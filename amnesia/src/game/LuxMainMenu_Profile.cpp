@@ -22,7 +22,7 @@
 #include "LuxMap.h"
 #include "LuxMapHandler.h"
 #include "LuxInputHandler.h"
-
+#include "RustLuxMenu.h"
 #include <algorithm>
 
 
@@ -93,7 +93,7 @@ void cLuxMainMenu_Profile::OnSetActive(bool abX)
 		
 		////////////////////////////////////////////////////////////
 		// If no profiles found, start the Create Profile window
-		if(mpListProfiles->GetItemNum()==0)
+		if(ohpl_ga7a_pf_activate(mpListProfiles->GetItemNum()))
 			PressCreateProfile(NULL, cGuiMessageData());
 		else
 		{
@@ -221,7 +221,9 @@ void cLuxMainMenu_Profile::CreateEnterNameGui()
 	vPos.y += pLabel->GetSize().y + fBorderSize;
 	//////////////////////////
 	//Text Box
-	tWString sIllegalChars = _W("*/\\:<>|\"?");
+	size_t lIllegalNum = 0;
+	const unsigned *pIllegal = ohpl_ga7a_pf_illegal(&lIllegalNum);
+	tWString sIllegalChars((const wchar_t*)pIllegal, lIllegalNum);
 	mpTextEnterName = mpGuiSet->CreateWidgetTextBox(vPos,cVector2f(mvEnterNameWindowSize.x-fBorderSize*2, 20), _W(""),mpWindowEnterName);
 	mpTextEnterName->SetForceCallBackOnEnter(true);
 	mpTextEnterName->SetCallbackOnLostFocus(false);
@@ -229,7 +231,7 @@ void cLuxMainMenu_Profile::CreateEnterNameGui()
 	mpTextEnterName->AddCallback(eGuiMessage_TextBoxEnter, this, kGuiCallback(PressEnterNameCreate));
 	
 
-	mpTextEnterName->SetMaxTextLength(20);
+	mpTextEnterName->SetMaxTextLength(ohpl_ga7a_pf_name_max());
 	vPos.y += mpTextEnterName->GetSize().y + fBorderSize;
 
 	//////////////////////////
@@ -273,11 +275,6 @@ void cLuxMainMenu_Profile::CreateEnterNameGui()
 
 //-----------------------------------------------------------------------
 
-static bool ProfileSort(cLuxGameProfile* apProfileA,const cLuxGameProfile* apProfileB)
-{
-	return apProfileA->mCreationDate < apProfileB->mCreationDate;
-}
-
 void cLuxMainMenu_Profile::AddProfilesInListBox()
 {
 	mpListProfiles->ClearItems();
@@ -302,7 +299,18 @@ void cLuxMainMenu_Profile::AddProfilesInListBox()
 	}
 
 	//Sort by date and add
-	std::sort(mvProfiles.begin(), mvProfiles.end(),ProfileSort);		
+	std::vector<OhplGa7aDate> vDates(mvProfiles.size());
+	for(size_t i=0; i<mvProfiles.size(); ++i)
+	{
+		const cDate &d = mvProfiles[i]->mCreationDate;
+		OhplGa7aDate rd = { d.seconds, d.minutes, d.hours, d.month_day, d.month, d.year };
+		vDates[i] = rd;
+	}
+	std::vector<unsigned> vOrder(mvProfiles.size());
+	if(mvProfiles.empty()==false) ohpl_ga7a_pf_sort(vDates.data(), vDates.size(), vOrder.data());
+	std::vector<cLuxGameProfile*> vSorted(mvProfiles.size());
+	for(size_t i=0; i<vOrder.size(); ++i) vSorted[i] = mvProfiles[vOrder[i]];
+	mvProfiles = vSorted;
 	for(size_t i=0; i<mvProfiles.size(); ++i)
 	{
 		cLuxGameProfile *pProfile = mvProfiles[i];
@@ -364,14 +372,9 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_Profile, UIPressList);
 
 bool cLuxMainMenu_Profile::WindowUIPress(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(aData.mlVal == eUIButton_Secondary)
-	{
-		if(mpListProfiles->GetIsLocked()) return false;
-		if(mpTextEnterName->IsVisible()) return false;
-
+	bool bSecondary = aData.mlVal == eUIButton_Secondary;
+	if(ohpl_ga7a_pf_ui_press(bSecondary, bSecondary && mpListProfiles->GetIsLocked(), bSecondary && mpTextEnterName->IsVisible()))
 		return WindowCloses(apWidget, aData);
-	}
-
 	return false;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_Profile, WindowUIPress);
@@ -407,11 +410,10 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_Profile, SelectedProfileChange);
 
 void cLuxMainMenu_Profile::SelectProfile(int alNum)
 {
-	if(alNum < 0) return;
-
-	mlLastPickedProfile = alNum;
-
-	cLuxGameProfile *pProfile = mvProfiles[alNum];
+	int lNum = ohpl_ga7a_pf_select(alNum, mvProfiles.size());
+	if(lNum < 0) return;
+	mlLastPickedProfile = lNum;
+	cLuxGameProfile *pProfile = mvProfiles[lNum];
 
 	//TODO: Make sure to clear stuff the other profile might have set
 	//		Especially language resources!
@@ -494,7 +496,9 @@ bool cLuxMainMenu_Profile::PressDeleteProfilePopupClose(iWidget* apWidget, const
 
 	///////////////////////////////////////////////////////////////
 	// Check if profile is in use
-	if(gpBase->mpUserConfig && gpBase->msProfileName==sFolder)
+	int lNewSelection;
+	int lPlan = ohpl_ga7a_pf_delete_plan(mpListProfiles->GetSelectedItem(), gpBase->mpUserConfig && gpBase->msProfileName==sFolder, gpBase->msBaseConfigPath != gpBase->msBaseSavePath, &lNewSelection);
+	if(lPlan & 1)
 	{
 		// Set a blank profile and config
 		gpBase->SetProfile(_W(""));
@@ -502,9 +506,7 @@ bool cLuxMainMenu_Profile::PressDeleteProfilePopupClose(iWidget* apWidget, const
 		gpBase->InitUserConfig();
 	}
 
-	int lNewSelection = mpListProfiles->GetSelectedItem()-1;
-
-	if(gpBase->msBaseConfigPath != gpBase->msBaseSavePath)
+	if(lPlan & 2)
 		cPlatform::RemoveFolder(gpBase->msBaseConfigPath+sFolder, true,true);
 	if(cPlatform::RemoveFolder(gpBase->msBaseSavePath+sFolder, true,true)==false)
 	{
@@ -550,8 +552,9 @@ bool cLuxMainMenu_Profile::PressEnterNameCreate(iWidget* apWidget, const cGuiMes
 	tWString sProfileName = mpTextEnterName->GetText();
 
 	
-	while(sProfileName.size() && sProfileName[0] == ' ') sProfileName = sProfileName.substr(1);
-	while(sProfileName.size() && sProfileName[sProfileName.size()-1] == ' ') sProfileName = sProfileName.substr(0, sProfileName.size()-1);
+	size_t lTrimStart = 0, lTrimEnd = 0;
+	ohpl_ga7a_pf_trim((const unsigned*)sProfileName.data(), sProfileName.size(), &lTrimStart, &lTrimEnd);
+	sProfileName = sProfileName.substr(lTrimStart, lTrimEnd - lTrimStart);
 	
 	if(sProfileName.empty())
 	{
