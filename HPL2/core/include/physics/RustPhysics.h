@@ -201,12 +201,12 @@ bool ohpl_phys_surface_parse(const char*, size_t, bool, void (*)(void*, const Oh
 
 void ohpl_phys_body_velocity_at_position(const OhplPhysVt*, size_t, const cVector3f*, cVector3f*);
 void ohpl_phys_body_torque_from_force(const OhplPhysVt*, size_t, const cVector3f*, const cVector3f*, cVector3f*);
-bool ohpl_phys_body_update_before(const OhplPhysVt*, size_t);
-void ohpl_phys_body_update_after(const OhplPhysVt*, size_t, float);
-void ohpl_phys_body_static_linear_move(const OhplPhysVt*, size_t, const cVector3f*);
-void ohpl_phys_body_static_angular_move(const OhplPhysVt*, size_t, const cVector3f*);
+bool ohpl_phys_body_update_before(const OhplPhysVt*, size_t, uint64_t);
+void ohpl_phys_body_update_after(const OhplPhysVt*, size_t, float, uint64_t);
+void ohpl_phys_body_static_linear_move(const OhplPhysVt*, size_t, const cVector3f*, uint64_t);
+void ohpl_phys_body_static_angular_move(const OhplPhysVt*, size_t, const cVector3f*, uint64_t);
 
-bool ohpl_phys_joint_update(const OhplPhysVt*, const OhplMoveParams*, OhplJointState*);
+bool ohpl_phys_joint_update(const OhplPhysVt*, const OhplMoveParams*, OhplJointState*, uint64_t);
 void ohpl_phys_joint_on_limit(const OhplPhysVt*, size_t, bool, const OhplLimitEffect*);
 bool ohpl_phys_joint_check_breakage(const OhplPhysVt*, size_t, bool, bool, float, OhplStr);
 void ohpl_phys_joint_calc_sound_freq(const OhplMoveParams*, float, float*, float*);

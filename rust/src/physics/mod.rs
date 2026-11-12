@@ -2,6 +2,7 @@
 //! The `iPhysics*` objects stay C++ and are reached through [`host::Host`] callbacks.
 
 pub mod body;
+pub mod book;
 pub mod character;
 pub mod controller;
 mod ffi;

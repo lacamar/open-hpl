@@ -1,5 +1,6 @@
 //! `iPhysicsJoint` move sounds, limit effects, breakage and limit auto-sleep.
 
+use super::book;
 use super::host::{H, Host, Str};
 use crate::math::{fma, len3, matrix_mul_3x3, matrix_mul_vec, sub3, v3};
 use crate::types::{Matrixf, Vector3f};
@@ -77,6 +78,28 @@ fn max(a: f32, b: f32) -> f32 {
 
 /// `OnPhysicsUpdate` after the pending position reset; false when the joint is frozen.
 pub fn on_physics_update<Ho: Host>(h: &Ho, p: &MoveParams, s: &mut JointState) -> bool {
+    on_physics_update_bk(h, p, s, 0)
+}
+
+/// With a non-zero `book` the previous matrices and speed count live in the Rust-owned book.
+pub fn on_physics_update_bk<Ho: Host>(
+    h: &Ho,
+    p: &MoveParams,
+    s: &mut JointState,
+    book: u64,
+) -> bool {
+    let Some(k) = book::joint_get(book) else {
+        return step(h, p, s);
+    };
+    (s.prev_child, s.prev_parent, s.speed_count) = (k.prev_child, k.prev_parent, k.speed_count);
+    let updated = step(h, p, s);
+    book::joint_with(book, |k| {
+        (k.prev_child, k.prev_parent, k.speed_count) = (s.prev_child, s.prev_parent, s.speed_count);
+    });
+    updated
+}
+
+fn step<Ho: Host>(h: &Ho, p: &MoveParams, s: &mut JointState) -> bool {
     let frozen = !((s.parent != 0 && h.body_enabled(s.parent)) || h.body_enabled(s.child));
     if frozen && s.sound == 0 {
         return false;

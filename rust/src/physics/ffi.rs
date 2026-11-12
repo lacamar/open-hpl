@@ -2,6 +2,7 @@
 //! `Vt` and the parameter structs are built on the C++ stack per call; handles stay owned by C++.
 
 use super::body;
+use super::book;
 use super::controller::{self, CtrlParams};
 use super::host::{H, Str, Vt};
 use super::joint::{self, JointState, LimitEffect, MoveParams};
@@ -203,18 +204,23 @@ pub unsafe extern "C" fn ohpl_phys_body_torque_from_force(
 /// # Safety
 /// `vt` valid.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_body_update_before(vt: *const Vt, b: H) -> bool {
+pub unsafe extern "C" fn ohpl_phys_body_update_before(vt: *const Vt, b: H, book: u64) -> bool {
     // SAFETY: caller contract.
-    unsafe { get(vt) }.is_some_and(|vt| body::update_before_simulate(&vt, b))
+    unsafe { get(vt) }.is_some_and(|vt| body::update_before_simulate_bk(&vt, b, book))
 }
 
 /// # Safety
 /// `vt` valid.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_body_update_after(vt: *const Vt, b: H, time_step: f32) {
+pub unsafe extern "C" fn ohpl_phys_body_update_after(
+    vt: *const Vt,
+    b: H,
+    time_step: f32,
+    book: u64,
+) {
     // SAFETY: caller contract.
     if let Some(vt) = unsafe { get(vt) } {
-        body::update_after_simulate(&vt, b, time_step);
+        body::update_after_simulate_bk(&vt, b, time_step, book);
     }
 }
 
@@ -225,11 +231,12 @@ pub unsafe extern "C" fn ohpl_phys_body_static_linear_move(
     vt: *const Vt,
     b: H,
     v: *const Vector3f,
+    book: u64,
 ) {
     // SAFETY: caller contract.
     if let Some(vt) = unsafe { get(vt) } {
         // SAFETY: caller contract.
-        body::static_linear_move(&vt, b, unsafe { vec3(v) });
+        body::static_linear_move_bk(&vt, b, unsafe { vec3(v) }, book);
     }
 }
 
@@ -240,11 +247,12 @@ pub unsafe extern "C" fn ohpl_phys_body_static_angular_move(
     vt: *const Vt,
     b: H,
     v: *const Vector3f,
+    book: u64,
 ) {
     // SAFETY: caller contract.
     if let Some(vt) = unsafe { get(vt) } {
         // SAFETY: caller contract.
-        body::static_angular_move(&vt, b, unsafe { vec3(v) });
+        body::static_angular_move_bk(&vt, b, unsafe { vec3(v) }, book);
     }
 }
 
@@ -255,10 +263,11 @@ pub unsafe extern "C" fn ohpl_phys_joint_update(
     vt: *const Vt,
     params: *const MoveParams,
     state: *mut JointState,
+    book: u64,
 ) -> bool {
     // SAFETY: caller contract.
     match unsafe { (get(vt), get(params), state.as_mut()) } {
-        (Some(vt), Some(p), Some(s)) => joint::on_physics_update(&vt, p, s),
+        (Some(vt), Some(p), Some(s)) => joint::on_physics_update_bk(&vt, p, s, book),
         _ => false,
     }
 }
@@ -410,3 +419,68 @@ const _: () = {
     assert!(size_of::<JointState>() == 216 && size_of::<MoveParams>() == 56);
     assert!(size_of::<LimitEffect>() == 24 && size_of::<BodyFilter>() == 24);
 };
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_body_new() -> u64 {
+    book::body_new()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_body_free(book: u64) {
+    book::body_free(book);
+}
+
+/// Field ids: 0 has_slide, 1 has_collision, 2 static_movement, 3 disable_after_sim.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_body_flag_get(book: u64, id: i32) -> bool {
+    book::body_get(book).is_some_and(|k| match id {
+        0 => k.has_slide,
+        1 => k.has_collision,
+        2 => k.static_movement,
+        _ => k.disable_after_sim,
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_body_flag_set(book: u64, id: i32, v: bool) {
+    book::body_with(book, |k| match id {
+        0 => k.has_slide = v,
+        1 => k.has_collision = v,
+        2 => k.static_movement = v,
+        _ => k.disable_after_sim = v,
+    });
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_joint_new() -> u64 {
+    book::joint_new()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_joint_free(book: u64) {
+    book::joint_free(book);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_joint_limit_auto_sleep(
+    book: u64,
+    enabled: bool,
+    sleep_dist: f32,
+    num_steps: i32,
+    min: f32,
+    max: f32,
+    dist: f32,
+) -> bool {
+    book::joint_with(book, |k| {
+        joint::limit_auto_sleep(
+            enabled,
+            sleep_dist,
+            num_steps,
+            &mut k.limit_step_count,
+            min,
+            max,
+            dist,
+        )
+    })
+    .unwrap_or(false)
+}
