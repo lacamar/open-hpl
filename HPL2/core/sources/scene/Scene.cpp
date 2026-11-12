@@ -58,7 +58,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	cScene::cScene(cGraphics *apGraphics,cResources *apResources, cSound* apSound,cPhysics *apPhysics,
-					cSystem *apSystem, cAI *apAI,cGui *apGui, cHaptic *apHaptic)
+					cSystem *apSystem, cAI *apAI,cGui *apGui)
 		: iUpdateable("HPL_Scene")
 	{
 		mpGraphics = apGraphics;
@@ -68,7 +68,6 @@ namespace hpl {
 		mpSystem = apSystem;
 		mpAI = apAI;
 		mpGui = apGui;
-		mpHaptic = apHaptic;
 
 		mpCurrentListener = NULL;
 	}
@@ -331,7 +330,7 @@ namespace hpl {
 	cWorld* cScene::CreateWorld(const tString& asName)
 	{
 		cWorld* pWorld = hplNew( cWorld, (asName,mpGraphics,mpResources,mpSound,mpPhysics,this,
-										mpSystem,mpAI,mpHaptic) );
+										mpSystem,mpAI) );
 
 		mlstWorlds.push_back(pWorld);
 

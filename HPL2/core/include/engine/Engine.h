@@ -39,9 +39,7 @@ namespace hpl {
 	class cSound;
 	class cPhysics;
 	class cAI;
-	class cHaptic;
 	class cGui;
-	class cGenerate;
 	class cEngine;
 	class cEngineInitVars;
 	class iTimer;
@@ -126,8 +124,6 @@ namespace hpl {
 		cPhysics* GetPhysics(){ return mpPhysics;}
 		cAI* GetAI(){ return mpAI;}
 		cGui* GetGui(){ return mpGui;}
-		cHaptic* GetHaptic(){ return mpHaptic;}
-		cGenerate* GetGenerate(){ return mpGenerate;}
 
 		cHeadlessControlServer* GetHeadlessControl(){ return mpHeadlessControl;}
 		void SetDevHudActive(bool abX);
@@ -238,9 +234,7 @@ namespace hpl {
 		cSound *mpSound;
 		cPhysics *mpPhysics;
 		cAI *mpAI;
-		cHaptic *mpHaptic;
 		cGui *mpGui;
-		cGenerate* mpGenerate;
 
 		cHeadlessControlServer *mpHeadlessControl;
 		cDevHud *mpDevHud;

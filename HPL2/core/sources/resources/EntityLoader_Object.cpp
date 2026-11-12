@@ -58,9 +58,6 @@
 
 #include "scene/Light.h"
 
-#include "haptic/Haptic.h"
-#include "haptic/LowLevelHaptic.h"
-#include "haptic/HapticShape.h"
 
 #include "resources/EntityObjectBuilder.h"
 
@@ -477,8 +474,6 @@ namespace hpl {
 		mvJoints.clear();
 
 		mvBodyExtraData.clear();
-
-		mvHapticShapes.clear();
 
 		mvParticleSystems.clear();
 		mvBillboards.clear();

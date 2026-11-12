@@ -41,6 +41,7 @@ namespace hpl {
 		tString GetInputType(){return "GamepadButton";}
 		
 		eGamepadButton GetButton(){ return mButton;}
+		OhplSubSpec OhplSpec(){ OhplSubSpec s = {eOhplSub_PadButton, mlPadIndex, (int)mButton, 0, 0, 0}; return s; }
 	private:
 		int mlPadIndex;
 		eGamepadButton mButton;

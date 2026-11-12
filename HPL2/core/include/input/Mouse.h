@@ -24,6 +24,8 @@
 #include "input/InputDevice.h"
 #include "math/MathTypes.h"
 
+struct OhplMouse;
+
 namespace hpl {
 
 	class iMouse : public iInputDevice
@@ -53,6 +55,8 @@ namespace hpl {
 		 * \return The name of the button as a string. 
 		 */
 		virtual tString ButtonToString(eMouseButton);
+
+		virtual const OhplMouse* RustHandle(){ return 0;}
 		/**
 		 * \param tString Name of the button
 		 * \return enum of the button.

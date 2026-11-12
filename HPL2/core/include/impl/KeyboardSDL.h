@@ -47,6 +47,7 @@ namespace hpl {
 		//int GetModifier();
 		bool KeyIsReleased();
 		cKeyPress GetReleasedKey();
+		const OhplKeyboard* RustHandle(){ return mpRust;}
 
 	private:
 		OhplKeyboard *mpRust;

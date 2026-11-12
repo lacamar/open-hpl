@@ -43,6 +43,16 @@ static_assert(sizeof(hpl::cGamepadInputData) == 16 && offsetof(hpl::cGamepadInpu
 static_assert(hpl::eGamepadInputType_Button == 0 && hpl::eGamepadInputType_Axis == 2 && hpl::eGamepadInputType_LastEnum == 4,
 	"input types cross the ABI");
 
+struct OhplSubSpec {
+	uint32_t kind;
+	int32_t pad, id, range;
+	float min, max;
+};
+static_assert(sizeof(OhplSubSpec) == 24, "OhplSubSpec layout");
+enum { eOhplSub_Key = 1, eOhplSub_Mouse, eOhplSub_PadButton, eOhplSub_PadAxis, eOhplSub_PadHat };
+static_assert(hpl::eKey_LastEnum == 230 && hpl::eMouseButton_LastEnum == 9, "registry device bounds");
+
+struct OhplInputReg;
 struct OhplKeyboard;
 struct OhplMouse;
 struct OhplGamepad;
@@ -92,6 +102,28 @@ extern "C" {
 	bool ohpl_input_action_double_triggered(OhplActionState*, float limit);
 	void ohpl_input_action_update(OhplActionState*, bool any_down, float time_step);
 	void ohpl_input_action_reset(OhplActionState*, bool any_down);
+
+	OhplInputReg* ohpl_input_reg_new();
+	void ohpl_input_reg_free(OhplInputReg*);
+	void ohpl_input_reg_set_devices(OhplInputReg*, const OhplKeyboard*, const OhplMouse*);
+	void ohpl_input_reg_set_pads(OhplInputReg*, const OhplGamepad* const*, size_t);
+	uint64_t ohpl_input_reg_create(OhplInputReg*, const unsigned char* name, size_t len, int id, void* user);
+	void ohpl_input_reg_destroy(OhplInputReg*, uint64_t);
+	uint64_t ohpl_input_reg_find_name(OhplInputReg*, const unsigned char* name, size_t len);
+	uint64_t ohpl_input_reg_find_id(OhplInputReg*, int id);
+	void* ohpl_input_reg_user(OhplInputReg*, uint64_t);
+	void ohpl_input_reg_add_sub(OhplInputReg*, uint64_t, const OhplSubSpec*);
+	void ohpl_input_reg_clear_subs(OhplInputReg*, uint64_t);
+	bool ohpl_input_reg_is_down(OhplInputReg*, uint64_t);
+	bool ohpl_input_reg_was_triggered(OhplInputReg*, uint64_t);
+	bool ohpl_input_reg_became_triggered(OhplInputReg*, uint64_t);
+	bool ohpl_input_reg_double_triggered(OhplInputReg*, uint64_t, float limit);
+	void ohpl_input_reg_reset(OhplInputReg*, uint64_t);
+	void ohpl_input_reg_update(OhplInputReg*, float timeStep);
+	void ohpl_input_reg_update_action(OhplInputReg*, uint64_t, float timeStep);
+	void ohpl_input_reg_reset_all(OhplInputReg*);
+	void* ohpl_input_reg_pop_registered(OhplInputReg*);
+	bool ohpl_input_reg_first_down(OhplInputReg*, uint32_t* kind, int32_t* id);
 
 	typedef void (*OhplInputSink)(void*, const unsigned char*, size_t);
 	void ohpl_input_key_name(int, OhplInputSink, void*);

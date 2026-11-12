@@ -23,6 +23,8 @@
 #include "input/InputTypes.h"
 #include "input/InputDevice.h"
 
+struct OhplKeyboard;
+
 namespace hpl {
 
 	//------------------------------
@@ -69,6 +71,8 @@ namespace hpl {
 		 * \return The name of the key as a string. 
 		 */
 		virtual tString KeyToString(eKey);
+
+		virtual const OhplKeyboard* RustHandle(){ return 0;}
 		/**
 		 * \param eKeyModifier The mod key to change to string.
 		 * \return The name of the mod key as a string. 

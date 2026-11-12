@@ -41,6 +41,7 @@ namespace hpl {
 		tString GetInputType(){return "Keyboard";}
 
 		eKey GetKey(){ return mKey;}
+		OhplSubSpec OhplSpec(){ OhplSubSpec s = {eOhplSub_Key, 0, (int)mKey, 0, 0, 0}; return s; }
 
 	private:
 		eKey mKey;

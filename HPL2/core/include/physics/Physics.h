@@ -25,7 +25,6 @@
 #include "engine/Updateable.h"
 #include "system/SystemTypes.h"
 #include "physics/PhysicsMaterial.h"
-#include "haptic/HapticTypes.h"
 
 struct OhplImpactCounts;
 
@@ -35,8 +34,6 @@ namespace hpl {
 	class iPhysicsWorld;
 	class cSurfaceData;
 	class cResources;
-	class iHapticSurface;
-	class cHaptic;
 
 	//------------------------------------------------
 
@@ -78,7 +75,7 @@ namespace hpl {
 
 		cSurfaceData *CreateSurfaceData(const tString& asName);
 		cSurfaceData *GetSurfaceData(const tString& asName);
-		bool LoadSurfaceData(const tString& asFile, cHaptic *apHaptic = NULL);
+		bool LoadSurfaceData(const tString& asFile);
 
 		iLowLevelPhysics* GetLowLevel(){ return mpLowLevelPhysics;}
 
@@ -98,8 +95,6 @@ namespace hpl {
 		bool GetDebugLog(){ return mbLog;}
 	
 	private:
-		eHapticSurfaceType GetHapticSurface(const char *apName);
-
 		ePhysicsMaterialCombMode GetCombMode(const char *apName);
 
 		void UpdateImpactCounts(float afTimeStep);

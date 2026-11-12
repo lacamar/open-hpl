@@ -41,6 +41,7 @@ namespace hpl {
 		tString GetInputType(){return "MouseButton";}
 		
 		eMouseButton GetButton(){ return mButton;}
+		OhplSubSpec OhplSpec(){ OhplSubSpec s = {eOhplSub_Mouse, 0, (int)mButton, 0, 0, 0}; return s; }
 	private:
 		eMouseButton mButton;
 		cInput *mpInput;

@@ -54,6 +54,8 @@ namespace hpl {
 
 		void Reset();
 		
+		const OhplMouse* RustHandle(){ return mpRust;}
+
 	private:
 		OhplMouse *mpRust;
 		std::vector<OhplInputEvent> mvEvents;
