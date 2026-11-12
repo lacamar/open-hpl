@@ -1,0 +1,114 @@
+frame 64 64
+-o add 0 28 9
+found=1 sub=0 rect=1,1,28,9 full=0 upd=1 adds=1 pic=1 texpic=1
+-o flush
+flushed upd=0 adds=1 pic=1 texpic=1 hash=0c9d20d82eeb3b97
+  img sub=0 rect=1,1,28,9
+-o flush
+flushed upd=0 adds=1 pic=1 texpic=1 hash=0c9d20d82eeb3b97
+  img sub=0 rect=1,1,28,9
+-o del 0
+-o add 1 17 25
+found=1 sub=1 rect=1,12,17,25 full=0 upd=1 adds=2 pic=2 texpic=2
+-o lock 0
+locked=0
+-o add 2 3 5
+found=1 sub=2 rect=31,1,3,5 full=0 upd=1 adds=3 pic=3 texpic=3
+-o subflush 2
+sub 2 upd=1 3ea08312,3c883127 3eb77cee,3c883127 3eb77cee,3dbdf3b6 3ea08312,3dbdf3b6
+-o del 2
+-o add 3 2 2
+found=1 sub=3 rect=25,1,2,2 full=0 upd=1 adds=1 pic=3 texpic=3
+-o add 4 9 28
+found=1 sub=4 rect=1,28,9,28 full=0 upd=1 adds=2 pic=4 texpic=4
+-o lock 1
+locked=1
+-o lock 1
+locked=1
+-o add 5 19 13
+found=1 sub=5 rect=20,8,19,13 full=0 upd=1 adds=3 pic=5 texpic=5
+-o flush
+flushed upd=0 adds=0 pic=4 texpic=4 hash=32e2ea63e283ba17
+  img sub=4 rect=1,1,9,28
+  img sub=1 rect=12,1,17,25
+  img sub=5 rect=31,1,19,13
+  img sub=3 rect=52,1,2,2
+-o lock 1
+locked=1
+-o add 6 2 24
+found=1 sub=6 rect=1,31,2,24 full=0 upd=1 adds=1 pic=5 texpic=5
+-o add 7 6 20
+found=1 sub=7 rect=5,31,6,20 full=0 upd=1 adds=2 pic=6 texpic=6
+-o subflush 7
+sub 7 upd=0 3da20c4a,3ef88312 3e2ef9db,3ef88312 3e2ef9db,3f4bbe77 3da20c4a,3f4bbe77
+-o add 8 24 8
+found=1 sub=8 rect=31,16,24,8 full=0 upd=1 adds=3 pic=7 texpic=7
+-o subflush 7
+sub 7 upd=0 3da20c4a,3ef88312 3e2ef9db,3ef88312 3e2ef9db,3f4bbe77 3da20c4a,3f4bbe77
+-o del 3
+-o add 9 1 8
+found=1 sub=9 rect=52,5,1,8 full=0 upd=1 adds=4 pic=8 texpic=8
+-o flush
+flushed upd=0 adds=0 pic=7 texpic=7 hash=4f4a359e1f898f57
+  img sub=4 rect=1,1,9,28
+  img sub=1 rect=12,1,17,25
+  img sub=8 rect=31,1,24,8
+  img sub=6 rect=1,31,2,24
+  img sub=7 rect=5,31,6,20
+  img sub=5 rect=31,11,19,13
+  img sub=9 rect=57,1,1,8
+-o add 10 27 21
+found=0 full=0 upd=0 adds=0 pic=7 texpic=7
+-o add 11 1 22
+found=0 full=0 upd=0 adds=0 pic=7 texpic=7
+-o lock 0
+locked=0
+-o add 12 2 19
+found=1 sub=10 rect=13,31,2,19 full=0 upd=1 adds=1 pic=8 texpic=8
+-o add 13 18 13
+found=1 sub=11 rect=17,31,18,13 full=0 upd=1 adds=2 pic=9 texpic=9
+-o add 14 26 9
+found=1 sub=12 rect=37,31,26,9 full=0 upd=1 adds=3 pic=10 texpic=10
+-o add 15 8 20
+found=0 full=0 upd=1 adds=3 pic=10 texpic=10
+-o del 4
+-o lock 1
+locked=1
+-o flush
+flushed upd=0 adds=0 pic=9 texpic=9 hash=ee162c3edb3c2f33
+  img sub=12 rect=1,1,26,9
+  img sub=1 rect=1,12,17,25
+  img sub=8 rect=29,1,24,8
+  img sub=6 rect=20,12,2,24
+  img sub=7 rect=24,12,6,20
+  img sub=5 rect=32,12,19,13
+  img sub=10 rect=1,39,2,19
+  img sub=11 rect=5,39,18,13
+  img sub=9 rect=55,1,1,8
+-o add 16 18 27
+found=0 full=0 upd=0 adds=0 pic=9 texpic=9
+-o subflush 5
+sub 5 upd=1 3f004189,3e410625 3f4bbe77,3e410625 3f4bbe77,3ec77cee 3f004189,3ec77cee
+-o lock 1
+locked=1
+-o add 17 24 1
+found=1 sub=13 rect=32,27,24,1 full=0 upd=1 adds=1 pic=10 texpic=10
+-o lock 1
+locked=1
+-o add 18 24 21
+found=0 full=0 upd=1 adds=1 pic=10 texpic=10
+-o flush
+flushed upd=0 adds=1 pic=10 texpic=10 hash=d4cf12ae7c9ea02b
+  img sub=12 rect=1,1,26,9
+  img sub=1 rect=1,12,17,25
+  img sub=8 rect=29,1,24,8
+  img sub=6 rect=20,12,2,24
+  img sub=7 rect=24,12,6,20
+  img sub=5 rect=32,12,19,13
+  img sub=10 rect=1,39,2,19
+  img sub=11 rect=5,39,18,13
+  img sub=9 rect=55,1,1,8
+  img sub=13 rect=32,27,24,1
+-o del 6
+-o flush
+final upd=0 hash=5385b2b77a0b8873

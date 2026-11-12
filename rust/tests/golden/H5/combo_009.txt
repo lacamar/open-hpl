@@ -1,0 +1,83 @@
+mgr mat96 1
+-o setup 0 mode0_3 vs_32.vert fs_24.frag f:2:Feat28
+combos=2
+-o shader 0 0 1
+create file=vs_32.vert type=0 vars=
+shader id=0
+-o name 0 0
+mat96_mode0_3
+-o shader 0 1 2
+create file=fs_24.frag type=1 vars=Feat28=;
+shader id=1
+-o shader 0 0 1
+shader id=0
+-o shader 0 1 2
+shader id=1
+-o shader 0 1 1
+shader id=0
+-o shader 0 0 2
+create file=fs_24.frag type=1 vars=
+shader id=0
+-o shader 0 1 1
+shader id=0
+-o shader 0 1 1
+shader id=0
+-o name 0 1
+mat96_mode0_3_Feat28
+-o shader 0 0 1
+shader id=0
+-o shader 0 1 1
+shader id=0
+-o shader 0 1 2
+shader id=1
+-o name 0 0
+mat96_mode0_3
+-o name 0 0
+mat96_mode0_3
+-o name 0 1
+mat96_mode0_3_Feat28
+-o name 0 1
+mat96_mode0_3_Feat28
+-o shader 0 1 2
+shader id=1
+-o name 0 1
+mat96_mode0_3_Feat28
+-o name 0 0
+mat96_mode0_3
+-o name 0 0
+mat96_mode0_3
+-o name 0 1
+mat96_mode0_3_Feat28
+-o name 0 0
+mat96_mode0_3
+-o shader 0 1 1
+shader id=0
+-o shader 0 0 2
+shader id=0
+-o name 0 1
+mat96_mode0_3_Feat28
+-o name 0 0
+mat96_mode0_3
+-o shader 0 0 1
+shader id=0
+-o name 0 1
+mat96_mode0_3_Feat28
+-o shader 0 1 2
+shader id=1
+-o shader 0 0 1
+shader id=0
+-o name 0 1
+mat96_mode0_3_Feat28
+-o shader 0 1 2
+shader id=1
+-o shader 0 1 1
+shader id=0
+-o name 0 1
+mat96_mode0_3_Feat28
+-o name 0 0
+mat96_mode0_3
+-o name 0 0
+mat96_mode0_3
+-o name 0 0
+mat96_mode0_3
+-o end

@@ -57,8 +57,8 @@ namespace hpl {
 		bool IsFull();
 		bool IsUpdated();
 
-		bool IsLocked()const { return mbIsLocked;}
-		void SetLocked(bool abX){ mbIsLocked = abX; }
+		bool IsLocked()const;
+		void SetLocked(bool abX);
 
 		void SetNeedReorganisation();
 
@@ -71,14 +71,17 @@ namespace hpl {
 
 		int GetHandle()const{ return mlHandle; }
 
-		int GetAdditionsSinceReorganization(){ return mlAdditionsSinceReorganization;}
+		int GetAdditionsSinceReorganization();
 	private:
 		void ClearAddedImages();
+		void ReorganizeRust();
+		cFrameSubImage* AddBitmapRust(cBitmap *apSrc, const tWString& asFullPath, cFrameSubImage *apSubImageCreated, bool *apFoundNode);
 
 		cBitmap* mpBitmap;
 		cFrameTexture* mpFrameTexture;
 		
 		void* mpPacker;
+		void* mpAtlas;
 
 		cFBitmapImageList mlstImages;
 		

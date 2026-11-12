@@ -1,0 +1,4 @@
+tex#0.CreateFromBitmap("v3i{64,128,1}511img{n=32768,h=617134ee24123ee3}")
+tex#0.CreateFromBitmap("v3i{64,128,1}511img{n=32768,h=54a0e39aa351dca7}")
+tex#0.CreateFromBitmap("v3i{64,128,1}511img{n=32768,h=eb2d876fd36ddb97}")
+tex#0.CreateFromBitmap("v3i{64,128,1}511img{n=32768,h=7b62e417d0eab853}")

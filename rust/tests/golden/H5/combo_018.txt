@@ -1,0 +1,56 @@
+mgr mat20 3
+-o setup 0 mode0_3 vs_41.vert fs_36.frag f:2:Feat15 f:2:Feat3 f:2:Feat17
+combos=8
+-o setup 1 mode1_4 vs_28.vert fs_47.frag f:2:Feat2
+combos=2
+-o setup 2 mode2_17 vs_46.vert fs_1.frag f:1:Feat26
+combos=2
+-o name 1 1
+mat20_mode1_4_Feat2
+-o name 1 1
+mat20_mode1_4_Feat2
+-o shader 2 1 2
+create file=fs_1.frag type=1 vars=
+shader id=0
+-o shader 0 0 1
+create file=vs_41.vert type=0 vars=
+shader id=0
+-o name 2 0
+mat20_mode2_17
+-o name 2 1
+mat20_mode2_17_Feat26
+-o shader 1 1 2
+create file=fs_47.frag type=1 vars=Feat2=;
+shader id=1
+-o name 2 0
+mat20_mode2_17
+-o name 0 0
+mat20_mode0_3
+-o name 0 2
+mat20_mode0_3_Feat3
+-o name 2 0
+mat20_mode2_17
+-o name 1 1
+mat20_mode1_4_Feat2
+-o name 0 2
+mat20_mode0_3_Feat3
+-o name 1 1
+mat20_mode1_4_Feat2
+-o name 2 1
+mat20_mode2_17_Feat26
+-o name 1 0
+mat20_mode1_4
+-o name 1 1
+mat20_mode1_4_Feat2
+-o name 0 5
+mat20_mode0_3_Feat15_Feat17
+-o shader 2 0 1
+create file=vs_46.vert type=0 vars=
+shader id=0
+-o name 0 3
+mat20_mode0_3_Feat15_Feat3
+-o shader 2 1 2
+shader id=0
+-o shader 0 4 1
+shader id=0
+-o end

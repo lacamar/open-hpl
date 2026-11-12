@@ -1,0 +1,68 @@
+mgr mat11 1
+-o setup 0 mode0_19 vs_6.vert fs_7.frag f:2:Feat11 f:1:Feat24
+combos=4
+-o name 0 3
+mat11_mode0_19_Feat11_Feat24
+-o shader 0 2 2
+create file=fs_7.frag type=1 vars=
+shader id=0
+-o shader 0 2 1
+create file=vs_6.vert type=0 vars=Feat24=;
+shader id=2
+-o name 0 1
+mat11_mode0_19_Feat11
+-o name 0 3
+mat11_mode0_19_Feat11_Feat24
+-o shader 0 1 2
+create file=fs_7.frag type=1 vars=Feat11=;
+shader id=1
+-o name 0 3
+mat11_mode0_19_Feat11_Feat24
+-o shader 0 2 2
+shader id=0
+-o shader 0 0 1
+create file=vs_6.vert type=0 vars=
+shader id=0
+-o name 0 3
+mat11_mode0_19_Feat11_Feat24
+-o shader 0 2 1
+shader id=2
+-o name 0 1
+mat11_mode0_19_Feat11
+-o name 0 1
+mat11_mode0_19_Feat11
+-o shader 0 1 1
+shader id=0
+-o shader 0 2 2
+shader id=0
+-o shader 0 1 2
+shader id=1
+-o shader 0 0 1
+shader id=0
+-o name 0 2
+mat11_mode0_19_Feat24
+-o name 0 2
+mat11_mode0_19_Feat24
+-o name 0 0
+mat11_mode0_19
+-o name 0 2
+mat11_mode0_19_Feat24
+-o name 0 2
+mat11_mode0_19_Feat24
+-o name 0 3
+mat11_mode0_19_Feat11_Feat24
+-o shader 0 3 2
+shader id=1
+-o shader 0 2 2
+shader id=0
+-o name 0 0
+mat11_mode0_19
+-o shader 0 3 1
+shader id=2
+-o name 0 2
+mat11_mode0_19_Feat24
+-o shader 0 0 2
+shader id=0
+-o name 0 3
+mat11_mode0_19_Feat11_Feat24
+-o end

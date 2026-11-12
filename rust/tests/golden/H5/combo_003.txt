@@ -1,0 +1,103 @@
+mgr mat46 3
+-o rename renamed5
+-o setup 0 mode0_27 vs_48.vert fs_2.frag f:2:Feat21 f:3:Feat12 f:1:Feat8
+combos=8
+-o setup 1 mode1_44 vs_31.vert fs_31.frag f:3:Feat14 f:2:Feat8 f:3:Feat2 f:2:Feat1 f:1:Feat4 d:Def2:154 d:Def3:22
+combos=32
+-o setup 2 mode2_2 vs_30.vert fs_38.frag f:1:Feat26 f:3:Feat8 f:2:Feat3
+combos=8
+-o name 2 4
+renamed5_mode2_2_Feat3
+-o shader 0 7 2
+create file=fs_2.frag type=1 vars=Feat12=;Feat21=;
+shader id=3
+-o shader 2 6 2
+create file=fs_38.frag type=1 vars=Feat3=;Feat8=;
+shader id=6
+-o shader 1 18 2
+create file=fs_31.frag type=1 vars=Def2=154;Def3=22;Feat8=;
+shader id=2
+-o shader 0 3 2
+shader id=3
+-o name 0 0
+renamed5_mode0_27
+-o shader 0 0 1
+create file=vs_48.vert type=0 vars=
+shader id=0
+-o name 0 2
+renamed5_mode0_27_Feat12
+-o name 0 7
+renamed5_mode0_27_Feat21_Feat12_Feat8
+-o shader 0 1 2
+create file=fs_2.frag type=1 vars=Feat21=;
+shader id=1
+-o shader 2 4 1
+create file=vs_30.vert type=0 vars=
+shader id=0
+-o shader 1 8 2
+create file=fs_31.frag type=1 vars=Def2=154;Def3=22;Feat1=;
+shader id=8
+-o name 0 4
+renamed5_mode0_27_Feat8
+-o shader 1 10 2
+create file=fs_31.frag type=1 vars=Def2=154;Def3=22;Feat1=;Feat8=;
+shader id=10
+-o shader 2 6 2
+shader id=6
+-o name 1 21
+renamed5_mode1_44_Feat14_Feat2_Feat4
+-o name 2 3
+renamed5_mode2_2_Feat26_Feat8
+-o shader 0 5 2
+shader id=1
+-o shader 0 2 2
+create file=fs_2.frag type=1 vars=Feat12=;
+shader id=2
+-o name 2 7
+renamed5_mode2_2_Feat26_Feat8_Feat3
+-o name 2 1
+renamed5_mode2_2_Feat26
+-o shader 0 1 2
+shader id=1
+-o shader 0 6 1
+create file=vs_48.vert type=0 vars=Feat12=;Feat8=;
+shader id=6
+-o name 1 15
+renamed5_mode1_44_Feat14_Feat8_Feat2_Feat1
+-o name 2 4
+renamed5_mode2_2_Feat3
+-o name 0 6
+renamed5_mode0_27_Feat12_Feat8
+-o shader 2 2 2
+create file=fs_38.frag type=1 vars=Feat8=;
+shader id=2
+-o shader 1 28 1
+create file=vs_31.vert type=0 vars=Def2=154;Def3=22;Feat2=;Feat4=;
+shader id=20
+-o name 1 15
+renamed5_mode1_44_Feat14_Feat8_Feat2_Feat1
+-o shader 1 5 2
+create file=fs_31.frag type=1 vars=Def2=154;Def3=22;Feat14=;Feat2=;
+shader id=5
+-o name 2 4
+renamed5_mode2_2_Feat3
+-o name 0 0
+renamed5_mode0_27
+-o shader 0 4 1
+create file=vs_48.vert type=0 vars=Feat8=;
+shader id=4
+-o shader 0 0 1
+shader id=0
+-o name 0 7
+renamed5_mode0_27_Feat21_Feat12_Feat8
+-o shader 2 6 1
+create file=vs_30.vert type=0 vars=Feat8=;
+shader id=2
+-o name 1 11
+renamed5_mode1_44_Feat14_Feat8_Feat1
+-o name 0 4
+renamed5_mode0_27_Feat8
+-o shader 2 1 1
+create file=vs_30.vert type=0 vars=Feat26=;
+shader id=1
+-o end

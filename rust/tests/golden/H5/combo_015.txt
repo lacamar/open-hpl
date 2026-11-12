@@ -1,0 +1,59 @@
+mgr mat95 3
+-o setup 0 mode0_3 vs_36.vert fs_47.frag
+combos=1
+-o setup 1 mode1_3 vs_49.vert fs_44.frag f:2:Feat20 f:1:Feat15 f:2:Feat25 f:1:Feat2
+combos=16
+-o setup 2 mode2_34 vs_2.vert fs_1.frag f:3:Feat9 f:2:Feat0 d:Def0:289 d:Def1:907
+combos=4
+-o name 2 3
+mat95_mode2_34_Feat9_Feat0
+-o name 0 1
+mat95_mode0_3
+-o shader 2 3 2
+create file=fs_1.frag type=1 vars=Def0=289;Def1=907;Feat0=;Feat9=;
+shader id=3
+-o shader 1 2 2
+create file=fs_44.frag type=1 vars=
+shader id=0
+-o name 2 0
+mat95_mode2_34
+-o shader 1 4 1
+create file=vs_49.vert type=0 vars=
+shader id=0
+-o shader 1 14 2
+create file=fs_44.frag type=1 vars=Feat25=;
+shader id=4
+-o shader 1 0 2
+shader id=0
+-o name 0 0
+mat95_mode0_3
+-o name 2 0
+mat95_mode2_34
+-o shader 2 0 2
+create file=fs_1.frag type=1 vars=Def0=289;Def1=907;
+shader id=0
+-o name 1 15
+mat95_mode1_3_Feat20_Feat15_Feat25_Feat2
+-o shader 1 5 2
+create file=fs_44.frag type=1 vars=Feat20=;Feat25=;
+shader id=5
+-o shader 0 1 1
+create file=vs_36.vert type=0 vars=
+shader id=0
+-o name 2 1
+mat95_mode2_34_Feat9
+-o name 2 0
+mat95_mode2_34
+-o name 2 2
+mat95_mode2_34_Feat0
+-o shader 2 3 2
+shader id=3
+-o shader 2 1 2
+create file=fs_1.frag type=1 vars=Def0=289;Def1=907;Feat9=;
+shader id=1
+-o name 2 0
+mat95_mode2_34
+-o shader 2 2 1
+create file=vs_2.vert type=0 vars=Def0=289;Def1=907;
+shader id=0
+-o end

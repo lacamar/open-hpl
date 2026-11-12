@@ -1,0 +1,53 @@
+mgr mat80 3
+-o setup 0 mode0_36 vs_14.vert fs_14.frag f:1:Feat19 f:1:Feat11 f:1:Feat16 f:3:Feat29 d:Def5:590
+combos=16
+-o setup 1 mode1_30 vs_0.vert fs_27.frag f:3:Feat19 f:2:Feat15 f:3:Feat13 f:2:Feat17 f:2:Feat24 f:3:Feat20
+combos=64
+-o setup 2 mode2_13 vs_8.vert fs_15.frag f:2:Feat25 f:1:Feat10 f:2:Feat7 f:2:Feat5 f:2:Feat20 f:2:Feat29
+combos=64
+-o name 2 5
+mat80_mode2_13_Feat25_Feat7
+-o name 1 44
+mat80_mode1_30_Feat13_Feat17_Feat20
+-o name 0 8
+mat80_mode0_36_Feat29
+-o name 1 4
+mat80_mode1_30_Feat13
+-o shader 0 15 2
+create file=fs_14.frag type=1 vars=Def5=590;Feat29=;
+shader id=8
+-o shader 0 10 1
+create file=vs_14.vert type=0 vars=Def5=590;Feat11=;Feat29=;
+shader id=10
+-o name 2 48
+mat80_mode2_13_Feat20_Feat29
+-o shader 2 16 1
+create file=vs_8.vert type=0 vars=
+shader id=0
+-o name 2 14
+mat80_mode2_13_Feat10_Feat7_Feat5
+-o name 0 5
+mat80_mode0_36_Feat19_Feat16
+-o name 2 33
+mat80_mode2_13_Feat25_Feat29
+-o shader 2 24 2
+create file=fs_15.frag type=1 vars=Feat20=;Feat5=;
+shader id=24
+-o name 1 44
+mat80_mode1_30_Feat13_Feat17_Feat20
+-o shader 2 60 2
+create file=fs_15.frag type=1 vars=Feat20=;Feat29=;Feat5=;Feat7=;
+shader id=60
+-o shader 0 10 1
+shader id=10
+-o shader 2 12 1
+shader id=0
+-o name 2 13
+mat80_mode2_13_Feat25_Feat7_Feat5
+-o name 1 31
+mat80_mode1_30_Feat19_Feat15_Feat13_Feat17_Feat24
+-o name 0 7
+mat80_mode0_36_Feat19_Feat11_Feat16
+-o name 0 2
+mat80_mode0_36_Feat11
+-o end

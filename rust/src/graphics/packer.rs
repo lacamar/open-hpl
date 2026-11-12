@@ -170,7 +170,7 @@ impl RectPacker {
     }
 }
 
-fn minimum_fit(src: &Rect2l, dest: &Rect2l) -> bool {
+pub fn minimum_fit(src: &Rect2l, dest: &Rect2l) -> bool {
     dest.w.wrapping_sub(src.w) < MIN_HOLE && dest.h.wrapping_sub(src.h) < MIN_HOLE
 }
 

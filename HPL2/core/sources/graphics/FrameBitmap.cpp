@@ -19,6 +19,8 @@
 
 #include "graphics/FrameBitmap.h"
 #include "graphics/RustGraphics.h"
+#include "graphics/RustGraphicsH5.h"
+#include "impl/RustBackends.h"
 
 #include "math/Math.h"
 
@@ -30,6 +32,8 @@
 #include "graphics/FrameSubImage.h"
 #include "graphics/Bitmap.h"
 #include "graphics/Texture.h"
+
+#include <memory>
 
 
 namespace hpl {
@@ -70,12 +74,18 @@ namespace hpl {
 		mbNeedNeedReorganisation = false;
 
 		//Root node in rect tree
-		mpPacker = ohpl_packer_new(mpBitmap->GetWidth(), mpBitmap->GetHeight());
+		mpAtlas = NULL;
+		mpPacker = NULL;
+		if(OhplBackendRustRequested())
+			mpAtlas = ohpl_h5_atlas_new(mpBitmap->GetWidth(), mpBitmap->GetHeight(), alHandle);
+		else
+			mpPacker = ohpl_packer_new(mpBitmap->GetWidth(), mpBitmap->GetHeight());
 	}
 
 	cFrameBitmap::~cFrameBitmap()
 	{
 		ohpl_packer_free(mpPacker);
+		ohpl_h5_atlas_free(mpAtlas);
 		STLDeleteAll(mlstImages);
 		hplDelete(mpBitmap);
 		mpBitmap = NULL;
@@ -89,8 +99,60 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	static void BitmapPix(cBitmap *apBitmap, OhplH5Surface &aSurface, unsigned char *&apData, size_t &alLen, bool abDest)
+	{
+		aSurface.size = apBitmap->GetSize();
+		aSurface.format = apBitmap->GetPixelFormat();
+		aSurface.bytes_per_pixel = apBitmap->GetBytesPerPixel();
+		cBitmapData *pData = apBitmap->GetData(0,0);
+		apData = (pData && !(abDest && apBitmap->IsCompressed())) ? pData->mpData : NULL;
+		alLen = (pData && apData) ? (size_t)pData->mlSize : 0;
+	}
+
+	cFrameSubImage *cFrameBitmap::AddBitmapRust(cBitmap *apSrc, const tWString& asFullPath, cFrameSubImage *apSubImageCreated, bool *apFoundNode)
+	{
+		OhplH5Surface dst, src;
+		unsigned char *pDst, *pSrc;
+		size_t lDstLen, lSrcLen;
+		BitmapPix(mpBitmap, dst, pDst, lDstLen, true);
+		BitmapPix(apSrc, src, pSrc, lSrcLen, false);
+
+		OhplH5Added added;
+		bool bFoundNode = ohpl_h5_atlas_add(mpAtlas, &dst, pDst, lDstLen, &src, pSrc, lSrcLen, apSubImageCreated!=NULL, &added);
+		cFrameSubImage *pImage = NULL;
+
+		if(bFoundNode)
+		{
+			cFBitmapImage *pBitmapImage = hplNew( cFBitmapImage, () );
+			if(apSubImageCreated){
+				pBitmapImage->mpSubImage = apSubImageCreated;
+				apSubImageCreated->mpFrameBitmapImage = pBitmapImage;
+			}
+			pBitmapImage->mRect = added.rect;
+			mlstImages.push_back(pBitmapImage);
+
+			mlPicCount = ohpl_h5_atlas_pic_count(mpAtlas);
+			mpFrameTexture->SetPicCount(mlPicCount);
+
+			if(apSubImageCreated == NULL)
+			{
+				pImage = hplNew( cFrameSubImage, (cString::To8Char(apSrc->GetFileName()),asFullPath,
+								mpFrameTexture, this,
+								added.rect,
+								cVector2l(mpBitmap->GetWidth(),mpBitmap->GetHeight()),
+								ohpl_h5_atlas_handle(mpAtlas), pBitmapImage) );
+				pBitmapImage->mpSubImage = pImage;
+			}
+		}
+
+		if(apFoundNode) *apFoundNode = bFoundNode;
+		return pImage;
+	}
+
 	cFrameSubImage *cFrameBitmap::AddBitmap(cBitmap *apSrc, const tWString& asFullPath, cFrameSubImage *apSubImageCreated, bool *apFoundNode)
 	{
+		if(mpAtlas) return AddBitmapRust(apSrc, asFullPath, apSubImageCreated, apFoundNode);
+
 		cFBitmapImage *pBitmapImage=NULL;
 		cFrameSubImage *pImage=NULL;
 		//source size
@@ -174,6 +236,7 @@ namespace hpl {
 
 	bool cFrameBitmap::MinimumFit(cRect2l aSrc,cRect2l aDest)
 	{
+		if(mpAtlas) return ohpl_h5_atlas_minimum_fit(&aSrc, &aDest);
 		if(aDest.w-aSrc.w<mlMinHole && aDest.h-aSrc.h<mlMinHole) return true;
 
 		return false;
@@ -183,6 +246,7 @@ namespace hpl {
 
 	bool cFrameBitmap::IsUpdated()
 	{
+		if(mpAtlas) return ohpl_h5_atlas_updated(mpAtlas);
 		return mbIsUpdated;
 	}
     
@@ -190,13 +254,31 @@ namespace hpl {
 
 	bool cFrameBitmap::IsFull()
 	{
+		if(mpAtlas) return ohpl_h5_atlas_full(mpAtlas);
 		return mbIsFull;
 	}
 
 	//-----------------------------------------------------------------------
 
+	bool cFrameBitmap::IsLocked()const
+	{
+		return mpAtlas ? ohpl_h5_atlas_locked(mpAtlas) : mbIsLocked;
+	}
+
+	void cFrameBitmap::SetLocked(bool abX)
+	{
+		if(mpAtlas) ohpl_h5_atlas_set_locked(mpAtlas, abX);
+		else mbIsLocked = abX;
+	}
+
+	int cFrameBitmap::GetAdditionsSinceReorganization()
+	{
+		return mpAtlas ? ohpl_h5_atlas_additions(mpAtlas) : mlAdditionsSinceReorganization;
+	}
+
 	void cFrameBitmap::SetNeedReorganisation()
 	{
+		if(mpAtlas){ ohpl_h5_atlas_set_need_reorg(mpAtlas, true); return; }
 		mbNeedNeedReorganisation = true;
 	}
 
@@ -204,6 +286,12 @@ namespace hpl {
 
 	void cFrameBitmap::UpdateBeforeDraw()
 	{
+		if(mpAtlas)
+		{
+			if(ohpl_h5_atlas_take_need_reorg(mpAtlas)) Reorganize();
+			FlushToTexture();
+			return;
+		}
 		if(mbNeedNeedReorganisation)
 		{
 			Reorganize();
@@ -236,8 +324,60 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
+	void cFrameBitmap::ReorganizeRust()
+	{
+		std::vector<cFrameSubImage*> vSubs;
+		std::vector<cRect2l> vRects;
+		for(cFBitmapImageListIt it = mlstImages.begin(); it != mlstImages.end(); ++it)
+		{
+			if((*it)->mpSubImage==NULL) continue;
+			vSubs.push_back((*it)->mpSubImage);
+			vRects.push_back((*it)->mRect);
+		}
+		size_t lNum = vSubs.size();
+
+		OhplH5Surface dst;
+		unsigned char *pDst;
+		size_t lDstLen;
+		BitmapPix(mpBitmap, dst, pDst, lDstLen, true);
+
+		std::unique_ptr<bool[]> vFit(new bool[lNum+1]);
+		std::vector<cRect2l> vOut(lNum+1);
+		std::vector<size_t> vOrder(lNum+1);
+		size_t lCount = 0;
+		ohpl_h5_atlas_reorganize(mpAtlas, &dst, pDst, lDstLen, vRects.data(), lNum, vOut.data(), vFit.get(), vOrder.data(), &lCount);
+
+		//Deleting the old images unlinks their subimages
+		STLDeleteAll(mlstImages);
+		mlstImages.clear();
+
+		for(size_t i=0; i<lNum; ++i)
+		{
+			if(vFit[i]==false)
+				Error("When reorganizing images according to previous order an image still does not fit!!!\n");
+		}
+
+		for(size_t i=0; i<lCount; ++i)
+		{
+			size_t lIdx = vOrder[i];
+			cFBitmapImage *pImage = hplNew( cFBitmapImage, () );
+			pImage->mRect = vOut[lIdx];
+			pImage->mpSubImage = vSubs[lIdx];
+			vSubs[lIdx]->mpFrameBitmapImage = pImage;
+			mlstImages.push_back(pImage);
+		}
+
+		mlPicCount = ohpl_h5_atlas_pic_count(mpAtlas);
+		if(lCount > 0) mpFrameTexture->SetPicCount(mlPicCount);
+
+		for(cFBitmapImageListIt it = mlstImages.begin(); it != mlstImages.end(); ++it)
+			(*it)->mpSubImage->SetNeedUpdateUvs();
+	}
+
 	void cFrameBitmap::Reorganize()
 	{
+		if(mpAtlas){ ReorganizeRust(); return; }
+
 		tFrameBitmapCombList lstBitmaps;
 
 		bool mbLogTime = false;
@@ -346,7 +486,7 @@ namespace hpl {
 
 	bool cFrameBitmap::FlushToTexture()
 	{
-		if(mbIsUpdated)
+		if(mpAtlas ? ohpl_h5_atlas_take_updated(mpAtlas) : mbIsUpdated)
 		{
 			mpFrameTexture->GetTexture()->CreateFromBitmap(mpBitmap);
 			mpFrameTexture->GetTexture()->SetWrapS(eTextureWrap_ClampToEdge);

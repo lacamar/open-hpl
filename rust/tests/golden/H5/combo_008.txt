@@ -1,0 +1,85 @@
+mgr mat88 3
+-o setup 0 mode0_20 vs_49.vert fs_44.frag f:2:Feat24 f:3:Feat20 f:3:Feat11 f:3:Feat27 f:1:Feat7 d:Def3:653
+combos=32
+-o setup 1 mode1_11 vs_37.vert fs_30.frag f:3:Feat0 d:Def6:330
+combos=2
+-o setup 2 mode2_47 vs_45.vert fs_26.frag d:Def0:273 d:Def6:2
+combos=1
+-o shader 2 1 1
+create file=vs_45.vert type=0 vars=Def0=273;Def6=2;
+shader id=0
+-o name 1 0
+mat88_mode1_11
+-o name 2 1
+mat88_mode2_47
+-o name 1 0
+mat88_mode1_11
+-o shader 0 13 1
+create file=vs_49.vert type=0 vars=Def3=653;Feat11=;Feat27=;
+shader id=12
+-o name 1 1
+mat88_mode1_11_Feat0
+-o shader 1 0 2
+create file=fs_30.frag type=1 vars=Def6=330;
+shader id=0
+-o name 1 1
+mat88_mode1_11_Feat0
+-o shader 0 4 1
+create file=vs_49.vert type=0 vars=Def3=653;Feat11=;
+shader id=4
+-o shader 2 1 1
+shader id=0
+-o name 0 15
+mat88_mode0_20_Feat24_Feat20_Feat11_Feat27
+-o name 2 1
+mat88_mode2_47
+-o name 1 1
+mat88_mode1_11_Feat0
+-o name 2 1
+mat88_mode2_47
+-o shader 1 1 1
+create file=vs_37.vert type=0 vars=Def6=330;Feat0=;
+shader id=1
+-o name 0 3
+mat88_mode0_20_Feat24_Feat20
+-o shader 2 0 2
+create file=fs_26.frag type=1 vars=Def0=273;Def6=2;
+shader id=0
+-o shader 1 0 1
+create file=vs_37.vert type=0 vars=Def6=330;
+shader id=0
+-o name 2 1
+mat88_mode2_47
+-o shader 1 0 2
+shader id=0
+-o shader 0 11 1
+create file=vs_49.vert type=0 vars=Def3=653;Feat20=;Feat27=;
+shader id=10
+-o name 0 24
+mat88_mode0_20_Feat27_Feat7
+-o name 2 0
+mat88_mode2_47
+-o name 0 0
+mat88_mode0_20
+-o shader 1 1 1
+shader id=1
+-o shader 2 1 2
+shader id=0
+-o shader 2 0 1
+shader id=0
+-o shader 0 24 2
+create file=fs_44.frag type=1 vars=Def3=653;Feat27=;
+shader id=8
+-o name 1 0
+mat88_mode1_11
+-o name 1 0
+mat88_mode1_11
+-o name 1 1
+mat88_mode1_11_Feat0
+-o name 0 29
+mat88_mode0_20_Feat24_Feat11_Feat27_Feat7
+-o name 1 0
+mat88_mode1_11
+-o name 2 0
+mat88_mode2_47
+-o end

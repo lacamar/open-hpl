@@ -13,7 +13,7 @@ use crate::types::{Vector2f, Vector2l, Vector3l};
 /// The bitmap scratch pixels and libc `rand()` are process-wide.
 static GLOBAL: Mutex<()> = Mutex::new(());
 
-fn global() -> MutexGuard<'static, ()> {
+pub(super) fn global() -> MutexGuard<'static, ()> {
     GLOBAL.lock().unwrap_or_else(|e| e.into_inner())
 }
 

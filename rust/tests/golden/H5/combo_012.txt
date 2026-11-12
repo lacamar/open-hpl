@@ -1,0 +1,93 @@
+mgr mat21 2
+-o rename renamed53
+-o setup 0 mode0_34 vs_11.vert fs_0.frag f:1:Feat9 f:2:Feat25 f:3:Feat0 f:1:Feat16 d:Def6:394 d:Def9:341
+combos=16
+-o setup 1 mode1_49 vs_7.vert fs_2.frag f:1:Feat22 f:1:Feat27 f:2:Feat1 d:Def1:708 d:Def4:406 d:Def6:561
+combos=8
+-o shader 1 7 1
+create file=vs_7.vert type=0 vars=Def1=708;Def4=406;Def6=561;Feat22=;Feat27=;
+shader id=3
+-o name 0 14
+renamed53_mode0_34_Feat25_Feat0_Feat16
+-o shader 1 2 1
+create file=vs_7.vert type=0 vars=Def1=708;Def4=406;Def6=561;Feat27=;
+shader id=2
+-o shader 1 6 1
+shader id=2
+-o name 1 6
+renamed53_mode1_49_Feat27_Feat1
+-o shader 1 6 1
+shader id=2
+-o shader 0 12 2
+create file=fs_0.frag type=1 vars=Def6=394;Def9=341;Feat0=;
+shader id=4
+-o shader 0 7 1
+create file=vs_11.vert type=0 vars=Def6=394;Def9=341;Feat0=;Feat9=;
+shader id=5
+-o shader 0 1 2
+create file=fs_0.frag type=1 vars=Def6=394;Def9=341;
+shader id=0
+-o shader 1 1 1
+create file=vs_7.vert type=0 vars=Def1=708;Def4=406;Def6=561;Feat22=;
+shader id=1
+-o name 0 15
+renamed53_mode0_34_Feat9_Feat25_Feat0_Feat16
+-o shader 1 7 2
+create file=fs_2.frag type=1 vars=Def1=708;Def4=406;Def6=561;Feat1=;
+shader id=4
+-o shader 0 6 2
+create file=fs_0.frag type=1 vars=Def6=394;Def9=341;Feat0=;Feat25=;
+shader id=6
+-o shader 1 5 2
+shader id=4
+-o name 0 12
+renamed53_mode0_34_Feat0_Feat16
+-o shader 0 6 1
+create file=vs_11.vert type=0 vars=Def6=394;Def9=341;Feat0=;
+shader id=4
+-o shader 0 0 2
+shader id=0
+-o name 1 0
+renamed53_mode1_49
+-o shader 0 3 2
+create file=fs_0.frag type=1 vars=Def6=394;Def9=341;Feat25=;
+shader id=2
+-o name 1 4
+renamed53_mode1_49_Feat1
+-o shader 1 5 2
+shader id=4
+-o name 1 0
+renamed53_mode1_49
+-o name 0 3
+renamed53_mode0_34_Feat9_Feat25
+-o name 0 7
+renamed53_mode0_34_Feat9_Feat25_Feat0
+-o shader 1 5 1
+shader id=1
+-o shader 0 11 1
+create file=vs_11.vert type=0 vars=Def6=394;Def9=341;Feat16=;Feat9=;
+shader id=9
+-o name 1 5
+renamed53_mode1_49_Feat22_Feat1
+-o name 1 6
+renamed53_mode1_49_Feat27_Feat1
+-o shader 0 11 1
+shader id=9
+-o shader 0 12 1
+create file=vs_11.vert type=0 vars=Def6=394;Def9=341;Feat0=;Feat16=;
+shader id=12
+-o shader 0 12 1
+shader id=12
+-o name 0 14
+renamed53_mode0_34_Feat25_Feat0_Feat16
+-o name 1 7
+renamed53_mode1_49_Feat22_Feat27_Feat1
+-o shader 0 8 1
+create file=vs_11.vert type=0 vars=Def6=394;Def9=341;Feat16=;
+shader id=8
+-o name 0 13
+renamed53_mode0_34_Feat9_Feat0_Feat16
+-o shader 1 4 1
+create file=vs_7.vert type=0 vars=Def1=708;Def4=406;Def6=561;
+shader id=0
+-o end

@@ -4,10 +4,13 @@
 //! see plain buffers.
 
 pub mod anim;
+pub mod atlas;
 pub mod bitmap;
+pub mod combo;
 pub mod decal;
 mod ffi;
 mod ffi_decal;
+mod ffi_h5;
 mod ffi_mesh;
 pub mod font;
 pub mod formats;
@@ -22,5 +25,7 @@ pub mod uv;
 mod tests;
 #[cfg(test)]
 mod tests_decal;
+#[cfg(test)]
+mod tests_h5;
 #[cfg(test)]
 mod tests_mesh;
