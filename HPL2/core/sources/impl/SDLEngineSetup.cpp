@@ -39,7 +39,7 @@
 #include "impl/MouseSDL.h"
 #include "impl/LowLevelGraphicsSDL.h"
 #ifdef HPL_VULKAN
-#include "impl/LowLevelGraphicsVulkan.h"
+#include "../../../../cshim/vk_backend.h"
 #endif
 #include "impl/LowLevelResourcesSDL.h"
 #include "impl/LowLevelSystemSDL.h"
@@ -165,9 +165,9 @@ namespace hpl {
 #ifdef HPL_VULKAN
 		if(pRenderer && ohpl_sys_renderer_is_vulkan(pRenderer))
 		{
-			cLowLevelGraphicsVulkan *pVulkan = hplNew( cLowLevelGraphicsVulkan,() );
-			if(apVars) pVulkan->SetColorOutput(apVars->mGraphics.msColorOutput, apVars->mGraphics.mfPaperWhite, apVars->mGraphics.mfPeakNits);
-			mpLowLevelGraphics = pVulkan;
+			const tString sMode = apVars ? apVars->mGraphics.msColorOutput : tString();
+			mpLowLevelGraphics = reinterpret_cast<iLowLevelGraphics*>(ohpl_vk_create(apVars ? sMode.c_str() : NULL,
+				apVars ? apVars->mGraphics.mfPaperWhite : 0, apVars ? apVars->mGraphics.mfPeakNits : 0));
 		}
 		else
 #endif
