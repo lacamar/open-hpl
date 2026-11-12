@@ -107,6 +107,7 @@ public:
 	//////////////////////
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
 
 
 	//////////////////////

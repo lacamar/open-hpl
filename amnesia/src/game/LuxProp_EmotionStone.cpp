@@ -59,13 +59,13 @@ void cLuxPropLoader_EmotionStone::LoadInstanceVariables(iLuxProp *apProp, cResou
 {
 	cLuxProp_EmotionStone  *pEmotionStone = static_cast<cLuxProp_EmotionStone*>(apProp);
 
-	pEmotionStone->msDescCat = apInstanceVars->GetVarString("DescCat","");
-	pEmotionStone->msDescEntry = apInstanceVars->GetVarString("DescEntry","");
-
-	pEmotionStone->msTextCat = apInstanceVars->GetVarString("TextCat","");
-	pEmotionStone->msTextEntry = apInstanceVars->GetVarString("TextEntry","");
-
-	pEmotionStone->msSound = apInstanceVars->GetVarString("Sound","");
+	OhplGa4VarsAdapter vars(apInstanceVars);
+	vars.Slot(kOhplGa4cSlot_EmotionDescCat, pEmotionStone->msDescCat)
+		.Slot(kOhplGa4cSlot_EmotionDescEntry, pEmotionStone->msDescEntry)
+		.Slot(kOhplGa4cSlot_EmotionTextCat, pEmotionStone->msTextCat)
+		.Slot(kOhplGa4cSlot_EmotionTextEntry, pEmotionStone->msTextEntry)
+		.Slot(kOhplGa4cSlot_EmotionSound, pEmotionStone->msSound);
+	ohpl_ga4c_emotion_load_instance(vars.Vars());
 }
 
 //-----------------------------------------------------------------------
@@ -147,7 +147,7 @@ eLuxFocusCrosshair cLuxProp_EmotionStone::GetFocusCrosshair(iPhysicsBody *apBody
 
 tWString cLuxProp_EmotionStone::GetFocusText()
 {
-	if(msDescCat == "" || msDescEntry == "") return _W("");
+	if(ohpl_ga4c_emotion_has_text(msDescCat == "", msDescEntry == "") == false) return _W("");
 
 	return gpBase->mpHelpFuncs->ParseString(kTranslate(msDescCat ,msDescEntry));
 }
