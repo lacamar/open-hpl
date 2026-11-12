@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxProp.h"
 
 //----------------------------------------------
 
@@ -116,6 +117,7 @@ class iLuxEntity : public iLuxCollideCallbackContainer
 friend class cLuxMap;
 friend class cLuxSavedGameEntity;
 friend class cLuxSavedGameMap;
+friend class OhplGa4cEntSink;
 public:	
 	iLuxEntity(const tString &asName, int alID, cLuxMap *apMap,eLuxEntityType aEntityType);
 	virtual ~iLuxEntity();
@@ -238,12 +240,18 @@ protected:
 	tString msConnectionStateChangeCallback;
 
 	tString msInteractCallback;
-	bool mbInteractCallbackRemove;
-
 	tString msLookAtCallback;
-	bool mbLookAtCallbackRemove;
-	float mfLookAtCount;
-	bool mbIsLookedAt;
+	union
+	{
+		OhplGa4cEntityCb mGa4cCb;
+		struct
+		{
+			bool mbInteractCallbackRemove;
+			bool mbLookAtCallbackRemove;
+			float mfLookAtCount;
+			bool mbIsLookedAt;
+		};
+	};
 
 	float mfMaxFocusDistance;
 
@@ -262,9 +270,25 @@ private:
 	eLuxEntityType mEntityType;
 
 	void DestroyMe(){ mbDestroyMe = true;}
+	void Ga4cApplyOp(const OhplGa4Op &aOp, const tString *apType);
 };
 
 //----------------------------------------------
 
+
+class OhplGa4cEntSink
+{
+public:
+	OhplGa4cEntSink(iLuxEntity *apEntity, const tString *apType = NULL) : mpEntity(apEntity), mpType(apType) { mSink.ctx = this; mSink.push = &Push; }
+	const OhplGa4Sink *Sink() const { return &mSink; }
+
+private:
+	static void Push(void *c, const OhplGa4Op *op) { OhplGa4cEntSink *me = (OhplGa4cEntSink*)c; me->mpEntity->Ga4cApplyOp(*op, me->mpType); }
+	iLuxEntity *mpEntity;
+	const tString *mpType;
+	OhplGa4Sink mSink;
+};
+
+//----------------------------------------------
 
 #endif // LUX_ENTITY_H

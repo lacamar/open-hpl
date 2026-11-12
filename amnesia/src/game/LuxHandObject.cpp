@@ -20,6 +20,28 @@
 #include "LuxHandObject.h"
 
 #include "LuxMap.h"
+#include "RustLuxProp.h"
+
+//////////////////////////////////////////////////////////////////////////
+// XML ATTRIBUTES AS VARIABLES
+//////////////////////////////////////////////////////////////////////////
+
+class cLuxHandXmlVars
+{
+public:
+	cLuxHandXmlVars(cXmlElement *apElem) : mpElem(apElem) {}
+	tString GetVarString(const tString &asName, const tString &asDefault=""){ return mpElem->GetAttributeString(asName, asDefault); }
+	bool GetVarBool(const tString &asName, bool abDefault=false){ return mpElem->GetAttributeBool(asName, abDefault); }
+	float GetVarFloat(const tString &asName, float afDefault=0){ return mpElem->GetAttributeFloat(asName, afDefault); }
+	int GetVarInt(const tString &asName, int alDefault=0){ return mpElem->GetAttributeInt(asName, alDefault); }
+	cVector2f GetVarVector2f(const tString &asName, const cVector2f &avDefault=0){ return mpElem->GetAttributeVector2f(asName, avDefault); }
+	cVector3f GetVarVector3f(const tString &asName, const cVector3f &avDefault=0){ return mpElem->GetAttributeVector3f(asName, avDefault); }
+	cColor GetVarColor(const tString &asName, const cColor &aDefault=cColor(0,0)){ return mpElem->GetAttributeColor(asName, aDefault); }
+
+private:
+	cXmlElement *mpElem;
+};
+
 
 //////////////////////////////////////////////////////////////////////////
 // CONSTRUCTORS
@@ -72,7 +94,7 @@ void cLuxHandObjectLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_
 	// Load mesh
 
 	//If hand object has not saved mesh, save it and increase user count!
-	if(mpHandObject->mpMesh==NULL)
+	if(ohpl_ga4c_hand_adopt_mesh(mpHandObject->mpMesh != NULL))
 	{
 		mpMesh->IncUserCount();
 		mpHandObject->mpMesh = mpMesh;
@@ -89,12 +111,14 @@ void cLuxHandObjectLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_
 
 	if(mpEntity)
 	{
-		cMatrixf mtxInvModel = cMath::MatrixInverse(mpEntity->GetLocalMatrix());
+		cMatrixf mtxInvModel;
+		ohpl_ga4c_hand_model_inverse(mpEntity->GetLocalMatrix().v, mtxInvModel.v);
 
 		for(size_t i=0; i<mvBillboards.size(); ++i)
 		{
 			cBillboard *pBB = mvBillboards[i];
-			cMatrixf mtxLocal = cMath::MatrixMul(mtxInvModel, pBB->GetLocalMatrix());
+			cMatrixf mtxLocal;
+			ohpl_ga4c_hand_child_local(mtxInvModel.v, pBB->GetLocalMatrix().v, mtxLocal.v);
 			pBB->SetMatrix(mtxLocal);
 
 			mpEntity->AddChild(pBB);
@@ -103,7 +127,8 @@ void cLuxHandObjectLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_
 		for(size_t i=0; i<mvLights.size(); ++i)
 		{
 			iLight *pLight = mvLights[i];
-			cMatrixf mtxLocal = cMath::MatrixMul(mtxInvModel, pLight->GetLocalMatrix());
+			cMatrixf mtxLocal;
+			ohpl_ga4c_hand_child_local(mtxInvModel.v, pLight->GetLocalMatrix().v, mtxLocal.v);
 			pLight->SetMatrix(mtxLocal);
 
 			mpEntity->AddChild(pLight);
@@ -122,7 +147,10 @@ void cLuxHandObjectLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_
 
 bool iLuxHandObject::LoadMainData(cXmlElement *apMainElem)
 {
-	msModelFile = apMainElem->GetAttributeString("Model");
+	cLuxHandXmlVars xml(apMainElem);
+	OhplGa4bVars<cLuxHandXmlVars> vars(&xml);
+	vars.Slot(kOhplGa4cSlot_HandModel, msModelFile);
+	ohpl_ga4c_hand_load_main(vars.BaseVars());
 
 	return true;
 }
@@ -133,23 +161,13 @@ void iLuxHandObject::LoadSettings(cXmlElement *apVarsElem)
 {
 	/////////////////////////////
 	//Load base settings 
-	
-	//Offset matrix
-	cVector3f vOffsetScale = apVarsElem->GetAttributeVector3f("OffsetScale",1);
-	cVector3f vOffsetRotation =cMath::Vector3ToRad(apVarsElem->GetAttributeVector3f("OffsetRotation",0));
-	cVector3f vOffsetPos = apVarsElem->GetAttributeVector3f("OffsetPosition",0);
-
-	m_mtxOffset = cMath::MatrixMul(cMath::MatrixRotate(vOffsetRotation,eEulerRotationOrder_XYZ), cMath::MatrixScale(vOffsetScale));
-	m_mtxOffset.SetTranslation(vOffsetPos);
-
-	//Animations
-	msHandsAnim_Idle =		apVarsElem->GetAttributeString("HandsAnim_Idle", "");
-	msHandsAnim_Draw =		apVarsElem->GetAttributeString("HandsAnim_Draw", "");
-	msHandsAnim_Holster =	apVarsElem->GetAttributeString("HandsAnim_Holster", "");
-
-	//Bone that object attaches to
-	msAttachBoneName =	apVarsElem->GetAttributeString("AttachBoneName", "attachpoint");
-	
+	cLuxHandXmlVars xml(apVarsElem);
+	OhplGa4bVars<cLuxHandXmlVars> vars(&xml);
+	vars.Slot(kOhplGa4cSlot_HandAnimIdle, msHandsAnim_Idle)
+		.Slot(kOhplGa4cSlot_HandAnimDraw, msHandsAnim_Draw)
+		.Slot(kOhplGa4cSlot_HandAnimHolster, msHandsAnim_Holster)
+		.Slot(kOhplGa4cSlot_HandBone, msAttachBoneName);
+	ohpl_ga4c_hand_load_settings(vars.BaseVars(), m_mtxOffset.v);
 
 	/////////////////////////////
 	//Load implemented vars
@@ -160,7 +178,7 @@ void iLuxHandObject::LoadSettings(cXmlElement *apVarsElem)
 
 void iLuxHandObject::CreateEntity(cLuxMap *apMap)
 {
-	if(mpMeshEntity) return;
+	if(ohpl_ga4c_hand_create_needed(mpMeshEntity != NULL) == false) return;
 
 	///////////////////////
 	// Load the entity

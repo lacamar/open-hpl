@@ -22,6 +22,7 @@
 #include "LuxMap.h"
 #include "LuxPlayer.h"
 #include "LuxInteractConnections.h"
+#include "LuxProp.h"
 
 
 
@@ -85,7 +86,7 @@ void cLuxStaticPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_
 	{
 		if(mpEntity)
 		{
-			mpEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, apInstanceVars->GetVarBool("CastShadows", true));
+			mpEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, ohpl_ga4c_static_cast_shadows(OhplGa4VarsAdapter(apInstanceVars).Vars()));
 		}
 	}
 }

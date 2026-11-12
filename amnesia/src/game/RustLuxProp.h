@@ -1088,4 +1088,224 @@ extern "C"
 	float ohpl_ga4b_photo_illum_step(float current, float goal, float dt);
 }
 
+// ---- GA4c: entity base, chest, emotion stone, item, NPC, static prop, hand-object base ----
+
+enum
+{
+	kOhplGa4cOp_EntCallback = 200,
+	kOhplGa4cOp_EntInteract = 201,
+	kOhplGa4cOp_EntClearInteract = 202,
+	kOhplGa4cOp_EntLookAtEnter = 203,
+	kOhplGa4cOp_EntLookAtLeave = 204,
+	kOhplGa4cOp_EntConnChangeCb = 205,
+	kOhplGa4cOp_EntConnSend = 206,
+	kOhplGa4cOp_EntConnScript = 207,
+	kOhplGa4cOp_ChestHingeMin = 210,
+	kOhplGa4cOp_ChestHingeMax = 211,
+	kOhplGa4cOp_ChestHingeSticky = 212,
+	kOhplGa4cOp_ChestAddForce = 213,
+	kOhplGa4cOp_ChestPay = 214,
+	kOhplGa4cOp_ChestUnlock = 215,
+	kOhplGa4cOp_ChestLog = 216,
+	kOhplGa4cOp_ChestCompletion = 217,
+	kOhplGa4cOp_ChestSound = 218,
+	kOhplGa4cOp_ItemAdd = 220,
+	kOhplGa4cOp_ItemDestroy = 221,
+	kOhplGa4cOp_ItemPickSound = 222,
+	kOhplGa4cOp_ItemPickMessage = 223,
+	kOhplGa4cOp_ItemCallback = 224,
+	kOhplGa4cOp_ItemFlash = 225,
+	kOhplGa4cOp_NpcAnim = 230,
+	kOhplGa4cOp_NpcBonesResize = 231,
+	kOhplGa4cOp_NpcBoneSet = 232,
+	kOhplGa4cOp_NpcErrorNoSkeleton = 233,
+	kOhplGa4cOp_NpcErrorBoneArray = 234,
+	kOhplGa4cOp_NpcErrorBone = 235,
+	kOhplGa4cOp_NpcBoneRotate = 236,
+
+	kOhplGa4cNpcAnim_Awake = 0,
+	kOhplGa4cNpcAnim_Sleep = 1,
+	kOhplGa4cNpcAnim_Idle = 2,
+	kOhplGa4cNpcAnim_SleepIdle = 3,
+
+	kOhplGa4cSlot_EmotionDescCat = 100,
+	kOhplGa4cSlot_EmotionDescEntry = 101,
+	kOhplGa4cSlot_EmotionTextCat = 102,
+	kOhplGa4cSlot_EmotionTextEntry = 103,
+	kOhplGa4cSlot_EmotionSound = 104,
+	kOhplGa4cSlot_ItemImage = 110,
+	kOhplGa4cSlot_ItemPickSound = 111,
+	kOhplGa4cSlot_ItemSubType = 112,
+	kOhplGa4cSlot_ItemVal = 113,
+	kOhplGa4cSlot_ItemExtraVal = 114,
+	kOhplGa4cSlot_NpcArea = 120,
+	kOhplGa4cSlot_HandAnimIdle = 130,
+	kOhplGa4cSlot_HandAnimDraw = 131,
+	kOhplGa4cSlot_HandAnimHolster = 132,
+	kOhplGa4cSlot_HandBone = 133,
+	kOhplGa4cSlot_HandModel = 134,
+
+	kOhplGa4cAttach_None = 0,
+	kOhplGa4cAttach_Child = 1,
+	kOhplGa4cAttach_Position = 2,
+	kOhplGa4cCrosshair_Default = 0,
+	kOhplGa4cCrosshair_Grab = 1,
+	kOhplGa4cChest_NoInteract = 0,
+	kOhplGa4cChest_NoCoins = 1,
+	kOhplGa4cChest_Question = 2,
+	kOhplGa4cItem_Other = 0,
+	kOhplGa4cItem_Coins = 1,
+	kOhplGa4cItem_Health = 2,
+	kOhplGa4cItem_Sanity = 3,
+	kOhplGa4cItem_LampOil = 4,
+	kOhplGa4cItem_Note = 5,
+	kOhplGa4cItem_Diary = 6,
+	kOhplGa4cArea_Find = 1,
+	kOhplGa4cArea_WarnEmpty = 2,
+};
+
+struct OhplGa4cEntityCb
+{
+	bool interact_remove;
+	bool lookat_remove;
+	float lookat_count;
+	bool is_looked_at;
+};
+
+struct OhplGa4cItemAmount
+{
+	bool set;
+	float amount;
+};
+
+struct OhplGa4cItemState
+{
+	bool remove_prop;
+	float flash_alpha;
+};
+
+struct OhplGa4cNpcParams
+{
+	float head_move_speed_mul;
+	float head_move_max_speed;
+	float max_head_angle;
+};
+
+struct OhplGa4cNpcState
+{
+	float head_angle;
+	float in_area_count;
+	bool player_in_area;
+	bool awake;
+	bool playing_wake_anim;
+	bool follow_player;
+};
+
+struct OhplGa4cNpcBone
+{
+	int idx;
+	float mul;
+	float rot_vec[3];
+};
+
+struct OhplGa4cLookHost
+{
+	void *ctx;
+	int (*body_num)(void *ctx);
+	bool (*body)(void *ctx, int i, OhplGa4bLookIn *out);
+};
+
+struct OhplGa4cConnHost
+{
+	void *ctx;
+	int (*conn_num)(void *ctx);
+	void (*conn)(void *ctx, int i, int *used, bool *invert);
+	bool (*has_callback)(void *ctx, int i);
+};
+
+struct OhplGa4cCollideHost
+{
+	void *ctx;
+	int (*body_num)(void *ctx);
+	bool (*bv_intersects)(void *ctx, int i);
+	bool (*shape_collides)(void *ctx, int i);
+};
+
+struct OhplGa4cItemHost
+{
+	void *ctx;
+	bool (*show_pickup)(void *ctx);
+	int (*sub_mesh_num)(void *ctx);
+	bool (*sub_mesh_visible)(void *ctx, int i);
+};
+
+struct OhplGa4cSkeleton
+{
+	void *ctx;
+	bool (*present)(void *ctx);
+	int (*bone_index)(void *ctx, const unsigned char *name, size_t len);
+	void (*bone_world)(void *ctx, int idx, float *out);
+};
+
+struct OhplGa4cNpcHost
+{
+	void *ctx;
+	bool (*check_area)(void *ctx);
+	void (*mesh_world)(void *ctx, float *out);
+	void (*mesh_position)(void *ctx, float *out);
+	void (*player_position)(void *ctx, float *out);
+};
+
+static_assert(sizeof(OhplGa4cEntityCb) == 12, "OhplGa4cEntityCb layout");
+static_assert(sizeof(OhplGa4cItemAmount) == 8, "OhplGa4cItemAmount layout");
+static_assert(sizeof(OhplGa4cItemState) == 8, "OhplGa4cItemState layout");
+static_assert(sizeof(OhplGa4cNpcParams) == 12, "OhplGa4cNpcParams layout");
+static_assert(sizeof(OhplGa4cNpcState) == 12, "OhplGa4cNpcState layout");
+static_assert(sizeof(OhplGa4cNpcBone) == 20, "OhplGa4cNpcBone layout");
+
+extern "C"
+{
+	void ohpl_ga4c_ent_run_callback(bool has, const OhplGa4Sink *sink);
+	void ohpl_ga4c_ent_run_interact(OhplGa4cEntityCb *cb, bool has, const OhplGa4Sink *sink);
+	bool ohpl_ga4c_ent_set_active(bool *active, bool x);
+	int ohpl_ga4c_ent_attach(bool sound, bool attach_entity, bool attach);
+	void ohpl_ga4c_ent_look_at(OhplGa4cEntityCb *cb, bool has_callback, float dt, const OhplGa4cLookHost *host, const OhplGa4bLos *los, const OhplGa4Sink *sink);
+	void ohpl_ga4c_ent_conn_change(int state, bool has_change_callback, const OhplGa4cConnHost *host, const OhplGa4Sink *sink);
+	bool ohpl_ga4c_ent_collides(const OhplGa4cCollideHost *host);
+	bool ohpl_ga4c_ent_preload_has_doc(bool doc);
+	bool ohpl_ga4c_ent_preload_has_mesh(bool mesh);
+	bool ohpl_ga4c_ent_connection_missing(bool found);
+	void ohpl_ga4c_chest_load(const OhplGa4Vars *v, OhplGa4MoveData *out);
+	int ohpl_ga4c_chest_load_instance(const OhplGa4Vars *v);
+	int ohpl_ga4c_chest_crosshair(bool locked);
+	int ohpl_ga4c_chest_interact(bool locked, int coins_needed, int coins);
+	void ohpl_ga4c_chest_press(bool yes, int coins_needed, const OhplGa4Sink *sink);
+	void ohpl_ga4c_chest_set_locked(bool *locked, bool new_locked, const float *max_angles, int n, const OhplGa4Sink *sink);
+	bool ohpl_ga4c_chest_conn_locked(int state);
+	void ohpl_ga4c_emotion_load_instance(const OhplGa4Vars *v);
+	bool ohpl_ga4c_emotion_has_text(bool cat_empty, bool entry_empty);
+	void ohpl_ga4c_item_load(const OhplGa4Vars *v, int kind, OhplGa4cItemAmount *out);
+	void ohpl_ga4c_item_load_instance(const OhplGa4Vars *v, int kind, OhplGa4cItemAmount *out);
+	bool ohpl_ga4c_item_can_interact(bool destroy_me);
+	void ohpl_ga4c_item_interact(OhplGa4cItemState *s, const OhplGa4cItemHost *host, const OhplGa4Sink *sink);
+	void ohpl_ga4c_item_update(OhplGa4cItemState *s, float dt, const float *camera, const float *body, const OhplGa4cItemHost *host, const OhplGa4Sink *sink);
+	void ohpl_ga4c_npc_state_new(OhplGa4cNpcState *s);
+	void ohpl_ga4c_npc_load(const OhplGa4Vars *v, const OhplGa4cSkeleton *skel, OhplGa4cNpcParams *out, const OhplGa4Sink *sink);
+	bool ohpl_ga4c_npc_load_instance(const OhplGa4Vars *v);
+	void ohpl_ga4c_npc_set_awake(OhplGa4cNpcState *s, bool awake, bool effects, const OhplGa4Sink *sink);
+	void ohpl_ga4c_npc_update_wake(OhplGa4cNpcState *s, int non_loop_anim, const OhplGa4Sink *sink);
+	int ohpl_ga4c_npc_after_world_load(bool area_name_empty);
+	bool ohpl_ga4c_npc_area_missing(bool found);
+	void ohpl_ga4c_npc_update_area(OhplGa4cNpcState *s, bool has_area, float dt, const OhplGa4cNpcHost *host);
+	void ohpl_ga4c_npc_update_head(OhplGa4cNpcState *s, const OhplGa4cNpcParams *p, const OhplGa4cNpcBone *bones, int n, float dt, const OhplGa4cNpcHost *host, const OhplGa4Sink *sink);
+	bool ohpl_ga4c_static_cast_shadows(const OhplGa4Vars *v);
+	void ohpl_ga4c_hand_load_settings(const OhplGa4Vars *v, float *out);
+	void ohpl_ga4c_hand_load_main(const OhplGa4Vars *v);
+	bool ohpl_ga4c_hand_adopt_mesh(bool has_mesh);
+	void ohpl_ga4c_hand_model_inverse(const float *local, float *out);
+	void ohpl_ga4c_hand_child_local(const float *inv, const float *child, float *out);
+	bool ohpl_ga4c_hand_create_needed(bool has_entity);
+}
+
+
 #endif

@@ -48,42 +48,35 @@ iLuxProp *cLuxPropLoader_Item::CreateProp(const tString& asName, int alID, cLuxM
 
 //-----------------------------------------------------------------------
 
+static int LuxItemKind(eLuxItemType aType)
+{
+	switch(aType)
+	{
+	case eLuxItemType_Coins:	return kOhplGa4cItem_Coins;
+	case eLuxItemType_Health:	return kOhplGa4cItem_Health;
+	case eLuxItemType_Sanity:	return kOhplGa4cItem_Sanity;
+	case eLuxItemType_LampOil:	return kOhplGa4cItem_LampOil;
+	case eLuxItemType_Note:		return kOhplGa4cItem_Note;
+	case eLuxItemType_Diary:	return kOhplGa4cItem_Diary;
+	default:					return kOhplGa4cItem_Other;
+	}
+}
+
+//-----------------------------------------------------------------------
+
 void cLuxPropLoader_Item::LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)
 {
 	cLuxProp_Item  *pItem = static_cast<cLuxProp_Item*>(apProp);
 
-	///////////////////////////
-	// General
 	pItem->mItemType = gpBase->mpInventory->GetItemTypeFromString(msEntitySubType);
 
-	pItem->msImageFile = GetVarString("ImageFile", "");
-	pItem->msPickSound = GetVarString("PickSound", "Generic");
-	pItem->msSubItemTypeName = GetVarString("SubItemTypeName", "");
-
-	///////////////////////////
-	// Coins
-	if(pItem->mItemType == eLuxItemType_Coins)
-	{
-		pItem->mfAmount = GetVarFloat("CoinAmount", 0);
-	}
-	///////////////////////////
-	// Health
-	else if(pItem->mItemType == eLuxItemType_Health)
-	{
-		pItem->mfAmount = GetVarFloat("HealAmount", 0);
-	}
-	///////////////////////////
-	// Sanity
-	else if(pItem->mItemType == eLuxItemType_Sanity)
-	{
-		pItem->mfAmount = GetVarFloat("HealAmount", 0);
-	}
-	///////////////////////////
-	// Lamp Oil
-	else if(pItem->mItemType == eLuxItemType_LampOil)
-	{
-		pItem->mfAmount = GetVarFloat("OilAmount", 0);
-	}
+	OhplGa4VarsAdapter vars(this);
+	vars.Slot(kOhplGa4cSlot_ItemImage, pItem->msImageFile)
+		.Slot(kOhplGa4cSlot_ItemPickSound, pItem->msPickSound)
+		.Slot(kOhplGa4cSlot_ItemSubType, pItem->msSubItemTypeName);
+	OhplGa4cItemAmount amount;
+	ohpl_ga4c_item_load(vars.Vars(), LuxItemKind(pItem->mItemType), &amount);
+	if(amount.set) pItem->mfAmount = amount.amount;
 }
 
 //-----------------------------------------------------------------------
@@ -92,27 +85,13 @@ void cLuxPropLoader_Item::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsO
 {
 	cLuxProp_Item  *pItem = static_cast<cLuxProp_Item*>(apProp);
 
-	///////////////////////////
-	// All
-	tString sCustomSubItemTypeName = apInstanceVars->GetVarString("CustomSubItemTypeName","");	
-
-    if(sCustomSubItemTypeName != "") pItem->msSubItemTypeName = sCustomSubItemTypeName;
-
-	///////////////////////////
-	// Note
-	if(pItem->mItemType == eLuxItemType_Note)
-	{
-		pItem->msVal = apInstanceVars->GetVarString("NoteText", "");
-		pItem->mfAmount = apInstanceVars->GetVarBool("OpenNoteInJournal", true) ? 1 : -1;
-		pItem->mfAmount *= apInstanceVars->GetVarBool("UseNarration", false) ? 2 : 1;
-	}
-	///////////////////////////
-	// Diary
-	else if(pItem->mItemType == eLuxItemType_Diary)
-	{
-		pItem->msVal = apInstanceVars->GetVarString("DiaryText", "");
-		pItem->msExtraVal = apInstanceVars->GetVarString("DiaryCallback", "");
-	}
+	OhplGa4VarsAdapter vars(apInstanceVars);
+	vars.Slot(kOhplGa4cSlot_ItemSubType, pItem->msSubItemTypeName)
+		.Slot(kOhplGa4cSlot_ItemVal, pItem->msVal)
+		.Slot(kOhplGa4cSlot_ItemExtraVal, pItem->msExtraVal);
+	OhplGa4cItemAmount amount;
+	ohpl_ga4c_item_load_instance(vars.Vars(), LuxItemKind(pItem->mItemType), &amount);
+	if(amount.set) pItem->mfAmount = amount.amount;
 }
 //-----------------------------------------------------------------------
 
@@ -126,7 +105,8 @@ cLuxProp_Item::cLuxProp_Item(const tString &asName,int alID, cLuxMap *apMap) : i
 {
 	mfAmount = 1.0f;
 	mlSpawnContainerID =-1;
-	mfFlashAlpha =0;
+	mS.remove_prop = false;
+	mS.flash_alpha =0;
 }
 
 //-----------------------------------------------------------------------
@@ -145,41 +125,79 @@ cLuxProp_Item::~cLuxProp_Item()
 
 bool cLuxProp_Item::CanInteract(iPhysicsBody *apBody)
 {
-	if(mbDestroyMe) return false; //To be 100% a player cannot double click on a note (if he is REALLY fast after closing journal)
-	return true;
+	return ohpl_ga4c_item_can_interact(mbDestroyMe);
 }
+
+class cLuxItemHost
+{
+public:
+	cLuxItemHost(cLuxProp_Item *apItem, cCamera *apCamera) : mpItem(apItem), mpCamera(apCamera)
+	{
+		mHost.ctx = this; mHost.show_pickup = &ShowPickup; mHost.sub_mesh_num = &SubMeshNum; mHost.sub_mesh_visible = &SubMeshVisible;
+	}
+	const OhplGa4cItemHost *Host() const { return &mHost; }
+
+private:
+	static cLuxItemHost *Me(void *c) { return (cLuxItemHost*)c; }
+	static bool ShowPickup(void *c)
+	{
+		iLuxItemType *pType = gpBase->mpInventory->GetItemTypeData(Me(c)->mpItem->mItemType);
+		return pType->ShowPickUpMessage();
+	}
+	static int SubMeshNum(void *c) { return Me(c)->mpItem->mpMeshEntity->GetSubMeshEntityNum(); }
+	static bool SubMeshVisible(void *c, int i)
+	{
+		cSubMeshEntity *pSubEnt = Me(c)->mpItem->mpMeshEntity->GetSubMeshEntity(i);
+		return Me(c)->mpCamera->GetFrustum()->CollideBoundingVolume(pSubEnt->GetBoundingVolume()) != eCollision_Outside;
+	}
+
+	cLuxProp_Item *mpItem;
+	cCamera *mpCamera;
+	OhplGa4cItemHost mHost;
+};
+
+//-----------------------------------------------------------------------
 
 bool cLuxProp_Item::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	////////////////////
-	//Picked up item
-	bool bRemoveProp=true;	
+	cLuxItemHost host(this, gpBase->mpPlayer->GetCamera());
+	OhplGa4Run run(this);
+	ohpl_ga4c_item_interact(&mS, host.Host(), run.Sink());
+	run.Finish();
 
-	gpBase->mpInventory->AddItem(msName, mItemType, msSubItemTypeName, msImageFile, mfAmount, msVal,msExtraVal ,&bRemoveProp);
+	return true;
+}
 
-	if(bRemoveProp)
+//-----------------------------------------------------------------------
+
+void cLuxProp_Item::Ga4ApplyOp(const OhplGa4Op &aOp)
+{
+	switch(aOp.code)
 	{
+	case kOhplGa4cOp_ItemAdd:
+		gpBase->mpInventory->AddItem(msName, mItemType, msSubItemTypeName, msImageFile, mfAmount, msVal,msExtraVal ,&mS.remove_prop);
+		break;
+	case kOhplGa4cOp_ItemDestroy:
 		mpMap->DestroyEntity(this);
-
+		break;
+	case kOhplGa4cOp_ItemPickSound:
 		gpBase->mpHelpFuncs->PlayGuiSoundData("ui/pick_"+msPickSound, eSoundEntryType_World);
-
-		iLuxItemType *pType = gpBase->mpInventory->GetItemTypeData(mItemType);
-		if(pType->ShowPickUpMessage())
+		break;
+	case kOhplGa4cOp_ItemPickMessage:
 		{
 			tString sEntry = "ItemName_"+msSubItemTypeName;
 			gpBase->mpMessageHandler->SetMessage(kTranslate("Inventory", "PickedUp")+_W(" ")+kTranslate("Inventory",sEntry), 0);
 		}
-
+		break;
+	case kOhplGa4cOp_ItemCallback:
 		RunCallbackFunc("OnPickup");
+		break;
+	case kOhplGa4cOp_ItemFlash:
+		gpBase->mpEffectRenderer->AddFlashObject(mpMeshEntity->GetSubMeshEntity(aOp.i), aOp.f[0]);
+		break;
+	default:
+		iLuxProp::Ga4ApplyOp(aOp);
 	}
-	/////////////////////
-	//Item is NOT picked up
-	else
-	{
-	}
-
-	
-	return true;
 }
 
 //-----------------------------------------------------------------------
@@ -202,36 +220,16 @@ void cLuxProp_Item::UpdatePropSpecific(float afTimeStep)
 {
 	if(mbInteractionDisabled) return;
 
-	/////////////////////////////////
-	// If near player, flash
 	cCamera *pCam =  gpBase->mpPlayer->GetCamera();
 	cVector3f vCameraPos = pCam->GetPosition();
 	cVector3f vBodyPos = mvBodies[0]->GetLocalPosition();
 	vCameraPos.y=0; 
 	vBodyPos.y =0;
 
-	float fDistSqrt = cMath::Vector3DistSqr(vCameraPos, vBodyPos);
-	if(fDistSqrt < 4.0f * 4.0f)
-	{
-		mfFlashAlpha += afTimeStep;
-		if(mfFlashAlpha >1)mfFlashAlpha =1;
-	}
-	else
-	{
-		mfFlashAlpha -=afTimeStep;
-		if(mfFlashAlpha <0)mfFlashAlpha =0;
-	}
-
-	if(mfFlashAlpha> 0)
-	{
-		for(int i=0; i<mpMeshEntity->GetSubMeshEntityNum(); ++i)
-		{
-			cSubMeshEntity *pSubEnt = mpMeshEntity->GetSubMeshEntity(i);
-
-			if(pCam->GetFrustum()->CollideBoundingVolume(pSubEnt->GetBoundingVolume()) != eCollision_Outside)
-				gpBase->mpEffectRenderer->AddFlashObject(pSubEnt, mfFlashAlpha);
-		}
-	}
+	cLuxItemHost host(this, pCam);
+	OhplGa4Run run(this);
+	ohpl_ga4c_item_update(&mS, afTimeStep, vCameraPos.v, vBodyPos.v, host.Host(), run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
