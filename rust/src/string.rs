@@ -259,8 +259,6 @@ pub fn numeric_suffix<T: Unit>(s: &[T]) -> (&[T], i32) {
 }
 
 pub fn matches_wildcard(pattern: &[u8], name: &[u8]) -> bool {
-    let pattern = to_lower(pattern);
-    let name = to_lower(name);
     if !pattern.contains(&b'*') {
         return pattern == name;
     }
@@ -600,6 +598,11 @@ mod tests {
             s("shutter_door_5_Hydroponics_1")
         ));
         assert!(!matches_wildcard(s("door*"), s("shutter_door")));
+        assert!(matches_wildcard(
+            s("*_lockdown*BioMech"),
+            s("biomech_door1panel_1_lockdown_BioMech")
+        ));
+        assert!(!matches_wildcard(s("Biomech*"), s("biomech_door")));
         assert!(!matches_wildcard(s("abc"), s("abcd")));
     }
 

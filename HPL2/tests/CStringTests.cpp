@@ -149,6 +149,8 @@ static void TestMatchesWildcard()
 	CHECK(cString::MatchesWildcard("*shutter_door*Hydroponics", "shutter_door_5_Hydroponics"));
 	CHECK(cString::MatchesWildcard("*shutter_door*Hydroponics", "shutter_door_5_Hydroponics_1"));
 	CHECK(cString::MatchesWildcard("*door_5_Hydro", "shutter_door_5_Hydroponics_1"));
+	CHECK(cString::MatchesWildcard("*_lockdown*BioMech", "biomech_door1panel_1_lockdown_BioMech"));
+	CHECK(!cString::MatchesWildcard("Biomech*", "biomech_door"));
 	CHECK(!cString::MatchesWildcard("shutter_door_5*o*o", "shutter_door_5_Hydroponics"));
 	CHECK(!cString::MatchesWildcard("door*", "shutter_door"));
 	CHECK(cString::MatchesWildcard("*", "x"));

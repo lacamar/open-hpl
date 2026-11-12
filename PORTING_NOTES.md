@@ -6865,3 +6865,8 @@ Solid materials with a `LiquidMap` (match burn, wet hands, blood) rendered dry; 
   `iRenderer::SetShadowMapCompare(false)` for those games.
 - Lum allowlists: Rebirth 02_05 `spot_cistern_4` lit the start through the ceiling before shadows worked;
   Bunker main_menu lamp waits for the pre-menu logos/gamma, soldier_quarters starts with the generator off.
+
+- 03_02 BioMech doors stayed locked after lockdown lift: `cString::MatchesWildcard` (Rust `matches_wildcard`) lowercased
+  both sides, so `*_lockdown*BioMech` found `biomech` at 0 in `biomech_door1panel_1_lockdown_BioMech` (first-occurrence
+  segments) and failed. Official matching is case-sensitive (ref: `Biomech*` and `BIOMECH_...` find nothing,
+  `*_lockdown*BioMech` unlocks all three BioMech panels). Lowercasing removed.
