@@ -37,11 +37,19 @@ namespace hpl {
 		iPhysicsWorld *apWorld,const cVector3f &avPivotPoint, const cVector3f& avPinDir)
 		: iPhysicsJointNewton<iPhysicsJointSlider>(asName,apParentBody,apChildBody,apWorld,avPivotPoint,avPinDir)
 	{
+		if(OhplL4UseRust())
+		{
+			mhRust = ohpl_ntj_create_slider(mhRustWorld, &avPivotPoint, &avPinDir, mpNewtonChildBody, mpNewtonParentBody,
+										(size_t)static_cast<iPhysicsJointNewton<iPhysicsJointSlider>*>(this), RustOps(), &mpNewtonJoint);
+		}
+		else
+		{
 		mpNewtonJoint = NewtonConstraintCreateSlider(mpNewtonWorld, avPivotPoint.v, avPinDir.v, mpNewtonChildBody,
 													mpNewtonParentBody);
 
 		NewtonJointSetUserData(mpNewtonJoint, (void*) this);
 		NewtonSliderSetUserCallback(mpNewtonJoint,LimitCallback);
+		}
 
 		mfMaxDistance =0;
 		mfMinDistance =0;
@@ -66,18 +74,38 @@ namespace hpl {
 	
 	void cPhysicsJointSliderNewton::SetMaxDistance(float afX)
 	{
+		if(OhplL4UseRust())
+		{
+			mfMaxDistance = afX;
+			ohpl_ntj_set_max(mhRust, afX);
+			return;
+		}
 		mfMaxDistance = afX;
 	}
 	void cPhysicsJointSliderNewton::SetMinDistance(float afX)
 	{
+		if(OhplL4UseRust())
+		{
+			mfMinDistance = afX;
+			ohpl_ntj_set_min(mhRust, afX);
+			return;
+		}
 		mfMinDistance = afX;
 	}
 	float cPhysicsJointSliderNewton::GetMaxDistance()
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntj_max(mhRust);
+		}
 		return mfMaxDistance;
 	}
 	float cPhysicsJointSliderNewton::GetMinDistance()
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntj_min(mhRust);
+		}
 		return mfMinDistance;
 	}
 	
@@ -85,6 +113,11 @@ namespace hpl {
 
 	cVector3f cPhysicsJointSliderNewton::GetVelocity()
 	{
+		if(OhplL4UseRust())
+		{
+			float fSpeed = ohpl_ntj_axis(mhRust, 1);
+			return GetPinDir() * fSpeed;
+		}
 		float fSpeed = NewtonSliderGetJointVeloc(mpNewtonJoint);
 		return GetPinDir() * fSpeed;
 	}
@@ -94,6 +127,12 @@ namespace hpl {
 	}
 	float cPhysicsJointSliderNewton::GetForceSize()
 	{
+		if(OhplL4UseRust())
+		{
+			cVector3f vForce;
+			ohpl_ntj_force(mhRust, &vForce);
+			return vForce.Length();
+		}
 		cVector3f vForce;
 		NewtonSliderGetJointForce(mpNewtonJoint,&vForce.v[0]);
 		return vForce.Length();
@@ -104,6 +143,10 @@ namespace hpl {
 
 	float cPhysicsJointSliderNewton::GetDistance()
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntj_axis(mhRust, 0);
+		}
 		return NewtonSliderGetJointPosit(mpNewtonJoint);
 	}
 	float cPhysicsJointSliderNewton::GetAngle()

@@ -7,6 +7,22 @@ pub struct Handle<T> {
     _t: PhantomData<fn() -> T>,
 }
 
+impl<T> Handle<T> {
+    /// Non-zero opaque form for C user data; 0 stays null.
+    pub fn to_bits(self) -> u64 {
+        ((u64::from(self.generation) << 32) | u64::from(self.index)) + 1
+    }
+
+    pub fn from_bits(bits: u64) -> Option<Self> {
+        let raw = bits.checked_sub(1)?;
+        Some(Self {
+            index: u32::try_from(raw & 0xFFFF_FFFF).ok()?,
+            generation: u32::try_from(raw >> 32).ok()?,
+            _t: PhantomData,
+        })
+    }
+}
+
 impl<T> Clone for Handle<T> {
     fn clone(&self) -> Self {
         *self
@@ -128,6 +144,15 @@ mod tests {
         assert_eq!(a.get(h1), None);
         assert_eq!(a.get(h2), Some(&'b'));
         assert_eq!(a.remove(h1), None);
+    }
+
+    #[test]
+    fn bits_round_trip_and_are_non_zero() {
+        let mut a = Arena::default();
+        let h = a.insert(1).unwrap();
+        assert_ne!(h.to_bits(), 0);
+        assert_eq!(Handle::from_bits(h.to_bits()), Some(h));
+        assert_eq!(Handle::<i32>::from_bits(0), None);
     }
 
     #[test]

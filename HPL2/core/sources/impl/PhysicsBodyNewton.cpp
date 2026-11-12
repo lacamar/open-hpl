@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <vector>
 #include "impl/RustNewton.h"
+#include "impl/RustNewtonBackend.h"
 
 namespace hpl {
 
@@ -48,6 +49,9 @@ namespace hpl {
 		
 		mpNewtonWorld = pWorldNewton->GetNewtonWorld();
 		cMatrixf mtxIdentity = cMatrixf::Identity;
+		if(OhplL4UseRust())
+			mhRust = ohpl_ntb_create(pWorldNewton->RustHandle(), pShapeNewton->GetNewtonCollision(), (size_t)this, &mpNewtonBody);
+		else
 		mpNewtonBody = NewtonCreateBody(pWorldNewton->GetNewtonWorld(), 
 										pShapeNewton->GetNewtonCollision(), &mtxIdentity.m[0][0]);
 
@@ -58,9 +62,12 @@ namespace hpl {
 		// Setup the callbacks and set this body as user data
 		// This is so that the transform gets updated and
 		// to add gravity, forces and user sink.
+		if(OhplL4UseRust() == false)
+		{
 		NewtonBodySetForceAndTorqueCallback(mpNewtonBody,OnUpdateCallback);
 		NewtonBodySetTransformCallback(mpNewtonBody, OnTransformCallback);
 		NewtonBodySetUserData(mpNewtonBody, this);
+		}
 
 		//Set default property settings
 		mbGravity = true;
@@ -84,7 +91,7 @@ namespace hpl {
 
 	cPhysicsBodyNewton::~cPhysicsBodyNewton()
 	{
-		if(mbForced)
+		if(mbForced && OhplL4UseRust() == false)
 		{
 			std::vector<cPhysicsBodyNewton*> &vForced = static_cast<cPhysicsWorldNewton*>(mpWorld)->mvForcedBodies;
 			vForced.erase(std::remove(vForced.begin(), vForced.end(), this), vForced.end());
@@ -95,6 +102,12 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::DeleteLowLevel()
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_destroy(mhRust);
+			hplDelete(mpCallback);
+			return;
+		}
 		//Log(" Newton body %d\n", (size_t)mpNewtonBody);
 		NewtonDestroyBody(mpNewtonWorld,mpNewtonBody);
 		//Log(" Callback\n");
@@ -112,6 +125,13 @@ namespace hpl {
     void cPhysicsBodyNewtonCallback::OnTransformUpdate(iEntity3D * apEntity)
 	{
 		if(cPhysicsBodyNewton::mbUseCallback==false) return;
+		if(OhplL4UseRust())
+		{
+			cPhysicsBodyNewton *pBody = static_cast<cPhysicsBodyNewton*>(apEntity);
+			ohpl_ntb_set_matrix(pBody->mhRust, &apEntity->GetLocalMatrix());
+			return;
+		}
+		if(cPhysicsBodyNewton::mbUseCallback==false) return;
 
 		cPhysicsBodyNewton *pRigidBody = static_cast<cPhysicsBodyNewton*>(apEntity);
 		cMatrixf mtxTranspose = apEntity->GetLocalMatrix().GetTranspose();
@@ -128,6 +148,13 @@ namespace hpl {
 	
 	void cPhysicsBodyNewton::SetMaterial(iPhysicsMaterial* apMaterial)
 	{
+		if(OhplL4UseRust())
+		{
+			mpMaterial = apMaterial;
+			if(apMaterial == NULL) return;
+			ohpl_ntb_set_material(mhRust, static_cast<cPhysicsMaterialNewton*>(mpMaterial)->GetId());
+			return;
+		}
 		mpMaterial = apMaterial;
 
 		if(apMaterial == NULL) return;
@@ -141,10 +168,21 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::SetLinearVelocity(const cVector3f &avVel)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_set_velocity(mhRust, &avVel);
+			return;
+		}
 		NewtonBodySetVelocity(mpNewtonBody, avVel.v);
 	}
 	cVector3f cPhysicsBodyNewton::GetLinearVelocity() const
 	{
+		if(OhplL4UseRust())
+		{
+			cVector3f vVel;
+			ohpl_ntb_velocity(mhRust, &vVel);
+			return vVel;
+		}
 		cVector3f vVel;
 		NewtonBodyGetVelocity(mpNewtonBody, vVel.v);
 		return vVel;
@@ -154,10 +192,21 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::SetAngularVelocity(const cVector3f &avVel)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_set_omega(mhRust, &avVel);
+			return;
+		}
 		NewtonBodySetOmega(mpNewtonBody, avVel.v);
 	}
 	cVector3f cPhysicsBodyNewton::GetAngularVelocity() const
 	{
+		if(OhplL4UseRust())
+		{
+			cVector3f vVel;
+			ohpl_ntb_omega(mhRust, &vVel);
+			return vVel;
+		}
 		cVector3f vVel;
 		NewtonBodyGetOmega(mpNewtonBody, vVel.v);
 		return vVel;
@@ -167,12 +216,21 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::SetLinearDamping(float afDamping)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_set_linear_damping(mhRust, afDamping);
+			return;
+		}
 		if(afDamping < 0.001f)afDamping = 0.001f;
 
 		NewtonBodySetLinearDamping(mpNewtonBody,afDamping);
 	}
 	float cPhysicsBodyNewton::GetLinearDamping() const
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntb_linear_damping(mhRust);
+		}
 		return NewtonBodyGetLinearDamping(mpNewtonBody);
 	}
 	
@@ -180,6 +238,11 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::SetAngularDamping(float afDamping)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_set_angular_damping(mhRust, afDamping);
+			return;
+		}
 		if(afDamping < 0.001f)afDamping = 0.001f;
 
 		float fDamp[3] = {afDamping,afDamping,afDamping};
@@ -187,6 +250,10 @@ namespace hpl {
 	}
 	float cPhysicsBodyNewton::GetAngularDamping() const
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntb_angular_damping(mhRust);
+		}
 		float fDamp[3];
 		NewtonBodyGetAngularDamping(mpNewtonBody,fDamp);
 		return fDamp[0];
@@ -196,10 +263,20 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::SetMaxLinearSpeed(float afSpeed)
 	{
+		if(OhplL4UseRust())
+		{
+			mfMaxLinearSpeed = afSpeed;
+			ohpl_ntb_set_max_linear(mhRust, afSpeed);
+			return;
+		}
 		mfMaxLinearSpeed = afSpeed;
 	}
 	float cPhysicsBodyNewton::GetMaxLinearSpeed() const
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntb_max_linear(mhRust);
+		}
 		return mfMaxLinearSpeed;
 	}
 	
@@ -207,10 +284,20 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::SetMaxAngularSpeed(float afDamping)
 	{
+		if(OhplL4UseRust())
+		{
+			mfMaxAngularSpeed = afDamping;
+			ohpl_ntb_set_max_angular(mhRust, afDamping);
+			return;
+		}
 		mfMaxAngularSpeed = afDamping;
 	}
 	float cPhysicsBodyNewton::GetMaxAngularSpeed() const
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntb_max_angular(mhRust);
+		}
 		return mfMaxAngularSpeed;
 	}
 
@@ -218,6 +305,12 @@ namespace hpl {
 
 	cVector3f cPhysicsBodyNewton::GetInertiaVector()
 	{
+		if(OhplL4UseRust())
+		{
+			cVector3f vInertia;
+			ohpl_ntb_inertia(mhRust, &vInertia);
+			return vInertia;
+		}
 		float fIxx, fIyy, fIzz, fMass;
 
 		NewtonBodyGetMassMatrix(mpNewtonBody,&fMass, &fIxx, &fIyy, &fIzz);
@@ -229,6 +322,17 @@ namespace hpl {
 
 	cMatrixf cPhysicsBodyNewton::GetInertiaMatrix()
 	{
+		if(OhplL4UseRust())
+		{
+			cVector3f vI = GetInertiaVector();
+			cMatrixf mtxRot = GetLocalMatrix().GetRotation();
+			cMatrixf mtxTransRot = mtxRot.GetTranspose();
+			cMatrixf mtxI(	vI.x,0,	  0,	0,
+							0,	 vI.y,0,	0,
+							0,	 0,	  vI.z,	0,
+							0,	 0,	  0,	1);
+			return cMath::MatrixMul(cMath::MatrixMul(mtxRot,mtxI), mtxTransRot);
+		}
 		float fIxx, fIyy, fIzz, fMass;
 
 		NewtonBodyGetMassMatrix(mpNewtonBody,&fMass, &fIxx, &fIyy, &fIzz);
@@ -247,6 +351,12 @@ namespace hpl {
 
 	void  cPhysicsBodyNewton::SetMass(float afMass)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_set_mass(mhRust, static_cast<cCollideShapeNewton*>(mpShape)->GetNewtonCollision(), afMass);
+			mfMass = afMass;
+			return;
+		}
 		cCollideShapeNewton *pShapeNewton = static_cast<cCollideShapeNewton*>(mpShape);
 		
 		cVector3f vInertia;// = pShapeNewton->GetInertia(afMass);
@@ -263,16 +373,31 @@ namespace hpl {
 	}
 	float cPhysicsBodyNewton::GetMass() const
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntb_mass(mhRust);
+		}
 		return mfMass;
 	}
 
 	void  cPhysicsBodyNewton::SetMassCentre(const cVector3f& avCentre)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_set_mass_centre(mhRust, &avCentre);
+			return;
+		}
 		NewtonBodySetCentreOfMass(mpNewtonBody,avCentre.v);
 	}
 
 	cVector3f cPhysicsBodyNewton::GetMassCentre() const
 	{
+		if(OhplL4UseRust())
+		{
+			cVector3f vCentre;
+			ohpl_ntb_mass_centre(mhRust, &vCentre);
+			return vCentre;
+		}
 		cVector3f vCentre;
 		NewtonBodyGetCentreOfMass(mpNewtonBody,vCentre.v);
 		return vCentre;
@@ -289,6 +414,12 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::AddForce(const cVector3f &avForce)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_add_force(mhRust, &avForce);
+			Enable();
+			return;
+		}
 		MarkForced();
 		mvTotalForce += avForce;
 		Enable();
@@ -298,6 +429,12 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::AddForceAtPosition(const cVector3f &avForce, const cVector3f &avPos)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_add_force_at_position(mhRust, &avForce, &avPos, &GetLocalMatrix());
+			Enable();
+			return;
+		}
 		MarkForced();
 		mvTotalForce += avForce;
 
@@ -321,6 +458,12 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::AddTorque(const cVector3f &avTorque)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_add_torque(mhRust, &avTorque);
+			Enable();
+			return;
+		}
 		MarkForced();
 		mvTotalTorque += avTorque;
 		Enable();
@@ -330,6 +473,11 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::AddImpulse(const cVector3f &avImpulse)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_add_impulse(mhRust, &avImpulse, &GetWorldMatrix());
+			return;
+		}
 		cVector3f vMassCentre = GetMassCentre();
 		if(vMassCentre != cVector3f(0,0,0))
 		{
@@ -346,6 +494,11 @@ namespace hpl {
 	}
 	void cPhysicsBodyNewton::AddImpulseAtPosition(const cVector3f &avImpulse, const cVector3f &avPos)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_add_impulse_at(mhRust, &avImpulse, &avPos);
+			return;
+		}
 		NewtonBodyAddImpulse(mpNewtonBody, avImpulse.v, avPos.v);
 	}
 	
@@ -353,16 +506,31 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::Sleep()
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_set_freeze(mhRust, 1);
+			return;
+		}
 		NewtonBodySetFreezeState(mpNewtonBody, 1);
 	}
 
 	void cPhysicsBodyNewton::Enable()
 	{
+		if(OhplL4UseRust())
+		{
+			mlFreezeCount = 0;
+			ohpl_ntb_set_freeze(mhRust, 0);
+			return;
+		}
 		mlFreezeCount = 0;
 		NewtonBodySetFreezeState(mpNewtonBody, 0);
 	}
 	bool cPhysicsBodyNewton::GetEnabled() const
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntb_enabled(mhRust);
+		}
 		return NewtonBodyGetSleepState(mpNewtonBody) ==0?true: false;
 	}
 	
@@ -370,10 +538,19 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::SetAutoDisable(bool abEnabled)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_set_auto_sleep(mhRust, abEnabled);
+			return;
+		}
 		NewtonBodySetAutoSleep(mpNewtonBody, abEnabled ? 1 : 0);
 	}
 	bool cPhysicsBodyNewton::GetAutoDisable() const
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntb_auto_sleep(mhRust);
+		}
 		return NewtonBodyGetAutoSleep(mpNewtonBody) == 0 ? false : true;
 	}
 	
@@ -421,11 +598,20 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::SetContinuousCollision(bool abOn)
 	{
+		if(OhplL4UseRust())
+		{
+			ohpl_ntb_set_continuous(mhRust, abOn);
+			return;
+		}
 		NewtonBodySetContinuousCollisionMode(mpNewtonBody,abOn ? 1 : 0);
 	}
 
 	bool cPhysicsBodyNewton::GetContinuousCollision()
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntb_continuous(mhRust);
+		}
 		return NewtonBodyGetContinuousCollisionMode(mpNewtonBody)==1 ? true : false;
 	}
 	
@@ -433,10 +619,20 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::SetGravity(bool abEnabled)
 	{
+		if(OhplL4UseRust())
+		{
+			mbGravity = abEnabled;
+			ohpl_ntb_set_gravity(mhRust, abEnabled);
+			return;
+		}
 		mbGravity = abEnabled;	
 	}
 	bool cPhysicsBodyNewton::GetGravity() const
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntb_gravity(mhRust);
+		}
 		return mbGravity;
 	}
 
@@ -454,6 +650,10 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::ClearForces()
 	{
+		if(OhplL4UseRust())
+		{
+			return;
+		}
 		mvTotalForce = cVector3f(0,0,0);
 		mvTotalTorque = cVector3f(0,0,0);
 		mbForced = false;

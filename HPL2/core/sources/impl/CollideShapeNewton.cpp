@@ -22,6 +22,8 @@
 #include "physics/PhysicsWorld.h"
 #include "system/LowLevelSystem.h"
 #include "impl/RustNewton.h"
+#include "impl/RustNewtonBackend.h"
+#include "impl/PhysicsWorldNewton.h"
 #include "system/Platform.h"
 #include "resources/BinaryBuffer.h"
 #include "resources/Resources.h"
@@ -46,6 +48,7 @@ namespace hpl {
 	{
 		mpNewtonCollision = NULL;
 		mpNewtonWorld = apNewtonWorld;
+		if(OhplL4UseRust() && apWorld) mhWorld = static_cast<cPhysicsWorldNewton*>(apWorld)->RustHandle();
 		mvSize = avSize;
 		mType = aType;
 
@@ -66,6 +69,12 @@ namespace hpl {
 		////////////////////////////////////////////
 		// Create Newton collision
 		
+		if(OhplL4UseRust())
+		{
+			if(aType >= eCollideShapeType_Null && aType <= eCollideShapeType_Capsule)
+				mpNewtonCollision = ohpl_nts_create(mhWorld, (int32_t)aType, &mvSize, apOffsetMtx);
+		}
+		else
 		switch(aType)
 		{
 		case eCollideShapeType_Null:		mpNewtonCollision = NewtonCreateNull(apNewtonWorld); break;
@@ -134,7 +143,10 @@ namespace hpl {
 	{
 		//Release Newton Collision
 		if(mpNewtonCollision)
-			NewtonReleaseCollision(mpNewtonWorld,mpNewtonCollision);
+		{
+			if(OhplL4UseRust()) ohpl_nts_release(mhWorld, mpNewtonCollision);
+			else NewtonReleaseCollision(mpNewtonWorld,mpNewtonCollision);
+		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -240,6 +252,17 @@ namespace hpl {
 
 	void cCollideShapeNewton::CreateStaticSceneFromShapeVec(tCollideShapeVec &avShapes, tMatrixfVec *apMatrices)
 	{
+		if(OhplL4UseRust())
+		{
+			std::vector<NewtonCollision*> vColliders;
+			for(size_t i=0; i<avShapes.size(); ++i)
+			{
+				mvSubShapes.push_back(avShapes[i]);
+				vColliders.push_back(static_cast<cCollideShapeNewton*>(avShapes[i])->GetNewtonCollision());
+			}
+			mpNewtonCollision = ohpl_nts_static_scene(mhWorld, vColliders.data(), vColliders.size());
+			return;
+		}
 		mpNewtonCollision = NewtonCreateSceneCollision(mpNewtonWorld, 0);
 
 		mvSubShapes.reserve(avShapes.size());
@@ -287,6 +310,9 @@ namespace hpl {
 			mfVolume += pNewtonShape->GetVolume();
 		}
 
+		if(OhplL4UseRust())
+			mpNewtonCollision = ohpl_nts_compound(mhWorld, vNewtonColliders.data(), vNewtonColliders.size());
+		else
 		mpNewtonCollision = NewtonCreateCompoundCollision(mpNewtonWorld, (int)vNewtonColliders.size(),
 															&vNewtonColliders[0], 0);
 
@@ -350,6 +376,10 @@ namespace hpl {
 		//unsigned long lStartTime = cPlatform::GetApplicationTime();
 		//Log("%d triangles: ", alIndexNum/3);
 
+		if(OhplL4UseRust())
+			mpNewtonCollision = ohpl_nts_tree(mhWorld, apIndexArray, alIndexNum, apVertexArray, alVtxStride, alVtxNum);
+		else
+		{
 		mpNewtonCollision = NewtonCreateTreeCollision(mpNewtonWorld, 0);
 		//Log("-- Creating mesh collision.:\n");
 		NewtonTreeCollisionBeginBuild(mpNewtonCollision);
@@ -416,6 +446,7 @@ namespace hpl {
 		}
 
 		NewtonTreeCollisionEndBuild(mpNewtonCollision,0);//bOptimize ? 1: 0);
+		}
 
 		//Log(" %dms\n", cPlatform::GetApplicationTime()-lStartTime);
 
@@ -438,9 +469,14 @@ namespace hpl {
 
 	void cCollideShapeNewton::CreateHeightField(int alSize, const unsigned short* apElevation, float afUnitSize, float afVerticalScale)
 	{
+		if(OhplL4UseRust())
+			mpNewtonCollision = ohpl_nts_height_field(mhWorld, alSize, apElevation, afUnitSize, afVerticalScale);
+		else
+		{
 		std::vector<int8_t> vAttributes((size_t)alSize * alSize, 0);
 		mpNewtonCollision = NewtonCreateHeightFieldCollision(mpNewtonWorld, alSize, alSize, 1, apElevation, vAttributes.data(),
 															 afUnitSize, afVerticalScale, 6);
+		}
 		const unsigned short* pEnd = apElevation + (size_t)alSize * alSize;
 		mBoundingVolume.SetLocalMinMax(cVector3f(0, *std::min_element(apElevation, pEnd) * afVerticalScale, 0),
 									   cVector3f((alSize - 1) * afUnitSize, *std::max_element(apElevation, pEnd) * afVerticalScale, (alSize - 1) * afUnitSize));
@@ -458,6 +494,9 @@ namespace hpl {
 	{
 		apBinBuffer->AddVector3f(mBoundingVolume.GetLocalMin());
 		apBinBuffer->AddVector3f(mBoundingVolume.GetLocalMax());
+		if(OhplL4UseRust())
+			ohpl_nts_serialize(mhWorld, mpNewtonCollision, (size_t)apBinBuffer);
+		else
 		NewtonCollisionSerialize(mpNewtonWorld, mpNewtonCollision, NewtonWriteToBinaryBuffer, (void*)apBinBuffer);
 	}
 
@@ -475,6 +514,9 @@ namespace hpl {
 		apBinBuffer->GetVector3f(&vMin);
 		apBinBuffer->GetVector3f(&vMax);
 
+		if(OhplL4UseRust())
+			mpNewtonCollision = ohpl_nts_deserialize(mhWorld, (size_t)apBinBuffer);
+		else
 		mpNewtonCollision = NewtonCreateCollisionFromSerialization (mpNewtonWorld, NewtonReadFromBinaryBuffer, (void*)apBinBuffer);
 
 		mBoundingVolume.SetLocalMinMax(vMin, vMax);

@@ -8,6 +8,7 @@
 #include "physics/PhysicsBody.h"
 #include "resources/BinaryBuffer.h"
 #include "system/MemoryManager.h"
+#include "PhysicsNewtonScenes.h"
 
 using namespace hpl;
 
@@ -279,6 +280,12 @@ static void TestNearAxisRayCast()
 // contract the Amnesia/Launcher executables use.
 int hplMain(const tString&)
 {
+	if (const char* pDump = std::getenv("OHPL_L4_DUMP"))
+	{
+		hplscenes::RunAll(pDump, std::getenv("OHPL_L4_VERBOSE") != NULL);
+		return 0;
+	}
+
 	TestShapeCreation();
 	TestBodySimulationStep();
 	TestBuoyancyDoesNotCrash();

@@ -30,6 +30,8 @@
 namespace hpl {
 
 	class iPhysicsBody;
+	class cPhysicsBodyNewton;
+	class cPhysicsContactData;
 	
 	//------------------------------------------
 
@@ -66,6 +68,9 @@ namespace hpl {
 		void UpdateMaterials();
 
 		int GetId(){ return mlMaterialId;}
+
+		static void DispatchContacts(cPhysicsBodyNewton* apBody1, cPhysicsBodyNewton* apBody2,
+									cPhysicsContactData &aContactData, int alContactNum);
 	private:
 		float Combine(ePhysicsMaterialCombMode aMode, float afX, float afY);
 

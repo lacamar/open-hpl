@@ -23,6 +23,7 @@
 #include "impl/PhysicsBodyNewton.h"
 #include "physics/SurfaceData.h"
 #include "impl/RustNewton.h"
+#include "impl/RustNewtonBackend.h"
 
 #include "system/LowLevelSystem.h"
 #include <algorithm>
@@ -45,7 +46,7 @@ namespace hpl {
 
 		if(alMatId==-1)
 		{
-			mlMaterialId = NewtonMaterialCreateGroupID(mpNewtonWorld);
+			mlMaterialId = OhplL4UseRust() ? ohpl_ntm_create_group(pNWorld->RustHandle()) : NewtonMaterialCreateGroupID(mpNewtonWorld);
 		}
 		else
 		{
@@ -167,6 +168,12 @@ namespace hpl {
 			OhplNewtonMatProps propsA{mFrictionMode, mElasticityMode, mfElasticity, mfStaticFriction, mfKineticFriction};
 			OhplNewtonMatProps propsB{pMat->mFrictionMode, pMat->mElasticityMode, pMat->mfElasticity,
 										pMat->mfStaticFriction, pMat->mfKineticFriction};
+			if(OhplL4UseRust())
+			{
+				ohpl_ntm_update_pair(static_cast<cPhysicsWorldNewton*>(mpWorld)->RustHandle(), mlMaterialId, pMat->mlMaterialId,
+									&propsA, &propsB, pMat == this);
+				continue;
+			}
 			OhplNewtonPairParams pair;
 			ohpl_newton_pair_params(&propsA, &propsB, pMat == this, &pair);
 
@@ -246,6 +253,53 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cPhysicsMaterialNewton::DispatchContacts(cPhysicsBodyNewton* pContactBody1, cPhysicsBodyNewton* pContactBody2,
+												cPhysicsContactData &contactData, int lContactNum)
+	{
+		iPhysicsMaterial *pMaterial1 = pContactBody1->GetMaterial();
+		iPhysicsMaterial *pMaterial2 = pContactBody2->GetMaterial();
+
+		////////////////////////////
+		//Surface data stuff
+		//Only do the effects if both bodies uses surfaces effects!
+		if(	pMaterial1->GetSurfaceData() && pMaterial2->GetSurfaceData() &&
+			pContactBody1->GetUseSurfaceEffects() && pContactBody2->GetUseSurfaceEffects() &&
+			pContactBody1->GetBuoyancyActive()==false && pContactBody2->GetBuoyancyActive()==false)
+		{
+			pMaterial1->GetSurfaceData()->CreateImpactEffect(contactData.mfMaxContactNormalSpeed,
+																contactData.mvContactPosition,
+																lContactNum,pMaterial2->GetSurfaceData(),
+																pContactBody1->GetWorld());
+
+			OhplNewtonSurfaceCalls calls;
+			ohpl_newton_surface_calls(pMaterial1->GetSurfaceData()->GetPriority(), pMaterial2->GetSurfaceData()->GetPriority(),
+										pMaterial2 == pMaterial1, contactData.mfMaxContactNormalSpeed,
+										contactData.mfMaxContactTangentSpeed, &calls);
+
+			if(calls.impact1)
+				pMaterial1->GetSurfaceData()->OnImpact(contactData.mfMaxContactNormalSpeed,
+														contactData.mvContactPosition,
+														lContactNum,pContactBody1);
+			if(calls.slide1)
+				pMaterial1->GetSurfaceData()->OnSlide(contactData.mfMaxContactTangentSpeed,
+														contactData.mvContactPosition,
+														lContactNum,pContactBody1,pContactBody2);
+			if(calls.impact2)
+				pMaterial2->GetSurfaceData()->OnImpact(contactData.mfMaxContactNormalSpeed,
+														contactData.mvContactPosition,
+														lContactNum,pContactBody2);
+			if(calls.slide2)
+				pMaterial2->GetSurfaceData()->OnSlide(contactData.mfMaxContactTangentSpeed,
+														contactData.mvContactPosition,
+														lContactNum,pContactBody2,pContactBody1);
+		}
+
+		pContactBody1->OnCollide(pContactBody2,&contactData);
+		pContactBody2->OnCollide(pContactBody1,&contactData);
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cPhysicsMaterialNewton::ContactsProcessCallback(const NewtonJoint* apContactJoint, dFloat afTimestep, int alThreadIndex)
 	{
 		////////////////////////////////
@@ -314,50 +368,11 @@ namespace hpl {
 
 		////////////////////////////////
 		//End contact process
-		iPhysicsMaterial *pMaterial1 = pContactBody1->GetMaterial();
-		iPhysicsMaterial *pMaterial2 = pContactBody2->GetMaterial();
-
 		//Thread lock
 		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0));
 		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody1));
 
-		////////////////////////////
-		//Surface data stuff
-		//Only do the effects if both bodies uses surfaces effects!
-		if(	pMaterial1->GetSurfaceData() && pMaterial2->GetSurfaceData() &&
-			pContactBody1->GetUseSurfaceEffects() && pContactBody2->GetUseSurfaceEffects() &&
-			pContactBody1->GetBuoyancyActive()==false && pContactBody2->GetBuoyancyActive()==false)
-		{
-			pMaterial1->GetSurfaceData()->CreateImpactEffect(contactData.mfMaxContactNormalSpeed,
-																contactData.mvContactPosition,
-																lContactNum,pMaterial2->GetSurfaceData(),
-																pContactBody1->GetWorld());
-
-			OhplNewtonSurfaceCalls calls;
-			ohpl_newton_surface_calls(pMaterial1->GetSurfaceData()->GetPriority(), pMaterial2->GetSurfaceData()->GetPriority(),
-										pMaterial2 == pMaterial1, contactData.mfMaxContactNormalSpeed,
-										contactData.mfMaxContactTangentSpeed, &calls);
-
-			if(calls.impact1)
-				pMaterial1->GetSurfaceData()->OnImpact(contactData.mfMaxContactNormalSpeed,
-														contactData.mvContactPosition,
-														lContactNum,pContactBody1);
-			if(calls.slide1)
-				pMaterial1->GetSurfaceData()->OnSlide(contactData.mfMaxContactTangentSpeed,
-														contactData.mvContactPosition,
-														lContactNum,pContactBody1,pContactBody2);
-			if(calls.impact2)
-				pMaterial2->GetSurfaceData()->OnImpact(contactData.mfMaxContactNormalSpeed,
-														contactData.mvContactPosition,
-														lContactNum,pContactBody2);
-			if(calls.slide2)
-				pMaterial2->GetSurfaceData()->OnSlide(contactData.mfMaxContactTangentSpeed,
-														contactData.mvContactPosition,
-														lContactNum,pContactBody2,pContactBody1);
-		}
-
-		pContactBody1->OnCollide(pContactBody2,&contactData);
-		pContactBody2->OnCollide(pContactBody1,&contactData);
+		DispatchContacts(pContactBody1, pContactBody2, contactData, lContactNum);
 
 		//Thread unlock
 		NewtonWorldCriticalSectionUnlock (NewtonBodyGetWorld (pBody0));

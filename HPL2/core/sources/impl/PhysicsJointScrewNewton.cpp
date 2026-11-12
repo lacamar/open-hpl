@@ -38,11 +38,19 @@ namespace hpl {
 		mvPin = avPinDir;
 		mvPin.Normalize();
 
+		if(OhplL4UseRust())
+		{
+			mhRust = ohpl_ntj_create_screw(mhRustWorld, &avPivotPoint, &avPinDir, mpNewtonChildBody, mpNewtonParentBody,
+										(size_t)static_cast<iPhysicsJointNewton<iPhysicsJointScrew>*>(this), RustOps(), &mpNewtonJoint);
+		}
+		else
+		{
 		mpNewtonJoint = NewtonConstraintCreateCorkscrew(mpNewtonWorld, avPivotPoint.v, avPinDir.v, mpNewtonChildBody,
 			mpNewtonParentBody);
 
 		NewtonJointSetUserData(mpNewtonJoint, (void*) this);
 		NewtonCorkscrewSetUserCallback(mpNewtonJoint,LimitCallback);
+		}
 
 		mfMaxDistance =0;
 		mfMinDistance =0;
@@ -70,18 +78,38 @@ namespace hpl {
 	
 	void cPhysicsJointScrewNewton::SetMaxDistance(float afX)
 	{
+		if(OhplL4UseRust())
+		{
+			mfMaxDistance = afX;
+			ohpl_ntj_set_max(mhRust, afX);
+			return;
+		}
 		mfMaxDistance = afX;
 	}
 	void cPhysicsJointScrewNewton::SetMinDistance(float afX)
 	{
+		if(OhplL4UseRust())
+		{
+			mfMinDistance = afX;
+			ohpl_ntj_set_min(mhRust, afX);
+			return;
+		}
 		mfMinDistance = afX;
 	}
 	float cPhysicsJointScrewNewton::GetMaxDistance()
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntj_max(mhRust);
+		}
 		return mfMaxDistance;
 	}
 	float cPhysicsJointScrewNewton::GetMinDistance()
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntj_min(mhRust);
+		}
 		return mfMinDistance;
 	}
 	
@@ -89,6 +117,11 @@ namespace hpl {
 
 	cVector3f cPhysicsJointScrewNewton::GetVelocity()
 	{
+		if(OhplL4UseRust())
+		{
+			float fSpeed = ohpl_ntj_axis(mhRust, 1);
+			return mvPin * fSpeed;
+		}
 		float fSpeed = NewtonCorkscrewGetJointVeloc(mpNewtonJoint);
 		return mvPin * fSpeed;
 	}
@@ -98,6 +131,12 @@ namespace hpl {
 	}
 	float cPhysicsJointScrewNewton::GetForceSize()
 	{
+		if(OhplL4UseRust())
+		{
+			cVector3f vForce;
+			ohpl_ntj_force(mhRust, &vForce);
+			return vForce.Length();
+		}
 		cVector3f vForce;
 		NewtonCorkscrewGetJointForce(mpNewtonJoint,&vForce.v[0]);
 		return vForce.Length();
@@ -106,10 +145,18 @@ namespace hpl {
 	
 	float cPhysicsJointScrewNewton::GetDistance()
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntj_axis(mhRust, 0);
+		}
 		return NewtonCorkscrewGetJointPosit(mpNewtonJoint);
 	}
 	float cPhysicsJointScrewNewton::GetAngle()
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntj_axis(mhRust, 2);
+		}
 		return NewtonCorkscrewGetJointAngle(mpNewtonJoint);
 	}
 

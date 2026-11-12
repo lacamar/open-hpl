@@ -27,6 +27,7 @@
 #include <vector>
 #endif
 #include <Newton.h>
+#include <cstdint>
 
 namespace hpl {
 	class cPhysicsBodyNewton;
@@ -110,9 +111,11 @@ namespace hpl {
 		void RenderDebugGeometry(iLowLevelGraphics *apLowLevel, const cColor& aColor);
 
 		NewtonWorld* GetNewtonWorld(){ return mpNewtonWorld;}
+		uint64_t RustHandle(){ return mhRust;}
 		std::vector<cPhysicsBodyNewton*> mvForcedBodies;
 	private:
 		NewtonWorld *mpNewtonWorld;
+		uint64_t mhRust = 0;
 
 		float* mpTempPoints;
 		float* mpTempNormals;

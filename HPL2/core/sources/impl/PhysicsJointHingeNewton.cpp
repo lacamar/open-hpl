@@ -44,10 +44,14 @@ namespace hpl {
 
 		mfPreviousAngle =0;
 
-		CreateCustomJoint(6);
+		if(OhplL4UseRust() == false)
+			CreateCustomJoint(6);
 		
 		cMatrixf mtxPinAndPivot = GetMatrixFromPinAndPivot(mvPinDir, mvPivotPoint);
 		CalculateLocalMatrix (mtxPinAndPivot, m_mtxLocalPinPivot0, m_mtxLocalPinPivot1);
+		if(OhplL4UseRust())
+			mhRust = ohpl_ntj_create_hinge(mhRustWorld, mpNewtonChildBody, mpNewtonParentBody, (size_t)static_cast<iPhysicsJointNewton<iPhysicsJointHinge>*>(this), RustOps(),
+											&m_mtxLocalPinPivot0, &m_mtxLocalPinPivot1, &mpNewtonJoint);
 	}
 
 	//-----------------------------------------------------------------------
@@ -67,18 +71,38 @@ namespace hpl {
 	
 	void cPhysicsJointHingeNewton::SetMaxAngle(float afAngle)
 	{
+		if(OhplL4UseRust())
+		{
+			mfMaxAngle = afAngle;
+			ohpl_ntj_set_max(mhRust, afAngle);
+			return;
+		}
 		mfMaxAngle = afAngle;
 	}
 	void cPhysicsJointHingeNewton::SetMinAngle(float afAngle)
 	{
+		if(OhplL4UseRust())
+		{
+			mfMinAngle = afAngle;
+			ohpl_ntj_set_min(mhRust, afAngle);
+			return;
+		}
 		mfMinAngle = afAngle;
 	}
 	float cPhysicsJointHingeNewton::GetMaxAngle()
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntj_max(mhRust);
+		}
 		return mfMaxAngle;
 	}
 	float cPhysicsJointHingeNewton::GetMinAngle()
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntj_min(mhRust);
+		}
 		return mfMinAngle;
 	}
 
@@ -108,6 +132,10 @@ namespace hpl {
 
 	float cPhysicsJointHingeNewton::GetForceSize()
 	{
+		if(OhplL4UseRust())
+		{
+			return ohpl_ntj_hinge_force_size(mhRust);
+		}
 		float fSize = 0;
 		
 		//Only get for the linear rows!

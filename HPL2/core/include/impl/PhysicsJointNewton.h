@@ -28,6 +28,8 @@
 #include "impl/PhysicsBodyNewton.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
+#include "impl/RustNewtonBackend.h"
+#include <cmath>
 
 namespace hpl {
 
@@ -52,6 +54,7 @@ namespace hpl {
 				mpNewtonParentBody = pNParent->GetNewtonBody();
 
 			mpNewtonChildBody = pNChild->GetNewtonBody();
+			mhRustWorld = pNWorld->RustHandle();
 		}
 
 		virtual ~iPhysicsJointNewton()
@@ -59,18 +62,23 @@ namespace hpl {
 			//Skip this for now and let newton handle it..
 			//Log("Destroying newton joint!\n");
 			if(this->mpChildBody || this->mpParentBody)
-				NewtonDestroyJoint(mpNewtonWorld,mpNewtonJoint);
+			{
+				if(OhplL4UseRust()) ohpl_ntj_destroy(mhRustWorld, mhRust);
+				else NewtonDestroyJoint(mpNewtonWorld,mpNewtonJoint);
+			}
 		}
 
 		//-------------------------------------------
 
 		void SetCollideBodies(bool abX)
 		{
-			NewtonJointSetCollisionState(mpNewtonJoint,abX ? 1: 0);
+			if(OhplL4UseRust()) ohpl_ntj_set_collide(mhRust, abX);
+			else NewtonJointSetCollisionState(mpNewtonJoint,abX ? 1: 0);
 		}
 
 		bool GetCollideBodies()
 		{
+			if(OhplL4UseRust()) return ohpl_ntj_collide(mhRust);
 			return NewtonJointGetCollisionState(mpNewtonJoint)==0 ? false : true;
 		}
 
@@ -78,10 +86,12 @@ namespace hpl {
 
 		void SetStiffness(float afX)
 		{
-			NewtonJointSetStiffness(mpNewtonJoint, afX);
+			if(OhplL4UseRust()) ohpl_ntj_set_stiffness(mhRust, afX);
+			else NewtonJointSetStiffness(mpNewtonJoint, afX);
 		}
 		float GetStiffness()
 		{
+			if(OhplL4UseRust()) return ohpl_ntj_stiffness(mhRust);
 			return NewtonJointGetStiffness(mpNewtonJoint);
 		}
 
@@ -167,8 +177,67 @@ namespace hpl {
 
 		//-------------------------------------------
 
+		static const OhplL4JointOps* RustOps()
+		{
+			static const OhplL4JointOps ops = { RustLimitEvent, RustCheckAutoSleep, RustNoLimit, RustMatrices, RustPositionCheck };
+			return &ops;
+		}
+
+		static iPhysicsJointNewton<T>* Self(size_t j) { return reinterpret_cast<iPhysicsJointNewton<T>*>(j); }
+
+		static void RustLimitEvent(size_t j, int32_t kind)
+		{
+			iPhysicsJointNewton<T>* p = Self(j);
+			if(kind == 0) p->OnMinLimit();
+			else if(kind == 1) p->OnMaxLimit();
+			else p->OnNoLimit();
+		}
+
+		static void RustCheckAutoSleep(size_t j, float afMin, float afMax, float afValue)
+		{
+			T::CheckLimitAutoSleep(Self(j), afMin, afMax, afValue);
+		}
+
+		static void RustNoLimit(size_t j, float afPrev, float afMin, float afMax, bool abSkip)
+		{
+			iPhysicsJointNewton<T>* p = Self(j);
+			if(p->mpParentBody==NULL || p->mpParentBody->GetMass()==0)
+			{
+				if( abSkip==false &&
+					( (p->mbStickyMaxLimit && afPrev > afMax) || (p->mbStickyMinLimit && afPrev < afMin) ) )
+				{
+					p->mpChildBody->SetAngularVelocity(0);
+					p->mpChildBody->SetLinearVelocity(0);
+				}
+			}
+			p->OnNoLimit();
+		}
+
+		static void RustMatrices(size_t j, cMatrixf* apChild, cMatrixf* apParent)
+		{
+			iPhysicsJointNewton<T>* p = Self(j);
+			*apChild = p->mpChildBody->GetLocalMatrix();
+			*apParent = p->mpParentBody ? p->mpParentBody->GetLocalMatrix() : cMatrixf::Identity;
+		}
+
+		static void RustPositionCheck(size_t j, float afDistSqr)
+		{
+			iPhysicsJointNewton<T>* p = Self(j);
+			if(p->mbAllowPositionReset && p->mpChildBody->IsActive())
+			{
+				if(!(afDistSqr <= 0.0025f))
+				{
+					Error("Body %s jumped more than 0.05 units (%f)- restoring!\n", p->mpChildBody->GetName().c_str(), sqrtf(afDistSqr));
+					p->mbPositionResetPending = true;
+				}
+			}
+		}
+		//-------------------------------------------
+
 		NewtonJoint* mpNewtonJoint;
 		NewtonWorld* mpNewtonWorld;
+		uint64_t mhRust = 0;
+		uint64_t mhRustWorld = 0;
 		NewtonBody* mpNewtonParentBody;
 		NewtonBody* mpNewtonChildBody;
 		
