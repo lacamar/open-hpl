@@ -21,10 +21,70 @@
 #include "scene/Node3D.h"
 #include "math/Math.h"
 #include "scene/RustNode.h"
+#include "scene/RustSceneH10.h"
+#include "impl/RustBackends.h"
 
 #include "system/LowLevelSystem.h"
 
 namespace hpl {
+
+
+	//////////////////////////////////////////////////////////////////////////
+	// RUST HOST
+	//////////////////////////////////////////////////////////////////////////
+
+	struct OhplH10Hooks
+	{
+		static iEntity3D* E(uintptr_t alEnt){ return (iEntity3D*)alEnt;}
+		static cNode3D* N(uintptr_t alNode){ return (cNode3D*)alNode;}
+
+		template<class T> static size_t Items(const std::list<T*> &alstItems, uintptr_t *apOut, size_t alCap)
+		{
+			size_t lCount =0;
+			for(T *pItem : alstItems)
+			{
+				if(lCount < alCap) apOut[lCount] = (uintptr_t)pItem;
+				++lCount;
+			}
+			return lCount;
+		}
+
+		static void EntView(uintptr_t alEnt, OhplH10EntView *apOut)
+		{
+			iEntity3D *pEnt = E(alEnt);
+			apOut->mpLocal = &pEnt->m_mtxLocalTransform;
+			apOut->mpWorld = &pEnt->m_mtxWorldTransform;
+			apOut->mpTransformUpdated = &pEnt->mbTransformUpdated;
+			apOut->mpUpdateBV = &pEnt->mbUpdateBoundingVolume;
+			apOut->mpApplyBV = &pEnt->mbApplyTransformToBV;
+			apOut->mpCount = &pEnt->mlCount;
+			apOut->mlParentNode = (uintptr_t)pEnt->mpParentNode;
+			apOut->mlParentEntity = (uintptr_t)pEnt->mpParent;
+		}
+		static size_t EntChildren(uintptr_t alEnt, uintptr_t *apOut, size_t alCap){ return Items(E(alEnt)->mlstChildren, apOut, alCap);}
+		static size_t EntNodeChildren(uintptr_t alEnt, uintptr_t *apOut, size_t alCap){ return Items(E(alEnt)->mlstNodeChildren, apOut, alCap);}
+		static void EntOnUpdated(uintptr_t alEnt){ E(alEnt)->OnTransformUpdated();}
+		static void EntCallbacks(uintptr_t alEnt)
+		{
+			iEntity3D *pEnt = E(alEnt);
+			if(pEnt->mlstCallbacks.empty()) return;
+			for(tEntityCallbackListIt it = pEnt->mlstCallbacks.begin(); it != pEnt->mlstCallbacks.end(); ++it)
+			{
+				(*it)->OnTransformUpdate(pEnt);
+			}
+		}
+		static OhplH10Node* NodeState(uintptr_t alNode){ return &N(alNode)->mS;}
+		static size_t NodeChildren(uintptr_t alNode, uintptr_t *apOut, size_t alCap){ return Items(N(alNode)->mlstNode, apOut, alCap);}
+		static size_t NodeEntities(uintptr_t alNode, uintptr_t *apOut, size_t alCap){ return Items(N(alNode)->mlstEntity, apOut, alCap);}
+	};
+
+	const OhplH10Host* OhplH10GetHost()
+	{
+		static const OhplH10Host host = {
+			OhplH10Hooks::EntView, OhplH10Hooks::EntChildren, OhplH10Hooks::EntNodeChildren, OhplH10Hooks::EntOnUpdated,
+			OhplH10Hooks::EntCallbacks, OhplH10Hooks::NodeState, OhplH10Hooks::NodeChildren, OhplH10Hooks::NodeEntities};
+		return &host;
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -74,7 +134,7 @@ namespace hpl {
 		for(tNode3DListIt it = mlstNodeChildren.begin(); it != mlstNodeChildren.end();++it)
 		{
 			cNode3D *pNode = *it;
-			pNode->mpEntityParent = NULL;
+			pNode->mS.mpEntityParent = NULL;
 		}
 	}
 
@@ -120,6 +180,8 @@ namespace hpl {
 
 	void iEntity3D::SetPosition(const cVector3f& avPos)
 	{
+		if(OhplBackendRustRequested()) { ohpl_h10_ent_set_position(OhplH10GetHost(), (uintptr_t)this, &avPos); return; }
+
 		m_mtxLocalTransform.m[0][3] = avPos.x;
 		m_mtxLocalTransform.m[1][3] = avPos.y;
 		m_mtxLocalTransform.m[2][3] = avPos.z;
@@ -131,6 +193,8 @@ namespace hpl {
 
 	void iEntity3D::SetMatrix(const cMatrixf& a_mtxTransform)
 	{
+		if(OhplBackendRustRequested()) { ohpl_h10_ent_set_matrix(OhplH10GetHost(), (uintptr_t)this, &a_mtxTransform); return; }
+
 		m_mtxLocalTransform = a_mtxTransform;
 
 		SetTransformUpdated();
@@ -140,6 +204,8 @@ namespace hpl {
 
 	void iEntity3D::SetWorldPosition(const cVector3f& avWorldPos)
 	{
+		if(OhplBackendRustRequested()) { ohpl_h10_ent_set_world_position(OhplH10GetHost(), (uintptr_t)this, &avWorldPos); return; }
+
 		if(mpParent)
 		{
 			SetPosition(avWorldPos - mpParent->GetWorldPosition());
@@ -154,6 +220,8 @@ namespace hpl {
 
 	void iEntity3D::SetWorldMatrix(const cMatrixf& a_mtxWorldTransform)
 	{
+		if(OhplBackendRustRequested()) { ohpl_h10_ent_set_world_matrix(OhplH10GetHost(), (uintptr_t)this, &a_mtxWorldTransform); return; }
+
 		if(mpParent)
 		{
 			cMatrixf mtxLocal;
@@ -170,6 +238,8 @@ namespace hpl {
 	
 	void iEntity3D::SetTransformUpdated(bool abUpdateCallbacks)
 	{
+		if(OhplBackendRustRequested()) { ohpl_h10_ent_set_transform_updated(OhplH10GetHost(), (uintptr_t)this, abUpdateCallbacks); return; }
+
 		mbTransformUpdated = true;
 		mlCount++;
 
@@ -220,6 +290,12 @@ namespace hpl {
 
 	cBoundingVolume* iEntity3D::GetBoundingVolume()
 	{
+		if(OhplBackendRustRequested())
+		{
+			if(ohpl_h10_ent_bv_dirty(OhplH10GetHost(), (uintptr_t)this)) mBoundingVolume.SetTransform(m_mtxWorldTransform);
+			return &mBoundingVolume;
+		}
+
 		if(mbApplyTransformToBV && mbUpdateBoundingVolume)
 		{
 			mBoundingVolume.SetTransform(GetWorldMatrix());
@@ -300,13 +376,13 @@ namespace hpl {
 
 	void iEntity3D::AddNodeChild(cNode3D *apNode)
 	{
-		if(apNode->mpEntityParent != NULL)
+		if(apNode->mS.mpEntityParent != NULL)
 		{
-			apNode->mpEntityParent->RemoveNodeChild(apNode);
+			apNode->mS.mpEntityParent->RemoveNodeChild(apNode);
 		}
 
 		mlstNodeChildren.push_back(apNode);
-		apNode->mpEntityParent = this;
+		apNode->mS.mpEntityParent = this;
 
 		apNode->SetWorldTransformUpdated();
 	}
@@ -318,7 +394,7 @@ namespace hpl {
 			cNode3D *pNode = *it;
 			if(pNode == apNode)
 			{
-				pNode->mpEntityParent = NULL;
+				pNode->mS.mpEntityParent = NULL;
 				it = mlstNodeChildren.erase(it);
 			}
 			else
@@ -347,6 +423,8 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	void iEntity3D::UpdateWorldTransform()
 	{
+		if(OhplBackendRustRequested()) { ohpl_h10_ent_update_world(OhplH10GetHost(), (uintptr_t)this); return; }
+
 		if(mbTransformUpdated)
 		{
 			//Log("CREATING Entity '%s' world transform!\n",msName.c_str());

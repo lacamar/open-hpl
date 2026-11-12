@@ -16,11 +16,13 @@ pub(crate) mod boxtree_dyn_ffi;
 pub(crate) mod boxtree_dyn_tests;
 mod camera;
 mod ffi;
+mod ffi_h10;
 mod ffi_light;
 mod ffi_meshentity;
 mod ffi_node;
 mod ffi_particles;
 mod ffi_world;
+mod h10;
 mod lensflare;
 mod light;
 mod meshentity;
@@ -32,6 +34,8 @@ mod skinning;
 mod soundentity;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_h10;
 #[cfg(test)]
 mod tests_light;
 #[cfg(test)]

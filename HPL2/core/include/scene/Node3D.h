@@ -22,12 +22,16 @@
 
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
+#include "scene/RustSceneH10.h"
 
 namespace hpl {
+
+	struct OhplH10Hooks;
 
 	class cNode3D
 	{
 		friend class iEntity3D;
+		friend struct OhplH10Hooks;
 	public:
 		cNode3D(const tString &asName="", bool abAutoDeleteChildren = true);
 		virtual ~cNode3D();
@@ -81,15 +85,15 @@ namespace hpl {
 
 		void AddTranslation(const cVector3f& avTrans);
 
-		bool GetUsePreAnimTransform(){ return mbUsePostTransform;}
-		bool GetUsePostAnimTransform(){ return mbUsePostTransform;}
-		const cMatrixf& GetPreAnimTransform(){ return m_mtxPostTransform;}
-		const cMatrixf& GetPostAnimTransform(){ return m_mtxPostTransform;}
+		bool GetUsePreAnimTransform(){ return mS.mbUsePost;}
+		bool GetUsePostAnimTransform(){ return mS.mbUsePost;}
+		const cMatrixf& GetPreAnimTransform(){ return mS.m_mtxPost;}
+		const cMatrixf& GetPostAnimTransform(){ return mS.m_mtxPost;}
 		
-		void SetUsePreTransform(bool abX){ mbUsePreTransform = abX;}
-		void SetUsePostTransform(bool abX){ mbUsePostTransform = abX;}
-		void SetPreTransform(const cMatrixf& a_mtxTransform){ m_mtxPreTransform = a_mtxTransform;}
-		void SetPostTransform(const cMatrixf& a_mtxTransform){ m_mtxPostTransform = a_mtxTransform;}
+		void SetUsePreTransform(bool abX){ mS.mbUsePre = abX;}
+		void SetUsePostTransform(bool abX){ mS.mbUsePost = abX;}
+		void SetPreTransform(const cMatrixf& a_mtxTransform){ mS.m_mtxPre = a_mtxTransform;}
+		void SetPostTransform(const cMatrixf& a_mtxTransform){ mS.m_mtxPost = a_mtxTransform;}
 		
 		/**
 		 * Applies the pre and post transforms to current matrix
@@ -117,25 +121,9 @@ namespace hpl {
 
 		bool mbAutoDeleteChildren;
 
-		cMatrixf m_mtxLocalTransform;
-		cMatrixf m_mtxWorldTransform;
+		OhplH10Node mS;
 
 		cVector3f mvWorldPosition;
-
-		bool mbUsePreTransform;
-		bool mbUsePostTransform;
-		
-		cMatrixf m_mtxPreTransform;
-		cMatrixf m_mtxPostTransform;
-
-		cQuaternion mqRotation;
-		cVector3f mvScale;
-		cVector3f mvTranslation;
-
-		bool mbTransformUpdated;
-
-		cNode3D* mpParent;
-		iEntity3D* mpEntityParent;
 
 		tEntity3DList mlstEntity;
 		tNode3DList mlstNode;

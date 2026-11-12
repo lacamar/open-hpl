@@ -22,6 +22,8 @@
 #include "system/LowLevelSystem.h"
 #include "math/Math.h"
 #include "scene/RustNode.h"
+#include "scene/RustSceneH10.h"
+#include "impl/RustBackends.h"
 
 namespace hpl {
 
@@ -39,25 +41,25 @@ namespace hpl {
 
 		mbAutoDeleteChildren = abAutoDeleteChildren;
 
-		m_mtxLocalTransform = cMatrixf::Identity;
-		m_mtxWorldTransform = cMatrixf::Identity;
+		mS.m_mtxLocal = cMatrixf::Identity;
+		mS.m_mtxWorld = cMatrixf::Identity;
 
 		mvWorldPosition = cVector3f(0,0,0);
 
-		mbTransformUpdated = true;
+		mS.mbTransformUpdated = true;
 
-		mbUsePreTransform = false;
-		mbUsePostTransform = false;
+		mS.mbUsePre = false;
+		mS.mbUsePost = false;
 
-		m_mtxPreTransform  = cMatrixf::Identity;
-		m_mtxPostTransform = cMatrixf::Identity;
+		mS.m_mtxPre  = cMatrixf::Identity;
+		mS.m_mtxPost = cMatrixf::Identity;
 
-		mpParent = NULL;
-		mpEntityParent = NULL;
+		mS.mpParent = NULL;
+		mS.mpEntityParent = NULL;
 		
-		mqRotation = cQuaternion::Identity;
-		mvScale = cVector3f(1,1,1);
-		mvTranslation = cVector3f(0,0,0);
+		mS.mqRotation = cQuaternion::Identity;
+		mS.mvScale = cVector3f(1,1,1);
+		mS.mvTranslation = cVector3f(0,0,0);
 
 		mlCustomFlags =0;
 	}
@@ -66,13 +68,13 @@ namespace hpl {
 
 	cNode3D::~cNode3D()
 	{
-		if(mpEntityParent)
+		if(mS.mpEntityParent)
 		{
-			mpEntityParent->RemoveNodeChild(this);
+			mS.mpEntityParent->RemoveNodeChild(this);
 		}
-		else if(mpParent)
+		else if(mS.mpParent)
 		{
-			mpParent->RemoveChild(this);
+			mS.mpParent->RemoveChild(this);
 		}
 
 		
@@ -85,7 +87,7 @@ namespace hpl {
 		for(tNode3DListIt NIt = mlstNode.begin(); NIt != mlstNode.end();++NIt)
 		{
 			cNode3D* pNode = *NIt;
-			pNode->mpParent = NULL;
+			pNode->mS.mpParent = NULL;
 		}
 		
 		if(mbAutoDeleteChildren)
@@ -166,7 +168,7 @@ namespace hpl {
 	{
 		cNode3D *pNode = hplNew( cNode3D, (asName,abAutoDeleteChildren) );
 
-		pNode->mpParent = this;
+		pNode->mS.mpParent = this;
 		mlstNode.push_back(pNode);
 
 		return pNode;
@@ -190,23 +192,24 @@ namespace hpl {
 
 	cVector3f cNode3D::GetLocalPosition()
 	{
-		return m_mtxLocalTransform.GetTranslation();
+		return mS.m_mtxLocal.GetTranslation();
 	}
 	
 	//-----------------------------------------------------------------------
 
 	cMatrixf& cNode3D::GetLocalMatrix()
 	{
-		return m_mtxLocalTransform;
+		return mS.m_mtxLocal;
 	}
 	
 	//-----------------------------------------------------------------------
 
 	cVector3f cNode3D::GetWorldPosition()
 	{
+
 		UpdateWorldTransform();
 
-		return m_mtxWorldTransform.GetTranslation();
+		return mS.m_mtxWorld.GetTranslation();
 	}
 
 	//-----------------------------------------------------------------------
@@ -215,7 +218,7 @@ namespace hpl {
 	{
 		UpdateWorldTransform();
 
-		return m_mtxWorldTransform;
+		return mS.m_mtxWorld;
 	}
 
 	//-----------------------------------------------------------------------
@@ -223,30 +226,36 @@ namespace hpl {
 
 	void cNode3D::SetPosition(const cVector3f& avPos)
 	{
-		m_mtxLocalTransform.m[0][3] = avPos.x;
-		m_mtxLocalTransform.m[1][3] = avPos.y;
-		m_mtxLocalTransform.m[2][3] = avPos.z;
+		if(OhplBackendRustRequested()) { ohpl_h10_node_set_position(OhplH10GetHost(), (uintptr_t)this, &avPos); return; }
+
+		mS.m_mtxLocal.m[0][3] = avPos.x;
+		mS.m_mtxLocal.m[1][3] = avPos.y;
+		mS.m_mtxLocal.m[2][3] = avPos.z;
 
 		SetWorldTransformUpdated();
 	}
 
 	void cNode3D::SetMatrix(const cMatrixf& a_mtxTransform, bool abSetChildrenUpdated)
 	{
-		m_mtxLocalTransform = a_mtxTransform;
+		if(OhplBackendRustRequested()) { ohpl_h10_node_set_matrix(OhplH10GetHost(), (uintptr_t)this, &a_mtxTransform, abSetChildrenUpdated); return; }
+
+		mS.m_mtxLocal = a_mtxTransform;
 
 		if(abSetChildrenUpdated)
 			SetWorldTransformUpdated();
 		else
-			mbTransformUpdated = true;
+			mS.mbTransformUpdated = true;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cNode3D::SetWorldPosition(const cVector3f& avWorldPos)
 	{
-		if(mpParent)
+		if(OhplBackendRustRequested()) { ohpl_h10_node_set_world_position(OhplH10GetHost(), (uintptr_t)this, &avWorldPos); return; }
+
+		if(mS.mpParent)
 		{
-			SetPosition(avWorldPos - mpParent->GetWorldPosition());
+			SetPosition(avWorldPos - mS.mpParent->GetWorldPosition());
 		}
 		else
 		{
@@ -259,10 +268,12 @@ namespace hpl {
 
 	void cNode3D::SetWorldMatrix(const cMatrixf& a_mtxWorldTransform)
 	{
-		if(mpParent)
+		if(OhplBackendRustRequested()) { ohpl_h10_node_set_world_matrix(OhplH10GetHost(), (uintptr_t)this, &a_mtxWorldTransform); return; }
+
+		if(mS.mpParent)
 		{
 			cMatrixf mtxLocal;
-			ohpl_scene_world_to_local(&mpParent->GetWorldMatrix(), &a_mtxWorldTransform, &mtxLocal);
+			ohpl_scene_world_to_local(&mS.mpParent->GetWorldMatrix(), &a_mtxWorldTransform, &mtxLocal);
 			SetMatrix(mtxLocal);
 		}
 		else
@@ -282,17 +293,17 @@ namespace hpl {
 
 	cNode3D* cNode3D::GetParent()
 	{
-		return mpParent;
+		return mS.mpParent;
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cNode3D::SetParent(cNode3D* apNode)
 	{
-		mpParent = apNode;
+		mS.mpParent = apNode;
 
-		if(mpParent)
-			mpParent->mlstNode.push_back(this);
+		if(mS.mpParent)
+			mS.mpParent->mlstNode.push_back(this);
 	}
 
 	void cNode3D::AddChild(cNode3D* apChild)
@@ -304,59 +315,73 @@ namespace hpl {
 
 	void cNode3D::AddRotation(const cVector3f& avRot, eEulerRotationOrder aOrder)
 	{
+		if(OhplBackendRustRequested()) { ohpl_h10_node_add_rotation_euler(&mS, &avRot, (int)aOrder); return; }
+
 		cQuaternion qNew;
-		ohpl_scene_node_add_rotation(&avRot, (int)aOrder, &mqRotation, &qNew);
-		mqRotation = qNew;
+		ohpl_scene_node_add_rotation(&avRot, (int)aOrder, &mS.mqRotation, &qNew);
+		mS.mqRotation = qNew;
 	}
 	
 	void cNode3D::AddRotation(const cQuaternion& aqRotation)
 	{
-		mqRotation = cMath::QuaternionMul(aqRotation, mqRotation);
+		if(OhplBackendRustRequested()) { ohpl_h10_node_add_rotation(&mS, &aqRotation); return; }
+
+		mS.mqRotation = cMath::QuaternionMul(aqRotation, mS.mqRotation);
 	}
 
 	void cNode3D::AddScale(const cVector3f& avScale)
 	{
-		mvScale *= avScale;
+		if(OhplBackendRustRequested()) { ohpl_h10_node_add_scale(&mS, &avScale); return; }
+
+		mS.mvScale *= avScale;
 	}
 
 	void cNode3D::AddTranslation(const cVector3f& avTrans)
 	{
-		mvTranslation += avTrans;
+		if(OhplBackendRustRequested()) { ohpl_h10_node_add_translation(&mS, &avTrans); return; }
+
+		mS.mvTranslation += avTrans;
 	}
 
 	void cNode3D::UpdateMatrix(bool abSetChildrenUpdated)
 	{
+		if(OhplBackendRustRequested()) { ohpl_h10_node_update_matrix(OhplH10GetHost(), (uintptr_t)this, abSetChildrenUpdated); return; }
+
 		cMatrixf mtxTransform;
-		ohpl_scene_node_update_matrix(&GetLocalMatrix(), &mqRotation, &mvTranslation, &mtxTransform);
+		ohpl_scene_node_update_matrix(&GetLocalMatrix(), &mS.mqRotation, &mS.mvTranslation, &mtxTransform);
 
 		SetMatrix(mtxTransform,abSetChildrenUpdated);
 
 		//Log("World pos: %s\n",GetWorldMatrix().GetTranslation().ToString().c_str());
 		
 		//Reset values
-		mqRotation = cQuaternion::Identity;
-		mvScale = cVector3f(1,1,1);
-		mvTranslation = cVector3f(0,0,0);
+		mS.mqRotation = cQuaternion::Identity;
+		mS.mvScale = cVector3f(1,1,1);
+		mS.mvTranslation = cVector3f(0,0,0);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cNode3D::ApplyPreAnimTransform(bool abSetChildrenUpdated)
 	{
-		if(mbUsePreTransform==false) return;
+		if(OhplBackendRustRequested()) { ohpl_h10_node_apply_anim(OhplH10GetHost(), (uintptr_t)this, false, abSetChildrenUpdated); return; }
+
+		if(mS.mbUsePre==false) return;
 
 		cMatrixf mtxTransform = GetLocalMatrix();
-		mtxTransform = cMath::MatrixMul(mtxTransform, m_mtxPreTransform);
+		mtxTransform = cMath::MatrixMul(mtxTransform, mS.m_mtxPre);
 
 		SetMatrix(mtxTransform,abSetChildrenUpdated);
 	}
 
 	void cNode3D::ApplyPostAnimTransform(bool abSetChildrenUpdated)
 	{
-		if(mbUsePostTransform==false) return;
+		if(OhplBackendRustRequested()) { ohpl_h10_node_apply_anim(OhplH10GetHost(), (uintptr_t)this, true, abSetChildrenUpdated); return; }
+
+		if(mS.mbUsePost==false) return;
 
 		cMatrixf mtxTransform = GetLocalMatrix();
-		mtxTransform = cMath::MatrixMul(m_mtxPostTransform, mtxTransform);
+		mtxTransform = cMath::MatrixMul(mS.m_mtxPost, mtxTransform);
 
 		SetMatrix(mtxTransform,abSetChildrenUpdated);
 	}
@@ -385,23 +410,25 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	void cNode3D::UpdateWorldTransform()
 	{
-		if(mbTransformUpdated)
+		if(OhplBackendRustRequested()) { ohpl_h10_node_update_world(OhplH10GetHost(), (uintptr_t)this); return; }
+
+		if(mS.mbTransformUpdated)
 		{
 			//if(msName == "WeaponJoint") LogUpdate("  update world transform!\n");
 
-			mbTransformUpdated = false;
+			mS.mbTransformUpdated = false;
 
-			if(mpParent)
+			if(mS.mpParent)
 			{
-				m_mtxWorldTransform = cMath::MatrixMul(mpParent->GetWorldMatrix(),m_mtxLocalTransform);
+				mS.m_mtxWorld = cMath::MatrixMul(mS.mpParent->GetWorldMatrix(),mS.m_mtxLocal);
 			}
-			else if(mpEntityParent)
+			else if(mS.mpEntityParent)
 			{
-				m_mtxWorldTransform = cMath::MatrixMul(mpEntityParent->GetWorldMatrix(),m_mtxLocalTransform);
+				mS.m_mtxWorld = cMath::MatrixMul(mS.mpEntityParent->GetWorldMatrix(),mS.m_mtxLocal);
 			}
 			else
 			{
-				m_mtxWorldTransform = m_mtxLocalTransform;
+				mS.m_mtxWorld = mS.m_mtxLocal;
 			}
 		}
 	}
@@ -409,9 +436,11 @@ namespace hpl {
 	
 	void cNode3D::SetWorldTransformUpdated()
 	{
+		if(OhplBackendRustRequested()) { ohpl_h10_node_set_world_transform_updated(OhplH10GetHost(), (uintptr_t)this); return; }
+
 		//if(msName == "WeaponJoint") LogUpdate("  setworldtransform updated!\n");
 
-		mbTransformUpdated = true;
+		mS.mbTransformUpdated = true;
 
 		//Update entity childre
 		UpdateEntityChildren();

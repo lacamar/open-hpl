@@ -79,3 +79,8 @@ target_link_options(PhysicsH14Tests PRIVATE
     "LINKER:--wrap=ohpl_h14_update_camera"
     "LINKER:--wrap=ohpl_h14_update_entity"
 )
+
+# H10 differential scenes (iEntity3D, cNode3D, cCamera): scripts/h10-diff.sh.
+AddTestTarget(SceneH10Tests
+    SceneH10Tests.cpp
+)
