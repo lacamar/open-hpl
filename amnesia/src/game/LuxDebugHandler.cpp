@@ -18,6 +18,7 @@
  */
 
 #include "LuxDebugHandler.h"
+#include "RustLuxBase.h"
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"
@@ -83,9 +84,9 @@ cLuxDebugHandler::cLuxDebugHandler() : iLuxUpdateable("LuxDebugHandler")
 
 	msCurrentFilePath = _W("");
 
-	mbWindowActive = false;
-	
-	mbFastForward = false;
+	mpRust = ohpl_ga9_debug_new();
+	mpF = ohpl_ga9_debug_flags(mpRust);
+
 	mpCBFastForward = NULL;
 }
 
@@ -94,6 +95,8 @@ cLuxDebugHandler::cLuxDebugHandler() : iLuxUpdateable("LuxDebugHandler")
 cLuxDebugHandler::~cLuxDebugHandler()
 {
 	SetLogMessageCallback(NULL);
+
+	ohpl_ga9_debug_free(mpRust);
 }
 
 //-----------------------------------------------------------------------
@@ -112,36 +115,8 @@ void cLuxDebugHandler::LoadUserConfig()
 
 	//////////////////////
 	//Load from config
-	mbShowFPS = gpBase->mpUserConfig->GetBool("Debug", "ShowFPS", true);
-	mbShowSoundPlaying = gpBase->mpUserConfig->GetBool("Debug", "ShowSoundPlaying", true);
-	mbShowPlayerInfo = gpBase->mpUserConfig->GetBool("Debug", "ShowPlayerInfo", true);
-	mbShowEntityInfo = gpBase->mpUserConfig->GetBool("Debug", "ShowEntityInfo", true);
-	mbShowDebugMessages = gpBase->mpUserConfig->GetBool("Debug", "ShowDebugMessages", true);
-	mbShowErrorMessages = gpBase->mpUserConfig->GetBool("Debug", "ShowErrorsAndWarnings", false);
-	mbScriptDebugOn = gpBase->mpUserConfig->GetBool("Debug", "ScriptDebugOn", false);
-	mbInspectionMode = gpBase->mpUserConfig->GetBool("Debug", "InspectionMode", false);
-	mbDisableFlashBacks = gpBase->mpUserConfig->GetBool("Debug", "DisableFlashBacks", false);
-	mbDrawPhysics = gpBase->mpUserConfig->GetBool("Debug", "DrawPhysics", false);
-
-	mbReloadFromCurrentPosition = gpBase->mpUserConfig->GetBool("Debug", "ReloadFromCurrentPosition", true);
-
-	mbAllowQuickSave = gpBase->mpUserConfig->GetBool("Debug", "AllowQuickSave", false);
-
-
-	if(gpBase->mbPTestActivated)
-	{
-		#ifndef SKIP_PTEST_TESTS
-			mbShowFPS = false;
-			mbShowSoundPlaying = false;
-			mbShowPlayerInfo = false;
-			mbShowEntityInfo = false;
-			mbShowDebugMessages = false;
-			mbShowErrorMessages = false;
-			mbScriptDebugOn = false;
-			mbInspectionMode = false;
-			mbDisableFlashBacks = false;
-		#endif
-	}
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r) { OhplGa9CfgCall(gpBase->mpUserConfig, op, a, r); };
+	ohpl_ga9_debug_load_user_config(mpRust, gpBase->mbPTestActivated, &call, OhplGa9CallOf<decltype(call)>::Fn());
 
 	/////////////////////////////////////////
 	// Set callback for message
@@ -154,20 +129,8 @@ void cLuxDebugHandler::LoadUserConfig()
 
 void cLuxDebugHandler::SaveUserConfig()
 {
-	 gpBase->mpUserConfig->SetBool("Debug", "ShowFPS", mbShowFPS);
-	 gpBase->mpUserConfig->SetBool("Debug", "ShowSoundPlaying", mbShowSoundPlaying);
-	 gpBase->mpUserConfig->SetBool("Debug", "ShowPlayerInfo", mbShowPlayerInfo);
-	 gpBase->mpUserConfig->SetBool("Debug", "ShowEntityInfo", mbShowEntityInfo);
-	 gpBase->mpUserConfig->SetBool("Debug", "ShowDebugMessages", mbShowDebugMessages);
-	 gpBase->mpUserConfig->SetBool("Debug", "ShowErrorsAndWarnings", mbShowErrorMessages);
-	 gpBase->mpUserConfig->SetBool("Debug", "ScriptDebugOn", mbScriptDebugOn);
-	 gpBase->mpUserConfig->SetBool("Debug", "InspectionMode", mbInspectionMode);
-	 gpBase->mpUserConfig->SetBool("Debug", "DisableFlashBacks", mbDisableFlashBacks);
-	 gpBase->mpUserConfig->SetBool("Debug", "DrawPhysics", mbDrawPhysics);
-
-	 gpBase->mpUserConfig->SetBool("Debug", "ReloadFromCurrentPosition", mbReloadFromCurrentPosition);
-
-	 gpBase->mpUserConfig->SetBool("Debug", "AllowQuickSave", mbAllowQuickSave);
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r) { OhplGa9CfgCall(gpBase->mpUserConfig, op, a, r); };
+	ohpl_ga9_debug_save_user_config(mpRust, &call, OhplGa9CallOf<decltype(call)>::Fn());
 }
 
 //-----------------------------------------------------------------------
@@ -185,7 +148,7 @@ void cLuxDebugHandler::OnStart()
 
 void cLuxDebugHandler::Reset()
 {
-	mbFirstUpdateOnMap = false;
+	ohpl_ga9_debug_reset(mpRust);
 	mpInspectMeshEntity = NULL;
 }
 
@@ -229,37 +192,27 @@ void cLuxDebugHandler::Update(float afTimeStep)
 {
 	iCharacterBody *pCharBody = gpBase->mpPlayer->GetCharacterBody();
 	
-	if(mbFirstUpdateOnMap)// && mlTempCount>0)
+	bool bFirstUpdate, bBatchDue;
+	ohpl_ga9_debug_update_tick(mpRust, &bFirstUpdate, &bBatchDue);
+
+	if(bFirstUpdate)
 	{
-		mbFirstUpdateOnMap = false;
-		
-		//DEBUG:
-		//gpBase->mpEngine->GetUpdater()->SetContainer("Journal");
-		//gpBase->mpJournal->OpenNote(gpBase->mpJournal->GetNote(0));
-		//gpBase->mpEngine->GetUpdater()->SetContainer("Inventory");
-		
 		cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 		if(pMap)
 		{
 			iRenderableContainer *pContainer = pMap->GetWorld()->GetRenderableContainer(eWorldContainerType_Dynamic);
-			//pContainer->UpdateBeforeRendering();
-			//pContainer->GetRoot()->UpdateBeforeUse();
-			//PrintContainerNode(pContainer->GetRoot(),0);
-			//Log("Root objects: %d Root has childs: %d\n",pContainer->GetRoot()->GetObjectNum(), pContainer->GetRoot()->HasChildNodes()?1:0);
 		}
 	}
-	mlTempCount++;
 
 	//////////////////////////////
-	if(mlTempCount > 30 && m_lstBatchMaps.empty()==false)
+	if(bBatchDue)
 	{
-		mlTempCount =0;
-
 		cLuxModelCache cache;
 		cache.Create();
 
-		tString sMap = m_lstBatchMaps.front();
-		m_lstBatchMaps.pop_front();
+		tString sMap;
+		auto emit = [&](uint32_t tag, const void *p, size_t n) { sMap = OhplGa9EmitS(p, n); };
+		ohpl_ga9_debug_batch_pop(mpRust, OhplGa9EmitOf<decltype(emit)>::Fn(), &emit);
 
         gpBase->Reset();
 		gpBase->StartGame(sMap, "", "");
@@ -267,7 +220,7 @@ void cLuxDebugHandler::Update(float afTimeStep)
 		cache.Destroy();
 	}
 
-	
+
 	UpdateInspectionMeshEntity(afTimeStep);
 	UpdateMessages(afTimeStep);
 }
@@ -276,8 +229,7 @@ void cLuxDebugHandler::Update(float afTimeStep)
 
 void cLuxDebugHandler::OnMapEnter(cLuxMap *apMap)
 {
-	mbFirstUpdateOnMap = true;
-	mlTempCount =0;
+	ohpl_ga9_debug_on_map_enter(mpRust);
 	mpInspectMeshEntity = NULL;
 
 	if(mpCBPlayerStarts)
@@ -312,7 +264,8 @@ void cLuxDebugHandler::OnMapLeave(cLuxMap *apMap)
 
 void cLuxDebugHandler::SetDebugWindowActive(bool abActive)
 {
-	if(gpBase->mpConfigHandler->mbLoadDebugMenu==false) return;
+	bool bLockChange = false;
+	if(ohpl_ga9_debug_window_change(gpBase->mpConfigHandler->mbLoadDebugMenu, abActive, gpBase->mpConfigHandler->mbFullscreen, &bLockChange)==false) return;
 
 	//////////////////
 	// Active
@@ -323,7 +276,7 @@ void cLuxDebugHandler::SetDebugWindowActive(bool abActive)
 		mpGuiSet->SetActive(true);
 		gpBase->mpInputHandler->ChangeState(eLuxInputState_Debug);
 
-		if(gpBase->mpConfigHandler->mbFullscreen==false) {
+		if(bLockChange) {
 			gpBase->mpEngine->GetInput()->GetLowLevel()->LockInput(false);
 			gpBase->mpEngine->GetInput()->GetLowLevel()->RelativeMouse(false);
 		}
@@ -337,7 +290,7 @@ void cLuxDebugHandler::SetDebugWindowActive(bool abActive)
 		mpGuiSet->SetActive(false);
 		gpBase->mpInputHandler->ChangeState(eLuxInputState_Game);
 
-		if(gpBase->mpConfigHandler->mbFullscreen==false) {
+		if(bLockChange) {
 			gpBase->mpEngine->GetInput()->GetLowLevel()->LockInput(true);
 			gpBase->mpEngine->GetInput()->GetLowLevel()->RelativeMouse(true);
 		}
@@ -386,7 +339,7 @@ void cLuxDebugHandler::OnDraw(float afFrameTime)
 	
 	////////////////////
 	// FPS
-	if(mbShowFPS)
+	if(mpF->show_fps)
 	{
 		gpBase->mpGameDebugSet->DrawFont(gpBase->mpDefaultFont, cVector3f(5,fY,10),14,cColor(1,1),
 			_W("FrameTime: %.1fms FPS: %.1f\n"),gpBase->mpEngine->GetAvgFrameTimeInMS(), gpBase->mpEngine->GetFPS());
@@ -395,14 +348,16 @@ void cLuxDebugHandler::OnDraw(float afFrameTime)
 
 	////////////////////
 	// Messages
-	if(mbShowDebugMessages || mbShowErrorMessages)
+	if(mpF->show_debug_messages || mpF->show_error_messages)
 	{
 		float fY= gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat().y - 40;
-		for(tLuxDebugMessageListIt it = mlstMessages.begin(); it != mlstMessages.end();++it)
+		tWString sText;
+		auto emit = [&](uint32_t tag, const void *p, size_t n) { sText = OhplGa9EmitW(p, n); };
+		size_t lNum = ohpl_ga9_debug_message_count(mpRust);
+		for(size_t i=0; i<lNum; ++i)
 		{
-			cLuxDebugMessage& debugMessage = *it;
-			
-			gpBase->mpGameDebugSet->DrawFont(debugMessage.msText,gpBase->mpDefaultFont,cVector3f(5,fY,10),14,cColor(1,1));
+			ohpl_ga9_debug_message(mpRust, i, OhplGa9EmitOf<decltype(emit)>::Fn(), &emit);
+			gpBase->mpGameDebugSet->DrawFont(sText,gpBase->mpDefaultFont,cVector3f(5,fY,10),14,cColor(1,1));
 			fY -= 17;
 		}
 	}
@@ -410,7 +365,7 @@ void cLuxDebugHandler::OnDraw(float afFrameTime)
 
 	////////////////////
 	// Player Info
-	if(mbShowPlayerInfo)
+	if(mpF->show_player_info)
 	{
 		cLuxPlayer *pPlayer = gpBase->mpPlayer;
 		iCharacterBody *pCharBody = pPlayer->GetCharacterBody();
@@ -505,7 +460,7 @@ void cLuxDebugHandler::OnDraw(float afFrameTime)
 
 	////////////////////
 	// Entity Info
-	if(mbShowEntityInfo)
+	if(mpF->show_entity_info)
 	{
 		cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 		cLuxEntityIterator entIt = pMap->GetEntityIterator();
@@ -520,7 +475,7 @@ void cLuxDebugHandler::OnDraw(float afFrameTime)
 
 	////////////////////////
 	// Sound playing
-	if(mbShowSoundPlaying)
+	if(mpF->show_sound_playing)
 	{
 		tStringVec vSoundNames;
 		std::vector<cSoundEntry*> vEntries;
@@ -600,7 +555,7 @@ void cLuxDebugHandler::OnDraw(float afFrameTime)
 
 	////////////////////////
 	// InspectMode
-	if(mbInspectionMode && mpInspectMeshEntity)
+	if(mpF->inspection_mode && mpInspectMeshEntity)
 	{
 		cGuiSet *pSet = gpBase->mpGameDebugSet;
 
@@ -637,7 +592,7 @@ void cLuxDebugHandler::OnDraw(float afFrameTime)
 
 void cLuxDebugHandler::RenderSolid(cRendererCallbackFunctions* apFunctions)
 {
-	if(mbInspectionMode && mpInspectMeshEntity)
+	if(mpF->inspection_mode && mpInspectMeshEntity)
 	{
 		apFunctions->SetBlendMode(eMaterialBlendMode_None);
 		apFunctions->SetDepthTest(true);
@@ -648,7 +603,7 @@ void cLuxDebugHandler::RenderSolid(cRendererCallbackFunctions* apFunctions)
 		apFunctions->SetMatrix(NULL);
 	}
 
-	if(mbDrawPhysics)
+	if(mpF->draw_physics)
 	{
 		gpBase->mpMapHandler->GetCurrentMap()->GetPhysicsWorld()->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(0.5f));
 	}
@@ -658,66 +613,28 @@ void cLuxDebugHandler::RenderSolid(cRendererCallbackFunctions* apFunctions)
 
 void cLuxDebugHandler::AddErrorOrWarningMessage(const tWString& asText)
 {
-	if(mbShowErrorMessages==false) return;
-
-	/////////////////////////////
-	// Check if message exists
-	for(tLuxDebugMessageListIt it = mlstMessages.begin(); it != mlstMessages.end();++it)
-	{
-		cLuxDebugMessage& debugMessage = *it;
-		if(debugMessage.msText == asText) return;
-	}
-	
-	/////////////////////////////
-	// Add message
-	cLuxDebugMessage debugMessage;
-	debugMessage.mfCount = 4;
-	debugMessage.msText = asText;
-	mlstMessages.push_front(debugMessage);
-
-	if(mlstMessages.size()>100) mlstMessages.pop_back();
+	ohpl_ga9_debug_add_error(mpRust, (const uint32_t*)asText.data(), asText.size());
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxDebugHandler::AddMessage(const tWString& asText, bool abCheckForDuplicates)
 {
-	if(mbShowDebugMessages==false) return;
-
-	/////////////////////////////
-	// Check if message exists
-	if(abCheckForDuplicates)
-	{
-		for(tLuxDebugMessageListIt it = mlstMessages.begin(); it != mlstMessages.end();++it)
-		{
-			cLuxDebugMessage& debugMessage = *it;
-			if(debugMessage.msText == asText) return;
-		}
-	}
-	
-	/////////////////////////////
-	// Add message
-	cLuxDebugMessage debugMessage;
-	debugMessage.mfCount = 4;
-	debugMessage.msText = asText;
-	mlstMessages.push_front(debugMessage);
-
-	if(mlstMessages.size()>100) mlstMessages.pop_back();
+	ohpl_ga9_debug_add_message(mpRust, (const uint32_t*)asText.data(), asText.size(), abCheckForDuplicates);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxDebugHandler::SetFastForward(bool abX)
 {
-	if(mbFastForward == abX) return;
+	float fSpeed = ohpl_ga9_debug_set_fast_forward(mpRust, abX);
+	if(fSpeed == 0) return;
 
-	mbFastForward = abX;
+	if(mpCBFastForward) mpCBFastForward->SetChecked(mpF->fast_forward, false);
 
-	if(mpCBFastForward) mpCBFastForward->SetChecked(mbFastForward, false);
+	gpBase->mpEngine->SetSpeedMul(fSpeed);
 
-	gpBase->mpEngine->SetSpeedMul(mbFastForward ? 4.0f : 1.0f);
-
-	gpBase->mpEngine->GetSound()->GetSoundHandler()->SetGlobalSpeed(mbFastForward ? 4.0f : 1.0f,eSoundEntryType_All, eLuxGlobalVolumeType_DebugMenu);
+	gpBase->mpEngine->GetSound()->GetSoundHandler()->SetGlobalSpeed(fSpeed,eSoundEntryType_All, eLuxGlobalVolumeType_DebugMenu);
 }
 
 //-----------------------------------------------------------------------
@@ -803,16 +720,19 @@ void cLuxDebugHandler::IterateRenderableNode(iRenderableContainerNode *apNode, c
 
 void cLuxDebugHandler::UpdateInspectionMeshEntity(float afTimeStep)
 {
-	if(mbInspectionMode==false) return;
+	if(mpF->inspection_mode==false) return;
 
 	/////////////////////////////
 	// Set up line
 	cCamera *pCam = gpBase->mpPlayer->GetCamera();
 	cVector3f vStart = pCam->GetPosition();
-	cVector3f vEnd = vStart + pCam->GetForward()*15;
-	
+	cVector3f vForward = pCam->GetForward();
+	float vLine[9];
+	ohpl_ga9_inspection_line(&vStart.x, &vForward.x, vLine);
+	cVector3f vEnd(vLine[0], vLine[1], vLine[2]);
+
     cBoundingVolume lineBV;
-	lineBV.SetLocalMinMax(cMath::Vector3Min(vStart, vEnd), cMath::Vector3Max(vStart, vEnd));
+	lineBV.SetLocalMinMax(cVector3f(vLine[3], vLine[4], vLine[5]), cVector3f(vLine[6], vLine[7], vLine[8]));
     
 	/////////////////////////////
 	// Set up variables
@@ -840,19 +760,7 @@ void cLuxDebugHandler::UpdateInspectionMeshEntity(float afTimeStep)
 
 void cLuxDebugHandler::UpdateMessages(float afTimeStep)
 {
-	for(tLuxDebugMessageListIt it = mlstMessages.begin(); it != mlstMessages.end();)
-	{
-		cLuxDebugMessage& debugMessage = *it;
-		debugMessage.mfCount-=afTimeStep;
-		if(debugMessage.mfCount <= 0)
-		{
-			it = mlstMessages.erase(it);
-		}
-		else
-		{
-			++it;
-		}
-	}
+	ohpl_ga9_debug_update_messages(mpRust, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -979,49 +887,49 @@ void cLuxDebugHandler::CreateGuiWindow()
 
 		//Show FPS
 		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Show FPS"),pGroup);
-		pCheckBox->SetChecked(mbShowFPS);
+		pCheckBox->SetChecked(mpF->show_fps);
 		pCheckBox->SetUserValue(0);
 		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		vGroupPos.y += 22;
 
 		//Show player info
 		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Show player info"),pGroup);
-		pCheckBox->SetChecked(mbShowPlayerInfo);
+		pCheckBox->SetChecked(mpF->show_player_info);
 		pCheckBox->SetUserValue(1);
 		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		vGroupPos.y += 22;
 
 		//Show entity info
 		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Show entity info"),pGroup);
-		pCheckBox->SetChecked(mbShowEntityInfo);
+		pCheckBox->SetChecked(mpF->show_entity_info);
 		pCheckBox->SetUserValue(2);
 		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		vGroupPos.y += 22;
 
 		//Show sounds playing
 		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Show sounds playing"),pGroup);
-		pCheckBox->SetChecked(mbShowSoundPlaying);
+		pCheckBox->SetChecked(mpF->show_sound_playing);
 		pCheckBox->SetUserValue(3);
 		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		vGroupPos.y += 22;
 
 		//Show debug messages
 		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Show debug messages"),pGroup);
-		pCheckBox->SetChecked(mbShowDebugMessages);
+		pCheckBox->SetChecked(mpF->show_debug_messages);
 		pCheckBox->SetUserValue(4);
 		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		vGroupPos.y += 22;
 
 		//Show error messages
 		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Show errors and warnings"),pGroup);
-		pCheckBox->SetChecked(mbShowErrorMessages);
+		pCheckBox->SetChecked(mpF->show_error_messages);
 		pCheckBox->SetUserValue(12);
 		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		vGroupPos.y += 22;
 
 		//Inspection mode
 		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Inspection mode"),pGroup);
-		pCheckBox->SetChecked(mbInspectionMode);
+		pCheckBox->SetChecked(mpF->inspection_mode);
 		pCheckBox->SetUserValue(5);
 		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		vGroupPos.y += 22;
@@ -1035,7 +943,7 @@ void cLuxDebugHandler::CreateGuiWindow()
 
 		//Physics debug drawing
 		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos, vSize, _W("Draw physics debug"), pGroup);
-		pCheckBox->SetChecked(mbDrawPhysics);
+		pCheckBox->SetChecked(mpF->draw_physics);
 		pCheckBox->SetUserValue(11);
 		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		vGroupPos.y += 22;
@@ -1080,7 +988,7 @@ void cLuxDebugHandler::CreateGuiWindow()
 		vGroupPos.y += 22;
 
 		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos, vSize, _W("Reload from current pos"), pGroup);
-		pCheckBox->SetChecked(mbReloadFromCurrentPosition, false);
+		pCheckBox->SetChecked(mpF->reload_from_current_position, false);
 		pCheckBox->SetUserValue(8);
 		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		vGroupPos.y += 22;
@@ -1131,7 +1039,7 @@ void cLuxDebugHandler::CreateGuiWindow()
 		pGroup = mpGuiSet->CreateWidgetGroup(vPos,100,_W("Game"),mpDebugWindow);
 
 		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos, vSize, _W("Disable Flashbacks"), pGroup);
-		pCheckBox->SetChecked(mbDisableFlashBacks, false);
+		pCheckBox->SetChecked(mpF->disable_flashbacks, false);
 		pCheckBox->SetUserValue(10);
 		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		vGroupPos.y += 22;
@@ -1154,7 +1062,7 @@ void cLuxDebugHandler::CreateGuiWindow()
 		vGroupPos.y += 22;
 
 		mpCBFastForward = mpGuiSet->CreateWidgetCheckBox(vGroupPos, vSize, _W("Fast Forward (F3)"), pGroup);
-		mpCBFastForward->SetChecked(mbFastForward, false);
+		mpCBFastForward->SetChecked(mpF->fast_forward, false);
 		mpCBFastForward->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		mpCBFastForward->SetUserValue(17);
 		vGroupPos.y += 22;
@@ -1276,7 +1184,7 @@ void cLuxDebugHandler::ReloadMap()
 
 	///////////////////
 	//Set char variables
-	if(mbReloadFromCurrentPosition)
+	if(mpF->reload_from_current_position)
 	{
 		pCharBody = gpBase->mpPlayer->GetCharacterBody();
 		pCam = gpBase->mpPlayer->GetCamera();
@@ -1355,7 +1263,7 @@ void cLuxDebugHandler::TestChangeMapSave()
 
 	///////////////////
 	//Set char variables
-	if(mbReloadFromCurrentPosition)
+	if(mpF->reload_from_current_position)
 	{
 		pCharBody = gpBase->mpPlayer->GetCharacterBody();
 		pCam = gpBase->mpPlayer->GetCamera();
@@ -1377,11 +1285,8 @@ void cLuxDebugHandler::LoadBatchLoadFile(const tWString& asFilePath)
 	sFileData.resize(lFileSize);
 	cPlatform::CopyFileToBuffer(asFilePath,&sFileData[0],lFileSize);
 
-	tStringVec vStrings;
-	cString::GetStringVec(sFileData, vStrings);
 
-	m_lstBatchMaps.clear();
-	for(size_t i=0; i<vStrings.size(); ++i) m_lstBatchMaps.push_back(vStrings[i]);
+	ohpl_ga9_debug_load_batch(mpRust, (const unsigned char*)sFileData.data(), sFileData.size());
 }
 
 //-----------------------------------------------------------------------
@@ -1558,28 +1463,18 @@ void cLuxDebugHandler::CheckDynamicContainerBugsRec(iRenderableContainerNode *ap
 
 bool cLuxDebugHandler::ChangeDebugText(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	int lNum = apWidget->GetUserValue();
-	bool bActive = aData.mlVal == 1;
+	OhplGa9Toggle toggle;
+	ohpl_ga9_debug_change_text(mpRust, apWidget->GetUserValue(), aData.mlVal, &toggle);
 
-    if(lNum == 0)		mbShowFPS = bActive;
-	else if(lNum == 1)	 mbShowPlayerInfo = bActive;
-	else if(lNum == 2)	 mbShowEntityInfo = bActive;
-	else if(lNum == 3)	 mbShowSoundPlaying = bActive;
-	else if(lNum == 4)	 mbShowDebugMessages = bActive;
-	else if(lNum == 5)	 mbInspectionMode = bActive;
-	else if(lNum == 6)	 gpBase->mpMapHandler->GetViewport()->GetRenderSettings()->mbUseOcclusionCulling = bActive;
-	else if(lNum == 7)	 iResourceBase::SetLogCreateAndDelete(bActive);
-	else if(lNum == 8)	 mbReloadFromCurrentPosition = bActive;
-	else if(lNum == 9)	 gpBase->mpConfigHandler->mbFastPhysicsLoad = bActive;
-	else if(lNum == 10)	 mbDisableFlashBacks = bActive;
-	else if(lNum == 11)  mbDrawPhysics = bActive;
-	else if(lNum == 12)  mbShowErrorMessages = bActive;
-
-	else if(lNum == 13)  gpBase->mpPlayer->SetFreeCamActive(bActive);
-	else if(lNum == 14)  gpBase->mpPlayer->SetFreeCamSpeed( cMath::Max((float)aData.mlVal/ 100.0f, 0.001f) );
-
-	else if(lNum == 17)  SetFastForward(bActive);
-	
+	switch(toggle.kind)
+	{
+	case 1: gpBase->mpMapHandler->GetViewport()->GetRenderSettings()->mbUseOcclusionCulling = toggle.on; break;
+	case 2: iResourceBase::SetLogCreateAndDelete(toggle.on); break;
+	case 3: gpBase->mpConfigHandler->mbFastPhysicsLoad = toggle.on; break;
+	case 4: gpBase->mpPlayer->SetFreeCamActive(toggle.on); break;
+	case 5: gpBase->mpPlayer->SetFreeCamSpeed(toggle.value); break;
+	case 6: SetFastForward(toggle.on); break;
+	}
 
 	return true;
 }

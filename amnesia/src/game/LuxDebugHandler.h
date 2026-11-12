@@ -23,18 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
-
-//----------------------------------------------
-
-class cLuxDebugMessage
-{
-public:
-	tWString msText;
-	float mfCount;
-};
-
-typedef std::list<cLuxDebugMessage> tLuxDebugMessageList;
-typedef tLuxDebugMessageList::iterator tLuxDebugMessageListIt;
+#include "RustLuxBase.h"
 
 //----------------------------------------------
 
@@ -56,7 +45,7 @@ public:
 
 
 	void SetDebugWindowActive(bool abActive);
-	bool GetDebugWindowActive(){ return mbWindowActive;}
+	bool GetDebugWindowActive(){ return mpF->window_active;}
 		
 	void OnDraw(float afFrameTime);
 	void RenderSolid(cRendererCallbackFunctions* apFunctions);
@@ -64,17 +53,17 @@ public:
 	void AddErrorOrWarningMessage(const tWString& asText);
 	void AddMessage(const tWString& asText, bool abCheckForDuplicates);
 
-	bool GetShowPlayerInfo(){ return mbShowPlayerInfo;}
-	bool GetShowEntityInfo(){ return mbShowEntityInfo;}
-	bool GetScriptDebugOn(){ return mbScriptDebugOn;}
-	bool GetDisableFlashBacks(){ return mbDisableFlashBacks;}
-	bool GetAllowQuickSave(){ return mbAllowQuickSave;}
+	bool GetShowPlayerInfo(){ return mpF->show_player_info;}
+	bool GetShowEntityInfo(){ return mpF->show_entity_info;}
+	bool GetScriptDebugOn(){ return mpF->script_debug_on;}
+	bool GetDisableFlashBacks(){ return mpF->disable_flashbacks;}
+	bool GetAllowQuickSave(){ return mpF->allow_quick_save;}
 
-	bool GetShowFPS(){ return mbShowFPS;}
-	void SetShowFPS(bool abX){ mbShowFPS = abX;}
+	bool GetShowFPS(){ return mpF->show_fps;}
+	void SetShowFPS(bool abX){ mpF->show_fps = abX;}
 
 	void SetFastForward(bool abX);
-	bool GetFastForward(){ return mbFastForward;}
+	bool GetFastForward(){ return mpF->fast_forward;}
 
 	void QuickReloadMap();
 
@@ -166,36 +155,16 @@ private:
 	
 	tWidgetList mlstScriptOutputWidgets;
 
-	bool mbShowFPS;
-	bool mbShowSoundPlaying;
-	bool mbShowPlayerInfo;
-	bool mbShowEntityInfo;
-	bool mbShowDebugMessages;
-	bool mbScriptDebugOn;
-	bool mbInspectionMode;
-	bool mbDrawPhysics;
-
-	bool mbAllowQuickSave;
-    
-	bool mbWindowActive;
-
-	bool mbReloadFromCurrentPosition;
-	bool mbDisableFlashBacks;
-
-	bool mbFastForward;
-	bool mbShowErrorMessages;
+	OhplGa9Debug *mpRust;
+	OhplGa9DebugFlags *mpF;
 
 	cSubMeshEntity *mpInspectMeshEntity;
 
-	bool mbFirstUpdateOnMap;
 
-	tStringList m_lstBatchMaps;
 
 	tWStringVec mvPickedFiles;
 	tWString msCurrentFilePath;
 
-	tLuxDebugMessageList mlstMessages;
-	int mlTempCount;
 };
 
 //----------------------------------------------

@@ -24,6 +24,7 @@
 
 #include "LuxBase.h"
 #include "LuxTypes.h"
+#include "RustLuxBase.h"
 
 //----------------------------------------------
 
@@ -146,11 +147,9 @@ private:
 
 	void CreateActions();
 
-	void CreateSubAction(cAction *apAction,const tStringVec& avType, int alValue);
+	void ActionCall(uint32_t op, const OhplGa9Arg *a, OhplGa9Ret *r);
 
-	tStringVec GetInputValueStrings(const tString& asX);
 
-	bool CreateSubActionFromInputString(cAction* apAction, const tString& asInputString);
 
 	bool ShowMouseOnMouseInput();
 
@@ -168,15 +167,14 @@ private:
 	bool mbSmoothMouse;
 	bool mbInvertMouse;
 
-	double mfMouseActiveAt;
+	OhplGa9MouseAct mMouseAct;
 
 	float mfMouseSensitivity;
 
 	int mlMaxSmoothMousePos;
 	float mfPrevSmoothMousePosMul;
-	tVector2fList mlstSmoothMousePos;
+	OhplGa9Smooth *mpSmooth;
 
-	cVector2l mvLastAbsMousePos;
 
 #ifdef USE_GAMEPAD
 	float mfGamepadWalkSensitivity;
