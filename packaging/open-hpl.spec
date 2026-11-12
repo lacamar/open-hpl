@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.88
+Version:        1.3.89
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,10 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Thu Nov 12 2026 lacamar <lchlnm@pm.me> - 1.3.89-1
+- Port resource managers, skeletons, animations, scene nodes, camera to Rust
+- Fix save round-trip scripts
+
 * Thu Nov 12 2026 lacamar <lchlnm@pm.me> - 1.3.88-1
 - Add Rust library backends (OHPL_IMPL=rust)
 - Port engine system, input, sound, resources, physics objects to Rust
