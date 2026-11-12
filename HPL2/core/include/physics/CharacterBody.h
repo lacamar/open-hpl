@@ -24,6 +24,7 @@
 #include "physics/PhysicsWorld.h"
 #include "math/PidController.h"
 #include "physics/RustCharacter.h"
+#include "physics/RustPhysicsH14.h"
 
 namespace hpl {
 
@@ -334,7 +335,7 @@ namespace hpl {
 		cVector3f GetCameraPosAdd();
 		void SetCameraSmoothPosNum(int alNum){ mlCameraSmoothPosNum = alNum;}
 		int GetCameraSmoothPosNum(){ return mlCameraSmoothPosNum;}
-		void SetCameraUseSmoothing(bool abX){ mbCameraUseSmoothing = abX; mlstCameraPos.clear(); UpdateCamera(); }
+		void SetCameraUseSmoothing(bool abX){ mbCameraUseSmoothing = abX; mlstCameraPos.clear(); if(mpAux) ohpl_h14_clear_camera(mpAux); UpdateCamera(); }
 		bool GetCameraUseSmoothing(){ return mbCameraUseSmoothing;}
 		void SetCameraUpdateActive(bool abX){ mbCameraUpdateActive = abX;}
 		bool GetCameraUpdateActive(){ return mbCameraUpdateActive;}
@@ -401,6 +402,8 @@ namespace hpl {
 		bool CheckCollision(cVector3f *apPushBackVector, const cVector3f& avPos, iPhysicsWorldCollisionCallback *apCallback,int alShapeIdx=-1);
 
 		OhplCharState mS;
+		OhplH14Aux *mpAux;
+		OhplH14Conn MakeConn();
 		OhplCharVt MakeVt();
 
 		tString msName;

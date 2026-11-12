@@ -521,3 +521,35 @@ pub fn update_after_simulate<H: RopeHost>(h: &H, r: &R) {
         count += 1.0;
     }
 }
+
+/// `iPhysicsRope::BuildRopeParticles` sizing: particles between the end points and the first segment length.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RopePlan {
+    pub wanted: i32,
+    pub first_segment: f32,
+}
+
+pub fn rope_plan(total: f32, segment: f32) -> RopePlan {
+    if segment > 0.0 {
+        let first = crate::math::modulus(total, segment);
+        RopePlan {
+            wanted: ((total / segment) + 0.999999f32) as i32 - 1,
+            first_segment: if first == 0.0 { segment } else { first },
+        }
+    } else {
+        RopePlan {
+            wanted: 0,
+            first_segment: total,
+        }
+    }
+}
+
+/// `start + dir * length` as gcc fuses it.
+pub fn rope_particle_pos(start: Vector3f, dir: Vector3f, length: f32) -> Vector3f {
+    v3(
+        fma(dir.x, length, start.x),
+        fma(dir.y, length, start.y),
+        fma(dir.z, length, start.z),
+    )
+}

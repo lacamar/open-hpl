@@ -1,6 +1,7 @@
 //! `cPidController<float>`.
 
-use crate::math::fma;
+use crate::math::{fma, v3};
+use crate::types::Vector3f;
 
 #[derive(Debug, Default)]
 pub struct Pid {
@@ -76,6 +77,80 @@ impl Pid {
             self.derivative,
             self.d,
             fma(error, self.p, self.integral * self.i),
+        )
+    }
+}
+
+/// `cPidController<cVector3f>`.
+#[derive(Debug, Default)]
+pub struct Pid3 {
+    pub p: f32,
+    pub i: f32,
+    pub d: f32,
+    errors: Vec<Vector3f>,
+    steps: Vec<f32>,
+    error_num: usize,
+    last_num: Option<usize>,
+}
+
+impl Pid3 {
+    pub fn new(error_num: usize) -> Self {
+        Pid3 {
+            errors: vec![Vector3f::default(); error_num],
+            steps: vec![0.0; error_num],
+            ..Pid3::default()
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.error_num = 0;
+        self.last_num = None;
+        self.steps.fill(0.0);
+    }
+
+    /// Empty buffers are UB in C++ (unchecked index); here the output is zero.
+    pub fn output(&mut self, error: Vector3f, time_step: f32) -> Vector3f {
+        let n = self.errors.len();
+        if n == 0 {
+            return Vector3f::default();
+        }
+        let idx = if self.error_num >= n {
+            0
+        } else {
+            self.error_num
+        };
+        if let (Some(e), Some(t)) = (self.errors.get_mut(idx), self.steps.get_mut(idx)) {
+            *e = error;
+            *t = time_step;
+        }
+
+        let mut integral = Vector3f::default();
+        for (e, t) in self.errors.iter().zip(&self.steps) {
+            integral = v3(
+                fma(e.x, *t, integral.x),
+                fma(e.y, *t, integral.y),
+                fma(e.z, *t, integral.z),
+            );
+        }
+
+        let mut derivative = Vector3f::default();
+        if let Some(last) = self.last_num {
+            let prev = self.errors.get(last).copied().unwrap_or_default();
+            derivative = v3(
+                (error.x - prev.x) / time_step,
+                (error.y - prev.y) / time_step,
+                (error.z - prev.z) / time_step,
+            );
+        }
+
+        self.last_num = Some(idx);
+        self.error_num = if idx + 1 >= n { 0 } else { idx + 1 };
+
+        let term = |e: f32, int: f32, der: f32| fma(der, self.d, fma(e, self.p, int * self.i));
+        v3(
+            term(error.x, integral.x, derivative.x),
+            term(error.y, integral.y, derivative.y),
+            term(error.z, integral.z, derivative.z),
         )
     }
 }

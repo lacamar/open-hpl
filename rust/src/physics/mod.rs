@@ -3,10 +3,12 @@
 
 pub mod body;
 pub mod book;
+mod char_aux;
 pub mod character;
 pub mod controller;
 mod ffi;
 mod ffi_character;
+mod ffi_h14;
 pub mod host;
 pub mod joint;
 pub(crate) mod newton_body;
@@ -22,3 +24,5 @@ pub mod world;
 mod tests;
 #[cfg(test)]
 mod tests_character;
+#[cfg(test)]
+mod tests_h14;
