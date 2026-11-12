@@ -6,6 +6,8 @@
 #include <vector>
 
 #include "input/RustInput.h"
+#include "impl/RustBackends.h"
+#include "impl/RustL1.h"
 #include "SDL2/SDL_events.h"
 
 static_assert(sizeof(((SDL_TextInputEvent*)0)->text) == 32, "OhplInputEvent::text");
@@ -15,6 +17,13 @@ namespace hpl {
 	inline void OhplConvertEvents(const std::list<SDL_Event>& alstEvents, std::vector<OhplInputEvent>& avOut)
 	{
 		avOut.clear();
+		if(OhplBackendRustRequested())
+		{
+			std::vector<SDL_Event> vEvents(alstEvents.begin(), alstEvents.end());
+			avOut.resize(vEvents.size());
+			ohpl_l1_convert_events(vEvents.data(), vEvents.size(), avOut.data());
+			return;
+		}
 		avOut.reserve(alstEvents.size());
 		for(const SDL_Event& e : alstEvents)
 		{

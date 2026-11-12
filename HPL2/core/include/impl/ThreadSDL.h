@@ -23,6 +23,7 @@
 #include "system/Thread.h"
 
 struct SDL_Thread;
+struct OhplL1Thread;
 
 namespace hpl {
 
@@ -43,6 +44,7 @@ namespace hpl {
 
 	private:
 		SDL_Thread* mpThreadHandle;
+		OhplL1Thread* mpRust;
 
 	};
 

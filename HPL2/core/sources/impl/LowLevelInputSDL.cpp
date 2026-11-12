@@ -23,6 +23,8 @@
 #include "impl/KeyboardSDL.h"
 #include "impl/GamepadSDL.h"
 #include "impl/GamepadSDL2.h"
+#include "impl/RustBackends.h"
+#include "impl/RustL1.h"
 
 #include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
@@ -44,6 +46,17 @@
 
 namespace hpl {
 
+	static bool L1EventFilter(void *apCtx, const SDL_Event *apEvent)
+	{
+		cLowLevelInputSDL *pInput = static_cast<cLowLevelInputSDL*>(apCtx);
+		return pInput->mEventFilter && pInput->mEventFilter(*apEvent);
+	}
+
+	static void L1EventPush(void *apCtx, const SDL_Event *apEvent)
+	{
+		static_cast<cLowLevelInputSDL*>(apCtx)->mlstEvents.push_back(*apEvent);
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
@@ -56,7 +69,8 @@ namespace hpl {
 		LockInput(true);
 		RelativeMouse(false);
 #if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
+        if(OhplBackendRustRequested()) ohpl_l1_input_init();
+        else SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
 #else
 //		mlConnectedDevices = 0;
 //		mlCheckDeviceChange = 0;
@@ -94,6 +108,18 @@ namespace hpl {
 
 	void cLowLevelInputSDL::BeginInputUpdate()
 	{
+		if(OhplBackendRustRequested())
+		{
+			mlstEvents.clear();
+			unsigned lFlags = ohpl_l1_poll(L1EventFilter, L1EventPush, this);
+			if(lFlags & kOhplL1PollPlugged) cEngine::SetDeviceWasPlugged();
+			if(lFlags & kOhplL1PollRemoved) cEngine::SetDeviceWasRemoved();
+			if(lFlags & kOhplL1PollQuit) mbQuitMessagePosted = true;
+			for(const SDL_Event &ev : mlstInjected)
+				if(ohpl_l1_filter_keeps(L1EventFilter, this, &ev)) mlstEvents.push_back(ev);
+			mlstInjected.clear();
+			return;
+		}
 		SDL_Event sdlEvent;
 
 		mlstEvents.clear();
@@ -184,6 +210,7 @@ namespace hpl {
 #if USE_XINPUT
 		return cGamepadXInput::GetNumConnected();
 #else
+		if(OhplBackendRustRequested()) return ohpl_l1_joystick_count();
 		return SDL_NumJoysticks();
 #endif
 	}

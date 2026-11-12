@@ -20,18 +20,35 @@
 
 #include "impl/LowLevelInputSDL.h"
 #include "impl/RustInputSDL.h"
+#include "impl/RustBackends.h"
+#include "impl/RustL1.h"
 #include "system/Platform.h"
 
 namespace hpl {
 
+	static void L1NameSink(void *apCtx, const unsigned char *apData, size_t alLen)
+	{
+		static_cast<tString*>(apCtx)->assign(reinterpret_cast<const char*>(apData), alLen);
+	}
+
 	cGamepadSDL2::cGamepadSDL2(cLowLevelInputSDL *apLowLevelInputSDL, int alIndex) : iGamepad("SDL Portable Gamepad", alIndex)
 	{
 		mpLowLevelInputSDL = apLowLevelInputSDL;
-		mpHandle = SDL_GameControllerOpen(mlIndex);
+		mpHandle = NULL;
 		mpHaptic = NULL;
+		mpRustPad = NULL;
 		mlInstance = 0;
 
 		size_t lButtons = 0, lAxes = 0;
+		if(OhplBackendRustRequested())
+		{
+			OhplL1PadInfo info;
+			mpRustPad = ohpl_l1_pad_open(mlIndex, &info, L1NameSink, &msGamepadName);
+			mlInstance = info.instance;
+			lButtons = info.buttons;
+			lAxes = info.axes;
+		}
+		else mpHandle = SDL_GameControllerOpen(mlIndex);
 		if(mpHandle)
 		{
 			SDL_Joystick *joy = SDL_GameControllerGetJoystick(mpHandle);
@@ -52,6 +69,7 @@ namespace hpl {
 
 	cGamepadSDL2::~cGamepadSDL2()
 	{
+		if(mpRustPad) ohpl_l1_pad_free(mpRustPad);
 		if(mpHaptic)
 		{
 			SDL_HapticRumbleStop(mpHaptic);
@@ -197,6 +215,7 @@ namespace hpl {
 
 	void cGamepadSDL2::SetRumble(float afValue, int alMillisec)
 	{
+		if(mpRustPad) { ohpl_l1_pad_rumble(mpRustPad, afValue, alMillisec); return; }
 		if(mpHaptic)
 		{
 			if(afValue > 0) SDL_HapticRumblePlay(mpHaptic, afValue, alMillisec);

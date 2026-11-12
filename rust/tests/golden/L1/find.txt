@@ -1,0 +1,20 @@
+FILES *	.hidden.txt	10.txt	9.txt	Zed.Txt	a.TXT	ab	b.txt	c.dat	x y.txt
+FILESSLASH *	.hidden.txt	10.txt	9.txt	Zed.Txt	a.TXT	ab	b.txt	c.dat	x y.txt
+FILES *.txt	.hidden.txt	10.txt	9.txt	Zed.Txt	a.TXT	b.txt	x y.txt
+FILESSLASH *.txt	.hidden.txt	10.txt	9.txt	Zed.Txt	a.TXT	b.txt	x y.txt
+FILES ?.txt	9.txt	a.TXT	b.txt
+FILESSLASH ?.txt	9.txt	a.TXT	b.txt
+FILES A*	a.TXT	ab
+FILESSLASH A*	a.TXT	ab
+FILES *.dat	c.dat
+FILESSLASH *.dat	c.dat
+FILES x*	x y.txt
+FILESSLASH x*	x y.txt
+FILES ??.txt	10.txt
+FILESSLASH ??.txt	10.txt
+FILES nomatch
+FILESSLASH nomatch
+FOLDERS 0 0	Sub	dir.txt	subb
+FOLDERS 0 1	Sub	dir.txt	subb
+FOLDERS 1 0	.dotdir	Sub	dir.txt	subb
+FOLDERS 1 1	..	.dotdir	Sub	dir.txt	subb

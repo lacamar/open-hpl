@@ -22,6 +22,8 @@
 
 #include "system/Timer.h"
 
+struct OhplL1Timer;
+
 #ifdef WIN32   // Windows system specific
 	#include <windows.h>
 #else          // Unix based system specific
@@ -45,6 +47,7 @@ namespace hpl {
 		double mfStartTimeInMicroSec;
 		double mfEndTimeInMicroSec;
 		bool   mbStopped;
+		OhplL1Timer *mpRust;
 		
 		#ifdef WIN32
 			LARGE_INTEGER mFrequency; 

@@ -23,6 +23,7 @@
 #include "system/Mutex.h"
 
 struct SDL_mutex;
+struct OhplL1Mutex;
 
 namespace hpl {
 
@@ -38,6 +39,7 @@ namespace hpl {
 
 	private:
 		SDL_mutex* mpMutexHandle;
+		OhplL1Mutex* mpRust;
 
 	};
 

@@ -24,6 +24,8 @@
 #include <angelscript.h>
 #include <stdio.h>
 
+struct OhplL1Log;
+
 namespace hpl {
 
 	//------------------------------------------------------
@@ -44,6 +46,7 @@ namespace hpl {
 		void ReopenFile();
 
 		FILE *mpFile;
+		::OhplL1Log *mpRust;
 		tWString msFileName;
 	};
 

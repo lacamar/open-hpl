@@ -32,11 +32,24 @@
 #include "impl/TimerSDL.h"
 #include "impl/ThreadSDL.h"
 #include "impl/MutexSDL.h"
+#include "impl/RustBackends.h"
+#include "impl/RustL1.h"
+#include <stdexcept>
 
 #include <set>
 #include <algorithm>
 
 namespace hpl {
+
+	static void L1Utf8Sink(void *apCtx, const unsigned char *apData, size_t alLen)
+	{
+		static_cast<tString*>(apCtx)->assign(reinterpret_cast<const char*>(apData), alLen);
+	}
+
+	static void L1VideoModeSink(void *apCtx, int alDisplay, int alW, int alH, int alBpp)
+	{
+		static_cast<tVideoModeVec*>(apCtx)->push_back(cVideoMode(alDisplay, cVector2l(alW, alH), alBpp, 1));
+	}
 	//////////////////////////////////////////////////////////////////////////
 	// APPLICATION
 	//////////////////////////////////////////////////////////////////////////
@@ -45,6 +58,7 @@ namespace hpl {
 
 	unsigned long cPlatform::GetApplicationTime()
 	{
+		if(OhplBackendRustRequested()) return ohpl_l1_ticks();
 		return SDL_GetTicks();
 	}
 
@@ -52,6 +66,7 @@ namespace hpl {
 
 	void cPlatform::Sleep ( const unsigned int alMillisecs )
 	{
+		if(OhplBackendRustRequested()) { ohpl_l1_delay(alMillisecs); return; }
 		SDL_Delay ( alMillisecs );
 	}
 
@@ -59,6 +74,7 @@ namespace hpl {
 	{
 #if SDL_VERSION_ATLEAST(2, 0, 0)
         tString tstr = cString::S16BitToUTF8(asText);
+        if(OhplBackendRustRequested()) { ohpl_l1_clipboard_set(tstr.c_str()); return; }
         SDL_SetClipboardText(tstr.c_str());
 #endif
 	}
@@ -69,6 +85,12 @@ namespace hpl {
 	{
         tWString tstr;
 #if SDL_VERSION_ATLEAST(2, 0, 0)
+        if(OhplBackendRustRequested())
+        {
+            tString sClip;
+            if(ohpl_l1_clipboard_get(L1Utf8Sink, &sClip)) tstr = cString::UTF8ToWChar(sClip.c_str());
+            return tstr;
+        }
         if (SDL_HasClipboardText()) {
             // Gets utf8 encoded text
             char * clip = SDL_GetClipboardText();
@@ -84,6 +106,7 @@ namespace hpl {
 	void cPlatform::GetDisplayResolution(int alDisplay, int& alWidth, int& alHeight)
 	{
 	#if SDL_VERSION_ATLEAST(2,0,0)
+		if(OhplBackendRustRequested()) { ohpl_l1_display_resolution(alDisplay, &alWidth, &alHeight); return; }
 		SDL_DisplayMode desktop;
 		SDL_GetDesktopDisplayMode(alDisplay, &desktop);
 		alWidth = desktop.w;
@@ -98,6 +121,12 @@ namespace hpl {
 	void cPlatform::GetAvailableVideoModes(tVideoModeVec& avDestVidModes, int alMinBpp, int alMinRefreshRate)
 	{
 #if SDL_VERSION_ATLEAST(2, 0, 0)
+        if(OhplBackendRustRequested())
+        {
+            avDestVidModes.clear();
+            ohpl_l1_video_modes(L1VideoModeSink, &avDestVidModes);
+            return;
+        }
         int ndisplays = SDL_GetNumVideoDisplays();
 
         std::set<cVideoMode, VideoComp> uniqVideoModes;
@@ -146,6 +175,12 @@ namespace hpl {
 
     tWString cPlatform::GetDisplayName(int alDisplay)
     {
+        if(OhplBackendRustRequested())
+        {
+            tString sName;
+            if(!ohpl_l1_display_name(alDisplay, L1Utf8Sink, &sName)) throw std::logic_error("GetDisplayName: no display name");
+            return cString::To16Char(sName);
+        }
         return cString::To16Char(SDL_GetDisplayName(alDisplay));
     }
 

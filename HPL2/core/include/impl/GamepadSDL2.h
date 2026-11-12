@@ -25,6 +25,7 @@
 #include "system/SystemTypes.h"
 #include "input/Gamepad.h"
 #include "input/RustInput.h"
+#include "impl/RustL1.h"
 //#include "input/InputTypes.h"
 
 #include "SDL2/SDL.h"
@@ -89,6 +90,7 @@ namespace hpl {
 		SDL_JoystickID		mlInstance;
 		cLowLevelInputSDL	*mpLowLevelInputSDL;
 		SDL_Haptic* mpHaptic;
+		OhplL1Pad* mpRustPad;
 	};
 
 };
