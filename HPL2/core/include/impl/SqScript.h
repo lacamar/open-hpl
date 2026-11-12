@@ -23,6 +23,7 @@
 #include "system/Script.h"
 #include "impl/LowLevelSystemSDL.h"
 #include <angelscript.h>
+#include "impl/RustL7.h"
 #include <vector>
 
 
@@ -31,7 +32,7 @@ namespace hpl {
 	class cSqScript : public iScript
 	{
 	public:
-		cSqScript(const tString& asName, asIScriptEngine *apScriptEngine,cScriptOutput *apScriptOutput, int alHandle); 
+		cSqScript(const tString& asName, asIScriptEngine *apScriptEngine,cScriptOutput *apScriptOutput, int alHandle, OhplL7Engine *apRustEngine=NULL);
 		~cSqScript();
 
 		bool CreateFromFile(const tWString& asFileName, tString *apCompileMessages=NULL);
@@ -49,6 +50,8 @@ namespace hpl {
 		asIScriptContext *mpContext;
 		asIScriptModule *mpModule;
 		
+		OhplL7Script *mpRs;
+
 		int mlHandle;
 		tString msModuleName;
 

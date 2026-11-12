@@ -6,6 +6,8 @@
 #include <zlib.h>
 
 #include "shims.h"
+#include "as_shim.h"
+#include <angelscript.h>
 
 #include <sys/mount.h>
 #include <sys/stat.h>
@@ -858,3 +860,15 @@ static_assert(sizeof(OhplOalInit) == 40 && offsetof(OhplOalInit, output_freq) ==
 static_assert(sizeof(OhplThYuv) == 56 && offsetof(OhplThYuv, y_len) == 24 && offsetof(OhplThYuv, y_stride) == 48
 	&& offsetof(OhplThYuv, uv_stride) == 52, "OhplThYuv");
 static_assert(sizeof(wchar_t) == 4, "wide text crosses the ABI as u32");
+
+// rust/src/script (L7)
+static_assert(sizeof(OhplAsMsg) == 32 && offsetof(OhplAsMsg, row) == 8 && offsetof(OhplAsMsg, col) == 12
+	&& offsetof(OhplAsMsg, type) == 16 && offsetof(OhplAsMsg, message) == 24, "OhplAsMsg");
+static_assert(asCALL_CDECL == 0 && asCALL_STDCALL == 1 && asCALL_CDECL_OBJLAST == 4 && asCALL_CDECL_OBJFIRST == 5, "asECallConvTypes");
+static_assert(asBEHAVE_CONSTRUCT == 0 && asBEHAVE_DESTRUCT == 2 && asBEHAVE_FACTORY == 3 && asBEHAVE_ADDREF == 5
+	&& asBEHAVE_RELEASE == 6, "asEBehaviours");
+static_assert(asOBJ_REF == 1 && asOBJ_VALUE == 2 && asOBJ_POD == 8 && asOBJ_NOHANDLE == 16 && asOBJ_APP_CLASS == 256
+	&& asOBJ_APP_CLASS_ALLINTS == (1 << 16) && asOBJ_APP_CLASS_ALLFLOATS == (1 << 17), "asEObjTypeFlags");
+static_assert(asMSGTYPE_ERROR == 0 && asMSGTYPE_WARNING == 1 && asMSGTYPE_INFORMATION == 2, "asEMsgType");
+static_assert(asGM_ALWAYS_CREATE == 2 && asEXECUTION_FINISHED == 0 && asINVALID_ARG == -5, "AngelScript codes");
+static_assert(ANGELSCRIPT_VERSION == 23800, "AngelScript version");

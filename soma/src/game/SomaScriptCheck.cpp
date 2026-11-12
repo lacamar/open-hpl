@@ -6,6 +6,8 @@
 #include "SomaScriptNatives.h"
 
 #include "impl/scriptarray.h"
+#include "impl/RustL7.h"
+#include "../../../cshim/as_shim.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -108,7 +110,18 @@ static void FindConfigScripts(const std::string &asGameDir, std::vector<std::str
 
 int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFile, const std::string &asReport)
 {
-	asIScriptEngine *pEngine = asCreateScriptEngine();
+	const bool bRust = hpl::OhplBackendRustRequested();
+	if (bRust)
+	{
+		OhplL7InstallAddons();
+		unsigned lFailed = ohpl_l7_selftest();
+		if (lFailed != 0)
+		{
+			fprintf(stderr, "rust script selftest failed: mask 0x%x\n", lFailed);
+			return 1;
+		}
+	}
+	asIScriptEngine *pEngine = bRust ? (asIScriptEngine *)ohpl_as_engine_new() : asCreateScriptEngine();
 	cCheckMessages msgs;
 	pEngine->SetMessageCallback(asMETHOD(cCheckMessages, Callback), &msgs, asCALL_THISCALL);
 	ConfigureSomaScriptEngine(pEngine);
