@@ -244,6 +244,8 @@ namespace hpl {
 
 		float GetMaxEdgeDistance() const { return mfMaxEndDistance;}
 
+		static bool (*mpTestCast)(unsigned int, const cVector3f*, const cVector3f*);
+
 		void SetMaxHeight(float afX){ mfMaxHeight = afX; SyncParams();}
 		float GetMaxHeight()const{ return mfMaxHeight;}
 
@@ -282,6 +284,7 @@ namespace hpl {
 		bool mbNodeIsAtCenter;
 
 		OhplAiGraph *mpGraph;
+		bool mbRsMaps;
 		iAIFreePathCallback *mpFreePathCallback;
 
 		//properties

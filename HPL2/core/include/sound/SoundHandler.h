@@ -75,6 +75,7 @@ namespace hpl {
 	
 	class cSoundEntry
 	{
+	friend class cSoundHandler;
 	public:
 		cSoundEntry(const tString& asName, iSoundChannel* apSound, float afVolume,
 					eSoundEntryType aType, bool ab3D,
@@ -85,21 +86,21 @@ namespace hpl {
 		bool Update(float afTimeStep);
 
 		inline const tString& GetName() const { return msName;}
-		inline eSoundEntryType GetType() const { return (eSoundEntryType)mS.entry_type; }
+		inline eSoundEntryType GetType() const { return (eSoundEntryType)mS->entry_type; }
 		inline int GetId() const { return mlId; }
 		inline iSoundChannel* GetChannel() const { return mpSound; }
 		
-		inline bool IsFirstTime(){ return mS.first_time; }
+		inline bool IsFirstTime(){ return mS->first_time; }
 
 		void Stop();
 		void SetPaused(bool abX);
 
-		void SetDefaultVolume(float afVolume){ mS.normal_volume = afVolume; }
-		void SetDefaultSpeed(float afSpeed){ mS.normal_speed = afSpeed; }
+		void SetDefaultVolume(float afVolume){ mS->normal_volume = afVolume; }
+		void SetDefaultSpeed(float afSpeed){ mS->normal_speed = afSpeed; }
 
-		void SetVolumeMul(float afMul){ mS.volume_mul = afMul; mS.volume_fade_dest = afMul; }
-		float GetVolumeMul() const { return mS.volume_mul; }
-		void SetSpeedMul(float afMul){ mS.speed_mul = afMul; mS.speed_fade_dest = afMul; }
+		void SetVolumeMul(float afMul){ mS->volume_mul = afMul; mS->volume_fade_dest = afMul; }
+		float GetVolumeMul() const { return mS->volume_mul; }
+		void SetSpeedMul(float afMul){ mS->speed_mul = afMul; mS->speed_fade_dest = afMul; }
 
 		void FadeVolumeMulTo(float afDestMul, float afSpeed);
 		void FadeSpeedMulTo(float afDestMul, float afSpeed);
@@ -110,8 +111,8 @@ namespace hpl {
 		iSoundEntryCallback* GetCallBack(){ return mpCallback;}
 		void SetCallBack(iSoundEntryCallback* apCallback){ mpCallback = apCallback;}
 
-		void SetStopDisabled(bool abX){mS.stop_disabled = abX;}
-		bool GetStopDisabled(){ return mS.stop_disabled;}
+		void SetStopDisabled(bool abX){mS->stop_disabled = abX;}
+		bool GetStopDisabled(){ return mS->stop_disabled;}
 		
 	private:
 		tString msName;
@@ -119,7 +120,9 @@ namespace hpl {
 		cSoundHandler *mpSoundHandler;
 		int mlId;
 
-		OhplSoundEntryState mS;
+		OhplSoundEntryState *mS;
+		OhplSoundEntryState mCppState;
+		uint64_t mRs;
 
 		iSoundEntryCallback *mpCallback;
 	};
@@ -146,7 +149,7 @@ namespace hpl {
 	friend class cSoundEntry;
 	public:
 		cSoundHandler(iLowLevelSound* apLowLevelSound, cResources* apResources);
-		~cSoundHandler();
+		virtual ~cSoundHandler();
 
 		void Update(float afTimeStep);
 
@@ -188,8 +191,8 @@ namespace hpl {
 
 		iLowLevelSound* GetLowLevelSound(){ return mpLowLevelSound; }
 
-		void SetSilent(bool abX){ mbSilent = abX; }
-		bool GetSilent(){ return mbSilent; }
+		void SetSilent(bool abX);
+		bool GetSilent();
 		
 		bool Stop(const tString& asName);
 		bool StopAllExcept(const tString& asName);
@@ -224,7 +227,7 @@ namespace hpl {
 
 		void SetWorld(cWorld *apWorld);
 
-		iSoundChannel* CreateChannel(const tString& asName, int alPriority, bool abStream, bool *apNotEnoughChannels);
+		virtual iSoundChannel* CreateChannel(const tString& asName, int alPriority, bool abStream, bool *apNotEnoughChannels);
 
 		tSoundEntryList* GetEntryList();
 		const std::list<tString>& GetRecentStarts() const { return mlstRecentStarts; }
@@ -233,6 +236,10 @@ namespace hpl {
 	
 	private:
 		cSoundEntry* GetEntry(const tString& asName);
+		template<class F> void ForEachOfTypes(tFlag aTypes, F aFunc);
+
+		OhplH16SndHandler *mpRs;
+		tSoundEntryList mlstEntryView;
 
 		iLowLevelSound* mpLowLevelSound;
 		cResources* mpResources;

@@ -26,6 +26,7 @@
 #include "system/Platform.h"
 
 #include "math/Math.h"
+#include "impl/RustBackends.h"
 
 
 #include "impl/tinyXML/tinyxml.h"
@@ -176,6 +177,8 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	bool (*cAINodeContainer::mpTestCast)(unsigned int, const cVector3f*, const cVector3f*) = NULL;
+
 	cAINodeContainer::cAINodeContainer(	const tString& asName, const tString &asNodeName, 
 										cWorld *apWorld, const cVector3f &avCollideSize)
 	{
@@ -187,6 +190,7 @@ namespace hpl {
 		mpRayCallback = hplNew( cAINodeRayCallback, () );
 		mpFreePathCallback = NULL;
 		mpGraph = ohpl_ai_graph_new(CastRay, this, &mvSize);
+		mbRsMaps = OhplBackendRustRequested();
 
 		mlMaxNodeEnds = 5;
 		mlMinNodeEnds = 2;
@@ -235,8 +239,12 @@ namespace hpl {
 		ohpl_ai_graph_add_node(mpGraph, &avPosition, (uint64_t)(uintptr_t)pNode);
 
 		mvNodes.push_back(pNode);
-		m_mapNodesByName.insert(tAINodeNameMap::value_type(asName,pNode));
-		m_mapNodesByID.insert(tAINodeIDMap::value_type(alID,pNode));
+		if(mbRsMaps) ohpl_ai_graph_name_node(mpGraph, (uint32_t)pNode->mlIdx, (const unsigned char*)asName.data(), asName.size(), alID);
+		else
+		{
+			m_mapNodesByName.insert(tAINodeNameMap::value_type(asName,pNode));
+			m_mapNodesByID.insert(tAINodeIDMap::value_type(alID,pNode));
+		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -250,6 +258,11 @@ namespace hpl {
 
 	cAINode* cAINodeContainer::GetNodeFromName(const tString &asName)
 	{
+		if(mbRsMaps)
+		{
+			int64_t lIdx = ohpl_ai_graph_find_name(mpGraph, (const unsigned char*)asName.data(), asName.size());
+			return lIdx < 0 ? NULL : mvNodes[lIdx];
+		}
 		tAINodeNameMapIt it = m_mapNodesByName.find(asName);
 		if(it == m_mapNodesByName.end())
 		{
@@ -262,6 +275,11 @@ namespace hpl {
 
 	cAINode* cAINodeContainer::GetNodeFromID(int alID)
 	{
+		if(mbRsMaps)
+		{
+			int64_t lIdx = ohpl_ai_graph_find_id(mpGraph, alID);
+			return lIdx < 0 ? NULL : mvNodes[lIdx];
+		}
 		tAINodeIDMapIt it = m_mapNodesByID.find(alID);
 		if(it == m_mapNodesByID.end())
 		{
@@ -311,6 +329,7 @@ namespace hpl {
 	bool cAINodeContainer::CastRay(void *apContainer, unsigned int alFlags, const cVector3f *apStart, const cVector3f *apEnd)
 	{
 		cAINodeContainer *pContainer = (cAINodeContainer*)apContainer;
+		if(pContainer->mpWorld==NULL) return mpTestCast ? mpTestCast(alFlags, apStart, apEnd) : false;
 		iPhysicsWorld *pPhysicsWorld = pContainer->mpWorld->GetPhysicsWorld();
 		if(pPhysicsWorld==NULL) return false;
 

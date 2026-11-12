@@ -80,6 +80,8 @@ pub struct Graph {
     cast: CastFn,
     ctx: *mut c_void,
     pub result: RefCell<Vec<u32>>,
+    by_name: BTreeMap<Vec<u8>, u32>,
+    by_id: BTreeMap<i32, u32>,
 }
 
 impl Graph {
@@ -95,7 +97,23 @@ impl Graph {
             cast,
             ctx,
             result: RefCell::new(Vec::new()),
+            by_name: BTreeMap::new(),
+            by_id: BTreeMap::new(),
         }
+    }
+
+    /// Registers the last-added node's lookup keys; like `std::map::insert`, the first node wins.
+    pub fn name_node(&mut self, node: u32, name: &[u8], id: i32) {
+        self.by_name.entry(name.to_vec()).or_insert(node);
+        self.by_id.entry(id).or_insert(node);
+    }
+
+    pub fn find_name(&self, name: &[u8]) -> Option<u32> {
+        self.by_name.get(name).copied()
+    }
+
+    pub fn find_id(&self, id: i32) -> Option<u32> {
+        self.by_id.get(&id).copied()
     }
 
     pub fn add_node(&mut self, pos: Vector3f, key: u64) {

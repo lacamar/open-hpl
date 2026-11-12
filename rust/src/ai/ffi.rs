@@ -237,3 +237,47 @@ pub unsafe extern "C" fn ohpl_ai_graph_result(g: *const Graph, out: *mut u32, ca
     }
     r.len()
 }
+
+/// # Safety
+/// `g` live; `name` readable for `len`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ai_graph_name_node(
+    g: *mut Graph,
+    node: u32,
+    name: *const u8,
+    len: usize,
+    id: i32,
+) {
+    // SAFETY: caller contract.
+    if let Some(g) = unsafe { g.as_mut() } {
+        g.name_node(node, unsafe { std::slice::from_raw_parts(name, len) }, id);
+    }
+}
+
+/// Node index or -1.
+///
+/// # Safety
+/// `g` live; `name` readable for `len`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ai_graph_find_name(
+    g: *const Graph,
+    name: *const u8,
+    len: usize,
+) -> i64 {
+    // SAFETY: caller contract.
+    unsafe { g.as_ref() }
+        .and_then(|g| g.find_name(unsafe { std::slice::from_raw_parts(name, len) }))
+        .map_or(-1, i64::from)
+}
+
+/// Node index or -1.
+///
+/// # Safety
+/// `g` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ai_graph_find_id(g: *const Graph, id: i32) -> i64 {
+    // SAFETY: caller contract.
+    unsafe { g.as_ref() }
+        .and_then(|g| g.find_id(id))
+        .map_or(-1, i64::from)
+}

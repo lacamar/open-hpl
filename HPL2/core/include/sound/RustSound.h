@@ -131,6 +131,13 @@ struct OhplMusicHostOps
 };
 
 struct OhplMusic;
+struct OhplH16SndHandler;
+
+struct OhplH16ShellOps
+{
+	bool (*update)(void*, void*, float);
+	void (*destroy)(void*, void*);
+};
 
 static_assert(sizeof(OhplSoundEntryState) == 56 && offsetof(OhplSoundEntryState, entry_type) == 44, "OhplSoundEntryState layout");
 static_assert(sizeof(OhplSoundPlayParams) == 32 && offsetof(OhplSoundPlayParams, entry_type) == 24, "OhplSoundPlayParams layout");
@@ -152,6 +159,24 @@ extern "C" {
 
 	int ohpl_snd_play_priority(const hpl::cVector3f* pos, const hpl::cVector3f* listener, float minDist, float maxDist, bool is3d, bool relative);
 	void ohpl_snd_play_setup(const OhplSoundPlayParams* params, int distPriority, const hpl::cMatrixf* listener, const OhplSoundChannelOps* chOps, void* ch);
+
+	OhplH16SndHandler* ohpl_sndh_new();
+	void ohpl_sndh_free(OhplH16SndHandler* h);
+	void ohpl_sndh_set_silent(OhplH16SndHandler* h, bool silent);
+	bool ohpl_sndh_silent(const OhplH16SndHandler* h);
+	void ohpl_sndh_set_globals(OhplH16SndHandler* h, const float* volume, const float* speed);
+	float ohpl_sndh_global_volume(const OhplH16SndHandler* h, uint32_t type);
+	float ohpl_sndh_global_speed(const OhplH16SndHandler* h, uint32_t type);
+	uint64_t ohpl_sndh_entry_new(OhplH16SndHandler* h, void* shell, const unsigned char* name, size_t len, float volume, uint32_t type, bool is3d, bool stream, OhplSoundEntryState** state);
+	int ohpl_sndh_entry_id(const OhplH16SndHandler* h, uint64_t entry);
+	void ohpl_sndh_push_back(OhplH16SndHandler* h, uint64_t entry);
+	void ohpl_sndh_entry_free(OhplH16SndHandler* h, uint64_t entry);
+	size_t ohpl_sndh_count(const OhplH16SndHandler* h);
+	void* ohpl_sndh_shell_at(const OhplH16SndHandler* h, size_t i);
+	void* ohpl_sndh_find(const OhplH16SndHandler* h, const unsigned char* name, size_t len);
+	bool ohpl_sndh_is_valid(const OhplH16SndHandler* h, void* shell, int id);
+	void ohpl_sndh_update(OhplH16SndHandler* h, float dt, const OhplH16ShellOps* ops, void* ctx);
+	void ohpl_sndh_for_each(OhplH16SndHandler* h, uint32_t mask, void (*f)(void*, void*), void* ctx);
 
 	OhplMusic* ohpl_music_new();
 	void ohpl_music_free(OhplMusic* m, const OhplMusicHostOps* ops, void* ctx);
