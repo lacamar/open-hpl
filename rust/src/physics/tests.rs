@@ -548,3 +548,73 @@ fn surface_file_without_root_element_or_valid_xml() {
     assert!(!parse("").0);
     assert!(!surface_xml::parse(b"<a/>", false, |_| {}));
 }
+
+#[test]
+fn body_book_replaces_host_slots() {
+    let bk = super::book::body_new();
+    super::book::body_with(bk, |k| {
+        k.static_movement = true;
+        k.total_linear = v3(1.0, 0.0, 0.0);
+        k.has_slide = true;
+    });
+
+    let book_run = Mock::new();
+    assert!(body::update_before_simulate_bk(&book_run, 1, bk));
+    body::update_after_simulate_bk(&book_run, 1, 0.5, bk);
+
+    let k = super::book::body_get(bk).unwrap_or_else(|| panic!("book"));
+    assert!(!k.has_slide && !k.has_collision && k.slide_count == 0);
+    assert_eq!(k.total_linear, v3(0.0, 0.0, 0.0));
+    assert_eq!(count(&book_run, "body_set_position"), 1);
+    for slot in [
+        "body_has_slide",
+        "body_set_has_slide",
+        "body_set_has_collision",
+        "body_static_movement",
+        "body_set_static_movement",
+        "body_total_static",
+        "body_set_total_static",
+        "body_slide_count",
+        "body_set_slide_count",
+    ] {
+        assert!(
+            book_run.log.borrow().iter().all(|l| !l.starts_with(slot)),
+            "{slot} leaked to host"
+        );
+    }
+
+    let mock_run = Mock::new();
+    mock_run.set("body_static_movement", vec![Val::B(true)]);
+    mock_run.set("body_total_static_linear", vec![Val::V(v3(1.0, 0.0, 0.0))]);
+    mock_run.set("body_has_slide", vec![Val::B(true)]);
+    assert!(body::update_before_simulate(&mock_run, 1));
+    body::update_after_simulate(&mock_run, 1, 0.5);
+    assert_eq!(
+        book_run.calls("body_set_position"),
+        mock_run.calls("body_set_position")
+    );
+
+    super::book::body_free(bk);
+    assert!(super::book::body_get(bk).is_none());
+}
+
+#[test]
+fn joint_book_keeps_step_counters() {
+    let bk = super::book::joint_new();
+    for _ in 0..2 {
+        assert!(!super::ffi::ohpl_h15_joint_limit_auto_sleep(
+            bk, true, 0.1, 2, 0.0, 1.0, 0.05
+        ));
+    }
+    assert!(super::ffi::ohpl_h15_joint_limit_auto_sleep(
+        bk, true, 0.1, 2, 0.0, 1.0, 0.05
+    ));
+    assert!(!super::ffi::ohpl_h15_joint_limit_auto_sleep(
+        bk, true, 0.1, 2, 0.0, 1.0, 0.5
+    ));
+    assert_eq!(
+        super::book::joint_get(bk).map(|k| k.limit_step_count),
+        Some(0)
+    );
+    super::book::joint_free(bk);
+}

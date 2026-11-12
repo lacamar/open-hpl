@@ -65,6 +65,7 @@ namespace hpl {
 			m_mtxParentBodySetup = cMatrixf::Identity;
 		}
 
+		mRsBook = OhplBackendRustRequested() ? ohpl_h15_joint_new() : 0;
 		m_mtxPrevChild = cMatrixf::Identity;
 		m_mtxPrevParent = cMatrixf::Identity;
 		
@@ -137,6 +138,8 @@ namespace hpl {
 		if(mpParentBody) mpParentBody->RemoveJoint(this);
 
 		if(mpSound) mpWorld->GetWorld()->DestroySoundEntity(mpSound);
+
+		if(mRsBook) ohpl_h15_joint_free(mRsBook);
 
 		//Log("Deleted joint '%s'\n",msName.c_str());
 	}
@@ -271,7 +274,7 @@ namespace hpl {
 			reinterpret_cast<size_t>(mpSound), mlSoundID, mlSpeedCount
 		};
 
-		bool bUpdated = ohpl_phys_joint_update(OhplPhysHost(), &params, &state);
+		bool bUpdated = ohpl_phys_joint_update(OhplPhysHost(), &params, &state, mRsBook);
 
 		mvPivotPoint = state.pivot;
 		mvPinDir = state.pinDir;
@@ -327,9 +330,13 @@ namespace hpl {
 											const float afMin, const float afMax,
 											const float afDist)
 	{
-		if(ohpl_phys_joint_limit_auto_sleep(apJoint->mbLimitAutoSleep, apJoint->mfLimitAutoSleepDist,
+		const bool bSleep = apJoint->mRsBook
+			? ohpl_h15_joint_limit_auto_sleep(apJoint->mRsBook, apJoint->mbLimitAutoSleep, apJoint->mfLimitAutoSleepDist,
+											apJoint->mlLimitAutoSleepNumSteps, afMin, afMax, afDist)
+			: ohpl_phys_joint_limit_auto_sleep(apJoint->mbLimitAutoSleep, apJoint->mfLimitAutoSleepDist,
 											apJoint->mlLimitAutoSleepNumSteps, &apJoint->mlLimitStepCount,
-											afMin, afMax, afDist))
+											afMin, afMax, afDist);
+		if(bSleep)
 		{
 			apJoint->mpChildBody->DisableAfterSimulation();
 		}

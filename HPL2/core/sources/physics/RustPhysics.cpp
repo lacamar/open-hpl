@@ -95,19 +95,19 @@ namespace hpl {
 			vt.body_has_slide = [](size_t b) { return B(b)->HasSlide(); };
 			vt.body_set_has_slide = [](size_t b, bool v) { B(b)->SetHasSlide(v); };
 			vt.body_has_collision = [](size_t b) { return B(b)->HasCollision(); };
-			vt.body_set_has_collision = [](size_t b, bool v) { B(b)->mbHasCollision = v; };
+			vt.body_set_has_collision = [](size_t b, bool v) { if(B(b)->mRsBook) ohpl_h15_body_flag_set(B(b)->mRsBook, OhplH15_HasCollision, v); else B(b)->mbHasCollision = v; };
 			vt.body_in_update_list = [](size_t b) { return B(b)->IsInUpdateList(); };
 			vt.body_add_to_update_list = [](size_t b) { B(b)->GetWorld()->AddBodyToUpdateList(B(b)); };
-			vt.body_static_movement = [](size_t b) { return B(b)->mbStaticMovement; };
-			vt.body_set_static_movement = [](size_t b, bool v) { B(b)->mbStaticMovement = v; };
+			vt.body_static_movement = [](size_t b) { return B(b)->mRsBook ? ohpl_h15_body_flag_get(B(b)->mRsBook, OhplH15_StaticMovement) : B(b)->mbStaticMovement; };
+			vt.body_set_static_movement = [](size_t b, bool v) { if(B(b)->mRsBook) ohpl_h15_body_flag_set(B(b)->mRsBook, OhplH15_StaticMovement, v); else B(b)->mbStaticMovement = v; };
 			vt.body_total_static_linear = [](size_t b) { return V(B(b)->mvTotalStaticLinearVel); };
 			vt.body_total_static_angular = [](size_t b) { return V(B(b)->mvTotalStaticAngularVel); };
 			vt.body_set_total_static_linear = [](size_t b, OhplV3 v) { B(b)->mvTotalStaticLinearVel = V(v); };
 			vt.body_set_total_static_angular = [](size_t b, OhplV3 v) { B(b)->mvTotalStaticAngularVel = V(v); };
 			vt.body_slide_count = [](size_t b) { return (int32_t)B(b)->mlSlideCount; };
 			vt.body_set_slide_count = [](size_t b, int32_t v) { B(b)->mlSlideCount = v; };
-			vt.body_disable_after_simulation = [](size_t b) { return B(b)->mbDisableAfterSimulation; };
-			vt.body_set_disable_after_simulation = [](size_t b, bool v) { B(b)->mbDisableAfterSimulation = v; };
+			vt.body_disable_after_simulation = [](size_t b) { return B(b)->mRsBook ? ohpl_h15_body_flag_get(B(b)->mRsBook, OhplH15_DisableAfterSim) : B(b)->mbDisableAfterSimulation; };
+			vt.body_set_disable_after_simulation = [](size_t b, bool v) { if(B(b)->mRsBook) ohpl_h15_body_flag_set(B(b)->mRsBook, OhplH15_DisableAfterSim, v); else B(b)->mbDisableAfterSimulation = v; };
 			vt.body_enable_bodies_around = [](size_t b) {
 				iPhysicsBody *pBody = B(b);
 				cBoundingVolume tempBV;

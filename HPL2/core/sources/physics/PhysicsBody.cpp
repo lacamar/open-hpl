@@ -77,6 +77,7 @@ namespace hpl {
 		mlScrapeSoundEntityID = -1;
 		mpRollSoundEntity = NULL;
 		mlRollSoundEntityID = -1;
+		mRsBook = OhplBackendRustRequested() ? ohpl_h15_body_new() : 0;
 		mbHasSlide = false;
 
 		mfBuoyancyDensityMul = 1.0f;
@@ -131,6 +132,7 @@ namespace hpl {
 
 	iPhysicsBody::~iPhysicsBody()
 	{
+		if(mRsBook) ohpl_h15_body_free(mRsBook);
 	}
 
 	//-----------------------------------------------------------------------
@@ -263,26 +265,26 @@ namespace hpl {
 
 	bool iPhysicsBody::UpdateBeforeSimulate(float afTimeStep)
 	{
-		return ohpl_phys_body_update_before(OhplPhysHost(), reinterpret_cast<size_t>(this));
+		return ohpl_phys_body_update_before(OhplPhysHost(), reinterpret_cast<size_t>(this), mRsBook);
 	}
 
 	//-----------------------------------------------------------------------
 	
 	void iPhysicsBody::UpdateAfterSimulate(float afTimeStep)
 	{
-		ohpl_phys_body_update_after(OhplPhysHost(), reinterpret_cast<size_t>(this), afTimeStep);
+		ohpl_phys_body_update_after(OhplPhysHost(), reinterpret_cast<size_t>(this), afTimeStep, mRsBook);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iPhysicsBody::StaticLinearMove(const cVector3f& avVelocity)
 	{
-		ohpl_phys_body_static_linear_move(OhplPhysHost(), reinterpret_cast<size_t>(this), &avVelocity);
+		ohpl_phys_body_static_linear_move(OhplPhysHost(), reinterpret_cast<size_t>(this), &avVelocity, mRsBook);
 	}
 
 	void iPhysicsBody::StaticAngularMove(const cVector3f& avVelocity)
 	{
-		ohpl_phys_body_static_angular_move(OhplPhysHost(), reinterpret_cast<size_t>(this), &avVelocity);
+		ohpl_phys_body_static_angular_move(OhplPhysHost(), reinterpret_cast<size_t>(this), &avVelocity, mRsBook);
 	}
 
 	//-----------------------------------------------------------------------
@@ -351,7 +353,8 @@ namespace hpl {
 
 	void iPhysicsBody::OnCollide(iPhysicsBody *apBody, cPhysicsContactData* apContactData)
 	{
-		mbHasCollision = true;
+		if(mRsBook) ohpl_h15_body_flag_set(mRsBook, OhplH15_HasCollision, true);
+		else mbHasCollision = true;
 
 		if(mlstBodyCallbacks.empty()) return;
 

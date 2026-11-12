@@ -23,6 +23,7 @@
 #include "scene/Entity3D.h"
 #include "graphics/GraphicsTypes.h"
 #include "physics/PhysicsTypes.h"
+#include "physics/RustPhysBook.h"
 
 namespace hpl {
 
@@ -183,10 +184,10 @@ namespace hpl {
 		cSoundEntity* GetRollSoundEntity(){ return mpRollSoundEntity;}
 		int GetRollSoundEntityID(){ return mlRollSoundEntityID;}
 
-		void SetHasSlide(bool abX){ mbHasSlide = abX;}
-		bool HasSlide(){ return mbHasSlide;}
+		void SetHasSlide(bool abX){ if(mRsBook) ohpl_h15_body_flag_set(mRsBook, OhplH15_HasSlide, abX); else mbHasSlide = abX;}
+		bool HasSlide(){ return mRsBook ? ohpl_h15_body_flag_get(mRsBook, OhplH15_HasSlide) : mbHasSlide;}
 
-		bool HasCollision(){ return mbHasCollision;}
+		bool HasCollision(){ return mRsBook ? ohpl_h15_body_flag_get(mRsBook, OhplH15_HasCollision) : mbHasCollision;}
 
 		void SetUserData(void* apUserData){ mpUserData = apUserData;}
 		void* GetUserData(){ return mpUserData;}
@@ -278,7 +279,7 @@ namespace hpl {
 
 		iPhysicsWorld *GetWorld(){ return mpWorld;}
 
-		void DisableAfterSimulation(){ mbDisableAfterSimulation = true;}
+		void DisableAfterSimulation(){ if(mRsBook) ohpl_h15_body_flag_set(mRsBook, OhplH15_DisableAfterSim, true); else mbDisableAfterSimulation = true;}
 
 		//Entity implementation
 		tString GetEntityType(){ return "Body";}
@@ -303,6 +304,7 @@ namespace hpl {
 		cSoundEntity *mpRollSoundEntity;
 		int mlRollSoundEntityID;
 		cMatrixf m_mtxPrevScrapeMatrix;
+		uint64_t mRsBook;
 		bool mbHasSlide;
 		int mlSlideCount;
 		int mlImpactCount;

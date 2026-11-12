@@ -27,6 +27,7 @@
 #include "engine/SaveGame.h"
 
 #include "physics/PhysicsController.h"
+#include "physics/RustPhysBook.h"
 
 namespace hpl {
 
@@ -260,6 +261,7 @@ namespace hpl {
 		bool mbAutoDeleteCallback;
 
 		int mlLimitStepCount;
+		uint64_t mRsBook;
 
 		void *mpUserData;
 
