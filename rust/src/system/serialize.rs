@@ -103,7 +103,7 @@ pub fn register(class: Class) {
         .or_insert_with(|| Arc::new(class));
 }
 
-fn lookup(name: &[u8]) -> Option<Arc<Class>> {
+pub(crate) fn lookup(name: &[u8]) -> Option<Arc<Class>> {
     REGISTRY
         .lock()
         .unwrap_or_else(PoisonError::into_inner)

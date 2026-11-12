@@ -1,0 +1,24 @@
+<Probe>
+    <class type="cProbe" name="">
+        <var type="1" name="mbFlag" val="true" />
+        <var type="2" name="mlNum" val="-42" />
+        <var type="3" name="mfNum" val="3.250000" />
+        <var type="4" name="msStr" val='a&lt;b&gt;&amp;&quot;q&quot;' />
+        <var type="14" name="msWStr" val="119 229 20013 " />
+        <var type="8" name="mvVec" val="1.500000 -2.000000 3.000000" />
+        <var type="10" name="mCol" val="0.250000 0.500000 0.750000 1.000000" />
+        <array type="2" name="mvArr" size="3">
+            <var val="7" />
+            <var val="8" />
+            <var val="9" />
+        </array>
+        <class type="cProbeInner" name="mInner">
+            <var type="2" name="mlA" val="5" />
+            <var type="3" name="mfB" val="0.500000" />
+        </class>
+        <class_ptr type="cProbeInner" name="mpInner">
+            <var type="2" name="mlA" val="11" />
+            <var type="3" name="mfB" val="2.000000" />
+        </class_ptr>
+    </class>
+</Probe>
