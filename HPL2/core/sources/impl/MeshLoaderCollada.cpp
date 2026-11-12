@@ -18,6 +18,7 @@
  */
 
 #include "impl/MeshLoaderCollada.h"
+#include "impl/RustL6.h"
 #include <cstring>
 #include "impl/MeshLoaderAssimp.h"
 #include <set>
@@ -218,6 +219,16 @@ namespace hpl {
 
 	cMesh* cMeshLoaderCollada::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplL6CfgBuf cfg;
+			OhplL6FillCfg(cfg, mpMeshManager, mbLoadAndSaveMSHFormat, aFlags);
+			OhplL6Env env = { mpLowLevelGraphics, mpMaterialManager, mpAnimationManager, mpMeshLoaderMSH };
+			bool bFallback = false;
+			cMesh* pRustMesh = OhplL6LoadMesh(eOhplL6KindCollada, env, cfg.cfg, asFile, &bFallback);
+			if(bFallback == false) return pRustMesh;
+		}
+
 		/////////////////////////////////////////////////
 		// TRY USING MSH LOADER
 		if(mbLoadAndSaveMSHFormat)
@@ -857,6 +868,16 @@ namespace hpl {
 
 	cAnimation* cMeshLoaderCollada::LoadAnimation(const tWString& asFile)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplL6CfgBuf cfg;
+			OhplL6FillCfg(cfg, mpMeshManager, mbLoadAndSaveMSHFormat, 0);
+			OhplL6Env env = { mpLowLevelGraphics, mpMaterialManager, mpAnimationManager, mpMeshLoaderMSH };
+			bool bFallback = false;
+			cAnimation* pRustAnim = OhplL6LoadAnim(eOhplL6KindCollada, env, cfg.cfg, asFile, &bFallback);
+			if(bFallback == false) return pRustAnim;
+		}
+
 		{
 			tString sAnm = cString::SetFileExt(cString::To8Char(asFile), "anm");
 			if(cMeshLoaderAssimp::IsHpl3Anm(sAnm))

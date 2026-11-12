@@ -1,4 +1,5 @@
 #include "impl/MeshLoaderAssimp.h"
+#include "impl/RustL6.h"
 
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
@@ -233,6 +234,14 @@ namespace hpl {
 
 	cMesh* cMeshLoaderAssimp::LoadMesh(const tWString& asFile, tMeshLoadFlag aFlags)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplL6CfgBuf cfg;
+			OhplL6FillCfg(cfg, mpMeshManager, false, aFlags);
+			OhplL6Env env = { mpLowLevelGraphics, mpMaterialManager, mpAnimationManager, NULL };
+			return OhplL6LoadMesh(eOhplL6KindAssimp, env, cfg.cfg, asFile);
+		}
+
 		if(IsOldBinaryFbx(cString::To8Char(asFile)))
 		{
 			Log("'%s' is binary FBX older than 7.0\n", cString::To8Char(asFile).c_str());
@@ -357,6 +366,14 @@ namespace hpl {
 
 	cAnimation* cMeshLoaderAssimp::LoadAnimation(const tWString& asFile)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplL6CfgBuf cfg;
+			OhplL6FillCfg(cfg, mpMeshManager, false, 0);
+			OhplL6Env env = { mpLowLevelGraphics, mpMaterialManager, mpAnimationManager, NULL };
+			return OhplL6LoadAnim(eOhplL6KindAssimp, env, cfg.cfg, asFile);
+		}
+
 		tString sFile = cString::To8Char(asFile);
 		cAnimation *pAnimation = LoadHpl3Anm(cString::SetFileExt(sFile, "anm"), asFile);
 		// .msh skeletons already carry the unit scale
