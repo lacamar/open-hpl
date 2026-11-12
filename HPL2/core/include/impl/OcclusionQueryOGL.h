@@ -21,6 +21,7 @@
 #define HPL_OCCLUSION_QUERY_OGL_H
 
 #include "graphics/OcclusionQuery.h"
+#include "impl/RustGlCtx.h"
 
 namespace hpl {
 
@@ -39,6 +40,8 @@ namespace hpl {
 		bool mbResultsAreFetched;
 		int mlLastSampleCount;
 		unsigned int mlQueryId;
+		bool mbRs;
+		OhplGlQuery mRs;
 	};
 
 };

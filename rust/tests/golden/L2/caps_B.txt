@@ -1,0 +1,23 @@
+CAPS GLCAPS ARB_multitexture=1 ARB_vertex_buffer_object=1 EXT_stencil_two_side=0 ATI_separate_stencil=1 EXT_texture_filter_anisotropic=0 ARB_multisample=0 ARB_texture_compression=1 EXT_texture_compression_s3tc=0 SGIS_generate_mipmap=0 EXT_framebuffer_object=1 EXT_packed_depth_stencil=0 ARB_texture_float=0 ARB_fragment_program=0 ARB_fragment_shader=1 NV_vertex_program3=0 ATI_shader_texture_lod=1 EXT_gpu_shader4=0 ATI_fragment_shader=0 EXT_blend_func_separate=0 ARB_occlusion_query=1
+cap0=1
+cap1=1
+cap2=1
+cap3=25
+cap4=24
+cap5=31
+cap6=0
+cap7=0
+cap8=0
+cap9=1
+cap10=0
+cap11=0
+cap12=1
+cap13=9
+cap14=0
+cap15=0
+cap16=1
+cap17=1
+cap18=1
+cap19=0
+cap20=0
+cap21=11
