@@ -29,6 +29,8 @@
 #include "graphics/Bone.h"
 #include "graphics/BoneState.h"
 #include "graphics/RustMesh.h"
+#include "impl/RustBackends.h"
+#include "graphics/RustGraphicsH6.h"
 
 #include "math/Math.h"
 
@@ -59,6 +61,7 @@ namespace hpl {
 		mpSkeleton = NULL;
 
 		mpRootNode = hplNew( cNode3D, () );
+		mpRs = OhplBackendRustRequested() ? ohpl_h6_mesh_new() : NULL;
 	}
 
 	//-----------------------------------------------------------------------
@@ -78,6 +81,7 @@ namespace hpl {
 		}
 
 		if(mpRootNode) hplDelete(mpRootNode);
+		if(mpRs) ohpl_h6_mesh_free(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -102,7 +106,8 @@ namespace hpl {
 		pSubMesh->mpParent = this;
 
 		mvSubMeshes.push_back(pSubMesh);
-		m_mapSubMeshes.insert(tSubMeshMap::value_type(asName, pSubMesh));
+		if(mpRs) ohpl_h6_mesh_add_sub(mpRs, asName.data(), asName.size());
+		else m_mapSubMeshes.insert(tSubMeshMap::value_type(asName, pSubMesh));
 
 		return pSubMesh;
 	}
@@ -118,6 +123,7 @@ namespace hpl {
 
 	int cMesh::GetSubMeshIndex(const tString &asName)
 	{
+		if(mpRs) return ohpl_h6_mesh_sub_index(mpRs, asName.data(), asName.size());
 		for(size_t i=0; i<mvSubMeshes.size(); ++i)
 		{
 			if(mvSubMeshes[i]->GetName() == asName) return (int)i;
@@ -128,6 +134,11 @@ namespace hpl {
 	
 	cSubMesh* cMesh::GetSubMeshName(const tString &asName)
 	{
+		if(mpRs)
+		{
+			int lIdx = ohpl_h6_mesh_sub_by_name(mpRs, asName.data(), asName.size());
+			return lIdx < 0 ? NULL : mvSubMeshes[lIdx];
+		}
 		tSubMeshMapIt it = m_mapSubMeshes.find(asName);
 		if(it == m_mapSubMeshes.end())return NULL;
 
@@ -174,6 +185,12 @@ namespace hpl {
 	void cMesh::AddAnimation(cAnimation *apAnimation)
 	{
 		mvAnimations.push_back(apAnimation);
+		if(mpRs)
+		{
+			const tString sAnimName = apAnimation->GetName();
+			ohpl_h6_mesh_add_animation(mpRs, sAnimName.data(), sAnimName.size());
+			return;
+		}
 		
 		tAnimationIndexMap::value_type value(apAnimation->GetName(), (int)mvAnimations.size() - 1);
 		m_mapAnimIndices.insert(value);
@@ -199,6 +216,7 @@ namespace hpl {
 	
 	int cMesh::GetAnimationIndex(const tString& asName)
 	{
+		if(mpRs) return ohpl_h6_mesh_animation_index(mpRs, asName.data(), asName.size());
 		tAnimationIndexMapIt it = m_mapAnimIndices.find(asName);
 		if(it !=  m_mapAnimIndices.end())
 		{
@@ -223,6 +241,7 @@ namespace hpl {
 
 		mvAnimations.clear();
 		m_mapAnimIndices.clear();
+		if(mpRs) ohpl_h6_mesh_clear_animations(mpRs);
 	}
 
 	int cMesh::GetAnimationNum()

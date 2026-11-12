@@ -29,6 +29,7 @@
 #include "resources/ResourceBase.h"
 
 #include "scene/Light.h"
+#include "graphics/RustGraphicsH6.h"
 
 namespace hpl {
 
@@ -121,6 +122,7 @@ namespace hpl {
 		cMaterialManager* mpMaterialManager;
 		cAnimationManager * mpAnimationManager;
 
+		OhplH6Mesh* mpRs;
 		tSubMeshVec mvSubMeshes;
 		tSubMeshMap m_mapSubMeshes;
 

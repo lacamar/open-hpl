@@ -23,6 +23,7 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
+#include "graphics/RustGraphicsH6.h"
 
 namespace hpl {
 
@@ -44,8 +45,8 @@ namespace hpl {
 		cKeyFrame* CreateKeyFrame(float afTime);
 		void ClearKeyFrames();
 		
-		inline cKeyFrame* GetKeyFrame(int alIndex){ return mvKeyFrames[alIndex];}
-		inline int GetKeyFrameNum(){ return (int) mvKeyFrames.size();}
+inline cKeyFrame* GetKeyFrame(int alIndex){ return mpRs ? ohpl_h6_track_frame(mpRs, alIndex) : mvKeyFrames[alIndex];}
+inline int GetKeyFrameNum(){ return mpRs ? ohpl_h6_track_num(mpRs) : (int) mvKeyFrames.size();}
 
 		inline tAnimTransformFlag GetTransformFlags(){ return mTransformFlags;}
 		inline float GetUnitScale(){ return mfUnitScale;}
@@ -93,7 +94,8 @@ namespace hpl {
 
 		float mfMaxFrameTime;
 		
-        cAnimation* mpParent;
+		cAnimation* mpParent;
+		OhplH6Track* mpRs;
 	};
 
 };

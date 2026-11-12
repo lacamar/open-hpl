@@ -24,6 +24,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
 #include "resources/ResourceBase.h"
+#include "graphics/RustGraphicsH6.h"
 
 namespace hpl {
 
@@ -66,6 +67,7 @@ namespace hpl {
 		float mfLength;
 		
 		tAnimationTrackVec mvTracks;
+		OhplH6Anim* mpRs;
 	};
 
 };
