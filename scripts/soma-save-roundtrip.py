@@ -103,11 +103,14 @@ def gaps():
     print("gaps before:",*a,sep="\n  "); print("gaps after:",*b,sep="\n  ")
     d=[x for x in difflib.unified_diff(a,b,lineterm="",n=0) if not x.startswith(("---","+++","@@"))]
     print("gap diffs:",len(d)//2); print("\n".join(d))
-if "--gaps" in sys.argv:
-    for _t in range(4):
-        if "--nostart" in sys.argv: break
-        try: sp.cmd_start(type("A",(),{"map":sys.argv[1],"pos":None,"save":None})()); break
-        except Exception as ex: print("start retry",ex); time.sleep(3)
-    sp.frames(2); gaps()
-else:
-    main()
+try:
+    if "--gaps" in sys.argv:
+        for _t in range(4):
+            if "--nostart" in sys.argv: break
+            try: sp.cmd_start(type("A",(),{"map":sys.argv[1],"pos":None,"save":None})()); break
+            except Exception as ex: print("start retry",ex); time.sleep(3)
+        sp.frames(2); gaps()
+    else:
+        main()
+finally:
+    if "--nostart" not in sys.argv: sp.cmd_stop(None)
