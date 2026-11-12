@@ -1,0 +1,4 @@
+<SoundEnvironment>
+ <Main Type="FMOD" Name="x"/>
+ <Parameters Density="1"/>
+</SoundEnvironment>

@@ -24,6 +24,8 @@
 
 #include <IL/il.h>
 
+#include "impl/RustL5.h"
+
 namespace hpl {
 
 
@@ -39,6 +41,7 @@ namespace hpl {
 		void Initialize();
 
 		bool LoadDevilImageW(const tWString& asFile);
+		cBitmap* LoadBitmapRust(const tWString& asFile, unsigned alKind, tBitmapLoadFlag aFlags);
 
 		ePixelFormat DevilPixelFormatToHPL(int alFormat);
 		ILenum HPLPixelFormatToDevil(ePixelFormat aFormat);

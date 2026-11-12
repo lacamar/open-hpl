@@ -48,9 +48,22 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	static void OhplL5DeviceSink(void* apCtx, int32_t alId, const uint8_t* apName, size_t alLen, bool abDefault)
+	{
+		tSoundDeviceVec* pVec = (tSoundDeviceVec*)apCtx;
+		pVec->push_back(hplNew(cSoundDeviceIdentifierOpenAL,(alId, tString((const char*)apName, alLen), abDefault)));
+	}
+
 	void iLowLevelSound::PopulateAvailableSoundDevices(tSoundDeviceVec& avSoundDeviceVec)
 	{
 		STLDeleteAll(avSoundDeviceVec);
+
+		if(OhplBackendRustRequested())
+		{
+			OhplL5InstallLog();
+			ohpl_l5_devices(OhplL5DeviceSink, &avSoundDeviceVec);
+			return;
+		}
 	
 		bool bDefaultFound = false;
 		tStringVec vDeviceNames = OAL_Info_GetOutputDevices();
@@ -86,13 +99,23 @@ namespace hpl {
 		mbInitialized = false;
 		mbEnvAudioEnabled = false;
 		mbNullEffectAttached = false;
+		mpEffect = NULL;
+		mlCurrentSoundDevID = -1;
+		mpRust = NULL;
+		if(OhplBackendRustRequested())
+		{
+			OhplL5InstallLog();
+			mpRust = ohpl_l5_low_new();
+		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	cLowLevelSoundOpenAL::~cLowLevelSoundOpenAL()
 	{
-		if(mbInitialized)
+		if(mpRust)
+			ohpl_l5_low_free(mpRust);
+		else if(mbInitialized)
 			OAL_Close();
 	}
 
@@ -135,6 +158,7 @@ namespace hpl {
 	
 	void cLowLevelSoundOpenAL::UpdateSound(float afTimeStep)
 	{
+		if(mpRust) { ohpl_l5_low_update(mpRust); return; }
 		OAL_Update();
 	}
 	
@@ -164,6 +188,12 @@ namespace hpl {
 		m_mtxListener.SetTranslation(mvListenerPosition);
 
 		float fVel[3]={0,0,0};
+		if(mpRust)
+		{
+			cVector3f vNegForward = avForward*(-1);
+			ohpl_l5_low_set_listener(mpRust, avPos.v, avVel.v, vNegForward.v, avUp.v);
+			return;
+		}
 		OAL_Listener_SetAttributes ( avPos.v, avVel.v, (avForward*(-1)).v, avUp.v );
 	}
 
@@ -173,6 +203,12 @@ namespace hpl {
 	{
 		mvListenerPosition = avPos;
 
+		if(mpRust)
+		{
+			cVector3f vNegForward = mvListenerForward*(-1);
+			ohpl_l5_low_set_listener(mpRust, avPos.v, mvListenerVelocity.v, vNegForward.v, mvListenerUp.v);
+			return;
+		}
 		OAL_Listener_SetAttributes ( avPos.v, mvListenerVelocity.v, (mvListenerForward*(-1)).v, mvListenerUp.v );
 	}
 	
@@ -187,6 +223,7 @@ namespace hpl {
 
 	void cLowLevelSoundOpenAL::SetSetRolloffFactor(float afFactor)
 	{
+		if(mpRust) { ohpl_l5_low_set_rolloff(mpRust, afFactor); return; }
 		OAL_SetRollOffFactor ( afFactor );
 	}
 	
@@ -196,6 +233,7 @@ namespace hpl {
 	{
 		mfVolume = afVolume;
 
+		if(mpRust) { ohpl_l5_low_set_volume(mpRust, afVolume); return; }
 		OAL_Listener_SetMasterVolume ( afVolume );
 	}
 
@@ -214,6 +252,12 @@ namespace hpl {
 									int alMaxMonoSourceHint, int alMaxStereoSourceHint,
 									int alStreamingBufferSize, int alStreamingBufferCount, bool abEnableLowLevelLog)
 	{
+		if(mpRust)
+		{
+			InitRust(alSoundDeviceID, abUseEnvAudio, alMaxChannels, alStreamUpdateFreq, abUseThreading, abUseVoiceManagement,
+					alMaxMonoSourceHint, alMaxStereoSourceHint, alStreamingBufferSize, alStreamingBufferCount, abEnableLowLevelLog);
+			return;
+		}
 
 		// Any need to create this??
 		//cOpenALSoundEnvironment* pEnv = hplNew(cOpenALSoundEnvironment,());
@@ -444,8 +488,68 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
+	static void OhplL5ToDevices(const tSoundDeviceVec& avDevices, std::vector<OhplL5Device>& avOut)
+	{
+		for(size_t i=0;i<avDevices.size();++i)
+		{
+			OhplL5Device dev;
+			dev.id = avDevices[i]->GetID();
+			dev.name = (const uint8_t*)avDevices[i]->GetName().data();
+			dev.name_len = avDevices[i]->GetName().size();
+			dev.is_default = avDevices[i]->IsDefault();
+			avOut.push_back(dev);
+		}
+	}
+
+	void cLowLevelSoundOpenAL::InitRust(int alSoundDeviceID, bool abUseEnvAudio,int alMaxChannels,
+									int alStreamUpdateFreq, bool abUseThreading, bool abUseVoiceManagement,
+									int alMaxMonoSourceHint, int alMaxStereoSourceHint,
+									int alStreamingBufferSize, int alStreamingBufferCount, bool abEnableLowLevelLog)
+	{
+		mbLogSounds = abEnableLowLevelLog;
+		ohpl_l5_low_prelude(abEnableLowLevelLog);
+
+		std::vector<OhplL5Device> vAll, vValid;
+		OhplL5ToDevices(GetAvailableSoundDevices(), vAll);
+		OhplL5ToDevices(GetFilteredSoundDevices(), vValid);
+
+		OhplL5InitArgs args;
+		args.device_id = alSoundDeviceID;
+		args.use_env_audio = abUseEnvAudio;
+		args.max_channels = alMaxChannels;
+		args.stream_update_freq = alStreamUpdateFreq;
+		args.use_threading = abUseThreading;
+		args.use_voice_management = abUseVoiceManagement;
+		args.max_mono_hint = alMaxMonoSourceHint;
+		args.max_stereo_hint = alMaxStereoSourceHint;
+		args.stream_buffer_size = alStreamingBufferSize;
+		args.stream_buffer_count = alStreamingBufferCount;
+		args.enable_log = abEnableLowLevelLog;
+
+		OhplL5InitResult res = ohpl_l5_low_init(mpRust, &args, vAll.data(), vAll.size(), vValid.data(), vValid.size(),
+												getenv("OPENHPL_SOUND_DEVICE"));
+		mbInitialized = res.initialized;
+		if(mbInitialized==false) return;
+
+		mlCurrentSoundDevID = res.device_id;
+		mbEnvAudioEnabled = ohpl_l5_low_env_enabled(mpRust);
+
+		mvListenerForward = cVector3f(0,0,1);
+		mvListenerUp = cVector3f(0,1,0);
+
+		SetVolume(1.0f);
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cLowLevelSoundOpenAL::SetEnvVolume( float afEnvVolume )
 	{
+		if(mpRust)
+		{
+			float fVolume;
+			if(ohpl_l5_low_set_env_volume(mpRust, afEnvVolume, &fVolume)) mfEnvVolume = fVolume;
+			return;
+		}
 		if (!mbEnvAudioEnabled)
 			return;
 
@@ -505,6 +609,14 @@ namespace hpl {
 	{
 		if (!mbEnvAudioEnabled)
 			return;
+
+		if(mpRust)
+		{
+			OhplL5EnvParams params;
+			if(apSoundEnv) ((cOpenALSoundEnvironment*)apSoundEnv)->ToRust(params);
+			ohpl_l5_low_set_env(mpRust, apSoundEnv ? &params : NULL);
+			return;
+		}
 
 		if (apSoundEnv == NULL)
 		{
@@ -599,6 +711,15 @@ namespace hpl {
 	{
 		if (!mbEnvAudioEnabled)
 			return;
+
+		if(mpRust)
+		{
+			OhplL5EnvParams src, dst;
+			if(apSourceSoundEnv) ((cOpenALSoundEnvironment*)apSourceSoundEnv)->ToRust(src);
+			if(apDestSoundEnv) ((cOpenALSoundEnvironment*)apDestSoundEnv)->ToRust(dst);
+			ohpl_l5_low_fade_env(mpRust, apSourceSoundEnv ? &src : NULL, apDestSoundEnv ? &dst : NULL, afT);
+			return;
+		}
 
 		if (afT<0)
 			afT = 0;
@@ -732,6 +853,17 @@ namespace hpl {
 
 	iSoundDeviceIdentifier* cLowLevelSoundOpenAL::GetFirstDefaultDevice()
 	{
+		if(mpRust)
+		{
+			std::vector<OhplL5Device> vAll, vValid;
+			OhplL5ToDevices(GetAvailableSoundDevices(), vAll);
+			OhplL5ToDevices(GetFilteredSoundDevices(), vValid);
+			int lId = ohpl_l5_first_default(vAll.data(), vAll.size(), vValid.data(), vValid.size());
+			const tSoundDeviceVec& vDevices = GetAvailableSoundDevices();
+			for(size_t i=0;i<vDevices.size();++i)
+				if(vDevices[i]->GetID()==lId) return vDevices[i];
+			return NULL;
+		}
 		iSoundDeviceIdentifier* pSndDev = GetFirstValidDefaultDevice();
 
 		if(pSndDev)

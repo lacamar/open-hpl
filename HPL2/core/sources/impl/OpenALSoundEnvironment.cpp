@@ -52,8 +52,46 @@ namespace hpl
 	{
 	}
 		
+	static void OhplL5EnvName(void* apCtx, const uint8_t* apName, size_t alLen)
+	{
+		((tString*)apCtx)->assign((const char*)apName, alLen);
+	}
+
+	void cOpenALSoundEnvironment::FromRust(const OhplL5EnvParams& p)
+	{
+		mfDensity = p.density; mfDiffusion = p.diffusion; mfGain = p.gain; mfGainHF = p.gain_hf; mfGainLF = p.gain_lf;
+		mfDecayTime = p.decay_time; mfDecayHFRatio = p.decay_hf_ratio; mfDecayLFRatio = p.decay_lf_ratio;
+		mfReflectionsGain = p.reflections_gain; mfReflectionsDelay = p.reflections_delay;
+		for(int i=0;i<3;++i) { mfReflectionsPan[i] = p.reflections_pan[i]; mfLateReverbPan[i] = p.late_reverb_pan[i]; }
+		mfLateReverbGain = p.late_reverb_gain; mfLateReverbDelay = p.late_reverb_delay;
+		mfEchoTime = p.echo_time; mfEchoDepth = p.echo_depth; mfModulationTime = p.modulation_time; mfModulationDepth = p.modulation_depth;
+		mfAirAbsorptionGainHF = p.air_absorption_gain_hf; mfHFReference = p.hf_reference; mfLFReference = p.lf_reference;
+		mfRoomRolloffFactor = p.room_rolloff_factor; mbDecayHFLimit = p.decay_hf_limit;
+	}
+
+	void cOpenALSoundEnvironment::ToRust(OhplL5EnvParams& p)
+	{
+		p.density = mfDensity; p.diffusion = mfDiffusion; p.gain = mfGain; p.gain_hf = mfGainHF; p.gain_lf = mfGainLF;
+		p.decay_time = mfDecayTime; p.decay_hf_ratio = mfDecayHFRatio; p.decay_lf_ratio = mfDecayLFRatio;
+		p.reflections_gain = mfReflectionsGain; p.reflections_delay = mfReflectionsDelay;
+		for(int i=0;i<3;++i) { p.reflections_pan[i] = mfReflectionsPan[i]; p.late_reverb_pan[i] = mfLateReverbPan[i]; }
+		p.late_reverb_gain = mfLateReverbGain; p.late_reverb_delay = mfLateReverbDelay;
+		p.echo_time = mfEchoTime; p.echo_depth = mfEchoDepth; p.modulation_time = mfModulationTime; p.modulation_depth = mfModulationDepth;
+		p.air_absorption_gain_hf = mfAirAbsorptionGainHF; p.hf_reference = mfHFReference; p.lf_reference = mfLFReference;
+		p.room_rolloff_factor = mfRoomRolloffFactor; p.decay_hf_limit = mbDecayHFLimit;
+	}
+
 	bool cOpenALSoundEnvironment::CreateFromFile(const tString &asFile)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplL5EnvParams params;
+			tString sName;
+			if(!ohpl_l5_env_load(asFile.c_str(), &params, OhplL5EnvName, &sName)) return false;
+			mstrName = sName;
+			FromRust(params);
+			return true;
+		}
 		tString strType;
 		TiXmlDocument doc;
 		if (!doc.LoadFile(asFile.c_str()))

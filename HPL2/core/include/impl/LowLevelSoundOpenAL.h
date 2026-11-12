@@ -21,6 +21,7 @@
 #define HPL_LOWLEVELSOUND_OPENAL_H
 
 #include "sound/LowLevelSound.h"
+#include "impl/RustL5.h"
 
 class cOAL_Effect_Reverb;
 
@@ -91,6 +92,11 @@ namespace hpl
 		bool	mbNullEffectAttached;
 
 		cOAL_Effect_Reverb* mpEffect;
+		OhplL5Low* mpRust;
+		void InitRust(int alSoundDeviceID, bool abUseEnvAudio,int alMaxChannels,
+					int alStreamUpdateFreq, bool abUseThreading, bool abUseVoiceManagement,
+					int alMaxMonoSourceHint, int alMaxStereoSourceHint,
+					int alStreamingBufferSize, int alStreamingBufferCount, bool abEnableLowLevelLog);
 		int mlCurrentSoundDevID;
 	};
 };

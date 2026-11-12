@@ -67,6 +67,7 @@ pub const IL_FALSE: u8 = 0;
 pub const IL_SEEK_SET: i32 = 0;
 pub const IL_SEEK_END: i32 = 2;
 
+#[cfg_attr(test, link(name = "IL"))]
 unsafe extern "C" {
     pub fn ilActiveFace(Number: u32) -> u8;
     pub fn ilActiveImage(Number: u32) -> u8;

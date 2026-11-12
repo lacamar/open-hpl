@@ -38,6 +38,7 @@ namespace hpl {
 		bool CreateFromBitmapFile(const tWString &asFileName);
 
 	private:
+		bool CreateFromBitmapFileRust(const tWString &asFileName, const tWString &asPath);
 		//cGlyph* RenderGlyph(TTF_Font* apFont,unsigned short aChar, int alFontSize);
 
 	};

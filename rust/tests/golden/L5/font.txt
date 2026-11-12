@@ -1,0 +1,11 @@
+fixtures/font_sample.fnt ok lh=34 base=28 h=42080000 r=3f52d2d3 largest=100 count=101
+ page a.png
+ page b.png
+ char 65 1 2 10 11 1 2 14 0 st=0
+ char 66 3 4 10 11 -1 2 14 1 st=0
+ char 67 3 4 10 11 0 2 14 2 st=2
+ char -5 3 4 10 11 0 2 14 0 st=1
+ char 100 0 0 5 0 0 0 2 0 st=0
+fixtures/font_lacks.fnt lacks
+fixtures/font_big.fnt unreasonable 99999999
+fixtures/font_missing.fnt open

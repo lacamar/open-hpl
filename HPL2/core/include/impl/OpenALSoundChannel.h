@@ -22,6 +22,7 @@
 
 #include "sound/SoundChannel.h"
 #include "sound/SoundData.h"
+#include "impl/RustL5.h"
 
 #ifdef USE_OALWRAPPER
 # include "OALWrapper/OAL_Funcs.h"
@@ -77,6 +78,7 @@ namespace hpl {
 
 		float mfPosition[3];
 		float mfVelocity[3];
+		OhplL5Channel* mpRust;
 	};
 };
 #endif // HPL_OPENAL_CHANNEL_H

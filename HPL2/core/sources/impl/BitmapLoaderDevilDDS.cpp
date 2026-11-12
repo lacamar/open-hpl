@@ -149,6 +149,8 @@ namespace hpl {
 	
 	cBitmap* cBitmapLoaderDevilDDS::LoadBitmap(const tWString& asFile, tBitmapLoadFlag aFlags)
 	{
+		if(OhplBackendRustRequested()) return LoadBitmapRust(asFile, 1, aFlags);
+
 		Initialize();
 
 		{
