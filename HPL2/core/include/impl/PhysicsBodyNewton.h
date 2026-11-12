@@ -24,6 +24,7 @@
 #include <unistd.h>
 #endif
 #include <Newton.h>
+#include <cstdint>
 
 #include "physics/PhysicsBody.h"
 
@@ -40,6 +41,7 @@ namespace hpl {
 	class cPhysicsBodyNewton : public iPhysicsBody
 	{
 	friend class cPhysicsBodyNewtonCallback;
+	friend struct OhplL4HostImpl;
 	public:
 		cPhysicsBodyNewton(const tString &asName,iPhysicsWorld *apWorld,iCollideShape *apShape);
 		~cPhysicsBodyNewton();
@@ -107,6 +109,7 @@ namespace hpl {
 
 		NewtonBody *mpNewtonBody;
 		NewtonWorld *mpNewtonWorld;
+		uint64_t mhRust = 0;
 
 		cPhysicsBodyNewtonCallback *mpCallback;
 

@@ -7,6 +7,22 @@ pub struct Handle<T> {
     _t: PhantomData<fn() -> T>,
 }
 
+impl<T> Handle<T> {
+    /// Non-zero opaque form for C user data; 0 stays null.
+    pub fn to_bits(self) -> u64 {
+        ((u64::from(self.generation) << 32) | u64::from(self.index)).wrapping_add(1)
+    }
+
+    pub fn from_bits(bits: u64) -> Option<Self> {
+        let raw = bits.checked_sub(1)?;
+        Some(Self {
+            index: u32::try_from(raw & 0xFFFF_FFFF).ok()?,
+            generation: u32::try_from(raw >> 32).ok()?,
+            _t: PhantomData,
+        })
+    }
+}
+
 impl<T> Clone for Handle<T> {
     fn clone(&self) -> Self {
         *self
@@ -22,22 +38,6 @@ impl<T> Eq for Handle<T> {}
 impl<T> core::fmt::Debug for Handle<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "Handle({}v{})", self.index, self.generation)
-    }
-}
-
-impl<T> Handle<T> {
-    /// Nonzero id for C callers; 0 is never a live handle.
-    pub fn to_bits(self) -> u64 {
-        ((u64::from(self.generation) << 32) | u64::from(self.index)) + 1
-    }
-
-    pub fn from_bits(bits: u64) -> Option<Self> {
-        let v = bits.checked_sub(1)?;
-        Some(Self {
-            index: v as u32,
-            generation: (v >> 32) as u32,
-            _t: PhantomData,
-        })
     }
 }
 

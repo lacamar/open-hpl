@@ -24,6 +24,7 @@
 #include <unistd.h>
 #endif
 #include <Newton.h>
+#include <cstdint>
 #include "physics/CollideShape.h"
 
 #include "math/MathTypes.h"
@@ -65,6 +66,7 @@ namespace hpl {
 	private:
 		NewtonCollision* mpNewtonCollision;
 		NewtonWorld *mpNewtonWorld;
+		uint64_t mhWorld = 0;
 
 		tCollideShapeVec mvSubShapes;
 		tVector3fVec mvBuoyancyPoints;

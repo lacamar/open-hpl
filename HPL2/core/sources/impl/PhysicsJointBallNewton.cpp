@@ -35,6 +35,9 @@ namespace hpl {
 						iPhysicsWorld *apWorld, const cVector3f &avPivotPoint, const cVector3f &avPinDir)
 	: iPhysicsJointNewton<iPhysicsJointBall>(asName,apParentBody,apChildBody,apWorld,avPivotPoint,avPinDir)
 	{
+		if(OhplL4UseRust())
+			mhRust = ohpl_ntj_create_ball(mhRustWorld, &avPivotPoint, mpNewtonChildBody, mpNewtonParentBody, &mpNewtonJoint);
+		else
 		mpNewtonJoint = NewtonConstraintCreateBall(mpNewtonWorld,avPivotPoint.v,
 												mpNewtonChildBody, mpNewtonParentBody);
 
@@ -58,6 +61,9 @@ namespace hpl {
 		
 	void cPhysicsJointBallNewton::SetConeLimits(float afMaxConeAngle, float afMaxTwistAngle)
 	{
+		if(OhplL4UseRust())
+			ohpl_ntj_ball_cone_limits(mhRust, &mvStartPinDir, afMaxConeAngle, afMaxTwistAngle);
+		else
 		NewtonBallSetConeLimits(mpNewtonJoint, mvStartPinDir.v,afMaxConeAngle,afMaxTwistAngle);
 		mfMaxConeAngle = afMaxConeAngle;
 		mfMaxTwistAngle = afMaxTwistAngle;
@@ -65,6 +71,12 @@ namespace hpl {
 	
 	cVector3f cPhysicsJointBallNewton::GetAngles()
 	{
+		if(OhplL4UseRust())
+		{
+			cVector3f vAngles;
+			ohpl_ntj_ball_angles(mhRust, &vAngles);
+			return vAngles;
+		}
 		cVector3f vAngles;
 		NewtonBallGetJointAngle(mpNewtonJoint,&vAngles.v[0]);
 		return vAngles;
@@ -78,12 +90,24 @@ namespace hpl {
 	}
 	cVector3f cPhysicsJointBallNewton::GetAngularVelocity()
 	{
+		if(OhplL4UseRust())
+		{
+			cVector3f vVel;
+			ohpl_ntj_ball_omega(mhRust, &vVel);
+			return vVel;
+		}
 		cVector3f vVel;
 		NewtonBallGetJointOmega(mpNewtonJoint,&vVel.v[0]);
 		return vVel;
 	}
 	float cPhysicsJointBallNewton::GetForceSize()
 	{
+		if(OhplL4UseRust())
+		{
+			cVector3f vForce;
+			ohpl_ntj_ball_force(mhRust, &vForce);
+			return vForce.Length();
+		}
 		cVector3f vForce;
 		NewtonBallGetJointForce(mpNewtonJoint,&vForce.v[0]);
 		return vForce.Length();
