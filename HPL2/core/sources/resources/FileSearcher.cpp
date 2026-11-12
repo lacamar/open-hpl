@@ -24,12 +24,13 @@
 #include "system/Platform.h"
 
 #include "resources/LowLevelResources.h"
+#include "impl/RustBackends.h"
 
 namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cFileSearcher::cFileSearcher() : mpFiles(ohpl_fs_new())
+	cFileSearcher::cFileSearcher() : mpFiles(ohpl_fs_new()), mpRs(OhplBackendRustRequested() ? ohpl_h2_fs_new() : NULL)
 	{
 		msNull = _W("");
 	}
@@ -39,12 +40,19 @@ namespace hpl {
 	cFileSearcher::~cFileSearcher()
 	{
 		ohpl_fs_free(mpFiles);
+		if(mpRs) ohpl_h2_fs_free(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cFileSearcher::AddDirectory(const tWString& asSearchPath, const tString &asMask, bool abAddSubDirectories)
 	{
+		if(mpRs)
+		{
+			ohpl_h2_fs_add_dir(mpRs, reinterpret_cast<const uint32_t*>(asSearchPath.data()), asSearchPath.size(), asMask.data(), asMask.size(), abAddSubDirectories);
+			return;
+		}
+
 		//Make the path with only "/" and lower case.
 		tWString sPath = cString::ReplaceCharToW(asSearchPath,_W("\\"),_W("/"));
 
@@ -89,6 +97,7 @@ namespace hpl {
 
 	void cFileSearcher::ClearDirectories()
 	{
+		if(mpRs) ohpl_h2_fs_clear(mpRs);
 		ohpl_fs_clear(mpFiles);
 		mvPaths.clear();
 	}
@@ -97,6 +106,20 @@ namespace hpl {
 
 	const tWString& cFileSearcher::GetFilePath(const tString& asFileNameAndPath, int *apEqualCount)
 	{
+		if(mpRs)
+		{
+			int64_t lRsId = ohpl_h2_fs_get(mpRs, asFileNameAndPath.data(), asFileNameAndPath.size(), apEqualCount);
+			if(lRsId < 0) return msNull;
+			if(mvPaths.size() <= (size_t)lRsId) mvPaths.resize(lRsId + 1);
+			if(mvPaths[lRsId].empty())
+			{
+				size_t lLen;
+				const uint32_t *pPath = ohpl_h2_fs_path(mpRs, (uint32_t)lRsId, &lLen);
+				mvPaths[lRsId].assign(reinterpret_cast<const wchar_t*>(pPath), lLen);
+			}
+			return mvPaths[lRsId];
+		}
+
 		int64_t lId = ohpl_fs_get(mpFiles, asFileNameAndPath.data(), asFileNameAndPath.size(), apEqualCount);
 		if(lId < 0) return msNull;
 		return mvPaths[lId];

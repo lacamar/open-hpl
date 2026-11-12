@@ -25,6 +25,7 @@
 #include "graphics/GraphicsTypes.h"
 
 struct OhplXmlDoc;
+struct OhplH2Config;
 
 namespace hpl {
 	class cFileSearcher;
@@ -83,6 +84,7 @@ namespace hpl {
 		cFileSearcher *mpFileSearcher;
 
 		OhplXmlDoc *mpXmlDoc;
+		OhplH2Config *mpRs;
 		tString msTempValue;
 
 		bool mbUseCRC;

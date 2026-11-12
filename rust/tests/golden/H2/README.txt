@@ -1,0 +1,5 @@
+xml_raw.txt: "game:relative path<TAB>fnv64" over cfg/fnt/gui/xml/snt/ps/lang (all) and mat/ent (every 8th) of SOMA, Amnesia TDD, Rebirth, Bunker. Digest = load status line + TiXmlDocument::SaveFile bytes + operator<< bytes, recorded from vendored tinyXML (xml_probe tiny); the Rust XML layer must reproduce it.
+fs.txt: "game<TAB>files<TAB>queries<TAB>fnv64" of cFileSearcher lookups (name, parent/name, grand\parent/name, wrong dir, upper case, equal-count) after AddDirectory(game root, "*.*", subdirs), recorded from the pre-port multimap C++ (git 509479b^).
+results.txt: differential run, pre-port C++ vs current vs OHPL_IMPL=rust (diffs per probe).
+Replay without C++: cargo test resources::golden_tests (skipped per game when the Steam data is absent; OHPL_H2_CORPUS overrides the common dir).
+Regenerate: harness/build.sh BUILD_DIR OUT; harness/compare.sh OUT (needs the HPL2 target built in BUILD_DIR).

@@ -1,6 +1,12 @@
 //! Resource registry data structures: file searcher, resource map, loader dispatch.
 //! Resource objects and loaders stay C++ and are opaque pointers here.
 
+pub mod config;
+pub mod ffi;
+#[cfg(test)]
+mod golden_tests;
+pub mod searcher;
+
 use crate::string;
 use std::collections::BTreeMap;
 use std::ffi::c_void;

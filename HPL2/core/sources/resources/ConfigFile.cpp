@@ -22,6 +22,8 @@
 #include "system/LowLevelSystem.h"
 #include "resources/FileSearcher.h"
 #include "system/RustXml.h"
+#include "resources/RustResourcesH2.h"
+#include "impl/RustBackends.h"
 
 #include "resources/BinaryBuffer.h"
 #include "system/Platform.h"
@@ -46,6 +48,7 @@ namespace hpl {
 			msFile = asFile;
 		}
 		mpXmlDoc = ohpl_xml_doc_new();
+		mpRs = OhplBackendRustRequested() ? ohpl_h2_cfg_new() : NULL;
 		//mpFileSearcher = apFileSearcher;
 
 		mbUseCRC = false;
@@ -54,6 +57,7 @@ namespace hpl {
 	cConfigFile::~cConfigFile()
 	{
 		ohpl_xml_doc_free(mpXmlDoc);
+		if(mpRs) ohpl_h2_cfg_free(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -66,6 +70,19 @@ namespace hpl {
 	
 	bool cConfigFile::Load()
 	{
+		if(mpRs)
+		{
+			const char *sName = mbUseCRC ? "binary config" : "config";
+			switch(ohpl_h2_cfg_load(mpRs, reinterpret_cast<const uint32_t*>(msFile.data()), msFile.size(), mbUseCRC))
+			{
+			case 0: return true;
+			case 1: Error("Unable to open %s file '%s'!\n", sName, cString::To8Char(msFile).c_str()); break;
+			case 2: Error("CRC check for binary config file '%s' failed!\n", cString::To8Char(msFile).c_str()); break;
+			default: if(mbUseCRC) Error("Parsing binary config file '%s' failed!\n", cString::To8Char(msFile).c_str()); break;
+			}
+			return false;
+		}
+
 		////////////////////////////////////
 		// CRC Loading
 		if(mbUseCRC)
@@ -122,6 +139,13 @@ namespace hpl {
 
 	bool cConfigFile::Save()
 	{
+		if(mpRs)
+		{
+			if(ohpl_h2_cfg_save(mpRs, reinterpret_cast<const uint32_t*>(msFile.data()), msFile.size(), mbUseCRC) == 0) return true;
+			Error("Unable to save %sconfig file '%s'!\n", mbUseCRC ? "bin " : "", cString::To8Char(msFile).c_str());
+			return false;
+		}
+
 		////////////////////////////////////
 		// CRC Loading
 		if(mbUseCRC)
@@ -181,6 +205,11 @@ namespace hpl {
 
 	void cConfigFile::SetString(const tString& asLevel, const tString& asName, const tString& asVal)
 	{
+		if(mpRs)
+		{
+			ohpl_h2_cfg_set(mpRs, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), asVal.c_str(), asVal.size());
+			return;
+		}
 		ohpl_xml_config_set(mpXmlDoc, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), asVal.c_str(), asVal.size());
 	}
 	//-----------------------------------------------------------------------
@@ -322,6 +351,11 @@ namespace hpl {
 
 	const char* cConfigFile::GetCharArray(tString asLevel, tString asName)
 	{
+		if(mpRs)
+		{
+			bool bRsFound = ohpl_h2_cfg_get(mpRs, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), OhplXmlAssign, &msTempValue);
+			return bRsFound ? msTempValue.c_str() : NULL;
+		}
 		bool bFound = ohpl_xml_config_get(mpXmlDoc, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), OhplXmlAssign, &msTempValue);
 		return bFound ? msTempValue.c_str() : NULL;
 	}
