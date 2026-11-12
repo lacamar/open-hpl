@@ -18,6 +18,7 @@
  */
 
 #include "LuxInsanityHandler.h"
+#include "RustLuxFx.h"
 
 #include "LuxPlayer.h"
 #include "LuxDebugHandler.h"
@@ -128,33 +129,10 @@ void cLuxInstanityEvent_Bugs::OnStart()
 	//////////////////////////////////////////
 	// Create the bugs 
 	mvBugs.resize(mlNumOfBugs);
-    for(int i=0; i<mlNumOfBugs; ++i)
+	if(mvBugs.empty() == false)
 	{
-		cLuxInstanityEvent_Bugs_Bug *pBug = &mvBugs[i];
-
-		/////////////////////
-		// Position (keep at edges of screen)
-		cVector2f vPos;
-		bool bVertical = cMath::RandRectf(0,1)>0.7;
-        if(bVertical)
-		{
-			vPos.x = cMath::RandRectl(0,1)==0 ? vGuiSetMin.x : vGuiSetMax.x;
-			vPos.y = cMath::RandRectf(vGuiSetMin.y, vGuiSetMax.y);
-		}
-		else
-		{
-			vPos.x = cMath::RandRectf(vGuiSetMin.x, vGuiSetMax.x);
-			vPos.y = cMath::RandRectl(0,1)==0 ? vGuiSetMin.y : vGuiSetMax.y;
-		}
-		
-		/////////////////////
-		// Set up variables
-		pBug->mbActive = false;
-		pBug->mfAlpha =0;
-		pBug->mfAngle = cMath::RandRectf(0, k2Pif);
-		pBug->mvPos = vPos;
-		pBug->mvVel = cVector2f(0,0);
-		pBug->mfSizeMul = cMath::RandRectf(mfMinSizeMul, mfMaxSizeMul);
+		OhplGa9bBugsParams params = BugsParams();
+		ohpl_ga9b_bugs_start((OhplGa9bBug*)&mvBugs[0], mvBugs.size(), &params, vGuiSetMin.x, vGuiSetMin.y, vGuiSetMax.x, vGuiSetMax.y);
 	}
 
 	//////////////////////////////////////////
@@ -198,92 +176,18 @@ void cLuxInstanityEvent_Bugs::OnExit()
 
 void cLuxInstanityEvent_Bugs::Update(float afTimeStep)
 {
-	cVector2f vSwarmPoint(400, 300);
-	bool bActive = true;
-	int lDisabledCount =0;
-
-	/////////////////////////////////
-	// Time
-	mfTimeCount -= afTimeStep;
-	if(mfTimeCount <0)
-	{
-		mfTimeCount = 0;
-		bActive = false;
-	}
-
-	/////////////////////////////////
-	// Bugs
-	for(int i=0; i<mlNumOfBugs; ++i)
-	{
-		cLuxInstanityEvent_Bugs_Bug *pBug = &mvBugs[i];
-
-		/////////////////// 
-		// Alpha
-		if(bActive && pBug->mfAlpha < 1)
-		{
-			pBug->mfAlpha += cMath::RandRectf(0.2f,1.0f)*afTimeStep;
-			if(pBug->mfAlpha>1) pBug->mfAlpha=1;
-		}
-		else if(bActive==false)
-		{
-			pBug->mfAlpha -= cMath::RandRectf(0.2f,1.0f)*afTimeStep;
-			if(pBug->mfAlpha<0)
-			{
-				pBug->mfAlpha=0;
-				lDisabledCount++;
-			}
-		}
-        	
-		/////////////////// 
-		// Wandering
-		if(pBug->mvVel.Length() > kEpsilonf)
-		{
-			cVector2f vDir = pBug->mvVel; vDir.Normalize();
-			float fAngle = cMath::RandRectf(0, k2Pif);
-
-			cVector3f vForce = cMath::MatrixMul(cMath::MatrixRotateY(fAngle),cVector3f(mfWanderCircleRadius,0,0));
-
-			pBug->mvVel += (vDir*mfWanderCircleDist + cVector2f(vForce.x, vForce.z)) * afTimeStep;
-		}
-		
-		/////////////////// 
-		// Swarm around point
-		{
-			float fSwarmPointDist = cMath::Vector2Dist(vSwarmPoint, pBug->mvPos);
-
-			cVector2f vWantedVel = vSwarmPoint - pBug->mvPos;
-			vWantedVel.Normalize(); vWantedVel *= mfSwarmPointMul;
-			
-			cVector2f vAcc = vWantedVel * cMath::Min(fSwarmPointDist*0.025f ,1.0f);
-			pBug->mvVel += vAcc * afTimeStep;
-		}
-		
-		/////////////////////////7
-		// Cap speed
-        float fSpeed = pBug->mvVel.Length();
-        if(fSpeed > mfMaxSpeed)
-		{
-			pBug->mvVel = (pBug->mvVel/fSpeed)*mfMaxSpeed;
-		}
-		
-		/////////////////// 
-		// Update pos
-		pBug->mvPos += pBug->mvVel * afTimeStep;
-		
-		/////////////////// 
-		// Calculate angle
-        if(pBug->mvVel.Length()>kEpsilonf)
-		{
-			pBug->mfAngle = cMath::GetAngleFromPoints2D(0, pBug->mvVel);
-		}
-	}
-
-	////////////////////////////
-	//Check if over
-	if(bActive==false && lDisabledCount==(int)mvBugs.size())
+	OhplGa9bBugsParams params = BugsParams();
+	bool bDone = ohpl_ga9b_bugs_update(mvBugs.empty() ? NULL : (OhplGa9bBug*)&mvBugs[0], mvBugs.size(), mlNumOfBugs, &params, afTimeStep, &mfTimeCount);
+	if(bDone)
 	{
 		EventIsDone();
 	}
+}
+
+OhplGa9bBugsParams cLuxInstanityEvent_Bugs::BugsParams()
+{
+	OhplGa9bBugsParams params = { mfMinSizeMul, mfMaxSizeMul, mfWanderCircleDist, mfWanderCircleRadius, mfSwarmPointMul, mfMaxSpeed };
+	return params;
 }
 
 //-----------------------------------------------------------------------
@@ -416,8 +320,7 @@ void cLuxInstanityEvent_Particles::Update(float afTimeStep)
 
 	/////////////////////////////////
 	// Time
-    mfTimeCount -= afTimeStep;
-	if(mfTimeCount <0)
+	if(ohpl_ga9b_timer_expired(&mfTimeCount, afTimeStep))
 	{
 		EventIsDone();
 	}
@@ -453,17 +356,17 @@ void cLuxInstanityEvent_SoundStream::OnLoadData(cXmlElement * apVarElem)
 	msFile = apVarElem->GetAttributeString("File", "");
 	mfVolume = apVarElem->GetAttributeFloat("Volume", 1);
 	mfSoundDelayTime = apVarElem->GetAttributeFloat("SoundDelayTime", 0);
-	if(mfSoundDelayTime <=0) mfSoundDelayTime = 0.001f;
-	
+
 	mbFadeScreen = apVarElem->GetAttributeBool("FadeScreen", false);
 	mFadeColor = apVarElem->GetAttributeColor("FadeColor", cColor(1));
 	mfFadeInSpeed = apVarElem->GetAttributeFloat("FadeInTime", 0);
 	mfFadeOutSpeed = apVarElem->GetAttributeFloat("FadeOutTime", 0);
-	
-	if(mfFadeInSpeed<=0) mfFadeInSpeed = 0.001f;
-	if(mfFadeOutSpeed<=0) mfFadeOutSpeed = 0.001f;
-	mfFadeInSpeed = 1.0f / mfFadeInSpeed;
-	mfFadeOutSpeed = 1.0f / mfFadeOutSpeed;
+
+	float vLoaded[3];
+	ohpl_ga9b_stream_load(mfSoundDelayTime, mfFadeInSpeed, mfFadeOutSpeed, vLoaded);
+	mfSoundDelayTime = vLoaded[0];
+	mfFadeInSpeed = vLoaded[1];
+	mfFadeOutSpeed = vLoaded[2];
 
 	msSubtitleCat = apVarElem->GetAttributeString("SubtitleCat", "");
 	msSubtitleEntry = apVarElem->GetAttributeString("SubtitleEntry", "");
@@ -513,46 +416,26 @@ void cLuxInstanityEvent_SoundStream::Update(float afTimeStep)
 {
 	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
 
-	///////////////////////////////
-	// Play sound
-	if(mpSoundEntry==NULL && mfSoundCount>0)
+	OhplGa9bStream s = { mfSoundCount, mfFadeAlpha, mfFadeAlphaSpeed, mfFadeOutSpeed, mbFadeScreen };
+
+	//////////////////////////////
+	// Start the sound when the delay is over
+	if(ohpl_ga9b_stream_a(&s, mpSoundEntry==NULL, afTimeStep))
 	{
-		mfSoundCount-= afTimeStep;
-		if(mfSoundCount <=0)
-		{
-			mpSoundEntry = pSoundHandler->PlayGuiStream(msFile, false, mfVolume);
-			if(mpSoundEntry)
-				mlSoundEntryID = mpSoundEntry->GetId();
-		}
+		mpSoundEntry = pSoundHandler->PlayGuiStream(msFile, false, mfVolume);
+		if(mpSoundEntry)
+			mlSoundEntryID = mpSoundEntry->GetId();
 	}
 
-	////////////////////////////////
-	// Fade screen
-	if(mbFadeScreen)
-	{
-		mfFadeAlpha += mfFadeAlphaSpeed*afTimeStep;
-		if(mfFadeAlphaSpeed > 0 && mfFadeAlpha > 1.0f)
-		{
-			mfFadeAlpha = 1.0f;
-		}
-		if(mfFadeAlphaSpeed < 0 && mfFadeAlpha < 0.0f)
-		{
-			mfFadeAlpha = 0.0f;
-			EventIsDone();
-		}
-	}
+	//////////////////////////////
+	// Fade and check if over
+	bool bGone = mpSoundEntry==NULL || pSoundHandler->IsValid(mpSoundEntry, mlSoundEntryID)==false;
+	bool bDone = ohpl_ga9b_stream_b(&s, bGone, afTimeStep);
 
-	////////////////////////////////
-	// Check if sound is over
-	if(mfSoundCount <=0 && (mpSoundEntry==NULL || pSoundHandler->IsValid(mpSoundEntry, mlSoundEntryID)==false) )
-	{
-		if(mbFadeScreen==false)
-		{
-			EventIsDone();
-		}
-		if(mfFadeAlphaSpeed>0)
-			mfFadeAlphaSpeed = -mfFadeOutSpeed;
-	}
+	mfSoundCount = s.soundCount;
+	mfFadeAlpha = s.fadeAlpha;
+	mfFadeAlphaSpeed = s.fadeAlphaSpeed;
+	if(bDone) EventIsDone();
 }
 
 //-----------------------------------------------------------------------
@@ -563,12 +446,13 @@ void cLuxInstanityEvent_SoundStream::OnDraw(float afFrameTime)
 		mvCurrentTextRows.empty()==false && 
 		gpBase->mpEffectHandler->GetPlayVoice()->IsActive()==false)
 	{
-		cVector3f vStartPos(400-300/2, 580 - (mvCurrentTextRows.size()*(18.0f+2.0f)), 4);
-
-		for(size_t i=0; i<mvCurrentTextRows.size(); ++i)
+		size_t lRows = mvCurrentTextRows.size();
+		std::vector<OhplGa9bRow> vRows(lRows);
+		size_t lNum = ohpl_ga9b_stream_rows(lRows, &vRows[0]);
+		for(size_t i=0; i<lNum; ++i)
 		{
-			gpBase->mpGameHudSet->DrawFont(mvCurrentTextRows[i],gpBase->mpDefaultFont, vStartPos, 18,cColor(1,1));
-			vStartPos.y+= 18+2;
+			const OhplGa9bRow &row = vRows[i];
+			gpBase->mpGameHudSet->DrawFont(mvCurrentTextRows[row.row],gpBase->mpDefaultFont, cVector3f(row.x, row.y, row.z), 18,cColor(1,1));
 		}
 	}
 
@@ -618,11 +502,23 @@ void cLuxInstanityEvent_Steps::OnStart()
 {
 	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
 
-	mvPosition = cMath::MatrixMul( cMath::MatrixRotateY(cMath::RandRectf(0, k2Pif)), cVector3f(mfDistance, 0, 0) );
+	OhplGa9bSteps s = StepsToRust();
+	ohpl_ga9b_steps_start(&s, mfStepTime, mlStepNum, mfDistance);
+	StepsFromRust(s);
+}
 
-	mfSoundCountMax = mfStepTime;
-	mfSoundCount =0;
-	mlCount = mlStepNum;
+OhplGa9bSteps cLuxInstanityEvent_Steps::StepsToRust()
+{
+	OhplGa9bSteps s = { mfSoundCount, mfSoundCountMax, mlCount, { mvPosition.x, mvPosition.y, mvPosition.z }, mfTimeMulPerStep, mfDistanceMulPerStep };
+	return s;
+}
+
+void cLuxInstanityEvent_Steps::StepsFromRust(const OhplGa9bSteps &s)
+{
+	mfSoundCount = s.soundCount;
+	mfSoundCountMax = s.soundCountMax;
+	mlCount = s.count;
+	mvPosition = cVector3f(s.pos[0], s.pos[1], s.pos[2]);
 }
 
 void cLuxInstanityEvent_Steps::OnExit()
@@ -635,27 +531,21 @@ void cLuxInstanityEvent_Steps::Update(float afTimeStep)
 {
 	cWorld *pWorld = gpBase->mpMapHandler->GetCurrentMap()->GetWorld();
 
-	///////////////////////////////
-	// Play sound
-	if(mfSoundCount <=0)
+	cVector3f vOldPosition = mvPosition;
+	OhplGa9bSteps s = StepsToRust();
+	bool bCreate = false;
+	bool bDone = ohpl_ga9b_steps_update(&s, afTimeStep, &bCreate);
+	StepsFromRust(s);
+
+	if(bCreate)
 	{
 		cSoundEntity *pSound = pWorld->CreateSoundEntity("insanity_step", msSound, true);
 		if(pSound)
 		{
-			pSound->SetPosition(gpBase->mpPlayer->GetCharacterBody()->GetPosition() + mvPosition);
+			pSound->SetPosition(gpBase->mpPlayer->GetCharacterBody()->GetPosition() + vOldPosition);
 		}
-
-		mfSoundCount = mfSoundCountMax;
-		mfSoundCountMax *= mfTimeMulPerStep;
-		mvPosition = cMath::Vector3Normalize(mvPosition) * mvPosition.Length() * mfDistanceMulPerStep;
-
-		mlCount--;
-		if(mlCount <=0) EventIsDone();
 	}
-	else
-	{
-		mfSoundCount -= afTimeStep;
-	}
+	if(bDone) EventIsDone();
 }
 
 //-----------------------------------------------------------------------
@@ -725,34 +615,30 @@ void cLuxInsanityHandler::Reset()
 
 void cLuxInsanityHandler::Update(float afTimeStep)
 {
-	//////////////////////////
-	// Update time between events if not event is playing
-	if(mfNewEventCount > 0 && mlCurrentEvent < 0)
-	{
-		mfNewEventCount -= afTimeStep;
-	}
-	
-	///////////////////////////
+	mfNewEventCount = ohpl_ga9b_insanity_count_down(mfNewEventCount, mlCurrentEvent, afTimeStep);
+
+	/////////////////////////
 	// Update current event
 	if(mlCurrentEvent>=0)
 	{
 		mvEvents[mlCurrentEvent]->Update(afTimeStep);
+
 		if(mvEvents[mlCurrentEvent]->IsOver())
 		{
 			mvEvents[mlCurrentEvent]->OnExit();
 			mlCurrentEvent = -1;
 
 			float fSanity = gpBase->mpPlayer->GetSanity();
-
-			//Between between events depends on sanity level.
-			if(fSanity <= mfMaxSanity_ShortWait)
-				mfNewEventCount = mfTimeBetween_ShortWait;
-			else if(fSanity <= mfMaxSanity_MedWait)
-				mfNewEventCount = mfTimeBetween_MedWait;
-			else
-				mfNewEventCount = mfTimeBetween_LongWait;
+			OhplGa9bTiming timing = TimingToRust();
+			mfNewEventCount = ohpl_ga9b_insanity_wait_after(&timing, fSanity);
 		}
 	}
+}
+
+OhplGa9bTiming cLuxInsanityHandler::TimingToRust()
+{
+	OhplGa9bTiming timing = { mfMaxSanity_LongWait, mfMaxSanity_MedWait, mfMaxSanity_ShortWait, mfTimeBetween_LongWait, mfTimeBetween_MedWait, mfTimeBetween_ShortWait };
+	return timing;
 }
 
 //-----------------------------------------------------------------------
@@ -776,52 +662,27 @@ void cLuxInsanityHandler::StartEvent()
 	
 	/////////////////////////////////
 	// Get number of events available
-	int lTotalEnabledEvents = 0;	//All whose set is not disabled
-	int lUnusedEvents =0;			//All events not disabled and unused.
+	std::vector<uint32_t> vSetDisabled(mvEvents.size()), vUsed(mvEvents.size());
+	std::vector<float> vMaxSanity(mvEvents.size());
 	for(size_t i=0; i<mvEvents.size(); ++i)
 	{
 		iLuxInstanityEvent *pEvent = mvEvents[i];
-		bool bUsed = pEvent->IsUsed();
-		bool bDisabled = SetIsDisabled(pEvent->GetSet()) || fPlayerSanity>pEvent->GetMaxSanity();
-
-		if(bUsed == false && bDisabled==false)	lUnusedEvents++;
-		if(bDisabled==false)	lTotalEnabledEvents++;
+		vSetDisabled[i] = SetIsDisabled(pEvent->GetSet());
+		vUsed[i] = pEvent->IsUsed();
+		vMaxSanity[i] = pEvent->GetMaxSanity();
 	}
 
-	if(lTotalEnabledEvents==0) return;
-
-	/////////////////////////////////////
-	//If all events are used, reset!
-	if(lUnusedEvents ==0)
+	OhplGa9bPick pick = ohpl_ga9b_insanity_pick(fPlayerSanity, mvEvents.size(), &vSetDisabled[0], &vUsed[0], &vMaxSanity[0]);
+	if(pick.resetUsed)
 	{
 		for(size_t i=0; i<mvEvents.size(); ++i)
 		{
 			iLuxInstanityEvent *pEvent = mvEvents[i];
 			pEvent->SetUsed(false);
 		}
-
-		lUnusedEvents = lTotalEnabledEvents; 
 	}
+	if(pick.index >= 0) mlCurrentEvent = pick.index;
 
-	/////////////////////////////////
-	// Get random event (iterate and increment current, skipping unavailable events.
-	int lIdx = cMath::RandRectl(0, lUnusedEvents);
-	int lCurrentEvent = 0;
-	for(size_t i=0; i<mvEvents.size(); ++i)
-	{
-		iLuxInstanityEvent *pEvent = mvEvents[i];
-		if(SetIsDisabled(pEvent->GetSet()) || pEvent->IsUsed() || fPlayerSanity>pEvent->GetMaxSanity()) continue;
-
-		if(lCurrentEvent == lIdx)
-		{
-			mlCurrentEvent = i;
-			break;
-		}
-		lCurrentEvent++;
-	}
-	
-	///////////////////////////////
-	// If no events are available, return
 	if(mlCurrentEvent < 0) return;
 
 	///////////////////////////////
@@ -880,7 +741,8 @@ void cLuxInsanityHandler::StopCurrentEvent()
 
 bool cLuxInsanityHandler::NewEventIsPossible()
 {
-	return mfNewEventCount <= 0 && gpBase->mpPlayer->GetSanity() <= mfMaxSanity_LongWait && mlCurrentEvent <0;
+	OhplGa9bTiming timing = TimingToRust();
+	return ohpl_ga9b_insanity_possible(&timing, mfNewEventCount, gpBase->mpPlayer->GetSanity(), mlCurrentEvent);
 }
 
 //-----------------------------------------------------------------------

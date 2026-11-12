@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxFx.h"
 
 class cGlowObject
 {
@@ -62,7 +63,7 @@ private:
 	void RenderEnemyGlow(cRendererCallbackFunctions* apFunctions);
 	
 	void RenderOutline(cRendererCallbackFunctions* apFunctions);
-	void RenderOutlineBlur(cRendererCallbackFunctions* apFunctions, iTexture *apInputTex);
+	void Replay(OhplGa9bRPlan *apPlan, cRendererCallbackFunctions* apFunctions, const std::vector<iRenderable*> &avObjects, const cRect2l &aClipRect);
 		
 	std::vector<cGlowObject> mvFlashObjects;
 	std::vector<cGlowObject> mvEnemyGlowObjects;

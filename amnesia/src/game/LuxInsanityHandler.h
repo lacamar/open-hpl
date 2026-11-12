@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxFx.h"
 
 //----------------------------------------------
 
@@ -97,6 +98,7 @@ public:
 	void OnDraw(float afFrameTime);
 
 private:
+	OhplGa9bBugsParams BugsParams();
 	//////////////////
 	//Data
 	int mlNumOfBugs;
@@ -221,6 +223,8 @@ public:
 	void OnDraw(float afFrameTime);
 
 private:
+	OhplGa9bSteps StepsToRust();
+	void StepsFromRust(const OhplGa9bSteps &s);
 	tString msSound;
 	float mfStepTime;
 	int mlStepNum;
@@ -272,6 +276,7 @@ public:
 
  
 private:
+	OhplGa9bTiming TimingToRust();
 	iLuxInstanityEvent* EventTypeToData(const tString& asType);
 	void LoadEvents(const tString& asFile);
 
