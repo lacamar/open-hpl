@@ -1,0 +1,29 @@
+tex_new 0 3 1 0 0 0
+tex_raw 0 16 2 32 1
+tex_new 1 3 1 0 0 0
+tex_raw 1 22 48 64 1
+tex_new 2 3 1 0 0 0
+tex_raw 2 16 7 40 1
+dsb_new 0 4 64 8 0
+dsb_new 1 1 4 16 24
+fb_new 0
+fb_post 0
+fb_tex 0 1 5 2 1 2
+fb_tex 0 4 0 0 2 3
+fb_tex 0 1 1 2 2 5
+fb_tex 0 2 2 0 2 2
+fail fbstatus 36060
+fb_compile 0
+fail fbstatus 36053
+fb_post 0
+fb_new 1
+fb_dsb 1 -1
+fb_tex 1 1 2 -1 0 0
+fail fbstatus 36058
+fb_compile 1
+fail fbstatus 36053
+fb_post 1
+fb_free 0
+fb_free 1
+dsb_free 0
+dsb_free 1

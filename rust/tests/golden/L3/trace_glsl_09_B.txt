@@ -1,0 +1,44 @@
+glCreateShader(35633)
+glCreateShader(35632)
+glShaderSource(101,1,p,null) 2600802889264045684
+glCompileShader(101)
+glGetShaderiv(101,35713,p)
+glGetShaderiv(101,35716,p)
+glGetShaderInfoLog(101,12,null,p)
+glShaderSource(102,1,p,null) 17077504739435501647
+glCompileShader(102)
+glGetShaderiv(102,35713,p)
+glGetShaderiv(102,35716,p)
+glGetShaderInfoLog(102,12,null,p)
+glCreateProgram()
+glAttachShader(201,101)
+glAttachShader(201,102)
+glLinkProgram(201)
+glGetProgramiv(201,35714,p)
+glGetProgramiv(201,35716,p)
+glGetProgramInfoLog(201,12,null,p)
+glGetProgramiv(201,35716,p)
+glGetProgramInfoLog(201,12,p,p)
+glAttachShader(201,101)
+glAttachShader(201,102)
+glLinkProgram(201)
+glGetProgramiv(201,35714,p)
+glGetProgramiv(201,35716,p)
+glGetProgramInfoLog(201,12,null,p)
+glGetProgramiv(201,35716,p)
+glGetProgramInfoLog(201,12,p,p)
+glGetUniformLocation(201,p) uColor
+glGetUniformLocation(201,p) uMtx
+glGetUniformLocation(201,p) uArr
+glGetUniformLocation(201,p) xmissing
+glGetUniformLocation(201,p) uTex
+glGetUniformLocation(201,p) uA
+glGetUniformLocation(201,p) uB
+glUseProgram(201)
+glUniform4f(5,f3f800000,f3fc00000,f00000000,f3f000000)
+glUniform1fv(5,4,p)
+glDetachShader(201,101)
+glDetachShader(201,102)
+glDeleteProgram(201)
+glDeleteShader(101)
+glDeleteShader(102)

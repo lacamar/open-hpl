@@ -1,0 +1,23 @@
+tex_new 0 0 1 0 0 0
+tex_raw 0 4 8 1 1
+tex_new 1 0 1 1 0 0
+tex_raw 1 4 16 1 1
+tex_new 2 1 1 1 0 0
+tex_raw 2 5 1 4 1
+tex_new 3 4 1 1 0 0
+tex_raw 3 26 16 5 1
+dsb_new 0 64 4 16 4
+dsb_new 1 32 1 24 0
+fb_new 0
+fb_tex 0 3 0 0 1 0
+fb_tex 0 1 0 0 2 1
+fb_tex 0 1 0 0 2 3
+fb_tex 0 0 1 2 1 1
+fb_tex 0 0 4 2 0 2
+fail fbstatus 36053
+fb_compile 0
+fail fbstatus 36053
+fb_post 0
+fb_free 0
+dsb_free 0
+dsb_free 1

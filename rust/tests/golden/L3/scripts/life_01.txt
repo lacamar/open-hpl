@@ -1,0 +1,82 @@
+sh_new 0 1
+sh_src 0 9 1 0
+tex_new 0 1 0 0 0 0
+tex_raw 0 5 8 32 1
+tex_free 0
+fb_new 0
+fb_compile 0
+vb_new 0 1 0 0 4 6
+vb_elem 0 1 0 3
+vb_fill 0 4 6
+vb_compile 0 0
+vb_update 0 2 1
+tex_new 1 1 0 1 0 0
+tex_raw 1 7 16 5 1
+prog_new 0
+prog_link 0
+tex_new 2 2 0 1 0 0
+tex_raw 2 5 1 64 1
+prog_new 1
+prog_link 1
+tex_new 3 3 0 0 0 0
+tex_raw 3 7 1 16 1
+tex_new 4 1 0 0 0 0
+tex_raw 4 5 4 24 1
+vb_free 0
+prog_free 0
+vb_new 1 0 0 0 4 6
+vb_elem 1 1 0 3
+vb_fill 1 4 6
+vb_compile 1 0
+vb_update 1 2 1
+prog_new 2
+prog_link 2
+fb_free 0
+prog_new 3
+prog_link 3
+vb_new 2 0 0 0 4 6
+vb_elem 2 1 0 3
+vb_fill 2 4 6
+vb_compile 2 0
+vb_update 2 2 1
+prog_new 4
+prog_link 4
+vb_new 3 0 0 0 4 6
+vb_elem 3 1 0 3
+vb_fill 3 4 6
+vb_compile 3 0
+tex_free 4
+sh_new 1 1
+sh_src 1 4 1 0
+dsb_new 0 16 16 0 8
+dsb_new 1 16 16 0 0
+sh_new 2 1
+sh_src 2 5 1 0
+dsb_new 2 16 16 0 8
+dsb_free 0
+vb_new 4 0 0 1 4 6
+vb_elem 4 1 0 3
+vb_fill 4 4 6
+vb_compile 4 0
+fb_new 1
+fb_compile 1
+sh_new 3 1
+sh_src 3 9 3 0
+tex_new 5 4 0 0 0 0
+tex_raw 5 5 4 3 8
+vb_new 5 0 0 0 4 6
+vb_elem 5 1 0 3
+vb_fill 5 4 6
+vb_compile 5 0
+prog_free 1
+fb_free 1
+dsb_new 3 16 16 24 8
+dsb_free 1
+sh_new 4 0
+sh_src 4 8 1 0
+sh_new 5 0
+sh_src 5 6 1 0
+prog_free 2
+vb_free 5
+sh_new 6 1
+sh_src 6 9 2 0

@@ -1,0 +1,47 @@
+ohpl_glsh_new 0 - => H1
+ohpl_glsh_new 1 - => H2
+@fail compile 1
+ohpl_glsh_compile H1 x766f6964206631372829207b7d0d0a766f6964206631382829207b7d0d0a766f6964206631392829207b7d0d0a766f6964206632302829207b7d0d0a766f6964206632312829207b7d0d0a7461696c
+ohpl_glsh_log H1 -
+ohpl_glsh_compile H2 x766f6964206631332829207b7d0d0a7461696c
+ohpl_glsh_log H2 -
+ohpl_glprog_new - => H3
+ohpl_glprog_attach H3 101
+ohpl_glprog_attach H3 102
+ohpl_glprog_link H3
+ohpl_glprog_log H3 -
+ohpl_glprog_use H3
+ohpl_glprog_link_sampler H3 x75436f6c6f72 0
+ohpl_glprog_link_sampler H3 x7542 1
+ohpl_glprog_use_current H3
+ohpl_glprog_attach H3 101
+ohpl_glprog_attach H3 102
+ohpl_glprog_link H3
+ohpl_glprog_log H3 -
+ohpl_glprog_use H3
+ohpl_glprog_link_sampler H3 x75436f6c6f72 0
+ohpl_glprog_link_sampler H3 x7542 1
+ohpl_glprog_use_current H3
+ohpl_glprog_variable_id H3 x75436f6c6f72 6
+ohpl_glprog_variable_id H3 x754d7478 4
+ohpl_glprog_variable_id H3 x75417272 4
+ohpl_glprog_variable_id H3 x786d697373696e67 8
+ohpl_glprog_variable_id H3 x75546578 4
+ohpl_glprog_variable_id H3 x7541 2
+ohpl_glprog_variable_id H3 x7542 2
+ohpl_glprog_bind H3
+ohpl_glprog_set_matrix H3 2 -
+ohpl_glprog_uniform_count H3
+ohpl_glprog_uniform_at H3 0 - -
+ohpl_glprog_uniform_at H3 1 - -
+ohpl_glprog_uniform_at H3 2 - -
+ohpl_glprog_set_matrix H3 -1 -
+ohpl_glprog_variable_id H3 x75546578 4
+ohpl_glprog_set_sampler H3 x7541 1
+ohpl_glprog_set_sampler H3 x75546578 4
+ohpl_glprog_bind H3
+ohpl_glprog_set_sampler H3 x75546578 4
+ohpl_glprog_variable_as_id H3 x75436f6c6f72 6 3
+ohpl_glprog_free H3 101 102
+ohpl_glsh_free H1
+ohpl_glsh_free H2

@@ -23,6 +23,7 @@
 #include "graphics/Texture.h"
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/RustGl.h"
+#include "impl/RustGlRes.h"
 
 #include <GL/glew.h>
 #if defined(__APPLE__)&&defined(__MACH__)
@@ -81,6 +82,15 @@ namespace hpl {
 	private:
 		void GenerateHandles(int alNumOfHandles);
 
+		size_t HandleCount();
+		bool ContainsData();
+		void LoadIo(OhplTexIo &aIo);
+		void StoreIo(const OhplTexIo &aIo);
+		bool CreateFacesRs(int alIdx, OhplTexFace *apFaces, int alNum);
+		void SetupPropertiesRs(int alIdx);
+		void WrapRs(unsigned alMask, eTextureWrap aMode);
+		void CompareRs(bool abFunc, int alValue);
+
 		bool CreateFromBitmapToIndex(cBitmap* apBmp, int alIdx);
 
 		bool CreateTexture(	int alTextureHandle,
@@ -105,6 +115,7 @@ namespace hpl {
 		bool mbContainsData;
 		cLowLevelGraphicsSDL* mpGfxSDL;
 
+		uint64_t mlRs;
 		OhplGlClock mClock;
 		int mlTextureIndex;
 	};

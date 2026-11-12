@@ -27,6 +27,8 @@
 #include "impl/SDLTexture.h"
 #include "impl/GLSLShader.h"
 #include "impl/LowLevelGraphicsSDL.h"
+#include "impl/RustBackends.h"
+
 
 
 
@@ -48,8 +50,14 @@ namespace hpl{
 	{
 		;
 
-		mlHandle = glCreateProgram();
-		mpParams = ohpl_gl_params_new();
+		mpParams = NULL;
+		mlRs = OhplBackendRustRequested() ? ohpl_glprog_new(&mlHandle) : 0;
+		if(mlRs == 0)
+		{
+			mlHandle = glCreateProgram();
+			mpParams = ohpl_gl_params_new();
+		}
+
 
 	}
 
@@ -57,7 +65,13 @@ namespace hpl{
 
 	cGLSLProgram::~cGLSLProgram()
 	{
-		;
+		if(mlRs)
+		{
+			cGLSLShader* pRsShader0 = static_cast<cGLSLShader*>(mpShader[0]);
+			cGLSLShader* pRsShader1 = static_cast<cGLSLShader*>(mpShader[1]);
+			ohpl_glprog_free(mlRs, pRsShader0 ? (int64_t)pRsShader0->GetHandle() : -1, pRsShader1 ? (int64_t)pRsShader1->GetHandle() : -1);
+			return;
+		}
 
 		for(int i=0; i<2; ++i)
 		{
@@ -82,7 +96,50 @@ namespace hpl{
 	
 	bool cGLSLProgram::Link()
 	{
-		;
+		if(mlRs)
+		{
+			for(int i=0; i<2; ++i)
+			{
+				cGLSLShader* pRsShader = static_cast<cGLSLShader*>(mpShader[i]);
+				if(pRsShader) ohpl_glprog_attach(mlRs, pRsShader->GetHandle());
+			}
+
+			unsigned long lRsLinkStart = cPlatform::GetApplicationTime();
+			bool bRsLinked = ohpl_glprog_link(mlRs);
+			cEngineDiagnostics::AddLinkTime((double)(cPlatform::GetApplicationTime() - lRsLinkStart));
+
+			{
+				tString sInfoLog;
+				size_t lLogLen = 0;
+				const unsigned char *pLog = ohpl_glprog_log(mlRs, &lLogLen);
+				if(lLogLen) sInfoLog.assign((const char*)pLog, lLogLen);
+				cEngineDiagnostics::ReportShader(msName, "link", bRsLinked, sInfoLog);
+			}
+			if(bRsLinked == false)
+			{
+				Error("Failed to link GLSL program %s\n",msName.c_str());
+				LogProgramInfoLog();
+				return false;
+			}
+
+			for(eGpuShaderType type : {eGpuShaderType_Vertex, eGpuShaderType_Fragment})
+			{
+				iGpuShader* pShader = mpShader[type];
+				if(pShader == NULL || pShader->GetSamplerUnitNum() == 0) continue;
+				ohpl_glprog_use(mlRs);
+
+				for(int i=0; i<pShader->GetSamplerUnitNum(); ++i)
+				{
+					tString &sSamplerName = pShader->GetSamplerUnit(i)->msName;
+					ohpl_glprog_link_sampler(mlRs, sSamplerName.c_str(), pShader->GetSamplerUnit(i)->mlUnit);
+				}
+
+				ohpl_glprog_use_current(mlRs);
+			}
+
+			return true;
+		}
+
 
 		///////////////////////////////////////
 		//Attach shaders
@@ -152,6 +209,12 @@ namespace hpl{
 
 	void cGLSLProgram::Bind()
 	{
+		if(mlRs)
+		{
+			ohpl_glprog_bind(mlRs);
+			return;
+		}
+
 		if(!ohpl_gl_prog_bind(&mlCurrentProgram, mlHandle)) return;
 		glUseProgram(mlHandle);
 	}
@@ -160,6 +223,12 @@ namespace hpl{
 
 	void cGLSLProgram::UnBind()
 	{
+		if(mlRs)
+		{
+			ohpl_glprog_unbind();
+			return;
+		}
+
 		if(!ohpl_gl_prog_unbind(&mlCurrentProgram)) return;
 		glUseProgram(0);
 	}
@@ -170,6 +239,20 @@ namespace hpl{
 	tString cGLSLProgram::DumpUniforms()
 	{
 		tString sOut;
+		if(mlRs)
+		{
+			int lRsCount = ohpl_glprog_uniform_count(mlRs);
+			for(int i=0; i<lRsCount; ++i)
+			{
+				char sName[128]; float vVal[16];
+				int lN = ohpl_glprog_uniform_at(mlRs, i, &sName, &vVal);
+				sOut += sName;
+				for(int j=0; j<lN; ++j) sOut += " " + cString::ToString(vVal[j]);
+				sOut += "\n";
+			}
+			return sOut;
+		}
+
 		GLint lCount = 0;
 		glGetProgramiv(mlHandle, GL_ACTIVE_UNIFORMS, &lCount);
 		for(GLint i=0; i<lCount; ++i)
@@ -190,7 +273,7 @@ namespace hpl{
 
 	bool cGLSLProgram::SetSamplerToUnit(const tString& asSamplerName, int alUnit)
 	{
-		;
+		if(mlRs) return ohpl_glprog_set_sampler(mlRs, asSamplerName.c_str(), alUnit);
 
 		GLint lVarHandle = glGetUniformLocation(mlHandle,asSamplerName.c_str());
 		if(lVarHandle <0) return false;
@@ -206,6 +289,8 @@ namespace hpl{
 
 	int cGLSLProgram::GetVariableId(const tString& asName)
 	{
+		if(mlRs) return ohpl_glprog_variable_id(mlRs, asName.c_str(), asName.size());
+
 		int lId = ohpl_gl_params_find(mpParams, asName.data(), asName.size());
 		if(lId >= 0) return lId;
 
@@ -219,6 +304,8 @@ namespace hpl{
 
 	bool cGLSLProgram::GetVariableAsId(const tString& asName, int alId)
 	{
+		if(mlRs) return ohpl_glprog_variable_as_id(mlRs, asName.c_str(), asName.size(), alId);
+
 		int lState = ohpl_gl_params_as_id_begin(mpParams, asName.data(), asName.size(), alId);
 		if(lState != 2) return lState == 1;
 
@@ -230,6 +317,7 @@ namespace hpl{
 
 	bool cGLSLProgram::SetInt(int alVarId, int alX)
 	{
+		if(mlRs) return ohpl_glprog_set_int(mlRs, alVarId, alX);
 		int lLocation;
 		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
@@ -243,6 +331,7 @@ namespace hpl{
 
 	bool cGLSLProgram::SetFloat(int alVarId, float afX)
 	{
+		if(mlRs) return ohpl_glprog_set_float(mlRs, alVarId, afX);
 		int lLocation;
 		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
@@ -255,6 +344,7 @@ namespace hpl{
 
 	bool cGLSLProgram::SetFloatArray(int alVarId, const float *apX, int alCount)
 	{
+		if(mlRs) return ohpl_glprog_set_float_array(mlRs, alVarId, apX, alCount);
 		int lLocation;
 		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
@@ -267,6 +357,7 @@ namespace hpl{
 
 	bool cGLSLProgram::SetVec2f(int alVarId, float afX,float afY)
 	{
+		if(mlRs) return ohpl_glprog_set_vec2(mlRs, alVarId, afX, afY);
 		int lLocation;
 		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
@@ -279,6 +370,7 @@ namespace hpl{
 
 	bool cGLSLProgram::SetVec3f(int alVarId, float afX,float afY,float afZ)
 	{
+		if(mlRs) return ohpl_glprog_set_vec3(mlRs, alVarId, afX, afY, afZ);
 		int lLocation;
 		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
@@ -291,6 +383,7 @@ namespace hpl{
 
 	bool cGLSLProgram::SetVec4f(int alVarId, float afX,float afY,float afZ, float afW)
 	{
+		if(mlRs) return ohpl_glprog_set_vec4(mlRs, alVarId, afX, afY, afZ, afW);
 		int lLocation;
 		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
@@ -303,6 +396,7 @@ namespace hpl{
 
 	bool cGLSLProgram::SetMatrixf(int alVarId, const cMatrixf& aMtx)
 	{
+		if(mlRs) return ohpl_glprog_set_matrix(mlRs, alVarId, aMtx.v);
 		int lLocation;
 		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
@@ -316,8 +410,6 @@ namespace hpl{
 	bool cGLSLProgram::SetMatrixf(int alVarId, eGpuShaderMatrix aType, 
 									eGpuShaderMatrixOp aOp)
 	{
-		;
-
 		//Not needed for GLSL
 		return false;
 	}
@@ -333,6 +425,19 @@ namespace hpl{
 	
 	void cGLSLProgram::LogProgramInfoLog()
 	{
+		if(mlRs)
+		{
+			size_t lRsLen = 0;
+			const unsigned char *pRsLog = ohpl_glprog_dump_log(mlRs, &lRsLen);
+			if(pRsLog)
+			{
+				Log("-------------\n");
+				Log("%s\n",(const char*)pRsLog);
+				Log("-------------\n");
+			}
+			return;
+		}
+
 		;
 
 		GLint infologLength = 0;

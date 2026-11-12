@@ -1,0 +1,58 @@
+ohpl_gltex_new => H1
+@range raw0 1808
+ohpl_gltex_create_raw H1 4,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,1,0,0 4,7,4 5 raw0+0
+ohpl_gltex_props_begin H1 4,1,1,0,0,0,0,0,1,5,0,448,4,7,4,16,16,16,f3f800000,f3f800000,1,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H1 4,1,1,0,0,0,0,0,1,5,0,448,4,7,4,16,16,16,f3f800000,f3f800000,1,0,0
+ohpl_gltex_create_raw_end H1 4,1,1,0,0,0,0,0,1,5,0,448,4,7,4,16,16,16,f3f800000,f3f800000,1,0,0
+@clear
+ohpl_gltex_new => H2
+@range raw1 784
+ohpl_gltex_create_raw H2 2,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 12,4,1 26 raw1+0
+ohpl_gltex_props_begin H2 2,1,1,0,0,0,0,0,1,26,0,768,12,4,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_gltex_props_end H2 2,1,1,2,2,2,0,0,1,26,0,768,12,4,1,16,16,16,f3f800000,f3f800000,0,0,0
+ohpl_gltex_create_raw_end H2 2,1,1,0,0,0,0,0,1,26,0,768,12,4,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+ohpl_gltex_new => H3
+@range raw2 32784
+ohpl_gltex_create_raw H3 3,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,1,0,0 32,64,1 7 raw2+0
+ohpl_gltex_props_begin H3 3,1,1,0,0,0,0,0,1,7,0,8192,32,64,1,16,16,16,f3f800000,f3f800000,1,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H3 3,1,1,0,0,0,0,0,1,7,0,8192,32,64,1,16,16,16,f3f800000,f3f800000,1,0,0
+ohpl_gltex_create_raw_end H3 3,1,1,0,0,0,0,0,1,7,0,8192,32,64,1,16,16,16,f3f800000,f3f800000,1,0,0
+@clear
+ohpl_glctx_get_caps 12 0
+ohpl_gldsb_new 4,2 24 8 - => H4
+ohpl_glctx_get_caps 12 0
+ohpl_gldsb_new 8,32 16 4 - => H5
+ohpl_glctx_get_caps 12 0
+ohpl_gldsb_new 64,8 24 0 - => H6
+ohpl_glctx_get_caps 12 0
+ohpl_glfb_new - => H7
+@fail fbstatus 36057
+ohpl_glfb_compile H7 0
+@fail fbstatus 36053
+ohpl_glctx_get_caps 12 0
+ohpl_glfb_new - => H8
+ohpl_glfb_attach_texture H8 36064 3 2 1 0 12,4 2 -
+ohpl_glfb_detach_texture H8 36096 0
+ohpl_glfb_attach_texture H8 36064 2 4 1 5 4,7 1 -
+@fail fbstatus 0
+ohpl_glfb_compile H8 12
+@fail fbstatus 36053
+ohpl_glctx_get_caps 12 0
+ohpl_glfb_new - => H9
+ohpl_glfb_set_depth_stencil H9 0 0 0 0
+ohpl_glfb_attach_texture H9 36064 1 2 2 0 12,4 2 -
+@fail fbstatus 36061
+ohpl_glfb_compile H9 2
+@fail fbstatus 36053
+ohpl_glfb_free H7
+ohpl_glfb_free H8
+ohpl_glfb_free H9
+ohpl_gldsb_free H4
+ohpl_gldsb_free H5
+ohpl_gldsb_free H6
+ohpl_gltex_free H1
+ohpl_gltex_free H2
+ohpl_gltex_free H3

@@ -1,0 +1,79 @@
+vb_new 0 1 1 0 16 6
+vb_elem 0 1 0 3 0
+vb_elem 0 0 0 3 1
+vb_elem 0 5 0 4 3
+vb_elem 0 7 0 3 3
+vb_elem 0 10 0 3 2
+vb_elem 0 12 1 1 0
+vb_elem 0 13 1 1 2
+vb_fill 0 8 3
+vb_num 0 3
+vb_compile 0 0
+vb_bv 0
+vb_update 0 65535 0
+vb_bind 0
+vb_drawidx 0 6 0
+vb_copy 0 4 0 1 50
+vb_bind 4
+vb_draw 4 0
+vb_unbind 4
+vb_new 1 1 6 0 4 24
+vb_elem 1 1 0 3 0
+vb_elem 1 0 0 3 1
+vb_elem 1 2 0 4 2
+vb_elem 1 8 0 4 2
+vb_elem 1 9 0 2 3
+vb_elem 1 11 0 3 2
+vb_elem 1 12 1 1 1
+vb_elem 1 13 0 1 1
+vb_fill 1 4 24
+vb_num 1 6
+vb_compile 1 0
+vb_transform 1
+vb_transform 1
+vb_bind 1
+vb_new 2 1 6 0 4 0
+vb_elem 2 1 0 4 0
+vb_elem 2 0 0 3 2
+vb_elem 2 5 0 4 1
+vb_elem 2 6 0 2 1
+vb_elem 2 7 0 2 1
+vb_elem 2 8 0 3 1
+vb_elem 2 10 1 2 3
+vb_elem 2 13 2 3 2
+vb_fill 2 8 12
+vb_num 2 -1
+vb_compile 2 1
+vb_unbind 2
+vb_drawidx 2 0 1
+vb_shadow 2 1
+vb_drawidx 2 12 3
+vb_bv 2
+vb_copy 2 6 1 2 3
+vb_bind 6
+vb_draw 6 0
+vb_unbind 6
+vb_free 6
+vb_new 3 1 0 1 4 24
+vb_elem 3 1 0 3 0
+vb_elem 3 0 0 3 0
+vb_elem 3 2 0 4 3
+vb_elem 3 8 0 3 0
+vb_elem 3 10 0 4 2
+vb_elem 3 12 1 1 2
+vb_fill 3 4 24
+vb_num 3 12
+vb_compile 3 1
+vb_bv 3
+vb_update 3 16 1
+vb_draw 3 3
+vb_bv 3
+vb_copy 3 7 0 2 3
+vb_bind 7
+vb_draw 7 0
+vb_unbind 7
+vb_free 7
+vb_free 0
+vb_free 1
+vb_free 2
+vb_free 3

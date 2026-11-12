@@ -9,6 +9,7 @@
 std::string gTrace;
 int gGen = 0, gShaders = 0, gPrograms = 0;
 int gWinW = 0, gWinH = 0;
+int gGlErrors = 0, gFailCompile = 0, gFailLink = 0, gFbStatus = 0x8CD5;
 
 struct Range { const char *base; size_t bytes; std::string label; };
 static std::vector<Range> gRanges;
@@ -71,7 +72,9 @@ const char *FakeExtensions()
 	static const char *kLimited =
 		"GL_ARB_multitexture GL_ARB_vertex_buffer_object GL_ATI_separate_stencil GL_EXT_framebuffer_object "
 		"GL_ARB_texture_compression GL_ARB_fragment_shader GL_ATI_shader_texture_lod GL_ARB_occlusion_query";
+	static const std::string kSecondary = std::string(kFull) + " GL_EXT_secondary_color";
 	const char *set = getenv("FAKE_EXT_SET");
+	if(set && !strcmp(set, "C")) return kSecondary.c_str();
 	return set && !strcmp(set, "B") ? kLimited : kFull;
 }
 
@@ -105,6 +108,22 @@ void *SDL_GL_GetProcAddress(const char *name)
 		if(!strcmp(e->name, name)) return e->fn;
 	if(!strncmp(name, "gl", 2) && strncmp(name, "glX", 3)) return (void*)&Unknown;
 	return NULL;
+}
+
+int gluScaleImage(unsigned format, int wIn, int hIn, unsigned typeIn, const void *dataIn, int wOut, int hOut, unsigned typeOut, void *dataOut)
+{
+	Rec("gluScaleImage", {A(format), A(wIn), A(hIn), A(typeIn), A(dataIn), A(wOut), A(hOut), A(typeOut), A(dataOut)}, "");
+	return 0;
+}
+int gluBuild1DMipmaps(unsigned target, int internalFormat, int width, unsigned format, unsigned type, const void *data)
+{
+	Rec("gluBuild1DMipmaps", {A(target), A(internalFormat), A(width), A(format), A(type), A(data)}, "");
+	return 0;
+}
+int gluBuild2DMipmaps(unsigned target, int internalFormat, int width, int height, unsigned format, unsigned type, const void *data)
+{
+	Rec("gluBuild2DMipmaps", {A(target), A(internalFormat), A(width), A(height), A(format), A(type), A(data)}, "");
+	return 0;
 }
 
 void *glXGetProcAddress(const unsigned char *name) { return SDL_GL_GetProcAddress((const char*)name); }

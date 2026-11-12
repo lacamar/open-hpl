@@ -24,6 +24,7 @@
 #include "graphics/Bitmap.h"
 
 #include "impl/LowLevelGraphicsSDL.h"
+#include "impl/RustBackends.h"
 
 #include <cmath>
 #include <cstring>
@@ -43,6 +44,8 @@ namespace hpl {
 				
 		mpGfxSDL = static_cast<cLowLevelGraphicsSDL*>(mpLowLevelGraphics);
 
+		mlRs = OhplBackendRustRequested() ? ohpl_gltex_new() : 0;
+
 		mlTextureIndex = 0;
 		mClock.count = 0;
 		mClock.dir = 1;
@@ -50,7 +53,11 @@ namespace hpl {
 
 	cSDLTexture::~cSDLTexture()
 	{
-		;
+		if(mlRs)
+		{
+			ohpl_gltex_free(mlRs);
+			return;
+		}
 
 		for(size_t i=0; i<mvTextureHandles.size(); ++i)
 		{
@@ -86,7 +93,7 @@ namespace hpl {
 
 		//////////////////////////////////
 		//Create textures
-		for(size_t i=0; i< mvTextureHandles.size(); ++i)
+		for(size_t i=0; i< HandleCount(); ++i)
 		{
 			if(CreateFromBitmapToIndex( (*avBitmaps)[i], (int)i)==false)
 			{
@@ -117,6 +124,20 @@ namespace hpl {
 
 		GenerateHandles(1);
 
+		if(mlRs)
+		{
+			OhplTexFace vFaces[6];
+			for(int i=0; i<6; ++i)
+			{
+				cBitmap *pBmp = (*avBitmaps)[i];
+				OhplTexFace f = { reinterpret_cast<const OhplTexLevel*>(pBmp->GetData(0,0)), pBmp->GetNumOfMipMaps(), pBmp->GetSize(), (int)pBmp->GetPixelFormat() };
+				vFaces[i] = f;
+			}
+			if(CreateFacesRs(0, vFaces, 6) == false) return false;
+			SetupPropertiesRs(0);
+			return true;
+		}
+
 		/////////////////////////////
 		//Create the faces on the cube
 		for(int i=0; i< 6; i++)
@@ -140,6 +161,18 @@ namespace hpl {
 
 	bool cSDLTexture::CreateFromRawData(const cVector3l &avSize,ePixelFormat aPixelFormat, unsigned char *apData)
 	{
+		if(mlRs)
+		{
+			OhplTexIo io;
+			LoadIo(io);
+			bool bRs = ohpl_gltex_create_raw(mlRs, &io, OhplGl(avSize), aPixelFormat, apData);
+			StoreIo(io);
+			if(bRs == false) return false;
+			SetupPropertiesRs(0);
+			ohpl_gltex_create_raw_end(mlRs, &io);
+			return true;
+		}
+
 		GenerateHandles(1);
 
 		int lDataSize;
@@ -180,6 +213,14 @@ namespace hpl {
 	{
 		;
 
+		if(mlRs)
+		{
+			OhplTexIo io;
+			LoadIo(io);
+			ohpl_gltex_set_raw_data(mlRs, &io, alLevel, OhplGl(avOffset), OhplGl(avSize), aPixelFormat, apData);
+			return;
+		}
+
 		if(mbContainsData==false) return;
 		if(apData==NULL) return;
 
@@ -213,24 +254,24 @@ namespace hpl {
 
 	void cSDLTexture::Update(float afTimeStep)
 	{
-		ohpl_gl_clock_update(&mClock, mvTextureHandles.size(), afTimeStep, mfFrameTime, mAnimMode);
+		ohpl_gl_clock_update(&mClock, HandleCount(), afTimeStep, mfFrameTime, mAnimMode);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cSDLTexture::HasAnimation()
 	{
-		return mvTextureHandles.size() > 1;
+		return HandleCount() > 1;
 	}
 	
 	void cSDLTexture::NextFrame()
 	{
-		ohpl_gl_clock_next(&mClock, mvTextureHandles.size(), mAnimMode);
+		ohpl_gl_clock_next(&mClock, HandleCount(), mAnimMode);
 	}
 
 	void cSDLTexture::PrevFrame()
 	{
-		ohpl_gl_clock_prev(&mClock, mvTextureHandles.size(), mAnimMode);
+		ohpl_gl_clock_prev(&mClock, HandleCount(), mAnimMode);
 	}
 	
 	float cSDLTexture::GetT()
@@ -258,6 +299,15 @@ namespace hpl {
 		unsigned int lHandle = GetTextureHandle();
 		if(lHandle == 0) return false;
 
+		if(mlRs)
+		{
+			OhplTexIo io;
+			LoadIo(io);
+			avOut.resize(mvSize.x * mvSize.y * 4);
+			bool bDepth = mPixelFormat == ePixelFormat_Depth16 || mPixelFormat == ePixelFormat_Depth24 || mPixelFormat == ePixelFormat_Depth32;
+			return ohpl_gltex_read_pixels(mlRs, &io, mClock.count, bDepth, avOut.data());
+		}
+
 		GLenum GLTarget = GetGLTextureTargetEnum(mType);
 
 		avOut.resize(mvSize.x * mvSize.y * 4);
@@ -278,6 +328,15 @@ namespace hpl {
 
 	void cSDLTexture::SetFilter(eTextureFilter aFilter)
 	{
+		if(mlRs)
+		{
+			OhplTexIo io;
+			LoadIo(io);
+			ohpl_gltex_set_filter(mlRs, &io, aFilter);
+			StoreIo(io);
+			return;
+		}
+
 		if(mFilter == aFilter) return;
 		mFilter = aFilter;
 
@@ -305,12 +364,20 @@ namespace hpl {
 
 	void cSDLTexture::SetAnisotropyDegree(float afX)
 	{
-		if(mbContainsData==false) return;
+		if(ContainsData()==false) return;
 		if(!mpLowLevelGraphics->GetCaps(eGraphicCaps_AnisotropicFiltering)) return;
 		if(afX < 1.0f) return;
 		if(!ohpl_gl_tex_aniso_apply(true, true, mpLowLevelGraphics->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), afX, mfAnisotropyDegree)) return;
 
 		mfAnisotropyDegree = afX;
+
+		if(mlRs)
+		{
+			OhplTexIo io;
+			LoadIo(io);
+			ohpl_gltex_apply_aniso(mlRs, &io, afX);
+			return;
+		}
 
 		GLenum GLTarget = GetGLTextureTargetEnum(mType);
 
@@ -328,6 +395,12 @@ namespace hpl {
 	void cSDLTexture::SetWrapS(eTextureWrap aMode)
 	{
 		if(mType == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
+
+		if(mlRs)
+		{
+			WrapRs(1, aMode);
+			return;
+		}
 
 		;
 
@@ -354,6 +427,12 @@ namespace hpl {
 	{
 		if(mType == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
 
+		if(mlRs)
+		{
+			WrapRs(2, aMode);
+			return;
+		}
+
 		;
 
 		mWrapT = aMode;
@@ -378,6 +457,12 @@ namespace hpl {
 	void cSDLTexture::SetWrapR(eTextureWrap aMode)
 	{
 		if(mType == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
+
+		if(mlRs)
+		{
+			WrapRs(4, aMode);
+			return;
+		}
 
 		;
 
@@ -406,6 +491,12 @@ namespace hpl {
 
 		;
 
+		if(mlRs)
+		{
+			WrapRs(7, aMode);
+			return;
+		}
+
 		mWrapS = aMode;
 		mWrapT = aMode;
 		mWrapR = aMode;
@@ -431,6 +522,12 @@ namespace hpl {
 
 	void cSDLTexture::SetCompareMode(eTextureCompareMode aMode)
 	{
+		if(mlRs)
+		{
+			CompareRs(false, aMode);
+			return;
+		}
+
 		mCompareMode = aMode;
 
 		if(mbContainsData==false) return;
@@ -453,6 +550,12 @@ namespace hpl {
 	
 	void cSDLTexture::SetCompareFunc(eTextureCompareFunc aFunc)
 	{
+		if(mlRs)
+		{
+			CompareRs(true, aFunc);
+			return;
+		}
+
 		mCompareFunc = aFunc;
 
 		if(mbContainsData==false) return;
@@ -476,6 +579,13 @@ namespace hpl {
 
 	void cSDLTexture::SetRedFromAlpha(bool abX)
 	{
+		if(mlRs)
+		{
+			OhplTexIo io;
+			LoadIo(io);
+			ohpl_gltex_set_red_from_alpha(mlRs, &io, abX);
+			return;
+		}
 		if(mbContainsData==false || mType != eTextureType_2D) return;
 
 		GLint lPrevBound = 0;
@@ -492,7 +602,13 @@ namespace hpl {
 	{
 		if(mbUseMipMaps==false) return;
 
-		;
+		if(mlRs)
+		{
+			OhplTexIo io;
+			LoadIo(io);
+			ohpl_gltex_auto_mipmaps(mlRs, &io);
+			return;
+		}
 
 		if(GLEW_EXT_framebuffer_object)
 		{
@@ -517,6 +633,8 @@ namespace hpl {
 
 	unsigned int cSDLTexture::GetTextureHandle()
 	{
+		if(mlRs) return ohpl_gltex_handle(mlRs, mClock.count);
+
 		int64_t lSlot = ohpl_gl_tex_handle_slot(mbContainsData, mvTextureHandles.size(), mClock.count);
 		if(lSlot < 0) return 0;
 		return mvTextureHandles[lSlot];
@@ -530,8 +648,92 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
+	size_t cSDLTexture::HandleCount()
+	{
+		return mlRs ? ohpl_gltex_handle_count(mlRs) : mvTextureHandles.size();
+	}
+
+	bool cSDLTexture::ContainsData()
+	{
+		return mlRs ? ohpl_gltex_contains_data(mlRs) : mbContainsData;
+	}
+
+	void cSDLTexture::LoadIo(OhplTexIo &aIo)
+	{
+		aIo.type = mType; aIo.usage = mUsage; aIo.filter = mFilter;
+		aIo.wrap[0] = mWrapS; aIo.wrap[1] = mWrapT; aIo.wrap[2] = mWrapR;
+		aIo.compareMode = mCompareMode; aIo.compareFunc = mCompareFunc;
+		aIo.animMode = mAnimMode; aIo.pixelFormat = mPixelFormat;
+		aIo.downLevel = mlSizeDownScaleLevel; aIo.memory = mlMemorySize;
+		aIo.size = mvSize; aIo.minSize = mvMinDownScaleSize;
+		aIo.frameTime = mfFrameTime; aIo.aniso = mfAnisotropyDegree;
+		aIo.useMips = mbUseMipMaps; aIo.srgb = mbsRGB; aIo.compressed = mbIsCompressed;
+	}
+
+	void cSDLTexture::StoreIo(const OhplTexIo &aIo)
+	{
+		mFilter = (eTextureFilter)aIo.filter;
+		mWrapS = (eTextureWrap)aIo.wrap[0]; mWrapT = (eTextureWrap)aIo.wrap[1]; mWrapR = (eTextureWrap)aIo.wrap[2];
+		mCompareMode = (eTextureCompareMode)aIo.compareMode; mCompareFunc = (eTextureCompareFunc)aIo.compareFunc;
+		mPixelFormat = (ePixelFormat)aIo.pixelFormat;
+		mlMemorySize = aIo.memory; mvSize = aIo.size;
+		mbUseMipMaps = aIo.useMips; mbIsCompressed = aIo.compressed;
+	}
+
+	void cSDLTexture::WrapRs(unsigned alMask, eTextureWrap aMode)
+	{
+		OhplTexIo io;
+		LoadIo(io);
+		ohpl_gltex_set_wrap(mlRs, &io, alMask, aMode);
+		StoreIo(io);
+	}
+
+	void cSDLTexture::CompareRs(bool abFunc, int alValue)
+	{
+		OhplTexIo io;
+		LoadIo(io);
+		ohpl_gltex_set_compare(mlRs, &io, abFunc, alValue);
+		StoreIo(io);
+	}
+
+	bool cSDLTexture::CreateFacesRs(int alIdx, OhplTexFace *apFaces, int alNum)
+	{
+		OhplTexIo io;
+		LoadIo(io);
+		OhplTexRes res = {0};
+		bool bRet = ohpl_gltex_create_faces(mlRs, &io, alIdx, apFaces, alNum, &res);
+		StoreIo(io);
+		for(int i=0; i<res.warnPow2; ++i)
+		{
+			Warning("Texture '%s' does not have a pow2 size!\n",msName.c_str());
+		}
+		if(bRet == false) Error("Could not create GL texture %s\n",msName.c_str());
+		return bRet;
+	}
+
+	void cSDLTexture::SetupPropertiesRs(int alIdx)
+	{
+		OhplTexIo io;
+		LoadIo(io);
+		int lState = ohpl_gltex_props_begin(mlRs, &io, alIdx);
+		StoreIo(io);
+		if(lState == 0) return;
+		if(lState == 1 &&
+			mpLowLevelGraphics->GetCaps(eGraphicCaps_AnisotropicFiltering) &&
+			ohpl_gl_tex_aniso_fits(mpLowLevelGraphics->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), mfAnisotropyDegree))
+		{
+			ohpl_gltex_props_aniso(mlRs, &io);
+		}
+		ohpl_gltex_props_end(mlRs, &io);
+	}
+
 	void cSDLTexture::GenerateHandles(int alNumOfHandles)
 	{
+		if(mlRs)
+		{
+			ohpl_gltex_generate_handles(mlRs, alNumOfHandles);
+			return;
+		}
 		if( (int)mvTextureHandles.size() < alNumOfHandles)
 		{
 			int lNewHandles = alNumOfHandles - (int)mvTextureHandles.size();
@@ -555,6 +757,19 @@ namespace hpl {
 				return false;
 			}
 
+			if(mlRs)
+			{
+				OhplTexFace vFaces[6];
+				for(int i=0; i<6; ++i)
+				{
+					OhplTexFace f = { reinterpret_cast<const OhplTexLevel*>(apBmp->GetData(i,0)), apBmp->GetNumOfMipMaps(), apBmp->GetSize(), (int)apBmp->GetPixelFormat() };
+					vFaces[i] = f;
+				}
+				if(CreateFacesRs(alIdx, vFaces, 6) == false) return false;
+				SetupPropertiesRs(alIdx);
+				return true;
+			}
+
 			for(int i=0; i<6; ++i)
 			{
 				bool bRet = CreateTexture(	mvTextureHandles[alIdx],
@@ -568,6 +783,11 @@ namespace hpl {
 		}
 		////////////////////////////
 		//Create 1d, 2d or 3d texture
+		else if(mlRs)
+		{
+			OhplTexFace f = { reinterpret_cast<const OhplTexLevel*>(apBmp->GetData(0,0)), apBmp->GetNumOfMipMaps(), apBmp->GetSize(), (int)apBmp->GetPixelFormat() };
+			if(CreateFacesRs(alIdx, &f, 1) == false) return false;
+		}
 		else
 		{
 			bool bRet = CreateTexture(	mvTextureHandles[alIdx],
@@ -578,7 +798,8 @@ namespace hpl {
 			
 		}
 
-		SetupProperties(mvTextureHandles[alIdx]);
+		if(mlRs) SetupPropertiesRs(alIdx);
+		else SetupProperties(mvTextureHandles[alIdx]);
 
 		return true;
 	}

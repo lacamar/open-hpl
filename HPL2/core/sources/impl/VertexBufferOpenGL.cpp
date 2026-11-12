@@ -159,6 +159,7 @@ namespace hpl {
 			mvIndexArray.reserve(alReserveIdxSize);
 
 		mbHasShadowDouble = false;
+		mlRs = 0;
 
 		mpLowLevelGraphics = apLowLevelGraphics;
 
@@ -167,8 +168,24 @@ namespace hpl {
 
 	//----------------------------------------------------------------------
 
+	void iVertexBufferOpenGL::BuildVbData(OhplVbData *apOut, tVertexElementFlag aTypes)
+	{
+		for(size_t i=0; i<mvElementArrays.size(); ++i)
+		{
+			cVtxBufferGLElementArray *pElement = mvElementArrays[i];
+			OhplVbData d = { NULL, 0 };
+			if(pElement->mFlag & aTypes)
+			{
+				d.ptr = pElement->GetArrayPtr();
+				d.bytes = pElement->Size() * GetVertexFormatByteSize(pElement->mFormat);
+			}
+			apOut[i] = d;
+		}
+	}
+
 	iVertexBufferOpenGL::~iVertexBufferOpenGL()
 	{
+		if(mlRs) ohpl_glvb_free(mlRs);
 		STLDeleteAll(mvElementArrays);	
 	}
 
@@ -203,6 +220,8 @@ namespace hpl {
 		desc.format = aFormat;
 		desc.elementNum = alElementNum;
 		desc.handle = 0;
+
+		if(mlRs) ohpl_glvb_add_element(mlRs, aType, aFormat, alElementNum, elementFlag);
 
 		mvElementArrays.push_back(pElement);
 	}

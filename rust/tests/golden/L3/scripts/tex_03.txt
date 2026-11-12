@@ -1,0 +1,46 @@
+tex_new 0 2 0 1 0 1
+tex_bmp 0 24 16 1 1 2 3
+fail errors 0
+tex_time 0 16.0 1
+tex_aniso 0 1.5
+tex_filter 0 2
+tex_new 1 0 0 1 0 0
+tex_bmp 1 15 4 1 1 1 4
+fail errors 0
+tex_pixels 1
+tex_mips 1
+tex_new 2 3 0 1 0 0
+tex_cube 2 4 18 4 16 2
+fail errors 0
+tex_update 2 0.5
+tex_time 2 0.0 2
+tex_prev 2
+tex_time 2 0.125 0
+tex_filter 2 1
+tex_state 2
+tex_new 3 1 0 0 1 1
+tex_raw 3 2 32 40 1
+fail errors 0
+tex_settime 3 -1.0
+tex_time 3 0.0 0
+tex_settime 3 -1.0
+tex_update 3 1.5
+tex_next 3
+tex_new 4 1 0 0 0 1
+tex_raw 4 28 40 2 1
+fail errors 0
+tex_aniso 4 3.25
+tex_state 4
+tex_time 4 3.25 0
+tex_filter 4 1
+tex_new 5 1 0 0 0 0
+tex_bmp 5 7 6 12 1 1 1
+fail errors 0
+tex_mips 5
+tex_update 5 0.1
+tex_cmpfunc 5 0
+tex_free 5
+tex_free 0
+tex_free 1
+tex_free 4
+tex_free 2

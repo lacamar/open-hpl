@@ -22,6 +22,7 @@
 
 #include "graphics/VertexBuffer.h"
 #include "impl/RustGl.h"
+#include "impl/RustGlRes.h"
 
 
 namespace hpl {
@@ -124,6 +125,9 @@ namespace hpl {
 			return mvElementArrays[ lIdx ]; 
 		}
 		
+		void BuildVbData(OhplVbData *apOut, tVertexElementFlag aTypes);
+
+		uint64_t mlRs;
 		signed char mvElementArrayIndex[eVertexBufferElement_LastEnum];
 		OhplGlElem mvElemDesc[eVertexBufferElement_LastEnum];
 		std::vector<cVtxBufferGLElementArray*> mvElementArrays;

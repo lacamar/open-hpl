@@ -25,6 +25,8 @@
 #include "impl/SDLTexture.h"
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/RustGl.h"
+#include "impl/RustBackends.h"
+
 
 
 
@@ -41,11 +43,22 @@ namespace hpl {
 		: iDepthStencilBuffer(avSize,alDepthBits,alStencilBits)
 	{
 		mlHandle =0;
+		mlRs = 0;
 
-		;
-		
 		OhplGlDsPlan plan;
-		ohpl_gl_fbo_plan_depth_stencil(alDepthBits, alStencilBits, GLEW_EXT_packed_depth_stencil, &plan);
+		if(OhplBackendRustRequested())
+		{
+			OhplDsbOut out;
+			mlRs = ohpl_gldsb_new(OhplGl(avSize), alDepthBits, alStencilBits, &out);
+			mlHandle = out.id;
+			plan.kind = out.kind;
+			plan.format = 0;
+		}
+		else
+		{
+			ohpl_gl_fbo_plan_depth_stencil(alDepthBits, alStencilBits, GLEW_EXT_packed_depth_stencil, &plan);
+		}
+
 
 		switch(plan.kind)
 		{
@@ -65,6 +78,7 @@ namespace hpl {
 		case kOhplGlDsPacked:
 		case kOhplGlDsDepth:
 		case kOhplGlDsStencil:
+			if(mlRs) break;
 			glGenRenderbuffersEXT(1, &mlHandle);
 			glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, mlHandle);
 			glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, plan.format, avSize.x, avSize.y);
@@ -76,7 +90,11 @@ namespace hpl {
 	
 	cDepthStencilBufferGL::~cDepthStencilBufferGL()
 	{
-		;
+		if(mlRs)
+		{
+			ohpl_gldsb_free(mlRs);
+			return;
+		}
 		if(mlHandle != 0)	glDeleteRenderbuffersEXT(1, &mlHandle);
 	}
 	
@@ -91,8 +109,9 @@ namespace hpl {
 	
 	cFrameBufferGL::cFrameBufferGL(const tString& asName, iLowLevelGraphics* apLowLevelGraphics) : iFrameBuffer(asName, apLowLevelGraphics)
 	{
-		;
-		glGenFramebuffersEXT(1, &mlHandle);
+		mlRs = OhplBackendRustRequested() ? ohpl_glfb_new(&mlHandle) : 0;
+		if(mlRs == 0) glGenFramebuffersEXT(1, &mlHandle);
+
 
 		mbIsUpdated = true;
 		mbExplicitMipLevel = false;
@@ -102,7 +121,11 @@ namespace hpl {
 
 	cFrameBufferGL::~cFrameBufferGL()
 	{
-		;
+		if(mlRs)
+		{
+			ohpl_glfb_free(mlRs);
+			return;
+		}
 		glDeleteFramebuffersEXT(1, &mlHandle);
 	}
 	
@@ -171,7 +194,18 @@ namespace hpl {
 
 	void cFrameBufferGL::SetDepthStencilBuffer(iDepthStencilBuffer* apBuffer)
 	{
-		;
+		if(mlRs)
+		{
+			cDepthStencilBufferGL *pRsBuffer = static_cast<cDepthStencilBufferGL*>(apBuffer);
+			ohpl_glfb_set_depth_stencil(mlRs, apBuffer != NULL, apBuffer ? pRsBuffer->GetHandle() : 0,
+										apBuffer ? pRsBuffer->GetDepthBits() : 0, apBuffer ? pRsBuffer->GetStencilBits() : 0);
+			if(apBuffer == NULL) return;
+			if(pRsBuffer->GetDepthBits() > 0) mpDepthBuffer = apBuffer;
+			if(pRsBuffer->GetStencilBits() > 0) mpStencilBuffer = apBuffer;
+			mbIsUpdated = true;
+			SetFirstSize(apBuffer->GetSize());
+			return;
+		}
 
 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, mlHandle);
 
@@ -221,13 +255,20 @@ namespace hpl {
 
 		bool bRet = false;
 
-		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, mlHandle);
-
 		unsigned int lOccupied = 0;
 		for(int i=0; i<kMaxDrawColorBuffers; ++i)
 		{
 			if(mpColorBuffer[i] != NULL) lOccupied |= 1u << i;
 		}
+
+		unsigned int lStatusClass;
+		if(mlRs)
+		{
+			lStatusClass = ohpl_glfb_compile(mlRs, lOccupied);
+		}
+		else
+		{
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, mlHandle);
 
 		OhplGlDrawPlan plan;
 		ohpl_gl_fbo_plan_draw_buffers(lOccupied, &plan);
@@ -248,7 +289,10 @@ namespace hpl {
 		}
 
 		GLenum GLStatus = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-		switch(ohpl_gl_fbo_status_class(GLStatus))
+		lStatusClass = ohpl_gl_fbo_status_class(GLStatus);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+		}
+		switch(lStatusClass)
 		{
 		case kOhplGlStatusComplete:		bRet = true; break;
 		case kOhplGlStatusUnsupported:	Error("Frame buffer '%s' is not complete! Format is unsupported!\n", msName.c_str()); break;
@@ -260,8 +304,6 @@ namespace hpl {
 		case kOhplGlStatusReadBuffer:	Error("Frame buffer '%s' is not complete! Incomplete read buffer!\n", msName.c_str()); break;
 		default:						Error("Frame buffer '%s' is not complete! Unknown error!\n", msName.c_str()); break;
 		}
-
-		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 
 		return bRet;
 	}
@@ -302,7 +344,11 @@ namespace hpl {
 	{
 		if(apTexture) return false;
 
-		;
+		if(mlRs)
+		{
+			ohpl_glfb_detach_texture(mlRs, alAttachmentType, alAttachmentIdx);
+			return true;
+		}
 
 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, mlHandle);
 		glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, alAttachmentType + alAttachmentIdx,GL_TEXTURE_2D, 0,0);
@@ -316,12 +362,17 @@ namespace hpl {
 	{
 		cVector3l vTexSize = apTexture->GetSize();
 		OhplGlAttach at;
+		cSDLTexture *pTextureSDL = static_cast<cSDLTexture*>(apTexture);
+
+		if(mlRs)
+		{
+			ohpl_glfb_attach_texture(mlRs, alAttachmentType, alAttachmentIdx, apTexture->GetType(), alMipmapLevel, alExtra,
+									OhplGlV2{vTexSize.x, vTexSize.y}, pTextureSDL->GetTextureHandle(), &at);
+		}
+		else
+		{
 		ohpl_gl_fbo_plan_attach(alAttachmentType, alAttachmentIdx, apTexture->GetType(), alMipmapLevel, alExtra,
 								OhplGlV2{vTexSize.x, vTexSize.y}, &at);
-
-		if(at.explicitMip) mbExplicitMipLevel = true;
-
-		cSDLTexture *pTextureSDL = static_cast<cSDLTexture*>(apTexture);
 
 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, mlHandle);
 
@@ -338,6 +389,9 @@ namespace hpl {
 		}
 
 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+		}
+
+		if(at.explicitMip) mbExplicitMipLevel = true;
 
 		switch(at.slot)
 		{
