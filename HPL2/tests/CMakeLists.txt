@@ -84,3 +84,15 @@ target_link_options(PhysicsH14Tests PRIVATE
 AddTestTarget(SceneH10Tests
     SceneH10Tests.cpp
 )
+
+# H15 differential: surface-data parse and surface-call/update-list scenes, scripts/h15-diff.sh.
+AddTestTarget(PhysicsH15Tests
+    PhysicsH15Tests.cpp
+)
+
+target_link_options(PhysicsH15Tests PRIVATE
+    "LINKER:--wrap=ohpl_phys_surface_on_impact"
+    "LINKER:--wrap=ohpl_phys_surface_on_slide"
+    "LINKER:--wrap=ohpl_phys_surface_create_impact_effect"
+    "LINKER:--wrap=ohpl_phys_surface_update_roll_effect"
+)

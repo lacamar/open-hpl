@@ -21,6 +21,7 @@
 #define HPL_PHYSICS_WORLD_H
 
 #include <map>
+#include <cstdint>
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
@@ -270,6 +271,7 @@ namespace hpl {
 		tCollideShapeList mlstShapes;
 		tPhysicsBodyList mlstBodies;
 		tPhysicsBodySet m_setUpdateBodies;
+		uint64_t mRsBook;
 		tCharacterBodyList mlstCharBodies;
 		tPhysicsMaterialMap m_mapMaterials;
 		tPhysicsJointList mlstJoints;

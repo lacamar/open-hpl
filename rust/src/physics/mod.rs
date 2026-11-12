@@ -26,3 +26,5 @@ mod tests;
 mod tests_character;
 #[cfg(test)]
 mod tests_h14;
+#[cfg(test)]
+mod tests_h15;

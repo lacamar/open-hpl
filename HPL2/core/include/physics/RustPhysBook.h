@@ -4,6 +4,7 @@
 // H15: Rust-owned iPhysicsBody / iPhysicsJoint bookkeeping (OHPL_IMPL=rust). Tokens are arena handles; 0 means C++ fields.
 
 #include "impl/RustBackends.h"
+#include <cstddef>
 #include <cstdint>
 
 extern "C" {
@@ -14,6 +15,13 @@ void ohpl_h15_body_flag_set(uint64_t, int32_t, bool);
 uint64_t ohpl_h15_joint_new();
 void ohpl_h15_joint_free(uint64_t);
 bool ohpl_h15_joint_limit_auto_sleep(uint64_t, bool, float, int32_t, float, float, float);
+uint64_t ohpl_h15_world_new();
+void ohpl_h15_world_free(uint64_t);
+bool ohpl_h15_world_update_insert(uint64_t, size_t);
+bool ohpl_h15_world_update_remove(uint64_t, size_t);
+void ohpl_h15_world_update_clear(uint64_t);
+void ohpl_h15_world_update_before(uint64_t, void*, bool (*)(void*, size_t), void (*)(void*, size_t));
+void ohpl_h15_world_update_after(uint64_t, void*, void (*)(void*, size_t));
 }
 
 namespace hpl {

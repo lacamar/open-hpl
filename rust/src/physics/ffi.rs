@@ -484,3 +484,53 @@ pub extern "C" fn ohpl_h15_joint_limit_auto_sleep(
     })
     .unwrap_or(false)
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_world_new() -> u64 {
+    book::world_new()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_world_free(book: u64) {
+    book::world_free(book);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_world_update_insert(book: u64, body: usize) -> bool {
+    book::world_with(book, |w| w.insert(body)).unwrap_or(false)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_world_update_remove(book: u64, body: usize) -> bool {
+    book::world_with(book, |w| w.remove(body)).unwrap_or(false)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h15_world_update_clear(book: u64) {
+    book::world_with(book, |w| w.clear());
+}
+
+/// # Safety
+/// `ctx` is valid for the callbacks.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h15_world_update_before(
+    book: u64,
+    ctx: *mut c_void,
+    before: world::BodyBefore,
+    remove: world::BodyAfter,
+) {
+    // SAFETY: caller contract.
+    unsafe { world::update_before(book, ctx, before, remove) };
+}
+
+/// # Safety
+/// `ctx` is valid for the callback.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h15_world_update_after(
+    book: u64,
+    ctx: *mut c_void,
+    after: world::BodyAfter,
+) {
+    // SAFETY: caller contract.
+    unsafe { world::update_after(book, ctx, after) };
+}

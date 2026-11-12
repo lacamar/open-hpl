@@ -4,6 +4,8 @@
 use crate::math::{IDENTITY, v3};
 use crate::obj::{Arena, Handle};
 use crate::types::{Matrixf, Vector3f};
+use std::collections::BTreeSet;
+use std::ops::Bound;
 use std::sync::{LazyLock, Mutex, MutexGuard};
 
 #[derive(Clone, Copy)]
@@ -39,10 +41,17 @@ pub struct JointBook {
     pub limit_step_count: i32,
 }
 
+/// Per-world set of bodies updated every step, ordered by address like `std::set<iPhysicsBody*>`.
+#[derive(Default)]
+pub struct WorldBook {
+    update: BTreeSet<usize>,
+}
+
 #[derive(Default)]
 struct Books {
     bodies: Arena<BodyBook>,
     joints: Arena<JointBook>,
+    worlds: Arena<WorldBook>,
 }
 
 static BOOKS: LazyLock<Mutex<Books>> = LazyLock::new(|| Mutex::new(Books::default()));
@@ -99,4 +108,41 @@ pub fn joint_get(bits: u64) -> Option<JointBook> {
 pub fn joint_with<R>(bits: u64, f: impl FnOnce(&mut JointBook) -> R) -> Option<R> {
     let h = Handle::from_bits(bits)?;
     books()?.joints.get_mut(h).map(f)
+}
+
+pub fn world_new() -> u64 {
+    books()
+        .and_then(|mut b| b.worlds.insert(WorldBook::default()))
+        .map_or(0, Handle::to_bits)
+}
+
+pub fn world_free(bits: u64) {
+    if let (Some(h), Some(mut b)) = (Handle::from_bits(bits), books()) {
+        b.worlds.remove(h);
+    }
+}
+
+pub fn world_with<R>(bits: u64, f: impl FnOnce(&mut WorldBook) -> R) -> Option<R> {
+    let h = Handle::from_bits(bits)?;
+    books()?.worlds.get_mut(h).map(f)
+}
+
+impl WorldBook {
+    pub fn insert(&mut self, body: usize) -> bool {
+        self.update.insert(body)
+    }
+
+    pub fn remove(&mut self, body: usize) -> bool {
+        self.update.remove(&body)
+    }
+
+    pub fn clear(&mut self) {
+        self.update.clear();
+    }
+
+    /// Smallest member above `after` (the first member when `None`): the `std::set` iterator step.
+    pub fn next_after(&self, after: Option<usize>) -> Option<usize> {
+        let lo = after.map_or(Bound::Unbounded, Bound::Excluded);
+        self.update.range((lo, Bound::Unbounded)).next().copied()
+    }
 }
