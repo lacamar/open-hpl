@@ -65,31 +65,32 @@ cLuxPlayerState_InteractSwingDoor::~cLuxPlayerState_InteractSwingDoor()
 
 float cLuxPlayerState_InteractSwingDoor::GetSpeedAdd(cCamera *apCam)
 {
-	cVector3f vBodyCenter = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mpCurrentBody->GetMassCentre());
-	cVector3f vJointToBody =  cMath::Vector3Normalize(vBodyCenter - mpCurrentJoint->GetPivotPoint());
-
-	cVector3f vUp = apCam->GetUp();
-	cVector3f vRight = apCam->GetRight();
-	cVector3f vForward = apCam->GetForward();
-
-	cVector3f vPushAmount = (vUp + vForward) * mvMouseAdd.y + vRight * -mvMouseAdd.x;
-	cVector3f vPushRotateDir = cMath::Vector3Cross(vJointToBody, vPushAmount);
-
-	float fSpeedAdd = cMath::Vector3Dot(vPushRotateDir, mpCurrentJoint->GetPinDir());
-	
-	return fSpeedAdd;
+	OhplGa2bJointGeom g;
+	g.bodyMatrix = mpCurrentBody->GetLocalMatrix();
+	g.massCentre = mpCurrentBody->GetMassCentre();
+	g.pivot = mpCurrentJoint->GetPivotPoint();
+	g.pin = mpCurrentJoint->GetPinDir();
+	g.up = apCam->GetUp();
+	g.right = apCam->GetRight();
+	g.forward = apCam->GetForward();
+	g.mouse = mvMouseAdd;
+	return ohpl_ga2b_swing_door_speed_add(&g);
 }
 
 void cLuxPlayerState_InteractSwingDoor::OnThrow()
 {
-	cVector3f vBodyCenter = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mpCurrentBody->GetMassCentre());
-	cVector3f vJointToBody =  cMath::Vector3Normalize(vBodyCenter - mpCurrentJoint->GetPivotPoint());
-	mvJointForward = cMath::Vector3Cross(mpCurrentJoint->GetPinDir(), vJointToBody);
-
-	cVector3f vImpulse = mvJointForward * mpMoveBaseData->mfMoveThrowImpulse;
-	float fForwardDot = cMath::Vector3Dot(mvJointForward, mpPlayer->GetCamera()->GetForward());
-	if(fForwardDot < 0) vImpulse = vImpulse * -1;
-
+	cCamera *apCam = mpPlayer->GetCamera();
+	OhplGa2bJointGeom g;
+	g.bodyMatrix = mpCurrentBody->GetLocalMatrix();
+	g.massCentre = mpCurrentBody->GetMassCentre();
+	g.pivot = mpCurrentJoint->GetPivotPoint();
+	g.pin = mpCurrentJoint->GetPinDir();
+	g.up = apCam->GetUp();
+	g.right = apCam->GetRight();
+	g.forward = apCam->GetForward();
+	g.mouse = mvMouseAdd;
+	cVector3f vImpulse;
+	ohpl_ga2b_swing_door_throw(&g, mpMoveBaseData->mfMoveThrowImpulse, &mvJointForward, &vImpulse);
 	mpCurrentBody->AddImpulse(vImpulse);
 }
 

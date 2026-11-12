@@ -110,7 +110,7 @@ protected:
 	
 	float mfRotSpeed;
 	
-	cPidController<cVector3f> mRotatePid;
+	OhplGa2bPid3 mRotatePid;
 
 	cVector3f mvCamDir[3];
 	float mfAxisCos[2];

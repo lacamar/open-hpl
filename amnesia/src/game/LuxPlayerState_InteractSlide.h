@@ -81,7 +81,7 @@ public:
 protected:
 	cLuxInteractData_Slide *mpSlideData;
 
-	cPidController<cVector3f> mForcePid;
+	OhplGa2bPid3 mForcePid;
 
 	iPhysicsJoint *mpCurrentJoint;
 	bool mbHasGravity;
