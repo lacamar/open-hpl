@@ -30,6 +30,7 @@ namespace hpl {
 	
 	class cSkeleton;
 	class cBone;
+	struct OhplH6Skel;
 
 	typedef std::list<cBone*> tBoneList;
 	typedef tBoneList::iterator tBoneListIt;
@@ -50,8 +51,8 @@ namespace hpl {
 		const cMatrixf& GetWorldTransform();
 		const cMatrixf& GetInvWorldTransform();
 
-		void SetInvBindTransform(const cMatrixf &a_mtxInvBind){ m_mtxInvBind = a_mtxInvBind; mbHasInvBind = true; }
-		const cMatrixf& GetInvBindTransform(){ return mbHasInvBind ? m_mtxInvBind : GetInvWorldTransform(); }
+		void SetInvBindTransform(const cMatrixf &a_mtxInvBind);
+		const cMatrixf& GetInvBindTransform();
 		void SetLocalUnitScale(float afX){ mfLocalUnitScale = afX; }
 		float GetLocalUnitScale(){ return mfLocalUnitScale; }
 
@@ -77,6 +78,7 @@ namespace hpl {
 		void SetValue(int alVal){ mlValue = alVal;}
 		
 	private:
+		OhplH6Skel* Rs() const;
 		void NeedsUpdate();
 
 		void UpdateMatrix();
@@ -107,6 +109,7 @@ namespace hpl {
 		bool mbNeedsUpdate;
 
 		int mlValue;
+		int mlRsId;
 	};
 
 };

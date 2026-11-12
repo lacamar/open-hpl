@@ -1,0 +1,68 @@
+clr	0
+anim c	1
+animq b	-1 -1
+subq a	-1 -1 0
+anim b	2
+sub a	0
+animq a	-1 -1
+subq d	-1 -1 1
+anim b	3
+animq a	-1 -1
+sub d	1
+subq a	0 0 2
+animq d	-1 -1
+anim a	4
+subq b	-1 -1 2
+sub d	2
+subq a	0 0 3
+sub a	3
+subq b	-1 -1 4
+animq b	1 1
+sub a	4
+animq c	0 0
+anim d	5
+sub d	5
+subq a	0 0 6
+subq a	0 0 6
+anim b	6
+anim b	7
+anim d	8
+sub d	6
+anim c	9
+subq a	0 0 7
+anim d	10
+sub a	7
+subq c	-1 -1 8
+anim a	11
+anim a	12
+anim a	13
+anim c	14
+subq a	0 0 8
+clr	0
+subq d	1 1 8
+animq a	-1 -1
+animq c	-1 -1
+anim a	1
+animq a	0 0
+subq c	-1 -1 8
+sub d	8
+sub a	9
+anim a	2
+anim a	3
+sub a	10
+sub a	11
+anim a	4
+anim a	5
+anim a	6
+anim b	7
+anim c	8
+sub c	12
+animq b	6 6
+anim d	9
+subq a	0 0 13
+sub a	13
+subq d	1 1 14
+subq a	0 0 14
+anim c	10
+sub c	14
+subq d	1 1 15

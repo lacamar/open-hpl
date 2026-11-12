@@ -29,6 +29,7 @@
 namespace hpl {
 
 	class cBone;
+	struct OhplH6Skel;
 
 	typedef std::vector<cBone*> tBoneVec;
 	typedef tBoneVec::iterator tBoneVecIt;
@@ -36,8 +37,9 @@ namespace hpl {
 	typedef std::map<tString,int> tBoneIdxNameMap;
 	typedef tBoneIdxNameMap::iterator tBoneIdxNameMapIt;
 
-	class cSkeleton
+class cSkeleton
 	{
+	friend class cBone;
 	public:
 		cSkeleton();
 		~cSkeleton();
@@ -57,6 +59,10 @@ namespace hpl {
 		bool mbFileUnits = false;
 	
 	private:
+		void RsRegister(cBone* apBone);
+
+		OhplH6Skel* mpRs;
+		tBoneVec mvRsById;
 		cBone* mpRootBone;
 
 		tBoneVec mvBones;

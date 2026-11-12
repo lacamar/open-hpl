@@ -24,6 +24,8 @@
 #include "graphics/RustMesh.h"
 #include "system/LowLevelSystem.h"
 #include "scene/Node3D.h"
+#include "impl/RustBackends.h"
+#include "graphics/RustGraphicsH6.h"
 
 namespace hpl {
 
@@ -43,12 +45,14 @@ namespace hpl {
 		mfMaxFrameTime = 0;
 
 		mlNodeIdx = -1;
+		mpRs = OhplBackendRustRequested() ? ohpl_h6_track_new() : NULL;
 	}
 
 	//-----------------------------------------------------------------------
 
 	cAnimationTrack::~cAnimationTrack()
 	{
+		if(mpRs) ohpl_h6_track_free(mpRs);
 		STLDeleteAll(mvKeyFrames);
 	}
 
@@ -62,6 +66,7 @@ namespace hpl {
 	
 	void cAnimationTrack::ResizeKeyFrames(int alSize)
 	{
+		if(mpRs) { ohpl_h6_track_reserve(mpRs, alSize); return; }
 		mvKeyFrames.reserve(alSize);
 	}
 	
@@ -69,6 +74,7 @@ namespace hpl {
 
 	cKeyFrame* cAnimationTrack::CreateKeyFrame(float afTime)
 	{
+		if(mpRs) return ohpl_h6_track_create(mpRs, afTime);
 		cKeyFrame* pFrame = hplNew( cKeyFrame,());
 		pFrame->time = afTime;
 
@@ -84,6 +90,7 @@ namespace hpl {
 
 	void cAnimationTrack::ClearKeyFrames()
 	{
+		if(mpRs) { ohpl_h6_track_clear(mpRs); return; }
 		STLDeleteAll(mvKeyFrames);
 		mvKeyFrames.clear();
 	}
@@ -92,7 +99,7 @@ namespace hpl {
 
 	void cAnimationTrack::ApplyToNode(cNode3D* apNode, float afTime, float afWeight, bool bLoop, float afTransScale)
 	{
-		if(mvKeyFrames.empty()) return;
+		if(GetKeyFrameNum() == 0) return;
 
 		cKeyFrame Frame = GetInterpolatedKeyFrame(afTime);
         		
@@ -116,6 +123,11 @@ namespace hpl {
 	cKeyFrame cAnimationTrack::GetInterpolatedKeyFrame(float afTime, bool bLoop)
 	{
 		cKeyFrame ResultKeyFrame;
+		if(mpRs)
+		{
+			ohpl_h6_track_interpolate(mpRs, mpParent->GetLength(), afTime, &ResultKeyFrame);
+			return ResultKeyFrame;
+		}
 		ohpl_anim_interpolate(mvKeyFrames.data(), mvKeyFrames.size(), mpParent->GetLength(), mfMaxFrameTime, afTime, &ResultKeyFrame);
 
 		return ResultKeyFrame;
@@ -126,6 +138,19 @@ namespace hpl {
 	float cAnimationTrack::GetKeyFramesAtTime(float afTime, cKeyFrame** apKeyFrameA,cKeyFrame** apKeyFrameB, bool bLoop)
 	{
 		size_t lIdxA = 0, lIdxB = 0;
+		if(mpRs)
+		{
+			float fW = ohpl_h6_track_frames_at_time(mpRs, mpParent->GetLength(), afTime, &lIdxA, &lIdxB);
+			if(GetKeyFrameNum() == 0)
+			{
+				*apKeyFrameA = NULL;
+				*apKeyFrameB = NULL;
+				return fW;
+			}
+			*apKeyFrameA = GetKeyFrame((int)lIdxA);
+			*apKeyFrameB = GetKeyFrame((int)lIdxB);
+			return fW;
+		}
 		float fT = ohpl_anim_frames_at_time(mvKeyFrames.data(), mvKeyFrames.size(), mpParent->GetLength(), mfMaxFrameTime, afTime, &lIdxA, &lIdxB);
 
 		if(mvKeyFrames.empty())

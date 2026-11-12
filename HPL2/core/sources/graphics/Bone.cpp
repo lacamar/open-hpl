@@ -23,6 +23,8 @@
 #include "math/Math.h"
 
 #include "system/LowLevelSystem.h"
+#include "impl/RustBackends.h"
+#include "graphics/RustGraphicsH6.h"
 
 
 namespace hpl {
@@ -45,6 +47,7 @@ namespace hpl {
 		mfLocalUnitScale = 1;
 
 		mlValue = 0;
+		mlRsId = -1;
 	}
 
 	//-----------------------------------------------------------------------
@@ -73,10 +76,13 @@ namespace hpl {
 	{
 		cBone *pBone = hplNew(cBone,(asName,asId, mpSkeleton) );
 		pBone->mpParent = this;
-		
 		mlstChildren.push_back(pBone);
-		mpSkeleton->AddBone(pBone);
-
+		if(Rs())
+		{
+			pBone->mlRsId = ohpl_h6_skel_create_child(Rs(), mlRsId, asName.data(), asName.size(), asId.data(), asId.size());
+			mpSkeleton->RsRegister(pBone);
+		}
+		else mpSkeleton->AddBone(pBone);
 		return pBone;
 	}
 
@@ -84,8 +90,8 @@ namespace hpl {
 
 	void cBone::SetTransform(const cMatrixf &a_mtxTransform)
 	{
+		if(Rs()) { ohpl_h6_bone_set_transform(Rs(), mlRsId, &a_mtxTransform); return; }
 		m_mtxTransform = a_mtxTransform;
-
 		NeedsUpdate();
 	}
 
@@ -95,6 +101,7 @@ namespace hpl {
 
 	void cBone::NeedsUpdateUnscaled()
 	{
+		if(Rs()) { ohpl_h6_bone_needs_update_unscaled(Rs(), mlRsId); return; }
 		mbNeedsUnscaledUpdate = true;
 
 		tBoneListIt it = mlstChildren.begin();
@@ -108,18 +115,20 @@ namespace hpl {
 
 	void cBone::SetTransformUnscaled(const cMatrixf &a_mtxTransformUnscaled)
 	{
+		if(Rs()) { ohpl_h6_bone_set_unscaled(Rs(), mlRsId, &a_mtxTransformUnscaled); return; }
 		m_mtxTransformUnscaled = a_mtxTransformUnscaled;
-
 		NeedsUpdateUnscaled();
 	}
 
 	const cMatrixf& cBone::GetLocalTransformUnscaled()
 	{
+		if(Rs()) return *ohpl_h6_bone_local_unscaled(Rs(), mlRsId);
 		return m_mtxTransformUnscaled;
 	}
 
 	const cMatrixf& cBone::GetWorldTransformUnscaled()
 	{
+		if(Rs()) return *ohpl_h6_bone_world_unscaled(Rs(), mlRsId);
 		UpdateUnscaledMatrix();
 		
         return m_mtxWorldTransformUnscaled;
@@ -150,11 +159,13 @@ namespace hpl {
 
 	const cMatrixf& cBone::GetLocalTransform()
 	{
+		if(Rs()) return *ohpl_h6_bone_local(Rs(), mlRsId);
 		return m_mtxTransform;
 	}
 
 	const cMatrixf& cBone::GetWorldTransform()
 	{
+		if(Rs()) return *ohpl_h6_bone_world(Rs(), mlRsId);
 		UpdateMatrix();
 		
         return m_mtxWorldTransform;
@@ -162,6 +173,7 @@ namespace hpl {
 
 	const cMatrixf& cBone::GetInvWorldTransform()
 	{
+		if(Rs()) return *ohpl_h6_bone_inv_world(Rs(), mlRsId);
 		UpdateMatrix();
 
 		return m_mtxInvWorldTransform;
@@ -183,10 +195,29 @@ namespace hpl {
 			}
 		}
 
-		mpSkeleton->RemoveBone(this);
+		if(Rs()) ohpl_h6_bone_detach(Rs(), mlRsId);
+		else mpSkeleton->RemoveBone(this);
 	}
 
 	//-----------------------------------------------------------------------
+
+	void cBone::SetInvBindTransform(const cMatrixf &a_mtxInvBind)
+	{
+		if(Rs()) ohpl_h6_bone_set_inv_bind(Rs(), mlRsId, &a_mtxInvBind);
+		else m_mtxInvBind = a_mtxInvBind;
+		mbHasInvBind = true;
+	}
+
+	const cMatrixf& cBone::GetInvBindTransform()
+	{
+		if(Rs()) return *ohpl_h6_bone_inv_bind(Rs(), mlRsId);
+		return mbHasInvBind ? m_mtxInvBind : GetInvWorldTransform();
+	}
+
+	OhplH6Skel* cBone::Rs() const
+	{
+		return mpSkeleton ? mpSkeleton->mpRs : NULL;
+	}
 
 	cBoneIterator cBone::GetChildIterator()
 	{

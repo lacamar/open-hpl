@@ -21,6 +21,8 @@
 
 #include "math/Math.h"
 #include "graphics/AnimationTrack.h"
+#include "impl/RustBackends.h"
+#include "graphics/RustGraphicsH6.h"
 
 namespace hpl {
 
@@ -34,6 +36,7 @@ namespace hpl {
 	{
 		msAnimName = "";
 		msFileName = asFile;
+		mpRs = OhplBackendRustRequested() ? ohpl_h6_anim_new() : NULL;
 	}
 
 	//-----------------------------------------------------------------------
@@ -41,6 +44,7 @@ namespace hpl {
 	cAnimation::~cAnimation()
 	{
 		STLDeleteAll(mvTracks);
+		if(mpRs) ohpl_h6_anim_free(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -70,7 +74,7 @@ namespace hpl {
 		cAnimationTrack *pTrack = hplNew( cAnimationTrack,(asName, aFlags, this) );
 
 		mvTracks.push_back(pTrack);
-
+		if(mpRs) ohpl_h6_anim_add_track(mpRs, asName.data(), asName.size());
 		return pTrack;
 	}
 	
@@ -85,6 +89,11 @@ namespace hpl {
 
 	cAnimationTrack* cAnimation::GetTrackByName(const tString &asName)
 	{
+		if(mpRs)
+		{
+			int lIdx = ohpl_h6_anim_track_by_name(mpRs, asName.data(), asName.size());
+			return lIdx < 0 ? NULL : mvTracks[lIdx];
+		}
 		for(size_t i=0; i< mvTracks.size(); ++i)
 		{
 			if(asName == tString(mvTracks[i]->GetName()))
