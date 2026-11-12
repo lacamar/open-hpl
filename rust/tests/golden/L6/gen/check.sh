@@ -31,6 +31,6 @@ for k in msh fbx anm fbxanim dae daeanim; do
 		continue
 	fi
 	python3 "$here/compact.py" < "$tmp/$k.cpp" | sort > "$tmp/$k.compact"
-	if [ "$stride" = 1 ]; then cmp "$tmp/$k.compact" "$g/$k.txt"; else grep -vxFf "$g/$k.txt" "$tmp/$k.compact" | head -3; fi
+	if [ "$stride" = 1 ]; then cmp "$tmp/$k.compact" "$g/$k.txt"; else { grep -vxFf "$g/$k.txt" "$tmp/$k.compact" || true; } | head -3; fi
 	echo "$k: $(wc -l < "$tmp/$k.cpp") files, cpp and rust match"
 done

@@ -750,3 +750,8 @@ pub fn load_anim(cfg: &Cfg, sink: Sink, path: &[u8]) -> i32 {
     sink.anim_end(false);
     0
 }
+
+const _: () = {
+    use std::mem::size_of;
+    assert!(size_of::<AiWeight>() == 8 && size_of::<AiBone>() == 96 && size_of::<AiMesh>() == 80);
+};

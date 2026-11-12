@@ -13,6 +13,7 @@
 
 static_assert(sizeof(aiVertexWeight) == sizeof(OhplAiWeight), "aiVertexWeight layout");
 static_assert(sizeof(aiMatrix4x4) == 64 && sizeof(aiVector3D) == 12, "assimp float layout");
+static_assert(sizeof(OhplAiBone) == 96 && sizeof(OhplAiMesh) == 80, "Rust mirror in meshio/assimp.rs");
 
 static aiMatrix4x4 Mat(const float* m) { aiMatrix4x4 r; memcpy(&r, m, 64); return r; }
 static void Put(float* out, const aiMatrix4x4& m) { memcpy(out, &m, 64); }
