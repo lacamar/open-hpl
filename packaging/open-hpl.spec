@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.89
+Version:        1.3.90
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,10 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Fri Nov 13 2026 lacamar <lchlnm@pm.me> - 1.3.90-1
+- Fix SOMA Omicron cleanroom door staying locked
+- Port material, post-effect, physics world state to Rust
+
 * Thu Nov 12 2026 lacamar <lchlnm@pm.me> - 1.3.89-1
 - Port resource managers, skeletons, animations, scene nodes, camera to Rust
 - Fix save round-trip scripts
