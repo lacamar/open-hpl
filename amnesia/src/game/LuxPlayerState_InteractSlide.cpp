@@ -39,10 +39,7 @@ cLuxPlayerState_InteractSlide::cLuxPlayerState_InteractSlide(cLuxPlayer *apPlaye
 	mfMoveToMouseAddFactor = gpBase->mpGameCfg->GetFloat("Player_Interaction","MoveToMouseAddFactor", 0.01f);
 	mfMaxForce = gpBase->mpGameCfg->GetFloat("Player_Interaction","SlideMaxForce", 1000.0f);
 
-	mForcePid.SetErrorNum(10);;
-	mForcePid.p = 6;
-	mForcePid.i = 0;
-	mForcePid.d = 0.1f;
+	ohpl_ga2b_pid_init(&mForcePid, 10, 6, 0, 0.1f);
 }
 
 //-----------------------------------------------------------------------
@@ -72,7 +69,7 @@ void cLuxPlayerState_InteractSlide::OnEnterState(eLuxPlayerState aPrevState)
 
 	//////////////////////////////
 	//Reset variables
-	mForcePid.Reset();
+	ohpl_ga2b_pid_reset(&mForcePid);
 
 	mvMouseAdd =0;
 	mvLastMouseAdd =0;
@@ -112,69 +109,35 @@ void cLuxPlayerState_InteractSlide::OnLeaveState(eLuxPlayerState aNewState)
 
 void cLuxPlayerState_InteractSlide::Update(float afTimeStep)
 {
-	//////////////////////////////
-	//Set up variables
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 	cCamera *pCam = mpPlayer->GetCamera();
 
-	cVector3f vUp = pCam->GetUp();
-	cVector3f vRight = pCam->GetRight();
-	cVector3f vForward = pCam->GetForward();
+	OhplGa2bSlideIn si;
+	si.camPos = pCam->GetPosition();
+	si.up = pCam->GetUp();
+	si.right = pCam->GetRight();
+	si.bodyMatrix = mpCurrentBody->GetLocalMatrix();
+	si.localInteract = mvLocalInteractPos;
+	si.mouse = mvMouseAdd;
+	si.pin = mpCurrentJoint->GetPinDir();
+	si.vel = mpCurrentBody->GetLinearVelocity();
+	si.mass = mpCurrentBody->GetMass();
+	si.maxDistance = mfMaxDistance;
+	si.slowDownFactor = mpSlideData->mfSlideSlowDownFactor;
+	si.speedFactor = mpSlideData->mfSlideSpeedFactor;
+	si.maxSpeed = mpSlideData->mfSlideMaxSpeed;
+	si.maxForce = mfMaxForce;
+	OhplGa2bSlideOut so;
+	ohpl_ga2b_slide_update(&si, &mfSlideSpeed, &mForcePid, afTimeStep, &so);
 
-	cVector3f vWorldInteractPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mvLocalInteractPos);
-
-		//////////////////////////////
-	//Check if out of range
-	float fDistance = cMath::Vector3Dist(pCam->GetPosition(), vWorldInteractPos);
-	if(fDistance > mfMaxDistance)
+	if(so.outOfRange)
 	{
 		mpPlayer->ChangeState(mPreviousState);
 	}
 
-	//////////////////////////////
-	//Get the speed add.
-	cVector3f vMouseCamDir = vUp * mvMouseAdd.y + vRight * -mvMouseAdd.x;
-	float fSpeedAdd = cMath::Vector3Dot(vMouseCamDir, mpCurrentJoint->GetPinDir());
+	mpCurrentBody->AddForce(so.force);
+	mvLastForce = so.force;
 
-
-	//////////////////////////////
-	//Update speed
-	float fSlowDownSpeed = cMath::Abs(mfSlideSpeed) * 3.0f * mpSlideData->mfSlideSlowDownFactor;
-	if(mfSlideSpeed > 0) 
-	{
-		mfSlideSpeed -= afTimeStep * fSlowDownSpeed;
-		if(mfSlideSpeed < 0) mfSlideSpeed = 0;
-	}
-	if(mfSlideSpeed < 0) 
-	{
-		mfSlideSpeed += afTimeStep * fSlowDownSpeed;
-		if(mfSlideSpeed > 0) mfSlideSpeed = 0;
-	}
-	if(mvMouseAdd == 0)
-	{
-		mfSlideSpeed = 0;
-	}
-	mfSlideSpeed += fSpeedAdd * 850.0f * afTimeStep  * mpSlideData->mfSlideSpeedFactor;
-	if(mfSlideSpeed > mpSlideData->mfSlideMaxSpeed)	mfSlideSpeed = mpSlideData->mfSlideMaxSpeed;
-	if(mfSlideSpeed < -mpSlideData->mfSlideMaxSpeed)mfSlideSpeed = -mpSlideData->mfSlideMaxSpeed;
-
-
-	//////////////////////////////
-	//Update force
-	cVector3f vBodyVel = mpCurrentBody->GetLinearVelocity();
-	
-	cVector3f vJointVel = mpCurrentJoint->GetPinDir() * cMath::Vector3Dot(mpCurrentJoint->GetPinDir(), vBodyVel);
-	cVector3f vWantedVel = mpCurrentJoint->GetPinDir() * mfSlideSpeed;
-
-	
-	cVector3f vForce = mForcePid.Output(vWantedVel - vJointVel, afTimeStep) * mpCurrentBody->GetMass();
-	
-	vForce = cMath::Vector3MaxLength(vForce, mfMaxForce);
-
-	mpCurrentBody->AddForce(vForce);
-	mvLastForce = vForce;
-
-	//Last stuff
 	mvLastMouseAdd = mvMouseAdd;
 	mvMouseAdd = 0;
 }
@@ -190,35 +153,22 @@ void cLuxPlayerState_InteractSlide::PostUpdate(float afTimeStep)
 
 bool cLuxPlayerState_InteractSlide::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	////////////////////////////
-	// Interact
-	if(aAction == eLuxPlayerAction_Interact)
+	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
+	if(lKind == 1)
 	{
-		// Not Pressed
-		if(abPressed==false)
-		{
-			mpPlayer->ChangeState(mPreviousState);
-
-			return false;
-		}
+		mpPlayer->ChangeState(mPreviousState);
+		return false;
 	}
-	////////////////////////////
-	// Attack
-	else if(aAction == eLuxPlayerAction_Attack)
+	else if(lKind == 2)
 	{
-		// Pressed
-		if(abPressed)
-		{
-			cVector3f vImpulse = mpCurrentJoint->GetPinDir() * cMath::Vector3Dot(mpCurrentJoint->GetPinDir(), mpPlayer->GetCamera()->GetForward());
-			vImpulse.Normalize();
-			vImpulse = vImpulse * mpSlideData->mfSlideThrowImpulse;
-			
-			mpCurrentBody->AddImpulse(vImpulse);
-
-			return false;
-		}
+		cVector3f vPin = mpCurrentJoint->GetPinDir();
+		cVector3f vForward = mpPlayer->GetCamera()->GetForward();
+		cVector3f vImpulse;
+		ohpl_ga2b_slide_throw(&vPin, &vForward, mpSlideData->mfSlideThrowImpulse, &vImpulse);
+		mpCurrentBody->AddImpulse(vImpulse);
+		return false;
 	}
-	
+
 	return true;
 }
 
@@ -264,9 +214,7 @@ bool cLuxPlayerState_InteractSlide::OnAddPitch(float afAmount)
 
 bool cLuxPlayerState_InteractSlide::OnMove(eCharDir aDir, float afMul)
 {
-	if(aDir == eCharDir_Forward)	mvMouseAdd.y += afMul * mfMoveToMouseAddFactor;
-	else							mvMouseAdd.x += afMul * -mfMoveToMouseAddFactor;
-
+	ohpl_ga2b_move_to_mouse(aDir == eCharDir_Forward, afMul, mfMoveToMouseAddFactor, &mvMouseAdd);
 	return true;
 }
 

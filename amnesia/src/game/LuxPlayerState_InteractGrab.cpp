@@ -47,16 +47,8 @@ cLuxPlayerState_InteractGrab::cLuxPlayerState_InteractGrab(cLuxPlayer *apPlayer)
 	mfMaxSlowPlayerMass = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMaxSlowPlayerMass",0);
 	mfMinSlowPlayerMul = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMinSlowPlayerMul",0);
 
-	mForcePid.SetErrorNum(20);;
-	mSpeedTorquePid.SetErrorNum(20);
-
-	mForcePid.p = 400;
-	mForcePid.i = 0;
-	mForcePid.d = 40;
-
-	mSpeedTorquePid.p = 40;
-	mSpeedTorquePid.i = 0;
-	mSpeedTorquePid.d = 0.4f;
+	ohpl_ga2b_pid_init(&mForcePid, 20, 400, 0, 40);
+	ohpl_ga2b_pid_init(&mSpeedTorquePid, 20, 40, 0, 0.4f);
 }
 
 //-----------------------------------------------------------------------
@@ -86,41 +78,10 @@ void cLuxPlayerState_InteractGrab::OnEnterState(eLuxPlayerState aPrevState)
 
 	//////////////////////////////
 	//Reset variables
-	mForcePid.Reset();
-	mSpeedTorquePid.Reset();
+	ohpl_ga2b_pid_reset(&mForcePid);
+	ohpl_ga2b_pid_reset(&mSpeedTorquePid);
 
 	//////////////////////////////////
-	// Set the rotation as the current of the body
-	if(mpGrabData->mbGrabUseOffset)
-	{
-		m_mtxBodyRotation = cMath::MatrixRotate(mpGrabData->mvGrabRotationOffset, eEulerRotationOrder_XYZ);	
-	}
-	//////////////////////////////////
-	// Set rotation based on entity file offset
-	else
-	{
-		cVector3f vCamRotation( pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
-		cMatrixf mtxCamRot = cMath::MatrixRotate(vCamRotation, eEulerRotationOrder_XYZ);
-		cMatrixf mtxInvCamRot = cMath::MatrixInverse(mtxCamRot);
-
-		m_mtxBodyRotation = cMath::MatrixMul(mtxInvCamRot, mpCurrentBody->GetLocalMatrix().GetRotation());
-		
-		mvLocalBodyOffset = mpCurrentBody->GetLocalPosition() - mvCurrentFocusPos;
-		mvLocalBodyOffset = cMath::MatrixMul( mtxInvCamRot, mvLocalBodyOffset);
-	}
-	
-	if(mpGrabData->mbGrabUseDepth)
-	{
-		mfDepth = mpGrabData->mfGrabDepth;
-	}
-	else
-	{
-		mfDepth = cMath::Vector3Dist(mvCurrentFocusPos, pCam->GetPosition())-0.08f;
-	}
-	
-
-
-	//////////////////////////////
 	//Save properties of the current body and all bodies attached to it
 	mvBodyProperties.clear();
 	SaveBodyProperties(mpCurrentBody);
@@ -145,30 +106,35 @@ void cLuxPlayerState_InteractGrab::OnEnterState(eLuxPlayerState aPrevState)
 		mfMassSum += pBody->GetMass();
 	}
 
+	OhplGa2bGrabEnterIn gi;
+	gi.camPos = pCam->GetPosition();
+	gi.camRot = cVector3f(pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
+	gi.bodyMatrix = mpCurrentBody->GetLocalMatrix();
+	gi.bodyPos = mpCurrentBody->GetLocalPosition();
+	gi.focusPos = mvCurrentFocusPos;
+	gi.rotOffset = mpGrabData->mvGrabRotationOffset;
+	gi.useOffset = mpGrabData->mbGrabUseOffset;
+	gi.useDepth = mpGrabData->mbGrabUseDepth;
+	gi.depth = mpGrabData->mfGrabDepth;
+	gi.maxDepth = mpGrabData->mfGrabMaxDepth;
+	gi.properMassSum = fProperMassSum;
+	gi.minSlowMass = mfMinSlowPlayerMass;
+	gi.maxSlowMass = mfMaxSlowPlayerMass;
+	gi.minSlowMul = mfMinSlowPlayerMul;
+	OhplGa2bGrabEnterOut go;
+	go.localOffset = mvLocalBodyOffset;
+	ohpl_ga2b_grab_enter(&gi, &go);
+	m_mtxBodyRotation = go.bodyRot;
+	if(mpGrabData->mbGrabUseOffset == false) mvLocalBodyOffset = go.localOffset;
+	mfDepth = go.depth;
+	mfMaxDistance = go.maxDistance;
+
 	mpPlayer->GetCharacterBody()->SetMass(mpPlayer->GetDefaultMass() + fProperMassSum);
 
 	mpCurrentProp->SetDisableCollisionUntilOutSidePlayer(false);
 
-	if(fProperMassSum >= mfMinSlowPlayerMass)
-	{
-		if(fProperMassSum >= mfMaxSlowPlayerMass)
-		{
-			mpPlayer->SetInteractionMoveSpeedMul(mfMinSlowPlayerMul);
-		}
-		else
-		{
-			float fMul = (fProperMassSum-mfMinSlowPlayerMass)/(mfMaxSlowPlayerMass-mfMinSlowPlayerMass);
-			fMul = fMul*mfMinSlowPlayerMul + (1.0f-fMul);
-			mpPlayer->SetInteractionMoveSpeedMul(fMul);
-		}
-	}
+	if(go.slow) mpPlayer->SetInteractionMoveSpeedMul(go.slowMul);
 
-	///////////////////////
-	//Calculate the max distance
-	mfMaxDistance = cMath::Vector3Dist(mpPlayer->GetCamera()->GetPosition(), mpCurrentBody->GetLocalPosition());
-	mfMaxDistance = cMath::Max(mfMaxDistance, mpGrabData->mfGrabMaxDepth) * 1.1f + 0.2f;
-
-	///////////////////////
 	//Setup Material
 	mbCustomMaterialsSetup = true;
 	/*
@@ -279,171 +245,80 @@ void cLuxPlayerState_InteractGrab::Update(float afTimeStep)
 
 void cLuxPlayerState_InteractGrab::PostUpdate(float afTimeStep)
 {
-	/////////////////////////////////////
-	// Init
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 	iPhysicsWorld *pPhysicsWorld = pMap->GetWorld()->GetPhysicsWorld();
-
 	cCamera *pCam = mpPlayer->GetCamera();
 	iCharacterBody *pPlayerBody = mpPlayer->GetCharacterBody();
 
-	/////////////////////////////////////
-	// Check if still in distance
-	float fDistance = cMath::Vector3Dist(pCam->GetPosition(), mpCurrentBody->GetLocalPosition());
-	if(fDistance > mfMaxDistance)
+	OhplGa2bGrabPost gp;
+	gp.camPos = pCam->GetPosition();
+	gp.camRot = cVector3f(pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
+	gp.bodyMatrix = mpCurrentBody->GetLocalMatrix();
+	gp.bodyPos = mpCurrentBody->GetLocalPosition();
+	gp.bodyAngVel = mpCurrentBody->GetAngularVelocity();
+	gp.inertia = mpCurrentBody->GetInertiaMatrix();
+	gp.bodyRot = m_mtxBodyRotation;
+	gp.localOffset = mvLocalBodyOffset;
+	gp.posOffset = mpGrabData->mvGrabPositionOffset;
+	gp.depth = mfDepth;
+	gp.maxDistance = mfMaxDistance;
+	gp.useOffset = mpGrabData->mbGrabUseOffset;
+	gp.useRotation = mpGrabData->mbUseRotation;
+	gp.massSum = mfMassSum;
+	gp.maxForce = mfMaxForce;
+	gp.maxTorque = mfMaxTorque;
+	gp.maxAngularSpeed = mfMaxAngularSpeed;
+	gp.forceMul = mpGrabData->mfForceMul;
+	gp.torqueMul = mpGrabData->mfTorqueMul;
+	OhplGa2bGrabPostOut go;
+	ohpl_ga2b_grab_post(&gp, &mForcePid, &mSpeedTorquePid, afTimeStep, &go);
+
+	if(go.status == kOhplGa2bGrabTooFar)
 	{
-		mpPlayer->ChangeState(mPreviousState);	
+		mpPlayer->ChangeState(mPreviousState);
 		return;
 	}
-	
-	/////////////////////////////////////
-	// Get the final body transform
 
-	// Camera rotation
-	cVector3f vCamRotation( pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
-	cMatrixf mtxCamTransform = cMath::MatrixRotate(vCamRotation, eEulerRotationOrder_XYZ);
-	mtxCamTransform.SetTranslation(pCam->GetPosition());
+	mpCurrentBody->AddForce(go.force);
+	if(go.status != kOhplGa2bGrabForceTorque) return;
 
-
-	// The base postion
-	cVector3f vBasePos;
-	if(mpGrabData->mbGrabUseOffset)
-	{
-		vBasePos = mpGrabData->mvGrabPositionOffset + cVector3f(0,0,-mfDepth);
-	}
-	else
-	{
-		vBasePos = cVector3f(0,0,-mfDepth) + mvLocalBodyOffset;
-	}
-	
-	//The final body matrix.
-	cMatrixf mtxGoal = cMath::MatrixMul(cMath::MatrixTranslate(vBasePos), m_mtxBodyRotation);
-	mtxGoal = cMath::MatrixMul(mtxCamTransform,mtxGoal);
-	
-	///////////////////////
-	//Force
-	cVector3f vWantedPos = mtxGoal.GetTranslation();
-	cVector3f vError = vWantedPos - mpCurrentBody->GetLocalPosition();
-
-	cVector3f vForce = mForcePid.Output(vError, afTimeStep) * mfMassSum;
-	
-	//Make sure force is not too large
-	vForce = cMath::Vector3MaxLength(vForce, mfMaxForce);
-
-	mpCurrentBody->AddForce(vForce * mpGrabData->mfForceMul);
-
-
-	if(mpGrabData->mbUseRotation==false) return;
-	/////////////////////////
-	// Get the wanted speed
-	cVector3f vWantedRotSpeed=0;
-	
-	cMatrixf mtxGoalInv = cMath::MatrixInverse(mtxGoal);
-	
-	cVector3f vWantedUp = mtxGoalInv.GetUp();
-	cVector3f vWantedRight = mtxGoalInv.GetRight();
-
-	cMatrixf mtxBodyInv = cMath::MatrixInverse(mpCurrentBody->GetLocalMatrix());
-	cVector3f vUp = mtxBodyInv.GetUp();
-	cVector3f vRight = mtxBodyInv.GetRight();
-
-	//Up alignment
-	cVector3f vRotateAxis = cMath::Vector3Cross(vUp,vWantedUp);
-
-	float fError = cMath::Vector3Angle(vWantedUp,vUp);
-	vWantedRotSpeed += vRotateAxis * fError * 100;
-
-	//Right alignment
-	vRotateAxis = cMath::Vector3Cross(vRight,vWantedRight);
-
-	fError = cMath::Vector3Angle(vWantedRight,vRight);
-	vWantedRotSpeed += vRotateAxis * fError *100;
-
-	//Make sure wanted speed is not too large
-	float fSpeed = vWantedRotSpeed.Length();
-	if(fSpeed > mfMaxAngularSpeed)
-	{
-		vWantedRotSpeed = (vWantedRotSpeed / fSpeed) * 6.0f;
-	}
-	
-	/////////////////////////
-	// Set speed by torque
-	cVector3f vRotError = vWantedRotSpeed - mpCurrentBody->GetAngularVelocity();
-		
-	cVector3f vTorque =  mSpeedTorquePid.Output(vRotError,afTimeStep);
-	vTorque = cMath::MatrixMul(mpCurrentBody->GetInertiaMatrix(), vTorque);
-
-	//Make sure force is not too large
-	vTorque = cMath::Vector3MaxLength(vTorque, mfMaxTorque);
-	
-	mpCurrentBody->AddTorque(vTorque * mpGrabData->mfTorqueMul);
+	mpCurrentBody->AddTorque(go.torque);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_InteractGrab::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	////////////////////////////
-	// Interact
-	if(aAction == eLuxPlayerAction_Interact)
+	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
+	if(lKind == 1)
 	{
-		// Pressed
-		if(abPressed==false)
+		for(size_t i=0; i<mvBodyProperties.size(); ++i)
 		{
-			///////////////////////
-			//Limit the body speed
-			for(size_t i=0; i<mvBodyProperties.size(); ++i)
-			{
-				iPhysicsBody *pBody = mvBodyProperties[i].mpBody;
+			iPhysicsBody *pBody = mvBodyProperties[i].mpBody;
+			cVector3f vNew;
 
-				float fLinearSpeed = pBody->GetLinearVelocity().Length();
-				if(fLinearSpeed > mfMaxLeaveLinearSpeed)
-					pBody->SetLinearVelocity( (pBody->GetLinearVelocity()/fLinearSpeed)*mfMaxLeaveLinearSpeed );
+			cVector3f vLinear = pBody->GetLinearVelocity();
+			if(ohpl_ga2b_leave_limit(&vLinear, mfMaxLeaveLinearSpeed, &vNew)) pBody->SetLinearVelocity(vNew);
 
-				float fAngularSpeed = pBody->GetAngularVelocity().Length();
-				if(fAngularSpeed > mfMaxLeaveAngularSpeed)
-					pBody->SetAngularVelocity( (pBody->GetAngularVelocity()/fAngularSpeed)*mfMaxLeaveAngularSpeed );
-			}
-
-			///////////////////////
-			//Change state
-			mpPlayer->ChangeState(mPreviousState);
-
-			return false;
+			cVector3f vAngular = pBody->GetAngularVelocity();
+			if(ohpl_ga2b_leave_limit(&vAngular, mfMaxLeaveAngularSpeed, &vNew)) pBody->SetAngularVelocity(vNew);
 		}
+
+		mpPlayer->ChangeState(mPreviousState);
+		return false;
 	}
-	////////////////////////////
-	// Attack
-	else if(aAction == eLuxPlayerAction_Attack)
+	else if(lKind == 2)
 	{
-		// Pressed
-		if(abPressed)
-		{
-			/////////////////////////////////////
-			// Set the body position as right in front of camera
-			cCamera *pCam = mpPlayer->GetCamera();
-			cVector3f vCamRotation( pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
-			cMatrixf mtxCamTransform = cMath::MatrixRotate(vCamRotation, eEulerRotationOrder_XYZ);
-			mtxCamTransform.SetTranslation(pCam->GetPosition());
+		cCamera *pCam = mpPlayer->GetCamera();
 
-			/*cVector3f vBasePos = cVector3f(0,0,-mfDepth);
-			m_mtxFinalTransform = cMath::MatrixMul(cMath::MatrixTranslate(vBasePos), m_mtxBodyRotation);
-			m_mtxFinalTransform = cMath::MatrixMul(mtxCamTransform,m_mtxFinalTransform);
+		mpCurrentBody->SetLinearVelocity(0);
+		mpCurrentBody->SetAngularVelocity(0);
+		mpCurrentBody->AddImpulse(pCam->GetForward() * mpGrabData->mfGrabThrowImpulse);
 
-			mpCurrentBody->SetMatrix(m_mtxFinalTransform);*/
-
-			/////////////////////////////////////
-			// Add the impulse and reset speed
-			mpCurrentBody->SetLinearVelocity(0);
-			mpCurrentBody->SetAngularVelocity(0);
-			mpCurrentBody->AddImpulse(pCam->GetForward() * mpGrabData->mfGrabThrowImpulse);
-
-			mpPlayer->ChangeState(mPreviousState);
-
-			return false;
-		}
+		mpPlayer->ChangeState(mPreviousState);
+		return false;
 	}
-	
+
 	return true;
 }
 
@@ -451,9 +326,7 @@ bool cLuxPlayerState_InteractGrab::OnDoAction(eLuxPlayerAction aAction,bool abPr
 
 void cLuxPlayerState_InteractGrab::OnScroll(float afAmount)
 {
-	mfDepth += afAmount * mpGrabData->mfGrabDepthInc;
-	if(mfDepth < mpGrabData->mfGrabMinDepth) mfDepth = mpGrabData->mfGrabMinDepth;
-	if(mfDepth >mpGrabData-> mfGrabMaxDepth) mfDepth = mpGrabData->mfGrabMaxDepth;
+	mfDepth = ohpl_ga2b_grab_scroll(mfDepth, afAmount, mpGrabData->mfGrabDepthInc, mpGrabData->mfGrabMinDepth, mpGrabData->mfGrabMaxDepth);
 }
 
 //-----------------------------------------------------------------------
@@ -463,7 +336,9 @@ bool cLuxPlayerState_InteractGrab::OnAddYaw(float afAmount)
 	cInput* pInput = gpBase->mpEngine->GetInput();
 	if(pInput->IsTriggerd(eLuxAction_Rotate) && mpGrabData->mbUseRotation)
 	{
-		m_mtxBodyRotation = cMath::MatrixMul(cMath::MatrixRotateY(afAmount * -3.2f),m_mtxBodyRotation);
+		cMatrixf mtxRot;
+		ohpl_ga2b_grab_rotate(&m_mtxBodyRotation, false, afAmount, &mtxRot);
+		m_mtxBodyRotation = mtxRot;
 		return false;
 	}
 
@@ -497,7 +372,9 @@ bool cLuxPlayerState_InteractGrab::OnAddPitch(float afAmount)
 #else
 		if(gpBase->mpInputHandler->GetInvertMouse()) afAmount = -afAmount;
 #endif
-		m_mtxBodyRotation = cMath::MatrixMul(cMath::MatrixRotateX(afAmount * -3.2f),m_mtxBodyRotation);
+		cMatrixf mtxRot;
+		ohpl_ga2b_grab_rotate(&m_mtxBodyRotation, true, afAmount, &mtxRot);
+		m_mtxBodyRotation = mtxRot;
 		return false;
 	}
 

@@ -40,10 +40,7 @@ iLuxPlayerState_InteractRotateBase::iLuxPlayerState_InteractRotateBase(cLuxPlaye
 	mfMaxTorque = gpBase->mpGameCfg->GetFloat("Player_Interaction","MoveMaxForce", 1000.0f);
 
 
-	mRotatePid.SetErrorNum(10);
-	mRotatePid.p = 10.0f;
-	mRotatePid.i = 0.0f;
-	mRotatePid.d = 1.0f;
+	ohpl_ga2b_pid_init(&mRotatePid, 10, 10.0f, 0.0f, 1.0f);
 }
 
 //-----------------------------------------------------------------------
@@ -80,7 +77,7 @@ void iLuxPlayerState_InteractRotateBase::OnEnterState(eLuxPlayerState aPrevState
 	
 	/////////////////////////////////
 	//Reset data
-	mRotatePid.Reset();
+	ohpl_ga2b_pid_reset(&mRotatePid);
 	mfRotSpeed =0;
 	mvMouseAdd =0;
 
@@ -100,10 +97,10 @@ void iLuxPlayerState_InteractRotateBase::OnEnterState(eLuxPlayerState aPrevState
 	/////////////////////////////////
 	//Get Max distance
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-	mfMaxDistance = cMath::Vector3Dist(pCharBody->GetFeetPosition(), mpCurrentJoint->GetPivotPoint());
-	mfMaxDistance = mfMaxDistance * 1.2f + 0.5f;
+	cVector3f vFeet = pCharBody->GetFeetPosition();
+	cVector3f vPivot = mpCurrentJoint->GetPivotPoint();
+	mfMaxDistance = ohpl_ga2b_rotate_max_distance(&vFeet, &vPivot);
 
-	/////////////////////////////////
 	//Callback
 	EnterRotateBase(aPrevState);
 }
@@ -205,69 +202,34 @@ void iLuxPlayerState_InteractRotateBase::SetupForceAxes()
 
 void iLuxPlayerState_InteractRotateBase::Update(float afTimeStep)
 {
-	//////////////////////////////
-	//Update move add
-	
 	if(gpBase->mpInputHandler->GetSmoothMouse()==false)
 		mvMouseAdd = gpBase->mpInputHandler->GetSmoothMousePos(mvMouseAdd);
 
-	//////////////////////////////
-	//Set up variables
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 	cCamera *pCam = mpPlayer->GetCamera();
 	iPhysicsJointHinge *pHingeJoint = static_cast<iPhysicsJointHinge*>(mpCurrentJoint);
-	
-	//////////////////////////////
-	//Check if out of range
-	float fDistance = cMath::Vector3Dist(pCharBody->GetFeetPosition(), mpCurrentJoint->GetPivotPoint());
-	if(fDistance > mfMaxDistance)
+
+	cVector3f vFeet = pCharBody->GetFeetPosition();
+	cVector3f vPivot = mpCurrentJoint->GetPivotPoint();
+	if(ohpl_ga2b_rotate_far(&vFeet, &vPivot, mfMaxDistance))
 	{
 		mpPlayer->ChangeState(mPreviousState);
 	}
 
-	
-	///////////////////////////////////
-	//Slow down the speed based on the current speed
-	float fSlowDownSpeed = cMath::Abs(mfRotSpeed) * mpMoveBaseData->mfMoveSlowDownFactor;
-	if(mfRotSpeed > 0) 
-	{
-		mfRotSpeed -= afTimeStep * fSlowDownSpeed;
-		if(mfRotSpeed < 0) mfRotSpeed = 0;
-	}
-	if(mfRotSpeed < 0) 
-	{
-		mfRotSpeed += afTimeStep * fSlowDownSpeed;
-		if(mfRotSpeed > 0) mfRotSpeed = 0;
-	}
-	
-	if(mvMouseAdd == 0)
-	{
-		mfRotSpeed = 0;
-	}
-	
-	///////////////////////////////////
-	//Get vectors and get move speed
+	ohpl_ga2b_rotate_slow(&mfRotSpeed, &mvMouseAdd, mpMoveBaseData->mfMoveSlowDownFactor, afTimeStep);
+
 	float fSpeedAdd = GetSpeedAdd(pCam);
 
-	///////////////////////////////////
-	//Change the speed and cap it o max if needed
-	
-	mfRotSpeed +=  fSpeedAdd * 3000.0f * mpMoveBaseData->mfMoveSpeedFactor * afTimeStep;	
-	if(mfRotSpeed > mpMoveBaseData->mfMoveMaxSpeed)	mfRotSpeed = mpMoveBaseData->mfMoveMaxSpeed;
-	if(mfRotSpeed < -mpMoveBaseData->mfMoveMaxSpeed)	mfRotSpeed = -mpMoveBaseData->mfMoveMaxSpeed;
-
-	///////////////////////////////////
-	//Calculate torque
-	cVector3f vRotateDir = mpCurrentJoint->GetPinDir();
-	cVector3f vBodyVel = mpCurrentBody->GetAngularVelocity();
-	cVector3f vHingeVel = vRotateDir * cMath::Vector3Dot(vRotateDir, vBodyVel);
-	cVector3f vWantedVel = vRotateDir * mfRotSpeed;
-
-	cVector3f vTorque = mRotatePid.Output(vWantedVel - vHingeVel, afTimeStep);
-	vTorque = cMath::MatrixMul(mpCurrentBody->GetInertiaMatrix(), vTorque);
-	
-	vTorque = cMath::Vector3MaxLength(vTorque, mfMaxTorque);
-		
+	OhplGa2bRotateTorqueIn ti;
+	ti.pin = mpCurrentJoint->GetPinDir();
+	ti.angVel = mpCurrentBody->GetAngularVelocity();
+	ti.inertia = mpCurrentBody->GetInertiaMatrix();
+	ti.speedAdd = fSpeedAdd;
+	ti.speedFactor = mpMoveBaseData->mfMoveSpeedFactor;
+	ti.maxSpeed = mpMoveBaseData->mfMoveMaxSpeed;
+	ti.maxTorque = mfMaxTorque;
+	cVector3f vTorque;
+	ohpl_ga2b_rotate_torque(&ti, &mfRotSpeed, &mRotatePid, afTimeStep, &vTorque);
 	mpCurrentBody->AddTorque(vTorque);
 
 	mvLastMouseAdd = mvMouseAdd;
@@ -282,31 +244,17 @@ void iLuxPlayerState_InteractRotateBase::PostUpdate(float afTimeStep)
 
 bool iLuxPlayerState_InteractRotateBase::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	////////////////////////////
-	// Interact
-	if(aAction == eLuxPlayerAction_Interact)
+	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
+	if(lKind == 1)
 	{
-		// Released
-		if(abPressed==false)
-		{
-			mpPlayer->ChangeState(mPreviousState);
-
-			return false;
-		}
+		mpPlayer->ChangeState(mPreviousState);
+		return false;
 	}
-	////////////////////////////
-	// Attack
-	else if(aAction == eLuxPlayerAction_Attack)
+	else if(lKind == 2)
 	{
-		//Pressed
-		if(abPressed)
-		{
-			OnThrow();
-
-			mpPlayer->ChangeState(mPreviousState);	
-
-			return false;
-		}		
+		OnThrow();
+		mpPlayer->ChangeState(mPreviousState);
+		return false;
 	}
 
 	return true;
@@ -323,9 +271,7 @@ void iLuxPlayerState_InteractRotateBase::OnScroll(float afAmount)
 
 bool iLuxPlayerState_InteractRotateBase::OnMove(eCharDir aDir, float afMul)
 {
-	if(aDir == eCharDir_Forward)	mvMouseAdd.y += afMul * mfMoveToMouseAddFactor;
-	else							mvMouseAdd.x += afMul * -mfMoveToMouseAddFactor;
-
+	ohpl_ga2b_move_to_mouse(aDir == eCharDir_Forward, afMul, mfMoveToMouseAddFactor, &mvMouseAdd);
 	return true;
 }
 

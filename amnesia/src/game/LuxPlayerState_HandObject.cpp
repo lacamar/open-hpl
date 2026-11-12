@@ -54,21 +54,11 @@ cLuxPlayerState_HandObject::~cLuxPlayerState_HandObject()
 
 bool cLuxPlayerState_HandObject::ImplementedDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	////////////////////
-	// Holster 
-	if(aAction == eLuxPlayerAction_Holster && abPressed)
-	{
-		mpPlayer->ChangeState(eLuxPlayerState_Normal);
-		return false;
-	}
-	////////////////////
-	// Attack
-	if(aAction == eLuxPlayerAction_Attack)
-	{
-		mpPlayer->GetHands()->DoAction(aAction, abPressed);
-		return false;
-	}
-	return true;
+	OhplGa2bAction a;
+	ohpl_ga2b_action(1, OhplGa2bActOf(aAction), abPressed, &a);
+	if(a.change == kOhplGa2bPsNormal) mpPlayer->ChangeState(eLuxPlayerState_Normal);
+	if(a.forwardToHands) mpPlayer->GetHands()->DoAction(aAction, abPressed);
+	return a.pass;
 }
 
 //-----------------------------------------------------------------------
@@ -84,10 +74,12 @@ void cLuxPlayerState_HandObject::ImplementedOnEnterState(eLuxPlayerState aPrevSt
 
 void cLuxPlayerState_HandObject::ImplementedOnLeaveState(eLuxPlayerState aNewState)
 {
-	//TODO: More states here?
-	if(	aNewState == eLuxPlayerState_Normal || 
-		aNewState == eLuxPlayerState_InteractPush || 
-		aNewState == eLuxPlayerState_InteractGrab)
+	int lNew = kOhplGa2bPsOther;
+	if(aNewState == eLuxPlayerState_Normal) lNew = kOhplGa2bPsNormal;
+	else if(aNewState == eLuxPlayerState_InteractPush) lNew = kOhplGa2bPsPush;
+	else if(aNewState == eLuxPlayerState_InteractGrab) lNew = kOhplGa2bPsGrab;
+
+	if(ohpl_ga2b_hand_object_hides(lNew))
 	{
 		mpPlayer->SetCurrentHandObjectDrawn(false);
 	}

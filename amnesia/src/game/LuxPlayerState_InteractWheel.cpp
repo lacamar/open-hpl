@@ -111,82 +111,12 @@ void cLuxPlayerState_InteractWheel::LeaveRotateBase(eLuxPlayerState aNewState)
 float cLuxPlayerState_InteractWheel::GetSpeedAdd(cCamera *apCam)
 {
 	mlstMoveAdds.push_back(mvMouseAdd);
+	if(ohpl_ga2b_wheel_pop(mlstMoveAdds.size())) mlstMoveAdds.pop_front();
 
-	size_t lMaxMoveAdds = 10;
-	if(mlstMoveAdds.size() > lMaxMoveAdds) mlstMoveAdds.pop_front();
-
-	if(mlstMoveAdds.size() < 4) return 0;
-
-	///////////////////////////////
-	//Calculate the tangents
-	cVector2f vPrevPos =0;
-	bool bFirst = true;
-	float fProperPosCount =0;
-
-	cVector3f vTanCenterVec[2]={0,0};
-	
-	//Iterate the latest 10 moveadds, get tanget (both dirs) and for each tangent dir calculate
-	//prev_pos + tan and add to that tan center vec accu,
-	for(std::list<cVector2f>::iterator it = mlstMoveAdds.begin(); it != mlstMoveAdds.end(); ++it)
-	{
-		cVector2f vNormalPos = *it;
-		vNormalPos.Normalize();
-
-		if(bFirst)
-		{
-			bFirst = false;
-			vPrevPos = vNormalPos;
-			continue;
-		}
-
-        cVector2f vDiff = vNormalPos - vPrevPos;
-		if(vDiff.Length() < 0.00001f) continue;
-
-		cVector2f vTangent[2] = { cVector2f(vDiff.y, -vDiff.x), cVector2f(-vDiff.y, vDiff.x) };
-		for(int i=0; i<2; ++i)
-		{
-			cVector2f vTan = vTangent[i];
-			vTan.Normalize();
-
-			vTanCenterVec[i] += vPrevPos + vTan;
-		}
-
-		fProperPosCount += 1;
-	}
-	
-	//The the median tan center vec
-	float fTanCenterDist[2]={0,0};
-	for(int i=0; i<2; ++i)
-	{
-		fTanCenterDist[i] = (vTanCenterVec[i] / fProperPosCount).Length();	
-	}
-
-	//Get the direction of the rotation and also make sure there is some rotation going on.
-    float fDirMul = 1;
-	float fMinDist = fTanCenterDist[1];
-	if(fTanCenterDist[0] < fTanCenterDist[1]){
-		fDirMul = -1;
-		fMinDist = fTanCenterDist[0];
-	}
-
-	//If too far from center, there is no real rotation made, so skip the movement.
-    if(fMinDist > 0.75f) return 0;
-	
-	///////////////////////////////
-	//Get the rotate direction based on the pin.
-	cCamera *pCam = mpPlayer->GetCamera();
-	
-	cVector3f vFwd = pCam->GetForward();
+	std::vector<cVector2f> vHistory(mlstMoveAdds.begin(), mlstMoveAdds.end());
 	cVector3f vPinDir = mpCurrentJoint->GetPinDir();
-	
-	if(cMath::Vector3Dot(vPinDir, vFwd) < 0) fDirMul = -fDirMul;
-
-
-	///////////////////////////////
-	//Calculate the speed
-	float fLength = mvMouseAdd.Length();
-	
-	return fDirMul *fLength* 1.0f;
+	cVector3f vFwd = mpPlayer->GetCamera()->GetForward();
+	return ohpl_ga2b_wheel_speed_add(vHistory.data(), vHistory.size(), &mvMouseAdd, &vPinDir, &vFwd);
 }
 
 //-----------------------------------------------------------------------
