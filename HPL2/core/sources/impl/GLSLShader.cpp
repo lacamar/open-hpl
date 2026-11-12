@@ -19,6 +19,8 @@
 
 #include "impl/GLSLShader.h"
 #include "impl/RustGl.h"
+#include "impl/RustBackends.h"
+
 #include "system/EngineDiagnostics.h"
 #include "impl/SDLTexture.h"
 #include "impl/LowLevelGraphicsSDL.h"
@@ -46,12 +48,17 @@ namespace hpl{
 
 		mpLowLevelGraphics = apLowLevelGraphics;
 		
-		mlHandle = glCreateShader(GetGLShaderType(aType));
+		mlRs = OhplBackendRustRequested() ? ohpl_glsh_new(aType, &mlHandle) : 0;
+		if(mlRs == 0) mlHandle = glCreateShader(GetGLShaderType(aType));
 	}
 
 	cGLSLShader::~cGLSLShader()
 	{
-		;
+		if(mlRs)
+		{
+			ohpl_glsh_free(mlRs);
+			return;
+		}
 
 		glDeleteShader(mlHandle);
 	}
@@ -120,13 +127,24 @@ namespace hpl{
 				[](void *apOut, const unsigned char *apData, size_t alLen){ static_cast<tString*>(apOut)->append((const char*)apData, alLen); }, &sPath);
 			if(FILE *pFile = fopen(sPath.c_str(), "wb")) { fputs(apStringData, pFile); fclose(pFile); }
 		}
+		GLint lStatus;
+		if(mlRs)
+		{
+			tString sInfoLog;
+			lStatus = ohpl_glsh_compile(mlRs, apStringData) ? GL_TRUE : GL_FALSE;
+			size_t lLogLen = 0;
+			const unsigned char *pLog = ohpl_glsh_log(mlRs, &lLogLen);
+			if(lLogLen) sInfoLog.assign((const char*)pLog, lLogLen);
+			cEngineDiagnostics::ReportShader(msName, "compile", lStatus != GL_FALSE, sInfoLog);
+		}
+		else
+		{
 		glShaderSource(mlHandle, 1, &apStringData, NULL);
 
 		glCompileShader(mlHandle);
 
 		///////////////////////////////////////
 		//Check for errors.
-		GLint lStatus;
 		glGetShaderiv(mlHandle,GL_COMPILE_STATUS,&lStatus);
 		{
 			tString sInfoLog;
@@ -138,6 +156,7 @@ namespace hpl{
 				glGetShaderInfoLog(mlHandle, lLogLen, NULL, &sInfoLog[0]);
 			}
 			cEngineDiagnostics::ReportShader(msName, "compile", lStatus != GL_FALSE, sInfoLog);
+		}
 		}
 		if(lStatus == GL_FALSE)
 		{
@@ -183,6 +202,19 @@ namespace hpl{
 
 	void cGLSLShader::LogShaderInfoLog()
 	{
+		if(mlRs)
+		{
+			size_t lLen = 0;
+			const unsigned char *pLog = ohpl_glsh_dump_log(mlRs, &lLen);
+			if(pLog)
+			{
+				Log("---------------------\n");
+				Log("%s\n",(const char*)pLog);
+				Log("---------------------\n");
+			}
+			return;
+		}
+
 		;
 
 		GLint infologLength = 0;

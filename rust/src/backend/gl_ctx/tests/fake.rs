@@ -18,6 +18,35 @@ thread_local! {
     pub static SHADERS: Cell<u32> = const { Cell::new(0) };
     pub static PROGRAMS: Cell<u32> = const { Cell::new(0) };
     pub static WIN: Cell<(i32, i32)> = const { Cell::new((0, 0)) };
+    pub static ERRORS: Cell<i32> = const { Cell::new(0) };
+    pub static FAIL_COMPILE: Cell<i32> = const { Cell::new(0) };
+    pub static FAIL_LINK: Cell<i32> = const { Cell::new(0) };
+    pub static FB_STATUS: Cell<u32> = const { Cell::new(0x8CD5) };
+}
+
+/// `glGetShaderiv` / `glGetProgramiv` of the fake: a failing status counts down, log length is fixed.
+pub fn status_param(
+    fail: &'static LocalKey<Cell<i32>>,
+    pname: u32,
+    status: u32,
+    len: u32,
+    len_value: i32,
+    extra: Option<(u32, i32)>,
+) -> i32 {
+    if pname == status {
+        fail.with(|f| {
+            if f.get() > 0 {
+                f.set(f.get() - 1);
+                0
+            } else {
+                1
+            }
+        })
+    } else if pname == len {
+        len_value
+    } else {
+        extra.filter(|(p, _)| *p == pname).map_or(1, |(_, v)| v)
+    }
 }
 
 const FULL: &str = "GL_ARB_multitexture GL_ARB_vertex_buffer_object GL_EXT_stencil_two_side GL_EXT_texture_filter_anisotropic GL_ARB_multisample GL_ARB_texture_compression GL_EXT_texture_compression_s3tc GL_SGIS_generate_mipmap GL_EXT_framebuffer_object GL_EXT_packed_depth_stencil GL_ARB_texture_float GL_ARB_fragment_program GL_ARB_fragment_shader GL_EXT_gpu_shader4 GL_EXT_blend_func_separate GL_ARB_occlusion_query GL_ARB_texture_rectangle GL_ARB_shading_language_100";
@@ -30,7 +59,15 @@ pub fn reset(set: &str) {
         k.with(|c| c.set(0));
     }
     WIN.with(|w| w.set((0, 0)));
-    let ext = if set == "B" { LIMITED } else { FULL };
+    ERRORS.with(|c| c.set(0));
+    FAIL_COMPILE.with(|c| c.set(0));
+    FAIL_LINK.with(|c| c.set(0));
+    FB_STATUS.with(|c| c.set(0x8CD5));
+    let ext = match set {
+        "B" => LIMITED.to_string(),
+        "C" => format!("{FULL} GL_EXT_secondary_color"),
+        _ => FULL.to_string(),
+    };
     EXT.with(|e| *e.borrow_mut() = CString::new(ext).unwrap_or_default());
 }
 
@@ -145,6 +182,86 @@ pub unsafe extern "C" fn SDL_GL_GetProcAddress(name: *const c_char) -> *mut c_vo
     } else {
         core::ptr::null_mut()
     }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn gluScaleImage(
+    format: u32,
+    w_in: i32,
+    h_in: i32,
+    type_in: u32,
+    data_in: *const c_void,
+    w_out: i32,
+    h_out: i32,
+    type_out: u32,
+    data_out: *mut c_void,
+) -> i32 {
+    rec(
+        "gluScaleImage",
+        &[
+            format.fmt_arg(),
+            w_in.fmt_arg(),
+            h_in.fmt_arg(),
+            type_in.fmt_arg(),
+            data_in.fmt_arg(),
+            w_out.fmt_arg(),
+            h_out.fmt_arg(),
+            type_out.fmt_arg(),
+            data_out.fmt_arg(),
+        ],
+        "",
+    );
+    0
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn gluBuild1DMipmaps(
+    target: u32,
+    internal: i32,
+    width: i32,
+    format: u32,
+    type_: u32,
+    data: *const c_void,
+) -> i32 {
+    rec(
+        "gluBuild1DMipmaps",
+        &[
+            target.fmt_arg(),
+            internal.fmt_arg(),
+            width.fmt_arg(),
+            format.fmt_arg(),
+            type_.fmt_arg(),
+            data.fmt_arg(),
+        ],
+        "",
+    );
+    0
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn gluBuild2DMipmaps(
+    target: u32,
+    internal: i32,
+    width: i32,
+    height: i32,
+    format: u32,
+    type_: u32,
+    data: *const c_void,
+) -> i32 {
+    rec(
+        "gluBuild2DMipmaps",
+        &[
+            target.fmt_arg(),
+            internal.fmt_arg(),
+            width.fmt_arg(),
+            height.fmt_arg(),
+            format.fmt_arg(),
+            type_.fmt_arg(),
+            data.fmt_arg(),
+        ],
+        "",
+    );
+    0
 }
 
 #[unsafe(no_mangle)]

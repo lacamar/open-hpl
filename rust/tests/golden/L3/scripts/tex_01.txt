@@ -1,0 +1,23 @@
+tex_new 0 4 0 1 0 2
+tex_bmp 0 28 40 40 4 1 3
+fail errors 0
+tex_time 0 16.0 0
+tex_cmpfunc 0 1
+tex_wrap 0 str 0
+tex_wrap 0 s 1
+tex_filter 0 1
+tex_update 0 1.5
+tex_new 1 4 0 1 0 0
+tex_bmp 1 20 3 48 2 2 4
+fail errors 0
+tex_update 1 0.1
+tex_filter 1 1
+tex_mips 1
+tex_new 2 0 0 1 0 0
+tex_bmp 2 4 8 1 1 1 2
+fail errors 0
+tex_update 2 0.1
+tex_cmpmode 2 1
+tex_free 2
+tex_free 0
+tex_free 1

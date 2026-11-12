@@ -143,7 +143,7 @@ pub unsafe extern "C" fn glBufferDataARB(
 pub unsafe extern "C" fn glCheckFramebufferStatusEXT(target: u32) -> u32 {
     let extra = String::new();
     rec("glCheckFramebufferStatusEXT", &[target.fmt_arg()], &extra);
-    0x8CD5
+    FB_STATUS.with(|s| s.get())
 }
 
 pub unsafe extern "C" fn glClear(mask: u32) {
@@ -660,12 +660,36 @@ pub unsafe extern "C" fn glGetActiveUniform(
         ],
         &extra,
     );
+    let text = format!("u{index}");
+    let n = text
+        .len()
+        .min(usize::try_from(maxLength).unwrap_or(0).saturating_sub(1));
+    for (i, b) in text.bytes().take(n).enumerate() {
+        unsafe { *name.add(i) = b as i8 };
+    }
+    unsafe { *name.add(n) = 0 };
+    if !length.is_null() {
+        unsafe { *length = n as i32 };
+    }
+    if !size.is_null() {
+        unsafe { *size = 1 };
+    }
+    if !type_.is_null() {
+        unsafe { *type_ = [0x8B51, 0x1406, 0x8B5C][(index % 3) as usize] };
+    }
 }
 
 pub unsafe extern "C" fn glGetError() -> u32 {
     let extra = String::new();
     rec("glGetError", &[], &extra);
-    0
+    ERRORS.with(|e| {
+        if e.get() > 0 {
+            e.set(e.get() - 1);
+            if e.get() == 0 { 0x502 } else { 0 }
+        } else {
+            0
+        }
+    })
 }
 
 pub unsafe extern "C" fn glGetFloatv(pname: u32, params: *mut f32) {
@@ -701,6 +725,18 @@ pub unsafe extern "C" fn glGetProgramInfoLog(
         ],
         &extra,
     );
+    let l = b"fake log\n";
+    let mut n = 0usize;
+    while (n as i32) + 1 < bufSize && n < l.len() {
+        unsafe { *infoLog.add(n) = l[n] as i8 };
+        n += 1;
+    }
+    if bufSize > 0 {
+        unsafe { *infoLog.add(n) = 0 };
+    }
+    if !length.is_null() {
+        unsafe { *length = n as i32 };
+    }
 }
 
 pub unsafe extern "C" fn glGetProgramiv(program: u32, pname: u32, param: *mut i32) {
@@ -710,7 +746,7 @@ pub unsafe extern "C" fn glGetProgramiv(program: u32, pname: u32, param: *mut i3
         &[program.fmt_arg(), pname.fmt_arg(), param.fmt_arg()],
         &extra,
     );
-    unsafe { *param = 1 };
+    unsafe { *param = status_param(&FAIL_LINK, pname, 0x8B82, 0x8B84, 12, Some((0x8B86, 3))) };
 }
 
 pub unsafe extern "C" fn glGetQueryObjectivARB(id: u32, pname: u32, params: *mut i32) {
@@ -749,6 +785,18 @@ pub unsafe extern "C" fn glGetShaderInfoLog(
         ],
         &extra,
     );
+    let l = b"fake log\n";
+    let mut n = 0usize;
+    while (n as i32) + 1 < bufSize && n < l.len() {
+        unsafe { *infoLog.add(n) = l[n] as i8 };
+        n += 1;
+    }
+    if bufSize > 0 {
+        unsafe { *infoLog.add(n) = 0 };
+    }
+    if !length.is_null() {
+        unsafe { *length = n as i32 };
+    }
 }
 
 pub unsafe extern "C" fn glGetShaderiv(shader: u32, pname: u32, param: *mut i32) {
@@ -758,7 +806,7 @@ pub unsafe extern "C" fn glGetShaderiv(shader: u32, pname: u32, param: *mut i32)
         &[shader.fmt_arg(), pname.fmt_arg(), param.fmt_arg()],
         &extra,
     );
-    unsafe { *param = 1 };
+    unsafe { *param = status_param(&FAIL_COMPILE, pname, 0x8B81, 0x8B84, 12, None) };
 }
 
 pub unsafe extern "C" fn glGetString(name: u32) -> *const u8 {
@@ -803,6 +851,9 @@ pub unsafe extern "C" fn glGetUniformfv(program: u32, location: i32, params: *mu
         &[program.fmt_arg(), location.fmt_arg(), params.fmt_arg()],
         &extra,
     );
+    for i in 0..16 {
+        unsafe { *params.add(i) = 0.5 * (i as f32 + 1.0) };
+    }
 }
 
 pub unsafe extern "C" fn glGetUniformLocation(program: u32, name: *const i8) -> i32 {
@@ -816,7 +867,11 @@ pub unsafe extern "C" fn glGetUniformLocation(program: u32, name: *const i8) -> 
         &[program.fmt_arg(), name.fmt_arg()],
         &extra,
     );
-    5
+    if unsafe { *name } == b'x' as i8 {
+        -1
+    } else {
+        5
+    }
 }
 
 pub unsafe extern "C" fn glHint(target: u32, mode: u32) {

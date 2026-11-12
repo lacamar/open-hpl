@@ -25,6 +25,22 @@ impl<T> core::fmt::Debug for Handle<T> {
     }
 }
 
+impl<T> Handle<T> {
+    /// Nonzero id for C callers; 0 is never a live handle.
+    pub fn to_bits(self) -> u64 {
+        ((u64::from(self.generation) << 32) | u64::from(self.index)) + 1
+    }
+
+    pub fn from_bits(bits: u64) -> Option<Self> {
+        let v = bits.checked_sub(1)?;
+        Some(Self {
+            index: v as u32,
+            generation: (v >> 32) as u32,
+            _t: PhantomData,
+        })
+    }
+}
+
 struct Slot<T> {
     generation: u32,
     value: Option<T>,
@@ -128,6 +144,15 @@ mod tests {
         assert_eq!(a.get(h1), None);
         assert_eq!(a.get(h2), Some(&'b'));
         assert_eq!(a.remove(h1), None);
+    }
+
+    #[test]
+    fn bits_round_trip_and_zero_is_null() {
+        let mut a = Arena::default();
+        let h = a.insert(1).unwrap();
+        assert_ne!(h.to_bits(), 0);
+        assert_eq!(Handle::from_bits(h.to_bits()), Some(h));
+        assert_eq!(Handle::<i32>::from_bits(0), None);
     }
 
     #[test]

@@ -1,0 +1,126 @@
+ohpl_glctx_get_caps 1 0
+ohpl_glvb_new 0 => H1
+ohpl_glvb_add_element H1 1 0 3 2
+ohpl_glvb_add_element H1 2 0 4 4
+ohpl_glvb_add_element H1 5 0 2 16
+ohpl_glvb_add_element H1 7 0 3 64
+ohpl_glvb_add_element H1 9 0 4 256
+ohpl_glvb_add_element H1 10 0 1 512
+ohpl_glvb_add_element H1 13 2 4 4096
+@range v0e1 48
+@range v0e2 64
+@range v0e5 32
+@range v0e7 48
+@range v0e9 64
+@range v0e10 32
+@range v0e13 16
+@range v0i 12
+ohpl_glvb_add_element H1 4 0 4 32
+@clear
+@range v0e1 48
+@range v0e2 64
+@range v0e5 32
+@range v0e7 48
+@range v0e9 64
+@range v0e10 32
+@range v0e13 16
+@range v0i 12
+@clear
+@range v0e1 48
+@range v0e2 64
+@range v0e5 32
+@range v0e7 48
+@range v0e9 64
+@range v0e10 32
+@range v0e13 16
+@range v0i 12
+@clear
+@range di 256
+ohpl_glvb_draw_indices 5 2 di+0 3
+@clear
+@range v0e1 48
+@range v0e2 64
+@range v0e5 32
+@range v0e7 48
+@range v0e9 64
+@range v0e10 32
+@range v0e13 16
+@range v0i 12
+@clear
+ohpl_glvb_unbind H1
+@range v0e1 96
+@range v0e2 64
+@range v0e5 32
+@range v0e7 48
+@range v0e9 64
+@range v0e10 32
+@range v0e13 16
+@range v0i 12
+@clear
+ohpl_glctx_get_caps 1 0
+ohpl_glvb_new 0 => H2
+ohpl_glvb_add_element H2 1 0 3 2
+ohpl_glvb_add_element H2 2 0 4 4
+ohpl_glvb_add_element H2 5 0 2 16
+ohpl_glvb_add_element H2 7 0 3 64
+ohpl_glvb_add_element H2 9 0 4 256
+ohpl_glvb_add_element H2 10 0 1 512
+ohpl_glvb_add_element H2 13 2 4 4096
+ohpl_glvb_add_element H2 4 0 4 32
+@range v2e1 96
+@range v2e2 64
+@range v2e5 32
+@range v2e7 48
+@range v2e9 64
+@range v2e10 32
+@range v2e13 16
+@range v2i 12
+ohpl_glvb_bind H2 v2e1+0|v2e2+0|v2e5+0|v2e7+0|v2e9+0|v2e10+0|v2e13+0|p
+@clear
+@range v2e1 96
+@range v2e2 64
+@range v2e5 32
+@range v2e7 48
+@range v2e9 64
+@range v2e10 32
+@range v2e13 16
+@range v2i 12
+ohpl_glvb_draw H2 5 0 -1 3 v2i+0
+@clear
+ohpl_glvb_unbind H2
+ohpl_glctx_get_caps 1 0
+ohpl_glvb_new 0 => H3
+ohpl_glvb_add_element H3 1 0 4 2
+ohpl_glvb_add_element H3 0 0 3 1
+ohpl_glvb_add_element H3 6 0 4 32
+ohpl_glvb_add_element H3 8 0 4 128
+@range v1e1 128
+@range v1e0 96
+@range v1e6 128
+@range v1e8 128
+@range v1i 12
+@clear
+@range v1e1 128
+@range v1e0 96
+@range v1e6 128
+@range v1e8 128
+@range v1i 12
+@clear
+@range v1e1 128
+@range v1e0 96
+@range v1e6 128
+@range v1e8 128
+@range v1i 12
+@clear
+@range v1e1 256
+@range v1e0 96
+@range v1e6 128
+@range v1e8 128
+@range v1i 12
+@clear
+@range di 256
+ohpl_glvb_draw_indices 1 5 di+0 3
+@clear
+ohpl_glvb_free H3
+ohpl_glvb_free H1
+ohpl_glvb_free H2

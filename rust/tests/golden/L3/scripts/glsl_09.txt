@@ -1,0 +1,23 @@
+sh_debug 1
+sh_new 0 0
+sh_new 1 1
+fail compile 2
+sh_src 0 3 5 1
+sh_src 1 9 2 1
+prog_new 0
+prog_shader 0 0 0
+prog_shader 0 1 1
+fail link 2
+prog_link 0
+prog_link 0
+prog_var 0 0 uColor
+prog_var 0 1 uMtx
+prog_var 0 2 uArr
+prog_var 0 3 xmissing
+prog_var 0 4 uTex
+prog_var 0 5 uA
+prog_var 0 6 uB
+prog_asid 0 3 uB
+prog_set 0 0 v4 1.0 1.5 0.0 0.5
+prog_var 0 5 uArr
+prog_set 0 5 arr 16.0 1.0 16.0 0.0

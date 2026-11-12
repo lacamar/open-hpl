@@ -1,0 +1,33 @@
+sh_debug 0
+sh_new 0 0
+sh_new 1 1
+fail compile 1
+sh_src 0 17 5 1
+sh_src 1 13 1 0
+sh_sampler 1 uColor 0
+sh_sampler 1 uB 1
+prog_new 0
+prog_shader 0 0 0
+prog_shader 0 1 1
+prog_link 0
+prog_link 0
+prog_var 0 0 uColor
+prog_var 0 1 uMtx
+prog_var 0 2 uArr
+prog_var 0 3 xmissing
+prog_var 0 4 uTex
+prog_var 0 5 uA
+prog_var 0 6 uB
+prog_bind 0
+prog_set 0 2 mtx 3.25 0.0 2.0 0.0
+prog_dump 0
+prog_set 0 3 mtx 16.0 0.5 2.0 16.0
+prog_var 0 6 uTex
+prog_sampler 0 uA 1
+prog_sampler 0 uTex 4
+prog_bind 0
+prog_sampler 0 uTex 4
+prog_asid 0 4 uColor
+prog_free 0
+sh_free 0
+sh_free 1

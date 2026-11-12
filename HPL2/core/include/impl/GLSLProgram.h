@@ -85,6 +85,7 @@ namespace hpl {
 		void LogProgramInfoLog();
 
 		GLuint mlHandle;
+		uint64_t mlRs;
 		static int mlCurrentProgram;
 
 		OhplGlParams *mpParams;

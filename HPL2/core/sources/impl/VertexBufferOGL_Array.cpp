@@ -25,6 +25,7 @@
 
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/GlOps.h"
+#include "impl/RustBackends.h"
 
 #include <GL/glew.h>
 
@@ -41,7 +42,7 @@ namespace hpl {
 										int alReserveVtxSize,int alReserveIdxSize) :
 	iVertexBufferOpenGL(apLowLevelGraphics,eVertexBufferType_Software, aDrawType,aUsageType, alReserveVtxSize, alReserveIdxSize)
 	{
-		
+		mlRs = OhplBackendRustRequested() ? ohpl_glvb_new(false) : 0;
 	}
 
 	cVertexBufferOGL_Array::~cVertexBufferOGL_Array()
@@ -64,6 +65,13 @@ namespace hpl {
 
 	void cVertexBufferOGL_Array::Draw(eVertexBufferDrawType aDrawType)
 	{
+		if(mlRs)
+		{
+			cEngineDiagnostics::CountDrawCall();
+			ohpl_glvb_draw(mlRs, mDrawType, aDrawType, mlElementNum, GetIndexNum(), &mvIndexArray[0]);
+			return;
+		}
+
 		GLenum mode = ohpl_gl_vb_draw_mode(mDrawType, aDrawType);
 
 		int lSize = ohpl_gl_vb_draw_count(mlElementNum, GetIndexNum());
@@ -75,6 +83,13 @@ namespace hpl {
 	void cVertexBufferOGL_Array::DrawIndices(	unsigned int *apIndices, int alCount,
 												eVertexBufferDrawType aDrawType)
 	{
+		if(mlRs)
+		{
+			cEngineDiagnostics::CountDrawCall();
+			ohpl_glvb_draw_indices(mDrawType, aDrawType, apIndices, alCount);
+			return;
+		}
+
 		GLenum mode = ohpl_gl_vb_draw_mode(mDrawType, aDrawType);
 
 		cEngineDiagnostics::CountDrawCall();
@@ -95,6 +110,12 @@ namespace hpl {
 
 	void cVertexBufferOGL_Array::UnBind()
 	{
+		if(mlRs)
+		{
+			ohpl_glvb_unbind(mlRs);
+			return;
+		}
+
 		OhplGlOp vOps[kOhplGlMaxOps];
 		size_t lCount = ohpl_gl_vb_unbind(mvElemDesc, mvElementArrays.size(), vOps);
 		OhplGlOpSources src = {NULL, NULL, NULL};
@@ -126,6 +147,14 @@ namespace hpl {
 
 	void cVertexBufferOGL_Array::SetVertexStates()
 	{
+		if(mlRs)
+		{
+			const void *vRsPtrs[eVertexBufferElement_LastEnum];
+			for(size_t i=0; i<mvElementArrays.size(); ++i) vRsPtrs[i] = mvElementArrays[i]->GetArrayPtr();
+			ohpl_glvb_bind(mlRs, vRsPtrs);
+			return;
+		}
+
 		OhplGlOp vOps[kOhplGlMaxOps];
 		size_t lCount = ohpl_gl_vb_bind_array(mvElemDesc, mvElementArrays.size(), vOps);
 

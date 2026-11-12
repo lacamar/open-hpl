@@ -1,0 +1,111 @@
+ohpl_glsh_new 0 - => H1
+ohpl_glsh_new 1 - => H2
+ohpl_glsh_compile H1 x766f6964206631372829207b7d0d0a7461696c
+ohpl_glsh_log H1 -
+ohpl_glsh_dump_log H1 -
+ohpl_glsh_compile H2 x766f69642066312829207b7d0d0a766f69642066322829207b7d0d0a766f69642066332829207b7d0d0a766f69642066342829207b7d0d0a7461696c
+ohpl_glsh_log H2 -
+ohpl_glsh_dump_log H2 -
+ohpl_glprog_new - => H3
+@fail link 2
+ohpl_glprog_attach H3 101
+ohpl_glprog_attach H3 102
+ohpl_glprog_link H3
+ohpl_glprog_log H3 -
+ohpl_glprog_dump_log H3 -
+ohpl_glprog_attach H3 101
+ohpl_glprog_attach H3 102
+ohpl_glprog_link H3
+ohpl_glprog_log H3 -
+ohpl_glprog_dump_log H3 -
+ohpl_glprog_variable_id H3 x75436f6c6f72 6
+ohpl_glprog_variable_id H3 x754d7478 4
+ohpl_glprog_variable_id H3 x75417272 4
+ohpl_glprog_variable_id H3 x786d697373696e67 8
+ohpl_glprog_variable_id H3 x75546578 4
+ohpl_glprog_variable_id H3 x7541 2
+ohpl_glprog_variable_id H3 x7542 2
+ohpl_glprog_set_int H3 5 1
+ohpl_glprog_unbind
+ohpl_glprog_set_sampler H3 x75546578 4
+ohpl_glprog_set_float H3 0 f3f800000
+ohpl_glprog_set_vec4 H3 -1 f40000000 f00000000 f00000000 f40500000
+ohpl_glprog_set_vec4 H3 -1 f3fc00000 f3f800000 f3fc00000 f40500000
+ohpl_glsh_new 0 - => H4
+ohpl_glsh_new 1 - => H5
+@fail compile 1
+ohpl_glsh_compile H4 x766f6964206631322829207b7d0d0a766f6964206631332829207b7d0d0a766f6964206631342829207b7d0d0a766f6964206631352829207b7d0d0a
+ohpl_glsh_log H4 -
+ohpl_glsh_compile H5 x766f6964206631362829207b7d0d0a
+ohpl_glsh_log H5 -
+ohpl_glsh_dump_log H5 -
+ohpl_glprog_new - => H6
+ohpl_glprog_attach H6 104
+ohpl_glprog_link H6
+ohpl_glprog_log H6 -
+ohpl_glprog_attach H6 104
+ohpl_glprog_link H6
+ohpl_glprog_log H6 -
+ohpl_glprog_variable_id H6 x75436f6c6f72 6
+ohpl_glprog_variable_id H6 x754d7478 4
+ohpl_glprog_variable_id H6 x75417272 4
+ohpl_glprog_variable_id H6 x786d697373696e67 8
+ohpl_glprog_variable_id H6 x75546578 4
+ohpl_glprog_variable_id H6 x7541 2
+ohpl_glprog_variable_id H6 x7542 2
+ohpl_glprog_unbind
+ohpl_glprog_set_vec4 H6 2 f3f000000 f41800000 f41800000 f3fc00000
+ohpl_glprog_variable_id H6 x786d697373696e67 8
+ohpl_glprog_set_float H6 -1 f3fc00000
+ohpl_glprog_set_sampler H6 x786d697373696e67 1
+ohpl_glprog_set_int H6 0 3
+ohpl_glprog_bind H6
+ohpl_glprog_free H6 -1 104
+ohpl_glsh_free H4
+ohpl_glsh_free H5
+ohpl_glsh_new 0 - => H7
+ohpl_glsh_new 1 - => H8
+ohpl_glsh_compile H7 x766f69642066392829207b7d0d0a766f6964206631302829207b7d0d0a766f6964206631312829207b7d0d0a766f6964206631322829207b7d0d0a766f6964206631332829207b7d0d0a7461696c
+ohpl_glsh_log H7 -
+ohpl_glsh_dump_log H7 -
+ohpl_glsh_compile H8 x766f6964206631332829207b7d0d0a766f6964206631342829207b7d0d0a766f6964206631352829207b7d0d0a766f6964206631362829207b7d0d0a7461696c
+ohpl_glsh_log H8 -
+ohpl_glsh_dump_log H8 -
+ohpl_glprog_new - => H9
+@fail link 2
+ohpl_glprog_attach H9 105
+ohpl_glprog_attach H9 106
+ohpl_glprog_link H9
+ohpl_glprog_log H9 -
+ohpl_glprog_dump_log H9 -
+ohpl_glprog_attach H9 105
+ohpl_glprog_attach H9 106
+ohpl_glprog_link H9
+ohpl_glprog_log H9 -
+ohpl_glprog_dump_log H9 -
+ohpl_glprog_variable_id H9 x75436f6c6f72 6
+ohpl_glprog_variable_id H9 x754d7478 4
+ohpl_glprog_variable_id H9 x75417272 4
+ohpl_glprog_variable_id H9 x786d697373696e67 8
+ohpl_glprog_variable_id H9 x75546578 4
+ohpl_glprog_variable_id H9 x7541 2
+ohpl_glprog_variable_id H9 x7542 2
+ohpl_glprog_uniform_count H9
+ohpl_glprog_uniform_at H9 0 - -
+ohpl_glprog_uniform_at H9 1 - -
+ohpl_glprog_uniform_at H9 2 - -
+ohpl_glprog_set_float H9 0 f00000000
+ohpl_glprog_set_float H9 1 f3f000000
+ohpl_glprog_set_sampler H9 x7541 7
+ohpl_glprog_uniform_count H9
+ohpl_glprog_uniform_at H9 0 - -
+ohpl_glprog_uniform_at H9 1 - -
+ohpl_glprog_uniform_at H9 2 - -
+ohpl_glprog_variable_as_id H9 x754d7478 4 4
+ohpl_glprog_bind H9
+ohpl_glprog_free H3 101 102
+ohpl_glprog_free H9 105 106
+ohpl_glsh_free H1
+ohpl_glsh_free H2
+ohpl_glsh_free H7
+ohpl_glsh_free H8

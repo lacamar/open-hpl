@@ -1,0 +1,151 @@
+ohpl_glsh_new 1 - => H1
+ohpl_glsh_compile H1 x766f69642066332829207b7d0d0a766f69642066342829207b7d0d0a7461696c
+ohpl_glsh_log H1 -
+ohpl_glsh_free H1
+ohpl_glctx_get_caps 1 0
+ohpl_glvb_new 0 => H2
+ohpl_glvb_add_element H2 1 0 3 2
+@range v0e1 48
+@range v0i 24
+@clear
+@range v0e1 48
+@range v0i 24
+@clear
+ohpl_gltex_new => H3
+@range raw0 528
+ohpl_gltex_create_raw H3 1,0,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 16,2,1 5 raw0+0
+ohpl_gltex_props_begin H3 1,0,1,0,0,0,0,0,1,5,0,128,16,2,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H3 1,0,1,0,0,0,0,0,1,5,0,128,16,2,1,16,16,16,f3f800000,f3f800000,0,0,0
+ohpl_gltex_create_raw_end H3 1,0,1,0,0,0,0,0,1,5,0,128,16,2,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+ohpl_glsh_new 0 - => H4
+ohpl_glsh_compile H4 x766f69642066332829207b7d0d0a7461696c
+ohpl_glsh_log H4 -
+ohpl_glctx_get_caps 1 0
+ohpl_glvb_new 0 => H5
+ohpl_glvb_add_element H5 1 0 3 2
+@range v1e1 48
+@range v1i 24
+@clear
+@range v1e1 48
+@range v1i 24
+@clear
+ohpl_glsh_new 0 - => H6
+ohpl_glsh_compile H6 x766f69642066332829207b7d0d0a7461696c
+ohpl_glsh_log H6 -
+ohpl_glsh_new 0 - => H7
+ohpl_glsh_compile H7 x766f69642066372829207b7d0d0a766f69642066382829207b7d0d0a7461696c
+ohpl_glsh_log H7 -
+ohpl_glctx_get_caps 1 0
+ohpl_glvb_new 1 => H8
+ohpl_glvb_add_element H8 1 0 3 2
+@range v2e1 48
+@range v2i 24
+ohpl_glvb_compile H8 1 v2e1+0:48 v2i+0 6
+@clear
+@range v2e1 48
+@range v2i 24
+@clear
+ohpl_gltex_new => H9
+@range raw1 784
+ohpl_gltex_create_raw H9 0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,1,0,0 48,1,1 7 raw1+0
+ohpl_gltex_props_begin H9 0,0,1,0,0,0,0,0,1,7,0,376,48,1,1,16,16,16,f3f800000,f3f800000,1,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H9 0,0,1,0,0,0,0,0,1,7,0,376,48,1,1,16,16,16,f3f800000,f3f800000,1,0,0
+ohpl_gltex_create_raw_end H9 0,0,1,0,0,0,0,0,1,7,0,376,48,1,1,16,16,16,f3f800000,f3f800000,1,0,0
+@clear
+ohpl_glctx_get_caps 12 0
+ohpl_gldsb_new 16,16 24 8 - => H10
+ohpl_gltex_free H9
+ohpl_glsh_new 0 - => H11
+ohpl_glsh_compile H11 x766f69642066382829207b7d0d0a766f69642066392829207b7d0d0a
+ohpl_glsh_log H11 -
+ohpl_glsh_free H11
+ohpl_glprog_new - => H12
+ohpl_glprog_link H12
+ohpl_glprog_log H12 -
+ohpl_gldsb_free H10
+ohpl_glctx_get_caps 12 0
+ohpl_glfb_new - => H13
+ohpl_glfb_compile H13 0
+ohpl_glsh_new 0 - => H14
+ohpl_glsh_compile H14 x766f69642066392829207b7d0d0a766f6964206631302829207b7d0d0a7461696c
+ohpl_glsh_log H14 -
+ohpl_glsh_new 0 - => H15
+ohpl_glsh_compile H15 x766f69642066322829207b7d0d0a766f69642066332829207b7d0d0a766f69642066342829207b7d0d0a
+ohpl_glsh_log H15 -
+ohpl_glvb_free H2
+ohpl_glsh_new 1 - => H16
+ohpl_glsh_compile H16 x766f69642066372829207b7d0d0a7461696c
+ohpl_glsh_log H16 -
+ohpl_glvb_free H5
+ohpl_glsh_new 0 - => H17
+ohpl_glsh_compile H17 x766f69642066392829207b7d0d0a766f6964206631302829207b7d0d0a7461696c
+ohpl_glsh_log H17 -
+ohpl_glctx_get_caps 12 0
+ohpl_gldsb_new 16,16 24 8 - => H18
+ohpl_glvb_free H8
+ohpl_glprog_new - => H19
+ohpl_glprog_link H19
+ohpl_glprog_log H19 -
+ohpl_glctx_get_caps 12 0
+ohpl_glfb_new - => H20
+ohpl_glfb_compile H20 0
+ohpl_glctx_get_caps 1 0
+ohpl_glvb_new 0 => H21
+ohpl_glvb_add_element H21 1 0 3 2
+@range v3e1 48
+@range v3i 24
+@clear
+@range v3e1 48
+@range v3i 24
+@clear
+@range v3e1 48
+@range v3i 24
+@clear
+ohpl_glprog_free H19 -1 -1
+ohpl_glctx_get_caps 1 0
+ohpl_glvb_new 0 => H22
+ohpl_glvb_add_element H22 1 0 3 2
+@range v4e1 48
+@range v4i 24
+@clear
+@range v4e1 48
+@range v4i 24
+@clear
+ohpl_glsh_new 1 - => H23
+ohpl_glsh_compile H23 x766f69642066392829207b7d0d0a766f6964206631302829207b7d0d0a7461696c
+ohpl_glsh_log H23 -
+ohpl_glprog_new - => H24
+ohpl_glprog_link H24
+ohpl_glprog_log H24 -
+ohpl_glprog_new - => H25
+ohpl_glprog_link H25
+ohpl_glprog_log H25 -
+ohpl_gltex_new => H26
+@range raw2 3856
+ohpl_gltex_create_raw H26 3,0,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 6,40,1 5 raw2+0
+ohpl_gltex_props_begin H26 3,0,1,0,0,0,0,0,1,5,0,960,6,40,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H26 3,0,1,0,0,0,0,0,1,5,0,960,6,40,1,16,16,16,f3f800000,f3f800000,0,0,0
+ohpl_gltex_create_raw_end H26 3,0,1,0,0,0,0,0,1,5,0,960,6,40,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+ohpl_glprog_free H12 -1 -1
+ohpl_glprog_free H24 -1 -1
+ohpl_glprog_free H25 -1 -1
+ohpl_glsh_free H4
+ohpl_glsh_free H6
+ohpl_glsh_free H7
+ohpl_glsh_free H14
+ohpl_glsh_free H15
+ohpl_glsh_free H16
+ohpl_glsh_free H17
+ohpl_glsh_free H23
+ohpl_glvb_free H21
+ohpl_glvb_free H22
+ohpl_glfb_free H13
+ohpl_glfb_free H20
+ohpl_gldsb_free H18
+ohpl_gltex_free H3
+ohpl_gltex_free H26

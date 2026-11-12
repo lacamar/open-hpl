@@ -1,0 +1,80 @@
+sh_debug 0
+sh_new 0 0
+sh_new 1 1
+fail compile 1
+sh_src 0 2 4 1
+sh_src 1 15 4 0
+prog_new 0
+prog_shader 0 0 0
+prog_shader 0 1 1
+prog_link 0
+prog_link 0
+prog_var 0 0 uColor
+prog_var 0 1 uMtx
+prog_var 0 2 uArr
+prog_var 0 3 xmissing
+prog_var 0 4 uTex
+prog_var 0 5 uA
+prog_var 0 6 uB
+prog_asid 0 6 uMtx
+prog_asid 0 1 uB
+prog_set 0 3 v3 0.0 3.25 1.0 0.0
+prog_set 0 4 arr 1.5 0.5 0.5 2.0
+prog_set 0 2 v2 0.125 3.25 0.125 16.0
+prog_asid 0 6 xmissing
+prog_asid 0 1 uMtx
+prog_free 0
+sh_free 0
+sh_free 1
+sh_new 2 0
+sh_new 3 1
+fail compile 2
+sh_src 2 13 1 0
+sh_src 3 20 2 1
+sh_sampler 3 uMtx 0
+sh_sampler 3 uColor 1
+sh_sampler 3 uTex 2
+prog_new 1
+prog_shader 1 0 2
+prog_shader 1 1 3
+prog_link 1
+prog_link 1
+prog_var 1 0 uColor
+prog_var 1 1 uMtx
+prog_var 1 2 uArr
+prog_var 1 3 xmissing
+prog_var 1 4 uTex
+prog_var 1 5 uA
+prog_var 1 6 uB
+prog_bind 1
+prog_asid 1 0 uTex
+prog_asid 1 3 uA
+prog_free 1
+sh_free 2
+sh_free 3
+sh_new 4 0
+sh_new 5 1
+fail compile 2
+sh_src 4 14 3 0
+sh_src 5 16 5 0
+sh_sampler 5 uArr 0
+sh_sampler 5 uMtx 1
+sh_sampler 5 uColor 2
+prog_new 2
+prog_shader 2 0 4
+prog_shader 2 1 5
+prog_link 2
+prog_link 2
+prog_var 2 0 uColor
+prog_var 2 1 uMtx
+prog_var 2 2 uArr
+prog_var 2 3 xmissing
+prog_var 2 4 uTex
+prog_var 2 5 uA
+prog_var 2 6 uB
+prog_set 2 6 arr 16.0 16.0 16.0 3.25
+prog_asid 2 1 uColor
+prog_sampler 2 uB 0
+prog_free 2
+sh_free 4
+sh_free 5

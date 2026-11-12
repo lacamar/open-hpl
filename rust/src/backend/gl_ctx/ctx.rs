@@ -57,6 +57,15 @@ macro_rules! gl {
     };
 }
 
+macro_rules! gl_of {
+    ($gl:expr, $f:ident($($a:expr),*)) => {
+        if let Some(f) = $gl.$f {
+            // SAFETY: entry point resolved for the current context with its C signature.
+            unsafe { f($($a),*) }
+        }
+    };
+}
+
 macro_rules! sdl_call {
     ($s:expr, $f:ident($($a:expr),*)) => {{
         let _ = &$s;
@@ -271,6 +280,10 @@ impl Ctx {
                 .into_owned()
         };
         self.caps = Caps::from_extensions(&ext, &has_proc);
+        crate::backend::gl_res::set_caps(
+            self.caps.framebuffer_object,
+            self.caps.packed_depth_stencil,
+        );
     }
 
     pub fn debug_from_env(&self) {
@@ -1111,51 +1124,8 @@ impl Ctx {
     /// # Safety
     /// Pointer sources in `src` are valid for the ops' indices; they are only handed to GL.
     pub unsafe fn run_ops(&self, ops: &[Op], src: &Sources) {
-        for op in ops {
-            match op.kind {
-                vbuf::OP_CLIENT_ACTIVE => gl!(self, glClientActiveTextureARB(op.array)),
-                vbuf::OP_ENABLE => gl!(self, glEnableClientState(op.array)),
-                vbuf::OP_DISABLE => gl!(self, glDisableClientState(op.array)),
-                vbuf::OP_BIND_BUFFER => {
-                    gl!(self, glBindBufferARB(g::GL_ARRAY_BUFFER_ARB, op.array))
-                }
-                vbuf::OP_POINTER => {
-                    let idx = op.index as usize;
-                    let ptr: *const c_void = match op.src {
-                        // SAFETY: caller contract on the source arrays.
-                        vbuf::SRC_ELEMENT if !src.element.is_null() => unsafe {
-                            *src.element.add(idx)
-                        },
-                        vbuf::SRC_BATCH_VERTEX => src.batch_vertex.wrapping_add(idx).cast(),
-                        // SAFETY: caller contract on the source arrays.
-                        vbuf::SRC_BATCH_TEXCOORD if !src.batch_texcoord.is_null() => unsafe {
-                            (*src.batch_texcoord.add(idx)).cast_const().cast()
-                        },
-                        _ => core::ptr::null(),
-                    };
-                    self.pointer(op, ptr);
-                }
-                _ => {}
-            }
-        }
-    }
-
-    fn pointer(&self, op: &Op, ptr: *const c_void) {
-        match op.array {
-            g::GL_VERTEX_ARRAY => gl!(self, glVertexPointer(op.size, op.gl_type, op.stride, ptr)),
-            g::GL_COLOR_ARRAY => gl!(self, glColorPointer(op.size, op.gl_type, op.stride, ptr)),
-            g::GL_SECONDARY_COLOR_ARRAY => {
-                gl!(
-                    self,
-                    glSecondaryColorPointerEXT(op.size, op.gl_type, op.stride, ptr)
-                );
-            }
-            g::GL_NORMAL_ARRAY => gl!(self, glNormalPointer(op.gl_type, op.stride, ptr)),
-            g::GL_TEXTURE_COORD_ARRAY => {
-                gl!(self, glTexCoordPointer(op.size, op.gl_type, op.stride, ptr));
-            }
-            _ => {}
-        }
+        // SAFETY: caller contract.
+        unsafe { run_ops_with(self.gl, ops, src) }
     }
 
     /// # Safety
@@ -1198,6 +1168,54 @@ impl Ctx {
             self,
             glDrawElements(mode, index_count, g::GL_UNSIGNED_INT, indices)
         );
+    }
+}
+
+/// Executes plan ops against `gl`; shared by the context and the vertex buffers.
+///
+/// # Safety
+/// Pointer sources in `src` are valid for the ops' indices; they are only handed to GL.
+pub unsafe fn run_ops_with(gl: &GlFns, ops: &[Op], src: &Sources) {
+    for op in ops {
+        match op.kind {
+            vbuf::OP_CLIENT_ACTIVE => gl_of!(gl, glClientActiveTextureARB(op.array)),
+            vbuf::OP_ENABLE => gl_of!(gl, glEnableClientState(op.array)),
+            vbuf::OP_DISABLE => gl_of!(gl, glDisableClientState(op.array)),
+            vbuf::OP_BIND_BUFFER => gl_of!(gl, glBindBufferARB(g::GL_ARRAY_BUFFER_ARB, op.array)),
+            vbuf::OP_POINTER => {
+                let idx = op.index as usize;
+                let ptr: *const c_void = match op.src {
+                    // SAFETY: caller contract on the source arrays.
+                    vbuf::SRC_ELEMENT if !src.element.is_null() => unsafe { *src.element.add(idx) },
+                    vbuf::SRC_BATCH_VERTEX => src.batch_vertex.wrapping_add(idx).cast(),
+                    // SAFETY: caller contract on the source arrays.
+                    vbuf::SRC_BATCH_TEXCOORD if !src.batch_texcoord.is_null() => unsafe {
+                        (*src.batch_texcoord.add(idx)).cast_const().cast()
+                    },
+                    _ => core::ptr::null(),
+                };
+                pointer(gl, op, ptr);
+            }
+            _ => {}
+        }
+    }
+}
+
+fn pointer(gl: &GlFns, op: &Op, ptr: *const c_void) {
+    match op.array {
+        g::GL_VERTEX_ARRAY => gl_of!(gl, glVertexPointer(op.size, op.gl_type, op.stride, ptr)),
+        g::GL_COLOR_ARRAY => gl_of!(gl, glColorPointer(op.size, op.gl_type, op.stride, ptr)),
+        g::GL_SECONDARY_COLOR_ARRAY => {
+            gl_of!(
+                gl,
+                glSecondaryColorPointerEXT(op.size, op.gl_type, op.stride, ptr)
+            );
+        }
+        g::GL_NORMAL_ARRAY => gl_of!(gl, glNormalPointer(op.gl_type, op.stride, ptr)),
+        g::GL_TEXTURE_COORD_ARRAY => {
+            gl_of!(gl, glTexCoordPointer(op.size, op.gl_type, op.stride, ptr));
+        }
+        _ => {}
     }
 }
 

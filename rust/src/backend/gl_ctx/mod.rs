@@ -7,4 +7,4 @@ pub mod ctx;
 pub mod ffi;
 pub mod oq;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

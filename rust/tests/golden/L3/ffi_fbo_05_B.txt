@@ -1,0 +1,49 @@
+ohpl_gltex_new => H1
+@range raw0 1040
+ohpl_gltex_create_raw H1 3,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 2,32,1 16 raw0+0
+ohpl_gltex_props_begin H1 3,1,1,0,0,0,0,0,1,16,0,256,2,32,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H1 3,1,1,0,0,0,0,0,1,16,0,256,2,32,1,16,16,16,f3f800000,f3f800000,0,0,0
+ohpl_gltex_create_raw_end H1 3,1,1,0,0,0,0,0,1,16,0,256,2,32,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+ohpl_gltex_new => H2
+@range raw1 49168
+ohpl_gltex_create_raw H2 3,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 48,64,1 22 raw1+0
+ohpl_gltex_props_begin H2 3,1,1,0,0,0,0,0,1,22,0,12288,48,64,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H2 3,1,1,0,0,0,0,0,1,22,0,12288,48,64,1,16,16,16,f3f800000,f3f800000,0,0,0
+ohpl_gltex_create_raw_end H2 3,1,1,0,0,0,0,0,1,22,0,12288,48,64,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+ohpl_gltex_new => H3
+@range raw2 4496
+ohpl_gltex_create_raw H3 3,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 7,40,1 16 raw2+0
+ohpl_gltex_props_begin H3 3,1,1,0,0,0,0,0,1,16,0,1120,7,40,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H3 3,1,1,0,0,0,0,0,1,16,0,1120,7,40,1,16,16,16,f3f800000,f3f800000,0,0,0
+ohpl_gltex_create_raw_end H3 3,1,1,0,0,0,0,0,1,16,0,1120,7,40,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+ohpl_glctx_get_caps 12 0
+ohpl_gldsb_new 4,64 8 0 - => H4
+ohpl_glctx_get_caps 12 0
+ohpl_gldsb_new 1,4 16 24 - => H5
+ohpl_glctx_get_caps 12 0
+ohpl_glfb_new - => H6
+ohpl_glfb_attach_texture H6 36096 0 3 2 3 2,32 1 -
+ohpl_glfb_attach_texture H6 36064 2 3 2 2 2,32 1 -
+@fail fbstatus 36060
+ohpl_glfb_compile H6 4
+@fail fbstatus 36053
+ohpl_glctx_get_caps 12 0
+ohpl_glfb_new - => H7
+ohpl_glfb_set_depth_stencil H7 0 0 0 0
+ohpl_glfb_detach_texture H7 36064 2
+@fail fbstatus 36058
+ohpl_glfb_compile H7 0
+@fail fbstatus 36053
+ohpl_glfb_free H6
+ohpl_glfb_free H7
+ohpl_gldsb_free H4
+ohpl_gldsb_free H5
+ohpl_gltex_free H1
+ohpl_gltex_free H2
+ohpl_gltex_free H3

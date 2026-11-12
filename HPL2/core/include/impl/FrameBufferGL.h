@@ -22,6 +22,8 @@
 
 #include "graphics/FrameBuffer.h"
 #include "impl/LowLevelGraphicsSDL.h"
+#include "impl/RustGlRes.h"
+
 
 namespace hpl {
 
@@ -35,6 +37,7 @@ namespace hpl {
 		inline unsigned int GetHandle(){ return mlHandle;}
 	public:
         GLuint mlHandle;
+		uint64_t mlRs;
 	};
 
 	//-----------------------------------------------
@@ -71,6 +74,7 @@ namespace hpl {
 		void SetFirstSize(const cVector2l &avSize);
 
 		GLuint mlHandle;
+		uint64_t mlRs;
 
 		bool mbIsUpdated;
 		bool mbExplicitMipLevel;

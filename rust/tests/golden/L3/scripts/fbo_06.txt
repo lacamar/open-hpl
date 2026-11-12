@@ -1,0 +1,40 @@
+tex_new 0 4 1 1 0 0
+tex_raw 0 5 4 7 4
+tex_new 1 2 1 0 0 0
+tex_raw 1 26 12 4 1
+tex_new 2 3 1 1 0 0
+tex_raw 2 7 32 64 1
+dsb_new 0 4 2 24 8
+dsb_new 1 8 32 16 4
+dsb_new 2 64 8 24 0
+fb_new 0
+fb_post 0
+fb_tex 0 2 2 1 2 0
+fail fbstatus 36057
+fb_compile 0
+fail fbstatus 36053
+fb_post 0
+fb_new 1
+fb_tex 1 2 0 0 1 5
+fb_tex 1 2 3 0 0 4
+fb_tex 1 0 3 1 1 5
+fb_tex 1 4 2 -1 0 0
+fb_tex 1 1 2 0 1 5
+fail fbstatus 0
+fb_compile 1
+fail fbstatus 36053
+fb_post 1
+fb_new 2
+fb_dsb 2 -1
+fb_tex 2 0 3 2 1 4
+fb_tex 2 0 1 1 2 5
+fail fbstatus 36061
+fb_compile 2
+fail fbstatus 36053
+fb_post 2
+fb_free 0
+fb_free 1
+fb_free 2
+dsb_free 0
+dsb_free 1
+dsb_free 2

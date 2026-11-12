@@ -27,5 +27,6 @@ void ClearRanges();
 extern int gGen, gShaders, gPrograms;
 extern std::string gTrace;
 extern int gWinW, gWinH;
+extern int gGlErrors, gFailCompile, gFailLink, gFbStatus;
 
 #endif

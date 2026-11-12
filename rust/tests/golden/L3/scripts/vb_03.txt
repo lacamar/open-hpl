@@ -1,0 +1,81 @@
+# sets: C
+vb_new 0 0 4 1 16 6
+vb_elem 0 1 0 4 0
+vb_elem 0 5 0 2 2
+vb_elem 0 6 0 4 3
+vb_elem 0 7 0 4 2
+vb_elem 0 9 0 3 3
+vb_elem 0 10 2 4 0
+vb_elem 0 11 1 3 0
+vb_elem 0 13 1 2 1
+vb_fill 0 12 3
+vb_num 0 3
+vb_compile 0 0
+vb_unbind 0
+vb_bind 0
+vb_update 0 4294967295 1
+vb_bind 0
+vb_copy 0 4 1 2 18
+vb_bind 4
+vb_draw 4 0
+vb_unbind 4
+vb_new 1 0 5 2 0 0
+vb_elem 1 1 0 3 0
+vb_elem 1 0 0 3 1
+vb_elem 1 2 2 4 0
+vb_elem 1 5 0 2 1
+vb_elem 1 12 1 4 1
+vb_elem 1 13 0 3 0
+vb_fill 1 8 6
+vb_num 1 12
+vb_compile 1 1
+vb_transform 1
+vb_draw 1 4
+vb_unbind 1
+vb_drawidx 1 6 5
+vb_bv 1
+vb_transform 1
+vb_copy 1 5 1 2 4294967295
+vb_bind 5
+vb_draw 5 0
+vb_unbind 5
+vb_free 5
+vb_new 2 0 7 2 0 0
+vb_elem 2 1 0 4 0
+vb_elem 2 0 0 3 1
+vb_elem 2 5 0 3 0
+vb_elem 2 7 0 4 1
+vb_elem 2 10 1 2 3
+vb_elem 2 11 0 1 2
+vb_fill 2 3 12
+vb_num 2 12
+vb_compile 2 0
+vb_update 2 3 0
+vb_transform 2
+vb_update 2 0 0
+vb_drawidx 2 3 8
+vb_unbind 2
+vb_copy 2 6 1 2 18
+vb_bind 6
+vb_draw 6 0
+vb_unbind 6
+vb_new 3 0 7 2 16 0
+vb_elem 3 1 0 3 0
+vb_elem 3 0 0 3 3
+vb_elem 3 2 1 4 3
+vb_elem 3 6 0 3 1
+vb_elem 3 7 0 4 3
+vb_elem 3 11 2 4 1
+vb_fill 3 12 12
+vb_num 3 12
+vb_compile 3 0
+vb_transform 3
+vb_unbind 3
+vb_transform 3
+vb_draw 3 0
+vb_copy 3 7 0 1 4294967295
+vb_bind 7
+vb_draw 7 0
+vb_unbind 7
+vb_free 0
+vb_free 3

@@ -26,6 +26,8 @@
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GPUShader.h"
+#include "impl/RustGlRes.h"
+
 
 namespace hpl {
 
@@ -62,6 +64,7 @@ namespace hpl {
 		iLowLevelGraphics *mpLowLevelGraphics;
 		
 		GLuint mlHandle;
+		uint64_t mlRs;
 	};
 };
 #endif // HPL_GLSL_SHADER_H

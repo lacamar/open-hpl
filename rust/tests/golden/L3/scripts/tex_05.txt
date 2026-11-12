@@ -1,0 +1,49 @@
+tex_new 0 4 0 1 1 0
+tex_anim 0 1 18 16 4 4 1
+fail errors 0
+tex_filter 0 1
+tex_filter 0 0
+tex_cmpmode 0 0
+tex_pixels 0
+tex_aniso 0 1.5
+tex_state 0
+tex_new 1 1 1 0 0 1
+tex_bmp 1 12 3 16 1 1 2
+fail errors 0
+tex_wrap 1 r 3
+tex_next 1
+tex_pixels 1
+tex_new 2 4 1 1 0 2
+tex_anim 2 5 9 4 8 2 1
+fail errors 0
+tex_time 2 1.5 0
+tex_state 2
+tex_pixels 2
+tex_red 2 1
+tex_cmpmode 2 0
+tex_new 3 1 0 1 0 1
+tex_cube 3 7 29 3 32 4
+fail errors 0
+tex_cmpmode 3 1
+tex_next 3
+tex_filter 3 2
+tex_setraw 3 2 3 2 0 19 64 4 1
+tex_setraw 3 0 0 1 1 13 1 32 1
+tex_new 4 4 0 1 0 0
+tex_anim 4 5 14 8 16 4 2
+fail errors 0
+tex_state 4
+tex_prev 4
+tex_settime 4 2.5
+tex_new 5 4 0 1 1 0
+tex_anim 5 1 1 8 64 4 1
+fail errors 0
+tex_prev 5
+tex_state 5
+tex_setraw 5 2 1 1 0 11 4 1 1
+tex_settime 5 2.5
+tex_pixels 5
+tex_next 5
+tex_free 2
+tex_free 4
+tex_free 3

@@ -1,0 +1,64 @@
+ohpl_gltex_new => H1
+@range raw0 80
+ohpl_gltex_create_raw H1 0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 4,1,1 4 raw0+0
+ohpl_gltex_props_begin H1 0,1,1,0,0,0,0,0,1,4,0,12,4,1,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H1 0,1,1,0,0,0,0,0,1,4,0,12,4,1,1,16,16,16,f3f800000,f3f800000,0,0,0
+ohpl_gltex_create_raw_end H1 0,1,1,0,0,0,0,0,1,4,0,12,4,1,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+ohpl_gltex_new => H2
+@range raw1 1552
+ohpl_gltex_create_raw H2 2,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 3,32,1 4 raw1+0
+ohpl_gltex_props_begin H2 2,1,1,0,0,0,0,0,1,4,0,288,3,32,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_gltex_props_end H2 2,1,1,2,2,2,0,0,1,4,0,288,3,32,1,16,16,16,f3f800000,f3f800000,0,0,0
+ohpl_gltex_create_raw_end H2 2,1,1,0,0,0,0,0,1,4,0,288,3,32,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+ohpl_gltex_new => H3
+@range raw2 112
+ohpl_gltex_create_raw H3 1,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,1,0,0 6,1,1 26 raw2+0
+ohpl_gltex_props_begin H3 1,1,1,0,0,0,0,0,1,26,0,96,6,1,1,16,16,16,f3f800000,f3f800000,1,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H3 1,1,1,0,0,0,0,0,1,26,0,96,6,1,1,16,16,16,f3f800000,f3f800000,1,0,0
+ohpl_gltex_create_raw_end H3 1,1,1,0,0,0,0,0,1,26,0,96,6,1,1,16,16,16,f3f800000,f3f800000,1,0,0
+@clear
+ohpl_gltex_new => H4
+@range raw3 1936
+ohpl_gltex_create_raw H4 4,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 3,40,1 14 raw3+0
+ohpl_gltex_props_begin H4 4,1,1,0,0,0,0,0,1,14,0,240,3,40,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H4 4,1,1,0,0,0,0,0,1,14,0,240,3,40,1,16,16,16,f3f800000,f3f800000,0,0,0
+ohpl_gltex_create_raw_end H4 4,1,1,0,0,0,0,0,1,14,0,240,3,40,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+ohpl_gltex_new => H5
+@range raw4 1040
+ohpl_gltex_create_raw H5 3,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 32,2,1 26 raw4+0
+ohpl_gltex_props_begin H5 3,1,1,0,0,0,0,0,1,26,0,1024,32,2,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H5 3,1,1,0,0,0,0,0,1,26,0,1024,32,2,1,16,16,16,f3f800000,f3f800000,0,0,0
+ohpl_gltex_create_raw_end H5 3,1,1,0,0,0,0,0,1,26,0,1024,32,2,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+ohpl_gltex_new => H6
+@range raw5 4112
+ohpl_gltex_create_raw H6 4,1,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 4,16,4 4 raw5+0
+ohpl_gltex_props_begin H6 4,1,1,0,0,0,0,0,1,4,0,768,4,16,4,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H6 4,1,1,0,0,0,0,0,1,4,0,768,4,16,4,16,16,16,f3f800000,f3f800000,0,0,0
+ohpl_gltex_create_raw_end H6 4,1,1,0,0,0,0,0,1,4,0,768,4,16,4,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+ohpl_glctx_get_caps 12 0
+ohpl_gldsb_new 64,32 24 24 - => H7
+ohpl_glctx_get_caps 12 0
+ohpl_glfb_new - => H8
+ohpl_glfb_detach_texture H8 36064 3
+ohpl_glfb_attach_texture H8 36064 4 4 1 4 3,40 4 -
+@fail fbstatus 36061
+ohpl_glfb_compile H8 16
+@fail fbstatus 36053
+ohpl_glfb_free H8
+ohpl_gldsb_free H7
+ohpl_gltex_free H1
+ohpl_gltex_free H2
+ohpl_gltex_free H3
+ohpl_gltex_free H4
+ohpl_gltex_free H5
+ohpl_gltex_free H6

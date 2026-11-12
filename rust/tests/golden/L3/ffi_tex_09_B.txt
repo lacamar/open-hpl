@@ -1,0 +1,65 @@
+ohpl_gltex_new => H1
+@range b0i0m0 96
+@range b0i1m0 96
+ohpl_gltex_generate_handles H1 1
+ohpl_gltex_create_faces H1 0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 0 F1;48,1,1;3;b0i0m0+0/96 1 -
+ohpl_gltex_props_begin H1 0,0,1,0,0,0,0,0,1,3,0,96,48,1,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H1 0,0,1,0,0,0,0,0,1,3,0,96,48,1,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+@fail errors 0
+ohpl_gltex_set_red_from_alpha H1 0,0,1,0,0,0,0,0,1,3,0,96,48,1,1,16,16,16,f3f800000,f3f800000,0,0,0 1
+ohpl_gltex_set_filter H1 0,0,1,0,0,0,0,0,1,3,0,96,48,1,1,16,16,16,f3f800000,f3f800000,0,0,0 1
+ohpl_gltex_new => H2
+@range b1i0m0 128
+@range b1i1m0 128
+ohpl_gltex_generate_handles H2 1
+ohpl_gltex_create_faces H2 1,0,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 0 F1;16,8,1;2;b1i0m0+0/128 1 -
+ohpl_gltex_props_begin H2 1,0,1,0,0,0,0,0,1,2,0,128,16,8,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H2 1,0,1,0,0,0,0,0,1,2,0,128,16,8,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+@fail errors 0
+ohpl_gltex_set_red_from_alpha H2 1,0,1,0,0,0,0,0,1,2,0,128,16,8,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_gltex_set_filter H2 1,0,1,0,0,0,0,0,1,2,0,128,16,8,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_gltex_read_pixels H2 1,0,0,0,0,0,0,0,1,2,0,128,16,8,1,16,16,16,f3f800000,f3f800000,0,0,0 f00000000 0 -
+ohpl_gltex_new => H3
+@range b2i0m0 48
+@range b2i0m1 48
+@range b3i0m0 48
+@range b3i0m1 48
+@range b4i0m0 48
+@range b4i0m1 48
+@range b5i0m0 48
+@range b5i0m1 48
+@range b6i0m0 48
+@range b6i0m1 48
+@range b7i0m0 48
+@range b7i0m1 48
+@clear
+@fail errors 0
+ohpl_gltex_auto_mipmaps H3 2,0,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f40500000,f3f800000,1,0,0
+ohpl_gltex_set_compare H3 2,0,1,0,0,0,0,0,1,0,0,0,0,0,0,16,16,16,f40500000,f3f800000,1,0,0 1 1
+ohpl_gltex_new => H4
+@range b8i0m0 448
+@range b8i0m1 448
+@range b8i0m2 448
+@range b8i1m0 448
+@range b8i1m1 448
+@range b8i1m2 448
+ohpl_gltex_generate_handles H4 1
+ohpl_gltex_create_faces H4 1,0,1,0,0,0,0,0,1,0,2,0,0,0,0,16,16,16,f3f800000,f3f800000,0,0,0 0 F3;7,64,1;15;b8i0m0+0/448|b8i0m1+0/448|b8i0m2+0/448 1 -
+ohpl_gltex_props_begin H4 1,0,1,0,0,0,0,0,1,15,2,448,7,64,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_glctx_get_caps 6 0
+ohpl_gltex_props_end H4 1,0,1,0,0,0,0,0,1,15,2,448,7,64,1,16,16,16,f3f800000,f3f800000,0,0,0
+@clear
+@fail errors 0
+ohpl_gltex_set_compare H4 1,0,1,0,0,0,0,0,1,15,2,448,7,64,1,16,16,16,f3f800000,f3f800000,0,0,0 0 0
+ohpl_gltex_set_compare H4 1,0,1,0,0,0,0,0,1,15,2,448,7,64,1,16,16,16,f3f800000,f3f800000,0,0,0 1 1
+ohpl_gltex_set_compare H4 1,0,1,0,0,0,0,1,1,15,2,448,7,64,1,16,16,16,f3f800000,f3f800000,0,0,0 1 0
+ohpl_gltex_set_wrap H4 1,0,1,0,0,0,0,0,1,15,2,448,7,64,1,16,16,16,f3f800000,f3f800000,0,0,0 1 3
+ohpl_gltex_set_filter H4 1,0,1,3,0,0,0,0,1,15,2,448,7,64,1,16,16,16,f3f800000,f3f800000,0,0,0 0
+ohpl_gltex_free H3
+ohpl_gltex_free H2
+ohpl_gltex_free H1
+ohpl_gltex_free H4

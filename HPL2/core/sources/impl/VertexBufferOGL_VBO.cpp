@@ -25,6 +25,7 @@
 
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/GlOps.h"
+#include "impl/RustBackends.h"
 
 #include <memory.h>
 
@@ -47,13 +48,19 @@ namespace hpl {
 	iVertexBufferOpenGL(apLowLevelGraphics,eVertexBufferType_Hardware,  aDrawType,aUsageType, alReserveVtxSize, alReserveIdxSize)
 	{
 		mlElementHandle =0;
+		mlRs = OhplBackendRustRequested() ? ohpl_glvb_new(true) : 0;
 	}
 
 	//-----------------------------------------------------------------------
 
 	cVertexBufferOGL_VBO::~cVertexBufferOGL_VBO()
 	{
-		;
+		if(mlRs)
+		{
+			ohpl_glvb_free(mlRs);
+			mlRs = 0;
+			return;
+		}
 
 		for(size_t i=0; i<mvElementArrays.size(); ++i)
 		{
@@ -75,7 +82,15 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::UpdateData(tVertexElementFlag aTypes, bool abIndices)
 	{
-		;
+		if(mlRs)
+		{
+			if(ohpl_glvb_needs_compile(mlRs, mvIndexArray.size())) CompileSpecific();
+
+			OhplVbData vData[eVertexBufferElement_LastEnum];
+			BuildVbData(vData, aTypes);
+			ohpl_glvb_update(mlRs, mUsageType, aTypes, abIndices, vData, abIndices ? &mvIndexArray[0] : NULL, GetIndexNum());
+			return;
+		}
 
 		if(mlElementHandle == 0 && mvIndexArray.empty()==false) CompileSpecific();
 
@@ -119,6 +134,13 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::Draw(eVertexBufferDrawType aDrawType)
 	{
+		if(mlRs)
+		{
+			cEngineDiagnostics::CountDrawCall();
+			ohpl_glvb_draw(mlRs, mDrawType, aDrawType, mlElementNum, GetIndexNum(), NULL);
+			return;
+		}
+
 		GLenum mode = ohpl_gl_vb_draw_mode(mDrawType, aDrawType);
 
 		glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB,mlElementHandle);
@@ -135,6 +157,13 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::DrawIndices(unsigned int *apIndices, int alCount,eVertexBufferDrawType aDrawType)
 	{
+		if(mlRs)
+		{
+			cEngineDiagnostics::CountDrawCall();
+			ohpl_glvb_draw_indices(mDrawType, aDrawType, apIndices, alCount);
+			return;
+		}
+
 		GLenum mode = ohpl_gl_vb_draw_mode(mDrawType, aDrawType);
 
 		cEngineDiagnostics::CountDrawCall();
@@ -148,7 +177,7 @@ namespace hpl {
 	{
 		;
 
-		if(mlElementHandle == 0 && mvIndexArray.empty()==false) CompileSpecific();
+		if((mlRs ? ohpl_glvb_needs_compile(mlRs, mvIndexArray.size()) : (mlElementHandle == 0 && mvIndexArray.empty()==false))) CompileSpecific();
 
 		SetVertexStates();
 	}
@@ -157,6 +186,12 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::UnBind()
 	{
+		if(mlRs)
+		{
+			ohpl_glvb_unbind(mlRs);
+			return;
+		}
+
 		OhplGlOp vOps[kOhplGlMaxOps];
 		size_t lCount = ohpl_gl_vb_unbind(mvElemDesc, mvElementArrays.size(), vOps);
 		OhplGlOpSources src = {NULL, NULL, NULL};
@@ -173,7 +208,13 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::CompileSpecific()
 	{
-		;
+		if(mlRs)
+		{
+			OhplVbData vData[eVertexBufferElement_LastEnum];
+			BuildVbData(vData, ~0u);
+			ohpl_glvb_compile(mlRs, mUsageType, vData, &mvIndexArray[0], GetIndexNum());
+			return;
+		}
 
 		GLenum usageType = ohpl_gl_usage(mUsageType);
 
@@ -217,6 +258,12 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::SetVertexStates()
 	{
+		if(mlRs)
+		{
+			ohpl_glvb_bind(mlRs, NULL);
+			return;
+		}
+
 		OhplGlOp vOps[kOhplGlMaxOps];
 		size_t lCount = ohpl_gl_vb_bind_vbo(mvElemDesc, mvElementArrays.size(), vOps);
 		OhplGlOpSources src = {NULL, NULL, NULL};

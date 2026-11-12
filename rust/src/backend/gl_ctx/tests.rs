@@ -2,8 +2,8 @@
 //! context against a recording GL must reproduce the GL and SDL call trace of the original C++
 //! (`trace_*.txt`). Both were recorded by `rust/tests/golden/L2/harness`.
 
-mod fake;
-mod fakegl;
+pub(crate) mod fake;
+pub(crate) mod fakegl;
 mod replay;
 mod replay_gen;
 
