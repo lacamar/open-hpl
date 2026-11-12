@@ -48,6 +48,11 @@ namespace hpl {
 		virtual bool IsTriggerd()=0;
 
 		/**
+		* The registry form of this sub action; kind 0 never triggers.
+		*/
+		virtual OhplSubSpec OhplSpec(){ OhplSubSpec s = {}; return s; }
+
+		/**
 		* 
 		* \return A value from the input, ie the relative mouse x position.
 		*/
@@ -125,12 +130,15 @@ namespace hpl {
 		
 		const tString& GetName(){ return msName;}
 		int GetId(){ return mlId; }
+		uint64_t GetRustHandle(){ return mlHandle; }
 	private:
 		tString msName;
 		int mlId;
 		cInput *mpInput;
 
 		OhplActionState mState;
+		OhplInputReg *mpReg;
+		uint64_t mlHandle;
 
 		bool AnySubActionTriggerd();
 

@@ -36,7 +36,6 @@ namespace hpl {
 	class iPhysicsJoint;
 	class cPhysicsContactData;
 	class iCharacterBody;
-	class iHapticShape;
 	class iVerletParticleContainer;
 
 	//------------------------------------------
@@ -274,9 +273,6 @@ namespace hpl {
 		void AddAttachedVerletContainer(iVerletParticleContainer *apContainer);
 		void RemoveAttachedVerletContainer(iVerletParticleContainer *apContainer);
 		
-		iHapticShape *GetHapticShape(){ return mpHapticShape;}
-		void SetHapticShape(iHapticShape *apShape){ mpHapticShape = apShape;}
-
 		iPhysicsWorld *GetWorld(){ return mpWorld;}
 
 		void DisableAfterSimulation(){ if(mRsBook) ohpl_h15_body_flag_set(mRsBook, OhplH15_DisableAfterSim, true); else mbDisableAfterSimulation = true;}
@@ -348,8 +344,6 @@ namespace hpl {
 		bool mbHasCollision;
 
 		tPhysicsBodyCallbackList mlstBodyCallbacks;
-
-		iHapticShape *mpHapticShape;
 
 		void *mpUserData;
 

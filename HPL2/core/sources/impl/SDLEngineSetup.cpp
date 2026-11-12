@@ -29,7 +29,6 @@
 #include "sound/Sound.h"
 #include "physics/Physics.h"
 #include "ai/AI.h"
-#include "haptic/Haptic.h"
 #include "system/HeadlessControl.h"
 #include "impl/RustImpl.h"
 #include "impl/RustBackends.h"
@@ -46,10 +45,6 @@
 #include "impl/LowLevelInputSDL.h"
 #include "impl/LowLevelSoundOpenAL.h"
 #include "impl/LowLevelPhysicsNewton.h"
-
-#ifdef INCLUDE_HAPTIC 
-	#include "impl/LowLevelHapticHaptX.h"
-#endif
 
 #if USE_SDL2
 #include "SDL2/SDL.h"
@@ -191,14 +186,6 @@ namespace hpl {
 		// Physics
 		mpLowLevelPhysics = hplNew( cLowLevelPhysicsNewton,() );
 		
-		//////////////////////////
-		// Haptic
-#ifdef INCLUDE_HAPTIC 
-		mpLowLevelHaptic = hplNew( cLowLevelHapticHaptX,() );
-#else 
-		mpLowLevelHaptic = NULL;
-#endif
-		
 	}
 
 	//-----------------------------------------------------------------------
@@ -219,10 +206,6 @@ namespace hpl {
 		hplDelete(mpLowLevelSystem);
 		Log("  Graphics\n");
 		hplDelete(mpLowLevelGraphics);
-		Log("  Haptic\n");
-#ifdef INCLUDE_HAPTIC 	
-		hplDelete(mpLowLevelHaptic);
-#endif
 		if(OhplBackendRustRequested())
 		{
 			ohpl_l1_sdl_shutdown();
@@ -244,10 +227,9 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	
 	cScene* cSDLEngineSetup::CreateScene(cGraphics* apGraphics, cResources *apResources, cSound* apSound,
-										cPhysics *apPhysics, cSystem *apSystem,cAI *apAI,cGui *apGui,
-										cHaptic *apHaptic)
+										cPhysics *apPhysics, cSystem *apSystem,cAI *apAI,cGui *apGui)
 	{
-		cScene *pScene = hplNew( cScene, (apGraphics,apResources, apSound,apPhysics, apSystem,apAI,apGui,apHaptic) );
+		cScene *pScene = hplNew( cScene, (apGraphics,apResources, apSound,apPhysics, apSystem,apAI,apGui) );
 		return pScene;
 	}
 
@@ -310,14 +292,6 @@ namespace hpl {
 	{
 		cAI *pAI = hplNew( cAI,() );
 		return pAI;
-	}
-
-	//-----------------------------------------------------------------------
-
-	cHaptic* cSDLEngineSetup::CreateHaptic()
-	{
-		cHaptic *pHaptic = hplNew( cHaptic, (mpLowLevelHaptic) );
-		return pHaptic;
 	}
 
 	//-----------------------------------------------------------------------

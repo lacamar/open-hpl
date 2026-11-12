@@ -49,11 +49,6 @@
 #include "graphics/Animation.h"
 #include "graphics/AnimationTrack.h"
 
-#include "haptic/Haptic.h"
-#include "haptic/HapticShape.h"
-#include "haptic/HapticSurface.h"
-#include "haptic/LowLevelHaptic.h"
-
 #include "impl/MeshLoaderMSH.h"
 
 #include "math/Math.h"

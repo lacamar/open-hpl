@@ -25,6 +25,8 @@
 
 #include "math/MathTypes.h"
 
+struct OhplGamepad;
+
 namespace hpl {
 
 	//------------------------------
@@ -103,6 +105,8 @@ namespace hpl {
 		 * \return The normalized input value for the axis.
 		 */
 		virtual float GetAxisValue(eGamepadAxis aAxis)=0;
+
+		virtual const OhplGamepad* RustHandle(){ return 0;}
 		/**
 		 * 
 		 * \return Threshold indicating the at which start value input will be considered.

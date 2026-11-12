@@ -93,9 +93,6 @@
 #include "ai/AINodeGenerator.h"
 #include "ai/AStar.h"
 
-#include "haptic/Haptic.h"
-#include "haptic/LowLevelHaptic.h"
-
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -105,8 +102,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	cWorld::cWorld(tString asName,cGraphics *apGraphics,cResources *apResources,cSound* apSound,
-						cPhysics *apPhysics, cScene *apScene,cSystem *apSystem, cAI *apAI,
-						cHaptic *apHaptic)
+						cPhysics *apPhysics, cScene *apScene,cSystem *apSystem, cAI *apAI)
 	{
 		mpGraphics = apGraphics;
 		mpResources = apResources;
@@ -115,7 +111,6 @@ namespace hpl {
 		mpScene = apScene;
 		mpSystem =apSystem;
 		mpAI = apAI;
-		mpHaptic = apHaptic;
 
 		mpRootNode = hplNew( cNode3D, () );
 

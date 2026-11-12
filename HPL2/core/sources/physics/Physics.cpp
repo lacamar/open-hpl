@@ -25,10 +25,7 @@
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 
-#include "haptic/Haptic.h"
 #include "physics/RustPhysics.h"
-#include "haptic/HapticSurface.h"
-#include "haptic/LowLevelHaptic.h"
 
 #include "impl/tinyXML/tinyxml.h"
 
@@ -150,7 +147,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	bool cPhysics::LoadSurfaceData(const tString& asFile, cHaptic *apHaptic)
+	bool cPhysics::LoadSurfaceData(const tString& asFile)
 	{
 		std::vector<char> vData;
 		bool bReadOk = false;
@@ -239,23 +236,6 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 	// PRIVATE METHODS
 	//////////////////////////////////////////////////////////////////////////
-	
-	//-----------------------------------------------------------------------
-
-	eHapticSurfaceType cPhysics::GetHapticSurface(const char *apName)
-	{
-		if(apName == NULL) return eHapticSurfaceType_Simple;
-		
-		tString sMode = cString::ToLowerCase(apName);
-
-		if(sMode == "simple")		return eHapticSurfaceType_Simple;
-		if(sMode == "frictional")	return eHapticSurfaceType_Frictional;
-		if(sMode == "rough")		return eHapticSurfaceType_Rough;
-		if(sMode == "sticky")		return eHapticSurfaceType_Sticky;
-		Warning("Could not find haptic surface type '%s'\n",apName);
-
-        return eHapticSurfaceType_Simple;
-	}
 	
 	//-----------------------------------------------------------------------
 

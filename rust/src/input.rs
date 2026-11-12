@@ -11,6 +11,8 @@ use crate::types::Vector2l;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+pub mod registry;
+
 pub const KIND_KEY: u32 = 1;
 pub const KIND_TEXT: u32 = 2;
 pub const KIND_MOUSE_MOTION: u32 = 3;

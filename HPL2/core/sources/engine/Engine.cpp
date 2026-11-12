@@ -27,9 +27,7 @@
 #include "resources/Resources.h"
 #include "graphics/Graphics.h"
 #include "gui/Gui.h"
-#include "haptic/Haptic.h"
 #include "scene/Scene.h"
-#include "generate/Generate.h"
 
 #include "system/LogicTimer.h"
 #include "system/String.h"
@@ -247,19 +245,9 @@ namespace hpl {
 		Log(" Creating gui module\n");
 		mpGui = hplNew(cGui,());
 
-		Log(" Creating generate module\n");
-		mpGenerate = hplNew(cGenerate,());
-
-		Log(" Creating haptic module\n");
-#ifdef INCLUDE_HAPTIC
-		mpHaptic = mpGameSetup->CreateHaptic();
-#else
-		mpHaptic = NULL;
-#endif
-
 
 		Log(" Creating scene module\n");
-		mpScene = mpGameSetup->CreateScene(mpGraphics, mpResources, mpSound,mpPhysics,mpSystem,mpAI,mpGui,mpHaptic);
+		mpScene = mpGameSetup->CreateScene(mpGraphics, mpResources, mpSound,mpPhysics,mpSystem,mpAI,mpGui);
 
 		Log("--------------------------------------------------------\n\n");
 
@@ -301,12 +289,6 @@ namespace hpl {
 		//Init Gui
 		mpGui->Init(mpResources,mpGraphics,mpSound,mpScene, mpInput);
 		
-		//Init Generate
-		mpGenerate->Init(mpResources,mpGraphics);
-
-
-		//Init haptic
-		if(mpHaptic) mpHaptic->Init(mpResources);
 
 		Log("Initializing Game Module\n");
 		Log("--------------------------------------------------------\n");
@@ -323,7 +305,6 @@ namespace hpl {
 		mpUpdater->AddGlobalUpdate(mpAI);
 		mpUpdater->AddGlobalUpdate(mpGui);
 		mpUpdater->AddGlobalUpdate(mpResources);
-		if(mpHaptic) mpUpdater->AddGlobalUpdate(mpHaptic);
 
 		//Setup the "default" updater container
 		mpUpdater->AddContainer("Default");
@@ -375,9 +356,7 @@ namespace hpl {
 		hplDelete(mpUpdater);
 		
 		hplDelete(mpGui);
-		hplDelete(mpGenerate);
 		hplDelete(mpScene);
-		if(mpHaptic) hplDelete(mpHaptic);
 		hplDelete(mpInput);
 		hplDelete(mpSound);
 		hplDelete(mpGraphics);

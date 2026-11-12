@@ -78,6 +78,7 @@ namespace hpl {
 		cVector2l GetBallRelPos(eGamepadBall aBall);
 
 		void SetRumble(float afValue, int alMillisec);
+		const OhplGamepad* RustHandle(){ return mpRust;}
 		//void SetColorLED(const cColor& aColor){}
 		//cColor GetColorLED(){ return cColor(0,0); }
 	private:

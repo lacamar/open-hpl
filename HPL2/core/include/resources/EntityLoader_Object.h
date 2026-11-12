@@ -45,7 +45,6 @@ namespace hpl {
 	class cBeam;
 	class cSoundEntity;
 	class iLight;
-	class iHapticShape;
 	class cBoneState;
 	class cEobImpl;
 
@@ -124,7 +123,6 @@ namespace hpl {
 
 		std::vector<cEntityBodyExtraData> mvBodyExtraData;
 
-		std::vector<iHapticShape*> mvHapticShapes;
 		
 		std::vector<iLight*> mvLights;
 		std::vector<cParticleSystem*> mvParticleSystems;

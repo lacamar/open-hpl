@@ -38,7 +38,6 @@ namespace hpl {
 	class cSystem;
 	class cSound;
 	class cPhysics;
-	class cHaptic;
 	class cGui;
 
 	class cCamera;
@@ -72,7 +71,7 @@ namespace hpl {
 	{
 	public:
 		cScene(cGraphics *apGraphics,cResources *apResources, cSound* apSound, cPhysics *apPhysics,
-				cSystem *apSystem, cAI *apAI,cGui *apGui, cHaptic *apHaptic);
+				cSystem *apSystem, cAI *apAI,cGui *apGui);
 		~cScene();
 
 		void Reset();
@@ -117,7 +116,6 @@ namespace hpl {
 		cSystem *mpSystem;
 		cAI *mpAI;
 		cGui *mpGui;
-		cHaptic *mpHaptic;
 
 		cViewport *mpCurrentListener;
 

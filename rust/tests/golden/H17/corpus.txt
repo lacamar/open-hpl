@@ -1,0 +1,5 @@
+H17 input registry golden vectors.
+script.txt: 40 seeded scenarios (gen/gen_script.py): random key/mouse/pad events, action bindings, destroys, hot-plug.
+trace.txt: output of gen/gen.cpp on the pre-H17 C++ cInput/cAction (git HEAD fa6f3b2); "~" lines are C++-only sub action introspection.
+Recorded: H17_ROOT=<tree at fa6f3b2> gen/gen.sh libohpl.a bin && bin script.txt > trace.txt
+Check (C++ and Rust paths): gen/check.sh libohpl.a   Rust replay without C++: cargo test registry

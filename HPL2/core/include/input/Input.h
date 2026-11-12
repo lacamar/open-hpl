@@ -26,6 +26,7 @@
 #include "system/SystemTypes.h"
 #include "engine/Updateable.h"
 #include "input/InputTypes.h"
+#include "input/RustInput.h"
 
 namespace hpl {
 
@@ -168,6 +169,8 @@ namespace hpl {
 
 		void AppDeviceWasPlugged();
 		void AppDeviceWasRemoved();
+
+		OhplInputReg* GetRustRegistry(){ return mpRegistry;}
 	private:
 		
 		tActionMap m_mapActions;
@@ -179,6 +182,8 @@ namespace hpl {
 		iMouse* mpMouse;
 		iKeyboard* mpKeyboard;
 		tGamepadList mlstGamepads;
+		OhplInputReg *mpRegistry;
+		void SyncRustDevices();
 	};
 };
 

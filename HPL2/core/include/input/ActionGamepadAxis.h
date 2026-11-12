@@ -41,6 +41,7 @@ namespace hpl {
 		
 		eGamepadAxis GetAxis()	{ return mAxis;}
 		eGamepadAxisRange GetRange() { return mRange; }
+		OhplSubSpec OhplSpec(){ OhplSubSpec s = {eOhplSub_PadAxis, mlPadIndex, (int)mAxis, (int)mRange, mfMinThreshold, mfMaxThreshold}; return s; }
 	private:
 		int mlPadIndex;
 		eGamepadAxis mAxis;

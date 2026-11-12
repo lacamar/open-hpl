@@ -42,6 +42,7 @@ namespace hpl {
 		
 		eGamepadHat GetHat(){ return mHat;}
 		eGamepadHatState GetHatState(){ return mHatState;}
+		OhplSubSpec OhplSpec(){ OhplSubSpec s = {eOhplSub_PadHat, mlPadIndex, (int)mHat, (int)mHatState, 0, 0}; return s; }
 	private:
 		int mlPadIndex;
 		eGamepadHat mHat;

@@ -211,14 +211,4 @@
 #include "gui/GuiPopUpColorPicker.h"
 #include "gui/WidgetDummy.h"
 
-#include "generate/Generate.h"
-#include "generate/GenerateTypes.h"
-#include "generate/VoxelMap.h"
-
-#include "haptic/Haptic.h"
-#include "haptic/LowLevelHaptic.h"
-#include "haptic/HapticShape.h"
-#include "haptic/HapticForce.h"
-#include "haptic/HapticSurface.h"
-
 #endif // HPL_HPL_H
