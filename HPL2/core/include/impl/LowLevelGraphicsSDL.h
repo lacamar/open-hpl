@@ -44,6 +44,7 @@
 #include "graphics/LowLevelGraphics.h"
 #include "math/MathTypes.h"
 #include "impl/RustGl.h"
+#include "impl/RustGlCtx.h"
 
 
 namespace hpl {
@@ -319,6 +320,7 @@ namespace hpl {
 		CGcontext GetGC_Context(){ return mCG_Context;}
 #endif
 		void SetupGL();
+		const char* GlString(unsigned int alName);
 
 	private:
         cVector2l mvScreenSize;
@@ -341,6 +343,7 @@ namespace hpl {
 		//////////////////////////////////////
 		//Render state settings
 		OhplGlState mGl;
+		OhplGlCtx *mpRs;
 		cVector2l mvScissorPos;
 		cVector2l mvScissorSize;
 

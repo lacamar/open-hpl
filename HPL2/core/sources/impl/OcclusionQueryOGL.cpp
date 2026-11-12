@@ -19,6 +19,7 @@
 
 #include "impl/OcclusionQueryOGL.h"
 #include "impl/LowLevelGraphicsSDL.h"
+#include "impl/RustBackends.h"
 
 #include <GL/glew.h>
 
@@ -35,6 +36,15 @@ namespace hpl {
 	{
 		;
 
+		mbRs = OhplBackendRustRequested();
+		if(mbRs)
+		{
+			ohpl_glq_create(&mRs);
+			mlQueryId = mRs.id;
+			mlLastSampleCount = 0;
+			mbResultsAreFetched = true;
+			return;
+		}
 		glGenQueriesARB(1, (GLuint *)&mlQueryId);
 		mlLastSampleCount =0;
 		mbResultsAreFetched = true;
@@ -46,6 +56,7 @@ namespace hpl {
 	{
 		;
 
+		if(mbRs) { ohpl_glq_destroy(&mRs); return; }
 		glDeleteQueriesARB(1, (GLuint *)&mlQueryId);
 	}
 
@@ -61,6 +72,7 @@ namespace hpl {
 	{
 		;
 
+		if(mbRs) { ohpl_glq_begin(&mRs); mbResultsAreFetched = false; return; }
 		glBeginQueryARB(GL_SAMPLES_PASSED_ARB,mlQueryId);
 		mbResultsAreFetched = false;
 	}
@@ -69,11 +81,19 @@ namespace hpl {
 	{
 		;
 
+		if(mbRs) { ohpl_glq_end(&mRs); return; }
 		glEndQueryARB(GL_SAMPLES_PASSED_ARB);
 	}
 
 	bool cOcclusionQueryOGL::FetchResults()
 	{
+		if(mbRs)
+		{
+			bool bDone = ohpl_glq_fetch(&mRs);
+			mbResultsAreFetched = mRs.fetched;
+			mlLastSampleCount = mRs.lastSamples;
+			return bDone;
+		}
 		if(mbResultsAreFetched) return true;
 
 		;
