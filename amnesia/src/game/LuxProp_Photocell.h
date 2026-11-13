@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxProp.h"
+#include "RustLuxPropA5.h"
 
 //----------------------------------------------
 
@@ -68,6 +69,10 @@ public:
 	//////////////////////
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState){}
+
+	//////////////////////
+	//Rust replay
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
 	
 	//////////////////////
 	//Save data stuff
@@ -78,18 +83,15 @@ public:
 
 
 private:
-	void UpdateLightLevel(float afTimeStep);
+	static void HostBounds(void *apCtx, float *apSize, float *apCenter);
+	static float HostLightAt(void *apCtx, const float *apPos);
+	static bool HostIllumination(void *apCtx, float *apOut);
 
 	//General
 	
 
 	//Vars
-	bool mbLit;
-	float mfLightLevel;
-	float mfLightLevelCheckCount;
-	
-	float mfLightLevelOnLimit;
-	float mfLightLevelOffLimit;
+	OhplA5Photocell mS;
 };
 
 //----------------------------------------------

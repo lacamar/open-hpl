@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxProp.h"
+#include "RustLuxPropA5.h"
 
 //----------------------------------------------
 
@@ -72,7 +73,7 @@ public:
 	//////////////////////
 	//Properties
 	void SetLocked(bool abLocked);
-	bool GetLocked(){ return mbLocked; }
+	bool GetLocked(){ return mS.locked; }
 
 	void SetLockedSound(const tString& asSound){ msLockedSound = asSound;}
 	void SetLockedText(const tString& asCat, const tString& asEntry){ msLockedTextCat = asCat; msLockedTextEntry=asEntry;}
@@ -80,6 +81,10 @@ public:
 	//////////////////////
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
+
+	//////////////////////
+	//Rust replay
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
 
 	//////////////////////
 	//Save data stuff
@@ -101,14 +106,11 @@ private:
 	tString msStartPos;
 	tString msTextEntry;
 
-	bool mbLocked;
 	tString msLockedSound;
 	tString msLockedTextCat;
 	tString msLockedTextEntry;
 
-	float mfLockedCount;
-
-	bool mbShowStats;
+	OhplA5Door mS;
 };
 
 //----------------------------------------------

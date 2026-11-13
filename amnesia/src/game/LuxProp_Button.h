@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxProp.h"
+#include "RustLuxPropA5.h"
 
 //----------------------------------------------
 
@@ -72,6 +73,10 @@ public:
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
 
 	//////////////////////
+	//Rust replay
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
+
+	//////////////////////
 	//Save data stuff
 	iLuxEntity_SaveData* CreateSaveData();
 	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
@@ -80,10 +85,7 @@ public:
 
 
 private:
-	//Vars
-	bool mbSwitchedOn;
-	bool mbCanBeSwitchedOn;
-	bool mbCanBeSwitchedOff;
+	OhplA5Button mS;
 };
 
 //----------------------------------------------

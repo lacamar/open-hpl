@@ -56,8 +56,8 @@ void cLuxPropLoader_Photocell::LoadInstanceVariables(iLuxProp *apProp, cResource
 {
 	cLuxProp_Photocell  *pPhotocell = static_cast<cLuxProp_Photocell*>(apProp);
 
-	pPhotocell->mfLightLevelOnLimit = apInstanceVars->GetVarFloat("LightLevelOnLimit", 0);
-	pPhotocell->mfLightLevelOffLimit = apInstanceVars->GetVarFloat("LightLevelOffLimit", 0);
+	OhplGa4VarsAdapter vars(apInstanceVars);
+	ohpl_a5_photocell_load_instance(vars.Vars(), &pPhotocell->mS);
 }
 //-----------------------------------------------------------------------
 
@@ -69,9 +69,9 @@ void cLuxPropLoader_Photocell::LoadInstanceVariables(iLuxProp *apProp, cResource
 
 cLuxProp_Photocell::cLuxProp_Photocell(const tString &asName,int alID, cLuxMap *apMap) : iLuxProp(asName,alID,apMap, eLuxPropType_Photocell)
 {
-	mfLightLevel = 0;
-	mfLightLevelCheckCount = 0;
-	mbLit = false;
+	mS.light_level = 0;
+	mS.check_count = 0;
+	mS.lit = false;
 }
 
 //-----------------------------------------------------------------------
@@ -123,16 +123,9 @@ void cLuxProp_Photocell::UpdatePropSpecific(float afTimeStep)
 {
 	/////////////////////
 	// Update light level
-	UpdateLightLevel(afTimeStep);
-
-	/////////////////////
-	// Set mesh alpha
-	float fGoalAmount = ohpl_ga4b_photo_goal(mfLightLevel, mfLightLevelOnLimit, mfLightLevelOffLimit);
-
-	if(mpMeshEntity && mpMeshEntity->GetIlluminationAmount() != fGoalAmount)
-	{
-		mpMeshEntity->SetIlluminationAmount(ohpl_ga4b_photo_illum_step(mpMeshEntity->GetIlluminationAmount(), fGoalAmount, afTimeStep));
-	}
+	OhplA5PhotoHost host = { this, &HostBounds, &HostLightAt, &HostIllumination };
+	OhplGa4Run run(this);
+	ohpl_a5_photocell_update(&mS, afTimeStep, &host, run.Sink());
 }
 
 //-----------------------------------------------------------------------
@@ -159,26 +152,48 @@ eLuxFocusCrosshair cLuxProp_Photocell::GetFocusCrosshair(iPhysicsBody *apBody, c
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_Photocell::UpdateLightLevel(float afTimeStep)
+void cLuxProp_Photocell::HostBounds(void *apCtx, float *apSize, float *apCenter)
 {
-	if(ohpl_ga4b_photo_tick(&mfLightLevelCheckCount, afTimeStep)==false) return;
-
-	cBoundingVolume *pBV = mpMeshEntity->GetBoundingVolume();
+	cLuxProp_Photocell *pProp = static_cast<cLuxProp_Photocell*>(apCtx);
+	cBoundingVolume *pBV = pProp->mpMeshEntity->GetBoundingVolume();
 	cVector3f vSize = pBV->GetSize();
 	cVector3f vCenter = pBV->GetWorldCenter();
+	apSize[0] = vSize.x; apSize[1] = vSize.y; apSize[2] = vSize.z;
+	apCenter[0] = vCenter.x; apCenter[1] = vCenter.y; apCenter[2] = vCenter.z;
+}
 
-	cVector3f vSamplePos[6];
-	ohpl_ga4b_photo_samples(vSize.v, vCenter.v, vSamplePos[0].v);
+//-----------------------------------------------------------------------
 
-	float vLight[6];
-	for(int i=0; i<6; ++i)
+float cLuxProp_Photocell::HostLightAt(void *apCtx, const float *apPos)
+{
+	return gpBase->mpMapHelper->GetLightLevelAtPos(cVector3f(apPos[0], apPos[1], apPos[2]));
+}
+
+//-----------------------------------------------------------------------
+
+bool cLuxProp_Photocell::HostIllumination(void *apCtx, float *apOut)
+{
+	cLuxProp_Photocell *pProp = static_cast<cLuxProp_Photocell*>(apCtx);
+	if(pProp->mpMeshEntity == NULL) return false;
+	*apOut = pProp->mpMeshEntity->GetIlluminationAmount();
+	return true;
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_Photocell::Ga4ApplyOp(const OhplGa4Op &aOp)
+{
+	switch(aOp.code)
 	{
-		vLight[i] = gpBase->mpMapHelper->GetLightLevelAtPos(vSamplePos[i]);
+	case kOhplA5Op_ConnState:
+		ConnectionStateChange(aOp.i);
+		break;
+	case kOhplA5Op_PhotoIllum:
+		mpMeshEntity->SetIlluminationAmount(aOp.f[0]);
+		break;
+	default:
+		iLuxProp::Ga4ApplyOp(aOp);
 	}
-	mfLightLevel = ohpl_ga4b_photo_level(vLight, 6);
-
-	int lConnState = ohpl_ga4b_photo_switch(mfLightLevel, &mbLit, mfLightLevelOnLimit, mfLightLevelOffLimit);
-	if(lConnState != 0) ConnectionStateChange(lConnState);
 }
 
 //-----------------------------------------------------------------------
@@ -215,11 +230,11 @@ void cLuxProp_Photocell::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	kCopyToVar(pData,mbLit);
-	kCopyToVar(pData,mfLightLevel);
-	kCopyToVar(pData,mfLightLevelCheckCount);
-	kCopyToVar(pData,mfLightLevelOnLimit);
-	kCopyToVar(pData,mfLightLevelOffLimit);
+	pData->mbLit = mS.lit;
+	pData->mfLightLevel = mS.light_level;
+	pData->mfLightLevelCheckCount = mS.check_count;
+	pData->mfLightLevelOnLimit = mS.on_limit;
+	pData->mfLightLevelOffLimit = mS.off_limit;
 }
 
 //-----------------------------------------------------------------------
@@ -233,11 +248,11 @@ void cLuxProp_Photocell::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	
 	//////////////////
 	//Set variables
-	kCopyFromVar(pData,mbLit);
-	kCopyFromVar(pData,mfLightLevel);
-	kCopyFromVar(pData,mfLightLevelCheckCount);
-	kCopyFromVar(pData,mfLightLevelOnLimit);
-	kCopyFromVar(pData,mfLightLevelOffLimit);
+	mS.lit = pData->mbLit;
+	mS.light_level = pData->mfLightLevel;
+	mS.check_count = pData->mfLightLevelCheckCount;
+	mS.on_limit = pData->mfLightLevelOnLimit;
+	mS.off_limit = pData->mfLightLevelOffLimit;
 }
 
 //-----------------------------------------------------------------------

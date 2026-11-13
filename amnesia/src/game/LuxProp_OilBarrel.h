@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxProp.h"
+#include "RustLuxPropA5.h"
 
 //----------------------------------------------
 
@@ -68,6 +69,10 @@ public:
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
 
+	//////////////////////
+	//Rust replay
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
+
 
 	//////////////////////
 	//Save data stuff
@@ -77,7 +82,9 @@ public:
 	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
-	void CalculateOilAmount();
+	static bool HostHardMode(void *apCtx);
+	static float HostLampOil(void *apCtx);
+	static float HostTotalOil(void *apCtx);
 
 	//////////////////////
 	// Data
@@ -86,8 +93,7 @@ private:
     	
 	//////////////////////
 	// Variables
-	bool mbAmountCalculated;
-	float mfOilAmount;
+	OhplA5Oil mS;
 };
 
 //----------------------------------------------

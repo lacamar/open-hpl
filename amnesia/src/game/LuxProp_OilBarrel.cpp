@@ -52,8 +52,10 @@ void cLuxPropLoader_OilBarrel::LoadVariables(iLuxProp *apProp, cXmlElement *apRo
 	///////////////////////////
 	// General
 	//pOilBarrel->mSwingDoorData.mfMoveMaxSpeed = GetVarFloat("MoveMaxSpeed", 13.5f);
-	pOilBarrel->msFillSound = GetVarString("FillSound", "");
-	pOilBarrel->msEmptySound = GetVarString("EmptySound", "");
+	OhplGa4VarsAdapter vars(this);
+	vars.Slot(kOhplA5Slot_OilFill, pOilBarrel->msFillSound)
+		.Slot(kOhplA5Slot_OilEmpty, pOilBarrel->msEmptySound);
+	ohpl_a5_oil_load(vars.Vars());
 }
 
 //-----------------------------------------------------------------------
@@ -75,7 +77,7 @@ void cLuxPropLoader_OilBarrel::LoadInstanceVariables(iLuxProp *apProp, cResource
 
 cLuxProp_OilBarrel::cLuxProp_OilBarrel(const tString &asName, int alID, cLuxMap *apMap) : iLuxProp(asName,alID,apMap, eLuxPropType_OilBarrel)
 {
-	mbAmountCalculated = false;
+	mS.calculated = false;
 }
 
 //-----------------------------------------------------------------------
@@ -101,41 +103,9 @@ bool cLuxProp_OilBarrel::CanInteract(iPhysicsBody *apBody)
 
 bool cLuxProp_OilBarrel::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	CalculateOilAmount();
-
-	OhplGa4bOilFill fill;
-	ohpl_ga4b_oil_fill(mfOilAmount, gpBase->mpPlayer->GetLampOil(), &fill);
-
-	if(fill.result == kOhplGa4bOil_Empty)
-	{
-		PlaySound("EmptyBarell",msEmptySound, true, false);
-		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Empty"), 0);
-		return false;
-	}
-	else if(fill.result == kOhplGa4bOil_Full)
-	{
-		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_LanternFull"), 0);
-		return false;
-	}
-
-	mfOilAmount = fill.barrel;
-	gpBase->mpPlayer->SetLampOil(fill.lamp);
-
-	PlaySound("FillLantern",msFillSound, true, false);
-
-	if(fill.tier == 0)
-	{
-		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Full"), 0);
-	}
-	else
-	{
-		if(fill.tier == 1)		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_025"),0);
-		else if(fill.tier == 2)	gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_050"),0);
-		else if(fill.tier == 3)	gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_075"),0);
-		else					gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_100"),0);
-	}
-
-	return true;
+	OhplA5OilHost host = { this, &HostHardMode, &HostLampOil, &HostTotalOil };
+	OhplGa4Run run(this);
+	return ohpl_a5_oil_interact(&mS, &host, run.Sink());
 }
 
 //-----------------------------------------------------------------------
@@ -177,10 +147,9 @@ eLuxFocusCrosshair cLuxProp_OilBarrel::GetFocusCrosshair(iPhysicsBody *apBody, c
 
 tWString cLuxProp_OilBarrel::GetFocusText()
 {
-	CalculateOilAmount();
-
+	OhplA5OilHost host = { this, &HostHardMode, &HostLampOil, &HostTotalOil };
 	tWString sText;
-	int lTier = ohpl_ga4b_oil_focus_tier(mfOilAmount);
+	int lTier = ohpl_a5_oil_focus_tier(&mS, &host);
 	if(lTier == 0)			sText = kTranslate("Game", "OilBarrel_FocusText_Empty");
 	else if(lTier == 1)		sText = kTranslate("Game", "OilBarrel_FocusText_025");
 	else if(lTier == 2)		sText = kTranslate("Game", "OilBarrel_FocusText_050");
@@ -206,24 +175,23 @@ void cLuxProp_OilBarrel::OnConnectionStateChange(iLuxEntity *apEntity, int alSta
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_OilBarrel::CalculateOilAmount()
+bool cLuxProp_OilBarrel::HostHardMode(void *apCtx)
 {
-	if(mbAmountCalculated) return;
-	
-	//////////////////////
-	// HARDMODE
-	if (gpBase->mbHardMode) 
-	{
-		mfOilAmount = 10.0f;
-		mbAmountCalculated = true;
-		return;
-	}
+	return gpBase->mbHardMode;
+}
 
-	mfOilAmount = 10.0f; //Base amount
+//-----------------------------------------------------------------------
 
+float cLuxProp_OilBarrel::HostLampOil(void *apCtx)
+{
+	return gpBase->mpPlayer->GetLampOil();
+}
+
+//-----------------------------------------------------------------------
+
+float cLuxProp_OilBarrel::HostTotalOil(void *apCtx)
+{
 	float fTotalOil = gpBase->mpPlayer->GetLampOil();
-	
-	//Iterate items and add amount and count to total
 	for(int i=0; i<gpBase->mpInventory->GetItemNum(); ++i)
 	{
 		cLuxInventory_Item *pItem = gpBase->mpInventory->GetItem(i);
@@ -231,10 +199,40 @@ void cLuxProp_OilBarrel::CalculateOilAmount()
 
 		fTotalOil += pItem->GetAmount() * (float)pItem->GetCount();
 	}
-	
-	mfOilAmount = ohpl_ga4b_oil_amount(fTotalOil);
+	return fTotalOil;
+}
 
-    mbAmountCalculated = true;    
+//-----------------------------------------------------------------------
+
+void cLuxProp_OilBarrel::Ga4ApplyOp(const OhplGa4Op &aOp)
+{
+	switch(aOp.code)
+	{
+	case kOhplA5Op_OilSound:
+		if(aOp.i == kOhplA5Snd_Empty) PlaySound("EmptyBarell",msEmptySound, true, false);
+		else PlaySound("FillLantern",msFillSound, true, false);
+		break;
+	case kOhplA5Op_OilSetLamp:
+		gpBase->mpPlayer->SetLampOil(aOp.f[0]);
+		break;
+	case kOhplA5Op_OilMessage:
+		{
+			const char *sEntry = "OilBarrel_Empty";
+			switch(aOp.i)
+			{
+			case kOhplA5Msg_LanternFull:	sEntry = "OilBarrel_LanternFull"; break;
+			case kOhplA5Msg_RefillFull:		sEntry = "OilBarrel_Refill_Full"; break;
+			case kOhplA5Msg_Refill025:		sEntry = "OilBarrel_Refill_Amount_025"; break;
+			case kOhplA5Msg_Refill050:		sEntry = "OilBarrel_Refill_Amount_050"; break;
+			case kOhplA5Msg_Refill075:		sEntry = "OilBarrel_Refill_Amount_075"; break;
+			case kOhplA5Msg_Refill100:		sEntry = "OilBarrel_Refill_Amount_100"; break;
+			}
+			gpBase->mpMessageHandler->SetMessage(kTranslate("Game", sEntry), 0);
+		}
+		break;
+	default:
+		iLuxProp::Ga4ApplyOp(aOp);
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -270,8 +268,8 @@ void cLuxProp_OilBarrel::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	kCopyToVar(pData, mbAmountCalculated);
-	kCopyToVar(pData, mfOilAmount);
+	pData->mbAmountCalculated = mS.calculated;
+	pData->mfOilAmount = mS.amount;
 	
 }
 
@@ -286,8 +284,8 @@ void cLuxProp_OilBarrel::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	
 	//////////////////
 	//Set variables
-	kCopyFromVar(pData, mbAmountCalculated);
-	kCopyFromVar(pData, mfOilAmount);
+	mS.calculated = pData->mbAmountCalculated;
+	mS.amount = pData->mfOilAmount;
 }
 
 //-----------------------------------------------------------------------
