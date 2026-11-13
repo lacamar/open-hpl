@@ -4,6 +4,10 @@
 //! script calls stay C++: Rust issues them as ordered `Op`s that C++ applies immediately. A script
 //! that re-enters the prop rewrites its POD state, which Rust re-reads after each such op.
 
+mod a5_ffi;
+mod a5_small;
+#[cfg(test)]
+mod a5_tests;
 mod base;
 mod critter;
 mod entc;

@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxProp.h"
+#include "RustLuxPropA5.h"
 
 //----------------------------------------------
 
@@ -41,7 +42,7 @@ class cLuxProp_OilBarrel : public iLuxProp
 {
 typedef iLuxProp super_class;
 friend class cLuxPropLoader_OilBarrel;
-public:	
+public:
 	cLuxProp_OilBarrel(const tString &asName, int alID, cLuxMap *apMap);
 	virtual ~cLuxProp_OilBarrel();
 
@@ -49,13 +50,13 @@ public:
 	//General
 	bool CanInteract(iPhysicsBody *apBody);
 	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
-	
+
 	void OnSetupAfterLoad(cWorld *apWorld);
 
 	void OnResetProperties();
 
 	void UpdatePropSpecific(float afTimeStep);
-	
+
 	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
@@ -63,10 +64,14 @@ public:
 
 	//////////////////////
 	//Properties
-	
+
 	//////////////////////
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
+
+	//////////////////////
+	//Rust replay
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
 
 
 	//////////////////////
@@ -78,16 +83,21 @@ public:
 
 private:
 	void CalculateOilAmount();
+	static bool HostHardMode(void *apCtx);
+	static float HostLampOil(void *apCtx);
+	static float HostTotalOil(void *apCtx);
 
 	//////////////////////
 	// Data
 	tString msFillSound;
 	tString msEmptySound;
-    	
+
 	//////////////////////
 	// Variables
 	bool mbAmountCalculated;
 	float mfOilAmount;
+
+	OhplA5Oil mS; //used instead of the vars above when OHPL_IMPL=rust
 };
 
 //----------------------------------------------

@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxProp.h"
+#include "RustLuxPropA5.h"
 
 //----------------------------------------------
 
@@ -35,6 +36,7 @@ public:
 	float mfLightLevelCheckCount;
 	float mfLightLevelOnLimit;
 	float mfLightLevelOffLimit;
+
 };
 
 //----------------------------------------------
@@ -43,7 +45,7 @@ class cLuxProp_Photocell : public iLuxProp
 {
 typedef iLuxProp super_class;
 friend class cLuxPropLoader_Photocell;
-public:	
+public:
 	cLuxProp_Photocell(const tString &asName, int alID, cLuxMap *apMap);
 	virtual ~cLuxProp_Photocell();
 
@@ -51,24 +53,28 @@ public:
 	//General
 	bool CanInteract(iPhysicsBody *apBody);
 	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
-	
+
 	void OnSetupAfterLoad(cWorld *apWorld);
 
 	void OnResetProperties();
 
 	void UpdatePropSpecific(float afTimeStep);
-	
+
 	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 
 	//////////////////////
 	//Properties
-	
+
 	//////////////////////
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState){}
-	
+
+	//////////////////////
+	//Rust replay
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
+
 	//////////////////////
 	//Save data stuff
 	iLuxEntity_SaveData* CreateSaveData();
@@ -79,17 +85,22 @@ public:
 
 private:
 	void UpdateLightLevel(float afTimeStep);
+	static void HostBounds(void *apCtx, float *apSize, float *apCenter);
+	static float HostLightAt(void *apCtx, const float *apPos);
+	static bool HostIllumination(void *apCtx, float *apOut);
 
 	//General
-	
+
 
 	//Vars
 	bool mbLit;
 	float mfLightLevel;
 	float mfLightLevelCheckCount;
-	
+
 	float mfLightLevelOnLimit;
 	float mfLightLevelOffLimit;
+
+	OhplA5Photocell mS; //used instead of the vars above when OHPL_IMPL=rust
 };
 
 //----------------------------------------------

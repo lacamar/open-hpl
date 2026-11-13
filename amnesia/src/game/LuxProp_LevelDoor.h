@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxProp.h"
+#include "RustLuxPropA5.h"
 
 //----------------------------------------------
 
@@ -50,7 +51,7 @@ class cLuxProp_LevelDoor : public iLuxProp
 {
 typedef iLuxProp super_class;
 friend class cLuxPropLoader_LevelDoor;
-public:	
+public:
 	cLuxProp_LevelDoor(const tString &asName, int alID, cLuxMap *apMap);
 	virtual ~cLuxProp_LevelDoor();
 
@@ -58,13 +59,13 @@ public:
 	//Genera
 	bool CanInteract(iPhysicsBody *apBody);
 	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
-	
+
 	void OnSetupAfterLoad(cWorld *apWorld);
 
 	void OnResetProperties();
 
 	void UpdatePropSpecific(float afTimeStep);
-	
+
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 	tWString GetFocusText();
 
@@ -72,14 +73,18 @@ public:
 	//////////////////////
 	//Properties
 	void SetLocked(bool abLocked);
-	bool GetLocked(){ return mbLocked; }
+	bool GetLocked(){ return hpl::OhplBackendRustRequested() ? mS.locked : mbLocked; }
 
 	void SetLockedSound(const tString& asSound){ msLockedSound = asSound;}
 	void SetLockedText(const tString& asCat, const tString& asEntry){ msLockedTextCat = asCat; msLockedTextEntry=asEntry;}
-	
+
 	//////////////////////
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
+
+	//////////////////////
+	//Rust replay
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
 
 	//////////////////////
 	//Save data stuff
@@ -92,7 +97,7 @@ private:
 
 	//////////////////////
 	// Data
-	tString msEnterSound;	
+	tString msEnterSound;
 	tString msExitSound;
 
 	//////////////////////
@@ -109,6 +114,8 @@ private:
 	float mfLockedCount;
 
 	bool mbShowStats;
+
+	OhplA5Door mS; //used instead of mbLocked, mfLockedCount and mbShowStats when OHPL_IMPL=rust
 };
 
 //----------------------------------------------
