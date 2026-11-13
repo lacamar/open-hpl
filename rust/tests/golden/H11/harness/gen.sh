@@ -2,7 +2,7 @@
 # Usage: gen.sh <build-dir> <source.cpp> <outbin> [<tree root>]
 # build-dir: configured and built `HPL2` (and `HPL2TraceRecorder`); tree root: where the headers come from
 # (default: this repository; pass a pristine checkout to record the C++ baseline against its own libraries).
-# Run:  <outbin> mesh <seed> <steps> <file.msh> [anm...] | light <seed> <steps> | fog <seed> <steps>, OHPL_IMPL=cpp|rust
+# Run:  <outbin> mesh <seed> <steps> <file.msh> [anm...] | light <seed> <steps> | fog <seed> <steps>
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 root=${4:-$(git -C "$here" rev-parse --show-toplevel)}

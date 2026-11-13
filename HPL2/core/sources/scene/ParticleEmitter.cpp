@@ -38,7 +38,6 @@
 #include "scene/World.h"
 
 #include "scene/ParticleSystem.h"
-#include "impl/RustBackends.h"
 
 
 namespace hpl {
@@ -183,52 +182,15 @@ namespace hpl {
 	{
 		if(IsActive()==false) return;
 
-		if(OhplBackendRustRequested())
+		uint32_t lGate = ohpl_h12b_pe_update_gate(&mCtl, true, IsDying(), iRenderer::GetRenderFrameCount() == mlRenderFrameCount,
+												mbUsesDirection, GetMatrixUpdateCount());
+		if(lGate == 0) return;
+		if(lGate & kOhplH12GateDirection)
 		{
-			uint32_t lGate = ohpl_h12b_pe_update_gate(&mCtl, true, IsDying(), iRenderer::GetRenderFrameCount() == mlRenderFrameCount,
-													mbUsesDirection, GetMatrixUpdateCount());
-			if(lGate == 0) return;
-			if(lGate & kOhplH12GateDirection)
-			{
-				cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
-				mvDirection = mtxInv.GetUp();
-			}
-			UpdateMotion(afTimeStep);
-			SetTransformUpdated();
-			return;
+			cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
+			mvDirection = mtxInv.GetUp();
 		}
-
-		//////////////////////////////
-		// Update sleep
-		if(IsDying()==false && iRenderer::GetRenderFrameCount() != mlRenderFrameCount)
-		{
-			if(mCtl.sleep_count <= 0)return;
-			mCtl.sleep_count--;
-		}
-		else
-		{
-			if(mCtl.sleep_count<10) mCtl.sleep_count =10;
-		}
-
-		//////////////////////////////
-		// Update vars
-		mCtl.update_gfx = true;
-		mCtl.update_bv = true;
-
-		//////////////////////////////
-		// Update direction
-		if(mbUsesDirection)
-		{
-			if(mCtl.direction_update_count != GetMatrixUpdateCount())
-			{
-				mCtl.direction_update_count = GetMatrixUpdateCount();
-				cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
-				mvDirection = mtxInv.GetUp();
-			}
-		}
-
 		UpdateMotion(afTimeStep);
-
 		SetTransformUpdated();
 	}
 
@@ -302,8 +264,7 @@ namespace hpl {
 			in.m_mtxPsWorld = mpParentSystem->GetWorldMatrix();
 		if(mDrawType == eParticleEmitterType_Axis)
 		{
-			const bool bAxisUpdate = OhplBackendRustRequested() ?
-				ohpl_h12b_pe_axis_gate(&mCtl, true, GetMatrixUpdateCount()) : mCtl.axis_update_count != GetMatrixUpdateCount();
+			const bool bAxisUpdate = ohpl_h12b_pe_axis_gate(&mCtl, true, GetMatrixUpdateCount());
 			if(bAxisUpdate)
 			{
 				mCtl.axis_update_count = GetMatrixUpdateCount();
@@ -359,19 +320,9 @@ namespace hpl {
 
 	cBoundingVolume* iParticleEmitter::GetBoundingVolume()
 	{
-		bool bUpdate, bAxisUpdate;
-		if(OhplBackendRustRequested())
-		{
-			const uint32_t lGate = ohpl_h12b_pe_bv_gate(&mCtl, mDrawType == eParticleEmitterType_Axis, GetMatrixUpdateCount());
-			bUpdate = lGate & 1;
-			bAxisUpdate = lGate & 2;
-		}
-		else
-		{
-			bUpdate = mCtl.update_bv;
-			bAxisUpdate = bUpdate && mDrawType == eParticleEmitterType_Axis && mCtl.axis_update_count != GetMatrixUpdateCount();
-			if(bAxisUpdate) mCtl.axis_update_count = GetMatrixUpdateCount();
-		}
+		const uint32_t lGate = ohpl_h12b_pe_bv_gate(&mCtl, mDrawType == eParticleEmitterType_Axis, GetMatrixUpdateCount());
+		const bool bUpdate = lGate & 1;
+		const bool bAxisUpdate = lGate & 2;
 
 		if(bUpdate)
 		{
@@ -403,49 +354,13 @@ namespace hpl {
 
 	cMatrixf* iParticleEmitter::GetModelMatrix(cFrustum *apFrustum)
 	{
-		if(OhplBackendRustRequested())
+		switch(ohpl_h12b_pe_model_kind(apFrustum != NULL, mDrawType == eParticleEmitterType_Axis))
 		{
-			switch(ohpl_h12b_pe_model_kind(apFrustum != NULL, mDrawType == eParticleEmitterType_Axis))
-			{
-			case 0: return &GetWorldMatrix();
-			case 1: m_mtxTemp = cMatrixf::Identity; break;
-			default: m_mtxTemp = cMath::MatrixInverse(apFrustum->GetViewMatrix()); break;
-			}
-			return &m_mtxTemp;
+		case 0: return &GetWorldMatrix();
+		case 1: m_mtxTemp = cMatrixf::Identity; break;
+		default: m_mtxTemp = cMath::MatrixInverse(apFrustum->GetViewMatrix()); break;
 		}
-
-		if(apFrustum)
-		{
-			if(mDrawType == eParticleEmitterType_Axis)
-			{
-				m_mtxTemp = cMatrixf::Identity;
-			}
-			//This is really not good...
-			else if(mCoordSystem == eParticleEmitterCoordSystem_World)
-			{
-				m_mtxTemp = cMath::MatrixInverse(apFrustum->GetViewMatrix());
-			}
-			else
-			{
-				m_mtxTemp = cMath::MatrixInverse(apFrustum->GetViewMatrix());
-				//m_mtxTemp = cMath::MatrixMul(cMath::MatrixInverse(apCamera->GetViewMatrix()), 
-				//								GetWorldMatrix());
-			}
-
-			//m_mtxTemp.SetTranslation(cVector3f(0,0,0));//GetWorldMatrix().GetTranslation());
-
-			//m_mtxTemp = cMatrixf::Identity;
-
-			//cMatrixf mtxCam = apCamera->GetViewMatrix();
-			//Log("MATRIX: %s\n",mtxCam.ToString().c_str());
-
-			return &m_mtxTemp;
-
-		}
-		else
-		{
-			return &GetWorldMatrix();
-		}
+		return &m_mtxTemp;
 	}
 
 	//-----------------------------------------------------------------------

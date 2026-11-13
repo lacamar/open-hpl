@@ -28,7 +28,6 @@
 
 #include "graphics/Graphics.h"
 #include "graphics/RustRenderH8.h"
-#include "impl/RustBackends.h"
 #include "graphics/Texture.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/MeshCreator.h"
@@ -1809,23 +1808,9 @@ namespace hpl {
 			afHalfFovTan = tan(apFrustum->GetFOV()*0.5f);
 		cMath::GetClipRectFromBV(clipRect, *pBV, apFrustum, avScreenSize, afHalfFovTan);
 
-		if(OhplBackendRustRequested())
-		{
-			OhplH8Rect rect = { clipRect.x, clipRect.y, clipRect.w, clipRect.h };
-			ohpl_h8_clip_pad(&rect, avScreenSize.x, avScreenSize.y, afHalfFovTan);
-			clipRect.x = rect.x; clipRect.y = rect.y; clipRect.w = rect.w; clipRect.h = rect.h;
-			return clipRect;
-		}
-
-		//Add 20% padding on clip rect
-		int lXInc = (int)((float)clipRect.w*afHalfFovTan);
-		int lYInc = (int)((float)clipRect.h*afHalfFovTan);
-
-		clipRect.x = cMath::Max(clipRect.x-lXInc, 0);
-		clipRect.y = cMath::Max(clipRect.y-lYInc, 0);
-		clipRect.w = cMath::Min(clipRect.w+lXInc*2, avScreenSize.x-clipRect.x);
-		clipRect.h = cMath::Min(clipRect.h+lYInc*2, avScreenSize.y-clipRect.y);
-
+		OhplH8Rect rect = { clipRect.x, clipRect.y, clipRect.w, clipRect.h };
+		ohpl_h8_clip_pad(&rect, avScreenSize.x, avScreenSize.y, afHalfFovTan);
+		clipRect.x = rect.x; clipRect.y = rect.y; clipRect.w = rect.w; clipRect.h = rect.h;
 		return clipRect;
 	}
 

@@ -45,8 +45,8 @@ namespace hpl {
 		cKeyFrame* CreateKeyFrame(float afTime);
 		void ClearKeyFrames();
 		
-inline cKeyFrame* GetKeyFrame(int alIndex){ return mpRs ? ohpl_h6_track_frame(mpRs, alIndex) : mvKeyFrames[alIndex];}
-inline int GetKeyFrameNum(){ return mpRs ? ohpl_h6_track_num(mpRs) : (int) mvKeyFrames.size();}
+inline cKeyFrame* GetKeyFrame(int alIndex){ return ohpl_h6_track_frame(mpRs, alIndex);}
+inline int GetKeyFrameNum(){ return ohpl_h6_track_num(mpRs);}
 
 		inline tAnimTransformFlag GetTransformFlags(){ return mTransformFlags;}
 		inline float GetUnitScale(){ return mfUnitScale;}
@@ -88,12 +88,9 @@ inline int GetKeyFrameNum(){ return mpRs ? ohpl_h6_track_num(mpRs) : (int) mvKey
 
 		int mlNodeIdx;
 
-		tKeyFramePtrVec mvKeyFrames;
 		tAnimTransformFlag mTransformFlags;
 		float mfUnitScale = 1.0f;
 
-		float mfMaxFrameTime;
-		
 		cAnimation* mpParent;
 		OhplH6Track* mpRs;
 	};

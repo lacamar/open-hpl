@@ -310,9 +310,9 @@ namespace hpl {
 		bool GetDirectionalLightActive(){ return mbDirectionalLightActive; }
 
 		cEnvironmentParticles* CreateEnvironmentParticles(const tString& asName);
-		cEnvironmentParticles* GetEnvironmentParticles(int alIdx){ return alIdx>=0 && alIdx<(int)mvEnvParticles.size() ? mvEnvParticles[alIdx] : NULL; }
+		cEnvironmentParticles* GetEnvironmentParticles(int alIdx);
 		cEnvironmentParticles* GetEnvironmentParticles(const tString& asName);
-		int GetEnvironmentParticleNum(){ return (int)mvEnvParticles.size(); }
+		int GetEnvironmentParticleNum();
 		void SetEnvironmentParticlesActive(bool abX){ mbEnvParticlesActive = abX; }
 		bool GetEnvironmentParticlesActive(){ return mbEnvParticlesActive; }
 
@@ -539,7 +539,6 @@ namespace hpl {
 		cLightDirectional *mpDirectionalLight = NULL;
 		bool mbDirectionalLightActive = false;
 
-		std::vector<cEnvironmentParticles*> mvEnvParticles;
 		bool mbEnvParticlesActive = true;
 
 		bool mbFogActive;
@@ -592,30 +591,12 @@ namespace hpl {
 		tString msColorGradingTexture;
 		std::vector<cWorldExposureArea> mvExposureAreas;
 
-		tLightList mlstLights;
-		tMeshEntityList mlstDynamicMeshEntities;
-		tMeshEntityList mlstStaticMeshEntities;
-		tBillboardList mlstBillboards;
-		tLensFlareList mlstLensFlares;
-		tBeamList mlstBeams;
-		tParticleSystemList mlstParticleSystems;
-		tGuiSetEntityList mlstGuiSetEntities;
-		tRopeEntityList mlstRopeEntities;
-		tSoundEntityList mlstSoundEntities;
-		tStartPosEntityList mlstStartPosEntities;
-		tAreaEntityMap m_mapAreaEntities;
-		tFogAreaList mlstFogAreas;
-		tForceFieldList mlstForceFields;
-		tDummyRenderableList mlstDummyRenderables;
-
 		int mlSoundCreationIDCount;
 
 		//tSoundEntityList mlstSoundEntityPool;<-Debugging
 
 		tEntFileList mlstEntFileCache;
 		
-		tAINodeContainerList mlstAINodeContainers;
-		tAStarHandlerList mlstAStarHandlers;
 		tTempNodeContainerMap m_mapTempNodes;
 
 		cNode3D* mpRootNode;

@@ -44,7 +44,6 @@ class cSkeleton
 		cSkeleton();
 		~cSkeleton();
 
-		void AddBone(cBone* apBone);
 		void RemoveBone(cBone* apBone);
 
 		cBone* GetRootBone();
@@ -65,8 +64,6 @@ class cSkeleton
 		tBoneVec mvRsById;
 		cBone* mpRootBone;
 
-		tBoneVec mvBones;
-		tBoneIdxNameMap m_mapBonesIdxByName;
 	};
 
 };

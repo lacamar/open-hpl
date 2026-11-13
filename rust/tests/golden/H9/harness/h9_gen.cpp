@@ -1,4 +1,4 @@
-// H9 differential harness: OHPL_IMPL=cpp|rust picks the setup path of cRendererDeferred::LoadData's fog and light program combos.
+// H9 harness: prints the cProgramComboManager state set up by cRendererDeferred::LoadData's fog and light program combos.
 //   h9_gen   prints the cProgramComboManager state (features, default defines, variable ids) per configuration.
 #include <cstdio>
 #include <cstdlib>
@@ -9,7 +9,6 @@
 #define protected public
 #include "graphics/ProgramComboManager.h"
 #include "graphics/RustRendererH9.h"
-#include "impl/RustBackends.h"
 #include "system/PreprocessParser.h"
 #undef private
 #undef protected
@@ -33,12 +32,10 @@ static void Dump(cProgramComboManager &m, int mode)
 
 int main()
 {
-	bool bRust = OhplBackendRustRequested();
-	fprintf(stderr, "rs %d\n", bRust ? 1 : 0);
 	for(int packed = 0; packed < 2; ++packed)
 	{
 		cProgramComboManager m("FogArea", NULL, NULL, 1);
-		OhplH9SetupFogCombos(&m, packed != 0, bRust);
+		OhplH9SetupFogCombos(&m, packed != 0);
 		printf("fog packed %d\n", packed);
 		Dump(m, 0);
 	}
@@ -48,7 +45,7 @@ int main()
 		for(size_t a = 0; a < sizeof(vSizes) / sizeof(vSizes[0]); ++a) for(size_t b = 0; b < sizeof(vSamples) / sizeof(vSamples[0]); ++b)
 		{
 			cProgramComboManager m("Deferred", NULL, NULL, 2);
-			OhplH9SetupLightCombos(&m, (eShadowMapQuality)q, g64 != 0, rt, vSizes[a], vSamples[b], bRust);
+			OhplH9SetupLightCombos(&m, (eShadowMapQuality)q, g64 != 0, rt, vSizes[a], vSamples[b]);
 			printf("light q %d g64 %d rt %d jitter %d %d\n", q, g64, rt, vSizes[a], vSamples[b]);
 			Dump(m, 0);
 		}

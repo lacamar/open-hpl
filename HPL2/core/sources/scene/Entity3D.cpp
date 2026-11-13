@@ -22,7 +22,6 @@
 #include "math/Math.h"
 #include "scene/RustNode.h"
 #include "scene/RustSceneH10.h"
-#include "impl/RustBackends.h"
 
 #include "system/LowLevelSystem.h"
 
@@ -180,96 +179,35 @@ namespace hpl {
 
 	void iEntity3D::SetPosition(const cVector3f& avPos)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_ent_set_position(OhplH10GetHost(), (uintptr_t)this, &avPos); return; }
-
-		m_mtxLocalTransform.m[0][3] = avPos.x;
-		m_mtxLocalTransform.m[1][3] = avPos.y;
-		m_mtxLocalTransform.m[2][3] = avPos.z;
-
-		SetTransformUpdated();
+		ohpl_h10_ent_set_position(OhplH10GetHost(), (uintptr_t)this, &avPos);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void iEntity3D::SetMatrix(const cMatrixf& a_mtxTransform)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_ent_set_matrix(OhplH10GetHost(), (uintptr_t)this, &a_mtxTransform); return; }
-
-		m_mtxLocalTransform = a_mtxTransform;
-
-		SetTransformUpdated();
+		ohpl_h10_ent_set_matrix(OhplH10GetHost(), (uintptr_t)this, &a_mtxTransform);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iEntity3D::SetWorldPosition(const cVector3f& avWorldPos)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_ent_set_world_position(OhplH10GetHost(), (uintptr_t)this, &avWorldPos); return; }
-
-		if(mpParent)
-		{
-			SetPosition(avWorldPos - mpParent->GetWorldPosition());
-		}
-		else
-		{
-			SetPosition(avWorldPos);
-		}
+		ohpl_h10_ent_set_world_position(OhplH10GetHost(), (uintptr_t)this, &avWorldPos);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iEntity3D::SetWorldMatrix(const cMatrixf& a_mtxWorldTransform)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_ent_set_world_matrix(OhplH10GetHost(), (uintptr_t)this, &a_mtxWorldTransform); return; }
-
-		if(mpParent)
-		{
-			cMatrixf mtxLocal;
-			ohpl_scene_world_to_local(&mpParent->GetWorldMatrix(), &a_mtxWorldTransform, &mtxLocal);
-			SetMatrix(mtxLocal);
-		}
-		else
-		{
-			SetMatrix(a_mtxWorldTransform);
-		}
+		ohpl_h10_ent_set_world_matrix(OhplH10GetHost(), (uintptr_t)this, &a_mtxWorldTransform);
 	}
 	
 	//-----------------------------------------------------------------------
 	
 	void iEntity3D::SetTransformUpdated(bool abUpdateCallbacks)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_ent_set_transform_updated(OhplH10GetHost(), (uintptr_t)this, abUpdateCallbacks); return; }
-
-		mbTransformUpdated = true;
-		mlCount++;
-
-		mbUpdateBoundingVolume = true;
-
-		OnTransformUpdated();
-		
-		//Update children
-		for(tEntity3DListIt EntIt = mlstChildren.begin(); EntIt != mlstChildren.end();++EntIt)
-		{
-			iEntity3D *pChild = *EntIt;
-			pChild->SetTransformUpdated(true);
-		}
-		
-		//Update node children
-		for(tNode3DListIt nodeIt = mlstNodeChildren.begin(); nodeIt != mlstNodeChildren.end();++nodeIt)
-		{
-			cNode3D *pNode = *nodeIt;
-			pNode->SetWorldTransformUpdated();
-		}
-
-		//Update callbacks
-		if(mlstCallbacks.empty() || abUpdateCallbacks==false) return;
-
-		tEntityCallbackListIt it = mlstCallbacks.begin();
-		for(; it!= mlstCallbacks.end(); ++it)
-		{
-			iEntityCallback* pCallback = *it;
-			pCallback->OnTransformUpdate(this);
-		}
+		ohpl_h10_ent_set_transform_updated(OhplH10GetHost(), (uintptr_t)this, abUpdateCallbacks);
 	}
 
 	//-----------------------------------------------------------------------
@@ -290,18 +228,7 @@ namespace hpl {
 
 	cBoundingVolume* iEntity3D::GetBoundingVolume()
 	{
-		if(OhplBackendRustRequested())
-		{
-			if(ohpl_h10_ent_bv_dirty(OhplH10GetHost(), (uintptr_t)this)) mBoundingVolume.SetTransform(m_mtxWorldTransform);
-			return &mBoundingVolume;
-		}
-
-		if(mbApplyTransformToBV && mbUpdateBoundingVolume)
-		{
-			mBoundingVolume.SetTransform(GetWorldMatrix());
-			mbUpdateBoundingVolume = false;
-		}
-
+		if(ohpl_h10_ent_bv_dirty(OhplH10GetHost(), (uintptr_t)this)) mBoundingVolume.SetTransform(m_mtxWorldTransform);
 		return &mBoundingVolume;
 	}
 
@@ -423,31 +350,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	void iEntity3D::UpdateWorldTransform()
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_ent_update_world(OhplH10GetHost(), (uintptr_t)this); return; }
-
-		if(mbTransformUpdated)
-		{
-			//Log("CREATING Entity '%s' world transform!\n",msName.c_str());
-
-			mbTransformUpdated = false;
-			
-			//first check if there is a node parent
-			if(mpParentNode)
-			{
-				cNode3D* pNode3D = static_cast<cNode3D*>(mpParentNode);
-
-				m_mtxWorldTransform = cMath::MatrixMul(pNode3D->GetWorldMatrix(), m_mtxLocalTransform);
-			}
-			//If there is no node parent check for entity parent
-			else if(mpParent)
-			{
-				m_mtxWorldTransform = cMath::MatrixMul(mpParent->GetWorldMatrix(), m_mtxLocalTransform);
-			}
-			else
-			{
-				m_mtxWorldTransform = m_mtxLocalTransform;
-			}
-		}
+		ohpl_h10_ent_update_world(OhplH10GetHost(), (uintptr_t)this);
 	}
 	
 	//-----------------------------------------------------------------------

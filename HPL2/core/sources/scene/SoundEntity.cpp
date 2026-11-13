@@ -33,7 +33,6 @@
 #include "scene/World.h"
 #include "scene/RustWorld.h"
 #include "scene/RustSceneH12.h"
-#include "impl/RustBackends.h"
 
 namespace hpl {
 
@@ -413,48 +412,14 @@ namespace hpl {
 
 		bool bNotEnoughChannels = false;
 
-		if(OhplBackendRustRequested())
-		{
-			const uint32_t lRoute = ohpl_h12b_snd_play_route(mbForcePlayAsGUISound, mpData->GetUse3D());
-			const bool bEntityRange = (lRoute & 4) != 0;
-			mvSoundEntries[aType] = mpSoundHandler->Play3D(
-										sSoundName, abLoop,
-										mfVolume, bEntityRange ? GetWorldPosition() : cVector3f(0,0,1),
-										bEntityRange ? mfMinDistance : 100.0f, bEntityRange ? mfMaxDistance : 200.0f,
-										(lRoute & 1) ? eSoundEntryType_Gui : eSoundEntryType_World, (lRoute & 2) != 0, mpData->GetPriority(),
-										mpData->GetStream(), &bNotEnoughChannels);
-		}
-		else
-		if(mbForcePlayAsGUISound)
-		{
-			mvSoundEntries[aType] = mpSoundHandler->Play3D(
-										sSoundName, abLoop,
-										mfVolume, cVector3f(0,0,1),
-										100.0f, 200.0f,	//Just set something so that sound is always inside min.
-										eSoundEntryType_Gui,true, mpData->GetPriority(),
-										mpData->GetStream(), &bNotEnoughChannels);
-		}
-		else
-		{
-			if(mpData->GetUse3D())
-			{
-				mvSoundEntries[aType] = mpSoundHandler->Play3D(
-										sSoundName, abLoop,
-										mfVolume, GetWorldPosition(),
-										mfMinDistance, mfMaxDistance,
-										eSoundEntryType_World,false, mpData->GetPriority(),
-										mpData->GetStream(), &bNotEnoughChannels);
-			}
-			else
-			{
-				mvSoundEntries[aType] = mpSoundHandler->Play3D(
-										sSoundName, abLoop,
-										mfVolume, cVector3f(0,0,1),
-										100.0f, 200.0f,	//Just set something so that sound is always inside min.
-										eSoundEntryType_World,true, mpData->GetPriority(),
-										mpData->GetStream(), &bNotEnoughChannels);
-			}
-		}
+		const uint32_t lRoute = ohpl_h12b_snd_play_route(mbForcePlayAsGUISound, mpData->GetUse3D());
+		const bool bEntityRange = (lRoute & 4) != 0;
+		mvSoundEntries[aType] = mpSoundHandler->Play3D(
+									sSoundName, abLoop,
+									mfVolume, bEntityRange ? GetWorldPosition() : cVector3f(0,0,1),
+									bEntityRange ? mfMinDistance : 100.0f, bEntityRange ? mfMaxDistance : 200.0f,
+									(lRoute & 1) ? eSoundEntryType_Gui : eSoundEntryType_World, (lRoute & 2) != 0, mpData->GetPriority(),
+									mpData->GetStream(), &bNotEnoughChannels);
 
 		if(mvSoundEntries[aType]==NULL)
 		{

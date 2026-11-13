@@ -167,7 +167,6 @@ namespace hpl {
 		void Destroy(){}
 		
 	private:
-		void UpdateAnimations(float afTimeStep);
 
 		cGraphics *mpGraphics;
 		cResources *mpResources;
@@ -215,7 +214,6 @@ namespace hpl {
 		std::vector<cMaterialUvAnimation> mvUvAnimations;
 		bool mbHasUvAnimation;
 		cMatrixf m_mtxUV;
-		float mfAnimTime;
 		
 		int mlRenderFrameCount;
 	

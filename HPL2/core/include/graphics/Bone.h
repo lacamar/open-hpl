@@ -79,34 +79,18 @@ namespace hpl {
 		
 	private:
 		OhplH6Skel* Rs() const;
-		void NeedsUpdate();
-
-		void UpdateMatrix();
-	
 		tString msName;
 		tString msSid;
 
-		cMatrixf m_mtxTransform;
-
-		cMatrixf m_mtxWorldTransform;
-		cMatrixf m_mtxInvWorldTransform;
-		cMatrixf m_mtxInvBind;
-		bool mbHasInvBind;
 		float mfLocalUnitScale;
 		
 		//// -- <UNSCALED> -- ///
-		cMatrixf m_mtxTransformUnscaled;
-		cMatrixf m_mtxWorldTransformUnscaled;
-		bool mbNeedsUnscaledUpdate;
-		void UpdateUnscaledMatrix();
 		//// -- </UNSCALED> -- ///
 
 		cBone* mpParent;
 		tBoneList mlstChildren;
 
 		cSkeleton* mpSkeleton;
-
-		bool mbNeedsUpdate;
 
 		int mlValue;
 		int mlRsId;

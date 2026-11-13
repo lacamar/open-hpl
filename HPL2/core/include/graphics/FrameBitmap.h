@@ -53,7 +53,6 @@ namespace hpl {
 		~cFrameBitmap();
 
 		cFrameSubImage * AddBitmap(cBitmap *apSrc, const tWString& asFullPath, cFrameSubImage *apSubImageCreated, bool *apFoundNode=NULL);
-		bool MinimumFit(cRect2l aSrc,cRect2l aDest);
 		bool IsFull();
 		bool IsUpdated();
 
@@ -73,26 +72,15 @@ namespace hpl {
 
 		int GetAdditionsSinceReorganization();
 	private:
-		void ClearAddedImages();
-		void ReorganizeRust();
-		cFrameSubImage* AddBitmapRust(cBitmap *apSrc, const tWString& asFullPath, cFrameSubImage *apSubImageCreated, bool *apFoundNode);
 
 		cBitmap* mpBitmap;
 		cFrameTexture* mpFrameTexture;
 		
-		void* mpPacker;
 		void* mpAtlas;
 
 		cFBitmapImageList mlstImages;
 		
-		int mlMinHole;
 		int mlHandle;
-		bool mbIsFull;
-		bool mbIsUpdated;
-		bool mbIsLocked;
-		bool mbNeedNeedReorganisation;
-
-		int mlAdditionsSinceReorganization;
 	};
 
 };

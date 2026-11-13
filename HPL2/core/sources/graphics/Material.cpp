@@ -34,7 +34,6 @@
 
 #include "math/Math.h"
 #include "graphics/RustMaterial.h"
-#include "impl/RustBackends.h"
 
 
 namespace hpl {
@@ -55,7 +54,7 @@ namespace hpl {
 
 		mpType = NULL;
 		mpVars = NULL;
-		mpRs = NULL;
+		mpRs = ohpl_h7_mat_new(apType && apType->IsTranslucent());
 		SetType(apType);
 
 		mbAutoDestroyTextures = true;
@@ -85,7 +84,6 @@ namespace hpl {
 			mbHasObjectSpecificsSettings[i] = false;
 		}
 
-		mfAnimTime = 0;
 		m_mtxUV = cMatrixf::Identity;
 		mbHasUvAnimation = false;
 
@@ -120,7 +118,6 @@ namespace hpl {
 		mAlphaMode = eMaterialAlphaMode_Solid;
 		mbDepthTest = true;
 
-		if(OhplBackendRustRequested()) mpRs = ohpl_h7_mat_new(mpType->IsTranslucent());
 	}
 
 	//-----------------------------------------------------------------------
@@ -128,7 +125,7 @@ namespace hpl {
 	cMaterial::~cMaterial()
 	{
 		if(mpVars) hplDelete(mpVars);
-		if(mpRs) ohpl_h7_mat_free(mpRs);
+		ohpl_h7_mat_free(mpRs);
 
 		if(mbDestroyTypeSpecifics && mpType)
 		{
@@ -167,7 +164,7 @@ namespace hpl {
 		if(mpType==apType) return;
 
 		mpType = apType;
-		if(mpRs && mpType) ohpl_h7_mat_set_translucent(mpRs, mpType->IsTranslucent());
+		if(mpType) ohpl_h7_mat_set_translucent(mpRs, mpType->IsTranslucent());
 
 		if(mpVars) hplDelete(mpVars);
 		if(mpType) mpVars = mpType->CreateSpecificVariables();
@@ -250,34 +247,26 @@ namespace hpl {
 
 	void cMaterial::SetBlendMode(eMaterialBlendMode aBlendMode)
 	{
-		if(mpRs) { mBlendMode = (eMaterialBlendMode)ohpl_h7_mat_set_blend(mpRs, aBlendMode); return; }
-		if(mpType->IsTranslucent()==false) return;
-
-		mBlendMode = aBlendMode;
+		mBlendMode = (eMaterialBlendMode)ohpl_h7_mat_set_blend(mpRs, aBlendMode);
 	}
 	
 	void cMaterial::SetAlphaMode(eMaterialAlphaMode aAlphaMode)
 	{
 		//if(mpType->IsTranslucent()) return;
 
-		if(mpRs) { mAlphaMode = (eMaterialAlphaMode)ohpl_h7_mat_set_alpha(mpRs, aAlphaMode); return; }
-		mAlphaMode = aAlphaMode;
+		mAlphaMode = (eMaterialAlphaMode)ohpl_h7_mat_set_alpha(mpRs, aAlphaMode);
 	}
 
 	void cMaterial::SetDepthTest(bool abDepthTest)
 	{
-		if(mpRs) { mbDepthTest = ohpl_h7_mat_set_depth_test(mpRs, abDepthTest); return; }
-		if(mpType->IsTranslucent()==false) return;
-
-		mbDepthTest = abDepthTest;
+		mbDepthTest = ohpl_h7_mat_set_depth_test(mpRs, abDepthTest);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cMaterial::UpdateBeforeRendering(float afTimeStep)
 	{
-		if(mpRs) { if(mbHasUvAnimation) ohpl_h7_mat_update(mpRs, afTimeStep, &m_mtxUV); return; }
-		if(mbHasUvAnimation) UpdateAnimations(afTimeStep);
+		if(mbHasUvAnimation) ohpl_h7_mat_update(mpRs, afTimeStep, &m_mtxUV);
 	}
 
 	//-----------------------------------------------------------------------
@@ -285,7 +274,7 @@ namespace hpl {
 	void cMaterial::AddUvAnimation(eMaterialUvAnimation aType, float afSpeed, float afAmp, eMaterialAnimationAxis aAxis)
 	{
 		mvUvAnimations.push_back(cMaterialUvAnimation(aType, afSpeed, afAmp, aAxis));
-		if(mpRs) ohpl_h7_mat_add_uv_anim(mpRs, aType, afSpeed, afAmp, aAxis);
+		ohpl_h7_mat_add_uv_anim(mpRs, aType, afSpeed, afAmp, aAxis);
 
 		mbHasUvAnimation = true;
 	}
@@ -299,7 +288,7 @@ namespace hpl {
 		mbHasUvAnimation = false;
 
 		m_mtxUV = cMatrixf::Identity;
-		if(mpRs) ohpl_h7_mat_clear_uv_anims(mpRs, &m_mtxUV);
+		ohpl_h7_mat_clear_uv_anims(mpRs, &m_mtxUV);
 	}
 
 	//-----------------------------------------------------------------------
@@ -309,15 +298,6 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
-
-	void cMaterial::UpdateAnimations(float afTimeStep)
-	{
-		static_assert(sizeof(cMaterialUvAnimation) == sizeof(OhplUvAnim) && offsetof(cMaterialUvAnimation, mfSpeed) == 4 &&
-					  offsetof(cMaterialUvAnimation, mfAmp) == 8 && offsetof(cMaterialUvAnimation, mAxis) == 12, "cMaterialUvAnimation layout");
-		ohpl_mat_uv_matrix((const OhplUvAnim*)mvUvAnimations.data(), mvUvAnimations.size(), mfAnimTime, &m_mtxUV);
-
-		mfAnimTime += afTimeStep;
-	}
 
 	//-----------------------------------------------------------------------
 

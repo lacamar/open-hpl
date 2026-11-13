@@ -89,7 +89,6 @@ namespace hpl {
 
 	private:
 		friend struct OhplH12PsProbe;
-		void LoadFromElementRust(cXmlElement *apElement, bool abLoadMaterials);
 		void BuildRustParams();
 		OhplPeParams mRustParams;
 

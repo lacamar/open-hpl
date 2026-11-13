@@ -25,7 +25,6 @@
 
 #include "math/Math.h"
 #include "scene/RustNode.h"
-#include "impl/RustBackends.h"
 
 #include "scene/Entity3D.h"
 
@@ -95,250 +94,115 @@ namespace hpl {
 
 	void cCamera::SetPosition(const cVector3f &avPos)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_position(&mS, &avPos); mNode.SetPosition(mS.mvPosition); return; }
-
-		mS.mvPosition = avPos;
-		mS.mbViewUpdated = true;
-		mS.mbFrustumUpdated = true;
-
-		mNode.SetPosition(mS.mvPosition);
+		ohpl_h10_cam_set_position(&mS, &avPos); mNode.SetPosition(mS.mvPosition);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cCamera::SetPitch(float afAngle)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_pitch(&mS, afAngle); return; }
-
-		mS.mfPitch = afAngle;
-		
-		if(mS.mfPitchLimitMin!=0 || mS.mfPitchLimitMax!=0)
-		{
-			if(mS.mfPitch> mS.mfPitchLimitMax) mS.mfPitch = mS.mfPitchLimitMax;
-			if(mS.mfPitch< mS.mfPitchLimitMin) mS.mfPitch = mS.mfPitchLimitMin;
-		}
-
-		mS.mbViewUpdated = true; mS.mbMoveUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_pitch(&mS, afAngle);
 	}
 	void cCamera::SetYaw(float afAngle)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_yaw(&mS, afAngle); return; }
-
-		mS.mfYaw = afAngle;
-
-		if(mS.mfYawLimitMin!=0 || mS.mfYawLimitMax!=0)
-		{
-			if(mS.mfYaw> mS.mfYawLimitMax) mS.mfYaw = mS.mfYawLimitMax;
-			if(mS.mfYaw< mS.mfYawLimitMin) mS.mfYaw = mS.mfYawLimitMin;
-		}
-		
-		mS.mbViewUpdated = true; mS.mbMoveUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_yaw(&mS, afAngle);
 	}
 	void cCamera::SetRoll(float afAngle)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_roll(&mS, afAngle); return; }
-
-		mS.mfRoll = afAngle;
-		mS.mbViewUpdated = true; mS.mbMoveUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_roll(&mS, afAngle);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cCamera::AddPitch(float afAngle)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_add_pitch(&mS, afAngle); return; }
-
-		mS.mfPitch += afAngle;
-		
-		SetPitch(mS.mfPitch);
+		ohpl_h10_cam_add_pitch(&mS, afAngle);
 }	
 	void cCamera::AddYaw(float afAngle)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_add_yaw(&mS, afAngle); return; }
-
-		mS.mfYaw += afAngle;
-		
-		SetYaw(mS.mfYaw);
+		ohpl_h10_cam_add_yaw(&mS, afAngle);
 	}
 	void cCamera::AddRoll(float afAngle)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_add_roll(&mS, afAngle); return; }
-
-		mS.mfRoll += afAngle;
-		mS.mbViewUpdated = true; mS.mbMoveUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_add_roll(&mS, afAngle);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cCamera::MoveForward(float afDist)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_move(&mS, 0, afDist); mNode.SetPosition(mS.mvPosition); return; }
-
-		UpdateMoveMatrix();
-		
-		mS.mvPosition += mS.m_mtxMove.GetForward()*-afDist;
-
-		mS.mbViewUpdated = true;
-		mS.mbFrustumUpdated = true;
-
-		mNode.SetPosition(mS.mvPosition);
+		ohpl_h10_cam_move(&mS, 0, afDist); mNode.SetPosition(mS.mvPosition);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cCamera::MoveRight(float afDist)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_move(&mS, 1, afDist); mNode.SetPosition(mS.mvPosition); return; }
-
-		UpdateMoveMatrix();
-
-		mS.mvPosition += mS.m_mtxMove.GetRight()*afDist;
-		
-		mS.mbViewUpdated = true;
-		mS.mbFrustumUpdated = true;
-
-		mNode.SetPosition(mS.mvPosition);
+		ohpl_h10_cam_move(&mS, 1, afDist); mNode.SetPosition(mS.mvPosition);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cCamera::MoveUp(float afDist)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_move(&mS, 2, afDist); mNode.SetPosition(mS.mvPosition); return; }
-
-		UpdateMoveMatrix();
-
-		mS.mvPosition += mS.m_mtxMove.GetUp()*afDist;
-
-		mS.mbViewUpdated = true;
-		mS.mbFrustumUpdated = true;
-
-		mNode.SetPosition(mS.mvPosition);
+		ohpl_h10_cam_move(&mS, 2, afDist); mNode.SetPosition(mS.mvPosition);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cCamera::SetFOV(float afAngle)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_fov(&mS, afAngle); return; }
-
-		if(mS.mfFOV==afAngle)
-			return;
-
-		mS.mfFOV = afAngle;
-
-		mS.mbProjectionUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_fov(&mS, afAngle);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cCamera::SetAspect(float afAspect)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_aspect(&mS, afAspect); return; }
-
-		if(mS.mfAspect==afAspect)
-			return;
-		
-		mS.mfAspect = afAspect;
-
-		mS.mbProjectionUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_aspect(&mS, afAspect);
 	}
 
 	void cCamera::SetFarClipPlane(float afX)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_far(&mS, afX); return; }
-
-		if(mS.mfFarClipPlane==afX)
-			return;
-		
-		mS.mfFarClipPlane = afX;
-
-		mS.mbProjectionUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_far(&mS, afX);
 	}
 
 	void cCamera::SetNearClipPlane(float afX)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_near(&mS, afX); return; }
-
-		if(mS.mfNearClipPlane==afX)
-			return;
-		
-		mS.mfNearClipPlane = afX;
-
-		mS.mbProjectionUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_near(&mS, afX);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cCamera::SetProjectionType(eProjectionType aType)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_projection_type(&mS, (int)aType); return; }
-
-		if(mS.mlProjectionType == aType) return;
-
-		mS.mlProjectionType = aType;
-
-		mS.mbProjectionUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_projection_type(&mS, (int)aType);
 	}
 	
 	void cCamera::SetOrthoViewSize(const cVector2f &avSize)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_ortho_view_size(&mS, &avSize); return; }
-
-		mS.mvViewSize = avSize;
-
-		if(mS.mlProjectionType == eProjectionType_Orthographic)
-		{
-			mS.mbProjectionUpdated = true;
-			mS.mbFrustumUpdated = true;
-		}
+		ohpl_h10_cam_set_ortho_view_size(&mS, &avSize);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cCamera::SetRotateMode(eCameraRotateMode aMode)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_rotate_mode(&mS, (int)aMode); return; }
-
-		mS.mlRotateMode = aMode;
-		mS.mbViewUpdated = true; mS.mbMoveUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_rotate_mode(&mS, (int)aMode);
 	}	
 	
 	//-----------------------------------------------------------------------
 
 	void cCamera::SetMoveMode(eCameraMoveMode aMode)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_move_mode(&mS, (int)aMode); return; }
-
-		mS.mlMoveMode = aMode;
-		mS.mbMoveUpdated = true;
+		ohpl_h10_cam_set_move_mode(&mS, (int)aMode);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cCamera::ResetRotation()
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_reset_rotation(&mS); return; }
-
-		mS.mbViewUpdated = false;
-		mS.mbMoveUpdated = false;
-		mS.mbFrustumUpdated = true;
-		mS.m_mtxMove = cMatrixf::Identity;
-		mS.m_mtxView = cMatrixf::Identity;
-
-		mS.mfRoll =0;
-		mS.mfYaw =0;
-		mS.mfPitch =0;
+		ohpl_h10_cam_reset_rotation(&mS);
 	}
 
 	//-----------------------------------------------------------------------
@@ -349,15 +213,7 @@ namespace hpl {
 		{
 			//If the far plane is infinite, still have to use a number on far plane
 			//to calculate the near plane in the frustm.
-			bool bWasInf=false;
-			if(OhplBackendRustRequested())
-			{
-				bWasInf = (ohpl_h10_cam_frustum_begin(&mS) & 2) != 0;
-			}
-			else if(mS.mbInfFarPlane){
-				SetInifintiveFarPlane(false);
-				bWasInf=true;
-			}
+			bool bWasInf = (ohpl_h10_cam_frustum_begin(&mS) & 2) != 0;
 			//////////////////////////////////////////////
 			// Perspective projection
 			if(mS.mlProjectionType == eProjectionType_Perspective)
@@ -377,18 +233,7 @@ namespace hpl {
 											mS.mvViewSize,GetPosition(),mS.mbInfFarPlane);
 			}
 			
-			if(OhplBackendRustRequested())
-			{
-				ohpl_h10_cam_frustum_end(&mS, bWasInf);
-			}
-			else
-			{
-				if(bWasInf){
-					SetInifintiveFarPlane(true);
-				}
-
-				mS.mbFrustumUpdated = false;
-			}
+			ohpl_h10_cam_frustum_end(&mS, bWasInf);
 		}
 
 		return &mFrustum;
@@ -398,42 +243,21 @@ namespace hpl {
 	
 	const cMatrixf& cCamera::GetViewMatrix()
 	{
-		if(OhplBackendRustRequested()) { return *ohpl_h10_cam_matrix(&mS, 0); }
-
-		if(mS.mbViewUpdated)
-		{
-			ohpl_scene_camera_view_matrix((int)mS.mlRotateMode, &mS.mvPosition, mS.mfYaw, mS.mfPitch, mS.mfRoll, &mS.m_mtxMatrixRotation, &mS.m_mtxView);
-
-			mS.mbViewUpdated = false;
-		}
-		return mS.m_mtxView;
+		return *ohpl_h10_cam_matrix(&mS, 0);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	const cMatrixf& cCamera::GetProjectionMatrix()
 	{
-		if(OhplBackendRustRequested()) { return *ohpl_h10_cam_matrix(&mS, 1); }
-
-		if(mS.mbProjectionUpdated)
-		{
-			ohpl_scene_camera_projection((int)mS.mlProjectionType, mS.mfNearClipPlane, mS.mfFarClipPlane, mS.mfFOV, mS.mfAspect, mS.mbInfFarPlane, &mS.mvViewSize, &mS.m_mtxProjection);
-
-			mS.mbProjectionUpdated = false;
-		}
-		
-		return mS.m_mtxProjection;
+		return *ohpl_h10_cam_matrix(&mS, 1);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	const cMatrixf& cCamera::GetMoveMatrix()
 	{
-		if(OhplBackendRustRequested()) { return *ohpl_h10_cam_matrix(&mS, 2); }
-
-		UpdateMoveMatrix();
-
-		return mS.m_mtxMove;
+		return *ohpl_h10_cam_matrix(&mS, 2);
 	}
 
 
@@ -501,40 +325,20 @@ namespace hpl {
 
 	void cCamera::SetForward(const cVector3f& avX)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_rotation_row(&mS, 2, &avX); return; }
-
-		mS.m_mtxMatrixRotation.SetForward(avX);
-
-		mS.mbViewUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_rotation_row(&mS, 2, &avX);
 	}
 	void cCamera::SetRight(const cVector3f& avX)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_rotation_row(&mS, 0, &avX); return; }
-
-		mS.m_mtxMatrixRotation.SetRight(avX);
-
-		mS.mbViewUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_rotation_row(&mS, 0, &avX);
 	}
 	void cCamera::SetUp(const cVector3f& avX)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_rotation_row(&mS, 1, &avX); return; }
-
-		mS.m_mtxMatrixRotation.SetUp(avX);
-
-		mS.mbViewUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_rotation_row(&mS, 1, &avX);
 	}
 
 	void cCamera::SetRotationMatrix(const cMatrixf& a_mtxRot)
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_set_rotation_matrix(&mS, &a_mtxRot); return; }
-
-		mS.m_mtxMatrixRotation = a_mtxRot;
-
-		mS.mbViewUpdated = true;
-		mS.mbFrustumUpdated = true;
+		ohpl_h10_cam_set_rotation_matrix(&mS, &a_mtxRot);
 	}
 
 	//-----------------------------------------------------------------------
@@ -542,21 +346,15 @@ namespace hpl {
 	
 	cVector3f cCamera::GetForward()
 	{
-		if(OhplBackendRustRequested()) { cVector3f vRow; ohpl_h10_cam_view_row(&mS, 2, true, &vRow); return vRow; }
-
-		return GetViewMatrix().GetForward()*-1.0f;
+		cVector3f vRow; ohpl_h10_cam_view_row(&mS, 2, true, &vRow); return vRow;
 	}
 	cVector3f cCamera::GetRight()
 	{
-		if(OhplBackendRustRequested()) { cVector3f vRow; ohpl_h10_cam_view_row(&mS, 0, false, &vRow); return vRow; }
-
-		return GetViewMatrix().GetRight();
+		cVector3f vRow; ohpl_h10_cam_view_row(&mS, 0, false, &vRow); return vRow;
 	}
 	cVector3f cCamera::GetUp()
 	{
-		if(OhplBackendRustRequested()) { cVector3f vRow; ohpl_h10_cam_view_row(&mS, 1, false, &vRow); return vRow; }
-
-		return GetViewMatrix().GetUp();
+		cVector3f vRow; ohpl_h10_cam_view_row(&mS, 1, false, &vRow); return vRow;
 	}
 
 	//-----------------------------------------------------------------------
@@ -569,14 +367,7 @@ namespace hpl {
 
 	void cCamera::UpdateMoveMatrix()
 	{
-		if(OhplBackendRustRequested()) { ohpl_h10_cam_matrix(&mS, 2); return; }
-
-		if(mS.mbMoveUpdated)
-		{
-			ohpl_scene_camera_move_matrix((int)mS.mlRotateMode, (int)mS.mlMoveMode, mS.mfYaw, mS.mfPitch, &mS.m_mtxMove);
-
-			mS.mbMoveUpdated = false;
-		}
+		ohpl_h10_cam_matrix(&mS, 2);
 	}
 
 	//-----------------------------------------------------------------------

@@ -279,21 +279,36 @@ std::string RunWalk(bool abRust, uint64_t alSeed, int alOps)
 		const int e = (int)rng.Below(kEnts);
 		if(lOp < 5)
 		{
-			OhplH13Push(pReg, 9, list, &pool[e]);
+			if(pReg) OhplH13Push(pReg, 9, &pool[e]); else list.push_back(&pool[e]);
 			continue;
 		}
 		if(lOp < 8)
 		{
 			bool bAppended = false;
 			out += "w:";
-			for(OhplH13Walk<std::list<Ent*> > it(pReg, 9, list); it.Has();)
+			if(pReg)
 			{
-				Ent *pE = it.Get();
-				snprintf(buf, sizeof(buf), " %d", EntIndex(pool, pE));
-				out += buf;
-				if(pE->mlID == 0) { out += "x"; it.Erase(); continue; }
-				if(pE->mlID == 1 && !bAppended) { bAppended = true; OhplH13Push(pReg, 9, list, &pool[e]); }
-				it.Advance();
+				for(OhplH13Walk<Ent*> it(pReg, 9); it.Has();)
+				{
+					Ent *pE = it.Get();
+					snprintf(buf, sizeof(buf), " %d", EntIndex(pool, pE));
+					out += buf;
+					if(pE->mlID == 0) { out += "x"; it.Erase(); continue; }
+					if(pE->mlID == 1 && !bAppended) { bAppended = true; OhplH13Push(pReg, 9, &pool[e]); }
+					it.Advance();
+				}
+			}
+			else
+			{
+				for(std::list<Ent*>::iterator it = list.begin(); it != list.end();)
+				{
+					Ent *pE = *it;
+					snprintf(buf, sizeof(buf), " %d", EntIndex(pool, pE));
+					out += buf;
+					if(pE->mlID == 0) { out += "x"; it = list.erase(it); continue; }
+					if(pE->mlID == 1 && !bAppended) { bAppended = true; list.push_back(&pool[e]); }
+					++it;
+				}
 			}
 			out += "\n";
 			continue;
@@ -320,7 +335,7 @@ std::string RunWalk(bool abRust, uint64_t alSeed, int alOps)
 	out += "drops:";
 	for(int d : gDrops) { snprintf(buf, sizeof(buf), " %d", d); out += buf; }
 	out += "\nsize ";
-	snprintf(buf, sizeof(buf), "%zu\n", OhplH13Size(pReg, 9, list));
+	snprintf(buf, sizeof(buf), "%zu\n", (pReg ? OhplH13Size(pReg, 9) : list.size()));
 	out += buf;
 	if(pReg) ohpl_h13_reg_free(pReg);
 	gPool = NULL;

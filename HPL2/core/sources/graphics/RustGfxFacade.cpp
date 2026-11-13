@@ -1,5 +1,4 @@
 #include "graphics/RustGraphicsH5b.h"
-#include "impl/RustBackends.h"
 
 #include <cstring>
 #include <string>
@@ -168,7 +167,7 @@ namespace hpl {
 
 	void OhplH5bAttachGfx(iLowLevelGraphics *apLlg, OhplGlCtx *apGl)
 	{
-		if(!OhplBackendRustRequested() || apLlg == NULL) return;
+		if(apLlg == NULL) return;
 		OhplH5bDetachGfx();
 		gpFacade = new cRustGfxFacade(apLlg);
 		if(apGl) ohpl_h5b_gfx_attach_gl(apGl, gpFacade, &OhplH5bFacadeCall);

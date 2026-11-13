@@ -1,4 +1,4 @@
-// H6 census harness (L6 gen.cpp plus the h6* modes). Links the engine (libHPL2.a); OHPL_IMPL=cpp|rust picks the path, so the same
+// H6 census harness (L6 gen.cpp plus the h6* modes). Links the engine (libHPL2.a); runs the Rust path, so the same
 // binary records the golden vectors (cpp) and checks the Rust path (rust).
 //   gen [h6]<msh|dae|fbx|anm|daeanim|fbxanim> <file>...
 // h6 modes print "<file> <hash> <bones> <tracks>": bone matrices, name lookups, track samples.

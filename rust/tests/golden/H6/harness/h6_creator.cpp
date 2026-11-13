@@ -1,5 +1,5 @@
 // H6 trace harness: cMeshCreator over the recording low-level graphics. stdout is the GPU call trace
-// plus mesh/sub-mesh lookups; OHPL_IMPL=cpp and =rust must print the same text.
+// plus mesh/sub-mesh lookups; must print the golden text.
 #include <cstdio>
 #include <cstdlib>
 #include <string>

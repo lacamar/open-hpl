@@ -1,5 +1,5 @@
 // H5 differential harness: drives cFrameBitmap (atlas) and cProgramComboManager (settings) with a
-// seeded script and prints every observable. Run with OHPL_IMPL=cpp and =rust and diff stdout.
+// seeded script and prints every observable. Compare stdout with the golden.
 // usage: H5_SCENARIO=atlas|combo H5_SEED=<n> h5_trace   ("-o" lines are the script ops; stderr = GPU trace)
 #include <cstdio>
 #include <cstdlib>

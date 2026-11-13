@@ -124,12 +124,10 @@ namespace hpl {
 
 		OhplH6Mesh* mpRs;
 		tSubMeshVec mvSubMeshes;
-		tSubMeshMap m_mapSubMeshes;
 
 		cSkeleton *mpSkeleton;
 
 		tAnimationVec mvAnimations;
-		tAnimationIndexMap m_mapAnimIndices;
 
 		tFloatVec mvBoneBoundingRadii;
 

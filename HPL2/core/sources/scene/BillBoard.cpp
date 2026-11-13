@@ -20,7 +20,6 @@
 #include "scene/BillBoard.h"
 #include "scene/RustParticles.h"
 #include "scene/RustSceneH12.h"
-#include "impl/RustBackends.h"
 
 #include "impl/tinyXML/tinyxml.h"
 
@@ -157,26 +156,10 @@ namespace hpl {
 		mvAxis = avAxis;
 		mvAxis.Normalize();
 		
-		if(OhplBackendRustRequested())
+		float fSize;
+		if(ohpl_h12b_bb_axis_size(mType == eBillboardType_Axis, &mvAxis, mvSize.x, mvSize.y, &fSize))
 		{
-			float fSize;
-			if(ohpl_h12b_bb_axis_size(mType == eBillboardType_Axis, &mvAxis, mvSize.x, mvSize.y, &fSize))
-			{
-				mBoundingVolume.SetSize(fSize);
-				SetTransformUpdated();
-			}
-			return;
-		}
-		//This is a quick fix so the bounding box is correct for non up-pointing axises
-		if(mType == eBillboardType_Axis && mvAxis != cVector3f(0,1,0))
-		{
-			float fMax = mvSize.x;
-			if(fMax < mvSize.y) fMax = mvSize.y;
-			
-			fMax *= kSqrt2f;
-
-			mBoundingVolume.SetSize(fMax);
-
+			mBoundingVolume.SetSize(fSize);
 			SetTransformUpdated();
 		}
 	}
@@ -273,10 +256,7 @@ namespace hpl {
 
 	bool cBillboard::IsVisible()
 	{
-		if(OhplBackendRustRequested()) return ohpl_h12b_is_visible(&mColor, mbIsVisible);
-		if(mColor.r <= 0 && mColor.g <= 0 && mColor.b <= 0) return false;
-
-		return mbIsVisible;
+		return ohpl_h12b_is_visible(&mColor, mbIsVisible);
 	}
 
 	//-----------------------------------------------------------------------
@@ -349,65 +329,16 @@ namespace hpl {
 		if(lMaxSamples >0)
 		{
 			///////////////////////
-			//Calculate the alpha
-			float fAlpha = (float)lSamples / (float)lMaxSamples;
-			
-			///////////////////////
 			//Check if inside screen
 			cFrustum *pFrustum = apRenderer->GetCurrentFrustum();
-			
-			if(OhplBackendRustRequested())
-			{
-				const uint32_t lGates = ohpl_h12b_bb_halo_gates(&mbHaloSizeUpdated, &mlHaloBVMatrixCount, GetTransformUpdateCount());
-				if(lGates & kOhplH12HaloSize) mpHaloSourceBV->SetSize(mvHaloSourceSize);
-				if(lGates & kOhplH12HaloTransform) mpHaloSourceBV->SetTransform(GetWorldMatrix());
 
-				cVector3f vRustMin, vRustMax;
-				const bool bClip = cMath::GetNormalizedClipRectFromBV(vRustMin, vRustMax, *mpHaloSourceBV, pFrustum, 0);
-				SetHaloAlpha(ohpl_h12b_bb_halo_alpha(lSamples, lMaxSamples, bClip, &vRustMin, &vRustMax));
-				return true;
-			}
-			//Update bv size
-			if(mbHaloSizeUpdated) 
-			{
-				mpHaloSourceBV->SetSize(mvHaloSourceSize);
-				mbHaloSizeUpdated = false;
-			}
+			const uint32_t lGates = ohpl_h12b_bb_halo_gates(&mbHaloSizeUpdated, &mlHaloBVMatrixCount, GetTransformUpdateCount());
+			if(lGates & kOhplH12HaloSize) mpHaloSourceBV->SetSize(mvHaloSourceSize);
+			if(lGates & kOhplH12HaloTransform) mpHaloSourceBV->SetTransform(GetWorldMatrix());
 
-			//Update bv transform
-			if(mlHaloBVMatrixCount != GetTransformUpdateCount())
-			{
-				mpHaloSourceBV->SetTransform(GetWorldMatrix());
-				mlHaloBVMatrixCount = GetTransformUpdateCount();
-			}
-
-
-			//Get the screen clip rect and see how much is inside screen.
-			cVector3f vMin,vMax;
-			if(cMath::GetNormalizedClipRectFromBV(vMin,vMax, *mpHaloSourceBV,pFrustum,0))
-			{
-				cVector3f vTotalSize = vMax -vMin;
-
-				if(vMin.x < -1) vMin.x = -1;
-				if(vMin.y < -1) vMin.y = -1;
-				if(vMax.x > 1) vMax.x = 1;
-				if(vMax.y > 1) vMax.y = 1;
-
-				cVector3f vInsideSize = vMax -vMin;
-
-				float fInsideArea = vInsideSize.x*vInsideSize.y;
-				float fTotalArea = vTotalSize.x*vTotalSize.y;
-
-				if(fTotalArea > 0)	fAlpha *= fInsideArea / fTotalArea;
-				else				fAlpha = 0;
-
-
-				SetHaloAlpha(fAlpha);
-			}
-			else
-			{
-				SetHaloAlpha(0);
-			}
+			cVector3f vRustMin, vRustMax;
+			const bool bClip = cMath::GetNormalizedClipRectFromBV(vRustMin, vRustMax, *mpHaloSourceBV, pFrustum, 0);
+			SetHaloAlpha(ohpl_h12b_bb_halo_alpha(lSamples, lMaxSamples, bClip, &vRustMin, &vRustMax));
 			
 			return true;
 		}

@@ -216,24 +216,16 @@ namespace hpl {
 		void* GetUserData() { return mpUserData; }
 
 	private:
-		void NameAdd(int alKind, const tString &asName, int alIdx){ if(mpNames) ohpl_h11b_names_insert(mpNames, alKind, asName.data(), asName.size(), alIdx); }
+		void NameAdd(int alKind, const tString &asName, int alIdx){ ohpl_h11b_names_insert(mpNames, alKind, asName.data(), asName.size(), alIdx); }
 		int NameFind(int alKind, const tString &asName){ return ohpl_h11b_names_find(mpNames, alKind, asName.data(), asName.size()); }
 		void InitSubBounds(cSubMeshEntity *apSub, iVertexBuffer *apVtxBuffer);
-		float GetAnimationWeightMul();
 		void SyncAnimCores();
 
 		void CreateNodes();
 
-		void UpdateNodeMatrixRec(cNode3D *apNode);
-
 		void HandleAnimationEvent(cAnimationEvent *apEvent);
 
-		void SetBoneMatrixFromBodyRec(const cMatrixf& a_mtxParentWorld,cBoneState *apBoneState);
 
-		void UpdateBVFromSkeleton();
-		void GetAABBFromBones(cVector3f &avMin, cVector3f &avMax);
-
-		void BuildBoneStatesRec(cBone *apBone, cNode3D *apParent);
 
 		cMaterialManager* mpMaterialManager;
 		cMeshManager* mpMeshManager;
@@ -255,26 +247,21 @@ namespace hpl {
 		bool mbStatic;
 
 		tSubMeshEntityVec mvSubMeshes;
-		tSubMeshEntityMap m_mapSubMeshes;
 
 		tAnimationStateVec mvAnimationStates;
-		tAnimationStateIndexMap m_mapAnimationStateIndices;
 
 		cNode3D *mpBoneStateRoot;
 
 		tNodeStateVec mvBoneStates;
-		tNodeStateIndexMap m_mapBoneStateIndices;
 		tNodeStateVec mvTempBoneStates;
 		std::vector<cMatrixf> mvBoneRestPose;
 
 		std::vector<cMatrixf> mvBoneMatrices;
 		std::vector<OhplAnimCore*> mvAnimCores;
 		std::vector<const cMatrixf*> mvScratchWorld, mvScratchInvBind;
-		std::vector<float> mvScratchRadii;
 
 
 		tNodeStateVec mvNodeStates;
-		tNodeStateIndexMap m_mapNodeStateIndices;
 
 		cMesh* mpMesh;
 		

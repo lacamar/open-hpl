@@ -39,11 +39,10 @@
 #include "scene/World.h"
 #include "scene/Light.h"
 #include "scene/RustSceneH12.h"
-#include "impl/RustBackends.h"
 
 namespace hpl {
 
-	// Calls the Rust lifecycle makes back into the system (OHPL_IMPL=rust); each repeats one statement of the C++ path.
+	// Callbacks the Rust lifecycle makes into the system
 	struct OhplH12PsHostImpl
 	{
 		static cParticleSystem* S(void *c){ return static_cast<cParticleSystem*>(c); }
@@ -107,7 +106,7 @@ namespace hpl {
 
 	cParticleSystem* cParticleSystemData::Create(tString asName, cVector3f avSize)
 	{
-		if(OhplBackendRustRequested() ? !ohpl_h12b_psdata_can_create((uint32_t)mvEmitterData.size()) : mvEmitterData.empty())
+		if(!ohpl_h12b_psdata_can_create((uint32_t)mvEmitterData.size()))
 		{
 			Warning("Particle system '%s' has no emitters.\n",msName.c_str());
 			return NULL;
@@ -172,62 +171,30 @@ namespace hpl {
 
 	bool cParticleSystemData::LoadFromElement(cXmlElement* apElement)
 	{
-		if(OhplBackendRustRequested())
-		{
-			if(apElement->GetValue()!="ParticleSystem")
-				return ohpl_h12b_psdata_plan(false, NULL, 0, (uint32_t)mvEmitterData.size(), NULL);
-
-			std::vector<tString> vValues;
-			cXmlNodeListIterator itV = apElement->GetChildIterator();
-			while(itV.HasNext()) vValues.push_back(itV.Next()->ToElement()->GetValue());
-
-			std::unique_ptr<bool[]> vIsEmitter(new bool[vValues.size() + 1]), vLoad(new bool[vValues.size() + 1]);
-			for(size_t i=0; i<vValues.size(); ++i) vIsEmitter[i] = vValues[i]=="ParticleEmitter";
-
-			const bool bRet = ohpl_h12b_psdata_plan(apElement->GetValue()=="ParticleSystem", vIsEmitter.get(), (uint32_t)vValues.size(),
-													(uint32_t)mvEmitterData.size(), vLoad.get());
-
-			cXmlNodeListIterator itL = apElement->GetChildIterator();
-			for(size_t i=0; itL.HasNext(); ++i)
-			{
-				cXmlElement* pElem = itL.Next()->ToElement();
-				if(vLoad[i]==false) continue;
-
-				cParticleEmitterData_UserData *pPE = hplNew( cParticleEmitterData_UserData,("",	mpResources,mpGraphics) );
-				pPE->LoadFromElement(pElem);
-				mvEmitterData.push_back(pPE);
-			}
-			return bRet;
-		}
-
 		if(apElement->GetValue()!="ParticleSystem")
-			return false;
+			return ohpl_h12b_psdata_plan(false, NULL, 0, (uint32_t)mvEmitterData.size(), NULL);
 
-		cXmlNodeListIterator it = apElement->GetChildIterator();
-		while(it.HasNext())
+		std::vector<tString> vValues;
+		cXmlNodeListIterator itV = apElement->GetChildIterator();
+		while(itV.HasNext()) vValues.push_back(itV.Next()->ToElement()->GetValue());
+
+		std::unique_ptr<bool[]> vIsEmitter(new bool[vValues.size() + 1]), vLoad(new bool[vValues.size() + 1]);
+		for(size_t i=0; i<vValues.size(); ++i) vIsEmitter[i] = vValues[i]=="ParticleEmitter";
+
+		const bool bRet = ohpl_h12b_psdata_plan(apElement->GetValue()=="ParticleSystem", vIsEmitter.get(), (uint32_t)vValues.size(),
+												(uint32_t)mvEmitterData.size(), vLoad.get());
+
+		cXmlNodeListIterator itL = apElement->GetChildIterator();
+		for(size_t i=0; itL.HasNext(); ++i)
 		{
-			cXmlElement* pElem = it.Next()->ToElement();
-			if(pElem->GetValue()!="ParticleEmitter")
-				continue;
+			cXmlElement* pElem = itL.Next()->ToElement();
+			if(vLoad[i]==false) continue;
 
 			cParticleEmitterData_UserData *pPE = hplNew( cParticleEmitterData_UserData,("",	mpResources,mpGraphics) );
 			pPE->LoadFromElement(pElem);
-
 			mvEmitterData.push_back(pPE);
 		}
-
-		/*cXmlElement *pEmitterElem = apElement->GetFirstElement("ParticleEmitter");
-		for(; pEmitterElem != NULL; pEmitterElem = pEmitterElem->NextSiblingElement("ParticleEmitter"))
-		{
-			cParticleEmitterData_UserData *pPE = hplNew( cParticleEmitterData_UserData,("",
-																	mpResources,mpGraphics) );
-
-            pPE->LoadFromElement(pEmitterElem);
-			
-			mvEmitterData.push_back(pPE);
-		}*/
-
-		return (mvEmitterData.empty()==false);
+		return bRet;
 	}
 
 	//-----------------------------------------------------------------------
@@ -291,173 +258,58 @@ namespace hpl {
 
 	void cParticleSystem::SetVisible(bool abVisible)
 	{
-		if(OhplBackendRustRequested())
-		{
-			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
-			ohpl_h12b_ps_set_visible(&h, &mbIsVisible, abVisible);
-			return;
-		}
-
-		if(mbIsVisible == abVisible) return;
-
-		mbIsVisible = abVisible;
-		
-		for(size_t i=0; i< mvEmitters.size(); ++i)
-		{
-			mvEmitters[i]->SetVisible(mbIsVisible);
-		}
-		
+		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+		ohpl_h12b_ps_set_visible(&h, &mbIsVisible, abVisible);
 	}
 
 	void cParticleSystem::SetCulledByDistance(bool abX)
 	{
-		if(OhplBackendRustRequested())
-		{
-			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
-			ohpl_h12b_ps_apply_all(&h, kOhplH12OpCullDistance, abX);
-			return;
-		}
-		for(size_t i=0; i< mvEmitters.size(); ++i) mvEmitters[i]->SetCulledByDistance(abX);
+		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+		ohpl_h12b_ps_apply_all(&h, kOhplH12OpCullDistance, abX);
 	}
 
 	void cParticleSystem::SetCulledByFog(bool abX)
 	{
-		if(OhplBackendRustRequested())
-		{
-			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
-			ohpl_h12b_ps_apply_all(&h, kOhplH12OpCullFog, abX);
-			return;
-		}
-		for(size_t i=0; i< mvEmitters.size(); ++i) mvEmitters[i]->SetCulledByFog(abX);
+		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+		ohpl_h12b_ps_apply_all(&h, kOhplH12OpCullFog, abX);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	bool cParticleSystem::IsDead()
 	{
-		if(OhplBackendRustRequested())
-		{
-			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
-			return ohpl_h12b_ps_all(&h, kOhplH12QueryDead);
-		}
-
-		size_t lCount =0;
-
-		for(size_t i=0; i< mvEmitters.size(); ++i)
-		{
-			iParticleEmitter *pPE = mvEmitters[i];
-
-			if(pPE->IsDead()) lCount++;
-		}
-
-		if(lCount == mvEmitters.size()) return true;
-
-		return false;
+		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+		return ohpl_h12b_ps_all(&h, kOhplH12QueryDead);
 	}
 
 	bool cParticleSystem::IsDying()
 	{
-		if(OhplBackendRustRequested())
-		{
-			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
-			return ohpl_h12b_ps_all(&h, kOhplH12QueryDying);
-		}
-
-		size_t lCount =0;
-
-		for(size_t i=0; i< mvEmitters.size(); ++i)
-		{
-			iParticleEmitter *pPE = mvEmitters[i];
-
-			if(pPE->IsDying()) lCount++;
-		}
-
-		if(lCount == mvEmitters.size()) return true;
-
-		return false;
+		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+		return ohpl_h12b_ps_all(&h, kOhplH12QueryDying);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cParticleSystem::Kill()
 	{
-		if(OhplBackendRustRequested())
-		{
-			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
-			ohpl_h12b_ps_apply_all(&h, kOhplH12OpKill, false);
-			return;
-		}
-		//SetIsSaved(false);
-		for(size_t i=0; i< mvEmitters.size(); ++i)
-		{
-			iParticleEmitter *pPE = mvEmitters[i];
-
-			pPE->Kill();
-		}
+		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+		ohpl_h12b_ps_apply_all(&h, kOhplH12OpKill, false);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cParticleSystem::KillInstantly()
 	{
-		if(OhplBackendRustRequested())
-		{
-			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
-			ohpl_h12b_ps_apply_all(&h, kOhplH12OpKillInstantly, false);
-			return;
-		}
-		//SetIsSaved(false);
-		for(size_t i=0; i< mvEmitters.size(); ++i)
-		{
-			iParticleEmitter *pPE = mvEmitters[i];
-
-			pPE->KillInstantly();
-		}
+		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+		ohpl_h12b_ps_apply_all(&h, kOhplH12OpKillInstantly, false);
 	}
 
 	//-----------------------------------------------------------------------
 	
 	void cParticleSystem::UpdateLogic(float afTimeStep)
 	{
-		if(OhplBackendRustRequested())
-		{
-			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
-			ohpl_h12b_ps_update_logic(&h, &mbFirstUpdate, IsActive(), afTimeStep);
-			return;
-		}
-
-		if(IsActive()==false) return;
-
-		for(size_t i=0; i< mvEmitters.size(); ++i)
-		{
-			iParticleEmitter *pPE = mvEmitters[i];
-
-			//////////////////////////
-			//Warm Up
-			if(mbFirstUpdate)
-			{
-				iParticleEmitterData *pData =  mpData->GetEmitterData((int)i);
-				
-				if(pData->GetWarmUpTime() >0)
-				{
-					float fTime = pData->GetWarmUpTime();
-					float fStepSize = 1.0f /pData->GetWarmUpStepsPerSec();
-
-					while(fTime >0)
-					{
-						pPE->UpdateLogic(fStepSize);
-						fTime -= fStepSize;
-					}
-				}
-			}
-			
-			//////////////////////////
-			//Update
-			pPE->UpdateLogic(afTimeStep);
-		}
-
-		//No loner first time!
-		mbFirstUpdate = false;
+		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+		ohpl_h12b_ps_update_logic(&h, &mbFirstUpdate, IsActive(), afTimeStep);
 	}
 
 	//-----------------------------------------------------------------------

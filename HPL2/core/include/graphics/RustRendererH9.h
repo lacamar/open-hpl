@@ -29,8 +29,8 @@ namespace hpl {
 	}
 
 	// abRust: Rust tables; otherwise the original C++ setup. Exposed for the H9 differential harness.
-	void OhplH9SetupFogCombos(cProgramComboManager *apMgr, bool abPackedDepth, bool abRust);
-	void OhplH9SetupLightCombos(cProgramComboManager *apMgr, eShadowMapQuality aQuality, bool abGBuffer64, int alGBufferTextures, int alJitterSize, int alJitterSamples, bool abRust);
+	void OhplH9SetupFogCombos(cProgramComboManager *apMgr, bool abPackedDepth);
+	void OhplH9SetupLightCombos(cProgramComboManager *apMgr, eShadowMapQuality aQuality, bool abGBuffer64, int alGBufferTextures, int alJitterSize, int alJitterSamples);
 
 	static_assert(sizeof(OhplH9Define) == 24, "H9 layout");
 }

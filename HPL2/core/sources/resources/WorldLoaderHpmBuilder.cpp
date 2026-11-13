@@ -65,31 +65,18 @@ namespace hpl {
 
 		cMatrixf H4RotTrans(const cVector3f& avRot, const cVector3f& avPos)
 		{
-			if (OhplH4UseRust())
-			{
-				cMatrixf m;
-				ohpl_h4_rot_trans(F3(avRot), F3(avPos), &m);
-				return m;
-			}
-			cMatrixf m = cMath::MatrixRotate(avRot, eEulerRotationOrder_XYZ);
-			m.SetTranslation(avPos);
+			cMatrixf m;
+			ohpl_h4_rot_trans(F3(avRot), F3(avPos), &m);
 			return m;
 		}
 
 		// world = rotate * scale, body = rotate + translation
 		void H4StaticXform(const cVector3f& avRot, const cVector3f& avScale, const cVector3f& avPos, cMatrixf& a_mtxWorld, cMatrixf& a_mtxBody)
 		{
-			if (OhplH4UseRust())
-			{
-				OhplH4Xform x;
-				ohpl_h4_static_xform(F3(avRot), F3(avScale), F3(avPos), &x);
-				a_mtxWorld = x.world;
-				a_mtxBody = x.body;
-				return;
-			}
-			a_mtxWorld = cMath::MatrixMul(cMath::MatrixRotate(avRot, eEulerRotationOrder_XYZ), cMath::MatrixScale(avScale));
-			a_mtxBody = cMath::MatrixRotate(avRot, eEulerRotationOrder_XYZ);
-			a_mtxBody.SetTranslation(avPos);
+			OhplH4Xform x;
+			ohpl_h4_static_xform(F3(avRot), F3(avScale), F3(avPos), &x);
+			a_mtxWorld = x.world;
+			a_mtxBody = x.body;
 		}
 
 		// Object creation sequence for A/B runs: OHPL_H4_SEQDUMP=<file> appends one line per object.
@@ -161,59 +148,48 @@ namespace hpl {
 		OhplH4CombineOut plan = {};
 		std::vector<uint32_t> vPlanOrder, vPlanSizes;
 		std::unique_ptr<bool[]> pPlanDestroy;
-		if (OhplH4UseRust())
+		std::map<cMeshEntity*, uint32_t> mapEntIdx;
+		std::vector<uint32_t> vEntSubs;
+		std::vector<int32_t> vPool;
+		std::vector<OhplH4Cand> vCands;
+		for (auto& [key, rec] : vRecs)
 		{
-			std::map<cMeshEntity*, uint32_t> mapEntIdx;
-			std::vector<uint32_t> vEntSubs;
-			std::vector<int32_t> vPool;
-			std::vector<OhplH4Cand> vCands;
-			for (auto& [key, rec] : vRecs)
+			auto itEnt = mapEntIdx.insert({rec.first, (uint32_t)vPlanEnts.size()});
+			if (itEnt.second)
 			{
-				auto itEnt = mapEntIdx.insert({rec.first, (uint32_t)vPlanEnts.size()});
-				if (itEnt.second)
-				{
-					vPlanEnts.push_back(rec.first);
-					vEntSubs.push_back(rec.first->GetSubMeshEntityNum());
-				}
-				OhplH4Cand c = {};
-				c.ent = itEnt.first->second;
-				c.cell[0] = std::get<0>(key); c.cell[1] = std::get<1>(key); c.cell[2] = std::get<2>(key);
-				c.mat = (uint64_t)(uintptr_t)std::get<3>(key);
-				c.shadow = std::get<4>(key);
-				c.oneSided = std::get<5>(key);
-				c.layoutOff = (uint32_t)vPool.size();
-				c.layoutLen = (uint32_t)std::get<6>(key).size();
-				vPool.insert(vPool.end(), std::get<6>(key).begin(), std::get<6>(key).end());
-				std::copy(std::get<7>(key).begin(), std::get<7>(key).end(), c.v);
-				c.culledDist = std::get<8>(key);
-				c.culledFog = std::get<9>(key);
-				vCands.push_back(c);
+				vPlanEnts.push_back(rec.first);
+				vEntSubs.push_back(rec.first->GetSubMeshEntityNum());
 			}
-			vPlanOrder.resize(vCands.size());
-			vPlanSizes.resize(vCands.size());
-			pPlanDestroy.reset(new bool[vPlanEnts.size() + 1]());
-			plan.order = vPlanOrder.data();
-			plan.groupSizes = vPlanSizes.data();
-			plan.destroy = pPlanDestroy.get();
-			ohpl_h4_combine_plan(vCands.data(), vCands.size(), vPool.data(), vPool.size(), vEntSubs.data(), vEntSubs.size(), &plan);
-			size_t lAt = 0;
-			for (uint32_t g = 0; g < plan.numGroups; ++g)
-			{
-				tSubList vSubs;
-				const size_t lFirst = lAt;
-				for (uint32_t i = 0; i < vPlanSizes[g]; ++i) vSubs.push_back(vRecs[vPlanOrder[lAt++]].second);
-				vGroups.push_back({vRecs[vPlanOrder[lFirst]].first, vSubs});
-			}
+			OhplH4Cand c = {};
+			c.ent = itEnt.first->second;
+			c.cell[0] = std::get<0>(key); c.cell[1] = std::get<1>(key); c.cell[2] = std::get<2>(key);
+			c.mat = (uint64_t)(uintptr_t)std::get<3>(key);
+			c.shadow = std::get<4>(key);
+			c.oneSided = std::get<5>(key);
+			c.layoutOff = (uint32_t)vPool.size();
+			c.layoutLen = (uint32_t)std::get<6>(key).size();
+			vPool.insert(vPool.end(), std::get<6>(key).begin(), std::get<6>(key).end());
+			std::copy(std::get<7>(key).begin(), std::get<7>(key).end(), c.v);
+			c.culledDist = std::get<8>(key);
+			c.culledFog = std::get<9>(key);
+			vCands.push_back(c);
 		}
-		else
+		vPlanOrder.resize(vCands.size());
+		vPlanSizes.resize(vCands.size());
+		pPlanDestroy.reset(new bool[vPlanEnts.size() + 1]());
+		plan.order = vPlanOrder.data();
+		plan.groupSizes = vPlanSizes.data();
+		plan.destroy = pPlanDestroy.get();
+		ohpl_h4_combine_plan(vCands.data(), vCands.size(), vPool.data(), vPool.size(), vEntSubs.data(), vEntSubs.size(), &plan);
+		size_t lAt = 0;
+		for (uint32_t g = 0; g < plan.numGroups; ++g)
 		{
-			std::map<tKey, tSubList> mapGroups;
-			for (auto& [key, rec] : vRecs) mapGroups[key].push_back(rec);
-			for (auto& [key, vSubs] : mapGroups)
-				if (vSubs.size() >= 2) vGroups.push_back({key, vSubs});
+			tSubList vSubs;
+			const size_t lFirst = lAt;
+			for (uint32_t i = 0; i < vPlanSizes[g]; ++i) vSubs.push_back(vRecs[vPlanOrder[lAt++]].second);
+			vGroups.push_back({vRecs[vPlanOrder[lFirst]].first, vSubs});
 		}
 
-		std::map<cMeshEntity*, int> mapCombinedSubs;
 		for (auto& [key, vSubs] : vGroups)
 		{
 			const std::vector<int>& vLayout = std::get<6>(key);
@@ -255,7 +231,6 @@ namespace hpl {
 				lIdxOffset += pSrc->GetIndexNum();
 				hplDelete(pSrc);
 				pSub->SetVisible(false);
-				++mapCombinedSubs[pEnt];
 			}
 			pVtx->Compile(0);
 
@@ -282,19 +257,9 @@ namespace hpl {
 		}
 
 		std::set<cMeshEntity*> setDestroy;
-		int lCombinedSubs = 0;
-		if (OhplH4UseRust())
-		{
-			for (size_t i = 0; i < vPlanEnts.size(); ++i)
-				if (pPlanDestroy[i]) setDestroy.insert(vPlanEnts[i]);
-			lCombinedSubs = (int)plan.combinedSubs;
-		}
-		else
-		{
-			for (auto& [pEnt, lNum] : mapCombinedSubs)
-				if (lNum == pEnt->GetSubMeshEntityNum()) setDestroy.insert(pEnt);
-			for (auto& p : mapCombinedSubs) lCombinedSubs += p.second;
-		}
+		for (size_t i = 0; i < vPlanEnts.size(); ++i)
+			if (pPlanDestroy[i]) setDestroy.insert(vPlanEnts[i]);
+		const int lCombinedSubs = (int)plan.combinedSubs;
 		mpCurrentWorld->DestroyStaticMeshEntities(setDestroy);
 		::hpl::Log("  SOMA hpm combined %d static submeshes into %d meshes\n", lCombinedSubs, mlCombinedMeshes);
 	}
@@ -374,7 +339,7 @@ namespace hpl {
 				// HPL3 iHplMapLoader::CombineStaticBodies: merged by flags, material and an 8x8x24 cell
 				cVector3f vPos = mtxBody.GetTranslation();
 				int32_t vCellI[3] = {(int)std::floor(vPos.x / 8), (int)std::floor(vPos.y / 8), (int)std::floor(vPos.z / 24)};
-				if (OhplH4UseRust()) ohpl_h4_body_cell(F3(vPos), vCellI);
+				ohpl_h4_body_cell(F3(vPos), vCellI);
 				tStaticShapeBatchKey key(pBodyElem->GetAttributeString("Material"), pBodyElem->GetAttributeBool("CollideCharacter", true),
 										 pBodyElem->GetAttributeBool("CollideNonCharacter", true), pBodyElem->GetAttributeBool("BlocksSound", false),
 										 vCellI[0], vCellI[1], vCellI[2]);
@@ -401,12 +366,11 @@ namespace hpl {
 	// HPL3 iHplMapLoader::CreateSubMeshShapeBodies: submesh colliders and _collider/_charcollider meshes
 	void cHpmWorldBuilder::CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const cMatrixf& a_mtxTransform, const cVector3f& avScale)
 	{
-		const bool bRust = OhplH4UseRust();
 		bool bHasColliderMesh = false;
 		for (int i = 0; i < apMeshEntity->GetSubMeshEntityNum(); ++i)
 		{
 			const tString& sSubName = apMeshEntity->GetSubMeshEntity(i)->GetSubMesh()->GetName();
-			bHasColliderMesh |= bRust ? ohpl_h4_is_collider_name(sSubName.c_str()) : cString::Sub(sSubName, 0, 9) == "_collider";
+			bHasColliderMesh |= ohpl_h4_is_collider_name(sSubName.c_str());
 		}
 
 		for (int i = 0; i < apMeshEntity->GetSubMeshEntityNum(); ++i)
@@ -415,11 +379,10 @@ namespace hpl {
 			cSubMesh* pSubMesh = pSubEnt->GetSubMesh();
 			tString sPhysMat = pSubEnt->GetMaterial() ? pSubEnt->GetMaterial()->GetPhysicsMaterial() : "";
 			OhplH4SubMesh subPlan = {};
-			if (bRust) ohpl_h4_sub_mesh_plan(pSubMesh->GetName().c_str(), &subPlan);
-			bool bCharMesh = bRust ? subPlan.isCharColliderMesh : cString::Sub(pSubMesh->GetName(), 0, 13) == "_charcollider";
-			bool bColliderMesh = bRust ? subPlan.isColliderMesh : (bCharMesh || cString::Sub(pSubMesh->GetName(), 0, 9) == "_collider");
-			bool bTriangles = !bHasColliderMesh;
-			if (bRust ? subPlan.hide : (bColliderMesh || cString::Sub(pSubMesh->GetName(), 0, 16) == "_noncharcollider")) pSubEnt->SetVisible(false);
+			ohpl_h4_sub_mesh_plan(pSubMesh->GetName().c_str(), &subPlan);
+			const bool bCharMesh = subPlan.isCharColliderMesh;
+			const bool bColliderMesh = subPlan.isColliderMesh;
+			if (subPlan.hide) pSubEnt->SetVisible(false);
 
 			std::vector<iCollideShape*> vShapes[2];
 			std::unique_ptr<bool[]> vIsChar(new bool[pSubMesh->GetColliderNum() + 1]());
@@ -427,7 +390,6 @@ namespace hpl {
 			{
 				cMeshCollider* pCollider = pSubMesh->GetCollider(j);
 				vIsChar[j] = pCollider->mbCharCollider;
-				if (pCollider->mbCharCollider == false) bTriangles = false;
 				cMatrixf mtxOffset = pCollider->m_mtxOffset;
 				mtxOffset.SetTranslation(mtxOffset.GetTranslation() * avScale);
 				if (iCollideShape* pShape = cSubMesh::CreateCollideShapeFromCollider(pCollider, mpCurrentPhysicsWorld, avScale, &mtxOffset))
@@ -446,23 +408,14 @@ namespace hpl {
 
 			iVertexBuffer* pSrcVtx = pSubMesh->GetVertexBuffer();
 			if (pSrcVtx == NULL) continue;
-			if (bRust ? ohpl_h4_sub_mesh_batches(bHasColliderMesh, bColliderMesh, vIsChar.get(), pSubMesh->GetColliderNum()) == false
-					  : (bTriangles || bColliderMesh) == false) continue;
+			if (ohpl_h4_sub_mesh_batches(bHasColliderMesh, bColliderMesh, vIsChar.get(), pSubMesh->GetColliderNum()) == false) continue;
 
 			int32_t vCellI[3];
-			if (bRust)
-			{
-				cVector3f vCenter = pSubEnt->GetBoundingVolume()->GetWorldCenter();
-				ohpl_h4_mesh_cell(F3(vCenter), vCellI);
-			}
-			else
-			{
-				cVector3f vCell = pSubEnt->GetBoundingVolume()->GetWorldCenter() / 16.0f;
-				vCellI[0] = (int)std::floor(vCell.x); vCellI[1] = (int)std::floor(vCell.y); vCellI[2] = (int)std::floor(vCell.z);
-			}
+			cVector3f vCenter = pSubEnt->GetBoundingVolume()->GetWorldCenter();
+			ohpl_h4_mesh_cell(F3(vCenter), vCellI);
 			tStaticBatchKey key(sPhysMat, bCharMesh, vCellI[0], vCellI[1], vCellI[2]);
 			cStaticBatch& batch = m_mapStaticBatches[key];
-			if (bRust ? ohpl_h4_batch_must_flush(batch.mvIdx.size(), pSrcVtx->GetIndexNum()) : batch.mvIdx.size() + pSrcVtx->GetIndexNum() > 50000)
+			if (ohpl_h4_batch_must_flush(batch.mvIdx.size(), pSrcVtx->GetIndexNum()))
 				FlushStaticBatch(key, batch);
 
 			iVertexBuffer* pVtx = pSrcVtx->CreateCopy(eVertexBufferType_Software, eVertexBufferUsageType_Static, eVertexElementFlag_Position);
@@ -518,44 +471,29 @@ namespace hpl {
 	void cHpmWorldBuilder::Finish()
 	{
 		const bool bNoCombine = getenv("OPENHPL_NO_MESH_COMBINE") != NULL;
-		if (OhplH4UseRust())
+		OhplH4FinishStep vSteps[8];
+		size_t lSteps = ohpl_h4_finish_steps(bNoCombine, vSteps);
+		for (size_t i = 0; i < lSteps; ++i)
 		{
-			OhplH4FinishStep vSteps[8];
-			size_t lSteps = ohpl_h4_finish_steps(bNoCombine, vSteps);
-			for (size_t i = 0; i < lSteps; ++i)
+			switch (vSteps[i])
 			{
-				switch (vSteps[i])
+			case OhplH4Finish_FlushStaticBatches:
+				for (auto& [key, batch] : m_mapStaticBatches)
 				{
-				case OhplH4Finish_FlushStaticBatches:
-					for (auto& [key, batch] : m_mapStaticBatches)
-					{
-						FlushStaticBatch(key, batch);
-						if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
-					}
-					m_mapStaticBatches.clear();
-					break;
-				case OhplH4Finish_BuildShapeBodies: BuildShapeBodies(); break;
-				case OhplH4Finish_CombineStaticMeshes: CombineStaticMeshes(); mvCombineCandidates.clear(); break;
-				case OhplH4Finish_ObjectDone:
+					FlushStaticBatch(key, batch);
 					if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
-					break;
-				case OhplH4Finish_CompileWorld: mpCurrentWorld->Compile(true); break;
 				}
+				m_mapStaticBatches.clear();
+				break;
+			case OhplH4Finish_BuildShapeBodies: BuildShapeBodies(); break;
+			case OhplH4Finish_CombineStaticMeshes: CombineStaticMeshes(); mvCombineCandidates.clear(); break;
+			case OhplH4Finish_ObjectDone:
+				if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
+				break;
+			case OhplH4Finish_CompileWorld: mpCurrentWorld->Compile(true); break;
 			}
-			mvCombineCandidates.clear();
-			return;
 		}
-		for (auto& [key, batch] : m_mapStaticBatches)
-		{
-			FlushStaticBatch(key, batch);
-			if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
-		}
-		m_mapStaticBatches.clear();
-		BuildShapeBodies();
-		if (bNoCombine == false) CombineStaticMeshes();
 		mvCombineCandidates.clear();
-		if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
-		mpCurrentWorld->Compile(true);
 	}
 
 	void cHpmWorldBuilder::BuildShapeBodies()
@@ -748,7 +686,7 @@ namespace hpl {
 		pMeshEntity->SetPosition(vPosition);
 		tFloatVec vPose(o.pose, o.pose + o.numPose);
 		const bool bPoseApplied = o.hasPose && pMeshEntity->SetBoneRestPoseFromMapValues(vPose);
-		const bool bCandidate = OhplH4UseRust() ? ohpl_h4_is_combine_candidate(o.hasPose, bPoseApplied) : (o.hasPose == false || bPoseApplied == false);
+		const bool bCandidate = ohpl_h4_is_combine_candidate(o.hasPose, bPoseApplied);
 		if (bCandidate) mvCombineCandidates.push_back(pMeshEntity);
 		H4Seq("static", sName, sFileName, &mtxTransform, o.collides ? "collides" : "-");
 
@@ -905,19 +843,9 @@ namespace hpl {
 
 	void cHpmWorldBuilder::LightMaskBox(const OhplHpmLightMask& m)
 	{
-		if (OhplH4UseRust())
-		{
-			OhplH4LightMask p;
-			ohpl_h4_light_mask(m.rotation, m.size, m.scale, m.worldPos, &p);
-			mmapLightMasks[m.id] = std::make_pair(cVector3f(p.center[0], p.center[1], p.center[2]), cVector3f(p.extent[0], p.extent[1], p.extent[2]));
-			return;
-		}
-		cMatrixf mtxRot = cMath::MatrixRotate(cVector3f(m.rotation[0], m.rotation[1], m.rotation[2]), eEulerRotationOrder_XYZ);
-		cVector3f vHalf = cVector3f(m.size[0], m.size[1], m.size[2]) * cVector3f(m.scale[0], m.scale[1], m.scale[2]) * 0.5f;
-		cVector3f vExtent;
-		for (int i = 0; i < 3; ++i)
-			vExtent.v[i] = 2.0f * (std::fabs(mtxRot.m[i][0]) * vHalf.x + std::fabs(mtxRot.m[i][1]) * vHalf.y + std::fabs(mtxRot.m[i][2]) * vHalf.z);
-		mmapLightMasks[m.id] = std::make_pair(cVector3f(m.worldPos[0], m.worldPos[1], m.worldPos[2]), vExtent);
+		OhplH4LightMask p;
+		ohpl_h4_light_mask(m.rotation, m.size, m.scale, m.worldPos, &p);
+		mmapLightMasks[m.id] = std::make_pair(cVector3f(p.center[0], p.center[1], p.center[2]), cVector3f(p.extent[0], p.extent[1], p.extent[2]));
 	}
 
 	void cHpmWorldBuilder::ConnectLightMasks()
@@ -969,7 +897,7 @@ namespace hpl {
 			if (pMesh == NULL) return i;
 
 			// Instance scale = stored radius / mesh radius (cDetailMesh)
-			if (fMeshRadius == 0 && OhplH4UseRust())
+			if (fMeshRadius == 0)
 			{
 				std::vector<float> vMins, vMaxs;
 				for (int j = 0; j < pMesh->GetSubMeshNum(); ++j)
@@ -979,32 +907,13 @@ namespace hpl {
 				}
 				fMeshRadius = ohpl_h4_detail_mesh_radius(vMins.data(), vMaxs.data(), vMins.size() / 3);
 			}
-			else if (fMeshRadius == 0)
-			{
-				cVector3f vMin(1e9f), vMax(-1e9f);
-				for (int j = 0; j < pMesh->GetSubMeshNum(); ++j)
-				{
-					cBoundingVolume bv = pMesh->GetSubMesh(j)->GetVertexBuffer()->CreateBoundingVolume();
-					vMin = cMath::Vector3Min(vMin, bv.GetLocalMin());
-					vMax = cMath::Vector3Max(vMax, bv.GetLocalMax());
-				}
-				fMeshRadius = cMath::Max(vMin.Length(), vMax.Length());
-			}
-			float fScale = OhplH4UseRust() ? ohpl_h4_detail_scale(i < (int)d.numRadii, i < (int)d.numRadii ? d.radii[i] : 0, fMeshRadius)
-										   : (i < (int)d.numRadii && fMeshRadius > 0 ? d.radii[i] / fMeshRadius : 1);
+			float fScale = ohpl_h4_detail_scale(i < (int)d.numRadii, i < (int)d.numRadii ? d.radii[i] : 0, fMeshRadius);
 
 			cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity("DetailMesh_" + cString::ToString(d.firstIndex + i), pMesh, true);
 			pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, false);
 
 			cMatrixf mtxTransform;
-			if (OhplH4UseRust())
-				ohpl_h4_detail_matrix(&d.rotations[i*4], &d.positions[i*3], fScale, &mtxTransform);
-			else
-			{
-				cQuaternion qRot(d.rotations[i*4], d.rotations[i*4+1], d.rotations[i*4+2], d.rotations[i*4+3]);
-				mtxTransform = cMath::MatrixMul(cMath::MatrixQuaternion(qRot), cMath::MatrixScale(fScale));
-				mtxTransform.SetTranslation(cVector3f(d.positions[i*3], d.positions[i*3+1], d.positions[i*3+2]));
-			}
+			ohpl_h4_detail_matrix(&d.rotations[i*4], &d.positions[i*3], fScale, &mtxTransform);
 			H4Seq("detail", "DetailMesh_" + cString::ToString(d.firstIndex + i), d.file, &mtxTransform, "-");
 			pEntity->SetMatrix(mtxTransform);
 			mvCombineCandidates.push_back(pEntity);
@@ -1016,20 +925,10 @@ namespace hpl {
 	{
 		cWorldExposureArea area;
 		area.msName = a.name;
-		if (OhplH4UseRust())
-		{
-			OhplH4Exposure p;
-			ohpl_h4_exposure_area(a.rotation, a.worldPos, a.scale, &p);
-			area.m_mtxInvTransform = p.invTransform;
-			area.mvHalfSize = cVector3f(p.halfSize[0], p.halfSize[1], p.halfSize[2]);
-		}
-		else
-		{
-			cMatrixf mtxTransform = cMath::MatrixRotate(cVector3f(a.rotation[0], a.rotation[1], a.rotation[2]), eEulerRotationOrder_XYZ);
-			mtxTransform.SetTranslation(cVector3f(a.worldPos[0], a.worldPos[1], a.worldPos[2]));
-			area.m_mtxInvTransform = cMath::MatrixInverse(mtxTransform);
-			area.mvHalfSize = cVector3f(a.scale[0], a.scale[1], a.scale[2]) * 0.5f;
-		}
+		OhplH4Exposure p;
+		ohpl_h4_exposure_area(a.rotation, a.worldPos, a.scale, &p);
+		area.m_mtxInvTransform = p.invTransform;
+		area.mvHalfSize = cVector3f(p.halfSize[0], p.halfSize[1], p.halfSize[2]);
 		H4Seq("exposure", area.msName, "", &area.m_mtxInvTransform, "-");
 		area.mfExposure = a.exposure;
 		area.mfWhiteCut = a.whiteCut;
