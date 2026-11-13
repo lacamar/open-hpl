@@ -19,6 +19,8 @@
 #include "gui/GuiSet.h"
 #include "math/Math.h"
 #include "engine/RustEngine.h"
+#include "engine/RustEngineH22.h"
+#include "impl/RustBackends.h"
 #include "resources/FileSearcher.h"
 #include "resources/FontManager.h"
 #include "resources/Resources.h"
@@ -123,8 +125,71 @@ namespace hpl {
 		return true;
 	}
 
+	void cDevHud::RenderRust(bool abHud)
+	{
+		OhplH22HudHost Host;
+		Host.ctx = this;
+		Host.app_time_ms = [](void*) -> uint64_t { return cPlatform::GetApplicationTime(); };
+		Host.init = [](void *apCtx) -> bool { return static_cast<cDevHud*>(apCtx)->Init(); };
+		Host.capture_bug_shot = [](void *apCtx) {
+			cDevHud *pHud = static_cast<cDevHud*>(apCtx);
+			iLowLevelGraphics *pLowGfx = pHud->mpEngine->GetGraphics()->GetLowLevel();
+			pHud->mbBugCapture = false;
+			pHud->mpBugShot = pLowGfx->CopyFrameBufferToBitmap();
+			if(pHud->mpBugShot && pHud->mpBugShot->GetBytesPerPixel() == 4)
+			{
+				cBitmapData *pData = pHud->mpBugShot->GetData(0,0);
+				for(size_t i = 3; i < (size_t)pData->mlSize; i += 4) pData->mpData[i] = 255;
+			}
+			if(pHud->mpBugShot) cEngineDiagnostics::ApplyDisplayGamma(pHud->mpBugShot, pLowGfx->GetGammaCorrection());
+		};
+		Host.screen_size = [](void *apCtx, int *apX, int *apY) {
+			const cVector2l &vScreen = static_cast<cDevHud*>(apCtx)->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt();
+			*apX = vScreen.x;
+			*apY = vScreen.y;
+		};
+		Host.set_virtual_size = [](void *apCtx, float afW, float afH) {
+			static_cast<cDevHud*>(apCtx)->mpSet->SetVirtualSize(cVector2f(afW, afH), -1000, 1000, 0, true);
+		};
+		Host.fps = [](void *apCtx) -> float { return static_cast<cDevHud*>(apCtx)->mpEngine->GetFPS(); };
+		Host.avg_frame_ms = [](void *apCtx) -> float { return static_cast<cDevHud*>(apCtx)->mpEngine->GetAvgFrameTimeInMS(); };
+		Host.system_line_count = [](void *apCtx) -> size_t { return static_cast<cDevHud*>(apCtx)->mvSystem.size(); };
+		Host.system_line = [](void *apCtx, size_t alIdx, OhplH22Sink apSink, void *apSinkCtx) {
+			const tString &sLine = static_cast<cDevHud*>(apCtx)->mvSystem[alIdx];
+			apSink(apSinkCtx, (const uint8_t*)sLine.data(), sLine.size());
+		};
+		Host.font_length = [](void *apCtx, float afSize, const uint32_t *apText, size_t alLen) -> float {
+			tWString sText((const wchar_t*)apText, alLen);
+			return static_cast<cDevHud*>(apCtx)->mpFont->GetLength(cVector2f(afSize), sText.c_str());
+		};
+		Host.draw_gfx = [](void *apCtx, float afX, float afY, float afZ, float afW, float afH) {
+			cDevHud *pHud = static_cast<cDevHud*>(apCtx);
+			pHud->mpSet->DrawGfx(pHud->mpBackground, cVector3f(afX, afY, afZ), cVector2f(afW, afH));
+		};
+		Host.draw_font = [](void *apCtx, const uint32_t *apText, size_t alLen, float afX, float afY, float afZ, float afSize,
+							float afR, float afG, float afB, float afA) {
+			cDevHud *pHud = static_cast<cDevHud*>(apCtx);
+			tWString sText((const wchar_t*)apText, alLen);
+			pHud->mpSet->DrawFont(sText, pHud->mpFont, cVector3f(afX, afY, afZ), cVector2f(afSize), cColor(afR, afG, afB, afA));
+		};
+		Host.set_frame_buffer_null = [](void *apCtx) {
+			static_cast<cDevHud*>(apCtx)->mpEngine->GetGraphics()->GetLowLevel()->SetCurrentFrameBuffer(NULL);
+		};
+		Host.render_set = [](void *apCtx) { static_cast<cDevHud*>(apCtx)->mpSet->Render(NULL); };
+
+		tString sLast = msLastSaved;
+		ohpl_h22_hud_render(&Host, abHud, mbBugOpen, mbBugCapture, mlSavedTime,
+							(const uint32_t*)msBugText.data(), msBugText.size(), OhplEnP(sLast), sLast.size());
+	}
+
 	void cDevHud::Render(bool abHud)
 	{
+		if(OhplBackendRustRequested())
+		{
+			RenderRust(abHud);
+			return;
+		}
+
 		bool bToast = mlSavedTime && ohpl_en_toast_active(mlSavedTime, cPlatform::GetApplicationTime());
 		if(!ohpl_en_should_render(abHud, mbBugOpen, bToast)) return;
 		if(!Init()) return;

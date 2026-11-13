@@ -820,3 +820,177 @@ fn text_chunks_split_on_utf8_boundaries() {
     assert_eq!(c.concat(), s.as_bytes());
     assert!(text_chunks(b"").is_empty());
 }
+
+// ---- DevHud draw sequence ----
+
+struct HudMock {
+    sx: i32,
+    sy: i32,
+    init_ok: bool,
+    now: u64,
+    fps: f32,
+    avg: f32,
+    sys: Vec<Vec<u8>>,
+    trace: RefCell<Vec<Vec<String>>>,
+}
+
+fn hex_w(t: &[u32]) -> String {
+    if t.is_empty() {
+        return "-".into();
+    }
+    t.iter().map(|c| format!("{c:x}.")).collect()
+}
+
+impl HudMock {
+    fn t(&self, v: Vec<String>) {
+        self.trace.borrow_mut().push(v);
+    }
+}
+
+fn font_len(size: f32, t: &[u32]) -> f32 {
+    size * t.iter().map(|c| 3 + (c % 5) as i32).sum::<i32>() as f32
+}
+
+impl super::h22_devhud::HudHost for HudMock {
+    fn app_time_ms(&self) -> u64 {
+        self.t(vec!["APP_TIME".into(), "->".into(), self.now.to_string()]);
+        self.now
+    }
+    fn init(&self) -> bool {
+        self.t(vec![
+            "INIT".into(),
+            "->".into(),
+            u8::from(self.init_ok).to_string(),
+        ]);
+        self.init_ok
+    }
+    fn capture_bug_shot(&self) {
+        self.t(vec!["CAPTURE".into()]);
+    }
+    fn screen_size(&self) -> (i32, i32) {
+        (self.sx, self.sy)
+    }
+    fn set_virtual_size(&self, w: f32, h: f32) {
+        self.t(vec!["SET_VIRTUAL".into(), w.to_string(), h.to_string()]);
+    }
+    fn fps(&self) -> f32 {
+        self.fps
+    }
+    fn avg_frame_ms(&self) -> f32 {
+        self.avg
+    }
+    fn system_lines(&self) -> Vec<Vec<u8>> {
+        self.sys.clone()
+    }
+    fn font_length(&self, size: f32, text: &[u32]) -> f32 {
+        let r = font_len(size, text);
+        self.t(vec![
+            "FONT_LENGTH".into(),
+            size.to_string(),
+            hex_w(text),
+            "->".into(),
+            r.to_string(),
+        ]);
+        r
+    }
+    fn draw_gfx(&self, p: [f32; 3], s: [f32; 2]) {
+        let mut v = vec!["DRAW_GFX".to_string()];
+        v.extend(p.iter().chain(&s).map(f32::to_string));
+        self.t(v);
+    }
+    fn draw_font(&self, text: &[u32], p: [f32; 3], size: f32, c: [f32; 4]) {
+        let mut v = vec!["DRAW_FONT".to_string(), hex_w(text)];
+        v.extend(p.iter().chain(&[size]).chain(&c).map(f32::to_string));
+        self.t(v);
+    }
+    fn set_frame_buffer_null(&self) {
+        self.t(vec!["SET_FB_NULL".into()]);
+    }
+    fn render_set(&self) {
+        self.t(vec!["RENDER_SET".into()]);
+    }
+}
+
+fn unhex_w(s: &str) -> Vec<u32> {
+    if s == "-" {
+        return Vec::new();
+    }
+    s.split('.')
+        .filter(|t| !t.is_empty())
+        .map(|t| u32::from_str_radix(t, 16).expect("hex"))
+        .collect()
+}
+
+fn tokens_match(want: &[&str], got: &[String]) -> bool {
+    want.len() == got.len()
+        && want.iter().zip(got).all(|(w, g)| {
+            *w == g.as_str()
+                || matches!((w.parse::<f64>(), g.parse::<f32>()), (Ok(a), Ok(b)) if a as f32 == b)
+        })
+}
+
+#[test]
+fn devhud_traces_match_cpp() {
+    use super::h22_devhud::{HudState, render};
+    let files = golden_files("hud_");
+    assert!(files.len() >= 20, "hud goldens missing");
+    for f in files {
+        let text = std::fs::read_to_string(&f).expect("golden");
+        let mut lines = text.lines();
+        let case = lines.next().expect("case line");
+        let kv: std::collections::HashMap<&str, &str> = case
+            .split(' ')
+            .skip(1)
+            .filter_map(|t| t.split_once('='))
+            .collect();
+        let get = |k: &str| *kv.get(k).expect("case key");
+        let wide_utf8 = |s: &str| {
+            let w: Vec<char> = unhex_w(s)
+                .iter()
+                .filter_map(|&c| char::from_u32(c))
+                .collect();
+            w.iter().collect::<String>().into_bytes()
+        };
+        let mock = HudMock {
+            sx: get("sx").parse().expect("sx"),
+            sy: get("sy").parse().expect("sy"),
+            init_ok: get("init") == "1",
+            now: get("now").parse().expect("now"),
+            fps: get("fps").parse().expect("fps"),
+            avg: get("avg").parse().expect("avg"),
+            sys: get("sys")
+                .split(',')
+                .filter(|s| !s.is_empty())
+                .map(wide_utf8)
+                .collect(),
+            trace: RefCell::new(Vec::new()),
+        };
+        let bug_text = unhex_w(get("text"));
+        let last = wide_utf8(get("last"));
+        let captured = render(
+            &mock,
+            &HudState {
+                hud: get("hud") == "1",
+                bug_open: get("open") == "1",
+                bug_capture: get("capture") == "1",
+                saved_time: get("saved").parse().expect("saved"),
+                bug_text: &bug_text,
+                last_saved: &last,
+            },
+        );
+        let rest: Vec<&str> = lines.collect();
+        let after = *rest.last().expect("capture_after");
+        let want: Vec<Vec<&str>> = rest
+            .iter()
+            .filter(|l| !l.starts_with("capture_after"))
+            .map(|l| l.split(' ').collect())
+            .collect();
+        let got = mock.trace.borrow();
+        assert_eq!(want.len(), got.len(), "{f:?}: op count");
+        for (i, (w, g)) in want.iter().zip(got.iter()).enumerate() {
+            assert!(tokens_match(w, g), "{f:?}: op {i}: want {w:?} got {g:?}");
+        }
+        let capture_after = get("capture") == "1" && !captured;
+        assert_eq!(after, format!("capture_after={}", u8::from(capture_after)));
+    }
+}

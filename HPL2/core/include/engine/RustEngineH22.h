@@ -33,6 +33,25 @@ struct OhplH22HcHost
 	void (*run_message)(void*, int);
 };
 
+struct OhplH22HudHost
+{
+	void* ctx;
+	uint64_t (*app_time_ms)(void*);
+	bool (*init)(void*);
+	void (*capture_bug_shot)(void*);
+	void (*screen_size)(void*, int*, int*);
+	void (*set_virtual_size)(void*, float, float);
+	float (*fps)(void*);
+	float (*avg_frame_ms)(void*);
+	size_t (*system_line_count)(void*);
+	void (*system_line)(void*, size_t, OhplH22Sink, void*);
+	float (*font_length)(void*, float, const uint32_t*, size_t);
+	void (*draw_gfx)(void*, float, float, float, float, float);
+	void (*draw_font)(void*, const uint32_t*, size_t, float, float, float, float, float, float, float, float);
+	void (*set_frame_buffer_null)(void*);
+	void (*render_set)(void*);
+};
+
 typedef double (*OhplH22Call)(void*, int, double, double, double, double);
 
 // Ops of OhplH22Call, mirrored in h22_engine_ffi.rs `op`.
@@ -59,6 +78,9 @@ extern "C" {
 	void ohpl_h22_hc_update(const OhplH22Hc* s, const OhplH22HcHost* host, bool loading);
 	void ohpl_h22_hc_logic_step(const OhplH22Hc* s, const OhplH22HcHost* host);
 	void ohpl_h22_hc_acquire_lock(void (*log)(void*, int, const uint8_t*, size_t), void* ctx);
+
+	bool ohpl_h22_hud_render(const OhplH22HudHost* host, bool hud, bool bugOpen, bool bugCapture, uint64_t savedTime,
+							 const uint32_t* text, size_t textN, const uint8_t* last, size_t lastN);
 
 	void ohpl_h22_engine_run(OhplH22Call call, void* ctx, OhplEnLoop* loop, float* frameTime, uint32_t* focusBits);
 	void ohpl_h22_engine_init(OhplH22Call call, void* ctx);

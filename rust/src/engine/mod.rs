@@ -6,6 +6,8 @@ pub mod devhud;
 mod ffi;
 mod ffi_devhud;
 pub mod frame;
+pub mod h22_devhud;
+mod h22_devhud_ffi;
 pub mod h22_engine;
 mod h22_engine_ffi;
 pub mod h22_hc;
