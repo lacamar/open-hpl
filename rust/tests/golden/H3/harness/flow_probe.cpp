@@ -45,15 +45,49 @@ namespace hpl {
 	void LogUpdate(const char*, ...) {}
 }
 
-static bool Fails(const std::string &asKey, int alSalt) { return (Fnv(asKey) + alSalt) % 7 == 0; }
+static std::string gExtra;
+static std::string Unroot(std::string s)
+{
+	if(gExtra.empty()) return s;
+	for(size_t p = 0; (p = s.find(gExtra, p)) != std::string::npos; p += 10) s.replace(p, gExtra.size(), "<matcases>");
+	return s;
+}
+static bool Fails(const std::string &asKey, int alSalt) { return (Fnv(Unroot(asKey)) + alSalt) % 7 == 0; }
 static tString Narrow(const tWString &asPath) { return cString::To8Char(asPath); }
+
+// update and destroy order follows the manager map's path-hash order; sort both.
+static std::string SortLog(const std::string &sLog)
+{
+	std::vector<std::string> vUpd;
+	std::string sRest;
+	size_t pos = 0, firstUpd = std::string::npos;
+	while(pos < sLog.size())
+	{
+		size_t e = sLog.find('\n', pos);
+		std::string l = sLog.substr(pos, e - pos + 1);
+		pos = e + 1;
+		bool bDestroy = l.compare(0, 2, "D:") == 0;
+		if(bDestroy && pos < sLog.size() && sLog.compare(pos, 14, "L:  Destroyed ") == 0)
+		{
+			size_t e2 = sLog.find('\n', pos);
+			l += sLog.substr(pos, e2 - pos + 1);
+			pos = e2 + 1;
+		}
+		if(bDestroy || l.compare(0, 7, "update ") == 0) { vUpd.push_back(l); if(firstUpd == std::string::npos) firstUpd = sRest.size(); }
+		else sRest += l;
+	}
+	std::sort(vUpd.begin(), vUpd.end());
+	std::string sUpd;
+	for(auto &l : vUpd) sUpd += l;
+	return firstUpd == std::string::npos ? sRest : sRest.substr(0, firstUpd) + sUpd + sRest.substr(firstUpd);
+}
 
 class cRes : public iResourceBase
 {
 public:
 	cRes(const tString &asName, const tWString &asPath, const char *asKind) : iResourceBase(asName, asPath, 0), msKind(asKind)
 	{
-		mlMem = (int)(Fnv(asName) % 1000);
+		mlMem = (int)(Fnv(Unroot(asName)) % 1000);
 		mbStream = false;
 		mpFrame = NULL; mpBmpFrame = NULL;
 	}
@@ -260,7 +294,7 @@ public:
 		bool bFail = Fails(Narrow(asPath), 1);
 		gLog += "B:" + Narrow(asPath) + (bFail ? " fail\n" : "\n");
 		if(bFail) return NULL;
-		return new int((int)(Fnv(Narrow(asPath)) % 1000));
+		return new int((int)(Fnv(Unroot(Narrow(asPath))) % 1000));
 	}
 
 	void *Tex(OhplH3Create &c, int alBitmaps)
@@ -1245,13 +1279,14 @@ public:
 		std::vector<iResourceBase*> v;
 		cResourceBaseIterator it = GetResourceBaseIterator();
 		while(it.HasNext()) v.push_back(it.Next());
+		std::stable_sort(v.begin(), v.end(), [](iResourceBase *a, iResourceBase *b) { return Unroot(Narrow(a->GetFullPath())) < Unroot(Narrow(b->GetFullPath())); });
 		return v;
 	}
 
 	std::string Dump()
 	{
 		std::string s;
-		for(iResourceBase *p : Live()) s += Narrow(p->GetFullPath()) + ":" + std::to_string(p->GetHandle()) + ":" + std::to_string(p->GetUserCount()) + ";";
+		for(iResourceBase *p : Live()) s += Unroot(Narrow(p->GetFullPath())) + ":" + std::to_string(p->GetHandle()) + ":" + std::to_string(p->GetUserCount()) + ";";
 		return std::to_string(Live().size()) + " " + Hex(Fnv(s));
 	}
 
@@ -1282,6 +1317,7 @@ int main(int argc, char **argv)
 	searcher.AddDirectory(cString::To16Char(root), "*.*", true);
 	iResourceBase::SetLogCreateAndDelete(true);
 	const char *sExtra = getenv("FLOW_EXTRA_DIR");
+	if(sExtra) gExtra = sExtra;
 	if(sExtra) searcher.AddDirectory(cString::To16Char(sExtra), "*.*", true);
 
 	std::vector<std::string> names, snames, mnames;
@@ -1419,26 +1455,11 @@ int main(int argc, char **argv)
 				line += "force " + id + " live=" + std::to_string(m.Live().size());
 			}
 			else line += m.Dump();
-			{
-				std::vector<std::string> vUpd;
-				std::string sRest;
-				size_t pos = 0, firstUpd = std::string::npos;
-				while(pos < gLog.size())
-				{
-					size_t e = gLog.find('\n', pos);
-					std::string l = gLog.substr(pos, e - pos + 1);
-					if(l.compare(0, 7, "update ") == 0) { vUpd.push_back(l); if(firstUpd == std::string::npos) firstUpd = sRest.size(); }
-					else sRest += l;
-					pos = e + 1;
-				}
-				std::sort(vUpd.begin(), vUpd.end());
-				std::string sUpd;
-				for(auto &l : vUpd) sUpd += l;
-				gLog = firstUpd == std::string::npos ? sRest : sRest.substr(0, firstUpd) + sUpd + sRest.substr(firstUpd);
-			}
+			gLog = SortLog(gLog);
 			std::string out = std::regex_replace(gLog, std::regex(" in -?[0-9]+ ms"), " in N ms");
 			out = std::regex_replace(out, std::regex("0x[0-9a-f]+"), "0xP");
 			line += "\n" + out;
+			line = Unroot(line);
 			total = Fnv(line, total);
 			if(argc > 3) transcript += line;
 		}
@@ -1448,7 +1469,8 @@ int main(int argc, char **argv)
 			cProbeMgr &m = *mgrs[f];
 			m.DestroyAllDispatch();
 			m.Shutdown();
-			std::string line = std::string("final ") + gFlavorName[f] + " " + std::to_string(m.Live().size()) + "\n" + std::regex_replace(gLog, std::regex("0x[0-9a-f]+"), "0xP");
+			std::string line = std::string("final ") + gFlavorName[f] + " " + std::to_string(m.Live().size()) + "\n" + std::regex_replace(SortLog(gLog), std::regex("0x[0-9a-f]+"), "0xP");
+			line = Unroot(line);
 			total = Fnv(line, total);
 			if(argc > 3) transcript += line;
 		}

@@ -25,7 +25,10 @@ const MESH_EXTS: [&[u8]; 3] = [b"dae", b"msh", b"fbx"];
 const SOUND_FORMATS: [&[u8]; 2] = [b"ogg", b"wav"];
 
 fn fails(key: &[u8], salt: u64) -> bool {
-    fnv(BASIS, key).wrapping_add(salt).checked_rem(7) == Some(0)
+    fnv(BASIS, &unroot_bytes(key))
+        .wrapping_add(salt)
+        .checked_rem(7)
+        == Some(0)
 }
 
 fn narrow(p: &[u32]) -> Vec<u8> {
@@ -113,7 +116,12 @@ impl Host {
             name: name.to_vec(),
             path: path.to_vec(),
             meta: ResMeta::new(0, self.time),
-            mem: i32::try_from(fnv(BASIS, name).checked_rem(1000).unwrap_or(0)).unwrap_or(0),
+            mem: i32::try_from(
+                fnv(BASIS, &unroot_bytes(name))
+                    .checked_rem(1000)
+                    .unwrap_or(0),
+            )
+            .unwrap_or(0),
             stream: false,
             frame: 0,
             bmp_frame: 0,
@@ -147,7 +155,8 @@ impl Host {
         self.log += &format!("B:{}{}\n", s(&p), if fail { " fail" } else { "" });
         (!fail).then(|| {
             Box::into_raw(Box::new(
-                i32::try_from(fnv(BASIS, &p).checked_rem(1000).unwrap_or(0)).unwrap_or(0),
+                i32::try_from(fnv(BASIS, &unroot_bytes(&p)).checked_rem(1000).unwrap_or(0))
+                    .unwrap_or(0),
             ))
         })
     }
@@ -755,13 +764,20 @@ fn normalize_hex(t: &str) -> String {
     out
 }
 
+// update and destroy order follows the manager map's path-hash order; sort both.
 fn sort_updates(log: &str) -> String {
     let mut upd = Vec::new();
     let mut rest = String::new();
     let mut first = None;
-    for l in log.split_inclusive('\n') {
-        if l.starts_with("update ") {
-            upd.push(l.to_string());
+    let mut lines = log.split_inclusive('\n').peekable();
+    while let Some(l) = lines.next() {
+        let destroy = l.starts_with("D:");
+        if destroy || l.starts_with("update ") {
+            let mut u = l.to_string();
+            if let Some(n) = lines.next_if(|n| destroy && n.starts_with("L:  Destroyed ")) {
+                u += n;
+            }
+            upd.push(u);
             first.get_or_insert(rest.len());
         } else {
             rest += l;
@@ -799,8 +815,12 @@ impl Mgr {
         }
     }
 
+    // The map's iteration order depends on the full path hash; sort by the checkout-independent path.
     fn live(&mut self) -> Vec<*mut c_void> {
-        self.m.resources()
+        let mut v = self.m.resources();
+        let h = &mut self.h;
+        v.sort_by_cached_key(|&p| unroot_bytes(&narrow(&h.obj(p).path)));
+        v
     }
 
     fn dump(&mut self) -> String {
@@ -921,6 +941,10 @@ fn unroot(s: String) -> String {
             s.replace(e.as_str(), "<matcases>")
         }
     })
+}
+
+fn unroot_bytes(b: &[u8]) -> Vec<u8> {
+    unroot(String::from_utf8_lossy(b).into_owned()).into_bytes()
 }
 
 pub(super) fn run(root: &Path, extra: &Path, ops_n: i64, dump: Option<&Path>) -> u64 {
@@ -1226,7 +1250,7 @@ pub(super) fn run(root: &Path, extra: &Path, ops_n: i64, dump: Option<&Path>) ->
             "final {} {}\n{}",
             NAMES[mg.flavor],
             mg.m.len(),
-            normalize_hex(&mg.h.log)
+            normalize_hex(&sort_updates(&mg.h.log))
         );
         let line = unroot(line);
         total = fnv(total, line.as_bytes());
