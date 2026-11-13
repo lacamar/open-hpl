@@ -161,6 +161,7 @@ namespace hpl {
 		cVector3f GetStartDirection();
 
 		cPidControllerVec3 mForcePid[2];
+		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
 
 
 
@@ -168,10 +169,10 @@ namespace hpl {
 
 
 		tString msMotorSound;
-		float mfMotorSoundStartSpeed;
-		float mfMotorSoundStopSpeed;
-		cSoundEntity *mpMotorSoundEntity;
-		int mlMotorSoundEntityID;
+		float mfMotorSoundStartSpeed = 0.1f;
+		float mfMotorSoundStopSpeed = 0.05f;
+		cSoundEntity *mpMotorSoundEntity = NULL;
+		int mlMotorSoundEntityID = -1;
 
 
 

@@ -22,6 +22,7 @@ pub(crate) mod newton_material;
 pub mod pid;
 pub mod preg;
 pub mod rope;
+mod rope_shell;
 pub mod shell;
 pub mod surf;
 pub mod surface;

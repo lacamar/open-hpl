@@ -86,6 +86,15 @@ static_assert(sizeof(OhplH14EntIn) == 220 && offsetof(OhplH14EntIn, yaw) == 204 
 extern "C" {
 void ohpl_h14_collide_gravity(size_t (*)(int32_t, OhplH15Wa*), size_t, void*, const OhplCharState*, size_t, size_t);
 void ohpl_h14_collide_push(size_t (*)(int32_t, OhplH15Wa*), size_t, void*, const OhplCharState*, size_t, size_t);
+void ohpl_h14_rope_init(OhplRopeState*, OhplV3, OhplV3, OhplV3);
+bool ohpl_h14_rope_check_collision(const OhplRopeState*, size_t);
+bool ohpl_h14_rope_check_sleeping(size_t (*)(int32_t, OhplH15Wa*), OhplRopeState*);
+bool ohpl_h14_rope_check_awake(size_t (*)(int32_t, OhplH15Wa*), OhplRopeState*);
+void ohpl_h14_rope_set_specific_sleeping(size_t (*)(int32_t, OhplH15Wa*), OhplRopeState*, bool);
+void ohpl_h14_rope_set_motor(size_t (*)(int32_t, OhplH15Wa*), size_t, OhplRopeState*, bool);
+void ohpl_h14_rope_set_auto_move(size_t (*)(int32_t, OhplH15Wa*), size_t, OhplRopeState*, bool);
+void ohpl_h14_rope_remove_attached(size_t (*)(int32_t, OhplH15Wa*), size_t, OhplRopeState*, size_t, bool);
+void ohpl_h14_rope_set_attached(size_t (*)(int32_t, OhplH15Wa*), size_t, OhplRopeState*, size_t, size_t, size_t);
 void ohpl_h14_char_init(void*, OhplCharState*, size_t, float);
 void ohpl_h14_connect_to_body(size_t (*)(int32_t, OhplH15Wa*), size_t, void*, OhplCharState*, size_t, OhplV3, uint32_t);
 void ohpl_h14_disconnect_body(size_t (*)(int32_t, OhplH15Wa*), size_t, void*);

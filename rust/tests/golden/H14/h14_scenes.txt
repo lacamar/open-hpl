@@ -58,6 +58,8 @@ scene rope_collide
 end rope_collide steps 600 hash 1660e677a8e0409c
 scene rope_free
 end rope_free steps 600 hash 65ed53930b346a5b
+scene rope_motor
+end rope_motor steps 600 hash 05c50dcd4460c203
 scene controller
   body 00000000 3fb623dc 00000000
 end controller steps 600 hash c7915af449edcf54

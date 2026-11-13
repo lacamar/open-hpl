@@ -338,6 +338,39 @@ static void ScenePush(const char* name, bool in2d, bool impulse, bool customGrav
 	gD.End(name);
 }
 
+static void SceneRopeMotor()
+{
+	gD.Begin("rope_motor");
+	cPhysicsWorldNewton& w = *NewWorld();
+	Floor(w);
+	iPhysicsBody* anchor = Box(w, "Anchor", cVector3f(0.4f, 0.4f, 0.4f), 0, cVector3f(0, 4, 0));
+	iPhysicsBody* weight = Box(w, "Weight", cVector3f(0.4f, 0.4f, 0.4f), 3, cVector3f(2.0f, 3.9f, 0));
+	iPhysicsBody* other = Box(w, "Other", cVector3f(0.4f, 0.4f, 0.4f), 2, cVector3f(-2.0f, 3.5f, 0));
+	iPhysicsRope* rope = w.CreateRope("Rope", cVector3f(0, 4, 0), cVector3f(2.0f, 3.9f, 0));
+	rope->SetSegmentLength(0.3f);
+	rope->SetMaxIterations(4);
+	rope->SetAttachedStartBody(anchor);
+	rope->SetAttachedEndBody(weight);
+	rope->SetMotorMinSpeed(-2.0f);
+	rope->SetMotorMaxSpeed(2.0f);
+	for (int i = 0; i < 600; ++i)
+	{
+		if (i == 50) rope->SetMotorActive(true);
+		if (i == 330) rope->SetMotorActive(false);
+		if (i == 340) { rope->SetAutoMoveActive(true); rope->SetAutoMoveAcc(0.0f); rope->SetAutoMoveSpeed(0.0f); }
+		if (i == 420) rope->SetAutoMoveActive(false);
+		if (i == 450) rope->SetAttachedEndBody(other);
+		if (i == 520) rope->RemoveAttachedBody(weight, true);
+		w.Update(1.0f / 60.0f);
+		Rope(rope);
+		Body(weight);
+		Body(other);
+		++gD.steps;
+	}
+	hplDelete(&w);
+	gD.End("rope_motor");
+}
+
 static void RunAll(const char* dumpFile)
 {
 	gD.f = dumpFile ? std::fopen(dumpFile, "w") : NULL;
@@ -358,6 +391,7 @@ static void RunAll(const char* dumpFile)
 	ScenePush("push_custom_gravity", true, true, true);
 	SceneRope("rope_collide", true, true, 1.0f);
 	SceneRope("rope_free", false, false, 0.6f);
+	SceneRopeMotor();
 	SceneController();
 	if (gD.f) std::fclose(gD.f);
 }

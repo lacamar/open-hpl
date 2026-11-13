@@ -169,7 +169,7 @@ namespace hpl {
 		tString msName;
 		iPhysicsWorld *mpWorld;
 
-		int mlUniqueID;
+		int mlUniqueID = -1;
 
 		cVerletParticleRayCallback *mpRayParticleCallback;
 		
@@ -178,7 +178,7 @@ namespace hpl {
 		bool mbActive = true;
 
                 
-		float mfDamping;
+		float mfDamping = 0.001f;
 		
 
 
