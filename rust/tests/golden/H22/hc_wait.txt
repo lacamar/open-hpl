@@ -1,0 +1,64 @@
+> {"cmd":"wait_frames","n":3}\n
+settle
+pump 1
+frames 1
+pump 1
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+frames 5
+pump 1
+< {"ok":true,"frames":6,"timed_out":false}
+> {"cmd":"wait_frames"}\n{"cmd":"wait_frames","n":0}\n{"cmd":"wait_frames","n":1}\n{"cmd":"wait_frames","n":2}\n
+settle
+pump 1
+pump 2
+< {"ok":true,"frames":0,"timed_out":false}
+frames 1
+pump 1
+< {"ok":true,"frames":1,"timed_out":false}
+< {"ok":true,"frames":1,"timed_out":false}
+frames 1
+pump 1
+< {"ok":true,"frames":2,"timed_out":false}
+> {"cmd":"wait_frames","n":1000,"max_ms":0}\n{"cmd":"wait_frames","n":1000,"max_ms":-1}\n{"cmd":"wait_frames","n":-1}\n{"cmd":"wait_frames","n":-2147483648}\n{"cmd":"wait_frames","n":5,"max_ms":100000000}\n{"cmd":"wait_frames","n":"x"}\n
+settle
+pump 1
+frames 2
+pump 1
+< {"ok":true,"frames":2,"timed_out":true}
+< {"ok":true,"frames":2,"timed_out":true}
+< {"ok":true,"frames":2,"timed_out":false}
+< {"ok":true,"frames":2,"timed_out":false}
+frames 4
+pump 1
+< {"ok":true,"frames":6,"timed_out":false}
+frames 1
+pump 1
+loading 1
+> {"cmd":"log_tail","lines":1}\n{"cmd":"ping"}\n{"cmd":"screenshot"}\n{"cmd":"quit"}\n{"cmd":"wait_frames","n":1}\n{"cmd":"resize","width":2,"height":2}\n{"cmd":"screenshot","path":"/z/q.bmp"}\n{"cmd":"dev_hud"}\n{"cmd":"ping"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot /z/q.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"pong":true}
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+< {"ok":true,"path":"/z/q.bmp"}
+< {"ok":true,"pong":true}
+pump 2
+loading 0
+pump 1
+state resize 2x2
+state exit
+< {"ok":true,"log":""}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true,"prev":false}
+frames 2
+pump 1
+< {"ok":true,"frames":2,"timed_out":false}
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}

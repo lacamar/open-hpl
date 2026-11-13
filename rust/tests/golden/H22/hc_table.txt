@@ -1,0 +1,770 @@
+log first line
+log second \nwith newline
+log tab\x09and "quote" and \\ backslash
+log \xc3\xa9 utf8
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"log_tail"}\n
+settle
+pump 1
+< {"ok":true,"log":"first line\nsecond \nwith newline\ntab\tand \"quote\" and \\ backslash\né utf8\n"}
+> {"cmd":"log_tail","lines":0}\n
+settle
+pump 1
+< {"ok":true,"log":""}
+> {"cmd":"log_tail","lines":1}\n
+settle
+pump 1
+< {"ok":true,"log":"é utf8\n"}
+> {"cmd":"log_tail","lines":2}\n
+settle
+pump 1
+< {"ok":true,"log":"tab\tand \"quote\" and \\ backslash\né utf8\n"}
+> {"cmd":"log_tail","lines":3}\n
+settle
+pump 1
+< {"ok":true,"log":"second \nwith newline\ntab\tand \"quote\" and \\ backslash\né utf8\n"}
+> {"cmd":"log_tail","lines":10}\n
+settle
+pump 1
+< {"ok":true,"log":"first line\nsecond \nwith newline\ntab\tand \"quote\" and \\ backslash\né utf8\n"}
+> {"cmd":"log_tail","lines":-1}\n
+settle
+pump 1
+< {"ok":true,"log":""}
+> {"cmd":"log_tail","lines":1000}\n
+settle
+pump 1
+< {"ok":true,"log":"first line\nsecond \nwith newline\ntab\tand \"quote\" and \\ backslash\né utf8\n"}
+> {"cmd":"log_tail","lines":"2"}\n{"cmd":"log_tail","lines":"abc"}\n{"cmd":"log_tail","lines":2.9}\n
+settle
+pump 1
+< {"ok":true,"log":"tab\tand \"quote\" and \\ backslash\né utf8\n"}
+< {"ok":true,"log":""}
+< {"ok":true,"log":"tab\tand \"quote\" and \\ backslash\né utf8\n"}
+log bulk 0
+log bulk 1
+log bulk 2
+log bulk 3
+log bulk 4
+log bulk 5
+log bulk 6
+log bulk 7
+log bulk 8
+log bulk 9
+log bulk 10
+log bulk 11
+log bulk 12
+log bulk 13
+log bulk 14
+log bulk 15
+log bulk 16
+log bulk 17
+log bulk 18
+log bulk 19
+log bulk 20
+log bulk 21
+log bulk 22
+log bulk 23
+log bulk 24
+log bulk 25
+log bulk 26
+log bulk 27
+log bulk 28
+log bulk 29
+log bulk 30
+log bulk 31
+log bulk 32
+log bulk 33
+log bulk 34
+log bulk 35
+log bulk 36
+log bulk 37
+log bulk 38
+log bulk 39
+log bulk 40
+log bulk 41
+log bulk 42
+log bulk 43
+log bulk 44
+log bulk 45
+log bulk 46
+log bulk 47
+log bulk 48
+log bulk 49
+log bulk 50
+log bulk 51
+log bulk 52
+log bulk 53
+log bulk 54
+log bulk 55
+log bulk 56
+log bulk 57
+log bulk 58
+log bulk 59
+log bulk 60
+log bulk 61
+log bulk 62
+log bulk 63
+log bulk 64
+log bulk 65
+log bulk 66
+log bulk 67
+log bulk 68
+log bulk 69
+log bulk 70
+log bulk 71
+log bulk 72
+log bulk 73
+log bulk 74
+log bulk 75
+log bulk 76
+log bulk 77
+log bulk 78
+log bulk 79
+log bulk 80
+log bulk 81
+log bulk 82
+log bulk 83
+log bulk 84
+log bulk 85
+log bulk 86
+log bulk 87
+log bulk 88
+log bulk 89
+log bulk 90
+log bulk 91
+log bulk 92
+log bulk 93
+log bulk 94
+log bulk 95
+log bulk 96
+log bulk 97
+log bulk 98
+log bulk 99
+log bulk 100
+log bulk 101
+log bulk 102
+log bulk 103
+log bulk 104
+log bulk 105
+log bulk 106
+log bulk 107
+log bulk 108
+log bulk 109
+log bulk 110
+log bulk 111
+log bulk 112
+log bulk 113
+log bulk 114
+log bulk 115
+log bulk 116
+log bulk 117
+log bulk 118
+log bulk 119
+log bulk 120
+log bulk 121
+log bulk 122
+log bulk 123
+log bulk 124
+log bulk 125
+log bulk 126
+log bulk 127
+log bulk 128
+log bulk 129
+log bulk 130
+log bulk 131
+log bulk 132
+log bulk 133
+log bulk 134
+log bulk 135
+log bulk 136
+log bulk 137
+log bulk 138
+log bulk 139
+log bulk 140
+log bulk 141
+log bulk 142
+log bulk 143
+log bulk 144
+log bulk 145
+log bulk 146
+log bulk 147
+log bulk 148
+log bulk 149
+log bulk 150
+log bulk 151
+log bulk 152
+log bulk 153
+log bulk 154
+log bulk 155
+log bulk 156
+log bulk 157
+log bulk 158
+log bulk 159
+log bulk 160
+log bulk 161
+log bulk 162
+log bulk 163
+log bulk 164
+log bulk 165
+log bulk 166
+log bulk 167
+log bulk 168
+log bulk 169
+log bulk 170
+log bulk 171
+log bulk 172
+log bulk 173
+log bulk 174
+log bulk 175
+log bulk 176
+log bulk 177
+log bulk 178
+log bulk 179
+log bulk 180
+log bulk 181
+log bulk 182
+log bulk 183
+log bulk 184
+log bulk 185
+log bulk 186
+log bulk 187
+log bulk 188
+log bulk 189
+log bulk 190
+log bulk 191
+log bulk 192
+log bulk 193
+log bulk 194
+log bulk 195
+log bulk 196
+log bulk 197
+log bulk 198
+log bulk 199
+log bulk 200
+log bulk 201
+log bulk 202
+log bulk 203
+log bulk 204
+log bulk 205
+log bulk 206
+log bulk 207
+log bulk 208
+log bulk 209
+log bulk 210
+log bulk 211
+log bulk 212
+log bulk 213
+log bulk 214
+log bulk 215
+log bulk 216
+log bulk 217
+log bulk 218
+log bulk 219
+log bulk 220
+log bulk 221
+log bulk 222
+log bulk 223
+log bulk 224
+log bulk 225
+log bulk 226
+log bulk 227
+log bulk 228
+log bulk 229
+log bulk 230
+log bulk 231
+log bulk 232
+log bulk 233
+log bulk 234
+log bulk 235
+log bulk 236
+log bulk 237
+log bulk 238
+log bulk 239
+log bulk 240
+log bulk 241
+log bulk 242
+log bulk 243
+log bulk 244
+log bulk 245
+log bulk 246
+log bulk 247
+log bulk 248
+log bulk 249
+log bulk 250
+log bulk 251
+log bulk 252
+log bulk 253
+log bulk 254
+log bulk 255
+log bulk 256
+log bulk 257
+log bulk 258
+log bulk 259
+log bulk 260
+log bulk 261
+log bulk 262
+log bulk 263
+log bulk 264
+log bulk 265
+log bulk 266
+log bulk 267
+log bulk 268
+log bulk 269
+log bulk 270
+log bulk 271
+log bulk 272
+log bulk 273
+log bulk 274
+log bulk 275
+log bulk 276
+log bulk 277
+log bulk 278
+log bulk 279
+log bulk 280
+log bulk 281
+log bulk 282
+log bulk 283
+log bulk 284
+log bulk 285
+log bulk 286
+log bulk 287
+log bulk 288
+log bulk 289
+log bulk 290
+log bulk 291
+log bulk 292
+log bulk 293
+log bulk 294
+log bulk 295
+log bulk 296
+log bulk 297
+log bulk 298
+log bulk 299
+log bulk 300
+log bulk 301
+log bulk 302
+log bulk 303
+log bulk 304
+log bulk 305
+log bulk 306
+log bulk 307
+log bulk 308
+log bulk 309
+log bulk 310
+log bulk 311
+log bulk 312
+log bulk 313
+log bulk 314
+log bulk 315
+log bulk 316
+log bulk 317
+log bulk 318
+log bulk 319
+log bulk 320
+log bulk 321
+log bulk 322
+log bulk 323
+log bulk 324
+log bulk 325
+log bulk 326
+log bulk 327
+log bulk 328
+log bulk 329
+log bulk 330
+log bulk 331
+log bulk 332
+log bulk 333
+log bulk 334
+log bulk 335
+log bulk 336
+log bulk 337
+log bulk 338
+log bulk 339
+log bulk 340
+log bulk 341
+log bulk 342
+log bulk 343
+log bulk 344
+log bulk 345
+log bulk 346
+log bulk 347
+log bulk 348
+log bulk 349
+log bulk 350
+log bulk 351
+log bulk 352
+log bulk 353
+log bulk 354
+log bulk 355
+log bulk 356
+log bulk 357
+log bulk 358
+log bulk 359
+log bulk 360
+log bulk 361
+log bulk 362
+log bulk 363
+log bulk 364
+log bulk 365
+log bulk 366
+log bulk 367
+log bulk 368
+log bulk 369
+log bulk 370
+log bulk 371
+log bulk 372
+log bulk 373
+log bulk 374
+log bulk 375
+log bulk 376
+log bulk 377
+log bulk 378
+log bulk 379
+log bulk 380
+log bulk 381
+log bulk 382
+log bulk 383
+log bulk 384
+log bulk 385
+log bulk 386
+log bulk 387
+log bulk 388
+log bulk 389
+log bulk 390
+log bulk 391
+log bulk 392
+log bulk 393
+log bulk 394
+log bulk 395
+log bulk 396
+log bulk 397
+log bulk 398
+log bulk 399
+log bulk 400
+log bulk 401
+log bulk 402
+log bulk 403
+log bulk 404
+log bulk 405
+log bulk 406
+log bulk 407
+log bulk 408
+log bulk 409
+log bulk 410
+log bulk 411
+log bulk 412
+log bulk 413
+log bulk 414
+log bulk 415
+log bulk 416
+log bulk 417
+log bulk 418
+log bulk 419
+log bulk 420
+log bulk 421
+log bulk 422
+log bulk 423
+log bulk 424
+log bulk 425
+log bulk 426
+log bulk 427
+log bulk 428
+log bulk 429
+log bulk 430
+log bulk 431
+log bulk 432
+log bulk 433
+log bulk 434
+log bulk 435
+log bulk 436
+log bulk 437
+log bulk 438
+log bulk 439
+log bulk 440
+log bulk 441
+log bulk 442
+log bulk 443
+log bulk 444
+log bulk 445
+log bulk 446
+log bulk 447
+log bulk 448
+log bulk 449
+log bulk 450
+log bulk 451
+log bulk 452
+log bulk 453
+log bulk 454
+log bulk 455
+log bulk 456
+log bulk 457
+log bulk 458
+log bulk 459
+log bulk 460
+log bulk 461
+log bulk 462
+log bulk 463
+log bulk 464
+log bulk 465
+log bulk 466
+log bulk 467
+log bulk 468
+log bulk 469
+log bulk 470
+log bulk 471
+log bulk 472
+log bulk 473
+log bulk 474
+log bulk 475
+log bulk 476
+log bulk 477
+log bulk 478
+log bulk 479
+log bulk 480
+log bulk 481
+log bulk 482
+log bulk 483
+log bulk 484
+log bulk 485
+log bulk 486
+log bulk 487
+log bulk 488
+log bulk 489
+log bulk 490
+log bulk 491
+log bulk 492
+log bulk 493
+log bulk 494
+log bulk 495
+log bulk 496
+log bulk 497
+log bulk 498
+log bulk 499
+log bulk 500
+log bulk 501
+log bulk 502
+log bulk 503
+log bulk 504
+log bulk 505
+log bulk 506
+log bulk 507
+log bulk 508
+log bulk 509
+log bulk 510
+log bulk 511
+log bulk 512
+log bulk 513
+log bulk 514
+log bulk 515
+log bulk 516
+log bulk 517
+log bulk 518
+log bulk 519
+> {"cmd":"log_tail","lines":4}\n{"cmd":"log_tail","lines":600}\n
+settle
+pump 1
+< {"ok":true,"log":"bulk 516\nbulk 517\nbulk 518\nbulk 519\n"}
+< {"ok":true,"log":"bulk 20\nbulk 21\nbulk 22\nbulk 23\nbulk 24\nbulk 25\nbulk 26\nbulk 27\nbulk 28\nbulk 29\nbulk 30\nbulk 31\nbulk 32\nbulk 33\nbulk 34\nbulk 35\nbulk 36\nbulk 37\nbulk 38\nbulk 39\nbulk 40\nbulk 41\nbulk 42\nbulk 43\nbulk 44\nbulk 45\nbulk 46\nbulk 47\nbulk 48\nbulk 49\nbulk 50\nbulk 51\nbulk 52\nbulk 53\nbulk 54\nbulk 55\nbulk 56\nbulk 57\nbulk 58\nbulk 59\nbulk 60\nbulk 61\nbulk 62\nbulk 63\nbulk 64\nbulk 65\nbulk 66\nbulk 67\nbulk 68\nbulk 69\nbulk 70\nbulk 71\nbulk 72\nbulk 73\nbulk 74\nbulk 75\nbulk 76\nbulk 77\nbulk 78\nbulk 79\nbulk 80\nbulk 81\nbulk 82\nbulk 83\nbulk 84\nbulk 85\nbulk 86\nbulk 87\nbulk 88\nbulk 89\nbulk 90\nbulk 91\nbulk 92\nbulk 93\nbulk 94\nbulk 95\nbulk 96\nbulk 97\nbulk 98\nbulk 99\nbulk 100\nbulk 101\nbulk 102\nbulk 103\nbulk 104\nbulk 105\nbulk 106\nbulk 107\nbulk 108\nbulk 109\nbulk 110\nbulk 111\nbulk 112\nbulk 113\nbulk 114\nbulk 115\nbulk 116\nbulk 117\nbulk 118\nbulk 119\nbulk 120\nbulk 121\nbulk 122\nbulk 123\nbulk 124\nbulk 125\nbulk 126\nbulk 127\nbulk 128\nbulk 129\nbulk 130\nbulk 131\nbulk 132\nbulk 133\nbulk 134\nbulk 135\nbulk 136\nbulk 137\nbulk 138\nbulk 139\nbulk 140\nbulk 141\nbulk 142\nbulk 143\nbulk 144\nbulk 145\nbulk 146\nbulk 147\nbulk 148\nbulk 149\nbulk 150\nbulk 151\nbulk 152\nbulk 153\nbulk 154\nbulk 155\nbulk 156\nbulk 157\nbulk 158\nbulk 159\nbulk 160\nbulk 161\nbulk 162\nbulk 163\nbulk 164\nbulk 165\nbulk 166\nbulk 167\nbulk 168\nbulk 169\nbulk 170\nbulk 171\nbulk 172\nbulk 173\nbulk 174\nbulk 175\nbulk 176\nbulk 177\nbulk 178\nbulk 179\nbulk 180\nbulk 181\nbulk 182\nbulk 183\nbulk 184\nbulk 185\nbulk 186\nbulk 187\nbulk 188\nbulk 189\nbulk 190\nbulk 191\nbulk 192\nbulk 193\nbulk 194\nbulk 195\nbulk 196\nbulk 197\nbulk 198\nbulk 199\nbulk 200\nbulk 201\nbulk 202\nbulk 203\nbulk 204\nbulk 205\nbulk 206\nbulk 207\nbulk 208\nbulk 209\nbulk 210\nbulk 211\nbulk 212\nbulk 213\nbulk 214\nbulk 215\nbulk 216\nbulk 217\nbulk 218\nbulk 219\nbulk 220\nbulk 221\nbulk 222\nbulk 223\nbulk 224\nbulk 225\nbulk 226\nbulk 227\nbulk 228\nbulk 229\nbulk 230\nbulk 231\nbulk 232\nbulk 233\nbulk 234\nbulk 235\nbulk 236\nbulk 237\nbulk 238\nbulk 239\nbulk 240\nbulk 241\nbulk 242\nbulk 243\nbulk 244\nbulk 245\nbulk 246\nbulk 247\nbulk 248\nbulk 249\nbulk 250\nbulk 251\nbulk 252\nbulk 253\nbulk 254\nbulk 255\nbulk 256\nbulk 257\nbulk 258\nbulk 259\nbulk 260\nbulk 261\nbulk 262\nbulk 263\nbulk 264\nbulk 265\nbulk 266\nbulk 267\nbulk 268\nbulk 269\nbulk 270\nbulk 271\nbulk 272\nbulk 273\nbulk 274\nbulk 275\nbulk 276\nbulk 277\nbulk 278\nbulk 279\nbulk 280\nbulk 281\nbulk 282\nbulk 283\nbulk 284\nbulk 285\nbulk 286\nbulk 287\nbulk 288\nbulk 289\nbulk 290\nbulk 291\nbulk 292\nbulk 293\nbulk 294\nbulk 295\nbulk 296\nbulk 297\nbulk 298\nbulk 299\nbulk 300\nbulk 301\nbulk 302\nbulk 303\nbulk 304\nbulk 305\nbulk 306\nbulk 307\nbulk 308\nbulk 309\nbulk 310\nbulk 311\nbulk 312\nbulk 313\nbulk 314\nbulk 315\nbulk 316\nbulk 317\nbulk 318\nbulk 319\nbulk 320\nbulk 321\nbulk 322\nbulk 323\nbulk 324\nbulk 325\nbulk 326\nbulk 327\nbulk 328\nbulk 329\nbulk 330\nbulk 331\nbulk 332\nbulk 333\nbulk 334\nbulk 335\nbulk 336\nbulk 337\nbulk 338\nbulk 339\nbulk 340\nbulk 341\nbulk 342\nbulk 343\nbulk 344\nbulk 345\nbulk 346\nbulk 347\nbulk 348\nbulk 349\nbulk 350\nbulk 351\nbulk 352\nbulk 353\nbulk 354\nbulk 355\nbulk 356\nbulk 357\nbulk 358\nbulk 359\nbulk 360\nbulk 361\nbulk 362\nbulk 363\nbulk 364\nbulk 365\nbulk 366\nbulk 367\nbulk 368\nbulk 369\nbulk 370\nbulk 371\nbulk 372\nbulk 373\nbulk 374\nbulk 375\nbulk 376\nbulk 377\nbulk 378\nbulk 379\nbulk 380\nbulk 381\nbulk 382\nbulk 383\nbulk 384\nbulk 385\nbulk 386\nbulk 387\nbulk 388\nbulk 389\nbulk 390\nbulk 391\nbulk 392\nbulk 393\nbulk 394\nbulk 395\nbulk 396\nbulk 397\nbulk 398\nbulk 399\nbulk 400\nbulk 401\nbulk 402\nbulk 403\nbulk 404\nbulk 405\nbulk 406\nbulk 407\nbulk 408\nbulk 409\nbulk 410\nbulk 411\nbulk 412\nbulk 413\nbulk 414\nbulk 415\nbulk 416\nbulk 417\nbulk 418\nbulk 419\nbulk 420\nbulk 421\nbulk 422\nbulk 423\nbulk 424\nbulk 425\nbulk 426\nbulk 427\nbulk 428\nbulk 429\nbulk 430\nbulk 431\nbulk 432\nbulk 433\nbulk 434\nbulk 435\nbulk 436\nbulk 437\nbulk 438\nbulk 439\nbulk 440\nbulk 441\nbulk 442\nbulk 443\nbulk 444\nbulk 445\nbulk 446\nbulk 447\nbulk 448\nbulk 449\nbulk 450\nbulk 451\nbulk 452\nbulk 453\nbulk 454\nbulk 455\nbulk 456\nbulk 457\nbulk 458\nbulk 459\nbulk 460\nbulk 461\nbulk 462\nbulk 463\nbulk 464\nbulk 465\nbulk 466\nbulk 467\nbulk 468\nbulk 469\nbulk 470\nbulk 471\nbulk 472\nbulk 473\nbulk 474\nbulk 475\nbulk 476\nbulk 477\nbulk 478\nbulk 479\nbulk 480\nbulk 481\nbulk 482\nbulk 483\nbulk 484\nbulk 485\nbulk 486\nbulk 487\nbulk 488\nbulk 489\nbulk 490\nbulk 491\nbulk 492\nbulk 493\nbulk 494\nbulk 495\nbulk 496\nbulk 497\nbulk 498\nbulk 499\nbulk 500\nbulk 501\nbulk 502\nbulk 503\nbulk 504\nbulk 505\nbulk 506\nbulk 507\nbulk 508\nbulk 509\nbulk 510\nbulk 511\nbulk 512\nbulk 513\nbulk 514\nbulk 515\nbulk 516\nbulk 517\nbulk 518\nbulk 519\n"}
+set copy_ok 1
+> {"cmd":"screenshot"}\n{"cmd":"screenshot","path":"/does/not/exist/x.bmp"}\n{"cmd":"screenshot","path":"out.bmp"}\n{"cmd":"screenshot","path":""}\n{"cmd":"screenshot","path":"q\\"uote.bmp"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot /does/not/exist/x.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot out.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot q"uote.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+< {"ok":true,"path":"/does/not/exist/x.bmp"}
+< {"ok":true,"path":"out.bmp"}
+< {"ok":false,"error":"SaveBitmap('') failed"}
+< {"ok":true,"path":"q\"uote.bmp"}
+set gamma100 100
+> {"cmd":"screenshot"}\n{"cmd":"screenshot","path":"/does/not/exist/x.bmp"}\n{"cmd":"screenshot","path":"out.bmp"}\n{"cmd":"screenshot","path":""}\n{"cmd":"screenshot","path":"q\\"uote.bmp"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot /does/not/exist/x.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot out.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot q"uote.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+< {"ok":true,"path":"/does/not/exist/x.bmp"}
+< {"ok":true,"path":"out.bmp"}
+< {"ok":false,"error":"SaveBitmap('') failed"}
+< {"ok":true,"path":"q\"uote.bmp"}
+set gamma100 220
+> {"cmd":"screenshot"}\n{"cmd":"screenshot","path":"/does/not/exist/x.bmp"}\n{"cmd":"screenshot","path":"out.bmp"}\n{"cmd":"screenshot","path":""}\n{"cmd":"screenshot","path":"q\\"uote.bmp"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=6734645320194850
+state shot /does/not/exist/x.bmp bpp=4 n=32 h=6734645320194850
+state shot out.bmp bpp=4 n=32 h=6734645320194850
+state shot q"uote.bmp bpp=4 n=32 h=6734645320194850
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+< {"ok":true,"path":"/does/not/exist/x.bmp"}
+< {"ok":true,"path":"out.bmp"}
+< {"ok":false,"error":"SaveBitmap('') failed"}
+< {"ok":true,"path":"q\"uote.bmp"}
+set gamma100 0
+> {"cmd":"screenshot"}\n{"cmd":"screenshot","path":"/does/not/exist/x.bmp"}\n{"cmd":"screenshot","path":"out.bmp"}\n{"cmd":"screenshot","path":""}\n{"cmd":"screenshot","path":"q\\"uote.bmp"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot /does/not/exist/x.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot out.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot q"uote.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+< {"ok":true,"path":"/does/not/exist/x.bmp"}
+< {"ok":true,"path":"out.bmp"}
+< {"ok":false,"error":"SaveBitmap('') failed"}
+< {"ok":true,"path":"q\"uote.bmp"}
+set gamma100 -5
+> {"cmd":"screenshot"}\n{"cmd":"screenshot","path":"/does/not/exist/x.bmp"}\n{"cmd":"screenshot","path":"out.bmp"}\n{"cmd":"screenshot","path":""}\n{"cmd":"screenshot","path":"q\\"uote.bmp"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot /does/not/exist/x.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot out.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot q"uote.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+< {"ok":true,"path":"/does/not/exist/x.bmp"}
+< {"ok":true,"path":"out.bmp"}
+< {"ok":false,"error":"SaveBitmap('') failed"}
+< {"ok":true,"path":"q\"uote.bmp"}
+set gamma100 100
+> {"cmd":"screenshot"}\n{"cmd":"screenshot","path":"/does/not/exist/x.bmp"}\n{"cmd":"screenshot","path":"out.bmp"}\n{"cmd":"screenshot","path":""}\n{"cmd":"screenshot","path":"q\\"uote.bmp"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot /does/not/exist/x.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot out.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot q"uote.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+< {"ok":true,"path":"/does/not/exist/x.bmp"}
+< {"ok":true,"path":"out.bmp"}
+< {"ok":false,"error":"SaveBitmap('') failed"}
+< {"ok":true,"path":"q\"uote.bmp"}
+set save_ok 0
+> {"cmd":"screenshot"}\n{"cmd":"screenshot","path":"/x/y.bmp"}\n{"cmd":"screenshot","path":"/x/y.unknownext"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+state shot /x/y.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":false,"error":"SaveBitmap('$XDG/open-hpl/headless_screenshot.bmp') failed"}
+< {"ok":false,"error":"SaveBitmap('/x/y.bmp') failed"}
+< {"ok":false,"error":"SaveBitmap('/x/y.unknownext') failed"}
+set save_ok 1
+set copy_ok 0
+> {"cmd":"screenshot"}\n{"cmd":"frame_stats"}\n{"cmd":"screenshot","path":"/a/b.bmp"}\n
+settle
+pump 1
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+set copy_ok 1
+> {"cmd":"frame_stats"}\n{"cmd":"screen_stats"}\n
+settle
+pump 1
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+set float_ok 0
+> {"cmd":"screen_stats"}\n
+settle
+pump 1
+< {"ok":false,"error":"no float screen target"}
+set float_ok 1
+> {"cmd":"dev_hud"}\n{"cmd":"dev_hud","value":true}\n{"cmd":"dev_hud"}\n{"cmd":"dev_hud","value":false}\n{"cmd":"dev_hud"}\n{"cmd":"dev_hud","value":"1"}\n{"cmd":"dev_hud","value":"true"}\n{"cmd":"dev_hud","value":"TRUE"}\n{"cmd":"dev_hud","value":"0"}\n{"cmd":"dev_hud","value":"yes"}\n{"cmd":"dev_hud","value":""}\n{"cmd":"dev_hud"}\n
+settle
+pump 1
+< {"ok":true,"prev":false}
+< {"ok":true,"prev":false}
+< {"ok":true,"prev":true}
+< {"ok":true,"prev":true}
+< {"ok":true,"prev":false}
+< {"ok":true,"prev":false}
+< {"ok":true,"prev":true}
+< {"ok":true,"prev":true}
+< {"ok":true,"prev":true}
+< {"ok":true,"prev":false}
+< {"ok":true,"prev":false}
+< {"ok":true,"prev":false}
+> {"cmd":"set_focus_wait","enabled":true}\n{"cmd":"set_focus_wait","enabled":false}\n{"cmd":"set_focus_wait"}\n{"cmd":"set_focus_wait","enabled":"1"}\n
+settle
+pump 1
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+shader vs_a vertex 1 compiled fine
+shader fs_b fragment 0 error: 0:1 \"bad\"\nline2
+shader p_c program 0 link failed
+shader \xc3\xa9name fragment 1 ok
+> {"cmd":"shader_report"}\n{"cmd":"shader_report","failed_only":false}\n{"cmd":"shader_report","failed_only":true}\n{"cmd":"shader_report","failed_only":"0"}\n{"cmd":"shader_report","failed_only":"false"}\n
+settle
+pump 1
+< {"ok":true,"failures":2,"shaders":[{"name":"fs_b","stage":"fragment","ok":false,"log":"error: 0:1 \"bad\"\nline2"},{"name":"p_c","stage":"program","ok":false,"log":"link failed"}]}
+< {"ok":true,"failures":2,"shaders":[{"name":"vs_a","stage":"vertex","ok":true,"log":"compiled fine"},{"name":"fs_b","stage":"fragment","ok":false,"log":"error: 0:1 \"bad\"\nline2"},{"name":"p_c","stage":"program","ok":false,"log":"link failed"},{"name":"éname","stage":"fragment","ok":true,"log":"ok"}]}
+< {"ok":true,"failures":2,"shaders":[{"name":"fs_b","stage":"fragment","ok":false,"log":"error: 0:1 \"bad\"\nline2"},{"name":"p_c","stage":"program","ok":false,"log":"link failed"}]}
+< {"ok":true,"failures":2,"shaders":[{"name":"vs_a","stage":"vertex","ok":true,"log":"compiled fine"},{"name":"fs_b","stage":"fragment","ok":false,"log":"error: 0:1 \"bad\"\nline2"},{"name":"p_c","stage":"program","ok":false,"log":"link failed"},{"name":"éname","stage":"fragment","ok":true,"log":"ok"}]}
+< {"ok":true,"failures":2,"shaders":[{"name":"vs_a","stage":"vertex","ok":true,"log":"compiled fine"},{"name":"fs_b","stage":"fragment","ok":false,"log":"error: 0:1 \"bad\"\nline2"},{"name":"p_c","stage":"program","ok":false,"log":"link failed"},{"name":"éname","stage":"fragment","ok":true,"log":"ok"}]}
+> {"cmd":"resize","width":800,"height":600}\n
+settle
+pump 1
+state resize 800x600
+< {"ok":true}
+> {"cmd":"resize","width":0,"height":600}\n
+settle
+pump 1
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"resize","width":800,"height":0}\n
+settle
+pump 1
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"resize","width":-1,"height":5}\n
+settle
+pump 1
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"resize","width":5,"height":-1}\n
+settle
+pump 1
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"resize","width":1920,"height":1080}\n
+settle
+pump 1
+state resize 1920x1080
+< {"ok":true}
+> {"cmd":"resize"}\n
+settle
+pump 1
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+set resize_ok 0
+> {"cmd":"resize","width":640,"height":480}\n{"cmd":"resize","width":"64x","height":"48"}\n
+settle
+pump 1
+state resize 640x480
+state resize 64x48
+< {"ok":false,"error":"could not resize window"}
+< {"ok":false,"error":"could not resize window"}
+set resize_ok 1
+> {"cmd":"nope"}\n{"cmd":""}\n{"x":1}\n{"cmd":"PING"}\n{"cmd":"ping ","x":1}\n{"cmd":"wait_framesX"}\n{"cmd":"qu\\u0069t"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'nope'"}
+< {"ok":false,"error":"unknown command: ''"}
+< {"ok":false,"error":"unknown command: ''"}
+< {"ok":false,"error":"unknown command: 'PING'"}
+< {"ok":false,"error":"unknown command: 'ping '"}
+< {"ok":false,"error":"unknown command: 'wait_framesX'"}
+< {"ok":false,"error":"unknown command: 'quu0069t'"}
+> {"cmd":"quit"}\n
+settle
+pump 1
+state exit
+< {"ok":true}
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}

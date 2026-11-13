@@ -1,0 +1,122 @@
+set save_ok 0
+pump 1
+> {"cmd":"wait_frames"}\n
+settle
+pump 1
+set resize_ok 0
+> {"cmd":"bogus","path":"left","n":"3.5","frames":"right","value":"-1","yrel":""}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+log fuzz 39
+> {"cmd":"wait_frames","max_ms":"99999999999","failed_only":-1}\n
+settle
+pump 1
+log fuzz 19
+set float_ok 1
+> {"cmd":"bogus","failed_only":"tap","lines":"right"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+log fuzz 41
+> {"cmd":"wait_frames","enabled":"up","yrel":"abc","frames":"down","height":"abc"}\n
+settle
+pump 0
+frames 2
+pump 2
+< {"ok":true,"frames":2,"timed_out":false}
+< {"ok":true,"frames":2,"timed_out":false}
+frames 3
+pump 1
+< {"ok":true,"frames":3,"timed_out":false}
+> {"cmd":"quit","x":"right","lines":"1,2;3,4"}\n
+settle
+pump 1
+state exit
+< {"ok":true}
+loading 1
+pump 1
+> {"cmd":"set_focus_wait","max_ms":"left","state":"99999999999"}\n
+settle
+pump 0
+> {"cmd":"resize","y":"lost","x":"abc","text":"3.5","yrel":"3.5","state":"1,2;3,4"}\n
+settle
+pump 1
+> {"cmd":"bogus"}\n
+settle
+pump 0
+pump 3
+> {"cmd":"wait_frames","x":"","state":"left","type":"x"}\n
+settle
+pump 1
+> {"cmd":"bogus"}\n
+settle
+pump 2
+pump 2
+> {"cmd":"log_tail","width":"true"}\n
+settle
+pump 1
+pump 1
+> {"cmd":"ping"}\n
+settle
+pump 0
+> {"cmd":"ping","yrel":"3.5","max_ms":"7","value":7,"key":"b"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+> {"cmd":"input","type":"text","xrel":"99999999999","state":"up","x":"true","y":"TRUE","enabled":"true"}\n
+settle
+pump 2
+pump 2
+pump 1
+frames 1
+pump 1
+> {"cmd":"bogus","state":"false","width":"false","height":"lost","xrel":"x","lines":"tap"}\n
+settle
+pump 2
+frames 2
+pump 1
+shader f2 fragment 0 log3
+loading 0
+pump 1
+< {"ok":true}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true,"log":"fuzz 39\nfuzz 19\nfuzz 41\n"}
+< {"ok":true}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+> {"cmd":"input","type":"text","state":"99999999999","button":"3.5","width":"right"}\n
+settle
+pump 1
+< {"ok":true}
+pump 1
+> {"cmd":"dev_hud","type":"mouse_button","width":"99999999999","action":"1,2;3,4","button":"left"}\n
+settle
+pump 2
+< {"ok":true,"prev":false}
+> {"cmd":"frame_stats","button":1,"y":"up","width":"0"}\n
+settle
+pump 1
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+frames 3
+pump 1
+< {"ok":true,"frames":3,"timed_out":false}
+frames 2
+pump 1
+pump 3
+frames 2
+pump 1
+pump 3
+set save_ok 1
+frames 3
+pump 2
+> {"cmd":"screen_stats","type":"mouse_move","value":"lost","state":"x"}\n
+settle
+pump 0
+shader f1 fragment 0 log7
+pump 1
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+loading 0
+pump 3

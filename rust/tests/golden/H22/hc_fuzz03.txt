@@ -1,0 +1,99 @@
+frames 1
+pump 2
+pump 2
+frames 1
+pump 1
+pump 2
+> {"cmd":"set_focus_wait","yrel":"down"}\n
+settle
+pump 2
+< {"ok":true}
+> {"cmd":"screenshot","enabled":"up"}\n
+settle
+pump 2
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+loading 0
+pump 1
+> {"cmd":"dev_hud"}\n
+settle
+pump 1
+< {"ok":true,"prev":false}
+set resize_ok 1
+frames 2
+pump 2
+> {"cmd":"ping","xrel":1,"enabled":"false","action":"","path":"gained"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"shader_report","action":"99999999999","text":"0","y":"x","width":"TRUE"}\n
+settle
+pump 1
+< {"ok":true,"failures":0,"shaders":[]}
+pump 3
+frames 3
+pump 1
+frames 3
+pump 2
+> {"cmd":"log_tail","yrel":-1,"lines":"true","action":0}\n
+settle
+pump 2
+< {"ok":true,"log":""}
+shader f0 fragment 0 log6
+log fuzz 42
+frames 2
+pump 1
+pump 2
+> {"cmd":"log_tail","text":"3.5","max_ms":"x","failed_only":"","y":"true"}\n
+settle
+pump 0
+pump 2
+< {"ok":true,"log":"fuzz 42\n"}
+> {"cmd":"screenshot","x":"lost","xrel":"x","frames":"down"}\n
+settle
+pump 0
+frames 3
+pump 2
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+> {"cmd":"bogus","width":"down","type":"key","y":"gained","height":"tap","button":"99999999999"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+> {"cmd":"wait_frames","xrel":"1,2;3,4","action":"x"}\n
+settle
+pump 1
+loading 0
+pump 1
+frames 3
+pump 1
+< {"ok":true,"frames":3,"timed_out":false}
+pump 2
+frames 2
+pump 2
+> {"cmd":"screenshot","action":"3.5","height":"lost"}\n
+settle
+pump 0
+loading 0
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+pump 3
+loading 1
+pump 1
+> {"cmd":"wait_frames","width":"TRUE","key":"b"}\n
+settle
+pump 0
+frames 2
+pump 1
+> {"cmd":"screenshot"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+loading 0
+pump 1
+shader f7 fragment 1 log3
+set copy_ok 0
+loading 0
+pump 3

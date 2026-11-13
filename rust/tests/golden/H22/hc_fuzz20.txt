@@ -1,0 +1,107 @@
+> {"cmd":"wait_frames"}\n
+settle
+pump 1
+frames 1
+pump 1
+< {"ok":true,"frames":1,"timed_out":false}
+> {"cmd":"log_tail"}\n
+settle
+pump 1
+< {"ok":true,"log":""}
+> {"cmd":"dev_hud","y":"99999999999","failed_only":"99999999999","button":"-1"}\n
+settle
+pump 2
+< {"ok":true,"prev":false}
+> {"cmd":"set_focus_wait","width":-1,"max_ms":"3.5","failed_only":"3.5","path":""}\n
+settle
+pump 1
+< {"ok":true}
+frames 1
+pump 2
+log fuzz 28
+frames 1
+pump 1
+set resize_ok 1
+> {"cmd":"wait_frames","state":"true","xrel":""}\n
+settle
+pump 2
+> {"cmd":"shader_report","path":"7","enabled":"1","y":"gained","action":"TRUE","width":"TRUE"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"b","x":"left","xrel":"down","frames":"99999999999","max_ms":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"x"}\n
+settle
+pump 1
+ev key type=300 state=1 repeat=0 sym=98 sc=5 mod=0
+< {"ok":true,"failures":0,"shaders":[]}
+< {"ok":true}
+< {"ok":false,"error":"unknown input type: 'x'"}
+log fuzz 3
+> {"cmd":"screen_stats","n":"true","value":"3.5","state":"true","frames":"gained"}\n
+settle
+pump 1
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+> {"cmd":"log_tail","width":"false"}\n
+settle
+pump 1
+< {"ok":true,"log":"fuzz 28\nfuzz 3\n"}
+> {"cmd":"screenshot","x":"right","enabled":0,"lines":"3.5","xrel":"lost"}\n
+settle
+pump 0
+pump 2
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+> {"cmd":"dev_hud","enabled":0,"path":"lost"}\n
+settle
+pump 1
+< {"ok":true,"prev":false}
+loading 1
+pump 1
+> {"cmd":"frame_stats"}\n
+settle
+pump 0
+frames 1
+pump 1
+< {"ok":true,"frames":1,"timed_out":false}
+log fuzz 67
+> {"cmd":"ping","state":"","key":"0","n":7,"value":1}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+log fuzz 10
+frames 2
+pump 2
+> {"cmd":"ping","enabled":"","x":"0","text":"left","button":"-1","frames":"right"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"resize","failed_only":"true","max_ms":"-1","action":"1,2;3,4"}\n
+settle
+pump 0
+loading 1
+pump 1
+> {"cmd":"screenshot","n":"1,2;3,4","enabled":"1,2;3,4"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+> {"cmd":"shader_report","xrel":"down","width":"3.5","x":"up","text":"x"}\n
+settle
+pump 1
+frames 1
+pump 2
+> {"cmd":"bogus","xrel":"abc"}\n
+settle
+pump 2
+> {"cmd":"resize","text":"1","enabled":"1,2;3,4","state":"lost","path":"false","height":"down"}\n
+settle
+pump 1
+loading 0
+pump 3
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+< {"ok":true,"failures":0,"shaders":[]}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}

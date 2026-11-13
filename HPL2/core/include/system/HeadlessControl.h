@@ -23,6 +23,7 @@
 #include "system/SystemTypes.h"
 #include "system/Thread.h"
 #include "system/LowLevelSystem.h"
+#include "engine/RustEngineH22.h"
 
 #include <deque>
 #include <map>
@@ -107,6 +108,7 @@ namespace hpl {
 		};
 
 		void RegisterBuiltins();
+		void InitRustHost();
 		void Dispatch(const cPendingRequest &aPending);
 		void SendResponse(int alClientFd, const cHeadlessResponse &aResp);
 
@@ -129,6 +131,9 @@ namespace hpl {
 		static void SCmdResizeWindow(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		static void SCmdShaderReport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		static void SCmdFrameStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
+
+		OhplH22Hc *mpRs;
+		OhplH22HcHost mRsHost;
 
 		cEngine *mpEngine;
 		tString msSocketPath;

@@ -27,6 +27,7 @@ namespace hpl {
 
 	private:
 		bool Init();
+		void RenderRust(bool abHud);
 		bool FilterEvent(const SDL_Event &aEvent);
 		void CloseBugReport();
 		void SaveBugReport();

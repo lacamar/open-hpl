@@ -23,6 +23,7 @@
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
 #include "engine/RustEngine.h"
+#include "engine/RustEngineH22.h"
 
 namespace hpl {
 
@@ -181,6 +182,11 @@ namespace hpl {
 		
 
 	private:
+		void RunRust();
+		static double RustCall(void *apCtx, int alOp, double a0, double a1, double a2, double a3);
+		double RustHost(int alOp, double a0, double a1, double a2, double a3);
+		void RustStep(int alStep, int alModule);
+
 		void UpdateFrameTimer();
 
 		void CheckAndBroadcastFocusChange();
@@ -188,6 +194,11 @@ namespace hpl {
 		void CheckIfAppInFocusElseWait();
 
 		void CheckAndBroadcastDeviceChange();
+
+		struct cRustInitArgs { tFlag mlSetupFlags; cEngineInitVars *mpVars; };
+		cRustInitArgs mRustInit;
+		uint32_t mlRustFocusBits;
+		unsigned int mlRustTimingStart[6];
 
 		bool mbGameIsDone;
 

@@ -1,0 +1,110 @@
+> {"cmd":"bogus"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+pump 1
+> {"cmd":"ping","enabled":"left","action":"1,2;3,4","width":"","path":"lost","key":"Left"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+shader f5 fragment 0 log4
+pump 3
+> {"cmd":"dev_hud","y":"left","yrel":"tap","lines":"1,2;3,4"}\n
+settle
+pump 2
+< {"ok":true,"prev":false}
+frames 3
+pump 2
+> {"cmd":"ping"}\n
+settle
+pump 0
+> {"cmd":"screen_stats","state":0}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+> {"cmd":"log_tail"}\n
+settle
+pump 2
+< {"ok":true,"log":""}
+> {"cmd":"frame_stats","text":"TRUE","type":"focus","x":"1,2;3,4","frames":-1,"width":"3.5"}\n
+settle
+pump 1
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+set resize_ok 1
+pump 2
+shader f1 fragment 1 log7
+> {"cmd":"wait_frames","x":"","state":-1,"n":1}\n
+settle
+pump 0
+pump 1
+set float_ok 1
+> {"cmd":"ping","lines":"abc","button":"tap","xrel":"left"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+log fuzz 78
+> {"cmd":"resize","x":"x","y":"left","action":"3.5","max_ms":"down","type":"mouse_button"}\n
+settle
+pump 2
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"wait_frames","state":"up","x":0}\n
+settle
+pump 1
+> {"cmd":"screen_stats","key":"Left","width":"right"}\n
+settle
+pump 1
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+> {"cmd":"resize","width":"tap","key":"Left","max_ms":"true","value":"99999999999","path":"99999999999"}\n
+settle
+pump 2
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+frames 1
+pump 2
+< {"ok":true,"frames":1,"timed_out":false}
+< {"ok":true,"frames":1,"timed_out":false}
+pump 3
+> {"cmd":"ping","xrel":"TRUE"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"set_focus_wait","frames":"tap","path":"TRUE","state":"99999999999","xrel":"x"}\n
+settle
+pump 2
+< {"ok":true}
+> {"cmd":"resize","height":"1,2;3,4"}\n
+settle
+pump 1
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"bogus","failed_only":"false","path":"-1","lines":"left","height":"down"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+shader f3 fragment 1 log2
+frames 1
+pump 2
+> {"cmd":"shader_report","value":"right","action":"right","enabled":"left","frames":"left","state":"x"}\n
+settle
+pump 1
+< {"ok":true,"failures":1,"shaders":[{"name":"f5","stage":"fragment","ok":false,"log":"log4"}]}
+> {"cmd":"shader_report","xrel":0,"width":"lost"}\n
+settle
+pump 1
+< {"ok":true,"failures":1,"shaders":[{"name":"f5","stage":"fragment","ok":false,"log":"log4"}]}
+> {"cmd":"dev_hud"}\n
+settle
+pump 2
+< {"ok":true,"prev":false}
+> {"cmd":"resize","xrel":"left","height":"left","x":"lost"}\n
+settle
+pump 0
+> {"cmd":"resize","yrel":"up","key":"Space","xrel":"abc"}\n
+settle
+pump 1
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+loading 1
+pump 1
+log fuzz 89
+loading 0
+pump 3

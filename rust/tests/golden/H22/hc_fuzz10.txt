@@ -1,0 +1,82 @@
+> {"cmd":"dev_hud"}\n
+settle
+pump 1
+< {"ok":true,"prev":false}
+> {"cmd":"frame_stats","value":"up","max_ms":"right"}\n
+settle
+pump 1
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+> {"cmd":"bogus","max_ms":"true","y":"x"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+> {"cmd":"input","type":"x","xrel":"3.5","value":"1,2;3,4"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown input type: 'x'"}
+> {"cmd":"set_focus_wait","state":"tap","x":0,"max_ms":"false"}\n
+settle
+pump 1
+< {"ok":true}
+> {"cmd":"ping","key":"zzz"}\n
+settle
+pump 0
+log fuzz 41
+set save_ok 0
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"frame_stats","state":"down","lines":-1}\n
+settle
+pump 1
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+pump 1
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+pump 2
+pump 2
+> {"cmd":"input","type":"mouse_move","frames":"left","value":"3.5","path":"TRUE","height":"TRUE"}\n
+settle
+pump 1
+ev motion x=0 y=0 xrel=0 yrel=0
+< {"ok":true}
+> {"cmd":"resize","y":"0","width":1}\n
+settle
+pump 1
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"input","type":"mouse_button","button":"right","value":"abc","x":"up"}\n
+settle
+pump 1
+ev button type=401 button=3 state=1 clicks=1 x=0 y=0
+< {"ok":true}
+> {"cmd":"dev_hud","lines":"left","value":"lost","yrel":"true"}\n
+settle
+pump 2
+< {"ok":true,"prev":false}
+> {"cmd":"resize","x":"7","yrel":"gained","value":"1","xrel":"left"}\n
+settle
+pump 0
+> {"cmd":"log_tail","path":"x"}\n
+settle
+pump 2
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+< {"ok":true,"log":"fuzz 41\n"}
+set float_ok 0
+> {"cmd":"shader_report","xrel":"gained","key":"Tab","height":"up","state":"true"}\n
+settle
+pump 1
+< {"ok":true,"failures":0,"shaders":[]}
+> {"cmd":"ping","failed_only":"3.5","button":"gained","yrel":"abc","n":"3.5","path":-1}\n
+settle
+pump 0
+pump 2
+< {"ok":true,"pong":true}
+> {"cmd":"frame_stats","action":"x"}\n
+settle
+pump 2
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+pump 1
+pump 1
+loading 0
+pump 3

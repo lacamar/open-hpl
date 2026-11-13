@@ -1,0 +1,87 @@
+> {"cmd":"input","type":"key"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown key name: ''"}
+log fuzz 60
+pump 3
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+loading 1
+pump 1
+pump 3
+log fuzz 24
+frames 3
+pump 2
+log fuzz 78
+log fuzz 54
+> {"cmd":"log_tail","y":"left","height":"7"}\n
+settle
+pump 1
+> {"cmd":"ping","failed_only":"up","action":"tap","yrel":"up","state":"0"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+frames 2
+pump 2
+frames 1
+pump 1
+> {"cmd":"wait_frames","type":"mouse_button","failed_only":"abc"}\n
+settle
+pump 1
+frames 3
+pump 1
+> {"cmd":"screenshot"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+frames 3
+pump 2
+> {"cmd":"screen_stats","type":"mouse_move","enabled":"gained","yrel":"x"}\n
+settle
+pump 2
+> {"cmd":"frame_stats","lines":"x"}\n
+settle
+pump 2
+> {"cmd":"shader_report"}\n
+settle
+pump 2
+> {"cmd":"bogus","lines":"left","failed_only":"right","height":"TRUE"}\n
+settle
+pump 0
+> {"cmd":"log_tail","button":"false","action":""}\n
+settle
+pump 2
+> {"cmd":"screen_stats","y":"x","state":"right"}\n
+settle
+pump 1
+frames 3
+pump 2
+> {"cmd":"bogus","yrel":"99999999999","type":"focus","xrel":"lost"}\n
+settle
+pump 1
+> {"cmd":"shader_report","value":"0","type":"mouse_move","text":"0"}\n
+settle
+pump 0
+log fuzz 47
+> {"cmd":"frame_stats","max_ms":"x","failed_only":0,"enabled":"up","height":"right"}\n
+settle
+pump 0
+> {"cmd":"log_tail","action":"abc","enabled":"x"}\n
+settle
+pump 1
+loading 0
+pump 3
+< {"ok":true,"log":"fuzz 60\nfuzz 24\nfuzz 78\nfuzz 54\nfuzz 47\n"}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+< {"ok":true,"failures":0,"shaders":[]}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true,"log":"fuzz 60\nfuzz 24\nfuzz 78\nfuzz 54\nfuzz 47\n"}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true,"failures":0,"shaders":[]}
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+< {"ok":true,"log":"fuzz 60\nfuzz 24\nfuzz 78\nfuzz 54\nfuzz 47\n"}
