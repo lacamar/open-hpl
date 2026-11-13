@@ -63,7 +63,7 @@ public:
 	virtual void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 protected:
-	bool mbItemInteraction;
+	bool &mbItemInteraction;
 };
 
 //----------------------------------------------

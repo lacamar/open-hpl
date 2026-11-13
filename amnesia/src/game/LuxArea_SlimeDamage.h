@@ -78,22 +78,22 @@ private:
 	
 	/////////////////////////
 	// Data
-	int mlSlimeType;
+	int &mlSlimeType;
 
-	float mfMinCheckAttackTime;
-	float mfMaxCheckAttackTime;
-	bool mbDisableAfterAttack;
+	float &mfMinCheckAttackTime;
+	float &mfMaxCheckAttackTime;
+	bool &mbDisableAfterAttack;
 	tString msCallback;
 
 	tString msAttackSound;
 	tString msAttackPS;
-	float mfMinAttackDamage;
-	float mfMaxAttackDamage;
-	float mfScreenShakeAmount;
+	float &mfMinAttackDamage;
+	float &mfMaxAttackDamage;
+	float &mfScreenShakeAmount;
 
 	/////////////////////////
 	// Variables
-	float mfCheckCollisionCount;
+	float &mfCheckCollisionCount;
 };
 
 //----------------------------------------------

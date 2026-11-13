@@ -81,9 +81,48 @@ void iLuxAreaLoader::Load(const tString &asName, int alID, bool abActive, const 
 
 //-----------------------------------------------------------------------
 
-iLuxArea::iLuxArea(const tString &asName, int alID, cLuxMap *apMap, eLuxAreaType aAreaType)  : iLuxEntity(asName,alID,apMap, eLuxEntityType_Area)
+static int A7Kind(eLuxAreaType aType)
 {
-	mAreaType = aAreaType;
+	switch(aType)
+	{
+	case eLuxAreaType_Script: return kOhplA7Script;
+	case eLuxAreaType_Flashback: return kOhplA7Flashback;
+	case eLuxAreaType_Ladder: return kOhplA7Ladder;
+	case eLuxAreaType_Liquid: return kOhplA7Liquid;
+	case eLuxAreaType_Sticky: return kOhplA7Sticky;
+	case eLuxAreaType_Insanity: return kOhplA7Insanity;
+	case eLuxAreaType_Examine: return kOhplA7Examine;
+	case eLuxAreaType_Sign: return kOhplA7Sign;
+	default: return kOhplA7Slime;
+	}
+}
+
+static OhplA7Area *A7NewArea(cLuxMap *apMap, eLuxAreaType aType)
+{
+	return apMap->GetA7() ? ohpl_a7_area_new(apMap->GetA7(), A7Kind(aType)) : NULL;
+}
+
+static OhplA7Base *A7BaseOf(OhplA7Area *apArea)
+{
+	return apArea ? ohpl_a7_area_base(apArea) : static_cast<OhplA7Base*>(calloc(1, sizeof(OhplA7Base)));
+}
+
+static void *A7PodOf(OhplA7Area *apArea, eLuxAreaType aType)
+{
+	return apArea ? ohpl_a7_area_pod(apArea) : calloc(1, ohpl_a7_pod_size(A7Kind(aType)) + 1);
+}
+
+iLuxArea::iLuxArea(const tString &asName, int alID, cLuxMap *apMap, eLuxAreaType aAreaType)  : iLuxEntity(asName,alID,apMap, eLuxEntityType_Area),
+	mAreaType(aAreaType),
+	mpA7Area(A7NewArea(apMap, aAreaType)),
+	mpA7Base(A7BaseOf(mpA7Area)),
+	mpA7Pod(A7PodOf(mpA7Area, aAreaType)),
+	mvSize(*reinterpret_cast<cVector3f*>(&mpA7Base->size)),
+	m_mtxTransform(*reinterpret_cast<cMatrixf*>(&mpA7Base->mtx)),
+	mvRelativeOffset(*reinterpret_cast<cVector3f*>(&mpA7Base->relOffset)),
+	mlBodyId(mpA7Base->bodyId)
+{
+	mpA7Base->areaType = (int)aAreaType;
 
 	mpBody = NULL;
 
@@ -98,6 +137,13 @@ iLuxArea::~iLuxArea()
 	if(mpBody)
 	{
 		mpMap->GetPhysicsWorld()->DestroyBody(mpBody);
+	}
+
+	if(mpA7Area) ohpl_a7_area_free(mpMap->GetA7(), mpA7Area);
+	else
+	{
+		free(mpA7Base);
+		free(mpA7Pod);
 	}
 }
 
@@ -164,7 +210,8 @@ void iLuxArea::AttachToBody(const tString& asPropName, int alBodyId)
 				mpParentBody = pPropBody;
 				cVector3f vBodyPos = mpBody->GetWorldPosition();
 				cVector3f vParentPos = mpParentBody->GetWorldPosition();
-				ohpl_ga5_attach_offset(reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<const OhplGa5Vec3*>(&vParentPos), reinterpret_cast<OhplGa5Vec3*>(&mvRelativeOffset));
+				if(mpA7Area) ohpl_a7_area_attach(mpA7Area, reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<const OhplGa5Vec3*>(&vParentPos));
+				else ohpl_ga5_attach_offset(reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<const OhplGa5Vec3*>(&vParentPos), reinterpret_cast<OhplGa5Vec3*>(&mvRelativeOffset));
 				return;
 			}
 		}
@@ -205,7 +252,8 @@ void iLuxArea::OnUpdate(float afTimeStep)
 		cVector3f vParentPos = mpParentBody->GetWorldPosition();
 		cVector3f vBodyPos = mpBody->GetWorldPosition();
 		cVector3f vMove;
-		ohpl_ga5_follow_offset(reinterpret_cast<const OhplGa5Vec3*>(&mvRelativeOffset), reinterpret_cast<const OhplGa5Vec3*>(&vParentPos), reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<OhplGa5Vec3*>(&vMove));
+		if(mpA7Area) ohpl_a7_area_follow(mpA7Area, reinterpret_cast<const OhplGa5Vec3*>(&vParentPos), reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<OhplGa5Vec3*>(&vMove));
+		else ohpl_ga5_follow_offset(reinterpret_cast<const OhplGa5Vec3*>(&mvRelativeOffset), reinterpret_cast<const OhplGa5Vec3*>(&vParentPos), reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<OhplGa5Vec3*>(&vMove));
 		mpBody->StaticLinearMove(vMove);
 	}
 }

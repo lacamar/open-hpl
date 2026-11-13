@@ -19,6 +19,7 @@
 
 #include "LuxMap.h"
 #include "RustLuxMap.h"
+#include "RustLuxMapA7.h"
 
 #include "LuxConfigHandler.h"
 
@@ -43,6 +44,7 @@
 #include "LuxArea_Sticky.h"
 
 #include <sstream>
+#include <fstream>
 
 //////////////////////////////////////////////////////////////////////////
 // DISSOLVE ENTITIES
@@ -54,6 +56,15 @@ cLuxDissolveEntity::cLuxDissolveEntity(cLuxMap *apMap)
 {
 	mpMap = apMap;
 }
+
+static void A7DropEntity(void *p){ hplDelete(static_cast<iLuxEntity*>(p)); }
+static void A7DropDissolve(void *p){ hplDelete(static_cast<cLuxDissolveEntity*>(p)); }
+static void A7DropLamp(void *p){ hplDelete(static_cast<cLuxLampLightConnection*>(p)); }
+static void A7DropStart(void *p){ hplDelete(static_cast<cLuxNode_PlayerStart*>(p)); }
+static void A7DropPos(void *p){ hplDelete(static_cast<cLuxNode_Pos*>(p)); }
+static void A7DropUse(void *p){ hplDelete(static_cast<cLuxUseItemCallback*>(p)); }
+static void A7DissolveCb(void *apCtx, void *apObj, float afAlpha, bool abRemove){ static_cast<cLuxDissolveEntity*>(apObj)->mpEntity->SetCoverageAmount(afAlpha); }
+static void A7LampCb(void *apCtx, void *apConn){ static_cast<cLuxLampLightConnection*>(apConn)->Update(*static_cast<float*>(apCtx)); }
 
 cLuxDissolveEntity::~cLuxDissolveEntity()
 {
@@ -89,31 +100,53 @@ cLuxMap::cLuxMap(const tString& asName)
 	mbDeletingAllWorldEntities = false;
 
 	mbCommentaryIconsActive = false;
+
+	mlA7Frames = 0;
+	mpA7 = NULL;
+	if(OhplBackendRustRequested())
+	{
+		mpA7 = ohpl_a7_new();
+		ohpl_a7_set_drop(mpA7, kOhplA7Entity, A7DropEntity);
+		ohpl_a7_set_drop(mpA7, kOhplA7Dissolve, A7DropDissolve);
+		ohpl_a7_set_drop(mpA7, kOhplA7Lamp, A7DropLamp);
+		ohpl_a7_set_drop(mpA7, kOhplA7Start, A7DropStart);
+		ohpl_a7_set_drop(mpA7, kOhplA7Pos, A7DropPos);
+		ohpl_a7_set_drop(mpA7, kOhplA7UseItem, A7DropUse);
+	}
 }
 
 //-----------------------------------------------------------------------
 
 cLuxMap::~cLuxMap()
 {
-	STLDeleteAll(mlstTimers);
-	
-	STLDeleteAll(mlstLampLightConnections);
+	if(mpA7)
+	{
+		ohpl_a7_teardown(mpA7);
+	}
+	else
+	{
+		STLDeleteAll(mlstTimers);
+
+		STLDeleteAll(mlstLampLightConnections);
 
 
-	mbDeletingAllWorldEntities = true;
-	STLDeleteAll(mlstEntities);
-	mbDeletingAllWorldEntities = false;
-	
+		mbDeletingAllWorldEntities = true;
+		STLDeleteAll(mlstEntities);
+		mbDeletingAllWorldEntities = false;
 
-	STLMapDeleteAll(m_mapPlayerStartNodes);
-	STLMapDeleteAll(m_mapPosNodes);
-	STLDeleteAll(mlstUseItemCallbacks);
-	STLDeleteAll(mlstDissolveEntities);
+
+		STLMapDeleteAll(m_mapPlayerStartNodes);
+		STLMapDeleteAll(m_mapPosNodes);
+		STLDeleteAll(mlstUseItemCallbacks);
+		STLDeleteAll(mlstDissolveEntities);
+	}
 
 	mpEngine->GetScene()->DestroyWorld(mpWorld);	
 
 	if(mpScript)
 		mpEngine->GetResources()->GetScriptManager()->Destroy(mpScript);
+
+	if(mpA7) ohpl_a7_free(mpA7);
 }
 
 //-----------------------------------------------------------------------
@@ -219,9 +252,9 @@ void cLuxMap::ApplyHardMode()
 
 	/////////////////////
 	// Go through all entities
-	for (tLuxEntityListIt entityIt = mlstEntities.begin(); entityIt != mlstEntities.end(); ++entityIt)
+	for (ohpl_a7::Walk<tLuxEntityList> entityIt(mpA7, kOhplA7Entities, mlstEntities); entityIt.Has(); entityIt.Advance())
 	{
-		iLuxEntity *pEntity = *entityIt;
+		iLuxEntity *pEntity = entityIt.Get();
 
 		eLuxEntityType entityType = pEntity->GetEntityType();
 
@@ -299,10 +332,9 @@ void cLuxMap::ApplyHardMode()
 void cLuxMap::AfterWorldLoadEntitySetup()
 {
 	//Extra setup for entities
-	tLuxEntityListIt entityIt = mlstEntities.begin();
-	for(; entityIt != mlstEntities.end(); ++entityIt)
+	for(ohpl_a7::Walk<tLuxEntityList> entityIt(mpA7, kOhplA7Entities, mlstEntities); entityIt.Has(); entityIt.Advance())
 	{
-		iLuxEntity *pEntity = *entityIt;
+		iLuxEntity *pEntity = entityIt.Get();
 
 		pEntity->AfterWorldLoad();
 	}
@@ -314,10 +346,9 @@ void cLuxMap::OnEnter(bool abRunScript, bool abFirstTime)
 {
 	///////////////
 	//On world load for all entities
-	tLuxEntityListIt entityIt = mlstEntities.begin();
-	for(; entityIt != mlstEntities.end(); ++entityIt)
+	for(ohpl_a7::Walk<tLuxEntityList> entityIt(mpA7, kOhplA7Entities, mlstEntities); entityIt.Has(); entityIt.Advance())
 	{
-		iLuxEntity *pEntity = *entityIt;
+		iLuxEntity *pEntity = entityIt.Get();
 		pEntity->OnMapEnter();
 	}
 
@@ -344,6 +375,15 @@ void cLuxMap::OnLeave(bool abRunScript)
 
 void cLuxMap::Update(float afTimeStep)
 {
+	static const char *sDumpFile = getenv("OHPL_A7_MAPDUMP");
+	if(sDumpFile)
+	{
+		static const char *sDumpFrames = getenv("OHPL_A7_MAPDUMP_FRAMES");
+		if(mlA7Frames == 0) DumpA7(sDumpFile, "load");
+		++mlA7Frames;
+		if(mlA7Frames == (sDumpFrames ? atoi(sDumpFrames) : 120)) DumpA7(sDumpFile, "frames");
+	}
+
 	UpdateCheckCommentaryIconActive(afTimeStep);
     UpdateDissolveEntities(afTimeStep);
 	UpdateTimers(afTimeStep);
@@ -352,10 +392,9 @@ void cLuxMap::Update(float afTimeStep)
 
 	////////////////////////////////////
 	// Iterate entities
-	tLuxEntityListIt entityIt = mlstEntities.begin();
-	for(; entityIt != mlstEntities.end(); ++entityIt)
+	for(ohpl_a7::Walk<tLuxEntityList> entityIt(mpA7, kOhplA7Entities, mlstEntities); entityIt.Has(); entityIt.Advance())
 	{
-		iLuxEntity *pEntity = *entityIt;
+		iLuxEntity *pEntity = entityIt.Get();
 
         if(pEntity->IsActive()) 
 			pEntity->UpdateLogic(afTimeStep);
@@ -401,10 +440,9 @@ void cLuxMap::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 {
 	if(gpBase->mpDebugHandler->GetShowEntityInfo()==false) return;
 
-	tLuxEntityListIt entityIt = mlstEntities.begin();
-	for(; entityIt != mlstEntities.end(); ++entityIt)
+	for(ohpl_a7::Walk<tLuxEntityList> entityIt(mpA7, kOhplA7Entities, mlstEntities); entityIt.Has(); entityIt.Advance())
 	{
-		iLuxEntity *pEntity = *entityIt;
+		iLuxEntity *pEntity = entityIt.Get();
 
 		if(pEntity->IsActive()) 
 			pEntity->OnRenderSolid(apFunctions);
@@ -481,10 +519,9 @@ void cLuxMap::LoadCheckPoint()
 
 	//////////////////////////////
 	// Enemies
-	tLuxEnemyListIt it = mlstEnemies.begin(); 
-	for(; it != mlstEnemies.end(); ++it)
+	for(ohpl_a7::Walk<tLuxEnemyList> it(mpA7, kOhplA7Enemies, mlstEnemies); it.Has(); it.Advance())
 	{
-		iLuxEnemy *pEnemy = *it;
+		iLuxEnemy *pEnemy = it.Get();
 		pEnemy->SetActive(false);
 		pEnemy->ResetProperties();
 	}
@@ -531,6 +568,13 @@ void cLuxMap::CreateEntity(const tString& asName, const tString& asFile, const c
 
 void cLuxMap::DestroyAllEntities()
 {
+	if(mpA7)
+	{
+		ohpl_a7_destroy_all(mpA7);
+		mbCommentaryIconsActive = false;
+		return;
+	}
+
 	STLDeleteAll(mlstTimers);
 
 	STLDeleteAll(mlstLampLightConnections);//Since these depend on entities, destroy...
@@ -553,6 +597,18 @@ void cLuxMap::DestroyAllEntities()
 
 void cLuxMap::AddEntity(iLuxEntity *apEntity)
 {
+	if(mpA7)
+	{
+		bool bIsEnemy = apEntity->GetEntityType() == eLuxEntityType_Enemy;
+		bool bArea = apEntity->GetEntityType() == eLuxEntityType_Area;
+		bool bSticky = bArea && static_cast<iLuxArea*>(apEntity)->GetAreaType() == eLuxAreaType_Sticky;
+		void *pTyped = NULL;
+		if(bIsEnemy) pTyped = static_cast<iLuxEnemy*>(apEntity);
+		else if(bSticky) pTyped = static_cast<cLuxArea_Sticky*>(static_cast<iLuxArea*>(apEntity));
+		ohpl_a7_ent_add(mpA7, apEntity, pTyped, OHPL_A7_S(apEntity->GetName()), apEntity->GetID(), bIsEnemy, bArea, bSticky);
+		return;
+	}
+
 	m_mapEntitiesByName.insert(tLuxEntityNameMap::value_type(cString::ToLowerCase(apEntity->GetName()), apEntity));
 	m_mapEntitiesByID.insert(tLuxEntityIDMap::value_type(apEntity->GetID(), apEntity));
 
@@ -575,22 +631,31 @@ void cLuxMap::AddEntity(iLuxEntity *apEntity)
 
 void cLuxMap::DestroyEntity(iLuxEntity *apEntity)
 {
-	if(mbDeletingAllWorldEntities) Warning("Trying to delete entity '%s' when Map is destroying all entities!\n", apEntity->GetName().c_str());
+	if(IsDeletingAllWorldEntities()) Warning("Trying to delete entity '%s' when Map is destroying all entities!\n", apEntity->GetName().c_str());
 
 	if(apEntity->GetDestroyMe()) return;
 
 	apEntity->DestroyMe();
-    mlstToBeDestroyedEntities.push_back(apEntity);
+	if(mpA7) ohpl_a7_doom_push(mpA7, apEntity);
+	else mlstToBeDestroyedEntities.push_back(apEntity);
 }
 
 //-----------------------------------------------------------------------
 
 iLuxEntity *cLuxMap::GetEntityByName(const tString& asName, eLuxEntityType aType, int alSubType)
 {
-	tLuxEntityNameMapIt it = m_mapEntitiesByName.find(cString::ToLowerCase(asName));
-	if(it == m_mapEntitiesByName.end()) return NULL;
-
-	iLuxEntity *pEntity = it->second;
+	iLuxEntity *pEntity;
+	if(mpA7)
+	{
+		pEntity = static_cast<iLuxEntity*>(ohpl_a7_ent_find_name(mpA7, OHPL_A7_S(asName)));
+		if(pEntity == NULL) return NULL;
+	}
+	else
+	{
+		tLuxEntityNameMapIt it = m_mapEntitiesByName.find(cString::ToLowerCase(asName));
+		if(it == m_mapEntitiesByName.end()) return NULL;
+		pEntity = it->second;
+	}
 	if(LuxIsCorrectType(pEntity, aType, alSubType)== false) return NULL;
 
 	return pEntity;
@@ -598,10 +663,18 @@ iLuxEntity *cLuxMap::GetEntityByName(const tString& asName, eLuxEntityType aType
 
 iLuxEntity *cLuxMap::GetEntityByID(int alID, eLuxEntityType aType, int alSubType)
 {
-	tLuxEntityIDMapIt it = m_mapEntitiesByID.find(alID);
-	if(it == m_mapEntitiesByID.end()) return NULL;
-
-	iLuxEntity *pEntity = it->second;
+	iLuxEntity *pEntity;
+	if(mpA7)
+	{
+		pEntity = static_cast<iLuxEntity*>(ohpl_a7_ent_find_id(mpA7, alID));
+		if(pEntity == NULL) return NULL;
+	}
+	else
+	{
+		tLuxEntityIDMapIt it = m_mapEntitiesByID.find(alID);
+		if(it == m_mapEntitiesByID.end()) return NULL;
+		pEntity = it->second;
+	}
 
 	if(LuxIsCorrectType(pEntity, aType, alSubType)== false) return NULL;
 
@@ -612,6 +685,8 @@ iLuxEntity *cLuxMap::GetEntityByID(int alID, eLuxEntityType aType, int alSubType
 
 bool cLuxMap::EntityExists(iLuxEntity *apEntity)
 {
+	if(mpA7) return ohpl_a7_ent_exists(mpA7, apEntity);
+
 	tLuxEntityListIt entityIt = mlstEntities.begin();
 	for(; entityIt != mlstEntities.end(); ++entityIt)
 	{
@@ -626,6 +701,7 @@ bool cLuxMap::EntityExists(iLuxEntity *apEntity)
 
 cLuxEntityIterator cLuxMap::GetEntityIterator()
 {
+	if(mpA7) return cLuxEntityIterator(mpA7, kOhplA7Entities);
 	return cLuxEntityIterator(&mlstEntities);
 }
 
@@ -633,6 +709,7 @@ cLuxEntityIterator cLuxMap::GetEntityIterator()
 
 cLuxEnemyIterator cLuxMap::GetEnemyIterator()
 {
+	if(mpA7) return cLuxEnemyIterator(mpA7, kOhplA7Enemies);
 	return cLuxEnemyIterator(&mlstEnemies);
 }
 
@@ -641,10 +718,9 @@ cLuxEnemyIterator cLuxMap::GetEnemyIterator()
 void cLuxMap::BroadcastEnemyMessage(eLuxEnemyMessage aType, bool abHasPosition, const cVector3f& avPos, float afRadius,
 									float afTime, bool abLocalScope, const cVector3f& avX,float afX, int alX)
 {
-	tLuxEnemyListIt it = mlstEnemies.begin();
-	for(; it != mlstEnemies.end(); ++it)
+	for(ohpl_a7::Walk<tLuxEnemyList> it(mpA7, kOhplA7Enemies, mlstEnemies); it.Has(); it.Advance())
 	{
-		iLuxEnemy *pEnemy = *it;
+		iLuxEnemy *pEnemy = it.Get();
 		if(pEnemy->IsActive()==false) continue;
 
 		////////////////////////////////
@@ -776,9 +852,9 @@ int cLuxMap::GetDoorState(int alID)
 
 bool cLuxMap::BodyIsInDetachableStickyArea(iPhysicsBody* apBody)
 {
-	for(tLuxArea_StickyListIt it = mlstStickyAreas.begin(); it != mlstStickyAreas.end(); ++it)
+	for(ohpl_a7::Walk<tLuxArea_StickyList> it(mpA7, kOhplA7StickyList, mlstStickyAreas); it.Has(); it.Advance())
 	{
-		cLuxArea_Sticky *pStickyArea = *it;
+		cLuxArea_Sticky *pStickyArea = it.Get();
 
 		if(pStickyArea->GetAttachedBody() == apBody)
 		{
@@ -792,9 +868,9 @@ bool cLuxMap::BodyIsInDetachableStickyArea(iPhysicsBody* apBody)
 
 bool cLuxMap::DetachBodyFromStickyArea(iPhysicsBody* apBody)
 {
-	for(tLuxArea_StickyListIt it = mlstStickyAreas.begin(); it != mlstStickyAreas.end(); ++it)
+	for(ohpl_a7::Walk<tLuxArea_StickyList> it(mpA7, kOhplA7StickyList, mlstStickyAreas); it.Has(); it.Advance())
 	{
-		cLuxArea_Sticky *pStickyArea = *it;
+		cLuxArea_Sticky *pStickyArea = it.Get();
 		if(pStickyArea->GetAttachedBody() == apBody)
 		{
 			if(pStickyArea->CanDetach())
@@ -886,12 +962,24 @@ bool cLuxMap::CheckCollision(iLuxCollideCallbackContainer *apCollider1, iLuxColl
 //-----------------------------------------------------------------------
 void cLuxMap::AddPlayerStart(cLuxNode_PlayerStart *apNode)
 {
+	if(mpA7)
+	{
+		ohpl_a7_start_add(mpA7, apNode, OHPL_A7_S(apNode->GetName()));
+		return;
+	}
 	m_mapPlayerStartNodes.insert(tLuxPlayerStartMap::value_type(apNode->GetName(), apNode));
 	mvPlayerStartNodes.push_back(apNode);
 }
 
 cLuxNode_PlayerStart * cLuxMap::GetPlayerStart(const tString & asName)
 {
+	if(mpA7)
+	{
+		cLuxNode_PlayerStart *pNode = static_cast<cLuxNode_PlayerStart*>(ohpl_a7_start_find(mpA7, OHPL_A7_S(asName)));
+		if(pNode == NULL) Warning("Could not find player start node '%s'\n", asName.c_str());
+		return pNode;
+	}
+
 	tLuxPlayerStartMapIt it = m_mapPlayerStartNodes.find(asName);
 	if(it == m_mapPlayerStartNodes.end()){
 		Warning("Could not find player start node '%s'\n", asName.c_str());
@@ -905,6 +993,8 @@ cLuxNode_PlayerStart * cLuxMap::GetPlayerStart(const tString & asName)
 
 cLuxNode_PlayerStart *cLuxMap::GetFirstPlayerStart()
 {
+	if(mpA7) return static_cast<cLuxNode_PlayerStart*>(ohpl_a7_start_first(mpA7));
+
 	tLuxPlayerStartMapIt it = m_mapPlayerStartNodes.begin();
 	if(it == m_mapPlayerStartNodes.end()) return NULL;
 
@@ -915,11 +1005,23 @@ cLuxNode_PlayerStart *cLuxMap::GetFirstPlayerStart()
 
 void cLuxMap::AddPosNode(cLuxNode_Pos *apNode)
 {
+	if(mpA7)
+	{
+		ohpl_a7_pos_add(mpA7, apNode, OHPL_A7_S(apNode->GetName()));
+		return;
+	}
 	m_mapPosNodes.insert(tLuxPosNodeMap::value_type(apNode->GetName(), apNode));
 }
 
 cLuxNode_Pos *cLuxMap::GetPosNode(const tString & asName)
 {
+	if(mpA7)
+	{
+		cLuxNode_Pos *pNode = static_cast<cLuxNode_Pos*>(ohpl_a7_pos_find(mpA7, OHPL_A7_S(asName)));
+		if(pNode == NULL) Warning("Could not find pos node '%s'\n", asName.c_str());
+		return pNode;
+	}
+
 	tLuxPosNodeMapIt it = m_mapPosNodes.find(asName);
 	if(it == m_mapPosNodes.end()){
 		Warning("Could not find pos node '%s'\n", asName.c_str());
@@ -942,11 +1044,19 @@ void cLuxMap::AddUseItemCallback(	const tString& asName, const tString& asItem, 
 	pCallback->msFunction = asFunction;
 	pCallback->mbAutoDestroy = abAutoCallback;
 	
-	mlstUseItemCallbacks.push_back(pCallback);
+	if(mpA7) ohpl_a7_use_add(mpA7, pCallback, OHPL_A7_S(asName), OHPL_A7_S(asItem), OHPL_A7_S(asEntity));
+	else mlstUseItemCallbacks.push_back(pCallback);
 }
 
 void cLuxMap::RemoveUseItemCallback( const tString& asName)
 {
+	if(mpA7)
+	{
+		if(ohpl_a7_use_remove_name(mpA7, OHPL_A7_S(asName))==false)
+			Warning("Could not find use item callback '%s'!\n", asName.c_str());
+		return;
+	}
+
 	tLuxUseItemCallbackListIt it = mlstUseItemCallbacks.begin();
 	for(; it != mlstUseItemCallbacks.end(); ++it)
 	{
@@ -965,6 +1075,12 @@ void cLuxMap::RemoveUseItemCallback( const tString& asName)
 
 void cLuxMap::RemoveUseItemCallback(cLuxUseItemCallback * apCallback, const tString& asName)
 {
+	if(mpA7)
+	{
+		ohpl_a7_use_remove_ptr(mpA7, apCallback, OHPL_A7_S(asName));
+		return;
+	}
+
 	tLuxUseItemCallbackListIt it = mlstUseItemCallbacks.begin();
 	for(; it != mlstUseItemCallbacks.end(); ++it)
 	{
@@ -987,6 +1103,8 @@ void cLuxMap::RemoveUseItemCallback(cLuxUseItemCallback * apCallback, const tStr
 
 cLuxUseItemCallback* cLuxMap::GetUseItemCallback(const tString& asItem, const tString& asEntity)
 {
+	if(mpA7) return static_cast<cLuxUseItemCallback*>(ohpl_a7_use_find(mpA7, OHPL_A7_S(asItem), OHPL_A7_S(asEntity)));
+
 	tLuxUseItemCallbackListIt it = mlstUseItemCallbacks.begin();
 	for(; it != mlstUseItemCallbacks.end(); ++it)
 	{
@@ -1010,6 +1128,12 @@ cLuxUseItemCallback* cLuxMap::GetUseItemCallback(const tString& asItem, const tS
 
 void cLuxMap::AddTimer(const tString& asName, float afTime, const tString& asFunction)
 {
+	if(mpA7)
+	{
+		ohpl_a7_timer_add(mpA7, OHPL_A7_S(asName), afTime, OHPL_A7_S(asFunction));
+		return;
+	}
+
 	cLuxEventTimer *pTimer = hplNew( cLuxEventTimer, ());
 	pTimer->msName = asName;
 	pTimer->mfCount = ohpl_ga5_timer_count(afTime); //Not allow 0 or lower for time!
@@ -1023,6 +1147,12 @@ void cLuxMap::AddTimer(const tString& asName, float afTime, const tString& asFun
 
 void cLuxMap::RemoveTimer(const tString& asName)
 {
+	if(mpA7)
+	{
+		ohpl_a7_timer_remove(mpA7, OHPL_A7_S(asName));
+		return;
+	}
+
 	for(tLuxEventTimerListIt it= mlstTimers.begin(); it != mlstTimers.end(); )
 	{
 		cLuxEventTimer *pTimer = *it;
@@ -1050,18 +1180,82 @@ void cLuxMap::RemoveTimer(const tString& asName)
 
 //-----------------------------------------------------------------------
 
-cLuxEventTimer* cLuxMap::GetTimer(const tString& asName)
+bool cLuxMap::GetTimerCount(const tString& asName, float *apCount)
 {
+	if(mpA7) return ohpl_a7_timer_get(mpA7, OHPL_A7_S(asName), apCount);
+
 	for(tLuxEventTimerListIt it= mlstTimers.begin(); it != mlstTimers.end();++it)
 	{
 		cLuxEventTimer *pTimer = *it;
 		if(pTimer->msName == asName)
 		{
-			return pTimer;
+			*apCount = pTimer->mfCount;
+			return true;
 		}
 	}
 
-	return NULL;
+	return false;
+}
+
+void cLuxMap::CopyTimers(std::vector<cLuxEventTimer> &avOut)
+{
+	if(mpA7)
+	{
+		for(size_t i=0; i<ohpl_a7_timer_len(mpA7); ++i)
+		{
+			cLuxEventTimer timer;
+			bool bDestroy;
+			ohpl_a7_timer_at(mpA7, i, ohpl_ga5::Collect, &timer.msName, &timer.msFunction, &timer.mfCount, &bDestroy);
+			timer.mbDestroyMe = bDestroy;
+			avOut.push_back(timer);
+		}
+		return;
+	}
+	for(tLuxEventTimerListIt it= mlstTimers.begin(); it != mlstTimers.end(); ++it) avOut.push_back(**it);
+}
+
+void cLuxMap::SetTimers(const std::vector<cLuxEventTimer> &avIn)
+{
+	if(mpA7)
+	{
+		ohpl_a7_timers_clear(mpA7);
+		for(size_t i=0; i<avIn.size(); ++i)
+		{
+			const cLuxEventTimer &t = avIn[i];
+			ohpl_a7_timer_push(mpA7, OHPL_A7_S(t.msName), OHPL_A7_S(t.msFunction), t.mfCount, t.mbDestroyMe);
+		}
+		return;
+	}
+	STLDeleteAll(mlstTimers);
+	for(size_t i=0; i<avIn.size(); ++i)
+	{
+		cLuxEventTimer *pTimer = hplNew(cLuxEventTimer,());
+		*pTimer = avIn[i];
+		mlstTimers.push_back(pTimer);
+	}
+}
+
+void cLuxMap::CopyUseItemCallbacks(std::vector<cLuxUseItemCallback> &avOut)
+{
+	if(mpA7)
+	{
+		for(size_t i=0; i<ohpl_a7_use_len(mpA7); ++i) avOut.push_back(*static_cast<cLuxUseItemCallback*>(ohpl_a7_use_at(mpA7, i)));
+		return;
+	}
+	for(tLuxUseItemCallbackListIt it= mlstUseItemCallbacks.begin(); it != mlstUseItemCallbacks.end(); ++it) avOut.push_back(**it);
+}
+
+void cLuxMap::SetUseItemCallbacks(const std::vector<cLuxUseItemCallback> &avIn)
+{
+	if(mpA7) ohpl_a7_use_clear(mpA7);
+	else STLDeleteAll(mlstUseItemCallbacks);
+	for(size_t i=0; i<avIn.size(); ++i)
+	{
+		cLuxUseItemCallback *pCallback = hplNew(cLuxUseItemCallback, ());
+		*pCallback = avIn[i];
+		if(mpA7) ohpl_a7_use_add(mpA7, pCallback, OHPL_A7_S(pCallback->msName), OHPL_A7_S(pCallback->msItem), OHPL_A7_S(pCallback->msEntity));
+		else mlstUseItemCallbacks.push_back(pCallback);
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -1090,6 +1284,7 @@ void cLuxMap::AddDissolveEntity(cMeshEntity *apMeshEntity, float afTime)
 	pDissolveEnt->mpEntity = pNewEntity;
 	pDissolveEnt->mfFadeSpeed = ohpl_ga5_dissolve_speed(afTime);
 	pDissolveEnt->mfAlpha =1;
+	if(mpA7) ohpl_a7_dissolve_add(mpA7, pDissolveEnt, afTime);
 
 	//////////////////////
 	//Set up transform
@@ -1116,8 +1311,8 @@ void cLuxMap::AddDissolveEntity(cMeshEntity *apMeshEntity, float afTime)
 		}
 	}
 
-	
-	mlstDissolveEntities.push_back(pDissolveEnt);
+
+	if(mpA7 == NULL) mlstDissolveEntities.push_back(pDissolveEnt);
 }
 
 //-----------------------------------------------------------------------
@@ -1128,7 +1323,8 @@ cLuxLampLightConnection* cLuxMap::AddLampLightConnection(cLuxProp_Lamp *apLamp, 
 	if(pConnection == NULL)
 	{
 		pConnection = hplNew(cLuxLampLightConnection, (apLight));
-		mlstLampLightConnections.push_back(pConnection);
+		if(mpA7) ohpl_a7_lamp_add(mpA7, pConnection, apLight);
+		else mlstLampLightConnections.push_back(pConnection);
 	}
     
 	pConnection->AddLamp(apLamp, afAmount, abUseOnColor, abUseSpec);
@@ -1140,6 +1336,8 @@ cLuxLampLightConnection* cLuxMap::AddLampLightConnection(cLuxProp_Lamp *apLamp, 
 
 cLuxLampLightConnection* cLuxMap::GetLampLightConnection(iLight *apLight)
 {
+	if(mpA7) return static_cast<cLuxLampLightConnection*>(ohpl_a7_lamp_find(mpA7, apLight));
+
 	tLuxLampLightConnectionListIt it = mlstLampLightConnections.begin();
 	for(; it != mlstLampLightConnections.end(); ++it)
 	{
@@ -1233,6 +1431,8 @@ void cLuxMap::CalculateTotalCompletionAmount()
 
 int cLuxMap::GetFreeEntityID()
 {
+	if(mpA7) return ohpl_a7_ent_free_id(mpA7);
+
 	//Find the lowest id not used in the id map (ascending)
 	std::vector<int> vIds;
 	for(tLuxEntityIDMapIt it = m_mapEntitiesByID.begin(); it != m_mapEntitiesByID.end(); ++it)
@@ -1247,6 +1447,32 @@ int cLuxMap::GetFreeEntityID()
 
 void cLuxMap::UpdateToBeDesotroyedEntities(bool abUseCallbacks)
 {
+	if(mpA7)
+	{
+		uint64_t lCur = ohpl_a7_cur_begin(mpA7, kOhplA7Doomed);
+		while(iLuxEntity *pEntity = static_cast<iLuxEntity*>(ohpl_a7_cur_get(mpA7, kOhplA7Doomed, lCur)))
+		{
+			if(abUseCallbacks)
+			{
+				gpBase->mpPlayer->GetCurrentStateData()->OnDestroyEntity(pEntity);
+				pEntity->BeforeEntityDestruction();
+			}
+
+			bool bIsEnemy = pEntity->GetEntityType() == eLuxEntityType_Enemy;
+			bool bIsArea = pEntity->GetEntityType() == eLuxEntityType_Area;
+			bool bSticky = bIsArea && static_cast<iLuxArea*>(pEntity)->GetAreaType() == eLuxAreaType_Sticky;
+			void *pTyped = NULL;
+			if(bIsEnemy) pTyped = static_cast<iLuxEnemy*>(pEntity);
+			else if(bSticky) pTyped = static_cast<cLuxArea_Sticky*>(static_cast<iLuxArea*>(pEntity));
+			ohpl_a7_ent_unlink(mpA7, pEntity, pTyped, bIsEnemy, bIsArea, bSticky);
+
+			hplDelete(pEntity);
+			lCur = ohpl_a7_cur_next(mpA7, kOhplA7Doomed, lCur);
+		}
+		ohpl_a7_doom_clear(mpA7);
+		return;
+	}
+
 	tLuxEntityListIt entityIt = mlstToBeDestroyedEntities.begin();
 	for(; entityIt != mlstToBeDestroyedEntities.end(); ++entityIt)
 	{
@@ -1287,6 +1513,20 @@ void cLuxMap::UpdateToBeDesotroyedEntities(bool abUseCallbacks)
 
 void cLuxMap::UpdateTimers(float afTimeStep)
 {
+	if(mpA7)
+	{
+		ohpl_a7_timers_begin(mpA7, afTimeStep);
+		size_t lCursor = 0;
+		tString sName, sFunc;
+		while(ohpl_a7_timer_poll(mpA7, &lCursor, ohpl_ga5::Collect, &sName, &sFunc))
+		{
+			RunScript(ohpl_ga5::Call1(sFunc, sName));
+			ohpl_a7_timer_finish(mpA7, lCursor);
+		}
+		ohpl_a7_timers_end(mpA7);
+		return;
+	}
+
 	mbUpdatingTimers = true;
 
 	//////////////////////
@@ -1338,6 +1578,12 @@ void cLuxMap::UpdateTimers(float afTimeStep)
 
 void cLuxMap::UpdateDissolveEntities(float afTimeStep)
 {
+	if(mpA7)
+	{
+		ohpl_a7_dissolve_update(mpA7, afTimeStep, A7DissolveCb, NULL);
+		return;
+	}
+
 	tLuxDissolveEntityListIt it = mlstDissolveEntities.begin();
 	for(; it != mlstDissolveEntities.end(); )
 	{
@@ -1362,6 +1608,12 @@ void cLuxMap::UpdateDissolveEntities(float afTimeStep)
 
 void cLuxMap::UpdateLampLightConnections(float afTimeStep)
 {
+	if(mpA7)
+	{
+		ohpl_a7_lamp_each(mpA7, A7LampCb, &afTimeStep);
+		return;
+	}
+
 	tLuxLampLightConnectionListIt it = mlstLampLightConnections.begin();
 	for(; it != mlstLampLightConnections.end(); ++it)
 	{
@@ -1375,16 +1627,16 @@ void cLuxMap::UpdateLampLightConnections(float afTimeStep)
 
 void cLuxMap::UpdateCheckCommentaryIconActive(float afTimeStep)
 {
-	int lNewState = ohpl_ga5_commentary_sync(mbCommentaryIconsActive, gpBase->mpMapHandler->GetShowCommentary());
+	int lNewState = mpA7 ? ohpl_a7_commentary_sync(mpA7, gpBase->mpMapHandler->GetShowCommentary())
+						: ohpl_ga5_commentary_sync(mbCommentaryIconsActive, gpBase->mpMapHandler->GetShowCommentary());
 	if(lNewState < 0) return;
 	mbCommentaryIconsActive = lNewState != 0;
 
 	//////////////////////////////
 	//Go through all entities and set commentary icons with proper active value
-	tLuxEntityListIt entityIt = mlstEntities.begin();
-	for(; entityIt != mlstEntities.end(); ++entityIt)
+	for(ohpl_a7::Walk<tLuxEntityList> entityIt(mpA7, kOhplA7Entities, mlstEntities); entityIt.Has(); entityIt.Advance())
 	{
-		iLuxEntity *pEntity = *entityIt;
+		iLuxEntity *pEntity = entityIt.Get();
 		if(pEntity->GetEntityType() == eLuxEntityType_CommentaryIcon)
 		{
 			pEntity->SetActive(mbCommentaryIconsActive);
@@ -1396,3 +1648,59 @@ void cLuxMap::UpdateCheckCommentaryIconActive(float afTimeStep)
 
 
 
+
+
+//-----------------------------------------------------------------------
+
+// OHPL_A7_MAPDUMP: every entity in list order with its save data, plus the lookups the map answers.
+void cLuxMap::DumpA7(const char *asFile, const char *asLabel)
+{
+	std::ofstream os(asFile, std::ios::app);
+	tString sTmp = tString(asFile) + ".tmp";
+	os << "== map " << msName << " " << asLabel << "\n";
+
+	int lIdx = 0;
+	cLuxEntityIterator it = GetEntityIterator();
+	while(it.HasNext())
+	{
+		iLuxEntity *pEntity = it.Next();
+		os << lIdx++ << "|" << (int)pEntity->GetEntityType() << "|" << pEntity->GetName() << "|" << pEntity->GetID()
+			<< "|" << pEntity->IsActive() << "|" << pEntity->GetDestroyMe()
+			<< "|" << (GetEntityByName(pEntity->GetName()) == pEntity) << "|" << (GetEntityByID(pEntity->GetID()) == pEntity);
+		if(pEntity->GetEntityType() == eLuxEntityType_Area) os << "|area" << (int)static_cast<iLuxArea*>(pEntity)->GetAreaType();
+		if(pEntity->GetEntityType() == eLuxEntityType_Prop) os << "|prop" << (int)static_cast<iLuxProp*>(pEntity)->GetPropType();
+		os << "|";
+		iLuxEntity_SaveData *pData = pEntity->GetEntityType() == eLuxEntityType_Area ? pEntity->CreateSaveData() : NULL;
+		if(pData)
+		{
+			pEntity->SaveToSaveData(pData);
+			cSerializeClass::SaveToFile(pData, cString::To16Char(sTmp), "D");
+			std::ifstream in(sTmp.c_str());
+			std::string sLine;
+			while(std::getline(in, sLine))
+			{
+				size_t lPos = sLine.find_first_not_of(" \t\r");
+				if(lPos != std::string::npos) os << sLine.substr(lPos);
+			}
+			hplDelete(pData);
+		}
+		os << "\n";
+	}
+
+	os << "enemies:";
+	cLuxEnemyIterator enemyIt = GetEnemyIterator();
+	while(enemyIt.HasNext()) os << " " << enemyIt.Next()->GetName();
+	os << "\nfreeid " << GetFreeEntityID() << " latest " << (GetLatestEntity() ? GetLatestEntity()->GetName() : tString("-")) << "\n";
+
+	std::vector<cLuxEventTimer> vTimers;
+	CopyTimers(vTimers);
+	for(size_t i=0; i<vTimers.size(); ++i) os << "timer " << vTimers[i].msName << " " << vTimers[i].msFunction << " " << vTimers[i].mfCount << " " << vTimers[i].mbDestroyMe << "\n";
+	std::vector<cLuxUseItemCallback> vCallbacks;
+	CopyUseItemCallbacks(vCallbacks);
+	for(size_t i=0; i<vCallbacks.size(); ++i) os << "useitem " << vCallbacks[i].msName << " " << vCallbacks[i].msItem << " " << vCallbacks[i].msEntity << " " << vCallbacks[i].msFunction << "\n";
+	for(int i=0; i<GetPlayerStartNodeNum(); ++i) os << "start " << GetPlayerStartNode(i)->GetName() << " " << GetPlayerStartNode(i)->GetPosition().x << "\n";
+	cLuxNode_PlayerStart *pFirst = GetFirstPlayerStart();
+	os << "firststart " << (pFirst ? pFirst->GetName() : tString("-")) << "\n";
+	for(tLuxScriptVarMapIt vit = m_mapVars.begin(); vit != m_mapVars.end(); ++vit) os << "var " << vit->first << "=" << vit->second.msVal << "\n";
+	os << "doomed 0 deleting " << IsDeletingAllWorldEntities() << "\n";
+}

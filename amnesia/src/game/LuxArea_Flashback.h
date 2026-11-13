@@ -72,7 +72,7 @@ private:
 
 	/////////////////////////
 	// Variables
-	float mfCheckCollisionCount;
+	float &mfCheckCollisionCount;
 };
 
 //----------------------------------------------

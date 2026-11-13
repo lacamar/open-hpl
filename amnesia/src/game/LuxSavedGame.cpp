@@ -416,20 +416,14 @@ int cLuxSavedGameMap::Ga6FromCall(void *apCtx, unsigned alOp, int alA, int alB)
 			}
 		}
 		{
-			tLuxUseItemCallbackListIt it = apMap->mlstUseItemCallbacks.begin();
-			for(; it != apMap->mlstUseItemCallbacks.end(); ++it)
-			{
-				cLuxUseItemCallback *pCallback = *it;
-				d.mvUseItemCallbacks.Add(*pCallback);
-			}
+			std::vector<cLuxUseItemCallback> vCallbacks;
+			apMap->CopyUseItemCallbacks(vCallbacks);
+			for(size_t i=0; i<vCallbacks.size(); ++i) d.mvUseItemCallbacks.Add(vCallbacks[i]);
 		}
 		{
-			tLuxEventTimerListIt it = apMap->mlstTimers.begin();
-			for(; it != apMap->mlstTimers.end(); ++it)
-			{
-				cLuxEventTimer *pTimer = *it;
-				d.mlstTimers.Add(*pTimer);
-			}
+			std::vector<cLuxEventTimer> vTimers;
+			apMap->CopyTimers(vTimers);
+			for(size_t i=0; i<vTimers.size(); ++i) d.mlstTimers.Add(vTimers[i]);
 		}
 		{
 			tLuxCollideCallbackList *pCallbackList = gpBase->mpPlayer->GetCollideCallbackList();
@@ -699,24 +693,15 @@ int cLuxSavedGameMap::Ga6ToCall(void *apCtx, unsigned alOp, int alA, int alB)
 			}
 		}
 		{
-			STLDeleteAll(apMap->mlstUseItemCallbacks);
-			for(size_t i=0; i<d.mvUseItemCallbacks.Size(); ++i)
-			{
-				cLuxUseItemCallback *pCallback = hplNew(cLuxUseItemCallback, ());
-				*pCallback = d.mvUseItemCallbacks[i];
-				apMap->mlstUseItemCallbacks.push_back(pCallback);
-			}
+			std::vector<cLuxUseItemCallback> vCallbacks;
+			for(size_t i=0; i<d.mvUseItemCallbacks.Size(); ++i) vCallbacks.push_back(d.mvUseItemCallbacks[i]);
+			apMap->SetUseItemCallbacks(vCallbacks);
 		}
 		{
-			STLDeleteAll(apMap->mlstTimers);
+			std::vector<cLuxEventTimer> vTimers;
 			cContainerListIterator<cLuxEventTimer> it = d.mlstTimers.GetIterator();
-			while(it.HasNext())
-			{
-				cLuxEventTimer& savedTimer = it.Next();
-				cLuxEventTimer *pTimer = hplNew(cLuxEventTimer,());
-				*pTimer = savedTimer;
-				apMap->mlstTimers.push_back(pTimer);
-			}
+			while(it.HasNext()) vTimers.push_back(it.Next());
+			apMap->SetTimers(vTimers);
 		}
 		return 0;
 	case eOhplGa6Op_GmSavedEntityN:

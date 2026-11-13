@@ -79,7 +79,8 @@ void cLuxAreaLoader_Script::SetupArea(iLuxArea *apArea, cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-cLuxArea_Script::cLuxArea_Script(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Script)
+cLuxArea_Script::cLuxArea_Script(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Script),
+	mbItemInteraction(Pod<OhplA7Script>().itemInteraction)
 {
 	mfMaxFocusDistance = gpBase->mpGameCfg->GetFloat("Player_Interaction","ScriptArea_MaxFocusDist",0);
 }
@@ -100,6 +101,7 @@ cLuxArea_Script::~cLuxArea_Script()
 
 bool cLuxArea_Script::CanInteract(iPhysicsBody *apBody)
 {
+	if(mpA7Area) return ohpl_a7_area_can_interact(mpA7Area, msInteractCallback!="");
 	return ohpl_ga5_script_can_interact(mbItemInteraction, msInteractCallback!="");
 }
 
@@ -107,6 +109,7 @@ bool cLuxArea_Script::CanInteract(iPhysicsBody *apBody)
 
 bool cLuxArea_Script::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
+	if(mpA7Area) return ohpl_a7_area_on_interact(mpA7Area, msInteractCallback!="");
 	return msInteractCallback!="";
 }
 
@@ -114,6 +117,11 @@ bool cLuxArea_Script::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 eLuxFocusCrosshair cLuxArea_Script::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
+	if(mpA7Area)
+	{
+		const int vTable[4] = { eLuxFocusCrosshair_Default, eLuxFocusCrosshair_Grab, eLuxFocusCrosshair_Ladder, eLuxFocusCrosshair_LastEnum };
+		return (eLuxFocusCrosshair)ohpl_a7_area_crosshair(mpA7Area, msInteractCallback!="", mCustomFocusCrossHair, &vTable);
+	}
 	return (eLuxFocusCrosshair)ohpl_ga5_script_crosshair(msInteractCallback!="", mCustomFocusCrossHair,
 														eLuxFocusCrosshair_Default, eLuxFocusCrosshair_Grab);
 }

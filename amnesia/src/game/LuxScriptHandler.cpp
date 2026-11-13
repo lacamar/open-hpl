@@ -865,9 +865,9 @@ float __stdcall cLuxScriptHandler::GetTimerTimeLeft(string& asName)
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 	if(pMap==NULL) return 0;
 
-	cLuxEventTimer *pTimer = pMap->GetTimer(asName);
-	if(pTimer)
-		return pTimer->mfCount;
+	float fCount;
+	if(pMap->GetTimerCount(asName, &fCount))
+		return fCount;
 	else
 		return 0;
 }

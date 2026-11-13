@@ -101,7 +101,17 @@ bool cLuxArea_Sticky::mbAllowAttachment = false;
 
 //-----------------------------------------------------------------------
 
-cLuxArea_Sticky::cLuxArea_Sticky(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Sticky)
+cLuxArea_Sticky::cLuxArea_Sticky(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Sticky),
+	mbMoveBody(Pod<OhplA7Sticky>().moveBody),
+	mbRotateBody(Pod<OhplA7Sticky>().rotateBody),
+	mbCheckCenterInArea(Pod<OhplA7Sticky>().checkCenterInArea),
+	mbCanDetach(Pod<OhplA7Sticky>().canDetach),
+	mfPoseTime(Pod<OhplA7Sticky>().poseTime),
+	mbAttachedBodyGravity(Pod<OhplA7Sticky>().attachedBodyGravity),
+	mfAttachedBodyMass(Pod<OhplA7Sticky>().attachedBodyMass),
+	mbAttachedEntityFullGameSaved(Pod<OhplA7Sticky>().attachedEntityFullGameSaved),
+	mfSetMtxTime(Pod<OhplA7Sticky>().setMtxTime),
+	mtxAttachedStart(*reinterpret_cast<cMatrixf*>(&Pod<OhplA7Sticky>().attachedStart))
 {
 	mpAttachedBody = NULL;
 	mpLastAttachedBody = NULL;
@@ -170,6 +180,23 @@ void cLuxArea_Sticky::AttachBody(iPhysicsBody *apBody)
 	/////////////////////////
 	//If in an interact state, set the previous state		
 	gpBase->mpPlayer->GetCurrentStateData()->OnAttachBodyToStickyArea(apBody);
+
+	if(mpA7Area)
+	{
+		cMatrixf mtxStart = apBody->GetLocalMatrix();
+		bool bGravity = apBody->GetGravity();
+		float fMass = apBody->GetMass();
+		iLuxEntity *pAttachEntity = (iLuxEntity*)apBody->GetUserData();
+		ohpl_a7_area_sticky_attach(mpA7Area, reinterpret_cast<const OhplGa5Mtx*>(&mtxStart), bGravity, fMass, pAttachEntity ? (int)pAttachEntity->GetFullGameSave() : -1);
+		apBody->SetLinearVelocity(0);
+		apBody->SetAngularVelocity(0);
+		apBody->SetGravity(false);
+		apBody->SetMass(0);
+		if(pAttachEntity) pAttachEntity->SetFullGameSave(true);
+		mpAttachedBody = apBody;
+		mpLastAttachedBody = mpAttachedBody;
+		return;
+	}
 
 	/////////////////////////
 	//Snap it into place.
@@ -253,26 +280,39 @@ void cLuxArea_Sticky::UpdateAttachBody(float afTimeStep)
 {
 	if(mpAttachedBody==NULL || mfSetMtxTime >= 1) return;
 
-	OhplGa5StickyIn attachIn;
-	memcpy(&attachIn.start, &mtxAttachedStart, sizeof(attachIn.start));
-	cMatrixf mtxArea = mpBody->GetWorldMatrix();
-	memcpy(&attachIn.areaWorld, &mtxArea, sizeof(attachIn.areaWorld));
-	cVector3f vAreaPos = mpBody->GetWorldPosition();
-	cVector3f vMassCentre = mpAttachedBody->GetMassCentre();
-	cVector3f vAttachedPos = mpAttachedBody->GetWorldPosition();
-	memcpy(&attachIn.areaPos, &vAreaPos, sizeof(attachIn.areaPos));
-	memcpy(&attachIn.massCentre, &vMassCentre, sizeof(attachIn.massCentre));
-	memcpy(&attachIn.attachedPos, &vAttachedPos, sizeof(attachIn.attachedPos));
-	attachIn.poseTime = mfPoseTime;
-	attachIn.step = afTimeStep;
-	attachIn.setTime = mfSetMtxTime;
-	attachIn.moveBody = mbMoveBody;
-	attachIn.rotateBody = mbRotateBody;
-
 	OhplGa5StickyOut attachOut;
-	ohpl_ga5_sticky_attach(&attachIn, &attachOut);
+	if(mpA7Area)
+	{
+		cMatrixf mtxArea = mpBody->GetWorldMatrix();
+		cVector3f vAreaPos = mpBody->GetWorldPosition();
+		cVector3f vMassCentre = mpAttachedBody->GetMassCentre();
+		cVector3f vAttachedPos = mpAttachedBody->GetWorldPosition();
+		if(ohpl_a7_area_sticky_step(mpA7Area, reinterpret_cast<const OhplGa5Mtx*>(&mtxArea), reinterpret_cast<const OhplGa5Vec3*>(&vAreaPos),
+									reinterpret_cast<const OhplGa5Vec3*>(&vMassCentre), reinterpret_cast<const OhplGa5Vec3*>(&vAttachedPos),
+									afTimeStep, &attachOut)==false) return;
+	}
+	else
+	{
+		OhplGa5StickyIn attachIn;
+		memcpy(&attachIn.start, &mtxAttachedStart, sizeof(attachIn.start));
+		cMatrixf mtxArea = mpBody->GetWorldMatrix();
+		memcpy(&attachIn.areaWorld, &mtxArea, sizeof(attachIn.areaWorld));
+		cVector3f vAreaPos = mpBody->GetWorldPosition();
+		cVector3f vMassCentre = mpAttachedBody->GetMassCentre();
+		cVector3f vAttachedPos = mpAttachedBody->GetWorldPosition();
+		memcpy(&attachIn.areaPos, &vAreaPos, sizeof(attachIn.areaPos));
+		memcpy(&attachIn.massCentre, &vMassCentre, sizeof(attachIn.massCentre));
+		memcpy(&attachIn.attachedPos, &vAttachedPos, sizeof(attachIn.attachedPos));
+		attachIn.poseTime = mfPoseTime;
+		attachIn.step = afTimeStep;
+		attachIn.setTime = mfSetMtxTime;
+		attachIn.moveBody = mbMoveBody;
+		attachIn.rotateBody = mbRotateBody;
 
-	mfSetMtxTime = attachOut.setTime;
+		ohpl_ga5_sticky_attach(&attachIn, &attachOut);
+
+		mfSetMtxTime = attachOut.setTime;
+	}
 	if(attachOut.mode == kOhplGa5AttachSetMatrix)
 	{
 		cMatrixf mtxNew;
