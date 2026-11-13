@@ -1,6 +1,6 @@
 //! A1: the Amnesia script API (LuxScriptHandler's registered functions) registered and entered from Rust.
 //! Each function marshals its script arguments into [`Arg`]s and calls the host op table, which is
-//! implemented by the C++ game objects (`LuxScriptA1Host.cpp`) until those are ported.
+//! implemented by the C++ game objects (`LuxScriptA1Ops.inc`) until those are ported.
 
 use super::a1_gen;
 use std::ffi::{CString, c_char, c_void};

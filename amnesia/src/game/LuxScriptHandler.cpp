@@ -4530,4 +4530,4 @@ bool __stdcall cLuxScriptHandler::ScriptStringToBool(string& asString)
 
 //-----------------------------------------------------------------------
 
-
+#include "LuxScriptA1Ops.inc"

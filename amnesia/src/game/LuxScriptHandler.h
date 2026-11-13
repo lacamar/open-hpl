@@ -40,6 +40,7 @@ public:
 
 	void OnDraw(float afFrameTime);
 
+	friend struct OhplA1Ops;
 	void AddFuncPublic(const char *asDecl, const void *apFunc);
 
 private:
