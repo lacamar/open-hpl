@@ -452,6 +452,7 @@ fn synthetic_decisions_match_cpp() {
 }
 
 #[test]
+#[ignore = "parses every .hpm map (~7 min debug); run with --ignored"]
 fn hpm_maps_match_cpp() {
     let common = std::env::var_os("OHPL_H4_CORPUS").map_or_else(
         || {
