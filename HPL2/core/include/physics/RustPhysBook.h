@@ -51,6 +51,8 @@ namespace hpl {
 
 	typedef size_t (*OhplH15WorldOp)(int32_t, OhplH15Wa*);
 
+	struct OhplV3Pod { float x, y, z; };
+
 	// Scalar state of cSurfaceData / cPhysics, owned by rust/src/physics/surf.rs and preg.rs; C++ members are references into it.
 	struct OhplSurfaceState
 	{
@@ -99,6 +101,32 @@ void ohpl_h15w_enable_bodies_in_bv(uint64_t, size_t);
 void ohpl_h15w_fadeout_all_loop_sounds(uint64_t, float);
 void ohpl_h15w_render_contacts(uint64_t, size_t, size_t);
 bool ohpl_h15w_shape_world_collision(uint64_t, void*, size_t, const void*, const hpl::OhplH15Query*, size_t);
+
+uint64_t ohpl_h15b_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t, void*, size_t, size_t);
+void ohpl_h15b_free(uint64_t);
+void ohpl_h15b_add_joint(uint64_t, size_t);
+size_t ohpl_h15b_joint_at(uint64_t, int32_t);
+int32_t ohpl_h15b_joint_num(uint64_t);
+void ohpl_h15b_remove_joint(uint64_t, size_t);
+void ohpl_h15b_add_callback(uint64_t, size_t);
+void ohpl_h15b_remove_callback(uint64_t, size_t);
+bool ohpl_h15b_on_aabb(uint64_t, size_t, size_t);
+void ohpl_h15b_on_collide(uint64_t, size_t, size_t, size_t);
+void ohpl_h15b_add_char(uint64_t, size_t);
+void ohpl_h15b_remove_char(uint64_t, size_t);
+void ohpl_h15b_add_verlet(uint64_t, size_t);
+void ohpl_h15b_remove_verlet(uint64_t, size_t);
+void ohpl_h15b_destroy(uint64_t, size_t);
+uint64_t ohpl_h15j_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t, void*, size_t, size_t, size_t, size_t, hpl::OhplV3Pod, hpl::OhplV3Pod);
+void ohpl_h15j_drop(uint64_t, size_t);
+void ohpl_h15j_add_controller(uint64_t, size_t, size_t);
+size_t ohpl_h15j_get_controller(uint64_t, const char*, size_t);
+bool ohpl_h15j_change_controller(uint64_t, const char*, size_t);
+void ohpl_h15j_set_all_paused(uint64_t, bool);
+size_t ohpl_h15j_controller_len(uint64_t);
+bool ohpl_h15j_controller_at(uint64_t, size_t, void*, size_t*);
+bool ohpl_h15j_update(uint64_t, size_t);
+bool ohpl_h15j_check_breakage(uint64_t, size_t);
 
 uint64_t ohpl_h15p_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t, hpl::OhplPhysState*);
 void ohpl_h15p_free(uint64_t);

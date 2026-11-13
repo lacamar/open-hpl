@@ -66,6 +66,31 @@ namespace hpl {
 	//-----------------------------------
 
 
+	class iPhysicsBody;
+	class iPhysicsWorld;
+	class cSoundEntity;
+	class iPhysicsJointCallback;
+
+	// Scalar and pointer state of iPhysicsJoint, owned by rust/src/physics/shell.rs; the members are references into it.
+	struct OhplJointShellState
+	{
+		uint64_t shell;
+		iPhysicsBody *parent;
+		iPhysicsBody *child;
+		iPhysicsWorld *world;
+		cSoundEntity *sound;
+		iPhysicsJointCallback *callback;
+		void *userData;
+		cMatrixf parentSetup, childSetup, prevChild, prevParent;
+		cVector3f pinDir, pivot, startPivot, localPivot, localPinDir, startPinDir;
+		float minMoveSpeed, minMoveFreq, minMoveFreqSpeed, minMoveVolume, maxMoveFreq, maxMoveFreqSpeed, maxMoveVolume, middleMoveSpeed, middleMoveVolume;
+		float breakForce, limitAutoSleepDist;
+		int32_t uniqueId, soundId, limitAutoSleepNumSteps, speedCount, limitStepCount;
+		int32_t moveSpeedType;
+		bool stickyMin, stickyMax, allowPositionReset, positionResetPending, breakable, broken, limitAutoSleep, hasCollided, autoDeleteCallback;
+	};
+	static_assert(sizeof(OhplJointShellState) == 464, "joint state layout");
+
 	class cJointLimitEffect : public iSerializable
 	{
 		kSerializableClassInit(cJointLimitEffect)
@@ -188,6 +213,8 @@ namespace hpl {
 		iPhysicsController* GetController(const tString &asName);
 		bool ChangeController(const tString &asName);
 		cPhysicsControllerIterator GetControllerIterator();
+		int ControllerCount();
+		iPhysicsController* ControllerAt(int alIdx);
 
 		void SetAllControllersPaused(bool abX);
 
@@ -198,72 +225,74 @@ namespace hpl {
 		int GetSoundID(){ return mlSoundID;}
 
 	protected:
+		OhplJointShellState mS = OhplJointShellState();
 		tString msName;
-		int mlUniqueID;
+		int &mlUniqueID = mS.uniqueId;
 
-		iPhysicsBody *mpParentBody;
-		iPhysicsBody *mpChildBody;
-		iPhysicsWorld *mpWorld;
+		iPhysicsBody *&mpParentBody = mS.parent;
+		iPhysicsBody *&mpChildBody = mS.child;
+		iPhysicsWorld *&mpWorld = mS.world;
 
-		cMatrixf m_mtxParentBodySetup;
-		cMatrixf m_mtxChildBodySetup;
+		cMatrixf &m_mtxParentBodySetup = mS.parentSetup;
+		cMatrixf &m_mtxChildBodySetup = mS.childSetup;
 
-		cVector3f mvPinDir;
-		cVector3f mvPivotPoint;
-		cVector3f mvStartPivotPoint;
+		cVector3f &mvPinDir = mS.pinDir;
+		cVector3f &mvPivotPoint = mS.pivot;
+		cVector3f &mvStartPivotPoint = mS.startPivot;
 
-		cVector3f mvLocalPivot;
-		cVector3f mvLocalPinDir;
-		cVector3f mvStartPinDir;
+		cVector3f &mvLocalPivot = mS.localPivot;
+		cVector3f &mvLocalPinDir = mS.localPinDir;
+		cVector3f &mvStartPinDir = mS.startPinDir;
 
-		bool mbStickyMinLimit;
-		bool mbStickyMaxLimit;
-		bool mbAllowPositionReset;
-		bool mbPositionResetPending;
+		bool &mbStickyMinLimit = mS.stickyMin;
+		bool &mbStickyMaxLimit = mS.stickyMax;
+		bool &mbAllowPositionReset = mS.allowPositionReset;
+		bool &mbPositionResetPending = mS.positionResetPending;
 
 		tPhysicsControllerMap m_mapControllers;
 
 		cJointLimitEffect mMaxLimit;
 		cJointLimitEffect mMinLimit;
 
-		int mlSpeedCount;
+		int &mlSpeedCount = mS.speedCount;
 
-		cMatrixf m_mtxPrevChild;
-		cMatrixf m_mtxPrevParent;
+		cMatrixf &m_mtxPrevChild = mS.prevChild;
+		cMatrixf &m_mtxPrevParent = mS.prevParent;
 
 		tString msMoveSound;
 
-		float mfMinMoveSpeed;
-		float mfMinMoveFreq;
-		float mfMinMoveFreqSpeed;
-		float mfMinMoveVolume;
-		float mfMaxMoveFreq;
-		float mfMaxMoveFreqSpeed;
-		float mfMaxMoveVolume;
-		float mfMiddleMoveSpeed;
-		float mfMiddleMoveVolume;
-		ePhysicsJointSpeed mMoveSpeedType;
+		float &mfMinMoveSpeed = mS.minMoveSpeed;
+		float &mfMinMoveFreq = mS.minMoveFreq;
+		float &mfMinMoveFreqSpeed = mS.minMoveFreqSpeed;
+		float &mfMinMoveVolume = mS.minMoveVolume;
+		float &mfMaxMoveFreq = mS.maxMoveFreq;
+		float &mfMaxMoveFreqSpeed = mS.maxMoveFreqSpeed;
+		float &mfMaxMoveVolume = mS.maxMoveVolume;
+		float &mfMiddleMoveSpeed = mS.middleMoveSpeed;
+		float &mfMiddleMoveVolume = mS.middleMoveVolume;
+		ePhysicsJointSpeed &mMoveSpeedType = reinterpret_cast<ePhysicsJointSpeed&>(mS.moveSpeedType);
 
-		bool mbBreakable;
-		float mfBreakForce;
+		bool &mbBreakable = mS.breakable;
+		float &mfBreakForce = mS.breakForce;
 		tString msBreakSound;
-		bool mbBroken;
+		bool &mbBroken = mS.broken;
 
-		bool mbLimitAutoSleep;
-		float mfLimitAutoSleepDist;
-		int mlLimitAutoSleepNumSteps;
+		bool &mbLimitAutoSleep = mS.limitAutoSleep;
+		float &mfLimitAutoSleepDist = mS.limitAutoSleepDist;
+		int &mlLimitAutoSleepNumSteps = mS.limitAutoSleepNumSteps;
 
-		cSoundEntity *mpSound;
-		int mlSoundID;
-		bool mbHasCollided;
+		cSoundEntity *&mpSound = mS.sound;
+		int &mlSoundID = mS.soundId;
+		bool &mbHasCollided = mS.hasCollided;
 
-		iPhysicsJointCallback *mpCallback;
-		bool mbAutoDeleteCallback;
+		iPhysicsJointCallback *&mpCallback = mS.callback;
+		bool &mbAutoDeleteCallback = mS.autoDeleteCallback;
 
-		int mlLimitStepCount;
+		int &mlLimitStepCount = mS.limitStepCount;
 		uint64_t mRsBook;
+		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
 
-		void *mpUserData;
+		void *&mpUserData = mS.userData;
 
 		static void CheckLimitAutoSleep(iPhysicsJoint *apJoint, const float afMin, const float afMax,
 										const float afDist);

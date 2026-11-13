@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -51,12 +51,52 @@ namespace hpl {
 
 	bool iPhysicsBody::mbHpl3Buoyancy = false;
 
-	iPhysicsBody::iPhysicsBody(const tString &asName,iPhysicsWorld *apWorld,iCollideShape *apShape) 
+	size_t iPhysicsBody::HostOp(int32_t alOp, OhplH15Wa *a)
+	{
+		switch(alOp)
+		{
+		case 301:
+		{
+			iPhysicsBody *pB = reinterpret_cast<iPhysicsBody*>(a->p[0]);
+			pB->mpShape->IncUserCount();
+			pB->mBoundingVolume.SetLocalMinMax(pB->mpShape->GetBoundingVolume().GetMin(), pB->mpShape->GetBoundingVolume().GetMax());
+			pB->mpMaterial = pB->mpWorld->GetMaterialFromName("Default");
+			return 0;
+		}
+		case 302: reinterpret_cast<iPhysicsWorld*>(a->p[1])->DestroyShape(reinterpret_cast<iCollideShape*>(a->p[2])); return 0;
+		case 303: reinterpret_cast<iCharacterBody*>(a->p[0])->DisconnectBody(); return 0;
+		case 304: reinterpret_cast<iVerletParticleContainer*>(a->p[0])->RemoveAttachedBody(reinterpret_cast<iPhysicsBody*>(a->p[1]), false); return 0;
+		case 305: reinterpret_cast<iPhysicsJoint*>(a->p[0])->RemoveBody(reinterpret_cast<iPhysicsBody*>(a->p[1])); return 0;
+		case 306: { iPhysicsJoint *pJ = reinterpret_cast<iPhysicsJoint*>(a->p[0]); return pJ->GetParentBody()==NULL && pJ->GetChildBody()==NULL; }
+		case 307: reinterpret_cast<iPhysicsWorld*>(a->p[0])->DestroyJoint(reinterpret_cast<iPhysicsJoint*>(a->p[1])); return 0;
+		case 308:
+		{
+			iPhysicsBody *pB = reinterpret_cast<iPhysicsBody*>(a->p[0]);
+			cSoundEntity *pEnt = a->p[1] == 0 ? pB->mpScrapeSoundEntity : pB->mpRollSoundEntity;
+			int lId = a->p[1] == 0 ? pB->mlScrapeSoundEntityID : pB->mlRollSoundEntityID;
+			if(pEnt && pB->mpWorld->GetWorld()->SoundEntityExists(pEnt, lId)) pB->mpWorld->GetWorld()->DestroySoundEntity(pEnt);
+			return 0;
+		}
+		case 309: reinterpret_cast<iPhysicsBody*>(a->p[0])->DeleteLowLevel(); return 0;
+		case 310: return reinterpret_cast<iPhysicsBodyCallback*>(a->p[0])->OnAABBCollide(reinterpret_cast<iPhysicsBody*>(a->p[1]), reinterpret_cast<iPhysicsBody*>(a->p[2]));
+		case 311: reinterpret_cast<iPhysicsBodyCallback*>(a->p[0])->OnBodyCollide(reinterpret_cast<iPhysicsBody*>(a->p[1]), reinterpret_cast<iPhysicsBody*>(a->p[2]), reinterpret_cast<cPhysicsContactData*>(a->p[3])); return 0;
+		}
+		return 0;
+	}
+
+	iPhysicsBody::iPhysicsBody(const tString &asName,iPhysicsWorld *apWorld,iCollideShape *apShape)
 		: iEntity3D(asName)
 	{
+		if(OhplBackendRustRequested())
+		{
+			mRsBook = ohpl_h15_body_new();
+			ohpl_h15b_new(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(apWorld), reinterpret_cast<size_t>(apShape));
+			return;
+		}
+
 		mpWorld = apWorld;
 		mpShape = apShape;
-		
+
 		//Increment user count for the shape
 		apShape->IncUserCount();
 
@@ -71,7 +111,7 @@ namespace hpl {
 		mbBlocksSound = false;
 		mbBlocksLight = true;
 		mbUseSurfaceEffects = true;
-	
+
 		mpScrapeBody = NULL;
 		mpScrapeSoundEntity = NULL;
 		mlScrapeSoundEntityID = -1;
@@ -131,6 +171,7 @@ namespace hpl {
 	iPhysicsBody::~iPhysicsBody()
 	{
 		if(mRsBook) ohpl_h15_body_free(mRsBook);
+		if(mS.shell) ohpl_h15b_free(mS.shell);
 	}
 
 	//-----------------------------------------------------------------------
@@ -138,8 +179,10 @@ namespace hpl {
 
 	void iPhysicsBody::Destroy()
 	{
+		if(mS.shell){ ohpl_h15b_destroy(mS.shell, reinterpret_cast<size_t>(this)); return; }
+
 		mbDestroying = true;
-		
+
 		mpWorld->DestroyShape(mpShape);
 
 		///////////////////////////
@@ -157,7 +200,7 @@ namespace hpl {
 		for(; conIt != mlstAttachedVerletContainers.end(); ++conIt)
 		{
 			iVerletParticleContainer *pCont = *conIt;
-			pCont->RemoveAttachedBody(this, false);	
+			pCont->RemoveAttachedBody(this, false);
 		}
 		mlstAttachedVerletContainers.clear();
 
@@ -168,7 +211,7 @@ namespace hpl {
 			iPhysicsJoint *pJoint = mvJoints[i];
 
 			pJoint->RemoveBody(this);
-			
+
 			if(pJoint->GetParentBody()==NULL && pJoint->GetChildBody()==NULL)
 			{
 				mpWorld->DestroyJoint(pJoint);
@@ -192,11 +235,11 @@ namespace hpl {
 
 		////////////////////////
 		// Remove sounds
-		if(mpScrapeSoundEntity && mpWorld->GetWorld()->SoundEntityExists(mpScrapeSoundEntity, mlScrapeSoundEntityID)) 
+		if(mpScrapeSoundEntity && mpWorld->GetWorld()->SoundEntityExists(mpScrapeSoundEntity, mlScrapeSoundEntityID))
 		{
 			mpWorld->GetWorld()->DestroySoundEntity(mpScrapeSoundEntity);
 		}
-		if(mpRollSoundEntity  && mpWorld->GetWorld()->SoundEntityExists(mpRollSoundEntity,mlRollSoundEntityID)) 
+		if(mpRollSoundEntity  && mpWorld->GetWorld()->SoundEntityExists(mpRollSoundEntity,mlRollSoundEntityID))
 		{
 			mpWorld->GetWorld()->DestroySoundEntity(mpRollSoundEntity);
 		}
@@ -234,21 +277,25 @@ namespace hpl {
 
 	void iPhysicsBody::AddJoint(iPhysicsJoint *apJoint)
 	{
+		if(mS.shell){ ohpl_h15b_add_joint(mS.shell, reinterpret_cast<size_t>(apJoint)); return; }
 		mvJoints.push_back(apJoint);
 	}
 
 	iPhysicsJoint* iPhysicsBody::GetJoint(int alIndex)
 	{
+		if(mS.shell) return reinterpret_cast<iPhysicsJoint*>(ohpl_h15b_joint_at(mS.shell, alIndex));
 		return mvJoints[alIndex];
 	}
 
 	int iPhysicsBody::GetJointNum()
 	{
+		if(mS.shell) return ohpl_h15b_joint_num(mS.shell);
 		return (int)mvJoints.size();
 	}
 
 	void iPhysicsBody::RemoveJoint(iPhysicsJoint *apJoint)
 	{
+		if(mS.shell){ ohpl_h15b_remove_joint(mS.shell, reinterpret_cast<size_t>(apJoint)); return; }
 		std::vector<iPhysicsJoint*>::iterator it = mvJoints.begin();
 		for(; it != mvJoints.end(); ++it)
 		{
@@ -258,7 +305,7 @@ namespace hpl {
 			}
 		}
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	bool iPhysicsBody::UpdateBeforeSimulate(float afTimeStep)
@@ -267,7 +314,7 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	void iPhysicsBody::UpdateAfterSimulate(float afTimeStep)
 	{
 		ohpl_phys_body_update_after(OhplPhysHost(), reinterpret_cast<size_t>(this), afTimeStep, mRsBook);
@@ -289,11 +336,13 @@ namespace hpl {
 
 	void iPhysicsBody::AddBodyCallback(iPhysicsBodyCallback *apCallback)
 	{
+		if(mS.shell){ ohpl_h15b_add_callback(mS.shell, reinterpret_cast<size_t>(apCallback)); return; }
 		mlstBodyCallbacks.push_back(apCallback);
 	}
-	
+
 	void iPhysicsBody::RemoveBodyCallback(iPhysicsBodyCallback *apCallback)
 	{
+		if(mS.shell){ ohpl_h15b_remove_callback(mS.shell, reinterpret_cast<size_t>(apCallback)); return; }
 		tPhysicsBodyCallbackListIt it = mlstBodyCallbacks.begin();
 		for(; it != mlstBodyCallbacks.end(); ++it)
 		{
@@ -329,9 +378,11 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	bool iPhysicsBody::OnAABBCollision(iPhysicsBody *apBody)
 	{
+		if(mS.shell) return ohpl_h15b_on_aabb(mS.shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apBody));
+
 		if(mlstBodyCallbacks.empty()) return true;
 
 		bool bReturn = true;
@@ -346,13 +397,15 @@ namespace hpl {
 
 		return bReturn;
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void iPhysicsBody::OnCollide(iPhysicsBody *apBody, cPhysicsContactData* apContactData)
 	{
 		if(mRsBook) ohpl_h15_body_flag_set(mRsBook, OhplH15_HasCollision, true);
 		else mbHasCollision = true;
+
+		if(mS.shell){ ohpl_h15b_on_collide(mS.shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apContactData)); return; }
 
 		if(mlstBodyCallbacks.empty()) return;
 
@@ -371,42 +424,46 @@ namespace hpl {
 	{
 		return mpMaterial;
 	}
-	
+
 	//-----------------------------------------------------------------------
-	
+
 	iCollideShape* iPhysicsBody::GetShape()
 	{
 		return mpShape;
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	void iPhysicsBody::AddConnectedCharacter(iCharacterBody *apCharBody)
 	{
+		if(mS.shell){ ohpl_h15b_add_char(mS.shell, reinterpret_cast<size_t>(apCharBody)); return; }
 		if(mbDestroying) return;
-		
+
 		mlstConnectedCharBodies.push_back(apCharBody);
 	}
-	
+
 	void iPhysicsBody::RemoveConnectedCharacter(iCharacterBody *apCharBody)
 	{
+		if(mS.shell){ ohpl_h15b_remove_char(mS.shell, reinterpret_cast<size_t>(apCharBody)); return; }
 		if(mbDestroying) return;
 
 		STLFindAndRemove(mlstConnectedCharBodies,apCharBody);
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	void iPhysicsBody::AddAttachedVerletContainer(iVerletParticleContainer *apContainer)
 	{
+		if(mS.shell){ ohpl_h15b_add_verlet(mS.shell, reinterpret_cast<size_t>(apContainer)); return; }
 		mlstAttachedVerletContainers.push_back(apContainer);
 	}
 
 	//-----------------------------------------------------------------------
 
-	
+
 	void iPhysicsBody::RemoveAttachedVerletContainer(iVerletParticleContainer *apContainer)
 	{
+		if(mS.shell){ ohpl_h15b_remove_verlet(mS.shell, reinterpret_cast<size_t>(apContainer)); return; }
 		tVerletParticleContainerListIt it = mlstAttachedVerletContainers.begin();
 		for(; it != mlstAttachedVerletContainers.end(); )
 		{

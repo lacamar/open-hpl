@@ -367,6 +367,14 @@ struct CountCb : iPhysicsWorldCollisionCallback
 	void OnCollision(iPhysicsBody* b, cCollideData* d) { ++n; gD.Float(b->GetMass()); gD.Int(d->mlNumOfPoints); }
 };
 
+struct BodyCb : iPhysicsBodyCallback
+{
+	int aabb = 0, coll = 0;
+	bool veto = false;
+	bool OnAABBCollide(iPhysicsBody*, iPhysicsBody* o) { ++aabb; gD.Float(o->GetMass()); return !veto; }
+	void OnBodyCollide(iPhysicsBody*, iPhysicsBody* o, cPhysicsContactData*) { ++coll; gD.Float(o->GetMass()); }
+};
+
 // World object lists: lookups, iteration order, destroy order, joint breakage, shape-world queries, DestroyAll.
 void SceneWorldLists()
 {
@@ -406,6 +414,20 @@ void SceneWorldLists()
 	w.CreateMaterial("Zeta");
 	w.CreateMaterial("Alpha");
 	iCollideShape* spare = w.CreateBoxShape(cVector3f(1, 1, 1), NULL);
+	BodyCb cbA, cbB;
+	for (int i = 1; i < 5; ++i) { bodies[i]->AddBodyCallback(&cbA); bodies[i]->AddBodyCallback(&cbB); }
+	cbB.veto = true;
+	iPhysicsController* jc0 = w.CreateController("jc_a");
+	iPhysicsController* jc1 = w.CreateController("jc_b");
+	jc0->SetType(ePhysicsControllerType_Pid); jc1->SetType(ePhysicsControllerType_Pid);
+	ball->AddController(jc1);
+	ball->AddController(jc0);
+	gD.Int(ball->ChangeController("jc_a") ? 1 : 0); gD.Int(ball->ChangeController("nope") ? 1 : 0);
+	gD.Int(ball->GetController("jc_b") == jc1 ? 1 : 0);
+	for (cPhysicsControllerIterator it = ball->GetControllerIterator(); it.HasNext();) gD.Int(it.Next()->IsActive() ? 1 : 0);
+	ball->SetAllControllersPaused(true);
+	r1->SetAttachedEndBody(bodies[4]);
+	hero->ConnectToBody(bodies[4], cVector3f(4, 1, 4), 0);
 
 	std::map<size_t, int> ids;
 	for (size_t i = 0; i < bodies.size(); ++i) ids[(size_t)bodies[i]] = (int)i;
@@ -416,8 +438,10 @@ void SceneWorldLists()
 	for (int step = 0; step < 600; ++step)
 	{
 		hero->Move(eCharDir_Forward, 1.0f);
-		if (step == 100) { w.DestroyBody(bodies[2]); bodies[2] = NULL; }
+		if (step == 100) { w.DestroyBody(bodies[1]); bodies[1] = NULL; }
 		if (step == 150) w.DestroyController(c0);
+		if (step == 200) { bodies[2]->RemoveBodyCallback(&cbB); bodies[3]->RemoveBodyCallback(&cbA); }
+		if (step == 400) { w.DestroyBody(bodies[4]); bodies[4] = NULL; }
 		if (step == 250) w.DestroyRope(r0);
 		if (step == 300)
 		{
@@ -443,7 +467,7 @@ void SceneWorldLists()
 				CountCb cb;
 				cVector3f push(7, 7, 7);
 				cMatrixf at = cMath::MatrixTranslate(cVector3f(-1.5f + q * 1.5f, 1.0f + 0.2f * q, 0.3f));
-				bool hit = w.CheckShapeWorldCollision(q == 3 ? NULL : &push, spare, at, q == 1 ? bodies[1] : NULL, q == 2, q == 0, q == 0 ? &cb : NULL, q != 1, q, eFlagBit_All, false);
+				bool hit = w.CheckShapeWorldCollision(q == 3 ? NULL : &push, spare, at, q == 1 ? bodies[3] : NULL, q == 2, q == 0, q == 0 ? &cb : NULL, q != 1, q, eFlagBit_All, false);
 				gD.Int(hit ? 1 : 0); gD.Vec(push); gD.Int(cb.n);
 			}
 			gD.Int(hero->IsOnGround() ? 1 : 0); gD.Vec(hero->GetPosition());
@@ -451,6 +475,9 @@ void SceneWorldLists()
 	}
 	w.DestroyJoint(slider);
 	gD.Int(w.JointExists(slider) ? 1 : 0);
+	gD.Int(cbA.aabb); gD.Int(cbA.coll); gD.Int(cbB.aabb); gD.Int(cbB.coll);
+	if (gD.f) std::fprintf(gD.f, "  callbacks %d %d %d %d\n", cbA.aabb, cbA.coll, cbB.aabb, cbB.coll);
+	gD.Int(bodies[6]->GetJointNum());
 	w.DestroyCharacterBody(hero);
 	gD.Int(id(w.GetCharacterBody("Hero")));
 	w.DestroyShape(spare);
