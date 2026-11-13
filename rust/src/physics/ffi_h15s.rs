@@ -183,3 +183,24 @@ pub unsafe extern "C" fn ohpl_h15j_check_breakage(j: u64, me: usize) -> bool {
     // SAFETY: caller contract.
     unsafe { shell::joint_check_breakage(j, me) }
 }
+
+/// Controller construction: zeroes the embedded state, sets `self`, and creates its PID (error window 10).
+///
+/// # Safety
+/// `state` is writable, `size_of::<CtrlParams>()` bytes, embedded in the controller `me`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h15c_init(
+    state: *mut super::controller::CtrlParams,
+    me: usize,
+) -> *mut super::pid::Pid {
+    // SAFETY: caller contract.
+    if let Some(s) = unsafe { state.as_mut() } {
+        *s = super::controller::CtrlParams::new(me);
+    }
+    let pid = Box::into_raw(Box::new(super::pid::Pid::new()));
+    // SAFETY: `pid` was just allocated.
+    if let Some(p) = unsafe { pid.as_mut() } {
+        p.set_error_num(10);
+    }
+    pid
+}

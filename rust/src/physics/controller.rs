@@ -40,6 +40,33 @@ pub struct CtrlParams {
     pub next: Str,
 }
 
+impl CtrlParams {
+    /// A fresh controller: inactive, no body or joint, all enums and gains zero.
+    pub fn new(this: H) -> Self {
+        Self {
+            this,
+            body: 0,
+            joint: 0,
+            active: false,
+            paused: false,
+            log: false,
+            mul_mass: false,
+            kind: 0,
+            input: 0,
+            input_axis: 0,
+            output: 0,
+            output_axis: 0,
+            end: 0,
+            a: 0.0,
+            b: 0.0,
+            c: 0.0,
+            dest: 0.0,
+            max_output: 0.0,
+            next: Str::default(),
+        }
+    }
+}
+
 fn axis(a: i32, v: Vector3f) -> f32 {
     match a {
         0 => v.x,
