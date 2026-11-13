@@ -1,4 +1,6 @@
 #include "SomaAgent.h"
+#include "RustSomaAgentS4.h"
+#include "impl/RustBackends.h"
 #include "SomaBase.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
@@ -1580,6 +1582,18 @@ std::string SomaAgentSavePath(cSomaLuxEntity *apEnt)
 	std::string s;
 	if (pPF == NULL)
 		return s;
+	if (OhplBackendRustRequested())
+	{
+		OhplS4PathPod pp = {pPF->mbMoving, pPF->mbExact, pPF->mbCallbackInMap, pPF->mbTrackActive, pPF->mbTrackPaused, pPF->mbTrackLoop, pPF->mbAtTrackNode,
+							{pPF->mvGoal[0], pPF->mvGoal[1], pPF->mvGoal[2]}, pPF->mlTrackIdx, pPF->mfTrackWait, pPF->mfTrackFreq};
+		auto S = [](const tString &x) { return OhplS4Str{(const unsigned char *)x.data(), x.size()}; };
+		std::vector<OhplS4Track> vTracks;
+		for (const cAgentTrackNode &n : pPF->mvTrack)
+			vTracks.push_back(OhplS4Track{S(n.msNode), n.mfMinWait, n.mfMaxWait, S(n.msAnim), n.mbLoopAnim});
+		ohpl_s4_path_save(&pp, S(pPF->msResultCallback), S(pPF->msEndOfPathCallback), S(pPF->msTrackCallback), vTracks.data(), vTracks.size(), &s,
+						  +[](void *c, const unsigned char *p, size_t n) { ((std::string *)c)->assign((const char *)p, n); });
+		return s;
+	}
 	auto pod = [&](const auto &x) { s.append((const char *)&x, sizeof(x)); };
 	auto str = [&](const tString &x) { pod((uint32_t)x.size()); s += x; };
 	pod(pPF->mbMoving), pod(pPF->mvGoal), pod(pPF->mbExact), str(pPF->msResultCallback), pod(pPF->mbCallbackInMap), str(pPF->msEndOfPathCallback);
@@ -1597,6 +1611,34 @@ void SomaAgentLoadPath(cSomaLuxEntity *apEnt, const std::string &asData)
 	cAgentPathfinder *pPF = pAgent ? pAgent->Find<cAgentPathfinder>(eComp_Pathfinder) : NULL;
 	if (pPF == NULL || asData.empty())
 		return;
+	if (OhplBackendRustRequested())
+	{
+		struct cCtx
+		{
+			cAgentPathfinder *mpPF;
+			tString msResult;
+		} ctx{pPF, ""};
+		OhplS4PathPod pp = {false, false, false, pPF->mbTrackActive, pPF->mbTrackPaused, pPF->mbTrackLoop, pPF->mbAtTrackNode, {0, 0, 0}, pPF->mlTrackIdx, pPF->mfTrackWait, pPF->mfTrackFreq};
+		pPF->mvTrack.clear();
+		ohpl_s4_path_load((const unsigned char *)asData.data(), asData.size(), &pp, &ctx,
+						  +[](void *c, uint32_t k, const unsigned char *p, size_t n) {
+							  cCtx *x = (cCtx *)c;
+							  tString &t = k == 0 ? x->msResult : k == 1 ? x->mpPF->msEndOfPathCallback : x->mpPF->msTrackCallback;
+							  t.assign((const char *)p, n);
+						  },
+						  +[](void *c, const OhplS4Track *t) {
+							  ((cCtx *)c)->mpPF->mvTrack.push_back(cAgentTrackNode{tString((const char *)t->node.ptr, t->node.len), t->min_wait, t->max_wait,
+																				   tString((const char *)t->anim.ptr, t->anim.len), t->loop_anim});
+						  });
+		pPF->mlTrackIdx = pp.track_idx;
+		pPF->mbTrackActive = pp.track_active, pPF->mbTrackPaused = pp.track_paused, pPF->mbTrackLoop = pp.track_loop, pPF->mbAtTrackNode = pp.at_node;
+		pPF->mfTrackWait = pp.track_wait, pPF->mfTrackFreq = pp.track_freq;
+		if (pp.moving)
+			pPF->MoveTo(cVector3f(pp.goal[0], pp.goal[1], pp.goal[2]), pp.exact, ctx.msResult, pp.in_map);
+		else
+			pPF->Stop();
+		return;
+	}
 	size_t p = 0;
 	auto pod = [&](auto &x) {
 		if (p + sizeof(x) <= asData.size())
@@ -1668,6 +1710,14 @@ tString SomaNavPath(const cVector3f &avFrom, const cVector3f &avTo)
 		if (pMap == NULL || it.first.first != pMap->GetWorld() || it.second.mpAStar->GetPath(avFrom, avTo, &lst) == false)
 			continue;
 		tString s;
+		if (OhplBackendRustRequested())
+		{
+			std::vector<float> vNodes;
+			for (cAINode *n : lst)
+				vNodes.insert(vNodes.end(), {n->GetPosition().x, n->GetPosition().y, n->GetPosition().z});
+			ohpl_s4_nav_path_text(vNodes.data(), lst.size(), &s, +[](void *c, const unsigned char *p, size_t n) { ((tString *)c)->assign((const char *)p, n); });
+			return s;
+		}
 		for (auto n = lst.rbegin(); n != lst.rend(); ++n)
 			s += cString::ToString((*n)->GetPosition().x) + " " + cString::ToString((*n)->GetPosition().y) + " " + cString::ToString((*n)->GetPosition().z) + "\n";
 		return s;
@@ -1681,6 +1731,41 @@ tString SomaAgentDebug(cSomaLuxEntity *apEnt)
 	if (pAgent == NULL)
 		return "";
 	tString s;
+	if (OhplBackendRustRequested())
+	{
+		OhplS4DebugIn d = {};
+		auto S = [](const tString &x) { return OhplS4Str{(const unsigned char *)x.data(), x.size()}; };
+		tString sCur, sPrev, sNext, sAnim;
+		if (cAgentStateMachine *pSM = pAgent->Find<cAgentStateMachine>(eComp_StateMachine))
+		{
+			sCur = pSM->Name(pSM->mlCur), sPrev = pSM->Name(pSM->mlPrev), sNext = pSM->Name(pSM->mlNext);
+			d.has_sm = true;
+			d.sm_cur = S(sCur), d.sm_prev = S(sPrev), d.sm_next = S(sNext);
+			d.sm_timers = pSM->TimerCount(false);
+		}
+		if (cAgentPathfinder *pPF = pAgent->Find<cAgentPathfinder>(eComp_Pathfinder))
+		{
+			d.has_pf = true;
+			d.pf_moving = pPF->mbMoving, d.pf_track_active = pPF->mbTrackActive, d.pf_paused = pPF->mbTrackPaused, d.pf_at_node = pPF->mbAtTrackNode;
+			d.pf_path_idx = (int)pPF->mlPathIdx, d.pf_path_len = (int)pPF->mvPath.size();
+			d.pf_goal[0] = pPF->mvGoal[0], d.pf_goal[1] = pPF->mvGoal[1], d.pf_goal[2] = pPF->mvGoal[2];
+			d.pf_track_idx = pPF->mlTrackIdx, d.pf_track_len = (int)pPF->mvTrack.size(), d.pf_wait = pPF->mfTrackWait;
+		}
+		if (cAgentCharMover *pM = pAgent->Find<cAgentCharMover>(eComp_CharMover))
+		{
+			d.has_cm = true;
+			d.cm_moving = pM->mbMoving, d.cm_turning = pM->mbTurning, d.cm_wall = pM->mbWallAvoid, d.cm_object_avoid = pM->mbObjectAvoid;
+			d.cm_goal[0] = pM->mvGoal[0], d.cm_goal[1] = pM->mvGoal[1], d.cm_goal[2] = pM->mvGoal[2];
+			d.cm_speed_state = pM->mlSpeedState, d.cm_fwd = pM->ForwardSpeed(), d.cm_stuck = pM->mfStuck;
+			sAnim = apEnt->mpMesh && apEnt->mlCurrentAnim >= 0 ? apEnt->mpMesh->GetAnimationState(apEnt->mlCurrentAnim)->GetName() : tString("");
+			d.cm_anim = S(sAnim);
+			d.cm_idle_extra_count = pM->mlIdleExtraCount, d.cm_idle_extra_wait = pM->mfIdleExtraWait;
+			d.cm_wall_hits = (int)std::count_if(pM->mvWallSamples.begin(), pM->mvWallSamples.end(), [](auto &w) { return w.mbHit; });
+			d.cm_roll = pM->mfRoll;
+		}
+		ohpl_s4_debug_text(&d, &s, +[](void *c, const unsigned char *p, size_t n) { ((tString *)c)->assign((const char *)p, n); });
+		return s;
+	}
 	if (cAgentStateMachine *pSM = pAgent->Find<cAgentStateMachine>(eComp_StateMachine))
 		s += "state=" + pSM->Name(pSM->mlCur) + " prev=" + pSM->Name(pSM->mlPrev) + " next=" + pSM->Name(pSM->mlNext) + " timers=" + cString::ToString(pSM->TimerCount(false));
 	if (cAgentPathfinder *pPF = pAgent->Find<cAgentPathfinder>(eComp_Pathfinder))
