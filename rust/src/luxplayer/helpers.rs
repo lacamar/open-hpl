@@ -232,6 +232,19 @@ pub struct Hurt {
 
 /// `Hurt::Update` after the health regain; `speed` is the body velocity length.
 pub fn hurt_update(s: &mut Hurt, health: f32, dead: bool, speed: f32, dt: f32, o: &mut Ops) {
+    hurt_update_with(s, health, dead, speed, dt, o, &mut rand_rectl);
+}
+
+/// `hurt_update` with the noise-frame random draw supplied by the caller.
+pub fn hurt_update_with(
+    s: &mut Hurt,
+    health: f32,
+    dead: bool,
+    speed: f32,
+    dt: f32,
+    o: &mut Ops,
+    rnd: &mut dyn FnMut(i32, i32) -> i32,
+) {
     if s.alpha <= 0.0 && health > s.effect_start_health {
         return;
     }
@@ -257,7 +270,7 @@ pub fn hurt_update(s: &mut Hurt, health: f32, dead: bool, speed: f32, dt: f32, o
     s.noise_update_count -= dt;
     if s.noise_update_count <= 0.0 {
         let max = s.noise_count - 1;
-        s.current_noise = s.current_noise.wrapping_add(rand_rectl(1, max));
+        s.current_noise = s.current_noise.wrapping_add(rnd(1, max));
         if s.current_noise > max {
             s.current_noise = s.current_noise.wrapping_sub(max.wrapping_add(1));
         }

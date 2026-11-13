@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxPlayerA2.h"
 
 //----------------------------------------------
 
@@ -297,6 +298,10 @@ public:
 
 	
 private:
+	OhplA2Core mCore;
+	static void A2HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD);
+	static float A2HostQuery(void *apCtx, uint32_t alKind);
+	void UpdateTerrorSound();
 	void RunVitals(int alWhich, float afAmount, int alType, unsigned int alFlags);
 	bool CanDrawCrossHair();
 	void DrawHud(float afFrameTime);
@@ -329,10 +334,10 @@ private:
 	eLuxPlayerState mState;
 	eLuxMoveState mMoveState;
 
-	float mfHealth;
-	float mfSanity;
-	float mfLampOil;
-	float mfTerror;
+	float &mfHealth = mCore.mfHealth;
+	float &mfSanity = mCore.mfSanity;
+	float &mfLampOil = mCore.mfLampOil;
+	float &mfTerror = mCore.mfTerror;
 	int mlCoins;
 	int mlTinderboxes;
 
@@ -364,7 +369,7 @@ private:
 
 	float mfScriptJumpForceMul;
 
-	cVector2f mvHeadSpinSpeed;
+	cVector2f &mvHeadSpinSpeed = mCore.mvHeadSpinSpeed;
 
 	cVector3f mvHeadPosAddSum;
 	
@@ -377,36 +382,36 @@ private:
 	cSoundEntry *mpTerrorSound;
 	int mlTerrorSoundID;
 
-	float mfAspectMul;
-	float mfFOVMul;
-	float mfAspectMulGoal;
-	float mfFOVMulGoal;
-	float mfAspectMulSpeed;
-	float mfFOVMulSpeed;
+	float &mfAspectMul = mCore.cam.mfAspectMul;
+	float &mfFOVMul = mCore.cam.mfFOVMul;
+	float &mfAspectMulGoal = mCore.cam.mfAspectMulGoal;
+	float &mfFOVMulGoal = mCore.cam.mfFOVMulGoal;
+	float &mfAspectMulSpeed = mCore.cam.mfAspectMulSpeed;
+	float &mfFOVMulSpeed = mCore.cam.mfFOVMulSpeed;
 	
-	float mfRoll;
-	float mfRollGoal;
-	float mfRollSpeedMul;
-	float mfRollMaxSpeed;
+	float &mfRoll = mCore.cam.mfRoll;
+	float &mfRollGoal = mCore.cam.mfRollGoal;
+	float &mfRollSpeedMul = mCore.cam.mfRollSpeedMul;
+	float &mfRollMaxSpeed = mCore.cam.mfRollMaxSpeed;
 
-	bool mbFadingPitch;
-	float mfPitchGoal;
-	float mfPitchSpeedMul;
-	float mfPitchMaxSpeed;
+	uint32_t &mbFadingPitch = mCore.cam.mbFadingPitch;
+	float &mfPitchGoal = mCore.cam.mfPitchGoal;
+	float &mfPitchSpeedMul = mCore.cam.mfPitchSpeedMul;
+	float &mfPitchMaxSpeed = mCore.cam.mfPitchMaxSpeed;
 
-	float mfLeanRoll;
-	float mfLeanRollGoal;
-	float mfLeanRollSpeedMul;
-	float mfLeanRollMaxSpeed;
+	float &mfLeanRoll = mCore.cam.mfLeanRoll;
+	float &mfLeanRollGoal = mCore.cam.mfLeanRollGoal;
+	float &mfLeanRollSpeedMul = mCore.cam.mfLeanRollSpeedMul;
+	float &mfLeanRollMaxSpeed = mCore.cam.mfLeanRollMaxSpeed;
 
-	cVector3f mvCamAnimPos;
-	cVector3f mvCamAnimPosGoal;
-	float mfCamAnimPosSpeedMul;
-	float mfCamAnimPosMaxSpeed;
+	cVector3f &mvCamAnimPos = mCore.cam.mvCamAnimPos;
+	cVector3f &mvCamAnimPosGoal = mCore.cam.mvCamAnimPosGoal;
+	float &mfCamAnimPosSpeedMul = mCore.cam.mfCamAnimPosSpeedMul;
+	float &mfCamAnimPosMaxSpeed = mCore.cam.mfCamAnimPosMaxSpeed;
 	
 	tWString msFocusText;
 	tWString msLastFocusText;
-	float mfFocusTextAlpha;
+	float &mfFocusTextAlpha = mCore.mfFocusTextAlpha;
 
 	bool mbShowCrossHair;
 	bool mbScriptShowFocusIconAndCrossHair;
@@ -423,16 +428,16 @@ private:
 	cVector3f mvBodyCrouchSize;
 	cVector3f mvCameraPosAdd;
 
-	float mfHeadSpinDamageSpeed;
-	float mfHeadSpinDeacc;
+	float &mfHeadSpinDamageSpeed = mCore.mfHeadSpinDamageSpeed;
+	float &mfHeadSpinDeacc = mCore.mfHeadSpinDeacc;
 
 	float mfDefaultMass;
 
-	float mfAspect;
-	float mfFOV;
+	float &mfAspect = mCore.cam.mfAspect;
+	float &mfFOV = mCore.cam.mfFOV;
 
-	float mfTerrorIncSpeed;
-	float mfTerrorDecSpeed;
+	float &mfTerrorIncSpeed = mCore.mfTerrorIncSpeed;
+	float &mfTerrorDecSpeed = mCore.mfTerrorDecSpeed;
 
 	float mfAutoKillYPos;
 

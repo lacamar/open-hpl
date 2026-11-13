@@ -48,6 +48,7 @@
 
 #include "LuxAreaNodes.h"
 #include "RustLuxPlayer.h"
+#include "impl/RustBackends.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -867,6 +868,12 @@ void cLuxPlayer::AddLampOil(float afX)
 
 void cLuxPlayer::RunVitals(int alWhich, float afAmount, int alType, unsigned int alFlags)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2Host h = {this, A2HostOp, A2HostQuery};
+		ohpl_a2_vitals(&mCore, &h, alWhich, afAmount, alType, alFlags);
+		return;
+	}
 	OhplGa2Vitals v = {mfHealth, mfSanity, mfLampOil, gpBase->mbHardMode ? 1u : 0u};
 	OhplGa2Ops ops;
 	ohpl_ga2_vitals(alWhich, &v, afAmount, alType, alFlags, &ops);
@@ -1180,6 +1187,12 @@ void cLuxPlayer::UpdateHeadPosAdd(float afTimeStep)
 
 void cLuxPlayer::UpdateCamera(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2Host h = {this, A2HostOp, A2HostQuery};
+		ohpl_a2_update_camera(&mCore, &h, afTimeStep);
+		return;
+	}
 	OhplGa2CamState s;
 	s.mfFOV = mfFOV;
 	s.mfAspect = mfAspect;
@@ -1234,7 +1247,18 @@ void cLuxPlayer::UpdateCamera(float afTimeStep)
 
 void cLuxPlayer::UpdateTerror(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2Host h = {this, A2HostOp, A2HostQuery};
+		ohpl_a2_update_terror(&mCore, &h, afTimeStep);
+		return;
+	}
 	mfTerror = ohpl_ga2_terror_step(mfTerror, !(m_setTerrorEnemies.empty() || IsDead()), mfTerrorIncSpeed, mfTerrorDecSpeed, afTimeStep);
+	UpdateTerrorSound();
+}
+
+void cLuxPlayer::UpdateTerrorSound()
+{
 	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
 	if(mfTerror > 0)
 	{
@@ -1262,8 +1286,58 @@ void cLuxPlayer::UpdateTerror(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
+void cLuxPlayer::A2HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
+{
+	cLuxPlayer *p = (cLuxPlayer*)apCtx;
+	switch(alKind)
+	{
+	case kOhplGa2DamageSplash: p->mpHudEffect->AddDamageSplash((eLuxDamageType)alI); break;
+	case kOhplGa2HitFlash: p->mpHudEffect->Flash(cColor(0.6f,0,0, 0.5f),eGuiMaterial_Alpha,0,0.25f); break;
+	case kOhplGa2DeathStart: p->mpDeath->Start(); break;
+	case kOhplGa2CollapseStart: p->mpInsanityCollapse->Start(); break;
+	case kOhplGa2SanityLost: p->mpSanity->SetSanityLost(); break;
+	case kOhplGa2SanityGainFlash: gpBase->mpEffectHandler->GetSanityGainFlash()->Start(); break;
+	case kOhplGa2SetFov: p->mpCamera->SetFOV(afA); break;
+	case kOhplGa2SetAspect: p->mpCamera->SetAspect(afA); break;
+	case kOhplGa2SetPitch: p->mpCamera->SetPitch(afA); break;
+	case kOhplGa2SetRoll: p->mpCamera->SetRoll(afA); break;
+	case kOhplA2HeadSpinCam:
+		p->mpCamera->AddPitch(afA);
+		p->mpCamera->AddYaw(afB);
+		p->mpCharBody->SetYaw(p->mpCamera->GetYaw());
+		break;
+	case kOhplA2TerrorSound: p->UpdateTerrorSound(); break;
+	}
+}
+
+float cLuxPlayer::A2HostQuery(void *apCtx, uint32_t alKind)
+{
+	cLuxPlayer *p = (cLuxPlayer*)apCtx;
+	switch(alKind)
+	{
+	case kOhplA2QCamPitch: return p->mpCamera->GetPitch();
+	case kOhplA2QPitchMin: return p->mpCamera->GetPitchMinLimit();
+	case kOhplA2QPitchMax: return p->mpCamera->GetPitchMaxLimit();
+	case kOhplA2QFreeCam: return p->mbFreeCameraActive ? 1.0f : 0.0f;
+	case kOhplA2QHardMode: return gpBase->mbHardMode ? 1.0f : 0.0f;
+	case kOhplA2QTerrorEnemies: return !(p->m_setTerrorEnemies.empty() || p->IsDead()) ? 1.0f : 0.0f;
+	case kOhplA2QFocusHide: return (gpBase->mpMessageHandler->IsPauseMessageActive() || p->msFocusText == _W("")) ? 1.0f : 0.0f;
+	case kOhplA2QRandYaw: return cMath::RandRectf(-1,1);
+	case kOhplA2QRandPitch: return cMath::RandRectf(0,0.5f);
+	}
+	return 0;
+}
+
+//-----------------------------------------------------------------------
+
 void cLuxPlayer::SpinHead(float afSpeed)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2Host h = {this, A2HostOp, A2HostQuery};
+		ohpl_a2_spin_head(&mCore, &h, afSpeed);
+		return;
+	}
 	float fYawRand = cMath::RandRectf(-1,1);
 	float fPitchRand = cMath::RandRectf(0,0.5f);
 	ohpl_ga2_spin_head(fYawRand, fPitchRand, afSpeed, &mvHeadSpinSpeed);
@@ -1273,6 +1347,12 @@ void cLuxPlayer::SpinHead(float afSpeed)
 
 void cLuxPlayer::UpdateHeadSpin(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2Host h = {this, A2HostOp, A2HostQuery};
+		ohpl_a2_update_head_spin(&mCore, &h, afTimeStep);
+		return;
+	}
 	cVector2f vAdd;
 	if(ohpl_ga2_update_head_spin(&mvHeadSpinSpeed, mfHeadSpinDeacc, afTimeStep, &vAdd) == false) return;
 	mpCamera->AddPitch(vAdd.x);
@@ -1284,6 +1364,12 @@ void cLuxPlayer::UpdateHeadSpin(float afTimeStep)
 
 void cLuxPlayer::UpdateFocusText(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2Host h = {this, A2HostOp, A2HostQuery};
+		ohpl_a2_update_focus_alpha(&mCore, &h, afTimeStep);
+		return;
+	}
 	mfFocusTextAlpha = ohpl_ga2_focus_alpha(mfFocusTextAlpha, gpBase->mpMessageHandler->IsPauseMessageActive() || msFocusText == _W(""), afTimeStep);
 }
 

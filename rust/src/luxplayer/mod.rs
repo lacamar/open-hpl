@@ -8,6 +8,12 @@
 //! (`states_*`, `move_normal`): POD in, POD out, with the body, joint, sound and script calls and the
 //! state changes left in C++.
 
+mod a2_core;
+#[cfg(test)]
+mod a2_tests;
+mod a2b_helpers;
+#[cfg(test)]
+mod a2b_tests;
 mod camera;
 mod ffi;
 mod hands;
