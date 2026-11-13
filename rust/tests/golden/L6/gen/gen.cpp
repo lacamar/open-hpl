@@ -1,5 +1,4 @@
-// L6 harness. Links the engine (libHPL2.a); OHPL_IMPL=cpp|rust picks the loader path, so the same
-// binary records the golden vectors (cpp) and checks the Rust path (rust).
+// L6 harness. Links the engine (libHPL2.a); loads through the Rust loaders and prints the full output.
 //   gen <msh|dae|fbx|anm|daeanim|fbxanim> <file>...
 // prints "<file> <all> <vtx> <idx> <bone> <anim> <names> <xf> <log>" (FNV-1a 64) or "<file> FAIL <log>".
 // Materials are not loaded (CreateMaterial is replaced); their names are hashed.

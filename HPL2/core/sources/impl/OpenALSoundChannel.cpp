@@ -37,42 +37,20 @@ namespace hpl {
 		mlChannel = alChannel;
 		mpRust = NULL;
 
-		if(OhplBackendRustRequested())
-		{
-			OhplL5InstallLog();
-			for(int i=0;i<3;i++)
-			{
-				mfPosition[i] = 0;
-				mfVelocity[i] = 0;
-			}
-			mpRust = ohpl_l5_chan_new(mlChannel);
-			return;
-		}
-
-        for(int i=0;i<3;i++)
+		OhplL5InstallLog();
+		for(int i=0;i<3;i++)
 		{
 			mfPosition[i] = 0;
 			mfVelocity[i] = 0;
 		}
-
-		OAL_Source_SetAttributes ( mlChannel, mfPosition, mfVelocity );
-		OAL_Source_SetFilterType(mlChannel, eOALFilterType_BandPass);
-		OAL_Source_SetSpatialize(mlChannel, false);
-//		SetAffectedByEnv(true);
-//		SetFilterGainHF(0.01f);
-		
-//		SetFiltering(true,0x3);
-//		OAL_Source_SetMinMaxDistance ( mlChannel, 100000.0f, 200000.f );
+		mpRust = ohpl_l5_chan_new(mlChannel);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	cOpenALSoundChannel::~cOpenALSoundChannel()
 	{
-		if(mpRust)
-			ohpl_l5_chan_free(mpRust);
-		else if(mlChannel>=0)
-			OAL_Source_Stop ( mlChannel );
+		ohpl_l5_chan_free(mpRust);
 
 		DestroyData();
 	}
@@ -99,8 +77,7 @@ namespace hpl {
 	void cOpenALSoundChannel::Stop()
 	{
 		//Log("Stopping %s - Source %d Ref %d\n",mpData->GetName().c_str(), mlChannel & 0xFFF, (mlChannel & 0x7ffff000) >> 12);
-		if(mpRust) ohpl_l5_chan_stop(mpRust);
-		else OAL_Source_Stop ( mlChannel );
+		ohpl_l5_chan_stop(mpRust);
 		mlChannel = -1;
 
 		mbStopUsed = true;
@@ -113,8 +90,7 @@ namespace hpl {
 //		Log("Setting %s %spaused! - Source %d\n",mpData->GetName().c_str(),abX?"":"un", mlChannel);
 		
 		mbPaused = abX;
-		if(mpRust) ohpl_l5_chan_set_paused(mpRust, abX);
-		else OAL_Source_SetPaused ( mlChannel, abX );
+		ohpl_l5_chan_set_paused(mpRust, abX);
 
 //		if(mbPaused)
 //		{
@@ -128,8 +104,7 @@ namespace hpl {
 	{
 		mfSpeed = afSpeed;
 		
-		if(mpRust) ohpl_l5_chan_set_pitch(mpRust, afSpeed);
-		else OAL_Source_SetPitch ( mlChannel, afSpeed );
+		ohpl_l5_chan_set_pitch(mpRust, afSpeed);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -138,8 +113,7 @@ namespace hpl {
 	{
 		mfVolume = afVolume;
 		
-		if(mpRust) ohpl_l5_chan_set_volume(mpRust, mfVolume);
-		else OAL_Source_SetVolume(mlChannel, mfVolume);
+		ohpl_l5_chan_set_volume(mpRust, mfVolume);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -148,8 +122,7 @@ namespace hpl {
 	{
 		mbLooping = abLoop;
 
-		if(mpRust) ohpl_l5_chan_set_loop(mpRust, abLoop);
-		else OAL_Source_SetLoop ( mlChannel, abLoop );
+		ohpl_l5_chan_set_loop(mpRust, abLoop);
 	}
 
 	//-----------------------------------------------------------------------
@@ -168,8 +141,7 @@ namespace hpl {
 	void cOpenALSoundChannel::Set3D(bool ab3D)
 	{
 		mb3D = ab3D;
-		if(mpRust) ohpl_l5_chan_set_spatialize(mpRust, ab3D && !mbPositionRelative);
-		else OAL_Source_SetSpatialize(mlChannel, ab3D && !mbPositionRelative);
+		ohpl_l5_chan_set_spatialize(mpRust, ab3D && !mbPositionRelative);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -177,8 +149,7 @@ namespace hpl {
 	void cOpenALSoundChannel::SetPositionIsRelative(bool abRelative)
 	{
 		mbPositionRelative = abRelative;
-		if(mpRust) ohpl_l5_chan_set_spatialize(mpRust, mb3D && !abRelative);
-		else OAL_Source_SetSpatialize(mlChannel, mb3D && !abRelative);
+		ohpl_l5_chan_set_spatialize(mpRust, mb3D && !abRelative);
 	}
 
 	//-----------------------------------------------------------------------
@@ -187,8 +158,7 @@ namespace hpl {
 	{
 		mvPosition = avPos;
 
-		if(mpRust) ohpl_l5_chan_set_attributes(mpRust, mvPosition.v, mvVelocity.v);
-		else OAL_Source_SetAttributes ( mlChannel, mvPosition.v, mvVelocity.v );
+		ohpl_l5_chan_set_attributes(mpRust, mvPosition.v, mvVelocity.v);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -197,8 +167,7 @@ namespace hpl {
 	{
 		mvVelocity = avVel;
 		
-		if(mpRust) ohpl_l5_chan_set_attributes(mpRust, mvPosition.v, mvVelocity.v);
-		else OAL_Source_SetAttributes ( mlChannel, mvPosition.v, mvVelocity.v );
+		ohpl_l5_chan_set_attributes(mpRust, mvPosition.v, mvVelocity.v);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -218,8 +187,7 @@ namespace hpl {
 	
 	bool cOpenALSoundChannel::IsPlaying()
 	{
-		if(mpRust) return ohpl_l5_chan_is_playing(mpRust);
-		return OAL_Source_IsPlaying( mlChannel );
+		return ohpl_l5_chan_is_playing(mpRust);
 	}
 	
 
@@ -227,45 +195,33 @@ namespace hpl {
 
 	bool cOpenALSoundChannel::IsBufferUnderrun()
 	{ 
-		if(mpRust) return ohpl_l5_chan_is_underrun(mpRust);
-		return OAL_Source_IsBufferUnderrun(mlChannel);
+		return ohpl_l5_chan_is_underrun(mpRust);
 	}
 	double cOpenALSoundChannel::GetElapsedTime()
 	{ 
-		if(mpRust) return ohpl_l5_chan_elapsed(mpRust);
-		return OAL_Source_GetElapsedTime(mlChannel);
+		return ohpl_l5_chan_elapsed(mpRust);
 	}
 	double cOpenALSoundChannel::GetTotalTime()
 	{ 
-		if(mpRust) return ohpl_l5_chan_total(mpRust);
-		return OAL_Source_GetTotalTime(mlChannel);
+		return ohpl_l5_chan_total(mpRust);
 	}
 	void cOpenALSoundChannel::SetElapsedTime(double afTime)
 	{
-		if(mpRust) { ohpl_l5_chan_set_elapsed(mpRust, afTime); return; }
-		if(afTime < 0) afTime =0;
-		if(afTime > GetTotalTime()) afTime = GetTotalTime() - 0.0001;
-
-		OAL_Source_SetElapsedTime(mlChannel, afTime);
+		ohpl_l5_chan_set_elapsed(mpRust, afTime);
 	}
 
 	//-----------------------------------------------------------------------
 	
 	void cOpenALSoundChannel::SetPriority(int alX)
 	{
-		if(mpRust) { ohpl_l5_chan_set_priority(mpRust, alX, mlPriorityModifier); return; }
-		int lPrio = alX+mlPriorityModifier;
-		if(lPrio>255)lPrio = 255;
-
-		OAL_Source_SetPriority ( mlChannel, lPrio );
+		ohpl_l5_chan_set_priority(mpRust, alX, mlPriorityModifier);
 	}
 	
 	//-----------------------------------------------------------------------
 	
 	int cOpenALSoundChannel::GetPriority()
 	{
-		if(mpRust) return ohpl_l5_chan_priority(mpRust);
-		return OAL_Source_GetPriority ( mlChannel );
+		return ohpl_l5_chan_priority(mpRust);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -277,12 +233,7 @@ namespace hpl {
         
 		iSoundChannel::SetAffectedByEnv(abAffected);
 
-		if(mpRust) { ohpl_l5_chan_set_aux_slot(mpRust, mbAffectedByEnv); return; }
-
-		if (mbAffectedByEnv)
-			OAL_Source_SetAuxSendSlot(mlChannel,0,0);
-		else
-			OAL_Source_SetAuxSendSlot(mlChannel,0,-1);
+		ohpl_l5_chan_set_aux_slot(mpRust, mbAffectedByEnv);
 	}
 
 	void cOpenALSoundChannel::SetFiltering(bool abEnabled, int alFlags)
@@ -290,8 +241,7 @@ namespace hpl {
 //		if (!(gpGame->GetSound()->GetLowLevel()->IsEnvAudioAvailable()))
 //			return;
         
-		if(mpRust) ohpl_l5_chan_set_filtering(mpRust, abEnabled, alFlags);
-		else OAL_Source_SetFiltering(mlChannel,abEnabled, alFlags);
+		ohpl_l5_chan_set_filtering(mpRust, abEnabled, alFlags);
 	}
 
 	void cOpenALSoundChannel::SetFilterGain(float afGain)
@@ -299,8 +249,7 @@ namespace hpl {
 //		if (!(gpGame->GetSound()->GetLowLevel()->IsEnvAudioAvailable()))
 //			return;
         
-		if(mpRust) ohpl_l5_chan_set_filter_gain(mpRust, afGain);
-		else OAL_Source_SetFilterGain(mlChannel, afGain);
+		ohpl_l5_chan_set_filter_gain(mpRust, afGain);
 	}
 	
 	void cOpenALSoundChannel::SetFilterGainHF( float afGainHF)
@@ -308,20 +257,17 @@ namespace hpl {
 //		if (!(gpGame->GetSound()->GetLowLevel()->IsEnvAudioAvailable()))
 //			return;
         
-		if(mpRust) ohpl_l5_chan_set_filter_gain_hf(mpRust, afGainHF);
-		else OAL_Source_SetFilterGainHF(mlChannel, afGainHF);
+		ohpl_l5_chan_set_filter_gain_hf(mpRust, afGainHF);
 	}
 
 	void cOpenALSoundChannel::SetFilterGainLF(float afGainLF)
 	{
-		if(mpRust) ohpl_l5_chan_set_filter_gain_lf(mpRust, afGainLF);
-		else OAL_Source_SetFilterGainLF(mlChannel, afGainLF);
+		ohpl_l5_chan_set_filter_gain_lf(mpRust, afGainLF);
 	}
 
 	void cOpenALSoundChannel::SetEnvSendGain(float afGain)
 	{
-		if(mpRust) ohpl_l5_chan_set_env_send_gain(mpRust, afGain);
-		else OAL_Source_SetAuxSendGain(mlChannel, afGain);
+		ohpl_l5_chan_set_env_send_gain(mpRust, afGain);
 	}
 
 }

@@ -52,8 +52,6 @@
 #include "SDL/SDL.h"
 #endif
 
-#include "impl/scriptstring.h"
-#include "impl/scriptarray.h"
 
 #include "system/String.h"
 #include "impl/RustImpl.h"
@@ -541,41 +539,6 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	
 	//////////////////////////////////////////////////////////////////////////
-	// SCRIPT OUTPUT
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	void cScriptOutput::AddMessage(const asSMessageInfo *msg)
-	{
-		unsigned lKind = msg->type == asMSGTYPE_WARNING ? 1 : msg->type == asMSGTYPE_INFORMATION ? 2 : 0;
-		ohpl_sys_script_message(msg->section, msg->row, msg->col, lKind, msg->message, AppendSink, &msMessage);
-	}
-	//-----------------------------------------------------------------------
-
-	static void LogChunkSink(void *apCtx, const char *apData, size_t alLen)
-	{
-		((std::vector<tString>*)apCtx)->push_back(tString(apData, alLen));
-	}
-
-	void cScriptOutput::Display()
-	{
-		std::vector<tString> vChunks;
-		ohpl_sys_script_chunks(msMessage.data(), msMessage.size(), LogChunkSink, &vChunks);
-		for(size_t i=0; i<vChunks.size(); ++i) Log(vChunks[i].c_str());
-		if(vChunks.size() > 1) msMessage = vChunks.back();
-	}
-	//-----------------------------------------------------------------------
-
-	void cScriptOutput::Clear()
-	{
-		msMessage = "";
-	}
-	
-	//-----------------------------------------------------------------------
-
-	
-	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
 
@@ -583,32 +546,11 @@ namespace hpl {
 
 	cLowLevelSystemSDL::cLowLevelSystemSDL()
 	{
-		mpRustEngine = NULL;
-		mpScriptOutput = NULL;
-		if(OhplBackendRustRequested())
+		OhplL7InstallAddons();
+		mpRustEngine = ohpl_l7_engine_new();
+		if(ohpl_l7_engine_raw(mpRustEngine)==NULL)
 		{
-			OhplL7InstallAddons();
-			mpRustEngine = ohpl_l7_engine_new();
-			mpScriptEngine = (asIScriptEngine*)ohpl_l7_engine_raw(mpRustEngine);
-			if(mpScriptEngine==NULL)
-			{
-				Error("Failed to start angel script!\n");
-			}
-		}
-		else
-		{
-			mpScriptEngine = asCreateScriptEngine(ANGELSCRIPT_VERSION);
-			if(mpScriptEngine==NULL)
-			{
-				Error("Failed to start angel script!\n");
-			}
-		
-			mpScriptOutput = hplNew( cScriptOutput, () );
-			mpScriptEngine->SetMessageCallback(asMETHOD(cScriptOutput,AddMessage), mpScriptOutput, asCALL_THISCALL);
-
-			RegisterScriptString(mpScriptEngine);
-
-			RegisterScriptArray(mpScriptEngine, true);
+			Error("Failed to start angel script!\n");
 		}
 
 		mlHandleCount = 0;
@@ -627,12 +569,7 @@ namespace hpl {
 	{
 		/*Release all runnings contexts */
 		
-		if(mpRustEngine) ohpl_l7_engine_free(mpRustEngine);
-		else
-		{
-			mpScriptEngine->Release();
-			hplDelete(mpScriptOutput);
-		}
+		ohpl_l7_engine_free(mpRustEngine);
 
 		//perhaps not the best thing to skip :)
 		//if(gpLogWriter)	hplDelete(gpLogWriter);
@@ -650,15 +587,14 @@ namespace hpl {
 	
 	iScript* cLowLevelSystemSDL::CreateScript(const tString& asName)
 	{
-		return hplNew( cSqScript, (asName,mpScriptEngine,mpScriptOutput,mlHandleCount++,mpRustEngine) );
+		return hplNew( cSqScript, (asName,mlHandleCount++,mpRustEngine) );
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cLowLevelSystemSDL::AddScriptFunc(const tString& asFuncDecl, void* pFunc)
 	{
-		if(mpRustEngine ? !ohpl_l7_add_func(mpRustEngine, asFuncDecl.c_str(), pFunc) :
-			mpScriptEngine->RegisterGlobalFunction(asFuncDecl.c_str(),asFUNCTION(pFunc),asCALL_STDCALL)<0)
+		if(!ohpl_l7_add_func(mpRustEngine, asFuncDecl.c_str(), pFunc))
 		{
 			Error("Couldn't add func '%s'\n",asFuncDecl.c_str());
 			return false;
@@ -671,8 +607,7 @@ namespace hpl {
 
 	bool cLowLevelSystemSDL::AddScriptVar(const tString& asVarDecl, void *pVar)
 	{
-		if(mpRustEngine ? !ohpl_l7_add_var(mpRustEngine, asVarDecl.c_str(), pVar) :
-			mpScriptEngine->RegisterGlobalProperty(asVarDecl.c_str(),pVar)<0)
+		if(!ohpl_l7_add_var(mpRustEngine, asVarDecl.c_str(), pVar))
 		{
 			Error("Couldn't add var '%s'\n",asVarDecl.c_str());
 			return false;

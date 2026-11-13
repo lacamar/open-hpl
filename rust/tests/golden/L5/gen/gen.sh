@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Usage: gen.sh <build-dir> <outbin>   (build-dir: configured and built `HPL2`, e.g. ~/.cache/open-hpl/port-l5)
 # Links the harness against libHPL2.a with the recording OAL in oal_fake.cpp (no OALWrapper).
-# Run: OHPL_IMPL=cpp <outbin> oal > cpp.txt; OHPL_IMPL=rust <outbin> oal > rust.txt; diff cpp.txt rust.txt
+# Run: <outbin> oal > out.txt
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(git -C "$here" rev-parse --show-toplevel)

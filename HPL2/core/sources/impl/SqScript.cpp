@@ -59,36 +59,18 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cSqScript::cSqScript(const tString& asName,asIScriptEngine *apScriptEngine,
-							cScriptOutput *apScriptOutput, int alHandle, OhplL7Engine *apRustEngine)
+	cSqScript::cSqScript(const tString& asName, int alHandle, OhplL7Engine *apRustEngine)
 		: iScript(asName, _W(""))
 	{
-		mpScriptEngine = apScriptEngine;
-		mpScriptOutput = apScriptOutput;
 		mlHandle = alHandle;
 
-		mpRs = NULL;
-		mpContext = NULL;
-		mpModule = NULL;
-		if(apRustEngine==NULL) mpContext = mpScriptEngine->CreateContext();
-
-		//Create a unique module name
 		int lRand = cMath::RandRectl(0,1000000);
-		msModuleName = "Module_"+cString::ToString(lRand)+
-						"_"+cString::ToString(mlHandle);
-		if(apRustEngine) mpRs = ohpl_l7_script_new(apRustEngine, mlHandle, lRand);
-
+		mpRs = ohpl_l7_script_new(apRustEngine, mlHandle, lRand);
 	}
 
 	cSqScript::~cSqScript()
 	{
-		if(mpRs)
-		{
-			ohpl_l7_script_free(mpRs);
-			return;
-		}
-		mpScriptEngine->DiscardModule(msModuleName.c_str());
-		mpContext->Release();
+		ohpl_l7_script_free(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -172,63 +154,29 @@ namespace hpl {
 		
 		/////////////////////////////////////////
 		// Create module
-		if(mpRs)
-		{
-			std::vector<tString> vChunks;
-			int lRes = ohpl_l7_script_build(mpRs, pCharBuffer, lLength, apCompileMessages ? AssignSink : NULL, apCompileMessages,
-											ChunkSink, &vChunks);
-			if(lRes==1)
-			{
-				Error("Couldn't add script '%s'!\n",asFileName.c_str());
-			}
-			else if(lRes==2)
-			{
-				Error("Couldn't build script '%s'!\n",cString::To8Char(asFileName).c_str());
-				Log("------- SCRIPT OUTPUT BEGIN --------------------------\n");
-				for(size_t i=0; i<vChunks.size(); ++i) Log(vChunks[i].c_str());
-				Log("------- SCRIPT OUTPUT END ----------------------------\n");
-			}
-			hplDeleteArray(pCharBuffer);
-			return lRes==0;
-		}
-		mpModule = mpScriptEngine->GetModule(msModuleName.c_str(), asGM_ALWAYS_CREATE);
-		if(mpModule->AddScriptSection("main", pCharBuffer, lLength)<0)
+		std::vector<tString> vChunks;
+		int lRes = ohpl_l7_script_build(mpRs, pCharBuffer, lLength, apCompileMessages ? AssignSink : NULL, apCompileMessages,
+										ChunkSink, &vChunks);
+		if(lRes==1)
 		{
 			Error("Couldn't add script '%s'!\n",asFileName.c_str());
-			hplDeleteArray(pCharBuffer);
-			return false;
 		}
-
-		int lBuildOutput = mpModule->Build();
-		if(apCompileMessages) *apCompileMessages = mpScriptOutput->GetMessage();
-
-		if(lBuildOutput<0)
+		else if(lRes==2)
 		{
 			Error("Couldn't build script '%s'!\n",cString::To8Char(asFileName).c_str());
 			Log("------- SCRIPT OUTPUT BEGIN --------------------------\n");
-			mpScriptOutput->Display();
-			mpScriptOutput->Clear();
+			for(size_t i=0; i<vChunks.size(); ++i) Log(vChunks[i].c_str());
 			Log("------- SCRIPT OUTPUT END ----------------------------\n");
-			
-			hplDeleteArray(pCharBuffer);
-			return false;
 		}
-		mpScriptOutput->Clear();
-
 		hplDeleteArray(pCharBuffer);
-		return true;
+		return lRes==0;
 	}
 
 	//-----------------------------------------------------------------------
 
 	int cSqScript::GetFuncHandle(const tString& asFunc)
 	{
-		if(mpRs) return ohpl_l7_script_func_handle(mpRs, asFunc.c_str());
-		asIScriptFunction *pFunc = mpModule->GetFunctionByName(asFunc.c_str());
-		if(pFunc==NULL) return -1;
-
-		mvFuncHandles.push_back(pFunc);
-		return (int)mvFuncHandles.size()-1;
+		return ohpl_l7_script_func_handle(mpRs, asFunc.c_str());
 	}
 
 	//-----------------------------------------------------------------------
@@ -242,26 +190,14 @@ namespace hpl {
 
 	bool cSqScript::Run(const tString& asFuncLine)
 	{
-		if(mpRs) return ohpl_l7_script_run_line(mpRs, asFuncLine.c_str());
-		ExecuteString(mpScriptEngine, asFuncLine.c_str(), mpModule);
-
-		return true;
+		return ohpl_l7_script_run_line(mpRs, asFuncLine.c_str());
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cSqScript::Run(int alHandle)
 	{
-		if(mpRs) return ohpl_l7_script_run_handle(mpRs, alHandle);
-		if(alHandle<0 || alHandle>=(int)mvFuncHandles.size()) return false;
-
-		mpContext->Prepare(mvFuncHandles[alHandle]);
-
-		/* Set all the args here */
-
-		mpContext->Execute();
-
-		return true;
+		return ohpl_l7_script_run_handle(mpRs, alHandle);
 	}
 
 	//-----------------------------------------------------------------------

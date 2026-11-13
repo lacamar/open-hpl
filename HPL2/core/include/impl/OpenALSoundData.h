@@ -23,12 +23,6 @@
 #include "sound/SoundData.h"
 #include "impl/RustL5.h"
 
-#ifdef USE_OALWRAPPER
-# include "OALWrapper/OAL_Funcs.h"
-#else
-# include "OpenAL/OAL_Funcs.h"
-#endif
-
 namespace hpl {
 
 	class cOpenALSoundData : public iSoundData
@@ -45,12 +39,8 @@ namespace hpl {
 
 		bool IsStereo();
 
-		cOAL_Sample*	GetSample(){ return ( mpSample ); } //static_cast<cOAL_Sample*> (mpSoundData));}
-		cOAL_Stream*	GetStream(){ return ( mpStream ); } //static_cast<cOAL_Stream*> (mpSoundData));}
 	
 	private:
-		cOAL_Sample*	mpSample;
-		cOAL_Stream*	mpStream;
 		OhplL5Data*		mpRust;
 
 //iOAL_Loadable*	mpSoundData;

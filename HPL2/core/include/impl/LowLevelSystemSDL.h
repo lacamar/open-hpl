@@ -53,25 +53,6 @@ namespace hpl {
 
 	//------------------------------------------------------
 	
-	class cScriptOutput// : public  asIOutputStream
-	{
-	public:
-		cScriptOutput() : msMessage("") {}
-		~cScriptOutput(){}
-		
-		void AddMessage(const asSMessageInfo *msg);
-		void Display();
-		void Clear();
-
-		tString &GetMessage(){ return msMessage;}
-
-	private:
-		tString msMessage;
-	};
-
-	//------------------------------------------------------
-
-
 	class cLowLevelSystemSDL : public iLowLevelSystem
 	{
 	public:
@@ -84,8 +65,6 @@ namespace hpl {
 		bool AddScriptVar(const tString& asVarDecl, void *pVar);
 
 	private:
-		asIScriptEngine *mpScriptEngine;
-		cScriptOutput *mpScriptOutput;
 		OhplL7Engine *mpRustEngine;
 		int mlHandleCount;
 	};

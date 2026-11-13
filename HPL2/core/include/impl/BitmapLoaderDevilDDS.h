@@ -32,9 +32,6 @@ namespace hpl {
 
 		cBitmap* LoadBitmap(const tWString& asFile, tBitmapLoadFlag aFlags);
 
-		
-	protected:
-		ePixelFormat GetPixelFormatFromILDXT(int alDxtFormat);
 	};
 
 };

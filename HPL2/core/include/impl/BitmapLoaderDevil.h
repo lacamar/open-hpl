@@ -22,8 +22,6 @@
 
 #include "resources/BitmapLoader.h"
 
-#include <IL/il.h>
-
 #include "impl/RustL5.h"
 
 namespace hpl {
@@ -38,16 +36,7 @@ namespace hpl {
 		bool SaveBitmap(cBitmap* apBitmap,const tWString& asFile, tBitmapSaveFlag aFlags);
 	
 	protected:
-		void Initialize();
-
-		bool LoadDevilImageW(const tWString& asFile);
 		cBitmap* LoadBitmapRust(const tWString& asFile, unsigned alKind, tBitmapLoadFlag aFlags);
-
-		ePixelFormat DevilPixelFormatToHPL(int alFormat);
-		ILenum HPLPixelFormatToDevil(ePixelFormat aFormat);
-		ILenum FileNameToDevilTypeW(const tWString& asFile);
-
-		static bool mbIsInitialized;
 	};
 
 };

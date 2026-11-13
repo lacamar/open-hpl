@@ -29,9 +29,6 @@ const ELEMENT_COLOR0: i32 = 2;
 const ELEMENT_TANGENT: i32 = 4;
 const ELEMENT_TEXTURE0: i32 = 5;
 
-/// Returned when the C++ loader has to take over (its XML structure cache is newer than the file).
-pub const FALLBACK: i32 = 2;
-
 fn identity() -> Matrixf {
     matrix_scale(v3(1.0, 1.0, 1.0))
 }
@@ -189,14 +186,10 @@ fn try_cache(
 enum Read {
     Ok(Box<Collada>),
     Fail,
-    Fallback,
 }
 
 fn read_collada(cfg: &Cfg, sink: Sink, path: &[u8], opts: parse::Opts) -> Read {
     let _ = cfg;
-    if collada_cache_newer(sink, path) {
-        return Read::Fallback;
-    }
     sink.log(
         abi::LOG,
         &text(&[b"Cache out of date! Reloading collada file '", path, b"'\n"]),
@@ -1148,7 +1141,6 @@ pub fn load_mesh(cfg: &Cfg, sink: Sink, path: &[u8]) -> i32 {
     let mut c = match read_collada(cfg, sink, path, opts) {
         Read::Ok(c) => c,
         Read::Fail => return 1,
-        Read::Fallback => return FALLBACK,
     };
     for g in &mut c.geometries {
         for v in &mut g.vertices {
@@ -1422,13 +1414,6 @@ pub fn load_mesh(cfg: &Cfg, sink: Sink, path: &[u8]) -> i32 {
     0
 }
 
-fn collada_cache_newer(sink: Sink, path: &[u8]) -> bool {
-    let cache = string::set_file_ext(path, b"dae_cache");
-    sink.file_exists(&cache)
-        && sink.file_exists(path)
-        && sink.file_date(&cache) > sink.file_date(path)
-}
-
 fn hpl3_top_nodes(xml: &[u8]) -> Vec<Vec<u8>> {
     let mut top = Vec::new();
     let mut pos = find(xml, b"<visual_scene", 0);
@@ -1534,7 +1519,6 @@ pub fn load_anim(cfg: &Cfg, sink: Sink, path: &[u8]) -> i32 {
     let c = match read_collada(cfg, sink, path, opts) {
         Read::Ok(c) => c,
         Read::Fail => return 1,
-        Read::Fallback => return FALLBACK,
     };
     let scene = Scene(&c.scene);
     let skel = match build_skeleton(&c, &scene, sink, b".") {

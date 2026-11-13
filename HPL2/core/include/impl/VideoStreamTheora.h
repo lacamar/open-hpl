@@ -23,8 +23,6 @@
 #include "graphics/VideoStream.h"
 #include "resources/VideoLoader.h"
 
-#include <theora/theora.h>
-
 #include "impl/RustL5.h"
 
 namespace hpl {
@@ -54,39 +52,10 @@ namespace hpl {
 		void CopyToTexture(iTexture *apTexture);
 
 	private:
-		void DrawFrameToBuffer();
-		int BufferData(FILE *pFile ,ogg_sync_state *apOggSynchState);
-		void QueuePage(ogg_page *apPage);
-		bool GetHeaders();
-		bool InitDecoders();
-		void ResetStreams();
-		
-		cVideoStreamTheora_Loader *mpLoader;
 		OhplL5Video *mpRust;
-
-		FILE *mpFile;
 
 		bool mbLooping;
 		bool mbPaused;
-		bool mbPlaying;
-
-		float mfTime;
-
-		unsigned char *mpFrameBuffer;
-		
-		ogg_sync_state   mOggSyncState;
-		ogg_stream_state mTheoraStreamState;
-		theora_info      mTheoraInfo;
-		theora_comment mTheoraComment;
-		theora_state	mTheoraState;
-
-		int          mlVideobufReady;
-		ogg_int64_t  mlVideobufGranulePos;
-		double       mfVideobufTime;
-
-		bool mbVideoLoaded;
-		bool mbVideoFrameReady;
-		int mlBufferSize;
 	};
 
 	//-----------------------------------------
@@ -101,11 +70,6 @@ namespace hpl {
 		iVideoStream* LoadVideo(const tWString& asName);
 	
 	private:
-		unsigned char* mpYuvToR;
-		unsigned char* mpYuvToB;
-		
-		unsigned short* mpYuv_G_UV;
-		unsigned char* mpYuv_G_Y_UV;
 		OhplL5VLoader* mpRust;
 	};
 
