@@ -133,11 +133,9 @@ namespace hpl {
 			vt.joint_callback_max = [](size_t j) { if(J(j)->mpCallback) J(j)->mpCallback->OnMaxLimit(J(j)); };
 			vt.joint_callback_min = [](size_t j) { if(J(j)->mpCallback) J(j)->mpCallback->OnMinLimit(J(j)); };
 			vt.joint_get_controller = [](size_t j, OhplStr name) { return H(J(j)->GetController(T(name))); };
-			vt.joint_controller_count = [](size_t j) { return (int32_t)J(j)->m_mapControllers.size(); };
+			vt.joint_controller_count = [](size_t j) { return (int32_t)J(j)->ControllerCount(); };
 			vt.joint_controller_at = [](size_t j, int32_t i) {
-				tPhysicsControllerMapIt it = J(j)->m_mapControllers.begin();
-				std::advance(it, i);
-				return H(it->second);
+				return H(J(j)->ControllerAt(i));
 			};
 			vt.joint_warn_missing_controller = [](size_t j, size_t c) {
 				Warning("Controller '%s' does not exist in joint '%s'\n", C(c)->GetNextController().c_str(), J(j)->msName.c_str());

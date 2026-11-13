@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -43,7 +43,27 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	iPhysicsRope::iPhysicsRope(const tString &asName,iPhysicsWorld *apWorld, const cVector3f &avStartPos , const cVector3f &avEndPos) 
+	size_t iPhysicsRope::HostOp(int32_t alOp, OhplH15Wa *a)
+	{
+		iPhysicsBody *pBody = reinterpret_cast<iPhysicsBody*>(a->p[0]);
+		iPhysicsRope *pRope = reinterpret_cast<iPhysicsRope*>(a->p[0]);
+		switch(alOp)
+		{
+		case 601: { cVector3f v = pBody->GetAngularVelocity(); a->rv[0] = v.x; a->rv[1] = v.y; a->rv[2] = v.z; return 0; }
+		case 602: { cVector3f v = pBody->GetLinearVelocity(); a->rv[0] = v.x; a->rv[1] = v.y; a->rv[2] = v.z; return 0; }
+		case 603: return pBody->GetEnabled();
+		case 604: pBody->Enable(); return 0;
+		case 605: pBody->AddAttachedVerletContainer(reinterpret_cast<iPhysicsRope*>(a->p[1])); return 0;
+		case 606: pBody->RemoveAttachedVerletContainer(reinterpret_cast<iPhysicsRope*>(a->p[1])); return 0;
+		case 607: pRope->SetSleeping(false); return 0;
+		case 608: *reinterpret_cast<cMatrixf*>(a->p[1]) = pBody->GetLocalMatrix(); return 0;
+		case 609: { cVector3f v = reinterpret_cast<cVerletParticle*>(a->p[0])->GetPosition(); a->rv[0] = v.x; a->rv[1] = v.y; a->rv[2] = v.z; return 0; }
+		case 610: pRope->mForcePid[a->p[1]].Reset(); return 0;
+		}
+		return 0;
+	}
+
+	iPhysicsRope::iPhysicsRope(const tString &asName,iPhysicsWorld *apWorld, const cVector3f &avStartPos , const cVector3f &avEndPos)
 		: iVerletParticleContainer(asName, apWorld)
 	{
 		//Add start and end particles.
@@ -51,11 +71,18 @@ namespace hpl {
 		mlstParticles.push_back(	hplNew( cVerletParticle, (this,avEndPos, 1) ) );
 		RefreshParticleCache();
 
-		for(int i=0; i< 2;++i)
+		for(int i=0; i< 2;++i) mForcePid[i].SetErrorNum(10);
+
+		if(OhplBackendRustRequested())
 		{
-			mS.attached[i].mpBody = NULL;
-			mForcePid[i].SetErrorNum(10);
+			cVector3f vGravity = mpWorld->GetGravity();
+			ohpl_h14_rope_init(&mS, OhplV3{vGravity.x, vGravity.y, vGravity.z}, OhplV3{avStartPos.x, avStartPos.y, avStartPos.z},
+				OhplV3{avEndPos.x, avEndPos.y, avEndPos.z});
+			return;
 		}
+
+		mS.attached[0].mpBody = NULL;
+		mS.attached[1].mpBody = NULL;
 
 		mS.totalLength = cMath::Vector3Dist(avStartPos, avEndPos);
 		mS.segmentLength = 0; //0 = no segments!
@@ -89,7 +116,7 @@ namespace hpl {
 		mS.firstSegmentLength = mS.totalLength;
 
 		mS.maxIterations = 3;
-		
+
 		mS.hasUpdated = false;
 	}
 
@@ -110,7 +137,7 @@ namespace hpl {
 		hplDelete(mpRayParticleCallback);
 	}
 
-	
+
 	//-----------------------------------------------------------------------
 
 	//////////////////////////////////////////////////////////////////////////
@@ -118,15 +145,16 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
-	
-	
+
+
 	//-----------------------------------------------------------------------
-	
-	
+
+
 	//-----------------------------------------------------------------------
 
 	void iPhysicsRope::SetMotorActive(bool abX)
 	{
+		if(OhplBackendRustRequested()){ ohpl_h14_rope_set_motor(HostOp, reinterpret_cast<size_t>(this), &mS, abX); return; }
 		if(mS.motorActive == abX) return;
 
 		mS.motorActive = abX;
@@ -142,6 +170,7 @@ namespace hpl {
 
 	void iPhysicsRope::SetAutoMoveActive(bool abX)
 	{
+		if(OhplBackendRustRequested()){ ohpl_h14_rope_set_auto_move(HostOp, reinterpret_cast<size_t>(this), &mS, abX); return; }
 		mS.autoMoveActive = abX;
 
         if(mS.autoMoveActive)
@@ -159,6 +188,7 @@ namespace hpl {
 
 	void iPhysicsRope::RemoveAttachedBody(iPhysicsBody *apBody, bool abRemoveContainerFromBody)
 	{
+		if(OhplBackendRustRequested()){ ohpl_h14_rope_remove_attached(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(apBody), abRemoveContainerFromBody); return; }
 		for(int i=0; i<2; ++i)
 		{
 			if(mS.attached[i].mpBody == apBody)
@@ -169,7 +199,7 @@ namespace hpl {
 		if(abRemoveContainerFromBody)
 			apBody->RemoveAttachedVerletContainer(this);
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void iPhysicsRope::SetAttachedStartBody(iPhysicsBody *apBody)
@@ -178,12 +208,12 @@ namespace hpl {
 
 		//TODO: Need to change inverse mass of start particle, if body mass > 0?
 	}
-	
+
 	void iPhysicsRope::SetAttachedEndBody(iPhysicsBody *apBody)
 	{
 		SetAttachedBody(1, GetEndParticle(), apBody);
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void iPhysicsRope::SetTotalLength(float afX)
@@ -221,7 +251,7 @@ namespace hpl {
 		RefreshParticleCache();
 		SetSleeping(false);
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void iPhysicsRope::RenderDebug(iLowLevelGraphics *apLowLevel)
@@ -251,7 +281,7 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 	// PRIVATE METHODS
 	//////////////////////////////////////////////////////////////////////////
-	
+
 	//-----------------------------------------------------------------------
 
 	void iPhysicsRope::UpdateBeforeSimulate(float afTimeStep)
@@ -290,9 +320,9 @@ namespace hpl {
 
 		if(mpMotorSoundEntity && pNormalWorld->SoundEntityExists(mpMotorSoundEntity, mlMotorSoundEntityID)==false)
 		{
-			mpMotorSoundEntity = NULL;	
+			mpMotorSoundEntity = NULL;
 		}
-		
+
 		///////////////////////
 		//Sound is playing. Check if speed is under the stop speed
 		if(mpMotorSoundEntity && cMath::Abs(fVel) < mfMotorSoundStopSpeed)
@@ -357,6 +387,7 @@ namespace hpl {
 
 	bool iPhysicsRope::CheckParticleBodyCollision(iPhysicsBody *apBody)
 	{
+		if(OhplBackendRustRequested()) return ohpl_h14_rope_check_collision(&mS, reinterpret_cast<size_t>(apBody));
 		if(mS.collideAttachments) return true;
 
         bool bAttachment=false;
@@ -372,6 +403,7 @@ namespace hpl {
 
 	bool iPhysicsRope::CheckSpecificDataSleeping()
 	{
+		if(OhplBackendRustRequested()) return ohpl_h14_rope_check_sleeping(HostOp, &mS);
 		if(mS.motorActive) return false;
 
 		for(int i=0; i<2; ++i)
@@ -389,6 +421,7 @@ namespace hpl {
 
 	bool iPhysicsRope::CheckSpecificDataAwake()
 	{
+		if(OhplBackendRustRequested()) return ohpl_h14_rope_check_awake(HostOp, &mS);
 		if(mS.motorActive) return true;
 
 		for(int i=0; i<2; ++i)
@@ -404,6 +437,7 @@ namespace hpl {
 
 	void iPhysicsRope::SetSpecificDataSleeping(bool abSleeping)
 	{
+		if(OhplBackendRustRequested()){ ohpl_h14_rope_set_specific_sleeping(HostOp, &mS, abSleeping); return; }
 		for(int i=0; i<2; ++i)
 		{
 			iPhysicsBody *pBody = mS.attached[i].mpBody;
@@ -434,7 +468,7 @@ namespace hpl {
 
 
 	//-----------------------------------------------------------------------
-	
+
 	void iPhysicsRope::BuildRopeParticles()
 	{
 		////////////////////////
@@ -476,7 +510,7 @@ namespace hpl {
 		{
 			mS.firstSegmentLength = mS.totalLength;
 		}
-		
+
 		//Log("Wanted num: %d | total len: %f | first set len: %f | seg len: %f \n", lWantedNum, mS.totalLength, mS.firstSegmentLength, mS.segmentLength);
 
 		if(lWantedNum == lParticleNum) return;
@@ -506,7 +540,7 @@ namespace hpl {
 
 			float fLength = mS.firstSegmentLength + mS.segmentLength*((float)lAddCount-1);
 
-			tVerletParticleListIt it = mlstParticles.begin(); 
+			tVerletParticleListIt it = mlstParticles.begin();
 			it++;
 
 			for(; lAddCount>0; --lAddCount)
@@ -531,13 +565,14 @@ namespace hpl {
 
 	void iPhysicsRope::SetAttachedBody(int alIdx, cVerletParticle *apParticle, iPhysicsBody *apBody)
 	{
+		if(OhplBackendRustRequested()){ ohpl_h14_rope_set_attached(HostOp, reinterpret_cast<size_t>(this), &mS, alIdx, reinterpret_cast<size_t>(apParticle), reinterpret_cast<size_t>(apBody)); return; }
 		mForcePid[alIdx].Reset();
-		
+
 		if(mS.attached[alIdx].mpBody)
 		{
 			mS.attached[alIdx].mpBody->RemoveAttachedVerletContainer(this);
 		}
-		
+
 		apBody->AddAttachedVerletContainer(this);
 
 		mS.attached[alIdx].mpBody = apBody;
@@ -546,7 +581,7 @@ namespace hpl {
 		cMatrixf mtxInvBody = cMath::MatrixInverse(apBody->GetLocalMatrix());
 		mS.attached[alIdx].mvBodyLocalPos = cMath::MatrixMul(mtxInvBody, apParticle->GetPosition());
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	cVector3f iPhysicsRope::GetStartDirection()

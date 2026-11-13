@@ -25,6 +25,7 @@
 #include "engine/Updateable.h"
 #include "system/SystemTypes.h"
 #include "physics/PhysicsMaterial.h"
+#include "physics/RustPhysBook.h"
 
 struct OhplImpactCounts;
 
@@ -79,6 +80,8 @@ namespace hpl {
 
 		iLowLevelPhysics* GetLowLevel(){ return mpLowLevelPhysics;}
 
+		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
+
 		void SetImpactDuration(float afX){ mfImpactDuration = afX;}
 		float GetImpactDuration(){ return mfImpactDuration;}
 
@@ -89,7 +92,7 @@ namespace hpl {
 		bool CanPlayImpact();
 		void AddImpact();
 
-		cSurfaceDataIterator GetSurfaceDataIterator() { return cSurfaceDataIterator(&m_mapSurfaceData); }
+		cSurfaceDataIterator GetSurfaceDataIterator();
 
 		void SetDebugLog(bool abX){ mbLog = abX;}
 		bool GetDebugLog(){ return mbLog;}
@@ -106,9 +109,11 @@ namespace hpl {
 		tSurfaceDataMap m_mapSurfaceData;
 
 		OhplImpactCounts *mpImpactCounts;
-		float mfImpactDuration;
-		int mlMaxImpacts;
-		bool mbLog;
+		uint64_t mRs;
+		OhplPhysState mS;
+		float &mfImpactDuration = mS.impactDuration;
+		int &mlMaxImpacts = mS.maxImpacts;
+		bool &mbLog = mS.log;
 	};
 
 };

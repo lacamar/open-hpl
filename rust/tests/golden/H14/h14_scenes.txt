@@ -39,10 +39,27 @@ scene connect_plain
   charpos bf58d2fb 3f64cb28 4186e05f
   crate bf586d47 3ecc695e 417a903d
 end connect_plain steps 480 hash 09fd042469defe3a
+scene push_2d
+  a 3ebe4c04 c31a490a c0dd6d6d
+  b 3eea6672 3f4b318e bff53977
+  crate 3f800000 3e99993f c00ccccd
+end push_2d steps 600 hash 3f80d8d8d8620067
+scene push_3d_impulse
+  a 3ebd0d10 c31a4898 c0dd61a5
+  b 4188bc8f 3f4b7d0f bfd43334
+  crate 3f800000 3e99993f c00ccccd
+end push_3d_impulse steps 600 hash 667d43bc332b05b7
+scene push_custom_gravity
+  a 3ebe4d0d c2b1d25a c0dd6d15
+  b 3eea6672 3f4b318e bff539aa
+  crate 3f800000 3e99993f c00ccccd
+end push_custom_gravity steps 600 hash 5f1c435069befbf5
 scene rope_collide
 end rope_collide steps 600 hash 1660e677a8e0409c
 scene rope_free
 end rope_free steps 600 hash 65ed53930b346a5b
+scene rope_motor
+end rope_motor steps 600 hash 05c50dcd4460c203
 scene controller
   body 00000000 3fb623dc 00000000
 end controller steps 600 hash c7915af449edcf54

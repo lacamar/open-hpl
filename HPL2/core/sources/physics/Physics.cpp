@@ -26,6 +26,8 @@
 #include "system/String.h"
 
 #include "physics/RustPhysics.h"
+#include "physics/RustPhysBook.h"
+#include "physics/PhysicsWorld.h"
 
 #include "impl/tinyXML/tinyxml.h"
 
@@ -37,9 +39,40 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	size_t cPhysics::HostOp(int32_t alOp, OhplH15Wa *a)
+	{
+		cPhysics *pPhysics = reinterpret_cast<cPhysics*>(a->p[0]);
+		cSurfaceData *pSurface = reinterpret_cast<cSurfaceData*>(a->p[1]);
+		tString sArg;
+		if(alOp == 103 || alOp == 106) sArg = tString(reinterpret_cast<const char*>(a->p[1]), a->p[2]);
+		switch(alOp)
+		{
+		case 101: return reinterpret_cast<size_t>(pPhysics->mpLowLevelPhysics->CreateWorld());
+		case 102: hplDelete(reinterpret_cast<iPhysicsWorld*>(a->p[1])); return 0;
+		case 103: return reinterpret_cast<size_t>(hplNew( cSurfaceData, (sArg, pPhysics, pPhysics->mpResources) ));
+		case 104: hplDelete(pSurface); return 0;
+		case 105: reinterpret_cast<cSurfaceData*>(a->p[0])->ToMaterial(reinterpret_cast<iPhysicsWorld*>(a->p[1])); return 0;
+		case 106: Error("Couldn't load XML file '%s'!\n", sArg.c_str()); return 0;
+		case 107: return reinterpret_cast<size_t>(pSurface->RustState());
+		case 108:
+		{
+			tString sVal(reinterpret_cast<const char*>(a->p[2]), a->p[3]);
+			if(a->i[0] == 0) pSurface->SetUserVar(sVal);
+			else if(a->i[0] == 1) pSurface->GetStepType(sVal);
+			else if(a->i[0] == 2) pSurface->SetScrapeSoundName(sVal);
+			else pSurface->SetRollSoundName(sVal);
+			return 0;
+		}
+		}
+		return 0;
+	}
+
 	cPhysics::cPhysics(iLowLevelPhysics *apLowLevelPhysics)  : iUpdateable("HPL_Physics")
 	{
 		mpLowLevelPhysics = apLowLevelPhysics;
+
+		mRs = OhplBackendRustRequested() ? ohpl_h15p_new(HostOp, reinterpret_cast<size_t>(this), &mS) : 0;
+		if(mRs){ mpImpactCounts = NULL; return; }
 
 		mlMaxImpacts = 6;
 		mfImpactDuration = 0.4f;
@@ -55,6 +88,12 @@ namespace hpl {
 		Log("Exiting Physics Module\n");
 		Log("--------------------------------------------------------\n");
 
+		if(mRs)
+		{
+			ohpl_h15p_free(mRs);
+			Log("--------------------------------------------------------\n\n");
+			return;
+		}
 		STLDeleteAll(mlstWorlds);
 		ohpl_phys_impacts_free(mpImpactCounts);
 		STLMapDeleteAll(m_mapSurfaceData);
@@ -79,6 +118,7 @@ namespace hpl {
 
 	void cPhysics::Update(float afTimeStep)
 	{
+		if(mRs){ ohpl_h15p_update_impacts(mRs, afTimeStep, mfImpactDuration); return; }
 		UpdateImpactCounts(afTimeStep);
 	}
 
@@ -86,6 +126,7 @@ namespace hpl {
 
 	iPhysicsWorld* cPhysics::CreateWorld(bool abAddSurfaceData)
 	{
+		if(mRs) return reinterpret_cast<iPhysicsWorld*>(ohpl_h15p_create_world(mRs, abAddSurfaceData));
 		iPhysicsWorld * pWorld = mpLowLevelPhysics->CreateWorld();
 		mlstWorlds.push_back(pWorld);
 
@@ -106,6 +147,7 @@ namespace hpl {
 
 	void cPhysics::DestroyWorld(iPhysicsWorld* apWorld)
 	{
+		if(mRs){ ohpl_h15p_destroy_world(mRs, reinterpret_cast<size_t>(apWorld)); return; }
 		STLFindAndDelete(mlstWorlds, apWorld);
 	}
 
@@ -113,23 +155,41 @@ namespace hpl {
 
 	bool cPhysics::CanPlayImpact()
 	{
+		if(mRs) return ohpl_h15p_can_play(mRs, mlMaxImpacts);
 		return ohpl_phys_impacts_can_play(mpImpactCounts, mlMaxImpacts);
 	}
 
 	void cPhysics::AddImpact()
 	{
+		if(mRs){ ohpl_h15p_add_impact(mRs); return; }
 		ohpl_phys_impacts_add(mpImpactCounts);
 	}
 
 	int cPhysics::GetNumOfImpacts()
 	{
+		if(mRs) return (int)ohpl_h15p_impact_count(mRs);
 		return (int)ohpl_phys_impacts_len(mpImpactCounts);
 	}
 
 	//-----------------------------------------------------------------------
 
+	cSurfaceDataIterator cPhysics::GetSurfaceDataIterator()
+	{
+		if(mRs)
+		{
+			m_mapSurfaceData.clear();
+			for(size_t i=0, n=ohpl_h15p_surface_len(mRs); i<n; ++i)
+			{
+				OhplStr name; size_t obj;
+				if(ohpl_h15p_surface_at(mRs, i, &name, &obj)) m_mapSurfaceData[tString(name.p, name.n)] = reinterpret_cast<cSurfaceData*>(obj);
+			}
+		}
+		return cSurfaceDataIterator(&m_mapSurfaceData);
+	}
+
 	cSurfaceData *cPhysics::CreateSurfaceData(const tString& asName)
 	{
+		if(mRs) return reinterpret_cast<cSurfaceData*>(ohpl_h15p_create_surface(mRs, asName.c_str(), asName.size()));
 		cSurfaceData *pData = hplNew( cSurfaceData, (asName, this,mpResources) );
 
 		m_mapSurfaceData.insert(tSurfaceDataMap::value_type(asName, pData));
@@ -139,6 +199,7 @@ namespace hpl {
 
 	cSurfaceData *cPhysics::GetSurfaceData(const tString& asName)
 	{
+		if(mRs) return reinterpret_cast<cSurfaceData*>(ohpl_h15p_get_surface(mRs, asName.c_str(), asName.size()));
 		tSurfaceDataMapIt it = m_mapSurfaceData.find(asName);
 		if(it == m_mapSurfaceData.end()) return NULL;
 
@@ -149,6 +210,8 @@ namespace hpl {
 
 	bool cPhysics::LoadSurfaceData(const tString& asFile)
 	{
+		if(mRs) return ohpl_h15p_load_surface(mRs, asFile.c_str(), asFile.size());
+
 		std::vector<char> vData;
 		bool bReadOk = false;
 		FILE *pFile = fopen(asFile.c_str(), "rb");
@@ -257,6 +320,7 @@ namespace hpl {
 
 	void cPhysics::UpdateImpactCounts(float afTimeStep)
 	{
+		if(mRs){ ohpl_h15p_update_impacts(mRs, afTimeStep, mfImpactDuration); return; }
 		ohpl_phys_impacts_update(mpImpactCounts, afTimeStep, mfImpactDuration);
 	}
 

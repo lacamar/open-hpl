@@ -22,6 +22,7 @@
 
 #include "math/MathTypes.h"
 #include "physics/PhysicsMaterial.h"
+#include "physics/RustPhysBook.h"
 
 namespace hpl {
 	
@@ -122,6 +123,8 @@ namespace hpl {
 		void SetRollAxisFlags(tFlag aAxisFlags){mRollAxisFlags = aAxisFlags;}
 
         void PreloadData();
+        OhplSurfaceState* RustState(){ return &mS;}
+        static size_t HostOp(int32_t alOp, OhplH15Wa *a);
 
 		iPhysicsMaterial *ToMaterial(iPhysicsWorld *apWorld);
 
@@ -158,39 +161,41 @@ namespace hpl {
 
 		cResources *mpResources;
 		cPhysics *mpPhysics;
+
 		tString msName;
 		tString msUserVar;
-		
-		//Properties
-		ePhysicsMaterialCombMode mFrictionMode;
-		ePhysicsMaterialCombMode mElasticityMode;
 
-		float mfElasticity;
-		float mfStaticFriction;
-		float mfKineticFriction;
+		OhplSurfaceState mS = OhplSurfaceState();
 
-		int mlPriority;
+		//Properties (references into mS, owned by rust/src/physics/surf.rs)
+		ePhysicsMaterialCombMode &mFrictionMode = reinterpret_cast<ePhysicsMaterialCombMode&>(mS.frictionMode);
+		ePhysicsMaterialCombMode &mElasticityMode = reinterpret_cast<ePhysicsMaterialCombMode&>(mS.elasticityMode);
 
-		float mfMinScrapeSpeed;
-		float mfMinScrapeFreq;
-		float mfMinScrapeFreqSpeed;
-		float mfMaxScrapeFreq;
-		float mfMaxScrapeFreqSpeed;
-		float mfMiddleScrapeSpeed;
-		int mlMinScrapeContacts;
+		float &mfElasticity = mS.elasticity;
+		float &mfStaticFriction = mS.staticFriction;
+		float &mfKineticFriction = mS.kineticFriction;
+		int &mlPriority = mS.priority;
+
+		float &mfMinScrapeSpeed = mS.minScrapeSpeed;
+		float &mfMinScrapeFreq = mS.minScrapeFreq;
+		float &mfMinScrapeFreqSpeed = mS.minScrapeFreqSpeed;
+		float &mfMaxScrapeFreq = mS.maxScrapeFreq;
+		float &mfMaxScrapeFreqSpeed = mS.maxScrapeFreqSpeed;
+		float &mfMiddleScrapeSpeed = mS.middleScrapeSpeed;
+		int &mlMinScrapeContacts = mS.minScrapeContacts;
 		tString msScrapeSoundName;
 
-		float mfMinRollSpeed;
-		float mfMinRollFreq;
-		float mfMinRollVolume;
-		float mfMinRollFreqSpeed;
-		float mfMaxRollFreq;
-		float mfMaxRollVolume;
-		float mfMaxRollFreqSpeed;
-		float mfMiddleRollSpeed;
-		int mlMinRollContacts;
+		float &mfMinRollSpeed = mS.minRollSpeed;
+		float &mfMinRollFreq = mS.minRollFreq;
+		float &mfMinRollVolume = mS.minRollVolume;
+		float &mfMinRollFreqSpeed = mS.minRollFreqSpeed;
+		float &mfMaxRollFreq = mS.maxRollFreq;
+		float &mfMaxRollVolume = mS.maxRollVolume;
+		float &mfMaxRollFreqSpeed = mS.maxRollFreqSpeed;
+		float &mfMiddleRollSpeed = mS.middleRollSpeed;
+		int &mlMinRollContacts = mS.minRollContacts;
 		tString msRollSoundName;
-		tFlag mRollAxisFlags;
+		tFlag &mRollAxisFlags = mS.rollAxisFlags;
 
         tString msStepType;
 

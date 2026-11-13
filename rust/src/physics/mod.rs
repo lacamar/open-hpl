@@ -4,21 +4,31 @@
 pub mod body;
 pub mod book;
 mod char_aux;
+mod char_collide;
+mod char_conn;
 pub mod character;
 pub mod controller;
 mod ffi;
 mod ffi_character;
 mod ffi_h14;
+mod ffi_h15p;
+mod ffi_h15s;
+mod ffi_h15w;
 pub mod host;
 pub mod joint;
 pub(crate) mod newton_body;
 mod newton_ffi;
 pub(crate) mod newton_material;
 pub mod pid;
+pub mod preg;
 pub mod rope;
+mod rope_shell;
+pub mod shell;
+pub mod surf;
 pub mod surface;
 pub mod surface_xml;
 pub mod world;
+pub mod wreg;
 
 #[cfg(test)]
 mod tests;
@@ -28,3 +38,5 @@ mod tests_character;
 mod tests_h14;
 #[cfg(test)]
 mod tests_h15;
+#[cfg(test)]
+mod tests_h15b;

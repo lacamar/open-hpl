@@ -41,6 +41,35 @@ namespace hpl {
 	//------------------------------------------
 
 	class iPhysicsBody;
+	class iPhysicsWorld;
+	class iCollideShape;
+	class iPhysicsMaterial;
+	class iCharacterBody;
+	class cSoundEntity;
+
+	// Scalar and pointer state of iPhysicsBody, owned by rust/src/physics/shell.rs; the members are references into it.
+	struct OhplBodyState
+	{
+		uint64_t shell;
+		iPhysicsWorld *world;
+		iCollideShape *shape;
+		iPhysicsMaterial *material;
+		iCharacterBody *charBody;
+		iPhysicsBody *scrapeBody;
+		cSoundEntity *scrapeSound;
+		cSoundEntity *rollSound;
+		void *userData;
+		cMatrixf prevScrape;
+		int32_t scrapeSoundId, rollSoundId, impactCount;
+		tFlag collideFlags;
+		float buoyancyDensityMul, massMulApplied;
+		int32_t pushStrength, freezeCount;
+		eVelocityAxes gravityAxes;
+		bool inUpdateList, pushedByCharGravity, blocksSound, blocksLight, isCharacter, collideCharacter, isRagDoll, collideRagDoll,
+			isVolatile, useSurfaceEffects, gravityCanAttach, gravityAttachRotation, gravityAttachVelocity, collide, destroying;
+	};
+	static_assert(sizeof(OhplBodyState) == 192, "body state layout");
+
 	class iPhysicsBodyCallback
 	{
 	public:
@@ -282,61 +311,63 @@ namespace hpl {
 
 		virtual void DeleteLowLevel()=0;
 	protected:
-        iPhysicsWorld *mpWorld;
-		iCollideShape *mpShape;
-		iPhysicsMaterial *mpMaterial;
+		OhplBodyState mS = OhplBodyState();
+        iPhysicsWorld *&mpWorld = mS.world;
+		iCollideShape *&mpShape = mS.shape;
+		iPhysicsMaterial *&mpMaterial = mS.material;
 		
-		iCharacterBody *mpCharacterBody;
+		iCharacterBody *&mpCharacterBody = mS.charBody;
 
 		std::vector<iPhysicsJoint*> mvJoints;
 
-		bool mbDestroying;
+		bool &mbDestroying = mS.destroying;
         
 		std::list<iCharacterBody*> mlstConnectedCharBodies;
 		        		
-		iPhysicsBody *mpScrapeBody;
-		cSoundEntity *mpScrapeSoundEntity;
-		int mlScrapeSoundEntityID;
-		cSoundEntity *mpRollSoundEntity;
-		int mlRollSoundEntityID;
-		cMatrixf m_mtxPrevScrapeMatrix;
+		iPhysicsBody *&mpScrapeBody = mS.scrapeBody;
+		cSoundEntity *&mpScrapeSoundEntity = mS.scrapeSound;
+		int &mlScrapeSoundEntityID = mS.scrapeSoundId;
+		cSoundEntity *&mpRollSoundEntity = mS.rollSound;
+		int &mlRollSoundEntityID = mS.rollSoundId;
+		cMatrixf &m_mtxPrevScrapeMatrix = mS.prevScrape;
 		uint64_t mRsBook;
+		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
 		bool mbHasSlide;
 		int mlSlideCount;
-		int mlImpactCount;
-		bool mbInUpdateList;
+		int &mlImpactCount = mS.impactCount;
+		bool &mbInUpdateList = mS.inUpdateList;
 
-		float mfBuoyancyDensityMul;
-		float mfMassMulApplied;
+		float &mfBuoyancyDensityMul = mS.buoyancyDensityMul;
+		float &mfMassMulApplied = mS.massMulApplied;
 
 		bool mbStaticMovement;
 		cVector3f mvTotalStaticLinearVel;
 		cVector3f mvTotalStaticAngularVel;
 
-		tFlag mlCollideFlags;
+		tFlag &mlCollideFlags = mS.collideFlags;
 
-		bool mbPushedByCharacterGravity;
+		bool &mbPushedByCharacterGravity = mS.pushedByCharGravity;
 
-		bool mbBlocksSound;
-		bool mbBlocksLight;
-		bool mbIsCharacter;
-		bool mbCollideCharacter;
-		bool mbIsRagDoll;
-		bool mbCollideRagDoll;
-		bool mbVolatile;
-		bool mbUseSurfaceEffects;
+		bool &mbBlocksSound = mS.blocksSound;
+		bool &mbBlocksLight = mS.blocksLight;
+		bool &mbIsCharacter = mS.isCharacter;
+		bool &mbCollideCharacter = mS.collideCharacter;
+		bool &mbIsRagDoll = mS.isRagDoll;
+		bool &mbCollideRagDoll = mS.collideRagDoll;
+		bool &mbVolatile = mS.isVolatile;
+		bool &mbUseSurfaceEffects = mS.useSurfaceEffects;
 
-		bool mbGravityCanAttachCharacter;
-		bool mbGravityAttachmentRotation;
-		bool mbGravityAttachmentVelocity;
-		eVelocityAxes mGravityAttachmentVelocityAxes;
+		bool &mbGravityCanAttachCharacter = mS.gravityCanAttach;
+		bool &mbGravityAttachmentRotation = mS.gravityAttachRotation;
+		bool &mbGravityAttachmentVelocity = mS.gravityAttachVelocity;
+		eVelocityAxes &mGravityAttachmentVelocityAxes = mS.gravityAxes;
 
-		int mlPushStrength;
+		int &mlPushStrength = mS.pushStrength;
 
 		cPhysicsBody_Buoyancy mBuoyancy;
 
 		bool mbDisableAfterSimulation;
-		int mlFreezeCount;
+		int &mlFreezeCount = mS.freezeCount;
 		static bool mbHpl3Buoyancy;
 		bool mbNoGravityWhenUnderwater = false;
 		bool mbIsUnderwater = false;
@@ -345,11 +376,11 @@ namespace hpl {
 
 		tPhysicsBodyCallbackList mlstBodyCallbacks;
 
-		void *mpUserData;
+		void *&mpUserData = mS.userData;
 
 		tVerletParticleContainerList mlstAttachedVerletContainers;
 
-		bool mbCollide;
+		bool &mbCollide = mS.collide;
 	};
 };
 #endif // HPL_PHYSICS_BODY_H

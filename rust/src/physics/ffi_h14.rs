@@ -305,3 +305,189 @@ pub extern "C" fn ohpl_h14_rope_particle_pos(
 ) -> Vector3f {
     rope_particle_pos(start, dir, length)
 }
+
+/// # Safety
+/// `ext` and `st` are writable and embedded in the character; `st.size` is set.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_char_init(
+    ext: *mut super::char_conn::CharExt,
+    st: *mut super::character::CharState,
+    world: usize,
+    max_no_slide_slope_cos: f32,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::char_conn::char_init(ext, st, world, max_no_slide_slope_cos) };
+}
+
+/// # Safety
+/// `ext` and `st` are the live embedded states of character `me`; `op` is its host op.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_connect_to_body(
+    op: super::wreg::WorldOp,
+    me: usize,
+    ext: *mut super::char_conn::CharExt,
+    st: *mut super::character::CharState,
+    body: usize,
+    pos: crate::types::Vector3f,
+    flags: u32,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::char_conn::connect_to_body(op, me, ext, st, body, pos, flags) };
+}
+
+/// # Safety
+/// `ext` is the live embedded state of character `me`; `op` is its host op.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_disconnect_body(
+    op: super::wreg::WorldOp,
+    me: usize,
+    ext: *mut super::char_conn::CharExt,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::char_conn::disconnect_body(op, me, ext) };
+}
+
+/// # Safety
+/// `ext` and `st` are the live embedded states of character `ch`; `cd` is the live collide data.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_collide_gravity(
+    op: super::wreg::WorldOp,
+    ch: usize,
+    ext: *mut super::char_conn::CharExt,
+    st: *const super::character::CharState,
+    body: usize,
+    cd: usize,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::char_collide::collide_gravity(op, ch, ext, st, body, cd) };
+}
+
+/// # Safety
+/// `ext` and `st` are the live embedded states of a character; `cd` is the live collide data.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_collide_push(
+    op: super::wreg::WorldOp,
+    ch: usize,
+    ext: *const super::char_conn::CharExt,
+    st: *const super::character::CharState,
+    body: usize,
+    cd: usize,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::char_collide::collide_push(op, ch, ext, st, body, cd) };
+}
+
+/// # Safety
+/// `st` is writable and embedded in the rope.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_rope_init(
+    st: *mut super::rope::RopeState,
+    gravity: crate::types::Vector3f,
+    start: crate::types::Vector3f,
+    end: crate::types::Vector3f,
+) {
+    // SAFETY: caller contract.
+    if let Some(s) = unsafe { st.as_mut() } {
+        *s = super::rope::RopeState::initial(gravity, start, end);
+    }
+}
+
+/// # Safety
+/// `st` is the live embedded state of the rope.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_rope_check_collision(
+    st: *const super::rope::RopeState,
+    body: usize,
+) -> bool {
+    // SAFETY: caller contract.
+    unsafe { super::rope_shell::check_particle_body_collision(st, body) }
+}
+
+/// # Safety
+/// `st` is the live embedded state of the rope; `op` is its host op.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_rope_check_sleeping(
+    op: super::wreg::WorldOp,
+    st: *mut super::rope::RopeState,
+) -> bool {
+    // SAFETY: caller contract.
+    unsafe { super::rope_shell::check_specific_sleeping(op, st) }
+}
+
+/// # Safety
+/// As [`ohpl_h14_rope_check_sleeping`].
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_rope_check_awake(
+    op: super::wreg::WorldOp,
+    st: *mut super::rope::RopeState,
+) -> bool {
+    // SAFETY: caller contract.
+    unsafe { super::rope_shell::check_specific_awake(op, st) }
+}
+
+/// # Safety
+/// As [`ohpl_h14_rope_check_sleeping`].
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_rope_set_specific_sleeping(
+    op: super::wreg::WorldOp,
+    st: *mut super::rope::RopeState,
+    sleeping: bool,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::rope_shell::set_specific_sleeping(op, st, sleeping) };
+}
+
+/// # Safety
+/// `st` is the live embedded state of rope `me`; `op` is its host op.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_rope_set_motor(
+    op: super::wreg::WorldOp,
+    me: usize,
+    st: *mut super::rope::RopeState,
+    on: bool,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::rope_shell::set_motor_active(op, me, st, on) };
+}
+
+/// # Safety
+/// As [`ohpl_h14_rope_set_motor`].
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_rope_set_auto_move(
+    op: super::wreg::WorldOp,
+    me: usize,
+    st: *mut super::rope::RopeState,
+    on: bool,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::rope_shell::set_auto_move_active(op, me, st, on) };
+}
+
+/// # Safety
+/// As [`ohpl_h14_rope_set_motor`].
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_rope_remove_attached(
+    op: super::wreg::WorldOp,
+    me: usize,
+    st: *mut super::rope::RopeState,
+    body: usize,
+    remove_container: bool,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::rope_shell::remove_attached_body(op, me, st, body, remove_container) };
+}
+
+/// # Safety
+/// As [`ohpl_h14_rope_set_motor`].
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_rope_set_attached(
+    op: super::wreg::WorldOp,
+    me: usize,
+    st: *mut super::rope::RopeState,
+    idx: usize,
+    particle: usize,
+    body: usize,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::rope_shell::set_attached_body(op, me, st, idx, particle, body) };
+}

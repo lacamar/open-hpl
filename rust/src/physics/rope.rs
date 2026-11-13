@@ -553,3 +553,49 @@ pub fn rope_particle_pos(start: Vector3f, dir: Vector3f, length: f32) -> Vector3
         fma(dir.z, length, start.z),
     )
 }
+
+impl RopeState {
+    /// The values `iVerletParticleContainer` and `iPhysicsRope` constructors give a new rope.
+    pub fn initial(gravity: Vector3f, start: Vector3f, end: Vector3f) -> Self {
+        let total = len3(sub3(end, start));
+        Self {
+            attached: [Attachment {
+                body: 0,
+                particle: std::ptr::null_mut(),
+                body_local_pos: v3(0.0, 0.0, 0.0),
+            }; 2],
+            gravity_force: gravity,
+            damping_mul: 1.0f32 - 0.001f32,
+            particle_radius: 0.05,
+            slide_amount: 0.3,
+            sleep_check_count: 0.0,
+            sleep_check_time: 1.0f32 / 3.0f32,
+            sleep_check_sqr_limit: 0.0015f32 * 0.0015f32,
+            motor_wanted_length: total,
+            motor_speed_mul: 1.0,
+            motor_max_speed: 1.0,
+            motor_min_speed: -1.0,
+            auto_move_acc: 1.0,
+            auto_move_max_speed: 1.0,
+            auto_move_speed: 0.0,
+            total_length: total,
+            min_total_length: total,
+            max_total_length: total,
+            segment_length: 0.0,
+            first_segment_length: total,
+            strength: 100.0,
+            stiffness: 1.0,
+            sleep_count: 0,
+            sleep_max_count: 3,
+            update_count: 0,
+            max_iterations: 3,
+            sleeping: false,
+            collide: false,
+            physics_active: true,
+            motor_active: false,
+            auto_move_active: false,
+            collide_attachments: false,
+            has_updated: false,
+        }
+    }
+}

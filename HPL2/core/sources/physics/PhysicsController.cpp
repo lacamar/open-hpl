@@ -23,6 +23,7 @@
 #include "physics/PhysicsBody.h"
 #include "physics/PhysicsJoint.h"
 #include "physics/RustPhysics.h"
+#include "physics/RustPhysBook.h"
 
 namespace hpl {
 
@@ -31,6 +32,13 @@ namespace hpl {
 		msName = asName;
 
 		mpWorld = apWorld;
+
+		if(OhplBackendRustRequested())
+		{
+			mpPid = ohpl_h15c_init(&mS, reinterpret_cast<size_t>(this));
+			return;
+		}
+		mS.self = this;
 
 		mpBody = NULL;
 		mpJoint = NULL;
@@ -61,14 +69,7 @@ namespace hpl {
 
 	void iPhysicsController::Update(float afTimeStep)
 	{
-		OhplCtrlParams params = {
-			reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(mpBody), reinterpret_cast<size_t>(mpJoint),
-			mbActive, mbPaused, mbLogInfo, mbMulMassWithOutput,
-			(int32_t)mType, (int32_t)mInputType, (int32_t)mInputAxis, (int32_t)mOutputType, (int32_t)mOutputAxis, (int32_t)mEndType,
-			mfA, mfB, mfC, mfDestValue, mfMaxOutput,
-			OhplS(msNextController)
-		};
-		ohpl_phys_ctrl_update(OhplPhysHost(), &params, mpPid, afTimeStep);
+		ohpl_phys_ctrl_update(OhplPhysHost(), reinterpret_cast<const OhplCtrlParams*>(&mS), mpPid, afTimeStep);
 	}
 
 	void iPhysicsController::SetActive(bool abX)

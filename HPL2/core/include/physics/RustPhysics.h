@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "system/SystemTypes.h"
+#include "physics/RustPhysBook.h"
 
 struct OhplPid;
 struct OhplImpactCounts;
@@ -186,6 +187,7 @@ static_assert(sizeof(OhplJointState) == 216 && sizeof(OhplMoveParams) == 56 && s
 static_assert(sizeof(OhplBodyFilter) == 24, "filter layout");
 
 extern "C" {
+void ohpl_h15s_params(const OhplSurfaceState*, size_t, size_t, OhplStr, OhplStr, OhplSurfaceParams*);
 
 OhplPid* ohpl_phys_pid_new();
 void ohpl_phys_pid_free(OhplPid*);

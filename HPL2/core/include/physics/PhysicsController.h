@@ -86,6 +86,28 @@ namespace hpl {
 	class iPhysicsJoint;
 	class iPhysicsBody;
 
+	class iPhysicsController;
+	class iPhysicsJoint;
+	class iPhysicsBody;
+	// Controller state, owned by rust/src/physics/controller.rs (layout of OhplCtrlParams); the members are references into it.
+	struct OhplCtrlState
+	{
+		iPhysicsController *self;
+		iPhysicsBody *body;
+		iPhysicsJoint *joint;
+		bool active, paused, log, mulMass;
+		ePhysicsControllerType kind;
+		ePhysicsControllerInput input;
+		ePhysicsControllerAxis inputAxis;
+		ePhysicsControllerOutput output;
+		ePhysicsControllerAxis outputAxis;
+		ePhysicsControllerEnd end;
+		float a, b, c, dest, maxOutput;
+		const char *nextP;
+		size_t nextN;
+	};
+	static_assert(sizeof(OhplCtrlState) == 88, "controller state layout");
+
 	class iPhysicsController
 	{
 	friend struct cRustPhysicsAccess;
@@ -137,7 +159,7 @@ namespace hpl {
 		void SetEndType(ePhysicsControllerEnd aEnd){ mEndType = aEnd;}
 		ePhysicsControllerEnd GetEndType(){ return mEndType;}
 
-		void SetNextController(const tString &asName){ msNextController = asName;}
+		void SetNextController(const tString &asName){ msNextController = asName; mS.nextP = msNextController.c_str(); mS.nextN = msNextController.size();}
 		const tString& GetNextController(){ return msNextController;}
 
 		void SetLogInfo(bool abX){mbLogInfo = abX;}
@@ -146,37 +168,29 @@ namespace hpl {
 
 
 	protected:
+		OhplCtrlState mS = OhplCtrlState();
 		iPhysicsWorld *mpWorld;
 		tString msName;
-
-		iPhysicsBody *mpBody;
-		iPhysicsJoint *mpJoint;
-
-		float mfA,mfB,mfC;
-
-		float mfDestValue;
-		float mfMaxOutput;
-
-		bool mbMulMassWithOutput;
-
-		ePhysicsControllerType mType;
-
-		ePhysicsControllerInput mInputType;
-		ePhysicsControllerAxis mInputAxis;
-
-		ePhysicsControllerOutput mOutputType;
-		ePhysicsControllerAxis mOutputAxis;
-
-		ePhysicsControllerEnd mEndType;
-
+		iPhysicsBody *&mpBody = mS.body;
+		iPhysicsJoint *&mpJoint = mS.joint;
+		float &mfA = mS.a;
+		float &mfB = mS.b;
+		float &mfC = mS.c;
+		float &mfDestValue = mS.dest;
+		float &mfMaxOutput = mS.maxOutput;
+		bool &mbMulMassWithOutput = mS.mulMass;
+		ePhysicsControllerType &mType = mS.kind;
+		ePhysicsControllerInput &mInputType = mS.input;
+		ePhysicsControllerAxis &mInputAxis = mS.inputAxis;
+		ePhysicsControllerOutput &mOutputType = mS.output;
+		ePhysicsControllerAxis &mOutputAxis = mS.outputAxis;
+		ePhysicsControllerEnd &mEndType = mS.end;
 		tString msNextController;
-
 		OhplPid *mpPid;
 
-		bool mbActive;
-		bool mbPaused;
-
-		bool mbLogInfo;
+		bool &mbActive = mS.active;
+		bool &mbPaused = mS.paused;
+		bool &mbLogInfo = mS.log;
 	};
 };
 #endif // HPL_PHYSICS_CONTROLLER_H
