@@ -30,6 +30,9 @@ pub mod deferred_ssao3;
 mod deferred_tests;
 pub mod ffi;
 pub mod funcs;
+pub mod h8;
+#[cfg(test)]
+mod h8_tests;
 pub mod list;
 pub mod posteffect;
 pub mod posteffect_ffi;
