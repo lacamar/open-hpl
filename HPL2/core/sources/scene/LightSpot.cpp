@@ -19,6 +19,7 @@
 
 #include "scene/LightSpot.h"
 #include "scene/RustLight.h"
+#include "impl/RustBackends.h"
 
 #include "impl/tinyXML/tinyxml.h"
 #include "math/Math.h"
@@ -47,17 +48,13 @@ namespace hpl {
 	
 	cLightSpot::cLightSpot(tString asName, cResources *apResources) : iLight(asName,apResources)
 	{
-		mbProjectionUpdated = true;
-		mbViewProjUpdated = true;
-		mbFrustumUpdated = true;
-		
         mLightType = eLightType_Spot;
 
 		mpFrustum = hplNew( cFrustum, () );
 
-		mlViewProjMatrixCount =-1;
-		mlViewMatrixCount =-1;
-		mlFrustumMatrixCount =-1;
+		mSpot.view_proj_count =-1;
+		mSpot.view_count =-1;
+		mSpot.frustum_count =-1;
 
 		mfFOV = cMath::ToRad(60.0f);
 		mfAspect = 1.0f;
@@ -107,13 +104,13 @@ namespace hpl {
 
 		//This is so that the render container is updated.
 		SetTransformUpdated();
-		mbProjectionUpdated = true;
+		mSpot.projection_updated = true;
 	}
 
 	void cLightSpot::SetFOV(float afAngle)
 	{ 
 		mfFOV = afAngle;
-		mbProjectionUpdated = true;
+		mSpot.projection_updated = true;
 
 		ohpl_light_spot_half_fov(mfFOV, &mfTanHalfFOV, &mfCosHalfFOV);
 	}
@@ -122,9 +119,9 @@ namespace hpl {
 	
 	const cMatrixf& cLightSpot::GetViewMatrix()
 	{
-		if(mlViewMatrixCount != GetTransformUpdateCount())
+		if(OhplBackendRustRequested() ? ohpl_h11_spot_view_stale(&mSpot, GetTransformUpdateCount()) : mSpot.view_count != GetTransformUpdateCount())
 		{
-			mlViewMatrixCount = GetTransformUpdateCount();
+			mSpot.view_count = GetTransformUpdateCount();
 			m_mtxView = cMath::MatrixInverse(GetWorldMatrix());
 		}
 
@@ -136,13 +133,16 @@ namespace hpl {
 
 	const cMatrixf& cLightSpot::GetProjectionMatrix()
 	{
-		if(mbProjectionUpdated)
+		if(OhplBackendRustRequested() ? ohpl_h11_spot_projection_stale(&mSpot) : mSpot.projection_updated)
 		{
 			ohpl_light_spot_projection(mfFOV, mfAspect, mfNearClipPlane, mfShadowNearClip, mfRadius, &m_mtxProjection);
 
-			mbProjectionUpdated = false;	
-			mbViewProjUpdated = true;
-			mbFrustumUpdated = true;
+			if(!OhplBackendRustRequested())
+			{
+				mSpot.projection_updated = false;
+				mSpot.view_proj_updated = true;
+				mSpot.frustum_updated = true;
+			}
 		}
 
 		return m_mtxProjection;
@@ -152,14 +152,19 @@ namespace hpl {
 	
 	const cMatrixf& cLightSpot::GetViewProjMatrix()
 	{
-		if(mlViewProjMatrixCount != GetTransformUpdateCount() || mbViewProjUpdated || mbProjectionUpdated)
+		if(OhplBackendRustRequested() ? ohpl_h11_spot_view_proj_stale(&mSpot, GetTransformUpdateCount())
+									  : (mSpot.view_proj_count != GetTransformUpdateCount() || mSpot.view_proj_updated || mSpot.projection_updated))
 		{
 			const cMatrixf &mtxProj = GetProjectionMatrix();
 			const cMatrixf &mtxView = GetViewMatrix();
 			ohpl_light_spot_view_proj(&mtxProj, &mtxView, &m_mtxViewProj);
 			
-			mlViewProjMatrixCount = GetTransformUpdateCount();
-			mbViewProjUpdated = false;
+			if(OhplBackendRustRequested()) ohpl_h11_spot_view_proj_done(&mSpot, GetTransformUpdateCount());
+			else
+			{
+				mSpot.view_proj_count = GetTransformUpdateCount();
+				mSpot.view_proj_updated = false;
+			}
 		}
 
 		return m_mtxViewProj;
@@ -169,14 +174,19 @@ namespace hpl {
 
 	cFrustum* cLightSpot::GetFrustum()
 	{
-		if(mlFrustumMatrixCount != GetTransformUpdateCount() || mbFrustumUpdated || mbProjectionUpdated)
+		if(OhplBackendRustRequested() ? ohpl_h11_spot_frustum_stale(&mSpot, GetTransformUpdateCount())
+									  : (mSpot.frustum_count != GetTransformUpdateCount() || mSpot.frustum_updated || mSpot.projection_updated))
 		{
 			mpFrustum->SetupPerspectiveProj(GetProjectionMatrix(),
 											GetViewMatrix(),
 											mfRadius,ohpl_light_spot_near(mfNearClipPlane, mfShadowNearClip),
 											mfFOV,mfAspect,GetWorldPosition(),false);
-			mbFrustumUpdated = false;
-			mlFrustumMatrixCount = GetTransformUpdateCount();
+			if(OhplBackendRustRequested()) ohpl_h11_spot_frustum_done(&mSpot, GetTransformUpdateCount());
+			else
+			{
+				mSpot.frustum_updated = false;
+				mSpot.frustum_count = GetTransformUpdateCount();
+			}
 		}
 
 		return mpFrustum;

@@ -25,6 +25,7 @@
 #include "graphics/Renderable.h"
 #include <functional>
 #include "scene/RustLight.h"
+#include "scene/RustSceneH11.h"
 
 class TiXmlElement;
 
@@ -306,6 +307,7 @@ namespace hpl {
 		tObjectVariabilityFlag mlShadowCastersAffected;
 
 		tShadowCasterCacheMap m_mapShadowCasterCache;
+		OhplH11ShadowCache *mpH11ShadowCache = NULL;
 
 		float mfShadowMapBiasMul;
 		float mfShadowDistance;

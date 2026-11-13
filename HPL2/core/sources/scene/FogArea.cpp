@@ -21,6 +21,8 @@
 
 #include "math/Math.h"
 #include "scene/RustNode.h"
+#include "scene/RustSceneH11.h"
+#include "impl/RustBackends.h"
 
 #include "resources/Resources.h"
 
@@ -68,7 +70,13 @@ namespace hpl {
 	{
 		mvSize = avSize;
 
-		mBoundingVolume.SetSize(cVector3f(mvSize.x, mvSize.y, mvSize.x));
+		if(OhplBackendRustRequested())
+		{
+			cVector3f vBvSize;
+			ohpl_h11_fog_bounds_size(&mvSize, &vBvSize);
+			mBoundingVolume.SetSize(vBvSize);
+		}
+		else mBoundingVolume.SetSize(cVector3f(mvSize.x, mvSize.y, mvSize.x));
 		
 		
 		SetTransformUpdated();

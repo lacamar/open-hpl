@@ -1,0 +1,949 @@
+m skel=0 bones=0 nodes=136 subs=0 anims=4 meshnodes=136
+s 0 41008889 3f800000
+x 0 40dba22a 0 snd
+s 1 4114cccd 3f800000
+x 1 3f4b8cb3 6 snd
+x 1 402f264f 0 snd
+x 1 409f7129 0 snd
+s 2 4114cccd 3f800000
+x 2 40b4779e 0 snd
+x 2 40a7accf 6 snd
+x 2 40f51515 6 snd
+x 2 3fffdce7 0 snd
+s 3 413a2223 3f800000
+x 3 40c560b4 0 snd
+x 3 40ee110f 0 snd
+x 3 40fe6a37 0 snd
+o update 3c888889
+e after 3c888889
+h b585374a394e7ba3
+~ n 27565c82fc49fb47
+o graphics
+~ bones 4d25767f9dce13f5
+~ skin cbf29ce484222325
+h b585374a394e7ba3
+~ n 27565c82fc49fb47
+o physweight 4001b1c2
+h b65bfaf6c289767a
+~ n 27565c82fc49fb47
+o update 3d088889
+e after 3d088889
+h b65bfaf6c289767a
+~ n 27565c82fc49fb47
+o update 3d088889
+e after 3d088889
+h b65bfaf6c289767a
+~ n 27565c82fc49fb47
+o physfade 3fdd015e
+h b65bfaf6c289767a
+~ n 27565c82fc49fb47
+o play 2 0 1
+h 8917d58ab2e6f027
+~ n 27565c82fc49fb47
+o playfade 2 0 403b4cfb
+h cb2d46a596bc4cec
+~ n 27565c82fc49fb47
+o layer 1 0
+h cb2d46a596bc4cec
+~ n 27565c82fc49fb47
+o update 3d4ccccd
+e after 3d4ccccd
+h 55c28044c2a381a1
+~ n b56754dd63e84121
+o update 3c888889
+e after 3c888889
+h 7d552cf1b01bc527
+~ n 5bd66adc884d434f
+o nop
+h 7d552cf1b01bc527
+~ n 5bd66adc884d434f
+o loop 2 1
+h cb58d6818230ea81
+~ n 5bd66adc884d434f
+o loop 2 1
+h cb58d6818230ea81
+~ n 5bd66adc884d434f
+o nop
+h cb58d6818230ea81
+~ n 5bd66adc884d434f
+o static 1
+h cb58d6818230ea81
+~ n 5bd66adc884d434f
+o stop
+h d53e5514f56c40ba
+~ n 5bd66adc884d434f
+o update 3e4ccccd
+h d53e5514f56c40ba
+~ n 5bd66adc884d434f
+o update 3d088889
+h d53e5514f56c40ba
+~ n 5bd66adc884d434f
+o update 3c888889
+h d53e5514f56c40ba
+~ n 5bd66adc884d434f
+o update 00000000
+h d53e5514f56c40ba
+~ n 5bd66adc884d434f
+o update 3d4ccccd
+h d53e5514f56c40ba
+~ n 5bd66adc884d434f
+o active 1 1
+h bf033f39e98274ef
+~ n 5bd66adc884d434f
+o update 3e4ccccd
+h bf033f39e98274ef
+~ n 5bd66adc884d434f
+o update 3d4ccccd
+h bf033f39e98274ef
+~ n 5bd66adc884d434f
+o update 3e4ccccd
+h bf033f39e98274ef
+~ n 5bd66adc884d434f
+o pause 3 0
+h bf033f39e98274ef
+~ n 5bd66adc884d434f
+o play 0 1 1
+h 044bf838e5e543d1
+~ n 5bd66adc884d434f
+o graphics
+~ bones 4d25767f9dce13f5
+~ skin cbf29ce484222325
+h 044bf838e5e543d1
+~ n 5bd66adc884d434f
+o restpose 0
+= 0
+h 044bf838e5e543d1
+~ n 5bd66adc884d434f
+o normalize 1
+h 044bf838e5e543d1
+~ n 5bd66adc884d434f
+o update 3d4ccccd
+h 044bf838e5e543d1
+~ n 5bd66adc884d434f
+o update 3c888889
+h 044bf838e5e543d1
+~ n 5bd66adc884d434f
+o fadeout 1 4034a2f5
+h fab73beb3616cee4
+~ n 5bd66adc884d434f
+o update 3d088889
+h fab73beb3616cee4
+~ n 5bd66adc884d434f
+o calcxf
+h fab73beb3616cee4
+~ n 5bd66adc884d434f
+o update 3e4ccccd
+h fab73beb3616cee4
+~ n 5bd66adc884d434f
+o update 3d088889
+h fab73beb3616cee4
+~ n 5bd66adc884d434f
+o nop
+h fab73beb3616cee4
+~ n 5bd66adc884d434f
+o active 1 1
+h 2b68b6907aeb02ec
+~ n 5bd66adc884d434f
+o pause 3 1
+h a60c31d65d1e5290
+~ n 5bd66adc884d434f
+o update 3d088889
+h a60c31d65d1e5290
+~ n 5bd66adc884d434f
+o graphics
+~ bones 4d25767f9dce13f5
+~ skin cbf29ce484222325
+h a60c31d65d1e5290
+~ n 5bd66adc884d434f
+o update 3f000000
+h a60c31d65d1e5290
+~ n 5bd66adc884d434f
+o loop 0 0
+h f8c465dbb9aaf3f2
+~ n 5bd66adc884d434f
+o restpose 0
+= 0
+h f8c465dbb9aaf3f2
+~ n 5bd66adc884d434f
+o static 1
+h f8c465dbb9aaf3f2
+~ n 5bd66adc884d434f
+o graphics
+~ bones 4d25767f9dce13f5
+~ skin cbf29ce484222325
+h f8c465dbb9aaf3f2
+~ n 5bd66adc884d434f
+o update 3d088889
+h f8c465dbb9aaf3f2
+~ n 5bd66adc884d434f
+o setmatrix
+h f8c465dbb9aaf3f2
+~ n 182f76ff5946822b
+o update 3d088889
+h f8c465dbb9aaf3f2
+~ n 182f76ff5946822b
+o nop
+h f8c465dbb9aaf3f2
+~ n 182f76ff5946822b
+o update 3c888889
+h f8c465dbb9aaf3f2
+~ n 182f76ff5946822b
+o calcxf
+h f8c465dbb9aaf3f2
+~ n 182f76ff5946822b
+o setmatrix
+h f8c465dbb9aaf3f2
+~ n ff7725ffdc54c4eb
+o update 3c888889
+h f8c465dbb9aaf3f2
+~ n ff7725ffdc54c4eb
+o update 3e4ccccd
+h f8c465dbb9aaf3f2
+~ n ff7725ffdc54c4eb
+o update 3f000000
+h f8c465dbb9aaf3f2
+~ n ff7725ffdc54c4eb
+o update 3d4ccccd
+h f8c465dbb9aaf3f2
+~ n ff7725ffdc54c4eb
+o update 00000000
+h f8c465dbb9aaf3f2
+~ n ff7725ffdc54c4eb
+o layer 0 0
+h f8c465dbb9aaf3f2
+~ n ff7725ffdc54c4eb
+o calcxf
+h f8c465dbb9aaf3f2
+~ n ff7725ffdc54c4eb
+o update 3c888889
+h f8c465dbb9aaf3f2
+~ n ff7725ffdc54c4eb
+o setmatrix
+h f8c465dbb9aaf3f2
+~ n bea7d43562718a31
+o update 3f000000
+h f8c465dbb9aaf3f2
+~ n bea7d43562718a31
+o update 3e4ccccd
+h f8c465dbb9aaf3f2
+~ n bea7d43562718a31
+o update 3c888889
+h f8c465dbb9aaf3f2
+~ n bea7d43562718a31
+o restpose 0
+= 0
+h f8c465dbb9aaf3f2
+~ n bea7d43562718a31
+o layer 3 0
+h f8c465dbb9aaf3f2
+~ n bea7d43562718a31
+o update 00000000
+h f8c465dbb9aaf3f2
+~ n bea7d43562718a31
+o update 3f000000
+h f8c465dbb9aaf3f2
+~ n bea7d43562718a31
+o update 3c888889
+h f8c465dbb9aaf3f2
+~ n bea7d43562718a31
+o update 3c888889
+h f8c465dbb9aaf3f2
+~ n bea7d43562718a31
+o fadeout 1 bf39ebba
+h 83740c36243fb9df
+~ n bea7d43562718a31
+o nop
+h 83740c36243fb9df
+~ n bea7d43562718a31
+o stop
+h ad7fbfb83c23c45e
+~ n bea7d43562718a31
+o update 3f000000
+h ad7fbfb83c23c45e
+~ n bea7d43562718a31
+o fadespeed 0 401997da 405997da
+h ad7fbfb83c23c45e
+~ n bea7d43562718a31
+o update 3d088889
+h ad7fbfb83c23c45e
+~ n bea7d43562718a31
+o active 1 0
+h ad7fbfb83c23c45e
+~ n bea7d43562718a31
+o update 3d4ccccd
+h ad7fbfb83c23c45e
+~ n bea7d43562718a31
+o normalize 1
+h ad7fbfb83c23c45e
+~ n bea7d43562718a31
+o pause 3 0
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o graphics
+~ bones 4d25767f9dce13f5
+~ skin cbf29ce484222325
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3c888889
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3d4ccccd
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o skelphys 1
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3c888889
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3d088889
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3d088889
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3d4ccccd
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o graphics
+~ bones 4d25767f9dce13f5
+~ skin cbf29ce484222325
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o calcxf
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3d4ccccd
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3c888889
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3d088889
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3e4ccccd
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3d088889
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3d4ccccd
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o layer 0 0
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3d088889
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o physfade 3fc6ad46
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3e4ccccd
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 00000000
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3f000000
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o update 3f000000
+h d53e5514f56c40ba
+~ n bea7d43562718a31
+o setmatrix
+h d53e5514f56c40ba
+~ n b821fd7557996e7d
+o playfade 3 0 3fe46164
+h 721642a822b32360
+~ n b821fd7557996e7d
+o graphics
+~ bones 4d25767f9dce13f5
+~ skin cbf29ce484222325
+h 721642a822b32360
+~ n b821fd7557996e7d
+o setmatrix
+h 721642a822b32360
+~ n fd6e7e34eb44b587
+o nop
+h 721642a822b32360
+~ n fd6e7e34eb44b587
+o update 3d4ccccd
+h 721642a822b32360
+~ n fd6e7e34eb44b587
+o static 1
+h 721642a822b32360
+~ n fd6e7e34eb44b587
+o physfade 3f4915ca
+h 721642a822b32360
+~ n fd6e7e34eb44b587
+o calcxf
+h 721642a822b32360
+~ n fd6e7e34eb44b587
+o pause 2 0
+h 721642a822b32360
+~ n fd6e7e34eb44b587
+o update 3f000000
+h 721642a822b32360
+~ n fd6e7e34eb44b587
+o update 3d088889
+h 721642a822b32360
+~ n fd6e7e34eb44b587
+o setmatrix
+h 721642a822b32360
+~ n ac285da6eeddaa6b
+o update 00000000
+h 721642a822b32360
+~ n ac285da6eeddaa6b
+o update 3c888889
+h 721642a822b32360
+~ n ac285da6eeddaa6b
+o update 3c888889
+h 721642a822b32360
+~ n ac285da6eeddaa6b
+o update 3e4ccccd
+h 721642a822b32360
+~ n ac285da6eeddaa6b
+o update 3c888889
+h 721642a822b32360
+~ n ac285da6eeddaa6b
+o physfade 4015fdd6
+h 721642a822b32360
+~ n ac285da6eeddaa6b
+o layer 2 0
+h 721642a822b32360
+~ n ac285da6eeddaa6b
+o playfade 2 0 4019bdda
+h 1304465e855ab828
+~ n ac285da6eeddaa6b
+o calcxf
+h 1304465e855ab828
+~ n ac285da6eeddaa6b
+o update 3f000000
+h 1304465e855ab828
+~ n ac285da6eeddaa6b
+o update 3c888889
+h 1304465e855ab828
+~ n ac285da6eeddaa6b
+o update 3e4ccccd
+h 1304465e855ab828
+~ n ac285da6eeddaa6b
+o update 3d088889
+h 1304465e855ab828
+~ n ac285da6eeddaa6b
+o layer 2 1
+h d1f345c6d77e8720
+~ n ac285da6eeddaa6b
+o update 3c888889
+h d1f345c6d77e8720
+~ n ac285da6eeddaa6b
+o graphics
+~ bones 4d25767f9dce13f5
+~ skin cbf29ce484222325
+h d1f345c6d77e8720
+~ n ac285da6eeddaa6b
+o update 3c888889
+h d1f345c6d77e8720
+~ n ac285da6eeddaa6b
+o active 1 0
+h d1f345c6d77e8720
+~ n ac285da6eeddaa6b
+o playfade 2 0 bf5883d8
+h 3d0681ca66b014a8
+~ n ac285da6eeddaa6b
+o loop 3 0
+h 3d0681ca66b014a8
+~ n ac285da6eeddaa6b
+o update 3e4ccccd
+h 3d0681ca66b014a8
+~ n ac285da6eeddaa6b
+o active 2 1
+h 3d0681ca66b014a8
+~ n ac285da6eeddaa6b
+o time 3 40570cb0
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3e4ccccd
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3d4ccccd
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3c888889
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3d4ccccd
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3f000000
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3f000000
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o nop
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3e4ccccd
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 00000000
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o skelphys 1
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3f000000
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o layer 1 0
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3d088889
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 00000000
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 00000000
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o active 3 1
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3d088889
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o graphics
+~ bones 4d25767f9dce13f5
+~ skin cbf29ce484222325
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3d4ccccd
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3e4ccccd
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3c888889
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o update 3c888889
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o graphics
+~ bones 4d25767f9dce13f5
+~ skin cbf29ce484222325
+h fb3a82c5c623b383
+~ n ac285da6eeddaa6b
+o stop
+h f5431354dc28314c
+~ n ac285da6eeddaa6b
+o normalize 1
+h f5431354dc28314c
+~ n ac285da6eeddaa6b
+o setmatrix
+h f5431354dc28314c
+~ n a2e57a18b78ae84d
+o weight 0 3e40f4c0
+h bbc93d56d156049f
+~ n a2e57a18b78ae84d
+o update 3e4ccccd
+h bbc93d56d156049f
+~ n a2e57a18b78ae84d
+o skelphys 1
+h bbc93d56d156049f
+~ n a2e57a18b78ae84d
+o update 3c888889
+h bbc93d56d156049f
+~ n a2e57a18b78ae84d
+o physfade 37800000
+h bbc93d56d156049f
+~ n a2e57a18b78ae84d
+o update 3d088889
+h bbc93d56d156049f
+~ n a2e57a18b78ae84d
+o update 3d088889
+h bbc93d56d156049f
+~ n a2e57a18b78ae84d
+o update 3d088889
+h bbc93d56d156049f
+~ n a2e57a18b78ae84d
+o update 00000000
+h bbc93d56d156049f
+~ n a2e57a18b78ae84d
+o fadein 0 3f0a5d8a
+h 5fd81b36c65f290a
+~ n a2e57a18b78ae84d
+o physweight 3d4c90c0
+h 569da34cf3913f8d
+~ n a2e57a18b78ae84d
+o skelphys 1
+h 569da34cf3913f8d
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h 569da34cf3913f8d
+~ n a2e57a18b78ae84d
+o update 00000000
+h 569da34cf3913f8d
+~ n a2e57a18b78ae84d
+o pause 1 0
+h 569da34cf3913f8d
+~ n a2e57a18b78ae84d
+o update 3f000000
+h 569da34cf3913f8d
+~ n a2e57a18b78ae84d
+o loop 1 1
+h 75a78370c546ba57
+~ n a2e57a18b78ae84d
+o fadein 2 4019afda
+h 6f0b405887d6f270
+~ n a2e57a18b78ae84d
+o update 3c888889
+h 6f0b405887d6f270
+~ n a2e57a18b78ae84d
+o physweight 3fc46744
+h cf6c4b4abbdc4d93
+~ n a2e57a18b78ae84d
+o restpose 0
+= 0
+h cf6c4b4abbdc4d93
+~ n a2e57a18b78ae84d
+o update 3d088889
+h cf6c4b4abbdc4d93
+~ n a2e57a18b78ae84d
+o update 3f000000
+h cf6c4b4abbdc4d93
+~ n a2e57a18b78ae84d
+o update 3e4ccccd
+h cf6c4b4abbdc4d93
+~ n a2e57a18b78ae84d
+o update 3e4ccccd
+h cf6c4b4abbdc4d93
+~ n a2e57a18b78ae84d
+o pause 3 0
+h cf6c4b4abbdc4d93
+~ n a2e57a18b78ae84d
+o fadespeed 1 400cfdcd 404cfdcd
+h cf6c4b4abbdc4d93
+~ n a2e57a18b78ae84d
+o fadeout 1 3f2041a0
+h 15763f0a67c77fd1
+~ n a2e57a18b78ae84d
+o update 3e4ccccd
+h 15763f0a67c77fd1
+~ n a2e57a18b78ae84d
+o update 3d088889
+h 15763f0a67c77fd1
+~ n a2e57a18b78ae84d
+o update 3c888889
+h 15763f0a67c77fd1
+~ n a2e57a18b78ae84d
+o update 3d088889
+h 15763f0a67c77fd1
+~ n a2e57a18b78ae84d
+o update 3e4ccccd
+h 15763f0a67c77fd1
+~ n a2e57a18b78ae84d
+o normalize 0
+h 7f81034048187ac0
+~ n a2e57a18b78ae84d
+o fadespeed 0 3ff0b770 40385bb8
+h 7f81034048187ac0
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h 7f81034048187ac0
+~ n a2e57a18b78ae84d
+o skelphys 0
+h 7f81034048187ac0
+~ n a2e57a18b78ae84d
+o layer 0 1
+h 7283ff6334d6c198
+~ n a2e57a18b78ae84d
+o weight 2 401af5db
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o update 3c888889
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o stop
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o restpose 0
+= 0
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o update 3c888889
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o update 3f000000
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o update 3c888889
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o update 3f000000
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o update 00000000
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o calcxf
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o update 3e4ccccd
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h 00dc3c2fa72b2efa
+~ n a2e57a18b78ae84d
+o weight 0 3f3545b6
+h 204642dd3ae0c99d
+~ n a2e57a18b78ae84d
+o update 3f000000
+h 204642dd3ae0c99d
+~ n a2e57a18b78ae84d
+o calcxf
+h 204642dd3ae0c99d
+~ n a2e57a18b78ae84d
+o loop 0 0
+h 204642dd3ae0c99d
+~ n a2e57a18b78ae84d
+o stop
+h 204642dd3ae0c99d
+~ n a2e57a18b78ae84d
+o physweight 3fb99f3a
+h a4d1c727d5db31fe
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h a4d1c727d5db31fe
+~ n a2e57a18b78ae84d
+o physweight 3f973f18
+h 655fa81f1cb7403e
+~ n a2e57a18b78ae84d
+o layer 3 0
+h 655fa81f1cb7403e
+~ n a2e57a18b78ae84d
+o fadein 0 3faa9d2a
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o update 00000000
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o update 3c888889
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o update 3d088889
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o stop
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o update 3d088889
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o update 3e4ccccd
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o physfade 401030d0
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o update 3c888889
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o update 3f000000
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o update 00000000
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o update 3d088889
+h 694f7ad6445fb95d
+~ n a2e57a18b78ae84d
+o weight 3 3ef302f4
+h 3312913c00bcbd5a
+~ n a2e57a18b78ae84d
+o playfade 0 0 3fe57d66
+h 7776dc007da5db26
+~ n a2e57a18b78ae84d
+o update 3d088889
+h 7776dc007da5db26
+~ n a2e57a18b78ae84d
+o update 3d088889
+h 7776dc007da5db26
+~ n a2e57a18b78ae84d
+o update 00000000
+h 7776dc007da5db26
+~ n a2e57a18b78ae84d
+o calcxf
+h 7776dc007da5db26
+~ n a2e57a18b78ae84d
+o update 3d088889
+h 7776dc007da5db26
+~ n a2e57a18b78ae84d
+o time 2 41341c5b
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o normalize 0
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o update 3d088889
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o update 3e4ccccd
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o update 00000000
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o update 3c888889
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o normalize 0
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o update 3c888889
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o update 3f000000
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o update 00000000
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o calcxf
+h c46c3fec48b6be5c
+~ n a2e57a18b78ae84d
+o fadein 1 3fa5c926
+h 188fedf0d6992c43
+~ n a2e57a18b78ae84d
+o physfade 400db4ce
+h 188fedf0d6992c43
+~ n a2e57a18b78ae84d
+o stop
+h b723d93d3bf4ec86
+~ n a2e57a18b78ae84d
+o update 3d4ccccd
+h b723d93d3bf4ec86
+~ n a2e57a18b78ae84d
+o setmatrix
+h b723d93d3bf4ec86
+~ n be00fa9989f0c44a
+o update 3f000000
+h b723d93d3bf4ec86
+~ n be00fa9989f0c44a
+o update 3c888889
+h b723d93d3bf4ec86
+~ n be00fa9989f0c44a
+o stop
+h b723d93d3bf4ec86
+~ n be00fa9989f0c44a
+o update 3c888889
+h b723d93d3bf4ec86
+~ n be00fa9989f0c44a
+o update 3d088889
+h b723d93d3bf4ec86
+~ n be00fa9989f0c44a
+o static 1
+h b723d93d3bf4ec86
+~ n be00fa9989f0c44a
+o playfade 0 1 3bfa8100
+h e276b4d70b83b3d3
+~ n be00fa9989f0c44a
+o pause 1 1
+h fa537b0776f164e7
+~ n be00fa9989f0c44a
+o update 3c888889
+h fa537b0776f164e7
+~ n be00fa9989f0c44a
+o fadespeed 3 3f3439b4 3fda1cda
+h fa537b0776f164e7
+~ n be00fa9989f0c44a
+o update 3f000000
+h fa537b0776f164e7
+~ n be00fa9989f0c44a
+o weight 2 40065ac6
+h bd1ab3d7a7803c0f
+~ n be00fa9989f0c44a
+o layer 3 0
+h bd1ab3d7a7803c0f
+~ n be00fa9989f0c44a
+o update 3d088889
+h bd1ab3d7a7803c0f
+~ n be00fa9989f0c44a
+o update 3e4ccccd
+h bd1ab3d7a7803c0f
+~ n be00fa9989f0c44a
+o stop
+h ea7fb102c4633ca4
+~ n be00fa9989f0c44a
+o nop
+h ea7fb102c4633ca4
+~ n be00fa9989f0c44a
+o fadeout 3 3f6cd1ec
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o update 3d4ccccd
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o update 3d088889
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o update 3d4ccccd
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o update 3d088889
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o update 3c888889
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o update 3e4ccccd
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o update 00000000
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o update 3f000000
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o update 00000000
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o graphics
+~ bones 4d25767f9dce13f5
+~ skin cbf29ce484222325
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o restpose 0
+= 0
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o update 3f000000
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
+o update 3e4ccccd
+h e0e852c1d50262fb
+~ n be00fa9989f0c44a
