@@ -157,7 +157,6 @@ static void A7DropMap(void *p){ hplDelete(static_cast<cLuxMap*>(p)); }
 
 cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 {
-	mpA7Maps = NULL;
 	mpA7Maps = ohpl_a7_new();
 	ohpl_a7_set_drop(mpA7Maps, kOhplA7Entity, A7DropMap);
 
@@ -229,12 +228,8 @@ cLuxMapHandler::~cLuxMapHandler()
 	hplDelete(mpSavedGame);
 	hplDelete(mpSavedGameMutex);
 	hplDelete(mpSoundCallback);
-	if(mpA7Maps)
-	{
-		ohpl_a7_destroy_entities(mpA7Maps);
-		ohpl_a7_free(mpA7Maps);
-	}
-	else STLDeleteAll(mlstMaps);
+	ohpl_a7_destroy_entities(mpA7Maps);
+	ohpl_a7_free(mpA7Maps);
 }
 
 //-----------------------------------------------------------------------
@@ -289,8 +284,7 @@ void cLuxMapHandler::Reset()
 	cSound *pSound = gpBase->mpEngine->GetSound();
 	pSound->GetSoundHandler()->StopAll(eSoundEntryType_All);
 
-	if(mpA7Maps) ohpl_a7_destroy_entities(mpA7Maps);
-	else STLDeleteAll(mlstMaps);
+	ohpl_a7_destroy_entities(mpA7Maps);
 	mpCurrentMap = NULL;
 
 	ResumeSoundsAndMusic(); //Make sure that all sounds and music are resumed!
@@ -427,8 +421,7 @@ cLuxMap* cLuxMapHandler::LoadMap(const tString& asFileName, bool abLoadEntities)
 	
 	pMap->LoadFromFile(msMapFolder+asFileName, abLoadEntities);
 
-	if(mpA7Maps) ohpl_a7_list_add(mpA7Maps, pMap);
-	else mlstMaps.push_back(pMap);
+	ohpl_a7_list_add(mpA7Maps, pMap);
 
 	return pMap;
 }
@@ -440,8 +433,7 @@ void cLuxMapHandler::DestroyMap(cLuxMap* apMap, bool abLoadingSaveGame)
 	//If the map do me destroyed is current, make sure it is not current
 	if(mpCurrentMap == apMap) SetCurrentMap(NULL, abLoadingSaveGame, false,"");
 
-	if(mpA7Maps) ohpl_a7_list_destroy(mpA7Maps, apMap);
-	else STLFindAndDelete(mlstMaps,apMap);
+	ohpl_a7_list_destroy(mpA7Maps, apMap);
 }
 
 //-----------------------------------------------------------------------

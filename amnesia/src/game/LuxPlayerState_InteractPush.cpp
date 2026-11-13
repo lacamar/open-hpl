@@ -142,15 +142,6 @@ float cLuxPlayerState_InteractPush::DrawDebug(cGuiSet *apSet,iFontData *apFont, 
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerState_InteractPush::ClearMoveVars()
-{
-	for(int i=0; i<2; ++i)
-	{
-		mfTotalMoveMul[i] = 0;
-		mbMoving[i] = false;
-	}
-}
-
 //-----------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////

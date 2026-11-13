@@ -101,29 +101,22 @@ cLuxArea_Script::~cLuxArea_Script()
 
 bool cLuxArea_Script::CanInteract(iPhysicsBody *apBody)
 {
-	if(mpA7Area) return ohpl_a7_area_can_interact(mpA7Area, msInteractCallback!="");
-	return ohpl_ga5_script_can_interact(mbItemInteraction, msInteractCallback!="");
+	return ohpl_a7_area_can_interact(mpA7Area, msInteractCallback!="");
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxArea_Script::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(mpA7Area) return ohpl_a7_area_on_interact(mpA7Area, msInteractCallback!="");
-	return msInteractCallback!="";
+	return ohpl_a7_area_on_interact(mpA7Area, msInteractCallback!="");
 }
 
 //-----------------------------------------------------------------------
 
 eLuxFocusCrosshair cLuxArea_Script::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(mpA7Area)
-	{
-		const int vTable[4] = { eLuxFocusCrosshair_Default, eLuxFocusCrosshair_Grab, eLuxFocusCrosshair_Ladder, eLuxFocusCrosshair_LastEnum };
-		return (eLuxFocusCrosshair)ohpl_a7_area_crosshair(mpA7Area, msInteractCallback!="", mCustomFocusCrossHair, &vTable);
-	}
-	return (eLuxFocusCrosshair)ohpl_ga5_script_crosshair(msInteractCallback!="", mCustomFocusCrossHair,
-														eLuxFocusCrosshair_Default, eLuxFocusCrosshair_Grab);
+	const int vTable[4] = { eLuxFocusCrosshair_Default, eLuxFocusCrosshair_Grab, eLuxFocusCrosshair_Ladder, eLuxFocusCrosshair_LastEnum };
+	return (eLuxFocusCrosshair)ohpl_a7_area_crosshair(mpA7Area, msInteractCallback!="", mCustomFocusCrossHair, &vTable);
 }
 
 //-----------------------------------------------------------------------

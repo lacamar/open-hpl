@@ -118,8 +118,8 @@ public:
 	void DestroyEntity(iLuxEntity *apEntity);
 	iLuxEntity *GetEntityByName(const tString& asName, eLuxEntityType aType=eLuxEntityType_LastEnum, int alSubType=-1);
 	iLuxEntity *GetEntityByID(int alID, eLuxEntityType aType=eLuxEntityType_LastEnum, int alSubType=-1);
-	iLuxEntity *GetLatestEntity(){ return mpA7 ? static_cast<iLuxEntity*>(ohpl_a7_ent_latest(mpA7)) : mpLatestAddedEntity;}
-	void ResetLatestEntity(){ if(mpA7) ohpl_a7_ent_reset_latest(mpA7); else mpLatestAddedEntity=NULL;}
+	iLuxEntity *GetLatestEntity(){ return static_cast<iLuxEntity*>(ohpl_a7_ent_latest(mpA7));}
+	void ResetLatestEntity(){ ohpl_a7_ent_reset_latest(mpA7); }
 	bool EntityExists(iLuxEntity *apEntity);
 	cLuxEntityIterator GetEntityIterator();
 	cLuxEnemyIterator GetEnemyIterator();
@@ -130,11 +130,9 @@ public:
 	/**
 	 * Gets number of enemies that are in range of player
 	 */
-	int GetInRangeEnemyNum();
 
 	bool AINodeIsUsedAsGoal(cAINode *apNode);
 	bool DoorIsBroken(int alID);
-	bool DoorIsClosed(int alID);
 	/**
 	* -1 = angle is close to 0, 1=angle is 70% or higher of max, 0=inbetween -1 and 1.
 	*/
@@ -143,7 +141,6 @@ public:
 	bool BodyIsInDetachableStickyArea(iPhysicsBody* apBody);
 	bool DetachBodyFromStickyArea(iPhysicsBody* apBody);
 
-    void DestroyAllRopes();
 
 	iPhysicsBody* GetBodyFromEntityBodyIdPair(const cLuxIdPair &aIdPair);
 
@@ -152,8 +149,8 @@ public:
 	void AddPlayerStart(cLuxNode_PlayerStart *apNode);
 	cLuxNode_PlayerStart *GetPlayerStart(const tString & asName);
 	cLuxNode_PlayerStart *GetFirstPlayerStart();
-	int GetPlayerStartNodeNum(){ return mpA7 ? (int)ohpl_a7_start_num(mpA7) : (int)mvPlayerStartNodes.size();}
-	cLuxNode_PlayerStart *GetPlayerStartNode(int alIdx){ return mpA7 ? static_cast<cLuxNode_PlayerStart*>(ohpl_a7_start_at(mpA7, alIdx)) : mvPlayerStartNodes[alIdx];}
+	int GetPlayerStartNodeNum(){ return (int)ohpl_a7_start_num(mpA7);}
+	cLuxNode_PlayerStart *GetPlayerStartNode(int alIdx){ return static_cast<cLuxNode_PlayerStart*>(ohpl_a7_start_at(mpA7, alIdx));}
 
 	void AddPosNode(cLuxNode_Pos *apNode);
 	cLuxNode_Pos *GetPosNode(const tString & asName);
@@ -188,7 +185,7 @@ public:
 
 	cLuxScriptVar* GetVar(const tString &asName);
 
-	bool IsDeletingAllWorldEntities(){ return mpA7 ? ohpl_a7_deleting_all(mpA7) : mbDeletingAllWorldEntities;}
+	bool IsDeletingAllWorldEntities(){ return ohpl_a7_deleting_all(mpA7);}
 
 	//////////////////////////
 	// Properties	
@@ -223,7 +220,6 @@ private:
 
 	bool mbUpdatingTimers;
 
-	bool mbDeletingAllWorldEntities;
 	
 	cEngine *mpEngine;
 	cWorld *mpWorld;
@@ -252,24 +248,11 @@ private:
 
 	tLuxScriptVarMap m_mapVars;
 	
-	tLuxEntityNameMap m_mapEntitiesByName;
-	tLuxEntityIDMap m_mapEntitiesByID;
-	tLuxEntityList mlstEntities;
-	tLuxEnemyList mlstEnemies;
-	tLuxEntityList mlstToBeDestroyedEntities;
-	iLuxEntity *mpLatestAddedEntity;
-	tLuxArea_StickyList mlstStickyAreas;
 
-	tLuxPlayerStartMap m_mapPlayerStartNodes;
-	std::vector<cLuxNode_PlayerStart*> mvPlayerStartNodes;
 
-	tLuxPosNodeMap m_mapPosNodes;
 
-	tLuxUseItemCallbackList mlstUseItemCallbacks;
 
-	tLuxDissolveEntityList mlstDissolveEntities;
 
-	tLuxLampLightConnectionList mlstLampLightConnections;
 };
 
 //----------------------------------------------

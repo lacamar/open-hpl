@@ -80,7 +80,6 @@ public:
 	void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:
-	void ClearMoveVars();
 
 
 	float (&mfTotalMoveMul)[2] = mR.totalMoveMul;

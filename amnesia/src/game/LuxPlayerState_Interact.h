@@ -58,8 +58,6 @@ public:
 	virtual void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:
-	void SetupInteractVars();
-	void ResetInteractVars();
 
 	iPhysicsBody *&mpCurrentBody;
 	iLuxProp *&mpCurrentProp;

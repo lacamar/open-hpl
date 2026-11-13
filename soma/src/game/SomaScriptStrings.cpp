@@ -49,34 +49,9 @@ private:
 
 static cStringFactory gStringFactory;
 
-template <class S> static void Construct(S *apMem) { new (apMem) S(); }
-template <class S> static void CopyConstruct(const S &aOther, S *apMem) { new (apMem) S(aOther); }
-template <class S> static void Destruct(S *apMem) { apMem->~S(); }
-template <class S> static int Cmp(const S &a, const S &b) { return a.compare(b) < 0 ? -1 : (a.compare(b) > 0 ? 1 : 0); }
 template <class S> static S Add(const S &a, const S &b) { return a + b; }
 template <class S> static asQWORD Length(const S &s) { return s.size(); }
 template <class S> static void Resize(asQWORD alSize, S &s) { s.resize((size_t)alSize); }
-
-static void ConstructWFromNarrow(const std::string &asIn, std::wstring *apMem)
-{
-	new (apMem) std::wstring(OhplGs6::Call32([&](OhplGs6Sink32 k, void *c) { ohpl_gs6_widen(OhplGs6::U(asIn), asIn.size(), k, c); }));
-}
-
-static uint8_t &CharAt(unsigned int alIdx, std::string &s)
-{
-	static uint8_t lDummy = 0;
-	if (alIdx >= s.size())
-		return lDummy;
-	return *(uint8_t *)&s[alIdx];
-}
-
-static uint16_t &WCharAt(unsigned int alIdx, std::wstring &s)
-{
-	static uint16_t lDummy = 0;
-	if (alIdx >= s.size())
-		return lDummy;
-	return *(uint16_t *)&s[alIdx];
-}
 
 static std::string Tos(unsigned int alKind, const float *apF, size_t alF, const int *apI = nullptr, size_t alI = 0)
 {
@@ -231,16 +206,7 @@ void RegisterSomaScriptStrings(asIScriptEngine *apEngine)
 
 // SOMA's array<T> also has STL-style names
 
-static void ArrPushBack(void *apValue, CScriptArray *apArr) { apArr->InsertLast(apValue); }
-static void ArrPushFront(void *apValue, CScriptArray *apArr) { apArr->InsertAt(0, apValue); }
-static void ArrPopBack(CScriptArray *apArr) { if (apArr->GetSize()) apArr->RemoveLast(); }
-static void ArrPopFront(CScriptArray *apArr) { if (apArr->GetSize()) apArr->RemoveAt(0); }
 static asUINT ArrSize(const CScriptArray *apArr) { return apArr->GetSize(); }
-static bool ArrEmpty(const CScriptArray *apArr) { return apArr->IsEmpty(); }
-static void ArrInsertBack(void *apValue, CScriptArray *apArr) { apArr->InsertLast(apValue); }
-static void ArrInsert(asUINT alIdx, void *apValue, CScriptArray *apArr) { apArr->InsertAt(alIdx, apValue); }
-static void ArrErase(asUINT alIdx, CScriptArray *apArr) { apArr->RemoveAt(alIdx); }
-
 void RegisterSomaScriptArrayExtras(asIScriptEngine *apEngine)
 {
 	ohpl_s2_register_array_extras(apEngine);

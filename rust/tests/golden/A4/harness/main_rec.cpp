@@ -1,6 +1,0 @@
-#include "prelude.h"
-#include "new_decl.inc"
-#include "fake.inc"
-#include "new_body.inc"
-#include "rec.inc"
-#include "driver.inc"

@@ -426,11 +426,9 @@ public:
 						bool abSyncWithPrevFrame,
 						bool abUseMoveAnimWhenCurrentIsOver);
 	bool FadeOutCurrentAnimImpl(float afFadeTime);
-	float ConvertAnimToAbsoluteTime(float afRelativeTimePostion);
     
 	cSoundEntity* PlaySound(const tString &asName);
 
-	void SetPositionAtStartPos();
 
 	void ResetProperties();
 
@@ -449,9 +447,6 @@ public:
 	void AddPatrolNode(cAINode *apNode, float afWaitTime, const tString & asAnimation, bool abLoopAnimation=false);
 	void ClearPatrolNodes();
 
-    cLuxEnemyPatrolNode* GetCurrentPatrolNode();
-	bool IsAtLastPatrolNode();
-	void IncCurrentPatrolNode(bool abLoopIfAtEnd);
 
 	cLuxEnemyPatrolNode* GetPatrolNode(int alIdx){ return &mvPatrolNodes[alIdx];}
 	int GetPatrolNodeNum(){ return (int)mvPatrolNodes.size();}
@@ -557,7 +552,6 @@ protected:
 
 	void ChangeSoundState(eLuxEnemySoundState aState);
 
-	void UpdateSoundState(float afTimeStep);
 	void UpdateAnimation(float afTimeStep);
 	void UpdateCharBody(float afTimeStep);
 	void UpdateCanSeePlayer(float afTimeStep);
@@ -565,10 +559,7 @@ protected:
 	void UpdatePlayerInRange(float afTimeStep);
 	void UpdateCheckStuckAtDoor(float afTimeStep);
 	void UpdateCheckLastPlayerPos(float afTimeStep);
-	void UpdateDarknessGlow(float afTimeStep);
 	void UpdateRegenHealth(float afTimeStep);
-	void UpdateHallucination(float afTimeStep);
-	void UpdateAlignEntityWithGroundRay(float afTimeStep);
 
 	//////////////////////////////
 	// Callbacks
@@ -601,26 +592,17 @@ protected:
 	bool IsInPlayerFovAtFeetPos(const cVector3f& avFeetPos);
 	bool IsVisibleToPlayerAtFeetPos(const cVector3f& avFeetPos);
 	
-	cVector3f GetPlayerFeetPos();
 
-	float Dist2D(const cVector3f &avPos);
-	float DistToChar(iCharacterBody *apBody);
-	float DistToChar2D(iCharacterBody *apBody);
-	float AbsHeightDistToChar(iCharacterBody *apBody);
 	cVector3f GetDirection2D(const cVector3f &avPos);
     
 	float DistToPlayer();
 	float DistToPlayer2D();
 	float DistToPlayer2D(const cVector3f& avPos);
 	float AbsHeightDistToPlayer();
-	cVector3f GetDirection2DToPlayer();
 	
 	//gets the cos of angle between player->enemy and player move dir. 1=directly towards, -1=directly away
 	float GetPlayerMovementTowardEnemyAmount();
 	
-	bool OutsideStartRadius();
-	bool InFOV(const cVector3f &avPos);
-	bool PlayerInFOV();
 
 	void OnSetActive(bool abX);
 	

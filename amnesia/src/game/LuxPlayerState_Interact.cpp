@@ -73,21 +73,9 @@ void iLuxPlayerState_Interact::OnAttachBodyToStickyArea(iPhysicsBody *apBody)
 
 //-----------------------------------------------------------------------
 
-void iLuxPlayerState_Interact::SetupInteractVars()
-{
-	mpCurrentProp = cLuxPlayerStateVars::mpInteractProp;
-	mpCurrentBody = cLuxPlayerStateVars::mpInteractBody;
-	mvCurrentFocusPos = cLuxPlayerStateVars::mvInteractPos;
 
-	mpCurrentProp->SetIsInteractedWith(true);
-}	
 
 //-----------------------------------------------------------------------
-
-void iLuxPlayerState_Interact::ResetInteractVars()
-{
-	mpCurrentProp->SetIsInteractedWith(false);
-}
 
 //-----------------------------------------------------------------------
 

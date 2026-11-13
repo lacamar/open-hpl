@@ -120,8 +120,7 @@ void cLuxArea_SlimeDamage::OnUpdate(float afTimeStep)
 {
 	//////////////////////////
 	// Check update count
-	if(mpA7Area ? ohpl_a7_area_tick(mpA7Area, afTimeStep, 0)==false
-				: ohpl_ga5_tick_random(&mfCheckCollisionCount, afTimeStep, mfMinCheckAttackTime, mfMaxCheckAttackTime)==false) return;
+	if(ohpl_a7_area_tick(mpA7Area, afTimeStep, 0)==false) return;
 
 	//////////////////////////
 	// Check collision

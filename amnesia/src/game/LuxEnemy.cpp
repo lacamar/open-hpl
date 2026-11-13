@@ -853,12 +853,6 @@ void iLuxEnemy::FadeOutCurrentAnim(float afFadeTime)
 
 //-----------------------------------------------------------------------
 
-float iLuxEnemy::ConvertAnimToAbsoluteTime(float afRelativeTimePostion)
-{
-	OhplA4Host h = A4Host();
-	return ohpl_a4_anim_absolute_time(&mA4,&h,afRelativeTimePostion);
-}
-
 //-----------------------------------------------------------------------
 
 cSoundEntity* iLuxEnemy::PlaySound(const tString &asName)
@@ -876,11 +870,6 @@ cSoundEntity* iLuxEnemy::PlaySound(const tString &asName)
 }
 
 //-----------------------------------------------------------------------
-
-void iLuxEnemy::SetPositionAtStartPos()
-{
-	mpCharBody->SetFeetPosition(mvStartPosition);
-}
 
 //-----------------------------------------------------------------------
 
@@ -950,24 +939,6 @@ void iLuxEnemy::ClearPatrolNodes()
 }
 
 //-----------------------------------------------------------------------
-
-cLuxEnemyPatrolNode* iLuxEnemy::GetCurrentPatrolNode()
-{
-	if(mlCurrentPatrolNode>= (int)mvPatrolNodes.size() || mlCurrentPatrolNode<0)
-		return NULL;
-
-	return &mvPatrolNodes[mlCurrentPatrolNode];
-}
-
-bool iLuxEnemy::IsAtLastPatrolNode()
-{
-	return ohpl_ga3_patrol_is_at_last(mlCurrentPatrolNode, (int)mvPatrolNodes.size());
-}
-
-void iLuxEnemy::IncCurrentPatrolNode(bool abLoopIfAtEnd)
-{
-	ohpl_ga3_patrol_inc(&mlCurrentPatrolNode, (int)mvPatrolNodes.size(), abLoopIfAtEnd);
-}
 
 //-----------------------------------------------------------------------
 
@@ -1094,12 +1065,6 @@ void iLuxEnemy::ChangeSoundState(eLuxEnemySoundState aState)
 
 //-----------------------------------------------------------------------
 
-void iLuxEnemy::UpdateSoundState(float afTimeStep)
-{
-	OhplA4Host h = A4Host();
-	ohpl_a4_update_sound_state(&mA4,&h,afTimeStep);
-}
-
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::UpdateAnimation(float afTimeStep)
@@ -1160,12 +1125,6 @@ void iLuxEnemy::UpdateCheckLastPlayerPos(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void iLuxEnemy::UpdateDarknessGlow(float afTimeStep)
-{
-	OhplA4Host h = A4Host();
-	ohpl_a4_update_darkness_glow(&mA4,&h,afTimeStep);
-}
-
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::UpdateRegenHealth(float afTimeStep)
@@ -1174,19 +1133,7 @@ void iLuxEnemy::UpdateRegenHealth(float afTimeStep)
 	ohpl_ga3_update_regen_health(&mGa3Ctx, &host, afTimeStep);
 }
 
-void iLuxEnemy::UpdateHallucination(float afTimeStep)
-{
-	OhplA4Host h = A4Host();
-	ohpl_a4_update_hallucination(&mA4,&h);
-}
-
 //-----------------------------------------------------------------------
-
-void iLuxEnemy::UpdateAlignEntityWithGroundRay(float afTimeStep)
-{
-	OhplA4Host h = A4Host();
-	ohpl_a4_update_align_ground_ray(&mA4,&h,afTimeStep);
-}
 
 //-----------------------------------------------------------------------
 
@@ -1306,39 +1253,7 @@ cLuxProp_Object* iLuxEnemy::GetClosestFood(float afMaxDist, float afMaxHeightDis
 
 //-----------------------------------------------------------------------
 
-cVector3f iLuxEnemy::GetPlayerFeetPos()
-{
-	return gpBase->mpPlayer->GetCharacterBody()->GetFeetPosition();
-}
-
 //-----------------------------------------------------------------------
-
-float iLuxEnemy::Dist2D(const cVector3f &avPos)
-{
-	OhplA4Host h = A4Host();
-	return ohpl_a4_dist_2d(&mA4,&h,&avPos.x);
-}
-
-float iLuxEnemy::DistToChar(iCharacterBody *apBody)
-{
-	OhplA4Host h = A4Host();
-	cVector3f vFeet = apBody->GetFeetPosition();
-	return ohpl_a4_dist_to_char(&mA4,&h,&vFeet.x);
-}
-
-float iLuxEnemy::DistToChar2D(iCharacterBody *apBody)
-{
-	OhplA4Host h = A4Host();
-	cVector3f vFeet = apBody->GetFeetPosition();
-	return ohpl_a4_dist_to_char_2d(&mA4,&h,&vFeet.x);
-}
-
-float iLuxEnemy::AbsHeightDistToChar(iCharacterBody *apBody)
-{
-	OhplA4Host h = A4Host();
-	cVector3f vFeet = apBody->GetFeetPosition();
-	return ohpl_a4_abs_height_dist(&mA4,&h,&vFeet.x);
-}
 
 cVector3f iLuxEnemy::GetDirection2D(const cVector3f &avPos)
 {
@@ -1369,11 +1284,6 @@ float iLuxEnemy::AbsHeightDistToPlayer()
 {
 	OhplA4Host h = A4Host();
 	return ohpl_a4_abs_height_dist_to_player(&mA4,&h);
-}
-
-cVector3f iLuxEnemy::GetDirection2DToPlayer()
-{
-	return GetDirection2D(gpBase->mpPlayer->GetCharacterBody()->GetPosition());
 }
 
 //-----------------------------------------------------------------------
@@ -1410,25 +1320,7 @@ float iLuxEnemy::GetPlayerMovementTowardEnemyAmount()
 
 //-----------------------------------------------------------------------
 
-bool iLuxEnemy::OutsideStartRadius()
-{
-	OhplA4Host h = A4Host();
-	return ohpl_a4_outside_start_radius(&mA4,&h);
-}
-
 //-----------------------------------------------------------------------
-
-bool iLuxEnemy::InFOV(const cVector3f &avPos)
-{
-	OhplGa3Host host = Ga3Host();
-	return ohpl_ga3_in_fov(&mGa3Ctx, &host, &avPos.x);
-}
-
-bool iLuxEnemy::PlayerInFOV()
-{
-	OhplGa3Host host = Ga3Host();
-	return ohpl_ga3_player_in_fov(&mGa3Ctx, &host);
-}
 
 //-----------------------------------------------------------------------
 

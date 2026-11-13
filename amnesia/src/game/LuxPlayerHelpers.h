@@ -650,7 +650,6 @@ public:
 
 	cLightPoint* GetAmbientLight(){ return mpAmbientLight;}
 
-	bool InDarkness();
 
 	void SetActive(bool abX);
 

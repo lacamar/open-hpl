@@ -158,7 +158,6 @@ private:
 
 	cLuxMap* mpCurrentMap;
 
-	tLuxMapList mlstMaps;
 	OhplA7Ctx *mpA7Maps;
 
 	cViewport *mpViewport;

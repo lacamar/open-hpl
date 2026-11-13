@@ -84,7 +84,7 @@ public:
 	static void SetAllowAttachment(bool abX){ mbAllowAttachment = abX;}
 
 	iPhysicsBody *GetAttachedBody(){ return mpAttachedBody;}
-	bool CanDetach(){ return mpA7Area ? ohpl_a7_area_sticky_can_detach(mpA7Area) : (mbCanDetach && mfSetMtxTime>=1);}
+	bool CanDetach(){ return ohpl_a7_area_sticky_can_detach(mpA7Area);}
 
 	//////////////////////
 	//Connection callbacks

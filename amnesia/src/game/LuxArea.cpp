@@ -99,24 +99,14 @@ static int A7Kind(eLuxAreaType aType)
 
 static OhplA7Area *A7NewArea(cLuxMap *apMap, eLuxAreaType aType)
 {
-	return apMap->GetA7() ? ohpl_a7_area_new(apMap->GetA7(), A7Kind(aType)) : NULL;
-}
-
-static OhplA7Base *A7BaseOf(OhplA7Area *apArea)
-{
-	return apArea ? ohpl_a7_area_base(apArea) : static_cast<OhplA7Base*>(calloc(1, sizeof(OhplA7Base)));
-}
-
-static void *A7PodOf(OhplA7Area *apArea, eLuxAreaType aType)
-{
-	return apArea ? ohpl_a7_area_pod(apArea) : calloc(1, ohpl_a7_pod_size(A7Kind(aType)) + 1);
+	return ohpl_a7_area_new(apMap->GetA7(), A7Kind(aType));
 }
 
 iLuxArea::iLuxArea(const tString &asName, int alID, cLuxMap *apMap, eLuxAreaType aAreaType)  : iLuxEntity(asName,alID,apMap, eLuxEntityType_Area),
 	mAreaType(aAreaType),
 	mpA7Area(A7NewArea(apMap, aAreaType)),
-	mpA7Base(A7BaseOf(mpA7Area)),
-	mpA7Pod(A7PodOf(mpA7Area, aAreaType)),
+	mpA7Base(ohpl_a7_area_base(mpA7Area)),
+	mpA7Pod(ohpl_a7_area_pod(mpA7Area)),
 	mvSize(*reinterpret_cast<cVector3f*>(&mpA7Base->size)),
 	m_mtxTransform(*reinterpret_cast<cMatrixf*>(&mpA7Base->mtx)),
 	mvRelativeOffset(*reinterpret_cast<cVector3f*>(&mpA7Base->relOffset)),
@@ -139,12 +129,7 @@ iLuxArea::~iLuxArea()
 		mpMap->GetPhysicsWorld()->DestroyBody(mpBody);
 	}
 
-	if(mpA7Area) ohpl_a7_area_free(mpMap->GetA7(), mpA7Area);
-	else
-	{
-		free(mpA7Base);
-		free(mpA7Pod);
-	}
+	ohpl_a7_area_free(mpMap->GetA7(), mpA7Area);
 }
 
 //-----------------------------------------------------------------------
@@ -210,8 +195,7 @@ void iLuxArea::AttachToBody(const tString& asPropName, int alBodyId)
 				mpParentBody = pPropBody;
 				cVector3f vBodyPos = mpBody->GetWorldPosition();
 				cVector3f vParentPos = mpParentBody->GetWorldPosition();
-				if(mpA7Area) ohpl_a7_area_attach(mpA7Area, reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<const OhplGa5Vec3*>(&vParentPos));
-				else ohpl_ga5_attach_offset(reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<const OhplGa5Vec3*>(&vParentPos), reinterpret_cast<OhplGa5Vec3*>(&mvRelativeOffset));
+				ohpl_a7_area_attach(mpA7Area, reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<const OhplGa5Vec3*>(&vParentPos));
 				return;
 			}
 		}
@@ -252,8 +236,7 @@ void iLuxArea::OnUpdate(float afTimeStep)
 		cVector3f vParentPos = mpParentBody->GetWorldPosition();
 		cVector3f vBodyPos = mpBody->GetWorldPosition();
 		cVector3f vMove;
-		if(mpA7Area) ohpl_a7_area_follow(mpA7Area, reinterpret_cast<const OhplGa5Vec3*>(&vParentPos), reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<OhplGa5Vec3*>(&vMove));
-		else ohpl_ga5_follow_offset(reinterpret_cast<const OhplGa5Vec3*>(&mvRelativeOffset), reinterpret_cast<const OhplGa5Vec3*>(&vParentPos), reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<OhplGa5Vec3*>(&vMove));
+		ohpl_a7_area_follow(mpA7Area, reinterpret_cast<const OhplGa5Vec3*>(&vParentPos), reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<OhplGa5Vec3*>(&vMove));
 		mpBody->StaticLinearMove(vMove);
 	}
 }

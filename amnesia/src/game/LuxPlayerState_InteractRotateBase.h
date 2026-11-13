@@ -87,7 +87,6 @@ protected:
 	virtual float GetSpeedAdd(cCamera *apCam)=0;
 	virtual void OnThrow()=0;
 
-	void SetupForceAxes();
 
 	iLuxInteractData_RotateBase *&mpMoveBaseData = mR.data;
 

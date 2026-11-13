@@ -1,6 +1,5 @@
 // min==max in the random-interval areas: libc rand() is shared with parallel cargo tests.
-// a7_harness cpp|rust: seeded op scripts through the std-container originals of cLuxMap (cpp) or the
-// Rust-owned map arena and area blocks (rust). Same driver, two backends; traces must be byte-equal.
+// a7_harness: seeded op scripts through the Rust-owned map arena and area blocks; the trace is compared with ../a7_ops.txt.
 #include "RustLuxMapA7.h"
 #include <cctype>
 #include <cstdint>
@@ -86,212 +85,6 @@ public:
 };
 
 static void Script(IMap &m, Rng &r, const std::string &func, const std::string &name, bool updating);
-
-// ---------------------------------------------------------------- the std-container originals
-class RefMap : public IMap
-{
-	std::list<Obj*> ents, enemies, stickies, doomed;
-	std::multimap<std::string, Obj*> byName;
-	std::multimap<int, Obj*> byId;
-	Obj *latest = NULL;
-	bool deleting = false, updating = false, commentary = false;
-	std::list<TimerRec*> timers;
-	std::list<std::pair<Obj*, std::vector<std::string>>> uses;
-	struct Dis { Obj *o; float speed, alpha; };
-	std::list<Dis> dis;
-	std::list<std::pair<Obj*, const void*>> lamps;
-	std::multimap<std::string, Obj*> starts, poss;
-	std::vector<Obj*> startOrder;
-	std::map<Obj*, int> flags;
-
-	static void Remove(std::list<Obj*> &l, Obj *o) { for(auto it = l.begin(); it != l.end(); ++it) if(*it == o) { l.erase(it); return; } }
-	static void RemoveMap(std::multimap<std::string, Obj*> &m, Obj *o) { for(auto it = m.begin(); it != m.end(); ++it) if(it->second == o) { m.erase(it); return; } }
-	static void RemoveMapI(std::multimap<int, Obj*> &m, Obj *o) { for(auto it = m.begin(); it != m.end(); ++it) if(it->second == o) { m.erase(it); return; } }
-
-public:
-	void AddEntity(Obj *e, int kf) override
-	{
-		byName.insert({ Lower(e->name), e });
-		byId.insert({ e->id, e });
-		ents.push_back(e);
-		latest = e;
-		flags[e] = kf;
-		bool enemy = kf & 1, sticky = kf & 2;
-		if(enemy) enemies.push_back(e);
-		else if(sticky) stickies.push_back(e);
-	}
-	Obj *FindName(const std::string &n) override { auto it = byName.find(Lower(n)); return it == byName.end() ? NULL : it->second; }
-	Obj *FindId(int id) override { auto it = byId.find(id); return it == byId.end() ? NULL : it->second; }
-	bool Exists(Obj *e) override { for(Obj *o : ents) if(o == e) return true; return false; }
-	Obj *Latest() override { return latest; }
-	void ResetLatest() override { latest = NULL; }
-	int FreeId() override
-	{
-		std::vector<int> ids;
-		for(auto &p : byId) ids.push_back(p.first);
-		return ohpl_ga5_free_entity_id(ids.data(), ids.size());
-	}
-	void Doom(Obj *e) override { if(e->doomed) return; e->doomed = true; doomed.push_back(e); }
-	void UpdateDoomed(Rng &r) override
-	{
-		for(auto it = doomed.begin(); it != doomed.end(); ++it)
-		{
-			Obj *e = *it;
-			T("doomed " + e->name);
-			if(r.n(4) == 0)
-			{
-				std::vector<Obj*> all(ents.begin(), ents.end());
-				if(!all.empty()) Doom(all[r.n((int)all.size())]);
-			}
-			Remove(ents, e);
-			RemoveMap(byName, e);
-			RemoveMapI(byId, e);
-			int kf = flags[e];
-			if(kf & 1) Remove(enemies, e);
-			else if(kf & 2) Remove(stickies, e);
-			Drop(e);
-		}
-		doomed.clear();
-	}
-	std::vector<Obj*> Walk(int which) override
-	{
-		const std::list<Obj*> &l = which == 0 ? ents : which == 1 ? enemies : stickies;
-		return std::vector<Obj*>(l.begin(), l.end());
-	}
-	void DestroyAll() override
-	{
-		for(TimerRec *t : timers) delete t;
-		timers.clear();
-		for(auto &p : lamps) Drop(p.first);
-		lamps.clear();
-		deleting = true;
-		for(Obj *e : ents) Drop(e);
-		ents.clear();
-		deleting = false;
-		byId.clear(); byName.clear(); doomed.clear(); latest = NULL; enemies.clear(); stickies.clear();
-		commentary = false;
-	}
-	void Teardown() override
-	{
-		for(TimerRec *t : timers) delete t;
-		timers.clear();
-		for(auto &p : lamps) Drop(p.first);
-		lamps.clear();
-		deleting = true;
-		for(Obj *e : ents) Drop(e);
-		deleting = false;
-		for(auto &p : starts) Drop(p.second);
-		for(auto &p : poss) Drop(p.second);
-		for(auto &u : uses) Drop(u.first);
-		for(auto &d : dis) Drop(d.o);
-	}
-	void TimerAdd(const std::string &n, float t, const std::string &f) override
-	{
-		TimerRec *r = new TimerRec{ n, f, ohpl_ga5_timer_count(t), false };
-		timers.push_back(r);
-	}
-	void TimerRemove(const std::string &n) override
-	{
-		for(auto it = timers.begin(); it != timers.end(); )
-		{
-			TimerRec *t = *it;
-			if(t->name == n)
-			{
-				if(ohpl_ga5_timer_remove_marks(updating)) { t->destroy = true; ++it; }
-				else { it = timers.erase(it); delete t; }
-			}
-			else ++it;
-		}
-	}
-	bool TimerGet(const std::string &n, float *c) override
-	{
-		for(TimerRec *t : timers) if(t->name == n) { *c = t->count; return true; }
-		return false;
-	}
-	void TimersUpdate(float step, Rng &r) override
-	{
-		updating = true;
-		for(TimerRec *t : timers) t->count = ohpl_ga5_timer_step(t->count, step);
-		for(auto it = timers.begin(); it != timers.end(); )
-		{
-			TimerRec *t = *it;
-			if(ohpl_ga5_timer_due(t->count, t->destroy))
-			{
-				Script(*this, r, t->func, t->name, true);
-				it = timers.erase(it);
-				delete t;
-			}
-			else ++it;
-		}
-		for(auto it = timers.begin(); it != timers.end(); )
-		{
-			if((*it)->destroy) { delete *it; it = timers.erase(it); }
-			else ++it;
-		}
-		updating = false;
-	}
-	std::vector<TimerRec> Timers() override { std::vector<TimerRec> v; for(TimerRec *t : timers) v.push_back(*t); return v; }
-	void TimersSet(const std::vector<TimerRec> &v) override
-	{
-		for(TimerRec *t : timers) delete t;
-		timers.clear();
-		for(const TimerRec &t : v) timers.push_back(new TimerRec(t));
-	}
-	void UseAdd(Obj *o, const std::string &n, const std::string &i, const std::string &e) override { uses.push_back({ o, { n, i, e } }); }
-	bool UseRemoveName(const std::string &n) override
-	{
-		for(auto it = uses.begin(); it != uses.end(); ++it)
-			if(it->second[0] == n) { Drop(it->first); uses.erase(it); return true; }
-		return false;
-	}
-	void UseRemovePtr(Obj *o, const std::string &n) override
-	{
-		for(auto it = uses.begin(); it != uses.end(); ++it)
-		{
-			if(it->first != o) continue;
-			if(ohpl_ga5_callback_remove_ok(n.data(), n.size(), it->second[0].data(), it->second[0].size()) == false) break;
-			Drop(o);
-			uses.erase(it);
-			break;
-		}
-	}
-	Obj *UseFind(const std::string &i, const std::string &e) override
-	{
-		for(auto &u : uses)
-			if(ohpl_ga5_use_item_matches(u.second[1].data(), u.second[1].size(), u.second[2].data(), u.second[2].size(), i.data(), i.size(), e.data(), e.size())) return u.first;
-		return NULL;
-	}
-	void DissolveAdd(Obj *o, float t) override { dis.push_back({ o, ohpl_ga5_dissolve_speed(t), 1.0f }); }
-	void DissolveUpdate(float step) override
-	{
-		for(auto it = dis.begin(); it != dis.end(); )
-		{
-			bool rm = ohpl_ga5_dissolve_step(&it->alpha, it->speed, step);
-			T("cover " + it->o->name + " " + Bits(it->alpha));
-			if(rm) { Drop(it->o); it = dis.erase(it); }
-			else ++it;
-		}
-	}
-	void LampAdd(Obj *c, const void *l) override { lamps.push_back({ c, l }); }
-	Obj *LampFind(const void *l) override { for(auto &p : lamps) if(p.second == l) return p.first; return NULL; }
-	void LampUpdate(float step) override { for(auto &p : lamps) T("lamp " + p.first->name + " " + Bits(step)); }
-	void StartAdd(Obj *o, bool pos) override
-	{
-		if(pos) poss.insert({ o->name, o });
-		else { starts.insert({ o->name, o }); startOrder.push_back(o); }
-	}
-	Obj *StartFind(const std::string &n) override { auto it = starts.find(n); return it == starts.end() ? NULL : it->second; }
-	Obj *PosFind(const std::string &n) override { auto it = poss.find(n); return it == poss.end() ? NULL : it->second; }
-	Obj *StartFirst() override { return starts.empty() ? NULL : starts.begin()->second; }
-	std::vector<Obj*> Starts() override { return startOrder; }
-	bool Commentary(bool show) override
-	{
-		int n = ohpl_ga5_commentary_sync(commentary, show);
-		if(n < 0) return false;
-		commentary = n != 0;
-		return true;
-	}
-};
 
 // ---------------------------------------------------------------- the Rust-owned arena
 static void SinkS(void *ctx, const unsigned char *p, size_t n) { static_cast<std::string*>(ctx)->assign((const char*)p, n); }
@@ -594,24 +387,22 @@ static void Run(IMap &m, uint64_t seed)
 }
 
 // ---------------------------------------------------------------- areas
-// cpp: the plain structs the C++ shells held before, driven through the same ohpl_ga5_* the shells call.
-// rust: the Rust-owned blocks.
 static std::string V(const OhplGa5Vec3 &v) { return Bits(v.x) + "," + Bits(v.y) + "," + Bits(v.z); }
 
-static void Areas(bool rust, uint64_t seed)
+static void Areas(uint64_t seed)
 {
 	Rng r = { seed };
 	OhplA7Ctx *ctx = ohpl_a7_new();
 	for(int round = 0; round < 40; ++round)
 	{
 		int kind = round % 9;
-		OhplA7Area *a = rust ? ohpl_a7_area_new(ctx, kind) : NULL;
+		OhplA7Area *a = ohpl_a7_area_new(ctx, kind);
 		static OhplA7Insanity ins; static OhplA7Flashback fb; static OhplA7Slime sl; static OhplA7Examine ex; static OhplA7Liquid lq;
 		static OhplA7Ladder ld; static OhplA7Sticky st; static OhplA7Script sc; static OhplA7Base base;
 		memset(&ins, 0, sizeof ins); memset(&fb, 0, sizeof fb); memset(&sl, 0, sizeof sl); memset(&ex, 0, sizeof ex);
 		memset(&lq, 0, sizeof lq); memset(&ld, 0, sizeof ld); memset(&st, 0, sizeof st); memset(&sc, 0, sizeof sc); memset(&base, 0, sizeof base);
-		OhplA7Base *b = rust ? ohpl_a7_area_base(a) : &base;
-		void *pod = rust ? ohpl_a7_area_pod(a) : NULL;
+		OhplA7Base *b = ohpl_a7_area_base(a);
+		void *pod = ohpl_a7_area_pod(a);
 		std::string head = "area " + std::to_string(round) + " kind " + std::to_string(kind);
 		const int tbl[4] = { 10, 11, 12, 13 };
 		float engine = 1.0f / 60.0f;
@@ -619,45 +410,44 @@ static void Areas(bool rust, uint64_t seed)
 		{
 		case kOhplA7Insanity:
 		{
-			OhplA7Insanity &s = rust ? *static_cast<OhplA7Insanity*>(pod) : ins;
+			OhplA7Insanity &s = *static_cast<OhplA7Insanity*>(pod);
 			s.checkTimeMin = 0.25f; s.checkTimeMax = 0.25f; s.checkCollisionCount = r.f(0.3f);
 			for(int i = 0; i < 60; ++i)
 			{
 				float step = r.f(0.05f);
-				bool go = rust ? ohpl_a7_area_tick(a, step, engine) : ohpl_ga5_tick_random(&s.checkCollisionCount, step, s.checkTimeMin, s.checkTimeMax);
+				bool go = ohpl_a7_area_tick(a, step, engine);
 				T(head + " tick " + std::to_string(go) + " " + Bits(s.checkCollisionCount));
 			}
 		}
 		break;
 		case kOhplA7Slime:
 		{
-			OhplA7Slime &s = rust ? *static_cast<OhplA7Slime*>(pod) : sl;
+			OhplA7Slime &s = *static_cast<OhplA7Slime*>(pod);
 			s.minCheckAttackTime = 0.5f; s.maxCheckAttackTime = 0.5f; s.checkCollisionCount = r.f(0.5f);
 			for(int i = 0; i < 60; ++i)
 			{
 				float step = r.f(0.08f);
-				bool go = rust ? ohpl_a7_area_tick(a, step, engine) : ohpl_ga5_tick_random(&s.checkCollisionCount, step, s.minCheckAttackTime, s.maxCheckAttackTime);
+				bool go = ohpl_a7_area_tick(a, step, engine);
 				T(head + " tick " + std::to_string(go) + " " + Bits(s.checkCollisionCount));
 			}
 		}
 		break;
 		case kOhplA7Flashback:
 		{
-			OhplA7Flashback &s = rust ? *static_cast<OhplA7Flashback*>(pod) : fb;
+			OhplA7Flashback &s = *static_cast<OhplA7Flashback*>(pod);
 			s.checkCollisionCount = r.f(0.2f);
 			for(int i = 0; i < 60; ++i)
 			{
 				float step = r.b() ? engine : r.f(0.05f) / 100.0f;
 				bool go;
-				if(rust) go = ohpl_a7_area_tick(a, step, engine);
-				else go = ohpl_ga5_step_too_small(step, engine) ? false : ohpl_ga5_tick_fixed(&s.checkCollisionCount, step, 0.1f);
+				go = ohpl_a7_area_tick(a, step, engine);
 				T(head + " tick " + std::to_string(go) + " " + Bits(s.checkCollisionCount));
 			}
 		}
 		break;
 		case kOhplA7Examine:
 		{
-			OhplA7Examine &s = rust ? *static_cast<OhplA7Examine*>(pod) : ex;
+			OhplA7Examine &s = *static_cast<OhplA7Examine*>(pod);
 			s.insaneLimit = 30.0f;
 			for(int i = 0; i < 80; ++i)
 			{
@@ -666,14 +456,13 @@ static void Areas(bool rust, uint64_t seed)
 					OhplGa5ExamineIn in = { r.b(), r.b(), r.b(), r.b(), r.b() };
 					OhplGa5ExamineOut out;
 					float sanity = r.f(50.0f);
-					if(rust) ohpl_a7_area_examine(a, &in, sanity, &out);
-					else { ohpl_ga5_examine_interact(&in, sanity, s.insaneLimit, s.playSoundCount, &out); s.playSoundCount = 0.5f; }
+					ohpl_a7_area_examine(a, &in, sanity, &out);
 					T(head + " interact " + std::to_string(out.showText) + std::to_string(out.insaneText) + std::to_string(out.playSound) + std::to_string(out.insaneSound) + " " + Bits(s.playSoundCount));
 				}
 				else
 				{
 					float step = r.f(0.1f);
-					if(rust) ohpl_a7_area_tick(a, step, engine); else ohpl_ga5_examine_tick(&s.playSoundCount, step);
+					ohpl_a7_area_tick(a, step, engine);
 					T(head + " tick " + Bits(s.playSoundCount));
 				}
 			}
@@ -681,40 +470,37 @@ static void Areas(bool rust, uint64_t seed)
 		break;
 		case kOhplA7Liquid:
 		{
-			OhplA7Liquid &s = rust ? *static_cast<OhplA7Liquid*>(pod) : lq;
+			OhplA7Liquid &s = *static_cast<OhplA7Liquid*>(pod);
 			for(int i = 0; i < 30; ++i)
 			{
 				float py = r.f(10.0f), sy = r.f(4.0f);
-				if(rust) ohpl_a7_area_liquid_setup(a, py, sy); else ohpl_ga5_liquid_surface_plane(py, sy, &s.surfacePlane);
+				ohpl_a7_area_liquid_setup(a, py, sy);
 				float step = r.b() ? engine : r.f(0.05f) / 100.0f;
 				bool go;
-				if(rust) go = ohpl_a7_area_tick(a, step, engine);
-				else { go = !ohpl_ga5_step_too_small(step, engine); if(go) s.timeCount += step; }
+				go = ohpl_a7_area_tick(a, step, engine);
 				T(head + " liquid " + std::to_string(go) + " " + Bits(s.surfacePlane.d) + " " + Bits(s.timeCount));
 			}
 		}
 		break;
 		case kOhplA7Ladder:
 		{
-			OhplA7Ladder &s = rust ? *static_cast<OhplA7Ladder*>(pod) : ld;
+			OhplA7Ladder &s = *static_cast<OhplA7Ladder*>(pod);
 			for(int i = 0; i < 20; ++i)
 			{
 				OhplGa5Mtx m;
 				for(int x = 0; x < 4; ++x) for(int y = 0; y < 4; ++y) m.m[x][y] = (x == y) ? 1.0f : r.f(0.5f) - 0.5f;
 				float py = r.f(10.0f), sy = r.f(4.0f);
-				if(rust) ohpl_a7_area_ladder_setup(a, &m, py, sy);
-				else { OhplGa5LadderSetup l; ohpl_ga5_ladder_setup(&m, py, sy, &l); s.forward = l.forward; s.maxY = l.maxY; s.minY = l.minY; }
+				ohpl_a7_area_ladder_setup(a, &m, py, sy);
 				OhplGa5Vec3 ap = { r.f(5.0f), r.f(5.0f), r.f(5.0f) }, cs = { 0.5f, 1.8f, 0.5f }, out;
 				float cy = r.f(8.0f);
-				if(rust) ohpl_a7_area_ladder_start(a, &ap, &cs, cy, &out);
-				else ohpl_ga5_ladder_start_pos(&ap, &s.forward, &cs, cy, s.maxY, s.minY, &out);
+				ohpl_a7_area_ladder_start(a, &ap, &cs, cy, &out);
 				T(head + " ladder " + V(s.forward) + " " + Bits(s.maxY) + " " + Bits(s.minY) + " start " + V(out));
 			}
 		}
 		break;
 		case kOhplA7Sticky:
 		{
-			OhplA7Sticky &s = rust ? *static_cast<OhplA7Sticky*>(pod) : st;
+			OhplA7Sticky &s = *static_cast<OhplA7Sticky*>(pod);
 			s.poseTime = 0.2f; s.canDetach = r.b(); s.moveBody = r.b(); s.rotateBody = r.b(); s.setMtxTime = 1.0f;
 			for(int i = 0; i < 30; ++i)
 			{
@@ -725,8 +511,7 @@ static void Areas(bool rust, uint64_t seed)
 					bool grav = r.b();
 					float mass = r.f(5.0f);
 					int saved = r.n(3) - 1;
-					if(rust) ohpl_a7_area_sticky_attach(a, &m, grav, mass, saved);
-					else { s.attachedStart = m; s.setMtxTime = 0; s.attachedBodyGravity = grav; s.attachedBodyMass = mass; s.attachedEntityFullGameSaved = saved >= 0 ? saved != 0 : false; }
+					ohpl_a7_area_sticky_attach(a, &m, grav, mass, saved);
 					T(head + " attach " + std::to_string(s.attachedBodyGravity) + " " + Bits(s.attachedBodyMass) + " " + std::to_string(s.attachedEntityFullGameSaved));
 				}
 				OhplGa5Vec3 ap = { r.f(3.0f), r.f(3.0f), r.f(3.0f) }, mc = { r.f(1.0f), r.f(1.0f), r.f(1.0f) }, at = { r.f(3.0f), r.f(3.0f), r.f(3.0f) };
@@ -734,57 +519,44 @@ static void Areas(bool rust, uint64_t seed)
 				OhplGa5StickyOut out;
 				memset(&out, 0, sizeof out);
 				bool ran;
-				if(rust) ran = ohpl_a7_area_sticky_step(a, &m, &ap, &mc, &at, step, &out);
-				else
-				{
-					ran = !(s.setMtxTime >= 1);
-					if(ran)
-					{
-						OhplGa5StickyIn in;
-						in.start = s.attachedStart; in.areaWorld = m; in.areaPos = ap; in.massCentre = mc; in.attachedPos = at;
-						in.poseTime = s.poseTime; in.step = step; in.setTime = s.setMtxTime; in.moveBody = s.moveBody; in.rotateBody = s.rotateBody;
-						ohpl_ga5_sticky_attach(&in, &out);
-						s.setMtxTime = out.setTime;
-					}
-				}
-				bool cd = rust ? ohpl_a7_area_sticky_can_detach(a) : (s.canDetach && s.setMtxTime >= 1);
+				ran = ohpl_a7_area_sticky_step(a, &m, &ap, &mc, &at, step, &out);
+				bool cd = ohpl_a7_area_sticky_can_detach(a);
 				T(head + " step " + std::to_string(ran) + " " + std::to_string(out.mode) + " " + Bits(out.setTime) + " " + std::to_string(out.done) + " " + Bits(out.mtx.m[0][0]) + " " + V(out.pos) + " detach " + std::to_string(cd));
 			}
 		}
 		break;
 		default:
 		{
-			OhplA7Script &s = rust ? *static_cast<OhplA7Script*>(pod) : sc;
+			OhplA7Script &s = *static_cast<OhplA7Script*>(pod);
 			s.itemInteraction = r.b();
 			for(int i = 0; i < 20; ++i)
 			{
 				bool cb = r.b();
 				int custom = r.n(4) + 10;
-				bool ci = rust ? ohpl_a7_area_can_interact(a, cb) : (kind == kOhplA7Script ? ohpl_ga5_script_can_interact(s.itemInteraction, cb) : true);
-				int cross = rust ? ohpl_a7_area_crosshair(a, cb, custom, &tbl) : (kind == kOhplA7Script ? ohpl_ga5_script_crosshair(cb, custom, tbl[0], tbl[1]) : tbl[0]);
-				bool oi = kind == kOhplA7Script ? (rust ? ohpl_a7_area_on_interact(a, cb) : cb) : false;
+				bool ci = ohpl_a7_area_can_interact(a, cb);
+				int cross = ohpl_a7_area_crosshair(a, cb, custom, &tbl);
+				bool oi = kind == kOhplA7Script ? (ohpl_a7_area_on_interact(a, cb)) : false;
 				T(head + " iface " + std::to_string(ci) + " " + std::to_string(cross) + " " + std::to_string(oi));
 			}
 		}
 		break;
 		}
 		OhplGa5Vec3 bp = { r.f(3.0f), r.f(3.0f), r.f(3.0f) }, pp = { r.f(3.0f), r.f(3.0f), r.f(3.0f) }, mv;
-		if(rust) { ohpl_a7_area_attach(a, &bp, &pp); ohpl_a7_area_follow(a, &pp, &bp, &mv); }
-		else { ohpl_ga5_attach_offset(&bp, &pp, &b->relOffset); ohpl_ga5_follow_offset(&b->relOffset, &pp, &bp, &mv); }
+		ohpl_a7_area_attach(a, &bp, &pp); ohpl_a7_area_follow(a, &pp, &bp, &mv);
 		T(head + " follow " + V(b->relOffset) + " " + V(mv));
-		if(rust) ohpl_a7_area_free(ctx, a);
+		ohpl_a7_area_free(ctx, a);
 	}
 	ohpl_a7_teardown(ctx);
 	ohpl_a7_free(ctx);
 }
 
 // cLuxMapHandler's map list: push_back, STLFindAndDelete, STLDeleteAll.
-static void Maps(bool rust, uint64_t seed)
+static void Maps(uint64_t seed)
 {
 	Rng r = { seed };
 	std::list<Obj*> ref;
-	OhplA7Ctx *c = rust ? ohpl_a7_new() : NULL;
-	if(rust) ohpl_a7_set_drop(c, kOhplA7Entity, Drop);
+	OhplA7Ctx *c = ohpl_a7_new();
+	ohpl_a7_set_drop(c, kOhplA7Entity, Drop);
 	std::vector<Obj*> pool;
 	for(int i = 0; i < 60; ++i)
 	{
@@ -793,38 +565,34 @@ static void Maps(bool rust, uint64_t seed)
 		{
 			Obj *o = new Obj(kEnt, "map" + std::to_string(i));
 			pool.push_back(o);
-			if(rust) ohpl_a7_list_add(c, o); else ref.push_back(o);
+			ohpl_a7_list_add(c, o);
 			T("load " + o->name);
 		}
 		else if(k < 4 && !pool.empty())
 		{
 			Obj *o = pool[r.n((int)pool.size())];
-			if(rust) ohpl_a7_list_destroy(c, o);
-			else { for(auto it = ref.begin(); it != ref.end(); ++it) if(*it == o) { ref.erase(it); break; } Drop(o); }
+			ohpl_a7_list_destroy(c, o);
 			T("destroy " + o->name);
 		}
 		else
 		{
-			if(rust) ohpl_a7_destroy_entities(c);
-			else { for(Obj *o : ref) Drop(o); ref.clear(); }
+			ohpl_a7_destroy_entities(c);
 			T("reset");
 		}
 	}
-	if(rust) { ohpl_a7_destroy_entities(c); ohpl_a7_free(c); }
-	else for(Obj *o : ref) Drop(o);
+	ohpl_a7_destroy_entities(c); ohpl_a7_free(c);
 	for(Obj *o : pool) delete o;
 }
 
-int main(int argc, char **argv)
+int main()
 {
-	bool rust = argc > 1 && strcmp(argv[1], "rust") == 0;
 	for(uint64_t seed = 1; seed <= 24; ++seed)
 	{
 		gTrace.clear();
 		gSerial = 0;
 		T("seed " + std::to_string(seed));
-		if(rust) { RustMap m; Run(m, seed); }
-		else { RefMap m; Run(m, seed); }
+		RustMap m;
+		Run(m, seed);
 		for(const std::string &s : gTrace) puts(s.c_str());
 		for(Obj *o : gPool) delete o;
 		gPool.clear();
@@ -833,14 +601,14 @@ int main(int argc, char **argv)
 	{
 		gTrace.clear();
 		T("area seed " + std::to_string(seed));
-		Areas(rust, seed);
+		Areas(seed);
 		for(const std::string &s : gTrace) puts(s.c_str());
 	}
 	for(uint64_t seed = 1; seed <= 4; ++seed)
 	{
 		gTrace.clear();
 		T("maps seed " + std::to_string(seed));
-		Maps(rust, seed);
+		Maps(seed);
 		for(const std::string &s : gTrace) puts(s.c_str());
 	}
 	return 0;

@@ -2444,12 +2444,6 @@ void cLuxPlayerInDarkness::DestroyWorldEntities(cLuxMap *apMap)
 
 //-----------------------------------------------------------------------
 
-bool cLuxPlayerInDarkness::InDarkness()
-{
-	float fLightLevel = mpPlayer->GetHelperLightLevel()->GetExtendedLightLevel();
-	return ohpl_a2b_dark_in_darkness(&mS, fLightLevel);
-}
-
 //-----------------------------------------------------------------------
 
 void cLuxPlayerInDarkness::SetActive(bool abX)
