@@ -33,6 +33,9 @@ pub mod funcs;
 pub mod h8;
 #[cfg(test)]
 mod h8_tests;
+pub mod h9;
+#[cfg(test)]
+mod h9_tests;
 pub mod list;
 pub mod posteffect;
 pub mod posteffect_ffi;
