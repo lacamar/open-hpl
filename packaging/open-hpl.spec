@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.93
+Version:        1.3.94
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,9 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Fri Nov 13 2026 lacamar <lchlnm@pm.me> - 1.3.94-1
+- Fix test failure in release builds
+
 * Fri Nov 13 2026 lacamar <lchlnm@pm.me> - 1.3.93-1
 - Make SDL, GL, Newton, audio, image, mesh, script, GUI, engine backends Rust-only
 - Port script bindings, player, enemies, map, save tables to Rust
