@@ -43,11 +43,10 @@ impl Replay<'_> {
     }
 }
 
-/// Bit-exact in release builds; at opt-level 0 LLVM keeps operand order, so a NaN that two NaN operands produce can differ in sign
-/// from the gcc/release one, which the C++ harness (release) checks bit for bit.
+/// Bit-exact except NaN sign: which NaN operand LLVM propagates depends on opt-level and codegen units.
 fn same(a: u32, b: u32) -> bool {
     let nan = |x: u32| x & 0x7F80_0000 == 0x7F80_0000 && x & 0x007F_FFFF != 0;
-    a == b || (cfg!(debug_assertions) && nan(a) && nan(b))
+    a == b || (nan(a) && nan(b))
 }
 
 fn fnv(p: Ptr) -> u32 {
