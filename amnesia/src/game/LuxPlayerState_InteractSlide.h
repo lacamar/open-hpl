@@ -41,7 +41,7 @@ public:
 //------------------------------------
 
 
-class cLuxPlayerState_InteractSlide : public iLuxPlayerState_Interact
+class cLuxPlayerState_InteractSlide : private OhplA3Holder<OhplA3Slide>, public iLuxPlayerState_Interact
 {
 typedef iLuxPlayerState_Interact super_class;
 public:	
@@ -79,24 +79,24 @@ public:
 	void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:
-	cLuxInteractData_Slide *mpSlideData;
+	cLuxInteractData_Slide *&mpSlideData = mR.data;
 
-	OhplGa2bPid3 mForcePid;
+	OhplGa2bPid3 &mForcePid = mR.forcePid;
 
-	iPhysicsJoint *mpCurrentJoint;
-	bool mbHasGravity;
+	iPhysicsJoint *&mpCurrentJoint = mR.joint;
+	bool &mbHasGravity = mR.hasGravity;
 
-	float mfMaxDistance;
-	cVector3f mvLocalInteractPos;
+	float &mfMaxDistance = mR.maxDistance;
+	cVector3f &mvLocalInteractPos = mR.localInteractPos;
 
-	cVector2f mvMouseAdd;
-	cVector2f mvLastMouseAdd;
-	cVector3f mvLastForce;
+	cVector2f &mvMouseAdd = mR.mouseAdd;
+	cVector2f &mvLastMouseAdd = mR.lastMouseAdd;
+	cVector3f &mvLastForce = mR.lastForce;
 
-	float mfSlideSpeed;
+	float &mfSlideSpeed = mR.slideSpeed;
 
-	float mfMoveToMouseAddFactor;
-	float mfMaxForce;
+	float &mfMoveToMouseAddFactor = mR.moveToMouseFactor;
+	float &mfMaxForce = mR.maxForce;
 	
 };
 

@@ -23,6 +23,7 @@
 #include "LuxMapHelper.h"
 #include "LuxMap.h"
 #include "LuxProp.h"
+#include "impl/RustBackends.h"
 
 //////////////////////////////////////////////////////////////////////////
 // CONSTRUCTORS
@@ -30,7 +31,8 @@
 
 //-----------------------------------------------------------------------
 
-iLuxPlayerState_Interact::iLuxPlayerState_Interact(cLuxPlayer *apPlayer, eLuxPlayerState aType) : iLuxPlayerState(apPlayer, aType)
+iLuxPlayerState_Interact::iLuxPlayerState_Interact(cLuxPlayer *apPlayer, eLuxPlayerState aType, OhplA3Base *apA3) : iLuxPlayerState(apPlayer, aType, apA3),
+	mpCurrentBody(apA3->curBody), mpCurrentProp(apA3->curProp), mvCurrentFocusPos(apA3->curFocusPos)
 {
 	mpCurrentBody = NULL;
 	mpCurrentProp = NULL;
@@ -53,6 +55,12 @@ iLuxPlayerState_Interact::~iLuxPlayerState_Interact()
 
 void iLuxPlayerState_Interact::OnDestroyEntity(iLuxEntity *apEntity)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_destroy_entity(mpA3, &h, apEntity);
+		return;
+	}
 	iLuxEntity *pCurrentEntity = mpCurrentProp;
 	if(pCurrentEntity == apEntity)
 	{
@@ -62,6 +70,12 @@ void iLuxPlayerState_Interact::OnDestroyEntity(iLuxEntity *apEntity)
 
 void iLuxPlayerState_Interact::OnAttachBodyToStickyArea(iPhysicsBody *apBody)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_attach_sticky(mpA3, &h, apBody);
+		return;
+	}
 	bool bBodyInProp = false;
 	for(int i=0; i<mpCurrentProp->GetBodyNum(); ++i)
 	{
