@@ -13,6 +13,9 @@ pub mod gfx;
 pub mod guicore;
 mod h19_ffi;
 pub mod h19_widget;
+mod h20_ffi;
+pub mod h20_host;
+pub mod h20_list;
 pub mod layout;
 pub mod list;
 pub mod popup;
@@ -28,6 +31,8 @@ pub mod widgets_text;
 
 #[cfg(test)]
 mod h19_tests;
+#[cfg(test)]
+mod h20_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

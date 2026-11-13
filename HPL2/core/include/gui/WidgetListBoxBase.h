@@ -23,6 +23,7 @@
 #include "gui/Widget.h"
 #include "gui/WidgetBaseClasses.h"
 #include "gui/RustWidget2.h"
+#include "gui/RustGuiH20.h"
 
 namespace hpl {
 
@@ -44,7 +45,7 @@ namespace hpl {
 	class iWidgetListBoxBase : public iWidget, public iWidgetItemContainer
 	{
 	public:
-		iWidgetListBoxBase(cGuiSet *apSet, cGuiSkin *apSkin);
+		iWidgetListBoxBase(cGuiSet *apSet, cGuiSkin *apSkin, int alKind=0);
 		virtual ~iWidgetListBoxBase();
 
 		void SetBackgroundZ(float afZ){mfBackgroundZ = afZ;}
@@ -121,10 +122,11 @@ namespace hpl {
 		
 		/////////////////////////
 		// Data
-		float mfBackgroundZ;
-		float mfSliderWidth;
-
-		OhplW2List mList;
+		// Rust state (OHPL_IMPL=rust); the references keep the member names.
+		OhplH20ListBase mH;
+		float& mfBackgroundZ;
+		float& mfSliderWidth;
+		OhplW2List& mList;
 
 		tIntList mlstSelectedItems;
 
