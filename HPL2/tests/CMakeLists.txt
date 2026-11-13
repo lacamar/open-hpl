@@ -90,6 +90,12 @@ AddTestTarget(SceneH12Tests
     SceneH12Tests.cpp
 )
 
+# H12 pass 2 (particle system lifecycle, emitter shell, billboard, beam, flare scenes and decision probes): scripts/h12b-diff.sh.
+AddTestTarget(SceneH12bTests
+    SceneH12bTests.cpp
+)
+target_link_libraries(SceneH12bTests HPL2TraceRecorder)
+
 # H13 differential (world registry, static-combine planner, .map parse traces): scripts/h13-diff.sh.
 AddTestTarget(SceneH13Tests
     SceneH13Tests.cpp

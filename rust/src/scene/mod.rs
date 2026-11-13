@@ -27,6 +27,8 @@ mod ffi_world;
 mod h10;
 mod h11;
 mod h12_psload;
+mod h12b_ent;
+mod h12b_psys;
 mod h13_world;
 mod lensflare;
 mod light;
@@ -45,6 +47,8 @@ mod tests_h10;
 mod tests_h11;
 #[cfg(test)]
 mod tests_h12;
+#[cfg(test)]
+mod tests_h12b;
 #[cfg(test)]
 mod tests_h13;
 #[cfg(test)]

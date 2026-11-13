@@ -19,6 +19,8 @@
 
 #include "scene/BillBoard.h"
 #include "scene/RustParticles.h"
+#include "scene/RustSceneH12.h"
+#include "impl/RustBackends.h"
 
 #include "impl/tinyXML/tinyxml.h"
 
@@ -155,6 +157,16 @@ namespace hpl {
 		mvAxis = avAxis;
 		mvAxis.Normalize();
 		
+		if(OhplBackendRustRequested())
+		{
+			float fSize;
+			if(ohpl_h12b_bb_axis_size(mType == eBillboardType_Axis, &mvAxis, mvSize.x, mvSize.y, &fSize))
+			{
+				mBoundingVolume.SetSize(fSize);
+				SetTransformUpdated();
+			}
+			return;
+		}
 		//This is a quick fix so the bounding box is correct for non up-pointing axises
 		if(mType == eBillboardType_Axis && mvAxis != cVector3f(0,1,0))
 		{
@@ -258,8 +270,10 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
+
 	bool cBillboard::IsVisible()
 	{
+		if(OhplBackendRustRequested()) return ohpl_h12b_is_visible(&mColor, mbIsVisible);
 		if(mColor.r <= 0 && mColor.g <= 0 && mColor.b <= 0) return false;
 
 		return mbIsVisible;
@@ -342,6 +356,17 @@ namespace hpl {
 			//Check if inside screen
 			cFrustum *pFrustum = apRenderer->GetCurrentFrustum();
 			
+			if(OhplBackendRustRequested())
+			{
+				const uint32_t lGates = ohpl_h12b_bb_halo_gates(&mbHaloSizeUpdated, &mlHaloBVMatrixCount, GetTransformUpdateCount());
+				if(lGates & kOhplH12HaloSize) mpHaloSourceBV->SetSize(mvHaloSourceSize);
+				if(lGates & kOhplH12HaloTransform) mpHaloSourceBV->SetTransform(GetWorldMatrix());
+
+				cVector3f vRustMin, vRustMax;
+				const bool bClip = cMath::GetNormalizedClipRectFromBV(vRustMin, vRustMax, *mpHaloSourceBV, pFrustum, 0);
+				SetHaloAlpha(ohpl_h12b_bb_halo_alpha(lSamples, lMaxSamples, bClip, &vRustMin, &vRustMax));
+				return true;
+			}
 			//Update bv size
 			if(mbHaloSizeUpdated) 
 			{

@@ -26,6 +26,7 @@
 #include "system/SystemTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "scene/RustParticles.h"
+#include "scene/RustSceneH12.h"
 
 namespace hpl {
 
@@ -166,21 +167,15 @@ namespace hpl {
 
 		tMaterialVec* mvMaterials;
 
-		int mlSleepCount;
-
-		//Vars for easier updating.
-
-		bool mbUpdateGfx;
-		bool mbUpdateBV;
+		//Sleep count, update flags and counters, see h12b_psys.rs.
+		OhplH12PeCtl mCtl;
 
 		iVertexBuffer *mpVtxBuffer;
 
 		cVector3f mvDirection;
-		int mlDirectionUpdateCount;
 
 		cVector3f mvRight;
 		cVector3f mvForward;
-		int mlAxisDrawUpdateCount;
 
 		cParticleSystem *mpParentSystem;
 

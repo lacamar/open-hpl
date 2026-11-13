@@ -115,7 +115,7 @@ namespace hpl {
 		bool mbIsHalo;
 		cVector3f mvHaloSourceSize;
 		cBoundingVolume *mpHaloSourceBV;
-		int mbHaloSizeUpdated;
+		bool mbHaloSizeUpdated;
 		int mlHaloBVMatrixCount;
 		
 		float mfForwardOffset;

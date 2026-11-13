@@ -14,6 +14,8 @@
 #include "math/Math.h"
 #include "math/Frustum.h"
 #include "scene/RustLight.h"
+#include "scene/RustSceneH12.h"
+#include "impl/RustBackends.h"
 
 namespace hpl {
 
@@ -228,6 +230,12 @@ namespace hpl {
 
 	eLensFlareType cLensFlare::GetFirstActiveType()
 	{
+		if(OhplBackendRustRequested())
+		{
+			bool vbActive[eLensFlareType_LastEnum];
+			for(int i=0; i<eLensFlareType_LastEnum; ++i) vbActive[i] = IsFlareActive((eLensFlareType)i);
+			return (eLensFlareType)ohpl_h12b_flare_first_active(vbActive);
+		}
 		if(IsFlareActive(eLensFlareType_Halo)) return eLensFlareType_Halo;
 		for(int i=0; i<eLensFlareType_LastEnum; ++i)
 			if(IsFlareActive((eLensFlareType)i)) return (eLensFlareType)i;
@@ -236,6 +244,12 @@ namespace hpl {
 
 	bool cLensFlare::IsAnyTypeActive()
 	{
+		if(OhplBackendRustRequested())
+		{
+			bool vbActive[eLensFlareType_LastEnum];
+			for(int i=0; i<eLensFlareType_LastEnum; ++i) vbActive[i] = IsFlareActive((eLensFlareType)i);
+			return ohpl_h12b_flare_any_active(mfFade, vbActive);
+		}
 		if(mfFade <= 0) return false;
 		for(int i=0; i<eLensFlareType_LastEnum; ++i)
 			if(IsFlareActive((eLensFlareType)i)) return true;
@@ -371,9 +385,12 @@ namespace hpl {
 	iVertexBuffer* cLensFlare::PrepareMultiIrisVertexBuffer(cFrustum *apFrustum, float afVis)
 	{
 		int lCount = mlMultiIrisCount;
-		if(IsFlareActive(eLensFlareType_MultiIris)==false || lCount <= 0) return NULL;
+		const uint32_t lIrisPlan = OhplBackendRustRequested() ?
+			ohpl_h12b_iris_plan(IsFlareActive(eLensFlareType_MultiIris), lCount, mpMultiIrisVtxBuffer ? (int32_t)mpMultiIrisVtxBuffer->GetVertexNum() : -1) :
+			kOhplH12IrisReuse;
+		if(OhplBackendRustRequested() ? lIrisPlan == kOhplH12IrisNone : (IsFlareActive(eLensFlareType_MultiIris)==false || lCount <= 0)) return NULL;
 
-		if(mpMultiIrisVtxBuffer && mpMultiIrisVtxBuffer->GetVertexNum() != lCount*4)
+		if(OhplBackendRustRequested() ? lIrisPlan == kOhplH12IrisRecreate : (mpMultiIrisVtxBuffer && mpMultiIrisVtxBuffer->GetVertexNum() != lCount*4))
 		{
 			hplDelete(mpMultiIrisVtxBuffer);
 			mpMultiIrisVtxBuffer = NULL;

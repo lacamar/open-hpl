@@ -78,6 +78,7 @@ namespace hpl {
 	#endif
 	friend class iParticleEmitter;
 	friend class iLight;
+	friend struct OhplH12PsHostImpl;
 	public:
 		cParticleSystem(	const tString asName,cParticleSystemData *apData, 
 							cResources *apResources, cGraphics *apGraphics);
