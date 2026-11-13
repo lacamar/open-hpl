@@ -12,6 +12,7 @@ cd "$H"
 FLAGS="-std=gnu++20 -fno-strict-aliasing -mcpu=apple-m2+crc+aes+sha3+fp16 -O2 -g -DNDEBUG -Wno-switch -Wno-reorder -Wno-unused-variable -Wno-unused-function -Wno-narrowing -fpermissive -DLINUX -w"
 COMMON="-I$H -I$R -I$W/amnesia/src/game -I$W/HPL2/core/include"
 which=${1:-both}
+python3 -I "$R/genwrap.py" "$H"
 [ $which = new ] || python3 -I "$R/gen.py" orig "$H" "$W"
 [ $which = orig ] || python3 -I "$R/gen.py" new "$H" "$W"
 {

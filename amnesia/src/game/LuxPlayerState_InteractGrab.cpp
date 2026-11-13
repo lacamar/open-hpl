@@ -477,6 +477,11 @@ bool cLuxPlayerState_InteractGrab::AllowBuoyancy(iPhysicsBody *apBody)
 
 float cLuxPlayerState_InteractGrab::DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
+	}
 	cVector3f vCurrentRot = cMath::MatrixToEulerAngles(mpCurrentBody->GetLocalMatrix().GetRotation(), eEulerRotationOrder_XYZ);
 	cVector3f vWantedRot = cMath::MatrixToEulerAngles(m_mtxBodyRotation, eEulerRotationOrder_XYZ);
 	cVector3f vRotError(	cMath::GetAngleDistanceRad(vCurrentRot.x, vWantedRot.x),

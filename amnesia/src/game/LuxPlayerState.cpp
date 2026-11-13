@@ -391,6 +391,30 @@ int32_t iLuxPlayerState::A3Host(void *apCtx, uint32_t alOp, OhplA3Io *apIo)
 		gpBase->mpHelpFuncs->PlayGuiSoundData("player_ladder_" + ((cLuxArea_Ladder*)io.p[0])->GetMaterial() + "_" + gA3LadderSounds[io.i[0]], eSoundEntryType_World);
 		break;
 
+	case kOhplA3Op_DEBUG_ROW:
+	{
+		cGuiSet *pSet = (cGuiSet*)io.p[0];
+		iFontData *pFont = (iFontData*)io.p[1];
+		float fY = io.f[0];
+		cVector3f vDbg(io.f[1], io.f[2], io.f[3]);
+		switch(io.i[0])
+		{
+		case 0:
+		{
+			tWString sBodyName = io.p[2] ? cString::To16Char(((iPhysicsBody*)io.p[2])->GetName()) : _W("None");
+			pSet->DrawFont(pFont, cVector3f(5, fY, 10), 14, cColor(1,1), _W("Focus Body: %ls Dist: %f"), sBodyName.c_str(), io.f[4]);
+			break;
+		}
+		case 1: pSet->DrawFont(pFont, cVector3f(5, fY, 5), 12, cColor(1,1), _W("CurrentVel: %ls"), cString::To16Char(vDbg.ToString()).c_str()); break;
+		case 2: pSet->DrawFont(pFont, cVector3f(5, fY, 5), 12, cColor(1,1), _W("WantedVel: %ls"), cString::To16Char(vDbg.ToString()).c_str()); break;
+		case 3: pSet->DrawFont(pFont, cVector3f(5, fY, 0), 12, cColor(1,1), _W("SideSpeed: %f Force: %ls"), io.f[4], cString::To16Char(vDbg.ToString()).c_str()); break;
+		case 4: pSet->DrawFont(pFont, cVector3f(5, fY, 5), 12, cColor(1,1), _W("Speed: %f"), io.f[4]); break;
+		case 5: pSet->DrawFont(pFont, cVector3f(5, fY, 5), 12, cColor(1,1), _W("Angle: %f"), cMath::ToDeg(((iPhysicsJoint*)io.p[2])->GetAngle())); break;
+		case 6: pSet->DrawFont(pFont, cVector3f(5, fY, 5), 12, cColor(1,1), _W("AngularVel: (%ls)"), cString::To16Char(vDbg.ToString()).c_str()); break;
+		default: io.f[0] = ((iLuxProp*)io.p[2])->OnInteractDebugDraw(pSet, pFont, fY); break;
+		}
+		break;
+	}
 	case kOhplA3Op_CFG_FLOAT: io.f[0] = gpBase->mpGameCfg->GetFloat((const char*)io.p[0], (const char*)io.p[1], io.f[0]); break;
 	case kOhplA3Op_VARS_ITEM_TAKE:
 		io.p[0] = cLuxPlayerStateVars::mpInventoryItem;

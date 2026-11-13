@@ -92,6 +92,7 @@ pub mod op {
     pub const LADDER_V3: u32 = 120;
     pub const LADDER_SOUND: u32 = 121;
     pub const CFG_FLOAT: u32 = 130;
+    pub const DEBUG_ROW: u32 = 150;
     pub const VARS_ITEM_TAKE: u32 = 140;
     pub const VARS_INTERACT: u32 = 141;
     pub const VARS_LADDER: u32 = 142;
@@ -775,6 +776,26 @@ impl Host {
         io.p[1] = key.as_ptr().cast_mut().cast();
         io.f[0] = def;
         self.raw(op::CFG_FLOAT, &mut io);
+        io.f[0]
+    }
+
+    /// One debug HUD row (`hud` is the gui set and font): the C++ formats and draws it; the prop row returns the new y.
+    pub fn debug_row(
+        &self,
+        hud: (Ptr, Ptr),
+        row: i32,
+        y: f32,
+        obj: Ptr,
+        v: Vector3f,
+        s: f32,
+    ) -> f32 {
+        let mut io = Io::new();
+        io.p = [hud.0, hud.1, obj];
+        io.i[0] = row;
+        io.f[0] = y;
+        put3(&mut io, 1, v);
+        io.f[4] = s;
+        self.raw(op::DEBUG_ROW, &mut io);
         io.f[0]
     }
 

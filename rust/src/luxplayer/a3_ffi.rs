@@ -383,6 +383,21 @@ pub unsafe extern "C" fn ohpl_a3_destroy_entity(b: *mut Base, h: *const Host, en
 }
 
 /// # Safety
+/// As `ohpl_a3_enter`; the result is the y of the next debug row.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_a3_draw_debug(
+    b: *mut Base,
+    h: *const Host,
+    gui_set: Ptr,
+    font: Ptr,
+    y: f32,
+) -> f32 {
+    let Some(k) = kind_of(b) else { return y };
+    // SAFETY: caller contract.
+    unsafe { super::a3_debug::draw_debug(b, &*h, k, gui_set, font, y) }
+}
+
+/// # Safety
 /// As `ohpl_a3_enter`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_a3_attach_sticky(b: *mut Base, h: *const Host, body: Ptr) {

@@ -44,7 +44,7 @@ LISTS = [
         'void iLuxPlayerState_DefaultBase::OnLeaveState', 'void iLuxPlayerState_DefaultBase::OnMapLeave',
         'void iLuxPlayerState_DefaultBase::Update', 'void iLuxPlayerState_DefaultBase::OnDraw', 'bool iLuxPlayerState_DefaultBase::OnDoAction',
         'cGuiGfxElement* iLuxPlayerState_DefaultBase::A3Gfx', 'cGuiGfxElement* iLuxPlayerState_DefaultBase::GetCrosshair',
-        'bool iLuxPlayerState_DefaultBase::ShowOutlineOnEntity', 'bool iLuxPlayerState_DefaultBase::CanInteractWithEntity', 'static bool BodyIsAdded',
+        'float iLuxPlayerState_DefaultBase::DrawDebug', 'bool iLuxPlayerState_DefaultBase::ShowOutlineOnEntity', 'bool iLuxPlayerState_DefaultBase::CanInteractWithEntity', 'static bool BodyIsAdded',
         'void iLuxPlayerState_DefaultBase::AddOutlineObjects', 'void iLuxPlayerState_DefaultBase::GetAttachedBodies']),
     ('LuxPlayerState_Normal.cpp', ['cLuxPlayerState_Normal::cLuxPlayerState_Normal', 'bool cLuxPlayerState_Normal::ImplementedDoAction']),
     ('LuxPlayerState_HandObject.cpp', ['cLuxPlayerState_HandObject::cLuxPlayerState_HandObject', 'bool cLuxPlayerState_HandObject::ImplementedDoAction',
@@ -60,23 +60,23 @@ LISTS = [
         'void cLuxPlayerState_InteractGrab::PostUpdate', 'bool cLuxPlayerState_InteractGrab::OnDoAction',
         'void cLuxPlayerState_InteractGrab::OnScroll', 'bool cLuxPlayerState_InteractGrab::OnAddYaw', 'bool cLuxPlayerState_InteractGrab::OnAddPitch',
         'void cLuxPlayerState_InteractGrab::OnSaveBody', 'bool cLuxPlayerState_InteractGrab::AllowBuoyancy',
-        'void cLuxPlayerState_InteractGrab::SaveBodyProperties', 'bool cLuxPlayerState_InteractGrab::BodyIsAdded']),
+        'float cLuxPlayerState_InteractGrab::DrawDebug', 'void cLuxPlayerState_InteractGrab::SaveBodyProperties', 'bool cLuxPlayerState_InteractGrab::BodyIsAdded']),
     ('LuxPlayerState_InteractPush.cpp', [
         'cLuxPlayerState_InteractPush::cLuxPlayerState_InteractPush', 'void cLuxPlayerState_InteractPush::OnEnterState',
         'void cLuxPlayerState_InteractPush::OnLeaveState', 'void cLuxPlayerState_InteractPush::Update',
         'void cLuxPlayerState_InteractPush::PostUpdate', 'bool cLuxPlayerState_InteractPush::OnDoAction',
-        'bool cLuxPlayerState_InteractPush::OnMove', 'void cLuxPlayerState_InteractPush::ClearMoveVars']),
+        'bool cLuxPlayerState_InteractPush::OnMove', 'float cLuxPlayerState_InteractPush::DrawDebug', 'void cLuxPlayerState_InteractPush::ClearMoveVars']),
     ('LuxPlayerState_InteractSlide.cpp', [
         'cLuxPlayerState_InteractSlide::cLuxPlayerState_InteractSlide', 'void cLuxPlayerState_InteractSlide::OnEnterState',
         'void cLuxPlayerState_InteractSlide::OnLeaveState', 'void cLuxPlayerState_InteractSlide::Update',
         'bool cLuxPlayerState_InteractSlide::OnDoAction', 'bool cLuxPlayerState_InteractSlide::OnAddYaw',
-        'bool cLuxPlayerState_InteractSlide::OnAddPitch', 'bool cLuxPlayerState_InteractSlide::OnMove']),
+        'bool cLuxPlayerState_InteractSlide::OnAddPitch', 'bool cLuxPlayerState_InteractSlide::OnMove', 'float cLuxPlayerState_InteractSlide::DrawDebug']),
     ('LuxPlayerState_InteractRotateBase.cpp', [
         'iLuxPlayerState_InteractRotateBase::iLuxPlayerState_InteractRotateBase', 'iLuxPlayerState_InteractRotateBase::~iLuxPlayerState_InteractRotateBase',
         'void iLuxPlayerState_InteractRotateBase::OnEnterState', 'void iLuxPlayerState_InteractRotateBase::OnLeaveState',
         'void iLuxPlayerState_InteractRotateBase::Update', 'bool iLuxPlayerState_InteractRotateBase::OnDoAction',
         'bool iLuxPlayerState_InteractRotateBase::OnMove', 'bool iLuxPlayerState_InteractRotateBase::OnAddYaw',
-        'bool iLuxPlayerState_InteractRotateBase::OnAddPitch']),
+        'bool iLuxPlayerState_InteractRotateBase::OnAddPitch', 'float iLuxPlayerState_InteractRotateBase::DrawDebug']),
     ('LuxPlayerState_InteractLever.cpp', ['float cLuxPlayerState_InteractLever::GetSpeedAdd', 'void cLuxPlayerState_InteractLever::OnThrow']),
     ('LuxPlayerState_InteractSwingDoor.cpp', ['float cLuxPlayerState_InteractSwingDoor::GetSpeedAdd', 'void cLuxPlayerState_InteractSwingDoor::OnThrow']),
     ('LuxPlayerState_InteractWheel.cpp', ['cLuxPlayerState_InteractWheel::cLuxPlayerState_InteractWheel',
@@ -87,7 +87,7 @@ LISTS = [
         'void cLuxPlayerState_Ladder::Update', 'bool cLuxPlayerState_Ladder::OnMove', 'bool cLuxPlayerState_Ladder::OnAddYaw',
         'bool cLuxPlayerState_Ladder::OnAddPitch', 'bool cLuxPlayerState_Ladder::OnRun', 'bool cLuxPlayerState_Ladder::OnJump',
         'bool cLuxPlayerState_Ladder::OnCrouch', 'bool cLuxPlayerState_Ladder::OnDoAction', 'void cLuxPlayerState_Ladder::PlaySound',
-        'void cLuxPlayerState_Ladder::SetupHeadTurnLimits']),
+        'void cLuxPlayerState_Ladder::SetupHeadTurnLimits', 'float cLuxPlayerState_Ladder::DrawDebug']),
 ]
 chunks = []
 for f, names in LISTS:

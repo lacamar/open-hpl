@@ -430,6 +430,11 @@ bool cLuxPlayerState_Ladder::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 
 float cLuxPlayerState_Ladder::DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
+	}
 	return afStartY;
 }
 

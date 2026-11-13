@@ -314,6 +314,7 @@ static void Misc(iLuxPlayerState_Interact *s)
 static void DumpGrab(cLuxPlayerState_InteractGrab &g)
 {
 	DP("fp", g.mForcePid); DP("tp", g.mSpeedTorquePid); RecM("rot", g.m_mtxBodyRotation); RecV("off", g.mvLocalBodyOffset); DF("depth", g.mfDepth); DF("maxDist", g.mfMaxDistance); DF("massSum", g.mfMassSum);
+	if(RB(15)) Rec("dbg %08x", Bits(g.DrawDebug(&gHud, NULL, RB(80) ? RU(-5, 50) : RF())));
 }
 
 static void RunGrab()
@@ -357,6 +358,7 @@ static void DumpPush(cLuxPlayerState_InteractPush &p)
 	DP("vp", p.mVelocityPid); DP("sp", p.mStopVelocityPid); RecV("dir", p.mvPushDir); RecV("attach", p.mvLocalAttachPos); DF("maxAttach", p.mfMaxAttachPointDist);
 	DF("m0", p.mfTotalMoveMul[0]); DF("m1", p.mfTotalMoveMul[1]); DI("mv0", p.mbMoving[0]); DI("mv1", p.mbMoving[1]);
 	DF("pmin", p.mfPrevMinPitchLimit); DF("pmax", p.mfPrevMaxPitchLimit);
+	if(RB(15)) Rec("dbg %08x", Bits(p.DrawDebug(&gHud, NULL, RB(80) ? RU(-5, 50) : RF())));
 }
 
 static void RunPush()
@@ -401,6 +403,7 @@ static void DumpSlide(cLuxPlayerState_InteractSlide &s)
 {
 	DP("fp", s.mForcePid); DF("speed", s.mfSlideSpeed); RecV2("mouse", s.mvMouseAdd); RecV2("lastMouse", s.mvLastMouseAdd); RecV("lastForce", s.mvLastForce); DF("maxDist", s.mfMaxDistance);
 	RecV("localInteract", s.mvLocalInteractPos);
+	if(RB(15)) Rec("dbg %08x", Bits(s.DrawDebug(&gHud, NULL, RB(80) ? RU(-5, 50) : RF())));
 }
 
 static void RunSlide()
@@ -439,6 +442,7 @@ static void RunSlide()
 static void DumpRot(iLuxPlayerState_InteractRotateBase &s)
 {
 	DP("rp", s.mRotatePid); DF("rotSpeed", s.mfRotSpeed); RecV2("mouse", s.mvMouseAdd); RecV2("lastMouse", s.mvLastMouseAdd); DF("maxDist", s.mfMaxDistance); RecV("jointFwd", s.mvJointForward);
+	if(RB(15)) Rec("dbg %08x", Bits(s.DrawDebug(&gHud, NULL, RB(80) ? RU(-5, 50) : RF())));
 }
 
 static void RunRotate(int kind)
@@ -484,6 +488,7 @@ static void DumpLadder(cLuxPlayerState_Ladder &l)
 	DI("state", l.mlState); DF("time", l.mfTimeCount); RecV("charPos", l.mvCharPosition); RecV("goalPos", l.mvGoalPos); RecV("goalRot", l.mvGoalRot);
 	RecV("posAdd", l.mvPosAdd); RecV("rotAdd", l.mvRotAdd); DF("moveMul", l.mfMoveMul); DF("step", l.mfStepCount); DI("played", l.mbPlayedSound);
 	DF("leave", l.mfLeaveAtTopCount); DI("lantern", l.mbLanternDrawn); DF("pmin", l.mfPitchMinLimit); DF("pmax", l.mfPitchMaxLimit);
+	if(RB(15)) Rec("dbg %08x", Bits(l.DrawDebug(&gHud, NULL, RB(80) ? RU(-5, 50) : RF())));
 }
 
 static void RunLadder()
@@ -528,6 +533,7 @@ static void DumpDefault(iLuxPlayerState_DefaultBase &d)
 	DI("body", d.mpBodyInFocus ? d.mpBodyInFocus->mlId : -1); DI("ent", d.mpEntityInFocus ? (int)(((iLuxProp *)d.mpEntityInFocus) - gProps) : -1);
 	cGuiGfxElement *g = d.GetCrosshair();
 	DI("crosshair", g ? g->mlId : -1);
+	if(RB(15)) Rec("dbg %08x", Bits(d.DrawDebug(&gHud, NULL, RB(80) ? RU(-5, 50) : RF())));
 }
 
 static void RunDefault(int kind)
@@ -583,10 +589,15 @@ static void RunDefault(int kind)
 	delete gMN; delete gML; gMN = gML = NULL;
 }
 
+#ifdef NEWSIDE
+static void GoldOpen();
+static void GoldClose();
+#endif
 int main(int argc, char **argv)
 {
 #ifdef NEWSIDE
 	setenv("OHPL_IMPL", "rust", 1);
+	GoldOpen();
 #endif
 	int cases = argc > 1 ? atoi(argv[1]) : 100;
 	if(argc > 2) gRng ^= (uint64_t)atoll(argv[2]) * 0x9E3779B97F4A7C15ull;
@@ -611,6 +622,9 @@ int main(int argc, char **argv)
 		}
 	}
 	fprintf(stderr, "steps %ld total %016llx\n", gSteps, (unsigned long long)gTotal);
+#ifdef NEWSIDE
+	GoldClose();
+#endif
 	return 0;
 }
 
@@ -621,6 +635,17 @@ void *operator new(size_t n) { void *p = calloc(1, n ? n : 1); if(!p) abort(); r
 void operator delete(void *p) noexcept { free(p); }
 void operator delete(void *p, size_t) noexcept { free(p); }
 
+void cGuiSet::DrawFont(iFontData *, const cVector3f &p, int sz, const cColor &c, const wchar_t *fmt, ...)
+{
+	wchar_t b[512];
+	va_list ap;
+	va_start(ap, fmt);
+	vswprintf(b, 512, fmt, ap);
+	va_end(ap);
+	char u[1024];
+	wcstombs(u, b, sizeof(u));
+	Rec("Font %08x %08x %08x %d %08x %s", Bits(p.x), Bits(p.y), Bits(p.z), sz, Bits(c.r), u);
+}
 void iLuxEntity::InFocusDraw(cGuiSet *, float f) { Rec("E.FocusDraw %08x", Bits(f)); }
 iLuxMoveState::iLuxMoveState(cLuxPlayer *apPlayer) { mpPlayer = apPlayer; }
 cLuxMoveState_Normal::cLuxMoveState_Normal(cLuxPlayer *apPlayer) : iLuxMoveState(apPlayer) { mbRunning = mbCrouching = false; }
@@ -634,5 +659,108 @@ void cLuxMoveState_ClimbLedge::OnEnterState(eLuxMoveState) {}
 void cLuxMoveState_ClimbLedge::OnUpdate(float) {}
 
 #ifdef NEWSIDE
-int32_t iLuxPlayerState::A3Host(void *apCtx, uint32_t alOp, OhplA3Io *apIo) { return A3HostReal(apCtx, alOp, apIo); }
+// ---- golden recorder: every ohpl_a3_* entry (state before as a diff, args, host traffic, state after, result) as u32 words
+static FILE *gGold;
+static std::map<const void *, uint32_t> gPtrIds;
+static std::map<OhplA3Base *, std::pair<int, std::vector<uint32_t> > > gObjs;
+static int gObjNext;
+static size_t gGoldWords;
+
+static void GReg(const void *p) { if(p && !gPtrIds.count(p)) gPtrIds[p] = (uint32_t)gPtrIds.size() + 1; }
+static void GRegisterWorld()
+{
+	for(int i = 0; i < 5; ++i) { GReg(&gBodies[i]); GReg(&gJoints[i]); }
+	for(int i = 0; i < 3; ++i) { GReg(&gProps[i]); GReg(&gProps[i].mMesh); GReg(&gProps[i].mGrab); GReg(&gProps[i].mPush); GReg(&gProps[i].mSlide); GReg(&gProps[i].mMove); }
+	GReg(&gLadder); GReg(&gItem); GReg(&gMapH.mMap.mCb); GReg(&gHud);
+	for(int i = 0; i < 16; ++i) GReg(&gEngine.mGui.mGfx[i]);
+}
+uint32_t GP(const void *p)
+{
+	if(!p) return 0;
+	std::map<const void *, uint32_t>::iterator it = gPtrIds.find(p);
+	return it == gPtrIds.end() ? 0xDEAD0000u : (0xABCD0000u | it->second);
+}
+static void GW(uint32_t w) { if(gGold) { fwrite(&w, 4, 1, gGold); ++gGoldWords; } }
+static size_t GSize(int kind)
+{
+	switch(kind) { case 2: return 120; case 3: return 952; case 4: return 920; case 8: return 528; case 5: case 6: case 7: return 592; case 9: return 208; default: return 80; }
+}
+static void GSnap(OhplA3Base *b, size_t size, std::vector<uint32_t> &w)
+{
+	w.assign(size / 4, 0);
+	for(size_t i = 0; i < size / 8; ++i)
+	{
+		uint64_t v;
+		memcpy(&v, (char *)b + i * 8, 8);
+		uint32_t lo = (uint32_t)v, hi = (uint32_t)(v >> 32);
+		if(i == 9) { lo = v != 0; hi = 0; }
+		else if(v != 0 && gPtrIds.count((const void *)v)) { lo = GP((const void *)v); hi = 0; }
+		w[i * 2] = lo; w[i * 2 + 1] = hi;
+	}
+}
+static void GDiff(const std::vector<uint32_t> &a, const std::vector<uint32_t> &b)
+{
+	std::vector<uint32_t> d;
+	for(size_t i = 0; i < b.size(); ++i) if(a[i] != b[i]) { d.push_back((uint32_t)i); d.push_back(b[i]); }
+	GW((uint32_t)(d.size() / 2));
+	for(size_t i = 0; i < d.size(); ++i) GW(d[i]);
+}
+static std::vector<uint32_t> gBefore;
+void GBegin(int fn, OhplA3Base *b, int kind, std::initializer_list<uint32_t> args)
+{
+	if(!gGold) return;
+	std::pair<int, std::vector<uint32_t> > &o = gObjs[b];
+	if(fn == 1)
+	{
+		o.first = gObjNext++;
+		o.second.assign(GSize(kind) / 4, 0);
+	}
+	size_t size = o.second.size() * 4;
+	GSnap(b, size, gBefore);
+	GW(0xC0); GW(fn); GW(o.first); GW((uint32_t)kind); GW((uint32_t)(size / 4)); GW((uint32_t)args.size());
+	for(uint32_t a : args) GW(a);
+	GDiff(o.second, gBefore);
+}
+void GEnd(OhplA3Base *b, uint32_t ret, std::initializer_list<uint32_t> outs, bool freed)
+{
+	if(!gGold) return;
+	std::pair<int, std::vector<uint32_t> > &o = gObjs[b];
+	std::vector<uint32_t> after;
+	GSnap(b, o.second.size() * 4, after);
+	GW(0xC2); GW(ret); GW((uint32_t)outs.size());
+	for(uint32_t a : outs) GW(a);
+	GDiff(gBefore, after);
+	o.second = after;
+	if(freed) gObjs.erase(b);
+}
+static uint32_t GStr(const void *p) { uint32_t h = 2166136261u; for(const unsigned char *s = (const unsigned char *)p; *s; ++s) { h ^= *s; h *= 16777619u; } return h; }
+static void GIoWords(const OhplA3Io &io, uint32_t op, uint32_t w[30])
+{
+	bool cfg = op == kOhplA3Op_CFG_FLOAT;
+	for(int k = 0; k < 3; ++k) w[k] = cfg && k < 2 ? GStr(io.p[k]) : GP(io.p[k]);
+	for(int k = 0; k < 3; ++k) w[3 + k] = (uint32_t)io.i[k];
+	for(int k = 0; k < 24; ++k) w[6 + k] = Bits(io.f[k]);
+}
+int32_t iLuxPlayerState::A3Host(void *apCtx, uint32_t alOp, OhplA3Io *apIo)
+{
+	if(!gGold) return A3HostReal(apCtx, alOp, apIo);
+	uint32_t in[30], out[30];
+	GIoWords(*apIo, alOp, in);
+	int32_t r = A3HostReal(apCtx, alOp, apIo);
+	GIoWords(*apIo, alOp, out);
+	uint32_t mi = 0, mo = 0;
+	for(int k = 0; k < 30; ++k) { if(in[k]) mi |= 1u << k; if(out[k] != in[k] && !(alOp == kOhplA3Op_CFG_FLOAT && k < 2)) mo |= 1u << k; }
+	GW(0xC1); GW(alOp); GW(mi);
+	for(int k = 0; k < 30; ++k) if(in[k]) GW(in[k]);
+	GW((uint32_t)r); GW(mo);
+	for(int k = 0; k < 30; ++k) if(mo & (1u << k)) GW(out[k]);
+	return r;
+}
+#include "golden_wrap.inc"
+static void GoldOpen()
+{
+	const char *p = getenv("A3_GOLDEN");
+	if(p) { gGold = fopen(p, "wb"); GRegisterWorld(); }
+}
+static void GoldClose() { if(gGold) { fclose(gGold); fprintf(stderr, "golden words %zu\n", gGoldWords); } }
 #endif

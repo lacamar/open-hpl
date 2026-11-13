@@ -11,6 +11,7 @@
 mod a2_core;
 #[cfg(test)]
 mod a2_tests;
+mod a3_debug;
 mod a3_default;
 mod a3_ffi;
 mod a3_grab;

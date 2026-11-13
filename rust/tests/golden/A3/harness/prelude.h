@@ -26,6 +26,7 @@ using hpl::cVector2f;
 using hpl::cVector3f;
 using hpl::cMatrixf;
 using hpl::cMath;
+using hpl::cString;
 using hpl::cColor;
 using hpl::tString;
 using hpl::tWString;
@@ -43,6 +44,7 @@ typedef OhplGa2bPid3 PidT;
 using hpl::OhplBackendRustRequested;
 #endif
 struct cGuiSet;
+struct iFontData;
 using hpl::cLinearOscillation;
 
 extern std::string gLog;
@@ -108,6 +110,8 @@ namespace hpl {
 struct iPhysicsJoint
 {
 	cVector3f mvPin, mvPivot;
+	float mfAngle = 0;
+	float GetAngle() { return mfAngle; }
 	iPhysicsBody *mpChild, *mpParent;
 	cVector3f GetPinDir() { return mvPin; }
 	cVector3f GetPivotPoint() { return mvPivot; }
@@ -150,6 +154,7 @@ struct iPhysicsBody
 	void AddForceAtPosition(const cVector3f &v, const cVector3f &p) { RecV("B.ForceAt", v); RecV("B.ForceAtP", p); }
 	void AddImpulseAtPosition(const cVector3f &v, const cVector3f &p) { RecV("B.ImpulseAt", v); RecV("B.ImpulseAtP", p); }
 	void SetMatrix(const cMatrixf &) {}
+	std::string GetName() { return "body" + std::to_string(mlId); }
 };
 }
 
@@ -297,6 +302,7 @@ struct iLuxProp : public iLuxEntity
 	iLuxInteractData_RotateBase mMove;
 	cMeshEntity mMesh;
 	bool mbConnected;
+	float OnInteractDebugDraw(cGuiSet *, iFontData *, float y) { Rec("P.DbgDraw %08x", Bits(y)); return y + 3.0f; }
 	std::vector<iPhysicsBody *> mBodies;
 	eLuxPropType GetPropType() { return mPropType; }
 	cLuxInteractData_Grab *GetGrabData() { return &mGrab; }
@@ -363,7 +369,8 @@ struct cLuxGameCfg
 	tString GetString(const char *, const char *k, const char *) { return std::string("snd_") + k; }
 	cVector2f GetVector2f(const char *a, const char *k, float def) { return cVector2f(GetFloat(a, k, def), GetFloat(a, k, def) * 0.5f); }
 };
-struct cGuiSet { void DrawGfx(cGuiGfxElement *, const cVector3f &, const cVector2f &, const cColor &, eGuiMaterial) { Rec("Gui.Draw"); } };
+struct iFontData {};
+struct cGuiSet { void DrawFont(iFontData *, const cVector3f &, int, const cColor &, const wchar_t *fmt, ...); void DrawGfx(cGuiGfxElement *, const cVector3f &, const cVector2f &, const cColor &, eGuiMaterial) { Rec("Gui.Draw"); } };
 struct cGui
 {
 	cGuiGfxElement mGfx[16];
@@ -622,6 +629,7 @@ public:
 	bool OnAddYaw(float afAmount);
 	bool OnAddPitch(float afAmount);
 	void OnSaveBody(iPhysicsBody *apBody, float &afMass, bool &abCollideCharacter);
+	float DrawDebug(cGuiSet *apSet, iFontData *apFont, float afStartY);
 	bool AllowBuoyancy(iPhysicsBody *apBody);
 	void SaveBodyProperties(iPhysicsBody *apBody);
 	bool BodyIsAdded(iPhysicsBody *apBody);
@@ -648,6 +656,7 @@ public:
 	void PostUpdate(float afTimeStep);
 	bool OnDoAction(eLuxPlayerAction aAction, bool abPressed);
 	bool OnMove(eCharDir aDir, float afMul);
+	float DrawDebug(cGuiSet *apSet, iFontData *apFont, float afStartY);
 	void ClearMoveVars();
 	M_PTR(cLuxInteractData_Push, mpPushData, mR.data)
 	M_ARR(float, mfTotalMoveMul, 2, mR.totalMoveMul) M_ARR(bool, mbMoving, 2, mR.moving) M_ARR(float, mfMaxSpeedInDir, 2, mR.maxSpeedInDir)
@@ -671,6 +680,7 @@ public:
 	bool OnAddYaw(float afAmount);
 	bool OnAddPitch(float afAmount);
 	bool OnMove(eCharDir aDir, float afMul);
+	float DrawDebug(cGuiSet *apSet, iFontData *apFont, float afStartY);
 	M_PTR(cLuxInteractData_Slide, mpSlideData, mR.data)
 	M_REF(PidT, mForcePid, mR.forcePid)
 	M_PTR(iPhysicsJoint, mpCurrentJoint, mR.joint)
@@ -698,6 +708,7 @@ public:
 	virtual void OnThrow() = 0;
 	virtual void EnterRotateBase(eLuxPlayerState) {}
 	virtual void LeaveRotateBase(eLuxPlayerState) {}
+	float DrawDebug(cGuiSet *apSet, iFontData *apFont, float afStartY);
 	M_PTR(iLuxInteractData_RotateBase, mpMoveBaseData, mR.data)
 	M_PTR(iPhysicsJoint, mpCurrentJoint, mR.joint)
 	M_REF(float, mfMoveToMouseAddFactor, mR.moveToMouseFactor) M_REF(float, mfMaxTorque, mR.maxTorque)
@@ -753,6 +764,7 @@ public:
 	bool OnCrouch(bool abPressed);
 	bool OnDoAction(eLuxPlayerAction aAction, bool abPressed);
 	void PlaySound(const tString &asType);
+	float DrawDebug(cGuiSet *apSet, iFontData *apFont, float afStartY);
 	void SetupHeadTurnLimits();
 	M_REF(int, mlState, mR.state)
 	M_PTR(cLuxArea_Ladder, mpLadder, mR.ladder)
@@ -787,6 +799,7 @@ public:
 	void AddOutlineObjects(iPhysicsBody *apBody, iLuxEntity *apEntity, const cVector3f &avFocusPos);
 	void GetAttachedBodies(iPhysicsBody *apBody, tPhysicsBodyList &alstBodies);
 	cGuiGfxElement *A3Gfx(int32_t alCode);
+	float DrawDebug(cGuiSet *apSet, iFontData *apFont, float afStartY);
 	M_NOINIT(iPhysicsBody *, mpBodyInFocus)
 	M_NOINIT(iLuxEntity *, mpEntityInFocus)
 	M_NOINIT(float, mfFocusDistance)
@@ -833,3 +846,10 @@ public:
 	float mfMinUseItemDistance;
 #endif
 };
+
+#ifdef NEWSIDE
+#include "golden_decl.h"
+void GBegin(int fn, OhplA3Base *b, int kind, std::initializer_list<uint32_t> args);
+void GEnd(OhplA3Base *b, uint32_t ret, std::initializer_list<uint32_t> outs, bool freed);
+uint32_t GP(const void *p);
+#endif

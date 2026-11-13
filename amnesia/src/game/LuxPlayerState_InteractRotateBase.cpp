@@ -370,6 +370,11 @@ cGuiGfxElement* iLuxPlayerState_InteractRotateBase::GetCrosshair()
 
 float iLuxPlayerState_InteractRotateBase::DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
+	}
 	apSet->DrawFont(apFont,cVector3f(5,afStartY,5),12,cColor(1,1),_W("Speed: %f"), mfRotSpeed);//mSmoothSpeed.GetOutput());
 	afStartY += 13.0f;
 

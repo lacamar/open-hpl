@@ -282,6 +282,11 @@ void cLuxPlayerState_InteractSlide::OnSaveBody(iPhysicsBody *apBody, float &afMa
 
 float cLuxPlayerState_InteractSlide::DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
+	}
 	
 	apSet->DrawFont(apFont, cVector3f(5,afStartY,0),12,cColor(1,1),_W("SideSpeed: %f Force: %ls"), mfSlideSpeed, cString::To16Char(mvLastForce.ToString()).c_str());
 	afStartY += 13;

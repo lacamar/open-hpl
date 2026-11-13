@@ -106,6 +106,7 @@ enum OhplA3Op : uint32_t
 	kOhplA3Op_LADDER_V3 = 120,
 	kOhplA3Op_LADDER_SOUND = 121,
 	kOhplA3Op_CFG_FLOAT = 130,
+	kOhplA3Op_DEBUG_ROW = 150,
 	kOhplA3Op_VARS_ITEM_TAKE = 140,
 	kOhplA3Op_VARS_INTERACT = 141,
 	kOhplA3Op_VARS_LADDER = 142,
@@ -268,6 +269,7 @@ void ohpl_a3_save_body(OhplA3Base *b, void *body, float *mass, bool *collide);
 bool ohpl_a3_allow_buoyancy(OhplA3Base *b, const OhplA3Host *h, void *body);
 void ohpl_a3_destroy_entity(OhplA3Base *b, const OhplA3Host *h, void *entity);
 void ohpl_a3_attach_sticky(OhplA3Base *b, const OhplA3Host *h, void *body);
+float ohpl_a3_draw_debug(OhplA3Base *b, const OhplA3Host *h, void *guiSet, void *font, float y);
 }
 
 #endif
