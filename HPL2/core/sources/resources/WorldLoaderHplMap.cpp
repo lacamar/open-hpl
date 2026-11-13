@@ -58,6 +58,8 @@
 #include "physics/PhysicsBody.h"
 
 #include "math/Math.h"
+#include "scene/RustSceneH13.h"
+#include "impl/RustBackends.h"
 
 #include <algorithm>
 #include <cstring>
@@ -289,6 +291,9 @@ namespace hpl {
 		if(gbLogTiming) Log("  Bodies created: %d\n", mlStaticMeshBodiesCreated);
 	
 		if(gbLogTiming) Log(" -------- Loading complete ---------\n");
+
+		if(const char *sDump = getenv("OHPL_H13_MAPDUMP"))
+			mpCurrentWorld->DumpH13(sDump, cString::To8Char(cString::GetFileNameW(asFile)).c_str());
 
 		return mpCurrentWorld;
 	}
@@ -984,6 +989,22 @@ namespace hpl {
 		if(gbLog) Log(" Check for mesh combination sequences!\n");
 
 		int lFirstInSequence = 0; //Index of first object to be combined.
+		if(OhplBackendRustRequested())
+		{
+			std::vector<OhplH13MeshItem> vItems(vMeshObjects.size());
+			for(size_t i=0; i< vMeshObjects.size(); ++i)
+			{
+				cHplMapStaticUserData *pUserData = (cHplMapStaticUserData*)static_cast<cSubMeshEntity*>(vMeshObjects[i])->GetUserData();
+				vItems[i].mMaterial = (size_t)vMeshObjects[i]->GetMaterial();
+				vItems[i].mbShadow = vMeshObjects[i]->GetRenderFlagBit(eRenderableFlag_ShadowCaster);
+				vItems[i].mbCombine = pUserData ? pUserData->mbCombine : true;
+			}
+			std::vector<int32_t> vPlan(2 * vItems.size());
+			const size_t lRuns = ohpl_h13_plan_meshes(vItems.data(), vItems.size(), vPlan.data(), vItems.size());
+			for(size_t i=0; i<lRuns; ++i)
+				CombineObjectsAndCreateMeshEntity(vMeshObjects, vPlan[2*i], vPlan[2*i+1]);
+		}
+		else
 		for(size_t i=0; i< vMeshObjects.size(); ++i)
 		{
 			iRenderable *pMeshObject = vMeshObjects[i];
@@ -1032,6 +1053,24 @@ namespace hpl {
 		lStartTime = cPlatform::GetApplicationTime();
 		if(gbLog) Log(" Check for body combination sequences!\n");
 		lFirstInSequence = 0;
+		if(OhplBackendRustRequested())
+		{
+			std::vector<OhplH13BodyItem> vItems(vPhysicsObjects.size());
+			for(size_t i=0; i< vPhysicsObjects.size(); ++i)
+			{
+				cHplMapPhysicsObject& physicsObject = vPhysicsObjects[i];
+				vItems[i].mPhysMaterial = (size_t)physicsObject.mpPhysicsMaterial;
+				vItems[i].mbShadow = physicsObject.mpObject->GetRenderFlagBit(eRenderableFlag_ShadowCaster);
+				vItems[i].mbCharCollider = physicsObject.mbCharCollider;
+				vItems[i].mbCollides = physicsObject.mpUserData->mbCollides;
+				vItems[i].mlIndexNum = vItems[i].mbCollides ? physicsObject.mpObject->GetVertexBuffer()->GetIndexNum() : 0;
+			}
+			std::vector<int32_t> vPlan(2 * vItems.size());
+			const size_t lRuns = ohpl_h13_plan_bodies(vItems.data(), vItems.size(), vMeshObjects.size(), vPlan.data(), vItems.size());
+			for(size_t i=0; i<lRuns; ++i)
+				CombineObjectsAndCreatePhysics(vPhysicsObjects, vPlan[2*i], vPlan[2*i+1]);
+		}
+		else
 		for(size_t i=0; i< vPhysicsObjects.size(); ++i)
 		{
 			cHplMapPhysicsObject& physicsObject = vPhysicsObjects[i];

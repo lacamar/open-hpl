@@ -18,6 +18,7 @@ mod camera;
 mod ffi;
 mod ffi_h10;
 mod ffi_h11;
+mod ffi_h13;
 mod ffi_light;
 mod ffi_meshentity;
 mod ffi_node;
@@ -26,6 +27,7 @@ mod ffi_world;
 mod h10;
 mod h11;
 mod h12_psload;
+mod h13_world;
 mod lensflare;
 mod light;
 mod meshentity;
@@ -43,6 +45,8 @@ mod tests_h10;
 mod tests_h11;
 #[cfg(test)]
 mod tests_h12;
+#[cfg(test)]
+mod tests_h13;
 #[cfg(test)]
 mod tests_light;
 #[cfg(test)]

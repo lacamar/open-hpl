@@ -62,6 +62,7 @@ namespace hpl {
 	class iPhysicsBody;
 	class cSoundEntity;
 	class cAINodeContainer;
+	struct OhplH13Reg;
 	class cAStarHandler;
 	class cAINodeGeneratorParams;
 	class iVertexBuffer;
@@ -169,6 +170,8 @@ namespace hpl {
 		~cWorld();
 
 		void DestroyAllEntities(tWorldDestroyAllFlag aFlags);
+
+		void DumpH13(const char *asPath, const char *asMap);
 
 		tString GetName(){ return msName;}
 
@@ -618,6 +621,8 @@ namespace hpl {
 		tTempNodeContainerMap m_mapTempNodes;
 
 		cNode3D* mpRootNode;
+
+		OhplH13Reg *mpH13Reg = NULL;
 
 		tString msMapName;
 		cColor mAmbientColor;
