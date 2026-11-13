@@ -53,7 +53,6 @@
 
 #include "impl/tinyXML/tinyxml.h"
 #include "resources/RustResMgr.h"
-#include "impl/RustBackends.h"
 #include <cstring>
 
 namespace hpl {
@@ -78,11 +77,8 @@ namespace hpl {
 
 		mpFileSearcher = hplNew( cFileSearcher, () );
 
-		mpEntityLoaders = ohpl_rm_loaders_new();
-		mpAreaLoaders = ohpl_rm_loaders_new();
-
 		mpLanguageFile = NULL;
-		if(OhplBackendRustRequested()) H4Setup();
+		H4Setup();
 	}
 
 	//-----------------------------------------------------------------------
@@ -104,53 +100,9 @@ namespace hpl {
 
 	cResources::~cResources()
 	{
-		if(mpRs)
-		{
-			ohpl_h4_res_shutdown(mpRs);
-			ohpl_h4_res_free(mpRs);
-			mpRs = NULL;
-			ohpl_rm_loaders_free(mpEntityLoaders);
-			ohpl_rm_loaders_free(mpAreaLoaders);
-			return;
-		}
-		Log("Exiting Resources Module\n");
-		Log("--------------------------------------------------------\n");
-
-		ohpl_rm_loaders_each(mpEntityLoaders, [](void*, void* apLoader){ hplDelete(static_cast<iEntityLoader*>(apLoader)); }, NULL);
-		ohpl_rm_loaders_each(mpAreaLoaders, [](void*, void* apLoader){ hplDelete(static_cast<iAreaLoader*>(apLoader)); }, NULL);
-		ohpl_rm_loaders_free(mpEntityLoaders);
-		ohpl_rm_loaders_free(mpAreaLoaders);
-
-		STLDeleteAll(mlstXmlDocuments);
-		STLDeleteAll(mlstBinBuffers);
-		
-		hplDelete(mpFontManager);
-		hplDelete(mpScriptManager);
-		hplDelete(mpParticleManager);
-		hplDelete(mpSoundManager);
-		hplDelete(mpMeshManager);
-		hplDelete(mpMaterialManager);
-		hplDelete(mpGpuShaderManager);
-		hplDelete(mpImageManager);
-		hplDelete(mpTextureManager);
-		hplDelete(mpSoundEntityManager);
-		hplDelete(mpAnimationManager);
-		hplDelete(mpVideoManager);
-		hplDelete(mpEntFileManager);
-		
-		Log(" All resources deleted\n");
-
-		hplDelete(mpFileSearcher);
-		
-		hplDelete(mpMeshLoaderHandler);
-		hplDelete(mpBitmapLoaderHandler);
-		hplDelete(mpWorldLoaderHandler);
-		hplDelete(mpVideoLoaderHandler);
-
-		if(mpLanguageFile) hplDelete(mpLanguageFile);
-		
-		mlstManagers.clear();
-		Log("--------------------------------------------------------\n\n");
+		ohpl_h4_res_shutdown(mpRs);
+		ohpl_h4_res_free(mpRs);
+		mpRs = NULL;
 	}
 
 	//-----------------------------------------------------------------------
@@ -162,34 +114,30 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	cResourceVarsObject::cResourceVarsObject() : mpVarsRs(OhplBackendRustRequested() ? ohpl_h2_vars_new() : NULL)
+	cResourceVarsObject::cResourceVarsObject() : mpVarsRs(ohpl_h2_vars_new())
 	{
 	}
 
-	cResourceVarsObject::cResourceVarsObject(const cResourceVarsObject &aOther) : m_mapVars(aOther.m_mapVars), mpVarsRs(aOther.mpVarsRs ? ohpl_h2_vars_clone(aOther.mpVarsRs) : NULL)
+	cResourceVarsObject::cResourceVarsObject(const cResourceVarsObject &aOther) : mpVarsRs(ohpl_h2_vars_clone(aOther.mpVarsRs))
 	{
 	}
 
 	cResourceVarsObject& cResourceVarsObject::operator=(const cResourceVarsObject &aOther)
 	{
 		if(this == &aOther) return *this;
-		m_mapVars = aOther.m_mapVars;
-		if(mpVarsRs) ohpl_h2_vars_free(mpVarsRs);
-		mpVarsRs = aOther.mpVarsRs ? ohpl_h2_vars_clone(aOther.mpVarsRs) : NULL;
+		ohpl_h2_vars_free(mpVarsRs);
+		mpVarsRs = ohpl_h2_vars_clone(aOther.mpVarsRs);
 		return *this;
 	}
 
 	cResourceVarsObject::~cResourceVarsObject()
 	{
-		if(mpVarsRs) ohpl_h2_vars_free(mpVarsRs);
+		ohpl_h2_vars_free(mpVarsRs);
 	}
 
 	void cResourceVarsObject::LoadVariables(cXmlElement *apRootElem)
 	{
-		if(mpVarsRs) ohpl_h2_vars_clear(mpVarsRs);
-		//////////////////////
-		//Clear any existing variables
-		m_mapVars.clear();
+		ohpl_h2_vars_clear(mpVarsRs);
 
 		////////////////////
 		//Iterate variables and add them to map.
@@ -201,8 +149,7 @@ namespace hpl {
 			tString sName = pVarElem->GetAttributeString("Name");
 			tString sValue = pVarElem->GetAttributeString("Value");
 
-			if(mpVarsRs) ohpl_h2_vars_insert(mpVarsRs, RM_STR(sName), RM_STR(sValue));
-			else m_mapVars.insert(tResourceVarMap::value_type(sName, sValue));
+			ohpl_h2_vars_insert(mpVarsRs, RM_STR(sName), RM_STR(sValue));
 		}
 	}
 
@@ -210,131 +157,96 @@ namespace hpl {
 
 	void cResourceVarsObject::SetUserVariable(const tString& asName, const tString& asValue)
 	{
-		if(mpVarsRs) { ohpl_h2_vars_set(mpVarsRs, RM_STR(asName), RM_STR(asValue)); return; }
-		m_mapVars[asName] = asValue;
+		ohpl_h2_vars_set(mpVarsRs, RM_STR(asName), RM_STR(asValue));
 	}
 
 	//-----------------------------------------------------------------------
 
 	tString* cResourceVarsObject::GetUserVariable(const tString& asName)
 	{
-		if(mpVarsRs)
-		{
-			msVarScratch.clear();
-			if(ohpl_h2_vars_get(mpVarsRs, RM_STR(asName), [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &msVarScratch) == false) return NULL;
-			return &msVarScratch;
-		}
-		tResourceVarMapIt it = m_mapVars.find(asName);
-		if(it == m_mapVars.end()) {
-			//Warning("Did not find user variable '%s'\n", asName.c_str());
-			return NULL;
-		}
-
-		return &(it->second);
+		msVarScratch.clear();
+		if(ohpl_h2_vars_get(mpVarsRs, RM_STR(asName), [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &msVarScratch) == false) return NULL;
+		return &msVarScratch;
 	}
 	//-----------------------------------------------------------------------
 
 	void cResourceVarsObject::AddVarBool(const tString& asName, bool abDefault)
 	{
-		if(mpVarsRs) { ohpl_h2_vars_add_bool(mpVarsRs, RM_STR(asName), abDefault); return; }
-		SetUserVariable(asName, abDefault? "true" : "false");
+		ohpl_h2_vars_add_bool(mpVarsRs, RM_STR(asName), abDefault);
 	}
 
 	void cResourceVarsObject::AddVarInt(const tString& asName, int alDefault)
 	{
-		if(mpVarsRs) { ohpl_h2_vars_add_int(mpVarsRs, RM_STR(asName), alDefault); return; }
-		SetUserVariable(asName, cString::ToString(alDefault));
+		ohpl_h2_vars_add_int(mpVarsRs, RM_STR(asName), alDefault);
 	}
 
 	void cResourceVarsObject::AddVarFloat(const tString& asName, float afDefault)
 	{
-		if(mpVarsRs) { ohpl_h2_vars_add_float(mpVarsRs, RM_STR(asName), afDefault); return; }
-		SetUserVariable(asName, cString::ToString(afDefault,-1,true));
+		ohpl_h2_vars_add_float(mpVarsRs, RM_STR(asName), afDefault);
 	}
 
 	void cResourceVarsObject::AddVarVector2f(const tString& asName, const cVector2f& avDefault)
 	{
-		if(mpVarsRs) { float vF[2] = { avDefault.x, avDefault.y }; ohpl_h2_vars_add_floats(mpVarsRs, RM_STR(asName), vF, 2); return; }
-		tString sVector = avDefault.ToString();
-		sVector = cString::ReplaceCharTo(sVector,":"," ");
-		SetUserVariable(asName, sVector);
+		float vF[2] = { avDefault.x, avDefault.y };
+		ohpl_h2_vars_add_floats(mpVarsRs, RM_STR(asName), vF, 2);
 	}
 
 	void cResourceVarsObject::AddVarVector3f(const tString& asName, const cVector3f& avDefault)
 	{
-		if(mpVarsRs) { float vF[3] = { avDefault.x, avDefault.y, avDefault.z }; ohpl_h2_vars_add_floats(mpVarsRs, RM_STR(asName), vF, 3); return; }
-		tString sVector = avDefault.ToString();
-		sVector = cString::ReplaceCharTo(sVector,":"," ");
-		SetUserVariable(asName, sVector);
+		float vF[3] = { avDefault.x, avDefault.y, avDefault.z };
+		ohpl_h2_vars_add_floats(mpVarsRs, RM_STR(asName), vF, 3);
 	}
 
 	void cResourceVarsObject::AddVarColor(const tString& asName, const cColor& aDefault)
 	{
-		if(mpVarsRs) { float vF[4] = { aDefault.r, aDefault.g, aDefault.b, aDefault.a }; ohpl_h2_vars_add_floats(mpVarsRs, RM_STR(asName), vF, 4); return; }
-		tString sColor = aDefault.ToString();
-		sColor = cString::ReplaceCharTo(sColor,":"," ");
-		SetUserVariable(asName, sColor);
+		float vF[4] = { aDefault.r, aDefault.g, aDefault.b, aDefault.a };
+		ohpl_h2_vars_add_floats(mpVarsRs, RM_STR(asName), vF, 4);
 	}
 
 	void cResourceVarsObject::AddVarString(const tString& asName, const tString& asDefault)
 	{
-		if(mpVarsRs) { ohpl_h2_vars_set(mpVarsRs, RM_STR(asName), RM_STR(asDefault)); return; }
-		SetUserVariable(asName, asDefault);
+		ohpl_h2_vars_set(mpVarsRs, RM_STR(asName), RM_STR(asDefault));
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cResourceVarsObject::GetVarBool(const tString& asName, bool abDefault)
 	{
-		if(mpVarsRs) return ohpl_h2_vars_get_bool(mpVarsRs, RM_STR(asName), abDefault);
-		tString *pVal = GetUserVariable(asName);
-		return cString::ToBool(pVal ? pVal->c_str() : NULL,abDefault);
+		return ohpl_h2_vars_get_bool(mpVarsRs, RM_STR(asName), abDefault);
 	}
 
 	int cResourceVarsObject::GetVarInt(const tString& asName, int alDefault)
 	{
-		if(mpVarsRs) return ohpl_h2_vars_get_int(mpVarsRs, RM_STR(asName), alDefault);
-		tString *pVal = GetUserVariable(asName);
-		return cString::ToInt(pVal ? pVal->c_str() : NULL,alDefault);
+		return ohpl_h2_vars_get_int(mpVarsRs, RM_STR(asName), alDefault);
 	}
 
 	float cResourceVarsObject::GetVarFloat(const tString& asName, float afDefault)
 	{
-		if(mpVarsRs) return ohpl_h2_vars_get_float(mpVarsRs, RM_STR(asName), afDefault);
-		tString *pVal = GetUserVariable(asName);
-		return cString::ToFloat(pVal ? pVal->c_str() : NULL,afDefault);
+		return ohpl_h2_vars_get_float(mpVarsRs, RM_STR(asName), afDefault);
 	}
 
 	cVector2f cResourceVarsObject::GetVarVector2f(const tString& asName, const cVector2f& avDefault)
 	{
-		if(mpVarsRs) { float vF[2]; return ohpl_h2_vars_get_floats(mpVarsRs, RM_STR(asName), vF, 2) ? cVector2f(vF[0], vF[1]) : avDefault; }
-		tString *pVal = GetUserVariable(asName);
-		return cString::ToVector2f(pVal ? pVal->c_str() : NULL,avDefault);
+		float vF[2];
+		return ohpl_h2_vars_get_floats(mpVarsRs, RM_STR(asName), vF, 2) ? cVector2f(vF[0], vF[1]) : avDefault;
 	}
 
 	cVector3f cResourceVarsObject::GetVarVector3f(const tString& asName, const cVector3f& avDefault)
 	{
-		if(mpVarsRs) { float vF[3]; return ohpl_h2_vars_get_floats(mpVarsRs, RM_STR(asName), vF, 3) ? cVector3f(vF[0], vF[1], vF[2]) : avDefault; }
-		tString *pVal = GetUserVariable(asName);
-		return cString::ToVector3f(pVal ? pVal->c_str() : NULL,avDefault);
+		float vF[3];
+		return ohpl_h2_vars_get_floats(mpVarsRs, RM_STR(asName), vF, 3) ? cVector3f(vF[0], vF[1], vF[2]) : avDefault;
 	}
 
 	cColor cResourceVarsObject::GetVarColor(const tString& asName, const cColor& aDefault)
 	{
-		if(mpVarsRs) { float vF[4]; return ohpl_h2_vars_get_floats(mpVarsRs, RM_STR(asName), vF, 4) ? cColor(vF[0], vF[1], vF[2], vF[3]) : aDefault; }
-		tString *pVal = GetUserVariable(asName);
-		return cString::ToColor(pVal ? pVal->c_str() : NULL,aDefault);
+		float vF[4];
+		return ohpl_h2_vars_get_floats(mpVarsRs, RM_STR(asName), vF, 4) ? cColor(vF[0], vF[1], vF[2], vF[3]) : aDefault;
 	}
 
 	tString cResourceVarsObject::GetVarString(const tString& asName, const tString& asDefault)
 	{
-		if(mpVarsRs)
-		{
-			tString sRsVal;
-			return ohpl_h2_vars_get(mpVarsRs, RM_STR(asName), [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sRsVal) ? sRsVal : asDefault;
-		}
-		tString *pVal = GetUserVariable(asName);
-		return cString::ToString(pVal ? pVal->c_str() : NULL,asDefault);
+		tString sRsVal;
+		return ohpl_h2_vars_get(mpVarsRs, RM_STR(asName), [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sRsVal) ? sRsVal : asDefault;
 	}
 
 	//-----------------------------------------------------------------------
@@ -349,88 +261,19 @@ namespace hpl {
 	void cResources::Init(	cGraphics* apGraphics,cSystem *apSystem, cSound* apSound, cScene *apScene,
 							cGui *apGui, cPhysics *apPhysics)
 	{
-		if(mpRs)
-		{
-			cInitArgs args = { apGraphics, apSystem, apSound, apScene, apGui, apPhysics };
-			mpInit = &args;
-			ohpl_h4_res_init(mpRs);
-			mpInit = NULL;
-			return;
-		}
-		Log("Initializing Resources Module\n");
-		Log("--------------------------------------------------------\n");
-
-		mpLowLevelSystem = apSystem->GetLowLevel();
-
-		Log(" Creating loader handlers \n");
-
-		mpMeshLoaderHandler = hplNew( cMeshLoaderHandler,(this, apScene) );
-		mpBitmapLoaderHandler = hplNew( cBitmapLoaderHandler,(this, apGraphics) );
-		mpWorldLoaderHandler = hplNew( cWorldLoaderHandler,(this, apGraphics,apScene,apPhysics) );
-		mpVideoLoaderHandler = hplNew( cVideoLoaderHandler,(this, apGraphics) );
-
-		Log(" Creating resource managers\n");
-
-		mpImageManager = hplNew( cImageManager,(this,mpLowLevelGraphics,mpLowLevelSystem) );
-		mlstManagers.push_back(mpImageManager);
-		mpGpuShaderManager = hplNew( cGpuShaderManager,(mpFileSearcher,mpLowLevelGraphics,mpLowLevelResources,mpLowLevelSystem) );
-		mlstManagers.push_back(mpGpuShaderManager);
-		mpParticleManager = hplNew( cParticleManager,(apGraphics, this) );
-		mlstManagers.push_back(mpParticleManager);
-		mpSoundManager = hplNew( cSoundManager,(apSound, this) );
-		mlstManagers.push_back(mpParticleManager);
-		mpFontManager = hplNew( cFontManager,(apGraphics,apGui, this) );
-		mlstManagers.push_back(mpFontManager);
-		mpScriptManager = hplNew( cScriptManager,(apSystem, this) );
-		mlstManagers.push_back(mpScriptManager);
-		mpTextureManager = hplNew( cTextureManager,(apGraphics, this) );
-		mlstManagers.push_back(mpTextureManager);
-		mpMaterialManager = hplNew( cMaterialManager,(apGraphics, this) );
-		mlstManagers.push_back(mpMaterialManager);
-		mpMeshManager = hplNew( cMeshManager,(apGraphics, this) );
-		mlstManagers.push_back(mpMeshManager);
-		mpSoundEntityManager = hplNew( cSoundEntityManager,(apSound, this) );
-		mlstManagers.push_back(mpSoundEntityManager);
-		mpAnimationManager = hplNew( cAnimationManager,(apGraphics, this) );
-		mlstManagers.push_back(mpAnimationManager);
-		mpVideoManager = hplNew( cVideoManager,(apGraphics, this) );
-		mlstManagers.push_back(mpVideoManager);
-		mpEntFileManager = hplNew( cEntFileManager,(this) );
-		mlstManagers.push_back(mpEntFileManager);
-
-		Log(" Adding loaders to handlers \n");
-
-		//Low level resources will load non-propitary formats.
-		mpLowLevelResources->AddBitmapLoaders(mpBitmapLoaderHandler);
-		mpLowLevelResources->AddMeshLoaders(mpMeshLoaderHandler);
-		mpLowLevelResources->AddVideoLoaders(mpVideoLoaderHandler);
-		
-		//Add properitary formats directly
-        mpWorldLoaderHandler->AddLoader(hplNew(cWorldLoaderHplMap, () ));
-
-		mpWorldLoaderHandler->AddLoader(hplNew(cWorldLoaderHpm, () ));
-
-		Log("--------------------------------------------------------\n\n");
+		cInitArgs args = { apGraphics, apSystem, apSound, apScene, apGui, apPhysics };
+		mpInit = &args;
+		ohpl_h4_res_init(mpRs);
+		mpInit = NULL;
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cResources::Update(float afTimeStep)
 	{
-		if(mpRs)
-		{
-			int32_t lBits;
-			memcpy(&lBits, &afTimeStep, sizeof(lBits));
-			ohpl_h4_res_update(mpRs, lBits);
-			return;
-		}
-		tResourceManagerListIt it = mlstManagers.begin();
-		for(; it != mlstManagers.end(); ++it)
-		{
-			iResourceManager *pManager = *it;
-
-			pManager->Update(afTimeStep);
-		}
+		int32_t lBits;
+		memcpy(&lBits, &afTimeStep, sizeof(lBits));
+		ohpl_h4_res_update(mpRs, lBits);
 	}
 
 	//-----------------------------------------------------------------------
@@ -450,17 +293,12 @@ namespace hpl {
 	 */
 	bool cResources::AddResourceDir(const tWString &asDir, bool abAddSubDirectories, const tString &asMask)
 	{
-		if(mpRs) return ohpl_h4_res_add_dir(mpRs, reinterpret_cast<const uint32_t*>(asDir.data()), asDir.size(), abAddSubDirectories, RM_STR(asMask));
-		mpFileSearcher->AddDirectory(asDir, asMask, abAddSubDirectories);
-		if(iResourceBase::GetLogCreateAndDelete())
-			Log(" Added resource directory '%s'\n",cString::To8Char(asDir).c_str());
-		return true;
+		return ohpl_h4_res_add_dir(mpRs, reinterpret_cast<const uint32_t*>(asDir.data()), asDir.size(), abAddSubDirectories, RM_STR(asMask));
 	}
 
 	void cResources::ClearResourceDirs()
 	{	
-		if(mpRs) { ohpl_h4_res_clear_dirs(mpRs); return; }
-		mpFileSearcher->ClearDirectories();
+		ohpl_h4_res_clear_dirs(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -500,137 +338,55 @@ namespace hpl {
 
 	void cResources::AddEntityLoader(iEntityLoader* apLoader, bool abSetAsDefault)
 	{
-		if(mpRs) { ohpl_h4_res_add_loader(mpRs, false, RM_STR(apLoader->GetName()), apLoader, abSetAsDefault); return; }
-		ohpl_rm_loaders_add(mpEntityLoaders, RM_STR(apLoader->GetName()), apLoader, abSetAsDefault);
+		ohpl_h4_res_add_loader(mpRs, false, RM_STR(apLoader->GetName()), apLoader, abSetAsDefault);
 	}
 
 	iEntityLoader* cResources::GetEntityLoader(const tString& asName)
 	{
-		if(mpRs) return static_cast<iEntityLoader*>(ohpl_h4_res_get_loader(mpRs, false, RM_STR(asName)));
-		bool bMissing = false;
-		iEntityLoader* pLoader = static_cast<iEntityLoader*>(ohpl_rm_loaders_get(mpEntityLoaders, RM_STR(asName), &bMissing));
-		if(bMissing)
-		{
-			Warning("No loader for type '%s' found!\n",asName.c_str());
-			if(pLoader) Log("Using default loader!\n");
-		}
-		return pLoader;
+		return static_cast<iEntityLoader*>(ohpl_h4_res_get_loader(mpRs, false, RM_STR(asName)));
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cResources::AddAreaLoader(iAreaLoader* apLoader, bool abSetAsDefault)
 	{
-		if(mpRs) { ohpl_h4_res_add_loader(mpRs, true, RM_STR(apLoader->GetName()), apLoader, abSetAsDefault); return; }
-		ohpl_rm_loaders_add(mpAreaLoaders, RM_STR(apLoader->GetName()), apLoader, abSetAsDefault);
+		ohpl_h4_res_add_loader(mpRs, true, RM_STR(apLoader->GetName()), apLoader, abSetAsDefault);
 	}
 
 	iAreaLoader* cResources::GetAreaLoader(const tString& asName)
 	{
-		if(mpRs) return static_cast<iAreaLoader*>(ohpl_h4_res_get_loader(mpRs, true, RM_STR(asName)));
-		bool bMissing = false;
-		iAreaLoader* pLoader = static_cast<iAreaLoader*>(ohpl_rm_loaders_get(mpAreaLoaders, RM_STR(asName), &bMissing));
-		if(bMissing)
-		{
-			Warning("No loader for area type '%s' found!\n",asName.c_str());
-			if(pLoader) Log("Using default loader!\n");
-		}
-		return pLoader;
+		return static_cast<iAreaLoader*>(ohpl_h4_res_get_loader(mpRs, true, RM_STR(asName)));
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cResources::LoadResourceDirsFile(const tString &asFile, const tWString &asAltPath)
 	{
-		if(mpRs) return ohpl_h4_res_dirs_file(mpRs, RM_STR(asFile), reinterpret_cast<const uint32_t*>(asAltPath.data()), asAltPath.size());
-		iXmlDocument* pDoc = mpLowLevelResources->CreateXmlDocument();
-		if(pDoc->CreateFromFile(cString::To16Char(asFile))==false)
-		{
-			Error("Couldn't load XML file '%s'!\n",asFile.c_str());
-			hplDelete( pDoc);
-			return false;
-		}
-
-		//Get the root.
-		cXmlNodeListIterator it = pDoc->GetChildIterator();
-		while(it.HasNext())
-		{
-			cXmlElement *pChildElem = it.Next()->ToElement();
-
-			tString sPath = pChildElem->GetAttributeString("Path");
-			if(sPath==""){
-				continue;
-			}
-
-			bool bAddSubDirs = pChildElem->GetAttributeBool("AddSubDirs",false);
-
-			cRmOut dirs;
-			ohpl_rm_resource_dirs(RM_STR(sPath), reinterpret_cast<const uint32_t*>(asAltPath.data()), asAltPath.size(), dirs.raw());
-			for(const tWString& sDir : dirs.mvItems) AddResourceDir(sDir,bAddSubDirs);
-		}
-
-		hplDelete( pDoc);
-		return true;
+		return ohpl_h4_res_dirs_file(mpRs, RM_STR(asFile), reinterpret_cast<const uint32_t*>(asAltPath.data()), asAltPath.size());
 	}
 
 	//-----------------------------------------------------------------------
 
 	iXmlDocument* cResources::LoadXmlDocument(const tString& asFile)
 	{
-		if(mpRs) return static_cast<iXmlDocument*>(ohpl_h4_res_load_xml(mpRs, RM_STR(asFile)));
-		tWString sPath = mpFileSearcher->GetFilePath(asFile);
-		if(sPath == _W("")){
-			Error("Could not load XML document '%s'\n",asFile.c_str());
-			return NULL;
-		}
-		
-        iXmlDocument *pDoc = mpLowLevelResources->CreateXmlDocument();
-		if(pDoc->CreateFromFile(sPath)==false)
-		{
-			Error("Could not parse/load XML from %s\n",cString::To8Char(sPath).c_str());
-			hplDelete( pDoc );
-			return NULL;
-		}
-
-		mlstXmlDocuments.push_back(pDoc);
-
-		return pDoc;
+		return static_cast<iXmlDocument*>(ohpl_h4_res_load_xml(mpRs, RM_STR(asFile)));
 	}
 	
 	void cResources::DestroyXmlDocument(iXmlDocument* apDoc)
 	{
-		if(mpRs) { ohpl_h4_res_destroy_xml(mpRs, apDoc); return; }
-		STLFindAndDelete(mlstXmlDocuments,apDoc);
+		ohpl_h4_res_destroy_xml(mpRs, apDoc);
 	}
 
 	//-----------------------------------------------------------------------
 
 	cBinaryBuffer* cResources::LoadBinaryBuffer(const tString& asFile)
 	{
-		if(mpRs) return static_cast<cBinaryBuffer*>(ohpl_h4_res_load_bin(mpRs, RM_STR(asFile)));
-		tWString sPath = mpFileSearcher->GetFilePath(asFile);
-		if(sPath == _W("")){
-			Error("Could not find filepath for binary buffer '%s'\n",asFile.c_str());
-			return NULL;
-		}
-
-		cBinaryBuffer *pFile = hplNew(cBinaryBuffer, (sPath) );
-		if(pFile->Load()==false)
-		{
-			Error("Could not load binary file from %s\n",cString::To8Char(sPath).c_str());
-			hplDelete( pFile );
-			return NULL;
-		}
-
-		mlstBinBuffers.push_back(pFile);
-
-		return pFile;
+		return static_cast<cBinaryBuffer*>(ohpl_h4_res_load_bin(mpRs, RM_STR(asFile)));
 	}
 	
 	void cResources::DestroyBinaryBuffer(cBinaryBuffer* apFile)
 	{
-		if(mpRs) { ohpl_h4_res_destroy_bin(mpRs, apFile); return; }
-		STLFindAndDelete(mlstBinBuffers,apFile);
+		ohpl_h4_res_destroy_bin(mpRs, apFile);
 	}
 
 	//-----------------------------------------------------------------------

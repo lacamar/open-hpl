@@ -61,7 +61,6 @@ namespace hpl {
         const tWString& GetFilePath(const tString& asFileNameAndPath, int *apEqualCount=NULL);
 	
 	private:
-		OhplFileSearcher *mpFiles;
 		OhplH2Searcher *mpRs;
 		std::deque<tWString> mvPaths;
 

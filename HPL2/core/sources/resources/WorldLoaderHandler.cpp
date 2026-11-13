@@ -59,15 +59,7 @@ namespace hpl {
 	
 	cWorld* cWorldLoaderHandler::LoadWorld(const tWString& asFile,tWorldLoadFlag aFlags)
 	{
-		if(mbRust) return static_cast<cWorld*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_WORLD_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), (int64_t)aFlags, NULL));
-		iWorldLoader *pWorldLoader = static_cast<iWorldLoader*>(GetLoaderForFile(asFile));
-
-		if(pWorldLoader)
-		{
-				return pWorldLoader->LoadWorld(asFile,aFlags);
-		}
-		
-		return NULL;
+		return static_cast<cWorld*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_WORLD_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), (int64_t)aFlags, NULL));
 	}
 
 	//-----------------------------------------------------------------------

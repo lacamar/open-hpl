@@ -29,7 +29,6 @@
 
 #include "system/LowLevelSystem.h"
 
-#include "impl/RustBackends.h"
 #include "resources/RustResMgr.h"
 
 #include <algorithm>
@@ -37,9 +36,6 @@
 
 namespace hpl {
 
-	int iResourceManager::mlTabCount=0;
-	static unsigned long glOuterStart=0;
-	static tString gsOuterName;
 	void (*iResourceManager::mpLoadTickCallback)() = NULL;
 
 	//////////////////////////////////////////////////////////////////////////
@@ -51,14 +47,13 @@ namespace hpl {
 	iResourceManager::iResourceManager(cFileSearcher *apFileSearcher, 
 										iLowLevelResources *apLowLevelResources,
 										iLowLevelSystem *apLowLevelSystem)
-		: mpRs(OhplBackendRustRequested() ? ohpl_h3_mgr_new() : NULL),
-		  m_mapResources(mpRs ? cResourceMap(ohpl_h3_mgr_map(mpRs)) : cResourceMap())
+		: mpRs(ohpl_h3_mgr_new()),
+		  m_mapResources(ohpl_h3_mgr_map(mpRs))
 	{
 		mpFileSearcher = apFileSearcher;
 		mpLowLevelResources = apLowLevelResources;
 		mpLowLevelSystem = apLowLevelSystem;
 		memset(&mOps, 0, sizeof(mOps));
-		if(mpRs == NULL) return;
 
 		mOps.ctx = this;
 		mOps.log = [](void*, int32_t alLevel, const uint8_t *apMsg, size_t alLen)
@@ -105,7 +100,7 @@ namespace hpl {
 
 	iResourceManager::~iResourceManager()
 	{
-		if(mpRs) ohpl_h3_mgr_free(mpRs);
+		ohpl_h3_mgr_free(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -118,9 +113,7 @@ namespace hpl {
 
 	iResourceBase* iResourceManager::GetResource(const tWString& asFullPath)
 	{
-		if(mpRs) return static_cast<iResourceBase*>(ohpl_h3_mgr_get(mpRs, reinterpret_cast<const uint32_t*>(asFullPath.data()), asFullPath.size()));
-		unsigned int lHash = cString::GetHashW(asFullPath);
-		return m_mapResources.find_if(lHash, [&](iResourceBase *pResource){ return pResource->GetFullPath() == asFullPath; });
+		return static_cast<iResourceBase*>(ohpl_h3_mgr_get(mpRs, reinterpret_cast<const uint32_t*>(asFullPath.data()), asFullPath.size()));
 	}
 
 	//-----------------------------------------------------------------------
@@ -132,65 +125,16 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-	static void ResourceUseKey(void*, void *apRes, unsigned int *apUsers, unsigned long *apTime)
+	void iResourceManager::DestroyUnused(int alMaxToKeep)
 	{
-		iResourceBase *pRes = static_cast<iResourceBase*>(apRes);
-		*apUsers = pRes->GetUserCount();
-		*apTime = pRes->GetTime();
-	}
-
-	static void CollectResources(void *apCtx, void *const *apRes, size_t alCount)
-	{
-		iResourceBase *const *ppFirst = reinterpret_cast<iResourceBase *const *>(apRes);
-		static_cast<std::vector<iResourceBase*>*>(apCtx)->assign(ppFirst, ppFirst + alCount);
-	}
-
-    void iResourceManager::DestroyUnused(int alMaxToKeep)
-	{
-		if(mpRs) { ohpl_h3f_destroy_unused(mpRs, &mOps, alMaxToKeep); return; }
-
-		if((int)m_mapResources.size() <= alMaxToKeep) return;
-
-		//Sorted according to num of users and then time.
-		std::vector<iResourceBase*> vResources;
-		ohpl_resmap_eviction_order(m_mapResources.raw(), ResourceUseKey, NULL, CollectResources, &vResources);
-
-		for(size_t i=alMaxToKeep; i<vResources.size(); ++i)
-		{
-			iResourceBase *pRes = vResources[i];
-
-			if(pRes->HasUsers()==false)
-			{
-				RemoveResource(pRes);
-				hplDelete(pRes);
-			}
-		}
+		ohpl_h3f_destroy_unused(mpRs, &mOps, alMaxToKeep);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iResourceManager::DestroyAll()
 	{
-		if(mpRs) { ohpl_h3f_destroy_all(mpRs, &mOps); return; }
-
-		tResourceBaseMapIt it = m_mapResources.begin();
-		while(it != m_mapResources.end())
-		{
-			//Log("Start destroy...");
-			
-			iResourceBase* pResource = it->second;
-			
-			//Log(" res: %d ...", pResource);
-			//Log(" res: '%s' / '%s': %d ...",pResource->GetName().c_str(), cString::To8Char(pResource->GetFullPath()).c_str(),pResource->GetUserCount());
-
-			while(pResource->HasUsers()) pResource->DecUserCount();
-			
-			Destroy(pResource);
-
-			it = m_mapResources.begin();
-			
-			//Log(" Done!\n");
-		}
+		ohpl_h3f_destroy_all(mpRs, &mOps);
 	}
 
 	//-----------------------------------------------------------------------
@@ -203,93 +147,43 @@ namespace hpl {
 
 	void iResourceManager::BeginLoad(const tString& asFile)
 	{
-		if(mpRs) { ohpl_h3f_begin(mpRs, &mOps, RM_STR(asFile)); return; }
-		mlTimeStart = cPlatform::GetApplicationTime();
-		
-		//Log("Begin resource: %s\n",asFile.c_str());
-
-		if(mlTabCount==0) { glOuterStart = mlTimeStart; gsOuterName = asFile; }
-		mlTabCount++;
+		ohpl_h3f_begin(mpRs, &mOps, RM_STR(asFile));
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void iResourceManager::EndLoad()
 	{
-		if(mpRs) { ohpl_h3f_end(mpRs, &mOps); return; }
-		mlTabCount--;
-		if(mlTabCount==0) cEngineDiagnostics::AddLoadTime(gsOuterName, (double)(cPlatform::GetApplicationTime() - glOuterStart));
-		if(mlTabCount==0 && mpLoadTickCallback) mpLoadTickCallback();
+		ohpl_h3f_end(mpRs, &mOps);
 	}
 
 	//-----------------------------------------------------------------------
 	
 	iResourceBase* iResourceManager::FindLoadedResource(const tString &asName, tWString &asFilePath,int *apEqualCount)
 	{
-		if(mpRs)
-		{
-			iResourceBase *pFound = static_cast<iResourceBase*>(ohpl_h3f_find_loaded(mpRs, &mOps, RM_STR(asName), apEqualCount,
-				[](void *c, const uint32_t *p, size_t n){ static_cast<tWString*>(c)->assign(reinterpret_cast<const wchar_t*>(p), n); }, &asFilePath));
-			return pFound;
-		}
-		asFilePath = mpFileSearcher->GetFilePath(asName, apEqualCount);
-		iResourceBase* pResource = GetResource(asFilePath);
-		if(pResource!=NULL)
-		{
-			asFilePath = _W("");
-		}
-
-		return pResource;
+		return static_cast<iResourceBase*>(ohpl_h3f_find_loaded(mpRs, &mOps, RM_STR(asName), apEqualCount,
+			[](void *c, const uint32_t *p, size_t n){ static_cast<tWString*>(c)->assign(reinterpret_cast<const wchar_t*>(p), n); }, &asFilePath));
 	}
 
 	//-----------------------------------------------------------------------
 	
 	tString iResourceManager::GetTabs()
 	{
-		if(mpRs)
-		{
-			tString sRsTabs;
-			ohpl_h3f_tabs(mpRs, &mOps, [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sRsTabs);
-			return sRsTabs;
-		}
-		tString sTabs ="";
-		for(int i=0; i<mlTabCount; ++i) sTabs+="  ";
+		tString sTabs;
+		ohpl_h3f_tabs(mpRs, &mOps, [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sTabs);
 		return sTabs;
 	}
 
 	void iResourceManager::AddResource(iResourceBase* apResource, bool abLog, bool abAddToSet)
 	{
-		if(mpRs) { ohpl_h3f_add(mpRs, &mOps, apResource, abLog, abAddToSet); return; }
-
-		if(abAddToSet)
-		{
-			int lHash = cString::GetHashW(apResource->GetFullPath());
-			m_mapResources.insert(lHash, apResource);
-		}
-
-		//Log("Adding %d, '%s' hash: %u\n",apResource,cString::To8Char(apResource->GetFullPath()).c_str(), lHash);
-		
-		if(abLog && iResourceBase::GetLogCreateAndDelete())
-		{
-			unsigned long lTime = cPlatform::GetApplicationTime() - mlTimeStart;
-            Log("%sLoaded resource %s in %d ms\n",GetTabs().c_str(), apResource->GetName().c_str(),lTime);
-			apResource->SetLogDestruction(true);
-		}
-		
-		//Log("End resource: %s\n",apResource->GetName().c_str());
+		ohpl_h3f_add(mpRs, &mOps, apResource, abLog, abAddToSet);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void iResourceManager::RemoveResource(iResourceBase* apResource)
 	{
-		//Log("Removing resource name: '%s' path: '%s' ", apResource->GetName().c_str(), cString::To8Char(apResource->GetFullPath()).c_str());
-
-		if(mpRs) { ohpl_h3_mgr_remove(mpRs, apResource); return; }
-
-		unsigned int lHash = cString::GetHashW(apResource->GetFullPath());
-
-		m_mapResources.erase(lHash, apResource);
+		ohpl_h3_mgr_remove(mpRs, apResource);
  	}
 
 	//-----------------------------------------------------------------------

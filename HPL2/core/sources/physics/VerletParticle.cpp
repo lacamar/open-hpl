@@ -138,29 +138,6 @@ namespace hpl {
 		mpWorld = apWorld;
 
 		mpRayParticleCallback = hplNew( cVerletParticleRayCallback, (this));
-
-		if(OhplBackendRustRequested()) return;
-
-		mlUniqueID = -1;
-
-		mS.gravityForce = mpWorld->GetGravity();
-
-		mS.collide = true;
-
-		mfDamping = 0.001f;
-		mS.dampingMul = 1 - mfDamping;
-
-		mS.slideAmount = 0.3f;
-		mS.particleRadius = 0.05f;
-
-		mS.sleeping = false;
-		mS.sleepCheckCount =0;
-		mS.sleepCheckTime = 1.0f / 3.0f;
-		mS.sleepCount =0;
-		mS.sleepMaxCount = 3;
-		mS.sleepCheckSqrLimit = 0.0015f * 0.0015f;
-
-		mS.updateCount =0;
 	}
 
 	iVerletParticleContainer::~iVerletParticleContainer()

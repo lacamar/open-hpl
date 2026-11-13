@@ -52,8 +52,8 @@ struct Peek : cSurfaceData
 	{
 		Peek& p = static_cast<Peek&>(d);
 		h.S(p.msName); h.S(p.msUserVar); h.S(p.msStepType); h.S(p.msScrapeSoundName); h.S(p.msRollSoundName);
-		h.F(p.mfElasticity); h.F(p.mfKineticFriction); h.F(p.mfStaticFriction);
-		h.U32(p.mlPriority); h.U32(p.mElasticityMode); h.U32(p.mFrictionMode);
+		h.F(p.GetElasticity()); h.F(p.GetKineticFriction()); h.F(p.GetStaticFriction());
+		h.U32(p.GetPriority()); h.U32(p.GetElasticityCombMode()); h.U32(p.GetFrictionCombMode());
 		h.F(p.mfMinScrapeSpeed); h.F(p.mfMinScrapeFreq); h.F(p.mfMinScrapeFreqSpeed); h.F(p.mfMiddleScrapeSpeed);
 		h.F(p.mfMaxScrapeFreqSpeed); h.F(p.mfMaxScrapeFreq); h.U32(p.mlMinScrapeContacts);
 		h.F(p.mfMinRollSpeed); h.F(p.mfMinRollFreq); h.F(p.mfMinRollVolume); h.F(p.mfMinRollFreqSpeed);

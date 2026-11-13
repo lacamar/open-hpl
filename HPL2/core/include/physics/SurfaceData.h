@@ -61,11 +61,6 @@ namespace hpl {
 		int mlPSPrio;
 	};
 
-	typedef std::vector<cSurfaceImpactData*> tSurfaceImpactDataVec;
-	typedef tSurfaceImpactDataVec::iterator tSurfaceImpactDataVecIt;
-
-	//----------------------------------------
-
 	class cSurfaceData
 	{
 	public:
@@ -168,14 +163,6 @@ namespace hpl {
 		OhplSurfaceState mS = OhplSurfaceState();
 
 		//Properties (references into mS, owned by rust/src/physics/surf.rs)
-		ePhysicsMaterialCombMode &mFrictionMode = reinterpret_cast<ePhysicsMaterialCombMode&>(mS.frictionMode);
-		ePhysicsMaterialCombMode &mElasticityMode = reinterpret_cast<ePhysicsMaterialCombMode&>(mS.elasticityMode);
-
-		float &mfElasticity = mS.elasticity;
-		float &mfStaticFriction = mS.staticFriction;
-		float &mfKineticFriction = mS.kineticFriction;
-		int &mlPriority = mS.priority;
-
 		float &mfMinScrapeSpeed = mS.minScrapeSpeed;
 		float &mfMinScrapeFreq = mS.minScrapeFreq;
 		float &mfMinScrapeFreqSpeed = mS.minScrapeFreqSpeed;
@@ -193,15 +180,10 @@ namespace hpl {
 		float &mfMaxRollVolume = mS.maxRollVolume;
 		float &mfMaxRollFreqSpeed = mS.maxRollFreqSpeed;
 		float &mfMiddleRollSpeed = mS.middleRollSpeed;
-		int &mlMinRollContacts = mS.minRollContacts;
 		tString msRollSoundName;
 		tFlag &mRollAxisFlags = mS.rollAxisFlags;
 
         tString msStepType;
-
-		tSurfaceImpactDataVec mvImpactData;
-
-		tSurfaceImpactDataVec mvHitData;
 	};
 };
 #endif // HPL_SURFACE_DATA_H

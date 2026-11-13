@@ -212,10 +212,10 @@ namespace hpl {
 		cSoundEntity* GetRollSoundEntity(){ return mpRollSoundEntity;}
 		int GetRollSoundEntityID(){ return mlRollSoundEntityID;}
 
-		void SetHasSlide(bool abX){ if(mRsBook) ohpl_h15_body_flag_set(mRsBook, OhplH15_HasSlide, abX); else mbHasSlide = abX;}
-		bool HasSlide(){ return mRsBook ? ohpl_h15_body_flag_get(mRsBook, OhplH15_HasSlide) : mbHasSlide;}
+		void SetHasSlide(bool abX){ ohpl_h15_body_flag_set(mRsBook, OhplH15_HasSlide, abX);}
+		bool HasSlide(){ return ohpl_h15_body_flag_get(mRsBook, OhplH15_HasSlide);}
 
-		bool HasCollision(){ return mRsBook ? ohpl_h15_body_flag_get(mRsBook, OhplH15_HasCollision) : mbHasCollision;}
+		bool HasCollision(){ return ohpl_h15_body_flag_get(mRsBook, OhplH15_HasCollision);}
 
 		void SetUserData(void* apUserData){ mpUserData = apUserData;}
 		void* GetUserData(){ return mpUserData;}
@@ -304,7 +304,7 @@ namespace hpl {
 		
 		iPhysicsWorld *GetWorld(){ return mpWorld;}
 
-		void DisableAfterSimulation(){ if(mRsBook) ohpl_h15_body_flag_set(mRsBook, OhplH15_DisableAfterSim, true); else mbDisableAfterSimulation = true;}
+		void DisableAfterSimulation(){ ohpl_h15_body_flag_set(mRsBook, OhplH15_DisableAfterSim, true);}
 
 		//Entity implementation
 		tString GetEntityType(){ return "Body";}
@@ -318,12 +318,7 @@ namespace hpl {
 		
 		iCharacterBody *&mpCharacterBody = mS.charBody;
 
-		std::vector<iPhysicsJoint*> mvJoints;
-
-		bool &mbDestroying = mS.destroying;
         
-		std::list<iCharacterBody*> mlstConnectedCharBodies;
-		        		
 		iPhysicsBody *&mpScrapeBody = mS.scrapeBody;
 		cSoundEntity *&mpScrapeSoundEntity = mS.scrapeSound;
 		int &mlScrapeSoundEntityID = mS.scrapeSoundId;
@@ -332,15 +327,12 @@ namespace hpl {
 		cMatrixf &m_mtxPrevScrapeMatrix = mS.prevScrape;
 		uint64_t mRsBook;
 		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
-		bool mbHasSlide;
 		int mlSlideCount;
-		int &mlImpactCount = mS.impactCount;
 		bool &mbInUpdateList = mS.inUpdateList;
 
 		float &mfBuoyancyDensityMul = mS.buoyancyDensityMul;
 		float &mfMassMulApplied = mS.massMulApplied;
 
-		bool mbStaticMovement;
 		cVector3f mvTotalStaticLinearVel;
 		cVector3f mvTotalStaticAngularVel;
 
@@ -366,19 +358,12 @@ namespace hpl {
 
 		cPhysicsBody_Buoyancy mBuoyancy;
 
-		bool mbDisableAfterSimulation;
 		int &mlFreezeCount = mS.freezeCount;
 		static bool mbHpl3Buoyancy;
 		bool mbNoGravityWhenUnderwater = false;
 		bool mbIsUnderwater = false;
 
-		bool mbHasCollision;
-
-		tPhysicsBodyCallbackList mlstBodyCallbacks;
-
 		void *&mpUserData = mS.userData;
-
-		tVerletParticleContainerList mlstAttachedVerletContainers;
 
 		bool &mbCollide = mS.collide;
 	};

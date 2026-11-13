@@ -365,7 +365,7 @@ namespace hpl {
 		cVector3f GetCameraPosAdd();
 		void SetCameraSmoothPosNum(int alNum){ mlCameraSmoothPosNum = alNum;}
 		int GetCameraSmoothPosNum(){ return mlCameraSmoothPosNum;}
-		void SetCameraUseSmoothing(bool abX){ mbCameraUseSmoothing = abX; mlstCameraPos.clear(); if(mpAux) ohpl_h14_clear_camera(mpAux); UpdateCamera(); }
+		void SetCameraUseSmoothing(bool abX){ mbCameraUseSmoothing = abX; ohpl_h14_clear_camera(mpAux); UpdateCamera(); }
 		bool GetCameraUseSmoothing(){ return mbCameraUseSmoothing;}
 		void SetCameraUpdateActive(bool abX){ mbCameraUpdateActive = abX;}
 		bool GetCameraUpdateActive(){ return mbCameraUpdateActive;}
@@ -417,7 +417,6 @@ namespace hpl {
 
 
 
-		void UpdateForcePushing(float afTimeStep);
 
 		void UpdateCamera();
 		void UpdateBodyActive();
@@ -428,7 +427,6 @@ namespace hpl {
 		void ClearGravityAttachment();
 		void UpdateGravityAttachment();
 
-		void EnableBodiesAroundCharacter();
 
 		bool CheckCollision(cVector3f *apPushBackVector, const cVector3f& avPos, iPhysicsWorldCollisionCallback *apCallback,int alShapeIdx=-1);
 
@@ -470,9 +468,6 @@ namespace hpl {
 
 
 
-		std::vector<cVector3f> mvSafePositions;
-		cVector3f mvSafePosHistory[4];
-		float mfSafePosTimer, mfSafePosInterval, mfSafePosBuffer;
 
 
 
@@ -485,18 +480,15 @@ namespace hpl {
 		int &mlCameraSmoothPosNum = mE.cameraSmoothPosNum;
 		bool &mbCameraUseSmoothing = mE.cameraUseSmoothing;
 		bool &mbCameraUpdateActive = mE.cameraUpdateActive;
-		tVector3fList mlstCameraPos;
 
 		iEntity3D *&mpEntity = mE.entity;
 		cMatrixf &m_mtxEntityOffset = mE.entityOffset;
 		cMatrixf &m_mtxEntityPostOffset = mE.entityPostOffset;
 		int &mlEntitySmoothPosNum = mE.entitySmoothPosNum;
-		tVector3fList mlstEntityPos;
 
 		bool &mbEntitySmoothYPos = mE.entitySmoothYPos;
 		float &mfEntityPitchAmount = mE.entityPitchAmount;
 		int &mlEntitySmoothYPosNum = mE.entitySmoothYPosNum;
-		tFloatList mlstEntityYPositions;
 
 
 
@@ -505,7 +497,6 @@ namespace hpl {
 		float &mfMaxConnectionTorque = mE.maxConnectionTorque;
 		float &mfMaxConnectionForce = mE.maxConnectionForce;
 		iPhysicsBody *&mpConnectedBody = mE.connectedBody;
-		bool &mbConnectedBodyHadGravity = mE.connectedBodyHadGravity;
 		bool &mbConnectionDependOnBodyRotation = mE.connDependOnBodyRotation;
 		cVector3f &mvConnectionPosLocalToBody = mE.connPosLocalToBody;
 		cVector3f &mvConnectionPosLocalToChar = mE.connPosLocalToChar;

@@ -73,51 +73,9 @@ namespace hpl {
 
 		for(int i=0; i< 2;++i) mForcePid[i].SetErrorNum(10);
 
-		if(OhplBackendRustRequested())
-		{
-			cVector3f vGravity = mpWorld->GetGravity();
-			ohpl_h14_rope_init(&mS, OhplV3{vGravity.x, vGravity.y, vGravity.z}, OhplV3{avStartPos.x, avStartPos.y, avStartPos.z},
-				OhplV3{avEndPos.x, avEndPos.y, avEndPos.z});
-			return;
-		}
-
-		mS.attached[0].mpBody = NULL;
-		mS.attached[1].mpBody = NULL;
-
-		mS.totalLength = cMath::Vector3Dist(avStartPos, avEndPos);
-		mS.segmentLength = 0; //0 = no segments!
-
-		mS.motorActive = false;
-		mS.motorWantedLength = mS.totalLength;
-		mS.motorSpeedMul = 1.0f;
-		mS.motorMinSpeed = -1.0f;
-		mS.motorMaxSpeed = 1.0f;
-
-		msMotorSound = "";
-		mfMotorSoundStartSpeed = 0.1f;
-		mfMotorSoundStopSpeed = 0.05f;
-		mpMotorSoundEntity = NULL;
-		mlMotorSoundEntityID = -1;
-
-		mS.autoMoveActive = false;
-		mS.autoMoveAcc = 1.0f;
-		mS.autoMoveMaxSpeed = 1.0f;
-		mS.autoMoveSpeed =0;
-
-		mS.minTotalLength = mS.totalLength;
-		mS.maxTotalLength = mS.totalLength;
-
-		mS.collideAttachments = false;
-		mS.collide = false;
-
-		mS.strength = 100;
-		mS.stiffness = 1;
-
-		mS.firstSegmentLength = mS.totalLength;
-
-		mS.maxIterations = 3;
-
-		mS.hasUpdated = false;
+		cVector3f vGravity = mpWorld->GetGravity();
+		ohpl_h14_rope_init(&mS, OhplV3{vGravity.x, vGravity.y, vGravity.z}, OhplV3{avStartPos.x, avStartPos.y, avStartPos.z},
+			OhplV3{avEndPos.x, avEndPos.y, avEndPos.z});
 	}
 
 
@@ -154,29 +112,14 @@ namespace hpl {
 
 	void iPhysicsRope::SetMotorActive(bool abX)
 	{
-		if(OhplBackendRustRequested()){ ohpl_h14_rope_set_motor(HostOp, reinterpret_cast<size_t>(this), &mS, abX); return; }
-		if(mS.motorActive == abX) return;
-
-		mS.motorActive = abX;
-
-		if(mS.motorActive)
-		{
-			mS.autoMoveSpeed = 0;
-			SetSleeping(false);
-		}
+		ohpl_h14_rope_set_motor(HostOp, reinterpret_cast<size_t>(this), &mS, abX);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iPhysicsRope::SetAutoMoveActive(bool abX)
 	{
-		if(OhplBackendRustRequested()){ ohpl_h14_rope_set_auto_move(HostOp, reinterpret_cast<size_t>(this), &mS, abX); return; }
-		mS.autoMoveActive = abX;
-
-        if(mS.autoMoveActive)
-		{
-			SetSleeping(false);
-		}
+		ohpl_h14_rope_set_auto_move(HostOp, reinterpret_cast<size_t>(this), &mS, abX);
 	}
 
 	bool iPhysicsRope::GetAutoMoveActive()
@@ -188,16 +131,7 @@ namespace hpl {
 
 	void iPhysicsRope::RemoveAttachedBody(iPhysicsBody *apBody, bool abRemoveContainerFromBody)
 	{
-		if(OhplBackendRustRequested()){ ohpl_h14_rope_remove_attached(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(apBody), abRemoveContainerFromBody); return; }
-		for(int i=0; i<2; ++i)
-		{
-			if(mS.attached[i].mpBody == apBody)
-			{
-				mS.attached[i].mpBody = NULL;
-			}
-		}
-		if(abRemoveContainerFromBody)
-			apBody->RemoveAttachedVerletContainer(this);
+		ohpl_h14_rope_remove_attached(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(apBody), abRemoveContainerFromBody);
 	}
 
 	//-----------------------------------------------------------------------
@@ -387,65 +321,24 @@ namespace hpl {
 
 	bool iPhysicsRope::CheckParticleBodyCollision(iPhysicsBody *apBody)
 	{
-		if(OhplBackendRustRequested()) return ohpl_h14_rope_check_collision(&mS, reinterpret_cast<size_t>(apBody));
-		if(mS.collideAttachments) return true;
-
-        bool bAttachment=false;
-		for(int i=0; i<2; ++i)
-		{
-			if(mS.attached[i].mpBody == apBody) return false;
-		}
-
-		return true;
+		return ohpl_h14_rope_check_collision(&mS, reinterpret_cast<size_t>(apBody));
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool iPhysicsRope::CheckSpecificDataSleeping()
 	{
-		if(OhplBackendRustRequested()) return ohpl_h14_rope_check_sleeping(HostOp, &mS);
-		if(mS.motorActive) return false;
-
-		for(int i=0; i<2; ++i)
-		{
-			iPhysicsBody *pBody = mS.attached[i].mpBody;
-			if(pBody)
-			{
-				if(pBody->GetAngularVelocity().SqrLength() > 0.001f*0.001f) return false;
-				if(pBody->GetLinearVelocity().SqrLength() > 0.001f*0.001f) return false;
-			}
-		}
-
-		return true;
+		return ohpl_h14_rope_check_sleeping(HostOp, &mS);
 	}
 
 	bool iPhysicsRope::CheckSpecificDataAwake()
 	{
-		if(OhplBackendRustRequested()) return ohpl_h14_rope_check_awake(HostOp, &mS);
-		if(mS.motorActive) return true;
-
-		for(int i=0; i<2; ++i)
-		{
-			iPhysicsBody *pBody = mS.attached[i].mpBody;
-			if(pBody)
-			{
-				if(pBody->GetEnabled()) return true;
-			}
-		}
-		return false;
+		return ohpl_h14_rope_check_awake(HostOp, &mS);
 	}
 
 	void iPhysicsRope::SetSpecificDataSleeping(bool abSleeping)
 	{
-		if(OhplBackendRustRequested()){ ohpl_h14_rope_set_specific_sleeping(HostOp, &mS, abSleeping); return; }
-		for(int i=0; i<2; ++i)
-		{
-			iPhysicsBody *pBody = mS.attached[i].mpBody;
-			if(pBody)
-			{
-				if(abSleeping==false) pBody->Enable();
-			}
-		}
+		ohpl_h14_rope_set_specific_sleeping(HostOp, &mS, abSleeping);
 	}
 
 	//-----------------------------------------------------------------------
@@ -491,25 +384,10 @@ namespace hpl {
 
 		////////////////////////
 		//Calculate number of particles needed and update vars
-		int lWantedNum = 0;
-		if(OhplBackendRustRequested())
-		{
-			OhplH14RopePlan plan;
-			ohpl_h14_rope_plan(mS.totalLength, mS.segmentLength, &plan);
-			lWantedNum = plan.wanted;
-			mS.firstSegmentLength = plan.firstSegment;
-		}
-		else if(mS.segmentLength > 0)
-		{
-			lWantedNum = (int)((mS.totalLength / mS.segmentLength)+0.999999f) - 1;
-
-			mS.firstSegmentLength = cMath::Modulus(mS.totalLength, mS.segmentLength);
-			if(mS.firstSegmentLength == 0) mS.firstSegmentLength = mS.segmentLength;
-		}
-		else
-		{
-			mS.firstSegmentLength = mS.totalLength;
-		}
+		OhplH14RopePlan plan;
+		ohpl_h14_rope_plan(mS.totalLength, mS.segmentLength, &plan);
+		int lWantedNum = plan.wanted;
+		mS.firstSegmentLength = plan.firstSegment;
 
 		//Log("Wanted num: %d | total len: %f | first set len: %f | seg len: %f \n", lWantedNum, mS.totalLength, mS.firstSegmentLength, mS.segmentLength);
 
@@ -545,14 +423,8 @@ namespace hpl {
 
 			for(; lAddCount>0; --lAddCount)
 			{
-				cVector3f vPos;
-				if(OhplBackendRustRequested())
-				{
-					OhplV3 r = ohpl_h14_rope_particle_pos(OhplV3{vStartPos.x, vStartPos.y, vStartPos.z}, OhplV3{vDir.x, vDir.y, vDir.z}, fLength);
-					vPos = cVector3f(r.x, r.y, r.z);
-				}
-				else
-					vPos = vStartPos + vDir*fLength;
+				OhplV3 r = ohpl_h14_rope_particle_pos(OhplV3{vStartPos.x, vStartPos.y, vStartPos.z}, OhplV3{vDir.x, vDir.y, vDir.z}, fLength);
+				cVector3f vPos(r.x, r.y, r.z);
 				//Log("Adding %d pos: %s length: %f\n", lAddCount, vPos.ToString().c_str(), fLength);
 				fLength -= mS.segmentLength;
 
@@ -565,21 +437,7 @@ namespace hpl {
 
 	void iPhysicsRope::SetAttachedBody(int alIdx, cVerletParticle *apParticle, iPhysicsBody *apBody)
 	{
-		if(OhplBackendRustRequested()){ ohpl_h14_rope_set_attached(HostOp, reinterpret_cast<size_t>(this), &mS, alIdx, reinterpret_cast<size_t>(apParticle), reinterpret_cast<size_t>(apBody)); return; }
-		mForcePid[alIdx].Reset();
-
-		if(mS.attached[alIdx].mpBody)
-		{
-			mS.attached[alIdx].mpBody->RemoveAttachedVerletContainer(this);
-		}
-
-		apBody->AddAttachedVerletContainer(this);
-
-		mS.attached[alIdx].mpBody = apBody;
-		mS.attached[alIdx].mpParticle = apParticle;
-
-		cMatrixf mtxInvBody = cMath::MatrixInverse(apBody->GetLocalMatrix());
-		mS.attached[alIdx].mvBodyLocalPos = cMath::MatrixMul(mtxInvBody, apParticle->GetPosition());
+		ohpl_h14_rope_set_attached(HostOp, reinterpret_cast<size_t>(this), &mS, alIdx, reinterpret_cast<size_t>(apParticle), reinterpret_cast<size_t>(apBody));
 	}
 
 	//-----------------------------------------------------------------------

@@ -5,13 +5,12 @@
 #include <string>
 
 #include "PhysicsH14Scenes.h"
-#include "impl/RustBackends.h"
 #include "physics/RustPhysicsH14.h"
 
 using namespace hpl;
 
 // OHPL_H14_VEC=<file> records every ohpl_h14_* call (inputs, host answers, outputs) through the
-// linker --wrap hooks, for the replay in rust/src/physics/tests_h14.rs. OHPL_IMPL=rust only.
+// linker --wrap hooks, for the replay in rust/src/physics/tests_h14.rs.
 
 extern "C" {
 OhplH14Aux* __real_ohpl_h14_aux_new();
@@ -50,7 +49,7 @@ bool Rec()
 	{
 		gVecInit = true;
 		const char* path = std::getenv("OHPL_H14_VEC");
-		if (path && OhplBackendRustRequested()) gVec = std::fopen(path, "w");
+		if (path) gVec = std::fopen(path, "w");
 	}
 	return gVec != NULL;
 }
@@ -233,13 +232,10 @@ int hplMain(const hpl::tString&)
 	const char* dump = std::getenv("OHPL_H14_DUMP");
 	h14scenes::RunAll(dump);
 	if (gVec) std::fclose(gVec);
-	if (hpl::OhplBackendRustRequested())
-	{
-		uint64_t n[16];
-		hpl::ohpl_h14_counts(n);
-		std::fprintf(stderr, "h14 rust counters:");
-		for (int i = 0; i < 16; ++i) std::fprintf(stderr, " %llu", (unsigned long long)n[i]);
-		std::fprintf(stderr, "\n");
-	}
+	uint64_t n[16];
+	hpl::ohpl_h14_counts(n);
+	std::fprintf(stderr, "h14 rust counters:");
+	for (int i = 0; i < 16; ++i) std::fprintf(stderr, " %llu", (unsigned long long)n[i]);
+	std::fprintf(stderr, "\n");
 	return 0;
 }

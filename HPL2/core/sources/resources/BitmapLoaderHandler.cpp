@@ -58,36 +58,14 @@ namespace hpl {
 	
 	cBitmap* cBitmapLoaderHandler::LoadBitmap(const tWString& asFile, tBitmapLoadFlag aFlags)
 	{
-		if(mbRust) return static_cast<cBitmap*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_BITMAP_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), (int64_t)aFlags, NULL));
-		iBitmapLoader *pBitmapLoader = static_cast<iBitmapLoader*>(GetLoaderForFile(asFile));
-
-		if(pBitmapLoader)
-		{
-			cBitmap* pBitmap = pBitmapLoader->LoadBitmap(asFile, aFlags);
-
-			//Set name of the file loaded.
-			if(pBitmap) pBitmap->SetFileName(cString::GetFileNameW(asFile));
-
-			return pBitmap;
-		}
-		else
-		{
-			return NULL;
-		}
+		return static_cast<cBitmap*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_BITMAP_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), (int64_t)aFlags, NULL));
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cBitmapLoaderHandler::SaveBitmap(cBitmap* apBitmap, const tWString& asFile, tBitmapSaveFlag aFlags)
 	{
-		if(mbRust) return ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_BITMAP_SAVE, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), (int64_t)aFlags, apBitmap) != NULL;
-		iBitmapLoader *pBitmapLoader = static_cast<iBitmapLoader*>(GetLoaderForFile(asFile));
-		
-		if(pBitmapLoader)
-		{
-			return pBitmapLoader->SaveBitmap(apBitmap,asFile,aFlags);
-		}
-		return false;
+		return ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_BITMAP_SAVE, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), (int64_t)aFlags, apBitmap) != NULL;
 	}
 	
 	//-----------------------------------------------------------------------

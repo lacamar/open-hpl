@@ -50,8 +50,6 @@ namespace hpl {
 		virtual void SetupLoader(iResourceLoader *apLoader)=0;
 		virtual void* H4Call(int alWhat, void *apLoader, const OhplH3WStr &aFile, int64_t alArg, void *apArg){ return NULL; }
 		static tWString H4Wide(const OhplH3WStr &aStr){ return tWString(reinterpret_cast<const wchar_t*>(aStr.p), aStr.n); }
-		const OhplH4HandlerOps* H4Ops() { return mbRust ? &mHOps : NULL; }
-		bool mbRust;
 		OhplH4HandlerOps mHOps;
 
 		tStringVec mvSupportedTypes;

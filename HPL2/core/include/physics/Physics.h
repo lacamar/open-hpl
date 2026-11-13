@@ -27,8 +27,6 @@
 #include "physics/PhysicsMaterial.h"
 #include "physics/RustPhysBook.h"
 
-struct OhplImpactCounts;
-
 namespace hpl {
 	
 	class iLowLevelPhysics;
@@ -38,26 +36,10 @@ namespace hpl {
 
 	//------------------------------------------------
 
-	typedef std::list<iPhysicsWorld*> tPhysicsWorldList;
-	typedef tPhysicsWorldList::iterator tPhysicsWorldListIt;
-
 	typedef std::map<tString, cSurfaceData*> tSurfaceDataMap;
 	typedef tSurfaceDataMap::iterator tSurfaceDataMapIt;
 
 	typedef cSTLMapIterator<cSurfaceData*, tSurfaceDataMap, tSurfaceDataMapIt> cSurfaceDataIterator;
-
-	//------------------------------------------------
-
-	class cPhysicsImpactCount
-	{
-	public:
-		cPhysicsImpactCount(){ mfCount =0;}
-
-		float mfCount;
-	};
-
-	typedef std::list<cPhysicsImpactCount> tPhysicsImpactCountList;
-	typedef tPhysicsImpactCountList::iterator tPhysicsImpactCountListIt;
 
 	//------------------------------------------------
 
@@ -98,17 +80,11 @@ namespace hpl {
 		bool GetDebugLog(){ return mbLog;}
 	
 	private:
-		ePhysicsMaterialCombMode GetCombMode(const char *apName);
-
-		void UpdateImpactCounts(float afTimeStep);
-
 		iLowLevelPhysics *mpLowLevelPhysics;
 		cResources *mpResources;
 
-		tPhysicsWorldList mlstWorlds;
 		tSurfaceDataMap m_mapSurfaceData;
 
-		OhplImpactCounts *mpImpactCounts;
 		uint64_t mRs;
 		OhplPhysState mS;
 		float &mfImpactDuration = mS.impactDuration;

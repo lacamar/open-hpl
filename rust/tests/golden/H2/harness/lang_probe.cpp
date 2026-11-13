@@ -21,7 +21,6 @@ namespace hpl {
 
 static std::string Dump(cLanguageFile &lf)
 {
-#ifdef OHPL_LANG_FOREACH
 	struct cDump { std::string msOut, msCat; bool mbAny = false; } d;
 	lf.ForEach([](void *c, const tString &asCat, const tString &asName, const tWString *apText)
 	{
@@ -33,20 +32,6 @@ static std::string Dump(cLanguageFile &lf)
 		p->msOut += "\n";
 	}, &d);
 	return d.msOut;
-#else
-	std::string s;
-	for(auto &c : *lf.GetCategoryMap())
-	{
-		s += "[" + c.first + "]\n";
-		for(auto &e : c.second->m_mapEntries)
-		{
-			s += e.first + "=";
-			for(wchar_t w : e.second->mwsText) s += std::to_string((int)w) + ",";
-			s += "\n";
-		}
-	}
-	return s;
-#endif
 }
 
 int main(int argc, char **argv)

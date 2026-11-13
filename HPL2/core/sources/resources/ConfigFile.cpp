@@ -23,16 +23,12 @@
 #include "resources/FileSearcher.h"
 #include "system/RustXml.h"
 #include "resources/RustResourcesH2.h"
-#include "impl/RustBackends.h"
 
-#include "resources/BinaryBuffer.h"
 #include "system/Platform.h"
 
 #include <stdio.h>
 
 namespace hpl {
-
-	#define kCRCKey (0x16AF2C1D)
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -47,8 +43,7 @@ namespace hpl {
 		} else {
 			msFile = asFile;
 		}
-		mpXmlDoc = ohpl_xml_doc_new();
-		mpRs = OhplBackendRustRequested() ? ohpl_h2_cfg_new() : NULL;
+		mpRs = ohpl_h2_cfg_new();
 		//mpFileSearcher = apFileSearcher;
 
 		mbUseCRC = false;
@@ -56,8 +51,7 @@ namespace hpl {
 
 	cConfigFile::~cConfigFile()
 	{
-		ohpl_xml_doc_free(mpXmlDoc);
-		if(mpRs) ohpl_h2_cfg_free(mpRs);
+		ohpl_h2_cfg_free(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -70,147 +64,31 @@ namespace hpl {
 	
 	bool cConfigFile::Load()
 	{
-		if(mpRs)
+		const char *sName = mbUseCRC ? "binary config" : "config";
+		switch(ohpl_h2_cfg_load(mpRs, reinterpret_cast<const uint32_t*>(msFile.data()), msFile.size(), mbUseCRC))
 		{
-			const char *sName = mbUseCRC ? "binary config" : "config";
-			switch(ohpl_h2_cfg_load(mpRs, reinterpret_cast<const uint32_t*>(msFile.data()), msFile.size(), mbUseCRC))
-			{
-			case 0: return true;
-			case 1: Error("Unable to open %s file '%s'!\n", sName, cString::To8Char(msFile).c_str()); break;
-			case 2: Error("CRC check for binary config file '%s' failed!\n", cString::To8Char(msFile).c_str()); break;
-			default: if(mbUseCRC) Error("Parsing binary config file '%s' failed!\n", cString::To8Char(msFile).c_str()); break;
-			}
-			return false;
+		case 0: return true;
+		case 1: Error("Unable to open %s file '%s'!\n", sName, cString::To8Char(msFile).c_str()); break;
+		case 2: Error("CRC check for binary config file '%s' failed!\n", cString::To8Char(msFile).c_str()); break;
+		default: if(mbUseCRC) Error("Parsing binary config file '%s' failed!\n", cString::To8Char(msFile).c_str()); break;
 		}
-
-		////////////////////////////////////
-		// CRC Loading
-		if(mbUseCRC)
-		{
-			/////////////////////////////////
-			// Load 
-			cBinaryBuffer buff;
-			if(buff.Load(msFile)==false)
-			{
-				Error("Unable to open binary config file '%s'!\n", cString::To8Char(msFile).c_str());
-				return false;
-			}
-
-			/////////////////////////////////
-			// CRC
-			if(buff.CheckInternalCRC(kCRCKey)==false)
-			{
-				Error("CRC check for binary config file '%s' failed!\n", cString::To8Char(msFile).c_str());
-				return false;
-			}
-
-			/////////////////////////////////
-			// Get XML
-			bool bParsed = ohpl_xml_doc_parse(mpXmlDoc, buff.GetDataPointerAtCurrentPos());
-
-			if(bParsed==false)
-			{
-				Error("Parsing binary config file '%s' failed!\n", cString::To8Char(msFile).c_str());
-				return false;
-			}
-
-			return true;
-		}
-		////////////////////////////////////
-		// Normal load
-		else
-		{
-			FILE *pFile = cPlatform::OpenFile(msFile, _W("rb"));
-
-			if(pFile==NULL)
-			{
-				Error("Unable to open config file '%s'! Invalid filepointer returned!\n", cString::To8Char(msFile).c_str());
-				return false;
-			}
-		
-			bool bRet = OhplXmlLoadFile(mpXmlDoc, pFile);
-
-			if(pFile) fclose(pFile);
-			return bRet;
-		}
+		return false;
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cConfigFile::Save()
 	{
-		if(mpRs)
-		{
-			if(ohpl_h2_cfg_save(mpRs, reinterpret_cast<const uint32_t*>(msFile.data()), msFile.size(), mbUseCRC) == 0) return true;
-			Error("Unable to save %sconfig file '%s'!\n", mbUseCRC ? "bin " : "", cString::To8Char(msFile).c_str());
-			return false;
-		}
-
-		////////////////////////////////////
-		// CRC Loading
-		if(mbUseCRC)
-		{
-			/////////////////////////////
-			// Get the data
-			tString sData;
-			ohpl_xml_doc_print_stream(mpXmlDoc, OhplXmlAssign, &sData);
-
-			/////////////////////////////
-			// Compress the data
-			cBinaryBuffer buff;
-
-			buff.AddCRC_Begin();
-
-			buff.AddCharArray(sData.c_str(), sData.size()+1);
-			
-			buff.AddCRC_End(kCRCKey);
-
-			/////////////////////////////
-			// Save the file
-			if(buff.Save(msFile)==false)
-			{
-				Error("Unable to save bin config file '%s'!\n", cString::To8Char(msFile).c_str());
-				return false;
-			}
-
-			return true;
-		}
-		////////////////////////////////////
-		// Normal load
-		else
-		{
-			#ifdef WIN32
-						tWString sFile = cString::ReplaceCharToW(msFile, _W("/"), _W("\\"));
-						FILE *pFile = _wfopen(sFile.c_str(),_W("w+"));
-			#else
-						FILE *pFile = fopen(cString::To8Char(msFile).c_str(),"w+");
-			#endif
-
-			if(pFile==NULL)
-			{
-				Error("Unable to save config file '%s'! Invalid filepointer returned!\n", cString::To8Char(msFile).c_str());
-				return false;
-			}
-
-			bool bRet = OhplXmlSaveFile(mpXmlDoc, pFile);
-
-			if(pFile) fclose(pFile);
-
-			return bRet;
-		}
-		
+		if(ohpl_h2_cfg_save(mpRs, reinterpret_cast<const uint32_t*>(msFile.data()), msFile.size(), mbUseCRC) == 0) return true;
+		Error("Unable to save %sconfig file '%s'!\n", mbUseCRC ? "bin " : "", cString::To8Char(msFile).c_str());
+		return false;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cConfigFile::SetString(const tString& asLevel, const tString& asName, const tString& asVal)
 	{
-		if(mpRs)
-		{
-			ohpl_h2_cfg_set(mpRs, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), asVal.c_str(), asVal.size());
-			return;
-		}
-		ohpl_xml_config_set(mpXmlDoc, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), asVal.c_str(), asVal.size());
+		ohpl_h2_cfg_set(mpRs, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), asVal.c_str(), asVal.size());
 	}
 	//-----------------------------------------------------------------------
 
@@ -351,12 +229,7 @@ namespace hpl {
 
 	const char* cConfigFile::GetCharArray(tString asLevel, tString asName)
 	{
-		if(mpRs)
-		{
-			bool bRsFound = ohpl_h2_cfg_get(mpRs, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), OhplXmlAssign, &msTempValue);
-			return bRsFound ? msTempValue.c_str() : NULL;
-		}
-		bool bFound = ohpl_xml_config_get(mpXmlDoc, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), OhplXmlAssign, &msTempValue);
+		bool bFound = ohpl_h2_cfg_get(mpRs, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), OhplXmlAssign, &msTempValue);
 		return bFound ? msTempValue.c_str() : NULL;
 	}
 

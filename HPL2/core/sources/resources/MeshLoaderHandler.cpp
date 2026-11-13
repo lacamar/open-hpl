@@ -59,51 +59,20 @@ namespace hpl {
 	
 	cMesh* cMeshLoaderHandler::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
 	{
-		if(mbRust) return static_cast<cMesh*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_MESH_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), (int64_t)aFlags, NULL));
-		// HPL3 loads the shipped .msh instead of the source under force-cache (cMeshManager::CreateMesh)
-		tWString sMsh = cString::SetFileExtW(asFile, _W("msh"));
-		if(sMsh != asFile && cResources::GetForceCacheLoadingAndSkipSaving() && cPlatform::FileExists(sMsh))
-		{
-			cMesh *pMesh = LoadMesh(sMsh, aFlags);
-			if(pMesh)
-			{
-				pMesh->SetFullPath(asFile);
-				return pMesh;
-			}
-		}
-
-		iMeshLoader *pMeshLoader = static_cast<iMeshLoader*>(GetLoaderForFile(asFile));
-		return pMeshLoader ? pMeshLoader->LoadMesh(asFile,aFlags) : NULL;
+		return static_cast<cMesh*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_MESH_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), (int64_t)aFlags, NULL));
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cMeshLoaderHandler::SaveMesh(cMesh* apMesh,const tWString& asFile)
 	{
-		if(mbRust) return ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_MESH_SAVE, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), 0, apMesh) != NULL;
-		iMeshLoader *pMeshLoader = static_cast<iMeshLoader*>(GetLoaderForFile(asFile));
-
-		if(pMeshLoader)
-		{
-				return pMeshLoader->SaveMesh(apMesh,asFile);
-		}
-		return false;
+		return ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_MESH_SAVE, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), 0, apMesh) != NULL;
 	}
 	
 	//-----------------------------------------------------------------------
 	cAnimation* cMeshLoaderHandler::LoadAnimation(const tWString& asFile)
 	{
-		if(mbRust) return static_cast<cAnimation*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_ANIMATION_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), 0, NULL));
-		iMeshLoader *pMeshLoader = static_cast<iMeshLoader*>(GetLoaderForFile(asFile));
-
-		if(pMeshLoader)
-		{
-				return pMeshLoader->LoadAnimation(asFile);
-		}
-		else
-		{
-			return NULL;
-		}
+		return static_cast<cAnimation*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_ANIMATION_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), 0, NULL));
 	}
 
 	//////////////////////////////////////////////////////////////////////////

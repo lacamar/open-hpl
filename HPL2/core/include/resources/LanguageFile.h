@@ -20,8 +20,6 @@
 #ifndef HPL_LANGUAGE_FILE_H
 #define HPL_LANGUAGE_FILE_H
 
-#include <map>
-#include <strings.h>
 #include "system/SystemTypes.h"
 #include "resources/RustResourcesH2.h"
 
@@ -32,37 +30,6 @@ namespace hpl {
 	class cResources;
 
 	tWString GetDecodedString(const tString &asString);
-
-	//--------------------------------
-
-	class cLanguageEntry
-	{
-	public:
-		tWString mwsText;		
-	};
-
-	struct cLanguageNameLess
-	{
-		bool operator()(const tString& a, const tString& b) const { return strcasecmp(a.c_str(), b.c_str()) < 0; }
-	};
-
-	typedef std::map<tString, cLanguageEntry*, cLanguageNameLess> tLanguageEntryMap;
-	typedef tLanguageEntryMap::iterator tLanguageEntryMapIt;
-
-	//--------------------------------
-
-	class cLanguageCategory
-	{
-	public:
-		~cLanguageCategory(){
-			STLMapDeleteAll(m_mapEntries);
-		}
-
-		tLanguageEntryMap m_mapEntries;
-	};
-
-	typedef std::map<tString, cLanguageCategory*, cLanguageNameLess> tLanguageCategoryMap;
-	typedef tLanguageCategoryMap::iterator tLanguageCategoryMapIt;
 
 	//--------------------------------
 
@@ -81,7 +48,6 @@ namespace hpl {
 		void ForEach(void (*apFunc)(void*, const tString&, const tString&, const tWString*), void *apCtx);
 	private:
 		OhplH2Lang *mpRs;
-		tLanguageCategoryMap m_mapCategories;
 		tWString mwsEmpty;
 
 		cResources *mpResources;

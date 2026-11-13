@@ -22,7 +22,6 @@
 #include "resources/ResourceLoader.h"
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
-#include "impl/RustBackends.h"
 #include <cstring>
 
 namespace hpl {
@@ -33,7 +32,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
-	iResourceLoaderHandler::iResourceLoaderHandler() : mbRust(OhplBackendRustRequested()), mpLoaders(ohpl_loaders_new())
+	iResourceLoaderHandler::iResourceLoaderHandler() : mpLoaders(ohpl_loaders_new())
 	{
 		memset(&mHOps, 0, sizeof(mHOps));
 		mHOps.ctx = this;
@@ -88,22 +87,15 @@ namespace hpl {
 	
 	iResourceLoader* iResourceLoaderHandler::GetLoaderForFile(const tWString& asFileName)
 	{
-		if(mbRust) return static_cast<iResourceLoader*>(ohpl_h4_handler_find(mpLoaders, &mHOps, reinterpret_cast<const uint8_t*>(cString::To8Char(asFileName).data()), cString::To8Char(asFileName).size()));
-		return GetLoaderForFile(cString::To8Char(asFileName));
+		tString sName = cString::To8Char(asFileName);
+		return static_cast<iResourceLoader*>(ohpl_h4_handler_find(mpLoaders, &mHOps, reinterpret_cast<const uint8_t*>(sName.data()), sName.size()));
 	}
 
 	//-----------------------------------------------------------------------
 
 	iResourceLoader* iResourceLoaderHandler::GetLoaderForFile(const tString& asFileName)
 	{
-		if(mbRust) return static_cast<iResourceLoader*>(ohpl_h4_handler_find(mpLoaders, &mHOps, RM_STR(asFileName)));
-		tString sLowExt = cString::ToLowerCase(cString::GetFileExt(asFileName));
-
-		iResourceLoader *pLoader = static_cast<iResourceLoader*>(ohpl_loaders_find(mpLoaders, sLowExt.data(), sLowExt.size()));
-		if(pLoader) return pLoader;
-
-		Error("No loader for file extension '%s' found!\n",sLowExt.c_str());
-		return NULL;
+		return static_cast<iResourceLoader*>(ohpl_h4_handler_find(mpLoaders, &mHOps, RM_STR(asFileName)));
 	}
 
 	//-----------------------------------------------------------------------

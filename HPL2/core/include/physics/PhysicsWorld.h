@@ -282,15 +282,10 @@ namespace hpl {
 		void RegisterMaterial(const tString &asName, iPhysicsMaterial *apMaterial);
 		tPhysicsBodyList& BodyList();
 
-		tCollideShapeList mlstShapes;
 		tPhysicsBodyList mlstBodies;
-		tPhysicsBodySet m_setUpdateBodies;
 		uint64_t mRsBook;
-		tCharacterBodyList mlstCharBodies;
 		tPhysicsMaterialMap m_mapMaterials;
 		tPhysicsJointList mlstJoints;
-		tPhysicsControllerList mlstControllers;
-		tPhysicsRopeList mlstRopes;
 		cWorld *mpWorld;
 
 		std::vector<iPhysicsBody*> mvTempBodies;

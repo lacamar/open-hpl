@@ -26,7 +26,6 @@
 #include "resources/Resources.h"
 #include "resources/FileSearcher.h"
 #include "system/Platform.h"
-#include "impl/RustBackends.h"
 #include "resources/RustResourcesH3.h"
 
 namespace hpl {
@@ -53,10 +52,9 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cLanguageFile::cLanguageFile(cResources *apResources) : mpRs(NULL)
+	cLanguageFile::cLanguageFile(cResources *apResources)
 	{
 		mpResources = apResources;
-		if(OhplBackendRustRequested() == false) return;
 
 		OhplH2LangOps ops = {};
 		ops.ctx = this;
@@ -99,8 +97,7 @@ namespace hpl {
 
 	cLanguageFile::~cLanguageFile()
 	{
-		if(mpRs) { ohpl_h2_lang_free(mpRs); return; }
-		STLMapDeleteAll(m_mapCategories);
+		ohpl_h2_lang_free(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -111,121 +108,18 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
-	struct cLangCtx
-	{
-		cResources *mpResources;
-		tLanguageCategoryMap *mpCategories;
-		cLanguageCategory *mpCategory;
-		tWString msAltPath;
-		const tWString *mpFile;
-	};
-
-	static void LangDirectory(void *apCtx, const char *asPath, size_t alLen, bool abAddSubDirs)
-	{
-		cLangCtx *pCtx = static_cast<cLangCtx*>(apCtx);
-		tString sPath(asPath, alLen);
-#ifndef HPL_MINIMAL
-		if (pCtx->msAltPath.length()) {
-			pCtx->mpResources->AddResourceDir(pCtx->msAltPath + cString::To16Char(sPath),abAddSubDirs);
-		}
-		pCtx->mpResources->AddResourceDir(cString::To16Char(sPath),abAddSubDirs);
-#endif
-	}
-
-	static void LangNoResources(void *apCtx)
-	{
-		Warning("No resources element found in '%ls'\n",static_cast<cLangCtx*>(apCtx)->mpFile->c_str());
-	}
-
-	static void LangCategory(void *apCtx, const char *asName, size_t alLen)
-	{
-		cLangCtx *pCtx = static_cast<cLangCtx*>(apCtx);
-		tString sCatName(asName, alLen);
-		tLanguageCategoryMapIt CatIt = pCtx->mpCategories->find(sCatName);
-		if(CatIt == pCtx->mpCategories->end())
-		{
-			pCtx->mpCategory = hplNew( cLanguageCategory, () );
-			pCtx->mpCategories->insert(tLanguageCategoryMap::value_type(sCatName, pCtx->mpCategory));
-		}
-		else
-		{
-			pCtx->mpCategory = CatIt->second;
-		}
-	}
-
-	static void LangEntry(void *apCtx, const char *asName, size_t alLen, const int *apText, size_t alTextLen)
-	{
-		cLangCtx *pCtx = static_cast<cLangCtx*>(apCtx);
-		tString sEntryName(asName, alLen);
-		if(pCtx->mpCategory->m_mapEntries.find(sEntryName) != pCtx->mpCategory->m_mapEntries.end())
-		{
-			return;
-		}
-		cLanguageEntry *pEntry = hplNew( cLanguageEntry, () );
-		for(size_t i=0; i<alTextLen; ++i) pEntry->mwsText.push_back((wchar_t)apText[i]);
-		pCtx->mpCategory->m_mapEntries.insert(tLanguageEntryMap::value_type(sEntryName,pEntry));
-	}
-
 	bool cLanguageFile::AddFromFile(const tWString& asFile, bool abAddResourceDirs, const tWString& asAltPath)
 	{
-		if(mpRs) return ohpl_h2_lang_add_file(mpRs, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), abAddResourceDirs,
-											  reinterpret_cast<const uint32_t*>(asAltPath.data()), asAltPath.size());
-		tWString sPath = asFile;
-		if (asAltPath.length() > 0 && cPlatform::FileExists(asAltPath + asFile)) {
-			sPath = asAltPath + asFile;
-		}
-
-		FILE *pFile = cPlatform::OpenFile(sPath, _W("rb"));
-		bool bRet = false;
-		if (pFile!=NULL) {
-			long lLength = 0;
-			fseek(pFile, 0, SEEK_END);
-			lLength = ftell(pFile);
-			fseek(pFile, 0, SEEK_SET);
-			std::vector<char> vData(lLength > 0 ? lLength : 0);
-			bool bRead = lLength > 0 && fread(vData.data(), lLength, 1, pFile) == 1;
-			fclose(pFile);
-
-			cLangCtx ctx = { mpResources, &m_mapCategories, NULL, asAltPath, &asFile };
-			OhplLangSink sink = { &ctx, LangDirectory, LangNoResources, LangCategory, LangEntry };
-			bRet = ohpl_xml_lang_read(vData.data(), vData.size(), lLength <= 0 || bRead, abAddResourceDirs, &sink);
-		}
-		if (!bRet)
-		{
-			Error("Couldn't load language file '%ls'\n",asFile.c_str());
-			return false;
-		}
-
-		return true;
+		return ohpl_h2_lang_add_file(mpRs, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), abAddResourceDirs,
+									 reinterpret_cast<const uint32_t*>(asAltPath.data()), asAltPath.size());
 	}
 
 	//-----------------------------------------------------------------------
 
 	const tWString& cLanguageFile::Translate(const tString& asCat, const tString& asName)
 	{
-		if(mpRs)
-		{
-			void *pText = ohpl_h2_lang_translate(mpRs, RM_STR(asCat), RM_STR(asName));
-			return pText ? *static_cast<tWString*>(pText) : mwsEmpty;
-		}
-		tLanguageCategoryMapIt CatIt = m_mapCategories.find(asCat);
-		if(CatIt == m_mapCategories.end())
-		{
-			Warning("Could not find language file category '%s'\n",asCat.c_str());
-			return mwsEmpty;
-		}
-		
-        cLanguageCategory *pCategory = CatIt->second;
-		tLanguageEntryMapIt EntryIt = pCategory->m_mapEntries.find(asName);
-		if(EntryIt == pCategory->m_mapEntries.end())
-		{
-			Warning("Could not find language file entry '%s'\n",asName.c_str());
-			return mwsEmpty;
-		}
-
-		cLanguageEntry *pEntry = EntryIt->second;
-
-		return pEntry->mwsText;
+		void *pText = ohpl_h2_lang_translate(mpRs, RM_STR(asCat), RM_STR(asName));
+		return pText ? *static_cast<tWString*>(pText) : mwsEmpty;
 	}
 	
 	//-----------------------------------------------------------------------
@@ -241,42 +135,22 @@ namespace hpl {
 
 	void cLanguageFile::SetEntry(const tString& asCat, const tString& asName, const tWString& asText)
 	{
-		if(mpRs)
-		{
-			std::vector<int32_t> vText(asText.begin(), asText.end());
-			ohpl_h2_lang_set(mpRs, RM_STR(asCat), RM_STR(asName), vText.data(), vText.size());
-			return;
-		}
-		cLanguageCategory *&pCategory = m_mapCategories[asCat];
-		if(pCategory == NULL) pCategory = hplNew( cLanguageCategory, () );
-		pCategory->m_mapEntries[asName] = hplNew( cLanguageEntry, () );
-		pCategory->m_mapEntries[asName]->mwsText = asText;
+		std::vector<int32_t> vText(asText.begin(), asText.end());
+		ohpl_h2_lang_set(mpRs, RM_STR(asCat), RM_STR(asName), vText.data(), vText.size());
 	}
 
 	bool cLanguageFile::HasEntry(const tString& asCat, const tString& asName)
 	{
-		if(mpRs) return ohpl_h2_lang_has(mpRs, RM_STR(asCat), RM_STR(asName));
-		tLanguageCategoryMapIt it = m_mapCategories.find(asCat);
-		return it != m_mapCategories.end() && it->second->m_mapEntries.count(asName) > 0;
+		return ohpl_h2_lang_has(mpRs, RM_STR(asCat), RM_STR(asName));
 	}
 
 	void cLanguageFile::ForEach(void (*apFunc)(void*, const tString&, const tString&, const tWString*), void *apCtx)
 	{
-		if(mpRs)
+		struct cEach { void (*mpFunc)(void*, const tString&, const tString&, const tWString*); void *mpCtx; } each = { apFunc, apCtx };
+		ohpl_h2_lang_each(mpRs, [](void *c, const uint8_t *pCat, size_t lCat, const uint8_t *pName, size_t lName, void *pText)
 		{
-			struct cEach { void (*mpFunc)(void*, const tString&, const tString&, const tWString*); void *mpCtx; } each = { apFunc, apCtx };
-			ohpl_h2_lang_each(mpRs, [](void *c, const uint8_t *pCat, size_t lCat, const uint8_t *pName, size_t lName, void *pText)
-			{
-				cEach *pEach = static_cast<cEach*>(c);
-				pEach->mpFunc(pEach->mpCtx, tString(reinterpret_cast<const char*>(pCat), lCat), tString(reinterpret_cast<const char*>(pName), lName), static_cast<tWString*>(pText));
-			}, &each);
-			return;
-		}
-		for(tLanguageCategoryMapIt cit = m_mapCategories.begin(); cit != m_mapCategories.end(); ++cit)
-		{
-			if(cit->second->m_mapEntries.empty()) apFunc(apCtx, cit->first, "", NULL);
-			for(tLanguageEntryMapIt eit = cit->second->m_mapEntries.begin(); eit != cit->second->m_mapEntries.end(); ++eit)
-				apFunc(apCtx, cit->first, eit->first, &eit->second->mwsText);
-		}
+			cEach *pEach = static_cast<cEach*>(c);
+			pEach->mpFunc(pEach->mpCtx, tString(reinterpret_cast<const char*>(pCat), lCat), tString(reinterpret_cast<const char*>(pName), lName), static_cast<tWString*>(pText));
+		}, &each);
 	}
 }

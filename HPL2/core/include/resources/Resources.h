@@ -77,8 +77,6 @@ namespace hpl {
 
 	//-------------------------------------------------------
 
-	typedef std::map<tString, tString> tResourceVarMap;
-	typedef tResourceVarMap::iterator tResourceVarMapIt;
 	
 	//-------------------------------------------------------
 	
@@ -111,7 +109,6 @@ namespace hpl {
 		tString GetVarString(const tString& asName, const tString& asDefault="");
 
 	protected:
-		tResourceVarMap m_mapVars;
 		OhplH2Vars *mpVarsRs;
 		tString msVarScratch;
 	};
@@ -178,8 +175,6 @@ namespace hpl {
 	// GetManager(tString) when getting a manager?
 	// This way you would be able to add your own resource types
 	// easily.
-	typedef std::list<iResourceManager*> tResourceManagerList;
-	typedef tResourceManagerList::iterator tResourceManagerListIt;
 
 	//-------------------------------------------------------
 
@@ -260,7 +255,6 @@ namespace hpl {
 		iLowLevelSystem *mpLowLevelSystem;
 		cFileSearcher *mpFileSearcher;
 
-        tResourceManagerList mlstManagers;
 		cImageManager *mpImageManager;
 		cGpuShaderManager *mpGpuShaderManager;
 		cParticleManager* mpParticleManager;
@@ -283,12 +277,6 @@ namespace hpl {
 		cWorldLoaderHandler *mpWorldLoaderHandler;
 		cVideoLoaderHandler *mpVideoLoaderHandler;
 				
-		OhplRmLoaders* mpEntityLoaders;
-		OhplRmLoaders* mpAreaLoaders;
-
-		tXmlDocumentList mlstXmlDocuments;
-		tBinaryBufferList mlstBinBuffers;
-
 		tWString mwsEmptyString;
 
 		static bool mbForceCacheLoadingAndSkipSaving;

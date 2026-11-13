@@ -29,8 +29,6 @@
 #include "physics/RustPhysBook.h"
 #include "physics/PhysicsWorld.h"
 
-#include "impl/tinyXML/tinyxml.h"
-
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -71,14 +69,7 @@ namespace hpl {
 	{
 		mpLowLevelPhysics = apLowLevelPhysics;
 
-		mRs = OhplBackendRustRequested() ? ohpl_h15p_new(HostOp, reinterpret_cast<size_t>(this), &mS) : 0;
-		if(mRs){ mpImpactCounts = NULL; return; }
-
-		mlMaxImpacts = 6;
-		mfImpactDuration = 0.4f;
-
-		mbLog = false;
-		mpImpactCounts = ohpl_phys_impacts_new();
+		mRs = ohpl_h15p_new(HostOp, reinterpret_cast<size_t>(this), &mS);
 	}
 
 	//-----------------------------------------------------------------------
@@ -88,24 +79,9 @@ namespace hpl {
 		Log("Exiting Physics Module\n");
 		Log("--------------------------------------------------------\n");
 
-		if(mRs)
-		{
-			ohpl_h15p_free(mRs);
-			Log("--------------------------------------------------------\n\n");
-			return;
-		}
-		STLDeleteAll(mlstWorlds);
-		ohpl_phys_impacts_free(mpImpactCounts);
-		STLMapDeleteAll(m_mapSurfaceData);
-
+		ohpl_h15p_free(mRs);
 		Log("--------------------------------------------------------\n\n");
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
 
@@ -118,212 +94,64 @@ namespace hpl {
 
 	void cPhysics::Update(float afTimeStep)
 	{
-		if(mRs){ ohpl_h15p_update_impacts(mRs, afTimeStep, mfImpactDuration); return; }
-		UpdateImpactCounts(afTimeStep);
+		ohpl_h15p_update_impacts(mRs, afTimeStep, mfImpactDuration);
 	}
 
 	//-----------------------------------------------------------------------
 
 	iPhysicsWorld* cPhysics::CreateWorld(bool abAddSurfaceData)
 	{
-		if(mRs) return reinterpret_cast<iPhysicsWorld*>(ohpl_h15p_create_world(mRs, abAddSurfaceData));
-		iPhysicsWorld * pWorld = mpLowLevelPhysics->CreateWorld();
-		mlstWorlds.push_back(pWorld);
-
-		if(abAddSurfaceData)
-		{
-			tSurfaceDataMapIt it = m_mapSurfaceData.begin();
-			for(; it != m_mapSurfaceData.end(); ++it)
-			{
-				cSurfaceData *apData = it->second;
-				apData->ToMaterial(pWorld);
-			}
-		}
-
-		return pWorld;
+		return reinterpret_cast<iPhysicsWorld*>(ohpl_h15p_create_world(mRs, abAddSurfaceData));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cPhysics::DestroyWorld(iPhysicsWorld* apWorld)
 	{
-		if(mRs){ ohpl_h15p_destroy_world(mRs, reinterpret_cast<size_t>(apWorld)); return; }
-		STLFindAndDelete(mlstWorlds, apWorld);
+		ohpl_h15p_destroy_world(mRs, reinterpret_cast<size_t>(apWorld));
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cPhysics::CanPlayImpact()
 	{
-		if(mRs) return ohpl_h15p_can_play(mRs, mlMaxImpacts);
-		return ohpl_phys_impacts_can_play(mpImpactCounts, mlMaxImpacts);
+		return ohpl_h15p_can_play(mRs, mlMaxImpacts);
 	}
 
 	void cPhysics::AddImpact()
 	{
-		if(mRs){ ohpl_h15p_add_impact(mRs); return; }
-		ohpl_phys_impacts_add(mpImpactCounts);
+		ohpl_h15p_add_impact(mRs);
 	}
 
 	int cPhysics::GetNumOfImpacts()
 	{
-		if(mRs) return (int)ohpl_h15p_impact_count(mRs);
-		return (int)ohpl_phys_impacts_len(mpImpactCounts);
+		return (int)ohpl_h15p_impact_count(mRs);
 	}
 
 	//-----------------------------------------------------------------------
 
 	cSurfaceDataIterator cPhysics::GetSurfaceDataIterator()
 	{
-		if(mRs)
+		m_mapSurfaceData.clear();
+		for(size_t i=0, n=ohpl_h15p_surface_len(mRs); i<n; ++i)
 		{
-			m_mapSurfaceData.clear();
-			for(size_t i=0, n=ohpl_h15p_surface_len(mRs); i<n; ++i)
-			{
-				OhplStr name; size_t obj;
-				if(ohpl_h15p_surface_at(mRs, i, &name, &obj)) m_mapSurfaceData[tString(name.p, name.n)] = reinterpret_cast<cSurfaceData*>(obj);
-			}
+			OhplStr name; size_t obj;
+			if(ohpl_h15p_surface_at(mRs, i, &name, &obj)) m_mapSurfaceData[tString(name.p, name.n)] = reinterpret_cast<cSurfaceData*>(obj);
 		}
 		return cSurfaceDataIterator(&m_mapSurfaceData);
 	}
 
 	cSurfaceData *cPhysics::CreateSurfaceData(const tString& asName)
 	{
-		if(mRs) return reinterpret_cast<cSurfaceData*>(ohpl_h15p_create_surface(mRs, asName.c_str(), asName.size()));
-		cSurfaceData *pData = hplNew( cSurfaceData, (asName, this,mpResources) );
-
-		m_mapSurfaceData.insert(tSurfaceDataMap::value_type(asName, pData));
-
-		return pData;
+		return reinterpret_cast<cSurfaceData*>(ohpl_h15p_create_surface(mRs, asName.c_str(), asName.size()));
 	}
 
 	cSurfaceData *cPhysics::GetSurfaceData(const tString& asName)
 	{
-		if(mRs) return reinterpret_cast<cSurfaceData*>(ohpl_h15p_get_surface(mRs, asName.c_str(), asName.size()));
-		tSurfaceDataMapIt it = m_mapSurfaceData.find(asName);
-		if(it == m_mapSurfaceData.end()) return NULL;
-
-		return it->second;
+		return reinterpret_cast<cSurfaceData*>(ohpl_h15p_get_surface(mRs, asName.c_str(), asName.size()));
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool cPhysics::LoadSurfaceData(const tString& asFile)
 	{
-		if(mRs) return ohpl_h15p_load_surface(mRs, asFile.c_str(), asFile.size());
-
-		std::vector<char> vData;
-		bool bReadOk = false;
-		FILE *pFile = fopen(asFile.c_str(), "rb");
-		if(pFile == NULL)
-		{
-			Error("Couldn't load XML file '%s'!\n",asFile.c_str());
-			return false;
-		}
-		fseek(pFile, 0, SEEK_END);
-		long lLength = ftell(pFile);
-		fseek(pFile, 0, SEEK_SET);
-		if(lLength <= 0)
-		{
-			bReadOk = true;
-		}
-		else
-		{
-			vData.resize(lLength);
-			bReadOk = fread(vData.data(), lLength, 1, pFile) == 1;
-		}
-		fclose(pFile);
-
-		bool bLoaded = ohpl_phys_surface_parse(vData.data(), vData.size(), bReadOk,
-			[](void *apContext, const OhplSurfaceDef *apDef)
-			{
-				cPhysics *pPhysics = static_cast<cPhysics*>(apContext);
-				cSurfaceData *pData = pPhysics->CreateSurfaceData(tString(apDef->name.p, apDef->name.n));
-
-				pData->SetElasticity(apDef->elasticity);
-				pData->SetKineticFriction(apDef->kineticFriction);
-				pData->SetStaticFriction(apDef->staticFriction);
-				pData->SetPriority(apDef->priority);
-				pData->SetUserVar(tString(apDef->userVar.p, apDef->userVar.n));
-				pData->SetElasticityCombMode((ePhysicsMaterialCombMode)apDef->elasticityMode);
-				pData->SetFrictionCombMode((ePhysicsMaterialCombMode)apDef->frictionMode);
-				pData->GetStepType(tString(apDef->stepType.p, apDef->stepType.n));
-
-				pData->SetMinScrapeSpeed(apDef->minScrapeSpeed);
-				pData->SetMinScrapeFreq(apDef->minScrapeFreq);
-				pData->SetMinScrapeFreqSpeed(apDef->minScrapeFreqSpeed);
-				pData->SetMiddleScrapeSpeed(apDef->middleScrapeSpeed);
-				pData->SetMaxScrapeFreqSpeed(apDef->maxScrapeFreqSpeed);
-				pData->SetMaxScrapeFreq(apDef->maxScrapeFreq);
-				pData->SetMinScrapeContacts(apDef->minScrapeContacts);
-				pData->SetScrapeSoundName(tString(apDef->scrapeSound.p, apDef->scrapeSound.n));
-
-				pData->SetMinRollSpeed(apDef->minRollSpeed);
-				pData->SetMinRollFreq(apDef->minRollFreq);
-				pData->SetMinRollVolume(apDef->minRollVolume);
-				pData->SetMinRollFreqSpeed(apDef->minRollFreqSpeed);
-				pData->SetMiddleRollSpeed(apDef->middleRollSpeed);
-				pData->SetMaxRollFreqSpeed(apDef->maxRollFreqSpeed);
-				pData->SetMaxRollFreq(apDef->maxRollFreq);
-				pData->SetMaxRollVolume(apDef->maxRollVolume);
-				pData->SetRollSoundName(tString(apDef->rollSound.p, apDef->rollSound.n));
-				pData->SetRollAxisFlags(apDef->rollAxisFlags);
-
-				for(size_t i=0; i<apDef->nImpacts; ++i)
-				{
-					const OhplImpactDef &def = apDef->impacts[i];
-					cSurfaceImpactData *pImpactData = pData->CreateImpactData(def.minSpeed);
-					pImpactData->SetSoundName(tString(def.sound.p, def.sound.n));
-					pImpactData->SetPSName(tString(def.ps.p, def.ps.n));
-					pImpactData->SetPSPrio(def.psPrio);
-				}
-				for(size_t i=0; i<apDef->nHits; ++i)
-				{
-					const OhplImpactDef &def = apDef->hits[i];
-					cSurfaceImpactData *pHitData = pData->CreateHitData(def.minSpeed);
-					pHitData->SetSoundName(tString(def.sound.p, def.sound.n));
-					pHitData->SetPSName(tString(def.ps.p, def.ps.n));
-					pHitData->SetPSPrio(def.psPrio);
-				}
-			}, this);
-
-		if(bLoaded == false)
-		{
-			Error("Couldn't load XML file '%s'!\n",asFile.c_str());
-			return false;
-		}
-		return true;
+		return ohpl_h15p_load_surface(mRs, asFile.c_str(), asFile.size());
 	}
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-	
-	//-----------------------------------------------------------------------
-
-	ePhysicsMaterialCombMode cPhysics::GetCombMode(const char *apName)
-	{
-		if(apName == NULL) return ePhysicsMaterialCombMode_Average;
-
-		tString sMode = cString::ToLowerCase(apName);
-
-		if(sMode == "average") return ePhysicsMaterialCombMode_Average;
-		if(sMode == "min") return ePhysicsMaterialCombMode_Min;
-		if(sMode == "max") return ePhysicsMaterialCombMode_Max;
-		if(sMode == "multiply") return ePhysicsMaterialCombMode_Multiply;
-
-		return ePhysicsMaterialCombMode_Average;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cPhysics::UpdateImpactCounts(float afTimeStep)
-	{
-		if(mRs){ ohpl_h15p_update_impacts(mRs, afTimeStep, mfImpactDuration); return; }
-		ohpl_phys_impacts_update(mpImpactCounts, afTimeStep, mfImpactDuration);
-	}
-
-	//-----------------------------------------------------------------------
 
 }
