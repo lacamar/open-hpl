@@ -14,6 +14,9 @@
 #include "gui/WidgetFrame.h"
 #include "gui/WidgetButton.h"
 #include "graphics/FontData.h"
+#include "math/Math.h"
+#include "system/Platform.h"
+#include "system/String.h"
 
 namespace hpl {
 
@@ -24,11 +27,15 @@ namespace hpl {
 		typedef void (iWidget::*tText)(const tWString&, const cVector3f&, eFontAlign);
 		static tBorders Borders() { return &OhplH20Access::DrawBordersAndCorners; }
 		static tText Text() { return (tText)&OhplH20Access::DrawDefaultText; }
+		typedef void (iWidget::*tTextCol)(const tWString&, const cVector3f&, eFontAlign, const cColor&);
+		static tTextCol TextCol() { return (tTextCol)&OhplH20Access::DrawDefaultText; }
+		static cColor FontColor(iWidget* apW) { return apW->*(&OhplH20Access::mDefaultFontColor); }
 		static tText Highlight() { return &OhplH20Access::DrawDefaultTextHighlight; }
 		static cGuiSet* Set(iWidget* apW) { return apW->*(&OhplH20Access::mpSet); }
 		static cGuiSkin* Skin(iWidget* apW) { return apW->*(&OhplH20Access::mpSkin); }
 		static cVector2f FontSize(iWidget* apW) { return apW->*(&OhplH20Access::mvDefaultFontSize); }
 		static iFontData* Font(iWidget* apW) { return apW->*(&OhplH20Access::mpDefaultFontType); }
+		static void SetPointer(iWidget* apW, cGuiGfxElement* apGfx) { apW->*(&OhplH20Access::mpPointerGfx) = apGfx; }
 		static cGuiSkinFont* SkinFont(iWidget* apW) { return apW->*(&OhplH20Access::mpDefaultFont); }
 		static void* State(iWidget* apW, int alKind)
 		{
@@ -192,7 +199,12 @@ namespace hpl {
 			tWString sText = a->text ? tWString(a->text, a->textLen) : tWString();
 			cVector3f vPos(a->f[0], a->f[1], a->f[2]);
 			iWidget* pWidget = W(a->w);
-			if(a->i[1]) (pWidget->*OhplH20Access::Highlight())(sText, vPos, (eFontAlign)a->i[0]);
+			if(a->i[2]==1)
+			{
+				cColor col = pWidget->IsEnabled() ? OhplH20Access::FontColor(pWidget) : OhplH20Access::Skin(pWidget)->GetFont(eGuiSkinFont_Disabled)->mColor;
+				(pWidget->*OhplH20Access::TextCol())(sText, vPos, (eFontAlign)a->i[0], col);
+			}
+			else if(a->i[1]) (pWidget->*OhplH20Access::Highlight())(sText, vPos, (eFontAlign)a->i[0]);
 			else		(pWidget->*OhplH20Access::Text())(sText, vPos, (eFontAlign)a->i[0]);
 			return 0;
 		}
@@ -295,6 +307,7 @@ namespace hpl {
 			case 12: return (uintptr_t)pSet->GetFocusedWidget();
 			case 13: return (uintptr_t)pSet->GetBaseClipRegion();
 			case 14: return (uintptr_t)pSet->GetCurrentClipRegion();
+			case 15: pSet->SetAttentionWidget(W(a->p[0]), false); return 0;
 			}
 			return 0;
 		}
@@ -326,6 +339,73 @@ namespace hpl {
 		}
 		case kOhplH20Op_TEXT_LENGTH_SKIN:
 			a->rf[0] = OhplH20Access::Font(W(a->w))->GetLength(OhplH20Access::SkinFont(W(a->w))->mvSize, W(a->w)->GetText().c_str());
+			return 0;
+		case kOhplH20Op_CREATE_BUTTON_AT:
+			return (uintptr_t)(iWidget*)OhplH20Access::Set(W(a->w))->CreateWidgetButton(cVector3f(a->f[0], a->f[1], a->f[2]), cVector2f(a->f[3], a->f[4]), _W(""), W(a->w));
+		case kOhplH20Op_BUTTON_SETUP:
+		{
+			cWidgetButton* pButton = (cWidgetButton*)W(a->w);
+			pButton->SetDefaultFontSize(cVector2f(a->f[0]));
+			pButton->SetRepeatActive(true);
+			pButton->SetRepeatFreq(a->f[1]);
+			return 0;
+		}
+		case kOhplH20Op_FONT_RANGE:
+		{
+			iFontData* pFont = OhplH20Access::Font(W(a->w));
+			a->ri[0] = pFont ? pFont->GetFirstChar() : 0;
+			a->ri[1] = pFont ? pFont->GetLastChar() : 0;
+			return 0;
+		}
+		case kOhplH20Op_GLYPH:
+		{
+			iFontData* pFont = OhplH20Access::Font(W(a->w));
+			if(pFont==NULL) return 0;
+			cGlyph* pGlyph = pFont->GetGlyph(a->i[0]);
+			if(pGlyph==NULL) return 0;
+			a->rf[0] = pGlyph->mfAdvance;
+			return 1;
+		}
+		case kOhplH20Op_FONT_LENGTH:
+		{
+			iFontData* pFont = OhplH20Access::Font(W(a->w));
+			if(pFont==NULL) { a->rf[0] = 0; return 0; }
+			tWString sText = a->text ? tWString(a->text, a->textLen) : tWString();
+			a->rf[0] = pFont->GetLength(OhplH20Access::FontSize(W(a->w)), sText.c_str());
+			return 0;
+		}
+		case kOhplH20Op_CLIPBOARD:
+		{
+			static tWString sClipboard;
+			sClipboard = cPlatform::LoadTextFromClipboard();
+			a->ri[0] = (int32_t)sClipboard.size();
+			return (uintptr_t)sClipboard.data();
+		}
+		case kOhplH20Op_COPY:
+			cPlatform::CopyTextToClipboard(a->text ? tWString(a->text, a->textLen) : tWString());
+			return 0;
+		case kOhplH20Op_TO_FLOAT:
+		{
+			tWString sText = a->text ? tWString(a->text, a->textLen) : tWString();
+			float fValue = cString::ToFloat(cString::To8Char(sText).c_str(), 0);
+			a->rf[0] = cMath::RoundFloatToDecimals(fValue, a->i[0]);
+			return 0;
+		}
+		case kOhplH20Op_FLOAT_TEXT:
+		{
+			static tWString sNumber;
+			sNumber = cString::ToStringW(a->f[0], a->i[0], true);
+			a->ri[0] = (int32_t)sNumber.size();
+			return (uintptr_t)sNumber.data();
+		}
+		case kOhplH20Op_SET_POINTER_GFX:
+			OhplH20Access::SetPointer(W(a->w), OhplH20Access::Skin(W(a->w))->GetGfx(a->i[0] ? eGuiSkinGfx_PointerText : eGuiSkinGfx_PointerNormal));
+			return 0;
+		case kOhplH20Op_GFX_ANIM_RESET:
+			((cGuiGfxElement*)a->p[0])->SetAnimationTime(0);
+			return 0;
+		case kOhplH20Op_CREATE_POPUP_KEYBOARD:
+			OhplH20Access::Set(W(a->w))->CreatePopUpUIKeyboard((cWidgetTextBox*)W(a->w));
 			return 0;
 		default:
 			return 0;

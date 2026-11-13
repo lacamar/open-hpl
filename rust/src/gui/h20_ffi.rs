@@ -9,6 +9,7 @@ use super::h20_combo::{self as cb, Combo};
 use super::h20_host::{HostVt, Hx};
 use super::h20_list::{self as l, ListBase};
 use super::h20_tab::{self as tb, Frame, Label, Tab};
+use super::h20_text::{self as tx, TextBox};
 use super::set::{Msg, W};
 use crate::types::Vector3f;
 
@@ -472,3 +473,141 @@ ffn!(Label, ohpl_h20_tl_on_get_ui_nav_focus, |hx, l| -> bool {
     tb::label_on_get_ui_nav_focus(hx, l)
 });
 ffn!(Label, ohpl_h20_tl_on_draw, |hx, l| tb::label_on_draw(hx, l));
+
+/// # Safety
+/// `t` is uninitialised storage, `base` the widget's base state.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h20_tb_init(
+    vt: *const HostVt,
+    t: *mut TextBox,
+    this: W,
+    base: *mut Base,
+    numeric: bool,
+) {
+    if !t.is_null() {
+        // SAFETY: caller contract.
+        unsafe { tx::init(t, vt, this, base, numeric) };
+    }
+}
+
+/// # Safety
+/// `t` is null or initialised and not used afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h20_tb_free(t: *mut TextBox) {
+    if !t.is_null() {
+        // SAFETY: caller contract.
+        unsafe { tx::free(t) };
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h20_tb_set_default_decimals(v: i32) {
+    tx::set_default_decimals(v);
+}
+
+ffn!(TextBox, ohpl_h20_tb_destroy_buttons, |hx, t| {
+    tx::destroy_buttons(hx, t)
+});
+ffn!(
+    TextBox,
+    ohpl_h20_tb_set_illegal_chars,
+    |hx, t, text: *const u32, len: usize| {
+        let _ = hx;
+        tx::set_illegal_chars(t, (text, len))
+    }
+);
+ffn!(
+    TextBox,
+    ohpl_h20_tb_set_max_text_length,
+    |hx, t, len: i32| tx::set_max_text_length(hx, t, len)
+);
+ffn!(
+    TextBox,
+    ohpl_h20_tb_set_selected_text,
+    |hx, t, start: i32, count: i32| tx::set_selected_text(hx, t, start, count)
+);
+ffn!(TextBox, ohpl_h20_tb_set_numeric_value, |hx, t, v: f32| {
+    tx::set_numeric_value(hx, t, v)
+});
+ffn!(TextBox, ohpl_h20_tb_numeric_value, |hx, t| -> f32 {
+    tx::numeric_value(hx, t)
+});
+ffn!(
+    TextBox,
+    ohpl_h20_tb_background_size,
+    |hx, t, out: *mut crate::types::Vector2f| {
+        if !out.is_null() {
+            out.write(tx::background_size(hx, t))
+        }
+    }
+);
+ffn!(TextBox, ohpl_h20_tb_set_can_edit, |hx, t, v: bool| {
+    tx::set_can_edit(hx, t, v)
+});
+ffn!(TextBox, ohpl_h20_tb_on_change_size, |hx, t| {
+    tx::on_change_size(hx, t)
+});
+ffn!(TextBox, ohpl_h20_tb_on_change_text, |hx, t| {
+    tx::on_change_text(hx, t)
+});
+ffn!(TextBox, ohpl_h20_tb_on_init, |hx, t| tx::on_init(hx, t));
+ffn!(TextBox, ohpl_h20_tb_on_load_graphics, |hx, t| {
+    tx::on_load_graphics(hx, t)
+});
+ffn!(TextBox, ohpl_h20_tb_on_draw, |hx, t| tx::on_draw(hx, t));
+ffn!(TextBox, ohpl_h20_tb_on_mouse_move, |hx,
+                                          t,
+                                          d: *const Msg|
+ -> bool {
+    tx::on_mouse_move(hx, t, &rd_msg(d))
+});
+ffn!(TextBox, ohpl_h20_tb_on_mouse_down, |hx,
+                                          t,
+                                          d: *const Msg|
+ -> bool {
+    tx::on_mouse_down(hx, t, &rd_msg(d))
+});
+ffn!(TextBox, ohpl_h20_tb_on_mouse_up, |hx,
+                                        t,
+                                        d: *const Msg|
+ -> bool {
+    tx::on_mouse_up(hx, t, &rd_msg(d))
+});
+ffn!(
+    TextBox,
+    ohpl_h20_tb_on_mouse_double_click,
+    |hx, t, d: *const Msg| -> bool { tx::on_mouse_double_click(hx, t, &rd_msg(d)) }
+);
+ffn!(TextBox, ohpl_h20_tb_on_got_focus, |hx, t| -> bool {
+    tx::on_got_focus(hx, t)
+});
+ffn!(TextBox, ohpl_h20_tb_on_got_tab_focus, |hx, t| -> bool {
+    tx::on_got_tab_focus(hx, t)
+});
+ffn!(TextBox, ohpl_h20_tb_on_lost_focus, |hx,
+                                          t,
+                                          d: *const Msg|
+ -> bool {
+    tx::on_lost_focus(hx, t, &rd_msg(d))
+});
+ffn!(TextBox, ohpl_h20_tb_on_key_press, |hx,
+                                         t,
+                                         d: *const Msg|
+ -> bool {
+    tx::on_key_press(hx, t, &rd_msg(d))
+});
+ffn!(TextBox, ohpl_h20_tb_on_ui_button_press, |hx,
+                                               t,
+                                               d: *const Msg|
+ -> bool {
+    tx::on_ui_button_press(hx, t, &rd_msg(d))
+});
+ffn!(TextBox, ohpl_h20_tb_on_enter, |hx,
+                                     t,
+                                     d: *const Msg|
+ -> bool {
+    tx::on_enter(hx, t, &rd_msg(d))
+});
+ffn!(TextBox, ohpl_h20_tb_ui_keyboard_open, |hx, t| {
+    tx::ui_keyboard_open(hx, t)
+});

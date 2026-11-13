@@ -153,7 +153,7 @@ fn at(text: &[u32], i: i32) -> u32 {
 }
 
 /// `cString::SubW`; the start is never negative where the widget calls it.
-fn sub_w(text: &[u32], start: i32, count: i32) -> Vec<u32> {
+pub fn sub_w(text: &[u32], start: i32, count: i32) -> Vec<u32> {
     sub(text, start, count, true).unwrap_or_default().to_vec()
 }
 

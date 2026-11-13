@@ -83,6 +83,18 @@ enum OhplH20Op {
 	kOhplH20Op_REMOVE_CHILD = 68,
 	kOhplH20Op_SKIN_FONT_SIZE = 69,
 	kOhplH20Op_TEXT_LENGTH_SKIN = 70,
+	kOhplH20Op_CREATE_BUTTON_AT = 71,
+	kOhplH20Op_FONT_RANGE = 72,
+	kOhplH20Op_GLYPH = 73,
+	kOhplH20Op_FONT_LENGTH = 74,
+	kOhplH20Op_CLIPBOARD = 75,
+	kOhplH20Op_COPY = 76,
+	kOhplH20Op_TO_FLOAT = 77,
+	kOhplH20Op_FLOAT_TEXT = 78,
+	kOhplH20Op_SET_POINTER_GFX = 79,
+	kOhplH20Op_GFX_ANIM_RESET = 80,
+	kOhplH20Op_CREATE_POPUP_KEYBOARD = 81,
+	kOhplH20Op_BUTTON_SETUP = 82,
 };
 
 struct OhplH20Args {
@@ -181,6 +193,22 @@ static_assert(sizeof(OhplW2TabState) == 40 && sizeof(OhplH20TabFrame) == 280 && 
 			  sizeof(OhplH20Tab) == 72 && offsetof(OhplH20Tab, label) == 24 && offsetof(OhplH20Tab, host) == 64 &&
 			  sizeof(OhplH20TabLabel) == 40, "tab state ABI");
 
+struct OhplH20TextBox {
+	OhplW2Text st;
+	uintptr_t buttons[2];
+	void* illegal;
+	void* replay;
+	iWidget* prevAttention;
+	uintptr_t gfx[11];
+	bool numeric, showButtons, replaying;
+	uintptr_t self;
+	OhplH19Base* base;
+	const OhplH20Host* host;
+};
+static_assert(sizeof(OhplW2Text) == 80 && sizeof(OhplH20TextBox) == 240 && offsetof(OhplH20TextBox, buttons) == 80 &&
+			  offsetof(OhplH20TextBox, gfx) == 120 && offsetof(OhplH20TextBox, numeric) == 208 &&
+			  offsetof(OhplH20TextBox, self) == 216, "OhplH20TextBox ABI");
+
 extern "C" {
 
 void ohpl_h20_lb_init(const OhplH20Host*, OhplH20ListBase*, uintptr_t self, uintptr_t container, OhplH19Base* base, int kind);
@@ -269,6 +297,34 @@ bool ohpl_h20_tl_on_mouse_down(const OhplH20Host*, OhplH20TabLabel*);
 void ohpl_h20_tl_on_change_text(const OhplH20Host*, OhplH20TabLabel*);
 bool ohpl_h20_tl_on_get_ui_nav_focus(const OhplH20Host*, OhplH20TabLabel*);
 void ohpl_h20_tl_on_draw(const OhplH20Host*, OhplH20TabLabel*);
+
+void ohpl_h20_tb_init(const OhplH20Host*, OhplH20TextBox*, uintptr_t self, OhplH19Base* base, bool numeric);
+void ohpl_h20_tb_free(OhplH20TextBox*);
+void ohpl_h20_tb_set_default_decimals(int v);
+void ohpl_h20_tb_destroy_buttons(const OhplH20Host*, OhplH20TextBox*);
+void ohpl_h20_tb_set_illegal_chars(const OhplH20Host*, OhplH20TextBox*, const wchar_t* text, size_t len);
+void ohpl_h20_tb_set_max_text_length(const OhplH20Host*, OhplH20TextBox*, int len);
+void ohpl_h20_tb_set_selected_text(const OhplH20Host*, OhplH20TextBox*, int start, int count);
+void ohpl_h20_tb_set_numeric_value(const OhplH20Host*, OhplH20TextBox*, float v);
+float ohpl_h20_tb_numeric_value(const OhplH20Host*, OhplH20TextBox*);
+void ohpl_h20_tb_background_size(const OhplH20Host*, OhplH20TextBox*, cVector2f* out);
+void ohpl_h20_tb_set_can_edit(const OhplH20Host*, OhplH20TextBox*, bool v);
+void ohpl_h20_tb_on_change_size(const OhplH20Host*, OhplH20TextBox*);
+void ohpl_h20_tb_on_change_text(const OhplH20Host*, OhplH20TextBox*);
+void ohpl_h20_tb_on_init(const OhplH20Host*, OhplH20TextBox*);
+void ohpl_h20_tb_on_load_graphics(const OhplH20Host*, OhplH20TextBox*);
+void ohpl_h20_tb_on_draw(const OhplH20Host*, OhplH20TextBox*);
+bool ohpl_h20_tb_on_mouse_move(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
+bool ohpl_h20_tb_on_mouse_down(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
+bool ohpl_h20_tb_on_mouse_up(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
+bool ohpl_h20_tb_on_mouse_double_click(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
+bool ohpl_h20_tb_on_got_focus(const OhplH20Host*, OhplH20TextBox*);
+bool ohpl_h20_tb_on_got_tab_focus(const OhplH20Host*, OhplH20TextBox*);
+bool ohpl_h20_tb_on_lost_focus(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
+bool ohpl_h20_tb_on_key_press(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
+bool ohpl_h20_tb_on_ui_button_press(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
+bool ohpl_h20_tb_on_enter(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
+void ohpl_h20_tb_ui_keyboard_open(const OhplH20Host*, OhplH20TextBox*);
 
 }
 

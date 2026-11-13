@@ -87,6 +87,18 @@ ops! {
     REMOVE_CHILD = 68,
     SKIN_FONT_SIZE = 69,
     TEXT_LENGTH_SKIN = 70,
+    CREATE_BUTTON_AT = 71,
+    FONT_RANGE = 72,
+    GLYPH = 73,
+    FONT_LENGTH = 74,
+    CLIPBOARD = 75,
+    COPY = 76,
+    TO_FLOAT = 77,
+    FLOAT_TEXT = 78,
+    SET_POINTER_GFX = 79,
+    GFX_ANIM_RESET = 80,
+    CREATE_POPUP_KEYBOARD = 81,
+    BUTTON_SETUP = 82,
 }
 
 pub const SC_PUSH_ATTENTION: i32 = 0;
@@ -104,6 +116,7 @@ pub const SC_GET_ATTENTION: i32 = 11;
 pub const SC_GET_FOCUSED: i32 = 12;
 pub const SC_BASE_CLIP: i32 = 13;
 pub const SC_CURRENT_CLIP: i32 = 14;
+pub const SC_SET_ATTENTION_NO_CLEAR: i32 = 15;
 
 pub const ARGS_F: usize = 10;
 
@@ -489,6 +502,29 @@ impl Hx {
 
     pub fn flag(self, code: i32, w: W) -> bool {
         self.with(code, w, |_| (), |_, v| v != 0)
+    }
+
+    /// `DrawDefaultText` in the widget's default font colour (`mode` 1: disabled aware).
+    pub fn draw_text_col(
+        self,
+        w: W,
+        text: (*const u32, usize),
+        pos: Vector3f,
+        align: i32,
+        mode: i32,
+    ) {
+        self.with(
+            DRAW_TEXT,
+            w,
+            |a| {
+                a.text = text.0;
+                a.text_len = text.1;
+                a.f[..3].copy_from_slice(&[pos.x, pos.y, pos.z]);
+                a.i[0] = align;
+                a.i[2] = mode;
+            },
+            |_, _| (),
+        );
     }
 
     pub fn gfx_rect(self) -> usize {
