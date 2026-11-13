@@ -45,6 +45,7 @@ namespace hpl {
 
 	cScriptManager::~cScriptManager()
 	{
+		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_SCRIPT); return; }
 		DestroyAll();
 		Log(" Done with scripts\n");
 	}
@@ -59,6 +60,7 @@ namespace hpl {
 
 	iScript* cScriptManager::CreateScript(const tString& asName, tString *apCompileMessages)
 	{
+		if(mpRs) return H3Res<iScript>(ohpl_h3f_script(mpRs, H3Ops(), RM_STR(asName), apCompileMessages));
 		iScript* pScript;
 
 		BeginLoad(asName);
@@ -100,6 +102,7 @@ namespace hpl {
 
 	void cScriptManager::Destroy(iResourceBase* apResource)
 	{
+		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
 		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
 			RemoveResource(apResource);
 			hplDelete(apResource);
@@ -116,4 +119,15 @@ namespace hpl {
 
 
 	//-----------------------------------------------------------------------
+
+	void* cScriptManager::H3Create(OhplH3Create &aCreate)
+	{
+		iScript *pScript = mpSystem->GetLowLevel()->CreateScript(H3Name(aCreate.name));
+		if(pScript->CreateFromFile(H3Wide(aCreate.path), static_cast<tString*>(aCreate.ptr))==false)
+		{
+			hplDelete(pScript);
+			return NULL;
+		}
+		return static_cast<iResourceBase*>(pScript);
+	}
 }

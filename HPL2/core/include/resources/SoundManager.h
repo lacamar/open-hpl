@@ -44,6 +44,9 @@ namespace hpl {
 
 		void DestroyAll();
 
+	protected:
+		void* H3Create(OhplH3Create &aCreate) override;
+		int64_t H3Call(int alWhat, void *apObj, int64_t alArg) override;
 	private:
 		cSound* mpSound;
 		cResources *mpResources;

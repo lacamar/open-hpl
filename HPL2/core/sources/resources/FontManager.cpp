@@ -48,6 +48,7 @@ namespace hpl {
 
 	cFontManager::~cFontManager()
 	{
+		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_FONT); return; }
 		DestroyAll();
 		Log(" Done with fonts\n");
 	}
@@ -63,6 +64,7 @@ namespace hpl {
 	iFontData* cFontManager::CreateFontData(const tString& asName, int alSize,unsigned short alFirstChar,
 											unsigned short alLastChar)
 	{
+		if(mpRs) return H3Res<iFontData>(ohpl_h3f_font(mpRs, H3Ops(), RM_STR(asName), alSize, alFirstChar, alLastChar));
 		iFontData* pFont;
 
 		BeginLoad(asName);
@@ -128,6 +130,7 @@ namespace hpl {
 
 	void cFontManager::Destroy(iResourceBase* apResource)
 	{
+		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
 		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
 			RemoveResource(apResource);
 			hplDelete(apResource);
@@ -144,4 +147,20 @@ namespace hpl {
 
 
 	//-----------------------------------------------------------------------
+
+	void* cFontManager::H3Create(OhplH3Create &aCreate)
+	{
+		iFontData *pFont = mpGraphics->GetLowLevel()->CreateFontData(H3Name(aCreate.name));
+		pFont->SetUp(mpResources,mpGui);
+		bool bOk = false;
+		if(aCreate.kind == OHPL_H3_FONT_UNKNOWN) return static_cast<iResourceBase*>(pFont);
+		if(aCreate.kind == OHPL_H3_FONT_TTF) bOk = pFont->CreateFromFontFile(H3Wide(aCreate.path),aCreate.i[0],(unsigned short)aCreate.i[1],(unsigned short)aCreate.i[2]);
+		else if(aCreate.kind == OHPL_H3_FONT_BITMAP) bOk = pFont->CreateFromBitmapFile(H3Wide(aCreate.path));
+		if(bOk==false)
+		{
+			hplDelete(pFont);
+			return NULL;
+		}
+		return static_cast<iResourceBase*>(pFont);
+	}
 }

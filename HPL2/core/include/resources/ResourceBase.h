@@ -24,6 +24,7 @@
 #include "system/SystemTypes.h"
 #include "system/LowLevelSystem.h"
 #include "resources/RustResources.h"
+#include "resources/RustResourcesH3.h"
 
 namespace hpl {
 
@@ -71,11 +72,10 @@ namespace hpl {
 
 		OhplResMeta* GetMeta(){ return &mMeta; }
 
-		static bool GetLogCreateAndDelete(){ return mbLogCreateAndDelete;}
-		static void SetLogCreateAndDelete(bool abX){ mbLogCreateAndDelete = abX;}
+		static bool GetLogCreateAndDelete(){ return ohpl_h3_log_create_get();}
+		static void SetLogCreateAndDelete(bool abX){ ohpl_h3_log_create_set(abX);}
 
 	protected:
-		static bool mbLogCreateAndDelete;
 		
 		tString msName;
 		

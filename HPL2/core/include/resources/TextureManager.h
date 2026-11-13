@@ -69,12 +69,15 @@ namespace hpl {
 
 		void Update(float afTimeStep);
 
-		int GetMemoryUsage(){ return mlMemoryUsage;}
+		int GetMemoryUsage(){ return mpRs ? ohpl_h3f_mem_usage(mpRs, &mOps) : mlMemoryUsage;}
 
 		void SetSRGB(bool abX){ mbSRGB = abX && mbHardwareSRGB; }
 		static void SetHardwareSRGB(bool abX){ mbHardwareSRGB = abX; }
 		static bool GetHardwareSRGB(){ return mbHardwareSRGB; }
 
+	protected:
+		void* H3Create(OhplH3Create &aCreate) override;
+		int64_t H3Call(int alWhat, void *apObj, int64_t alArg) override;
 	private:
 		iTexture* CreateSimpleTexture(const tString& asName,bool abUseMipMaps, 
 									eTextureUsage aUsage, eTextureType aType, 

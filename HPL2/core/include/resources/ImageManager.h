@@ -73,6 +73,9 @@ namespace hpl {
 		void SetFrameLocked(int alHandle, bool abLocked);
 
 		static void SetDefaultFrameSize(const cVector2l &avSize) { mvDefaultFrameSize = avSize; }
+	protected:
+		void* H3Create(OhplH3Create &aCreate) override;
+		int64_t H3Call(int alWhat, void *apObj, int64_t alArg) override;
 	private:
 		static cVector2l mvDefaultFrameSize;
 

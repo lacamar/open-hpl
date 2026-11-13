@@ -47,6 +47,7 @@ namespace hpl {
 
 	cAnimationManager::~cAnimationManager()
 	{
+		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_ANIMATION); return; }
 		DestroyAll();
 
 		Log(" Done with animations\n");
@@ -62,6 +63,11 @@ namespace hpl {
 
 	cAnimation* cAnimationManager::CreateAnimation(const tString& asName)
 	{
+		if(mpRs)
+		{
+			cRmExts exts(*mpResources->GetMeshLoaderHandler()->GetSupportedTypes());
+			return H3Res<cAnimation>(ohpl_h3f_model(mpRs, H3Ops(), false, RM_STR(asName), exts.h3(), exts.size(), 0));
+		}
 		cAnimation *pAnimation=NULL;
 
 		BeginLoad(asName);
@@ -105,6 +111,7 @@ namespace hpl {
 
 	void cAnimationManager::Destroy(iResourceBase* apResource)
 	{
+		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
 		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
 			RemoveResource(apResource);
 			hplDelete(apResource);
@@ -121,4 +128,9 @@ namespace hpl {
 
 
 	//-----------------------------------------------------------------------
+
+	void* cAnimationManager::H3Create(OhplH3Create &aCreate)
+	{
+		return static_cast<iResourceBase*>(mpResources->GetMeshLoaderHandler()->LoadAnimation(H3Wide(aCreate.path)));
+	}
 }

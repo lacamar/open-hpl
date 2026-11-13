@@ -71,6 +71,10 @@ namespace hpl {
 		eMaterialUvAnimation GetUvAnimType(const char* apString);
 		eMaterialAnimationAxis GetAnimAxis(const char* apString);
 
+	protected:
+		void* H3Create(OhplH3Create &aCreate) override;
+		int64_t H3Call(int alWhat, void *apObj, int64_t alArg) override;
+		void H3Text(int alWhat, void *apObj, const OhplH3WStr &aPath, void (*apSink)(void*, const uint8_t*, size_t), void *apCtx) override;
 	private:
 		cMaterial* LoadFromFile(const tString& asName,const tWString& asPath);
 

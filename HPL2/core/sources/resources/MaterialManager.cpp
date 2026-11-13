@@ -107,6 +107,7 @@ namespace hpl {
 
 	cMaterialManager::~cMaterialManager()
 	{
+		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_MATERIAL); return; }
         DestroyAll();
 
 		Log(" Done with materials\n");
@@ -122,6 +123,7 @@ namespace hpl {
 
 	cMaterial* cMaterialManager::CreateMaterial(const tString& asName)
 	{
+		if(mpRs) return H3Res<cMaterial>(ohpl_h3f_material(mpRs, H3Ops(), RM_STR(asName)));
 		cMaterial* pMaterial;
 
 		cRmEnv env(mpFileSearcher, this);
@@ -171,6 +173,7 @@ namespace hpl {
 
 	void cMaterialManager::Destroy(iResourceBase* apResource)
 	{
+		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
 		if(ohpl_rm_destroy_standard(apResource->GetMeta()))
 		{
 			RemoveResource(apResource);
@@ -182,6 +185,7 @@ namespace hpl {
 
 	void cMaterialManager::CompileTextureLookups()
 	{
+		if(mpRs) { ohpl_h3f_for_each(mpRs, H3Ops(), OHPL_H3C_MAT_COMPILE_LOOKUP, 0); return; }
 		for(tResourceBaseMapIt it = m_mapResources.begin(); it != m_mapResources.end(); ++it)
 		{
 			cMaterial *pMat = static_cast<cMaterial*>(it->second);
@@ -195,6 +199,7 @@ namespace hpl {
 	{
 		if(aFilter == mTextureFilter) return;
 		mTextureFilter = aFilter;
+		if(mpRs) { ohpl_h3f_for_each(mpRs, H3Ops(), OHPL_H3C_MAT_SET_FILTER, (int64_t)aFilter); return; }
 		
 		tResourceBaseMapIt it = m_mapResources.begin();
 		for(; it != m_mapResources.end(); ++it)
@@ -217,6 +222,7 @@ namespace hpl {
 											mpGraphics->GetLowLevel()->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), mfTextureAnisotropy))
 			return;
 		mfTextureAnisotropy = afX;
+		if(mpRs) { ohpl_h3f_for_each(mpRs, H3Ops(), OHPL_H3C_MAT_SET_ANISO, H3Bits(afX)); return; }
 
 		tResourceBaseMapIt it = m_mapResources.begin();
 		for(; it != m_mapResources.end(); ++it)
@@ -235,6 +241,12 @@ namespace hpl {
 
 	tString cMaterialManager::GetPhysicsMaterialName(const tString& asName)
 	{
+		if(mpRs)
+		{
+			tString sRsName;
+			ohpl_h3f_material_physics_name(mpRs, H3Ops(), RM_STR(asName), [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sRsName);
+			return sRsName;
+		}
 		cMaterial* pMaterial;
 
 		cRmEnv env(mpFileSearcher, this);
@@ -284,6 +296,12 @@ namespace hpl {
 
 	cMaterial* cMaterialManager::CreateCustomMaterial(const tString& asName, iMaterialType *apMaterialType)
 	{
+		if(mpRs)
+		{
+			cMaterial* pCustom = hplNew( cMaterial, (asName, cString::To16Char(asName), mpGraphics, mpResources, apMaterialType) );
+			ohpl_h3f_material_custom(mpRs, H3Ops(), static_cast<iResourceBase*>(pCustom));
+			return pCustom;
+		}
 		cMaterial* pMat = hplNew( cMaterial, (asName, cString::To16Char(asName), mpGraphics, mpResources, apMaterialType) );
 		pMat->IncUserCount();
 		AddResource(pMat);
@@ -574,4 +592,64 @@ namespace hpl {
 		return axis;
 	}
 
+
+	void* cMaterialManager::H3Create(OhplH3Create &aCreate)
+	{
+		return static_cast<iResourceBase*>(LoadFromFile(H3Name(aCreate.name), H3Wide(aCreate.path)));
+	}
+
+	int64_t cMaterialManager::H3Call(int alWhat, void *apObj, int64_t alArg)
+	{
+		cMaterial *pMat = H3Res<cMaterial>(apObj);
+		if(alWhat == OHPL_H3C_MAT_COMPILE_LOOKUP)
+		{
+			if(pMat->GetType()) pMat->CompileTextureLookup();
+			return 0;
+		}
+		for(int i=0; i<eMaterialTexture_LastEnum; ++i)
+		{
+			iTexture *pTex = pMat->GetTexture((eMaterialTexture)i);
+			if(pTex == NULL) continue;
+			if(alWhat == OHPL_H3C_MAT_SET_FILTER) pTex->SetFilter((eTextureFilter)alArg);
+			else if(alWhat == OHPL_H3C_MAT_SET_ANISO) pTex->SetAnisotropyDegree(H3Float(alArg));
+		}
+		return 0;
+	}
+
+	void cMaterialManager::H3Text(int alWhat, void *apObj, const OhplH3WStr &aPath, void (*apSink)(void*, const uint8_t*, size_t), void *apCtx)
+	{
+		tString sName;
+		if(apObj) sName = H3Res<cMaterial>(apObj)->GetPhysicsMaterial();
+		else
+		{
+			tWString sPath = H3Wide(aPath);
+			FILE *pFile = cPlatform::OpenFile(sPath, _W("rb"));
+			if(pFile!=NULL)
+			{
+				TiXmlDocument *pDoc = hplNew( TiXmlDocument, () );
+				if(!pDoc->LoadFile(pFile))
+				{
+					fclose(pFile);
+					hplDelete(pDoc);
+				}
+				else
+				{
+					fclose(pFile);
+					TiXmlElement *pRoot = pDoc->RootElement();
+					TiXmlElement *pMain = pRoot->FirstChildElement("Main");
+					if(pMain==NULL)
+					{
+						hplDelete(pDoc);
+						Error("Main child not found in '%s'\n",sPath.c_str());
+					}
+					else
+					{
+						sName = cString::ToString(pMain->Attribute("PhysicsMaterial"),"Default");
+						hplDelete(pDoc);
+					}
+				}
+			}
+		}
+		apSink(apCtx, reinterpret_cast<const uint8_t*>(sName.data()), sName.size());
+	}
 }

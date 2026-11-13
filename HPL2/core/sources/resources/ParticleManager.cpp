@@ -47,6 +47,7 @@ namespace hpl {
 
 	cParticleManager::~cParticleManager()
 	{
+		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_PARTICLE); return; }
 		tResourceBaseMapIt it = m_mapResources.begin();
 		for(;it != m_mapResources.end(); ++it)
 		{
@@ -71,6 +72,7 @@ namespace hpl {
 
 	cParticleSystem* cParticleManager::CreatePS(const tString& asName,const tString& asType, cVector3f avSize)
 	{
+		if(mpRs) return static_cast<cParticleSystem*>(ohpl_h3f_particle_by_type(mpRs, H3Ops(), RM_STR(asName), RM_STR(asType), avSize.x, avSize.y, avSize.z));
 		cParticleSystemData *pData = NULL;
 
 		cRmEnv env(mpFileSearcher, this);
@@ -122,6 +124,7 @@ namespace hpl {
 
 	cParticleSystem* cParticleManager::CreatePS(const tString& asName, const tString& asDataName, cXmlElement* apElement, cVector3f avSize)
 	{
+		if(mpRs) return static_cast<cParticleSystem*>(ohpl_h3f_particle_by_element(mpRs, H3Ops(), RM_STR(asName), RM_STR(asDataName), apElement, avSize.x, avSize.y, avSize.z));
 		cParticleSystemData *pPSData = NULL;
 
 		BeginLoad(asName);
@@ -158,6 +161,7 @@ namespace hpl {
 
 	void cParticleManager::AddData(cParticleSystemData *apData)
 	{
+		if(mpRs) { ohpl_h3f_particle_add_data(mpRs, H3Ops(), static_cast<iResourceBase*>(apData)); return; }
 		AddResource(apData);
 	}
 
@@ -165,6 +169,7 @@ namespace hpl {
 
 	void cParticleManager::Preload(const tString& asFile)
 	{
+		if(mpRs) { ohpl_h3f_particle_preload(mpRs, H3Ops(), RM_STR(asFile)); return; }
 		cRmEnv env(mpFileSearcher, this);
 		cRmOut byFile;
 		ohpl_rm_particle_by_file(env.raw(), RM_STR(asFile), byFile.raw());
@@ -203,6 +208,7 @@ namespace hpl {
 
 	void cParticleManager::Destroy(iResourceBase* apResource)
 	{
+		if(mpRs) { ohpl_h3f_particle_destroy(mpRs, H3Ops(), apResource); return; }
 		ohpl_rm_destroy_particle(apResource->GetMeta());
 	}
 	
@@ -216,4 +222,26 @@ namespace hpl {
 
 
 	//-----------------------------------------------------------------------
+
+	void* cParticleManager::H3Create(OhplH3Create &aCreate)
+	{
+		if(aCreate.kind == OHPL_H3_PS_CREATE)
+		{
+			cVector3f vSize(aCreate.f[0], aCreate.f[1], aCreate.f[2]);
+			cParticleSystemData *pData = H3Res<cParticleSystemData>(aCreate.ptr);
+			cParticleSystem *pPS = pData->Create(H3Name(aCreate.name), vSize);
+			pPS->SetDataName(H3Name(aCreate.name2));
+			pPS->SetDataSize(vSize);
+			pPS->SetParticleManager(this);
+			return pPS;
+		}
+		cParticleSystemData *pPSData = hplNew( cParticleSystemData, (H3Name(aCreate.name), mpResources, mpGraphics) );
+		bool bOk = aCreate.kind == OHPL_H3_PS_DATA_FILE ? pPSData->LoadFromFile(H3Wide(aCreate.path)) : pPSData->LoadFromElement(static_cast<cXmlElement*>(aCreate.ptr));
+		if(bOk==false)
+		{
+			hplDelete(pPSData);
+			return NULL;
+		}
+		return static_cast<iResourceBase*>(pPSData);
+	}
 }

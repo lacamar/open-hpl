@@ -62,6 +62,13 @@ namespace hpl {
 		static bool IsHpsl() { return mpHpslTranspileCallback != NULL; }
 		static void AddGlobalDefine(const tString& asName) { mvGlobalDefines.push_back(asName); }
 
+	protected:
+		void* H3Create(OhplH3Create &aCreate) override;
+		int64_t H3Call(int alWhat, void *apObj, int64_t alArg) override;
+		void H3Text(int alWhat, void *apObj, const OhplH3WStr &aPath, void (*apSink)(void*, const uint8_t*, size_t), void *apCtx) override;
+		tString msScratchParsed;
+		tString msScratchPre;
+		tString msTranspileError;
 	private:
 		bool IsShaderSupported(const tString& asName, eGpuShaderType aType);
 

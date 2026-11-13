@@ -5,6 +5,11 @@ pub mod config;
 pub mod ffi;
 #[cfg(test)]
 mod golden_tests;
+pub mod h3_ffi;
+pub mod h3_flows;
+pub mod h3_gpu;
+pub mod h3_image;
+pub mod h3_ops;
 pub mod manager;
 pub mod manager_ffi;
 #[cfg(test)]
