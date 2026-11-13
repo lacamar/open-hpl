@@ -17,6 +17,13 @@ mod ffi_h6;
 mod ffi_mesh;
 pub mod font;
 pub mod formats;
+pub mod h5b_ffi;
+pub mod h5b_foreign;
+pub mod h5b_gfx;
+pub mod h5b_imm;
+pub mod h5b_ops;
+pub mod h5b_scn;
+pub mod h5b_trace;
 pub mod meshgen;
 pub mod packer;
 pub mod scatter;
@@ -31,6 +38,8 @@ mod tests;
 mod tests_decal;
 #[cfg(test)]
 mod tests_h5;
+#[cfg(test)]
+mod tests_h5b;
 #[cfg(test)]
 mod tests_h6;
 #[cfg(test)]
