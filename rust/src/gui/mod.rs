@@ -4,6 +4,7 @@
 
 pub mod draw;
 mod ffi;
+mod ffi_set;
 mod ffi_skin;
 mod ffi_widget;
 mod ffi_widget2;
@@ -13,6 +14,7 @@ pub mod guicore;
 pub mod layout;
 pub mod list;
 pub mod popup;
+pub mod set;
 pub mod skin;
 mod sort;
 pub mod widget;
@@ -24,6 +26,8 @@ pub mod widgets_text;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_set;
 #[cfg(test)]
 mod tests_skin;
 #[cfg(test)]
