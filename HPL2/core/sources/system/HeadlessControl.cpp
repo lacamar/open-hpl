@@ -304,10 +304,16 @@ namespace hpl {
 
 	void cHeadlessControlServer::RegisterHandler(const tString &asCmd, tHeadlessCommandFunc apFunc, void *apUserData)
 	{
-		if(mpRs) return;
 		cHandlerEntry entry;
 		entry.mpFunc = apFunc;
 		entry.mpUserData = apUserData;
+		if(mpRs)
+		{
+			size_t lSlot = ohpl_h22_hc_register(mpRs, OhplEnP(asCmd), asCmd.size());
+			if(lSlot >= mvRsHandlers.size()) mvRsHandlers.resize(lSlot + 1);
+			mvRsHandlers[lSlot] = entry;
+			return;
+		}
 		mmapHandlers[asCmd] = entry;
 	}
 
@@ -528,6 +534,28 @@ namespace hpl {
 			memcpy(ev.text.text, apText, alLen);
 			static_cast<cLowLevelInputSDL*>(((cHeadlessControlServer*)apCtx)->mpEngine->GetInput()->GetLowLevel())->mlstInjected.push_back(ev);
 #endif
+		};
+		mRsHost.call_handler = [](void *apCtx, size_t alSlot, const uint8_t *apBlob, size_t alLen, OhplH22Sink apSink, void *apSinkCtx) {
+			cHeadlessControlServer *pThis = (cHeadlessControlServer*)apCtx;
+			cHeadlessRequest request;
+			for(size_t i = 0; i + 8 <= alLen;)
+			{
+				tString vPart[2];
+				for(int p = 0; p < 2 && i + 8 <= alLen; ++p)
+				{
+					uint64_t lN;
+					memcpy(&lN, apBlob + i, 8);
+					i += 8;
+					vPart[p].assign((const char*)apBlob + i, (size_t)lN);
+					i += (size_t)lN;
+				}
+				request.mmapFields[vPart[0]] = vPart[1];
+			}
+			cHeadlessResponse response;
+			const cHandlerEntry &entry = pThis->mvRsHandlers[alSlot];
+			entry.mpFunc(entry.mpUserData, request, response);
+			tString sJson = response.ToJson();
+			apSink(apSinkCtx, (const uint8_t*)sJson.data(), sJson.size());
 		};
 		mRsHost.run_message = [](void *apCtx, int alMsg) {
 			((cHeadlessControlServer*)apCtx)->mpEngine->GetUpdater()->RunMessage((eUpdateableMessage)alMsg);

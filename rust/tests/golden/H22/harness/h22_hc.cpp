@@ -157,6 +157,25 @@ static std::string Unescape(const std::string &s)
 	return o;
 }
 
+static void HEcho(void *apUd, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	std::string sF;
+	for(auto &kv : aReq.mmapFields) sF += Hex(kv.first.data(), kv.first.size()) + "=" + Hex(kv.second.data(), kv.second.size()) + ",";
+	Out("state handler ud=" + std::to_string((int)(intptr_t)apUd) + " " + sF);
+	aResp.Set("ud", (int)(intptr_t)apUd);
+	aResp.Set("cmd", aReq.GetCmd());
+	aResp.Set("a", aReq.GetString("a", ""));
+	aResp.Set("n", aReq.GetInt("n", -1));
+	aResp.Set("f", aReq.GetFloat("f", 0.5f));
+	aResp.Set("b", aReq.GetBool("b", false));
+	aResp.Set("has", aReq.HasKey("a"));
+	aResp.SetRaw("raw", "[1,2]");
+}
+
+static void HFail(void*, const cHeadlessRequest&, cHeadlessResponse &aResp) { aResp.SetError("custom fail \"q\""); }
+
+static void HPing(void*, const cHeadlessRequest&, cHeadlessResponse &aResp) { aResp.Set("pong2", true); }
+
 int hplMain(const tString&)
 {
 	const char *pScript = getenv("H22_SCRIPT");
@@ -267,6 +286,15 @@ int hplMain(const tString&)
 		else if(cmd == ">>") { std::string raw = Unescape(rest); send(lFd, raw.data(), raw.size(), 0); }
 		else if(cmd == "settle") usleep(60000);
 		else if(cmd == "pump") Pump(atoi(rest.c_str()));
+		else if(cmd == "register")
+		{
+			pServer->RegisterHandler("echo", HEcho, (void*)7);
+			pServer->RegisterHandler("ping", HPing, NULL);
+			pServer->RegisterHandler("echo", HEcho, (void*)9);
+			pServer->RegisterHandler("fail", HFail, NULL);
+			pServer->RegisterHandler("wait_frames", HEcho, (void*)3);
+			pServer->RegisterHandler("dev_hud", HEcho, (void*)5);
+		}
 		else if(cmd == "loading") bLoading = atoi(rest.c_str()) != 0;
 		else if(cmd == "frames") for(int i = atoi(rest.c_str()); i > 0; --i) cEngineDiagnostics::EndFrame();
 		else if(cmd == "log") pServer->PushLogLine(eLogOutputType_Normal, Unescape(rest));

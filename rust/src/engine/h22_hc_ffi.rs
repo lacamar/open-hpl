@@ -1,6 +1,6 @@
 //! C ABI of the headless control server (`HPL2/core/include/engine/RustEngineH22.h`).
 
-use super::h22_hc::{self, Ev, HcHost, HcServer, LogLevel, MouseButton, Shot};
+use super::h22_hc::{self, Ev, HcHost, HcServer, LogLevel, MouseButton, Request, Shot};
 use crate::string_ffi::{Sink, units};
 use crate::sys::sdl2;
 use std::ffi::{CString, c_void};
@@ -27,6 +27,8 @@ pub struct HcHostC {
     pub screenshot: unsafe extern "C" fn(*mut c_void, *const u8, usize) -> i32,
     pub inject_text: unsafe extern "C" fn(*mut c_void, *const u8, usize),
     pub run_message: unsafe extern "C" fn(*mut c_void, i32),
+    pub call_handler:
+        unsafe extern "C" fn(*mut c_void, usize, *const u8, usize, Sink<u8>, *mut c_void),
 }
 
 unsafe extern "C" fn collect(ctx: *mut c_void, p: *const u8, n: usize) {
@@ -215,6 +217,20 @@ impl HcHost for HcHostC {
         // SAFETY: host contract.
         unsafe { (self.run_message)(self.ctx, msg) }
     }
+
+    fn call_handler(&self, slot: usize, req: &Request) -> Vec<u8> {
+        let mut blob = Vec::new();
+        for (k, v) in &req.fields {
+            for part in [k, v] {
+                blob.extend_from_slice(&(part.len() as u64).to_ne_bytes());
+                blob.extend_from_slice(part);
+            }
+        }
+        // SAFETY: host contract; `collect` matches the sink type.
+        self.string(|s, c| unsafe {
+            (self.call_handler)(self.ctx, slot, blob.as_ptr(), blob.len(), s, c);
+        })
+    }
 }
 
 /// # Safety
@@ -240,6 +256,18 @@ pub unsafe extern "C" fn ohpl_h22_hc_free(s: *mut HcServer) {
         // SAFETY: caller contract.
         drop(unsafe { Box::from_raw(s) });
     }
+}
+
+/// # Safety
+/// `s` is valid; `name` valid for `n` bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h22_hc_register(
+    s: *const HcServer,
+    name: *const u8,
+    n: usize,
+) -> usize {
+    // SAFETY: caller contract.
+    unsafe { (*s).register(units(name, n)) }
 }
 
 /// # Safety
