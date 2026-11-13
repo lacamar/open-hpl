@@ -155,8 +155,8 @@ void cLuxPlayerState_InteractGrab::RenderSolid(cRendererCallbackFunctions* apFun
 	cMatrixf mtxCamTransform = cMath::MatrixRotate(vCamRotation, eEulerRotationOrder_XYZ);
 	mtxCamTransform.SetTranslation(pCam->GetPosition());
 
-	cVector3f vBasePos = mpGrabData->mvGrabPositionOffset + cVector3f(0,0,-mfDepth);
-	cMatrixf mtxGoal = cMath::MatrixMul(cMath::MatrixTranslate(vBasePos), m_mtxBodyRotation);
+	cVector3f vBasePos = mR.data->mvGrabPositionOffset + cVector3f(0,0,-mR.depth);
+	cMatrixf mtxGoal = cMath::MatrixMul(cMath::MatrixTranslate(vBasePos), mR.bodyRotation);
 	mtxGoal = cMath::MatrixMul(mtxCamTransform,mtxGoal);
 
 	cMatrixf mtxGoalInv = cMath::MatrixInverse(mtxGoal);
@@ -255,9 +255,9 @@ void cLuxPlayerState_InteractGrab::SaveToSaveData(iLuxPlayerState_SaveData* apSa
 	
 	///////////////////////
 	// Save vars
-	kCopyToVar(pData, m_mtxBodyRotation);
-	kCopyToVar(pData, mvLocalBodyOffset);
-	kCopyToVar(pData, mfDepth);
+	(pData->m_mtxBodyRotation = mR.bodyRotation);
+	(pData->mvLocalBodyOffset = mR.localBodyOffset);
+	(pData->mfDepth = mR.depth);
 	kCopyToVar(pData, mfMaxDistance);
 }
 
@@ -286,9 +286,9 @@ void cLuxPlayerState_InteractGrab::LoadFromSaveDataAfterEnter(cLuxMap *apMap, iL
 
 	///////////////////////
 	// Load vars
-	kCopyFromVar(pData, m_mtxBodyRotation);
-	kCopyFromVar(pData, mvLocalBodyOffset);
-	kCopyFromVar(pData, mfDepth);
+	(mR.bodyRotation = pData->m_mtxBodyRotation);
+	(mR.localBodyOffset = pData->mvLocalBodyOffset);
+	(mR.depth = pData->mfDepth);
 	kCopyFromVar(pData, mfMaxDistance);
 }
 

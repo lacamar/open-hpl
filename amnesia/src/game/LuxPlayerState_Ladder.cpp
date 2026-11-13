@@ -262,29 +262,29 @@ void cLuxPlayerState_Ladder::SaveToSaveData(iLuxPlayerState_SaveData* apSaveData
 
 	kCopyToVar(pData, mfTimeCount);
 
-	kCopyToVar(pData, mvCharPosition);
+	(pData->mvCharPosition = mR.charPosition);
 
-	kCopyToVar(pData, mvGoalPos);
-	kCopyToVar(pData, mvGoalRot);
+	(pData->mvGoalPos = mR.goalPos);
+	(pData->mvGoalRot = mR.goalRot);
 
-	kCopyToVar(pData, mvPosAdd);
-	kCopyToVar(pData, mvRotAdd);
+	(pData->mvPosAdd = mR.posAdd);
+	(pData->mvRotAdd = mR.rotAdd);
 
-	kCopyToVar(pData, mfMoveMul);
+	(pData->mfMoveMul = mR.moveMul);
 
-	kCopyToVar(pData, mfUpSpeed);
-	kCopyToVar(pData, mfDownSpeed);
+	(pData->mfUpSpeed = mR.upSpeed);
+	(pData->mfDownSpeed = mR.downSpeed);
 
-	kCopyToVar(pData, mfStepLength);
-	kCopyToVar(pData, mfStepCount);
-	kCopyToVar(pData, mbPlayedSound);
+	(pData->mfStepLength = mR.stepLength);
+	(pData->mfStepCount = mR.stepCount);
+	(pData->mbPlayedSound = mR.playedSound);
 
 	kCopyToVar(pData, mfPitchMaxLimit);
 	kCopyToVar(pData, mfPitchMinLimit);
 
-	kCopyToVar(pData, mfLeaveAtTopCount);
+	(pData->mfLeaveAtTopCount = mR.leaveAtTop);
 
-	kCopyToVar(pData, mbLanternDrawn);
+	(pData->mbLanternDrawn = mR.lanternDrawn);
 }
 
 //-----------------------------------------------------------------------
@@ -324,29 +324,29 @@ void cLuxPlayerState_Ladder::LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlay
 	
 	kCopyFromVar(pData, mfTimeCount);
 
-	kCopyFromVar(pData, mvCharPosition);
+	(mR.charPosition = pData->mvCharPosition);
 
-	kCopyFromVar(pData, mvGoalPos);
-	kCopyFromVar(pData, mvGoalRot);
+	(mR.goalPos = pData->mvGoalPos);
+	(mR.goalRot = pData->mvGoalRot);
 
-	kCopyFromVar(pData, mvPosAdd);
-	kCopyFromVar(pData, mvRotAdd);
+	(mR.posAdd = pData->mvPosAdd);
+	(mR.rotAdd = pData->mvRotAdd);
 
-	kCopyFromVar(pData, mfMoveMul);
+	(mR.moveMul = pData->mfMoveMul);
 
-	kCopyFromVar(pData, mfUpSpeed);
-	kCopyFromVar(pData, mfDownSpeed);
+	(mR.upSpeed = pData->mfUpSpeed);
+	(mR.downSpeed = pData->mfDownSpeed);
 
-	kCopyFromVar(pData, mfStepLength);
-	kCopyFromVar(pData, mfStepCount);
-	kCopyFromVar(pData, mbPlayedSound);
+	(mR.stepLength = pData->mfStepLength);
+	(mR.stepCount = pData->mfStepCount);
+	(mR.playedSound = pData->mbPlayedSound);
 
 	kCopyFromVar(pData, mfPitchMaxLimit);
 	kCopyFromVar(pData, mfPitchMinLimit);
 
-	kCopyFromVar(pData, mfLeaveAtTopCount);
+	(mR.leaveAtTop = pData->mfLeaveAtTopCount);
 
-	kCopyFromVar(pData, mbLanternDrawn);
+	(mR.lanternDrawn = pData->mbLanternDrawn);
 
 	if(mlState>0)
 	{

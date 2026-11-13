@@ -58,7 +58,7 @@ cLuxPlayerState_UseItem::~cLuxPlayerState_UseItem()
 
 void cLuxPlayerState_UseItem::ImplementedOnEnterState(eLuxPlayerState aPrevState)
 {
-	mpCurrentItem = cLuxPlayerStateVars::mpInventoryItem;
+	mR.item = cLuxPlayerStateVars::mpInventoryItem;
 	cLuxPlayerStateVars::mpInventoryItem = NULL;
 }
 
@@ -86,7 +86,7 @@ void cLuxPlayerState_UseItem::ImplementedUpdate(float afTimeStep)
 cGuiGfxElement* cLuxPlayerState_UseItem::GetCrosshair()
 {
 	OhplA3Host h = A3HostTable();
-	return ohpl_a3_crosshair(mpA3, &h) == kOhplA3Crosshair_Item ? mpCurrentItem->GetImage() : NULL;
+	return ohpl_a3_crosshair(mpA3, &h) == kOhplA3Crosshair_Item ? mR.item->GetImage() : NULL;
 }
 
 //-----------------------------------------------------------------------
@@ -115,7 +115,7 @@ bool cLuxPlayerState_UseItem::ShowOutlineOnEntity(iLuxEntity *apEntity, iPhysics
 	
 	/////////////////////////////////
 	// Tinder box
-	if(mpCurrentItem->GetType() == eLuxItemType_Tinderbox)
+	if(mR.item->GetType() == eLuxItemType_Tinderbox)
 	{
 		if(apEntity->GetEntityType()!=eLuxEntityType_Prop) return false;
 
@@ -142,7 +142,7 @@ bool cLuxPlayerState_UseItem::ShowOutlineOnEntity(iLuxEntity *apEntity, iPhysics
 			}
 		}
 
-		return pMap->GetUseItemCallback(mpCurrentItem->GetName(), apEntity->GetName())!=NULL;
+		return pMap->GetUseItemCallback(mR.item->GetName(), apEntity->GetName())!=NULL;
 	}*/
 }
 
@@ -153,13 +153,13 @@ void cLuxPlayerState_UseItem::UseItem()
 	iLuxEntity *pEntity = mpEntityInFocus;
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 
-	float fMaxFocus = pEntity ? ohpl_ga2b_use_item_max_focus(pEntity->GetMaxFocusDistance(), mfMinUseItemDistance) : 0.0f;
-	int lPlan = ohpl_ga2b_use_item_focus(mpCurrentItem != NULL, pEntity != NULL, pMap != NULL, mfFocusDistance, fMaxFocus);
+	float fMaxFocus = pEntity ? ohpl_ga2b_use_item_max_focus(pEntity->GetMaxFocusDistance(), mR.minUseDistance) : 0.0f;
+	int lPlan = ohpl_ga2b_use_item_focus(mR.item != NULL, pEntity != NULL, pMap != NULL, mfFocusDistance, fMaxFocus);
 	if(lPlan == kOhplGa2bPlanNone) return;
 
 	if(lPlan == kOhplGa2bPlanCallback)
 	{
-		cLuxUseItemCallback *pCallback = pMap->GetUseItemCallback(mpCurrentItem->GetName(), pEntity->GetName());
+		cLuxUseItemCallback *pCallback = pMap->GetUseItemCallback(mR.item->GetName(), pEntity->GetName());
 		if(ohpl_ga2b_use_item_plan(pCallback != NULL) == kOhplGa2bPlanCallback)
 		{
 			bool bAutoDestroy = pCallback->mbAutoDestroy;

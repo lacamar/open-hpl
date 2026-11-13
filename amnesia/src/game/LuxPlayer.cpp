@@ -83,13 +83,13 @@ cLuxPlayer::cLuxPlayer() : iLuxUpdateable("LuxPlayer"), iLuxCollideCallbackConta
 
 	//////////////////////////////////
 	// Init General properties
-	mfHeadSpinDamageSpeed = gpBase->mpGameCfg->GetFloat("Player_General","HeadSpinDamageSpeed",0);
-	mfHeadSpinDeacc = gpBase->mpGameCfg->GetFloat("Player_General","HeadSpinDeacc",0);
+	mCore.mfHeadSpinDamageSpeed = gpBase->mpGameCfg->GetFloat("Player_General","HeadSpinDamageSpeed",0);
+	mCore.mfHeadSpinDeacc = gpBase->mpGameCfg->GetFloat("Player_General","HeadSpinDeacc",0);
 
 	msTerrorSound = gpBase->mpGameCfg->GetString("Player_General","TerrorSound","");
 
-	mfTerrorIncSpeed = gpBase->mpGameCfg->GetFloat("Player_General","TerrorIncSpeed",0);
-	mfTerrorDecSpeed = gpBase->mpGameCfg->GetFloat("Player_General","TerrorDecSpeed",0);
+	mCore.mfTerrorIncSpeed = gpBase->mpGameCfg->GetFloat("Player_General","TerrorIncSpeed",0);
+	mCore.mfTerrorDecSpeed = gpBase->mpGameCfg->GetFloat("Player_General","TerrorDecSpeed",0);
 
 	mlMaxPrevSpeeds = gpBase->mpGameCfg->GetInt("Player_General","MaxPrevSpeedsSaved",0);
 
@@ -283,7 +283,7 @@ void cLuxPlayer::Reset()
 
 	msFocusText = _W("");
 	msLastFocusText = _W("");
-	mfFocusTextAlpha =0;
+	mCore.mfFocusTextAlpha =0;
 
 	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
 	if(mpTerrorSound && pSoundHandler->IsValid(mpTerrorSound, mlTerrorSoundID)) mpTerrorSound->Stop();
@@ -301,10 +301,10 @@ void cLuxPlayer::Reset()
 	mfRollSpeedMul=0;
 	mfRollMaxSpeed=0;
 
-	mfLeanRoll=0;
-	mfLeanRollGoal=0;
-	mfLeanRollSpeedMul=0;
-	mfLeanRollMaxSpeed=0;
+	mCore.cam.mfLeanRoll=0;
+	mCore.cam.mfLeanRollGoal=0;
+	mCore.cam.mfLeanRollSpeedMul=0;
+	mCore.cam.mfLeanRollMaxSpeed=0;
 
 	mvCamAnimPos =0;
 	mvCamAnimPosGoal=0;
@@ -474,7 +474,7 @@ void cLuxPlayer::OnMapEnter(cLuxMap *apMap)
 	//Reset focus text
 	msFocusText = _W("");
 	msLastFocusText = _W("");
-	mfFocusTextAlpha =0;
+	mCore.mfFocusTextAlpha =0;
 
 	////////////////////////////////
 	//Reset variables
@@ -518,10 +518,10 @@ void cLuxPlayer::OnMapLeave(cLuxMap *apMap)
 	mfPitchSpeedMul=0;
 	mfPitchMaxSpeed=0;
 
-	mfLeanRoll=0;
-	mfLeanRollGoal=0;
-	mfLeanRollSpeedMul=0;
-	mfLeanRollMaxSpeed=0;
+	mCore.cam.mfLeanRoll=0;
+	mCore.cam.mfLeanRollGoal=0;
+	mCore.cam.mfLeanRollSpeedMul=0;
+	mCore.cam.mfLeanRollMaxSpeed=0;
 
 	mpCamera->SetRoll(0.0f);
 	mpCamera->SetFOV(mfFOV*mfFOVMul);
@@ -968,9 +968,9 @@ void cLuxPlayer::FadePitchTo(float afX, float afSpeedMul, float afMaxSpeed)
 
 void cLuxPlayer::FadeLeanRollTo(float afX, float afSpeedMul, float afMaxSpeed)
 {
-	mfLeanRollGoal = afX;
-	mfLeanRollSpeedMul = afSpeedMul;
-	mfLeanRollMaxSpeed = afMaxSpeed;
+	mCore.cam.mfLeanRollGoal = afX;
+	mCore.cam.mfLeanRollSpeedMul = afSpeedMul;
+	mCore.cam.mfLeanRollMaxSpeed = afMaxSpeed;
 }
 
 void cLuxPlayer::SetRoll(float afX)
@@ -1098,15 +1098,15 @@ void cLuxPlayer::DrawHud(float afFrameTime)
 		mpFocusFont->GetWordWrapRows(500, 22, 22, msFocusText,&vRows);
         
 		for(size_t i=0; i<vRows.size(); ++i)
-			gpBase->mpGameHudSet->DrawFont(vRows[i],mpFocusFont,cVector3f(400, fFocusTextY+i*24,1),22,cColor(1,mfFocusTextAlpha),	eFontAlign_Center);
+			gpBase->mpGameHudSet->DrawFont(vRows[i],mpFocusFont,cVector3f(400, fFocusTextY+i*24,1),22,cColor(1,mCore.mfFocusTextAlpha),	eFontAlign_Center);
 	}
-	else if(mfFocusTextAlpha >0)
+	else if(mCore.mfFocusTextAlpha >0)
 	{
 		tWStringVec vRows;
 		mpFocusFont->GetWordWrapRows(500, 22, 22, msLastFocusText,&vRows);
 
 		for(size_t i=0; i<vRows.size(); ++i)
-			gpBase->mpGameHudSet->DrawFont(vRows[i],mpFocusFont,cVector3f(400, fFocusTextY+i*24,1),22,cColor(1,mfFocusTextAlpha),	eFontAlign_Center);
+			gpBase->mpGameHudSet->DrawFont(vRows[i],mpFocusFont,cVector3f(400, fFocusTextY+i*24,1),22,cColor(1,mCore.mfFocusTextAlpha),	eFontAlign_Center);
 	}
 }
 

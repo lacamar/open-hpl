@@ -150,7 +150,7 @@ void cLuxPlayerState_InteractSlide::RenderSolid(cRendererCallbackFunctions* apFu
 	cMatrixf mtxCamTransform = cMath::MatrixRotate(vCamRotation, eEulerRotationOrder_XYZ);
 	mtxCamTransform.SetTranslation(pCam->GetPosition());
 
-	cVector3f vWorldInteractPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mvLocalInteractPos);
+	cVector3f vWorldInteractPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mR.localInteractPos);
 
 	apFunctions->GetLowLevelGfx()->DrawSphere(vWorldInteractPos, 0.1f, cColor(0,1,0,1));
 	

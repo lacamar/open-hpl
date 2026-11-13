@@ -55,17 +55,17 @@
 
 cLuxPlayerInsanityCollapse::cLuxPlayerInsanityCollapse(cLuxPlayer *apPlayer) : iLuxPlayerHelper(apPlayer, "LuxPlayerInsanityCollapse")
 {
-	mfHeightAddGoal = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_HeightAddGoal",0);
+	mS.mfHeightAddGoal = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_HeightAddGoal",0);
 	
-	mfHeightAddCollapseSpeed = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_HeightAddCollapseSpeed",0);
-	mfHeightAddAwakeSpeed = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_HeightAddAwakeSpeed",0);
-	mfRollCollapseSpeed = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_RollCollapseSpeed",0);
+	mS.mfHeightAddCollapseSpeed = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_HeightAddCollapseSpeed",0);
+	mS.mfHeightAddAwakeSpeed = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_HeightAddAwakeSpeed",0);
+	mS.mfRollCollapseSpeed = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_RollCollapseSpeed",0);
 	mfRollAwakeSpeed = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_RollAwakeSpeed",0);
 
-	mfSleepTime = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_SleepTime",0);
+	mS.mfSleepTime = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_SleepTime",0);
 
 	mfSleepSpeedMul = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_SleepSpeedMul",0);
-	mfWakeUpSpeedMul = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_WakeUpSpeedMul",0);
+	mS.mfWakeUpSpeedMul = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_WakeUpSpeedMul",0);
 
 	msStartSound = gpBase->mpGameCfg->GetString("Player_General","InsanityCollapse_StartSound", "");
 	msAwakenSound = gpBase->mpGameCfg->GetString("Player_General","InsanityCollapse_AwakenSound", "");
@@ -73,10 +73,10 @@ cLuxPlayerInsanityCollapse::cLuxPlayerInsanityCollapse(cLuxPlayer *apPlayer) : i
 	mfSleepLoopSoundVolume = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_SleepLoopSoundVolume", 0);
 
 	msSleepRandomSound = gpBase->mpGameCfg->GetString("Player_General","InsanityCollapse_SleepRandomSound", "");
-	mfSleepRandomMinTime = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_SleepRandomMinTime", 0);
-	mfSleepRandomMaxTime = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_SleepRandomMaxTime", 0);
+	mS.mfSleepRandomMinTime = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_SleepRandomMinTime", 0);
+	mS.mfSleepRandomMaxTime = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_SleepRandomMaxTime", 0);
 
-	mfAwakenSanity = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_AwakenSanity", 0);
+	mS.mfAwakenSanity = gpBase->mpGameCfg->GetFloat("Player_General","InsanityCollapse_AwakenSanity", 0);
 
 	//Init sound var here
 	mpLoopSound = NULL;
@@ -186,7 +186,7 @@ void cLuxPlayerInsanityCollapse::HostOp(void *apCtx, uint32_t alKind, int32_t al
 	case kOhplGa2SetHeadAdd: p->mpPlayer->SetHeadPosAdd(eLuxHeadPosAdd_InsanityCollapse, cVector3f(0,afA,0)); break;
 	case kOhplGa2FadeRoll: p->mpPlayer->FadeRollTo(afA, afB, afC); break;
 	case kOhplGa2PlayRandomSound: gpBase->mpHelpFuncs->PlayGuiSoundData(p->msSleepRandomSound, eSoundEntryType_Gui); break;
-	case kOhplGa2RandCount: p->mfRandomCount = cMath::RandRectf(afA, afB); break;
+	case kOhplGa2RandCount: p->mS.mfRandomCount = cMath::RandRectf(afA, afB); break;
 	case kOhplGa2WakeFx:
 	{
 		cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
@@ -228,8 +228,8 @@ float cLuxPlayerInsanityCollapse::HostQuery(void *apCtx, uint32_t alKind, float 
 
 cLuxPlayerCamDirEffects::cLuxPlayerCamDirEffects(cLuxPlayer *apPlayer) : iLuxPlayerHelper(apPlayer, "LuxPlayerCamDirEffects")
 {
-	mfStartSwayMaxSanity =  gpBase->mpGameCfg->GetFloat("Player_Sanity","StartSwayMaxSanity",0);
-	mlMaxPositions = gpBase->mpGameCfg->GetInt("Player_Sanity","SwayMaxSavedPositions",0);
+	mS.k.mfStartSwayMaxSanity =  gpBase->mpGameCfg->GetFloat("Player_Sanity","StartSwayMaxSanity",0);
+	mS.k.mlMaxPositions = gpBase->mpGameCfg->GetInt("Player_Sanity","SwayMaxSavedPositions",0);
 	mS.mlCount = 0;
 }
 
@@ -525,18 +525,18 @@ bool cLuxPlayerSpawnPS::LoadSpawnPSFile(const tString& asFileName)
 
 cLuxPlayerHurt::cLuxPlayerHurt(cLuxPlayer *apPlayer) : iLuxPlayerHelper(apPlayer, "LuxPlayerHurt")
 {
-	mfEffectStartHealth =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_EffectStartHealth",0);
-	mfMinMoveMul =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_MinSpeedMul",0);
+	mS.k.mfEffectStartHealth =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_EffectStartHealth",0);
+	mS.k.mfMinMoveMul =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_MinSpeedMul",0);
 
-	mfMaxPantCount =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_MaxPantCount",0);
-	mfPantSpeed =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_PantSpeed",0);
-	mfPantSize =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_PantSize",0);
+	mS.k.mfMaxPantCount =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_MaxPantCount",0);
+	mS.k.mfPantSpeed =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_PantSpeed",0);
+	mS.k.mfPantSize =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_PantSize",0);
 
-	mfHealthRegainSpeed =  gpBase->mpGameCfg->GetFloat("Player_General","HealthRegainSpeed",0);
-	mfHealthRegainLimit =  gpBase->mpGameCfg->GetFloat("Player_General","HealthRegainLimit",0);
+	mS.mfHealthRegainSpeed =  gpBase->mpGameCfg->GetFloat("Player_General","HealthRegainSpeed",0);
+	mS.mfHealthRegainLimit =  gpBase->mpGameCfg->GetFloat("Player_General","HealthRegainLimit",0);
 
 	mfNoiseAlpha =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_NoiseAlpha",0);
-	mfNoiseFreq =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_NoiseFreq",0);
+	mS.k.mfNoiseFreq =  gpBase->mpGameCfg->GetFloat("Player_General","Hurt_NoiseFreq",0);
 	mNoiseColor =  gpBase->mpGameCfg->GetColor("Player_General","Hurt_NoiseColor",cColor(0));
 
 	cGui *pGui = gpBase->mpEngine->GetGui();
@@ -613,7 +613,7 @@ void cLuxPlayerHurt::OnDraw(float afFrameTime)
 	{
 		for(int x=0; x<vCount.x; ++x)
 		{
-			gpBase->mpGameHudSet->DrawGfx(mvNoiseGfx[mlCurrentNoise], vPos, vNoiseSize, cColor(1,1-mfAlpha, 1-mfAlpha));
+			gpBase->mpGameHudSet->DrawGfx(mvNoiseGfx[mS.k.mlCurrentNoise], vPos, vNoiseSize, cColor(1,1-mfAlpha, 1-mfAlpha));
 			vPos.x += vNoiseSize.x;
 		}
 		vPos.x = gpBase->mvHudVirtualStartPos.x;
@@ -631,10 +631,10 @@ void cLuxPlayerHurt::OnDraw(float afFrameTime)
 
 cLuxPlayerFlashback::cLuxPlayerFlashback (cLuxPlayer *apPlayer) : iLuxPlayerHelper(apPlayer, "LuxPlayerFlashback")
 {
-	mfRadialBlurSize = gpBase->mpGameCfg->GetFloat("Player_General","FlashbackRadialBlurSize", 0.12f);
-	mfRadialBlurStartDist = gpBase->mpGameCfg->GetFloat("Player_General","FlashbackRadialBlurStartDist", 0.4f);
+	mS.mfRadialBlurSize = gpBase->mpGameCfg->GetFloat("Player_General","FlashbackRadialBlurSize", 0.12f);
+	mS.mfRadialBlurStartDist = gpBase->mpGameCfg->GetFloat("Player_General","FlashbackRadialBlurStartDist", 0.4f);
 	mfWorldSoundVolume = gpBase->mpGameCfg->GetFloat("Player_General","FlashbackWorldSoundVolume", 0.4f);
-	mfMoveSpeedMul = gpBase->mpGameCfg->GetFloat("Player_General","FlashbackMoveSpeedMul", 1.0f);
+	mS.mfMoveSpeedMul = gpBase->mpGameCfg->GetFloat("Player_General","FlashbackMoveSpeedMul", 1.0f);
 	mfRunSpeedMul = gpBase->mpGameCfg->GetFloat("Player_General","FlashbackRunSpeedMul", 1.0f);
 
 	Reset();
@@ -1263,8 +1263,8 @@ cLuxPlayerLantern::cLuxPlayerLantern(cLuxPlayer *apPlayer) : iLuxPlayerHelper(ap
 	msGobo = gpBase->mpGameCfg->GetString("Player_Lantern","Gobo","");
 	mvLocalOffset = gpBase->mpGameCfg->GetVector3f("Player_Lantern","LocalOffset",0);
 	mbCastShadows = gpBase->mpGameCfg->GetBool("Player_Lantern","CastShadows",false);
-	mfLowerOilSpeed = gpBase->mpGameCfg->GetFloat("Player_Lantern","LowerOilSpeed",0);
-	mfFadeLightOilAmount = gpBase->mpGameCfg->GetFloat("Player_Lantern","FadeLightOilAmount",0);
+	mS.k.mfLowerOilSpeed = gpBase->mpGameCfg->GetFloat("Player_Lantern","LowerOilSpeed",0);
+	mS.k.mfFadeLightOilAmount = gpBase->mpGameCfg->GetFloat("Player_Lantern","FadeLightOilAmount",0);
 
 	msOutOfOilSound = gpBase->mpGameCfg->GetString("Player_Lantern","OutOfOilSound","");
 	msDisabledSound = gpBase->mpGameCfg->GetString("Player_Lantern","DisabledSound","");
@@ -2230,7 +2230,7 @@ void cLuxPlayerHudEffect::LoadDamageData(cLuxPlayerDamageData *apData, const tSt
 
 cLuxPlayerLightLevel::cLuxPlayerLightLevel(cLuxPlayer *apPlayer) : iLuxPlayerHelper(apPlayer, "LuxPlayerLightLevel")
 {
-	mfRadiusAdd = gpBase->mpGameCfg->GetFloat("Player_Darkness","RadiusAdd",0);
+	mS.mfRadiusAdd = gpBase->mpGameCfg->GetFloat("Player_Darkness","RadiusAdd",0);
 }
 
 cLuxPlayerLightLevel::~cLuxPlayerLightLevel()
@@ -2263,7 +2263,7 @@ void cLuxPlayerLightLevel::SampleLevels(const cVector3f *apPos, float *apExt, fl
 	vSkipLights.push_back(mpPlayer->GetHelperInDarkness()->GetAmbientLight());
 	for(int i=0; i<5; ++i)
 	{
-		apExt[i] = gpBase->mpMapHelper->GetLightLevelAtPos(apPos[i], &vSkipLights, mfRadiusAdd);
+		apExt[i] = gpBase->mpMapHelper->GetLightLevelAtPos(apPos[i], &vSkipLights, mS.mfRadiusAdd);
 		apNormal[i] = gpBase->mpMapHelper->GetLightLevelAtPos(apPos[i], &vSkipLights, 0);
 	}
 }
@@ -2318,9 +2318,9 @@ cLuxPlayerInDarkness::cLuxPlayerInDarkness(cLuxPlayer *apPlayer) : iLuxPlayerHel
 {
 	mpSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
 
-	mfMinDarknessLightLevel = gpBase->mpGameCfg->GetFloat("Player_Darkness","MinLightLevel",0);
+	mS.k.mfMinDarknessLightLevel = gpBase->mpGameCfg->GetFloat("Player_Darkness","MinLightLevel",0);
 	
-	mfAmbientLightMinLightLevel = gpBase->mpGameCfg->GetFloat("Player_Darkness","AmbientLightMinLightLevel",0);
+	mS.k.mfAmbientLightMinLightLevel = gpBase->mpGameCfg->GetFloat("Player_Darkness","AmbientLightMinLightLevel",0);
 	mfAmbientLightRadius = gpBase->mpGameCfg->GetFloat("Player_Darkness","AmbientLightRadius",0);
 	mfAmbientLightIntensity = gpBase->mpGameCfg->GetFloat("Player_Darkness","AmbientLightIntensity",0);
 	mfAmbientLightFadeInTime = gpBase->mpGameCfg->GetFloat("Player_Darkness","AmbientLightFadeInTime",0);
@@ -2329,11 +2329,11 @@ cLuxPlayerInDarkness::cLuxPlayerInDarkness(cLuxPlayer *apPlayer) : iLuxPlayerHel
 
 	msLoopSoundFile  = gpBase->mpGameCfg->GetString("Player_Darkness", "LoopSoundFile","");
 	mfLoopSoundVolume = gpBase->mpGameCfg->GetFloat("Player_Darkness", "LoopSoundVolume",0);
-	mfLoopSoundStartupTime = gpBase->mpGameCfg->GetFloat("Player_Darkness", "LoopSoundStartupTime",0);
+	mS.k.mfLoopSoundStartupTime = gpBase->mpGameCfg->GetFloat("Player_Darkness", "LoopSoundStartupTime",0);
 	mfLoopSoundFadeInSpeed = gpBase->mpGameCfg->GetFloat("Player_Darkness", "LoopSoundFadeInSpeed",0);
 	mfLoopSoundFadeOutSpeed = gpBase->mpGameCfg->GetFloat("Player_Darkness", "LoopSoundFadeOutSpeed",0);
 
-	mfSanityLossPerSecond = gpBase->mpGameCfg->GetFloat("Player_Darkness", "SanityLossPerSecond",0);
+	mS.k.mfSanityLossPerSecond = gpBase->mpGameCfg->GetFloat("Player_Darkness", "SanityLossPerSecond",0);
 }
 
 cLuxPlayerInDarkness::~cLuxPlayerInDarkness()

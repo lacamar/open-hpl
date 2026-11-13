@@ -123,29 +123,16 @@ private:
 
 	float &mfTimeCount = mR.timeCount;
 
-	cVector3f &mvCharPosition = mR.charPosition;
 
-	cVector3f &mvGoalPos = mR.goalPos;
-	cVector3f &mvGoalRot = mR.goalRot;
 
-	cVector3f &mvPosAdd = mR.posAdd;
-	cVector3f &mvRotAdd = mR.rotAdd;
 
-	float &mfMoveMul = mR.moveMul;
 
-	float &mfUpSpeed = mR.upSpeed;
-	float &mfDownSpeed = mR.downSpeed;
 
-	float &mfStepLength = mR.stepLength;
-	float &mfStepCount = mR.stepCount;
-	bool &mbPlayedSound = mR.playedSound;
 
 	float &mfPitchMaxLimit = mR.pitchMaxLimit;
 	float &mfPitchMinLimit = mR.pitchMinLimit;
 	
-	float &mfLeaveAtTopCount = mR.leaveAtTop;
 
-	bool &mbLanternDrawn = mR.lanternDrawn;
 };
 
 //----------------------------------------------

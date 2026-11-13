@@ -240,7 +240,7 @@ void iLuxEnemyLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTr
 	pEnemy->mfTurnMinBreakAngle = cMath::ToRad(GetVarFloat("TurnMinBreakAngle", 1));
 	pEnemy->mfTurnBreakMul = GetVarFloat("TurnBreakMul", 1);
 
-	pEnemy->mfMoveSpeedAnimMul =	GetVarFloat("MoveSpeedAnimMul", 1);
+	pEnemy->mA4.moveSpeedAnimMul =	GetVarFloat("MoveSpeedAnimMul", 1);
 
 	pEnemy->mfStoppedToWalkSpeed[eLuxEnemyPoseType_Biped] =	GetVarFloat("StoppedToWalkSpeed", 0);
 	pEnemy->mfWalkToStoppedSpeed[eLuxEnemyPoseType_Biped] =	GetVarFloat("WalkToStoppedSpeed", 0);
@@ -364,8 +364,8 @@ void iLuxEnemyLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTr
 	{
 		pEnemy->msCallbackFunc = apInstanceVars->GetVarString("CallbackFunc", "");
 		pEnemy->mbDisableTriggers = apInstanceVars->GetVarBool("DisableTriggers", false);
-		pEnemy->mbHallucination =  apInstanceVars->GetVarBool("Hallucination", false);
-		pEnemy->mfHallucinationEndDist = apInstanceVars->GetVarFloat("HallucinationEndDist", false);
+		pEnemy->mA4.hallucination =  apInstanceVars->GetVarBool("Hallucination", false);
+		pEnemy->mA4.hallucinationEndDist = apInstanceVars->GetVarFloat("HallucinationEndDist", false);
 		pEnemy->mbBlind = apInstanceVars->GetVarBool("Blind", false);
 		pEnemy->mbDeaf = apInstanceVars->GetVarBool("Deaf", false);
 
@@ -448,10 +448,10 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mCurrentState = eLuxEnemyState_LastEnum;
 	mPreviousState = eLuxEnemyState_LastEnum;
 	
-	mSoundState = eLuxEnemySoundState_Silent;
+	mA4.soundState = eLuxEnemySoundState_Silent;
 
-	mpCurrentSound = NULL;
-	mfAmbientSoundCount = 0;
+	mA4.curSound = NULL;
+	mA4.ambientCount = 0;
 
 	mfLookForPlayerCount =0;
 	mbCanSeePlayer = false;
@@ -467,16 +467,16 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mfForwardAcc =1;
 	mfForwardDeacc =1;
 
-	mfDarknessGlowAlpha =0;
-	mfDarknessGlowUpdateCount =0;
+	mA4.glowAlpha =0;
+	mA4.glowUpdateCount =0;
 
 	mfFOVMul = 1.0f;
 
-	mpCurrentAnimation = NULL;
+	mA4.curAnim = NULL;
 
-	mbAnimationIsSpeedDependant = false;
-	mfAnimationSpeedMul = 1;
-	mbUseMoveAnimWhenCurrentIsOver = true;
+	mA4.animSpeedDependant = false;
+	mA4.animSpeedMul = 1;
+	mA4.useMoveAnimWhenOver = true;
 
 	mpLastSearchNode = NULL;
 
@@ -498,10 +498,10 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mbBlind = false;
 	mbDeaf = false;
 
-	mbHallucination = false;
-	mfHallucinationEndDist = 3.0f;
+	mA4.hallucination = false;
+	mA4.hallucinationEndDist = 3.0f;
 	
-	mfEnemyDarknessGlowMaxDistance = gpBase->mpGameCfg->GetFloat("Enemy", "EnemyDarknessGlowMaxDistance",0);
+	mA4.glowMaxDist = gpBase->mpGameCfg->GetFloat("Enemy", "EnemyDarknessGlowMaxDistance",0);
 
 	mfPlayerInDarknessLightLevel = 0.35;
 	mfCrouchVisibleRangeMul = 0.5f;
@@ -560,7 +560,7 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mGa3Ctx.autoRemoveAtPathEnd = &mbAutoRemoveAtPathEnd;
 	ohpl_a4_init(&mA4, &mGa3Ctx, (int)aEnemyType);
 
-	mfCheckGroundRayCount =0;
+	mA4.groundRayCount =0;
 	mlMaxGroundCheckDists = 3;
 	mbAlignEntityWithGroundRay = false;
 
@@ -1602,13 +1602,13 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyToVar(pData, mfHealth);
 	kCopyToVar(pData, mbCausesSanityDecrease);
 
-	kCopyToVar(pData, mbHallucination);
+	(pData->mbHallucination = mA4.hallucination);
 	
 	pData->mlCurrentState = mCurrentState;
 	pData->mlNextState = mNextState;
 	pData->mlPreviousState = mPreviousState;
 
-	pData->mlSoundState = mSoundState;
+	pData->mlSoundState = mA4.soundState;
 
 	kCopyToVar(pData, mfLookForPlayerCount);
 	kCopyToVar(pData, mlPlayerInLOSCount);
@@ -1625,16 +1625,16 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyToVar(pData, mfForwardAcc);
 	kCopyToVar(pData, mfForwardDeacc);
 
-	kCopyToVar(pData, mfDarknessGlowAlpha);
-	kCopyToVar(pData, mfDarknessGlowAlphaGoal);
+	(pData->mfDarknessGlowAlpha = mA4.glowAlpha);
+	(pData->mfDarknessGlowAlphaGoal = mA4.glowGoal);
 
 	kCopyToVar(pData, mlAttackHitCounter);
 
 	kCopyToVar(pData,mfFOVMul);
 
-	kCopyToVar(pData, mbAnimationIsSpeedDependant);
-	kCopyToVar(pData, mfAnimationSpeedMul);
-	kCopyToVar(pData, mbUseMoveAnimWhenCurrentIsOver);
+	(pData->mbAnimationIsSpeedDependant = mA4.animSpeedDependant);
+	(pData->mfAnimationSpeedMul = mA4.animSpeedMul);
+	(pData->mbUseMoveAnimWhenCurrentIsOver = mA4.useMoveAnimWhenOver);
 
 	kCopyToVar(pData, mvStartPosition);
 
@@ -1661,8 +1661,8 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	
 	///////////////////////
 	//Current animation
-	if(mpCurrentAnimation)
-		pData->msCurrentAnimName = mpCurrentAnimation->GetName();
+	if(mA4.curAnim)
+		pData->msCurrentAnimName = mA4.curAnim->GetName();
 	else
 		pData->msCurrentAnimName = "";
 
@@ -1759,7 +1759,7 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyFromVar(pData, mfHealth);
 	kCopyFromVar(pData, mbCausesSanityDecrease);
 
-	kCopyFromVar(pData, mbHallucination);
+	(mA4.hallucination = pData->mbHallucination);
 
 	
 	mCurrentState = (eLuxEnemyState)pData->mlCurrentState;
@@ -1783,16 +1783,16 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyFromVar(pData, mfForwardAcc);
 	kCopyFromVar(pData, mfForwardDeacc);
 
-	kCopyFromVar(pData, mfDarknessGlowAlpha);
-	kCopyFromVar(pData, mfDarknessGlowAlphaGoal);
+	(mA4.glowAlpha = pData->mfDarknessGlowAlpha);
+	(mA4.glowGoal = pData->mfDarknessGlowAlphaGoal);
 
 	kCopyFromVar(pData, mlAttackHitCounter);
 
 	kCopyFromVar(pData,mfFOVMul);
 
-	kCopyFromVar(pData, mbAnimationIsSpeedDependant);
-	kCopyFromVar(pData, mfAnimationSpeedMul);
-	kCopyFromVar(pData, mbUseMoveAnimWhenCurrentIsOver);
+	(mA4.animSpeedDependant = pData->mbAnimationIsSpeedDependant);
+	(mA4.animSpeedMul = pData->mfAnimationSpeedMul);
+	(mA4.useMoveAnimWhenOver = pData->mbUseMoveAnimWhenCurrentIsOver);
 
 	kCopyFromVar(pData, mvStartPosition);
 
@@ -1810,11 +1810,11 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//Current animation
 	if(pData->msCurrentAnimName != "")
 	{
-		mpCurrentAnimation = mpMeshEntity->GetAnimationStateFromName(pData->msCurrentAnimName);
+		mA4.curAnim = mpMeshEntity->GetAnimationStateFromName(pData->msCurrentAnimName);
 	}
 	else
 	{
-		mpCurrentAnimation = NULL;
+		mA4.curAnim = NULL;
 	}
 	
 	///////////////////////
@@ -1964,7 +1964,7 @@ void iLuxEnemy::Ga3MoverParams(OhplGa3MoverParams &aParams)
 	aParams.turnBreakMul = mfTurnBreakMul;
 	aParams.turnSpeedMul = mfTurnSpeedMul;
 	aParams.turnMaxSpeed = mfTurnMaxSpeed;
-	aParams.moveSpeedAnimMul = mfMoveSpeedAnimMul;
+	aParams.moveSpeedAnimMul = mA4.moveSpeedAnimMul;
 	aParams.pose = mCurrentPose;
 	for(int i=0; i<2; ++i)
 	{
@@ -2044,8 +2044,8 @@ int iLuxEnemy::Ga3Call(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 		}
 		return pEnemy->PlayAnimImpl(sName, apIo->i[2] != 0, apIo->f[0], apIo->i[3] != 0, apIo->f[1], apIo->i[4] != 0, apIo->i[6] != 0) ? 1 : 0;
 	}
-	case eOhplGa3Op_AnimExists:		return pEnemy->mpCurrentAnimation ? 1 : 0;
-	case eOhplGa3Op_AnimSetSpeed:	pEnemy->mpCurrentAnimation->SetSpeed(apIo->f[0]); return 0;
+	case eOhplGa3Op_AnimExists:		return pEnemy->mA4.curAnim ? 1 : 0;
+	case eOhplGa3Op_AnimSetSpeed:	pEnemy->mA4.curAnim->SetSpeed(apIo->f[0]); return 0;
 	case eOhplGa3Op_FadeOutAnim:	return pEnemy->FadeOutCurrentAnimImpl(apIo->f[0]) ? 1 : 0;
 
 	case eOhplGa3Op_PlayerDead:		return pPlayer->IsDead() ? 1 : 0;

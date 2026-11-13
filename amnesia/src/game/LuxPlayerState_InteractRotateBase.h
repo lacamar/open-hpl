@@ -100,7 +100,6 @@ protected:
 	
 	float &mfMaxDistance = mR.maxDistance;
 
-	cVector3f &mvJointRight = mR.jointRight;
 	cVector3f &mvJointForward = mR.jointForward;
 	
 	cVector3f (&mvForceAxis)[2] = mR.forceAxis;
@@ -108,7 +107,6 @@ protected:
 	cVector2f &mvMouseAdd = mR.mouseAdd;
 	cVector2f &mvLastMouseAdd = mR.lastMouseAdd;
 	
-	float &mfRotSpeed = mR.rotSpeed;
 	
 	OhplGa2bPid3 &mRotatePid = mR.rotatePid;
 

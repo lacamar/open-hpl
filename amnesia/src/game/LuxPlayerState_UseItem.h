@@ -72,10 +72,8 @@ protected:
 	bool ShowOutlineOnEntity(iLuxEntity *apEntity, iPhysicsBody *apBody, const cVector3f &avFocusPos);
 	void UseItem();
 	
-	cLuxInventory_Item *&mpCurrentItem = mR.item;
 	cLinearOscillation &mFlashOscill = *reinterpret_cast<cLinearOscillation*>(mR.flash);
 
-	float &mfMinUseItemDistance = mR.minUseDistance;
 };
 
 //----------------------------------------------
