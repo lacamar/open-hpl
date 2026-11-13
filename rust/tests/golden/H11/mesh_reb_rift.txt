@@ -1151,3 +1151,6 @@ h 07dec571ca84e3a9
 o fadespeed 3 400c19cc 404c19cc
 h 07dec571ca84e3a9
 ~ n 8bea68c22df94003
+~ names 7e2e39d93e952d78
+~ setters ce54ae614a1caad6
+~ physflags 1ce8296b91842d82

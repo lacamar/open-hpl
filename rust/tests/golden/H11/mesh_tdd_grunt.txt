@@ -995,3 +995,6 @@ h 5448b334b73cb630
 o physfade 3f4f19d0
 h 5448b334b73cb630
 ~ n 0665b73090905aff
+~ names 04775c39314090c0
+~ setters ce54ae614a1caad6
+~ physflags 6b743c040ae8860c

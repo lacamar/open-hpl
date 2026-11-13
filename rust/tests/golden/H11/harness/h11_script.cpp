@@ -208,6 +208,80 @@ static void HashGraphics(Hash& bones, Hash& skin, cMeshEntity* e)
 	}
 }
 
+// Name lookups, sub-mesh fan-out setters and skeleton-physics flag paths; "~" lines, compared live (cpp vs rust).
+static void Extras(cMeshEntity* e, int nAnim)
+{
+	Hash h;
+	std::vector<std::string> names;
+	for(int i = 0; i < nAnim; ++i) names.push_back(e->GetAnimationState(i)->GetName());
+	names.push_back("no-such-anim");
+	names.push_back("");
+	for(size_t i = 0; i < names.size(); ++i)
+	{
+		const std::string& n = names[i];
+		h.U(e->GetAnimationStateIndex(n)); h.U(e->GetAnimationStateFromName(n) != NULL);
+		h.U(e->GetBoneStateIndex(n)); h.U(e->GetBoneStateFromName(n) != NULL);
+		h.U(e->GetNodeStateIndex(n)); h.U(e->GetNodeStateFromName(n) != NULL);
+		h.U(e->GetSubMeshEntityName(n) != NULL);
+		h.U(e->AnimationIsOver(n));
+		e->PlayName(n, i & 1, i & 2);
+		HashAnimStates(h, e);
+		e->PlayFadeToName(n, i & 1, 0.25f * (float)i);
+		HashAnimStates(h, e);
+	}
+	for(int i = 0; i < e->GetBoneStateNum(); ++i)
+	{
+		const std::string n = e->GetBoneState(i)->GetName();
+		h.U(e->GetBoneStateIndex(n));
+		h.U(e->GetBoneStateFromName(n) == e->GetBoneState(i));
+	}
+	for(int i = 0; i < e->GetNodeStateNum(); ++i)
+	{
+		const std::string n = e->GetNodeState(i)->GetName();
+		h.U(e->GetNodeStateIndex(n));
+		h.U(e->GetNodeStateFromName(n) == e->GetNodeState(i));
+	}
+	for(int i = 0; i < e->GetSubMeshEntityNum(); ++i)
+		h.U(e->GetSubMeshEntityName(e->GetMesh()->GetSubMesh(i)->GetName()) != NULL);
+	Out("~ names", h.h);
+
+	Hash g;
+	for(int round = 0; round < 3; ++round)
+	{
+		e->SetVisible(round != 1); e->SetVisible(round != 1);
+		e->SetStatic(round == 2);
+		e->SetIlluminationAmount(0.25f * (float)round); e->SetCoverageAmount(round == 1 ? 0.0f : 0.5f);
+		e->SetLiquidAmount(round - 1.0f);
+		if(round == 2) e->UseAutomaticLiquidAmount();
+		e->SetRenderFlagBit(1 << round, round != 1);
+		e->SetColorMul(cColor(0.1f * (float)round, 0.5f, 0.75f, 1));
+		e->SetIlluminationColor(cColor(0.9f, 0.1f * (float)round, 0.3f, 1));
+		g.U(e->IsVisible()); g.U(e->IsStatic()); g.F(e->GetIlluminationAmount()); g.F(e->GetCoverageAmount()); g.F(e->GetLiquidAmount());
+		for(int i = 0; i < e->GetSubMeshEntityNum(); ++i)
+		{
+			cSubMeshEntity* x = e->GetSubMeshEntity(i);
+			g.U(x->GetVisibleVar()); g.U(x->IsStatic()); g.F(x->GetIlluminationAmount()); g.F(x->GetCoverageAmount()); g.F(x->GetLiquidAmount());
+			g.U(x->GetRenderFlags()); g.C(x->GetColorMul()); g.C(x->GetIlluminationColor());
+		}
+	}
+	Out("~ setters", g.h);
+
+	Hash k;
+	e->SetSkeletonCollidersActive(true); k.U(e->GetSkeletonCollidersActive());
+	e->SetSkeletonPhysicsActive(true); k.U(e->GetSkeletonPhysicsActive());
+	e->FadeSkeletonPhysicsWeight(0.5f); k.F(e->GetSkeletonPhysicsWeight());
+	e->UpdateLogic(0.2f);
+	e->UpdateLogic(0.4f);
+	e->AlignBodiesToSkeleton(false);
+	k.U(e->CheckColliderShapeCollision(NULL, NULL, cMatrixf::Identity, NULL, NULL));
+	e->SetSkeletonCollidersActive(false); k.U(e->GetSkeletonCollidersActive());
+	e->SetSkeletonPhysicsActive(false); k.U(e->GetSkeletonPhysicsActive());
+	k.F(e->GetSkeletonPhysicsWeight());
+	e->FadeSkeletonPhysicsWeight(0.5f);
+	HashAnimStates(k, e);
+	Out("~ physflags", k.h);
+}
+
 static int Mesh(int seed, int steps, const char* file, int argc, char** argv)
 {
 	SetLogMessageCallback([](eLogOutputType, const char* m) { if(getenv("H11_LOG")) fprintf(stderr, "log: %s", m); });
@@ -365,6 +439,7 @@ static int Mesh(int seed, int steps, const char* file, int argc, char** argv)
 		Out("h", h.h);
 		Out("~ n", nodes.h);
 	}
+	Extras(e, nAnim);
 	return 0;
 }
 

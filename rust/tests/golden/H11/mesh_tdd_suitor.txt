@@ -1144,3 +1144,6 @@ h e8110d15e25b4352
 o update 00000000
 h e8110d15e25b4352
 ~ n 10e6ea8c73279d1e
+~ names e22a388cfbafedd8
+~ setters fea590e5f866dbdf
+~ physflags 091984bd42bb4c0a

@@ -1072,3 +1072,6 @@ h 28f1c0c847697cb5
 o static 1
 h 28f1c0c847697cb5
 ~ n 655f6048aff3ce22
+~ names 53ca3b6f7e156508
+~ setters 74c14149cbf8caff
+~ physflags dd2c3f0631c8f41c

@@ -46,6 +46,38 @@ namespace hpl {
 	};
 
 	struct OhplH11ShadowCache;
+	struct OhplH11Names;
+
+	struct OhplH11Call
+	{
+		void *ctx;
+		size_t (*call)(void*, int32_t, size_t, size_t, int32_t, float);
+	};
+
+	enum OhplH11Op
+	{
+		OhplH11Op_NodeActive = 0, OhplH11Op_NodeUpdateMatrix, OhplH11Op_NodeAnimXform, OhplH11Op_NodeChildCount,
+		OhplH11Op_NodeChild, OhplH11Op_NodeWorld, OhplH11Op_NodeUpdateWorld, OhplH11Op_NodeSetMatrix,
+		OhplH11Op_BoneBody, OhplH11Op_BoneCollider, OhplH11Op_BoneInvBody, OhplH11Op_BoneBodyMatrix,
+		OhplH11Op_BodyWorld, OhplH11Op_BodySetActive, OhplH11Op_BodyEnable, OhplH11Op_BodyZeroVel,
+		OhplH11Op_BodySetMatrix, OhplH11Op_BoneState, OhplH11Op_BoneCount, OhplH11Op_Root, OhplH11Op_ResetGfx,
+		OhplH11Op_EntWorld, OhplH11Op_EntParentWorld, OhplH11Op_EntSetMatrix, OhplH11Op_Collide,
+		OhplH11Op_PushPos, OhplH11Op_PushNum, OhplH11Op_SubCount, OhplH11Op_SubVisible, OhplH11Op_SubStatic,
+		OhplH11Op_SubIllum, OhplH11Op_SubCoverage, OhplH11Op_SubLiquid, OhplH11Op_SubAutoLiquid,
+		OhplH11Op_SubRenderFlag, OhplH11Op_SubColorMul, OhplH11Op_SubIllumColor, OhplH11Op_SubBvMin,
+		OhplH11Op_SubBvMax, OhplH11Op_BvFlag, OhplH11Op_BvClearFlag, OhplH11Op_BvFromVertices,
+		OhplH11Op_BvSetLocal, OhplH11Op_BvSetIdentity, OhplH11Op_BoneRadius, OhplH11Op_HasSkeleton,
+		OhplH11Op_Play, OhplH11Op_PlayFade, OhplH11Op_Warn, OhplH11Op_AnimIsOver, OhplH11Op_EvCallback,
+		OhplH11Op_EvValueEmpty, OhplH11Op_EvType, OhplH11Op_EvPlaySound, OhplH11Op_ListCount, OhplH11Op_ListAt,
+		OhplH11Op_SubMeshNum, OhplH11Op_CreateSub, OhplH11Op_AnimNum, OhplH11Op_CreateAnimState, OhplH11Op_CreateBoneRoot,
+		OhplH11Op_SkelBoneNum, OhplH11Op_CreateBone, OhplH11Op_BoneSetParent, OhplH11Op_BoneInitMatrices,
+		OhplH11Op_BoneResetMatrix, OhplH11Op_TempBoneInit, OhplH11Op_TempBoneCreate, OhplH11Op_SubAttach,
+		OhplH11Op_SubDetach, OhplH11Op_MeshNodeNum, OhplH11Op_SubFromMeshNode, OhplH11Op_NodeStateCount,
+		OhplH11Op_CreateNodeState, OhplH11Op_NodeSetParent, OhplH11Op_NodeAddRoot, OhplH11Op_NodeAddChild,
+		OhplH11Op_TransformUpdated, OhplH11Op_StrPtr, OhplH11Op_StrLen, OhplH11Op_SubSetLocalNode,
+		OhplH11Op_MeshNodeChildCount, OhplH11Op_SubDestroy, OhplH11Op_RootDelete, OhplH11Op_MeshDestroy,
+		OhplH11Op_DeleteAll, OhplH11Op_AnimStateCount
+	};
 
 	struct OhplH11MeshHost
 	{
@@ -113,6 +145,27 @@ void ohpl_h11_shadow_cache_set(OhplH11ShadowCache*, const OhplH11Caster*, int32_
 void ohpl_h11_shadow_cache_clear(OhplH11ShadowCache*);
 int32_t ohpl_h11_shadow_cache_len(const OhplH11ShadowCache*);
 void ohpl_h11_fog_bounds_size(const cVector3f*, cVector3f*);
+
+void ohpl_h11b_build(const OhplH11Call*, OhplH11Names*);
+void ohpl_h11b_create_nodes(const OhplH11Call*, OhplH11Names*);
+void ohpl_h11b_destroy(const OhplH11Call*);
+void ohpl_h11b_physics_from_bodies(const OhplH11Call*);
+void ohpl_h11b_bone_nodes_update(const OhplH11Call*);
+void ohpl_h11b_node_update(const OhplH11Call*);
+void ohpl_h11b_physics_active(const OhplH11Call*, OhplH11MeshCtl*, bool);
+void ohpl_h11b_physics_fade(const OhplH11Call*, OhplH11MeshCtl*, float);
+void ohpl_h11b_colliders_active(const OhplH11Call*, OhplH11MeshCtl*, bool);
+void ohpl_h11b_align_bodies(const OhplH11Call*);
+bool ohpl_h11b_check_colliders(const OhplH11Call*, size_t, bool, bool);
+void ohpl_h11b_bounding_volume(const OhplH11Call*);
+void ohpl_h11b_animation_event(const OhplH11Call*, size_t);
+void ohpl_h11b_fan_out(const OhplH11Call*, int32_t, size_t, size_t, float);
+OhplH11Names* ohpl_h11b_names_new();
+void ohpl_h11b_names_free(OhplH11Names*);
+void ohpl_h11b_names_insert(OhplH11Names*, int32_t, const char*, size_t, int32_t);
+int32_t ohpl_h11b_names_find(const OhplH11Names*, int32_t, const char*, size_t);
+void ohpl_h11b_play_name(const OhplH11Call*, const OhplH11Names*, const char*, size_t, bool, float, int32_t, bool);
+bool ohpl_h11b_anim_is_over(const OhplH11Call*, const OhplH11Names*, const char*, size_t);
 
 }
 }
