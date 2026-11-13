@@ -1,0 +1,2508 @@
+0.0 Print("Door_1") = -
+  host 0 Print("Door_1")
+0.1 Print("Body_Mesh_01") = -
+  host 0 Print("Body_Mesh_01")
+0.2 Print("a") = -
+  host 0 Print("a")
+0.3 Print("Door_1") = -
+  host 0 Print("Door_1")
+1.0 AddDebugMessage("x\0y",0) = -
+  host 1 AddDebugMessage("x\0y",0)
+1.1 AddDebugMessage("wild*",1) = -
+  host 1 AddDebugMessage("wild*",1)
+1.2 AddDebugMessage("Åge",0) = -
+  host 1 AddDebugMessage("Åge",0)
+1.3 AddDebugMessage("",1) = -
+  host 1 AddDebugMessage("",1)
+2.0 ProgLog("two words","Door_1") = -
+  host 2 ProgLog("two words","Door_1")
+2.1 ProgLog("wild*","wild*") = -
+  host 2 ProgLog("wild*","wild*")
+2.2 ProgLog("x\0y","wild*") = -
+  host 2 ProgLog("x\0y","wild*")
+2.3 ProgLog("Body_Mesh_01","wild*") = -
+  host 2 ProgLog("Body_Mesh_01","wild*")
+3.0 ScriptDebugOn() = 0
+  host 3 ScriptDebugOn()
+3.1 ScriptDebugOn() = 0
+  host 3 ScriptDebugOn()
+3.2 ScriptDebugOn() = 0
+  host 3 ScriptDebugOn()
+3.3 ScriptDebugOn() = 0
+  host 3 ScriptDebugOn()
+4.0 RandFloat(f3dcccccd,f80000000) = f40900000
+  host 4 RandFloat(f3dcccccd,f80000000)
+4.1 RandFloat(f7fc00000,f3dcccccd) = f40900000
+  host 4 RandFloat(f7fc00000,f3dcccccd)
+4.2 RandFloat(f80000000,f80000000) = f40900000
+  host 4 RandFloat(f80000000,f80000000)
+4.3 RandFloat(f3a83126f,f80000000) = f40900000
+  host 4 RandFloat(f3a83126f,f80000000)
+5.0 RandInt(7,255) = 12
+  host 5 RandInt(7,255)
+5.1 RandInt(-1,0) = 12
+  host 5 RandInt(-1,0)
+5.2 RandInt(0,7) = 12
+  host 5 RandInt(0,7)
+5.3 RandInt(-1,-1) = 12
+  host 5 RandInt(-1,-1)
+6.0 StringContains("Door_1","Åge") = 0
+6.1 StringContains("Door_1","a") = 0
+6.2 StringContains("two words","Door_1") = 0
+6.3 StringContains("wild*","wild*") = 1
+7.0 StringSub("a",2,2) = ptr
+  host 6 StringSub("a",2,2)
+7.1 StringSub("Åge",7,0) = ptr
+  host 6 StringSub("Åge",7,0)
+7.2 StringSub("",255,7) = ptr
+  host 6 StringSub("",255,7)
+7.3 StringSub("Åge",-1,2) = ptr
+  host 6 StringSub("Åge",-1,2)
+8.0 AddTimer("x\0y",f7f7fffff,"Door_1") = -
+  host 7 AddTimer("x\0y",f7f7fffff,"Door_1")
+8.1 AddTimer("a",f3f800000,"wild*") = -
+  host 7 AddTimer("a",f3f800000,"wild*")
+8.2 AddTimer("",fbfc00000,"Body_Mesh_01") = -
+  host 7 AddTimer("",fbfc00000,"Body_Mesh_01")
+8.3 AddTimer("two words",f3a83126f,"") = -
+  host 7 AddTimer("two words",f3a83126f,"")
+9.0 RemoveTimer("Body_Mesh_01") = -
+  host 8 RemoveTimer("Body_Mesh_01")
+9.1 RemoveTimer("wild*") = -
+  host 8 RemoveTimer("wild*")
+9.2 RemoveTimer("") = -
+  host 8 RemoveTimer("")
+9.3 RemoveTimer("a") = -
+  host 8 RemoveTimer("a")
+10.0 GetTimerTimeLeft("a") = f41180000
+  host 9 GetTimerTimeLeft("a")
+10.1 GetTimerTimeLeft("wild*") = f41180000
+  host 9 GetTimerTimeLeft("wild*")
+10.2 GetTimerTimeLeft("two words") = f41180000
+  host 9 GetTimerTimeLeft("two words")
+10.3 GetTimerTimeLeft("Door_1") = f41180000
+  host 9 GetTimerTimeLeft("Door_1")
+11.0 SetLocalVarInt("Body_Mesh_01",7) = -
+  host 10 SetLocalVarInt("Body_Mesh_01",7)
+11.1 SetLocalVarInt("Door_1",-1000) = -
+  host 10 SetLocalVarInt("Door_1",-1000)
+11.2 SetLocalVarInt("Åge",-1000) = -
+  host 10 SetLocalVarInt("Åge",-1000)
+11.3 SetLocalVarInt("two words",7) = -
+  host 10 SetLocalVarInt("two words",7)
+12.0 SetLocalVarFloat("wild*",f3a83126f) = -
+  host 11 SetLocalVarFloat("wild*",f3a83126f)
+12.1 SetLocalVarFloat("Åge",f80000000) = -
+  host 11 SetLocalVarFloat("Åge",f80000000)
+12.2 SetLocalVarFloat("wild*",f3dcccccd) = -
+  host 11 SetLocalVarFloat("wild*",f3dcccccd)
+12.3 SetLocalVarFloat("wild*",f7fc00000) = -
+  host 11 SetLocalVarFloat("wild*",f7fc00000)
+13.0 SetLocalVarString("Door_1","two words") = -
+  host 12 SetLocalVarString("Door_1","two words")
+13.1 SetLocalVarString("Door_1","Body_Mesh_01") = -
+  host 12 SetLocalVarString("Door_1","Body_Mesh_01")
+13.2 SetLocalVarString("","two words") = -
+  host 12 SetLocalVarString("","two words")
+13.3 SetLocalVarString("x\0y","") = -
+  host 12 SetLocalVarString("x\0y","")
+14.0 AddLocalVarInt("a",255) = -
+  host 13 AddLocalVarInt("a",255)
+14.1 AddLocalVarInt("",2) = -
+  host 13 AddLocalVarInt("",2)
+14.2 AddLocalVarInt("x\0y",-1) = -
+  host 13 AddLocalVarInt("x\0y",-1)
+14.3 AddLocalVarInt("Åge",0) = -
+  host 13 AddLocalVarInt("Åge",0)
+15.0 AddLocalVarFloat("two words",f3f800000) = -
+  host 14 AddLocalVarFloat("two words",f3f800000)
+15.1 AddLocalVarFloat("two words",f00000000) = -
+  host 14 AddLocalVarFloat("two words",f00000000)
+15.2 AddLocalVarFloat("Åge",f7f7fffff) = -
+  host 14 AddLocalVarFloat("Åge",f7f7fffff)
+15.3 AddLocalVarFloat("Door_1",f80000000) = -
+  host 14 AddLocalVarFloat("Door_1",f80000000)
+16.0 AddLocalVarString("x\0y","x\0y") = -
+  host 15 AddLocalVarString("x\0y","x\0y")
+16.1 AddLocalVarString("two words","Body_Mesh_01") = -
+  host 15 AddLocalVarString("two words","Body_Mesh_01")
+16.2 AddLocalVarString("Door_1","x\0y") = -
+  host 15 AddLocalVarString("Door_1","x\0y")
+16.3 AddLocalVarString("wild*","Door_1") = -
+  host 15 AddLocalVarString("wild*","Door_1")
+17.0 GetLocalVarInt("") = 23
+  host 16 GetLocalVarInt("")
+17.1 GetLocalVarInt("a") = 23
+  host 16 GetLocalVarInt("a")
+17.2 GetLocalVarInt("two words") = 23
+  host 16 GetLocalVarInt("two words")
+17.3 GetLocalVarInt("a") = 23
+  host 16 GetLocalVarInt("a")
+18.0 GetLocalVarFloat("Body_Mesh_01") = f418c0000
+  host 17 GetLocalVarFloat("Body_Mesh_01")
+18.1 GetLocalVarFloat("Åge") = f418c0000
+  host 17 GetLocalVarFloat("Åge")
+18.2 GetLocalVarFloat("Body_Mesh_01") = f418c0000
+  host 17 GetLocalVarFloat("Body_Mesh_01")
+18.3 GetLocalVarFloat("wild*") = f418c0000
+  host 17 GetLocalVarFloat("wild*")
+19.0 GetLocalVarString("a") = ptr
+  host 18 GetLocalVarString("a")
+19.1 GetLocalVarString("Åge") = ptr
+  host 18 GetLocalVarString("Åge")
+19.2 GetLocalVarString("Åge") = ptr
+  host 18 GetLocalVarString("Åge")
+19.3 GetLocalVarString("Body_Mesh_01") = ptr
+  host 18 GetLocalVarString("Body_Mesh_01")
+20.0 SetGlobalVarInt("",7) = -
+  host 19 SetGlobalVarInt("",7)
+20.1 SetGlobalVarInt("x\0y",-1) = -
+  host 19 SetGlobalVarInt("x\0y",-1)
+20.2 SetGlobalVarInt("Body_Mesh_01",-1) = -
+  host 19 SetGlobalVarInt("Body_Mesh_01",-1)
+20.3 SetGlobalVarInt("Door_1",0) = -
+  host 19 SetGlobalVarInt("Door_1",0)
+21.0 SetGlobalVarFloat("a",f42c80000) = -
+  host 20 SetGlobalVarFloat("a",f42c80000)
+21.1 SetGlobalVarFloat("",f00000000) = -
+  host 20 SetGlobalVarFloat("",f00000000)
+21.2 SetGlobalVarFloat("a",f7fc00000) = -
+  host 20 SetGlobalVarFloat("a",f7fc00000)
+21.3 SetGlobalVarFloat("wild*",f00000000) = -
+  host 20 SetGlobalVarFloat("wild*",f00000000)
+22.0 SetGlobalVarString("a","Body_Mesh_01") = -
+  host 21 SetGlobalVarString("a","Body_Mesh_01")
+22.1 SetGlobalVarString("two words","wild*") = -
+  host 21 SetGlobalVarString("two words","wild*")
+22.2 SetGlobalVarString("Door_1","") = -
+  host 21 SetGlobalVarString("Door_1","")
+22.3 SetGlobalVarString("wild*","Door_1") = -
+  host 21 SetGlobalVarString("wild*","Door_1")
+23.0 AddGlobalVarInt("Door_1",0) = -
+  host 22 AddGlobalVarInt("Door_1",0)
+23.1 AddGlobalVarInt("wild*",2) = -
+  host 22 AddGlobalVarInt("wild*",2)
+23.2 AddGlobalVarInt("two words",2) = -
+  host 22 AddGlobalVarInt("two words",2)
+23.3 AddGlobalVarInt("wild*",-1000) = -
+  host 22 AddGlobalVarInt("wild*",-1000)
+24.0 AddGlobalVarFloat("Door_1",f00000000) = -
+  host 23 AddGlobalVarFloat("Door_1",f00000000)
+24.1 AddGlobalVarFloat("a",f00000000) = -
+  host 23 AddGlobalVarFloat("a",f00000000)
+24.2 AddGlobalVarFloat("wild*",fbfc00000) = -
+  host 23 AddGlobalVarFloat("wild*",fbfc00000)
+24.3 AddGlobalVarFloat("Body_Mesh_01",f3dcccccd) = -
+  host 23 AddGlobalVarFloat("Body_Mesh_01",f3dcccccd)
+25.0 AddGlobalVarString("wild*","") = -
+  host 24 AddGlobalVarString("wild*","")
+25.1 AddGlobalVarString("Body_Mesh_01","x\0y") = -
+  host 24 AddGlobalVarString("Body_Mesh_01","x\0y")
+25.2 AddGlobalVarString("x\0y","") = -
+  host 24 AddGlobalVarString("x\0y","")
+25.3 AddGlobalVarString("","two words") = -
+  host 24 AddGlobalVarString("","two words")
+26.0 GetGlobalVarInt("wild*") = 32
+  host 25 GetGlobalVarInt("wild*")
+26.1 GetGlobalVarInt("a") = 32
+  host 25 GetGlobalVarInt("a")
+26.2 GetGlobalVarInt("Åge") = 32
+  host 25 GetGlobalVarInt("Åge")
+26.3 GetGlobalVarInt("two words") = 32
+  host 25 GetGlobalVarInt("two words")
+27.0 GetGlobalVarFloat("a") = f41d40000
+  host 26 GetGlobalVarFloat("a")
+27.1 GetGlobalVarFloat("wild*") = f41d40000
+  host 26 GetGlobalVarFloat("wild*")
+27.2 GetGlobalVarFloat("Åge") = f41d40000
+  host 26 GetGlobalVarFloat("Åge")
+27.3 GetGlobalVarFloat("wild*") = f41d40000
+  host 26 GetGlobalVarFloat("wild*")
+28.0 GetGlobalVarString("a") = ptr
+  host 27 GetGlobalVarString("a")
+28.1 GetGlobalVarString("Door_1") = ptr
+  host 27 GetGlobalVarString("Door_1")
+28.2 GetGlobalVarString("x\0y") = ptr
+  host 27 GetGlobalVarString("x\0y")
+28.3 GetGlobalVarString("two words") = ptr
+  host 27 GetGlobalVarString("two words")
+29.0 StartCredits("Door_1",0,"Body_Mesh_01","x\0y",7) = -
+  host 28 StartCredits("Door_1",0,"Body_Mesh_01","x\0y",7)
+29.1 StartCredits("x\0y",1,"Åge","Door_1",-1) = -
+  host 28 StartCredits("x\0y",1,"Åge","Door_1",-1)
+29.2 StartCredits("Door_1",1,"a","",-1) = -
+  host 28 StartCredits("Door_1",1,"a","",-1)
+29.3 StartCredits("Body_Mesh_01",1,"wild*","Body_Mesh_01",255) = -
+  host 28 StartCredits("Body_Mesh_01",1,"wild*","Body_Mesh_01",255)
+30.0 AddKeyPart(-1) = -
+  host 29 AddKeyPart(-1)
+30.1 AddKeyPart(1) = -
+  host 29 AddKeyPart(1)
+30.2 AddKeyPart(1) = -
+  host 29 AddKeyPart(1)
+30.3 AddKeyPart(2) = -
+  host 29 AddKeyPart(2)
+31.0 StartDemoEnd() = -
+  host 30 StartDemoEnd()
+31.1 StartDemoEnd() = -
+  host 30 StartDemoEnd()
+31.2 StartDemoEnd() = -
+  host 30 StartDemoEnd()
+31.3 StartDemoEnd() = -
+  host 30 StartDemoEnd()
+32.0 AutoSave() = -
+  host 31 AutoSave()
+32.1 AutoSave() = -
+  host 31 AutoSave()
+32.2 AutoSave() = -
+  host 31 AutoSave()
+32.3 AutoSave() = -
+  host 31 AutoSave()
+33.0 CheckPoint("Åge","","Body_Mesh_01","Åge","Åge") = -
+  host 32 CheckPoint("Åge","","Body_Mesh_01","Åge","Åge")
+33.1 CheckPoint("two words","Åge","Åge","a","a") = -
+  host 32 CheckPoint("two words","Åge","Åge","a","a")
+33.2 CheckPoint("Door_1","wild*","Door_1","Door_1","x\0y") = -
+  host 32 CheckPoint("Door_1","wild*","Door_1","Door_1","x\0y")
+33.3 CheckPoint("Body_Mesh_01","Åge","Door_1","Åge","Door_1") = -
+  host 32 CheckPoint("Body_Mesh_01","Åge","Door_1","Åge","Door_1")
+34.0 CheckPointAmfp("Åge","","Body_Mesh_01","","",1) = -
+  host 33 CheckPointAmfp("Åge","","Body_Mesh_01","","",1)
+34.1 CheckPointAmfp("two words","two words","a","two words","Åge",1) = -
+  host 33 CheckPointAmfp("two words","two words","a","two words","Åge",1)
+34.2 CheckPointAmfp("Åge","","wild*","x\0y","x\0y",1) = -
+  host 33 CheckPointAmfp("Åge","","wild*","x\0y","x\0y",1)
+34.3 CheckPointAmfp("Åge","x\0y","two words","","a",0) = -
+  host 33 CheckPointAmfp("Åge","x\0y","two words","","a",0)
+35.0 AmfpStub_AddHint("Door_1","Body_Mesh_01") = -
+  host warning "AMFP stub: AddHint('Door_1', 'Body_Mesh_01') not implemented\n"
+35.1 AmfpStub_AddHint("wild*","a") = -
+  host warning "AMFP stub: AddHint('wild*', 'a') not implemented\n"
+35.2 AmfpStub_AddHint("two words","") = -
+  host warning "AMFP stub: AddHint('two words', '') not implemented\n"
+35.3 AmfpStub_AddHint("wild*","x\0y") = -
+  host warning "AMFP stub: AddHint('wild*', 'x') not implemented\n"
+36.0 AmfpStub_GetEntityActive("two words") = 1
+  host 34 AmfpStub_GetEntityActive("two words")
+36.1 AmfpStub_GetEntityActive("Door_1") = 1
+  host 34 AmfpStub_GetEntityActive("Door_1")
+36.2 AmfpStub_GetEntityActive("a") = 1
+  host 34 AmfpStub_GetEntityActive("a")
+36.3 AmfpStub_GetEntityActive("two words") = 1
+  host 34 AmfpStub_GetEntityActive("two words")
+37.0 AmfpStub_SetEnemyMoveType("Åge","x\0y") = -
+  host warning "AMFP stub: SetEnemyMoveType('Åge', 'x') not implemented\n"
+37.1 AmfpStub_SetEnemyMoveType("x\0y","Body_Mesh_01") = -
+  host warning "AMFP stub: SetEnemyMoveType('x', 'Body_Mesh_01') not implemented\n"
+37.2 AmfpStub_SetEnemyMoveType("","a") = -
+  host warning "AMFP stub: SetEnemyMoveType('', 'a') not implemented\n"
+37.3 AmfpStub_SetEnemyMoveType("two words","two words") = -
+  host warning "AMFP stub: SetEnemyMoveType('two words', 'two words') not implemented\n"
+38.0 AmfpStub_SetJournalDisabled(1) = -
+  host warning "AMFP stub: SetJournalDisabled(1) not implemented\n"
+38.1 AmfpStub_SetJournalDisabled(0) = -
+  host warning "AMFP stub: SetJournalDisabled(0) not implemented\n"
+38.2 AmfpStub_SetJournalDisabled(0) = -
+  host warning "AMFP stub: SetJournalDisabled(0) not implemented\n"
+38.3 AmfpStub_SetJournalDisabled(0) = -
+  host warning "AMFP stub: SetJournalDisabled(0) not implemented\n"
+39.0 AmfpStub_SetLampFlickerActive("two words",1) = -
+  host warning "AMFP stub: SetLampFlickerActive('two words', 1) not implemented\n"
+39.1 AmfpStub_SetLampFlickerActive("Åge",1) = -
+  host warning "AMFP stub: SetLampFlickerActive('Åge', 1) not implemented\n"
+39.2 AmfpStub_SetLampFlickerActive("Åge",0) = -
+  host warning "AMFP stub: SetLampFlickerActive('Åge', 0) not implemented\n"
+39.3 AmfpStub_SetLampFlickerActive("wild*",1) = -
+  host warning "AMFP stub: SetLampFlickerActive('wild*', 1) not implemented\n"
+40.0 AmfpStub_SetLanternFlickerActive(1) = -
+  host warning "AMFP stub: SetLanternFlickerActive(1) not implemented\n"
+40.1 AmfpStub_SetLanternFlickerActive(1) = -
+  host warning "AMFP stub: SetLanternFlickerActive(1) not implemented\n"
+40.2 AmfpStub_SetLanternFlickerActive(1) = -
+  host warning "AMFP stub: SetLanternFlickerActive(1) not implemented\n"
+40.3 AmfpStub_SetLanternFlickerActive(1) = -
+  host warning "AMFP stub: SetLanternFlickerActive(1) not implemented\n"
+41.0 AmfpStub_SetManPigType("","two words") = -
+  host warning "AMFP stub: SetManPigType('', 'two words') not implemented\n"
+41.1 AmfpStub_SetManPigType("a","") = -
+  host warning "AMFP stub: SetManPigType('a', '') not implemented\n"
+41.2 AmfpStub_SetManPigType("a","Body_Mesh_01") = -
+  host warning "AMFP stub: SetManPigType('a', 'Body_Mesh_01') not implemented\n"
+41.3 AmfpStub_SetManPigType("wild*","") = -
+  host warning "AMFP stub: SetManPigType('wild*', '') not implemented\n"
+42.0 AmfpStub_SetParticleSystemActive("",0) = -
+  host warning "AMFP stub: SetParticleSystemActive('', 0) not implemented\n"
+42.1 AmfpStub_SetParticleSystemActive("Body_Mesh_01",0) = -
+  host warning "AMFP stub: SetParticleSystemActive('Body_Mesh_01', 0) not implemented\n"
+42.2 AmfpStub_SetParticleSystemActive("a",0) = -
+  host warning "AMFP stub: SetParticleSystemActive('a', 0) not implemented\n"
+42.3 AmfpStub_SetParticleSystemActive("wild*",1) = -
+  host warning "AMFP stub: SetParticleSystemActive('wild*', 1) not implemented\n"
+43.0 AmfpStub_SetPhysicsAutoDisable("Åge",1) = -
+  host warning "AMFP stub: SetPhysicsAutoDisable('Åge', 1) not implemented\n"
+43.1 AmfpStub_SetPhysicsAutoDisable("a",1) = -
+  host warning "AMFP stub: SetPhysicsAutoDisable('a', 1) not implemented\n"
+43.2 AmfpStub_SetPhysicsAutoDisable("a",0) = -
+  host warning "AMFP stub: SetPhysicsAutoDisable('a', 0) not implemented\n"
+43.3 AmfpStub_SetPhysicsAutoDisable("",1) = -
+  host warning "AMFP stub: SetPhysicsAutoDisable('', 1) not implemented\n"
+44.0 AmfpStub_SetPlayerInfection(f3a83126f) = -
+  host warning "AMFP stub: SetPlayerInfection(0.001000) not implemented\n"
+44.1 AmfpStub_SetPlayerInfection(f3dcccccd) = -
+  host warning "AMFP stub: SetPlayerInfection(0.100000) not implemented\n"
+44.2 AmfpStub_SetPlayerInfection(f3dcccccd) = -
+  host warning "AMFP stub: SetPlayerInfection(0.100000) not implemented\n"
+44.3 AmfpStub_SetPlayerInfection(f00000000) = -
+  host warning "AMFP stub: SetPlayerInfection(0.000000) not implemented\n"
+45.0 AmfpStub_ShowScreenImage("x\0y",fbfc00000,f3f800000,f3a83126f,0,f3dcccccd,f3dcccccd,f7f7fffff) = -
+  host warning "AMFP stub: ShowScreenImage('x', ...) not implemented\n"
+45.1 AmfpStub_ShowScreenImage("a",fbfc00000,f3dcccccd,f3f800000,1,f00000000,f7f7fffff,f00000000) = -
+  host warning "AMFP stub: ShowScreenImage('a', ...) not implemented\n"
+45.2 AmfpStub_ShowScreenImage("a",fbfc00000,f7fc00000,f3dcccccd,1,f7fc00000,f00000000,fbfc00000) = -
+  host warning "AMFP stub: ShowScreenImage('a', ...) not implemented\n"
+45.3 AmfpStub_ShowScreenImage("a",f3f800000,f3dcccccd,f7f7fffff,0,f42c80000,f3dcccccd,f00000000) = -
+  host warning "AMFP stub: ShowScreenImage('a', ...) not implemented\n"
+46.0 AmfpStub_StartPhoneRinging("") = -
+  host warning "AMFP stub: StartPhoneRinging('') not implemented\n"
+46.1 AmfpStub_StartPhoneRinging("Åge") = -
+  host warning "AMFP stub: StartPhoneRinging('Åge') not implemented\n"
+46.2 AmfpStub_StartPhoneRinging("x\0y") = -
+  host warning "AMFP stub: StartPhoneRinging('x') not implemented\n"
+46.3 AmfpStub_StartPhoneRinging("Åge") = -
+  host warning "AMFP stub: StartPhoneRinging('Åge') not implemented\n"
+47.0 AmfpStub_StopPhoneRinging("") = -
+  host warning "AMFP stub: StopPhoneRinging('') not implemented\n"
+47.1 AmfpStub_StopPhoneRinging("wild*") = -
+  host warning "AMFP stub: StopPhoneRinging('wild*') not implemented\n"
+47.2 AmfpStub_StopPhoneRinging("a") = -
+  host warning "AMFP stub: StopPhoneRinging('a') not implemented\n"
+47.3 AmfpStub_StopPhoneRinging("wild*") = -
+  host warning "AMFP stub: StopPhoneRinging('wild*') not implemented\n"
+48.0 AddEffectVoice2("wild*","Body_Mesh_01","two words","Body_Mesh_01",fbfc00000,"",f3a83126f,1,"x\0y",f3dcccccd,f7fc00000) = -
+  host 35 AddEffectVoice2("wild*","Body_Mesh_01","two words","Body_Mesh_01",fbfc00000,"",f3a83126f,1,"x\0y",f3dcccccd,f7fc00000)
+48.1 AddEffectVoice2("Body_Mesh_01","wild*","two words","a",f7fc00000,"two words",f3f800000,1,"two words",f00000000,f3f800000) = -
+  host 35 AddEffectVoice2("Body_Mesh_01","wild*","two words","a",f7fc00000,"two words",f3f800000,1,"two words",f00000000,f3f800000)
+48.2 AddEffectVoice2("x\0y","Body_Mesh_01","x\0y","two words",f3f800000,"",f42c80000,0,"Åge",f42c80000,f00000000) = -
+  host 35 AddEffectVoice2("x\0y","Body_Mesh_01","x\0y","two words",f3f800000,"",f42c80000,0,"Åge",f42c80000,f00000000)
+48.3 AddEffectVoice2("wild*","Åge","","wild*",f7fc00000,"x\0y",f3dcccccd,1,"a",f3dcccccd,f7f7fffff) = -
+  host 35 AddEffectVoice2("wild*","Åge","","wild*",f7fc00000,"x\0y",f3dcccccd,1,"a",f3dcccccd,f7f7fffff)
+49.0 AddEffectVoice3("","two words","Body_Mesh_01","two words",f42c80000,"Åge",f42c80000,"Åge",f7fc00000,0,"Body_Mesh_01",f00000000,fbfc00000) = -
+  host 36 AddEffectVoice3("","two words","Body_Mesh_01","two words",f42c80000,"Åge",f42c80000,"Åge",f7fc00000,0,"Body_Mesh_01",f00000000,fbfc00000)
+49.1 AddEffectVoice3("Body_Mesh_01","two words","Åge","Åge",f3f800000,"x\0y",fbfc00000,"Body_Mesh_01",f7f7fffff,1,"Body_Mesh_01",f80000000,f3f800000) = -
+  host 36 AddEffectVoice3("Body_Mesh_01","two words","Åge","Åge",f3f800000,"x\0y",fbfc00000,"Body_Mesh_01",f7f7fffff,1,"Body_Mesh_01",f80000000,f3f800000)
+49.2 AddEffectVoice3("Åge","Åge","a","two words",f3f800000,"two words",f7fc00000,"Body_Mesh_01",f00000000,0,"a",f7fc00000,f80000000) = -
+  host 36 AddEffectVoice3("Åge","Åge","a","two words",f3f800000,"two words",f7fc00000,"Body_Mesh_01",f00000000,0,"a",f7fc00000,f80000000)
+49.3 AddEffectVoice3("Door_1","a","wild*","wild*",fbfc00000,"Body_Mesh_01",f7f7fffff,"x\0y",f80000000,1,"a",f3dcccccd,f7f7fffff) = -
+  host 36 AddEffectVoice3("Door_1","a","wild*","wild*",fbfc00000,"Body_Mesh_01",f7f7fffff,"x\0y",f80000000,1,"a",f3dcccccd,f7f7fffff)
+50.0 AddEffectVoice5("two words","two words","two words","",fbfc00000,"Åge",f3a83126f,"x\0y",f3a83126f,"two words",f7f7fffff,"Body_Mesh_01",fbfc00000,1,"a",f3a83126f,f3a83126f) = -
+  host 37 AddEffectVoice5("two words","two words","two words","",fbfc00000,"Åge",f3a83126f,"x\0y",f3a83126f,"two words",f7f7fffff,"Body_Mesh_01",fbfc00000,1,"a",f3a83126f,f3a83126f)
+50.1 AddEffectVoice5("x\0y","Door_1","wild*","x\0y",f7f7fffff,"wild*",fbfc00000,"x\0y",f00000000,"Door_1",f3a83126f,"a",f42c80000,1,"two words",f3f800000,f80000000) = -
+  host 37 AddEffectVoice5("x\0y","Door_1","wild*","x\0y",f7f7fffff,"wild*",fbfc00000,"x\0y",f00000000,"Door_1",f3a83126f,"a",f42c80000,1,"two words",f3f800000,f80000000)
+50.2 AddEffectVoice5("wild*","a","x\0y","two words",f00000000,"Door_1",f3a83126f,"a",fbfc00000,"Body_Mesh_01",f7f7fffff,"Body_Mesh_01",fbfc00000,0,"",f7f7fffff,f3dcccccd) = -
+  host 37 AddEffectVoice5("wild*","a","x\0y","two words",f00000000,"Door_1",f3a83126f,"a",fbfc00000,"Body_Mesh_01",f7f7fffff,"Body_Mesh_01",fbfc00000,0,"",f7f7fffff,f3dcccccd)
+50.3 AddEffectVoice5("Door_1","Door_1","Body_Mesh_01","x\0y",f80000000,"wild*",f80000000,"Body_Mesh_01",f7fc00000,"x\0y",f3dcccccd,"a",f3f800000,1,"",f80000000,f3dcccccd) = -
+  host 37 AddEffectVoice5("Door_1","Door_1","Body_Mesh_01","x\0y",f80000000,"wild*",f80000000,"Body_Mesh_01",f7fc00000,"x\0y",f3dcccccd,"a",f3f800000,1,"",f80000000,f3dcccccd)
+51.0 AddEffectVoice6("Body_Mesh_01","Åge","x\0y","Door_1",f3a83126f,"Åge",f00000000,"Body_Mesh_01",f7fc00000,"two words",f42c80000,"Åge",f3f800000,"two words",fbfc00000,0,"x\0y",fbfc00000,f80000000) = -
+  host 38 AddEffectVoice6("Body_Mesh_01","Åge","x\0y","Door_1",f3a83126f,"Åge",f00000000,"Body_Mesh_01",f7fc00000,"two words",f42c80000,"Åge",f3f800000,"two words",fbfc00000,0,"x\0y",fbfc00000,f80000000)
+51.1 AddEffectVoice6("Door_1","Door_1","Body_Mesh_01","x\0y",f3a83126f,"Åge",f3a83126f,"Body_Mesh_01",f3dcccccd,"Door_1",fbfc00000,"wild*",f3f800000,"two words",f3f800000,0,"Door_1",f7f7fffff,f3f800000) = -
+  host 38 AddEffectVoice6("Door_1","Door_1","Body_Mesh_01","x\0y",f3a83126f,"Åge",f3a83126f,"Body_Mesh_01",f3dcccccd,"Door_1",fbfc00000,"wild*",f3f800000,"two words",f3f800000,0,"Door_1",f7f7fffff,f3f800000)
+51.2 AddEffectVoice6("Door_1","wild*","two words","Body_Mesh_01",f80000000,"Åge",f7fc00000,"two words",f00000000,"Door_1",f7fc00000,"two words",f00000000,"two words",f80000000,1,"Door_1",f80000000,f7f7fffff) = -
+  host 38 AddEffectVoice6("Door_1","wild*","two words","Body_Mesh_01",f80000000,"Åge",f7fc00000,"two words",f00000000,"Door_1",f7fc00000,"two words",f00000000,"two words",f80000000,1,"Door_1",f80000000,f7f7fffff)
+51.3 AddEffectVoice6("","Body_Mesh_01","","Door_1",f3f800000,"a",f00000000,"Door_1",f3f800000,"x\0y",f42c80000,"a",f80000000,"Åge",f3dcccccd,1,"a",f80000000,f3dcccccd) = -
+  host 38 AddEffectVoice6("","Body_Mesh_01","","Door_1",f3f800000,"a",f00000000,"Door_1",f3f800000,"x\0y",f42c80000,"a",f80000000,"Åge",f3dcccccd,1,"a",f80000000,f3dcccccd)
+52.0 AddEffectVoice7("","Door_1","Door_1","wild*",f00000000,"",f42c80000,"Åge",f00000000,"Åge",f80000000,"x\0y",f7fc00000,"Åge",f3dcccccd,"Åge",f7fc00000,1,"two words",f42c80000,f7f7fffff) = -
+  host 39 AddEffectVoice7("","Door_1","Door_1","wild*",f00000000,"",f42c80000,"Åge",f00000000,"Åge",f80000000,"x\0y",f7fc00000,"Åge",f3dcccccd,"Åge",f7fc00000,1,"two words",f42c80000,f7f7fffff)
+52.1 AddEffectVoice7("wild*","a","","",f3dcccccd,"a",f80000000,"Åge",f80000000,"x\0y",f00000000,"Body_Mesh_01",f7f7fffff,"Åge",f3dcccccd,"wild*",f3dcccccd,0,"Door_1",f00000000,f3f800000) = -
+  host 39 AddEffectVoice7("wild*","a","","",f3dcccccd,"a",f80000000,"Åge",f80000000,"x\0y",f00000000,"Body_Mesh_01",f7f7fffff,"Åge",f3dcccccd,"wild*",f3dcccccd,0,"Door_1",f00000000,f3f800000)
+52.2 AddEffectVoice7("","Åge","Åge","two words",f00000000,"two words",f3f800000,"x\0y",f7fc00000,"two words",f3dcccccd,"two words",f42c80000,"wild*",f7fc00000,"Door_1",f00000000,0,"Body_Mesh_01",f3a83126f,fbfc00000) = -
+  host 39 AddEffectVoice7("","Åge","Åge","two words",f00000000,"two words",f3f800000,"x\0y",f7fc00000,"two words",f3dcccccd,"two words",f42c80000,"wild*",f7fc00000,"Door_1",f00000000,0,"Body_Mesh_01",f3a83126f,fbfc00000)
+52.3 AddEffectVoice7("Body_Mesh_01","x\0y","Door_1","Door_1",f80000000,"a",f3f800000,"two words",f42c80000,"",f7f7fffff,"x\0y",f3f800000,"Door_1",f3dcccccd,"Body_Mesh_01",f3dcccccd,0,"a",f3a83126f,f00000000) = -
+  host 39 AddEffectVoice7("Body_Mesh_01","x\0y","Door_1","Door_1",f80000000,"a",f3f800000,"two words",f42c80000,"",f7f7fffff,"x\0y",f3f800000,"Door_1",f3dcccccd,"Body_Mesh_01",f3dcccccd,0,"a",f3a83126f,f00000000)
+53.0 AmfpStub_AddPlayerInfection(f42c80000) = -
+  host warning "AMFP stub: AddPlayerInfection(100.000000) not implemented\n"
+53.1 AmfpStub_AddPlayerInfection(f3a83126f) = -
+  host warning "AMFP stub: AddPlayerInfection(0.001000) not implemented\n"
+53.2 AmfpStub_AddPlayerInfection(f3dcccccd) = -
+  host warning "AMFP stub: AddPlayerInfection(0.100000) not implemented\n"
+53.3 AmfpStub_AddPlayerInfection(f7fc00000) = -
+  host warning "AMFP stub: AddPlayerInfection(nan) not implemented\n"
+54.0 AttachAreaToProp("wild*","x\0y",0) = -
+  host 40 AttachAreaToProp("wild*","x\0y",0)
+54.1 AttachAreaToProp("Body_Mesh_01","wild*",-1000) = -
+  host 40 AttachAreaToProp("Body_Mesh_01","wild*",-1000)
+54.2 AttachAreaToProp("x\0y","wild*",0) = -
+  host 40 AttachAreaToProp("x\0y","wild*",0)
+54.3 AttachAreaToProp("Body_Mesh_01","Åge",2) = -
+  host 40 AttachAreaToProp("Body_Mesh_01","Åge",2)
+55.0 AttachPropToBone("","Body_Mesh_01","two words",f7f7fffff,f7f7fffff,f3a83126f,f42c80000,f3dcccccd,f80000000) = -
+  host 41 AttachPropToBone("","Body_Mesh_01","two words",f7f7fffff,f7f7fffff,f3a83126f,f42c80000,f3dcccccd,f80000000)
+55.1 AttachPropToBone("two words","","Door_1",f00000000,f3f800000,f00000000,f3dcccccd,f7f7fffff,f3dcccccd) = -
+  host 41 AttachPropToBone("two words","","Door_1",f00000000,f3f800000,f00000000,f3dcccccd,f7f7fffff,f3dcccccd)
+55.2 AttachPropToBone("two words","a","two words",f3f800000,f3dcccccd,f7fc00000,f7fc00000,f3a83126f,f3f800000) = -
+  host 41 AttachPropToBone("two words","a","two words",f3f800000,f3dcccccd,f7fc00000,f7fc00000,f3a83126f,f3f800000)
+55.3 AttachPropToBone("Door_1","two words","Body_Mesh_01",f3a83126f,f80000000,fbfc00000,f80000000,f7fc00000,f3f800000) = -
+  host 41 AttachPropToBone("Door_1","two words","Body_Mesh_01",f3a83126f,f80000000,fbfc00000,f80000000,f7fc00000,f3f800000)
+56.0 AmfpStub_ChangeEnemyPose("a","wild*") = -
+  host warning "AMFP stub: ChangeEnemyPose('a', 'wild*') not implemented\n"
+56.1 AmfpStub_ChangeEnemyPose("Åge","Åge") = -
+  host warning "AMFP stub: ChangeEnemyPose('Åge', 'Åge') not implemented\n"
+56.2 AmfpStub_ChangeEnemyPose("two words","Door_1") = -
+  host warning "AMFP stub: ChangeEnemyPose('two words', 'Door_1') not implemented\n"
+56.3 AmfpStub_ChangeEnemyPose("two words","x\0y") = -
+  host warning "AMFP stub: ChangeEnemyPose('two words', 'x') not implemented\n"
+57.0 DestroyParticleSystemInstantly("two words") = -
+  host 42 DestroyParticleSystemInstantly("two words")
+57.1 DestroyParticleSystemInstantly("a") = -
+  host 42 DestroyParticleSystemInstantly("a")
+57.2 DestroyParticleSystemInstantly("Body_Mesh_01") = -
+  host 42 DestroyParticleSystemInstantly("Body_Mesh_01")
+57.3 DestroyParticleSystemInstantly("x\0y") = -
+  host 42 DestroyParticleSystemInstantly("x\0y")
+58.0 DetachPropFromBone("x\0y") = -
+  host 43 DetachPropFromBone("x\0y")
+58.1 DetachPropFromBone("a") = -
+  host 43 DetachPropFromBone("a")
+58.2 DetachPropFromBone("Åge") = -
+  host 43 DetachPropFromBone("Åge")
+58.3 DetachPropFromBone("Door_1") = -
+  host 43 DetachPropFromBone("Door_1")
+59.0 FadeLampTo("a",f3f800000,f7fc00000,f7f7fffff,f3a83126f,f7f7fffff,f42c80000) = -
+  host 44 FadeLampTo("a",f3f800000,f7fc00000,f7f7fffff,f3a83126f,f7f7fffff,f42c80000)
+59.1 FadeLampTo("Åge",f3f800000,f3f800000,f3dcccccd,f3f800000,f7fc00000,fbfc00000) = -
+  host 44 FadeLampTo("Åge",f3f800000,f3f800000,f3dcccccd,f3f800000,f7fc00000,fbfc00000)
+59.2 FadeLampTo("x\0y",f80000000,f3dcccccd,f7f7fffff,f3f800000,f42c80000,f3a83126f) = -
+  host 44 FadeLampTo("x\0y",f80000000,f3dcccccd,f7f7fffff,f3f800000,f42c80000,f3a83126f)
+59.3 FadeLampTo("Door_1",fbfc00000,f3f800000,f3f800000,f7f7fffff,f3dcccccd,f00000000) = -
+  host 44 FadeLampTo("Door_1",fbfc00000,f3f800000,f3f800000,f7f7fffff,f3dcccccd,f00000000)
+60.0 FadePlayerPitchTo(f42c80000,fbfc00000,f3a83126f) = -
+  host 45 FadePlayerPitchTo(f42c80000,fbfc00000,f3a83126f)
+60.1 FadePlayerPitchTo(f3f800000,f3f800000,f00000000) = -
+  host 45 FadePlayerPitchTo(f3f800000,f3f800000,f00000000)
+60.2 FadePlayerPitchTo(f7fc00000,f7fc00000,f3dcccccd) = -
+  host 45 FadePlayerPitchTo(f7fc00000,f7fc00000,f3dcccccd)
+60.3 FadePlayerPitchTo(f7fc00000,f80000000,f42c80000) = -
+  host 45 FadePlayerPitchTo(f7fc00000,f80000000,f42c80000)
+61.0 ForceEnemyWaitState("a") = -
+  host 46 ForceEnemyWaitState("a")
+61.1 ForceEnemyWaitState("wild*") = -
+  host 46 ForceEnemyWaitState("wild*")
+61.2 ForceEnemyWaitState("two words") = -
+  host 46 ForceEnemyWaitState("two words")
+61.3 ForceEnemyWaitState("") = -
+  host 46 ForceEnemyWaitState("")
+62.0 GetEnemyPlayerDistance("") = f423e0000
+  host 47 GetEnemyPlayerDistance("")
+62.1 GetEnemyPlayerDistance("Door_1") = f423e0000
+  host 47 GetEnemyPlayerDistance("Door_1")
+62.2 GetEnemyPlayerDistance("wild*") = f423e0000
+  host 47 GetEnemyPlayerDistance("wild*")
+62.3 GetEnemyPlayerDistance("Body_Mesh_01") = f423e0000
+  host 47 GetEnemyPlayerDistance("Body_Mesh_01")
+63.0 GetEnemyState("wild*") = 55
+  host 48 GetEnemyState("wild*")
+63.1 GetEnemyState("") = 55
+  host 48 GetEnemyState("")
+63.2 GetEnemyState("wild*") = 55
+  host 48 GetEnemyState("wild*")
+63.3 GetEnemyState("Door_1") = 55
+  host 48 GetEnemyState("Door_1")
+64.0 AmfpStub_GetJournalDisabled() = 0
+  host 49 AmfpStub_GetJournalDisabled()
+64.1 AmfpStub_GetJournalDisabled() = 0
+  host 49 AmfpStub_GetJournalDisabled()
+64.2 AmfpStub_GetJournalDisabled() = 0
+  host 49 AmfpStub_GetJournalDisabled()
+64.3 AmfpStub_GetJournalDisabled() = 0
+  host 49 AmfpStub_GetJournalDisabled()
+65.0 GetPlayerCanSeeEnemy("a") = 1
+  host 50 GetPlayerCanSeeEnemy("a")
+65.1 GetPlayerCanSeeEnemy("Åge") = 1
+  host 50 GetPlayerCanSeeEnemy("Åge")
+65.2 GetPlayerCanSeeEnemy("Body_Mesh_01") = 1
+  host 50 GetPlayerCanSeeEnemy("Body_Mesh_01")
+65.3 GetPlayerCanSeeEnemy("two words") = 1
+  host 50 GetPlayerCanSeeEnemy("two words")
+66.0 AmfpStub_GetPlayerInfection() = f424e0000
+  host 51 AmfpStub_GetPlayerInfection()
+66.1 AmfpStub_GetPlayerInfection() = f424e0000
+  host 51 AmfpStub_GetPlayerInfection()
+66.2 AmfpStub_GetPlayerInfection() = f424e0000
+  host 51 AmfpStub_GetPlayerInfection()
+66.3 AmfpStub_GetPlayerInfection() = f424e0000
+  host 51 AmfpStub_GetPlayerInfection()
+67.0 AmfpStub_GiveInfectionDamage(f3a83126f,0) = -
+  host warning "AMFP stub: GiveInfectionDamage(0.001000, 0) not implemented\n"
+67.1 AmfpStub_GiveInfectionDamage(f42c80000,1) = -
+  host warning "AMFP stub: GiveInfectionDamage(100.000000, 1) not implemented\n"
+67.2 AmfpStub_GiveInfectionDamage(f3a83126f,1) = -
+  host warning "AMFP stub: GiveInfectionDamage(0.001000, 1) not implemented\n"
+67.3 AmfpStub_GiveInfectionDamage(f3a83126f,1) = -
+  host warning "AMFP stub: GiveInfectionDamage(0.001000, 1) not implemented\n"
+68.0 AmfpStub_HangUpPhone("Door_1") = -
+  host warning "AMFP stub: HangUpPhone('Door_1') not implemented\n"
+68.1 AmfpStub_HangUpPhone("Åge") = -
+  host warning "AMFP stub: HangUpPhone('Åge') not implemented\n"
+68.2 AmfpStub_HangUpPhone("a") = -
+  host warning "AMFP stub: HangUpPhone('a') not implemented\n"
+68.3 AmfpStub_HangUpPhone("Body_Mesh_01") = -
+  host warning "AMFP stub: HangUpPhone('Body_Mesh_01') not implemented\n"
+69.0 AmfpStub_HideScreenImageImmediately() = -
+  host warning "AMFP stub: HideScreenImageImmediately() not implemented\n"
+69.1 AmfpStub_HideScreenImageImmediately() = -
+  host warning "AMFP stub: HideScreenImageImmediately() not implemented\n"
+69.2 AmfpStub_HideScreenImageImmediately() = -
+  host warning "AMFP stub: HideScreenImageImmediately() not implemented\n"
+69.3 AmfpStub_HideScreenImageImmediately() = -
+  host warning "AMFP stub: HideScreenImageImmediately() not implemented\n"
+70.0 AmfpStub_HideScreenImageWithFade(fbfc00000) = -
+  host warning "AMFP stub: HideScreenImageWithFade(-1.500000) not implemented\n"
+70.1 AmfpStub_HideScreenImageWithFade(f3a83126f) = -
+  host warning "AMFP stub: HideScreenImageWithFade(0.001000) not implemented\n"
+70.2 AmfpStub_HideScreenImageWithFade(f7f7fffff) = -
+  host warning "AMFP stub: HideScreenImageWithFade(340282346638528859811704183484516925440.000000) not implemented\n"
+70.3 AmfpStub_HideScreenImageWithFade(f3f800000) = -
+  host warning "AMFP stub: HideScreenImageWithFade(1.000000) not implemented\n"
+71.0 PauseCurrentAnimation("Body_Mesh_01",f80000000) = -
+  host 52 PauseCurrentAnimation("Body_Mesh_01",f80000000)
+71.1 PauseCurrentAnimation("Body_Mesh_01",f7f7fffff) = -
+  host 52 PauseCurrentAnimation("Body_Mesh_01",f7f7fffff)
+71.2 PauseCurrentAnimation("Åge",f00000000) = -
+  host 52 PauseCurrentAnimation("Åge",f00000000)
+71.3 PauseCurrentAnimation("x\0y",f42c80000) = -
+  host 52 PauseCurrentAnimation("x\0y",f42c80000)
+72.0 PlayCurrentAnimation("Åge",fbfc00000,0) = -
+  host 53 PlayCurrentAnimation("Åge",fbfc00000,0)
+72.1 PlayCurrentAnimation("wild*",f3a83126f,0) = -
+  host 53 PlayCurrentAnimation("wild*",f3a83126f,0)
+72.2 PlayCurrentAnimation("a",f00000000,1) = -
+  host 53 PlayCurrentAnimation("a",f00000000,1)
+72.3 PlayCurrentAnimation("Åge",f80000000,0) = -
+  host 53 PlayCurrentAnimation("Åge",f80000000,0)
+73.0 PlayEnemyAnimation("a","two words",0,f3f800000) = -
+  host 54 PlayEnemyAnimation("a","two words",0,f3f800000)
+73.1 PlayEnemyAnimation("x\0y","",0,f3dcccccd) = -
+  host 54 PlayEnemyAnimation("x\0y","",0,f3dcccccd)
+73.2 PlayEnemyAnimation("two words","",1,f7f7fffff) = -
+  host 54 PlayEnemyAnimation("two words","",1,f7f7fffff)
+73.3 PlayEnemyAnimation("","Åge",0,f7f7fffff) = -
+  host 54 PlayEnemyAnimation("","Åge",0,f7f7fffff)
+74.0 PlayScriptedAnimation("Body_Mesh_01","two words",0) = -
+  host 55 PlayScriptedAnimation("Body_Mesh_01","two words",0)
+74.1 PlayScriptedAnimation("Body_Mesh_01","Body_Mesh_01",0) = -
+  host 55 PlayScriptedAnimation("Body_Mesh_01","Body_Mesh_01",0)
+74.2 PlayScriptedAnimation("","Door_1",0) = -
+  host 55 PlayScriptedAnimation("","Door_1",0)
+74.3 PlayScriptedAnimation("a","Body_Mesh_01",1) = -
+  host 55 PlayScriptedAnimation("a","Body_Mesh_01",1)
+75.0 PlaySoundAtPosition("wild*","x\0y",f80000000,f7fc00000,f3a83126f,f00000000,1) = -
+  host 56 PlaySoundAtPosition("wild*","x\0y",f80000000,f7fc00000,f3a83126f,f00000000,1)
+75.1 PlaySoundAtPosition("Åge","Åge",f3f800000,f80000000,f00000000,f80000000,0) = -
+  host 56 PlaySoundAtPosition("Åge","Åge",f3f800000,f80000000,f00000000,f80000000,0)
+75.2 PlaySoundAtPosition("Body_Mesh_01","a",f3dcccccd,f3a83126f,f42c80000,f42c80000,0) = -
+  host 56 PlaySoundAtPosition("Body_Mesh_01","a",f3dcccccd,f3a83126f,f42c80000,f42c80000,0)
+75.3 PlaySoundAtPosition("Body_Mesh_01","Body_Mesh_01",f7f7fffff,f3dcccccd,f3dcccccd,f3dcccccd,1) = -
+  host 56 PlaySoundAtPosition("Body_Mesh_01","Body_Mesh_01",f7f7fffff,f3dcccccd,f3dcccccd,f3dcccccd,1)
+76.0 AmfpStub_ReleasePlayerFromLimbo() = -
+  host warning "AMFP stub: ReleasePlayerFromLimbo() not implemented\n"
+76.1 AmfpStub_ReleasePlayerFromLimbo() = -
+  host warning "AMFP stub: ReleasePlayerFromLimbo() not implemented\n"
+76.2 AmfpStub_ReleasePlayerFromLimbo() = -
+  host warning "AMFP stub: ReleasePlayerFromLimbo() not implemented\n"
+76.3 AmfpStub_ReleasePlayerFromLimbo() = -
+  host warning "AMFP stub: ReleasePlayerFromLimbo() not implemented\n"
+77.0 AmfpStub_RemoveAllHints() = -
+  host warning "AMFP stub: RemoveAllHints() not implemented\n"
+77.1 AmfpStub_RemoveAllHints() = -
+  host warning "AMFP stub: RemoveAllHints() not implemented\n"
+77.2 AmfpStub_RemoveAllHints() = -
+  host warning "AMFP stub: RemoveAllHints() not implemented\n"
+77.3 AmfpStub_RemoveAllHints() = -
+  host warning "AMFP stub: RemoveAllHints() not implemented\n"
+78.0 SendEnemyTimeOut("Åge",f3f800000) = -
+  host 57 SendEnemyTimeOut("Åge",f3f800000)
+78.1 SendEnemyTimeOut("",f3a83126f) = -
+  host 57 SendEnemyTimeOut("",f3a83126f)
+78.2 SendEnemyTimeOut("two words",f7f7fffff) = -
+  host 57 SendEnemyTimeOut("two words",f7f7fffff)
+78.3 SendEnemyTimeOut("Door_1",f80000000) = -
+  host 57 SendEnemyTimeOut("Door_1",f80000000)
+79.0 SetButtonCanBeSwitchedOff("two words",0) = -
+  host 58 SetButtonCanBeSwitchedOff("two words",0)
+79.1 SetButtonCanBeSwitchedOff("a",0) = -
+  host 58 SetButtonCanBeSwitchedOff("a",0)
+79.2 SetButtonCanBeSwitchedOff("Body_Mesh_01",0) = -
+  host 58 SetButtonCanBeSwitchedOff("Body_Mesh_01",0)
+79.3 SetButtonCanBeSwitchedOff("two words",1) = -
+  host 58 SetButtonCanBeSwitchedOff("two words",1)
+80.0 SetButtonCanBeSwitchedOn("wild*",1) = -
+  host 59 SetButtonCanBeSwitchedOn("wild*",1)
+80.1 SetButtonCanBeSwitchedOn("two words",0) = -
+  host 59 SetButtonCanBeSwitchedOn("two words",0)
+80.2 SetButtonCanBeSwitchedOn("Door_1",1) = -
+  host 59 SetButtonCanBeSwitchedOn("Door_1",1)
+80.3 SetButtonCanBeSwitchedOn("Body_Mesh_01",1) = -
+  host 59 SetButtonCanBeSwitchedOn("Body_Mesh_01",1)
+81.0 SetEnemyActivationDistance("x\0y",f80000000) = -
+  host 60 SetEnemyActivationDistance("x\0y",f80000000)
+81.1 SetEnemyActivationDistance("wild*",f7fc00000) = -
+  host 60 SetEnemyActivationDistance("wild*",f7fc00000)
+81.2 SetEnemyActivationDistance("Door_1",f3f800000) = -
+  host 60 SetEnemyActivationDistance("Door_1",f3f800000)
+81.3 SetEnemyActivationDistance("a",f3f800000) = -
+  host 60 SetEnemyActivationDistance("a",f3f800000)
+82.0 SetEnemyBlind("two words",1) = -
+  host 61 SetEnemyBlind("two words",1)
+82.1 SetEnemyBlind("a",0) = -
+  host 61 SetEnemyBlind("a",0)
+82.2 SetEnemyBlind("a",0) = -
+  host 61 SetEnemyBlind("a",0)
+82.3 SetEnemyBlind("a",0) = -
+  host 61 SetEnemyBlind("a",0)
+83.0 SetEnemyDeaf("two words",0) = -
+  host 62 SetEnemyDeaf("two words",0)
+83.1 SetEnemyDeaf("Body_Mesh_01",1) = -
+  host 62 SetEnemyDeaf("Body_Mesh_01",1)
+83.2 SetEnemyDeaf("Door_1",1) = -
+  host 62 SetEnemyDeaf("Door_1",1)
+83.3 SetEnemyDeaf("Body_Mesh_01",0) = -
+  host 62 SetEnemyDeaf("Body_Mesh_01",0)
+84.0 AmfpStub_SetInfectionFauxMode(1) = -
+  host warning "AMFP stub: SetInfectionFauxMode(1) not implemented\n"
+84.1 AmfpStub_SetInfectionFauxMode(0) = -
+  host warning "AMFP stub: SetInfectionFauxMode(0) not implemented\n"
+84.2 AmfpStub_SetInfectionFauxMode(0) = -
+  host warning "AMFP stub: SetInfectionFauxMode(0) not implemented\n"
+84.3 AmfpStub_SetInfectionFauxMode(0) = -
+  host warning "AMFP stub: SetInfectionFauxMode(0) not implemented\n"
+85.0 SetLampCanBeLitByPlayer("Door_1",0) = -
+  host 63 SetLampCanBeLitByPlayer("Door_1",0)
+85.1 SetLampCanBeLitByPlayer("a",0) = -
+  host 63 SetLampCanBeLitByPlayer("a",0)
+85.2 SetLampCanBeLitByPlayer("Åge",1) = -
+  host 63 SetLampCanBeLitByPlayer("Åge",1)
+85.3 SetLampCanBeLitByPlayer("",0) = -
+  host 63 SetLampCanBeLitByPlayer("",0)
+86.0 SetPlayerUsesDragFootsteps(0) = -
+  host 64 SetPlayerUsesDragFootsteps(0)
+86.1 SetPlayerUsesDragFootsteps(1) = -
+  host 64 SetPlayerUsesDragFootsteps(1)
+86.2 SetPlayerUsesDragFootsteps(0) = -
+  host 64 SetPlayerUsesDragFootsteps(0)
+86.3 SetPlayerUsesDragFootsteps(1) = -
+  host 64 SetPlayerUsesDragFootsteps(1)
+87.0 SetPropAnimationPosition("",f80000000) = -
+  host 65 SetPropAnimationPosition("",f80000000)
+87.1 SetPropAnimationPosition("a",f7f7fffff) = -
+  host 65 SetPropAnimationPosition("a",f7f7fffff)
+87.2 SetPropAnimationPosition("wild*",fbfc00000) = -
+  host 65 SetPropAnimationPosition("wild*",fbfc00000)
+87.3 SetPropAnimationPosition("Door_1",f80000000) = -
+  host 65 SetPropAnimationPosition("Door_1",f80000000)
+88.0 SetPropAnimationSpeed("Door_1",f7fc00000) = -
+  host 66 SetPropAnimationSpeed("Door_1",f7fc00000)
+88.1 SetPropAnimationSpeed("a",f7f7fffff) = -
+  host 66 SetPropAnimationSpeed("a",f7f7fffff)
+88.2 SetPropAnimationSpeed("two words",fbfc00000) = -
+  host 66 SetPropAnimationSpeed("two words",fbfc00000)
+88.3 SetPropAnimationSpeed("a",f42c80000) = -
+  host 66 SetPropAnimationSpeed("a",f42c80000)
+89.0 SetSwingDoorOpenAmount("Åge",f3a83126f,f00000000,0) = -
+  host 67 SetSwingDoorOpenAmount("Åge",f3a83126f,f00000000,0)
+89.1 SetSwingDoorOpenAmount("",f7f7fffff,fbfc00000,1) = -
+  host 67 SetSwingDoorOpenAmount("",f7f7fffff,fbfc00000,1)
+89.2 SetSwingDoorOpenAmount("two words",f7f7fffff,f7fc00000,1) = -
+  host 67 SetSwingDoorOpenAmount("two words",f7f7fffff,f7fc00000,1)
+89.3 SetSwingDoorOpenAmount("a",f3a83126f,f3f800000,1) = -
+  host 67 SetSwingDoorOpenAmount("a",f3a83126f,f3f800000,1)
+90.0 StopAnimationAndContinue("wild*",f3dcccccd) = -
+  host 68 StopAnimationAndContinue("wild*",f3dcccccd)
+90.1 StopAnimationAndContinue("Body_Mesh_01",fbfc00000) = -
+  host 68 StopAnimationAndContinue("Body_Mesh_01",fbfc00000)
+90.2 StopAnimationAndContinue("x\0y",fbfc00000) = -
+  host 68 StopAnimationAndContinue("x\0y",fbfc00000)
+90.3 StopAnimationAndContinue("",f3dcccccd) = -
+  host 68 StopAnimationAndContinue("",f3dcccccd)
+91.0 StopPropAnimation("two words") = -
+  host 69 StopPropAnimation("two words")
+91.1 StopPropAnimation("a") = -
+  host 69 StopPropAnimation("a")
+91.2 StopPropAnimation("") = -
+  host 69 StopPropAnimation("")
+91.3 StopPropAnimation("a") = -
+  host 69 StopPropAnimation("a")
+92.0 CreateEntityAtAreaExt("two words","Body_Mesh_01","Åge",1,f00000000,f3a83126f,f3dcccccd,f3a83126f,f3f800000,f00000000) = -
+  host 70 CreateEntityAtAreaExt("two words","Body_Mesh_01","Åge",1,f00000000,f3a83126f,f3dcccccd,f3a83126f,f3f800000,f00000000)
+92.1 CreateEntityAtAreaExt("Åge","Door_1","x\0y",1,f3f800000,f3a83126f,f00000000,f7f7fffff,f3f800000,f3a83126f) = -
+  host 70 CreateEntityAtAreaExt("Åge","Door_1","x\0y",1,f3f800000,f3a83126f,f00000000,f7f7fffff,f3f800000,f3a83126f)
+92.2 CreateEntityAtAreaExt("","","Door_1",0,f7f7fffff,f7f7fffff,fbfc00000,f00000000,f3a83126f,f3dcccccd) = -
+  host 70 CreateEntityAtAreaExt("","","Door_1",0,f7f7fffff,f7f7fffff,fbfc00000,f00000000,f3a83126f,f3dcccccd)
+92.3 CreateEntityAtAreaExt("Door_1","Åge","Åge",0,f7f7fffff,f00000000,f7f7fffff,f3f800000,fbfc00000,f00000000) = -
+  host 70 CreateEntityAtAreaExt("Door_1","Åge","Åge",0,f7f7fffff,f00000000,f7f7fffff,f3f800000,fbfc00000,f00000000)
+93.0 AddEffectVoice4("Body_Mesh_01","Åge","Door_1","two words",f7fc00000,"Åge",f3dcccccd,"Åge",f3a83126f,"",f7f7fffff,1,"x\0y",f3dcccccd,f3dcccccd) = -
+  host 71 AddEffectVoice4("Body_Mesh_01","Åge","Door_1","two words",f7fc00000,"Åge",f3dcccccd,"Åge",f3a83126f,"",f7f7fffff,1,"x\0y",f3dcccccd,f3dcccccd)
+93.1 AddEffectVoice4("Body_Mesh_01","","Door_1","",f00000000,"Body_Mesh_01",fbfc00000,"wild*",f3dcccccd,"x\0y",f42c80000,1,"two words",f80000000,f7f7fffff) = -
+  host 71 AddEffectVoice4("Body_Mesh_01","","Door_1","",f00000000,"Body_Mesh_01",fbfc00000,"wild*",f3dcccccd,"x\0y",f42c80000,1,"two words",f80000000,f7f7fffff)
+93.2 AddEffectVoice4("","","two words","a",f00000000,"Åge",f7f7fffff,"wild*",f3a83126f,"x\0y",f42c80000,0,"wild*",fbfc00000,f80000000) = -
+  host 71 AddEffectVoice4("","","two words","a",f00000000,"Åge",f7f7fffff,"wild*",f3a83126f,"x\0y",f42c80000,0,"wild*",fbfc00000,f80000000)
+93.3 AddEffectVoice4("x\0y","x\0y","a","a",f7f7fffff,"a",f3a83126f,"",f3f800000,"Body_Mesh_01",f7fc00000,0,"",f3dcccccd,f3a83126f) = -
+  host 71 AddEffectVoice4("x\0y","x\0y","a","a",f7f7fffff,"a",f3a83126f,"",f3f800000,"Body_Mesh_01",f7fc00000,0,"",f3dcccccd,f3a83126f)
+94.0 AddEffectVoiceExt("wild*","two words","","a",1,"Åge",f3dcccccd,f7f7fffff,255,0) = -
+  host 72 AddEffectVoiceExt("wild*","two words","","a",1,"Åge",f3dcccccd,f7f7fffff,255,0)
+94.1 AddEffectVoiceExt("Body_Mesh_01","Åge","wild*","",0,"Door_1",f3f800000,f3f800000,0,0) = -
+  host 72 AddEffectVoiceExt("Body_Mesh_01","Åge","wild*","",0,"Door_1",f3f800000,f3f800000,0,0)
+94.2 AddEffectVoiceExt("two words","wild*","wild*","Åge",1,"Åge",f3f800000,f7fc00000,1,1) = -
+  host 72 AddEffectVoiceExt("two words","wild*","wild*","Åge",1,"Åge",f3f800000,f7fc00000,1,1)
+94.3 AddEffectVoiceExt("","Body_Mesh_01","Door_1","Åge",1,"wild*",f3f800000,f7fc00000,1,0) = -
+  host 72 AddEffectVoiceExt("","Body_Mesh_01","Door_1","Åge",1,"wild*",f3f800000,f7fc00000,1,0)
+95.0 ChangeMap("x\0y","","Åge","Åge") = -
+  host 73 ChangeMap("x\0y","","Åge","Åge")
+95.1 ChangeMap("wild*","Body_Mesh_01","two words","") = -
+  host 73 ChangeMap("wild*","Body_Mesh_01","two words","")
+95.2 ChangeMap("Door_1","","Body_Mesh_01","Body_Mesh_01") = -
+  host 73 ChangeMap("Door_1","","Body_Mesh_01","Body_Mesh_01")
+95.3 ChangeMap("wild*","Åge","two words","Åge") = -
+  host 73 ChangeMap("wild*","Åge","two words","Åge")
+96.0 ClearSavedMaps() = -
+  host 74 ClearSavedMaps()
+96.1 ClearSavedMaps() = -
+  host 74 ClearSavedMaps()
+96.2 ClearSavedMaps() = -
+  host 74 ClearSavedMaps()
+96.3 ClearSavedMaps() = -
+  host 74 ClearSavedMaps()
+97.0 CreateDataCache() = -
+  host 75 CreateDataCache()
+97.1 CreateDataCache() = -
+  host 75 CreateDataCache()
+97.2 CreateDataCache() = -
+  host 75 CreateDataCache()
+97.3 CreateDataCache() = -
+  host 75 CreateDataCache()
+98.0 DestroyDataCache() = -
+  host 76 DestroyDataCache()
+98.1 DestroyDataCache() = -
+  host 76 DestroyDataCache()
+98.2 DestroyDataCache() = -
+  host 76 DestroyDataCache()
+98.3 DestroyDataCache() = -
+  host 76 DestroyDataCache()
+99.0 SetMapDisplayNameEntry("wild*") = -
+  host 77 SetMapDisplayNameEntry("wild*")
+99.1 SetMapDisplayNameEntry("Door_1") = -
+  host 77 SetMapDisplayNameEntry("Door_1")
+99.2 SetMapDisplayNameEntry("Body_Mesh_01") = -
+  host 77 SetMapDisplayNameEntry("Body_Mesh_01")
+99.3 SetMapDisplayNameEntry("x\0y") = -
+  host 77 SetMapDisplayNameEntry("x\0y")
+100.0 SetSkyBoxActive(1) = -
+  host 78 SetSkyBoxActive(1)
+100.1 SetSkyBoxActive(1) = -
+  host 78 SetSkyBoxActive(1)
+100.2 SetSkyBoxActive(1) = -
+  host 78 SetSkyBoxActive(1)
+100.3 SetSkyBoxActive(1) = -
+  host 78 SetSkyBoxActive(1)
+101.0 SetSkyBoxTexture("Door_1") = -
+  host 79 SetSkyBoxTexture("Door_1")
+101.1 SetSkyBoxTexture("two words") = -
+  host 79 SetSkyBoxTexture("two words")
+101.2 SetSkyBoxTexture("two words") = -
+  host 79 SetSkyBoxTexture("two words")
+101.3 SetSkyBoxTexture("") = -
+  host 79 SetSkyBoxTexture("")
+102.0 SetSkyBoxColor(f00000000,f00000000,f80000000,f7fc00000) = -
+  host 80 SetSkyBoxColor(f00000000,f00000000,f80000000,f7fc00000)
+102.1 SetSkyBoxColor(f00000000,f3dcccccd,f42c80000,f42c80000) = -
+  host 80 SetSkyBoxColor(f00000000,f3dcccccd,f42c80000,f42c80000)
+102.2 SetSkyBoxColor(f7fc00000,f00000000,fbfc00000,f00000000) = -
+  host 80 SetSkyBoxColor(f7fc00000,f00000000,fbfc00000,f00000000)
+102.3 SetSkyBoxColor(f7f7fffff,fbfc00000,f3a83126f,f3f800000) = -
+  host 80 SetSkyBoxColor(f7f7fffff,fbfc00000,f3a83126f,f3f800000)
+103.0 UnlockAchievement("two words") = -
+  host 81 UnlockAchievement("two words")
+103.1 UnlockAchievement("") = -
+  host 81 UnlockAchievement("")
+103.2 UnlockAchievement("Åge") = -
+  host 81 UnlockAchievement("Åge")
+103.3 UnlockAchievement("two words") = -
+  host 81 UnlockAchievement("two words")
+104.0 SetFogActive(0) = -
+  host 82 SetFogActive(0)
+104.1 SetFogActive(0) = -
+  host 82 SetFogActive(0)
+104.2 SetFogActive(1) = -
+  host 82 SetFogActive(1)
+104.3 SetFogActive(1) = -
+  host 82 SetFogActive(1)
+105.0 SetFogColor(f80000000,f3f800000,f3f800000,f7fc00000) = -
+  host 83 SetFogColor(f80000000,f3f800000,f3f800000,f7fc00000)
+105.1 SetFogColor(fbfc00000,f80000000,fbfc00000,f42c80000) = -
+  host 83 SetFogColor(fbfc00000,f80000000,fbfc00000,f42c80000)
+105.2 SetFogColor(f42c80000,f3dcccccd,fbfc00000,fbfc00000) = -
+  host 83 SetFogColor(f42c80000,f3dcccccd,fbfc00000,fbfc00000)
+105.3 SetFogColor(f00000000,f42c80000,f3a83126f,f3dcccccd) = -
+  host 83 SetFogColor(f00000000,f42c80000,f3a83126f,f3dcccccd)
+106.0 SetFogProperties(f7f7fffff,f80000000,f7fc00000,1) = -
+  host 84 SetFogProperties(f7f7fffff,f80000000,f7fc00000,1)
+106.1 SetFogProperties(f00000000,fbfc00000,f42c80000,1) = -
+  host 84 SetFogProperties(f00000000,fbfc00000,f42c80000,1)
+106.2 SetFogProperties(fbfc00000,f3a83126f,f7fc00000,0) = -
+  host 84 SetFogProperties(fbfc00000,f3a83126f,f7fc00000,0)
+106.3 SetFogProperties(f7fc00000,f7f7fffff,f00000000,1) = -
+  host 84 SetFogProperties(f7fc00000,f7f7fffff,f00000000,1)
+107.0 SetupLoadScreen("Body_Mesh_01","x\0y",2,"Body_Mesh_01") = -
+  host 85 SetupLoadScreen("Body_Mesh_01","x\0y",2,"Body_Mesh_01")
+107.1 SetupLoadScreen("a","two words",0,"two words") = -
+  host 85 SetupLoadScreen("a","two words",0,"two words")
+107.2 SetupLoadScreen("a","wild*",255,"Door_1") = -
+  host 85 SetupLoadScreen("a","wild*",255,"Door_1")
+107.3 SetupLoadScreen("Body_Mesh_01","x\0y",-1,"wild*") = -
+  host 85 SetupLoadScreen("Body_Mesh_01","x\0y",-1,"wild*")
+108.0 FadeIn(f00000000) = -
+  host 86 FadeIn(f00000000)
+108.1 FadeIn(f3a83126f) = -
+  host 86 FadeIn(f3a83126f)
+108.2 FadeIn(f80000000) = -
+  host 86 FadeIn(f80000000)
+108.3 FadeIn(fbfc00000) = -
+  host 86 FadeIn(fbfc00000)
+109.0 FadeOut(f7f7fffff) = -
+  host 87 FadeOut(f7f7fffff)
+109.1 FadeOut(f3dcccccd) = -
+  host 87 FadeOut(f3dcccccd)
+109.2 FadeOut(f3dcccccd) = -
+  host 87 FadeOut(f3dcccccd)
+109.3 FadeOut(f42c80000) = -
+  host 87 FadeOut(f42c80000)
+110.0 FadeImageTrailTo(f3dcccccd,f3dcccccd) = -
+  host 88 FadeImageTrailTo(f3dcccccd,f3dcccccd)
+110.1 FadeImageTrailTo(f80000000,f3dcccccd) = -
+  host 88 FadeImageTrailTo(f80000000,f3dcccccd)
+110.2 FadeImageTrailTo(f80000000,f00000000) = -
+  host 88 FadeImageTrailTo(f80000000,f00000000)
+110.3 FadeImageTrailTo(f3f800000,f42c80000) = -
+  host 88 FadeImageTrailTo(f3f800000,f42c80000)
+111.0 FadeSepiaColorTo(f3f800000,f80000000) = -
+  host 89 FadeSepiaColorTo(f3f800000,f80000000)
+111.1 FadeSepiaColorTo(f80000000,f42c80000) = -
+  host 89 FadeSepiaColorTo(f80000000,f42c80000)
+111.2 FadeSepiaColorTo(f3a83126f,f80000000) = -
+  host 89 FadeSepiaColorTo(f3a83126f,f80000000)
+111.3 FadeSepiaColorTo(f3dcccccd,f7fc00000) = -
+  host 89 FadeSepiaColorTo(f3dcccccd,f7fc00000)
+112.0 FadeRadialBlurTo(fbfc00000,f42c80000) = -
+  host 90 FadeRadialBlurTo(fbfc00000,f42c80000)
+112.1 FadeRadialBlurTo(f42c80000,f42c80000) = -
+  host 90 FadeRadialBlurTo(f42c80000,f42c80000)
+112.2 FadeRadialBlurTo(f00000000,f42c80000) = -
+  host 90 FadeRadialBlurTo(f00000000,f42c80000)
+112.3 FadeRadialBlurTo(f80000000,f00000000) = -
+  host 90 FadeRadialBlurTo(f80000000,f00000000)
+113.0 SetRadialBlurStartDist(f80000000) = -
+  host 91 SetRadialBlurStartDist(f80000000)
+113.1 SetRadialBlurStartDist(f3dcccccd) = -
+  host 91 SetRadialBlurStartDist(f3dcccccd)
+113.2 SetRadialBlurStartDist(f7fc00000) = -
+  host 91 SetRadialBlurStartDist(f7fc00000)
+113.3 SetRadialBlurStartDist(f3f800000) = -
+  host 91 SetRadialBlurStartDist(f3f800000)
+114.0 StartEffectFlash(f3dcccccd,f3a83126f,fbfc00000) = -
+  host 92 StartEffectFlash(f3dcccccd,f3a83126f,fbfc00000)
+114.1 StartEffectFlash(f00000000,f80000000,f7fc00000) = -
+  host 92 StartEffectFlash(f00000000,f80000000,f7fc00000)
+114.2 StartEffectFlash(f42c80000,f3f800000,fbfc00000) = -
+  host 92 StartEffectFlash(f42c80000,f3f800000,fbfc00000)
+114.3 StartEffectFlash(f3f800000,f42c80000,f7f7fffff) = -
+  host 92 StartEffectFlash(f3f800000,f42c80000,f7f7fffff)
+115.0 StartEffectEmotionFlash("two words","","Body_Mesh_01") = -
+  host 93 StartEffectEmotionFlash("two words","","Body_Mesh_01")
+115.1 StartEffectEmotionFlash("two words","x\0y","Åge") = -
+  host 93 StartEffectEmotionFlash("two words","x\0y","Åge")
+115.2 StartEffectEmotionFlash("","","Body_Mesh_01") = -
+  host 93 StartEffectEmotionFlash("","","Body_Mesh_01")
+115.3 StartEffectEmotionFlash("x\0y","a","a") = -
+  host 93 StartEffectEmotionFlash("x\0y","a","a")
+116.0 SetInDarknessEffectsActive(1) = -
+  host 94 SetInDarknessEffectsActive(1)
+116.1 SetInDarknessEffectsActive(0) = -
+  host 94 SetInDarknessEffectsActive(0)
+116.2 SetInDarknessEffectsActive(1) = -
+  host 94 SetInDarknessEffectsActive(1)
+116.3 SetInDarknessEffectsActive(1) = -
+  host 94 SetInDarknessEffectsActive(1)
+117.0 AddEffectVoice("a","x\0y","a","",1,"Body_Mesh_01",f42c80000,fbfc00000) = -
+  host 95 AddEffectVoice("a","x\0y","a","",1,"Body_Mesh_01",f42c80000,fbfc00000)
+117.1 AddEffectVoice("a","wild*","two words","Body_Mesh_01",1,"Åge",f42c80000,f42c80000) = -
+  host 95 AddEffectVoice("a","wild*","two words","Body_Mesh_01",1,"Åge",f42c80000,f42c80000)
+117.2 AddEffectVoice("wild*","Body_Mesh_01","Åge","Åge",1,"two words",f00000000,f3a83126f) = -
+  host 95 AddEffectVoice("wild*","Body_Mesh_01","Åge","Åge",1,"two words",f00000000,f3a83126f)
+117.3 AddEffectVoice("Door_1","two words","a","Body_Mesh_01",1,"a",f42c80000,f3dcccccd) = -
+  host 95 AddEffectVoice("Door_1","two words","a","Body_Mesh_01",1,"a",f42c80000,f3dcccccd)
+118.0 StopAllEffectVoices(f3a83126f) = -
+  host 96 StopAllEffectVoices(f3a83126f)
+118.1 StopAllEffectVoices(f7f7fffff) = -
+  host 96 StopAllEffectVoices(f7f7fffff)
+118.2 StopAllEffectVoices(f00000000) = -
+  host 96 StopAllEffectVoices(f00000000)
+118.3 StopAllEffectVoices(f00000000) = -
+  host 96 StopAllEffectVoices(f00000000)
+119.0 GetEffectVoiceActive() = 0
+  host 97 GetEffectVoiceActive()
+119.1 GetEffectVoiceActive() = 0
+  host 97 GetEffectVoiceActive()
+119.2 GetEffectVoiceActive() = 0
+  host 97 GetEffectVoiceActive()
+119.3 GetEffectVoiceActive() = 0
+  host 97 GetEffectVoiceActive()
+120.0 SetEffectVoiceOverCallback("Åge") = -
+  host 98 SetEffectVoiceOverCallback("Åge")
+120.1 SetEffectVoiceOverCallback("wild*") = -
+  host 98 SetEffectVoiceOverCallback("wild*")
+120.2 SetEffectVoiceOverCallback("Åge") = -
+  host 98 SetEffectVoiceOverCallback("Åge")
+120.3 SetEffectVoiceOverCallback("") = -
+  host 98 SetEffectVoiceOverCallback("")
+121.0 StartScreenShake(f3a83126f,f3f800000,f3a83126f,f7f7fffff) = -
+  host 99 StartScreenShake(f3a83126f,f3f800000,f3a83126f,f7f7fffff)
+121.1 StartScreenShake(f7fc00000,f80000000,f3f800000,fbfc00000) = -
+  host 99 StartScreenShake(f7fc00000,f80000000,f3f800000,fbfc00000)
+121.2 StartScreenShake(f42c80000,f00000000,f3f800000,f80000000) = -
+  host 99 StartScreenShake(f42c80000,f00000000,f3f800000,f80000000)
+121.3 StartScreenShake(f42c80000,fbfc00000,f3f800000,f3f800000) = -
+  host 99 StartScreenShake(f42c80000,fbfc00000,f3f800000,f3f800000)
+122.0 GetFlashbackIsActive() = 1
+  host 100 GetFlashbackIsActive()
+122.1 GetFlashbackIsActive() = 1
+  host 100 GetFlashbackIsActive()
+122.2 GetFlashbackIsActive() = 1
+  host 100 GetFlashbackIsActive()
+122.3 GetFlashbackIsActive() = 1
+  host 100 GetFlashbackIsActive()
+123.0 SetInsanitySetEnabled("Åge",1) = -
+  host 101 SetInsanitySetEnabled("Åge",1)
+123.1 SetInsanitySetEnabled("Åge",1) = -
+  host 101 SetInsanitySetEnabled("Åge",1)
+123.2 SetInsanitySetEnabled("x\0y",0) = -
+  host 101 SetInsanitySetEnabled("x\0y",0)
+123.3 SetInsanitySetEnabled("",1) = -
+  host 101 SetInsanitySetEnabled("",1)
+124.0 StartRandomInsanityEvent() = -
+  host 102 StartRandomInsanityEvent()
+124.1 StartRandomInsanityEvent() = -
+  host 102 StartRandomInsanityEvent()
+124.2 StartRandomInsanityEvent() = -
+  host 102 StartRandomInsanityEvent()
+124.3 StartRandomInsanityEvent() = -
+  host 102 StartRandomInsanityEvent()
+125.0 StartInsanityEvent("Åge") = -
+  host 103 StartInsanityEvent("Åge")
+125.1 StartInsanityEvent("a") = -
+  host 103 StartInsanityEvent("a")
+125.2 StartInsanityEvent("a") = -
+  host 103 StartInsanityEvent("a")
+125.3 StartInsanityEvent("Body_Mesh_01") = -
+  host 103 StartInsanityEvent("Body_Mesh_01")
+126.0 StopCurrentInsanityEvent() = -
+  host 104 StopCurrentInsanityEvent()
+126.1 StopCurrentInsanityEvent() = -
+  host 104 StopCurrentInsanityEvent()
+126.2 StopCurrentInsanityEvent() = -
+  host 104 StopCurrentInsanityEvent()
+126.3 StopCurrentInsanityEvent() = -
+  host 104 StopCurrentInsanityEvent()
+127.0 InsanityEventIsActive() = -
+  host 105 InsanityEventIsActive()
+127.1 InsanityEventIsActive() = -
+  host 105 InsanityEventIsActive()
+127.2 InsanityEventIsActive() = -
+  host 105 InsanityEventIsActive()
+127.3 InsanityEventIsActive() = -
+  host 105 InsanityEventIsActive()
+128.0 StartPlayerSpawnPS("Åge") = -
+  host 106 StartPlayerSpawnPS("Åge")
+128.1 StartPlayerSpawnPS("Door_1") = -
+  host 106 StartPlayerSpawnPS("Door_1")
+128.2 StartPlayerSpawnPS("wild*") = -
+  host 106 StartPlayerSpawnPS("wild*")
+128.3 StartPlayerSpawnPS("Body_Mesh_01") = -
+  host 106 StartPlayerSpawnPS("Body_Mesh_01")
+129.0 StartPlayerSpawnPS() = -
+  host 106 StartPlayerSpawnPS("")
+129.1 StartPlayerSpawnPS() = -
+  host 106 StartPlayerSpawnPS("")
+129.2 StartPlayerSpawnPS() = -
+  host 106 StartPlayerSpawnPS("")
+129.3 StartPlayerSpawnPS() = -
+  host 106 StartPlayerSpawnPS("")
+130.0 PlayGuiSound("a",f42c80000) = -
+  host 107 PlayGuiSound("a",f42c80000)
+130.1 PlayGuiSound("",f7fc00000) = -
+  host 107 PlayGuiSound("",f7fc00000)
+130.2 PlayGuiSound("Åge",f00000000) = -
+  host 107 PlayGuiSound("Åge",f00000000)
+130.3 PlayGuiSound("Body_Mesh_01",f42c80000) = -
+  host 107 PlayGuiSound("Body_Mesh_01",f42c80000)
+131.0 SetPlayerActive(0) = -
+  host 108 SetPlayerActive(0)
+131.1 SetPlayerActive(1) = -
+  host 108 SetPlayerActive(1)
+131.2 SetPlayerActive(1) = -
+  host 108 SetPlayerActive(1)
+131.3 SetPlayerActive(1) = -
+  host 108 SetPlayerActive(1)
+132.0 ChangePlayerStateToNormal() = -
+  host 109 ChangePlayerStateToNormal()
+132.1 ChangePlayerStateToNormal() = -
+  host 109 ChangePlayerStateToNormal()
+132.2 ChangePlayerStateToNormal() = -
+  host 109 ChangePlayerStateToNormal()
+132.3 ChangePlayerStateToNormal() = -
+  host 109 ChangePlayerStateToNormal()
+133.0 SetPlayerCrouching(0) = -
+  host 110 SetPlayerCrouching(0)
+133.1 SetPlayerCrouching(1) = -
+  host 110 SetPlayerCrouching(1)
+133.2 SetPlayerCrouching(1) = -
+  host 110 SetPlayerCrouching(1)
+133.3 SetPlayerCrouching(0) = -
+  host 110 SetPlayerCrouching(0)
+134.0 AddPlayerBodyForce(f7fc00000,f3f800000,f3f800000,1) = -
+  host 111 AddPlayerBodyForce(f7fc00000,f3f800000,f3f800000,1)
+134.1 AddPlayerBodyForce(f7fc00000,f42c80000,f3f800000,1) = -
+  host 111 AddPlayerBodyForce(f7fc00000,f42c80000,f3f800000,1)
+134.2 AddPlayerBodyForce(f3f800000,f3dcccccd,f3a83126f,0) = -
+  host 111 AddPlayerBodyForce(f3f800000,f3dcccccd,f3a83126f,0)
+134.3 AddPlayerBodyForce(f7fc00000,f00000000,fbfc00000,1) = -
+  host 111 AddPlayerBodyForce(f7fc00000,f00000000,fbfc00000,1)
+135.0 ShowPlayerCrossHairIcons(0) = -
+  host 112 ShowPlayerCrossHairIcons(0)
+135.1 ShowPlayerCrossHairIcons(0) = -
+  host 112 ShowPlayerCrossHairIcons(0)
+135.2 ShowPlayerCrossHairIcons(1) = -
+  host 112 ShowPlayerCrossHairIcons(1)
+135.3 ShowPlayerCrossHairIcons(1) = -
+  host 112 ShowPlayerCrossHairIcons(1)
+136.0 SetPlayerPos(f7f7fffff,fbfc00000,fbfc00000) = -
+  host 113 SetPlayerPos(f7f7fffff,fbfc00000,fbfc00000)
+136.1 SetPlayerPos(f3f800000,f00000000,f3f800000) = -
+  host 113 SetPlayerPos(f3f800000,f00000000,f3f800000)
+136.2 SetPlayerPos(f7fc00000,f3dcccccd,f7f7fffff) = -
+  host 113 SetPlayerPos(f7fc00000,f3dcccccd,f7f7fffff)
+136.3 SetPlayerPos(f7f7fffff,f3f800000,f80000000) = -
+  host 113 SetPlayerPos(f7f7fffff,f3f800000,f80000000)
+137.0 GetPlayerPosX() = f42e50000
+  host 114 GetPlayerPosX()
+137.1 GetPlayerPosX() = f42e50000
+  host 114 GetPlayerPosX()
+137.2 GetPlayerPosX() = f42e50000
+  host 114 GetPlayerPosX()
+137.3 GetPlayerPosX() = f42e50000
+  host 114 GetPlayerPosX()
+138.0 GetPlayerPosY() = f42e70000
+  host 115 GetPlayerPosY()
+138.1 GetPlayerPosY() = f42e70000
+  host 115 GetPlayerPosY()
+138.2 GetPlayerPosY() = f42e70000
+  host 115 GetPlayerPosY()
+138.3 GetPlayerPosY() = f42e70000
+  host 115 GetPlayerPosY()
+139.0 GetPlayerPosZ() = f42e90000
+  host 116 GetPlayerPosZ()
+139.1 GetPlayerPosZ() = f42e90000
+  host 116 GetPlayerPosZ()
+139.2 GetPlayerPosZ() = f42e90000
+  host 116 GetPlayerPosZ()
+139.3 GetPlayerPosZ() = f42e90000
+  host 116 GetPlayerPosZ()
+140.0 SetPlayerSanity(f3a83126f) = -
+  host 117 SetPlayerSanity(f3a83126f)
+140.1 SetPlayerSanity(f7f7fffff) = -
+  host 117 SetPlayerSanity(f7f7fffff)
+140.2 SetPlayerSanity(f80000000) = -
+  host 117 SetPlayerSanity(f80000000)
+140.3 SetPlayerSanity(f3f800000) = -
+  host 117 SetPlayerSanity(f3f800000)
+141.0 AddPlayerSanity(f00000000) = -
+  host 118 AddPlayerSanity(f00000000)
+141.1 AddPlayerSanity(f7f7fffff) = -
+  host 118 AddPlayerSanity(f7f7fffff)
+141.2 AddPlayerSanity(f7f7fffff) = -
+  host 118 AddPlayerSanity(f7f7fffff)
+141.3 AddPlayerSanity(fbfc00000) = -
+  host 118 AddPlayerSanity(fbfc00000)
+142.0 GetPlayerSanity() = f42ef0000
+  host 119 GetPlayerSanity()
+142.1 GetPlayerSanity() = f42ef0000
+  host 119 GetPlayerSanity()
+142.2 GetPlayerSanity() = f42ef0000
+  host 119 GetPlayerSanity()
+142.3 GetPlayerSanity() = f42ef0000
+  host 119 GetPlayerSanity()
+143.0 SetPlayerHealth(f42c80000) = -
+  host 120 SetPlayerHealth(f42c80000)
+143.1 SetPlayerHealth(f7fc00000) = -
+  host 120 SetPlayerHealth(f7fc00000)
+143.2 SetPlayerHealth(f3f800000) = -
+  host 120 SetPlayerHealth(f3f800000)
+143.3 SetPlayerHealth(f3dcccccd) = -
+  host 120 SetPlayerHealth(f3dcccccd)
+144.0 AddPlayerHealth(f7f7fffff) = -
+  host 121 AddPlayerHealth(f7f7fffff)
+144.1 AddPlayerHealth(f3f800000) = -
+  host 121 AddPlayerHealth(f3f800000)
+144.2 AddPlayerHealth(f80000000) = -
+  host 121 AddPlayerHealth(f80000000)
+144.3 AddPlayerHealth(f7fc00000) = -
+  host 121 AddPlayerHealth(f7fc00000)
+145.0 GetPlayerHealth() = f42f50000
+  host 122 GetPlayerHealth()
+145.1 GetPlayerHealth() = f42f50000
+  host 122 GetPlayerHealth()
+145.2 GetPlayerHealth() = f42f50000
+  host 122 GetPlayerHealth()
+145.3 GetPlayerHealth() = f42f50000
+  host 122 GetPlayerHealth()
+146.0 SetPlayerLampOil(f00000000) = -
+  host 123 SetPlayerLampOil(f00000000)
+146.1 SetPlayerLampOil(f3f800000) = -
+  host 123 SetPlayerLampOil(f3f800000)
+146.2 SetPlayerLampOil(f42c80000) = -
+  host 123 SetPlayerLampOil(f42c80000)
+146.3 SetPlayerLampOil(f00000000) = -
+  host 123 SetPlayerLampOil(f00000000)
+147.0 AddPlayerLampOil(f42c80000) = -
+  host 124 AddPlayerLampOil(f42c80000)
+147.1 AddPlayerLampOil(f42c80000) = -
+  host 124 AddPlayerLampOil(f42c80000)
+147.2 AddPlayerLampOil(f3dcccccd) = -
+  host 124 AddPlayerLampOil(f3dcccccd)
+147.3 AddPlayerLampOil(fbfc00000) = -
+  host 124 AddPlayerLampOil(fbfc00000)
+148.0 GetPlayerLampOil() = f42fb0000
+  host 125 GetPlayerLampOil()
+148.1 GetPlayerLampOil() = f42fb0000
+  host 125 GetPlayerLampOil()
+148.2 GetPlayerLampOil() = f42fb0000
+  host 125 GetPlayerLampOil()
+148.3 GetPlayerLampOil() = f42fb0000
+  host 125 GetPlayerLampOil()
+149.0 GetPlayerSpeed() = f42fd0000
+  host 126 GetPlayerSpeed()
+149.1 GetPlayerSpeed() = f42fd0000
+  host 126 GetPlayerSpeed()
+149.2 GetPlayerSpeed() = f42fd0000
+  host 126 GetPlayerSpeed()
+149.3 GetPlayerSpeed() = f42fd0000
+  host 126 GetPlayerSpeed()
+150.0 GetPlayerYSpeed() = f42ff0000
+  host 127 GetPlayerYSpeed()
+150.1 GetPlayerYSpeed() = f42ff0000
+  host 127 GetPlayerYSpeed()
+150.2 GetPlayerYSpeed() = f42ff0000
+  host 127 GetPlayerYSpeed()
+150.3 GetPlayerYSpeed() = f42ff0000
+  host 127 GetPlayerYSpeed()
+151.0 MovePlayerForward(f00000000) = -
+  host 128 MovePlayerForward(f00000000)
+151.1 MovePlayerForward(f00000000) = -
+  host 128 MovePlayerForward(f00000000)
+151.2 MovePlayerForward(f3dcccccd) = -
+  host 128 MovePlayerForward(f3dcccccd)
+151.3 MovePlayerForward(f7fc00000) = -
+  host 128 MovePlayerForward(f7fc00000)
+152.0 SetPlayerPermaDeathSound("x\0y") = -
+  host 129 SetPlayerPermaDeathSound("x\0y")
+152.1 SetPlayerPermaDeathSound("Door_1") = -
+  host 129 SetPlayerPermaDeathSound("Door_1")
+152.2 SetPlayerPermaDeathSound("two words") = -
+  host 129 SetPlayerPermaDeathSound("two words")
+152.3 SetPlayerPermaDeathSound("Body_Mesh_01") = -
+  host 129 SetPlayerPermaDeathSound("Body_Mesh_01")
+153.0 SetSanityDrainDisabled(1) = -
+  host 130 SetSanityDrainDisabled(1)
+153.1 SetSanityDrainDisabled(1) = -
+  host 130 SetSanityDrainDisabled(1)
+153.2 SetSanityDrainDisabled(0) = -
+  host 130 SetSanityDrainDisabled(0)
+153.3 SetSanityDrainDisabled(1) = -
+  host 130 SetSanityDrainDisabled(1)
+154.0 GiveSanityBoost() = -
+  host 131 GiveSanityBoost()
+154.1 GiveSanityBoost() = -
+  host 131 GiveSanityBoost()
+154.2 GiveSanityBoost() = -
+  host 131 GiveSanityBoost()
+154.3 GiveSanityBoost() = -
+  host 131 GiveSanityBoost()
+155.0 GiveSanityBoostSmall() = -
+  host 132 GiveSanityBoostSmall()
+155.1 GiveSanityBoostSmall() = -
+  host 132 GiveSanityBoostSmall()
+155.2 GiveSanityBoostSmall() = -
+  host 132 GiveSanityBoostSmall()
+155.3 GiveSanityBoostSmall() = -
+  host 132 GiveSanityBoostSmall()
+156.0 GiveSanityDamage(f80000000,1) = -
+  host 133 GiveSanityDamage(f80000000,1)
+156.1 GiveSanityDamage(f3f800000,1) = -
+  host 133 GiveSanityDamage(f3f800000,1)
+156.2 GiveSanityDamage(f80000000,1) = -
+  host 133 GiveSanityDamage(f80000000,1)
+156.3 GiveSanityDamage(f3f800000,0) = -
+  host 133 GiveSanityDamage(f3f800000,0)
+157.0 GivePlayerDamage(f3a83126f,"Door_1",1,1) = -
+  host 134 GivePlayerDamage(f3a83126f,"Door_1",1,1)
+157.1 GivePlayerDamage(f3f800000,"wild*",0,0) = -
+  host 134 GivePlayerDamage(f3f800000,"wild*",0,0)
+157.2 GivePlayerDamage(f3dcccccd,"",1,0) = -
+  host 134 GivePlayerDamage(f3dcccccd,"",1,0)
+157.3 GivePlayerDamage(f3dcccccd,"",1,0) = -
+  host 134 GivePlayerDamage(f3dcccccd,"",1,0)
+158.0 FadePlayerFOVMulTo(f3a83126f,f3dcccccd) = -
+  host 135 FadePlayerFOVMulTo(f3a83126f,f3dcccccd)
+158.1 FadePlayerFOVMulTo(f80000000,fbfc00000) = -
+  host 135 FadePlayerFOVMulTo(f80000000,fbfc00000)
+158.2 FadePlayerFOVMulTo(fbfc00000,f00000000) = -
+  host 135 FadePlayerFOVMulTo(fbfc00000,f00000000)
+158.3 FadePlayerFOVMulTo(f3f800000,f7f7fffff) = -
+  host 135 FadePlayerFOVMulTo(f3f800000,f7f7fffff)
+159.0 FadePlayerAspectMulTo(f7f7fffff,f7f7fffff) = -
+  host 136 FadePlayerAspectMulTo(f7f7fffff,f7f7fffff)
+159.1 FadePlayerAspectMulTo(f3a83126f,f3f800000) = -
+  host 136 FadePlayerAspectMulTo(f3a83126f,f3f800000)
+159.2 FadePlayerAspectMulTo(f7fc00000,f7f7fffff) = -
+  host 136 FadePlayerAspectMulTo(f7fc00000,f7f7fffff)
+159.3 FadePlayerAspectMulTo(f3dcccccd,f7fc00000) = -
+  host 136 FadePlayerAspectMulTo(f3dcccccd,f7fc00000)
+160.0 FadePlayerRollTo(f42c80000,f00000000,f80000000) = -
+  host 137 FadePlayerRollTo(f42c80000,f00000000,f80000000)
+160.1 FadePlayerRollTo(f3f800000,f00000000,f3f800000) = -
+  host 137 FadePlayerRollTo(f3f800000,f00000000,f3f800000)
+160.2 FadePlayerRollTo(f3f800000,f7f7fffff,f80000000) = -
+  host 137 FadePlayerRollTo(f3f800000,f7f7fffff,f80000000)
+160.3 FadePlayerRollTo(f42c80000,f00000000,f42c80000) = -
+  host 137 FadePlayerRollTo(f42c80000,f00000000,f42c80000)
+161.0 MovePlayerHeadPos(f7f7fffff,f3f800000,f7fc00000,fbfc00000,f80000000) = -
+  host 138 MovePlayerHeadPos(f7f7fffff,f3f800000,f7fc00000,fbfc00000,f80000000)
+161.1 MovePlayerHeadPos(f42c80000,f00000000,f7fc00000,fbfc00000,f3f800000) = -
+  host 138 MovePlayerHeadPos(f42c80000,f00000000,f7fc00000,fbfc00000,f3f800000)
+161.2 MovePlayerHeadPos(f3a83126f,f3a83126f,f42c80000,fbfc00000,f3f800000) = -
+  host 138 MovePlayerHeadPos(f3a83126f,f3a83126f,f42c80000,fbfc00000,f3f800000)
+161.3 MovePlayerHeadPos(f3a83126f,f7fc00000,f3a83126f,f3a83126f,f80000000) = -
+  host 138 MovePlayerHeadPos(f3a83126f,f7fc00000,f3a83126f,f3a83126f,f80000000)
+162.0 StartPlayerLookAt("",fbfc00000,fbfc00000,"Door_1") = -
+  host 139 StartPlayerLookAt("",fbfc00000,fbfc00000,"Door_1")
+162.1 StartPlayerLookAt("a",f42c80000,f7fc00000,"") = -
+  host 139 StartPlayerLookAt("a",f42c80000,f7fc00000,"")
+162.2 StartPlayerLookAt("",fbfc00000,f00000000,"Åge") = -
+  host 139 StartPlayerLookAt("",fbfc00000,f00000000,"Åge")
+162.3 StartPlayerLookAt("a",f00000000,f00000000,"") = -
+  host 139 StartPlayerLookAt("a",f00000000,f00000000,"")
+163.0 StopPlayerLookAt() = -
+  host 140 StopPlayerLookAt()
+163.1 StopPlayerLookAt() = -
+  host 140 StopPlayerLookAt()
+163.2 StopPlayerLookAt() = -
+  host 140 StopPlayerLookAt()
+163.3 StopPlayerLookAt() = -
+  host 140 StopPlayerLookAt()
+164.0 SetPlayerMoveSpeedMul(f42c80000) = -
+  host 141 SetPlayerMoveSpeedMul(f42c80000)
+164.1 SetPlayerMoveSpeedMul(fbfc00000) = -
+  host 141 SetPlayerMoveSpeedMul(fbfc00000)
+164.2 SetPlayerMoveSpeedMul(f00000000) = -
+  host 141 SetPlayerMoveSpeedMul(f00000000)
+164.3 SetPlayerMoveSpeedMul(f7fc00000) = -
+  host 141 SetPlayerMoveSpeedMul(f7fc00000)
+165.0 SetPlayerRunSpeedMul(f42c80000) = -
+  host 142 SetPlayerRunSpeedMul(f42c80000)
+165.1 SetPlayerRunSpeedMul(f7fc00000) = -
+  host 142 SetPlayerRunSpeedMul(f7fc00000)
+165.2 SetPlayerRunSpeedMul(f7f7fffff) = -
+  host 142 SetPlayerRunSpeedMul(f7f7fffff)
+165.3 SetPlayerRunSpeedMul(f80000000) = -
+  host 142 SetPlayerRunSpeedMul(f80000000)
+166.0 SetPlayerLookSpeedMul(f7f7fffff) = -
+  host 143 SetPlayerLookSpeedMul(f7f7fffff)
+166.1 SetPlayerLookSpeedMul(f7fc00000) = -
+  host 143 SetPlayerLookSpeedMul(f7fc00000)
+166.2 SetPlayerLookSpeedMul(fbfc00000) = -
+  host 143 SetPlayerLookSpeedMul(fbfc00000)
+166.3 SetPlayerLookSpeedMul(fbfc00000) = -
+  host 143 SetPlayerLookSpeedMul(fbfc00000)
+167.0 SetPlayerJumpForceMul(f80000000) = -
+  host 144 SetPlayerJumpForceMul(f80000000)
+167.1 SetPlayerJumpForceMul(f7fc00000) = -
+  host 144 SetPlayerJumpForceMul(f7fc00000)
+167.2 SetPlayerJumpForceMul(f42c80000) = -
+  host 144 SetPlayerJumpForceMul(f42c80000)
+167.3 SetPlayerJumpForceMul(fbfc00000) = -
+  host 144 SetPlayerJumpForceMul(fbfc00000)
+168.0 SetPlayerJumpDisabled(0) = -
+  host 145 SetPlayerJumpDisabled(0)
+168.1 SetPlayerJumpDisabled(1) = -
+  host 145 SetPlayerJumpDisabled(1)
+168.2 SetPlayerJumpDisabled(1) = -
+  host 145 SetPlayerJumpDisabled(1)
+168.3 SetPlayerJumpDisabled(0) = -
+  host 145 SetPlayerJumpDisabled(0)
+169.0 SetPlayerCrouchDisabled(0) = -
+  host 146 SetPlayerCrouchDisabled(0)
+169.1 SetPlayerCrouchDisabled(0) = -
+  host 146 SetPlayerCrouchDisabled(0)
+169.2 SetPlayerCrouchDisabled(1) = -
+  host 146 SetPlayerCrouchDisabled(1)
+169.3 SetPlayerCrouchDisabled(1) = -
+  host 146 SetPlayerCrouchDisabled(1)
+170.0 SetPlayerFallDamageDisabled(0) = -
+  host 147 SetPlayerFallDamageDisabled(0)
+170.1 SetPlayerFallDamageDisabled(0) = -
+  host 147 SetPlayerFallDamageDisabled(0)
+170.2 SetPlayerFallDamageDisabled(0) = -
+  host 147 SetPlayerFallDamageDisabled(0)
+170.3 SetPlayerFallDamageDisabled(0) = -
+  host 147 SetPlayerFallDamageDisabled(0)
+171.0 TeleportPlayer("Body_Mesh_01") = -
+  host 148 TeleportPlayer("Body_Mesh_01")
+171.1 TeleportPlayer("a") = -
+  host 148 TeleportPlayer("a")
+171.2 TeleportPlayer("") = -
+  host 148 TeleportPlayer("")
+171.3 TeleportPlayer("x\0y") = -
+  host 148 TeleportPlayer("x\0y")
+172.0 SetLanternActive(1,1) = -
+  host 149 SetLanternActive(1,1)
+172.1 SetLanternActive(0,1) = -
+  host 149 SetLanternActive(0,1)
+172.2 SetLanternActive(0,0) = -
+  host 149 SetLanternActive(0,0)
+172.3 SetLanternActive(1,1) = -
+  host 149 SetLanternActive(1,1)
+173.0 GetLanternActive() = 1
+  host 150 GetLanternActive()
+173.1 GetLanternActive() = 1
+  host 150 GetLanternActive()
+173.2 GetLanternActive() = 1
+  host 150 GetLanternActive()
+173.3 GetLanternActive() = 1
+  host 150 GetLanternActive()
+174.0 SetLanternDisabled(0) = -
+  host 151 SetLanternDisabled(0)
+174.1 SetLanternDisabled(0) = -
+  host 151 SetLanternDisabled(0)
+174.2 SetLanternDisabled(1) = -
+  host 151 SetLanternDisabled(1)
+174.3 SetLanternDisabled(0) = -
+  host 151 SetLanternDisabled(0)
+175.0 SetLanternLitCallback("two words") = -
+  host 152 SetLanternLitCallback("two words")
+175.1 SetLanternLitCallback("Åge") = -
+  host 152 SetLanternLitCallback("Åge")
+175.2 SetLanternLitCallback("Door_1") = -
+  host 152 SetLanternLitCallback("Door_1")
+175.3 SetLanternLitCallback("") = -
+  host 152 SetLanternLitCallback("")
+176.0 SetMessage("wild*","two words",f7fc00000) = -
+  host 153 SetMessage("wild*","two words",f7fc00000)
+176.1 SetMessage("two words","",f7fc00000) = -
+  host 153 SetMessage("two words","",f7fc00000)
+176.2 SetMessage("Åge","Door_1",f7f7fffff) = -
+  host 153 SetMessage("Åge","Door_1",f7f7fffff)
+176.3 SetMessage("Door_1","wild*",f80000000) = -
+  host 153 SetMessage("Door_1","wild*",f80000000)
+177.0 SetDeathHint("x\0y","Body_Mesh_01") = -
+  host 154 SetDeathHint("x\0y","Body_Mesh_01")
+177.1 SetDeathHint("","Body_Mesh_01") = -
+  host 154 SetDeathHint("","Body_Mesh_01")
+177.2 SetDeathHint("Åge","Åge") = -
+  host 154 SetDeathHint("Åge","Åge")
+177.3 SetDeathHint("x\0y","wild*") = -
+  host 154 SetDeathHint("x\0y","wild*")
+178.0 DisableDeathStartSound() = -
+  host 155 DisableDeathStartSound()
+178.1 DisableDeathStartSound() = -
+  host 155 DisableDeathStartSound()
+178.2 DisableDeathStartSound() = -
+  host 155 DisableDeathStartSound()
+178.3 DisableDeathStartSound() = -
+  host 155 DisableDeathStartSound()
+179.0 AddNote("Åge","Door_1") = -
+  host 156 AddNote("Åge","Door_1")
+179.1 AddNote("Body_Mesh_01","wild*") = -
+  host 156 AddNote("Body_Mesh_01","wild*")
+179.2 AddNote("Body_Mesh_01","Åge") = -
+  host 156 AddNote("Body_Mesh_01","Åge")
+179.3 AddNote("a","x\0y") = -
+  host 156 AddNote("a","x\0y")
+180.0 AddDiary("Door_1","") = -
+  host 157 AddDiary("Door_1","")
+180.1 AddDiary("x\0y","two words") = -
+  host 157 AddDiary("x\0y","two words")
+180.2 AddDiary("x\0y","a") = -
+  host 157 AddDiary("x\0y","a")
+180.3 AddDiary("a","x\0y") = -
+  host 157 AddDiary("a","x\0y")
+181.0 ReturnOpenJournal(0) = -
+  host 158 ReturnOpenJournal(0)
+181.1 ReturnOpenJournal(0) = -
+  host 158 ReturnOpenJournal(0)
+181.2 ReturnOpenJournal(1) = -
+  host 158 ReturnOpenJournal(1)
+181.3 ReturnOpenJournal(0) = -
+  host 158 ReturnOpenJournal(0)
+182.0 AddQuest("wild*","a") = -
+  host 159 AddQuest("wild*","a")
+182.1 AddQuest("Door_1","Åge") = -
+  host 159 AddQuest("Door_1","Åge")
+182.2 AddQuest("Body_Mesh_01","Åge") = -
+  host 159 AddQuest("Body_Mesh_01","Åge")
+182.3 AddQuest("wild*","two words") = -
+  host 159 AddQuest("wild*","two words")
+183.0 CompleteQuest("wild*","x\0y") = -
+  host 160 CompleteQuest("wild*","x\0y")
+183.1 CompleteQuest("Door_1","two words") = -
+  host 160 CompleteQuest("Door_1","two words")
+183.2 CompleteQuest("wild*","two words") = -
+  host 160 CompleteQuest("wild*","two words")
+183.3 CompleteQuest("Door_1","wild*") = -
+  host 160 CompleteQuest("Door_1","wild*")
+184.0 QuestIsCompleted("two words") = 0
+  host 161 QuestIsCompleted("two words")
+184.1 QuestIsCompleted("") = 0
+  host 161 QuestIsCompleted("")
+184.2 QuestIsCompleted("") = 0
+  host 161 QuestIsCompleted("")
+184.3 QuestIsCompleted("Door_1") = 0
+  host 161 QuestIsCompleted("Door_1")
+185.0 QuestIsAdded("Åge") = 1
+  host 162 QuestIsAdded("Åge")
+185.1 QuestIsAdded("wild*") = 1
+  host 162 QuestIsAdded("wild*")
+185.2 QuestIsAdded("wild*") = 1
+  host 162 QuestIsAdded("wild*")
+185.3 QuestIsAdded("x\0y") = 1
+  host 162 QuestIsAdded("x\0y")
+186.0 SetNumberOfQuestsInMap(0) = -
+  host 163 SetNumberOfQuestsInMap(0)
+186.1 SetNumberOfQuestsInMap(-1) = -
+  host 163 SetNumberOfQuestsInMap(-1)
+186.2 SetNumberOfQuestsInMap(0) = -
+  host 163 SetNumberOfQuestsInMap(0)
+186.3 SetNumberOfQuestsInMap(7) = -
+  host 163 SetNumberOfQuestsInMap(7)
+187.0 GiveHint("Åge","Åge","two words",f3a83126f) = -
+  host 164 GiveHint("Åge","Åge","two words",f3a83126f)
+187.1 GiveHint("x\0y","Body_Mesh_01","Åge",f7fc00000) = -
+  host 164 GiveHint("x\0y","Body_Mesh_01","Åge",f7fc00000)
+187.2 GiveHint("Door_1","","a",f42c80000) = -
+  host 164 GiveHint("Door_1","","a",f42c80000)
+187.3 GiveHint("Door_1","wild*","two words",f3dcccccd) = -
+  host 164 GiveHint("Door_1","wild*","two words",f3dcccccd)
+188.0 RemoveHint("two words") = -
+  host 165 RemoveHint("two words")
+188.1 RemoveHint("two words") = -
+  host 165 RemoveHint("two words")
+188.2 RemoveHint("Body_Mesh_01") = -
+  host 165 RemoveHint("Body_Mesh_01")
+188.3 RemoveHint("Body_Mesh_01") = -
+  host 165 RemoveHint("Body_Mesh_01")
+189.0 BlockHint("Åge") = -
+  host 166 BlockHint("Åge")
+189.1 BlockHint("a") = -
+  host 166 BlockHint("a")
+189.2 BlockHint("") = -
+  host 166 BlockHint("")
+189.3 BlockHint("wild*") = -
+  host 166 BlockHint("wild*")
+190.0 UnBlockHint("wild*") = -
+  host 167 UnBlockHint("wild*")
+190.1 UnBlockHint("two words") = -
+  host 167 UnBlockHint("two words")
+190.2 UnBlockHint("x\0y") = -
+  host 167 UnBlockHint("x\0y")
+190.3 UnBlockHint("") = -
+  host 167 UnBlockHint("")
+191.0 ExitInventory() = -
+  host 168 ExitInventory()
+191.1 ExitInventory() = -
+  host 168 ExitInventory()
+191.2 ExitInventory() = -
+  host 168 ExitInventory()
+191.3 ExitInventory() = -
+  host 168 ExitInventory()
+192.0 SetInventoryDisabled(1) = -
+  host 169 SetInventoryDisabled(1)
+192.1 SetInventoryDisabled(0) = -
+  host 169 SetInventoryDisabled(0)
+192.2 SetInventoryDisabled(1) = -
+  host 169 SetInventoryDisabled(1)
+192.3 SetInventoryDisabled(0) = -
+  host 169 SetInventoryDisabled(0)
+193.0 SetInventoryMessage("wild*","Body_Mesh_01",f3dcccccd) = -
+  host 170 SetInventoryMessage("wild*","Body_Mesh_01",f3dcccccd)
+193.1 SetInventoryMessage("two words","Door_1",f3a83126f) = -
+  host 170 SetInventoryMessage("two words","Door_1",f3a83126f)
+193.2 SetInventoryMessage("a","wild*",f7f7fffff) = -
+  host 170 SetInventoryMessage("a","wild*",f7f7fffff)
+193.3 SetInventoryMessage("","a",f80000000) = -
+  host 170 SetInventoryMessage("","a",f80000000)
+194.0 GiveItem("Door_1","x\0y","x\0y","Door_1",fbfc00000) = -
+  host 171 GiveItem("Door_1","x\0y","x\0y","Door_1",fbfc00000)
+194.1 GiveItem("","Åge","two words","Body_Mesh_01",f3dcccccd) = -
+  host 171 GiveItem("","Åge","two words","Body_Mesh_01",f3dcccccd)
+194.2 GiveItem("Åge","","a","Door_1",f42c80000) = -
+  host 171 GiveItem("Åge","","a","Door_1",f42c80000)
+194.3 GiveItem("x\0y","two words","a","Door_1",f7f7fffff) = -
+  host 171 GiveItem("x\0y","two words","a","Door_1",f7f7fffff)
+195.0 GiveItemFromFile("x\0y","x\0y") = -
+  host 172 GiveItemFromFile("x\0y","x\0y")
+195.1 GiveItemFromFile("","") = -
+  host 172 GiveItemFromFile("","")
+195.2 GiveItemFromFile("two words","Åge") = -
+  host 172 GiveItemFromFile("two words","Åge")
+195.3 GiveItemFromFile("x\0y","Door_1") = -
+  host 172 GiveItemFromFile("x\0y","Door_1")
+196.0 RemoveItem("wild*") = -
+  host 173 RemoveItem("wild*")
+196.1 RemoveItem("x\0y") = -
+  host 173 RemoveItem("x\0y")
+196.2 RemoveItem("x\0y") = -
+  host 173 RemoveItem("x\0y")
+196.3 RemoveItem("") = -
+  host 173 RemoveItem("")
+197.0 HasItem("wild*") = 1
+  host 174 HasItem("wild*")
+197.1 HasItem("") = 1
+  host 174 HasItem("")
+197.2 HasItem("wild*") = 1
+  host 174 HasItem("wild*")
+197.3 HasItem("a") = 1
+  host 174 HasItem("a")
+198.0 AddCombineCallback("wild*","Door_1","Åge","a",0) = -
+  host 175 AddCombineCallback("wild*","Door_1","Åge","a",0)
+198.1 AddCombineCallback("a","two words","Door_1","wild*",1) = -
+  host 175 AddCombineCallback("a","two words","Door_1","wild*",1)
+198.2 AddCombineCallback("x\0y","x\0y","","x\0y",0) = -
+  host 175 AddCombineCallback("x\0y","x\0y","","x\0y",0)
+198.3 AddCombineCallback("x\0y","two words","two words","wild*",1) = -
+  host 175 AddCombineCallback("x\0y","two words","two words","wild*",1)
+199.0 RemoveCombineCallback("a") = -
+  host 176 RemoveCombineCallback("a")
+199.1 RemoveCombineCallback("wild*") = -
+  host 176 RemoveCombineCallback("wild*")
+199.2 RemoveCombineCallback("Åge") = -
+  host 176 RemoveCombineCallback("Åge")
+199.3 RemoveCombineCallback("") = -
+  host 176 RemoveCombineCallback("")
+200.0 AddUseItemCallback("x\0y","x\0y","wild*","Door_1",0) = -
+  host 177 AddUseItemCallback("x\0y","x\0y","wild*","Door_1",0)
+200.1 AddUseItemCallback("x\0y","Door_1","","Body_Mesh_01",1) = -
+  host 177 AddUseItemCallback("x\0y","Door_1","","Body_Mesh_01",1)
+200.2 AddUseItemCallback("a","Åge","Door_1","Body_Mesh_01",1) = -
+  host 177 AddUseItemCallback("a","Åge","Door_1","Body_Mesh_01",1)
+200.3 AddUseItemCallback("two words","Door_1","","two words",0) = -
+  host 177 AddUseItemCallback("two words","Door_1","","two words",0)
+201.0 RemoveUseItemCallback("a") = -
+  host 178 RemoveUseItemCallback("a")
+201.1 RemoveUseItemCallback("two words") = -
+  host 178 RemoveUseItemCallback("two words")
+201.2 RemoveUseItemCallback("") = -
+  host 178 RemoveUseItemCallback("")
+201.3 RemoveUseItemCallback("wild*") = -
+  host 178 RemoveUseItemCallback("wild*")
+202.0 PreloadParticleSystem("Åge") = -
+  host 179 PreloadParticleSystem("Åge")
+202.1 PreloadParticleSystem("") = -
+  host 179 PreloadParticleSystem("")
+202.2 PreloadParticleSystem("two words") = -
+  host 179 PreloadParticleSystem("two words")
+202.3 PreloadParticleSystem("Åge") = -
+  host 179 PreloadParticleSystem("Åge")
+203.0 PreloadSound("a") = -
+  host 180 PreloadSound("a")
+203.1 PreloadSound("wild*") = -
+  host 180 PreloadSound("wild*")
+203.2 PreloadSound("two words") = -
+  host 180 PreloadSound("two words")
+203.3 PreloadSound("x\0y") = -
+  host 180 PreloadSound("x\0y")
+204.0 CreateParticleSystemAtEntity("a","two words","Åge",0) = -
+  host 181 CreateParticleSystemAtEntity("a","two words","Åge",0)
+204.1 CreateParticleSystemAtEntity("Door_1","wild*","wild*",1) = -
+  host 181 CreateParticleSystemAtEntity("Door_1","wild*","wild*",1)
+204.2 CreateParticleSystemAtEntity("two words","wild*","a",0) = -
+  host 181 CreateParticleSystemAtEntity("two words","wild*","a",0)
+204.3 CreateParticleSystemAtEntity("wild*","two words","wild*",1) = -
+  host 181 CreateParticleSystemAtEntity("wild*","two words","wild*",1)
+205.0 CreateParticleSystemAtEntityExt("Åge","Door_1","wild*",0,f80000000,f3dcccccd,f7fc00000,f3a83126f,0,f3f800000,f3f800000,f7fc00000,f00000000) = -
+  host 182 CreateParticleSystemAtEntityExt("Åge","Door_1","wild*",0,f80000000,f3dcccccd,f7fc00000,f3a83126f,0,f3f800000,f3f800000,f7fc00000,f00000000)
+205.1 CreateParticleSystemAtEntityExt("Door_1","Åge","Body_Mesh_01",0,f3a83126f,fbfc00000,f3f800000,f3dcccccd,0,f00000000,fbfc00000,f00000000,fbfc00000) = -
+  host 182 CreateParticleSystemAtEntityExt("Door_1","Åge","Body_Mesh_01",0,f3a83126f,fbfc00000,f3f800000,f3dcccccd,0,f00000000,fbfc00000,f00000000,fbfc00000)
+205.2 CreateParticleSystemAtEntityExt("a","Door_1","x\0y",1,fbfc00000,f42c80000,f7f7fffff,f3f800000,0,f7f7fffff,f42c80000,f3a83126f,fbfc00000) = -
+  host 182 CreateParticleSystemAtEntityExt("a","Door_1","x\0y",1,fbfc00000,f42c80000,f7f7fffff,f3f800000,0,f7f7fffff,f42c80000,f3a83126f,fbfc00000)
+205.3 CreateParticleSystemAtEntityExt("x\0y","Åge","Åge",1,f3dcccccd,f42c80000,f3f800000,f3a83126f,0,f42c80000,fbfc00000,f3a83126f,f7f7fffff) = -
+  host 182 CreateParticleSystemAtEntityExt("x\0y","Åge","Åge",1,f3dcccccd,f42c80000,f3f800000,f3a83126f,0,f42c80000,fbfc00000,f3a83126f,f7f7fffff)
+206.0 DestroyParticleSystem("") = -
+  host 183 DestroyParticleSystem("")
+206.1 DestroyParticleSystem("a") = -
+  host 183 DestroyParticleSystem("a")
+206.2 DestroyParticleSystem("wild*") = -
+  host 183 DestroyParticleSystem("wild*")
+206.3 DestroyParticleSystem("Åge") = -
+  host 183 DestroyParticleSystem("Åge")
+207.0 PlaySoundAtEntity("x\0y","Door_1","Door_1",f3dcccccd,1) = -
+  host 184 PlaySoundAtEntity("x\0y","Door_1","Door_1",f3dcccccd,1)
+207.1 PlaySoundAtEntity("two words","Body_Mesh_01","Åge",f3f800000,0) = -
+  host 184 PlaySoundAtEntity("two words","Body_Mesh_01","Åge",f3f800000,0)
+207.2 PlaySoundAtEntity("Door_1","Åge","a",f80000000,1) = -
+  host 184 PlaySoundAtEntity("Door_1","Åge","a",f80000000,1)
+207.3 PlaySoundAtEntity("wild*","Åge","a",fbfc00000,1) = -
+  host 184 PlaySoundAtEntity("wild*","Åge","a",fbfc00000,1)
+208.0 FadeInSound("wild*",f3a83126f,0) = -
+  host 185 FadeInSound("wild*",f3a83126f,0)
+208.1 FadeInSound("two words",f42c80000,0) = -
+  host 185 FadeInSound("two words",f42c80000,0)
+208.2 FadeInSound("Door_1",f00000000,1) = -
+  host 185 FadeInSound("Door_1",f00000000,1)
+208.3 FadeInSound("",f80000000,0) = -
+  host 185 FadeInSound("",f80000000,0)
+209.0 StopSound("Door_1",f42c80000) = -
+  host 186 StopSound("Door_1",f42c80000)
+209.1 StopSound("Åge",f3a83126f) = -
+  host 186 StopSound("Åge",f3a83126f)
+209.2 StopSound("Åge",f3f800000) = -
+  host 186 StopSound("Åge",f3f800000)
+209.3 StopSound("wild*",f80000000) = -
+  host 186 StopSound("wild*",f80000000)
+210.0 PlayMusic("two words",0,f00000000,f3dcccccd,255,0) = -
+  host 187 PlayMusic("two words",0,f00000000,f3dcccccd,255,0)
+210.1 PlayMusic("x\0y",0,f42c80000,f42c80000,1,0) = -
+  host 187 PlayMusic("x\0y",0,f42c80000,f42c80000,1,0)
+210.2 PlayMusic("Door_1",0,f00000000,f3a83126f,0,1) = -
+  host 187 PlayMusic("Door_1",0,f00000000,f3a83126f,0,1)
+210.3 PlayMusic("two words",0,f42c80000,f42c80000,255,0) = -
+  host 187 PlayMusic("two words",0,f42c80000,f42c80000,255,0)
+211.0 StopMusic(f00000000,1) = -
+  host 188 StopMusic(f00000000,1)
+211.1 StopMusic(f3dcccccd,7) = -
+  host 188 StopMusic(f3dcccccd,7)
+211.2 StopMusic(f7f7fffff,-1000) = -
+  host 188 StopMusic(f7f7fffff,-1000)
+211.3 StopMusic(f80000000,0) = -
+  host 188 StopMusic(f80000000,0)
+212.0 FadeGlobalSoundVolume(f7fc00000,f42c80000) = -
+  host 189 FadeGlobalSoundVolume(f7fc00000,f42c80000)
+212.1 FadeGlobalSoundVolume(fbfc00000,f3a83126f) = -
+  host 189 FadeGlobalSoundVolume(fbfc00000,f3a83126f)
+212.2 FadeGlobalSoundVolume(f80000000,f7f7fffff) = -
+  host 189 FadeGlobalSoundVolume(f80000000,f7f7fffff)
+212.3 FadeGlobalSoundVolume(fbfc00000,f3a83126f) = -
+  host 189 FadeGlobalSoundVolume(fbfc00000,f3a83126f)
+213.0 FadeGlobalSoundSpeed(f00000000,f7f7fffff) = -
+  host 190 FadeGlobalSoundSpeed(f00000000,f7f7fffff)
+213.1 FadeGlobalSoundSpeed(f80000000,f42c80000) = -
+  host 190 FadeGlobalSoundSpeed(f80000000,f42c80000)
+213.2 FadeGlobalSoundSpeed(f3a83126f,f42c80000) = -
+  host 190 FadeGlobalSoundSpeed(f3a83126f,f42c80000)
+213.3 FadeGlobalSoundSpeed(f3dcccccd,f42c80000) = -
+  host 190 FadeGlobalSoundSpeed(f3dcccccd,f42c80000)
+214.0 SetLightVisible("two words",1) = -
+  host 191 SetLightVisible("two words",1)
+214.1 SetLightVisible("Body_Mesh_01",1) = -
+  host 191 SetLightVisible("Body_Mesh_01",1)
+214.2 SetLightVisible("Door_1",1) = -
+  host 191 SetLightVisible("Door_1",1)
+214.3 SetLightVisible("Door_1",0) = -
+  host 191 SetLightVisible("Door_1",0)
+215.0 FadeLightTo("x\0y",f3f800000,fbfc00000,f3a83126f,f42c80000,f7fc00000,fbfc00000) = -
+  host 192 FadeLightTo("x\0y",f3f800000,fbfc00000,f3a83126f,f42c80000,f7fc00000,fbfc00000)
+215.1 FadeLightTo("a",f80000000,f00000000,f7fc00000,f7fc00000,f3dcccccd,f3a83126f) = -
+  host 192 FadeLightTo("a",f80000000,f00000000,f7fc00000,f7fc00000,f3dcccccd,f3a83126f)
+215.2 FadeLightTo("x\0y",f7f7fffff,f42c80000,f3f800000,f3a83126f,fbfc00000,f3a83126f) = -
+  host 192 FadeLightTo("x\0y",f7f7fffff,f42c80000,f3f800000,f3a83126f,fbfc00000,f3a83126f)
+215.3 FadeLightTo("a",f3f800000,f3f800000,f7fc00000,f00000000,f7f7fffff,f00000000) = -
+  host 192 FadeLightTo("a",f3f800000,f3f800000,f7fc00000,f00000000,f7f7fffff,f00000000)
+216.0 SetLightFlickerActive("Åge",0) = -
+  host 193 SetLightFlickerActive("Åge",0)
+216.1 SetLightFlickerActive("Åge",1) = -
+  host 193 SetLightFlickerActive("Åge",1)
+216.2 SetLightFlickerActive("Body_Mesh_01",1) = -
+  host 193 SetLightFlickerActive("Body_Mesh_01",1)
+216.3 SetLightFlickerActive("wild*",1) = -
+  host 193 SetLightFlickerActive("wild*",1)
+217.0 SetEntityActive("a",0) = -
+  host 194 SetEntityActive("a",0)
+217.1 SetEntityActive("two words",1) = -
+  host 194 SetEntityActive("two words",1)
+217.2 SetEntityActive("x\0y",0) = -
+  host 194 SetEntityActive("x\0y",0)
+217.3 SetEntityActive("two words",1) = -
+  host 194 SetEntityActive("two words",1)
+218.0 SetEntityVisible("Åge",0) = -
+  host 195 SetEntityVisible("Åge",0)
+218.1 SetEntityVisible("Body_Mesh_01",0) = -
+  host 195 SetEntityVisible("Body_Mesh_01",0)
+218.2 SetEntityVisible("a",1) = -
+  host 195 SetEntityVisible("a",1)
+218.3 SetEntityVisible("Body_Mesh_01",1) = -
+  host 195 SetEntityVisible("Body_Mesh_01",1)
+219.0 GetEntityExists("a") = 1
+  host 196 GetEntityExists("a")
+219.1 GetEntityExists("Body_Mesh_01") = 1
+  host 196 GetEntityExists("Body_Mesh_01")
+219.2 GetEntityExists("x\0y") = 1
+  host 196 GetEntityExists("x\0y")
+219.3 GetEntityExists("two words") = 1
+  host 196 GetEntityExists("two words")
+220.0 SetEntityPos("x\0y",f3a83126f,f3dcccccd,f3dcccccd) = -
+  host 197 SetEntityPos("x\0y",f3a83126f,f3dcccccd,f3dcccccd)
+220.1 SetEntityPos("x\0y",f3dcccccd,f00000000,f3a83126f) = -
+  host 197 SetEntityPos("x\0y",f3dcccccd,f00000000,f3a83126f)
+220.2 SetEntityPos("x\0y",f7f7fffff,f3a83126f,fbfc00000) = -
+  host 197 SetEntityPos("x\0y",f7f7fffff,f3a83126f,fbfc00000)
+220.3 SetEntityPos("wild*",f7f7fffff,fbfc00000,f3dcccccd) = -
+  host 197 SetEntityPos("wild*",f7f7fffff,fbfc00000,f3dcccccd)
+221.0 GetEntityPosX("Door_1") = f43468000
+  host 198 GetEntityPosX("Door_1")
+221.1 GetEntityPosX("Body_Mesh_01") = f43468000
+  host 198 GetEntityPosX("Body_Mesh_01")
+221.2 GetEntityPosX("Door_1") = f43468000
+  host 198 GetEntityPosX("Door_1")
+221.3 GetEntityPosX("Åge") = f43468000
+  host 198 GetEntityPosX("Åge")
+222.0 GetEntityPosY("two words") = f43478000
+  host 199 GetEntityPosY("two words")
+222.1 GetEntityPosY("Door_1") = f43478000
+  host 199 GetEntityPosY("Door_1")
+222.2 GetEntityPosY("Åge") = f43478000
+  host 199 GetEntityPosY("Åge")
+222.3 GetEntityPosY("Door_1") = f43478000
+  host 199 GetEntityPosY("Door_1")
+223.0 GetEntityPosZ("two words") = f43488000
+  host 200 GetEntityPosZ("two words")
+223.1 GetEntityPosZ("Body_Mesh_01") = f43488000
+  host 200 GetEntityPosZ("Body_Mesh_01")
+223.2 GetEntityPosZ("Door_1") = f43488000
+  host 200 GetEntityPosZ("Door_1")
+223.3 GetEntityPosZ("wild*") = f43488000
+  host 200 GetEntityPosZ("wild*")
+224.0 SetEntityCustomFocusCrossHair("","a") = -
+  host 201 SetEntityCustomFocusCrossHair("","a")
+224.1 SetEntityCustomFocusCrossHair("","two words") = -
+  host 201 SetEntityCustomFocusCrossHair("","two words")
+224.2 SetEntityCustomFocusCrossHair("a","a") = -
+  host 201 SetEntityCustomFocusCrossHair("a","a")
+224.3 SetEntityCustomFocusCrossHair("two words","a") = -
+  host 201 SetEntityCustomFocusCrossHair("two words","a")
+225.0 CreateEntityAtArea("x\0y","a","two words",0) = -
+  host 202 CreateEntityAtArea("x\0y","a","two words",0)
+225.1 CreateEntityAtArea("two words","Door_1","two words",1) = -
+  host 202 CreateEntityAtArea("two words","Door_1","two words",1)
+225.2 CreateEntityAtArea("Door_1","Åge","Åge",1) = -
+  host 202 CreateEntityAtArea("Door_1","Åge","Åge",1)
+225.3 CreateEntityAtArea("two words","Åge","Body_Mesh_01",0) = -
+  host 202 CreateEntityAtArea("two words","Åge","Body_Mesh_01",0)
+226.0 ReplaceEntity("Door_1","","Åge","two words",0) = -
+  host 203 ReplaceEntity("Door_1","","Åge","two words",0)
+226.1 ReplaceEntity("wild*","Åge","","Åge",1) = -
+  host 203 ReplaceEntity("wild*","Åge","","Åge",1)
+226.2 ReplaceEntity("Body_Mesh_01","Åge","wild*","x\0y",0) = -
+  host 203 ReplaceEntity("Body_Mesh_01","Åge","wild*","x\0y",0)
+226.3 ReplaceEntity("Åge","Door_1","two words","Åge",1) = -
+  host 203 ReplaceEntity("Åge","Door_1","two words","Åge",1)
+227.0 PlaceEntityAtEntity("Åge","","two words",0) = -
+  host 204 PlaceEntityAtEntity("Åge","","two words",0)
+227.1 PlaceEntityAtEntity("a","Body_Mesh_01","x\0y",1) = -
+  host 204 PlaceEntityAtEntity("a","Body_Mesh_01","x\0y",1)
+227.2 PlaceEntityAtEntity("Door_1","Åge","x\0y",0) = -
+  host 204 PlaceEntityAtEntity("Door_1","Åge","x\0y",0)
+227.3 PlaceEntityAtEntity("wild*","wild*","Door_1",1) = -
+  host 204 PlaceEntityAtEntity("wild*","wild*","Door_1",1)
+228.0 SetEntityPlayerLookAtCallback("","Door_1",0) = -
+  host 205 SetEntityPlayerLookAtCallback("","Door_1",0)
+228.1 SetEntityPlayerLookAtCallback("two words","Body_Mesh_01",0) = -
+  host 205 SetEntityPlayerLookAtCallback("two words","Body_Mesh_01",0)
+228.2 SetEntityPlayerLookAtCallback("Body_Mesh_01","Body_Mesh_01",0) = -
+  host 205 SetEntityPlayerLookAtCallback("Body_Mesh_01","Body_Mesh_01",0)
+228.3 SetEntityPlayerLookAtCallback("Åge","a",1) = -
+  host 205 SetEntityPlayerLookAtCallback("Åge","a",1)
+229.0 SetEntityPlayerInteractCallback("two words","two words",0) = -
+  host 206 SetEntityPlayerInteractCallback("two words","two words",0)
+229.1 SetEntityPlayerInteractCallback("two words","two words",1) = -
+  host 206 SetEntityPlayerInteractCallback("two words","two words",1)
+229.2 SetEntityPlayerInteractCallback("Body_Mesh_01","two words",1) = -
+  host 206 SetEntityPlayerInteractCallback("Body_Mesh_01","two words",1)
+229.3 SetEntityPlayerInteractCallback("Åge","a",1) = -
+  host 206 SetEntityPlayerInteractCallback("Åge","a",1)
+230.0 SetEntityCallbackFunc("two words","wild*") = -
+  host 207 SetEntityCallbackFunc("two words","wild*")
+230.1 SetEntityCallbackFunc("Åge","Åge") = -
+  host 207 SetEntityCallbackFunc("Åge","Åge")
+230.2 SetEntityCallbackFunc("Door_1","") = -
+  host 207 SetEntityCallbackFunc("Door_1","")
+230.3 SetEntityCallbackFunc("Door_1","Door_1") = -
+  host 207 SetEntityCallbackFunc("Door_1","Door_1")
+231.0 SetEntityConnectionStateChangeCallback("a","x\0y") = -
+  host 208 SetEntityConnectionStateChangeCallback("a","x\0y")
+231.1 SetEntityConnectionStateChangeCallback("two words","Door_1") = -
+  host 208 SetEntityConnectionStateChangeCallback("two words","Door_1")
+231.2 SetEntityConnectionStateChangeCallback("Åge","") = -
+  host 208 SetEntityConnectionStateChangeCallback("Åge","")
+231.3 SetEntityConnectionStateChangeCallback("x\0y","Body_Mesh_01") = -
+  host 208 SetEntityConnectionStateChangeCallback("x\0y","Body_Mesh_01")
+232.0 SetEntityInteractionDisabled("two words",0) = -
+  host 209 SetEntityInteractionDisabled("two words",0)
+232.1 SetEntityInteractionDisabled("two words",1) = -
+  host 209 SetEntityInteractionDisabled("two words",1)
+232.2 SetEntityInteractionDisabled("Åge",1) = -
+  host 209 SetEntityInteractionDisabled("Åge",1)
+232.3 SetEntityInteractionDisabled("two words",1) = -
+  host 209 SetEntityInteractionDisabled("two words",1)
+233.0 GetEntitiesCollide("x\0y","Door_1") = 1
+  host 210 GetEntitiesCollide("x\0y","Door_1")
+233.1 GetEntitiesCollide("Åge","wild*") = 1
+  host 210 GetEntitiesCollide("Åge","wild*")
+233.2 GetEntitiesCollide("Body_Mesh_01","Door_1") = 1
+  host 210 GetEntitiesCollide("Body_Mesh_01","Door_1")
+233.3 GetEntitiesCollide("a","Åge") = 1
+  host 210 GetEntitiesCollide("a","Åge")
+234.0 SetPropEffectActive("a",0,0) = -
+  host 211 SetPropEffectActive("a",0,0)
+234.1 SetPropEffectActive("",1,0) = -
+  host 211 SetPropEffectActive("",1,0)
+234.2 SetPropEffectActive("Åge",0,0) = -
+  host 211 SetPropEffectActive("Åge",0,0)
+234.3 SetPropEffectActive("x\0y",0,0) = -
+  host 211 SetPropEffectActive("x\0y",0,0)
+235.0 SetPropActiveAndFade("a",0,f7f7fffff) = -
+  host 212 SetPropActiveAndFade("a",0,f7f7fffff)
+235.1 SetPropActiveAndFade("two words",0,f00000000) = -
+  host 212 SetPropActiveAndFade("two words",0,f00000000)
+235.2 SetPropActiveAndFade("",0,f3a83126f) = -
+  host 212 SetPropActiveAndFade("",0,f3a83126f)
+235.3 SetPropActiveAndFade("Door_1",1,f7f7fffff) = -
+  host 212 SetPropActiveAndFade("Door_1",1,f7f7fffff)
+236.0 SetPropStaticPhysics("two words",0) = -
+  host 213 SetPropStaticPhysics("two words",0)
+236.1 SetPropStaticPhysics("two words",0) = -
+  host 213 SetPropStaticPhysics("two words",0)
+236.2 SetPropStaticPhysics("",1) = -
+  host 213 SetPropStaticPhysics("",1)
+236.3 SetPropStaticPhysics("Åge",1) = -
+  host 213 SetPropStaticPhysics("Åge",1)
+237.0 GetPropIsInteractedWith("Body_Mesh_01") = 1
+  host 214 GetPropIsInteractedWith("Body_Mesh_01")
+237.1 GetPropIsInteractedWith("x\0y") = 1
+  host 214 GetPropIsInteractedWith("x\0y")
+237.2 GetPropIsInteractedWith("") = 1
+  host 214 GetPropIsInteractedWith("")
+237.3 GetPropIsInteractedWith("a") = 1
+  host 214 GetPropIsInteractedWith("a")
+238.0 RotatePropToSpeed("Body_Mesh_01",fbfc00000,f7fc00000,f3a83126f,f42c80000,f00000000,1,"wild*") = -
+  host 215 RotatePropToSpeed("Body_Mesh_01",fbfc00000,f7fc00000,f3a83126f,f42c80000,f00000000,1,"wild*")
+238.1 RotatePropToSpeed("Door_1",f3a83126f,f7f7fffff,f3a83126f,f80000000,f3a83126f,0,"wild*") = -
+  host 215 RotatePropToSpeed("Door_1",f3a83126f,f7f7fffff,f3a83126f,f80000000,f3a83126f,0,"wild*")
+238.2 RotatePropToSpeed("",f42c80000,f3a83126f,f42c80000,f42c80000,f42c80000,0,"Door_1") = -
+  host 215 RotatePropToSpeed("",f42c80000,f3a83126f,f42c80000,f42c80000,f42c80000,0,"Door_1")
+238.3 RotatePropToSpeed("wild*",f42c80000,f3dcccccd,f7fc00000,f3a83126f,f7fc00000,0,"wild*") = -
+  host 215 RotatePropToSpeed("wild*",f42c80000,f3dcccccd,f7fc00000,f3a83126f,f7fc00000,0,"wild*")
+239.0 StopPropMovement("wild*") = -
+  host 216 StopPropMovement("wild*")
+239.1 StopPropMovement("x\0y") = -
+  host 216 StopPropMovement("x\0y")
+239.2 StopPropMovement("x\0y") = -
+  host 216 StopPropMovement("x\0y")
+239.3 StopPropMovement("Body_Mesh_01") = -
+  host 216 StopPropMovement("Body_Mesh_01")
+240.0 AddAttachedPropToProp("wild*","Body_Mesh_01","wild*",f3dcccccd,f00000000,f80000000,f3a83126f,f00000000,f80000000) = -
+  host 217 AddAttachedPropToProp("wild*","Body_Mesh_01","wild*",f3dcccccd,f00000000,f80000000,f3a83126f,f00000000,f80000000)
+240.1 AddAttachedPropToProp("two words","Body_Mesh_01","a",f80000000,f7f7fffff,f3dcccccd,fbfc00000,f7fc00000,f3a83126f) = -
+  host 217 AddAttachedPropToProp("two words","Body_Mesh_01","a",f80000000,f7f7fffff,f3dcccccd,fbfc00000,f7fc00000,f3a83126f)
+240.2 AddAttachedPropToProp("x\0y","two words","Body_Mesh_01",f3a83126f,f7f7fffff,f7f7fffff,f7f7fffff,f42c80000,f7fc00000) = -
+  host 217 AddAttachedPropToProp("x\0y","two words","Body_Mesh_01",f3a83126f,f7f7fffff,f7f7fffff,f7f7fffff,f42c80000,f7fc00000)
+240.3 AddAttachedPropToProp("Åge","","wild*",f42c80000,f80000000,f7fc00000,f00000000,f7fc00000,f7fc00000) = -
+  host 217 AddAttachedPropToProp("Åge","","wild*",f42c80000,f80000000,f7fc00000,f00000000,f7fc00000,f7fc00000)
+241.0 AttachPropToProp("two words","two words","Door_1",fbfc00000,f7fc00000,f80000000,f00000000,f7f7fffff,fbfc00000) = -
+  host 218 AttachPropToProp("two words","two words","Door_1",fbfc00000,f7fc00000,f80000000,f00000000,f7f7fffff,fbfc00000)
+241.1 AttachPropToProp("wild*","Body_Mesh_01","",fbfc00000,f42c80000,f3f800000,f7fc00000,f3a83126f,fbfc00000) = -
+  host 218 AttachPropToProp("wild*","Body_Mesh_01","",fbfc00000,f42c80000,f3f800000,f7fc00000,f3a83126f,fbfc00000)
+241.2 AttachPropToProp("two words","Door_1","Body_Mesh_01",f3dcccccd,f42c80000,f42c80000,f42c80000,f7fc00000,f42c80000) = -
+  host 218 AttachPropToProp("two words","Door_1","Body_Mesh_01",f3dcccccd,f42c80000,f42c80000,f42c80000,f7fc00000,f42c80000)
+241.3 AttachPropToProp("two words","wild*","wild*",f42c80000,f7f7fffff,f3f800000,f3f800000,f3f800000,fbfc00000) = -
+  host 218 AttachPropToProp("two words","wild*","wild*",f42c80000,f7f7fffff,f3f800000,f3f800000,f3f800000,fbfc00000)
+242.0 RemoveAttachedPropFromProp("Door_1","Door_1") = -
+  host 219 RemoveAttachedPropFromProp("Door_1","Door_1")
+242.1 RemoveAttachedPropFromProp("Åge","a") = -
+  host 219 RemoveAttachedPropFromProp("Åge","a")
+242.2 RemoveAttachedPropFromProp("Åge","Body_Mesh_01") = -
+  host 219 RemoveAttachedPropFromProp("Åge","Body_Mesh_01")
+242.3 RemoveAttachedPropFromProp("a","two words") = -
+  host 219 RemoveAttachedPropFromProp("a","two words")
+243.0 SetLampLit("Åge",0,1) = -
+  host 220 SetLampLit("Åge",0,1)
+243.1 SetLampLit("x\0y",0,1) = -
+  host 220 SetLampLit("x\0y",0,1)
+243.2 SetLampLit("Åge",1,0) = -
+  host 220 SetLampLit("Åge",1,0)
+243.3 SetLampLit("",1,0) = -
+  host 220 SetLampLit("",1,0)
+244.0 SetSwingDoorLocked("two words",1,0) = -
+  host 221 SetSwingDoorLocked("two words",1,0)
+244.1 SetSwingDoorLocked("Body_Mesh_01",1,1) = -
+  host 221 SetSwingDoorLocked("Body_Mesh_01",1,1)
+244.2 SetSwingDoorLocked("x\0y",0,0) = -
+  host 221 SetSwingDoorLocked("x\0y",0,0)
+244.3 SetSwingDoorLocked("x\0y",1,0) = -
+  host 221 SetSwingDoorLocked("x\0y",1,0)
+245.0 SetSwingDoorClosed("",0,1) = -
+  host 222 SetSwingDoorClosed("",0,1)
+245.1 SetSwingDoorClosed("Door_1",1,1) = -
+  host 222 SetSwingDoorClosed("Door_1",1,1)
+245.2 SetSwingDoorClosed("Door_1",1,1) = -
+  host 222 SetSwingDoorClosed("Door_1",1,1)
+245.3 SetSwingDoorClosed("two words",0,1) = -
+  host 222 SetSwingDoorClosed("two words",0,1)
+246.0 SetSwingDoorDisableAutoClose("wild*",0) = -
+  host 223 SetSwingDoorDisableAutoClose("wild*",0)
+246.1 SetSwingDoorDisableAutoClose("x\0y",1) = -
+  host 223 SetSwingDoorDisableAutoClose("x\0y",1)
+246.2 SetSwingDoorDisableAutoClose("wild*",1) = -
+  host 223 SetSwingDoorDisableAutoClose("wild*",1)
+246.3 SetSwingDoorDisableAutoClose("Door_1",0) = -
+  host 223 SetSwingDoorDisableAutoClose("Door_1",0)
+247.0 SetLevelDoorLocked("a",0) = -
+  host 224 SetLevelDoorLocked("a",0)
+247.1 SetLevelDoorLocked("Body_Mesh_01",0) = -
+  host 224 SetLevelDoorLocked("Body_Mesh_01",0)
+247.2 SetLevelDoorLocked("x\0y",1) = -
+  host 224 SetLevelDoorLocked("x\0y",1)
+247.3 SetLevelDoorLocked("wild*",1) = -
+  host 224 SetLevelDoorLocked("wild*",1)
+248.0 SetLevelDoorLockedSound("Body_Mesh_01","two words") = -
+  host 225 SetLevelDoorLockedSound("Body_Mesh_01","two words")
+248.1 SetLevelDoorLockedSound("a","Body_Mesh_01") = -
+  host 225 SetLevelDoorLockedSound("a","Body_Mesh_01")
+248.2 SetLevelDoorLockedSound("Body_Mesh_01","wild*") = -
+  host 225 SetLevelDoorLockedSound("Body_Mesh_01","wild*")
+248.3 SetLevelDoorLockedSound("Body_Mesh_01","x\0y") = -
+  host 225 SetLevelDoorLockedSound("Body_Mesh_01","x\0y")
+249.0 SetLevelDoorLockedText("x\0y","wild*","Åge") = -
+  host 226 SetLevelDoorLockedText("x\0y","wild*","Åge")
+249.1 SetLevelDoorLockedText("","a","Åge") = -
+  host 226 SetLevelDoorLockedText("","a","Åge")
+249.2 SetLevelDoorLockedText("wild*","two words","Body_Mesh_01") = -
+  host 226 SetLevelDoorLockedText("wild*","two words","Body_Mesh_01")
+249.3 SetLevelDoorLockedText("x\0y","a","a") = -
+  host 226 SetLevelDoorLockedText("x\0y","a","a")
+250.0 GetSwingDoorLocked("wild*") = 0
+  host 227 GetSwingDoorLocked("wild*")
+250.1 GetSwingDoorLocked("two words") = 0
+  host 227 GetSwingDoorLocked("two words")
+250.2 GetSwingDoorLocked("a") = 0
+  host 227 GetSwingDoorLocked("a")
+250.3 GetSwingDoorLocked("Body_Mesh_01") = 0
+  host 227 GetSwingDoorLocked("Body_Mesh_01")
+251.0 GetSwingDoorClosed("wild*") = 1
+  host 228 GetSwingDoorClosed("wild*")
+251.1 GetSwingDoorClosed("Åge") = 1
+  host 228 GetSwingDoorClosed("Åge")
+251.2 GetSwingDoorClosed("") = 1
+  host 228 GetSwingDoorClosed("")
+251.3 GetSwingDoorClosed("Body_Mesh_01") = 1
+  host 228 GetSwingDoorClosed("Body_Mesh_01")
+252.0 GetSwingDoorState("x\0y") = 236
+  host 229 GetSwingDoorState("x\0y")
+252.1 GetSwingDoorState("x\0y") = 236
+  host 229 GetSwingDoorState("x\0y")
+252.2 GetSwingDoorState("Body_Mesh_01") = 236
+  host 229 GetSwingDoorState("Body_Mesh_01")
+252.3 GetSwingDoorState("x\0y") = 236
+  host 229 GetSwingDoorState("x\0y")
+253.0 SetPropObjectStuckState("x\0y",0) = -
+  host 230 SetPropObjectStuckState("x\0y",0)
+253.1 SetPropObjectStuckState("x\0y",7) = -
+  host 230 SetPropObjectStuckState("x\0y",7)
+253.2 SetPropObjectStuckState("wild*",0) = -
+  host 230 SetPropObjectStuckState("wild*",0)
+253.3 SetPropObjectStuckState("",1) = -
+  host 230 SetPropObjectStuckState("",1)
+254.0 SetWheelAngle("wild*",f7f7fffff,0) = -
+  host 231 SetWheelAngle("wild*",f7f7fffff,0)
+254.1 SetWheelAngle("x\0y",f3a83126f,1) = -
+  host 231 SetWheelAngle("x\0y",f3a83126f,1)
+254.2 SetWheelAngle("a",f3dcccccd,1) = -
+  host 231 SetWheelAngle("a",f3dcccccd,1)
+254.3 SetWheelAngle("Åge",f3a83126f,1) = -
+  host 231 SetWheelAngle("Åge",f3a83126f,1)
+255.0 SetWheelStuckState("Body_Mesh_01",-1000,1) = -
+  host 232 SetWheelStuckState("Body_Mesh_01",-1000,1)
+255.1 SetWheelStuckState("two words",-1000,1) = -
+  host 232 SetWheelStuckState("two words",-1000,1)
+255.2 SetWheelStuckState("Åge",7,1) = -
+  host 232 SetWheelStuckState("Åge",7,1)
+255.3 SetWheelStuckState("two words",-1000,1) = -
+  host 232 SetWheelStuckState("two words",-1000,1)
+256.0 SetLeverStuckState("x\0y",7,0) = -
+  host 233 SetLeverStuckState("x\0y",7,0)
+256.1 SetLeverStuckState("two words",7,0) = -
+  host 233 SetLeverStuckState("two words",7,0)
+256.2 SetLeverStuckState("x\0y",2,0) = -
+  host 233 SetLeverStuckState("x\0y",2,0)
+256.3 SetLeverStuckState("Body_Mesh_01",-1,0) = -
+  host 233 SetLeverStuckState("Body_Mesh_01",-1,0)
+257.0 SetWheelInteractionDisablesStuck("Door_1",0) = -
+  host 234 SetWheelInteractionDisablesStuck("Door_1",0)
+257.1 SetWheelInteractionDisablesStuck("Body_Mesh_01",1) = -
+  host 234 SetWheelInteractionDisablesStuck("Body_Mesh_01",1)
+257.2 SetWheelInteractionDisablesStuck("Door_1",1) = -
+  host 234 SetWheelInteractionDisablesStuck("Door_1",1)
+257.3 SetWheelInteractionDisablesStuck("a",0) = -
+  host 234 SetWheelInteractionDisablesStuck("a",0)
+258.0 SetLeverInteractionDisablesStuck("",0) = -
+  host 235 SetLeverInteractionDisablesStuck("",0)
+258.1 SetLeverInteractionDisablesStuck("Door_1",1) = -
+  host 235 SetLeverInteractionDisablesStuck("Door_1",1)
+258.2 SetLeverInteractionDisablesStuck("a",0) = -
+  host 235 SetLeverInteractionDisablesStuck("a",0)
+258.3 SetLeverInteractionDisablesStuck("x\0y",0) = -
+  host 235 SetLeverInteractionDisablesStuck("x\0y",0)
+259.0 GetLeverState("wild*") = 243
+  host 236 GetLeverState("wild*")
+259.1 GetLeverState("") = 243
+  host 236 GetLeverState("")
+259.2 GetLeverState("Åge") = 243
+  host 236 GetLeverState("Åge")
+259.3 GetLeverState("x\0y") = 243
+  host 236 GetLeverState("x\0y")
+260.0 SetMultiSliderStuckState("Door_1",1,0) = -
+  host 237 SetMultiSliderStuckState("Door_1",1,0)
+260.1 SetMultiSliderStuckState("x\0y",1,1) = -
+  host 237 SetMultiSliderStuckState("x\0y",1,1)
+260.2 SetMultiSliderStuckState("",255,1) = -
+  host 237 SetMultiSliderStuckState("",255,1)
+260.3 SetMultiSliderStuckState("Body_Mesh_01",255,0) = -
+  host 237 SetMultiSliderStuckState("Body_Mesh_01",255,0)
+261.0 SetMultiSliderCallback("Åge","two words") = -
+  host 238 SetMultiSliderCallback("Åge","two words")
+261.1 SetMultiSliderCallback("wild*","two words") = -
+  host 238 SetMultiSliderCallback("wild*","two words")
+261.2 SetMultiSliderCallback("Body_Mesh_01","") = -
+  host 238 SetMultiSliderCallback("Body_Mesh_01","")
+261.3 SetMultiSliderCallback("x\0y","Body_Mesh_01") = -
+  host 238 SetMultiSliderCallback("x\0y","Body_Mesh_01")
+262.0 SetButtonSwitchedOn("Åge",1,1) = -
+  host 239 SetButtonSwitchedOn("Åge",1,1)
+262.1 SetButtonSwitchedOn("Door_1",0,0) = -
+  host 239 SetButtonSwitchedOn("Door_1",0,0)
+262.2 SetButtonSwitchedOn("wild*",0,0) = -
+  host 239 SetButtonSwitchedOn("wild*",0,0)
+262.3 SetButtonSwitchedOn("two words",1,0) = -
+  host 239 SetButtonSwitchedOn("two words",1,0)
+263.0 SetAllowStickyAreaAttachment(1) = -
+  host 240 SetAllowStickyAreaAttachment(1)
+263.1 SetAllowStickyAreaAttachment(1) = -
+  host 240 SetAllowStickyAreaAttachment(1)
+263.2 SetAllowStickyAreaAttachment(1) = -
+  host 240 SetAllowStickyAreaAttachment(1)
+263.3 SetAllowStickyAreaAttachment(1) = -
+  host 240 SetAllowStickyAreaAttachment(1)
+264.0 AttachPropToStickyArea("two words","Åge") = -
+  host 241 AttachPropToStickyArea("two words","Åge")
+264.1 AttachPropToStickyArea("wild*","a") = -
+  host 241 AttachPropToStickyArea("wild*","a")
+264.2 AttachPropToStickyArea("x\0y","") = -
+  host 241 AttachPropToStickyArea("x\0y","")
+264.3 AttachPropToStickyArea("Åge","Door_1") = -
+  host 241 AttachPropToStickyArea("Åge","Door_1")
+265.0 AttachBodyToStickyArea("Body_Mesh_01","Door_1") = -
+  host 242 AttachBodyToStickyArea("Body_Mesh_01","Door_1")
+265.1 AttachBodyToStickyArea("x\0y","two words") = -
+  host 242 AttachBodyToStickyArea("x\0y","two words")
+265.2 AttachBodyToStickyArea("x\0y","Åge") = -
+  host 242 AttachBodyToStickyArea("x\0y","Åge")
+265.3 AttachBodyToStickyArea("x\0y","x\0y") = -
+  host 242 AttachBodyToStickyArea("x\0y","x\0y")
+266.0 DetachFromStickyArea("Body_Mesh_01") = -
+  host 243 DetachFromStickyArea("Body_Mesh_01")
+266.1 DetachFromStickyArea("two words") = -
+  host 243 DetachFromStickyArea("two words")
+266.2 DetachFromStickyArea("Body_Mesh_01") = -
+  host 243 DetachFromStickyArea("Body_Mesh_01")
+266.3 DetachFromStickyArea("Åge") = -
+  host 243 DetachFromStickyArea("Åge")
+267.0 SetNPCAwake("a",1,0) = -
+  host 244 SetNPCAwake("a",1,0)
+267.1 SetNPCAwake("x\0y",0,0) = -
+  host 244 SetNPCAwake("x\0y",0,0)
+267.2 SetNPCAwake("Åge",0,0) = -
+  host 244 SetNPCAwake("Åge",0,0)
+267.3 SetNPCAwake("",0,1) = -
+  host 244 SetNPCAwake("",0,1)
+268.0 SetNPCFollowPlayer("",1) = -
+  host 245 SetNPCFollowPlayer("",1)
+268.1 SetNPCFollowPlayer("two words",0) = -
+  host 245 SetNPCFollowPlayer("two words",0)
+268.2 SetNPCFollowPlayer("Body_Mesh_01",1) = -
+  host 245 SetNPCFollowPlayer("Body_Mesh_01",1)
+268.3 SetNPCFollowPlayer("Door_1",1) = -
+  host 245 SetNPCFollowPlayer("Door_1",1)
+269.0 SetEnemyDisabled("a",0) = -
+  host 246 SetEnemyDisabled("a",0)
+269.1 SetEnemyDisabled("a",0) = -
+  host 246 SetEnemyDisabled("a",0)
+269.2 SetEnemyDisabled("",0) = -
+  host 246 SetEnemyDisabled("",0)
+269.3 SetEnemyDisabled("Åge",0) = -
+  host 246 SetEnemyDisabled("Åge",0)
+270.0 SetEnemyIsHallucination("wild*",1) = -
+  host 247 SetEnemyIsHallucination("wild*",1)
+270.1 SetEnemyIsHallucination("Åge",0) = -
+  host 247 SetEnemyIsHallucination("Åge",0)
+270.2 SetEnemyIsHallucination("Åge",0) = -
+  host 247 SetEnemyIsHallucination("Åge",0)
+270.3 SetEnemyIsHallucination("two words",0) = -
+  host 247 SetEnemyIsHallucination("two words",0)
+271.0 FadeEnemyToSmoke("Åge",0) = -
+  host 248 FadeEnemyToSmoke("Åge",0)
+271.1 FadeEnemyToSmoke("Door_1",0) = -
+  host 248 FadeEnemyToSmoke("Door_1",0)
+271.2 FadeEnemyToSmoke("Body_Mesh_01",1) = -
+  host 248 FadeEnemyToSmoke("Body_Mesh_01",1)
+271.3 FadeEnemyToSmoke("a",1) = -
+  host 248 FadeEnemyToSmoke("a",1)
+272.0 SetEnemyDisableTriggers("a",0) = -
+  host 249 SetEnemyDisableTriggers("a",0)
+272.1 SetEnemyDisableTriggers("two words",0) = -
+  host 249 SetEnemyDisableTriggers("two words",0)
+272.2 SetEnemyDisableTriggers("a",0) = -
+  host 249 SetEnemyDisableTriggers("a",0)
+272.3 SetEnemyDisableTriggers("two words",1) = -
+  host 249 SetEnemyDisableTriggers("two words",1)
+273.0 ShowEnemyPlayerPosition("Body_Mesh_01") = -
+  host 250 ShowEnemyPlayerPosition("Body_Mesh_01")
+273.1 ShowEnemyPlayerPosition("Body_Mesh_01") = -
+  host 250 ShowEnemyPlayerPosition("Body_Mesh_01")
+273.2 ShowEnemyPlayerPosition("x\0y") = -
+  host 250 ShowEnemyPlayerPosition("x\0y")
+273.3 ShowEnemyPlayerPosition("x\0y") = -
+  host 250 ShowEnemyPlayerPosition("x\0y")
+274.0 AlertEnemyOfPlayerPresence("") = -
+  host 251 AlertEnemyOfPlayerPresence("")
+274.1 AlertEnemyOfPlayerPresence("Body_Mesh_01") = -
+  host 251 AlertEnemyOfPlayerPresence("Body_Mesh_01")
+274.2 AlertEnemyOfPlayerPresence("x\0y") = -
+  host 251 AlertEnemyOfPlayerPresence("x\0y")
+274.3 AlertEnemyOfPlayerPresence("") = -
+  host 251 AlertEnemyOfPlayerPresence("")
+275.0 AddEnemyPatrolNode("a","two words",f3a83126f,"wild*") = -
+  host 252 AddEnemyPatrolNode("a","two words",f3a83126f,"wild*")
+275.1 AddEnemyPatrolNode("Åge","x\0y",fbfc00000,"a") = -
+  host 252 AddEnemyPatrolNode("Åge","x\0y",fbfc00000,"a")
+275.2 AddEnemyPatrolNode("a","two words",f7fc00000,"wild*") = -
+  host 252 AddEnemyPatrolNode("a","two words",f7fc00000,"wild*")
+275.3 AddEnemyPatrolNode("Body_Mesh_01","Åge",f00000000,"wild*") = -
+  host 252 AddEnemyPatrolNode("Body_Mesh_01","Åge",f00000000,"wild*")
+276.0 AddEnemyPatrolNodeAmfp("two words","two words",f3a83126f,"Door_1",0) = -
+  host 253 AddEnemyPatrolNodeAmfp("two words","two words",f3a83126f,"Door_1",0)
+276.1 AddEnemyPatrolNodeAmfp("Door_1","",f3a83126f,"",1) = -
+  host 253 AddEnemyPatrolNodeAmfp("Door_1","",f3a83126f,"",1)
+276.2 AddEnemyPatrolNodeAmfp("Body_Mesh_01","Body_Mesh_01",f3f800000,"Åge",0) = -
+  host 253 AddEnemyPatrolNodeAmfp("Body_Mesh_01","Body_Mesh_01",f3f800000,"Åge",0)
+276.3 AddEnemyPatrolNodeAmfp("Body_Mesh_01","two words",f3dcccccd,"",1) = -
+  host 253 AddEnemyPatrolNodeAmfp("Body_Mesh_01","two words",f3dcccccd,"",1)
+277.0 ClearEnemyPatrolNodes("wild*") = -
+  host 254 ClearEnemyPatrolNodes("wild*")
+277.1 ClearEnemyPatrolNodes("wild*") = -
+  host 254 ClearEnemyPatrolNodes("wild*")
+277.2 ClearEnemyPatrolNodes("wild*") = -
+  host 254 ClearEnemyPatrolNodes("wild*")
+277.3 ClearEnemyPatrolNodes("a") = -
+  host 254 ClearEnemyPatrolNodes("a")
+278.0 SetEnemySanityDecreaseActive("Door_1",0) = -
+  host 255 SetEnemySanityDecreaseActive("Door_1",0)
+278.1 SetEnemySanityDecreaseActive("a",0) = -
+  host 255 SetEnemySanityDecreaseActive("a",0)
+278.2 SetEnemySanityDecreaseActive("a",0) = -
+  host 255 SetEnemySanityDecreaseActive("a",0)
+278.3 SetEnemySanityDecreaseActive("x\0y",1) = -
+  host 255 SetEnemySanityDecreaseActive("x\0y",1)
+279.0 TeleportEnemyToNode("two words","",1) = -
+  host 256 TeleportEnemyToNode("two words","",1)
+279.1 TeleportEnemyToNode("wild*","wild*",0) = -
+  host 256 TeleportEnemyToNode("wild*","wild*",0)
+279.2 TeleportEnemyToNode("a","Body_Mesh_01",1) = -
+  host 256 TeleportEnemyToNode("a","Body_Mesh_01",1)
+279.3 TeleportEnemyToNode("a","Åge",1) = -
+  host 256 TeleportEnemyToNode("a","Åge",1)
+280.0 TeleportEnemyToEntity("wild*","a","a",0) = -
+  host 257 TeleportEnemyToEntity("wild*","a","a",0)
+280.1 TeleportEnemyToEntity("two words","a","Door_1",1) = -
+  host 257 TeleportEnemyToEntity("two words","a","Door_1",1)
+280.2 TeleportEnemyToEntity("","wild*","two words",0) = -
+  host 257 TeleportEnemyToEntity("","wild*","two words",0)
+280.3 TeleportEnemyToEntity("Åge","Åge","Åge",0) = -
+  host 257 TeleportEnemyToEntity("Åge","Åge","Åge",0)
+281.0 ChangeManPigPose("","Åge") = -
+  host 258 ChangeManPigPose("","Åge")
+281.1 ChangeManPigPose("x\0y","Åge") = -
+  host 258 ChangeManPigPose("x\0y","Åge")
+281.2 ChangeManPigPose("two words","a") = -
+  host 258 ChangeManPigPose("two words","a")
+281.3 ChangeManPigPose("Åge","") = -
+  host 258 ChangeManPigPose("Åge","")
+282.0 SetTeslaPigFadeDisabled("x\0y",1) = -
+  host 259 SetTeslaPigFadeDisabled("x\0y",1)
+282.1 SetTeslaPigFadeDisabled("",0) = -
+  host 259 SetTeslaPigFadeDisabled("",0)
+282.2 SetTeslaPigFadeDisabled("Åge",0) = -
+  host 259 SetTeslaPigFadeDisabled("Åge",0)
+282.3 SetTeslaPigFadeDisabled("Door_1",1) = -
+  host 259 SetTeslaPigFadeDisabled("Door_1",1)
+283.0 SetTeslaPigSoundDisabled("Åge",1) = -
+  host 260 SetTeslaPigSoundDisabled("Åge",1)
+283.1 SetTeslaPigSoundDisabled("",0) = -
+  host 260 SetTeslaPigSoundDisabled("",0)
+283.2 SetTeslaPigSoundDisabled("wild*",1) = -
+  host 260 SetTeslaPigSoundDisabled("wild*",1)
+283.3 SetTeslaPigSoundDisabled("x\0y",0) = -
+  host 260 SetTeslaPigSoundDisabled("x\0y",0)
+284.0 SetTeslaPigEasyEscapeDisabled("wild*",0) = -
+  host 261 SetTeslaPigEasyEscapeDisabled("wild*",0)
+284.1 SetTeslaPigEasyEscapeDisabled("x\0y",0) = -
+  host 261 SetTeslaPigEasyEscapeDisabled("x\0y",0)
+284.2 SetTeslaPigEasyEscapeDisabled("a",1) = -
+  host 261 SetTeslaPigEasyEscapeDisabled("a",1)
+284.3 SetTeslaPigEasyEscapeDisabled("wild*",1) = -
+  host 261 SetTeslaPigEasyEscapeDisabled("wild*",1)
+285.0 ForceTeslaPigSighting("Door_1") = -
+  host 262 ForceTeslaPigSighting("Door_1")
+285.1 ForceTeslaPigSighting("Body_Mesh_01") = -
+  host 262 ForceTeslaPigSighting("Body_Mesh_01")
+285.2 ForceTeslaPigSighting("Body_Mesh_01") = -
+  host 262 ForceTeslaPigSighting("Body_Mesh_01")
+285.3 ForceTeslaPigSighting("") = -
+  host 262 ForceTeslaPigSighting("")
+286.0 GetEnemyStateName("Body_Mesh_01") = ptr
+  host 263 GetEnemyStateName("Body_Mesh_01")
+286.1 GetEnemyStateName("Åge") = ptr
+  host 263 GetEnemyStateName("Åge")
+286.2 GetEnemyStateName("x\0y") = ptr
+  host 263 GetEnemyStateName("x\0y")
+286.3 GetEnemyStateName("a") = ptr
+  host 263 GetEnemyStateName("a")
+287.0 SetPropHealth("a",f7fc00000) = -
+  host 264 SetPropHealth("a",f7fc00000)
+287.1 SetPropHealth("Door_1",f7f7fffff) = -
+  host 264 SetPropHealth("Door_1",f7f7fffff)
+287.2 SetPropHealth("",f3f800000) = -
+  host 264 SetPropHealth("",f3f800000)
+287.3 SetPropHealth("Door_1",fbfc00000) = -
+  host 264 SetPropHealth("Door_1",fbfc00000)
+288.0 AddPropHealth("Door_1",fbfc00000) = -
+  host 265 AddPropHealth("Door_1",fbfc00000)
+288.1 AddPropHealth("wild*",f3f800000) = -
+  host 265 AddPropHealth("wild*",f3f800000)
+288.2 AddPropHealth("x\0y",f7f7fffff) = -
+  host 265 AddPropHealth("x\0y",f7f7fffff)
+288.3 AddPropHealth("",f3f800000) = -
+  host 265 AddPropHealth("",f3f800000)
+289.0 GetPropHealth("two words") = f43854000
+  host 266 GetPropHealth("two words")
+289.1 GetPropHealth("x\0y") = f43854000
+  host 266 GetPropHealth("x\0y")
+289.2 GetPropHealth("two words") = f43854000
+  host 266 GetPropHealth("two words")
+289.3 GetPropHealth("Door_1") = f43854000
+  host 266 GetPropHealth("Door_1")
+290.0 ResetProp("") = -
+  host 267 ResetProp("")
+290.1 ResetProp("a") = -
+  host 267 ResetProp("a")
+290.2 ResetProp("two words") = -
+  host 267 ResetProp("two words")
+290.3 ResetProp("Door_1") = -
+  host 267 ResetProp("Door_1")
+291.0 PlayPropAnimation("wild*","Åge",f00000000,1,"Åge") = -
+  host 268 PlayPropAnimation("wild*","Åge",f00000000,1,"Åge")
+291.1 PlayPropAnimation("Door_1","a",f80000000,1,"x\0y") = -
+  host 268 PlayPropAnimation("Door_1","a",f80000000,1,"x\0y")
+291.2 PlayPropAnimation("","Body_Mesh_01",f80000000,0,"x\0y") = -
+  host 268 PlayPropAnimation("","Body_Mesh_01",f80000000,0,"x\0y")
+291.3 PlayPropAnimation("Body_Mesh_01","a",f3f800000,0,"a") = -
+  host 268 PlayPropAnimation("Body_Mesh_01","a",f3f800000,0,"a")
+292.0 SetMoveObjectState("a",f3dcccccd) = -
+  host 269 SetMoveObjectState("a",f3dcccccd)
+292.1 SetMoveObjectState("x\0y",f80000000) = -
+  host 269 SetMoveObjectState("x\0y",f80000000)
+292.2 SetMoveObjectState("",f7fc00000) = -
+  host 269 SetMoveObjectState("",f7fc00000)
+292.3 SetMoveObjectState("Body_Mesh_01",f00000000) = -
+  host 269 SetMoveObjectState("Body_Mesh_01",f00000000)
+293.0 SetMoveObjectStateExt("a",f3dcccccd,f80000000,f3f800000,f3a83126f,1) = -
+  host 270 SetMoveObjectStateExt("a",f3dcccccd,f80000000,f3f800000,f3a83126f,1)
+293.1 SetMoveObjectStateExt("wild*",f3dcccccd,f80000000,f80000000,fbfc00000,0) = -
+  host 270 SetMoveObjectStateExt("wild*",f3dcccccd,f80000000,f80000000,fbfc00000,0)
+293.2 SetMoveObjectStateExt("Body_Mesh_01",fbfc00000,f00000000,fbfc00000,f00000000,0) = -
+  host 270 SetMoveObjectStateExt("Body_Mesh_01",fbfc00000,f00000000,fbfc00000,f00000000,0)
+293.3 SetMoveObjectStateExt("",f7f7fffff,f42c80000,f3f800000,f3a83126f,0) = -
+  host 270 SetMoveObjectStateExt("",f7f7fffff,f42c80000,f3f800000,f3a83126f,0)
+294.0 AddPropForce("Door_1",f42c80000,f00000000,f3dcccccd,"Door_1") = -
+  host 271 AddPropForce("Door_1",f42c80000,f00000000,f3dcccccd,"Door_1")
+294.1 AddPropForce("wild*",f00000000,f7f7fffff,f00000000,"Åge") = -
+  host 271 AddPropForce("wild*",f00000000,f7f7fffff,f00000000,"Åge")
+294.2 AddPropForce("x\0y",fbfc00000,f7f7fffff,f7f7fffff,"a") = -
+  host 271 AddPropForce("x\0y",fbfc00000,f7f7fffff,f7f7fffff,"a")
+294.3 AddPropForce("x\0y",f7fc00000,f3a83126f,f7fc00000,"two words") = -
+  host 271 AddPropForce("x\0y",f7fc00000,f3a83126f,f7fc00000,"two words")
+295.0 AddPropImpulse("Body_Mesh_01",f3f800000,f3f800000,fbfc00000,"wild*") = -
+  host 272 AddPropImpulse("Body_Mesh_01",f3f800000,f3f800000,fbfc00000,"wild*")
+295.1 AddPropImpulse("Åge",f42c80000,f3a83126f,f3dcccccd,"Door_1") = -
+  host 272 AddPropImpulse("Åge",f42c80000,f3a83126f,f3dcccccd,"Door_1")
+295.2 AddPropImpulse("",f3f800000,f00000000,f7fc00000,"two words") = -
+  host 272 AddPropImpulse("",f3f800000,f00000000,f7fc00000,"two words")
+295.3 AddPropImpulse("Body_Mesh_01",f7f7fffff,fbfc00000,fbfc00000,"") = -
+  host 272 AddPropImpulse("Body_Mesh_01",f7f7fffff,fbfc00000,fbfc00000,"")
+296.0 AddBodyForce("",f7f7fffff,f3f800000,f7fc00000,"Body_Mesh_01") = -
+  host 273 AddBodyForce("",f7f7fffff,f3f800000,f7fc00000,"Body_Mesh_01")
+296.1 AddBodyForce("two words",f3f800000,f42c80000,f3f800000,"Door_1") = -
+  host 273 AddBodyForce("two words",f3f800000,f42c80000,f3f800000,"Door_1")
+296.2 AddBodyForce("Door_1",f3f800000,fbfc00000,f80000000,"Door_1") = -
+  host 273 AddBodyForce("Door_1",f3f800000,fbfc00000,f80000000,"Door_1")
+296.3 AddBodyForce("",f3dcccccd,f3f800000,f7f7fffff,"wild*") = -
+  host 273 AddBodyForce("",f3dcccccd,f3f800000,f7f7fffff,"wild*")
+297.0 AddBodyImpulse("Åge",f3a83126f,f3a83126f,f3f800000,"x\0y") = -
+  host 274 AddBodyImpulse("Åge",f3a83126f,f3a83126f,f3f800000,"x\0y")
+297.1 AddBodyImpulse("two words",f00000000,f42c80000,f3f800000,"x\0y") = -
+  host 274 AddBodyImpulse("two words",f00000000,f42c80000,f3f800000,"x\0y")
+297.2 AddBodyImpulse("two words",f80000000,f42c80000,f00000000,"x\0y") = -
+  host 274 AddBodyImpulse("two words",f80000000,f42c80000,f00000000,"x\0y")
+297.3 AddBodyImpulse("a",f00000000,f3f800000,f7f7fffff,"Åge") = -
+  host 274 AddBodyImpulse("a",f00000000,f3f800000,f7f7fffff,"Åge")
+298.0 BreakJoint("a") = -
+  host 275 BreakJoint("a")
+298.1 BreakJoint("Body_Mesh_01") = -
+  host 275 BreakJoint("Body_Mesh_01")
+298.2 BreakJoint("wild*") = -
+  host 275 BreakJoint("wild*")
+298.3 BreakJoint("a") = -
+  host 275 BreakJoint("a")
+299.0 SetBodyMass("Door_1",fbfc00000) = -
+  host 276 SetBodyMass("Door_1",fbfc00000)
+299.1 SetBodyMass("",fbfc00000) = -
+  host 276 SetBodyMass("",fbfc00000)
+299.2 SetBodyMass("wild*",f7fc00000) = -
+  host 276 SetBodyMass("wild*",f7fc00000)
+299.3 SetBodyMass("Body_Mesh_01",f7f7fffff) = -
+  host 276 SetBodyMass("Body_Mesh_01",f7f7fffff)
+300.0 GetBodyMass("Åge") = f438ac000
+  host 277 GetBodyMass("Åge")
+300.1 GetBodyMass("x\0y") = f438ac000
+  host 277 GetBodyMass("x\0y")
+300.2 GetBodyMass("Åge") = f438ac000
+  host 277 GetBodyMass("Åge")
+300.3 GetBodyMass("wild*") = f438ac000
+  host 277 GetBodyMass("wild*")
+301.0 AddEntityCollideCallback("Door_1","","",0,7) = -
+  host 278 AddEntityCollideCallback("Door_1","","",0,7)
+301.1 AddEntityCollideCallback("wild*","Body_Mesh_01","Body_Mesh_01",0,0) = -
+  host 278 AddEntityCollideCallback("wild*","Body_Mesh_01","Body_Mesh_01",0,0)
+301.2 AddEntityCollideCallback("Åge","Body_Mesh_01","Body_Mesh_01",0,255) = -
+  host 278 AddEntityCollideCallback("Åge","Body_Mesh_01","Body_Mesh_01",0,255)
+301.3 AddEntityCollideCallback("Door_1","two words","",1,0) = -
+  host 278 AddEntityCollideCallback("Door_1","two words","",1,0)
+302.0 RemoveEntityCollideCallback("Door_1","two words") = -
+  host 279 RemoveEntityCollideCallback("Door_1","two words")
+302.1 RemoveEntityCollideCallback("Door_1","Body_Mesh_01") = -
+  host 279 RemoveEntityCollideCallback("Door_1","Body_Mesh_01")
+302.2 RemoveEntityCollideCallback("a","wild*") = -
+  host 279 RemoveEntityCollideCallback("a","wild*")
+302.3 RemoveEntityCollideCallback("Door_1","Door_1") = -
+  host 279 RemoveEntityCollideCallback("Door_1","Door_1")
+303.0 InteractConnectPropWithRope("x\0y","two words","x\0y",0,f80000000,f00000000,f80000000,1,7) = -
+  host 280 InteractConnectPropWithRope("x\0y","two words","x\0y",0,f80000000,f00000000,f80000000,1,7)
+303.1 InteractConnectPropWithRope("Body_Mesh_01","wild*","two words",0,f7fc00000,fbfc00000,f3a83126f,0,-1000) = -
+  host 280 InteractConnectPropWithRope("Body_Mesh_01","wild*","two words",0,f7fc00000,fbfc00000,f3a83126f,0,-1000)
+303.2 InteractConnectPropWithRope("Åge","x\0y","Body_Mesh_01",1,fbfc00000,f80000000,f7fc00000,1,0) = -
+  host 280 InteractConnectPropWithRope("Åge","x\0y","Body_Mesh_01",1,fbfc00000,f80000000,f7fc00000,1,0)
+303.3 InteractConnectPropWithRope("Body_Mesh_01","x\0y","x\0y",1,f7fc00000,f00000000,f3f800000,1,0) = -
+  host 280 InteractConnectPropWithRope("Body_Mesh_01","x\0y","x\0y",1,f7fc00000,f00000000,f3f800000,1,0)
+304.0 InteractConnectPropWithMoveObject("Åge","Åge","wild*",0,1,0) = -
+  host 281 InteractConnectPropWithMoveObject("Åge","Åge","wild*",0,1,0)
+304.1 InteractConnectPropWithMoveObject("x\0y","Body_Mesh_01","Body_Mesh_01",0,1,255) = -
+  host 281 InteractConnectPropWithMoveObject("x\0y","Body_Mesh_01","Body_Mesh_01",0,1,255)
+304.2 InteractConnectPropWithMoveObject("Door_1","Body_Mesh_01","Åge",0,1,-1000) = -
+  host 281 InteractConnectPropWithMoveObject("Door_1","Body_Mesh_01","Åge",0,1,-1000)
+304.3 InteractConnectPropWithMoveObject("a","Åge","two words",1,1,255) = -
+  host 281 InteractConnectPropWithMoveObject("a","Åge","two words",1,1,255)
+305.0 ConnectEntities("wild*","wild*","two words",0,2,"wild*") = -
+  host 282 ConnectEntities("wild*","wild*","two words",0,2,"wild*")
+305.1 ConnectEntities("Åge","a","",0,2,"x\0y") = -
+  host 282 ConnectEntities("Åge","a","",0,2,"x\0y")
+305.2 ConnectEntities("Body_Mesh_01","two words","Åge",0,0,"two words") = -
+  host 282 ConnectEntities("Body_Mesh_01","two words","Åge",0,0,"two words")
+305.3 ConnectEntities("a","Body_Mesh_01","Door_1",0,-1,"x\0y") = -
+  host 282 ConnectEntities("a","Body_Mesh_01","Door_1",0,-1,"x\0y")
+306.0 ScriptSin(f3a83126f) = f3a83126e
+306.1 ScriptSin(f7f7fffff) = fbf0599b3
+306.2 ScriptSin(f7f7fffff) = fbf0599b3
+306.3 ScriptSin(f80000000) = f80000000
+307.0 ScriptCos(f3f800000) = f3f0a5140
+307.1 ScriptCos(f00000000) = f3f800000
+307.2 ScriptCos(f00000000) = f3f800000
+307.3 ScriptCos(f3a83126f) = f3f7ffff8
+308.0 ScriptTan(f3dcccccd) = f3dcd7c44
+308.1 ScriptTan(f00000000) = f00000000
+308.2 ScriptTan(f7f7fffff) = fbf1c9eca
+308.3 ScriptTan(fbfc00000) = fc1619f6b
+309.0 ScriptAsin(f3f800000) = f3fc90fdb
+309.1 ScriptAsin(f3a83126f) = f3a831270
+309.2 ScriptAsin(fbfc00000) = f7fc00000
+309.3 ScriptAsin(fbfc00000) = f7fc00000
+310.0 ScriptAcos(f42c80000) = f7fc00000
+310.1 ScriptAcos(f3a83126f) = f3fc8ef16
+310.2 ScriptAcos(fbfc00000) = f7fc00000
+310.3 ScriptAcos(f3a83126f) = f3fc8ef16
+311.0 ScriptAtan(f3f800000) = f3f490fdb
+311.1 ScriptAtan(f00000000) = f00000000
+311.2 ScriptAtan(f80000000) = f80000000
+311.3 ScriptAtan(f80000000) = f80000000
+312.0 ScriptAtan2(fbfc00000,f3f800000) = fbf7b985f
+312.1 ScriptAtan2(f3f800000,f80000000) = f3fc90fdb
+312.2 ScriptAtan2(fbfc00000,f80000000) = fbfc90fdb
+312.3 ScriptAtan2(f7f7fffff,f00000000) = f3fc90fdb
+313.0 ScriptSqrt(f80000000) = f80000000
+313.1 ScriptSqrt(f3dcccccd) = f3ea1e89b
+313.2 ScriptSqrt(f42c80000) = f41200000
+313.3 ScriptSqrt(f3f800000) = f3f800000
+314.0 ScriptPow(f80000000,f7fc00000) = f7fc00000
+314.1 ScriptPow(f42c80000,f42c80000) = f7f800000
+314.2 ScriptPow(f7fc00000,fbfc00000) = f7fc00000
+314.3 ScriptPow(f3f800000,f3f800000) = f3f800000
+315.0 ScriptMin(f3f800000,f42c80000) = f3f800000
+315.1 ScriptMin(f42c80000,fbfc00000) = fbfc00000
+315.2 ScriptMin(f7fc00000,f7f7fffff) = f7f7fffff
+315.3 ScriptMin(f3dcccccd,f42c80000) = f3dcccccd
+316.0 ScriptMax(f3a83126f,f42c80000) = f42c80000
+316.1 ScriptMax(f00000000,f3dcccccd) = f3dcccccd
+316.2 ScriptMax(f7fc00000,f3f800000) = f3f800000
+316.3 ScriptMax(f3a83126f,f3f800000) = f3f800000
+317.0 ScriptClamp(fbfc00000,f00000000,f3f800000) = f00000000
+317.1 ScriptClamp(f7fc00000,f7f7fffff,f3f800000) = f7fc00000
+317.2 ScriptClamp(f42c80000,f00000000,f3f800000) = f3f800000
+317.3 ScriptClamp(f3a83126f,f00000000,f3dcccccd) = f3a83126f
+318.0 ScriptAbs(f7fc00000) = f7fc00000
+318.1 ScriptAbs(f7f7fffff) = f7f7fffff
+318.2 ScriptAbs(f42c80000) = f42c80000
+318.3 ScriptAbs(f3dcccccd) = f3dcccccd
+319.0 ScriptStringToInt("") = 0
+319.1 ScriptStringToInt("Åge") = 0
+319.2 ScriptStringToInt("Body_Mesh_01") = 0
+319.3 ScriptStringToInt("Door_1") = 0
+320.0 ScriptStringToFloat("x\0y") = f00000000
+320.1 ScriptStringToFloat("Body_Mesh_01") = f00000000
+320.2 ScriptStringToFloat("Body_Mesh_01") = f00000000
+320.3 ScriptStringToFloat("a") = f00000000
+321.0 ScriptStringToBool("x\0y") = 0
+321.1 ScriptStringToBool("Body_Mesh_01") = 0
+321.2 ScriptStringToBool("wild*") = 0
+321.3 ScriptStringToBool("Door_1") = 0

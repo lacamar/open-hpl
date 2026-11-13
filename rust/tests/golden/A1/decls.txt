@@ -1,0 +1,322 @@
+void Print(const string &in asString) -> Print
+void AddDebugMessage(const string &in asString, bool abCheckForDuplicates) -> AddDebugMessage
+void ProgLog(const string &in asLevel, const string &in asMessage) -> ProgLog
+bool ScriptDebugOn() -> ScriptDebugOn
+float RandFloat(float afMin, float afMax) -> RandFloat
+int RandInt(int alMin, int alMax) -> RandInt
+bool StringContains(const string &in asString, const string &in asSubString) -> StringContains
+string& StringSub(const string &in asString, int alStart, int alCount) -> StringSub
+void AddTimer(const string &in asName, float afTime, const string &in asFunction) -> AddTimer
+void RemoveTimer(const string &in asName) -> RemoveTimer
+float GetTimerTimeLeft(const string &in asName) -> GetTimerTimeLeft
+void SetLocalVarInt(const string &in asName, int alVal) -> SetLocalVarInt
+void SetLocalVarFloat(const string &in asName, float afVal) -> SetLocalVarFloat
+void SetLocalVarString(const string &in asName, const string &in asVal) -> SetLocalVarString
+void AddLocalVarInt(const string &in asName, int alVal) -> AddLocalVarInt
+void AddLocalVarFloat(const string &in asName, float afVal) -> AddLocalVarFloat
+void AddLocalVarString(const string &in asName, const string &in asVal) -> AddLocalVarString
+int GetLocalVarInt(const string &in asName) -> GetLocalVarInt
+float GetLocalVarFloat(const string &in asName) -> GetLocalVarFloat
+string& GetLocalVarString(const string &in asName) -> GetLocalVarString
+void SetGlobalVarInt(const string &in asName, int alVal) -> SetGlobalVarInt
+void SetGlobalVarFloat(const string &in asName, float afVal) -> SetGlobalVarFloat
+void SetGlobalVarString(const string &in asName, const string &in asVal) -> SetGlobalVarString
+void AddGlobalVarInt(const string &in asName, int alVal) -> AddGlobalVarInt
+void AddGlobalVarFloat(const string &in asName, float afVal) -> AddGlobalVarFloat
+void AddGlobalVarString(const string &in asName, const string &in asVal) -> AddGlobalVarString
+int GetGlobalVarInt(const string &in asName) -> GetGlobalVarInt
+float GetGlobalVarFloat(const string &in asName) -> GetGlobalVarFloat
+string& GetGlobalVarString(const string &in asName) -> GetGlobalVarString
+void StartCredits(const string &in asMusic, bool abLoopMusic, const string &in asTextCat, const string &in asTextEntry, int alEndNum) -> StartCredits
+void AddKeyPart(int alKeyPart) -> AddKeyPart
+void StartDemoEnd() -> StartDemoEnd
+void AutoSave() -> AutoSave
+void CheckPoint(const string &in asName,const string &in asStartPos ,const string &in asCallback, const string &in asDeathHintCat, const string &in asDeathHintEntry) -> CheckPoint
+void CheckPoint(const string &in asName,const string &in asStartPos ,const string &in asCallback, const string &in asDeathHintCat, const string &in asDeathHintEntry, bool abAmfpExtraArg) -> CheckPointAmfp
+void AddHint(const string &in asEntity, const string &in asUnknown) -> AmfpStub_AddHint
+bool GetEntityActive(const string &in asName) -> AmfpStub_GetEntityActive
+void SetEnemyMoveType(const string &in asEnemyName, const string &in asMoveType) -> AmfpStub_SetEnemyMoveType
+void SetJournalDisabled(bool abDisabled) -> AmfpStub_SetJournalDisabled
+void SetLampFlickerActive(const string &in asName, bool abActive) -> AmfpStub_SetLampFlickerActive
+void SetLanternFlickerActive(bool abActive) -> AmfpStub_SetLanternFlickerActive
+void SetManPigType(const string &in asEnemyName, const string &in asType) -> AmfpStub_SetManPigType
+void SetParticleSystemActive(const string &in asName, bool abActive) -> AmfpStub_SetParticleSystemActive
+void SetPhysicsAutoDisable(const string &in asName, bool abActive) -> AmfpStub_SetPhysicsAutoDisable
+void SetPlayerInfection(float afAmount) -> AmfpStub_SetPlayerInfection
+void ShowScreenImage(const string &in asFile, float afX, float afY, float afZ, bool abFadeIn, float afA, float afB, float afC) -> AmfpStub_ShowScreenImage
+void StartPhoneRinging(const string &in asName) -> AmfpStub_StartPhoneRinging
+void StopPhoneRinging(const string &in asName) -> AmfpStub_StopPhoneRinging
+void AddEffectVoice2(const string &in asVoiceFile, const string &in asEffectFile, const string &in asTextCat, const string &in asTextEntry, float afTextDelay, const string &in asText2Entry, float afText2Delay, bool abUsePostion,  const string &in asPosEnitity, float afMinDistance, float afMaxDistance) -> AddEffectVoice2
+void AddEffectVoice3(const string &in asVoiceFile, const string &in asEffectFile, const string &in asTextCat, const string &in asTextEntry, float afTextDelay, const string &in asText2Entry, float afText2Delay, const string &in asText3Entry, float afText3Delay, bool abUsePostion,  const string &in asPosEnitity, float afMinDistance, float afMaxDistance) -> AddEffectVoice3
+void AddEffectVoice5(const string &in asVoiceFile, const string &in asEffectFile, const string &in asTextCat, const string &in asTextEntry, float afTextDelay, const string &in asText2Entry, float afText2Delay, const string &in asText3Entry, float afText3Delay, const string &in asText4Entry, float afText4Delay, const string &in asText5Entry, float afText5Delay, bool abUsePostion, const string &in asPosEnitity, float afMinDistance, float afMaxDistance) -> AddEffectVoice5
+void AddEffectVoice6(const string &in asVoiceFile, const string &in asEffectFile, const string &in asTextCat, const string &in asTextEntry, float afTextDelay, const string &in asText2Entry, float afText2Delay, const string &in asText3Entry, float afText3Delay, const string &in asText4Entry, float afText4Delay, const string &in asText5Entry, float afText5Delay, const string &in asText6Entry, float afText6Delay, bool abUsePostion, const string &in asPosEnitity, float afMinDistance, float afMaxDistance) -> AddEffectVoice6
+void AddEffectVoice7(const string &in asVoiceFile, const string &in asEffectFile, const string &in asTextCat, const string &in asTextEntry, float afTextDelay, const string &in asText2Entry, float afText2Delay, const string &in asText3Entry, float afText3Delay, const string &in asText4Entry, float afText4Delay, const string &in asText5Entry, float afText5Delay, const string &in asText6Entry, float afText6Delay, const string &in asText7Entry, float afText7Delay, bool abUsePostion, const string &in asPosEnitity, float afMinDistance, float afMaxDistance) -> AddEffectVoice7
+void AddPlayerInfection(float afInfection) -> AmfpStub_AddPlayerInfection
+void AttachAreaToProp(const string &in asAreaName, const string &in asProp, int alBody) -> AttachAreaToProp
+void AttachPropToBone(const string &in asChildEntityName, const string &in asParentEntityName, const string &in asParentBoneName, float fPosX, float fPosY, float fPosZ, float fRotX, float fRotY, float fRotZ) -> AttachPropToBone
+void ChangeEnemyPose(const string &in asName, const string &in asPoseType) -> AmfpStub_ChangeEnemyPose
+void DestroyParticleSystemInstantly(const string &in asName) -> DestroyParticleSystemInstantly
+void DetachPropFromBone(const string &in asChildEntityName) -> DetachPropFromBone
+void FadeLampTo(const string &in asName, float afR, float afG, float afB, float afA, float afRadius, float afTime) -> FadeLampTo
+void FadePlayerPitchTo(float afX, float afSpeedMul, float afMaxSpeed) -> FadePlayerPitchTo
+void ForceEnemyWaitState(const string &in asName) -> ForceEnemyWaitState
+float GetEnemyPlayerDistance(const string &in asEnemyName) -> GetEnemyPlayerDistance
+int GetEnemyState(const string &in asName) -> GetEnemyState
+bool GetJournalDisabled() -> AmfpStub_GetJournalDisabled
+bool GetPlayerCanSeeEnemy(const string &in asEnemyName) -> GetPlayerCanSeeEnemy
+float GetPlayerInfection() -> AmfpStub_GetPlayerInfection
+void GiveInfectionDamage(float afAmount, bool abUseEffect) -> AmfpStub_GiveInfectionDamage
+void HangUpPhone(const string &in asName) -> AmfpStub_HangUpPhone
+void HideScreenImageImmediately() -> AmfpStub_HideScreenImageImmediately
+void HideScreenImageWithFade(float afFadeOut) -> AmfpStub_HideScreenImageWithFade
+void PauseCurrentPropAnimation(const string &in asProp, float afFadeTime) -> PauseCurrentAnimation
+void PlayCurrentPropAnimation(const string &in asProp, float afFadeTime, bool abLoop) -> PlayCurrentAnimation
+void PlayEnemyAnimation(const string &in asEnemyName, const string &in asAnimName, bool abLoop, float afFadeTime) -> PlayEnemyAnimation
+void PlayScriptedAnimation(const string &in asEnemyName, const string &in asAnimationName, bool abLoopAnimation) -> PlayScriptedAnimation
+void PlaySoundAtPosition(const string &in asSoundName, const string &in asSoundFile, float afX, float afY, float afZ, float afFadeSpeed, bool abSaveSound) -> PlaySoundAtPosition
+void ReleasePlayerFromLimbo() -> AmfpStub_ReleasePlayerFromLimbo
+void RemoveAllHints() -> AmfpStub_RemoveAllHints
+void SendEnemyTimeOut(const string &in asEnemyName, float afTimeOut) -> SendEnemyTimeOut
+void SetButtonCanBeSwitchedOff(const string &in asName, bool abCanBeSwitchedOff) -> SetButtonCanBeSwitchedOff
+void SetButtonCanBeSwitchedOn(const string &in asName, bool abCanBeSwitchedOn) -> SetButtonCanBeSwitchedOn
+void SetEnemyActivationDistance(const string &in asName, float afX) -> SetEnemyActivationDistance
+void SetEnemyBlind(const string &in asName, bool abX) -> SetEnemyBlind
+void SetEnemyDeaf(const string &in asName, bool abX) -> SetEnemyDeaf
+void SetInfectionFauxMode(bool abFauxMode) -> AmfpStub_SetInfectionFauxMode
+void SetLampCanBeLitByPlayer(const string &in asName, bool abLit) -> SetLampCanBeLitByPlayer
+void SetPlayerUsesDragFootsteps(bool abX) -> SetPlayerUsesDragFootsteps
+void SetPropAnimationPosition(const string &in asProp, float afPos) -> SetPropAnimationPosition
+void SetPropAnimationSpeed(const string &in asProp, float afSpeed) -> SetPropAnimationSpeed
+void SetSwingDoorOpenAmount(const string &in asName, float afOpenAmount, float afDuration, bool abOpenTowardsMaxAngle) -> SetSwingDoorOpenAmount
+void StopAnimationAndContinue(const string &in asEnemyName, float afTimeOut) -> StopAnimationAndContinue
+void StopPropAnimation(const string &in asProp) -> StopPropAnimation
+void CreateEntityAtArea(const string &in asEntityName, const string &in asEntityFile, const string &in asAreaName, bool abFullGameSave, float afPosX, float afPosY, float afPosZ, float afRotX, float afRotY, float afRotZ) -> CreateEntityAtAreaExt
+void AddEffectVoice4(const string &in asVoiceFile, const string &in asEffectFile, const string &in asTextCat, const string &in asTextEntry, float afTextDelay, const string &in asText2Entry, float afText2Delay, const string &in asText3Entry, float afText3Delay, const string &in asText4Entry, float afText4Delay, bool abUsePostion, const string &in asPosEnitity, float afMinDistance, float afMaxDistance) -> AddEffectVoice4
+void AddEffectVoice(const string &in asVoiceFile, const string &in asEffectFile, const string &in asTextCat, const string &in asTextEntry, bool abUsePostion,  const string &in asPosEnitity, float afMinDistance, float afMaxDistance, int alPriority, bool abStopInterrupted) -> AddEffectVoiceExt
+void ChangeMap(const string &in asMapName, const string &in asStartPos, const string &in asStartSound, const string &in asEndSound) -> ChangeMap
+void ClearSavedMaps() -> ClearSavedMaps
+void CreateDataCache() -> CreateDataCache
+void DestroyDataCache() -> DestroyDataCache
+void SetMapDisplayNameEntry(const string &in asNameEntry) -> SetMapDisplayNameEntry
+void SetSkyBoxActive(bool abActive) -> SetSkyBoxActive
+void SetSkyBoxTexture(const string &in asTexture) -> SetSkyBoxTexture
+void SetSkyBoxColor(float afR, float afG, float afB, float afA) -> SetSkyBoxColor
+void UnlockAchievement(const string &in asName) -> UnlockAchievement
+void SetFogActive(bool abActive) -> SetFogActive
+void SetFogColor(float afR, float afG, float afB, float afA) -> SetFogColor
+void SetFogProperties(float afStart, float afEnd, float afFalloffExp, bool abCulling) -> SetFogProperties
+void SetupLoadScreen(const string &in asTextCat, const string &in asTextEntry, int alRandomNum, const string &in asImageFile) -> SetupLoadScreen
+void FadeIn(float afTime) -> FadeIn
+void FadeOut(float afTime) -> FadeOut
+void FadeImageTrailTo(float afAmount, float afSpeed) -> FadeImageTrailTo
+void FadeSepiaColorTo(float afAmount, float afSpeed) -> FadeSepiaColorTo
+void FadeRadialBlurTo(float afSize, float afSpeed) -> FadeRadialBlurTo
+void SetRadialBlurStartDist(float afStartDist) -> SetRadialBlurStartDist
+void StartEffectFlash(float afFadeIn, float afWhite, float afFadeOut) -> StartEffectFlash
+void StartEffectEmotionFlash(const string &in asTextCat, const string &in asTextEntry, const string &in asSound) -> StartEffectEmotionFlash
+void SetInDarknessEffectsActive(bool abX) -> SetInDarknessEffectsActive
+void AddEffectVoice(const string &in asVoiceFile, const string &in asEffectFile, const string &in asTextCat, const string &in asTextEntry, bool abUsePostion,  const string &in asPosEnitity, float afMinDistance, float afMaxDistance) -> AddEffectVoice
+void StopAllEffectVoices(float afFadeOutTime) -> StopAllEffectVoices
+bool GetEffectVoiceActive() -> GetEffectVoiceActive
+void SetEffectVoiceOverCallback(const string &in asFunc) -> SetEffectVoiceOverCallback
+void StartScreenShake(float afAmount, float afTime, float afFadeInTime,float afFadeOutTime) -> StartScreenShake
+bool GetFlashbackIsActive() -> GetFlashbackIsActive
+void SetInsanitySetEnabled(const string &in asSet, bool abX) -> SetInsanitySetEnabled
+void StartRandomInsanityEvent() -> StartRandomInsanityEvent
+void StartInsanityEvent(const string &in asEventName) -> StartInsanityEvent
+void StopCurrentInsanityEvent() -> StopCurrentInsanityEvent
+void InsanityEventIsActive() -> InsanityEventIsActive
+void StartPlayerSpawnPS(const string &in asSPSFile) -> StartPlayerSpawnPS
+void StopPlayerSpawnPS() -> StartPlayerSpawnPS
+void PlayGuiSound(const string &in asSoundFile, float afVolume) -> PlayGuiSound
+void SetPlayerActive(bool abActive) -> SetPlayerActive
+void ChangePlayerStateToNormal() -> ChangePlayerStateToNormal
+void SetPlayerCrouching(bool abCrouch) -> SetPlayerCrouching
+void AddPlayerBodyForce(float afX, float afY, float afZ, bool abUseLocalCoords) -> AddPlayerBodyForce
+void ShowPlayerCrossHairIcons(bool abX) -> ShowPlayerCrossHairIcons
+void SetPlayerPos(float afX, float afY, float afZ) -> SetPlayerPos
+float GetPlayerPosX() -> GetPlayerPosX
+float GetPlayerPosY() -> GetPlayerPosY
+float GetPlayerPosZ() -> GetPlayerPosZ
+void SetPlayerSanity(float afSanity) -> SetPlayerSanity
+void AddPlayerSanity(float afSanity) -> AddPlayerSanity
+float GetPlayerSanity() -> GetPlayerSanity
+void SetPlayerHealth(float afHealth) -> SetPlayerHealth
+void AddPlayerHealth(float afHealth) -> AddPlayerHealth
+float GetPlayerHealth() -> GetPlayerHealth
+void SetPlayerLampOil(float afOil) -> SetPlayerLampOil
+void AddPlayerLampOil(float afOil) -> AddPlayerLampOil
+float GetPlayerLampOil() -> GetPlayerLampOil
+float GetPlayerSpeed() -> GetPlayerSpeed
+float GetPlayerYSpeed() -> GetPlayerYSpeed
+void MovePlayerForward(float afAmount) -> MovePlayerForward
+void SetPlayerPermaDeathSound(const string &in asSound) -> SetPlayerPermaDeathSound
+void SetSanityDrainDisabled(bool abX) -> SetSanityDrainDisabled
+void GiveSanityBoost() -> GiveSanityBoost
+void GiveSanityBoostSmall() -> GiveSanityBoostSmall
+void GiveSanityDamage(float afAmount, bool abUseEffect) -> GiveSanityDamage
+void GivePlayerDamage(float afAmount, const string &in asType, bool abSpinHead, bool abLethal) -> GivePlayerDamage
+void FadePlayerFOVMulTo(float afX, float afSpeed) -> FadePlayerFOVMulTo
+void FadePlayerAspectMulTo(float afX, float afSpeed) -> FadePlayerAspectMulTo
+void FadePlayerRollTo(float afX, float afSpeedMul, float afMaxSpeed) -> FadePlayerRollTo
+void MovePlayerHeadPos(float afX, float afY, float afZ, float afSpeed, float afSlowDownDist) -> MovePlayerHeadPos
+void StartPlayerLookAt(const string &in asEntityName, float afSpeedMul, float afMaxSpeed,const string &in asAtTargetCallback) -> StartPlayerLookAt
+void StopPlayerLookAt() -> StopPlayerLookAt
+void SetPlayerMoveSpeedMul(float afMul) -> SetPlayerMoveSpeedMul
+void SetPlayerRunSpeedMul(float afMul) -> SetPlayerRunSpeedMul
+void SetPlayerLookSpeedMul(float afMul) -> SetPlayerLookSpeedMul
+void SetPlayerJumpForceMul(float afMul) -> SetPlayerJumpForceMul
+void SetPlayerJumpDisabled(bool abX) -> SetPlayerJumpDisabled
+void SetPlayerCrouchDisabled(bool abX) -> SetPlayerCrouchDisabled
+void SetPlayerFallDamageDisabled(bool abX) -> SetPlayerFallDamageDisabled
+void TeleportPlayer(const string &in asStartPosName) -> TeleportPlayer
+void SetLanternActive(bool abX, bool abUseEffects) -> SetLanternActive
+bool GetLanternActive() -> GetLanternActive
+void SetLanternDisabled(bool abX) -> SetLanternDisabled
+void SetLanternLitCallback(const string &in asCallback) -> SetLanternLitCallback
+void SetMessage(const string &in asTextCategory, const string &in asTextEntry, float afTime) -> SetMessage
+void SetDeathHint(const string &in asTextCategory, const string &in asTextEntry) -> SetDeathHint
+void DisableDeathStartSound() -> DisableDeathStartSound
+void AddNote(const string &in asNameAndTextEntry, const string &in asImage) -> AddNote
+void AddDiary(const string &in asNameAndTextEntry, const string &in asImage) -> AddDiary
+void ReturnOpenJournal(bool abOpenJournal) -> ReturnOpenJournal
+void AddQuest(const string &in asName, const string &in asNameAndTextEntry) -> AddQuest
+void CompleteQuest(const string &in asName, const string &in asNameAndTextEntry) -> CompleteQuest
+bool QuestIsCompleted(const string &in asName) -> QuestIsCompleted
+bool QuestIsAdded(const string &in asName) -> QuestIsAdded
+void SetNumberOfQuestsInMap(int alNumberOfQuests) -> SetNumberOfQuestsInMap
+void GiveHint(const string &in asName, const string &in asMessageCat, const string &in asMessageEntry, float afTimeShown) -> GiveHint
+void RemoveHint(const string &in asName) -> RemoveHint
+void BlockHint(const string &in asName) -> BlockHint
+void UnBlockHint(const string &in asName) -> UnBlockHint
+void ExitInventory() -> ExitInventory
+void SetInventoryDisabled(bool abX) -> SetInventoryDisabled
+void SetInventoryMessage(const string &in asTextCategory, const string &in asTextEntry, float afTime) -> SetInventoryMessage
+void GiveItem(const string &in asName, const string &in asType, const string &in asSubTypeName, const string &in asImageName, float afAmount) -> GiveItem
+void GiveItemFromFile(const string &in asName, const string &in asFileName) -> GiveItemFromFile
+void RemoveItem(const string &in asName) -> RemoveItem
+bool HasItem(const string &in asName) -> HasItem
+void AddCombineCallback(const string &in asName, const string &in asItemA, const string &in asItemB, const string &in asFunction, bool abAutoDestroy) -> AddCombineCallback
+void RemoveCombineCallback(const string &in asName) -> RemoveCombineCallback
+void AddUseItemCallback(const string &in asName, const string &in asItem, const string &in asEntity, const string &in asFunction, bool abAutoDestroy) -> AddUseItemCallback
+void RemoveUseItemCallback(const string &in asName) -> RemoveUseItemCallback
+void PreloadParticleSystem(const string &in asPSFile) -> PreloadParticleSystem
+void PreloadSound(const string &in asSoundFile) -> PreloadSound
+void CreateParticleSystemAtEntity(const string &in asPSName, const string &in asPSFile, const string &in asEntity, bool abSavePS) -> CreateParticleSystemAtEntity
+void CreateParticleSystemAtEntityExt(	const string &in asPSName, const string &in asPSFile, const string &in asEntity, bool abSavePS, float afR, float afG, float afB, float afA, bool abFadeAtDistance, float afFadeMinEnd, float afFadeMinStart, float afFadeMaxStart, float afFadeMaxEnd) -> CreateParticleSystemAtEntityExt
+void DestroyParticleSystem(const string &in asName) -> DestroyParticleSystem
+void PlaySoundAtEntity(const string &in asSoundName, const string &in asSoundFile, const string &in asEntity, float afFadeSpeed, bool abSaveSound) -> PlaySoundAtEntity
+void FadeInSound(const string &in asSoundName, float afFadeTime, bool abPlayStart) -> FadeInSound
+void StopSound(const string &in asSoundName, float afFadeTime) -> StopSound
+void PlayMusic(const string &in asMusicFile, bool abLoop, float afVolume, float afFadeTime, int alPrio, bool abResume) -> PlayMusic
+void StopMusic(float afFadeTime, int alPrio) -> StopMusic
+void FadeGlobalSoundVolume(float afDestVolume, float afTime) -> FadeGlobalSoundVolume
+void FadeGlobalSoundSpeed(float afDestSpeed, float afTime) -> FadeGlobalSoundSpeed
+void SetLightVisible(const string &in asLightName, bool abVisible) -> SetLightVisible
+void FadeLightTo(const string &in asLightName, float afR, float afG, float afB, float afA, float afRadius, float afTime) -> FadeLightTo
+void SetLightFlickerActive(const string &in asLightName, bool abActive) -> SetLightFlickerActive
+void SetEntityActive(const string &in asName, bool abActive) -> SetEntityActive
+void SetEntityVisible(const string &in asName, bool abVisible) -> SetEntityVisible
+bool GetEntityExists(const string &in asName) -> GetEntityExists
+void SetEntityPos(const string &in asName, float afX, float afY, float afZ) -> SetEntityPos
+float GetEntityPosX(const string &in asName) -> GetEntityPosX
+float GetEntityPosY(const string &in asName) -> GetEntityPosY
+float GetEntityPosZ(const string &in asName) -> GetEntityPosZ
+void SetEntityCustomFocusCrossHair(const string &in asName, const string &in asCrossHair) -> SetEntityCustomFocusCrossHair
+void CreateEntityAtArea(const string &in asEntityName, const string &in asEntityFile, const string &in asAreaName, bool abFullGameSave) -> CreateEntityAtArea
+void ReplaceEntity(const string &in asName, const string &in asBodyName, const string &in asNewEntityName, const string &in asNewEntityFile, bool abFullGameSave) -> ReplaceEntity
+void PlaceEntityAtEntity(const string &in asName, const string &in asTargetEntity, const string &in asTargetBodyName, bool abUseRotation) -> PlaceEntityAtEntity
+void SetEntityPlayerLookAtCallback(const string &in asName, const string &in asCallback, bool abRemoveWhenLookedAt) -> SetEntityPlayerLookAtCallback
+void SetEntityPlayerInteractCallback(const string &in asName, const string &in asCallback, bool abRemoveOnInteraction) -> SetEntityPlayerInteractCallback
+void SetEntityCallbackFunc(const string &in asName, const string &in asCallback) -> SetEntityCallbackFunc
+void SetEntityConnectionStateChangeCallback(const string &in asName, const string &in asCallback) -> SetEntityConnectionStateChangeCallback
+void SetEntityInteractionDisabled(const string &in asName, bool abDisabled) -> SetEntityInteractionDisabled
+bool GetEntitiesCollide(const string &in asEntityA, const string &in asEntityB) -> GetEntitiesCollide
+void SetPropEffectActive(const string &in asName, bool abActive, bool abFadeAndPlaySounds) -> SetPropEffectActive
+void SetPropActiveAndFade(const string &in asName, bool abActive, float afFadeTime) -> SetPropActiveAndFade
+void SetPropStaticPhysics(const string &in asName, bool abX) -> SetPropStaticPhysics
+bool GetPropIsInteractedWith(const string &in asName) -> GetPropIsInteractedWith
+void RotatePropToSpeed(const string &in asName, float afAcc, float afGoalSpeed, float afAxisX, float afAxisY, float afAxisZ, bool abResetSpeed, const string &in asOffsetArea) -> RotatePropToSpeed
+void StopPropMovement(const string &in asName) -> StopPropMovement
+void AddAttachedPropToProp(const string &in asPropName, const string &in asAttachName, const string &in asAttachFile, float fPosX, float fPosY, float fPosZ, float fRotX, float fRotY, float fRot) -> AddAttachedPropToProp
+void AttachPropToProp(const string &in asPropName, const string &in asAttachName, const string &in asAttachFile, float fPosX, float fPosY, float fPosZ, float fRotX, float fRotY, float fRot) -> AttachPropToProp
+void RemoveAttachedPropFromProp(const string &in asPropName, const string &in asAttachName) -> RemoveAttachedPropFromProp
+void SetLampLit(const string &in asName, bool abLit, bool abEffects) -> SetLampLit
+void SetSwingDoorLocked(const string &in asName, bool abLocked, bool abEffects) -> SetSwingDoorLocked
+void SetSwingDoorClosed(const string &in asName, bool abClosed, bool abEffects) -> SetSwingDoorClosed
+void SetSwingDoorDisableAutoClose(const string &in asName, bool abDisableAutoClose) -> SetSwingDoorDisableAutoClose
+void SetLevelDoorLocked(const string &in asName, bool abLocked) -> SetLevelDoorLocked
+void SetLevelDoorLockedSound(const string &in asName, const string &in asSound) -> SetLevelDoorLockedSound
+void SetLevelDoorLockedText(const string &in asName, const string &in asTextCat, const string &in asTextEntry) -> SetLevelDoorLockedText
+bool GetSwingDoorLocked(const string &in asName) -> GetSwingDoorLocked
+bool GetSwingDoorClosed(const string &in asName) -> GetSwingDoorClosed
+int GetSwingDoorState(const string &in asName) -> GetSwingDoorState
+void SetPropObjectStuckState(const string &in asName, int alState) -> SetPropObjectStuckState
+void SetWheelAngle(const string &in asName, float afAngle, bool abAutoMove) -> SetWheelAngle
+void SetWheelStuckState(const string &in asName, int alState, bool abEffects) -> SetWheelStuckState
+void SetLeverStuckState(const string &in asName, int alState, bool abEffects) -> SetLeverStuckState
+void SetWheelInteractionDisablesStuck(const string &in asName, bool abX) -> SetWheelInteractionDisablesStuck
+void SetLeverInteractionDisablesStuck(const string &in asName, bool abX) -> SetLeverInteractionDisablesStuck
+int GetLeverState(const string &in asName) -> GetLeverState
+void SetMultiSliderStuckState(const string &in asName, int alStuckState, bool abEffects) -> SetMultiSliderStuckState
+void SetMultiSliderCallback(const string &in asName, const string &in asCallback) -> SetMultiSliderCallback
+void SetButtonSwitchedOn(const string &in asName, bool abSwitchedOn, bool abEffects) -> SetButtonSwitchedOn
+void SetAllowStickyAreaAttachment(bool abX) -> SetAllowStickyAreaAttachment
+void AttachPropToStickyArea(const string &in asAreaName, const string &in asProp) -> AttachPropToStickyArea
+void AttachBodyToStickyArea(const string &in asAreaName, const string &in asBody) -> AttachBodyToStickyArea
+void DetachFromStickyArea(const string &in asAreaName) -> DetachFromStickyArea
+void SetNPCAwake(const string &in asName, bool abAwake, bool abEffects) -> SetNPCAwake
+void SetNPCFollowPlayer(const string &in asName, bool abX) -> SetNPCFollowPlayer
+void SetEnemyDisabled(const string &in asName, bool abDisabled) -> SetEnemyDisabled
+void SetEnemyIsHallucination(const string &in asName, bool abX) -> SetEnemyIsHallucination
+void FadeEnemyToSmoke(const string &in asName, bool abPlaySound) -> FadeEnemyToSmoke
+void SetEnemyDisableTriggers(const string &in asName, bool abX) -> SetEnemyDisableTriggers
+void ShowEnemyPlayerPosition(const string &in asName) -> ShowEnemyPlayerPosition
+void AlertEnemyOfPlayerPresence(const string &in asName) -> AlertEnemyOfPlayerPresence
+void AddEnemyPatrolNode(const string &in asEnemyName, const string &in asNodeName, float afWaitTime, const string &in asAnimation) -> AddEnemyPatrolNode
+void AddEnemyPatrolNode(const string &in asEnemyName, const string &in asNodeName, float afWaitTime, const string &in asAnimation, bool abAmfpExtraArg) -> AddEnemyPatrolNodeAmfp
+void ClearEnemyPatrolNodes(const string &in asEnemyName) -> ClearEnemyPatrolNodes
+void SetEnemySanityDecreaseActive(const string &in asName, bool abX) -> SetEnemySanityDecreaseActive
+void TeleportEnemyToNode(const string &in asEnemyName, const string &in asNodeName, bool abChangeY) -> TeleportEnemyToNode
+void TeleportEnemyToEntity(const string &in asEnemyName, const string &in asTargetEntity, const string &in asTargetBody, bool abChangeY) -> TeleportEnemyToEntity
+void ChangeManPigPose(const string &in asName, const string &in asPoseType) -> ChangeManPigPose
+void SetTeslaPigFadeDisabled(const string &in asName, bool abX) -> SetTeslaPigFadeDisabled
+void SetTeslaPigSoundDisabled(const string &in asName, bool abX) -> SetTeslaPigSoundDisabled
+void SetTeslaPigEasyEscapeDisabled(const string &in asName, bool abX) -> SetTeslaPigEasyEscapeDisabled
+void ForceTeslaPigSighting(const string &in asName) -> ForceTeslaPigSighting
+string& GetEnemyStateName(const string &in asName) -> GetEnemyStateName
+void SetPropHealth(const string &in asName, float afHealth) -> SetPropHealth
+void AddPropHealth(const string &in asName, float afHealth) -> AddPropHealth
+float GetPropHealth(const string &in asName) -> GetPropHealth
+void ResetProp(const string &in asName) -> ResetProp
+void PlayPropAnimation(const string &in asProp, const string &in asAnimation, float afFadeTime, bool abLoop, const string &in asCallback) -> PlayPropAnimation
+void SetMoveObjectState(const string &in asName, float afState) -> SetMoveObjectState
+void SetMoveObjectStateExt(const string &in asName, float afState, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed) -> SetMoveObjectStateExt
+void AddPropForce(const string &in asName, float afX, float afY, float afZ, const string &in asCoordSystem) -> AddPropForce
+void AddPropImpulse(const string &in asName, float afX, float afY, float afZ, const string &in asCoordSystem) -> AddPropImpulse
+void AddBodyForce(const string &in asName, float afX, float afY, float afZ, const string &in asCoordSystem) -> AddBodyForce
+void AddBodyImpulse(const string &in asName, float afX, float afY, float afZ, const string &in asCoordSystem) -> AddBodyImpulse
+void BreakJoint(const string &in asName) -> BreakJoint
+void SetBodyMass(const string &in asName, float afMass) -> SetBodyMass
+float GetBodyMass(const string &in asName) -> GetBodyMass
+void AddEntityCollideCallback(const string &in asParentName, const string &in asChildName, const string &in asFunction, bool abDeleteOnCollide, int alStates) -> AddEntityCollideCallback
+void RemoveEntityCollideCallback(const string &in asParentName, const string &in asChildName) -> RemoveEntityCollideCallback
+void InteractConnectPropWithRope(const string &in asName, const string &in asLeverName, const string &in asPropName, bool abInteractOnly, float afSpeedMul,float afMinSpeed, float afMaxSpeed, bool abInvert, int alStatesUsed) -> InteractConnectPropWithRope
+void InteractConnectPropWithMoveObject(const string &in asName, const string &in asPropName, const string &in asMoveObjectName, bool abInteractOnly,bool abInvert, int alStatesUsed) -> InteractConnectPropWithMoveObject
+void ConnectEntities(const string &in asName, const string &in asMainEntity, const string &in asConnectEntity, bool abInvertStateSent, int alStatesUsed, const string &in asCallbackFunc) -> ConnectEntities
+float MathSin(float afX) -> ScriptSin
+float MathCos(float afX) -> ScriptCos
+float MathTan(float afX) -> ScriptTan
+float MathAsin(float afX) -> ScriptAsin
+float MathAcos(float afX) -> ScriptAcos
+float MathAtan(float afX) -> ScriptAtan
+float MathAtan2(float afX, float afY) -> ScriptAtan2
+float MathSqrt(float afX) -> ScriptSqrt
+float MathPow(float afBase, float afExp) -> ScriptPow
+float MathMin(float afA, float afB) -> ScriptMin
+float MathMax(float afA, float afB) -> ScriptMax
+float MathClamp(float afX, float afMin, float afMax) -> ScriptClamp
+float MathAbs(float afX) -> ScriptAbs
+int StringToInt(const string &in asString) -> ScriptStringToInt
+float StringToFloat(const string &in asString) -> ScriptStringToFloat
+bool StringToBool(const string &in asString) -> ScriptStringToBool
