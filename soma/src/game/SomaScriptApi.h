@@ -19,18 +19,25 @@ struct cSomaScriptApiType
 	std::vector<std::string> mvCasts;
 };
 
+struct OhplS2Api;
+
 class cSomaScriptApi
 {
 public:
+	cSomaScriptApi();
+	~cSomaScriptApi();
+	cSomaScriptApi(const cSomaScriptApi &) = delete;
+	cSomaScriptApi &operator=(const cSomaScriptApi &) = delete;
+
 	bool Load(const std::string &asFile);
 	void RebaseEnums(const cSomaScriptApi &aBase);
 
 	void RegisterTypes(asIScriptEngine *apEngine);
 	int Register(asIScriptEngine *apEngine);
 
-	const std::vector<std::string> &GetErrors() const { return mvErrors; }
-	const std::vector<std::string> &GetWarnings() const { return mvWarnings; }
-	const std::vector<std::string> &GetRemaps() const { return mvRemaps; }
+	const std::vector<std::string> &GetErrors() const { Sync(); return mvErrors; }
+	const std::vector<std::string> &GetWarnings() const { Sync(); return mvWarnings; }
+	const std::vector<std::string> &GetRemaps() const { Sync(); return mvRemaps; }
 
 	static std::string NativeDecl(const char *apType, const char *apDecl);
 
@@ -40,14 +47,17 @@ public:
 private:
 	void RegisterPropertyAccessors(asIScriptEngine *apEngine, const cSomaScriptApiType &aType, const std::string &asDecl);
 	void Fail(const std::string &asWhat, int alCode);
+	void Sync() const;
+
+	OhplS2Api *mpRust = NULL;
 
 	std::vector<std::pair<std::string, std::vector<std::pair<std::string, int>>>> mvEnums;
 	std::vector<cSomaScriptApiType> mvTypes;
 	std::vector<std::string> mvGlobals;
 	std::vector<std::string> mvGlobalProps;
-	std::vector<std::string> mvErrors;
-	std::vector<std::string> mvWarnings;
-	std::vector<std::string> mvRemaps;
+	mutable std::vector<std::string> mvErrors;
+	mutable std::vector<std::string> mvWarnings;
+	mutable std::vector<std::string> mvRemaps;
 	std::map<std::string, std::vector<std::string>> mmapSigs;
 	std::set<std::string> msetEnumNames;
 	bool mbTypesRegistered = false;

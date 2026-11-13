@@ -21,6 +21,7 @@ mod tangents;
 
 pub use crate::types::{Matrixf, Quaternion, Vector2f, Vector2l, Vector3f};
 pub(crate) use geom::expand_aabb;
+pub(crate) use geom::plane_line_intersection;
 pub(crate) use geom::rect_fit_l;
 pub(crate) use geom::vector3_angle;
 pub(crate) use geom::vector3_reflect;
@@ -44,10 +45,12 @@ pub(crate) use matrix::{
 };
 pub(crate) use matrix::{matrix_to_euler_angles, quat_to_rotation_matrix};
 pub(crate) use matrix::{matrix_translate, orthographic_projection, transpose};
+pub(crate) use matrix::{quat_add, quat_mul, quat_sub};
 pub(crate) use matrix::{quat_normalize, quat_scale, quat_slerp};
 pub(crate) use scalar::angle_distance;
 pub(crate) use scalar::angle_from_points_2d;
 pub(crate) use scalar::to_deg;
+pub(crate) use scalar::{angle_from_vector, randomize};
 pub(crate) use scalar::{clamp, rand_rectf, round_float_to_decimals, to_rad};
 pub(crate) use scalar::{fast_random_float, modulus, rand_rectl};
 pub(crate) use scalar::{get_flag_bit, smooth_curve};

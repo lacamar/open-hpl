@@ -1,4 +1,5 @@
 #include "SomaScriptNatives.h"
+#include "RustSomaScriptS2.h"
 #include "SomaImGui.h"
 #include "SomaSound.h"
 #include "SomaSoundscape.h"
@@ -12,6 +13,12 @@
 
 void RegisterSomaScriptNatives(asIScriptEngine *apEngine)
 {
+	if (OhplS2Rust())
+	{
+		OhplS2InstallHost();
+		ohpl_s2_register_natives(apEngine);
+		return;
+	}
 	RegisterSomaScriptMathNatives(apEngine);
 	RegisterSomaScriptStringNatives(apEngine);
 	RegisterSomaScriptLuxNatives(apEngine);

@@ -1,5 +1,6 @@
 #include "SomaScriptCheck.h"
 #include "RustSomaScript.h"
+#include "RustSomaScriptS2.h"
 #include "SomaScriptApi.h"
 #include "SomaScriptBuilder.h"
 #include "SomaScriptStrings.h"
@@ -139,6 +140,8 @@ int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFil
 	api.RegisterTypes(pEngine);
 	RegisterSomaScriptNatives(pEngine);
 	api.Register(pEngine);
+	if (const char *pDump = getenv("OHPL_S2_DECL_DUMP"))
+		ohpl_s2_dump_decls(pEngine, pDump);
 	for (size_t i = 0; i < api.GetWarnings().size(); ++i)
 		fprintf(stderr, "warning: %s\n", api.GetWarnings()[i].c_str());
 	for (const std::string &sRemap : api.GetRemaps())
