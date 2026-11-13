@@ -1,5 +1,5 @@
 // xml_probe MODE ROOT LIST: one line per file in LIST (paths relative to ROOT).
-//   api   cXmlDocumentTiny (built against pre-port or current sources): tree dump + SaveToString digest
+//   api   cXmlDocumentTiny: tree dump + SaveToString digest
 //   tiny  raw tinyXML reference: load/error/print digest
 //   rust  the Rust XML layer through its C ABI, same digest as tiny
 #include "common.h"
@@ -7,10 +7,8 @@
 #include "system/String.h"
 #include <fstream>
 #include <iostream>
-#ifndef OLD
 #include "impl/tinyXML/tinyxml.h"
 #include "system/RustXml.h"
-#endif
 
 using namespace hpl;
 
@@ -61,7 +59,6 @@ int main(int argc, char **argv)
 			else dump = std::to_string(doc.GetErrorRow()) + "|" + std::to_string(doc.GetErrorCol()) + "|" + doc.GetErrorDesc();
 			line += (ok ? "1" : "0") + std::string("\t") + Hex(Fnv(dump)) + "\t" + Hex(Fnv(save));
 		}
-#ifndef OLD
 		else if(mode == "tiny")
 		{
 			TiXmlDocument doc;
@@ -93,7 +90,6 @@ int main(int argc, char **argv)
 			ohpl_xml_doc_print_stream(doc.p, OhplXmlAssign, &stream);
 			line += Hex(Fnv(s + file + stream));
 		}
-#endif
 		std::cout << line << "\n";
 	}
 	remove(tmp.c_str());

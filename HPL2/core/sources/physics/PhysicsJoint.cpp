@@ -79,110 +79,14 @@ namespace hpl {
 		iPhysicsWorld *apWorld,const cVector3f &avPivotPoint, const cVector3f &avPinDir)
 		: msName(asName)
 	{
-		if(OhplBackendRustRequested())
-		{
-			mRsBook = 0;
-			ohpl_h15j_new(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(OhplPhysHost()), reinterpret_cast<size_t>(apParentBody),
-				reinterpret_cast<size_t>(apChildBody), reinterpret_cast<size_t>(apWorld), OhplV3Pod{avPivotPoint.x, avPivotPoint.y, avPivotPoint.z},
-				OhplV3Pod{avPinDir.x, avPinDir.y, avPinDir.z});
-			return;
-		}
-
-		mpParentBody = apParentBody;
-		mpChildBody = apChildBody;
-		mpWorld = apWorld;
-		mlUniqueID = -1;
-
-		mMaxLimit.msSound = "";
-		mMinLimit.msSound = "";
-
-		if(apParentBody) {
-			apParentBody->AddJoint(this);
-			m_mtxParentBodySetup = apParentBody->GetLocalMatrix();
-		}
-		else{
-			m_mtxParentBodySetup = cMatrixf::Identity;
-		}
-
-		mRsBook = OhplBackendRustRequested() ? ohpl_h15_joint_new() : 0;
-		m_mtxPrevChild = cMatrixf::Identity;
-		m_mtxPrevParent = cMatrixf::Identity;
-
-		apChildBody->AddJoint(this);
-		m_mtxChildBodySetup = apChildBody->GetLocalMatrix();
-
-		mvPivotPoint = avPivotPoint;
-		mvStartPivotPoint = avPivotPoint;
-
-		mvPinDir = avPinDir;
-		mvStartPinDir = avPinDir;
-
-		if(mpParentBody)
-		{
-			cMatrixf m_mtxInvParent = cMath::MatrixInverse(mpParentBody->GetLocalMatrix());
-			mvLocalPivot = cMath::MatrixMul(m_mtxInvParent,avPivotPoint);
-			mvLocalPinDir = cMath::MatrixMul(m_mtxInvParent.GetRotation(),avPinDir);
-		}
-		else
-		{
-			mvLocalPivot = avPivotPoint;
-			mvLocalPinDir = avPinDir;
-		}
-
-		msMoveSound = "";
-
-		mbHasCollided = false;
-		mpSound = NULL;
-		mlSoundID = -1;
-
-		mpCallback = NULL;
-
-		mbAutoDeleteCallback = false;
-
-		mpUserData = NULL;
-
-		mbBreakable = false;
-		mfBreakForce = 0;
-		msBreakSound = "";
-		mbBroken = false;
-
-		mbStickyMinLimit = false;
-		mbStickyMaxLimit = false;
-
-		mlLimitStepCount =0;
-
-		mlSpeedCount =0;
-
-		mbLimitAutoSleep = false;
-		mbAllowPositionReset = false;
-		mbPositionResetPending = false;
-		mfLimitAutoSleepDist = 0.02f;
-		mlLimitAutoSleepNumSteps = 10;
-
-		//Log("Created joint '%s'\n",msName.c_str());
+		ohpl_h15j_new(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(OhplPhysHost()), reinterpret_cast<size_t>(apParentBody),
+			reinterpret_cast<size_t>(apChildBody), reinterpret_cast<size_t>(apWorld), OhplV3Pod{avPivotPoint.x, avPivotPoint.y, avPivotPoint.z},
+			OhplV3Pod{avPinDir.x, avPinDir.y, avPinDir.z});
 	}
 
 	iPhysicsJoint::~iPhysicsJoint()
 	{
-		if(mS.shell){ ohpl_h15j_drop(mS.shell, reinterpret_cast<size_t>(this)); return; }
-
-		if(mbAutoDeleteCallback && mpCallback) hplDelete(mpCallback);
-
-		//Destroy all controllers.
-		tPhysicsControllerMapIt it = m_mapControllers.begin();
-		for(; it != m_mapControllers.end(); ++it)
-		{
-			mpWorld->DestroyController(it->second);
-		}
-
-		if(mpChildBody) mpChildBody->RemoveJoint(this);
-		if(mpParentBody) mpParentBody->RemoveJoint(this);
-
-		if(mpSound) mpWorld->GetWorld()->DestroySoundEntity(mpSound);
-
-		if(mRsBook) ohpl_h15_joint_free(mRsBook);
-
-		//Log("Deleted joint '%s'\n",msName.c_str());
+		ohpl_h15j_drop(mS.shell, reinterpret_cast<size_t>(this));
 	}
 
 	//-----------------------------------------------------------------------
@@ -206,97 +110,51 @@ namespace hpl {
 
 	void iPhysicsJoint::AddController(iPhysicsController *apController)
 	{
-		if(mS.shell){ ohpl_h15j_add_controller(mS.shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apController)); return; }
-
-		//Add controller top map
-		m_mapControllers.insert(tPhysicsControllerMap::value_type(apController->GetName(), apController));
-
-		//Set properties
-		apController->SetBody(mpChildBody);
-		apController->SetJoint(this);
+		ohpl_h15j_add_controller(mS.shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apController));
 	}
 
 	//-----------------------------------------------------------------------
 
 	iPhysicsController* iPhysicsJoint::GetController(const tString &asName)
 	{
-		if(mS.shell) return reinterpret_cast<iPhysicsController*>(ohpl_h15j_get_controller(mS.shell, asName.c_str(), asName.size()));
-		tPhysicsControllerMapIt it = m_mapControllers.find(asName);
-		if(it == m_mapControllers.end()) return NULL;
-
-		return it->second;
+		return reinterpret_cast<iPhysicsController*>(ohpl_h15j_get_controller(mS.shell, asName.c_str(), asName.size()));
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool iPhysicsJoint::ChangeController(const tString &asName)
 	{
-		if(mS.shell) return ohpl_h15j_change_controller(mS.shell, asName.c_str(), asName.size());
-		iPhysicsController *pNewCtrl = GetController(asName);
-		if(pNewCtrl==NULL) return false;
-
-		tPhysicsControllerMapIt it = m_mapControllers.begin();
-		for(; it != m_mapControllers.end(); ++it)
-		{
-			iPhysicsController *pCtrl = it->second;
-
-			if(pCtrl == pNewCtrl)
-			{
-				pCtrl->SetActive(true);
-			}
-			else
-			{
-				pCtrl->SetActive(false);
-			}
-		}
-
-		return true;
+		return ohpl_h15j_change_controller(mS.shell, asName.c_str(), asName.size());
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iPhysicsJoint::SetAllControllersPaused(bool abX)
 	{
-		if(mS.shell){ ohpl_h15j_set_all_paused(mS.shell, abX); return; }
-		tPhysicsControllerMapIt it = m_mapControllers.begin();
-		for(; it != m_mapControllers.end(); ++it)
-		{
-			iPhysicsController *pCtrl = it->second;
-
-			pCtrl->SetPaused(abX);
-		}
+		ohpl_h15j_set_all_paused(mS.shell, abX);
 	}
 
 	//-----------------------------------------------------------------------
 
 	int iPhysicsJoint::ControllerCount()
 	{
-		return mS.shell ? (int)ohpl_h15j_controller_len(mS.shell) : (int)m_mapControllers.size();
+		return (int)ohpl_h15j_controller_len(mS.shell);
 	}
 
 	iPhysicsController* iPhysicsJoint::ControllerAt(int alIdx)
 	{
-		if(mS.shell)
-		{
-			OhplStr name; size_t obj = 0;
-			ohpl_h15j_controller_at(mS.shell, alIdx, &name, &obj);
-			return reinterpret_cast<iPhysicsController*>(obj);
-		}
-		tPhysicsControllerMapIt it = m_mapControllers.begin();
-		std::advance(it, alIdx);
-		return it->second;
+		OhplStr name; size_t obj = 0;
+		ohpl_h15j_controller_at(mS.shell, alIdx, &name, &obj);
+		return reinterpret_cast<iPhysicsController*>(obj);
 	}
 
 	cPhysicsControllerIterator iPhysicsJoint::GetControllerIterator()
 	{
-		if(mS.shell)
+		m_mapControllers.clear();
+		for(size_t i=0, n=ohpl_h15j_controller_len(mS.shell); i<n; ++i)
 		{
-			m_mapControllers.clear();
-			for(size_t i=0, n=ohpl_h15j_controller_len(mS.shell); i<n; ++i)
-			{
-				OhplStr name; size_t obj;
-				if(ohpl_h15j_controller_at(mS.shell, i, &name, &obj)) m_mapControllers[tString(name.p, name.n)] = reinterpret_cast<iPhysicsController*>(obj);
-			}
+			OhplStr name; size_t obj;
+			if(ohpl_h15j_controller_at(mS.shell, i, &name, &obj)) m_mapControllers[tString(name.p, name.n)] = reinterpret_cast<iPhysicsController*>(obj);
 		}
 		return cPhysicsControllerIterator(&m_mapControllers);
 	}
@@ -331,34 +189,7 @@ namespace hpl {
 
 	bool iPhysicsJoint::OnPhysicsUpdate()
 	{
-		if(mS.shell) return ohpl_h15j_update(mS.shell, reinterpret_cast<size_t>(this));
-
-		if(mbPositionResetPending) ResetPosition();
-		mbPositionResetPending = false;
-
-		OhplMoveParams params = {
-			mfMinMoveSpeed, mfMinMoveFreq, mfMinMoveFreqSpeed, mfMinMoveVolume,
-			mfMaxMoveFreq, mfMaxMoveFreqSpeed, mfMaxMoveVolume, mfMiddleMoveSpeed, mfMiddleMoveVolume,
-			(int32_t)mMoveSpeedType, OhplS(msMoveSound)
-		};
-		OhplJointState state = {
-			reinterpret_cast<size_t>(mpParentBody), reinterpret_cast<size_t>(mpChildBody), reinterpret_cast<size_t>(mpWorld),
-			mvPivotPoint, mvPinDir, mvLocalPivot, mvLocalPinDir,
-			m_mtxPrevChild, m_mtxPrevParent,
-			reinterpret_cast<size_t>(mpSound), mlSoundID, mlSpeedCount
-		};
-
-		bool bUpdated = ohpl_phys_joint_update(OhplPhysHost(), &params, &state, mRsBook);
-
-		mvPivotPoint = state.pivot;
-		mvPinDir = state.pinDir;
-		m_mtxPrevChild = state.prevChild;
-		m_mtxPrevParent = state.prevParent;
-		mpSound = reinterpret_cast<cSoundEntity*>(state.sound);
-		mlSoundID = state.soundId;
-		mlSpeedCount = state.speedCount;
-
-		return bUpdated;
+		return ohpl_h15j_update(mS.shell, reinterpret_cast<size_t>(this));
 	}
 
 	//-----------------------------------------------------------------------
@@ -395,8 +226,7 @@ namespace hpl {
 
 	bool iPhysicsJoint::CheckBreakage()
 	{
-		if(mS.shell) return ohpl_h15j_check_breakage(mS.shell, reinterpret_cast<size_t>(this));
-		return ohpl_phys_joint_check_breakage(OhplPhysHost(), reinterpret_cast<size_t>(this), mbBreakable, mbBroken, mfBreakForce, OhplS(msBreakSound));
+		return ohpl_h15j_check_breakage(mS.shell, reinterpret_cast<size_t>(this));
 	}
 
 	//-----------------------------------------------------------------------
@@ -405,10 +235,7 @@ namespace hpl {
 											const float afMin, const float afMax,
 											const float afDist)
 	{
-		const bool bSleep = apJoint->mRsBook
-			? ohpl_h15_joint_limit_auto_sleep(apJoint->mRsBook, apJoint->mbLimitAutoSleep, apJoint->mfLimitAutoSleepDist,
-											apJoint->mlLimitAutoSleepNumSteps, afMin, afMax, afDist)
-			: ohpl_phys_joint_limit_auto_sleep(apJoint->mbLimitAutoSleep, apJoint->mfLimitAutoSleepDist,
+		const bool bSleep = ohpl_phys_joint_limit_auto_sleep(apJoint->mbLimitAutoSleep, apJoint->mfLimitAutoSleepDist,
 											apJoint->mlLimitAutoSleepNumSteps, &apJoint->mlLimitStepCount,
 											afMin, afMax, afDist);
 		if(bSleep)

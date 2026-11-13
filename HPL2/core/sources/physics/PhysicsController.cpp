@@ -33,28 +33,7 @@ namespace hpl {
 
 		mpWorld = apWorld;
 
-		if(OhplBackendRustRequested())
-		{
-			mpPid = ohpl_h15c_init(&mS, reinterpret_cast<size_t>(this));
-			return;
-		}
-		mS.self = this;
-
-		mpBody = NULL;
-		mpJoint = NULL;
-
-		mbActive = false;
-
-		mpPid = ohpl_phys_pid_new();
-		ohpl_phys_pid_set_error_num(mpPid, 10);
-
-		mbMulMassWithOutput = false;
-
-		mfMaxOutput = 0;
-
-		mbLogInfo = false;
-
-		mbPaused = false;
+		mpPid = ohpl_h15c_init(&mS, reinterpret_cast<size_t>(this));
 	}
 
 	iPhysicsController::~iPhysicsController()

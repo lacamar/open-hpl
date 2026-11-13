@@ -88,8 +88,6 @@ namespace hpl {
 		void BeginLoad(const tString& asFile);
 		void EndLoad();
 		
-		unsigned long mlTimeStart;
-
 		/**
 		 * Checks if a resource alllready is in the manager, else searches the resources.
 		 * \param &asName Name of the resource.
@@ -101,7 +99,6 @@ namespace hpl {
 		void RemoveResource(iResourceBase* apResource);
 
 		tString GetTabs();
-		static int mlTabCount;
 
 	};
 

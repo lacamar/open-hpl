@@ -83,7 +83,6 @@ namespace hpl {
 		tWString msFile;
 		cFileSearcher *mpFileSearcher;
 
-		OhplXmlDoc *mpXmlDoc;
 		OhplH2Config *mpRs;
 		tString msTempValue;
 

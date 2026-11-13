@@ -233,15 +233,10 @@ namespace hpl {
 		iPhysicsBody *&mpChildBody = mS.child;
 		iPhysicsWorld *&mpWorld = mS.world;
 
-		cMatrixf &m_mtxParentBodySetup = mS.parentSetup;
-		cMatrixf &m_mtxChildBodySetup = mS.childSetup;
 
 		cVector3f &mvPinDir = mS.pinDir;
 		cVector3f &mvPivotPoint = mS.pivot;
-		cVector3f &mvStartPivotPoint = mS.startPivot;
 
-		cVector3f &mvLocalPivot = mS.localPivot;
-		cVector3f &mvLocalPinDir = mS.localPinDir;
 		cVector3f &mvStartPinDir = mS.startPinDir;
 
 		bool &mbStickyMinLimit = mS.stickyMin;
@@ -254,10 +249,7 @@ namespace hpl {
 		cJointLimitEffect mMaxLimit;
 		cJointLimitEffect mMinLimit;
 
-		int &mlSpeedCount = mS.speedCount;
 
-		cMatrixf &m_mtxPrevChild = mS.prevChild;
-		cMatrixf &m_mtxPrevParent = mS.prevParent;
 
 		tString msMoveSound;
 
@@ -289,7 +281,6 @@ namespace hpl {
 		bool &mbAutoDeleteCallback = mS.autoDeleteCallback;
 
 		int &mlLimitStepCount = mS.limitStepCount;
-		uint64_t mRsBook;
 		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
 
 		void *&mpUserData = mS.userData;

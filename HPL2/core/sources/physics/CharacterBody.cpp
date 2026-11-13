@@ -61,66 +61,8 @@ namespace hpl {
 
 	void cCharacterBodyCollideGravity::OnCollision(iPhysicsBody *apBody, cCollideData *apCollideData)
 	{
-		if(mpCharBody->mpAux)
-		{
-			ohpl_h14_collide_gravity(iCharacterBody::HostOp, reinterpret_cast<size_t>(mpCharBody), &mpCharBody->mE, &mpCharBody->mS,
-				reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apCollideData));
-			return;
-		}
-
-		mpCharBody->mpGravityCollideMaterial = apBody->GetMaterial();
-
-		/////////////////////////////////////
-		//Check if body allow character attachment, if so attach character to it
-		if(	apBody->GetGravityCanAttachCharacter() && apBody->IsCharacter()==false &&
-			apCollideData->mvContactPoints[0].mvNormal.y > 0.001f)	//Quick check to make sure that character is just not sliding against the body.
-		{
-			//Choose the body that has the most contacts.
-			if(	mpCharBody->mlGravityAttachmentContacts < apCollideData->mlNumOfPoints)
-			{
-				mpCharBody->mlGravityAttachmentContacts = apCollideData->mlNumOfPoints;
-				mpCharBody->mpGravityAttachedBody = apBody;
-			}
-		}
-
-		if(mpCharBody->mpCallback) mpCharBody->mpCallback->OnGravityCollide(mpCharBody,apBody,apCollideData);
-
-		if(apBody->GetMass()==0 || apBody->GetPushedByCharacterGravity()==false) return;
-
-		//////////////////////////////////////
-		//Go through all of the contact points and check if any is a movement up.
-		//This means the body is below the character and should be pushed down.
-		bool bPushDown=false;
-		cVector3f vMedianPoint(0,0,0);
-		float fNumPoints=0;
-		for(int i=0; i< apCollideData->mlNumOfPoints; i++)
-		{
-			//TODO: Get the point at which to apply the force.
-			cCollidePoint &point = apCollideData->mvContactPoints[i];
-			if(point.mvNormal.y > 0.001f)
-			{
-				bPushDown = true;
-				fNumPoints+=1;
-				vMedianPoint += point.mvPoint;
-			}
-		}
-
-		if(bPushDown)
-		{
-			vMedianPoint = vMedianPoint / fNumPoints;
-
-			//Transfer the velocity of the player to the body.
-			// SKIPPING THIS! For now. It makes stuff very unstable.
-			/*if(mpCharBody->GetForceVelocity().y < 0.1f && mpCharBody->IsOnGround()==false)
-			{
-				float fImpulse = mpCharBody->GetForceVelocity().y * (mpCharBody->GetMass() / apBody->GetMass());
-				apBody->AddImpulseAtPosition(cVector3f(0,fImpulse,0), vMedianPoint);
-			}*/
-
-			float fForceMul = mpCharBody->mS.customGravityActive ? mpCharBody->mS.customGravity.y : mpCharBody->mpWorld->GetGravity().y;
-			if(fForceMul < 0)
-				apBody->AddForceAtPosition(cVector3f(0,mpCharBody->GetMass() * fForceMul,0), vMedianPoint);
-		}
+		ohpl_h14_collide_gravity(iCharacterBody::HostOp, reinterpret_cast<size_t>(mpCharBody), &mpCharBody->mE, &mpCharBody->mS,
+			reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apCollideData));
 	}
 
 	//-----------------------------------------------------------------------
@@ -140,81 +82,7 @@ namespace hpl {
 
 	void cCharacterBodyCollidePush::OnCollision(iPhysicsBody *apBody, cCollideData *apCollideData)
 	{
-		if(mpCharBody->mpAux)
-		{
-			ohpl_h14_collide_push(iCharacterBody::HostOp, reinterpret_cast<size_t>(mpCharBody), &mpCharBody->mE, &mpCharBody->mS, reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apCollideData));
-			return;
-		}
-
-		///////////////////////////////////
-		//Check what bodies not to push.
-		if(apBody->GetMass()==0 && apBody->IsCharacter()==false) return;
-		if(apBody->GetMass() > mpCharBody->GetMaxPushMass()) return;
-
-		///////////////////////////////
-		//Character is hit
-		if(apBody->IsCharacter())
-		{
-			iCharacterBody *pHitCharBody = apBody->GetCharacterBody();
-			if(pHitCharBody->GetMass() > mpCharBody->GetCharacterMaxPushMass()) return;
-
-
-			float fHitTop = pHitCharBody->GetPosition().y + pHitCharBody->GetSize().y/2;
-			//Make bottom 10% of size longer up to remove uneeded pushing.
-			float fBottom = mpCharBody->GetPosition().y - (mpCharBody->GetSize().y/2 - mpCharBody->GetSize().y*0.1f);
-
-			//Log("Top: %f Bottom: %f. HitSize: %f Size: %f. HitPos: %f Pos: %f\n",fHitTop, fBottom,pHitCharBody->GetSize().y,mpCharBody->GetSize().y,
-			//																		pHitCharBody->GetPosition().y,mpCharBody->GetPosition().y);
-
-			//If body is on top of hitbody, skip doing a push.
-			if(fHitTop < fBottom) return;
-
-			cVector3f vDir = pHitCharBody->GetPosition() - mpCharBody->GetPosition();
-			if(mpCharBody->GetCharacterPushIn2D()) vDir.y =0;
-			vDir.Normalize();
-
-			pHitCharBody->AddForce(vDir * mpCharBody->GetCharacterPushForce());
-		}
-		//////////////////////////////
-		//Normal body is hit
-		else
-		{
-				/////////////////////////////////////////
-			//Go through all of the contact points and find median
-			cVector3f vMedianPoint(0,0,0);
-			float fNumPoints=0;
-
-			for(int i=0; i< apCollideData->mlNumOfPoints; i++)
-			{
-				cCollidePoint &point = apCollideData->mvContactPoints[i];
-
-				fNumPoints+=1;
-				vMedianPoint += point.mvPoint;
-			}
-			vMedianPoint = vMedianPoint / fNumPoints;
-
-			//If median is below (or almost below the player), skip push
-			float fMinY = mpCharBody->GetFeetPosition().y;
-			fMinY += 0.01f;
-			if(vMedianPoint.y  <  fMinY) return;
-
-			float fForce = mpCharBody->GetPushForce();
-			if(mpCharBody->GetPushImpulse() > 0) fForce = cMath::Min(fForce, apBody->GetMass() * mpCharBody->GetPushImpulse());
-
-			if(mpCharBody->GetPushIn2D())
-			{
-				cVector3f vDir = vMedianPoint - mpCharBody->GetPosition();
-				vDir.y =0; vDir.Normalize();
-
-				apBody->AddForceAtPosition(vDir * fForce, vMedianPoint);
-			}
-			else
-			{
-				cVector3f vDir = cMath::Vector3Normalize(vMedianPoint - mpCharBody->GetPosition());
-
-				apBody->AddForceAtPosition(vDir * fForce, vMedianPoint);
-			}
-		}
+		ohpl_h14_collide_push(iCharacterBody::HostOp, reinterpret_cast<size_t>(mpCharBody), &mpCharBody->mE, &mpCharBody->mS, reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apCollideData));
 	}
 
 	//-----------------------------------------------------------------------
@@ -326,25 +194,14 @@ namespace hpl {
 
 	iCharacterBody::iCharacterBody(const tString &asName, iPhysicsWorld *apWorld, const cVector3f avSize)
 	{
-		mpAux = OhplBackendRustRequested() ? ohpl_h14_aux_new() : NULL;
+		mpAux = ohpl_h14_aux_new();
 
 		/////////////////////////////
 		//Set up main properties
 		msName = asName;
 
 		mS.size = avSize;
-		if(mpAux)
-		{
-			ohpl_h14_char_init(&mE, &mS, reinterpret_cast<size_t>(apWorld), cos(cMath::ToRad(45.0f)));
-		}
-		else
-		{
-		mpWorld = apWorld;
-
-		mS.collideFlags = eFlagBit_All; // orig read it uninitialised below
-
-		mpCallback = NULL;
-		}
+		ohpl_h14_char_init(&mE, &mS, reinterpret_cast<size_t>(apWorld), cos(cMath::ToRad(45.0f)));
 
 		/////////////////////////////
 		// Create Shape
@@ -379,132 +236,6 @@ namespace hpl {
 		mpCollideGravityCallback = hplNew( cCharacterBodyCollideGravity, (this) );
 		mpCollidePushCallback = hplNew( cCharacterBodyCollidePush, (this) );
 		mpRayCallback = hplNew( cCharacterBodyRay, () );
-
-		if(mpAux) return;
-
-		/////////////////////////////
-		//Set up properties
-
-		mS.active = true;
-		mbCollideCharacter = true;
-		mS.testCollision = true;
-		mbPhysicsBodyActive = true;
-
-		mbEntitySmoothYPos = false;
-		mlEntitySmoothYPosNum = 20;
-
-		mS.disableDiagSpeedBoost = true;
-
-		mS.currentShapeIdx =0;
-
-		mS.yaw =0;
-		mS.pitch =0;
-
-		mS.collideFlags = eFlagBit_All;
-
-		//The maximum angle of a slope (compare to gravity direction) where no sliding occurs
-		mS.maxNoSlideSlopeCos = cos(cMath::ToRad(45.0f));
-
-		//Set move properties
-		for(int i=0; i<eCharDir_LastEnum; i++)
-		{
-			mS.maxPosMoveSpeed[i]=10;
-			mS.maxNegMoveSpeed[i]=-10;
-			mS.moveSpeed[i]=0;
-			mS.moveSpeedMul[i]=1;
-			mS.moveAcc[i]=20;
-			mS.moveDeacc[i]=20;
-			mS.moving[i]=false;
-			mS.currentMoveAcc[i] =0;
-			mS.moveOppositeDirAccMul[i] = 1;
-		}
-
-		mS.movedLastUpdate = false;
-
-		mS.deaccelerateMoveSpeedInAir = false;
-
-		mS.force = cVector3f(0,0,0);
-		mS.velocity = cVector3f(0,0,0);
-		mfSafePosTimer = mfSafePosInterval = mfSafePosBuffer = 0;
-
-		mS.lastGroundNormal = cVector3f(0,0,0);
-
-		mS.gravityActive = true;
-
-		mS.maxGravitySpeed = 30.0f;
-
-		mfConstantContactForceMul = 16.0f;
-		mfVelocityContactForceMul = 4.0f;
-		mfMaxContactForcePerMassUnit = 250.0f;
-
-		mpCamera = NULL;
-		mvCameraPosAdd = cVector3f(0,0,0);
-
-		mpEntity = NULL;
-		m_mtxEntityOffset = cMatrixf::Identity;
-		m_mtxEntityPostOffset = cMatrixf::Identity;
-
-		mpUserData = NULL;
-
-		mlCameraSmoothPosNum =0;
-		mbCameraUseSmoothing = true;
-		mbCameraUpdateActive = true;
-		mlEntitySmoothPosNum =0;
-
-		mS.onGroundCount = 0;
-		mS.maxOnGroundCount = 12;
-
-		mS.maxStepHeight = mS.size.y *0.2f;
-		mS.maxStepHeightInAir = mS.maxStepHeight;
-		mS.stepClimbSpeed = 1.0f;
-		mS.climbForwardMul = 1.0f;
-		mS.climbHeightAdd = 0.01f;
-		mS.climbing = false;
-		mS.accurateClimbing = false;
-
-		mS.checkStepClimbCount = 0;
-		mS.checkStepClimbInterval = 1/20.0f;
-
-		mS.groundFriction = 6.0f;
-		mS.airFriction = 0.3f;
-
-		mS.mass = 1;
-
-		mbStickToSlope = true;
-
-		mfMaxPushMass = 0;
-		mfPushForce = 0;
-		mfPushImpulse = 0;
-		mbPushIn2D = true;
-
-		mfCharacterMaxPushMass =0;
-		mfCharacterPushForce =0;
-		mbCharacterPushIn2D = true;
-
-		mlMinBodyPushStrength = 0;
-
-		mfMaxConnectionTorque =0;
-		mfMaxConnectionForce =0;
-		mpConnectedBody = NULL;
-		mBodyConnectionPointPid.SetErrorNum(10);
-		mBodyCenterPid.SetErrorNum(10);
-		mBodyOneAxisAngularPid.SetErrorNum(10);
-		mBodyAngularPid.SetErrorNum(10);
-		mCharConnectionPointPid.SetErrorNum(10);
-		mCharRotatePid.SetErrorNum(10);
-
-		mbRotateYawWhenGravityAttached = true;
-		mpGravityAttachedBody = NULL;
-		mlGravityAttachmentContacts =0;
-		mpGravityLastAttachedBody = NULL;
-		mS.gravityAttachmentVelocity =0;
-
-		mS.customGravityActive = false;
-		mS.customGravity = cVector3f(0,9.8f,0);
-
-		mpGravityCollideMaterial = NULL;
-
-		mS.moveDelayCount=0;
 	}
 
 	//-----------------------------------------------------------------------
@@ -515,7 +246,7 @@ namespace hpl {
 
 		for(size_t i=0; i< mvBodies.size(); i++) mpWorld->DestroyBody(mvBodies[i]);
 
-		if(mpAux) ohpl_h14_aux_free(mpAux);
+		ohpl_h14_aux_free(mpAux);
 
 		hplDelete(mpCollideGravityCallback);
 		hplDelete(mpCollidePushCallback);
@@ -694,49 +425,20 @@ namespace hpl {
 
 	void iCharacterBody::SetupSafePositions(float afSaveInterval, float afBufferTime)
 	{
-		if(mpAux) ohpl_h14_setup_safe_positions(mpAux, afSaveInterval, afBufferTime);
-		if(afBufferTime <= 0) return;
-		mfSafePosTimer = 0;
-		mfSafePosInterval = afSaveInterval;
-		mfSafePosBuffer = afBufferTime;
-		for(int i=0; i<4; ++i) mvSafePosHistory[i] = cVector3f(-1000000.0f);
-		mvSafePositions.clear();
-		mvSafePositions.reserve((size_t)ceilf(afBufferTime / afSaveInterval) + 2);
+		ohpl_h14_setup_safe_positions(mpAux, afSaveInterval, afBufferTime);
 	}
 
 	// cCharacterBodyNewton::PostUpdate 0x14b4a20, iCharacterBody::TeleportToSafePosition 0xe787c0 (Rebirth)
 	void iCharacterBody::UpdateSafePositions(float afTimeStep)
 	{
-		if(mpAux)
-		{
-			ohpl_h14_update_safe_positions(mpAux, afTimeStep, OhplV3{mS.position.x, mS.position.y, mS.position.z});
-			return;
-		}
-		if(mfSafePosInterval <= 0) return;
-		for(int i=0; i<3; ++i) mvSafePosHistory[i] = mvSafePosHistory[i+1];
-		mvSafePosHistory[3] = mS.position;
-		mfSafePosTimer -= afTimeStep;
-		if(mfSafePosTimer > 0) return;
-		mfSafePosTimer = mfSafePosInterval;
-		if(mvSafePosHistory[0] == cVector3f(-1000000.0f)) return;
-		mvSafePositions.push_back(mvSafePosHistory[0]);
-		if((float)mvSafePositions.size() > mfSafePosBuffer / mfSafePosInterval) mvSafePositions.pop_back();
+		ohpl_h14_update_safe_positions(mpAux, afTimeStep, OhplV3{mS.position.x, mS.position.y, mS.position.z});
 	}
 
 	void iCharacterBody::TeleportToSafePosition(float afElapsedTime, bool abSmooth)
 	{
-		if(mpAux)
-		{
-			cVector3f vSafe;
-			if(!ohpl_h14_safe_position(mpAux, afElapsedTime, reinterpret_cast<OhplV3*>(&vSafe))) return;
-			SetPosition(vSafe, abSmooth);
-			mS.velocity = cVector3f(0, 0.1f, 0);
-			return;
-		}
-		if(mvSafePositions.empty()) return;
-		int lIdx = (int)floorf(afElapsedTime / mfSafePosInterval + 0.5f);
-		lIdx = cMath::Min(lIdx, (int)mvSafePositions.size() - 1);
-		SetPosition(mvSafePositions[lIdx], abSmooth);
+		cVector3f vSafe;
+		if(!ohpl_h14_safe_position(mpAux, afElapsedTime, reinterpret_cast<OhplV3*>(&vSafe))) return;
+		SetPosition(vSafe, abSmooth);
 		mS.velocity = cVector3f(0, 0.1f, 0);
 	}
 
@@ -750,10 +452,7 @@ namespace hpl {
 		mpCurrentBody->SetPosition(avPos);
 
 		if(!abSmooth){
-			if(mpAux) ohpl_h14_clear_smoothing(mpAux);
-			mlstCameraPos.clear();
-			mlstEntityPos.clear();
-			mlstEntityYPositions.clear();
+			ohpl_h14_clear_smoothing(mpAux);
 		}
 	}
 	const cVector3f& iCharacterBody::GetPosition()
@@ -956,143 +655,16 @@ namespace hpl {
 										tPhysicsConnectionFlag alFlags)
 	{
 		if(apBody == NULL) return;
-		if(mpAux)
-		{
-			ohpl_h14_connect_to_body(HostOp, reinterpret_cast<size_t>(this), &mE, &mS, reinterpret_cast<size_t>(apBody),
-				OhplV3{avConnectionPos.x, avConnectionPos.y, avConnectionPos.z}, alFlags);
-			ohpl_h14_reset_pids(mpAux);
-			return;
-		}
-
-		//////////////////////////////////////////
-		// Set the connected body and add charater as connected on body
-		mpConnectedBody = apBody;
-		mpConnectedBody->AddConnectedCharacter(this);
-
-		//////////////////////////////////////////
-		// Set if connection depends on body rotation.
-		mbConnectionDependOnBodyRotation = (alFlags & ePhysicsConnectionFlag_DependOnBodyRotation) != 0;
-
-		////////////////////////////////
-		//Get inverse body matrix
-        cMatrixf mtxInvBodyWorld = cMath::MatrixInverse(mpConnectedBody->GetLocalMatrix());
-
-		//////////////////////////////////////////
-		// Set the local connection postion for body
-        if(mbConnectionDependOnBodyRotation)
-		{
-			mvConnectionPosLocalToBody = cMath::MatrixMul(mtxInvBodyWorld, avConnectionPos);
-		}
-		else
-		{
-			mvConnectionPosLocalToBody = avConnectionPos - mpConnectedBody->GetWorldPosition();
-		}
-
-		//////////////////////////////////////////
-		// Get the start rotation for body
-		mvConnectionBodyStartRotation = cMath::MatrixToEulerAngles(mpConnectedBody->GetLocalMatrix().GetRotation(), eEulerRotationOrder_XYZ);
-
-		//////////////////////////////////////////
-		// Set up pids
-		if(mpAux) ohpl_h14_reset_pids(mpAux);
-		mBodyConnectionPointPid.Reset();
-		mBodyCenterPid.Reset();
-		mBodyOneAxisAngularPid.Reset();
-		mBodyAngularPid.Reset();
-
-		mCharConnectionPointPid.Reset();
-		mCharRotatePid.Reset();
-
-		//////////////////////////////////////////
-		// More body properties
-		mbConnectionAlignRotation = (alFlags & ePhysicsConnectionFlag_AlignBodyRotation) != 0;
-		mbConnectionAlignCenter = (alFlags & ePhysicsConnectionFlag_AlignBodyCenter) != 0;
-
-		//Connection point to body normal.
-        mvConnectionNormalLocalToBody = cMath::Vector3Normalize(mpConnectedBody->GetWorldPosition() - avConnectionPos);
-		mfConnectionDistanceToBody = mvConnectionPosLocalToBody.Length();
-
-		//The local wanted up vector (when this vector is up, body is correct!)
-		mvConnectionLocalUpBody = cMath::MatrixMul(mtxInvBodyWorld.GetRotation(), GetUp());
-		mvConnectionLocalUpBody.Normalize();
-
-		///////////////////////////////////
-		// Disable gravity or not
-		if(alFlags & ePhysicsConnectionFlag_DisableBodyGravity)
-		{
-			mbConnectedBodyHadGravity = mpConnectedBody->GetGravity();
-			if(mbConnectedBodyHadGravity)
-				mpConnectedBody->SetGravity(false);
-		}
-
-		///////////////////////////////////
-		// Connection affects character
-		mbConnectionAffectChar = (alFlags & ePhysicsConnectionFlag_AffectChar) != 0;
-
-		///////////////////////////////////
-		//Local character connection point
-		mvConnectionPosLocalToChar = avConnectionPos - mS.position;
-
-
-		///////////////////////////////////
-		// Align character rotation
-		mbConnectionAlignCharacterRotation = (alFlags & ePhysicsConnectionFlag_AlignCharRotation) != 0;
-		if(mbConnectionAlignCharacterRotation)
-		{
-			//Make sure it is local, with no rotation from body.
-			mvConnectionCharLocalForward = cMath::MatrixMul(mtxInvBodyWorld.GetRotation(), mS.forward);
-
-			//Character to connection vector
-			cMatrixf mtxInvCharRot = cMath::MatrixInverse(mS.mtxMove.GetRotation());
-			mvConnectionPosLocalToChar = cMath::MatrixMul(mtxInvCharRot, mvConnectionPosLocalToChar);
-		}
-
-		///////////////////////////////////
-		// Depend on character rotation
-
-		//Do not allow connection dependent on rotation when this is true!
-		if(mbConnectionAlignCharacterRotation)
-			mbConnectionDependOnCharRotation = false;
-		else
-			mbConnectionDependOnCharRotation = (alFlags & ePhysicsConnectionFlag_DependOnCharRotation) != 0;
-
-		if(mbConnectionDependOnCharRotation)
-		{
-			//If body is aligned according to character rotation, then we need to make sure vectors are local when rotation is 0,
-			//hence we multiply with inverse rotation.
-			UpdateMoveMatrix();
-			cMatrixf mtxInvCharRot = cMath::MatrixInverse(mS.mtxMove.GetRotation());
-
-			//Character to connection vector
-			mvConnectionPosLocalToChar = cMath::MatrixMul(mtxInvCharRot, mvConnectionPosLocalToChar);
-
-			//Connection to body normal
-			mvConnectionNormalLocalToBody = cMath::MatrixMul(mtxInvCharRot, mvConnectionNormalLocalToBody);
-		}
-
-
-		////////////////////////////////////////
-		//If collision between connected character and body is allowed.
-		mbConnectionCollision = (alFlags & ePhysicsConnectionFlag_AllowCollision) != 0;
-
-		mbConnectedBodyIsActive = mpConnectedBody->IsActive();
-
+		ohpl_h14_connect_to_body(HostOp, reinterpret_cast<size_t>(this), &mE, &mS, reinterpret_cast<size_t>(apBody),
+			OhplV3{avConnectionPos.x, avConnectionPos.y, avConnectionPos.z}, alFlags);
+		ohpl_h14_reset_pids(mpAux);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iCharacterBody::DisconnectBody()
 	{
-		if(mpAux){ ohpl_h14_disconnect_body(HostOp, reinterpret_cast<size_t>(this), &mE); return; }
-
-		if(mpConnectedBody == NULL) return;
-
-		mpConnectedBody->RemoveConnectedCharacter(this);
-
-		if(mbConnectedBodyHadGravity)
-			mpConnectedBody->SetGravity(true);
-
-		mpConnectedBody = NULL;
+		ohpl_h14_disconnect_body(HostOp, reinterpret_cast<size_t>(this), &mE);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1197,36 +769,18 @@ namespace hpl {
 
 	cVector3f iCharacterBody::GetBodyConnectionPos()
 	{
-		if(mpAux)
-		{
-			OhplH14Conn conn = MakeConn();
-			cVector3f vPos;
-			ohpl_h14_body_connection_pos(BodyVt(), &conn, reinterpret_cast<OhplV3*>(&vPos));
-			return vPos;
-		}
-		if(mpConnectedBody == NULL) return 0;
-
-		if(mbConnectionDependOnBodyRotation)
-			return cMath::MatrixMul(mpConnectedBody->GetWorldMatrix(), mvConnectionPosLocalToBody);
-		else
-			return mpConnectedBody->GetWorldPosition() + mvConnectionPosLocalToBody;
+		OhplH14Conn conn = MakeConn();
+		cVector3f vPos;
+		ohpl_h14_body_connection_pos(BodyVt(), &conn, reinterpret_cast<OhplV3*>(&vPos));
+		return vPos;
 	}
 
 	cVector3f iCharacterBody::GetCharConnectionPos()
 	{
-		if(mpAux)
-		{
-			OhplH14Conn conn = MakeConn();
-			cVector3f vPos;
-			ohpl_h14_char_connection_pos(&mS, &conn, reinterpret_cast<OhplV3*>(&vPos));
-			return vPos;
-		}
-		if(mpConnectedBody == NULL) return 0;
-
-		if(mbConnectionDependOnCharRotation || mbConnectionAlignCharacterRotation)
-			return mS.position + cMath::MatrixMul3x3(mS.mtxMove, mvConnectionPosLocalToChar);
-		else
-			return mS.position + mvConnectionPosLocalToChar;
+		OhplH14Conn conn = MakeConn();
+		cVector3f vPos;
+		ohpl_h14_char_connection_pos(&mS, &conn, reinterpret_cast<OhplV3*>(&vPos));
+		return vPos;
 	}
 
 	//-----------------------------------------------------------------------
@@ -1269,153 +823,8 @@ namespace hpl {
 		//No connected body = nothing to do
 		if(mpConnectedBody == NULL) return;
 
-		if(mpAux)
-		{
-			OhplH14Conn conn = MakeConn();
-			ohpl_h14_update_body_connection(mpAux, BodyVt(), &mS, &conn, IsOnGround(), afTimeStep);
-			return;
-		}
-
-		//Nothing to do on static bodies.
-		if(mpConnectedBody->GetMass() == 0) return;
-
-		cVector3f vTotalTorque=0;
-		cVector3f vTotalForce=0;
-
-		//Get the maximum force can be made by the character
-		float fMaxTotalCharForce = mfMaxConnectionForce;
-		if(IsOnGround()==false)
-		{
-			float fGravitySize = mS.customGravityActive ? mS.customGravity.Length() : mpWorld->GetGravity().Length();
-			fMaxTotalCharForce = fGravitySize * GetMass();
-		}
-		float fMaxRelativeCharForce = fMaxTotalCharForce / mpConnectedBody->GetMass();
-		float fMaxRelativeCharTorque = mfMaxConnectionTorque / mpConnectedBody->GetMass(); //Not really correct
-
-
-		//////////////////////////////////
-		// Linear ConnectionPoint Correction
-
-		//Set up PID (move this SetConnectedBody?)
-		mBodyConnectionPointPid.p = 200.0f;
-		mBodyConnectionPointPid.i = 0.0f;
-		mBodyConnectionPointPid.d = 10.0f;
-
-		//Get the body position of the connection positions
-		cVector3f vBodyConnection = GetBodyConnectionPos();
-		cVector3f vCharConnection = GetCharConnectionPos();
-
-		cVector3f vError = vCharConnection - vBodyConnection;
-		cVector3f vForce = mBodyConnectionPointPid.Output(vError, afTimeStep);
-
-		//Make sure this force is not too much for player, do this here to get correct torque!
-		cMath::Vector3ClampToLength(vForce, fMaxRelativeCharForce);
-
-		vTotalForce += vForce;
-
-		//Only use torque if connection depends on rotation!
-		if(mbConnectionDependOnBodyRotation)
-		{
-			cVector3f vTorque = mpConnectedBody->GetTorqueFromForceAtPosition(vForce, vBodyConnection);
-			vTotalTorque += vTorque;
-		}
-
-		//get the normal form connection to body, this will change if connections depends on body rotation.
-		cVector3f vNormalToBody = mvConnectionNormalLocalToBody;
-		if(mbConnectionDependOnCharRotation)
-		{
-			vNormalToBody = cMath::MatrixMul(mS.mtxMove.GetRotation(), vNormalToBody);
-		}
-
-
-		//////////////////////////////////
-		// Linear Center Correction
-		if(mbConnectionAlignCenter)
-		{
-			//Setup bid
-			mBodyCenterPid.p = 200.0f;
-			mBodyCenterPid.i = 0.0f;
-			mBodyCenterPid.d = 10.0f;
-
-			cVector3f vCenter = mpConnectedBody->GetWorldPosition();
-			cVector3f vWantedPosition = vCharConnection + vNormalToBody * mfConnectionDistanceToBody;
-
-			vError = vWantedPosition - vCenter;
-			vForce = mBodyCenterPid.Output(vError, afTimeStep);
-
-			vTotalForce += vForce;
-		}
-
-
-		//////////////////////////////////
-		// Angular correction
-		if(mbConnectionAlignRotation)
-		{
-			//////////////////////////////////
-			// The connection depends on rotation, meaning we need to rotate around the connection axis
-            if(mbConnectionDependOnBodyRotation)
-			{
-				//Set up pid
-				mBodyOneAxisAngularPid.p = 20.0f;
-				mBodyOneAxisAngularPid.i = 0.0f;
-				mBodyOneAxisAngularPid.d = 2.5f;
-
-				//The current direction of up, given that up was == character up when connected.
-				cVector3f vBodyUp = cMath::MatrixMul(mpConnectedBody->GetWorldMatrix().GetRotation(), mvConnectionLocalUpBody);
-
-				//The right vector if connection to body is forward.
-				cVector3f vBodyRight = cMath::Vector3Cross(vNormalToBody, GetUp());
-
-				float fError =  cMath::Vector3Angle(vBodyUp, GetUp());
-
-				//Get by checking how the up is compared to right, we can get the sign of the rotation.
-				// ">" since the error is in the opposite direction, ie the way want to rotate in!
-				if(cMath::Vector3Dot(vBodyRight, vBodyUp)>0) fError = -fError;
-
-				//Log("Error: %f\n", cMath::ToDeg(fError));
-				float fTorqueSize = mBodyOneAxisAngularPid.Output(fError, afTimeStep);
-
-				cVector3f vTorque = vNormalToBody * fTorqueSize;
-				cMath::Vector3ClampToLength(vTorque, fMaxRelativeCharTorque);
-
-				vTotalTorque += vTorque;
-			}
-			////////////////////////////////////
-			//Rotate around all axes
-			else
-			{
-				//Set up pid
-				mBodyAngularPid.p = 20.0f;
-				mBodyAngularPid.i = 0.0f;
-				mBodyAngularPid.d = 2.5f;
-
-				cVector3f vCurrentRotation = cMath::MatrixToEulerAngles(mpConnectedBody->GetLocalMatrix().GetRotation(), eEulerRotationOrder_XYZ);
-				cVector3f vError = mvConnectionBodyStartRotation - vCurrentRotation;
-
-				cVector3f vTorque = mBodyAngularPid.Output(vError, afTimeStep);
-				cMath::Vector3ClampToLength(vTorque, fMaxRelativeCharTorque);
-
-				vTotalTorque += vTorque;
-			}
-		}
-
-		//////////////////////////////////
-		// Apply forces
-		const float fMaxTorque = 10.0f;
-		const float fMaxForce = 100.0f;
-
-		//Make sure that the force is not too large before multiplying with mass
-		cMath::Vector3ClampToLength(vTotalForce,fMaxForce);
-		cMath::Vector3ClampToLength(vTotalForce,fMaxTotalCharForce);
-
-		vTotalForce = vTotalForce * mpConnectedBody->GetMass();
-		mpConnectedBody->AddForce(vTotalForce);
-
-		//Make sure that the force is not too large before multiplying with intertia and mass
-		cMath::Vector3ClampToLength(vTotalTorque, fMaxTorque);
-
-		vTotalTorque =  cMath::MatrixMul(mpConnectedBody->GetInertiaMatrix(),vTotalTorque);
-		mpConnectedBody->AddTorque(vTotalTorque);
+		OhplH14Conn conn = MakeConn();
+		ohpl_h14_update_body_connection(mpAux, BodyVt(), &mS, &conn, IsOnGround(), afTimeStep);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1425,53 +834,10 @@ namespace hpl {
 		//If no connection, do nothing
 		if(mpConnectedBody == NULL) return;
 
-		if(mpAux)
-		{
-			OhplH14Conn conn = MakeConn();
-			cVector3f vForce;
-			if(ohpl_h14_update_character_connection(mpAux, BodyVt(), &mS, &conn, afTimeStep, reinterpret_cast<OhplV3*>(&vForce)))
-				AddForce(vForce);
-			return;
-		}
-
-		//Check if character is affected.
-		if(mbConnectionAffectChar==false) return;
-
-		//////////////////////////////////////
-		// Align rotation (Only works for yaw for the time being)
-		if(mbConnectionAlignCharacterRotation)
-		{
-			//-1 since normal is toward char otherwise.
-			cVector3f vWantedForward = cMath::MatrixMul(mpConnectedBody->GetWorldMatrix().GetRotation(), mvConnectionCharLocalForward);
-
-			cVector3f vWantedForwardXZ = cMath::Vector3Normalize(cVector3f(vWantedForward.x, 0, vWantedForward.z));
-
-			//Get the angle from character to the body connection point.
-			float fWantedYaw = cMath::Vector3Angle(cVector3f(0,0,-1), vWantedForwardXZ);
-			if(vWantedForwardXZ.x >0) fWantedYaw = -fWantedYaw;
-
-			//Offset that angle to get yaw
-			mS.yaw = fWantedYaw;
-
-			UpdateMoveMatrix();
-		}
-
-		//////////////////////////////////////
-		// Align character to connection
-
-		//Set up PID (move this SetConnectedBody?)
-		mCharConnectionPointPid.p = 100.0f;
-		mCharConnectionPointPid.i = 0.0f;
-		mCharConnectionPointPid.d = 0.0f;
-
-		//Get the body position of the connection positions
-		cVector3f vBodyConnection = GetBodyConnectionPos();
-		cVector3f vCharConnection = GetCharConnectionPos();
-
-		cVector3f vError = vBodyConnection - vCharConnection;
-		cVector3f vForce = mCharConnectionPointPid.Output(vError, afTimeStep);
-
-        AddForce(vForce * GetMass());
+		OhplH14Conn conn = MakeConn();
+		cVector3f vForce;
+		if(ohpl_h14_update_character_connection(mpAux, BodyVt(), &mS, &conn, afTimeStep, reinterpret_cast<OhplV3*>(&vForce)))
+			AddForce(vForce);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1610,159 +976,20 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	void iCharacterBody::UpdateForcePushing(float afTimeStep)
-	{
-		cCollideData collideData;
-		collideData.SetMaxSize(32);
-
-		cCollideData extraCollideData;
-		extraCollideData.SetMaxSize(1);
-
-		cBoundingVolume boundingVolume = mpCurrentShape->GetBoundingVolume();
-		boundingVolume.SetPosition(mS.position);
-
-		cMatrixf mtxTransform = cMath::MatrixTranslate(mS.position);
-
-		//////////////////////////////
-        // Iterate bodies
-		mvTempBodies.resize(0);
-		mpWorld->GetBodiesInBV(&boundingVolume, &mvTempBodies);
-
-		for(size_t i=0; i<mvTempBodies.size(); ++i)
-		{
-			iPhysicsBody *pBody = mvTempBodies[i];
-
-			if(pBody->IsActive()==false) continue;
-            if(pBody->GetMass() == 0) continue;
-			if(pBody->IsCharacter() && mbCollideCharacter==false) continue;
-			if(pBody->GetCollideCharacter()==false) continue;
-			if(iPhysicsBody::CollideFlagsMatch(mS.collideFlags, pBody->GetCollideFlags())==false) continue;
-
-			if(cMath::CheckBVIntersection(boundingVolume,*pBody->GetBoundingVolume())==false)
-			{
-				continue;
-			}
-
-			collideData.SetMaxSize(32);
-			bool bRet = mpWorld->CheckShapeCollision(pBody->GetShape(),pBody->GetLocalMatrix(),
-													mpCurrentShape,mtxTransform,
-													collideData, 32, true);
-
-			if(bRet)
-			{
-				float fNumOfPoints = (float)collideData.mlNumOfPoints;
-
-				float fMaxForce = mfMaxContactForcePerMassUnit * pBody->GetMass() / fNumOfPoints;
-
-				float fC = mfConstantContactForceMul / fNumOfPoints * mS.mass;
-				float fV = mfVelocityContactForceMul / fNumOfPoints * mS.mass;
-
-				////////////////////////
-				//Iterate contact points and add a spring force.
-				for(int i=0; i< collideData.mlNumOfPoints; i++)
-				{
-					cCollidePoint &point = collideData.mvContactPoints[i];
-
-					cVector3f vBodyVelocityAtPos = pBody->GetVelocityAtPosition(point.mvPoint);
-
-					cVector3f vForce = point.mvNormal * point.mfDepth * fC -
-											  point.mvNormal * cMath::Vector3Dot(vBodyVelocityAtPos,point.mvNormal)  * fV;
-
-					float fLength = vForce.Length();
-					if(fLength > fMaxForce)
-					{
-						vForce = (vForce / fLength) * fMaxForce;
-					}
-
-					pBody->AddForceAtPosition(vForce, point.mvPoint);
-				}
-			}
-    	}
-	}
-
-	//-----------------------------------------------------------------------
-
-
 	void iCharacterBody::UpdateCamera()
 	{
 		if(mpCamera==NULL) return;
-		if(mpAux)
+		OhplH14CamIn in = {
+			mS.position, mS.right, mS.forward, mvCameraPosAdd,
+			mvShapes[0]->GetSize().y, mS.size.y, mS.yaw, mlCameraSmoothPosNum, mbCameraUpdateActive, mbCameraUseSmoothing
+		};
+		OhplH14CamOut out;
+		ohpl_h14_update_camera(mpAux, &in, &out);
+		if(out.set)
 		{
-			OhplH14CamIn in = {
-				mS.position, mS.right, mS.forward, mvCameraPosAdd,
-				mvShapes[0]->GetSize().y, mS.size.y, mS.yaw, mlCameraSmoothPosNum, mbCameraUpdateActive, mbCameraUseSmoothing
-			};
-			OhplH14CamOut out;
-			ohpl_h14_update_camera(mpAux, &in, &out);
-			if(out.set)
-			{
-				mpCamera->SetPosition(out.position);
-				mpCamera->SetYaw(out.yaw);
-			}
-			return;
+			mpCamera->SetPosition(out.position);
+			mpCamera->SetYaw(out.yaw);
 		}
-		if(!mbCameraUpdateActive)
-		{
-			mlstCameraPos.clear();
-			return;
-		}
-
-		//////////////////
-		//Get the camera pos add.
-		cVector3f vAdd=0;
-		vAdd.y += mvCameraPosAdd.y;
-		vAdd += mS.right * mvCameraPosAdd.x;
-		vAdd += mS.forward * mvCameraPosAdd.z;
-
-		float fMainHeight = mvShapes[0]->GetSize().y;
-
-		///////////////////////////////
-		//Do NOT do any smoothing
-		if(mlCameraSmoothPosNum <=0 || !mbCameraUseSmoothing)
-		{
-			cVector3f vPos = mS.position + cVector3f(0,fMainHeight - mS.size.y/2.0f,0);
-			mpCamera->SetPosition(vPos + vAdd);
-		}
-		///////////////////////////////
-		//Smooth the camera position
-		else
-		{
-			//////////////////////////////
-			//Add the newest position.
-			cVector3f vHeadPos = mS.position + cVector3f(0,fMainHeight - mS.size.y/2.0f,0);
-			mlstCameraPos.push_back(vHeadPos);
-
-			//If to too large remove the oldest.
-			if((int)mlstCameraPos.size() > mlCameraSmoothPosNum)
-			{
-				mlstCameraPos.erase(mlstCameraPos.begin());
-			}
-
-			float fPositionNum = (float)mlstCameraPos.size();
-
-			/////////////////////////////////////////
-			//Add all positions and devide by the number of em.
-			//that way we get the average
-			cVector3f vTotalPos(0,0,0);
-			tVector3fListIt it=mlstCameraPos.begin();
-			for(; it!= mlstCameraPos.end(); ++it)
-			{
-				vTotalPos += *it;
-			}
-
-			cVector3f vPos = vTotalPos / fPositionNum;
-
-			//////////////////////////////////
-			// Set up new position
-			cVector3f vFirstSize = mvShapes[0]->GetSize();
-
-			//cVector3f vHeadPos = (vPos - cVector3f(0,mS.size.y/2.0f,0)) + cVector3f(0,vFirstSize.y,0);
-
-			mpCamera->SetPosition(vPos + vAdd);
-		}
-
-		//No need to smooth this yaw.
-		mpCamera->SetYaw(mS.yaw);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1771,85 +998,13 @@ namespace hpl {
 	void iCharacterBody::UpdateEntity()
 	{
 		if(mpEntity==NULL) return;
-		if(mpAux)
-		{
-			OhplH14EntIn in = {
-				mS.position, mS.mtxMove, m_mtxEntityOffset, m_mtxEntityPostOffset,
-				mS.yaw, mlEntitySmoothPosNum, mlEntitySmoothYPosNum, mbEntitySmoothYPos
-			};
-			cMatrixf mtxEntity;
-			ohpl_h14_update_entity(mpAux, &in, &mtxEntity);
-			mpEntity->SetMatrix(mtxEntity);
-			return;
-		}
-
-		///////////////////////////////
-		//Y Position Smoothing
-		float fSmoothY = mS.position.y;
-		if(mbEntitySmoothYPos)
-		{
-			fSmoothY =0.0f;
-			mlstEntityYPositions.push_back(mS.position.y);
-			if((int)mlstEntityYPositions.size() > mlEntitySmoothYPosNum)
-				mlstEntityYPositions.pop_front();
-
-			//Iterate values and get average
-			for(tFloatListIt it = mlstEntityYPositions.begin(); it != mlstEntityYPositions.end(); ++it)
-			{
-				fSmoothY += *it;
-			}
-			fSmoothY = fSmoothY / (float)mlstEntityYPositions.size();
-		}
-
-		///////////////////////////////
-		//Do NOT do any smoothing
-		if(mlEntitySmoothPosNum <=0)
-		{
-			cMatrixf mtxEntity = cMath::MatrixRotateY(mS.yaw);
-			mtxEntity.SetTranslation(cVector3f(mS.position.x, fSmoothY, mS.position.z));
-
-			mpEntity->SetMatrix(cMath::MatrixMul(mtxEntity,m_mtxEntityOffset));
-		}
-		//Smooth the entity position
-		else
-		{
-			/////////////////////////////////
-			//Add the newest position.
-			mlstEntityPos.push_back(mS.position);
-
-			//If to too large remove the oldest.
-			if((int)mlstEntityPos.size() > mlEntitySmoothPosNum)
-			{
-				mlstEntityPos.erase(mlstEntityPos.begin());
-			}
-
-			float fPositionNum = (float)mlstEntityPos.size();
-
-			//////////////////////////////////
-			//Add all positions and devide by the number of em.
-			//that way we get the average
-			cVector3f vTotalPos(0,0,0);
-			tVector3fListIt it=mlstEntityPos.begin();
-			for(; it!= mlstEntityPos.end(); ++it)
-			{
-				vTotalPos += *it;
-			}
-
-			cVector3f vPos = vTotalPos / fPositionNum;
-			if(mbEntitySmoothYPos) vPos.y = fSmoothY;
-
-			//////////////////////////////////
-			// Set up new matrix
-			cMatrixf mtxEntity = mS.mtxMove;
-			mtxEntity.SetTranslation(0);
-
-			mtxEntity = cMath::MatrixMul(m_mtxEntityPostOffset,mtxEntity);
-			mtxEntity.SetTranslation(mtxEntity.GetTranslation() + vPos);
-
-			mtxEntity = cMath::MatrixMul(mtxEntity,m_mtxEntityOffset);
-
-			mpEntity->SetMatrix(mtxEntity);
-		}
+		OhplH14EntIn in = {
+			mS.position, mS.mtxMove, m_mtxEntityOffset, m_mtxEntityPostOffset,
+			mS.yaw, mlEntitySmoothPosNum, mlEntitySmoothYPosNum, mbEntitySmoothYPos
+		};
+		cMatrixf mtxEntity;
+		ohpl_h14_update_entity(mpAux, &in, &mtxEntity);
+		mpEntity->SetMatrix(mtxEntity);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1873,127 +1028,16 @@ namespace hpl {
 
 	void iCharacterBody::UpdateGravityAttachment()
 	{
-		if(mpAux)
+		OhplH14Grav grav = {
+			reinterpret_cast<size_t>(mpGravityAttachedBody), reinterpret_cast<size_t>(mpGravityLastAttachedBody),
+			m_mtxGravityAttachedPrevMatrix, mvGravityAttachmentBodyVelocity, mbRotateYawWhenGravityAttached
+		};
+		ohpl_h14_update_gravity_attachment(BodyVt(), &mS, &grav);
+		if(mpGravityAttachedBody)
 		{
-			OhplH14Grav grav = {
-				reinterpret_cast<size_t>(mpGravityAttachedBody), reinterpret_cast<size_t>(mpGravityLastAttachedBody),
-				m_mtxGravityAttachedPrevMatrix, mvGravityAttachmentBodyVelocity, mbRotateYawWhenGravityAttached
-			};
-			ohpl_h14_update_gravity_attachment(BodyVt(), &mS, &grav);
-			if(mpGravityAttachedBody)
-			{
-				mvGravityAttachmentBodyVelocity = grav.bodyVelocity;
-				m_mtxGravityAttachedPrevMatrix = grav.prevMatrix;
-			}
-			return;
+			mvGravityAttachmentBodyVelocity = grav.bodyVelocity;
+			m_mtxGravityAttachedPrevMatrix = grav.prevMatrix;
 		}
-		if(mpGravityAttachedBody==NULL)
-		{
-			////////////////////////
-			//If the character was just attached, do somethings
-			if(mpGravityLastAttachedBody != NULL)
-			{
-				mS.gravityAttachmentVelocity = mvGravityAttachmentBodyVelocity;
-			}
-
-			return;
-		}
-
-		mS.gravityAttachmentVelocity =0;
-
-		//Log("Attched body: %s\n", mpGravityAttachedBody->GetName().c_str());
-
-		/////////////////////////////
-		// If the character was not just attached, update the position according to attachment body
-		if(mpGravityLastAttachedBody == mpGravityAttachedBody)
-		{
-			///////////
-			// Transform the current position according to entire matrix difference since previous matrix
-			if(mpGravityAttachedBody->GetGravityAttachmentRotation())
-			{
-				//Transform the position
-				cMatrixf mtxInvPrevWorld = cMath::MatrixInverse(m_mtxGravityAttachedPrevMatrix);
-				cMatrixf mtxDelta = cMath::MatrixMul(mpGravityAttachedBody->GetWorldMatrix(),mtxInvPrevWorld);
-
-				mS.position = cMath::MatrixMul(mtxDelta, mS.position);
-
-				//Rotate the body (only along Y)
-				if(mbRotateYawWhenGravityAttached)
-				{
-					cMatrixf mtxRotDelta = cMath::MatrixMul(mpGravityAttachedBody->GetWorldMatrix().GetRotation(),
-																mtxInvPrevWorld.GetRotation());
-
-					cVector3f vForward = cMath::MatrixMul(mtxRotDelta, cVector3f(0,0,-1));
-					vForward.y =0; //only get x,z part.
-					float fLength = vForward.Length();
-					if(fLength > 0.0001f)
-					{
-
-						vForward = vForward / fLength;	//Normalize
-
-						float fAngle = acos( -vForward.z );	//simply forward dot (0,0,-1)
-						if(vForward > 0) fAngle = -fAngle;	//Determine direction.
-
-						mS.yaw += fAngle;
-						UpdateMoveMatrix();
-					}
-				}
-
-
-			}
-			///////////
-			// Transform only using positon delta
-			else
-			{
-				mS.position +=	mpGravityAttachedBody->GetWorldMatrix().GetTranslation() -
-								m_mtxGravityAttachedPrevMatrix.GetTranslation();
-			}
-
-
-		}
-
-		//mvGravityAttachmentBodyVelocity = mpGravityAttachedBody->GetLinearVelocity();
-		if(mpGravityAttachedBody->GetGravityAttachmentVelocity())
-		{
-			switch(mpGravityAttachedBody->GetGravityAttachmentVelocityAxes())
-			{
-			case eVelocityAxes_XZ:
-				mvGravityAttachmentBodyVelocity.x = mpGravityAttachedBody->GetVelocityAtPosition(GetFeetPosition()).x;
-				mvGravityAttachmentBodyVelocity.y = 0;
-				mvGravityAttachmentBodyVelocity.z = mpGravityAttachedBody->GetVelocityAtPosition(GetFeetPosition()).z;
-				break;
-
-			case eVelocityAxes_Y:
-				mvGravityAttachmentBodyVelocity.x = 0;
-				mvGravityAttachmentBodyVelocity.y = mpGravityAttachedBody->GetVelocityAtPosition(GetFeetPosition()).y;
-				mvGravityAttachmentBodyVelocity.z = 0;
-				break;
-
-			case eVelocityAxes_XYZ:
-				mvGravityAttachmentBodyVelocity = mpGravityAttachedBody->GetVelocityAtPosition(GetFeetPosition());
-				break;
-			}
-
-
-		}
-		else
-			mvGravityAttachmentBodyVelocity = 0;
-
-		m_mtxGravityAttachedPrevMatrix = mpGravityAttachedBody->GetWorldMatrix();
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::EnableBodiesAroundCharacter()
-	{
-		if(mS.position == mS.lastPosition) return;
-
-		//Make size a little larger so that bodies get enabled too.
-		cBoundingVolume tempBv;
-		tempBv.SetSize(mS.size * 1.1f);
-		tempBv.SetPosition(mS.position);
-
-        mpWorld->EnableBodiesInBV(&tempBv, true);
 	}
 
 	//-----------------------------------------------------------------------

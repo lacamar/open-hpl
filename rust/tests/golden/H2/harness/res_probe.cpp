@@ -2,6 +2,8 @@
 // tables, language files, destruction log), cResourceVarsObject and the loader handlers (mesh, bitmap, video, world with
 // stub loaders) with a seeded op walk over the game data. Prints "ops<TAB>fnv64"; the full transcript (results plus every
 // Log/Warning/Error line) goes to LOG. OHPL_IMPL=cpp and OHPL_IMPL=rust must produce the same bytes.
+#include <cstdlib>
+#include <cstring>
 #include "common.h"
 #include "resources/Resources.h"
 #include "resources/ResourceBase.h"
@@ -308,7 +310,13 @@ int main(int argc, char **argv)
 			case 5: line = "video " + std::to_string((long)(videos.LoadVideo(w) != NULL)); break;
 			case 6: line = "world " + std::to_string((long)(worlds.LoadWorld(cString::To16Char(cString::SetFileExt(n, Rnd(2) ? "hpm" : "map")), (tWorldLoadFlag)Rnd(3)) != NULL)); break;
 			case 7: line = "types " + std::to_string(meshes.GetSupportedTypes()->size()) + std::to_string(bitmaps.GetSupportedTypes()->size()); break;
-			default: line = "cache " + cString::To8Char(cResources::GetCacheFile(w, _W("msh")));
+			default:
+			{
+				std::string sCache = cString::To8Char(cResources::GetCacheFile(w, _W("msh")));
+				const char *pXdg = std::getenv("XDG_CACHE_HOME");
+				if(pXdg && sCache.compare(0, strlen(pXdg), pXdg) == 0) sCache = "<xdg>" + sCache.substr(strlen(pXdg));
+				line = "cache " + sCache;
+			}
 			}
 		}
 		else line = "noop";

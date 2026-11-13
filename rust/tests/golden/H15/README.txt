@@ -1,3 +1,3 @@
-H15 body/joint bookkeeping (OHPL_IMPL=rust) is checked against the L4 vectors: ../L4/newton_scenes.txt (scripts/l4-diff.sh).
-surface_parse.txt: "<game>/<file> <materials> <fnv64>" of the legacy TinyXML loader on every real materials.cfg; replayed by rust/src/physics/tests_h15.rs (skips without Steam data, STEAM_COMMON overrides).
-h15_scenes.txt: surface_drop / surface_mover / world_lists (lookups, iteration order, destroy order, joint breakage, shape-world queries, body callbacks, joint controllers, verlet attach, char connect, DestroyAll), 600 steps: body state hashes, surface calls at the ohpl_phys_surface_* boundary, update-list flags; scripts/h15-diff.sh cpp vs rust identical.
+H15 body/joint bookkeeping is checked against the L4 vectors: ../L4/newton_scenes.txt (scripts/l4-diff.sh).
+surface_parse.txt: "<game>/<file> <materials> <fnv64>" of the pre-port TinyXML loader on every real materials.cfg; replayed by rust/src/physics/tests_h15.rs (skips without Steam data, STEAM_COMMON overrides).
+h15_scenes.txt: surface_drop / surface_mover / world_lists (lookups, iteration order, destroy order, joint breakage, shape-world queries, body callbacks, joint controllers, verlet attach, char connect, DestroyAll), 600 steps: body state hashes, surface calls at the ohpl_phys_surface_* boundary, update-list flags; scripts/h15-diff.sh compares the dump with this file.

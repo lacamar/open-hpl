@@ -19,18 +19,14 @@
 
 #include "resources/FileSearcher.h"
 
-#include "system/LowLevelSystem.h"
-#include "system/String.h"
-#include "system/Platform.h"
 
 #include "resources/LowLevelResources.h"
-#include "impl/RustBackends.h"
 
 namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cFileSearcher::cFileSearcher() : mpFiles(ohpl_fs_new()), mpRs(OhplBackendRustRequested() ? ohpl_h2_fs_new() : NULL)
+	cFileSearcher::cFileSearcher() : mpRs(ohpl_h2_fs_new())
 	{
 		msNull = _W("");
 	}
@@ -39,66 +35,21 @@ namespace hpl {
 
 	cFileSearcher::~cFileSearcher()
 	{
-		ohpl_fs_free(mpFiles);
-		if(mpRs) ohpl_h2_fs_free(mpRs);
+		ohpl_h2_fs_free(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cFileSearcher::AddDirectory(const tWString& asSearchPath, const tString &asMask, bool abAddSubDirectories)
 	{
-		if(mpRs)
-		{
-			ohpl_h2_fs_add_dir(mpRs, reinterpret_cast<const uint32_t*>(asSearchPath.data()), asSearchPath.size(), asMask.data(), asMask.size(), abAddSubDirectories);
-			return;
-		}
-
-		//Make the path with only "/" and lower case.
-		tWString sPath = cString::ReplaceCharToW(asSearchPath,_W("\\"),_W("/"));
-
-		///////////////////////////////
-		//Add all files in directory
-		tWStringList lstFileNames;
-
-		cPlatform::FindFilesInDir(lstFileNames,sPath, cString::To16Char(asMask));
-		tWString sFullPath = cString::ReplaceCharToW(cPlatform::GetFullFilePath(sPath), _W("\\"),_W("/"));
-
-		for(tWStringListIt it = lstFileNames.begin();it!=lstFileNames.end();it++)
-		{
-			tWString& sFile = *it;
-			tString sLowFile = cString::ToLowerCase(cString::To8Char(sFile));
-			tWString sFilePath = cString::SetFilePathW(sFile,sFullPath);
-
-			//Skipped when the first file of that name already has this path
-			auto SamePath = [&](uint32_t alId){ return mvPaths[alId] == sFilePath; };
-			int64_t lId = ohpl_fs_add(mpFiles, sLowFile.data(), sLowFile.size(),
-				reinterpret_cast<const uint32_t*>(sFilePath.data()), sFilePath.size(),
-				[](void *apCtx, uint32_t alId){ return (*static_cast<decltype(SamePath)*>(apCtx))(alId); }, &SamePath);
-			if(lId >= 0) mvPaths.push_back(sFilePath);
-		}
-
-		//////////////////////////////////
-		//Search sub directories if set.
-		if(abAddSubDirectories)
-		{
-			tWStringList lstDirNames;
-			cPlatform::FindFoldersInDir(lstDirNames,sPath,false);
-
-			for(tWStringListIt it = lstDirNames.begin();it!=lstDirNames.end();it++)
-			{
-				tWString sNewPath = cString::SetFilePathW(*it, sPath);
-
-				AddDirectory(sNewPath,asMask,true);
-			}
-		}
+		ohpl_h2_fs_add_dir(mpRs, reinterpret_cast<const uint32_t*>(asSearchPath.data()), asSearchPath.size(), asMask.data(), asMask.size(), abAddSubDirectories);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cFileSearcher::ClearDirectories()
 	{
-		if(mpRs) ohpl_h2_fs_clear(mpRs);
-		ohpl_fs_clear(mpFiles);
+		ohpl_h2_fs_clear(mpRs);
 		mvPaths.clear();
 	}
 
@@ -106,23 +57,16 @@ namespace hpl {
 
 	const tWString& cFileSearcher::GetFilePath(const tString& asFileNameAndPath, int *apEqualCount)
 	{
-		if(mpRs)
+		int64_t lRsId = ohpl_h2_fs_get(mpRs, asFileNameAndPath.data(), asFileNameAndPath.size(), apEqualCount);
+		if(lRsId < 0) return msNull;
+		if(mvPaths.size() <= (size_t)lRsId) mvPaths.resize(lRsId + 1);
+		if(mvPaths[lRsId].empty())
 		{
-			int64_t lRsId = ohpl_h2_fs_get(mpRs, asFileNameAndPath.data(), asFileNameAndPath.size(), apEqualCount);
-			if(lRsId < 0) return msNull;
-			if(mvPaths.size() <= (size_t)lRsId) mvPaths.resize(lRsId + 1);
-			if(mvPaths[lRsId].empty())
-			{
-				size_t lLen;
-				const uint32_t *pPath = ohpl_h2_fs_path(mpRs, (uint32_t)lRsId, &lLen);
-				mvPaths[lRsId].assign(reinterpret_cast<const wchar_t*>(pPath), lLen);
-			}
-			return mvPaths[lRsId];
+			size_t lLen;
+			const uint32_t *pPath = ohpl_h2_fs_path(mpRs, (uint32_t)lRsId, &lLen);
+			mvPaths[lRsId].assign(reinterpret_cast<const wchar_t*>(pPath), lLen);
 		}
-
-		int64_t lId = ohpl_fs_get(mpFiles, asFileNameAndPath.data(), asFileNameAndPath.size(), apEqualCount);
-		if(lId < 0) return msNull;
-		return mvPaths[lId];
+		return mvPaths[lRsId];
 	}
 
 	//-----------------------------------------------------------------------

@@ -159,28 +159,27 @@ namespace hpl {
 	{
 		mbLogDebug = false;
 		mpWorld = NULL;
-		mRsBook = OhplBackendRustRequested() ? ohpl_h15w_new(WorldOp, reinterpret_cast<size_t>(this)) : 0;
+		mRsBook = ohpl_h15w_new(WorldOp, reinterpret_cast<size_t>(this));
 	}
 
 	//-----------------------------------------------------------------------
 
 	iPhysicsWorld::~iPhysicsWorld()
 	{
-		if(mRsBook) ohpl_h15_world_free(mRsBook);
+		ohpl_h15_world_free(mRsBook);
 	}
 
 	//-----------------------------------------------------------------------
 
-	void iPhysicsWorld::RegisterShape(iCollideShape *apShape){ if(mRsBook) ohpl_h15w_add(mRsBook, OhplKind_Shape, reinterpret_cast<size_t>(apShape)); else mlstShapes.push_back(apShape); }
-	void iPhysicsWorld::RegisterBody(iPhysicsBody *apBody){ if(mRsBook) ohpl_h15w_add(mRsBook, OhplKind_Body, reinterpret_cast<size_t>(apBody)); else mlstBodies.push_back(apBody); }
-	void iPhysicsWorld::RegisterCharBody(iCharacterBody *apBody){ if(mRsBook) ohpl_h15w_add(mRsBook, OhplKind_Char, reinterpret_cast<size_t>(apBody)); else mlstCharBodies.push_back(apBody); }
-	void iPhysicsWorld::RegisterJoint(iPhysicsJoint *apJoint){ if(mRsBook) ohpl_h15w_add(mRsBook, OhplKind_Joint, reinterpret_cast<size_t>(apJoint)); else mlstJoints.push_back(apJoint); }
-	void iPhysicsWorld::RegisterController(iPhysicsController *apController){ if(mRsBook) ohpl_h15w_add(mRsBook, OhplKind_Ctrl, reinterpret_cast<size_t>(apController)); else mlstControllers.push_back(apController); }
-	void iPhysicsWorld::RegisterRope(iPhysicsRope *apRope){ if(mRsBook) ohpl_h15w_add(mRsBook, OhplKind_Rope, reinterpret_cast<size_t>(apRope)); else mlstRopes.push_back(apRope); }
+	void iPhysicsWorld::RegisterShape(iCollideShape *apShape){ ohpl_h15w_add(mRsBook, OhplKind_Shape, reinterpret_cast<size_t>(apShape)); }
+	void iPhysicsWorld::RegisterBody(iPhysicsBody *apBody){ ohpl_h15w_add(mRsBook, OhplKind_Body, reinterpret_cast<size_t>(apBody)); }
+	void iPhysicsWorld::RegisterCharBody(iCharacterBody *apBody){ ohpl_h15w_add(mRsBook, OhplKind_Char, reinterpret_cast<size_t>(apBody)); }
+	void iPhysicsWorld::RegisterJoint(iPhysicsJoint *apJoint){ ohpl_h15w_add(mRsBook, OhplKind_Joint, reinterpret_cast<size_t>(apJoint)); }
+	void iPhysicsWorld::RegisterController(iPhysicsController *apController){ ohpl_h15w_add(mRsBook, OhplKind_Ctrl, reinterpret_cast<size_t>(apController)); }
+	void iPhysicsWorld::RegisterRope(iPhysicsRope *apRope){ ohpl_h15w_add(mRsBook, OhplKind_Rope, reinterpret_cast<size_t>(apRope)); }
 	void iPhysicsWorld::RegisterMaterial(const tString &asName, iPhysicsMaterial *apMaterial)
 	{
-		if(mRsBook) ohpl_h15w_add_material(mRsBook, asName.c_str(), asName.size(), reinterpret_cast<size_t>(apMaterial));
-		else m_mapMaterials.insert(tPhysicsMaterialMap::value_type(asName, apMaterial));
+		ohpl_h15w_add_material(mRsBook, asName.c_str(), asName.size(), reinterpret_cast<size_t>(apMaterial));
 	}
 
 	//-----------------------------------------------------------------------
@@ -193,250 +192,82 @@ namespace hpl {
 
 	void iPhysicsWorld::Update(float afTimeStep)
 	{
-		if(mRsBook){ ohpl_h15w_update(mRsBook, afTimeStep); return; }
-
-		//Clear all contact points.
-		mvContactPoints.clear();
-
-		////////////////////////////////////
-		//Update controllers
-		for(tPhysicsControllerListIt CtrlIt = mlstControllers.begin(); CtrlIt != mlstControllers.end(); ++CtrlIt)
-		{
-			iPhysicsController *pCtrl = *CtrlIt;
-
-			pCtrl->Update(afTimeStep);
-		}
-
-		////////////////////////////////////
-		//Update Ropes before simulate
-		for(tPhysicsRopeListIt it = mlstRopes.begin(); it != mlstRopes.end(); ++it)
-		{
-			iPhysicsRope *pRope = *it;
-			if(pRope->GetActive()) pRope->UpdateBeforeSimulate(afTimeStep);
-		}
-
-		////////////////////////////////////
-		//Update character bodies
-		START_TIMING(PhysicsCharacters)		
-		for(tCharacterBodyListIt CharIt = mlstCharBodies.begin(); CharIt != mlstCharBodies.end(); ++CharIt)
-		{
-			iCharacterBody *pBody = *CharIt;
-
-			pBody->Update(afTimeStep);
-		}
-		STOP_TIMING(PhysicsCharacters)
-
-		
-		////////////////////////////////////
-		//Update the rigid bodies before simulation.
-		START_TIMING(BodyBeforeSimulate)
-		{
-		tPhysicsBodyList lstRemoveUpdateBodies;
-		for(tPhysicsBodySetIt BodyIt = m_setUpdateBodies.begin(); BodyIt != m_setUpdateBodies.end(); ++BodyIt)
-		{
-			iPhysicsBody *pBody = *BodyIt;
-
-			if(pBody->UpdateBeforeSimulate(afTimeStep)==false)
-			{
-				//Add to remove list
-				lstRemoveUpdateBodies.push_back(pBody);
-			}
-		}
-				
-		//Iterate remove list and remove all bodies in it from the update list.
-        if(lstRemoveUpdateBodies.empty()==false)
-		{
-			for(tPhysicsBodyListIt it = lstRemoveUpdateBodies.begin(); it != lstRemoveUpdateBodies.end(); ++it)
-			{
-				iPhysicsBody *pBody = *it;
-
-				RemoveBodyFromUpdateList(pBody, false);
-			}
-		}
-		}
-		STOP_TIMING(BodyBeforeSimulate)
-		
-
-		////////////////////////////////////
-		//Simulate the physics
-		START_TIMING(Simulate)				
-		Simulate(afTimeStep);
-		STOP_TIMING(Simulate)	
-				
-		////////////////////////////////////
-		//Update the joints after simulation.
-		for(tPhysicsJointListIt JointIt = mlstJoints.begin(); JointIt != mlstJoints.end(); )
-		{
-			iPhysicsJoint *pJoint = *JointIt;
-
-			if(pJoint->OnPhysicsUpdate()==false)
-			{
-				++JointIt;
-				continue;
-			}
-            
-			if(pJoint->CheckBreakage())
-			{
-				JointIt = mlstJoints.erase(JointIt);
-				hplDelete(pJoint);
-			}
-			else
-			{
-				++JointIt;
-			}
-		}
-		////////////////////////////////////
-		//Update the rigid bodies after simulation.
-		START_TIMING(BodyAfterSimulate)	
-		for(tPhysicsBodySetIt BodyIt = m_setUpdateBodies.begin(); BodyIt != m_setUpdateBodies.end(); ++BodyIt)
-		{
-			iPhysicsBody *pBody = *BodyIt;
-			
-			pBody->UpdateAfterSimulate(afTimeStep);
-		}
-		STOP_TIMING(BodyAfterSimulate)	
-
-		////////////////////////////////////
-		//Update Ropes after simulate
-		for(tPhysicsRopeListIt it = mlstRopes.begin(); it != mlstRopes.end(); ++it)
-		{
-			iPhysicsRope *pRope = *it;
-
-			pRope->UpdateAfterSimulate(afTimeStep);
-		}
+		ohpl_h15w_update(mRsBook, afTimeStep);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::DestroyShape(iCollideShape *apShape)
 	{
-		if(mRsBook){ ohpl_h15w_destroy_shape(mRsBook, reinterpret_cast<size_t>(apShape)); return; }
-
-		apShape->DecUserCount();
-		if(apShape->HasUsers()==false)
-		{
-			STLFindAndDelete(mlstShapes, apShape);
-		}
+		ohpl_h15w_destroy_shape(mRsBook, reinterpret_cast<size_t>(apShape));
 	}
 
 	//-----------------------------------------------------------------------
 	
 	void iPhysicsWorld::DestroyBody(iPhysicsBody* apBody)
 	{
-		if(mRsBook){ ohpl_h15w_destroy_body(mRsBook, reinterpret_cast<size_t>(apBody)); return; }
-
-		if(apBody->IsInUpdateList()) RemoveBodyFromUpdateList(apBody, true);
-				
-		tPhysicsBodyListIt it = mlstBodies.begin();
-		for(; it != mlstBodies.end(); ++it)
-		{
-			iPhysicsBody *pBody = *it;
-			if(pBody == apBody)
-			{
-				pBody->Destroy();
-				hplDelete(pBody);
-				mlstBodies.erase(it);
-				return;
-			}
-		}
+		ohpl_h15w_destroy_body(mRsBook, reinterpret_cast<size_t>(apBody));
 	}
 
 	iPhysicsBody *iPhysicsWorld::GetBody(const tString &asName)
 	{
-		if(mRsBook) return reinterpret_cast<iPhysicsBody*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Body, asName.c_str(), asName.size()));
-		return (iPhysicsBody*)STLFindByName(mlstBodies, asName);
+		return reinterpret_cast<iPhysicsBody*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Body, asName.c_str(), asName.size()));
 	}
 
 	tPhysicsBodyList& iPhysicsWorld::BodyList()
 	{
-		if(mRsBook)
-		{
-			mlstBodies.clear();
-			for(size_t i=0, n=ohpl_h15w_len(mRsBook, OhplKind_Body); i<n; ++i) mlstBodies.push_back(reinterpret_cast<iPhysicsBody*>(ohpl_h15w_at(mRsBook, OhplKind_Body, i)));
-		}
+		mlstBodies.clear();
+		for(size_t i=0, n=ohpl_h15w_len(mRsBook, OhplKind_Body); i<n; ++i) mlstBodies.push_back(reinterpret_cast<iPhysicsBody*>(ohpl_h15w_at(mRsBook, OhplKind_Body, i)));
 		return mlstBodies;
 	}
 
 	cPhysicsBodyIterator iPhysicsWorld::GetBodyIterator()
 	{
-		if(mRsBook) return cPhysicsBodyIterator(&BodyList());
-		return cPhysicsBodyIterator(&mlstBodies);
+		return cPhysicsBodyIterator(&BodyList());
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::EnableBodiesInBV(cBoundingVolume *apBV, bool abEnabled)
 	{
-		if(mRsBook){ ohpl_h15w_enable_bodies_in_bv(mRsBook, reinterpret_cast<size_t>(apBV)); return; }
-
-		mvTempBodies.resize(0);
-        GetBodiesInBV(apBV, &mvTempBodies);
-
-		for(size_t i=0; i<mvTempBodies.size(); ++i)
-		{
-			iPhysicsBody *pBody = mvTempBodies[i];
-			
-			if(pBody->GetMass() > 0 && cMath::CheckBVIntersection(*apBV,*pBody->GetBoundingVolume()))
-			{
-				pBody->Enable();
-			}
-		}
+		ohpl_h15w_enable_bodies_in_bv(mRsBook, reinterpret_cast<size_t>(apBV));
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::AddBodyToUpdateList(iPhysicsBody *apBody)
 	{
-		if(mRsBook){ ohpl_h15w_update_add(mRsBook, reinterpret_cast<size_t>(apBody)); return; }
-		if(apBody->IsInUpdateList()) return;
-
-		m_setUpdateBodies.insert(apBody);
-		apBody->SetInUpdateList(true);
+		ohpl_h15w_update_add(mRsBook, reinterpret_cast<size_t>(apBody));
 	}
 
 	//NOTE: Skipping removing dynamic bodies for now since they will need to be checked if enabled 
 	//		Still want to remove when destroying though.
 	void iPhysicsWorld::RemoveBodyFromUpdateList(iPhysicsBody *apBody, bool abDestroyingBody)
 	{
-		if(mRsBook){ ohpl_h15w_update_remove(mRsBook, reinterpret_cast<size_t>(apBody)); return; }
-		if(apBody->IsInUpdateList()==false) return;
-
-		m_setUpdateBodies.erase(apBody);
-		apBody->SetInUpdateList(false);
+		ohpl_h15w_update_remove(mRsBook, reinterpret_cast<size_t>(apBody));
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::DestroyJoint(iPhysicsJoint* apJoint)
 	{
-		if(mRsBook){ ohpl_h15w_find_and_delete(mRsBook, OhplKind_Joint, reinterpret_cast<size_t>(apJoint)); return; }
-		STLFindAndDelete(mlstJoints, apJoint);
+		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Joint, reinterpret_cast<size_t>(apJoint));
 	}
 
 	iPhysicsJoint *iPhysicsWorld::GetJoint(const tString &asName)
 	{
-		if(mRsBook) return reinterpret_cast<iPhysicsJoint*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Joint, asName.c_str(), asName.size()));
-		return (iPhysicsJoint*)STLFindByName(mlstJoints, asName);
+		return reinterpret_cast<iPhysicsJoint*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Joint, asName.c_str(), asName.size()));
 	}
 
 	bool iPhysicsWorld::JointExists(iPhysicsJoint* apJoint)
 	{
-		if(mRsBook) return ohpl_h15w_contains(mRsBook, OhplKind_Joint, reinterpret_cast<size_t>(apJoint));
-		tPhysicsJointListIt JointIt = mlstJoints.begin();
-		for(; JointIt != mlstJoints.end(); ++JointIt)
-		{
-			if(*JointIt == apJoint) return true;
-		}
-		return false;
+		return ohpl_h15w_contains(mRsBook, OhplKind_Joint, reinterpret_cast<size_t>(apJoint));
 	}
 
 	cPhysicsJointIterator iPhysicsWorld::GetJointIterator()
 	{
-		if(mRsBook)
-		{
-			mlstJoints.clear();
-			for(size_t i=0, n=ohpl_h15w_len(mRsBook, OhplKind_Joint); i<n; ++i) mlstJoints.push_back(reinterpret_cast<iPhysicsJoint*>(ohpl_h15w_at(mRsBook, OhplKind_Joint, i)));
-		}
+		mlstJoints.clear();
+		for(size_t i=0, n=ohpl_h15w_len(mRsBook, OhplKind_Joint); i<n; ++i) mlstJoints.push_back(reinterpret_cast<iPhysicsJoint*>(ohpl_h15w_at(mRsBook, OhplKind_Joint, i)));
 		return cPhysicsJointIterator(&mlstJoints);
 	}
 
@@ -444,49 +275,30 @@ namespace hpl {
 
 	void iPhysicsWorld::DestroyCharacterBody(iCharacterBody* apBody)
 	{
-		if(mRsBook){ ohpl_h15w_find_and_delete(mRsBook, OhplKind_Char, reinterpret_cast<size_t>(apBody)); return; }
-		STLFindAndDelete(mlstCharBodies, apBody);		
+		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Char, reinterpret_cast<size_t>(apBody));
 	}
 		
 	iPhysicsBody *iPhysicsWorld::GetCharacterBody(const tString &asName)
 	{
-		if(mRsBook) return reinterpret_cast<iPhysicsBody*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Char, asName.c_str(), asName.size()));
-		return (iPhysicsBody*)STLFindByName(mlstCharBodies, asName);
+		return reinterpret_cast<iPhysicsBody*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Char, asName.c_str(), asName.size()));
 	}
 
 	//-----------------------------------------------------------------------
 	
 	iPhysicsMaterial* iPhysicsWorld::GetMaterialFromName(const tString &asName)
 	{
-		if(mRsBook) return reinterpret_cast<iPhysicsMaterial*>(ohpl_h15w_get_material(mRsBook, asName.c_str(), asName.size()));
-		tPhysicsMaterialMapIt it = m_mapMaterials.find(asName);
-		if(it == m_mapMaterials.end()){
-			return NULL;
-		}
-
-		iPhysicsMaterial *pMaterial =it->second;
-
-        if(pMaterial->IsPreloaded()==false && pMaterial->GetSurfaceData())
-		{
-			pMaterial->SetPreloaded(true);
-			pMaterial->GetSurfaceData()->PreloadData();
-		}
-
-		return pMaterial;
+		return reinterpret_cast<iPhysicsMaterial*>(ohpl_h15w_get_material(mRsBook, asName.c_str(), asName.size()));
 	}
 	
 	//-----------------------------------------------------------------------
 
 	cPhysicsMaterialIterator iPhysicsWorld::GetMaterialIterator()
 	{
-		if(mRsBook)
+		m_mapMaterials.clear();
+		for(size_t i=0, n=ohpl_h15w_material_len(mRsBook); i<n; ++i)
 		{
-			m_mapMaterials.clear();
-			for(size_t i=0, n=ohpl_h15w_material_len(mRsBook); i<n; ++i)
-			{
-				OhplStr name; size_t obj;
-				if(ohpl_h15w_material_at(mRsBook, i, &name, &obj)) m_mapMaterials[tString(name.p, name.n)] = reinterpret_cast<iPhysicsMaterial*>(obj);
-			}
+			OhplStr name; size_t obj;
+			if(ohpl_h15w_material_at(mRsBook, i, &name, &obj)) m_mapMaterials[tString(name.p, name.n)] = reinterpret_cast<iPhysicsMaterial*>(obj);
 		}
 		return cPhysicsMaterialIterator(&m_mapMaterials);
 	}
@@ -495,54 +307,24 @@ namespace hpl {
 
 	iPhysicsRope* iPhysicsWorld::GetRope(const tString &asName)
 	{
-		if(mRsBook) return reinterpret_cast<iPhysicsRope*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Rope, asName.c_str(), asName.size()));
-		return (iPhysicsRope*) STLFindByName(mlstRopes, asName);
+		return reinterpret_cast<iPhysicsRope*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Rope, asName.c_str(), asName.size()));
 	}
 
 	iPhysicsRope* iPhysicsWorld::GetRopeFromUniqueID(int alID)
 	{
-		if(mRsBook) return reinterpret_cast<iPhysicsRope*>(ohpl_h15w_rope_from_unique_id(mRsBook, alID));
-		for(tPhysicsRopeListIt it = mlstRopes.begin(); it != mlstRopes.end(); ++it)
-		{
-			iPhysicsRope* pRope = *it;
-			
-			if(pRope->GetUniqueID() == alID) return pRope;
-		}
-		return NULL;
+		return reinterpret_cast<iPhysicsRope*>(ohpl_h15w_rope_from_unique_id(mRsBook, alID));
 	}
 
 	void iPhysicsWorld::DestroyRope(iPhysicsRope* apRope)
 	{
-		if(mRsBook){ ohpl_h15w_find_and_delete(mRsBook, OhplKind_Rope, reinterpret_cast<size_t>(apRope)); return; }
-		STLFindAndDelete(mlstRopes, apRope);
+		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Rope, reinterpret_cast<size_t>(apRope));
 	}
 
 	//-----------------------------------------------------------------------
 	
 	void iPhysicsWorld::DestroyAll()
 	{
-		if(mRsBook){ ohpl_h15w_destroy_all(mRsBook); return; }
-
-		STLDeleteAll(mlstCharBodies);
-		
-		//Bodies
-		tPhysicsBodyListIt it = mlstBodies.begin();
-		for(; it != mlstBodies.end(); ++it)
-		{
-			iPhysicsBody *pBody = *it;
-		
-			pBody->Destroy();
-			hplDelete(pBody);
-		}
-		mlstBodies.clear();
-		m_setUpdateBodies.clear();
-
-		STLDeleteAll(mlstRopes);
-
-		STLDeleteAll(mlstShapes);
-		STLDeleteAll(mlstJoints);
-		STLDeleteAll(mlstControllers);
-		STLMapDeleteAll(m_mapMaterials);
+		ohpl_h15w_destroy_all(mRsBook);
 	}
 
 	//-----------------------------------------------------------------------
@@ -550,8 +332,7 @@ namespace hpl {
 	
 	void iPhysicsWorld::DestroyController(iPhysicsController *apController)
 	{
-		if(mRsBook){ ohpl_h15w_find_and_delete(mRsBook, OhplKind_Ctrl, reinterpret_cast<size_t>(apController)); return; }
-		STLFindAndDelete(mlstControllers, apController);
+		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Ctrl, reinterpret_cast<size_t>(apController));
 	}
 
 	//-----------------------------------------------------------------------
@@ -576,10 +357,7 @@ namespace hpl {
 
 	void iPhysicsWorld::FadeoutAllLoopSounds(float afFadeSpeed)
 	{
-		if(mRsBook){ ohpl_h15w_fadeout_all_loop_sounds(mRsBook, afFadeSpeed); return; }
-
-		for(tPhysicsBodyListIt bodyIt = mlstBodies.begin(); bodyIt != mlstBodies.end(); ++bodyIt) FadeoutBodySounds(*bodyIt, afFadeSpeed);
-		for(tPhysicsJointListIt jointIt = mlstJoints.begin(); jointIt != mlstJoints.end(); ++jointIt) FadeoutJointSound(*jointIt, afFadeSpeed);
+		ohpl_h15w_fadeout_all_loop_sounds(mRsBook, afFadeSpeed);
 	}
 
 	//-----------------------------------------------------------------------
@@ -597,13 +375,8 @@ namespace hpl {
 	void iPhysicsWorld::RenderContactPoints(iLowLevelGraphics *apLowLevel, const cColor& aPointColor,
 											const cColor& aLineColor)
 	{
-		if(mRsBook)
-		{
-			const cColor colors[2] = { aPointColor, aLineColor };
-			ohpl_h15w_render_contacts(mRsBook, reinterpret_cast<size_t>(apLowLevel), reinterpret_cast<size_t>(colors));
-			return;
-		}
-		for(size_t i=0; i < mvContactPoints.size(); i++) RenderContactPoint(apLowLevel, i, aPointColor, aLineColor);
+		const cColor colors[2] = { aPointColor, aLineColor };
+		ohpl_h15w_render_contacts(mRsBook, reinterpret_cast<size_t>(apLowLevel), reinterpret_cast<size_t>(colors));
 	}
 
 	//-----------------------------------------------------------------------
@@ -617,70 +390,8 @@ namespace hpl {
 							tFlag alCollideFlags,
 							bool abDebug)
 	{
-		if(mRsBook)
-		{
-			const OhplH15Query query = { reinterpret_cast<size_t>(apSkipBody), (uint32_t)alCollideFlags, abCollideCharacter, abIsCharacter, abSkipStatic, (int32_t)alMinPushStrength };
-			return ohpl_h15w_shape_world_collision(mRsBook, apPushVector, reinterpret_cast<size_t>(apShape), &a_mtxTransform, &query, reinterpret_cast<size_t>(apCallback));
-		}
-
-		cCollideData collideData;
-
-		if(apPushVector) *apPushVector = cVector3f(0,0,0);
-		bool bCollide = false;
-
-		cBoundingVolume boundingVolume = apShape->GetBoundingVolume();
-		boundingVolume.SetTransform(cMath::MatrixMul(a_mtxTransform, boundingVolume.GetTransform()));
-
-		//Log("MAIN Position: %s Size: %s\n",boundingVolume.GetWorldCenter().ToString().c_str(),
-		//	boundingVolume.GetSize().ToString().c_str());
-
-		//if(abDebug)Log("--------------\n");
-
-		int lBefore =0;
-		int lAfter =0;
-		
-		mvTempBodies.resize(0);
-		GetBodiesInBV(&boundingVolume, &mvTempBodies);
-		
-		for(size_t i=0; i<mvTempBodies.size(); ++i)
-		{
-			iPhysicsBody *pBody = mvTempBodies[i];
-			
-			OhplBodyFilter filter = { pBody->IsActive(), pBody->IsCharacter(), pBody == apSkipBody, pBody->GetMass(),
-				pBody->GetCollideCharacter(), pBody->GetCollide(), (int32_t)pBody->GetPushStrength(),
-				iPhysicsBody::CollideFlagsMatch(alCollideFlags, pBody->GetCollideFlags()),
-				abCollideCharacter, abIsCharacter, abSkipStatic, (int32_t)alMinPushStrength };
-			if(ohpl_phys_world_body_passes(&filter)==false) continue;
-
-			//Note: Still make this check, since GetBodiesInBV is not exact.
-			if(cMath::CheckBVIntersection(boundingVolume,*pBody->GetBoundingVolume())==false)
-			{
-				continue;
-
-			}
-			
-		   	collideData.SetMaxSize(32);
-			bool bRet = CheckShapeCollision(apShape,a_mtxTransform, pBody->GetShape(),pBody->GetLocalMatrix(),
-											collideData, 32, true);
-
-			if(bRet && apPushVector)
-			{
-				//if(abDebug) Log(" Collided with '%s'\n",pBody->GetName().c_str());
-					
-				if(apCallback) apCallback->OnCollision(pBody, &collideData);
-
-				for(int i=0; i< collideData.mlNumOfPoints; i++)
-				{
-					cCollidePoint &point = collideData.mvContactPoints[i];
-				
-					ohpl_phys_world_merge_push(apPushVector, &point.mvNormal, point.mfDepth);
-				}
-			}
-			if(bRet)bCollide = true;
-		}
-		//Log("--------------\n");
-		
-		return bCollide;
+		const OhplH15Query query = { reinterpret_cast<size_t>(apSkipBody), (uint32_t)alCollideFlags, abCollideCharacter, abIsCharacter, abSkipStatic, (int32_t)alMinPushStrength };
+		return ohpl_h15w_shape_world_collision(mRsBook, apPushVector, reinterpret_cast<size_t>(apShape), &a_mtxTransform, &query, reinterpret_cast<size_t>(apCallback));
 	}
 
 	//-----------------------------------------------------------------------
