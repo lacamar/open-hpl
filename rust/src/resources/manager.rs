@@ -1,9 +1,10 @@
 //! `iResourceManager` state (H3): resource set keyed by full-path hash, eviction candidates, load-tab accounting.
 //! Resources and their metas stay C++ objects and are opaque pointers here.
 
+use crate::resmgr::CustomMap;
 use crate::resources::{MapEntry, ResMap, ResMeta, eviction_order};
 use crate::string;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::c_void;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
@@ -16,6 +17,13 @@ struct Info {
 pub struct Manager {
     map: ResMap,
     info: BTreeMap<usize, Info>,
+    pub time_start: u64,
+    pub mem_usage: i32,
+    pub anim: BTreeSet<usize>,
+    pub streams: Vec<usize>,
+    pub custom: CustomMap,
+    pub frames: super::h3_image::Frames,
+    pub mat_blank: bool,
 }
 
 impl Manager {
@@ -80,6 +88,22 @@ impl Manager {
                 })
         });
         order.into_iter().skip(keep).collect()
+    }
+
+    pub fn meta_of(&self, res: *mut c_void) -> *mut ResMeta {
+        self.info
+            .get(&(res as usize))
+            .map_or(std::ptr::null_mut(), |i| i.meta.cast_mut())
+    }
+
+    pub fn resources(&mut self) -> Vec<*mut c_void> {
+        (0..self.map.len())
+            .filter_map(|i| {
+                let e = self.map.at(i);
+                // SAFETY: `at` returns a live entry or null.
+                (!e.is_null()).then(|| unsafe { (*e).second })
+            })
+            .collect()
     }
 
     pub fn first(&mut self) -> *mut c_void {

@@ -23,6 +23,9 @@
 #include <map>
 #include <strings.h>
 #include "system/SystemTypes.h"
+#include "resources/RustResourcesH2.h"
+
+#define OHPL_LANG_FOREACH 1
 
 namespace hpl {
 
@@ -73,10 +76,12 @@ namespace hpl {
 		
 		const tWString& Translate(const tString& asCat, const tString& asName);
 
-		tLanguageCategoryMap* GetCategoryMap(){ return &m_mapCategories;}
-        
+		void SetEntry(const tString& asCat, const tString& asName, const tWString& asText);
+		bool HasEntry(const tString& asCat, const tString& asName);
+		void ForEach(void (*apFunc)(void*, const tString&, const tString&, const tWString*), void *apCtx);
 	private:
-		tLanguageCategoryMap m_mapCategories;	
+		OhplH2Lang *mpRs;
+		tLanguageCategoryMap m_mapCategories;
 		tWString mwsEmpty;
 
 		cResources *mpResources;

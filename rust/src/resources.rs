@@ -5,11 +5,27 @@ pub mod config;
 pub mod ffi;
 #[cfg(test)]
 mod golden_tests;
+pub mod h3_ffi;
+#[cfg(test)]
+mod h3_flow_golden;
+pub mod h3_flows;
+pub mod h3_gpu;
+pub mod h3_image;
+pub mod h3_material;
+pub mod h3_ops;
+#[cfg(test)]
+mod h3_tests;
+pub mod h4_ffi;
+pub mod h4_handler;
+pub mod h4_res;
+pub mod lang;
+pub mod lang_ffi;
 pub mod manager;
 pub mod manager_ffi;
 #[cfg(test)]
 mod manager_golden;
 pub mod searcher;
+pub mod vars;
 
 use crate::string;
 use std::collections::BTreeMap;

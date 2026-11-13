@@ -55,10 +55,12 @@ namespace hpl {
 
 	   mvFrameSize = mvDefaultFrameSize;
 	   mlFrameHandle = 0;
+	   if(mpRs) ohpl_h3f_image_init(mpRs, &mOps, mvFrameSize.x, mvFrameSize.y);
 	}
 
 	cImageManager::~cImageManager()
 	{
+		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_IMAGE); return; }
 		//DeleteAllBitmapFrames();
 		DestroyAll();
 
@@ -75,6 +77,11 @@ namespace hpl {
 
 	iResourceBase* cImageManager::CreateInFrame(const tString& asName, int alFrameHandle)
 	{
+		if(mpRs)
+		{
+			cRmExts exts(*mpBitmapLoaderHandler->GetSupportedTypes());
+			return static_cast<iResourceBase*>(ohpl_h3f_image_create_in_frame(mpRs, H3Ops(), RM_STR(asName), alFrameHandle, exts.h3(), exts.size()));
+		}
 		cFrameSubImage *pImage = NULL;
 		tWString sPath;
 
@@ -140,6 +147,7 @@ namespace hpl {
 
 	cFrameSubImage* cImageManager::CreateFromBitmap(const tString &asName,cBitmap* apBmp, int alFrameHandle)
 	{
+		if(mpRs) return H3Res<cFrameSubImage>(ohpl_h3f_image_from_bitmap(mpRs, H3Ops(), apBmp, alFrameHandle));
 		if(apBmp==NULL)return NULL;
 
 		cFrameSubImage *pImage = AddToFrame(apBmp,_W(""), alFrameHandle);
@@ -156,6 +164,7 @@ namespace hpl {
 
 	cFrameTexture* cImageManager::CreateCustomFrame(iTexture *apTexture)
 	{
+		if(mpRs) return static_cast<cFrameTexture*>(ohpl_h3f_image_custom_frame(mpRs, H3Ops(), apTexture));
 		cFrameTexture *pTFrame = hplNew( cFrameTexture, (apTexture,mlFrameHandle,this,true) );
 		
 		m_mapTextureFrames.insert(tFrameTextureMap::value_type(mlFrameHandle, pTFrame));
@@ -172,6 +181,7 @@ namespace hpl {
 
 	void cImageManager::Destroy(iResourceBase* apResource)
 	{
+		if(mpRs) { ohpl_h3f_image_destroy(mpRs, H3Ops(), apResource); return; }
 		//Lower the user num for the the resource. If it is 0 then lower the
 		//user num for the TextureFrame and delete the resource. If the Texture
 		//frame reaches 0 it is deleted as well.
@@ -238,6 +248,7 @@ namespace hpl {
 
 	void cImageManager::ReorganizeAll()
 	{
+		if(mpRs) { ohpl_h3f_image_reorganize_all(mpRs, H3Ops()); return; }
 		for(tFrameBitmapListIt it=mlstBitmapFrames.begin();it!=mlstBitmapFrames.end();++it)
 		{
 			cFrameBitmap* pFrameBmp = *it;
@@ -250,6 +261,7 @@ namespace hpl {
 	
 	int cImageManager::FlushAll()
 	{
+		if(mpRs) return ohpl_h3f_image_flush_all(mpRs, H3Ops());
 		//Log("Flushing...");
 		int lNum =0;
 		for(tFrameBitmapListIt it=mlstBitmapFrames.begin();it!=mlstBitmapFrames.end();++it)
@@ -266,6 +278,7 @@ namespace hpl {
 
 	cFrameTexture* cImageManager::GetFrameTexture(int alHandle)
 	{
+		if(mpRs) return static_cast<cFrameTexture*>(ohpl_h3f_image_frame_texture(mpRs, H3Ops(), alHandle));
 		tFrameTextureMapIt it = m_mapTextureFrames.find(alHandle);
 		if(it == m_mapTextureFrames.end()) return NULL;
 		
@@ -276,6 +289,7 @@ namespace hpl {
 
 	int cImageManager::CreateFrame(cVector2l avSize)
 	{
+		if(mpRs) return ohpl_h3f_image_create_frame(mpRs, H3Ops(), avSize.x, avSize.y);
 		cFrameBitmap *pBFrame = CreateBitmapFrame(avSize);
 		
 		if(pBFrame==NULL) return -1;
@@ -287,6 +301,7 @@ namespace hpl {
 
 	void cImageManager::SetFrameLocked(int alHandle, bool abLocked)
 	{
+		if(mpRs) { ohpl_h3f_image_set_frame_locked(mpRs, H3Ops(), alHandle, abLocked); return; }
 		tFrameBitmapListIt it = mlstBitmapFrames.begin();
 		while(it != mlstBitmapFrames.end())
 		{	
@@ -419,4 +434,57 @@ namespace hpl {
 
 
 	//-----------------------------------------------------------------------
+
+	void* cImageManager::H3Create(OhplH3Create &aCreate)
+	{
+		switch(aCreate.kind)
+		{
+		case OHPL_H3_IMAGE:
+			return mpBitmapLoaderHandler->LoadBitmap(H3Wide(aCreate.path), eBitmapLoadFlag_ForceNoCompression);
+		case OHPL_H3_IMG_BITMAP_FRAME:
+		{
+			iTexture *pTex = mpLowLevelGraphics->CreateTexture("ImageFrame",eTextureType_2D,eTextureUsage_Normal);
+			cFrameTexture *pTFrame = hplNew( cFrameTexture, (pTex,aCreate.i[2],this,false) );
+			cBitmap *pBmp = hplNew(cBitmap, () );
+			pBmp->CreateData(cVector3l(aCreate.i[0], aCreate.i[1],1),ePixelFormat_RGBA,0,0);
+			cFrameBitmap *pBFrame = hplNew(  cFrameBitmap, (pBmp,pTFrame,aCreate.i[2]) );
+			return pBFrame;
+		}
+		case OHPL_H3_IMG_CUSTOM_FRAME:
+			return hplNew( cFrameTexture, (static_cast<iTexture*>(aCreate.ptr),aCreate.i[0],this,true) );
+		case OHPL_H3_IMG_ADD_BITMAP:
+			return static_cast<iResourceBase*>(static_cast<cFrameBitmap*>(aCreate.ptr)->AddBitmap(static_cast<cBitmap*>(aCreate.ptr2), H3Wide(aCreate.path), NULL));
+		}
+		return NULL;
+	}
+
+	int64_t cImageManager::H3Call(int alWhat, void *apObj, int64_t alArg)
+	{
+		cFrameBitmap *pBmpFrame = static_cast<cFrameBitmap*>(apObj);
+		cFrameTexture *pFrame = static_cast<cFrameTexture*>(apObj);
+		switch(alWhat)
+		{
+		case OHPL_H3C_IMG_FRAME_TEX: return (int64_t)(intptr_t)H3Res<cFrameSubImage>(apObj)->GetFrameTexture();
+		case OHPL_H3C_IMG_FRAME_BMP: return (int64_t)(intptr_t)H3Res<cFrameSubImage>(apObj)->GetFrameBitmap();
+		case OHPL_H3C_FRAME_DEC_PIC: pFrame->DecPicCount(); return 0;
+		case OHPL_H3C_BMPFRAME_DEC_PIC: pBmpFrame->DecPicCount(); return 0;
+		case OHPL_H3C_FRAME_IS_EMPTY: return pFrame->IsEmpty();
+		case OHPL_H3C_FRAME_IS_CUSTOM: return pFrame->IsCustom();
+		case OHPL_H3C_BMPFRAME_HANDLE: return pBmpFrame->GetHandle();
+		case OHPL_H3C_BMPFRAME_TEX: return (int64_t)(intptr_t)pBmpFrame->GetFrameTexture();
+		case OHPL_H3C_BMPFRAME_IS_FULL: return pBmpFrame->IsFull();
+		case OHPL_H3C_BMPFRAME_IS_LOCKED: return pBmpFrame->IsLocked();
+		case OHPL_H3C_BMPFRAME_ADDITIONS: return pBmpFrame->GetAdditionsSinceReorganization();
+		case OHPL_H3C_BMPFRAME_REORGANIZE: pBmpFrame->Reorganize(); return 0;
+		case OHPL_H3C_BMPFRAME_FLUSH: return pBmpFrame->FlushToTexture();
+		case OHPL_H3C_BMPFRAME_SET_LOCKED: pBmpFrame->SetLocked(alArg != 0); return 0;
+		case OHPL_H3C_BMPFRAME_DELETE: hplDelete(pBmpFrame); return 0;
+		case OHPL_H3C_FRAME_DELETE: hplDelete(pFrame); return 0;
+		case OHPL_H3C_FRAME_HANDLE: return pFrame->GetHandle();
+		case OHPL_H3C_BMP_WIDTH: return static_cast<cBitmap*>(apObj)->GetWidth();
+		case OHPL_H3C_BMP_HEIGHT: return static_cast<cBitmap*>(apObj)->GetHeight();
+		case OHPL_H3C_BMP_DELETE: hplDelete(static_cast<cBitmap*>(apObj)); return 0;
+		}
+		return 0;
+	}
 }

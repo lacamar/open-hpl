@@ -21,6 +21,8 @@
 #define HPL_RESOURCEMANAGER_H
 
 #include <map>
+#include <cstring>
+#include "resources/ResourceBase.h"
 #include "system/SystemTypes.h"
 #include "resources/RustResources.h"
 #include "resources/RustResourcesH3.h"
@@ -66,7 +68,18 @@ namespace hpl {
 		
 	protected:
 		OhplH3Mgr *mpRs;
+		OhplH3Ops mOps;
 		tResourceBaseMap m_mapResources;
+
+		const OhplH3Ops* H3Ops() { return &mOps; }
+		static tWString H3Wide(const OhplH3WStr &aStr){ return tWString(reinterpret_cast<const wchar_t*>(aStr.p), aStr.n); }
+		static tString H3Name(const OhplH3Str &aStr){ return tString(reinterpret_cast<const char*>(aStr.p), aStr.n); }
+		static int64_t H3Bits(float afX){ int32_t lBits; memcpy(&lBits, &afX, sizeof(lBits)); return lBits; }
+		static float H3Float(int64_t alBits){ int32_t lBits = (int32_t)alBits; float fX; memcpy(&fX, &lBits, sizeof(fX)); return fX; }
+		template<class T> static T* H3Res(void *apObj){ return static_cast<T*>(static_cast<iResourceBase*>(apObj)); }
+		virtual void* H3Create(OhplH3Create &aCreate){ return NULL; }
+		virtual int64_t H3Call(int alWhat, void *apObj, int64_t alArg){ return 0; }
+		virtual void H3Text(int alWhat, void *apObj, const OhplH3WStr &aPath, void (*apSink)(void*, const uint8_t*, size_t), void *apCtx){}
 		
 		cFileSearcher *mpFileSearcher;
 		iLowLevelResources *mpLowLevelResources;

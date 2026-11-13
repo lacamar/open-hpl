@@ -56,6 +56,7 @@ namespace hpl {
 
 	iVideoStream* cVideoManager::CreateVideo(const tString& asName)
 	{
+		if(mpRs) return H3Res<iVideoStream>(ohpl_h3f_video(mpRs, H3Ops(), RM_STR(asName)));
 		BeginLoad(asName);
 
 		tWString sPath = mpFileSearcher->GetFilePath(asName);
@@ -91,6 +92,7 @@ namespace hpl {
 
 	void cVideoManager::Destroy(iResourceBase* apResource)
 	{
+		if(mpRs) { ohpl_h3f_video_destroy(mpRs, H3Ops(), apResource); return; }
 		if(apResource)
 		{
 			RemoveResource(apResource);
@@ -102,6 +104,7 @@ namespace hpl {
 
 	void cVideoManager::Update(float afTimeStep)
 	{
+		if(mpRs) { ohpl_h3f_video_update(mpRs, H3Ops(), H3Bits(afTimeStep)); return; }
 		tResourceBaseMapIt it = m_mapResources.begin();
 		for(; it != m_mapResources.end(); ++it)
 		{
@@ -122,4 +125,19 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	//-----------------------------------------------------------------------
+
+	void* cVideoManager::H3Create(OhplH3Create &aCreate)
+	{
+		tWString sPath = H3Wide(aCreate.path);
+		iVideoStream *pVideo = mpResources->GetVideoLoaderHandler()->LoadVideo(sPath);
+		if(pVideo == NULL) return NULL;
+		pVideo->SetFullPath(sPath);
+		return static_cast<iResourceBase*>(pVideo);
+	}
+
+	int64_t cVideoManager::H3Call(int alWhat, void *apObj, int64_t alArg)
+	{
+		if(alWhat == OHPL_H3C_UPDATE) H3Res<iVideoStream>(apObj)->Update(H3Float(alArg));
+		return 0;
+	}
 }

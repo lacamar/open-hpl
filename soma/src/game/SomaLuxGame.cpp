@@ -121,10 +121,8 @@ static void LoadLanguage()
 	pRes->ClearTranslations();
 	pRes->AddLanguageFile("config/base_" + gsLanguage + ".lang", false);
 	pRes->AddLanguageFile("config/lang_main/" + gsLanguage + ".lang", false);
-	cLanguageCategory *&pMenu = (*pRes->GetLanguageFile()->GetCategoryMap())["Menu"];
-	if (pMenu == NULL)
-		pMenu = new cLanguageCategory();
-	pMenu->m_mapEntries["OpenHplHud"] = new cLanguageEntry{_W("OPEN-HPL HUD")};
+	cLanguageFile *pLang = pRes->GetLanguageFile();
+	pLang->SetEntry("Menu", "OpenHplHud", _W("OPEN-HPL HUD"));
 	static const wchar_t *vEntries[][2] = {
 		{L"Renderer", L"RENDERER (RESTART)"}, {L"ColorOutput", L"COLOR OUTPUT"},
 		{L"HdrPaperWhite", L"HDR PAPER WHITE"}, {L"HdrPeak", L"HDR PEAK BRIGHTNESS"},
@@ -136,8 +134,8 @@ static void LoadLanguage()
 		{L"HdrPeak_Info", L"Peak brightness of your HDR display in nits."},
 	};
 	for (auto &e : vEntries)
-		if (pMenu->m_mapEntries.find(cString::To8Char(e[0])) == pMenu->m_mapEntries.end())
-			pMenu->m_mapEntries[cString::To8Char(e[0])] = new cLanguageEntry{e[1]};
+		if (!pLang->HasEntry("Menu", cString::To8Char(e[0])))
+			pLang->SetEntry("Menu", cString::To8Char(e[0]), e[1]);
 }
 
 // FullScreen "true" is exclusive at Width x Height (emulated by SDL on Wayland), "borderless" the desktop

@@ -58,6 +58,7 @@ namespace hpl {
 	
 	cBitmap* cBitmapLoaderHandler::LoadBitmap(const tWString& asFile, tBitmapLoadFlag aFlags)
 	{
+		if(mbRust) return static_cast<cBitmap*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_BITMAP_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), (int64_t)aFlags, NULL));
 		iBitmapLoader *pBitmapLoader = static_cast<iBitmapLoader*>(GetLoaderForFile(asFile));
 
 		if(pBitmapLoader)
@@ -79,6 +80,7 @@ namespace hpl {
 
 	bool cBitmapLoaderHandler::SaveBitmap(cBitmap* apBitmap, const tWString& asFile, tBitmapSaveFlag aFlags)
 	{
+		if(mbRust) return ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_BITMAP_SAVE, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), (int64_t)aFlags, apBitmap) != NULL;
 		iBitmapLoader *pBitmapLoader = static_cast<iBitmapLoader*>(GetLoaderForFile(asFile));
 		
 		if(pBitmapLoader)
@@ -104,4 +106,17 @@ namespace hpl {
 	}
 	
 	//-----------------------------------------------------------------------
+
+	void* cBitmapLoaderHandler::H4Call(int alWhat, void *apLoader, const OhplH3WStr &aFile, int64_t alArg, void *apArg)
+	{
+		iBitmapLoader *pLoader = static_cast<iBitmapLoader*>(static_cast<iResourceLoader*>(apLoader));
+		tWString sFile = H4Wide(aFile);
+		switch(alWhat)
+		{
+		case OHPL_H4_BITMAP_LOAD: return pLoader->LoadBitmap(sFile, (tBitmapLoadFlag)alArg);
+		case OHPL_H4_BITMAP_SAVE: return pLoader->SaveBitmap(static_cast<cBitmap*>(apArg), sFile, (tBitmapSaveFlag)alArg) ? apLoader : NULL;
+		case OHPL_H4_BITMAP_SET_FILE_NAME: static_cast<cBitmap*>(apLoader)->SetFileName(sFile); return NULL;
+		}
+		return NULL;
+	}
 }

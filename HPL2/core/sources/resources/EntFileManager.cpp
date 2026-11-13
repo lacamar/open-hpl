@@ -66,6 +66,7 @@ namespace hpl {
 
 	cEntFileManager::~cEntFileManager()
 	{
+		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_ENT_FILE); return; }
 		DestroyAll();
 		Log(" Done with ent files\n");
 	}
@@ -80,6 +81,7 @@ namespace hpl {
 
 	cEntFile* cEntFileManager::CreateEntFile(const tString& asName)
 	{
+		if(mpRs) return H3Res<cEntFile>(ohpl_h3f_ent_file(mpRs, H3Ops(), RM_STR(asName)));
 		cEntFile* pEntFile;
 
 		BeginLoad(asName);
@@ -126,6 +128,7 @@ namespace hpl {
 
 	void cEntFileManager::Destroy(iResourceBase* apResource)
 	{
+		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
 		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
 			RemoveResource(apResource);
 			hplDelete(apResource);
@@ -142,4 +145,15 @@ namespace hpl {
 
 
 	//-----------------------------------------------------------------------
+
+	void* cEntFileManager::H3Create(OhplH3Create &aCreate)
+	{
+		cEntFile *pEntFile = hplNew(cEntFile, (H3Name(aCreate.name), H3Wide(aCreate.path), mpResources));
+		if(pEntFile->CreateFromFile()==false)
+		{
+			hplDelete(pEntFile);
+			return NULL;
+		}
+		return static_cast<iResourceBase*>(pEntFile);
+	}
 }

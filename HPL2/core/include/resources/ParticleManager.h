@@ -60,6 +60,8 @@ namespace hpl {
 		
 		void Destroy(iResourceBase* apResource);
 		void Unload(iResourceBase* apResource);
+	protected:
+		void* H3Create(OhplH3Create &aCreate) override;
 	private:
 		cGraphics* mpGraphics;
 		cResources *mpResources;

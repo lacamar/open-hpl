@@ -20,3 +20,6 @@ cc $INC -I$H -c "$H/ent_probe.cpp" -o "$OUT/ent.o"
 cc $INC -c "$OUT/old/resources/EntityObjectParser.cpp" -o "$OUT/old_parser.o"
 g++ "$OUT/ent.o" "$OUT/stubs.o" $LIBS -o "$OUT/ent_new"
 g++ "$OUT/ent.o" "$OUT/old_parser.o" "$OUT/stubs.o" $LIBS -o "$OUT/ent_old"
+
+cc $INC -I$H -c "$H/flow_probe.cpp" -o "$OUT/flow.o"
+g++ "$OUT/flow.o" $LIBS -o "$OUT/flow_probe"

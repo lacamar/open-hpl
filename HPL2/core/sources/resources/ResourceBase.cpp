@@ -25,7 +25,6 @@
 
 namespace hpl {
 
-	bool iResourceBase::mbLogCreateAndDelete=false;
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -41,7 +40,7 @@ namespace hpl {
 
 	iResourceBase::~iResourceBase()
 	{
-		if(mMeta.log_destruction && mbLogCreateAndDelete)
+		if(mMeta.log_destruction && GetLogCreateAndDelete())
 			Log("  Destroyed resource '%s'\n",msName.c_str());
 	}
 	//-----------------------------------------------------------------------

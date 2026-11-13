@@ -97,7 +97,9 @@ extern "C" {
 	void ohpl_rm_resource_dirs(const uint8_t* path, size_t n, const uint32_t* alt, size_t an, OhplRmOut*);
 }
 
+#ifndef RM_STR
 #define RM_STR(s) reinterpret_cast<const uint8_t*>((s).data()), (s).size()
+#endif
 
 namespace hpl {
 	class iResourceBase;
@@ -111,6 +113,7 @@ namespace hpl {
 		template<class C>
 		explicit cRmExts(const C& aList) { for(const tString& s : aList) mvBytes.push_back(RmBytes(s)); }
 		const OhplRmBytes* data() const { return mvBytes.data(); }
+		const OhplH3Str* h3() const { return reinterpret_cast<const OhplH3Str*>(mvBytes.data()); }
 		size_t size() const { return mvBytes.size(); }
 	private:
 		std::vector<OhplRmBytes> mvBytes;

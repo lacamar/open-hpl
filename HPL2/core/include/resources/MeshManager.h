@@ -52,6 +52,8 @@ namespace hpl {
 		const tString& GetFastloadMaterial(){ return msFastloadMaterial;}
 		bool GetUseFastloadMaterial(){ return mbUseFastloadMaterial;}
 
+	protected:
+		void* H3Create(OhplH3Create &aCreate) override;
 	private:
 		cGraphics* mpGraphics;
 		cResources* mpResources;

@@ -30,3 +30,6 @@ for p in cfg:ConfigFile lang:LanguageFile fs:FileSearcher; do
 	lnk "$OUT/${n}_new.o" "$OUT/${n}_new"
 	lnk "$OUT/${n}_old.o" "$OUT/${n}_old" "$OUT/old_$f.o"
 done
+
+cc $INC -I$H -c "$H/res_probe.cpp" -o "$OUT/res.o"
+g++ "$OUT/res.o" $LIBS -o "$OUT/res_probe"

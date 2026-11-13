@@ -48,6 +48,9 @@ namespace hpl {
 		void Unload(iResourceBase* apResource);
 
 		void Update(float afTimeStep);
+	protected:
+		void* H3Create(OhplH3Create &aCreate) override;
+		int64_t H3Call(int alWhat, void *apObj, int64_t alArg) override;
 	private:
 		cGraphics* mpGraphics;
 		cResources *mpResources;

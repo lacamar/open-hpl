@@ -30,8 +30,10 @@
 #include "system/LowLevelSystem.h"
 
 #include "impl/RustBackends.h"
+#include "resources/RustResMgr.h"
 
 #include <algorithm>
+#include <cstring>
 
 namespace hpl {
 
@@ -55,6 +57,50 @@ namespace hpl {
 		mpFileSearcher = apFileSearcher;
 		mpLowLevelResources = apLowLevelResources;
 		mpLowLevelSystem = apLowLevelSystem;
+		memset(&mOps, 0, sizeof(mOps));
+		if(mpRs == NULL) return;
+
+		mOps.ctx = this;
+		mOps.log = [](void*, int32_t alLevel, const uint8_t *apMsg, size_t alLen)
+		{
+			tString sMsg(reinterpret_cast<const char*>(apMsg), alLen);
+			if(alLevel == 2) Error("%s", sMsg.c_str());
+			else if(alLevel == 1) Warning("%s", sMsg.c_str());
+			else Log("%s", sMsg.c_str());
+		};
+		mOps.now = [](void*) -> uint64_t { return cPlatform::GetApplicationTime(); };
+		mOps.file_path = [](void *c, const uint8_t *p, size_t n, int32_t *apCount, size_t *apLen) -> const uint32_t*
+		{
+			int lCount = apCount ? *apCount : 0;
+			const tWString &sPath = static_cast<iResourceManager*>(c)->mpFileSearcher->GetFilePath(tString(reinterpret_cast<const char*>(p), n), apCount ? &lCount : NULL);
+			if(apCount) *apCount = lCount;
+			*apLen = sPath.size();
+			return reinterpret_cast<const uint32_t*>(sPath.data());
+		};
+		mOps.info = [](void*, void *apObj, OhplH3Info *apInfo)
+		{
+			iResourceBase *pRes = static_cast<iResourceBase*>(apObj);
+			apInfo->name = OhplH3Str{reinterpret_cast<const uint8_t*>(pRes->GetName().data()), pRes->GetName().size()};
+			apInfo->path = OhplH3WStr{reinterpret_cast<const uint32_t*>(pRes->GetFullPath().data()), pRes->GetFullPath().size()};
+			apInfo->meta = pRes->GetMeta();
+		};
+		mOps.destroy = [](void*, void *apObj){ hplDelete(static_cast<iResourceBase*>(apObj)); };
+		mOps.load_done = [](void*, const uint8_t *apName, size_t alLen, uint64_t alElapsed)
+		{
+			cEngineDiagnostics::AddLoadTime(tString(reinterpret_cast<const char*>(apName), alLen), (double)alElapsed);
+			if(mpLoadTickCallback) mpLoadTickCallback();
+		};
+		mOps.create = [](void *c, OhplH3Create *apCreate) -> void* { return static_cast<iResourceManager*>(c)->H3Create(*apCreate); };
+		mOps.call = [](void *c, int32_t alWhat, void *apObj, int64_t alArg) -> int64_t
+		{
+			iResourceManager *pThis = static_cast<iResourceManager*>(c);
+			if(alWhat == OHPL_H3C_DESTROY_VIRTUAL){ pThis->Destroy(static_cast<iResourceBase*>(apObj)); return 0; }
+			return pThis->H3Call(alWhat, apObj, alArg);
+		};
+		mOps.text = [](void *c, int32_t alWhat, void *apObj, OhplH3WStr aPath, void (*apSink)(void*, const uint8_t*, size_t), void *apCtx)
+		{
+			static_cast<iResourceManager*>(c)->H3Text(alWhat, apObj, aPath, apSink, apCtx);
+		};
 	}
 
 	iResourceManager::~iResourceManager()
@@ -101,20 +147,7 @@ namespace hpl {
 
     void iResourceManager::DestroyUnused(int alMaxToKeep)
 	{
-		if(mpRs)
-		{
-			std::vector<iResourceBase*> vTail;
-			ohpl_h3_mgr_eviction_tail(mpRs, alMaxToKeep, CollectResources, &vTail);
-			for(iResourceBase *pRes : vTail)
-			{
-				if(pRes->HasUsers()==false)
-				{
-					RemoveResource(pRes);
-					hplDelete(pRes);
-				}
-			}
-			return;
-		}
+		if(mpRs) { ohpl_h3f_destroy_unused(mpRs, &mOps, alMaxToKeep); return; }
 
 		if((int)m_mapResources.size() <= alMaxToKeep) return;
 
@@ -138,15 +171,7 @@ namespace hpl {
 
 	void iResourceManager::DestroyAll()
 	{
-		if(mpRs)
-		{
-			while(iResourceBase *pResource = static_cast<iResourceBase*>(ohpl_h3_mgr_first(mpRs)))
-			{
-				while(pResource->HasUsers()) pResource->DecUserCount();
-				Destroy(pResource);
-			}
-			return;
-		}
+		if(mpRs) { ohpl_h3f_destroy_all(mpRs, &mOps); return; }
 
 		tResourceBaseMapIt it = m_mapResources.begin();
 		while(it != m_mapResources.end())
@@ -178,8 +203,8 @@ namespace hpl {
 
 	void iResourceManager::BeginLoad(const tString& asFile)
 	{
+		if(mpRs) { ohpl_h3f_begin(mpRs, &mOps, RM_STR(asFile)); return; }
 		mlTimeStart = cPlatform::GetApplicationTime();
-		if(mpRs) { ohpl_h3_begin_load(reinterpret_cast<const uint8_t*>(asFile.data()), asFile.size(), mlTimeStart); return; }
 		
 		//Log("Begin resource: %s\n",asFile.c_str());
 
@@ -191,17 +216,7 @@ namespace hpl {
 
 	void iResourceManager::EndLoad()
 	{
-		if(mpRs)
-		{
-			tString sOuter;
-			uint64_t lElapsed = 0;
-			if(ohpl_h3_end_load(cPlatform::GetApplicationTime(), [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sOuter, &lElapsed))
-			{
-				cEngineDiagnostics::AddLoadTime(sOuter, (double)lElapsed);
-				if(mpLoadTickCallback) mpLoadTickCallback();
-			}
-			return;
-		}
+		if(mpRs) { ohpl_h3f_end(mpRs, &mOps); return; }
 		mlTabCount--;
 		if(mlTabCount==0) cEngineDiagnostics::AddLoadTime(gsOuterName, (double)(cPlatform::GetApplicationTime() - glOuterStart));
 		if(mlTabCount==0 && mpLoadTickCallback) mpLoadTickCallback();
@@ -211,6 +226,12 @@ namespace hpl {
 	
 	iResourceBase* iResourceManager::FindLoadedResource(const tString &asName, tWString &asFilePath,int *apEqualCount)
 	{
+		if(mpRs)
+		{
+			iResourceBase *pFound = static_cast<iResourceBase*>(ohpl_h3f_find_loaded(mpRs, &mOps, RM_STR(asName), apEqualCount,
+				[](void *c, const uint32_t *p, size_t n){ static_cast<tWString*>(c)->assign(reinterpret_cast<const wchar_t*>(p), n); }, &asFilePath));
+			return pFound;
+		}
 		asFilePath = mpFileSearcher->GetFilePath(asName, apEqualCount);
 		iResourceBase* pResource = GetResource(asFilePath);
 		if(pResource!=NULL)
@@ -225,18 +246,22 @@ namespace hpl {
 	
 	tString iResourceManager::GetTabs()
 	{
+		if(mpRs)
+		{
+			tString sRsTabs;
+			ohpl_h3f_tabs(mpRs, &mOps, [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sRsTabs);
+			return sRsTabs;
+		}
 		tString sTabs ="";
-		for(int i=0, n = mpRs ? ohpl_h3_tab_count() : mlTabCount; i<n; ++i) sTabs+="  ";
+		for(int i=0; i<mlTabCount; ++i) sTabs+="  ";
 		return sTabs;
 	}
 
 	void iResourceManager::AddResource(iResourceBase* apResource, bool abLog, bool abAddToSet)
 	{
-		tString sName = cString::ToLowerCase(apResource->GetName());
-		
-		if(abAddToSet && mpRs)
-			ohpl_h3_mgr_add(mpRs, apResource, reinterpret_cast<const uint32_t*>(apResource->GetFullPath().data()), apResource->GetFullPath().size(), apResource->GetMeta());
-		else if(abAddToSet)
+		if(mpRs) { ohpl_h3f_add(mpRs, &mOps, apResource, abLog, abAddToSet); return; }
+
+		if(abAddToSet)
 		{
 			int lHash = cString::GetHashW(apResource->GetFullPath());
 			m_mapResources.insert(lHash, apResource);

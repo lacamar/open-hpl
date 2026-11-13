@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include "resources/GpuShaderManager.h"
+#include "resources/RustResMgr.h"
 
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
@@ -115,6 +116,7 @@ namespace hpl {
 
 	cGpuShaderManager::~cGpuShaderManager()
 	{
+		if(mpRs) { hplDelete(mpPreprocessParser); ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_GPU_SHADER); return; }
 		hplDelete(mpPreprocessParser);
 
 		DestroyAll();
@@ -169,6 +171,7 @@ namespace hpl {
 	iGpuShader* cGpuShaderManager::CreateShader(const tString& asName, eGpuShaderType aType,
 												cParserVarContainer *apVarContainer)
 	{
+		if(mpRs) return H3Res<iGpuShader>(ohpl_h3f_gpu_shader(mpRs, H3Ops(), RM_STR(asName), (int32_t)aType, apVarContainer, mpHpslTranspileCallback != NULL, aType == eGpuShaderType_Fragment));
 		iGpuShader* pShader;
 
 		BeginLoad(asName);
@@ -352,6 +355,7 @@ namespace hpl {
 
 	void cGpuShaderManager::Destroy(iResourceBase* apResource)
 	{
+		if(mpRs) { ohpl_h3f_gpu_destroy(mpRs, H3Ops(), apResource); return; }
 		apResource->DecUserCount();
 
 		if(apResource->HasUsers()==false){
@@ -391,4 +395,104 @@ namespace hpl {
 	}
 	
 	//-----------------------------------------------------------------------
+
+	void* cGpuShaderManager::H3Create(OhplH3Create &aCreate)
+	{
+		tString sName = H3Name(aCreate.name);
+		tWString sPath = H3Wide(aCreate.path);
+		eGpuShaderType type = (eGpuShaderType)aCreate.i[0];
+		switch(aCreate.kind)
+		{
+		case OHPL_H3_SHADER_PARSE:
+		{
+			tString sFileData;
+			unsigned int lFileSize = cPlatform::GetFileSize(sPath);
+			sFileData.resize(lFileSize);
+			cPlatform::CopyFileToBuffer(sPath,&sFileData[0],lFileSize);
+			msScratchParsed.clear();
+			if(aCreate.i[0] == 0)
+			{
+				cParserVarContainer *pVars = static_cast<cParserVarContainer*>(aCreate.ptr);
+				if(aCreate.i[1])
+				{
+					if(pVars->Get("UseDepth") != NULL) pVars->Add("UseLinearDepth");
+					pVars->Add("UseExtendedArgs");
+					PatchHpslSource(H3Name(aCreate.name2), sFileData);
+				}
+				mpPreprocessParser->Parse(&sFileData, &msScratchParsed, pVars, cString::GetFilePathW(sPath));
+				if(aCreate.i[1])
+				{
+					// Rebirth reads BC5 as RG; cSDLTexture swizzles it to SOMA's LATC2 layout
+					size_t lBC5 = msScratchParsed.find("avNormalValue.yxx");
+					if(lBC5 != tString::npos) msScratchParsed.replace(lBC5, 17, "avNormalValue.wyx");
+				}
+			}
+			else
+			{
+				cParserVarContainer emptyVars;
+				mpPreprocessParser->Parse(&sFileData, &msScratchParsed, &emptyVars, cString::GetFilePathW(sPath));
+			}
+			msScratchPre = msScratchParsed;
+			return NULL;
+		}
+		case OHPL_H3_SHADER_TRANSPILE:
+		{
+			tString sGlsl;
+			aCreate.status = 0;
+			if(mpHpslTranspileCallback(msScratchParsed, type, sGlsl, msTranspileError)==false)
+			{
+				aCreate.status = 1;
+				return NULL;
+			}
+			msScratchParsed = sGlsl;
+			DumpTranspiledShaderIfRequested(sName, sGlsl);
+			return NULL;
+		}
+		case OHPL_H3_SHADER_FILE:
+		{
+			iGpuShader *pShader = mpLowLevelGraphics->CreateGpuShader(sName, type);
+			if(pShader->CreateFromFile(sPath)==false)
+			{
+				hplDelete(pShader);
+				return NULL;
+			}
+			return static_cast<iResourceBase*>(pShader);
+		}
+		case OHPL_H3_SHADER_STRING:
+		{
+			iGpuShader *pShader = mpLowLevelGraphics->CreateGpuShader(sName, type);
+			pShader->SetFullPath(sPath);
+			if(pShader->CreateFromString(msScratchParsed.c_str())==false)
+			{
+				hplDelete(pShader);
+				return NULL;
+			}
+			return static_cast<iResourceBase*>(pShader);
+		}
+		}
+		return NULL;
+	}
+
+	int64_t cGpuShaderManager::H3Call(int alWhat, void *apObj, int64_t alArg)
+	{
+		if(alWhat != OHPL_H3C_SHADER_POST) return 0;
+		iGpuShader *pShader = H3Res<iGpuShader>(apObj);
+		if((alArg & 1) && pShader->SamplerNeedsTextureUnitSetup()) ApplyHpslTextureBindings(pShader, msScratchPre);
+		if((alArg & 2) && pShader->SamplerNeedsTextureUnitSetup())
+		{
+			std::vector<ohpl_shader_kv> vVars;
+			for(auto& kv : *mpPreprocessParser->GetParsingVarContainer()->GetMapPtr())
+			{
+				ohpl_shader_kv e = { kv.first.data(), kv.first.size(), kv.second.data(), kv.second.size() };
+				vVars.push_back(e);
+			}
+			ohpl_shader_sampler_units(vVars.data(), vVars.size(), SamplerCallback, pShader);
+		}
+		return 0;
+	}
+
+	void cGpuShaderManager::H3Text(int alWhat, void *apObj, const OhplH3WStr &aPath, void (*apSink)(void*, const uint8_t*, size_t), void *apCtx)
+	{
+		if(alWhat == OHPL_H3C_SHADER_ERROR) apSink(apCtx, reinterpret_cast<const uint8_t*>(msTranspileError.data()), msTranspileError.size());
+	}
 }

@@ -12,6 +12,7 @@ mkdir -p "$OUT/golden" "$OUT/run"
 : > "$OUT/results.txt"
 : > "$OUT/golden/mgr.txt"
 : > "$OUT/golden/ent.txt"
+: > "$OUT/golden/flow.txt"
 
 report() { echo "$*" | tee -a "$OUT/results.txt"; }
 
@@ -23,6 +24,13 @@ for g in soma amnesia rebirth bunker; do
 	OHPL_IMPL=rust "$OUT/mgr_probe" "$R" "$OPS" "$L.mgr.rust" > "$L.mgr.rust.sum" 2>/dev/null
 	report "$g mgr ops=$OPS lines=$(wc -l < $L.mgr.cpp) cpp-vs-rust diff lines=$(diff $L.mgr.cpp $L.mgr.rust | grep -c '^<') digest=$(sed 's/.*digest=//' $L.mgr.cpp.sum)"
 	printf '%s\t%s\t%s\n' "$g" "$OPS" "$(sed 's/.*digest=//' $L.mgr.cpp.sum)" >> "$OUT/golden/mgr.txt"
+
+	FOPS=${FLOW_OPS:-20000}
+	export FLOW_EXTRA_DIR="$(cd "$(dirname "$0")" && pwd)/matcases"
+	OHPL_IMPL=cpp "$OUT/flow_probe" "$R" "$FOPS" "$L.flow.cpp" > "$L.flow.cpp.sum" 2>/dev/null
+	OHPL_IMPL=rust "$OUT/flow_probe" "$R" "$FOPS" "$L.flow.rust" > "$L.flow.rust.sum" 2>/dev/null
+	report "$g flow ops=$FOPS lines=$(wc -l < $L.flow.cpp) cpp-vs-rust diff lines=$(diff $L.flow.cpp $L.flow.rust | grep -c '^<') digest=$(sed 's/.*digest=//' $L.flow.cpp.sum)"
+	printf '%s\t%s\t%s\n' "$g" "$FOPS" "$(sed 's/.*digest=//' $L.flow.cpp.sum)" >> "$OUT/golden/flow.txt"
 
 	( cd "$R" && find . -type f -name '*.ent' | sed 's|^\./||' | LC_ALL=C sort ) > "$L.ent.lst"
 	"$OUT/ent_old" "$R" "$L.ent.lst" "$L.ent.old.full" > "$L.ent.old" 2>/dev/null

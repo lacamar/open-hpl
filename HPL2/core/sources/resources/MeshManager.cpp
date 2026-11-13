@@ -51,6 +51,7 @@ namespace hpl {
 
 	cMeshManager::~cMeshManager()
 	{
+		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_MESH); return; }
 		DestroyAll();
 
 		Log(" Done with meshes\n");
@@ -66,6 +67,11 @@ namespace hpl {
 
 	cMesh* cMeshManager::CreateMesh(const tString& asName, tMeshLoadFlag aFlag)
 	{
+		if(mpRs)
+		{
+			cRmExts exts(*mpResources->GetMeshLoaderHandler()->GetSupportedTypes());
+			return H3Res<cMesh>(ohpl_h3f_model(mpRs, H3Ops(), true, RM_STR(asName), exts.h3(), exts.size(), (int32_t)aFlag));
+		}
 		cMesh* pMesh;
 
 		BeginLoad(asName);
@@ -126,6 +132,7 @@ namespace hpl {
 
 	void cMeshManager::Destroy(iResourceBase* apResource)
 	{
+		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
 		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
 			RemoveResource(apResource);
 			hplDelete(apResource);
@@ -142,4 +149,9 @@ namespace hpl {
 
 
 	//-----------------------------------------------------------------------
+
+	void* cMeshManager::H3Create(OhplH3Create &aCreate)
+	{
+		return static_cast<iResourceBase*>(mpResources->GetMeshLoaderHandler()->LoadMesh(H3Wide(aCreate.path), (tMeshLoadFlag)aCreate.i[0]));
+	}
 }
