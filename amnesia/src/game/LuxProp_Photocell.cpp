@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -47,7 +47,7 @@ void cLuxPropLoader_Photocell::LoadVariables(iLuxProp *apProp, cXmlElement *apRo
 {
 	cLuxProp_Photocell  *pPhotocell = static_cast<cLuxProp_Photocell*>(apProp);
 
-	
+
 }
 
 //-----------------------------------------------------------------------
@@ -56,8 +56,14 @@ void cLuxPropLoader_Photocell::LoadInstanceVariables(iLuxProp *apProp, cResource
 {
 	cLuxProp_Photocell  *pPhotocell = static_cast<cLuxProp_Photocell*>(apProp);
 
-	OhplGa4VarsAdapter vars(apInstanceVars);
-	ohpl_a5_photocell_load_instance(vars.Vars(), &pPhotocell->mS);
+	if(hpl::OhplBackendRustRequested())
+	{
+		OhplGa4VarsAdapter vars(apInstanceVars);
+		ohpl_a5_photocell_load_instance(vars.Vars(), &pPhotocell->mS);
+		return;
+	}
+	pPhotocell->mfLightLevelOnLimit = apInstanceVars->GetVarFloat("LightLevelOnLimit", 0);
+	pPhotocell->mfLightLevelOffLimit = apInstanceVars->GetVarFloat("LightLevelOffLimit", 0);
 }
 //-----------------------------------------------------------------------
 
@@ -69,6 +75,9 @@ void cLuxPropLoader_Photocell::LoadInstanceVariables(iLuxProp *apProp, cResource
 
 cLuxProp_Photocell::cLuxProp_Photocell(const tString &asName,int alID, cLuxMap *apMap) : iLuxProp(asName,alID,apMap, eLuxPropType_Photocell)
 {
+	mfLightLevel = 0;
+	mfLightLevelCheckCount = 0;
+	mbLit = false;
 	mS.light_level = 0;
 	mS.check_count = 0;
 	mS.lit = false;
@@ -91,7 +100,7 @@ cLuxProp_Photocell::~cLuxProp_Photocell()
 bool cLuxProp_Photocell::CanInteract(iPhysicsBody *apBody)
 {
 	return false;
-	
+
 }
 
 //-----------------------------------------------------------------------
@@ -107,7 +116,7 @@ bool cLuxProp_Photocell::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos
 
 void cLuxProp_Photocell::OnSetupAfterLoad(cWorld *apWorld)
 {
-	
+
 }
 
 //-----------------------------------------------------------------------
@@ -123,9 +132,24 @@ void cLuxProp_Photocell::UpdatePropSpecific(float afTimeStep)
 {
 	/////////////////////
 	// Update light level
-	OhplA5PhotoHost host = { this, &HostBounds, &HostLightAt, &HostIllumination };
-	OhplGa4Run run(this);
-	ohpl_a5_photocell_update(&mS, afTimeStep, &host, run.Sink());
+	if(hpl::OhplBackendRustRequested())
+	{
+		OhplA5PhotoHost host = { this, &HostBounds, &HostLightAt, &HostIllumination };
+		OhplGa4Run run(this);
+		ohpl_a5_photocell_update(&mS, afTimeStep, &host, run.Sink());
+		return;
+	}
+
+	UpdateLightLevel(afTimeStep);
+
+	/////////////////////
+	// Set mesh alpha
+	float fGoalAmount = ohpl_ga4b_photo_goal(mfLightLevel, mfLightLevelOnLimit, mfLightLevelOffLimit);
+
+	if(mpMeshEntity && mpMeshEntity->GetIlluminationAmount() != fGoalAmount)
+	{
+		mpMeshEntity->SetIlluminationAmount(ohpl_ga4b_photo_illum_step(mpMeshEntity->GetIlluminationAmount(), fGoalAmount, afTimeStep));
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -198,6 +222,30 @@ void cLuxProp_Photocell::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 //-----------------------------------------------------------------------
 
+void cLuxProp_Photocell::UpdateLightLevel(float afTimeStep)
+{
+	if(ohpl_ga4b_photo_tick(&mfLightLevelCheckCount, afTimeStep)==false) return;
+
+	cBoundingVolume *pBV = mpMeshEntity->GetBoundingVolume();
+	cVector3f vSize = pBV->GetSize();
+	cVector3f vCenter = pBV->GetWorldCenter();
+
+	cVector3f vSamplePos[6];
+	ohpl_ga4b_photo_samples(vSize.v, vCenter.v, vSamplePos[0].v);
+
+	float vLight[6];
+	for(int i=0; i<6; ++i)
+	{
+		vLight[i] = gpBase->mpMapHelper->GetLightLevelAtPos(vSamplePos[i]);
+	}
+	mfLightLevel = ohpl_ga4b_photo_level(vLight, 6);
+
+	int lConnState = ohpl_ga4b_photo_switch(mfLightLevel, &mbLit, mfLightLevelOnLimit, mfLightLevelOffLimit);
+	if(lConnState != 0) ConnectionStateChange(lConnState);
+}
+
+//-----------------------------------------------------------------------
+
 //////////////////////////////////////////////////////////////////////////
 // SAVE DATA STUFF
 //////////////////////////////////////////////////////////////////////////
@@ -230,11 +278,20 @@ void cLuxProp_Photocell::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	pData->mbLit = mS.lit;
-	pData->mfLightLevel = mS.light_level;
-	pData->mfLightLevelCheckCount = mS.check_count;
-	pData->mfLightLevelOnLimit = mS.on_limit;
-	pData->mfLightLevelOffLimit = mS.off_limit;
+	if(hpl::OhplBackendRustRequested())
+	{
+		pData->mbLit = mS.lit;
+		pData->mfLightLevel = mS.light_level;
+		pData->mfLightLevelCheckCount = mS.check_count;
+		pData->mfLightLevelOnLimit = mS.on_limit;
+		pData->mfLightLevelOffLimit = mS.off_limit;
+		return;
+	}
+	kCopyToVar(pData,mbLit);
+	kCopyToVar(pData,mfLightLevel);
+	kCopyToVar(pData,mfLightLevelCheckCount);
+	kCopyToVar(pData,mfLightLevelOnLimit);
+	kCopyToVar(pData,mfLightLevelOffLimit);
 }
 
 //-----------------------------------------------------------------------
@@ -245,14 +302,23 @@ void cLuxProp_Photocell::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//Init
 	super_class::LoadFromSaveData(apSaveData);
 	cLuxProp_Photocell_SaveData *pData = static_cast<cLuxProp_Photocell_SaveData*>(apSaveData);
-	
+
 	//////////////////
 	//Set variables
-	mS.lit = pData->mbLit;
-	mS.light_level = pData->mfLightLevel;
-	mS.check_count = pData->mfLightLevelCheckCount;
-	mS.on_limit = pData->mfLightLevelOnLimit;
-	mS.off_limit = pData->mfLightLevelOffLimit;
+	if(hpl::OhplBackendRustRequested())
+	{
+		mS.lit = pData->mbLit;
+		mS.light_level = pData->mfLightLevel;
+		mS.check_count = pData->mfLightLevelCheckCount;
+		mS.on_limit = pData->mfLightLevelOnLimit;
+		mS.off_limit = pData->mfLightLevelOffLimit;
+		return;
+	}
+	kCopyFromVar(pData,mbLit);
+	kCopyFromVar(pData,mfLightLevel);
+	kCopyFromVar(pData,mfLightLevelCheckCount);
+	kCopyFromVar(pData,mfLightLevelOnLimit);
+	kCopyFromVar(pData,mfLightLevelOffLimit);
 }
 
 //-----------------------------------------------------------------------

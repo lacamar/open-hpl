@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -57,9 +57,16 @@ void cLuxPropLoader_Button::LoadInstanceVariables(iLuxProp *apProp, cResourceVar
 {
     cLuxProp_Button  *pButton = static_cast<cLuxProp_Button*>(apProp);
 
-	OhplGa4VarsAdapter vars(apInstanceVars);
-	OhplGa4Run run(pButton);
-	ohpl_a5_button_load_instance(vars.Vars(), &pButton->mS, run.Sink());
+	if(hpl::OhplBackendRustRequested())
+	{
+		OhplGa4VarsAdapter vars(apInstanceVars);
+		OhplGa4Run run(pButton);
+		ohpl_a5_button_load_instance(vars.Vars(), &pButton->mS, run.Sink());
+		return;
+	}
+	pButton->SetSwitchedOn(apInstanceVars->GetVarBool("SwitchedOn",false), false);
+	pButton->mbCanBeSwitchedOn = apInstanceVars->GetVarBool("CanBeSwitchedOn",true);
+	pButton->mbCanBeSwitchedOff = apInstanceVars->GetVarBool("CanBeSwitchedOff",true);
 }
 //-----------------------------------------------------------------------
 
@@ -71,6 +78,7 @@ void cLuxPropLoader_Button::LoadInstanceVariables(iLuxProp *apProp, cResourceVar
 
 cLuxProp_Button::cLuxProp_Button(const tString &asName,int alID, cLuxMap *apMap) : iLuxProp(asName,alID,apMap, eLuxPropType_Button)
 {
+	mbSwitchedOn = true;
 	ohpl_a5_button_init(&mS);
 }
 
@@ -90,6 +98,7 @@ cLuxProp_Button::~cLuxProp_Button()
 
 void cLuxProp_Button::SetCanBeSwitchedOn(bool abX)
 {
+	mbCanBeSwitchedOn = abX;
 	mS.can_on = abX;
 }
 
@@ -97,6 +106,7 @@ void cLuxProp_Button::SetCanBeSwitchedOn(bool abX)
 
 void cLuxProp_Button::SetCanBeSwitchedOff(bool abX)
 {
+	mbCanBeSwitchedOff = abX;
 	mS.can_off = abX;
 }
 
@@ -104,15 +114,22 @@ void cLuxProp_Button::SetCanBeSwitchedOff(bool abX)
 
 bool cLuxProp_Button::CanInteract(iPhysicsBody *apBody)
 {
-	return ohpl_a5_button_can_interact(&mS);
+	if(hpl::OhplBackendRustRequested()) return ohpl_a5_button_can_interact(&mS);
+	return ohpl_ga4b_button_can_interact(mbSwitchedOn, mbCanBeSwitchedOn, mbCanBeSwitchedOff);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxProp_Button::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	OhplGa4Run run(this);
-	ohpl_a5_button_interact(&mS, run.Sink());
+	if(hpl::OhplBackendRustRequested())
+	{
+		OhplGa4Run run(this);
+		ohpl_a5_button_interact(&mS, run.Sink());
+		return true;
+	}
+
+	SetSwitchedOn(!mbSwitchedOn, true);
 
 	return true;
 }
@@ -121,7 +138,7 @@ bool cLuxProp_Button::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 void cLuxProp_Button::OnSetupAfterLoad(cWorld *apWorld)
 {
-	
+
 }
 
 //-----------------------------------------------------------------------
@@ -156,16 +173,19 @@ eLuxFocusCrosshair cLuxProp_Button::GetFocusCrosshair(iPhysicsBody *apBody, cons
 
 void cLuxProp_Button::SetSwitchedOn(bool abX, bool abUseEffects)
 {
-	OhplGa4Run run(this);
-	ohpl_a5_button_set_on(&mS, abX, abUseEffects, run.Sink());
-}
+	if(hpl::OhplBackendRustRequested())
+	{
+		OhplGa4Run run(this);
+		ohpl_a5_button_set_on(&mS, abX, abUseEffects, run.Sink());
+		return;
+	}
 
-//-----------------------------------------------------------------------
+	int lConnState;
+	if(ohpl_ga4b_button_set(&mbSwitchedOn, abX, &lConnState)==false) return;
 
-void cLuxProp_Button::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
-{
-	OhplGa4Run run(this);
-	ohpl_a5_button_conn(&mS, alState, run.Sink());
+	ConnectionStateChange(lConnState);
+
+	SetEffectsActive(mbSwitchedOn, abUseEffects);
 }
 
 //-----------------------------------------------------------------------
@@ -183,6 +203,22 @@ void cLuxProp_Button::Ga4ApplyOp(const OhplGa4Op &aOp)
 	default:
 		iLuxProp::Ga4ApplyOp(aOp);
 	}
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_Button::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
+{
+	if(hpl::OhplBackendRustRequested())
+	{
+		OhplGa4Run run(this);
+		ohpl_a5_button_conn(&mS, alState, run.Sink());
+		return;
+	}
+
+	int lSwitch = ohpl_ga4b_button_conn_state(alState);
+	if(lSwitch == 1)		SetSwitchedOn(true, true);
+	else if(lSwitch == 0)	SetSwitchedOn(false, true);
 }
 
 //-----------------------------------------------------------------------
@@ -225,9 +261,16 @@ void cLuxProp_Button::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	pData->mbSwitchedOn = mS.on;
-	pData->mbCanBeSwitchedOn = mS.can_on;
-	pData->mbCanBeSwitchedOff = mS.can_off;
+	if(hpl::OhplBackendRustRequested())
+	{
+		pData->mbSwitchedOn = mS.on;
+		pData->mbCanBeSwitchedOn = mS.can_on;
+		pData->mbCanBeSwitchedOff = mS.can_off;
+		return;
+	}
+	kCopyToVar(pData,mbSwitchedOn);
+	kCopyToVar(pData,mbCanBeSwitchedOn);
+	kCopyToVar(pData,mbCanBeSwitchedOff);
 }
 
 //-----------------------------------------------------------------------
@@ -238,12 +281,19 @@ void cLuxProp_Button::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//Init
 	super_class::LoadFromSaveData(apSaveData);
 	cLuxProp_Button_SaveData *pData = static_cast<cLuxProp_Button_SaveData*>(apSaveData);
-	
+
 	//////////////////
 	//Set variables
-	mS.on = pData->mbSwitchedOn;
-	mS.can_on = pData->mbCanBeSwitchedOn;
-	mS.can_off = pData->mbCanBeSwitchedOff;
+	if(hpl::OhplBackendRustRequested())
+	{
+		mS.on = pData->mbSwitchedOn;
+		mS.can_on = pData->mbCanBeSwitchedOn;
+		mS.can_off = pData->mbCanBeSwitchedOff;
+		return;
+	}
+	kCopyFromVar(pData,mbSwitchedOn);
+	kCopyFromVar(pData,mbCanBeSwitchedOn);
+	kCopyFromVar(pData,mbCanBeSwitchedOff);
 }
 
 //-----------------------------------------------------------------------

@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -52,10 +52,16 @@ void cLuxPropLoader_OilBarrel::LoadVariables(iLuxProp *apProp, cXmlElement *apRo
 	///////////////////////////
 	// General
 	//pOilBarrel->mSwingDoorData.mfMoveMaxSpeed = GetVarFloat("MoveMaxSpeed", 13.5f);
-	OhplGa4VarsAdapter vars(this);
-	vars.Slot(kOhplA5Slot_OilFill, pOilBarrel->msFillSound)
-		.Slot(kOhplA5Slot_OilEmpty, pOilBarrel->msEmptySound);
-	ohpl_a5_oil_load(vars.Vars());
+	if(hpl::OhplBackendRustRequested())
+	{
+		OhplGa4VarsAdapter vars(this);
+		vars.Slot(kOhplA5Slot_OilFill, pOilBarrel->msFillSound)
+			.Slot(kOhplA5Slot_OilEmpty, pOilBarrel->msEmptySound);
+		ohpl_a5_oil_load(vars.Vars());
+		return;
+	}
+	pOilBarrel->msFillSound = GetVarString("FillSound", "");
+	pOilBarrel->msEmptySound = GetVarString("EmptySound", "");
 }
 
 //-----------------------------------------------------------------------
@@ -77,6 +83,7 @@ void cLuxPropLoader_OilBarrel::LoadInstanceVariables(iLuxProp *apProp, cResource
 
 cLuxProp_OilBarrel::cLuxProp_OilBarrel(const tString &asName, int alID, cLuxMap *apMap) : iLuxProp(asName,alID,apMap, eLuxPropType_OilBarrel)
 {
+	mbAmountCalculated = false;
 	mS.calculated = false;
 }
 
@@ -103,16 +110,55 @@ bool cLuxProp_OilBarrel::CanInteract(iPhysicsBody *apBody)
 
 bool cLuxProp_OilBarrel::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	OhplA5OilHost host = { this, &HostHardMode, &HostLampOil, &HostTotalOil };
-	OhplGa4Run run(this);
-	return ohpl_a5_oil_interact(&mS, &host, run.Sink());
+	if(hpl::OhplBackendRustRequested())
+	{
+		OhplA5OilHost host = { this, &HostHardMode, &HostLampOil, &HostTotalOil };
+		OhplGa4Run run(this);
+		return ohpl_a5_oil_interact(&mS, &host, run.Sink());
+	}
+
+	CalculateOilAmount();
+
+	OhplGa4bOilFill fill;
+	ohpl_ga4b_oil_fill(mfOilAmount, gpBase->mpPlayer->GetLampOil(), &fill);
+
+	if(fill.result == kOhplGa4bOil_Empty)
+	{
+		PlaySound("EmptyBarell",msEmptySound, true, false);
+		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Empty"), 0);
+		return false;
+	}
+	else if(fill.result == kOhplGa4bOil_Full)
+	{
+		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_LanternFull"), 0);
+		return false;
+	}
+
+	mfOilAmount = fill.barrel;
+	gpBase->mpPlayer->SetLampOil(fill.lamp);
+
+	PlaySound("FillLantern",msFillSound, true, false);
+
+	if(fill.tier == 0)
+	{
+		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Full"), 0);
+	}
+	else
+	{
+		if(fill.tier == 1)		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_025"),0);
+		else if(fill.tier == 2)	gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_050"),0);
+		else if(fill.tier == 3)	gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_075"),0);
+		else					gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_100"),0);
+	}
+
+	return true;
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxProp_OilBarrel::OnSetupAfterLoad(cWorld *apWorld)
 {
-	
+
 }
 
 //-----------------------------------------------------------------------
@@ -126,7 +172,7 @@ void cLuxProp_OilBarrel::OnResetProperties()
 
 void cLuxProp_OilBarrel::UpdatePropSpecific(float afTimeStep)
 {
-	
+
 }
 
 //-----------------------------------------------------------------------
@@ -147,9 +193,18 @@ eLuxFocusCrosshair cLuxProp_OilBarrel::GetFocusCrosshair(iPhysicsBody *apBody, c
 
 tWString cLuxProp_OilBarrel::GetFocusText()
 {
-	OhplA5OilHost host = { this, &HostHardMode, &HostLampOil, &HostTotalOil };
 	tWString sText;
-	int lTier = ohpl_a5_oil_focus_tier(&mS, &host);
+	int lTier;
+	if(hpl::OhplBackendRustRequested())
+	{
+		OhplA5OilHost host = { this, &HostHardMode, &HostLampOil, &HostTotalOil };
+		lTier = ohpl_a5_oil_focus_tier(&mS, &host);
+	}
+	else
+	{
+		CalculateOilAmount();
+		lTier = ohpl_ga4b_oil_focus_tier(mfOilAmount);
+	}
 	if(lTier == 0)			sText = kTranslate("Game", "OilBarrel_FocusText_Empty");
 	else if(lTier == 1)		sText = kTranslate("Game", "OilBarrel_FocusText_025");
 	else if(lTier == 2)		sText = kTranslate("Game", "OilBarrel_FocusText_050");
@@ -163,7 +218,7 @@ tWString cLuxProp_OilBarrel::GetFocusText()
 
 void cLuxProp_OilBarrel::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
 {
-	
+
 }
 
 //-----------------------------------------------------------------------
@@ -237,6 +292,39 @@ void cLuxProp_OilBarrel::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 //-----------------------------------------------------------------------
 
+void cLuxProp_OilBarrel::CalculateOilAmount()
+{
+	if(mbAmountCalculated) return;
+
+	//////////////////////
+	// HARDMODE
+	if (gpBase->mbHardMode)
+	{
+		mfOilAmount = 10.0f;
+		mbAmountCalculated = true;
+		return;
+	}
+
+	mfOilAmount = 10.0f; //Base amount
+
+	float fTotalOil = gpBase->mpPlayer->GetLampOil();
+
+	//Iterate items and add amount and count to total
+	for(int i=0; i<gpBase->mpInventory->GetItemNum(); ++i)
+	{
+		cLuxInventory_Item *pItem = gpBase->mpInventory->GetItem(i);
+		if(pItem->GetType() != eLuxItemType_LampOil) continue;
+
+		fTotalOil += pItem->GetAmount() * (float)pItem->GetCount();
+	}
+
+	mfOilAmount = ohpl_ga4b_oil_amount(fTotalOil);
+
+    mbAmountCalculated = true;
+}
+
+//-----------------------------------------------------------------------
+
 //////////////////////////////////////////////////////////////////////////
 // SAVE DATA STUFF
 //////////////////////////////////////////////////////////////////////////
@@ -268,9 +356,15 @@ void cLuxProp_OilBarrel::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	pData->mbAmountCalculated = mS.calculated;
-	pData->mfOilAmount = mS.amount;
-	
+	if(hpl::OhplBackendRustRequested())
+	{
+		pData->mbAmountCalculated = mS.calculated;
+		pData->mfOilAmount = mS.amount;
+		return;
+	}
+	kCopyToVar(pData, mbAmountCalculated);
+	kCopyToVar(pData, mfOilAmount);
+
 }
 
 //-----------------------------------------------------------------------
@@ -281,11 +375,13 @@ void cLuxProp_OilBarrel::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//Init
 	super_class::LoadFromSaveData(apSaveData);
 	cLuxProp_OilBarrel_SaveData *pData = static_cast<cLuxProp_OilBarrel_SaveData*>(apSaveData);
-	
+
 	//////////////////
 	//Set variables
+	kCopyFromVar(pData, mbAmountCalculated);
 	mS.calculated = pData->mbAmountCalculated;
 	mS.amount = pData->mfOilAmount;
+	kCopyFromVar(pData, mfOilAmount);
 }
 
 //-----------------------------------------------------------------------

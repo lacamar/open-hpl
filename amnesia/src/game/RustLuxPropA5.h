@@ -5,6 +5,7 @@
 // the OhplGa4Sink of RustLuxProp.h and are applied by the prop's Ga4ApplyOp.
 
 #include "RustLuxProp.h"
+#include "impl/RustBackends.h"
 
 struct OhplA5Button
 {
