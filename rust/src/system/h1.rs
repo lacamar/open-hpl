@@ -90,6 +90,11 @@ pub extern "C" fn ohpl_h1_ser_flush() {
         }
         // SAFETY: strings are NUL-terminated (libstdc++ strings and literals); the table ends in T_NULL.
         unsafe {
+            let table = crate::luxsave::a8_table::refine(
+                p.name as *const c_char,
+                p.parent as *const c_char,
+                table,
+            );
             ohpl_ser_register(
                 p.name as *const c_char,
                 p.parent as *const c_char,

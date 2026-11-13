@@ -18,6 +18,7 @@
  */
 
 #include "LuxProp_LevelDoor.h"
+#include "RustLuxSaveA8.h"
 
 #include "LuxMapHandler.h"
 #include "LuxSavedGame.h"
@@ -301,14 +302,13 @@ void cLuxProp_LevelDoor::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyToVar(pData, msStartPos);
 	kCopyToVar(pData, msMapFile);
 
-	if(hpl::OhplBackendRustRequested()) pData->mbLocked = mS.locked;
+	if(hpl::OhplBackendRustRequested()) ohpl_a8_door_save(&mS, pData);
 	else kCopyToVar(pData, mbLocked);
 	kCopyToVar(pData, msLockedSound);
 	kCopyToVar(pData, msLockedTextCat);
 	kCopyToVar(pData, msLockedTextEntry);
 
-	if(hpl::OhplBackendRustRequested()) pData->mbShowStats = mS.show_stats;
-	else kCopyToVar(pData, mbShowStats);
+	if(!hpl::OhplBackendRustRequested()) kCopyToVar(pData, mbShowStats);
 }
 
 //-----------------------------------------------------------------------
@@ -327,13 +327,12 @@ void cLuxProp_LevelDoor::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyFromVar(pData, msMapFile);
 
 	kCopyFromVar(pData, mbLocked);
-	mS.locked = pData->mbLocked;
+	if(hpl::OhplBackendRustRequested()) ohpl_a8_door_load(&mS, pData);
 	kCopyFromVar(pData, msLockedSound);
 	kCopyFromVar(pData, msLockedTextCat);
 	kCopyFromVar(pData, msLockedTextEntry);
 
 	kCopyFromVar(pData, mbShowStats);
-	mS.show_stats = pData->mbShowStats;
 }
 
 //-----------------------------------------------------------------------

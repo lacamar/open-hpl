@@ -18,6 +18,7 @@
  */
 
 #include "LuxProp_OilBarrel.h"
+#include "RustLuxSaveA8.h"
 
 #include "LuxPlayer.h"
 #include "LuxMessageHandler.h"
@@ -358,8 +359,7 @@ void cLuxProp_OilBarrel::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	//Set variables
 	if(hpl::OhplBackendRustRequested())
 	{
-		pData->mbAmountCalculated = mS.calculated;
-		pData->mfOilAmount = mS.amount;
+		ohpl_a8_oil_save(&mS, pData);
 		return;
 	}
 	kCopyToVar(pData, mbAmountCalculated);
@@ -379,8 +379,7 @@ void cLuxProp_OilBarrel::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//////////////////
 	//Set variables
 	kCopyFromVar(pData, mbAmountCalculated);
-	mS.calculated = pData->mbAmountCalculated;
-	mS.amount = pData->mfOilAmount;
+	if(hpl::OhplBackendRustRequested()) ohpl_a8_oil_load(&mS, pData);
 	kCopyFromVar(pData, mfOilAmount);
 }
 
