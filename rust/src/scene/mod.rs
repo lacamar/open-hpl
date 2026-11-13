@@ -23,6 +23,7 @@ mod ffi_node;
 mod ffi_particles;
 mod ffi_world;
 mod h10;
+mod h12_psload;
 mod lensflare;
 mod light;
 mod meshentity;
@@ -36,6 +37,8 @@ mod soundentity;
 mod tests;
 #[cfg(test)]
 mod tests_h10;
+#[cfg(test)]
+mod tests_h12;
 #[cfg(test)]
 mod tests_light;
 #[cfg(test)]

@@ -36,6 +36,8 @@
 #include "physics/PhysicsBody.h"
 
 #include "scene/World.h"
+#include "scene/RustSceneH12.h"
+#include "impl/RustBackends.h"
 
 #include "math/Math.h"
 
@@ -190,8 +192,150 @@ namespace hpl {
 
 	/////////////////////////
 
-	void cParticleEmitterData_UserData::LoadFromElement(cXmlElement *apElement)
+	static const char* H12Attr(void *apCtx, const char *asName)
 	{
+		return static_cast<cXmlElement*>(apCtx)->GetAttribute(asName);
+	}
+
+	void cParticleEmitterData_UserData::LoadFromElementRust(cXmlElement *apElement, bool abLoadMaterials)
+	{
+		OhplH12PsBox *pBox = ohpl_h12_ps_parse(H12Attr, apElement);
+		const OhplH12PsDesc &d = *ohpl_h12_ps_desc(pBox);
+		const OhplPeParams &p = d.mParams;
+
+		msName = d.msName;
+		mPEType = (ePEType)p.mlPEType;
+		mlMaxParticleNum = d.mlMaxParticleNum;
+		mbRespawn = d.mbRespawn;
+		mfParticlesPerSecond = p.mfParticlesPerSecond;
+		mfStartTimeOffset = p.mfStartTimeOffset;
+		mfWarmUpTime = d.mfWarmUpTime;
+		mfWarmUpStepsPerSec = d.mfWarmUpStepsPerSec;
+		mfMinPauseLength = p.mfMinPauseLength;
+		mfMaxPauseLength = p.mfMaxPauseLength;
+		mfMinPauseInterval = p.mfMinPauseInterval;
+		mfMaxPauseInterval = p.mfMaxPauseInterval;
+		mvPosOffset = d.mvPosOffset;
+		mvAngleOffset = d.mvAngleOffset;
+
+		mvSubDiv = d.mvSubDiv;
+		mSubDivType = (ePESubDivType)p.mlSubDivType;
+
+		if(abLoadMaterials)
+		{
+			tString sMaterial = d.msMaterial;
+			if(d.mlMaterialNum <= 1)
+			{
+				sMaterial = cString::SetFileExt(sMaterial,"mat");
+				cMaterial *pMaterial = mpResources->GetMaterialManager()->CreateMaterial(sMaterial);
+				if(pMaterial) mvMaterials.push_back(pMaterial);
+			}
+			else
+			{
+				for(int i=1; i<d.mlMaterialNum+1; ++i)
+				{
+					tString sFileName;
+					if(i>9)		sFileName = sMaterial + cString::ToString(i);
+					else		sFileName = sMaterial + "0"+cString::ToString(i);
+
+					sFileName = cString::SetFileExt(sFileName,"mat");
+
+					cMaterial *pMaterial = mpResources->GetMaterialManager()->CreateMaterial(sFileName);
+					if(pMaterial) mvMaterials.push_back(pMaterial);
+				}
+			}
+		}
+
+		if(d.mbHasSubDiv==false && mvMaterials.empty()==false)
+			mvSubDiv = mvMaterials[0]->GetUVSubDivisions();
+
+		mfFrameStep = ohpl_h12_ps_frame_step(d.mfAnimationLength, (uint32_t)mvMaterials.size());
+		mfMaxFrameTime = ohpl_h12_ps_max_frame_time((uint32_t)mvMaterials.size());
+
+		mStartPosType = (ePEStartPosType)p.mlStartPosType;
+		mvMinStartPos = p.mvMinStartPos;
+		mvMaxStartPos = p.mvMaxStartPos;
+		mvMinStartAngles = p.mvMinStartAngles;
+		mvMaxStartAngles = p.mvMaxStartAngles;
+		mfMinStartRadius = p.mfMinStartRadius;
+		mfMaxStartRadius = p.mfMaxStartRadius;
+
+		mStartVelType = (ePEStartPosType)p.mlStartVelType;
+		mvMinStartVel = p.mvMinStartVel;
+		mvMaxStartVel = p.mvMaxStartVel;
+		mvMinStartVelAngles = p.mvMinStartVelAngles;
+		mvMaxStartVelAngles = p.mvMaxStartVelAngles;
+		mfMinStartVelSpeed = p.mfMinStartVelSpeed;
+		mfMaxStartVelSpeed = p.mfMaxStartVelSpeed;
+		mfMinSpeedMultiply = p.mfMinSpeedMultiply;
+		mfMaxSpeedMultiply = p.mfMaxSpeedMultiply;
+		mvMinStartAcc = p.mvMinStartAcc;
+		mvMaxStartAcc = p.mvMaxStartAcc;
+		mfMinVelMaximum = p.mfMinVelMaximum;
+		mfMaxVelMaximum = p.mfMaxVelMaximum;
+		mbUsesDirection = p.mbUsesDirection;
+		mGravityType = (ePEGravityType)p.mlGravityType;
+		mvGravityAcc = p.mvGravityAcc;
+		mCoordSystem = (eParticleEmitterCoordSystem)p.mlCoordSystem;
+
+		mbUsePartSpin = p.mbUsePartSpin;
+		mPartSpinType = (ePEPartSpinType)p.mlPartSpinType;
+		mfMinSpinRange = p.mfMinSpinRange;
+		mfMaxSpinRange = p.mfMaxSpinRange;
+		mbUseRevolution = p.mbUseRevolution;
+		mvMinRevVel = p.mvMinRevVel;
+		mvMaxRevVel = p.mvMaxRevVel;
+
+		mfMinLifeSpan = p.mfMinLifeSpan;
+		mfMaxLifeSpan = p.mfMaxLifeSpan;
+		mDeathType = ePEDeathType_Age;
+		msDeathPS = d.msDeathPS;
+
+		mDrawType = (eParticleEmitterType)p.mlDrawType;
+		mvMinStartSize = p.mvMinStartSize;
+		mvMaxStartSize = p.mvMaxStartSize;
+		mfStartRelSize = p.mfStartRelSize;
+		mfMiddleRelSize = p.mfMiddleRelSize;
+		mfMiddleRelSizeTime = p.mfMiddleRelSizeTime;
+		mfMiddleRelSizeLength = p.mfMiddleRelSizeLength;
+		mfEndRelSize = p.mfEndRelSize;
+		mbMultiplyRGBWithAlpha = p.mbMultiplyRGBWithAlpha;
+
+		mMinStartColor = p.mMinStartColor;
+		mMaxStartColor = p.mMaxStartColor;
+		mStartRelColor = p.mStartRelColor;
+		mMiddleRelColor = p.mMiddleRelColor;
+		mfMiddleRelColorTime = p.mfMiddleRelColorTime;
+		mfMiddleRelColorLength = p.mfMiddleRelColorLength;
+		mEndRelColor = p.mEndRelColor;
+
+		mbCollides = p.mbCollides;
+		mfMinBounceAmount = p.mfMinBounceAmount;
+		mfMaxBounceAmount = p.mfMaxBounceAmount;
+		mlMinCollisionMax = p.mlMinCollisionMax;
+		mlMaxCollisionMax = p.mlMaxCollisionMax;
+		mlCollisionUpdateRate = p.mlCollisionUpdateRate;
+
+		mbUseBeamNoise = d.mbUseBeamNoise;
+		mlLowFreqPoints = d.mlLowFreqPoints;
+		mlHighFreqPoints = d.mlHighFreqPoints;
+		mvMinLowFreqNoise = d.mvMinLowFreqNoise;
+		mvMaxLowFreqNoise = d.mvMaxLowFreqNoise;
+		mvMinHighFreqNoise = d.mvMinHighFreqNoise;
+		mvMaxHighFreqNoise = d.mvMaxHighFreqNoise;
+
+		ohpl_h12_ps_free(pBox);
+		BuildRustParams();
+	}
+
+	void cParticleEmitterData_UserData::LoadFromElement(cXmlElement *apElement, bool abLoadMaterials)
+	{
+		if(OhplBackendRustRequested())
+		{
+			LoadFromElementRust(apElement, abLoadMaterials);
+			return;
+		}
+
 		///////// GENERAL /////////////
 		msName =  cString::ToString(apElement->GetAttribute("Name"),"");
 
@@ -231,7 +375,10 @@ namespace hpl {
 		mvSubDiv = cString::ToVector2l(apElement->GetAttribute("SubDiv"),1);
 		mSubDivType = GetSubDivType(apElement->GetAttribute("SubDivType"));
 		
-		if(lMaterialNum <= 1)
+		if(abLoadMaterials==false)
+		{
+		}
+		else if(lMaterialNum <= 1)
 		{
 			sMaterial = cString::SetFileExt(sMaterial,"mat");
 			cMaterial *pMaterial = mpResources->GetMaterialManager()->CreateMaterial(sMaterial);
