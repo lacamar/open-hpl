@@ -19,6 +19,8 @@
 
 #include "graphics/FontData.h"
 #include "graphics/RustGraphics.h"
+#include "graphics/RustGraphicsH5b.h"
+#include "impl/RustBackends.h"
 #include <stddef.h>
 #include <stdexcept>
 #include <stdarg.h>
@@ -65,6 +67,8 @@ namespace hpl {
 	{
 		mpLowLevelGraphics = apLowLevelGraphics;
 		mpResources = NULL;
+		mlRs = OhplBackendRustRequested() ? ohpl_h5b_font_new() : 0;
+		mbRsDirty = true;
 	}
 	
 	//-----------------------------------------------------------------------
@@ -75,6 +79,24 @@ namespace hpl {
 		{
 			if(mvGlyphs[i]) hplDelete(mvGlyphs[i]);
 		}
+		if(mlRs) ohpl_h5b_font_free(mlRs);
+	}
+
+	void iFontData::SyncRs()
+	{
+		std::vector<OhplH5bGlyph> vGlyphs(mvGlyphs.size());
+		std::vector<unsigned char> vPresent(mvGlyphs.size(), 0);
+		for(size_t i = 0; i < mvGlyphs.size(); ++i)
+		{
+			cGlyph *pGlyph = mvGlyphs[i];
+			if(pGlyph == NULL) continue;
+			OhplH5bGlyph g = { pGlyph->mpGuiGfx, { pGlyph->mvOffset.x, pGlyph->mvOffset.y }, { pGlyph->mvSize.x, pGlyph->mvSize.y }, pGlyph->mfAdvance };
+			vGlyphs[i] = g;
+			vPresent[i] = 1;
+		}
+		OhplH5bFontHdr hdr = { mlFirstChar, mlLastChar, mfHeight, { mvSizeRatio.x, mvSizeRatio.y } };
+		ohpl_h5b_font_set(mlRs, &hdr, vGlyphs.data(), vPresent.data(), vGlyphs.size());
+		mbRsDirty = false;
 	}
 
 	
@@ -218,6 +240,11 @@ namespace hpl {
 		return g;
 	}
 
+	static void PushRowRs(void* apCtx, const uint32_t* apRow, size_t alLen)
+	{
+		((tWStringVec*)apCtx)->push_back(tWString((const wchar_t*)apRow, alLen));
+	}
+
 	static void PushRow(void* apCtx, const wchar_t* apRow, size_t alLen)
 	{
 		((tWStringVec*)apCtx)->push_back(tWString(apRow, alLen));
@@ -226,6 +253,13 @@ namespace hpl {
 	void iFontData::GetWordWrapRows(float afLength,float afFontHeight,cVector2f avSize,
 							const tWString& asString,tWStringVec *apRowVec)
 	{
+		if(mlRs)
+		{
+			if(mbRsDirty) SyncRs();
+			if(ohpl_h5b_font_word_wrap(mlRs, afLength, avSize.x, (const uint32_t*)asString.data(), asString.size(), PushRowRs, apRowVec)==false)
+				throw std::out_of_range("basic_string::substr");
+			return;
+		}
 		OhplGlyphs g = GlyphView(mvGlyphs, mlFirstChar, mlLastChar);
 		if(ohpl_font_word_wrap(&g, afLength, avSize.x, asString.data(), asString.size(), PushRow, apRowVec)==false)
 			throw std::out_of_range("basic_string::substr");
@@ -235,6 +269,13 @@ namespace hpl {
 	
 	float iFontData::GetLength(const cVector2f& avSize,const wchar_t* sText)
 	{
+		if(mlRs)
+		{
+			if(mbRsDirty) SyncRs();
+			size_t lLen = 0;
+			while(sText[lLen] != 0) ++lLen;
+			return ohpl_h5b_font_length(mlRs, avSize.x, (const uint32_t*)sText, lLen);
+		}
 		int lCount=0;
 		float fLength =0;
 		while(sText[lCount] != 0)
@@ -296,6 +337,7 @@ namespace hpl {
 		float fAdvance = vM[4];
 
 		cGlyph* pGlyph = hplNew( cGlyph,(pGuiGfx,vOffset,vSize,fAdvance));
+		mbRsDirty = true;
 
 		return pGlyph;
 	}
@@ -305,6 +347,7 @@ namespace hpl {
 	void iFontData::AddGlyph(cGlyph *apGlyph)
 	{
 		mvGlyphs.push_back(apGlyph);
+		mbRsDirty = true;
 	}
 
 	

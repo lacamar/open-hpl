@@ -12,6 +12,17 @@ pub struct Glyphs {
     pub advance_offset: usize,
 }
 
+/// Anything that can measure a wide string in glyph advances.
+pub trait GlyphSet {
+    fn length(&self, size_x: f32, text: &[u32]) -> f32;
+}
+
+impl GlyphSet for Glyphs {
+    fn length(&self, size_x: f32, text: &[u32]) -> f32 {
+        Glyphs::length(self, size_x, text)
+    }
+}
+
 impl Glyphs {
     fn table(&self) -> &[*const u8] {
         if self.glyphs.is_null() {
@@ -59,7 +70,7 @@ fn row(s: &[u32], start: usize, count: usize) -> Option<(usize, usize)> {
 
 /// Rows of `s` as `(start, len)` ranges; `None` where the C++ `substr` throws.
 pub fn word_wrap_rows(
-    glyphs: &Glyphs,
+    glyphs: &impl GlyphSet,
     max_length: f32,
     size_x: f32,
     s: &[u32],
@@ -69,7 +80,11 @@ pub fn word_wrap_rows(
     let sub = |first: u32, count: u32| row(s, first as usize, count as usize);
     let measure = |first: u32, count: u32| -> Option<f32> {
         let (a, l) = sub(first, count)?;
-        Some(glyphs.length(size_x, s.get(a..a.checked_add(l)?)?))
+        Some(GlyphSet::length(
+            glyphs,
+            size_x,
+            s.get(a..a.checked_add(l)?)?,
+        ))
     };
 
     let mut rows = 0usize;
