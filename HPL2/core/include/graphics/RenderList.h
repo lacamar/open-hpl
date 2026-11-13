@@ -22,6 +22,7 @@
 
 #include "graphics/GraphicsTypes.h"
 #include "graphics/RustRender.h"
+#include "graphics/RustRenderH8.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 
@@ -80,6 +81,7 @@ namespace hpl {
 
 	private:
 		void ApplyOrder(eRenderListType aType, const tRenderableVec& avSource);
+		void AddObjectRust(iRenderable *apObject, eRenderableType aRenderType);
 
 		float mfFrameTime;
 		cFrustum *mpFrustum;

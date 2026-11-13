@@ -34,6 +34,8 @@
 #include "math/Math.h"
 #include "math/Frustum.h"
 
+#include "impl/RustBackends.h"
+
 #include <algorithm>
 #include <cstring>
 
@@ -87,6 +89,12 @@ namespace hpl {
 			for(int i=0; i<eLensFlareType_MultiIris; ++i)
 				if(pFlare->IsFlareActive((eLensFlareType)i)) AddObject(pFlare->GetTypeRenderable((eLensFlareType)i));
 			if(pFlare->IsFlareActive(eLensFlareType_MultiIris)) mvMultiIrisFlares.push_back(pFlare);
+			return;
+		}
+
+		if(OhplBackendRustRequested())
+		{
+			AddObjectRust(apObject, renderType);
 			return;
 		}
 
@@ -203,6 +211,73 @@ namespace hpl {
 				}
 			}
 		}
+	}
+
+	void cRenderList::AddObjectRust(iRenderable *apObject, eRenderableType aRenderType)
+	{
+		const int lFrame = iRenderer::GetRenderFrameCount();
+		cMaterial *pMaterial = apObject->GetMaterial();
+		iMaterialType *pMaterialType = pMaterial ? pMaterial->GetType() : NULL;
+
+		OhplH8GateIn gate;
+		gate.hasMaterial = pMaterial != NULL;
+		gate.hasType = pMaterialType != NULL;
+		gate.translucent = pMaterialType && pMaterialType->IsTranslucent();
+		gate.decal = pMaterialType && pMaterialType->IsDecal();
+		gate.frame = lFrame;
+		gate.materialFrame = pMaterial ? pMaterial->GetRenderFrameCount() : 0;
+		gate.objectFrame = apObject->GetRenderFrameCount();
+		const unsigned lGates = ohpl_h8_rl_gates(&gate);
+
+		if(lGates & eOhplH8Gate_MaterialUpdate)
+		{
+			pMaterial->SetRenderFrameCount(lFrame);
+			pMaterial->UpdateBeforeRendering(mfFrameTime);
+		}
+		if(lGates & eOhplH8Gate_ObjectUpdate)
+		{
+			apObject->SetRenderFrameCount(lFrame);
+			apObject->UpdateGraphicsForFrame(mfFrameTime);
+		}
+
+		if(lGates & eOhplH8Gate_ViewportUpdate)
+		{
+			if(apObject->UpdateGraphicsForViewport(mpFrustum,mfFrameTime)==false) return;
+			apObject->SetModelMatrixPtr(apObject->GetModelMatrix(mpFrustum));
+		}
+		else
+		{
+			apObject->SetModelMatrixPtr(apObject->GetModelMatrix(NULL));
+		}
+
+		cBoundingVolume *pBV = apObject->GetBoundingVolume();
+		OhplH8PostIn in;
+		in.renderType = aRenderType;
+		in.hasMaterial = gate.hasMaterial;
+		in.hasType = gate.hasType;
+		in.translucent = gate.translucent;
+		in.decal = gate.decal;
+		in.hasIllumTexture = pMaterial && pMaterial->GetTexture(eMaterialTexture_Illumination);
+		in.usesOcclusionQuery = apObject->UsesOcclusionQuery();
+		in.illumination = apObject->GetIlluminationAmount();
+		const cVector3f &vMin = pBV->GetMin(), &vMax = pBV->GetMax(), &vCenter = pBV->GetWorldCenter(), &vOrigin = mpFrustum->GetOrigin();
+		in.bvMin.x = vMin.x; in.bvMin.y = vMin.y; in.bvMin.z = vMin.z;
+		in.bvMax.x = vMax.x; in.bvMax.y = vMax.y; in.bvMax.z = vMax.z;
+		in.bvCenter.x = vCenter.x; in.bvCenter.y = vCenter.y; in.bvCenter.z = vCenter.z;
+		in.origin.x = vOrigin.x; in.origin.y = vOrigin.y; in.origin.z = vOrigin.z;
+		memcpy(&in.view, &mpFrustum->GetViewMatrix(), sizeof(OhplMat4));
+
+		OhplH8PostOut out;
+		ohpl_h8_rl_post(&in, &out);
+
+		apObject->SetViewSpaceZ(out.viewZ);
+		if(out.lists & eOhplH8List_Occlusion)	mvOcclusionQueryObjects.push_back(apObject);
+		if(out.lists & eOhplH8List_Light)		mvLights.push_back( static_cast<iLight*>(apObject) );
+		if(out.lists & eOhplH8List_Fog)			mvFogAreas.push_back( static_cast<cFogArea*>(apObject) );
+		if(out.lists & eOhplH8List_Decal)		mvDecalObjects.push_back(apObject);
+		if(out.lists & eOhplH8List_Trans)		mvTransObjects.push_back(apObject);
+		if(out.lists & eOhplH8List_Solid)		mvSolidObjects.push_back(apObject);
+		if(out.lists & eOhplH8List_Illum)		mvIllumObjects.push_back(apObject);
 	}
 
 	//-----------------------------------------------------------------------

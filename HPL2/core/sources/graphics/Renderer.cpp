@@ -27,6 +27,8 @@
 #include "system/String.h"
 
 #include "graphics/Graphics.h"
+#include "graphics/RustRenderH8.h"
+#include "impl/RustBackends.h"
 #include "graphics/Texture.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/MeshCreator.h"
@@ -1806,6 +1808,14 @@ namespace hpl {
 		if(afHalfFovTan ==0)	
 			afHalfFovTan = tan(apFrustum->GetFOV()*0.5f);
 		cMath::GetClipRectFromBV(clipRect, *pBV, apFrustum, avScreenSize, afHalfFovTan);
+
+		if(OhplBackendRustRequested())
+		{
+			OhplH8Rect rect = { clipRect.x, clipRect.y, clipRect.w, clipRect.h };
+			ohpl_h8_clip_pad(&rect, avScreenSize.x, avScreenSize.y, afHalfFovTan);
+			clipRect.x = rect.x; clipRect.y = rect.y; clipRect.w = rect.w; clipRect.h = rect.h;
+			return clipRect;
+		}
 
 		//Add 20% padding on clip rect
 		int lXInc = (int)((float)clipRect.w*afHalfFovTan);
