@@ -1658,6 +1658,7 @@ void cLuxMap::DumpA7(const char *asFile, const char *asLabel)
 	std::ofstream os(asFile, std::ios::app);
 	tString sTmp = tString(asFile) + ".tmp";
 	os << "== map " << msName << " " << asLabel << "\n";
+	Log("A7 map dump '%s' %s backend=%s\n", msName.c_str(), asLabel, mpA7 ? "rust" : "cpp");
 
 	int lIdx = 0;
 	cLuxEntityIterator it = GetEntityIterator();

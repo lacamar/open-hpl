@@ -1,3 +1,4 @@
+// min==max in the random-interval areas: libc rand() is shared with parallel cargo tests.
 // a7_harness cpp|rust: seeded op scripts through the std-container originals of cLuxMap (cpp) or the
 // Rust-owned map arena and area blocks (rust). Same driver, two backends; traces must be byte-equal.
 #include "RustLuxMapA7.h"
@@ -619,7 +620,7 @@ static void Areas(bool rust, uint64_t seed)
 		case kOhplA7Insanity:
 		{
 			OhplA7Insanity &s = rust ? *static_cast<OhplA7Insanity*>(pod) : ins;
-			s.checkTimeMin = 0.1f; s.checkTimeMax = 0.4f; s.checkCollisionCount = r.f(0.3f);
+			s.checkTimeMin = 0.25f; s.checkTimeMax = 0.25f; s.checkCollisionCount = r.f(0.3f);
 			for(int i = 0; i < 60; ++i)
 			{
 				float step = r.f(0.05f);
@@ -631,7 +632,7 @@ static void Areas(bool rust, uint64_t seed)
 		case kOhplA7Slime:
 		{
 			OhplA7Slime &s = rust ? *static_cast<OhplA7Slime*>(pod) : sl;
-			s.minCheckAttackTime = 0.2f; s.maxCheckAttackTime = 0.9f; s.checkCollisionCount = r.f(0.5f);
+			s.minCheckAttackTime = 0.5f; s.maxCheckAttackTime = 0.5f; s.checkCollisionCount = r.f(0.5f);
 			for(int i = 0; i < 60; ++i)
 			{
 				float step = r.f(0.08f);
@@ -777,6 +778,43 @@ static void Areas(bool rust, uint64_t seed)
 	ohpl_a7_free(ctx);
 }
 
+// cLuxMapHandler's map list: push_back, STLFindAndDelete, STLDeleteAll.
+static void Maps(bool rust, uint64_t seed)
+{
+	Rng r = { seed };
+	std::list<Obj*> ref;
+	OhplA7Ctx *c = rust ? ohpl_a7_new() : NULL;
+	if(rust) ohpl_a7_set_drop(c, kOhplA7Entity, Drop);
+	std::vector<Obj*> pool;
+	for(int i = 0; i < 60; ++i)
+	{
+		int k = r.n(5);
+		if(k < 2)
+		{
+			Obj *o = new Obj(kEnt, "map" + std::to_string(i));
+			pool.push_back(o);
+			if(rust) ohpl_a7_list_add(c, o); else ref.push_back(o);
+			T("load " + o->name);
+		}
+		else if(k < 4 && !pool.empty())
+		{
+			Obj *o = pool[r.n((int)pool.size())];
+			if(rust) ohpl_a7_list_destroy(c, o);
+			else { for(auto it = ref.begin(); it != ref.end(); ++it) if(*it == o) { ref.erase(it); break; } Drop(o); }
+			T("destroy " + o->name);
+		}
+		else
+		{
+			if(rust) ohpl_a7_destroy_entities(c);
+			else { for(Obj *o : ref) Drop(o); ref.clear(); }
+			T("reset");
+		}
+	}
+	if(rust) { ohpl_a7_destroy_entities(c); ohpl_a7_free(c); }
+	else for(Obj *o : ref) Drop(o);
+	for(Obj *o : pool) delete o;
+}
+
 int main(int argc, char **argv)
 {
 	bool rust = argc > 1 && strcmp(argv[1], "rust") == 0;
@@ -796,6 +834,13 @@ int main(int argc, char **argv)
 		gTrace.clear();
 		T("area seed " + std::to_string(seed));
 		Areas(rust, seed);
+		for(const std::string &s : gTrace) puts(s.c_str());
+	}
+	for(uint64_t seed = 1; seed <= 4; ++seed)
+	{
+		gTrace.clear();
+		T("maps seed " + std::to_string(seed));
+		Maps(rust, seed);
 		for(const std::string &s : gTrace) puts(s.c_str());
 	}
 	return 0;

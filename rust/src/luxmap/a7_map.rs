@@ -181,6 +181,16 @@ impl A7Map {
         }
     }
 
+    /// A plain address list (`cLuxMapHandler`'s maps): no name or id lookups.
+    pub fn list_add(&mut self, p: usize) {
+        self.ents.push_back(p);
+    }
+
+    /// `STLFindAndDelete` unlink half.
+    pub fn list_remove(&mut self, p: usize) {
+        find_remove(&mut self.ents, p);
+    }
+
     pub fn find_name(&self, name: &[u8]) -> usize {
         self.by_name.first_of(&string::to_lower(name)).unwrap_or(0)
     }

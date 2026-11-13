@@ -153,8 +153,17 @@ void cLuxDebugRenderCallback::OnPostTranslucentDraw(cRendererCallbackFunctions* 
 
 //-----------------------------------------------------------------------
 
+static void A7DropMap(void *p){ hplDelete(static_cast<cLuxMap*>(p)); }
+
 cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 {
+	mpA7Maps = NULL;
+	if(OhplBackendRustRequested())
+	{
+		mpA7Maps = ohpl_a7_new();
+		ohpl_a7_set_drop(mpA7Maps, kOhplA7Entity, A7DropMap);
+	}
+
 	//////////////////////////
 	//Create and setup view port
 	mpViewport = gpBase->mpEngine->GetScene()->CreateViewport();
@@ -223,7 +232,12 @@ cLuxMapHandler::~cLuxMapHandler()
 	hplDelete(mpSavedGame);
 	hplDelete(mpSavedGameMutex);
 	hplDelete(mpSoundCallback);
-	STLDeleteAll(mlstMaps);
+	if(mpA7Maps)
+	{
+		ohpl_a7_destroy_entities(mpA7Maps);
+		ohpl_a7_free(mpA7Maps);
+	}
+	else STLDeleteAll(mlstMaps);
 }
 
 //-----------------------------------------------------------------------
@@ -278,7 +292,8 @@ void cLuxMapHandler::Reset()
 	cSound *pSound = gpBase->mpEngine->GetSound();
 	pSound->GetSoundHandler()->StopAll(eSoundEntryType_All);
 
-	STLDeleteAll(mlstMaps);
+	if(mpA7Maps) ohpl_a7_destroy_entities(mpA7Maps);
+	else STLDeleteAll(mlstMaps);
 	mpCurrentMap = NULL;
 
 	ResumeSoundsAndMusic(); //Make sure that all sounds and music are resumed!
@@ -415,7 +430,8 @@ cLuxMap* cLuxMapHandler::LoadMap(const tString& asFileName, bool abLoadEntities)
 	
 	pMap->LoadFromFile(msMapFolder+asFileName, abLoadEntities);
 
-	mlstMaps.push_back(pMap);
+	if(mpA7Maps) ohpl_a7_list_add(mpA7Maps, pMap);
+	else mlstMaps.push_back(pMap);
 
 	return pMap;
 }
@@ -427,7 +443,8 @@ void cLuxMapHandler::DestroyMap(cLuxMap* apMap, bool abLoadingSaveGame)
 	//If the map do me destroyed is current, make sure it is not current
 	if(mpCurrentMap == apMap) SetCurrentMap(NULL, abLoadingSaveGame, false,"");
 
-    STLFindAndDelete(mlstMaps,apMap);
+	if(mpA7Maps) ohpl_a7_list_destroy(mpA7Maps, apMap);
+	else STLFindAndDelete(mlstMaps,apMap);
 }
 
 //-----------------------------------------------------------------------

@@ -17,6 +17,7 @@ SCRATCH="$WORK/scratch-$GAME"
 sed 's/ohpl-sweep\.sock/ohpl-a7sweep.sock/' "$REPO/scripts/soma-sweep.py" >"$WORK/a7-sweep.py"
 ln -sf "$REPO/scripts/headless-lock-holders.sh" "$WORK/headless-lock-holders.sh"
 export PYTHONPATH="$REPO/scripts"
+export OPENHPL_HEADLESS_SLOTS=4
 export OHPL_GAME="$GAME"
 VAR="OPENHPL_$(echo "$GAME" | tr a-z A-Z)_SCRATCH"; export "$VAR=$SCRATCH"
 fail=0
@@ -24,6 +25,10 @@ for map in "$@"; do
 	for impl in cpp rust; do
 		out="$WORK/dump-$GAME-$map-$impl.txt"; rm -f "$out"
 		OHPL_IMPL=$impl OHPL_A7_MAPDUMP="$out" python3 "$WORK/a7-sweep.py" --map "$map" --out "$WORK/res-$GAME-$map-$impl.json" >"$WORK/log-$GAME-$map-$impl.txt" 2>&1
+	done
+	for impl in cpp rust; do
+		lg=$(python3 -I -c 'import json,sys;print(list(json.load(open(sys.argv[1]))["maps"].values())[0].get("log",""))' "$WORK/res-$GAME-$map-$impl.json" 2>/dev/null)
+		grep -qa "dump '$map' load backend=$impl" "$lg" 2>/dev/null || { echo "BACKEND? $GAME $map $impl not confirmed in log"; fail=1; }
 	done
 	a="$WORK/dump-$GAME-$map-cpp.txt"; b="$WORK/dump-$GAME-$map-rust.txt"
 	if [ -s "$a" ] && python3 -I "$REPO/rust/tests/golden/A7/mapdump-diff.py" "$a" "$b" >/dev/null; then

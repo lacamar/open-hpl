@@ -567,8 +567,8 @@ fn areas(seed: u64) {
         match kind {
             T_INSANITY => {
                 if let super::a7_area::Pod::Insanity(s) = &mut a.pod {
-                    s.check_time_min = 0.1;
-                    s.check_time_max = 0.4;
+                    s.check_time_min = 0.25;
+                    s.check_time_max = 0.25;
                     s.check_collision_count = r.f(0.3);
                 }
                 for _ in 0..60 {
@@ -583,8 +583,8 @@ fn areas(seed: u64) {
             }
             T_SLIME => {
                 if let super::a7_area::Pod::Slime(s) = &mut a.pod {
-                    s.min_check_attack_time = 0.2;
-                    s.max_check_attack_time = 0.9;
+                    s.min_check_attack_time = 0.5;
+                    s.max_check_attack_time = 0.5;
                     s.check_collision_count = r.f(0.5);
                 }
                 for _ in 0..60 {
@@ -767,6 +767,47 @@ fn areas(seed: u64) {
     }
 }
 
+fn maps(seed: u64) {
+    let mut r = Rng(seed);
+    let mut m = A7Map::default();
+    m.set_foreign(
+        0,
+        Foreign {
+            drop: Some(drop_thunk),
+            ..Foreign::default()
+        },
+    );
+    let mut pool: Vec<(usize, String)> = Vec::new();
+    let mut objs: Vec<Box<u8>> = Vec::new();
+    for i in 0..60 {
+        let k = r.n(5);
+        if k < 2 {
+            let b = Box::new(0u8);
+            let p = std::ptr::from_ref::<u8>(&b) as usize;
+            objs.push(b);
+            let name = format!("map{i}");
+            LIVE.with(|l| l.borrow_mut().insert(p, (0, name.clone())));
+            m.list_add(p);
+            pool.push((p, name.clone()));
+            t(format!("load {name}"));
+        } else if k < 4 && !pool.is_empty() {
+            let (p, name) = pool[r.n(pool.len() as u32) as usize].clone();
+            m.list_remove(p);
+            drop_thunk(p as *mut c_void);
+            t(format!("destroy {name}"));
+        } else {
+            for p in m.list_snapshot(0) {
+                drop_thunk(p as *mut c_void);
+            }
+            m.after_destroy_all();
+            t("reset".to_string());
+        }
+    }
+    for p in m.list_snapshot(0) {
+        drop_thunk(p as *mut c_void);
+    }
+}
+
 fn trace_all() -> String {
     let mut out = String::new();
     for seed in 1..=24u64 {
@@ -801,6 +842,17 @@ fn trace_all() -> String {
         TRACE.with(|x| x.borrow_mut().clear());
         t(format!("area seed {seed}"));
         areas(seed);
+        TRACE.with(|x| {
+            for l in x.borrow().iter() {
+                out.push_str(l);
+                out.push('\n');
+            }
+        });
+    }
+    for seed in 1..=4u64 {
+        TRACE.with(|x| x.borrow_mut().clear());
+        t(format!("maps seed {seed}"));
+        maps(seed);
         TRACE.with(|x| {
             for l in x.borrow().iter() {
                 out.push_str(l);

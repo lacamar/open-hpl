@@ -71,6 +71,8 @@ extern "C" {
 	void ohpl_a7_destroy_entities(OhplA7Ctx *m);
 	void ohpl_a7_destroy_all(OhplA7Ctx *m);
 	void ohpl_a7_ent_add(OhplA7Ctx *m, void *p, void *typed, const char *name, size_t name_n, int id, bool is_enemy, bool is_area, bool is_sticky);
+	void ohpl_a7_list_add(OhplA7Ctx *m, void *p);
+	void ohpl_a7_list_destroy(OhplA7Ctx *m, void *p);
 	void *ohpl_a7_ent_find_name(OhplA7Ctx *m, const char *name, size_t n);
 	void *ohpl_a7_ent_find_id(OhplA7Ctx *m, int id);
 	bool ohpl_a7_ent_exists(OhplA7Ctx *m, const void *p);

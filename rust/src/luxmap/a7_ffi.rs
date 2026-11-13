@@ -161,6 +161,27 @@ pub unsafe extern "C" fn ohpl_a7_ent_add(
 }
 
 /// # Safety
+/// `m` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_a7_list_add(m: *mut Ctx, p: *mut c_void) {
+    mp!(m).list_add(p as usize);
+}
+
+/// Unlinks `p` if present and deletes it regardless (`STLFindAndDelete`).
+///
+/// # Safety
+/// `m` live; `p` a live object of the entity kind.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_a7_list_destroy(m: *mut Ctx, p: *mut c_void) {
+    let f = {
+        let mm = mp!(m);
+        mm.list_remove(p as usize);
+        mm.foreign(K_ENTITY)
+    };
+    drop_all(f, vec![p as usize]);
+}
+
+/// # Safety
 /// `m` live; `name` valid.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_a7_ent_find_name(
