@@ -1,5 +1,4 @@
-// L5 harness. Links the engine (libHPL2.a) with a recording OAL; OHPL_IMPL=cpp|rust picks the path,
-// so the same binary records the golden vectors (cpp) and checks the Rust path (rust).
+// L5 harness. Links the engine (libHPL2.a) with a recording OAL; checks the Rust backends against the golden vectors.
 //   gen oal                    OAL call trace and log lines of a fixed sound scenario
 //   gen bitmaps <file>...      "<file> <hash>" for each image
 //   gen video <ogv> <frames>   frame hashes

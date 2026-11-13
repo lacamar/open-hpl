@@ -379,7 +379,7 @@ namespace hpl {
 		c.fastloadMaterial = Out(aBuf.fastload);
 	}
 
-	cMesh* OhplL6LoadMesh(int aKind, const OhplL6Env& aEnv, const OhplL6Cfg& aCfg, const tWString& asFile, bool* apFallback)
+	cMesh* OhplL6LoadMesh(int aKind, const OhplL6Env& aEnv, const OhplL6Cfg& aCfg, const tWString& asFile)
 	{
 		Ctx c;
 		c.env = aEnv;
@@ -390,11 +390,10 @@ namespace hpl {
 		int lRet = aKind == eOhplL6KindMsh ? ohpl_l6_msh_mesh(&aCfg, &b, path)
 				: aKind == eOhplL6KindCollada ? ohpl_l6_collada_mesh(&aCfg, &b, path)
 				: ohpl_l6_assimp_mesh(&aCfg, &b, path);
-		if(apFallback) *apFallback = lRet == 2;
 		return lRet == 0 ? c.mesh : NULL;
 	}
 
-	cAnimation* OhplL6LoadAnim(int aKind, const OhplL6Env& aEnv, const OhplL6Cfg& aCfg, const tWString& asFile, bool* apFallback)
+	cAnimation* OhplL6LoadAnim(int aKind, const OhplL6Env& aEnv, const OhplL6Cfg& aCfg, const tWString& asFile)
 	{
 		Ctx c;
 		c.env = aEnv;
@@ -405,7 +404,6 @@ namespace hpl {
 		int lRet = aKind == eOhplL6KindMsh ? ohpl_l6_msh_anim(&aCfg, &b, path)
 				: aKind == eOhplL6KindCollada ? ohpl_l6_collada_anim(&aCfg, &b, path)
 				: ohpl_l6_assimp_anim(&aCfg, &b, path);
-		if(apFallback) *apFallback = lRet == 2;
 		return lRet == 0 ? c.result : NULL;
 	}
 

@@ -144,8 +144,8 @@ int ohpl_l6_assimp_anim(const OhplL6Cfg*, const OhplL6Builder*, OhplL6Str path);
 	void OhplL6FillCfg(OhplL6CfgBuf& aBuf, cMeshManager* apMeshManager, bool abLoadAndSaveMsh, uint32_t alMeshFlags);
 
 	// Shared by the three loaders; implemented in MeshLoaderRustBuilder.cpp.
-	cMesh* OhplL6LoadMesh(int aKind, const OhplL6Env& aEnv, const OhplL6Cfg& aCfg, const tWString& asFile, bool* apFallback = NULL);
-	cAnimation* OhplL6LoadAnim(int aKind, const OhplL6Env& aEnv, const OhplL6Cfg& aCfg, const tWString& asFile, bool* apFallback = NULL);
+	cMesh* OhplL6LoadMesh(int aKind, const OhplL6Env& aEnv, const OhplL6Cfg& aCfg, const tWString& asFile);
+	cAnimation* OhplL6LoadAnim(int aKind, const OhplL6Env& aEnv, const OhplL6Cfg& aCfg, const tWString& asFile);
 
 }
 

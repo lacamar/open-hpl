@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 # Usage: check.sh <build-dir> [stride]   (build-dir: configured and built `HPL2`, see gen.sh)
 # Lists the .msh/.dae/.fbx/.anm of the installed games (read-only), loads every file (or every
-# stride-th) with the C++ and the Rust path, diffs the full outputs and compares them with the
-# golden files. Skinned .dae (with <controller>) crash the C++ loader without an MSH cache and are
-# left out of the dae lists.
+# stride-th) with the Rust loaders and compares the compacted output with the golden files.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 g=$(dirname "$here")
@@ -23,14 +21,8 @@ list anm > "$tmp/anm.lst"
 cp "$tmp/fbx.lst" "$tmp/fbxanim.lst"
 awk 'NR%12<3' "$tmp/dae.lst" > "$tmp/daeanim.lst"
 for k in msh fbx anm fbxanim dae daeanim; do
-	for m in cpp rust; do
-		(cd "$root" && OHPL_IMPL=$m "$tmp/gen" "$k" - < "$tmp/$k.lst" > "$tmp/$k.$m" 2> /dev/null)
-	done
-	if ! diff "$tmp/$k.cpp" "$tmp/$k.rust" > "$tmp/$k.diff"; then
-		echo "$k: $(grep -c '^<' "$tmp/$k.diff") differences, see $tmp/$k.diff"
-		continue
-	fi
-	python3 "$here/compact.py" < "$tmp/$k.cpp" | sort > "$tmp/$k.compact"
+	(cd "$root" && "$tmp/gen" "$k" - < "$tmp/$k.lst" > "$tmp/$k.rust" 2> /dev/null)
+	python3 "$here/compact.py" < "$tmp/$k.rust" | sort > "$tmp/$k.compact"
 	if [ "$stride" = 1 ]; then cmp "$tmp/$k.compact" "$g/$k.txt"; else { grep -vxFf "$g/$k.txt" "$tmp/$k.compact" || true; } | head -3; fi
-	echo "$k: $(wc -l < "$tmp/$k.cpp") files, cpp and rust match"
+	echo "$k: $(wc -l < "$tmp/$k.rust") files, Rust matches"
 done

@@ -113,8 +113,6 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/OpenAL*
     # mesh loader
     sources/impl/MeshLoaderCollada.cpp
-    sources/impl/MeshLoaderColladaHelpers.cpp
-    sources/impl/MeshLoaderColladaLoader.cpp
     sources/impl/MeshLoaderMSH.cpp
     sources/impl/MeshLoaderAssimp.cpp
     sources/impl/MeshLoaderRustBuilder.cpp

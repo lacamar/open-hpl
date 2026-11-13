@@ -32,7 +32,7 @@ namespace hpl {
 	class cSqScript : public iScript
 	{
 	public:
-		cSqScript(const tString& asName, asIScriptEngine *apScriptEngine,cScriptOutput *apScriptOutput, int alHandle, OhplL7Engine *apRustEngine=NULL);
+		cSqScript(const tString& asName, int alHandle, OhplL7Engine *apRustEngine);
 		~cSqScript();
 
 		bool CreateFromFile(const tWString& asFileName, tString *apCompileMessages=NULL);
@@ -44,18 +44,9 @@ namespace hpl {
 		bool Run(int alHandle);
 
 	private:
-		asIScriptEngine *mpScriptEngine;
-		cScriptOutput *mpScriptOutput;
-        
-		asIScriptContext *mpContext;
-		asIScriptModule *mpModule;
-		
 		OhplL7Script *mpRs;
 
 		int mlHandle;
-		tString msModuleName;
-
-		std::vector<asIScriptFunction*> mvFuncHandles;
 
 		char* LoadCharBuffer(const tWString& asFileName, int& alLength);
 	};

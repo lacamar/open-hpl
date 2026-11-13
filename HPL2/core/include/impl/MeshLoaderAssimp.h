@@ -16,8 +16,6 @@ namespace hpl {
 
 		cAnimation* LoadAnimation(const tWString& asFile);
 
-		static cAnimation* LoadHpl3Anm(const tString& asAnmFile, const tWString& asSourceFile);
-		static bool IsHpl3Anm(const tString& asAnmFile);
 		bool SaveAnimation(cAnimation* apAnimation, const tWString& asFile){ return false; }
 	};
 

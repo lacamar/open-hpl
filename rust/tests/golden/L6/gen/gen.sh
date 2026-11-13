@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Usage: gen.sh <build-dir> <outbin>   (build-dir: configured and built `HPL2`, e.g. ~/.cache/open-hpl/port-l6)
 # Links the harness against libHPL2.a; CreateMaterial is replaced so no material or texture is loaded.
-# Run: OHPL_IMPL=cpp <outbin> dae a.dae > cpp.txt; OHPL_IMPL=rust <outbin> dae a.dae > rust.txt; diff cpp.txt rust.txt
+# Run: <outbin> dae a.dae > out.txt
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(git -C "$here" rev-parse --show-toplevel)

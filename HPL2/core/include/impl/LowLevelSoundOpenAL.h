@@ -23,7 +23,6 @@
 #include "sound/LowLevelSound.h"
 #include "impl/RustL5.h"
 
-class cOAL_Effect_Reverb;
 
 
 namespace hpl 
@@ -82,16 +81,13 @@ namespace hpl
 		iSoundDeviceIdentifier* GetCurrentSoundDevice();
 
 	private:
-		iSoundDeviceIdentifier* GetFirstValidDefaultDevice();
 		iSoundDeviceIdentifier* GetFirstDefaultDevice();
 
 		tString mvFormats[30];
 		bool	mbLogSounds;
 		bool	mbInitialized;
 		int		mlEffectSlotId;
-		bool	mbNullEffectAttached;
 
-		cOAL_Effect_Reverb* mpEffect;
 		OhplL5Low* mpRust;
 		void InitRust(int alSoundDeviceID, bool abUseEnvAudio,int alMaxChannels,
 					int alStreamUpdateFreq, bool abUseThreading, bool abUseVoiceManagement,
