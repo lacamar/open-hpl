@@ -20,6 +20,9 @@ pub mod h20_list;
 pub mod h20_menu;
 pub mod h20_tab;
 pub mod h20_text;
+mod h21_ffi;
+pub mod h21_log;
+pub mod h21_popup;
 pub mod layout;
 pub mod list;
 pub mod popup;
@@ -37,6 +40,8 @@ pub mod widgets_text;
 mod h19_tests;
 #[cfg(test)]
 mod h20_tests;
+#[cfg(test)]
+mod h21_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

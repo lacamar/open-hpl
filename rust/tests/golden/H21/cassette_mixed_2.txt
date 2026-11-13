@@ -1,0 +1,986 @@
+ev fp_new kind=0 path=2f,68,6f,6d,65,2f,6c,6d,2f,2e,63,61,63,68,65,2f,6f,70,65,6e,2d,68,70,6c,2f,68,32,31,2d,74,6d,70,2f,66,70,2f,73,75,62,2f name=73,61,76,65,64,2e,74,78,74 cb=1,2
+> PopupCount i0=1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> VirtualSize
+< w=0 i=0 f=44480000,44160000,0,0 s=-;-;-
+> PopupZ
+< w=0 i=0 f=41a00000,0,0,0 s=-;-;-
+> IncPopupZ
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateWindow f0=42c80000 f1=42480000 f2=41a00000 f3=44160000 f4=43fa0000
+< w=3 i=0 f=0,0,0,0 s=-;-;-
+> WinCloseDisables w0=3
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=31 i1=1 w0=3
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetFocused
+< w=4 i=0 f=0,0,0,0 s=-;-;-
+> GetDefaultFocus
+< w=5 i=0 f=0,0,0,0 s=-;-;-
+> PushAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushFocused
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushDefaultFocus
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetAttention w0=3
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> WinEscCloses i0=1 w0=3
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= p=6
+ev fp_init p=6
+> WinFontSize w0=3
+< w=0 i=0 f=41600000,41600000,0,0 s=-;-;-
+> FpLoadGfx
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetText w0=3 s0=53,61,76,65,20,66,69,6c,65
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateCombo w0=3 f0=41f00000 f1=42700000 f2=3dcccccd f3=43c80000 f4=41800000 s0=
+< w=7 i=0 f=0,0,0,0 s=-;-;-
+> CbCanEdit w0=7
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=26 i1=15 w0=7
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=3 s0=
+< w=8 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=10 w0=8
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=3 s0=
+< w=9 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=10 w0=9
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=3 s0=
+< w=10 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=10 w0=10
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> BtnUpImage w0=8
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=8 f0=43d98000 f1=42700000 f2=3dcccccd
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetSize w0=8 f0=41b80000 f1=41b80000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetText w0=9 s0=53,61,76,65,20,66,69,6c,65
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=9 f0=43fa0000 f1=43d48000 f2=3f000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetSize w0=9 f0=428c0000 f1=41a00000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetText w0=10 s0=43,61,6e,63,65,6c
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=10 f0=43fa0000 f1=43e10000 f2=3f000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetSize w0=10 f0=428c0000 f1=41a00000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateTextbox w0=3 f0=41f00000 f1=43d48000 f2=3f000000 f3=43c80000 f4=41800000 f5=3f800000 s0=73,61,76,65,64,2e,74,78,74
+< w=11 i=0 f=0,0,0,0 s=-;-;-
+> TbForceEnter i0=1 w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> TbLostFocus w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=28 i1=10 w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocused w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> TbSelectAll w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateCombo w0=3 f0=41f00000 f1=43e10000 f2=3f000000 f3=43960000 f4=41800000 s0=
+< w=12 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=26 i1=18 w0=12
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateList w0=3 f0=41f00000 f1=42b40000 f2=3f800000 f3=44070000 f4=43960000
+< w=13 i=0 f=0,0,0,0 s=-;-;-
+> MlAddColumn w0=13 s0=
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> MlColWidth w0=13 f0=41c00000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> MlAddColumn i0=1 w0=13 s0=4e,61,6d,65
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> MlColWidth i0=1 w0=13 f0=43960000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> MlAddColumn i0=2 i1=1 w0=13 s0=53,69,7a,65
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> MlColWidth i0=2 w0=13 f0=42960000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> MlAddColumn i0=3 w0=13 s0=44,61,74,65,20,6d,6f,64,69,66,69,65,64
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> MlColWidth i0=3 w0=13 f0=42fa0000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=26 i1=17 w0=13
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=27 i1=16 w0=13
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbInit
+ev fp_on_navigate p=6
+> CbClear w0=7
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbDirs
+< w=0 i=2 f=0,0,0,0 s=-;-;-
+> FbPathCount
+< w=0 i=7 f=0,0,0,0 s=-;-;-
+> CbAddItem w0=7 s0=3c,53,79,73,74,65,6d,20,52,6f,6f,74,3e
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CbAddItem w0=7 s0=3c,47,61,6d,65,20,46,6f,6c,64,65,72,3e
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbPathEntry
+< w=0 i=0 f=0,0,0,0 s=68,6f,6d,65;-;-
+> CbAddItem w0=7 s0=68,6f,6d,65
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbPathEntry i0=1
+< w=0 i=0 f=0,0,0,0 s=6c,6d;-;-
+> CbAddItem w0=7 s0=6c,6d
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbPathEntry i0=2
+< w=0 i=0 f=0,0,0,0 s=2e,63,61,63,68,65;-;-
+> CbAddItem w0=7 s0=2e,63,61,63,68,65
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbPathEntry i0=3
+< w=0 i=0 f=0,0,0,0 s=6f,70,65,6e,2d,68,70,6c;-;-
+> CbAddItem w0=7 s0=6f,70,65,6e,2d,68,70,6c
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbPathEntry i0=4
+< w=0 i=0 f=0,0,0,0 s=68,32,31,2d,74,6d,70;-;-
+> CbAddItem w0=7 s0=68,32,31,2d,74,6d,70
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbPathEntry i0=5
+< w=0 i=0 f=0,0,0,0 s=66,70;-;-
+> CbAddItem w0=7 s0=66,70
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbPathEntry i0=6
+< w=0 i=0 f=0,0,0,0 s=73,75,62;-;-
+> CbAddItem w0=7 s0=73,75,62
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbFullPath
+< w=0 i=0 f=0,0,0,0 s=2f,68,6f,6d,65,2f,6c,6d,2f,2e,63,61,63,68,65,2f,6f,70,65,6e,2d,68,70,6c,2f,68,32,31,2d,74,6d,70,2f,66,70,2f,73,75,62,2f;-;-
+> SetText w0=7 s0=2f,68,6f,6d,65,2f,6c,6d,2f,2e,63,61,63,68,65,2f,6f,70,65,6e,2d,68,70,6c,2f,68,32,31,2d,74,6d,70,2f,66,70,2f,73,75,62,2f
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CbSelected w0=12
+< w=0 i=-1 f=0,0,0,0 s=-;-;-
+= ok
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ok
+ev fp_set_save_dest p=6 name=75,6e,74,6f,75,63,68,65,64
+> SetText w0=11 s0=75,6e,74,6f,75,63,68,65,64
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ok
+ev fp_on_add_filter p=6
+> CbClear w0=12
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbCatCount
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+> FbCatName
+< w=0 i=0 f=0,0,0,0 s=54,65,78,74,20,66,69,6c,65,73;-;-
+> FbCatFilterCount
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+> FbCatFilter
+< w=0 i=0 f=0,0,0,0 s=2a,2e,74,78,74;-;-
+> CbAddItem w0=12 s0=54,65,78,74,20,66,69,6c,65,73,20,28,2a,2e,74,78,74,29
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CbSetSelected w0=12
+ev event p=6 tag=18 w=12 val=0
+> CbSelected w0=12
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> MlClear w0=13
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbFullPath
+< w=0 i=0 f=0,0,0,0 s=2f,68,6f,6d,65,2f,6c,6d,2f,2e,63,61,63,68,65,2f,6f,70,65,6e,2d,68,70,6c,2f,68,32,31,2d,74,6d,70,2f,66,70,2f,73,75,62,2f;-;-
+> FbList
+< w=0 i=2 f=0,0,0,0 s=-;-;-
+> FbRow
+< w=0 i=5 f=0,0,0,0 s=64,65,65,70,65,72;30,20,62,79,74,65,73;34,2f,32,2f,32,30,32,30,20,34,3a,30,36,3a,30,37
+> MlAddRow i0=1 i1=5 w0=13 s0=64,65,65,70,65,72 s1=30,20,62,79,74,65,73 s2=34,2f,32,2f,32,30,32,30,20,34,3a,30,36,3a,30,37
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbRow i0=1
+< w=0 i=3 f=0,0,0,0 s=78,2e,74,78,74;31,20,4b,42;32,2f,30,2f,32,30,32,30,20,32,3a,30,34,3a,30,35
+> MlAddRow i0=1 i1=3 w0=13 s0=78,2e,74,78,74 s1=31,20,4b,42 s2=32,2f,30,2f,32,30,32,30,20,32,3a,30,34,3a,30,35
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ret=1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ok
+ev fp_on_add_filter p=6
+> CbClear w0=12
+ev event p=6 tag=18 w=12 val=-1
+> CbSelected w0=12
+< w=0 i=-1 f=0,0,0,0 s=-;-;-
+= ret=1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbCatCount
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+> FbCatName
+< w=0 i=0 f=0,0,0,0 s=54,65,78,74,20,66,69,6c,65,73;-;-
+> FbCatFilterCount
+< w=0 i=2 f=0,0,0,0 s=-;-;-
+> FbCatFilter
+< w=0 i=0 f=0,0,0,0 s=2a,2e,74,78,74;-;-
+> FbCatFilter i1=1
+< w=0 i=0 f=0,0,0,0 s=2a,2e,6d,64;-;-
+> CbAddItem w0=12 s0=54,65,78,74,20,66,69,6c,65,73,20,28,2a,2e,74,78,74,2c,20,2a,2e,6d,64,29
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CbSetSelected w0=12
+ev event p=6 tag=18 w=12 val=0
+> CbSelected w0=12
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> MlClear w0=13
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbFullPath
+< w=0 i=0 f=0,0,0,0 s=2f,68,6f,6d,65,2f,6c,6d,2f,2e,63,61,63,68,65,2f,6f,70,65,6e,2d,68,70,6c,2f,68,32,31,2d,74,6d,70,2f,66,70,2f,73,75,62,2f;-;-
+> FbList
+< w=0 i=2 f=0,0,0,0 s=-;-;-
+> FbRow
+< w=0 i=5 f=0,0,0,0 s=64,65,65,70,65,72;30,20,62,79,74,65,73;34,2f,32,2f,32,30,32,30,20,34,3a,30,36,3a,30,37
+> MlAddRow i0=1 i1=5 w0=13 s0=64,65,65,70,65,72 s1=30,20,62,79,74,65,73 s2=34,2f,32,2f,32,30,32,30,20,34,3a,30,36,3a,30,37
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FbRow i0=1
+< w=0 i=3 f=0,0,0,0 s=78,2e,74,78,74;31,20,4b,42;32,2f,30,2f,32,30,32,30,20,32,3a,30,34,3a,30,35
+> MlAddRow i0=1 i1=3 w0=13 s0=78,2e,74,78,74 s1=31,20,4b,42 s2=32,2f,30,2f,32,30,32,30,20,32,3a,30,34,3a,30,35
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ret=1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ok
+ev set_destroy_callback p=6 cb=1,14
+= ok
+ev kill_on_escape p=6
+> WinGetEsc w0=3
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+= ret=1
+ev event p=6 tag=1 w=3 val=0
+> DestroyPopup
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ret=1
+ev destroy p=6
+> DestroyWidget w0=8
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> DestroyWidget w0=9
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> DestroyWidget w0=10
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> DestroyWidget w0=7
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> DestroyWidget w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> DestroyWidget w0=13
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> DestroyWidget w0=12
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopupCount i0=-1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopFocused
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopDefaultFocus
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CallDestroyCb p0=1 p1=14
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> DestroyWidget i0=1 w0=3
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ok
+ev kb_new target=4
+> PopupCount i0=1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> VirtualSize
+< w=0 i=0 f=44480000,44160000,0,0 s=-;-;-
+> PopupZ
+< w=0 i=0 f=41c80000,0,0,0 s=-;-;-
+> IncPopupZ
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateWindow i0=1 f0=43c80000 f1=43960000 f2=41c80000
+< w=15 i=0 f=0,0,0,0 s=-;-;-
+> WinCloseDisables w0=15
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=31 i1=1 w0=15
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetFocused
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetDefaultFocus
+< w=5 i=0 f=0,0,0,0 s=-;-;-
+> PushAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushFocused
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushDefaultFocus
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetAttention w0=15
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> WinEscCloses i0=1 w0=15
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetText w0=4
+< w=0 i=0 f=0,0,0,0 s=69,6e,69,74,69,61,6c;-;-
+> TbKbOpen w0=4
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> TbUserData w0=4
+< w=5 i=0 f=0,0,0,0 s=-;-;-
+> SetText w0=15 s0=
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> WinStatic i0=1 w0=15
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> WinDrawLabel w0=15
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetGlobalUiListener i0=1 w0=15
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=19 i1=22 w0=15
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=20 i1=23 w0=15
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=30
+< w=16 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=16
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=31
+< w=17 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=17
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=32
+< w=18 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=33
+< w=19 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=19
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=34
+< w=20 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=20
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=35
+< w=21 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=21
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=36
+< w=22 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=22
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=37
+< w=23 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=23
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=38
+< w=24 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=24
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=39
+< w=25 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=25
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=61
+< w=26 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=26
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=62
+< w=27 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=27
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=63
+< w=28 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=28
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=64
+< w=29 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=29
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=65
+< w=30 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=30
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=66
+< w=31 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=31
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=67
+< w=32 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=32
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=68
+< w=33 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=33
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=69
+< w=34 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=34
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=6a
+< w=35 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=35
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=6b
+< w=36 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=36
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=6c
+< w=37 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=37
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=6d
+< w=38 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=38
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=6e
+< w=39 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=39
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=6f
+< w=40 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=40
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=70
+< w=41 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=41
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=71
+< w=42 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=42
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=72
+< w=43 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=43
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=73
+< w=44 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=44
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=74
+< w=45 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=45
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=75
+< w=46 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=46
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=76
+< w=47 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=47
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=77
+< w=48 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=48
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=78
+< w=49 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=49
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=79
+< w=50 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=50
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42000000 f4=42000000 s0=7a
+< w=51 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=51
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42820000 f4=42000000 s0=45,6e,74,65,72
+< w=52 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=20 w0=52
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=42820000 f4=42000000 s0=43,61,6e,63,65,6c
+< w=53 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=21 w0=53
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=15 f3=43a48000 f4=42000000 s0=53,70,61,63,65
+< w=54 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=19 w0=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetSize w0=16
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=17
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=18
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=19
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=20
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=21
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=22
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=23
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=24
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=25
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=26
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=27
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=28
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=29
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=30
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=31
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=32
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=33
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=34
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=35
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=36
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=37
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=38
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=39
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=40
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=41
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=42
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=43
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=44
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=45
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=46
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=47
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=48
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=49
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=50
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=51
+< w=0 i=0 f=42000000,42000000,0,0 s=-;-;-
+> GetSize w0=52
+< w=0 i=0 f=42820000,42000000,0,0 s=-;-;-
+> GetSize w0=53
+< w=0 i=0 f=42820000,42000000,0,0 s=-;-;-
+> GetSize w0=54
+< w=0 i=0 f=43a48000,42000000,0,0 s=-;-;-
+> SetPosition w0=16 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=17 f0=42040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=18 f0=42840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=19 f0=42c60000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=20 f0=43040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=21 f0=43250000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=22 f0=43460000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=23 f0=43670000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=24 f0=43840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=25 f0=43948000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=26 f1=42040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=27 f0=42040000 f1=42040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=28 f0=42840000 f1=42040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=29 f0=42c60000 f1=42040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=30 f0=43040000 f1=42040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=31 f0=43250000 f1=42040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=32 f0=43460000 f1=42040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=33 f0=43670000 f1=42040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=34 f0=43840000 f1=42040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=35 f0=43948000 f1=42040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=36 f1=42840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=37 f0=42040000 f1=42840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=38 f0=42840000 f1=42840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=39 f0=42c60000 f1=42840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=40 f0=43040000 f1=42840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=41 f0=43250000 f1=42840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=42 f0=43460000 f1=42840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=43 f0=43670000 f1=42840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=44 f0=43840000 f1=42840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=45 f0=43948000 f1=42840000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=46 f1=42c60000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=47 f0=42040000 f1=42c60000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=48 f0=42840000 f1=42c60000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=49 f0=42c60000 f1=42c60000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=50 f0=43040000 f1=42c60000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=51 f0=43250000 f1=42c60000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=52 f0=43460000 f1=42c60000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=53 f0=43840000 f1=42c60000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=54 f1=43040000 f2=40000000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetSize w0=15 f0=43a50000 f1=43250000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetGlobalPosition w0=4
+< w=0 i=0 f=41f00000,42480000,41a00000,0 s=-;-;-
+> GetSize w0=4
+< w=0 i=0 f=43160000,41b00000,0,0 s=-;-;-
+> SetGlobalPosition w0=15 f0=c2700000 f1=42a00000 f2=41a00000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> InsideBounds w0=15
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=16 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=16 w1=17
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=16 w1=26
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=16 w1=25
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=17 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=17 w1=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=17 w1=27
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=17 w1=16
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=18 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=18 w1=19
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=18 w1=28
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=18 w1=17
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=19 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=19 w1=20
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=19 w1=29
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=19 w1=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=20 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=20 w1=21
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=20 w1=30
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=20 w1=19
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=21 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=21 w1=22
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=21 w1=31
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=21 w1=20
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=22 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=22 w1=23
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=22 w1=32
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=22 w1=21
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=23 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=23 w1=24
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=23 w1=33
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=23 w1=22
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=24 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=24 w1=25
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=24 w1=34
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=24 w1=23
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=25 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=25 w1=16
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=25 w1=35
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=25 w1=24
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=26 w1=16
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=26 w1=27
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=26 w1=36
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=26 w1=35
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=27 w1=17
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=27 w1=28
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=27 w1=37
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=27 w1=26
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=28 w1=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=28 w1=29
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=28 w1=38
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=28 w1=27
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=29 w1=19
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=29 w1=30
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=29 w1=39
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=29 w1=28
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=30 w1=20
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=30 w1=31
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=30 w1=40
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=30 w1=29
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=31 w1=21
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=31 w1=32
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=31 w1=41
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=31 w1=30
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=32 w1=22
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=32 w1=33
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=32 w1=42
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=32 w1=31
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=33 w1=23
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=33 w1=34
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=33 w1=43
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=33 w1=32
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=34 w1=24
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=34 w1=35
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=34 w1=44
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=34 w1=33
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=35 w1=25
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=35 w1=26
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=35 w1=45
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=35 w1=34
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=36 w1=26
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=36 w1=37
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=36 w1=46
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=36 w1=45
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=37 w1=27
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=37 w1=38
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=37 w1=47
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=37 w1=36
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=38 w1=28
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=38 w1=39
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=38 w1=48
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=38 w1=37
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=39 w1=29
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=39 w1=40
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=39 w1=49
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=39 w1=38
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=40 w1=30
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=40 w1=41
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=40 w1=50
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=40 w1=39
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=41 w1=31
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=41 w1=42
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=41 w1=51
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=41 w1=40
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=42 w1=32
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=42 w1=43
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=42 w1=52
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=42 w1=41
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=43 w1=33
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=43 w1=44
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=43 w1=53
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=43 w1=42
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=44 w1=34
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=44 w1=45
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=44 w1=53
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=44 w1=43
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=45 w1=35
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=45 w1=36
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=45 w1=53
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=45 w1=44
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=46 w1=36
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=46 w1=47
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=46 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=46 w1=53
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=47 w1=37
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=47 w1=48
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=47 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=47 w1=46
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=48 w1=38
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=48 w1=49
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=48 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=48 w1=47
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=49 w1=39
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=49 w1=50
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=49 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=49 w1=48
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=50 w1=40
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=50 w1=51
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=50 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=50 w1=49
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=51 w1=41
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=51 w1=52
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=51 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=51 w1=50
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=52 w1=42
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=52 w1=53
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=52 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=52 w1=51
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=53 w1=43
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=53 w1=46
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=53 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=53 w1=52
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=1 w0=54 w1=46
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=54 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=4 w0=54 w1=16
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=54 w1=54
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetDefaultFocus w0=16
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocused w0=16
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= p=6
+ev set_destroy_callback p=6 cb=55,14
+= ok
+ev kill_on_escape p=6
+> WinGetEsc w0=15
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+= ret=1
+ev event p=6 tag=22 w=15 val=36
+= ret=0
+ev event p=6 tag=19 w=37 val=1
+> TbKeySkip i0=55 i1=108 w0=4
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+= ret=1
+ev event p=6 tag=19 w=28 val=1
+> TbKeySkip i0=46 i1=99 w0=4
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+= ret=1
+ev event p=6 tag=19 w=41 val=1
+> TbKeySkip i0=59 i1=112 w0=4
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+= ret=1

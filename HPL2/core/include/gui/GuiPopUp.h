@@ -21,7 +21,10 @@
 #define HPL_GUI_POP_UP_H
 
 #include "gui/RustWidget3.h"
+#include "gui/RustGuiH21.h"
 #include "gui/GuiTypes.h"
+#include "impl/RustBackends.h"
+#include <list>
 
 namespace hpl {
 
@@ -29,6 +32,9 @@ namespace hpl {
 	class cGuiSkin;
 
 	class cWidgetWindow;
+	class iGuiPopUp;
+
+	struct OhplH21Binding { iGuiPopUp *popup; int tag; };
 
 	class iGuiPopUp 
 	{
@@ -41,7 +47,7 @@ namespace hpl {
 		void SetKillOnEscapeKey(bool abX);
 		bool GetKillOnEscapeKey();
 
-		void SetNextFocusWidget(iWidget *apNewFocused)  { ohpl_w3_popup_set_next_focus(&mPopUp, (size_t)apNewFocused); }
+		void SetNextFocusWidget(iWidget *apNewFocused)  { if(mR) ohpl_h21_set_next_focus(mR, (uintptr_t)apNewFocused); else ohpl_w3_popup_set_next_focus(&mPopUp, (size_t)apNewFocused); }
 		cGuiSet* GetGuiSet() { return mpSet; }
 
 	protected:
@@ -68,6 +74,19 @@ namespace hpl {
 		tGuiCallbackFunc mpDestroyCallback;
 
 		OhplW3PopUp mPopUp;
+
+		// OHPL_IMPL=rust: the popup state machine lives in Rust, the members above stay unused.
+		OhplH21Popup *mR;
+		bool mbDestroyQueued;
+		std::list<OhplH21Binding> mBindings;
+		tWString mH21Str[3];
+
+		OhplH21Host H21Host();
+		void H21Bind(iWidget *apWidget, int alMsg, int alTag);
+		static void H21Exec(void *apCtx, const OhplH21Cmd *apCmd, OhplH21Ret *apRet);
+		static bool H21Dispatch(void *apObj, iWidget *apWidget, const cGuiMessageData &aData);
+		virtual bool H21Ext(const OhplH21Cmd &aCmd, OhplH21Ret &aRet) { return false; }
+		void H21Str(OhplH21Ret &aRet, int alIdx, const tWString &asStr);
 	};
 
 };

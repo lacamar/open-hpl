@@ -80,6 +80,7 @@ namespace hpl {
 		void PopulateFileList();
 
 		void ClosePopUp(bool abPickedFile);
+		bool H21Ext(const OhplH21Cmd &aCmd, OhplH21Ret &aRet);
 
 
 
@@ -104,6 +105,7 @@ namespace hpl {
 		
 		void* mpCallbackObject;
 		tGuiCallbackFunc mpCallback;
+		std::vector<tWString> mvH21Files;
 	};
 };
 
