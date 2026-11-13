@@ -21,6 +21,7 @@
 
 #include <cstring>
 
+#include "impl/RustBackends.h"
 #include "LuxEnemyMover.h"
 #include "LuxEnemyPathfinder.h"
 
@@ -558,6 +559,7 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mGa3Ctx.curPatrol = &mlCurrentPatrolNode;
 	mGa3Ctx.isSeenByPlayer = &mbIsSeenByPlayer;
 	mGa3Ctx.autoRemoveAtPathEnd = &mbAutoRemoveAtPathEnd;
+	ohpl_a4_init(&mA4, &mGa3Ctx, (int)aEnemyType);
 
 	mfCheckGroundRayCount =0;
 	mlMaxGroundCheckDists = 3;
@@ -685,6 +687,11 @@ void iLuxEnemy::OnMapEnter()
 
 void iLuxEnemy::OnUpdate(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_on_update(&mA4,&h,afTimeStep); return;
+	}
 	if(mbDisabled) return;
 
 	//In case the update is called in save or anyhting else that just want a quick update, we do not want to be updated.
@@ -856,6 +863,11 @@ iEntity3D* iLuxEnemy::GetAttachEntity()
 
 void iLuxEnemy::GiveDamage(float afAmount, int alStrength)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_give_damage(&mA4,&h,afAmount,alStrength); return;
+	}
 	if(mfHealth > 0)
 
 	if(alStrength < mlToughness-1)			afAmount =0;
@@ -885,11 +897,21 @@ void iLuxEnemy::GiveDamage(float afAmount, int alStrength)
 
 void iLuxEnemy::ShowPlayerPosition()
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_show_player_position(&mA4,&h); return;
+	}
 	mvLastKnownPlayerPos = gpBase->mpPlayer->GetCharacterBody()->GetFeetPosition();
 }
 
 void iLuxEnemy::AlertOfPlayerPresence()
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_alert_of_player_presence(&mA4,&h); return;
+	}
 	if(TriggersDisabled()) return;
 
 	ShowPlayerPosition();
@@ -903,6 +925,11 @@ void iLuxEnemy::AlertOfPlayerPresence()
 
 void iLuxEnemy::ChangeState(eLuxEnemyState aState)
 {
+	if(OhplBackendRustRequested())
+	{
+		ohpl_a4_change_state(&mA4,(int)aState);
+		return;
+	}
 	if(aState == eLuxEnemyState_LastEnum) return;
 	if(mCurrentState == aState) return;
 
@@ -935,6 +962,11 @@ void iLuxEnemy::PlayAnim(	const tString &asName, bool abLoop, float afFadeTime,
 							bool abOverideMoveState,
 							bool abUseMoveAnimWhenCurrentIsOver)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_play_anim(&mA4,&h,asName.c_str(),abLoop,afFadeTime,abDependsOnSpeed,afSpeedMul,abSyncWithPrevFrame,abOverideMoveState,abUseMoveAnimWhenCurrentIsOver); return;
+	}
 	if(PlayAnimImpl(asName, abLoop, afFadeTime, abDependsOnSpeed, afSpeedMul, abSyncWithPrevFrame, abUseMoveAnimWhenCurrentIsOver))
 		mpMover->SetOverideMoveState(abOverideMoveState);
 }
@@ -946,6 +978,11 @@ bool iLuxEnemy::PlayAnimImpl(	const tString &asName, bool abLoop, float afFadeTi
 								bool abSyncWithPrevFrame,
 								bool abUseMoveAnimWhenCurrentIsOver)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		return ohpl_a4_play_anim_impl(&mA4,&h,asName.c_str(),abLoop,afFadeTime,abDependsOnSpeed,afSpeedMul,abSyncWithPrevFrame,abUseMoveAnimWhenCurrentIsOver);
+	}
 	//if not using animations, then return.
 	if(mbUseAnimations==false) return false;
 
@@ -1008,6 +1045,11 @@ bool iLuxEnemy::PlayAnimImpl(	const tString &asName, bool abLoop, float afFadeTi
 
 bool iLuxEnemy::FadeOutCurrentAnimImpl(float afFadeTime)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		return ohpl_a4_fade_out_current_anim_impl(&mA4,&h,afFadeTime);
+	}
 	if(mpCurrentAnimation==NULL) return false;
 	if(mpCurrentAnimation->IsLooping()) return false;
 
@@ -1019,6 +1061,11 @@ bool iLuxEnemy::FadeOutCurrentAnimImpl(float afFadeTime)
 
 void iLuxEnemy::FadeOutCurrentAnim(float afFadeTime)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_fade_out_current_anim(&mA4,&h,afFadeTime); return;
+	}
 	if(FadeOutCurrentAnimImpl(afFadeTime)) mpMover->UseMoveStateAnimations();
 }
 
@@ -1026,6 +1073,11 @@ void iLuxEnemy::FadeOutCurrentAnim(float afFadeTime)
 
 float iLuxEnemy::ConvertAnimToAbsoluteTime(float afRelativeTimePostion)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		return ohpl_a4_anim_absolute_time(&mA4,&h,afRelativeTimePostion);
+	}
 	if(mpCurrentAnimation==NULL) return 0;
 
     return mpCurrentAnimation->GetLength() * afRelativeTimePostion;	
@@ -1058,6 +1110,11 @@ void iLuxEnemy::SetPositionAtStartPos()
 
 void iLuxEnemy::ResetProperties()
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_reset_properties(&mA4,&h); return;
+	}
 	SetPositionAtStartPos();
 	ChangeState(eLuxEnemyState_Idle);
 
@@ -1294,6 +1351,11 @@ void iLuxEnemy::UpdateStateMachine(float afTimeStep)
 
 void iLuxEnemy::ChangeSoundState(eLuxEnemySoundState aState)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_change_sound_state(&mA4,&h,(int)aState); return;
+	}
 	if(mSoundState == aState) return;
 
 	mSoundState = aState;
@@ -1311,6 +1373,11 @@ void iLuxEnemy::ChangeSoundState(eLuxEnemySoundState aState)
 
 void iLuxEnemy::UpdateSoundState(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_update_sound_state(&mA4,&h,afTimeStep); return;
+	}
 	if(mSoundState == eLuxEnemySoundState_Silent) return;
 	if(msAmbientSound[mSoundState] == "") return;
 
@@ -1336,6 +1403,11 @@ void iLuxEnemy::UpdateSoundState(float afTimeStep)
 
 void iLuxEnemy::UpdateAnimation(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_update_animation(&mA4,&h,afTimeStep); return;
+	}
 	if(mbUseAnimations==false) return;
 	if(mpMover->GetOverideMoveState()==false || mpCurrentAnimation==NULL) return;
 
@@ -1421,6 +1493,11 @@ void iLuxEnemy::UpdateCheckLastPlayerPos(float afTimeStep)
 
 void iLuxEnemy::UpdateDarknessGlow(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_update_darkness_glow(&mA4,&h,afTimeStep); return;
+	}
 	///////////////////////////////
 	//Update darkness alpha according to goal
 	if(mfDarknessGlowAlpha != mfDarknessGlowAlphaGoal)
@@ -1502,6 +1579,11 @@ void iLuxEnemy::UpdateRegenHealth(float afTimeStep)
 
 void iLuxEnemy::UpdateHallucination(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_update_hallucination(&mA4,&h); return;
+	}
 	if(mbHallucination==false || mfHealth <= 0) return;
 
 	float fDistSqr = cMath::Vector3DistSqr(mpCharBody->GetPosition(), gpBase->mpPlayer->GetCharacterBody()->GetPosition());
@@ -1515,6 +1597,11 @@ void iLuxEnemy::UpdateHallucination(float afTimeStep)
 
 void iLuxEnemy::UpdateAlignEntityWithGroundRay(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_update_align_ground_ray(&mA4,&h,afTimeStep); return;
+	}
 	if(mbAlignEntityWithGroundRay==false) return;
 
 	mfCheckGroundRayCount -= afTimeStep;
@@ -1569,6 +1656,11 @@ bool iLuxEnemy::TriggersDisabled()
 
 bool iLuxEnemy::Attack(const cEnemyAttackSizeData &aSizeData, const cEnemyAttackDamageData &aDamageData, float afDamageMul)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		return ohpl_a4_attack(&mA4,&h,&aSizeData,&aDamageData,afDamageMul);
+	}
 	bool bHitPlayer = false;
 	bool bHit = gpBase->mpMapHelper->ShapeDamage(GetAttackShape(aSizeData.mlShapeIdx), GetDamageShapeMatrix(aSizeData.mvOffset), mpCharBody->GetPosition(),
 												aDamageData.mfMinDamage*afDamageMul, aDamageData.mfMaxDamage*afDamageMul, 
@@ -1590,6 +1682,11 @@ bool iLuxEnemy::Attack(const cEnemyAttackSizeData &aSizeData, const cEnemyAttack
 
 void iLuxEnemy::SetMoveSpeed(eLuxEnemyMoveSpeed aType)
 {
+	if(OhplBackendRustRequested())
+	{
+		ohpl_a4_set_move_speed(&mA4,(int)aType);
+		return;
+	}
 	mfForwardSpeed = mfDefaultForwardSpeed[mCurrentPose][aType];
 	mfBackwardSpeed = mfDefaultBackwardSpeed[mCurrentPose][aType];
 	mfForwardAcc = mfDefaultForwardAcc[mCurrentPose][aType];
@@ -1677,6 +1774,13 @@ int iLuxEnemy::CreateAttackShape(cWorld *apWorld, cVector3f &avSize, eCollideSha
 
 cMatrixf iLuxEnemy::GetDamageShapeMatrix(const cVector3f& avOffset)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		cMatrixf mtxOut;
+		ohpl_a4_damage_shape_matrix(&mA4,&h,&avOffset.x,&mtxOut.m[0][0]);
+		return mtxOut;
+	}
 	cVector3f vPos =	mpCharBody->GetPosition() +
 						mpCharBody->GetRight() * avOffset.x +
 						mpCharBody->GetUp() * avOffset.y +
@@ -1694,6 +1798,11 @@ cMatrixf iLuxEnemy::GetDamageShapeMatrix(const cVector3f& avOffset)
 
 cLuxProp_Object* iLuxEnemy::GetClosestFood(float afMaxDist, float afMaxHeightDist)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		return (cLuxProp_Object*)ohpl_a4_closest_food(&mA4,&h,afMaxDist,afMaxHeightDist);
+	}
 	cLuxProp_Object *pOutputFood=NULL;
 	float fShortestDist=-1;
 
@@ -1746,6 +1855,11 @@ cVector3f iLuxEnemy::GetPlayerFeetPos()
 
 float iLuxEnemy::Dist2D(const cVector3f &avPos)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		return ohpl_a4_dist_2d(&mA4,&h,&avPos.x);
+	}
 	cVector3f vStart = mpCharBody->GetFeetPosition();
 	cVector3f vEnd = avPos;
 	vStart.y =0;
@@ -1756,11 +1870,23 @@ float iLuxEnemy::Dist2D(const cVector3f &avPos)
 
 float iLuxEnemy::DistToChar(iCharacterBody *apBody)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		cVector3f vFeet = apBody->GetFeetPosition();
+		return ohpl_a4_dist_to_char(&mA4,&h,&vFeet.x);
+	}
 	return cMath::Vector3Dist(mpCharBody->GetFeetPosition(), apBody->GetFeetPosition());
 }
 
 float iLuxEnemy::DistToChar2D(iCharacterBody *apBody)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		cVector3f vFeet = apBody->GetFeetPosition();
+		return ohpl_a4_dist_to_char_2d(&mA4,&h,&vFeet.x);
+	}
 	cVector3f vStart = mpCharBody->GetFeetPosition();
 	cVector3f vEnd = apBody->GetFeetPosition();
 	vStart.y =0;
@@ -1771,6 +1897,12 @@ float iLuxEnemy::DistToChar2D(iCharacterBody *apBody)
 
 float iLuxEnemy::AbsHeightDistToChar(iCharacterBody *apBody)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		cVector3f vFeet = apBody->GetFeetPosition();
+		return ohpl_a4_abs_height_dist(&mA4,&h,&vFeet.x);
+	}
 	cVector3f vStart = mpCharBody->GetFeetPosition();
 	cVector3f vEnd = apBody->GetFeetPosition();
 
@@ -1779,6 +1911,13 @@ float iLuxEnemy::AbsHeightDistToChar(iCharacterBody *apBody)
 
 cVector3f iLuxEnemy::GetDirection2D(const cVector3f &avPos)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		cVector3f vDir;
+		ohpl_a4_direction_2d(&mA4,&h,&avPos.x,&vDir.x);
+		return vDir;
+	}
 	cVector3f vDiff = avPos - mpCharBody->GetPosition();
 	vDiff.y=0; vDiff.Normalize();
 	return vDiff;
@@ -1803,6 +1942,11 @@ float iLuxEnemy::DistToPlayer2D(const cVector3f& avPos)
 
 float iLuxEnemy::AbsHeightDistToPlayer()
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		return ohpl_a4_abs_height_dist_to_player(&mA4,&h);
+	}
 	if(gpBase->mpPlayer->IsDead()) return 100000.0f;
 
 	return AbsHeightDistToChar(gpBase->mpPlayer->GetCharacterBody());
@@ -1817,6 +1961,11 @@ cVector3f iLuxEnemy::GetDirection2DToPlayer()
 
 bool iLuxEnemy::IsSeenByPlayer()
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		return ohpl_a4_is_seen_by_player(&mA4,&h);
+	}
 	///////////////////////////////
 	// Check frustum
 	cFrustum *pFrustum = gpBase->mpPlayer->GetCamera()->GetFrustum();
@@ -1836,6 +1985,11 @@ bool iLuxEnemy::IsSeenByPlayer()
 
 bool iLuxEnemy::IsInPlayerFovAtFeetPos(const cVector3f& avFeetPos)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		return ohpl_a4_in_player_fov_at_feet(&mA4,&h,&avFeetPos.x);
+	}
 	cBoundingVolume bv;
 	bv = *mpCharBody->GetCurrentBody()->GetBoundingVolume();
 	bv.SetPosition(avFeetPos + cVector3f(0, mpCharBody->GetSize().y/2, 0) );
@@ -1848,6 +2002,11 @@ bool iLuxEnemy::IsInPlayerFovAtFeetPos(const cVector3f& avFeetPos)
 
 bool iLuxEnemy::IsVisibleToPlayerAtFeetPos(const cVector3f& avFeetPos)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		return ohpl_a4_visible_to_player_at_feet(&mA4,&h,&avFeetPos.x);
+	}
 	cVector3f vPlayerEyePos = gpBase->mpPlayer->GetCamera()->GetPosition();
 	cVector3f vCharPos = avFeetPos;
 	vCharPos.y += mpCharBody->GetSize().y/2;
@@ -1867,6 +2026,11 @@ float iLuxEnemy::GetPlayerMovementTowardEnemyAmount()
 
 bool iLuxEnemy::OutsideStartRadius()
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		return ohpl_a4_outside_start_radius(&mA4,&h);
+	}
 	float fDist = cMath::Vector3Dist(mpCharBody->GetFeetPosition(), mvStartPosition);
 
 	return fDist > mfActivationDistance * 1.2f + 2.0f;
@@ -1890,6 +2054,12 @@ bool iLuxEnemy::PlayerInFOV()
 
 void iLuxEnemy::OnSetActive(bool abX)
 {	
+	if(OhplBackendRustRequested())
+	{
+		OhplA4Host h = A4Host();
+		ohpl_a4_on_set_active(&mA4,&h,abX);
+		return;
+	}
 	if(mpCharBody)
 	{
 		mpCharBody->SetActive(abX);

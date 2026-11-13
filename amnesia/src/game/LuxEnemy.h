@@ -25,6 +25,7 @@
 #include "LuxEntity.h"
 #include "LuxSavedEngineTypes.h"
 #include "RustLuxEnemy.h"
+#include "RustLuxEnemyA4.h"
 
 //----------------------------------------------
 
@@ -409,6 +410,8 @@ public:
 	static int Ga3Call(void *apEnemy, unsigned alOp, OhplGa3Io *apIo);
 	static bool Ga3StateCb(void *apEnemy, int alState, int alEvent, const OhplGa3Msg *apMessage);
 	static bool Ga3DetectedCb(void *apEnemy);
+	OhplA4Host A4Host();
+	static int A4Call(void *apEnemy, unsigned alOp, OhplA4Io *apIo);
 	cLuxEnemyPatrolNode* Ga3PatrolNode(int alIdx){ return (alIdx >= 0 && alIdx < (int)mvPatrolNodes.size()) ? &mvPatrolNodes[alIdx] : NULL;}
 
 	void PlayScriptedAnimation(const tString &asName, bool abLoop);
@@ -631,6 +634,7 @@ protected:
 
 	//////////////
 	//Variables
+	OhplA4Base mA4 = {};
 	bool mbDisabled;
 
 	bool mbDisableTriggers;
@@ -638,22 +642,22 @@ protected:
 	bool mbBlind;
 	bool mbDeaf;
 
-	bool mbHallucination;
-	float mfHallucinationEndDist;
+	bool &mbHallucination = mA4.hallucination;
+	float &mfHallucinationEndDist = mA4.hallucinationEndDist;
 
 	float mfHealth;
-	bool mbCausesSanityDecrease;
-	bool mbCausesSanityDecreaseAsDefault;
+	bool &mbCausesSanityDecrease = mA4.causesSanity;
+	bool &mbCausesSanityDecreaseAsDefault = mA4.causesSanityDefault;
 
 	eLuxEnemyState mCurrentState;
 	eLuxEnemyState mNextState;
 	eLuxEnemyState mPreviousState;
 
-	eLuxEnemySoundState mSoundState;
+	int32_t &mSoundState = mA4.soundState;
 
-	cSoundEntity *mpCurrentSound;
-	int mlCurrentSoundID;
-	float mfAmbientSoundCount;
+	cSoundEntity *&mpCurrentSound = mA4.curSound;
+	int32_t &mlCurrentSoundID = mA4.curSoundId;
+	float &mfAmbientSoundCount = mA4.ambientCount;
 
 	float mfLookForPlayerCount;
 	int mlPlayerInLOSCount;
@@ -665,9 +669,9 @@ protected:
 	bool mbStuckAtDoor;
 	int mlStuckDoorID;
 
-	float mfDarknessGlowAlpha;
-	float mfDarknessGlowAlphaGoal;
-	float mfDarknessGlowUpdateCount;
+	float &mfDarknessGlowAlpha = mA4.glowAlpha;
+	float &mfDarknessGlowAlphaGoal = mA4.glowGoal;
+	float &mfDarknessGlowUpdateCount = mA4.glowUpdateCount;
 
 	float mfForwardSpeed;
 	float mfBackwardSpeed;
@@ -678,14 +682,15 @@ protected:
 
 	float mfInLanternLightCount;
 
-	cAnimationState *mpCurrentAnimation;
-	bool mbAnimationIsSpeedDependant;
-	float mfAnimationSpeedMul;
-	bool mbUseMoveAnimWhenCurrentIsOver;
+	cAnimationState *&mpCurrentAnimation = mA4.curAnim;
+	bool &mbAnimationIsSpeedDependant = mA4.animSpeedDependant;
+	float &mfAnimationSpeedMul = mA4.animSpeedMul;
+	bool &mbUseMoveAnimWhenCurrentIsOver = mA4.useMoveAnimWhenOver;
 
 	OhplGa3Queue *mpGa3Queue;
 	OhplGa3Ctx mGa3Ctx;
 	std::vector<std::pair<iLuxProp*, iPhysicsBody*> > mvGa3Doors;
+	std::vector<iLuxEntity*> mvA4Entities;
 
 	cVector3f mvStartPosition;
 
@@ -706,7 +711,7 @@ protected:
 
 	bool mbIsSeenByPlayer;
 
-	float mfCheckGroundRayCount;
+	float &mfCheckGroundRayCount = mA4.groundRayCount;
 	tFloatList mlstGroundCheckDists;
 	int mlMaxGroundCheckDists;
 
@@ -720,11 +725,11 @@ protected:
 	//Data
 	cWorld *mpWorld;
 
-	bool mbUseAnimations;
+	bool &mbUseAnimations = mA4.useAnimations;
 
-	int mlToughness;
+	int32_t &mlToughness = mA4.toughness;
 
-	bool mbAlignEntityWithGroundRay;
+	bool &mbAlignEntityWithGroundRay = mA4.alignGroundRay;
 
 	bool mbAutoRemoveAtPathEnd;
 
@@ -739,7 +744,7 @@ protected:
 	float mfMaxRegenHealth;
 	float mfRegenHealthSpeed;
 
-	float mfEnemyDarknessGlowMaxDistance;
+	float &mfEnemyDarknessGlowMaxDistance = mA4.glowMaxDist;
 
 	float mfPlayerInDarknessLightLevel;
 	float mfCrouchVisibleRangeMul;
@@ -764,7 +769,7 @@ protected:
 	float mfTurnMinBreakAngle;
 	float mfTurnBreakMul;
 
-	float mfMoveSpeedAnimMul;
+	float &mfMoveSpeedAnimMul = mA4.moveSpeedAnimMul;
 
 	float mfStoppedToWalkSpeed[eLuxEnemyPoseType_LastEnum];
 	float mfWalkToStoppedSpeed[eLuxEnemyPoseType_LastEnum];
@@ -784,8 +789,8 @@ protected:
 	tString msHitSound[eLuxWeaponHitType_LastEnum];
 
 	tString msAmbientSound[eLuxEnemySoundState_LastEnum];
-	float mfAmbientSoundMinTime[eLuxEnemySoundState_LastEnum];
-	float mfAmbientSoundMaxTime[eLuxEnemySoundState_LastEnum];
+	float (&mfAmbientSoundMinTime)[eLuxEnemySoundState_LastEnum] = mA4.ambientMin;
+	float (&mfAmbientSoundMaxTime)[eLuxEnemySoundState_LastEnum] = mA4.ambientMax;
 
 	float mfNormalAttackDistance;
 	cEnemyAttackDamageData mNormalAttackDamage;
