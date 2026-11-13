@@ -26,6 +26,8 @@
 #include "resources/Resources.h"
 #include "resources/FileSearcher.h"
 #include "system/Platform.h"
+#include "impl/RustBackends.h"
+#include "resources/RustResourcesH3.h"
 
 namespace hpl {
 
@@ -51,15 +53,53 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cLanguageFile::cLanguageFile(cResources *apResources)
+	cLanguageFile::cLanguageFile(cResources *apResources) : mpRs(NULL)
 	{
 		mpResources = apResources;
+		if(OhplBackendRustRequested() == false) return;
+
+		OhplH2LangOps ops = {};
+		ops.ctx = this;
+		ops.log = [](void*, int32_t alLevel, const uint8_t *apMsg, size_t alLen)
+		{
+			tString sMsg(reinterpret_cast<const char*>(apMsg), alLen);
+			if(alLevel == 2) Error("%s", sMsg.c_str());
+			else Warning("%s", sMsg.c_str());
+		};
+		ops.add_dir = [](void *c, const uint32_t *p, size_t n, bool abSubDirs)
+		{
+			static_cast<cLanguageFile*>(c)->mpResources->AddResourceDir(tWString(reinterpret_cast<const wchar_t*>(p), n), abSubDirs);
+		};
+		ops.file_exists = [](void*, const uint32_t *p, size_t n){ return cPlatform::FileExists(tWString(reinterpret_cast<const wchar_t*>(p), n)); };
+		ops.read_file = [](void*, const uint32_t *p, size_t n, void (*apSink)(void*, const uint8_t*, size_t), void *apCtx, bool *apReadOk) -> bool
+		{
+			FILE *pFile = cPlatform::OpenFile(tWString(reinterpret_cast<const wchar_t*>(p), n), _W("rb"));
+			if(pFile == NULL) return false;
+			fseek(pFile, 0, SEEK_END);
+			long lLength = ftell(pFile);
+			fseek(pFile, 0, SEEK_SET);
+			std::vector<char> vData(lLength > 0 ? lLength : 0);
+			bool bRead = lLength > 0 && fread(vData.data(), lLength, 1, pFile) == 1;
+			fclose(pFile);
+			*apReadOk = lLength <= 0 || bRead;
+			apSink(apCtx, reinterpret_cast<const uint8_t*>(vData.data()), vData.size());
+			return true;
+		};
+		ops.text_new = [](void*, const int32_t *p, size_t n) -> void*
+		{
+			tWString *pText = new tWString();
+			for(size_t i=0; i<n; ++i) pText->push_back((wchar_t)p[i]);
+			return pText;
+		};
+		ops.text_free = [](void*, void *apText){ delete static_cast<tWString*>(apText); };
+		mpRs = ohpl_h2_lang_new(&ops);
 	}
 
 	//-----------------------------------------------------------------------
 
 	cLanguageFile::~cLanguageFile()
 	{
+		if(mpRs) { ohpl_h2_lang_free(mpRs); return; }
 		STLMapDeleteAll(m_mapCategories);
 	}
 
@@ -128,6 +168,8 @@ namespace hpl {
 
 	bool cLanguageFile::AddFromFile(const tWString& asFile, bool abAddResourceDirs, const tWString& asAltPath)
 	{
+		if(mpRs) return ohpl_h2_lang_add_file(mpRs, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), abAddResourceDirs,
+											  reinterpret_cast<const uint32_t*>(asAltPath.data()), asAltPath.size());
 		tWString sPath = asFile;
 		if (asAltPath.length() > 0 && cPlatform::FileExists(asAltPath + asFile)) {
 			sPath = asAltPath + asFile;
@@ -161,6 +203,11 @@ namespace hpl {
 
 	const tWString& cLanguageFile::Translate(const tString& asCat, const tString& asName)
 	{
+		if(mpRs)
+		{
+			void *pText = ohpl_h2_lang_translate(mpRs, RM_STR(asCat), RM_STR(asName));
+			return pText ? *static_cast<tWString*>(pText) : mwsEmpty;
+		}
 		tLanguageCategoryMapIt CatIt = m_mapCategories.find(asCat);
 		if(CatIt == m_mapCategories.end())
 		{
@@ -191,4 +238,45 @@ namespace hpl {
 
 	
 	//-----------------------------------------------------------------------
+
+	void cLanguageFile::SetEntry(const tString& asCat, const tString& asName, const tWString& asText)
+	{
+		if(mpRs)
+		{
+			std::vector<int32_t> vText(asText.begin(), asText.end());
+			ohpl_h2_lang_set(mpRs, RM_STR(asCat), RM_STR(asName), vText.data(), vText.size());
+			return;
+		}
+		cLanguageCategory *&pCategory = m_mapCategories[asCat];
+		if(pCategory == NULL) pCategory = hplNew( cLanguageCategory, () );
+		pCategory->m_mapEntries[asName] = hplNew( cLanguageEntry, () );
+		pCategory->m_mapEntries[asName]->mwsText = asText;
+	}
+
+	bool cLanguageFile::HasEntry(const tString& asCat, const tString& asName)
+	{
+		if(mpRs) return ohpl_h2_lang_has(mpRs, RM_STR(asCat), RM_STR(asName));
+		tLanguageCategoryMapIt it = m_mapCategories.find(asCat);
+		return it != m_mapCategories.end() && it->second->m_mapEntries.count(asName) > 0;
+	}
+
+	void cLanguageFile::ForEach(void (*apFunc)(void*, const tString&, const tString&, const tWString*), void *apCtx)
+	{
+		if(mpRs)
+		{
+			struct cEach { void (*mpFunc)(void*, const tString&, const tString&, const tWString*); void *mpCtx; } each = { apFunc, apCtx };
+			ohpl_h2_lang_each(mpRs, [](void *c, const uint8_t *pCat, size_t lCat, const uint8_t *pName, size_t lName, void *pText)
+			{
+				cEach *pEach = static_cast<cEach*>(c);
+				pEach->mpFunc(pEach->mpCtx, tString(reinterpret_cast<const char*>(pCat), lCat), tString(reinterpret_cast<const char*>(pName), lName), static_cast<tWString*>(pText));
+			}, &each);
+			return;
+		}
+		for(tLanguageCategoryMapIt cit = m_mapCategories.begin(); cit != m_mapCategories.end(); ++cit)
+		{
+			if(cit->second->m_mapEntries.empty()) apFunc(apCtx, cit->first, "", NULL);
+			for(tLanguageEntryMapIt eit = cit->second->m_mapEntries.begin(); eit != cit->second->m_mapEntries.end(); ++eit)
+				apFunc(apCtx, cit->first, eit->first, &eit->second->mwsText);
+		}
+	}
 }

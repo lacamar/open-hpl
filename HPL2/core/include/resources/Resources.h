@@ -27,6 +27,7 @@
 #include "resources/ResourcesTypes.h"
 
 #include "engine/Updateable.h"
+#include "resources/RustResourcesH4.h"
 
 class TiXmlElement;
 
@@ -84,6 +85,11 @@ namespace hpl {
 	class cResourceVarsObject
 	{
 	public:
+		cResourceVarsObject();
+		cResourceVarsObject(const cResourceVarsObject &aOther);
+		cResourceVarsObject& operator=(const cResourceVarsObject &aOther);
+		~cResourceVarsObject();
+
 		void LoadVariables(cXmlElement *apRootElem);
 		void SetUserVariable(const tString& asName, const tString& asValue);
 		tString* GetUserVariable(const tString& asName);
@@ -106,6 +112,8 @@ namespace hpl {
 
 	protected:
 		tResourceVarMap m_mapVars;
+		OhplH2Vars *mpVarsRs;
+		tString msVarScratch;
 	};
 
 
@@ -243,6 +251,10 @@ namespace hpl {
 		static bool GetCreateAndLoadCompressedMaps(){ return mbCreateAndLoadCompressedMaps ;}
 		
 	private:
+		struct cInitArgs { cGraphics *mpGraphics; cSystem *mpSystem; cSound *mpSound; cScene *mpScene; cGui *mpGui; cPhysics *mpPhysics; };
+		void H4Setup();
+		OhplH4Res *mpRs;
+		cInitArgs *mpInit;
 		iLowLevelResources *mpLowLevelResources;
 		iLowLevelGraphics *mpLowLevelGraphics;
 		iLowLevelSystem *mpLowLevelSystem;

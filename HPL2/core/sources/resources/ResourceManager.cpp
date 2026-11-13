@@ -71,7 +71,7 @@ namespace hpl {
 		mOps.now = [](void*) -> uint64_t { return cPlatform::GetApplicationTime(); };
 		mOps.file_path = [](void *c, const uint8_t *p, size_t n, int32_t *apCount, size_t *apLen) -> const uint32_t*
 		{
-			int lCount = 0;
+			int lCount = apCount ? *apCount : 0;
 			const tWString &sPath = static_cast<iResourceManager*>(c)->mpFileSearcher->GetFilePath(tString(reinterpret_cast<const char*>(p), n), apCount ? &lCount : NULL);
 			if(apCount) *apCount = lCount;
 			*apLen = sPath.size();

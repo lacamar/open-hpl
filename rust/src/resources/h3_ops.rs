@@ -209,7 +209,12 @@ impl Ops {
     }
 
     pub fn file_path(&self, name: &[u8], want_count: bool) -> (Vec<u32>, i32) {
-        let mut count = 0;
+        self.file_path_seeded(name, want_count, 0)
+    }
+
+    /// `seed` is the count the host reports when the searcher leaves it untouched.
+    pub fn file_path_seeded(&self, name: &[u8], want_count: bool, seed: i32) -> (Vec<u32>, i32) {
+        let mut count = seed;
         let mut len = 0;
         let counter = if want_count {
             &raw mut count
@@ -294,11 +299,12 @@ pub fn wide8(p: &[u32]) -> Vec<u8> {
 struct FlowEnv<'a> {
     ops: &'a Ops,
     m: &'a Manager,
+    seed: i32,
 }
 
 impl Env for FlowEnv<'_> {
     fn file_path(&mut self, name: &[u8], want_count: bool) -> (Vec<u32>, i32) {
-        self.ops.file_path(name, want_count)
+        self.ops.file_path_seeded(name, want_count, self.seed)
     }
 
     fn get_resource(&mut self, path: &[u32]) -> *mut c_void {
@@ -314,17 +320,20 @@ pub fn null() -> *mut c_void {
 pub struct Flow<'a> {
     pub m: &'a mut Manager,
     pub ops: &'a Ops,
+    /// Initial equal-count a lookup reports (the caller's pointee in `FindLoadedResource`).
+    pub seed: i32,
 }
 
 impl<'a> Flow<'a> {
     pub fn new(m: &'a mut Manager, ops: &'a Ops) -> Self {
-        Self { m, ops }
+        Self { m, ops, seed: 0 }
     }
 
     pub fn env(&self) -> impl Env + '_ {
         FlowEnv {
             ops: self.ops,
             m: self.m,
+            seed: self.seed,
         }
     }
 

@@ -1,0 +1,4 @@
+soma	20000	df7121bd37a112a0
+amnesia	20000	6323becce3f1fe43
+rebirth	20000	82db264bf591a7d7
+bunker	20000	dbec08f68352a179

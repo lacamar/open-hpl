@@ -346,8 +346,7 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 				  cLanguageFile *pLang = gpSomaBase->mpEngine->GetResources()->GetLanguageFile();
 				  if (pLang == NULL)
 					  return false;
-				  auto it = pLang->GetCategoryMap()->find(c);
-				  return it != pLang->GetCategoryMap()->end() && it->second->m_mapEntries.count(n) > 0;
+				  return pLang->HasEntry(c, n);
 			  });
 	SOMA_FUNC(e, "tWString cLux_ParseString(const tWString&in asInput)", +[](const tWString &s) { return SomaParseString(s); });
 	SOMA_FUNC(e, "cMaterial@ cResources_CreateMaterial(const tString&in asName)",

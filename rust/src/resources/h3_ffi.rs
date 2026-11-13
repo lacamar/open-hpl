@@ -67,7 +67,11 @@ ffi!(fn ohpl_h3f_tabs(m, o, sink: Sink<u8>, ctx: *mut c_void) {
 });
 
 ffi!(fn ohpl_h3f_find_loaded(m, o, name: *const u8, n: usize, count: *mut i32, sink: Sink<u32>, ctx: *mut c_void) -> *mut c_void {
-    let lk = flow(m, o).find_loaded(units(name, n), !count.is_null());
+    let mut f = flow(m, o);
+    if !count.is_null() {
+        f.seed = *count;
+    }
+    let lk = f.find_loaded(units(name, n), !count.is_null());
     if !count.is_null() {
         *count = lk.count;
     }

@@ -23,6 +23,7 @@
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
 #include "system/Platform.h"
+#include "resources/RustResMgr.h"
 #include "graphics/Mesh.h"
 #include "resources/Resources.h"
 #include "scene/Scene.h"
@@ -58,6 +59,7 @@ namespace hpl {
 	
 	cMesh* cMeshLoaderHandler::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
 	{
+		if(mbRust) return static_cast<cMesh*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_MESH_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), (int64_t)aFlags, NULL));
 		// HPL3 loads the shipped .msh instead of the source under force-cache (cMeshManager::CreateMesh)
 		tWString sMsh = cString::SetFileExtW(asFile, _W("msh"));
 		if(sMsh != asFile && cResources::GetForceCacheLoadingAndSkipSaving() && cPlatform::FileExists(sMsh))
@@ -78,6 +80,7 @@ namespace hpl {
 
 	bool cMeshLoaderHandler::SaveMesh(cMesh* apMesh,const tWString& asFile)
 	{
+		if(mbRust) return ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_MESH_SAVE, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), 0, apMesh) != NULL;
 		iMeshLoader *pMeshLoader = static_cast<iMeshLoader*>(GetLoaderForFile(asFile));
 
 		if(pMeshLoader)
@@ -90,6 +93,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	cAnimation* cMeshLoaderHandler::LoadAnimation(const tWString& asFile)
 	{
+		if(mbRust) return static_cast<cAnimation*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_ANIMATION_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), 0, NULL));
 		iMeshLoader *pMeshLoader = static_cast<iMeshLoader*>(GetLoaderForFile(asFile));
 
 		if(pMeshLoader)
@@ -119,4 +123,19 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+
+	void* cMeshLoaderHandler::H4Call(int alWhat, void *apLoader, const OhplH3WStr &aFile, int64_t alArg, void *apArg)
+	{
+		iMeshLoader *pLoader = static_cast<iMeshLoader*>(static_cast<iResourceLoader*>(apLoader));
+		tWString sFile = H4Wide(aFile);
+		switch(alWhat)
+		{
+		case OHPL_H4_MESH_LOAD: return pLoader->LoadMesh(sFile, (tMeshLoadFlag)alArg);
+		case OHPL_H4_MESH_SAVE: return pLoader->SaveMesh(static_cast<cMesh*>(apArg), sFile) ? apLoader : NULL;
+		case OHPL_H4_ANIMATION_LOAD: return pLoader->LoadAnimation(sFile);
+		case OHPL_H4_MESH_SET_FULL_PATH: static_cast<cMesh*>(apLoader)->SetFullPath(sFile); return NULL;
+		case OHPL_H4_MESH_CACHE_USABLE: return (cResources::GetForceCacheLoadingAndSkipSaving() && cPlatform::FileExists(sFile)) ? (void*)1 : NULL;
+		}
+		return NULL;
+	}
 }

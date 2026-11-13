@@ -1,0 +1,4 @@
+soma	8000	d1970e2fc5f768b6
+amnesia	8000	12b76b22eab99a8a
+rebirth	8000	62e799cb8c61768a
+bunker	8000	43c69b2ad49a6585

@@ -11,6 +11,8 @@ mkdir -p "$OUT/golden" "$OUT/run"
 : > "$OUT/results.txt"
 : > "$OUT/golden/xml_raw.txt"
 : > "$OUT/golden/fs.txt"
+: > "$OUT/golden/res.txt"
+mkdir -p "$OUT/xdg"
 
 diffcount() { diff <(cat "$1") <(cat "$2") | grep -c '^<'; }
 report() { echo "$*" | tee -a "$OUT/results.txt"; }
@@ -50,4 +52,10 @@ for g in soma amnesia rebirth bunker; do
 	OHPL_IMPL=rust "$OUT/fs_new" "$L.fs.lst" "$L.fs.rust.full" > "$L.fs.new_rust" 2>/dev/null
 	report "$g fs        $(cat $L.fs.old) | old-vs-cpp diffs=$(diffcount $L.fs.old.full $L.fs.cpp.full) old-vs-rust diffs=$(diffcount $L.fs.old.full $L.fs.rust.full)"
 	awk -v g=$g '{ split($1,a,/ /); f=$1; q=$2; d=$3; sub(/files=/,"",f); sub(/queries=/,"",q); sub(/digest=/,"",d); printf "%s\t%s\t%s\t%s\n", g, f, q, d }' "$L.fs.old" >> "$OUT/golden/fs.txt"
+
+	ROPS=${RES_OPS:-8000}
+	XDG_CACHE_HOME="$OUT/xdg" OHPL_IMPL=cpp "$OUT/res_probe" "$R" "$ROPS" "$L.res.cpp" > "$L.res.cpp.sum" 2>/dev/null
+	XDG_CACHE_HOME="$OUT/xdg" OHPL_IMPL=rust "$OUT/res_probe" "$R" "$ROPS" "$L.res.rust" > "$L.res.rust.sum" 2>/dev/null
+	report "$g res       ops=$ROPS lines=$(wc -l < $L.res.cpp) cpp-vs-rust diff lines=$(diffcount $L.res.cpp $L.res.rust) digest=$(sed 's/.*digest=//' $L.res.cpp.sum)"
+	printf '%s\t%s\t%s\n' "$g" "$ROPS" "$(sed 's/.*digest=//' $L.res.cpp.sum)" >> "$OUT/golden/res.txt"
 done

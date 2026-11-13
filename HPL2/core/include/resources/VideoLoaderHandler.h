@@ -40,6 +40,8 @@ namespace hpl {
 
 		iVideoStream* LoadVideo(const tWString& asFile);
 	
+	protected:
+		void* H4Call(int alWhat, void *apLoader, const OhplH3WStr &aFile, int64_t alArg, void *apArg) override;
 	private:
 		void SetupLoader(iResourceLoader *apLoader);
 

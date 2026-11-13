@@ -58,6 +58,7 @@ namespace hpl {
 	
 	iVideoStream* cVideoLoaderHandler::LoadVideo(const tWString& asFile)
 	{
+		if(mbRust) return static_cast<iVideoStream*>(ohpl_h4_handler_run(mpLoaders, &mHOps, OHPL_H4_VIDEO_LOAD, reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(), 0, NULL));
 		iVideoLoader *pVideoLoader = static_cast<iVideoLoader*>(GetLoaderForFile(asFile));
 
 		if(pVideoLoader)
@@ -86,4 +87,10 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+
+	void* cVideoLoaderHandler::H4Call(int alWhat, void *apLoader, const OhplH3WStr &aFile, int64_t alArg, void *apArg)
+	{
+		if(alWhat == OHPL_H4_VIDEO_LOAD) return static_cast<iVideoLoader*>(static_cast<iResourceLoader*>(apLoader))->LoadVideo(H4Wide(aFile));
+		return NULL;
+	}
 }

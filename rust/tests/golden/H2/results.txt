@@ -3,18 +3,22 @@ soma xml raw   files=8490 tinyxml-vs-rust diffs=0 lines=8490
 soma cfg       files=21 old-vs-cpp diffs=0 old-vs-rust diffs=0
 soma lang      files=45 old-vs-cpp diffs=0 old-vs-rust diffs=0
 soma fs        files=41009 queries=246056 digest=ba179d25c401b2b6 | old-vs-cpp diffs=0 old-vs-rust diffs=0
+soma res       ops=8000 lines=11052 cpp-vs-rust diff lines=0 digest=d1970e2fc5f768b6
 amnesia xml api   files=3196 old-vs-cpp diffs=0 old-vs-rust diffs=0 lines=3196
 amnesia xml raw   files=3196 tinyxml-vs-rust diffs=0 lines=3196
 amnesia cfg       files=31 old-vs-cpp diffs=0 old-vs-rust diffs=0
 amnesia lang      files=24 old-vs-cpp diffs=0 old-vs-rust diffs=0
 amnesia fs        files=11762 queries=70574 digest=d28976de34f19955 | old-vs-cpp diffs=0 old-vs-rust diffs=0
+amnesia res       ops=8000 lines=11195 cpp-vs-rust diff lines=0 digest=12b76b22eab99a8a
 rebirth xml api   files=7022 old-vs-cpp diffs=0 old-vs-rust diffs=0 lines=7022
 rebirth xml raw   files=7022 tinyxml-vs-rust diffs=0 lines=7022
 rebirth cfg       files=30 old-vs-cpp diffs=0 old-vs-rust diffs=0
 rebirth lang      files=68 old-vs-cpp diffs=0 old-vs-rust diffs=0
 rebirth fs        files=35824 queries=214946 digest=4a5cdd5bdcd6788f | old-vs-cpp diffs=0 old-vs-rust diffs=0
+rebirth res       ops=8000 lines=11048 cpp-vs-rust diff lines=0 digest=62e799cb8c61768a
 bunker xml api   files=5573 old-vs-cpp diffs=0 old-vs-rust diffs=0 lines=5573
 bunker xml raw   files=5573 tinyxml-vs-rust diffs=0 lines=5573
 bunker cfg       files=32 old-vs-cpp diffs=0 old-vs-rust diffs=0
 bunker lang      files=26 old-vs-cpp diffs=0 old-vs-rust diffs=0
 bunker fs        files=23484 queries=140906 digest=40aba42a49d98577 | old-vs-cpp diffs=0 old-vs-rust diffs=0
+bunker res       ops=8000 lines=11146 cpp-vs-rust diff lines=0 digest=43c69b2ad49a6585
