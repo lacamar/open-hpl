@@ -90,6 +90,11 @@ AddTestTarget(SceneH12Tests
     SceneH12Tests.cpp
 )
 
+# H13 differential (world registry, static-combine planner, .map parse traces): scripts/h13-diff.sh.
+AddTestTarget(SceneH13Tests
+    SceneH13Tests.cpp
+)
+
 # H15 differential: surface-data parse and surface-call/update-list scenes, scripts/h15-diff.sh.
 AddTestTarget(PhysicsH15Tests
     PhysicsH15Tests.cpp
