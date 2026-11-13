@@ -62,6 +62,18 @@ enum OhplH20Op {
 	kOhplH20Op_WIDGET_SET_ENABLED = 47,
 	kOhplH20Op_WIDGET_IS_ENABLED = 48,
 	kOhplH20Op_CLIP_GET_CURRENT = 49,
+	kOhplH20Op_SET_CALL = 50,
+	kOhplH20Op_WIDGET_SET_TEXT = 51,
+	kOhplH20Op_WIDGET_SET_FONT_SIZE = 52,
+	kOhplH20Op_TEXTBOX_SET_CAN_EDIT = 53,
+	kOhplH20Op_TEXTBOX_GET_CAN_EDIT = 54,
+	kOhplH20Op_TEXTBOX_BG_SIZE = 55,
+	kOhplH20Op_CREATE_TEXTBOX = 56,
+	kOhplH20Op_CREATE_BUTTON = 57,
+	kOhplH20Op_BUTTON_SET_IMAGE = 58,
+	kOhplH20Op_CHECK_POINT_CLIP = 59,
+	kOhplH20Op_WIDGET_GET_POSITION = 60,
+	kOhplH20Op_WIDGET_IS_VISIBLE = 61,
 };
 
 struct OhplH20Args {
@@ -103,6 +115,20 @@ static_assert(sizeof(OhplH20ListBase) == 184 && offsetof(OhplH20ListBase, select
 			  offsetof(OhplH20ListBase, gfx) == 64 && offsetof(OhplH20ListBase, bgZ) == 144 &&
 			  offsetof(OhplH20ListBase, kind) == 156 && offsetof(OhplH20ListBase, base) == 176, "OhplH20ListBase ABI");
 
+struct OhplH20Combo {
+	OhplW2Combo combo;
+	uintptr_t text, button, slider;
+	uintptr_t gfx[10];
+	float buttonW, sliderW;
+	uintptr_t self;
+	uintptr_t container;
+	OhplH19Base* base;
+	const OhplH20Host* host;
+};
+static_assert(sizeof(OhplH20Combo) == 184 && offsetof(OhplH20Combo, text) == 40 && offsetof(OhplH20Combo, gfx) == 64 &&
+			  offsetof(OhplH20Combo, buttonW) == 144 && offsetof(OhplH20Combo, self) == 152 && offsetof(OhplH20Combo, host) == 176,
+			  "OhplH20Combo ABI");
+
 extern "C" {
 
 void ohpl_h20_lb_init(const OhplH20Host*, OhplH20ListBase*, uintptr_t self, uintptr_t container, OhplH19Base* base, int kind);
@@ -133,6 +159,28 @@ bool ohpl_h20_lb_on_ui_button_double_press(const OhplH20Host*, OhplH20ListBase*,
 void ohpl_h20_lb_add_column(const OhplH20Host*, OhplH20ListBase*, const wchar_t* text, size_t len, int index, int align);
 void ohpl_h20_lb_set_column_width(const OhplH20Host*, OhplH20ListBase*, int idx, float width);
 void ohpl_h20_lb_item_start_pos(const OhplH20Host*, OhplH20ListBase*, cVector3f* out);
+
+void ohpl_h20_cb_init(const OhplH20Host*, OhplH20Combo*, uintptr_t self, uintptr_t container, OhplH19Base* base);
+void ohpl_h20_cb_destroy_children(const OhplH20Host*, OhplH20Combo*);
+void ohpl_h20_cb_set_selected_item(const OhplH20Host*, OhplH20Combo*, int x, bool moveList, bool callback);
+void ohpl_h20_cb_set_can_edit(const OhplH20Host*, OhplH20Combo*, bool v);
+bool ohpl_h20_cb_can_edit(const OhplH20Host*, OhplH20Combo*);
+void ohpl_h20_cb_set_max_shown_items(const OhplH20Host*, OhplH20Combo*, int v);
+void ohpl_h20_cb_set_default_font_size(const OhplH20Host*, OhplH20Combo*, float x, float y);
+void ohpl_h20_cb_update_properties(const OhplH20Host*, OhplH20Combo*);
+void ohpl_h20_cb_on_init(const OhplH20Host*, OhplH20Combo*);
+void ohpl_h20_cb_on_change_size(const OhplH20Host*, OhplH20Combo*);
+void ohpl_h20_cb_on_change_text(const OhplH20Host*, OhplH20Combo*);
+void ohpl_h20_cb_on_load_graphics(const OhplH20Host*, OhplH20Combo*);
+void ohpl_h20_cb_on_draw(const OhplH20Host*, OhplH20Combo*);
+bool ohpl_h20_cb_on_mouse_move(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
+bool ohpl_h20_cb_on_mouse_down(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
+bool ohpl_h20_cb_on_mouse_up(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
+bool ohpl_h20_cb_on_ui_arrow_press(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
+bool ohpl_h20_cb_on_ui_button_press(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
+bool ohpl_h20_cb_on_ui_button_release(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
+bool ohpl_h20_cb_on_lost_focus(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
+bool ohpl_h20_cb_point_is_inside(const OhplH20Host*, OhplH20Combo*, float x, float y, bool onlyClipped);
 
 }
 

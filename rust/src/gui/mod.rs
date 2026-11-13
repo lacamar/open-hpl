@@ -13,6 +13,7 @@ pub mod gfx;
 pub mod guicore;
 mod h19_ffi;
 pub mod h19_widget;
+pub mod h20_combo;
 mod h20_ffi;
 pub mod h20_host;
 pub mod h20_list;

@@ -9,6 +9,8 @@
 #include "gui/WidgetLabel.h"
 #include "gui/WidgetListBoxBase.h"
 #include "gui/WidgetSlider.h"
+#include "gui/WidgetTextBox.h"
+#include "gui/WidgetButton.h"
 #include "graphics/FontData.h"
 
 namespace hpl {
@@ -25,6 +27,7 @@ namespace hpl {
 		static cGuiSkin* Skin(iWidget* apW) { return apW->*(&OhplH20Access::mpSkin); }
 		static cVector2f FontSize(iWidget* apW) { return apW->*(&OhplH20Access::mvDefaultFontSize); }
 		static iFontData* Font(iWidget* apW) { return apW->*(&OhplH20Access::mpDefaultFontType); }
+		static bool CheckClip(iWidget* apW, const cVector2f& avPoint) { return (apW->*(&OhplH20Access::CheckPointInsideClippingParent))(avPoint); }
 		static cVector3f ToLocal(iWidget* apW, const cVector3f& avPos) { return (apW->*(&OhplH20Access::WorldToLocalPosition))(avPos); }
 	};
 
@@ -177,7 +180,7 @@ namespace hpl {
 			return 0;
 		case kOhplH20Op_DRAW_TEXT:
 		{
-			tWString sText(a->text, a->textLen);
+			tWString sText = a->text ? tWString(a->text, a->textLen) : tWString();
 			cVector3f vPos(a->f[0], a->f[1], a->f[2]);
 			iWidget* pWidget = W(a->w);
 			if(a->i[1]) (pWidget->*OhplH20Access::Highlight())(sText, vPos, (eFontAlign)a->i[0]);
@@ -212,6 +215,80 @@ namespace hpl {
 		case kOhplH20Op_DESTROY_WIDGET:
 			OhplH20Access::Set(W(a->w))->DestroyWidget(W(a->p[0]));
 			return 0;
+		case kOhplH20Op_WIDGET_SET_VISIBLE:
+			W(a->w)->SetVisible(a->i[0]!=0);
+			return 0;
+		case kOhplH20Op_WIDGET_SET_ENABLED:
+			W(a->w)->SetEnabled(a->i[0]!=0);
+			return 0;
+		case kOhplH20Op_WIDGET_IS_ENABLED:
+			return W(a->w)->IsEnabled();
+		case kOhplH20Op_WIDGET_IS_VISIBLE:
+			return W(a->w)->IsVisible();
+		case kOhplH20Op_WIDGET_GET_TEXT:
+		{
+			const tWString& sText = W(a->w)->GetText();
+			a->ri[0] = (int32_t)sText.size();
+			return (uintptr_t)sText.data();
+		}
+		case kOhplH20Op_WIDGET_SET_TEXT:
+			W(a->w)->SetText(a->text ? tWString(a->text, a->textLen) : tWString());
+			return 0;
+		case kOhplH20Op_WIDGET_SET_FONT_SIZE:
+			W(a->w)->SetDefaultFontSize(cVector2f(a->f[0], a->f[1]));
+			return 0;
+		case kOhplH20Op_WIDGET_GET_POSITION:
+		{
+			cVector3f vPos = W(a->w)->GetLocalPosition();
+			a->rf[0] = vPos.x;
+			a->rf[1] = vPos.y;
+			a->rf[2] = vPos.z;
+			return 0;
+		}
+		case kOhplH20Op_TEXTBOX_SET_CAN_EDIT:
+			((cWidgetTextBox*)W(a->w))->SetCanEdit(a->i[0]!=0);
+			return 0;
+		case kOhplH20Op_TEXTBOX_GET_CAN_EDIT:
+			return ((cWidgetTextBox*)W(a->w))->GetCanEdit();
+		case kOhplH20Op_TEXTBOX_BG_SIZE:
+		{
+			cVector2f vSize = ((cWidgetTextBox*)W(a->w))->GetBackgroundSize();
+			a->rf[0] = vSize.x;
+			a->rf[1] = vSize.y;
+			return 0;
+		}
+		case kOhplH20Op_CREATE_TEXTBOX:
+			return (uintptr_t)(iWidget*)OhplH20Access::Set(W(a->w))->CreateWidgetTextBox(0, cVector2f(a->f[0], a->f[1]), _W(""), W(a->w));
+		case kOhplH20Op_CREATE_BUTTON:
+			return (uintptr_t)(iWidget*)OhplH20Access::Set(W(a->w))->CreateWidgetButton(0, 0, _W(""), W(a->w));
+		case kOhplH20Op_BUTTON_SET_IMAGE:
+			((cWidgetButton*)W(a->w))->SetImage((cGuiGfxElement*)a->p[0], false);
+			return 0;
+		case kOhplH20Op_CHECK_POINT_CLIP:
+			return OhplH20Access::CheckClip(W(a->w), cVector2f(a->f[0], a->f[1]));
+		case kOhplH20Op_SET_CALL:
+		{
+			cGuiSet* pSet = OhplH20Access::Set(W(a->w));
+			switch(a->i[0])
+			{
+			case 0: pSet->PushAttentionWidget(); return 0;
+			case 1: pSet->PushFocusedWidget(); return 0;
+			case 2: pSet->PushDefaultFocusNavWidget(); return 0;
+			case 3: pSet->SetAttentionWidget(W(a->p[0])); return 0;
+			case 4: pSet->SetFocusedWidget(W(a->p[0])); return 0;
+			case 5: pSet->PopAttentionWidget(); return 0;
+			case 6: pSet->PopFocusedWidget(); return 0;
+			case 7: pSet->PopDefaultFocusNavWidget(); return 0;
+			case 8: a->rf[0] = pSet->GetPopUpZ(); return 0;
+			case 9: a->rf[0] = pSet->GetVirtualSize().x; a->rf[1] = pSet->GetVirtualSize().y; return 0;
+			case 10: pSet->DecContextMenuZ(); return 0;
+			case 11: return (uintptr_t)pSet->GetAttentionWidget();
+			case 12: return (uintptr_t)pSet->GetFocusedWidget();
+			case 13: return (uintptr_t)pSet->GetBaseClipRegion();
+			case 14: return (uintptr_t)pSet->GetCurrentClipRegion();
+			}
+			return 0;
+		}
 		default:
 			return 0;
 		}

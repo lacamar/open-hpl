@@ -24,6 +24,7 @@
 #include "gui/WidgetSlider.h"
 #include "gui/WidgetBaseClasses.h"
 #include "gui/RustWidget2.h"
+#include "gui/RustGuiH20.h"
 
 
 namespace hpl {
@@ -111,10 +112,12 @@ namespace hpl {
 		cWidgetButton *mpButton;
 		cWidgetSlider *mpSlider;
 
-		OhplW2Combo mCombo;
+		// Rust state (OHPL_IMPL=rust); the references keep the member names.
+		OhplH20Combo mH;
+		OhplW2Combo& mCombo;
 
-		float mfButtonWidth;
-		float mfSliderWidth;
+		float& mfButtonWidth;
+		float& mfSliderWidth;
 
 
 		cGuiGfxElement *mpGfxBackground;

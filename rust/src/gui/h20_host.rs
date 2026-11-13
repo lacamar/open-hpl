@@ -66,7 +66,35 @@ ops! {
     WIDGET_SET_ENABLED = 47,
     WIDGET_IS_ENABLED = 48,
     CLIP_GET_CURRENT = 49,
+    SET_CALL = 50,
+    WIDGET_SET_TEXT = 51,
+    WIDGET_SET_FONT_SIZE = 52,
+    TEXTBOX_SET_CAN_EDIT = 53,
+    TEXTBOX_GET_CAN_EDIT = 54,
+    TEXTBOX_BG_SIZE = 55,
+    CREATE_TEXTBOX = 56,
+    CREATE_BUTTON = 57,
+    BUTTON_SET_IMAGE = 58,
+    CHECK_POINT_CLIP = 59,
+    WIDGET_GET_POSITION = 60,
+    WIDGET_IS_VISIBLE = 61,
 }
+
+pub const SC_PUSH_ATTENTION: i32 = 0;
+pub const SC_PUSH_FOCUSED: i32 = 1;
+pub const SC_PUSH_DEFAULT_NAV: i32 = 2;
+pub const SC_SET_ATTENTION: i32 = 3;
+pub const SC_SET_FOCUSED: i32 = 4;
+pub const SC_POP_ATTENTION: i32 = 5;
+pub const SC_POP_FOCUSED: i32 = 6;
+pub const SC_POP_DEFAULT_NAV: i32 = 7;
+pub const SC_POPUP_Z: i32 = 8;
+pub const SC_VIRTUAL_SIZE: i32 = 9;
+pub const SC_DEC_CONTEXT_Z: i32 = 10;
+pub const SC_GET_ATTENTION: i32 = 11;
+pub const SC_GET_FOCUSED: i32 = 12;
+pub const SC_BASE_CLIP: i32 = 13;
+pub const SC_CURRENT_CLIP: i32 = 14;
 
 pub const ARGS_F: usize = 10;
 
@@ -410,6 +438,48 @@ impl Hx {
             },
             |_, _| (),
         );
+    }
+
+    /// `cGuiSet` call `which` (`SC_*`) of the set owning widget `w`; `p` is the widget argument.
+    pub fn set_call(self, w: W, which: i32, p: usize) -> (usize, [f32; 2]) {
+        self.with(
+            SET_CALL,
+            w,
+            |a| {
+                a.i[0] = which;
+                a.p[0] = p;
+            },
+            |a, v| (v, [a.rf[0], a.rf[1]]),
+        )
+    }
+
+    pub fn set_text(self, w: W, text: (*const u32, usize)) {
+        self.with(
+            WIDGET_SET_TEXT,
+            w,
+            |a| {
+                a.text = text.0;
+                a.text_len = text.1;
+            },
+            |_, _| (),
+        );
+    }
+
+    pub fn text(self, w: W) -> (*const u32, usize) {
+        self.with(
+            WIDGET_GET_TEXT,
+            w,
+            |_| (),
+            |a, v| (v as *const u32, usize::try_from(a.ri[0]).unwrap_or(0)),
+        )
+    }
+
+    pub fn set_flag(self, code: i32, w: W, v: bool) {
+        self.with(code, w, |a| a.i[0] = i32::from(v), |_, _| ());
+    }
+
+    pub fn flag(self, code: i32, w: W) -> bool {
+        self.with(code, w, |_| (), |_, v| v != 0)
     }
 
     pub fn gfx_rect(self) -> usize {
