@@ -7,7 +7,11 @@
 
 mod a4_enemy;
 mod a4_ffi;
+#[cfg(test)]
+mod a4_replay_gen;
 mod a4_state;
+#[cfg(test)]
+mod a4_tests;
 mod ctx;
 mod ffi;
 mod grunt;

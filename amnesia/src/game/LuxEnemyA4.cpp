@@ -45,6 +45,7 @@ int iLuxEnemy::A4Call(void *apEnemy, unsigned alOp, OhplA4Io *apIo)
 	{
 	case kOhplA4Op_GA3:				return Ga3Call(pEnemy, apIo->i[0], static_cast<OhplGa3Io*>(apIo->p[0]));
 	case kOhplA4Op_STEP_SIZE:		f[0] = gpBase->mpEngine->GetStepSize(); return 0;
+	case kOhplA4Op_RAND_RECT:		f[0] = cMath::RandRectf(f[0], f[1]); return 0;
 	case kOhplA4Op_UPDATE_STEP:
 		switch(apIo->i[0])
 		{

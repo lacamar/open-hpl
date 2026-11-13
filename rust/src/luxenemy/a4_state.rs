@@ -8,6 +8,7 @@ use std::ffi::c_void;
 pub const OP_GA3: u32 = 1;
 pub const OP_STEP_SIZE: u32 = 2;
 pub const OP_UPDATE_STEP: u32 = 3;
+pub const OP_RAND_RECT: u32 = 5;
 pub const OP_ANIM_NAME_EQ: u32 = 10;
 pub const OP_ANIM_IS_ACTIVE: u32 = 11;
 pub const OP_ANIM_IS_OVER: u32 = 12;

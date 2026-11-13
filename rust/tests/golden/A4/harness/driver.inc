@@ -543,6 +543,7 @@ static void Run(Case &c, FILE *out)
 			cVector3f dd = e->GetDirection2D(ff);
 			Rec("GD2 %016llx", (unsigned long long)HV(dd));
 		}
+		if(r.p(0.03f)) e->PlayAnim("Anim" + cString::ToString(r.i(0, 3)), r.p(0.5f), r.f(0, 1), r.p(0.5f), r.f(0.5f, 2), r.p(0.5f), r.p(0.5f), r.p(0.5f));
 		if(r.p(0.003f)) { e->ResetProperties(); Rec("RESET"); }
 		if(r.p(0.01f)) { Rec("Z"); e->FadeOutCurrentAnim(0.2f); }
 		// update
@@ -615,8 +616,15 @@ static std::vector<Case> Load(const char *path)
 
 int main(int argc, char **argv)
 {
+#ifdef RECORD
+	gRecF = fopen(getenv("A4_REC"), "wb");
+#endif
 	std::vector<Case> cs = Load(argv[1]);
 	int lo = argc > 2 ? atoi(argv[2]) : 0, hi = argc > 3 ? atoi(argv[3]) : (int)cs.size();
 	for(int i = lo; i < hi && i < (int)cs.size(); ++i) Run(cs[i], stdout);
+#ifdef RECORD
+	if(gRecF) fclose(gRecF);
+	fprintf(stderr, "recorded %llu entries\n", (unsigned long long)gRecTotal);
+#endif
 	return 0;
 }

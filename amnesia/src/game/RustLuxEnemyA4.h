@@ -41,6 +41,7 @@ enum OhplA4Op : uint32_t
 	kOhplA4Op_GA3 = 1,
 	kOhplA4Op_STEP_SIZE = 2,
 	kOhplA4Op_UPDATE_STEP = 3,
+	kOhplA4Op_RAND_RECT = 5,
 	kOhplA4Op_ANIM_NAME_EQ = 10,
 	kOhplA4Op_ANIM_IS_ACTIVE = 11,
 	kOhplA4Op_ANIM_IS_OVER = 12,

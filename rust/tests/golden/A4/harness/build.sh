@@ -19,10 +19,13 @@ for f in math/Math:Math math/MathTypes:MathTypes system/String:String math/Bound
   src=${f%%:*}; o=${f##*:}
   [ -f obj/$o.o ] || echo "g++ $FLAGS $COMMON -c $W/HPL2/core/sources/$src.cpp -o obj/$o.o"
 done
+python3 -I "$R/genrec.py" "$H" "$W" > /dev/null
+echo "g++ $FLAGS $COMMON -DNEWSIDE -DRECORD -c $R/main_rec.cpp -o obj/main_rec.o"
 [ $which = new ] || echo "g++ $FLAGS $COMMON -DNEWSIDE -c $R/main_orig.cpp -o obj/main_orig.o"
 [ $which = orig ] || echo "g++ $FLAGS $COMMON -DNEWSIDE -c $R/main_new.cpp -o obj/main_new.o"
 } | xargs -P3 -I{} sh -c "{}"
 C="obj/Math.o obj/MathTypes.o obj/String.o obj/BV.o obj/Quat.o obj/Color.o"
 [ $which = new ] || g++ $FLAGS obj/main_orig.o $C $LIB -lSDL2 -Wl,--gc-sections -Wl,--unresolved-symbols=ignore-all -lpthread -ldl -lm -lz -o harness_orig
 [ $which = orig ] || g++ $FLAGS obj/main_new.o $C $LIB -lSDL2 -Wl,--gc-sections -Wl,--unresolved-symbols=ignore-all -lpthread -ldl -lm -lz -o harness_new
+g++ $FLAGS obj/main_rec.o $C $LIB $(cat wrap.txt) -lSDL2 -Wl,--gc-sections -Wl,--unresolved-symbols=ignore-all -lpthread -ldl -lm -lz -o harness_rec
 echo built

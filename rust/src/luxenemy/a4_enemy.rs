@@ -11,13 +11,13 @@ use super::a4_state::{
     OP_FOOD_IS_OBJECT, OP_FOOD_LOWEST_Y, OP_FOOD_POS, OP_FRUSTUM_BODY, OP_FRUSTUM_BODY_AT,
     OP_GROUND_RAY, OP_LIGHT_LEVEL_AT, OP_MESH_EXISTS, OP_MESH_SET_ACTIVE, OP_MESH_VISIBLE,
     OP_ON_DAMAGE, OP_ON_RESET_PROPERTIES, OP_ON_SET_ACTIVE_SPECIFIC, OP_PLAYER_SANITY,
-    OP_SET_ENTITY_OFFSET, OP_SOUND_CREATE, OP_SOUND_EXISTS, OP_SOUND_FADE_OUT, OP_SOUND_ID,
-    OP_STEP_SIZE, OP_SUBMESH_NUM, OP_UPDATE_STEP, OP_WARN_NO_ANIM,
+    OP_RAND_RECT, OP_SET_ENTITY_OFFSET, OP_SOUND_CREATE, OP_SOUND_EXISTS, OP_SOUND_FADE_OUT,
+    OP_SOUND_ID, OP_STEP_SIZE, OP_SUBMESH_NUM, OP_UPDATE_STEP, OP_WARN_NO_ANIM,
 };
 use super::ctx::{Ctx, Env, g, gv, s, sv};
 use super::machine::{MSG_ANIMATION_OVER, MSG_ANIMATION_SPECIAL_EVENT, MSG_TAKE_HIT};
 use super::{dist_sqr, dist3, normalized, rot_y, z3};
-use crate::math::{Matrixf, Vector3f, fma, len3, matrix_mul_vec, matrix_rotate, rand_rectf, v3};
+use crate::math::{Matrixf, Vector3f, fma, len3, matrix_mul_vec, matrix_rotate, v3};
 use std::ffi::c_void;
 
 pub const STATE_IDLE: i32 = 0;
@@ -281,7 +281,7 @@ fn at2(a: &[[f32; 2]; 2], pose: i32, speed: i32) -> f32 {
         .unwrap_or(0.0)
 }
 
-fn ambient_rand(b: &Base, state: i32) -> f32 {
+fn ambient_rand(b: &Base, h: &H, state: i32) -> f32 {
     let at = |a: &[f32; 4]| {
         usize::try_from(state)
             .ok()
@@ -289,7 +289,11 @@ fn ambient_rand(b: &Base, state: i32) -> f32 {
             .copied()
             .unwrap_or(0.0)
     };
-    rand_rectf(at(&b.ambient_min), at(&b.ambient_max))
+    let mut io = Io::new();
+    io.f[0] = at(&b.ambient_min);
+    io.f[1] = at(&b.ambient_max);
+    h.call(OP_RAND_RECT, &mut io);
+    io.f[0]
 }
 
 pub fn set_move_speed(b: &Base, speed: i32) {
@@ -345,7 +349,7 @@ pub fn change_sound_state(b: &mut Base, h: &H, state: i32) {
             b.cur_sound = std::ptr::null_mut();
         }
     }
-    b.ambient_count = ambient_rand(b, state);
+    b.ambient_count = ambient_rand(b, h, state);
 }
 
 pub fn update_sound_state(b: &mut Base, h: &H, dt: f32) {
@@ -370,7 +374,7 @@ pub fn update_sound_state(b: &mut Base, h: &H, dt: f32) {
         if !b.cur_sound.is_null() {
             b.cur_sound_id = h.qp(OP_SOUND_ID, b.cur_sound);
         }
-        b.ambient_count = ambient_rand(b, st);
+        b.ambient_count = ambient_rand(b, h, st);
     } else {
         b.ambient_count -= dt;
     }
