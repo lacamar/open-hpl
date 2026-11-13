@@ -1,29 +1,29 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "impl/CollideShapeNewton.h"
+#include "physics/CollideShape.h"
 
 #include "physics/PhysicsWorld.h"
 #include "system/LowLevelSystem.h"
 #include "impl/RustNewton.h"
 #include "impl/RustNewtonBackend.h"
-#include "impl/PhysicsWorldNewton.h"
+#include "physics/PhysicsWorld.h"
 #include "system/Platform.h"
 #include "resources/BinaryBuffer.h"
 #include "resources/Resources.h"
@@ -35,20 +35,14 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cCollideShapeNewton::cCollideShapeNewton(eCollideShapeType aType, const cVector3f &avSize, 
+	iCollideShape::iCollideShape(eCollideShapeType aType, const cVector3f &avSize,
 											cMatrixf* apOffsetMtx, NewtonWorld* apNewtonWorld,
 											iPhysicsWorld *apWorld)
-	: iCollideShape(apWorld)
+	: mlUserCount(0), mpWorld(apWorld)
 	{
 		mpNewtonCollision = NULL;
 		mpNewtonWorld = apNewtonWorld;
-		if(apWorld) mhWorld = static_cast<cPhysicsWorldNewton*>(apWorld)->RustHandle();
+		if(apWorld) mhWorld = static_cast<iPhysicsWorld*>(apWorld)->RustHandle();
 		mvSize = avSize;
 		mType = aType;
 
@@ -59,13 +53,11 @@ namespace hpl {
 		else
 			m_mtxOffset = cMatrixf::Identity;
 
-		////////////////////////////////////////////
 		// Create Newton collision
-		
+
 		if(aType >= eCollideShapeType_Null && aType <= eCollideShapeType_Capsule)
 			mpNewtonCollision = ohpl_nts_create(mhWorld, (int32_t)aType, &mvSize, apOffsetMtx);
 
-		////////////////////////////////////////////
 		// Calculate Bounding volume and volume.
 		if(mType == eCollideShapeType_Box)
 		{
@@ -79,11 +71,11 @@ namespace hpl {
 
 			mfVolume = (4.0f / 3.0f) * kPif * (mvSize.x*mvSize.x*mvSize.x);
 		}
-		else if(mType == eCollideShapeType_Cylinder || 
+		else if(mType == eCollideShapeType_Cylinder ||
 				mType == eCollideShapeType_Capsule)
 		{
 			mBoundingVolume.SetSize(cVector3f(mvSize.y,mvSize.x*2,mvSize.x*2));
-			
+
 			//Not gonna be correct for capsule...
 			if(mType == eCollideShapeType_Cylinder)
 				mfVolume = kPif * (mvSize.x*mvSize.x)*mvSize.y;
@@ -92,11 +84,11 @@ namespace hpl {
 				//Height of the cylinder part.
                 float fCylHeight = mvSize.y - (mvSize.x*2);
 				mfVolume =0;
-				
+
 				//The volume of the cylinder part.
 				if(fCylHeight>0)
 					mfVolume += kPif * (mvSize.x*mvSize.x)*fCylHeight;
-				
+
 				//The volume of the sphere part.
 				mfVolume += (4.0f / 3.0f) * kPif * (mvSize.x*mvSize.x*mvSize.x);
 			}
@@ -105,9 +97,7 @@ namespace hpl {
 		mBoundingVolume.SetTransform(m_mtxOffset);
 	}
 
-	//-----------------------------------------------------------------------
-
-	cCollideShapeNewton::~cCollideShapeNewton()
+	iCollideShape::~iCollideShape()
 	{
 		//Release Newton Collision
 		if(mpNewtonCollision)
@@ -116,15 +106,9 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
-
-	iCollideShape* cCollideShapeNewton::GetSubShape(int alIdx)
+	iCollideShape* iCollideShape::GetSubShape(int alIdx)
 	{
 		if(mType == eCollideShapeType_Compound)
 			return mvSubShapes[alIdx];
@@ -132,7 +116,7 @@ namespace hpl {
 			return this;
 	}
 
-	int cCollideShapeNewton::GetSubShapeNum()
+	int iCollideShape::GetSubShapeNum()
 	{
 		if(mType == eCollideShapeType_Compound)
 			return (int)mvSubShapes.size();
@@ -140,9 +124,7 @@ namespace hpl {
 			return 1;
 	}
 
-	//-----------------------------------------------------------------------
-
-	const tVector3fVec& cCollideShapeNewton::GetBuoyancyPoints(float &afRadius)
+	const tVector3fVec& iCollideShape::GetBuoyancyPoints(float &afRadius)
 	{
 		if(mfBuoyancyPointRadius < 0)
 		{
@@ -156,13 +138,11 @@ namespace hpl {
 		afRadius = mfBuoyancyPointRadius;
 		return mvBuoyancyPoints;
 	}
-	
-	//-----------------------------------------------------------------------
 
-	cVector3f cCollideShapeNewton::GetInertia(float afMass)
+	cVector3f iCollideShape::GetInertia(float afMass)
 	{
 		cVector3f vInertia(1,1,1);
-		
+
 		// Box
 		if(mType == eCollideShapeType_Box)
 		{
@@ -215,27 +195,21 @@ namespace hpl {
 		return vInertia;
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cCollideShapeNewton::CreateStaticSceneFromShapeVec(tCollideShapeVec &avShapes, tMatrixfVec *apMatrices)
+	void iCollideShape::CreateStaticSceneFromShapeVec(tCollideShapeVec &avShapes, tMatrixfVec *apMatrices)
 	{
 		std::vector<NewtonCollision*> vColliders;
 		for(size_t i=0; i<avShapes.size(); ++i)
 		{
 			mvSubShapes.push_back(avShapes[i]);
-			vColliders.push_back(static_cast<cCollideShapeNewton*>(avShapes[i])->GetNewtonCollision());
+			vColliders.push_back(static_cast<iCollideShape*>(avShapes[i])->GetNewtonCollision());
 		}
 		mpNewtonCollision = ohpl_nts_static_scene(mhWorld, vColliders.data(), vColliders.size());
 	}
 
-
-	//-----------------------------------------------------------------------
-
-	
-	void cCollideShapeNewton::CreateCompoundFromShapeVec(tCollideShapeVec &avShapes)
-	{	
+	void iCollideShape::CreateCompoundFromShapeVec(tCollideShapeVec &avShapes)
+	{
 		std::vector<NewtonCollision*> vNewtonColliders;
-		
+
 		vNewtonColliders.reserve(avShapes.size());
 		mvSubShapes.reserve(avShapes.size());
 
@@ -244,8 +218,8 @@ namespace hpl {
 		for(size_t i=0; i< avShapes.size(); i++)
 		{
 			mvSubShapes.push_back(avShapes[i]);
-		
-			cCollideShapeNewton *pNewtonShape = static_cast<cCollideShapeNewton*>(avShapes[i]);
+
+			iCollideShape *pNewtonShape = static_cast<iCollideShape*>(avShapes[i]);
 			vNewtonColliders.push_back(pNewtonShape->GetNewtonCollision());
 
 			mfVolume += pNewtonShape->GetVolume();
@@ -273,12 +247,10 @@ namespace hpl {
 		}
 
 		mBoundingVolume.SetLocalMinMax(vFinalMin, vFinalMax);
-		
-	}
-	
-	//-----------------------------------------------------------------------
 
-	void cCollideShapeNewton::CreateFromVertices(	const unsigned int* apIndexArray, int alIndexNum,
+	}
+
+	void iCollideShape::CreateFromVertices(	const unsigned int* apIndexArray, int alIndexNum,
 													const float *apVertexArray, int alVtxStride, int alVtxNum)
 	{
 		tWString sCacheFile;
@@ -304,7 +276,6 @@ namespace hpl {
 
 		mpNewtonCollision = ohpl_nts_tree(mhWorld, apIndexArray, alIndexNum, apVertexArray, alVtxStride, alVtxNum);
 
-
 		//Set bounding box size
 		mBoundingVolume.AddArrayPoints(apVertexArray, alVtxNum);
 		mBoundingVolume.CreateFromPoints(alVtxStride);
@@ -318,9 +289,7 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cCollideShapeNewton::CreateHeightField(int alSize, const unsigned short* apElevation, float afUnitSize, float afVerticalScale)
+	void iCollideShape::CreateHeightField(int alSize, const unsigned short* apElevation, float afUnitSize, float afVerticalScale)
 	{
 		mpNewtonCollision = ohpl_nts_height_field(mhWorld, alSize, apElevation, afUnitSize, afVerticalScale);
 		const unsigned short* pEnd = apElevation + (size_t)alSize * alSize;
@@ -328,18 +297,14 @@ namespace hpl {
 									   cVector3f((alSize - 1) * afUnitSize, *std::max_element(apElevation, pEnd) * afVerticalScale, (alSize - 1) * afUnitSize));
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cCollideShapeNewton::SaveToSerializedData(cBinaryBuffer* apBinBuffer)
+	void iCollideShape::SaveToSerializedData(cBinaryBuffer* apBinBuffer)
 	{
 		apBinBuffer->AddVector3f(mBoundingVolume.GetLocalMin());
 		apBinBuffer->AddVector3f(mBoundingVolume.GetLocalMax());
 		ohpl_nts_serialize(mhWorld, mpNewtonCollision, (size_t)apBinBuffer);
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cCollideShapeNewton::CreateFromSerializedData(cBinaryBuffer* apBinBuffer)
+	void iCollideShape::CreateFromSerializedData(cBinaryBuffer* apBinBuffer)
 	{
 		cVector3f vMin, vMax;
 		apBinBuffer->GetVector3f(&vMin);
@@ -350,12 +315,6 @@ namespace hpl {
 		mBoundingVolume.SetLocalMinMax(vMin, vMax);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 }

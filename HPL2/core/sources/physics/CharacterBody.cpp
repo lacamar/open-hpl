@@ -36,28 +36,14 @@ namespace hpl {
 
 	static const OhplH14BodyVt* BodyVt();
 
-	//////////////////////////////////////////////////////////////////////////
-	// COLLIDE GRAVITY
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	std::vector<iPhysicsBody*> iCharacterBody::mvTempBodies;
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// COLLIDE GRAVITY
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cCharacterBodyCollideGravity::cCharacterBodyCollideGravity(iCharacterBody *apCharBody)
 	{
 		mpCharBody = apCharBody;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cCharacterBodyCollideGravity::OnCollision(iPhysicsBody *apBody, cCollideData *apCollideData)
 	{
@@ -65,48 +51,30 @@ namespace hpl {
 			reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apCollideData));
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// COLLIDE PUSH
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cCharacterBodyCollidePush::cCharacterBodyCollidePush(iCharacterBody *apCharBody)
 	{
 		mpCharBody = apCharBody;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cCharacterBodyCollidePush::OnCollision(iPhysicsBody *apBody, cCollideData *apCollideData)
 	{
 		ohpl_h14_collide_push(iCharacterBody::HostOp, reinterpret_cast<size_t>(mpCharBody), &mpCharBody->mE, &mpCharBody->mS, reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apCollideData));
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// RAY CAST
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cCharacterBodyRay::cCharacterBodyRay() : mlCollideFlags(eFlagBit_All)
 	{
 
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cCharacterBodyRay::Clear()
 	{
 		mfMinDist = 10000.0f;
 		mbCollide = false;
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool cCharacterBodyRay::OnIntersect(iPhysicsBody *pBody,cPhysicsRayParams *apParams)
 	{
@@ -122,14 +90,7 @@ namespace hpl {
 		return true;
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	size_t iCharacterBody::HostOp(int32_t alOp, OhplH15Wa *a)
 	{
@@ -167,27 +128,7 @@ namespace hpl {
 			pBody->AddForceAtPosition(cVector3f(pF[0], pF[1], pF[2]), cVector3f(pP[0], pP[1], pP[2]));
 			return 0;
 		}
-		case 517:
-		{
-			iCharacterBody *pChar = reinterpret_cast<iCharacterBody*>(a->p[0]);
-			iCharacterBody *pHitCharBody = reinterpret_cast<iPhysicsBody*>(a->p[1])->GetCharacterBody();
-			if(pHitCharBody->GetMass() > pChar->GetCharacterMaxPushMass()) return 0;
-
-			float fHitTop = pHitCharBody->GetPosition().y + pHitCharBody->GetSize().y/2;
-			//Make bottom 10% of size longer up to remove uneeded pushing.
-			float fBottom = pChar->GetPosition().y - (pChar->GetSize().y/2 - pChar->GetSize().y*0.1f);
-
-			//If body is on top of hitbody, skip doing a push.
-			if(fHitTop < fBottom) return 0;
-
-			cVector3f vDir = pHitCharBody->GetPosition() - pChar->GetPosition();
-			if(pChar->GetCharacterPushIn2D()) vDir.y =0;
-			vDir.Normalize();
-
-			pHitCharBody->AddForce(vDir * pChar->GetCharacterPushForce());
-			return 0;
-		}
-		case 519: return reinterpret_cast<size_t>(pBody->GetCharacterBody());
+		case 519: return reinterpret_cast<size_t>(&pBody->GetCharacterBody()->mS);
 		}
 		return 0;
 	}
@@ -196,14 +137,12 @@ namespace hpl {
 	{
 		mpAux = ohpl_h14_aux_new();
 
-		/////////////////////////////
 		//Set up main properties
 		msName = asName;
 
 		mS.size = avSize;
 		ohpl_h14_char_init(&mE, &mS, reinterpret_cast<size_t>(apWorld), cos(cMath::ToRad(45.0f)));
 
-		/////////////////////////////
 		// Create Shape
 		float fRadius = cMath::Max(avSize.x, avSize.z)*0.5f;
 		cMatrixf mtxOffset = cMath::MatrixRotateZ(kPi2f);
@@ -230,15 +169,15 @@ namespace hpl {
 		mvShapes.push_back(mpCurrentShape);
 		mvBodies.push_back(mpCurrentBody);
 
-
-		/////////////////////////////
 		//Create callbacks
 		mpCollideGravityCallback = hplNew( cCharacterBodyCollideGravity, (this) );
 		mpCollidePushCallback = hplNew( cCharacterBodyCollidePush, (this) );
 		mpRayCallback = hplNew( cCharacterBodyRay, () );
 	}
 
-	//-----------------------------------------------------------------------
+	void iCharacterBody::UpdateBodyActive() { mpCurrentBody->SetActive(mS.active && mS.testCollision && mbPhysicsBodyActive); }
+
+	void iCharacterBody::UpdateBody() { mpCurrentBody->SetPosition(mS.position); }
 
 	iCharacterBody::~iCharacterBody()
 	{
@@ -253,24 +192,12 @@ namespace hpl {
 		hplDelete(mpRayCallback);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
-
-	float iCharacterBody::GetMass()
-	{
-		return mS.mass;
-	}
 	void iCharacterBody::SetMass(float afMass)
 	{
 		mS.mass = afMass;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iCharacterBody::SetActive(bool abX)
 	{
@@ -280,16 +207,12 @@ namespace hpl {
 		UpdateBodyActive();
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iCharacterBody::SetCollideCharacter(bool abX)
 	{
 		if(abX == mbCollideCharacter) return;
 
 		mbCollideCharacter = abX;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iCharacterBody::SetTestCollision(bool abX)
 	{
@@ -298,26 +221,6 @@ namespace hpl {
 		mS.testCollision = abX;
 		UpdateBodyActive();
 	}
-
-	void iCharacterBody::SetPhysicsBodyActive(bool abX)
-	{
-		mbPhysicsBodyActive = abX;
-		UpdateBodyActive();
-	}
-
-	void iCharacterBody::UpdateBodyActive()
-	{
-		mpCurrentBody->SetActive(mS.active && mS.testCollision && mbPhysicsBodyActive);
-	}
-
-	//-----------------------------------------------------------------------
-
-	cVector3f iCharacterBody::GetSize()
-	{
-		return mS.size;
-	}
-
-	//-----------------------------------------------------------------------
 
 	int iCharacterBody::AddExtraSize(const cVector3f& avSize)
 	{
@@ -339,8 +242,6 @@ namespace hpl {
 
 		return (int)mvShapes.size() -1;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iCharacterBody::SetActiveSize(int alNum)
 	{
@@ -364,55 +265,29 @@ namespace hpl {
 		mS.size.z = mpCurrentShape->GetRadius() * 2;
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::SetMaxPositiveMoveSpeed(eCharDir aDir, float afX)
-	{
-		mS.maxPosMoveSpeed[aDir] = afX;
-	}
 	float iCharacterBody::GetMaxPositiveMoveSpeed(eCharDir aDir)
 	{
 		return mS.maxPosMoveSpeed[aDir];
-	}
-	void iCharacterBody::SetMaxNegativeMoveSpeed(eCharDir aDir, float afX)
-	{
-		mS.maxNegMoveSpeed[aDir] = afX;
 	}
 	float iCharacterBody::GetMaxNegativeMoveSpeed(eCharDir aDir)
 	{
 		return mS.maxNegMoveSpeed[aDir];
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::SetMoveSpeed(eCharDir aDir, float afX)
-	{
-		mS.moveSpeed[aDir] = afX;
-	}
 	float iCharacterBody::GetMoveSpeed(eCharDir aDir)
 	{
 		return mS.moveSpeed[aDir];
 	}
 
-	void iCharacterBody::SetMoveAcc(eCharDir aDir, float afX)
-	{
-		mS.moveAcc[aDir] = afX;
-	}
 	float iCharacterBody::GetMoveAcc(eCharDir aDir)
 	{
 		return mS.moveAcc[aDir];
 	}
 
-	void iCharacterBody::SetMoveDeacc(eCharDir aDir, float afX)
-	{
-		mS.moveDeacc[aDir] = afX;
-	}
 	float iCharacterBody::GetMoveDeacc(eCharDir aDir)
 	{
 		return mS.moveDeacc[aDir];
 	}
-
-	//-----------------------------------------------------------------------
 
 	cVector3f iCharacterBody::GetVelocity(float afFrameTime)
 	{
@@ -421,14 +296,7 @@ namespace hpl {
         return (mS.position - mS.lastPosition) / afFrameTime;
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::SetupSafePositions(float afSaveInterval, float afBufferTime)
-	{
-		ohpl_h14_setup_safe_positions(mpAux, afSaveInterval, afBufferTime);
-	}
-
-	// cCharacterBodyNewton::PostUpdate 0x14b4a20, iCharacterBody::TeleportToSafePosition 0xe787c0 (Rebirth)
+	// iCharacterBody::PostUpdate 0x14b4a20, iCharacterBody::TeleportToSafePosition 0xe787c0 (Rebirth)
 	void iCharacterBody::UpdateSafePositions(float afTimeStep)
 	{
 		ohpl_h14_update_safe_positions(mpAux, afTimeStep, OhplV3{mS.position.x, mS.position.y, mS.position.z});
@@ -459,24 +327,6 @@ namespace hpl {
 	{
 		return mS.position;
 	}
-	const cVector3f& iCharacterBody::GetLastPosition()
-	{
-		return mS.lastPosition;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::SetFeetPosition(const cVector3f& avPos, bool abSmooth)
-	{
-		SetPosition(avPos + cVector3f(0,mS.size.y/2,0),abSmooth);
-	}
-
-	cVector3f iCharacterBody::GetFeetPosition()
-	{
-		return mS.position - cVector3f(0,mS.size.y/2,0);
-	}
-
-	//-----------------------------------------------------------------------
 
 	void iCharacterBody::SetYaw(float afX)
 	{
@@ -484,16 +334,6 @@ namespace hpl {
 		if(mpConnectedBody && mbConnectionAlignCharacterRotation) return;
 
 		mS.yaw = afX;
-	}
-
-	float iCharacterBody::GetYaw()
-	{
-		return mS.yaw;
-	}
-
-	void iCharacterBody::AddYaw(float afX)
-	{
-		mS.yaw += afX;
 	}
 
 	void iCharacterBody::SetPitch(float afX)
@@ -504,75 +344,15 @@ namespace hpl {
 		mS.pitch = afX;
 	}
 
-	void iCharacterBody::AddPitch(float afX)
-	{
-		mS.pitch += afX;
-	}
-
-	float iCharacterBody::GetPitch()
-	{
-		return mS.pitch;
-	}
-
-	//-----------------------------------------------------------------------
-
-	const cVector3f& iCharacterBody::GetForward()
-	{
-		return mS.forward;
-	}
 	const cVector3f& iCharacterBody::GetRight()
 	{
 		return mS.right;
 	}
-	const cVector3f& iCharacterBody::GetUp()
-	{
-		return mS.up;
-	}
 
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::SetGravityActive(bool abX)
-	{
-		mS.gravityActive = abX;
-	}
-
-	bool iCharacterBody::GravityIsActive()
-	{
-		return mS.gravityActive;
-	}
-
-	void iCharacterBody::SetMaxGravitySpeed(float afX)
-	{
-		mS.maxGravitySpeed = afX;
-	}
 	float iCharacterBody::GetMaxGravitySpeed()
 	{
 		return mS.maxGravitySpeed;
 	}
-
-	//-----------------------------------------------------------------------
-
-	bool iCharacterBody::GetCustomGravityActive()
-	{
-		return mS.customGravityActive;
-	}
-
-	void iCharacterBody::SetCustomGravityActive(bool abX)
-	{
-		mS.customGravityActive = abX;
-	}
-
-	void iCharacterBody::SetCustomGravity(const cVector3f& avCustomGravity)
-	{
-		mS.customGravity = avCustomGravity;
-	}
-
-	cVector3f iCharacterBody::GetCustomGravity()
-	{
-		return mS.customGravity;
-	}
-
-	//-----------------------------------------------------------------------
 
 	void iCharacterBody::SetCollideFlags(tFlag alX)
 	{
@@ -587,44 +367,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::SetMaxNoSlideSlopeAngle(float afAngle)
-	{
-		mS.maxNoSlideSlopeCos = cos(afAngle);
-	}
-
-	float iCharacterBody::GetMaxNoSlideSlopeAngle()
-	{
-		return acos(mS.maxNoSlideSlopeCos);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::ResetClimbing()
-	{
-		mS.climbing = false;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::SetForce(const cVector3f &avForce)
-	{
-		mS.force = avForce;
-	}
-
-	void iCharacterBody::AddForce(const cVector3f &avForce)
-	{
-		mS.force += avForce;
-	}
-
-	cVector3f iCharacterBody::GetForce()
-	{
-		return mS.force;
-	}
-
-	//-----------------------------------------------------------------------
-
 	void iCharacterBody::Move(eCharDir aDir, float afMul)
 	{
 		if(mS.moveDelayCount>0) return; //Just skip any movement.
@@ -633,8 +375,6 @@ namespace hpl {
 
 		mS.moving[aDir] = true;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iCharacterBody::StopMovement()
 	{
@@ -649,8 +389,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iCharacterBody::ConnectToBody(	iPhysicsBody *apBody, const cVector3f& avConnectionPos,
 										tPhysicsConnectionFlag alFlags)
 	{
@@ -660,63 +398,10 @@ namespace hpl {
 		ohpl_h14_reset_pids(mpAux);
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::DisconnectBody()
-	{
-		ohpl_h14_disconnect_body(HostOp, reinterpret_cast<size_t>(this), &mE);
-	}
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::SetCamera(cCamera *apCam)
-	{
-		mpCamera = apCam;
-	}
-
-	cCamera* iCharacterBody::GetCamera()
-	{
-		return mpCamera;
-	}
-
-	void iCharacterBody::SetCameraPosAdd(const cVector3f &avAdd)
-	{
-		mvCameraPosAdd = avAdd;
-	}
 	cVector3f iCharacterBody::GetCameraPosAdd()
 	{
 		return mvCameraPosAdd;
 	}
-
-	//-----------------------------------------------------------------------
-
-	iCollideShape * iCharacterBody::GetCurrentShape()
-	{
-		return mpCurrentShape;
-	}
-
-	iPhysicsBody* iCharacterBody::GetCurrentBody()
-	{
-		return mpCurrentBody;
-	}
-
-	iCollideShape *iCharacterBody::GetShape(int alIdx)
-	{
-		return mvShapes[alIdx];
-	}
-
-	bool iCharacterBody::IsOnGround()
-	{
-		return mS.onGroundCount >0;
-	}
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
 
 	bool iCharacterBody::CheckRayIntersection(const cVector3f &avStart, const cVector3f &avEnd, float *apDistance, cVector3f *apNormalVec)
 	{
@@ -732,39 +417,18 @@ namespace hpl {
 		return bCollide;
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::SetEntity(iEntity3D *apEntity)
-	{
-		mpEntity = apEntity;
-	}
 	iEntity3D* iCharacterBody::GetEntity()
 	{
 		return mpEntity;
-	}
-	void iCharacterBody::SetEntityOffset(const cMatrixf &a_mtxOffset)
-	{
-		m_mtxEntityOffset = a_mtxOffset;
 	}
 	const cMatrixf& iCharacterBody::GetEntityOffset()
 	{
 		return m_mtxEntityOffset;
 	}
 
-	void iCharacterBody::SetEntityPostOffset(const cMatrixf &a_mtxOffset)
-	{
-		m_mtxEntityPostOffset = a_mtxOffset;
-	}
 	const cMatrixf& iCharacterBody::GetEntityPostOffset()
 	{
 		return m_mtxEntityPostOffset;
-	}
-
-	//-----------------------------------------------------------------------
-
-	iPhysicsBody * iCharacterBody::GetConnectedBody()
-	{
-		return mpConnectedBody;
 	}
 
 	cVector3f iCharacterBody::GetBodyConnectionPos()
@@ -783,17 +447,7 @@ namespace hpl {
 		return vPos;
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
 	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
 
 	void iCharacterBody::PreUpdateConnection(float afTimeStep)
 	{
@@ -816,8 +470,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iCharacterBody::UpdateBodyConnection(float afTimeStep)
 	{
 		//No connected body = nothing to do
@@ -826,8 +478,6 @@ namespace hpl {
 		OhplH14Conn conn = MakeConn();
 		ohpl_h14_update_body_connection(mpAux, BodyVt(), &mS, &conn, IsOnGround(), afTimeStep);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iCharacterBody::UpdateCharacterConnection(float afTimeStep)
 	{
@@ -839,20 +489,6 @@ namespace hpl {
 		if(ohpl_h14_update_character_connection(mpAux, BodyVt(), &mS, &conn, afTimeStep, reinterpret_cast<OhplV3*>(&vForce)))
 			AddForce(vForce);
 	}
-
-	//-----------------------------------------------------------------------
-
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
 
 	static const OhplH14BodyVt* BodyVt()
 	{
@@ -927,23 +563,6 @@ namespace hpl {
 		return vt;
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::Update(float afTimeStep)
-	{
-		OhplCharVt vt = MakeVt();
-		ohpl_char_update(&vt, &mS, afTimeStep, mbHpl3);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::UpdateMoveMatrix()
-	{
-		ohpl_char_update_move_matrix(&mS);
-	}
-
-	//-----------------------------------------------------------------------
-
 	bool iCharacterBody::CheckCharacterFits(const cVector3f &avPosition, bool abFeetPosition, int alSizeIdx, cVector3f *apPushBackVec, float afEpsilon)
 	{
 		if(alSizeIdx <0) alSizeIdx = mS.currentShapeIdx;
@@ -956,25 +575,7 @@ namespace hpl {
 		return bFits;
 	}
 
-	//-----------------------------------------------------------------------
-
 	bool iCharacterBody::mbHpl3 = false;
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
 
 	void iCharacterBody::UpdateCamera()
 	{
@@ -992,9 +593,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-
 	void iCharacterBody::UpdateEntity()
 	{
 		if(mpEntity==NULL) return;
@@ -1006,25 +604,6 @@ namespace hpl {
 		ohpl_h14_update_entity(mpAux, &in, &mtxEntity);
 		mpEntity->SetMatrix(mtxEntity);
 	}
-
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::UpdateBody()
-	{
-		mpCurrentBody->SetPosition(mS.position);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iCharacterBody::ClearGravityAttachment()
-	{
-		mpGravityLastAttachedBody = mpGravityAttachedBody;
-		mpGravityAttachedBody = NULL;
- 		mlGravityAttachmentContacts = 0;
-	}
-
-	//-----------------------------------------------------------------------
-
 
 	void iCharacterBody::UpdateGravityAttachment()
 	{
@@ -1040,8 +619,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
 	bool iCharacterBody::CheckCollision(cVector3f *apPushBackVector, const cVector3f& avPos, iPhysicsWorldCollisionCallback *apCallback,
 										int alShapeIdx)
 	{
@@ -1053,7 +630,5 @@ namespace hpl {
 												apCallback, true,mlMinBodyPushStrength,
 												mS.collideFlags, false);
 	}
-
-	//-----------------------------------------------------------------------
 
 }

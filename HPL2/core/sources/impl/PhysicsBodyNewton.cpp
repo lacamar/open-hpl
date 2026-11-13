@@ -1,27 +1,27 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "impl/PhysicsBodyNewton.h"
+#include "physics/PhysicsBody.h"
 
-#include "impl/CollideShapeNewton.h"
-#include "impl/PhysicsWorldNewton.h"
-#include "impl/PhysicsMaterialNewton.h"
+#include "physics/CollideShape.h"
+#include "physics/PhysicsWorld.h"
+#include "physics/PhysicsMaterial.h"
 #include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
 #include "math/Math.h"
@@ -33,170 +33,100 @@
 
 namespace hpl {
 
-	bool cPhysicsBodyNewton::mbUseCallback = true;
+	bool iPhysicsBody::mbUseCallback = true;
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cPhysicsBodyNewton::cPhysicsBodyNewton(const tString &asName,iPhysicsWorld *apWorld,iCollideShape *apShape) 
-	: iPhysicsBody(asName,apWorld, apShape)
-	{
-		cPhysicsWorldNewton *pWorldNewton = static_cast<cPhysicsWorldNewton*>(apWorld);
-		cCollideShapeNewton *pShapeNewton = static_cast<cCollideShapeNewton*>(apShape);
-		
-		mpNewtonWorld = pWorldNewton->GetNewtonWorld();
-		cMatrixf mtxIdentity = cMatrixf::Identity;
-		mhRust = ohpl_ntb_create(pWorldNewton->RustHandle(), pShapeNewton->GetNewtonCollision(), (size_t)this, &mpNewtonBody);
-
-		mpCallback = hplNew( cPhysicsBodyNewtonCallback, () );
-
-		AddCallback(mpCallback);
-
-		//Set default property settings
-		mbGravity = true;
-		
-		mfMaxLinearSpeed =0;
-		mfMaxAngularSpeed =0;
-		mfMass =0;
-
-		mfAutoDisableLinearThreshold = 0.01f;
-		mfAutoDisableAngularThreshold = 0.01f;
-		mlAutoDisableNumSteps = 10;
-
-		//Log("Creating newton body '%s' %d\n",msName.c_str(),(size_t)this);
-	}
-
-	//-----------------------------------------------------------------------
-
-	cPhysicsBodyNewton::~cPhysicsBodyNewton()
-	{
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cPhysicsBodyNewton::DeleteLowLevel()
+	void iPhysicsBody::DeleteLowLevel()
 	{
 		ohpl_ntb_destroy(mhRust);
 		hplDelete(mpCallback);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// CALLBACK METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
     void cPhysicsBodyNewtonCallback::OnTransformUpdate(iEntity3D * apEntity)
 	{
-		if(cPhysicsBodyNewton::mbUseCallback==false) return;
-		cPhysicsBodyNewton *pBody = static_cast<cPhysicsBodyNewton*>(apEntity);
+		if(iPhysicsBody::mbUseCallback==false) return;
+		iPhysicsBody *pBody = static_cast<iPhysicsBody*>(apEntity);
 		ohpl_ntb_set_matrix(pBody->mhRust, &apEntity->GetLocalMatrix());
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-	
-	//-----------------------------------------------------------------------
-	
-	void cPhysicsBodyNewton::SetMaterial(iPhysicsMaterial* apMaterial)
+
+	void iPhysicsBody::SetMaterial(iPhysicsMaterial* apMaterial)
 	{
 		mpMaterial = apMaterial;
 		if(apMaterial == NULL) return;
-		ohpl_ntb_set_material(mhRust, static_cast<cPhysicsMaterialNewton*>(mpMaterial)->GetId());
+		ohpl_ntb_set_material(mhRust, static_cast<iPhysicsMaterial*>(mpMaterial)->GetId());
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cPhysicsBodyNewton::SetLinearVelocity(const cVector3f &avVel)
+	void iPhysicsBody::SetLinearVelocity(const cVector3f &avVel)
 	{
 		ohpl_ntb_set_velocity(mhRust, &avVel);
 	}
-	cVector3f cPhysicsBodyNewton::GetLinearVelocity() const
+	cVector3f iPhysicsBody::GetLinearVelocity() const
 	{
 		cVector3f vVel;
 		ohpl_ntb_velocity(mhRust, &vVel);
 		return vVel;
 	}
-	
-	//-----------------------------------------------------------------------
 
-	void cPhysicsBodyNewton::SetAngularVelocity(const cVector3f &avVel)
+	void iPhysicsBody::SetAngularVelocity(const cVector3f &avVel)
 	{
 		ohpl_ntb_set_omega(mhRust, &avVel);
 	}
-	cVector3f cPhysicsBodyNewton::GetAngularVelocity() const
+	cVector3f iPhysicsBody::GetAngularVelocity() const
 	{
 		cVector3f vVel;
 		ohpl_ntb_omega(mhRust, &vVel);
 		return vVel;
 	}
-	
-	//-----------------------------------------------------------------------
 
-	void cPhysicsBodyNewton::SetLinearDamping(float afDamping)
+	void iPhysicsBody::SetLinearDamping(float afDamping)
 	{
 		ohpl_ntb_set_linear_damping(mhRust, afDamping);
 	}
-	float cPhysicsBodyNewton::GetLinearDamping() const
+	float iPhysicsBody::GetLinearDamping() const
 	{
 		return ohpl_ntb_linear_damping(mhRust);
 	}
-	
-	//-----------------------------------------------------------------------
 
-	void cPhysicsBodyNewton::SetAngularDamping(float afDamping)
+	void iPhysicsBody::SetAngularDamping(float afDamping)
 	{
 		ohpl_ntb_set_angular_damping(mhRust, afDamping);
 	}
-	float cPhysicsBodyNewton::GetAngularDamping() const
+	float iPhysicsBody::GetAngularDamping() const
 	{
 		return ohpl_ntb_angular_damping(mhRust);
 	}
-	
-	//-----------------------------------------------------------------------
 
-	void cPhysicsBodyNewton::SetMaxLinearSpeed(float afSpeed)
+	void iPhysicsBody::SetMaxLinearSpeed(float afSpeed)
 	{
 		mfMaxLinearSpeed = afSpeed;
 		ohpl_ntb_set_max_linear(mhRust, afSpeed);
 	}
-	float cPhysicsBodyNewton::GetMaxLinearSpeed() const
+	float iPhysicsBody::GetMaxLinearSpeed() const
 	{
 		return ohpl_ntb_max_linear(mhRust);
 	}
-	
-	//-----------------------------------------------------------------------
 
-	void cPhysicsBodyNewton::SetMaxAngularSpeed(float afDamping)
+	void iPhysicsBody::SetMaxAngularSpeed(float afDamping)
 	{
 		mfMaxAngularSpeed = afDamping;
 		ohpl_ntb_set_max_angular(mhRust, afDamping);
 	}
-	float cPhysicsBodyNewton::GetMaxAngularSpeed() const
+	float iPhysicsBody::GetMaxAngularSpeed() const
 	{
 		return ohpl_ntb_max_angular(mhRust);
 	}
 
-	//-----------------------------------------------------------------------
-
-	cVector3f cPhysicsBodyNewton::GetInertiaVector()
+	cVector3f iPhysicsBody::GetInertiaVector()
 	{
 		cVector3f vInertia;
 		ohpl_ntb_inertia(mhRust, &vInertia);
 		return vInertia;
 	}
 
-	//-----------------------------------------------------------------------
-
-	cMatrixf cPhysicsBodyNewton::GetInertiaMatrix()
+	cMatrixf iPhysicsBody::GetInertiaMatrix()
 	{
 		cVector3f vI = GetInertiaVector();
 		cMatrixf mtxRot = GetLocalMatrix().GetRotation();
@@ -208,171 +138,142 @@ namespace hpl {
 		return cMath::MatrixMul(cMath::MatrixMul(mtxRot,mtxI), mtxTransRot);
 	}
 
-	//-----------------------------------------------------------------------
-
-	void  cPhysicsBodyNewton::SetMass(float afMass)
+	void  iPhysicsBody::SetMass(float afMass)
 	{
-		ohpl_ntb_set_mass(mhRust, static_cast<cCollideShapeNewton*>(mpShape)->GetNewtonCollision(), afMass);
+		ohpl_ntb_set_mass(mhRust, static_cast<iCollideShape*>(mpShape)->GetNewtonCollision(), afMass);
 		mfMass = afMass;
 	}
-	float cPhysicsBodyNewton::GetMass() const
+	float iPhysicsBody::GetMass() const
 	{
 		return ohpl_ntb_mass(mhRust);
 	}
 
-	void  cPhysicsBodyNewton::SetMassCentre(const cVector3f& avCentre)
+	void  iPhysicsBody::SetMassCentre(const cVector3f& avCentre)
 	{
 		ohpl_ntb_set_mass_centre(mhRust, &avCentre);
 	}
 
-	cVector3f cPhysicsBodyNewton::GetMassCentre() const
+	cVector3f iPhysicsBody::GetMassCentre() const
 	{
 		cVector3f vCentre;
 		ohpl_ntb_mass_centre(mhRust, &vCentre);
 		return vCentre;
 	}
-	
-	//-----------------------------------------------------------------------
-	
-	void cPhysicsBodyNewton::AddForce(const cVector3f &avForce)
+
+	void iPhysicsBody::AddForce(const cVector3f &avForce)
 	{
 		ohpl_ntb_add_force(mhRust, &avForce);
 		Enable();
 	}
 
-	void cPhysicsBodyNewton::AddForceAtPosition(const cVector3f &avForce, const cVector3f &avPos)
+	void iPhysicsBody::AddForceAtPosition(const cVector3f &avForce, const cVector3f &avPos)
 	{
 		ohpl_ntb_add_force_at_position(mhRust, &avForce, &avPos, &GetLocalMatrix());
 		Enable();
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cPhysicsBodyNewton::AddTorque(const cVector3f &avTorque)
+	void iPhysicsBody::AddTorque(const cVector3f &avTorque)
 	{
 		ohpl_ntb_add_torque(mhRust, &avTorque);
 		Enable();
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cPhysicsBodyNewton::AddImpulse(const cVector3f &avImpulse)
+	void iPhysicsBody::AddImpulse(const cVector3f &avImpulse)
 	{
 		ohpl_ntb_add_impulse(mhRust, &avImpulse, &GetWorldMatrix());
 	}
-	void cPhysicsBodyNewton::AddImpulseAtPosition(const cVector3f &avImpulse, const cVector3f &avPos)
+	void iPhysicsBody::AddImpulseAtPosition(const cVector3f &avImpulse, const cVector3f &avPos)
 	{
 		ohpl_ntb_add_impulse_at(mhRust, &avImpulse, &avPos);
 	}
-	
-	//-----------------------------------------------------------------------
 
-	void cPhysicsBodyNewton::Sleep()
+	void iPhysicsBody::Sleep()
 	{
 		ohpl_ntb_set_freeze(mhRust, 1);
 	}
 
-	void cPhysicsBodyNewton::Enable()
+	void iPhysicsBody::Enable()
 	{
 		mlFreezeCount = 0;
 		ohpl_ntb_set_freeze(mhRust, 0);
 	}
-	bool cPhysicsBodyNewton::GetEnabled() const
+	bool iPhysicsBody::GetEnabled() const
 	{
 		return ohpl_ntb_enabled(mhRust);
 	}
-	
-	//-----------------------------------------------------------------------
 
-	void cPhysicsBodyNewton::SetAutoDisable(bool abEnabled)
+	void iPhysicsBody::SetAutoDisable(bool abEnabled)
 	{
 		ohpl_ntb_set_auto_sleep(mhRust, abEnabled);
 	}
-	bool cPhysicsBodyNewton::GetAutoDisable() const
+	bool iPhysicsBody::GetAutoDisable() const
 	{
 		return ohpl_ntb_auto_sleep(mhRust);
 	}
-	
-	//-----------------------------------------------------------------------
 
-	void cPhysicsBodyNewton::SetAutoDisableLinearThreshold(float afThresold)
+	void iPhysicsBody::SetAutoDisableLinearThreshold(float afThresold)
 	{
 		mfAutoDisableLinearThreshold = afThresold;
 		/*NewtonBodySetFreezeTreshold(mpNewtonBody, mfAutoDisableLinearThreshold,
 			mfAutoDisableAngularThreshold, mlAutoDisableNumSteps);*/
 	}
-	float cPhysicsBodyNewton::GetAutoDisableLinearThreshold() const
+	float iPhysicsBody::GetAutoDisableLinearThreshold() const
 	{
 		return mfAutoDisableLinearThreshold;
 	}
-	
-	//-----------------------------------------------------------------------
 
-	void cPhysicsBodyNewton::SetAutoDisableAngularThreshold(float afThresold)
+	void iPhysicsBody::SetAutoDisableAngularThreshold(float afThresold)
 	{
 		mfAutoDisableAngularThreshold = afThresold;
 		/*NewtonBodySetFreezeTreshold(mpNewtonBody, mfAutoDisableLinearThreshold,
 			mfAutoDisableAngularThreshold, mlAutoDisableNumSteps);*/
 	}
-	float cPhysicsBodyNewton::GetAutoDisableAngularThreshold() const
+	float iPhysicsBody::GetAutoDisableAngularThreshold() const
 	{
 		return mfAutoDisableAngularThreshold;
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cPhysicsBodyNewton::SetAutoDisableNumSteps(int anNum)
+	void iPhysicsBody::SetAutoDisableNumSteps(int anNum)
 	{
 		mlAutoDisableNumSteps = anNum;
 		/*NewtonBodySetFreezeTreshold(mpNewtonBody, mfAutoDisableLinearThreshold,
 			mfAutoDisableAngularThreshold, mlAutoDisableNumSteps);*/
 	}
 
-	int cPhysicsBodyNewton::GetAutoDisableNumSteps() const
+	int iPhysicsBody::GetAutoDisableNumSteps() const
 	{
 		return mlAutoDisableNumSteps;
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cPhysicsBodyNewton::SetContinuousCollision(bool abOn)
+	void iPhysicsBody::SetContinuousCollision(bool abOn)
 	{
 		ohpl_ntb_set_continuous(mhRust, abOn);
 	}
 
-	bool cPhysicsBodyNewton::GetContinuousCollision()
+	bool iPhysicsBody::GetContinuousCollision()
 	{
 		return ohpl_ntb_continuous(mhRust);
 	}
-	
-	//-----------------------------------------------------------------------
 
-	void cPhysicsBodyNewton::SetGravity(bool abEnabled)
+	void iPhysicsBody::SetGravity(bool abEnabled)
 	{
 		mbGravity = abEnabled;
 		ohpl_ntb_set_gravity(mhRust, abEnabled);
 	}
-	bool cPhysicsBodyNewton::GetGravity() const
+	bool iPhysicsBody::GetGravity() const
 	{
 		return ohpl_ntb_gravity(mhRust);
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	////////////////////////////////////////////
-
-	void cPhysicsBodyNewton::RenderDebugGeometry(iLowLevelGraphics *apLowLevel,const cColor &aColor)
+	void iPhysicsBody::RenderDebugGeometry(iLowLevelGraphics *apLowLevel,const cColor &aColor)
 	{
 		mpWorld->RenderShapeDebugGeometry(mpShape,GetLocalMatrix(),apLowLevel, aColor);
 	}
-	
-	//-----------------------------------------------------------------------
 
-	// HPL3 cCollideShapeNewton::CalculateBouyancyForces: lift from spheres packed in the shape, then drag
-	bool cPhysicsBodyNewton::CalcHpl3Buoyancy(const cVector3f &avGravity, float afTimeStep)
+	// HPL3 iCollideShape::CalculateBouyancyForces: lift from spheres packed in the shape, then drag
+	bool iPhysicsBody::CalcHpl3Buoyancy(const cVector3f &avGravity, float afTimeStep)
 	{
-		cCollideShapeNewton *pShape = static_cast<cCollideShapeNewton*>(mpShape);
+		iCollideShape *pShape = static_cast<iCollideShape*>(mpShape);
 		cPhysicsBody_Buoyancy &b = mBuoyancy;
 		if (mfMass == 0 || b.mfDensity * mfBuoyancyDensityMul <= 0)
 			return false;
@@ -389,7 +290,7 @@ namespace hpl {
 		}
 		for (int i = 0; i < lSubNum; ++i)
 		{
-			cCollideShapeNewton *pSub = static_cast<cCollideShapeNewton*>(pShape->GetSubShape(i));
+			iCollideShape *pSub = static_cast<iCollideShape*>(pShape->GetSubShape(i));
 			float fR;
 			const tVector3fVec &vPoints = pSub->GetBuoyancyPoints(fR);
 			pSubs[i] = OhplNewtonSubShape{vPoints.empty() ? nullptr : &vPoints[0], vPoints.size(), fR, pSub->GetVolume()};
@@ -433,8 +334,5 @@ namespace hpl {
 		mvBuoyancyTorque = out.torque;
 		return true;
 	}
-
-	//-----------------------------------------------------------------------
-
 
 }

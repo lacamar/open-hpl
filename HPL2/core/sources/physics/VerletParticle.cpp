@@ -30,12 +30,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// PARTICLE RAY CALLBACK
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	cVerletParticleRayCallback::cVerletParticleRayCallback(iVerletParticleContainer *apContainer)
 	{
 		mpContainer = apContainer;
@@ -44,15 +38,11 @@ namespace hpl {
 		mvIntersectNormal =0;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cVerletParticleRayCallback::Reset()
 	{
 		mfClosestDist = 9999999.0f;
 		mbIntersected = false;
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool cVerletParticleRayCallback::BeforeIntersect(iPhysicsBody *pBody)
 	{
@@ -60,8 +50,6 @@ namespace hpl {
 
         return mpContainer->CheckParticleBodyCollision(pBody);
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool cVerletParticleRayCallback::OnIntersect(iPhysicsBody *pBody,cPhysicsRayParams *apParams)
 	{
@@ -76,13 +64,7 @@ namespace hpl {
 		return true;
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PARTICLE
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cVerletParticle::cVerletParticle(iVerletParticleContainer *apContainer)
 	{
@@ -109,8 +91,6 @@ namespace hpl {
 
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cVerletParticle::SetPosition(const cVector3f& avPos, bool abSetPrevPos)
 	{
 		mvPosition = avPos;
@@ -118,18 +98,6 @@ namespace hpl {
 
 		mpContainer->SetSleeping(false);
 	}
-
-	//-----------------------------------------------------------------------
-
-
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PARTICLE CONTAINER
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	iVerletParticleContainer::iVerletParticleContainer(const tString &asName, iPhysicsWorld *apWorld)
 	{
@@ -145,8 +113,6 @@ namespace hpl {
 
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iVerletParticleContainer::SetDamping(float afX)
 	{
 		afX = cMath::Clamp(afX,0,1);
@@ -154,9 +120,6 @@ namespace hpl {
 		mfDamping = afX;
 		mS.dampingMul = 1 - mfDamping;
 	}
-
-
-	//-----------------------------------------------------------------------
 
 	void iVerletParticleContainer::SetParticleRadius(float afX)
 	{
@@ -166,8 +129,6 @@ namespace hpl {
 
 		SetSleeping(false);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iVerletParticleContainer::SetSleeping(bool abX)
 	{
@@ -180,17 +141,10 @@ namespace hpl {
 		SetSpecificDataSleeping(abX);
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
 	void cVerletParticle::UpdateMovement(float afTimeStep)
 	{
 		ohpl_verlet_update_movement(this, mpContainer->mS.dampingMul, OhplV3{mpContainer->mS.gravityForce.x, mpContainer->mS.gravityForce.y, mpContainer->mS.gravityForce.z}, afTimeStep);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iVerletParticleContainer::UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness)
 	{
@@ -206,8 +160,6 @@ namespace hpl {
 	{
 		ohpl_verlet_length_constraint_stretch(apP1, apP2, afLength, afStiffness);
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool iVerletParticleContainer::CastParticleRay(const cVector3f &avStart, const cVector3f &avEnd, cVector3f *apPos, cVector3f *apNormal)
 	{
@@ -229,21 +181,11 @@ namespace hpl {
 			this, &mS, apPart, OhplV3{avPrevPos.x, avPrevPos.y, avPrevPos.z}, afRadius);
 	}
 
-	//-----------------------------------------------------------------------
-
 	cVerletParticle* iVerletParticleContainer::GetParticle(int alIdx)
 	{
 		// ponytail: O(n) list walk, vector storage if ropes get long
 		if(alIdx<0 || alIdx>=(int)mlstParticles.size()) return NULL;
 		return *std::next(mlstParticles.begin(), alIdx);
 	}
-
-
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
 
 }

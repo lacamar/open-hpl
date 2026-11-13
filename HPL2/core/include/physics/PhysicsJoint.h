@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -28,6 +28,11 @@
 
 #include "physics/PhysicsController.h"
 #include "physics/RustPhysBook.h"
+#include "impl/RustNewtonBackend.h"
+
+class NewtonJoint;
+class NewtonWorld;
+class NewtonBody;
 
 namespace hpl {
 
@@ -40,10 +45,7 @@ namespace hpl {
 	typedef std::map<tString, iPhysicsController*> tPhysicsControllerMap;
 	typedef tPhysicsControllerMap::iterator tPhysicsControllerMapIt;
 
-	 
 	typedef cSTLMapIterator<iPhysicsController*, tPhysicsControllerMap, tPhysicsControllerMapIt> cPhysicsControllerIterator;
-
-	//-----------------------------------
 
 	enum ePhysicsJointType
 	{
@@ -54,17 +56,12 @@ namespace hpl {
 		ePhysicsJointType_LastEnum
 	};
 
-	//-----------------------------------
-
 	enum ePhysicsJointSpeed
 	{
 		ePhysicsJointSpeed_Linear,
 		ePhysicsJointSpeed_Angular,
 		ePhysicsJointSpeed_LastEnum
 	};
-
-	//-----------------------------------
-
 
 	class iPhysicsBody;
 	class iPhysicsWorld;
@@ -100,8 +97,6 @@ namespace hpl {
 		float mfMaxSpeed;
 	};
 
-	//-----------------------------------
-
 	class iPhysicsJointCallback
 	{
 	public:
@@ -113,8 +108,6 @@ namespace hpl {
 		//Ugly trick to support joint script callback.
 		virtual bool IsScript(){ return false;}
 	};
-
-	//-----------------------------------
 
 	class iPhysicsJoint
 	{
@@ -142,11 +135,11 @@ namespace hpl {
 
 		virtual ePhysicsJointType GetType()=0;
 
-		virtual void SetCollideBodies(bool abX)=0;
-		virtual bool GetCollideBodies()=0;
+		void SetCollideBodies(bool abX);
+		bool GetCollideBodies();
 
-		virtual void SetStiffness(float afX)=0;
-		virtual float GetStiffness()=0;
+		void SetStiffness(float afX);
+		float GetStiffness();
 
 		virtual cVector3f GetVelocity()=0;
 		virtual cVector3f GetAngularVelocity()=0;
@@ -203,7 +196,7 @@ namespace hpl {
 		bool GetAllowPositionReset(){ return mbAllowPositionReset;}
 		virtual void ResetPosition(){}
 
-		void Break();
+		void Break() { mbBroken = true; mbBreakable = true; }
 
 		bool IsBroken(){ return mbBroken;}
 
@@ -233,7 +226,6 @@ namespace hpl {
 		iPhysicsBody *&mpChildBody = mS.child;
 		iPhysicsWorld *&mpWorld = mS.world;
 
-
 		cVector3f &mvPinDir = mS.pinDir;
 		cVector3f &mvPivotPoint = mS.pivot;
 
@@ -248,8 +240,6 @@ namespace hpl {
 
 		cJointLimitEffect mMaxLimit;
 		cJointLimitEffect mMinLimit;
-
-
 
 		tString msMoveSound;
 
@@ -288,11 +278,27 @@ namespace hpl {
 		static void CheckLimitAutoSleep(iPhysicsJoint *apJoint, const float afMin, const float afMax,
 										const float afDist);
 
-
 		void OnMaxLimit();
 		void OnMinLimit();
-		void OnNoLimit();
+		void OnNoLimit() { mbHasCollided = false; }
 
+		cMatrixf GetMatrixFromPinAndPivot(const cVector3f& avPinDir,const cVector3f& avPivot);
+		void CalculateGlobalMatrix (const cMatrixf& a_mtxLocalMatrix0, const cMatrixf& a_mtxLocalMatrix1, cMatrixf& a_mtxMatrix0, cMatrixf& a_mtxMatrix1);
+		void CalculateLocalMatrix (const cMatrixf& a_mtxPinsAndPivotFrame, cMatrixf& a_mtxLocalMatrix0, cMatrixf& a_mtxLocalMatrix1);
+		static const OhplL4JointOps* RustOps();
+		static iPhysicsJoint* Self(size_t j){ return reinterpret_cast<iPhysicsJoint*>(j);}
+		static void RustLimitEvent(size_t j, int32_t kind);
+		static void RustCheckAutoSleep(size_t j, float afMin, float afMax, float afValue);
+		static void RustNoLimit(size_t j, float afPrev, float afMin, float afMax, bool abSkip);
+		static void RustMatrices(size_t j, cMatrixf* apChild, cMatrixf* apParent);
+		static void RustPositionCheck(size_t j, float afDistSqr);
+
+		NewtonJoint* mpNewtonJoint;
+		NewtonWorld* mpNewtonWorld;
+		uint64_t mhRust = 0;
+		uint64_t mhRustWorld = 0;
+		NewtonBody* mpNewtonParentBody;
+		NewtonBody* mpNewtonChildBody;
 
 	};
 };

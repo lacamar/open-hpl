@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -30,16 +30,12 @@ struct OhplPid;
 
 namespace hpl {
 
-	//-------------------------------------------
-
 	enum ePhysicsControllerType
 	{
 		ePhysicsControllerType_Pid,
 		ePhysicsControllerType_Spring,
 		ePhysicsControllerType_LastEnum
 	};
-
-	//-------------------------------------------
 
 	enum ePhysicsControllerInput
 	{
@@ -50,16 +46,12 @@ namespace hpl {
 		ePhysicsControllerInput_LastEnum
 	};
 
-	//-------------------------------------------
-
 	enum ePhysicsControllerOutput
 	{
 		ePhysicsControllerOutput_Force,
 		ePhysicsControllerOutput_Torque,
 		ePhysicsControllerOutput_LastEnum
 	};
-
-	//-------------------------------------------
 
 	enum ePhysicsControllerAxis
 	{
@@ -69,8 +61,6 @@ namespace hpl {
 		ePhysicsControllerAxis_LastEnum
 	};
 
-	//-------------------------------------------
-
 	enum ePhysicsControllerEnd
 	{
 		ePhysicsControllerEnd_Null,
@@ -79,8 +69,6 @@ namespace hpl {
 		ePhysicsControllerEnd_OnMax,
 		ePhysicsControllerEnd_LastEnum
 	};
-
-	//-------------------------------------------
 
 	class iPhysicsWorld;
 	class iPhysicsJoint;
@@ -165,7 +153,6 @@ namespace hpl {
 		void SetLogInfo(bool abX){mbLogInfo = abX;}
 
 		void SetPaused(bool abX){mbPaused = abX;}
-
 
 	protected:
 		OhplCtrlState mS = OhplCtrlState();

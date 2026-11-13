@@ -367,14 +367,14 @@ pub unsafe extern "C" fn ohpl_h14_collide_gravity(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h14_collide_push(
     op: super::wreg::WorldOp,
-    ch: usize,
+    _ch: usize,
     ext: *const super::char_conn::CharExt,
     st: *const super::character::CharState,
     body: usize,
     cd: usize,
 ) {
     // SAFETY: caller contract.
-    unsafe { super::char_collide::collide_push(op, ch, ext, st, body, cd) };
+    unsafe { super::char_collide::collide_push(op, ext, st, body, cd) };
 }
 
 /// # Safety

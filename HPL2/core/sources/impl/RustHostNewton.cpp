@@ -1,8 +1,8 @@
 #include "impl/RustNewtonBackend.h"
 
-#include "impl/PhysicsBodyNewton.h"
-#include "impl/PhysicsMaterialNewton.h"
-#include "impl/PhysicsWorldNewton.h"
+#include "physics/PhysicsBody.h"
+#include "physics/PhysicsMaterial.h"
+#include "physics/PhysicsWorld.h"
 #include "graphics/LowLevelGraphics.h"
 #include "physics/PhysicsWorld.h"
 #include "resources/BinaryBuffer.h"
@@ -12,17 +12,17 @@ namespace hpl {
 	static_assert(sizeof(cCollidePoint) == sizeof(OhplL4CollPoint) && offsetof(cCollidePoint, mfDepth) == offsetof(OhplL4CollPoint, depth),
 				"Rust layout");
 
-	static cPhysicsBodyNewton* Body(size_t cpp) { return reinterpret_cast<cPhysicsBodyNewton*>(cpp); }
+	static iPhysicsBody* Body(size_t cpp) { return reinterpret_cast<iPhysicsBody*>(cpp); }
 
 	struct OhplL4HostImpl
 	{
 		static void BodyState(size_t cpp, OhplL4BodyState* out)
 		{
-			cPhysicsBodyNewton* b = Body(cpp);
+			iPhysicsBody* b = Body(cpp);
 			out->active = b->IsActive();
 			out->inUpdateList = b->IsInUpdateList();
 			out->buoyancyActive = b->mBuoyancy.mbActive;
-			out->hpl3 = cPhysicsBodyNewton::mbHpl3Buoyancy;
+			out->hpl3 = iPhysicsBody::mbHpl3Buoyancy;
 			out->freezeCount = b->mlFreezeCount;
 			out->densityMul = b->mfBuoyancyDensityMul;
 			out->density = b->mBuoyancy.mfDensity;
@@ -37,7 +37,7 @@ namespace hpl {
 
 		static void BodyAddToUpdateList(size_t cpp)
 		{
-			cPhysicsBodyNewton* b = Body(cpp);
+			iPhysicsBody* b = Body(cpp);
 			b->GetWorld()->AddBodyToUpdateList(b);
 		}
 
@@ -45,7 +45,7 @@ namespace hpl {
 
 		static bool BodyHpl3Buoyancy(size_t cpp, const cVector3f* gravity, float timeStep, cVector3f* force, cVector3f* torque)
 		{
-			cPhysicsBodyNewton* b = Body(cpp);
+			iPhysicsBody* b = Body(cpp);
 			if(b->CalcHpl3Buoyancy(*gravity, timeStep) == false) return false;
 			*force = b->mvBuoyancyForce;
 			*torque = b->mvBuoyancyTorque;
@@ -54,16 +54,16 @@ namespace hpl {
 
 		static void BodySetTransform(size_t cpp, const float* m)
 		{
-			cPhysicsBodyNewton* b = Body(cpp);
+			iPhysicsBody* b = Body(cpp);
 			b->m_mtxLocalTransform.FromTranspose(m);
-			cPhysicsBodyNewton::mbUseCallback = false;
+			iPhysicsBody::mbUseCallback = false;
 			b->SetTransformUpdated(true);
-			cPhysicsBodyNewton::mbUseCallback = true;
+			iPhysicsBody::mbUseCallback = true;
 		}
 
 		static void BodyGate(size_t cpp, OhplNewtonGateBody* gate, uint32_t* flags)
 		{
-			cPhysicsBodyNewton* b = Body(cpp);
+			iPhysicsBody* b = Body(cpp);
 			*gate = OhplNewtonGateBody{b->GetCollide(), b->IsActive(), b->IsRagDoll(), b->GetCollideRagDoll(),
 										b->IsCharacter(), b->GetCollideCharacter()};
 			*flags = b->GetCollideFlags();
@@ -101,7 +101,7 @@ namespace hpl {
 			contactData.mvForce = agg->force;
 			contactData.mvContactNormal = agg->normal;
 			contactData.mvContactPosition = agg->position;
-			cPhysicsMaterialNewton::DispatchContacts(Body(cpp1), Body(cpp2), contactData, count);
+			iPhysicsMaterial::DispatchContacts(Body(cpp1), Body(cpp2), contactData, count);
 		}
 
 		static bool RayBeforeIntersect(size_t cb, size_t body)

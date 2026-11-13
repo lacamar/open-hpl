@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -149,27 +149,39 @@ namespace hpl {
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iPhysicsWorld::iPhysicsWorld()
 	{
 		mbLogDebug = false;
 		mpWorld = NULL;
 		mRsBook = ohpl_h15w_new(WorldOp, reinterpret_cast<size_t>(this));
-	}
 
-	//-----------------------------------------------------------------------
+		OhplL4InstallHost();
+		mhRust = ohpl_ntw_create(&mpNewtonWorld);
+
+		if(mpNewtonWorld==NULL){
+			Warning("Couldn't create newton world!\n");
+		}
+
+        //Set default values to properties
+		mvWorldSizeMin = cVector3f(0,0,0);
+		mvWorldSizeMax = cVector3f(0,0,0);
+
+		mvGravity = cVector3f(0,-9.81f,0);
+		mfMaxTimeStep = 1.0f/60.0f;
+
+		//Create default material.
+		int lDefaultMatId = 0;//NewtonMaterialGetDefaultGroupID(mpNewtonWorld);
+		iPhysicsMaterial *pMaterial = hplNew( iPhysicsMaterial, ("Default",this,lDefaultMatId) );
+		RegisterMaterial("Default", pMaterial);
+		pMaterial->UpdateMaterials();
+	}
 
 	iPhysicsWorld::~iPhysicsWorld()
 	{
+		DestroyAll();
+		ohpl_ntw_destroy(mhRust);
 		ohpl_h15_world_free(mRsBook);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::RegisterShape(iCollideShape *apShape){ ohpl_h15w_add(mRsBook, OhplKind_Shape, reinterpret_cast<size_t>(apShape)); }
 	void iPhysicsWorld::RegisterBody(iPhysicsBody *apBody){ ohpl_h15w_add(mRsBook, OhplKind_Body, reinterpret_cast<size_t>(apBody)); }
@@ -182,28 +194,18 @@ namespace hpl {
 		ohpl_h15w_add_material(mRsBook, asName.c_str(), asName.size(), reinterpret_cast<size_t>(apMaterial));
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-	
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::Update(float afTimeStep)
 	{
 		ohpl_h15w_update(mRsBook, afTimeStep);
 	}
-	
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::DestroyShape(iCollideShape *apShape)
 	{
 		ohpl_h15w_destroy_shape(mRsBook, reinterpret_cast<size_t>(apShape));
 	}
 
-	//-----------------------------------------------------------------------
-	
 	void iPhysicsWorld::DestroyBody(iPhysicsBody* apBody)
 	{
 		ohpl_h15w_destroy_body(mRsBook, reinterpret_cast<size_t>(apBody));
@@ -221,33 +223,22 @@ namespace hpl {
 		return mlstBodies;
 	}
 
-	cPhysicsBodyIterator iPhysicsWorld::GetBodyIterator()
-	{
-		return cPhysicsBodyIterator(&BodyList());
-	}
-
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::EnableBodiesInBV(cBoundingVolume *apBV, bool abEnabled)
 	{
 		ohpl_h15w_enable_bodies_in_bv(mRsBook, reinterpret_cast<size_t>(apBV));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::AddBodyToUpdateList(iPhysicsBody *apBody)
 	{
 		ohpl_h15w_update_add(mRsBook, reinterpret_cast<size_t>(apBody));
 	}
 
-	//NOTE: Skipping removing dynamic bodies for now since they will need to be checked if enabled 
+	//NOTE: Skipping removing dynamic bodies for now since they will need to be checked if enabled
 	//		Still want to remove when destroying though.
 	void iPhysicsWorld::RemoveBodyFromUpdateList(iPhysicsBody *apBody, bool abDestroyingBody)
 	{
 		ohpl_h15w_update_remove(mRsBook, reinterpret_cast<size_t>(apBody));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::DestroyJoint(iPhysicsJoint* apJoint)
 	{
@@ -271,26 +262,20 @@ namespace hpl {
 		return cPhysicsJointIterator(&mlstJoints);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::DestroyCharacterBody(iCharacterBody* apBody)
 	{
 		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Char, reinterpret_cast<size_t>(apBody));
 	}
-		
+
 	iPhysicsBody *iPhysicsWorld::GetCharacterBody(const tString &asName)
 	{
 		return reinterpret_cast<iPhysicsBody*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Char, asName.c_str(), asName.size()));
 	}
 
-	//-----------------------------------------------------------------------
-	
 	iPhysicsMaterial* iPhysicsWorld::GetMaterialFromName(const tString &asName)
 	{
 		return reinterpret_cast<iPhysicsMaterial*>(ohpl_h15w_get_material(mRsBook, asName.c_str(), asName.size()));
 	}
-	
-	//-----------------------------------------------------------------------
 
 	cPhysicsMaterialIterator iPhysicsWorld::GetMaterialIterator()
 	{
@@ -302,8 +287,6 @@ namespace hpl {
 		}
 		return cPhysicsMaterialIterator(&m_mapMaterials);
 	}
-
-	//-----------------------------------------------------------------------
 
 	iPhysicsRope* iPhysicsWorld::GetRope(const tString &asName)
 	{
@@ -320,22 +303,15 @@ namespace hpl {
 		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Rope, reinterpret_cast<size_t>(apRope));
 	}
 
-	//-----------------------------------------------------------------------
-	
 	void iPhysicsWorld::DestroyAll()
 	{
 		ohpl_h15w_destroy_all(mRsBook);
 	}
 
-	//-----------------------------------------------------------------------
-
-	
 	void iPhysicsWorld::DestroyController(iPhysicsController *apController)
 	{
 		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Ctrl, reinterpret_cast<size_t>(apController));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::FadeoutBodySounds(iPhysicsBody *pBody, float afFadeSpeed)
 	{
@@ -360,8 +336,6 @@ namespace hpl {
 		ohpl_h15w_fadeout_all_loop_sounds(mRsBook, afFadeSpeed);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::RenderContactPoint(iLowLevelGraphics *apLowLevel, size_t i, const cColor& aPointColor, const cColor& aLineColor)
 	{
 		apLowLevel->DrawSphere(mvContactPoints[i].mvPoint,0.2f, aPointColor);
@@ -370,8 +344,6 @@ namespace hpl {
 							aLineColor);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::RenderContactPoints(iLowLevelGraphics *apLowLevel, const cColor& aPointColor,
 											const cColor& aLineColor)
 	{
@@ -379,8 +351,6 @@ namespace hpl {
 		ohpl_h15w_render_contacts(mRsBook, reinterpret_cast<size_t>(apLowLevel), reinterpret_cast<size_t>(colors));
 	}
 
-	//-----------------------------------------------------------------------
-	
 	bool iPhysicsWorld::CheckShapeWorldCollision(cVector3f *apPushVector,
 							iCollideShape* apShape, const cMatrixf& a_mtxTransform,
 							iPhysicsBody *apSkipBody, bool abSkipStatic, bool abIsCharacter,
@@ -393,7 +363,5 @@ namespace hpl {
 		const OhplH15Query query = { reinterpret_cast<size_t>(apSkipBody), (uint32_t)alCollideFlags, abCollideCharacter, abIsCharacter, abSkipStatic, (int32_t)alMinPushStrength };
 		return ohpl_h15w_shape_world_collision(mRsBook, apPushVector, reinterpret_cast<size_t>(apShape), &a_mtxTransform, &query, reinterpret_cast<size_t>(apCallback));
 	}
-
-	//-----------------------------------------------------------------------
 
 }

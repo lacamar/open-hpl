@@ -177,7 +177,7 @@ int RunSurfaceParse(const char* list, const char* outFile)
 		std::string path = files.substr(pos, end - pos);
 		pos = end + 1;
 
-		cPhysics legacy(NULL), now(NULL);
+		cPhysics legacy, now;
 		bool okLegacy = LegacyLoad(legacy, path);
 		bool okNow = now.LoadSurfaceData(path);
 		Hasher a, b;
@@ -262,7 +262,7 @@ namespace {
 
 using namespace hplscenes;
 
-iPhysicsBody* AddBody(cPhysicsWorldNewton& w, std::vector<iPhysicsBody*>& bodies, iPhysicsBody* b, iPhysicsMaterial* m)
+iPhysicsBody* AddBody(iPhysicsWorld& w, std::vector<iPhysicsBody*>& bodies, iPhysicsBody* b, iPhysicsMaterial* m)
 {
 	b->SetMaterial(m);
 	gC.bodies[(size_t)b] = (int)bodies.size();
@@ -277,7 +277,7 @@ void SceneSurfaceWorld(const char* name, bool mover)
 	gC.f = gD.f;
 	gC.verbose = gD.verbose;
 
-	cPhysics phys(NULL);
+	cPhysics phys;
 	cSurfaceData* wood = phys.CreateSurfaceData("Wood");
 	wood->SetPriority(1);
 	wood->SetMinScrapeSpeed(0.05f);
@@ -295,7 +295,7 @@ void SceneSurfaceWorld(const char* name, bool mover)
 	gC.names[(size_t)wood] = 0;
 	gC.names[(size_t)metal] = 1;
 
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	w.SetWorld(NULL);
 	iPhysicsMaterial* mWood = wood->ToMaterial(&w);
 	iPhysicsMaterial* mMetal = metal->ToMaterial(&w);
@@ -379,7 +379,7 @@ struct BodyCb : iPhysicsBodyCallback
 void SceneWorldLists()
 {
 	gD.Begin("world_lists");
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	w.SetWorld(NULL);
 	std::vector<iPhysicsBody*> bodies;
 	bodies.push_back(Floor(w));

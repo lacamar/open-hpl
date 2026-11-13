@@ -2,9 +2,9 @@
 #include <cstdlib>
 #include <vector>
 
-#include "impl/PhysicsWorldNewton.h"
+#include "physics/PhysicsWorld.h"
 #include "math/Math.h"
-#include "impl/CollideShapeNewton.h"
+#include "physics/CollideShape.h"
 #include "physics/PhysicsBody.h"
 #include "resources/BinaryBuffer.h"
 #include "system/MemoryManager.h"
@@ -26,7 +26,7 @@ static int gFailures = 0;
 
 static void TestShapeCreation()
 {
-	cPhysicsWorldNewton world;
+	iPhysicsWorld world;
 
 	iCollideShape* pNull = world.CreateNullShape();
 	CHECK(pNull != NULL);
@@ -59,7 +59,7 @@ static void TestShapeCreation()
 
 static void TestBodySimulationStep()
 {
-	cPhysicsWorldNewton world;
+	iPhysicsWorld world;
 	world.SetGravity(cVector3f(0, -9.81f, 0));
 	world.SetMaxTimeStep(1.0f / 60.0f);
 
@@ -83,7 +83,7 @@ static void TestBodySimulationStep()
 
 static void TestBuoyancyDoesNotCrash()
 {
-	cPhysicsWorldNewton world;
+	iPhysicsWorld world;
 	world.SetGravity(cVector3f(0, -9.81f, 0));
 	world.SetMaxTimeStep(1.0f / 60.0f);
 
@@ -113,7 +113,7 @@ static void TestHpl3BuoyancyLiftsEachShape()
 	iPhysicsBody::SetHpl3Buoyancy(true);
 	for (int type = 0; type < 4; ++type)
 	{
-		cPhysicsWorldNewton world;
+		iPhysicsWorld world;
 		world.SetGravity(cVector3f(0, -9.81f, 0));
 		world.SetMaxTimeStep(1.0f / 60.0f);
 
@@ -144,9 +144,9 @@ static void TestHpl3BuoyancyLiftsEachShape()
 
 static void TestMeshCollisionSerializationRoundTrip()
 {
-	cPhysicsWorldNewton world;
+	iPhysicsWorld world;
 
-	cCollideShapeNewton* pMeshShape = hplNew(cCollideShapeNewton,
+	iCollideShape* pMeshShape = hplNew(iCollideShape,
 		(eCollideShapeType_Mesh, 0, NULL, world.GetNewtonWorld(), &world));
 
 	// A simple two-triangle quad, wound consistently.
@@ -168,7 +168,7 @@ static void TestMeshCollisionSerializationRoundTrip()
 	// reading a cache file back on a later run.
 	serialized.SetPos(0);
 
-	cPhysicsWorldNewton otherWorld;
+	iPhysicsWorld otherWorld;
 	iCollideShape* pRoundTripped = otherWorld.LoadMeshShapeFromBuffer(&serialized);
 	CHECK(pRoundTripped != NULL);
 
@@ -179,7 +179,7 @@ static void TestMeshCollisionSerializationRoundTrip()
 
 static void TestMeshCollisionSameBoxCentres()
 {
-	cPhysicsWorldNewton world;
+	iPhysicsWorld world;
 	const int lTris = 2000;
 	std::vector<unsigned int> vIndices(lTris * 3);
 	std::vector<float> vVertices(lTris * 9);
@@ -190,7 +190,7 @@ static void TestMeshCollisionSameBoxCentres()
 		for (int j = 0; j < 9; ++j) vVertices[i * 9 + j] = v[j];
 		for (int j = 0; j < 3; ++j) vIndices[i * 3 + j] = i * 3 + j;
 	}
-	cCollideShapeNewton* pMeshShape = hplNew(cCollideShapeNewton,
+	iCollideShape* pMeshShape = hplNew(iCollideShape,
 		(eCollideShapeType_Mesh, 0, NULL, world.GetNewtonWorld(), &world));
 	pMeshShape->CreateFromVertices(vIndices.data(), (int)vIndices.size(), vVertices.data(), 3, lTris * 3);
 	CHECK(pMeshShape->GetNewtonCollision() != NULL);
@@ -201,7 +201,7 @@ static void TestMeshCollisionSameBoxCentres()
 
 static void TestHeightFieldSupportsBody()
 {
-	cPhysicsWorldNewton world;
+	iPhysicsWorld world;
 	world.SetGravity(cVector3f(0, -9.81f, 0));
 	world.SetMaxTimeStep(1.0f / 60.0f);
 
@@ -222,12 +222,12 @@ static void TestHeightFieldSupportsBody()
 
 static void TestThinBoxRestsOnMesh()
 {
-	cPhysicsWorldNewton world;
+	iPhysicsWorld world;
 	world.SetGravity(cVector3f(0, -9.81f, 0));
 	world.SetMaxTimeStep(1.0f / 60.0f);
 	world.SetAccuracyLevel(ePhysicsAccuracy_Medium);
 
-	cCollideShapeNewton* pFloorShape = hplNew(cCollideShapeNewton,
+	iCollideShape* pFloorShape = hplNew(iCollideShape,
 		(eCollideShapeType_Mesh, 0, NULL, world.GetNewtonWorld(), &world));
 	const unsigned int vIndices[6] = { 0, 1, 2, 0, 2, 3 };
 	const float vVertices[4 * 3] = {
@@ -262,7 +262,7 @@ public:
 // Amnesia 20_sewer focus ray: start on a cell boundary, near-axis direction
 static void TestNearAxisRayCast()
 {
-	cPhysicsWorldNewton world;
+	iPhysicsWorld world;
 	world.SetWorldSize(cVector3f(-128), cVector3f(128));
 	iPhysicsBody* pBox = world.CreateBody("Box", world.CreateBoxShape(cVector3f(0.49998f, 0.5f, 0.5f), NULL));
 	pBox->SetMass(0);
