@@ -24,7 +24,6 @@
 #include "graphics/Bitmap.h"
 
 #include "impl/LowLevelGraphicsSDL.h"
-#include "impl/RustBackends.h"
 
 #include <cmath>
 #include <cstring>
@@ -40,11 +39,10 @@ namespace hpl {
 	cSDLTexture::cSDLTexture(const tString& asName, eTextureType aType, eTextureUsage aUsage, iLowLevelGraphics* apLowLevelGraphics)
 				: iTexture(asName,_W(""),aType, aUsage, apLowLevelGraphics)
 	{
-		mbContainsData = false;
 				
 		mpGfxSDL = static_cast<cLowLevelGraphicsSDL*>(mpLowLevelGraphics);
 
-		mlRs = OhplBackendRustRequested() ? ohpl_gltex_new() : 0;
+		mlRs = ohpl_gltex_new();
 
 		mlTextureIndex = 0;
 		mClock.count = 0;
@@ -53,16 +51,7 @@ namespace hpl {
 
 	cSDLTexture::~cSDLTexture()
 	{
-		if(mlRs)
-		{
-			ohpl_gltex_free(mlRs);
-			return;
-		}
-
-		for(size_t i=0; i<mvTextureHandles.size(); ++i)
-		{
-			glDeleteTextures(1,(GLuint *)&mvTextureHandles[i]);
-		}
+		ohpl_gltex_free(mlRs);
 	}
 
 
@@ -124,35 +113,15 @@ namespace hpl {
 
 		GenerateHandles(1);
 
-		if(mlRs)
-		{
-			OhplTexFace vFaces[6];
-			for(int i=0; i<6; ++i)
-			{
-				cBitmap *pBmp = (*avBitmaps)[i];
-				OhplTexFace f = { reinterpret_cast<const OhplTexLevel*>(pBmp->GetData(0,0)), pBmp->GetNumOfMipMaps(), pBmp->GetSize(), (int)pBmp->GetPixelFormat() };
-				vFaces[i] = f;
-			}
-			if(CreateFacesRs(0, vFaces, 6) == false) return false;
-			SetupPropertiesRs(0);
-			return true;
-		}
-
-		/////////////////////////////
-		//Create the faces on the cube
-		for(int i=0; i< 6; i++)
+		OhplTexFace vFaces[6];
+		for(int i=0; i<6; ++i)
 		{
 			cBitmap *pBmp = (*avBitmaps)[i];
-
-			bool bRet = CreateTexture(	mvTextureHandles[0],
-										pBmp->GetData(0,0), pBmp->GetNumOfMipMaps(),
-										pBmp->GetSize(), pBmp->GetPixelFormat(),i,
-										mbUseMipMaps,true);
-			if(bRet==false) return false;
+			OhplTexFace f = { reinterpret_cast<const OhplTexLevel*>(pBmp->GetData(0,0)), pBmp->GetNumOfMipMaps(), pBmp->GetSize(), (int)pBmp->GetPixelFormat() };
+			vFaces[i] = f;
 		}
-
-		SetupProperties(mvTextureHandles[0]);
-
+		if(CreateFacesRs(0, vFaces, 6) == false) return false;
+		SetupPropertiesRs(0);
 		return true;
 	}
 
@@ -161,48 +130,13 @@ namespace hpl {
 
 	bool cSDLTexture::CreateFromRawData(const cVector3l &avSize,ePixelFormat aPixelFormat, unsigned char *apData)
 	{
-		if(mlRs)
-		{
-			OhplTexIo io;
-			LoadIo(io);
-			bool bRs = ohpl_gltex_create_raw(mlRs, &io, OhplGl(avSize), aPixelFormat, apData);
-			StoreIo(io);
-			if(bRs == false) return false;
-			SetupPropertiesRs(0);
-			ohpl_gltex_create_raw_end(mlRs, &io);
-			return true;
-		}
-
-		GenerateHandles(1);
-
-		int lDataSize;
-		OhplGlV3 vRaw = ohpl_gl_tex_raw_size(OhplGl(avSize), aPixelFormat, &lDataSize);
-		mvSize = cVector3l(vRaw.x, vRaw.y, vRaw.z);
-		mPixelFormat = aPixelFormat;
-
-		GLenum GLTarget = TextureTypeToGLTarget(mType);
-
-		glEnable(GLTarget);
-		glBindTexture(GLTarget, mvTextureHandles[0]);
-
-		bool bRet = CopyTextureDataToGL(mvTextureHandles[0],0,apData, lDataSize, avSize, aPixelFormat,0);
-		if(bRet==false)
-		{
-			glDisable(GLTarget);
-			return false;
-		}
-
-		mbContainsData = true;
-
-		if(mbUseMipMaps)
-		{
-			GenerateMipMaps(GLTarget,aPixelFormat,avSize,apData,lDataSize,0);
-		}
-
-		SetupProperties(mvTextureHandles[0]);
-
-		glDisable(GLTarget);
-
+		OhplTexIo io;
+		LoadIo(io);
+		bool bRs = ohpl_gltex_create_raw(mlRs, &io, OhplGl(avSize), aPixelFormat, apData);
+		StoreIo(io);
+		if(bRs == false) return false;
+		SetupPropertiesRs(0);
+		ohpl_gltex_create_raw_end(mlRs, &io);
 		return true;
 	}
 
@@ -213,41 +147,9 @@ namespace hpl {
 	{
 		;
 
-		if(mlRs)
-		{
-			OhplTexIo io;
-			LoadIo(io);
-			ohpl_gltex_set_raw_data(mlRs, &io, alLevel, OhplGl(avOffset), OhplGl(avSize), aPixelFormat, apData);
-			return;
-		}
-
-		if(mbContainsData==false) return;
-		if(apData==NULL) return;
-
-		GLenum GLTarget = TextureTypeToGLTarget(mType);
-		GLenum GLFormat = PixelFormatToGLFormat(aPixelFormat);
-
-		glEnable(GLTarget);
-		glBindTexture(GLTarget, mvTextureHandles[0]);
-
-		if(mType == eTextureType_1D)
-		{
-			glTexSubImage1D(GLTarget,alLevel,avOffset.x, avSize.x,
-							GLFormat,GL_UNSIGNED_BYTE,apData);
-		}
-		else if(mType == eTextureType_2D || mType == eTextureType_Rect)
-		{
-			glTexSubImage2D(GLTarget,alLevel,avOffset.x,avOffset.y, avSize.x,avSize.y,
-							GLFormat,GL_UNSIGNED_BYTE,apData);
-		}
-		else if(mType == eTextureType_3D)
-		{
-			glTexSubImage3D(GLTarget,alLevel,avOffset.x,avOffset.y,avOffset.z, 
-							avSize.x,avSize.y,avSize.z,
-							GLFormat,GL_UNSIGNED_BYTE,apData);
-		}
-
-		glDisable(GLTarget);
+		OhplTexIo io;
+		LoadIo(io);
+		ohpl_gltex_set_raw_data(mlRs, &io, alLevel, OhplGl(avOffset), OhplGl(avSize), aPixelFormat, apData);
 	}
 
 	//-----------------------------------------------------------------------
@@ -299,65 +201,19 @@ namespace hpl {
 		unsigned int lHandle = GetTextureHandle();
 		if(lHandle == 0) return false;
 
-		if(mlRs)
-		{
-			OhplTexIo io;
-			LoadIo(io);
-			avOut.resize(mvSize.x * mvSize.y * 4);
-			bool bDepth = mPixelFormat == ePixelFormat_Depth16 || mPixelFormat == ePixelFormat_Depth24 || mPixelFormat == ePixelFormat_Depth32;
-			return ohpl_gltex_read_pixels(mlRs, &io, mClock.count, bDepth, avOut.data());
-		}
-
-		GLenum GLTarget = GetGLTextureTargetEnum(mType);
-
+		OhplTexIo io;
+		LoadIo(io);
 		avOut.resize(mvSize.x * mvSize.y * 4);
-
-		glBindTexture(GLTarget, lHandle);
-		if(mPixelFormat == ePixelFormat_Depth16 || mPixelFormat == ePixelFormat_Depth24 || mPixelFormat == ePixelFormat_Depth32)
-		{
-			std::vector<float> vDepth(mvSize.x * mvSize.y);
-			glGetTexImage(GLTarget, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &vDepth[0]);
-			for(size_t i=0; i<vDepth.size(); ++i) { avOut[i*4] = avOut[i*4+1] = avOut[i*4+2] = vDepth[i]; avOut[i*4+3] = 1; }
-		}
-		else
-			glGetTexImage(GLTarget, 0, GL_RGBA, GL_FLOAT, &avOut[0]);
-		glBindTexture(GLTarget, 0);
-
-		return true;
+		bool bDepth = mPixelFormat == ePixelFormat_Depth16 || mPixelFormat == ePixelFormat_Depth24 || mPixelFormat == ePixelFormat_Depth32;
+		return ohpl_gltex_read_pixels(mlRs, &io, mClock.count, bDepth, avOut.data());
 	}
 
 	void cSDLTexture::SetFilter(eTextureFilter aFilter)
 	{
-		if(mlRs)
-		{
-			OhplTexIo io;
-			LoadIo(io);
-			ohpl_gltex_set_filter(mlRs, &io, aFilter);
-			StoreIo(io);
-			return;
-		}
-
-		if(mFilter == aFilter) return;
-		mFilter = aFilter;
-
-		if(mbContainsData)
-		{
-			GLenum GLTarget = GetGLTextureTargetEnum(mType);
-			unsigned int vFilter[2];
-			ohpl_gl_tex_filter_params(mFilter, mbUseMipMaps, mType, vFilter);
-
-			glEnable(GLTarget);
-			for(size_t i=0; i < mvTextureHandles.size(); ++i)
-			{
-				glBindTexture(GLTarget, mvTextureHandles[i]);
-				if(vFilter[0])
-				{
-					glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, vFilter[0]);
-					glTexParameteri(GLTarget, GL_TEXTURE_MAG_FILTER, vFilter[1]);
-				}
-			}
-			glDisable(GLTarget);
-		}
+		OhplTexIo io;
+		LoadIo(io);
+		ohpl_gltex_set_filter(mlRs, &io, aFilter);
+		StoreIo(io);
 	}
 
 	//-----------------------------------------------------------------------
@@ -371,23 +227,9 @@ namespace hpl {
 
 		mfAnisotropyDegree = afX;
 
-		if(mlRs)
-		{
-			OhplTexIo io;
-			LoadIo(io);
-			ohpl_gltex_apply_aniso(mlRs, &io, afX);
-			return;
-		}
-
-		GLenum GLTarget = GetGLTextureTargetEnum(mType);
-
-		glEnable(GLTarget);
-		for(size_t i=0; i < mvTextureHandles.size(); ++i)
-		{
-			glBindTexture(GLTarget, mvTextureHandles[i]);
-			glTexParameterf(GLTarget,GL_TEXTURE_MAX_ANISOTROPY_EXT ,mfAnisotropyDegree);
-		}
-		glDisable(GLTarget);
+		OhplTexIo io;
+		LoadIo(io);
+		ohpl_gltex_apply_aniso(mlRs, &io, afX);
 	}
 
 	//-----------------------------------------------------------------------
@@ -396,29 +238,7 @@ namespace hpl {
 	{
 		if(mType == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
 
-		if(mlRs)
-		{
-			WrapRs(1, aMode);
-			return;
-		}
-
-		;
-
-		mWrapS = aMode;
-
-		if(mbContainsData==false) return;
-		
-		GLenum GLTarget = GetGLTextureTargetEnum(mType);
-
-		glEnable(GLTarget);
-		for(size_t i=0; i < mvTextureHandles.size(); ++i)
-		{
-			glBindTexture(GLTarget, mvTextureHandles[i]);
-
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_S,GetGLWrapEnum(aMode));
-		}
-
-		glDisable(GLTarget);
+		WrapRs(1, aMode);
 	}
 
 	//-----------------------------------------------------------------------
@@ -427,29 +247,7 @@ namespace hpl {
 	{
 		if(mType == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
 
-		if(mlRs)
-		{
-			WrapRs(2, aMode);
-			return;
-		}
-
-		;
-
-		mWrapT = aMode;
-
-		if(mbContainsData==false) return;
-		
-		GLenum GLTarget = GetGLTextureTargetEnum(mType);
-
-		glEnable(GLTarget);
-		for(size_t i=0; i < mvTextureHandles.size(); ++i)
-		{
-			glBindTexture(GLTarget, mvTextureHandles[i]);
-
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_T,GetGLWrapEnum(aMode));
-		}
-
-		glDisable(GLTarget);
+		WrapRs(2, aMode);
 	}
 
 	//-----------------------------------------------------------------------
@@ -458,29 +256,7 @@ namespace hpl {
 	{
 		if(mType == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
 
-		if(mlRs)
-		{
-			WrapRs(4, aMode);
-			return;
-		}
-
-		;
-
-		mWrapR = aMode;
-
-		if(mbContainsData==false) return;
-		
-		GLenum GLTarget = GetGLTextureTargetEnum(mType);
-
-		glEnable(GLTarget);
-		for(size_t i=0; i < mvTextureHandles.size(); ++i)
-		{
-			glBindTexture(GLTarget, mvTextureHandles[i]);
-
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_R,GetGLWrapEnum(aMode));
-		}
-
-		glDisable(GLTarget);
+		WrapRs(4, aMode);
 	}
 
 	//-----------------------------------------------------------------------
@@ -491,153 +267,45 @@ namespace hpl {
 
 		;
 
-		if(mlRs)
-		{
-			WrapRs(7, aMode);
-			return;
-		}
-
-		mWrapS = aMode;
-		mWrapT = aMode;
-		mWrapR = aMode;
-
-		if(mbContainsData==false) return;
-
-		GLenum GLTarget = GetGLTextureTargetEnum(mType);
-
-		glEnable(GLTarget);
-		for(size_t i=0; i < mvTextureHandles.size(); ++i)
-		{
-			glBindTexture(GLTarget, mvTextureHandles[i]);
-
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_S,GetGLWrapEnum(aMode));
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_T,GetGLWrapEnum(aMode));
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_R,GetGLWrapEnum(aMode));
-		}
-
-		glDisable(GLTarget);
+		WrapRs(7, aMode);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cSDLTexture::SetCompareMode(eTextureCompareMode aMode)
 	{
-		if(mlRs)
-		{
-			CompareRs(false, aMode);
-			return;
-		}
-
-		mCompareMode = aMode;
-
-		if(mbContainsData==false) return;
-
-		;
-
-		GLenum GLTarget = GetGLTextureTargetEnum(mType);
-		GLenum GLCompareMode = GetGLTextureCompareMode(mCompareMode);
-		
-		glEnable(GLTarget);
-		for(size_t i=0; i < mvTextureHandles.size(); ++i)
-		{
-			glBindTexture(GLTarget, mvTextureHandles[i]);
-
-			glTexParameteri(GLTarget,GL_TEXTURE_COMPARE_MODE,GLCompareMode);			
-		}
-		glDisable(GLTarget);
+		CompareRs(false, aMode);
 	}
 	
 	
 	void cSDLTexture::SetCompareFunc(eTextureCompareFunc aFunc)
 	{
-		if(mlRs)
-		{
-			CompareRs(true, aFunc);
-			return;
-		}
-
-		mCompareFunc = aFunc;
-
-		if(mbContainsData==false) return;
-
-		;
-
-		GLenum GLTarget = GetGLTextureTargetEnum(mType);
-		GLenum GLCompareFunc = GetGLTextureCompareFunc(mCompareFunc);
-
-		glEnable(GLTarget);
-		for(size_t i=0; i < mvTextureHandles.size(); ++i)
-		{
-			glBindTexture(GLTarget, mvTextureHandles[i]);
-
-			glTexParameteri(GLTarget,GL_TEXTURE_COMPARE_FUNC,GLCompareFunc);			
-		}
-		glDisable(GLTarget);
+		CompareRs(true, aFunc);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cSDLTexture::SetRedFromAlpha(bool abX)
 	{
-		if(mlRs)
-		{
-			OhplTexIo io;
-			LoadIo(io);
-			ohpl_gltex_set_red_from_alpha(mlRs, &io, abX);
-			return;
-		}
-		if(mbContainsData==false || mType != eTextureType_2D) return;
-
-		GLint lPrevBound = 0;
-		glGetIntegerv(GL_TEXTURE_BINDING_2D, &lPrevBound);
-		for(size_t i=0; i < mvTextureHandles.size(); ++i)
-		{
-			glBindTexture(GL_TEXTURE_2D, mvTextureHandles[i]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, abX ? GL_ALPHA : GL_RED);
-		}
-		glBindTexture(GL_TEXTURE_2D, lPrevBound);
+		OhplTexIo io;
+		LoadIo(io);
+		ohpl_gltex_set_red_from_alpha(mlRs, &io, abX);
 	}
 
 	void cSDLTexture::AutoGenerateMipmaps()
 	{
 		if(mbUseMipMaps==false) return;
 
-		if(mlRs)
-		{
-			OhplTexIo io;
-			LoadIo(io);
-			ohpl_gltex_auto_mipmaps(mlRs, &io);
-			return;
-		}
-
-		if(GLEW_EXT_framebuffer_object)
-		{
-			GLenum GLTarget = GetGLTextureTargetEnum(mType);
-
-			GLenum GLBinding = ohpl_gl_texture_binding(GLTarget);
-			GLint lPrevBound = 0;
-			glGetIntegerv(GLBinding, &lPrevBound);
-			glEnable(GLTarget);
-			for(size_t i=0; i < mvTextureHandles.size(); ++i)
-			{
-				glBindTexture(GLTarget, mvTextureHandles[i]);
-				glGenerateMipmapEXT(GLTarget);
-			}
-
-			glDisable(GLTarget);
-			glBindTexture(GLTarget, lPrevBound);
-		}
+		OhplTexIo io;
+		LoadIo(io);
+		ohpl_gltex_auto_mipmaps(mlRs, &io);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	unsigned int cSDLTexture::GetTextureHandle()
 	{
-		if(mlRs) return ohpl_gltex_handle(mlRs, mClock.count);
-
-		int64_t lSlot = ohpl_gl_tex_handle_slot(mbContainsData, mvTextureHandles.size(), mClock.count);
-		if(lSlot < 0) return 0;
-		return mvTextureHandles[lSlot];
+		return ohpl_gltex_handle(mlRs, mClock.count);
 	}
 
 	//-----------------------------------------------------------------------
@@ -650,12 +318,12 @@ namespace hpl {
 
 	size_t cSDLTexture::HandleCount()
 	{
-		return mlRs ? ohpl_gltex_handle_count(mlRs) : mvTextureHandles.size();
+		return ohpl_gltex_handle_count(mlRs);
 	}
 
 	bool cSDLTexture::ContainsData()
 	{
-		return mlRs ? ohpl_gltex_contains_data(mlRs) : mbContainsData;
+		return ohpl_gltex_contains_data(mlRs);
 	}
 
 	void cSDLTexture::LoadIo(OhplTexIo &aIo)
@@ -729,17 +397,7 @@ namespace hpl {
 
 	void cSDLTexture::GenerateHandles(int alNumOfHandles)
 	{
-		if(mlRs)
-		{
-			ohpl_gltex_generate_handles(mlRs, alNumOfHandles);
-			return;
-		}
-		if( (int)mvTextureHandles.size() < alNumOfHandles)
-		{
-			int lNewHandles = alNumOfHandles - (int)mvTextureHandles.size();
-			mvTextureHandles.resize(alNumOfHandles);
-			glGenTextures(lNewHandles,(GLuint *)&mvTextureHandles[alNumOfHandles-lNewHandles]);
-		}
+		ohpl_gltex_generate_handles(mlRs, alNumOfHandles);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -757,314 +415,26 @@ namespace hpl {
 				return false;
 			}
 
-			if(mlRs)
-			{
-				OhplTexFace vFaces[6];
-				for(int i=0; i<6; ++i)
-				{
-					OhplTexFace f = { reinterpret_cast<const OhplTexLevel*>(apBmp->GetData(i,0)), apBmp->GetNumOfMipMaps(), apBmp->GetSize(), (int)apBmp->GetPixelFormat() };
-					vFaces[i] = f;
-				}
-				if(CreateFacesRs(alIdx, vFaces, 6) == false) return false;
-				SetupPropertiesRs(alIdx);
-				return true;
-			}
-
+			OhplTexFace vFaces[6];
 			for(int i=0; i<6; ++i)
 			{
-				bool bRet = CreateTexture(	mvTextureHandles[alIdx],
-											apBmp->GetData(i,0),apBmp->GetNumOfMipMaps(),
-											apBmp->GetSize(), apBmp->GetPixelFormat(),
-											i,mbUseMipMaps,	true);
-				if(bRet == false) return false;
+				OhplTexFace f = { reinterpret_cast<const OhplTexLevel*>(apBmp->GetData(i,0)), apBmp->GetNumOfMipMaps(), apBmp->GetSize(), (int)apBmp->GetPixelFormat() };
+				vFaces[i] = f;
 			}
-
-
+			if(CreateFacesRs(alIdx, vFaces, 6) == false) return false;
+			SetupPropertiesRs(alIdx);
+			return true;
 		}
 		////////////////////////////
 		//Create 1d, 2d or 3d texture
-		else if(mlRs)
-		{
-			OhplTexFace f = { reinterpret_cast<const OhplTexLevel*>(apBmp->GetData(0,0)), apBmp->GetNumOfMipMaps(), apBmp->GetSize(), (int)apBmp->GetPixelFormat() };
-			if(CreateFacesRs(alIdx, &f, 1) == false) return false;
-		}
-		else
-		{
-			bool bRet = CreateTexture(	mvTextureHandles[alIdx],
-										apBmp->GetData(0,0),apBmp->GetNumOfMipMaps(),
-										apBmp->GetSize(), apBmp->GetPixelFormat(),
-										0,mbUseMipMaps,true);
-			if(bRet == false) return false;
-			
-		}
+		OhplTexFace f = { reinterpret_cast<const OhplTexLevel*>(apBmp->GetData(0,0)), apBmp->GetNumOfMipMaps(), apBmp->GetSize(), (int)apBmp->GetPixelFormat() };
+		if(CreateFacesRs(alIdx, &f, 1) == false) return false;
 
-		if(mlRs) SetupPropertiesRs(alIdx);
-		else SetupProperties(mvTextureHandles[alIdx]);
+		SetupPropertiesRs(alIdx);
 
 		return true;
 	}
 
 	//-----------------------------------------------------------------------
 
-	bool cSDLTexture::CreateTexture(	int alTextureHandle,
-										cBitmapData* apBitmapImage, int alNumOfMipMaps,
-										const cVector3l avSize, ePixelFormat aPixelFormat,
-										int alFaceNum,bool abGenerateMipMaps,
-										bool abCheckForResize)
-	{
-		OhplGlCreateIn in = { (int)mType, (int)aPixelFormat, avSize, mvMinDownScaleSize, alNumOfMipMaps,
-							  (unsigned)mlSizeDownScaleLevel, abGenerateMipMaps, abCheckForResize };
-		OhplGlCreatePlan plan;
-		ohpl_gl_tex_plan_create(&in, &plan);
-
-		if(plan.warnPow2)
-		{
-			Warning("Texture '%s' does not have a pow2 size!\n",msName.c_str());
-		}
-
-		mvSize = plan.size;
-		mPixelFormat = aPixelFormat;
-		mbIsCompressed = plan.compressed;
-
-		GLenum GLTarget = TextureTypeToGLTarget(mType);
-		GLenum GLFormat = PixelFormatToGLFormat(aPixelFormat);
-
-		unsigned char *pResizeData = NULL;
-		int lResizeDataSize = 0;
-		if(plan.resize)
-		{
-			lResizeDataSize = plan.resizeBytes;
-			pResizeData = hplNewArray(unsigned char, lResizeDataSize);
-
-			gluScaleImage(	GLFormat,avSize.x, avSize.y, GL_UNSIGNED_BYTE, apBitmapImage->mpData,
-							plan.size.x, plan.size.y,GL_UNSIGNED_BYTE,pResizeData);
-		}
-
-		glEnable(GLTarget);
-		glBindTexture(GLTarget, alTextureHandle);
-
-		bool bRet = true;
-		int lMipMapCount = plan.endLevel;
-		for(int i=plan.startLevel; i<lMipMapCount; ++i)
-		{
-			int lCount = i-plan.startLevel;
-			OhplGlV3 vLevel = ohpl_gl_tex_level_size(OhplGl(plan.size), lCount);
-			cVector3l vSize(vLevel.x, vLevel.y, vLevel.z);
-
-			unsigned char *pData = apBitmapImage[i].mpData;
-			int lSize = apBitmapImage[i].mlSize;
-
-			if(lCount==0 && pResizeData)
-			{
-				pData = pResizeData;
-				lSize = lResizeDataSize;
-			}
-
-			if(CopyTextureDataToGL(	alTextureHandle,lCount,pData,lSize, vSize,aPixelFormat,alFaceNum) == false)
-			{
-				bRet = false;
-				break;
-			}
-		}
-
-		if(bRet==false)
-		{
-			glDisable(GLTarget);
-			Error("Could not create GL texture %s\n",msName.c_str());
-			return false;
-		}
-
-		mbContainsData = true;
-
-		if(plan.maxLevel >= 0)
-			glTexParameteri(GLTarget, GL_TEXTURE_MAX_LEVEL, plan.maxLevel);
-
-		if(plan.buildMips)
-		{
-			if(pResizeData)
-				GenerateMipMaps(GLTarget,aPixelFormat,mvSize,pResizeData,lResizeDataSize,alFaceNum);
-			else
-				GenerateMipMaps(GLTarget,aPixelFormat,mvSize,apBitmapImage->mpData,apBitmapImage->mlSize,alFaceNum);
-		}
-
-		if(pResizeData) hplDeleteArray(pResizeData);
-
-		glDisable(GLTarget);
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-
-
-	//-----------------------------------------------------------------------
-
-	void cSDLTexture::GenerateMipMaps(	GLenum aGLTarget, ePixelFormat aPixelFormat,const cVector3l avSize,
-										unsigned char *apData,int alDataSize, int alFaceNum)
-	{
-		OhplGlMipPlan plan;
-		ohpl_gl_tex_plan_mips(mType, mUsage, GLEW_EXT_framebuffer_object, mbsRGB, aPixelFormat, OhplGl(avSize), alFaceNum, &plan);
-
-		switch(plan.action)
-		{
-		case kOhplGlMipGenerate:
-			glGenerateMipmapEXT(aGLTarget);
-			break;
-		case kOhplGlMipBuild1D:
-			gluBuild1DMipmaps(	aGLTarget,plan.internal,avSize.x,
-								plan.format, GL_UNSIGNED_BYTE,
-								apData);
-			break;
-		case kOhplGlMipBuild2D:
-			gluBuild2DMipmaps(	plan.target,
-								plan.internal,avSize.x,avSize.y,
-								plan.format, GL_UNSIGNED_BYTE,
-								apData);
-			break;
-		}
-
-		mlMemorySize += plan.memory;
-		if(plan.disableMips) mbUseMipMaps = false;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cSDLTexture::CopyTextureDataToGL(	int alTextureHandle, int alLevel,unsigned char *apData,int alDataSize,
-											const cVector3l avSize, ePixelFormat aPixelFormat,int alFaceNum)
-	{
-		OhplGlUpload up;
-		ohpl_gl_tex_plan_upload(mType, mbsRGB, aPixelFormat, alLevel, alDataSize, OhplGl(avSize), alFaceNum, &up);
-
-		while(glGetError()!=GL_NO_ERROR);
-
-		mlMemorySize += alDataSize;
-
-		switch(up.kind)
-		{
-		case 1:
-			glCompressedTexImage1DARB(up.target, up.level, up.internal, up.size.x, 0, up.bytes, apData);
-			break;
-		case 2:
-			glCompressedTexImage2DARB(up.target, up.level, up.internal, up.size.x, up.size.y, 0, up.bytes, apData);
-			if(up.swizzle)
-			{
-				// SOMA uploads these as LATC2
-				GLint vSwizzle[4] = { GL_RED, GL_RED, GL_RED, GL_GREEN };
-				glTexParameteriv(TextureTypeToGLTarget(mType), GL_TEXTURE_SWIZZLE_RGBA, vSwizzle);
-			}
-			break;
-		case 3:
-			glCompressedTexImage3DARB(up.target, up.level, up.internal, up.size.x, up.size.y, up.size.z, 0, up.bytes, apData);
-			break;
-		case 4:
-			glTexImage1D(up.target, up.level, up.internal, up.size.x, 0, up.format, up.glType, apData);
-			break;
-		case 5:
-			glTexImage2D(up.target, up.level, up.internal, up.size.x, up.size.y, 0, up.format, up.glType, apData);
-			break;
-		case 6:
-			glTexImage3D(up.target, up.level, up.internal, up.size.x, up.size.y, up.size.z, 0, up.format, up.glType, apData);
-			break;
-		}
-
-		if(glGetError()!=GL_NO_ERROR) return false;
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cSDLTexture::SetupProperties(int alTextureHandle)
-	{
-		if(mbContainsData==false) return;
-
-		GLenum GLTarget = TextureTypeToGLTarget(mType);
-
-		glEnable(GLTarget);
-		glBindTexture(GLTarget, alTextureHandle);
-
-		int vWrap[3] = { (int)mWrapS, (int)mWrapT, (int)mWrapR };
-		OhplGlProps props;
-		ohpl_gl_tex_plan_props(mType, mbUseMipMaps, mFilter, vWrap, &props);
-
-		glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, props.minFilter);
-		glTexParameteri(GLTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		if(props.rect)
-		{
-			mWrapS = eTextureWrap_ClampToEdge;
-			mWrapT = eTextureWrap_ClampToEdge;
-			mWrapR = eTextureWrap_ClampToEdge;
-		}
-
-		glTexParameteri(GLTarget,GL_TEXTURE_WRAP_S,props.wrap[0]);
-		glTexParameteri(GLTarget,GL_TEXTURE_WRAP_T,props.wrap[1]);
-		glTexParameteri(GLTarget,GL_TEXTURE_WRAP_R,props.wrap[2]);
-
-		if(props.rect == false)
-		{
-			if(	mpLowLevelGraphics->GetCaps(eGraphicCaps_AnisotropicFiltering) &&
-				ohpl_gl_tex_aniso_fits(mpLowLevelGraphics->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), mfAnisotropyDegree))
-			{
-				glTexParameterf(GLTarget,GL_TEXTURE_MAX_ANISOTROPY_EXT ,mfAnisotropyDegree);
-			}
-		}
-
-		glDisable(GLTarget);
-	}
-
-	//-----------------------------------------------------------------------
-
-	unsigned char* cSDLTexture::ResizePixelData(unsigned char *apData, int alBytesPerPixel)
-	{
-		if(mlSizeDownScaleLevel<=0 || mvSize.x <= mvMinDownScaleSize.x) return NULL;
-
-		unsigned char *pNewSrc = NULL;
-		
-		int lOldW = mvSize.x;
-		int lOldH = mvSize.y;
-
-		int lSizeDiv = (int)powf((int)2,(int)mlSizeDownScaleLevel);
-
-		mvSize.x /= lSizeDiv;
-		mvSize.y /= lSizeDiv;
-
-		while(mvSize.x < mvMinDownScaleSize.x)
-		{
-			mvSize.x*=2;
-			mvSize.y*=2;
-			lSizeDiv/=2;
-		}
-
-		pNewSrc = hplNewArray( unsigned char, alBytesPerPixel * mvSize.x * mvSize.y);
-
-		int lWidthCount = mvSize.x;
-		int lHeightCount = mvSize.y;
-		int lOldAdd = alBytesPerPixel*lSizeDiv;
-		int lOldHeightAdd = alBytesPerPixel*lOldW*(lSizeDiv-1);
-
-		unsigned char *pOldPixel = apData;
-		unsigned char *pNewPixel = pNewSrc;
-
-		while(lHeightCount)
-		{
-			memcpy(pNewPixel, pOldPixel,alBytesPerPixel);
-
-			pOldPixel += lOldAdd;
-			pNewPixel += alBytesPerPixel;
-
-			lWidthCount--;
-			if(!lWidthCount)
-			{
-				lWidthCount = mvSize.x;
-				lHeightCount--;
-				pOldPixel += lOldHeightAdd;
-			}
-		}
-
-		return pNewSrc;
-	}
-
-	//-----------------------------------------------------------------------
 }

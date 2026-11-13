@@ -46,7 +46,6 @@ namespace hpl {
 	private:
 		void ReopenFile();
 
-		FILE *mpFile;
 		::OhplL1Log *mpRust;
 		tWString msFileName;
 	};

@@ -18,7 +18,6 @@
  */
 
 #include "impl/ThreadSDL.h"
-#include "impl/RustBackends.h"
 #include "impl/RustL1.h"
 
 #if USE_SDL2
@@ -39,15 +38,14 @@ namespace hpl {
 	
 	cThreadSDL::cThreadSDL()
 	{
-		mpThreadHandle = NULL;
-		mpRust = OhplBackendRustRequested() ? ohpl_l1_thread_new() : NULL;
+		mpRust = ohpl_l1_thread_new();
 	}
 
 	//-----------------------------------------------------------------------
 
 	cThreadSDL::~cThreadSDL()
 	{
-		if(mpRust) ohpl_l1_thread_free(mpRust);
+		ohpl_l1_thread_free(mpRust);
 
 	}
 
@@ -62,12 +60,7 @@ namespace hpl {
 	void cThreadSDL::Start()
 	{
 		mbThreadActive = true;
-		if(mpRust) { ohpl_l1_thread_start(mpRust, iThread::MainThreadFunc, typeid(this).name(), this); return; }
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        mpThreadHandle = SDL_CreateThread(iThread::MainThreadFunc, typeid(this).name(), this);
-#else
-		mpThreadHandle = SDL_CreateThread(iThread::MainThreadFunc, this);
-#endif
+		ohpl_l1_thread_start(mpRust, iThread::MainThreadFunc, typeid(this).name(), this);
 	}
 
 	//-----------------------------------------------------------------------
@@ -75,36 +68,21 @@ namespace hpl {
 	void cThreadSDL::Stop()
 	{
 		mbThreadActive = false;
-		if(mpRust) { ohpl_l1_thread_stop(mpRust); return; }
-		SDL_WaitThread(mpThreadHandle,0);
-		mpThreadHandle = NULL;
+		ohpl_l1_thread_stop(mpRust);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cThreadSDL::Sleep(unsigned int alSleepTime)
 	{
-		if(mpRust) { ohpl_l1_delay(alSleepTime); return; }
-		SDL_Delay(alSleepTime);
+		ohpl_l1_delay(alSleepTime);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cThreadSDL::SetPriority(eThreadPrio aPrio)
 	{
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        if(mpRust) { ohpl_l1_thread_set_priority((int)aPrio); iThread::SetPriority(aPrio); return; }
-        int prio = TranslateEnginePrio(aPrio);
-        SDL_SetThreadPriority((SDL_ThreadPriority)prio);
-#else
-		/** investigate further on other linux distros and mac os x
-		 * As right now Priority range seems to be 0 .. 0 in linux */
-#   ifdef __linux__
-		struct sched_param param;
-		param.sched_priority = TranslateEnginePrio(aPrio);
-		int ret = pthread_setschedparam(SDL_GetThreadID(mpThreadHandle),SCHED_OTHER,&param);
-#   endif
-#endif
+		ohpl_l1_thread_set_priority((int)aPrio);
 		iThread::SetPriority(aPrio);
 	}
 
@@ -112,25 +90,15 @@ namespace hpl {
 
 	int cThreadSDL::TranslateEnginePrio(eThreadPrio aPrio)
 	{
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        switch (aPrio) {
-            case eThreadPrio_Low:
-                return SDL_THREAD_PRIORITY_LOW;
-            case eThreadPrio_High:
-                return SDL_THREAD_PRIORITY_HIGH;
-            case eThreadPrio_Normal:
-            default:
-                return SDL_THREAD_PRIORITY_NORMAL;
-		}
-#else
 		switch (aPrio) {
-		case eThreadPrio_Low:
-		case eThreadPrio_Normal:
-		case eThreadPrio_High:
-		default:
-			return 0;
+			case eThreadPrio_Low:
+				return SDL_THREAD_PRIORITY_LOW;
+			case eThreadPrio_High:
+				return SDL_THREAD_PRIORITY_HIGH;
+			case eThreadPrio_Normal:
+			default:
+				return SDL_THREAD_PRIORITY_NORMAL;
 		}
-#endif
 	}
 
 	//-----------------------------------------------------------------------

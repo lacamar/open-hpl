@@ -38,7 +38,6 @@ namespace hpl {
 		bool Unlock();
 
 	private:
-		SDL_mutex* mpMutexHandle;
 		OhplL1Mutex* mpRust;
 
 	};

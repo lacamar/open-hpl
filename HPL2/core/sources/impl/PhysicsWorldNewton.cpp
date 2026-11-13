@@ -52,13 +52,8 @@ namespace hpl {
 	cPhysicsWorldNewton::cPhysicsWorldNewton()
 		: iPhysicsWorld()
 	{
-		if(OhplL4UseRust())
-		{
-			OhplL4InstallHost();
-			mhRust = ohpl_ntw_create(&mpNewtonWorld);
-		}
-		else
-			mpNewtonWorld = NewtonCreate();
+		OhplL4InstallHost();
+		mhRust = ohpl_ntw_create(&mpNewtonWorld);
 
 		if(mpNewtonWorld==NULL){
 			Warning("Couldn't create newton world!\n");
@@ -78,10 +73,6 @@ namespace hpl {
 		cPhysicsMaterialNewton *pMaterial = hplNew( cPhysicsMaterialNewton, ("Default",this,lDefaultMatId) );
 		RegisterMaterial("Default", pMaterial);
 		pMaterial->UpdateMaterials();
-
-		mpTempDepths = hplNewArray( float,500);
-		mpTempNormals = hplNewArray( float,500 * 3);
-		mpTempPoints = hplNewArray( float,500 * 3);
 	}
 
 	//-----------------------------------------------------------------------
@@ -89,14 +80,7 @@ namespace hpl {
 	cPhysicsWorldNewton::~cPhysicsWorldNewton()
 	{
 		DestroyAll();
-		if(OhplL4UseRust())
-			ohpl_ntw_destroy(mhRust);
-		else
-			NewtonDestroy(mpNewtonWorld);
-
-		hplDeleteArray(mpTempDepths);
-		hplDeleteArray(mpTempNormals);
-		hplDeleteArray(mpTempPoints);
+		ohpl_ntw_destroy(mhRust);
 	}
 
 	//-----------------------------------------------------------------------
@@ -109,37 +93,15 @@ namespace hpl {
 
 	void cPhysicsWorldNewton::Simulate(float afTimeStep)
 	{
-		if(OhplL4UseRust())
-		{
-			ohpl_ntw_simulate(mhRust, afTimeStep);
-			return;
-		}
-		//cPhysicsBodyNewton::SetUseCallback(false);
-		//static lUpdate =0;
-        //if(lUpdate % 30==0)
-		{
-
-			while(afTimeStep>mfMaxTimeStep)
-			{
-				NewtonUpdate(mpNewtonWorld, mfMaxTimeStep);
-				afTimeStep -= mfMaxTimeStep;
-			}
-			NewtonUpdate(mpNewtonWorld, afTimeStep);
-		}
-		//lUpdate++;
-		//cPhysicsBodyNewton::SetUseCallback(true);
-        			
-		for(cPhysicsBodyNewton* pBody : mvForcedBodies)
-			pBody->ClearForces();
-		mvForcedBodies.clear();
+		ohpl_ntw_simulate(mhRust, afTimeStep);
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void cPhysicsWorldNewton::SetMaxTimeStep(float afTimeStep)
 	{
 		mfMaxTimeStep = afTimeStep;
-		if(OhplL4UseRust()) ohpl_ntw_set_max_step(mhRust, afTimeStep);
+		ohpl_ntw_set_max_step(mhRust, afTimeStep);
 	}
 	
 	float cPhysicsWorldNewton::GetMaxTimeStep()
@@ -154,10 +116,7 @@ namespace hpl {
 		mvWorldSizeMin = avMin;
 		mvWorldSizeMax = avMax;
 
-		if(OhplL4UseRust())
-			ohpl_ntw_set_size(mhRust, avMin.v, avMax.v);
-		else
-			NewtonSetWorldSize(mpNewtonWorld,avMin.v, avMax.v);
+		ohpl_ntw_set_size(mhRust, avMin.v, avMax.v);
 	}
 
 	cVector3f cPhysicsWorldNewton::GetWorldSizeMin()
@@ -191,27 +150,7 @@ namespace hpl {
 	{
 		mAccuracy = aAccuracy;
 
-		if(OhplL4UseRust())
-		{
-			ohpl_ntw_set_accuracy(mhRust, (int32_t)aAccuracy);
-			return;
-		}
-		
-		switch(mAccuracy)
-		{
-		case ePhysicsAccuracy_Low:
-									NewtonSetSolverModel(mpNewtonWorld,1);
-									NewtonSetFrictionModel(mpNewtonWorld,1);
-									break;
-		case ePhysicsAccuracy_Medium:
-									NewtonSetSolverModel(mpNewtonWorld,2);
-									NewtonSetFrictionModel(mpNewtonWorld,1);
-									break;
-		case ePhysicsAccuracy_High:
-									NewtonSetSolverModel(mpNewtonWorld,0);
-									NewtonSetFrictionModel(mpNewtonWorld,0);
-									break;
-		}
+		ohpl_ntw_set_accuracy(mhRust, (int32_t)aAccuracy);
 	}
 
 	//-----------------------------------------------------------------------
@@ -225,17 +164,12 @@ namespace hpl {
 
 	void cPhysicsWorldNewton::SetNumberOfThreads(int alThreads)
 	{
-		if(OhplL4UseRust())
-			ohpl_ntw_set_threads(mhRust, alThreads);
-		else
-			NewtonSetThreadsCount(mpNewtonWorld, alThreads);
+		ohpl_ntw_set_threads(mhRust, alThreads);
 	}
 	
 	int cPhysicsWorldNewton::GetNumberOfThreads()
 	{
-		if(OhplL4UseRust())
-			return ohpl_ntw_threads(mhRust);
-		return NewtonGetThreadsCount(mpNewtonWorld);
+		return ohpl_ntw_threads(mhRust);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -422,23 +356,9 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static std::vector<iPhysicsBody*> *gpBodyVec;
-	static void AddNewtonBodyToVector(const NewtonBody* apNewtonBody, void* apUserData)
-	{
-		cPhysicsBodyNewton* pBody = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apNewtonBody);
-		gpBodyVec->push_back(pBody);
-	}
-
 	void cPhysicsWorldNewton::GetBodiesInBV(cBoundingVolume *apBV, std::vector<iPhysicsBody*> *apBodyVec)
 	{
-		if(OhplL4UseRust())
-		{
-			ohpl_ntw_bodies_in_aabb(mhRust, apBV->GetMin().v, apBV->GetMax().v, (size_t)apBodyVec);
-			return;
-		}
-		gpBodyVec = apBodyVec;
-
-		NewtonWorldForEachBodyInAABBDo(mpNewtonWorld,apBV->GetMin().v, apBV->GetMax().v,AddNewtonBodyToVector, NULL);
+		ohpl_ntw_bodies_in_aabb(mhRust, apBV->GetMin().v, apBV->GetMax().v, (size_t)apBodyVec);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -489,139 +409,21 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static bool gbRayCalcDist;
-	static bool gbRayCalcNormal;
-	static bool gbRayCalcPoint;
-	static iPhysicsRayCallback *gpRayCallback;
-	static cVector3f gvRayOrigin;
-	static cVector3f gvRayEnd;
-	static cVector3f gvRayDelta;
-	static float gfRayLength;
-	//Temp:
-	static cVector3f gvRayBoxMin; 
-	static cVector3f gvRayBoxMax;
-	
-	static cPhysicsRayParams gRayParams;
-
-	//////////////////////////////////////
-	
-	static unsigned RayCastPrefilterFunc (const NewtonBody* apNewtonBody,const NewtonCollision* collision, void* userData)
-	{
-		cPhysicsBodyNewton* pRigidBody = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apNewtonBody);
-		if(pRigidBody->IsActive()==false) return 0;
-
-		//Temp:
-		cBoundingVolume *pBv = pRigidBody->GetBoundingVolume();
-		if(cMath::CheckAABBIntersection(gvRayBoxMin, gvRayBoxMax, pBv->GetMin(), pBv->GetMax())==false)
-		{
-			return 0;
-		}
-
-		bool bRet = gpRayCallback->BeforeIntersect(pRigidBody);
-
-		if(bRet) return 1;
-		else return 0;
-	}
-
-	static float RayCastFilterFunc (const NewtonBody* apNewtonBody, const float* apNormalVec, 
-								int alCollisionID, void* apUserData, float afIntersetParam)
-	{
-		cPhysicsBodyNewton* pRigidBody = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apNewtonBody);
-		if(pRigidBody->IsActive()==false) return 1;
-
-		gRayParams.mfT = afIntersetParam;
-		
-		//Calculate stuff needed.
-		if(gbRayCalcDist){
-			gRayParams.mfDist = gfRayLength * afIntersetParam;
-		}
-		if(gbRayCalcNormal){
-			gRayParams.mvNormal.FromVec(apNormalVec);
-		}
-		if(gbRayCalcPoint){
-			gRayParams.mvPoint = gvRayOrigin + gvRayDelta * afIntersetParam;
-		}
-		
-		//Call the call back
-		bool bRet = gpRayCallback->OnIntersect(pRigidBody,&gRayParams);
-		
-		//return correct value.
-		if(bRet) return 1;//afIntersetParam;
-		else return 0;
-	}
-
-	//////////////////////////////////////
-
 	void cPhysicsWorldNewton::CastRay(iPhysicsRayCallback *apCallback, 
 								const cVector3f &avOrigin, const cVector3f& avEnd, 
 								bool abCalcDist, bool abCalcNormal,bool abCalcPoint,
 								bool abUsePrefilter)
 	{
-		if(OhplL4UseRust())
-		{
-			ohpl_ntw_cast_ray(mhRust, (size_t)apCallback, &avOrigin, &avEnd, abCalcDist, abCalcNormal, abCalcPoint, abUsePrefilter);
-			return;
-		}
-		gbRayCalcPoint = abCalcPoint;
-		gbRayCalcNormal = abCalcNormal;
-		gbRayCalcDist = abCalcDist;
-
-		gvRayOrigin = avOrigin;
-		gvRayEnd = avEnd;
-
-		gvRayDelta = avEnd - avOrigin;
-		gfRayLength = gvRayDelta.Length();
-
-        gpRayCallback = apCallback;
-
-		////////////
-		//Temp:
-		for(int i=0; i<3; ++i)
-		{
-			if(gvRayOrigin.v[i] > gvRayEnd.v[i]){
-				gvRayBoxMin.v[i] = gvRayEnd.v[i];
-				gvRayBoxMax.v[i] = gvRayOrigin.v[i];
-			}
-			else {
-				gvRayBoxMin.v[i] = gvRayOrigin.v[i];
-				gvRayBoxMax.v[i] = gvRayEnd.v[i];
-			}
-		}
-
-		
-		if(abUsePrefilter)
-			NewtonWorldRayCast(mpNewtonWorld, avOrigin.v, avEnd.v,RayCastFilterFunc, NULL, RayCastPrefilterFunc);
-		else
-			NewtonWorldRayCast(mpNewtonWorld, avOrigin.v, avEnd.v,RayCastFilterFunc, NULL, NULL);
+		ohpl_ntw_cast_ray(mhRust, (size_t)apCallback, &avOrigin, &avEnd, abCalcDist, abCalcNormal, abCalcPoint, abUsePrefilter);
 	}
-	
+
 	//-----------------------------------------------------------------------
-
-	static inline void CorrectNormalDirection(cVector3f& avNormal, const cVector3f& avCollidePoint, const cVector3f& avShapeACenter)
-	{
-		cVector3f vCenterToCollidePoint = avCollidePoint - avShapeACenter;
-		//A check if the normal points in the wrong direction.
-		if(cMath::Vector3Dot(vCenterToCollidePoint,avNormal)>0)
-		{
-			avNormal = avNormal *-1;	
-		}
-	}
 
 	float cPhysicsWorldNewton::CastRayOnShape(iCollideShape* apShape, const cMatrixf& a_mtxTransform, const cVector3f& avOrigin, const cVector3f& avEnd,
 											cVector3f& avOutNormal, bool abLocalRayPositions)
 	{
-		if(OhplL4UseRust())
-			return ohpl_ntw_cast_ray_on_shape(static_cast<cCollideShapeNewton*>(apShape)->GetNewtonCollision(), &a_mtxTransform,
-											&avOrigin, &avEnd, &avOutNormal, abLocalRayPositions);
-		cVector3f vStart = avOrigin, vEnd = avEnd;
-		if(abLocalRayPositions==false)
-		{
-			cMatrixf mtxInv = cMath::MatrixInverse(a_mtxTransform);
-			vStart = cMath::MatrixMul(mtxInv, avOrigin);
-			vEnd = cMath::MatrixMul(mtxInv, avEnd);
-		}
-		int lAttribute;
-		return NewtonCollisionRayCast(static_cast<cCollideShapeNewton*>(apShape)->GetNewtonCollision(), vStart.v, vEnd.v, avOutNormal.v, &lAttribute);
+		return ohpl_ntw_cast_ray_on_shape(static_cast<cCollideShapeNewton*>(apShape)->GetNewtonCollision(), &a_mtxTransform,
+										&avOrigin, &avEnd, &avOutNormal, abLocalRayPositions);
 	}
 
 	bool cPhysicsWorldNewton::CheckShapeCollision(	iCollideShape* apShapeA, const cMatrixf& a_mtxA,
@@ -632,164 +434,28 @@ namespace hpl {
 		cCollideShapeNewton *pNewtonShapeA = static_cast<cCollideShapeNewton*>(apShapeA);
 		cCollideShapeNewton *pNewtonShapeB = static_cast<cCollideShapeNewton*>(apShapeB);
 
-		if(OhplL4UseRust())
+		bool bCompound = pNewtonShapeA->GetType() == eCollideShapeType_Compound ||
+						pNewtonShapeB->GetType() == eCollideShapeType_Compound;
+		std::vector<NewtonCollision*> vSubsA, vSubsB;
+		if(bCompound)
 		{
-			bool bCompound = pNewtonShapeA->GetType() == eCollideShapeType_Compound ||
-							pNewtonShapeB->GetType() == eCollideShapeType_Compound;
-			std::vector<NewtonCollision*> vSubsA, vSubsB;
-			if(bCompound)
-			{
-				for(int i=0; i<pNewtonShapeA->GetSubShapeNum(); ++i)
-					vSubsA.push_back(static_cast<cCollideShapeNewton*>(pNewtonShapeA->GetSubShape(i))->GetNewtonCollision());
-				for(int i=0; i<pNewtonShapeB->GetSubShapeNum(); ++i)
-					vSubsB.push_back(static_cast<cCollideShapeNewton*>(pNewtonShapeB->GetSubShape(i))->GetNewtonCollision());
-			}
-			else
-			{
-				vSubsA.push_back(pNewtonShapeA->GetNewtonCollision());
-				vSubsB.push_back(pNewtonShapeB->GetNewtonCollision());
-			}
-			int32_t lCount = aCollideData.mlNumOfPoints;
-			bool bHit = ohpl_ntw_check_collision(mhRust, vSubsA.data(), vSubsA.size(), vSubsB.data(), vSubsB.size(), bCompound,
-								&a_mtxA, &a_mtxB, alMaxPoints, abCorrectNormalDirection, apShapeA->GetType() == eCollideShapeType_Mesh,
-								reinterpret_cast<OhplL4CollPoint*>(aCollideData.mvContactPoints.data()),
-								aCollideData.mvContactPoints.size(), &lCount);
-			aCollideData.mlNumOfPoints = lCount;
-			return bHit;
+			for(int i=0; i<pNewtonShapeA->GetSubShapeNum(); ++i)
+				vSubsA.push_back(static_cast<cCollideShapeNewton*>(pNewtonShapeA->GetSubShape(i))->GetNewtonCollision());
+			for(int i=0; i<pNewtonShapeB->GetSubShapeNum(); ++i)
+				vSubsB.push_back(static_cast<cCollideShapeNewton*>(pNewtonShapeB->GetSubShape(i))->GetNewtonCollision());
 		}
-
-		cMatrixf mtxTransposeA = a_mtxA.GetTranspose();
-		cMatrixf mtxTransposeB = a_mtxB.GetTranspose();
-		
-		bool bLog = false;
-		//if(alMaxPoints== 1) bLog = true;
-		
-		//////////////////////////////
-		//Check compound collision
-        if(pNewtonShapeA->GetType() == eCollideShapeType_Compound || 
-			pNewtonShapeB->GetType() == eCollideShapeType_Compound)
+		else
 		{
-			int lACount = pNewtonShapeA->GetSubShapeNum();
-			int lBCount = pNewtonShapeB->GetSubShapeNum();
-
-			bool bCollision = false;
-			aCollideData.mlNumOfPoints = 0;
-			int lCollideDataStart =0;
-
-			for(int a=0; a< lACount; a++)
-			{
-				for(int b=0; b< lBCount; b++)
-				{
-					cCollideShapeNewton *pSubShapeA = static_cast<cCollideShapeNewton*>(pNewtonShapeA->GetSubShape(a));
-					cCollideShapeNewton *pSubShapeB = static_cast<cCollideShapeNewton*>(pNewtonShapeB->GetSubShape(b));
-					
-					int lNum = NewtonCollisionCollide(mpNewtonWorld, alMaxPoints,
-												pSubShapeA->GetNewtonCollision(), &(mtxTransposeA.m[0][0]),
-												pSubShapeB->GetNewtonCollision(), &(mtxTransposeB.m[0][0]),
-												mpTempPoints, mpTempNormals, mpTempDepths, 0);
-					if(lNum<1) continue;
-					if(lNum > alMaxPoints )lNum = alMaxPoints;
-
-					bCollision = true;
-
-					//Log("Collided %d vs %d. Num: %d\n",a,b,lNum);
-					
-					//Negate for each iteration.
-					alMaxPoints -= lNum;
-
-					for(int i=0; i<lNum; i++)
-					{
-						cCollidePoint &CollPoint = aCollideData.mvContactPoints[lCollideDataStart + i];
-						CollPoint.mfDepth =  mpTempDepths[i];
-
-						int lVertex = i*3;
-
-						CollPoint.mvNormal.x = mpTempNormals[lVertex+0];
-						CollPoint.mvNormal.y = mpTempNormals[lVertex+1];
-						CollPoint.mvNormal.z = mpTempNormals[lVertex+2];
-
-						CollPoint.mvPoint.x = mpTempPoints[lVertex+0];
-						CollPoint.mvPoint.y = mpTempPoints[lVertex+1];
-						CollPoint.mvPoint.z = mpTempPoints[lVertex+2];
-						
-						/////////
-						//Correct the normal
-						if(abCorrectNormalDirection && apShapeA->GetType() != eCollideShapeType_Mesh)
-							CorrectNormalDirection(CollPoint.mvNormal,CollPoint.mvPoint, a_mtxA.GetTranslation());						
-					}
-	                
-					lCollideDataStart += lNum;
-					aCollideData.mlNumOfPoints += lNum;
-
-					if(alMaxPoints <= 0) break;
-				}
-				if(alMaxPoints <= 0) break;
-			}
-			
-			return bCollision;
+			vSubsA.push_back(pNewtonShapeA->GetNewtonCollision());
+			vSubsB.push_back(pNewtonShapeB->GetNewtonCollision());
 		}
-		//////////////////////////////
-		//Check NON compound collision
-		else 
-		{
-			//Log(" 1\n");
-			int lNum = NewtonCollisionCollide(mpNewtonWorld, alMaxPoints,
-										pNewtonShapeA->GetNewtonCollision(), &(mtxTransposeA.m[0][0]),
-										pNewtonShapeB->GetNewtonCollision(), &(mtxTransposeB.m[0][0]),
-										mpTempPoints, mpTempNormals, mpTempDepths, 0);
-			
-			if(lNum<1) return false;
-			if(lNum > alMaxPoints )lNum = alMaxPoints;
-			
-			//Log(" 2\n");
-			for(int i=0; i<lNum; i++)
-			{
-				cCollidePoint &CollPoint = aCollideData.mvContactPoints[i];
-				CollPoint.mfDepth =  mpTempDepths[i];
-				
-				int lVertex = i*3;
-
-				CollPoint.mvNormal.x = mpTempNormals[lVertex+0];
-				CollPoint.mvNormal.y = mpTempNormals[lVertex+1];
-				CollPoint.mvNormal.z = mpTempNormals[lVertex+2];
-
-				CollPoint.mvPoint.x = mpTempPoints[lVertex+0];
-				CollPoint.mvPoint.y = mpTempPoints[lVertex+1];
-				CollPoint.mvPoint.z = mpTempPoints[lVertex+2];
-
-				/////////
-				//Correct the normal
-				if(abCorrectNormalDirection && apShapeA->GetType() != eCollideShapeType_Mesh)
-					CorrectNormalDirection(CollPoint.mvNormal,CollPoint.mvPoint, a_mtxA.GetTranslation());
-				
-			}
-			
-			aCollideData.mlNumOfPoints = lNum;
-		}
-		
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	static iLowLevelGraphics *gpLowLevelGraphics;
-	static cColor gDebugColor;
-
-	static void RenderDebugPolygon(void* apUserData, int alVertexCount, const dFloat* apFaceArray, int alFaceId)
-	{
-		int i;
-
-		i = alVertexCount - 1;
-		cVector3f vP0(apFaceArray[i * 3 + 0], apFaceArray[i * 3 + 1], apFaceArray[i * 3 + 2]);
-		for (i = 0; i < alVertexCount; ++i)
-		{
-			cVector3f vP1 (apFaceArray[i * 3 + 0], apFaceArray[i * 3 + 1], apFaceArray[i * 3 + 2]);
-
-			gpLowLevelGraphics->DrawLine(vP0, vP1,gDebugColor);
-
-			vP0 = vP1;
-		}
-
+		int32_t lCount = aCollideData.mlNumOfPoints;
+		bool bHit = ohpl_ntw_check_collision(mhRust, vSubsA.data(), vSubsA.size(), vSubsB.data(), vSubsB.size(), bCompound,
+							&a_mtxA, &a_mtxB, alMaxPoints, abCorrectNormalDirection, apShapeA->GetType() == eCollideShapeType_Mesh,
+							reinterpret_cast<OhplL4CollPoint*>(aCollideData.mvContactPoints.data()),
+							aCollideData.mvContactPoints.size(), &lCount);
+		aCollideData.mlNumOfPoints = lCount;
+		return bHit;
 	}
 
 	//-----------------------------------------------------------------------
@@ -797,21 +463,8 @@ namespace hpl {
 	void cPhysicsWorldNewton::RenderShapeDebugGeometry(	iCollideShape *apShape, const cMatrixf& a_mtxTransform, 
 														iLowLevelGraphics *apLowLevel, const cColor& aColor)
 	{
-		if(OhplL4UseRust())
-		{
-			ohpl_ntw_debug_shape(static_cast<cCollideShapeNewton*>(apShape)->GetNewtonCollision(), &a_mtxTransform,
-								(size_t)apLowLevel, (size_t)&aColor);
-			return;
-		}
-		gpLowLevelGraphics = apLowLevel;
-		gDebugColor = aColor;
-
-		cCollideShapeNewton *pNewtonShape = static_cast<cCollideShapeNewton*>(apShape);
-		cMatrixf mtxTranspose = a_mtxTransform.GetTranspose();
-		NewtonCollisionForEachPolygonDo (	pNewtonShape->GetNewtonCollision(),
-											&mtxTranspose.m[0][0],
-											RenderDebugPolygon,
-											NULL);
+		ohpl_ntw_debug_shape(static_cast<cCollideShapeNewton*>(apShape)->GetNewtonCollision(), &a_mtxTransform,
+							(size_t)apLowLevel, (size_t)&aColor);
 	}
 	
 	//-----------------------------------------------------------------------

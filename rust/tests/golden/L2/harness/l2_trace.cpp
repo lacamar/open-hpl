@@ -1,5 +1,5 @@
 // Drives cLowLevelGraphicsSDL through a fixed script against fake GL and SDL entry points and
-// writes the call trace. Run with OHPL_IMPL=cpp and OHPL_IMPL=rust and diff the files.
+// writes the call trace. Diff against the committed trace_*.txt.
 #define private public
 #include "impl/LowLevelGraphicsSDL.h"
 #undef private
@@ -14,7 +14,6 @@
 #include <cstdlib>
 #include <cstring>
 
-namespace hpl { tString GlewCapsLine(); }
 extern std::string gFfi;
 using namespace hpl;
 
@@ -30,8 +29,7 @@ int hplMain(const tString&)
 	g->Init(640, 480, 0, 32, 1, 4, eGpuProgramFormat_GLSL, "cap", cVector2l(0, 0));
 	{
 		char vCaps[1024];
-		if(g->mpRs) ohpl_glctx_caps_line(g->mpRs, vCaps, sizeof(vCaps));
-		else snprintf(vCaps, sizeof(vCaps), "%s", GlewCapsLine().c_str());
+		ohpl_glctx_caps_line(g->mpRs, vCaps, sizeof(vCaps));
 		gTrace += std::string("CAPS ") + vCaps + "\n";
 	}
 	AddRange(g->mpVertexArray, sizeof(float) * g->mlBatchStride * g->mlBatchArraySize, "vtx");

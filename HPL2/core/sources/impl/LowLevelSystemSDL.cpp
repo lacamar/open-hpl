@@ -73,14 +73,7 @@ static void AppendSink(void *apCtx, const char *apData, size_t alLen)
 #endif
 
 #ifdef __linux__
-#include <dirent.h>
-#include <errno.h>
 #include <string.h>
-#include <limits.h>
-#include <sched.h>
-#include <sys/mount.h>
-#include <sys/statvfs.h>
-#include <set>
 #endif
 
 
@@ -99,93 +92,6 @@ int WINAPI WinMain(	HINSTANCE hInstance,  HINSTANCE hPrevInstance,LPSTR	lpCmdLin
 	return hplMain(lpCmdLine);
 }
 #else
-#ifdef __linux__
-static bool WriteProcFile(const char *apPath, const std::string &asData)
-{
-	FILE *pFile = fopen(apPath, "w");
-	if(pFile == NULL) return false;
-	bool bOk = fputs(asData.c_str(), pFile) >= 0;
-	return fclose(pFile) == 0 && bOk;
-}
-
-static void AddSteamRoot(std::set<std::string> &aSet, const std::string &asPath)
-{
-	char vReal[PATH_MAX];
-	if(realpath(asPath.c_str(), vReal) == NULL) return;
-	std::string sRoot;
-	if(ohpl_sys_steam_root(vReal, AppendSink, &sRoot)) aSet.insert(sRoot);
-}
-
-static void AddSteamLibraryFolders(std::set<std::string> &aSet, const std::string &asVdf)
-{
-	std::ifstream file(asVdf);
-	for(std::string sLine; std::getline(file, sLine);)
-	{
-		std::string sPath;
-		if(ohpl_sys_vdf_path(sLine.data(), sLine.size(), AppendSink, &sPath)) AddSteamRoot(aSet, sPath + "/steamapps/common");
-	}
-}
-
-// Game data is read-only to the engine: every Steam library and every steamapps/common reachable from the game dir
-// gets a private read-only bind mount. Fails closed: a root that stays writable stops the engine.
-static bool ProtectSteamLibraries()
-{
-	std::set<std::string> setRoots;
-	DIR *pDir = opendir(".");
-	for(dirent *pEnt = pDir ? readdir(pDir) : NULL; pEnt; pEnt = readdir(pDir))
-		AddSteamRoot(setRoots, pEnt->d_name);
-	if(pDir) closedir(pDir);
-	const char *pHome = getenv("HOME");
-	const char *pData = getenv("XDG_DATA_HOME");
-	if(pHome)
-	{
-		AddSteamLibraryFolders(setRoots, std::string(pHome) + "/.steam/steam/steamapps/libraryfolders.vdf");
-		AddSteamLibraryFolders(setRoots, std::string(pHome) + "/.local/share/Steam/steamapps/libraryfolders.vdf");
-	}
-	if(pData && *pData) AddSteamLibraryFolders(setRoots, std::string(pData) + "/Steam/steamapps/libraryfolders.vdf");
-	if(setRoots.empty()) return true;
-
-	char vCwd[PATH_MAX];
-	uid_t lUid = getuid();
-	gid_t lGid = getgid();
-	if(getcwd(vCwd, sizeof(vCwd)) == NULL || unshare(CLONE_NEWUSER | CLONE_NEWNS) != 0 ||
-	   !WriteProcFile("/proc/self/setgroups", "deny") ||
-	   !WriteProcFile("/proc/self/uid_map", std::to_string(lUid) + " " + std::to_string(lUid) + " 1") ||
-	   !WriteProcFile("/proc/self/gid_map", std::to_string(lGid) + " " + std::to_string(lGid) + " 1") ||
-	   mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0)
-	{
-		fprintf(stderr, "open-hpl: could not make Steam libraries read-only: %s\n", strerror(errno));
-	}
-	else
-	{
-		static_assert(ST_NOSUID == 2 && ST_NODEV == 4 && ST_NOEXEC == 8 && ST_NOATIME == 1024 && ST_NODIRATIME == 2048 && ST_RELATIME == 4096 &&
-			MS_RDONLY == 1 && MS_NOSUID == 2 && MS_NODEV == 4 && MS_NOEXEC == 8 && MS_REMOUNT == 32 && MS_NOATIME == 1024 &&
-			MS_NODIRATIME == 2048 && MS_BIND == 4096 && MS_RELATIME == (1 << 21), "mount flags cross the ABI");
-		for(const std::string &sRoot : setRoots)
-		{
-			struct statvfs st;
-			unsigned long lFlags = 0;
-			bool bOk = mount(sRoot.c_str(), sRoot.c_str(), NULL, MS_BIND | MS_REC, NULL) == 0 && statvfs(sRoot.c_str(), &st) == 0;
-			if(bOk) lFlags = (unsigned long)ohpl_sys_remount_flags(st.f_flag);
-			if(!bOk || mount(NULL, sRoot.c_str(), NULL, lFlags, NULL) != 0)
-				fprintf(stderr, "open-hpl: could not make '%s' read-only: %s\n", sRoot.c_str(), strerror(errno));
-		}
-		// the old cwd still points into the writable mount
-		if(chdir(vCwd) != 0) fprintf(stderr, "open-hpl: chdir '%s': %s\n", vCwd, strerror(errno));
-	}
-
-	// an already read-only root (bwrap, flatpak) passes even when unshare failed
-	bool bAllReadOnly = true;
-	for(const std::string &sRoot : setRoots)
-		if(access(sRoot.c_str(), W_OK) == 0)
-		{
-			fprintf(stderr, "open-hpl: refusing to run: '%s' is writable\n", sRoot.c_str());
-			bAllReadOnly = false;
-		}
-	return bAllReadOnly;
-}
-#endif
-
 static void AppendSinkU8(void *apCtx, const unsigned char *apData, size_t alLen)
 {
 	((std::string*)apCtx)->append((const char*)apData, alLen);
@@ -193,77 +99,16 @@ static void AppendSinkU8(void *apCtx, const unsigned char *apData, size_t alLen)
 
 int main(int argc, char *argv[])
 {
-#ifdef __linux__
-	if(hpl::OhplBackendRustRequested())
+	bool bCwd = false;
+	hpl::tString sCmdLine;
+	if(ohpl_l1_main_args(argc, argv, AppendSinkU8, &sCmdLine, &bCwd) != 0) return 1;
+	if(!bCwd)
 	{
-		bool bCwd = false;
-		hpl::tString sCmdLine;
-		if(ohpl_l1_main_args(argc, argv, AppendSinkU8, &sCmdLine, &bCwd) != 0) return 1;
-		if(!bCwd)
-		{
-			hpl::tString sDataDir = hpl::cPlatform::GetDataDir();
-			if(chdir(sDataDir.c_str())) {}
-		}
-		if(!ohpl_l1_protect_steam()) return 1;
-		return hplMain(sCmdLine);
+		hpl::tString sDataDir = hpl::cPlatform::GetDataDir();
+		if(chdir(sDataDir.c_str())) {}
 	}
-#endif
-#ifdef __linux__
-	if(!std::setlocale(LC_CTYPE, "")) {
-		fprintf(stderr, "Can't set the specified locale! Check LANG, LC_CTYPE, LC_ALL.\n");
-		return 1;
-	}
-	char *charset = nl_langinfo(CODESET);
-	bool utf8_mode = (strcasecmp(charset, "UTF-8") == 0);
-	if (!utf8_mode) {
-		fprintf(stderr, "UTF-8 Charset %s available.\nCurrent LANG is %s\nCharset: %s\n",
-			utf8_mode ? "is" : "not",
-			getenv("LANG"), charset);
-	}
-#endif
-
-	bool cwd = false;
-	bool bGotGameDirArg = false;
-	hpl::tString cmdline = "";
-	for (int i=1; i < argc; i++) {
-		unsigned lKind = ohpl_sys_classify_arg(argv[i], bGotGameDirArg);
-        if (lKind == kOhplArgCwd) {
-            cwd = true;
-        } else if (lKind == kOhplArgSkip) {
-            // skip "finder" process number
-		} else if (lKind == kOhplArgGameDir) {
-			struct stat dirStat;
-			if (stat(argv[i], &dirStat) == 0 && S_ISDIR(dirStat.st_mode))
-			{
-				bGotGameDirArg = true;
-				cwd = (chdir(argv[i]) == 0);
-				continue;
-			}
-
-			if (cmdline.length()>0) {
-				cmdline.append(" ").append(argv[i]);
-			} else {
-				cmdline.append(argv[i]);
-			}
-		} else {
-			if (cmdline.length()>0) {
-				cmdline.append(" ").append(argv[i]);
-			} else {
-				cmdline.append(argv[i]);
-			}
-		}
-	}
-
-	if (!cwd) {
-        hpl::tString dataDir = hpl::cPlatform::GetDataDir();
-
-        chdir(dataDir.c_str());
-	}
-#ifdef __linux__
-	if(!ProtectSteamLibraries()) return 1;
-#endif
-
-	return hplMain(cmdline);
+	if(!ohpl_l1_protect_steam()) return 1;
+	return hplMain(sCmdLine);
 }
 #endif
 #endif
@@ -288,35 +133,24 @@ namespace hpl {
 	cLogWriter::cLogWriter(const tWString& asFileName)
 	{
 		msFileName = asFileName;
-		mpFile = NULL;
 		mpRust = NULL;
 	}
 
 	cLogWriter::~cLogWriter()
 	{
-		if(mpFile) fclose(mpFile);
 		if(mpRust) ohpl_l1_log_close(mpRust);
 	}
 
 	void cLogWriter::Write(const tString& asMessage)
 	{
-		if(!mpFile && !mpRust) ReopenFile();
-		
-		if(mpRust)
-		{
-			ohpl_l1_log_write(mpRust, asMessage.c_str());
-		}
-		else if(mpFile)
-		{
-			fprintf(mpFile, "%s", asMessage.c_str());
-			fflush(mpFile);
-		}
+		if(!mpRust) ReopenFile();
+
+		if(mpRust) ohpl_l1_log_write(mpRust, asMessage.c_str());
 	}
 
 	void cLogWriter::Clear()
 	{
 		ReopenFile();
-		if(mpFile) fflush(mpFile);
 	}
 
 	//-----------------------------------------------------------------------
@@ -327,7 +161,7 @@ namespace hpl {
 		if(msFileName == asFile) return;
 
 		msFileName = asFile;
-		if(mpFile || mpRust) ReopenFile();
+		if(mpRust) ReopenFile();
 	}
 
 	//-----------------------------------------------------------------------
@@ -346,8 +180,6 @@ namespace hpl {
 
 	void cLogWriter::ReopenFile()
 	{
-		if(mpFile) fclose(mpFile);
-		mpFile = NULL;
 		if(mpRust) ohpl_l1_log_close(mpRust);
 		mpRust = NULL;
 
@@ -361,16 +193,7 @@ namespace hpl {
 			return;
 		}
 
-		if(OhplBackendRustRequested())
-		{
-			mpRust = ohpl_l1_log_open(cString::To8Char(msFileName).c_str());
-			return;
-		}
-		#ifdef WIN32
-			mpFile = _wfopen(msFileName.c_str(),_W("w"));
-		#else
-			mpFile = fopen(cString::To8Char(msFileName).c_str(),"w");
-		#endif
+		mpRust = ohpl_l1_log_open(cString::To8Char(msFileName).c_str());
 	}
 
 

@@ -44,20 +44,7 @@ namespace hpl {
 
 		double GetTimeInMicroSec(); 
 	private:
-		double mfStartTimeInMicroSec;
-		double mfEndTimeInMicroSec;
-		bool   mbStopped;
 		OhplL1Timer *mpRust;
-		
-		#ifdef WIN32
-			LARGE_INTEGER mFrequency; 
-			LARGE_INTEGER mStartCount;
-			LARGE_INTEGER mEndCount;  
-		#else
-			double mFrequency;
-			timeval mStartCount;
-			timeval mEndCount;
-		#endif
 	};
 
 };

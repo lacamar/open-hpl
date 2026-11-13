@@ -1,5 +1,5 @@
-//! SDL system, platform, input and threads (L1): the SDL calls and object ownership behind
-//! `OHPL_IMPL=rust`. Decision logic lives in `crate::sdlsys` and `crate::input`.
+//! SDL system, platform, input and threads (L1): the SDL calls and object ownership.
+//! Decision logic lives in `crate::sdlsys` and `crate::input`.
 
 mod clib;
 pub mod fs;

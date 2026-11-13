@@ -20,7 +20,6 @@
 
 #include "impl/LowLevelInputSDL.h"
 #include "impl/RustInputSDL.h"
-#include "impl/RustBackends.h"
 #include "impl/RustL1.h"
 #include "system/Platform.h"
 
@@ -34,48 +33,18 @@ namespace hpl {
 	cGamepadSDL2::cGamepadSDL2(cLowLevelInputSDL *apLowLevelInputSDL, int alIndex) : iGamepad("SDL Portable Gamepad", alIndex)
 	{
 		mpLowLevelInputSDL = apLowLevelInputSDL;
-		mpHandle = NULL;
-		mpHaptic = NULL;
-		mpRustPad = NULL;
-		mlInstance = 0;
-
 		size_t lButtons = 0, lAxes = 0;
-		if(OhplBackendRustRequested())
-		{
-			OhplL1PadInfo info;
-			mpRustPad = ohpl_l1_pad_open(mlIndex, &info, L1NameSink, &msGamepadName);
-			mlInstance = info.instance;
-			lButtons = info.buttons;
-			lAxes = info.axes;
-		}
-		else mpHandle = SDL_GameControllerOpen(mlIndex);
-		if(mpHandle)
-		{
-			SDL_Joystick *joy = SDL_GameControllerGetJoystick(mpHandle);
-			mlInstance = SDL_JoystickInstanceID(joy);
-			msGamepadName = tString(SDL_GameControllerName(mpHandle));
-			lButtons = SDL_CONTROLLER_BUTTON_MAX;
-			lAxes = SDL_CONTROLLER_AXIS_MAX;
-
-			mpHaptic = SDL_HapticOpenFromJoystick(joy);
-			if(SDL_HapticRumbleInit(mpHaptic) != 0)
-			{
-				if(mpHaptic) SDL_HapticClose(mpHaptic);
-				mpHaptic = NULL;
-			}
-		}
+		OhplL1PadInfo info;
+		mpRustPad = ohpl_l1_pad_open(mlIndex, &info, L1NameSink, &msGamepadName);
+		mlInstance = info.instance;
+		lButtons = info.buttons;
+		lAxes = info.axes;
 		mpRust = ohpl_input_pad_new(mlIndex, mlInstance, lButtons, lAxes, SDL_CONTROLLER_BUTTON_MAX + SDL_CONTROLLER_AXIS_MAX);
 	}
 
 	cGamepadSDL2::~cGamepadSDL2()
 	{
 		if(mpRustPad) ohpl_l1_pad_free(mpRustPad);
-		if(mpHaptic)
-		{
-			SDL_HapticRumbleStop(mpHaptic);
-			SDL_HapticClose(mpHaptic);
-		}
-		if(mpHandle) SDL_GameControllerClose(mpHandle);
 		ohpl_input_pad_free(mpRust);
 	}
 
@@ -215,12 +184,7 @@ namespace hpl {
 
 	void cGamepadSDL2::SetRumble(float afValue, int alMillisec)
 	{
-		if(mpRustPad) { ohpl_l1_pad_rumble(mpRustPad, afValue, alMillisec); return; }
-		if(mpHaptic)
-		{
-			if(afValue > 0) SDL_HapticRumblePlay(mpHaptic, afValue, alMillisec);
-			else			SDL_HapticRumbleStop(mpHaptic);
-		}
+		if(mpRustPad) ohpl_l1_pad_rumble(mpRustPad, afValue, alMillisec);
 	}
 
 }

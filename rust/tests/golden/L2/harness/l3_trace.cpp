@@ -1,6 +1,6 @@
 // L3: drives cSDLTexture, the vertex buffers, cFrameBufferGL and the GLSL classes through a script
 // against fake GL entry points and writes the call trace (L3_TRACE_OUT) and, on the Rust path, the
-// log of shell-to-Rust calls (L3_FFI_OUT). Run with OHPL_IMPL=cpp and OHPL_IMPL=rust and diff.
+// log of shell-to-Rust calls (L3_FFI_OUT). Diff against the committed trace_*.txt.
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/RustBackends.h"
 #include "graphics/Bitmap.h"

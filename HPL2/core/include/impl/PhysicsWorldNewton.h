@@ -112,14 +112,9 @@ namespace hpl {
 
 		NewtonWorld* GetNewtonWorld(){ return mpNewtonWorld;}
 		uint64_t RustHandle(){ return mhRust;}
-		std::vector<cPhysicsBodyNewton*> mvForcedBodies;
 	private:
 		NewtonWorld *mpNewtonWorld;
 		uint64_t mhRust = 0;
-
-		float* mpTempPoints;
-		float* mpTempNormals;
-		float* mpTempDepths;
 
 		cVector3f mvWorldSizeMin;
 		cVector3f mvWorldSizeMax;

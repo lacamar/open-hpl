@@ -63,8 +63,7 @@ namespace hpl {
 			//Log("Destroying newton joint!\n");
 			if(this->mpChildBody || this->mpParentBody)
 			{
-				if(OhplL4UseRust()) ohpl_ntj_destroy(mhRustWorld, mhRust);
-				else NewtonDestroyJoint(mpNewtonWorld,mpNewtonJoint);
+				ohpl_ntj_destroy(mhRustWorld, mhRust);
 			}
 		}
 
@@ -72,27 +71,23 @@ namespace hpl {
 
 		void SetCollideBodies(bool abX)
 		{
-			if(OhplL4UseRust()) ohpl_ntj_set_collide(mhRust, abX);
-			else NewtonJointSetCollisionState(mpNewtonJoint,abX ? 1: 0);
+			ohpl_ntj_set_collide(mhRust, abX);
 		}
 
 		bool GetCollideBodies()
 		{
-			if(OhplL4UseRust()) return ohpl_ntj_collide(mhRust);
-			return NewtonJointGetCollisionState(mpNewtonJoint)==0 ? false : true;
+			return ohpl_ntj_collide(mhRust);
 		}
 
 		//-------------------------------------------
 
 		void SetStiffness(float afX)
 		{
-			if(OhplL4UseRust()) ohpl_ntj_set_stiffness(mhRust, afX);
-			else NewtonJointSetStiffness(mpNewtonJoint, afX);
+			ohpl_ntj_set_stiffness(mhRust, afX);
 		}
 		float GetStiffness()
 		{
-			if(OhplL4UseRust()) return ohpl_ntj_stiffness(mhRust);
-			return NewtonJointGetStiffness(mpNewtonJoint);
+			return ohpl_ntj_stiffness(mhRust);
 		}
 
 		//-------------------------------------------
@@ -123,16 +118,6 @@ namespace hpl {
 
 		//-------------------------------------------
 		
-		void CreateCustomJoint(int alMaxDOF)
-		{
-			mlMaxDOF = alMaxDOF;
-			mpNewtonJoint = NewtonConstraintCreateUserJoint (mpNewtonWorld, mlMaxDOF, StaticSubmitConstraints, StaticGetInfo, mpNewtonChildBody, mpNewtonParentBody); 
-
-			NewtonJointSetUserData (mpNewtonJoint, this);
-		}
-
-		//-------------------------------------------
-
 		void CalculateGlobalMatrix (const cMatrixf& a_mtxLocalMatrix0, const cMatrixf& a_mtxLocalMatrix1, cMatrixf& a_mtxMatrix0, cMatrixf& a_mtxMatrix1)
 		{
 			cMatrixf mtxMatrix0 = this->mpChildBody->GetLocalMatrix();
@@ -154,27 +139,6 @@ namespace hpl {
 			a_mtxLocalMatrix1 = cMath::MatrixMul( cMath::MatrixInverse(mtxMatrix1), a_mtxPinsAndPivotFrame);
 		}
 		
-		//-------------------------------------------
-
-		virtual void SubmitConstraints (dFloat afTimestep, int alThreadIndex){}
-		virtual void GetInfo (NewtonJointRecord* apInfo){}
-		
-		//-------------------------------------------
-
-		static void StaticSubmitConstraints (const NewtonJoint* apJoint, dFloat afTimestep, int alThreadIndex)
-		{
-			iPhysicsJointNewton<T> *pJointData = (iPhysicsJointNewton<T>*)NewtonJointGetUserData(apJoint);
-
-			pJointData->SubmitConstraints(afTimestep, alThreadIndex);
-		}
-		
-		static void StaticGetInfo (const NewtonJoint* apJoint, NewtonJointRecord* apInfo)
-		{
-			iPhysicsJointNewton<T> *pJointData = (iPhysicsJointNewton<T>*)NewtonJointGetUserData(apJoint);
-
-            pJointData->GetInfo(apInfo);
-		}
-
 		//-------------------------------------------
 
 		static const OhplL4JointOps* RustOps()
@@ -240,8 +204,6 @@ namespace hpl {
 		uint64_t mhRustWorld = 0;
 		NewtonBody* mpNewtonParentBody;
 		NewtonBody* mpNewtonChildBody;
-		
-		int mlMaxDOF;
 	};
 };
 #endif // HPL_PHYSICS_JOINT_NEWTON_H

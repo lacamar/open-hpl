@@ -87,10 +87,8 @@ namespace hpl {
 		OhplGamepad *mpRust;
 		std::vector<OhplInputEvent> mvEvents;
 
-		SDL_GameController	*mpHandle;
 		SDL_JoystickID		mlInstance;
 		cLowLevelInputSDL	*mpLowLevelInputSDL;
-		SDL_Haptic* mpHaptic;
 		OhplL1Pad* mpRustPad;
 	};
 

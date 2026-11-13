@@ -1,15 +1,15 @@
 #!/bin/sh
-# Differential run of the Newton backend: same scenes under OHPL_IMPL=cpp and OHPL_IMPL=rust, dumps must be identical.
+# Newton backend regression: PhysicsNewtonTests dump must equal the committed golden (recorded from the former C++ path).
 # usage: scripts/l4-diff.sh <build-dir>   (build-dir holds PhysicsNewtonTests.bin.aarch64)
 set -e
 bin="${1:?build dir}/PhysicsNewtonTests.bin.aarch64"
+golden="$(dirname "$0")/../rust/tests/golden/L4/newton_scenes.txt"
 out="${XDG_CACHE_HOME:-$HOME/.cache}/open-hpl/l4-diff"
 mkdir -p "$out"
-OHPL_IMPL=cpp OHPL_L4_DUMP="$out/cpp.txt" OHPL_L4_VERBOSE=1 "$bin"
-OHPL_IMPL=rust OHPL_L4_DUMP="$out/rust.txt" OHPL_L4_VERBOSE=1 "$bin"
-if cmp "$out/cpp.txt" "$out/rust.txt"; then
-	echo "identical: $(grep -c '^end' "$out/cpp.txt") scenes"
+OHPL_L4_DUMP="$out/rust.txt" OHPL_L4_VERBOSE=1 "$bin"
+if cmp "$golden" "$out/rust.txt"; then
+	echo "identical: $(grep -c '^end' "$golden") scenes"
 else
-	diff "$out/cpp.txt" "$out/rust.txt" | head -20
+	diff "$golden" "$out/rust.txt" | head -20
 	exit 1
 fi

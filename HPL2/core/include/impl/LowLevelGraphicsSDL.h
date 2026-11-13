@@ -343,7 +343,6 @@ namespace hpl {
 
 		//////////////////////////////////////
 		//Render state settings
-		OhplGlState mGl;
 		OhplGlCtx *mpRs;
 		cVector2l mvScissorPos;
 		cVector2l mvScissorSize;
@@ -358,10 +357,6 @@ namespace hpl {
 		//Gamma
 		Uint16 mvStartGammaArray[3][256];
 		float mfGammaCorrection;
-		unsigned int mlGammaProgram;
-		unsigned int mlGammaTexture;
-		cVector2l mvGammaTextureSize;
-		void ApplyShaderGamma();
 
 		//////////////////////////////////////
 		//Clipping
@@ -418,17 +413,6 @@ namespace hpl {
 		void ExitCG();
 #endif
 		
-		//////////////////////////////////////
-		//Matrix helper
-		void SetMatrixMode(eMatrix mType);
-
-		//////////////////////////////////////
-		//Batch helper
-		void SetUpBatchArrays();
-	
-		//////////////////////////////////////
-		//Vtx helper
-		void SetVtxBatchStates(tVtxBatchFlag aFlags);
 	};
 };
 #endif // HPL_LOWLEVELGRAPHICS_SDL_H

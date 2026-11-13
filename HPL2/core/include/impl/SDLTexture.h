@@ -93,26 +93,6 @@ namespace hpl {
 
 		bool CreateFromBitmapToIndex(cBitmap* apBmp, int alIdx);
 
-		bool CreateTexture(	int alTextureHandle,
-							cBitmapData* apBitmapImage, int alNumOfMipMaps,
-							const cVector3l avSize, ePixelFormat aPixelFormat, 
-							int alFaceNum,bool abGenerateMipMaps,
-							bool abCheckForResize);
-
-		bool CopyTextureDataToGL(	int alTextureHandle, int alLevel,unsigned char *apData,int alDataSize,
-									const cVector3l avSize, ePixelFormat aPixelFormat,int alFaceNum);
-
-		void GenerateMipMaps(	GLenum aGLTarget, ePixelFormat aPixelFormat,const cVector3l avSize, 
-								unsigned char *apData,int alDataSize, int alFaceNum);
-		
-		void SetupProperties(int alTextureHandle);
-
-
-		unsigned char* ResizePixelData(unsigned char *apData, int alBytesPerPixel);
-
-		
-		tUIntVec mvTextureHandles;
-		bool mbContainsData;
 		cLowLevelGraphicsSDL* mpGfxSDL;
 
 		uint64_t mlRs;

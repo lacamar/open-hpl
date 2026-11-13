@@ -23,7 +23,6 @@
 #include "impl/KeyboardSDL.h"
 #include "impl/GamepadSDL.h"
 #include "impl/GamepadSDL2.h"
-#include "impl/RustBackends.h"
 #include "impl/RustL1.h"
 
 #include "system/LowLevelSystem.h"
@@ -68,16 +67,7 @@ namespace hpl {
 	{
 		LockInput(true);
 		RelativeMouse(false);
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        if(OhplBackendRustRequested()) ohpl_l1_input_init();
-        else SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
-#else
-//		mlConnectedDevices = 0;
-//		mlCheckDeviceChange = 0;
-//		mbDirtyGamepads = true;
-//
-		SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
+		ohpl_l1_input_init();
 	}
 
 	//-----------------------------------------------------------------------
@@ -108,80 +98,16 @@ namespace hpl {
 
 	void cLowLevelInputSDL::BeginInputUpdate()
 	{
-		if(OhplBackendRustRequested())
-		{
-			mlstEvents.clear();
-			unsigned lFlags = ohpl_l1_poll(L1EventFilter, L1EventPush, this);
-			if(lFlags & kOhplL1PollPlugged) cEngine::SetDeviceWasPlugged();
-			if(lFlags & kOhplL1PollRemoved) cEngine::SetDeviceWasRemoved();
-			if(lFlags & kOhplL1PollQuit) mbQuitMessagePosted = true;
-			for(const SDL_Event &ev : mlstInjected)
-				if(ohpl_l1_filter_keeps(L1EventFilter, this, &ev)) mlstEvents.push_back(ev);
-			mlstInjected.clear();
-			return;
-		}
-		SDL_Event sdlEvent;
-
 		mlstEvents.clear();
-		while(SDL_PollEvent(&sdlEvent)!=0)
-		{
-#if defined WIN32 && !SDL_VERSION_ATLEAST(2,0,0)
-			if(sdlEvent.type==SDL_SYSWMEVENT)
-			{
-				SDL_SysWMmsg* pMsg = sdlEvent.syswm.msg;
-				
-				// This is bad, cos it is actually Windows specific code, should not be here. TODO: move it, obviously
-				if(pMsg->msg==WM_DEVICECHANGE)
-				{
-					if(pMsg->wParam==DBT_DEVICEARRIVAL)
-					{
-						cEngine::SetDeviceWasPlugged();
-					}
-					else if(pMsg->wParam==DBT_DEVICEREMOVECOMPLETE)
-					{
-						cEngine::SetDeviceWasRemoved();
-					}
-				}
-			}
-			else
-#endif //WIN32
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-            // built-in SDL2 gamepad hotplug code
-            // this whole contract should be rewritten to allow clean adding/removing
-            // of controllers, instead of brute force rescanning
-            if (sdlEvent.type==SDL_CONTROLLERDEVICEADDED)
-            {
-                // sdlEvent.cdevice.which is the device #
-                cEngine::SetDeviceWasPlugged();
-            } else if (sdlEvent.type==SDL_CONTROLLERDEVICEREMOVED)
-            {
-                // sdlEvent.cdevice.which is the instance # (not device #).
-                // instance # increases as devices are plugged and unplugged.
-                cEngine::SetDeviceWasRemoved();
-            }
-#endif
-#if defined (__APPLE__)
-            if (sdlEvent.type==SDL_KEYDOWN)
-            {
-                if (sdlEvent.key.keysym.sym == SDLK_q && sdlEvent.key.keysym.mod & KMOD_GUI) {
-                    mbQuitMessagePosted = true;
-                } else {
-                    mlstEvents.push_back(sdlEvent);
-                }
-            } else
-#endif
-            if (sdlEvent.type==SDL_QUIT)
-            {
-                mbQuitMessagePosted = true;
-            } else if(!mEventFilter || !mEventFilter(sdlEvent))
-				mlstEvents.push_back(sdlEvent);
-		}
-		// sdl2-compat can't SDL_PushEvent text input
+		unsigned lFlags = ohpl_l1_poll(L1EventFilter, L1EventPush, this);
+		if(lFlags & kOhplL1PollPlugged) cEngine::SetDeviceWasPlugged();
+		if(lFlags & kOhplL1PollRemoved) cEngine::SetDeviceWasRemoved();
+		if(lFlags & kOhplL1PollQuit) mbQuitMessagePosted = true;
 		for(const SDL_Event &ev : mlstInjected)
-			if(!mEventFilter || !mEventFilter(ev)) mlstEvents.push_back(ev);
+			if(ohpl_l1_filter_keeps(L1EventFilter, this, &ev)) mlstEvents.push_back(ev);
 		mlstInjected.clear();
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void cLowLevelInputSDL::EndInputUpdate()
@@ -210,8 +136,7 @@ namespace hpl {
 #if USE_XINPUT
 		return cGamepadXInput::GetNumConnected();
 #else
-		if(OhplBackendRustRequested()) return ohpl_l1_joystick_count();
-		return SDL_NumJoysticks();
+		return ohpl_l1_joystick_count();
 #endif
 	}
 

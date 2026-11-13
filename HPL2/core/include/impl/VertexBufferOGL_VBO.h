@@ -50,7 +50,6 @@ namespace hpl {
 
 		void SetVertexStates();
 
-		unsigned int mlElementHandle;
 	};
 
 };

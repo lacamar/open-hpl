@@ -40,7 +40,6 @@ namespace hpl {
 		bool mbResultsAreFetched;
 		int mlLastSampleCount;
 		unsigned int mlQueryId;
-		bool mbRs;
 		OhplGlQuery mRs;
 	};
 

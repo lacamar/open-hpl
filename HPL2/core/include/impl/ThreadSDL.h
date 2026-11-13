@@ -43,7 +43,6 @@ namespace hpl {
 		int TranslateEnginePrio(eThreadPrio aPrio);
 
 	private:
-		SDL_Thread* mpThreadHandle;
 		OhplL1Thread* mpRust;
 
 	};
