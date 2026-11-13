@@ -1,9 +1,9 @@
 #!/bin/bash
 # build.sh [orig|new|both]
 set -e
-H=/home/lm/.cache/open-hpl/a2b-harness
-W=/home/lm/.local/src/open-hpl/.claude/worktrees/agent-a46003426b7ef3f23
-LIB=/home/lm/.cache/open-hpl/port-a2b/release/libohpl.a
+W=$(cd "$(dirname "$0")/../../../../.." && pwd)
+H=${A2_HARNESS_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/open-hpl/a2-harness}
+LIB=${A2_LIB:-$W/rust/target/release/libohpl.a}
 cd $H
 mkdir -p obj
 FLAGS="-std=gnu++20 -fno-strict-aliasing -mcpu=apple-m2+crc+aes+sha3+fp16 -O2 -g -DNDEBUG -Wno-switch -Wno-reorder -Wno-unused-variable -Wno-unused-function -Wno-narrowing -fpermissive -DLINUX"
