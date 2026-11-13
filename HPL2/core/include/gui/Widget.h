@@ -23,6 +23,7 @@
 #include <list>
 #include <vector>
 #include "gui/GuiTypes.h"
+#include "gui/RustGuiH19.h"
 #include "system/LowLevelSystem.h"
 
 namespace hpl {
@@ -38,6 +39,8 @@ namespace hpl {
 	class cGuiGlobalShortcut;
 
 	class iFontData;
+
+	struct OhplH19HostImpl;
 
 	//--------------------------------
 
@@ -61,6 +64,7 @@ namespace hpl {
 	class iWidget
 	{
 	friend class cGuiSet;
+	friend struct OhplH19HostImpl;
 	public:
 		iWidget(eWidgetType aType,cGuiSet *apSet, cGuiSkin *apSkin);
 		virtual ~iWidget();
@@ -269,19 +273,22 @@ namespace hpl {
 		cGuiSkin *mpSkin;
 		cGui *mpGui;
 
+		// Shared with the Rust base (OHPL_IMPL=rust); the references keep the member names.
+		OhplH19Base mB;
+
 		tWString msText;
-		cVector3f mvPosition;
-		cVector3f mvGlobalPosition;
-		cVector2f mvSize;
-		cVector3f mvChildrenOffset;
-		cVector3f mvScrollAmount;
-		bool mbAffectedByScroll;
+		cVector3f &mvPosition = mB.pos;
+		cVector3f &mvGlobalPosition = mB.global;
+		cVector2f &mvSize = mB.size;
+		cVector3f &mvChildrenOffset = mB.childrenOffset;
+		cVector3f &mvScrollAmount = mB.scroll;
+		bool &mbAffectedByScroll = mB.affectedByScroll;
 
 		tString msName;
 
 		eWidgetType mType;
 
-        int mlPositionCount;
+        int &mlPositionCount = mB.positionCount;
 
 		cGuiSkinFont *mpDefaultFont;
 		iFontData *mpDefaultFontType;
@@ -289,22 +296,22 @@ namespace hpl {
 		cColor mDefaultFontHighlightColor;
 		cVector2f mvDefaultFontSize;
 
-		iWidget *mpParent;
+		iWidget *&mpParent = mB.parent;
 
 		tWidgetList mlstChildren;
 		
-		bool mbEnabled;
-		bool mbVisible;
+		bool &mbEnabled = mB.enabled;
+		bool &mbVisible = mB.visible;
 
 		cColor mColorMul;
 
-		bool mbMouseIsOver;
+		bool &mbMouseIsOver = mB.mouseOver;
 
-		bool mbClipsGraphics;
+		bool &mbClipsGraphics = mB.clips;
 
 		cGuiGfxElement* mpPointerGfx;
 
-        bool mbConnectedToChildren;
+        bool &mbConnectedToChildren = mB.connectedToChildren;
 
 		bool mbToolTipEnabled;
 		tWString msToolTip;
@@ -314,9 +321,9 @@ namespace hpl {
 		bool mbGlobalKeyPressListener;
 		bool mbGlobalUIInputListener;
 
-		bool mbTextChanged;
+		bool &mbTextChanged = mB.textChanged;
 
-		bool mbCallbacksDisabled;
+		bool &mbCallbacksDisabled = mB.callbacksDisabled;
 	private:
 		void SetMouseIsOver(bool abX){ mbMouseIsOver = abX;}        
 		bool ProcessCallbacks(eGuiMessage aMessage, const cGuiMessageData& aData);
@@ -325,7 +332,7 @@ namespace hpl {
 
         std::vector<tWidgetCallbackList> mvCallbackLists;
 
-		bool mbPositionIsUpdated;
+		bool &mbPositionIsUpdated = mB.positionUpdated;
 
 		void *mpUserData;
 		int mlUserValue;

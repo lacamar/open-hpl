@@ -29,10 +29,95 @@
 #include "gui/GuiSkin.h"
 #include "gui/GuiGfxElement.h"
 #include "gui/RustWidget.h"
+#include "impl/RustBackends.h"
+#include <string.h>
 
 #include "math/Math.h"
 
 namespace hpl {
+
+
+	struct OhplH19HostImpl
+	{
+		static iWidget* Wd(OhplH19W w) { return (iWidget*)w; }
+		static OhplH19Base* Base(void*, OhplH19W w) { return &Wd(w)->mB; }
+
+		static bool Call(void*, OhplH19W w, int op, OhplH19W other, const cGuiMessageData* d, float f)
+		{
+			iWidget* pW = Wd(w);
+			switch(op)
+			{
+			case kOhplH19OnMessage:			return pW->OnMessage((eGuiMessage)other, *d);
+			case kOhplH19Virtual:
+				switch((eGuiMessage)other)
+				{
+				case eGuiMessage_MouseMove:				return pW->OnMouseMove(*d);
+				case eGuiMessage_MouseDown:				return pW->OnMouseDown(*d);
+				case eGuiMessage_MouseUp:				return pW->OnMouseUp(*d);
+				case eGuiMessage_MouseDoubleClick:		return pW->OnMouseDoubleClick(*d);
+				case eGuiMessage_MouseEnter:			return pW->OnMouseEnter(*d);
+				case eGuiMessage_MouseLeave:			return pW->OnMouseLeave(*d);
+				case eGuiMessage_KeyPress:				return pW->OnKeyPress(*d);
+				case eGuiMessage_GotFocus:				return pW->OnGotFocus(*d);
+				case eGuiMessage_GotTabFocus:			return pW->OnGotTabFocus(*d);
+				case eGuiMessage_LostFocus:				return pW->OnLostFocus(*d);
+				case eGuiMessage_UIArrowPress:			return pW->OnUIArrowPress(*d);
+				case eGuiMessage_UIArrowRelease:		return pW->OnUIArrowRelease(*d);
+				case eGuiMessage_UIButtonPress:			return pW->OnUIButtonPress(*d);
+				case eGuiMessage_UIButtonDoublePress:	return pW->OnUIButtonDoublePress(*d);
+				case eGuiMessage_UIButtonRelease:		return pW->OnUIButtonRelease(*d);
+				case eGuiMessage_GetUINavFocus:			return pW->OnGetUINavFocus(*d);
+				case eGuiMessage_LoseUINavFocus:		return pW->OnLoseUINavFocus(*d);
+				default: return false;
+				}
+			case kOhplH19ChangePosition:	pW->OnChangePosition(); return false;
+			case kOhplH19ChangeSize:		pW->OnChangeSize(); return false;
+			case kOhplH19ChangeText:		pW->OnChangeText(); return false;
+			case kOhplH19ChildUpdate:		pW->OnChildUpdate(Wd(other)); return false;
+			case kOhplH19OnAttachChild:		pW->OnAttachChild(Wd(other)); return false;
+			case kOhplH19OnRemoveChild:		pW->OnRemoveChild(Wd(other)); return false;
+			case kOhplH19RemoveChild:		pW->RemoveChild(Wd(other)); return false;
+			case kOhplH19ChildGotFocus:		pW->OnChildGotFocus(Wd(other), *d); return false;
+			case kOhplH19ChildGotTabFocus:	pW->OnChildGotTabFocus(Wd(other), *d); return false;
+			case kOhplH19ChildLostFocus:	pW->OnChildLostFocus(Wd(other), *d); return false;
+			case kOhplH19Update:			pW->OnUpdate(f); return false;
+			case kOhplH19Draw:				pW->OnDraw(f, (cGuiClipRegion*)other); return false;
+			case kOhplH19DrawAfterClip:		pW->OnDrawAfterClip(f, (cGuiClipRegion*)other); return false;
+			case kOhplH19PointIsInside:		return pW->PointIsInside(d->mvPos, f != 0);
+			}
+			return false;
+		}
+
+		static tWidgetListIt Cursor(uintptr_t c) { tWidgetListIt it; memcpy(&it, &c, sizeof(it)); return it; }
+		static uintptr_t Pack(tWidgetListIt it) { uintptr_t c; memcpy(&c, &it, sizeof(c)); return c; }
+		static uintptr_t Begin(void*, OhplH19W w) { return Pack(Wd(w)->mlstChildren.begin()); }
+		static bool End(void*, OhplH19W w, uintptr_t c) { return Cursor(c) == Wd(w)->mlstChildren.end(); }
+		static OhplH19W Get(void*, OhplH19W, uintptr_t c) { return (OhplH19W)*Cursor(c); }
+		static uintptr_t Next(void*, OhplH19W, uintptr_t c) { tWidgetListIt it = Cursor(c); ++it; return Pack(it); }
+		static void Erase(void*, OhplH19W w, uintptr_t c) { Wd(w)->mlstChildren.erase(Cursor(c)); }
+		static void Push(void*, OhplH19W w, OhplH19W child) { Wd(w)->mlstChildren.push_back(Wd(child)); }
+		static void NeedsSorting(void*, OhplH19W w) { Wd(w)->mpSet->SetWidgetsNeedSorting(); }
+		static void VirtualSize(void*, OhplH19W w, float* out)
+		{
+			cVector2f v = Wd(w)->mpSet->GetVirtualSize();
+			out[0] = v.x; out[1] = v.y;
+		}
+		static uintptr_t ClipChild(void*, OhplH19W, uintptr_t clip, const float* pos, const float* size)
+		{
+			return (uintptr_t)((cGuiClipRegion*)clip)->CreateChild(cVector3f(pos[0], pos[1], pos[2]), cVector2f(size[0], size[1]));
+		}
+		static void SetClip(void*, OhplH19W w, uintptr_t clip) { Wd(w)->mpSet->SetCurrentClipRegion((cGuiClipRegion*)clip); }
+	};
+
+	static_assert(sizeof(tWidgetListIt) == sizeof(uintptr_t), "list iterator is one word");
+
+	static const OhplH19Host gH19Host = {
+		NULL, &OhplH19HostImpl::Base, &OhplH19HostImpl::Call, &OhplH19HostImpl::Begin, &OhplH19HostImpl::End,
+		&OhplH19HostImpl::Get, &OhplH19HostImpl::Next, &OhplH19HostImpl::Erase, &OhplH19HostImpl::Push,
+		&OhplH19HostImpl::NeedsSorting, &OhplH19HostImpl::VirtualSize, &OhplH19HostImpl::ClipChild, &OhplH19HostImpl::SetClip
+	};
+
+	#define H19W ((OhplH19W)this)
 
 	static OhplWdParentPos ParentPosOf(iWidget* apParent)
 	{
@@ -51,6 +136,8 @@ namespace hpl {
 
 	iWidget::iWidget(eWidgetType aType,cGuiSet *apSet, cGuiSkin *apSkin)
 	{
+		ohpl_h19_base_init(&mB, OhplBackendRustRequested());
+
 		mpSet = apSet;
 		mpSkin = apSkin;
 		mpGui = mpSet->GetGui();
@@ -128,6 +215,8 @@ namespace hpl {
 		////////////////////////////
 		//Remove from parent
 		if(mpParent) mpParent->RemoveChild(this);
+
+		ohpl_h19_base_free(&mB);
 	}
 
 	//-----------------------------------------------------------------------
@@ -140,6 +229,12 @@ namespace hpl {
 
 	void iWidget::Update(float afTimeStep)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_update(&gH19Host, H19W, afTimeStep);
+			return;
+		}
+
 		////////////////////////////
 		//Update callback
 		cGuiMessageData data;
@@ -155,6 +250,12 @@ namespace hpl {
 
 	void iWidget::Draw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_draw(&gH19Host, H19W, afTimeStep, (uintptr_t)apClipRegion);
+			return;
+		}
+
 		if(mbVisible==false) return;
 		
 		OnDraw(afTimeStep, apClipRegion);
@@ -210,6 +311,11 @@ namespace hpl {
 
 	bool iWidget::ProcessMessage(eGuiMessage aMessage, const cGuiMessageData& aData, bool abSkipVisCheck, bool abSkipEnabledCheck)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h19_process_message(&gH19Host, H19W, aMessage, &aData, abSkipVisCheck, abSkipEnabledCheck);
+		}
+
 		if(mbCallbacksDisabled ||
 			!abSkipVisCheck && IsVisible()==false ||
 			!abSkipEnabledCheck && IsEnabled()==false) return false;
@@ -257,6 +363,12 @@ namespace hpl {
 
 	void iWidget::AddCallback(eGuiMessage aMessage,void *apObject,tGuiCallbackFunc apFunc)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_add_callback(&gH19Host, H19W, aMessage, apObject, reinterpret_cast<OhplH19Callback>(apFunc));
+			return;
+		}
+
 		mvCallbackLists[aMessage].push_back(cWidgetCallback(apObject, apFunc));
 	}
 
@@ -264,6 +376,11 @@ namespace hpl {
 
 	bool iWidget::PointIsInside(const cVector2f& avPoint, bool abOnlyClipped)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h19_point_is_inside(&gH19Host, H19W, avPoint.x, avPoint.y, abOnlyClipped);
+		}
+
 		int lStage = ohpl_wd_point_stage(CheckPointInsideClippingParent(avPoint), abOnlyClipped, mbClipsGraphics);
 		if(lStage != 2) return lStage == 1;
 
@@ -275,6 +392,12 @@ namespace hpl {
 
 	void iWidget::AttachChild(iWidget *apChild)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_attach_child(&gH19Host, H19W, (OhplH19W)apChild);
+			return;
+		}
+
 		if(apChild->mpParent)
 		{
 			iWidget *pParent = apChild->mpParent;
@@ -294,6 +417,12 @@ namespace hpl {
 	
 	void iWidget::RemoveChild(iWidget *apChild)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_remove_child(&gH19Host, H19W, (OhplH19W)apChild);
+			return;
+		}
+
 		tWidgetListIt it = mlstChildren.begin();
 		for(; it != mlstChildren.end(); ++it)
 		{
@@ -321,6 +450,12 @@ namespace hpl {
 
 	void iWidget::SetEnabled(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_set_enabled(&gH19Host, H19W, abX);
+			return;
+		}
+
 		if(mbEnabled == abX) return;
 
 		mbEnabled = abX;
@@ -329,6 +464,11 @@ namespace hpl {
 
 	bool iWidget::IsEnabled()
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h19_is_enabled(&gH19Host, H19W);
+		}
+
 		if(mpParent)
 		{
 			if(mpParent->IsEnabled()) return mbEnabled;
@@ -342,6 +482,12 @@ namespace hpl {
 
 	void iWidget::SetVisible(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_set_visible(&gH19Host, H19W, abX);
+			return;
+		}
+
 		if(mbVisible == abX) return;
 
 		mbVisible = abX;
@@ -352,6 +498,11 @@ namespace hpl {
 
 	bool iWidget::IsVisible()
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h19_is_visible(&gH19Host, H19W);
+		}
+
 		if(mpParent)
 		{
 			if(mpParent->IsVisible())	return mbVisible;
@@ -374,6 +525,13 @@ namespace hpl {
 	{
 		if(asText == msText) return;
 
+		if(OhplBackendRustRequested())
+		{
+			msText = asText;
+			ohpl_h19_text_changed(&gH19Host, H19W);
+			return;
+		}
+
 		mbTextChanged = true;
 
 		msText = asText;
@@ -391,6 +549,12 @@ namespace hpl {
 
 	void iWidget::SetPosition(const cVector3f &avPos)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_set_position(&gH19Host, H19W, &avPos);
+			return;
+		}
+
 		if(mvPosition.z!=avPos.z)
 			mpSet->SetWidgetsNeedSorting();
 
@@ -404,6 +568,12 @@ namespace hpl {
 
 	void iWidget::SetGlobalPosition(const cVector3f &avPos)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_set_global_position(&gH19Host, H19W, &avPos);
+			return;
+		}
+
 		OhplWdParentPos parent;
 		if(mpParent) parent = ParentPosOf(mpParent);
 		cVector3f vLocal;
@@ -418,6 +588,12 @@ namespace hpl {
 	
 	const cVector3f& iWidget::GetGlobalPosition()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_refresh_global(&gH19Host, H19W);
+			return mpParent ? mvGlobalPosition : mvPosition;
+		}
+
 		if(mpParent)
 		{
 			if(mbPositionIsUpdated)
@@ -438,6 +614,12 @@ namespace hpl {
 
 	void iWidget::SetChildrenOffset(const cVector3f& avX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_set_children_offset(&gH19Host, H19W, &avX);
+			return;
+		}
+
 		if(mvChildrenOffset==avX)
 			return;
 
@@ -449,6 +631,12 @@ namespace hpl {
 
 	void iWidget::SetAffectedByScroll(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_set_affected_by_scroll(&gH19Host, H19W, abX);
+			return;
+		}
+
 		if(mbAffectedByScroll==abX)
 			return;
 
@@ -458,6 +646,12 @@ namespace hpl {
 
 	void iWidget::SetScrollAmount(const cVector3f& avX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_set_scroll_amount(&gH19Host, H19W, &avX);
+			return;
+		}
+
 		if(mvScrollAmount==avX)
 			return;
 
@@ -469,6 +663,12 @@ namespace hpl {
 
 	void iWidget::CenterGlobalPositionInSet()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_center_in_set(&gH19Host, H19W);
+			return;
+		}
+
 		cVector2f vSetSize = mpSet->GetVirtualSize();
 		float fGlobalZ = GetGlobalPosition().z;
 
@@ -481,6 +681,12 @@ namespace hpl {
 
 	void iWidget::SetSize(const cVector2f &avSize)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_set_size(&gH19Host, H19W, &avSize);
+			return;
+		}
+
 		mvSize = avSize;
 		
 		OnChangeSize();
@@ -493,6 +699,11 @@ namespace hpl {
 
 	bool iWidget::ClipsGraphics()
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h19_clips_graphics(&gH19Host, H19W);
+		}
+
 		if(mpParent && mpParent->ClipsGraphics()) return true;
 		
 		return mbClipsGraphics;
@@ -502,6 +713,11 @@ namespace hpl {
 
 	bool iWidget::IsConnectedTo(iWidget *apWidget, bool abIsStartWidget)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h19_is_connected_to(&gH19Host, H19W, (OhplH19W)apWidget, abIsStartWidget);
+		}
+
 		if(abIsStartWidget == false && mbConnectedToChildren==false) return false; 
 
 		if(apWidget == NULL) return false;
@@ -524,6 +740,12 @@ namespace hpl {
 
 	void iWidget::SetFocusNavigation(eUIArrow aDir, iWidget* apWidget)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_set_focus_navigation(&gH19Host, H19W, aDir, (OhplH19W)apWidget);
+			return;
+		}
+
 		int lSlot = UIArrowToArrayPos(aDir);
 		if(lSlot < 0) return;
 		mvFocusNavWidgets[lSlot] = apWidget;
@@ -531,6 +753,11 @@ namespace hpl {
 
 	iWidget* iWidget::GetFocusNavigation(eUIArrow aDir)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return (iWidget*)ohpl_h19_focus_navigation(&gH19Host, H19W, aDir);
+		}
+
 		int lSlot = UIArrowToArrayPos(aDir);
 		if(lSlot < 0) return NULL;
 		return mvFocusNavWidgets[lSlot];
@@ -540,6 +767,11 @@ namespace hpl {
 
 	bool iWidget::HasFocusNavigation()
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h19_has_focus_navigation(&gH19Host, H19W);
+		}
+
 		for(size_t i=0; i<mvFocusNavWidgets.size(); ++i)
 			if(mvFocusNavWidgets[i]) return true;
 		
@@ -557,6 +789,11 @@ namespace hpl {
 
 	bool iWidget::GetFocus(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h19_focus_message(&gH19Host, H19W, eGuiMessage_GotFocus, kOhplH19ChildGotFocus, &aData);
+		}
+
 		bool bRet = ProcessMessage(eGuiMessage_GotFocus, aData);
 		if(bRet)
 			OnChildGotFocus(this, aData);
@@ -571,6 +808,12 @@ namespace hpl {
 
 	void iWidget::OnChildGotFocus(iWidget* apChild, const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_forward_to_parent(&gH19Host, H19W, kOhplH19ChildGotFocus, (OhplH19W)apChild, &aData);
+			return;
+		}
+
 		if(mpParent)
 			mpParent->OnChildGotFocus(apChild, aData);
 	}
@@ -579,6 +822,11 @@ namespace hpl {
 
 	bool iWidget::GetTabFocus(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h19_focus_message(&gH19Host, H19W, eGuiMessage_GotTabFocus, kOhplH19ChildGotTabFocus, &aData);
+		}
+
 		bool bRet = ProcessMessage(eGuiMessage_GotTabFocus, aData);
 		if(bRet)
 			OnChildGotTabFocus(this, aData);
@@ -593,6 +841,12 @@ namespace hpl {
 
 	void iWidget::OnChildGotTabFocus(iWidget* apChild, const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_forward_to_parent(&gH19Host, H19W, kOhplH19ChildGotTabFocus, (OhplH19W)apChild, &aData);
+			return;
+		}
+
 		if(mpParent)
 			mpParent->OnChildGotTabFocus(apChild, aData);
 	}
@@ -601,6 +855,11 @@ namespace hpl {
 
 	bool iWidget::LoseFocus(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h19_focus_message(&gH19Host, H19W, eGuiMessage_LostFocus, kOhplH19ChildLostFocus, &aData);
+		}
+
 		bool bRet = ProcessMessage(eGuiMessage_LostFocus, aData);
 		if(bRet)
 			OnChildLostFocus(this, aData);
@@ -610,6 +869,12 @@ namespace hpl {
 
 	void iWidget::OnChildLostFocus(iWidget* apChild, const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_forward_to_parent(&gH19Host, H19W, kOhplH19ChildLostFocus, (OhplH19W)apChild, &aData);
+			return;
+		}
+
 		if(mpParent)
 			mpParent->OnChildLostFocus(apChild, aData);
 	}
@@ -771,6 +1036,12 @@ namespace hpl {
 
 	void iWidget::SetPositionUpdated()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h19_set_position_updated(&gH19Host, H19W);
+			return;
+		}
+
         mbPositionIsUpdated = true;
 		mlPositionCount++;
 
