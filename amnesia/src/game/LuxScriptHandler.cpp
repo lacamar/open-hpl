@@ -67,6 +67,8 @@
 
 #include "LuxAchievementHandler.h"
 #include "RustLuxScript.h"
+#include "RustLuxScriptA1.h"
+#include "impl/RustBackends.h"
 
 static_assert(eLuxEntityType_Area == 1 && eLuxEntityType_LastEnum == 5, "ga1 entity type ids");
 static_assert(eLuxProgressLogLevel_Medium == 1 && eLuxProgressLogLevel_High == 2, "ga1 progress levels");
@@ -370,8 +372,25 @@ iPhysicsBody* cLuxScriptHandler::GetBodyInEntity(iLuxEntity* apEntity, const tSt
 
 //-----------------------------------------------------------------------
 
+static void AddFuncFromRust(void *apCtx, const char *asDecl, const void *apFunc)
+{
+	static_cast<cLuxScriptHandler *>(apCtx)->AddFuncPublic(asDecl, apFunc);
+}
+
+void cLuxScriptHandler::AddFuncPublic(const char *asDecl, const void *apFunc)
+{
+	AddFunc(asDecl, const_cast<void *>(apFunc));
+}
+
 void cLuxScriptHandler::InitScriptFunctions()
 {
+	if(hpl::OhplBackendRustRequested())
+	{
+		ohpl_a1_set_host(OhplA1HostCall);
+		ohpl_a1_register(AddFuncFromRust, this);
+		return;
+	}
+
 	AddFunc("void Print(const string &in asString)", (void *)Print);
 	AddFunc("void AddDebugMessage(const string &in asString, bool abCheckForDuplicates)",(void *)AddDebugMessage);
 	AddFunc("void ProgLog(const string &in asLevel, const string &in asMessage)", (void *)ProgLog);

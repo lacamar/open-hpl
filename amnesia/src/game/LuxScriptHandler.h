@@ -40,6 +40,8 @@ public:
 
 	void OnDraw(float afFrameTime);
 
+	void AddFuncPublic(const char *asDecl, const void *apFunc);
+
 private:
 	iLowLevelSystem *mpLowLevelSystem;
 
