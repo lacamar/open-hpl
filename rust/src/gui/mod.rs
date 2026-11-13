@@ -17,6 +17,7 @@ pub mod h20_combo;
 mod h20_ffi;
 pub mod h20_host;
 pub mod h20_list;
+pub mod h20_menu;
 pub mod h20_tab;
 pub mod h20_text;
 pub mod layout;

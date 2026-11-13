@@ -31,6 +31,7 @@ namespace hpl {
 	class cGuiSet;
 	class cGuiSkin;
 	class cWidgetMenuItem;
+	struct OhplH20Access;
 
 	typedef vector<cWidgetMenuItem*>		tWidgetMenuItemVector;
 	typedef tWidgetMenuItemVector::iterator	tWidgetMenuItemVectorIt;
@@ -39,6 +40,7 @@ namespace hpl {
 	class iWidgetMenu : public iWidget
 	{
 		friend class cWidgetMenuItem;
+		friend struct OhplH20Access;
 	public:
 		iWidgetMenu(eWidgetType aeMenuType,cGuiSet *apSet, cGuiSkin *apSkin);
 		virtual ~iWidgetMenu();

@@ -95,6 +95,13 @@ enum OhplH20Op {
 	kOhplH20Op_GFX_ANIM_RESET = 80,
 	kOhplH20Op_CREATE_POPUP_KEYBOARD = 81,
 	kOhplH20Op_BUTTON_SETUP = 82,
+	kOhplH20Op_MENU_CALL = 84,
+	kOhplH20Op_WIDGET_TYPE = 85,
+	kOhplH20Op_WIDGET_SET_CHILDREN_OFFSET = 86,
+	kOhplH20Op_IS_CONNECTED = 87,
+	kOhplH20Op_ITEM_TEXT_LENGTH = 88,
+	kOhplH20Op_ITEM_IS_SEPARATOR = 89,
+	kOhplH20Op_WIDGET_SHORTCUT_TEXT = 90,
 };
 
 struct OhplH20Args {
@@ -208,6 +215,36 @@ struct OhplH20TextBox {
 static_assert(sizeof(OhplW2Text) == 80 && sizeof(OhplH20TextBox) == 240 && offsetof(OhplH20TextBox, buttons) == 80 &&
 			  offsetof(OhplH20TextBox, gfx) == 120 && offsetof(OhplH20TextBox, numeric) == 208 &&
 			  offsetof(OhplH20TextBox, self) == 216, "OhplH20TextBox ABI");
+
+class iWidgetMenu;
+
+struct OhplH20MenuItem {
+	iWidgetMenu* child;
+	uintptr_t gfx[5];
+	float timer, openTime, separatorPadding, separatorHeight, vPadding;
+	bool checked, def;
+	int32_t kind;
+	uintptr_t self;
+	OhplH19Base* base;
+	const OhplH20Host* host;
+};
+struct OhplH20CtxMenu {
+	float timer, hideTime, hPadding, vPadding, separation, arrowIcon, checkIcon, textLeft, textRight;
+	uintptr_t gfx[9];
+	uintptr_t self;
+	OhplH19Base* base;
+	const OhplH20Host* host;
+};
+struct OhplH20MainMenu {
+	float textPadding, vPadding, separation;
+	uintptr_t gfxBg;
+	uintptr_t self;
+	OhplH19Base* base;
+	const OhplH20Host* host;
+};
+static_assert(sizeof(OhplH20MenuItem) == 104 && offsetof(OhplH20MenuItem, timer) == 48 && offsetof(OhplH20MenuItem, checked) == 68 &&
+			  offsetof(OhplH20MenuItem, self) == 80 && sizeof(OhplH20CtxMenu) == 136 && offsetof(OhplH20CtxMenu, gfx) == 40 &&
+			  sizeof(OhplH20MainMenu) == 48 && offsetof(OhplH20MainMenu, gfxBg) == 16, "menu state ABI");
 
 extern "C" {
 
@@ -325,6 +362,40 @@ bool ohpl_h20_tb_on_key_press(const OhplH20Host*, OhplH20TextBox*, const cGuiMes
 bool ohpl_h20_tb_on_ui_button_press(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
 bool ohpl_h20_tb_on_enter(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
 void ohpl_h20_tb_ui_keyboard_open(const OhplH20Host*, OhplH20TextBox*);
+
+void ohpl_h20_mi_init(const OhplH20Host*, OhplH20MenuItem*, uintptr_t self, OhplH19Base* base, int kind);
+void ohpl_h20_mi_on_init(const OhplH20Host*, OhplH20MenuItem*);
+void ohpl_h20_mi_on_update(const OhplH20Host*, OhplH20MenuItem*, float dt);
+void ohpl_h20_mi_on_draw(const OhplH20Host*, OhplH20MenuItem*);
+bool ohpl_h20_mi_on_mouse_down(const OhplH20Host*, OhplH20MenuItem*);
+bool ohpl_h20_mi_on_mouse_up(const OhplH20Host*, OhplH20MenuItem*, const cGuiMessageData*);
+bool ohpl_h20_mi_on_mouse_move(const OhplH20Host*, OhplH20MenuItem*);
+bool ohpl_h20_mi_on_mouse_leave(const OhplH20Host*, OhplH20MenuItem*);
+bool ohpl_h20_mi_on_key_press(const OhplH20Host*, OhplH20MenuItem*, const cGuiMessageData*);
+void ohpl_h20_mi_on_load_graphics(const OhplH20Host*, OhplH20MenuItem*);
+
+void ohpl_h20_cm_init(const OhplH20Host*, OhplH20CtxMenu*, uintptr_t self, OhplH19Base* base);
+void ohpl_h20_cm_hide(const OhplH20Host*, OhplH20CtxMenu*);
+float ohpl_h20_cm_item_width(const OhplH20Host*, OhplH20CtxMenu*);
+void ohpl_h20_cm_update_items_pos(const OhplH20Host*, OhplH20CtxMenu*, uintptr_t item);
+void ohpl_h20_cm_update_items_size(const OhplH20Host*, OhplH20CtxMenu*, uintptr_t item);
+void ohpl_h20_cm_update_width(const OhplH20Host*, OhplH20CtxMenu*, float textWidth);
+void ohpl_h20_cm_on_draw(const OhplH20Host*, OhplH20CtxMenu*);
+void ohpl_h20_cm_on_update(const OhplH20Host*, OhplH20CtxMenu*, float dt);
+bool ohpl_h20_cm_on_lost_focus(const OhplH20Host*, OhplH20CtxMenu*);
+bool ohpl_h20_cm_on_got_focus(const OhplH20Host*, OhplH20CtxMenu*);
+bool ohpl_h20_cm_on_key_press(const OhplH20Host*, OhplH20CtxMenu*, const cGuiMessageData*);
+void ohpl_h20_cm_on_load_graphics(const OhplH20Host*, OhplH20CtxMenu*);
+
+void ohpl_h20_mm_init(const OhplH20Host*, OhplH20MainMenu*, uintptr_t self, OhplH19Base* base);
+void ohpl_h20_mm_update_items_pos(const OhplH20Host*, OhplH20MainMenu*, uintptr_t item);
+void ohpl_h20_mm_update_items_size(const OhplH20Host*, OhplH20MainMenu*, uintptr_t item);
+void ohpl_h20_mm_on_child_menu_hide(const OhplH20Host*, OhplH20MainMenu*);
+void ohpl_h20_mm_hide(const OhplH20Host*, OhplH20MainMenu*);
+void ohpl_h20_mm_on_draw(const OhplH20Host*, OhplH20MainMenu*);
+void ohpl_h20_mm_on_update(const OhplH20Host*, OhplH20MainMenu*);
+void ohpl_h20_mm_on_init(const OhplH20Host*, OhplH20MainMenu*);
+void ohpl_h20_mm_on_load_graphics(const OhplH20Host*, OhplH20MainMenu*);
 
 }
 

@@ -30,6 +30,7 @@
 
 #include "graphics/FontData.h"
 #include "gui/RustWidget3.h"
+#include "impl/RustBackends.h"
 
 namespace hpl {
 	static int ItemKind(eWidgetType aType)
@@ -45,8 +46,10 @@ namespace hpl {
 
 	//----------------------------------------------------------------
 
-	cWidgetMenuItem::cWidgetMenuItem(iWidgetMenu* apParent) : iWidget(eWidgetType_MenuItem, apParent->GetSet(), apParent->GetSet()->GetSkin())
+	cWidgetMenuItem::cWidgetMenuItem(iWidgetMenu* apParent) : iWidget(eWidgetType_MenuItem, apParent->GetSet(), apParent->GetSet()->GetSkin()),
+		mbChecked(mH.checked), mbDefault(mH.def), mfTimer(mH.timer), mfOpenMenuTime(mH.openTime), mpChildMenu(mH.child)
 	{
+		ohpl_h20_mi_init(&gH20Host, &mH, (uintptr_t)(iWidget*)this, &mB, ItemKind(apParent->GetType()));
 		mbChecked = false;
 		mItemType = apParent->GetType();
 
@@ -172,6 +175,12 @@ namespace hpl {
 
 	void cWidgetMenuItem::OnInit()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mi_on_init(&gH20Host, &mH);
+			return;
+		}
+
 		cVector2f vSize;
 		ohpl_w3_item_init_size(IsSeparator(), mfSeparatorHeight, mfItemVPadding, mpDefaultFont->mvSize.y,
 							   GetParentMenu()->GetMenuItemWidth(), &vSize);
@@ -182,6 +191,12 @@ namespace hpl {
 
 	void cWidgetMenuItem::OnUpdate(float afTimeStep)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mi_on_update(&gH20Host, &mH, afTimeStep);
+			return;
+		}
+
 		if(IsVisible() == false || (mpSet->GetAttentionWidget()!=NULL && IsConnectedTo(mpSet->GetAttentionWidget())==false))
 			return;
 
@@ -198,6 +213,12 @@ namespace hpl {
 
 	void cWidgetMenuItem::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mi_on_draw(&gH20Host, &mH);
+			return;
+		}
+
 		OhplW3ItemDrawIn in;
 		in.kind = ItemKind(mItemType);
 		in.separator = IsSeparator();
@@ -259,6 +280,11 @@ namespace hpl {
 
 	bool cWidgetMenuItem::OnMouseDown(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_mi_on_mouse_down(&gH20Host, &mH);
+		}
+
 		if(IsSeparator()) return false;
 		///////////////////////////
 		// If clicked, skip timer
@@ -271,6 +297,11 @@ namespace hpl {
 
 	bool cWidgetMenuItem::OnMouseUp(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_mi_on_mouse_up(&gH20Host, &mH, &aData);
+		}
+
 		OhplW3ItemUp up = ohpl_w3_item_mouse_up(IsSeparator(), GetParentMenu()->GetHightlightedItem()==this, IsParent());
 		if(up.ret==false) return false;
 
@@ -295,6 +326,11 @@ namespace hpl {
 
 	bool cWidgetMenuItem::OnMouseMove(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_mi_on_mouse_move(&gH20Host, &mH);
+		}
+
 		bool bAttentionBlocks = mpSet->GetAttentionWidget()!=NULL && IsConnectedTo(mpSet->GetAttentionWidget())==false;
 		if(ohpl_w3_item_mouse_move_highlights(IsVisible(), mpSet->GetDrawMouse(), bAttentionBlocks, GetMouseIsOver()))
 			GetParentMenu()->SetHighlightedItem(this);
@@ -305,6 +341,11 @@ namespace hpl {
 
 	bool cWidgetMenuItem::OnMouseLeave(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_mi_on_mouse_leave(&gH20Host, &mH);
+		}
+
 		bool bAttentionBlocks = mpSet->GetAttentionWidget()!=NULL && IsConnectedTo(mpSet->GetAttentionWidget())==false;
 		OhplW3ItemLeave leave = ohpl_w3_item_mouse_leave(bAttentionBlocks, IsMenuOpen());
 		if(leave.ret==false) return false;
@@ -322,6 +363,11 @@ namespace hpl {
 	
 	bool cWidgetMenuItem::OnKeyPress(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_mi_on_key_press(&gH20Host, &mH, &aData);
+		}
+
 		eKey key = aData.mKeyPress.mKey;
 
 		if(IsParent())
@@ -334,6 +380,12 @@ namespace hpl {
 
 	void cWidgetMenuItem::OnLoadGraphics()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mi_on_load_graphics(&gH20Host, &mH);
+			return;
+		}
+
 		mpGfxSelection = mpSkin->GetGfx(eGuiSkinGfx_TextBoxSelectedTextBack);
 		mpGfxSubMenuArrow = mpSkin->GetGfx(eGuiSkinGfx_MenuItemArrow);
 

@@ -8,6 +8,7 @@ use super::h19_widget::Base;
 use super::h20_combo::{self as cb, Combo};
 use super::h20_host::{HostVt, Hx};
 use super::h20_list::{self as l, ListBase};
+use super::h20_menu::{self as mn, Ctx, Item, Main};
 use super::h20_tab::{self as tb, Frame, Label, Tab};
 use super::h20_text::{self as tx, TextBox};
 use super::set::{Msg, W};
@@ -610,4 +611,133 @@ ffn!(TextBox, ohpl_h20_tb_on_enter, |hx,
 });
 ffn!(TextBox, ohpl_h20_tb_ui_keyboard_open, |hx, t| {
     tx::ui_keyboard_open(hx, t)
+});
+
+/// # Safety
+/// `i` is uninitialised storage, `base` the widget's base state.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h20_mi_init(
+    vt: *const HostVt,
+    i: *mut Item,
+    this: W,
+    base: *mut Base,
+    kind: i32,
+) {
+    if !i.is_null() {
+        // SAFETY: caller contract.
+        unsafe { mn::item_init(i, vt, this, base, kind) };
+    }
+}
+
+ffn!(Item, ohpl_h20_mi_on_init, |hx, i| mn::item_on_init(hx, i));
+ffn!(Item, ohpl_h20_mi_on_update, |hx, i, dt: f32| {
+    mn::item_on_update(hx, i, dt)
+});
+ffn!(Item, ohpl_h20_mi_on_draw, |hx, i| mn::item_on_draw(hx, i));
+ffn!(Item, ohpl_h20_mi_on_mouse_down, |hx, i| -> bool {
+    mn::item_on_mouse_down(hx, i)
+});
+ffn!(Item, ohpl_h20_mi_on_mouse_up, |hx,
+                                     i,
+                                     d: *const Msg|
+ -> bool {
+    mn::item_on_mouse_up(hx, i, &rd_msg(d))
+});
+ffn!(Item, ohpl_h20_mi_on_mouse_move, |hx, i| -> bool {
+    mn::item_on_mouse_move(hx, i)
+});
+ffn!(Item, ohpl_h20_mi_on_mouse_leave, |hx, i| -> bool {
+    mn::item_on_mouse_leave(hx, i)
+});
+ffn!(Item, ohpl_h20_mi_on_key_press, |hx,
+                                      i,
+                                      d: *const Msg|
+ -> bool {
+    mn::item_on_key_press(hx, i, &rd_msg(d))
+});
+ffn!(Item, ohpl_h20_mi_on_load_graphics, |hx, i| {
+    mn::item_on_load_graphics(hx, i)
+});
+
+/// # Safety
+/// `c` is uninitialised storage, `base` the widget's base state.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h20_cm_init(
+    vt: *const HostVt,
+    c: *mut Ctx,
+    this: W,
+    base: *mut Base,
+) {
+    if !c.is_null() {
+        // SAFETY: caller contract.
+        unsafe { mn::ctx_init(c, vt, this, base) };
+    }
+}
+
+ffn!(Ctx, ohpl_h20_cm_hide, |hx, c| mn::ctx_hide(hx, c));
+ffn!(Ctx, ohpl_h20_cm_item_width, |hx, c| -> f32 {
+    mn::ctx_item_width(hx, c)
+});
+ffn!(Ctx, ohpl_h20_cm_update_items_pos, |hx, c, item: usize| {
+    mn::ctx_update_items_pos(hx, c, item)
+});
+ffn!(Ctx, ohpl_h20_cm_update_items_size, |hx, c, item: usize| {
+    mn::ctx_update_items_size(hx, c, item)
+});
+ffn!(Ctx, ohpl_h20_cm_update_width, |hx, c, w: f32| {
+    mn::ctx_update_width(hx, c, w)
+});
+ffn!(Ctx, ohpl_h20_cm_on_draw, |hx, c| mn::ctx_on_draw(hx, c));
+ffn!(Ctx, ohpl_h20_cm_on_update, |hx, c, dt: f32| {
+    mn::ctx_on_update(hx, c, dt)
+});
+ffn!(Ctx, ohpl_h20_cm_on_lost_focus, |hx, c| -> bool {
+    mn::ctx_on_lost_focus(hx, c)
+});
+ffn!(Ctx, ohpl_h20_cm_on_got_focus, |hx, c| -> bool {
+    let _ = hx;
+    mn::ctx_on_got_focus(c)
+});
+ffn!(Ctx, ohpl_h20_cm_on_key_press, |hx,
+                                     c,
+                                     d: *const Msg|
+ -> bool {
+    mn::ctx_on_key_press(hx, c, &rd_msg(d))
+});
+ffn!(Ctx, ohpl_h20_cm_on_load_graphics, |hx, c| {
+    mn::ctx_on_load_graphics(hx, c)
+});
+
+/// # Safety
+/// `m` is uninitialised storage, `base` the widget's base state.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h20_mm_init(
+    vt: *const HostVt,
+    m: *mut Main,
+    this: W,
+    base: *mut Base,
+) {
+    if !m.is_null() {
+        // SAFETY: caller contract.
+        unsafe { mn::main_init(m, vt, this, base) };
+    }
+}
+
+ffn!(Main, ohpl_h20_mm_update_items_pos, |hx, m, item: usize| {
+    mn::main_update_items_pos(hx, m, item)
+});
+ffn!(Main, ohpl_h20_mm_update_items_size, |hx, m, item: usize| {
+    mn::main_update_items_size(hx, m, item)
+});
+ffn!(Main, ohpl_h20_mm_on_child_menu_hide, |hx, m| {
+    mn::main_on_child_menu_hide(hx, m)
+});
+ffn!(Main, ohpl_h20_mm_hide, |hx, m| mn::main_hide(hx, m));
+ffn!(Main, ohpl_h20_mm_on_draw, |hx, m| mn::main_on_draw(hx, m));
+ffn!(Main, ohpl_h20_mm_on_update, |hx, m| mn::main_on_update(
+    hx, m
+));
+ffn!(Main, ohpl_h20_mm_on_init, |hx, m| mn::main_on_init(hx, m));
+ffn!(Main, ohpl_h20_mm_on_load_graphics, |hx, m| {
+    mn::main_on_load_graphics(hx, m)
 });

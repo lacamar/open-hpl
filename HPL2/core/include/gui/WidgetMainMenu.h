@@ -23,6 +23,7 @@
 #include "gui/WidgetMenu.h"
 
 #include "gui/GuiSkin.h"
+#include "gui/RustGuiH20.h"
 
 namespace hpl {
 
@@ -59,6 +60,7 @@ namespace hpl {
 		/////////////////////////////
 		// Data
 
+		OhplH20MainMenu mH;
 		float mfItemSeparation;
 		float mfItemVPadding;
 		float mfItemTextPadding;

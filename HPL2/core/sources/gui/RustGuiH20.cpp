@@ -11,6 +11,9 @@
 #include "gui/WidgetSlider.h"
 #include "gui/WidgetTextBox.h"
 #include "gui/WidgetTabFrame.h"
+#include "gui/WidgetMenu.h"
+#include "gui/WidgetMenuItem.h"
+#include "gui/WidgetContextMenu.h"
 #include "gui/WidgetFrame.h"
 #include "gui/WidgetButton.h"
 #include "graphics/FontData.h"
@@ -36,14 +39,47 @@ namespace hpl {
 		static cVector2f FontSize(iWidget* apW) { return apW->*(&OhplH20Access::mvDefaultFontSize); }
 		static iFontData* Font(iWidget* apW) { return apW->*(&OhplH20Access::mpDefaultFontType); }
 		static void SetPointer(iWidget* apW, cGuiGfxElement* apGfx) { apW->*(&OhplH20Access::mpPointerGfx) = apGfx; }
+		static cColor HighlightColor(iWidget* apW) { return apW->*(&OhplH20Access::mDefaultFontHighlightColor); }
 		static cGuiSkinFont* SkinFont(iWidget* apW) { return apW->*(&OhplH20Access::mpDefaultFont); }
 		static void* State(iWidget* apW, int alKind)
 		{
 			if(alKind==0) return &((cWidgetTabLabel*)apW)->mH;
 			if(alKind==1) return &((cWidgetTab*)apW)->mH;
+			if(alKind==3) return &((cWidgetMenuItem*)apW)->mH;
 			return &((cWidgetTabFrame*)apW)->mH;
 		}
 		static bool CheckClip(iWidget* apW, const cVector2f& avPoint) { return (apW->*(&OhplH20Access::CheckPointInsideClippingParent))(avPoint); }
+		static uintptr_t MenuCall(OhplH20Args* a)
+		{
+			iWidgetMenu* pMenu = (iWidgetMenu*)(iWidget*)a->w;
+			switch(a->i[0])
+			{
+			case 0: return (uintptr_t)(iWidget*)pMenu->GetHightlightedItem();
+			case 1: pMenu->SetHighlightedItem((cWidgetMenuItem*)(iWidget*)a->p[0]); return 0;
+			case 2: pMenu->Hide(); return 0;
+			case 3: { cVector3f v = pMenu->GetArrowOffset(); a->rf[0] = v.x; a->rf[1] = v.y; a->rf[2] = v.z; return 0; }
+			case 4: { cVector3f v = pMenu->GetCheckOffset(); a->rf[0] = v.x; a->rf[1] = v.y; a->rf[2] = v.z; return 0; }
+			case 5: { cVector3f v = pMenu->GetTextOffset(); a->rf[0] = v.x; a->rf[1] = v.y; a->rf[2] = v.z; return 0; }
+			case 6: a->rf[0] = pMenu->GetMenuItemWidth(); return 0;
+			case 8: return pMenu->IsSubmenuOpen();
+			case 9: return (uintptr_t)(iWidget*)pMenu->GetTopMostMenu();
+			case 10: return (uintptr_t)(iWidget*)pMenu->GetParentMenu();
+			case 11: pMenu->OnChildMenuHide(); return 0;
+			case 12: pMenu->SetMustHide(a->i[1]!=0); return 0;
+			case 13: return pMenu->mbMustHide;
+			case 14: return (uintptr_t)(iWidget*)pMenu->GetParentItem();
+			case 15: return (uintptr_t)pMenu->mpPrevAttention;
+			case 16: return pMenu->mvMenuItems.size();
+			case 17: return (uintptr_t)(iWidget*)pMenu->mvMenuItems[a->i[1]];
+			case 18:
+				if(a->i[1] & 1) pMenu->SetArrowPos(cVector3f(a->f[0], a->f[1], a->f[2]));
+				if(a->i[1] & 2) pMenu->SetTextPos(cVector3f(a->f[3], a->f[4], a->f[5]));
+				if(a->i[1] & 4) pMenu->SetCheckPos(cVector3f(a->f[6], a->f[7], a->f[8]));
+				return 0;
+			case 19: return (uintptr_t)(iWidget*)((cWidgetMenuItem*)(iWidget*)a->w)->GetParentMenu();
+			}
+			return 0;
+		}
 		static cVector3f ToLocal(iWidget* apW, const cVector3f& avPos) { return (apW->*(&OhplH20Access::WorldToLocalPosition))(avPos); }
 	};
 
@@ -115,7 +151,7 @@ namespace hpl {
 		}
 		case kOhplH20Op_PROCESS_MESSAGE:
 			if(a->p[0])
-				return W(a->w)->ProcessMessage((eGuiMessage)a->i[0], *(const cGuiMessageData*)a->p[0]);
+				return W(a->w)->ProcessMessage((eGuiMessage)a->i[0], *(const cGuiMessageData*)a->p[0], a->i[2]!=0, a->i[3]!=0);
 			return W(a->w)->ProcessMessage((eGuiMessage)a->i[0], cGuiMessageData(a->i[1]));
 		case kOhplH20Op_WORLD_TO_LOCAL:
 		{
@@ -152,7 +188,8 @@ namespace hpl {
 			cGuiSet* pSet = OhplH20Access::Set(W(a->w));
 			cVector3f vPos(a->f[0], a->f[1], a->f[2]);
 			cVector2f vSize(a->f[3], a->f[4]);
-			if(a->i[0]) pSet->DrawGfx((cGuiGfxElement*)a->p[0], vPos, vSize, cColor(a->f[5], a->f[6], a->f[7], a->f[8]));
+			if(a->i[1]) pSet->DrawGfx((cGuiGfxElement*)a->p[0], vPos);
+			else if(a->i[0]) pSet->DrawGfx((cGuiGfxElement*)a->p[0], vPos, vSize, cColor(a->f[5], a->f[6], a->f[7], a->f[8]));
 			else		pSet->DrawGfx((cGuiGfxElement*)a->p[0], vPos, vSize);
 			return 0;
 		}
@@ -202,6 +239,12 @@ namespace hpl {
 			if(a->i[2]==1)
 			{
 				cColor col = pWidget->IsEnabled() ? OhplH20Access::FontColor(pWidget) : OhplH20Access::Skin(pWidget)->GetFont(eGuiSkinFont_Disabled)->mColor;
+				(pWidget->*OhplH20Access::TextCol())(sText, vPos, (eFontAlign)a->i[0], col);
+			}
+			else if(a->i[2]==2)
+			{
+				cColor col = a->i[3]==0 ? OhplH20Access::Skin(pWidget)->GetFont(eGuiSkinFont_Disabled)->mColor :
+							 (a->i[3]==1 ? OhplH20Access::HighlightColor(pWidget) : OhplH20Access::FontColor(pWidget));
 				(pWidget->*OhplH20Access::TextCol())(sText, vPos, (eFontAlign)a->i[0], col);
 			}
 			else if(a->i[1]) (pWidget->*OhplH20Access::Highlight())(sText, vPos, (eFontAlign)a->i[0]);
@@ -308,6 +351,8 @@ namespace hpl {
 			case 13: return (uintptr_t)pSet->GetBaseClipRegion();
 			case 14: return (uintptr_t)pSet->GetCurrentClipRegion();
 			case 15: pSet->SetAttentionWidget(W(a->p[0]), false); return 0;
+			case 16: pSet->ShowContextMenu((cWidgetContextMenu*)W(a->p[0]), cVector3f(a->f[0], a->f[1], a->f[2])); return 0;
+			case 17: return pSet->GetDrawMouse();
 			}
 			return 0;
 		}
@@ -407,6 +452,26 @@ namespace hpl {
 		case kOhplH20Op_CREATE_POPUP_KEYBOARD:
 			OhplH20Access::Set(W(a->w))->CreatePopUpUIKeyboard((cWidgetTextBox*)W(a->w));
 			return 0;
+		case kOhplH20Op_WIDGET_TYPE:
+			return a->w ? (uintptr_t)W(a->w)->GetType() : (uintptr_t)-1;
+		case kOhplH20Op_WIDGET_SET_CHILDREN_OFFSET:
+			W(a->w)->SetChildrenOffset(cVector3f(a->f[0], a->f[1], a->f[2]));
+			return 0;
+		case kOhplH20Op_IS_CONNECTED:
+			return a->i[0] ? W(a->w)->IsConnectedTo(W(a->p[0]), false) : W(a->w)->IsConnectedTo(W(a->p[0]));
+		case kOhplH20Op_ITEM_TEXT_LENGTH:
+			a->rf[0] = ((cWidgetMenuItem*)W(a->w))->GetTextLength();
+			return 0;
+		case kOhplH20Op_ITEM_IS_SEPARATOR:
+			return ((cWidgetMenuItem*)W(a->w))->IsSeparator();
+		case kOhplH20Op_WIDGET_SHORTCUT_TEXT:
+		{
+			const tWString& sText = ((cWidgetMenuItem*)W(a->w))->GetShortcutText();
+			a->ri[0] = (int32_t)sText.size();
+			return (uintptr_t)sText.data();
+		}
+		case kOhplH20Op_MENU_CALL:
+			return OhplH20Access::MenuCall(a);
 		default:
 			return 0;
 		}

@@ -23,6 +23,7 @@
 #include "gui/WidgetMenu.h"
 
 #include "gui/GuiSkin.h"
+#include "gui/RustGuiH20.h"
 
 namespace hpl {
 
@@ -76,8 +77,10 @@ namespace hpl {
 
 		/////////////////////////
 		// Data
-		float mfTimer;
-		float mfHideTime;
+		// Rust state (OHPL_IMPL=rust); the references keep the member names.
+		OhplH20CtxMenu mH;
+		float& mfTimer;
+		float& mfHideTime;
 
 		// Skin attributes
 		float mfItemHPadding;

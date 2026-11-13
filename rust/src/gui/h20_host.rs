@@ -99,7 +99,37 @@ ops! {
     GFX_ANIM_RESET = 80,
     CREATE_POPUP_KEYBOARD = 81,
     BUTTON_SETUP = 82,
+    MENU_CALL = 84,
+    WIDGET_TYPE = 85,
+    WIDGET_SET_CHILDREN_OFFSET = 86,
+    IS_CONNECTED = 87,
+    ITEM_TEXT_LENGTH = 88,
+    ITEM_IS_SEPARATOR = 89,
+    WIDGET_SHORTCUT_TEXT = 90,
 }
+
+pub const TYPE_ROOT: i32 = 0;
+pub const TYPE_WINDOW: i32 = 1;
+
+pub const MC_HIGHLIGHTED: i32 = 0;
+pub const MC_SET_HIGHLIGHTED: i32 = 1;
+pub const MC_HIDE: i32 = 2;
+pub const MC_ARROW_OFFSET: i32 = 3;
+pub const MC_CHECK_OFFSET: i32 = 4;
+pub const MC_TEXT_OFFSET: i32 = 5;
+pub const MC_ITEM_WIDTH: i32 = 6;
+pub const MC_IS_SUBMENU_OPEN: i32 = 8;
+pub const MC_TOP_MOST: i32 = 9;
+pub const MC_PARENT_MENU: i32 = 10;
+pub const MC_ON_CHILD_HIDE: i32 = 11;
+pub const MC_SET_MUST_HIDE: i32 = 12;
+pub const MC_GET_MUST_HIDE: i32 = 13;
+pub const MC_PARENT_ITEM: i32 = 14;
+pub const MC_PREV_ATTENTION: i32 = 15;
+pub const MC_ITEM_COUNT: i32 = 16;
+pub const MC_ITEM_AT: i32 = 17;
+pub const MC_SET_OFFSETS: i32 = 18;
+pub const MC_ITEM_PARENT_MENU: i32 = 19;
 
 pub const SC_PUSH_ATTENTION: i32 = 0;
 pub const SC_PUSH_FOCUSED: i32 = 1;
@@ -117,6 +147,8 @@ pub const SC_GET_FOCUSED: i32 = 12;
 pub const SC_BASE_CLIP: i32 = 13;
 pub const SC_CURRENT_CLIP: i32 = 14;
 pub const SC_SET_ATTENTION_NO_CLEAR: i32 = 15;
+pub const SC_SHOW_CONTEXT_MENU: i32 = 16;
+pub const SC_GET_DRAW_MOUSE: i32 = 17;
 
 pub const ARGS_F: usize = 10;
 
