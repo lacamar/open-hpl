@@ -208,6 +208,21 @@ enum OhplH5bOp {
 	kOhplH5b_Count
 };
 
+struct OhplH5bFontHdr {
+	unsigned short first, last;
+	float height;
+	float ratio[2];
+};
+static_assert(sizeof(OhplH5bFontHdr) == 16, "OhplH5bFontHdr layout");
+
+struct OhplH5bGlyph {
+	void *gfx;
+	float offset[2];
+	float size[2];
+	float advance;
+};
+static_assert(sizeof(OhplH5bGlyph) == 32, "OhplH5bGlyph layout");
+
 extern "C" {
 
 typedef uint64_t (*OhplH5bCallFn)(void *ctx, uint32_t op, const uint64_t *args, size_t n, uint64_t *out);
@@ -217,6 +232,14 @@ void ohpl_h5b_gfx_attach_foreign(void *ctx, OhplH5bCallFn call);
 void ohpl_h5b_gfx_detach();
 // Runs the seeded scenario against the facade; copies the result log to out and returns its length.
 size_t ohpl_h5b_run_foreign(void *ctx, OhplH5bCallFn call, uint64_t seed, uint32_t rounds, char *out, size_t cap);
+// iFontData glyph table mirror (rust/src/graphics/h5b_font.rs).
+uint64_t ohpl_h5b_font_new();
+void ohpl_h5b_font_free(uint64_t h);
+void ohpl_h5b_font_set(uint64_t h, const OhplH5bFontHdr *hdr, const OhplH5bGlyph *glyphs, const unsigned char *present, size_t n);
+bool ohpl_h5b_font_glyph(uint64_t h, size_t i, OhplH5bGlyph *out);
+float ohpl_h5b_font_length(uint64_t h, float sizeX, const uint32_t *s, size_t n);
+bool ohpl_h5b_font_word_wrap(uint64_t h, float maxLength, float sizeX, const uint32_t *s, size_t n, void (*sink)(void*, const uint32_t*, size_t), void *ctx);
+
 // Runs n random draw and batch calls (Draw trait only) against the facade.
 void ohpl_h5b_run_draws(void *ctx, OhplH5bCallFn call, uint64_t seed, uint32_t n);
 

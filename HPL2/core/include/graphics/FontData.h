@@ -157,6 +157,11 @@ namespace hpl {
 
 		cVector2f mvSizeRatio;
 
+		// OHPL_IMPL=rust: mirror of the glyph table in Rust, rebuilt lazily after the glyphs change.
+		unsigned long long mlRs;
+		bool mbRsDirty;
+		void SyncRs();
+
 		cGlyph* CreateGlyph(cFrameSubImage* apImage, const cVector2l &avOffset,const cVector2l &avSize,
 							const cVector2l& avFontSize, int alAdvance);
 		void AddGlyph(cGlyph *apGlyph);
