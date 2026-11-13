@@ -8,8 +8,8 @@ widgets_<skin>.txt  h20_widgets stdout with the trace replaced by its line count
                     and editing keys, UI arrows/buttons, gamepad, setters (text, selection, numeric value, can-edit,
                     list/combo selection, cursor, tab switching and adding, menu show/hide/check) and updates;
                     callbacks in order, widget and widget state per step, then the RecordingLowLevelGraphics trace of
-                    3 Draw/Render frames. Recorded from OHPL_IMPL=cpp; harness/verify.sh checks OHPL_IMPL=rust
-                    against these files, harness/compare.sh diffs cpp against rust byte for byte.
+                    3 Draw/Render frames. Recorded from the C++ before it was deleted;
+                    harness/verify.sh checks the Rust path against these files.
                     The harness allocates from a bump arena: draw order ties are broken by clip/material/texture
                     addresses (cGuiRenderObjectCompare), so heap layout must not differ between the two runs.
 
@@ -18,6 +18,5 @@ against a mock host.
 
 Record (needs a build dir of this tree with `make TraceRecorderTests`):
   harness/build.sh <repo> <build dir> <out>     builds <out>/h20_widgets
-  harness/compare.sh <out> 40                   OHPL_IMPL=cpp vs rust over 6 skins x seeds
-  harness/verify.sh <out>                       rust vs the committed files
-  H20_DIGEST=1 H20_SKIN=<skin> H20_SEED=<n> OHPL_IMPL=cpp <out>/h20_widgets > widgets_<skin>.txt
+  harness/verify.sh <out>                       widgets over 6 skins against the committed files
+  H20_DIGEST=1 H20_SKIN=<skin> H20_SEED=<n> <out>/h20_widgets > widgets_<skin>.txt

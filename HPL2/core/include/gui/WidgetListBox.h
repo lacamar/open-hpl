@@ -35,19 +35,6 @@ namespace hpl {
 	public:
 		cWidgetListBox(cGuiSet *apSet, cGuiSkin *apSkin);
 		virtual ~cWidgetListBox();
-	protected:
-		/////////////////////////
-		// Own functions
-			
-		/////////////////////////
-		// Implemented iWidgetListBoxBase functions
-		void DrawItems(float afTimeStep, cGuiClipRegion* apClipRegion);
-		/////////////////////////
-		// Implemented functions
-	
-			
-		/////////////////////////
-		// Data
 	};
 
 };

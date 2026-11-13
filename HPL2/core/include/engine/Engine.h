@@ -187,14 +187,6 @@ namespace hpl {
 		double RustHost(int alOp, double a0, double a1, double a2, double a3);
 		void RustStep(int alStep, int alModule);
 
-		void UpdateFrameTimer();
-
-		void CheckAndBroadcastFocusChange();
-
-		void CheckIfAppInFocusElseWait();
-
-		void CheckAndBroadcastDeviceChange();
-
 		struct cRustInitArgs { tFlag mlSetupFlags; cEngineInitVars *mpVars; };
 		cRustInitArgs mRustInit;
 		uint32_t mlRustFocusBits;
@@ -225,9 +217,6 @@ namespace hpl {
 		tScriptVarMap m_mapLocalVars;
 		tScriptVarMap m_mapGlobalVars;
 
-		bool mbApplicationHasInputFocus;
-		bool mbApplicationHasMouseFocus;
-		bool mbApplicationIsVisible;
 
 		bool mbWaitIfAppOutOfFocus;
 

@@ -57,9 +57,6 @@ namespace hpl {
 							 bool abClearPrevious=true);
 		int GetSelectedItem();
 
-		void AddIndexToSelection(int alIdx);
-		void RemoveIndexFromSelection(int alIdx);
-
 		int GetMultiSelectionNum();
 		int GetMultiSelection(int alIdx);
 
@@ -83,16 +80,10 @@ namespace hpl {
 		// Own functions
 		virtual void DrawItems(float afTimeStep, cGuiClipRegion* apClipRegion){}
 
-		void SelectRange(int alStart, int alEnd);
-		void ApplyCursor(const OhplW2SliderSet& aFirst, bool abMoveList);
-
 		void UpdateProperties();
 
 		void AddItemToSelection(cWidgetItem* apItem);
 		void RemoveItemFromSelection(cWidgetItem* apItem);
-
-		bool MoveSlider(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(MoveSlider);	
 
 		/////////////////////////
 		// Implemented functions
@@ -122,25 +113,10 @@ namespace hpl {
 		
 		/////////////////////////
 		// Data
-		// Rust state (OHPL_IMPL=rust); the references keep the member names.
 		OhplH20ListBase mH;
 		float& mfBackgroundZ;
 		float& mfSliderWidth;
 		OhplW2List& mList;
-
-		tIntList mlstSelectedItems;
-
-
-		cGuiGfxElement *mpGfxBackground;
-		cGuiGfxElement *mpGfxSelection;
-		
-		cGuiGfxElement *mvGfxBorders[4];
-		cGuiGfxElement *mvGfxCorners[4];
-
-		cWidgetSlider *mpSlider;
-
-		bool mbSelectionUpdated;
-		bool mbClearingSelection;
 	};
 
 };

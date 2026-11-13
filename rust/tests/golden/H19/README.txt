@@ -12,12 +12,11 @@ widgets_<skin>.txt  h19_widgets stdout with the trace replaced by its line count
                     fonts' size/colour, gfx material/offset/active size, image sizes from the .tga headers; glyphs
                     are a stub font), seeded mouse/key/gamepad/UI input, setters and updates; callbacks in order,
                     widget state per step, then the RecordingLowLevelGraphics trace of 3 Draw/Render frames.
-                    Compared OHPL_IMPL=cpp vs rust only (harness/verify.sh checks rust against these files).
+                    Recorded from the C++ before it was deleted; harness/verify.sh checks the Rust path against these files.
                     The harness allocates from a bump arena: draw order ties are broken by clip/material/texture
                     addresses (cGuiRenderObjectCompare), so heap layout must not differ between the two runs.
 
 Record (needs a build dir of this tree with `make TraceRecorderTests`):
   harness/build.sh <repo> <build dir> <out>     builds <out>/h19_base and <out>/h19_widgets
-  harness/compare.sh <out> 40                   OHPL_IMPL=cpp vs rust: base seeds, and widgets over 6 skins x seeds
-  harness/verify.sh <out>                       rust vs the committed files
-  H19_SEED=<n> OHPL_IMPL=cpp <out>/h19_base > base_<nnn>.txt   (seeds 1..12 committed)
+  harness/verify.sh <out>                       base seeds and widgets over 6 skins against the committed files
+  H19_SEED=<n> <out>/h19_base > base_<nnn>.txt   (seeds 1..12 committed)

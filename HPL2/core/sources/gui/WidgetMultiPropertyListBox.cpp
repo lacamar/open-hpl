@@ -29,7 +29,6 @@
 
 #include "gui/GuiSet.h"
 #include "gui/GuiSkin.h"
-#include "impl/RustBackends.h"
 
 
 namespace hpl {
@@ -50,13 +49,8 @@ namespace hpl {
 	{
 		if(mpSet->IsDestroyingSet()==false)
 		{
-			if(OhplBackendRustRequested()) ohpl_h20_lb_destroy_columns(&gH20Host, &mH);
-			for(size_t i=0;i<mvColumns.size();++i)
-			{
-				mpSet->DestroyWidget(mvColumns[i]);
-			}
+			ohpl_h20_lb_destroy_columns(&gH20Host, &mH);
 		}
-		mvColumns.clear();
 	}
 
 	//-------------------------------------------------------------------------------
@@ -74,26 +68,8 @@ namespace hpl {
 	 */
 	void cWidgetMultiPropertyListBox::AddColumn(const tString& asName, const int alIndex, eFontAlign aAlign)
 	{
-		if(OhplBackendRustRequested())
-		{
-			tWString sName = cString::To16Char(asName);
-			ohpl_h20_lb_add_column(&gH20Host, &mH, sName.data(), sName.size(), alIndex, aAlign);
-			return;
-		}
-
-		mvSubLists.push_back(cSubList(asName,alIndex, aAlign));
-
-		cWidgetLabel* pLabel = mpSet->CreateWidgetLabel( cVector3f(0,0,mfBackgroundZ+0.5f),
-														 -1, 
-														 cString::To16Char(asName), 
-														 this);
-		pLabel->SetDefaultFontSize(mvDefaultFontSize);
-		pLabel->SetBackGroundColor(cColor(0.82f,0.81f,0.79f,1));
-		mvColumns.push_back(pLabel);
-
-		SetColumnWidth((int)mvColumns.size()-1, 0);
-        
-		UpdateColumns();
+		tWString sName = cString::To16Char(asName);
+		ohpl_h20_lb_add_column(&gH20Host, &mH, sName.data(), sName.size(), alIndex, aAlign);
 	}
 
 	//-------------------------------------------------------------------------------
@@ -105,28 +81,7 @@ namespace hpl {
 	 */
 	void cWidgetMultiPropertyListBox::SetColumnWidth(const int alIdx, float afWidth)
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h20_lb_set_column_width(&gH20Host, &mH, alIdx, afWidth);
-			return;
-		}
-
-		if(alIdx>=0 && alIdx<(int)mvColumns.size())
-		{
-			cWidgetLabel* pLabel = mvColumns[alIdx];
-			cVector2f vSize = pLabel->GetSize();
-
-			float fTextWidth = mpDefaultFontType->GetLength(mvDefaultFontSize, pLabel->GetText().c_str());
-
-			if(afWidth < fTextWidth)
-				vSize.x = fTextWidth;
-			else
-				vSize.x = afWidth;
-
-			mvColumns[alIdx]->SetSize(vSize);
-
-			UpdateColumns();
-		}
+		ohpl_h20_lb_set_column_width(&gH20Host, &mH, alIdx, afWidth);
 	}
 
 	cVector3f cWidgetMultiPropertyListBox::GetItemStartPos()
@@ -139,108 +94,6 @@ namespace hpl {
 	/////////////////////////////////////////////////////////////////////////////////
 	// PROTECTED METHODS
 	/////////////////////////////////////////////////////////////////////////////////
-
-	//-------------------------------------------------------------------------------
-
-	void cWidgetMultiPropertyListBox::UpdateColumns()
-	{
-		cVector3f vPos = cVector3f(0,0,0.02f);
-		for(size_t i=0;i<mvColumns.size();++i)
-		{
-			mvColumns[i]->SetPosition(vPos);
-			vPos.x += mvColumns[i]->GetSize().x;
-		}
-	}
-
-	//-------------------------------------------------------------------------------
-
-	void cWidgetMultiPropertyListBox::DrawItems(float afTimeStep, cGuiClipRegion* apClipRegion)
-	{
-		cVector3f vPosition = GetGlobalPosition();
-		vPosition.z += mfBackgroundZ+0.01f;
-
-		bool bSelected = false;
-
-		///////////////////////////////////////
-		// Draw Header background
-		mpSet->DrawGfx(mpGfxBackground, vPosition, cVector2f(mvSize.x, mvDefaultFontSize.y+2), cColor(0.82f,0.81f,0.79f,1));
-
-		/////////////////////////////
-		// Sets up column clipping
-		std::vector<cGuiClipRegion*> pRegion;
-		for(size_t i=0; i<mvColumns.size();++i)
-		{
-			cWidgetLabel* pCol = mvColumns[i];
-			cVector3f vPos = pCol->GetGlobalPosition();
-			cVector2f vSize = cVector2f(pCol->GetSize().x, mvSize.y);
-			
-			pRegion.push_back( apClipRegion->CreateChild(vPos, vSize) );
-		}
-
-		/////////////////////////////
-		// Draws items
-		vPosition = GetItemStartPos();
-		for(size_t i=mList.first_item; i<mvItems.size(); ++i)
-		{
-			if(i-mList.first_item > mList.max_items) break;
-
-			cWidgetItem* pItem = mvItems[i];
-
-			bSelected = pItem->IsSelected();
-
-			vPosition.x = GetGlobalPosition().x;
-
-			// Draw Highlight
-			if(bSelected)
-				mpSet->DrawGfx(	mpGfxSelection,vPosition - cVector3f(0,0,0.01f),
-								cVector2f(mvSize.x - mfSliderWidth,mvDefaultFontSize.y+2));
-
-			// One property per column
-			for(size_t j=0; j<mvSubLists.size(); ++j)
-			{
-				const cSubList& sublist = mvSubLists[j];
-				cWidgetItemProperty* pProp = pItem->GetProperty(sublist.mlIndex);
-
-				vPosition.x = mvColumns[j]->GetGlobalPosition().x;
-				if(sublist.mAlign==eFontAlign_Right)
-					vPosition.x+= mvColumns[j]->GetSize().x-10;
-
-				if(pProp==NULL)
-					continue;
-
-				mpSet->SetCurrentClipRegion(pRegion[j]);
-
-				////////////////////////////////////////////
-				// Draw property according to type (image or string)
-				switch(pProp->GetType())
-				{
-				case eItemPropertyType_String:
-					if(bSelected)
-                        DrawDefaultTextHighlight(pProp->GetText(), vPosition, sublist.mAlign);
-					else
-						DrawDefaultText(pProp->GetText(), vPosition, sublist.mAlign);
-					break;
-				case eItemPropertyType_Image:
-					if(pProp->GetGfx()) mpSet->DrawGfx(pProp->GetGfx(), vPosition, mfIconSize);
-					break;
-				}
-
-				mpSet->SetCurrentClipRegion(apClipRegion);
-			}
-			vPosition.y += mvDefaultFontSize.y+2;
-		}
-
-
-	}
-
-	//-------------------------------------------------------------------------------
-
-	void cWidgetMultiPropertyListBox::OnLoadGraphics()
-	{
-		iWidgetListBoxBase::OnLoadGraphics();
-
-		mfIconSize = 15;
-	}
 
 	//-------------------------------------------------------------------------------
 

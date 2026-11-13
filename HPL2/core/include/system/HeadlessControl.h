@@ -77,7 +77,7 @@ namespace hpl {
 
 	typedef void (*tHeadlessCommandFunc)(void *apUserData, const cHeadlessRequest &aRequest, cHeadlessResponse &aResponse);
 
-	class cHeadlessControlServer : public iThreadClass
+	class cHeadlessControlServer
 	{
 	public:
 		cHeadlessControlServer(cEngine *apEngine, const tString &asSocketPath);
@@ -90,47 +90,16 @@ namespace hpl {
 		void Update(bool abLoading = false);
 		void LogicStep();
 
-		void UpdateThread();
-
 		void PushLogLine(eLogOutputType aType, const tString &asLine);
 
 	private:
-		struct cPendingRequest
-		{
-			int mlClientFd;
-			cHeadlessRequest mRequest;
-		};
-
 		struct cHandlerEntry
 		{
 			tHeadlessCommandFunc mpFunc;
 			void *mpUserData;
 		};
 
-		void RegisterBuiltins();
 		void InitRustHost();
-		void Dispatch(const cPendingRequest &aPending);
-		void SendResponse(int alClientFd, const cHeadlessResponse &aResp);
-
-		void CmdPing(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		void CmdQuit(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		void CmdScreenshot(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		void CmdLogTail(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		void CmdSetFocusWait(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		void CmdInput(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		void CmdResizeWindow(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		void CmdShaderReport(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		void CmdFrameStats(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-
-		static void SCmdPing(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		static void SCmdQuit(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		static void SCmdScreenshot(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		static void SCmdLogTail(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		static void SCmdSetFocusWait(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		static void SCmdInput(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		static void SCmdResizeWindow(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		static void SCmdShaderReport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
-		static void SCmdFrameStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 
 		OhplH22Hc *mpRs;
 		OhplH22HcHost mRsHost;
@@ -139,29 +108,6 @@ namespace hpl {
 		cEngine *mpEngine;
 		tString msSocketPath;
 		bool mbListening;
-
-		int mlListenFd;
-		volatile int mlClientFd;
-		iThread *mpThread;
-		iMutex *mpQueueMutex;
-		iMutex *mpLogMutex;
-
-		std::deque<cPendingRequest> mlstPendingQueue;
-
-		struct cFrameWaiter
-		{
-			int mlClientFd;
-			unsigned int mlTargetFrame;
-			unsigned int mlStartFrame;
-			int mlFramesTotal;
-			unsigned long mlDeadlineMs;
-		};
-		std::vector<cFrameWaiter> mvFrameWaiters;
-		int mlDragFrames = 0, mlDragX = 0, mlDragY = 0;
-		std::deque<std::pair<int,int> > mdqDragPath;
-		std::map<tString, cHandlerEntry> mmapHandlers;
-
-		std::deque<tString> mlstLogLines;
 	};
 
 }

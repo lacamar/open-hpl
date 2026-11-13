@@ -55,10 +55,8 @@ namespace hpl {
 		mlId = alId;
 		mpInput = apInput;
 
-		mState = ohpl_input_action_new();
-		mpReg = mpInput ? mpInput->GetRustRegistry() : NULL;
-		mlHandle = 0;
-		if(mpReg) mlHandle = ohpl_input_reg_create(mpReg, (const unsigned char*)asName.data(), asName.size(), alId, this);
+		mpReg = mpInput->GetRustRegistry();
+		mlHandle = ohpl_input_reg_create(mpReg, (const unsigned char*)asName.data(), asName.size(), alId, this);
 	}
 
 	//-----------------------------------------------------------------------
@@ -106,18 +104,15 @@ namespace hpl {
 	void cAction::AddSubAction(iSubAction *apSubAction)
 	{
 		mvSubActions.push_back(apSubAction);
-		if(mpReg)
-		{
-			OhplSubSpec spec = apSubAction->OhplSpec();
-			ohpl_input_reg_add_sub(mpReg, mlHandle, &spec);
-		}
+		OhplSubSpec spec = apSubAction->OhplSpec();
+		ohpl_input_reg_add_sub(mpReg, mlHandle, &spec);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cAction::ClearSubActions()
 	{
-		if(mpReg) ohpl_input_reg_clear_subs(mpReg, mlHandle);
+		ohpl_input_reg_clear_subs(mpReg, mlHandle);
 		STLDeleteAll(mvSubActions);
 	}
 
@@ -125,61 +120,46 @@ namespace hpl {
 
 	bool cAction::IsTriggerd()
 	{
-		if(mpReg) return ohpl_input_reg_is_down(mpReg, mlHandle);
-		return ohpl_input_action_is_down(&mState);
+		return ohpl_input_reg_is_down(mpReg, mlHandle);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cAction::WasTriggerd()
 	{
-		if(mpReg) return ohpl_input_reg_was_triggered(mpReg, mlHandle);
-		return ohpl_input_action_was_triggered(&mState);
+		return ohpl_input_reg_was_triggered(mpReg, mlHandle);
 	}
 
 	//-----------------------------------------------------------------------
 	
 	bool cAction::BecameTriggerd()
 	{
-		if(mpReg) return ohpl_input_reg_became_triggered(mpReg, mlHandle);
-		return ohpl_input_action_became_triggered(&mState);
+		return ohpl_input_reg_became_triggered(mpReg, mlHandle);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cAction::DoubleTriggerd(float afLimit)
 	{
-		if(mpReg) return ohpl_input_reg_double_triggered(mpReg, mlHandle, afLimit);
-		return ohpl_input_action_double_triggered(&mState, afLimit);
+		return ohpl_input_reg_double_triggered(mpReg, mlHandle, afLimit);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cAction::ResetToCurrentState()
 	{
-		if(mpReg) { ohpl_input_reg_reset(mpReg, mlHandle); return; }
-		ohpl_input_action_reset(&mState, AnySubActionTriggerd());
+		ohpl_input_reg_reset(mpReg, mlHandle);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cAction::Update(float afTimeStep)
 	{
-		if(mpReg) { ohpl_input_reg_update_action(mpReg, mlHandle, afTimeStep); return; }
-		ohpl_input_action_update(&mState, AnySubActionTriggerd(), afTimeStep);
+		ohpl_input_reg_update_action(mpReg, mlHandle, afTimeStep);
 	}
 
 	//-----------------------------------------------------------------------
 
-	bool cAction::AnySubActionTriggerd()
-	{
-		bool bAny = false;
-		for(size_t i=0; i< mvSubActions.size(); ++i)
-		{
-			if(mvSubActions[i]->IsTriggerd()) bAny = true;
-		}
-		return bAny;
-	}
 
 	//-----------------------------------------------------------------------
 

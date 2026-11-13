@@ -216,7 +216,7 @@ static void State()
 			}
 		}
 		else if(cWidgetMenuItem *m = dynamic_cast<cWidgetMenuItem*>(w))
-			snprintf(buf + n, sizeof(buf) - n, " chk=%d def=%d tm=%08x open=%d prs=%d", m->mbChecked, m->mbDefault, Bits(m->mfTimer), m->IsMenuOpen(), m->mbPressed);
+			snprintf(buf + n, sizeof(buf) - n, " chk=%d def=%d tm=%08x open=%d prs=%d", m->mbChecked, m->mbDefault, Bits(m->mfTimer), m->IsMenuOpen(), 0);
 		else if(iWidgetMenu *m = dynamic_cast<iWidgetMenu*>(w))
 			snprintf(buf + n, sizeof(buf) - n, " hl=%d must=%d sub=%d", Idx(m->mpHighlightedItem), m->mbMustHide, m->IsSubmenuOpen());
 		Emit((int)i + 1, buf);

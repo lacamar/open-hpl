@@ -77,25 +77,9 @@ namespace hpl {
 
 		/////////////////////////
 		// Data
-		// Rust state (OHPL_IMPL=rust); the references keep the member names.
 		OhplH20CtxMenu mH;
 		float& mfTimer;
 		float& mfHideTime;
-
-		// Skin attributes
-		float mfItemHPadding;
-		float mfItemTextLeftPadding;
-		float mfItemTextRightPadding;
-		float mfItemVPadding;
-		float mfItemSeparation;
-		float mfItemArrowIconSize;
-		float mfItemCheckIconSize;
-		
-		// Graphics
-		cGuiGfxElement* mpGfxBackground;
-
-		cGuiGfxElement* mvGfxBorders[4];
-		cGuiGfxElement* mvGfxCorners[4];
 	};
 };
 

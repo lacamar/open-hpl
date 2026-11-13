@@ -136,7 +136,7 @@ static void Setup(int seed)
 		printf("w %d par=%d vis=%d en=%d conn=%d tip=%d gkl=%d gul=%d ptr=%d nav=", i, par == gSet->mpWidgetRoot ? -1 : Idx(par),
 			   w->mbVisible, w->mbEnabled, w->mbConnectedToChildren, w->mbToolTipEnabled, w->mbGlobalKeyPressListener,
 			   w->mbGlobalUIInputListener, (int)(((uintptr_t)w->mpPointerGfx) >> 4));
-		for(int d = 0; d < 4; ++d) printf("%d,", Ref(w->mvFocusNavWidgets[d]));
+		for(int d = 0; d < 4; ++d) printf("%d,", Ref(w->GetFocusNavigation((eUIArrow)(1 << d))));
 		printf(" pos=%08x,%08x,%08x size=%08x,%08x\n", Bits(p.x), Bits(p.y), Bits(p.z), Bits(w->GetSize().x), Bits(w->GetSize().y));
 	}
 	printf("ord=");
@@ -253,8 +253,7 @@ static void Op(int step)
 		if(wp && w < gN && IsLeaf(w))
 		{
 			printf("op winadd %d\n", w);
-			if(OhplBackendRustRequested()) ohpl_h18_add_window(&gSet->mS, (OhplH18W)wp);
-			else gSet->mlstWindows.push_back(wp);
+			ohpl_h18_add_window(&gSet->mS, (OhplH18W)wp);
 		}
 		else printf("op skip\n");
 	}

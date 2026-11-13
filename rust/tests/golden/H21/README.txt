@@ -1,6 +1,6 @@
 H21 golden vectors: the five GUI popups (message box, file picker save/load, colour picker, UI keyboard).
 
-cassette_<kind>_<seed>.txt  Host traffic of the Rust popups (OHPL_IMPL=rust) driving the real C++ widgets over the
+cassette_<kind>_<seed>.txt  Host traffic of the Rust popups driving the real C++ widgets over the
                             seeded harness script (Amnesia TDD default skin): "ev" = entry point called by the C++
                             shell (new/event/destroy/...), ">" = host command, "<" = its answer, "=" = entry result;
                             events raised inside a command (combo selection callbacks) nest between ">" and "<".
@@ -9,13 +9,12 @@ cassette_<kind>_<seed>.txt  Host traffic of the Rust popups (OHPL_IMPL=rust) dri
                             checks each command and result, without the C++.
 digests.txt                 md5 of the full harness stdout of the original C++ (state per step, user/destroy callbacks
                             in order, set focus/attention, RecordingLowLevelGraphics trace of 3 frames) for 6 kinds x
-                            6 game skins x seeds 1-3. harness/digests.sh verify checks OHPL_IMPL=rust against it.
+                            6 game skins x seeds 1-3. harness/digests.sh checks the Rust path against it.
                             Needs the installed games (read-only) and the file picker tree under
                             ~/.cache/open-hpl/h21-tmp/fp (harness/make-fpdir.sh: fixed files and mtimes; the harness
                             chdirs into fp/sub, so dates and paths in the output depend on that location).
 
 Record (needs a build dir of this tree with `make TraceRecorderTests`):
   harness/build.sh <repo> <build dir> <out>      builds <out>/h21_popups
-  harness/compare.sh <out> 30                    OHPL_IMPL=cpp vs rust, stdout per case: 6 skins x seeds x 6 kinds
-  harness/digests.sh <out> record|verify [impl]  digests.txt from cpp / check an implementation against it
-  H21_LOG=<file> H21_KIND=<kind> H21_SEED=<n> OHPL_IMPL=rust <out>/h21_popups   one cassette (run from fp/sub, see compare.sh)
+  harness/digests.sh <out>                       stdout of 6 kinds x 6 skins x seeds 1-3 against digests.txt
+  H21_LOG=<file> H21_KIND=<kind> H21_SEED=<n> <out>/h21_popups   one cassette (run from fp/sub, see digests.sh)

@@ -36,18 +36,6 @@ namespace hpl {
 			const tWString& asButton1, const tWString& asButton2,
 			void *apCallbackObject, tGuiCallbackFunc apCallback);
 		virtual ~cGuiPopUpMessageBox();
-		
-	protected:
-		bool ButtonPress(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(ButtonPress);
-		bool GamepadButtonPress(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(GamepadButtonPress);
-
-		cWidgetButton *mvButtons[2];
-		cWidgetLabel *mpLabel;
-		
-		void * mpCallbackObject;
-		tGuiCallbackFunc mpCallback;
 	};
 
 };

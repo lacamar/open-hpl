@@ -30,13 +30,10 @@ namespace hpl {
 	
 	class cWidgetButton;
 	class cGuiPopUpUIKeyboard;
-	struct OhplW2TbCtx;
-	struct OhplW2TbEvent;
 
 	class cWidgetTextBox : public iWidget
 	{
 		friend class cGuiPopUpUIKeyboard;
-		friend struct OhplW2TbCtx;
 		friend struct OhplH20Access;
 	public:
 		cWidgetTextBox(cGuiSet *apSet, cGuiSkin *apSkin, eWidgetTextBoxInputType aType);
@@ -100,18 +97,6 @@ namespace hpl {
 		
 	protected:
 		/////////////////////////
-		// Own functions
-		bool Widget_OnValueUp(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Widget_OnValueUp);
-		bool Widget_OnValueDown(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Widget_OnValueDown);
-		bool ButtonPressed(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(ButtonPressed);
-
-		void SetupCall(OhplW2TbCtx& aCtx, OhplW2TextCall& aCall);
-		bool ApplyEvents(OhplW2TbCtx& aCtx, const cGuiMessageData& aData);
-
-		/////////////////////////
 		// Implemented functions
 		void OnInit();
 		void OnLoadGraphics();
@@ -145,7 +130,6 @@ namespace hpl {
 
 		/////////////////////////
 		// Data
-		// Rust state (OHPL_IMPL=rust); the references keep the member names.
 		OhplH20TextBox mH;
 		iWidget*& mpPrevAttention;
 		OhplW2Text& mState;
@@ -157,20 +141,7 @@ namespace hpl {
 
 		tWString msIllegalChars;
 
-		cWidgetButton *mvButtons[2];
-		
-		cGuiGfxElement *mpGfxMarker;
-		cGuiGfxElement *mpGfxSelectedTextBack;
-
-		cGuiGfxElement *mpGfxBackground;
-		
-		cGuiGfxElement *mvGfxBorders[4];
-		cGuiGfxElement *mvGfxCorners[4];
-
 		bool mbUIKeyboardOpen;
-
-		bool mbReplaying;
-		const OhplW2TbEvent* mpReplayEvent;
 	};
 
 };

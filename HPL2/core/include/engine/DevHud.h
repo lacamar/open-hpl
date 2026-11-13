@@ -27,12 +27,9 @@ namespace hpl {
 
 	private:
 		bool Init();
-		void RenderRust(bool abHud);
 		bool FilterEvent(const SDL_Event &aEvent);
 		void CloseBugReport();
 		void SaveBugReport();
-		void RenderBugReport(const cVector2l &avScreen);
-
 		cEngine *mpEngine;
 		cGuiSet *mpSet;
 		iFontData *mpFont;

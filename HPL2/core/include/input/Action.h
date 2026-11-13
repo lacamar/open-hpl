@@ -136,11 +136,8 @@ namespace hpl {
 		int mlId;
 		cInput *mpInput;
 
-		OhplActionState mState;
 		OhplInputReg *mpReg;
 		uint64_t mlHandle;
-
-		bool AnySubActionTriggerd();
 
 		tSubActionVec mvSubActions;
 		

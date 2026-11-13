@@ -36,23 +36,6 @@ namespace hpl {
 
 	//---------------------------------------------------------------
 
-	class cUIKey
-	{
-	public:
-		cUIKey(eKey aKey, int alUnicodeLower, int alUnicodeUpper) : mKey(aKey) 
-		{ mvUnicode[0]=alUnicodeLower; mvUnicode[1]=alUnicodeUpper; }
-
-		eKey mKey;
-		int mvUnicode[2];
-	};
-
-	//---------------------------------------------------------------
-
-	typedef std::list<cUIKey>		tUIKeyList;
-	typedef tUIKeyList::iterator	tUIKeyListIt;
-
-	//---------------------------------------------------------------
-
 	class cGuiPopUpUIKeyboard : public iGuiPopUp
 	{
 	public:
@@ -60,49 +43,7 @@ namespace hpl {
 		virtual ~cGuiPopUpUIKeyboard();		
 
 	protected:
-		/////////////////////////////
-		// Own functions
-		void SetUpKey(iWidget* apKeyWidget, eKey aKey, int alUnicode, int alUnicodeUpper);
-
-		bool Key_OnPress(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Key_OnPress);
-
-		bool Enter_OnPress(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Enter_OnPress);
-
-		bool Cancel_OnPress(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Cancel_OnPress);
-
-		bool Button_Pressed(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Button_Pressed);
-
-		bool WindowClose(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(WindowClose);
-
-		bool Window_OnUIButtonPress(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Window_OnUIButtonPress);
-
-		bool Window_OnUIButtonRelease(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Window_OnUIButtonRelease);
-		
-		void Init();
-
-		void ClosePopUp();
 		bool H21Ext(const OhplH21Cmd &aCmd, OhplH21Ret &aRet);
-
-		void SetShiftActive(bool abX);
-
-		//////////////////////////////
-		// Data
-		cVector3f mvPos;
-
-		cWidgetTextBox* mpTargetTextBox;
-		tWString msBackUpText;
-
-		tWidgetList mlstKeyWidgets;		
-		tUIKeyList mlstKeys;
-
-		bool mbShift;
 	};
 };
 
