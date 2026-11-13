@@ -321,10 +321,10 @@
     "Compound:0/13"
    ],
    "asleep": false,
-   "boot_s": 3.0,
+   "boot_s": 5.4,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.880249,
+    "fps": 48.514839,
     "pitch": 0,
     "pos_x": -10.75,
     "pos_y": 1.51415,
@@ -333,33 +333,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.880249,
+   "fps": 48.514839,
    "frame": {
-    "black_frac": 0.007974,
+    "black_frac": 0.007967,
     "height": 720,
     "lum_hist16": [
-     0.366571,
-     0.399901,
-     0.103923,
-     0.041679,
-     0.023754,
-     0.012762,
-     0.008097,
-     0.006734,
-     0.007163,
-     0.007221,
-     0.005875,
-     0.001476,
-     0.001534,
-     0.001952,
-     0.006568,
-     0.004792
+     0.366417,
+     0.398599,
+     0.104401,
+     0.041974,
+     0.024426,
+     0.012767,
+     0.008089,
+     0.006726,
+     0.007115,
+     0.00734,
+     0.00583,
+     0.001478,
+     0.001522,
+     0.001942,
+     0.006616,
+     0.004757
     ],
     "lum_max": 255,
-    "lum_mean": 29.516031,
+    "lum_mean": 29.573051,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 2.2e-05,
+    "white_frac": 2.3e-05,
     "width": 1280
    },
    "gbuffer": {
@@ -370,18 +370,18 @@
      "a_nan_count": 0,
      "a_zero_count": 921600,
      "b_max": 1.154297,
-     "b_mean": 0.402223,
+     "b_mean": 0.402233,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 10297,
      "g_max": 1.208984,
-     "g_mean": 0.469361,
+     "g_mean": 0.469374,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 5300,
      "height": 720,
      "r_max": 1.201172,
-     "r_mean": 0.453944,
+     "r_mean": 0.453952,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 1705,
@@ -451,26 +451,26 @@
    "load_report": {
     "map": "00_01_apartment.hpm",
     "terrain_active": false,
-    "total_ms": 1191,
+    "total_ms": 2244,
     "tracks": {
      "Area": {
       "created": 80,
       "file_missing": false,
-      "ms": 3,
+      "ms": 2,
       "skipped": {},
       "xml": 80
      },
      "Billboard": {
       "created": 20,
       "file_missing": false,
-      "ms": 10,
+      "ms": 16,
       "skipped": {},
       "xml": 20
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 13
       },
@@ -479,21 +479,21 @@
      "Decal": {
       "created": 106,
       "file_missing": false,
-      "ms": 67,
+      "ms": 106,
       "skipped": {},
       "xml": 106
      },
      "DetailMeshes": {
       "created": 39,
       "file_missing": false,
-      "ms": 11,
+      "ms": 9,
       "skipped": {},
       "xml": 39
      },
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 776,
+      "ms": 1543,
       "skipped": {},
       "xml": 436
      },
@@ -514,14 +514,14 @@
      "LensFlare": {
       "created": 4,
       "file_missing": false,
-      "ms": 2,
+      "ms": 6,
       "skipped": {},
       "xml": 4
      },
      "Light": {
       "created": 70,
       "file_missing": false,
-      "ms": 7,
+      "ms": 5,
       "skipped": {},
       "xml": 70
      },
@@ -535,21 +535,21 @@
      "ParticleSystem": {
       "created": 9,
       "file_missing": false,
-      "ms": 14,
+      "ms": 19,
       "skipped": {},
       "xml": 9
      },
      "Primitive": {
       "created": 11,
       "file_missing": false,
-      "ms": 9,
+      "ms": 23,
       "skipped": {},
       "xml": 11
      },
      "Sound": {
       "created": 7,
       "file_missing": false,
-      "ms": 166,
+      "ms": 262,
       "skipped": {},
       "xml": 7
      },
@@ -563,7 +563,7 @@
      "StaticObject": {
       "created": 145,
       "file_missing": false,
-      "ms": 89,
+      "ms": 202,
       "skipped": {},
       "xml": 145
      },
@@ -576,7 +576,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2850279.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-4011010.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 4,
@@ -586,33 +586,33 @@
      "count": 1,
      "example": "ERROR: Couldn't find sound entry 'Entities_Urban/tech/cellphone/vibrating_wood' for Sound_StopGui"
     },
-    "ERROR: Unable to open config file '*'! Invalid filepointer returned!": {
+    "ERROR: Unable to open config file '*'!": {
      "count": 1,
-     "example": "ERROR: Unable to open config file '/home/lm/.cache/open-hpl/soma-scratch/.xdg/config/open-hpl/soma/user_stats.cfg'! Invalid filepointer returned!"
+     "example": "ERROR: Unable to open config file '/home/lm/.cache/open-hpl/soma-scratch/.xdg/config/open-hpl/soma/user_stats.cfg'!"
     }
    },
    "log_warnings": 24,
    "render": {
-    "draw_calls": 1057,
+    "draw_calls": 1055,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 27,
     "lights_rendered": 27,
-    "occlusion_queries": 39,
+    "occlusion_queries": 38,
     "per_frame": {
-     "frames": 120,
-     "logic_ms": 1.1363792419433594,
-     "logic_steps": 1.0,
-     "render_ms": 5.569215774536133,
-     "swap_ms": 0.0028947414830327034
+     "frames": 122,
+     "logic_ms": 4.0548415184021,
+     "logic_steps": 1.2049180269241333,
+     "render_ms": 15.966865539550781,
+     "swap_ms": 0.006189909763634205
     },
     "shader_failures": 0,
     "solid_objects": 191,
-    "trans_objects": 14
+    "trans_objects": 13
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 12.1,
+   "wall_s": 16.6,
    "warmup": {
     "frames": 360,
     "timed_out": false

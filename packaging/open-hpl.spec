@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.91
+Version:        1.3.92
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,9 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Fri Nov 13 2026 lacamar <lchlnm@pm.me> - 1.3.92-1
+- Port GUI widgets, popups, SOMA world builder to Rust
+
 * Fri Nov 13 2026 lacamar <lchlnm@pm.me> - 1.3.91-1
 - Port GUI focus, widget base, renderer, mesh entities, lights, world to Rust
 - Fix flaky Rust tests sharing libc rand
