@@ -808,7 +808,9 @@ impl Mgr {
         let mut text = Vec::new();
         for &p in &live {
             let o = self.h.obj(p);
-            text.extend(narrow(&o.path));
+            text.extend(
+                unroot(String::from_utf8_lossy(&narrow(&o.path)).into_owned()).into_bytes(),
+            );
             text.extend(format!(":{}:{};", o.meta.handle, o.meta.user_count).bytes());
         }
         format!("{} {:016x}", live.len(), fnv(BASIS, &text))
@@ -907,8 +909,23 @@ fn corpus(root: &Path, extra: &Path) -> (Names, Names, Names) {
     (names, snames, mnames)
 }
 
+thread_local!(static EXTRA: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) });
+
+// The matcases dir lives in the checkout; hash it as a fixed name so goldens don't depend on where the repo is.
+fn unroot(s: String) -> String {
+    EXTRA.with(|e| {
+        let e = e.borrow();
+        if e.is_empty() {
+            s
+        } else {
+            s.replace(e.as_str(), "<matcases>")
+        }
+    })
+}
+
 pub(super) fn run(root: &Path, extra: &Path, ops_n: i64, dump: Option<&Path>) -> u64 {
     manager::reset_tabs();
+    EXTRA.with(|e| *e.borrow_mut() = extra.to_string_lossy().into_owned());
     let (names, snames, mnames) = corpus(root, extra);
     let mut fs = Searcher::default();
     fs.add_directory(
@@ -1187,6 +1204,7 @@ pub(super) fn run(root: &Path, extra: &Path, ops_n: i64, dump: Option<&Path>) ->
         let out = normalize_hex(&normalize_ms(&log));
         line += "\n";
         line += &out;
+        let line = unroot(line);
         total = fnv(total, line.as_bytes());
         if dump.is_some() {
             transcript += &line;
@@ -1210,6 +1228,7 @@ pub(super) fn run(root: &Path, extra: &Path, ops_n: i64, dump: Option<&Path>) ->
             mg.m.len(),
             normalize_hex(&mg.h.log)
         );
+        let line = unroot(line);
         total = fnv(total, line.as_bytes());
         if dump.is_some() {
             transcript += &line;
@@ -1240,8 +1259,15 @@ fn flows_match_cpp() {
         let Some(root) = game_root(game) else {
             continue;
         };
-        let got = run(&root, &extra, ops_n.parse().unwrap_or(0), dump.as_deref());
-        assert_eq!(format!("{got:016x}"), digest, "{game}");
+        let got = run(
+            &root,
+            &extra,
+            ops_n.parse().unwrap_or(0),
+            dump.as_ref().map(|d| d.with_extension(game)).as_deref(),
+        );
+        if std::env::var_os("OHPL_H3_FLOW_NOASSERT").is_none() {
+            assert_eq!(format!("{got:016x}"), digest, "{game}");
+        }
         checked += 1;
     }
     LOG_CREATE_AND_DELETE.store(false, Ordering::Relaxed);
