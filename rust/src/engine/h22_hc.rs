@@ -93,6 +93,8 @@ pub trait HcHost {
     fn scancode_from_key(&self, key: i32) -> i32;
     fn push_event(&self, ev: &Ev);
     fn run_message(&self, msg: i32);
+    /// Reply JSON of the game handler registered in `slot` (see `HcServer::register`).
+    fn call_handler(&self, slot: usize, req: &Request) -> Vec<u8>;
 }
 
 /// `cHeadlessRequest`.
@@ -240,6 +242,7 @@ struct Shared {
 pub struct HcServer {
     shared: Arc<Shared>,
     state: Mutex<EngineState>,
+    handlers: Mutex<Vec<Vec<u8>>>,
     path: Vec<u8>,
     listening: bool,
     thread: Option<JoinHandle<()>>,
@@ -312,6 +315,7 @@ impl HcServer {
         let mut server = Self {
             shared: Arc::clone(&shared),
             state: Mutex::new(EngineState::default()),
+            handlers: Mutex::new(Vec::new()),
             path: socket_path.to_vec(),
             listening: false,
             thread: None,
@@ -345,6 +349,15 @@ impl HcServer {
             }
         }
         server
+    }
+
+    /// `RegisterHandler`: the slot the host stores the callback in; a repeated name reuses its slot.
+    pub fn register(&self, name: &[u8]) -> usize {
+        let mut h = lock(&self.handlers);
+        h.iter().position(|n| n == name).unwrap_or_else(|| {
+            h.push(name.to_vec());
+            h.len() - 1
+        })
     }
 
     /// Requests the socket thread has queued so far.
@@ -439,6 +452,11 @@ impl HcServer {
                     .wrapping_add(i64::from(req.get_int(b"max_ms", 600_000)) as u64),
             };
             lock(&self.state).waiters.push(w);
+            return;
+        }
+        let slot = lock(&self.handlers).iter().position(|n| *n == cmd);
+        if let Some(slot) = slot {
+            send_line(&p.client, &host.call_handler(slot, req));
             return;
         }
         let mut resp = Response::default();

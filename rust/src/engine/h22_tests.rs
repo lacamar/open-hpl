@@ -4,7 +4,7 @@
 use super::frame::Loop;
 use super::h22_engine::{self as eng, RunState};
 use super::h22_engine_ffi::{CHost, op};
-use super::h22_hc::{Ev, HcHost, HcServer, LogLevel, MouseButton, Shot};
+use super::h22_hc::{Ev, HcHost, HcServer, LogLevel, MouseButton, Request, Response, Shot};
 use std::cell::{Cell, RefCell};
 use std::ffi::c_void;
 use std::io::{Read, Write};
@@ -584,6 +584,31 @@ impl HcHost for FakeHost {
             _ => {}
         }
     }
+    fn call_handler(&self, slot: usize, req: &Request) -> Vec<u8> {
+        const UD: [i32; 5] = [9, 1, 0, 3, 5];
+        let ud = UD[slot];
+        let mut f = String::new();
+        for (k, v) in &req.fields {
+            f += &format!("{}={},", hex(k), hex(v));
+        }
+        let mut r = Response::default();
+        match slot {
+            1 => r.set_bool(b"pong2", true),
+            2 => r.set_error(b"custom fail \"q\""),
+            _ => {
+                self.say(format!("state handler ud={ud} {f}"));
+                r.set_int(b"ud", ud);
+                r.set_str(b"cmd", &req.cmd());
+                r.set_str(b"a", &req.get_string(b"a", b""));
+                r.set_int(b"n", req.get_int(b"n", -1));
+                r.set_float(b"f", req.get_float(b"f", 0.5));
+                r.set_bool(b"b", req.get_bool(b"b", false));
+                r.set_bool(b"has", req.has_key(b"a"));
+                r.set_raw(b"raw", b"[1,2]");
+            }
+        }
+        r.to_json()
+    }
 }
 
 /// The SDL2 compat layer on SDL3 carries pointer coordinates as floats.
@@ -702,7 +727,15 @@ fn replay_hc(golden: &str, id: usize) -> Vec<String> {
         let head = line.split(' ').next().unwrap_or_default();
         if !matches!(
             head,
-            ">" | ">>" | "settle" | "pump" | "loading" | "frames" | "log" | "set" | "shader"
+            ">" | ">>"
+                | "settle"
+                | "pump"
+                | "register"
+                | "loading"
+                | "frames"
+                | "log"
+                | "set"
+                | "shader"
         ) {
             continue;
         }
@@ -728,6 +761,11 @@ fn replay_hc(golden: &str, id: usize) -> Vec<String> {
             "pump" => {
                 let n: i32 = rest.trim().parse().unwrap_or(0);
                 pump!(n);
+            }
+            "register" => {
+                for n in ["echo", "ping", "echo", "fail", "wait_frames", "dev_hud"] {
+                    server.register(n.as_bytes());
+                }
             }
             "loading" => loading = rest.trim().parse::<i32>().unwrap_or(0) != 0,
             "frames" => host

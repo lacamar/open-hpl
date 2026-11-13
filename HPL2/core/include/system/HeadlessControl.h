@@ -134,6 +134,7 @@ namespace hpl {
 
 		OhplH22Hc *mpRs;
 		OhplH22HcHost mRsHost;
+		std::vector<cHandlerEntry> mvRsHandlers;
 
 		cEngine *mpEngine;
 		tString msSocketPath;

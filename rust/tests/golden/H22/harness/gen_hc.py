@@ -142,6 +142,20 @@ def inputs():
     return s
 
 
+def handlers():
+    s = Script()
+    s.add("register")
+    s.send(j(cmd="echo"), j(cmd="echo", a="x", n=5, f=2.5, b=True), '{"cmd":"echo","a":"q\\"uo\\\\te\\n","n":"zz","f":"1e2","b":"yes"}')
+    s.send(j(cmd="ping"), j(cmd="fail"), j(cmd="dev_hud", value=True), j(cmd="dev_hud"), j(cmd="bogus"))
+    s.send(j(cmd="wait_frames", n=2), pump=1)
+    s.add("frames 2")
+    s.add("pump 1")
+    s.send(j(cmd="echo", z=1, y=2, a=""), j(cmd="log_tail", lines=1), j(cmd="screen_stats"), j(cmd="echo"), pump=2)
+    s.add("register")
+    s.send(j(cmd="echo", a="again"), j(cmd="ping"))
+    return s
+
+
 def waits():
     s = Script()
     s.send(j(cmd="wait_frames", n=3), pump=1)
@@ -256,6 +270,7 @@ def main():
     os.makedirs(out, exist_ok=True)
     table().write(os.path.join(out, "hc_table.script"))
     inputs().write(os.path.join(out, "hc_input.script"))
+    handlers().write(os.path.join(out, "hc_handlers.script"))
     waits().write(os.path.join(out, "hc_wait.script"))
     parsing().write(os.path.join(out, "hc_parse.script"))
     for i in range(1, nfuzz + 1):

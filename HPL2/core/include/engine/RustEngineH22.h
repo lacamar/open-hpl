@@ -31,6 +31,7 @@ struct OhplH22HcHost
 	int (*screenshot)(void*, const uint8_t*, size_t); // 0 saved, 1 copy failed, 2 save failed
 	void (*inject_text)(void*, const uint8_t*, size_t);
 	void (*run_message)(void*, int);
+	void (*call_handler)(void*, size_t, const uint8_t*, size_t, OhplH22Sink, void*); // blob: u64 len + bytes, key then value per field
 };
 
 struct OhplH22HudHost
@@ -73,6 +74,7 @@ enum
 extern "C" {
 	OhplH22Hc* ohpl_h22_hc_new(const OhplH22HcHost* host, const uint8_t* path, size_t n);
 	void ohpl_h22_hc_free(OhplH22Hc* s);
+	size_t ohpl_h22_hc_register(const OhplH22Hc* s, const uint8_t* name, size_t n);
 	bool ohpl_h22_hc_listening(const OhplH22Hc* s);
 	void ohpl_h22_hc_push_log(const OhplH22Hc* s, const uint8_t* line, size_t n);
 	void ohpl_h22_hc_update(const OhplH22Hc* s, const OhplH22HcHost* host, bool loading);

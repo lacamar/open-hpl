@@ -1,0 +1,42 @@
+register
+> {"cmd":"echo"}\n{"cmd":"echo","a":"x","n":5,"f":2.5,"b":true}\n{"cmd":"echo","a":"q\\"uo\\\\te\\n","n":"zz","f":"1e2","b":"yes"}\n
+settle
+pump 1
+state handler ud=9 636d64=6563686f,
+state handler ud=9 61=78,62=74727565,636d64=6563686f,66=322e35,6e=35,
+state handler ud=9 61=7122756f5c74650a,62=796573,636d64=6563686f,66=316532,6e=7a7a,
+< {"ok":true,"ud":9,"cmd":"echo","a":"","n":-1,"f":0.5,"b":false,"has":false,"raw":[1,2]}
+< {"ok":true,"ud":9,"cmd":"echo","a":"x","n":5,"f":2.5,"b":true,"has":true,"raw":[1,2]}
+< {"ok":true,"ud":9,"cmd":"echo","a":"q\"uo\\te\n","n":0,"f":100,"b":false,"has":true,"raw":[1,2]}
+> {"cmd":"ping"}\n{"cmd":"fail"}\n{"cmd":"dev_hud","value":true}\n{"cmd":"dev_hud"}\n{"cmd":"bogus"}\n
+settle
+pump 1
+state handler ud=5 636d64=6465765f687564,76616c7565=74727565,
+state handler ud=5 636d64=6465765f687564,
+< {"ok":true,"pong2":true}
+< {"ok":false,"error":"custom fail \"q\""}
+< {"ok":true,"ud":5,"cmd":"dev_hud","a":"","n":-1,"f":0.5,"b":false,"has":false,"raw":[1,2]}
+< {"ok":true,"ud":5,"cmd":"dev_hud","a":"","n":-1,"f":0.5,"b":false,"has":false,"raw":[1,2]}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+> {"cmd":"wait_frames","n":2}\n
+settle
+pump 1
+frames 2
+pump 1
+< {"ok":true,"frames":2,"timed_out":false}
+> {"cmd":"echo","z":1,"y":2,"a":""}\n{"cmd":"log_tail","lines":1}\n{"cmd":"screen_stats"}\n{"cmd":"echo"}\n
+settle
+pump 2
+state handler ud=9 61=,636d64=6563686f,79=32,7a=31,
+state handler ud=9 636d64=6563686f,
+< {"ok":true,"ud":9,"cmd":"echo","a":"","n":-1,"f":0.5,"b":false,"has":true,"raw":[1,2]}
+< {"ok":true,"log":""}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+< {"ok":true,"ud":9,"cmd":"echo","a":"","n":-1,"f":0.5,"b":false,"has":false,"raw":[1,2]}
+register
+> {"cmd":"echo","a":"again"}\n{"cmd":"ping"}\n
+settle
+pump 1
+state handler ud=9 61=616761696e,636d64=6563686f,
+< {"ok":true,"ud":9,"cmd":"echo","a":"again","n":-1,"f":0.5,"b":false,"has":true,"raw":[1,2]}
+< {"ok":true,"pong2":true}
