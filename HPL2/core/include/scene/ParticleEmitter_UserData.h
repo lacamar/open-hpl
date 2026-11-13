@@ -80,7 +80,7 @@ namespace hpl {
 
 		iParticleEmitter* Create(tString asName, cVector3f avSize);
 
-		void LoadFromElement(cXmlElement *apElement);
+		void LoadFromElement(cXmlElement *apElement, bool abLoadMaterials=true);
 
 		bool CheckCollision(const cVector3f& avStart, const cVector3f &avEnd,
 									iPhysicsWorld *apPhysicsWorld,
@@ -88,6 +88,8 @@ namespace hpl {
 									cVector3f *apPosVec);
 
 	private:
+		friend struct OhplH12PsProbe;
+		void LoadFromElementRust(cXmlElement *apElement, bool abLoadMaterials);
 		void BuildRustParams();
 		OhplPeParams mRustParams;
 

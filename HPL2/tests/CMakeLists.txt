@@ -85,6 +85,11 @@ AddTestTarget(SceneH10Tests
     SceneH10Tests.cpp
 )
 
+# H12 differential (particle emitter data load, emitter frames): scripts/h12-diff.sh.
+AddTestTarget(SceneH12Tests
+    SceneH12Tests.cpp
+)
+
 # H15 differential: surface-data parse and surface-call/update-list scenes, scripts/h15-diff.sh.
 AddTestTarget(PhysicsH15Tests
     PhysicsH15Tests.cpp
