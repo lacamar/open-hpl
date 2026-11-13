@@ -15,6 +15,10 @@
 #include "PhysicsNewtonScenes.h"
 #include "physics/Physics.h"
 #include "physics/SurfaceData.h"
+#include "physics/PhysicsRope.h"
+#include "physics/PhysicsController.h"
+#include "physics/CharacterBody.h"
+#include "physics/PhysicsJoint.h"
 #include "physics/RustPhysics.h"
 #include "system/String.h"
 #include "impl/tinyXML/tinyxml.h"
@@ -357,6 +361,109 @@ void SceneSurfaceWorld(const char* name, bool mover)
 	gD.End(name, steps);
 }
 
+struct CountCb : iPhysicsWorldCollisionCallback
+{
+	int n = 0;
+	void OnCollision(iPhysicsBody* b, cCollideData* d) { ++n; gD.Float(b->GetMass()); gD.Int(d->mlNumOfPoints); }
+};
+
+// World object lists: lookups, iteration order, destroy order, joint breakage, shape-world queries, DestroyAll.
+void SceneWorldLists()
+{
+	gD.Begin("world_lists");
+	cPhysicsWorldNewton& w = *NewWorld();
+	w.SetWorld(NULL);
+	std::vector<iPhysicsBody*> bodies;
+	bodies.push_back(Floor(w));
+	for (int i = 0; i < 6; ++i)
+	{
+		char n[8];
+		std::snprintf(n, sizeof(n), "B%d", i);
+		iPhysicsBody* b = w.CreateBody(n, i % 2 ? w.CreateBoxShape(cVector3f(0.5f, 0.5f, 0.5f), NULL) : w.CreateSphereShape(cVector3f(0.3f, 0.3f, 0.3f), NULL));
+		b->SetMass(i == 5 ? 0 : 1.0f + 0.2f * i);
+		b->SetPosition(cVector3f(-2.0f + i * 0.9f, 0.6f + 0.5f * i, 0.2f * i));
+		bodies.push_back(b);
+	}
+	iPhysicsJointBall* ball = w.CreateJointBall("j_ball", cVector3f(-1.5f, 1.0f, 0), cVector3f(0, 1, 0), bodies[1], bodies[2]);
+	iPhysicsJointHinge* hinge = w.CreateJointHinge("j_hinge", cVector3f(0.5f, 2.0f, 0.4f), cVector3f(0, 1, 0), bodies[3], bodies[4]);
+	hinge->SetBreakable(true);
+	hinge->SetBreakForce(5.0f);
+	iPhysicsJointSlider* slider = w.CreateJointSlider("j_slider", cVector3f(1.0f, 1.0f, 0), cVector3f(1, 0, 0), bodies[5], bodies[6]);
+	(void)ball; (void)slider;
+	iPhysicsController* c0 = w.CreateController("c0");
+	iPhysicsController* c1 = w.CreateController("c1");
+	c0->SetBody(bodies[4]); c0->SetType(ePhysicsControllerType_Pid); c0->SetA(10); c0->SetDestValue(1); c0->SetMaxOutput(10);
+	c0->SetInputType(ePhysicsControllerInput_LinearSpeed, ePhysicsControllerAxis_Y);
+	c0->SetOutputType(ePhysicsControllerOutput_Force, ePhysicsControllerAxis_Y);
+	c0->SetActive(true);
+	c1->SetBody(bodies[3]);
+	iPhysicsRope* r0 = w.CreateRope("r0", cVector3f(0, 4, 3), cVector3f(2, 3.9f, 3));
+	iPhysicsRope* r1 = w.CreateRope("r1", cVector3f(0, 4, -3), cVector3f(2, 3.9f, -3));
+	r0->SetSegmentLength(0.25f); r1->SetSegmentLength(0.4f);
+	r0->SetAttachedStartBody(bodies[6]);
+	iCharacterBody* hero = w.CreateCharacterBody("Hero", cVector3f(0.5f, 1.8f, 0.5f));
+	hero->SetFeetPosition(cVector3f(4, 0.05f, 4), false);
+	w.CreateMaterial("Zeta");
+	w.CreateMaterial("Alpha");
+	iCollideShape* spare = w.CreateBoxShape(cVector3f(1, 1, 1), NULL);
+
+	std::map<size_t, int> ids;
+	for (size_t i = 0; i < bodies.size(); ++i) ids[(size_t)bodies[i]] = (int)i;
+	ids[(size_t)hero] = 100; ids[(size_t)r0] = 101; ids[(size_t)r1] = 102; ids[(size_t)c0] = 103; ids[(size_t)c1] = 104;
+	ids[(size_t)hinge] = 105; ids[(size_t)ball] = 106; ids[(size_t)slider] = 107;
+	struct Id { std::map<size_t, int>& m; int operator()(const void* p) const { std::map<size_t, int>::iterator it = m.find((size_t)p); return it == m.end() ? -1 : it->second; } } id = { ids };
+
+	for (int step = 0; step < 600; ++step)
+	{
+		hero->Move(eCharDir_Forward, 1.0f);
+		if (step == 100) { w.DestroyBody(bodies[2]); bodies[2] = NULL; }
+		if (step == 150) w.DestroyController(c0);
+		if (step == 250) w.DestroyRope(r0);
+		if (step == 300)
+		{
+			cBoundingVolume bv;
+			bv.SetLocalMinMax(cVector3f(-3, -1, -3), cVector3f(3, 5, 3));
+			w.EnableBodiesInBV(&bv, true);
+		}
+		w.Update(1.0f / 60.0f);
+		if (step % 50 == 49)
+		{
+			gD.Int(step);
+			gD.Int(id(w.GetBody("B1"))); gD.Int(id(w.GetBody("B2"))); gD.Int(id(w.GetBody("nope")));
+			gD.Int(id(w.GetJoint("j_hinge"))); gD.Int(id(w.GetJoint("j_ball"))); gD.Int(id(w.GetJoint("j_slider")));
+			gD.Int(w.JointExists(hinge) ? 1 : 0);
+			gD.Int(id(w.GetRope("r0"))); gD.Int(id(w.GetRope("r1")));
+			gD.Int(id(w.GetCharacterBody("Hero")));
+			gD.Int(w.GetMaterialFromName("Alpha") ? 1 : 0); gD.Int(w.GetMaterialFromName("nope") ? 1 : 0);
+			for (cPhysicsBodyIterator it = w.GetBodyIterator(); it.HasNext();) { iPhysicsBody* b = it.Next(); gD.Int(id(b)); gD.Matrix(b->GetLocalMatrix()); }
+			for (cPhysicsJointIterator it = w.GetJointIterator(); it.HasNext();) gD.Int(id(it.Next()));
+			for (cPhysicsMaterialIterator it = w.GetMaterialIterator(); it.HasNext();) { iPhysicsMaterial* m = it.Next(); gD.Int((int)m->GetName().size()); gD.Mix(m->GetName().c_str(), m->GetName().size()); }
+			for (int q = 0; q < 4; ++q)
+			{
+				CountCb cb;
+				cVector3f push(7, 7, 7);
+				cMatrixf at = cMath::MatrixTranslate(cVector3f(-1.5f + q * 1.5f, 1.0f + 0.2f * q, 0.3f));
+				bool hit = w.CheckShapeWorldCollision(q == 3 ? NULL : &push, spare, at, q == 1 ? bodies[1] : NULL, q == 2, q == 0, q == 0 ? &cb : NULL, q != 1, q, eFlagBit_All, false);
+				gD.Int(hit ? 1 : 0); gD.Vec(push); gD.Int(cb.n);
+			}
+			gD.Int(hero->IsOnGround() ? 1 : 0); gD.Vec(hero->GetPosition());
+		}
+	}
+	w.DestroyJoint(slider);
+	gD.Int(w.JointExists(slider) ? 1 : 0);
+	w.DestroyCharacterBody(hero);
+	gD.Int(id(w.GetCharacterBody("Hero")));
+	w.DestroyShape(spare);
+	if (gD.f)
+		for (size_t i = 0; i < bodies.size(); ++i)
+			if (bodies[i]) { char tag[32]; std::snprintf(tag, sizeof(tag), "  final%d", (int)i); gD.Line(tag, bodies[i]->GetLocalMatrix()); }
+	w.DestroyAll();
+	gD.Int(id(w.GetBody("B1"))); gD.Int(id(w.GetJoint("j_ball"))); gD.Int(id(w.GetRope("r1")));
+	gD.Int(w.GetMaterialFromName("Alpha") ? 1 : 0);
+	hplDelete(&w);
+	gD.End("world_lists", 600);
+}
+
 } // namespace
 
 int hplMain(const tString&)
@@ -369,6 +476,7 @@ int hplMain(const tString&)
 		gD.verbose = std::getenv("OHPL_H15_VERBOSE") != NULL;
 		SceneSurfaceWorld("surface_drop", false);
 		SceneSurfaceWorld("surface_mover", true);
+		SceneWorldLists();
 		if (gD.f) std::fclose(gD.f);
 		return 0;
 	}
