@@ -21,6 +21,7 @@ pub mod h5b_ffi;
 pub mod h5b_font;
 pub mod h5b_foreign;
 pub mod h5b_gfx;
+pub mod h5b_gl;
 pub mod h5b_imm;
 pub mod h5b_ops;
 pub mod h5b_scn;

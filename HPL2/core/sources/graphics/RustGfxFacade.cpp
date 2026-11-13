@@ -1,4 +1,5 @@
 #include "graphics/RustGraphicsH5b.h"
+#include "impl/RustBackends.h"
 
 #include <cstring>
 #include <string>
@@ -142,10 +143,49 @@ namespace hpl {
 	cRustGfxFacade::cRustGfxFacade(iLowLevelGraphics *apLlg) : mpImpl(new cImpl()) { mpImpl->mpLlg = apLlg; }
 	cRustGfxFacade::~cRustGfxFacade() { delete mpImpl; }
 
-	uint32_t cRustGfxFacade::WrapTexture(iTexture *apTex) { return (uint32_t)cImpl::Add(mpImpl->mTex, apTex); }
-	uint32_t cRustGfxFacade::WrapVertexBuffer(iVertexBuffer *apVb) { return (uint32_t)cImpl::Add(mpImpl->mVb, apVb); }
-	uint32_t cRustGfxFacade::WrapProgram(iGpuProgram *apProg) { return (uint32_t)cImpl::Add(mpImpl->mProg, apProg); }
-	uint32_t cRustGfxFacade::WrapFrameBuffer(iFrameBuffer *apFb) { return (uint32_t)cImpl::Add(mpImpl->mFb, apFb); }
+	template<class T> static uint32_t IdOrAdd(std::vector<T*> &avV, T *apObj)
+	{
+		for(size_t i = 0; i < avV.size(); ++i) if(avV[i] == apObj) return (uint32_t)i;
+		avV.push_back(apObj);
+		return (uint32_t)(avV.size() - 1);
+	}
+
+	uint32_t cRustGfxFacade::TextureId(iTexture *apTex) { return IdOrAdd(mpImpl->mTex, apTex); }
+	uint32_t cRustGfxFacade::VertexBufferId(iVertexBuffer *apVb) { return IdOrAdd(mpImpl->mVb, apVb); }
+	uint32_t cRustGfxFacade::ProgramId(iGpuProgram *apProg) { return IdOrAdd(mpImpl->mProg, apProg); }
+	uint32_t cRustGfxFacade::FrameBufferId(iFrameBuffer *apFb) { return IdOrAdd(mpImpl->mFb, apFb); }
+
+	//-----------------------------------------------------------------------
+
+	namespace {
+		cRustGfxFacade *gpFacade = NULL;
+
+		extern "C" uint64_t OhplH5bFacadeCall(void *apCtx, uint32_t alOp, const uint64_t *apArgs, size_t alN, uint64_t *apOut)
+		{
+			return cRustGfxFacade::Call(apCtx, alOp, apArgs, alN, apOut);
+		}
+	}
+
+	void OhplH5bAttachGfx(iLowLevelGraphics *apLlg, OhplGlCtx *apGl)
+	{
+		if(!OhplBackendRustRequested() || apLlg == NULL) return;
+		OhplH5bDetachGfx();
+		gpFacade = new cRustGfxFacade(apLlg);
+		if(apGl) ohpl_h5b_gfx_attach_gl(apGl, gpFacade, &OhplH5bFacadeCall);
+		else ohpl_h5b_gfx_attach_foreign(gpFacade, &OhplH5bFacadeCall);
+	}
+
+	void OhplH5bDetachGfx()
+	{
+		ohpl_h5b_gfx_detach();
+		delete gpFacade;
+		gpFacade = NULL;
+	}
+
+	uint32_t OhplH5bTextureId(iTexture *apTex) { return gpFacade ? gpFacade->TextureId(apTex) : 0xFFFFFFFFu; }
+	uint32_t OhplH5bVertexBufferId(iVertexBuffer *apVb) { return gpFacade ? gpFacade->VertexBufferId(apVb) : 0xFFFFFFFFu; }
+	uint32_t OhplH5bProgramId(iGpuProgram *apProg) { return gpFacade ? gpFacade->ProgramId(apProg) : 0xFFFFFFFFu; }
+	uint32_t OhplH5bFrameBufferId(iFrameBuffer *apFb) { return gpFacade ? gpFacade->FrameBufferId(apFb) : 0xFFFFFFFFu; }
 
 	uint64_t cRustGfxFacade::Call(void *apSelf, uint32_t alOp, const uint64_t *apArgs, size_t alCount, uint64_t *apOut)
 	{

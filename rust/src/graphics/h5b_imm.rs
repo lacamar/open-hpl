@@ -230,6 +230,20 @@ impl Batch {
         self.store.get(..self.count).unwrap_or_default()
     }
 
+    /// Start of the vertex store, for the GL array pointers.
+    pub fn vertex_ptr(&self) -> *const f32 {
+        self.store.as_ptr()
+    }
+
+    /// Per-unit texcoord arrays as the GL source table wants them.
+    pub fn texcoord_ptrs(&mut self) -> [*mut f32; MAX_TEXTURE_UNITS] {
+        let mut p = [core::ptr::null_mut(); MAX_TEXTURE_UNITS];
+        for (d, s) in p.iter_mut().zip(self.texcoords.iter_mut()) {
+            *d = s.as_mut_ptr();
+        }
+        p
+    }
+
     fn slot(&mut self) -> &mut [f32] {
         let at = self.count;
         self.count += BATCH_STRIDE;

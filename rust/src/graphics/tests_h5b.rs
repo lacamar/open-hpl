@@ -54,3 +54,25 @@ fn trace_matches_cpp_recorder() {
         assert_eq!(l, want_l, "log seed {s}");
     }
 }
+
+#[test]
+fn gl_gfx_keeps_state_calls_off_the_inner_device() {
+    use super::h5b_gl::GlGfx;
+    use crate::backend::gl_ctx::ctx::Ctx;
+    let mut ctx = Ctx::new();
+    // SAFETY: `ctx` outlives the device and the test is single threaded.
+    let mut g = unsafe { GlGfx::new(&mut ctx, TraceGfx::default()) };
+    let log = h5b_scn::run(&mut g, 3, 1);
+    assert!(log.contains("actions="));
+    let t = g.inner().text();
+    assert!(t.contains("CreateTexture("));
+    for direct in [
+        "SetBlendActive(",
+        "SetMatrix(",
+        "ClearFrameBuffer(",
+        "DrawQuad(",
+        "FlushTriBatch(",
+    ] {
+        assert!(!t.contains(direct), "{direct} reached the inner device");
+    }
+}

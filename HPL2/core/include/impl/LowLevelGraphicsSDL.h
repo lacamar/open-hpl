@@ -102,6 +102,7 @@ namespace hpl {
 	public:
 		cLowLevelGraphicsSDL();
 		~cLowLevelGraphicsSDL();
+		OhplGlCtx* GetRsCtx() { return mpRs; }
 
 		/////////////////////////////////////////////////////
 		/////////////// GENERAL SETUP ///////////////////////

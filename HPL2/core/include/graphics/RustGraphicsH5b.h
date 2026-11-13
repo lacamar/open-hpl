@@ -229,6 +229,8 @@ typedef uint64_t (*OhplH5bCallFn)(void *ctx, uint32_t op, const uint64_t *args, 
 
 // Registers / drops the process-wide Rust Gfx over a facade.
 void ohpl_h5b_gfx_attach_foreign(void *ctx, OhplH5bCallFn call);
+// GL: state, draws and the batch run on the Rust context gl; resources go through the facade.
+void ohpl_h5b_gfx_attach_gl(void *gl, void *ctx, OhplH5bCallFn call);
 void ohpl_h5b_gfx_detach();
 // Runs the seeded scenario against the facade; copies the result log to out and returns its length.
 size_t ohpl_h5b_run_foreign(void *ctx, OhplH5bCallFn call, uint64_t seed, uint32_t rounds, char *out, size_t cap);
@@ -254,15 +256,26 @@ public:
 	~cRustGfxFacade();
 	static uint64_t Call(void *apSelf, uint32_t alOp, const uint64_t *apArgs, size_t alCount, uint64_t *apOut);
 
-	uint32_t WrapTexture(class iTexture *apTex);
-	uint32_t WrapVertexBuffer(class iVertexBuffer *apVb);
-	uint32_t WrapProgram(class iGpuProgram *apProg);
-	uint32_t WrapFrameBuffer(class iFrameBuffer *apFb);
+	// Id of an object created elsewhere (a resource manager), registered on first use.
+	uint32_t TextureId(class iTexture *apTex);
+	uint32_t VertexBufferId(class iVertexBuffer *apVb);
+	uint32_t ProgramId(class iGpuProgram *apProg);
+	uint32_t FrameBufferId(class iFrameBuffer *apFb);
 
 private:
 	struct cImpl;
 	cImpl *mpImpl;
 };
+
+// Process-wide Rust Gfx over the low-level graphics: the Rust GL context when apGl is set, else the
+// facade alone (Vulkan). No-op unless OHPL_IMPL=rust.
+struct OhplGlCtx;
+void OhplH5bAttachGfx(iLowLevelGraphics *apLlg, OhplGlCtx *apGl);
+void OhplH5bDetachGfx();
+uint32_t OhplH5bTextureId(class iTexture *apTex);
+uint32_t OhplH5bVertexBufferId(class iVertexBuffer *apVb);
+uint32_t OhplH5bProgramId(class iGpuProgram *apProg);
+uint32_t OhplH5bFrameBufferId(class iFrameBuffer *apFb);
 
 }
 

@@ -6,7 +6,9 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use super::h5b_foreign::{CallFn, ForeignGfx};
 use super::h5b_gfx::Gfx;
+use super::h5b_gl::GlGfx;
 use super::h5b_scn;
+use crate::backend::gl_ctx::ctx::Ctx;
 
 struct Slot(Option<Box<dyn Gfx>>);
 
@@ -41,6 +43,19 @@ pub fn with_gfx<R>(f: impl FnOnce(&mut dyn Gfx) -> R) -> Option<R> {
 pub unsafe extern "C" fn ohpl_h5b_gfx_attach_foreign(ctx: *mut c_void, call: CallFn) {
     // SAFETY: caller contract.
     set_gfx(Box::new(unsafe { ForeignGfx::new(ctx, call) }));
+}
+
+/// Installs a `GlGfx` over the GL context `gl` (from `ohpl_glctx_new`); resources and the state the
+/// C++ shell keeps go through the facade `ctx`.
+///
+/// # Safety
+/// `gl` outlives the attachment; the rest as `ohpl_h5b_gfx_attach_foreign`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h5b_gfx_attach_gl(gl: *mut Ctx, ctx: *mut c_void, call: CallFn) {
+    // SAFETY: caller contract.
+    let inner = unsafe { ForeignGfx::new(ctx, call) };
+    // SAFETY: caller contract.
+    set_gfx(Box::new(unsafe { GlGfx::new(gl, inner) }));
 }
 
 #[unsafe(no_mangle)]

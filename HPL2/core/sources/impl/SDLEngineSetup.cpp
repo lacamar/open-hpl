@@ -32,6 +32,7 @@
 #include "system/HeadlessControl.h"
 #include "impl/RustImpl.h"
 #include "impl/RustBackends.h"
+#include "graphics/RustGraphicsH5b.h"
 #include "impl/RustL1.h"
 
 #include "impl/KeyboardSDL.h"
@@ -169,6 +170,10 @@ namespace hpl {
 			mpLowLevelGraphics = hplNew( cLowLevelGraphicsSDL,() );
 		if(pRenderer && ohpl_sys_renderer_is_vulkan(pRenderer) && dynamic_cast<cLowLevelGraphicsSDL*>(mpLowLevelGraphics))
 			Warning("OPENHPL_RENDERER=vulkan: built without Vulkan, using OpenGL\n");
+		{
+			cLowLevelGraphicsSDL *pGl = dynamic_cast<cLowLevelGraphicsSDL*>(mpLowLevelGraphics);
+			OhplH5bAttachGfx(mpLowLevelGraphics, pGl ? pGl->GetRsCtx() : NULL);
+		}
 		
 		//////////////////////////
 		// Input
@@ -205,6 +210,7 @@ namespace hpl {
 		Log("  System\n");
 		hplDelete(mpLowLevelSystem);
 		Log("  Graphics\n");
+		OhplH5bDetachGfx();
 		hplDelete(mpLowLevelGraphics);
 		if(OhplBackendRustRequested())
 		{
