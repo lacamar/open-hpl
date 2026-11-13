@@ -1,4 +1,4 @@
-//! Newton physics backend (L4), selected with `OHPL_IMPL=rust`.
+//! Newton physics backend (L4).
 //!
 //! Rust owns the Newton worlds, collisions, bodies and joints and every Newton callback. The
 //! `iPhysics*` objects stay C++ and are reached through [`host::Host`]; Newton user data is an

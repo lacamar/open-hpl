@@ -19,7 +19,6 @@
 
 #include "impl/OcclusionQueryOGL.h"
 #include "impl/LowLevelGraphicsSDL.h"
-#include "impl/RustBackends.h"
 
 #include <GL/glew.h>
 
@@ -34,19 +33,9 @@ namespace hpl {
 
 	cOcclusionQueryOGL::cOcclusionQueryOGL()
 	{
-		;
-
-		mbRs = OhplBackendRustRequested();
-		if(mbRs)
-		{
-			ohpl_glq_create(&mRs);
-			mlQueryId = mRs.id;
-			mlLastSampleCount = 0;
-			mbResultsAreFetched = true;
-			return;
-		}
-		glGenQueriesARB(1, (GLuint *)&mlQueryId);
-		mlLastSampleCount =0;
+		ohpl_glq_create(&mRs);
+		mlQueryId = mRs.id;
+		mlLastSampleCount = 0;
 		mbResultsAreFetched = true;
 	}
 
@@ -54,10 +43,7 @@ namespace hpl {
 
 	cOcclusionQueryOGL::~cOcclusionQueryOGL()
 	{
-		;
-
-		if(mbRs) { ohpl_glq_destroy(&mRs); return; }
-		glDeleteQueriesARB(1, (GLuint *)&mlQueryId);
+		ohpl_glq_destroy(&mRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -70,51 +56,21 @@ namespace hpl {
 
 	void cOcclusionQueryOGL::Begin()
 	{
-		;
-
-		if(mbRs) { ohpl_glq_begin(&mRs); mbResultsAreFetched = false; return; }
-		glBeginQueryARB(GL_SAMPLES_PASSED_ARB,mlQueryId);
+		ohpl_glq_begin(&mRs);
 		mbResultsAreFetched = false;
 	}
 
 	void cOcclusionQueryOGL::End()
 	{
-		;
-
-		if(mbRs) { ohpl_glq_end(&mRs); return; }
-		glEndQueryARB(GL_SAMPLES_PASSED_ARB);
+		ohpl_glq_end(&mRs);
 	}
 
 	bool cOcclusionQueryOGL::FetchResults()
 	{
-		if(mbRs)
-		{
-			bool bDone = ohpl_glq_fetch(&mRs);
-			mbResultsAreFetched = mRs.fetched;
-			mlLastSampleCount = mRs.lastSamples;
-			return bDone;
-		}
-		if(mbResultsAreFetched) return true;
-
-		;
-
-		//if it is not a query, there are no samples to get!
-		if(glIsQuery(mlQueryId) == GL_FALSE)
-		{
-			mbResultsAreFetched = true;
-			mlLastSampleCount =0;
-			return true;
-		}
-
-		GLint lAvailable=0;
-		glGetQueryObjectivARB(mlQueryId,GL_QUERY_RESULT_AVAILABLE_ARB,&lAvailable);
-		if(lAvailable==0) return false;
-
-		glGetQueryObjectivARB(mlQueryId,GL_QUERY_RESULT_ARB,(GLint *)&mlLastSampleCount);
-
-		mbResultsAreFetched = true;
-
-		return true;
+		bool bDone = ohpl_glq_fetch(&mRs);
+		mbResultsAreFetched = mRs.fetched;
+		mlLastSampleCount = mRs.lastSamples;
+		return bDone;
 	}
 
 	unsigned int cOcclusionQueryOGL::GetSampleCount()

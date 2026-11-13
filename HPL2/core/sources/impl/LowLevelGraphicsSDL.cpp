@@ -48,7 +48,6 @@
 #include "impl/VertexBufferOGL_VBO.h"
 #include "impl/FrameBufferGL.h"
 #include "impl/OcclusionQueryOGL.h"
-#include "impl/RustBackends.h"
 #include "impl/RustGlCtx.h"
 
 #include "graphics/Bitmap.h"
@@ -95,24 +94,6 @@ namespace hpl {
 		}
 	}
 
-	// The same GLCAPS text as ohpl_glctx_caps_line, from the GLEW flags, so both paths can be diffed.
-	tString GlewCapsLine()
-	{
-		tString sLine = "GLCAPS";
-#define OHPL_CAP(n) sLine += " " #n "="; sLine += GLEW_##n ? "1" : "0";
-		OHPL_CAP(ARB_multitexture) OHPL_CAP(ARB_vertex_buffer_object) OHPL_CAP(EXT_stencil_two_side)
-		OHPL_CAP(ATI_separate_stencil) OHPL_CAP(EXT_texture_filter_anisotropic) OHPL_CAP(ARB_multisample)
-		OHPL_CAP(ARB_texture_compression) OHPL_CAP(EXT_texture_compression_s3tc) OHPL_CAP(SGIS_generate_mipmap)
-		OHPL_CAP(EXT_framebuffer_object) OHPL_CAP(EXT_packed_depth_stencil) OHPL_CAP(ARB_texture_float)
-		OHPL_CAP(ARB_fragment_program) OHPL_CAP(ARB_fragment_shader) OHPL_CAP(NV_vertex_program3)
-		OHPL_CAP(ATI_shader_texture_lod) OHPL_CAP(EXT_gpu_shader4) OHPL_CAP(ATI_fragment_shader)
-		OHPL_CAP(EXT_blend_func_separate) OHPL_CAP(ARB_occlusion_query)
-#undef OHPL_CAP
-		return sLine;
-	}
-
-	#define OHPL_RS(call) do { if(mpRs) { call; return; } } while(0)
-
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
@@ -121,12 +102,8 @@ namespace hpl {
 
 	cLowLevelGraphicsSDL::cLowLevelGraphicsSDL()
 	{
-		mpRs = NULL;
-		if(OhplBackendRustRequested())
-		{
-			ohpl_glctx_set_host_log(&OhplGlCtxHostLog);
-			mpRs = ohpl_glctx_new();
-		}
+		ohpl_glctx_set_host_log(&OhplGlCtxHostLog);
+		mpRs = ohpl_glctx_new();
 
 		mlBatchArraySize = 20000;
 		mlVertexCount = 0;
@@ -142,8 +119,6 @@ namespace hpl {
 #endif
 
 		mpFrameBuffer = NULL;
-
-		ohpl_gl_state_new(&mGl);
 
 		//Create the batch arrays:
 		mlBatchStride = 13;
@@ -195,14 +170,7 @@ namespace hpl {
 		ExitCG();
 #endif
 		//TTF_Quit();
-		if(mpRs)
-		{
-			ohpl_glctx_free(mpRs);
-			return;
-		}
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_DestroyWindow(mpScreen);
-#endif
+		ohpl_glctx_free(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -236,148 +204,11 @@ namespace hpl {
 		mGpuProgramFormat = aGpuProgramFormat;
 		if(mGpuProgramFormat == eGpuProgramFormat_LastEnum) mGpuProgramFormat = eGpuProgramFormat_GLSL;
 
-		if(mpRs)
-		{
-			OhplGlCtxCfg cfg = {alWidth, alHeight, alDisplay, alBpp, abFullscreen != 0, alMultisampling,
-								getenv("OPENHPL_HEADLESS_SOCKET") != NULL, asWindowCaption.c_str(), 0, 0, false};
-			if(!ohpl_glctx_create_window(mpRs, &cfg)) return false;
-			mpScreen = (SDL_Window*)ohpl_glctx_window(mpRs);
-			mvScreenSize = cVector2l(cfg.outW, cfg.outH);
-		}
-		else
-		{
-		//Set some GL Attributes
-		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
-
-		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-		SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
-		// Multisampling
-		if(mlMultisampling > 0)
-		{
-			if(SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, 1)==-1)
-			{
-				Error("Multisample buffers not supported!\n");
-			}
-			else
-			{
-				if(SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, mlMultisampling)==-1)
-				{
-					Error("Couldn't set multisampling samples to %d\n",mlMultisampling);
-				}
-			}
-		}
-
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        unsigned int mlFlags = SDL_WINDOW_OPENGL;
-        if (alWidth == 0 && alHeight == 0) {
-            mvScreenSize = cVector2l(800,600);
-            mlFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-        } else if (abFullscreen) {
-            const char *pDriver = SDL_GetCurrentVideoDriver();
-            if(pDriver != NULL && cString::ToLowerCase(pDriver) == "wayland")
-            {
-                mlFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-            }
-            else
-            {
-                mlFlags |= SDL_WINDOW_FULLSCREEN;
-            }
-        }
-
-        if (getenv("OPENHPL_HEADLESS_SOCKET") != NULL) {
-            mlFlags |= SDL_WINDOW_HIDDEN;
-        }
-
-
-        Log(" Setting video mode: %d x %d - %d bpp\n",alWidth, alHeight, alBpp);
-        mpScreen = SDL_CreateWindow(asWindowCaption.c_str(),
-                                    SDL_WINDOWPOS_CENTERED_DISPLAY(mlDisplay), SDL_WINDOWPOS_CENTERED_DISPLAY(mlDisplay),
-                                    mvScreenSize.x, mvScreenSize.y, mlFlags);
-		if(mpScreen==NULL)
-        {
-            // try disabling FSAA
-			Error("Could not set display mode setting a lower one! %s\n", SDL_GetError());
-			mvScreenSize = cVector2l(640,480);
-            SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-            SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
-            mpScreen = SDL_CreateWindow(asWindowCaption.c_str(),
-                                        SDL_WINDOWPOS_CENTERED_DISPLAY(mlDisplay), SDL_WINDOWPOS_CENTERED_DISPLAY(mlDisplay),
-                                        mvScreenSize.x, mvScreenSize.y, mlFlags);
-            if(mpScreen==NULL)
-            {
-                FatalError("Unable to initialize display! %s\n", SDL_GetError());
-                return false;
-            }
-            else
-            {
-                cPlatform::CreateMessageBox(_W("Warning!"),_W("Could not set displaymode and 640x480 is used instead!\n"));
-            }
-        }
-        {
-            // update with the screen size ACTUALLY obtained
-            int w,h;
-            SDL_GetWindowSize(mpScreen, &w, &h);
-            mvScreenSize = cVector2l(w, h);
-        }
-        mGLContext = SDL_GL_CreateContext(mpScreen);
-#else
-		unsigned int mlFlags = SDL_OPENGL;
-
-		if(abFullscreen) mlFlags |= SDL_FULLSCREEN;
-
-		// If caption set before engine creation, no chance for the "SDL_App" to appear for even a msec
-		SetWindowCaption(asWindowCaption);
-
-		Log(" Setting video mode: %d x %d - %d bpp\n",alWidth, alHeight, alBpp);
-		mpScreen = SDL_SetVideoMode( alWidth, alHeight, alBpp, mlFlags);
-		if(mpScreen==NULL){
-			Error("Could not set display mode setting a lower one!\n");
-			mvScreenSize = cVector2l(640,480);
-
-			mpScreen = SDL_SetVideoMode( mvScreenSize.x, mvScreenSize.y, alBpp, mlFlags);
-			if(mpScreen==NULL)
-			{
-				FatalError("Unable to initialize display!\n");
-				return false;
-			}
-			else
-			{
-				//SetWindowCaption(asWindowCaption);
-				cPlatform::CreateMessageBox(_W("Warning!"),_W("Could not set displaymode and 640x480 is used instead!\n"));
-			}
-		}
-		else
-		{
-			//SetWindowCaption(asWindowCaption);
-		}
-        // update with the screen size ACTUALLY obtained
-        mvScreenSize = cVector2l(mpScreen->w, mpScreen->h);
-#   ifdef WIN32
-		//////////////////////////////
-		// Set up window position
-		if(abFullscreen==false)
-		{
-			SDL_SysWMinfo pInfo;
-			SDL_VERSION(&pInfo.version);
-			SDL_GetWMInfo(&pInfo);
-
-			RECT r;
-			GetWindowRect(pInfo.window, &r);
-			
-			if(avWindowPos.x >=0 && avWindowPos.y >=0)
-			{
-				SetWindowPos(pInfo.window, HWND_TOP, avWindowPos.x, avWindowPos.y, 0, 0,  SWP_NOSIZE);
-			}
-		}
-#   endif
-#endif
-		}
+		OhplGlCtxCfg cfg = {alWidth, alHeight, alDisplay, alBpp, abFullscreen != 0, alMultisampling,
+							getenv("OPENHPL_HEADLESS_SOCKET") != NULL, asWindowCaption.c_str(), 0, 0, false};
+		if(!ohpl_glctx_create_window(mpRs, &cfg)) return false;
+		mpScreen = (SDL_Window*)ohpl_glctx_window(mpRs);
+		mvScreenSize = cVector2l(cfg.outW, cfg.outH);
         if (mbGrab) {
             SetWindowGrab(true);
         }
@@ -391,8 +222,8 @@ namespace hpl {
 		}
 #endif //WIN32
 
-		// OHPL_NO_GLEW=1 (Rust path): the remaining C++ GL users (textures, buffers, programs) need GLEW
-		if(mpRs && getenv("OHPL_NO_GLEW") != NULL)
+		// OHPL_NO_GLEW=1: the remaining C++ GL users (textures, buffers, programs) need GLEW
+		if(getenv("OHPL_NO_GLEW") != NULL)
 		{
 			Log(" Glew skipped\n");
 		}
@@ -410,7 +241,7 @@ namespace hpl {
 			Error(" Couldn't init glew!\n");
 		}
 		}
-		if(mpRs) ohpl_glctx_load(mpRs);
+		ohpl_glctx_load(mpRs);
 
 		///Setup up windows specifc context:
 #if defined(WIN32) && !SDL_VERSION_ATLEAST(2,0,0)
@@ -426,9 +257,6 @@ namespace hpl {
 
 		//Gamma
 		mfGammaCorrection = 1.0f;
-		mlGammaProgram = 0;
-		mlGammaTexture = 0;
-		mvGammaTextureSize = 0;
 #if !SDL_VERSION_ATLEAST(2, 0, 0)
 		SDL_GetGammaRamp(mvStartGammaArray[0],mvStartGammaArray[1],mvStartGammaArray[2]);
 
@@ -439,33 +267,11 @@ namespace hpl {
 		Log(" Setting up OpenGL\n");
 		SetupGL();
 
-		if(mpRs)
-		{
-			ohpl_glctx_swap(mpRs, 1.0f);
-		}
-		else
-		{
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_GL_SwapWindow(mpScreen);
-#else
-		//Set the clear color
-		SDL_GL_SwapBuffers();
-#endif
-		}
+		ohpl_glctx_swap(mpRs, 1.0f);
 
 		mbInitHasBeenRun = true;
 
-		if(mpRs)
-		{
-			ohpl_glctx_debug_from_env(mpRs);
-		}
-		else if(getenv("OPENHPL_GL_DEBUG") && glDebugMessageCallback)
-		{
-			glEnable(GL_DEBUG_OUTPUT);
-			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-			glDebugMessageCallback((GLDEBUGPROC)&OGLDebugOutputCallback, strcmp(getenv("OPENHPL_GL_DEBUG"), "all") ? NULL : this);
-		}
-
+		ohpl_glctx_debug_from_env(mpRs);
 
 		return true;
 	}
@@ -483,7 +289,6 @@ namespace hpl {
 	{
 		///////////////////////////////
 		// Setup variables
-		ohpl_gl_state_setup(&mGl);
 		mvScissorPos =0;
 		mvScissorSize = mvScreenSize;
 
@@ -494,89 +299,12 @@ namespace hpl {
 		mvFrameBufferTotalSize = mvScreenSize;
 
 
-		if(mpRs)
-		{
-			ohpl_glctx_setup_gl(mpRs);
-		}
-		else
-		{
-		///////////////////////////////
-		//Inits GL stuff
-		//Set Shade model and clear color.
-		glShadeModel(GL_SMOOTH);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
-		///////////////////////////////
-		//Depth Test setup
-		glClearDepth(1.0f);//VAlues buffer is cleared with
-		glEnable(GL_DEPTH_TEST); //enable depth testing
-		glDepthFunc(GL_LEQUAL); //function to do depth test with
-		glDisable(GL_ALPHA_TEST);
-		glDepthMask(true);
-
-		///////////////////////////////
-		//Render Settings
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GetGLDepthTestFuncEnum((eDepthTestFunc)mGl.depthFunc));
-		glAlphaFunc(GetGLAlphaTestFuncEnum((eAlphaTestFunc)mGl.alphaFunc),mGl.alphaRef);
-
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glFrontFace(GL_CW);
-
-		glDisable(GL_SCISSOR_TEST);
-		glScissor(mvScissorPos.x, (mvScissorSize.y - mvScissorPos.y - 1)-mvScissorSize.y, mvScissorSize.x, mvScissorSize.y);
-		glDisable(GL_BLEND);
-
-		///////////////////////////////
-		//Set best perspective correction
-		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-
-		//int lStencilBits=-1;
-		//glGetIntegerv(GL_STENCIL_BITS,&lStencilBits);
-		//Log(" Stencil bits: %d\n",lStencilBits);
-
-		///////////////////////////////
-		//Stencil setup
-		glClearStencil(0);
-
-		///////////////////////////////
-		//Clear the screen
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-
-		//glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_REPLACE);
-
-
-		/////  BEGIN BATCH ARRAY STUFF ///////////////
-
-		//Enable all the vertex arrays that are used:
-		glEnableClientState(GL_VERTEX_ARRAY ); //The positions
-		glEnableClientState(GL_COLOR_ARRAY ); //The color
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY); //Tex coords
-		glDisableClientState(GL_NORMAL_ARRAY);
-		//Disable the once not used.
-		glDisableClientState(GL_INDEX_ARRAY); //color index
-		glDisableClientState(GL_EDGE_FLAG_ARRAY);
-
-		///// END BATCH ARRAY STUFF ///////////////
-		}
+		ohpl_glctx_setup_gl(mpRs);
 
 		//Show some info
-		if(mpRs)
-		{
-			char vCaps[1024];
-			ohpl_glctx_caps_line(mpRs, vCaps, sizeof(vCaps));
-			Log("  %s\n", vCaps);
-		}
-		else
-		{
-			Log("  %s\n", GlewCapsLine().c_str());
-		}
+		char vCaps[1024];
+		ohpl_glctx_caps_line(mpRs, vCaps, sizeof(vCaps));
+		Log("  %s\n", vCaps);
 		Log("  Vendor: %s\n", GlString(GL_VENDOR));
 		Log("  Renderer: %s\n", GlString(GL_RENDERER));
 		Log("  Version: %s\n", GlString(GL_VERSION));
@@ -617,7 +345,7 @@ namespace hpl {
 
 	const char* cLowLevelGraphicsSDL::GlString(unsigned int alName)
 	{
-		return mpRs ? (const char*)ohpl_glctx_get_string(mpRs, alName) : (const char*)glGetString(alName);
+		return (const char*)ohpl_glctx_get_string(mpRs, alName);
 	}
 
 	tString cLowLevelGraphicsSDL::GetRendererDescription()
@@ -627,114 +355,14 @@ namespace hpl {
 
 	int cLowLevelGraphicsSDL::GetCaps(eGraphicCaps aType)
 	{
-		if(mpRs) return ohpl_glctx_get_caps(mpRs, aType, mbForceShaderModel3And4Off);
-
-		switch(aType)
-		{
-		case eGraphicCaps_TextureTargetRectangle:	return 1;//GLEW_ARB_texture_rectangle?1:0;
-		
-		case eGraphicCaps_VertexBufferObject:		return GLEW_ARB_vertex_buffer_object?1:0;
-		case eGraphicCaps_TwoSideStencil:			
-			{
-				if(GLEW_EXT_stencil_two_side) return 1;
-				else if(GLEW_ATI_separate_stencil) return 1;
-				else return 0;
-			}
-
-		case eGraphicCaps_MaxTextureImageUnits:
-			{
-				int lUnits;
-				glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB,(GLint *)&lUnits);
-				return lUnits;
-			}
-
-		case eGraphicCaps_MaxTextureCoordUnits:
-			{
-				int lUnits;
-				glGetIntegerv(GL_MAX_TEXTURE_COORDS_ARB,(GLint *)&lUnits);
-				return lUnits;
-			}
-		case eGraphicCaps_MaxUserClipPlanes:
-			{
-				int lClipPlanes;
-				glGetIntegerv( GL_MAX_CLIP_PLANES,(GLint *)&lClipPlanes);
-				return lClipPlanes;	
-			}
-
-		case eGraphicCaps_AnisotropicFiltering:		return GLEW_EXT_texture_filter_anisotropic ? 1 : 0;
-		
-		case eGraphicCaps_MaxAnisotropicFiltering:
-			{
-				if(!GLEW_EXT_texture_filter_anisotropic) return 0;
-
-				float fMax;
-				glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT,&fMax);
-				return (int)fMax;
-			}
-
-		case eGraphicCaps_Multisampling: return GLEW_ARB_multisample ? 1: 0;
-		
-		case eGraphicCaps_TextureCompression:		return GLEW_ARB_texture_compression  ? 1 : 0;
-		case eGraphicCaps_TextureCompression_DXTC:	return GLEW_EXT_texture_compression_s3tc ? 1 : 0;
-		
-		case eGraphicCaps_AutoGenerateMipMaps:		return GLEW_SGIS_generate_mipmap ? 1 : 0;
-	
-		case eGraphicCaps_RenderToTexture:			return GLEW_EXT_framebuffer_object ? 1: 0;
-		
-		case eGraphicCaps_MaxDrawBuffers:
-			{
-				GLint lMaxbuffers;
-				glGetIntegerv(GL_MAX_DRAW_BUFFERS, &lMaxbuffers);
-				return lMaxbuffers;
-			}
-		case eGraphicCaps_PackedDepthStencil:	return GLEW_EXT_packed_depth_stencil ? 1: 0;		
-		case eGraphicCaps_TextureFloat:			return GLEW_ARB_texture_float ? 1: 0;
-
-		case eGraphicCaps_PolygonOffset:		return 1;	//OpenGL always support it!
-
-		case eGraphicCaps_ShaderModel_2:		return (GLEW_ARB_fragment_program || GLEW_ARB_fragment_shader) ? 1 : 0;	//Mac always support this, so not a good test.
-#ifdef __APPLE__
-		case eGraphicCaps_ShaderModel_3:		return 0; // Force return false for OS X as dynamic branching doesn't work well (it's slow)
-		case eGraphicCaps_ShaderModel_4:		return 0;
-#else
-		case eGraphicCaps_ShaderModel_3:
-			{
-				if(mbForceShaderModel3And4Off)
-					return 0;
-				else
-					return  (GLEW_NV_vertex_program3 || GLEW_ATI_shader_texture_lod) ? 1 : 0;
-			}
-		case eGraphicCaps_ShaderModel_4:
-			{
-				if(mbForceShaderModel3And4Off)
-					return 0;
-				else
-					return  GLEW_EXT_gpu_shader4 ? 1 : 0;
-			}
-#endif
-		
-		case eGraphicCaps_OGL_ATIFragmentShader: return  GLEW_ATI_fragment_shader ? 1 : 0;
-
-		case eGraphicCaps_MaxColorRenderTargets:
-			{
-				GLint lMax;
-				glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS_EXT, &lMax);
-				return lMax;
-			}
-		}
-		return 0;
+		return ohpl_glctx_get_caps(mpRs, aType, mbForceShaderModel3And4Off);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::ShowCursor(bool abX)
 	{
-		OHPL_RS(ohpl_glctx_show_cursor(mpRs, abX));
-
-		if(abX)
-			SDL_ShowCursor(SDL_ENABLE);
-		else
-			SDL_ShowCursor(SDL_DISABLE);
+		ohpl_glctx_show_cursor(mpRs, abX);
 	}
     
 	//-----------------------------------------------------------------------
@@ -742,108 +370,46 @@ namespace hpl {
     void cLowLevelGraphicsSDL::SetWindowGrab(bool abX)
     {
         mbGrab = abX;
-        OHPL_RS(ohpl_glctx_window_grab(mpRs, abX, getenv("OPENHPL_HEADLESS_SOCKET") != NULL));
-        if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL) return;
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        if (mpScreen) {
-            SDL_SetWindowGrab(mpScreen, abX ? SDL_TRUE : SDL_FALSE);
-        }
-#else
-		SDL_WM_GrabInput(abX ? SDL_GRAB_ON : SDL_GRAB_OFF);
-#endif
+		ohpl_glctx_window_grab(mpRs, abX, getenv("OPENHPL_HEADLESS_SOCKET") != NULL);
     }
 
 	void cLowLevelGraphicsSDL::SetRelativeMouse(bool abX)
 	{
-		OHPL_RS(ohpl_glctx_relative_mouse(mpRs, abX, getenv("OPENHPL_HEADLESS_SOCKET") != NULL));
-		if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL) return;
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-		SDL_SetRelativeMouseMode(abX ? SDL_TRUE : SDL_FALSE);
-#endif
+		ohpl_glctx_relative_mouse(mpRs, abX, getenv("OPENHPL_HEADLESS_SOCKET") != NULL);
 	}
 
     void cLowLevelGraphicsSDL::SetWindowCaption(const tString &asName)
     {
-        OHPL_RS(ohpl_glctx_set_caption(mpRs, asName.c_str()));
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_SetWindowTitle(mpScreen, asName.c_str());
-#else
-        SDL_WM_SetCaption(asName.c_str(), "");
-#endif
+		ohpl_glctx_set_caption(mpRs, asName.c_str());
     }
 
     bool cLowLevelGraphicsSDL::GetWindowMouseFocus()
     {
-        if(mpRs) return ohpl_glctx_mouse_focus(mpRs);
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        return (SDL_GetWindowFlags(mpScreen) & SDL_WINDOW_MOUSE_FOCUS) != 0;
-#else
-        return (SDL_GetAppState() & SDL_APPMOUSEFOCUS) !=0;
-#endif
+        return ohpl_glctx_mouse_focus(mpRs);
     }
 
     bool cLowLevelGraphicsSDL::GetWindowInputFocus()
     {
-        if(mpRs) return ohpl_glctx_input_focus(mpRs);
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        return (SDL_GetWindowFlags(mpScreen) & SDL_WINDOW_INPUT_FOCUS) != 0;
-#else
-        return (SDL_GetAppState() & SDL_APPINPUTFOCUS) !=0;
-#endif
+        return ohpl_glctx_input_focus(mpRs);
     }
 
     bool cLowLevelGraphicsSDL::GetWindowIsVisible()
     {
-        if(mpRs) return ohpl_glctx_is_visible(mpRs);
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        return (SDL_GetWindowFlags(mpScreen) & SDL_WINDOW_SHOWN) != 0;
-#else
-        return (SDL_GetAppState() & SDL_APPACTIVE) !=0;
-#endif
+        return ohpl_glctx_is_visible(mpRs);
     }
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetVsyncActive(bool abX, bool abAdaptive)
 	{
-        OHPL_RS(ohpl_glctx_set_vsync(mpRs, abX, abAdaptive));
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_GL_SetSwapInterval(abX ? (abAdaptive ? -1 : 1) : 0);
-#elif defined(WIN32)
-		if(WGLEW_EXT_swap_control)
-		{
-			wglSwapIntervalEXT(abX ? (abAdaptive ? -1 : 1) : 0);
-		}
-#elif defined(__linux__)
-		if (GLX_SGI_swap_control)
-		{
-			GLXSWAPINTERVALPROC glXSwapInterval = (GLXSWAPINTERVALPROC)glXGetProcAddress((GLubyte*)"glXSwapIntervalSGI");
-			glXSwapInterval(abX ? (abAdaptive ? -1 : 1) : 0);
-		}
-		else if (GLX_MESA_swap_control)
-		{
-			GLXSWAPINTERVALPROC glXSwapInterval = (GLXSWAPINTERVALPROC)glXGetProcAddress((GLubyte*)"glXSwapIntervalMESA");
-			glXSwapInterval(abX ? (abAdaptive ? -1 : 1) : 0);
-		}
-#elif defined(__APPLE__)
-		CGLContextObj ctx = CGLGetCurrentContext();
-		GLint swap = abX ? 1 : 0;
-		CGLSetParameter(ctx, kCGLCPSwapInterval, &swap);
-#endif
+		ohpl_glctx_set_vsync(mpRs, abX, abAdaptive);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetMultisamplingActive(bool abX)
 	{	
-		OHPL_RS(ohpl_glctx_set_multisampling_active(mpRs, abX));
-
-		if(!GLEW_ARB_multisample || mlMultisampling<=0) return;
-
-		if(abX)
-			glEnable(GL_MULTISAMPLE_ARB);
-		else
-			glDisable(GL_MULTISAMPLE_ARB);
+		ohpl_glctx_set_multisampling_active(mpRs, abX);
 	}
 
 	//-----------------------------------------------------------------------
@@ -885,40 +451,15 @@ namespace hpl {
 
 	bool cLowLevelGraphicsSDL::ForceWindowSize(int alWidth, int alHeight)
 	{
-		if(mpRs) return ohpl_glctx_force_window_size(mpRs, alWidth, alHeight);
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-		if(mpScreen == NULL) return false;
-		SDL_SetWindowFullscreen(mpScreen, 0);
-		SDL_SetWindowSize(mpScreen, alWidth, alHeight);
-		return true;
-#else
-		return false;
-#endif
+		return ohpl_glctx_force_window_size(mpRs, alWidth, alHeight);
 	}
 
 	bool cLowLevelGraphicsSDL::CheckAndUpdateScreenSize()
 	{
-		if(mpRs)
-		{
-			OhplGlV2 vSize;
-			if(!ohpl_glctx_check_screen(mpRs, &vSize)) return false;
-			mvScreenSize = cVector2l(vSize.x, vSize.y);
-			return true;
-		}
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-		if(mpScreen == NULL) return false;
-
-		int lW = 0, lH = 0;
-		SDL_GetWindowSize(mpScreen, &lW, &lH);
-		if(lW <= 0 || lH <= 0) return false;
-
-		if(lW == mvScreenSize.x && lH == mvScreenSize.y) return false;
-
-		mvScreenSize = cVector2l(lW, lH);
+		OhplGlV2 vSize;
+		if(!ohpl_glctx_check_screen(mpRs, &vSize)) return false;
+		mvScreenSize = cVector2l(vSize.x, vSize.y);
 		return true;
-#else
-		return false;
-#endif
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -1027,37 +568,19 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::ClearFrameBuffer(tClearFrameBufferFlag aFlags)
 	{
-		OHPL_RS(ohpl_glctx_clear(mpRs, aFlags));
-		;
-
-		GLbitfield bitmask=0;
-
-		if(aFlags & eClearFrameBufferFlag_Color)	bitmask |= GL_COLOR_BUFFER_BIT;
-		if(aFlags & eClearFrameBufferFlag_Depth)	bitmask |= GL_DEPTH_BUFFER_BIT;
-		if(aFlags & eClearFrameBufferFlag_Stencil)	bitmask |= GL_STENCIL_BUFFER_BIT;
-
-		glClear(bitmask);
+		ohpl_glctx_clear(mpRs, aFlags);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetClearColor(const cColor& aCol){
-		OHPL_RS(ohpl_glctx_set_clear_color(mpRs, aCol.r, aCol.g, aCol.b, aCol.a));
-		;
-
-		glClearColor(aCol.r, aCol.g, aCol.b, aCol.a);
+		ohpl_glctx_set_clear_color(mpRs, aCol.r, aCol.g, aCol.b, aCol.a);
 	}
 	void cLowLevelGraphicsSDL::SetClearDepth(float afDepth){
-		OHPL_RS(ohpl_glctx_set_clear_depth(mpRs, afDepth));
-		;
-
-		glClearDepth(afDepth);
+		ohpl_glctx_set_clear_depth(mpRs, afDepth);
 	}
 	void cLowLevelGraphicsSDL::SetClearStencil(int alVal){
-		OHPL_RS(ohpl_glctx_set_clear_stencil(mpRs, alVal));
-		;
-
-		glClearStencil(alVal);
+		ohpl_glctx_set_clear_stencil(mpRs, alVal);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1067,19 +590,8 @@ namespace hpl {
 	{
 		if(apTex==NULL)return;
 
-		if(mpRs)
-		{
-			SetTexture(0, apTex);
-			ohpl_glctx_copy_to_texture(mpRs, OhplGl(avPos), OhplGl(avSize), OhplGl(avTexOffset), apTex->GetType(), apTex->GetHeight());
-			return;
-		}
-
-		int vRect[6];
-		ohpl_gl_copy_to_texture(OhplGl(mvFrameBufferPos), OhplGl(mvFrameBufferSize), OhplGl(mvFrameBufferTotalSize), OhplGl(avPos), OhplGl(avSize), OhplGl(avTexOffset), apTex->GetHeight(), vRect);
-
 		SetTexture(0, apTex);
-		glCopyTexSubImage2D(GetGLTextureTargetEnum(apTex->GetType()),0,	vRect[0], vRect[1],
-							vRect[2], vRect[3], vRect[4], vRect[5]);
+		ohpl_glctx_copy_to_texture(mpRs, OhplGl(avPos), OhplGl(avSize), OhplGl(avTexOffset), apTex->GetType(), apTex->GetHeight());
 	}
 
 	//-----------------------------------------------------------------------
@@ -1089,10 +601,7 @@ namespace hpl {
 		;
 
 		int vRect[4];
-		if(mpRs)
-			ohpl_glctx_read_rect(mpRs, OhplGl(avScreenPos), OhplGl(avScreenSize), &vRect);
-		else
-			ohpl_gl_read_rect(OhplGl(mvFrameBufferPos), OhplGl(mvFrameBufferSize), OhplGl(mvFrameBufferTotalSize), OhplGl(avScreenPos), OhplGl(avScreenSize), vRect);
+		ohpl_glctx_read_rect(mpRs, OhplGl(avScreenPos), OhplGl(avScreenSize), &vRect);
 		cVector2l vSize(vRect[2], vRect[3]);
 		cVector2l vPos(vRect[0], vRect[1]);
 
@@ -1117,10 +626,7 @@ namespace hpl {
 
 		//////////////////////////////
 		//Copy pixels
-		if(mpRs)
-			ohpl_glctx_read_pixels(mpRs, &vRect, pixelFormat, pBitmap->GetData(0,0)->mpData);
-		else
-		glReadPixels(vPos.x, vPos.y, vSize.x, vSize.y,PixelFormatToGLFormat(pixelFormat), GL_UNSIGNED_BYTE, pBitmap->GetData(0,0)->mpData);
+		ohpl_glctx_read_pixels(mpRs, &vRect, pixelFormat, pBitmap->GetData(0,0)->mpData);
 
 		//TODO: Flip, not needed?
 
@@ -1140,20 +646,7 @@ namespace hpl {
 			iFrameBuffer *pPrevFameBuffer = mpFrameBuffer;
 			mpFrameBuffer = apFrameBuffer;
 
-			if(mpRs)
-			{
-				ohpl_glctx_bind_framebuffer(mpRs, mpFrameBuffer ? static_cast<cFrameBufferGL*>(mpFrameBuffer)->GetHandle() : 0);
-			}
-			else if(mpFrameBuffer)
-			{
-				cFrameBufferGL *pFrameBufferGL = static_cast<cFrameBufferGL*>(mpFrameBuffer);
-
-				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,pFrameBufferGL->GetHandle());
-			}
-			else
-			{
-				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,0);
-			}
+			ohpl_glctx_bind_framebuffer(mpRs, mpFrameBuffer ? static_cast<cFrameBufferGL*>(mpFrameBuffer)->GetHandle() : 0);
 
 			// Post tasks like generating mipmaps
 			if(pPrevFameBuffer)
@@ -1164,40 +657,22 @@ namespace hpl {
 
 		/////////////////////////////////////
 		//Get framebuffer size and set viewport
-		if(mpRs)
-		{
-			const cVector2l vTarget = mpFrameBuffer ? mpFrameBuffer->GetSize() : mvScreenSize;
-			ohpl_glctx_set_viewport(mpRs, OhplGl(vTarget), OhplGl(avPos), OhplGl(avSize));
-			return;
-		}
-		OhplGlViewport vp;
-		ohpl_gl_viewport(OhplGl(mpFrameBuffer ? mpFrameBuffer->GetSize() : mvScreenSize), OhplGl(avPos), OhplGl(avSize), &vp);
-		mvFrameBufferTotalSize = vp.total;
-		mvFrameBufferSize = vp.size;
-		mvFrameBufferPos = vp.pos;
-		glViewport(vp.gl[0], vp.gl[1], vp.gl[2], vp.gl[3]);
+		const cVector2l vTarget = mpFrameBuffer ? mpFrameBuffer->GetSize() : mvScreenSize;
+		ohpl_glctx_set_viewport(mpRs, OhplGl(vTarget), OhplGl(avPos), OhplGl(avSize));
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetFrameBufferDrawTargets(int *apTargets, int alNumOfTargets)
 	{
-		OHPL_RS(ohpl_glctx_set_draw_targets(mpRs, apTargets, alNumOfTargets));
-		unsigned int vAttachments[64];
-		ohpl_gl_draw_targets(apTargets, alNumOfTargets > 0 ? (size_t)alNumOfTargets : 0, vAttachments, 64);
-		int lNum = alNumOfTargets > 64 ? 64 : alNumOfTargets;
-		glDrawBuffers(lNum, lNum > 0 ? vAttachments : NULL);
+		ohpl_glctx_set_draw_targets(mpRs, apTargets, alNumOfTargets);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::WaitAndFinishRendering()
 	{
-		OHPL_RS(ohpl_glctx_finish(mpRs));
-		;
-
-		glFinish();
-		//dont use this any more, SwapBuffers() takes care of it
+		ohpl_glctx_finish(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1205,86 +680,14 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::FlushRendering()
 	{
-		OHPL_RS(ohpl_glctx_flush(mpRs));
-		;
-
-		glFlush();
+		ohpl_glctx_flush(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
 
-	void cLowLevelGraphicsSDL::ApplyShaderGamma()
-	{
-		if(mlGammaProgram == 0)
-		{
-			const char *pVtx = "#version 120\nvarying vec2 uv;\nvoid main(){ uv = gl_Vertex.xy*0.5+0.5; gl_Position = gl_Vertex; }\n";
-			const char *pFrag = "#version 120\nuniform sampler2D tex; uniform float invGamma; varying vec2 uv;\n"
-								"void main(){ vec4 c = texture2D(tex, uv); gl_FragColor = vec4(pow(c.rgb, vec3(invGamma)), c.a); }\n";
-			GLuint lVtx = glCreateShader(GL_VERTEX_SHADER), lFrag = glCreateShader(GL_FRAGMENT_SHADER);
-			glShaderSource(lVtx, 1, &pVtx, NULL); glCompileShader(lVtx);
-			glShaderSource(lFrag, 1, &pFrag, NULL); glCompileShader(lFrag);
-			mlGammaProgram = glCreateProgram();
-			glAttachShader(mlGammaProgram, lVtx); glAttachShader(mlGammaProgram, lFrag);
-			glLinkProgram(mlGammaProgram);
-			glDeleteShader(lVtx); glDeleteShader(lFrag);
-			glGenTextures(1, &mlGammaTexture);
-		}
-
-		GLint lPrevProgram, lPrevFrameBuffer, lPrevActiveTex, lPrevTex, lPrevArrayBuffer;
-		glGetIntegerv(GL_CURRENT_PROGRAM, &lPrevProgram);
-		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &lPrevFrameBuffer);
-		glGetIntegerv(GL_ACTIVE_TEXTURE, &lPrevActiveTex);
-		glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &lPrevArrayBuffer);
-		glActiveTexture(GL_TEXTURE0);
-		glGetIntegerv(GL_TEXTURE_BINDING_2D, &lPrevTex);
-		glPushAttrib(GL_ALL_ATTRIB_BITS);
-
-		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindTexture(GL_TEXTURE_2D, mlGammaTexture);
-		if(mvGammaTextureSize != mvScreenSize)
-		{
-			mvGammaTextureSize = mvScreenSize;
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, mvScreenSize.x, mvScreenSize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		}
-		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, mvScreenSize.x, mvScreenSize.y);
-
-		glViewport(0, 0, mvScreenSize.x, mvScreenSize.y);
-		glDisable(GL_DEPTH_TEST); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
-		glDisable(GL_SCISSOR_TEST); glDisable(GL_STENCIL_TEST); glDisable(GL_ALPHA_TEST);
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glUseProgram(mlGammaProgram);
-		glUniform1i(glGetUniformLocation(mlGammaProgram, "tex"), 0);
-		glUniform1f(glGetUniformLocation(mlGammaProgram, "invGamma"), 1.0f / mfGammaCorrection);
-		glBegin(GL_TRIANGLE_STRIP);
-		glVertex2f(-1, -1); glVertex2f(1, -1); glVertex2f(-1, 1); glVertex2f(1, 1);
-		glEnd();
-
-		glPopAttrib();
-		glUseProgram(lPrevProgram);
-		glBindTexture(GL_TEXTURE_2D, lPrevTex);
-		glActiveTexture(lPrevActiveTex);
-		glBindBuffer(GL_ARRAY_BUFFER, lPrevArrayBuffer);
-		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, lPrevFrameBuffer);
-	}
-
 	void cLowLevelGraphicsSDL::SwapBuffers()
 	{
-		if(mpRs)
-		{
-			ohpl_glctx_swap(mpRs, mfGammaCorrection);
-			return;
-		}
-		;
-		if(cMath::Abs(mfGammaCorrection - 1.0f) > 0.001f && mfGammaCorrection > 0)
-			ApplyShaderGamma();
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_GL_SwapWindow(mpScreen);
-#else
-		SDL_GL_SwapBuffers();
-#endif
+		ohpl_glctx_swap(mpRs, mfGammaCorrection);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1297,105 +700,63 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetColorWriteActive(bool abR,bool abG,bool abB,bool abA)
 	{
-		OHPL_RS(ohpl_glctx_set_color_write(mpRs, abR, abG, abB, abA));
-		if(ohpl_gl_state_color_write(&mGl, abR, abG, abB, abA)) glColorMask(abR,abG,abB,abA);
+		ohpl_glctx_set_color_write(mpRs, abR, abG, abB, abA);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetDepthWriteActive(bool abX)
 	{
-		OHPL_RS(ohpl_glctx_set_depth_write(mpRs, abX));
-		if(ohpl_gl_state_depth_write(&mGl, abX)) glDepthMask(abX);
+		ohpl_glctx_set_depth_write(mpRs, abX);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetDepthTestActive(bool abX)
 	{
-		OHPL_RS(ohpl_glctx_set_depth_test(mpRs, abX));
-		if(!ohpl_gl_state_depth_test(&mGl, abX)) return;
-		if(abX) glEnable(GL_DEPTH_TEST);
-		else glDisable(GL_DEPTH_TEST);
+		ohpl_glctx_set_depth_test(mpRs, abX);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetDepthTestFunc(eDepthTestFunc aFunc)
 	{
-		OHPL_RS(ohpl_glctx_set_depth_func(mpRs, aFunc));
-		if(ohpl_gl_state_depth_func(&mGl, aFunc)) glDepthFunc(GetGLDepthTestFuncEnum(aFunc));
+		ohpl_glctx_set_depth_func(mpRs, aFunc);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetAlphaTestActive(bool abX)
 	{
-		OHPL_RS(ohpl_glctx_set_alpha_test(mpRs, abX));
-		if(!ohpl_gl_state_alpha_test(&mGl, abX)) return;
-		if(abX) glEnable(GL_ALPHA_TEST);
-		else glDisable(GL_ALPHA_TEST);
+		ohpl_glctx_set_alpha_test(mpRs, abX);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetAlphaTestFunc(eAlphaTestFunc aFunc,float afRef)
 	{
-		OHPL_RS(ohpl_glctx_set_alpha_func(mpRs, aFunc, afRef));
-		if(ohpl_gl_state_alpha_func(&mGl, aFunc, afRef)) glAlphaFunc(GetGLAlphaTestFuncEnum(aFunc),afRef);
+		ohpl_glctx_set_alpha_func(mpRs, aFunc, afRef);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencilActive(bool abX)
 	{
-		OHPL_RS(ohpl_glctx_set_stencil_active(mpRs, abX));
-		;
-
-		if(abX)
-		{
-			//DO this check, so you can setup stencil and then turn on / off afterwards
-			//and separate will still remain.
-			if(mbDoubleSidedStencilIsSet && GLEW_EXT_stencil_two_side)
-			{
-				glEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-			}
-			glEnable(GL_STENCIL_TEST);
-		}
-		else
-		{
-			glDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-			glDisable(GL_STENCIL_TEST);
-		}
+		ohpl_glctx_set_stencil_active(mpRs, abX);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencilWriteMask(unsigned int alMask)
 	{
-		OHPL_RS(ohpl_glctx_set_stencil_write_mask(mpRs, alMask));
-		;
-
-		glStencilMask(alMask);
+		ohpl_glctx_set_stencil_write_mask(mpRs, alMask);
 	}
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencil(eStencilFunc aFunc,int alRef, unsigned int aMask,
 		eStencilOp aFailOp,eStencilOp aZFailOp,eStencilOp aZPassOp)
 	{
-		OHPL_RS(ohpl_glctx_set_stencil(mpRs, aFunc, alRef, aMask, aFailOp, aZFailOp, aZPassOp));
-		;
-
-		mbDoubleSidedStencilIsSet = false;
-		if(GLEW_EXT_stencil_two_side)
-		{
-			glDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-			glActiveStencilFaceEXT(GL_FRONT);
-		}
-		glStencilFunc(GetGLStencilFuncEnum(aFunc), alRef, aMask);
-
-		glStencilOp(GetGLStencilOpEnum(aFailOp), GetGLStencilOpEnum(aZFailOp),
-			GetGLStencilOpEnum(aZPassOp));
+		ohpl_glctx_set_stencil(mpRs, aFunc, alRef, aMask, aFailOp, aZFailOp, aZPassOp);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1405,94 +766,33 @@ namespace hpl {
 		eStencilOp aFrontFailOp,eStencilOp aFrontZFailOp,eStencilOp aFrontZPassOp,
 		eStencilOp aBackFailOp,eStencilOp aBackZFailOp,eStencilOp aBackZPassOp)
 	{
-		if(mpRs)
-		{
-			const int vOps[6] = {aFrontFailOp, aFrontZFailOp, aFrontZPassOp, aBackFailOp, aBackZFailOp, aBackZPassOp};
-			ohpl_glctx_set_stencil_two_side(mpRs, aFrontFunc, aBackFunc, alRef, aMask, &vOps);
-			return;
-		}
-		;
-
-		mbDoubleSidedStencilIsSet = true;
-
-		//Nvidia implementation
-		if(GLEW_EXT_stencil_two_side)
-		{
-			glEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-
-			//Front
-			glActiveStencilFaceEXT(GL_FRONT);
-			glStencilFunc(GetGLStencilFuncEnum(aFrontFunc), alRef, aMask);
-
-			glStencilOp(GetGLStencilOpEnum(aFrontFailOp), GetGLStencilOpEnum(aFrontZFailOp),
-				GetGLStencilOpEnum(aFrontZPassOp));
-			//Back
-			glActiveStencilFaceEXT(GL_BACK);
-			glStencilFunc(GetGLStencilFuncEnum(aBackFunc), alRef, aMask);
-
-			glStencilOp(GetGLStencilOpEnum(aBackFailOp), GetGLStencilOpEnum(aBackZFailOp),
-				GetGLStencilOpEnum(aBackZPassOp));
-		}
-		//Ati implementation
-		else if(GLEW_ATI_separate_stencil)
-		{
-			//Front
-			glStencilOpSeparateATI( GL_FRONT, GetGLStencilOpEnum(aFrontFailOp), 
-				GetGLStencilOpEnum(aFrontZFailOp), 
-				GetGLStencilOpEnum(aFrontZPassOp));
-			//Back
-			glStencilOpSeparateATI( GL_BACK, GetGLStencilOpEnum(aBackFailOp), 
-				GetGLStencilOpEnum(aBackZFailOp), 
-				GetGLStencilOpEnum(aBackZPassOp));
-
-			//Front and Back function
-			glStencilFuncSeparateATI(GetGLStencilFuncEnum(aFrontFunc),
-				GetGLStencilFuncEnum(aBackFunc), 
-				alRef, aMask);
-		}
-		else
-		{
-			FatalError("Only single sided stencil supported!\n");
-		}
+		const int vOps[6] = {aFrontFailOp, aFrontZFailOp, aFrontZPassOp, aBackFailOp, aBackZFailOp, aBackZPassOp};
+		ohpl_glctx_set_stencil_two_side(mpRs, aFrontFunc, aBackFunc, alRef, aMask, &vOps);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetCullActive(bool abX)
 	{
-		OHPL_RS(ohpl_glctx_set_cull_active(mpRs, abX));
-		ohpl_gl_state_cull_active(&mGl, abX);
-		if(abX) glEnable(GL_CULL_FACE);
-		else	glDisable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
+		ohpl_glctx_set_cull_active(mpRs, abX);
 	}
 	void cLowLevelGraphicsSDL::SetCullMode(eCullMode aMode)
 	{
-		OHPL_RS(ohpl_glctx_set_cull_mode(mpRs, aMode));
-		ohpl_gl_state_cull_mode(&mGl, aMode);
-		glCullFace(GL_BACK);
-		if(aMode == eCullMode_Clockwise)	glFrontFace(GL_CCW);
-		else								glFrontFace(GL_CW);
+		ohpl_glctx_set_cull_mode(mpRs, aMode);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetScissorActive(bool abX)
 	{
-		OHPL_RS(ohpl_glctx_set_scissor_active(mpRs, abX));
-		if(!ohpl_gl_state_scissor(&mGl, abX)) return;
-		if(abX) glEnable(GL_SCISSOR_TEST);
-		else glDisable(GL_SCISSOR_TEST);
+		ohpl_glctx_set_scissor_active(mpRs, abX);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetScissorRect(const cVector2l& avPos, const cVector2l& avSize)
 	{
-		OHPL_RS(ohpl_glctx_set_scissor_rect(mpRs, mpFrameBuffer ? mpFrameBuffer->GetSize().y : mvScreenSize.y, OhplGl(avPos), OhplGl(avSize)));
-		int vRect[4];
-		ohpl_gl_scissor_rect(mpFrameBuffer ? mpFrameBuffer->GetSize().y : mvScreenSize.y, OhplGl(avPos), OhplGl(avSize), vRect);
-		glScissor(vRect[0], vRect[1], vRect[2], vRect[3]);
+		ohpl_glctx_set_scissor_rect(mpRs, mpFrameBuffer ? mpFrameBuffer->GetSize().y : mvScreenSize.y, OhplGl(avPos), OhplGl(avSize));
 	}
 
 	//-----------------------------------------------------------------------
@@ -1500,22 +800,8 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetClipPlane(int alIdx, const cPlanef& aPlane)
 	{
-		if(mpRs)
-		{
-			mvClipPlanes[alIdx] = aPlane;
-			ohpl_glctx_set_clip_plane(mpRs, alIdx, aPlane.a, aPlane.b, aPlane.c, aPlane.d);
-			return;
-		}
-		;
-
 		mvClipPlanes[alIdx] = aPlane;
-
-		double vPlane[4];
-		vPlane[0] = aPlane.a;
-		vPlane[1] = aPlane.b;
-		vPlane[2] = aPlane.c;
-		vPlane[3] = aPlane.d;
-		glClipPlane(GL_CLIP_PLANE0 + alIdx,vPlane);
+		ohpl_glctx_set_clip_plane(mpRs, alIdx, aPlane.a, aPlane.b, aPlane.c, aPlane.d);
 	}
 	cPlanef cLowLevelGraphicsSDL::GetClipPlane(int alIdx)
 	{
@@ -1525,11 +811,7 @@ namespace hpl {
 	}
 	void cLowLevelGraphicsSDL::SetClipPlaneActive(int alIdx, bool abX)
 	{
-		OHPL_RS(ohpl_glctx_set_clip_plane_active(mpRs, alIdx, abX));
-		;
-
-		if(abX) glEnable(GL_CLIP_PLANE0 + alIdx);
-		else	glDisable(GL_CLIP_PLANE0 + alIdx);
+		ohpl_glctx_set_clip_plane_active(mpRs, alIdx, abX);
 	}
 
 
@@ -1537,22 +819,14 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetBlendActive(bool abX)
 	{
-		OHPL_RS(ohpl_glctx_set_blend_active(mpRs, abX));
-		if(!ohpl_gl_state_blend(&mGl, abX)) return;
-		if(abX)
-			glEnable(GL_BLEND);
-		else
-			glDisable(GL_BLEND);
+		ohpl_glctx_set_blend_active(mpRs, abX);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetBlendFunc(eBlendFunc aSrcFactor, eBlendFunc aDestFactor)
 	{
-		OHPL_RS(ohpl_glctx_set_blend_func(mpRs, aSrcFactor, aDestFactor));
-		;
-
-		glBlendFunc(GetGLBlendEnum(aSrcFactor),GetGLBlendEnum(aDestFactor));
+		ohpl_glctx_set_blend_func(mpRs, aSrcFactor, aDestFactor);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1561,47 +835,24 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::SetBlendFuncSeparate(eBlendFunc aSrcFactorColor, eBlendFunc aDestFactorColor,
 		eBlendFunc aSrcFactorAlpha, eBlendFunc aDestFactorAlpha)
 	{
-		OHPL_RS(ohpl_glctx_set_blend_func_separate(mpRs, aSrcFactorColor, aDestFactorColor, aSrcFactorAlpha, aDestFactorAlpha));
-		;
-
-		if(GLEW_EXT_blend_func_separate)
-		{
-			glBlendFuncSeparateEXT(GetGLBlendEnum(aSrcFactorColor),
-				GetGLBlendEnum(aDestFactorColor),
-				GetGLBlendEnum(aSrcFactorAlpha),
-				GetGLBlendEnum(aDestFactorAlpha));
-		}
-		else
-		{
-			glBlendFunc(GetGLBlendEnum(aSrcFactorColor),GetGLBlendEnum(aDestFactorColor));
-		}
+		ohpl_glctx_set_blend_func_separate(mpRs, aSrcFactorColor, aDestFactorColor, aSrcFactorAlpha, aDestFactorAlpha);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetDepthClampActive(bool abX)
 	{
-		OHPL_RS(ohpl_glctx_set_depth_clamp_active(mpRs, abX));
-		if(abX)	glEnable(GL_DEPTH_CLAMP);
-		else	glDisable(GL_DEPTH_CLAMP);
+		ohpl_glctx_set_depth_clamp_active(mpRs, abX);
 	}
 
 	void cLowLevelGraphicsSDL::SetPolygonOffsetActive(bool abX)
 	{
-		OHPL_RS(ohpl_glctx_set_polygon_offset_active(mpRs, abX));
-		;
-
-		if(abX)	glEnable(GL_POLYGON_OFFSET_FILL);
-		else	glDisable(GL_POLYGON_OFFSET_FILL);
-
+		ohpl_glctx_set_polygon_offset_active(mpRs, abX);
 	}
 
 	void cLowLevelGraphicsSDL::SetPolygonOffset(float afBias, float afSlopeScaleBias)
 	{
-		OHPL_RS(ohpl_glctx_set_polygon_offset(mpRs, afBias, afSlopeScaleBias));
-		;
-
-		glPolygonOffset(afSlopeScaleBias, afBias);
+		ohpl_glctx_set_polygon_offset(mpRs, afBias, afSlopeScaleBias);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1616,11 +867,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::PushMatrix(eMatrix aMtxType)
 	{
-		OHPL_RS(ohpl_glctx_push_matrix(mpRs, aMtxType));
-		;
-
-		SetMatrixMode(aMtxType);
-		glPushMatrix();
+		ohpl_glctx_push_matrix(mpRs, aMtxType);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1628,23 +875,13 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::PopMatrix(eMatrix aMtxType)
 	{
-		OHPL_RS(ohpl_glctx_pop_matrix(mpRs, aMtxType));
-		;
-
-		SetMatrixMode(aMtxType);
-		glPopMatrix();
+		ohpl_glctx_pop_matrix(mpRs, aMtxType);
 	}
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetMatrix(eMatrix aMtxType, const cMatrixf& a_mtxA)
 	{
-		OHPL_RS(ohpl_glctx_set_matrix(mpRs, aMtxType, &a_mtxA.v));
-		;
-
-		SetMatrixMode(aMtxType);
-		glLoadIdentity();
-		cMatrixf mtxTranpose = a_mtxA.GetTranspose();
-		glLoadMatrixf(mtxTranpose.v);
+		ohpl_glctx_set_matrix(mpRs, aMtxType, &a_mtxA.v);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1652,33 +889,19 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetIdentityMatrix(eMatrix aMtxType)
 	{
-		OHPL_RS(ohpl_glctx_set_identity_matrix(mpRs, aMtxType));
-		;
-
-		SetMatrixMode(aMtxType);
-		glLoadIdentity();
+		ohpl_glctx_set_identity_matrix(mpRs, aMtxType);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetOrthoProjection(const cVector2f& avSize, float afMin, float afMax)
 	{
-		OHPL_RS(ohpl_glctx_set_ortho(mpRs, 0, avSize.x, avSize.y, 0, afMin, afMax));
-		;
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0,avSize.x,avSize.y,0,afMin,afMax);
+		ohpl_glctx_set_ortho(mpRs, 0, avSize.x, avSize.y, 0, afMin, afMax);
 	}
 
 	void cLowLevelGraphicsSDL::SetOrthoProjection(const cVector3f& avMin, const cVector3f& avMax)
 	{
-		OHPL_RS(ohpl_glctx_set_ortho(mpRs, avMin.x, avMax.x, avMax.y, avMin.y, avMin.z, avMax.z));
-		;
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(avMin.x,avMax.x,avMax.y,avMin.y,avMin.z,avMax.z);
+		ohpl_glctx_set_ortho(mpRs, avMin.x, avMax.x, avMax.y, avMin.y, avMin.z, avMax.z);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1692,73 +915,35 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetTexture(unsigned int alUnit,iTexture* apTex)
 	{
-		OHPL_RS(ohpl_glctx_set_texture(mpRs, alUnit, apTex ? apTex->GetType() : 0, apTex != NULL, apTex ? static_cast<cSDLTexture*>(apTex)->GetTextureHandle() : 0));
-		GLenum NewTarget=0;
-		if(apTex)	NewTarget = GetGLTextureTargetEnum(apTex->GetType());
-
-		OhplGlTexPlan plan;
-		ohpl_gl_state_set_texture(&mGl, alUnit, NewTarget, apTex != NULL, GLEW_ARB_multitexture, &plan);
-
-		if(plan.activeUnit >= 0) glActiveTextureARB(GL_TEXTURE0_ARB + plan.activeUnit);
-		if(plan.disable) glDisable(plan.disable);
-		if(plan.bind) glBindTexture(NewTarget, static_cast<cSDLTexture*>(apTex)->GetTextureHandle());
-		if(plan.enable) glEnable(plan.enable);
+		ohpl_glctx_set_texture(mpRs, alUnit, apTex ? apTex->GetType() : 0, apTex != NULL, apTex ? static_cast<cSDLTexture*>(apTex)->GetTextureHandle() : 0);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetActiveTextureUnit(unsigned int alUnit)
 	{
-		OHPL_RS(ohpl_glctx_set_active_texture_unit(mpRs, alUnit));
-		if(!ohpl_gl_state_active_unit(&mGl, alUnit)) return;
-		glActiveTextureARB(GL_TEXTURE0_ARB + alUnit);
+		ohpl_glctx_set_active_texture_unit(mpRs, alUnit);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetTextureEnv(eTextureParam aParam, int alVal)
 	{
-		OHPL_RS(ohpl_glctx_set_texture_env(mpRs, aParam, alVal));
-		;
-
-		GLenum lParam = GetGLTextureParamEnum(aParam);
-
-		glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_COMBINE_ARB);
-
-		if(aParam==eTextureParam_ColorFunc || aParam==eTextureParam_AlphaFunc){
-			glTexEnvi(GL_TEXTURE_ENV,lParam,GetGLTextureFuncEnum((eTextureFunc)alVal));
-		}
-		else if(aParam>=eTextureParam_ColorSource0 && aParam<=eTextureParam_AlphaSource2){
-			glTexEnvi(GL_TEXTURE_ENV,lParam,GetGLTextureSourceEnum((eTextureSource)alVal));
-		}
-		else if(aParam>=eTextureParam_ColorOp0 && aParam<=eTextureParam_AlphaOp2){
-			glTexEnvi(GL_TEXTURE_ENV,lParam,GetGLTextureOpEnum((eTextureOp)alVal));
-		}
-		else {
-			glTexEnvi(GL_TEXTURE_ENV,lParam,alVal);
-		}
+		ohpl_glctx_set_texture_env(mpRs, aParam, alVal);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetTextureConstantColor(const cColor &aColor)
 	{
-		OHPL_RS(ohpl_glctx_set_texture_constant_color(mpRs, aColor.r, aColor.g, aColor.b, aColor.a));
-		;
-
-		float vColor[4] = {	aColor.r, aColor.g, aColor.b, aColor.a	};
-
-		glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, &vColor[0]);
+		ohpl_glctx_set_texture_constant_color(mpRs, aColor.r, aColor.g, aColor.b, aColor.a);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetColor(const cColor &aColor)
 	{
-		OHPL_RS(ohpl_glctx_set_color(mpRs, aColor.r, aColor.g, aColor.b, aColor.a));
-		;
-
-		glColor4f(aColor.r, aColor.g, aColor.b, aColor.a);
+		ohpl_glctx_set_color(mpRs, aColor.r, aColor.g, aColor.b, aColor.a);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1772,14 +957,14 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 #define IM_CLASS cLowLevelGraphicsSDL
-#define IM_BEGIN(m) (mpRs ? ohpl_glctx_begin(mpRs, m) : glBegin(m))
-#define IM_END() (mpRs ? ohpl_glctx_end(mpRs) : glEnd())
-#define IM_VERTEX3(x,y,z) (mpRs ? ohpl_glctx_vertex3f(mpRs, x, y, z) : glVertex3f(x, y, z))
-#define IM_COLOR4(r,g,b,a) (mpRs ? ohpl_glctx_color4f(mpRs, r, g, b, a) : glColor4f(r, g, b, a))
-#define IM_TEXCOORD2(s,t) (mpRs ? ohpl_glctx_texcoord2f(mpRs, s, t) : glTexCoord2f(s, t))
-#define IM_TEXCOORD3(s,t,r) (mpRs ? ohpl_glctx_texcoord3f(mpRs, s, t, r) : glTexCoord3f(s, t, r))
-#define IM_MULTITEXCOORD2(u,s,t) (mpRs ? ohpl_glctx_multitexcoord2f(mpRs, u, s, t) : glMultiTexCoord2fARB(u, s, t))
-#define IM_MULTITEXCOORD3(u,s,t,r) (mpRs ? ohpl_glctx_multitexcoord3f(mpRs, u, s, t, r) : glMultiTexCoord3fARB(u, s, t, r))
+#define IM_BEGIN(m) (ohpl_glctx_begin(mpRs, m))
+#define IM_END() (ohpl_glctx_end(mpRs))
+#define IM_VERTEX3(x,y,z) (ohpl_glctx_vertex3f(mpRs, x, y, z))
+#define IM_COLOR4(r,g,b,a) (ohpl_glctx_color4f(mpRs, r, g, b, a))
+#define IM_TEXCOORD2(s,t) (ohpl_glctx_texcoord2f(mpRs, s, t))
+#define IM_TEXCOORD3(s,t,r) (ohpl_glctx_texcoord3f(mpRs, s, t, r))
+#define IM_MULTITEXCOORD2(u,s,t) (ohpl_glctx_multitexcoord2f(mpRs, u, s, t))
+#define IM_MULTITEXCOORD3(u,s,t,r) (ohpl_glctx_multitexcoord3f(mpRs, u, s, t, r))
 #define IM_QUADS GL_QUADS
 #define IM_LINES GL_LINES
 #define IM_LINE_STRIP GL_LINE_STRIP
@@ -1793,35 +978,14 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetBatchTextureUnitActive(unsigned int alUnit,bool abActive)
 	{
-		OHPL_RS(ohpl_glctx_batch_texture_unit(mpRs, alUnit, abActive, sizeof(float)*mlBatchStride, mpVertexArray, mpTexCoordArray));
-		OhplGlOp vOps[kOhplGlMaxOps];
-		size_t lCount = ohpl_gl_batch_texture_unit(alUnit, abActive, sizeof(float)*mlBatchStride, vOps);
-		OhplGlOpSources src = {NULL, mpVertexArray, mpTexCoordArray};
-		RunGlOps(vOps, lCount, src);
+		ohpl_glctx_batch_texture_unit(mpRs, alUnit, abActive, sizeof(float)*mlBatchStride, mpVertexArray, mpTexCoordArray);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::FlushTriBatch(tVtxBatchFlag aTypeFlags, bool abAutoClear)
 	{
-		if(mpRs)
-		{
-			ohpl_glctx_flush_batch(mpRs, false, aTypeFlags, sizeof(float)*mlBatchStride, mlIndexCount, mpIndexArray, mpVertexArray, mpTexCoordArray);
-			if(abAutoClear){
-				mlIndexCount = 0;
-				mlVertexCount = 0;
-				for(int i=0;i<kMaxTextureUnits;i++)
-					mlTexCoordArrayCount[i]=0;
-			}
-			return;
-		}
-		;
-
-		SetVtxBatchStates(aTypeFlags);
-		SetUpBatchArrays();
-
-		glDrawElements(GL_TRIANGLES,mlIndexCount,GL_UNSIGNED_INT, mpIndexArray);
-
+		ohpl_glctx_flush_batch(mpRs, false, aTypeFlags, sizeof(float)*mlBatchStride, mlIndexCount, mpIndexArray, mpVertexArray, mpTexCoordArray);
 		if(abAutoClear){
 			mlIndexCount = 0;
 			mlVertexCount = 0;
@@ -1834,24 +998,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::FlushQuadBatch(tVtxBatchFlag aTypeFlags, bool abAutoClear)
 	{
-		if(mpRs)
-		{
-			ohpl_glctx_flush_batch(mpRs, true, aTypeFlags, sizeof(float)*mlBatchStride, mlIndexCount, mpIndexArray, mpVertexArray, mpTexCoordArray);
-			if(abAutoClear){
-				mlIndexCount = 0;
-				mlVertexCount = 0;
-				for(int i=0;i<kMaxTextureUnits;i++)
-					mlTexCoordArrayCount[i]=0;
-			}
-			return;
-		}
-		;
-
-		SetVtxBatchStates(aTypeFlags);
-		SetUpBatchArrays();
-
-		glDrawElements(GL_QUADS,mlIndexCount,GL_UNSIGNED_INT, mpIndexArray);
-
+		ohpl_glctx_flush_batch(mpRs, true, aTypeFlags, sizeof(float)*mlBatchStride, mlIndexCount, mpIndexArray, mpVertexArray, mpTexCoordArray);
 		if(abAutoClear){
 			mlIndexCount = 0;
 			mlVertexCount = 0;
@@ -1884,23 +1031,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cLowLevelGraphicsSDL::SetUpBatchArrays()
-	{
-		OhplGlOp vOps[kOhplGlMaxOps];
-		size_t lCount = ohpl_gl_batch_arrays(sizeof(float)*mlBatchStride, vOps);
-		OhplGlOpSources src = {NULL, mpVertexArray, mpTexCoordArray};
-		RunGlOps(vOps, lCount, src);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cLowLevelGraphicsSDL::SetVtxBatchStates(tVtxBatchFlag aFlags)
-	{
-		OhplGlOp vOps[kOhplGlMaxOps];
-		size_t lCount = ohpl_gl_batch_states(aFlags, vOps);
-		OhplGlOpSources src = {NULL, mpVertexArray, mpTexCoordArray};
-		RunGlOps(vOps, lCount, src);
-	}
 #ifdef WITH_CG
 	void cLowLevelGraphicsSDL::InitCG()
 	{
@@ -1914,20 +1044,6 @@ namespace hpl {
 		cgDestroyContext(mCG_Context);
 	}
 #endif
-
-	//-----------------------------------------------------------------------
-
-	void cLowLevelGraphicsSDL::SetMatrixMode(eMatrix mType)
-	{
-		;
-
-		switch(mType)
-		{
-		case eMatrix_ModelView: glMatrixMode(GL_MODELVIEW);break;
-		case eMatrix_Projection: glMatrixMode(GL_PROJECTION); break;
-		case eMatrix_Texture: glMatrixMode(GL_TEXTURE); break;
-		}
-	}
 
 	//-----------------------------------------------------------------------
 

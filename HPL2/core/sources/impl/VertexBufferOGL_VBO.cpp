@@ -25,7 +25,6 @@
 
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/GlOps.h"
-#include "impl/RustBackends.h"
 
 #include <memory.h>
 
@@ -47,29 +46,15 @@ namespace hpl {
 												int alReserveVtxSize,int alReserveIdxSize) :
 	iVertexBufferOpenGL(apLowLevelGraphics,eVertexBufferType_Hardware,  aDrawType,aUsageType, alReserveVtxSize, alReserveIdxSize)
 	{
-		mlElementHandle =0;
-		mlRs = OhplBackendRustRequested() ? ohpl_glvb_new(true) : 0;
+		mlRs = ohpl_glvb_new(true);
 	}
 
 	//-----------------------------------------------------------------------
 
 	cVertexBufferOGL_VBO::~cVertexBufferOGL_VBO()
 	{
-		if(mlRs)
-		{
-			ohpl_glvb_free(mlRs);
-			mlRs = 0;
-			return;
-		}
-
-		for(size_t i=0; i<mvElementArrays.size(); ++i)
-		{
-			cVtxBufferGLElementArray *pElement = mvElementArrays[i];
-			
-			glDeleteBuffersARB(1,(GLuint *)&pElement->mlGLHandle);
-		}
-
-		glDeleteBuffersARB(1,(GLuint *)&mlElementHandle);
+		ohpl_glvb_free(mlRs);
+		mlRs = 0;
 	}
 
 	//-----------------------------------------------------------------------
@@ -82,92 +67,27 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::UpdateData(tVertexElementFlag aTypes, bool abIndices)
 	{
-		if(mlRs)
-		{
-			if(ohpl_glvb_needs_compile(mlRs, mvIndexArray.size())) CompileSpecific();
+		if(ohpl_glvb_needs_compile(mlRs, mvIndexArray.size())) CompileSpecific();
 
-			OhplVbData vData[eVertexBufferElement_LastEnum];
-			BuildVbData(vData, aTypes);
-			ohpl_glvb_update(mlRs, mUsageType, aTypes, abIndices, vData, abIndices ? &mvIndexArray[0] : NULL, GetIndexNum());
-			return;
-		}
-
-		if(mlElementHandle == 0 && mvIndexArray.empty()==false) CompileSpecific();
-
-		GLenum usageType = ohpl_gl_usage(mUsageType);
-
-		//Create the VBO vertex arrays
-		for(size_t i=0; i<mvElementArrays.size(); ++i)
-		{
-			cVtxBufferGLElementArray *pElement = mvElementArrays[i];
-
-			if( (aTypes & pElement->mFlag) && pElement->mlGLHandle >0)
-			{
-				glBindBufferARB(GL_ARRAY_BUFFER_ARB, pElement->mlGLHandle);
-
-
-				int lSize = (int)pElement->Size() * GetVertexFormatByteSize(pElement->mFormat);
-				glBufferDataARB(GL_ARRAY_BUFFER_ARB, lSize,	NULL, usageType);
-				glBufferDataARB(GL_ARRAY_BUFFER_ARB, lSize, pElement->GetArrayPtr(), usageType);
-			}
-		}
-		glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-
-		//Create the VBO index array
-		if(abIndices)
-		{
-			glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB,mlElementHandle);
-
-			//glBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB,GetIndexNum()*sizeof(unsigned int),
-			//	NULL, usageType);
-
-			glBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, GetIndexNum()*sizeof(unsigned int),
-				&mvIndexArray[0], usageType);
-
-			//TODO: Same as with vertex, for stream and dynamic.
-
-			glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB,0);
-		}
+		OhplVbData vData[eVertexBufferElement_LastEnum];
+		BuildVbData(vData, aTypes);
+		ohpl_glvb_update(mlRs, mUsageType, aTypes, abIndices, vData, abIndices ? &mvIndexArray[0] : NULL, GetIndexNum());
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cVertexBufferOGL_VBO::Draw(eVertexBufferDrawType aDrawType)
 	{
-		if(mlRs)
-		{
-			cEngineDiagnostics::CountDrawCall();
-			ohpl_glvb_draw(mlRs, mDrawType, aDrawType, mlElementNum, GetIndexNum(), NULL);
-			return;
-		}
-
-		GLenum mode = ohpl_gl_vb_draw_mode(mDrawType, aDrawType);
-
-		glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB,mlElementHandle);
-
-		int lSize = ohpl_gl_vb_draw_count(mlElementNum, GetIndexNum());
-
 		cEngineDiagnostics::CountDrawCall();
-		glDrawElements(mode,lSize,GL_UNSIGNED_INT, (char*) NULL);
-
-		glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB,0);
+		ohpl_glvb_draw(mlRs, mDrawType, aDrawType, mlElementNum, GetIndexNum(), NULL);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cVertexBufferOGL_VBO::DrawIndices(unsigned int *apIndices, int alCount,eVertexBufferDrawType aDrawType)
 	{
-		if(mlRs)
-		{
-			cEngineDiagnostics::CountDrawCall();
-			ohpl_glvb_draw_indices(mDrawType, aDrawType, apIndices, alCount);
-			return;
-		}
-
-		GLenum mode = ohpl_gl_vb_draw_mode(mDrawType, aDrawType);
-
 		cEngineDiagnostics::CountDrawCall();
-		glDrawElements(mode, alCount, GL_UNSIGNED_INT, apIndices);
+		ohpl_glvb_draw_indices(mDrawType, aDrawType, apIndices, alCount);
 	}
 
 
@@ -177,7 +97,7 @@ namespace hpl {
 	{
 		;
 
-		if((mlRs ? ohpl_glvb_needs_compile(mlRs, mvIndexArray.size()) : (mlElementHandle == 0 && mvIndexArray.empty()==false))) CompileSpecific();
+		if(ohpl_glvb_needs_compile(mlRs, mvIndexArray.size())) CompileSpecific();
 
 		SetVertexStates();
 	}
@@ -186,16 +106,7 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::UnBind()
 	{
-		if(mlRs)
-		{
-			ohpl_glvb_unbind(mlRs);
-			return;
-		}
-
-		OhplGlOp vOps[kOhplGlMaxOps];
-		size_t lCount = ohpl_gl_vb_unbind(mvElemDesc, mvElementArrays.size(), vOps);
-		OhplGlOpSources src = {NULL, NULL, NULL};
-		RunGlOps(vOps, lCount, src);
+		ohpl_glvb_unbind(mlRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -208,41 +119,9 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::CompileSpecific()
 	{
-		if(mlRs)
-		{
-			OhplVbData vData[eVertexBufferElement_LastEnum];
-			BuildVbData(vData, ~0u);
-			ohpl_glvb_compile(mlRs, mUsageType, vData, &mvIndexArray[0], GetIndexNum());
-			return;
-		}
-
-		GLenum usageType = ohpl_gl_usage(mUsageType);
-
-		//Create the VBO vertex arrays
-		for(size_t i=0; i<mvElementArrays.size(); ++i)
-		{
-			cVtxBufferGLElementArray *pElement = mvElementArrays[i];
-            
-			glGenBuffersARB(1,(GLuint *)&pElement->mlGLHandle);
-			mvElemDesc[i].handle = pElement->mlGLHandle;
-			glBindBufferARB(GL_ARRAY_BUFFER_ARB, pElement->mlGLHandle);
-
-			glBufferDataARB(GL_ARRAY_BUFFER_ARB, pElement->Size() * GetVertexFormatByteSize(pElement->mFormat),
-							pElement->GetArrayPtr(), usageType);
-
-			//Log("Compiling handle %d, type: %d element num: %d\n",pElement->mlGLHandle, pElement->mType, pElement->mlElementNum);
-
-			glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-
-		}
-
-		//Create the VBO index array
-		glGenBuffersARB(1,(GLuint *)&mlElementHandle);
-		glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB,mlElementHandle);
-		glBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, GetIndexNum()*sizeof(unsigned int),
-			&mvIndexArray[0], usageType);
-		glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB,0);
-
+		OhplVbData vData[eVertexBufferElement_LastEnum];
+		BuildVbData(vData, ~0u);
+		ohpl_glvb_compile(mlRs, mUsageType, vData, &mvIndexArray[0], GetIndexNum());
 	}
 
 	//-----------------------------------------------------------------------
@@ -258,95 +137,9 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::SetVertexStates()
 	{
-		if(mlRs)
-		{
-			ohpl_glvb_bind(mlRs, NULL);
-			return;
-		}
-
-		OhplGlOp vOps[kOhplGlMaxOps];
-		size_t lCount = ohpl_gl_vb_bind_vbo(mvElemDesc, mvElementArrays.size(), vOps);
-		OhplGlOpSources src = {NULL, NULL, NULL};
-		RunGlOps(vOps, lCount, src);
+		ohpl_glvb_bind(mlRs, NULL);
 	}
 
 	//-----------------------------------------------------------------------
 
 }
-
-//Old code for compiling all to one array.
-//Log("Compiling VBO..\n");
-
-/*int lNum = 0;
-int lSize = 0;
-int lNumSize = 0;
-//Deterimine the number of arrays and the size.
-Log("calc size: ");
-for(int i=0;i< klNumOfVertexFlags; i++)
-{
-if(mVertexFlags & kvVertexFlags[i]){
-lNum++;
-
-//if(lSize != -1 && lSize != mvTempVertexArray[i].size()){
-//	return false;
-//}
-
-lSize += (int)mvTempVertexArray[i].size();
-
-lNumSize = (int)mvTempVertexArray[i].size()/GetElementNum(kvVertexFlags[i]);
-
-Log(" %d (%d * %d),",lSize,lNumSize, GetElementNum(kvVertexFlags[i]));
-}
-}
-Log("\n");
-
-//Get memory for the main array
-mvVertexArray.resize(lSize);
-
-//Copy the temp arrays into the main one
-int lPos =0;
-
-Log("Copy: \n");
-for(int i=0;i< klNumOfVertexFlags; i++)
-{
-if(mVertexFlags & kvVertexFlags[i])
-{
-int lArraySize = (int)mvTempVertexArray[i].size();
-
-Log(" %d (%d) -> %d \n",i,lArraySize,lPos );
-
-memcpy(&mvVertexArray[lPos], &(mvTempVertexArray[i][0]), sizeof(float)*lArraySize);
-
-mvArrayOffset[i] = lPos;
-
-lPos += lArraySize;
-mvTempVertexArray[i].clear();
-}
-}
-
-Log("Array:\n");
-for(int i=0;i< klNumOfVertexFlags; i++)
-{
-if(mVertexFlags & kvVertexFlags[i])
-{
-int lOffset =  mvArrayOffset[i];
-int lElemNum = GetElementNum(kvVertexFlags[i]);
-
-for(int j=0;j<lNumSize;j++)
-{
-Log("(");
-
-for(int k=0;k<lElemNum;k++)
-{
-Log(" %.1f,",mvVertexArray[lOffset + j*lElemNum + k]);
-}
-
-Log(") ");
-}
-
-Log("\n");
-}
-}*/
-
-
-

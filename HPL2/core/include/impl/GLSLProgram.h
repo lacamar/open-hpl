@@ -88,7 +88,6 @@ namespace hpl {
 		uint64_t mlRs;
 		static int mlCurrentProgram;
 
-		OhplGlParams *mpParams;
     };
 };
 #endif // HPL_GLSL_PROGRAM_H

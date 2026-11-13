@@ -45,7 +45,6 @@ namespace hpl {
 		float GetAngle();
 
 	private:
-		static unsigned LimitCallback(const NewtonJoint* pSlider, NewtonHingeSliderUpdateDesc* pDesc);
 
 		float mfPreviousDist;
 	};

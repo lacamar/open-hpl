@@ -44,21 +44,14 @@ namespace hpl {
 		//On first update make sure to clear all previous events.
 		if(ohpl_input_mouse_take_first_time(mpRust))
 		{
-			if(OhplBackendRustRequested()) ohpl_l1_mouse_flush();
-			else for(int i=0; i<10; ++i)
-			{
-				SDL_PumpEvents();
-				int lX,lY;
-				SDL_GetRelativeMouseState(&lX, &lY);
-			}
+			ohpl_l1_mouse_flush();
 		}
 
 		static const bool bHeadless = getenv("OPENHPL_HEADLESS_SOCKET") != NULL;
 
 		OhplConvertEvents(mpLowLevelInputSDL->mlstEvents, mvEvents);
 		int lX,lY;
-		if(OhplBackendRustRequested()) ohpl_l1_mouse_relative(&lX, &lY);
-		else SDL_GetRelativeMouseState(&lX, &lY);
+		ohpl_l1_mouse_relative(&lX, &lY);
 		OhplVec2l vRel = {lX, lY};
 		ohpl_input_mouse_update(mpRust, mvEvents.data(), mvEvents.size(), bHeadless, vRel);
 	}

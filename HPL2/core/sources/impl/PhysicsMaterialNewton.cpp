@@ -46,7 +46,7 @@ namespace hpl {
 
 		if(alMatId==-1)
 		{
-			mlMaterialId = OhplL4UseRust() ? ohpl_ntm_create_group(pNWorld->RustHandle()) : NewtonMaterialCreateGroupID(mpNewtonWorld);
+			mlMaterialId = ohpl_ntm_create_group(pNWorld->RustHandle());
 		}
 		else
 		{
@@ -168,47 +168,9 @@ namespace hpl {
 			OhplNewtonMatProps propsA{mFrictionMode, mElasticityMode, mfElasticity, mfStaticFriction, mfKineticFriction};
 			OhplNewtonMatProps propsB{pMat->mFrictionMode, pMat->mElasticityMode, pMat->mfElasticity,
 										pMat->mfStaticFriction, pMat->mfKineticFriction};
-			if(OhplL4UseRust())
-			{
-				ohpl_ntm_update_pair(static_cast<cPhysicsWorldNewton*>(mpWorld)->RustHandle(), mlMaterialId, pMat->mlMaterialId,
-									&propsA, &propsB, pMat == this);
-				continue;
-			}
-			OhplNewtonPairParams pair;
-			ohpl_newton_pair_params(&propsA, &propsB, pMat == this, &pair);
-
-			NewtonMaterialSetDefaultElasticity(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId, pair.elasticity);
-
-			NewtonMaterialSetDefaultFriction(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId,
-				pair.staticFriction, pair.kineticFriction);
-
-			NewtonMaterialSetContinuousCollisionMode(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId,
-													1);
-
-			NewtonMaterialSetCollisionCallback(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId,
-												(void*)NULL,OnAABBOverlapCallback,ContactsProcessCallback);
+			ohpl_ntm_update_pair(static_cast<cPhysicsWorldNewton*>(mpWorld)->RustHandle(), mlMaterialId, pMat->mlMaterialId,
+								&propsA, &propsB, pMat == this);
 		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// NEWTON LOCK CLASS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cNewtonLockBodyUntilReturn::cNewtonLockBodyUntilReturn(const NewtonBody* apNewtonBody)
-	{
-		mpNewtonBody = apNewtonBody;
-		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (mpNewtonBody));
-	}
-	
-	//-----------------------------------------------------------------------
-
-	cNewtonLockBodyUntilReturn::~cNewtonLockBodyUntilReturn()
-	{
-		NewtonWorldCriticalSectionUnlock (NewtonBodyGetWorld (mpNewtonBody));
 	}
 
 	//-----------------------------------------------------------------------
@@ -217,40 +179,6 @@ namespace hpl {
 	// STATIC NEWTON CALLBACKS
 	//////////////////////////////////////////////////////////////////////////
 	
-	//-----------------------------------------------------------------------
-
-	int cPhysicsMaterialNewton::OnAABBOverlapCallback(	const NewtonMaterial* apMaterial,
-														const NewtonBody* apBody1, const NewtonBody* apBody2,
-														int alThreadIndex)
-	{
-		cPhysicsBodyNewton* pContactBody1 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apBody1);
-		cPhysicsBodyNewton* pContactBody2 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apBody2);
-
-		OhplNewtonGateBody gate1{pContactBody1->GetCollide(), pContactBody1->IsActive(), pContactBody1->IsRagDoll(),
-								pContactBody1->GetCollideRagDoll(), pContactBody1->IsCharacter(), pContactBody1->GetCollideCharacter()};
-		OhplNewtonGateBody gate2{pContactBody2->GetCollide(), pContactBody2->IsActive(), pContactBody2->IsRagDoll(),
-								pContactBody2->GetCollideRagDoll(), pContactBody2->IsCharacter(), pContactBody2->GetCollideCharacter()};
-		if(ohpl_newton_aabb_gate(iPhysicsBody::CollideFlagsMatch(pContactBody1->GetCollideFlags(), pContactBody2->GetCollideFlags()),
-								&gate1, &gate2)==false) return 0;
-		
-		//TODO: Not using this in character body any more!
-		//if(pContactBody1->IsCharacter() || pContactBody2->IsCharacter()) return 0;
-
-		//Log("----- Begin contact between body '%s' and '%s'.\n",mpContactBody1->GetName().c_str(),
-		//													mpContactBody2->GetName().c_str());
-
-		//Thread lock
-		cNewtonLockBodyUntilReturn criticalLock1(apBody1);
-		cNewtonLockBodyUntilReturn criticalLock2(apBody2);
-		
-		//Call the callbacks
-		if(pContactBody1->OnAABBCollision(pContactBody2)==false) return 0;
-		if(pContactBody2->OnAABBCollision(pContactBody1)==false) return 0;
-
-		
-		return 1;
-	}
-
 	//-----------------------------------------------------------------------
 
 	void cPhysicsMaterialNewton::DispatchContacts(cPhysicsBodyNewton* pContactBody1, cPhysicsBodyNewton* pContactBody2,
@@ -296,89 +224,6 @@ namespace hpl {
 
 		pContactBody1->OnCollide(pContactBody2,&contactData);
 		pContactBody2->OnCollide(pContactBody1,&contactData);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cPhysicsMaterialNewton::ContactsProcessCallback(const NewtonJoint* apContactJoint, dFloat afTimestep, int alThreadIndex)
-	{
-		////////////////////////////////
-		//Get bodies
-		NewtonBody *pBody0 = NewtonJointGetBody0(apContactJoint);
-		NewtonBody *pBody1 = NewtonJointGetBody1(apContactJoint);
-
-		cPhysicsBodyNewton* pContactBody1 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(pBody0);
-		cPhysicsBodyNewton* pContactBody2 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(pBody1);
-
-		////////////////////////////////
-		//Set up variables
-
-		int lContactNum =0;
-		cPhysicsContactData contactData;
-
-		////////////////////////////////
-		//Iterate all contacts
-		OhplNewtonContact stackContacts[64];
-		std::vector<OhplNewtonContact> heapContacts;
-		void* pContact = NewtonContactJointGetFirstContact (apContactJoint);
-		for(; pContact != NULL; pContact = NewtonContactJointGetNextContact (apContactJoint, pContact)) 
-		{
-			NewtonMaterial* pMaterial =  NewtonContactGetMaterial (pContact);
-
-			OhplNewtonContact contact;
-			contact.normalSpeed = NewtonMaterialGetContactNormalSpeed(pMaterial);
-			contact.tangentSpeed0 = NewtonMaterialGetContactTangentSpeed(pMaterial,0);
-			contact.tangentSpeed1 = NewtonMaterialGetContactTangentSpeed(pMaterial,1);
-			NewtonMaterialGetContactForce(pMaterial,(NewtonBody*)pBody0,contact.force.v);
-			NewtonMaterialGetContactPositionAndNormal(pMaterial,(NewtonBody*)pBody0,contact.position.v, contact.normal.v);
-
-			if(lContactNum < 64) stackContacts[lContactNum] = contact;
-			else
-			{
-				if(lContactNum == 64) heapContacts.assign(stackContacts, stackContacts + 64);
-				heapContacts.push_back(contact);
-			}
-
-			if(pContactBody1->GetWorld()->GetSaveContactPoints())
-			{
-				//Thread lock
-				NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0));
-
-				cCollidePoint collidePoint;
-				collidePoint.mfDepth = 1;
-				collidePoint.mvPoint = contact.position;
-				collidePoint.mvNormal = contact.normal;
-
-				pContactBody1->GetWorld()->GetContactPoints()->push_back(collidePoint);
-
-				//Thread unlock
-				NewtonWorldCriticalSectionUnlock (NewtonBodyGetWorld (pBody0));
-			}
-
-			lContactNum++;
-		}
-
-		OhplNewtonContactAgg agg;
-		ohpl_newton_aggregate_contacts(lContactNum > 64 ? heapContacts.data() : stackContacts, lContactNum, &agg);
-		contactData.mfMaxContactNormalSpeed = agg.maxNormalSpeed;
-		contactData.mfMaxContactTangentSpeed = agg.maxTangentSpeed;
-		contactData.mvForce = agg.force;
-		contactData.mvContactNormal = agg.normal;
-		contactData.mvContactPosition = agg.position;
-
-		////////////////////////////////
-		//End contact process
-		//Thread lock
-		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0));
-		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody1));
-
-		DispatchContacts(pContactBody1, pContactBody2, contactData, lContactNum);
-
-		//Thread unlock
-		NewtonWorldCriticalSectionUnlock (NewtonBodyGetWorld (pBody0));
-		NewtonWorldCriticalSectionUnlock (NewtonBodyGetWorld (pBody1));
-
-
 	}
 
 	//-----------------------------------------------------------------------

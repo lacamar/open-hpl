@@ -48,55 +48,23 @@ namespace hpl {
 	{
 		mpNewtonCollision = NULL;
 		mpNewtonWorld = apNewtonWorld;
-		if(OhplL4UseRust() && apWorld) mhWorld = static_cast<cPhysicsWorldNewton*>(apWorld)->RustHandle();
+		if(apWorld) mhWorld = static_cast<cPhysicsWorldNewton*>(apWorld)->RustHandle();
 		mvSize = avSize;
 		mType = aType;
 
 		mfVolume = 0;
 
-		float *pMtx = NULL;
-		cMatrixf mtxTranspose;
 		if(apOffsetMtx)
-		{
 			m_mtxOffset = *apOffsetMtx;
-			mtxTranspose = m_mtxOffset.GetTranspose();
-
-			pMtx = &(mtxTranspose.m[0][0]);
-		}
 		else
 			m_mtxOffset = cMatrixf::Identity;
 
 		////////////////////////////////////////////
 		// Create Newton collision
 		
-		if(OhplL4UseRust())
-		{
-			if(aType >= eCollideShapeType_Null && aType <= eCollideShapeType_Capsule)
-				mpNewtonCollision = ohpl_nts_create(mhWorld, (int32_t)aType, &mvSize, apOffsetMtx);
-		}
-		else
-		switch(aType)
-		{
-		case eCollideShapeType_Null:		mpNewtonCollision = NewtonCreateNull(apNewtonWorld); break;
-		
-		case eCollideShapeType_Box:			mpNewtonCollision = NewtonCreateBox(apNewtonWorld,
-												mvSize.x, mvSize.y, mvSize.z, 
-												0, pMtx); break;
-		
-		case eCollideShapeType_Sphere:		mpNewtonCollision = NewtonCreateSphere(apNewtonWorld,
-												//mvSize.x, mvSize.y, mvSize.z, if not all values are equal then this does not work
-												mvSize.x, mvSize.x,mvSize.x,	//so this is better!
-												0, pMtx); break;
+		if(aType >= eCollideShapeType_Null && aType <= eCollideShapeType_Capsule)
+			mpNewtonCollision = ohpl_nts_create(mhWorld, (int32_t)aType, &mvSize, apOffsetMtx);
 
-		case eCollideShapeType_Cylinder:	mpNewtonCollision = NewtonCreateCylinder(apNewtonWorld,
-												mvSize.x, mvSize.y, 
-												0, pMtx); break;
-		
-		case eCollideShapeType_Capsule:		mpNewtonCollision = NewtonCreateCapsule(apNewtonWorld,
-												mvSize.x, mvSize.y, 
-												0, pMtx); break;
-		}
-		
 		////////////////////////////////////////////
 		// Calculate Bounding volume and volume.
 		if(mType == eCollideShapeType_Box)
@@ -144,8 +112,7 @@ namespace hpl {
 		//Release Newton Collision
 		if(mpNewtonCollision)
 		{
-			if(OhplL4UseRust()) ohpl_nts_release(mhWorld, mpNewtonCollision);
-			else NewtonReleaseCollision(mpNewtonWorld,mpNewtonCollision);
+			ohpl_nts_release(mhWorld, mpNewtonCollision);
 		}
 	}
 
@@ -252,39 +219,13 @@ namespace hpl {
 
 	void cCollideShapeNewton::CreateStaticSceneFromShapeVec(tCollideShapeVec &avShapes, tMatrixfVec *apMatrices)
 	{
-		if(OhplL4UseRust())
-		{
-			std::vector<NewtonCollision*> vColliders;
-			for(size_t i=0; i<avShapes.size(); ++i)
-			{
-				mvSubShapes.push_back(avShapes[i]);
-				vColliders.push_back(static_cast<cCollideShapeNewton*>(avShapes[i])->GetNewtonCollision());
-			}
-			mpNewtonCollision = ohpl_nts_static_scene(mhWorld, vColliders.data(), vColliders.size());
-			return;
-		}
-		mpNewtonCollision = NewtonCreateSceneCollision(mpNewtonWorld, 0);
-
-		mvSubShapes.reserve(avShapes.size());
-        
+		std::vector<NewtonCollision*> vColliders;
 		for(size_t i=0; i<avShapes.size(); ++i)
 		{
 			mvSubShapes.push_back(avShapes[i]);
-
-			cCollideShapeNewton *pNewtonShape = static_cast<cCollideShapeNewton*>(avShapes[i]);
-
-			cMatrixf mtxIdentity = cMatrixf::Identity;
-			NewtonSceneProxy* pProxy = NewtonSceneCollisionCreateProxy(mpNewtonCollision, pNewtonShape->GetNewtonCollision(), &mtxIdentity.m[0][0]);
-			//cMatrixf mtxTransform = cMatrixf::Identity;
-			//NewtonSceneProxySetMatrix(pProxy, &mtxTransform.GetTranspose().m[0][0]);
-			if(apMatrices)
-			{
-				//TODO!
-			}
-			
+			vColliders.push_back(static_cast<cCollideShapeNewton*>(avShapes[i])->GetNewtonCollision());
 		}
-		
-		NewtonSceneCollisionOptimize(mpNewtonCollision);
+		mpNewtonCollision = ohpl_nts_static_scene(mhWorld, vColliders.data(), vColliders.size());
 	}
 
 
@@ -310,11 +251,7 @@ namespace hpl {
 			mfVolume += pNewtonShape->GetVolume();
 		}
 
-		if(OhplL4UseRust())
-			mpNewtonCollision = ohpl_nts_compound(mhWorld, vNewtonColliders.data(), vNewtonColliders.size());
-		else
-		mpNewtonCollision = NewtonCreateCompoundCollision(mpNewtonWorld, (int)vNewtonColliders.size(),
-															&vNewtonColliders[0], 0);
+		mpNewtonCollision = ohpl_nts_compound(mhWorld, vNewtonColliders.data(), vNewtonColliders.size());
 
 		// Create bounding volume
 		cVector3f vFinalMax = avShapes[0]->GetBoundingVolume().GetMax();
@@ -365,92 +302,8 @@ namespace hpl {
 			}
 		}
 
-		float vTriVec[9];
+		mpNewtonCollision = ohpl_nts_tree(mhWorld, apIndexArray, alIndexNum, apVertexArray, alVtxStride, alVtxNum);
 
-		bool bOptimize = false;
-		bool bCreatedPlane = false;
-		cPlanef plane;
-
-		int lCount=0;
-
-		//unsigned long lStartTime = cPlatform::GetApplicationTime();
-		//Log("%d triangles: ", alIndexNum/3);
-
-		if(OhplL4UseRust())
-			mpNewtonCollision = ohpl_nts_tree(mhWorld, apIndexArray, alIndexNum, apVertexArray, alVtxStride, alVtxNum);
-		else
-		{
-		mpNewtonCollision = NewtonCreateTreeCollision(mpNewtonWorld, 0);
-		//Log("-- Creating mesh collision.:\n");
-		NewtonTreeCollisionBeginBuild(mpNewtonCollision);
-		for(int tri = 0; tri < alIndexNum; tri+=3)
-		{
-			//Log("tri: %d:\n", tri/3);
-			for(int idx =0; idx < 3; idx++)
-			{
-				int lVtx = apIndexArray[tri + 2-idx]*alVtxStride;
-                
-				vTriVec[idx*3 + 0] = apVertexArray[lVtx + 0];
-				vTriVec[idx*3 + 1] = apVertexArray[lVtx + 1];
-				vTriVec[idx*3 + 2] = apVertexArray[lVtx + 2];
-			}
-
-			//if(alIndexNum<100)
-			//{
-			//	for(int i=0;i<3; ++i) Log("%f, %f, %f, ", vTriVec[i*3 + 0],vTriVec[i*3 + 1],vTriVec[i*3 + 2]);
-			//	Log("\n");
-			//}
-			//lCount+=9;
-
-			//cannot allow negative zeros! it is true!
-			/*for(int i=0;i<9; ++i)
-			{
-				if(fabs(vTriVec[i]-0.0f) < 0.000001f) vTriVec[i] = 0;
-			}*/
-
-			if(false)//bOptimize==false)
-			{
-				cPlanef tempPlane;
-				cVector3f vP1(vTriVec[0+0],vTriVec[0+1],vTriVec[0+2]);
-				cVector3f vP2(vTriVec[1*3+0],vTriVec[1*3+1],vTriVec[1*3+2]);
-				cVector3f vP3(vTriVec[2*3+0],vTriVec[2*3+1],vTriVec[2*3+2]);
-				
-				tempPlane.FromPoints(vP1, vP2, vP3);
-
-				//Log("P1: %s P2: %s P3: %s\n",vP1.ToString().c_str(),vP2.ToString().c_str(),vP3.ToString().c_str());
-				//Log("Plane: a: %f b: %f c: %f d: %f\n",tempPlane.a,tempPlane.b,tempPlane.c,tempPlane.d);
-				
-				/////////////////////////////////
-				//Check if the triangles are on the same plane. If so, do not optimize
-				// Do not check first triangle
-				if(bCreatedPlane==false)
-				{
-					plane = tempPlane;
-					bCreatedPlane = true;
-				}
-				// First plane created.
-				else
-				{
-					//Check the plane equation is different from the first one (allow a small difference thoug).
-					if(	std::abs(plane.a - tempPlane.a) > 0.001f ||
-						std::abs(plane.b - tempPlane.b) > 0.001f ||
-						std::abs(plane.c - tempPlane.c) > 0.001f ||
-						std::abs(plane.d - tempPlane.d) > 0.001f )
-					{
-						bOptimize = true;
-					}
-				}
-			}
-					    
-            NewtonTreeCollisionAddFace(mpNewtonCollision,3,vTriVec,sizeof(float)*3,1);
-		}
-
-		NewtonTreeCollisionEndBuild(mpNewtonCollision,0);//bOptimize ? 1: 0);
-		}
-
-		//Log(" %dms\n", cPlatform::GetApplicationTime()-lStartTime);
-
-		//Log("Numbers: %d\n",lCount);
 
 		//Set bounding box size
 		mBoundingVolume.AddArrayPoints(apVertexArray, alVtxNum);
@@ -469,14 +322,7 @@ namespace hpl {
 
 	void cCollideShapeNewton::CreateHeightField(int alSize, const unsigned short* apElevation, float afUnitSize, float afVerticalScale)
 	{
-		if(OhplL4UseRust())
-			mpNewtonCollision = ohpl_nts_height_field(mhWorld, alSize, apElevation, afUnitSize, afVerticalScale);
-		else
-		{
-		std::vector<int8_t> vAttributes((size_t)alSize * alSize, 0);
-		mpNewtonCollision = NewtonCreateHeightFieldCollision(mpNewtonWorld, alSize, alSize, 1, apElevation, vAttributes.data(),
-															 afUnitSize, afVerticalScale, 6);
-		}
+		mpNewtonCollision = ohpl_nts_height_field(mhWorld, alSize, apElevation, afUnitSize, afVerticalScale);
 		const unsigned short* pEnd = apElevation + (size_t)alSize * alSize;
 		mBoundingVolume.SetLocalMinMax(cVector3f(0, *std::min_element(apElevation, pEnd) * afVerticalScale, 0),
 									   cVector3f((alSize - 1) * afUnitSize, *std::max_element(apElevation, pEnd) * afVerticalScale, (alSize - 1) * afUnitSize));
@@ -484,29 +330,14 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static void NewtonWriteToBinaryBuffer(void* apSerializeHandle, const void* apNewtonBuffer, size_t alSize)
-	{
-		cBinaryBuffer *pBinBuff = (cBinaryBuffer*)apSerializeHandle;
-		pBinBuff->AddInt32Array((int*)apNewtonBuffer, (size_t)(alSize>>2));
-	}
-
 	void cCollideShapeNewton::SaveToSerializedData(cBinaryBuffer* apBinBuffer)
 	{
 		apBinBuffer->AddVector3f(mBoundingVolume.GetLocalMin());
 		apBinBuffer->AddVector3f(mBoundingVolume.GetLocalMax());
-		if(OhplL4UseRust())
-			ohpl_nts_serialize(mhWorld, mpNewtonCollision, (size_t)apBinBuffer);
-		else
-		NewtonCollisionSerialize(mpNewtonWorld, mpNewtonCollision, NewtonWriteToBinaryBuffer, (void*)apBinBuffer);
+		ohpl_nts_serialize(mhWorld, mpNewtonCollision, (size_t)apBinBuffer);
 	}
 
 	//-----------------------------------------------------------------------
-
-	static void NewtonReadFromBinaryBuffer(void* apSerializeHandle, void* apNewtonBuffer, size_t alSize)
-	{
-		cBinaryBuffer *pBinBuff = (cBinaryBuffer*)apSerializeHandle;
-		pBinBuff->GetInt32Array((int*)apNewtonBuffer, (size_t)(alSize>>2));
-	}
 
 	void cCollideShapeNewton::CreateFromSerializedData(cBinaryBuffer* apBinBuffer)
 	{
@@ -514,10 +345,7 @@ namespace hpl {
 		apBinBuffer->GetVector3f(&vMin);
 		apBinBuffer->GetVector3f(&vMax);
 
-		if(OhplL4UseRust())
-			mpNewtonCollision = ohpl_nts_deserialize(mhWorld, (size_t)apBinBuffer);
-		else
-		mpNewtonCollision = NewtonCreateCollisionFromSerialization (mpNewtonWorld, NewtonReadFromBinaryBuffer, (void*)apBinBuffer);
+		mpNewtonCollision = ohpl_nts_deserialize(mhWorld, (size_t)apBinBuffer);
 
 		mBoundingVolume.SetLocalMinMax(vMin, vMax);
 	}

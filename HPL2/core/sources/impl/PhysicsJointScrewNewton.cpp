@@ -38,19 +38,8 @@ namespace hpl {
 		mvPin = avPinDir;
 		mvPin.Normalize();
 
-		if(OhplL4UseRust())
-		{
-			mhRust = ohpl_ntj_create_screw(mhRustWorld, &avPivotPoint, &avPinDir, mpNewtonChildBody, mpNewtonParentBody,
-										(size_t)static_cast<iPhysicsJointNewton<iPhysicsJointScrew>*>(this), RustOps(), &mpNewtonJoint);
-		}
-		else
-		{
-		mpNewtonJoint = NewtonConstraintCreateCorkscrew(mpNewtonWorld, avPivotPoint.v, avPinDir.v, mpNewtonChildBody,
-			mpNewtonParentBody);
-
-		NewtonJointSetUserData(mpNewtonJoint, (void*) this);
-		NewtonCorkscrewSetUserCallback(mpNewtonJoint,LimitCallback);
-		}
+		mhRust = ohpl_ntj_create_screw(mhRustWorld, &avPivotPoint, &avPinDir, mpNewtonChildBody, mpNewtonParentBody,
+									(size_t)static_cast<iPhysicsJointNewton<iPhysicsJointScrew>*>(this), RustOps(), &mpNewtonJoint);
 
 		mfMaxDistance =0;
 		mfMinDistance =0;
@@ -78,51 +67,28 @@ namespace hpl {
 	
 	void cPhysicsJointScrewNewton::SetMaxDistance(float afX)
 	{
-		if(OhplL4UseRust())
-		{
-			mfMaxDistance = afX;
-			ohpl_ntj_set_max(mhRust, afX);
-			return;
-		}
 		mfMaxDistance = afX;
+		ohpl_ntj_set_max(mhRust, afX);
 	}
 	void cPhysicsJointScrewNewton::SetMinDistance(float afX)
 	{
-		if(OhplL4UseRust())
-		{
-			mfMinDistance = afX;
-			ohpl_ntj_set_min(mhRust, afX);
-			return;
-		}
 		mfMinDistance = afX;
+		ohpl_ntj_set_min(mhRust, afX);
 	}
 	float cPhysicsJointScrewNewton::GetMaxDistance()
 	{
-		if(OhplL4UseRust())
-		{
-			return ohpl_ntj_max(mhRust);
-		}
-		return mfMaxDistance;
+		return ohpl_ntj_max(mhRust);
 	}
 	float cPhysicsJointScrewNewton::GetMinDistance()
 	{
-		if(OhplL4UseRust())
-		{
-			return ohpl_ntj_min(mhRust);
-		}
-		return mfMinDistance;
+		return ohpl_ntj_min(mhRust);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	cVector3f cPhysicsJointScrewNewton::GetVelocity()
 	{
-		if(OhplL4UseRust())
-		{
-			float fSpeed = ohpl_ntj_axis(mhRust, 1);
-			return mvPin * fSpeed;
-		}
-		float fSpeed = NewtonCorkscrewGetJointVeloc(mpNewtonJoint);
+		float fSpeed = ohpl_ntj_axis(mhRust, 1);
 		return mvPin * fSpeed;
 	}
 	cVector3f cPhysicsJointScrewNewton::GetAngularVelocity()
@@ -131,93 +97,22 @@ namespace hpl {
 	}
 	float cPhysicsJointScrewNewton::GetForceSize()
 	{
-		if(OhplL4UseRust())
-		{
-			cVector3f vForce;
-			ohpl_ntj_force(mhRust, &vForce);
-			return vForce.Length();
-		}
 		cVector3f vForce;
-		NewtonCorkscrewGetJointForce(mpNewtonJoint,&vForce.v[0]);
+		ohpl_ntj_force(mhRust, &vForce);
 		return vForce.Length();
 	}
 	//-----------------------------------------------------------------------
 	
 	float cPhysicsJointScrewNewton::GetDistance()
 	{
-		if(OhplL4UseRust())
-		{
-			return ohpl_ntj_axis(mhRust, 0);
-		}
-		return NewtonCorkscrewGetJointPosit(mpNewtonJoint);
+		return ohpl_ntj_axis(mhRust, 0);
 	}
 	float cPhysicsJointScrewNewton::GetAngle()
 	{
-		if(OhplL4UseRust())
-		{
-			return ohpl_ntj_axis(mhRust, 2);
-		}
-		return NewtonCorkscrewGetJointAngle(mpNewtonJoint);
+		return ohpl_ntj_axis(mhRust, 2);
 	}
 
 	//-----------------------------------------------------------------------
 
 	
-	//////////////////////////////////////////////////////////////////////////
-	// STATIC CALLBACKS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	unsigned cPhysicsJointScrewNewton::LimitCallback(const NewtonJoint* pScrew, NewtonHingeSliderUpdateDesc* pDesc)
-	{
-		cPhysicsJointScrewNewton* pScrewJoint = (cPhysicsJointScrewNewton*)NewtonJointGetUserData(pScrew);
-		
-		//pScrewJoint->OnPhysicsUpdate();
-
-		float fDistance = NewtonCorkscrewGetJointPosit (pScrew);
-		//Log("Dist: %f\n",fDistance);
-
-		if(pScrewJoint->mfMinDistance == 0 && pScrewJoint->mfMaxDistance == 0) return 0;
-
-		//Avoid oscillation
-		CheckLimitAutoSleep(pScrewJoint, pScrewJoint->mfMinDistance,pScrewJoint->mfMaxDistance,fDistance);
-
-		if (fDistance < pScrewJoint->mfMinDistance)
-		{
-			pScrewJoint->OnMinLimit();
-
-			pDesc->m_accel = NewtonCorkscrewCalculateStopAccel (pScrew, pDesc, pScrewJoint->mfMinDistance);
-			pDesc->m_minFriction =0;
-			return 1;
-		} 
-		else if (fDistance > pScrewJoint->mfMaxDistance)
-		{
-			pScrewJoint->OnMaxLimit();
-
-			pDesc->m_accel = NewtonCorkscrewCalculateStopAccel (pScrew, pDesc, pScrewJoint->mfMaxDistance);
-			pDesc->m_maxFriction =0;
-			return 1;
-		}
-		else
-		{
-			if(pScrewJoint->mpParentBody ==NULL || pScrewJoint->mpParentBody->GetMass()==0)
-			{
-				if( (pScrewJoint->mbStickyMaxLimit && pScrewJoint->mfPreviousDist > pScrewJoint->mfMaxDistance) || 
-					(pScrewJoint->mbStickyMinLimit && pScrewJoint->mfPreviousDist < pScrewJoint->mfMinDistance) )
-				{
-					pScrewJoint->mpChildBody->SetAngularVelocity(0);
-					pScrewJoint->mpChildBody->SetLinearVelocity(0);
-				}
-			}
-
-			pScrewJoint->OnNoLimit();
-		}
-
-		pScrewJoint->mfPreviousDist = fDistance;
-
-		return 0;
-	}
-	//-----------------------------------------------------------------------
-
 }

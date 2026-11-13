@@ -1,9 +1,8 @@
 #ifndef HPL_RUST_NEWTON_BACKEND_H
 #define HPL_RUST_NEWTON_BACKEND_H
 
-// C ABI of rust/src/backend/newton (OHPL_IMPL=rust). Handles are Rust arena tokens, never addresses.
+// C ABI of rust/src/backend/newton . Handles are Rust arena tokens, never addresses.
 
-#include "impl/RustBackends.h"
 #include "impl/RustNewton.h"
 #include "math/MathTypes.h"
 #include <Newton.h>
@@ -11,11 +10,6 @@
 #include <cstdint>
 
 namespace hpl {
-
-	inline bool OhplL4UseRust()
-	{
-		return OhplBackendRustRequested();
-	}
 
 	struct OhplL4BodyState
 	{

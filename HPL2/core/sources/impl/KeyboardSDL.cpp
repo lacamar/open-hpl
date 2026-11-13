@@ -40,7 +40,7 @@ namespace hpl {
 	void cKeyboardSDL::Update()
 	{
 		OhplConvertEvents(mpLowLevelInputSDL->mlstEvents, mvEvents);
-		ohpl_input_kb_update(mpRust, mvEvents.data(), mvEvents.size(), OhplBackendRustRequested() ? ohpl_l1_mod_state() : (int)SDL_GetModState());
+		ohpl_input_kb_update(mpRust, mvEvents.data(), mvEvents.size(), ohpl_l1_mod_state());
 	}
 
 	bool cKeyboardSDL::KeyIsDown(eKey aKey)
