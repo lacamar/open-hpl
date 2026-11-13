@@ -1,0 +1,386 @@
+ev msgbox_new l=41,20,6c,6f,6e,67,65,72,20,6d,65,73,73,61,67,65,20,62,6f,78,20,74,69,74,6c,65,20,74,68,61,74,20,69,73,20,77,69,64,65 t=53,6f,6d,65,20,74,65,78,74,20,77,69,74,68,20,6d,6f,72,65,20,63,68,61,72,61,63,74,65,72,73,20,74,6f,20,6d,65,61,73,75,72,65,20,74,68,65,20,77,69,64,74,68,20,6f,66,20,74,68,65,20,62,6f,78 b1=4f,4b b2= cb=1,2
+> PopupCount i0=1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> VirtualSize
+< w=0 i=0 f=44480000,44160000,0,0 s=-;-;-
+> PopupZ
+< w=0 i=0 f=41a00000,0,0,0 s=-;-;-
+> IncPopupZ
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateWindow f0=43c80000 f1=43960000 f2=41a00000
+< w=3 i=0 f=0,0,0,0 s=-;-;-
+> WinCloseDisables w0=3
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=31 i1=1 w0=3
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetFocused
+< w=4 i=0 f=0,0,0,0 s=-;-;-
+> GetDefaultFocus
+< w=5 i=0 f=0,0,0,0 s=-;-;-
+> PushAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushFocused
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushDefaultFocus
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetAttention w0=3
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> WinEscCloses i0=1 w0=3
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FontSize
+< w=0 i=0 f=41600000,41600000,0,0 s=-;-;-
+> TextLen s0=41,20,6c,6f,6e,67,65,72,20,6d,65,73,73,61,67,65,20,62,6f,78,20,74,69,74,6c,65,20,74,68,61,74,20,69,73,20,77,69,64,65
+< w=0 i=0 f=458dc000,0,0,0 s=-;-;-
+> TextLen s0=53,6f,6d,65,20,74,65,78,74,20,77,69,74,68,20,6d,6f,72,65,20,63,68,61,72,61,63,74,65,72,73,20,74,6f,20,6d,65,61,73,75,72,65,20,74,68,65,20,77,69,64,74,68,20,6f,66,20,74,68,65,20,62,6f,78
+< w=0 i=0 f=45e15000,0,0,0 s=-;-;-
+> VirtualSize
+< w=0 i=0 f=44480000,44160000,0,0 s=-;-;-
+> SetText w0=3 s0=41,20,6c,6f,6e,67,65,72,20,6d,65,73,73,61,67,65,20,62,6f,78,20,74,69,74,6c,65,20,74,68,61,74,20,69,73,20,77,69,64,65
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=3 f1=43780000 f2=42c80000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetSize w0=3 f0=45e29000 f1=42d00000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=3 f0=45601000 f1=42800000 f2=3f800000 f3=42a00000 f4=41f00000 s0=4f,4b
+< w=6 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=10 w0=6
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=19 i1=11 w0=6
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetGlobalUiListener i0=1 w0=6
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetDefaultFocus w0=6
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocused w0=6
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateLabel w0=3 f0=41a00000 f1=41f00000 f2=3f800000 f3=45e24000 f4=41600000 s0=53,6f,6d,65,20,74,65,78,74,20,77,69,74,68,20,6d,6f,72,65,20,63,68,61,72,61,63,74,65,72,73,20,74,6f,20,6d,65,61,73,75,72,65,20,74,68,65,20,77,69,64,74,68,20,6f,66,20,74,68,65,20,62,6f,78
+< w=7 i=0 f=0,0,0,0 s=-;-;-
+> SetDefaultFocus w0=6
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocused w0=6
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= p=8
+ev set_destroy_callback p=8 cb=1,9
+= ok
+ev set_kill_on_escape p=8 x=1
+> WinEscCloses i0=1 w0=3
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ok
+ev kill_on_escape p=8
+> WinGetEsc w0=3
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+= ret=1
+ev event p=8 tag=11 w=6 val=2
+> GetAttention
+< w=3 i=0 f=0,0,0,0 s=-;-;-
+> GetFocused
+< w=6 i=0 f=0,0,0,0 s=-;-;-
+> GetDefaultFocus
+< w=6 i=0 f=0,0,0,0 s=-;-;-
+> RunCallback i0=1 w0=6 p0=1 p1=2
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+> GetAttention
+< w=7 i=0 f=0,0,0,0 s=-;-;-
+> GetFocused
+< w=7 i=0 f=0,0,0,0 s=-;-;-
+> GetDefaultFocus
+< w=6 i=0 f=0,0,0,0 s=-;-;-
+> DestroyPopup
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ret=1
+ev destroy p=8
+> DestroyWidget w0=6
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> DestroyWidget w0=7
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopupCount i0=-1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopFocused
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopDefaultFocus
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetAttention w0=7
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocused w0=7
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CallDestroyCb p0=1 p1=9
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> DestroyWidget i0=1 w0=3
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ok
+ev msgbox_new l=54,69,74,6c,65 t=53,6f,6d,65,20,74,65,78,74,20,77,69,74,68,20,6d,6f,72,65,20,63,68,61,72,61,63,74,65,72,73,20,74,6f,20,6d,65,61,73,75,72,65,20,74,68,65,20,77,69,64,74,68,20,6f,66,20,74,68,65,20,62,6f,78 b1=4f,4b b2= cb=1,2
+> PopupCount i0=1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> VirtualSize
+< w=0 i=0 f=44480000,44160000,0,0 s=-;-;-
+> PopupZ
+< w=0 i=0 f=41c80000,0,0,0 s=-;-;-
+> IncPopupZ
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateWindow f0=43c80000 f1=43960000 f2=41c80000
+< w=10 i=0 f=0,0,0,0 s=-;-;-
+> WinCloseDisables w0=10
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=31 i1=1 w0=10
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetAttention
+< w=7 i=0 f=0,0,0,0 s=-;-;-
+> GetFocused
+< w=7 i=0 f=0,0,0,0 s=-;-;-
+> GetDefaultFocus
+< w=5 i=0 f=0,0,0,0 s=-;-;-
+> PushAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushFocused
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushDefaultFocus
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetAttention w0=10
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> WinEscCloses i0=1 w0=10
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FontSize
+< w=0 i=0 f=41600000,41600000,0,0 s=-;-;-
+> TextLen s0=54,69,74,6c,65
+< w=0 i=0 f=44088000,0,0,0 s=-;-;-
+> TextLen s0=53,6f,6d,65,20,74,65,78,74,20,77,69,74,68,20,6d,6f,72,65,20,63,68,61,72,61,63,74,65,72,73,20,74,6f,20,6d,65,61,73,75,72,65,20,74,68,65,20,77,69,64,74,68,20,6f,66,20,74,68,65,20,62,6f,78
+< w=0 i=0 f=45e15000,0,0,0 s=-;-;-
+> VirtualSize
+< w=0 i=0 f=44480000,44160000,0,0 s=-;-;-
+> SetText w0=10 s0=54,69,74,6c,65
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=10 f1=43780000 f2=42c80000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetSize w0=10 f0=45e29000 f1=42d00000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=10 f0=45601000 f1=42800000 f2=3f800000 f3=42a00000 f4=41f00000 s0=4f,4b
+< w=11 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=10 w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=19 i1=11 w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetGlobalUiListener i0=1 w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetDefaultFocus w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocused w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateLabel w0=10 f0=41a00000 f1=41f00000 f2=3f800000 f3=45e24000 f4=41600000 s0=53,6f,6d,65,20,74,65,78,74,20,77,69,74,68,20,6d,6f,72,65,20,63,68,61,72,61,63,74,65,72,73,20,74,6f,20,6d,65,61,73,75,72,65,20,74,68,65,20,77,69,64,74,68,20,6f,66,20,74,68,65,20,62,6f,78
+< w=12 i=0 f=0,0,0,0 s=-;-;-
+> SetDefaultFocus w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocused w0=11
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= p=8
+ev set_kill_on_escape p=8 x=1
+> WinEscCloses i0=1 w0=10
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ok
+ev kill_on_escape p=8
+> WinGetEsc w0=10
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+= ret=1
+ev event p=8 tag=11 w=11 val=5
+= ret=0
+ev event p=8 tag=11 w=11 val=4
+= ret=0
+ev msgbox_new l=54,69,74,6c,65 t=53,6f,6d,65,20,74,65,78,74,20,77,69,74,68,20,6d,6f,72,65,20,63,68,61,72,61,63,74,65,72,73,20,74,6f,20,6d,65,61,73,75,72,65,20,74,68,65,20,77,69,64,74,68,20,6f,66,20,74,68,65,20,62,6f,78 b1=4f,4b b2= cb=0,0
+> PopupCount i0=1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> VirtualSize
+< w=0 i=0 f=44480000,44160000,0,0 s=-;-;-
+> PopupZ
+< w=0 i=0 f=41f00000,0,0,0 s=-;-;-
+> IncPopupZ
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateWindow f0=43c80000 f1=43960000 f2=41f00000
+< w=13 i=0 f=0,0,0,0 s=-;-;-
+> WinCloseDisables w0=13
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=31 i1=1 w0=13
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetAttention
+< w=10 i=0 f=0,0,0,0 s=-;-;-
+> GetFocused
+< w=11 i=0 f=0,0,0,0 s=-;-;-
+> GetDefaultFocus
+< w=11 i=0 f=0,0,0,0 s=-;-;-
+> PushAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushFocused
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushDefaultFocus
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetAttention w0=13
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> WinEscCloses i0=1 w0=13
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FontSize
+< w=0 i=0 f=41600000,41600000,0,0 s=-;-;-
+> TextLen s0=54,69,74,6c,65
+< w=0 i=0 f=44088000,0,0,0 s=-;-;-
+> TextLen s0=53,6f,6d,65,20,74,65,78,74,20,77,69,74,68,20,6d,6f,72,65,20,63,68,61,72,61,63,74,65,72,73,20,74,6f,20,6d,65,61,73,75,72,65,20,74,68,65,20,77,69,64,74,68,20,6f,66,20,74,68,65,20,62,6f,78
+< w=0 i=0 f=45e15000,0,0,0 s=-;-;-
+> VirtualSize
+< w=0 i=0 f=44480000,44160000,0,0 s=-;-;-
+> SetText w0=13 s0=54,69,74,6c,65
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=13 f1=43780000 f2=42c80000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetSize w0=13 f0=45e29000 f1=42d00000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=13 f0=45601000 f1=42800000 f2=3f800000 f3=42a00000 f4=41f00000 s0=4f,4b
+< w=14 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=10 w0=14
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=19 i1=11 w0=14
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetGlobalUiListener i0=1 w0=14
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetDefaultFocus w0=14
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocused w0=14
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateLabel w0=13 f0=41a00000 f1=41f00000 f2=3f800000 f3=45e24000 f4=41600000 s0=53,6f,6d,65,20,74,65,78,74,20,77,69,74,68,20,6d,6f,72,65,20,63,68,61,72,61,63,74,65,72,73,20,74,6f,20,6d,65,61,73,75,72,65,20,74,68,65,20,77,69,64,74,68,20,6f,66,20,74,68,65,20,62,6f,78
+< w=15 i=0 f=0,0,0,0 s=-;-;-
+> SetDefaultFocus w0=14
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocused w0=14
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= p=16
+ev kill_on_escape p=16
+> WinGetEsc w0=13
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+= ret=1
+ev event p=16 tag=10 w=14 val=30
+> DestroyPopup
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ret=1
+ev destroy p=16
+> DestroyWidget w0=14
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> DestroyWidget w0=15
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopupCount i0=-1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopFocused
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PopDefaultFocus
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> DestroyWidget i0=1 w0=13
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ok
+ev msgbox_new l= t=78 b1=4f,4b b2=43,61,6e,63,65,6c cb=1,2
+> PopupCount i0=1
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> VirtualSize
+< w=0 i=0 f=44480000,44160000,0,0 s=-;-;-
+> PopupZ
+< w=0 i=0 f=420c0000,0,0,0 s=-;-;-
+> IncPopupZ
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateWindow f0=43c80000 f1=43960000 f2=420c0000
+< w=17 i=0 f=0,0,0,0 s=-;-;-
+> WinCloseDisables w0=17
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=31 i1=1 w0=17
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetAttention
+< w=10 i=0 f=0,0,0,0 s=-;-;-
+> GetFocused
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetDefaultFocus
+< w=11 i=0 f=0,0,0,0 s=-;-;-
+> PushAttention
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushFocused
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> PushDefaultFocus
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetAttention w0=17
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> WinEscCloses i0=1 w0=17
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> FontSize
+< w=0 i=0 f=41600000,41600000,0,0 s=-;-;-
+> TextLen s0=
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> TextLen s0=78
+< w=0 i=0 f=42c40000,0,0,0 s=-;-;-
+> VirtualSize
+< w=0 i=0 f=44480000,44160000,0,0 s=-;-;-
+> SetText w0=17 s0=
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetPosition w0=17 f0=43960000 f1=43780000 f2=42c80000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetSize w0=17 f0=43480000 f1=42d00000
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=17 f0=41200000 f1=42800000 f2=3f800000 f3=42a00000 f4=41f00000 s0=4f,4b
+< w=18 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=10 w0=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=19 i1=11 w0=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetGlobalUiListener i0=1 w0=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateButton w0=17 f0=42dc0000 f1=42800000 f2=3f800000 f3=42a00000 f4=41f00000 s0=43,61,6e,63,65,6c
+< w=19 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=11 i1=10 w0=19
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> AddCallback i0=19 i1=11 w0=19
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetGlobalUiListener i0=1 w0=19
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=2 w0=18 w1=19
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocusNav i0=8 w0=19 w1=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetDefaultFocus w0=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocused w0=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> CreateLabel w0=17 f0=41a00000 f1=41f00000 f2=3f800000 f3=433e0000 f4=41600000 s0=78
+< w=20 i=0 f=0,0,0,0 s=-;-;-
+> SetDefaultFocus w0=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> SetFocused w0=18
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= p=16
+ev set_destroy_callback p=16 cb=1,9
+= ok
+ev set_kill_on_escape p=16 x=1
+> WinEscCloses i0=1 w0=17
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ok
+ev kill_on_escape p=16
+> WinGetEsc w0=17
+< w=0 i=1 f=0,0,0,0 s=-;-;-
+= ret=1
+ev event p=16 tag=10 w=18 val=1
+> GetAttention
+< w=17 i=0 f=0,0,0,0 s=-;-;-
+> GetFocused
+< w=18 i=0 f=0,0,0,0 s=-;-;-
+> GetDefaultFocus
+< w=18 i=0 f=0,0,0,0 s=-;-;-
+> RunCallback i0=1 w0=18 p0=1 p1=2
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+> GetAttention
+< w=17 i=0 f=0,0,0,0 s=-;-;-
+> GetFocused
+< w=18 i=0 f=0,0,0,0 s=-;-;-
+> GetDefaultFocus
+< w=18 i=0 f=0,0,0,0 s=-;-;-
+> DestroyPopup
+< w=0 i=0 f=0,0,0,0 s=-;-;-
+= ret=1
+ev event p=16 tag=11 w=18 val=32
+= ret=0
+ev event p=16 tag=11 w=19 val=32
+= ret=0

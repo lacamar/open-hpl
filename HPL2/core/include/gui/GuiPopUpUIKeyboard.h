@@ -88,6 +88,7 @@ namespace hpl {
 		void Init();
 
 		void ClosePopUp();
+		bool H21Ext(const OhplH21Cmd &aCmd, OhplH21Ret &aRet);
 
 		void SetShiftActive(bool abX);
 

@@ -52,6 +52,18 @@ namespace hpl {
 		// Set up variables
 		mpCallback = apCallback;
 		mpCallbackObject = apCallbackObject;
+		mvButtons[0] = mvButtons[1] = NULL;
+		mpLabel = NULL;
+
+		if(OhplBackendRustRequested())
+		{
+			OhplH21Host host = H21Host();
+			mR = ohpl_h21_msgbox_new(&host, reinterpret_cast<const uint32_t*>(asLabel.data()), asLabel.size(), reinterpret_cast<const uint32_t*>(asText.data()), asText.size(),
+									 reinterpret_cast<const uint32_t*>(asButton1.data()), asButton1.size(), reinterpret_cast<const uint32_t*>(asButton2.data()), asButton2.size(),
+									 (uintptr_t)apCallbackObject, reinterpret_cast<uintptr_t>(apCallback));
+			mpWindow = (cWidgetWindow*)ohpl_h21_window(mR);
+			return;
+		}
 
 		cGuiSkinFont *pFont = mpSkin->GetFont(eGuiSkinFont_Default);
 		
@@ -117,6 +129,13 @@ namespace hpl {
 
 	cGuiPopUpMessageBox::~cGuiPopUpMessageBox()
 	{
+		if(mR)
+		{
+			OhplH21Host host = H21Host();
+			ohpl_h21_destroy(&host, mR);
+			mR = NULL;
+			return;
+		}
 		if(mvButtons[0]) mpSet->DestroyWidget(mvButtons[0]);
 		if(mvButtons[1]) mpSet->DestroyWidget(mvButtons[1]);
 		if(mpLabel) mpSet->DestroyWidget(mpLabel);

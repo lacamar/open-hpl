@@ -41,6 +41,12 @@ namespace hpl {
 	{
 		mpSet = apSet;
 		mpSkin = mpSet->GetSkin();
+		mR = NULL;
+		mbDestroyQueued = false;
+		mpWindow = NULL;
+		mpDestroyCallbackObject = NULL;
+		mpDestroyCallback = NULL;
+		if(OhplBackendRustRequested()) return;
 
 		mpSet->mlPopupCount++;
 
@@ -76,6 +82,8 @@ namespace hpl {
 
 	iGuiPopUp::~iGuiPopUp()
 	{
+		if(OhplBackendRustRequested()) return;
+
 		mpSet->mlPopupCount--;
 
 		mpSet->PopAttentionWidget();
@@ -108,15 +116,27 @@ namespace hpl {
 	{
 		mpDestroyCallbackObject = apCallbackObject;
 		mpDestroyCallback = apCallback;
+		if(mR) ohpl_h21_set_destroy_callback(mR, (uintptr_t)apCallbackObject, reinterpret_cast<uintptr_t>(apCallback));
 	}
 
 	void iGuiPopUp::SetKillOnEscapeKey(bool abX)
 	{
+		if(mR)
+		{
+			OhplH21Host host = H21Host();
+			ohpl_h21_set_kill_on_escape(&host, mR, abX);
+			return;
+		}
 		mpWindow->SetEscapeKeyClosesWindow(abX);
 	}
 
 	bool iGuiPopUp::GetKillOnEscapeKey()
 	{
+		if(mR)
+		{
+			OhplH21Host host = H21Host();
+			return ohpl_h21_kill_on_escape(&host, mR);
+		}
 		return mpWindow->GetEscapeKeyClosesWindow();
 	}
 
@@ -142,6 +162,8 @@ namespace hpl {
 	
 	void iGuiPopUp::SelfDestruct()
 	{
+		if(mbDestroyQueued) return;
+		mbDestroyQueued = true;
 		mpSet->DestroyPopUp(this);
 	}
 

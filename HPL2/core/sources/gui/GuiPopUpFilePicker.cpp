@@ -73,12 +73,35 @@ namespace hpl {
 
 		mpSaveFileDest = NULL;
 		mpLoadFileListDest = NULL;
+		for(int i=0;i<3;++i) mvButtons[i] = NULL;
+		mpCurrentDirectory = NULL;
+		mpFileList = NULL;
+		mpCurrentFileName = NULL;
+		mpFilterList = NULL;
+		mpGfxUpButton = NULL;
+		for(int i=0;i<6;++i) mvGfxFileTypeIcons[i] = NULL;
+
+		if(OhplBackendRustRequested())
+		{
+			OhplH21Host host = H21Host();
+			mR = ohpl_h21_fp_new(&host, (int32_t)aType, reinterpret_cast<const uint32_t*>(asStartPath.data()), asStartPath.size(),
+								 reinterpret_cast<const uint32_t*>(asStartFilename.data()), asStartFilename.size(),
+								 (uintptr_t)apCallbackObject, reinterpret_cast<uintptr_t>(apCallback));
+			mpWindow = (cWidgetWindow*)ohpl_h21_window(mR);
+		}
 	}
 
     //-------------------------------------------------------------------------------
 
 	cGuiPopUpFilePicker::~cGuiPopUpFilePicker()
 	{
+		if(mR)
+		{
+			OhplH21Host host = H21Host();
+			ohpl_h21_destroy(&host, mR);
+			mR = NULL;
+			return;
+		}
 		for(int i=0;i<3;++i) if(mvButtons[i]) mpSet->DestroyWidget(mvButtons[i]);
 		if(mpCurrentDirectory) mpSet->DestroyWidget(mpCurrentDirectory);
 		if(mpCurrentFileName) mpSet->DestroyWidget(mpCurrentFileName);
@@ -97,6 +120,12 @@ namespace hpl {
 	void cGuiPopUpFilePicker::SetSaveFileDest( tWString &asFileName )
 	{
 		mpSaveFileDest = &asFileName;
+		if(mR)
+		{
+			OhplH21Host host = H21Host();
+			ohpl_h21_fp_set_save_dest(&host, mR, reinterpret_cast<const uint32_t*>(asFileName.data()), asFileName.size());
+			return;
+		}
 
 		mpCurrentFileName->SetText(cString::GetFileNameW(asFileName));
 	}
@@ -334,6 +363,12 @@ namespace hpl {
 	 */
 	void cGuiPopUpFilePicker::OnAddFilter()
 	{
+		if(mR)
+		{
+			OhplH21Host host = H21Host();
+			ohpl_h21_fp_on_add_filter(&host, mR);
+			return;
+		}
 		////////////////////////////////////////////////
 		// This method clears the current filter combobox,
 		// and then repopulates it with the new filter values:
@@ -367,6 +402,12 @@ namespace hpl {
 
 	void cGuiPopUpFilePicker::OnNavigate()
 	{
+		if(mR)
+		{
+			OhplH21Host host = H21Host();
+			ohpl_h21_fp_on_navigate(&host, mR);
+			return;
+		}
 		mpCurrentDirectory->ClearItems();
 		std::vector<int32_t> vEntries(ohpl_w3_fp_dir_entries(iFileBrowser::msPersonalDir.length()!=0, iFileBrowser::msGameDir.length()!=0,
 															 mvCurrentDirFullPath.size(), NULL, 0));
@@ -454,6 +495,12 @@ namespace hpl {
 	 */
 	void cGuiPopUpFilePicker::Init()
 	{
+		if(mR)
+		{
+			OhplH21Host host = H21Host();
+			ohpl_h21_fp_init(&host, mR);
+			return;
+		}
 		tWString sCaption;
 		sCaption.resize(ohpl_w3_fp_caption(mPickerType, NULL, 0));
 		ohpl_w3_fp_caption(mPickerType, &sCaption[0], sCaption.size());
@@ -547,6 +594,92 @@ namespace hpl {
 	}
 
 	//-------------------------------------------------------------------------
+
+	bool cGuiPopUpFilePicker::H21Ext(const OhplH21Cmd &c, OhplH21Ret &r)
+	{
+		tWString sPath;
+		switch(c.op)
+		{
+		case kOhplH21FpLoadGfx:
+			mpGfxUpButton = mpSkin->GetGfx(eGuiSkinGfx_FilePickerUpButton);
+			for(int i=0; i<6; ++i)
+				mvGfxFileTypeIcons[i] = mpSkin->GetGfx((eGuiSkinGfx) (i + eGuiSkinGfx_FilePickerUpButton+1));
+			return true;
+		case kOhplH21BtnUpImage:
+			if(mpGfxUpButton) static_cast<cWidgetButton*>((iWidget*)c.w[0])->SetImage(mpGfxUpButton, false);
+			return true;
+		case kOhplH21MlAddRow:
+		{
+			cWidgetMultiPropertyListBox *pList = static_cast<cWidgetMultiPropertyListBox*>((iWidget*)c.w[0]);
+			cWidgetItem *pItem = pList->AddItem();
+			if(c.i[0] == 0)
+			{
+				pItem->AddProperty((const cGuiGfxElement*)NULL);
+				pItem->AddProperty(tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0]));
+				pItem->AddProperty(_W(""));
+				pItem->AddProperty(_W(""));
+			}
+			else
+			{
+				pItem->AddProperty(mvGfxFileTypeIcons[c.i[1]]);
+				for(int i=0; i<3; ++i) pItem->AddProperty(tWString(reinterpret_cast<const wchar_t*>(c.s[i]), c.n[i]));
+			}
+			return true;
+		}
+		case kOhplH21FbNavUp: NavigateUp(); return true;
+		case kOhplH21FbNavTo: r.i = NavigateTo(tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0])); return true;
+		case kOhplH21FbFullPath: H21Str(r, 0, GetCurrentFullPath()); return true;
+		case kOhplH21FbPathCount: r.i = (int)mvCurrentDirFullPath.size(); return true;
+		case kOhplH21FbPathPop:
+			for(int i=0; i<c.i[0] && !mvCurrentDirFullPath.empty(); ++i) mvCurrentDirFullPath.pop_back();
+			return true;
+		case kOhplH21FbPathClear: mvCurrentDirFullPath.clear(); return true;
+		case kOhplH21FbPathEntry: H21Str(r, 0, mvCurrentDirFullPath[c.i[0]]); return true;
+		case kOhplH21FbDirs: r.i = (iFileBrowser::msPersonalDir.length()!=0 ? 1 : 0) | (iFileBrowser::msGameDir.length()!=0 ? 2 : 0); return true;
+		case kOhplH21FbCatCount: r.i = (int)mvCategories.size(); return true;
+		case kOhplH21FbCatName: H21Str(r, 0, mvCategories[c.i[0]]->msName); return true;
+		case kOhplH21FbCatFilterCount: r.i = (int)mvCategories[c.i[0]]->mvFilters.size(); return true;
+		case kOhplH21FbCatFilter: H21Str(r, 0, mvCategories[c.i[0]]->mvFilters[c.i[1]]); return true;
+		case kOhplH21FbInit: InitBrowser(); return true;
+		case kOhplH21FbRootCount: r.i = (int)mvSystemRootFolders.size(); return true;
+		case kOhplH21FbRoot: H21Str(r, 0, mvSystemRootFolders[c.i[0]]); return true;
+		case kOhplH21FbList:
+		{
+			tWStringList lst;
+			GetFilesAndFoldersInCurrentPath(c.i[0], lst);
+			mvH21Files.assign(lst.begin(), lst.end());
+			r.i = (int)mvH21Files.size();
+			return true;
+		}
+		case kOhplH21FbRow:
+		{
+			tWString sFilename = mvH21Files[c.i[0]];
+			tWString sFull = GetCurrentFullPath();
+			r.i = (int)GetFileTypeByName(sFilename);
+			H21Str(r, 0, sFilename);
+			H21Str(r, 1, GetHumanReadableSize(cPlatform::GetFileSize(sFull + sFilename)));
+			H21Str(r, 2, cString::To16Char(cPlatform::FileModifiedDate(sFull + sFilename).ToString()));
+			return true;
+		}
+		case kOhplH21FileExists: r.i = cPlatform::FileExists(tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0])); return true;
+		case kOhplH21FolderExists: r.i = cPlatform::FolderExists(tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0])); return true;
+		case kOhplH21SaveDest:
+			if(mpSaveFileDest) *mpSaveFileDest = tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0]);
+			return true;
+		case kOhplH21LoadDest:
+			if(mpLoadFileListDest)
+			{
+				mpLoadFileListDest->clear();
+				mpLoadFileListDest->push_back(tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0]));
+			}
+			return true;
+		default:
+			break;
+		}
+		return false;
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////
 
 	void cGuiPopUpFilePicker::ClosePopUp(bool abPickedFile)
 	{

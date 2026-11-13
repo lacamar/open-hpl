@@ -60,6 +60,16 @@ namespace hpl {
 		//mpCallback = apCallback;
 
 		mpTargetTextBox = apTarget;
+		mbShift = false;
+
+		if(OhplBackendRustRequested())
+		{
+			OhplH21Host host = H21Host();
+			mR = ohpl_h21_kb_new(&host, (uintptr_t)apTarget);
+			mpWindow = (cWidgetWindow*)ohpl_h21_window(mR);
+			return;
+		}
+
 		msBackUpText = mpTargetTextBox->GetText();
 
 		mpTargetTextBox->OnUIKeyboardOpen();
@@ -75,6 +85,13 @@ namespace hpl {
 
 	cGuiPopUpUIKeyboard::~cGuiPopUpUIKeyboard()
 	{
+		if(mR)
+		{
+			OhplH21Host host = H21Host();
+			ohpl_h21_destroy(&host, mR);
+			mR = NULL;
+			return;
+		}
 		mpTargetTextBox->OnUIKeyboardClose();
 	}
 
@@ -311,6 +328,15 @@ namespace hpl {
 
 	//-------------------------------------------------------------------------------
 	
+	bool cGuiPopUpUIKeyboard::H21Ext(const OhplH21Cmd &c, OhplH21Ret &r)
+	{
+		if(c.op == kOhplH21TbKbOpen) { static_cast<cWidgetTextBox*>((iWidget*)c.w[0])->OnUIKeyboardOpen(); return true; }
+		if(c.op == kOhplH21TbKbClose) { static_cast<cWidgetTextBox*>((iWidget*)c.w[0])->OnUIKeyboardClose(); return true; }
+		return false;
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cGuiPopUpUIKeyboard::ClosePopUp()
 	{
 		SelfDestruct();

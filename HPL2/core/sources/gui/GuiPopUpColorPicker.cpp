@@ -60,6 +60,17 @@ namespace hpl {
 		mpCallback = apCallback;
 
 		mpDestColor = apDestColor;
+		mpFrameCurrentColor = mpFramePreviousColor = NULL;
+		for(int i=0;i<4;++i) mvLabelColorComponent[i] = NULL, mvSliderColorComponent[i] = NULL, mvInputColorComponent[i] = NULL;
+		for(int i=0;i<3;++i) mvButtons[i] = NULL;
+
+		if(OhplBackendRustRequested())
+		{
+			OhplH21Host host = H21Host();
+			mR = ohpl_h21_color_new(&host, (uintptr_t)apDestColor, (uintptr_t)apCallbackObject, reinterpret_cast<uintptr_t>(apCallback));
+			mpWindow = (cWidgetWindow*)ohpl_h21_window(mR);
+			return;
+		}
 
 		if(mpDestColor)
 			mColor = *mpDestColor;
@@ -73,6 +84,13 @@ namespace hpl {
 
 	cGuiPopUpColorPicker::~cGuiPopUpColorPicker()
 	{
+		if(mR)
+		{
+			OhplH21Host host = H21Host();
+			ohpl_h21_destroy(&host, mR);
+			mR = NULL;
+			return;
+		}
 		for(int i=0;i<4;++i)
 		{
 			if(i<3 && mvButtons[i]) mpSet->DestroyWidget(mvButtons[i]);
