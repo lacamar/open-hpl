@@ -13,6 +13,7 @@
 
 std::string gLog;
 FILE *gRecFile;
+FILE *gRecFileB;
 unsigned gRecCount;
 cLuxBase *gpBase;
 static bool gFrustumIn;
@@ -368,9 +369,9 @@ static void InitCase()
 	cLuxPlayerCamDirEffects *d = W->camdir;
 	d->mfStartSwayMaxSanity = C("Player_Sanity", "StartSwayMaxSanity", 0);
 	d->mbSwayActive = RB(40);
-	d->mlstPrevAdd.clear();
+	CdClear(d);
 	int n = RI(4) == 0 ? 0 : RI(8);
-	for(int i = 0; i < n; ++i) d->mlstPrevAdd.push_back(cVector2f(Val(-1, 1), Val(-1, 1)));
+	for(int i = 0; i < n; ++i) CdPush(d, cVector2f(Val(-1, 1), Val(-1, 1)));
 	d->mvSwayAdd = cVector2f(Val(-1, 1), Val(-1, 1));
 	d->mlMaxPositions = RB(10) ? RI(3) - 1 : (int)C("Player_Sanity", "SwayMaxSavedPositions", 0);
 	d->mfSwayAlpha = RB(30) ? 0 : Val(0, 1);
@@ -378,6 +379,9 @@ static void InitCase()
 	// hurt
 	cLuxPlayerHurt *h = W->hurt;
 	h->mvNoiseGfx.assign(8, 0);
+#ifdef NEWSIDE
+	h->mS.k.mlNoiseCount = 8;
+#endif
 	h->mfEffectStartHealth = C("Player_General", "Hurt_EffectStartHealth", 0);
 	if(h->mfEffectStartHealth == 0) h->mfEffectStartHealth = 30 * gJit;
 	h->mfMinMoveMul = C("Player_General", "Hurt_MinSpeedMul", 0.5f);
@@ -562,14 +566,15 @@ static void Dump()
 	MI(c->mbActive); MI(c->mlState); MF(c->mfHeightAdd); MF(c->mfRoll); MF(c->mfT); MF(c->mfRandomCount);
 	cLuxPlayerCamDirEffects *d = W->camdir;
 	MI(d->mbSwayActive); MF(d->mvSwayAdd.x); MF(d->mvSwayAdd.y); MF(d->mfSwayAlpha); MF(d->mvNextAdd.x); MF(d->mvNextAdd.y);
-	MI(d->mlstPrevAdd.size());
-	for(std::list<cVector2f>::iterator it = d->mlstPrevAdd.begin(); it != d->mlstPrevAdd.end(); ++it) { MF(it->x); MF(it->y); }
+	MI(CdSize(d));
+	for(size_t i = 0; i < CdSize(d); ++i) { MF(CdAt(d, i).x); MF(CdAt(d, i).y); }
 	cLuxPlayerHurt *h = W->hurt;
 	MI(h->mlCurrentNoise); MF(h->mfNoiseUpdateCount); MF(h->mfPantCount); MF(h->mfPantPosAdd); MF(h->mfPantPosAddVel);
 	MF(h->mfPantPosAddDir); MF(h->mfAlpha);
 	// lookat z is uninitialised in the original
 	cLuxPlayerLookAt *l = W->lookat;
-	MF(l->mvCurrentSpeed.x); MF(l->mvCurrentSpeed.y);
+	MF(l->mvCurrentSpeed.x); MF(l->mvCurrentSpeed.y); MI(l->mbActive); MV(l->mvTargetPos); MF(l->mfSpeedMul); MF(l->mfMaxSpeed);
+	MF(l->mfDestFovMul); MF(l->mfFov); MF(l->mfFovSpeed); MF(l->mfFovMaxSpeed);
 	cLuxPlayerFlashback *f = W->flashback;
 	MF(f->mfFlashDelay); MI(f->mbActive); MF(f->mfFlashbackStartCount); MI(f->mlstFlashbackQueue.size());
 	cLuxPlayerSanity *s = W->sanity;
@@ -578,7 +583,7 @@ static void Dump()
 	MF(s->mfInsaneWaveAlpha); MF(s->mfSanityDrainCount); MF(s->mfSanityDrainVolume); MF(s->mfSanityHeartbeatCount);
 	MF(s->mfSeenEnemyCount); MI(s->mbEnemyIsSeen); MF(s->mfShowHintTimer);
 	cLuxPlayerLantern *la = W->lantern;
-	MI(la->mbActive); MF(la->mfAlpha);
+	MI(la->mbActive); MF(la->mfAlpha); MI(la->mbDisabled);
 	cLuxPlayerLightLevel *ll = W->lightLevel;
 	MF(ll->mfExtendedLightLevel); MF(ll->mfNormalLightLevel); MF(ll->mfUpdateCount);
 	cLuxPlayerInDarkness *dk = W->darkness;
@@ -688,6 +693,27 @@ static void Step(int act, int caseNo, int stepNo)
 		break;
 	}
 	case 16: W->sanity->UpdateCheckEnemySeen(dt); break;
+	case 17:
+		switch(RI(16))
+		{
+		case 0: W->collapse->Reset(); break;
+		case 1: W->camdir->Reset(); break;
+		case 2: W->hurt->Reset(); break;
+		case 3: W->flashback->Reset(); break;
+		case 4: W->lookat->Reset(); break;
+		case 5: W->lookat->SetTarget(V3(-20, 20), Val(0, 4), RB(50) ? 9999.0f : Val(0, 5), RB() ? "t2" : ""); break;
+		case 6: W->lookat->SetActive(RB()); break;
+		case 7: W->lightLevel->Reset(); break;
+		case 8: W->lightLevel->OnMapEnter(NULL); break;
+		case 9: W->darkness->Reset(); W->darkness->mpAmbientLight = &W->ambientLight; break;
+		case 10: W->darkness->OnMapEnter(NULL); break;
+		case 11: W->darkness->SetActive(RB(70)); break;
+		case 12: Rec("indark %d", W->darkness->InDarkness()); break;
+		case 13: W->lantern->Reset(); W->lantern->mpLight = &W->lanternLight; break;
+		case 14: W->lantern->SetDisabled(RB(40)); break;
+		default: W->lookat->mbActive = RB(70); break;
+		}
+		break;
 	}
 	gH = 14695981039346656037ull;
 	Dump();
@@ -704,6 +730,7 @@ int main(int argc, char **argv)
 	int first = atoi(argv[2]), last = atoi(argv[3]), steps = atoi(argv[4]);
 	gVerbose = argc > 5;
 	if(getenv("A2_REC")) gRecFile = fopen(getenv("A2_REC"), "wb");
+	if(getenv("A2_REC_B")) gRecFileB = fopen(getenv("A2_REC_B"), "wb");
 	Setup();
 	for(int c = first; c < last; ++c)
 	{
@@ -714,12 +741,13 @@ int main(int argc, char **argv)
 		InitCase();
 		for(int s = 0; s < steps; ++s)
 		{
-			int act = RI(100) < 40 ? 10 : RI(17);
+			int act = RI(100) < 40 ? 10 : RI(18);
 			if(act == 10 && RB(30)) act = 8;
 			Step(act, c, s);
 		}
 		printf("ENDCASE %d\n", c);
 		if(gRecFile) fflush(gRecFile);
+		if(gRecFileB) fflush(gRecFileB);
 	}
 	return 0;
 }

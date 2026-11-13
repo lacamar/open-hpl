@@ -91,12 +91,16 @@ cLuxPlayerInsanityCollapse::~cLuxPlayerInsanityCollapse()
 
 void cLuxPlayerInsanityCollapse::Reset()
 {
-	mbActive = false;
-	mlState =0;
-	mfHeightAdd =0;
-	mfRoll =0;
-	mfT=0;
-	mfRandomCount=0;
+	if(OhplBackendRustRequested()) ohpl_a2b_collapse_clear(&mS, false, true);
+	else
+	{
+		mbActive = false;
+		mlState =0;
+		mfHeightAdd =0;
+		mfRoll =0;
+		mfT=0;
+		mfRandomCount=0;
+	}
 
 	if(mpLoopSound && gpBase->mpEngine->GetSound()->GetSoundHandler()->IsValid(mpLoopSound, mlLoopSoundID))
 	{
@@ -150,13 +154,16 @@ void cLuxPlayerInsanityCollapse::Start()
 
 	/////////////////
 	//Setup variables.	
-	mbActive = true;
-
-	mlState =0;
-	mfHeightAdd =0;
-	mfRoll =0;
-	mfT=0;
-	mfRandomCount=0;
+	if(OhplBackendRustRequested()) ohpl_a2b_collapse_clear(&mS, true, true);
+	else
+	{
+		mbActive = true;
+		mlState =0;
+		mfHeightAdd =0;
+		mfRoll =0;
+		mfT=0;
+		mfRandomCount=0;
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -176,12 +183,15 @@ void cLuxPlayerInsanityCollapse::Stop()
 		mpLoopSound->FadeOut(1.0f);
 	}
 
-	mbActive = false;
-	
-	mlState =0;
-	mfT =0;
-	mfRoll =0;
-	mfHeightAdd=0;
+	if(OhplBackendRustRequested()) ohpl_a2b_collapse_clear(&mS, false, false);
+	else
+	{
+		mbActive = false;
+		mlState =0;
+		mfT =0;
+		mfRoll =0;
+		mfHeightAdd=0;
+	}
 	mpPlayer->FadeRollTo(0, 10,10);
 	mpPlayer->MoveHeadPosAdd(eLuxHeadPosAdd_InsanityCollapse, cVector3f(0,0,0),1, 0.1f);
 }
@@ -190,49 +200,61 @@ void cLuxPlayerInsanityCollapse::Stop()
 
 void cLuxPlayerInsanityCollapse::Update(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+		ohpl_a2b_collapse_update(&mS, &h, afTimeStep);
+		return;
+	}
+
 	if(mbActive==false) return;
-	OhplGa2Collapse s = {mbActive, mlState, mfHeightAdd, mfRoll, mfT, mfRandomCount, mfHeightAddGoal, mfHeightAddCollapseSpeed,
-		mfHeightAddAwakeSpeed, mfRollCollapseSpeed, mfSleepTime, mfWakeUpSpeedMul, mfAwakenSanity, mfSleepRandomMinTime, mfSleepRandomMaxTime};
+
 	OhplGa2Ops ops;
-	ohpl_ga2_collapse_update(&s, afTimeStep, &ops);
-	mbActive = s.mbActive != 0;
-	mlState = s.mlState;
-	mfHeightAdd = s.mfHeightAdd;
-	mfRoll = s.mfRoll;
-	mfT = s.mfT;
-	mfRandomCount = s.mfRandomCount;
+	ohpl_ga2_collapse_update(&mS, afTimeStep, &ops);
 	for(uint32_t i=0; i<ops.n; ++i)
 	{
 		const OhplGa2Op &op = ops.ops[i];
-		switch(op.kind)
-		{
-		case kOhplGa2SetHeadAdd: mpPlayer->SetHeadPosAdd(eLuxHeadPosAdd_InsanityCollapse, cVector3f(0,op.a,0)); break;
-		case kOhplGa2FadeRoll: mpPlayer->FadeRollTo(op.a, op.b, op.c); break;
-		case kOhplGa2PlayRandomSound: gpBase->mpHelpFuncs->PlayGuiSoundData(msSleepRandomSound, eSoundEntryType_Gui); break;
-		case kOhplGa2RandCount: mfRandomCount = cMath::RandRectf(op.a, op.b); break;
-		case kOhplGa2WakeFx:
-		{
-			cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
-			pSoundHandler->FadeGlobalVolume(1, 0.2f, eSoundEntryType_World,eLuxGlobalVolumeType_InsanityCollapse, false);
-			pSoundHandler->FadeGlobalSpeed(1, 0.25f, eSoundEntryType_World,eLuxGlobalVolumeType_InsanityCollapse, false);
-			break;
-		}
-		case kOhplGa2SetCollapseSpeedMul: mpPlayer->SetInsanityCollapseSpeedMul(op.a); break;
-		case kOhplGa2LoopFadeOut:
-		{
-			cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
-			if(mpLoopSound && pSoundHandler->IsValid(mpLoopSound, mlLoopSoundID))
-			{
-				mpLoopSound->FadeOut(0.3f);
-			}
-			break;
-		}
-		case kOhplGa2PlayerSetSanity: mpPlayer->SetSanity(op.a); break;
-		case kOhplGa2PlayAwaken: gpBase->mpHelpFuncs->PlayGuiSoundData(msAwakenSound, eSoundEntryType_World); break;
-		case kOhplGa2SetCrouchDisabled: mpPlayer->SetCrouchDisabled(op.i != 0); break;
-		case kOhplGa2SetJumpDisabled: mpPlayer->SetJumpDisabled(op.i != 0); break;
-		}
+		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
 	}
+}
+
+void cLuxPlayerInsanityCollapse::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
+{
+	cLuxPlayerInsanityCollapse *p = (cLuxPlayerInsanityCollapse*)apCtx;
+	switch(alKind)
+	{
+	case kOhplGa2SetHeadAdd: p->mpPlayer->SetHeadPosAdd(eLuxHeadPosAdd_InsanityCollapse, cVector3f(0,afA,0)); break;
+	case kOhplGa2FadeRoll: p->mpPlayer->FadeRollTo(afA, afB, afC); break;
+	case kOhplGa2PlayRandomSound: gpBase->mpHelpFuncs->PlayGuiSoundData(p->msSleepRandomSound, eSoundEntryType_Gui); break;
+	case kOhplGa2RandCount: p->mfRandomCount = cMath::RandRectf(afA, afB); break;
+	case kOhplGa2WakeFx:
+	{
+		cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
+		pSoundHandler->FadeGlobalVolume(1, 0.2f, eSoundEntryType_World,eLuxGlobalVolumeType_InsanityCollapse, false);
+		pSoundHandler->FadeGlobalSpeed(1, 0.25f, eSoundEntryType_World,eLuxGlobalVolumeType_InsanityCollapse, false);
+		break;
+	}
+	case kOhplGa2SetCollapseSpeedMul: p->mpPlayer->SetInsanityCollapseSpeedMul(afA); break;
+	case kOhplGa2LoopFadeOut:
+	{
+		cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
+		if(p->mpLoopSound && pSoundHandler->IsValid(p->mpLoopSound, p->mlLoopSoundID))
+		{
+			p->mpLoopSound->FadeOut(0.3f);
+		}
+		break;
+	}
+	case kOhplGa2PlayerSetSanity: p->mpPlayer->SetSanity(afA); break;
+	case kOhplGa2PlayAwaken: gpBase->mpHelpFuncs->PlayGuiSoundData(p->msAwakenSound, eSoundEntryType_World); break;
+	case kOhplGa2SetCrouchDisabled: p->mpPlayer->SetCrouchDisabled(alI != 0); break;
+	case kOhplGa2SetJumpDisabled: p->mpPlayer->SetJumpDisabled(alI != 0); break;
+	}
+}
+
+float cLuxPlayerInsanityCollapse::HostQuery(void *apCtx, uint32_t alKind, float afA, float afB)
+{
+	if(alKind == kOhplA2bQRand) return cMath::RandRectf(afA, afB);
+	return 0;
 }
 
 
@@ -248,6 +270,7 @@ cLuxPlayerCamDirEffects::cLuxPlayerCamDirEffects(cLuxPlayer *apPlayer) : iLuxPla
 {
 	mfStartSwayMaxSanity =  gpBase->mpGameCfg->GetFloat("Player_Sanity","StartSwayMaxSanity",0);
 	mlMaxPositions = gpBase->mpGameCfg->GetInt("Player_Sanity","SwayMaxSavedPositions",0);
+	mS.mlCount = 0;
 }
 
 cLuxPlayerCamDirEffects::~cLuxPlayerCamDirEffects()
@@ -259,13 +282,16 @@ cLuxPlayerCamDirEffects::~cLuxPlayerCamDirEffects()
 
 void cLuxPlayerCamDirEffects::Reset()
 {
+	if(OhplBackendRustRequested())
+	{
+		ohpl_a2b_camdir_reset(&mS);
+		return;
+	}
+
 	mbSwayActive = false;
-
-	mlstPrevAdd.clear();
+	mS.mlCount = 0;
 	mvSwayAdd = 0;
-	
 	mvNextAdd = 0;
-
 	mfSwayAlpha =0;
 }
 
@@ -274,22 +300,29 @@ void cLuxPlayerCamDirEffects::Reset()
 
 void cLuxPlayerCamDirEffects::Update(float afTimeStep)
 {
-	OhplGa2CamDir s = {mfStartSwayMaxSanity, mbSwayActive, mvSwayAdd, mlMaxPositions, mfSwayAlpha, mvNextAdd};
-	std::vector<cVector2f> vPrev(mlstPrevAdd.begin(), mlstPrevAdd.end());
+	if(OhplBackendRustRequested())
+	{
+		OhplA2bHost h = {this, NULL, HostQuery, NULL};
+		ohpl_a2b_camdir_update(&mS, &h, afTimeStep);
+		return;
+	}
+
+	std::vector<cVector2f> vPrev(mS.mvList, mS.mvList + mS.mlCount);
 	OhplGa2Ops ops;
-	ohpl_ga2_camdir_update(&s, vPrev.data(), vPrev.size(), mpPlayer->GetSanity(), afTimeStep, &ops);
-	mbSwayActive = s.mbSwayActive != 0;
-	mvSwayAdd = s.mvSwayAdd;
-	mfSwayAlpha = s.mfSwayAlpha;
-	mvNextAdd = s.mvNextAdd;
+	ohpl_ga2_camdir_update(&mS.k, vPrev.data(), vPrev.size(), mpPlayer->GetSanity(), afTimeStep, &ops);
 	for(uint32_t i=0; i<ops.n; ++i)
 	{
 		const OhplGa2Op &op = ops.ops[i];
 		switch(op.kind)
 		{
-		case kOhplGa2ListClear: mlstPrevAdd.clear(); break;
-		case kOhplGa2ListPush: mlstPrevAdd.push_back(cVector2f(op.a, op.b)); break;
-		case kOhplGa2ListPopFront: mlstPrevAdd.pop_front(); break;
+		case kOhplGa2ListClear: mS.mlCount = 0; break;
+		case kOhplGa2ListPush:
+			if(mS.mlCount >= 256) { memmove(mS.mvList, mS.mvList+1, sizeof(cVector2f)*255); mS.mlCount = 255; }
+			mS.mvList[mS.mlCount++] = cVector2f(op.a, op.b);
+			break;
+		case kOhplGa2ListPopFront:
+			if(mS.mlCount > 0) { memmove(mS.mvList, mS.mvList+1, sizeof(cVector2f)*(mS.mlCount-1)); --mS.mlCount; }
+			break;
 		}
 	}
 }
@@ -298,18 +331,23 @@ void cLuxPlayerCamDirEffects::Update(float afTimeStep)
 
 float cLuxPlayerCamDirEffects::AddAndGetYawAdd(float afX)
 {
-	OhplGa2CamDir s = {mfStartSwayMaxSanity, mbSwayActive, mvSwayAdd, mlMaxPositions, mfSwayAlpha, mvNextAdd};
-	float fYaw = ohpl_ga2_camdir_add(&s, mlstPrevAdd.empty(), true, afX);
-	mvNextAdd = s.mvNextAdd;
-	return fYaw;
+	if(OhplBackendRustRequested()) return ohpl_a2b_camdir_add(&mS, true, afX);
+
+	return ohpl_ga2_camdir_add(&mS.k, mS.mlCount==0, true, afX);
 }
 
 float cLuxPlayerCamDirEffects::AddAndGetPitchAdd(float afX)
 {
-	OhplGa2CamDir s = {mfStartSwayMaxSanity, mbSwayActive, mvSwayAdd, mlMaxPositions, mfSwayAlpha, mvNextAdd};
-	float fPitch = ohpl_ga2_camdir_add(&s, mlstPrevAdd.empty(), false, afX);
-	mvNextAdd = s.mvNextAdd;
-	return fPitch;
+	if(OhplBackendRustRequested()) return ohpl_a2b_camdir_add(&mS, false, afX);
+
+	return ohpl_ga2_camdir_add(&mS.k, mS.mlCount==0, false, afX);
+}
+
+float cLuxPlayerCamDirEffects::HostQuery(void *apCtx, uint32_t alKind, float afA, float afB)
+{
+	cLuxPlayerCamDirEffects *p = (cLuxPlayerCamDirEffects*)apCtx;
+	if(alKind == kOhplA2bQSanity) return p->mpPlayer->GetSanity();
+	return 0;
 }
 
 //-----------------------------------------------------------------------
@@ -580,6 +618,7 @@ cLuxPlayerHurt::cLuxPlayerHurt(cLuxPlayer *apPlayer) : iLuxPlayerHelper(apPlayer
 
 	cGui *pGui = gpBase->mpEngine->GetGui();
 	mvNoiseGfx.resize(8);
+	mS.k.mlNoiseCount = (int)mvNoiseGfx.size();
 	for(size_t i=0; i<mvNoiseGfx.size(); ++i)
 	{
 		mvNoiseGfx[i] = pGui->CreateGfxTexture("hud_hurt_noise0"+cString::ToString((int)i)+".dds", eGuiMaterial_Modulative,eTextureType_2D);
@@ -597,6 +636,12 @@ cLuxPlayerHurt::~cLuxPlayerHurt()
 
 void cLuxPlayerHurt::Reset()
 {
+	if(OhplBackendRustRequested())
+	{
+		ohpl_a2b_hurt_reset(&mS);
+		return;
+	}
+
 	mfAlpha = 0;
 	mfPantCount =0;
 	mfPantPosAdd = 0;
@@ -610,33 +655,52 @@ void cLuxPlayerHurt::Reset()
 
 void cLuxPlayerHurt::Update(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+		ohpl_a2b_hurt_update(&mS, &h, afTimeStep);
+		return;
+	}
+
 	float fRegain;
 	if(ohpl_ga2_hurt_regain(mpPlayer->GetHealth(), mfHealthRegainLimit, mfHealthRegainSpeed, afTimeStep, &fRegain))
 	{
 		mpPlayer->AddHealth(fRegain);
 	}
-	OhplGa2Hurt s = {mfEffectStartHealth, mfMinMoveMul, mfMaxPantCount, mfPantSpeed, mfPantSize, mlCurrentNoise, mfNoiseUpdateCount, mfNoiseFreq,
-		mfPantCount, mfPantPosAdd, mfPantPosAddVel, mfPantPosAddDir, mfAlpha, (int)mvNoiseGfx.size()};
+
 	float fSpeed = mpPlayer->GetCharacterBody()->GetVelocity(afTimeStep).Length();
 	OhplGa2Ops ops;
-	ohpl_ga2_hurt_update(&s, mpPlayer->GetHealth(), mpPlayer->IsDead(), fSpeed, afTimeStep, &ops);
-	mlCurrentNoise = s.mlCurrentNoise;
-	mfNoiseUpdateCount = s.mfNoiseUpdateCount;
-	mfPantCount = s.mfPantCount;
-	mfPantPosAdd = s.mfPantPosAdd;
-	mfPantPosAddVel = s.mfPantPosAddVel;
-	mfPantPosAddDir = s.mfPantPosAddDir;
-	mfAlpha = s.mfAlpha;
+	ohpl_ga2_hurt_update(&mS.k, mpPlayer->GetHealth(), mpPlayer->IsDead(), fSpeed, afTimeStep, &ops);
 	for(uint32_t i=0; i<ops.n; ++i)
 	{
 		const OhplGa2Op &op = ops.ops[i];
-		switch(op.kind)
-		{
-		case kOhplGa2SetHurtMoveSpeedMul: mpPlayer->SetHurtMoveSpeedMul(op.a); break;
-		case kOhplGa2PlayHurtPant: gpBase->mpHelpFuncs->PlayGuiSoundData("hurt_pant",eSoundEntryType_Gui, op.a); break;
-		case kOhplGa2SetHurtHeadAdd: mpPlayer->SetHeadPosAdd(eLuxHeadPosAdd_Hurt, cVector3f(0,op.a,0)); break;
-		}
+		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
 	}
+}
+
+void cLuxPlayerHurt::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
+{
+	cLuxPlayerHurt *p = (cLuxPlayerHurt*)apCtx;
+	switch(alKind)
+	{
+	case kOhplA2bAddHealth: p->mpPlayer->AddHealth(afA); break;
+	case kOhplGa2SetHurtMoveSpeedMul: p->mpPlayer->SetHurtMoveSpeedMul(afA); break;
+	case kOhplGa2PlayHurtPant: gpBase->mpHelpFuncs->PlayGuiSoundData("hurt_pant",eSoundEntryType_Gui, afA); break;
+	case kOhplGa2SetHurtHeadAdd: p->mpPlayer->SetHeadPosAdd(eLuxHeadPosAdd_Hurt, cVector3f(0,afA,0)); break;
+	}
+}
+
+float cLuxPlayerHurt::HostQuery(void *apCtx, uint32_t alKind, float afA, float afB)
+{
+	cLuxPlayerHurt *p = (cLuxPlayerHurt*)apCtx;
+	switch(alKind)
+	{
+	case kOhplA2bQHealth: return p->mpPlayer->GetHealth();
+	case kOhplA2bQDead: return p->mpPlayer->IsDead() ? 1.0f : 0.0f;
+	case kOhplA2bQSpeed: return p->mpPlayer->GetCharacterBody()->GetVelocity(afA).Length();
+	case kOhplA2bQRandInt: return (float)cMath::RandRectl((int)afA, (int)afB);
+	}
+	return 0;
 }
 
 //-----------------------------------------------------------------------
@@ -692,8 +756,12 @@ cLuxPlayerFlashback::~cLuxPlayerFlashback ()
 
 void cLuxPlayerFlashback::Reset()
 {
-	mfFlashDelay =0;
-	mbActive = false;
+	if(OhplBackendRustRequested()) ohpl_a2b_flashback_reset(&mS);
+	else
+	{
+		mfFlashDelay =0;
+		mbActive = false;
+	}
 	mlstFlashbackQueue.clear();
 }
 
@@ -734,50 +802,71 @@ void cLuxPlayerFlashback::Start(const tString &asFlashbackFile, const tString &a
 
 void cLuxPlayerFlashback::Update(float afTimeStep)
 {
-	OhplGa2Flashback s = {mfRadialBlurSize, mfRadialBlurStartDist, mfMoveSpeedMul, mfRunSpeedMul, mfFlashDelay, mbActive, mfFlashbackStartCount};
+	if(OhplBackendRustRequested())
+	{
+		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+		ohpl_a2b_flashback_update(&mS, &h, afTimeStep);
+		return;
+	}
+
 	bool bVoiceDone = mbActive ? gpBase->mpEffectHandler->GetPlayVoice()->VoiceDonePlaying() : false;
 	OhplGa2Ops ops;
-	ohpl_ga2_flashback_update(&s, mlstFlashbackQueue.empty()==false, bVoiceDone, msCallback != "", afTimeStep, &ops);
-	mfFlashDelay = s.mfFlashDelay;
-	mbActive = s.mbActive != 0;
-	mfFlashbackStartCount = s.mfFlashbackStartCount;
+	ohpl_ga2_flashback_update(&mS, mlstFlashbackQueue.empty()==false, bVoiceDone, msCallback != "", afTimeStep, &ops);
 	for(uint32_t i=0; i<ops.n; ++i)
 	{
 		const OhplGa2Op &op = ops.ops[i];
-		switch(op.kind)
-		{
-		case kOhplGa2FlashbackStartQueued:
-		{
-			cLuxFlashbackData data = mlstFlashbackQueue.front();
-			mlstFlashbackQueue.pop_front();
-			Start(data.msFile, data.msCallback);
-			break;
-		}
-		case kOhplGa2FlashMid:
-			gpBase->mpEffectHandler->GetFlash()->Start(0.5f, 0.5f, 2.5f);
-			gpBase->mpPlayer->SetEventMoveSpeedMul(op.a);
-			gpBase->mpPlayer->SetEventRunSpeedMul(op.b);
-			break;
-		case kOhplGa2FlashbackBegin:
-			gpBase->mpEffectHandler->GetSepiaColor()->FadeTo(1, op.d);
-			gpBase->mpEffectHandler->GetRadialBlur()->SetBlurStartDist(op.a);
-			gpBase->mpEffectHandler->GetRadialBlur()->FadeTo(op.b, op.c);
-			LoadAndPlayFlashbackFile(msFlashbackFile);
-			break;
-		case kOhplGa2FlashbackEnd:
-		{
-			gpBase->mpEffectHandler->GetFlash()->Start(1.0f, 0.1f, 2.5f);
-			gpBase->mpEffectHandler->GetSepiaColor()->FadeTo(0, op.a);
-			gpBase->mpEffectHandler->GetRadialBlur()->FadeTo(0, op.b);
-			gpBase->mpEngine->GetSound()->GetSoundHandler()->FadeGlobalVolume(1, op.a,eSoundEntryType_World,eLuxGlobalVolumeType_Flashback,true);
-			gpBase->mpPlayer->SetEventMoveSpeedMul(1.0f);
-			gpBase->mpPlayer->SetEventRunSpeedMul(1.0f);
-			cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
-			if(op.i) pMap->RunScript(msCallback + "()");
-			break;
-		}
-		}
+		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
 	}
+}
+
+void cLuxPlayerFlashback::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
+{
+	cLuxPlayerFlashback *p = (cLuxPlayerFlashback*)apCtx;
+	switch(alKind)
+	{
+	case kOhplGa2FlashbackStartQueued:
+	{
+		cLuxFlashbackData data = p->mlstFlashbackQueue.front();
+		p->mlstFlashbackQueue.pop_front();
+		p->Start(data.msFile, data.msCallback);
+		break;
+	}
+	case kOhplGa2FlashMid:
+		gpBase->mpEffectHandler->GetFlash()->Start(0.5f, 0.5f, 2.5f);
+		gpBase->mpPlayer->SetEventMoveSpeedMul(afA);
+		gpBase->mpPlayer->SetEventRunSpeedMul(afB);
+		break;
+	case kOhplGa2FlashbackBegin:
+		gpBase->mpEffectHandler->GetSepiaColor()->FadeTo(1, afD);
+		gpBase->mpEffectHandler->GetRadialBlur()->SetBlurStartDist(afA);
+		gpBase->mpEffectHandler->GetRadialBlur()->FadeTo(afB, afC);
+		p->LoadAndPlayFlashbackFile(p->msFlashbackFile);
+		break;
+	case kOhplGa2FlashbackEnd:
+	{
+		gpBase->mpEffectHandler->GetFlash()->Start(1.0f, 0.1f, 2.5f);
+		gpBase->mpEffectHandler->GetSepiaColor()->FadeTo(0, afA);
+		gpBase->mpEffectHandler->GetRadialBlur()->FadeTo(0, afB);
+		gpBase->mpEngine->GetSound()->GetSoundHandler()->FadeGlobalVolume(1, afA,eSoundEntryType_World,eLuxGlobalVolumeType_Flashback,true);
+		gpBase->mpPlayer->SetEventMoveSpeedMul(1.0f);
+		gpBase->mpPlayer->SetEventRunSpeedMul(1.0f);
+		cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
+		if(alI) pMap->RunScript(p->msCallback + "()");
+		break;
+	}
+	}
+}
+
+float cLuxPlayerFlashback::HostQuery(void *apCtx, uint32_t alKind, float afA, float afB)
+{
+	cLuxPlayerFlashback *p = (cLuxPlayerFlashback*)apCtx;
+	switch(alKind)
+	{
+	case kOhplA2bQVoiceDone: return gpBase->mpEffectHandler->GetPlayVoice()->VoiceDonePlaying() ? 1.0f : 0.0f;
+	case kOhplA2bQQueueNonEmpty: return p->mlstFlashbackQueue.empty() ? 0.0f : 1.0f;
+	case kOhplA2bQHasCallback: return p->msCallback != "" ? 1.0f : 0.0f;
+	}
+	return 0;
 }
 
 //-----------------------------------------------------------------------
@@ -849,52 +938,91 @@ cLuxPlayerLookAt::~cLuxPlayerLookAt()
 
 void cLuxPlayerLookAt::Update(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2bHost h = {this, HostOp, HostQuery, HostFill};
+		ohpl_a2b_lookat_update(&mS, &h, afTimeStep);
+		return;
+	}
+
 	if(mbActive==false) return;
+
 	cCamera *pCam = mpPlayer->GetCamera();
 	cVector3f vGoalAngle = cMath::GetAngleFromPoints3D(pCam->GetPosition(),mvTargetPos);
-	OhplGa2LookAt s = {mvCurrentSpeed, mfSpeedMul, mfMaxSpeed};
 	OhplGa2Ops ops;
-	ohpl_ga2_lookat_update(&s, &vGoalAngle, pCam->GetPitch(), pCam->GetYaw(), afTimeStep, &ops);
-	mvCurrentSpeed = s.mvCurrentSpeed;
+	ohpl_ga2_lookat_update(&mS.k, &vGoalAngle, pCam->GetPitch(), pCam->GetYaw(), afTimeStep, &ops);
 	for(uint32_t i=0; i<ops.n; ++i)
 	{
 		const OhplGa2Op &op = ops.ops[i];
-		switch(op.kind)
-		{
-		case kOhplGa2LookAddPitch: pCam->AddPitch(op.a); break;
-		case kOhplGa2LookAddYaw: pCam->AddYaw(op.a); break;
-		case kOhplGa2LookSyncBodyYaw: mpPlayer->GetCharacterBody()->SetYaw(pCam->GetYaw()); break;
-		case kOhplGa2LookAtTarget: gpBase->mpMapHandler->GetCurrentMap()->RunScript(msAtTargetCallback+"()"); break;
-		}
+		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
 	}
+}
+
+void cLuxPlayerLookAt::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
+{
+	cLuxPlayerLookAt *p = (cLuxPlayerLookAt*)apCtx;
+	cCamera *pCam = p->mpPlayer->GetCamera();
+	switch(alKind)
+	{
+	case kOhplGa2LookAddPitch: pCam->AddPitch(afA); break;
+	case kOhplGa2LookAddYaw: pCam->AddYaw(afA); break;
+	case kOhplGa2LookSyncBodyYaw: p->mpPlayer->GetCharacterBody()->SetYaw(pCam->GetYaw()); break;
+	case kOhplGa2LookAtTarget: gpBase->mpMapHandler->GetCurrentMap()->RunScript(p->msAtTargetCallback+"()"); break;
+	}
+}
+
+float cLuxPlayerLookAt::HostQuery(void *apCtx, uint32_t alKind, float afA, float afB)
+{
+	cLuxPlayerLookAt *p = (cLuxPlayerLookAt*)apCtx;
+	switch(alKind)
+	{
+	case kOhplA2bQCamPitch: return p->mpPlayer->GetCamera()->GetPitch();
+	case kOhplA2bQCamYaw: return p->mpPlayer->GetCamera()->GetYaw();
+	}
+	return 0;
+}
+
+void cLuxPlayerLookAt::HostFill(void *apCtx, uint32_t alKind, float *apBuf)
+{
+	cLuxPlayerLookAt *p = (cLuxPlayerLookAt*)apCtx;
+	if(alKind != kOhplA2bFGoalAngle) return;
+	cVector3f vGoal = cMath::GetAngleFromPoints3D(p->mpPlayer->GetCamera()->GetPosition(), cVector3f(apBuf[0], apBuf[1], apBuf[2]));
+	apBuf[3] = vGoal.x;
+	apBuf[4] = vGoal.y;
+	apBuf[5] = vGoal.z;
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerLookAt::Reset()
 {
-	mbActive = false;
-	mfMaxSpeed = 9999.0f;
-	mfSpeedMul = 1.0f;
-	mvTargetPos = cVector3f(0,1,0);
-	mvCurrentSpeed =0;
-
+	if(OhplBackendRustRequested()) ohpl_a2b_lookat_reset(&mS);
+	else
+	{
+		mbActive = false;
+		mfMaxSpeed = 9999.0f;
+		mfSpeedMul = 1.0f;
+		mvTargetPos = cVector3f(0,1,0);
+		mvCurrentSpeed =0;
+		mfDestFovMul = 1.0f;
+		mfFov = 1.0f;
+		mfFovSpeed = 1.0f;
+		mfFovMaxSpeed = 1.0f;
+	}
 	msAtTargetCallback = "";
-
-	mfDestFovMul = 1.0f;
-	mfFov = 1.0f;
-	mfFovSpeed = 1.0f;
-	mfFovMaxSpeed = 1.0f;
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerLookAt::SetTarget(const cVector3f &avTargetPos, float afSpeedMul, float afMaxSpeed, const tString& asAtTargetCallback)
 {
-	mvTargetPos = avTargetPos;
-	mfSpeedMul = afSpeedMul;
-	mfMaxSpeed = afMaxSpeed;
-
+	if(OhplBackendRustRequested()) ohpl_a2b_lookat_set_target(&mS, avTargetPos.x, avTargetPos.y, avTargetPos.z, afSpeedMul, afMaxSpeed);
+	else
+	{
+		mvTargetPos = avTargetPos;
+		mfSpeedMul = afSpeedMul;
+		mfMaxSpeed = afMaxSpeed;
+	}
 	msAtTargetCallback = asAtTargetCallback;
 }
 
@@ -902,6 +1030,12 @@ void cLuxPlayerLookAt::SetTarget(const cVector3f &avTargetPos, float afSpeedMul,
 
 void cLuxPlayerLookAt::SetActive(bool abX)
 {
+	if(OhplBackendRustRequested())
+	{
+		ohpl_a2b_lookat_set_active(&mS, abX);
+		return;
+	}
+
 	mbActive = abX;
 	if(mbActive==false)
 	{
@@ -1323,10 +1457,14 @@ void cLuxPlayerLantern::OnStart()
 }
 void cLuxPlayerLantern::Reset()
 {
-	mbDisabled = false;
-	mbActive = false;
+	if(OhplBackendRustRequested()) ohpl_a2b_lantern_reset(&mS);
+	else
+	{
+		mbDisabled = false;
+		mbActive = false;
+		mfAlpha =0;
+	}
 	mpLight = NULL;
-	mfAlpha =0;
 }
 
 //-----------------------------------------------------------------------
@@ -1334,34 +1472,82 @@ void cLuxPlayerLantern::Reset()
 
 void cLuxPlayerLantern::Update(float afTimeStep)
 {
-	OhplGa2Lantern s = {{mDefaultColor.r, mDefaultColor.g, mDefaultColor.b, mDefaultColor.a}, mfFadeLightOilAmount, mfLowerOilSpeed, mbActive, mfAlpha};
+	if(OhplBackendRustRequested())
+	{
+		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+		ohpl_a2b_lantern_update(&mS, &h, afTimeStep);
+		return;
+	}
+
 	OhplGa2Ops ops;
 	bool bEmotionFlash = mbActive ? gpBase->mpEffectHandler->GetEmotionFlash()->IsActive() : false;
+	OhplGa2Lantern s = mS.k;
 	if(ohpl_ga2_lantern_update(&s, gpBase->mpPlayer->GetLampOil(), bEmotionFlash, afTimeStep, &ops) == false) return;
 	mfAlpha = s.mfAlpha;
 	for(uint32_t i=0; i<ops.n; ++i)
 	{
 		const OhplGa2Op &op = ops.ops[i];
-		switch(op.kind)
-		{
-		case kOhplGa2LanternColor: mpLight->SetDiffuseColor(cColor(op.a, op.b, op.c, op.d)); break;
-		case kOhplGa2LanternOutOfOil:
-			gpBase->mpHelpFuncs->PlayGuiSoundData(msOutOfOilSound, eSoundEntryType_Gui);
-			SetActive(false, true);
-			break;
-		case kOhplGa2LanternSetOil: mpPlayer->SetLampOil(op.a); break;
-		}
+		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
 	}
-	// Update light matrix
-	if(mpLight)
+	HostOp(this, kOhplA2bLanternMatrix, 0, 0, 0, 0, 0);
+}
+
+void cLuxPlayerLantern::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
+{
+	cLuxPlayerLantern *p = (cLuxPlayerLantern*)apCtx;
+	switch(alKind)
 	{
-		cCamera *pCam = mpPlayer->GetCamera();
-		cVector3f vCamRotation( pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
-		cMatrixf mtxCamTransform = cMath::MatrixRotate(vCamRotation, eEulerRotationOrder_XYZ);
-		mtxCamTransform.SetTranslation(pCam->GetPosition());
-		cMatrixf mtxLocalLight = cMath::MatrixTranslate(mvLocalOffset);
-		mpLight->SetMatrix(cMath::MatrixMul(mtxCamTransform, mtxLocalLight));
+	case kOhplGa2LanternColor: p->mpLight->SetDiffuseColor(cColor(afA, afB, afC, afD)); break;
+	case kOhplGa2LanternOutOfOil:
+		gpBase->mpHelpFuncs->PlayGuiSoundData(p->msOutOfOilSound, eSoundEntryType_Gui);
+		p->SetActive(false, true);
+		break;
+	case kOhplGa2LanternSetOil: p->mpPlayer->SetLampOil(afA); break;
+	case kOhplA2bLanternMatrix:
+		// Update light matrix
+		if(p->mpLight)
+		{
+			cCamera *pCam = p->mpPlayer->GetCamera();
+			cVector3f vCamRotation( pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
+			cMatrixf mtxCamTransform = cMath::MatrixRotate(vCamRotation, eEulerRotationOrder_XYZ);
+			mtxCamTransform.SetTranslation(pCam->GetPosition());
+			cMatrixf mtxLocalLight = cMath::MatrixTranslate(p->mvLocalOffset);
+			p->mpLight->SetMatrix(cMath::MatrixMul(mtxCamTransform, mtxLocalLight));
+		}
+		break;
+	case kOhplGa2LanternHintNoItem: gpBase->mpHintHandler->Add("LanternNoItem", kTranslate("Hints", "LanternNoItem"), 0); break;
+	case kOhplGa2LanternHintNoOil: gpBase->mpHintHandler->Add("LanternNoOil", kTranslate("Hints", "LanternNoOil"), 0); break;
+	case kOhplGa2LanternSoundOut: gpBase->mpHelpFuncs->PlayGuiSoundData(p->msOutOfOilSound, eSoundEntryType_Gui); break;
+	case kOhplGa2LanternSetActive: p->mbActive = alI != 0; break;
+	case kOhplGa2LanternSoundOn: gpBase->mpHelpFuncs->PlayGuiSoundData(p->msTurnOnSound, eSoundEntryType_Gui); break;
+	case kOhplGa2LanternSoundOff: gpBase->mpHelpFuncs->PlayGuiSoundData(p->msTurnOffSound, eSoundEntryType_Gui); break;
+	case kOhplGa2LanternHand:
+		if(alI) p->mpPlayer->GetHands()->SetActiveHandObject("lantern");
+		else p->mpPlayer->GetHands()->SetActiveHandObject("");
+		break;
+	case kOhplGa2LanternCallback:
+	{
+		cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
+		if(pMap->GetLanternLitCallback()!="")
+		{
+			pMap->RunScript(pMap->GetLanternLitCallback()+"(" + (alI ? "true" : "false") + ")" );
+		}
+		break;
 	}
+	}
+}
+
+float cLuxPlayerLantern::HostQuery(void *apCtx, uint32_t alKind, float afA, float afB)
+{
+	cLuxPlayerLantern *p = (cLuxPlayerLantern*)apCtx;
+	switch(alKind)
+	{
+	case kOhplA2bQEmotionFlash: return gpBase->mpEffectHandler->GetEmotionFlash()->IsActive() ? 1.0f : 0.0f;
+	case kOhplA2bQOil: return p->mpPlayer->GetLampOil();
+	case kOhplA2bQAllowed: return p->mpPlayer->GetCurrentStateData()->AllowLantern() ? 1.0f : 0.0f;
+	case kOhplA2bQHasItem: return gpBase->mpInventory->HasItemOfType(eLuxItemType_Lantern) ? 1.0f : 0.0f;
+	}
+	return 0;
 }
 
 //-----------------------------------------------------------------------
@@ -1406,14 +1592,21 @@ void cLuxPlayerLantern::DestroyWorldEntities(cLuxMap *apMap)
 
 void cLuxPlayerLantern::SetActive(bool abX, bool abUseEffects, bool abCheckForOilAndItems, bool abCheckIfAllowed)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+		ohpl_a2b_lantern_set_active(&mS, &h, abX, abUseEffects, abCheckForOilAndItems, abCheckIfAllowed);
+		return;
+	}
+
 	OhplGa2LanternSet p;
 	p.mbActive = abX;
 	p.mbUseEffects = abUseEffects;
 	p.mbCheckOilItems = abCheckForOilAndItems;
 	p.mbCheckAllowed = abCheckIfAllowed;
 	p.mbCurrent = mbActive;
-	p.mbAllowed = abCheckIfAllowed ? mpPlayer->GetCurrentStateData()->AllowLantern() : true;
-	p.mbHasItem = abCheckForOilAndItems ? gpBase->mpInventory->HasItemOfType(eLuxItemType_Lantern) : true;
+	p.mbAllowed = abCheckIfAllowed ? HostQuery(this, kOhplA2bQAllowed, 0, 0) != 0 : true;
+	p.mbHasItem = abCheckForOilAndItems ? HostQuery(this, kOhplA2bQHasItem, 0, 0) != 0 : true;
 	p.mbDisabled = mbDisabled;
 	p.mfOil = mpPlayer->GetLampOil();
 	OhplGa2Ops ops;
@@ -1421,28 +1614,7 @@ void cLuxPlayerLantern::SetActive(bool abX, bool abUseEffects, bool abCheckForOi
 	for(uint32_t i=0; i<ops.n; ++i)
 	{
 		const OhplGa2Op &op = ops.ops[i];
-		switch(op.kind)
-		{
-		case kOhplGa2LanternHintNoItem: gpBase->mpHintHandler->Add("LanternNoItem", kTranslate("Hints", "LanternNoItem"), 0); break;
-		case kOhplGa2LanternHintNoOil: gpBase->mpHintHandler->Add("LanternNoOil", kTranslate("Hints", "LanternNoOil"), 0); break;
-		case kOhplGa2LanternSoundOut: gpBase->mpHelpFuncs->PlayGuiSoundData(msOutOfOilSound, eSoundEntryType_Gui); break;
-		case kOhplGa2LanternSetActive: mbActive = op.i != 0; break;
-		case kOhplGa2LanternSoundOn: gpBase->mpHelpFuncs->PlayGuiSoundData(msTurnOnSound, eSoundEntryType_Gui); break;
-		case kOhplGa2LanternSoundOff: gpBase->mpHelpFuncs->PlayGuiSoundData(msTurnOffSound, eSoundEntryType_Gui); break;
-		case kOhplGa2LanternHand:
-			if(op.i) mpPlayer->GetHands()->SetActiveHandObject("lantern");
-			else mpPlayer->GetHands()->SetActiveHandObject("");
-			break;
-		case kOhplGa2LanternCallback:
-		{
-			cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
-			if(pMap->GetLanternLitCallback()!="")
-			{
-				pMap->RunScript(pMap->GetLanternLitCallback()+"(" + (op.i ? "true" : "false") + ")" );
-			}
-			break;
-		}
-		}
+		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
 	}
 }
 
@@ -1450,8 +1622,14 @@ void cLuxPlayerLantern::SetActive(bool abX, bool abUseEffects, bool abCheckForOi
 
 void cLuxPlayerLantern::SetDisabled(bool abX)
 {
-	mbDisabled = abX;
+	if(OhplBackendRustRequested())
+	{
+		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+		ohpl_a2b_lantern_set_disabled(&mS, &h, abX);
+		return;
+	}
 
+	mbDisabled = abX;
 	if(mbDisabled)
 		SetActive(false, true);
 }
@@ -2290,6 +2468,12 @@ void cLuxPlayerLightLevel::OnStart()
 
 void cLuxPlayerLightLevel::Reset()
 {
+	if(OhplBackendRustRequested())
+	{
+		ohpl_a2b_light_reset(&mS);
+		return;
+	}
+
 	mfExtendedLightLevel = 1.0f;
 	mfNormalLightLevel = 1.0f;
 	mfUpdateCount =0;
@@ -2299,24 +2483,66 @@ void cLuxPlayerLightLevel::Reset()
 
 void cLuxPlayerLightLevel::Update(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2bHost h = {this, NULL, HostQuery, HostFill};
+		ohpl_a2b_light_update(&mS, &h, afTimeStep);
+		return;
+	}
+
 	if(ohpl_ga2_light_timer(&mfUpdateCount, afTimeStep))
 	{
 		iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 		cVector3f vPos = pCharBody->GetPosition();
 		cVector3f vSize = pCharBody->GetSize();
 		cVector3f vForward = pCharBody->GetForward();
+
 		cVector3f vTestPos[5];
 		ohpl_ga2_light_positions(&vPos, &vSize, &vForward, vTestPos);
-		std::vector<iLight*> vSkipLights;
-		vSkipLights.push_back(mpPlayer->GetHelperInDarkness()->GetAmbientLight());
+
 		bool bLantern = mpPlayer->GetHelperLantern()->IsActive();
 		float vExt[5], vNormal[5];
-		for(int i=0; i<5; ++i)
-		{
-			vExt[i] = gpBase->mpMapHelper->GetLightLevelAtPos(vTestPos[i], &vSkipLights, mfRadiusAdd);
-			vNormal[i] = gpBase->mpMapHelper->GetLightLevelAtPos(vTestPos[i], &vSkipLights, 0);
-		}
+		SampleLevels(vTestPos, vExt, vNormal);
 		ohpl_ga2_light_combine(bLantern, vExt, vNormal, &mfExtendedLightLevel, &mfNormalLightLevel);
+	}
+}
+
+void cLuxPlayerLightLevel::SampleLevels(const cVector3f *apPos, float *apExt, float *apNormal)
+{
+	std::vector<iLight*> vSkipLights;
+	vSkipLights.push_back(mpPlayer->GetHelperInDarkness()->GetAmbientLight());
+	for(int i=0; i<5; ++i)
+	{
+		apExt[i] = gpBase->mpMapHelper->GetLightLevelAtPos(apPos[i], &vSkipLights, mfRadiusAdd);
+		apNormal[i] = gpBase->mpMapHelper->GetLightLevelAtPos(apPos[i], &vSkipLights, 0);
+	}
+}
+
+float cLuxPlayerLightLevel::HostQuery(void *apCtx, uint32_t alKind, float afA, float afB)
+{
+	cLuxPlayerLightLevel *p = (cLuxPlayerLightLevel*)apCtx;
+	if(alKind == kOhplA2bQLanternActive) return p->mpPlayer->GetHelperLantern()->IsActive() ? 1.0f : 0.0f;
+	return 0;
+}
+
+void cLuxPlayerLightLevel::HostFill(void *apCtx, uint32_t alKind, float *apBuf)
+{
+	cLuxPlayerLightLevel *p = (cLuxPlayerLightLevel*)apCtx;
+	if(alKind == kOhplA2bFBody)
+	{
+		iCharacterBody *pCharBody = p->mpPlayer->GetCharacterBody();
+		cVector3f vPos = pCharBody->GetPosition();
+		cVector3f vSize = pCharBody->GetSize();
+		cVector3f vForward = pCharBody->GetForward();
+		memcpy(apBuf, &vPos, sizeof(float)*3);
+		memcpy(apBuf+3, &vSize, sizeof(float)*3);
+		memcpy(apBuf+6, &vForward, sizeof(float)*3);
+	}
+	else if(alKind == kOhplA2bFLights)
+	{
+		cVector3f vTestPos[5];
+		memcpy(vTestPos, apBuf, sizeof(float)*15);
+		p->SampleLevels(vTestPos, apBuf+16, apBuf+21);
 	}
 }
 
@@ -2327,6 +2553,12 @@ void cLuxPlayerLightLevel::Update(float afTimeStep)
 
 void cLuxPlayerLightLevel::OnMapEnter(cLuxMap *apMap)
 {
+	if(OhplBackendRustRequested())
+	{
+		ohpl_a2b_light_map_enter(&mS);
+		return;
+	}
+
 	mfUpdateCount =0;
 }
 
@@ -2373,19 +2605,18 @@ void cLuxPlayerInDarkness::OnStart()
 }
 void cLuxPlayerInDarkness::Reset()
 {
-	mbActive = true;
-
+	if(OhplBackendRustRequested()) ohpl_a2b_dark_reset(&mS);
+	else
+	{
+		mbActive = true;
+		mbAmbientLightIsOn = false;
+		mbInDarkness = false;
+		mfLoopSoundCount =0;
+		mfSanityLossMul =0;
+		mfShowHintTimer = 0;
+	}
 	mpAmbientLight =NULL;
-
-	mbAmbientLightIsOn = false;
-	mbInDarkness = false;
-
 	mpLoopSound = NULL;
-	mfLoopSoundCount =0;
-
-	mfSanityLossMul =0;
-
-	mfShowHintTimer = 0;
 }
 
 //-----------------------------------------------------------------------
@@ -2393,46 +2624,85 @@ void cLuxPlayerInDarkness::Reset()
 
 void cLuxPlayerInDarkness::Update(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA2bHost h = {this, HostOp, HostQuery, HostFill};
+		ohpl_a2b_dark_update(&mS, &h, afTimeStep);
+		return;
+	}
+
 	if (!mbActive) return;
+
 	OhplGa2DarknessIn in;
-	in.mfExtLevel = mpPlayer->GetHelperLightLevel()->GetExtendedLightLevel();
-	in.mfNormalLevel = mpPlayer->GetHelperLightLevel()->GetNormalLightLevel();
-	cVector3f vCamPos = mpPlayer->GetCamera()->GetPosition();
-	mpAmbientLight->SetPosition(vCamPos - cVector3f(0,0.3f,0));
-	in.mbHardMode = gpBase->mbHardMode;
-	in.mbFlashbackActive = mpPlayer->GetHelperFlashback()->IsActive();
-	in.mbDrainDisabled = mpPlayer->GetSanityDrainDisabled();
-	in.mbEmotionFlash = gpBase->mpEffectHandler->GetEmotionFlash()->IsActive();
-	OhplGa2Darkness s = {mfMinDarknessLightLevel, mfAmbientLightMinLightLevel, mfLoopSoundStartupTime, mfSanityLossPerSecond,
-		mbAmbientLightIsOn, mbInDarkness, mfLoopSoundCount, mfSanityLossMul, mfShowHintTimer};
+	float vLevels[2];
+	HostFill(this, kOhplA2bFDarkLevels, vLevels);
+	in.mfExtLevel = vLevels[0];
+	in.mfNormalLevel = vLevels[1];
+	HostOp(this, kOhplA2bAmbientPos, 0, 0, 0, 0, 0);
+	in.mbHardMode = HostQuery(this, kOhplA2bQHardMode, 0, 0) != 0;
+	in.mbFlashbackActive = HostQuery(this, kOhplA2bQFlashbackActive, 0, 0) != 0;
+	in.mbDrainDisabled = HostQuery(this, kOhplA2bQDrainDisabled, 0, 0) != 0;
+	in.mbEmotionFlash = HostQuery(this, kOhplA2bQEmotionFlash, 0, 0) != 0;
+
 	OhplGa2Ops ops;
-	ohpl_ga2_darkness_update(&s, &in, afTimeStep, &ops);
-	mbAmbientLightIsOn = s.mbAmbientLightIsOn != 0;
-	mbInDarkness = s.mbInDarkness != 0;
-	mfLoopSoundCount = s.mfLoopSoundCount;
-	mfSanityLossMul = s.mfSanityLossMul;
-	mfShowHintTimer = s.mfShowHintTimer;
+	ohpl_ga2_darkness_update(&mS.k, &in, afTimeStep, &ops);
 	for(uint32_t i=0; i<ops.n; ++i)
 	{
 		const OhplGa2Op &op = ops.ops[i];
-		switch(op.kind)
-		{
-		case kOhplGa2AmbientOff: mpAmbientLight->FadeTo(cColor(0.0f, 0.0f),mpAmbientLight->GetRadius(),mfAmbientLightFadeOutTime); break;
-		case kOhplGa2AmbientOn:
-			if(op.i)
-				mpAmbientLight->FadeTo(mAmbientLightColor*mfAmbientLightIntensity * 0.75f , mpAmbientLight->GetRadius(), mfAmbientLightFadeInTime * 2.5f);
-			else
-				mpAmbientLight->FadeTo(mAmbientLightColor*mfAmbientLightIntensity, mpAmbientLight->GetRadius(), mfAmbientLightFadeInTime);
-			break;
-		case kOhplGa2DarknessLowerSanity: mpPlayer->LowerSanity(op.a, true); break;
-		case kOhplGa2HintDarkness: gpBase->mpHintHandler->Add("DarknessDecrease", kTranslate("Hints", "DarknessDecrease"), 0); break;
-		}
+		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
 	}
+}
+
+void cLuxPlayerInDarkness::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
+{
+	cLuxPlayerInDarkness *p = (cLuxPlayerInDarkness*)apCtx;
+	switch(alKind)
+	{
+	case kOhplA2bAmbientPos:
+		p->mpAmbientLight->SetPosition(p->mpPlayer->GetCamera()->GetPosition() - cVector3f(0,0.3f,0));
+		break;
+	case kOhplGa2AmbientOff: p->mpAmbientLight->FadeTo(cColor(0.0f, 0.0f),p->mpAmbientLight->GetRadius(),p->mfAmbientLightFadeOutTime); break;
+	case kOhplGa2AmbientOn:
+		if(alI)
+			p->mpAmbientLight->FadeTo(p->mAmbientLightColor*p->mfAmbientLightIntensity * 0.75f , p->mpAmbientLight->GetRadius(), p->mfAmbientLightFadeInTime * 2.5f);
+		else
+			p->mpAmbientLight->FadeTo(p->mAmbientLightColor*p->mfAmbientLightIntensity, p->mpAmbientLight->GetRadius(), p->mfAmbientLightFadeInTime);
+		break;
+	case kOhplGa2DarknessLowerSanity: p->mpPlayer->LowerSanity(afA, true); break;
+	case kOhplGa2HintDarkness: gpBase->mpHintHandler->Add("DarknessDecrease", kTranslate("Hints", "DarknessDecrease"), 0); break;
+	}
+}
+
+float cLuxPlayerInDarkness::HostQuery(void *apCtx, uint32_t alKind, float afA, float afB)
+{
+	cLuxPlayerInDarkness *p = (cLuxPlayerInDarkness*)apCtx;
+	switch(alKind)
+	{
+	case kOhplA2bQHardMode: return gpBase->mbHardMode ? 1.0f : 0.0f;
+	case kOhplA2bQFlashbackActive: return p->mpPlayer->GetHelperFlashback()->IsActive() ? 1.0f : 0.0f;
+	case kOhplA2bQDrainDisabled: return p->mpPlayer->GetSanityDrainDisabled() ? 1.0f : 0.0f;
+	case kOhplA2bQEmotionFlash: return gpBase->mpEffectHandler->GetEmotionFlash()->IsActive() ? 1.0f : 0.0f;
+	}
+	return 0;
+}
+
+void cLuxPlayerInDarkness::HostFill(void *apCtx, uint32_t alKind, float *apBuf)
+{
+	cLuxPlayerInDarkness *p = (cLuxPlayerInDarkness*)apCtx;
+	if(alKind != kOhplA2bFDarkLevels) return;
+	apBuf[0] = p->mpPlayer->GetHelperLightLevel()->GetExtendedLightLevel();
+	apBuf[1] = p->mpPlayer->GetHelperLightLevel()->GetNormalLightLevel();
 }
 
 //-----------------------------------------------------------------------
 void cLuxPlayerInDarkness::OnMapEnter(cLuxMap *apMap)
 {
+	if(OhplBackendRustRequested())
+	{
+		ohpl_a2b_dark_map_enter(&mS);
+		return;
+	}
+
 	mbAmbientLightIsOn = false;
 	mbInDarkness = false;
 }
@@ -2474,6 +2744,8 @@ void cLuxPlayerInDarkness::DestroyWorldEntities(cLuxMap *apMap)
 bool cLuxPlayerInDarkness::InDarkness()
 {
 	float fLightLevel = mpPlayer->GetHelperLightLevel()->GetExtendedLightLevel();
+	if(OhplBackendRustRequested()) return ohpl_a2b_dark_in_darkness(&mS, fLightLevel);
+
 	return fLightLevel <= mfMinDarknessLightLevel;
 }
 
@@ -2481,8 +2753,14 @@ bool cLuxPlayerInDarkness::InDarkness()
 
 void cLuxPlayerInDarkness::SetActive(bool abX)
 {
-	mbActive = abX;
+	if(OhplBackendRustRequested())
+	{
+		OhplA2bHost h = {this, HostOp, HostQuery, HostFill};
+		ohpl_a2b_dark_set_active(&mS, &h, abX);
+		return;
+	}
 
+	mbActive = abX;
 	if (abX == false)
 	{
 		if(mbAmbientLightIsOn)
@@ -2490,7 +2768,6 @@ void cLuxPlayerInDarkness::SetActive(bool abX)
 			mbAmbientLightIsOn = false;
 			mpAmbientLight->FadeTo(cColor(0.0f, 0.0f),mpAmbientLight->GetRadius(),mfAmbientLightFadeOutTime);
 		}
-        
 		mfLoopSoundCount = 0;
 		mbInDarkness = false;
 		mfSanityLossMul = 0;

@@ -11,6 +11,9 @@
 mod a2_core;
 #[cfg(test)]
 mod a2_tests;
+mod a2b_helpers;
+#[cfg(test)]
+mod a2b_tests;
 mod camera;
 mod ffi;
 mod hands;

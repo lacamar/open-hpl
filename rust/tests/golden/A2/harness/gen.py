@@ -3,11 +3,11 @@ import re
 import subprocess
 import sys
 
-sys.path.insert(0, '/home/lm/.cache/open-hpl/ga3a-harness')
+sys.path.insert(0, '/home/lm/.cache/open-hpl/a2b-harness')
 from cppedit import span
 
 side = sys.argv[1]
-W = '/home/lm/.local/src/open-hpl/.claude/worktrees/agent-aae97849e1b6dc9b1'
+W = '/home/lm/.local/src/open-hpl/.claude/worktrees/agent-a46003426b7ef3f23'
 G = 'amnesia/src/game/'
 
 
@@ -47,6 +47,18 @@ H = [
     'void cLuxPlayerLantern::Update', 'void cLuxPlayerLantern::SetActive',
     'void cLuxPlayerLightLevel::Update',
     'void cLuxPlayerInDarkness::Update',
+    'void cLuxPlayerInsanityCollapse::Reset', 'void cLuxPlayerInsanityCollapse::HostOp', 'float cLuxPlayerInsanityCollapse::HostQuery',
+    'void cLuxPlayerCamDirEffects::Reset', 'float cLuxPlayerCamDirEffects::HostQuery',
+    'void cLuxPlayerHurt::Reset', 'void cLuxPlayerHurt::HostOp', 'float cLuxPlayerHurt::HostQuery',
+    'void cLuxPlayerFlashback::Reset', 'void cLuxPlayerFlashback::HostOp', 'float cLuxPlayerFlashback::HostQuery',
+    'void cLuxPlayerLookAt::Reset', 'void cLuxPlayerLookAt::SetTarget', 'void cLuxPlayerLookAt::SetActive', 'void cLuxPlayerLookAt::HostOp',
+    'float cLuxPlayerLookAt::HostQuery', 'void cLuxPlayerLookAt::HostFill',
+    'void cLuxPlayerLightLevel::Reset', 'void cLuxPlayerLightLevel::OnMapEnter', 'void cLuxPlayerLightLevel::SampleLevels',
+    'float cLuxPlayerLightLevel::HostQuery', 'void cLuxPlayerLightLevel::HostFill',
+    'void cLuxPlayerInDarkness::Reset', 'void cLuxPlayerInDarkness::OnMapEnter', 'bool cLuxPlayerInDarkness::InDarkness',
+    'void cLuxPlayerInDarkness::SetActive', 'void cLuxPlayerInDarkness::HostOp', 'float cLuxPlayerInDarkness::HostQuery',
+    'void cLuxPlayerInDarkness::HostFill',
+    'void cLuxPlayerLantern::Reset', 'void cLuxPlayerLantern::SetDisabled', 'void cLuxPlayerLantern::HostOp', 'float cLuxPlayerLantern::HostQuery',
     'void cLuxPlayerDeath::Update', 'void cLuxPlayerDeath::ToRust', 'void cLuxPlayerDeath::FromRust', 'void cLuxPlayerDeath::Replay',
 ]
 D = [
@@ -58,5 +70,5 @@ for f, names in (('LuxPlayer.cpp', P), ('LuxPlayerHelpers.cpp', H), ('LuxPlayerH
     t = src(f)
     for n in names:
         out.append(fn(t, n))
-open('/home/lm/.cache/open-hpl/a2-harness/%s.inc' % side, 'w', encoding='latin-1', newline='').write(''.join(out))
+open('/home/lm/.cache/open-hpl/a2b-harness/%s.inc' % side, 'w', encoding='latin-1', newline='').write(''.join(out))
 print(side, sum(len(x) for x in out))

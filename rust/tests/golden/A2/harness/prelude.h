@@ -35,11 +35,9 @@ using hpl::eEulerRotationOrder_ZXY;
 #define hplDelete(p) delete p
 #define _W(x) L##x
 
-#ifdef NEWSIDE
 #include "RustLuxPlayerA2.h"
 #include "impl/RustBackends.h"
 using hpl::OhplBackendRustRequested;
-#endif
 
 extern std::string gLog;
 void Rec(const char *fmt, ...);
@@ -417,9 +415,7 @@ struct cLuxPlayer
 	void UpdateHeadSpin(float afTimeStep);
 	void UpdateFocusText(float afTimeStep);
 	void UpdateAvgSpeed(float afTimeStep);
-#ifdef NEWSIDE
 	void RunVitals(int alWhich, float afAmount, int alType, unsigned int alFlags);
-#endif
 
 	float GetHealth() { return mfHealth; }
 	float GetSanity() { return mfSanity; }
@@ -470,6 +466,7 @@ struct cLuxBase
 };
 extern cLuxBase *gpBase;
 
+#ifndef NEWSIDE
 struct cLuxPlayerInsanityCollapse : public iLuxPlayerHelper
 {
 	bool mbActive;
@@ -485,8 +482,35 @@ struct cLuxPlayerInsanityCollapse : public iLuxPlayerHelper
 	cLuxPlayerInsanityCollapse(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
 	void Start() { Rec("CollapseStart"); }
 	void Update(float afTimeStep);
+	void Reset();
 };
+#else
+struct cLuxPlayerInsanityCollapse : public iLuxPlayerHelper
+{
+	OhplGa2Collapse mS;
+	uint32_t &mbActive = mS.mbActive;
+	int32_t &mlState = mS.mlState;
+	float &mfHeightAddCollapseSpeed = mS.mfHeightAddCollapseSpeed, &mfHeightAddAwakeSpeed = mS.mfHeightAddAwakeSpeed,
+		&mfRollCollapseSpeed = mS.mfRollCollapseSpeed, &mfHeightAddGoal = mS.mfHeightAddGoal, &mfAwakenSanity = mS.mfAwakenSanity,
+		&mfSleepTime = mS.mfSleepTime, &mfWakeUpSpeedMul = mS.mfWakeUpSpeedMul;
+	float mfRollAwakeSpeed, mfSleepSpeedMul;
+	tString msStartSound, msAwakenSound, msSleepLoopSound;
+	float mfSleepLoopSoundVolume;
+	tString msSleepRandomSound;
+	float &mfSleepRandomMinTime = mS.mfSleepRandomMinTime, &mfSleepRandomMaxTime = mS.mfSleepRandomMaxTime, &mfHeightAdd = mS.mfHeightAdd,
+		&mfRoll = mS.mfRoll, &mfT = mS.mfT, &mfRandomCount = mS.mfRandomCount;
+	cSoundEntry *mpLoopSound;
+	int mlLoopSoundID;
+	static void HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD);
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
+	cLuxPlayerInsanityCollapse(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
+	void Start() { Rec("CollapseStart"); }
+	void Update(float afTimeStep);
+	void Reset();
+};
+#endif
 
+#ifndef NEWSIDE
 struct cLuxPlayerCamDirEffects : public iLuxPlayerHelper
 {
 	float mfStartSwayMaxSanity;
@@ -504,8 +528,28 @@ struct cLuxPlayerCamDirEffects : public iLuxPlayerHelper
 	void SetSwayActive(bool abX);
 	void UpdateSway(float afTimeStep);
 #endif
+	void Reset();
 };
+#else
+struct cLuxPlayerCamDirEffects : public iLuxPlayerHelper
+{
+	OhplA2bCamDir mS;
+	float &mfStartSwayMaxSanity = mS.k.mfStartSwayMaxSanity;
+	uint32_t &mbSwayActive = mS.k.mbSwayActive;
+	cVector2f &mvSwayAdd = mS.k.mvSwayAdd;
+	int32_t &mlMaxPositions = mS.k.mlMaxPositions;
+	float &mfSwayAlpha = mS.k.mfSwayAlpha;
+	cVector2f &mvNextAdd = mS.k.mvNextAdd;
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
+	cLuxPlayerCamDirEffects(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
+	void Reset();
+	void Update(float afTimeStep);
+	float AddAndGetYawAdd(float afX);
+	float AddAndGetPitchAdd(float afX);
+};
+#endif
 
+#ifndef NEWSIDE
 struct cLuxPlayerHurt : public iLuxPlayerHelper
 {
 	std::vector<int> mvNoiseGfx;
@@ -515,12 +559,33 @@ struct cLuxPlayerHurt : public iLuxPlayerHelper
 	float mfPantCount, mfPantPosAdd, mfPantPosAddVel, mfPantPosAddDir, mfAlpha, mfHealthRegainSpeed, mfHealthRegainLimit;
 	cLuxPlayerHurt(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
 	void Update(float afTimeStep);
+	void Reset();
 };
+#else
+struct cLuxPlayerHurt : public iLuxPlayerHelper
+{
+	OhplA2bHurt mS;
+	std::vector<int> mvNoiseGfx;
+	float &mfEffectStartHealth = mS.k.mfEffectStartHealth, &mfMinMoveMul = mS.k.mfMinMoveMul, &mfMaxPantCount = mS.k.mfMaxPantCount,
+		&mfPantSpeed = mS.k.mfPantSpeed, &mfPantSize = mS.k.mfPantSize;
+	int32_t &mlCurrentNoise = mS.k.mlCurrentNoise;
+	float &mfNoiseUpdateCount = mS.k.mfNoiseUpdateCount, mfNoiseAlpha, &mfNoiseFreq = mS.k.mfNoiseFreq;
+	float &mfPantCount = mS.k.mfPantCount, &mfPantPosAdd = mS.k.mfPantPosAdd, &mfPantPosAddVel = mS.k.mfPantPosAddVel,
+		&mfPantPosAddDir = mS.k.mfPantPosAddDir, &mfAlpha = mS.k.mfAlpha, &mfHealthRegainSpeed = mS.mfHealthRegainSpeed,
+		&mfHealthRegainLimit = mS.mfHealthRegainLimit;
+	static void HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD);
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
+	cLuxPlayerHurt(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
+	void Update(float afTimeStep);
+	void Reset();
+};
+#endif
 
 struct cLuxFlashbackData
 {
 	tString msFile, msCallback;
 };
+#ifndef NEWSIDE
 struct cLuxPlayerFlashback : public iLuxPlayerHelper
 {
 	float mfRadialBlurSize, mfRadialBlurStartDist, mfWorldSoundVolume, mfMoveSpeedMul, mfRunSpeedMul;
@@ -534,17 +599,63 @@ struct cLuxPlayerFlashback : public iLuxPlayerHelper
 	void Start(const tString &f, const tString &c);
 	void LoadAndPlayFlashbackFile(const tString &f) { Rec("LoadFlashFile %s", f.c_str()); }
 	bool IsActive() { return mbActive; }
+	void Reset();
 };
+#else
+struct cLuxPlayerFlashback : public iLuxPlayerHelper
+{
+	OhplGa2Flashback mS;
+	float &mfRadialBlurSize = mS.mfRadialBlurSize, &mfRadialBlurStartDist = mS.mfRadialBlurStartDist, mfWorldSoundVolume,
+		&mfMoveSpeedMul = mS.mfMoveSpeedMul, &mfRunSpeedMul = mS.mfRunSpeedMul;
+	float &mfFlashDelay = mS.mfFlashDelay;
+	uint32_t &mbActive = mS.mbActive;
+	float &mfFlashbackStartCount = mS.mfFlashbackStartCount;
+	tString msFlashbackFile, msCallback;
+	std::list<cLuxFlashbackData> mlstFlashbackQueue;
+	static void HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD);
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
+	cLuxPlayerFlashback(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
+	void Update(float afTimeStep);
+	void Reset();
+	void Start(const tString &f, const tString &c);
+	void LoadAndPlayFlashbackFile(const tString &f) { Rec("LoadFlashFile %s", f.c_str()); }
+	bool IsActive() { return mbActive; }
+};
+#endif
 
+#ifndef NEWSIDE
 struct cLuxPlayerLookAt : public iLuxPlayerHelper
 {
 	bool mbActive;
 	cVector3f mvTargetPos, mvCurrentSpeed;
 	float mfSpeedMul, mfMaxSpeed;
 	tString msAtTargetCallback;
+	float mfDestFovMul, mfFov, mfFovSpeed, mfFovMaxSpeed;
 	cLuxPlayerLookAt(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
 	void Update(float afTimeStep);
+	void Reset();
+	void SetTarget(const cVector3f &avTargetPos, float afSpeedMul, float afMaxSpeed, const tString &asAtTargetCallback);
+	void SetActive(bool abX);
 };
+#else
+struct cLuxPlayerLookAt : public iLuxPlayerHelper
+{
+	OhplA2bLookAt mS;
+	uint32_t &mbActive = mS.mbActive;
+	cVector3f &mvTargetPos = mS.mvTargetPos, &mvCurrentSpeed = mS.k.mvCurrentSpeed;
+	float &mfSpeedMul = mS.k.mfSpeedMul, &mfMaxSpeed = mS.k.mfMaxSpeed;
+	float &mfDestFovMul = mS.mfDestFovMul, &mfFov = mS.mfFov, &mfFovSpeed = mS.mfFovSpeed, &mfFovMaxSpeed = mS.mfFovMaxSpeed;
+	tString msAtTargetCallback;
+	static void HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD);
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
+	static void HostFill(void *apCtx, uint32_t alKind, float *apBuf);
+	cLuxPlayerLookAt(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
+	void Update(float afTimeStep);
+	void Reset();
+	void SetTarget(const cVector3f &avTargetPos, float afSpeedMul, float afMaxSpeed, const tString &asAtTargetCallback);
+	void SetActive(bool abX);
+};
+#endif
 
 struct cLuxPlayerSanity : public iLuxPlayerHelper
 {
@@ -572,13 +683,13 @@ struct cLuxPlayerSanity : public iLuxPlayerHelper
 	void UpdateInsanityVisuals(float afTimeStep);
 	void UpdateLosingSanity(float afTimeStep);
 	void UpdateLowSanity(float afTimeStep);
-#else
+#endif
 	void ToRust(OhplGa2Sanity &s);
 	void FromRust(const OhplGa2Sanity &s);
 	void Replay(const OhplGa2Ops &ops);
-#endif
 };
 
+#ifndef NEWSIDE
 struct cLuxPlayerLantern : public iLuxPlayerHelper
 {
 	cColor mDefaultColor;
@@ -592,8 +703,32 @@ struct cLuxPlayerLantern : public iLuxPlayerHelper
 	void Update(float afTimeStep);
 	void SetActive(bool abX, bool abUseEffects, bool abCheckForOilAndItems = true, bool abCheckIfAllowed = true);
 	bool IsActive() { return mbActive; }
+	void Reset();
+	void SetDisabled(bool abX);
 };
+#else
+struct cLuxPlayerLantern : public iLuxPlayerHelper
+{
+	OhplA2bLantern mS;
+	cColor &mDefaultColor = reinterpret_cast<cColor &>(mS.k.mColor);
+	tString msTurnOnSound, msTurnOffSound, msOutOfOilSound;
+	cVector3f mvLocalOffset;
+	float &mfLowerOilSpeed = mS.k.mfLowerOilSpeed, &mfFadeLightOilAmount = mS.k.mfFadeLightOilAmount;
+	uint32_t &mbDisabled = mS.mbDisabled, &mbActive = mS.k.mbActive;
+	float &mfAlpha = mS.k.mfAlpha;
+	cLightPoint *mpLight;
+	static void HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD);
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
+	cLuxPlayerLantern(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
+	void Update(float afTimeStep);
+	void SetActive(bool abX, bool abUseEffects, bool abCheckForOilAndItems = true, bool abCheckIfAllowed = true);
+	void Reset();
+	void SetDisabled(bool abX);
+	bool IsActive() { return mbActive; }
+};
+#endif
 
+#ifndef NEWSIDE
 struct cLuxPlayerLightLevel : public iLuxPlayerHelper
 {
 	float mfRadiusAdd, mfExtendedLightLevel, mfNormalLightLevel, mfUpdateCount;
@@ -601,8 +736,28 @@ struct cLuxPlayerLightLevel : public iLuxPlayerHelper
 	void Update(float afTimeStep);
 	float GetExtendedLightLevel() { return mfExtendedLightLevel; }
 	float GetNormalLightLevel() { return mfNormalLightLevel; }
+	void Reset();
+	void OnMapEnter(cLuxMap *apMap);
 };
+#else
+struct cLuxPlayerLightLevel : public iLuxPlayerHelper
+{
+	OhplA2bLight mS;
+	float &mfRadiusAdd = mS.mfRadiusAdd, &mfExtendedLightLevel = mS.mfExtendedLightLevel, &mfNormalLightLevel = mS.mfNormalLightLevel,
+		&mfUpdateCount = mS.mfUpdateCount;
+	void SampleLevels(const cVector3f *apPos, float *apExt, float *apNormal);
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
+	static void HostFill(void *apCtx, uint32_t alKind, float *apBuf);
+	cLuxPlayerLightLevel(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
+	void Update(float afTimeStep);
+	void Reset();
+	void OnMapEnter(cLuxMap *apMap);
+	float GetExtendedLightLevel() { return mfExtendedLightLevel; }
+	float GetNormalLightLevel() { return mfNormalLightLevel; }
+};
+#endif
 
+#ifndef NEWSIDE
 struct cLuxPlayerInDarkness : public iLuxPlayerHelper
 {
 	bool mbActive;
@@ -615,7 +770,37 @@ struct cLuxPlayerInDarkness : public iLuxPlayerHelper
 	cLuxPlayerInDarkness(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
 	void Update(float afTimeStep);
 	iLight *GetAmbientLight() { return mpAmbientLight; }
+	void Reset();
+	void OnMapEnter(cLuxMap *apMap);
+	bool InDarkness();
+	void SetActive(bool abX);
+	cSoundEntry *mpLoopSound;
 };
+#else
+struct cLuxPlayerInDarkness : public iLuxPlayerHelper
+{
+	OhplA2bDark mS;
+	uint32_t &mbActive = mS.mbActive;
+	cLightPoint *mpAmbientLight;
+	uint32_t &mbAmbientLightIsOn = mS.k.mbAmbientLightIsOn, &mbInDarkness = mS.k.mbInDarkness;
+	float &mfMinDarknessLightLevel = mS.k.mfMinDarknessLightLevel, &mfAmbientLightMinLightLevel = mS.k.mfAmbientLightMinLightLevel,
+		mfAmbientLightRadius, mfAmbientLightIntensity, mfAmbientLightFadeInTime, mfAmbientLightFadeOutTime;
+	cColor mAmbientLightColor;
+	float &mfLoopSoundCount = mS.k.mfLoopSoundCount, &mfLoopSoundStartupTime = mS.k.mfLoopSoundStartupTime,
+		&mfSanityLossPerSecond = mS.k.mfSanityLossPerSecond, &mfSanityLossMul = mS.k.mfSanityLossMul, &mfShowHintTimer = mS.k.mfShowHintTimer;
+	cSoundEntry *mpLoopSound;
+	static void HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD);
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
+	static void HostFill(void *apCtx, uint32_t alKind, float *apBuf);
+	cLuxPlayerInDarkness(cLuxPlayer *p) : iLuxPlayerHelper(p) {}
+	void Update(float afTimeStep);
+	void Reset();
+	void OnMapEnter(cLuxMap *apMap);
+	bool InDarkness();
+	void SetActive(bool abX);
+	iLight *GetAmbientLight() { return mpAmbientLight; }
+};
+#endif
 
 struct cLinearOscillation
 {
@@ -639,11 +824,9 @@ struct cLuxPlayerDeath : public iLuxPlayerHelper
 	void Update(float afTimeStep);
 	void ResetGame() { Rec("DeathResetGame"); }
 	void Reset() { Rec("DeathReset"); mlState = 0; mbActive = false; mfFadeAlpha = 0; mfTextAlpha1 = 0; }
-#ifdef NEWSIDE
 	void ToRust(OhplGa2Death &s);
 	void FromRust(const OhplGa2Death &s);
 	void Replay(const OhplGa2Ops &ops);
-#endif
 };
 
 struct cLuxPlayerHands : public iLuxPlayerHelper
@@ -673,6 +856,17 @@ struct cLuxPlayerHands : public iLuxPlayerHelper
 	void HideAllHandObjects() { Rec("HideAll"); }
 };
 
+#ifdef NEWSIDE
+static void CdClear(cLuxPlayerCamDirEffects *d) { d->mS.mlCount = 0; }
+static void CdPush(cLuxPlayerCamDirEffects *d, const cVector2f &v) { d->mS.mvList[d->mS.mlCount++] = v; }
+static size_t CdSize(cLuxPlayerCamDirEffects *d) { return d->mS.mlCount; }
+static cVector2f CdAt(cLuxPlayerCamDirEffects *d, size_t i) { return d->mS.mvList[i]; }
+#else
+static void CdClear(cLuxPlayerCamDirEffects *d) { d->mlstPrevAdd.clear(); }
+static void CdPush(cLuxPlayerCamDirEffects *d, const cVector2f &v) { d->mlstPrevAdd.push_back(v); }
+static size_t CdSize(cLuxPlayerCamDirEffects *d) { return d->mlstPrevAdd.size(); }
+static cVector2f CdAt(cLuxPlayerCamDirEffects *d, size_t i) { std::list<cVector2f>::iterator it = d->mlstPrevAdd.begin(); std::advance(it, i); return *it; }
+#endif
 // golden recorder (A2): wraps the Rust drivers, logs Core before/after plus the host traffic
 extern FILE *gRecFile;
 extern unsigned gRecCount;
@@ -727,3 +921,185 @@ static void rec_focus(OhplA2Core *c, const OhplA2Host *h, float s)
 #define ohpl_a2_update_head_spin rec_hspin
 #define ohpl_a2_update_terror rec_terror
 #define ohpl_a2_update_focus_alpha rec_focus
+
+// golden recorder (A2b): helper drivers, State before, host traffic, State after
+extern FILE *gRecFileB;
+struct RecHostB { const OhplA2bHost *real; std::vector<uint32_t> ev; };
+static inline uint32_t FBb(float f) { uint32_t u; memcpy(&u, &f, 4); return u; }
+static void RecOpB(void *c, uint32_t k, int32_t i, float a, float b, float cc, float d)
+{
+	RecHostB *r = (RecHostB *)c;
+	uint32_t w[7] = {1, k, (uint32_t)i};
+	memcpy(w + 3, &a, 4); memcpy(w + 4, &b, 4); memcpy(w + 5, &cc, 4); memcpy(w + 6, &d, 4);
+	r->ev.insert(r->ev.end(), w, w + 7);
+	r->real->op(r->real->ctx, k, i, a, b, cc, d);
+}
+static float RecQB(void *c, uint32_t k, float a, float b)
+{
+	RecHostB *r = (RecHostB *)c;
+	float v = r->real->query(r->real->ctx, k, a, b);
+	uint32_t w[5] = {0, k, FBb(a), FBb(b), FBb(v)};
+	r->ev.insert(r->ev.end(), w, w + 5);
+	return v;
+}
+static void RecFillB(void *c, uint32_t k, float *buf)
+{
+	RecHostB *r = (RecHostB *)c;
+	uint32_t n = k == kOhplA2bFGoalAngle ? 6 : k == kOhplA2bFBody ? 9 : k == kOhplA2bFLights ? 26 : 2;
+	r->ev.push_back(2); r->ev.push_back(k); r->ev.push_back(n);
+	for(uint32_t i = 0; i < n; ++i) r->ev.push_back(FBb(buf[i]));
+	r->real->fill(r->real->ctx, k, buf);
+	for(uint32_t i = 0; i < n; ++i) r->ev.push_back(FBb(buf[i]));
+}
+static bool gRbInside, gRbTaint;
+template<class S, class F> static void RecB(uint32_t id, S *s, const OhplA2bHost *h, uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, F f)
+{
+	static unsigned seen[32], kept[32];
+	bool setter = id >= 8;
+	unsigned stride = setter ? 1 : 29, cap = setter ? (id == 12 || id == 13 ? 12 : 40) : (id == 1 ? 30 : 100);
+	if(gRbInside) { gRbTaint = true; uint32_t dummy; f(h, &dummy); return; }
+	if(!gRecFileB || kept[id] >= cap || seen[id]++ % stride) { uint32_t dummy; gRbInside = true; f(h, &dummy); gRbInside = false; return; }
+	S before = *s;
+	RecHostB r = {h, {}};
+	OhplA2bHost h2 = {&r, RecOpB, RecQB, RecFillB};
+	uint32_t ret = 0;
+	gRbInside = true; gRbTaint = false;
+	f(h ? &h2 : NULL, &ret);
+	gRbInside = false;
+	if(gRbTaint) return;
+	uint32_t hd[8] = {id, a0, a1, a2, a3, a4, ret, (uint32_t)r.ev.size()};
+	fwrite(hd, 4, 8, gRecFileB);
+	fwrite(&before, sizeof(S), 1, gRecFileB);
+	fwrite(r.ev.data(), 4, r.ev.size(), gRecFileB);
+	fwrite(s, sizeof(S), 1, gRecFileB);
+	++kept[id];
+}
+static void rb_collapse_update(OhplGa2Collapse *s, const OhplA2bHost *h, float dt)
+{
+	RecB(0, s, h, FBb(dt), 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_collapse_update(s, hx, dt); });
+}
+static void rb_camdir_update(OhplA2bCamDir *s, const OhplA2bHost *h, float dt)
+{
+	RecB(1, s, h, FBb(dt), 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_camdir_update(s, hx, dt); });
+}
+static void rb_hurt_update(OhplA2bHurt *s, const OhplA2bHost *h, float dt)
+{
+	RecB(2, s, h, FBb(dt), 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_hurt_update(s, hx, dt); });
+}
+static void rb_lookat_update(OhplA2bLookAt *s, const OhplA2bHost *h, float dt)
+{
+	RecB(3, s, h, FBb(dt), 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_lookat_update(s, hx, dt); });
+}
+static void rb_flashback_update(OhplGa2Flashback *s, const OhplA2bHost *h, float dt)
+{
+	RecB(4, s, h, FBb(dt), 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_flashback_update(s, hx, dt); });
+}
+static void rb_light_update(OhplA2bLight *s, const OhplA2bHost *h, float dt)
+{
+	RecB(5, s, h, FBb(dt), 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_light_update(s, hx, dt); });
+}
+static void rb_dark_update(OhplA2bDark *s, const OhplA2bHost *h, float dt)
+{
+	RecB(6, s, h, FBb(dt), 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_dark_update(s, hx, dt); });
+}
+static void rb_lantern_update(OhplA2bLantern *s, const OhplA2bHost *h, float dt)
+{
+	RecB(7, s, h, FBb(dt), 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_lantern_update(s, hx, dt); });
+}
+static void rb_lantern_set_active(OhplA2bLantern *s, const OhplA2bHost *h, bool a, bool b, bool c, bool d)
+{
+	RecB(8, s, h, a, b, c, d, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_lantern_set_active(s, hx, a, b, c, d); });
+}
+static void rb_lantern_set_disabled(OhplA2bLantern *s, const OhplA2bHost *h, bool a)
+{
+	RecB(9, s, h, a, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_lantern_set_disabled(s, hx, a); });
+}
+static void rb_dark_set_active(OhplA2bDark *s, const OhplA2bHost *h, bool a)
+{
+	RecB(10, s, h, a, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_dark_set_active(s, hx, a); });
+}
+static void rb_collapse_clear(OhplGa2Collapse *s, bool a, bool b)
+{
+	RecB(11, s, NULL, a, b, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_collapse_clear(s, a, b); });
+}
+static float rb_camdir_add(OhplA2bCamDir *s, bool yaw, float x)
+{
+	float res = 0;
+	RecB(12, s, NULL, yaw, FBb(x), 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *r) { res = ohpl_a2b_camdir_add(s, yaw, x); *r = FBb(res); });
+	return res;
+}
+static void rb_camdir_reset(OhplA2bCamDir *s)
+{
+	RecB(13, s, NULL, 0, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_camdir_reset(s); });
+}
+static void rb_hurt_reset(OhplA2bHurt *s)
+{
+	RecB(14, s, NULL, 0, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_hurt_reset(s); });
+}
+static void rb_lookat_reset(OhplA2bLookAt *s)
+{
+	RecB(15, s, NULL, 0, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_lookat_reset(s); });
+}
+static void rb_lookat_set_target(OhplA2bLookAt *s, float x, float y, float z, float m, float n)
+{
+	RecB(16, s, NULL, FBb(x), FBb(y), FBb(z), FBb(m), FBb(n), [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_lookat_set_target(s, x, y, z, m, n); });
+}
+static void rb_lookat_set_active(OhplA2bLookAt *s, bool a)
+{
+	RecB(17, s, NULL, a, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_lookat_set_active(s, a); });
+}
+static void rb_flashback_reset(OhplGa2Flashback *s)
+{
+	RecB(18, s, NULL, 0, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_flashback_reset(s); });
+}
+static void rb_light_reset(OhplA2bLight *s)
+{
+	RecB(19, s, NULL, 0, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_light_reset(s); });
+}
+static void rb_light_map_enter(OhplA2bLight *s)
+{
+	RecB(20, s, NULL, 0, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_light_map_enter(s); });
+}
+static void rb_dark_reset(OhplA2bDark *s)
+{
+	RecB(21, s, NULL, 0, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_dark_reset(s); });
+}
+static void rb_dark_map_enter(OhplA2bDark *s)
+{
+	RecB(22, s, NULL, 0, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_dark_map_enter(s); });
+}
+static void rb_lantern_reset(OhplA2bLantern *s)
+{
+	RecB(23, s, NULL, 0, 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *) { ohpl_a2b_lantern_reset(s); });
+}
+static bool rb_dark_in_darkness(OhplA2bDark *s, float ext)
+{
+	bool res = false;
+	RecB(24, s, NULL, FBb(ext), 0, 0, 0, 0, [&](const OhplA2bHost *hx, uint32_t *r) { res = ohpl_a2b_dark_in_darkness(s, ext); *r = res; });
+	return res;
+}
+#define ohpl_a2b_collapse_update rb_collapse_update
+#define ohpl_a2b_camdir_update rb_camdir_update
+#define ohpl_a2b_hurt_update rb_hurt_update
+#define ohpl_a2b_lookat_update rb_lookat_update
+#define ohpl_a2b_flashback_update rb_flashback_update
+#define ohpl_a2b_light_update rb_light_update
+#define ohpl_a2b_dark_update rb_dark_update
+#define ohpl_a2b_lantern_update rb_lantern_update
+#define ohpl_a2b_lantern_set_active rb_lantern_set_active
+#define ohpl_a2b_lantern_set_disabled rb_lantern_set_disabled
+#define ohpl_a2b_dark_set_active rb_dark_set_active
+#define ohpl_a2b_collapse_clear rb_collapse_clear
+#define ohpl_a2b_camdir_add rb_camdir_add
+#define ohpl_a2b_camdir_reset rb_camdir_reset
+#define ohpl_a2b_hurt_reset rb_hurt_reset
+#define ohpl_a2b_lookat_reset rb_lookat_reset
+#define ohpl_a2b_lookat_set_target rb_lookat_set_target
+#define ohpl_a2b_lookat_set_active rb_lookat_set_active
+#define ohpl_a2b_flashback_reset rb_flashback_reset
+#define ohpl_a2b_light_reset rb_light_reset
+#define ohpl_a2b_light_map_enter rb_light_map_enter
+#define ohpl_a2b_dark_reset rb_dark_reset
+#define ohpl_a2b_dark_map_enter rb_dark_map_enter
+#define ohpl_a2b_lantern_reset rb_lantern_reset
+#define ohpl_a2b_dark_in_darkness rb_dark_in_darkness
