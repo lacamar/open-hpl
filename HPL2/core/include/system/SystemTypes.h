@@ -30,6 +30,19 @@
 
 #include "system/Container.h"
 
+#include <stdint.h>
+
+namespace hpl {
+	struct OhplH13Reg;
+}
+
+extern "C" {
+	// rust/src/scene/ffi_h13.rs: cursors over the Rust-owned world entity lists.
+	uint64_t ohpl_h13_cur_begin(const hpl::OhplH13Reg*, uint32_t kind);
+	void* ohpl_h13_cur_get(const hpl::OhplH13Reg*, uint32_t kind, uint64_t cur);
+	uint64_t ohpl_h13_cur_next(const hpl::OhplH13Reg*, uint32_t kind, uint64_t cur);
+}
+
 namespace hpl {
 
 	//////////////////////////////////////////////////
@@ -542,15 +555,23 @@ namespace hpl {
 
 		}
 
+		// Walks a list the Rust world registry owns (OHPL_IMPL=rust); same order and end semantics.
+		cSTLIterator(OhplH13Reg *apReg, uint32_t alKind) : mpCont(NULL), mpReg(apReg), mlKind(alKind)
+		{
+			mlCur = ohpl_h13_cur_begin(apReg, alKind);
+		}
+
 		///////////////////////////
 
 		bool HasNext()
 		{
+			if(mpReg) return ohpl_h13_cur_get(mpReg, mlKind, mlCur) != NULL;
 			return mIt != mpCont->end();
 		}
 
 		void* NextPtr()
 		{
+			if(mpReg) return NULL;
 			if(mIt == mpCont->end())
 				return NULL;
 			else
@@ -565,6 +586,12 @@ namespace hpl {
 
 		T Next()
 		{
+			if(mpReg)
+			{
+				T val = (T)ohpl_h13_cur_get(mpReg, mlKind, mlCur);
+				mlCur = ohpl_h13_cur_next(mpReg, mlKind, mlCur);
+				return val;
+			}
 			if(mIt == mpCont->end())
 				return NULL;
 			else
@@ -579,6 +606,7 @@ namespace hpl {
 
 		T PeekNext()
 		{
+			if(mpReg) return (T)ohpl_h13_cur_get(mpReg, mlKind, mlCur);
 			if(mIt == mpCont->end())
 				return NULL;
 			else{
@@ -591,6 +619,9 @@ namespace hpl {
 	private:
 		IT mIt;
 		CONT* mpCont;
+		OhplH13Reg *mpReg = NULL;
+		uint32_t mlKind = 0;
+		uint64_t mlCur = 0;
 
 	};
 

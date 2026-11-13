@@ -116,6 +116,27 @@ namespace hpl {
 		mpSystem =apSystem;
 		mpAI = apAI;
 		mpH13Reg = OhplBackendRustRequested() ? ohpl_h13_reg_new() : NULL;
+		if(mpH13Reg)
+		{
+			OhplH13Foreign<iLight>(mpH13Reg, kOhplH13Light);
+			OhplH13Foreign<cMeshEntity>(mpH13Reg, kOhplH13DynMesh);
+			OhplH13Foreign<cMeshEntity>(mpH13Reg, kOhplH13StaticMesh);
+			OhplH13Foreign<cBillboard>(mpH13Reg, kOhplH13Billboard);
+			OhplH13Foreign<cLensFlare>(mpH13Reg, kOhplH13LensFlare);
+			OhplH13Foreign<cBeam>(mpH13Reg, kOhplH13Beam);
+			OhplH13Foreign<cParticleSystem>(mpH13Reg, kOhplH13ParticleSystem);
+			OhplH13Foreign<cGuiSetEntity>(mpH13Reg, kOhplH13GuiSet);
+			OhplH13Foreign<cRopeEntity>(mpH13Reg, kOhplH13Rope);
+			OhplH13Foreign<cSoundEntity>(mpH13Reg, kOhplH13Sound);
+			OhplH13Foreign<cStartPosEntity>(mpH13Reg, kOhplH13StartPos);
+			OhplH13Foreign<cFogArea>(mpH13Reg, kOhplH13FogArea);
+			OhplH13Foreign<cForceField>(mpH13Reg, kOhplH13ForceField);
+			OhplH13Foreign<cDummyRenderable>(mpH13Reg, kOhplH13Dummy);
+			OhplH13Foreign<cAINodeContainer>(mpH13Reg, kOhplH13AiContainer);
+			OhplH13Foreign<cAStarHandler>(mpH13Reg, kOhplH13AStar);
+			OhplH13Foreign<cEnvironmentParticles>(mpH13Reg, kOhplH13EnvParticles);
+			OhplH13Foreign<cAreaEntity>(mpH13Reg, kOhplH13Area);
+		}
 
 		mpRootNode = hplNew( cNode3D, () );
 
@@ -174,8 +195,7 @@ namespace hpl {
 	cEnvironmentParticles* cWorld::CreateEnvironmentParticles(const tString& asName)
 	{
 		cEnvironmentParticles *pEnv = hplNew(cEnvironmentParticles, (asName, this, mpGraphics, mpResources));
-		mvEnvParticles.push_back(pEnv);
-		OhplH13Added(mpH13Reg, kOhplH13EnvParticles, mvEnvParticles);
+		OhplH13Push(mpH13Reg, kOhplH13EnvParticles, mvEnvParticles, pEnv);
 		return pEnv;
 	}
 
@@ -190,7 +210,7 @@ namespace hpl {
 	{
 		if(mpDirectionalLight) hplDelete(mpDirectionalLight);
 		if(mpTerrain) hplDelete(mpTerrain);
-		STLDeleteAll(mvEnvParticles);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13EnvParticles, mvEnvParticles);
 		if(mpSkyBoxVtxBuffer) hplDelete(mpSkyBoxVtxBuffer);
 		if(mpSkyBoxTexture && mbAutoDestroySkybox)
 		{
@@ -226,39 +246,25 @@ namespace hpl {
 	{
 		const uint32_t lPlan = ohpl_world_destroy_plan(aFlags);
 		if(lPlan & kOhplDestroyStatic)
-			STLDeleteAll(mlstStaticMeshEntities);
-			OhplH13Cleared(mpH13Reg, kOhplH13StaticMesh);
+			OhplH13DeleteAll(mpH13Reg, kOhplH13StaticMesh, mlstStaticMeshEntities);
 		
-		STLDeleteAll(mlstDynamicMeshEntities);
-		OhplH13Cleared(mpH13Reg, kOhplH13DynMesh);
-		STLDeleteAll(mlstLights);
-		OhplH13Cleared(mpH13Reg, kOhplH13Light);
-		STLDeleteAll(mlstBillboards);
-		OhplH13Cleared(mpH13Reg, kOhplH13Billboard);
-		STLDeleteAll(mlstLensFlares);
-		OhplH13Cleared(mpH13Reg, kOhplH13LensFlare);
-		STLDeleteAll(mlstBeams);
-		OhplH13Cleared(mpH13Reg, kOhplH13Beam);
-		STLDeleteAll(mlstParticleSystems);
-		OhplH13Cleared(mpH13Reg, kOhplH13ParticleSystem);
-		STLDeleteAll(mlstGuiSetEntities);
-		OhplH13Cleared(mpH13Reg, kOhplH13GuiSet);
-		STLDeleteAll(mlstRopeEntities);
-		OhplH13Cleared(mpH13Reg, kOhplH13Rope);
-		STLDeleteAll(mlstFogAreas);
-		OhplH13Cleared(mpH13Reg, kOhplH13FogArea);
-		STLDeleteAll(mlstForceFields);
-		OhplH13Cleared(mpH13Reg, kOhplH13ForceField);
-		STLDeleteAll(mlstStartPosEntities);
-		OhplH13Cleared(mpH13Reg, kOhplH13StartPos);
-		STLMapDeleteAll(m_mapAreaEntities);
-		if(mpH13Reg) ohpl_h13_area_clear(mpH13Reg);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13DynMesh, mlstDynamicMeshEntities);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13Light, mlstLights);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13Billboard, mlstBillboards);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13LensFlare, mlstLensFlares);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13Beam, mlstBeams);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13GuiSet, mlstGuiSetEntities);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13Rope, mlstRopeEntities);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13FogArea, mlstFogAreas);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13ForceField, mlstForceFields);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13StartPos, mlstStartPosEntities);
+		if(mpH13Reg) ohpl_h13_area_destroy_all(mpH13Reg);
+		else STLMapDeleteAll(m_mapAreaEntities);
 
 
-		STLDeleteAll(mlstAINodeContainers);
-		OhplH13Cleared(mpH13Reg, kOhplH13AiContainer);
-		STLDeleteAll(mlstAStarHandlers);
-		OhplH13Cleared(mpH13Reg, kOhplH13AStar);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13AiContainer, mlstAINodeContainers);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13AStar, mlstAStarHandlers);
 		STLMapDeleteAll(m_mapTempNodes);
 
 		if(lPlan & kOhplDestroyPhysics)
@@ -268,8 +274,7 @@ namespace hpl {
 		}
 
 		//So that bodies can stop sound entities on destruction.
-		STLDeleteAll(mlstSoundEntities);
-		OhplH13Cleared(mpH13Reg, kOhplH13Sound);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13Sound, mlstSoundEntities);
 
 	}
 
@@ -294,13 +299,21 @@ namespace hpl {
 		}
 	}
 
-	template<class CONT>
-	void H13DumpList(FILE *f, const char *asKind, CONT &aCont)
+	void H13DumpArea(FILE *f, const tString &asName, cAreaEntity *apArea)
 	{
-		fprintf(f, "list %s %d\n", asKind, (int)aCont.size());
+		fprintf(f, "area %s %s", asName.c_str(), apArea->msType.c_str());
+		H13Mtx(f, apArea->m_mtxTransform);
+		fprintf(f, " %08x %08x %08x\n", H13Bits(apArea->mvSize.x), H13Bits(apArea->mvSize.y), H13Bits(apArea->mvSize.z));
+	}
+
+	template<class CONT>
+	void H13DumpList(FILE *f, const char *asKind, OhplH13Reg *apReg, uint32_t alKind, CONT &aCont)
+	{
+		fprintf(f, "list %s %d\n", asKind, (int)OhplH13Size(apReg, alKind, aCont));
 		int lIdx = 0;
-		for(auto *pItem : aCont)
+		for(OhplH13Walk<CONT> it(apReg, alKind, aCont); it.Has(); it.Advance())
 		{
+			auto *pItem = it.Get();
 			fprintf(f, "%s %d %s %d", asKind, lIdx++, pItem->GetName().c_str(), pItem->GetUniqueID());
 			H13Mtx(f, pItem->GetWorldMatrix());
 			fprintf(f, "\n");
@@ -317,39 +330,50 @@ namespace hpl {
 		fprintf(f, "map %s\nworld %s\n", asMap, msName.c_str());
 		fprintf(f, "fog %d %d %08x\n", mbFogActive, mbFogCulling, H13Bits(mfFogStart));
 		fprintf(f, "sky %d\n", mbSkyBoxActive);
-		H13DumpList(f, "light", mlstLights);
-		H13DumpList(f, "meshdyn", mlstDynamicMeshEntities);
-		H13DumpList(f, "meshstatic", mlstStaticMeshEntities);
-		H13DumpList(f, "billboard", mlstBillboards);
-		H13DumpList(f, "lensflare", mlstLensFlares);
-		H13DumpList(f, "beam", mlstBeams);
-		H13DumpList(f, "ps", mlstParticleSystems);
-		H13DumpList(f, "guiset", mlstGuiSetEntities);
-		H13DumpList(f, "rope", mlstRopeEntities);
-		H13DumpList(f, "sound", mlstSoundEntities);
-		H13DumpList(f, "fogarea", mlstFogAreas);
-		H13DumpList(f, "forcefield", mlstForceFields);
-		H13DumpList(f, "dummy", mlstDummyRenderables);
+		H13DumpList(f, "light", mpH13Reg, kOhplH13Light, mlstLights);
+		H13DumpList(f, "meshdyn", mpH13Reg, kOhplH13DynMesh, mlstDynamicMeshEntities);
+		H13DumpList(f, "meshstatic", mpH13Reg, kOhplH13StaticMesh, mlstStaticMeshEntities);
+		H13DumpList(f, "billboard", mpH13Reg, kOhplH13Billboard, mlstBillboards);
+		H13DumpList(f, "lensflare", mpH13Reg, kOhplH13LensFlare, mlstLensFlares);
+		H13DumpList(f, "beam", mpH13Reg, kOhplH13Beam, mlstBeams);
+		H13DumpList(f, "ps", mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems);
+		H13DumpList(f, "guiset", mpH13Reg, kOhplH13GuiSet, mlstGuiSetEntities);
+		H13DumpList(f, "rope", mpH13Reg, kOhplH13Rope, mlstRopeEntities);
+		H13DumpList(f, "sound", mpH13Reg, kOhplH13Sound, mlstSoundEntities);
+		H13DumpList(f, "fogarea", mpH13Reg, kOhplH13FogArea, mlstFogAreas);
+		H13DumpList(f, "forcefield", mpH13Reg, kOhplH13ForceField, mlstForceFields);
+		H13DumpList(f, "dummy", mpH13Reg, kOhplH13Dummy, mlstDummyRenderables);
 
-		fprintf(f, "list startpos %d\n", (int)mlstStartPosEntities.size());
-		for(cStartPosEntity *pStart : mlstStartPosEntities)
+		fprintf(f, "list startpos %d\n", (int)OhplH13Size(mpH13Reg, kOhplH13StartPos, mlstStartPosEntities));
+		for(OhplH13Walk<tStartPosEntityList> it(mpH13Reg, kOhplH13StartPos, mlstStartPosEntities); it.Has(); it.Advance())
 		{
+			cStartPosEntity *pStart = it.Get();
 			fprintf(f, "startpos %s %d", pStart->msName.c_str(), pStart->mbCrouching);
 			H13Mtx(f, pStart->m_mtxTransform);
 			fprintf(f, "\n");
 		}
 
-		fprintf(f, "list area %d\n", (int)m_mapAreaEntities.size());
-		for(tAreaEntityMapIt it = m_mapAreaEntities.begin(); it != m_mapAreaEntities.end(); ++it)
+		if(mpH13Reg)
 		{
-			cAreaEntity *pArea = it->second;
-			fprintf(f, "area %s %s", it->first.c_str(), pArea->msType.c_str());
-			H13Mtx(f, pArea->m_mtxTransform);
-			fprintf(f, " %08x %08x %08x\n", H13Bits(pArea->mvSize.x), H13Bits(pArea->mvSize.y), H13Bits(pArea->mvSize.z));
+			fprintf(f, "list area %d\n", (int)ohpl_h13_area_len(mpH13Reg));
+			for(size_t i=0; i<ohpl_h13_area_len(mpH13Reg); ++i)
+			{
+				OhplName key;
+				cAreaEntity *pArea = static_cast<cAreaEntity*>(ohpl_h13_area_at(mpH13Reg, i, &key));
+				H13DumpArea(f, tString(key.ptr, key.len), pArea);
+			}
+		}
+		else
+		{
+			fprintf(f, "list area %d\n", (int)m_mapAreaEntities.size());
+			for(tAreaEntityMapIt it = m_mapAreaEntities.begin(); it != m_mapAreaEntities.end(); ++it)
+				H13DumpArea(f, it->first, it->second);
 		}
 
 		fprintf(f, "list ainode %d\nlist astar %d\nlist envparticles %d\n",
-				(int)mlstAINodeContainers.size(), (int)mlstAStarHandlers.size(), (int)mvEnvParticles.size());
+				(int)OhplH13Size(mpH13Reg, kOhplH13AiContainer, mlstAINodeContainers),
+				(int)OhplH13Size(mpH13Reg, kOhplH13AStar, mlstAStarHandlers),
+				(int)OhplH13Size(mpH13Reg, kOhplH13EnvParticles, mvEnvParticles));
 		fclose(f);
 	}
 
@@ -370,19 +394,18 @@ namespace hpl {
 		UpdateParticles(afTimeStep);
 		STOP_TIMING(Particles);
 
-		for(cLensFlare *pFlare : mlstLensFlares) pFlare->UpdateLogic(afTimeStep);
+		for(OhplH13Walk<tLensFlareList> it(mpH13Reg, kOhplH13LensFlare, mlstLensFlares); it.Has(); it.Advance()) it.Get()->UpdateLogic(afTimeStep);
 
-		for(tForceFieldListIt it = mlstForceFields.begin(); it != mlstForceFields.end();)
+		for(OhplH13Walk<tForceFieldList> it(mpH13Reg, kOhplH13ForceField, mlstForceFields); it.Has();)
 		{
-			cForceField *pField = *it;
+			cForceField *pField = it.Get();
 			if(pField->IsActive()) pField->UpdateLogic(afTimeStep);
 			if(pField->GetAutoRemove() && pField->IsDead())
 			{
 				hplDelete(pField);
-				it = mlstForceFields.erase(it);
-				OhplH13Removed(mpH13Reg, kOhplH13ForceField, mlstForceFields, pField);
+				it.Erase();
 			}
-			else ++it;
+			else it.Advance();
 		}
 
 		START_TIMING(Lights);
@@ -393,7 +416,14 @@ namespace hpl {
 		UpdateSoundEntities(afTimeStep);
 		STOP_TIMING(SoundEntities);
 
-		for(size_t i=0; i<mvEnvParticles.size(); ++i) mvEnvParticles[i]->Update(afTimeStep);
+		if(mpH13Reg)
+		{
+			for(OhplH13Walk<std::vector<cEnvironmentParticles*> > it(mpH13Reg, kOhplH13EnvParticles, mvEnvParticles); it.Has(); it.Advance()) it.Get()->Update(afTimeStep);
+		}
+		else
+		{
+			for(size_t i=0; i<mvEnvParticles.size(); ++i) mvEnvParticles[i]->Update(afTimeStep);
+		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -530,8 +560,8 @@ namespace hpl {
 	{
 		cAreaEntity *pArea = hplNew( cAreaEntity, () );
 		pArea->msName = asName;
-		m_mapAreaEntities.insert(tAreaEntityMap::value_type(asName, pArea));
 		if(mpH13Reg) ohpl_h13_area_insert(mpH13Reg, OhplName{asName.data(), asName.size()}, pArea);
+		else m_mapAreaEntities.insert(tAreaEntityMap::value_type(asName, pArea));
 		return pArea;
 	}
 
@@ -605,13 +635,11 @@ namespace hpl {
 		//Put in entity list
 		if(abStatic)
 		{
-			mlstStaticMeshEntities.push_back(pMeshEntity);
-			OhplH13Added(mpH13Reg, kOhplH13StaticMesh, mlstStaticMeshEntities);
+			OhplH13Push(mpH13Reg, kOhplH13StaticMesh, mlstStaticMeshEntities, pMeshEntity);
 		}
 		else
 		{
-			mlstDynamicMeshEntities.push_back(pMeshEntity);
-			OhplH13Added(mpH13Reg, kOhplH13DynMesh, mlstDynamicMeshEntities);
+			OhplH13Push(mpH13Reg, kOhplH13DynMesh, mlstDynamicMeshEntities, pMeshEntity);
 		}
 
 
@@ -644,13 +672,11 @@ namespace hpl {
 
 		if(apMesh->IsStatic())
 		{
-			OhplH13Removed(mpH13Reg, kOhplH13StaticMesh, mlstStaticMeshEntities, apMesh);
-			STLFindAndDelete(mlstStaticMeshEntities,apMesh);
+			OhplH13Destroy(mpH13Reg, kOhplH13StaticMesh, mlstStaticMeshEntities, apMesh);
 		}
 		else
 		{
-			OhplH13Removed(mpH13Reg, kOhplH13DynMesh, mlstDynamicMeshEntities, apMesh);
-			STLFindAndDelete(mlstDynamicMeshEntities,apMesh);
+			OhplH13Destroy(mpH13Reg, kOhplH13DynMesh, mlstDynamicMeshEntities, apMesh);
 		}
 	}
 
@@ -660,13 +686,13 @@ namespace hpl {
 		for(cMeshEntity* pMesh : aSet)
 			for(int i=0; i<pMesh->GetSubMeshEntityNum(); ++i) setSubs.insert(pMesh->GetSubMeshEntity(i));
 		mpRenderableContainer[eWorldContainerType_Static]->RemoveSet(setSubs);
-		mlstStaticMeshEntities.remove_if([&](cMeshEntity* pMesh) { return aSet.count(pMesh) != 0; });
 		if(mpH13Reg)
 		{
 			std::vector<size_t> vSet;
 			for(cMeshEntity *pMesh : aSet) vSet.push_back((size_t)pMesh);
 			ohpl_h13_reg_remove_set(mpH13Reg, kOhplH13StaticMesh, vSet.data(), vSet.size());
 		}
+		else mlstStaticMeshEntities.remove_if([&](cMeshEntity* pMesh) { return aSet.count(pMesh) != 0; });
 		for(cMeshEntity* pMesh : aSet) hplDelete(pMesh);
 	}
 
@@ -678,10 +704,8 @@ namespace hpl {
 		if(apMesh->IsStatic()==false) return;
 		for(int i=0; i<apMesh->GetSubMeshEntityNum(); ++i)
 			RemoveRenderableFromContainer(apMesh->GetSubMeshEntity(i));
-		OhplH13Removed(mpH13Reg, kOhplH13StaticMesh, mlstStaticMeshEntities, apMesh);
-		STLFindAndRemove(mlstStaticMeshEntities, apMesh);
-		mlstDynamicMeshEntities.push_back(apMesh);
-		OhplH13Added(mpH13Reg, kOhplH13DynMesh, mlstDynamicMeshEntities);
+		OhplH13Erase(mpH13Reg, kOhplH13StaticMesh, mlstStaticMeshEntities, apMesh);
+		OhplH13Push(mpH13Reg, kOhplH13DynMesh, mlstDynamicMeshEntities, apMesh);
 		apMesh->SetStatic(false);
 		for(int i=0; i<apMesh->GetSubMeshEntityNum(); ++i)
 		{
@@ -709,13 +733,39 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	cLightListIterator cWorld::GetLightIterator()
+	{
+		if(mpH13Reg) return cLightListIterator(mpH13Reg, kOhplH13Light);
+		return cLightListIterator(&mlstLights);
+	}
+
+	cParticleSystemIterator cWorld::GetParticleSystemIterator()
+	{
+		if(mpH13Reg) return cParticleSystemIterator(mpH13Reg, kOhplH13ParticleSystem);
+		return cParticleSystemIterator(&mlstParticleSystems);
+	}
+
+	cForceFieldIterator cWorld::GetForceFieldIterator()
+	{
+		if(mpH13Reg) return cForceFieldIterator(mpH13Reg, kOhplH13ForceField);
+		return cForceFieldIterator(&mlstForceFields);
+	}
+
+	cSoundEntityIterator cWorld::GetSoundEntityIterator()
+	{
+		if(mpH13Reg) return cSoundEntityIterator(mpH13Reg, kOhplH13Sound);
+		return cSoundEntityIterator(&mlstSoundEntities);
+	}
+
 	cMeshEntityIterator cWorld::GetDynamicMeshEntityIterator()
 	{
+		if(mpH13Reg) return cMeshEntityIterator(mpH13Reg, kOhplH13DynMesh);
 		return cMeshEntityIterator(&mlstDynamicMeshEntities);
 	}
 
 	cMeshEntityIterator cWorld::GetStaticMeshEntityIterator()
 	{
+		if(mpH13Reg) return cMeshEntityIterator(mpH13Reg, kOhplH13StaticMesh);
 		return cMeshEntityIterator(&mlstStaticMeshEntities);
 	}
 	
@@ -723,10 +773,9 @@ namespace hpl {
 
 	void cWorld::DrawMeshBoundingBoxes(const cColor &aColor, bool abStatic)
 	{
-		tMeshEntityListIt It=mlstDynamicMeshEntities.begin();
-		for(;It != mlstDynamicMeshEntities.end();++It)
+		for(OhplH13Walk<tMeshEntityList> It(mpH13Reg, kOhplH13DynMesh, mlstDynamicMeshEntities); It.Has(); It.Advance())
 		{
-			cMeshEntity *pEntity = *It;
+			cMeshEntity *pEntity = It.Get();
 
 			if(abStatic==false && pEntity->IsStatic()) continue;
 
@@ -741,8 +790,7 @@ namespace hpl {
 	cLightPoint* cWorld::CreateLightPoint(const tString &asName,const tString &asGobo,bool abStatic)
 	{
 		cLightPoint* pLight = hplNew( cLightPoint, (asName,mpResources) );
-		mlstLights.push_back(pLight);
-		OhplH13Added(mpH13Reg, kOhplH13Light, mlstLights);
+		OhplH13Push(mpH13Reg, kOhplH13Light, mlstLights, pLight);
 
 		if(asGobo != "")
 		{
@@ -769,8 +817,7 @@ namespace hpl {
 										bool abStatic)
 	{
 		cLightSpot* pLight = hplNew( cLightSpot, (asName,mpResources) );
-		mlstLights.push_back(pLight);
-		OhplH13Added(mpH13Reg, kOhplH13Light, mlstLights);
+		OhplH13Push(mpH13Reg, kOhplH13Light, mlstLights, pLight);
 
 		if(asGobo != "")
 		{
@@ -796,8 +843,7 @@ namespace hpl {
 	cLightBox* cWorld::CreateLightBox(const tString &asName,bool abStatic)
 	{
 		cLightBox* pLight = hplNew( cLightBox, (asName,mpResources) );
-		mlstLights.push_back(pLight);
-		OhplH13Added(mpH13Reg, kOhplH13Light, mlstLights);
+		OhplH13Push(mpH13Reg, kOhplH13Light, mlstLights, pLight);
 
 		pLight->SetStatic(abStatic);
 		AddRenderableToContainer(pLight);
@@ -813,8 +859,7 @@ namespace hpl {
 	{
 		RemoveRenderableFromContainer(apLight);
 
-		OhplH13Removed(mpH13Reg, kOhplH13Light, mlstLights, apLight);
-		STLFindAndDelete(mlstLights, apLight);
+		OhplH13Destroy(mpH13Reg, kOhplH13Light, mlstLights, apLight);
 	}
 
 	//-----------------------------------------------------------------------
@@ -835,8 +880,7 @@ namespace hpl {
 										const tString& asMaterial, bool abStatic)
 	{
 		cBillboard* pBillboard = hplNew( cBillboard, (asName, avSize,aType,mpResources,mpGraphics) );
-		mlstBillboards.push_back(pBillboard);
-		OhplH13Added(mpH13Reg, kOhplH13Billboard, mlstBillboards);
+		OhplH13Push(mpH13Reg, kOhplH13Billboard, mlstBillboards, pBillboard);
 
 		if(asMaterial!="")
 		{
@@ -855,8 +899,7 @@ namespace hpl {
 	{
 		RemoveRenderableFromContainer(apObject);
 
-		OhplH13Removed(mpH13Reg, kOhplH13Billboard, mlstBillboards, apObject);
-		STLFindAndDelete(mlstBillboards, apObject);
+		OhplH13Destroy(mpH13Reg, kOhplH13Billboard, mlstBillboards, apObject);
 	}
 
 	//-----------------------------------------------------------------------
@@ -875,6 +918,7 @@ namespace hpl {
 
 	cBillboardIterator cWorld::GetBillboardIterator()
 	{
+		if(mpH13Reg) return cBillboardIterator(mpH13Reg, kOhplH13Billboard);
 		return cBillboardIterator(&mlstBillboards);
 	}
 
@@ -883,8 +927,7 @@ namespace hpl {
 	cLensFlare* cWorld::CreateLensFlare(const tString& asName, const cVector2f& avSize, const tString& asMaterial, bool abStatic)
 	{
 		cLensFlare* pFlare = hplNew( cLensFlare, (asName, mpResources, mpGraphics) );
-		mlstLensFlares.push_back(pFlare);
-		OhplH13Added(mpH13Reg, kOhplH13LensFlare, mlstLensFlares);
+		OhplH13Push(mpH13Reg, kOhplH13LensFlare, mlstLensFlares, pFlare);
 		pFlare->SetFlareSize(eLensFlareType_Halo, avSize);
 		pFlare->SetFlareActive(eLensFlareType_Halo, true);
 		if(asMaterial!="") pFlare->SetMaterial(eLensFlareType_Halo, mpResources->GetMaterialManager()->CreateMaterial(asMaterial));
@@ -896,8 +939,7 @@ namespace hpl {
 	void cWorld::DestroyLensFlare(cLensFlare* apObject)
 	{
 		RemoveRenderableFromContainer(apObject);
-		OhplH13Removed(mpH13Reg, kOhplH13LensFlare, mlstLensFlares, apObject);
-		STLFindAndDelete(mlstLensFlares, apObject);
+		OhplH13Destroy(mpH13Reg, kOhplH13LensFlare, mlstLensFlares, apObject);
 	}
 
 	cLensFlare* cWorld::GetLensFlare(const tString& asName)
@@ -912,6 +954,7 @@ namespace hpl {
 
 	cLensFlareIterator cWorld::GetLensFlareIterator()
 	{
+		if(mpH13Reg) return cLensFlareIterator(mpH13Reg, kOhplH13LensFlare);
 		return cLensFlareIterator(&mlstLensFlares);
 	}
 
@@ -921,8 +964,7 @@ namespace hpl {
 	cBeam* cWorld::CreateBeam(const tString& asName, bool abStatic)
 	{
 		cBeam* pBeam = hplNew( cBeam, (asName,mpResources,mpGraphics) );
-		mlstBeams.push_back(pBeam);
-		OhplH13Added(mpH13Reg, kOhplH13Beam, mlstBeams);
+		OhplH13Push(mpH13Reg, kOhplH13Beam, mlstBeams, pBeam);
 
 		pBeam->SetStatic(abStatic);
 		AddRenderableToContainer(pBeam);
@@ -936,8 +978,7 @@ namespace hpl {
 	{
 		RemoveRenderableFromContainer(apObject);
 
-		OhplH13Removed(mpH13Reg, kOhplH13Beam, mlstBeams, apObject);
-		STLFindAndDelete(mlstBeams, apObject);
+		OhplH13Destroy(mpH13Reg, kOhplH13Beam, mlstBeams, apObject);
 	}
 
 	//-----------------------------------------------------------------------
@@ -956,6 +997,7 @@ namespace hpl {
 
 	cBeamIterator cWorld::GetBeamIterator()
 	{
+		if(mpH13Reg) return cBeamIterator(mpH13Reg, kOhplH13Beam);
 		return cBeamIterator(&mlstBeams);
 	}
 
@@ -993,8 +1035,7 @@ namespace hpl {
 			pPE->SetWorld(this);
 		}
 
-		mlstParticleSystems.push_back(pPS);
-		OhplH13Added(mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems);
+		OhplH13Push(mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems, pPS);
 
 		//Log("Created particle system '%s'\n",asType.c_str());
 
@@ -1024,8 +1065,7 @@ namespace hpl {
 			pPE->SetWorld(this);
 		}
 
-		mlstParticleSystems.push_back(pPS);
-		OhplH13Added(mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems);
+		OhplH13Push(mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems, pPS);
 
 		//Log("Created particle system '%s'\n",asType.c_str());
 
@@ -1045,8 +1085,7 @@ namespace hpl {
 			RemoveRenderableFromContainer(pPE);
 		}
 
-		OhplH13Removed(mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems, apPS);
-		STLFindAndDelete(mlstParticleSystems, apPS);
+		OhplH13Destroy(mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems, apPS);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1077,11 +1116,10 @@ namespace hpl {
 
 	void cWorld::DestroyAllParticleSystems()
 	{
-		tParticleSystemListIt it = mlstParticleSystems.begin();
-		for(; it != mlstParticleSystems.end(); ++it)
+		for(OhplH13Walk<tParticleSystemList> it(mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems); it.Has(); it.Advance())
 		{
-			cParticleSystem *pPS = *it;
-			
+			cParticleSystem *pPS = it.Get();
+
 			for(int i=0; i< pPS->GetEmitterNum();++i)
 			{
 				iParticleEmitter *pPE = pPS->GetEmitter(i);
@@ -1090,8 +1128,7 @@ namespace hpl {
 			}
 			hplDelete(pPS);
 		}
-		mlstParticleSystems.clear();
-		OhplH13Cleared(mpH13Reg, kOhplH13ParticleSystem);
+		OhplH13Clear(mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1099,8 +1136,7 @@ namespace hpl {
 	cGuiSetEntity* cWorld::CreateGuiSetEntity(const tString& asName, cGuiSet *apSet, bool abStatic)
 	{
 		cGuiSetEntity *pSetEntity = hplNew( cGuiSetEntity, (asName, apSet) );
-		mlstGuiSetEntities.push_back(pSetEntity);
-		OhplH13Added(mpH13Reg, kOhplH13GuiSet, mlstGuiSetEntities);
+		OhplH13Push(mpH13Reg, kOhplH13GuiSet, mlstGuiSetEntities, pSetEntity);
 
 		pSetEntity->SetStatic(abStatic);
 		AddRenderableToContainer(pSetEntity);
@@ -1112,8 +1148,7 @@ namespace hpl {
 	{
 		//TODO...RemoveRenderableFromContainer(...), etc
 
-		OhplH13Removed(mpH13Reg, kOhplH13GuiSet, mlstGuiSetEntities, apObject);
-		STLFindAndDelete(mlstGuiSetEntities, apObject);
+		OhplH13Destroy(mpH13Reg, kOhplH13GuiSet, mlstGuiSetEntities, apObject);
 	}
 	
 	cGuiSetEntity* cWorld::GetGuiSetEntity(const tString& asName)
@@ -1128,6 +1163,7 @@ namespace hpl {
 	
 	cGuiSetEntityIterator cWorld::GetGuiSetEntityIterator()
 	{
+		if(mpH13Reg) return cGuiSetEntityIterator(mpH13Reg, kOhplH13GuiSet);
 		return cGuiSetEntityIterator(&mlstGuiSetEntities);
 	}
 	
@@ -1136,8 +1172,7 @@ namespace hpl {
 	cRopeEntity* cWorld::CreateRopeEntity(const tString& asName, iPhysicsRope *apRope, int alMaxSegments)
 	{
 		cRopeEntity *pRope = hplNew( cRopeEntity, (asName, mpResources, mpGraphics, apRope, alMaxSegments));
-		mlstRopeEntities.push_back(pRope);
-		OhplH13Added(mpH13Reg, kOhplH13Rope, mlstRopeEntities);
+		OhplH13Push(mpH13Reg, kOhplH13Rope, mlstRopeEntities, pRope);
 
 		AddRenderableToContainer(pRope);
 		
@@ -1148,8 +1183,7 @@ namespace hpl {
 	{
 		RemoveRenderableFromContainer(apRope);
 
-		OhplH13Removed(mpH13Reg, kOhplH13Rope, mlstRopeEntities, apRope);
-		STLFindAndDelete(mlstRopeEntities, apRope);
+		OhplH13Destroy(mpH13Reg, kOhplH13Rope, mlstRopeEntities, apRope);
 	}
 
 	cRopeEntity* cWorld::GetRopeEntity(const tString& asName)
@@ -1164,6 +1198,7 @@ namespace hpl {
 
 	cRopeEntityIterator cWorld::GetRopeEntityIterator()
 	{
+		if(mpH13Reg) return cRopeEntityIterator(mpH13Reg, kOhplH13Rope);
 		return cRopeEntityIterator(&mlstRopeEntities);
 	}
 
@@ -1172,8 +1207,7 @@ namespace hpl {
 	cFogArea* cWorld::CreateFogArea(const tString& asName, bool abStatic)
 	{
 		cFogArea *pFog = hplNew( cFogArea, (asName, mpResources));
-		mlstFogAreas.push_back(pFog);
-		OhplH13Added(mpH13Reg, kOhplH13FogArea, mlstFogAreas);
+		OhplH13Push(mpH13Reg, kOhplH13FogArea, mlstFogAreas, pFog);
 		pFog->SetStatic(abStatic);
 
 
@@ -1186,8 +1220,7 @@ namespace hpl {
 	{
 		RemoveRenderableFromContainer(apRope);
 
-		OhplH13Removed(mpH13Reg, kOhplH13FogArea, mlstFogAreas, apRope);
-		STLFindAndDelete(mlstFogAreas, apRope);
+		OhplH13Destroy(mpH13Reg, kOhplH13FogArea, mlstFogAreas, apRope);
 	}
 
 	cFogArea* cWorld::GetFogArea(const tString& asName)
@@ -1202,6 +1235,7 @@ namespace hpl {
 
 	cFogAreaIterator cWorld::GetFogAreaIterator()
 	{
+		if(mpH13Reg) return cFogAreaIterator(mpH13Reg, kOhplH13FogArea);
 		return cFogAreaIterator(&mlstFogAreas);
 	}
 
@@ -1211,15 +1245,13 @@ namespace hpl {
 	{
 		cForceField *pField = hplNew(cForceField, (asName, abAutoRemove));
 		pField->SetStatic(abStatic);
-		mlstForceFields.push_back(pField);
-		OhplH13Added(mpH13Reg, kOhplH13ForceField, mlstForceFields);
+		OhplH13Push(mpH13Reg, kOhplH13ForceField, mlstForceFields, pField);
 		return pField;
 	}
 
 	void cWorld::DestroyForceField(cForceField* apField)
 	{
-		OhplH13Removed(mpH13Reg, kOhplH13ForceField, mlstForceFields, apField);
-		STLFindAndDelete(mlstForceFields, apField);
+		OhplH13Destroy(mpH13Reg, kOhplH13ForceField, mlstForceFields, apField);
 	}
 
 	cForceField* cWorld::GetForceField(const tString& asName)
@@ -1232,8 +1264,9 @@ namespace hpl {
 	{
 		std::vector<OhplFieldIn> vFields;
 		std::vector<cForceField*> vCandidates;
-		for(cForceField *pField : mlstForceFields)
+		for(OhplH13Walk<tForceFieldList> it(mpH13Reg, kOhplH13ForceField, mlstForceFields); it.Has(); it.Advance())
 		{
+			cForceField *pField = it.Get();
 			if(pField->IsActive() == false || pField->IsVisible() == false) continue;
 			cBoundingVolume *pBV = pField->GetBoundingVolume();
 			OhplFieldIn field;
@@ -1278,8 +1311,7 @@ namespace hpl {
 			mlstSoundEntityPool.pop_back();
 		}*/
 
-		mlstSoundEntities.push_back(pSound);
-		OhplH13Added(mpH13Reg, kOhplH13Sound, mlstSoundEntities);
+		OhplH13Push(mpH13Reg, kOhplH13Sound, mlstSoundEntities, pSound);
 
 		return pSound;
 	}
@@ -1289,16 +1321,7 @@ namespace hpl {
 		//STLFindAndDelete(mlstSoundEntities,apEntity);
 		
 		//Only delete if found! (as it is possible that the sound entity is not longer a valid pointer!
-		const int lIdx = OhplH13Index(mpH13Reg, kOhplH13Sound, mlstSoundEntities, apEntity);
-		if(lIdx >= 0)
-		{
-			tSoundEntityListIt it = mlstSoundEntities.begin();
-			std::advance(it, lIdx);
-			cSoundEntity *pSound = *it;
-			mlstSoundEntities.erase(it);
-			OhplH13Removed(mpH13Reg, kOhplH13Sound, mlstSoundEntities, pSound);
-			hplDelete(pSound);
-		}
+		OhplH13Destroy(mpH13Reg, kOhplH13Sound, mlstSoundEntities, apEntity, true);
 	}
 
 	void cWorld::DestroyAllSoundEntities()
@@ -1323,10 +1346,7 @@ namespace hpl {
 		}
 		
 		//Destroy all sound entities
-		STLDeleteAll(mlstSoundEntities);
-		OhplH13Cleared(mpH13Reg, kOhplH13Sound);
-		mlstSoundEntities.clear();
-		OhplH13Cleared(mpH13Reg, kOhplH13Sound);
+		OhplH13DeleteAll(mpH13Reg, kOhplH13Sound, mlstSoundEntities);
 	}
 
 
@@ -1356,9 +1376,7 @@ namespace hpl {
 		const int lIdx = OhplH13Index(mpH13Reg, kOhplH13Sound, mlstSoundEntities, apEntity);
 		if(lIdx < 0) return false;
 
-		tSoundEntityListIt it = mlstSoundEntities.begin();
-		std::advance(it, lIdx);
-		return alCreationID == (*it)->GetCreationID();
+		return alCreationID == apEntity->GetCreationID();
 	}
 
 	//-----------------------------------------------------------------------
@@ -1367,8 +1385,7 @@ namespace hpl {
 	{
 		cStartPosEntity *pStartPos = hplNew( cStartPosEntity, (asName) );
 
-		mlstStartPosEntities.push_back(pStartPos);
-		OhplH13Added(mpH13Reg, kOhplH13StartPos, mlstStartPosEntities);
+		OhplH13Push(mpH13Reg, kOhplH13StartPos, mlstStartPosEntities, pStartPos);
 
 		return pStartPos;
 	}
@@ -1380,7 +1397,7 @@ namespace hpl {
 
 	cStartPosEntity* cWorld::GetFirstStartPosEntityByName()
 	{
-		if(mpH13Reg) return static_cast<cStartPosEntity*>(ohpl_h13_reg_first_by_name(mpH13Reg, kOhplH13StartPos, OhplH13NameOf<cStartPosEntity>));
+		if(mpH13Reg) return static_cast<cStartPosEntity*>(ohpl_h13_reg_first_by_name_f(mpH13Reg, kOhplH13StartPos));
 
 		std::vector<OhplName> vNames;
 		for(cStartPosEntity *pStart : mlstStartPosEntities)
@@ -1397,6 +1414,7 @@ namespace hpl {
 
 	cStartPosEntity* cWorld::GetFirstStartPosEntity()
 	{
+		if(mpH13Reg) return static_cast<cStartPosEntity*>(ohpl_h13_reg_get(mpH13Reg, kOhplH13StartPos, 0));
 		if(mlstStartPosEntities.empty()) return NULL;
 
 		return mlstStartPosEntities.front();
@@ -1450,8 +1468,7 @@ namespace hpl {
 			cTempNodeContainer *pTempCont = ContIt->second;
 
 			pContainer = hplNew( cAINodeContainer, (asName,asNodeName,this,avSize) );
-			mlstAINodeContainers.push_back(pContainer);
-			OhplH13Added(mpH13Reg, kOhplH13AiContainer, mlstAINodeContainers);
+			OhplH13Push(mpH13Reg, kOhplH13AiContainer, mlstAINodeContainers, pContainer);
 
 			//Set properties
 			pContainer->SetMinEdges(alMinEdges);
@@ -1512,16 +1529,14 @@ namespace hpl {
 	{
 		cAStarHandler *pAStar = hplNew( cAStarHandler, (apContainer) );
 
-		mlstAStarHandlers.push_back(pAStar);
-		OhplH13Added(mpH13Reg, kOhplH13AStar, mlstAStarHandlers);
+		OhplH13Push(mpH13Reg, kOhplH13AStar, mlstAStarHandlers, pAStar);
 
 		return pAStar;
 	}
 
 	void cWorld::DestroyAStarHandler(cAStarHandler* apHandler)
 	{
-		OhplH13Removed(mpH13Reg, kOhplH13AStar, mlstAStarHandlers, apHandler);
-		STLFindAndDelete(mlstAStarHandlers, apHandler);
+		OhplH13Destroy(mpH13Reg, kOhplH13AStar, mlstAStarHandlers, apHandler);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1572,8 +1587,7 @@ namespace hpl {
 	cDummyRenderable* cWorld::CreateDummyRenderable(const tString& asName, bool abStatic)
 	{
 		cDummyRenderable *pDummy = hplNew( cDummyRenderable, (asName));
-		mlstDummyRenderables.push_back(pDummy);
-		OhplH13Added(mpH13Reg, kOhplH13Dummy, mlstDummyRenderables);
+		OhplH13Push(mpH13Reg, kOhplH13Dummy, mlstDummyRenderables, pDummy);
 		pDummy->SetStatic(abStatic);
 
 		AddRenderableToContainer(pDummy);
@@ -1585,8 +1599,7 @@ namespace hpl {
 	{
 		RemoveRenderableFromContainer(apDummy);
 
-		OhplH13Removed(mpH13Reg, kOhplH13Dummy, mlstDummyRenderables, apDummy);
-		STLFindAndDelete(mlstDummyRenderables, apDummy);
+		OhplH13Destroy(mpH13Reg, kOhplH13Dummy, mlstDummyRenderables, apDummy);
 	}
 
 	cDummyRenderable* cWorld::GetDummyRenderable(const tString& asName)
@@ -1601,6 +1614,7 @@ namespace hpl {
 
 	cDummyRenderableIterator cWorld::GetDummyRenderableIterator()
 	{
+		if(mpH13Reg) return cDummyRenderableIterator(mpH13Reg, kOhplH13Dummy);
 		return cDummyRenderableIterator(&mlstDummyRenderables);
 	}
 
@@ -1632,19 +1646,18 @@ namespace hpl {
 
 	void cWorld::UpdateParticles(float afTimeStep)
 	{
-		tParticleSystemListIt it = mlstParticleSystems.begin();
+		OhplH13Walk<tParticleSystemList> it(mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems);
 
-		while(it != mlstParticleSystems.end())
+		while(it.Has())
 		{
-			cParticleSystem *pPS = *it;
+			cParticleSystem *pPS = it.Get();
 
 			pPS->UpdateLogic(afTimeStep);
 
 			//Check if the system is alive, else destroy
 			if(pPS->GetRemoveWhenDead() && pPS->IsDead())
 			{
-                it = mlstParticleSystems.erase(it);
-				OhplH13Removed(mpH13Reg, kOhplH13ParticleSystem, mlstParticleSystems, pPS);
+				it.Erase();
 				for(int i=0; i< pPS->GetEmitterNum();++i)
 				{
 					RemoveRenderableFromContainer(pPS->GetEmitter(i));
@@ -1653,7 +1666,7 @@ namespace hpl {
 			}
 			else
 			{
-				it++;
+				it.Advance();
 			}
 		}
 	}
@@ -1666,12 +1679,10 @@ namespace hpl {
 		//bool bRenderDebug = lLastSize != mlstDynamicMeshEntities.size() && mlstDynamicMeshEntities.size()>=2;
 		//if(mlstDynamicMeshEntities.size()>=2) lLastSize = mlstDynamicMeshEntities.size();
         	
-		tMeshEntityListIt MeshIt = mlstDynamicMeshEntities.begin();
-		tMeshEntityListIt endIt =mlstDynamicMeshEntities.end();
 		//if(bRenderDebug)Log("----\n");
-		for(;MeshIt != endIt;MeshIt++)
+		for(OhplH13Walk<tMeshEntityList> MeshIt(mpH13Reg, kOhplH13DynMesh, mlstDynamicMeshEntities); MeshIt.Has(); MeshIt.Advance())
 		{
-			cMeshEntity *pEntity = *MeshIt;
+			cMeshEntity *pEntity = MeshIt.Get();
 
 			if(pEntity->IsActive()){
 				//if(pEntity->IsStatic()==false) START_TIMING_EX(pEntity->GetName().c_str(),entity);
@@ -1688,15 +1699,11 @@ namespace hpl {
 
 	void cWorld::UpdateLights(float afTimeStep)
 	{
-		tLightListIt it = mlstLights.begin();
-
-		while(it != mlstLights.end())
+		for(OhplH13Walk<tLightList> it(mpH13Reg, kOhplH13Light, mlstLights); it.Has(); it.Advance())
 		{
-			iLight *pLight = *it;
+			iLight *pLight = it.Get();
 
 			if(pLight->IsActive()) pLight->UpdateLogic(afTimeStep);
-
-			++it;
 		}
 	}
 
@@ -1704,25 +1711,24 @@ namespace hpl {
 
 	void cWorld::UpdateSoundEntities(float afTimeStep)
 	{
-		tSoundEntityListIt it = mlstSoundEntities.begin();
+		OhplH13Walk<tSoundEntityList> it(mpH13Reg, kOhplH13Sound, mlstSoundEntities);
 
-		while(it != mlstSoundEntities.end())
+		while(it.Has())
 		{
-			cSoundEntity *pSound = *it;
+			cSoundEntity *pSound = it.Get();
 
 			if(pSound->IsActive()) pSound->UpdateLogic(afTimeStep);
 
 			//Check if the system is stopped, else destroy
 			if(pSound->IsStopped() && pSound->GetRemoveWhenOver())
 			{
-				it =  mlstSoundEntities.erase(it);
-				OhplH13Removed(mpH13Reg, kOhplH13Sound, mlstSoundEntities, pSound);
+				it.Erase();
 				//mlstSoundEntityPool.push_back(pSound);
 				hplDelete(pSound);
 			}
 			else
 			{
-				it++;
+				it.Advance();
 			}
 		}
 	}

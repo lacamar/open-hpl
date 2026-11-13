@@ -1,6 +1,8 @@
 // H13 differential: cWorld entity registry, .map static-combine planner and .map parse traces.
 //  [reg]  seeded create/destroy/lookup/iteration sequences: std::list/std::map oracle (the original
 //         cWorld semantics) vs the Rust registry; the oracle output is the golden.
+//  [walk] OhplH13Walk cursors (erase/append while walking, destroy order): std::list vs Rust cursors.
+//  [walk] OhplH13Walk cursors (erase/append while walking, destroy order): std::list vs Rust cursors.
 //  [plan] CombineAndCreateMeshesAndPhysics run-splitting: original loops vs ohpl_h13_plan_*.
 //  [map]  every *.map under OHPL_H13_DIRS parsed through HplMapParse with a recording builder
 //         (tinyxml document, C ABI marshalling); one hash per map.
@@ -246,6 +248,82 @@ std::string RunReg(bool abRust, uint64_t alSeed, int alOps)
 	}
 	for(int k=0; k<kKinds; ++k) Dump(k);
 	if(pReg) ohpl_h13_reg_free(pReg);
+	return out;
+}
+
+std::vector<int> gDrops;
+Ent *gPool = NULL;
+
+void RecordDrop(void *apItem)
+{
+	gDrops.push_back(EntIndex(gPool, apItem));
+}
+
+// Cursor walks with erase/append and destroy order: OhplH13Walk over std::list (oracle) vs Rust cursors.
+std::string RunWalk(bool abRust, uint64_t alSeed, int alOps)
+{
+	Ent pool[kEnts];
+	gPool = pool;
+	gDrops.clear();
+	Rng rng = { alSeed };
+	for(int i=0; i<kEnts; ++i) pool[i].mlID = (int)rng.Below(5);
+
+	std::list<Ent*> list;
+	OhplH13Reg *pReg = abRust ? ohpl_h13_reg_new() : NULL;
+	if(pReg) ohpl_h13_reg_set_foreign(pReg, 9, NULL, NULL, RecordDrop);
+	std::string out;
+	char buf[64];
+	for(int op=0; op<alOps; ++op)
+	{
+		const uint32_t lOp = rng.Below(10);
+		const int e = (int)rng.Below(kEnts);
+		if(lOp < 5)
+		{
+			OhplH13Push(pReg, 9, list, &pool[e]);
+			continue;
+		}
+		if(lOp < 8)
+		{
+			bool bAppended = false;
+			out += "w:";
+			for(OhplH13Walk<std::list<Ent*> > it(pReg, 9, list); it.Has();)
+			{
+				Ent *pE = it.Get();
+				snprintf(buf, sizeof(buf), " %d", EntIndex(pool, pE));
+				out += buf;
+				if(pE->mlID == 0) { out += "x"; it.Erase(); continue; }
+				if(pE->mlID == 1 && !bAppended) { bAppended = true; OhplH13Push(pReg, 9, list, &pool[e]); }
+				it.Advance();
+			}
+			out += "\n";
+			continue;
+		}
+		if(lOp < 9)
+		{
+			if(pReg) ohpl_h13_reg_destroy(pReg, 9, &pool[e], false);
+			else
+			{
+				for(std::list<Ent*>::iterator it = list.begin(); it != list.end(); ++it)
+					if(*it == &pool[e]) { list.erase(it); break; }
+				RecordDrop(&pool[e]);
+			}
+			continue;
+		}
+		if(pReg) ohpl_h13_reg_destroy_all(pReg, 9);
+		else
+		{
+			for(Ent *p : list) RecordDrop(p);
+			list.clear();
+		}
+		out += "all\n";
+	}
+	out += "drops:";
+	for(int d : gDrops) { snprintf(buf, sizeof(buf), " %d", d); out += buf; }
+	out += "\nsize ";
+	snprintf(buf, sizeof(buf), "%zu\n", OhplH13Size(pReg, 9, list));
+	out += buf;
+	if(pReg) ohpl_h13_reg_free(pReg);
+	gPool = NULL;
 	return out;
 }
 
@@ -532,6 +610,25 @@ int hplMain(const hpl::tString&)
 		}
 	}
 	fprintf(stderr, "reg: seeds %d, lines %ld, diffs %d\n", lSeeds, lLines, lDiffs);
+
+	{
+		int lWalkDiffs = 0;
+		for(int s=0; s<lSeeds; ++s)
+		{
+			std::string sOracle = RunWalk(false, 2000 + s, lOps);
+			std::string sRust = RunWalk(true, 2000 + s, lOps);
+			fprintf(f, "walk %d\n%s", s, sOracle.c_str());
+			if(sOracle != sRust)
+			{
+				++lWalkDiffs;
+				size_t i = 0;
+				while(i < sOracle.size() && i < sRust.size() && sOracle[i] == sRust[i]) ++i;
+				fprintf(stderr, "walk seed %d differs at byte %zu: oracle '%.60s' rust '%.60s'\n", s, i, sOracle.c_str() + i, sRust.c_str() + i);
+			}
+		}
+		fprintf(stderr, "walk: seeds %d, diffs %d\n", lSeeds, lWalkDiffs);
+		lDiffs += lWalkDiffs;
+	}
 
 	lDiffs += RunPlans(f);
 	RunMaps(f);

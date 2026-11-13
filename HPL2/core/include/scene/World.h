@@ -351,7 +351,6 @@ namespace hpl {
 		
 		cAreaEntity* CreateAreaEntity(const tString &asName);
 		cAreaEntity* GetAreaEntity(const tString &asName);
-		tAreaEntityMap* GetAreaEntityMap(){return &m_mapAreaEntities;}
 
 		///// MESH ENTITY METHODS ////////////////////
 		
@@ -376,9 +375,8 @@ namespace hpl {
 		iLight* GetLight(const tString& asName);
 		iLight* GetLightFromUniqueID(int alID);
 
-		tLightList * GetLightList(){ return &mlstLights;}
 
-		cLightListIterator GetLightIterator(){ return cLightListIterator(&mlstLights);}
+		cLightListIterator GetLightIterator();
 
 		///// BILLBOARD METHODS ////////////////////
 
@@ -413,7 +411,7 @@ namespace hpl {
 
 		void DestroyAllParticleSystems();
 
-		cParticleSystemIterator GetParticleSystemIterator(){ return cParticleSystemIterator(&mlstParticleSystems);}
+		cParticleSystemIterator GetParticleSystemIterator();
 
 		///// GUISET ENTITY METHODS ////////////////////
 		
@@ -441,7 +439,7 @@ namespace hpl {
 		cForceField* CreateForceField(const tString& asName, bool abAutoRemove, bool abStatic);
 		void DestroyForceField(cForceField* apField);
 		cForceField* GetForceField(const tString& asName);
-		cForceFieldIterator GetForceFieldIterator(){ return cForceFieldIterator(&mlstForceFields); }
+		cForceFieldIterator GetForceFieldIterator();
 		int GetForceFields(const cVector3f& avMin, const cVector3f& avMax, cForceField **apOut);
 
 		///// SOUND ENTITY METHODS ////////////////////
@@ -458,7 +456,7 @@ namespace hpl {
 		cTerrain* GetTerrain(){ return mpTerrain; }
 		void SetTerrain(cTerrain* apTerrain);
 
-		cSoundEntityIterator GetSoundEntityIterator(){ return cSoundEntityIterator(&mlstSoundEntities);}
+		cSoundEntityIterator GetSoundEntityIterator();
 
 		///// START POS ENTITY METHODS ////////////////
 		
