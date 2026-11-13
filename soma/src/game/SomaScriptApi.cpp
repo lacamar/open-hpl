@@ -26,11 +26,8 @@ static cSomaScriptApi *gpActiveApi = NULL;
 // to an older game's declaration can serve one that swapped an enum for an int or appended defaulted params
 std::string cSomaScriptApi::NativeDecl(const char *apType, const char *apDecl)
 {
-	if (OhplS2Rust())
-	{
-		size_t lType = apType ? strlen(apType) : 0, lDecl = strlen(apDecl);
-		return OhplGs6::Call8([&](OhplGs6Sink8 k, void *c) { ohpl_s2_native_decl(apType ? (const unsigned char *)apType : NULL, lType, (const unsigned char *)apDecl, lDecl, k, c); });
-	}
+	size_t lType = apType ? strlen(apType) : 0, lDecl = strlen(apDecl);
+	return OhplGs6::Call8([&](OhplGs6Sink8 k, void *c) { ohpl_s2_native_decl(apType ? (const unsigned char *)apType : NULL, lType, (const unsigned char *)apDecl, lDecl, k, c); });
 	cSomaScriptApi *pApi = gpActiveApi;
 	if (pApi == NULL)
 		return apDecl;
@@ -70,15 +67,10 @@ bool cSomaScriptApi::IsValueTypeNative(const std::string &asName)
 
 std::map<std::string, int> &cSomaScriptApi::GetStubCallCounts()
 {
-	if (OhplS2Rust())
-	{
-		static std::map<std::string, int> mapRust;
-		mapRust.clear();
-		ohpl_s2_stub_counts(+[](void *c, const unsigned char *p, size_t n, int l) { (*(std::map<std::string, int> *)c)[std::string((const char *)p, n)] = l; }, &mapRust);
-		return mapRust;
-	}
-	static std::map<std::string, int> counts;
-	return counts;
+	static std::map<std::string, int> mapRust;
+	mapRust.clear();
+	ohpl_s2_stub_counts(+[](void *c, const unsigned char *p, size_t n, int l) { (*(std::map<std::string, int> *)c)[std::string((const char *)p, n)] = l; }, &mapRust);
+	return mapRust;
 }
 
 // Native code and the recovered defaults use SOMA's layout for these structs in every game
@@ -116,91 +108,18 @@ static OhplGs6Enums *ToRustEnums(const std::vector<std::pair<std::string, std::v
 // native code uses SOMA's enum values; later games insert names in the middle
 void cSomaScriptApi::RebaseEnums(const cSomaScriptApi &aBase)
 {
-	if (OhplS2Rust())
-	{
-		ohpl_s2_api_rebase(mpRust, aBase.mpRust);
-		return;
-	}
-	OhplGs6Enums *pEnums = ToRustEnums(mvEnums), *pBase = ToRustEnums(aBase.mvEnums);
-	ohpl_gs6_enums_rebase(pEnums, pBase);
-	std::vector<int> vValues;
-	ohpl_gs6_enums_values(pEnums, OhplGs6::ToInts, &vValues);
-	size_t lNext = 0;
-	for (auto &e : mvEnums)
-		for (auto &v : e.second)
-			v.second = vValues[lNext++];
-	ohpl_gs6_enums_free(pEnums);
-	ohpl_gs6_enums_free(pBase);
+	ohpl_s2_api_rebase(mpRust, aBase.mpRust);
 }
 
 bool cSomaScriptApi::Load(const std::string &asFile)
 {
-	if (OhplS2Rust())
-	{
-		std::ifstream fRust(asFile.c_str());
-		if (fRust.is_open() == false)
-			return false;
-		std::string sRust((std::istreambuf_iterator<char>(fRust)), std::istreambuf_iterator<char>());
-		OhplS2InstallHost();
-		mpRust = ohpl_s2_api_new();
-		ohpl_s2_api_load(mpRust, OhplGs6::U(sRust), sRust.size());
-		return true;
-	}
-	std::ifstream f(asFile.c_str());
-	if (f.is_open() == false)
+	std::ifstream fRust(asFile.c_str());
+	if (fRust.is_open() == false)
 		return false;
-	std::string sText((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-
-	ohpl_gs6_api_load(OhplGs6::U(sText), sText.size(),
-		+[](void *c, unsigned int alKind, size_t alType, const unsigned char *apA, size_t alA, const unsigned char *apB, size_t alB, int alNum) {
-			cSomaScriptApi *self = (cSomaScriptApi *)c;
-			std::string sA((const char *)apA, alA), sB((const char *)apB, alB);
-			cSomaScriptApiType *pCur = alType < self->mvTypes.size() ? &self->mvTypes[alType] : NULL;
-			switch (alKind)
-			{
-			case kOhplGs6RecEnum:
-				self->mvEnums.push_back(std::make_pair(sA, std::vector<std::pair<std::string, int>>()));
-				break;
-			case kOhplGs6RecEnumValue:
-				self->mvEnums.back().second.push_back(std::make_pair(sA, alNum));
-				break;
-			case kOhplGs6RecType:
-			{
-				cSomaScriptApiType t;
-				t.msName = sA;
-				t.msKind = sB;
-				t.mlSize = alNum;
-				self->mvTypes.push_back(t);
-				break;
-			}
-			case kOhplGs6RecBehaviour:
-				if (pCur)
-					pCur->mvBehaviours.push_back(std::make_pair(sA, sB));
-				break;
-			case kOhplGs6RecMethod:
-				if (pCur)
-					pCur->mvMethods.push_back(sA);
-				break;
-			case kOhplGs6RecProp:
-				if (pCur)
-					pCur->mvProps.push_back(std::make_pair(sA, alNum));
-				break;
-			case kOhplGs6RecCast:
-				if (pCur)
-					pCur->mvCasts.push_back(sA);
-				break;
-			case kOhplGs6RecGlobal:
-				self->mvGlobals.push_back(sA);
-				break;
-			case kOhplGs6RecGlobalProp:
-				self->mvGlobalProps.push_back(sA);
-				break;
-			}
-		},
-		this);
-	for (auto &t : mvTypes)
-		for (auto &prop : t.mvProps)
-			prop.second = SomaNativeOffset(t.msName, prop.first, prop.second);
+	std::string sRust((std::istreambuf_iterator<char>(fRust)), std::istreambuf_iterator<char>());
+	OhplS2InstallHost();
+	mpRust = ohpl_s2_api_new();
+	ohpl_s2_api_load(mpRust, OhplGs6::U(sRust), sRust.size());
 	return true;
 }
 
@@ -253,9 +172,7 @@ static std::set<void *> gsetDummies;
 
 bool SomaScriptIsDummy(void *apObj)
 {
-	if (OhplS2Rust())
-		return ohpl_s2_is_dummy(apObj);
-	return apObj && gsetDummies.count(apObj) != 0;
+	return ohpl_s2_is_dummy(apObj);
 }
 
 static void *DummyForReturn(asIScriptEngine *apEngine, asIScriptFunction *apFunc, int alTypeId)
@@ -280,18 +197,7 @@ static void *DummyForReturn(asIScriptEngine *apEngine, asIScriptFunction *apFunc
 
 void *SomaScriptDummyOf(asIScriptEngine *apEngine, const char *apType)
 {
-	if (OhplS2Rust())
-		return ohpl_s2_dummy_of(apEngine, apType);
-	static std::map<std::string, void *> mapDummies;
-	void *&pDummy = mapDummies[apType];
-	asITypeInfo *pType = apEngine->GetTypeInfoByName(apType);
-	if (pDummy == NULL && pType)
-	{
-		pDummy = calloc(1, 4096);
-		ConstructMembers(apEngine, pType, (char *)pDummy);
-		gsetDummies.insert(pDummy);
-	}
-	return pDummy;
+	return ohpl_s2_dummy_of(apEngine, apType);
 }
 
 static void CountStub(asIScriptGeneric *apGen)
@@ -325,12 +231,7 @@ static void Stub(asIScriptGeneric *apGen)
 
 void SomaScriptStubCall(asIScriptGeneric *apGen)
 {
-	if (OhplS2Rust())
-	{
-		ohpl_s2_stub_call(apGen);
-		return;
-	}
-	Stub(apGen);
+	ohpl_s2_stub_call(apGen);
 }
 
 static void StubConstruct(asIScriptGeneric *apGen)
@@ -348,9 +249,7 @@ static void MarkStub(asIScriptEngine *apEngine, int alFuncId)
 
 bool SomaScriptIsStub(asIScriptFunction *apFunc)
 {
-	if (OhplS2Rust())
-		return ohpl_s2_is_stub(apFunc);
-	return apFunc && apFunc->GetUserData(kSomaStubUserData) != NULL;
+	return ohpl_s2_is_stub(apFunc);
 }
 
 // Copy constructors of POD value types copy the bytes
@@ -407,12 +306,7 @@ static void ConstructMembers(asIScriptEngine *apEngine, asITypeInfo *apType, cha
 
 void *SomaNewScriptStruct(const char *apType)
 {
-	if (OhplS2Rust())
-		return ohpl_s2_new_struct(apType, false);
-	char *pObj = (char *)calloc(1, 4096);
-	if (const cSomaStructDefaults *pDefaults = FindStructDefaults(apType))
-		ApplyStructDefaults(pDefaults, pObj);
-	return pObj;
+	return ohpl_s2_new_struct(apType, false);
 }
 
 // Refcounts of script-created structs; embedded or native-owned structs are absent
@@ -420,11 +314,7 @@ static std::unordered_map<void *, int> gmapStructRefs;
 
 void *SomaNewOwnedScriptStruct(const char *apType)
 {
-	if (OhplS2Rust())
-		return ohpl_s2_new_struct(apType, true);
-	void *pObj = SomaNewScriptStruct(apType);
-	gmapStructRefs[pObj] = 1;
-	return pObj;
+	return ohpl_s2_new_struct(apType, true);
 }
 
 static void StructAddRef(asIScriptGeneric *apGen)
@@ -452,20 +342,7 @@ static void StructRelease(asIScriptGeneric *apGen)
 // AngelScript hands the callee a reference with each handle argument
 void SomaScriptReleaseHandleArgs(asIScriptGeneric *apGen)
 {
-	if (OhplS2Rust())
-	{
-		ohpl_s2_release_handle_args(apGen);
-		return;
-	}
-	asIScriptFunction *pFunc = apGen->GetFunction();
-	for (asUINT i = 0; i < pFunc->GetParamCount(); ++i)
-	{
-		int lTypeId;
-		asDWORD lFlags;
-		pFunc->GetParam(i, &lTypeId, &lFlags);
-		if ((lTypeId & asTYPEID_OBJHANDLE) && lFlags == 0)
-			ReleaseStruct(*(void **)apGen->GetAddressOfArg(i));
-	}
+	ohpl_s2_release_handle_args(apGen);
 }
 
 static bool IsScriptStruct(const cSomaScriptApiType &aType)
@@ -599,46 +476,22 @@ namespace
 
 void SomaSetIndirectProps(const std::string &asType, int alPointerOffset)
 {
-	if (OhplS2Rust())
-	{
-		ohpl_s2_set_indirect(OhplGs6::U(asType), asType.size(), alPointerOffset);
-		return;
-	}
-	gmapIndirect[asType].mlPointerOffset = alPointerOffset;
+	ohpl_s2_set_indirect(OhplGs6::U(asType), asType.size(), alPointerOffset);
 }
 
 int SomaIndirectPropOffset(const std::string &asType, const std::string &asName)
 {
-	if (OhplS2Rust())
-		return ohpl_s2_indirect_offset(OhplGs6::U(asType), asType.size(), OhplGs6::U(asName), asName.size());
-	auto &m = gmapIndirect[asType].mmapOffsets;
-	auto it = m.find(asName);
-	return it == m.end() ? -1 : it->second;
+	return ohpl_s2_indirect_offset(OhplGs6::U(asType), asType.size(), OhplGs6::U(asName), asName.size());
 }
 
 char *SomaNewPropBlock(const std::string &asType)
 {
-	if (OhplS2Rust())
-		return (char *)ohpl_s2_new_prop_block(OhplGs6::U(asType), asType.size());
-	const cIndirectProps &props = gmapIndirect[asType];
-	char *pBlock = (char *)calloc(1, props.mlSize + 64);
-	for (int lOff : props.mvStringOffsets)
-		new (pBlock + lOff) std::string();
-	return pBlock;
+	return (char *)ohpl_s2_new_prop_block(OhplGs6::U(asType), asType.size());
 }
 
 void SomaFreePropBlock(const std::string &asType, char *apBlock)
 {
-	if (OhplS2Rust())
-	{
-		ohpl_s2_free_prop_block(OhplGs6::U(asType), asType.size(), apBlock);
-		return;
-	}
-	if (apBlock == NULL)
-		return;
-	for (int lOff : gmapIndirect[asType].mvStringOffsets)
-		((std::string *)(apBlock + lOff))->~basic_string();
-	free(apBlock);
+	ohpl_s2_free_prop_block(OhplGs6::U(asType), asType.size(), apBlock);
 }
 
 void cSomaScriptApi::RegisterPropertyAccessors(asIScriptEngine *apEngine, const cSomaScriptApiType &aType, const std::string &asDecl)
@@ -664,224 +517,16 @@ void cSomaScriptApi::RegisterPropertyAccessors(asIScriptEngine *apEngine, const 
 
 void cSomaScriptApi::RegisterTypes(asIScriptEngine *apEngine)
 {
-	if (OhplS2Rust())
-	{
-		ohpl_s2_api_register_types(mpRust, apEngine);
-		return;
-	}
-	gpActiveApi = this;
-	if (mbTypesRegistered)
-		return;
-	mbTypesRegistered = true;
-	int r;
-	for (size_t i = 0; i < mvEnums.size(); ++i)
-	{
-		r = apEngine->RegisterEnum(mvEnums[i].first.c_str());
-		if (r < 0 && r != asALREADY_REGISTERED)
-			Fail("enum " + mvEnums[i].first, r);
-		for (size_t j = 0; j < mvEnums[i].second.size(); ++j)
-		{
-			r = apEngine->RegisterEnumValue(mvEnums[i].first.c_str(), mvEnums[i].second[j].first.c_str(), mvEnums[i].second[j].second);
-			if (r < 0 && r != asALREADY_REGISTERED)
-				Fail("enum value " + mvEnums[i].second[j].first, r);
-		}
-	}
-
-	for (size_t i = 0; i < mvTypes.size(); ++i)
-	{
-		const cSomaScriptApiType &t = mvTypes[i];
-		if (IsValueTypeNative(t.msName) || apEngine->GetTypeInfoByName(t.msName.c_str()))
-			continue;
-		if (t.msKind == "interface")
-			r = apEngine->RegisterInterface(t.msName.c_str());
-		else if (t.msKind == "value")
-			r = apEngine->RegisterObjectType(t.msName.c_str(), t.mlSize, asOBJ_VALUE | asOBJ_POD | asOBJ_APP_PRIMITIVE);
-		else if (t.msKind == "template")
-			continue;
-		else if (IsScriptStruct(t))
-		{
-			r = apEngine->RegisterObjectType(t.msName.c_str(), 0, asOBJ_REF);
-			if (r >= 0)
-			{
-				apEngine->RegisterObjectBehaviour(t.msName.c_str(), asBEHAVE_ADDREF, "void f()", asFUNCTION(StructAddRef), asCALL_GENERIC);
-				apEngine->RegisterObjectBehaviour(t.msName.c_str(), asBEHAVE_RELEASE, "void f()", asFUNCTION(StructRelease), asCALL_GENERIC);
-			}
-		}
-		else
-			r = apEngine->RegisterObjectType(t.msName.c_str(), 0, asOBJ_REF | asOBJ_NOCOUNT);
-		if (r < 0 && r != asALREADY_REGISTERED)
-			Fail("type " + t.msName, r);
-	}
+	ohpl_s2_api_register_types(mpRust, apEngine);
 }
 
 int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 {
-	if (OhplS2Rust())
-	{
-		int lRust = ohpl_s2_api_register(mpRust, apEngine);
-		return lRust;
-	}
-	RegisterTypes(apEngine);
-	int r;
-
-	for (size_t i = 0; i < mvTypes.size(); ++i)
-	{
-		const cSomaScriptApiType &t = mvTypes[i];
-		if (t.msKind == "template" || apEngine->GetTypeInfoByName(t.msName.c_str()) == NULL)
-			continue;
-		const char *pName = t.msName.c_str();
-
-		if (t.msKind == "interface")
-		{
-			for (size_t j = 0; j < t.mvMethods.size(); ++j)
-			{
-				r = apEngine->RegisterInterfaceMethod(pName, t.mvMethods[j].c_str());
-				if (r < 0 && r != asALREADY_REGISTERED)
-					Fail(t.msName + "::" + t.mvMethods[j], r);
-			}
-			continue;
-		}
-
-		for (size_t j = 0; j < t.mvBehaviours.size() && IsValueTypeNative(t.msName) == false && SomaScriptHasNativeBehaviours(pName) == false; ++j)
-		{
-			const std::string &sKind = t.mvBehaviours[j].first;
-			const std::string &sParams = t.mvBehaviours[j].second;
-			if (sKind == "construct" && t.msKind == "value")
-			{
-				std::string sDecl = "void f(" + sParams + ")";
-				bool bCopy = ohpl_gs6_is_copy_ctor(OhplGs6::U(sParams), sParams.size(), OhplGs6::U(t.msName), t.msName.size());
-				r = apEngine->RegisterObjectBehaviour(pName, asBEHAVE_CONSTRUCT, sDecl.c_str(), bCopy ? asFUNCTION(CopyConstructPod) : asFUNCTION(StubConstruct),
-													  asCALL_GENERIC);
-			}
-			else if ((sKind == "factory" || sKind == "FactoryDefault") && t.msKind == "ref")
-			{
-				std::string sDecl = t.msName + "@ f(" + (sKind == "factory" ? sParams : "") + ")";
-				r = apEngine->RegisterObjectBehaviour(pName, asBEHAVE_FACTORY, sDecl.c_str(), asFUNCTION(StubFactory), asCALL_GENERIC);
-			}
-			else
-				continue;
-			if (r < 0 && r != asALREADY_REGISTERED)
-				Fail(t.msName + " behaviour " + sKind + "(" + sParams + ")", r);
-		}
-
-		asITypeInfo *pTypeInfo = apEngine->GetTypeInfoByName(pName);
-		for (size_t j = 0; j < t.mvMethods.size(); ++j)
-		{
-			if (pTypeInfo->GetMethodByDecl(t.mvMethods[j].c_str()))
-				continue;
-			bool bLayoutAssign = t.msKind == "ref" && !t.mvProps.empty() && t.mvMethods[j].find("opAssign(const " + t.msName) != std::string::npos;
-			r = apEngine->RegisterObjectMethod(pName, t.mvMethods[j].c_str(), asFUNCTION(bLayoutAssign ? MemberAssign : Stub), asCALL_GENERIC);
-			if (r >= 0 && bLayoutAssign == false)
-				MarkStub(apEngine, r);
-			if (r < 0 && r != asALREADY_REGISTERED)
-				Fail(t.msName + "::" + t.mvMethods[j], r);
-		}
-
-		// The official layout has 8-byte strings: move them past the other props
-		auto itIndirect = gmapIndirect.find(t.msName);
-		int lStringArea = 0;
-		if (itIndirect != gmapIndirect.end())
-			for (auto &prop : t.mvProps)
-				lStringArea = std::max(lStringArea, prop.second + 32);
-		for (size_t j = 0; j < t.mvProps.size(); ++j)
-		{
-			if (HasProperty(pTypeInfo, t.mvProps[j].first))
-				continue;
-			if (t.mvProps[j].second >= 0 && itIndirect != gmapIndirect.end())
-			{
-				cIndirectProps &props = itIndirect->second;
-				bool bString = t.mvProps[j].first.compare(0, 8, "tString ") == 0;
-				int lOffset = t.mvProps[j].second;
-				if (bString)
-				{
-					lOffset = lStringArea;
-					lStringArea += (int)sizeof(std::string);
-					props.mvStringOffsets.push_back(lOffset);
-				}
-				r = apEngine->RegisterObjectProperty(pName, t.mvProps[j].first.c_str(), lOffset, props.mlPointerOffset, true);
-				props.mmapOffsets[t.mvProps[j].first.substr(t.mvProps[j].first.find_last_of(' ') + 1)] = lOffset;
-				props.mlSize = std::max(props.mlSize, lOffset + 32);
-				if (r < 0 && r != asALREADY_REGISTERED)
-					Fail(t.msName + " prop " + t.mvProps[j].first, r);
-			}
-			else if (t.mvProps[j].second >= 0)
-			{
-				r = apEngine->RegisterObjectProperty(pName, t.mvProps[j].first.c_str(), t.mvProps[j].second);
-				if (r < 0 && r != asALREADY_REGISTERED)
-					Fail(t.msName + " prop " + t.mvProps[j].first, r);
-			}
-			else
-				RegisterPropertyAccessors(apEngine, t, t.mvProps[j].first);
-		}
-	}
-
-	// Casts need both types registered: derived -> base implicit, base -> derived explicit
-	for (size_t i = 0; i < mvTypes.size(); ++i)
-	{
-		const cSomaScriptApiType &t = mvTypes[i];
-		for (size_t j = 0; j < t.mvCasts.size(); ++j)
-		{
-			asITypeInfo *pOther = apEngine->GetTypeInfoByName(t.mvCasts[j].c_str());
-			if (pOther == NULL || (pOther->GetFlags() & asOBJ_REF) == 0)
-				continue;
-			std::string sUp = t.mvCasts[j] + "@ opImplCast()";
-			std::string sDown = t.msName + "@ opCast()";
-			asITypeInfo *pCur = apEngine->GetTypeInfoByName(t.msName.c_str());
-			if (pCur == NULL || pCur->GetMethodByDecl(sUp.c_str()) || pOther->GetMethodByDecl(sDown.c_str()))
-				continue;
-			r = apEngine->RegisterObjectMethod(t.msName.c_str(), sUp.c_str(), asFUNCTION(StubCastSelf), asCALL_GENERIC);
-			if (r < 0 && r != asALREADY_REGISTERED)
-				Fail(t.msName + "::" + sUp, r);
-			r = apEngine->RegisterObjectMethod(t.mvCasts[j].c_str(), sDown.c_str(), asFUNCTION(StubCastSelf), asCALL_GENERIC);
-			if (r < 0 && r != asALREADY_REGISTERED)
-				Fail(t.mvCasts[j] + "::" + sDown, r);
-		}
-	}
-
-	std::set<std::string> setNativeNames;
-	for (asUINT i = 0; i < apEngine->GetGlobalFunctionCount(); ++i)
-		setNativeNames.insert(apEngine->GetGlobalFunctionByIndex(i)->GetName());
-	for (size_t i = 0; i < mvGlobals.size(); ++i)
-	{
-		if (apEngine->GetGlobalFunctionByDecl(mvGlobals[i].c_str()))
-			continue;
-		size_t lParen = mvGlobals[i].find('(');
-		size_t lNameStart = mvGlobals[i].find_last_of(" &@", lParen) + 1;
-		std::string sName = mvGlobals[i].substr(lNameStart, lParen - lNameStart);
-		if (setNativeNames.count(sName))
-			mvWarnings.push_back("native overload of '" + sName + "' does not match API declaration: " + mvGlobals[i]);
-		r = apEngine->RegisterGlobalFunction(mvGlobals[i].c_str(), asFUNCTION(Stub), asCALL_GENERIC);
-		if (r >= 0)
-			MarkStub(apEngine, r);
-		if (r < 0 && r != asALREADY_REGISTERED)
-			Fail(mvGlobals[i], r);
-	}
-
-	for (size_t i = 0; i < mvGlobalProps.size(); ++i)
-	{
-		std::string sName = mvGlobalProps[i].substr(mvGlobalProps[i].find_last_of(' ') + 1);
-		if (apEngine->GetGlobalPropertyIndexByName(sName.c_str()) >= 0)
-			continue;
-		void *pMem = calloc(1, 256);
-		r = apEngine->RegisterGlobalProperty(mvGlobalProps[i].c_str(), pMem);
-		if (r < 0 && r != asALREADY_REGISTERED)
-			Fail(mvGlobalProps[i], r);
-	}
-
-	return (int)mvErrors.size();
+	int lRust = ohpl_s2_api_register(mpRust, apEngine);
+	return lRust;
 }
 
 void ConfigureSomaScriptEngine(asIScriptEngine *apEngine)
 {
-	if (OhplS2Rust())
-	{
-		ohpl_s2_configure_engine(apEngine);
-		return;
-	}
-	// SOMA's scripts use 'x' as integer literals and unqualified & references
-	apEngine->SetEngineProperty(asEP_USE_CHARACTER_LITERALS, 1);
-	apEngine->SetEngineProperty(asEP_ALLOW_UNSAFE_REFERENCES, 1);
-	apEngine->SetEngineProperty(asEP_PROPERTY_ACCESSOR_MODE, 3);
-	// AS 2.28 (official): members exist before the constructor body (CreditsHandler's `this = cCreditsStyle();`)
-	apEngine->SetEngineProperty(asEP_MEMBER_INIT_MODE, 0);
+	ohpl_s2_configure_engine(apEngine);
 }

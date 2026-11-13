@@ -158,11 +158,8 @@ static void A7DropMap(void *p){ hplDelete(static_cast<cLuxMap*>(p)); }
 cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 {
 	mpA7Maps = NULL;
-	if(OhplBackendRustRequested())
-	{
-		mpA7Maps = ohpl_a7_new();
-		ohpl_a7_set_drop(mpA7Maps, kOhplA7Entity, A7DropMap);
-	}
+	mpA7Maps = ohpl_a7_new();
+	ohpl_a7_set_drop(mpA7Maps, kOhplA7Entity, A7DropMap);
 
 	//////////////////////////
 	//Create and setup view port

@@ -73,7 +73,7 @@ public:
 	//////////////////////
 	//Properties
 	void SetLocked(bool abLocked);
-	bool GetLocked(){ return hpl::OhplBackendRustRequested() ? mS.locked : mbLocked; }
+	bool GetLocked(){ return mS.locked; }
 
 	void SetLockedSound(const tString& asSound){ msLockedSound = asSound;}
 	void SetLockedText(const tString& asCat, const tString& asEntry){ msLockedTextCat = asCat; msLockedTextEntry=asEntry;}
@@ -106,16 +106,11 @@ private:
 	tString msStartPos;
 	tString msTextEntry;
 
-	bool mbLocked;
 	tString msLockedSound;
 	tString msLockedTextCat;
 	tString msLockedTextEntry;
 
-	float mfLockedCount;
-
-	bool mbShowStats;
-
-	OhplA5Door mS; //used instead of mbLocked, mfLockedCount and mbShowStats when OHPL_IMPL=rust
+	OhplA5Door mS;
 };
 
 //----------------------------------------------

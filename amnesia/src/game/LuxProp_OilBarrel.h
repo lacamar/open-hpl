@@ -82,7 +82,6 @@ public:
 	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
-	void CalculateOilAmount();
 	static bool HostHardMode(void *apCtx);
 	static float HostLampOil(void *apCtx);
 	static float HostTotalOil(void *apCtx);
@@ -92,12 +91,7 @@ private:
 	tString msFillSound;
 	tString msEmptySound;
 
-	//////////////////////
-	// Variables
-	bool mbAmountCalculated;
-	float mfOilAmount;
-
-	OhplA5Oil mS; //used instead of the vars above when OHPL_IMPL=rust
+	OhplA5Oil mS;
 };
 
 //----------------------------------------------

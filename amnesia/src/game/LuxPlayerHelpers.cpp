@@ -91,16 +91,7 @@ cLuxPlayerInsanityCollapse::~cLuxPlayerInsanityCollapse()
 
 void cLuxPlayerInsanityCollapse::Reset()
 {
-	if(OhplBackendRustRequested()) ohpl_a2b_collapse_clear(&mS, false, true);
-	else
-	{
-		mbActive = false;
-		mlState =0;
-		mfHeightAdd =0;
-		mfRoll =0;
-		mfT=0;
-		mfRandomCount=0;
-	}
+	ohpl_a2b_collapse_clear(&mS, false, true);
 
 	if(mpLoopSound && gpBase->mpEngine->GetSound()->GetSoundHandler()->IsValid(mpLoopSound, mlLoopSoundID))
 	{
@@ -154,16 +145,7 @@ void cLuxPlayerInsanityCollapse::Start()
 
 	/////////////////
 	//Setup variables.	
-	if(OhplBackendRustRequested()) ohpl_a2b_collapse_clear(&mS, true, true);
-	else
-	{
-		mbActive = true;
-		mlState =0;
-		mfHeightAdd =0;
-		mfRoll =0;
-		mfT=0;
-		mfRandomCount=0;
-	}
+	ohpl_a2b_collapse_clear(&mS, true, true);
 }
 
 //-----------------------------------------------------------------------
@@ -183,15 +165,7 @@ void cLuxPlayerInsanityCollapse::Stop()
 		mpLoopSound->FadeOut(1.0f);
 	}
 
-	if(OhplBackendRustRequested()) ohpl_a2b_collapse_clear(&mS, false, false);
-	else
-	{
-		mbActive = false;
-		mlState =0;
-		mfT =0;
-		mfRoll =0;
-		mfHeightAdd=0;
-	}
+	ohpl_a2b_collapse_clear(&mS, false, false);
 	mpPlayer->FadeRollTo(0, 10,10);
 	mpPlayer->MoveHeadPosAdd(eLuxHeadPosAdd_InsanityCollapse, cVector3f(0,0,0),1, 0.1f);
 }
@@ -200,22 +174,8 @@ void cLuxPlayerInsanityCollapse::Stop()
 
 void cLuxPlayerInsanityCollapse::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
-		ohpl_a2b_collapse_update(&mS, &h, afTimeStep);
-		return;
-	}
-
-	if(mbActive==false) return;
-
-	OhplGa2Ops ops;
-	ohpl_ga2_collapse_update(&mS, afTimeStep, &ops);
-	for(uint32_t i=0; i<ops.n; ++i)
-	{
-		const OhplGa2Op &op = ops.ops[i];
-		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
-	}
+	OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+	ohpl_a2b_collapse_update(&mS, &h, afTimeStep);
 }
 
 void cLuxPlayerInsanityCollapse::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
@@ -282,17 +242,7 @@ cLuxPlayerCamDirEffects::~cLuxPlayerCamDirEffects()
 
 void cLuxPlayerCamDirEffects::Reset()
 {
-	if(OhplBackendRustRequested())
-	{
-		ohpl_a2b_camdir_reset(&mS);
-		return;
-	}
-
-	mbSwayActive = false;
-	mS.mlCount = 0;
-	mvSwayAdd = 0;
-	mvNextAdd = 0;
-	mfSwayAlpha =0;
+	ohpl_a2b_camdir_reset(&mS);
 }
 
 //-----------------------------------------------------------------------
@@ -300,47 +250,20 @@ void cLuxPlayerCamDirEffects::Reset()
 
 void cLuxPlayerCamDirEffects::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2bHost h = {this, NULL, HostQuery, NULL};
-		ohpl_a2b_camdir_update(&mS, &h, afTimeStep);
-		return;
-	}
-
-	std::vector<cVector2f> vPrev(mS.mvList, mS.mvList + mS.mlCount);
-	OhplGa2Ops ops;
-	ohpl_ga2_camdir_update(&mS.k, vPrev.data(), vPrev.size(), mpPlayer->GetSanity(), afTimeStep, &ops);
-	for(uint32_t i=0; i<ops.n; ++i)
-	{
-		const OhplGa2Op &op = ops.ops[i];
-		switch(op.kind)
-		{
-		case kOhplGa2ListClear: mS.mlCount = 0; break;
-		case kOhplGa2ListPush:
-			if(mS.mlCount >= 256) { memmove(mS.mvList, mS.mvList+1, sizeof(cVector2f)*255); mS.mlCount = 255; }
-			mS.mvList[mS.mlCount++] = cVector2f(op.a, op.b);
-			break;
-		case kOhplGa2ListPopFront:
-			if(mS.mlCount > 0) { memmove(mS.mvList, mS.mvList+1, sizeof(cVector2f)*(mS.mlCount-1)); --mS.mlCount; }
-			break;
-		}
-	}
+	OhplA2bHost h = {this, NULL, HostQuery, NULL};
+	ohpl_a2b_camdir_update(&mS, &h, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 float cLuxPlayerCamDirEffects::AddAndGetYawAdd(float afX)
 {
-	if(OhplBackendRustRequested()) return ohpl_a2b_camdir_add(&mS, true, afX);
-
-	return ohpl_ga2_camdir_add(&mS.k, mS.mlCount==0, true, afX);
+	return ohpl_a2b_camdir_add(&mS, true, afX);
 }
 
 float cLuxPlayerCamDirEffects::AddAndGetPitchAdd(float afX)
 {
-	if(OhplBackendRustRequested()) return ohpl_a2b_camdir_add(&mS, false, afX);
-
-	return ohpl_ga2_camdir_add(&mS.k, mS.mlCount==0, false, afX);
+	return ohpl_a2b_camdir_add(&mS, false, afX);
 }
 
 float cLuxPlayerCamDirEffects::HostQuery(void *apCtx, uint32_t alKind, float afA, float afB)
@@ -636,46 +559,15 @@ cLuxPlayerHurt::~cLuxPlayerHurt()
 
 void cLuxPlayerHurt::Reset()
 {
-	if(OhplBackendRustRequested())
-	{
-		ohpl_a2b_hurt_reset(&mS);
-		return;
-	}
-
-	mfAlpha = 0;
-	mfPantCount =0;
-	mfPantPosAdd = 0;
-	mfPantPosAddVel = 0;
-	mfPantPosAddDir = 1.0f;
-	mlCurrentNoise = 0;
-	mfNoiseUpdateCount =0;
+	ohpl_a2b_hurt_reset(&mS);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerHurt::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
-		ohpl_a2b_hurt_update(&mS, &h, afTimeStep);
-		return;
-	}
-
-	float fRegain;
-	if(ohpl_ga2_hurt_regain(mpPlayer->GetHealth(), mfHealthRegainLimit, mfHealthRegainSpeed, afTimeStep, &fRegain))
-	{
-		mpPlayer->AddHealth(fRegain);
-	}
-
-	float fSpeed = mpPlayer->GetCharacterBody()->GetVelocity(afTimeStep).Length();
-	OhplGa2Ops ops;
-	ohpl_ga2_hurt_update(&mS.k, mpPlayer->GetHealth(), mpPlayer->IsDead(), fSpeed, afTimeStep, &ops);
-	for(uint32_t i=0; i<ops.n; ++i)
-	{
-		const OhplGa2Op &op = ops.ops[i];
-		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
-	}
+	OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+	ohpl_a2b_hurt_update(&mS, &h, afTimeStep);
 }
 
 void cLuxPlayerHurt::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
@@ -756,12 +648,7 @@ cLuxPlayerFlashback::~cLuxPlayerFlashback ()
 
 void cLuxPlayerFlashback::Reset()
 {
-	if(OhplBackendRustRequested()) ohpl_a2b_flashback_reset(&mS);
-	else
-	{
-		mfFlashDelay =0;
-		mbActive = false;
-	}
+	ohpl_a2b_flashback_reset(&mS);
 	mlstFlashbackQueue.clear();
 }
 
@@ -802,21 +689,8 @@ void cLuxPlayerFlashback::Start(const tString &asFlashbackFile, const tString &a
 
 void cLuxPlayerFlashback::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
-		ohpl_a2b_flashback_update(&mS, &h, afTimeStep);
-		return;
-	}
-
-	bool bVoiceDone = mbActive ? gpBase->mpEffectHandler->GetPlayVoice()->VoiceDonePlaying() : false;
-	OhplGa2Ops ops;
-	ohpl_ga2_flashback_update(&mS, mlstFlashbackQueue.empty()==false, bVoiceDone, msCallback != "", afTimeStep, &ops);
-	for(uint32_t i=0; i<ops.n; ++i)
-	{
-		const OhplGa2Op &op = ops.ops[i];
-		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
-	}
+	OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+	ohpl_a2b_flashback_update(&mS, &h, afTimeStep);
 }
 
 void cLuxPlayerFlashback::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
@@ -938,24 +812,8 @@ cLuxPlayerLookAt::~cLuxPlayerLookAt()
 
 void cLuxPlayerLookAt::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2bHost h = {this, HostOp, HostQuery, HostFill};
-		ohpl_a2b_lookat_update(&mS, &h, afTimeStep);
-		return;
-	}
-
-	if(mbActive==false) return;
-
-	cCamera *pCam = mpPlayer->GetCamera();
-	cVector3f vGoalAngle = cMath::GetAngleFromPoints3D(pCam->GetPosition(),mvTargetPos);
-	OhplGa2Ops ops;
-	ohpl_ga2_lookat_update(&mS.k, &vGoalAngle, pCam->GetPitch(), pCam->GetYaw(), afTimeStep, &ops);
-	for(uint32_t i=0; i<ops.n; ++i)
-	{
-		const OhplGa2Op &op = ops.ops[i];
-		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
-	}
+	OhplA2bHost h = {this, HostOp, HostQuery, HostFill};
+	ohpl_a2b_lookat_update(&mS, &h, afTimeStep);
 }
 
 void cLuxPlayerLookAt::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
@@ -996,19 +854,7 @@ void cLuxPlayerLookAt::HostFill(void *apCtx, uint32_t alKind, float *apBuf)
 
 void cLuxPlayerLookAt::Reset()
 {
-	if(OhplBackendRustRequested()) ohpl_a2b_lookat_reset(&mS);
-	else
-	{
-		mbActive = false;
-		mfMaxSpeed = 9999.0f;
-		mfSpeedMul = 1.0f;
-		mvTargetPos = cVector3f(0,1,0);
-		mvCurrentSpeed =0;
-		mfDestFovMul = 1.0f;
-		mfFov = 1.0f;
-		mfFovSpeed = 1.0f;
-		mfFovMaxSpeed = 1.0f;
-	}
+	ohpl_a2b_lookat_reset(&mS);
 	msAtTargetCallback = "";
 }
 
@@ -1016,13 +862,7 @@ void cLuxPlayerLookAt::Reset()
 
 void cLuxPlayerLookAt::SetTarget(const cVector3f &avTargetPos, float afSpeedMul, float afMaxSpeed, const tString& asAtTargetCallback)
 {
-	if(OhplBackendRustRequested()) ohpl_a2b_lookat_set_target(&mS, avTargetPos.x, avTargetPos.y, avTargetPos.z, afSpeedMul, afMaxSpeed);
-	else
-	{
-		mvTargetPos = avTargetPos;
-		mfSpeedMul = afSpeedMul;
-		mfMaxSpeed = afMaxSpeed;
-	}
+	ohpl_a2b_lookat_set_target(&mS, avTargetPos.x, avTargetPos.y, avTargetPos.z, afSpeedMul, afMaxSpeed);
 	msAtTargetCallback = asAtTargetCallback;
 }
 
@@ -1030,17 +870,7 @@ void cLuxPlayerLookAt::SetTarget(const cVector3f &avTargetPos, float afSpeedMul,
 
 void cLuxPlayerLookAt::SetActive(bool abX)
 {
-	if(OhplBackendRustRequested())
-	{
-		ohpl_a2b_lookat_set_active(&mS, abX);
-		return;
-	}
-
-	mbActive = abX;
-	if(mbActive==false)
-	{
-		mvCurrentSpeed =0;
-	}
+	ohpl_a2b_lookat_set_active(&mS, abX);
 }
 
 //-----------------------------------------------------------------------
@@ -1457,13 +1287,7 @@ void cLuxPlayerLantern::OnStart()
 }
 void cLuxPlayerLantern::Reset()
 {
-	if(OhplBackendRustRequested()) ohpl_a2b_lantern_reset(&mS);
-	else
-	{
-		mbDisabled = false;
-		mbActive = false;
-		mfAlpha =0;
-	}
+	ohpl_a2b_lantern_reset(&mS);
 	mpLight = NULL;
 }
 
@@ -1472,24 +1296,8 @@ void cLuxPlayerLantern::Reset()
 
 void cLuxPlayerLantern::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
-		ohpl_a2b_lantern_update(&mS, &h, afTimeStep);
-		return;
-	}
-
-	OhplGa2Ops ops;
-	bool bEmotionFlash = mbActive ? gpBase->mpEffectHandler->GetEmotionFlash()->IsActive() : false;
-	OhplGa2Lantern s = mS.k;
-	if(ohpl_ga2_lantern_update(&s, gpBase->mpPlayer->GetLampOil(), bEmotionFlash, afTimeStep, &ops) == false) return;
-	mfAlpha = s.mfAlpha;
-	for(uint32_t i=0; i<ops.n; ++i)
-	{
-		const OhplGa2Op &op = ops.ops[i];
-		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
-	}
-	HostOp(this, kOhplA2bLanternMatrix, 0, 0, 0, 0, 0);
+	OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+	ohpl_a2b_lantern_update(&mS, &h, afTimeStep);
 }
 
 void cLuxPlayerLantern::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
@@ -1592,46 +1400,16 @@ void cLuxPlayerLantern::DestroyWorldEntities(cLuxMap *apMap)
 
 void cLuxPlayerLantern::SetActive(bool abX, bool abUseEffects, bool abCheckForOilAndItems, bool abCheckIfAllowed)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
-		ohpl_a2b_lantern_set_active(&mS, &h, abX, abUseEffects, abCheckForOilAndItems, abCheckIfAllowed);
-		return;
-	}
-
-	OhplGa2LanternSet p;
-	p.mbActive = abX;
-	p.mbUseEffects = abUseEffects;
-	p.mbCheckOilItems = abCheckForOilAndItems;
-	p.mbCheckAllowed = abCheckIfAllowed;
-	p.mbCurrent = mbActive;
-	p.mbAllowed = abCheckIfAllowed ? HostQuery(this, kOhplA2bQAllowed, 0, 0) != 0 : true;
-	p.mbHasItem = abCheckForOilAndItems ? HostQuery(this, kOhplA2bQHasItem, 0, 0) != 0 : true;
-	p.mbDisabled = mbDisabled;
-	p.mfOil = mpPlayer->GetLampOil();
-	OhplGa2Ops ops;
-	ohpl_ga2_lantern_set_active(&p, &ops);
-	for(uint32_t i=0; i<ops.n; ++i)
-	{
-		const OhplGa2Op &op = ops.ops[i];
-		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
-	}
+	OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+	ohpl_a2b_lantern_set_active(&mS, &h, abX, abUseEffects, abCheckForOilAndItems, abCheckIfAllowed);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerLantern::SetDisabled(bool abX)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2bHost h = {this, HostOp, HostQuery, NULL};
-		ohpl_a2b_lantern_set_disabled(&mS, &h, abX);
-		return;
-	}
-
-	mbDisabled = abX;
-	if(mbDisabled)
-		SetActive(false, true);
+	OhplA2bHost h = {this, HostOp, HostQuery, NULL};
+	ohpl_a2b_lantern_set_disabled(&mS, &h, abX);
 }
 
 //-----------------------------------------------------------------------
@@ -2468,43 +2246,15 @@ void cLuxPlayerLightLevel::OnStart()
 
 void cLuxPlayerLightLevel::Reset()
 {
-	if(OhplBackendRustRequested())
-	{
-		ohpl_a2b_light_reset(&mS);
-		return;
-	}
-
-	mfExtendedLightLevel = 1.0f;
-	mfNormalLightLevel = 1.0f;
-	mfUpdateCount =0;
+	ohpl_a2b_light_reset(&mS);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerLightLevel::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2bHost h = {this, NULL, HostQuery, HostFill};
-		ohpl_a2b_light_update(&mS, &h, afTimeStep);
-		return;
-	}
-
-	if(ohpl_ga2_light_timer(&mfUpdateCount, afTimeStep))
-	{
-		iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-		cVector3f vPos = pCharBody->GetPosition();
-		cVector3f vSize = pCharBody->GetSize();
-		cVector3f vForward = pCharBody->GetForward();
-
-		cVector3f vTestPos[5];
-		ohpl_ga2_light_positions(&vPos, &vSize, &vForward, vTestPos);
-
-		bool bLantern = mpPlayer->GetHelperLantern()->IsActive();
-		float vExt[5], vNormal[5];
-		SampleLevels(vTestPos, vExt, vNormal);
-		ohpl_ga2_light_combine(bLantern, vExt, vNormal, &mfExtendedLightLevel, &mfNormalLightLevel);
-	}
+	OhplA2bHost h = {this, NULL, HostQuery, HostFill};
+	ohpl_a2b_light_update(&mS, &h, afTimeStep);
 }
 
 void cLuxPlayerLightLevel::SampleLevels(const cVector3f *apPos, float *apExt, float *apNormal)
@@ -2553,13 +2303,7 @@ void cLuxPlayerLightLevel::HostFill(void *apCtx, uint32_t alKind, float *apBuf)
 
 void cLuxPlayerLightLevel::OnMapEnter(cLuxMap *apMap)
 {
-	if(OhplBackendRustRequested())
-	{
-		ohpl_a2b_light_map_enter(&mS);
-		return;
-	}
-
-	mfUpdateCount =0;
+	ohpl_a2b_light_map_enter(&mS);
 }
 
 //-----------------------------------------------------------------------
@@ -2605,16 +2349,7 @@ void cLuxPlayerInDarkness::OnStart()
 }
 void cLuxPlayerInDarkness::Reset()
 {
-	if(OhplBackendRustRequested()) ohpl_a2b_dark_reset(&mS);
-	else
-	{
-		mbActive = true;
-		mbAmbientLightIsOn = false;
-		mbInDarkness = false;
-		mfLoopSoundCount =0;
-		mfSanityLossMul =0;
-		mfShowHintTimer = 0;
-	}
+	ohpl_a2b_dark_reset(&mS);
 	mpAmbientLight =NULL;
 	mpLoopSound = NULL;
 }
@@ -2624,33 +2359,8 @@ void cLuxPlayerInDarkness::Reset()
 
 void cLuxPlayerInDarkness::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2bHost h = {this, HostOp, HostQuery, HostFill};
-		ohpl_a2b_dark_update(&mS, &h, afTimeStep);
-		return;
-	}
-
-	if (!mbActive) return;
-
-	OhplGa2DarknessIn in;
-	float vLevels[2];
-	HostFill(this, kOhplA2bFDarkLevels, vLevels);
-	in.mfExtLevel = vLevels[0];
-	in.mfNormalLevel = vLevels[1];
-	HostOp(this, kOhplA2bAmbientPos, 0, 0, 0, 0, 0);
-	in.mbHardMode = HostQuery(this, kOhplA2bQHardMode, 0, 0) != 0;
-	in.mbFlashbackActive = HostQuery(this, kOhplA2bQFlashbackActive, 0, 0) != 0;
-	in.mbDrainDisabled = HostQuery(this, kOhplA2bQDrainDisabled, 0, 0) != 0;
-	in.mbEmotionFlash = HostQuery(this, kOhplA2bQEmotionFlash, 0, 0) != 0;
-
-	OhplGa2Ops ops;
-	ohpl_ga2_darkness_update(&mS.k, &in, afTimeStep, &ops);
-	for(uint32_t i=0; i<ops.n; ++i)
-	{
-		const OhplGa2Op &op = ops.ops[i];
-		HostOp(this, op.kind, op.i, op.a, op.b, op.c, op.d);
-	}
+	OhplA2bHost h = {this, HostOp, HostQuery, HostFill};
+	ohpl_a2b_dark_update(&mS, &h, afTimeStep);
 }
 
 void cLuxPlayerInDarkness::HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
@@ -2697,14 +2407,7 @@ void cLuxPlayerInDarkness::HostFill(void *apCtx, uint32_t alKind, float *apBuf)
 //-----------------------------------------------------------------------
 void cLuxPlayerInDarkness::OnMapEnter(cLuxMap *apMap)
 {
-	if(OhplBackendRustRequested())
-	{
-		ohpl_a2b_dark_map_enter(&mS);
-		return;
-	}
-
-	mbAmbientLightIsOn = false;
-	mbInDarkness = false;
+	ohpl_a2b_dark_map_enter(&mS);
 }
 
 void cLuxPlayerInDarkness::OnMapLeave(cLuxMap *apMap)
@@ -2744,34 +2447,15 @@ void cLuxPlayerInDarkness::DestroyWorldEntities(cLuxMap *apMap)
 bool cLuxPlayerInDarkness::InDarkness()
 {
 	float fLightLevel = mpPlayer->GetHelperLightLevel()->GetExtendedLightLevel();
-	if(OhplBackendRustRequested()) return ohpl_a2b_dark_in_darkness(&mS, fLightLevel);
-
-	return fLightLevel <= mfMinDarknessLightLevel;
+	return ohpl_a2b_dark_in_darkness(&mS, fLightLevel);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerInDarkness::SetActive(bool abX)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2bHost h = {this, HostOp, HostQuery, HostFill};
-		ohpl_a2b_dark_set_active(&mS, &h, abX);
-		return;
-	}
-
-	mbActive = abX;
-	if (abX == false)
-	{
-		if(mbAmbientLightIsOn)
-		{
-			mbAmbientLightIsOn = false;
-			mpAmbientLight->FadeTo(cColor(0.0f, 0.0f),mpAmbientLight->GetRadius(),mfAmbientLightFadeOutTime);
-		}
-		mfLoopSoundCount = 0;
-		mbInDarkness = false;
-		mfSanityLossMul = 0;
-	}
+	OhplA2bHost h = {this, HostOp, HostQuery, HostFill};
+	ohpl_a2b_dark_set_active(&mS, &h, abX);
 }
 
 //-----------------------------------------------------------------------

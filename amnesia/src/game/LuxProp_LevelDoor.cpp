@@ -51,16 +51,10 @@ void cLuxPropLoader_LevelDoor::LoadVariables(iLuxProp *apProp, cXmlElement *apRo
 
 	///////////////////////////
 	// General
-	if(hpl::OhplBackendRustRequested())
-	{
-		OhplGa4VarsAdapter vars(this);
-		vars.Slot(kOhplA5Slot_DoorEnter, pLevelDoor->msEnterSound)
-			.Slot(kOhplA5Slot_DoorExit, pLevelDoor->msExitSound);
-		ohpl_a5_door_load(vars.Vars());
-		return;
-	}
-	pLevelDoor->msEnterSound = GetVarString("EnterSound", "");
-	pLevelDoor->msExitSound = GetVarString("ExitSound", "");
+	OhplGa4VarsAdapter vars(this);
+	vars.Slot(kOhplA5Slot_DoorEnter, pLevelDoor->msEnterSound)
+		.Slot(kOhplA5Slot_DoorExit, pLevelDoor->msExitSound);
+	ohpl_a5_door_load(vars.Vars());
 }
 
 //-----------------------------------------------------------------------
@@ -69,28 +63,14 @@ void cLuxPropLoader_LevelDoor::LoadInstanceVariables(iLuxProp *apProp, cResource
 {
 	cLuxProp_LevelDoor  *pLevelDoor = static_cast<cLuxProp_LevelDoor*>(apProp);
 
-	if(hpl::OhplBackendRustRequested())
-	{
-		OhplGa4VarsAdapter vars(apInstanceVars);
-		vars.Slot(kOhplA5Slot_DoorTextEntry, pLevelDoor->msTextEntry)
-			.Slot(kOhplA5Slot_DoorMapFile, pLevelDoor->msMapFile)
-			.Slot(kOhplA5Slot_DoorStartPos, pLevelDoor->msStartPos)
-			.Slot(kOhplA5Slot_DoorLockedSound, pLevelDoor->msLockedSound)
-			.Slot(kOhplA5Slot_DoorLockedCat, pLevelDoor->msLockedTextCat)
-			.Slot(kOhplA5Slot_DoorLockedEntry, pLevelDoor->msLockedTextEntry);
-		ohpl_a5_door_load_instance(vars.Vars(), &pLevelDoor->mS);
-		return;
-	}
-	pLevelDoor->msTextEntry = apInstanceVars->GetVarString("TextEntry","");
-	pLevelDoor->msMapFile = apInstanceVars->GetVarString("MapFile","");
-	pLevelDoor->msStartPos = apInstanceVars->GetVarString("StartPos","");
-
-	pLevelDoor->mbLocked = apInstanceVars->GetVarBool("Locked",false);
-	pLevelDoor->msLockedSound = apInstanceVars->GetVarString("LockedSound","");
-	pLevelDoor->msLockedTextCat = apInstanceVars->GetVarString("LockedTextCat","");
-	pLevelDoor->msLockedTextEntry = apInstanceVars->GetVarString("LockedTextEntry","");
-
-	pLevelDoor->mbShowStats = apInstanceVars->GetVarBool("ShowStats",true);
+	OhplGa4VarsAdapter vars(apInstanceVars);
+	vars.Slot(kOhplA5Slot_DoorTextEntry, pLevelDoor->msTextEntry)
+		.Slot(kOhplA5Slot_DoorMapFile, pLevelDoor->msMapFile)
+		.Slot(kOhplA5Slot_DoorStartPos, pLevelDoor->msStartPos)
+		.Slot(kOhplA5Slot_DoorLockedSound, pLevelDoor->msLockedSound)
+		.Slot(kOhplA5Slot_DoorLockedCat, pLevelDoor->msLockedTextCat)
+		.Slot(kOhplA5Slot_DoorLockedEntry, pLevelDoor->msLockedTextEntry);
+	ohpl_a5_door_load_instance(vars.Vars(), &pLevelDoor->mS);
 }
 //-----------------------------------------------------------------------
 
@@ -103,7 +83,6 @@ void cLuxPropLoader_LevelDoor::LoadInstanceVariables(iLuxProp *apProp, cResource
 
 cLuxProp_LevelDoor::cLuxProp_LevelDoor(const tString &asName, int alID, cLuxMap *apMap) : iLuxProp(asName,alID,apMap, eLuxPropType_LevelDoor)
 {
-	mfLockedCount =0;
 	mS.locked_count = 0;
 }
 
@@ -130,30 +109,8 @@ bool cLuxProp_LevelDoor::CanInteract(iPhysicsBody *apBody)
 
 bool cLuxProp_LevelDoor::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(hpl::OhplBackendRustRequested())
-	{
-		OhplGa4Run run(this);
-		ohpl_a5_door_interact(&mS, run.Sink());
-		return true;
-	}
-
-	OhplGa4bDoorAct act;
-	ohpl_ga4b_door_interact(mbLocked, mfLockedCount, &act);
-
-	if(act.locked_feedback)
-	{
-		gpBase->mpHelpFuncs->PlayGuiSoundData(msLockedSound,eSoundEntryType_World);
-		if(msLockedTextCat != "" && msLockedTextEntry != "")
-		{
-			gpBase->mpMessageHandler->SetMessage(kTranslate(msLockedTextCat, msLockedTextEntry), 0);
-		}
-		mfLockedCount = act.count;
-	}
-	if(act.change_map)
-	{
-		gpBase->mpMapHandler->ChangeMap(msMapFile,msStartPos, msEnterSound, msExitSound);
-	}
-
+	OhplGa4Run run(this);
+	ohpl_a5_door_interact(&mS, run.Sink());
 	return true;
 }
 
@@ -174,12 +131,7 @@ void cLuxProp_LevelDoor::OnResetProperties()
 
 void cLuxProp_LevelDoor::UpdatePropSpecific(float afTimeStep)
 {
-	if(hpl::OhplBackendRustRequested())
-	{
-		ohpl_a5_door_update(&mS, afTimeStep);
-		return;
-	}
-	mfLockedCount = ohpl_ga4b_door_tick(mfLockedCount, afTimeStep);
+	ohpl_a5_door_update(&mS, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -216,7 +168,6 @@ tWString cLuxProp_LevelDoor::GetFocusText()
 
 void cLuxProp_LevelDoor::SetLocked(bool abLocked)
 {
-	mbLocked = abLocked;
 	mS.locked = abLocked;
 }
 
@@ -302,13 +253,11 @@ void cLuxProp_LevelDoor::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyToVar(pData, msStartPos);
 	kCopyToVar(pData, msMapFile);
 
-	if(hpl::OhplBackendRustRequested()) ohpl_a8_door_save(&mS, pData);
-	else kCopyToVar(pData, mbLocked);
+	ohpl_a8_door_save(&mS, pData);
 	kCopyToVar(pData, msLockedSound);
 	kCopyToVar(pData, msLockedTextCat);
 	kCopyToVar(pData, msLockedTextEntry);
 
-	if(!hpl::OhplBackendRustRequested()) kCopyToVar(pData, mbShowStats);
 }
 
 //-----------------------------------------------------------------------
@@ -326,13 +275,11 @@ void cLuxProp_LevelDoor::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyFromVar(pData, msStartPos);
 	kCopyFromVar(pData, msMapFile);
 
-	kCopyFromVar(pData, mbLocked);
-	if(hpl::OhplBackendRustRequested()) ohpl_a8_door_load(&mS, pData);
+	ohpl_a8_door_load(&mS, pData);
 	kCopyFromVar(pData, msLockedSound);
 	kCopyFromVar(pData, msLockedTextCat);
 	kCopyFromVar(pData, msLockedTextEntry);
 
-	kCopyFromVar(pData, mbShowStats);
 }
 
 //-----------------------------------------------------------------------

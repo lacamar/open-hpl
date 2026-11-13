@@ -57,14 +57,8 @@ void cLuxPropLoader_Photocell::LoadInstanceVariables(iLuxProp *apProp, cResource
 {
 	cLuxProp_Photocell  *pPhotocell = static_cast<cLuxProp_Photocell*>(apProp);
 
-	if(hpl::OhplBackendRustRequested())
-	{
-		OhplGa4VarsAdapter vars(apInstanceVars);
-		ohpl_a5_photocell_load_instance(vars.Vars(), &pPhotocell->mS);
-		return;
-	}
-	pPhotocell->mfLightLevelOnLimit = apInstanceVars->GetVarFloat("LightLevelOnLimit", 0);
-	pPhotocell->mfLightLevelOffLimit = apInstanceVars->GetVarFloat("LightLevelOffLimit", 0);
+	OhplGa4VarsAdapter vars(apInstanceVars);
+	ohpl_a5_photocell_load_instance(vars.Vars(), &pPhotocell->mS);
 }
 //-----------------------------------------------------------------------
 
@@ -76,9 +70,6 @@ void cLuxPropLoader_Photocell::LoadInstanceVariables(iLuxProp *apProp, cResource
 
 cLuxProp_Photocell::cLuxProp_Photocell(const tString &asName,int alID, cLuxMap *apMap) : iLuxProp(asName,alID,apMap, eLuxPropType_Photocell)
 {
-	mfLightLevel = 0;
-	mfLightLevelCheckCount = 0;
-	mbLit = false;
 	mS.light_level = 0;
 	mS.check_count = 0;
 	mS.lit = false;
@@ -133,24 +124,9 @@ void cLuxProp_Photocell::UpdatePropSpecific(float afTimeStep)
 {
 	/////////////////////
 	// Update light level
-	if(hpl::OhplBackendRustRequested())
-	{
-		OhplA5PhotoHost host = { this, &HostBounds, &HostLightAt, &HostIllumination };
-		OhplGa4Run run(this);
-		ohpl_a5_photocell_update(&mS, afTimeStep, &host, run.Sink());
-		return;
-	}
-
-	UpdateLightLevel(afTimeStep);
-
-	/////////////////////
-	// Set mesh alpha
-	float fGoalAmount = ohpl_ga4b_photo_goal(mfLightLevel, mfLightLevelOnLimit, mfLightLevelOffLimit);
-
-	if(mpMeshEntity && mpMeshEntity->GetIlluminationAmount() != fGoalAmount)
-	{
-		mpMeshEntity->SetIlluminationAmount(ohpl_ga4b_photo_illum_step(mpMeshEntity->GetIlluminationAmount(), fGoalAmount, afTimeStep));
-	}
+	OhplA5PhotoHost host = { this, &HostBounds, &HostLightAt, &HostIllumination };
+	OhplGa4Run run(this);
+	ohpl_a5_photocell_update(&mS, afTimeStep, &host, run.Sink());
 }
 
 //-----------------------------------------------------------------------
@@ -223,29 +199,6 @@ void cLuxProp_Photocell::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_Photocell::UpdateLightLevel(float afTimeStep)
-{
-	if(ohpl_ga4b_photo_tick(&mfLightLevelCheckCount, afTimeStep)==false) return;
-
-	cBoundingVolume *pBV = mpMeshEntity->GetBoundingVolume();
-	cVector3f vSize = pBV->GetSize();
-	cVector3f vCenter = pBV->GetWorldCenter();
-
-	cVector3f vSamplePos[6];
-	ohpl_ga4b_photo_samples(vSize.v, vCenter.v, vSamplePos[0].v);
-
-	float vLight[6];
-	for(int i=0; i<6; ++i)
-	{
-		vLight[i] = gpBase->mpMapHelper->GetLightLevelAtPos(vSamplePos[i]);
-	}
-	mfLightLevel = ohpl_ga4b_photo_level(vLight, 6);
-
-	int lConnState = ohpl_ga4b_photo_switch(mfLightLevel, &mbLit, mfLightLevelOnLimit, mfLightLevelOffLimit);
-	if(lConnState != 0) ConnectionStateChange(lConnState);
-}
-
-//-----------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////
 // SAVE DATA STUFF
@@ -279,16 +232,7 @@ void cLuxProp_Photocell::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	if(hpl::OhplBackendRustRequested())
-	{
-		ohpl_a8_photocell_save(&mS, pData);
-		return;
-	}
-	kCopyToVar(pData,mbLit);
-	kCopyToVar(pData,mfLightLevel);
-	kCopyToVar(pData,mfLightLevelCheckCount);
-	kCopyToVar(pData,mfLightLevelOnLimit);
-	kCopyToVar(pData,mfLightLevelOffLimit);
+	ohpl_a8_photocell_save(&mS, pData);
 }
 
 //-----------------------------------------------------------------------
@@ -302,16 +246,7 @@ void cLuxProp_Photocell::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	if(hpl::OhplBackendRustRequested())
-	{
-		ohpl_a8_photocell_load(&mS, pData);
-		return;
-	}
-	kCopyFromVar(pData,mbLit);
-	kCopyFromVar(pData,mfLightLevel);
-	kCopyFromVar(pData,mfLightLevelCheckCount);
-	kCopyFromVar(pData,mfLightLevelOnLimit);
-	kCopyFromVar(pData,mfLightLevelOffLimit);
+	ohpl_a8_photocell_load(&mS, pData);
 }
 
 //-----------------------------------------------------------------------

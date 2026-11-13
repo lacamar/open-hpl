@@ -13,25 +13,6 @@
 
 void RegisterSomaScriptNatives(asIScriptEngine *apEngine)
 {
-	if (OhplS2Rust())
-	{
-		OhplS2InstallHost();
-		ohpl_s2_register_natives(apEngine);
-		return;
-	}
-	RegisterSomaScriptMathNatives(apEngine);
-	RegisterSomaScriptStringNatives(apEngine);
-	RegisterSomaScriptLuxNatives(apEngine);
-	RegisterSomaScriptGlobalNatives(apEngine);
-	cSomaImGui::RegisterNatives(apEngine);
-	cSomaLuxEntity::RegisterNatives(apEngine);
-	cSomaLuxGame::RegisterNatives(apEngine);
-	cSomaSoundEvents::RegisterNatives(apEngine);
-	cSomaSoundscape::RegisterNatives(apEngine);
-	cSomaSaveHandler::RegisterNatives(apEngine);
-	cSomaToneMapping::RegisterNatives(apEngine);
-	cSomaPostEffects::RegisterNatives(apEngine);
-	SomaRegisterCritterNatives(apEngine);
-	SomaRegisterAgentNatives(apEngine);
-	RegisterSomaScriptGenBindings(apEngine);
+	OhplS2InstallHost();
+	ohpl_s2_register_natives(apEngine);
 }

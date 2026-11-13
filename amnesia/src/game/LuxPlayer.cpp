@@ -48,7 +48,6 @@
 
 #include "LuxAreaNodes.h"
 #include "RustLuxPlayer.h"
-#include "impl/RustBackends.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -868,33 +867,8 @@ void cLuxPlayer::AddLampOil(float afX)
 
 void cLuxPlayer::RunVitals(int alWhich, float afAmount, int alType, unsigned int alFlags)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2Host h = {this, A2HostOp, A2HostQuery};
-		ohpl_a2_vitals(&mCore, &h, alWhich, afAmount, alType, alFlags);
-		return;
-	}
-	OhplGa2Vitals v = {mfHealth, mfSanity, mfLampOil, gpBase->mbHardMode ? 1u : 0u};
-	OhplGa2Ops ops;
-	ohpl_ga2_vitals(alWhich, &v, afAmount, alType, alFlags, &ops);
-	for(uint32_t i=0; i<ops.n; ++i)
-	{
-		const OhplGa2Op &op = ops.ops[i];
-		switch(op.kind)
-		{
-		case kOhplGa2SetHealth: mfHealth = op.a; break;
-		case kOhplGa2SetSanity: mfSanity = op.a; break;
-		case kOhplGa2SetOil: mfLampOil = op.a; break;
-		case kOhplGa2DamageSplash: mpHudEffect->AddDamageSplash((eLuxDamageType)op.i); break;
-		case kOhplGa2HitFlash: mpHudEffect->Flash(cColor(0.6f,0,0, 0.5f),eGuiMaterial_Alpha,0,0.25f); break;
-		case kOhplGa2SpinHead: SpinHead(mfHeadSpinDamageSpeed); break;
-		case kOhplGa2DeathStart: mpDeath->Start(); break;
-		case kOhplGa2CollapseStart: mpInsanityCollapse->Start(); break;
-		case kOhplGa2SanityLost: mpSanity->SetSanityLost(); break;
-		case kOhplGa2SanityGainFlash: gpBase->mpEffectHandler->GetSanityGainFlash()->Start(); break;
-		case kOhplGa2Kill: SetHealth(0.f); break;
-		}
-	}
+	OhplA2Host h = {this, A2HostOp, A2HostQuery};
+	ohpl_a2_vitals(&mCore, &h, alWhich, afAmount, alType, alFlags);
 }
 
 //-----------------------------------------------------------------------
@@ -1187,74 +1161,16 @@ void cLuxPlayer::UpdateHeadPosAdd(float afTimeStep)
 
 void cLuxPlayer::UpdateCamera(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2Host h = {this, A2HostOp, A2HostQuery};
-		ohpl_a2_update_camera(&mCore, &h, afTimeStep);
-		return;
-	}
-	OhplGa2CamState s;
-	s.mfFOV = mfFOV;
-	s.mfAspect = mfAspect;
-	s.mfFOVMul = mfFOVMul;
-	s.mfFOVMulGoal = mfFOVMulGoal;
-	s.mfFOVMulSpeed = mfFOVMulSpeed;
-	s.mfAspectMul = mfAspectMul;
-	s.mfAspectMulGoal = mfAspectMulGoal;
-	s.mfAspectMulSpeed = mfAspectMulSpeed;
-	s.mfRoll = mfRoll;
-	s.mfRollGoal = mfRollGoal;
-	s.mfRollSpeedMul = mfRollSpeedMul;
-	s.mfRollMaxSpeed = mfRollMaxSpeed;
-	s.mfLeanRoll = mfLeanRoll;
-	s.mfLeanRollGoal = mfLeanRollGoal;
-	s.mfLeanRollSpeedMul = mfLeanRollSpeedMul;
-	s.mfLeanRollMaxSpeed = mfLeanRollMaxSpeed;
-	s.mfPitchGoal = mfPitchGoal;
-	s.mfPitchSpeedMul = mfPitchSpeedMul;
-	s.mfPitchMaxSpeed = mfPitchMaxSpeed;
-	s.mvCamAnimPos = mvCamAnimPos;
-	s.mvCamAnimPosGoal = mvCamAnimPosGoal;
-	s.mfCamAnimPosSpeedMul = mfCamAnimPosSpeedMul;
-	s.mfCamAnimPosMaxSpeed = mfCamAnimPosMaxSpeed;
-	s.mbFadingPitch = mbFadingPitch;
-	s.mbFreeCamera = mbFreeCameraActive;
-	s.mfCamPitch = mpCamera->GetPitch();
-	s.mfPitchMin = mpCamera->GetPitchMinLimit();
-	s.mfPitchMax = mpCamera->GetPitchMaxLimit();
-	OhplGa2Ops ops;
-	ohpl_ga2_update_camera(&s, afTimeStep, &ops);
-	mfFOVMul = s.mfFOVMul;
-	mfAspectMul = s.mfAspectMul;
-	mfRoll = s.mfRoll;
-	mfLeanRoll = s.mfLeanRoll;
-	mbFadingPitch = s.mbFadingPitch != 0;
-	mvCamAnimPos = s.mvCamAnimPos;
-	for(uint32_t i=0; i<ops.n; ++i)
-	{
-		const OhplGa2Op &op = ops.ops[i];
-		switch(op.kind)
-		{
-		case kOhplGa2SetFov: mpCamera->SetFOV(op.a); break;
-		case kOhplGa2SetAspect: mpCamera->SetAspect(op.a); break;
-		case kOhplGa2SetPitch: mpCamera->SetPitch(op.a); break;
-		case kOhplGa2SetRoll: mpCamera->SetRoll(op.a); break;
-		}
-	}
+	OhplA2Host h = {this, A2HostOp, A2HostQuery};
+	ohpl_a2_update_camera(&mCore, &h, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::UpdateTerror(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2Host h = {this, A2HostOp, A2HostQuery};
-		ohpl_a2_update_terror(&mCore, &h, afTimeStep);
-		return;
-	}
-	mfTerror = ohpl_ga2_terror_step(mfTerror, !(m_setTerrorEnemies.empty() || IsDead()), mfTerrorIncSpeed, mfTerrorDecSpeed, afTimeStep);
-	UpdateTerrorSound();
+	OhplA2Host h = {this, A2HostOp, A2HostQuery};
+	ohpl_a2_update_terror(&mCore, &h, afTimeStep);
 }
 
 void cLuxPlayer::UpdateTerrorSound()
@@ -1332,45 +1248,24 @@ float cLuxPlayer::A2HostQuery(void *apCtx, uint32_t alKind)
 
 void cLuxPlayer::SpinHead(float afSpeed)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2Host h = {this, A2HostOp, A2HostQuery};
-		ohpl_a2_spin_head(&mCore, &h, afSpeed);
-		return;
-	}
-	float fYawRand = cMath::RandRectf(-1,1);
-	float fPitchRand = cMath::RandRectf(0,0.5f);
-	ohpl_ga2_spin_head(fYawRand, fPitchRand, afSpeed, &mvHeadSpinSpeed);
+	OhplA2Host h = {this, A2HostOp, A2HostQuery};
+	ohpl_a2_spin_head(&mCore, &h, afSpeed);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::UpdateHeadSpin(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2Host h = {this, A2HostOp, A2HostQuery};
-		ohpl_a2_update_head_spin(&mCore, &h, afTimeStep);
-		return;
-	}
-	cVector2f vAdd;
-	if(ohpl_ga2_update_head_spin(&mvHeadSpinSpeed, mfHeadSpinDeacc, afTimeStep, &vAdd) == false) return;
-	mpCamera->AddPitch(vAdd.x);
-	mpCamera->AddYaw(vAdd.y);
-	mpCharBody->SetYaw(mpCamera->GetYaw());
+	OhplA2Host h = {this, A2HostOp, A2HostQuery};
+	ohpl_a2_update_head_spin(&mCore, &h, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::UpdateFocusText(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA2Host h = {this, A2HostOp, A2HostQuery};
-		ohpl_a2_update_focus_alpha(&mCore, &h, afTimeStep);
-		return;
-	}
-	mfFocusTextAlpha = ohpl_ga2_focus_alpha(mfFocusTextAlpha, gpBase->mpMessageHandler->IsPauseMessageActive() || msFocusText == _W(""), afTimeStep);
+	OhplA2Host h = {this, A2HostOp, A2HostQuery};
+	ohpl_a2_update_focus_alpha(&mCore, &h, afTimeStep);
 }
 
 //-----------------------------------------------------------------------

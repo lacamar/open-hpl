@@ -25,7 +25,6 @@
 #include "LuxMoveState.h"
 #include "LuxEffectRenderer.h"
 #include "LuxPlayerHands.h"
-#include "impl/RustBackends.h"
 
 
 
@@ -69,31 +68,16 @@ iLuxPlayerState_DefaultBase::~iLuxPlayerState_DefaultBase()
 
 void iLuxPlayerState_DefaultBase::OnEnterState(eLuxPlayerState aPrevState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_enter(mpA3, &h, aPrevState);
-		return;
-	}
-	mpBodyInFocus = NULL;
-	mpEntityInFocus = NULL;
-
-    ImplementedOnEnterState(aPrevState);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_enter(mpA3, &h, aPrevState);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxPlayerState_DefaultBase::OnLeaveState(eLuxPlayerState aNewState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_leave(mpA3, &h, aNewState);
-		return;
-	}
-	gpBase->mpEffectRenderer->ClearOutlineObjects();
-
-	ImplementedOnLeaveState(aNewState);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_leave(mpA3, &h, aNewState);
 }
 
 //-----------------------------------------------------------------------
@@ -107,47 +91,15 @@ void iLuxPlayerState_DefaultBase::OnMapEnter(cLuxMap *apMap)
 
 void iLuxPlayerState_DefaultBase::OnMapLeave(cLuxMap *apMap)
 {
-	if(OhplBackendRustRequested())
-	{
-		ohpl_a3_map_leave(mpA3);
-		return;
-	}
-	mpBodyInFocus = NULL;
-	mpEntityInFocus = NULL;
+	ohpl_a3_map_leave(mpA3);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxPlayerState_DefaultBase::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_update(mpA3, &h, afTimeStep);
-		return;
-	}
-	/////////////////////////////////////////
-	// Get the entity currently in focus
-	cCamera *pCam = mpPlayer->GetCamera();
-
-	gpBase->mpMapHelper->GetClosestEntity(	pCam->GetPosition(), pCam->GetForward(), 20.0f, 
-											&mfFocusDistance,&mpBodyInFocus,&mpEntityInFocus);
-	mvFocusPos = pCam->GetPosition() + pCam->GetForward()*mfFocusDistance;
-
-	AddOutlineObjects(mpBodyInFocus,mpEntityInFocus, mvFocusPos);
-
-	//For other classes to use focused
-	mpPlayer->SetEntityInFocus(mpEntityInFocus);
-	mpPlayer->SetBodyInFocus(mpBodyInFocus);
-	mpPlayer->SetCurrentFocusDistance(mfFocusDistance);
-
-	if(mpEntityInFocus && CanInteractWithEntity())
-		mpPlayer->SetFocusText(mpEntityInFocus->GetFocusText());
-	else
-		mpPlayer->SetFocusText(_W(""));
-
-	//update implemented class
-	ImplementedUpdate(afTimeStep);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_update(mpA3, &h, afTimeStep);
 }
 
 void iLuxPlayerState_DefaultBase::PostUpdate(float afTimeStep)
@@ -159,43 +111,16 @@ void iLuxPlayerState_DefaultBase::PostUpdate(float afTimeStep)
 
 void iLuxPlayerState_DefaultBase::OnDraw(cGuiSet *apGuiSet ,float afFrameTime)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_draw(mpA3, &h, apGuiSet, afFrameTime);
-		return;
-	}
-	if(mpEntityInFocus && CanInteractWithEntity())
-	{
-		mpEntityInFocus->InFocusDraw(apGuiSet, afFrameTime);
-	}
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_draw(mpA3, &h, apGuiSet, afFrameTime);
 }
 
 //-----------------------------------------------------------------------
 
 bool iLuxPlayerState_DefaultBase::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
-	}
-	if(mpPlayer->GetCurrentMoveStateData()->GetAllowsInteraction()==false) return true;
-
-	if(ImplementedDoAction(aAction, abPressed)==false)
-	{
-		return false;
-	}
-
-	bool bInteract;
-	bool bPass = ohpl_ga2b_default_base_interact(OhplGa2bActOf(aAction), abPressed,
-												aAction == eLuxPlayerAction_Interact && abPressed && CanInteractWithEntity(), &bInteract);
-	if(bInteract)
-	{
-		mpEntityInFocus->OnInteract(mpBodyInFocus,mvFocusPos);
-		mpEntityInFocus->RunInteractCallbackFunc();
-	}
-	return bPass;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
 }
 
 //-----------------------------------------------------------------------
@@ -213,39 +138,16 @@ cGuiGfxElement* iLuxPlayerState_DefaultBase::A3Gfx(int32_t alCode)
 
 cGuiGfxElement* iLuxPlayerState_DefaultBase::GetCrosshair()
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return A3Gfx(ohpl_a3_crosshair(mpA3, &h));
-	}
-	if(ohpl_ga2b_focus_in_range(mpEntityInFocus != NULL, mfFocusDistance, mpEntityInFocus ? mpEntityInFocus->GetMaxFocusDistance() : 0.0f))
-	{
-		eLuxFocusCrosshair crossHair = mpEntityInFocus->GetFocusCrosshair(mpBodyInFocus, mvFocusPos);
-		int lPick = ohpl_ga2b_crosshair_pick(crossHair, eLuxFocusCrosshair_Default, eLuxFocusCrosshair_LastEnum,
-											mpEntityInFocus->GetInteractionDisabled(),
-											mpPlayer->GetFocusIconStyle()==eLuxFocusIconStyle_Default);
-		if(lPick == -1) return mpDefaultCrosshairGfx;
-		if(lPick == -2) return mpSimpleInteractCrosshairGfx;
-		return mvFocusCrosshairGfx[lPick];
-	}
-	return mpDefaultCrosshairGfx;
+	OhplA3Host h = A3HostTable();
+	return A3Gfx(ohpl_a3_crosshair(mpA3, &h));
 }
 
 //-----------------------------------------------------------------------
 
 float iLuxPlayerState_DefaultBase::DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
-	}
-	tWString sBodyName = mpBodyInFocus ? cString::To16Char(mpBodyInFocus->GetName()) : _W("None");
-	apSet->DrawFont(apFont, cVector3f(5, afStartY,10),14,cColor(1,1),_W("Focus Body: %ls Dist: %f"), sBodyName.c_str(),mfFocusDistance);
-
-	afStartY += 15;
-
-	return afStartY;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
 }
 
 //-----------------------------------------------------------------------

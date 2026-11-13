@@ -103,16 +103,13 @@ cLuxMap::cLuxMap(const tString& asName)
 
 	mlA7Frames = 0;
 	mpA7 = NULL;
-	if(OhplBackendRustRequested())
-	{
-		mpA7 = ohpl_a7_new();
-		ohpl_a7_set_drop(mpA7, kOhplA7Entity, A7DropEntity);
-		ohpl_a7_set_drop(mpA7, kOhplA7Dissolve, A7DropDissolve);
-		ohpl_a7_set_drop(mpA7, kOhplA7Lamp, A7DropLamp);
-		ohpl_a7_set_drop(mpA7, kOhplA7Start, A7DropStart);
-		ohpl_a7_set_drop(mpA7, kOhplA7Pos, A7DropPos);
-		ohpl_a7_set_drop(mpA7, kOhplA7UseItem, A7DropUse);
-	}
+	mpA7 = ohpl_a7_new();
+	ohpl_a7_set_drop(mpA7, kOhplA7Entity, A7DropEntity);
+	ohpl_a7_set_drop(mpA7, kOhplA7Dissolve, A7DropDissolve);
+	ohpl_a7_set_drop(mpA7, kOhplA7Lamp, A7DropLamp);
+	ohpl_a7_set_drop(mpA7, kOhplA7Start, A7DropStart);
+	ohpl_a7_set_drop(mpA7, kOhplA7Pos, A7DropPos);
+	ohpl_a7_set_drop(mpA7, kOhplA7UseItem, A7DropUse);
 }
 
 //-----------------------------------------------------------------------

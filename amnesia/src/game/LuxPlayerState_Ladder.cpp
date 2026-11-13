@@ -20,7 +20,6 @@
 #include "LuxPlayerState_Ladder.h"
 
 #include "LuxPlayer.h"
-#include "impl/RustBackends.h"
 #include "LuxArea_Ladder.h"
 #include "LuxMoveState_Normal.h"
 #include "LuxHelpFuncs.h"
@@ -37,23 +36,8 @@
 
 cLuxPlayerState_Ladder::cLuxPlayerState_Ladder(cLuxPlayer *apPlayer) : iLuxPlayerState(apPlayer, eLuxPlayerState_Ladder, &mR.base)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_init(&mR.base, &h, eLuxPlayerState_Ladder);
-		return;
-	}
-
-	mpLadder = NULL;
-
-	mfUpSpeed = gpBase->mpGameCfg->GetFloat("Player_Ladder","UpSpeed",0);
-	mfDownSpeed = gpBase->mpGameCfg->GetFloat("Player_Ladder","DownSpeed",0);
-
-	mfStepLength = gpBase->mpGameCfg->GetFloat("Player_Ladder","StepLength",0);
-
-	mfStepCount =0;
-
-	mlState =0;
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_init(&mR.base, &h, eLuxPlayerState_Ladder);
 }
 
 //-----------------------------------------------------------------------
@@ -72,236 +56,24 @@ cLuxPlayerState_Ladder::~cLuxPlayerState_Ladder()
 
 void cLuxPlayerState_Ladder::OnEnterState(eLuxPlayerState aPrevState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_enter(mpA3, &h, aPrevState);
-		return;
-	}
-	
-	/////////////////////////////////////
-	// Load the data
-	mpLadder = cLuxPlayerStateVars::mpLadder;
-	mvStartPosition = cLuxPlayerStateVars::mvLadderStartPos;
-
-	/////////////////////////////////////
-	// Get data
-	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-	
-	/////////////////////////////////////
-	// Set up player
-	mpPlayer->ChangeMoveState(eLuxMoveState_Normal);
-	pCharBody->SetGravityActive(false);
-	pCharBody->SetTestCollision(false);
-	pCharBody->StopMovement();
-	pCharBody->ResetClimbing();
-
-    cLuxMoveState_Normal *pMoveState = static_cast<cLuxMoveState_Normal*>(mpPlayer->GetMoveStateData(eLuxMoveState_Normal));
-	pMoveState->SetCrouch(false);
-	pMoveState->ResetJumping();
-
-	/////////////////////////////////////
-	// Holster lantern
-	mbLanternDrawn = mpPlayer->GetHelperLantern()->IsActive();
-	mpPlayer->GetHelperLantern()->SetActive(false,true,true, false);
-
-	///////////////////////////////////////
-	// Set up variables
-	mlState =0;
-	mfStepCount =0;
-	mbPlayedSound = false;
-	mfMoveMul =0;
-
-	///////////////////////////////////////
-	// Save pitch limits
-	mfPitchMinLimit = mpPlayer->GetCamera()->GetPitchMinLimit();
-	mfPitchMaxLimit = mpPlayer->GetCamera()->GetPitchMaxLimit();
-
-	/////////////////////////////////////		
-	//Different time if player is above the ladder.
-	OhplGa2bLadderEnterIn li;
-	li.pos = mpPlayer->GetCharacterBody()->GetPosition();
-	li.start = mvStartPosition;
-	li.maxY = mpLadder->GetMaxY();
-	li.startYaw = mpLadder->GetStartRotation().y;
-	li.pitch = mpPlayer->GetCamera()->GetPitch();
-	li.yaw = mpPlayer->GetCamera()->GetYaw();
-	OhplGa2bLadderEnterOut lo;
-	ohpl_ga2b_ladder_enter(&li, &lo);
-
-	mfTimeCount = lo.time;
-
-	mvGoalPos = mvStartPosition;
-	mvPosAdd = lo.posAdd;
-
-	mvCharPosition = mpPlayer->GetCharacterBody()->GetPosition();
-
-	mvGoalRot.x = 0;
-	mvGoalRot.y = mpLadder->GetStartRotation().y;
-
-	mvRotAdd.x = lo.rotAdd.x;
-	mvRotAdd.y = lo.rotAdd.y;
-
-    /////////////////////////////////////
-	// Play attach sound
-	PlaySound("attach");
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_enter(mpA3, &h, aPrevState);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerState_Ladder::OnLeaveState(eLuxPlayerState aNewState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_leave(mpA3, &h, aNewState);
-		return;
-	}
-	//////////////////////////////
-	//Reset variables
-	// Need to so pointer exists! (as this might be on leave!)
-	if(mpPlayer->GetCharacterBody())
-	{
-		mpPlayer->GetCharacterBody()->SetGravityActive(true);
-		mpPlayer->GetCharacterBody()->SetTestCollision(true);
-	}
-
-	mpPlayer->GetCamera()->SetPitchLimits(mfPitchMinLimit, mfPitchMaxLimit);
-	mpPlayer->GetCamera()->SetYawLimits(0, 0);
-
-	/////////////////////////////////////
-	// Draw lantern if it was before
-	if(mbLanternDrawn)
-        mpPlayer->GetHelperLantern()->SetActive(true, true, true, false);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_leave(mpA3, &h, aNewState);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerState_Ladder::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_update(mpA3, &h, afTimeStep);
-		return;
-	}
-	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-	cCamera *pCam = mpPlayer->GetCamera();
-
-	auto toRust = [this]()
-	{
-		OhplGa2bLadderState s;
-		s.state = mlState;
-		s.timeCount = mfTimeCount;
-		s.stepCount = mfStepCount;
-		s.moveMul = mfMoveMul;
-		s.leaveAtTop = mfLeaveAtTopCount;
-		s.playedSound = mbPlayedSound;
-		s.charPos = mvCharPosition;
-		s.posAdd = mvPosAdd;
-		s.rotAdd = cVector2f(mvRotAdd.x, mvRotAdd.y);
-		return s;
-	};
-	auto fromRust = [this](const OhplGa2bLadderState &s)
-	{
-		mfTimeCount = s.timeCount;
-		mfStepCount = s.stepCount;
-		mfMoveMul = s.moveMul;
-		mfLeaveAtTopCount = s.leaveAtTop;
-		mbPlayedSound = s.playedSound;
-		mvCharPosition = s.charPos;
-	};
-
-	if(mlState ==0)
-	{
-		OhplGa2bLadderState ls = toRust();
-		OhplGa2bLadderAttachOut ao;
-		ohpl_ga2b_ladder_attach(&ls, afTimeStep, &ao);
-		fromRust(ls);
-
-		pCharBody->SetPosition(mvCharPosition);
-		mvCharPosition = pCharBody->GetPosition();
-
-		pCam->AddPitch(ao.pitchAdd);
-		pCam->AddYaw(ao.yawAdd);
-		pCharBody->SetYaw(pCam->GetYaw());
-
-		if(ao.done)
-		{
-			mpPlayer->GetCharacterBody()->SetTestCollision(true);
-
-			SetupHeadTurnLimits();
-
-			mlState++;
-		}
-	}
-	else if(mlState == 1)
-	{
-		cVector3f vPos = pCharBody->GetPosition();
-		OhplGa2bLadderState ls = toRust();
-		int lSound = ohpl_ga2b_ladder_move_pre(&ls, &vPos, mfUpSpeed, mfDownSpeed, afTimeStep);
-		fromRust(ls);
-		if(lSound == kOhplGa2bSoundUp) PlaySound("up");
-		else if(lSound == kOhplGa2bSoundDown) PlaySound("down");
-
-		if(pCharBody->CheckCharacterFits(mvCharPosition,false,0,NULL,kEpsilonf)==false)
-		{
-			mfMoveMul =0;
-			return;
-		}
-
-		ls = toRust();
-		lSound = ohpl_ga2b_ladder_move_post(&ls, mfUpSpeed, mfDownSpeed, mfStepLength, afTimeStep);
-		fromRust(ls);
-		if(lSound == kOhplGa2bSoundUp) PlaySound("up");
-		else if(lSound == kOhplGa2bSoundDown) PlaySound("down");
-
-		pCharBody->SetPosition(mvCharPosition);
-
-		cVector3f vFeet = pCharBody->GetFeetPosition();
-		cVector3f vLadderForward = mpLadder->GetForward();
-		cVector3f vRays[4];
-		ohpl_ga2b_ladder_ground_rays(&vFeet, &vLadderForward, pCharBody->GetSize().x, vRays);
-
-		if(ohpl_ga2b_ladder_at_top(mfMoveMul, mvCharPosition.y, pCharBody->GetSize().y, mpLadder->GetMaxY()))
-		{
-			mlState = 2;
-			mfLeaveAtTopCount = 2;
-			PlaySound("dettach");
-		}
-		else
-		{
-			int lBottom = ohpl_ga2b_ladder_at_bottom(mfMoveMul, mvCharPosition.y, pCharBody->GetSize().y, mpLadder->GetMinY());
-			if(lBottom == kOhplGa2bBottomYes ||
-				(lBottom == kOhplGa2bBottomCheckRays &&
-					(pCharBody->CheckRayIntersection(vRays[0], vRays[1],NULL,NULL) ||
-					pCharBody->CheckRayIntersection(vRays[2], vRays[3],NULL,NULL))))
-			{
-				mpPlayer->ChangeState(eLuxPlayerState_Normal);
-			}
-		}
-
-		mfMoveMul =0;
-	}
-	else if(mlState == 2)
-	{
-		pCharBody->Move(eCharDir_Forward,1);
-
-		cVector3f vFeet = pCharBody->GetFeetPosition();
-		cVector3f vRay[2];
-		ohpl_ga2b_ladder_top_rays(&vFeet, vRay);
-
-		bool bTimeout = ohpl_ga2b_ladder_leave_tick(&mfLeaveAtTopCount, afTimeStep);
-
-		if( pCharBody->CheckRayIntersection(vRay[0], vRay[1],NULL,NULL))
-		{
-			mpPlayer->ChangeState(eLuxPlayerState_Normal);
-		}
-		else if(bTimeout)
-		{
-			mpPlayer->ChangeState(eLuxPlayerState_Normal);
-		}
-	}
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_update(mpA3, &h, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -331,98 +103,56 @@ cGuiGfxElement* cLuxPlayerState_Ladder::GetCrosshair()
 
 bool cLuxPlayerState_Ladder::OnMove(eCharDir aDir, float afMul)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
-	}
-	ohpl_ga2b_ladder_on_move(mlState, aDir == eCharDir_Right, afMul, &mfMoveMul);
-	return false;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_Ladder::OnAddYaw(float afAmount)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_add_yaw(mpA3, &h, afAmount);
-	}
-	return ohpl_ga2b_ladder_camera_free(mlState);
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_add_yaw(mpA3, &h, afAmount);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_Ladder::OnAddPitch(float afAmount)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_add_pitch(mpA3, &h, afAmount);
-	}
-	return ohpl_ga2b_ladder_camera_free(mlState);
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_add_pitch(mpA3, &h, afAmount);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_Ladder::OnRun(bool abPressed)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_on_run(mpA3, &h, abPressed);
-	}
-	return false;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_on_run(mpA3, &h, abPressed);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_Ladder::OnJump(bool abPressed)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_on_jump(mpA3, &h, abPressed);
-	}
-    if(abPressed)
-	{
-		mpPlayer->ChangeState(eLuxPlayerState_Normal);
-		cLuxMoveState_Normal *pMoveState = static_cast<cLuxMoveState_Normal*>(mpPlayer->GetMoveStateData(eLuxMoveState_Normal));
-		pMoveState->Jump();
-	}
-
-	return false;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_on_jump(mpA3, &h, abPressed);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_Ladder::OnCrouch(bool abPressed)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_on_crouch(mpA3, &h, abPressed);
-	}
-	return false;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_on_crouch(mpA3, &h, abPressed);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_Ladder::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
-	}
-	bool bRelease;
-	bool bPass = ohpl_ga2b_ladder_action(OhplGa2bActOf(aAction), abPressed, &bRelease);
-	if(bRelease)
-	{
-		mpPlayer->ChangeState(eLuxPlayerState_Normal);
-	}
-	return bPass;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
 }
 
 //-----------------------------------------------------------------------
@@ -430,12 +160,8 @@ bool cLuxPlayerState_Ladder::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 
 float cLuxPlayerState_Ladder::DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
-	}
-	return afStartY;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
 }
 
 //-----------------------------------------------------------------------

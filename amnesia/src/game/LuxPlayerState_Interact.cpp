@@ -23,7 +23,6 @@
 #include "LuxMapHelper.h"
 #include "LuxMap.h"
 #include "LuxProp.h"
-#include "impl/RustBackends.h"
 
 //////////////////////////////////////////////////////////////////////////
 // CONSTRUCTORS
@@ -55,41 +54,14 @@ iLuxPlayerState_Interact::~iLuxPlayerState_Interact()
 
 void iLuxPlayerState_Interact::OnDestroyEntity(iLuxEntity *apEntity)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_destroy_entity(mpA3, &h, apEntity);
-		return;
-	}
-	iLuxEntity *pCurrentEntity = mpCurrentProp;
-	if(pCurrentEntity == apEntity)
-	{
-		gpBase->mpPlayer->ChangeState(mPreviousState);
-	}
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_destroy_entity(mpA3, &h, apEntity);
 }
 
 void iLuxPlayerState_Interact::OnAttachBodyToStickyArea(iPhysicsBody *apBody)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_attach_sticky(mpA3, &h, apBody);
-		return;
-	}
-	bool bBodyInProp = false;
-	for(int i=0; i<mpCurrentProp->GetBodyNum(); ++i)
-	{
-		if(mpCurrentProp->GetBody(i) == apBody) 
-		{
-			bBodyInProp = true;
-			break;
-		}
-	}
-
-    if(bBodyInProp)
-	{
-		mpPlayer->ChangeState(mPreviousState);
-	}
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_attach_sticky(mpA3, &h, apBody);
 }
 
 //-----------------------------------------------------------------------

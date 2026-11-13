@@ -92,63 +92,11 @@ bool cSomaScriptBuilder::Collect(std::vector<std::pair<std::string, std::string>
 int cSomaScriptBuilder::Build(asIScriptEngine *apEngine, const std::string &asModuleName, const std::string &asEntryFile,
 							  std::string *apMissingInclude)
 {
-	if (OhplS2Rust())
-	{
-		std::string sMissing;
-		OhplS2InstallHost();
-		int r = ohpl_s2_builder_build(mpRust, U(msCacheDir), msCacheDir.size(), apEngine, U(asModuleName), asModuleName.size(), U(asEntryFile), asEntryFile.size(),
-									  +[](void *c, const unsigned char *p, size_t n) { ((std::string *)c)->assign((const char *)p, n); }, &sMissing);
-		if (apMissingInclude && apMissingInclude->empty())
-			*apMissingInclude = sMissing;
-		return r;
-	}
-	std::vector<std::pair<std::string, std::string>> vSections;
-	if (Collect(vSections, asEntryFile, apMissingInclude) == false)
-		return asERROR;
-	asIScriptModule *pModule = apEngine->GetModule(asModuleName.c_str(), asGM_ALWAYS_CREATE);
-
-	// Bytecode is only valid for the exact binary that registered the API
-	std::string sKey, sCacheFile;
-	struct stat st;
-	if (msCacheDir.empty() == false && stat("/proc/self/exe", &st) == 0)
-	{
-		std::vector<const unsigned char *> vNames, vCodes;
-		std::vector<size_t> vNameLens, vCodeLens;
-		for (auto &sec : vSections)
-		{
-			vNames.push_back(U(sec.first));
-			vNameLens.push_back(sec.first.size());
-			vCodes.push_back(U(sec.second));
-			vCodeLens.push_back(sec.second.size());
-		}
-		sKey = Call8([&](OhplGs6Sink8 s, void *c) {
-			ohpl_gs6_cache_key(st.st_size, st.st_mtim.tv_sec, st.st_mtim.tv_nsec, vNames.data(), vNameLens.data(), vCodes.data(), vCodeLens.data(),
-							   vSections.size(), s, c);
-		});
-		sCacheFile = msCacheDir + "/" + Call8([&](OhplGs6Sink8 s, void *c) { ohpl_gs6_cache_file_name(U(asEntryFile), asEntryFile.size(), s, c); });
-
-		cByteStream in;
-		std::ifstream f(sCacheFile.c_str(), std::ios::binary);
-		in.msData.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
-		if (in.msData.compare(0, sKey.size(), sKey) == 0)
-		{
-			in.mlPos = sKey.size();
-			if (pModule->LoadByteCode(&in) >= 0)
-				return 0;
-			pModule = apEngine->GetModule(asModuleName.c_str(), asGM_ALWAYS_CREATE);
-		}
-	}
-
-	for (auto &sec : vSections)
-		pModule->AddScriptSection(sec.first.c_str(), sec.second.c_str(), sec.second.size());
-	int r = pModule->Build();
-	cByteStream out;
-	out.msData = sKey;
-	if (r >= 0 && sCacheFile.empty() == false && pModule->SaveByteCode(&out) >= 0)
-	{
-		std::string sTmp = sCacheFile + "." + std::to_string(getpid());
-		if (std::ofstream(sTmp.c_str(), std::ios::binary).write(out.msData.data(), out.msData.size()))
-			rename(sTmp.c_str(), sCacheFile.c_str());
-	}
+	std::string sMissing;
+	OhplS2InstallHost();
+	int r = ohpl_s2_builder_build(mpRust, U(msCacheDir), msCacheDir.size(), apEngine, U(asModuleName), asModuleName.size(), U(asEntryFile), asEntryFile.size(),
+								  +[](void *c, const unsigned char *p, size_t n) { ((std::string *)c)->assign((const char *)p, n); }, &sMissing);
+	if (apMissingInclude && apMissingInclude->empty())
+		*apMissingInclude = sMissing;
 	return r;
 }
