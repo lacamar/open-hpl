@@ -18,6 +18,7 @@
  */
 
 #include "scene/MeshEntity.h"
+#include "impl/RustBackends.h"
 #include <cstring>
 
 #include "resources/Resources.h"
@@ -53,6 +54,223 @@
 
 namespace hpl {
 
+	// Calls the Rust UpdateLogic makes back into the entity (OHPL_IMPL=rust); each repeats one statement of the C++ path.
+	struct OhplH11MeshHostImpl
+	{
+		static cMeshEntity* E(void *apCtx){ return static_cast<cMeshEntity*>(apCtx); }
+
+		static OhplAnimCore *const* Cores(void *p, int32_t *apNum)
+		{
+			cMeshEntity *e = E(p);
+			e->SyncAnimCores();
+			*apNum = (int32_t)e->mvAnimCores.size();
+			return e->mvAnimCores.data();
+		}
+		static int32_t StateCount(void *p){ return (int32_t)E(p)->mvAnimationStates.size(); }
+		static int32_t BoneCount(void *p){ return (int32_t)E(p)->mvBoneStates.size(); }
+		static bool HasSkeleton(void *p){ return E(p)->mpMesh->GetSkeleton() != NULL; }
+		static bool HasRestPose(void *p){ return E(p)->mvBoneRestPose.empty() == false; }
+
+		static void BoneReset(void *p, int32_t alBone, bool abMapPose, bool abTemp)
+		{
+			cMeshEntity *e = E(p);
+			cNode3D *pState = e->mvBoneStates[alBone];
+			cBone *pBone = e->mpMesh->GetSkeleton()->GetBoneByIndex(alBone);
+			if(pState->IsActive())
+			{
+				pState->SetMatrix(abMapPose ? e->mvBoneRestPose[alBone] : pBone->GetLocalTransform(), false);
+			}
+			if(abTemp)
+			{
+				e->mvTempBoneStates[alBone]->SetMatrix(abMapPose ? e->mvBoneRestPose[alBone] : pBone->GetLocalTransform(), false);
+			}
+		}
+
+		static void PhysicsFromBodies(void *p)
+		{
+			cMeshEntity *e = E(p);
+			cNode3DIterator BoneIt = e->mpBoneStateRoot->GetChildIterator();
+			while(BoneIt.HasNext())
+			{
+				cBoneState *pBoneState = static_cast<cBoneState*>(BoneIt.Next());
+				e->SetBoneMatrixFromBodyRec(e->mpBoneStateRoot->GetWorldMatrix(),pBoneState);
+			}
+		}
+
+		static void PhysicsMix(void *p, int32_t alBone, float afWeight)
+		{
+			cMeshEntity *e = E(p);
+			cMatrixf mtxMixLocal = cMath::MatrixSlerp(afWeight, e->mvTempBoneStates[alBone]->GetLocalMatrix(),
+													  e->mvBoneStates[alBone]->GetLocalMatrix(), true);
+			e->mvBoneStates[alBone]->SetMatrix(mtxMixLocal, false);
+		}
+
+		static void PhysicsDeactivate(void *p){ E(p)->SetSkeletonPhysicsActive(false); }
+
+		static void SkeletonApply(void *p, int32_t alState, float afWeight)
+		{
+			cMeshEntity *e = E(p);
+			cAnimationState *pAnimState = e->mvAnimationStates[alState];
+			cAnimation *pAnim = pAnimState->GetAnimation();
+			std::vector<int> &vIdx = pAnimState->mvTrackNodeIndices;
+			if((int)vIdx.size() != pAnim->GetTrackNum())
+			{
+				vIdx.resize(pAnim->GetTrackNum());
+				for(int i=0; i<pAnim->GetTrackNum(); i++)
+					vIdx[i] = e->mpMesh->GetSkeleton()->GetBoneIndexByName(pAnim->GetTrack(i)->GetName());
+			}
+			for(int i=0; i<pAnim->GetTrackNum(); i++)
+			{
+				cAnimationTrack *pTrack = pAnim->GetTrack(i);
+				cNode3D* pState = e->GetBoneState(vIdx[i]);
+				if(pState && pState->IsActive())
+				{
+					float fTransScale = e->mpMesh->GetSkeleton()->mbFileUnits ? 1.0f : pTrack->GetUnitScale();
+					pTrack->ApplyToNode(pState,pAnimState->GetTimePosition(),afWeight, pAnimState->IsLooping(), fTransScale);
+				}
+			}
+		}
+
+		static void NodeApply(void *p, int32_t alState, float afWeight)
+		{
+			cMeshEntity *e = E(p);
+			cAnimationState *pAnimState = e->mvAnimationStates[alState];
+			cAnimation *pAnim = pAnimState->GetAnimation();
+			std::vector<int> &vIdx = pAnimState->mvTrackNodeIndices;
+			if((int)vIdx.size() != pAnim->GetTrackNum())
+			{
+				vIdx.resize(pAnim->GetTrackNum());
+				for(int i=0; i<pAnim->GetTrackNum(); i++)
+					vIdx[i] = e->GetNodeStateIndex(pAnim->GetTrack(i)->GetName());
+			}
+			for(int i=0; i<pAnim->GetTrackNum(); i++)
+			{
+				cAnimationTrack *pTrack = pAnim->GetTrack(i);
+				if(vIdx[i] < 0) continue;
+				cNode3D* pNodeState = e->GetNodeState(vIdx[i]);
+				if(pNodeState->IsActive())
+					pTrack->ApplyToNode(pNodeState,pAnimState->GetTimePosition(),afWeight, true, pTrack->GetUnitScale());
+			}
+		}
+
+		static void BoneNodesUpdate(void *p)
+		{
+			cMeshEntity *e = E(p);
+			cNode3DIterator NodeIt = e->mpBoneStateRoot->GetChildIterator();
+			while(NodeIt.HasNext())
+			{
+				cNode3D *pBoneState = static_cast<cNode3D*>(NodeIt.Next());
+				e->UpdateNodeMatrixRec(pBoneState);
+			}
+		}
+
+		static void BoneEntityChildren(void *p)
+		{
+			cMeshEntity *e = E(p);
+			for(size_t i=0;i < e->mvBoneStates.size(); i++) e->mvBoneStates[i]->UpdateEntityChildren();
+		}
+
+		static void CollidersUpdate(void *p)
+		{
+			cMeshEntity *e = E(p);
+			for(size_t i=0;i < e->mvBoneStates.size(); i++)
+			{
+				cBoneState *pState = e->mvBoneStates[i];
+				iPhysicsBody *pColliderBody = pState->GetColliderBody();
+				if(pColliderBody)
+				{
+					cMatrixf mtxBody = cMath::MatrixMul(pState->GetWorldMatrix(), pState->GetBodyMatrix());
+					pColliderBody->SetMatrix(mtxBody);
+				}
+			}
+		}
+
+		static void SubTransformUpdated(void *p)
+		{
+			cMeshEntity *e = E(p);
+			for(size_t i=0; i<e->mvSubMeshes.size(); ++i) e->mvSubMeshes[i]->SetTransformUpdated(true);
+		}
+
+		static void NodeReset(void *p)
+		{
+			cMeshEntity *e = E(p);
+			for(size_t i=0;i < e->mvNodeStates.size(); i++)
+			{
+				cNode3D *pState = e->mvNodeStates[i];
+				if(pState->IsActive()) pState->SetMatrix(cMatrixf::Identity);
+			}
+		}
+
+		static void NodeUpdate(void *p)
+		{
+			cMeshEntity *e = E(p);
+			tNode3DListIt nodeIt = e->mlstNodeChildren.begin();
+			for(; nodeIt != e->mlstNodeChildren.end(); ++nodeIt) e->UpdateNodeMatrixRec(*nodeIt);
+		}
+
+		static void NodeRestore(void *p)
+		{
+			cMeshEntity *e = E(p);
+			for(size_t i=0;i < e->mvNodeStates.size(); i++)
+			{
+				cNode3D *pState = e->mvNodeStates[i];
+				cNode3D* pMeshNode = e->mpMesh->GetNode((int)i);
+				if(pState->IsActive()) pState->SetMatrix(pMeshNode->GetLocalMatrix());
+			}
+		}
+
+		static void AfterAnim(void *p, float afTimeStep)
+		{
+			cMeshEntity *e = E(p);
+			if(e->mpCallback) e->mpCallback->AfterAnimationUpdate(e, afTimeStep);
+		}
+
+		static void SubUpdateLogic(void *p, float afTimeStep)
+		{
+			cMeshEntity *e = E(p);
+			for(size_t i=0; i<e->mvSubMeshes.size(); ++i) e->mvSubMeshes[i]->UpdateLogic(afTimeStep);
+		}
+
+		static int32_t EventCount(void *p, int32_t alState){ return E(p)->mvAnimationStates[alState]->GetEventNum(); }
+		static float EventTime(void *p, int32_t alState, int32_t alEvent){ return E(p)->mvAnimationStates[alState]->GetEvent(alEvent)->mfTime; }
+		static void HandleEvent(void *p, int32_t alState, int32_t alEvent)
+		{
+			cMeshEntity *e = E(p);
+			e->HandleAnimationEvent(e->mvAnimationStates[alState]->GetEvent(alEvent));
+		}
+
+		static OhplH11MeshHost Make(cMeshEntity *apEntity)
+		{
+			OhplH11MeshHost host;
+			host.ctx = apEntity;
+			host.cores = Cores;
+			host.state_count = StateCount;
+			host.bone_count = BoneCount;
+			host.has_skeleton = HasSkeleton;
+			host.has_rest_pose = HasRestPose;
+			host.bone_reset = BoneReset;
+			host.physics_from_bodies = PhysicsFromBodies;
+			host.physics_mix = PhysicsMix;
+			host.physics_deactivate = PhysicsDeactivate;
+			host.skeleton_apply = SkeletonApply;
+			host.node_apply = NodeApply;
+			host.bone_nodes_update = BoneNodesUpdate;
+			host.bone_entity_children = BoneEntityChildren;
+			host.colliders_update = CollidersUpdate;
+			host.sub_transform_updated = SubTransformUpdated;
+			host.node_reset = NodeReset;
+			host.node_update = NodeUpdate;
+			host.node_restore = NodeRestore;
+			host.after_anim = AfterAnim;
+			host.sub_update_logic = SubUpdateLogic;
+			host.event_count = EventCount;
+			host.event_time = EventTime;
+			host.handle_event = HandleEvent;
+			return host;
+		}
+	};
+
+
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
@@ -84,28 +302,28 @@ namespace hpl {
 		mfCoverageAmount = 1.0f;
 		mlRenderFlags =0;
 
-		mlInvWorldMatrixTransformCount = -1;
-		mlBoneMatricesTransformCount = -1;
-		mlBoneMatricesVersion = 0;
+		mCtl.inv_world_transform_count = -1;
+		mCtl.bone_matrices_transform_count = -1;
+		mCtl.bone_matrices_version = 0;
 
-		mbBoneMatricesNeedUpdate = true;
+		mCtl.matrices_need_update = true;
 
 		mbStatic = false;
 
-		mbSkeletonPhysics = false;
-		mfSkeletonPhysicsWeight = 1.0f;
-		mbSkeletonPhysicsFading = false;
-		mfSkeletonPhysicsFadeSpeed = 1.0f;
+		mCtl.physics = false;
+		mCtl.physics_weight = 1.0f;
+		mCtl.fading = false;
+		mCtl.physics_fade_speed = 1.0f;
 		
-		mbSkeletonPhysicsSleeping = false;
-		mbSkeletonPhysicsCanSleep = true;
+		mCtl.sleeping = false;
+		mCtl.can_sleep = true;
 		
-		mbSkeletonColliders = false;
+		mCtl.colliders = false;
 
-		mbNormalizeAnimationWeights = true;
+		mCtl.normalize = true;
 
-		mbUpdatedBones = false;
-		mbHasUpdatedAnimation = true;
+		mCtl.updated_bones = false;
+		mCtl.has_updated_animation = true;
 
 		////////////////////////////////////////////////
 		//Create sub entities
@@ -364,17 +582,24 @@ namespace hpl {
 	
 	void cMeshEntity::UpdateLogic(float afTimeStep)
 	{	
+		if(OhplBackendRustRequested())
+		{
+			OhplH11MeshHost host = OhplH11MeshHostImpl::Make(this);
+			ohpl_h11_mesh_update_logic(&host, &mCtl, mbStatic, afTimeStep);
+			return;
+		}
+
 		if(mbStatic) return; //No update on static models
 
 		/////////////////////////////////////////////
 		//Update the skeleton physics fade
-		if(mbSkeletonPhysicsFading && mbSkeletonPhysics)
+		if(mCtl.fading && mCtl.physics)
 		{
-			mfSkeletonPhysicsWeight -= afTimeStep * mfSkeletonPhysicsFadeSpeed;
-			if(mfSkeletonPhysicsWeight <= 0)
+			mCtl.physics_weight -= afTimeStep * mCtl.physics_fade_speed;
+			if(mCtl.physics_weight <= 0)
 			{
-				mbSkeletonPhysicsFading = false;
-				mfSkeletonPhysicsWeight = 1.0f;
+				mCtl.fading = false;
+				mCtl.physics_weight = 1.0f;
 				SetSkeletonPhysicsActive(false);
 			}
 		}
@@ -383,8 +608,8 @@ namespace hpl {
 		//Check if all bodies connected to the skeleton is at rest,
 		//If so we can skip skinning the body and simply just use the mesh as is.
 		//(has some problems so turned off at the moment)
-		mbSkeletonPhysicsSleeping = false;
-		if(mbSkeletonPhysics && mfSkeletonPhysicsWeight==1.0f && mbSkeletonPhysicsCanSleep)
+		mCtl.sleeping = false;
+		if(mCtl.physics && mCtl.physics_weight==1.0f && mCtl.can_sleep)
 		{
 			bool bEnabled = false;
 			for(int bone =0; bone< GetBoneStateNum(); ++bone)
@@ -398,12 +623,12 @@ namespace hpl {
 				}
 			}
 			if(bEnabled == false){
-				//mbSkeletonPhysicsSleeping = true;
+				//mCtl.sleeping = true;
 			}
 		}
 		/////////////////////////////////////////////
 		//Update animations and skeleton physics
-		if(mvAnimationStates.empty()==false || mbSkeletonPhysics)
+		if(mvAnimationStates.empty()==false || mCtl.physics)
 		{
 			////////////////////////
 			//Check if it is animated
@@ -428,8 +653,8 @@ namespace hpl {
 
 				//////////
 				//Reset all bones states
-				if(	bAnimationActive || mbUpdatedBones == false ||
-					(mbSkeletonPhysics && !mbSkeletonPhysicsSleeping))
+				if(	bAnimationActive || mCtl.updated_bones == false ||
+					(mCtl.physics && !mCtl.sleeping))
 				{
 					for(size_t i=0;i < mvBoneStates.size(); i++)
 					{
@@ -443,7 +668,7 @@ namespace hpl {
 						
 						//can optimize this by doing it in the order of the tree
 						//and using recursive. (should be enough as is...)
-						if(mbSkeletonPhysics && mfSkeletonPhysicsWeight!=1.0f)
+						if(mCtl.physics && mCtl.physics_weight!=1.0f)
 						{
 							mvTempBoneStates[i]->SetMatrix(bUseMapPose ? mvBoneRestPose[i] : pBone->GetLocalTransform(),false);
 						}
@@ -454,9 +679,9 @@ namespace hpl {
 
 				///////////////////////////
 				// Update skeleton physics
-				if(	mbSkeletonPhysics && (!mbSkeletonPhysicsSleeping || mbUpdatedBones==false))
+				if(	mCtl.physics && (!mCtl.sleeping || mCtl.updated_bones==false))
 				{
-					mbUpdatedBones = true;
+					mCtl.updated_bones = true;
 					cNode3DIterator BoneIt = mpBoneStateRoot->GetChildIterator();
 					while(BoneIt.HasNext())
 					{
@@ -466,11 +691,11 @@ namespace hpl {
 					}
 					
 					//Interpolate matrices
-					if(mfSkeletonPhysicsWeight!=1.0f)
+					if(mCtl.physics_weight!=1.0f)
 					{	
 						for(size_t i=0;i < mvBoneStates.size(); i++)
 						{
-							cMatrixf mtxMixLocal = cMath::MatrixSlerp(	mfSkeletonPhysicsWeight,
+							cMatrixf mtxMixLocal = cMath::MatrixSlerp(	mCtl.physics_weight,
 																		mvTempBoneStates[i]->GetLocalMatrix(),
 																		mvBoneStates[i]->GetLocalMatrix(),
 																		true);
@@ -537,7 +762,7 @@ namespace hpl {
 
 				////////////////////////////
 				//Update attached entities
-				if(bAnimationActive || mbSkeletonPhysics)
+				if(bAnimationActive || mCtl.physics)
 				{
 					for(size_t i=0;i < mvBoneStates.size(); i++)
 					{
@@ -548,7 +773,7 @@ namespace hpl {
 				//////////////////////////////////
 				//Update the colliders if they are active
 				//Note this must be done after all bone states are updated.
-				if(mbSkeletonColliders && mbSkeletonPhysics==false)
+				if(mCtl.colliders && mCtl.physics==false)
 				{
 					for(size_t i=0;i < mvBoneStates.size(); i++)
 					{
@@ -635,11 +860,11 @@ namespace hpl {
 						UpdateNodeMatrixRec(pNodeState);
 					}
 
-					mbHasUpdatedAnimation = true;
+					mCtl.has_updated_animation = true;
 				}
 				//////////////////////////////
 				//No animation is played, only do this if an animation has been played.
-				else if(mbHasUpdatedAnimation)
+				else if(mCtl.has_updated_animation)
 				{
 					//Reset all state matrices
 					for(size_t i=0;i < mvNodeStates.size(); i++)
@@ -648,7 +873,7 @@ namespace hpl {
 						cNode3D* pMeshNode = mpMesh->GetNode((int)i);
 						if(pState->IsActive()) pState->SetMatrix(pMeshNode->GetLocalMatrix());
 					}
-					mbHasUpdatedAnimation = false;
+					mCtl.has_updated_animation = false;
 				}
 			}
 			
@@ -691,7 +916,7 @@ namespace hpl {
 
 		/////////////////////////////////////////
 		/// Final things
-		if(mpMesh->GetSkeleton()) mbBoneMatricesNeedUpdate = true;
+		if(mpMesh->GetSkeleton()) mCtl.matrices_need_update = true;
 	}
 
 	//-----------------------------------------------------------------------
@@ -768,6 +993,12 @@ namespace hpl {
 
 	void cMeshEntity::Play(int alIndex,bool abLoop, bool bStopPrev)
 	{
+		if(OhplBackendRustRequested())
+		{
+			SyncAnimCores();
+			ohpl_h11_mesh_play(mvAnimCores.data(), (int32_t)mvAnimCores.size(), alIndex, abLoop, bStopPrev);
+			return;
+		}
 		if(bStopPrev) Stop();
 		if(alIndex >= (int)mvAnimationStates.size()) return;
 		
@@ -795,6 +1026,12 @@ namespace hpl {
 
 	void cMeshEntity::PlayFadeTo(int alIndex,bool abLoop, float afTime)
 	{
+		if(OhplBackendRustRequested())
+		{
+			SyncAnimCores();
+			ohpl_h11_mesh_play_fade_to(mvAnimCores.data(), (int32_t)mvAnimCores.size(), alIndex, abLoop, afTime);
+			return;
+		}
 		///////////////////////
 		// Fade out previous
 		for(size_t i=0; i< mvAnimationStates.size(); i++)
@@ -835,6 +1072,12 @@ namespace hpl {
 	
 	void cMeshEntity::Stop()
 	{
+		if(OhplBackendRustRequested())
+		{
+			SyncAnimCores();
+			ohpl_h11_mesh_stop(mvAnimCores.data(), (int32_t)mvAnimCores.size());
+			return;
+		}
 		for(size_t i=0; i< mvAnimationStates.size(); i++)
 		{
 			mvAnimationStates[i]->SetActive(false);
@@ -915,6 +1158,19 @@ namespace hpl {
 		if(pSkeleton == NULL || (int)avVals.size() != pSkeleton->GetBoneNum() * 7) return false;
 
 		std::vector<cMatrixf> vLocal(pSkeleton->GetBoneNum());
+		if(OhplBackendRustRequested())
+		{
+			std::vector<cMatrixf> vBind(vLocal.size());
+			std::vector<float> vUnit(vLocal.size());
+			for(int i=0; i<pSkeleton->GetBoneNum(); ++i)
+			{
+				vBind[i] = pSkeleton->GetBoneByIndex(i)->GetLocalTransform();
+				vUnit[i] = pSkeleton->GetBoneByIndex(i)->GetLocalUnitScale();
+			}
+			if(!ohpl_h11_rest_pose_from_map(avVals.data(), (int32_t)avVals.size(), vBind.data(), vUnit.data(), vLocal.data(), (int32_t)vLocal.size())) return false;
+			SetBoneRestPose(vLocal);
+			return true;
+		}
 		for(int i=0; i<pSkeleton->GetBoneNum(); ++i)
 		{
 			const float *v = &avVals[i * 7];
@@ -934,20 +1190,28 @@ namespace hpl {
 		if(avLocal.size() != mvBoneStates.size()) return;
 		mvBoneRestPose = avLocal;
 		for(size_t i=0; i<mvBoneStates.size(); ++i) mvBoneStates[i]->SetMatrix(avLocal[i]);
-		mbUpdatedBones = false;
+		mCtl.updated_bones = false;
 	}
 
 	//----------------------------------------------------------------------
 	
 	void cMeshEntity::SetSkeletonPhysicsActive(bool abX)
 	{
-		mbSkeletonPhysics = abX;
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h11_mesh_physics_set(&mCtl, abX);
+			ResetGraphicsUpdated();
+		}
+		else
+		{
+			mCtl.physics = abX;
 
-		mbUpdatedBones = false;
-		ResetGraphicsUpdated();
+			mCtl.updated_bones = false;
+			ResetGraphicsUpdated();
 
-		mbSkeletonPhysicsFading = false;
-		mfSkeletonPhysicsWeight = 1.0f;
+			mCtl.fading = false;
+			mCtl.physics_weight = 1.0f;
+		}
 
 		for(int bone =0; bone< GetBoneStateNum(); ++bone)
 		{
@@ -966,7 +1230,7 @@ namespace hpl {
 					pBody->SetAngularVelocity(0);
 				}
 
-				if(mbSkeletonColliders)
+				if(mCtl.colliders)
 				{
 					pColliderBody->SetActive(!abX);
 				}
@@ -976,17 +1240,20 @@ namespace hpl {
 
 	bool cMeshEntity::GetSkeletonPhysicsActive()
 	{
-		return mbSkeletonPhysics;
+		return mCtl.physics;
 	}
 
 	//----------------------------------------------------------------------
 
 	void cMeshEntity::FadeSkeletonPhysicsWeight(float afTime)
 	{
-		if(mbSkeletonPhysics)
+		if(OhplBackendRustRequested() ? ohpl_h11_mesh_physics_fade(&mCtl, afTime) : mCtl.physics)
 		{
-			mbSkeletonPhysicsFading = true;
-			mfSkeletonPhysicsFadeSpeed = 1.0f / afTime;
+			if(!OhplBackendRustRequested())
+			{
+				mCtl.fading = true;
+				mCtl.physics_fade_speed = 1.0f / afTime;
+			}
 
 			for(int bone =0; bone< GetBoneStateNum(); ++bone)
 			{
@@ -1004,18 +1271,18 @@ namespace hpl {
 
 	float cMeshEntity::GetSkeletonPhysicsWeight()
 	{
-		return mfSkeletonPhysicsWeight;
+		return mCtl.physics_weight;
 	}
 	void cMeshEntity::SetSkeletonPhysicsWeight(float afX)
 	{
-		mfSkeletonPhysicsWeight = afX;
+		mCtl.physics_weight = afX;
 	}
 
 	//----------------------------------------------------------------------
 
 	void cMeshEntity::SetSkeletonCollidersActive(bool abX)
 	{		
-		mbSkeletonColliders = abX;
+		mCtl.colliders = abX;
 
 		//Set active to the correct state.
 		for(int bone =0; bone< GetBoneStateNum(); ++bone)
@@ -1025,14 +1292,14 @@ namespace hpl {
 
 			if(pColliderBody)
 			{
-				if(abX && !mbSkeletonPhysics) pColliderBody->SetActive(true);
+				if(abX && !mCtl.physics) pColliderBody->SetActive(true);
 				else if(!abX) pColliderBody->SetActive(false);
 			}
 		}
 	}
 	bool cMeshEntity::GetSkeletonCollidersActive()
 	{
-		return mbSkeletonColliders;
+		return mCtl.colliders;
 	}
 
 	//----------------------------------------------------------------------
@@ -1071,6 +1338,17 @@ namespace hpl {
 		cBone* pBone = BoneIt.Next();
 
 		//Rotation and position
+		if(OhplBackendRustRequested())
+		{
+			cMatrixf mtxOut;
+			cVector3f vPos;
+			float fYAngle;
+			ohpl_h11_transform_from_skeleton(&pBoneState->GetWorldMatrix(), &pBone->GetInvWorldTransform(), &mtxOut, &vPos, &fYAngle);
+			if(apPostion) *apPostion = vPos;
+			if(apAngles) *apAngles = cVector3f(0,fYAngle,0);
+			return mtxOut;
+		}
+
 		cMatrixf mtxInvBind = pBone->GetInvWorldTransform();
 		cMatrixf mtxInvBone = cMath::MatrixInverse(pBoneState->GetWorldMatrix());
 		cVector3f vStateForward = mtxInvBone.GetForward();
@@ -1139,7 +1417,7 @@ namespace hpl {
 		{
 			mvSubMeshes[i]->mbGraphicsUpdated = false;
 		}
-		mbUpdatedBones = false;
+		mCtl.updated_bones = false;
 	}
 
 	//----------------------------------------------------------------------
@@ -1206,24 +1484,35 @@ namespace hpl {
 	void cMeshEntity::UpdateGraphicsForFrame(float afFrameTime)
 	{
 		//////////////////////////////////////////
-		//Check so update is needed
-		if(	mbBoneMatricesNeedUpdate == false &&
-			mlBoneMatricesTransformCount == GetTransformUpdateCount())
+		cSkeleton *pSkeleton = mpMesh->GetSkeleton();
+		bool bInvStale;
+		if(OhplBackendRustRequested())
 		{
-			return;
+			uint32_t lGate = ohpl_h11_mesh_graphics_gate(&mCtl, pSkeleton != NULL, GetTransformUpdateCount());
+			if(lGate == 0) return;
+			bInvStale = (lGate & 2) != 0;
 		}
+		else
+		{
+			if(	mCtl.matrices_need_update == false &&
+				mCtl.bone_matrices_transform_count == GetTransformUpdateCount())
+			{
+				return;
+			}
 
-		mlBoneMatricesTransformCount = GetTransformUpdateCount();
-		mbBoneMatricesNeedUpdate = false;
+			mCtl.bone_matrices_transform_count = GetTransformUpdateCount();
+			mCtl.matrices_need_update = false;
+
+			bInvStale = pSkeleton && mCtl.inv_world_transform_count != GetTransformUpdateCount();
+			if(bInvStale) mCtl.inv_world_transform_count = GetTransformUpdateCount();
+		}
 
 		///////////////////////////////////
 		//Update the bone matrices
-		cSkeleton *pSkeleton = mpMesh->GetSkeleton();
 		if(pSkeleton)
 		{
-			if(mlInvWorldMatrixTransformCount != GetTransformUpdateCount())
+			if(bInvStale)
 			{
-				mlInvWorldMatrixTransformCount = GetTransformUpdateCount();
 				m_mtxInvWorldMatrix = cMath::MatrixInverse(GetWorldMatrix());
 			}
 			
@@ -1235,7 +1524,7 @@ namespace hpl {
 				mvScratchWorld[i] = &mvBoneStates[i]->GetWorldMatrix();
 				mvScratchInvBind[i] = &pSkeleton->GetBoneByIndex(i)->GetInvBindTransform();
 			}
-			mlBoneMatricesVersion += (int)ohpl_meshentity_bone_matrices(&m_mtxInvWorldMatrix, mvScratchWorld.data(),
+			mCtl.bone_matrices_version += (int)ohpl_meshentity_bone_matrices(&m_mtxInvWorldMatrix, mvScratchWorld.data(),
 									mvScratchInvBind.data(), mvBoneMatrices.data(), lBoneNum);
 		}
 	}
@@ -1274,6 +1563,21 @@ namespace hpl {
 			if(mbUpdateBoundingVolume)
 			{
 				mbUpdateBoundingVolume = false;
+
+				if(OhplBackendRustRequested())
+				{
+					std::vector<cVector3f> vMins, vMaxs;
+					for(size_t i=0; i< mvSubMeshes.size(); i++)
+					{
+						cBoundingVolume *pSubBV = mvSubMeshes[i]->GetBoundingVolume();
+						vMins.push_back(pSubBV->GetMin());
+						vMaxs.push_back(pSubBV->GetMax());
+					}
+					cVector3f vRustMin, vRustMax;
+					if(ohpl_h11_bounds_union(vMins.data(), vMaxs.data(), (int32_t)vMins.size(), &vRustMin, &vRustMax))
+						mBoundingVolume.SetLocalMinMax(vRustMin, vRustMax);
+					return &mBoundingVolume;
+				}
 
 				cBoundingVolume *pBV = mvSubMeshes[0]->GetBoundingVolume(); 
 				cVector3f vFinalMin = pBV->GetMin();
@@ -1387,7 +1691,7 @@ namespace hpl {
 	float cMeshEntity::GetAnimationWeightMul()
 	{
 		SyncAnimCores();
-		return ohpl_meshentity_weight_mul(mvAnimCores.data(), (int)mvAnimCores.size(), mbNormalizeAnimationWeights);
+		return ohpl_meshentity_weight_mul(mvAnimCores.data(), (int)mvAnimCores.size(), mCtl.normalize);
 	}
 
 	//-----------------------------------------------------------------------

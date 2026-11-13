@@ -129,7 +129,7 @@ namespace hpl {
 		bool mbGraphicsUpdated;
 		int mlSkinnedBoneMatricesVersion;
 
-		signed char mlStaticNullMatrixCount;
+		int mlStaticNullMatrixCount;
 		void *mpUserData;
 	};
 

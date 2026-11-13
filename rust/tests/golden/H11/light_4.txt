@@ -1,0 +1,923 @@
+light kind=1
+o objmove 2
+= lit 1 00000000 00000000 00000000 3f800000 3f800000 42c80000 1 1 -> 0 0
+~ l f369a7cc895420e4
+o flickeractive 1
+= lit 1 00000000 00000000 00000000 3f800000 3f800000 42c80000 1 1 -> 0 0
+~ l 1a12bd92fa21fe7c
+o flicker
+= lit 1 00000000 00000000 00000000 3f800000 3f800000 42c80000 1 1 -> 0 0
+~ l 1a12bd92fa21fe7c
+o diffuse
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 42c80000 1 1 -> 1 1
+~ l 112fb5d7795e87b7
+o radius 3faebd2f
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 1 -> 1 1
+~ l b611d6b6b7f7b52a
+o setmatrix
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 1 -> 1 1
+~ l 010fd435e28f2c7f
+o nop
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 1 -> 1 1
+~ l 010fd435e28f2c7f
+o flicker
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 1 -> 1 1
+~ l 010fd435e28f2c7f
+o update 3c888889
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 1 -> 1 1
+~ l 010fd435e28f2c7f
+o visible 0
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 0 -> 1 0
+~ l d3abf4520ca686e5
+o stopfade
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 0 -> 1 0
+~ l d3abf4520ca686e5
+o flickeractive 1
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 0 -> 1 0
+~ l d3abf4520ca686e5
+o flicker
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 0 -> 1 0
+~ l d3abf4520ca686e5
+o hpl3 1
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 0 -> 1 0
+~ l d3abf4520ca686e5
+o mask 1
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 0 -> 1 0
+~ l a70cda063c8ebb22
+o nop
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 0 -> 1 0
+~ l a70cda063c8ebb22
+o spot 1 4027a4e8
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 3f800000 40830de3 1 0 -> 1 0
+~ l ad8ac6b7c114b35c
+o brightness 4030a9b1
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 40830de3 1 0 -> 1 0
+~ l 985eff1132425cb7
+o mask 0
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 40830de3 1 0 -> 1 0
+~ l 693dbf70a3c5d83a
+o update 3e99999a
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 40830de3 1 0 -> 1 0
+~ l 693dbf70a3c5d83a
+o nop
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 40830de3 1 0 -> 1 0
+~ l 693dbf70a3c5d83a
+o visible 1
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 40830de3 1 1 -> 1 1
+~ l 8de426ea053dd268
+o update 3c888889
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 40830de3 1 1 -> 1 1
+~ l 8de426ea053dd268
+o radius 409d859e
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 416c486d 1 1 -> 1 1
+~ l 2a7b0a07ef5a2cc0
+o update 3c888889
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 416c486d 1 1 -> 1 1
+~ l 2a7b0a07ef5a2cc0
+o objmove 3
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 416c486d 1 1 -> 1 1
+~ l 2a7b0a07ef5a2cc0
+o update 00000000
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 416c486d 1 1 -> 1 1
+~ l 2a7b0a07ef5a2cc0
+o radius 405bd3dc
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 1 1 -> 1 1
+~ l 83d7700a1084eaea
+o flickeractive 0
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 1 1 -> 1 1
+~ l c672d8d4750a1752
+o flicker
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 1 1 -> 1 1
+~ l c672d8d4750a1752
+o setmatrix
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 1 1 -> 1 1
+~ l b8c365f84fc6f709
+o update 3d4ccccd
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 1 1 -> 1 1
+~ l b8c365f84fc6f709
+o hpl3 0
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 0 1 -> 1 1
+~ l b8c365f84fc6f709
+o flicker
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 0 1 -> 1 1
+~ l b8c365f84fc6f709
+o shadowcheck 1 42 0 0 0 1 1 0 1 1 0 0 0 1
+= 1
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 0 1 -> 1 1
+~ l b8c365f84fc6f709
+o update 3e99999a
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 0 1 -> 1 1
+~ l b8c365f84fc6f709
+o update 3c888889
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 0 1 -> 1 1
+~ l b8c365f84fc6f709
+o visible 1
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 0 1 -> 1 1
+~ l b8c365f84fc6f709
+o setmatrix
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 0 1 -> 1 1
+~ l 97b96abb946a5629
+o flicker
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 0 1 -> 1 1
+~ l 97b96abb946a5629
+o setmatrix
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 0 1 -> 1 1
+~ l af9597fd22494a96
+o nop
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 4030a9b1 4124dee5 0 1 -> 1 1
+~ l af9597fd22494a96
+o brightness 401e4b1e
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 401e4b1e 4124dee5 0 1 -> 1 1
+~ l 754902674b200bc9
+o mask 0
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 401e4b1e 4124dee5 0 1 -> 1 1
+~ l 754902674b200bc9
+o flickeractive 0
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 401e4b1e 4124dee5 0 1 -> 1 1
+~ l 754902674b200bc9
+o update 3c888889
+= lit 1 3f0fcf90 3f5ee1df 3f3239b2 3eeacceb 401e4b1e 4124dee5 0 1 -> 1 1
+~ l 754902674b200bc9
+o diffuse
+= lit 1 3f1b149b 3f46dec7 3f1c8c9d 3e7194f2 401e4b1e 4124dee5 0 1 -> 1 1
+~ l f3a85cbefae77c72
+o flickeractive 1
+= lit 1 3f1b149b 3f46dec7 3f1c8c9d 3e7194f2 401e4b1e 4124dee5 0 1 -> 1 1
+~ l 8e79049d38aee37a
+o fadebright 3f001180
+= lit 1 3f1b149b 3f46dec7 3f1c8c9d 3e7194f2 401e4b1e 4124dee5 0 1 -> 1 1
+~ l 8e79049d38aee37a
+o nop
+= lit 1 3f1b149b 3f46dec7 3f1c8c9d 3e7194f2 401e4b1e 4124dee5 0 1 -> 1 1
+~ l 8e79049d38aee37a
+o flickeractive 1
+= lit 1 3f1b149b 3f46dec7 3f1c8c9d 3e7194f2 401e4b1e 4124dee5 0 1 -> 1 1
+~ l 8e79049d38aee37a
+o radius 407a68ba
+= lit 1 3f1b149b 3f46dec7 3f1c8c9d 3e7194f2 401e4b1e 413bce8c 0 1 -> 1 1
+~ l 9d82f468a4ddef31
+o update 00000000
+= lit 1 3f1b149b 3f46dec7 3f1c8c9d 3e7194f2 401e4b1e 413bce8c 0 1 -> 1 1
+~ l 9d82f468a4ddef31
+o diffuse
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 401e4b1e 413bce8c 0 1 -> 1 1
+~ l be9a360f8029f305
+o nop
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 401e4b1e 413bce8c 0 1 -> 1 1
+~ l be9a360f8029f305
+o radius 408aa14b
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 401e4b1e 414ff1f0 0 1 -> 1 1
+~ l 1cc1f6123c21d671
+o flicker
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 401e4b1e 414ff1f0 0 1 -> 1 1
+~ l 1cc1f6123c21d671
+o update 3e99999a
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 3ff9f3e3 414ff1f0 0 1 -> 1 1
+~ l f99260b40393e3ba
+o update 00000000
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 3ff9f3e3 414ff1f0 0 1 -> 1 1
+~ l f99260b40393e3ba
+o shadowadd 1 0
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 3ff9f3e3 414ff1f0 0 1 -> 1 1
+~ l f99260b40393e3ba
+o mask 0
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 3ff9f3e3 414ff1f0 0 1 -> 1 1
+~ l f99260b40393e3ba
+o objmove 4
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 3ff9f3e3 414ff1f0 0 1 -> 1 1
+~ l f99260b40393e3ba
+o flicker
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 3ff9f3e3 414ff1f0 0 1 -> 1 1
+~ l f99260b40393e3ba
+o hpl3 0
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 3ff9f3e3 414ff1f0 0 1 -> 1 1
+~ l f99260b40393e3ba
+o intersect
+~ isect 4d25767f9dce13f5
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 3ff9f3e3 414ff1f0 0 1 -> 1 1
+~ l f99260b40393e3ba
+o radius 403f677f
+= lit 1 3d3b00bb 3f297fa9 3e965296 3e59d4da 3ff9f3e3 410f8d9f 0 1 -> 1 1
+~ l 7b2802823f8ae2d8
+o diffuse
+= lit 1 3f136293 3e6988ea 3ef60ef6 3f0bb68c 3ff9f3e3 410f8d9f 0 1 -> 1 1
+~ l 6726e1781ab386e4
+o shadowcheck 0 37 0 0 0 1 1 0 1 1 1 0 0 1
+= 0 1 0 0 0 0
+= lit 1 3f136293 3e6988ea 3ef60ef6 3f0bb68c 3ff9f3e3 410f8d9f 0 1 -> 1 1
+~ l 6726e1781ab386e4
+o diffuse
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3ff9f3e3 410f8d9f 0 1 -> 1 1
+~ l c4aed706975b884c
+o setmatrix
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3ff9f3e3 410f8d9f 0 1 -> 1 1
+~ l a5b4cb16ac3af5dd
+o update 3c888889
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3ff64033 410f8d9f 0 1 -> 1 1
+~ l 163188affab00e37
+o update 3c888889
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3ff28c84 410f8d9f 0 1 -> 1 1
+~ l 6b59bfccd23d4524
+o brightness 403b49bb
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 403b49bb 410f8d9f 0 1 -> 1 1
+~ l d15c18973d77d378
+o stopfade
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 403b49bb 410f8d9f 0 1 -> 1 1
+~ l d15c18973d77d378
+o brightness 3ff20df2
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3ff20df2 410f8d9f 0 1 -> 1 1
+~ l 56b27be471245205
+o radius 403b44bb
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3ff20df2 410c738c 0 1 -> 1 1
+~ l 54be3d919d0d514b
+o setmatrix
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3ff20df2 410c738c 0 1 -> 1 1
+~ l 5b8f653725c52930
+o shadowadd 2 1
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3ff20df2 410c738c 0 1 -> 1 1
+~ l 5b8f653725c52930
+o update 3c888889
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3feed8d4 410c738c 0 1 -> 1 1
+~ l f2fa4d07ab240e3d
+o nop
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3feed8d4 410c738c 0 1 -> 1 1
+~ l f2fa4d07ab240e3d
+o shadowadd 2 1
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3feed8d4 410c738c 0 1 -> 1 1
+~ l f2fa4d07ab240e3d
+o radius 3ee72ce7
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3feed8d4 3fad61ad 0 1 -> 1 1
+~ l dd8918373447ff40
+o hpl3 0
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3feed8d4 3fad61ad 0 1 -> 1 1
+~ l dd8918373447ff40
+o fadeto 40013601
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3feed8d4 3fad61ad 0 1 -> 1 1
+~ l 6a8bd81ce89e3301
+o update 00000000
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3feed8d4 3fad61ad 0 1 -> 1 1
+~ l 6a8bd81ce89e3301
+o nop
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 3feed8d4 3fad61ad 0 1 -> 1 1
+~ l 6a8bd81ce89e3301
+o brightness 40134213
+= lit 1 3da7e0a8 3f186d98 3ec5f6c6 3e83f684 40134213 3fad61ad 0 1 -> 1 1
+~ l 4bb7778bf1983220
+o diffuse
+= lit 1 3f0da78e 3f67c9e8 3eb422b4 3f1dea9e 40134213 3fad61ad 0 1 -> 1 1
+~ l aae59cdbd646315c
+o mask 0
+= lit 1 3f0da78e 3f67c9e8 3eb422b4 3f1dea9e 40134213 3fad61ad 0 1 -> 1 1
+~ l aae59cdbd646315c
+o diffuse
+= lit 1 3f3f41bf 3eaeb8af 3eb92eb9 3f34b9b5 40134213 3fad61ad 0 1 -> 1 1
+~ l 1ca083ab39e91e2c
+o update 00000000
+= lit 1 3f3f41bf 3eaeb8af 3eb92eb9 3f34b9b5 3feed8d4 3fad61ad 0 1 -> 1 1
+~ l ccd418bc45942155
+o radius 405df39e
+= lit 1 3f3f41bf 3eaeb8af 3eb92eb9 3f34b9b5 3feed8d4 412676b6 0 1 -> 1 1
+~ l 0b79e653fe1d97eb
+o mask 0
+= lit 1 3f3f41bf 3eaeb8af 3eb92eb9 3f34b9b5 3feed8d4 412676b6 0 1 -> 1 1
+~ l 0b79e653fe1d97eb
+o mask 0
+= lit 1 3f3f41bf 3eaeb8af 3eb92eb9 3f34b9b5 3feed8d4 412676b6 0 1 -> 1 1
+~ l 0b79e653fe1d97eb
+o update 3d4ccccd
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 3fe3bdc5 4127bc54 0 1 -> 1 1
+~ l 9413610b6cad7a5a
+o hpl3 1
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 3fe3bdc5 4127bc54 1 1 -> 1 1
+~ l 9413610b6cad7a5a
+o radius 4086bda7
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 3fe3bdc5 414a1c7a 1 1 -> 1 1
+~ l a26c24dd98987b6b
+o collide
+~ collide 4d25767f9dce13f5
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 3fe3bdc5 414a1c7a 1 1 -> 1 1
+~ l a26c24dd98987b6b
+o visible 1
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 3fe3bdc5 414a1c7a 1 1 -> 1 1
+~ l a26c24dd98987b6b
+o spot 3 40597f99
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 3fe3bdc5 414a1c7a 1 1 -> 1 1
+~ l a26c24dd98987b6b
+o mask 1
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 3fe3bdc5 414a1c7a 1 1 -> 1 1
+~ l 0e857e1bc1020ad0
+o brightness 4074ecf5
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 4074ecf5 414a1c7a 1 1 -> 1 1
+~ l d52ae2b3a4217c21
+o visible 1
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 4074ecf5 414a1c7a 1 1 -> 1 1
+~ l d52ae2b3a4217c21
+o hpl3 0
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 4074ecf5 414a1c7a 0 1 -> 1 1
+~ l d52ae2b3a4217c21
+o flickeractive 1
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 4074ecf5 414a1c7a 0 1 -> 1 1
+~ l d52ae2b3a4217c21
+o shadowcheck 0 1 0 0 0 1 1 0 1 1 1 0 0 1
+= 0 1 1 0 0 0
+= lit 1 3f41b7e2 3ea87f2b 3ec15e98 3f3a5ae1 4074ecf5 414a1c7a 0 1 -> 1 1
+~ l d52ae2b3a4217c21
+o update 3c888889
+= lit 1 3f4289ee 3ea66bff 3ec41938 3f3c3b45 3fe00a15 414a8904 0 1 -> 1 1
+~ l 6957a7125be69e91
+o setmatrix
+= lit 1 3f4289ee 3ea66bff 3ec41938 3f3c3b45 3fe00a15 414a8904 0 1 -> 1 1
+~ l 41fd26ae190d5631
+o shadowadd 2 1
+= lit 1 3f4289ee 3ea66bff 3ec41938 3f3c3b45 3fe00a15 414a8904 0 1 -> 1 1
+~ l 41fd26ae190d5631
+o update 00000000
+= lit 1 3f4289ee 3ea66bff 3ec41938 3f3c3b45 3fe00a15 414a8904 0 1 -> 1 1
+~ l 41fd26ae190d5631
+o radius 3f5480d5
+= lit 1 3f4289ee 3ea66bff 3ec41938 3f3c3b45 3fe00a15 401f60a0 0 1 -> 1 1
+~ l c1d4703100cbab17
+o update 3e99999a
+= lit 1 3f514ebe 3e8112e8 3ef53870 3f5e024f 3f9d67bc 403de779 0 1 -> 1 1
+~ l cb34298031a47158
+o update 3d4ccccd
+= lit 1 3f53c4e1 3e75b2c8 3efd684f 3f63a37b 3f924cad 4042fdf3 0 1 -> 1 1
+~ l 926d6b2329db00ee
+o mask 1
+= lit 1 3f53c4e1 3e75b2c8 3efd684f 3f63a37b 3f924cad 4042fdf3 0 1 -> 1 1
+~ l 8d13a88b9feb5c1c
+o update 3e99999a
+= lit 1 3f6289b1 3e2b009a 3f1743c4 3f82b543 3f1f54a6 406184cc 0 1 -> 1 1
+~ l 900b63a16eedcb02
+o radius 3fb1d0b2
+= lit 1 3f6289b1 3e2b009a 3f1743c4 3f82b543 3f1f54a6 40855c86 0 1 -> 1 1
+~ l 726a98ba600cc618
+o collide
+~ collide 4d25767f9dce13f5
+= lit 1 3f6289b1 3e2b009a 3f1743c4 3f82b543 3f1f54a6 40855c86 0 1 -> 1 1
+~ l 726a98ba600cc618
+o update 00000000
+= lit 1 3f6289b1 3e2b009a 3f1743c4 3f82b543 3f1f54a6 40855c86 0 1 -> 1 1
+~ l 726a98ba600cc618
+o visible 0
+= lit 1 3f6289b1 3e2b009a 3f1743c4 3f82b543 3f1f54a6 40855c86 0 0 -> 1 0
+~ l 13273726653884fa
+o flickeractive 0
+= lit 1 3f6289b1 3e2b009a 3f1743c4 3f82b543 3f1f54a6 40855c86 0 0 -> 1 0
+~ l aff19fcaca706de2
+o update 00000000
+= lit 1 3f6289b1 3e2b009a 3f1743c4 3f82b543 3f1f54a6 40855c86 0 0 -> 1 0
+~ l aff19fcaca706de2
+o radius 4020e561
+= lit 1 3f6289b1 3e2b009a 3f1743c4 3f82b543 3f1f54a6 40f15812 0 0 -> 1 0
+~ l 2337f836780203da
+o update 3d4ccccd
+= lit 1 3f64ffd4 3e1e8d92 3f1b5bb3 3f8585d9 3f091e89 40f3e34f 0 0 -> 1 0
+~ l 05a6af587cde7e7d
+o update 3e99999a
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f001180 4101935e 0 0 -> 1 0
+~ l f5976f6eb2279878
+o fadebright 4084fd85
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f001180 4101935e 0 0 -> 1 0
+~ l f5976f6eb2279878
+o fadebright 3fff32ff
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f001180 4101935e 0 0 -> 1 0
+~ l f5976f6eb2279878
+o objmove 3
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f001180 4101935e 0 0 -> 1 0
+~ l f5976f6eb2279878
+o brightness 40841784
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 40841784 4101935e 0 0 -> 1 0
+~ l 646ca2d5f47b8a6f
+o hpl3 1
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 40841784 4101935e 1 0 -> 1 0
+~ l 646ca2d5f47b8a6f
+o spot 3 3ec468c4
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 40841784 4101935e 1 0 -> 1 0
+~ l 646ca2d5f47b8a6f
+o nop
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 40841784 4101935e 1 0 -> 1 0
+~ l 646ca2d5f47b8a6f
+o stopfade
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 40841784 4101935e 1 0 -> 1 0
+~ l 903aa5203164d523
+o update 3d4ccccd
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f037a62 4101935e 1 0 -> 1 0
+~ l a1e6c8aaf313d8b8
+o flicker
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f037a62 4101935e 1 0 -> 1 0
+~ l a1e6c8aaf313d8b8
+o objmove 3
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f037a62 4101935e 1 0 -> 1 0
+~ l a1e6c8aaf313d8b8
+o hpl3 0
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f037a62 4101935e 0 0 -> 1 0
+~ l a1e6c8aaf313d8b8
+o intersect
+~ isect 4d25767f9dce13f5
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f037a62 4101935e 0 0 -> 1 0
+~ l a1e6c8aaf313d8b8
+o spot 0 40814461
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f037a62 4101935e 0 0 -> 1 0
+~ l 9e3ce9bd93ed493b
+o shadowadd 5 0
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f037a62 4101935e 0 0 -> 1 0
+~ l 9e3ce9bd93ed493b
+o shadowadd 0 0
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f037a62 4101935e 0 0 -> 1 0
+~ l 9e3ce9bd93ed493b
+o update 3c888889
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f06214b 4101935e 0 0 -> 1 0
+~ l 2b75a9661a812ed6
+o flicker
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f06214b 4101935e 0 0 -> 1 0
+~ l 2b75a9661a812ed6
+o stopfade
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f06214b 4101935e 0 0 -> 1 0
+~ l 2b75a9661a812ed6
+o brightness 40395479
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 40395479 4101935e 0 0 -> 1 0
+~ l 29a7965fd357982d
+o update 00000000
+= lit 1 3f73c4a4 3da7b6c7 3f33eb4f 3f96695e 3f06214b 4101935e 0 0 -> 1 0
+~ l 2b75a9661a812ed6
+o diffuse
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 3f06214b 4101935e 0 0 -> 1 0
+~ l f6a093b7dc95784f
+o brightness 405c431c
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 405c431c 4101935e 0 0 -> 1 0
+~ l b38b81e999addcc9
+o nop
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 405c431c 4101935e 0 0 -> 1 0
+~ l b38b81e999addcc9
+o hpl3 0
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 405c431c 4101935e 0 0 -> 1 0
+~ l b38b81e999addcc9
+o stopfade
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 405c431c 4101935e 0 0 -> 1 0
+~ l b38b81e999addcc9
+o hpl3 0
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 405c431c 4101935e 0 0 -> 1 0
+~ l b38b81e999addcc9
+o update 3d4ccccd
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 3f12a1dd 4101935e 0 0 -> 1 0
+~ l 958b15a53a7f1f8d
+o stopfade
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 3f12a1dd 4101935e 0 0 -> 1 0
+~ l 958b15a53a7f1f8d
+o mask 1
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 3f12a1dd 4101935e 0 0 -> 1 0
+~ l 82323de2b93e90e4
+o stopfade
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 3f12a1dd 4101935e 0 0 -> 1 0
+~ l 82323de2b93e90e4
+o flicker
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 3f12a1dd 4101935e 0 0 -> 1 0
+~ l 82323de2b93e90e4
+o update 3e99999a
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 3fb66d32 4101935e 0 0 -> 1 0
+~ l b8e79eeb88cd3603
+o collide
+~ collide ad2aca7747985764
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 3fb66d32 4101935e 0 0 -> 1 0
+~ l b8e79eeb88cd3603
+o shadowcheck 4 4 0 0 0 1 1 0 3 1 1 0 0 1
+= lit 1 3f3af4bb 3f5835d8 3f4cc9cd 3e4bc4cc 3fb66d32 4101935e 0 0 -> 1 0
+~ l b8e79eeb88cd3603
+o diffuse
+= lit 1 3f5111d1 3dfd48fd 3e5e84df 3deaa8eb 3fb66d32 4101935e 0 0 -> 1 0
+~ l e9670ae25f4e768b
+o flicker
+= lit 1 3f5111d1 3dfd48fd 3e5e84df 3deaa8eb 3fb66d32 4101935e 0 0 -> 1 0
+~ l e9670ae25f4e768b
+o flicker
+= lit 1 3f5111d1 3dfd48fd 3e5e84df 3deaa8eb 3fb66d32 4101935e 0 0 -> 1 0
+~ l e9670ae25f4e768b
+o update 3d4ccccd
+= lit 1 3f5111d1 3dfd48fd 3e5e84df 3deaa8eb 3fd48baa 4101935e 0 0 -> 1 0
+~ l 6399eb09f6707657
+o visible 1
+= lit 1 3f5111d1 3dfd48fd 3e5e84df 3deaa8eb 3fd48baa 4101935e 0 1 -> 1 1
+~ l cff93ee83a587809
+o mask 0
+= lit 1 3f5111d1 3dfd48fd 3e5e84df 3deaa8eb 3fd48baa 4101935e 0 1 -> 1 1
+~ l 87ffde089ac5a4d2
+o update 00000000
+= lit 1 3f5111d1 3dfd48fd 3e5e84df 3deaa8eb 3fd48baa 4101935e 0 1 -> 1 1
+~ l 87ffde089ac5a4d2
+o objmove 0
+= lit 1 3f5111d1 3dfd48fd 3e5e84df 3deaa8eb 3fd48baa 4101935e 0 1 -> 1 1
+~ l 87ffde089ac5a4d2
+o setmatrix
+= lit 1 3f5111d1 3dfd48fd 3e5e84df 3deaa8eb 3fd48baa 4101935e 0 1 -> 1 1
+~ l 7695eecfbd984337
+o fadeto 3f60c9e1
+= lit 1 3f5111d1 3dfd48fd 3e5e84df 3deaa8eb 3fd48baa 4101935e 0 1 -> 1 1
+~ l aa498b380331552e
+o collide
+~ collide 4d25767f9dce13f5
+= lit 1 3f5111d1 3dfd48fd 3e5e84df 3deaa8eb 3fd48baa 4101935e 0 1 -> 1 1
+~ l aa498b380331552e
+o update 3c888889
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 40fd5fd0 0 1 -> 1 1
+~ l 51dab8a1cc035c5f
+o visible 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 40fd5fd0 0 0 -> 1 0
+~ l ae8bd0bfc2b5cb8d
+o collide
+~ collide 4d25767f9dce13f5
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 40fd5fd0 0 0 -> 1 0
+~ l ae8bd0bfc2b5cb8d
+o hpl3 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 40fd5fd0 0 0 -> 1 0
+~ l ae8bd0bfc2b5cb8d
+o setmatrix
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 40fd5fd0 0 0 -> 1 0
+~ l 34f8fb4597211294
+o fadebright 402cbb6d
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 40fd5fd0 0 0 -> 1 0
+~ l 34f8fb4597211294
+o brightness 40582cd8
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 40582cd8 40fd5fd0 0 0 -> 1 0
+~ l df7598e034ca3940
+o collide
+~ collide ad2aca7747985764
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 40582cd8 40fd5fd0 0 0 -> 1 0
+~ l df7598e034ca3940
+o flicker
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 40582cd8 40fd5fd0 0 0 -> 1 0
+~ l f20abc3f2b03c46c
+o brightness 408a816b
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 408a816b 40fd5fd0 0 0 -> 1 0
+~ l 5a3a6224571b0e6a
+o update 00000000
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 40fd5fd0 0 0 -> 1 0
+~ l e13048ac577f4f28
+o flicker
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 40fd5fd0 0 0 -> 1 0
+~ l e13048ac577f4f28
+o fadeto 406c986d
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 40fd5fd0 0 0 -> 1 0
+~ l 6da242fa79745eff
+o hpl3 1
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 40fd5fd0 1 0 -> 1 0
+~ l 6da242fa79745eff
+o nop
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 40fd5fd0 1 0 -> 1 0
+~ l 6da242fa79745eff
+o radius 3fa8d229
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 407d3b3e 1 0 -> 1 0
+~ l 143d1b57bd01084a
+o collide
+~ collide ad2aca7747985764
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 407d3b3e 1 0 -> 1 0
+~ l 143d1b57bd01084a
+o stopfade
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 407d3b3e 1 0 -> 1 0
+~ l 7113d6da07f45d2e
+o fadeto 40010cc1
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 407d3b3e 1 0 -> 1 0
+~ l a28e60c2aab18e01
+o stopfade
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 407d3b3e 1 0 -> 1 0
+~ l 84d6cc2cc6b4df7d
+o visible 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fdf57cb 407d3b3e 1 0 -> 1 0
+~ l 84d6cc2cc6b4df7d
+o brightness 3e8be28c
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l 5e519840e7517726
+o flicker
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l 5e519840e7517726
+o shadowadd 5 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l 5e519840e7517726
+o objmove 4
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l 5e519840e7517726
+o fadebright 3d992099
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l 5e519840e7517726
+o spot 3 4040b041
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l 5e519840e7517726
+o nop
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l 5e519840e7517726
+o nop
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l 5e519840e7517726
+o nop
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l 5e519840e7517726
+o shadowcheck 3 40 1 0 0 1 1 0 3 1 2 0 0 1
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l 5e519840e7517726
+o fadebright 403c98bd
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l 5e519840e7517726
+o setmatrix
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l aabfa153f54f27ee
+o objmove 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l aabfa153f54f27ee
+o collide
+~ collide 4d25767f9dce13f5
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l aabfa153f54f27ee
+o visible 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l aabfa153f54f27ee
+o fadebright 400a668a
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l aabfa153f54f27ee
+o nop
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l aabfa153f54f27ee
+o shadowadd 4 2
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l aabfa153f54f27ee
+o fadebright 3fb9dcba
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l aabfa153f54f27ee
+o fadebright 408fba50
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l aabfa153f54f27ee
+o flickeractive 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 407d3b3e 1 0 -> 1 0
+~ l aabfa153f54f27ee
+o radius 3d82a083
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 3e43f0c4 1 0 -> 1 0
+~ l 4075daf3649f4853
+o flickeractive 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 3e43f0c4 1 0 -> 1 0
+~ l 4075daf3649f4853
+o setmatrix
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 3e43f0c4 1 0 -> 1 0
+~ l a90282c29c5fb179
+o update 00000000
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 3e43f0c4 1 0 -> 1 0
+~ l a90282c29c5fb179
+o mask 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 3e43f0c4 1 0 -> 1 0
+~ l a90282c29c5fb179
+o visible 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 3e43f0c4 1 0 -> 1 0
+~ l a90282c29c5fb179
+o collide
+~ collide 4d25767f9dce13f5
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3e8be28c 3e43f0c4 1 0 -> 1 0
+~ l a90282c29c5fb179
+o update 3d4ccccd
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3f7074bb 3e43f0c4 1 0 -> 1 0
+~ l 4d0fd49d0624574c
+o objmove 1
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3f7074bb 3e43f0c4 1 0 -> 1 0
+~ l 4d0fd49d0624574c
+o radius 3fb2e633
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3f7074bb 40862ca6 1 0 -> 1 0
+~ l 7028ca88f7c5d273
+o hpl3 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3f7074bb 40862ca6 0 0 -> 1 0
+~ l 7028ca88f7c5d273
+o update 00000000
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3f7074bb 40862ca6 0 0 -> 1 0
+~ l 7028ca88f7c5d273
+o setmatrix
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3f7074bb 40862ca6 0 0 -> 1 0
+~ l e9bd0e156be67b07
+o shadowcheck 0 50 2 0 1 1 1 0 3 1 2 0 0 1
+= 0 0 0 0 1 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3f7074bb 40862ca6 0 0 -> 1 0
+~ l e9bd0e156be67b07
+o hpl3 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3f7074bb 40862ca6 0 0 -> 1 0
+~ l e9bd0e156be67b07
+o update 3d4ccccd
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 3fcd7c18 40862ca6 0 0 -> 1 0
+~ l e0bea953c9d82115
+o update 3e99999a
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 408fba50 40862ca6 0 0 -> 1 0
+~ l 9dff57ec626cb300
+o fadebright 40902a30
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 408fba50 40862ca6 0 0 -> 1 0
+~ l 9dff57ec626cb300
+o hpl3 1
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 408fba50 40862ca6 1 0 -> 1 0
+~ l 9dff57ec626cb300
+o shadowadd 5 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 408fba50 40862ca6 1 0 -> 1 0
+~ l 9dff57ec626cb300
+o radius 40434443
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 408fba50 41127332 1 0 -> 1 0
+~ l 47a280b05a92942a
+o flickeractive 1
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 408fba50 41127332 1 0 -> 1 0
+~ l 2d4a079ac68e2152
+o update 3c888889
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 408fba53 41127332 1 0 -> 1 0
+~ l ac36618f4b829a15
+o intersect
+~ isect 4d25767f9dce13f5
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 408fba53 41127332 1 0 -> 1 0
+~ l ac36618f4b829a15
+o fadebright 40381fb8
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 408fba53 41127332 1 0 -> 1 0
+~ l ac36618f4b829a15
+o hpl3 0
+= lit 1 3f4ea6c9 3e09b0e9 3e748e72 3e0f2359 408fba53 41127332 0 0 -> 1 0
+~ l ac36618f4b829a15
+o diffuse
+= lit 1 3eccaccd 3f6115e1 3e918492 3e3048b0 408fba53 41127332 0 0 -> 1 0
+~ l 2bcf83196a11f902
+o fadebright 3fe88369
+= lit 1 3eccaccd 3f6115e1 3e918492 3e3048b0 408fba53 41127332 0 0 -> 1 0
+~ l 2bcf83196a11f902
+o intersect
+~ isect 4d25767f9dce13f5
+= lit 1 3eccaccd 3f6115e1 3e918492 3e3048b0 408fba53 41127332 0 0 -> 1 0
+~ l 2bcf83196a11f902
+o visible 0
+= lit 1 3eccaccd 3f6115e1 3e918492 3e3048b0 408fba53 41127332 0 0 -> 1 0
+~ l 2bcf83196a11f902
+o shadowcheck 2 39 2 0 1 1 1 0 3 1 2 0 0 1
+= 0
+= lit 1 3eccaccd 3f6115e1 3e918492 3e3048b0 408fba53 41127332 0 0 -> 1 0
+~ l 2bcf83196a11f902
+o diffuse
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 408fba53 41127332 0 0 -> 1 0
+~ l 3751c15310e41da2
+o shadowcheck 4 19 2 0 1 1 1 0 3 1 2 0 0 1
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 408fba53 41127332 0 0 -> 1 0
+~ l 3751c15310e41da2
+o nop
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 408fba53 41127332 0 0 -> 1 0
+~ l 3751c15310e41da2
+o update 3d4ccccd
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 408aff3e 41127332 0 0 -> 1 0
+~ l c34f8258d0c452dd
+o brightness 3f57f5d8
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 3f57f5d8 41127332 0 0 -> 1 0
+~ l 577e51b40c492ff1
+o update 00000000
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 408aff3e 41127332 0 0 -> 1 0
+~ l c34f8258d0c452dd
+o shadowcheck 3 31 2 0 1 1 1 0 3 1 2 0 0 1
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 408aff3e 41127332 0 0 -> 1 0
+~ l c34f8258d0c452dd
+o objmove 0
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 408aff3e 41127332 0 0 -> 1 0
+~ l c34f8258d0c452dd
+o nop
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 408aff3e 41127332 0 0 -> 1 0
+~ l c34f8258d0c452dd
+o setmatrix
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 408aff3e 41127332 0 0 -> 1 0
+~ l e820160f50ceef2e
+o objmove 0
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 408aff3e 41127332 0 0 -> 1 0
+~ l e820160f50ceef2e
+o radius 3cbfe0c0
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 408aff3e 3d8fe890 0 0 -> 1 0
+~ l 68840ba01ef90de0
+o brightness 3fcc314c
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 3fcc314c 3d8fe890 0 0 -> 1 0
+~ l 297b9846b36cd1a7
+o fadebright 3e1e0c9e
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 3fcc314c 3d8fe890 0 0 -> 1 0
+~ l 297b9846b36cd1a7
+o setmatrix
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 3fcc314c 3d8fe890 0 0 -> 1 0
+~ l 0d0b9f5559ff6247
+o brightness 40451905
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 40451905 3d8fe890 0 0 -> 1 0
+~ l ef37acc16f67a39e
+o nop
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 40451905 3d8fe890 0 0 -> 1 0
+~ l ef37acc16f67a39e
+o fadebright 3ff5cb76
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 40451905 3d8fe890 0 0 -> 1 0
+~ l ef37acc16f67a39e
+o spot 2 408678e6
+= lit 1 3d7770f7 3f3727b7 3ed550d5 3d7610f6 40451905 3d8fe890 0 0 -> 1 0
+~ l dd6392b7783febec
+o diffuse
+= lit 1 3f4396c4 3e948895 3da068a0 3eaa5eaa 40451905 3d8fe890 0 0 -> 1 0
+~ l bea827b99fad1726
+o intersect
+~ isect 4d25767f9dce13f5
+= lit 1 3f4396c4 3e948895 3da068a0 3eaa5eaa 40451905 3d8fe890 0 0 -> 1 0
+~ l bea827b99fad1726
+o spot 3 3fbd903e
+= lit 1 3f4396c4 3e948895 3da068a0 3eaa5eaa 40451905 3d8fe890 0 0 -> 1 0
+~ l bea827b99fad1726
+o update 3c888889
+= lit 1 3f4396c4 3e948895 3da068a0 3eaa5eaa 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 4b7c5b01fe6c05ec
+o intersect
+~ isect 4d25767f9dce13f5
+= lit 1 3f4396c4 3e948895 3da068a0 3eaa5eaa 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 4b7c5b01fe6c05ec
+o setmatrix
+= lit 1 3f4396c4 3e948895 3da068a0 3eaa5eaa 4020fb35 3d8fe890 0 0 -> 1 0
+~ l d2f3d559e04801d9
+o diffuse
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 5d3f6c51c283ef92
+o shadowadd 0 4
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 5d3f6c51c283ef92
+o objmove 4
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 5d3f6c51c283ef92
+o flickeractive 0
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 76f00829c5ab0eaa
+o shadowadd 5 0
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 76f00829c5ab0eaa
+o spot 1 3fc56cc5
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 49ac32c8cf1dfe47
+o nop
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 49ac32c8cf1dfe47
+o stopfade
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 49ac32c8cf1dfe47
+o nop
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 49ac32c8cf1dfe47
+o nop
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 49ac32c8cf1dfe47
+o shadowadd 1 1
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 49ac32c8cf1dfe47
+o stopfade
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 49ac32c8cf1dfe47
+o brightness 409f7adf
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 00000000 3d8fe890 0 0 -> 1 0
+~ l d7e0ca184b2c8737
+o nop
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 00000000 3d8fe890 0 0 -> 1 0
+~ l d7e0ca184b2c8737
+o shadowcheck 4 38 4 0 1 1 1 0 3 1 3 0 0 1
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 00000000 3d8fe890 0 0 -> 1 0
+~ l d7e0ca184b2c8737
+o stopfade
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 00000000 3d8fe890 0 0 -> 1 0
+~ l d7e0ca184b2c8737
+o visible 0
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 00000000 3d8fe890 0 0 -> 1 0
+~ l d7e0ca184b2c8737
+o fadeto 3eaf32af
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 00000000 3d8fe890 0 0 -> 1 0
+~ l 83de06755f7a6917
+o shadowadd 2 1
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 00000000 3d8fe890 0 0 -> 1 0
+~ l 83de06755f7a6917
+o update 00000000
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l f2fc3f31367ccdc8
+o stopfade
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 4020fb35 3d8fe890 0 0 -> 1 0
+~ l 823a13fee4c4c7e4
+o update 3c888889
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 3ff9bac9 3d8fe890 0 0 -> 1 0
+~ l a39258c670284feb
+o fadeto 403b54fb
+= lit 1 3ebde8be 3f4e12ce 3ec38ec4 3ea448a4 3ff9bac9 3d8fe890 0 0 -> 1 0
+~ l bb7a761ac6ecb8c5
+o update 3d4ccccd
+= lit 1 3ec8f07d 3f4f6f72 3ec9476f 3eb367a8 3ff5cb76 3ea4c1c0 0 0 -> 1 0
+~ l 036226e0a111d21c
+o update 00000000
+= lit 1 3ec8f07d 3f4f6f72 3ec9476f 3eb367a8 3ff5cb76 3ea4c1c0 0 0 -> 1 0
+~ l 036226e0a111d21c
+o objmove 2
+= lit 1 3ec8f07d 3f4f6f72 3ec9476f 3eb367a8 3ff5cb76 3ea4c1c0 0 0 -> 1 0
+~ l 036226e0a111d21c
+o update 3c888889
+= lit 1 3ecc9dbd 3f4fe3a9 3ecb2fa8 3eb871ff 3ff5cb76 3ecfaef4 0 0 -> 1 0
+~ l faa7bbede00fbe9b
+o update 3e99999a
+= lit 1 3f07661b 3f580f82 3eed83a8 3f09960c 3ff5cb76 3ff51728 0 0 -> 1 0
+~ l c96719928e7b6aa9
+o intersect
+~ isect 4d25767f9dce13f5
+= lit 1 3f07661b 3f580f82 3eed83a8 3f09960c 3ff5cb76 3ff51728 0 0 -> 1 0
+~ l c96719928e7b6aa9
+o brightness 3f2fd7b0
+= lit 1 3f07661b 3f580f82 3eed83a8 3f09960c 00000000 3ff51728 0 0 -> 1 0
+~ l e4a301b7cdebed52
+o nop
+= lit 1 3f07661b 3f580f82 3eed83a8 3f09960c 00000000 3ff51728 0 0 -> 1 0
+~ l e4a301b7cdebed52
+o intersect
+~ isect 4d25767f9dce13f5
+= lit 1 3f07661b 3f580f82 3eed83a8 3f09960c 00000000 3ff51728 0 0 -> 1 0
+~ l e4a301b7cdebed52

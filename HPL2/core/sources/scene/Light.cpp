@@ -43,6 +43,7 @@
 #include "scene/MeshEntity.h"
 #include "scene/RenderableContainer.h"
 #include "scene/Camera.h"
+#include "impl/RustBackends.h"
 
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
@@ -121,6 +122,7 @@ namespace hpl {
 	{
 		for(size_t i=0; i<mvParticleSystems.size(); ++i) mvParticleSystems[i]->mpLight = NULL;
 		if(mpVisibleNodeTracker) hplDelete(mpVisibleNodeTracker);
+		if(mpH11ShadowCache) ohpl_h11_shadow_cache_free(mpH11ShadowCache);
 		if(mpFalloffMap) mpTextureManager->Destroy(mpFalloffMap);
 		if(mpGoboTexture) mpTextureManager->Destroy(mpGoboTexture);
 	}	
@@ -146,6 +148,7 @@ namespace hpl {
 
 	bool iLight::IsLit()
 	{
+		if(OhplBackendRustRequested()) return ohpl_h11_light_is_lit(&mDiffuseColor, mfBrightness, mbHpl3Visibility);
 		if(mbHpl3Visibility)
 			return (mDiffuseColor.r >0 || mDiffuseColor.g >0 || mDiffuseColor.b >0) && mfBrightness != 0;
 		return mDiffuseColor.r >0 || mDiffuseColor.g >0 || mDiffuseColor.b >0 || mDiffuseColor.a >0;
@@ -153,6 +156,7 @@ namespace hpl {
 
 	bool iLight::IsVisible()
 	{ 
+		if(OhplBackendRustRequested()) return ohpl_h11_light_is_visible(IsLit(), mfRadius, mbIsVisible);
 		if(!IsLit()) return false;
 		if(mfRadius <= 0) return false;
 
@@ -346,7 +350,14 @@ namespace hpl {
 		if(mbUpdateBoundingVolume)
 		{
 			UpdateBoundingVolume();
-			if(mbMaskBox)
+			if(mbMaskBox && OhplBackendRustRequested())
+			{
+				cVector3f vMin, vMax;
+				ohpl_h11_light_mask_bounds(&mBoundingVolume.GetMin(), &mBoundingVolume.GetMax(), &mvMaskCenter, &mvMaskSize, &vMin, &vMax);
+				mBoundingVolume.SetLocalMinMax(vMin, vMax);
+				mBoundingVolume.SetTransform(cMatrixf::Identity);
+			}
+			else if(mbMaskBox)
 			{
 				cVector3f vHalf = mvMaskSize * 0.5f;
 				mBoundingVolume.SetLocalMinMax(cMath::Vector3Max(mBoundingVolume.GetMin(), mvMaskCenter - vHalf),
@@ -405,19 +416,47 @@ namespace hpl {
 
 	void iLight::AddShadowCaster(iRenderable *apObject)
 	{
+		if(OhplBackendRustRequested())
+		{
+			if(!mpH11ShadowCache) mpH11ShadowCache = ohpl_h11_shadow_cache_new();
+			ohpl_h11_shadow_cache_add(mpH11ShadowCache, (uintptr_t)apObject, apObject->GetTransformUpdateCount());
+			return;
+		}
 		m_mapShadowCasterCache.insert(tShadowCasterCacheMap::value_type(apObject, apObject->GetTransformUpdateCount()));
 	}
 	
 	bool iLight::ShadowCasterIsValid(iRenderable *apObject)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return mpH11ShadowCache && ohpl_h11_shadow_cache_valid(mpH11ShadowCache, (uintptr_t)apObject, apObject->GetTransformUpdateCount());
+		}
 		tShadowCasterCacheMapIt it = m_mapShadowCasterCache.find(apObject);
 		if(it == m_mapShadowCasterCache.end()) return false;
 
 		return it->second == apObject->GetTransformUpdateCount();
 	}
 	
+	static std::vector<OhplH11Caster> H11Casters(const tRenderableVec &avObjects)
+	{
+		std::vector<OhplH11Caster> vCasters(avObjects.size());
+		for(size_t i=0; i<avObjects.size(); ++i)
+		{
+			vCasters[i].object = (uintptr_t)avObjects[i];
+			vCasters[i].count = avObjects[i]->GetTransformUpdateCount();
+			vCasters[i].is_static = avObjects[i]->IsStatic();
+		}
+		return vCasters;
+	}
+
 	bool iLight::ShadowCastersAreUnchanged(const tRenderableVec &avObjects)
 	{
+		if(OhplBackendRustRequested())
+		{
+			if(!mpH11ShadowCache) mpH11ShadowCache = ohpl_h11_shadow_cache_new();
+			std::vector<OhplH11Caster> vCasters = H11Casters(avObjects);
+			return ohpl_h11_shadow_cache_unchanged(mpH11ShadowCache, vCasters.data(), (int32_t)vCasters.size());
+		}
 		size_t lDynObjectCount=0;
 		for(size_t i=0; i<avObjects.size(); ++i)
 		{
@@ -439,6 +478,13 @@ namespace hpl {
 
 	void iLight::SetShadowCasterCacheFromVec(const tRenderableVec &avObjects)
 	{
+		if(OhplBackendRustRequested())
+		{
+			if(!mpH11ShadowCache) mpH11ShadowCache = ohpl_h11_shadow_cache_new();
+			std::vector<OhplH11Caster> vCasters = H11Casters(avObjects);
+			ohpl_h11_shadow_cache_set(mpH11ShadowCache, vCasters.data(), (int32_t)vCasters.size());
+			return;
+		}
 		m_mapShadowCasterCache.clear();
 
 		for(size_t i=0; i<avObjects.size(); ++i)
@@ -449,6 +495,11 @@ namespace hpl {
 	
 	void iLight::ClearShadowCasterCache()
 	{
+		if(OhplBackendRustRequested())
+		{
+			if(mpH11ShadowCache) ohpl_h11_shadow_cache_clear(mpH11ShadowCache);
+			return;
+		}
 		m_mapShadowCasterCache.clear();
 	}
 

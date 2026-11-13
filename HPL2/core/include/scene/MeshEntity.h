@@ -32,6 +32,7 @@
 #include "scene/SubMeshEntity.h"
 
 #include "scene/AnimationState.h"
+#include "scene/RustSceneH11.h"
 
 namespace hpl {
 
@@ -79,6 +80,7 @@ namespace hpl {
 	friend class cSubMeshEntity;
 	friend class cMeshEntityRootNodeUpdate;
 	friend class cMesh;
+	friend struct OhplH11MeshHostImpl;
 	public:
 		cMeshEntity(const tString asName,cMesh* apMesh, cMaterialManager* apMaterialManager,
 					cMeshManager* apMeshManager, cAnimationManager *apAnimationManager);
@@ -115,8 +117,8 @@ namespace hpl {
 
 		bool AnimationIsOver(const tString &asName);
 
-		void SetNormalizeAnimationWeights(bool abX){ mbNormalizeAnimationWeights = abX;}
-		bool GetNormalizeAnimationWeights(){  return mbNormalizeAnimationWeights;}
+		void SetNormalizeAnimationWeights(bool abX){ mCtl.normalize = abX;}
+		bool GetNormalizeAnimationWeights(){  return mCtl.normalize;}
 
 		//Bone states
 		cNode3D* GetBoneStateRoot(){ return mpBoneStateRoot;}
@@ -133,8 +135,8 @@ namespace hpl {
 		void SetSkeletonPhysicsActive(bool abX);
 		bool GetSkeletonPhysicsActive();
 
-		void SetSkeletonPhysicsCanSleep(bool abX){mbSkeletonPhysicsCanSleep = abX;}
-		bool GetSkeletonPhysicsCanSleep(){ return mbSkeletonPhysicsCanSleep;}
+		void SetSkeletonPhysicsCanSleep(bool abX){mCtl.can_sleep = abX;}
+		bool GetSkeletonPhysicsCanSleep(){ return mCtl.can_sleep;}
 
 		float GetSkeletonPhysicsWeight();
 		void SetSkeletonPhysicsWeight(float afX);
@@ -242,12 +244,9 @@ namespace hpl {
 		float mfMeshLiquidAmount = -1;
 		tRenderableFlag mlRenderFlags;
 		
-		bool mbBoneMatricesNeedUpdate;
-		int mlBoneMatricesTransformCount;
-		int mlBoneMatricesVersion;
+		OhplH11MeshCtl mCtl;
 
 		cMatrixf m_mtxInvWorldMatrix;
-		int mlInvWorldMatrixTransformCount;
 
 		bool mbStatic;
 
@@ -269,20 +268,6 @@ namespace hpl {
 		std::vector<const cMatrixf*> mvScratchWorld, mvScratchInvBind;
 		std::vector<float> mvScratchRadii;
 
-		bool mbSkeletonPhysics;
-		bool mbSkeletonPhysicsFading;
-		float mfSkeletonPhysicsFadeSpeed;
-		float mfSkeletonPhysicsWeight;
-
-		bool mbSkeletonPhysicsSleeping;
-		bool mbSkeletonPhysicsCanSleep;
-		
-		bool mbSkeletonColliders;
-
-		bool mbNormalizeAnimationWeights;
-
-		bool mbUpdatedBones;
-		bool mbHasUpdatedAnimation;
 
 		tNodeStateVec mvNodeStates;
 		tNodeStateIndexMap m_mapNodeStateIndices;

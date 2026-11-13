@@ -49,10 +49,10 @@ namespace hpl {
 		inline float GetTanHalfFOV() const{return mfTanHalfFOV; }
 		inline float GetCosHalfFOV() const{return mfCosHalfFOV;}
 
-		void SetAspect(float afAngle) { mfAspect = afAngle; mbProjectionUpdated = true;}
+		void SetAspect(float afAngle) { mfAspect = afAngle; mSpot.projection_updated = true;}
 		float GetAspect() { return mfAspect;}
 
-		void SetNearClipPlane(float afX) { mfNearClipPlane = afX; mbProjectionUpdated = true;}
+		void SetNearClipPlane(float afX) { mfNearClipPlane = afX; mSpot.projection_updated = true;}
 		float GetNearClipPlane() { return mfNearClipPlane;}
 
 		static void SetShadowNearClip(float afX){ mfShadowNearClip = afX; }
@@ -91,13 +91,7 @@ namespace hpl {
 		float mfCosHalfFOV;
 		
 
-		bool mbProjectionUpdated;
-		bool mbViewProjUpdated;
-		bool mbFrustumUpdated;
-
-		int mlViewProjMatrixCount;
-		int mlViewMatrixCount;
-		int mlFrustumMatrixCount;
+		OhplH11SpotCtl mSpot;
 	};
 
 };

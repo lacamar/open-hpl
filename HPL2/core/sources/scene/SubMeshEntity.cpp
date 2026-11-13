@@ -39,6 +39,7 @@
 #include "physics/PhysicsBody.h"
 
 #include "math/Math.h"
+#include "impl/RustBackends.h"
 
 namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
@@ -160,14 +161,21 @@ namespace hpl {
 		////////////////////////////////////
 		if(mpDynVtxBuffer && mpSubMesh->mpVertexWeights)
 		{
-			if(mbGraphicsUpdated && (mpMeshEntity->mbSkeletonPhysicsSleeping ||
-				mlSkinnedBoneMatricesVersion == mpMeshEntity->mlBoneMatricesVersion))
+			if(OhplBackendRustRequested())
 			{
-				return;
+				if(!ohpl_h11_sub_skin_gate(&mbGraphicsUpdated, &mlSkinnedBoneMatricesVersion, mpMeshEntity->mCtl.bone_matrices_version, mpMeshEntity->mCtl.sleeping)) return;
 			}
-			
-			mbGraphicsUpdated = true;
-			mlSkinnedBoneMatricesVersion = mpMeshEntity->mlBoneMatricesVersion;
+			else
+			{
+				if(mbGraphicsUpdated && (mpMeshEntity->mCtl.sleeping ||
+					mlSkinnedBoneMatricesVersion == mpMeshEntity->mCtl.bone_matrices_version))
+				{
+					return;
+				}
+
+				mbGraphicsUpdated = true;
+				mlSkinnedBoneMatricesVersion = mpMeshEntity->mCtl.bone_matrices_version;
+			}
 
 			const float *pBindPos = mpSubMesh->GetVertexBuffer()->GetFloatArray(eVertexBufferElement_Position);
 			const float *pBindNormal = mpSubMesh->GetVertexBuffer()->GetFloatArray(eVertexBufferElement_Normal);
@@ -263,6 +271,10 @@ namespace hpl {
 		// Static entity
 		if(IsStatic() && mlStaticNullMatrixCount>=0)
 		{
+			if(OhplBackendRustRequested())
+			{
+				return ohpl_h11_sub_static_null(&mlStaticNullMatrixCount, &GetWorldMatrix()) ? NULL : &GetWorldMatrix();
+			}
 			if(mlStaticNullMatrixCount==0)
 			{
 				if(GetWorldMatrix() == cMatrixf::Identity) 	mlStaticNullMatrixCount = 1;
