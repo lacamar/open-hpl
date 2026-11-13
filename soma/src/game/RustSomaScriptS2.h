@@ -47,6 +47,8 @@ struct OhplS2HostOps
 	bool (*global_funcs)(size_t, const unsigned char **, const unsigned char **, const unsigned char **);
 	float (*easing)(int, float);
 	int (*misc)(unsigned, int, const unsigned char *, size_t);
+	void (*game_id)(OhplGs6Sink8, void *);
+	void (*register_array)(void *);
 };
 
 enum { kOhplS2StepLux, kOhplS2StepGlobalEngine, kOhplS2StepClasses };
@@ -79,6 +81,8 @@ extern "C" {
 	void ohpl_s2_free_prop_block(const unsigned char *, size_t, void *);
 	void ohpl_s2_stub_counts(OhplS2CountSink, void *);
 	int ohpl_s2_dump_decls(void *engine, const char *path);
+	int ohpl_s2_run_check(const unsigned char *, size_t, const unsigned char *, size_t, const unsigned char *, size_t);
+	int ohpl_s2_builder_build(void *builder, const unsigned char *cache, size_t, void *engine, const unsigned char *module, size_t, const unsigned char *entry, size_t, OhplGs6Sink8 missing, void *ctx);
 	int ohpl_s2_call_corpus(void *engine, unsigned seed, unsigned calls, const char *path);
 }
 

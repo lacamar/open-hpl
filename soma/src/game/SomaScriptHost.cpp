@@ -14,6 +14,7 @@
 #include "SomaSoundscape.h"
 #include "SomaToneMapping.h"
 #include "SomaGlobalFuncsTable.h"
+#include "SomaConfig.h"
 
 #include "impl/scriptarray.h"
 
@@ -101,6 +102,14 @@ namespace
 		return SomaRunGlobalFunc(S(apObj, alObj), S(apClass, alClass), S(apFunc, alFunc));
 	}
 
+	void GameId(OhplGs6Sink8 aSink, void *apCtx)
+	{
+		const std::string &s = SomaGameId();
+		aSink(apCtx, (const unsigned char *)s.data(), s.size());
+	}
+
+	void RegisterArray(void *apEngine) { RegisterScriptArray((asIScriptEngine *)apEngine, true); }
+
 	const void *GenOp(size_t alIdx) { return (const void *)SomaScriptGenBindingFunc(alIdx); }
 
 	bool GlobalFuncs(size_t alIdx, const unsigned char **appDecl, const unsigned char **appClass, const unsigned char **appFunc)
@@ -144,7 +153,7 @@ namespace
 
 	const OhplS2HostOps gHost = {StructDefaults, InternEmpty, NativeOffset, RegisterStep, SetReset, SetAssign, SetAdd, SetErase, SetCount, SetSize, SetToArray,
 								 ArrInsertLast, ArrInsertAt, ArrRemoveLast, ArrRemoveAt, ArrSize, ArrResize, RunGlobalFunc, SomaScriptGenBindingCount,
-								 GenOp, GlobalFuncs, SomaEasing, Misc};
+								 GenOp, GlobalFuncs, SomaEasing, Misc, GameId, RegisterArray};
 }
 
 void OhplS2InstallHost()

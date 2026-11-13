@@ -125,6 +125,11 @@ int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFil
 			return 1;
 		}
 	}
+	if (bRust)
+	{
+		OhplS2InstallHost();
+		return ohpl_s2_run_check(OhplGs6::U(asGameDir), asGameDir.size(), OhplGs6::U(asApiFile), asApiFile.size(), OhplGs6::U(asReport), asReport.size());
+	}
 	asIScriptEngine *pEngine = bRust ? (asIScriptEngine *)ohpl_as_engine_new() : asCreateScriptEngine();
 	cCheckMessages msgs;
 	pEngine->SetMessageCallback(asMETHOD(cCheckMessages, Callback), &msgs, asCALL_THISCALL);

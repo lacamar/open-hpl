@@ -337,6 +337,25 @@ void CallOne(asIScriptEngine* e, asIScriptContext* c, asIScriptFunction* f, Rng&
 		e->ReleaseScriptObject(self.obj, self.type);
 }
 
+struct ByteStream : asIBinaryStream
+{
+	std::string data;
+	size_t pos = 0;
+	int Write(const void* p, asUINT n) override
+	{
+		data.append((const char*)p, n);
+		return 0;
+	}
+	int Read(void* p, asUINT n) override
+	{
+		if (pos + n > data.size())
+			return -1;
+		memcpy(p, data.data() + pos, n);
+		pos += n;
+		return 0;
+	}
+};
+
 } // namespace
 
 extern "C" {
@@ -433,6 +452,52 @@ void ohpl_as2_wstr_append(void* s, const uint32_t* p, size_t n) { static_cast<st
 void ohpl_as2_wstr_resize(void* s, size_t n) { static_cast<std::wstring*>(s)->resize(n); }
 const uint32_t* ohpl_as2_wstr_data(const void* s) { return (const uint32_t*)static_cast<const std::wstring*>(s)->data(); }
 size_t ohpl_as2_wstr_len(const void* s) { return static_cast<const std::wstring*>(s)->size(); }
+
+int ohpl_as2_module_load_bytecode(void* m, const unsigned char* p, size_t n)
+{
+	ByteStream s;
+	s.data.assign((const char*)p, n);
+	return static_cast<asIScriptModule*>(m)->LoadByteCode(&s);
+}
+
+int ohpl_as2_module_save_bytecode(void* m, void (*sink)(void*, const unsigned char*, size_t), void* ctx)
+{
+	ByteStream s;
+	int r = static_cast<asIScriptModule*>(m)->SaveByteCode(&s);
+	if (r >= 0)
+		sink(ctx, (const unsigned char*)s.data.data(), s.data.size());
+	return r;
+}
+
+void ohpl_as2_module_called_funcs(void* m, void (*cb)(void*, int), void* ctx)
+{
+	asIScriptModule* mod = static_cast<asIScriptModule*>(m);
+	std::vector<asIScriptFunction*> funcs;
+	for (asUINT i = 0; i < mod->GetFunctionCount(); ++i)
+		funcs.push_back(mod->GetFunctionByIndex(i));
+	for (asUINT i = 0; i < mod->GetObjectTypeCount(); ++i)
+	{
+		asITypeInfo* t = mod->GetObjectTypeByIndex(i);
+		for (asUINT j = 0; j < t->GetMethodCount(); ++j)
+			funcs.push_back(t->GetMethodByIndex(j, false));
+		for (asUINT j = 0; j < t->GetBehaviourCount(); ++j)
+			funcs.push_back(t->GetBehaviourByIndex(j, NULL));
+		for (asUINT j = 0; j < t->GetFactoryCount(); ++j)
+			funcs.push_back(t->GetFactoryByIndex(j));
+	}
+	for (asIScriptFunction* f : funcs)
+	{
+		asUINT len = 0;
+		asDWORD* code = f ? f->GetByteCode(&len) : NULL;
+		for (asUINT pos = 0; code && pos < len;)
+		{
+			asBYTE op = *(asBYTE*)&code[pos];
+			if (op == asBC_CALLSYS || op == asBC_Thiscall1)
+				cb(ctx, (int)code[pos + 1]);
+			pos += asBCTypeSize[asBCInfo[op].type];
+		}
+	}
+}
 
 int ohpl_as2_call_corpus(void* e, unsigned seed, unsigned calls, const char* path)
 {

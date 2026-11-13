@@ -1,6 +1,7 @@
 //! S2: the C++ side of the script natives: recovered struct defaults, the std containers behind
 //! `cScriptStringSet` and `array<T>`, the entity-script runner, and the generated engine bindings.
 
+use crate::string_ffi::Sink;
 use std::ffi::c_void;
 use std::sync::OnceLock;
 
@@ -39,6 +40,8 @@ pub struct OhplS2HostOps {
         unsafe extern "C" fn(usize, *mut *const u8, *mut *const u8, *mut *const u8) -> bool,
     pub easing: unsafe extern "C" fn(i32, f32) -> f32,
     pub misc: unsafe extern "C" fn(u32, i32, *const u8, usize) -> i32,
+    pub game_id: unsafe extern "C" fn(Sink<u8>, *mut c_void),
+    pub register_array: unsafe extern "C" fn(*mut c_void),
 }
 
 static HOST: OnceLock<&'static OhplS2HostOps> = OnceLock::new();
@@ -182,5 +185,25 @@ pub fn global_func(i: usize) -> Option<(Vec<u8>, Vec<u8>, Vec<u8>)> {
         }
         let s = |p: *const u8| std::ffi::CStr::from_ptr(p.cast()).to_bytes().to_vec();
         Some((s(d), s(c), s(f)))
+    }
+}
+
+pub fn game_id() -> Vec<u8> {
+    unsafe extern "C" fn sink(ctx: *mut c_void, p: *const u8, n: usize) {
+        // SAFETY: `ctx` is the `Vec` below; the host passes `n` valid bytes.
+        unsafe { (*ctx.cast::<Vec<u8>>()).extend_from_slice(std::slice::from_raw_parts(p, n)) }
+    }
+    let mut v = Vec::new();
+    if let Some(h) = ops() {
+        // SAFETY: `v` outlives the call.
+        unsafe { (h.game_id)(sink, std::ptr::from_mut(&mut v).cast()) };
+    }
+    v
+}
+
+pub fn register_array(engine: *mut c_void) {
+    // SAFETY: plain call into the host.
+    if let Some(h) = ops() {
+        unsafe { (h.register_array)(engine) };
     }
 }

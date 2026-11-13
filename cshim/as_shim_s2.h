@@ -71,6 +71,11 @@ void ohpl_as2_wstr_resize(void* s, size_t n);
 const uint32_t* ohpl_as2_wstr_data(const void* s);
 size_t ohpl_as2_wstr_len(const void* s);
 
+/* modules: bytecode cache and the application functions a module calls */
+int ohpl_as2_module_load_bytecode(void* m, const unsigned char* p, size_t n);
+int ohpl_as2_module_save_bytecode(void* m, void (*sink)(void*, const unsigned char*, size_t), void* ctx);
+void ohpl_as2_module_called_funcs(void* m, void (*cb)(void*, int), void* ctx);
+
 /* diagnostics: seeded calls of the value-type and cMath/cString natives; one line per call with the
    arguments, the result and the objects after the call (hex) */
 int ohpl_as2_call_corpus(void* e, unsigned seed, unsigned calls, const char* path);

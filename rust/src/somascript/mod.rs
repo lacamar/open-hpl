@@ -20,6 +20,8 @@ mod s1_gen;
 mod s1_tests;
 mod s2_api;
 mod s2_as;
+mod s2_builder;
+mod s2_check;
 mod s2_entry;
 mod s2_globals;
 mod s2_host;
