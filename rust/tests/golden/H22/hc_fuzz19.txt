@@ -1,0 +1,76 @@
+set copy_ok 0
+> {"cmd":"screen_stats","button":"x","enabled":""}\n
+settle
+pump 0
+> {"cmd":"resize","path":"3.5","key":"0"}\n
+settle
+pump 0
+pump 1
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"shader_report","lines":"tap","path":"gained","y":"lost","n":"left","button":"3.5"}\n
+settle
+pump 1
+< {"ok":true,"failures":0,"shaders":[]}
+set float_ok 0
+loading 0
+pump 1
+set float_ok 0
+> {"cmd":"wait_frames","path":"0","text":"right","xrel":"x"}\n
+settle
+pump 0
+> {"cmd":"screen_stats","action":"TRUE","y":0,"text":0}\n
+settle
+pump 2
+< {"ok":false,"error":"no float screen target"}
+> {"cmd":"bogus","height":"lost","enabled":"3.5","yrel":"TRUE","type":"mouse_button","xrel":"3.5"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+log fuzz 5
+> {"cmd":"input","type":"x","path":"left","xrel":"up","lines":"left"}\n
+settle
+pump 0
+> {"cmd":"wait_frames","lines":"true","state":"TRUE"}\n
+settle
+pump 2
+< {"ok":false,"error":"unknown input type: 'x'"}
+> {"cmd":"frame_stats"}\n
+settle
+pump 1
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+frames 3
+pump 1
+< {"ok":true,"frames":3,"timed_out":false}
+< {"ok":true,"frames":3,"timed_out":false}
+> {"cmd":"wait_frames","n":"lost"}\n
+settle
+pump 1
+pump 1
+< {"ok":true,"frames":0,"timed_out":false}
+frames 3
+pump 2
+pump 1
+> {"cmd":"resize"}\n
+settle
+pump 0
+loading 0
+pump 1
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"input","type":"focus","frames":"up","enabled":"","key":"Escape"}\n
+settle
+pump 1
+< {"ok":false,"error":"focus requires 'state' of 'lost' or 'gained'"}
+frames 3
+pump 2
+set copy_ok 0
+> {"cmd":"frame_stats"}\n
+settle
+pump 0
+> {"cmd":"frame_stats","x":"left","key":"b","button":"up","action":"left","value":"gained"}\n
+settle
+pump 0
+loading 0
+pump 3
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}

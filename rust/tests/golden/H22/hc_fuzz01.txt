@@ -1,0 +1,97 @@
+frames 1
+pump 2
+> {"cmd":"ping","yrel":7,"x":"lost","failed_only":"gained"}\n
+settle
+pump 0
+log fuzz 34
+loading 0
+pump 1
+< {"ok":true,"pong":true}
+frames 1
+pump 2
+> {"cmd":"ping","text":"0","n":"left","x":"right","failed_only":"down","y":"abc"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"set_focus_wait","type":"x","n":7,"y":"3.5"}\n
+settle
+pump 0
+loading 1
+pump 1
+> {"cmd":"wait_frames","type":"focus"}\n
+settle
+pump 2
+set float_ok 0
+> {"cmd":"bogus","y":"down","value":"1,2;3,4","action":-1}\n
+settle
+pump 0
+loading 1
+pump 1
+> {"cmd":"bogus"}\n
+settle
+pump 2
+> {"cmd":"bogus","button":"TRUE","state":"up","x":"abc","value":"0"}\n
+settle
+pump 1
+> {"cmd":"resize","action":"lost","xrel":"up","height":"true","n":"up"}\n
+settle
+pump 1
+> {"cmd":"ping","action":"false","button":"up","text":"gained"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+set float_ok 1
+> {"cmd":"screen_stats","state":"abc","key":"Tab","xrel":"tap","n":"TRUE"}\n
+settle
+pump 0
+set resize_ok 0
+set copy_ok 0
+shader f7 fragment 0 log4
+> {"cmd":"log_tail","value":"TRUE","action":"TRUE","type":"focus","lines":"TRUE"}\n
+settle
+pump 1
+frames 2
+pump 2
+log fuzz 63
+> {"cmd":"ping","x":"gained","key":"Escape"}\n
+settle
+pump 0
+> {"cmd":"bogus","failed_only":0,"y":"1","n":"TRUE","width":"left"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+> {"cmd":"set_focus_wait","frames":"lost","xrel":"tap","width":"99999999999","state":"gained","n":"1"}\n
+settle
+pump 1
+pump 1
+> {"cmd":"log_tail","type":"focus","value":""}\n
+settle
+pump 1
+> {"cmd":"ping","failed_only":"x","button":"up","xrel":1,"value":"1,2;3,4"}\n
+settle
+pump 0
+> {"cmd":"wait_frames","button":"7","failed_only":"lost","yrel":"3.5"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+> {"cmd":"dev_hud","type":"text","n":"tap","value":"true"}\n
+settle
+pump 1
+> {"cmd":"input","type":"x"}\n
+settle
+pump 2
+loading 0
+pump 3
+state dev_hud 1
+< {"ok":true}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+< {"ok":true,"log":""}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true}
+< {"ok":true,"log":"fuzz 34\nfuzz 63\n"}
+< {"ok":true,"prev":false}
+< {"ok":false,"error":"unknown input type: 'x'"}

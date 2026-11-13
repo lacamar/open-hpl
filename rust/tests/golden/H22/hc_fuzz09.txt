@@ -1,0 +1,158 @@
+frames 2
+pump 1
+> {"cmd":"wait_frames"}\n
+settle
+pump 1
+> {"cmd":"dev_hud"}\n
+settle
+pump 1
+< {"ok":true,"prev":false}
+frames 3
+pump 1
+< {"ok":true,"frames":3,"timed_out":false}
+loading 0
+pump 1
+log fuzz 57
+pump 2
+> {"cmd":"set_focus_wait"}\n
+settle
+pump 0
+> {"cmd":"dev_hud"}\n
+settle
+pump 2
+< {"ok":true}
+< {"ok":true,"prev":false}
+set copy_ok 1
+> {"cmd":"set_focus_wait","y":"","lines":"99999999999","height":"false","failed_only":"0","x":"1"}\n
+settle
+pump 2
+< {"ok":true}
+> {"cmd":"set_focus_wait","path":"tap","n":"false","state":"false"}\n
+settle
+pump 1
+< {"ok":true}
+> {"cmd":"log_tail","text":"0"}\n
+settle
+pump 2
+< {"ok":true,"log":"fuzz 57\n"}
+> {"cmd":"set_focus_wait","lines":"-1","x":"true","failed_only":"TRUE"}\n
+settle
+pump 0
+> {"cmd":"screen_stats","state":"lost","enabled":"abc","height":"TRUE","max_ms":"x","path":"up"}\n
+settle
+pump 0
+loading 0
+pump 1
+< {"ok":true}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+shader f1 fragment 1 log7
+> {"cmd":"set_focus_wait","n":"gained","x":7,"key":"Escape","state":"99999999999"}\n
+settle
+pump 1
+< {"ok":true}
+frames 1
+pump 1
+> {"cmd":"ping","y":"tap","yrel":-1,"action":"abc","width":"7"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+pump 3
+> {"cmd":"wait_frames","value":0,"height":"TRUE"}\n
+settle
+pump 1
+pump 1
+frames 1
+pump 1
+< {"ok":true,"frames":1,"timed_out":false}
+> {"cmd":"set_focus_wait","type":"mouse_move","n":"right","action":"down"}\n
+settle
+pump 1
+< {"ok":true}
+> {"cmd":"log_tail","text":"left","type":"x","path":"down","lines":"lost","y":"tap"}\n
+settle
+pump 1
+< {"ok":true,"log":""}
+log fuzz 35
+loading 1
+pump 1
+> {"cmd":"ping","frames":"TRUE","enabled":-1}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+set save_ok 0
+> {"cmd":"dev_hud","text":"down","x":"right","lines":"tap","value":""}\n
+settle
+pump 0
+pump 1
+frames 3
+pump 2
+> {"cmd":"screen_stats","text":"-1","lines":"true","state":7,"type":"mouse_button"}\n
+settle
+pump 0
+> {"cmd":"wait_frames","max_ms":"abc","n":"1,2;3,4","action":"tap","width":"x","xrel":"right"}\n
+settle
+pump 1
+> {"cmd":"dev_hud"}\n
+settle
+pump 0
+log fuzz 52
+frames 1
+pump 1
+> {"cmd":"ping","lines":-1}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"frame_stats","enabled":"7","x":"abc","yrel":"left","state":"true"}\n
+settle
+pump 1
+pump 1
+> {"cmd":"log_tail"}\n
+settle
+pump 0
+> {"cmd":"bogus"}\n
+settle
+pump 2
+frames 1
+pump 2
+shader f1 fragment 0 log0
+> {"cmd":"screen_stats","failed_only":"7","n":"gained","xrel":"1","height":"right","button":"99999999999"}\n
+settle
+pump 1
+frames 3
+pump 2
+> {"cmd":"ping","action":"lost"}\n
+settle
+pump 0
+shader f4 fragment 0 log0
+> {"cmd":"set_focus_wait","state":"tap","key":"F5","yrel":"gained"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"input","type":"mouse_button","state":"left","button":"lost","xrel":"TRUE"}\n
+settle
+pump 1
+> {"cmd":"resize"}\n
+settle
+pump 1
+> {"cmd":"ping","failed_only":"1,2;3,4"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+loading 0
+pump 3
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+< {"ok":true,"prev":false}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+< {"ok":true,"prev":false}
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+< {"ok":true,"log":"fuzz 57\nfuzz 35\nfuzz 52\n"}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+< {"ok":true}
+< {"ok":true}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+< {"ok":true,"frames":0,"timed_out":true}

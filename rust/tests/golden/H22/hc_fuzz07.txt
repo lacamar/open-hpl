@@ -1,0 +1,118 @@
+pump 2
+log fuzz 9
+set copy_ok 1
+frames 3
+pump 1
+> {"cmd":"shader_report","lines":"down","width":"gained","state":"1"}\n
+settle
+pump 0
+pump 3
+< {"ok":true,"failures":0,"shaders":[]}
+frames 1
+pump 2
+> {"cmd":"set_focus_wait"}\n
+settle
+pump 1
+< {"ok":true}
+> {"cmd":"screenshot","path":"7","button":"false","type":"key","value":"down"}\n
+settle
+pump 0
+frames 3
+pump 1
+< {"ok":false,"error":"SaveBitmap('7') failed"}
+> {"cmd":"screen_stats","key":"Escape","xrel":"abc","button":"TRUE"}\n
+settle
+pump 1
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+> {"cmd":"input","type":"text","key":"b","xrel":"7"}\n
+settle
+pump 1
+< {"ok":true}
+pump 2
+> {"cmd":"wait_frames"}\n
+settle
+pump 1
+> {"cmd":"resize","yrel":"-1","button":"right","xrel":-1,"lines":"3.5"}\n
+settle
+pump 2
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"shader_report","action":"x","n":7,"xrel":"false","state":"3.5","value":"true"}\n
+settle
+pump 1
+< {"ok":true,"failures":0,"shaders":[]}
+> {"cmd":"frame_stats"}\n
+settle
+pump 1
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+> {"cmd":"screen_stats","enabled":"down","y":""}\n
+settle
+pump 2
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+pump 3
+shader f3 fragment 0 log1
+> {"cmd":"set_focus_wait","width":"3.5","n":0,"yrel":"down","value":"1,2;3,4","height":"x"}\n
+settle
+pump 1
+< {"ok":true}
+pump 3
+set copy_ok 1
+shader f8 fragment 1 log6
+> {"cmd":"log_tail","x":"-1","max_ms":"left","failed_only":"TRUE"}\n
+settle
+pump 0
+> {"cmd":"ping"}\n
+settle
+pump 0
+frames 3
+pump 1
+< {"ok":true,"frames":3,"timed_out":false}
+< {"ok":true,"log":"fuzz 9\nERROR: No loader for file extension '' found!\n\n"}
+< {"ok":true,"pong":true}
+pump 3
+> {"cmd":"set_focus_wait","x":"x","enabled":"1,2;3,4","height":"right","action":7}\n
+settle
+pump 2
+< {"ok":true}
+pump 2
+> {"cmd":"input","type":"key","path":"99999999999"}\n
+settle
+pump 2
+< {"ok":false,"error":"unknown key name: ''"}
+set save_ok 0
+> {"cmd":"screen_stats","enabled":"0","text":"3.5"}\n
+settle
+pump 0
+log fuzz 33
+> {"cmd":"screenshot","width":"down","text":"up"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+< {"ok":false,"error":"SaveBitmap('$XDG/open-hpl/headless_screenshot.bmp') failed"}
+frames 3
+pump 1
+set float_ok 0
+> {"cmd":"frame_stats","n":"","state":"right"}\n
+settle
+pump 1
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+> {"cmd":"dev_hud","xrel":"1,2;3,4","action":-1}\n
+settle
+pump 1
+< {"ok":true,"prev":false}
+> {"cmd":"resize","yrel":"x"}\n
+settle
+pump 0
+> {"cmd":"wait_frames","lines":"lost","path":"false"}\n
+settle
+pump 2
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+shader f6 fragment 1 log1
+set float_ok 1
+> {"cmd":"log_tail","value":"tap","state":"left","enabled":"true","n":"x","text":"x"}\n
+settle
+pump 2
+< {"ok":true,"log":"fuzz 9\nERROR: No loader for file extension '' found!\n\nfuzz 33\n"}
+log fuzz 44
+loading 0
+pump 3

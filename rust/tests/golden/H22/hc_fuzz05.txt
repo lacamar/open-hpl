@@ -1,0 +1,108 @@
+loading 0
+pump 1
+set save_ok 0
+pump 1
+> {"cmd":"set_focus_wait","text":"0","path":"gained","width":""}\n
+settle
+pump 1
+< {"ok":true}
+pump 2
+> {"cmd":"ping"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+loading 0
+pump 1
+shader f4 fragment 1 log3
+> {"cmd":"wait_frames","failed_only":0,"value":"TRUE","state":"true","x":"","type":"text"}\n
+settle
+pump 1
+set copy_ok 1
+> {"cmd":"resize","yrel":"TRUE","key":"zzz"}\n
+settle
+pump 1
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"ping","action":"lost","x":"tap","n":0,"y":"TRUE","state":"x"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"set_focus_wait","action":"up","frames":"","state":"left"}\n
+settle
+pump 0
+frames 2
+pump 2
+< {"ok":true,"frames":2,"timed_out":false}
+< {"ok":true}
+> {"cmd":"log_tail","key":0}\n
+settle
+pump 1
+< {"ok":true,"log":""}
+> {"cmd":"bogus","lines":"TRUE","type":"x","key":"Escape","button":"right"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+loading 0
+pump 1
+pump 3
+pump 1
+> {"cmd":"dev_hud","height":"gained","xrel":"true"}\n
+settle
+pump 0
+pump 3
+< {"ok":true,"prev":false}
+> {"cmd":"frame_stats","failed_only":"tap","enabled":"true"}\n
+settle
+pump 2
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+> {"cmd":"shader_report","enabled":"gained","max_ms":"3.5"}\n
+settle
+pump 1
+< {"ok":true,"failures":0,"shaders":[]}
+> {"cmd":"dev_hud","frames":"left"}\n
+settle
+pump 2
+< {"ok":true,"prev":false}
+log fuzz 40
+> {"cmd":"input","type":"mouse_button","enabled":"down","path":"TRUE","x":"right"}\n
+settle
+pump 1
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+< {"ok":true}
+> {"cmd":"frame_stats","frames":"up","text":"1,2;3,4"}\n
+settle
+pump 0
+set resize_ok 0
+loading 1
+pump 1
+frames 3
+pump 2
+set resize_ok 1
+pump 2
+frames 3
+pump 1
+> {"cmd":"ping","key":"Escape","height":"up"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"wait_frames","y":"TRUE","action":"left"}\n
+settle
+pump 1
+pump 3
+> {"cmd":"screenshot","action":"right"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":false,"error":"SaveBitmap('$XDG/open-hpl/headless_screenshot.bmp') failed"}
+log fuzz 92
+log fuzz 53
+> {"cmd":"ping","frames":0,"y":"tap","type":"focus","height":"TRUE"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+loading 0
+pump 3
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}

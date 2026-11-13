@@ -1,0 +1,149 @@
+shader f7 fragment 1 log8
+set save_ok 0
+set float_ok 0
+> {"cmd":"input","type":"mouse_move"}\n
+settle
+pump 0
+frames 2
+pump 2
+ev motion x=0 y=0 xrel=0 yrel=0
+< {"ok":true}
+log fuzz 78
+log fuzz 79
+> {"cmd":"screen_stats"}\n
+settle
+pump 0
+> {"cmd":"set_focus_wait","n":"tap","xrel":"false","key":"Space","button":"3.5"}\n
+settle
+pump 2
+< {"ok":false,"error":"no float screen target"}
+< {"ok":true}
+> {"cmd":"log_tail","height":"-1","y":"99999999999","text":"up"}\n
+settle
+pump 1
+< {"ok":true,"log":"fuzz 78\nfuzz 79\n"}
+> {"cmd":"dev_hud"}\n
+settle
+pump 2
+< {"ok":true,"prev":false}
+> {"cmd":"input","type":"mouse_button"}\n
+settle
+pump 0
+set copy_ok 0
+> {"cmd":"ping","x":"-1","state":"false","y":""}\n
+settle
+pump 1
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+< {"ok":true}
+< {"ok":true,"pong":true}
+> {"cmd":"resize"}\n
+settle
+pump 2
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+loading 0
+pump 1
+> {"cmd":"bogus"}\n
+settle
+pump 0
+> {"cmd":"quit","value":"left","text":"up","failed_only":"false"}\n
+settle
+pump 1
+state exit
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true}
+> {"cmd":"shader_report"}\n
+settle
+pump 2
+< {"ok":true,"failures":0,"shaders":[]}
+> {"cmd":"set_focus_wait"}\n
+settle
+pump 1
+< {"ok":true}
+shader f9 fragment 1 log0
+> {"cmd":"shader_report","button":"false","path":"left","max_ms":"","enabled":"0"}\n
+settle
+pump 1
+< {"ok":true,"failures":0,"shaders":[]}
+set float_ok 0
+> {"cmd":"set_focus_wait","width":"x","n":"left","action":"true","text":"tap"}\n
+settle
+pump 2
+< {"ok":true}
+set save_ok 1
+> {"cmd":"screenshot","width":"false","state":"TRUE"}\n
+settle
+pump 1
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+log fuzz 49
+shader f9 fragment 0 log6
+> {"cmd":"log_tail"}\n
+settle
+pump 1
+< {"ok":true,"log":"fuzz 78\nfuzz 79\nfuzz 49\n"}
+> {"cmd":"bogus","height":"3.5","y":"up","yrel":"TRUE"}\n
+settle
+pump 0
+> {"cmd":"frame_stats","state":"false","lines":0,"height":"gained","failed_only":"left"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+> {"cmd":"screenshot","action":"tap","frames":"true"}\n
+settle
+pump 0
+> {"cmd":"frame_stats","frames":"true","button":"tap"}\n
+settle
+pump 0
+pump 2
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+pump 3
+> {"cmd":"ping"}\n
+settle
+pump 0
+> {"cmd":"bogus","key":"b","enabled":"left"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+loading 0
+pump 1
+set resize_ok 1
+> {"cmd":"frame_stats"}\n
+settle
+pump 2
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+pump 1
+shader f9 fragment 0 log9
+log fuzz 48
+frames 3
+pump 1
+> {"cmd":"wait_frames"}\n
+settle
+pump 1
+shader f5 fragment 1 log9
+> {"cmd":"frame_stats","lines":"3.5","frames":"x","button":-1,"n":"abc"}\n
+settle
+pump 0
+> {"cmd":"dev_hud","yrel":"true","height":"x","n":"false","action":"up","type":"text"}\n
+settle
+pump 2
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+< {"ok":true,"prev":false}
+> {"cmd":"set_focus_wait","x":"false","height":"gained"}\n
+settle
+pump 1
+< {"ok":true}
+shader f6 fragment 0 log9
+pump 1
+> {"cmd":"frame_stats","max_ms":"","lines":"TRUE"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_move","x":"99999999999","frames":"x","yrel":"left"}\n
+settle
+pump 1
+ev motion x=1215752192 y=0 xrel=0 yrel=0
+< {"ok":false,"error":"CopyFrameBufferToBitmap() failed"}
+< {"ok":true}
+loading 0
+pump 3

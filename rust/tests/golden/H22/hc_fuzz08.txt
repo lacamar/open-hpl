@@ -1,0 +1,113 @@
+> {"cmd":"shader_report","failed_only":1}\n
+settle
+pump 1
+< {"ok":true,"failures":0,"shaders":[]}
+set save_ok 1
+frames 2
+pump 2
+> {"cmd":"frame_stats","failed_only":"abc","x":"0","lines":"up","yrel":"gained"}\n
+settle
+pump 2
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+pump 2
+loading 1
+pump 1
+> {"cmd":"log_tail","state":1,"x":-1,"path":"up"}\n
+settle
+pump 1
+frames 1
+pump 1
+> {"cmd":"ping","failed_only":"tap","enabled":"left","xrel":"3.5"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+set float_ok 0
+> {"cmd":"dev_hud"}\n
+settle
+pump 1
+log fuzz 82
+set save_ok 1
+> {"cmd":"screen_stats","frames":"up","lines":"down"}\n
+settle
+pump 1
+> {"cmd":"ping","key":"a","width":"gained"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"bogus","value":"TRUE","x":0,"path":"TRUE"}\n
+settle
+pump 1
+> {"cmd":"ping","key":"Return","value":"gained","y":"tap"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+> {"cmd":"log_tail","path":"-1","max_ms":"up"}\n
+settle
+pump 1
+> {"cmd":"screen_stats","enabled":"0","lines":"99999999999","failed_only":"tap"}\n
+settle
+pump 0
+loading 1
+pump 1
+> {"cmd":"resize"}\n
+settle
+pump 2
+> {"cmd":"dev_hud"}\n
+settle
+pump 1
+> {"cmd":"shader_report","path":"x","lines":"abc","failed_only":"right"}\n
+settle
+pump 2
+set float_ok 0
+> {"cmd":"bogus","enabled":"-1","xrel":"right","frames":"tap"}\n
+settle
+pump 2
+set float_ok 0
+> {"cmd":"ping","path":"0","state":"x","failed_only":"0"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+> {"cmd":"bogus","frames":"abc","button":"99999999999","failed_only":"up","state":"false"}\n
+settle
+pump 0
+> {"cmd":"input","type":"text","key":"F5","x":"1,2;3,4","width":"99999999999","lines":7}\n
+settle
+pump 1
+> {"cmd":"dev_hud","failed_only":"lost","type":"mouse_button"}\n
+settle
+pump 1
+set resize_ok 1
+> {"cmd":"screen_stats","lines":"right","height":"","value":"gained","state":"7"}\n
+settle
+pump 1
+pump 2
+set resize_ok 1
+pump 3
+> {"cmd":"resize","width":"up"}\n
+settle
+pump 2
+> {"cmd":"quit","frames":"7","failed_only":"lost","action":"-1","yrel":"tap"}\n
+settle
+pump 0
+set save_ok 0
+frames 3
+pump 2
+loading 0
+pump 3
+state exit
+< {"ok":true,"log":"fuzz 82\n"}
+< {"ok":true,"prev":false}
+< {"ok":false,"error":"no float screen target"}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true,"log":"fuzz 82\n"}
+< {"ok":false,"error":"no float screen target"}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+< {"ok":true,"prev":false}
+< {"ok":true,"failures":0,"shaders":[]}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true}
+< {"ok":true,"prev":false}
+< {"ok":false,"error":"no float screen target"}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+< {"ok":true}

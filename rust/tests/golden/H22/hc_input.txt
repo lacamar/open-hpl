@@ -1,0 +1,1098 @@
+> {"cmd":"input","type":"key","key":"a"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"a","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"a","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"a","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"a","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=97 sc=4 mod=0
+ev key type=300 state=1 repeat=0 sym=97 sc=4 mod=0
+ev key type=301 state=0 repeat=0 sym=97 sc=4 mod=0
+ev key type=300 state=1 repeat=0 sym=97 sc=4 mod=0
+ev key type=301 state=0 repeat=0 sym=97 sc=4 mod=0
+ev key type=300 state=1 repeat=0 sym=97 sc=4 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"b"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"b","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"b","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"b","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"b","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=98 sc=5 mod=0
+ev key type=300 state=1 repeat=0 sym=98 sc=5 mod=0
+ev key type=301 state=0 repeat=0 sym=98 sc=5 mod=0
+ev key type=300 state=1 repeat=0 sym=98 sc=5 mod=0
+ev key type=301 state=0 repeat=0 sym=98 sc=5 mod=0
+ev key type=300 state=1 repeat=0 sym=98 sc=5 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"z"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"z","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"z","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"z","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"z","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=122 sc=29 mod=0
+ev key type=300 state=1 repeat=0 sym=122 sc=29 mod=0
+ev key type=301 state=0 repeat=0 sym=122 sc=29 mod=0
+ev key type=300 state=1 repeat=0 sym=122 sc=29 mod=0
+ev key type=301 state=0 repeat=0 sym=122 sc=29 mod=0
+ev key type=300 state=1 repeat=0 sym=122 sc=29 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"A"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"A","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"A","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"A","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"A","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=97 sc=4 mod=0
+ev key type=300 state=1 repeat=0 sym=97 sc=4 mod=0
+ev key type=301 state=0 repeat=0 sym=97 sc=4 mod=0
+ev key type=300 state=1 repeat=0 sym=97 sc=4 mod=0
+ev key type=301 state=0 repeat=0 sym=97 sc=4 mod=0
+ev key type=300 state=1 repeat=0 sym=97 sc=4 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"0"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"0","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"0","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"0","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"0","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=48 sc=39 mod=0
+ev key type=300 state=1 repeat=0 sym=48 sc=39 mod=0
+ev key type=301 state=0 repeat=0 sym=48 sc=39 mod=0
+ev key type=300 state=1 repeat=0 sym=48 sc=39 mod=0
+ev key type=301 state=0 repeat=0 sym=48 sc=39 mod=0
+ev key type=300 state=1 repeat=0 sym=48 sc=39 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"9"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"9","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"9","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"9","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"9","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=57 sc=38 mod=0
+ev key type=300 state=1 repeat=0 sym=57 sc=38 mod=0
+ev key type=301 state=0 repeat=0 sym=57 sc=38 mod=0
+ev key type=300 state=1 repeat=0 sym=57 sc=38 mod=0
+ev key type=301 state=0 repeat=0 sym=57 sc=38 mod=0
+ev key type=300 state=1 repeat=0 sym=57 sc=38 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"Return"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Return","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Return","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Return","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Return","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+ev key type=301 state=0 repeat=0 sym=13 sc=40 mod=0
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+ev key type=301 state=0 repeat=0 sym=13 sc=40 mod=0
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"Space"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Space","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Space","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Space","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Space","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=32 sc=44 mod=0
+ev key type=300 state=1 repeat=0 sym=32 sc=44 mod=0
+ev key type=301 state=0 repeat=0 sym=32 sc=44 mod=0
+ev key type=300 state=1 repeat=0 sym=32 sc=44 mod=0
+ev key type=301 state=0 repeat=0 sym=32 sc=44 mod=0
+ev key type=300 state=1 repeat=0 sym=32 sc=44 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"Escape"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Escape","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Escape","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Escape","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Escape","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=27 sc=41 mod=0
+ev key type=300 state=1 repeat=0 sym=27 sc=41 mod=0
+ev key type=301 state=0 repeat=0 sym=27 sc=41 mod=0
+ev key type=300 state=1 repeat=0 sym=27 sc=41 mod=0
+ev key type=301 state=0 repeat=0 sym=27 sc=41 mod=0
+ev key type=300 state=1 repeat=0 sym=27 sc=41 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"Tab"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Tab","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Tab","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Tab","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Tab","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=9 sc=43 mod=0
+ev key type=300 state=1 repeat=0 sym=9 sc=43 mod=0
+ev key type=301 state=0 repeat=0 sym=9 sc=43 mod=0
+ev key type=300 state=1 repeat=0 sym=9 sc=43 mod=0
+ev key type=301 state=0 repeat=0 sym=9 sc=43 mod=0
+ev key type=300 state=1 repeat=0 sym=9 sc=43 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"Left"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Left","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Left","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Left","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Left","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=1073741904 sc=80 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741904 sc=80 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741904 sc=80 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741904 sc=80 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741904 sc=80 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741904 sc=80 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"Right"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Right","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Right","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Right","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Right","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=1073741903 sc=79 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741903 sc=79 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741903 sc=79 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741903 sc=79 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741903 sc=79 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741903 sc=79 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"Up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Up","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Up","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Up","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Up","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=1073741906 sc=82 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741906 sc=82 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741906 sc=82 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741906 sc=82 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741906 sc=82 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741906 sc=82 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"Down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Down","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Down","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Down","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Down","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=1073741905 sc=81 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741905 sc=81 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741905 sc=81 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741905 sc=81 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741905 sc=81 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741905 sc=81 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"F1"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"F1","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"F1","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"F1","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"F1","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=1073741882 sc=58 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741882 sc=58 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741882 sc=58 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741882 sc=58 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741882 sc=58 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741882 sc=58 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"F12"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"F12","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"F12","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"F12","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"F12","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=1073741893 sc=69 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741893 sc=69 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741893 sc=69 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741893 sc=69 mod=0
+ev key type=301 state=0 repeat=0 sym=1073741893 sc=69 mod=0
+ev key type=300 state=1 repeat=0 sym=1073741893 sc=69 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"Left Shift"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Left Shift","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Left Shift","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Left Shift","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Left Shift","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=1073742049 sc=225 mod=0
+ev key type=300 state=1 repeat=0 sym=1073742049 sc=225 mod=0
+ev key type=301 state=0 repeat=0 sym=1073742049 sc=225 mod=0
+ev key type=300 state=1 repeat=0 sym=1073742049 sc=225 mod=0
+ev key type=301 state=0 repeat=0 sym=1073742049 sc=225 mod=0
+ev key type=300 state=1 repeat=0 sym=1073742049 sc=225 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"Backspace"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Backspace","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Backspace","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Backspace","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"Backspace","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=8 sc=42 mod=0
+ev key type=300 state=1 repeat=0 sym=8 sc=42 mod=0
+ev key type=301 state=0 repeat=0 sym=8 sc=42 mod=0
+ev key type=300 state=1 repeat=0 sym=8 sc=42 mod=0
+ev key type=301 state=0 repeat=0 sym=8 sc=42 mod=0
+ev key type=300 state=1 repeat=0 sym=8 sc=42 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"nosuchkey"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"nosuchkey","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"nosuchkey","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"nosuchkey","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"nosuchkey","action":"other"}\n
+settle
+pump 0
+pump 1
+< {"ok":false,"error":"unknown key name: 'nosuchkey'"}
+< {"ok":false,"error":"unknown key name: 'nosuchkey'"}
+< {"ok":false,"error":"unknown key name: 'nosuchkey'"}
+< {"ok":false,"error":"unknown key name: 'nosuchkey'"}
+< {"ok":false,"error":"unknown key name: 'nosuchkey'"}
+> {"cmd":"input","type":"key","key":""}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"","action":"other"}\n
+settle
+pump 0
+pump 1
+< {"ok":false,"error":"unknown key name: ''"}
+< {"ok":false,"error":"unknown key name: ''"}
+< {"ok":false,"error":"unknown key name: ''"}
+< {"ok":false,"error":"unknown key name: ''"}
+< {"ok":false,"error":"unknown key name: ''"}
+> {"cmd":"input","type":"key","key":"RETURN"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"RETURN","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"RETURN","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"RETURN","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"RETURN","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+ev key type=301 state=0 repeat=0 sym=13 sc=40 mod=0
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+ev key type=301 state=0 repeat=0 sym=13 sc=40 mod=0
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"return"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"return","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"return","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"return","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"return","action":"other"}\n
+settle
+pump 0
+pump 1
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+ev key type=301 state=0 repeat=0 sym=13 sc=40 mod=0
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+ev key type=301 state=0 repeat=0 sym=13 sc=40 mod=0
+ev key type=300 state=1 repeat=0 sym=13 sc=40 mod=0
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"key","key":"\\\\u00e9"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"\\\\u00e9","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"\\\\u00e9","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"\\\\u00e9","action":"tap"}\n
+settle
+pump 0
+> {"cmd":"input","type":"key","key":"\\\\u00e9","action":"other"}\n
+settle
+pump 0
+pump 1
+< {"ok":false,"error":"unknown key name: '\\u00e9'"}
+< {"ok":false,"error":"unknown key name: '\\u00e9'"}
+< {"ok":false,"error":"unknown key name: '\\u00e9'"}
+< {"ok":false,"error":"unknown key name: '\\u00e9'"}
+< {"ok":false,"error":"unknown key name: '\\u00e9'"}
+> {"cmd":"input","type":"key"}\n{"cmd":"input","type":"key","action":"tap"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown key name: ''"}
+< {"ok":false,"error":"unknown key name: ''"}
+> {"cmd":"input","type":"mouse_move","x":0,"y":0,"xrel":0,"yrel":0}\n
+settle
+pump 1
+ev motion x=0 y=0 xrel=0 yrel=0
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","x":10,"y":20,"xrel":3,"yrel":-4}\n
+settle
+pump 1
+ev motion x=10 y=20 xrel=3 yrel=-4
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","x":-5,"y":7,"xrel":100000,"yrel":-100000}\n
+settle
+pump 1
+ev motion x=-5 y=7 xrel=100000 yrel=-100000
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","x":2147483647,"y":-2147483648,"xrel":1,"yrel":1}\n
+settle
+pump 1
+ev motion x=-2147483648 y=-2147483648 xrel=1 yrel=1
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","x":"12","y":"abc","xrel":"-3","yrel":"4.7"}\n
+settle
+pump 1
+ev motion x=12 y=0 xrel=-3 yrel=4
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","xrel":2,"yrel":3,"frames":4}\n
+settle
+pump 6
+ev motion x=0 y=0 xrel=2 yrel=3
+ev motion x=0 y=0 xrel=2 yrel=3
+< {"ok":true}
+ev motion x=0 y=0 xrel=2 yrel=3
+ev motion x=0 y=0 xrel=2 yrel=3
+> {"cmd":"input","type":"mouse_move","xrel":2,"yrel":3,"frames":0}\n
+settle
+pump 3
+ev motion x=0 y=0 xrel=2 yrel=3
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","xrel":2,"yrel":3,"frames":-3}\n
+settle
+pump 3
+ev motion x=0 y=0 xrel=2 yrel=3
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"1,2;3,4;5,6"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=1 yrel=2
+< {"ok":true}
+ev motion x=0 y=0 xrel=3 yrel=4
+ev motion x=0 y=0 xrel=5 yrel=6
+ev motion x=0 y=0 xrel=5 yrel=6
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"1,2"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=1 yrel=2
+< {"ok":true}
+ev motion x=0 y=0 xrel=1 yrel=2
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"1,2;"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=1 yrel=2
+< {"ok":true}
+ev motion x=0 y=0 xrel=1 yrel=2
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"1,2;;3,4"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=1 yrel=2
+< {"ok":true}
+ev motion x=0 y=0 xrel=1 yrel=2
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":" 7 , 8"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=9 yrel=8
+ev motion x=0 y=0 xrel=9 yrel=8
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"7 ,8"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=9 yrel=8
+ev motion x=0 y=0 xrel=9 yrel=8
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"7, 8;9,10"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=7 yrel=8
+< {"ok":true}
+ev motion x=0 y=0 xrel=9 yrel=10
+ev motion x=0 y=0 xrel=9 yrel=10
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"x"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=9 yrel=8
+ev motion x=0 y=0 xrel=9 yrel=8
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"1,"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=9 yrel=8
+ev motion x=0 y=0 xrel=9 yrel=8
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":",2"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=9 yrel=8
+ev motion x=0 y=0 xrel=9 yrel=8
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"+5,-6;7,8"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=5 yrel=-6
+< {"ok":true}
+ev motion x=0 y=0 xrel=7 yrel=8
+ev motion x=0 y=0 xrel=7 yrel=8
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"99999999999,1;2,3"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=1215752192 yrel=1
+< {"ok":true}
+ev motion x=0 y=0 xrel=2 yrel=3
+ev motion x=0 y=0 xrel=2 yrel=3
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"1,2;3,4;bad;5,6"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=1 yrel=2
+< {"ok":true}
+ev motion x=0 y=0 xrel=3 yrel=4
+ev motion x=0 y=0 xrel=3 yrel=4
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"1,2 ;3,4"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=1 yrel=2
+< {"ok":true}
+ev motion x=0 y=0 xrel=1 yrel=2
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"1,2;  3,4"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=1 yrel=2
+< {"ok":true}
+ev motion x=0 y=0 xrel=3 yrel=4
+ev motion x=0 y=0 xrel=3 yrel=4
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"-0,0"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=0 yrel=0
+< {"ok":true}
+ev motion x=0 y=0 xrel=0 yrel=0
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"1,2;3"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=1 yrel=2
+< {"ok":true}
+ev motion x=0 y=0 xrel=1 yrel=2
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"  ;1,2"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=9 yrel=8
+ev motion x=0 y=0 xrel=9 yrel=8
+< {"ok":true}
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":2,"path":"1,2;3,4;"}\n
+settle
+pump 7
+ev motion x=0 y=0 xrel=1 yrel=2
+< {"ok":true}
+ev motion x=0 y=0 xrel=3 yrel=4
+ev motion x=0 y=0 xrel=3 yrel=4
+> {"cmd":"input","type":"mouse_move","xrel":9,"yrel":8,"frames":3,"path":"4,4;5,5"}\n{"cmd":"input","type":"mouse_move","x":1,"y":2}\n
+settle
+pump 6
+ev motion x=1 y=2 xrel=0 yrel=0
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"hello"}\n
+settle
+pump 1
+inj 68656c6c6f
+< {"ok":true}
+> {"cmd":"input","type":"text","text":""}\n
+settle
+pump 1
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}\n
+settle
+pump 1
+inj 61616161616161616161616161616161616161616161616161616161616161
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}\n
+settle
+pump 1
+inj 61616161616161616161616161616161616161616161616161616161616161
+inj 61
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}\n
+settle
+pump 1
+inj 61616161616161616161616161616161616161616161616161616161616161
+inj 61616161616161616161616161616161616161616161616161616161616161
+inj 61616161616161616161616161616161616161616161616161616161616161
+inj 61616161616161
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9"}\n
+settle
+pump 1
+inj 75303065397530306539753030653975303065397530306539753030653975
+inj 30306539753030653975303065397530306539753030653975303065397530
+inj 30653975303065397530306539753030653975303065397530306539753030
+inj 65397530306539
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"\\u65e5\\u672c\\u8a9e\\u30c6\\u30ad\\u30b9\\u30c8\\u3067\\u3059\\u65e5\\u672c\\u8a9e\\u30c6\\u30ad\\u30b9\\u30c8\\u3067\\u3059\\u65e5\\u672c\\u8a9e\\u30c6\\u30ad\\u30b9\\u30c8\\u3067\\u3059\\u65e5\\u672c\\u8a9e\\u30c6\\u30ad\\u30b9\\u30c8\\u3067\\u3059"}\n
+settle
+pump 1
+inj 75363565357536373263753861396575333063367533306164753330623975
+inj 33306338753330363775333035397536356535753637326375386139657533
+inj 30633675333061647533306239753330633875333036377533303539753635
+inj 65357536373263753861396575333063367533306164753330623975333063
+inj 38753330363775333035397536356535753637326375386139657533306336
+inj 75333061647533306239753330633875333036377533303539
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"x\\ny"}\n
+settle
+pump 1
+inj 780a79
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"\\ud83d\\ude00\\ud83d\\ude00\\ud83d\\ude00\\ud83d\\ude00\\ud83d\\ude00\\ud83d\\ude00\\ud83d\\ude00\\ud83d\\ude00\\ud83d\\ude00"}\n
+settle
+pump 1
+inj 75643833647564653030756438336475646530307564383364756465303075
+inj 64383364756465303075643833647564653030756438336475646530307564
+inj 38336475646530307564383364756465303075643833647564653030
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"tab\\there"}\n
+settle
+pump 1
+inj 7461620968657265
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9a"}\n
+settle
+pump 1
+inj 75303065397530306539753030653975303065397530306539753030653975
+inj 30306539753030653975303065397530306539753030653975303065397530
+inj 3065397530306539753030653961
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\u00e9"}\n
+settle
+pump 1
+inj 61616161616161616161616161616161616161616161616161616161616175
+inj 30306539
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\u65e5"}\n
+settle
+pump 1
+inj 61616161616161616161616161616161616161616161616161616161617536
+inj 356535
+< {"ok":true}
+> {"cmd":"input","type":"mouse_button","x":0,"y":0}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"action":"other"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"action":"other"}\n
+settle
+pump 0
+pump 1
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+ev button type=401 button=1 state=1 clicks=1 x=5 y=6
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+ev button type=401 button=1 state=1 clicks=1 x=5 y=6
+ev button type=402 button=1 state=0 clicks=1 x=0 y=0
+ev button type=402 button=1 state=0 clicks=1 x=5 y=6
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+ev button type=401 button=1 state=1 clicks=1 x=5 y=6
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"left"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"left"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"left","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"left","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"left","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"left","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"left","action":"other"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"left","action":"other"}\n
+settle
+pump 0
+pump 1
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+ev button type=401 button=1 state=1 clicks=1 x=5 y=6
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+ev button type=401 button=1 state=1 clicks=1 x=5 y=6
+ev button type=402 button=1 state=0 clicks=1 x=0 y=0
+ev button type=402 button=1 state=0 clicks=1 x=5 y=6
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+ev button type=401 button=1 state=1 clicks=1 x=5 y=6
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"right"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"right"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"right","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"right","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"right","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"right","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"right","action":"other"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"right","action":"other"}\n
+settle
+pump 0
+pump 1
+ev button type=401 button=3 state=1 clicks=1 x=0 y=0
+ev button type=401 button=3 state=1 clicks=1 x=5 y=6
+ev button type=401 button=3 state=1 clicks=1 x=0 y=0
+ev button type=401 button=3 state=1 clicks=1 x=5 y=6
+ev button type=402 button=3 state=0 clicks=1 x=0 y=0
+ev button type=402 button=3 state=0 clicks=1 x=5 y=6
+ev button type=401 button=3 state=1 clicks=1 x=0 y=0
+ev button type=401 button=3 state=1 clicks=1 x=5 y=6
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"middle"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"middle"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"middle","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"middle","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"middle","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"middle","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"middle","action":"other"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"middle","action":"other"}\n
+settle
+pump 0
+pump 1
+ev button type=401 button=2 state=1 clicks=1 x=0 y=0
+ev button type=401 button=2 state=1 clicks=1 x=5 y=6
+ev button type=401 button=2 state=1 clicks=1 x=0 y=0
+ev button type=401 button=2 state=1 clicks=1 x=5 y=6
+ev button type=402 button=2 state=0 clicks=1 x=0 y=0
+ev button type=402 button=2 state=0 clicks=1 x=5 y=6
+ev button type=401 button=2 state=1 clicks=1 x=0 y=0
+ev button type=401 button=2 state=1 clicks=1 x=5 y=6
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"x"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"x"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"x","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"x","action":"down"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"x","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"x","action":"up"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":0,"y":0,"button":"x","action":"other"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_button","x":5,"y":6,"button":"x","action":"other"}\n
+settle
+pump 0
+pump 1
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+ev button type=401 button=1 state=1 clicks=1 x=5 y=6
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+ev button type=401 button=1 state=1 clicks=1 x=5 y=6
+ev button type=402 button=1 state=0 clicks=1 x=0 y=0
+ev button type=402 button=1 state=0 clicks=1 x=5 y=6
+ev button type=401 button=1 state=1 clicks=1 x=0 y=0
+ev button type=401 button=1 state=1 clicks=1 x=5 y=6
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+> {"cmd":"input","type":"focus","state":"lost"}\n
+settle
+pump 1
+state msg lost_input_focus
+< {"ok":true}
+> {"cmd":"input","type":"focus","state":"gained"}\n
+settle
+pump 1
+state msg got_input_focus
+< {"ok":true}
+> {"cmd":"input","type":"focus","state":""}\n
+settle
+pump 1
+< {"ok":false,"error":"focus requires 'state' of 'lost' or 'gained'"}
+> {"cmd":"input","type":"focus","state":"other"}\n
+settle
+pump 1
+< {"ok":false,"error":"focus requires 'state' of 'lost' or 'gained'"}
+> {"cmd":"input","type":"focus","state":"LOST"}\n
+settle
+pump 1
+< {"ok":false,"error":"focus requires 'state' of 'lost' or 'gained'"}
+> {"cmd":"input","type":"focus"}\n
+settle
+pump 1
+< {"ok":false,"error":"focus requires 'state' of 'lost' or 'gained'"}
+> {"cmd":"input","type":"nope"}\n{"cmd":"input"}\n{"cmd":"input","type":""}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown input type: 'nope'"}
+< {"ok":false,"error":"unknown input type: ''"}
+< {"ok":false,"error":"unknown input type: ''"}

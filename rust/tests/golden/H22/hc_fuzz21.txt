@@ -1,0 +1,107 @@
+> {"cmd":"shader_report","type":"focus","yrel":"abc","failed_only":0,"button":"tap","value":"gained"}\n
+settle
+pump 0
+> {"cmd":"quit","width":1}\n
+settle
+pump 2
+state exit
+< {"ok":true,"failures":0,"shaders":[]}
+< {"ok":true}
+frames 1
+pump 2
+> {"cmd":"bogus"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+> {"cmd":"bogus"}\n
+settle
+pump 0
+set copy_ok 1
+> {"cmd":"bogus","x":"true","yrel":"TRUE"}\n
+settle
+pump 0
+> {"cmd":"set_focus_wait"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true}
+> {"cmd":"ping","button":"false","lines":"99999999999","path":"down","yrel":"gained","x":"3.5"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+> {"cmd":"resize","x":-1,"height":"right","n":0}\n
+settle
+pump 1
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+frames 2
+pump 1
+> {"cmd":"screenshot","action":7,"key":"F5","state":"1,2;3,4","type":"x","width":"1"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+> {"cmd":"screenshot","button":"abc","n":"abc","action":"TRUE","yrel":"down","x":-1}\n
+settle
+pump 2
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+loading 1
+pump 1
+> {"cmd":"input","type":"mouse_move","max_ms":"TRUE"}\n
+settle
+pump 2
+> {"cmd":"resize","enabled":"true","state":"up","yrel":"right","max_ms":"0","height":"1,2;3,4"}\n
+settle
+pump 1
+shader f9 fragment 1 log7
+frames 2
+pump 2
+> {"cmd":"dev_hud","enabled":"lost","n":"true"}\n
+settle
+pump 0
+> {"cmd":"resize","width":"true","button":"true","y":"true","height":7,"x":"TRUE"}\n
+settle
+pump 0
+frames 1
+pump 1
+shader f4 fragment 0 log4
+> {"cmd":"resize","yrel":"TRUE","width":"TRUE","value":"lost"}\n
+settle
+pump 1
+log fuzz 70
+loading 0
+pump 1
+ev motion x=0 y=0 xrel=0 yrel=0
+< {"ok":true}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+< {"ok":true,"prev":false}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+set copy_ok 1
+> {"cmd":"log_tail","button":"","value":"x","width":"99999999999"}\n
+settle
+pump 1
+< {"ok":true,"log":"fuzz 70\n"}
+> {"cmd":"input","type":"x","frames":"right","text":"tap"}\n
+settle
+pump 0
+> {"cmd":"ping","state":"3.5","key":"Tab","frames":"down","type":"key"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown input type: 'x'"}
+< {"ok":true,"pong":true}
+pump 2
+> {"cmd":"wait_frames","path":"left","lines":"up","button":"x"}\n
+settle
+pump 0
+log fuzz 90
+> {"cmd":"screen_stats","x":0,"state":"gained","lines":1,"width":"tap"}\n
+settle
+pump 2
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+loading 1
+pump 1
+set float_ok 1
+loading 0
+pump 3

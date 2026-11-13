@@ -1,0 +1,109 @@
+shader f1 fragment 0 log9
+> {"cmd":"shader_report","action":"left","enabled":0,"failed_only":"left","height":0}\n
+settle
+pump 2
+< {"ok":true,"failures":1,"shaders":[{"name":"f1","stage":"fragment","ok":false,"log":"log9"}]}
+> {"cmd":"screen_stats","y":"tap","action":"1,2;3,4","max_ms":"TRUE","failed_only":"x","text":"false"}\n
+settle
+pump 1
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+frames 2
+pump 2
+log fuzz 40
+frames 2
+pump 1
+log fuzz 75
+set save_ok 0
+set resize_ok 0
+frames 1
+pump 1
+> {"cmd":"dev_hud","button":"tap","height":"99999999999"}\n
+settle
+pump 1
+< {"ok":true,"prev":false}
+> {"cmd":"quit","text":"true","failed_only":"7","height":"7"}\n
+settle
+pump 1
+state exit
+< {"ok":true}
+> {"cmd":"screenshot","button":1,"path":"gained","x":"lost","value":0,"xrel":"abc"}\n
+settle
+pump 0
+pump 3
+< {"ok":false,"error":"SaveBitmap('gained') failed"}
+pump 3
+pump 2
+loading 1
+pump 1
+> {"cmd":"ping","yrel":-1,"failed_only":"down","max_ms":"false"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+pump 1
+> {"cmd":"screen_stats","value":"","text":7,"button":0,"width":"99999999999"}\n
+settle
+pump 2
+set float_ok 0
+log fuzz 81
+loading 1
+pump 1
+> {"cmd":"input","type":"mouse_move","text":"0","max_ms":"99999999999","path":"TRUE"}\n
+settle
+pump 0
+> {"cmd":"bogus","path":"left","width":"","text":0,"yrel":"0"}\n
+settle
+pump 1
+loading 1
+pump 1
+> {"cmd":"wait_frames"}\n
+settle
+pump 1
+log fuzz 95
+> {"cmd":"log_tail","height":"down","yrel":"TRUE","text":"up"}\n
+settle
+pump 1
+> {"cmd":"log_tail","max_ms":"right"}\n
+settle
+pump 2
+loading 1
+pump 1
+frames 2
+pump 2
+> {"cmd":"ping","height":"TRUE","key":"a"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+loading 1
+pump 1
+> {"cmd":"bogus"}\n
+settle
+pump 2
+> {"cmd":"input","type":"mouse_move","action":"","path":"tap","xrel":"left","button":"0"}\n
+settle
+pump 1
+set copy_ok 0
+loading 1
+pump 1
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+frames 3
+pump 1
+> {"cmd":"screen_stats","state":"-1","action":"x","type":"key"}\n
+settle
+pump 0
+pump 1
+pump 1
+loading 0
+pump 3
+ev motion x=0 y=0 xrel=0 yrel=0
+ev motion x=0 y=0 xrel=0 yrel=0
+< {"ok":false,"error":"no float screen target"}
+< {"ok":true}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true,"log":"fuzz 40\nfuzz 75\nERROR: No loader for file extension '' found!\n\nfuzz 81\nfuzz 95\n"}
+< {"ok":true,"log":"fuzz 40\nfuzz 75\nERROR: No loader for file extension '' found!\n\nfuzz 81\nfuzz 95\n"}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true}
+< {"ok":false,"error":"no float screen target"}

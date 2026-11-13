@@ -1,0 +1,101 @@
+> {"cmd":"frame_stats","width":"right","failed_only":"right"}\n
+settle
+pump 1
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+> {"cmd":"frame_stats","failed_only":7,"height":"TRUE"}\n
+settle
+pump 1
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+> {"cmd":"set_focus_wait","action":"false","button":"3.5","frames":"","failed_only":0,"yrel":"lost"}\n
+settle
+pump 1
+< {"ok":true}
+loading 1
+pump 1
+> {"cmd":"dev_hud","frames":"down","height":7,"button":"tap","type":"mouse_move"}\n
+settle
+pump 2
+log fuzz 80
+set save_ok 0
+frames 2
+pump 1
+> {"cmd":"frame_stats","path":"down","failed_only":"right","height":-1,"key":"Return"}\n
+settle
+pump 2
+> {"cmd":"wait_frames"}\n
+settle
+pump 1
+> {"cmd":"ping","x":"true","button":-1,"text":"lost","frames":"TRUE","n":"lost"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+log fuzz 87
+log fuzz 18
+> {"cmd":"bogus","type":"mouse_button","enabled":"true","y":"TRUE","n":"x"}\n
+settle
+pump 2
+> {"cmd":"screen_stats","xrel":"x","text":"","path":"gained","n":"lost"}\n
+settle
+pump 2
+frames 2
+pump 2
+set save_ok 0
+> {"cmd":"ping","action":"3.5"}\n
+settle
+pump 0
+pump 3
+< {"ok":true,"pong":true}
+loading 0
+pump 1
+< {"ok":true,"prev":false}
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+pump 2
+pump 1
+set save_ok 0
+pump 1
+frames 1
+pump 2
+< {"ok":true,"frames":1,"timed_out":false}
+> {"cmd":"dev_hud","action":"lost","value":"gained"}\n
+settle
+pump 2
+< {"ok":true,"prev":false}
+loading 0
+pump 1
+> {"cmd":"shader_report","max_ms":-1,"button":"TRUE","height":"1,2;3,4","x":"true","text":"left"}\n
+settle
+pump 0
+> {"cmd":"resize","height":"abc","text":"-1","xrel":"99999999999","frames":-1,"lines":"down"}\n
+settle
+pump 2
+< {"ok":true,"failures":0,"shaders":[]}
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"screen_stats","x":"0","type":"x","xrel":"false"}\n
+settle
+pump 0
+> {"cmd":"wait_frames","lines":0,"button":"abc"}\n
+settle
+pump 1
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+log fuzz 40
+> {"cmd":"screenshot","xrel":""}\n
+settle
+pump 0
+> {"cmd":"wait_frames","frames":"right","value":"x","height":"abc","y":"x","enabled":""}\n
+settle
+pump 2
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":false,"error":"SaveBitmap('$XDG/open-hpl/headless_screenshot.bmp') failed"}
+> {"cmd":"dev_hud","action":"3.5","frames":"x","max_ms":0,"xrel":"up","type":"mouse_move"}\n
+settle
+pump 0
+> {"cmd":"input","type":"mouse_move","y":"-1"}\n
+settle
+pump 1
+ev motion x=0 y=-1 xrel=0 yrel=0
+< {"ok":true,"prev":false}
+< {"ok":true}
+loading 0
+pump 3

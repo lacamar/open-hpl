@@ -20,6 +20,7 @@
 #include "system/HeadlessControl.h"
 #include "system/EngineDiagnostics.h"
 #include "system/RustSystem.h"
+#include "impl/RustBackends.h"
 
 #include "engine/Engine.h"
 #include "engine/Updater.h"
@@ -57,6 +58,16 @@ namespace hpl {
 	void AcquireHeadlessSingleInstanceLock()
 	{
 		if(getenv("OPENHPL_HEADLESS_SOCKET") == NULL) return;
+
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h22_hc_acquire_lock([](void*, int alLevel, const uint8_t *apMsg, size_t alLen) {
+				tString sMsg((const char*)apMsg, alLen);
+				if(alLevel == 1) Warning("%s", sMsg.c_str());
+				else Log("%s", sMsg.c_str());
+			}, NULL);
+			return;
+		}
 
 #ifdef HPL_HEADLESS_CONTROL_POSIX
 		const char *pRuntimeDir = getenv("XDG_RUNTIME_DIR");
@@ -192,8 +203,19 @@ namespace hpl {
 	}
 
 	cHeadlessControlServer::cHeadlessControlServer(cEngine *apEngine, const tString &asSocketPath)
-		: mpEngine(apEngine), msSocketPath(asSocketPath), mbListening(false), mlListenFd(-1), mlClientFd(-1), mpThread(NULL)
+		: mpRs(NULL), mpEngine(apEngine), msSocketPath(asSocketPath), mbListening(false), mlListenFd(-1), mlClientFd(-1), mpThread(NULL),
+		  mpQueueMutex(NULL), mpLogMutex(NULL)
 	{
+		if(OhplBackendRustRequested())
+		{
+			InitRustHost();
+			mpRs = ohpl_h22_hc_new(&mRsHost, OhplEnP(msSocketPath), msSocketPath.size());
+			mbListening = ohpl_h22_hc_listening(mpRs);
+			gpHeadlessLogInstance = this;
+			SetLogMessageCallback(HeadlessLogCallback);
+			return;
+		}
+
 		mpQueueMutex = cPlatform::CreateMutEx();
 		mpLogMutex = cPlatform::CreateMutEx();
 
@@ -250,6 +272,12 @@ namespace hpl {
 			gpHeadlessLogInstance = NULL;
 		}
 
+		if(mpRs)
+		{
+			ohpl_h22_hc_free(mpRs);
+			return;
+		}
+
 #ifdef HPL_HEADLESS_CONTROL_POSIX
 		if(mlListenFd >= 0)
 		{
@@ -276,6 +304,7 @@ namespace hpl {
 
 	void cHeadlessControlServer::RegisterHandler(const tString &asCmd, tHeadlessCommandFunc apFunc, void *apUserData)
 	{
+		if(mpRs) return;
 		cHandlerEntry entry;
 		entry.mpFunc = apFunc;
 		entry.mpUserData = apUserData;
@@ -284,6 +313,7 @@ namespace hpl {
 
 	void cHeadlessControlServer::LogicStep()
 	{
+		if(mpRs) { ohpl_h22_hc_logic_step(mpRs, &mRsHost); return; }
 #if USE_SDL2
 		if(!mdqDragPath.empty())
 		{
@@ -304,6 +334,7 @@ namespace hpl {
 
 	void cHeadlessControlServer::Update(bool abLoading)
 	{
+		if(mpRs) { ohpl_h22_hc_update(mpRs, &mRsHost, abLoading); return; }
 		for(size_t i=0; i<mvFrameWaiters.size(); )
 		{
 			bool bTimedOut = cPlatform::GetApplicationTime() >= mvFrameWaiters[i].mlDeadlineMs;
@@ -379,6 +410,7 @@ namespace hpl {
 
 	void cHeadlessControlServer::PushLogLine(eLogOutputType aType, const tString &asLine)
 	{
+		if(mpRs) { ohpl_h22_hc_push_log(mpRs, OhplEnP(asLine), asLine.size()); return; }
 		mpLogMutex->Lock();
 		mlstLogLines.push_back(asLine);
 		while(mlstLogLines.size() > 500) mlstLogLines.pop_front();
@@ -421,6 +453,85 @@ namespace hpl {
 		tString sLine = aResp.ToJson() + "\n";
 		send(alClientFd, sLine.c_str(), sLine.size(), MSG_NOSIGNAL);
 #endif
+	}
+
+	void cHeadlessControlServer::InitRustHost()
+	{
+		mRsHost.ctx = this;
+		mRsHost.now_ms = [](void*) -> uint64_t { return cPlatform::GetApplicationTime(); };
+		mRsHost.rendered_frames = [](void*) -> uint32_t { return cEngineDiagnostics::GetRenderedFrameCount(); };
+		mRsHost.log = [](void*, int alLevel, const uint8_t *apMsg, size_t alLen) {
+			tString sMsg((const char*)apMsg, alLen);
+			if(alLevel == 2) Error("%s", sMsg.c_str());
+			else if(alLevel == 1) Warning("%s", sMsg.c_str());
+			else Log("%s", sMsg.c_str());
+		};
+		mRsHost.exit = [](void *apCtx) { ((cHeadlessControlServer*)apCtx)->mpEngine->Exit(); };
+		mRsHost.set_wait_focus = [](void *apCtx, bool abX) { ((cHeadlessControlServer*)apCtx)->mpEngine->SetWaitIfAppOutOfFocus(abX); };
+		mRsHost.dev_hud_active = [](void *apCtx) -> bool { return ((cHeadlessControlServer*)apCtx)->mpEngine->GetDevHudActive(); };
+		mRsHost.set_dev_hud = [](void *apCtx, bool abX) { ((cHeadlessControlServer*)apCtx)->mpEngine->SetDevHudActive(abX); };
+		mRsHost.screen_stats = [](void *apCtx, float *apMax, float *apMean, float *apOver) -> bool {
+			return ((cHeadlessControlServer*)apCtx)->mpEngine->GetGraphics()->GetLowLevel()->GetScreenFloatStats(*apMax, *apMean, *apOver);
+		};
+		mRsHost.force_window_size = [](void *apCtx, int alW, int alH) -> bool {
+			return ((cHeadlessControlServer*)apCtx)->mpEngine->GetGraphics()->GetLowLevel()->ForceWindowSize(alW, alH);
+		};
+		mRsHost.shader_fail_count = [](void*) -> int { return cEngineDiagnostics::GetShaderFailCount(); };
+		mRsHost.shader_report_json = [](void*, bool abFailedOnly, OhplH22Sink apSink, void *apSinkCtx) {
+			tString sJson = cEngineDiagnostics::GetShaderReportJson(abFailedOnly);
+			apSink(apSinkCtx, (const uint8_t*)sJson.data(), sJson.size());
+		};
+		mRsHost.frame_stats = [](void *apCtx, OhplH22Sink apFrameSink, void *apFrameCtx, OhplH22Sink apGlSink, void *apGlCtx) -> bool {
+			cEngine *pEngine = ((cHeadlessControlServer*)apCtx)->mpEngine;
+			cBitmap *pBmp = pEngine->GetGraphics()->GetLowLevel()->CopyFrameBufferToBitmap();
+			if(pBmp == NULL) return false;
+			tString sFrame = cEngineDiagnostics::GetFrameStatsJson(pBmp->GetData(0,0)->mpData, pBmp->GetWidth(), pBmp->GetHeight(),
+																	 pBmp->GetBytesPerPixel());
+			tString sGl = cEngineDiagnostics::PollGLErrorsJson(false);
+			hplDelete(pBmp);
+			apFrameSink(apFrameCtx, (const uint8_t*)sFrame.data(), sFrame.size());
+			apGlSink(apGlCtx, (const uint8_t*)sGl.data(), sGl.size());
+			return true;
+		};
+		mRsHost.xdg_cache_home = [](void*, OhplH22Sink apSink, void *apSinkCtx) {
+			tString sDir = cString::To8Char(cPlatform::GetSystemSpecialPath(eSystemPath_XDGCacheHome));
+			apSink(apSinkCtx, (const uint8_t*)sDir.data(), sDir.size());
+		};
+		mRsHost.ensure_folder = [](void*, const uint8_t *apDir, size_t alLen) {
+#if defined(__linux__)
+			tWString sDir = cString::To16Char(tString((const char*)apDir, alLen));
+			if(cPlatform::FolderExists(sDir) == false) cPlatform::CreateFolder(sDir);
+#endif
+		};
+		mRsHost.screenshot = [](void *apCtx, const uint8_t *apPath, size_t alLen) -> int {
+			cEngine *pEngine = ((cHeadlessControlServer*)apCtx)->mpEngine;
+			tString sPath((const char*)apPath, alLen);
+			cBitmap *pBmp = pEngine->GetGraphics()->GetLowLevel()->CopyFrameBufferToBitmap();
+			if(pBmp == NULL) return 1;
+
+			if(pBmp->GetBytesPerPixel() == 4)
+			{
+				cBitmapData *pData = pBmp->GetData(0,0);
+				for(size_t i = 3; i < (size_t)pData->mlSize; i += 4) pData->mpData[i] = 255;
+			}
+			cEngineDiagnostics::ApplyDisplayGamma(pBmp, pEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection());
+
+			bool bSaved = pEngine->GetResources()->GetBitmapLoaderHandler()->SaveBitmap(pBmp, cString::To16Char(sPath), 0);
+			hplDelete(pBmp);
+			return bSaved ? 0 : 2;
+		};
+		mRsHost.inject_text = [](void *apCtx, const uint8_t *apText, size_t alLen) {
+#if USE_SDL2
+			SDL_Event ev;
+			memset(&ev, 0, sizeof(ev));
+			ev.type = SDL_TEXTINPUT;
+			memcpy(ev.text.text, apText, alLen);
+			static_cast<cLowLevelInputSDL*>(((cHeadlessControlServer*)apCtx)->mpEngine->GetInput()->GetLowLevel())->mlstInjected.push_back(ev);
+#endif
+		};
+		mRsHost.run_message = [](void *apCtx, int alMsg) {
+			((cHeadlessControlServer*)apCtx)->mpEngine->GetUpdater()->RunMessage((eUpdateableMessage)alMsg);
+		};
 	}
 
 	void cHeadlessControlServer::RegisterBuiltins()

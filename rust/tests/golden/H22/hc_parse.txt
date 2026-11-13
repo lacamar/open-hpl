@@ -1,0 +1,217 @@
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+>   {  "cmd" : "ping"  }  \n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"ping",}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"ping","cmd":"quit_not"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'quit_not'"}
+> {"cmd":ping}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"pi\\"ng"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'pi\"ng'"}
+> {"cmd":"ping","a":"b\\nc\\td\\re\\\\f\\/g\\u00e9"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"ping","n":12,"b":true,"z":null,"f":1.5e3}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"ping","k":{"x":1}}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> not json\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: ''"}
+> {\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: ''"}
+> }\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: ''"}
+> {}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: ''"}
+> {"cmd"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: ''"}
+> {"cmd":}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: ''"}
+> {"cmd":"ping"\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"ping"}}}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> [{"cmd":"ping"}]\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: ''"}
+>   \n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: ''"}
+> \\t{"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: ''"}
+> {"cmd" "ping"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: ''"}
+> {"":"x"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: ''"}
+> {"cmd":"ping","":"x"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"log_tail","lines":3 }\n
+settle
+pump 1
+< {"ok":true,"log":""}
+> {"cmd":"log_tail","lines" :3,}\n
+settle
+pump 1
+< {"ok":true,"log":""}
+> {"cmd":"log_tail" , "lines":"3"}\n
+settle
+pump 1
+< {"ok":true,"log":""}
+> {"cmd":"ping"}\x0d\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"input","type":"key","key":"a b"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown key name: 'a b'"}
+> {"cmd":"input","type":"text","text":"\\u00e9\\n\\t\\"x\\""}\n
+settle
+pump 1
+inj 75303065390a09227822
+< {"ok":true}
+> {"cmd":"input","type":"text","text":"abc\\\\"}\n
+settle
+pump 1
+inj 6162635c
+< {"ok":true}
+> {"cmd":"x\\xc3\\xa9"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'xxc3xa9'"}
+> {"cmd":"log_tail","lines":0x10}\n
+settle
+pump 1
+< {"ok":true,"log":""}
+> {"cmd":"log_tail","lines":  7  }\n
+settle
+pump 1
+< {"ok":true,"log":""}
+> {"cmd":"ping"}garbage\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"ping","a":"unterminated}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"input","type":"text","text":"a\\u0000b"}\n
+settle
+pump 1
+inj 61753030303062
+< {"ok":true}
+> {"cmd":"screenshot","path":"/tmp/a\\nb.bmp"}\n
+settle
+pump 1
+state shot /tmp/a
+b.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"/tmp/a\nb.bmp"}
+>> {"cmd":"pi
+settle
+>> ng"}\n{"cmd":"log_tail",
+settle
+>> "lines":1}\n\n\n{"cmd":"ping"}
+settle
+pump 1
+< {"ok":true,"pong":true}
+< {"ok":true,"log":""}
+>> \n
+settle
+pump 1
+< {"ok":true,"pong":true}
+>> {"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n{"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+< {"ok":true,"pong":true}
+>> {"cmd":"ping","pad":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}

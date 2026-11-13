@@ -1,0 +1,166 @@
+> {"cmd":"screen_stats","action":"right","enabled":"","x":"left","n":"x","state":"abc"}\n
+settle
+pump 0
+log fuzz 18
+pump 2
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+> {"cmd":"set_focus_wait"}\n
+settle
+pump 1
+< {"ok":true}
+> {"cmd":"wait_frames","x":"0","lines":"up"}\n
+settle
+pump 1
+> {"cmd":"shader_report","path":"down","y":"99999999999","enabled":"down"}\n
+settle
+pump 1
+< {"ok":true,"failures":0,"shaders":[]}
+pump 1
+frames 3
+pump 1
+< {"ok":true,"frames":3,"timed_out":false}
+> {"cmd":"shader_report","state":"-1","yrel":"","button":"1,2;3,4","x":"1,2;3,4","n":"lost"}\n
+settle
+pump 1
+< {"ok":true,"failures":0,"shaders":[]}
+> {"cmd":"set_focus_wait","action":"up","state":"tap"}\n
+settle
+pump 1
+< {"ok":true}
+> {"cmd":"shader_report"}\n
+settle
+pump 0
+> {"cmd":"shader_report"}\n
+settle
+pump 2
+< {"ok":true,"failures":0,"shaders":[]}
+< {"ok":true,"failures":0,"shaders":[]}
+> {"cmd":"dev_hud"}\n
+settle
+pump 1
+< {"ok":true,"prev":false}
+> {"cmd":"bogus","max_ms":"","y":"right"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+frames 3
+pump 1
+> {"cmd":"resize","key":"zzz"}\n
+settle
+pump 2
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+log fuzz 61
+> {"cmd":"screenshot","text":"false","action":"abc","value":"x"}\n
+settle
+pump 0
+pump 2
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":true,"path":"$XDG/open-hpl/headless_screenshot.bmp"}
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+frames 2
+pump 1
+> {"cmd":"resize","height":"right","path":"1,2;3,4","width":"","frames":"left","yrel":"TRUE"}\n
+settle
+pump 2
+< {"ok":false,"error":"resize requires positive 'width' and 'height'"}
+> {"cmd":"ping","key":"Space","frames":"3.5"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"ping","n":"true","enabled":"abc","text":"false","height":"gained","y":"right"}\n
+settle
+pump 0
+frames 3
+pump 2
+< {"ok":true,"pong":true}
+loading 1
+pump 1
+> {"cmd":"log_tail","failed_only":"1,2;3,4","button":"1,2;3,4","text":"lost"}\n
+settle
+pump 1
+> {"cmd":"bogus","n":"1"}\n
+settle
+pump 2
+> {"cmd":"ping","path":"3.5","action":"","failed_only":"down"}\n
+settle
+pump 0
+> {"cmd":"dev_hud","x":"1,2;3,4","button":"99999999999","width":"99999999999","lines":"-1","y":"3.5"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+loading 1
+pump 1
+> {"cmd":"ping","yrel":"x"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+> {"cmd":"ping","state":"7","key":"Left","xrel":"1,2;3,4","width":"","button":"false"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+> {"cmd":"screen_stats","frames":"99999999999"}\n
+settle
+pump 2
+> {"cmd":"screen_stats","width":"gained","xrel":"down","button":"lost","max_ms":"up","state":"left"}\n
+settle
+pump 0
+pump 3
+frames 2
+pump 2
+loading 0
+pump 1
+< {"ok":true,"log":"fuzz 18\nfuzz 61\n"}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true,"prev":false}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+> {"cmd":"frame_stats","type":"mouse_button","value":"abc"}\n
+settle
+pump 1
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+> {"cmd":"ping","action":"x","type":"mouse_button","y":"x"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"input","type":"x"}\n
+settle
+pump 2
+< {"ok":false,"error":"unknown input type: 'x'"}
+> {"cmd":"dev_hud","height":"lost","key":"Return","y":"TRUE","x":"false","yrel":""}\n
+settle
+pump 0
+pump 3
+< {"ok":true,"prev":false}
+shader f5 fragment 1 log2
+set resize_ok 0
+loading 0
+pump 1
+frames 1
+pump 1
+set save_ok 0
+> {"cmd":"quit","failed_only":"3.5","value":"down"}\n
+settle
+pump 0
+> {"cmd":"frame_stats","failed_only":"0","xrel":"lost","path":"up","frames":"right"}\n
+settle
+pump 1
+state exit
+< {"ok":true}
+< {"ok":true,"frame":{"width":4,"height":2,"lum_mean":116.375,"lum_min":42,"lum_max":211,"black_frac":0,"white_frac":0,"magenta_frac":0,"lum_hist16":[0,0,0.125,0.125,0.125,0.125,0,0.125,0,0,0.125,0.125,0,0.125,0,0]},"gl_errors":{}}
+> {"cmd":"wait_frames","y":"","frames":"0","n":"right"}\n
+settle
+pump 1
+log fuzz 87
+set float_ok 1
+loading 0
+pump 1
+< {"ok":true,"frames":0,"timed_out":false}
+> {"cmd":"set_focus_wait"}\n
+settle
+pump 2
+< {"ok":true}
+loading 0
+pump 3

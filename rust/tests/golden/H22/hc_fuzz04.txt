@@ -1,0 +1,116 @@
+> {"cmd":"bogus","yrel":-1,"enabled":"down","lines":"3.5"}\n
+settle
+pump 0
+> {"cmd":"screen_stats","height":7,"value":"0"}\n
+settle
+pump 1
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+set save_ok 0
+> {"cmd":"wait_frames","action":"TRUE","lines":"abc","key":"Escape","x":"-1","width":"down"}\n
+settle
+pump 1
+> {"cmd":"input","type":"text","frames":"gained","failed_only":"left","y":"TRUE","button":"abc"}\n
+settle
+pump 1
+< {"ok":true}
+> {"cmd":"ping"}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+frames 2
+pump 2
+< {"ok":true,"frames":2,"timed_out":false}
+log fuzz 18
+pump 1
+> {"cmd":"set_focus_wait","xrel":"tap","height":"99999999999","value":"false","action":"99999999999","y":"1"}\n
+settle
+pump 1
+< {"ok":true}
+loading 0
+pump 1
+> {"cmd":"screenshot","xrel":1,"n":"-1"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":false,"error":"SaveBitmap('$XDG/open-hpl/headless_screenshot.bmp') failed"}
+loading 1
+pump 1
+> {"cmd":"input","type":"text","y":"x"}\n
+settle
+pump 0
+> {"cmd":"set_focus_wait","type":"focus","enabled":"TRUE","height":"99999999999"}\n
+settle
+pump 1
+> {"cmd":"screenshot","action":"tap","type":"mouse_button"}\n
+settle
+pump 1
+state shot $XDG/open-hpl/headless_screenshot.bmp bpp=4 n=32 h=9515fb3643bb3503
+< {"ok":false,"error":"SaveBitmap('$XDG/open-hpl/headless_screenshot.bmp') failed"}
+> {"cmd":"set_focus_wait"}\n
+settle
+pump 0
+> {"cmd":"bogus","state":"true"}\n
+settle
+pump 0
+> {"cmd":"dev_hud","key":"b"}\n
+settle
+pump 1
+loading 1
+pump 1
+log fuzz 25
+> {"cmd":"set_focus_wait","y":"abc","yrel":"gained","max_ms":"left"}\n
+settle
+pump 1
+frames 2
+pump 1
+> {"cmd":"ping"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+> {"cmd":"screen_stats","width":"gained"}\n
+settle
+pump 1
+> {"cmd":"ping","button":"tap","path":"lost"}\n
+settle
+pump 0
+> {"cmd":"log_tail","failed_only":"99999999999","button":"right","value":"99999999999"}\n
+settle
+pump 1
+< {"ok":true,"pong":true}
+log fuzz 87
+set resize_ok 1
+pump 1
+set resize_ok 0
+> {"cmd":"dev_hud","height":"1"}\n
+settle
+pump 2
+frames 3
+pump 2
+pump 1
+set save_ok 0
+> {"cmd":"input","type":"key","x":"1","width":"false","text":"TRUE"}\n
+settle
+pump 1
+set float_ok 1
+> {"cmd":"ping","state":1,"path":"up","yrel":0,"height":"1,2;3,4","enabled":-1}\n
+settle
+pump 2
+< {"ok":true,"pong":true}
+> {"cmd":"ping","x":"right","width":"lost"}\n
+settle
+pump 0
+pump 2
+< {"ok":true,"pong":true}
+loading 0
+pump 3
+< {"ok":true}
+< {"ok":true}
+< {"ok":true}
+< {"ok":false,"error":"unknown command: 'bogus'"}
+< {"ok":true,"prev":false}
+< {"ok":true}
+< {"ok":true,"max":1.5,"mean":0.25,"over1":0.125}
+< {"ok":true,"log":"fuzz 18\nfuzz 25\nfuzz 87\n"}
+< {"ok":true,"prev":false}
+< {"ok":false,"error":"unknown key name: ''"}
