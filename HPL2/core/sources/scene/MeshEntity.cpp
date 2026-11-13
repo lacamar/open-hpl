@@ -86,16 +86,7 @@ namespace hpl {
 			}
 		}
 
-		static void PhysicsFromBodies(void *p)
-		{
-			cMeshEntity *e = E(p);
-			cNode3DIterator BoneIt = e->mpBoneStateRoot->GetChildIterator();
-			while(BoneIt.HasNext())
-			{
-				cBoneState *pBoneState = static_cast<cBoneState*>(BoneIt.Next());
-				e->SetBoneMatrixFromBodyRec(e->mpBoneStateRoot->GetWorldMatrix(),pBoneState);
-			}
-		}
+		static void PhysicsFromBodies(void *p){ OhplH11Call c = MakeCall(E(p)); ohpl_h11b_physics_from_bodies(&c); }
 
 		static void PhysicsMix(void *p, int32_t alBone, float afWeight)
 		{
@@ -153,16 +144,7 @@ namespace hpl {
 			}
 		}
 
-		static void BoneNodesUpdate(void *p)
-		{
-			cMeshEntity *e = E(p);
-			cNode3DIterator NodeIt = e->mpBoneStateRoot->GetChildIterator();
-			while(NodeIt.HasNext())
-			{
-				cNode3D *pBoneState = static_cast<cNode3D*>(NodeIt.Next());
-				e->UpdateNodeMatrixRec(pBoneState);
-			}
-		}
+		static void BoneNodesUpdate(void *p){ OhplH11Call c = MakeCall(E(p)); ohpl_h11b_bone_nodes_update(&c); }
 
 		static void BoneEntityChildren(void *p)
 		{
@@ -201,12 +183,7 @@ namespace hpl {
 			}
 		}
 
-		static void NodeUpdate(void *p)
-		{
-			cMeshEntity *e = E(p);
-			tNode3DListIt nodeIt = e->mlstNodeChildren.begin();
-			for(; nodeIt != e->mlstNodeChildren.end(); ++nodeIt) e->UpdateNodeMatrixRec(*nodeIt);
-		}
+		static void NodeUpdate(void *p){ OhplH11Call c = MakeCall(E(p)); ohpl_h11b_node_update(&c); }
 
 		static void NodeRestore(void *p)
 		{
@@ -238,6 +215,126 @@ namespace hpl {
 			cMeshEntity *e = E(p);
 			e->HandleAnimationEvent(e->mvAnimationStates[alState]->GetEvent(alEvent));
 		}
+		static void PhysicsActive(cMeshEntity *e, bool abX){ OhplH11Call c = MakeCall(e); ohpl_h11b_physics_active(&c, &e->mCtl, abX); }
+
+		struct CollideArgs
+		{
+			iPhysicsWorld *world; iCollideShape *shape; const cMatrixf *mtx; cCollideData *data;
+			tVector3fList *pos; tIntList *num;
+		};
+
+		static cBoneState* B(size_t a){ return reinterpret_cast<cBoneState*>(a); }
+		static cNode3D* N(size_t a){ return reinterpret_cast<cNode3D*>(a); }
+		static iPhysicsBody* Body(size_t a){ return reinterpret_cast<iPhysicsBody*>(a); }
+		static size_t P(const void *p){ return reinterpret_cast<size_t>(p); }
+
+		static size_t Call(void *p, int32_t op, size_t a, size_t b, int32_t i, float f)
+		{
+			cMeshEntity *e = E(p);
+			switch(op)
+			{
+			case OhplH11Op_NodeActive: return N(a)->IsActive();
+			case OhplH11Op_NodeUpdateMatrix: N(a)->UpdateMatrix(false); return 0;
+			case OhplH11Op_NodeAnimXform: N(a)->ApplyPreAnimTransform(false); N(a)->ApplyPostAnimTransform(false); return 0;
+			case OhplH11Op_NodeChildCount: return N(a)->GetChildList()->size();
+			case OhplH11Op_NodeChild: return P(*std::next(N(a)->GetChildList()->begin(), i));
+			case OhplH11Op_NodeWorld: return P(&N(a)->GetWorldMatrix());
+			case OhplH11Op_NodeUpdateWorld: N(a)->UpdateWorldTransform(); return 0;
+			case OhplH11Op_NodeSetMatrix: N(a)->SetMatrix(*reinterpret_cast<const cMatrixf*>(b), false); return 0;
+			case OhplH11Op_BoneBody: return P(B(a)->GetBody());
+			case OhplH11Op_BoneCollider: return P(B(a)->GetColliderBody());
+			case OhplH11Op_BoneInvBody: return P(&B(a)->GetInvBodyMatrix());
+			case OhplH11Op_BoneBodyMatrix: return P(&B(a)->GetBodyMatrix());
+			case OhplH11Op_BodyWorld: return P(&Body(a)->GetWorldMatrix());
+			case OhplH11Op_BodySetActive: if(Body(a)) Body(a)->SetActive(i != 0); return 0;
+			case OhplH11Op_BodyEnable: Body(a)->Enable(); return 0;
+			case OhplH11Op_BodyZeroVel: Body(a)->SetLinearVelocity(0); Body(a)->SetAngularVelocity(0); return 0;
+			case OhplH11Op_BodySetMatrix: Body(a)->SetMatrix(*reinterpret_cast<const cMatrixf*>(b)); return 0;
+			case OhplH11Op_BoneState: return P(e->GetBoneState(i));
+			case OhplH11Op_BoneCount: return e->mvBoneStates.size();
+			case OhplH11Op_Root: return P(e->mpBoneStateRoot);
+			case OhplH11Op_ResetGfx: e->ResetGraphicsUpdated(); return 0;
+			case OhplH11Op_EntWorld: return P(&e->GetWorldMatrix());
+			case OhplH11Op_EntParentWorld: return e->GetEntityParent() ? P(&e->GetEntityParent()->GetWorldMatrix()) : 0;
+			case OhplH11Op_EntSetMatrix: e->SetMatrix(*reinterpret_cast<const cMatrixf*>(b)); return 0;
+			case OhplH11Op_Collide:
+			{
+				CollideArgs *args = reinterpret_cast<CollideArgs*>(b);
+				return args->world->CheckShapeCollision(Body(a)->GetShape(), Body(a)->GetLocalMatrix(),
+										args->shape, *args->mtx, *args->data, 1, false);
+			}
+			case OhplH11Op_PushPos:
+			{
+				CollideArgs *args = reinterpret_cast<CollideArgs*>(a);
+				args->pos->push_back(args->data->mvContactPoints[0].mvPoint);
+				return 0;
+			}
+			case OhplH11Op_PushNum: reinterpret_cast<CollideArgs*>(a)->num->push_back(i); return 0;
+			case OhplH11Op_SubCount: return e->mvSubMeshes.size();
+			case OhplH11Op_SubVisible: e->mvSubMeshes[i]->SetVisible(a != 0); return 0;
+			case OhplH11Op_SubStatic: e->mvSubMeshes[i]->SetStatic(a != 0); return 0;
+			case OhplH11Op_SubIllum: e->mvSubMeshes[i]->SetIlluminationAmount(f); return 0;
+			case OhplH11Op_SubCoverage: e->mvSubMeshes[i]->SetCoverageAmount(f); return 0;
+			case OhplH11Op_SubLiquid: e->mvSubMeshes[i]->SetLiquidAmount(f); return 0;
+			case OhplH11Op_SubAutoLiquid: e->mvSubMeshes[i]->UseAutomaticLiquidAmount(); return 0;
+			case OhplH11Op_SubRenderFlag: e->mvSubMeshes[i]->SetRenderFlagBit((tRenderableFlag)a, b != 0); return 0;
+			case OhplH11Op_SubColorMul: e->mvSubMeshes[i]->SetColorMul(*reinterpret_cast<const cColor*>(a)); return 0;
+			case OhplH11Op_SubIllumColor: e->mvSubMeshes[i]->SetIlluminationColor(*reinterpret_cast<const cColor*>(a)); return 0;
+			case OhplH11Op_SubBvMin: return P(&e->mvSubMeshes[i]->GetBoundingVolume()->GetMin());
+			case OhplH11Op_SubBvMax: return P(&e->mvSubMeshes[i]->GetBoundingVolume()->GetMax());
+			case OhplH11Op_BvFlag: return e->mbUpdateBoundingVolume;
+			case OhplH11Op_BvClearFlag: e->mbUpdateBoundingVolume = false; return 0;
+			case OhplH11Op_BvFromVertices:
+			{
+				for(int s=0;s<e->GetSubMeshEntityNum();s++)
+				{
+					iVertexBuffer *pVtxBuffer = e->GetSubMeshEntity(s)->GetVertexBuffer();
+					e->mBoundingVolume.AddArrayPoints(pVtxBuffer->GetFloatArray(eVertexBufferElement_Position), pVtxBuffer->GetVertexNum());
+				}
+				if(e->GetSubMeshEntityNum()>0)
+					e->mBoundingVolume.CreateFromPoints(e->GetSubMeshEntity(0)->GetVertexBuffer()->GetElementNum(eVertexBufferElement_Position));
+				return 0;
+			}
+			case OhplH11Op_BvSetLocal:
+				e->mBoundingVolume.SetLocalMinMax(*reinterpret_cast<const cVector3f*>(a), *reinterpret_cast<const cVector3f*>(b));
+				return 0;
+			case OhplH11Op_BvSetIdentity: e->mBoundingVolume.SetTransform(cMatrixf::Identity); return 0;
+			case OhplH11Op_BoneRadius: { float r = e->mpMesh->GetBoneBoundingRadius(i); uint32_t u; memcpy(&u, &r, 4); return u; }
+			case OhplH11Op_HasSkeleton: return e->mpMesh->GetSkeleton() != NULL;
+			case OhplH11Op_Play: e->Play(i, a != 0, b != 0); return 0;
+			case OhplH11Op_PlayFade: e->PlayFadeTo(i, a != 0, f); return 0;
+			case OhplH11Op_Warn:
+			{
+				tString sName(reinterpret_cast<const char*>(a), b);
+				if(i == 0) Warning("Can not find animation '%s' in meshentity '%s'\n", sName.c_str(), e->msName.c_str());
+				else Warning("Can not find animation '%s' in mesh entity '%s'\n", sName.c_str(), e->msName.c_str());
+				return 0;
+			}
+			case OhplH11Op_AnimIsOver: return e->mvAnimationStates[i]->IsOver();
+			case OhplH11Op_EvCallback:
+				return e->mpCallback && e->mpCallback->OnAnimationEvent(e, reinterpret_cast<cAnimationEvent*>(a));
+			case OhplH11Op_EvValueEmpty: return reinterpret_cast<cAnimationEvent*>(a)->msValue == "";
+			case OhplH11Op_EvType: return reinterpret_cast<cAnimationEvent*>(a)->mType == eAnimationEventType_PlaySound;
+			case OhplH11Op_EvPlaySound:
+			{
+				cAnimationEvent *apEvent = reinterpret_cast<cAnimationEvent*>(a);
+				cSoundEntity *pSound = e->mpWorld->CreateSoundEntity(e->msName+"_AnimEvent",apEvent->msValue,true);
+				if(pSound)
+				{
+					pSound->SetIsSaved(false);
+					cNode3DIterator nodeIt = e->mpBoneStateRoot->GetChildIterator();
+					if(nodeIt.HasNext()) nodeIt.Next()->AddEntity(pSound);
+					else pSound->SetPosition(e->mBoundingVolume.GetWorldCenter());
+				}
+				return 0;
+			}
+			case OhplH11Op_ListCount: return e->mlstNodeChildren.size();
+			case OhplH11Op_ListAt: return P(*std::next(e->mlstNodeChildren.begin(), i));
+			}
+			return 0;
+		}
+
+		static OhplH11Call MakeCall(cMeshEntity *apEntity){ OhplH11Call c = { apEntity, Call }; return c; }
 
 		static OhplH11MeshHost Make(cMeshEntity *apEntity)
 		{
@@ -290,6 +387,7 @@ namespace hpl {
 		mpCallback = NULL;
 
 		mpMesh = apMesh;
+		mpNames = OhplBackendRustRequested() ? ohpl_h11b_names_new() : NULL;
 
 		mpBoneStateRoot = NULL;
 		
@@ -334,6 +432,7 @@ namespace hpl {
 
 			mvSubMeshes.push_back(pSub);
 			m_mapSubMeshes.insert(tSubMeshEntityMap::value_type(mpMesh->GetSubMesh(i)->GetName(), pSub));
+			NameAdd(3, mpMesh->GetSubMesh(i)->GetName(), i);
 			
 			iVertexBuffer *pVtxBuffer = mpMesh->GetSubMesh(i)->GetVertexBuffer();
 			
@@ -354,6 +453,7 @@ namespace hpl {
 
 			tAnimationStateIndexMap::value_type value(pAnimState->GetName(), (int)mvAnimationStates.size()-1);
 			m_mapAnimationStateIndices.insert(value);
+			NameAdd(0, pAnimState->GetName(), (int)mvAnimationStates.size()-1);
 		}
 
 		
@@ -386,6 +486,7 @@ namespace hpl {
 				//Add bone to array and add it's index to the map.
 				mvBoneStates.push_back(pState);
 				m_mapBoneStateIndices.insert(tBoneIdxNameMap::value_type(pState->GetName(),i));
+				NameAdd(1, pState->GetName(), i);
 			}
 
 			//////////////////////////////////
@@ -502,6 +603,7 @@ namespace hpl {
 		STLDeleteAll(mvTempBoneStates);
 
 		STLDeleteAll(mvAnimationStates);
+		ohpl_h11b_names_free(mpNames);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -937,6 +1039,7 @@ namespace hpl {
 
 		tAnimationStateIndexMap::value_type value(pAnimState->GetName(), (int)mvAnimationStates.size()-1);
 		m_mapAnimationStateIndices.insert(value);
+			NameAdd(0, pAnimState->GetName(), (int)mvAnimationStates.size()-1);
 
 		return pAnimState;
 	}
@@ -962,6 +1065,10 @@ namespace hpl {
 	}
 	int cMeshEntity::GetAnimationStateIndex(const tString &asName)
 	{
+		if(mpNames)
+		{
+			return NameFind(0, asName);
+		}
 		tAnimationStateIndexMapIt it = m_mapAnimationStateIndices.find(asName);
 		if(it != m_mapAnimationStateIndices.end())
 		{
@@ -974,6 +1081,11 @@ namespace hpl {
 	}
 	cAnimationState* cMeshEntity::GetAnimationStateFromName(const tString &asName)
 	{
+		if(mpNames)
+		{
+			int lIdx = NameFind(0, asName);
+			return lIdx < 0 ? NULL : mvAnimationStates[lIdx];
+		}
 		int lIdx = GetAnimationStateIndex(asName);
 		if(lIdx >= 0)
 		{
@@ -1010,6 +1122,12 @@ namespace hpl {
 
 	void cMeshEntity::PlayName(const tString &asName,bool abLoop, bool bStopPrev)
 	{
+		if(mpNames)
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_play_name(&c, mpNames, asName.data(), asName.size(), abLoop, 0, 0, bStopPrev);
+			return;
+		}
 		int lIdx = GetAnimationStateIndex(asName);
 		if(lIdx>=0)
 		{
@@ -1056,6 +1174,12 @@ namespace hpl {
 	
 	void cMeshEntity::PlayFadeToName(const tString &asName,bool abLoop, float afTime)
 	{
+		if(mpNames)
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_play_name(&c, mpNames, asName.data(), asName.size(), abLoop, afTime, 1, false);
+			return;
+		}
 		int lIdx = GetAnimationStateIndex(asName);
 		if(lIdx>=0)
 		{
@@ -1089,6 +1213,11 @@ namespace hpl {
 
 	bool cMeshEntity::AnimationIsOver(const tString &asName)
 	{
+		if(mpNames)
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			return ohpl_h11b_anim_is_over(&c, mpNames, asName.data(), asName.size());
+		}
 		int lIdx = GetAnimationStateIndex(asName);
 		if(lIdx>=0)
 		{
@@ -1114,6 +1243,10 @@ namespace hpl {
 
 	int cMeshEntity::GetBoneStateIndex(const tString &asName)
 	{
+		if(mpNames)
+		{
+			return NameFind(1, asName);
+		}
 		tNodeStateIndexMapIt it = m_mapBoneStateIndices.find(asName);
 		if(it != m_mapBoneStateIndices.end())
 		{
@@ -1137,6 +1270,11 @@ namespace hpl {
 
 	cBoneState* cMeshEntity::GetBoneStateFromName(const tString &asName)
 	{
+		if(mpNames)
+		{
+			int lIdx = NameFind(1, asName);
+			return lIdx < 0 ? NULL : mvBoneStates[lIdx];
+		}
 		int lIdx = GetBoneStateIndex(asName);
 		if(lIdx >= 0)
 		{
@@ -1199,6 +1337,12 @@ namespace hpl {
 	{
 		if(OhplBackendRustRequested())
 		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_physics_active(&c, &mCtl, abX);
+			return;
+		}
+		if(OhplBackendRustRequested())
+		{
 			ohpl_h11_mesh_physics_set(&mCtl, abX);
 			ResetGraphicsUpdated();
 		}
@@ -1247,6 +1391,12 @@ namespace hpl {
 
 	void cMeshEntity::FadeSkeletonPhysicsWeight(float afTime)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_physics_fade(&c, &mCtl, afTime);
+			return;
+		}
 		if(OhplBackendRustRequested() ? ohpl_h11_mesh_physics_fade(&mCtl, afTime) : mCtl.physics)
 		{
 			if(!OhplBackendRustRequested())
@@ -1282,6 +1432,12 @@ namespace hpl {
 
 	void cMeshEntity::SetSkeletonCollidersActive(bool abX)
 	{		
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_colliders_active(&c, &mCtl, abX);
+			return;
+		}
 		mCtl.colliders = abX;
 
 		//Set active to the correct state.
@@ -1306,6 +1462,12 @@ namespace hpl {
 
 	void cMeshEntity::AlignBodiesToSkeleton(bool abCalculateSpeed)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_align_bodies(&c);
+			return;
+		}
 		// The entity may be attached to one of the bodies: moving it would move the remaining bones
 		std::vector<cMatrixf> vMatrices(GetBoneStateNum());
 		for(int bone =0; bone< GetBoneStateNum(); ++bone)
@@ -1378,6 +1540,14 @@ namespace hpl {
 						iCollideShape *apShape, const cMatrixf &a_mtxShape,
 						tVector3fList *apPosList, tIntList *apNumList)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			cCollideData collideData;
+			collideData.SetMaxSize(1);
+			OhplH11MeshHostImpl::CollideArgs args = { apWorld, apShape, &a_mtxShape, &collideData, apPosList, apNumList };
+			return ohpl_h11b_check_colliders(&c, (size_t)&args, apPosList != NULL, apNumList != NULL);
+		}
 		bool bCollision = false;
 		cCollideData collideData;
 		collideData.SetMaxSize(1);
@@ -1429,6 +1599,10 @@ namespace hpl {
 
 	int cMeshEntity::GetNodeStateIndex(const tString &asName)
 	{
+		if(mpNames)
+		{
+			return NameFind(2, asName);
+		}
 		tNodeStateIndexMapIt it = m_mapNodeStateIndices.find(asName);
 		if(it != m_mapNodeStateIndices.end())
 		{
@@ -1442,6 +1616,11 @@ namespace hpl {
 
 	cNode3D* cMeshEntity::GetNodeStateFromName(const tString &asName)
 	{
+		if(mpNames)
+		{
+			int lIdx = NameFind(2, asName);
+			return lIdx < 0 ? NULL : mvNodeStates[lIdx];
+		}
 		int lIdx = GetNodeStateIndex(asName);
 		if(lIdx >= 0)
 		{
@@ -1468,6 +1647,11 @@ namespace hpl {
 
 	cSubMeshEntity* cMeshEntity::GetSubMeshEntityName(const tString &asName)
 	{
+		if(mpNames)
+		{
+			int lIdx = NameFind(3, asName);
+			return lIdx < 0 ? NULL : mvSubMeshes[lIdx];
+		}
 		tSubMeshEntityMapIt it = m_mapSubMeshes.find(asName);
 		if(it == m_mapSubMeshes.end())return NULL;
 
@@ -1533,6 +1717,14 @@ namespace hpl {
 
 	void cMeshEntity::SetVisible(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			if(abX == mbIsVisible) return;
+			mbIsVisible = abX;
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_fan_out(&c, OhplH11Op_SubVisible, abX, 0, 0);
+			return;
+		}
 		if(abX == mbIsVisible) return;
 
 		mbIsVisible = abX;
@@ -1546,6 +1738,12 @@ namespace hpl {
 
 	cBoundingVolume* cMeshEntity::GetBoundingVolume()
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_bounding_volume(&c);
+			return &mBoundingVolume;
+		}
 		///////////////////////////////////////////////
 		// Update the BV from bones
 		if(mpMesh->GetSkeleton())
@@ -1612,6 +1810,14 @@ namespace hpl {
 
 	void cMeshEntity::SetStatic(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			if(abX == mbStatic) return;
+			mbStatic = abX;
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_fan_out(&c, OhplH11Op_SubStatic, abX, 0, 0);
+			return;
+		}
 		if(abX == mbStatic) return;
 
 		mbStatic = abX;
@@ -1625,6 +1831,12 @@ namespace hpl {
 
 	void cMeshEntity::SetRenderFlagBit(tRenderableFlag alFlagBit, bool abSet)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_fan_out(&c, OhplH11Op_SubRenderFlag, alFlagBit, abSet, 0);
+			return;
+		}
 		for(int i=0;i<(int)mvSubMeshes.size();i++)
 		{
 			mvSubMeshes[i]->SetRenderFlagBit(alFlagBit, abSet);
@@ -1633,11 +1845,25 @@ namespace hpl {
 
 	void cMeshEntity::SetColorMul(const cColor& aX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_fan_out(&c, OhplH11Op_SubColorMul, (size_t)&aX, 0, 0);
+			return;
+		}
 		for(size_t i=0; i<mvSubMeshes.size(); ++i) mvSubMeshes[i]->SetColorMul(aX);
 	}
 
 	void cMeshEntity::SetIlluminationAmount(float afX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			if(mfIlluminationAmount == afX) return;
+			mfIlluminationAmount = afX;
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_fan_out(&c, OhplH11Op_SubIllum, 0, 0, afX);
+			return;
+		}
 		if(mfIlluminationAmount == afX) return;
 
 		mfIlluminationAmount = afX;
@@ -1650,12 +1876,26 @@ namespace hpl {
 
 	void cMeshEntity::SetIlluminationColor(const cColor& aX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_fan_out(&c, OhplH11Op_SubIllumColor, (size_t)&aX, 0, 0);
+			return;
+		}
 		for(int i=0;i<(int)mvSubMeshes.size();i++)
 			mvSubMeshes[i]->SetIlluminationColor(aX);
 	}
 
 	void cMeshEntity::SetCoverageAmount(float afX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			if(mfCoverageAmount == afX) return;
+			mfCoverageAmount = afX;
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_fan_out(&c, OhplH11Op_SubCoverage, 0, 0, afX);
+			return;
+		}
 		if(mfCoverageAmount == afX) return;
 
 		mfCoverageAmount = afX;
@@ -1668,12 +1908,26 @@ namespace hpl {
 
 	void cMeshEntity::SetLiquidAmount(float afX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			mfMeshLiquidAmount = afX > 0 ? afX : 0;
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_fan_out(&c, OhplH11Op_SubLiquid, 0, 0, mfMeshLiquidAmount);
+			return;
+		}
 		mfMeshLiquidAmount = afX > 0 ? afX : 0;
 		for(size_t i=0; i<mvSubMeshes.size(); ++i) mvSubMeshes[i]->SetLiquidAmount(mfMeshLiquidAmount);
 	}
 
 	void cMeshEntity::UseAutomaticLiquidAmount()
 	{
+		if(OhplBackendRustRequested())
+		{
+			mfMeshLiquidAmount = -1;
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_fan_out(&c, OhplH11Op_SubAutoLiquid, 0, 0, 0);
+			return;
+		}
 		mfMeshLiquidAmount = -1;
 		for(size_t i=0; i<mvSubMeshes.size(); ++i) mvSubMeshes[i]->UseAutomaticLiquidAmount();
 	}
@@ -1733,6 +1987,7 @@ namespace hpl {
 			//Add node to array and add it's index to the map.
 			mvNodeStates.push_back(pNode);
 			m_mapNodeStateIndices.insert(tNodeStateIndexMap::value_type(pNode->GetName(),i));
+			NameAdd(2, pNode->GetName(), i);
 
 			//Connect with sub mesh entity
 			cSubMeshEntity *pSubEntity = GetSubMeshEntityName(pMeshNode->GetName());
@@ -1785,6 +2040,12 @@ namespace hpl {
 
 	void cMeshEntity::HandleAnimationEvent(cAnimationEvent *apEvent)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_animation_event(&c, (size_t)apEvent);
+			return;
+		}
 		if(mpCallback && mpCallback->OnAnimationEvent(this, apEvent)) return;
 		if(apEvent->msValue == "") return;
 

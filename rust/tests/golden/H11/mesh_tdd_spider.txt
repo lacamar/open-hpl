@@ -1011,3 +1011,6 @@ h 41039d0d32c896d4
 o update 3e4ccccd
 h 41039d0d32c896d4
 ~ n b0e2b3f1e208052f
+~ names 22560828b3b7a4c0
+~ setters fea590e5f866dbdf
+~ physflags 3d35c2afed499f6e

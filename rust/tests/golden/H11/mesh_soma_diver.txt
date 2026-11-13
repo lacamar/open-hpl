@@ -1130,3 +1130,6 @@ h 2dd48de8cc19147c
 o update 3d4ccccd
 h 2dd48de8cc19147c
 ~ n 4b60ce346295147a
+~ names b9ca0eaa2e9283ed
+~ setters ce54ae614a1caad6
+~ physflags 2924774e8fd804dd

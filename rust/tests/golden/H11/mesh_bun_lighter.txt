@@ -1028,3 +1028,6 @@ h 58463c783e9dc103
 o update 3f000000
 h 58463c783e9dc103
 ~ n d19ed166b1ff6dea
+~ names 3e287f2c4519cd7e
+~ setters 08453d1e9a1fa22f
+~ physflags 94dc921e6596f0d5

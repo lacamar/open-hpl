@@ -216,6 +216,8 @@ namespace hpl {
 		void* GetUserData() { return mpUserData; }
 
 	private:
+		void NameAdd(int alKind, const tString &asName, int alIdx){ if(mpNames) ohpl_h11b_names_insert(mpNames, alKind, asName.data(), asName.size(), alIdx); }
+		int NameFind(int alKind, const tString &asName){ return ohpl_h11b_names_find(mpNames, alKind, asName.data(), asName.size()); }
 		float GetAnimationWeightMul();
 		void SyncAnimCores();
 
@@ -245,6 +247,7 @@ namespace hpl {
 		tRenderableFlag mlRenderFlags;
 		
 		OhplH11MeshCtl mCtl;
+		OhplH11Names *mpNames;
 
 		cMatrixf m_mtxInvWorldMatrix;
 
