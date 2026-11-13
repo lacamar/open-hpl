@@ -4,6 +4,7 @@
 pub mod body;
 pub mod book;
 mod char_aux;
+mod char_collide;
 mod char_conn;
 pub mod character;
 pub mod controller;
@@ -36,3 +37,5 @@ mod tests_character;
 mod tests_h14;
 #[cfg(test)]
 mod tests_h15;
+#[cfg(test)]
+mod tests_h15b;

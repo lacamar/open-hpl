@@ -263,7 +263,7 @@ fn h14_vectors_replay_bit_exact() {
 #[test]
 fn h14_scene_dump_lists_every_scene() {
     let ends = SCENES.lines().filter(|l| l.starts_with("end ")).count();
-    assert_eq!(ends, 13);
+    assert_eq!(ends, 16);
     assert!(SCENES.contains("end connect_all steps 480 hash 32ea6a1cae7dbaab"));
 }
 

@@ -61,6 +61,13 @@ namespace hpl {
 
 	void cCharacterBodyCollideGravity::OnCollision(iPhysicsBody *apBody, cCollideData *apCollideData)
 	{
+		if(mpCharBody->mpAux)
+		{
+			ohpl_h14_collide_gravity(iCharacterBody::HostOp, reinterpret_cast<size_t>(mpCharBody), &mpCharBody->mE, &mpCharBody->mS,
+				reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apCollideData));
+			return;
+		}
+
 		mpCharBody->mpGravityCollideMaterial = apBody->GetMaterial();
 
 		/////////////////////////////////////
@@ -133,6 +140,12 @@ namespace hpl {
 
 	void cCharacterBodyCollidePush::OnCollision(iPhysicsBody *apBody, cCollideData *apCollideData)
 	{
+		if(mpCharBody->mpAux)
+		{
+			ohpl_h14_collide_push(iCharacterBody::HostOp, reinterpret_cast<size_t>(mpCharBody), &mpCharBody->mE, &mpCharBody->mS, reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apCollideData));
+			return;
+		}
+
 		///////////////////////////////////
 		//Check what bodies not to push.
 		if(apBody->GetMass()==0 && apBody->IsCharacter()==false) return;
@@ -262,6 +275,51 @@ namespace hpl {
 		case 505: pBody->SetGravity(a->i[0] != 0); return 0;
 		case 506: return pBody->IsActive();
 		case 507: pBody->RemoveConnectedCharacter(reinterpret_cast<iCharacterBody*>(a->p[1])); return 0;
+		case 508: return reinterpret_cast<size_t>(pBody->GetMaterial());
+		case 509: return (pBody->GetGravityCanAttachCharacter() ? 1 : 0) | (pBody->IsCharacter() ? 2 : 0) | (pBody->GetPushedByCharacterGravity() ? 4 : 0);
+		case 510: a->rf = pBody->GetMass(); return 0;
+		case 511: return reinterpret_cast<cCollideData*>(a->p[0])->mlNumOfPoints;
+		case 512:
+		{
+			const cCollidePoint &pt = reinterpret_cast<cCollideData*>(a->p[0])->mvContactPoints[a->p[1]];
+			if(a->p[2] == 1){ float *pOut = reinterpret_cast<float*>(a->p[3]); pOut[0] = pt.mvPoint.x; pOut[1] = pt.mvPoint.y; pOut[2] = pt.mvPoint.z; }
+			else { a->rv[0] = pt.mvNormal.x; a->rv[1] = pt.mvNormal.y; a->rv[2] = pt.mvNormal.z; a->rf = pt.mfDepth; }
+			return 0;
+		}
+		case 514:
+		{
+			iCharacterBody *pChar = reinterpret_cast<iCharacterBody*>(a->p[0]);
+			if(pChar->mpCallback) pChar->mpCallback->OnGravityCollide(pChar, reinterpret_cast<iPhysicsBody*>(a->p[1]), reinterpret_cast<cCollideData*>(a->p[2]));
+			return 0;
+		}
+		case 515: a->rf = reinterpret_cast<iCharacterBody*>(a->p[0])->mpWorld->GetGravity().y; return 0;
+		case 516:
+		{
+			const float *pF = reinterpret_cast<const float*>(a->p[1]); const float *pP = reinterpret_cast<const float*>(a->p[2]);
+			pBody->AddForceAtPosition(cVector3f(pF[0], pF[1], pF[2]), cVector3f(pP[0], pP[1], pP[2]));
+			return 0;
+		}
+		case 517:
+		{
+			iCharacterBody *pChar = reinterpret_cast<iCharacterBody*>(a->p[0]);
+			iCharacterBody *pHitCharBody = reinterpret_cast<iPhysicsBody*>(a->p[1])->GetCharacterBody();
+			if(pHitCharBody->GetMass() > pChar->GetCharacterMaxPushMass()) return 0;
+
+			float fHitTop = pHitCharBody->GetPosition().y + pHitCharBody->GetSize().y/2;
+			//Make bottom 10% of size longer up to remove uneeded pushing.
+			float fBottom = pChar->GetPosition().y - (pChar->GetSize().y/2 - pChar->GetSize().y*0.1f);
+
+			//If body is on top of hitbody, skip doing a push.
+			if(fHitTop < fBottom) return 0;
+
+			cVector3f vDir = pHitCharBody->GetPosition() - pChar->GetPosition();
+			if(pChar->GetCharacterPushIn2D()) vDir.y =0;
+			vDir.Normalize();
+
+			pHitCharBody->AddForce(vDir * pChar->GetCharacterPushForce());
+			return 0;
+		}
+		case 519: return reinterpret_cast<size_t>(pBody->GetCharacterBody());
 		}
 		return 0;
 	}

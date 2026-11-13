@@ -84,6 +84,8 @@ static_assert(sizeof(OhplH14CamOut) == 20 && offsetof(OhplH14CamOut, set) == 16,
 static_assert(sizeof(OhplH14EntIn) == 220 && offsetof(OhplH14EntIn, yaw) == 204 && offsetof(OhplH14EntIn, smoothY) == 216, "h14 ent layout");
 
 extern "C" {
+void ohpl_h14_collide_gravity(size_t (*)(int32_t, OhplH15Wa*), size_t, void*, const OhplCharState*, size_t, size_t);
+void ohpl_h14_collide_push(size_t (*)(int32_t, OhplH15Wa*), size_t, void*, const OhplCharState*, size_t, size_t);
 void ohpl_h14_char_init(void*, OhplCharState*, size_t, float);
 void ohpl_h14_connect_to_body(size_t (*)(int32_t, OhplH15Wa*), size_t, void*, OhplCharState*, size_t, OhplV3, uint32_t);
 void ohpl_h14_disconnect_body(size_t (*)(int32_t, OhplH15Wa*), size_t, void*);

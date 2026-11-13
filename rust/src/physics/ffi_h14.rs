@@ -346,3 +346,33 @@ pub unsafe extern "C" fn ohpl_h14_disconnect_body(
     // SAFETY: caller contract.
     unsafe { super::char_conn::disconnect_body(op, me, ext) };
 }
+
+/// # Safety
+/// `ext` and `st` are the live embedded states of character `ch`; `cd` is the live collide data.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_collide_gravity(
+    op: super::wreg::WorldOp,
+    ch: usize,
+    ext: *mut super::char_conn::CharExt,
+    st: *const super::character::CharState,
+    body: usize,
+    cd: usize,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::char_collide::collide_gravity(op, ch, ext, st, body, cd) };
+}
+
+/// # Safety
+/// `ext` and `st` are the live embedded states of a character; `cd` is the live collide data.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_collide_push(
+    op: super::wreg::WorldOp,
+    ch: usize,
+    ext: *const super::char_conn::CharExt,
+    st: *const super::character::CharState,
+    body: usize,
+    cd: usize,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::char_collide::collide_push(op, ch, ext, st, body, cd) };
+}

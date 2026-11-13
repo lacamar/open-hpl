@@ -131,6 +131,7 @@ namespace hpl {
 	class iCharacterBody
 	{
 	friend class cCharacterBodyCollideGravity;
+	friend class cCharacterBodyCollidePush;
 	public:
 		iCharacterBody(const tString &asName, iPhysicsWorld *apWorld, const cVector3f avSize);
 		virtual ~iCharacterBody();
