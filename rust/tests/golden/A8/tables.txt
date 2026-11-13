@@ -1,0 +1,974 @@
+class cEngineAnimationState_SaveData
+  mbActive - 1 1 0
+  mbLoop - 1 1 0
+  mfWeight - 3 1 0
+  mfFadeStep - 3 1 0
+  mfTimePos - 3 1 0
+  mfSpeed - 3 1 0
+class cEngineBeam_SaveData
+  msName - 4 1 0
+  mlID - 2 1 0
+  msFile - 4 1 0
+  mvStartPos - 8 1 0
+  mvEndPos - 8 1 0
+class cEngineBillboard_SaveData
+  mColor - 10 1 0
+class cEngineBody_SaveData
+  mfMass - 3 1 0
+  mbActive - 1 1 0
+  mbCollideCharacter - 1 1 0
+  mvLinearVelocity - 8 1 0
+  mvAngularVelocity - 8 1 0
+  m_mtxTransform - 9 1 0
+class cEngineCharacterBody_SaveData
+  mbActive - 1 1 0
+  mfMass - 3 1 0
+  mvPosition - 8 1 0
+  mfYaw - 3 1 0
+  mfPitch - 3 1 0
+  mfSpeedForward - 3 1 0
+  mfSpeedRight - 3 1 0
+  mvForceVelocity - 8 1 0
+  mlActiveSize - 2 1 0
+class cEngineJointController_SaveData
+  msName - 4 1 0
+  mfDestValue - 3 1 0
+  mbActive - 1 1 0
+class cEngineJoint_SaveData
+  msName - 4 1 0
+  mlID - 2 1 0
+  mfMinLimit - 3 1 0
+  mfMaxLimit - 3 1 0
+  mbBroken - 1 1 0
+  msOnMinCallback - 4 1 0
+  msOnMaxCallback - 4 1 0
+  mvControllers cEngineJointController_SaveData 100 3 0
+class cEngineLight_SaveData
+  msName - 4 1 0
+  mlID - 2 1 0
+  mbActive - 1 1 0
+  mbVisible - 1 1 0
+  mbOnlyAffectInSector - 1 1 0
+  mDiffuseColor - 10 1 0
+  mfFarAttenuation - 3 1 0
+  mbFlickering - 1 1 0
+  msFlickerOffSound - 4 1 0
+  msFlickerOnSound - 4 1 0
+  msFlickerOffPS - 4 1 0
+  msFlickerOnPS - 4 1 0
+  mfFlickerOnMinLength - 3 1 0
+  mfFlickerOffMinLength - 3 1 0
+  mfFlickerOnMaxLength - 3 1 0
+  mfFlickerOffMaxLength - 3 1 0
+  mFlickerOffColor - 10 1 0
+  mfFlickerOffRadius - 3 1 0
+  mbFlickerFade - 1 1 0
+  mfFlickerOnFadeMinLength - 3 1 0
+  mfFlickerOnFadeMaxLength - 3 1 0
+  mfFlickerOffFadeMinLength - 3 1 0
+  mfFlickerOffFadeMaxLength - 3 1 0
+class cEngineMeshEntity_SaveData
+  mbActive - 1 1 0
+  mbVisible - 1 1 0
+  mfIlluminationAmount - 3 1 0
+  m_mtxTransform - 9 1 0
+  mvAnimations cEngineAnimationState_SaveData 100 3 0
+  mvSubMeshEntities cEngineSubMeshEntity_SaveData 100 3 0
+class cEnginePSEmitter_SaveData
+  mbActive - 1 1 0
+class cEnginePS_SaveData
+  msName - 4 1 0
+  mlID - 2 1 0
+  mbActive - 1 1 0
+  mbVisible - 1 1 0
+  msType - 4 1 0
+  mvSize - 8 1 0
+  m_mtxTransform - 9 1 0
+  mColor - 10 1 0
+  mbFadeAtDistance - 1 1 0
+  mfMinFadeDistanceStart - 3 1 0
+  mfMinFadeDistanceEnd - 3 1 0
+  mfMaxFadeDistanceStart - 3 1 0
+  mfMaxFadeDistanceEnd - 3 1 0
+  mvEmitterActive cEnginePSEmitter_SaveData 100 3 0
+class cEngineRope_SaveData
+  msName - 4 1 0
+  msPhysicsName - 4 1 0
+  mlUniquePhysicsID - 2 1 0
+  mlUniqueGfxID - 2 1 0
+  mvParticles cEngineVerletParticle_SaveData 100 3 0
+  mvStartPos - 8 1 0
+  mvEndPos - 8 1 0
+  mStartBody - 100 1 0
+  mEndBody - 100 1 0
+  mvStartBodyLocalPos - 8 1 0
+  mvEndBodyLocalPos - 8 1 0
+  mlMaxIterations - 2 1 0
+  mfTotalLength - 3 1 0
+  mfMinTotalLength - 3 1 0
+  mfMaxTotalLength - 3 1 0
+  mfSegmentLength - 3 1 0
+  mfDamping - 3 1 0
+  mfStrength - 3 1 0
+  mfStiffness - 3 1 0
+  msMaterial - 4 1 0
+  mfParticleRadius - 3 1 0
+  mlMaxSegments - 2 1 0
+  mfRadius - 3 1 0
+  mfLengthTileAmount - 3 1 0
+  mfLengthTileSize - 3 1 0
+  msSound - 4 1 0
+  mfSoundStartSpeed - 3 1 0
+  mfSoundStopSpeed - 3 1 0
+  mbMotorActive - 1 1 0
+  mfMotorWantedLength - 3 1 0
+  mfMotorSpeedMul - 3 1 0
+  mfMotorMinSpeed - 3 1 0
+  mfMotorMaxSpeed - 3 1 0
+  mbAutoMove - 1 1 0
+  mfAutoMoveSpeed - 3 1 0
+  mfAutoMoveAcc - 3 1 0
+  mfAutoMoveMaxSpeed - 3 1 0
+class cEngineSound_SaveData
+  msName - 4 1 0
+  mlID - 2 1 0
+  mbActive - 1 1 0
+  mbStopped - 1 1 0
+  msSoundDataName - 4 1 0
+  mfMinDistance - 3 1 0
+  mfMaxDistance - 3 1 0
+  mfVolume - 3 1 0
+  mvLocalPosition - 8 1 0
+  mbRemoveWhenOver - 1 1 0
+class cEngineSubMeshEntity_SaveData
+  mbActive - 1 1 0
+  mbVisible - 1 1 0
+  mfIlluminationAmount - 3 1 0
+  m_mtxTransform - 9 1 0
+class cEngineVerletParticle_SaveData
+  mvPosition - 8 1 0
+  mvPrevPosition - 8 1 0
+  mvSmoothPosition - 8 1 0
+  mfInvMass - 3 1 0
+class cLuxArea_Examine_SaveData : iLuxArea_SaveData
+  msDescCat - 4 1 0
+  msDescEntry - 4 1 0
+  msDescInsaneCat - 4 1 0
+  msDescInsaneEntry - 4 1 0
+  msSound - 4 1 0
+  msInsaneSound - 4 1 0
+class cLuxArea_Flashback_SaveData : iLuxArea_SaveData
+  msFlashbackFile - 4 1 0
+  msCallback - 4 1 0
+class cLuxArea_Insanity_SaveData : iLuxArea_SaveData
+  mbAutoDisable - 1 1 0
+class cLuxArea_Ladder_SaveData : iLuxArea_SaveData
+  msMaterial - 4 1 0
+class cLuxArea_Liquid_SaveData : iLuxArea_SaveData
+  mfDensity - 3 1 0
+  mfLinearViscosity - 3 1 0
+  mfAngularViscosity - 3 1 0
+  msPhysicsMaterial - 4 1 0
+  mbHasWaves - 1 1 0
+  mfWaveAmp - 3 1 0
+  mfWaveFreq - 3 1 0
+  mfPlayerSpeedMul - 3 1 0
+  mfMaxWaveDistanceSqr - 3 1 0
+class cLuxArea_Script_SaveData : iLuxArea_SaveData
+  mbItemInteraction - 1 1 0
+class cLuxArea_Sign_SaveData : iLuxArea_SaveData
+  msTextCat - 4 1 0
+  msTextEntry - 4 1 0
+class cLuxArea_SlimeDamage_SaveData : iLuxArea_SaveData
+  mlSlimeType - 2 1 0
+  mfMinCheckAttackTime - 3 1 0
+  mfMaxCheckAttackTime - 3 1 0
+  mbDisableAfterAttack - 1 1 0
+  msCallback - 4 1 0
+  mfCheckCollisionCount - 3 1 0
+  msAttackSound - 4 1 0
+  msAttackPS - 4 1 0
+  mfMinAttackDamage - 3 1 0
+  mfMaxAttackDamage - 3 1 0
+  mfScreenShakeAmount - 3 1 0
+class cLuxArea_Sticky_SaveData : iLuxArea_SaveData
+  msAttachFunction - 4 1 0
+  msDetachFunction - 4 1 0
+  msAttachSound - 4 1 0
+  msDetachSound - 4 1 0
+  msAttachPS - 4 1 0
+  msDetachPS - 4 1 0
+  mbCanDetach - 1 1 0
+  mfPoseTime - 3 1 0
+  mbCheckCenterInArea - 1 1 0
+  msAttachableBodyName - 4 1 0
+  mlAttachedEntityID - 2 1 0
+  mlAttachedBodyID - 2 1 0
+  mfAttachedBodyMass - 3 1 0
+  mbAttachedBodyGravity - 1 1 0
+  mbAttachedEntityFullGameSaved - 1 1 0
+  mfSetMtxTime - 3 1 0
+class cLuxCollideCallback_SaveData
+  mlCollideEntity - 2 1 0
+  msCallbackFunc - 4 1 0
+  mbDeleteWhenColliding - 1 1 0
+  mlStates - 2 1 0
+  mbColliding - 1 1 0
+class cLuxCombineItemsCallback
+  msName - 4 1 0
+  msItemA - 4 1 0
+  msItemB - 4 1 0
+  msFunction - 4 1 0
+  mbAutoDestroy - 1 1 0
+class cLuxCommentaryIcon_SaveData : iLuxEntity_SaveData
+  msFileName - 4 1 0
+  m_mtxOnLoadTransform - 9 1 0
+  mvOnLoadScale - 8 1 0
+  msTalker - 4 1 0
+  msTopic - 4 1 0
+  msSoundFile - 4 1 0
+class cLuxCritter_Bug_SaveData : iLuxProp_CritterBase_SaveData
+  mfPlaySoundCount - 3 1 0
+class cLuxCritter_Spider_SaveData : iLuxProp_CritterBase_SaveData
+  mlState - 2 1 0
+  mfFallingCount - 3 1 0
+  mfNewGroundNormalCount - 3 1 0
+  mbOnGround - 1 1 0
+  mfMaxSpeed - 3 1 0
+  mfCount - 3 1 0
+  mfPlaySoundCount - 3 1 0
+class cLuxDiary
+  msNameEntry - 4 1 0
+  msTextEntry - 4 1 0
+  msIconFile - 4 1 0
+  msImageFile - 4 1 0
+class cLuxEffectHandler_SaveData
+  mbFade_Active - 1 1 0
+  mfFade_GoalAlpha - 3 1 0
+  mfFade_Alpha - 3 1 0
+  mfFade_FadeSpeed - 3 1 0
+  mbImageTrail_Active - 1 1 0
+  mfImageTrail_Amount - 3 1 0
+  mfImageTrail_AmountGoal - 3 1 0
+  mfImageTrail_FadeSpeed - 3 1 0
+  mbSepiaColor_Active - 1 1 0
+  mfSepiaColor_Amount - 3 1 0
+  mfSepiaColor_AmountGoal - 3 1 0
+  mfSepiaColor_FadeSpeed - 3 1 0
+  mbRadialBlur_Active - 1 1 0
+  mfRadialBlur_Size - 3 1 0
+  mfRadialBlur_BlurStartDist - 3 1 0
+  mfRadialBlur_SizeGoal - 3 1 0
+  mfRadialBlur_FadeSpeed - 3 1 0
+  msVoiceOverCallback - 4 1 0
+  mbVoiceActive - 1 1 0
+  mvVoiceData cLuxVoiceData 100 3 0
+  mvGlobalSoundVolumeMul cLuxEffectHandler_SoundMul_SaveData 100 3 0
+  mvGlobalSoundSpeedMul cLuxEffectHandler_SoundMul_SaveData 100 3 0
+class cLuxEffectHandler_SoundMul_SaveData
+  mbActive - 1 1 0
+  mfVal - 3 1 0
+  mfDest - 3 1 0
+  mfSpeed - 3 1 0
+  mTypes - 2 1 0
+  mbDestroyAtDest - 1 1 0
+class cLuxEnemyMover_SaveData
+  mbTurning - 1 1 0
+  mfTurnGoalAngle - 3 1 0
+  mfTurnSpeed - 3 1 0
+  mfTurnBreakAcc - 3 1 0
+  mfStuckCounter - 3 1 0
+  mlMoveState - 2 1 0
+  mbOverideMoveState - 1 1 0
+class cLuxEnemyPathfinder_SaveData
+  mbMoving - 1 1 0
+  mvMoveGoalPos - 8 1 0
+  mvPathNodeIds - 2 3 0
+class cLuxEnemyPatrolNode_SaveData
+  mlNodeId - 2 1 0
+  mfWaitTime - 3 1 0
+  msAnimation - 4 1 0
+  mbLoopAnimation - 1 1 0
+class cLuxEnemy_Grunt_SaveData : iLuxEnemy_SaveData
+class cLuxEnemy_ManPig_SaveData : iLuxEnemy_SaveData
+  mbThreatenOnAlert - 1 1 0
+  mbFleeFromPlayer - 1 1 0
+  mbAutoDisableAfterFlee - 1 1 0
+  mfLanternSensitivity - 3 1 0
+  mIdleBehavior - 2 1 0
+  mPatrolMoveSpeed - 2 1 0
+  mfDamageMul - 3 1 0
+  mfRunSpeedMul - 3 1 0
+  mfInLanternLightCount - 3 1 0
+  mbAllowZeroWaitTime - 1 1 0
+  mfHuntPauseTimeMul - 3 1 0
+  mbTeslaTerror - 1 1 0
+  mbTeslaFadeDisabled - 1 1 0
+  mbTeslaSoundDisabled - 1 1 0
+  mbTeslaEasyEscapeDisabled - 1 1 0
+  mlCurrentPose - 2 1 0
+  mlCurrentMoveType - 2 1 0
+  mbSkipVisibilityRangeHandicaps - 1 1 0
+class cLuxEnemy_WaterLurker_SaveData : iLuxEnemy_SaveData
+  mfPlayerDetectionHeight - 3 1 0
+class cLuxEntityConnection_SaveData
+  msName - 4 1 0
+  mlEntityId - 2 1 0
+  mbInvertStateSent - 1 1 0
+  mlStatesUsed - 2 1 0
+  msCallbackFunc - 4 1 0
+class cLuxEventTimer
+  msName - 4 1 0
+  msFunction - 4 1 0
+  mfCount - 3 1 0
+  mbDestroyMe - 1 1 0
+class cLuxFlashbackData_SaveData
+  msFile - 4 1 0
+  msCallback - 4 1 0
+class cLuxGlobalDataHandler_SaveData
+  mlstVars cLuxScriptVar 100 3 0
+class cLuxHeadPosAdd
+  mvAdd - 8 1 0
+  mbMoving - 1 1 0
+  mvMoveGoal - 8 1 0
+  mfMoveSpeed - 3 1 0
+  mfMoveSlowDownDist - 3 1 0
+class cLuxHintHandler_Hint_SaveData
+  msName - 4 1 0
+class cLuxHintHandler_SaveData
+  mlstHintsGiven cLuxHintHandler_Hint_SaveData 100 3 0
+  mlstHintsBlocked cLuxHintHandler_Hint_SaveData 100 3 0
+class cLuxIdPair
+  mlParentId - 2 1 0
+  mlChildId - 2 1 0
+class cLuxInsanityHandler_Event_SaveData
+  mbUsed - 1 1 0
+class cLuxInsanityHandler_SaveData
+  mfNewEventCount - 3 1 0
+  mvEvents cLuxInsanityHandler_Event_SaveData 100 3 0
+  mvDisabledSets cLuxInsanityHandler_Set_SaveData 100 3 0
+class cLuxInsanityHandler_Set_SaveData
+  msName - 4 1 0
+class cLuxInteractConnection_MoveObject_SaveData : iLuxInteractConnection_SaveData
+  mlMoveObjectId - 2 1 0
+class cLuxInteractConnection_Rope_SaveData : iLuxInteractConnection_SaveData
+  mlRopeId - 2 1 0
+  mfSpeedMul - 3 1 0
+  mfMinSpeed - 3 1 0
+  mfMaxSpeed - 3 1 0
+class cLuxInventory_Item_SaveData
+  msName - 4 1 0
+  mlType - 2 1 0
+  msSubType - 4 1 0
+  msVal - 4 1 0
+  msExtraVal - 4 1 0
+  msImageFile - 4 1 0
+  mfAmount - 3 1 0
+  mlCount - 2 1 0
+  msGameNameEntry - 4 1 0
+  msGameDescEntry - 4 1 0
+class cLuxInventory_SaveData
+  mbDisabled - 1 1 0
+  mlEquippedHandItem - 2 1 0
+  mvItems cLuxInventory_Item_SaveData 100 3 0
+  mvCombineCallbacks cLuxCombineItemsCallback 100 3 0
+class cLuxJournal_DiaryCont_SaveData
+  msType - 4 1 0
+  mvDiaries cLuxDiary 100 3 0
+class cLuxJournal_SaveData
+  mlLastReadTextCat - 2 1 0
+  mlLastReadTextEntry - 2 1 0
+  mlLastReadTextType - 2 1 0
+  mvNotes cLuxNote 100 3 0
+  mvDiaryConts cLuxJournal_DiaryCont_SaveData 100 3 0
+  mvQuestNotes cLuxQuestNote 100 3 0
+class cLuxLoadScreenHandler_SaveData
+  msLoadTextCat - 4 1 0
+  msLoadTextEntry - 4 1 0
+  msLoadTextImage - 4 1 0
+  mlTextRandomNum - 2 1 0
+  mlPrevTextNumBitFlags - 2 1 0
+class cLuxMusicHandler_Music_SaveData
+  msFile - 4 1 0
+  mfVolume - 3 1 0
+  mbLoop - 1 1 0
+  mbResume - 1 1 0
+  mbSpecialEffect - 1 1 0
+class cLuxMusicHandler_SaveData
+  msCurrentMusic - 4 1 0
+  mfCurrentMusicVolume - 3 1 0
+  mfCurrentMusicVolumeAdd - 3 1 0
+  mfCurrentMusicMaxVolume - 3 1 0
+  mfCurrentMusicTime - 3 1 0
+  mbCurrentMusicLoop - 1 1 0
+  mlCurrentMaxPrio - 2 1 0
+  mbEnemyClosePlaying - 1 1 0
+  mbAttackPlaying - 1 1 0
+  mbSearchPlaying - 1 1 0
+  mvMusic cLuxMusicHandler_Music_SaveData 100 3 0
+  mvAttackerIDs - 2 3 0
+  mvSearcherIDs - 2 3 0
+class cLuxNote
+  msNameEntry - 4 1 0
+  msTextEntry - 4 1 0
+  msIconFile - 4 1 0
+  msImageFile - 4 1 0
+class cLuxPlayerHands_SaveData
+  mlState - 2 1 0
+  msCurrentHandObject - 4 1 0
+  msCurrentAnim - 4 1 0
+  mMesh - 100 1 0
+  mfHandObjectChargeCount - 3 1 0
+  mlHandObjectState - 2 1 0
+  mbHandObjectAttackDown - 1 1 0
+  mbHandObjectInteractDown - 1 1 0
+  mfHandObjectAlpha - 3 1 0
+class cLuxPlayerState_HandObject_SaveData : iLuxPlayerState_DefaultBase_SaveData
+class cLuxPlayerState_InteractGrab_SaveData : iLuxPlayerState_Interact_SaveData
+  m_mtxBodyRotation - 9 1 0
+  mvLocalBodyOffset - 8 1 0
+  mfDepth - 3 1 0
+  mfMaxDistance - 3 1 0
+class cLuxPlayerState_InteractLever_SaveData : iLuxPlayerState_InteractRotateBase_SaveData
+class cLuxPlayerState_InteractPush_SaveData : iLuxPlayerState_Interact_SaveData
+class cLuxPlayerState_InteractSlide_SaveData : iLuxPlayerState_Interact_SaveData
+class cLuxPlayerState_InteractSwingDoor_SaveData : iLuxPlayerState_InteractRotateBase_SaveData
+class cLuxPlayerState_InteractWheel_SaveData : iLuxPlayerState_InteractRotateBase_SaveData
+class cLuxPlayerState_Ladder_SaveData : iLuxPlayerState_DefaultBase_SaveData
+  mlState - 2 1 0
+  mvStartPosition - 8 1 0
+  mlLadderID - 2 1 0
+  mfTimeCount - 3 1 0
+  mvCharPosition - 8 1 0
+  mvGoalPos - 8 1 0
+  mvGoalRot - 8 1 0
+  mvPosAdd - 8 1 0
+  mvRotAdd - 8 1 0
+  mfMoveMul - 3 1 0
+  mfUpSpeed - 3 1 0
+  mfDownSpeed - 3 1 0
+  mfStepLength - 3 1 0
+  mfStepCount - 3 1 0
+  mbPlayedSound - 1 1 0
+  mfPitchMaxLimit - 3 1 0
+  mfPitchMinLimit - 3 1 0
+  mbLanternDrawn - 1 1 0
+class cLuxPlayerState_Normal_SaveData : iLuxPlayerState_DefaultBase_SaveData
+class cLuxPlayerState_UseItem_SaveData : iLuxPlayerState_DefaultBase_SaveData
+class cLuxPlayer_SaveData
+  mlState - 2 1 0
+  mpStateData - 101 1 0
+  mbActive - 1 1 0
+  mbUsesDragFootsteps - 1 1 0
+  mfHealth - 3 1 0
+  mfSanity - 3 1 0
+  mfLampOil - 3 1 0
+  mfTerror - 3 1 0
+  mlCoins - 2 1 0
+  mlTinderboxes - 2 1 0
+  mbIsInWater - 1 1 0
+  msWaterStepSound - 4 1 0
+  mfWaterSpeedMul - 3 1 0
+  mbJumpDisabled - 1 1 0
+  mbCrouchDisabled - 1 1 0
+  mbSanityDrainDisabled - 1 1 0
+  mbCrouching - 1 1 0
+  mfInteractionMoveSpeedMul - 3 1 0
+  mfEventMoveSpeedMul - 3 1 0
+  mfEventRunSpeedMul - 3 1 0
+  mfScriptMoveSpeedMul - 3 1 0
+  mfScriptRunSpeedMul - 3 1 0
+  mfLookSpeedMul - 3 1 0
+  mfHurtMoveSpeedMul - 3 1 0
+  mfInsanityCollapseSpeedMul - 3 1 0
+  mfScriptJumpForceMul - 3 1 0
+  mfAspectMul - 3 1 0
+  mfFOVMul - 3 1 0
+  mfAspectMulGoal - 3 1 0
+  mfFOVMulGoal - 3 1 0
+  mfAspectMulSpeed - 3 1 0
+  mfFOVMulSpeed - 3 1 0
+  mfRoll - 3 1 0
+  mfRollGoal - 3 1 0
+  mfRollSpeedMul - 3 1 0
+  mfRollMaxSpeed - 3 1 0
+  mbFadingPitch - 1 1 0
+  mfPitchGoal - 3 1 0
+  mfPitchSpeedMul - 3 1 0
+  mfPitchMaxSpeed - 3 1 0
+  mvCamAnimPos - 8 1 0
+  mvCamAnimPosGoal - 8 1 0
+  mfCamAnimPosSpeedMul - 3 1 0
+  mfCamAnimPosMaxSpeed - 3 1 0
+  mvHeadSpinSpeed - 6 1 0
+  mbNoFallDamage - 1 1 0
+  mbScriptShowFocusIconAndCrossHair - 1 1 0
+  mbLanternOn - 1 1 0
+  mbLanternDisabled - 1 1 0
+  msDeathHintCat - 4 1 0
+  msDeathHintEntry - 4 1 0
+  mbSpawnPSActive - 1 1 0
+  mbSpawnPSFile - 4 1 0
+  mbFlashbackActive - 1 1 0
+  mfFlashbackStartCount - 3 1 0
+  mfFlashDelay - 3 1 0
+  msFlashbackFile - 4 1 0
+  msFlashbackCallback - 4 1 0
+  mlstFlashbackQueue cLuxFlashbackData_SaveData 100 3 0
+  mbInsanityCollapse_Active - 1 1 0
+  mlInsanityCollapse_State - 2 1 0
+  mfInsanityCollapse_HeightAdd - 3 1 0
+  mfInsanityCollapse_Roll - 3 1 0
+  mfInsanityCollapse_T - 3 1 0
+  mfSanity_AtLowSanityCount - 3 1 0
+  mbLookAt_Active - 1 1 0
+  mvLookAt_TargetPos - 8 1 0
+  mvLookAt_CurrentSpeed - 8 1 0
+  mfLookAt_SpeedMul - 3 1 0
+  mfLookAt_MaxSpeed - 3 1 0
+  msLookAt_AtTargetCallback - 4 1 0
+  mfLookAt_DestFovMul - 3 1 0
+  mfLookAt_Fov - 3 1 0
+  mfLookAt_FovSpeed - 3 1 0
+  mfLookAt_FovMaxSpeed - 3 1 0
+  mfDarkness_Active - 1 1 0
+  mCharBody - 100 1 0
+  mvCameraAngles - 8 1 0
+  mfPitchMaxLimit - 3 1 0
+  mfPitchMinLimit - 3 1 0
+  mfYawMaxLimit - 3 1 0
+  mfYawMinLimit - 3 1 0
+  mvHeadPosAdds cLuxHeadPosAdd 100 3 0
+  mvTerrorEnemyIDs - 2 3 0
+  mPlayerHands - 100 1 0
+  mlstCollideCallbacks cLuxCollideCallback_SaveData 100 3 0
+class cLuxPropConnectedProp
+  msName - 4 1 0
+class cLuxProp_AttachedProp
+  msFileName - 4 1 0
+  msName - 4 1 0
+  m_mtxOffset - 9 1 0
+class cLuxProp_Button_SaveData : iLuxProp_SaveData
+  mbSwitchedOn - 1 1 0
+  mbCanBeSwitchedOn - 1 1 0
+  mbCanBeSwitchedOff - 1 1 0
+class cLuxProp_Chest_SaveData : iLuxProp_SaveData
+  mbLocked - 1 1 0
+  mlCoinsNeeded - 3 1 0
+class cLuxProp_EmotionStone_SaveData : iLuxProp_SaveData
+  msDescCat - 4 1 0
+  msDescEntry - 4 1 0
+  msTextCat - 4 1 0
+  msTextEntry - 4 1 0
+  msSound - 4 1 0
+class cLuxProp_Item_SaveData : iLuxProp_SaveData
+  msVal - 4 1 0
+  msExtraVal - 4 1 0
+  mlSpawnContainerID - 2 1 0
+  mfAmount - 3 1 0
+  msSubItemTypeName - 4 1 0
+class cLuxProp_Lamp_SaveData : iLuxProp_SaveData
+  mbLit - 1 1 0
+  mbLightConnectionSetup - 1 1 0
+  msConnectionLight - 4 1 0
+  mfConnectionLightAmount - 3 1 0
+  mbConnectionLightUseOnColor - 1 1 0
+  mbConnectionLightUseSpec - 1 1 0
+class cLuxProp_LevelDoor_SaveData : iLuxProp_SaveData
+  msMapFile - 4 1 0
+  msStartPos - 4 1 0
+  msTextEntry - 4 1 0
+  mbLocked - 1 1 0
+  msLockedSound - 4 1 0
+  msLockedTextCat - 4 1 0
+  msLockedTextEntry - 4 1 0
+  mbShowStats - 1 1 0
+class cLuxProp_Lever_SaveData : iLuxProp_SaveData
+  mlCurrentState - 2 1 0
+  mlStuckState - 2 1 0
+  mbInteractionDisablesStuck - 1 1 0
+  mfMiddleAngleAmount - 3 1 0
+  mbAutoMoveToAngle - 1 1 0
+  mlAutoMoveGoal - 2 1 0
+class cLuxProp_MoveObject_SaveData : iLuxProp_SaveData
+  mvAngularOffsetPos - 8 1 0
+  mbUseAngularLocalOffset - 1 1 0
+  mbAutoMoveReachedGoal - 1 1 0
+class cLuxProp_MultiSlider_SaveData : iLuxProp_SaveData
+  mlCurrentState - 2 1 0
+  mlStuckState - 2 1 0
+  mbInteractionDisablesStuck - 1 1 0
+  msChangeStateCallback - 4 1 0
+class cLuxProp_NPC_SaveData : iLuxProp_SaveData
+  msFollowPlayerArea - 4 1 0
+  mfHeadAngle - 3 1 0
+  mbPlayerIsInArea - 1 1 0
+  mbAwake - 1 1 0
+  mbPlayingWakeAnim - 1 1 0
+  mbFollowPlayer - 1 1 0
+class cLuxProp_Object_SaveData : iLuxProp_SaveData
+  mfLifeLengthCount - 3 1 0
+  msContainedItem - 4 1 0
+  mlStuckState - 2 1 0
+  mfFoodAttractCount - 3 1 0
+  mbDisableBreakable - 1 1 0
+  mbIsInsanityVision - 1 1 0
+  mfVisionMaxSanity - 3 1 0
+  mbInsanityVisionActive - 1 1 0
+class cLuxProp_OilBarrel_SaveData : iLuxProp_SaveData
+  mbAmountCalculated - 1 1 0
+  mfOilAmount - 3 1 0
+class cLuxProp_Photocell_SaveData : iLuxProp_SaveData
+  mbLit - 3 1 0
+  mfLightLevel - 3 1 0
+  mfLightLevelCheckCount - 3 1 0
+  mfLightLevelOnLimit - 3 1 0
+  mfLightLevelOffLimit - 3 1 0
+class cLuxProp_SwingDoor_SaveData : iLuxProp_SaveData
+  mbLocked - 1 1 0
+  mbBroken - 1 1 0
+  mbClosed - 1 1 0
+  mlBrokenEntityID - 2 1 0
+  mlCurrentMeshEntity - 2 1 0
+  mbDisableBreakable - 1 1 0
+  mbDisableAutoClose - 1 1 0
+  mDamageMesh1 - 100 1 0
+  mDamageMesh2 - 100 1 0
+  mfGoalOpenAmount - 3 1 0
+  mbOpeningTowardsMaxAngle - 1 1 0
+  mfCurrentOpenAmount - 3 1 0
+  mfOpenSpeed - 3 1 0
+  mbIsUpdatingOpenAmount - 1 1 0
+class cLuxProp_Wheel_SaveData : iLuxProp_SaveData
+  mfAngle - 3 1 0
+  mfPrevAngle - 3 1 0
+  mfLastToMax - 3 1 0
+  mfLastToMin - 3 1 0
+  mlCurrentState - 2 1 0
+  mlStuckState - 2 1 0
+  mfJointAngle - 3 1 0
+  mfPrevJointAngle - 3 1 0
+  mbAutoMoving - 1 1 0
+  mfAutoMoveGoal - 3 1 0
+  mfMinLimit - 3 1 0
+  mfMaxLimit - 3 1 0
+  mbMinLimitStuck - 1 1 0
+  mbMaxLimitStuck - 1 1 0
+  mlSpinDir - 2 1 0
+  mbInteractionDisablesStuck - 1 1 0
+class cLuxQuestNote
+  mbActive - 1 1 0
+  msName - 4 1 0
+  msNameEntry - 4 1 0
+  msTextEntry - 4 1 0
+class cLuxRope_SaveData : iLuxEntity_SaveData
+  mbRopeCreated - 1 1 0
+  mvStartPos - 8 1 0
+  mvEndPos - 8 1 0
+  msEndPosNode - 4 1 0
+  msStartBody - 4 1 0
+  msEndBody - 4 1 0
+  mfMinTotalLength - 3 1 0
+  mfMaxTotalLength - 3 1 0
+  mfSegmentLength - 3 1 0
+  mfDamping - 3 1 0
+  mfStrength - 3 1 0
+  mfStiffness - 3 1 0
+  msMaterial - 4 1 0
+  mfRadius - 3 1 0
+  mfLengthTileAmount - 3 1 0
+  mfLengthTileSize - 3 1 0
+  msSound - 4 1 0
+  mfSoundStartSpeed - 3 1 0
+  mfSoundStopSpeed - 3 1 0
+  mbAutoMove - 1 1 0
+  mfAutoMoveAcc - 3 1 0
+  mfAutoMoveMaxSpeed - 3 1 0
+class cLuxSaveGame_SaveData
+  mbHardmode - 1 1 0
+  msMapFolder - 4 1 0
+  mMap - 100 1 0
+  mInventory - 100 1 0
+  mJournal - 100 1 0
+  mPlayer - 100 1 0
+  mMusicHandler - 100 1 0
+  mEffectHandler - 100 1 0
+  mGlobalDataHandler - 100 1 0
+  mHintHandler - 100 1 0
+  mInsanityHandler - 100 1 0
+  mLoadScreenHandler - 100 1 0
+  mpSavedMaps - 101 1 0
+class cLuxSavedGameEnemy
+  mlID - 2 1 0
+  mbActive - 1 1 0
+  mvPatrolNodes cLuxEnemyPatrolNode_SaveData 100 3 0
+class cLuxSavedGameEntity
+  mlID - 2 1 0
+  mvAttachedProps cLuxProp_AttachedProp 100 3 0
+  mvInteractConnections iLuxInteractConnection_SaveData 101 3 0
+  mvConnections cLuxEntityConnection_SaveData 100 3 0
+  mlstCollideCallbacks cLuxCollideCallback_SaveData 100 3 0
+class cLuxSavedGameEntityFunc
+  mlID - 2 1 0
+  msFunc - 4 1 0
+  mbAutoRemove - 1 1 0
+class cLuxSavedGameMap
+  msName - 4 1 0
+  msDisplayNameEntry - 4 1 0
+  mlNumberOfQuests - 2 1 0
+  mlTotalCompletionAmount - 2 1 0
+  mlCurrentCompletionAmount - 2 1 0
+  mbSkyBoxActive - 1 1 0
+  msSkyboxTexture - 4 1 0
+  mSkyBoxColor - 10 1 0
+  mbFogActive - 1 1 0
+  mbFogCulling - 1 1 0
+  mfFogStart - 3 1 0
+  mfFogEnd - 3 1 0
+  mfFogFalloffExp - 3 1 0
+  mFogColor - 10 1 0
+  mlstFullEntities iLuxEntity_SaveData 101 3 0
+  mlstCollideAndConnectEntities cLuxSavedGameEntity 101 3 0
+  mlstEnemies cLuxSavedGameEnemy 101 3 0
+  mlstTimers cLuxEventTimer 100 3 0
+  mlstVars cLuxScriptVar 100 3 0
+  mvUseItemCallbacks cLuxUseItemCallback 100 3 0
+  mlstPlayerCollideCallbacks cLuxCollideCallback_SaveData 100 3 0
+  mlstLights cEngineLight_SaveData 100 3 0
+  mlstSounds cEngineSound_SaveData 100 3 0
+  mlstPS cEnginePS_SaveData 100 3 0
+  mlstEntityFunc_Look cLuxSavedGameEntityFunc 100 3 0
+  mlstEntityFunc_Interact cLuxSavedGameEntityFunc 100 3 0
+  mlstEntityFunc_Callback cLuxSavedGameEntityFunc 100 3 0
+  mlstEntityFunc_StateChange cLuxSavedGameEntityFunc 100 3 0
+  mlstDisabledEntities - 2 3 0
+  mlstLockedDoors - 2 3 0
+  mlstLockedLevelDoors - 2 3 0
+  mlstActiveItems - 2 3 0
+  mlstOpenChests - 2 3 0
+  mlstUnbrokenItemContainers - 2 3 0
+  mlstBrokenContainersWithActiveItem - 2 3 0
+  mlstUnlitLamps - 2 3 0
+class cLuxSavedGameMapCollection
+  mlstMaps cLuxSavedGameMap 101 3 0
+class cLuxSavedMap
+  msFileName - 4 1 0
+  msDisplayNameEntry - 4 1 0
+  msLanternLitCallback - 4 1 0
+  mlNumberOfQuests - 2 1 0
+  mlTotalCompletionAmount - 2 1 0
+  mlCurrentCompletionAmount - 2 1 0
+  mbSkyBoxActive - 1 1 0
+  msSkyboxTexture - 4 1 0
+  mSkyBoxColor - 10 1 0
+  mbFogActive - 1 1 0
+  mbFogCulling - 1 1 0
+  mfFogStart - 3 1 0
+  mfFogEnd - 3 1 0
+  mfFogFalloffExp - 3 1 0
+  mFogColor - 10 1 0
+  msCheckPointName - 4 1 0
+  msCheckPointStartPos - 4 1 0
+  msCheckPointCallback - 4 1 0
+  mlCheckPointCount - 2 1 0
+  msCheckPointMusic - 4 1 0
+  mlCheckPointMusicPrio - 2 1 0
+  mbCheckPointMusicResume - 1 1 0
+  mfCheckPointMusicVolume - 3 1 0
+  mlstLights cEngineLight_SaveData 100 3 0
+  mlstRopes cEngineRope_SaveData 100 3 0
+  mlstSounds cEngineSound_SaveData 100 3 0
+  mlstPS cEnginePS_SaveData 100 3 0
+  mlstEntities iLuxEntity_SaveData 101 3 0
+  mlstTimers cLuxEventTimer 100 3 0
+  mlstVars cLuxScriptVar 100 3 0
+  mvUseItemCallbacks cLuxUseItemCallback 100 3 0
+class cLuxScriptVar
+  msName - 4 1 0
+  msVal - 4 1 0
+class cLuxStateMessage_SaveData
+  mlType - 2 1 0
+  mfTime - 3 1 0
+  mfCount - 3 1 0
+  mvCustomValue - 8 1 0
+  mfCustomValue - 3 1 0
+  mlCustomValue - 2 1 0
+  mlState - 2 1 0
+class cLuxUseItemCallback
+  msName - 4 1 0
+  msItem - 4 1 0
+  msEntity - 4 1 0
+  msFunction - 4 1 0
+  mbAutoDestroy - 1 1 0
+class cLuxVoiceData
+  msText - 14 1 0
+  mfTextDelay - 3 1 0
+  msText2 - 14 1 0
+  mfText2Delay - 3 1 0
+  msText3 - 14 1 0
+  mfText3Delay - 3 1 0
+  msText4 - 14 1 0
+  mfText4Delay - 3 1 0
+  msText5 - 14 1 0
+  mfText5Delay - 3 1 0
+  msText6 - 14 1 0
+  mfText6Delay - 3 1 0
+  msText7 - 14 1 0
+  mfText7Delay - 3 1 0
+  msVoiceFile - 4 1 0
+  msEffectFile - 4 1 0
+  mbUsePosition - 1 1 0
+  mvPosition - 8 1 0
+  mfMinDistance - 3 1 0
+  mfMaxDistance - 3 1 0
+class iLuxArea_SaveData : iLuxEntity_SaveData
+  mvSize - 8 1 0
+  m_mtxTransform - 9 1 0
+  mvRelativeOffset - 8 1 0
+  msPropName - 4 1 0
+  mlBodyId - 2 1 0
+class iLuxEnemy_SaveData : iLuxEntity_SaveData
+  msFileName - 4 1 0
+  m_mtxOnLoadTransform - 9 1 0
+  mvOnLoadScale - 8 1 0
+  mbDisabled - 1 1 0
+  mbDisableTriggers - 1 1 0
+  mbBlind - 1 1 0
+  mbDeaf - 1 1 0
+  mfHealth - 3 1 0
+  mbCausesSanityDecrease - 1 1 0
+  mbHallucination - 1 1 0
+  mlCurrentState - 2 1 0
+  mlNextState - 2 1 0
+  mlPreviousState - 2 1 0
+  mlSoundState - 2 1 0
+  mfLookForPlayerCount - 3 1 0
+  mlPlayerInLOSCount - 2 1 0
+  mbCanSeePlayer - 1 1 0
+  mbPlayerDetected - 1 1 0
+  mbPlayerInRange - 1 1 0
+  mfCheckAtDoorCount - 3 1 0
+  mbStuckAtDoor - 1 1 0
+  mlStuckDoorID - 2 1 0
+  mfForwardSpeed - 3 1 0
+  mfBackwardSpeed - 3 1 0
+  mfForwardAcc - 3 1 0
+  mfForwardDeacc - 3 1 0
+  mfDarknessGlowAlpha - 3 1 0
+  mfDarknessGlowAlphaGoal - 3 1 0
+  mlAttackHitCounter - 2 1 0
+  mfFOVMul - 3 1 0
+  msCurrentAnimName - 4 1 0
+  mbAnimationIsSpeedDependant - 1 1 0
+  mfAnimationSpeedMul - 3 1 0
+  mbUseMoveAnimWhenCurrentIsOver - 1 1 0
+  mvStartPosition - 8 1 0
+  mvLastKnownPlayerPos - 8 1 0
+  mfLastPlayerPosCount - 3 1 0
+  mvTempPos - 8 1 0
+  mfTempVal - 3 1 0
+  mlTempVal - 2 1 0
+  mfDamageCount - 3 1 0
+  mvPatrolNodes cLuxEnemyPatrolNode_SaveData 100 3 0
+  mlCurrentPatrolNode - 2 1 0
+  mMeshEntity - 100 1 0
+  mvPS cEnginePS_SaveData 100 3 0
+  mvBeams cEngineBeam_SaveData 100 3 0
+  mvLights cEngineLight_SaveData 100 3 0
+  mvBillboards cEngineBillboard_SaveData 100 3 0
+  mvMessages cLuxStateMessage_SaveData 100 3 0
+  mMover - 100 1 0
+  mPathfinder - 100 1 0
+  mCharBody - 100 1 0
+class iLuxEntity_SaveData
+  msName - 4 1 0
+  mbFullGameSave - 1 1 0
+  mbActive - 1 1 0
+  mlEntityType - 2 1 0
+  mlID - 2 1 0
+  mfMaxFocusDistance - 3 1 0
+  mbInteractionDisabled - 1 1 0
+  msCallbackFunc - 4 1 0
+  msConnectionStateChangeCallback - 4 1 0
+  msInteractCallback - 4 1 0
+  mbInteractCallbackRemove - 1 1 0
+  msLookAtCallback - 4 1 0
+  mbLookAtCallbackRemove - 1 1 0
+  mbIsLookedAt - 1 1 0
+  mvConnections cLuxEntityConnection_SaveData 100 3 0
+  mlstCollideCallbacks cLuxCollideCallback_SaveData 100 3 0
+class iLuxInteractConnection_SaveData
+  msName - 4 1 0
+  mbInteractionOnly - 1 1 0
+  mlPropId - 2 1 0
+  mbInvert - 1 1 0
+  mlStateUsed - 2 1 0
+class iLuxPlayerState_DefaultBase_SaveData : iLuxPlayerState_SaveData
+class iLuxPlayerState_InteractRotateBase_SaveData : iLuxPlayerState_Interact_SaveData
+class iLuxPlayerState_Interact_SaveData : iLuxPlayerState_SaveData
+  mlCurrentPropId - 2 1 0
+  mlCurrentBodyId - 2 1 0
+  mvCurrentFocusPos - 8 1 0
+class iLuxPlayerState_SaveData
+  mlPreviousState - 2 1 0
+class iLuxProp_CritterBase_SaveData : iLuxProp_SaveData
+  mvVel - 8 1 0
+  mvGravityVel - 8 1 0
+  mvSwarmPoint - 8 1 0
+  mlAnimState - 2 1 0
+  mvGroundNormal - 8 1 0
+  mbColliding - 1 1 0
+  mbUpdateAnimation - 1 1 0
+class iLuxProp_SaveData : iLuxEntity_SaveData
+  msFileName - 4 1 0
+  m_mtxOnLoadTransform - 9 1 0
+  mvOnLoadScale - 8 1 0
+  mfHealth - 3 1 0
+  mbCheckOutsidePlayer - 1 1 0
+  mbEffectsActive - 1 1 0
+  mfEffectsAlpha - 3 1 0
+  mbStaticPhysics - 1 1 0
+  mbMoving - 1 1 0
+  mbMovingLinear - 1 1 0
+  mfMoveLinearMaxSpeed - 3 1 0
+  mfMoveLinearAcc - 3 1 0
+  mfMoveLinearSpeed - 3 1 0
+  mfMoveLinearSlowdownDist - 3 1 0
+  mvMoveLinearGoal - 8 1 0
+  mbMovingAngular - 1 1 0
+  mfMoveAngularMaxSpeed - 3 1 0
+  mfMoveAngularAcc - 3 1 0
+  mfMoveAngularSpeed - 3 1 0
+  mfMoveAngularSlowdownDist - 3 1 0
+  m_mtxMoveAngularGoal - 9 1 0
+  mbMoveAngularUseOffset - 1 1 0
+  mvMoveAngularWorldOffset - 8 1 0
+  mvMoveAngularLocalOffset - 8 1 0
+  mbMoveAngularNoGoal - 1 1 0
+  mvMoveAngularNoGoalDir - 8 1 0
+  mlCurrentNonLoopAnimIndex - 2 1 0
+  msAnimCallback - 4 1 0
+  msParentEntityName - 4 1 0
+  msParentBoneName - 4 1 0
+  mpParentBoneOffsetMatrix - 9 1 0
+  mfBodyMassBackup - 3 1 0
+  mbBodyCollideBackup - 1 1 0
+  mbBodyCollideCharacterBackup - 1 1 0
+  mbBodyActiveBackup - 1 1 0
+  mBodyMatrixBackup - 9 1 0
+  mvAttachedProps cLuxProp_AttachedProp 100 3 0
+  mvConnectedProps cLuxPropConnectedProp 100 3 0
+  mMeshEntity - 100 1 0
+  mvBodies cEngineBody_SaveData 100 3 0
+  mvJoints cEngineJoint_SaveData 100 3 0
+  mvPS cEnginePS_SaveData 100 3 0
+  mvBeams cEngineBeam_SaveData 100 3 0
+  mvLights cEngineLight_SaveData 100 3 0
+  mvSounds cEngineSound_SaveData 100 3 0
+  mvBillboards cEngineBillboard_SaveData 100 3 0
+  mvInteractConnections iLuxInteractConnection_SaveData 101 3 0
+class iLuxStaticProp_SaveData
+  msName - 4 1 0
+  mlID - 2 1 0
+  msFileName - 4 1 0
+  m_mtxOnLoadTransform - 9 1 0

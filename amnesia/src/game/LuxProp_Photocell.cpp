@@ -18,6 +18,7 @@
  */
 
 #include "LuxProp_Photocell.h"
+#include "RustLuxSaveA8.h"
 
 #include "LuxPlayer.h"
 #include "LuxPlayerState.h"
@@ -280,11 +281,7 @@ void cLuxProp_Photocell::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	//Set variables
 	if(hpl::OhplBackendRustRequested())
 	{
-		pData->mbLit = mS.lit;
-		pData->mfLightLevel = mS.light_level;
-		pData->mfLightLevelCheckCount = mS.check_count;
-		pData->mfLightLevelOnLimit = mS.on_limit;
-		pData->mfLightLevelOffLimit = mS.off_limit;
+		ohpl_a8_photocell_save(&mS, pData);
 		return;
 	}
 	kCopyToVar(pData,mbLit);
@@ -307,11 +304,7 @@ void cLuxProp_Photocell::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//Set variables
 	if(hpl::OhplBackendRustRequested())
 	{
-		mS.lit = pData->mbLit;
-		mS.light_level = pData->mfLightLevel;
-		mS.check_count = pData->mfLightLevelCheckCount;
-		mS.on_limit = pData->mfLightLevelOnLimit;
-		mS.off_limit = pData->mfLightLevelOffLimit;
+		ohpl_a8_photocell_load(&mS, pData);
 		return;
 	}
 	kCopyFromVar(pData,mbLit);

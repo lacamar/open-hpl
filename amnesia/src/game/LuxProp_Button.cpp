@@ -18,6 +18,7 @@
  */
 
 #include "LuxProp_Button.h"
+#include "RustLuxSaveA8.h"
 
 #include "LuxPlayer.h"
 #include "LuxPlayerState.h"
@@ -263,9 +264,7 @@ void cLuxProp_Button::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	//Set variables
 	if(hpl::OhplBackendRustRequested())
 	{
-		pData->mbSwitchedOn = mS.on;
-		pData->mbCanBeSwitchedOn = mS.can_on;
-		pData->mbCanBeSwitchedOff = mS.can_off;
+		ohpl_a8_button_save(&mS, pData);
 		return;
 	}
 	kCopyToVar(pData,mbSwitchedOn);
@@ -286,9 +285,7 @@ void cLuxProp_Button::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//Set variables
 	if(hpl::OhplBackendRustRequested())
 	{
-		mS.on = pData->mbSwitchedOn;
-		mS.can_on = pData->mbCanBeSwitchedOn;
-		mS.can_off = pData->mbCanBeSwitchedOff;
+		ohpl_a8_button_load(&mS, pData);
 		return;
 	}
 	kCopyFromVar(pData,mbSwitchedOn);

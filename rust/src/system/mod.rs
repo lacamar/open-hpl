@@ -2,7 +2,7 @@
 //! logic timer. Threads, mutexes, the memory tracker and the socket I/O stay in C++.
 
 mod diag;
-mod ffi;
+pub(crate) mod ffi;
 pub mod h1;
 pub mod headless;
 pub mod logic_timer;
