@@ -1,0 +1,149 @@
+attr WindowLabelTextOffset 420c0000,c1a00000,00000000
+attr WindowButtonSize 41900000,00000000,00000000
+attr WindowBordersOutside 3f800000,00000000,00000000
+attr ButtonPressedContentOffset 3f800000,3f800000,00000000
+attr SliderButtonSize 41900000,00000000,00000000
+attr ListBoxSliderWidth 41900000,00000000,00000000
+attr ComboBoxButtonWidth 41900000,00000000,00000000
+attr ComboBoxSliderWidth 41900000,00000000,00000000
+attr ContextMenuItemArrowSize 41200000,00000000,00000000
+attr ContextMenuItemCheckSize 41900000,00000000,00000000
+attr ContextMenuItemHPadding 40a00000,00000000,00000000
+attr ContextMenuItemVPadding 40000000,00000000,00000000
+attr ContextMenuItemTextLeftPadding 40a00000,00000000,00000000
+attr ContextMenuItemTextRightPadding 41700000,00000000,00000000
+attr ContextMenuItemSeparation 00000000,00000000,00000000
+attr ContextMenuSeparatorPadding 00000000,00000000,00000000
+attr MainMenuItemTextPadding 40800000,00000000,00000000
+attr MainMenuItemVPadding 40000000,00000000,00000000
+attr MainMenuItemSeparation 40a00000,00000000,00000000
+attr MenuSeparatorPadding 40c00000,00000000,00000000
+attr MenuSeparatorHeight 3f800000,00000000,00000000
+attr TabFrameButtonSize 41900000,00000000,00000000
+attr TabFrameIconPadding 40000000,00000000,00000000
+attr TabFrameTextLeftPadding 41200000,00000000,00000000
+attr TabFrameTextRightPadding 41200000,00000000,00000000
+attr TabFrameLabelInactiveOffset 00000000,00000000,00000000
+attr TabFrameLabelActiveOffset 00000000,00000000,00000000
+attr FirstTabOffset 41a00000,00000000,00000000
+attr TabSeparation 41a00000,00000000,00000000
+attr GroupHeaderOffset 41a00000,00000000,00000000
+attr GroupHeaderOverUpperBorder 3f800000,00000000,00000000
+attr DefaultFontHighlightColor 3f800000,3f800000,3f800000
+font Default menu_gui_default.fnt 41600000,41600000 3f800000,3f800000,3f800000,3f800000
+font Disabled menu_gui_default.fnt 41600000,41600000 3f19999a,3f19999a,3f19999a,3f800000
+font WindowLabel menu_gui_default.fnt 41c80000,41c80000 3f800000,3f800000,3f800000,3f800000
+gfx PointerNormal gui_amn_mm_pointer_normal.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx PointerText gui_amn_mm_pointer_text.tga off=c0e00000,c1300000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx WindowBorderRight gui_amn_mm_window_border_r.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx WindowBorderLeft gui_amn_mm_window_border_l.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx WindowBorderUp gui_amn_mm_window_border_u.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx WindowBorderDown gui_amn_mm_window_border_d.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx WindowCornerLU gui_amn_mm_window_corner_lu.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx WindowCornerRU gui_amn_mm_window_corner_ru.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx WindowCornerRD gui_amn_mm_window_corner_rd.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx WindowCornerLD gui_amn_mm_window_corner_ld.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx WindowLabel  off=00000000,00000000 act=00000000,00000000 col=3eb851ec,3f0ccccd,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx WindowBackground gui_amn_mm_window_bg.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx WindowButtonCross gui_amn_mm_window_cross.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FrameBorderRight  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FrameBorderLeft  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FrameBorderUp  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FrameBorderDown  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FrameCornerLU  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FrameCornerRU  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FrameCornerRD  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FrameCornerLD  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FrameBackground  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx CheckBoxEnabledUnchecked gui_amn_mm_checkbox_unchecked.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx CheckBoxEnabledChecked gui_amn_mm_checkbox_checked.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx CheckBoxDisabledUnchecked gui_amn_mm_checkbox_unchecked.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3ecccccd mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx CheckBoxDisabledChecked gui_amn_mm_checkbox_checked.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3ecccccd mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TextBoxBackground gui_amn_mm_listbox_bg.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TextBoxSelectedTextBack  off=00000000,00000000 act=bf800000,bf800000 col=3f028f5c,3eda9fbe,3ea2d0e5,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TextBoxMarker gui_amn_mm_textbox_marker.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=1 ft=3f000000 mode=0 awarn=None
+gfx ComboBoxButtonIcon gui_amn_mm_slider_vert_arrow_d.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ComboBoxBorderRight  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ComboBoxBorderLeft  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ComboBoxBorderUp  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ComboBoxBorderDown  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ComboBoxCornerLU  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ComboBoxCornerRU  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ComboBoxCornerRD  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ComboBoxCornerLD  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ComboBoxBackground gui_amn_mm_listbox_bg.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ListBoxBackground gui_amn_mm_listbox_bg.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHandleBorderRight gui_amn_mm_slider_handle_border.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHandleBorderLeft gui_amn_mm_slider_handle_border.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHandleBorderUp gui_amn_mm_slider_handle_border.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHandleBorderDown gui_amn_mm_slider_handle_border.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHandleCornerLU gui_amn_mm_slider_handle_corner_lu.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHandleCornerRU gui_amn_mm_slider_handle_corner_ru.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHandleCornerRD gui_amn_mm_slider_handle_corner_ld.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHandleCornerLD gui_amn_mm_slider_handle_corner_ld.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHandleBackground gui_amn_mm_slider_handle_bg.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderVertArrowUp gui_amn_mm_slider_vert_arrow_u.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderVertArrowDown gui_amn_mm_slider_vert_arrow_d.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderVertBackground gui_amn_mm_listbox_bg.tga off=00000000,00000000 act=bf800000,bf800000 col=3f000000,3f000000,3f000000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHoriArrowUp gui_amn_mm_slider_hori_arrow_u.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHoriArrowDown gui_amn_mm_slider_hori_arrow_d.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx SliderHoriBackground gui_amn_mm_listbox_bg.tga off=00000000,00000000 act=bf800000,bf800000 col=3f000000,3f000000,3f000000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonUpBorderRight gui_amn_mm_button_up_border_r.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonUpBorderLeft gui_amn_mm_button_up_border_l.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonUpBorderUp gui_amn_mm_button_up_border_u.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonUpBorderDown gui_amn_mm_button_up_border_d.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonUpCornerLU gui_amn_mm_button_up_corner_lu.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonUpCornerRU gui_amn_mm_button_up_corner_ru.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonUpCornerRD gui_amn_mm_button_up_corner_rd.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonUpCornerLD gui_amn_mm_button_up_corner_ld.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonUpBackground gui_amn_mm_button_up_bg.tga off=00000000,00000000 act=bf800000,bf800000 col=3f547ae1,3f51eb85,3f47ae14,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonDownBorderRight gui_amn_mm_button_up_border_r.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonDownBorderLeft gui_amn_mm_button_up_border_l.tga off=00000000,00000000 act=bf800000,bf800000 col=3f19999a,3f19999a,3f19999a,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonDownBorderUp gui_amn_mm_button_up_border_u.tga off=00000000,00000000 act=bf800000,bf800000 col=3f19999a,3f19999a,3f19999a,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonDownBorderDown gui_amn_mm_button_up_border_d.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonDownCornerLU gui_amn_mm_button_up_corner_lu.tga off=00000000,00000000 act=bf800000,bf800000 col=3f19999a,3f19999a,3f19999a,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonDownCornerRU gui_amn_mm_button_up_corner_ru.tga off=00000000,00000000 act=bf800000,bf800000 col=3f19999a,3f19999a,3f19999a,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonDownCornerRD gui_amn_mm_button_up_corner_rd.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonDownCornerLD gui_amn_mm_button_up_corner_ld.tga off=00000000,00000000 act=bf800000,bf800000 col=3f19999a,3f19999a,3f19999a,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx ButtonDownBackground gui_amn_mm_button_up_bg.tga off=00000000,00000000 act=bf800000,bf800000 col=3f4ccccd,3f4a3d71,3f400000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx MenuEnabledChecked gui_amn_mm_menu_checked.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx MenuDisabledChecked gui_amn_mm_menu_checked.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3ecccccd mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx MenuSeparatorLine  off=00000000,00000000 act=bf800000,bf800000 col=3e6b851f,3e6147ae,3e3851ec,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx MenuItemArrow gui_amn_mm_menu_arrow.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabLabelBorderRight  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabLabelBorderLeft  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabLabelBorderUp  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabLabelBorderDown  off=00000000,00000000 act=bf800000,bf800000 col=3f547ae1,3f51eb85,3f47ae14,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabLabelCornerLU  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabLabelCornerRU  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabLabelCornerRD  off=00000000,00000000 act=40000000,40000000 col=3f547ae1,3f51eb85,3f47ae14,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabLabelCornerLD  off=00000000,00000000 act=40000000,40000000 col=3f547ae1,3f51eb85,3f47ae14,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabBorderRight  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabBorderLeft  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabBorderUp  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabBorderDown  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabCornerLU  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabCornerRU  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabCornerRD  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabCornerLD  off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabLabelBackground gui_amn_mm_tab_label_bg.tga off=00000000,00000000 act=bf800000,bf800000 col=3f547ae1,3f51eb85,3f47ae14,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabLabelBackgroundActive gui_amn_mm_tab_label_bg_active.tga off=00000000,00000000 act=bf800000,bf800000 col=3f547ae1,3f51eb85,3f47ae14,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabBackground  off=00000000,00000000 act=bf800000,bf800000 col=00000000,00000000,00000000,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabFrameArrowLeft gui_amn_mm_slider_hori_arrow_u.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx TabFrameArrowRight gui_amn_mm_slider_hori_arrow_d.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx GroupBorderRight gui_amn_mm_group_border_r.tga off=00000000,00000000 act=bf800000,bf800000 col=3e99999a,3e99999a,3e99999a,3f333333 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx GroupBorderLeft gui_amn_mm_group_border_l.tga off=00000000,00000000 act=bf800000,bf800000 col=3e99999a,3e99999a,3e99999a,3f333333 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx GroupBorderUp gui_amn_mm_group_border_u.tga off=00000000,00000000 act=bf800000,bf800000 col=3e99999a,3e99999a,3e99999a,3f333333 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx GroupBorderDown gui_amn_mm_group_border_d.tga off=00000000,00000000 act=bf800000,bf800000 col=3e99999a,3e99999a,3e99999a,3f333333 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx GroupCornerLU gui_amn_mm_group_corner_lu.tga off=00000000,00000000 act=bf800000,bf800000 col=3e99999a,3e99999a,3e99999a,3f333333 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx GroupCornerRU gui_amn_mm_group_corner_ru.tga off=00000000,00000000 act=bf800000,bf800000 col=3e99999a,3e99999a,3e99999a,3f333333 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx GroupCornerRD gui_amn_mm_group_corner_rd.tga off=00000000,00000000 act=bf800000,bf800000 col=3e99999a,3e99999a,3e99999a,3f333333 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx GroupCornerLD gui_amn_mm_group_corner_ld.tga off=00000000,00000000 act=bf800000,bf800000 col=3e99999a,3e99999a,3e99999a,3f333333 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx GroupBackground  off=00000000,00000000 act=bf800000,bf800000 col=3e99999a,3e99999a,3e99999a,00000000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FilePickerUpButton gui_amn_mm_filepicker_upbutton.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FilePickerIconFolder gui_amn_mm_filepicker_icon_folder.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FilePickerIconGraphics gui_amn_mm_filepicker_icon_graphics.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FilePickerIconModels gui_amn_mm_filepicker_icon_models.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FilePickerIconSounds gui_amn_mm_filepicker_icon_sounds.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FilePickerIconText gui_amn_mm_filepicker_icon_text.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None
+gfx FilePickerIconOther gui_amn_mm_filepicker_icon_rest.tga off=00000000,00000000 act=bf800000,bf800000 col=3f800000,3f800000,3f800000,3f800000 mat=1 warn=None anim=0 ft=3f800000 mode=0 awarn=None

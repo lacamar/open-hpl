@@ -18,6 +18,7 @@
  */
 
 #include "gui/GuiSet.h"
+#include "impl/RustBackends.h"
 
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
@@ -221,9 +222,9 @@ namespace hpl {
 
 		mpGfxCurrentPointer = NULL;
 
-		mpFocusedWidget = NULL;
+		mS.focused = NULL;
 
-		mpAttentionWidget = NULL;
+		mS.attention = NULL;
 
 		mlPopupCount =0;
 		mfLastPopUpZ = 20;
@@ -257,22 +258,21 @@ namespace hpl {
 		mlDrawPrio = 0;
 		
 		// 9 mouse buttons defined in InputTypes and GuiTypes
-		mvMouseDown.resize(9);
-		for(int i=0; i<(int)mvMouseDown.size(); ++i) mvMouseDown[i] = false;
-		mbMouseMovementEnabled = true;
+		if(OhplBackendRustRequested()) mS.lists = ohpl_h18_lists_new();
+		mS.mouseMovement = true;
 
 		SetSkin(apSkin);
 
-		mfToolTipTimer = 0;
+		mS.tooltipTimer = 0;
 		mfToolTipTimeToPopUp = 0.5f;
-		mpCurrentToolTipWidget = NULL;
+		mS.tooltipWidget = NULL;
 
 		mpFrameToolTip = NULL;
 		mpFrameBGToolTip = NULL;
 		mpLabelToolTip = NULL;
 
-		mpTabOrderWidget = NULL;
-		mfWindowZ = -1;
+		mS.tabWidget = NULL;
+		mS.windowZ = -1;
 
 		if(mpSkin)
 		{
@@ -281,7 +281,7 @@ namespace hpl {
 
 		mpTopMostDestroyingWidget = NULL;
 
-		mpDefaultFocusNavWidget = NULL;
+		mS.defaultNav = NULL;
 		mbDrawFocus = false;
 		mpFocusDrawObject = NULL;
 		mpFocusDrawCallback = NULL;
@@ -304,6 +304,7 @@ namespace hpl {
 		ClearGlobalShortcuts();
 
 		ohpl_gui_list_free(mpRustRenderList);
+		ohpl_h18_lists_free(mS.lists);
 	}
 
 	//-----------------------------------------------------------------------
@@ -356,6 +357,13 @@ namespace hpl {
 
 	bool cGuiSet::SendMessage(eGuiMessage aMessage, const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH18Host host;
+			FillRustHost(host);
+			return ohpl_h18_send_message(&mS, &host, aMessage, &aData);
+		}
+
 		// Sort widgets so that highest Z value mean first on the list (if needed)
 		if(mbSortWidgets)
 		{
@@ -433,12 +441,12 @@ namespace hpl {
 		STLDeleteAll(mlstWidgets);
 		mpWidgetRoot->mlstChildren.clear();
 
-		mpFocusedWidget = NULL;
-		mpAttentionWidget = NULL;
+		mS.focused = NULL;
+		mS.attention = NULL;
 
 		mbDestroyingSet = false;
 
-		mpCurrentToolTipWidget = NULL;
+		mS.tooltipWidget = NULL;
 
 		CreateToolTipWidgets();
 	}
@@ -598,7 +606,8 @@ namespace hpl {
 		pWindow->SetName(asName);
 		AddWidget(pWindow, apParent);
 
-		mlstWindows.push_back(pWindow);
+		if(OhplBackendRustRequested()) ohpl_h18_add_window(&mS, (OhplH18W)pWindow);
+		else mlstWindows.push_back(pWindow);
 
 		return pWindow;
 	}
@@ -916,15 +925,22 @@ namespace hpl {
 
 	void cGuiSet::DestroyWidget(iWidget *apWidget, bool abDestroyChildren)
 	{
-		if(apWidget == mpFocusedWidget) mpFocusedWidget = NULL;
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h18_destroy_prelude(&mS, (OhplH18W)apWidget);
+		}
+		else
+		{
+		if(apWidget == mS.focused) mS.focused = NULL;
 		mlstTabOrderWidgets.remove(apWidget);
-		mpTabOrderWidget = NULL;
+		mS.tabWidget = NULL;
 		
-		if(apWidget==mpCurrentToolTipWidget)
+		if(apWidget==mS.tooltipWidget)
 			SetToolTipWidget(NULL);
 
-		if(apWidget==mpDefaultFocusNavWidget)
-			mpDefaultFocusNavWidget = NULL;
+		if(apWidget==mS.defaultNav)
+			mS.defaultNav = NULL;
+		}
 
 		tWidgetList& lstChildren = apWidget->GetChildren();
 		if(abDestroyChildren && lstChildren.empty()==false)
@@ -1092,16 +1108,28 @@ namespace hpl {
 
 	void cGuiSet::RemoveWindow(cWidgetWindow* apWin)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h18_remove_window(&mS, (OhplH18W)apWin);
+			return;
+		}
 		mlstWindows.remove(apWin);
 	}
 
 	void cGuiSet::SetLastWindowZ(float afX)
 	{
-		mfWindowZ = afX; 
+		mS.windowZ = afX;
 	}
 
 	void cGuiSet::SetWindowOnTop(cWidgetWindow* apWin)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH18Host host;
+			FillRustHost(host);
+			ohpl_h18_set_window_on_top(&mS, &host, (OhplH18W)apWin);
+			return;
+		}
 		tWidgetListIt it = find(mlstWindows.begin(), mlstWindows.end(), apWin);
 		if(it==mlstWindows.end())
 			return;
@@ -1170,19 +1198,26 @@ namespace hpl {
 
 	void cGuiSet::SetFocusedWidget(iWidget* apWidget, bool abCheckForValidity)
 	{
-		if(mpFocusedWidget==apWidget)
+		if(OhplBackendRustRequested())
+		{
+			OhplH18Host host;
+			FillRustHost(host);
+			ohpl_h18_set_focused(&mS, &host, (OhplH18W)apWidget, abCheckForValidity);
+			return;
+		}
+		if(mS.focused==apWidget)
 			return;
 		
 		if(abCheckForValidity && IsValidWidget(apWidget)==false)
 			apWidget = NULL;
 
-		iWidget* pOldFocus = mpFocusedWidget;
-		cGuiMessageData data = cGuiMessageData(mvMousePos,0);
+		iWidget* pOldFocus = mS.focused;
+		cGuiMessageData data = cGuiMessageData(mS.mousePos,0);
 
-		mpFocusedWidget = apWidget;
+		mS.focused = apWidget;
 
-		if(mpFocusedWidget)
-			mpFocusedWidget->GetFocus(data);
+		if(mS.focused)
+			mS.focused->GetFocus(data);
 		
 		if(pOldFocus)
 			pOldFocus->ProcessMessage(eGuiMessage_LostFocus, data);
@@ -1192,11 +1227,23 @@ namespace hpl {
 
 	void cGuiSet::PushFocusedWidget()
 	{
-		mlstFocusedStack.push_back(mpFocusedWidget);
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h18_push_focused(&mS);
+			return;
+		}
+		mlstFocusedStack.push_back(mS.focused);
 	}
 
 	void cGuiSet::PopFocusedWidget()
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH18Host host;
+			FillRustHost(host);
+			ohpl_h18_pop_focused(&mS, &host);
+			return;
+		}
 		if(mlstFocusedStack.empty()) return;
 
 		SetFocusedWidget(mlstFocusedStack.back(), true);
@@ -1207,33 +1254,40 @@ namespace hpl {
 
 	void cGuiSet::SetAttentionWidget(iWidget *apWidget, bool abClearFocus, bool abCheckForValidity)
 	{
-		if(mpAttentionWidget == apWidget) return;
+		if(OhplBackendRustRequested())
+		{
+			OhplH18Host host;
+			FillRustHost(host);
+			ohpl_h18_set_attention(&mS, &host, (OhplH18W)apWidget, abClearFocus, abCheckForValidity);
+			return;
+		}
+		if(mS.attention == apWidget) return;
 
 		if(abCheckForValidity && IsValidWidget(apWidget)==false)
 			apWidget = NULL;
 
-		mpAttentionWidget = apWidget;
-		cGuiMessageData data = cGuiMessageData(mvMousePos, 0);
+		mS.attention = apWidget;
+		cGuiMessageData data = cGuiMessageData(mS.mousePos, 0);
 
-		//Log("Sett attn: %d\n",mpAttentionWidget);
-		iWidget* pOldFocus = mpFocusedWidget;
+		//Log("Sett attn: %d\n",mS.attention);
+		iWidget* pOldFocus = mS.focused;
 		
-		if(mpFocusedWidget && mpFocusedWidget->IsConnectedTo(mpAttentionWidget)==false)
+		if(mS.focused && mS.focused->IsConnectedTo(mS.attention)==false)
 		{
-			//Log("Lost focus %d\n",mpFocusedWidget);
+			//Log("Lost focus %d\n",mS.focused);
 			
-			if(mpAttentionWidget!= NULL || abClearFocus)
-				mpFocusedWidget = NULL;
+			if(mS.attention!= NULL || abClearFocus)
+				mS.focused = NULL;
 		}
 
-		if(mpAttentionWidget && mpFocusedWidget == NULL)
+		if(mS.attention && mS.focused == NULL)
 		{
 			//Log("Got focus %d\n",apWidget);
-			mpFocusedWidget = apWidget;
-			if(mpFocusedWidget) mpFocusedWidget->ProcessMessage(eGuiMessage_GotFocus, data);
+			mS.focused = apWidget;
+			if(mS.focused) mS.focused->ProcessMessage(eGuiMessage_GotFocus, data);
 		}
 
-		if(pOldFocus && pOldFocus != mpFocusedWidget)
+		if(pOldFocus && pOldFocus != mS.focused)
 			pOldFocus->ProcessMessage(eGuiMessage_LostFocus, data);
 	}
 
@@ -1241,11 +1295,23 @@ namespace hpl {
 
 	void cGuiSet::PushAttentionWidget()
 	{
-		mlstAttentionStack.push_back(mpAttentionWidget);
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h18_push_attention(&mS);
+			return;
+		}
+		mlstAttentionStack.push_back(mS.attention);
 	}
 
 	void cGuiSet::PopAttentionWidget(bool abClearFocus)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH18Host host;
+			FillRustHost(host);
+			ohpl_h18_pop_attention(&mS, &host, abClearFocus);
+			return;
+		}
 		if(mlstAttentionStack.empty()) return;
 
 		SetAttentionWidget(mlstAttentionStack.back(), abClearFocus, true);
@@ -1451,6 +1517,53 @@ namespace hpl {
 	}
 	//-----------------------------------------------------------------------
 
+	//-----------------------------------------------------------------------
+
+	void cGuiSet::FillRustHost(OhplH18Host& aHost)
+	{
+		aHost.ctx = this;
+		aHost.isVisible = [](void*, OhplH18W w) { return ((iWidget*)w)->IsVisible(); };
+		aHost.isEnabled = [](void*, OhplH18W w) { return ((iWidget*)w)->IsEnabled(); };
+		aHost.isConnectedTo = [](void*, OhplH18W w, OhplH18W o) { return ((iWidget*)w)->IsConnectedTo((iWidget*)o); };
+		aHost.pointIsInside = [](void*, OhplH18W w, float x, float y) { return ((iWidget*)w)->PointIsInside(cVector2f(x, y), false); };
+		aHost.mouseIsOver = [](void*, OhplH18W w) { return ((iWidget*)w)->GetMouseIsOver(); };
+		aHost.setMouseIsOver = [](void*, OhplH18W w, bool b) { ((iWidget*)w)->SetMouseIsOver(b); };
+		aHost.processMessage = [](void*, OhplH18W w, int m, const cGuiMessageData* d, bool v, bool e) {
+			return ((iWidget*)w)->ProcessMessage((eGuiMessage)m, *d, v, e); };
+		aHost.getFocus = [](void*, OhplH18W w, const cGuiMessageData* d) { return ((iWidget*)w)->GetFocus(*d); };
+		aHost.tooltipEnabled = [](void*, OhplH18W w) { return ((iWidget*)w)->IsToolTipEnabled(); };
+		aHost.hasFocusNav = [](void*, OhplH18W w) { return ((iWidget*)w)->HasFocusNavigation(); };
+		aHost.parent = [](void*, OhplH18W w) { return (OhplH18W)((iWidget*)w)->GetParent(); };
+		aHost.widgetSet = [](void*, OhplH18W w) { return (uintptr_t)((iWidget*)w)->GetSet(); };
+		aHost.pointerGfx = [](void*, OhplH18W w) { return (uintptr_t)((iWidget*)w)->GetPointerGfx(); };
+		aHost.focusNav = [](void*, OhplH18W w, int d) { return (OhplH18W)((iWidget*)w)->GetFocusNavigation((eUIArrow)d); };
+		aHost.globalKeyListener = [](void*, OhplH18W w) { return ((iWidget*)w)->IsGlobalKeyPressListener(); };
+		aHost.globalUIListener = [](void*, OhplH18W w) { return ((iWidget*)w)->IsGlobalUIInputListener(); };
+		aHost.gotTabFocus = [](void*, OhplH18W w, const cGuiMessageData* d) { return ((iWidget*)w)->OnGotTabFocus(*d); };
+		aHost.isValid = [](void* c, OhplH18W w) { return ((cGuiSet*)c)->IsValidWidget((iWidget*)w); };
+		aHost.listBegin = [](void* c) {
+			tWidgetListIt it = ((cGuiSet*)c)->mlstWidgets.begin();
+			uintptr_t r; memcpy(&r, &it, sizeof(r)); return r; };
+		aHost.listEnd = [](void* c, uintptr_t r) {
+			tWidgetListIt it; memcpy(&it, &r, sizeof(r)); return it == ((cGuiSet*)c)->mlstWidgets.end(); };
+		aHost.listGet = [](void*, uintptr_t r) {
+			tWidgetListIt it; memcpy(&it, &r, sizeof(r)); return (OhplH18W)*it; };
+		aHost.listNext = [](void*, uintptr_t r) {
+			tWidgetListIt it; memcpy(&it, &r, sizeof(r)); ++it; memcpy(&r, &it, sizeof(r)); return r; };
+		aHost.sortWidgets = [](void* c) {
+			cGuiSet* p = (cGuiSet*)c;
+			if(p->mbSortWidgets) { p->mbSortWidgets = false; p->mlstWidgets.sort(SortWidget_Z); } };
+		aHost.currentPointer = [](void* c) { return (uintptr_t)((cGuiSet*)c)->mpGfxCurrentPointer; };
+		aHost.setCurrentPointer = [](void* c, uintptr_t g) { ((cGuiSet*)c)->SetCurrentPointer((cGuiGfxElement*)g); };
+		aHost.skinNormalPointer = [](void* c) { return (uintptr_t)((cGuiSet*)c)->mpSkin->GetGfx(eGuiSkinGfx_PointerNormal); };
+		aHost.execShortcut = [](void* c, const cGuiMessageData* d) { return ((cGuiSet*)c)->ExecShortcut(d->mKeyPress); };
+		aHost.globalPos = [](void*, OhplH18W w, float* p) {
+			cVector3f v = ((iWidget*)w)->GetGlobalPosition(); p[0] = v.x; p[1] = v.y; p[2] = v.z; };
+		aHost.setGlobalPos = [](void*, OhplH18W w, const float* p) { ((iWidget*)w)->SetGlobalPosition(cVector3f(p[0], p[1], p[2])); };
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cGuiSet::AddWidget(iWidget *apWidget,iWidget *apParent)
 	{
 		mlstWidgets.push_front(apWidget);
@@ -1472,18 +1585,18 @@ namespace hpl {
 
 		///////////////////////////
 		//Set up variables
-		mvMousePos = aData.mvPos;
+		mS.mousePos = aData.mvPos;
 		
-		iWidget* pOldToolTipWidget = mpCurrentToolTipWidget;
+		iWidget* pOldToolTipWidget = mS.tooltipWidget;
 		iWidget* pNewToolTipWidget = NULL;
 	
 		cGuiMessageData tData = aData;
 		tData.mlVal = 0;
-		if(mvMouseDown[0]) tData.mlVal |= eGuiMouseButton_Left;
-		if(mvMouseDown[1]) tData.mlVal |= eGuiMouseButton_Middle;
-		if(mvMouseDown[2]) tData.mlVal |= eGuiMouseButton_Right;
-		if(mvMouseDown[3]) tData.mlVal |= eGuiMouseButton_WheelUp;
-		if(mvMouseDown[4]) tData.mlVal |= eGuiMouseButton_WheelDown;
+		if(mS.mouseDown[0]) tData.mlVal |= eGuiMouseButton_Left;
+		if(mS.mouseDown[1]) tData.mlVal |= eGuiMouseButton_Middle;
+		if(mS.mouseDown[2]) tData.mlVal |= eGuiMouseButton_Right;
+		if(mS.mouseDown[3]) tData.mlVal |= eGuiMouseButton_WheelUp;
+		if(mS.mouseDown[4]) tData.mlVal |= eGuiMouseButton_WheelDown;
 
 		///////////////////////////
 		//Call widgets
@@ -1502,10 +1615,10 @@ namespace hpl {
 			if(pWidget->IsVisible()==false)
 				continue;	
 			
-			if(mpAttentionWidget && pWidget->IsConnectedTo(mpAttentionWidget)==false)
+			if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
 				continue;
 
-			if(pWidget->PointIsInside(mvMousePos,false))
+			if(pWidget->PointIsInside(mS.mousePos,false))
 			{
 				if(pWidgetUnderMouse==NULL || 
 					pWidgetUnderMouse->IsConnectedTo(pWidget) || 
@@ -1534,13 +1647,13 @@ namespace hpl {
 								pNewToolTipWidget = pWidget;
 
 								if(pNewToolTipWidget!=pOldToolTipWidget)
-									mfToolTipTimer = 0;
+									mS.tooltipTimer = 0;
 							}
 						}
 
 						if(pWidget->HasFocusNavigation() && pWidget->IsVisible() && pWidget->IsEnabled())
 						{
-							iWidget *pOldFocus = mpFocusedWidget;
+							iWidget *pOldFocus = mS.focused;
 
 							if(pOldFocus==NULL || (pOldFocus->GetParent() == pWidget->GetParent()
 													&& pOldFocus->GetSet() == pWidget->GetSet()))
@@ -1554,8 +1667,8 @@ namespace hpl {
 					//Set pointer
 					if(bPointerSet==false && pWidget->GetPointerGfx())
 					{
-						if(	mpAttentionWidget &&
-							pWidget->IsConnectedTo(mpAttentionWidget)==false)
+						if(	mS.attention &&
+							pWidget->IsConnectedTo(mS.attention)==false)
 						{
 						}
 						else
@@ -1584,7 +1697,7 @@ namespace hpl {
 					pWidget->ProcessMessage(eGuiMessage_MouseLeave, tData);
 
 					//In case the widget is moved under the mouse again, check:
-					if(mpFocusedWidget == pWidget && pWidget->PointIsInside(mvMousePos, false))
+					if(mS.focused == pWidget && pWidget->PointIsInside(mS.mousePos, false))
 					{
 						pWidget->SetMouseIsOver(true);
 						if(pWidget->ProcessMessage(eGuiMessage_MouseEnter, tData)) bRet = true;
@@ -1599,7 +1712,7 @@ namespace hpl {
 
 			////////////////////////////
 			//Mouse move event
-			if(pWidget->GetMouseIsOver() || mpFocusedWidget == pWidget)
+			if(pWidget->GetMouseIsOver() || mS.focused == pWidget)
 			{
 				if(pWidget->ProcessMessage(eGuiMessage_MouseMove, tData)) bRet = true;
 			}
@@ -1607,11 +1720,11 @@ namespace hpl {
 
 		if(bToolTipWidgetSet)
 		{
-			mpCurrentToolTipWidget = pNewToolTipWidget;
+			mS.tooltipWidget = pNewToolTipWidget;
 		}
 		else if(bToolTipWidgetLeft)
 		{
-			mpCurrentToolTipWidget=NULL;
+			mS.tooltipWidget=NULL;
 		}
 		
 		return bRet;
@@ -1623,12 +1736,12 @@ namespace hpl {
 	{
 		///////////////////////////
 		//Set up variables
-		mvMouseDown[cMath::Log2ToInt(aData.mlVal)] = true;
+		mS.mouseDown[cMath::Log2ToInt(aData.mlVal)] = true;
 
 		cGuiMessageData tData = aData;
-		tData.mvPos = mvMousePos;
+		tData.mvPos = mS.mousePos;
 
-		iWidget *pOldFocus = mpFocusedWidget;
+		iWidget *pOldFocus = mS.focused;
 
 		///////////////////////////
 		//Call widgets
@@ -1644,23 +1757,23 @@ namespace hpl {
 				continue;
 
 			//If there is an attention set, do not send clicks to any other widgets
-			if(mpAttentionWidget && pWidget->IsConnectedTo(mpAttentionWidget)==false) 
+			if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
 			{
 				continue;
 			}
 
 			if(pWidget->GetMouseIsOver())
 			{
-				if(mpFocusedWidget != pWidget)
+				if(mS.focused != pWidget)
 				{
 					if(pWidget->GetFocus(tData))
 					{
-						mpFocusedWidget = pWidget;
+						mS.focused = pWidget;
 					}
 				}
 				//else
 				//{
-				//	mpFocusedWidget = pWidget;
+				//	mS.focused = pWidget;
 				//}
 
 				//Log("Got focus %d\n",pWidget);
@@ -1675,10 +1788,10 @@ namespace hpl {
 
 		//Se if anything was clicked
 		if(bRet == false)
-			mpFocusedWidget = NULL;
+			mS.focused = NULL;
 		
 		//Lost focus callback
-		if(mpFocusedWidget != pOldFocus)
+		if(mS.focused != pOldFocus)
 		{
 			//Log("Lost focus %d\n",pOldFocus);
 			if(pOldFocus && IsValidWidget(pOldFocus)) pOldFocus->ProcessMessage(eGuiMessage_LostFocus, tData, true, true);			
@@ -1693,10 +1806,10 @@ namespace hpl {
 	{
 		///////////////////////////
 		//Set up variables
-		mvMouseDown[cMath::Log2ToInt(aData.mlVal)] = false;
+		mS.mouseDown[cMath::Log2ToInt(aData.mlVal)] = false;
 
 		cGuiMessageData tData = aData;
-		tData.mvPos = mvMousePos;
+		tData.mvPos = mS.mousePos;
 
 		//mlstWidgets.sort(SortWidget_Z);
 		
@@ -1704,9 +1817,9 @@ namespace hpl {
 		//Call widgets
 		bool bRet = false;
 		
-		if(mpFocusedWidget)
+		if(mS.focused)
 		{
-			bRet = mpFocusedWidget->ProcessMessage(eGuiMessage_MouseUp, tData);
+			bRet = mS.focused->ProcessMessage(eGuiMessage_MouseUp, tData);
 		}
 
 		if(bRet == false)
@@ -1717,12 +1830,12 @@ namespace hpl {
 				iWidget *pWidget = *it;
 
 				//If these is an attention set, do send clicks to any other widgets
-				if(mpAttentionWidget && pWidget->IsConnectedTo(mpAttentionWidget)==false) 
+				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
 				{
 					continue;
 				}
 
-				if(pWidget != mpFocusedWidget && pWidget->GetMouseIsOver())
+				if(pWidget != mS.focused && pWidget->GetMouseIsOver())
 				{
 					if(pWidget->ProcessMessage(eGuiMessage_MouseUp, tData))
 					{
@@ -1743,7 +1856,7 @@ namespace hpl {
 		///////////////////////////
 		//Set up variables
 		cGuiMessageData tData = aData;
-		tData.mvPos = mvMousePos;
+		tData.mvPos = mS.mousePos;
 		
 		///////////////////////////
 		//Call widgets
@@ -1754,7 +1867,7 @@ namespace hpl {
 			iWidget *pWidget = *it;
 
 			//If these is an attention set, do send clicks to any other widgets
-			if(mpAttentionWidget && pWidget->IsConnectedTo(mpAttentionWidget)==false) 
+			if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
 			{
 				continue;
 			}
@@ -1779,7 +1892,7 @@ namespace hpl {
 		///////////////////////////
 		//Set up variables
 		cGuiMessageData tData = aData;
-		tData.mvPos = mvMousePos;
+		tData.mvPos = mS.mousePos;
 
 		///////////////////////////
 		//Call widgets
@@ -1789,10 +1902,10 @@ namespace hpl {
 		// Check tab order (temporary - this should be handled by iWidget, for widgets capable of containing other widgets)
 		if(bRet==false && tData.mKeyPress.mKey==eKey_Tab && mlstTabOrderWidgets.empty()==false)
 		{
-			iWidget* pOldWidgetToFocus = mpTabOrderWidget;
+			iWidget* pOldWidgetToFocus = mS.tabWidget;
 			iWidget* pNewWidgetToFocus=NULL;
 
-			tWidgetListIt it = find(mlstTabOrderWidgets.begin(), mlstTabOrderWidgets.end(), mpFocusedWidget);
+			tWidgetListIt it = find(mlstTabOrderWidgets.begin(), mlstTabOrderWidgets.end(), mS.focused);
 			if(it==mlstTabOrderWidgets.end())
 				it = find(mlstTabOrderWidgets.begin(), mlstTabOrderWidgets.end(), pOldWidgetToFocus);
 
@@ -1820,9 +1933,9 @@ namespace hpl {
 			
 			if(pNewWidgetToFocus && pNewWidgetToFocus->IsVisible() && pNewWidgetToFocus->IsEnabled())
 			{
-				mpTabOrderWidget = pNewWidgetToFocus;
-				SetFocusedWidget(mpTabOrderWidget);
-				mpTabOrderWidget->OnGotTabFocus(tData);
+				mS.tabWidget = pNewWidgetToFocus;
+				SetFocusedWidget(mS.tabWidget);
+				mS.tabWidget->OnGotTabFocus(tData);
 				bRet = true;
 			}
 		}
@@ -1830,8 +1943,8 @@ namespace hpl {
 
 		if(bRet==false)
 		{
-			if(mpFocusedWidget) 
-				bRet = mpFocusedWidget->ProcessMessage(eGuiMessage_KeyPress, tData);
+			if(mS.focused)
+				bRet = mS.focused->ProcessMessage(eGuiMessage_KeyPress, tData);
 
 			if(bRet==false)
 			{
@@ -1848,13 +1961,13 @@ namespace hpl {
 		if(bRet==false)
 		{
 			// Steal focus from current widget
-			iWidget* pFocusedWidget = mpFocusedWidget;
+			iWidget* pFocusedWidget = mS.focused;
 			SetFocusedWidget(NULL);
 
 			bRet = ExecShortcut(tData.mKeyPress);
 
 			// Restore focus if shortcut did not set own
-			if(mpFocusedWidget==NULL)
+			if(mS.focused==NULL)
                 SetFocusedWidget(pFocusedWidget);
 		}
 		
@@ -1866,12 +1979,12 @@ namespace hpl {
 				iWidget *pWidget = *it;
 
 				//If these is an attention set, do send clicks to any other widgets
-				if(mpAttentionWidget && pWidget->IsConnectedTo(mpAttentionWidget)==false) 
+				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
 				{
 					continue;
 				}
 
-				if(pWidget->GetMouseIsOver() || pWidget->IsGlobalKeyPressListener() && mpFocusedWidget != pWidget)
+				if(pWidget->GetMouseIsOver() || pWidget->IsGlobalKeyPressListener() && mS.focused != pWidget)
 				{
 					if(pWidget->ProcessMessage(eGuiMessage_KeyPress, tData))
 					{
@@ -1892,15 +2005,15 @@ namespace hpl {
 		///////////////////////////
 		//Set up variables
 		cGuiMessageData tData = aData;
-		tData.mvPos = mvMousePos;
+		tData.mvPos = mS.mousePos;
 
 		///////////////////////////
 		//Call widgets
 		bool bRet = false;
 
-		if(mpFocusedWidget)
+		if(mS.focused)
 		{
-			bRet = mpFocusedWidget->ProcessMessage(eGuiMessage_KeyRelease, tData);
+			bRet = mS.focused->ProcessMessage(eGuiMessage_KeyRelease, tData);
 			if(bRet==false)
 			{
 				eKey key = tData.mKeyPress.mKey;
@@ -1919,12 +2032,12 @@ namespace hpl {
 				iWidget *pWidget = *it;
 
 				//If these is an attention set, do send clicks to any other widgets
-				if(mpAttentionWidget && pWidget->IsConnectedTo(mpAttentionWidget)==false) 
+				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
 				{
 					continue;
 				}
 
-				if(pWidget->GetMouseIsOver() && mpFocusedWidget != pWidget)
+				if(pWidget->GetMouseIsOver() && mS.focused != pWidget)
 				{
 					if(pWidget->ProcessMessage(eGuiMessage_KeyRelease, tData))
 					{
@@ -1950,9 +2063,9 @@ namespace hpl {
 		//Call widgets
 		bool bRet = false;
 
-		if(mpFocusedWidget)
+		if(mS.focused)
 		{
-			bRet = mpFocusedWidget->ProcessMessage(eGuiMessage_GamepadInput, tData);
+			bRet = mS.focused->ProcessMessage(eGuiMessage_GamepadInput, tData);
 		}
 		
 		if(bRet==false)
@@ -1963,12 +2076,12 @@ namespace hpl {
 				iWidget *pWidget = *it;
 
 				//If these is an attention set, do send clicks to any other widgets
-				if(mpAttentionWidget && pWidget->IsConnectedTo(mpAttentionWidget)==false) 
+				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
 				{
 					continue;
 				}
 
-				if(pWidget->GetMouseIsOver() && mpFocusedWidget != pWidget)
+				if(pWidget->GetMouseIsOver() && mS.focused != pWidget)
 				{
 					if(pWidget->ProcessMessage(eGuiMessage_GamepadInput, tData))
 					{
@@ -1988,19 +2101,19 @@ namespace hpl {
 	{
 		///////////////////////////////////////////////////////////////////////////////////////////////
 		// First check if we have a proper start point, if we are not and cannot set one, just skip
-		if(mpFocusedWidget==NULL || 
-			mpFocusedWidget->HasFocusNavigation()==false && mpFocusedWidget!=mpDefaultFocusNavWidget)
+		if(mS.focused==NULL ||
+			mS.focused->HasFocusNavigation()==false && mS.focused!=mS.defaultNav)
 		{
-			if(mpDefaultFocusNavWidget==NULL) 
+			if(mS.defaultNav==NULL)
 			{
 				return false;
 			}
 			else
 			{
-				if(mpAttentionWidget==NULL || mpDefaultFocusNavWidget->IsConnectedTo(mpAttentionWidget))
+				if(mS.attention==NULL || mS.defaultNav->IsConnectedTo(mS.attention))
 				{
-					SetFocusedWidget(mpDefaultFocusNavWidget);
-					mpFocusedWidget->ProcessMessage(eGuiMessage_GetUINavFocus, cGuiMessageData());
+					SetFocusedWidget(mS.defaultNav);
+					mS.focused->ProcessMessage(eGuiMessage_GetUINavFocus, cGuiMessageData());
 
 					return true;
 				}
@@ -2013,22 +2126,22 @@ namespace hpl {
 		///////////////////////////////////////////////////////////////////////////////////////////////
 		// Check if widget likes the arrow press for anything else other than moving away,
 		// if not the case, just get next widget and check for validity
-		if(mpFocusedWidget) bRet = mpFocusedWidget->ProcessMessage(eGuiMessage_UIArrowPress, aData);
+		if(mS.focused) bRet = mS.focused->ProcessMessage(eGuiMessage_UIArrowPress, aData);
 
 		if(bRet==false)
 		{
-			iWidget* pNextWidget = mpFocusedWidget->GetFocusNavigation((eUIArrow)aData.mlVal);
+			iWidget* pNextWidget = mS.focused->GetFocusNavigation((eUIArrow)aData.mlVal);
 
 			if(pNextWidget && 
 				pNextWidget->IsEnabled() && 
 				pNextWidget->IsVisible() &&
-				(mpAttentionWidget==NULL || pNextWidget->IsConnectedTo(mpAttentionWidget)))
+				(mS.attention==NULL || pNextWidget->IsConnectedTo(mS.attention)))
 			{
-				iWidget *pOldFocus = mpFocusedWidget;
+				iWidget *pOldFocus = mS.focused;
 				SetFocusedWidget(pNextWidget);
 
 				// Do whatever stuff the widget wants to do when getting the focus through arrows
-				mpFocusedWidget->ProcessMessage(eGuiMessage_GetUINavFocus, cGuiMessageData());
+				mS.focused->ProcessMessage(eGuiMessage_GetUINavFocus, cGuiMessageData());
 				pOldFocus->ProcessMessage(eGuiMessage_LoseUINavFocus, cGuiMessageData());
 				bRet = true;
 			}
@@ -2044,11 +2157,11 @@ namespace hpl {
 				iWidget *pWidget = *it;
 
 				// If widget is not eligible for input check, skip it (or if it's the focused one, we already checked that)
-				if(pWidget->IsGlobalUIInputListener()==false || pWidget==mpFocusedWidget || pWidget->IsVisible()==false)
+				if(pWidget->IsGlobalUIInputListener()==false || pWidget==mS.focused || pWidget->IsVisible()==false)
 					continue;
 
 				//If there is an attention set, do not send clicks to any other widgets
-				if(mpAttentionWidget && pWidget->IsConnectedTo(mpAttentionWidget)==false) 
+				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
 				{
 					continue;
 				}
@@ -2067,12 +2180,12 @@ namespace hpl {
 
 	bool cGuiSet::OnUIArrowRelease(const cGuiMessageData& aData)
 	{
-		if(mpFocusedWidget==NULL)
+		if(mS.focused==NULL)
 		{
 			return false;
 		}
 
-		bool bRet = mpFocusedWidget->ProcessMessage(eGuiMessage_UIArrowRelease, aData);
+		bool bRet = mS.focused->ProcessMessage(eGuiMessage_UIArrowRelease, aData);
 
 		return bRet;
 	}
@@ -2084,8 +2197,8 @@ namespace hpl {
 		///////////////////////////
 		//Call widgets
 		bool bRet = false;
-		if(mpFocusedWidget)
-			bRet = mpFocusedWidget->ProcessMessage(eGuiMessage_UIButtonPress, aData);
+		if(mS.focused)
+			bRet = mS.focused->ProcessMessage(eGuiMessage_UIButtonPress, aData);
 
 		if(bRet==false)
 		{
@@ -2095,11 +2208,11 @@ namespace hpl {
 				iWidget *pWidget = *it;
 
 				// If widget is not eligible for input check, skip it (or if it's the focused one, we already checked that)
-				if(pWidget->IsGlobalUIInputListener()==false || pWidget==mpFocusedWidget || pWidget->IsVisible()==false)
+				if(pWidget->IsGlobalUIInputListener()==false || pWidget==mS.focused || pWidget->IsVisible()==false)
 					continue;
 
 				//If there is an attention set, do not send clicks to any other widgets
-				if(mpAttentionWidget && pWidget->IsConnectedTo(mpAttentionWidget)==false) 
+				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
 				{
 					continue;
 				}
@@ -2120,8 +2233,8 @@ namespace hpl {
 		///////////////////////////
 		//Call widgets
 		bool bRet = false;
-		if(mpFocusedWidget)
-			bRet = mpFocusedWidget->ProcessMessage(eGuiMessage_UIButtonRelease, aData);
+		if(mS.focused)
+			bRet = mS.focused->ProcessMessage(eGuiMessage_UIButtonRelease, aData);
 
 		if(bRet==false)
 		{
@@ -2131,11 +2244,11 @@ namespace hpl {
 				iWidget *pWidget = *it;
 
 				// If widget is not eligible for input check, skip it (or if it's the focused one, we already checked that)
-				if(pWidget->IsGlobalUIInputListener()==false || pWidget==mpFocusedWidget || pWidget->IsVisible()==false)
+				if(pWidget->IsGlobalUIInputListener()==false || pWidget==mS.focused || pWidget->IsVisible()==false)
 					continue;
 
 				//If there is an attention set, do not send clicks to any other widgets
-				if(mpAttentionWidget && pWidget->IsConnectedTo(mpAttentionWidget)==false) 
+				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
 				{
 					continue;
 				}
@@ -2153,9 +2266,9 @@ namespace hpl {
 
 	bool cGuiSet::OnUIButtonDoublePress(const cGuiMessageData& aData)
 	{
-		if(mpFocusedWidget==NULL) return false;
+		if(mS.focused==NULL) return false;
 
-		return mpFocusedWidget->ProcessMessage(eGuiMessage_UIButtonDoublePress, aData);
+		return mS.focused->ProcessMessage(eGuiMessage_UIButtonDoublePress, aData);
 	}
 
 	//-----------------------------------------------------------------------
@@ -2164,7 +2277,7 @@ namespace hpl {
 	{	
 		if(HasFocus() && mbDrawMouse && mpGfxCurrentPointer)
 		{
-			DrawGfx(mpGfxCurrentPointer,cVector3f(mvMousePos.x,mvMousePos.y, mfMouseZ),
+			DrawGfx(mpGfxCurrentPointer,cVector3f(mS.mousePos.x,mS.mousePos.y, mfMouseZ),
 				mpGfxCurrentPointer->GetImageSize(),cColor(1,1));
 		}
 		
@@ -2176,16 +2289,16 @@ namespace hpl {
 
 	bool cGuiSet::DrawFocus(iWidget* apWidget, const cGuiMessageData& aData)
 	{	
-		if(HasFocus() && mpFocusedWidget && mbDrawFocus && 
-			(mpFocusedWidget==mpDefaultFocusNavWidget || mpFocusedWidget->HasFocusNavigation()))
+		if(HasFocus() && mS.focused && mbDrawFocus &&
+			(mS.focused==mS.defaultNav || mS.focused->HasFocusNavigation()))
 		{
 			if(mpFocusDrawObject && mpFocusDrawCallback)
-				mpFocusDrawCallback(mpFocusDrawObject, mpFocusedWidget, aData);
+				mpFocusDrawCallback(mpFocusDrawObject, mS.focused, aData);
 			else
 			{
-				cVector3f vPos = mpFocusedWidget->GetGlobalPosition();
+				cVector3f vPos = mS.focused->GetGlobalPosition();
 				vPos.z = mfMouseZ-1.0f;
-				DrawGfx(cGui::mpGfxRect, vPos, mpFocusedWidget->GetSize(), cColor(0.8f,0.2f));
+				DrawGfx(cGui::mpGfxRect, vPos, mS.focused->GetSize(), cColor(0.8f,0.2f));
 			}
 		}
 		
@@ -2216,7 +2329,7 @@ namespace hpl {
 	{
 		if(mpSkin==NULL || mpFrameToolTip==NULL) return;
 
-		if(mpCurrentToolTipWidget==NULL || mpCurrentToolTipWidget->IsVisible()==false)
+		if(mS.tooltipWidget==NULL || mS.tooltipWidget->IsVisible()==false)
 		{
 			if(mpFrameToolTip->IsVisible())
 			{
@@ -2226,11 +2339,11 @@ namespace hpl {
 		}
 		else
 		{
-			if(mfToolTipTimer>=mfToolTipTimeToPopUp)
+			if(mS.tooltipTimer>=mfToolTipTimeToPopUp)
 			{
 				if(mpFrameToolTip->IsVisible()==false)
 				{
-					const tWString& sTipText = mpCurrentToolTipWidget->GetToolTip().c_str();
+					const tWString& sTipText = mS.tooltipWidget->GetToolTip().c_str();
 					const cVector2f& mvFontSize = mpLabelToolTip->GetDefaultFontSize();
 
 					iFontData* pFont = mpLabelToolTip->GetDefaultFontType();
@@ -2243,7 +2356,7 @@ namespace hpl {
 
 					cVector2f vPointerSize = mpGfxCurrentPointer->GetImageSize();
 					OhplGuiTooltip tip;
-					ohpl_gui_tooltip(&mvMousePos, mfMouseZ, &vPointerSize, &mvVirtualSize, fTextLength, mvFontSize.y, lRows, &tip);
+					ohpl_gui_tooltip(&mS.mousePos, mfMouseZ, &vPointerSize, &mvVirtualSize, fTextLength, mvFontSize.y, lRows, &tip);
 
 					mpLabelToolTip->SetText(sTipText);
 					mpLabelToolTip->SetSize(tip.size);
@@ -2259,7 +2372,7 @@ namespace hpl {
 			}
 			else
 			{
-				mfToolTipTimer+=afTimeStep;
+				mS.tooltipTimer+=afTimeStep;
 
 				if(mpFrameToolTip->IsVisible())
 				{
@@ -2307,42 +2420,71 @@ namespace hpl {
 
 	void cGuiSet::AddToTabOrder(iWidget* apWidget)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h18_add_to_tab_order(&mS, (OhplH18W)apWidget);
+			return;
+		}
 		if(apWidget && find(mlstTabOrderWidgets.begin(), mlstTabOrderWidgets.end(), apWidget)==mlstTabOrderWidgets.end())
 			mlstTabOrderWidgets.push_back(apWidget);
 
-		mpTabOrderWidget = mlstTabOrderWidgets.front();
+		mS.tabWidget = mlstTabOrderWidgets.front();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cGuiSet::ClearTabOrder()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h18_clear_tab_order(&mS);
+			return;
+		}
 		mlstTabOrderWidgets.clear();
 
-		mpTabOrderWidget = NULL;
+		mS.tabWidget = NULL;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cGuiSet::SetDefaultFocusNavWidget(iWidget* apWidget, bool abCheckForValidity)
 	{
-		if(mpDefaultFocusNavWidget==apWidget) return;
+		if(OhplBackendRustRequested())
+		{
+			OhplH18Host host;
+			FillRustHost(host);
+			ohpl_h18_set_default_nav(&mS, &host, (OhplH18W)apWidget, abCheckForValidity);
+			return;
+		}
+		if(mS.defaultNav==apWidget) return;
 
 		if(abCheckForValidity && IsValidWidget(apWidget)==false)
 			apWidget = NULL;
 
-		mpDefaultFocusNavWidget = apWidget;
+		mS.defaultNav = apWidget;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cGuiSet::PushDefaultFocusNavWidget()
 	{
-		mlstDefaultFocusStack.push_back(mpDefaultFocusNavWidget);
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h18_push_default_nav(&mS);
+			return;
+		}
+		mlstDefaultFocusStack.push_back(mS.defaultNav);
 	}
 
 	void cGuiSet::PopDefaultFocusNavWidget()
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH18Host host;
+			FillRustHost(host);
+			ohpl_h18_pop_default_nav(&mS, &host);
+			return;
+		}
 		if(mlstDefaultFocusStack.empty()) return;
 
 		SetDefaultFocusNavWidget(mlstDefaultFocusStack.back(), true);

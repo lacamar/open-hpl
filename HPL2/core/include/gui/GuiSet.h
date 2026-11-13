@@ -23,6 +23,7 @@
 #include <list>
 #include "gui/GuiTypes.h"
 #include "graphics/GraphicsTypes.h"
+#include "gui/RustGuiH18.h"
 
 
 namespace hpl {
@@ -372,10 +373,10 @@ namespace hpl {
 		void SetMouseZ(float afZ){mfMouseZ = afZ;}
 		float GetMouseZ(){ return mfMouseZ;}
 
-		void SetMouseMovementEnabled(bool abX) { mbMouseMovementEnabled = abX; }
-		bool GetMouseMovementEnabled() { return mbMouseMovementEnabled; }
+		void SetMouseMovementEnabled(bool abX) { mS.mouseMovement = abX; }
+		bool GetMouseMovementEnabled() { return mS.mouseMovement; }
 
-		const cVector2f& GetMousePos(){ return mvMousePos;}
+		const cVector2f& GetMousePos(){ return mS.mousePos;}
 
 		void SetRootWidgetClips(bool abX);
 		bool GetRootWidgetClips();
@@ -388,13 +389,13 @@ namespace hpl {
 		static float GetGlobalGuiScale(){ return mfGlobalGuiScale; }
 
 		void SetFocusedWidget(iWidget* apWidget, bool abCheckForValidity=false);
-		iWidget* GetFocusedWidget(){return mpFocusedWidget;}
+		iWidget* GetFocusedWidget(){return mS.focused;}
 
 		void PushFocusedWidget();
 		void PopFocusedWidget();
 
 		void SetAttentionWidget(iWidget *apWidget, bool abClearFocus = true, bool abCheckForValidity = false);
-		iWidget* GetAttentionWidget(){ return mpAttentionWidget;}
+		iWidget* GetAttentionWidget(){ return mS.attention;}
 
 		void PushAttentionWidget();
 		void PopAttentionWidget(bool abClearFocus=true);
@@ -444,13 +445,13 @@ namespace hpl {
 		void AddToTabOrder(iWidget* apWidget);
 		void ClearTabOrder();
 
-		iWidget* GetToolTipWidget() { return mpCurrentToolTipWidget; }
-		void SetToolTipWidget(iWidget* apWidget) { mpCurrentToolTipWidget = apWidget; }
+		iWidget* GetToolTipWidget() { return mS.tooltipWidget; }
+		void SetToolTipWidget(iWidget* apWidget) { mS.tooltipWidget = apWidget; }
 
 		void SetWidgetsNeedSorting() { mbSortWidgets = true; }
 
 		void SetDefaultFocusNavWidget(iWidget* apWidget, bool abCheckForValidity=false);
-		iWidget* GetDefaultFocusNavWidget() { return mpDefaultFocusNavWidget; }
+		iWidget* GetDefaultFocusNavWidget() { return mS.defaultNav; }
 
 		void PushDefaultFocusNavWidget();
 		void PopDefaultFocusNavWidget();
@@ -491,6 +492,7 @@ namespace hpl {
 		bool OnUIButtonRelease(const cGuiMessageData& aData);
 		bool OnUIButtonDoublePress(const cGuiMessageData& aData);
 
+		void FillRustHost(OhplH18Host& aHost);
 		bool OnGetUINavFocus(const cGuiMessageData& aData);
 		bool OnLoseUINavFocus(const cGuiMessageData& aData);
 
@@ -508,6 +510,8 @@ namespace hpl {
 
 		eUIArrow TranslateKeyToUIArrow(eKey aKey);
 
+		OhplH18SetState mS;
+
 		cGui *mpGui;
 		cGuiSkin *mpSkin;
 
@@ -518,10 +522,8 @@ namespace hpl {
 		cSound *mpSound;
 		cScene *mpScene;
 
-		iWidget *mpAttentionWidget;
 		tWidgetList mlstAttentionStack;
 
-		iWidget *mpFocusedWidget;
 		tWidgetList mlstFocusedStack;
 
 		iWidget* mpWidgetRoot;
@@ -532,7 +534,6 @@ namespace hpl {
 		int mlPopupCount;
 		float mfLastPopUpZ;
 
-		float mfWindowZ;
 
 		float mfContextMenuZ;
 
@@ -559,9 +560,6 @@ namespace hpl {
 		float mfMouseZ;
 		cGuiGfxElement *mpGfxCurrentPointer;
 				
-		tBoolVec mvMouseDown;
-		cVector2f mvMousePos;
-		bool mbMouseMovementEnabled;
 
 		tGuiPopUpList mlstPopUps;
 
@@ -576,9 +574,7 @@ namespace hpl {
 
 		///////////////////////////////////
 		// Tool tips
-		float mfToolTipTimer;
 		float mfToolTipTimeToPopUp;
-		iWidget* mpCurrentToolTipWidget;
 		bool mbToolTipUpdated;
 
 		cWidgetFrame* mpFrameToolTip;
@@ -588,14 +584,12 @@ namespace hpl {
 		////////////////////////////////////
 		// Tab Order
 		tWidgetList mlstTabOrderWidgets;
-		iWidget* mpTabOrderWidget;
 
 		bool mbDestroyingSet;
 
 		bool mbOldDestroyingSet;
 		iWidget* mpTopMostDestroyingWidget;
 
-		iWidget*	mpDefaultFocusNavWidget;
 		tWidgetList	mlstDefaultFocusStack;
 
 		bool				mbDrawFocus;
