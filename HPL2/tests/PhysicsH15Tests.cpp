@@ -59,14 +59,14 @@ struct Peek : cSurfaceData
 		h.F(p.mfMinRollSpeed); h.F(p.mfMinRollFreq); h.F(p.mfMinRollVolume); h.F(p.mfMinRollFreqSpeed);
 		h.F(p.mfMiddleRollSpeed); h.F(p.mfMaxRollFreqSpeed); h.F(p.mfMaxRollFreq); h.F(p.mfMaxRollVolume);
 		h.U32(p.mRollAxisFlags);
-		const tSurfaceImpactDataVec* lists[2] = { &p.mvImpactData, &p.mvHitData };
 		for (int l = 0; l < 2; ++l)
 		{
-			h.U32((uint32_t)lists[l]->size());
-			for (size_t i = 0; i < lists[l]->size(); ++i)
+			int n = l == 0 ? d.GetImpactDataNum() : d.GetHitDataNum();
+			h.U32((uint32_t)n);
+			for (int i = 0; i < n; ++i)
 			{
-				cSurfaceImpactData* d = (*lists[l])[i];
-				h.F(d->GetMinSpeed()); h.S(d->GetSoundName()); h.S(d->GetPSName()); h.U32(d->GetPSPrio());
+				cSurfaceImpactData* e = l == 0 ? d.GetImpactData(i) : d.GetHitData(i);
+				h.F(e->GetMinSpeed()); h.S(e->GetSoundName()); h.S(e->GetPSName()); h.U32(e->GetPSPrio());
 			}
 		}
 	}

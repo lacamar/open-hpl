@@ -21,6 +21,7 @@
 
 #include "physics/Physics.h"
 #include "physics/RustPhysics.h"
+#include "physics/RustPhysBook.h"
 #include "physics/PhysicsWorld.h"
 #include "physics/PhysicsBody.h"
 #include "system/LowLevelSystem.h"
@@ -46,11 +47,52 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	size_t cSurfaceData::HostOp(int32_t alOp, OhplH15Wa *a)
+	{
+		cSurfaceData *pS = reinterpret_cast<cSurfaceData*>(a->p[0]);
+		tString sArg;
+		if(alOp == 206 || alOp == 207 || alOp == 210 || alOp == 211) sArg = tString(reinterpret_cast<const char*>(a->p[alOp >= 210 ? 2 : 1]), a->p[alOp >= 210 ? 3 : 2]);
+		cSurfaceImpactData *pI = reinterpret_cast<cSurfaceImpactData*>(a->p[1]);
+		const tString *ps = NULL;
+		switch(alOp)
+		{
+		case 201: hplDelete(pI); return 0;
+		case 202: { cSurfaceImpactData *pNew = hplNew( cSurfaceImpactData, () ); pNew->mfMinSpeed = a->f[0]; return reinterpret_cast<size_t>(pNew); }
+		case 203: pI->msSoundName = tString(reinterpret_cast<const char*>(a->p[2]), a->p[3]); return 0;
+		case 204: pI->msPSName = tString(reinterpret_cast<const char*>(a->p[2]), a->p[3]); return 0;
+		case 205: pI->mlPSPrio = a->i[0]; return 0;
+		case 206: pS->mpResources->GetSoundEntityManager()->Preload(sArg); return 0;
+		case 207: pS->mpResources->GetParticleManager()->Preload(sArg); return 0;
+		case 208: ps = a->i[0] == 0 ? &pS->msUserVar : a->i[0] == 1 ? &pS->msStepType : a->i[0] == 2 ? &pS->msScrapeSoundName : &pS->msRollSoundName; break;
+		case 209: ps = a->i[0] == 0 ? &pI->msSoundName : &pI->msPSName; break;
+		case 210: return reinterpret_cast<size_t>(reinterpret_cast<iPhysicsWorld*>(a->p[1])->GetMaterialFromName(sArg));
+		case 211: return reinterpret_cast<size_t>(reinterpret_cast<iPhysicsWorld*>(a->p[1])->CreateMaterial(sArg));
+		case 212:
+		{
+			iPhysicsMaterial *pM = reinterpret_cast<iPhysicsMaterial*>(a->p[1]);
+			if(a->i[0] == 0) pM->SetElasticity(a->f[0]); else if(a->i[0] == 1) pM->SetKineticFriction(a->f[0]); else pM->SetStaticFriction(a->f[0]);
+			return 0;
+		}
+		case 213:
+		{
+			iPhysicsMaterial *pM = reinterpret_cast<iPhysicsMaterial*>(a->p[1]);
+			ePhysicsMaterialCombMode mode = (ePhysicsMaterialCombMode)(a->i[0] >> 8);
+			if((a->i[0] & 0xff) == 0) pM->SetElasticityCombMode(mode); else pM->SetFrictionCombMode(mode);
+			return 0;
+		}
+		case 214: reinterpret_cast<iPhysicsMaterial*>(a->p[1])->SetSurfaceData(pS); return 0;
+		}
+		if(ps){ a->s = ps->c_str(); a->n = ps->size(); }
+		return 0;
+	}
+
 	cSurfaceData::cSurfaceData(const tString &asName, cPhysics *apPhysics,cResources *apResources)
 	{
 		msName = asName;
 		mpPhysics = apPhysics;
 		mpResources = apResources;
+
+		if(OhplBackendRustRequested()){ ohpl_h15s_new(HostOp, reinterpret_cast<size_t>(this), &mS); return; }
 
 		//Setup default properties
 		mFrictionMode = ePhysicsMaterialCombMode_Average;
@@ -75,6 +117,8 @@ namespace hpl {
 
 	cSurfaceData::~cSurfaceData()
 	{
+		if(mS.rs){ ohpl_h15s_free(mS.rs); return; }
+
 		STLDeleteAll(mvImpactData);
 		STLDeleteAll(mvHitData);
 	}
@@ -89,6 +133,11 @@ namespace hpl {
 
 	void cSurfaceData::RustParams(OhplSurfaceParams &aParams) const
 	{
+		if(mS.rs)
+		{
+			ohpl_h15s_params(&mS, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(mpPhysics), OhplS(msScrapeSoundName), OhplS(msRollSoundName), &aParams);
+			return;
+		}
 		aParams.self = reinterpret_cast<size_t>(this);
 		aParams.physics = reinterpret_cast<size_t>(mpPhysics);
 		aParams.minScrapeSpeed = mfMinScrapeSpeed;
@@ -154,11 +203,13 @@ namespace hpl {
 
 	void cSurfaceData::SetElasticity(float afElasticity)
 	{
+		if(mS.rs){ ohpl_h15s_set_f32(&mS, 0, afElasticity); return; }
 		mfElasticity = afElasticity;
 	}
 
 	float cSurfaceData::GetElasticity() const
 	{
+		if(mS.rs) return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(&mS), 0);
 		return mfElasticity;
 	}
 
@@ -166,11 +217,13 @@ namespace hpl {
 
 	void cSurfaceData::SetStaticFriction(float afElasticity)
 	{
+		if(mS.rs){ ohpl_h15s_set_f32(&mS, 1, afElasticity); return; }
 		mfStaticFriction = afElasticity;
 	}
 
 	float cSurfaceData::GetStaticFriction() const
 	{
+		if(mS.rs) return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(&mS), 1);
 		return mfStaticFriction;
 	}
 
@@ -178,11 +231,13 @@ namespace hpl {
 
 	void cSurfaceData::SetKineticFriction(float afElasticity)
 	{
+		if(mS.rs){ ohpl_h15s_set_f32(&mS, 2, afElasticity); return; }
 		mfKineticFriction = afElasticity;
 	}
 
 	float cSurfaceData::GetKineticFriction() const
 	{
+		if(mS.rs) return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(&mS), 2);
 		return mfKineticFriction;
 	}
 
@@ -190,11 +245,13 @@ namespace hpl {
 
 	void cSurfaceData::SetPriority(int alPriority)
 	{
+		if(mS.rs){ ohpl_h15s_set_i32(&mS, 0, alPriority); return; }
 		mlPriority = alPriority;
 	}
 
 	int cSurfaceData::GetPriority() const
 	{
+		if(mS.rs) return ohpl_h15s_get_i32(&mS, 0);
 		return mlPriority;
 	}
 
@@ -202,11 +259,13 @@ namespace hpl {
 
 	void cSurfaceData::SetFrictionCombMode(ePhysicsMaterialCombMode aMode)
 	{
+		if(mS.rs){ ohpl_h15s_set_i32(&mS, 1, aMode); return; }
 		mFrictionMode = aMode;
 	}
 
 	ePhysicsMaterialCombMode cSurfaceData::GetFrictionCombMode() const
 	{
+		if(mS.rs) return (ePhysicsMaterialCombMode)ohpl_h15s_get_i32(&mS, 1);
 		return mFrictionMode;
 	}
 
@@ -214,6 +273,7 @@ namespace hpl {
 
 	void cSurfaceData::SetElasticityCombMode(ePhysicsMaterialCombMode aMode)
 	{
+		if(mS.rs){ ohpl_h15s_set_i32(&mS, 2, aMode); return; }
 		mElasticityMode = aMode;
 	}
 
@@ -221,6 +281,7 @@ namespace hpl {
 
 	ePhysicsMaterialCombMode cSurfaceData::GetElasticityCombMode() const
 	{
+		if(mS.rs) return (ePhysicsMaterialCombMode)ohpl_h15s_get_i32(&mS, 2);
 		return mElasticityMode;
 	}
 
@@ -228,6 +289,8 @@ namespace hpl {
 
 	void cSurfaceData::PreloadData()
 	{
+		if(mS.rs){ ohpl_h15s_preload(mS.rs); return; }
+
 		if(msRollSoundName!="")mpResources->GetSoundEntityManager()->Preload(msRollSoundName);
 		if(msScrapeSoundName!="")mpResources->GetSoundEntityManager()->Preload(msScrapeSoundName);
 		
@@ -255,6 +318,8 @@ namespace hpl {
 
 	iPhysicsMaterial* cSurfaceData::ToMaterial(iPhysicsWorld *apWorld)
 	{
+		if(mS.rs) return reinterpret_cast<iPhysicsMaterial*>(ohpl_h15s_to_material(mS.rs, &mS, msName.c_str(), msName.size(), reinterpret_cast<size_t>(apWorld)));
+
 		iPhysicsMaterial *pMat=NULL;
 
 		pMat = apWorld->GetMaterialFromName(msName);
@@ -280,6 +345,7 @@ namespace hpl {
 
 	cSurfaceImpactData* cSurfaceData::CreateImpactData(float afMinSpeed)
 	{
+		if(mS.rs) return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_create_impact(mS.rs, afMinSpeed, false));
 		cSurfaceImpactData *pData = hplNew( cSurfaceImpactData, () );
 		pData->mfMinSpeed = afMinSpeed;
 
@@ -290,16 +356,19 @@ namespace hpl {
 
 	cSurfaceImpactData* cSurfaceData::GetImpactData(int alIdx)
 	{
+		if(mS.rs) return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_at(mS.rs, false, alIdx));
 		return mvImpactData[alIdx];
 	}
 
 	int cSurfaceData::GetImpactDataNum()
 	{
+		if(mS.rs) return ohpl_h15s_impact_num(mS.rs, false);
 		return (int)mvImpactData.size();
 	}
 
 	cSurfaceImpactData* cSurfaceData::GetImpactDataFromSpeed(float afSpeed)
-	{	
+	{
+		if(mS.rs) return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_from_speed(mS.rs, false, afSpeed));
 		for(size_t i=0; i< mvImpactData.size(); ++i)
 		{
 			if(afSpeed >= mvImpactData[i]->GetMinSpeed())
@@ -314,6 +383,7 @@ namespace hpl {
 
 	cSurfaceImpactData* cSurfaceData::CreateHitData(float afMinSpeed)
 	{
+		if(mS.rs) return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_create_impact(mS.rs, afMinSpeed, true));
 		cSurfaceImpactData *pData = hplNew( cSurfaceImpactData, () );
 		pData->mfMinSpeed = afMinSpeed;
 
@@ -324,16 +394,19 @@ namespace hpl {
 
 	cSurfaceImpactData* cSurfaceData::GetHitData(int alIdx)
 	{
+		if(mS.rs) return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_at(mS.rs, true, alIdx));
 		return mvHitData[alIdx];
 	}
 
 	int cSurfaceData::GetHitDataNum()
 	{
+		if(mS.rs) return ohpl_h15s_impact_num(mS.rs, true);
 		return (int)mvHitData.size();
 	}
 
 	cSurfaceImpactData* cSurfaceData::GetHitDataFromSpeed(float afSpeed)
-	{	
+	{
+		if(mS.rs) return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_from_speed(mS.rs, true, afSpeed));
 		for(size_t i=0; i< mvHitData.size(); ++i)
 		{
 			if(afSpeed >= mvHitData[i]->GetMinSpeed())
