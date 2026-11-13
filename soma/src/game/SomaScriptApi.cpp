@@ -1,5 +1,6 @@
 #include "SomaScriptApi.h"
 #include "RustSomaScript.h"
+#include "RustSomaScriptS2.h"
 #include "SomaImGuiDefaults.h"
 #include "SomaImGui.h"
 #include "SomaScriptNatives.h"
@@ -25,6 +26,11 @@ static cSomaScriptApi *gpActiveApi = NULL;
 // to an older game's declaration can serve one that swapped an enum for an int or appended defaulted params
 std::string cSomaScriptApi::NativeDecl(const char *apType, const char *apDecl)
 {
+	if (OhplS2Rust())
+	{
+		size_t lType = apType ? strlen(apType) : 0, lDecl = strlen(apDecl);
+		return OhplGs6::Call8([&](OhplGs6Sink8 k, void *c) { ohpl_s2_native_decl(apType ? (const unsigned char *)apType : NULL, lType, (const unsigned char *)apDecl, lDecl, k, c); });
+	}
 	cSomaScriptApi *pApi = gpActiveApi;
 	if (pApi == NULL)
 		return apDecl;
@@ -64,12 +70,19 @@ bool cSomaScriptApi::IsValueTypeNative(const std::string &asName)
 
 std::map<std::string, int> &cSomaScriptApi::GetStubCallCounts()
 {
+	if (OhplS2Rust())
+	{
+		static std::map<std::string, int> mapRust;
+		mapRust.clear();
+		ohpl_s2_stub_counts(+[](void *c, const unsigned char *p, size_t n, int l) { (*(std::map<std::string, int> *)c)[std::string((const char *)p, n)] = l; }, &mapRust);
+		return mapRust;
+	}
 	static std::map<std::string, int> counts;
 	return counts;
 }
 
 // Native code and the recovered defaults use SOMA's layout for these structs in every game
-static int NativeOffset(const std::string &asType, const std::string &asDecl, int alOffset)
+int SomaNativeOffset(const std::string &asType, const std::string &asDecl, int alOffset)
 {
 	static const struct { const char *mpType, *mpName; int mlOffset; } vLayout[] = {
 #include "SomaImGuiLayout.inc"
@@ -103,6 +116,11 @@ static OhplGs6Enums *ToRustEnums(const std::vector<std::pair<std::string, std::v
 // native code uses SOMA's enum values; later games insert names in the middle
 void cSomaScriptApi::RebaseEnums(const cSomaScriptApi &aBase)
 {
+	if (OhplS2Rust())
+	{
+		ohpl_s2_api_rebase(mpRust, aBase.mpRust);
+		return;
+	}
 	OhplGs6Enums *pEnums = ToRustEnums(mvEnums), *pBase = ToRustEnums(aBase.mvEnums);
 	ohpl_gs6_enums_rebase(pEnums, pBase);
 	std::vector<int> vValues;
@@ -117,6 +135,17 @@ void cSomaScriptApi::RebaseEnums(const cSomaScriptApi &aBase)
 
 bool cSomaScriptApi::Load(const std::string &asFile)
 {
+	if (OhplS2Rust())
+	{
+		std::ifstream fRust(asFile.c_str());
+		if (fRust.is_open() == false)
+			return false;
+		std::string sRust((std::istreambuf_iterator<char>(fRust)), std::istreambuf_iterator<char>());
+		OhplS2InstallHost();
+		mpRust = ohpl_s2_api_new();
+		ohpl_s2_api_load(mpRust, OhplGs6::U(sRust), sRust.size());
+		return true;
+	}
 	std::ifstream f(asFile.c_str());
 	if (f.is_open() == false)
 		return false;
@@ -171,7 +200,7 @@ bool cSomaScriptApi::Load(const std::string &asFile)
 		this);
 	for (auto &t : mvTypes)
 		for (auto &prop : t.mvProps)
-			prop.second = NativeOffset(t.msName, prop.first, prop.second);
+			prop.second = SomaNativeOffset(t.msName, prop.first, prop.second);
 	return true;
 }
 
@@ -224,6 +253,8 @@ static std::set<void *> gsetDummies;
 
 bool SomaScriptIsDummy(void *apObj)
 {
+	if (OhplS2Rust())
+		return ohpl_s2_is_dummy(apObj);
 	return apObj && gsetDummies.count(apObj) != 0;
 }
 
@@ -249,6 +280,8 @@ static void *DummyForReturn(asIScriptEngine *apEngine, asIScriptFunction *apFunc
 
 void *SomaScriptDummyOf(asIScriptEngine *apEngine, const char *apType)
 {
+	if (OhplS2Rust())
+		return ohpl_s2_dummy_of(apEngine, apType);
 	static std::map<std::string, void *> mapDummies;
 	void *&pDummy = mapDummies[apType];
 	asITypeInfo *pType = apEngine->GetTypeInfoByName(apType);
@@ -292,6 +325,11 @@ static void Stub(asIScriptGeneric *apGen)
 
 void SomaScriptStubCall(asIScriptGeneric *apGen)
 {
+	if (OhplS2Rust())
+	{
+		ohpl_s2_stub_call(apGen);
+		return;
+	}
 	Stub(apGen);
 }
 
@@ -310,6 +348,8 @@ static void MarkStub(asIScriptEngine *apEngine, int alFuncId)
 
 bool SomaScriptIsStub(asIScriptFunction *apFunc)
 {
+	if (OhplS2Rust())
+		return ohpl_s2_is_stub(apFunc);
 	return apFunc && apFunc->GetUserData(kSomaStubUserData) != NULL;
 }
 
@@ -326,7 +366,7 @@ const tString *SomaIntern(const tString &asStr)
 	return &*setStrings.insert(asStr).first;
 }
 
-static const cSomaStructDefaults *FindStructDefaults(const char *apType)
+const cSomaStructDefaults *FindStructDefaults(const char *apType)
 {
 	for (int i = 0; i < glSomaStructDefaultsNum; ++i)
 		if (strcmp(gvSomaStructDefaults[i].mpType, apType) == 0)
@@ -367,6 +407,8 @@ static void ConstructMembers(asIScriptEngine *apEngine, asITypeInfo *apType, cha
 
 void *SomaNewScriptStruct(const char *apType)
 {
+	if (OhplS2Rust())
+		return ohpl_s2_new_struct(apType, false);
 	char *pObj = (char *)calloc(1, 4096);
 	if (const cSomaStructDefaults *pDefaults = FindStructDefaults(apType))
 		ApplyStructDefaults(pDefaults, pObj);
@@ -378,6 +420,8 @@ static std::unordered_map<void *, int> gmapStructRefs;
 
 void *SomaNewOwnedScriptStruct(const char *apType)
 {
+	if (OhplS2Rust())
+		return ohpl_s2_new_struct(apType, true);
 	void *pObj = SomaNewScriptStruct(apType);
 	gmapStructRefs[pObj] = 1;
 	return pObj;
@@ -408,6 +452,11 @@ static void StructRelease(asIScriptGeneric *apGen)
 // AngelScript hands the callee a reference with each handle argument
 void SomaScriptReleaseHandleArgs(asIScriptGeneric *apGen)
 {
+	if (OhplS2Rust())
+	{
+		ohpl_s2_release_handle_args(apGen);
+		return;
+	}
 	asIScriptFunction *pFunc = apGen->GetFunction();
 	for (asUINT i = 0; i < pFunc->GetParamCount(); ++i)
 	{
@@ -509,6 +558,26 @@ static bool HasProperty(asITypeInfo *apType, const std::string &asDecl)
 	return false;
 }
 
+cSomaScriptApi::cSomaScriptApi() {}
+
+cSomaScriptApi::~cSomaScriptApi()
+{
+	if (mpRust)
+		ohpl_s2_api_free(mpRust);
+}
+
+void cSomaScriptApi::Sync() const
+{
+	if (mpRust == NULL)
+		return;
+	std::vector<std::string> *vLists[] = {&mvErrors, &mvWarnings, &mvRemaps};
+	for (unsigned i = 0; i < 3; ++i)
+	{
+		vLists[i]->clear();
+		ohpl_s2_api_list(mpRust, i, OhplGs6::AppendString, vLists[i]);
+	}
+}
+
 void cSomaScriptApi::Fail(const std::string &asWhat, int alCode)
 {
 	char sBuf[32];
@@ -528,10 +597,20 @@ namespace
 	std::map<std::string, cIndirectProps> gmapIndirect;
 }
 
-void SomaSetIndirectProps(const std::string &asType, int alPointerOffset) { gmapIndirect[asType].mlPointerOffset = alPointerOffset; }
+void SomaSetIndirectProps(const std::string &asType, int alPointerOffset)
+{
+	if (OhplS2Rust())
+	{
+		ohpl_s2_set_indirect(OhplGs6::U(asType), asType.size(), alPointerOffset);
+		return;
+	}
+	gmapIndirect[asType].mlPointerOffset = alPointerOffset;
+}
 
 int SomaIndirectPropOffset(const std::string &asType, const std::string &asName)
 {
+	if (OhplS2Rust())
+		return ohpl_s2_indirect_offset(OhplGs6::U(asType), asType.size(), OhplGs6::U(asName), asName.size());
 	auto &m = gmapIndirect[asType].mmapOffsets;
 	auto it = m.find(asName);
 	return it == m.end() ? -1 : it->second;
@@ -539,6 +618,8 @@ int SomaIndirectPropOffset(const std::string &asType, const std::string &asName)
 
 char *SomaNewPropBlock(const std::string &asType)
 {
+	if (OhplS2Rust())
+		return (char *)ohpl_s2_new_prop_block(OhplGs6::U(asType), asType.size());
 	const cIndirectProps &props = gmapIndirect[asType];
 	char *pBlock = (char *)calloc(1, props.mlSize + 64);
 	for (int lOff : props.mvStringOffsets)
@@ -548,6 +629,11 @@ char *SomaNewPropBlock(const std::string &asType)
 
 void SomaFreePropBlock(const std::string &asType, char *apBlock)
 {
+	if (OhplS2Rust())
+	{
+		ohpl_s2_free_prop_block(OhplGs6::U(asType), asType.size(), apBlock);
+		return;
+	}
 	if (apBlock == NULL)
 		return;
 	for (int lOff : gmapIndirect[asType].mvStringOffsets)
@@ -578,6 +664,11 @@ void cSomaScriptApi::RegisterPropertyAccessors(asIScriptEngine *apEngine, const 
 
 void cSomaScriptApi::RegisterTypes(asIScriptEngine *apEngine)
 {
+	if (OhplS2Rust())
+	{
+		ohpl_s2_api_register_types(mpRust, apEngine);
+		return;
+	}
 	gpActiveApi = this;
 	if (mbTypesRegistered)
 		return;
@@ -625,6 +716,11 @@ void cSomaScriptApi::RegisterTypes(asIScriptEngine *apEngine)
 
 int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 {
+	if (OhplS2Rust())
+	{
+		int lRust = ohpl_s2_api_register(mpRust, apEngine);
+		return lRust;
+	}
 	RegisterTypes(apEngine);
 	int r;
 
@@ -777,6 +873,11 @@ int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 
 void ConfigureSomaScriptEngine(asIScriptEngine *apEngine)
 {
+	if (OhplS2Rust())
+	{
+		ohpl_s2_configure_engine(apEngine);
+		return;
+	}
 	// SOMA's scripts use 'x' as integer literals and unqualified & references
 	apEngine->SetEngineProperty(asEP_USE_CHARACTER_LITERALS, 1);
 	apEngine->SetEngineProperty(asEP_ALLOW_UNSAFE_REFERENCES, 1);

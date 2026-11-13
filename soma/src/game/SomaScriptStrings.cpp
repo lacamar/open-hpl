@@ -3,6 +3,7 @@
 #include "hpl.h"
 
 #include "RustSomaScript.h"
+#include "RustSomaScriptS2.h"
 
 #include "impl/scriptarray.h"
 
@@ -224,6 +225,12 @@ void RegisterSomaScriptStringConcats(asIScriptEngine *apEngine)
 
 void RegisterSomaScriptStrings(asIScriptEngine *apEngine)
 {
+	if (OhplS2Rust())
+	{
+		OhplS2InstallHost();
+		ohpl_s2_register_strings(apEngine);
+		return;
+	}
 	int r;
 	r = apEngine->RegisterObjectType("tString", sizeof(std::string), asOBJ_VALUE | asGetTypeTraits<std::string>()); assert(r >= 0);
 	r = apEngine->RegisterObjectType("tWString", sizeof(std::wstring), asOBJ_VALUE | asGetTypeTraits<std::wstring>()); assert(r >= 0);
@@ -277,6 +284,11 @@ static void ArrErase(asUINT alIdx, CScriptArray *apArr) { apArr->RemoveAt(alIdx)
 
 void RegisterSomaScriptArrayExtras(asIScriptEngine *apEngine)
 {
+	if (OhplS2Rust())
+	{
+		ohpl_s2_register_array_extras(apEngine);
+		return;
+	}
 	int r;
 	r = apEngine->RegisterObjectMethod("array<T>", "void push_back(const T&in)", asFUNCTION(ArrPushBack), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("array<T>", "void push_front(const T&in)", asFUNCTION(ArrPushFront), asCALL_CDECL_OBJLAST); assert(r >= 0);

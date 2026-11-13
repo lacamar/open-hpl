@@ -8,2690 +8,2749 @@
 
 using namespace hpl;
 
+namespace
+{
+	struct cGenBinding
+	{
+		const char *mpType; // NULL: global function
+		const char *mpDecl;
+		void (*mpFunc)(asIScriptGeneric *);
+	};
+
+	const cGenBinding gvBindings[] = {
+		{"cAINode", "const cVector3f& GetPosition()", SomaBind::GenericMethod<(+[](cAINode *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPosition(); return r; })>},
+		{"cAINode", "const tString& GetName()", SomaBind::GenericMethod<(+[](cAINode *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cAINode", "int GetID()", SomaBind::GenericMethod<(+[](cAINode *o) -> int { return o->GetID(); })>},
+		{"cAINodeContainer", "const tString& GetNodeName()", SomaBind::GenericMethod<(+[](cAINodeContainer *o) -> const tString & { static thread_local tString r; r = o->GetNodeName(); return r; })>},
+		{"cAINodeContainer", "const tString& GetName()", SomaBind::GenericMethod<(+[](cAINodeContainer *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cAINodeContainer", "const cVector3f& GetCollideSize()", SomaBind::GenericMethod<(+[](cAINodeContainer *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetCollideSize(); return r; })>},
+		{"cAINodeContainer", "int GetNodeNum() const", SomaBind::GenericMethod<(+[](cAINodeContainer *o) -> int { return o->GetNodeNum(); })>},
+		{"cAINodeContainer", "cAINode@ GetNode(int alIdx)", SomaBind::GenericMethod<(+[](cAINodeContainer *o, int a0) -> cAINode * { return o->GetNode(a0); })>},
+		{"cAINodeContainer", "cAINode@ GetNodeFromName(const tString &in asName)", SomaBind::GenericMethod<(+[](cAINodeContainer *o, const tString & a0) -> cAINode * { return o->GetNodeFromName(a0); })>},
+		{"cAINodeContainer", "cAINode@ GetNodeFromID(int alID)", SomaBind::GenericMethod<(+[](cAINodeContainer *o, int a0) -> cAINode * { return o->GetNodeFromID(a0); })>},
+		{"cAction", "void AddKey(eKey aKey)", SomaBind::GenericMethod<(+[](cAction *o, int a0) { o->AddKey((eKey)a0); })>},
+		{"cAction", "void AddMouseButton(eMouseButton aButton)", SomaBind::GenericMethod<(+[](cAction *o, int a0) { o->AddMouseButton((eMouseButton)a0); })>},
+		{"cAction", "void AddGamepadButton(int alPadIndex, eGamepadButton aButton)", SomaBind::GenericMethod<(+[](cAction *o, int a0, int a1) { o->AddGamepadButton(a0, (eGamepadButton)a1); })>},
+		{"cAction", "void AddGamepadAxis(int alPadIndex, eGamepadAxis aAxis, eGamepadAxisRange aRange, float afMinThreshold, float afMaxThreshold)", SomaBind::GenericMethod<(+[](cAction *o, int a0, int a1, int a2, float a3, float a4) { o->AddGamepadAxis(a0, (eGamepadAxis)a1, (eGamepadAxisRange)a2, a3, a4); })>},
+		{"cAction", "void AddGamepadHat(int alPadIndex, eGamepadHat aHat, eGamepadHatState aHatState)", SomaBind::GenericMethod<(+[](cAction *o, int a0, int a1, int a2) { o->AddGamepadHat(a0, (eGamepadHat)a1, (eGamepadHatState)a2); })>},
+		{"cAction", "void ClearSubActions()", SomaBind::GenericMethod<(+[](cAction *o) { o->ClearSubActions(); })>},
+		{"cAction", "bool IsTriggered()", SomaBind::GenericMethod<(+[](cAction *o) -> bool { return o->IsTriggerd(); })>},
+		{"cAction", "bool WasTriggered()", SomaBind::GenericMethod<(+[](cAction *o) -> bool { return o->WasTriggerd(); })>},
+		{"cAction", "bool BecameTriggered()", SomaBind::GenericMethod<(+[](cAction *o) -> bool { return o->BecameTriggerd(); })>},
+		{"cAction", "bool DoubleTriggered(float afLimit)", SomaBind::GenericMethod<(+[](cAction *o, float a0) -> bool { return o->DoubleTriggerd(a0); })>},
+		{"cAction", "void ResetToCurrentState()", SomaBind::GenericMethod<(+[](cAction *o) { o->ResetToCurrentState(); })>},
+		{"cAction", "int GetSubActionNum()", SomaBind::GenericMethod<(+[](cAction *o) -> int { return o->GetSubActionNum(); })>},
+		{"cAction", "const tString& GetName()", SomaBind::GenericMethod<(+[](cAction *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cAction", "int GetId()", SomaBind::GenericMethod<(+[](cAction *o) -> int { return o->GetId(); })>},
+		{"cAnimationState", "const tString& GetName()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cAnimationState", "void Update(float afTimeStep)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0) { o->Update(a0); })>},
+		{"cAnimationState", "bool DataIsInMeshFile()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> bool { return o->DataIsInMeshFile(); })>},
+		{"cAnimationState", "bool IsFading()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> bool { return o->IsFading(); })>},
+		{"cAnimationState", "bool IsOver()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> bool { return o->IsOver(); })>},
+		{"cAnimationState", "void FadeIn(float afTime)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0) { o->FadeIn(a0); })>},
+		{"cAnimationState", "void FadeOut(float afTime)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0) { o->FadeOut(a0); })>},
+		{"cAnimationState", "void SetLength(float afLength)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0) { o->SetLength(a0); })>},
+		{"cAnimationState", "float GetLength()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> float { return o->GetLength(); })>},
+		{"cAnimationState", "void SetWeight(float afWeight)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0) { o->SetWeight(a0); })>},
+		{"cAnimationState", "float GetWeight()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> float { return o->GetWeight(); })>},
+		{"cAnimationState", "void SetSpeed(float afSpeed)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0) { o->SetSpeed(a0); })>},
+		{"cAnimationState", "float GetSpeed()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> float { return o->GetSpeed(); })>},
+		{"cAnimationState", "void SetBaseSpeed(float afSpeed)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0) { o->SetBaseSpeed(a0); })>},
+		{"cAnimationState", "float GetBaseSpeed()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> float { return o->GetBaseSpeed(); })>},
+		{"cAnimationState", "void SetTimePosition(float afPosition)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0) { o->SetTimePosition(a0); })>},
+		{"cAnimationState", "float GetTimePosition()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> float { return o->GetTimePosition(); })>},
+		{"cAnimationState", "float GetPreviousTimePosition()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> float { return o->GetPreviousTimePosition(); })>},
+		{"cAnimationState", "void SetRelativeTimePosition(float afPosition)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0) { o->SetRelativeTimePosition(a0); })>},
+		{"cAnimationState", "float GetRelativeTimePosition()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> float { return o->GetRelativeTimePosition(); })>},
+		{"cAnimationState", "bool IsActive()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> bool { return o->IsActive(); })>},
+		{"cAnimationState", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cAnimationState *o, bool a0) { o->SetActive(a0); })>},
+		{"cAnimationState", "bool IsLooping()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> bool { return o->IsLooping(); })>},
+		{"cAnimationState", "void SetLoop(bool abLoop)", SomaBind::GenericMethod<(+[](cAnimationState *o, bool a0) { o->SetLoop(a0); })>},
+		{"cAnimationState", "bool IsPaused()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> bool { return o->IsPaused(); })>},
+		{"cAnimationState", "void SetPaused(bool abPaused)", SomaBind::GenericMethod<(+[](cAnimationState *o, bool a0) { o->SetPaused(a0); })>},
+		{"cAnimationState", "void AddTimePosition(float afAdd)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0) { o->AddTimePosition(a0); })>},
+		{"cAnimationState", "float GetFadeStep()", SomaBind::GenericMethod<(+[](cAnimationState *o) -> float { return o->GetFadeStep(); })>},
+		{"cAnimationState", "void SetFadeStep(float afX)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0) { o->SetFadeStep(a0); })>},
+		{"cAnimationState", "void FadeSpeed(float afSpeed, float afTime)", SomaBind::GenericMethod<(+[](cAnimationState *o, float a0, float a1) { o->FadeSpeed(a0, a1); })>},
+		{"cBeam", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cBeam *o) -> int { return o->GetUniqueID(); })>},
+		{"cBeam", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cBeam *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cBeam", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cBeam *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cBeam", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cBeam *o, const tString & a0) { o->SetName(a0); })>},
+		{"cBeam", "bool HasParent()", SomaBind::GenericMethod<(+[](cBeam *o) -> bool { return o->HasParent(); })>},
+		{"cBeam", "bool IsActive()const", SomaBind::GenericMethod<(+[](cBeam *o) -> bool { return o->IsActive(); })>},
+		{"cBeam", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cBeam *o, bool a0) { o->SetActive(a0); })>},
+		{"cBeam", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cBeam *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cBeam", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cBeam *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cBeam", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cBeam *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cBeam", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cBeam *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cBeam", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cBeam *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cBeam", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cBeam *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cBeam", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cBeam *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cBeam", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cBeam *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cBeam", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cBeam *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cBeam", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cBeam *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cBeam", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cBeam *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cBeam", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cBeam *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cBeam", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cBeam *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cBeam", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cBeam *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"cBeam", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](cBeam *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"cBeam", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](cBeam *o) -> int { return (int)o->GetRenderType(); })>},
+		{"cBeam", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cBeam *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"cBeam", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](cBeam *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"cBeam", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](cBeam *o) -> int { return o->GetRenderFlags(); })>},
+		{"cBeam", "bool IsStatic()", SomaBind::GenericMethod<(+[](cBeam *o) -> bool { return o->IsStatic(); })>},
+		{"cBeam", "bool IsVisible()", SomaBind::GenericMethod<(+[](cBeam *o) -> bool { return o->IsVisible(); })>},
+		{"cBeam", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cBeam *o, bool a0) { o->SetVisible(a0); })>},
+		{"cBeam", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](cBeam *o) -> bool { return o->GetVisibleVar(); })>},
+		{"cBeam", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cBeam *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"cBeam", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](cBeam *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"cBeam", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cBeam *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"cBeam", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](cBeam *o) -> float { return o->GetCoverageAmount(); })>},
+		{"cBeam", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](cBeam *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"cBeam", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](cBeam *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"cBeam", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](cBeam *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"cBeam", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](cBeam *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"cBeam", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cBeam *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"cBeam", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](cBeam *o) -> float { return o->GetLiquidAmount(); })>},
+		{"cBeam", "void SetSize(const cVector2f&in avSize)", SomaBind::GenericMethod<(+[](cBeam *o, const cVector2f & a0) { o->SetSize(a0); })>},
+		{"cBeam", "cVector2f GetSize()", SomaBind::GenericMethod<(+[](cBeam *o) -> cVector2f { return o->GetSize(); })>},
+		{"cBeam", "void SetColor(const cColor &in aColor)", SomaBind::GenericMethod<(+[](cBeam *o, const cColor & a0) { o->SetColor(a0); })>},
+		{"cBeam", "const cColor& GetColor()", SomaBind::GenericMethod<(+[](cBeam *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; })>},
+		{"cBeam", "void SetTileHeight(bool abX)", SomaBind::GenericMethod<(+[](cBeam *o, bool a0) { o->SetTileHeight(a0); })>},
+		{"cBeam", "bool GetTileHeight()", SomaBind::GenericMethod<(+[](cBeam *o) -> bool { return o->GetTileHeight(); })>},
+		{"cBeam", "void SetMultiplyAlphaWithColor(bool abX)", SomaBind::GenericMethod<(+[](cBeam *o, bool a0) { o->SetMultiplyAlphaWithColor(a0); })>},
+		{"cBeam", "bool GetMultiplyAlphaWithColor()", SomaBind::GenericMethod<(+[](cBeam *o) -> bool { return o->GetMultiplyAlphaWithColor(); })>},
+		{"cBeam", "cVector3f GetAxis()", SomaBind::GenericMethod<(+[](cBeam *o) -> cVector3f { return o->GetAxis(); })>},
+		{"cBeam", "cVector3f GetMidPosition()", SomaBind::GenericMethod<(+[](cBeam *o) -> cVector3f { return o->GetMidPosition(); })>},
+		{"cBillboard", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cBillboard *o) -> int { return o->GetUniqueID(); })>},
+		{"cBillboard", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cBillboard *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cBillboard", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cBillboard *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cBillboard", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cBillboard *o, const tString & a0) { o->SetName(a0); })>},
+		{"cBillboard", "bool HasParent()", SomaBind::GenericMethod<(+[](cBillboard *o) -> bool { return o->HasParent(); })>},
+		{"cBillboard", "bool IsActive()const", SomaBind::GenericMethod<(+[](cBillboard *o) -> bool { return o->IsActive(); })>},
+		{"cBillboard", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cBillboard *o, bool a0) { o->SetActive(a0); })>},
+		{"cBillboard", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cBillboard *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cBillboard", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cBillboard *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cBillboard", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cBillboard *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cBillboard", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cBillboard *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cBillboard", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cBillboard *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cBillboard", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cBillboard *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cBillboard", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cBillboard *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cBillboard", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cBillboard *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cBillboard", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cBillboard *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cBillboard", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cBillboard *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cBillboard", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cBillboard *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cBillboard", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cBillboard *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cBillboard", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cBillboard *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cBillboard", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cBillboard *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"cBillboard", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](cBillboard *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"cBillboard", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](cBillboard *o) -> int { return (int)o->GetRenderType(); })>},
+		{"cBillboard", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cBillboard *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"cBillboard", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](cBillboard *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"cBillboard", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](cBillboard *o) -> int { return o->GetRenderFlags(); })>},
+		{"cBillboard", "bool IsStatic()", SomaBind::GenericMethod<(+[](cBillboard *o) -> bool { return o->IsStatic(); })>},
+		{"cBillboard", "bool IsVisible()", SomaBind::GenericMethod<(+[](cBillboard *o) -> bool { return o->IsVisible(); })>},
+		{"cBillboard", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cBillboard *o, bool a0) { o->SetVisible(a0); })>},
+		{"cBillboard", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](cBillboard *o) -> bool { return o->GetVisibleVar(); })>},
+		{"cBillboard", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cBillboard *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"cBillboard", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](cBillboard *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"cBillboard", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cBillboard *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"cBillboard", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](cBillboard *o) -> float { return o->GetCoverageAmount(); })>},
+		{"cBillboard", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](cBillboard *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"cBillboard", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](cBillboard *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"cBillboard", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](cBillboard *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"cBillboard", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](cBillboard *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"cBillboard", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cBillboard *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"cBillboard", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](cBillboard *o) -> float { return o->GetLiquidAmount(); })>},
+		{"cBillboard", "eBillboardType GetType()", SomaBind::GenericMethod<(+[](cBillboard *o) -> int { return (int)o->GetType(); })>},
+		{"cBillboard", "void SetAxis(const cVector3f&in avAxis)", SomaBind::GenericMethod<(+[](cBillboard *o, const cVector3f & a0) { o->SetAxis(a0); })>},
+		{"cBillboard", "const cVector3f& GetAxis()", SomaBind::GenericMethod<(+[](cBillboard *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetAxis(); return r; })>},
+		{"cBillboard", "void SetForwardOffset(float afOffset)", SomaBind::GenericMethod<(+[](cBillboard *o, float a0) { o->SetForwardOffset(a0); })>},
+		{"cBillboard", "float GetForwardOffset()", SomaBind::GenericMethod<(+[](cBillboard *o) -> float { return o->GetForwardOffset(); })>},
+		{"cBillboard", "void SetColor(const cColor &in aColor)", SomaBind::GenericMethod<(+[](cBillboard *o, const cColor & a0) { o->SetColor(a0); })>},
+		{"cBillboard", "const cColor& GetColor()", SomaBind::GenericMethod<(+[](cBillboard *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; })>},
+		{"cBillboard", "void SetHaloAlpha(float afX)", SomaBind::GenericMethod<(+[](cBillboard *o, float a0) { o->SetHaloAlpha(a0); })>},
+		{"cBillboard", "float GetHaloAlpha()", SomaBind::GenericMethod<(+[](cBillboard *o) -> float { return o->GetHaloAlpha(); })>},
+		{"cBillboard", "void SetBrightness(float afX)", SomaBind::GenericMethod<(+[](cBillboard *o, float a0) { o->SetBrightness(a0); })>},
+		{"cBillboard", "float GetBrightness()", SomaBind::GenericMethod<(+[](cBillboard *o) -> float { return o->GetBrightness(); })>},
+		{"cBillboard", "void SetMaterial(cMaterial@ apMaterial)", SomaBind::GenericMethod<(+[](cBillboard *o, cMaterial * a0) { o->SetMaterial(a0); })>},
+		{"cBillboard", "void SetSize(const cVector2f&in avSize)", SomaBind::GenericMethod<(+[](cBillboard *o, const cVector2f & a0) { o->SetSize(a0); })>},
+		{"cBillboard", "cVector2f GetSize()", SomaBind::GenericMethod<(+[](cBillboard *o) -> cVector2f { return o->GetSize(); })>},
+		{"cBone", "const cMatrixf& GetLocalTransform()", SomaBind::GenericMethod<(+[](cBone *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetLocalTransform(); return r; })>},
+		{"cBone", "const cMatrixf& GetWorldTransform()", SomaBind::GenericMethod<(+[](cBone *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetWorldTransform(); return r; })>},
+		{"cBone", "const cMatrixf& GetInvWorldTransform()", SomaBind::GenericMethod<(+[](cBone *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetInvWorldTransform(); return r; })>},
+		{"cBone", "const tString& GetName()", SomaBind::GenericMethod<(+[](cBone *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cBone", "const tString& GetSid()", SomaBind::GenericMethod<(+[](cBone *o) -> const tString & { static thread_local tString r; r = o->GetSid(); return r; })>},
+		{"cBone", "cBone@ GetParent()", SomaBind::GenericMethod<(+[](cBone *o) -> cBone * { return o->GetParent(); })>},
+		{"cBoneState", "bool AddEntity(iEntity3D@ apEntity)", SomaBind::GenericMethod<(+[](cBoneState *o, iEntity3D * a0) -> bool { return o->AddEntity(a0); })>},
+		{"cBoneState", "bool RemoveEntity(iEntity3D@ apEntity)", SomaBind::GenericMethod<(+[](cBoneState *o, iEntity3D * a0) -> bool { return o->RemoveEntity(a0); })>},
+		{"cBoneState", "void ClearEntities()", SomaBind::GenericMethod<(+[](cBoneState *o) { o->ClearEntities(); })>},
+		{"cBoneState", "cNode3D@ GetParent()", SomaBind::GenericMethod<(+[](cBoneState *o) -> cNode3D * { return o->GetParent(); })>},
+		{"cBoneState", "cNode3D@ CreateChild(const tString &in asName=, bool abAutoDeleteChildren = true)", SomaBind::GenericMethod<(+[](cBoneState *o, const tString & a0, bool a1) -> cNode3D * { return o->CreateChild(a0, a1); })>},
+		{"cBoneState", "void RemoveChild(cNode3D@ apNode)", SomaBind::GenericMethod<(+[](cBoneState *o, cNode3D * a0) { o->RemoveChild(a0); })>},
+		{"cBoneState", "void SetParent(cNode3D@ apNode)", SomaBind::GenericMethod<(+[](cBoneState *o, cNode3D * a0) { o->SetParent(a0); })>},
+		{"cBoneState", "void AddChild(cNode3D@ apChild)", SomaBind::GenericMethod<(+[](cBoneState *o, cNode3D * a0) { o->AddChild(a0); })>},
+		{"cBoneState", "const tString& GetName()", SomaBind::GenericMethod<(+[](cBoneState *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cBoneState", "void SetActive(bool abX)", SomaBind::GenericMethod<(+[](cBoneState *o, bool a0) { o->SetActive(a0); })>},
+		{"cBoneState", "bool IsActive()", SomaBind::GenericMethod<(+[](cBoneState *o) -> bool { return o->IsActive(); })>},
+		{"cBoneState", "int SetVisible(bool abX, bool abCascade)", SomaBind::GenericMethod<(+[](cBoneState *o, bool a0, bool a1) -> int { return o->SetVisible(a0, a1); })>},
+		{"cBoneState", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cBoneState *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cBoneState", "const cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cBoneState *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetLocalMatrix(); return r; })>},
+		{"cBoneState", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cBoneState *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cBoneState", "const cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cBoneState *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetWorldMatrix(); return r; })>},
+		{"cBoneState", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cBoneState *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cBoneState", "void SetMatrix(const cMatrixf&in a_mtxTransform, bool abSetChildrenUpdated=true)", SomaBind::GenericMethod<(+[](cBoneState *o, const cMatrixf & a0, bool a1) { o->SetMatrix(a0, a1); })>},
+		{"cBoneState", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cBoneState *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cBoneState", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cBoneState *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cBoneState", "void AddRotation(const cVector3f&in avRot, eEulerRotationOrder aOrder)", SomaBind::GenericMethod<(+[](cBoneState *o, const cVector3f & a0, int a1) { o->AddRotation(a0, (eEulerRotationOrder)a1); })>},
+		{"cBoneState", "void AddScale(const cVector3f&in avScale)", SomaBind::GenericMethod<(+[](cBoneState *o, const cVector3f & a0) { o->AddScale(a0); })>},
+		{"cBoneState", "void AddTranslation(const cVector3f&in avTrans)", SomaBind::GenericMethod<(+[](cBoneState *o, const cVector3f & a0) { o->AddTranslation(a0); })>},
+		{"cBoneState", "bool GetUsePreAnimTransform()", SomaBind::GenericMethod<(+[](cBoneState *o) -> bool { return o->GetUsePreAnimTransform(); })>},
+		{"cBoneState", "bool GetUsePostAnimTransform()", SomaBind::GenericMethod<(+[](cBoneState *o) -> bool { return o->GetUsePostAnimTransform(); })>},
+		{"cBoneState", "const cMatrixf& GetPreAnimTransform()", SomaBind::GenericMethod<(+[](cBoneState *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetPreAnimTransform(); return r; })>},
+		{"cBoneState", "const cMatrixf& GetPostAnimTransform()", SomaBind::GenericMethod<(+[](cBoneState *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetPostAnimTransform(); return r; })>},
+		{"cBoneState", "void SetUsePreTransform(bool abX)", SomaBind::GenericMethod<(+[](cBoneState *o, bool a0) { o->SetUsePreTransform(a0); })>},
+		{"cBoneState", "void SetUsePostTransform(bool abX)", SomaBind::GenericMethod<(+[](cBoneState *o, bool a0) { o->SetUsePostTransform(a0); })>},
+		{"cBoneState", "void SetPreTransform(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cBoneState *o, const cMatrixf & a0) { o->SetPreTransform(a0); })>},
+		{"cBoneState", "void SetPostTransform(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cBoneState *o, const cMatrixf & a0) { o->SetPostTransform(a0); })>},
+		{"cBoneState", "void ApplyPreAnimTransform(bool abSetChildrenUpdated)", SomaBind::GenericMethod<(+[](cBoneState *o, bool a0) { o->ApplyPreAnimTransform(a0); })>},
+		{"cBoneState", "void ApplyPostAnimTransform(bool abSetChildrenUpdated)", SomaBind::GenericMethod<(+[](cBoneState *o, bool a0) { o->ApplyPostAnimTransform(a0); })>},
+		{"cBoneState", "void SetCustomFlags(int alX)", SomaBind::GenericMethod<(+[](cBoneState *o, int a0) { o->SetCustomFlags(a0); })>},
+		{"cBoneState", "int GetCustomFlags()", SomaBind::GenericMethod<(+[](cBoneState *o) -> int { return o->GetCustomFlags(); })>},
+		{"cBoneState", "void UpdateMatrix(bool abSetChildrenUpdated)", SomaBind::GenericMethod<(+[](cBoneState *o, bool a0) { o->UpdateMatrix(a0); })>},
+		{"cBoneState", "void UpdateEntityChildren()", SomaBind::GenericMethod<(+[](cBoneState *o) { o->UpdateEntityChildren(); })>},
+		{"cBoneState", "void SetBody(iPhysicsBody @apBody)", SomaBind::GenericMethod<(+[](cBoneState *o, iPhysicsBody * a0) { o->SetBody(a0); })>},
+		{"cBoneState", "iPhysicsBody@ GetBody()", SomaBind::GenericMethod<(+[](cBoneState *o) -> iPhysicsBody * { return o->GetBody(); })>},
+		{"cBoneState", "void SetColliderBody(iPhysicsBody @apBody)", SomaBind::GenericMethod<(+[](cBoneState *o, iPhysicsBody * a0) { o->SetColliderBody(a0); })>},
+		{"cBoneState", "iPhysicsBody@ GetColliderBody()", SomaBind::GenericMethod<(+[](cBoneState *o) -> iPhysicsBody * { return o->GetColliderBody(); })>},
+		{"cBoundingVolume", "cVector3f GetMax()", SomaBind::GenericMethod<(+[](cBoundingVolume *o) -> cVector3f { return o->GetMax(); })>},
+		{"cBoundingVolume", "cVector3f GetMin()", SomaBind::GenericMethod<(+[](cBoundingVolume *o) -> cVector3f { return o->GetMin(); })>},
+		{"cBoundingVolume", "const cVector3f& GetLocalMax()", SomaBind::GenericMethod<(+[](cBoundingVolume *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLocalMax(); return r; })>},
+		{"cBoundingVolume", "const cVector3f& GetLocalMin()", SomaBind::GenericMethod<(+[](cBoundingVolume *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLocalMin(); return r; })>},
+		{"cBoundingVolume", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cBoundingVolume *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cBoundingVolume", "cVector3f GetPosition()", SomaBind::GenericMethod<(+[](cBoundingVolume *o) -> cVector3f { return o->GetPosition(); })>},
+		{"cBoundingVolume", "cVector3f GetSize()", SomaBind::GenericMethod<(+[](cBoundingVolume *o) -> cVector3f { return o->GetSize(); })>},
+		{"cBoundingVolume", "const cMatrixf& GetTransform()", SomaBind::GenericMethod<(+[](cBoundingVolume *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetTransform(); return r; })>},
+		{"cBoundingVolume", "cVector3f GetLocalCenter()", SomaBind::GenericMethod<(+[](cBoundingVolume *o) -> cVector3f { return o->GetLocalCenter(); })>},
+		{"cBoundingVolume", "cVector3f GetWorldCenter()", SomaBind::GenericMethod<(+[](cBoundingVolume *o) -> cVector3f { return o->GetWorldCenter(); })>},
+		{"cBoundingVolume", "float GetRadius()", SomaBind::GenericMethod<(+[](cBoundingVolume *o) -> float { return o->GetRadius(); })>},
+		{"cCamera", "const cVector3f& GetPosition()const", SomaBind::GenericMethod<(+[](cCamera *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPosition(); return r; })>},
+		{"cCamera", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cCamera *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cCamera", "void MoveForward(float afDist)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->MoveForward(a0); })>},
+		{"cCamera", "void MoveRight(float afDist)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->MoveRight(a0); })>},
+		{"cCamera", "void MoveUp(float afDist)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->MoveUp(a0); })>},
+		{"cCamera", "void SetFOV(float afAngle)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->SetFOV(a0); })>},
+		{"cCamera", "float GetFOV()", SomaBind::GenericMethod<(+[](cCamera *o) -> float { return o->GetFOV(); })>},
+		{"cCamera", "void SetAspect(float afSpect)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->SetAspect(a0); })>},
+		{"cCamera", "float GetAspect()", SomaBind::GenericMethod<(+[](cCamera *o) -> float { return o->GetAspect(); })>},
+		{"cCamera", "void SetFarClipPlane(float afX)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->SetFarClipPlane(a0); })>},
+		{"cCamera", "float GetFarClipPlane()", SomaBind::GenericMethod<(+[](cCamera *o) -> float { return o->GetFarClipPlane(); })>},
+		{"cCamera", "void SetNearClipPlane(float afX)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->SetNearClipPlane(a0); })>},
+		{"cCamera", "float GetNearClipPlane()", SomaBind::GenericMethod<(+[](cCamera *o) -> float { return o->GetNearClipPlane(); })>},
+		{"cCamera", "void SetOrthoViewSize(const cVector2f &in avSize)", SomaBind::GenericMethod<(+[](cCamera *o, const cVector2f & a0) { o->SetOrthoViewSize(a0); })>},
+		{"cCamera", "const cVector2f& GetOrthoViewSize()", SomaBind::GenericMethod<(+[](cCamera *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetOrthoViewSize(); return r; })>},
+		{"cCamera", "void SetInifintiveFarPlane(bool abX)", SomaBind::GenericMethod<(+[](cCamera *o, bool a0) { o->SetInifintiveFarPlane(a0); })>},
+		{"cCamera", "bool GetInifintiveFarPlane()", SomaBind::GenericMethod<(+[](cCamera *o) -> bool { return o->GetInifintiveFarPlane(); })>},
+		{"cCamera", "void SetProjectionType(eProjectionType aType)", SomaBind::GenericMethod<(+[](cCamera *o, int a0) { o->SetProjectionType((eProjectionType)a0); })>},
+		{"cCamera", "eProjectionType GetProjectionType()", SomaBind::GenericMethod<(+[](cCamera *o) -> int { return (int)o->GetProjectionType(); })>},
+		{"cCamera", "eCameraRotateMode GetRotateMode()", SomaBind::GenericMethod<(+[](cCamera *o) -> int { return (int)o->GetRotateMode(); })>},
+		{"cCamera", "eCameraMoveMode GetMoveMode()", SomaBind::GenericMethod<(+[](cCamera *o) -> int { return (int)o->GetMoveMode(); })>},
+		{"cCamera", "void SetRotateMode(eCameraRotateMode aMode)", SomaBind::GenericMethod<(+[](cCamera *o, int a0) { o->SetRotateMode((eCameraRotateMode)a0); })>},
+		{"cCamera", "void SetMoveMode(eCameraMoveMode aMode)", SomaBind::GenericMethod<(+[](cCamera *o, int a0) { o->SetMoveMode((eCameraMoveMode)a0); })>},
+		{"cCamera", "void ResetRotation()", SomaBind::GenericMethod<(+[](cCamera *o) { o->ResetRotation(); })>},
+		{"cCamera", "void AttachEntity(iEntity3D@ aEntity)", SomaBind::GenericMethod<(+[](cCamera *o, iEntity3D * a0) { o->AttachEntity(a0); })>},
+		{"cCamera", "void RemoveEntity(iEntity3D@ aEntity)", SomaBind::GenericMethod<(+[](cCamera *o, iEntity3D * a0) { o->RemoveEntity(a0); })>},
+		{"cCamera", "cNode3D@ GetAttachmentNode()", SomaBind::GenericMethod<(+[](cCamera *o) -> cNode3D * { return o->GetAttachmentNode(); })>},
+		{"cCamera", "void ClearAttachedEntities()", SomaBind::GenericMethod<(+[](cCamera *o) { o->ClearAttachedEntities(); })>},
+		{"cCamera", "void SetPitch(float afAngle)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->SetPitch(a0); })>},
+		{"cCamera", "void SetYaw(float afAngle)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->SetYaw(a0); })>},
+		{"cCamera", "void SetRoll(float afAngle)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->SetRoll(a0); })>},
+		{"cCamera", "void AddPitch(float afAngle)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->AddPitch(a0); })>},
+		{"cCamera", "void AddYaw(float afAngle)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->AddYaw(a0); })>},
+		{"cCamera", "void AddRoll(float afAngle)", SomaBind::GenericMethod<(+[](cCamera *o, float a0) { o->AddRoll(a0); })>},
+		{"cCamera", "float GetPitch() const", SomaBind::GenericMethod<(+[](cCamera *o) -> float { return o->GetPitch(); })>},
+		{"cCamera", "float GetYaw() const", SomaBind::GenericMethod<(+[](cCamera *o) -> float { return o->GetYaw(); })>},
+		{"cCamera", "float GetRoll() const", SomaBind::GenericMethod<(+[](cCamera *o) -> float { return o->GetRoll(); })>},
+		{"cCamera", "void SetPitchLimits(float afMin, float afMax)", SomaBind::GenericMethod<(+[](cCamera *o, float a0, float a1) { o->SetPitchLimits(a0, a1); })>},
+		{"cCamera", "float GetPitchMinLimit()", SomaBind::GenericMethod<(+[](cCamera *o) -> float { return o->GetPitchMinLimit(); })>},
+		{"cCamera", "float GetPitchMaxLimit()", SomaBind::GenericMethod<(+[](cCamera *o) -> float { return o->GetPitchMaxLimit(); })>},
+		{"cCamera", "void SetYawLimits(float afMin, float afMax)", SomaBind::GenericMethod<(+[](cCamera *o, float a0, float a1) { o->SetYawLimits(a0, a1); })>},
+		{"cCamera", "float GetYawMinLimit()", SomaBind::GenericMethod<(+[](cCamera *o) -> float { return o->GetYawMinLimit(); })>},
+		{"cCamera", "float GetYawMaxLimit()", SomaBind::GenericMethod<(+[](cCamera *o) -> float { return o->GetYawMaxLimit(); })>},
+		{"cCamera", "void SetForward(const cVector3f&in avX)", SomaBind::GenericMethod<(+[](cCamera *o, const cVector3f & a0) { o->SetForward(a0); })>},
+		{"cCamera", "void SetRight(const cVector3f&in avX)", SomaBind::GenericMethod<(+[](cCamera *o, const cVector3f & a0) { o->SetRight(a0); })>},
+		{"cCamera", "void SetUp(const cVector3f&in avX)", SomaBind::GenericMethod<(+[](cCamera *o, const cVector3f & a0) { o->SetUp(a0); })>},
+		{"cCamera", "void SetRotationMatrix(const cMatrixf&in a_mtxRot)", SomaBind::GenericMethod<(+[](cCamera *o, const cMatrixf & a0) { o->SetRotationMatrix(a0); })>},
+		{"cCamera", "cVector3f GetForward()", SomaBind::GenericMethod<(+[](cCamera *o) -> cVector3f { return o->GetForward(); })>},
+		{"cCamera", "cVector3f GetRight()", SomaBind::GenericMethod<(+[](cCamera *o) -> cVector3f { return o->GetRight(); })>},
+		{"cCamera", "cVector3f GetUp()", SomaBind::GenericMethod<(+[](cCamera *o) -> cVector3f { return o->GetUp(); })>},
+		{"cCamera", "const cMatrixf& GetRotationMatrix()", SomaBind::GenericMethod<(+[](cCamera *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetRotationMatrix(); return r; })>},
+		{"cCamera", "const cMatrixf& GetViewMatrix()", SomaBind::GenericMethod<(+[](cCamera *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetViewMatrix(); return r; })>},
+		{"cCamera", "const cMatrixf& GetProjectionMatrix()", SomaBind::GenericMethod<(+[](cCamera *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetProjectionMatrix(); return r; })>},
+		{"cCamera", "const cMatrixf& GetMoveMatrix()", SomaBind::GenericMethod<(+[](cCamera *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetMoveMatrix(); return r; })>},
+		{"cCollideData", "void SetMaxSize(int alSize)", SomaBind::GenericMethod<(+[](cCollideData *o, int a0) { o->SetMaxSize(a0); })>},
+		{"cEnvironmentParticles", "void SetBoxDistance(float afDistance)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, float a0) { o->SetBoxDistance(a0); })>},
+		{"cEnvironmentParticles", "void SetFadeInStart(float afX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, float a0) { o->SetFadeInStart(a0); })>},
+		{"cEnvironmentParticles", "void SetFadeInEnd(float afX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, float a0) { o->SetFadeInEnd(a0); })>},
+		{"cEnvironmentParticles", "void SetFadeOutStart(float afX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, float a0) { o->SetFadeOutStart(a0); })>},
+		{"cEnvironmentParticles", "void SetFadeOutEnd(float afX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, float a0) { o->SetFadeOutEnd(a0); })>},
+		{"cEnvironmentParticles", "void SetIterationNum(float afNum)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, float a0) { o->SetIterationNum(a0); })>},
+		{"cEnvironmentParticles", "float GetIterationNum()", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o) -> float { return o->GetIterationNum(); })>},
+		{"cEnvironmentParticles", "int GetIterationNumInt()", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o) -> int { return o->GetIterationNumInt(); })>},
+		{"cEnvironmentParticles", "void SetColor(const cColor &in aCol)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, const cColor & a0) { o->SetColor(a0); })>},
+		{"cEnvironmentParticles", "void SetBrightness(float afX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, float a0) { o->SetBrightness(a0); })>},
+		{"cEnvironmentParticles", "cColor GetColor()", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o) -> cColor { return o->GetColor(); })>},
+		{"cEnvironmentParticles", "float GetBrightness()", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o) -> float { return o->GetBrightness(); })>},
+		{"cEnvironmentParticles", "void SetGravityVelocity(const cVector3f &in avVel)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, const cVector3f & a0) { o->SetGravityVelocity(a0); })>},
+		{"cEnvironmentParticles", "void SetWindVelocity(const cVector3f &in avVel)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, const cVector3f & a0) { o->SetWindVelocity(a0); })>},
+		{"cEnvironmentParticles", "void SetRotateVelocity(const cVector3f &in avVel)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, const cVector3f & a0) { o->SetRotateVelocity(a0); })>},
+		{"cEnvironmentParticles", "bool SetVisible(bool abX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, bool a0) -> bool { return o->SetVisible(a0); })>},
+		{"cEnvironmentParticles", "cVector3f GetGravityVelocity()", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o) -> cVector3f { return o->GetGravityVelocity(); })>},
+		{"cEnvironmentParticles", "cVector3f GetWindVelocity()", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o) -> cVector3f { return o->GetWindVelocity(); })>},
+		{"cEnvironmentParticles", "cVector3f GetRotateVelocity()", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o) -> cVector3f { return o->GetRotateVelocity(); })>},
+		{"cEnvironmentParticles", "void SetGravitySpeedRandomAmount(float afX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, float a0) { o->SetGravitySpeedRandomAmount(a0); })>},
+		{"cEnvironmentParticles", "void SetWindSpeedRandomAmount(float afX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, float a0) { o->SetWindSpeedRandomAmount(a0); })>},
+		{"cEnvironmentParticles", "void SetWindDirectionRandomAmount(float afX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, float a0) { o->SetWindDirectionRandomAmount(a0); })>},
+		{"cEnvironmentParticles", "void SetRotateSpeedRandomAmount(float afX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, float a0) { o->SetRotateSpeedRandomAmount(a0); })>},
+		{"cEnvironmentParticles", "void SetRotateSpeedRandomBothDirs(bool abX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, bool a0) { o->SetRotateSpeedRandomBothDirs(a0); })>},
+		{"cEnvironmentParticles", "void SetClipActive(bool abX)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, bool a0) { o->SetClipActive(a0); })>},
+		{"cEnvironmentParticles", "bool GetClipActive()", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o) -> bool { return o->GetClipActive(); })>},
+		{"cEnvironmentParticles", "void AddClipArea(iEntity3D@ apClipEntity, bool abSubtractive)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, iEntity3D * a0, bool a1) { o->AddClipArea(a0, a1); })>},
+		{"cEnvironmentParticles", "void RemoveClipArea(iEntity3D@ apClipEntity)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, iEntity3D * a0) { o->RemoveClipArea(a0); })>},
+		{"cEnvironmentParticles", "const tString& GetName()", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cEnvironmentParticles", "void SetSpotLight(cLightSpot@ apSpotLight, float afMul)", SomaBind::GenericMethod<(+[](cEnvironmentParticles *o, cLightSpot * a0, float a1) { o->SetSpotLight(a0, a1); })>},
+		{"cFogArea", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cFogArea *o) -> int { return o->GetUniqueID(); })>},
+		{"cFogArea", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cFogArea *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cFogArea", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cFogArea *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cFogArea", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cFogArea *o, const tString & a0) { o->SetName(a0); })>},
+		{"cFogArea", "bool HasParent()", SomaBind::GenericMethod<(+[](cFogArea *o) -> bool { return o->HasParent(); })>},
+		{"cFogArea", "bool IsActive()const", SomaBind::GenericMethod<(+[](cFogArea *o) -> bool { return o->IsActive(); })>},
+		{"cFogArea", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cFogArea *o, bool a0) { o->SetActive(a0); })>},
+		{"cFogArea", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cFogArea *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cFogArea", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cFogArea *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cFogArea", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cFogArea *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cFogArea", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cFogArea *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cFogArea", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cFogArea *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cFogArea", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cFogArea *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cFogArea", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cFogArea *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cFogArea", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cFogArea *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cFogArea", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cFogArea *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cFogArea", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cFogArea *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cFogArea", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cFogArea *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cFogArea", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cFogArea *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cFogArea", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cFogArea *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cFogArea", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cFogArea *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"cFogArea", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](cFogArea *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"cFogArea", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](cFogArea *o) -> int { return (int)o->GetRenderType(); })>},
+		{"cFogArea", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cFogArea *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"cFogArea", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](cFogArea *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"cFogArea", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](cFogArea *o) -> int { return o->GetRenderFlags(); })>},
+		{"cFogArea", "bool IsStatic()", SomaBind::GenericMethod<(+[](cFogArea *o) -> bool { return o->IsStatic(); })>},
+		{"cFogArea", "bool IsVisible()", SomaBind::GenericMethod<(+[](cFogArea *o) -> bool { return o->IsVisible(); })>},
+		{"cFogArea", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cFogArea *o, bool a0) { o->SetVisible(a0); })>},
+		{"cFogArea", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](cFogArea *o) -> bool { return o->GetVisibleVar(); })>},
+		{"cFogArea", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cFogArea *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"cFogArea", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](cFogArea *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"cFogArea", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cFogArea *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"cFogArea", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](cFogArea *o) -> float { return o->GetCoverageAmount(); })>},
+		{"cFogArea", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](cFogArea *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"cFogArea", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](cFogArea *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"cFogArea", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](cFogArea *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"cFogArea", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](cFogArea *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"cFogArea", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cFogArea *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"cFogArea", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](cFogArea *o) -> float { return o->GetLiquidAmount(); })>},
+		{"cFogArea", "const cColor& GetColor()", SomaBind::GenericMethod<(+[](cFogArea *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; })>},
+		{"cFogArea", "void SetColor(const cColor&in aCol)", SomaBind::GenericMethod<(+[](cFogArea *o, const cColor & a0) { o->SetColor(a0); })>},
+		{"cFogArea", "const cVector3f& GetSize()", SomaBind::GenericMethod<(+[](cFogArea *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; })>},
+		{"cFogArea", "void SetSize(const cVector3f&in avSize)", SomaBind::GenericMethod<(+[](cFogArea *o, const cVector3f & a0) { o->SetSize(a0); })>},
+		{"cFogArea", "void SetStart(float afX)", SomaBind::GenericMethod<(+[](cFogArea *o, float a0) { o->SetStart(a0); })>},
+		{"cFogArea", "void SetEnd(float afX)", SomaBind::GenericMethod<(+[](cFogArea *o, float a0) { o->SetEnd(a0); })>},
+		{"cFogArea", "float GetStart()", SomaBind::GenericMethod<(+[](cFogArea *o) -> float { return o->GetStart(); })>},
+		{"cFogArea", "float GetEnd()", SomaBind::GenericMethod<(+[](cFogArea *o) -> float { return o->GetEnd(); })>},
+		{"cFogArea", "void SetFalloffExp(float afX)", SomaBind::GenericMethod<(+[](cFogArea *o, float a0) { o->SetFalloffExp(a0); })>},
+		{"cFogArea", "float GetFalloffExp()", SomaBind::GenericMethod<(+[](cFogArea *o) -> float { return o->GetFalloffExp(); })>},
+		{"cFogArea", "void SetShowBacksideWhenOutside(bool abX)", SomaBind::GenericMethod<(+[](cFogArea *o, bool a0) { o->SetShowBacksideWhenOutside(a0); })>},
+		{"cFogArea", "void SetShowBacksideWhenInside(bool abX)", SomaBind::GenericMethod<(+[](cFogArea *o, bool a0) { o->SetShowBacksideWhenInside(a0); })>},
+		{"cFogArea", "bool GetShowBacksideWhenOutside()", SomaBind::GenericMethod<(+[](cFogArea *o) -> bool { return o->GetShowBacksideWhenOutside(); })>},
+		{"cFogArea", "bool GetShowBacksideWhenInside()", SomaBind::GenericMethod<(+[](cFogArea *o) -> bool { return o->GetShowBacksideWhenInside(); })>},
+		{"cFogArea", "bool GetExponential()", SomaBind::GenericMethod<(+[](cFogArea *o) -> bool { return o->GetExponential(); })>},
+		{"cFogArea", "bool GetHeightBased()", SomaBind::GenericMethod<(+[](cFogArea *o) -> bool { return o->GetHeightBased(); })>},
+		{"cFogArea", "float GetDensity()", SomaBind::GenericMethod<(+[](cFogArea *o) -> float { return o->GetDensity(); })>},
+		{"cFogArea", "float GetHeightDensity()", SomaBind::GenericMethod<(+[](cFogArea *o) -> float { return o->GetHeightDensity(); })>},
+		{"cFogArea", "float GetHeightHorizon()", SomaBind::GenericMethod<(+[](cFogArea *o) -> float { return o->GetHeightHorizon(); })>},
+		{"cFogArea", "void SetExponential(bool abX)", SomaBind::GenericMethod<(+[](cFogArea *o, bool a0) { o->SetExponential(a0); })>},
+		{"cFogArea", "void SetHeightBased(bool abX)", SomaBind::GenericMethod<(+[](cFogArea *o, bool a0) { o->SetHeightBased(a0); })>},
+		{"cFogArea", "void SetDensity(float afX)", SomaBind::GenericMethod<(+[](cFogArea *o, float a0) { o->SetDensity(a0); })>},
+		{"cFogArea", "void SetHeightDensity(float afX)", SomaBind::GenericMethod<(+[](cFogArea *o, float a0) { o->SetHeightDensity(a0); })>},
+		{"cFogArea", "void SetHeightHorizon(float afX)", SomaBind::GenericMethod<(+[](cFogArea *o, float a0) { o->SetHeightHorizon(a0); })>},
+		{"cForceField", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cForceField *o) -> int { return o->GetUniqueID(); })>},
+		{"cForceField", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cForceField *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cForceField", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cForceField *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cForceField", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cForceField *o, const tString & a0) { o->SetName(a0); })>},
+		{"cForceField", "bool HasParent()", SomaBind::GenericMethod<(+[](cForceField *o) -> bool { return o->HasParent(); })>},
+		{"cForceField", "bool IsActive()const", SomaBind::GenericMethod<(+[](cForceField *o) -> bool { return o->IsActive(); })>},
+		{"cForceField", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cForceField *o, bool a0) { o->SetActive(a0); })>},
+		{"cForceField", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cForceField *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cForceField", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cForceField *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cForceField", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cForceField *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cForceField", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cForceField *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cForceField", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cForceField *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cForceField", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cForceField *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cForceField", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cForceField *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cForceField", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cForceField *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cForceField", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cForceField *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cForceField", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cForceField *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cForceField", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cForceField *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cForceField", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cForceField *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cForceField", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cForceField *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cForceField", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cForceField *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"cForceField", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](cForceField *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"cForceField", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](cForceField *o) -> int { return (int)o->GetRenderType(); })>},
+		{"cForceField", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cForceField *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"cForceField", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](cForceField *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"cForceField", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](cForceField *o) -> int { return o->GetRenderFlags(); })>},
+		{"cForceField", "bool IsStatic()", SomaBind::GenericMethod<(+[](cForceField *o) -> bool { return o->IsStatic(); })>},
+		{"cForceField", "bool IsVisible()", SomaBind::GenericMethod<(+[](cForceField *o) -> bool { return o->IsVisible(); })>},
+		{"cForceField", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cForceField *o, bool a0) { o->SetVisible(a0); })>},
+		{"cForceField", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](cForceField *o) -> bool { return o->GetVisibleVar(); })>},
+		{"cForceField", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cForceField *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"cForceField", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](cForceField *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"cForceField", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cForceField *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"cForceField", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](cForceField *o) -> float { return o->GetCoverageAmount(); })>},
+		{"cForceField", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](cForceField *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"cForceField", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](cForceField *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"cForceField", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](cForceField *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"cForceField", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](cForceField *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"cForceField", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cForceField *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"cForceField", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](cForceField *o) -> float { return o->GetLiquidAmount(); })>},
+		{"cForceField", "void FadeTo(float afAmount, float afTime)", SomaBind::GenericMethod<(+[](cForceField *o, float a0, float a1) { o->FadeTo(a0, a1); })>},
+		{"cForceField", "void FadeOut(float afTime)", SomaBind::GenericMethod<(+[](cForceField *o, float a0) { o->FadeOut(a0); })>},
+		{"cForceField", "void SetRadius(float afX)", SomaBind::GenericMethod<(+[](cForceField *o, float a0) { o->SetRadius(a0); })>},
+		{"cForceField", "float GetRadius()", SomaBind::GenericMethod<(+[](cForceField *o) -> float { return o->GetRadius(); })>},
+		{"cForceField", "float GetFinalRadius()", SomaBind::GenericMethod<(+[](cForceField *o) -> float { return o->GetFinalRadius(); })>},
+		{"cForceField", "void SetFalloffStartRadius(float afX)", SomaBind::GenericMethod<(+[](cForceField *o, float a0) { o->SetFalloffStartRadius(a0); })>},
+		{"cForceField", "float GetFalloffStartRadius()", SomaBind::GenericMethod<(+[](cForceField *o) -> float { return o->GetFalloffStartRadius(); })>},
+		{"cForceField", "float GetFinalFalloffStartRadius()", SomaBind::GenericMethod<(+[](cForceField *o) -> float { return o->GetFinalFalloffStartRadius(); })>},
+		{"cForceField", "void SetForce(float afX)", SomaBind::GenericMethod<(+[](cForceField *o, float a0) { o->SetForce(a0); })>},
+		{"cForceField", "float GetForce()", SomaBind::GenericMethod<(+[](cForceField *o) -> float { return o->GetForce(); })>},
+		{"cForceField", "float GetFinalForce()", SomaBind::GenericMethod<(+[](cForceField *o) -> float { return o->GetFinalForce(); })>},
+		{"cForceField", "void SetFreq(float afX)", SomaBind::GenericMethod<(+[](cForceField *o, float a0) { o->SetFreq(a0); })>},
+		{"cForceField", "float GetFreq()", SomaBind::GenericMethod<(+[](cForceField *o) -> float { return o->GetFreq(); })>},
+		{"cForceField", "float GetFinalFreq()", SomaBind::GenericMethod<(+[](cForceField *o) -> float { return o->GetFinalFreq(); })>},
+		{"cForceField", "void SetAutoRemove(bool abX)", SomaBind::GenericMethod<(+[](cForceField *o, bool a0) { o->SetAutoRemove(a0); })>},
+		{"cForceField", "bool GetAutoRemove()", SomaBind::GenericMethod<(+[](cForceField *o) -> bool { return o->GetAutoRemove(); })>},
+		{"cForceField", "float GetT()", SomaBind::GenericMethod<(+[](cForceField *o) -> float { return o->GetT(); })>},
+		{"cFrustum", "void SetupPerspectiveProj(const cMatrixf&in a_mtxProj, const cMatrixf&in a_mtxView, float afFarPlane,float afNearPlane,float afFOV, float afAspect, const cVector3f &in avOrigin)", SomaBind::GenericMethod<(+[](cFrustum *o, const cMatrixf & a0, const cMatrixf & a1, float a2, float a3, float a4, float a5, const cVector3f & a6) { o->SetupPerspectiveProj(a0, a1, a2, a3, a4, a5, a6); })>},
+		{"cFrustum", "void SetupOrthoProj( const cMatrixf&in a_mtxProj, const cMatrixf&in a_mtxView, float afFarPlane,float afNearPlane,const cVector2f &in avViewSize, const cVector3f &in avOrigin)", SomaBind::GenericMethod<(+[](cFrustum *o, const cMatrixf & a0, const cMatrixf & a1, float a2, float a3, const cVector2f & a4, const cVector3f & a5) { o->SetupOrthoProj(a0, a1, a2, a3, a4, a5); })>},
+		{"cFrustum", "const cPlanef& GetPlane(eFrustumPlane aType)", SomaBind::GenericMethod<(+[](cFrustum *o, int a0) -> const cPlanef & { static thread_local cPlanef r; r = o->GetPlane((eFrustumPlane)a0); return r; })>},
+		{"cFrustum", "const cVector3f& GetVertex(int alIdx)", SomaBind::GenericMethod<(+[](cFrustum *o, int a0) -> const cVector3f & { static thread_local cVector3f r; r = o->GetVertex(a0); return r; })>},
+		{"cFrustum", "bool CollidePoint(const cVector3f&in avPoint)", SomaBind::GenericMethod<(+[](cFrustum *o, const cVector3f & a0) -> bool { return o->CollidePoint(a0); })>},
+		{"cFrustum", "eCollision CollideFustrumSphere(const cVector3f&in avCenter, float afRadius)", SomaBind::GenericMethod<(+[](cFrustum *o, const cVector3f & a0, float a1) -> int { return (int)o->CollideFustrumSphere(a0, a1); })>},
+		{"cFrustum", "eCollision CollideSphere(const cVector3f&in avCenter, float afRadius, int alMaxPlanes)", SomaBind::GenericMethod<(+[](cFrustum *o, const cVector3f & a0, float a1, int a2) -> int { return (int)o->CollideSphere(a0, a1, a2); })>},
+		{"cFrustum", "eCollision CollideAABB(const cVector3f&in avMin,const cVector3f&in avMax, int alMaxPlanes)", SomaBind::GenericMethod<(+[](cFrustum *o, const cVector3f & a0, const cVector3f & a1, int a2) -> int { return (int)o->CollideAABB(a0, a1, a2); })>},
+		{"cFrustum", "const cMatrixf& GetProjectionMatrix()", SomaBind::GenericMethod<(+[](cFrustum *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetProjectionMatrix(); return r; })>},
+		{"cFrustum", "const cMatrixf& GetViewMatrix()const", SomaBind::GenericMethod<(+[](cFrustum *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetViewMatrix(); return r; })>},
+		{"cFrustum", "float GetFarPlane()const", SomaBind::GenericMethod<(+[](cFrustum *o) -> float { return o->GetFarPlane(); })>},
+		{"cFrustum", "float GetNearPlane()const", SomaBind::GenericMethod<(+[](cFrustum *o) -> float { return o->GetNearPlane(); })>},
+		{"cFrustum", "float GetAspect() const", SomaBind::GenericMethod<(+[](cFrustum *o) -> float { return o->GetAspect(); })>},
+		{"cFrustum", "float GetFOV() const", SomaBind::GenericMethod<(+[](cFrustum *o) -> float { return o->GetFOV(); })>},
+		{"cFrustum", "bool GetInfFarPlane()", SomaBind::GenericMethod<(+[](cFrustum *o) -> bool { return o->GetInfFarPlane(); })>},
+		{"cFrustum", "void SetInvertsCullMode(bool abX)", SomaBind::GenericMethod<(+[](cFrustum *o, bool a0) { o->SetInvertsCullMode(a0); })>},
+		{"cFrustum", "bool GetInvertsCullMode()", SomaBind::GenericMethod<(+[](cFrustum *o) -> bool { return o->GetInvertsCullMode(); })>},
+		{"cFrustum", "eProjectionType GetProjectionType() const", SomaBind::GenericMethod<(+[](cFrustum *o) -> int { return (int)o->GetProjectionType(); })>},
+		{"cFrustum", "const cVector2f& GetOrthoViewSize() const", SomaBind::GenericMethod<(+[](cFrustum *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetOrthoViewSize(); return r; })>},
+		{"cFrustum", "bool CheckSphereNearPlaneIntersection(const cVector3f &in avCenter, float afRadius)", SomaBind::GenericMethod<(+[](cFrustum *o, const cVector3f & a0, float a1) -> bool { return o->CheckSphereNearPlaneIntersection(a0, a1); })>},
+		{"cFrustum", "bool CheckAABBNearPlaneIntersection(const cVector3f &in avMin, const cVector3f &in avMax)", SomaBind::GenericMethod<(+[](cFrustum *o, const cVector3f & a0, const cVector3f & a1) -> bool { return o->CheckAABBNearPlaneIntersection(a0, a1); })>},
+		{"cFrustum", "bool CheckLineIntersection(const cVector3f&in avStart, const cVector3f &in avEnd, cVector3f &in avIntersection)", SomaBind::GenericMethod<(+[](cFrustum *o, const cVector3f & a0, const cVector3f & a1, cVector3f & a2) -> bool { return o->CheckLineIntersection(a0, a1, a2); })>},
+		{"cFrustum", "const cVector3f& GetOrigin()", SomaBind::GenericMethod<(+[](cFrustum *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetOrigin(); return r; })>},
+		{"cFrustum", "cVector3f GetForward()", SomaBind::GenericMethod<(+[](cFrustum *o) -> cVector3f { return o->GetForward(); })>},
+		{"cGuiGfxElement", "void SetOffset(const cVector3f&in avOffset)", SomaBind::GenericMethod<(+[](cGuiGfxElement *o, const cVector3f & a0) { o->SetOffset(a0); })>},
+		{"cGuiGfxElement", "const cVector3f& GetOffset()", SomaBind::GenericMethod<(+[](cGuiGfxElement *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetOffset(); return r; })>},
+		{"cGuiGfxElement", "void SetActiveSize(const cVector2f&in avSize)", SomaBind::GenericMethod<(+[](cGuiGfxElement *o, const cVector2f & a0) { o->SetActiveSize(a0); })>},
+		{"cGuiGfxElement", "const cVector2f& GetActiveSize()", SomaBind::GenericMethod<(+[](cGuiGfxElement *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetActiveSize(); return r; })>},
+		{"cGuiGfxElement", "void PlayAnimation(int alNum)", SomaBind::GenericMethod<(+[](cGuiGfxElement *o, int a0) { o->PlayAnimation(a0); })>},
+		{"cGuiGfxElement", "int GetAnimationNum()", SomaBind::GenericMethod<(+[](cGuiGfxElement *o) -> int { return o->GetAnimationNum(); })>},
+		{"cGuiGfxElement", "void SetAnimationTime(float afTime)", SomaBind::GenericMethod<(+[](cGuiGfxElement *o, float a0) { o->SetAnimationTime(a0); })>},
+		{"cGuiGfxElement", "void SetAnimationPaused(bool abX)", SomaBind::GenericMethod<(+[](cGuiGfxElement *o, bool a0) { o->SetAnimationPaused(a0); })>},
+		{"cGuiGfxElement", "void SetColor(const cColor &in aColor)", SomaBind::GenericMethod<(+[](cGuiGfxElement *o, const cColor & a0) { o->SetColor(a0); })>},
+		{"cGuiGfxElement", "void SetFlipUvYAxis(bool abX)", SomaBind::GenericMethod<(+[](cGuiGfxElement *o, bool a0) { o->SetFlipUvYAxis(a0); })>},
+		{"cGuiGfxElement", "bool GetFlipUvYAxis()", SomaBind::GenericMethod<(+[](cGuiGfxElement *o) -> bool { return o->GetFlipUvYAxis(); })>},
+		{"cGuiGfxElement", "const cVector2f& GetImageSize()", SomaBind::GenericMethod<(+[](cGuiGfxElement *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetImageSize(); return r; })>},
+		{"cGuiSet", "void DestroyAllWidgets()", SomaBind::GenericMethod<(+[](cGuiSet *o) { o->DestroyAllWidgets(); })>},
+		{"cGuiSet", "void ResetMouseOver()", SomaBind::GenericMethod<(+[](cGuiSet *o) { o->ResetMouseOver(); })>},
+		{"cGuiSet", "void DrawGfx(cGuiGfxElement@ apGfx, const cVector3f &in avPos)", SomaBind::GenericMethod<(+[](cGuiSet *o, cGuiGfxElement * a0, const cVector3f & a1) { o->DrawGfx(a0, a1); })>},
+		{"cGuiSet", "void DrawGfx(cGuiGfxElement@ apGfx, const cVector3f &in avPos, const cVector2f &in avSize, const cColor&in aColor)", SomaBind::GenericMethod<(+[](cGuiSet *o, cGuiGfxElement * a0, const cVector3f & a1, const cVector2f & a2, const cColor & a3) { o->DrawGfx(a0, a1, a2, a3); })>},
+		{"cGuiSet", "void DrawGfx(cGuiGfxElement@ apGfx, const cVector3f &in avPos, const cVector2f &in avSize, const cColor&in aColor, eGuiMaterial aMaterial, float afRotationAngle, bool abUseCustomPivot, const cVector3f&in avCustomPivot)", SomaBind::GenericMethod<(+[](cGuiSet *o, cGuiGfxElement * a0, const cVector3f & a1, const cVector2f & a2, const cColor & a3, int a4, float a5, bool a6, const cVector3f & a7) { o->DrawGfx(a0, a1, a2, a3, (eGuiMaterial)a4, a5, a6, a7); })>},
+		{"cGuiSet", "void DrawFont(const tWString &in asText,iFontData @apFont, const cVector3f &in avPos,const cVector2f &in avSize, const cColor&in aColor)", SomaBind::GenericMethod<(+[](cGuiSet *o, const tWString & a0, iFontData * a1, const cVector3f & a2, const cVector2f & a3, const cColor & a4) { o->DrawFont(a0, a1, a2, a3, a4); })>},
+		{"cGuiSet", "cWidgetWindow@ CreateWidgetWindow(int alFlags, const cVector3f &in avLocalPos, const cVector2f &in avSize, const tWString &in asText, iWidget @apParent, const tString&in asName )", SomaBind::GenericMethod<(+[](cGuiSet *o, int a0, const cVector3f & a1, const cVector2f & a2, const tWString & a3, iWidget * a4, const tString & a5) -> cWidgetWindow * { return o->CreateWidgetWindow(a0, a1, a2, a3, a4, a5); })>},
+		{"cGuiSet", "iWidget @GetWidgetFromName(const tString&in asName)", SomaBind::GenericMethod<(+[](cGuiSet *o, const tString & a0) -> iWidget * { return o->GetWidgetFromName(a0); })>},
+		{"cGuiSet", "void DestroyWidget(iWidget @apWidget, bool abDestroyChildren)", SomaBind::GenericMethod<(+[](cGuiSet *o, iWidget * a0, bool a1) { o->DestroyWidget(a0, a1); })>},
+		{"cGuiSet", "bool IsValidWidget(iWidget @apWidget)", SomaBind::GenericMethod<(+[](cGuiSet *o, iWidget * a0) -> bool { return o->IsValidWidget(a0); })>},
+		{"cGuiSet", "void RemoveWindow(cWidgetWindow@ apWin)", SomaBind::GenericMethod<(+[](cGuiSet *o, cWidgetWindow * a0) { o->RemoveWindow(a0); })>},
+		{"cGuiSet", "void SetLastWindowZ(float afX)", SomaBind::GenericMethod<(+[](cGuiSet *o, float a0) { o->SetLastWindowZ(a0); })>},
+		{"cGuiSet", "void SetWindowOnTop(cWidgetWindow@ apWin)", SomaBind::GenericMethod<(+[](cGuiSet *o, cWidgetWindow * a0) { o->SetWindowOnTop(a0); })>},
+		{"cGuiSet", "void SetActive(bool abX)", SomaBind::GenericMethod<(+[](cGuiSet *o, bool a0) { o->SetActive(a0); })>},
+		{"cGuiSet", "bool IsActive()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> bool { return o->IsActive(); })>},
+		{"cGuiSet", "const tString& GetName()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cGuiSet", "void SetDrawMouse(bool abX)", SomaBind::GenericMethod<(+[](cGuiSet *o, bool a0) { o->SetDrawMouse(a0); })>},
+		{"cGuiSet", "bool GetDrawMouse()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> bool { return o->GetDrawMouse(); })>},
+		{"cGuiSet", "void SetMouseZ(float afZ)", SomaBind::GenericMethod<(+[](cGuiSet *o, float a0) { o->SetMouseZ(a0); })>},
+		{"cGuiSet", "float GetMouseZ()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> float { return o->GetMouseZ(); })>},
+		{"cGuiSet", "void SetMouseMovementEnabled(bool abX)", SomaBind::GenericMethod<(+[](cGuiSet *o, bool a0) { o->SetMouseMovementEnabled(a0); })>},
+		{"cGuiSet", "bool GetMouseMovementEnabled()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> bool { return o->GetMouseMovementEnabled(); })>},
+		{"cGuiSet", "const cVector2f& GetMousePos()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetMousePos(); return r; })>},
+		{"cGuiSet", "void SetRootWidgetClips(bool abX)", SomaBind::GenericMethod<(+[](cGuiSet *o, bool a0) { o->SetRootWidgetClips(a0); })>},
+		{"cGuiSet", "bool GetRootWidgetClips()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> bool { return o->GetRootWidgetClips(); })>},
+		{"cGuiSet", "void SetVirtualSize(const cVector2f&in avSize, float afMinZ, float afMaxZ, const cVector2f&in avOffset)", SomaBind::GenericMethod<(+[](cGuiSet *o, const cVector2f & a0, float a1, float a2, const cVector2f & a3) { o->SetVirtualSize(a0, a1, a2, a3); })>},
+		{"cGuiSet", "const cVector2f& GetVirtualSize()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetVirtualSize(); return r; })>},
+		{"cGuiSet", "const cVector2f& GetVirtualSizeOffset()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetVirtualSizeOffset(); return r; })>},
+		{"cGuiSet", "void SetFocusedWidget(iWidget@ apWidget, bool abCheckForValidity=false)", SomaBind::GenericMethod<(+[](cGuiSet *o, iWidget * a0, bool a1) { o->SetFocusedWidget(a0, a1); })>},
+		{"cGuiSet", "iWidget@ GetFocusedWidget()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> iWidget * { return o->GetFocusedWidget(); })>},
+		{"cGuiSet", "void SetAttentionWidget(iWidget @apWidget, bool abClearFocus)", SomaBind::GenericMethod<(+[](cGuiSet *o, iWidget * a0, bool a1) { o->SetAttentionWidget(a0, a1); })>},
+		{"cGuiSet", "iWidget@ GetAttentionWidget()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> iWidget * { return o->GetAttentionWidget(); })>},
+		{"cGuiSet", "void SetIs3D(bool abX)", SomaBind::GenericMethod<(+[](cGuiSet *o, bool a0) { o->SetIs3D(a0); })>},
+		{"cGuiSet", "bool Is3D()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> bool { return o->Is3D(); })>},
+		{"cGuiSet", "int GetDrawPriority()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> int { return o->GetDrawPriority(); })>},
+		{"cGuiSet", "void SetDrawPriority(int alPrio)", SomaBind::GenericMethod<(+[](cGuiSet *o, int a0) { o->SetDrawPriority(a0); })>},
+		{"cGuiSet", "void SetCurrentPointer(cGuiGfxElement @apGfx)", SomaBind::GenericMethod<(+[](cGuiSet *o, cGuiGfxElement * a0) { o->SetCurrentPointer(a0); })>},
+		{"cGuiSet", "cGuiGfxElement@ GetCurrentPointer()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> cGuiGfxElement * { return o->GetCurrentPointer(); })>},
+		{"cGuiSet", "void Set3DSize(const cVector3f&in avSize)", SomaBind::GenericMethod<(+[](cGuiSet *o, const cVector3f & a0) { o->Set3DSize(a0); })>},
+		{"cGuiSet", "const cVector3f& Get3DSize()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> const cVector3f & { static thread_local cVector3f r; r = o->Get3DSize(); return r; })>},
+		{"cGuiSet", "void SetCullBackface(bool abX)", SomaBind::GenericMethod<(+[](cGuiSet *o, bool a0) { o->SetCullBackface(a0); })>},
+		{"cGuiSet", "bool GetCullBackface()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> bool { return o->GetCullBackface(); })>},
+		{"cGuiSet", "void Set3DTransform(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cGuiSet *o, const cMatrixf & a0) { o->Set3DTransform(a0); })>},
+		{"cGuiSet", "const cMatrixf& Get3DTransform()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->Get3DTransform(); return r; })>},
+		{"cGuiSet", "bool HasFocus()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> bool { return o->HasFocus(); })>},
+		{"cGuiSet", "void SetSkin(cGuiSkin@ apSkin)", SomaBind::GenericMethod<(+[](cGuiSet *o, cGuiSkin * a0) { o->SetSkin(a0); })>},
+		{"cGuiSet", "cGuiSkin@ GetSkin()", SomaBind::GenericMethod<(+[](cGuiSet *o) -> cGuiSkin * { return o->GetSkin(); })>},
+		{"cGuiSkin", "const tString& GetName()", SomaBind::GenericMethod<(+[](cGuiSkin *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cGuiSkin", "bool LoadFromFile(const tWString&in asFile)", SomaBind::GenericMethod<(+[](cGuiSkin *o, const tWString & a0) -> bool { return o->LoadFromFile(a0); })>},
+		{"cGuiSkin", "cGuiGfxElement@ GetGfx(eGuiSkinGfx aType)", SomaBind::GenericMethod<(+[](cGuiSkin *o, int a0) -> cGuiGfxElement * { return o->GetGfx((eGuiSkinGfx)a0); })>},
+		{"cGuiSkin", "const cVector3f& GetAttribute(eGuiSkinAttribute aType)", SomaBind::GenericMethod<(+[](cGuiSkin *o, int a0) -> const cVector3f & { static thread_local cVector3f r; r = o->GetAttribute((eGuiSkinAttribute)a0); return r; })>},
+		{"cLensFlare", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> int { return o->GetUniqueID(); })>},
+		{"cLensFlare", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cLensFlare", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cLensFlare *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cLensFlare", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cLensFlare *o, const tString & a0) { o->SetName(a0); })>},
+		{"cLensFlare", "bool HasParent()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> bool { return o->HasParent(); })>},
+		{"cLensFlare", "bool IsActive()const", SomaBind::GenericMethod<(+[](cLensFlare *o) -> bool { return o->IsActive(); })>},
+		{"cLensFlare", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cLensFlare *o, bool a0) { o->SetActive(a0); })>},
+		{"cLensFlare", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cLensFlare", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cLensFlare", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cLensFlare", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cLensFlare", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cLensFlare *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cLensFlare", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cLensFlare *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cLensFlare", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cLensFlare *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cLensFlare", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cLensFlare *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cLensFlare", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cLensFlare", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLensFlare *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cLensFlare", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLensFlare *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cLensFlare", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLensFlare *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cLensFlare", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cLensFlare", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"cLensFlare", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](cLensFlare *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"cLensFlare", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> int { return (int)o->GetRenderType(); })>},
+		{"cLensFlare", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"cLensFlare", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"cLensFlare", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](cLensFlare *o) -> int { return o->GetRenderFlags(); })>},
+		{"cLensFlare", "bool IsStatic()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> bool { return o->IsStatic(); })>},
+		{"cLensFlare", "bool IsVisible()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> bool { return o->IsVisible(); })>},
+		{"cLensFlare", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cLensFlare *o, bool a0) { o->SetVisible(a0); })>},
+		{"cLensFlare", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> bool { return o->GetVisibleVar(); })>},
+		{"cLensFlare", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLensFlare *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"cLensFlare", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](cLensFlare *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"cLensFlare", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"cLensFlare", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetCoverageAmount(); })>},
+		{"cLensFlare", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"cLensFlare", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](cLensFlare *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"cLensFlare", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"cLensFlare", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"cLensFlare", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"cLensFlare", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetLiquidAmount(); })>},
+		{"cLensFlare", "void FadeIn(float afTime)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->FadeIn(a0); })>},
+		{"cLensFlare", "void FadeOut(float afTime)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->FadeOut(a0); })>},
+		{"cLensFlare", "void SetFlareSourceSize(cVector3f avSize)", SomaBind::GenericMethod<(+[](cLensFlare *o, cVector3f a0) { o->SetFlareSourceSize(a0); })>},
+		{"cLensFlare", "cVector3f GetFlareSourceSize()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> cVector3f { return o->GetFlareSourceSize(); })>},
+		{"cLensFlare", "void SetOuterFieldOfView(float afAngle)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->SetOuterFieldOfView(a0); })>},
+		{"cLensFlare", "float GetOuterFieldOfView()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetOuterFieldOfView(); })>},
+		{"cLensFlare", "void SetInnerFieldOfView(float afAngle)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->SetInnerFieldOfView(a0); })>},
+		{"cLensFlare", "float GetInnerFieldOfView()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetInnerFieldOfView(); })>},
+		{"cLensFlare", "void SetMultiIrisTextureAtlasGrid(cVector2l avMultiIrisGrid)", SomaBind::GenericMethod<(+[](cLensFlare *o, cVector2l a0) { o->SetMultiIrisTextureAtlasGrid(a0); })>},
+		{"cLensFlare", "cVector2l GetMultiIrisTextureAtlasGrid()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> cVector2l { return o->GetMultiIrisTextureAtlasGrid(); })>},
+		{"cLensFlare", "void SetMultiIrisSeed(int alSeed)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0) { o->SetMultiIrisSeed(a0); })>},
+		{"cLensFlare", "int GetMultiIrisSeed()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> int { return o->GetMultiIrisSeed(); })>},
+		{"cLensFlare", "void SetMultiIrisCount(int alCount)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0) { o->SetMultiIrisCount(a0); })>},
+		{"cLensFlare", "int GetMultiIrisCount()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> int { return o->GetMultiIrisCount(); })>},
+		{"cLensFlare", "void SetRangeMax(float afRangeMaxStart, float afRangeMaxEnd)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0, float a1) { o->SetRangeMax(a0, a1); })>},
+		{"cLensFlare", "void DisableRangeMax()", SomaBind::GenericMethod<(+[](cLensFlare *o) { o->DisableRangeMax(); })>},
+		{"cLensFlare", "float GetRangeMaxStart()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetRangeMaxStart(); })>},
+		{"cLensFlare", "float GetRangeMaxEnd()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetRangeMaxEnd(); })>},
+		{"cLensFlare", "void SetRangeMin(float afRangeMinStart, float afRangeMinEnd)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0, float a1) { o->SetRangeMin(a0, a1); })>},
+		{"cLensFlare", "void DisableRangeMin()", SomaBind::GenericMethod<(+[](cLensFlare *o) { o->DisableRangeMin(); })>},
+		{"cLensFlare", "float GetRangeMinStart()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetRangeMinStart(); })>},
+		{"cLensFlare", "float GetRangeMinEnd()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetRangeMinEnd(); })>},
+		{"cLensFlare", "void SetGlareBrightness(float afBrightness)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->SetGlareBrightness(a0); })>},
+		{"cLensFlare", "float GetGlareBrightness()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetGlareBrightness(); })>},
+		{"cLensFlare", "void SetGlareFieldOfView(float afAngle)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->SetGlareFieldOfView(a0); })>},
+		{"cLensFlare", "float GetGlareFieldOfView()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetGlareFieldOfView(); })>},
+		{"cLensFlare", "void SetGlareStareAt(float afGlare)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->SetGlareStareAt(a0); })>},
+		{"cLensFlare", "void SetGlareRange(float afRangeMaxStart, float afRangeMaxEnd)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0, float a1) { o->SetGlareRange(a0, a1); })>},
+		{"cLensFlare", "float GetGlareRangeMaxStart()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetGlareRangeMaxStart(); })>},
+		{"cLensFlare", "float GetGlareRangeMaxEnd()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetGlareRangeMaxEnd(); })>},
+		{"cLensFlare", "void SetSizeChangeBasedOnDistance(float afPercent)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->SetSizeChangeBasedOnDistance(a0); })>},
+		{"cLensFlare", "float GetSizeChangeBasedOnDistance()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetSizeChangeBasedOnDistance(); })>},
+		{"cLensFlare", "void SetFlareSize(eLensFlareType aType, cVector2f avSize)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0, cVector2f a1) { o->SetFlareSize((eLensFlareType)a0, a1); })>},
+		{"cLensFlare", "cVector2f GetFlareSize(eLensFlareType aType)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0) -> cVector2f { return o->GetFlareSize((eLensFlareType)a0); })>},
+		{"cLensFlare", "void SetFlareColor(eLensFlareType aType, cColor aValue)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0, cColor a1) { o->SetFlareColor((eLensFlareType)a0, a1); })>},
+		{"cLensFlare", "cColor GetFlareColor(eLensFlareType aType)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0) -> cColor { return o->GetFlareColor((eLensFlareType)a0); })>},
+		{"cLensFlare", "void SetFlareActive(eLensFlareType aType, bool abValue)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0, bool a1) { o->SetFlareActive((eLensFlareType)a0, a1); })>},
+		{"cLensFlare", "bool IsFlareActive(eLensFlareType aType)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0) -> bool { return o->IsFlareActive((eLensFlareType)a0); })>},
+		{"cLensFlare", "void SetUseParentMeshForOcclusion(bool abValue)", SomaBind::GenericMethod<(+[](cLensFlare *o, bool a0) { o->SetUseParentMeshForOcclusion(a0); })>},
+		{"cLensFlare", "bool GetUseParentMeshForOcclusion()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> bool { return o->GetUseParentMeshForOcclusion(); })>},
+		{"cLensFlare", "void SetShrinkWhenOccluded(bool abValue)", SomaBind::GenericMethod<(+[](cLensFlare *o, bool a0) { o->SetShrinkWhenOccluded(a0); })>},
+		{"cLensFlare", "bool GetShrinkWhenOccluded()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> bool { return o->GetShrinkWhenOccluded(); })>},
+		{"cLensFlare", "void SetMultiplyGlareWithMultiIris(bool abValue)", SomaBind::GenericMethod<(+[](cLensFlare *o, bool a0) { o->SetMultiplyGlareWithMultiIris(a0); })>},
+		{"cLensFlare", "bool GetMultiplyGlareWithMultiIris()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> bool { return o->GetMultiplyGlareWithMultiIris(); })>},
+		{"cLensFlare", "void SetBrightness(float afX)", SomaBind::GenericMethod<(+[](cLensFlare *o, float a0) { o->SetBrightness(a0); })>},
+		{"cLensFlare", "float GetBrightness()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> float { return o->GetBrightness(); })>},
+		{"cLensFlare", "eLensFlareType GetFirstActiveType()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> int { return (int)o->GetFirstActiveType(); })>},
+		{"cLensFlare", "void SetMaterial(eLensFlareType aType, cMaterial@ apMaterial)", SomaBind::GenericMethod<(+[](cLensFlare *o, int a0, cMaterial * a1) { o->SetMaterial((eLensFlareType)a0, a1); })>},
+		{"cLightBox", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cLightBox *o) -> int { return o->GetUniqueID(); })>},
+		{"cLightBox", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cLightBox", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cLightBox *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cLightBox", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cLightBox *o, const tString & a0) { o->SetName(a0); })>},
+		{"cLightBox", "bool HasParent()", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->HasParent(); })>},
+		{"cLightBox", "bool IsActive()const", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->IsActive(); })>},
+		{"cLightBox", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cLightBox *o, bool a0) { o->SetActive(a0); })>},
+		{"cLightBox", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cLightBox *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cLightBox", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cLightBox *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cLightBox", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cLightBox *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cLightBox", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cLightBox *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cLightBox", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cLightBox *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cLightBox", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cLightBox *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cLightBox", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cLightBox *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cLightBox", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cLightBox *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cLightBox", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cLightBox *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cLightBox", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightBox *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cLightBox", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightBox *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cLightBox", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightBox *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cLightBox", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cLightBox *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cLightBox", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cLightBox *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"cLightBox", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](cLightBox *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"cLightBox", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](cLightBox *o) -> int { return (int)o->GetRenderType(); })>},
+		{"cLightBox", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cLightBox *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"cLightBox", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](cLightBox *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"cLightBox", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](cLightBox *o) -> int { return o->GetRenderFlags(); })>},
+		{"cLightBox", "bool IsStatic()", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->IsStatic(); })>},
+		{"cLightBox", "bool IsVisible()", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->IsVisible(); })>},
+		{"cLightBox", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cLightBox *o, bool a0) { o->SetVisible(a0); })>},
+		{"cLightBox", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->GetVisibleVar(); })>},
+		{"cLightBox", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightBox *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"cLightBox", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"cLightBox", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"cLightBox", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetCoverageAmount(); })>},
+		{"cLightBox", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](cLightBox *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"cLightBox", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](cLightBox *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"cLightBox", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](cLightBox *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"cLightBox", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"cLightBox", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"cLightBox", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetLiquidAmount(); })>},
+		{"cLightBox", "eLightType GetLightType()", SomaBind::GenericMethod<(+[](cLightBox *o) -> int { return (int)o->GetLightType(); })>},
+		{"cLightBox", "void SetGoboTexture(iTexture @apTexture)", SomaBind::GenericMethod<(+[](cLightBox *o, iTexture * a0) { o->SetGoboTexture(a0); })>},
+		{"cLightBox", "iTexture@ GetGoboTexture()", SomaBind::GenericMethod<(+[](cLightBox *o) -> iTexture * { return o->GetGoboTexture(); })>},
+		{"cLightBox", "void RemoveBillboard(cBillboard @apBillboard)", SomaBind::GenericMethod<(+[](cLightBox *o, cBillboard * a0) { o->RemoveBillboard(a0); })>},
+		{"cLightBox", "void AttachParticleSystem(cParticleSystem @apPS)", SomaBind::GenericMethod<(+[](cLightBox *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); })>},
+		{"cLightBox", "void RemoveParticleSystem(cParticleSystem @apPS)", SomaBind::GenericMethod<(+[](cLightBox *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); })>},
+		{"cLightBox", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", SomaBind::GenericMethod<(+[](cLightBox *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); })>},
+		{"cLightBox", "void StopFading()", SomaBind::GenericMethod<(+[](cLightBox *o) { o->StopFading(); })>},
+		{"cLightBox", "bool IsFading()", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->IsFading(); })>},
+		{"cLightBox", "const cColor& GetDestColor()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetDestColor(); return r; })>},
+		{"cLightBox", "float GetDestRadius()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetDestRadius(); })>},
+		{"cLightBox", "void SetFlickerActive(bool abX)", SomaBind::GenericMethod<(+[](cLightBox *o, bool a0) { o->SetFlickerActive(a0); })>},
+		{"cLightBox", "bool GetFlickerActive()", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->GetFlickerActive(); })>},
+		{"cLightBox", "void SetFlicker(const cColor&in aOffCol, float afOffRadius,float afOnMinLength, float afOnMaxLength,const tString &in asOnSound,const tString &in asOnPS, float afOffMinLength, float afOffMaxLength,const tString &in asOffSound,const tString &in asOffPS, bool abFade, float afOnFadeMinLength, float afOnFadeMaxLength, float afOffFadeMinLength, float afOffFadeMaxLength)", SomaBind::GenericMethod<(+[](cLightBox *o, const cColor & a0, float a1, float a2, float a3, const tString & a4, const tString & a5, float a6, float a7, const tString & a8, const tString & a9, bool a10, float a11, float a12, float a13, float a14) { o->SetFlicker(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14); })>},
+		{"cLightBox", "const tString& GetFlickerOffSound()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffSound(); return r; })>},
+		{"cLightBox", "const tString& GetFlickerOnSound()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnSound(); return r; })>},
+		{"cLightBox", "const tString& GetFlickerOffPS()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffPS(); return r; })>},
+		{"cLightBox", "const tString& GetFlickerOnPS()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnPS(); return r; })>},
+		{"cLightBox", "float GetFlickerOnMinLength()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetFlickerOnMinLength(); })>},
+		{"cLightBox", "float GetFlickerOffMinLength()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetFlickerOffMinLength(); })>},
+		{"cLightBox", "float GetFlickerOnMaxLength()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetFlickerOnMaxLength(); })>},
+		{"cLightBox", "float GetFlickerOffMaxLength()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetFlickerOffMaxLength(); })>},
+		{"cLightBox", "const cColor& GetFlickerOffColor()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOffColor(); return r; })>},
+		{"cLightBox", "float GetFlickerOffRadius()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetFlickerOffRadius(); })>},
+		{"cLightBox", "bool GetFlickerFade()", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->GetFlickerFade(); })>},
+		{"cLightBox", "float GetFlickerOnFadeMinLength()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetFlickerOnFadeMinLength(); })>},
+		{"cLightBox", "float GetFlickerOnFadeMaxLength()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetFlickerOnFadeMaxLength(); })>},
+		{"cLightBox", "float GetFlickerOffFadeMinLength()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetFlickerOffFadeMinLength(); })>},
+		{"cLightBox", "float GetFlickerOffFadeMaxLength()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetFlickerOffFadeMaxLength(); })>},
+		{"cLightBox", "const cColor& GetFlickerOnColor()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOnColor(); return r; })>},
+		{"cLightBox", "float GetFlickerOnRadius()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetFlickerOnRadius(); })>},
+		{"cLightBox", "const cColor& GetDiffuseColor()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetDiffuseColor(); return r; })>},
+		{"cLightBox", "void SetDiffuseColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightBox *o, const cColor & a0) { o->SetDiffuseColor(a0); })>},
+		{"cLightBox", "const cColor& GetDefaultDiffuseColor()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultDiffuseColor(); return r; })>},
+		{"cLightBox", "void SetDefaultDiffuseColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightBox *o, const cColor & a0) { o->SetDefaultDiffuseColor(a0); })>},
+		{"cLightBox", "const cColor& GetSpecularColor()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetSpecularColor(); return r; })>},
+		{"cLightBox", "void SetSpecularColor(cColor aColor)", SomaBind::GenericMethod<(+[](cLightBox *o, cColor a0) { o->SetSpecularColor(a0); })>},
+		{"cLightBox", "bool GetCastShadows()", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->GetCastShadows(); })>},
+		{"cLightBox", "void SetCastShadows(bool afX)", SomaBind::GenericMethod<(+[](cLightBox *o, bool a0) { o->SetCastShadows(a0); })>},
+		{"cLightBox", "int GetShadowCastersAffected()", SomaBind::GenericMethod<(+[](cLightBox *o) -> int { return o->GetShadowCastersAffected(); })>},
+		{"cLightBox", "void SetShadowCastersAffected(int alX)", SomaBind::GenericMethod<(+[](cLightBox *o, int a0) { o->SetShadowCastersAffected(a0); })>},
+		{"cLightBox", "eShadowMapResolution GetShadowMapResolution() const", SomaBind::GenericMethod<(+[](cLightBox *o) -> int { return (int)o->GetShadowMapResolution(); })>},
+		{"cLightBox", "void SetShadowMapResolution(eShadowMapResolution aQuality)", SomaBind::GenericMethod<(+[](cLightBox *o, int a0) { o->SetShadowMapResolution((eShadowMapResolution)a0); })>},
+		{"cLightBox", "float GetShadowMapBlurAmount() const", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetShadowMapBlurAmount(); })>},
+		{"cLightBox", "void SetShadowMapBlurAmount(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetShadowMapBlurAmount(a0); })>},
+		{"cLightBox", "bool GetOcclusionCullShadowCasters() const", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->GetOcclusionCullShadowCasters(); })>},
+		{"cLightBox", "void SetOcclusionCullShadowCasters(bool abX)", SomaBind::GenericMethod<(+[](cLightBox *o, bool a0) { o->SetOcclusionCullShadowCasters(a0); })>},
+		{"cLightBox", "float GetShadowMapBiasMul()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetShadowMapBiasMul(); })>},
+		{"cLightBox", "float GetShadowMapSlopeScaleBiasMul()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetShadowMapSlopeScaleBiasMul(); })>},
+		{"cLightBox", "void SetShadowMapBiasMul(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetShadowMapBiasMul(a0); })>},
+		{"cLightBox", "void SetShadowMapSlopeScaleBiasMul(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetShadowMapSlopeScaleBiasMul(a0); })>},
+		{"cLightBox", "void SetRadius(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetRadius(a0); })>},
+		{"cLightBox", "float GetRadius()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetRadius(); })>},
+		{"cLightBox", "void SetFalloffPow(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetFalloffPow(a0); })>},
+		{"cLightBox", "float GetFalloffPow()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetFalloffPow(); })>},
+		{"cLightBox", "float GetSourceRadius()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetSourceRadius(); })>},
+		{"cLightBox", "void SetSourceRadius(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetSourceRadius(a0); })>},
+		{"cLightBox", "void SetBrightness(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetBrightness(a0); })>},
+		{"cLightBox", "float GetBrightness()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetBrightness(); })>},
+		{"cLightBox", "float GetTranslucency()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetTranslucency(); })>},
+		{"cLightBox", "void SetTranslucency(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetTranslucency(a0); })>},
+		{"cLightBox", "void SetSize(const cVector3f&in avSize)", SomaBind::GenericMethod<(+[](cLightBox *o, const cVector3f & a0) { o->SetSize(a0); })>},
+		{"cLightBox", "const cVector3f& GetSize()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; })>},
+		{"cLightBox", "void SetBlendFunc(eLightBoxBlendFunc aFunc)", SomaBind::GenericMethod<(+[](cLightBox *o, int a0) { o->SetBlendFunc((eLightBoxBlendFunc)a0); })>},
+		{"cLightBox", "eLightBoxBlendFunc GetBlendFunc()", SomaBind::GenericMethod<(+[](cLightBox *o) -> int { return (int)o->GetBlendFunc(); })>},
+		{"cLightBox", "void SetAmbientColorSky(const cColor &in aColor)", SomaBind::GenericMethod<(+[](cLightBox *o, const cColor & a0) { o->SetAmbientColorSky(a0); })>},
+		{"cLightBox", "void SetAmbientColorGround(const cColor &in aColor)", SomaBind::GenericMethod<(+[](cLightBox *o, const cColor & a0) { o->SetAmbientColorGround(a0); })>},
+		{"cLightBox", "const cColor& GetAmbientColorSky()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetAmbientColorSky(); return r; })>},
+		{"cLightBox", "const cColor& GetAmbientColorGround()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetAmbientColorGround(); return r; })>},
+		{"cLightBox", "void SetWeight(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetWeight(a0); })>},
+		{"cLightBox", "float GetWeight()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetWeight(); })>},
+		{"cLightBox", "void SetBevel(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetBevel(a0); })>},
+		{"cLightBox", "float GetBevel()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetBevel(); })>},
+		{"cLightBox", "void SetUseSphericalHarmonics(bool abX)", SomaBind::GenericMethod<(+[](cLightBox *o, bool a0) { o->SetUseSphericalHarmonics(a0); })>},
+		{"cLightBox", "bool GetUseSphericalHarmonics()", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->GetUseSphericalHarmonics(); })>},
+		{"cLightBox", "void SetProbeOffset(const cVector3f&in avPosition)", SomaBind::GenericMethod<(+[](cLightBox *o, const cVector3f & a0) { o->SetProbeOffset(a0); })>},
+		{"cLightBox", "const cVector3f& GetProbeOffset()", SomaBind::GenericMethod<(+[](cLightBox *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetProbeOffset(); return r; })>},
+		{"cLightBox", "void FadeIrradianceSet(const tString&in asSetName, float afTime)", SomaBind::GenericMethod<(+[](cLightBox *o, const tString & a0, float a1) { o->FadeIrradianceSet(a0, a1); })>},
+		{"cLightBox", "void SetSpecularColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightBox *o, const cColor & a0) { o->SetSpecularColor(a0); })>},
+		{"cLightBox", "void SetDefaultBrightness(float afX)", SomaBind::GenericMethod<(+[](cLightBox *o, float a0) { o->SetDefaultBrightness(a0); })>},
+		{"cLightBox", "float GetDefaultBrightness()", SomaBind::GenericMethod<(+[](cLightBox *o) -> float { return o->GetDefaultBrightness(); })>},
+		{"cLightBox", "bool GetCastDiffuseLight()", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->GetCastDiffuseLight(); })>},
+		{"cLightBox", "void SetCastDiffuseLight(bool afX)", SomaBind::GenericMethod<(+[](cLightBox *o, bool a0) { o->SetCastDiffuseLight(a0); })>},
+		{"cLightBox", "bool GetCastSpecularLight()", SomaBind::GenericMethod<(+[](cLightBox *o) -> bool { return o->GetCastSpecularLight(); })>},
+		{"cLightBox", "void SetCastSpecularLight(bool afX)", SomaBind::GenericMethod<(+[](cLightBox *o, bool a0) { o->SetCastSpecularLight(a0); })>},
+		{"cLightDirectional", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> int { return o->GetUniqueID(); })>},
+		{"cLightDirectional", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cLightDirectional", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cLightDirectional", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const tString & a0) { o->SetName(a0); })>},
+		{"cLightDirectional", "bool HasParent()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->HasParent(); })>},
+		{"cLightDirectional", "bool IsActive()const", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->IsActive(); })>},
+		{"cLightDirectional", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cLightDirectional *o, bool a0) { o->SetActive(a0); })>},
+		{"cLightDirectional", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cLightDirectional", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cLightDirectional", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cLightDirectional", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cLightDirectional", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cLightDirectional", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cLightDirectional", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cLightDirectional", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cLightDirectional", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cLightDirectional", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightDirectional *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cLightDirectional", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightDirectional *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cLightDirectional", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightDirectional *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cLightDirectional", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cLightDirectional", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"cLightDirectional", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](cLightDirectional *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"cLightDirectional", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> int { return (int)o->GetRenderType(); })>},
+		{"cLightDirectional", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cLightDirectional *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"cLightDirectional", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](cLightDirectional *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"cLightDirectional", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> int { return o->GetRenderFlags(); })>},
+		{"cLightDirectional", "bool IsStatic()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->IsStatic(); })>},
+		{"cLightDirectional", "bool IsVisible()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->IsVisible(); })>},
+		{"cLightDirectional", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cLightDirectional *o, bool a0) { o->SetVisible(a0); })>},
+		{"cLightDirectional", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->GetVisibleVar(); })>},
+		{"cLightDirectional", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"cLightDirectional", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"cLightDirectional", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"cLightDirectional", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetCoverageAmount(); })>},
+		{"cLightDirectional", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"cLightDirectional", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"cLightDirectional", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](cLightDirectional *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"cLightDirectional", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"cLightDirectional", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"cLightDirectional", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetLiquidAmount(); })>},
+		{"cLightDirectional", "eLightType GetLightType()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> int { return (int)o->GetLightType(); })>},
+		{"cLightDirectional", "void SetGoboTexture(iTexture @apTexture)", SomaBind::GenericMethod<(+[](cLightDirectional *o, iTexture * a0) { o->SetGoboTexture(a0); })>},
+		{"cLightDirectional", "iTexture@ GetGoboTexture()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> iTexture * { return o->GetGoboTexture(); })>},
+		{"cLightDirectional", "void RemoveBillboard(cBillboard @apBillboard)", SomaBind::GenericMethod<(+[](cLightDirectional *o, cBillboard * a0) { o->RemoveBillboard(a0); })>},
+		{"cLightDirectional", "void AttachParticleSystem(cParticleSystem @apPS)", SomaBind::GenericMethod<(+[](cLightDirectional *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); })>},
+		{"cLightDirectional", "void RemoveParticleSystem(cParticleSystem @apPS)", SomaBind::GenericMethod<(+[](cLightDirectional *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); })>},
+		{"cLightDirectional", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); })>},
+		{"cLightDirectional", "void StopFading()", SomaBind::GenericMethod<(+[](cLightDirectional *o) { o->StopFading(); })>},
+		{"cLightDirectional", "bool IsFading()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->IsFading(); })>},
+		{"cLightDirectional", "const cColor& GetDestColor()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetDestColor(); return r; })>},
+		{"cLightDirectional", "float GetDestRadius()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetDestRadius(); })>},
+		{"cLightDirectional", "void SetFlickerActive(bool abX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, bool a0) { o->SetFlickerActive(a0); })>},
+		{"cLightDirectional", "bool GetFlickerActive()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->GetFlickerActive(); })>},
+		{"cLightDirectional", "void SetFlicker(const cColor&in aOffCol, float afOffRadius,float afOnMinLength, float afOnMaxLength,const tString &in asOnSound,const tString &in asOnPS, float afOffMinLength, float afOffMaxLength,const tString &in asOffSound,const tString &in asOffPS, bool abFade, float afOnFadeMinLength, float afOnFadeMaxLength, float afOffFadeMinLength, float afOffFadeMaxLength)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cColor & a0, float a1, float a2, float a3, const tString & a4, const tString & a5, float a6, float a7, const tString & a8, const tString & a9, bool a10, float a11, float a12, float a13, float a14) { o->SetFlicker(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14); })>},
+		{"cLightDirectional", "const tString& GetFlickerOffSound()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffSound(); return r; })>},
+		{"cLightDirectional", "const tString& GetFlickerOnSound()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnSound(); return r; })>},
+		{"cLightDirectional", "const tString& GetFlickerOffPS()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffPS(); return r; })>},
+		{"cLightDirectional", "const tString& GetFlickerOnPS()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnPS(); return r; })>},
+		{"cLightDirectional", "float GetFlickerOnMinLength()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetFlickerOnMinLength(); })>},
+		{"cLightDirectional", "float GetFlickerOffMinLength()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetFlickerOffMinLength(); })>},
+		{"cLightDirectional", "float GetFlickerOnMaxLength()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetFlickerOnMaxLength(); })>},
+		{"cLightDirectional", "float GetFlickerOffMaxLength()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetFlickerOffMaxLength(); })>},
+		{"cLightDirectional", "const cColor& GetFlickerOffColor()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOffColor(); return r; })>},
+		{"cLightDirectional", "float GetFlickerOffRadius()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetFlickerOffRadius(); })>},
+		{"cLightDirectional", "bool GetFlickerFade()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->GetFlickerFade(); })>},
+		{"cLightDirectional", "float GetFlickerOnFadeMinLength()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetFlickerOnFadeMinLength(); })>},
+		{"cLightDirectional", "float GetFlickerOnFadeMaxLength()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetFlickerOnFadeMaxLength(); })>},
+		{"cLightDirectional", "float GetFlickerOffFadeMinLength()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetFlickerOffFadeMinLength(); })>},
+		{"cLightDirectional", "float GetFlickerOffFadeMaxLength()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetFlickerOffFadeMaxLength(); })>},
+		{"cLightDirectional", "const cColor& GetFlickerOnColor()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOnColor(); return r; })>},
+		{"cLightDirectional", "float GetFlickerOnRadius()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetFlickerOnRadius(); })>},
+		{"cLightDirectional", "const cColor& GetDiffuseColor()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetDiffuseColor(); return r; })>},
+		{"cLightDirectional", "void SetDiffuseColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cColor & a0) { o->SetDiffuseColor(a0); })>},
+		{"cLightDirectional", "const cColor& GetDefaultDiffuseColor()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultDiffuseColor(); return r; })>},
+		{"cLightDirectional", "void SetDefaultDiffuseColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cColor & a0) { o->SetDefaultDiffuseColor(a0); })>},
+		{"cLightDirectional", "const cColor& GetSpecularColor()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetSpecularColor(); return r; })>},
+		{"cLightDirectional", "void SetSpecularColor(cColor aColor)", SomaBind::GenericMethod<(+[](cLightDirectional *o, cColor a0) { o->SetSpecularColor(a0); })>},
+		{"cLightDirectional", "bool GetCastShadows()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->GetCastShadows(); })>},
+		{"cLightDirectional", "void SetCastShadows(bool afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, bool a0) { o->SetCastShadows(a0); })>},
+		{"cLightDirectional", "int GetShadowCastersAffected()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> int { return o->GetShadowCastersAffected(); })>},
+		{"cLightDirectional", "void SetShadowCastersAffected(int alX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, int a0) { o->SetShadowCastersAffected(a0); })>},
+		{"cLightDirectional", "eShadowMapResolution GetShadowMapResolution() const", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> int { return (int)o->GetShadowMapResolution(); })>},
+		{"cLightDirectional", "void SetShadowMapResolution(eShadowMapResolution aQuality)", SomaBind::GenericMethod<(+[](cLightDirectional *o, int a0) { o->SetShadowMapResolution((eShadowMapResolution)a0); })>},
+		{"cLightDirectional", "float GetShadowMapBlurAmount() const", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetShadowMapBlurAmount(); })>},
+		{"cLightDirectional", "void SetShadowMapBlurAmount(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetShadowMapBlurAmount(a0); })>},
+		{"cLightDirectional", "bool GetOcclusionCullShadowCasters() const", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->GetOcclusionCullShadowCasters(); })>},
+		{"cLightDirectional", "void SetOcclusionCullShadowCasters(bool abX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, bool a0) { o->SetOcclusionCullShadowCasters(a0); })>},
+		{"cLightDirectional", "float GetShadowMapBiasMul()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetShadowMapBiasMul(); })>},
+		{"cLightDirectional", "float GetShadowMapSlopeScaleBiasMul()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetShadowMapSlopeScaleBiasMul(); })>},
+		{"cLightDirectional", "void SetShadowMapBiasMul(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetShadowMapBiasMul(a0); })>},
+		{"cLightDirectional", "void SetShadowMapSlopeScaleBiasMul(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetShadowMapSlopeScaleBiasMul(a0); })>},
+		{"cLightDirectional", "void SetRadius(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetRadius(a0); })>},
+		{"cLightDirectional", "float GetRadius()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetRadius(); })>},
+		{"cLightDirectional", "void SetFalloffPow(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetFalloffPow(a0); })>},
+		{"cLightDirectional", "float GetFalloffPow()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetFalloffPow(); })>},
+		{"cLightDirectional", "float GetSourceRadius()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetSourceRadius(); })>},
+		{"cLightDirectional", "void SetSourceRadius(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetSourceRadius(a0); })>},
+		{"cLightDirectional", "void SetBrightness(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetBrightness(a0); })>},
+		{"cLightDirectional", "float GetBrightness()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetBrightness(); })>},
+		{"cLightDirectional", "float GetTranslucency()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetTranslucency(); })>},
+		{"cLightDirectional", "void SetTranslucency(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetTranslucency(a0); })>},
+		{"cLightDirectional", "void SetDirection(const cVector3f&in avDir)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cVector3f & a0) { o->SetDirection(a0); })>},
+		{"cLightDirectional", "const cVector3f& GetDirection()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetDirection(); return r; })>},
+		{"cLightDirectional", "void SetAmbientColorSky(const cColor &in aColor)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cColor & a0) { o->SetAmbientColorSky(a0); })>},
+		{"cLightDirectional", "void SetAmbientColorGround(const cColor &in aColor)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cColor & a0) { o->SetAmbientColorGround(a0); })>},
+		{"cLightDirectional", "const cColor& GetAmbientColorSky()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetAmbientColorSky(); return r; })>},
+		{"cLightDirectional", "const cColor& GetAmbientColorGround()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetAmbientColorGround(); return r; })>},
+		{"cLightDirectional", "void SetShadowCasterDistance(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetShadowCasterDistance(a0); })>},
+		{"cLightDirectional", "float GetShadowCasterDistance()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetShadowCasterDistance(); })>},
+		{"cLightDirectional", "void SetAutoShadowSliceSettings(bool abX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, bool a0) { o->SetAutoShadowSliceSettings(a0); })>},
+		{"cLightDirectional", "bool GetAutoShadowSliceSettings()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->GetAutoShadowSliceSettings(); })>},
+		{"cLightDirectional", "void SetAutoShadowSliceLogTerm(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetAutoShadowSliceLogTerm(a0); })>},
+		{"cLightDirectional", "float GetAutoShadowSliceLogTerm()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetAutoShadowSliceLogTerm(); })>},
+		{"cLightDirectional", "void SetSpecularColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightDirectional *o, const cColor & a0) { o->SetSpecularColor(a0); })>},
+		{"cLightDirectional", "void SetDefaultBrightness(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetDefaultBrightness(a0); })>},
+		{"cLightDirectional", "float GetDefaultBrightness()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetDefaultBrightness(); })>},
+		{"cLightDirectional", "bool GetCastDiffuseLight()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->GetCastDiffuseLight(); })>},
+		{"cLightDirectional", "void SetCastDiffuseLight(bool afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, bool a0) { o->SetCastDiffuseLight(a0); })>},
+		{"cLightDirectional", "bool GetCastSpecularLight()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> bool { return o->GetCastSpecularLight(); })>},
+		{"cLightDirectional", "void SetCastSpecularLight(bool afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, bool a0) { o->SetCastSpecularLight(a0); })>},
+		{"cLightDirectional", "void SetShadowDistance(float afX)", SomaBind::GenericMethod<(+[](cLightDirectional *o, float a0) { o->SetShadowDistance(a0); })>},
+		{"cLightDirectional", "float GetShadowDistance()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> float { return o->GetShadowDistance(); })>},
+		{"cLightPoint", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> int { return o->GetUniqueID(); })>},
+		{"cLightPoint", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cLightPoint", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cLightPoint", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cLightPoint *o, const tString & a0) { o->SetName(a0); })>},
+		{"cLightPoint", "bool HasParent()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->HasParent(); })>},
+		{"cLightPoint", "bool IsActive()const", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->IsActive(); })>},
+		{"cLightPoint", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cLightPoint *o, bool a0) { o->SetActive(a0); })>},
+		{"cLightPoint", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cLightPoint", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cLightPoint", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cLightPoint", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cLightPoint", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cLightPoint *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cLightPoint", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cLightPoint *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cLightPoint", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cLightPoint *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cLightPoint", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cLightPoint *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cLightPoint", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cLightPoint", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightPoint *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cLightPoint", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightPoint *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cLightPoint", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightPoint *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cLightPoint", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cLightPoint", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"cLightPoint", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](cLightPoint *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"cLightPoint", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> int { return (int)o->GetRenderType(); })>},
+		{"cLightPoint", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cLightPoint *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"cLightPoint", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](cLightPoint *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"cLightPoint", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](cLightPoint *o) -> int { return o->GetRenderFlags(); })>},
+		{"cLightPoint", "bool IsStatic()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->IsStatic(); })>},
+		{"cLightPoint", "bool IsVisible()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->IsVisible(); })>},
+		{"cLightPoint", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cLightPoint *o, bool a0) { o->SetVisible(a0); })>},
+		{"cLightPoint", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->GetVisibleVar(); })>},
+		{"cLightPoint", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightPoint *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"cLightPoint", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"cLightPoint", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"cLightPoint", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetCoverageAmount(); })>},
+		{"cLightPoint", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"cLightPoint", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](cLightPoint *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"cLightPoint", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](cLightPoint *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"cLightPoint", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"cLightPoint", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"cLightPoint", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetLiquidAmount(); })>},
+		{"cLightPoint", "eLightType GetLightType()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> int { return (int)o->GetLightType(); })>},
+		{"cLightPoint", "void SetGoboTexture(iTexture @apTexture)", SomaBind::GenericMethod<(+[](cLightPoint *o, iTexture * a0) { o->SetGoboTexture(a0); })>},
+		{"cLightPoint", "iTexture@ GetGoboTexture()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> iTexture * { return o->GetGoboTexture(); })>},
+		{"cLightPoint", "void RemoveBillboard(cBillboard @apBillboard)", SomaBind::GenericMethod<(+[](cLightPoint *o, cBillboard * a0) { o->RemoveBillboard(a0); })>},
+		{"cLightPoint", "void AttachParticleSystem(cParticleSystem @apPS)", SomaBind::GenericMethod<(+[](cLightPoint *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); })>},
+		{"cLightPoint", "void RemoveParticleSystem(cParticleSystem @apPS)", SomaBind::GenericMethod<(+[](cLightPoint *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); })>},
+		{"cLightPoint", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", SomaBind::GenericMethod<(+[](cLightPoint *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); })>},
+		{"cLightPoint", "void StopFading()", SomaBind::GenericMethod<(+[](cLightPoint *o) { o->StopFading(); })>},
+		{"cLightPoint", "bool IsFading()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->IsFading(); })>},
+		{"cLightPoint", "const cColor& GetDestColor()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetDestColor(); return r; })>},
+		{"cLightPoint", "float GetDestRadius()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetDestRadius(); })>},
+		{"cLightPoint", "void SetFlickerActive(bool abX)", SomaBind::GenericMethod<(+[](cLightPoint *o, bool a0) { o->SetFlickerActive(a0); })>},
+		{"cLightPoint", "bool GetFlickerActive()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->GetFlickerActive(); })>},
+		{"cLightPoint", "void SetFlicker(const cColor&in aOffCol, float afOffRadius,float afOnMinLength, float afOnMaxLength,const tString &in asOnSound,const tString &in asOnPS, float afOffMinLength, float afOffMaxLength,const tString &in asOffSound,const tString &in asOffPS, bool abFade, float afOnFadeMinLength, float afOnFadeMaxLength, float afOffFadeMinLength, float afOffFadeMaxLength)", SomaBind::GenericMethod<(+[](cLightPoint *o, const cColor & a0, float a1, float a2, float a3, const tString & a4, const tString & a5, float a6, float a7, const tString & a8, const tString & a9, bool a10, float a11, float a12, float a13, float a14) { o->SetFlicker(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14); })>},
+		{"cLightPoint", "const tString& GetFlickerOffSound()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffSound(); return r; })>},
+		{"cLightPoint", "const tString& GetFlickerOnSound()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnSound(); return r; })>},
+		{"cLightPoint", "const tString& GetFlickerOffPS()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffPS(); return r; })>},
+		{"cLightPoint", "const tString& GetFlickerOnPS()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnPS(); return r; })>},
+		{"cLightPoint", "float GetFlickerOnMinLength()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetFlickerOnMinLength(); })>},
+		{"cLightPoint", "float GetFlickerOffMinLength()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetFlickerOffMinLength(); })>},
+		{"cLightPoint", "float GetFlickerOnMaxLength()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetFlickerOnMaxLength(); })>},
+		{"cLightPoint", "float GetFlickerOffMaxLength()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetFlickerOffMaxLength(); })>},
+		{"cLightPoint", "const cColor& GetFlickerOffColor()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOffColor(); return r; })>},
+		{"cLightPoint", "float GetFlickerOffRadius()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetFlickerOffRadius(); })>},
+		{"cLightPoint", "bool GetFlickerFade()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->GetFlickerFade(); })>},
+		{"cLightPoint", "float GetFlickerOnFadeMinLength()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetFlickerOnFadeMinLength(); })>},
+		{"cLightPoint", "float GetFlickerOnFadeMaxLength()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetFlickerOnFadeMaxLength(); })>},
+		{"cLightPoint", "float GetFlickerOffFadeMinLength()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetFlickerOffFadeMinLength(); })>},
+		{"cLightPoint", "float GetFlickerOffFadeMaxLength()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetFlickerOffFadeMaxLength(); })>},
+		{"cLightPoint", "const cColor& GetFlickerOnColor()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOnColor(); return r; })>},
+		{"cLightPoint", "float GetFlickerOnRadius()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetFlickerOnRadius(); })>},
+		{"cLightPoint", "const cColor& GetDiffuseColor()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetDiffuseColor(); return r; })>},
+		{"cLightPoint", "void SetDiffuseColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightPoint *o, const cColor & a0) { o->SetDiffuseColor(a0); })>},
+		{"cLightPoint", "const cColor& GetDefaultDiffuseColor()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultDiffuseColor(); return r; })>},
+		{"cLightPoint", "void SetDefaultDiffuseColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightPoint *o, const cColor & a0) { o->SetDefaultDiffuseColor(a0); })>},
+		{"cLightPoint", "const cColor& GetSpecularColor()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetSpecularColor(); return r; })>},
+		{"cLightPoint", "void SetSpecularColor(cColor aColor)", SomaBind::GenericMethod<(+[](cLightPoint *o, cColor a0) { o->SetSpecularColor(a0); })>},
+		{"cLightPoint", "bool GetCastShadows()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->GetCastShadows(); })>},
+		{"cLightPoint", "void SetCastShadows(bool afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, bool a0) { o->SetCastShadows(a0); })>},
+		{"cLightPoint", "int GetShadowCastersAffected()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> int { return o->GetShadowCastersAffected(); })>},
+		{"cLightPoint", "void SetShadowCastersAffected(int alX)", SomaBind::GenericMethod<(+[](cLightPoint *o, int a0) { o->SetShadowCastersAffected(a0); })>},
+		{"cLightPoint", "eShadowMapResolution GetShadowMapResolution() const", SomaBind::GenericMethod<(+[](cLightPoint *o) -> int { return (int)o->GetShadowMapResolution(); })>},
+		{"cLightPoint", "void SetShadowMapResolution(eShadowMapResolution aQuality)", SomaBind::GenericMethod<(+[](cLightPoint *o, int a0) { o->SetShadowMapResolution((eShadowMapResolution)a0); })>},
+		{"cLightPoint", "float GetShadowMapBlurAmount() const", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetShadowMapBlurAmount(); })>},
+		{"cLightPoint", "void SetShadowMapBlurAmount(float afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->SetShadowMapBlurAmount(a0); })>},
+		{"cLightPoint", "bool GetOcclusionCullShadowCasters() const", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->GetOcclusionCullShadowCasters(); })>},
+		{"cLightPoint", "void SetOcclusionCullShadowCasters(bool abX)", SomaBind::GenericMethod<(+[](cLightPoint *o, bool a0) { o->SetOcclusionCullShadowCasters(a0); })>},
+		{"cLightPoint", "float GetShadowMapBiasMul()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetShadowMapBiasMul(); })>},
+		{"cLightPoint", "float GetShadowMapSlopeScaleBiasMul()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetShadowMapSlopeScaleBiasMul(); })>},
+		{"cLightPoint", "void SetShadowMapBiasMul(float afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->SetShadowMapBiasMul(a0); })>},
+		{"cLightPoint", "void SetShadowMapSlopeScaleBiasMul(float afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->SetShadowMapSlopeScaleBiasMul(a0); })>},
+		{"cLightPoint", "void SetRadius(float afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->SetRadius(a0); })>},
+		{"cLightPoint", "float GetRadius()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetRadius(); })>},
+		{"cLightPoint", "void SetFalloffPow(float afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->SetFalloffPow(a0); })>},
+		{"cLightPoint", "float GetFalloffPow()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetFalloffPow(); })>},
+		{"cLightPoint", "float GetSourceRadius()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetSourceRadius(); })>},
+		{"cLightPoint", "void SetSourceRadius(float afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->SetSourceRadius(a0); })>},
+		{"cLightPoint", "void SetBrightness(float afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->SetBrightness(a0); })>},
+		{"cLightPoint", "float GetBrightness()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetBrightness(); })>},
+		{"cLightPoint", "float GetTranslucency()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetTranslucency(); })>},
+		{"cLightPoint", "void SetTranslucency(float afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->SetTranslucency(a0); })>},
+		{"cLightPoint", "void SetSpecularColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightPoint *o, const cColor & a0) { o->SetSpecularColor(a0); })>},
+		{"cLightPoint", "void SetDefaultBrightness(float afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, float a0) { o->SetDefaultBrightness(a0); })>},
+		{"cLightPoint", "float GetDefaultBrightness()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> float { return o->GetDefaultBrightness(); })>},
+		{"cLightPoint", "bool GetCastDiffuseLight()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->GetCastDiffuseLight(); })>},
+		{"cLightPoint", "void SetCastDiffuseLight(bool afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, bool a0) { o->SetCastDiffuseLight(a0); })>},
+		{"cLightPoint", "bool GetCastSpecularLight()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> bool { return o->GetCastSpecularLight(); })>},
+		{"cLightPoint", "void SetCastSpecularLight(bool afX)", SomaBind::GenericMethod<(+[](cLightPoint *o, bool a0) { o->SetCastSpecularLight(a0); })>},
+		{"cLightSpot", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> int { return o->GetUniqueID(); })>},
+		{"cLightSpot", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cLightSpot", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cLightSpot", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cLightSpot *o, const tString & a0) { o->SetName(a0); })>},
+		{"cLightSpot", "bool HasParent()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->HasParent(); })>},
+		{"cLightSpot", "bool IsActive()const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->IsActive(); })>},
+		{"cLightSpot", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cLightSpot *o, bool a0) { o->SetActive(a0); })>},
+		{"cLightSpot", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cLightSpot", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cLightSpot", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cLightSpot", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cLightSpot", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cLightSpot *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cLightSpot", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cLightSpot *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cLightSpot", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cLightSpot *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cLightSpot", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cLightSpot *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cLightSpot", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cLightSpot", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightSpot *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cLightSpot", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightSpot *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cLightSpot", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cLightSpot *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cLightSpot", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cLightSpot", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"cLightSpot", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](cLightSpot *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"cLightSpot", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> int { return (int)o->GetRenderType(); })>},
+		{"cLightSpot", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cLightSpot *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"cLightSpot", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](cLightSpot *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"cLightSpot", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> int { return o->GetRenderFlags(); })>},
+		{"cLightSpot", "bool IsStatic()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->IsStatic(); })>},
+		{"cLightSpot", "bool IsVisible()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->IsVisible(); })>},
+		{"cLightSpot", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cLightSpot *o, bool a0) { o->SetVisible(a0); })>},
+		{"cLightSpot", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->GetVisibleVar(); })>},
+		{"cLightSpot", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightSpot *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"cLightSpot", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"cLightSpot", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"cLightSpot", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetCoverageAmount(); })>},
+		{"cLightSpot", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"cLightSpot", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"cLightSpot", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](cLightSpot *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"cLightSpot", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"cLightSpot", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"cLightSpot", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetLiquidAmount(); })>},
+		{"cLightSpot", "eLightType GetLightType()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> int { return (int)o->GetLightType(); })>},
+		{"cLightSpot", "void SetGoboTexture(iTexture @apTexture)", SomaBind::GenericMethod<(+[](cLightSpot *o, iTexture * a0) { o->SetGoboTexture(a0); })>},
+		{"cLightSpot", "iTexture@ GetGoboTexture()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> iTexture * { return o->GetGoboTexture(); })>},
+		{"cLightSpot", "void RemoveBillboard(cBillboard @apBillboard)", SomaBind::GenericMethod<(+[](cLightSpot *o, cBillboard * a0) { o->RemoveBillboard(a0); })>},
+		{"cLightSpot", "void AttachParticleSystem(cParticleSystem @apPS)", SomaBind::GenericMethod<(+[](cLightSpot *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); })>},
+		{"cLightSpot", "void RemoveParticleSystem(cParticleSystem @apPS)", SomaBind::GenericMethod<(+[](cLightSpot *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); })>},
+		{"cLightSpot", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", SomaBind::GenericMethod<(+[](cLightSpot *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); })>},
+		{"cLightSpot", "void StopFading()", SomaBind::GenericMethod<(+[](cLightSpot *o) { o->StopFading(); })>},
+		{"cLightSpot", "bool IsFading()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->IsFading(); })>},
+		{"cLightSpot", "const cColor& GetDestColor()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetDestColor(); return r; })>},
+		{"cLightSpot", "float GetDestRadius()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetDestRadius(); })>},
+		{"cLightSpot", "void SetFlickerActive(bool abX)", SomaBind::GenericMethod<(+[](cLightSpot *o, bool a0) { o->SetFlickerActive(a0); })>},
+		{"cLightSpot", "bool GetFlickerActive()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->GetFlickerActive(); })>},
+		{"cLightSpot", "void SetFlicker(const cColor&in aOffCol, float afOffRadius,float afOnMinLength, float afOnMaxLength,const tString &in asOnSound,const tString &in asOnPS, float afOffMinLength, float afOffMaxLength,const tString &in asOffSound,const tString &in asOffPS, bool abFade, float afOnFadeMinLength, float afOnFadeMaxLength, float afOffFadeMinLength, float afOffFadeMaxLength)", SomaBind::GenericMethod<(+[](cLightSpot *o, const cColor & a0, float a1, float a2, float a3, const tString & a4, const tString & a5, float a6, float a7, const tString & a8, const tString & a9, bool a10, float a11, float a12, float a13, float a14) { o->SetFlicker(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14); })>},
+		{"cLightSpot", "const tString& GetFlickerOffSound()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffSound(); return r; })>},
+		{"cLightSpot", "const tString& GetFlickerOnSound()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnSound(); return r; })>},
+		{"cLightSpot", "const tString& GetFlickerOffPS()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffPS(); return r; })>},
+		{"cLightSpot", "const tString& GetFlickerOnPS()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnPS(); return r; })>},
+		{"cLightSpot", "float GetFlickerOnMinLength()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFlickerOnMinLength(); })>},
+		{"cLightSpot", "float GetFlickerOffMinLength()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFlickerOffMinLength(); })>},
+		{"cLightSpot", "float GetFlickerOnMaxLength()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFlickerOnMaxLength(); })>},
+		{"cLightSpot", "float GetFlickerOffMaxLength()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFlickerOffMaxLength(); })>},
+		{"cLightSpot", "const cColor& GetFlickerOffColor()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOffColor(); return r; })>},
+		{"cLightSpot", "float GetFlickerOffRadius()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFlickerOffRadius(); })>},
+		{"cLightSpot", "bool GetFlickerFade()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->GetFlickerFade(); })>},
+		{"cLightSpot", "float GetFlickerOnFadeMinLength()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFlickerOnFadeMinLength(); })>},
+		{"cLightSpot", "float GetFlickerOnFadeMaxLength()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFlickerOnFadeMaxLength(); })>},
+		{"cLightSpot", "float GetFlickerOffFadeMinLength()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFlickerOffFadeMinLength(); })>},
+		{"cLightSpot", "float GetFlickerOffFadeMaxLength()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFlickerOffFadeMaxLength(); })>},
+		{"cLightSpot", "const cColor& GetFlickerOnColor()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOnColor(); return r; })>},
+		{"cLightSpot", "float GetFlickerOnRadius()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFlickerOnRadius(); })>},
+		{"cLightSpot", "const cColor& GetDiffuseColor()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetDiffuseColor(); return r; })>},
+		{"cLightSpot", "void SetDiffuseColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightSpot *o, const cColor & a0) { o->SetDiffuseColor(a0); })>},
+		{"cLightSpot", "const cColor& GetDefaultDiffuseColor()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultDiffuseColor(); return r; })>},
+		{"cLightSpot", "void SetDefaultDiffuseColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightSpot *o, const cColor & a0) { o->SetDefaultDiffuseColor(a0); })>},
+		{"cLightSpot", "const cColor& GetSpecularColor()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetSpecularColor(); return r; })>},
+		{"cLightSpot", "void SetSpecularColor(cColor aColor)", SomaBind::GenericMethod<(+[](cLightSpot *o, cColor a0) { o->SetSpecularColor(a0); })>},
+		{"cLightSpot", "bool GetCastShadows()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->GetCastShadows(); })>},
+		{"cLightSpot", "void SetCastShadows(bool afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, bool a0) { o->SetCastShadows(a0); })>},
+		{"cLightSpot", "int GetShadowCastersAffected()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> int { return o->GetShadowCastersAffected(); })>},
+		{"cLightSpot", "void SetShadowCastersAffected(int alX)", SomaBind::GenericMethod<(+[](cLightSpot *o, int a0) { o->SetShadowCastersAffected(a0); })>},
+		{"cLightSpot", "eShadowMapResolution GetShadowMapResolution() const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> int { return (int)o->GetShadowMapResolution(); })>},
+		{"cLightSpot", "void SetShadowMapResolution(eShadowMapResolution aQuality)", SomaBind::GenericMethod<(+[](cLightSpot *o, int a0) { o->SetShadowMapResolution((eShadowMapResolution)a0); })>},
+		{"cLightSpot", "float GetShadowMapBlurAmount() const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetShadowMapBlurAmount(); })>},
+		{"cLightSpot", "void SetShadowMapBlurAmount(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetShadowMapBlurAmount(a0); })>},
+		{"cLightSpot", "bool GetOcclusionCullShadowCasters() const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->GetOcclusionCullShadowCasters(); })>},
+		{"cLightSpot", "void SetOcclusionCullShadowCasters(bool abX)", SomaBind::GenericMethod<(+[](cLightSpot *o, bool a0) { o->SetOcclusionCullShadowCasters(a0); })>},
+		{"cLightSpot", "float GetShadowMapBiasMul()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetShadowMapBiasMul(); })>},
+		{"cLightSpot", "float GetShadowMapSlopeScaleBiasMul()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetShadowMapSlopeScaleBiasMul(); })>},
+		{"cLightSpot", "void SetShadowMapBiasMul(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetShadowMapBiasMul(a0); })>},
+		{"cLightSpot", "void SetShadowMapSlopeScaleBiasMul(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetShadowMapSlopeScaleBiasMul(a0); })>},
+		{"cLightSpot", "void SetRadius(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetRadius(a0); })>},
+		{"cLightSpot", "float GetRadius()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetRadius(); })>},
+		{"cLightSpot", "void SetFalloffPow(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetFalloffPow(a0); })>},
+		{"cLightSpot", "float GetFalloffPow()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFalloffPow(); })>},
+		{"cLightSpot", "float GetSourceRadius()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetSourceRadius(); })>},
+		{"cLightSpot", "void SetSourceRadius(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetSourceRadius(a0); })>},
+		{"cLightSpot", "void SetBrightness(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetBrightness(a0); })>},
+		{"cLightSpot", "float GetBrightness()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetBrightness(); })>},
+		{"cLightSpot", "float GetTranslucency()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetTranslucency(); })>},
+		{"cLightSpot", "void SetTranslucency(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetTranslucency(a0); })>},
+		{"cLightSpot", "const cMatrixf& GetViewMatrix()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetViewMatrix(); return r; })>},
+		{"cLightSpot", "const cMatrixf& GetProjectionMatrix()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetProjectionMatrix(); return r; })>},
+		{"cLightSpot", "const cMatrixf& GetViewProjMatrix()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetViewProjMatrix(); return r; })>},
+		{"cLightSpot", "void SetFOV(float afAngle)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetFOV(a0); })>},
+		{"cLightSpot", "float GetFOV() const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetFOV(); })>},
+		{"cLightSpot", "float GetTanHalfFOV() const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetTanHalfFOV(); })>},
+		{"cLightSpot", "float GetCosHalfFOV() const", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetCosHalfFOV(); })>},
+		{"cLightSpot", "void SetAspect(float afAngle)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetAspect(a0); })>},
+		{"cLightSpot", "float GetAspect()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetAspect(); })>},
+		{"cLightSpot", "void SetNearClipPlane(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetNearClipPlane(a0); })>},
+		{"cLightSpot", "float GetNearClipPlane()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetNearClipPlane(); })>},
+		{"cLightSpot", "void SetSpotFalloffPow(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetSpotFalloffPow(a0); })>},
+		{"cLightSpot", "float GetSpotFalloffPow()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetSpotFalloffPow(); })>},
+		{"cLightSpot", "void SetSpecularColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cLightSpot *o, const cColor & a0) { o->SetSpecularColor(a0); })>},
+		{"cLightSpot", "void SetDefaultBrightness(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetDefaultBrightness(a0); })>},
+		{"cLightSpot", "float GetDefaultBrightness()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetDefaultBrightness(); })>},
+		{"cLightSpot", "bool GetCastDiffuseLight()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->GetCastDiffuseLight(); })>},
+		{"cLightSpot", "void SetCastDiffuseLight(bool afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, bool a0) { o->SetCastDiffuseLight(a0); })>},
+		{"cLightSpot", "bool GetCastSpecularLight()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> bool { return o->GetCastSpecularLight(); })>},
+		{"cLightSpot", "void SetCastSpecularLight(bool afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, bool a0) { o->SetCastSpecularLight(a0); })>},
+		{"cLightSpot", "void SetShadowDistance(float afX)", SomaBind::GenericMethod<(+[](cLightSpot *o, float a0) { o->SetShadowDistance(a0); })>},
+		{"cLightSpot", "float GetShadowDistance()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> float { return o->GetShadowDistance(); })>},
+		{"cMaterial", "bool GetForceFullScaleTextures()", SomaBind::GenericMethod<(+[](cMaterial *o) -> bool { return o->GetForceFullScaleTextures(); })>},
+		{"cMaterial", "const tString& GetName()", SomaBind::GenericMethod<(+[](cMaterial *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cMaterial", "int GetUvAnimationNum()", SomaBind::GenericMethod<(+[](cMaterial *o) -> int { return o->GetUvAnimationNum(); })>},
+		{"cMesh", "cSubMesh@ CreateSubMesh(const tString &in asName)", SomaBind::GenericMethod<(+[](cMesh *o, const tString & a0) -> cSubMesh * { return o->CreateSubMesh(a0); })>},
+		{"cMesh", "cSubMesh@ GetSubMesh(uint alIdx)", SomaBind::GenericMethod<(+[](cMesh *o, unsigned int a0) -> cSubMesh * { return o->GetSubMesh(a0); })>},
+		{"cMesh", "int GetSubMeshIndex(const tString &in asName)", SomaBind::GenericMethod<(+[](cMesh *o, const tString & a0) -> int { return o->GetSubMeshIndex(a0); })>},
+		{"cMesh", "cSubMesh@ GetSubMeshName(const tString &in asName)", SomaBind::GenericMethod<(+[](cMesh *o, const tString & a0) -> cSubMesh * { return o->GetSubMeshName(a0); })>},
+		{"cMesh", "int GetSubMeshNum()", SomaBind::GenericMethod<(+[](cMesh *o) -> int { return o->GetSubMeshNum(); })>},
+		{"cMesh", "int GetTriangleCount()", SomaBind::GenericMethod<(+[](cMesh *o) -> int { return o->GetTriangleCount(); })>},
+		{"cMesh", "int GetAnimationIndex(const tString&in asName)", SomaBind::GenericMethod<(+[](cMesh *o, const tString & a0) -> int { return o->GetAnimationIndex(a0); })>},
+		{"cMesh", "void ClearAnimations(bool abDeleteAll)", SomaBind::GenericMethod<(+[](cMesh *o, bool a0) { o->ClearAnimations(a0); })>},
+		{"cMesh", "int GetAnimationNum()", SomaBind::GenericMethod<(+[](cMesh *o) -> int { return o->GetAnimationNum(); })>},
+		{"cMesh", "void CompileBonesAndSubMeshes()", SomaBind::GenericMethod<(+[](cMesh *o) { o->CompileBonesAndSubMeshes(); })>},
+		{"cMesh", "float GetBoneBoundingRadius(int alIdx)", SomaBind::GenericMethod<(+[](cMesh *o, int a0) -> float { return o->GetBoneBoundingRadius(a0); })>},
+		{"cMesh", "cNode3D@ GetRootNode()", SomaBind::GenericMethod<(+[](cMesh *o) -> cNode3D * { return o->GetRootNode(); })>},
+		{"cMesh", "void AddNode(cNode3D@ apNode)", SomaBind::GenericMethod<(+[](cMesh *o, cNode3D * a0) { o->AddNode(a0); })>},
+		{"cMesh", "int GetNodeNum()", SomaBind::GenericMethod<(+[](cMesh *o) -> int { return o->GetNodeNum(); })>},
+		{"cMesh", "cNode3D@ GetNode(int alIdx)", SomaBind::GenericMethod<(+[](cMesh *o, int a0) -> cNode3D * { return o->GetNode(a0); })>},
+		{"cMesh", "cNode3D@ GetNodeByName(const tString &in asName)", SomaBind::GenericMethod<(+[](cMesh *o, const tString & a0) -> cNode3D * { return o->GetNodeByName(a0); })>},
+		{"cMeshEntity", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> int { return o->GetUniqueID(); })>},
+		{"cMeshEntity", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cMeshEntity *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cMeshEntity", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cMeshEntity", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const tString & a0) { o->SetName(a0); })>},
+		{"cMeshEntity", "bool HasParent()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> bool { return o->HasParent(); })>},
+		{"cMeshEntity", "bool IsActive()const", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> bool { return o->IsActive(); })>},
+		{"cMeshEntity", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cMeshEntity *o, bool a0) { o->SetActive(a0); })>},
+		{"cMeshEntity", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cMeshEntity", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cMeshEntity", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cMeshEntity", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cMeshEntity", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cMeshEntity", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cMeshEntity", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cMeshEntity", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cMeshEntity", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cMeshEntity", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cMeshEntity *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cMeshEntity", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cMeshEntity *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cMeshEntity", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cMeshEntity *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cMeshEntity", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cMeshEntity", "cMesh@ GetMesh()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> cMesh * { return o->GetMesh(); })>},
+		{"cMeshEntity", "cSubMeshEntity@ GetSubMeshEntity(uint alIdx)", SomaBind::GenericMethod<(+[](cMeshEntity *o, unsigned int a0) -> cSubMeshEntity * { return o->GetSubMeshEntity(a0); })>},
+		{"cMeshEntity", "cSubMeshEntity@ GetSubMeshEntityName(const tString &in asName)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const tString & a0) -> cSubMeshEntity * { return o->GetSubMeshEntityName(a0); })>},
+		{"cMeshEntity", "int GetSubMeshEntityNum()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> int { return o->GetSubMeshEntityNum(); })>},
+		{"cMeshEntity", "cAnimationState@ GetAnimationState(int alIndex)", SomaBind::GenericMethod<(+[](cMeshEntity *o, int a0) -> cAnimationState * { return o->GetAnimationState(a0); })>},
+		{"cMeshEntity", "int GetAnimationStateIndex(const tString &in asName)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const tString & a0) -> int { return o->GetAnimationStateIndex(a0); })>},
+		{"cMeshEntity", "cAnimationState@ GetAnimationStateFromName(const tString &in asName)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const tString & a0) -> cAnimationState * { return o->GetAnimationStateFromName(a0); })>},
+		{"cMeshEntity", "int GetAnimationStateNum()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> int { return o->GetAnimationStateNum(); })>},
+		{"cMeshEntity", "void Play(int alIndex,bool abLoop, bool bStopPrev)", SomaBind::GenericMethod<(+[](cMeshEntity *o, int a0, bool a1, bool a2) { o->Play(a0, a1, a2); })>},
+		{"cMeshEntity", "void PlayName(const tString &in asName,bool abLoop, bool bStopPrev)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const tString & a0, bool a1, bool a2) { o->PlayName(a0, a1, a2); })>},
+		{"cMeshEntity", "void Stop()", SomaBind::GenericMethod<(+[](cMeshEntity *o) { o->Stop(); })>},
+		{"cMeshEntity", "void PlayFadeTo(int alIndex,bool abLoop, float afTime)", SomaBind::GenericMethod<(+[](cMeshEntity *o, int a0, bool a1, float a2) { o->PlayFadeTo(a0, a1, a2); })>},
+		{"cMeshEntity", "void PlayFadeToName(const tString &in asName,bool abLoop, float afTime)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const tString & a0, bool a1, float a2) { o->PlayFadeToName(a0, a1, a2); })>},
+		{"cMeshEntity", "bool AnimationIsOver(const tString &in asName)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const tString & a0) -> bool { return o->AnimationIsOver(a0); })>},
+		{"cMeshEntity", "void SetNormalizeAnimationWeights(bool abX)", SomaBind::GenericMethod<(+[](cMeshEntity *o, bool a0) { o->SetNormalizeAnimationWeights(a0); })>},
+		{"cMeshEntity", "bool GetNormalizeAnimationWeights()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> bool { return o->GetNormalizeAnimationWeights(); })>},
+		{"cMeshEntity", "cNode3D@ GetBoneStateRoot()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> cNode3D * { return o->GetBoneStateRoot(); })>},
+		{"cMeshEntity", "cBoneState@ GetBoneState(int alIndex)", SomaBind::GenericMethod<(+[](cMeshEntity *o, int a0) -> cBoneState * { return o->GetBoneState(a0); })>},
+		{"cMeshEntity", "int GetBoneStateIndex(const tString &in asName)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const tString & a0) -> int { return o->GetBoneStateIndex(a0); })>},
+		{"cMeshEntity", "int GetBoneStateIndexFromPtr(cBoneState@ apBoneState)", SomaBind::GenericMethod<(+[](cMeshEntity *o, cBoneState * a0) -> int { return o->GetBoneStateIndexFromPtr(a0); })>},
+		{"cMeshEntity", "cBoneState@ GetBoneStateFromName(const tString &in asName)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const tString & a0) -> cBoneState * { return o->GetBoneStateFromName(a0); })>},
+		{"cMeshEntity", "int GetBoneStateNum()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> int { return o->GetBoneStateNum(); })>},
+		{"cMeshEntity", "void SetSkeletonPhysicsActive(bool abX)", SomaBind::GenericMethod<(+[](cMeshEntity *o, bool a0) { o->SetSkeletonPhysicsActive(a0); })>},
+		{"cMeshEntity", "bool GetSkeletonPhysicsActive()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> bool { return o->GetSkeletonPhysicsActive(); })>},
+		{"cMeshEntity", "void SetSkeletonPhysicsCanSleep(bool abX)", SomaBind::GenericMethod<(+[](cMeshEntity *o, bool a0) { o->SetSkeletonPhysicsCanSleep(a0); })>},
+		{"cMeshEntity", "bool GetSkeletonPhysicsCanSleep()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> bool { return o->GetSkeletonPhysicsCanSleep(); })>},
+		{"cMeshEntity", "float GetSkeletonPhysicsWeight()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> float { return o->GetSkeletonPhysicsWeight(); })>},
+		{"cMeshEntity", "void SetSkeletonPhysicsWeight(float afX)", SomaBind::GenericMethod<(+[](cMeshEntity *o, float a0) { o->SetSkeletonPhysicsWeight(a0); })>},
+		{"cMeshEntity", "void FadeSkeletonPhysicsWeight(float afTime)", SomaBind::GenericMethod<(+[](cMeshEntity *o, float a0) { o->FadeSkeletonPhysicsWeight(a0); })>},
+		{"cMeshEntity", "void SetSkeletonCollidersActive(bool abX)", SomaBind::GenericMethod<(+[](cMeshEntity *o, bool a0) { o->SetSkeletonCollidersActive(a0); })>},
+		{"cMeshEntity", "bool GetSkeletonCollidersActive()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> bool { return o->GetSkeletonCollidersActive(); })>},
+		{"cMeshEntity", "void AlignBodiesToSkeleton(bool abCalculateSpeed)", SomaBind::GenericMethod<(+[](cMeshEntity *o, bool a0) { o->AlignBodiesToSkeleton(a0); })>},
+		{"cMeshEntity", "void ResetGraphicsUpdated()", SomaBind::GenericMethod<(+[](cMeshEntity *o) { o->ResetGraphicsUpdated(); })>},
+		{"cMeshEntity", "cNode3D@ GetNodeState(int alIndex)", SomaBind::GenericMethod<(+[](cMeshEntity *o, int a0) -> cNode3D * { return o->GetNodeState(a0); })>},
+		{"cMeshEntity", "int GetNodeStateIndex(const tString &in asName)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const tString & a0) -> int { return o->GetNodeStateIndex(a0); })>},
+		{"cMeshEntity", "cNode3D@ GetNodeStateFromName(const tString &in asName)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const tString & a0) -> cNode3D * { return o->GetNodeStateFromName(a0); })>},
+		{"cMeshEntity", "int GetNodeStateNum()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> int { return o->GetNodeStateNum(); })>},
+		{"cMeshEntity", "bool IsVisible()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> bool { return o->IsVisible(); })>},
+		{"cMeshEntity", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cMeshEntity *o, bool a0) { o->SetVisible(a0); })>},
+		{"cMeshEntity", "void SetStatic(bool abX)", SomaBind::GenericMethod<(+[](cMeshEntity *o, bool a0) { o->SetStatic(a0); })>},
+		{"cMeshEntity", "bool IsStatic()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> bool { return o->IsStatic(); })>},
+		{"cMeshEntity", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cMeshEntity *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"cMeshEntity", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cMeshEntity *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"cMeshEntity", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cMeshEntity *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"cMeshEntity", "float GetCoverageAmount()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> float { return o->GetCoverageAmount(); })>},
+		{"cMeshEntity", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cMeshEntity *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"cMeshEntity", "float GetLiquidAmount()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> float { return o->GetLiquidAmount(); })>},
+		{"cMeshEntity", "void UseAutomaticLiquidAmount()", SomaBind::GenericMethod<(+[](cMeshEntity *o) { o->UseAutomaticLiquidAmount(); })>},
+		{"cNode3D", "bool AddEntity(iEntity3D@ apEntity)", SomaBind::GenericMethod<(+[](cNode3D *o, iEntity3D * a0) -> bool { return o->AddEntity(a0); })>},
+		{"cNode3D", "bool RemoveEntity(iEntity3D@ apEntity)", SomaBind::GenericMethod<(+[](cNode3D *o, iEntity3D * a0) -> bool { return o->RemoveEntity(a0); })>},
+		{"cNode3D", "void ClearEntities()", SomaBind::GenericMethod<(+[](cNode3D *o) { o->ClearEntities(); })>},
+		{"cNode3D", "cNode3D@ GetParent()", SomaBind::GenericMethod<(+[](cNode3D *o) -> cNode3D * { return o->GetParent(); })>},
+		{"cNode3D", "cNode3D@ CreateChild(const tString &in asName=, bool abAutoDeleteChildren = true)", SomaBind::GenericMethod<(+[](cNode3D *o, const tString & a0, bool a1) -> cNode3D * { return o->CreateChild(a0, a1); })>},
+		{"cNode3D", "void RemoveChild(cNode3D@ apNode)", SomaBind::GenericMethod<(+[](cNode3D *o, cNode3D * a0) { o->RemoveChild(a0); })>},
+		{"cNode3D", "void SetParent(cNode3D@ apNode)", SomaBind::GenericMethod<(+[](cNode3D *o, cNode3D * a0) { o->SetParent(a0); })>},
+		{"cNode3D", "void AddChild(cNode3D@ apChild)", SomaBind::GenericMethod<(+[](cNode3D *o, cNode3D * a0) { o->AddChild(a0); })>},
+		{"cNode3D", "const tString& GetName()", SomaBind::GenericMethod<(+[](cNode3D *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cNode3D", "void SetActive(bool abX)", SomaBind::GenericMethod<(+[](cNode3D *o, bool a0) { o->SetActive(a0); })>},
+		{"cNode3D", "bool IsActive()", SomaBind::GenericMethod<(+[](cNode3D *o) -> bool { return o->IsActive(); })>},
+		{"cNode3D", "int SetVisible(bool abX, bool abCascade)", SomaBind::GenericMethod<(+[](cNode3D *o, bool a0, bool a1) -> int { return o->SetVisible(a0, a1); })>},
+		{"cNode3D", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cNode3D *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cNode3D", "const cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cNode3D *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetLocalMatrix(); return r; })>},
+		{"cNode3D", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cNode3D *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cNode3D", "const cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cNode3D *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetWorldMatrix(); return r; })>},
+		{"cNode3D", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cNode3D *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cNode3D", "void SetMatrix(const cMatrixf&in a_mtxTransform, bool abSetChildrenUpdated=true)", SomaBind::GenericMethod<(+[](cNode3D *o, const cMatrixf & a0, bool a1) { o->SetMatrix(a0, a1); })>},
+		{"cNode3D", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cNode3D *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cNode3D", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cNode3D *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cNode3D", "void AddRotation(const cVector3f&in avRot, eEulerRotationOrder aOrder)", SomaBind::GenericMethod<(+[](cNode3D *o, const cVector3f & a0, int a1) { o->AddRotation(a0, (eEulerRotationOrder)a1); })>},
+		{"cNode3D", "void AddScale(const cVector3f&in avScale)", SomaBind::GenericMethod<(+[](cNode3D *o, const cVector3f & a0) { o->AddScale(a0); })>},
+		{"cNode3D", "void AddTranslation(const cVector3f&in avTrans)", SomaBind::GenericMethod<(+[](cNode3D *o, const cVector3f & a0) { o->AddTranslation(a0); })>},
+		{"cNode3D", "bool GetUsePreAnimTransform()", SomaBind::GenericMethod<(+[](cNode3D *o) -> bool { return o->GetUsePreAnimTransform(); })>},
+		{"cNode3D", "bool GetUsePostAnimTransform()", SomaBind::GenericMethod<(+[](cNode3D *o) -> bool { return o->GetUsePostAnimTransform(); })>},
+		{"cNode3D", "const cMatrixf& GetPreAnimTransform()", SomaBind::GenericMethod<(+[](cNode3D *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetPreAnimTransform(); return r; })>},
+		{"cNode3D", "const cMatrixf& GetPostAnimTransform()", SomaBind::GenericMethod<(+[](cNode3D *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetPostAnimTransform(); return r; })>},
+		{"cNode3D", "void SetUsePreTransform(bool abX)", SomaBind::GenericMethod<(+[](cNode3D *o, bool a0) { o->SetUsePreTransform(a0); })>},
+		{"cNode3D", "void SetUsePostTransform(bool abX)", SomaBind::GenericMethod<(+[](cNode3D *o, bool a0) { o->SetUsePostTransform(a0); })>},
+		{"cNode3D", "void SetPreTransform(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cNode3D *o, const cMatrixf & a0) { o->SetPreTransform(a0); })>},
+		{"cNode3D", "void SetPostTransform(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cNode3D *o, const cMatrixf & a0) { o->SetPostTransform(a0); })>},
+		{"cNode3D", "void ApplyPreAnimTransform(bool abSetChildrenUpdated)", SomaBind::GenericMethod<(+[](cNode3D *o, bool a0) { o->ApplyPreAnimTransform(a0); })>},
+		{"cNode3D", "void ApplyPostAnimTransform(bool abSetChildrenUpdated)", SomaBind::GenericMethod<(+[](cNode3D *o, bool a0) { o->ApplyPostAnimTransform(a0); })>},
+		{"cNode3D", "void SetCustomFlags(int alX)", SomaBind::GenericMethod<(+[](cNode3D *o, int a0) { o->SetCustomFlags(a0); })>},
+		{"cNode3D", "int GetCustomFlags()", SomaBind::GenericMethod<(+[](cNode3D *o) -> int { return o->GetCustomFlags(); })>},
+		{"cNode3D", "void UpdateMatrix(bool abSetChildrenUpdated)", SomaBind::GenericMethod<(+[](cNode3D *o, bool a0) { o->UpdateMatrix(a0); })>},
+		{"cNode3D", "void UpdateEntityChildren()", SomaBind::GenericMethod<(+[](cNode3D *o) { o->UpdateEntityChildren(); })>},
+		{"cParticleSystem", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> int { return o->GetUniqueID(); })>},
+		{"cParticleSystem", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cParticleSystem *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cParticleSystem", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cParticleSystem", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cParticleSystem *o, const tString & a0) { o->SetName(a0); })>},
+		{"cParticleSystem", "bool HasParent()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> bool { return o->HasParent(); })>},
+		{"cParticleSystem", "bool IsActive()const", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> bool { return o->IsActive(); })>},
+		{"cParticleSystem", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cParticleSystem *o, bool a0) { o->SetActive(a0); })>},
+		{"cParticleSystem", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cParticleSystem", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cParticleSystem", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cParticleSystem", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cParticleSystem", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cParticleSystem *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cParticleSystem", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cParticleSystem *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cParticleSystem", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cParticleSystem *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cParticleSystem", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cParticleSystem *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cParticleSystem", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cParticleSystem", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cParticleSystem *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cParticleSystem", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cParticleSystem *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cParticleSystem", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cParticleSystem *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cParticleSystem", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cParticleSystem", "bool IsVisible()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> bool { return o->IsVisible(); })>},
+		{"cParticleSystem", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cParticleSystem *o, bool a0) { o->SetVisible(a0); })>},
+		{"cParticleSystem", "bool GetRemoveWhenDead()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> bool { return o->GetRemoveWhenDead(); })>},
+		{"cParticleSystem", "void SetRemoveWhenDead(bool abX)", SomaBind::GenericMethod<(+[](cParticleSystem *o, bool a0) { o->SetRemoveWhenDead(a0); })>},
+		{"cParticleSystem", "void Kill()", SomaBind::GenericMethod<(+[](cParticleSystem *o) { o->Kill(); })>},
+		{"cParticleSystem", "void KillInstantly()", SomaBind::GenericMethod<(+[](cParticleSystem *o) { o->KillInstantly(); })>},
+		{"cParticleSystem", "void SetColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cParticleSystem *o, const cColor & a0) { o->SetColor(a0); })>},
+		{"cParticleSystem", "void SetFadeAtDistance(bool abX)", SomaBind::GenericMethod<(+[](cParticleSystem *o, bool a0) { o->SetFadeAtDistance(a0); })>},
+		{"cParticleSystem", "void SetMinFadeDistanceStart(float afX)", SomaBind::GenericMethod<(+[](cParticleSystem *o, float a0) { o->SetMinFadeDistanceStart(a0); })>},
+		{"cParticleSystem", "void SetMinFadeDistanceEnd(float afX)", SomaBind::GenericMethod<(+[](cParticleSystem *o, float a0) { o->SetMinFadeDistanceEnd(a0); })>},
+		{"cParticleSystem", "void SetMaxFadeDistanceStart(float afX)", SomaBind::GenericMethod<(+[](cParticleSystem *o, float a0) { o->SetMaxFadeDistanceStart(a0); })>},
+		{"cParticleSystem", "void SetMaxFadeDistanceEnd(float afX)", SomaBind::GenericMethod<(+[](cParticleSystem *o, float a0) { o->SetMaxFadeDistanceEnd(a0); })>},
+		{"cParticleSystem", "void SetBrightness(float afX)", SomaBind::GenericMethod<(+[](cParticleSystem *o, float a0) { o->SetBrightness(a0); })>},
+		{"cParticleSystem", "const cColor& GetColor()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; })>},
+		{"cParticleSystem", "bool GetFadeAtDistance()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> bool { return o->GetFadeAtDistance(); })>},
+		{"cParticleSystem", "float GetMinFadeDistanceStart()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> float { return o->GetMinFadeDistanceStart(); })>},
+		{"cParticleSystem", "float GetMinFadeDistanceEnd()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> float { return o->GetMinFadeDistanceEnd(); })>},
+		{"cParticleSystem", "float GetMaxFadeDistanceStart()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> float { return o->GetMaxFadeDistanceStart(); })>},
+		{"cParticleSystem", "float GetMaxFadeDistanceEnd()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> float { return o->GetMaxFadeDistanceEnd(); })>},
+		{"cParticleSystem", "float GetBrightness()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> float { return o->GetBrightness(); })>},
+		{"cParticleSystem", "bool IsDead()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> bool { return o->IsDead(); })>},
+		{"cParticleSystem", "bool IsDying()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> bool { return o->IsDying(); })>},
+		{"cPostEffectComposite", "int GetPostEffectNum()", SomaBind::GenericMethod<(+[](cPostEffectComposite *o) -> int { return o->GetPostEffectNum(); })>},
+		{"cPostEffectComposite", "bool HasActiveEffects()", SomaBind::GenericMethod<(+[](cPostEffectComposite *o) -> bool { return o->HasActiveEffects(); })>},
+		{"cResourceVarsObject", "void AddVarBool(const tString&in asName, bool abDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, bool a1) { o->AddVarBool(a0, a1); })>},
+		{"cResourceVarsObject", "void AddVarInt(const tString&in asName, int alDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, int a1) { o->AddVarInt(a0, a1); })>},
+		{"cResourceVarsObject", "void AddVarFloat(const tString&in asName, float afDefault=0)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, float a1) { o->AddVarFloat(a0, a1); })>},
+		{"cResourceVarsObject", "void AddVarVector2f(const tString&in asName, const cVector2f&in avDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, const cVector2f & a1) { o->AddVarVector2f(a0, a1); })>},
+		{"cResourceVarsObject", "void AddVarVector3f(const tString&in asName, const cVector3f&in avDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, const cVector3f & a1) { o->AddVarVector3f(a0, a1); })>},
+		{"cResourceVarsObject", "void AddVarColor(const tString&in asName, const cColor&in aDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, const cColor & a1) { o->AddVarColor(a0, a1); })>},
+		{"cResourceVarsObject", "void AddVarString(const tString&in asName, const tString&in alDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, const tString & a1) { o->AddVarString(a0, a1); })>},
+		{"cResourceVarsObject", "bool GetVarBool(const tString&in asName, bool abDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, bool a1) -> bool { return o->GetVarBool(a0, a1); })>},
+		{"cResourceVarsObject", "int GetVarInt(const tString&in asName, int alDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, int a1) -> int { return o->GetVarInt(a0, a1); })>},
+		{"cResourceVarsObject", "float GetVarFloat(const tString&in asName, float afDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, float a1) -> float { return o->GetVarFloat(a0, a1); })>},
+		{"cResourceVarsObject", "cVector2f GetVarVector2f(const tString&in asName, const cVector2f&in avDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, const cVector2f & a1) -> cVector2f { return o->GetVarVector2f(a0, a1); })>},
+		{"cResourceVarsObject", "cVector3f GetVarVector3f(const tString&in asName, const cVector3f&in avDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, const cVector3f & a1) -> cVector3f { return o->GetVarVector3f(a0, a1); })>},
+		{"cResourceVarsObject", "cColor GetVarColor(const tString&in asName, const cColor&in aDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, const cColor & a1) -> cColor { return o->GetVarColor(a0, a1); })>},
+		{"cResourceVarsObject", "tString GetVarString(const tString&in asName, const tString&in asDefault)", SomaBind::GenericMethod<(+[](cResourceVarsObject *o, const tString & a0, const tString & a1) -> tString { return o->GetVarString(a0, a1); })>},
+		{"cSoundEntity", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> int { return o->GetUniqueID(); })>},
+		{"cSoundEntity", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cSoundEntity *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cSoundEntity", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cSoundEntity", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cSoundEntity *o, const tString & a0) { o->SetName(a0); })>},
+		{"cSoundEntity", "bool HasParent()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> bool { return o->HasParent(); })>},
+		{"cSoundEntity", "bool IsActive()const", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> bool { return o->IsActive(); })>},
+		{"cSoundEntity", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cSoundEntity *o, bool a0) { o->SetActive(a0); })>},
+		{"cSoundEntity", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cSoundEntity", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cSoundEntity", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cSoundEntity", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cSoundEntity", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cSoundEntity *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cSoundEntity", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cSoundEntity *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cSoundEntity", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cSoundEntity *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cSoundEntity", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cSoundEntity *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cSoundEntity", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cSoundEntity", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cSoundEntity *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cSoundEntity", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cSoundEntity *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cSoundEntity", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cSoundEntity *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cSoundEntity", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cSoundEntity", "void Play()", SomaBind::GenericMethod<(+[](cSoundEntity *o) { o->Play(); })>},
+		{"cSoundEntity", "void Stop(bool abPlayEndSound)", SomaBind::GenericMethod<(+[](cSoundEntity *o, bool a0) { o->Stop(a0); })>},
+		{"cSoundEntity", "void FadeIn(float afSpeed)", SomaBind::GenericMethod<(+[](cSoundEntity *o, float a0) { o->FadeIn(a0); })>},
+		{"cSoundEntity", "void FadeOut(float afSpeed)", SomaBind::GenericMethod<(+[](cSoundEntity *o, float a0) { o->FadeOut(a0); })>},
+		{"cSoundEntity", "bool IsStopped()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> bool { return o->IsStopped(); })>},
+		{"cSoundEntity", "bool IsFadingOut()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> bool { return o->IsFadingOut(); })>},
+		{"cSoundEntity", "bool GetRemoveWhenOver()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> bool { return o->GetRemoveWhenOver(); })>},
+		{"cSoundEntity", "void SetVolume(float afX)", SomaBind::GenericMethod<(+[](cSoundEntity *o, float a0) { o->SetVolume(a0); })>},
+		{"cSoundEntity", "float GetVolume()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> float { return o->GetVolume(); })>},
+		{"cSoundEntity", "float GetMinDistance()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> float { return o->GetMinDistance(); })>},
+		{"cSoundEntity", "float GetMaxDistance()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> float { return o->GetMaxDistance(); })>},
+		{"cSoundEntity", "void SetParam(int alIdx, float afValue)", SomaBind::GenericMethod<(+[](cSoundEntity *o, int a0, float a1) { o->SetParam(a0, a1); })>},
+		{"cSoundEntity", "void SetParam(const tString&in asName, float afValue)", SomaBind::GenericMethod<(+[](cSoundEntity *o, const tString & a0, float a1) { o->SetParam(a0, a1); })>},
+		{"cSoundEntity", "int GetCreationID()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> int { return o->GetCreationID(); })>},
+		{"cSubMesh", "void SetMaterial(cMaterial@ apMaterial)", SomaBind::GenericMethod<(+[](cSubMesh *o, cMaterial * a0) { o->SetMaterial(a0); })>},
+		{"cSubMesh", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cSubMesh *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"cSubMesh", "const tString& GetName()", SomaBind::GenericMethod<(+[](cSubMesh *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cSubMesh", "int GetColliderNum()", SomaBind::GenericMethod<(+[](cSubMesh *o) -> int { return o->GetColliderNum(); })>},
+		{"cSubMesh", "iCollideShape@ CreateCollideShape(iPhysicsWorld @apWorld)", SomaBind::GenericMethod<(+[](cSubMesh *o, iPhysicsWorld * a0) -> iCollideShape * { return o->CreateCollideShape(a0); })>},
+		{"cSubMesh", "void SetIsCollideShape(bool abX)", SomaBind::GenericMethod<(+[](cSubMesh *o, bool a0) { o->SetIsCollideShape(a0); })>},
+		{"cSubMesh", "bool IsCollideShape()", SomaBind::GenericMethod<(+[](cSubMesh *o) -> bool { return o->IsCollideShape(); })>},
+		{"cSubMesh", "cVector3f GetModelScale()", SomaBind::GenericMethod<(+[](cSubMesh *o) -> cVector3f { return o->GetModelScale(); })>},
+		{"cSubMesh", "const cMatrixf& GetLocalTransform()", SomaBind::GenericMethod<(+[](cSubMesh *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetLocalTransform(); return r; })>},
+		{"cSubMesh", "void SetLocalTransform(const cMatrixf&in a_mtxTrans)", SomaBind::GenericMethod<(+[](cSubMesh *o, const cMatrixf & a0) { o->SetLocalTransform(a0); })>},
+		{"cSubMesh", "const tString& GetMaterialName()", SomaBind::GenericMethod<(+[](cSubMesh *o) -> const tString & { static thread_local tString r; r = o->GetMaterialName(); return r; })>},
+		{"cSubMesh", "void Compile()", SomaBind::GenericMethod<(+[](cSubMesh *o) { o->Compile(); })>},
+		{"cSubMeshEntity", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> int { return o->GetUniqueID(); })>},
+		{"cSubMeshEntity", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, float a0) { o->UpdateLogic(a0); })>},
+		{"cSubMeshEntity", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cSubMeshEntity", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, const tString & a0) { o->SetName(a0); })>},
+		{"cSubMeshEntity", "bool HasParent()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> bool { return o->HasParent(); })>},
+		{"cSubMeshEntity", "bool IsActive()const", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> bool { return o->IsActive(); })>},
+		{"cSubMeshEntity", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, bool a0) { o->SetActive(a0); })>},
+		{"cSubMeshEntity", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"cSubMeshEntity", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"cSubMeshEntity", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"cSubMeshEntity", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"cSubMeshEntity", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cSubMeshEntity", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"cSubMeshEntity", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"cSubMeshEntity", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"cSubMeshEntity", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"cSubMeshEntity", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"cSubMeshEntity", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"cSubMeshEntity", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"cSubMeshEntity", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"cSubMeshEntity", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"cSubMeshEntity", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"cSubMeshEntity", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> int { return (int)o->GetRenderType(); })>},
+		{"cSubMeshEntity", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"cSubMeshEntity", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"cSubMeshEntity", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> int { return o->GetRenderFlags(); })>},
+		{"cSubMeshEntity", "bool IsStatic()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> bool { return o->IsStatic(); })>},
+		{"cSubMeshEntity", "bool IsVisible()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> bool { return o->IsVisible(); })>},
+		{"cSubMeshEntity", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, bool a0) { o->SetVisible(a0); })>},
+		{"cSubMeshEntity", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> bool { return o->GetVisibleVar(); })>},
+		{"cSubMeshEntity", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"cSubMeshEntity", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"cSubMeshEntity", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"cSubMeshEntity", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> float { return o->GetCoverageAmount(); })>},
+		{"cSubMeshEntity", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"cSubMeshEntity", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"cSubMeshEntity", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"cSubMeshEntity", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"cSubMeshEntity", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"cSubMeshEntity", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> float { return o->GetLiquidAmount(); })>},
+		{"cSubMeshEntity", "cSubMesh@ GetSubMesh() const", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> cSubMesh * { return o->GetSubMesh(); })>},
+		{"cSubMeshEntity", "void SetLocalNode(cNode3D @apNode)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, cNode3D * a0) { o->SetLocalNode(a0); })>},
+		{"cSubMeshEntity", "cNode3D@ GetLocalNode()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> cNode3D * { return o->GetLocalNode(); })>},
+		{"cSubMeshEntity", "void SetCustomMaterial(cMaterial @apMaterial, bool abDestroyOldCustom)", SomaBind::GenericMethod<(+[](cSubMeshEntity *o, cMaterial * a0, bool a1) { o->SetCustomMaterial(a0, a1); })>},
+		{"cSubMeshEntity", "cMaterial@ GetCustomMaterial()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> cMaterial * { return o->GetCustomMaterial(); })>},
+		{"cSurfaceData", "const tString& GetName() const", SomaBind::GenericMethod<(+[](cSurfaceData *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cSurfaceData", "void PreloadData()", SomaBind::GenericMethod<(+[](cSurfaceData *o) { o->PreloadData(); })>},
+		{"cSurfaceData", "int GetImpactDataNum()", SomaBind::GenericMethod<(+[](cSurfaceData *o) -> int { return o->GetImpactDataNum(); })>},
+		{"cSurfaceData", "int GetHitDataNum()", SomaBind::GenericMethod<(+[](cSurfaceData *o) -> int { return o->GetHitDataNum(); })>},
+		{"cSurfaceData", "const tString& GetStepType()", SomaBind::GenericMethod<(+[](cSurfaceData *o) -> const tString & { static thread_local tString r; r = o->GetStepType(); return r; })>},
+		{"cSurfaceData", "const tString& GetUserVar()", SomaBind::GenericMethod<(+[](cSurfaceData *o) -> const tString & { static thread_local tString r; r = o->GetUserVar(); return r; })>},
+		{"cTerrain", "bool GetWorldPosHeightAndNormal(const cVector3f&in avPosition, float &out afHeight, cVector3f &out avNormal)", SomaBind::GenericMethod<(+[](cTerrain *o, const cVector3f & a0, float & a1, cVector3f & a2) -> bool { return o->GetWorldPosHeightAndNormal(a0, a1, a2); })>},
+		{"cTerrain", "void SetCheapMaterial(const tString&in asCheapMaterial, float afCheapMaterialMul)", SomaBind::GenericMethod<(+[](cTerrain *o, const tString & a0, float a1) { o->SetCheapMaterial(a0, a1); })>},
+		{"cVerletParticle", "void SetPosition(const cVector3f&in avPos, bool abSetPrevPos)", SomaBind::GenericMethod<(+[](cVerletParticle *o, const cVector3f & a0, bool a1) { o->SetPosition(a0, a1); })>},
+		{"cVerletParticle", "void AddPosition(const cVector3f&in avAdd, bool abSetPrevPos)", SomaBind::GenericMethod<(+[](cVerletParticle *o, const cVector3f & a0, bool a1) { o->AddPosition(a0, a1); })>},
+		{"cVerletParticle", "const cVector3f& GetPosition() const", SomaBind::GenericMethod<(+[](cVerletParticle *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPosition(); return r; })>},
+		{"cVerletParticle", "void SetPrevPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cVerletParticle *o, const cVector3f & a0) { o->SetPrevPosition(a0); })>},
+		{"cVerletParticle", "const cVector3f& GetPrevPosition() const", SomaBind::GenericMethod<(+[](cVerletParticle *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPrevPosition(); return r; })>},
+		{"cVerletParticle", "void SetSmoothPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cVerletParticle *o, const cVector3f & a0) { o->SetSmoothPosition(a0); })>},
+		{"cVerletParticle", "const cVector3f& GetSmoothPosition() const", SomaBind::GenericMethod<(+[](cVerletParticle *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSmoothPosition(); return r; })>},
+		{"cVerletParticle", "void AddForce(const cVector3f&in avForce)", SomaBind::GenericMethod<(+[](cVerletParticle *o, const cVector3f & a0) { o->AddForce(a0); })>},
+		{"cVerletParticle", "void SetInvMass(float afInvMass)", SomaBind::GenericMethod<(+[](cVerletParticle *o, float a0) { o->SetInvMass(a0); })>},
+		{"cVerletParticle", "float GetInvMass() const", SomaBind::GenericMethod<(+[](cVerletParticle *o) -> float { return o->GetInvMass(); })>},
+		{"cViewport", "void SetActive(bool abX)", SomaBind::GenericMethod<(+[](cViewport *o, bool a0) { o->SetActive(a0); })>},
+		{"cViewport", "void SetVisible(bool abX)", SomaBind::GenericMethod<(+[](cViewport *o, bool a0) { o->SetVisible(a0); })>},
+		{"cViewport", "bool IsActive()", SomaBind::GenericMethod<(+[](cViewport *o) -> bool { return o->IsActive(); })>},
+		{"cViewport", "bool IsVisible()", SomaBind::GenericMethod<(+[](cViewport *o) -> bool { return o->IsVisible(); })>},
+		{"cViewport", "void SetIsListener(bool abX)", SomaBind::GenericMethod<(+[](cViewport *o, bool a0) { o->SetIsListener(a0); })>},
+		{"cViewport", "bool IsListener()", SomaBind::GenericMethod<(+[](cViewport *o) -> bool { return o->IsListener(); })>},
+		{"cViewport", "void SetCamera(cCamera @apCamera)", SomaBind::GenericMethod<(+[](cViewport *o, cCamera * a0) { o->SetCamera(a0); })>},
+		{"cViewport", "cCamera@ GetCamera()", SomaBind::GenericMethod<(+[](cViewport *o) -> cCamera * { return o->GetCamera(); })>},
+		{"cViewport", "cWorld@ GetWorld()", SomaBind::GenericMethod<(+[](cViewport *o) -> cWorld * { return o->GetWorld(); })>},
+		{"cViewport", "void SetPostEffectComposite(cPostEffectComposite @apPostEffectComposite)", SomaBind::GenericMethod<(+[](cViewport *o, cPostEffectComposite * a0) { o->SetPostEffectComposite(a0); })>},
+		{"cViewport", "cPostEffectComposite@ GetPostEffectComposite()", SomaBind::GenericMethod<(+[](cViewport *o) -> cPostEffectComposite * { return o->GetPostEffectComposite(); })>},
+		{"cViewport", "void AddGuiSet(cGuiSet @apSet)", SomaBind::GenericMethod<(+[](cViewport *o, cGuiSet * a0) { o->AddGuiSet(a0); })>},
+		{"cViewport", "void RemoveGuiSet(cGuiSet @apSet)", SomaBind::GenericMethod<(+[](cViewport *o, cGuiSet * a0) { o->RemoveGuiSet(a0); })>},
+		{"cViewport", "void SetPosition(const cVector2l&in avPos)", SomaBind::GenericMethod<(+[](cViewport *o, const cVector2l & a0) { o->SetPosition(a0); })>},
+		{"cViewport", "void SetSize(const cVector2l&in avSize)", SomaBind::GenericMethod<(+[](cViewport *o, const cVector2l & a0) { o->SetSize(a0); })>},
+		{"cViewport", "const cVector2l& GetPosition()", SomaBind::GenericMethod<(+[](cViewport *o) -> const cVector2l & { static thread_local cVector2l r; r = o->GetPosition(); return r; })>},
+		{"cViewport", "const cVector2l& GetSize()", SomaBind::GenericMethod<(+[](cViewport *o) -> const cVector2l & { static thread_local cVector2l r; r = o->GetSize(); return r; })>},
+		{"cWidgetWindow", "void Update(float afTimeStep)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, float a0) { o->Update(a0); })>},
+		{"cWidgetWindow", "eWidgetType GetType()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> int { return (int)o->GetType(); })>},
+		{"cWidgetWindow", "void Init()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) { o->Init(); })>},
+		{"cWidgetWindow", "void SetToolTip(const tWString&in asToolTip)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const tWString & a0) { o->SetToolTip(a0); })>},
+		{"cWidgetWindow", "const tWString& GetToolTip()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> const tWString & { static thread_local tWString r; r = o->GetToolTip(); return r; })>},
+		{"cWidgetWindow", "void SetToolTipEnabled(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetToolTipEnabled(a0); })>},
+		{"cWidgetWindow", "bool PointIsInside(const cVector2f&in avPoint, bool abOnlyClipped)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const cVector2f & a0, bool a1) -> bool { return o->PointIsInside(a0, a1); })>},
+		{"cWidgetWindow", "void AttachChild(iWidget@ apChild)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, iWidget * a0) { o->AttachChild(a0); })>},
+		{"cWidgetWindow", "void RemoveChild(iWidget@ apChild)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, iWidget * a0) { o->RemoveChild(a0); })>},
+		{"cWidgetWindow", "cGuiSet@ GetSet()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> cGuiSet * { return o->GetSet(); })>},
+		{"cWidgetWindow", "iWidget@ GetParent()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> iWidget * { return o->GetParent(); })>},
+		{"cWidgetWindow", "void SetEnabled(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetEnabled(a0); })>},
+		{"cWidgetWindow", "bool IsEnabled()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->IsEnabled(); })>},
+		{"cWidgetWindow", "void SetVisible(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetVisible(a0); })>},
+		{"cWidgetWindow", "bool IsVisible()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->IsVisible(); })>},
+		{"cWidgetWindow", "bool HasFocus()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->HasFocus(); })>},
+		{"cWidgetWindow", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const tString & a0) { o->SetName(a0); })>},
+		{"cWidgetWindow", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"cWidgetWindow", "void SetText(const tWString&in asText)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const tWString & a0) { o->SetText(a0); })>},
+		{"cWidgetWindow", "const tWString& GetText()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> const tWString & { static thread_local tWString r; r = o->GetText(); return r; })>},
+		{"cWidgetWindow", "iFontData@ GetDefaultFontType()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> iFontData * { return o->GetDefaultFontType(); })>},
+		{"cWidgetWindow", "void SetDefaultFontType(iFontData@ apFont)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, iFontData * a0) { o->SetDefaultFontType(a0); })>},
+		{"cWidgetWindow", "const cColor& GetDefaultFontColor()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultFontColor(); return r; })>},
+		{"cWidgetWindow", "void SetDefaultFontColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const cColor & a0) { o->SetDefaultFontColor(a0); })>},
+		{"cWidgetWindow", "const cVector2f& GetDefaultFontSize()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetDefaultFontSize(); return r; })>},
+		{"cWidgetWindow", "void SetDefaultFontSize(const cVector2f&in avSize)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const cVector2f & a0) { o->SetDefaultFontSize(a0); })>},
+		{"cWidgetWindow", "void SetClipActive(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetClipActive(a0); })>},
+		{"cWidgetWindow", "bool GetClipActive()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->GetClipActive(); })>},
+		{"cWidgetWindow", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"cWidgetWindow", "void SetGlobalPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const cVector3f & a0) { o->SetGlobalPosition(a0); })>},
+		{"cWidgetWindow", "const cVector3f& GetLocalPosition()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLocalPosition(); return r; })>},
+		{"cWidgetWindow", "const cVector3f& GetGlobalPosition()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetGlobalPosition(); return r; })>},
+		{"cWidgetWindow", "void SetChildrenOffset(const cVector3f&in)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const cVector3f & a0) { o->SetChildrenOffset(a0); })>},
+		{"cWidgetWindow", "const cVector3f& GetChildrenOffset()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetChildrenOffset(); return r; })>},
+		{"cWidgetWindow", "void SetAffectedByScroll(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetAffectedByScroll(a0); })>},
+		{"cWidgetWindow", "void SetScrollAmount(const cVector3f&in avX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const cVector3f & a0) { o->SetScrollAmount(a0); })>},
+		{"cWidgetWindow", "const cVector3f& GetScrollAmount()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetScrollAmount(); return r; })>},
+		{"cWidgetWindow", "void CenterGlobalPositionInSet()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) { o->CenterGlobalPositionInSet(); })>},
+		{"cWidgetWindow", "void SetSize(const cVector2f&in avSize)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const cVector2f & a0) { o->SetSize(a0); })>},
+		{"cWidgetWindow", "const cVector2f& GetSize()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetSize(); return r; })>},
+		{"cWidgetWindow", "void SetColorMul(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, const cColor & a0) { o->SetColorMul(a0); })>},
+		{"cWidgetWindow", "const cColor& GetColorMul()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> const cColor & { static thread_local cColor r; r = o->GetColorMul(); return r; })>},
+		{"cWidgetWindow", "bool ClipsGraphics()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->ClipsGraphics(); })>},
+		{"cWidgetWindow", "bool GetMouseIsOver()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->GetMouseIsOver(); })>},
+		{"cWidgetWindow", "bool IsConnectedTo(iWidget@ apWidget, bool abIsStartWidget=true)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, iWidget * a0, bool a1) -> bool { return o->IsConnectedTo(a0, a1); })>},
+		{"cWidgetWindow", "bool IsConnectedToChildren()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->IsConnectedToChildren(); })>},
+		{"cWidgetWindow", "void SetConnectedToChildren(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetConnectedToChildren(a0); })>},
+		{"cWidgetWindow", "cGuiGfxElement@ GetPointerGfx()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> cGuiGfxElement * { return o->GetPointerGfx(); })>},
+		{"cWidgetWindow", "void SetGlobalKeyPressListener(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetGlobalKeyPressListener(a0); })>},
+		{"cWidgetWindow", "bool IsGlobalKeyPressListener()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->IsGlobalKeyPressListener(); })>},
+		{"cWidgetWindow", "void SetUserValue(int alX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, int a0) { o->SetUserValue(a0); })>},
+		{"cWidgetWindow", "int GetUserValue()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> int { return o->GetUserValue(); })>},
+		{"cWidgetWindow", "void SetCallbacksDisabled(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetCallbacksDisabled(a0); })>},
+		{"cWidgetWindow", "bool GetCallbacksDisabled()const", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->GetCallbacksDisabled(); })>},
+		{"cWidgetWindow", "void SetFocusNavigation(eUIArrow aDir, iWidget@ apWidget)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, int a0, iWidget * a1) { o->SetFocusNavigation((eUIArrow)a0, a1); })>},
+		{"cWidgetWindow", "iWidget@ GetFocusNavigation(eUIArrow aDir)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, int a0) -> iWidget * { return o->GetFocusNavigation((eUIArrow)a0); })>},
+		{"cWidgetWindow", "bool HasFocusNavigation()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->HasFocusNavigation(); })>},
+		{"cWidgetWindow", "void SetGlobalUIInputListener(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetGlobalUIInputListener(a0); })>},
+		{"cWidgetWindow", "bool IsGlobalUIInputListener()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->IsGlobalUIInputListener(); })>},
+		{"cWidgetWindow", "void SetStatic(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetStatic(a0); })>},
+		{"cWidgetWindow", "bool GetStatic()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->GetStatic(); })>},
+		{"cWidgetWindow", "void SetDrawLabel(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetDrawLabel(a0); })>},
+		{"cWidgetWindow", "void SetCloseButtonDisablesWindow(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetCloseButtonDisablesWindow(a0); })>},
+		{"cWidgetWindow", "bool GetCloseButtonDisablesWindow()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->GetCloseButtonDisablesWindow(); })>},
+		{"cWidgetWindow", "void SetEscapeKeyClosesWindow(bool abX)", SomaBind::GenericMethod<(+[](cWidgetWindow *o, bool a0) { o->SetEscapeKeyClosesWindow(a0); })>},
+		{"cWidgetWindow", "bool GetEscapeKeyClosesWindow()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> bool { return o->GetEscapeKeyClosesWindow(); })>},
+		{"cWorld", "void Update(float afTimeStep)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->Update(a0); })>},
+		{"cWorld", "void SetActive(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetActive(a0); })>},
+		{"cWorld", "bool IsActive() const", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->IsActive(); })>},
+		{"cWorld", "const cVector3f& GetWorldSize()", SomaBind::GenericMethod<(+[](cWorld *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetWorldSize(); return r; })>},
+		{"cWorld", "tString GetName()", SomaBind::GenericMethod<(+[](cWorld *o) -> tString { return o->GetName(); })>},
+		{"cWorld", "void Compile(bool abCalcPhysicsWorldSize)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->Compile(a0); })>},
+		{"cWorld", "void SetDistanceCullActive(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetDistanceCullActive(a0); })>},
+		{"cWorld", "void SetDistanceCullMinRange(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetDistanceCullMinRange(a0); })>},
+		{"cWorld", "void SetDistanceCullScreenSize(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetDistanceCullScreenSize(a0); })>},
+		{"cWorld", "void SetDistanceCullRandomSize(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetDistanceCullRandomSize(a0); })>},
+		{"cWorld", "void SetDistanceCullMaxRange(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetDistanceCullMaxRange(a0); })>},
+		{"cWorld", "void SetDistanceCullFadeSpeed(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetDistanceCullFadeSpeed(a0); })>},
+		{"cWorld", "bool GetDistanceCullActive()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetDistanceCullActive(); })>},
+		{"cWorld", "float GetDistanceCullMinRange()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetDistanceCullMinRange(); })>},
+		{"cWorld", "float GetDistanceCullScreenSize()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetDistanceCullScreenSize(); })>},
+		{"cWorld", "float GetDistanceCullRandomSize()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetDistanceCullRandomSize(); })>},
+		{"cWorld", "float GetDistanceCullMaxRange()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetDistanceCullMaxRange(); })>},
+		{"cWorld", "float GetDistanceCullFadeSpeed()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetDistanceCullFadeSpeed(); })>},
+		{"cWorld", "void SetPhysicsWorld(iPhysicsWorld@ apWorld, bool abAutoDelete)", SomaBind::GenericMethod<(+[](cWorld *o, iPhysicsWorld * a0, bool a1) { o->SetPhysicsWorld(a0, a1); })>},
+		{"cWorld", "iPhysicsWorld@ GetPhysicsWorld()", SomaBind::GenericMethod<(+[](cWorld *o) -> iPhysicsWorld * { return o->GetPhysicsWorld(); })>},
+		{"cWorld", "cTerrain@ GetTerrain()", SomaBind::GenericMethod<(+[](cWorld *o) -> cTerrain * { return o->GetTerrain(); })>},
+		{"cWorld", "void SetSkyBox(iTexture @apTexture, bool abAutoDestroy)", SomaBind::GenericMethod<(+[](cWorld *o, iTexture * a0, bool a1) { o->SetSkyBox(a0, a1); })>},
+		{"cWorld", "void SetSkyBoxActive(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetSkyBoxActive(a0); })>},
+		{"cWorld", "void SetSkyBoxColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cWorld *o, const cColor & a0) { o->SetSkyBoxColor(a0); })>},
+		{"cWorld", "void SetSkyBoxBrightness(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetSkyBoxBrightness(a0); })>},
+		{"cWorld", "iTexture@ GetSkyBoxTexture()", SomaBind::GenericMethod<(+[](cWorld *o) -> iTexture * { return o->GetSkyBoxTexture(); })>},
+		{"cWorld", "bool GetSkyBoxActive()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetSkyBoxActive(); })>},
+		{"cWorld", "const cColor& GetSkyBoxColor()", SomaBind::GenericMethod<(+[](cWorld *o) -> const cColor & { static thread_local cColor r; r = o->GetSkyBoxColor(); return r; })>},
+		{"cWorld", "float GetSkyBoxBrightness()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetSkyBoxBrightness(); })>},
+		{"cWorld", "cLightDirectional@ GetDirectionalLight()", SomaBind::GenericMethod<(+[](cWorld *o) -> cLightDirectional * { return o->GetDirectionalLight(); })>},
+		{"cWorld", "void SetDirectionalLightActive(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetDirectionalLightActive(a0); })>},
+		{"cWorld", "bool GetDirectionalLightActive()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetDirectionalLightActive(); })>},
+		{"cWorld", "void SetFogActive(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetFogActive(a0); })>},
+		{"cWorld", "void SetFogStart(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetFogStart(a0); })>},
+		{"cWorld", "void SetFogEnd(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetFogEnd(a0); })>},
+		{"cWorld", "void SetFogFalloffExp(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetFogFalloffExp(a0); })>},
+		{"cWorld", "void SetFogColor(const cColor&in aCol)", SomaBind::GenericMethod<(+[](cWorld *o, const cColor & a0) { o->SetFogColor(a0); })>},
+		{"cWorld", "void SetFogBrightness(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetFogBrightness(a0); })>},
+		{"cWorld", "void SetSecondaryFogActive(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetSecondaryFogActive(a0); })>},
+		{"cWorld", "void SetSecondaryFogStart(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetSecondaryFogStart(a0); })>},
+		{"cWorld", "void SetSecondaryFogEnd(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetSecondaryFogEnd(a0); })>},
+		{"cWorld", "void SetSecondaryFogFalloffExp(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetSecondaryFogFalloffExp(a0); })>},
+		{"cWorld", "void SetSecondaryFogColor(const cColor&in aCol)", SomaBind::GenericMethod<(+[](cWorld *o, const cColor & a0) { o->SetSecondaryFogColor(a0); })>},
+		{"cWorld", "void SetSecondaryFogBrightness(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetSecondaryFogBrightness(a0); })>},
+		{"cWorld", "void SetFogCulling(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetFogCulling(a0); })>},
+		{"cWorld", "void SetFogUnderwater(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetFogUnderwater(a0); })>},
+		{"cWorld", "void SetFogUseSkybox(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetFogUseSkybox(a0); })>},
+		{"cWorld", "void SetFogSkyboxTexture(iTexture@ apTexture)", SomaBind::GenericMethod<(+[](cWorld *o, iTexture * a0) { o->SetFogSkyboxTexture(a0); })>},
+		{"cWorld", "void SetFogApplyAfterFogAreas(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetFogApplyAfterFogAreas(a0); })>},
+		{"cWorld", "bool GetFogActive()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetFogActive(); })>},
+		{"cWorld", "float GetFogStart()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetFogStart(); })>},
+		{"cWorld", "float GetFogEnd()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetFogEnd(); })>},
+		{"cWorld", "float GetFogFalloffExp()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetFogFalloffExp(); })>},
+		{"cWorld", "float GetFogBrightness()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetSecondaryFogBrightness(); })>},
+		{"cWorld", "const cColor& GetFogColor()", SomaBind::GenericMethod<(+[](cWorld *o) -> const cColor & { static thread_local cColor r; r = o->GetFogColor(); return r; })>},
+		{"cWorld", "bool GetSecondaryFogActive()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetSecondaryFogActive(); })>},
+		{"cWorld", "float GetSecondaryFogStart()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetSecondaryFogStart(); })>},
+		{"cWorld", "float GetSecondaryFogEnd()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetSecondaryFogEnd(); })>},
+		{"cWorld", "float GetSecondaryFogFalloffExp()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetSecondaryFogFalloffExp(); })>},
+		{"cWorld", "float GetSecondaryFogBrightness()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetSecondaryFogBrightness(); })>},
+		{"cWorld", "const cColor& GetSecondaryFogColor()", SomaBind::GenericMethod<(+[](cWorld *o) -> const cColor & { static thread_local cColor r; r = o->GetSecondaryFogColor(); return r; })>},
+		{"cWorld", "bool GetFogCulling()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetFogCulling(); })>},
+		{"cWorld", "bool GetFogUnderwater()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetFogUnderwater(); })>},
+		{"cWorld", "bool GetFogUseSkybox()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetFogUseSkybox(); })>},
+		{"cWorld", "bool GetFogApplyAfterFogAreas()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetFogApplyAfterFogAreas(); })>},
+		{"cWorld", "iTexture@ GetFogSkyboxTexture()", SomaBind::GenericMethod<(+[](cWorld *o) -> iTexture * { return o->GetFogSkyboxTexture(); })>},
+		{"cWorld", "cMeshEntity@ CreateMeshEntity(const tString &in asName,cMesh@ apMesh, bool abStatic)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0, cMesh * a1, bool a2) -> cMeshEntity * { return o->CreateMeshEntity(a0, a1, a2); })>},
+		{"cWorld", "void DestroyMeshEntity(cMeshEntity@ apMesh)", SomaBind::GenericMethod<(+[](cWorld *o, cMeshEntity * a0) { o->DestroyMeshEntity(a0); })>},
+		{"cWorld", "cMeshEntity@ GetDynamicMeshEntity(const tString&in asName)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0) -> cMeshEntity * { return o->GetDynamicMeshEntity(a0); })>},
+		{"cWorld", "cLightPoint@ CreateLightPoint(const tString &in asName,const tString &in asGobo, bool abStatic)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0, const tString & a1, bool a2) -> cLightPoint * { return o->CreateLightPoint(a0, a1, a2); })>},
+		{"cWorld", "cLightSpot@ CreateLightSpot(const tString &in asName, const tString &in asGobo, bool abStatic)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0, const tString & a1, bool a2) -> cLightSpot * { return o->CreateLightSpot(a0, a1, a2); })>},
+		{"cWorld", "cLightBox@ CreateLightBox(const tString &in asName, bool abStatic)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0, bool a1) -> cLightBox * { return o->CreateLightBox(a0, a1); })>},
+		{"cWorld", "void DestroyLight(iLight@ apLight)", SomaBind::GenericMethod<(+[](cWorld *o, iLight * a0) { o->DestroyLight(a0); })>},
+		{"cWorld", "iLight@ GetLight(const tString&in asName)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0) -> iLight * { return o->GetLight(a0); })>},
+		{"cWorld", "cBillboard@ CreateBillboard(const tString&in asName, const cVector2f&in avSize,eBillboardType aType,const tString&in asMaterial,bool abStatic)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0, const cVector2f & a1, int a2, const tString & a3, bool a4) -> cBillboard * { return o->CreateBillboard(a0, a1, (eBillboardType)a2, a3, a4); })>},
+		{"cWorld", "void DestroyBillboard(cBillboard@ apObject)", SomaBind::GenericMethod<(+[](cWorld *o, cBillboard * a0) { o->DestroyBillboard(a0); })>},
+		{"cWorld", "cBillboard@ GetBillboard(const tString&in asName)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0) -> cBillboard * { return o->GetBillboard(a0); })>},
+		{"cWorld", "cFogArea@ CreateFogArea(const tString&in asName, bool abStatic)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0, bool a1) -> cFogArea * { return o->CreateFogArea(a0, a1); })>},
+		{"cWorld", "void DestroyFogArea(cFogArea@ apFogArea)", SomaBind::GenericMethod<(+[](cWorld *o, cFogArea * a0) { o->DestroyFogArea(a0); })>},
+		{"cWorld", "cFogArea@ GetFogArea(const tString&in asName)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0) -> cFogArea * { return o->GetFogArea(a0); })>},
+		{"cWorld", "cForceField@ CreateForceField(const tString&in asName,bool abAutoRemove, bool abStatic)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0, bool a1, bool a2) -> cForceField * { return o->CreateForceField(a0, a1, a2); })>},
+		{"cWorld", "void DestroyForceField(cForceField@ apForce)", SomaBind::GenericMethod<(+[](cWorld *o, cForceField * a0) { o->DestroyForceField(a0); })>},
+		{"cWorld", "cForceField@ GetForceField(const tString&in asName)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0) -> cForceField * { return o->GetForceField(a0); })>},
+		{"cWorld", "void DestroyParticleSystem(cParticleSystem@ apPS)", SomaBind::GenericMethod<(+[](cWorld *o, cParticleSystem * a0) { o->DestroyParticleSystem(a0); })>},
+		{"cWorld", "cParticleSystem@ GetParticleSystem(const tString&in asName)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0) -> cParticleSystem * { return o->GetParticleSystem(a0); })>},
+		{"cWorld", "bool ParticleSystemExists(cParticleSystem@ apPS)", SomaBind::GenericMethod<(+[](cWorld *o, cParticleSystem * a0) -> bool { return o->ParticleSystemExists(a0); })>},
+		{"cWorld", "void DestroyAllParticleSystems()", SomaBind::GenericMethod<(+[](cWorld *o) { o->DestroyAllParticleSystems(); })>},
+		{"cWorld", "cEnvironmentParticles@ GetEnvironmentParticles(int i)", SomaBind::GenericMethod<(+[](cWorld *o, int a0) -> cEnvironmentParticles * { return o->GetEnvironmentParticles(a0); })>},
+		{"cWorld", "void SetEnvironmentParticlesActive(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetEnvironmentParticlesActive(a0); })>},
+		{"cWorld", "bool GetEnvironmentParticlesActive()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetEnvironmentParticlesActive(); })>},
+		{"cWorld", "int GetEnvironmentParticleNum()", SomaBind::GenericMethod<(+[](cWorld *o) -> int { return o->GetEnvironmentParticleNum(); })>},
+		{"cWorld", "cBeam@ CreateBeam(const tString&in asName, bool abStatic)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0, bool a1) -> cBeam * { return o->CreateBeam(a0, a1); })>},
+		{"cWorld", "void DestroyBeam(cBeam@ apObject)", SomaBind::GenericMethod<(+[](cWorld *o, cBeam * a0) { o->DestroyBeam(a0); })>},
+		{"cWorld", "cBeam@ GetBeam(const tString&in asName)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0) -> cBeam * { return o->GetBeam(a0); })>},
+		{"cWorld", "void DestroyRopeEntity(iRopeEntity@ apRope)", SomaBind::GenericMethod<(+[](cWorld *o, cRopeEntity * a0) { o->DestroyRopeEntity(a0); })>},
+		{"cWorld", "iRopeEntity@ GetRopeEntity(const tString&in asName)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0) -> cRopeEntity * { return o->GetRopeEntity(a0); })>},
+		{"cWorld", "cSoundEntity@ CreateSoundEntity(const tString &in asName,const tString &in asSoundDataFile, bool abRemoveWhenOver)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0, const tString & a1, bool a2) -> cSoundEntity * { return o->CreateSoundEntity(a0, a1, a2); })>},
+		{"cWorld", "void DestroySoundEntity(cSoundEntity@ apEntity)", SomaBind::GenericMethod<(+[](cWorld *o, cSoundEntity * a0) { o->DestroySoundEntity(a0); })>},
+		{"cWorld", "cSoundEntity@ GetSoundEntity(const tString&in asName)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0) -> cSoundEntity * { return o->GetSoundEntity(a0); })>},
+		{"cWorld", "void DestroyAllSoundEntities()", SomaBind::GenericMethod<(+[](cWorld *o) { o->DestroyAllSoundEntities(); })>},
+		{"cWorld", "bool SoundEntityExists(cSoundEntity@ apEntity, int alCreationID)", SomaBind::GenericMethod<(+[](cWorld *o, cSoundEntity * a0, int a1) -> bool { return o->SoundEntityExists(a0, a1); })>},
+		{"cWorld", "bool IsValid(cSoundEntity@ apEntity)", SomaBind::GenericMethod<(+[](cWorld *o, cSoundEntity * a0) -> bool { return o->IsValid(a0); })>},
+		{"cWorld", "void SetDepthOfFieldActive(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetDepthOfFieldActive(a0); })>},
+		{"cWorld", "void SetDepthOfFieldFocusStart(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetDepthOfFieldFocusStart(a0); })>},
+		{"cWorld", "void SetDepthOfFieldFocusEnd(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetDepthOfFieldFocusEnd(a0); })>},
+		{"cWorld", "float GetDepthOfFieldFocusStart()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetDepthOfFieldFocusStart(); })>},
+		{"cWorld", "float GetDepthOfFieldFocusEnd()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetDepthOfFieldFocusEnd(); })>},
+		{"cWorld", "bool IsDepthOfFieldActive()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->IsDepthOfFieldActive(); })>},
+		{"cWorld", "void SetDepthOfFieldFalloff(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetDepthOfFieldFalloff(a0); })>},
+		{"cWorld", "float GetDepthOfFieldFalloff()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetDepthOfFieldFalloff(); })>},
+		{"cWorld", "float GetToneMappingExposure()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetToneMappingExposure(); })>},
+		{"cWorld", "float GetToneMappingKey()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetToneMappingKey(); })>},
+		{"cWorld", "float GetToneMappingWhiteCut()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetToneMappingWhiteCut(); })>},
+		{"cWorld", "cLensFlare@ CreateLensFlare(const tString &in asName, const cVector2f &in avSize,const tString &in asMaterial,bool abStatic)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0, const cVector2f & a1, const tString & a2, bool a3) -> cLensFlare * { return o->CreateLensFlare(a0, a1, a2, a3); })>},
+		{"cWorld", "void DestroyLensFlare(cLensFlare@ apObject)", SomaBind::GenericMethod<(+[](cWorld *o, cLensFlare * a0) { o->DestroyLensFlare(a0); })>},
+		{"cWorld", "cLensFlare@ GetLensFlare(const tString &in asName)", SomaBind::GenericMethod<(+[](cWorld *o, const tString & a0) -> cLensFlare * { return o->GetLensFlare(a0); })>},
+		{"cWorld", "void SetNightVisionColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cWorld *o, const cColor & a0) { o->SetNightVisionColor(a0); })>},
+		{"cWorld", "void SetNightVisionBrightness(float afBrightness)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetNightVisionBrightness(a0); })>},
+		{"cWorld", "void SetNightVisionRadiusMin(float afRadius)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetNightVisionRadiusMin(a0); })>},
+		{"cWorld", "void SetNightVisionRadiusMax(float afRadius)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetNightVisionRadiusMax(a0); })>},
+		{"cWorld", "void SetNightVisionFalloff(float afFalloff)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetNightVisionFalloff(a0); })>},
+		{"cWorld", "bool GetNightVisionVisible()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetNightVisionVisible(); })>},
+		{"cWorld", "const cColor& GetNightVisionColor()", SomaBind::GenericMethod<(+[](cWorld *o) -> const cColor & { static thread_local cColor r; r = o->GetNightVisionColor(); return r; })>},
+		{"cWorld", "float GetNightVisionBrightness()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetNightVisionBrightness(); })>},
+		{"cWorld", "float GetNightVisionRadiusMin()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetNightVisionRadiusMin(); })>},
+		{"cWorld", "float GetNightVisionRadiusMax()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetNightVisionRadiusMax(); })>},
+		{"cWorld", "float GetNightVisionFalloff()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetNightVisionFalloff(); })>},
+		{"cWorld", "void SetFogLighten(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetFogLighten(a0); })>},
+		{"cWorld", "bool GetFogLighten()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetFogLighten(); })>},
+		{"cWorld", "void SetSecondaryFogDensity(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetSecondaryFogDensity(a0); })>},
+		{"cWorld", "void SetSecondaryFogHeightDensity(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetSecondaryFogHeightDensity(a0); })>},
+		{"cWorld", "void SetSecondaryFogHeightHorizon(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetSecondaryFogHeightHorizon(a0); })>},
+		{"cWorld", "void SetFogHeightBased(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetFogHeightBased(a0); })>},
+		{"cWorld", "void SetFogExponential(bool abX)", SomaBind::GenericMethod<(+[](cWorld *o, bool a0) { o->SetFogExponential(a0); })>},
+		{"cWorld", "void SetFogDensity(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetFogDensity(a0); })>},
+		{"cWorld", "void SetFogHeightDensity(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetFogHeightDensity(a0); })>},
+		{"cWorld", "void SetFogHeightHorizon(float afX)", SomaBind::GenericMethod<(+[](cWorld *o, float a0) { o->SetFogHeightHorizon(a0); })>},
+		{"cWorld", "float GetSecondaryFogDensity()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetSecondaryFogDensity(); })>},
+		{"cWorld", "float GetSecondaryFogHeightDensity()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetSecondaryFogHeightDensity(); })>},
+		{"cWorld", "float GetSecondaryFogHeightHorizon()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetSecondaryFogHeightHorizon(); })>},
+		{"cWorld", "bool GetFogHeightBased()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetFogHeightBased(); })>},
+		{"cWorld", "bool GetFogExponential()", SomaBind::GenericMethod<(+[](cWorld *o) -> bool { return o->GetFogExponential(); })>},
+		{"cWorld", "float GetFogDensity()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetFogDensity(); })>},
+		{"cWorld", "float GetFogHeightDensity()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetFogHeightDensity(); })>},
+		{"cWorld", "float GetFogHeightHorizon()", SomaBind::GenericMethod<(+[](cWorld *o) -> float { return o->GetFogHeightHorizon(); })>},
+		{"iCharacterBody", "const tString& GetName()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iCharacterBody", "void Update(float afTimeStep)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->Update(a0); })>},
+		{"iCharacterBody", "void SetForce(const cVector3f &in avForce)", SomaBind::GenericMethod<(+[](iCharacterBody *o, const cVector3f & a0) { o->SetForce(a0); })>},
+		{"iCharacterBody", "void AddForce(const cVector3f &in avForce)", SomaBind::GenericMethod<(+[](iCharacterBody *o, const cVector3f & a0) { o->AddForce(a0); })>},
+		{"iCharacterBody", "cVector3f GetForce()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> cVector3f { return o->GetForce(); })>},
+		{"iCharacterBody", "void Move(eCharDir aDir, float afMul)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0, float a1) { o->Move((eCharDir)a0, a1); })>},
+		{"iCharacterBody", "void StopMovement()", SomaBind::GenericMethod<(+[](iCharacterBody *o) { o->StopMovement(); })>},
+		{"iCharacterBody", "int AddExtraSize(const cVector3f&in avSize)", SomaBind::GenericMethod<(+[](iCharacterBody *o, const cVector3f & a0) -> int { return o->AddExtraSize(a0); })>},
+		{"iCharacterBody", "void SetActiveSize(int alNum)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) { o->SetActiveSize(a0); })>},
+		{"iCharacterBody", "int GetActiveSize()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> int { return o->GetActiveSize(); })>},
+		{"iCharacterBody", "void SetActive(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetActive(a0); })>},
+		{"iCharacterBody", "bool IsActive()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->IsActive(); })>},
+		{"iCharacterBody", "float GetMass()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetMass(); })>},
+		{"iCharacterBody", "void SetMass(float afMass)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetMass(a0); })>},
+		{"iCharacterBody", "const cVector3f& GetSize()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; })>},
+		{"iCharacterBody", "iCollideShape@ GetCurrentShape()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> iCollideShape * { return o->GetCurrentShape(); })>},
+		{"iCharacterBody", "iCollideShape@ GetShape(int alIdx)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) -> iCollideShape * { return o->GetShape(a0); })>},
+		{"iCharacterBody", "iPhysicsBody@ GetCurrentBody()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> iPhysicsBody * { return o->GetCurrentBody(); })>},
+		{"iCharacterBody", "void SetCollideCharacter(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetCollideCharacter(a0); })>},
+		{"iCharacterBody", "bool GetCollideCharacter()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetCollideCharacter(); })>},
+		{"iCharacterBody", "void SetTestCollision(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetTestCollision(a0); })>},
+		{"iCharacterBody", "bool GetTestCollision()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetTestCollision(); })>},
+		{"iCharacterBody", "void SetPhysicsBodyActive(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetPhysicsBodyActive(a0); })>},
+		{"iCharacterBody", "bool GetPhysicsBodyActive()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetPhysicsBodyActive(); })>},
+		{"iCharacterBody", "void SetMaxPositiveMoveSpeed(eCharDir aDir, float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0, float a1) { o->SetMaxPositiveMoveSpeed((eCharDir)a0, a1); })>},
+		{"iCharacterBody", "float GetMaxPositiveMoveSpeed(eCharDir aDir)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) -> float { return o->GetMaxPositiveMoveSpeed((eCharDir)a0); })>},
+		{"iCharacterBody", "void SetMaxNegativeMoveSpeed(eCharDir aDir, float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0, float a1) { o->SetMaxNegativeMoveSpeed((eCharDir)a0, a1); })>},
+		{"iCharacterBody", "float GetMaxNegativeMoveSpeed(eCharDir aDir)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) -> float { return o->GetMaxNegativeMoveSpeed((eCharDir)a0); })>},
+		{"iCharacterBody", "void SetMoveSpeed(eCharDir aDir, float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0, float a1) { o->SetMoveSpeed((eCharDir)a0, a1); })>},
+		{"iCharacterBody", "float GetMoveSpeed(eCharDir aDir)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) -> float { return o->GetMoveSpeed((eCharDir)a0); })>},
+		{"iCharacterBody", "void SetMoveAcc(eCharDir aDir, float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0, float a1) { o->SetMoveAcc((eCharDir)a0, a1); })>},
+		{"iCharacterBody", "float GetMoveAcc(eCharDir aDir)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) -> float { return o->GetMoveAcc((eCharDir)a0); })>},
+		{"iCharacterBody", "void SetMoveDeacc(eCharDir aDir, float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0, float a1) { o->SetMoveDeacc((eCharDir)a0, a1); })>},
+		{"iCharacterBody", "float GetMoveDeacc(eCharDir aDir)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) -> float { return o->GetMoveDeacc((eCharDir)a0); })>},
+		{"iCharacterBody", "void SetMoveOppositeDirAccMul(eCharDir aDir, float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0, float a1) { o->SetMoveOppositeDirAccMul((eCharDir)a0, a1); })>},
+		{"iCharacterBody", "float GetMoveOppositeDirAccMul(eCharDir aDir)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) -> float { return o->GetMoveOppositeDirAccMul((eCharDir)a0); })>},
+		{"iCharacterBody", "void SetDeaccelerateMoveSpeedInAir(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetDeaccelerateMoveSpeedInAir(a0); })>},
+		{"iCharacterBody", "bool GetDeaccelerateMoveSpeedInAir()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetDeaccelerateMoveSpeedInAir(); })>},
+		{"iCharacterBody", "cVector3f GetVelocity(float afFrameTime)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) -> cVector3f { return o->GetVelocity(a0); })>},
+		{"iCharacterBody", "void SetPosition(const cVector3f&in avPos, bool abSmooth)", SomaBind::GenericMethod<(+[](iCharacterBody *o, const cVector3f & a0, bool a1) { o->SetPosition(a0, a1); })>},
+		{"iCharacterBody", "const cVector3f& GetPosition()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPosition(); return r; })>},
+		{"iCharacterBody", "const cVector3f& GetLastPosition()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLastPosition(); return r; })>},
+		{"iCharacterBody", "void SetFeetPosition(const cVector3f&in avPos, bool abSmooth)", SomaBind::GenericMethod<(+[](iCharacterBody *o, const cVector3f & a0, bool a1) { o->SetFeetPosition(a0, a1); })>},
+		{"iCharacterBody", "cVector3f GetFeetPosition()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> cVector3f { return o->GetFeetPosition(); })>},
+		{"iCharacterBody", "void SetYaw(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetYaw(a0); })>},
+		{"iCharacterBody", "void AddYaw(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->AddYaw(a0); })>},
+		{"iCharacterBody", "float GetYaw()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetYaw(); })>},
+		{"iCharacterBody", "void SetPitch(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetPitch(a0); })>},
+		{"iCharacterBody", "void AddPitch(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->AddPitch(a0); })>},
+		{"iCharacterBody", "float GetPitch()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetPitch(); })>},
+		{"iCharacterBody", "const cVector3f& GetForward()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetForward(); return r; })>},
+		{"iCharacterBody", "const cVector3f& GetRight()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetRight(); return r; })>},
+		{"iCharacterBody", "const cVector3f& GetUp()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetUp(); return r; })>},
+		{"iCharacterBody", "const cMatrixf& GetMoveMatrix()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetMoveMatrix(); return r; })>},
+		{"iCharacterBody", "void SetGravityActive(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetGravityActive(a0); })>},
+		{"iCharacterBody", "bool GravityIsActive()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GravityIsActive(); })>},
+		{"iCharacterBody", "void SetMaxGravitySpeed(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetMaxGravitySpeed(a0); })>},
+		{"iCharacterBody", "float GetMaxGravitySpeed()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetMaxGravitySpeed(); })>},
+		{"iCharacterBody", "bool GetCustomGravityActive()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetCustomGravityActive(); })>},
+		{"iCharacterBody", "void SetCustomGravityActive(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetCustomGravityActive(a0); })>},
+		{"iCharacterBody", "void SetCustomGravity(const cVector3f&in avCustomGravity)", SomaBind::GenericMethod<(+[](iCharacterBody *o, const cVector3f & a0) { o->SetCustomGravity(a0); })>},
+		{"iCharacterBody", "cVector3f GetCustomGravity()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> cVector3f { return o->GetCustomGravity(); })>},
+		{"iCharacterBody", "void AddForceVelocity(const cVector3f&in avVel)", SomaBind::GenericMethod<(+[](iCharacterBody *o, const cVector3f & a0) { o->AddForceVelocity(a0); })>},
+		{"iCharacterBody", "void SetForceVelocity(const cVector3f&in avVel)", SomaBind::GenericMethod<(+[](iCharacterBody *o, const cVector3f & a0) { o->SetForceVelocity(a0); })>},
+		{"iCharacterBody", "cVector3f GetForceVelocity()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> cVector3f { return o->GetForceVelocity(); })>},
+		{"iCharacterBody", "bool IsOnGround()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->IsOnGround(); })>},
+		{"iCharacterBody", "void SetMaxOnGroundCount(int alX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) { o->SetMaxOnGroundCount(a0); })>},
+		{"iCharacterBody", "int GetMaxOnGroundCount()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> int { return o->GetMaxOnGroundCount(); })>},
+		{"iCharacterBody", "void SetCollideFlags(uint alX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, unsigned int a0) { o->SetCollideFlags(a0); })>},
+		{"iCharacterBody", "uint GetCollideFlags() const", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> unsigned int { return o->GetCollideFlags(); })>},
+		{"iCharacterBody", "void SetGroundFriction(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetGroundFriction(a0); })>},
+		{"iCharacterBody", "float GetGroundFriction()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetGroundFriction(); })>},
+		{"iCharacterBody", "void SetAirFriction(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetAirFriction(a0); })>},
+		{"iCharacterBody", "float GetAirFriction()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetAirFriction(); })>},
+		{"iCharacterBody", "void SetDisableDiagSpeedBoost(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetDisableDiagSpeedBoost(a0); })>},
+		{"iCharacterBody", "bool GetDisableDiagSpeedBoost()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetDisableDiagSpeedBoost(); })>},
+		{"iCharacterBody", "bool GetMovedLastUpdate()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetMovedLastUpdate(); })>},
+		{"iCharacterBody", "void SetMaxPushMass(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetMaxPushMass(a0); })>},
+		{"iCharacterBody", "void SetMaxPushForce(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetPushForce(a0); })>},
+		{"iCharacterBody", "void SetPushImpulse(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetPushImpulse(a0); })>},
+		{"iCharacterBody", "float GetMaxPushMass()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetMaxPushMass(); })>},
+		{"iCharacterBody", "float GetMaxPushForce()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetPushForce(); })>},
+		{"iCharacterBody", "float GetPushImpulse()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetPushImpulse(); })>},
+		{"iCharacterBody", "bool GetPushIn2D()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetPushIn2D(); })>},
+		{"iCharacterBody", "void SetPushIn2D(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetPushIn2D(a0); })>},
+		{"iCharacterBody", "void SetCharacterMaxPushMass(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetCharacterMaxPushMass(a0); })>},
+		{"iCharacterBody", "void SetCharacterPushForce(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetCharacterPushForce(a0); })>},
+		{"iCharacterBody", "float GetCharacterMaxPushMass()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetCharacterMaxPushMass(); })>},
+		{"iCharacterBody", "float GetCharacterPushForce()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetCharacterPushForce(); })>},
+		{"iCharacterBody", "bool GetCharacterPushIn2D()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetCharacterPushIn2D(); })>},
+		{"iCharacterBody", "void SetCharacterPushIn2D(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetCharacterPushIn2D(a0); })>},
+		{"iCharacterBody", "void SetConstantContactForceMul(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetConstantContactForceMul(a0); })>},
+		{"iCharacterBody", "float GetConstantContactForceMul()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetConstantContactForceMul(); })>},
+		{"iCharacterBody", "void SetVelocityContactForceMul(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetVelocityContactForceMul(a0); })>},
+		{"iCharacterBody", "float GetVelocityContactForceMul()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetVelocityContactForceMul(); })>},
+		{"iCharacterBody", "void SetMaxContactForcePerMassUnit(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetMaxContactForcePerMassUnit(a0); })>},
+		{"iCharacterBody", "float GetMaxContactForcePerMassUnit()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetMaxContactForcePerMassUnit(); })>},
+		{"iCharacterBody", "void SetMaxNoSlideSlopeAngle(float afAngle)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetMaxNoSlideSlopeAngle(a0); })>},
+		{"iCharacterBody", "float GetMaxNoSlideSlopeAngle()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetMaxNoSlideSlopeAngle(); })>},
+		{"iCharacterBody", "void SetStickToSlope(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetStickToSlope(a0); })>},
+		{"iCharacterBody", "bool GetStickToSlope()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetStickToSlope(); })>},
+		{"iCharacterBody", "float GetMaxStepSize()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetMaxStepSize(); })>},
+		{"iCharacterBody", "void SetMaxStepSize(float afSize)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetMaxStepSize(a0); })>},
+		{"iCharacterBody", "float GetMaxStepSizeInAir()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetMaxStepSizeInAir(); })>},
+		{"iCharacterBody", "void SetMaxStepSizeInAir(float afSize)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetMaxStepSizeInAir(a0); })>},
+		{"iCharacterBody", "void SetStepClimbSpeed(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetStepClimbSpeed(a0); })>},
+		{"iCharacterBody", "float GetStepClimbSpeed()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetStepClimbSpeed(); })>},
+		{"iCharacterBody", "void SetAccurateClimbing(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetAccurateClimbing(a0); })>},
+		{"iCharacterBody", "bool GetAccurateClimbing()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetAccurateClimbing(); })>},
+		{"iCharacterBody", "void SetClimbForwardMul(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetClimbForwardMul(a0); })>},
+		{"iCharacterBody", "float GetClimbForwardMul()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetClimbForwardMul(); })>},
+		{"iCharacterBody", "void SetClimbHeightAdd(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetClimbHeightAdd(a0); })>},
+		{"iCharacterBody", "float GetClimbHeightAdd()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetClimbHeightAdd(); })>},
+		{"iCharacterBody", "bool IsClimbing()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->IsClimbing(); })>},
+		{"iCharacterBody", "void ResetClimbing()", SomaBind::GenericMethod<(+[](iCharacterBody *o) { o->ResetClimbing(); })>},
+		{"iCharacterBody", "void SetGroundAngleMin(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetGroundAngleMin(a0); })>},
+		{"iCharacterBody", "float GetGroundAngleMin()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetGroundAngleMin(); })>},
+		{"iCharacterBody", "const cVector3f& GetLastGroundNormal()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLastGroundNormal(); return r; })>},
+		{"iCharacterBody", "void SetRotateYawWhenGravityAttached(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetRotateYawWhenGravityAttached(a0); })>},
+		{"iCharacterBody", "bool GetRotateYawWhenGravityAttached()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetRotateYawWhenGravityAttached(); })>},
+		{"iCharacterBody", "iPhysicsBody@ GetGravityAttachedBody()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> iPhysicsBody * { return o->GetGravityAttachedBody(); })>},
+		{"iCharacterBody", "iPhysicsMaterial@ GetGravityCollideMaterial()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> iPhysicsMaterial * { return o->GetGravityCollideMaterial(); })>},
+		{"iCharacterBody", "void SetCamera(cCamera@ apCam)", SomaBind::GenericMethod<(+[](iCharacterBody *o, cCamera * a0) { o->SetCamera(a0); })>},
+		{"iCharacterBody", "cCamera@ GetCamera()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> cCamera * { return o->GetCamera(); })>},
+		{"iCharacterBody", "void SetCameraPosAdd(const cVector3f &in avAdd)", SomaBind::GenericMethod<(+[](iCharacterBody *o, const cVector3f & a0) { o->SetCameraPosAdd(a0); })>},
+		{"iCharacterBody", "cVector3f GetCameraPosAdd()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> cVector3f { return o->GetCameraPosAdd(); })>},
+		{"iCharacterBody", "void SetCameraSmoothPosNum(int alNum)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) { o->SetCameraSmoothPosNum(a0); })>},
+		{"iCharacterBody", "int GetCameraSmoothPosNum()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> int { return o->GetCameraSmoothPosNum(); })>},
+		{"iCharacterBody", "void SetCameraUseSmoothing(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetCameraUseSmoothing(a0); })>},
+		{"iCharacterBody", "bool GetCameraUseSmoothing()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetCameraUseSmoothing(); })>},
+		{"iCharacterBody", "void SetCameraUpdateActive(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetCameraUpdateActive(a0); })>},
+		{"iCharacterBody", "bool GetCameraUpdateActive()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetCameraUpdateActive(); })>},
+		{"iCharacterBody", "void SetEntity(iEntity3D@ apEntity)", SomaBind::GenericMethod<(+[](iCharacterBody *o, iEntity3D * a0) { o->SetEntity(a0); })>},
+		{"iCharacterBody", "iEntity3D@ GetEntity()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> iEntity3D * { return o->GetEntity(); })>},
+		{"iCharacterBody", "void SetEntityPitchAmount(float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0) { o->SetEntityPitchAmount(a0); })>},
+		{"iCharacterBody", "float GetEntityPitchAmount()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> float { return o->GetEntityPitchAmount(); })>},
+		{"iCharacterBody", "void SetEntityOffset(const cMatrixf &in a_mtxOffset)", SomaBind::GenericMethod<(+[](iCharacterBody *o, const cMatrixf & a0) { o->SetEntityOffset(a0); })>},
+		{"iCharacterBody", "const cMatrixf & GetEntityOffset()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetEntityOffset(); return r; })>},
+		{"iCharacterBody", "void SetEntityPostOffset(const cMatrixf &in a_mtxOffset)", SomaBind::GenericMethod<(+[](iCharacterBody *o, const cMatrixf & a0) { o->SetEntityPostOffset(a0); })>},
+		{"iCharacterBody", "const cMatrixf & GetEntityPostOffset()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetEntityPostOffset(); return r; })>},
+		{"iCharacterBody", "void SetEntitySmoothPosNum(int alNum)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) { o->SetEntitySmoothPosNum(a0); })>},
+		{"iCharacterBody", "int GetEntitySmoothPosNum()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> int { return o->GetEntitySmoothPosNum(); })>},
+		{"iCharacterBody", "void SetUseEntitySmoothYPos(bool abX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, bool a0) { o->SetUseEntitySmoothYPos(a0); })>},
+		{"iCharacterBody", "void SetEntitySmoothYPosNum(int alX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0) { o->SetEntitySmoothYPosNum(a0); })>},
+		{"iCharacterBody", "bool GetUseEntitySmoothYPos()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> bool { return o->GetUseEntitySmoothYPos(); })>},
+		{"iCharacterBody", "int GetEntitySmoothYPosNum()", SomaBind::GenericMethod<(+[](iCharacterBody *o) -> int { return o->GetEntitySmoothYPosNum(); })>},
+		{"iCharacterBody", "void SetMoveSpeedMul(eCharDir aDir, float afX)", SomaBind::GenericMethod<(+[](iCharacterBody *o, int a0, float a1) { o->SetMoveSpeedMul((eCharDir)a0, a1); })>},
+		{"iCharacterBody", "void SetupSafePositions(float afSafePositionSaveInterval, float afSafePositionBufferTime)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0, float a1) { o->SetupSafePositions(a0, a1); })>},
+		{"iCharacterBody", "void TeleportToSafePosition(float afElapsedTime, bool abSmooth = false)", SomaBind::GenericMethod<(+[](iCharacterBody *o, float a0, bool a1) { o->TeleportToSafePosition(a0, a1); })>},
+		{"iCollideShape", "iCollideShape@ GetSubShape(int alIdx)", SomaBind::GenericMethod<(+[](iCollideShape *o, int a0) -> iCollideShape * { return o->GetSubShape(a0); })>},
+		{"iCollideShape", "int GetSubShapeNum()", SomaBind::GenericMethod<(+[](iCollideShape *o) -> int { return o->GetSubShapeNum(); })>},
+		{"iCollideShape", "const cVector3f& GetSize()", SomaBind::GenericMethod<(+[](iCollideShape *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; })>},
+		{"iCollideShape", "float GetHeight()", SomaBind::GenericMethod<(+[](iCollideShape *o) -> float { return o->GetHeight(); })>},
+		{"iCollideShape", "float GetWidth()", SomaBind::GenericMethod<(+[](iCollideShape *o) -> float { return o->GetWidth(); })>},
+		{"iCollideShape", "float GetDepth()", SomaBind::GenericMethod<(+[](iCollideShape *o) -> float { return o->GetDepth(); })>},
+		{"iCollideShape", "const cMatrixf& GetOffset()", SomaBind::GenericMethod<(+[](iCollideShape *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetOffset(); return r; })>},
+		{"iCollideShape", "eCollideShapeType GetType()", SomaBind::GenericMethod<(+[](iCollideShape *o) -> int { return (int)o->GetType(); })>},
+		{"iCollideShape", "float GetVolume()", SomaBind::GenericMethod<(+[](iCollideShape *o) -> float { return o->GetVolume(); })>},
+		{"iEntity3D", "int GetUniqueID()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> int { return o->GetUniqueID(); })>},
+		{"iEntity3D", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](iEntity3D *o, float a0) { o->UpdateLogic(a0); })>},
+		{"iEntity3D", "const tString& GetName()const", SomaBind::GenericMethod<(+[](iEntity3D *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iEntity3D", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](iEntity3D *o, const tString & a0) { o->SetName(a0); })>},
+		{"iEntity3D", "bool HasParent()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> bool { return o->HasParent(); })>},
+		{"iEntity3D", "bool IsActive()const", SomaBind::GenericMethod<(+[](iEntity3D *o) -> bool { return o->IsActive(); })>},
+		{"iEntity3D", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](iEntity3D *o, bool a0) { o->SetActive(a0); })>},
+		{"iEntity3D", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"iEntity3D", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"iEntity3D", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"iEntity3D", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"iEntity3D", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](iEntity3D *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"iEntity3D", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](iEntity3D *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"iEntity3D", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](iEntity3D *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"iEntity3D", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](iEntity3D *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"iEntity3D", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"iEntity3D", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](iEntity3D *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"iEntity3D", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](iEntity3D *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"iEntity3D", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](iEntity3D *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"iEntity3D", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"iFontData", "float GetHeight()", SomaBind::GenericMethod<(+[](iFontData *o) -> float { return o->GetHeight(); })>},
+		{"iGamepad", "tString GetGamepadName()", SomaBind::GenericMethod<(+[](iGamepad *o) -> tString { return o->GetGamepadName(); })>},
+		{"iGamepad", "int GetNumButtons()", SomaBind::GenericMethod<(+[](iGamepad *o) -> int { return o->GetNumButtons(); })>},
+		{"iGamepad", "int GetNumAxes()", SomaBind::GenericMethod<(+[](iGamepad *o) -> int { return o->GetNumAxes(); })>},
+		{"iGamepad", "int GetNumHats()", SomaBind::GenericMethod<(+[](iGamepad *o) -> int { return o->GetNumHats(); })>},
+		{"iGamepad", "int GetNumBalls()", SomaBind::GenericMethod<(+[](iGamepad *o) -> int { return o->GetNumBalls(); })>},
+		{"iGamepad", "bool HasInputUpdates()", SomaBind::GenericMethod<(+[](iGamepad *o) -> bool { return o->HasInputUpdates(); })>},
+		{"iGamepad", "bool ButtonIsDown(eGamepadButton aButton)", SomaBind::GenericMethod<(+[](iGamepad *o, int a0) -> bool { return o->ButtonIsDown((eGamepadButton)a0); })>},
+		{"iGamepad", "bool ButtonIsPressed()", SomaBind::GenericMethod<(+[](iGamepad *o) -> bool { return o->ButtonIsPressed(); })>},
+		{"iGamepad", "bool ButtonIsReleased()", SomaBind::GenericMethod<(+[](iGamepad *o) -> bool { return o->ButtonIsReleased(); })>},
+		{"iGamepad", "float GetAxisValue(eGamepadAxis aAxis)", SomaBind::GenericMethod<(+[](iGamepad *o, int a0) -> float { return o->GetAxisValue((eGamepadAxis)a0); })>},
+		{"iGamepad", "float GetAxisDeadZoneRadiusValue()", SomaBind::GenericMethod<(+[](iGamepad *o) -> float { return o->GetAxisDeadZoneRadiusValue(); })>},
+		{"iGamepad", "void SetAxisDeadZoneRadiusValue(float afValue)", SomaBind::GenericMethod<(+[](iGamepad *o, float a0) { o->SetAxisDeadZoneRadiusValue(a0); })>},
+		{"iGamepad", "bool AxesUpdated()", SomaBind::GenericMethod<(+[](iGamepad *o) -> bool { return o->AxesUpdated(); })>},
+		{"iGamepad", "eGamepadHatState GetHatCurrentState(eGamepadHat aHat)", SomaBind::GenericMethod<(+[](iGamepad *o, int a0) -> int { return (int)o->GetHatCurrentState((eGamepadHat)a0); })>},
+		{"iGamepad", "bool HatIsInState(eGamepadHat aHat, eGamepadHatState aState)", SomaBind::GenericMethod<(+[](iGamepad *o, int a0, int a1) -> bool { return o->HatIsInState((eGamepadHat)a0, (eGamepadHatState)a1); })>},
+		{"iGamepad", "bool HatsChanged()", SomaBind::GenericMethod<(+[](iGamepad *o) -> bool { return o->HatsChanged(); })>},
+		{"iGamepad", "cVector2l GetBallAbsPos(eGamepadBall aBall)", SomaBind::GenericMethod<(+[](iGamepad *o, int a0) -> cVector2l { return o->GetBallAbsPos((eGamepadBall)a0); })>},
+		{"iKeyboard", "bool KeyIsDown(eKey aKey)", SomaBind::GenericMethod<(+[](iKeyboard *o, int a0) -> bool { return o->KeyIsDown((eKey)a0); })>},
+		{"iKeyboard", "bool KeyIsPressed()", SomaBind::GenericMethod<(+[](iKeyboard *o) -> bool { return o->KeyIsPressed(); })>},
+		{"iKeyboard", "int GetModifier()", SomaBind::GenericMethod<(+[](iKeyboard *o) -> int { return o->GetModifier(); })>},
+		{"iKeyboard", "bool KeyIsReleased()", SomaBind::GenericMethod<(+[](iKeyboard *o) -> bool { return o->KeyIsReleased(); })>},
+		{"iKeyboard", "tString KeyToString(eKey)", SomaBind::GenericMethod<(+[](iKeyboard *o, int a0) -> tString { return o->KeyToString((eKey)a0); })>},
+		{"iKeyboard", "tString ModifierKeyToString(eKeyModifier)", SomaBind::GenericMethod<(+[](iKeyboard *o, int a0) -> tString { return o->ModifierKeyToString((eKeyModifier)a0); })>},
+		{"iKeyboard", "eKey StringToKey(const tString&in)", SomaBind::GenericMethod<(+[](iKeyboard *o, const tString & a0) -> int { return (int)o->StringToKey(a0); })>},
+		{"iLight", "int GetUniqueID()", SomaBind::GenericMethod<(+[](iLight *o) -> int { return o->GetUniqueID(); })>},
+		{"iLight", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->UpdateLogic(a0); })>},
+		{"iLight", "const tString& GetName()const", SomaBind::GenericMethod<(+[](iLight *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iLight", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](iLight *o, const tString & a0) { o->SetName(a0); })>},
+		{"iLight", "bool HasParent()", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->HasParent(); })>},
+		{"iLight", "bool IsActive()const", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->IsActive(); })>},
+		{"iLight", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](iLight *o, bool a0) { o->SetActive(a0); })>},
+		{"iLight", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](iLight *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"iLight", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](iLight *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"iLight", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](iLight *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"iLight", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](iLight *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"iLight", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](iLight *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"iLight", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](iLight *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"iLight", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](iLight *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"iLight", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](iLight *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"iLight", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](iLight *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"iLight", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](iLight *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"iLight", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](iLight *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"iLight", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](iLight *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"iLight", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](iLight *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"iLight", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](iLight *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"iLight", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](iLight *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"iLight", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](iLight *o) -> int { return (int)o->GetRenderType(); })>},
+		{"iLight", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](iLight *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"iLight", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](iLight *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"iLight", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](iLight *o) -> int { return o->GetRenderFlags(); })>},
+		{"iLight", "bool IsStatic()", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->IsStatic(); })>},
+		{"iLight", "bool IsVisible()", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->IsVisible(); })>},
+		{"iLight", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](iLight *o, bool a0) { o->SetVisible(a0); })>},
+		{"iLight", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->GetVisibleVar(); })>},
+		{"iLight", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](iLight *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"iLight", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"iLight", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"iLight", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetCoverageAmount(); })>},
+		{"iLight", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](iLight *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"iLight", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](iLight *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"iLight", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](iLight *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"iLight", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"iLight", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"iLight", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetLiquidAmount(); })>},
+		{"iLight", "eLightType GetLightType()", SomaBind::GenericMethod<(+[](iLight *o) -> int { return (int)o->GetLightType(); })>},
+		{"iLight", "void SetGoboTexture(iTexture @apTexture)", SomaBind::GenericMethod<(+[](iLight *o, iTexture * a0) { o->SetGoboTexture(a0); })>},
+		{"iLight", "iTexture@ GetGoboTexture()", SomaBind::GenericMethod<(+[](iLight *o) -> iTexture * { return o->GetGoboTexture(); })>},
+		{"iLight", "void RemoveBillboard(cBillboard @apBillboard)", SomaBind::GenericMethod<(+[](iLight *o, cBillboard * a0) { o->RemoveBillboard(a0); })>},
+		{"iLight", "void AttachParticleSystem(cParticleSystem @apPS)", SomaBind::GenericMethod<(+[](iLight *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); })>},
+		{"iLight", "void RemoveParticleSystem(cParticleSystem @apPS)", SomaBind::GenericMethod<(+[](iLight *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); })>},
+		{"iLight", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", SomaBind::GenericMethod<(+[](iLight *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); })>},
+		{"iLight", "void StopFading()", SomaBind::GenericMethod<(+[](iLight *o) { o->StopFading(); })>},
+		{"iLight", "bool IsFading()", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->IsFading(); })>},
+		{"iLight", "const cColor& GetDestColor()", SomaBind::GenericMethod<(+[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetDestColor(); return r; })>},
+		{"iLight", "float GetDestRadius()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetDestRadius(); })>},
+		{"iLight", "void SetFlickerActive(bool abX)", SomaBind::GenericMethod<(+[](iLight *o, bool a0) { o->SetFlickerActive(a0); })>},
+		{"iLight", "bool GetFlickerActive()", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->GetFlickerActive(); })>},
+		{"iLight", "void SetFlicker(const cColor&in aOffCol, float afOffRadius,float afOnMinLength, float afOnMaxLength,const tString &in asOnSound,const tString &in asOnPS, float afOffMinLength, float afOffMaxLength,const tString &in asOffSound,const tString &in asOffPS, bool abFade, float afOnFadeMinLength, float afOnFadeMaxLength, float afOffFadeMinLength, float afOffFadeMaxLength)", SomaBind::GenericMethod<(+[](iLight *o, const cColor & a0, float a1, float a2, float a3, const tString & a4, const tString & a5, float a6, float a7, const tString & a8, const tString & a9, bool a10, float a11, float a12, float a13, float a14) { o->SetFlicker(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14); })>},
+		{"iLight", "const tString& GetFlickerOffSound()", SomaBind::GenericMethod<(+[](iLight *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffSound(); return r; })>},
+		{"iLight", "const tString& GetFlickerOnSound()", SomaBind::GenericMethod<(+[](iLight *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnSound(); return r; })>},
+		{"iLight", "const tString& GetFlickerOffPS()", SomaBind::GenericMethod<(+[](iLight *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffPS(); return r; })>},
+		{"iLight", "const tString& GetFlickerOnPS()", SomaBind::GenericMethod<(+[](iLight *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnPS(); return r; })>},
+		{"iLight", "float GetFlickerOnMinLength()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetFlickerOnMinLength(); })>},
+		{"iLight", "float GetFlickerOffMinLength()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetFlickerOffMinLength(); })>},
+		{"iLight", "float GetFlickerOnMaxLength()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetFlickerOnMaxLength(); })>},
+		{"iLight", "float GetFlickerOffMaxLength()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetFlickerOffMaxLength(); })>},
+		{"iLight", "const cColor& GetFlickerOffColor()", SomaBind::GenericMethod<(+[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOffColor(); return r; })>},
+		{"iLight", "float GetFlickerOffRadius()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetFlickerOffRadius(); })>},
+		{"iLight", "bool GetFlickerFade()", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->GetFlickerFade(); })>},
+		{"iLight", "float GetFlickerOnFadeMinLength()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetFlickerOnFadeMinLength(); })>},
+		{"iLight", "float GetFlickerOnFadeMaxLength()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetFlickerOnFadeMaxLength(); })>},
+		{"iLight", "float GetFlickerOffFadeMinLength()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetFlickerOffFadeMinLength(); })>},
+		{"iLight", "float GetFlickerOffFadeMaxLength()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetFlickerOffFadeMaxLength(); })>},
+		{"iLight", "const cColor& GetFlickerOnColor()", SomaBind::GenericMethod<(+[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOnColor(); return r; })>},
+		{"iLight", "float GetFlickerOnRadius()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetFlickerOnRadius(); })>},
+		{"iLight", "const cColor& GetDiffuseColor()", SomaBind::GenericMethod<(+[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetDiffuseColor(); return r; })>},
+		{"iLight", "void SetDiffuseColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](iLight *o, const cColor & a0) { o->SetDiffuseColor(a0); })>},
+		{"iLight", "const cColor& GetDefaultDiffuseColor()", SomaBind::GenericMethod<(+[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultDiffuseColor(); return r; })>},
+		{"iLight", "void SetDefaultDiffuseColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](iLight *o, const cColor & a0) { o->SetDefaultDiffuseColor(a0); })>},
+		{"iLight", "const cColor& GetSpecularColor()", SomaBind::GenericMethod<(+[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetSpecularColor(); return r; })>},
+		{"iLight", "void SetSpecularColor(cColor aColor)", SomaBind::GenericMethod<(+[](iLight *o, cColor a0) { o->SetSpecularColor(a0); })>},
+		{"iLight", "bool GetCastShadows()", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->GetCastShadows(); })>},
+		{"iLight", "void SetCastShadows(bool afX)", SomaBind::GenericMethod<(+[](iLight *o, bool a0) { o->SetCastShadows(a0); })>},
+		{"iLight", "int GetShadowCastersAffected()", SomaBind::GenericMethod<(+[](iLight *o) -> int { return o->GetShadowCastersAffected(); })>},
+		{"iLight", "void SetShadowCastersAffected(int alX)", SomaBind::GenericMethod<(+[](iLight *o, int a0) { o->SetShadowCastersAffected(a0); })>},
+		{"iLight", "eShadowMapResolution GetShadowMapResolution() const", SomaBind::GenericMethod<(+[](iLight *o) -> int { return (int)o->GetShadowMapResolution(); })>},
+		{"iLight", "void SetShadowMapResolution(eShadowMapResolution aQuality)", SomaBind::GenericMethod<(+[](iLight *o, int a0) { o->SetShadowMapResolution((eShadowMapResolution)a0); })>},
+		{"iLight", "float GetShadowMapBlurAmount() const", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetShadowMapBlurAmount(); })>},
+		{"iLight", "void SetShadowMapBlurAmount(float afX)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->SetShadowMapBlurAmount(a0); })>},
+		{"iLight", "bool GetOcclusionCullShadowCasters() const", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->GetOcclusionCullShadowCasters(); })>},
+		{"iLight", "void SetOcclusionCullShadowCasters(bool abX)", SomaBind::GenericMethod<(+[](iLight *o, bool a0) { o->SetOcclusionCullShadowCasters(a0); })>},
+		{"iLight", "float GetShadowMapBiasMul()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetShadowMapBiasMul(); })>},
+		{"iLight", "float GetShadowMapSlopeScaleBiasMul()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetShadowMapSlopeScaleBiasMul(); })>},
+		{"iLight", "void SetShadowMapBiasMul(float afX)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->SetShadowMapBiasMul(a0); })>},
+		{"iLight", "void SetShadowMapSlopeScaleBiasMul(float afX)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->SetShadowMapSlopeScaleBiasMul(a0); })>},
+		{"iLight", "void SetRadius(float afX)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->SetRadius(a0); })>},
+		{"iLight", "float GetRadius()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetRadius(); })>},
+		{"iLight", "void SetFalloffPow(float afX)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->SetFalloffPow(a0); })>},
+		{"iLight", "float GetFalloffPow()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetFalloffPow(); })>},
+		{"iLight", "float GetSourceRadius()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetSourceRadius(); })>},
+		{"iLight", "void SetSourceRadius(float afX)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->SetSourceRadius(a0); })>},
+		{"iLight", "void SetBrightness(float afX)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->SetBrightness(a0); })>},
+		{"iLight", "float GetBrightness()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetBrightness(); })>},
+		{"iLight", "float GetTranslucency()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetTranslucency(); })>},
+		{"iLight", "void SetTranslucency(float afX)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->SetTranslucency(a0); })>},
+		{"iLight", "void SetSpecularColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](iLight *o, const cColor & a0) { o->SetSpecularColor(a0); })>},
+		{"iLight", "void SetDefaultBrightness(float afX)", SomaBind::GenericMethod<(+[](iLight *o, float a0) { o->SetDefaultBrightness(a0); })>},
+		{"iLight", "float GetDefaultBrightness()", SomaBind::GenericMethod<(+[](iLight *o) -> float { return o->GetDefaultBrightness(); })>},
+		{"iLight", "bool GetCastDiffuseLight()", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->GetCastDiffuseLight(); })>},
+		{"iLight", "void SetCastDiffuseLight(bool afX)", SomaBind::GenericMethod<(+[](iLight *o, bool a0) { o->SetCastDiffuseLight(a0); })>},
+		{"iLight", "bool GetCastSpecularLight()", SomaBind::GenericMethod<(+[](iLight *o) -> bool { return o->GetCastSpecularLight(); })>},
+		{"iLight", "void SetCastSpecularLight(bool afX)", SomaBind::GenericMethod<(+[](iLight *o, bool a0) { o->SetCastSpecularLight(a0); })>},
+		{"iLowLevelGraphics", "cVector2f GetScreenSizeFloat()", SomaBind::GenericMethod<(+[](iLowLevelGraphics *o) -> cVector2f { return o->GetScreenSizeFloat(); })>},
+		{"iLowLevelGraphics", "const cVector2l& GetScreenSizeInt()", SomaBind::GenericMethod<(+[](iLowLevelGraphics *o) -> const cVector2l & { static thread_local cVector2l r; r = o->GetScreenSizeInt(); return r; })>},
+		{"iLowLevelGraphics", "void DrawLine(const cVector3f&in avBegin, const cVector3f&in avEnd, const cColor&in aCol)", SomaBind::GenericMethod<(+[](iLowLevelGraphics *o, const cVector3f & a0, const cVector3f & a1, const cColor & a2) { o->DrawLine(a0, a1, a2); })>},
+		{"iLowLevelGraphics", "void DrawBoxMinMax(const cVector3f&in avMin, const cVector3f&in avMax, const cColor&in aCol)", SomaBind::GenericMethod<(+[](iLowLevelGraphics *o, const cVector3f & a0, const cVector3f & a1, const cColor & a2) { o->DrawBoxMinMax(a0, a1, a2); })>},
+		{"iLowLevelGraphics", "void DrawLineQuad(const cVector3f &in avPos,const cVector2f &in avSize, const cColor&in aCol)", SomaBind::GenericMethod<(+[](iLowLevelGraphics *o, const cVector3f & a0, const cVector2f & a1, const cColor & a2) { o->DrawLineQuad(a0, a1, a2); })>},
+		{"iLowLevelGraphics", "void SetGammaCorrection(float afX)", SomaBind::GenericMethod<(+[](iLowLevelGraphics *o, float a0) { o->SetGammaCorrection(a0); })>},
+		{"iMouse", "bool ButtonIsDown(eMouseButton)", SomaBind::GenericMethod<(+[](iMouse *o, int a0) -> bool { return o->ButtonIsDown((eMouseButton)a0); })>},
+		{"iMouse", "void Update()", SomaBind::GenericMethod<(+[](iMouse *o) { o->Update(); })>},
+		{"iMouse", "cVector2l GetAbsPosition()", SomaBind::GenericMethod<(+[](iMouse *o) -> cVector2l { return o->GetAbsPosition(); })>},
+		{"iMouse", "cVector2l GetRelPosition()", SomaBind::GenericMethod<(+[](iMouse *o) -> cVector2l { return o->GetRelPosition(); })>},
+		{"iPhysicsBody", "int GetUniqueID()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> int { return o->GetUniqueID(); })>},
+		{"iPhysicsBody", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->UpdateLogic(a0); })>},
+		{"iPhysicsBody", "const tString& GetName()const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iPhysicsBody", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const tString & a0) { o->SetName(a0); })>},
+		{"iPhysicsBody", "bool HasParent()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->HasParent(); })>},
+		{"iPhysicsBody", "bool IsActive()const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->IsActive(); })>},
+		{"iPhysicsBody", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetActive(a0); })>},
+		{"iPhysicsBody", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"iPhysicsBody", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"iPhysicsBody", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"iPhysicsBody", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"iPhysicsBody", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"iPhysicsBody", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"iPhysicsBody", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"iPhysicsBody", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"iPhysicsBody", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"iPhysicsBody", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"iPhysicsBody", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"iPhysicsBody", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"iPhysicsBody", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"iPhysicsBody", "iPhysicsMaterial@ GetMaterial()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> iPhysicsMaterial * { return o->GetMaterial(); })>},
+		{"iPhysicsBody", "iCollideShape@ GetShape()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> iCollideShape * { return o->GetShape(); })>},
+		{"iPhysicsBody", "iPhysicsJoint@ GetJoint(int alIndex)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, int a0) -> iPhysicsJoint * { return o->GetJoint(a0); })>},
+		{"iPhysicsBody", "int GetJointNum()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> int { return o->GetJointNum(); })>},
+		{"iPhysicsBody", "void RemoveJoint(iPhysicsJoint @apJoint)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, iPhysicsJoint * a0) { o->RemoveJoint(a0); })>},
+		{"iPhysicsBody", "void SetLinearVelocity(const cVector3f &in avVel)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0) { o->SetLinearVelocity(a0); })>},
+		{"iPhysicsBody", "cVector3f GetLinearVelocity() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> cVector3f { return o->GetLinearVelocity(); })>},
+		{"iPhysicsBody", "void SetAngularVelocity(const cVector3f &in avVel)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0) { o->SetAngularVelocity(a0); })>},
+		{"iPhysicsBody", "cVector3f GetAngularVelocity() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> cVector3f { return o->GetAngularVelocity(); })>},
+		{"iPhysicsBody", "void SetLinearDamping(float afDamping)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetLinearDamping(a0); })>},
+		{"iPhysicsBody", "float GetLinearDamping() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetLinearDamping(); })>},
+		{"iPhysicsBody", "void SetAngularDamping(float afDamping)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetAngularDamping(a0); })>},
+		{"iPhysicsBody", "float GetAngularDamping() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetAngularDamping(); })>},
+		{"iPhysicsBody", "void SetMaxLinearSpeed(float afSpeed)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetMaxLinearSpeed(a0); })>},
+		{"iPhysicsBody", "float GetMaxLinearSpeed() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetMaxLinearSpeed(); })>},
+		{"iPhysicsBody", "void SetMaxAngularSpeed(float afDamping)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetMaxAngularSpeed(a0); })>},
+		{"iPhysicsBody", "float GetMaxAngularSpeed() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetMaxAngularSpeed(); })>},
+		{"iPhysicsBody", "cVector3f GetInertiaVector()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> cVector3f { return o->GetInertiaVector(); })>},
+		{"iPhysicsBody", "cMatrixf GetInertiaMatrix()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> cMatrixf { return o->GetInertiaMatrix(); })>},
+		{"iPhysicsBody", "void SetNoGravityWhenUnderwater(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetNoGravityWhenUnderwater(a0); })>},
+		{"iPhysicsBody", "bool GetNoGravityWhenUnderwater()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetNoGravityWhenUnderwater(); })>},
+		{"iPhysicsBody", "void SetIsUnderwater(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetIsUnderwater(a0); })>},
+		{"iPhysicsBody", "bool GetIsUnderwater()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetIsUnderwater(); })>},
+		{"iPhysicsBody", "cVector3f GetVelocityAtPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0) -> cVector3f { return o->GetVelocityAtPosition(a0); })>},
+		{"iPhysicsBody", "cVector3f GetTorqueFromForceAtPosition(const cVector3f&in avForce, const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0, const cVector3f & a1) -> cVector3f { return o->GetTorqueFromForceAtPosition(a0, a1); })>},
+		{"iPhysicsBody", "void SetMass(float afMass)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetMass(a0); })>},
+		{"iPhysicsBody", "float GetMass() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetMass(); })>},
+		{"iPhysicsBody", "void SetMassMulApplied(float afMul)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetMassMulApplied(a0); })>},
+		{"iPhysicsBody", "float GetMassMulApplied()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetMassMulApplied(); })>},
+		{"iPhysicsBody", "void AddForce(const cVector3f &in avForce)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0) { o->AddForce(a0); })>},
+		{"iPhysicsBody", "void AddForceAtPosition(const cVector3f &in avForce, const cVector3f &in avPos)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0, const cVector3f & a1) { o->AddForceAtPosition(a0, a1); })>},
+		{"iPhysicsBody", "void AddTorque(const cVector3f &in avTorque)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0) { o->AddTorque(a0); })>},
+		{"iPhysicsBody", "void AddImpulse(const cVector3f &in avImpulse)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0) { o->AddImpulse(a0); })>},
+		{"iPhysicsBody", "void AddImpulseAtPosition(const cVector3f &in avImpulse, const cVector3f &in avPos)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0, const cVector3f & a1) { o->AddImpulseAtPosition(a0, a1); })>},
+		{"iPhysicsBody", "void Freeze()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) { o->Freeze(); })>},
+		{"iPhysicsBody", "bool GetFrozen()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetFrozen(); })>},
+		{"iPhysicsBody", "void Enable()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) { o->Enable(); })>},
+		{"iPhysicsBody", "bool GetEnabled() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetEnabled(); })>},
+		{"iPhysicsBody", "void SetAutoDisable(bool abEnabled)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetAutoDisable(a0); })>},
+		{"iPhysicsBody", "bool GetAutoDisable() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetAutoDisable(); })>},
+		{"iPhysicsBody", "void SetAutoDisableLinearThreshold(float afThresold)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetAutoDisableLinearThreshold(a0); })>},
+		{"iPhysicsBody", "float GetAutoDisableLinearThreshold() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetAutoDisableLinearThreshold(); })>},
+		{"iPhysicsBody", "void SetAutoDisableAngularThreshold(float afThresold)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetAutoDisableAngularThreshold(a0); })>},
+		{"iPhysicsBody", "float GetAutoDisableAngularThreshold() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetAutoDisableAngularThreshold(); })>},
+		{"iPhysicsBody", "void SetAutoDisableNumSteps(int alNum)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, int a0) { o->SetAutoDisableNumSteps(a0); })>},
+		{"iPhysicsBody", "int GetAutoDisableNumSteps() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> int { return o->GetAutoDisableNumSteps(); })>},
+		{"iPhysicsBody", "void SetContinuousCollision(bool abOn)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetContinuousCollision(a0); })>},
+		{"iPhysicsBody", "bool GetContinuousCollision()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetContinuousCollision(); })>},
+		{"iPhysicsBody", "void SetGravity(bool abEnabled)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetGravity(a0); })>},
+		{"iPhysicsBody", "bool GetGravity() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetGravity(); })>},
+		{"iPhysicsBody", "void RenderDebugGeometry(iLowLevelGraphics@ apLowLevel,const cColor &in aColor)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, iLowLevelGraphics * a0, const cColor & a1) { o->RenderDebugGeometry(a0, a1); })>},
+		{"iPhysicsBody", "void StaticLinearMove(const cVector3f&in avVelocity)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0) { o->StaticLinearMove(a0); })>},
+		{"iPhysicsBody", "void StaticAngularMove(const cVector3f&in avVelocity)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cVector3f & a0) { o->StaticAngularMove(a0); })>},
+		{"iPhysicsBody", "void SetBlocksSound(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetBlocksSound(a0); })>},
+		{"iPhysicsBody", "bool GetBlocksSound()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetBlocksSound(); })>},
+		{"iPhysicsBody", "void SetBlocksLight(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetBlocksLight(a0); })>},
+		{"iPhysicsBody", "bool GetBlocksLight()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetBlocksLight(); })>},
+		{"iPhysicsBody", "void SetUseSurfaceEffects(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetUseSurfaceEffects(a0); })>},
+		{"iPhysicsBody", "bool GetUseSurfaceEffects()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetUseSurfaceEffects(); })>},
+		{"iPhysicsBody", "void SetCollide(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetCollide(a0); })>},
+		{"iPhysicsBody", "bool GetCollide()const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetCollide(); })>},
+		{"iPhysicsBody", "bool IsCharacter()const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->IsCharacter(); })>},
+		{"iPhysicsBody", "void SetCollideCharacter(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetCollideCharacter(a0); })>},
+		{"iPhysicsBody", "bool GetCollideCharacter()const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetCollideCharacter(); })>},
+		{"iPhysicsBody", "iCharacterBody@ GetCharacterBody()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> iCharacterBody * { return o->GetCharacterBody(); })>},
+		{"iPhysicsBody", "void SetPushStrength(int alX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, int a0) { o->SetPushStrength(a0); })>},
+		{"iPhysicsBody", "int GetPushStrength()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> int { return o->GetPushStrength(); })>},
+		{"iPhysicsBody", "void SetCollideFlags(uint alX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, unsigned int a0) { o->SetCollideFlags(a0); })>},
+		{"iPhysicsBody", "uint GetCollideFlags() const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> unsigned int { return o->GetCollideFlags(); })>},
+		{"iPhysicsBody", "bool IsRagDoll()const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->IsRagDoll(); })>},
+		{"iPhysicsBody", "void SetCollideRagDoll(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetCollideRagDoll(a0); })>},
+		{"iPhysicsBody", "bool GetCollideRagDoll()const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetCollideRagDoll(); })>},
+		{"iPhysicsBody", "void SetVolatile(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetVolatile(a0); })>},
+		{"iPhysicsBody", "bool IsVolatile()const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->IsVolatile(); })>},
+		{"iPhysicsBody", "void SetPushedByCharacterGravity(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetPushedByCharacterGravity(a0); })>},
+		{"iPhysicsBody", "bool GetPushedByCharacterGravity()const", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetPushedByCharacterGravity(); })>},
+		{"iPhysicsBody", "void SetBuoyancyActive(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetBuoyancyActive(a0); })>},
+		{"iPhysicsBody", "void SetBuoyancyDensity(float afX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetBuoyancyDensity(a0); })>},
+		{"iPhysicsBody", "void SetBuoyancyLinearViscosity(float afX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetBuoyancyLinearViscosity(a0); })>},
+		{"iPhysicsBody", "void SetBuoyancyAngularViscosity(float afX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetBuoyancyAngularViscosity(a0); })>},
+		{"iPhysicsBody", "void SetBuoyancySurface(const cPlanef &in aP)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, const cPlanef & a0) { o->SetBuoyancySurface(a0); })>},
+		{"iPhysicsBody", "bool GetBuoyancyActive()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetBuoyancyActive(); })>},
+		{"iPhysicsBody", "float GetBuoyancyDensity()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetBuoyancyDensity(); })>},
+		{"iPhysicsBody", "float GetBuoyancyLinearViscosity()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetBuoyancyLinearViscosity(); })>},
+		{"iPhysicsBody", "float GetBuoyancyAngularViscosity()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetBuoyancyAngularViscosity(); })>},
+		{"iPhysicsBody", "float GetBuoyancyDensityMul()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> float { return o->GetBuoyancyDensityMul(); })>},
+		{"iPhysicsBody", "void SetBuoyancyDensityMul(float afX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, float a0) { o->SetBuoyancyDensityMul(a0); })>},
+		{"iPhysicsBody", "void SetGravityCanAttachCharacter(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetGravityCanAttachCharacter(a0); })>},
+		{"iPhysicsBody", "void SetGravityAttachmentRotation(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetGravityAttachmentRotation(a0); })>},
+		{"iPhysicsBody", "void SetGravityAttachmentVelocity(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetGravityAttachmentVelocity(a0); })>},
+		{"iPhysicsBody", "void SetGravityAttachmentVelocityAxes(eVelocityAxes aAxes)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, int a0) { o->SetGravityAttachmentVelocityAxes((eVelocityAxes)a0); })>},
+		{"iPhysicsBody", "bool GetGravityCanAttachCharacter()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetGravityCanAttachCharacter(); })>},
+		{"iPhysicsBody", "bool GetGravityAttachmentRotation()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetGravityAttachmentRotation(); })>},
+		{"iPhysicsBody", "bool GetGravityAttachmentVelocity()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> bool { return o->GetGravityAttachmentVelocity(); })>},
+		{"iPhysicsBody", "eVelocityAxes GetGravityAttachmentVelocityAxes()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> int { return (int)o->GetGravityAttachmentVelocityAxes(); })>},
+		{"iPhysicsBody", "void SetMaterial(iPhysicsMaterial@ aMat)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, iPhysicsMaterial * a0) { o->SetMaterial(a0); })>},
+		{"iPhysicsBody", "void SetIsCharacter(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsBody *o, bool a0) { o->SetIsCharacter(a0); })>},
+		{"iPhysicsJoint", "const tString& GetName()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iPhysicsJoint", "int GetUniqueID()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> int { return o->GetUniqueID(); })>},
+		{"iPhysicsJoint", "iPhysicsBody@ GetParentBody()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> iPhysicsBody * { return o->GetParentBody(); })>},
+		{"iPhysicsJoint", "iPhysicsBody@ GetChildBody()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> iPhysicsBody * { return o->GetChildBody(); })>},
+		{"iPhysicsJoint", "void RemoveBody(iPhysicsBody @apBody)", SomaBind::GenericMethod<(+[](iPhysicsJoint *o, iPhysicsBody * a0) { o->RemoveBody(a0); })>},
+		{"iPhysicsJoint", "const cVector3f& GetPivotPoint()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPivotPoint(); return r; })>},
+		{"iPhysicsJoint", "const cVector3f& GetPinDir()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPinDir(); return r; })>},
+		{"iPhysicsJoint", "ePhysicsJointType GetType()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> int { return (int)o->GetType(); })>},
+		{"iPhysicsJoint", "void SetCollideBodies(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJoint *o, bool a0) { o->SetCollideBodies(a0); })>},
+		{"iPhysicsJoint", "bool GetCollideBodies()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> bool { return o->GetCollideBodies(); })>},
+		{"iPhysicsJoint", "void SetStiffness(float afX)", SomaBind::GenericMethod<(+[](iPhysicsJoint *o, float a0) { o->SetStiffness(a0); })>},
+		{"iPhysicsJoint", "float GetStiffness()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> float { return o->GetStiffness(); })>},
+		{"iPhysicsJoint", "cVector3f GetVelocity()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> cVector3f { return o->GetVelocity(); })>},
+		{"iPhysicsJoint", "cVector3f GetAngularVelocity()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> cVector3f { return o->GetAngularVelocity(); })>},
+		{"iPhysicsJoint", "float GetForceSize()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> float { return o->GetForceSize(); })>},
+		{"iPhysicsJoint", "float GetDistance()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> float { return o->GetDistance(); })>},
+		{"iPhysicsJoint", "float GetAngle()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> float { return o->GetAngle(); })>},
+		{"iPhysicsJoint", "void SetBreakable(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJoint *o, bool a0) { o->SetBreakable(a0); })>},
+		{"iPhysicsJoint", "bool IsBreakable()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> bool { return o->IsBreakable(); })>},
+		{"iPhysicsJoint", "void SetLimitAutoSleep(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJoint *o, bool a0) { o->SetLimitAutoSleep(a0); })>},
+		{"iPhysicsJoint", "bool GetLimitAutoSleep()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> bool { return o->GetLimitAutoSleep(); })>},
+		{"iPhysicsJoint", "void SetStickyMinLimit(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJoint *o, bool a0) { o->SetStickyMinLimit(a0); })>},
+		{"iPhysicsJoint", "void SetStickyMaxLimit(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJoint *o, bool a0) { o->SetStickyMaxLimit(a0); })>},
+		{"iPhysicsJoint", "bool GetStickyMinLimit()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> bool { return o->GetStickyMinLimit(); })>},
+		{"iPhysicsJoint", "bool GetStickyMaxLimit()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> bool { return o->GetStickyMaxLimit(); })>},
+		{"iPhysicsJoint", "void Break()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) { o->Break(); })>},
+		{"iPhysicsJoint", "bool IsBroken()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> bool { return o->IsBroken(); })>},
+		{"iPhysicsJoint", "void SetMoveSound(tString&in asName)", SomaBind::GenericMethod<(+[](iPhysicsJoint *o, tString & a0) { o->SetMoveSound(a0); })>},
+		{"iPhysicsJoint", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", SomaBind::GenericMethod<(+[](iPhysicsJoint *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); })>},
+		{"iPhysicsJoint", "void SetMinMoveSpeed(float afX)", SomaBind::GenericMethod<(+[](iPhysicsJoint *o, float a0) { o->SetMinMoveSpeed(a0); })>},
+		{"iPhysicsJoint", "void SetAllowPositionReset(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJoint *o, bool a0) { o->SetAllowPositionReset(a0); })>},
+		{"iPhysicsJoint", "bool GetAllowPositionReset()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> bool { return o->GetAllowPositionReset(); })>},
+		{"iPhysicsJointBall", "const tString& GetName()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iPhysicsJointBall", "int GetUniqueID()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> int { return o->GetUniqueID(); })>},
+		{"iPhysicsJointBall", "iPhysicsBody@ GetParentBody()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> iPhysicsBody * { return o->GetParentBody(); })>},
+		{"iPhysicsJointBall", "iPhysicsBody@ GetChildBody()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> iPhysicsBody * { return o->GetChildBody(); })>},
+		{"iPhysicsJointBall", "void RemoveBody(iPhysicsBody @apBody)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, iPhysicsBody * a0) { o->RemoveBody(a0); })>},
+		{"iPhysicsJointBall", "const cVector3f& GetPivotPoint()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPivotPoint(); return r; })>},
+		{"iPhysicsJointBall", "const cVector3f& GetPinDir()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPinDir(); return r; })>},
+		{"iPhysicsJointBall", "ePhysicsJointType GetType()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> int { return (int)o->GetType(); })>},
+		{"iPhysicsJointBall", "void SetCollideBodies(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, bool a0) { o->SetCollideBodies(a0); })>},
+		{"iPhysicsJointBall", "bool GetCollideBodies()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> bool { return o->GetCollideBodies(); })>},
+		{"iPhysicsJointBall", "void SetStiffness(float afX)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, float a0) { o->SetStiffness(a0); })>},
+		{"iPhysicsJointBall", "float GetStiffness()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> float { return o->GetStiffness(); })>},
+		{"iPhysicsJointBall", "cVector3f GetVelocity()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> cVector3f { return o->GetVelocity(); })>},
+		{"iPhysicsJointBall", "cVector3f GetAngularVelocity()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> cVector3f { return o->GetAngularVelocity(); })>},
+		{"iPhysicsJointBall", "float GetForceSize()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> float { return o->GetForceSize(); })>},
+		{"iPhysicsJointBall", "float GetDistance()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> float { return o->GetDistance(); })>},
+		{"iPhysicsJointBall", "float GetAngle()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> float { return o->GetAngle(); })>},
+		{"iPhysicsJointBall", "void SetBreakable(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, bool a0) { o->SetBreakable(a0); })>},
+		{"iPhysicsJointBall", "bool IsBreakable()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> bool { return o->IsBreakable(); })>},
+		{"iPhysicsJointBall", "void SetLimitAutoSleep(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, bool a0) { o->SetLimitAutoSleep(a0); })>},
+		{"iPhysicsJointBall", "bool GetLimitAutoSleep()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> bool { return o->GetLimitAutoSleep(); })>},
+		{"iPhysicsJointBall", "void SetStickyMinLimit(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, bool a0) { o->SetStickyMinLimit(a0); })>},
+		{"iPhysicsJointBall", "void SetStickyMaxLimit(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, bool a0) { o->SetStickyMaxLimit(a0); })>},
+		{"iPhysicsJointBall", "bool GetStickyMinLimit()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> bool { return o->GetStickyMinLimit(); })>},
+		{"iPhysicsJointBall", "bool GetStickyMaxLimit()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> bool { return o->GetStickyMaxLimit(); })>},
+		{"iPhysicsJointBall", "void Break()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) { o->Break(); })>},
+		{"iPhysicsJointBall", "bool IsBroken()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> bool { return o->IsBroken(); })>},
+		{"iPhysicsJointBall", "void SetMoveSound(tString&in asName)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, tString & a0) { o->SetMoveSound(a0); })>},
+		{"iPhysicsJointBall", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); })>},
+		{"iPhysicsJointBall", "void SetMinMoveSpeed(float afX)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, float a0) { o->SetMinMoveSpeed(a0); })>},
+		{"iPhysicsJointBall", "void SetAllowPositionReset(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, bool a0) { o->SetAllowPositionReset(a0); })>},
+		{"iPhysicsJointBall", "bool GetAllowPositionReset()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> bool { return o->GetAllowPositionReset(); })>},
+		{"iPhysicsJointBall", "void SetConeLimits(float afMaxConeAngle, float afMaxTwistAngle)", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o, float a0, float a1) { o->SetConeLimits(a0, a1); })>},
+		{"iPhysicsJointBall", "cVector3f GetAngles()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> cVector3f { return o->GetAngles(); })>},
+		{"iPhysicsJointBall", "float GetMaxConeAngle()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> float { return o->GetMaxConeAngle(); })>},
+		{"iPhysicsJointBall", "float GetMaxTwistAngle()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> float { return o->GetMaxTwistAngle(); })>},
+		{"iPhysicsJointHinge", "const tString& GetName()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iPhysicsJointHinge", "int GetUniqueID()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> int { return o->GetUniqueID(); })>},
+		{"iPhysicsJointHinge", "iPhysicsBody@ GetParentBody()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> iPhysicsBody * { return o->GetParentBody(); })>},
+		{"iPhysicsJointHinge", "iPhysicsBody@ GetChildBody()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> iPhysicsBody * { return o->GetChildBody(); })>},
+		{"iPhysicsJointHinge", "void RemoveBody(iPhysicsBody @apBody)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, iPhysicsBody * a0) { o->RemoveBody(a0); })>},
+		{"iPhysicsJointHinge", "const cVector3f& GetPivotPoint()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPivotPoint(); return r; })>},
+		{"iPhysicsJointHinge", "const cVector3f& GetPinDir()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPinDir(); return r; })>},
+		{"iPhysicsJointHinge", "ePhysicsJointType GetType()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> int { return (int)o->GetType(); })>},
+		{"iPhysicsJointHinge", "void SetCollideBodies(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, bool a0) { o->SetCollideBodies(a0); })>},
+		{"iPhysicsJointHinge", "bool GetCollideBodies()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> bool { return o->GetCollideBodies(); })>},
+		{"iPhysicsJointHinge", "void SetStiffness(float afX)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, float a0) { o->SetStiffness(a0); })>},
+		{"iPhysicsJointHinge", "float GetStiffness()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> float { return o->GetStiffness(); })>},
+		{"iPhysicsJointHinge", "cVector3f GetVelocity()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> cVector3f { return o->GetVelocity(); })>},
+		{"iPhysicsJointHinge", "cVector3f GetAngularVelocity()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> cVector3f { return o->GetAngularVelocity(); })>},
+		{"iPhysicsJointHinge", "float GetForceSize()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> float { return o->GetForceSize(); })>},
+		{"iPhysicsJointHinge", "float GetDistance()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> float { return o->GetDistance(); })>},
+		{"iPhysicsJointHinge", "float GetAngle()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> float { return o->GetAngle(); })>},
+		{"iPhysicsJointHinge", "void SetBreakable(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, bool a0) { o->SetBreakable(a0); })>},
+		{"iPhysicsJointHinge", "bool IsBreakable()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> bool { return o->IsBreakable(); })>},
+		{"iPhysicsJointHinge", "void SetLimitAutoSleep(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, bool a0) { o->SetLimitAutoSleep(a0); })>},
+		{"iPhysicsJointHinge", "bool GetLimitAutoSleep()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> bool { return o->GetLimitAutoSleep(); })>},
+		{"iPhysicsJointHinge", "void SetStickyMinLimit(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, bool a0) { o->SetStickyMinLimit(a0); })>},
+		{"iPhysicsJointHinge", "void SetStickyMaxLimit(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, bool a0) { o->SetStickyMaxLimit(a0); })>},
+		{"iPhysicsJointHinge", "bool GetStickyMinLimit()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> bool { return o->GetStickyMinLimit(); })>},
+		{"iPhysicsJointHinge", "bool GetStickyMaxLimit()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> bool { return o->GetStickyMaxLimit(); })>},
+		{"iPhysicsJointHinge", "void Break()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) { o->Break(); })>},
+		{"iPhysicsJointHinge", "bool IsBroken()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> bool { return o->IsBroken(); })>},
+		{"iPhysicsJointHinge", "void SetMoveSound(tString&in asName)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, tString & a0) { o->SetMoveSound(a0); })>},
+		{"iPhysicsJointHinge", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); })>},
+		{"iPhysicsJointHinge", "void SetMinMoveSpeed(float afX)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, float a0) { o->SetMinMoveSpeed(a0); })>},
+		{"iPhysicsJointHinge", "void SetAllowPositionReset(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, bool a0) { o->SetAllowPositionReset(a0); })>},
+		{"iPhysicsJointHinge", "bool GetAllowPositionReset()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> bool { return o->GetAllowPositionReset(); })>},
+		{"iPhysicsJointHinge", "void SetMaxAngle(float afAngle)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, float a0) { o->SetMaxAngle(a0); })>},
+		{"iPhysicsJointHinge", "void SetMinAngle(float afAngle)", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o, float a0) { o->SetMinAngle(a0); })>},
+		{"iPhysicsJointHinge", "float GetMaxAngle()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> float { return o->GetMaxAngle(); })>},
+		{"iPhysicsJointHinge", "float GetMinAngle()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> float { return o->GetMinAngle(); })>},
+		{"iPhysicsJointSlider", "const tString& GetName()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iPhysicsJointSlider", "int GetUniqueID()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> int { return o->GetUniqueID(); })>},
+		{"iPhysicsJointSlider", "iPhysicsBody@ GetParentBody()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> iPhysicsBody * { return o->GetParentBody(); })>},
+		{"iPhysicsJointSlider", "iPhysicsBody@ GetChildBody()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> iPhysicsBody * { return o->GetChildBody(); })>},
+		{"iPhysicsJointSlider", "void RemoveBody(iPhysicsBody @apBody)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, iPhysicsBody * a0) { o->RemoveBody(a0); })>},
+		{"iPhysicsJointSlider", "const cVector3f& GetPivotPoint()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPivotPoint(); return r; })>},
+		{"iPhysicsJointSlider", "const cVector3f& GetPinDir()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPinDir(); return r; })>},
+		{"iPhysicsJointSlider", "ePhysicsJointType GetType()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> int { return (int)o->GetType(); })>},
+		{"iPhysicsJointSlider", "void SetCollideBodies(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, bool a0) { o->SetCollideBodies(a0); })>},
+		{"iPhysicsJointSlider", "bool GetCollideBodies()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> bool { return o->GetCollideBodies(); })>},
+		{"iPhysicsJointSlider", "void SetStiffness(float afX)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, float a0) { o->SetStiffness(a0); })>},
+		{"iPhysicsJointSlider", "float GetStiffness()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> float { return o->GetStiffness(); })>},
+		{"iPhysicsJointSlider", "cVector3f GetVelocity()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> cVector3f { return o->GetVelocity(); })>},
+		{"iPhysicsJointSlider", "cVector3f GetAngularVelocity()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> cVector3f { return o->GetAngularVelocity(); })>},
+		{"iPhysicsJointSlider", "float GetForceSize()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> float { return o->GetForceSize(); })>},
+		{"iPhysicsJointSlider", "float GetDistance()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> float { return o->GetDistance(); })>},
+		{"iPhysicsJointSlider", "float GetAngle()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> float { return o->GetAngle(); })>},
+		{"iPhysicsJointSlider", "void SetBreakable(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, bool a0) { o->SetBreakable(a0); })>},
+		{"iPhysicsJointSlider", "bool IsBreakable()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> bool { return o->IsBreakable(); })>},
+		{"iPhysicsJointSlider", "void SetLimitAutoSleep(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, bool a0) { o->SetLimitAutoSleep(a0); })>},
+		{"iPhysicsJointSlider", "bool GetLimitAutoSleep()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> bool { return o->GetLimitAutoSleep(); })>},
+		{"iPhysicsJointSlider", "void SetStickyMinLimit(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, bool a0) { o->SetStickyMinLimit(a0); })>},
+		{"iPhysicsJointSlider", "void SetStickyMaxLimit(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, bool a0) { o->SetStickyMaxLimit(a0); })>},
+		{"iPhysicsJointSlider", "bool GetStickyMinLimit()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> bool { return o->GetStickyMinLimit(); })>},
+		{"iPhysicsJointSlider", "bool GetStickyMaxLimit()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> bool { return o->GetStickyMaxLimit(); })>},
+		{"iPhysicsJointSlider", "void Break()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) { o->Break(); })>},
+		{"iPhysicsJointSlider", "bool IsBroken()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> bool { return o->IsBroken(); })>},
+		{"iPhysicsJointSlider", "void SetMoveSound(tString&in asName)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, tString & a0) { o->SetMoveSound(a0); })>},
+		{"iPhysicsJointSlider", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); })>},
+		{"iPhysicsJointSlider", "void SetMinMoveSpeed(float afX)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, float a0) { o->SetMinMoveSpeed(a0); })>},
+		{"iPhysicsJointSlider", "void SetAllowPositionReset(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, bool a0) { o->SetAllowPositionReset(a0); })>},
+		{"iPhysicsJointSlider", "bool GetAllowPositionReset()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> bool { return o->GetAllowPositionReset(); })>},
+		{"iPhysicsJointSlider", "void SetMaxDistance(float afX)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, float a0) { o->SetMaxDistance(a0); })>},
+		{"iPhysicsJointSlider", "void SetMinDistance(float afX)", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o, float a0) { o->SetMinDistance(a0); })>},
+		{"iPhysicsJointSlider", "float GetMaxDistance()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> float { return o->GetMaxDistance(); })>},
+		{"iPhysicsJointSlider", "float GetMinDistance()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> float { return o->GetMinDistance(); })>},
+		{"iPhysicsMaterial", "const tString& GetName() const", SomaBind::GenericMethod<(+[](iPhysicsMaterial *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iPhysicsMaterial", "float GetElasticity()", SomaBind::GenericMethod<(+[](iPhysicsMaterial *o) -> float { return o->GetElasticity(); })>},
+		{"iPhysicsMaterial", "float GetStaticFriction()", SomaBind::GenericMethod<(+[](iPhysicsMaterial *o) -> float { return o->GetStaticFriction(); })>},
+		{"iPhysicsMaterial", "float GetKineticFriction()", SomaBind::GenericMethod<(+[](iPhysicsMaterial *o) -> float { return o->GetKineticFriction(); })>},
+		{"iPhysicsMaterial", "cSurfaceData@ GetSurfaceData()", SomaBind::GenericMethod<(+[](iPhysicsMaterial *o) -> cSurfaceData * { return o->GetSurfaceData(); })>},
+		{"iPhysicsRope", "const tString& GetName()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iPhysicsRope", "int GetUniqueID()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> int { return o->GetUniqueID(); })>},
+		{"iPhysicsRope", "void SetActive(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, bool a0) { o->SetActive(a0); })>},
+		{"iPhysicsRope", "bool GetActive()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> bool { return o->GetActive(); })>},
+		{"iPhysicsRope", "void RemoveAttachedBody(iPhysicsBody @apBody, bool abRemoveContainerFromBody)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, iPhysicsBody * a0, bool a1) { o->RemoveAttachedBody(a0, a1); })>},
+		{"iPhysicsRope", "void SetGravityForce(const cVector3f&in avX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, const cVector3f & a0) { o->SetGravityForce(a0); })>},
+		{"iPhysicsRope", "const cVector3f& GetGravityForce()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetGravityForce(); return r; })>},
+		{"iPhysicsRope", "void SetDamping(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetDamping(a0); })>},
+		{"iPhysicsRope", "float GetDamping()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetDamping(); })>},
+		{"iPhysicsRope", "void SetParticleRadius(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetParticleRadius(a0); })>},
+		{"iPhysicsRope", "float GetParticleRadius()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetParticleRadius(); })>},
+		{"iPhysicsRope", "void SetSlideAmount(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetSlideAmount(a0); })>},
+		{"iPhysicsRope", "float GetSlideAmount()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetSlideAmount(); })>},
+		{"iPhysicsRope", "void SetCollide(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, bool a0) { o->SetCollide(a0); })>},
+		{"iPhysicsRope", "bool GetCollide()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> bool { return o->GetCollide(); })>},
+		{"iPhysicsRope", "void SetSleeping(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, bool a0) { o->SetSleeping(a0); })>},
+		{"iPhysicsRope", "int GetParticleNum()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> int { return o->GetParticleNum(); })>},
+		{"iPhysicsRope", "cVerletParticle@ GetParticle(int alIdx)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, int a0) -> cVerletParticle * { return o->GetParticle(a0); })>},
+		{"iPhysicsRope", "int GetUpdateCount() const", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> int { return o->GetUpdateCount(); })>},
+		{"iPhysicsRope", "void IncUpdateCount()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) { o->IncUpdateCount(); })>},
+		{"iPhysicsRope", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, cVerletParticle * a0, cVerletParticle * a1, float a2) { o->UpdateLengthConstraint(a0, a1, a2); })>},
+		{"iPhysicsRope", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength, float afStiffness)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3) { o->UpdateLengthConstraint(a0, a1, a2, a3); })>},
+		{"iPhysicsRope", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afMinLength, float afMaxLength, float afStiffness)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3, float a4) { o->UpdateLengthConstraint(a0, a1, a2, a3, a4); })>},
+		{"iPhysicsRope", "void UpdateLengthConstraintStretch(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength, float afStiffness)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3) { o->UpdateLengthConstraintStretch(a0, a1, a2, a3); })>},
+		{"iPhysicsRope", "void UpdateParticleCollisionConstraint(cVerletParticle@ apPart, const cVector3f &in avPrevPos, float afRadius)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, cVerletParticle * a0, const cVector3f & a1, float a2) { o->UpdateParticleCollisionConstraint(a0, a1, a2); })>},
+		{"iPhysicsRope", "void SetPhysicsActive(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, bool a0) { o->SetPhysicsActive(a0); })>},
+		{"iPhysicsRope", "bool GetPhysicsActive()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> bool { return o->GetPhysicsActive(); })>},
+		{"iPhysicsRope", "void SetMotorActive(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, bool a0) { o->SetMotorActive(a0); })>},
+		{"iPhysicsRope", "bool GetMotorActive()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> bool { return o->GetMotorActive(); })>},
+		{"iPhysicsRope", "void SetMotorWantedLength(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetMotorWantedLength(a0); })>},
+		{"iPhysicsRope", "void SetMotorSpeedMul(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetMotorSpeedMul(a0); })>},
+		{"iPhysicsRope", "void SetMotorMaxSpeed(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetMotorMaxSpeed(a0); })>},
+		{"iPhysicsRope", "void SetMotorMinSpeed(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetMotorMinSpeed(a0); })>},
+		{"iPhysicsRope", "float GetMotorWantedLength()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetMotorWantedLength(); })>},
+		{"iPhysicsRope", "float GetMotorSpeedMul()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetMotorSpeedMul(); })>},
+		{"iPhysicsRope", "float GetMotorMaxSpeed()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetMotorMaxSpeed(); })>},
+		{"iPhysicsRope", "float GetMotorMinSpeed()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetMotorMinSpeed(); })>},
+		{"iPhysicsRope", "void SetMotorSound(const tString&in asSound)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, const tString & a0) { o->SetMotorSound(a0); })>},
+		{"iPhysicsRope", "void SetMotorSoundStartSpeed(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetMotorSoundStartSpeed(a0); })>},
+		{"iPhysicsRope", "void SetMotorSoundStopSpeed(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetMotorSoundStopSpeed(a0); })>},
+		{"iPhysicsRope", "const tString& GetMotorSound()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> const tString & { static thread_local tString r; r = o->GetMotorSound(); return r; })>},
+		{"iPhysicsRope", "float GetMotorSoundStartSpeed()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetMotorSoundStartSpeed(); })>},
+		{"iPhysicsRope", "float GetMotorSoundStopSpeed()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetMotorSoundStopSpeed(); })>},
+		{"iPhysicsRope", "void SetAutoMoveActive(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, bool a0) { o->SetAutoMoveActive(a0); })>},
+		{"iPhysicsRope", "void SetAutoMoveAcc(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetAutoMoveAcc(a0); })>},
+		{"iPhysicsRope", "void SetAutoMoveMaxSpeed(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetAutoMoveMaxSpeed(a0); })>},
+		{"iPhysicsRope", "void SetAutoMoveSpeed(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetAutoMoveSpeed(a0); })>},
+		{"iPhysicsRope", "bool GetAutoMoveActive()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> bool { return o->GetAutoMoveActive(); })>},
+		{"iPhysicsRope", "float GetAutoMoveAcc()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetAutoMoveAcc(); })>},
+		{"iPhysicsRope", "float GetAutoMoveMaxSpeed()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetAutoMoveMaxSpeed(); })>},
+		{"iPhysicsRope", "float GetAutoMoveSpeed()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetAutoMoveSpeed(); })>},
+		{"iPhysicsRope", "cVerletParticle@ GetStartParticle()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> cVerletParticle * { return o->GetStartParticle(); })>},
+		{"iPhysicsRope", "cVerletParticle@ GetEndParticle()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> cVerletParticle * { return o->GetEndParticle(); })>},
+		{"iPhysicsRope", "void SetAttachedStartBody(iPhysicsBody @apBody)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, iPhysicsBody * a0) { o->SetAttachedStartBody(a0); })>},
+		{"iPhysicsRope", "void SetAttachedEndBody(iPhysicsBody @apBody)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, iPhysicsBody * a0) { o->SetAttachedEndBody(a0); })>},
+		{"iPhysicsRope", "iPhysicsBody@ GetAttachedStartBody()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> iPhysicsBody * { return o->GetAttachedStartBody(); })>},
+		{"iPhysicsRope", "iPhysicsBody@ GetAttachedEndBody()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> iPhysicsBody * { return o->GetAttachedEndBody(); })>},
+		{"iPhysicsRope", "void SetTotalLength(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetTotalLength(a0); })>},
+		{"iPhysicsRope", "float GetTotalLength()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetTotalLength(); })>},
+		{"iPhysicsRope", "void SetMinTotalLength(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetMinTotalLength(a0); })>},
+		{"iPhysicsRope", "void SetMaxTotalLength(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetMaxTotalLength(a0); })>},
+		{"iPhysicsRope", "float GetMinTotalLength()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetMinTotalLength(); })>},
+		{"iPhysicsRope", "float GetMaxTotalLength()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetMaxTotalLength(); })>},
+		{"iPhysicsRope", "void SetSegmentLength(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetSegmentLength(a0); })>},
+		{"iPhysicsRope", "float GetSegmentLength()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetSegmentLength(); })>},
+		{"iPhysicsRope", "float GetFirstSegmentLength()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetFirstSegmentLength(); })>},
+		{"iPhysicsRope", "void SetMaxIterations(int alX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, int a0) { o->SetMaxIterations(a0); })>},
+		{"iPhysicsRope", "int GetMaxIterations()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> int { return o->GetMaxIterations(); })>},
+		{"iPhysicsRope", "void SetStrength(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetStrength(a0); })>},
+		{"iPhysicsRope", "float GetStrength()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetStrength(); })>},
+		{"iPhysicsRope", "void SetStiffness(float afX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, float a0) { o->SetStiffness(a0); })>},
+		{"iPhysicsRope", "float GetStiffness()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> float { return o->GetStiffness(); })>},
+		{"iPhysicsRope", "void SetCollideAttachments(bool abX)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, bool a0) { o->SetCollideAttachments(a0); })>},
+		{"iPhysicsRope", "bool GetCollideAttachments()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> bool { return o->GetCollideAttachments(); })>},
+		{"iPhysicsRope", "void UpdateConstraints()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) { o->UpdateConstraints(); })>},
+		{"iPhysicsRope", "void RenderDebug(iLowLevelGraphics@ apLowLevel)", SomaBind::GenericMethod<(+[](iPhysicsRope *o, iLowLevelGraphics * a0) { o->RenderDebug(a0); })>},
+		{"iPhysicsWorld", "void SetMaxTimeStep(float afTimeStep)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, float a0) { o->SetMaxTimeStep(a0); })>},
+		{"iPhysicsWorld", "float GetMaxTimeStep()", SomaBind::GenericMethod<(+[](iPhysicsWorld *o) -> float { return o->GetMaxTimeStep(); })>},
+		{"iPhysicsWorld", "void SetWorldSize(const cVector3f &in avMin,const cVector3f &in avMax)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const cVector3f & a0, const cVector3f & a1) { o->SetWorldSize(a0, a1); })>},
+		{"iPhysicsWorld", "cVector3f GetWorldSizeMin()", SomaBind::GenericMethod<(+[](iPhysicsWorld *o) -> cVector3f { return o->GetWorldSizeMin(); })>},
+		{"iPhysicsWorld", "cVector3f GetWorldSizeMax()", SomaBind::GenericMethod<(+[](iPhysicsWorld *o) -> cVector3f { return o->GetWorldSizeMax(); })>},
+		{"iPhysicsWorld", "void SetGravity(const cVector3f&in avGravity)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const cVector3f & a0) { o->SetGravity(a0); })>},
+		{"iPhysicsWorld", "cVector3f GetGravity()", SomaBind::GenericMethod<(+[](iPhysicsWorld *o) -> cVector3f { return o->GetGravity(); })>},
+		{"iPhysicsWorld", "void SetAccuracyLevel(ePhysicsAccuracy aAccuracy)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, int a0) { o->SetAccuracyLevel((ePhysicsAccuracy)a0); })>},
+		{"iPhysicsWorld", "ePhysicsAccuracy GetAccuracyLevel()", SomaBind::GenericMethod<(+[](iPhysicsWorld *o) -> int { return (int)o->GetAccuracyLevel(); })>},
+		{"iPhysicsWorld", "void SetNumberOfThreads(int alThreads)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, int a0) { o->SetNumberOfThreads(a0); })>},
+		{"iPhysicsWorld", "int GetNumberOfThreads()", SomaBind::GenericMethod<(+[](iPhysicsWorld *o) -> int { return o->GetNumberOfThreads(); })>},
+		{"iPhysicsWorld", "void DestroyShape(iCollideShape @apShape)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, iCollideShape * a0) { o->DestroyShape(a0); })>},
+		{"iPhysicsWorld", "iPhysicsJointBall@ CreateJointBall(const tString &in asName, const cVector3f&in avPivotPoint,const cVector3f&in avPinDir, iPhysicsBody@ apParentBody, iPhysicsBody @apChildBody)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const tString & a0, const cVector3f & a1, const cVector3f & a2, iPhysicsBody * a3, iPhysicsBody * a4) -> iPhysicsJointBall * { return o->CreateJointBall(a0, a1, a2, a3, a4); })>},
+		{"iPhysicsWorld", "iPhysicsJointHinge@ CreateJointHinge(const tString &in asName, const cVector3f&in avPivotPoint,const cVector3f&in avPinDir, iPhysicsBody@ apParentBody, iPhysicsBody @apChildBody)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const tString & a0, const cVector3f & a1, const cVector3f & a2, iPhysicsBody * a3, iPhysicsBody * a4) -> iPhysicsJointHinge * { return o->CreateJointHinge(a0, a1, a2, a3, a4); })>},
+		{"iPhysicsWorld", "iPhysicsJointSlider@ CreateJointSlider(const tString &in asName, const cVector3f&in avPivotPoint,const cVector3f&in avPinDir, iPhysicsBody@ apParentBody, iPhysicsBody @apChildBody)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const tString & a0, const cVector3f & a1, const cVector3f & a2, iPhysicsBody * a3, iPhysicsBody * a4) -> iPhysicsJointSlider * { return o->CreateJointSlider(a0, a1, a2, a3, a4); })>},
+		{"iPhysicsWorld", "void DestroyJoint(iPhysicsJoint@ apJoint)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, iPhysicsJoint * a0) { o->DestroyJoint(a0); })>},
+		{"iPhysicsWorld", "iPhysicsJoint @GetJoint(const tString &in asName)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const tString & a0) -> iPhysicsJoint * { return o->GetJoint(a0); })>},
+		{"iPhysicsWorld", "bool JointExists(iPhysicsJoint@ apJoint)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, iPhysicsJoint * a0) -> bool { return o->JointExists(a0); })>},
+		{"iPhysicsWorld", "iPhysicsMaterial@ CreateMaterial(const tString &in asName)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const tString & a0) -> iPhysicsMaterial * { return o->CreateMaterial(a0); })>},
+		{"iPhysicsWorld", "iPhysicsMaterial@ GetMaterialFromName(const tString &in asName)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const tString & a0) -> iPhysicsMaterial * { return o->GetMaterialFromName(a0); })>},
+		{"iPhysicsWorld", "void DestroyBody(iPhysicsBody@ apBody)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, iPhysicsBody * a0) { o->DestroyBody(a0); })>},
+		{"iPhysicsWorld", "iPhysicsBody @GetBody(const tString &in asName)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const tString & a0) -> iPhysicsBody * { return o->GetBody(a0); })>},
+		{"iPhysicsWorld", "iCharacterBody @CreateCharacterBody(const tString &in asName, const cVector3f &in avSize)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const tString & a0, const cVector3f & a1) -> iCharacterBody * { return o->CreateCharacterBody(a0, a1); })>},
+		{"iPhysicsWorld", "void DestroyCharacterBody(iCharacterBody@ apBody)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, iCharacterBody * a0) { o->DestroyCharacterBody(a0); })>},
+		{"iPhysicsWorld", "iPhysicsBody @GetCharacterBody(const tString &in asName)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const tString & a0) -> iPhysicsBody * { return o->GetCharacterBody(a0); })>},
+		{"iPhysicsWorld", "iPhysicsRope@ CreateRope(const tString &in asName, const cVector3f &in avStartPos, const cVector3f &in avEndPos)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const tString & a0, const cVector3f & a1, const cVector3f & a2) -> iPhysicsRope * { return o->CreateRope(a0, a1, a2); })>},
+		{"iPhysicsWorld", "iPhysicsRope@ GetRope(const tString &in asName)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, const tString & a0) -> iPhysicsRope * { return o->GetRope(a0); })>},
+		{"iPhysicsWorld", "iPhysicsRope@ GetRopeFromUniqueID(int alID)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, int a0) -> iPhysicsRope * { return o->GetRopeFromUniqueID(a0); })>},
+		{"iPhysicsWorld", "void DestroyRope(iPhysicsRope@ apRope)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, iPhysicsRope * a0) { o->DestroyRope(a0); })>},
+		{"iPhysicsWorld", "void FadeoutAllLoopSounds(float afFadeSpeed)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, float a0) { o->FadeoutAllLoopSounds(a0); })>},
+		{"iPhysicsWorld", "float CastRayOnShape(iCollideShape @apShape, const cMatrixf&in a_mtxTransform, const cVector3f &in avOrigin, const cVector3f&in avEnd,cVector3f&out avOutNormal, bool abLocalRayPositions)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, iCollideShape * a0, const cMatrixf & a1, const cVector3f & a2, const cVector3f & a3, cVector3f & a4, bool a5) -> float { return o->CastRayOnShape(a0, a1, a2, a3, a4, a5); })>},
+		{"iPhysicsWorld", "void RenderShapeDebugGeometry( iCollideShape @apShape, const cMatrixf&in a_mtxTransform, iLowLevelGraphics @apLowLevel, const cColor&in aColor)", SomaBind::GenericMethod<(+[](iPhysicsWorld *o, iCollideShape * a0, const cMatrixf & a1, iLowLevelGraphics * a2, const cColor & a3) { o->RenderShapeDebugGeometry(a0, a1, a2, a3); })>},
+		{"iRopeEntity", "int GetUniqueID()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> int { return o->GetUniqueID(); })>},
+		{"iRopeEntity", "void UpdateLogic(float afTimeStep)", SomaBind::GenericMethod<(+[](cRopeEntity *o, float a0) { o->UpdateLogic(a0); })>},
+		{"iRopeEntity", "const tString& GetName()const", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iRopeEntity", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](cRopeEntity *o, const tString & a0) { o->SetName(a0); })>},
+		{"iRopeEntity", "bool HasParent()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> bool { return o->HasParent(); })>},
+		{"iRopeEntity", "bool IsActive()const", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> bool { return o->IsActive(); })>},
+		{"iRopeEntity", "void SetActive(bool abActive)", SomaBind::GenericMethod<(+[](cRopeEntity *o, bool a0) { o->SetActive(a0); })>},
+		{"iRopeEntity", "cVector3f GetLocalPosition()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> cVector3f { return o->GetLocalPosition(); })>},
+		{"iRopeEntity", "cMatrixf& GetLocalMatrix()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> cMatrixf & { return o->GetLocalMatrix(); })>},
+		{"iRopeEntity", "cVector3f GetWorldPosition()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> cVector3f { return o->GetWorldPosition(); })>},
+		{"iRopeEntity", "cMatrixf& GetWorldMatrix()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> cMatrixf & { return o->GetWorldMatrix(); })>},
+		{"iRopeEntity", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](cRopeEntity *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"iRopeEntity", "void SetMatrix(const cMatrixf&in a_mtxTransform)", SomaBind::GenericMethod<(+[](cRopeEntity *o, const cMatrixf & a0) { o->SetMatrix(a0); })>},
+		{"iRopeEntity", "void SetWorldPosition(const cVector3f&in avWorldPos)", SomaBind::GenericMethod<(+[](cRopeEntity *o, const cVector3f & a0) { o->SetWorldPosition(a0); })>},
+		{"iRopeEntity", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", SomaBind::GenericMethod<(+[](cRopeEntity *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); })>},
+		{"iRopeEntity", "int GetTransformUpdateCount()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> int { return o->GetTransformUpdateCount(); })>},
+		{"iRopeEntity", "void AddChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cRopeEntity *o, iEntity3D * a0) { o->AddChild(a0); })>},
+		{"iRopeEntity", "void RemoveChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cRopeEntity *o, iEntity3D * a0) { o->RemoveChild(a0); })>},
+		{"iRopeEntity", "bool IsChild(iEntity3D @apEntity)", SomaBind::GenericMethod<(+[](cRopeEntity *o, iEntity3D * a0) -> bool { return o->IsChild(a0); })>},
+		{"iRopeEntity", "iEntity3D @GetEntityParent()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> iEntity3D * { return o->GetEntityParent(); })>},
+		{"iRopeEntity", "cMaterial @GetMaterial()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> cMaterial * { return o->GetMaterial(); })>},
+		{"iRopeEntity", "bool CollidesWithFrustum(cFrustum @apFrustum)", SomaBind::GenericMethod<(+[](cRopeEntity *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); })>},
+		{"iRopeEntity", "eRenderableType GetRenderType()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> int { return (int)o->GetRenderType(); })>},
+		{"iRopeEntity", "void SetRenderFlagBit(int alFlagBit, bool abSet)", SomaBind::GenericMethod<(+[](cRopeEntity *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); })>},
+		{"iRopeEntity", "bool GetRenderFlagBit(int alFlagBit)", SomaBind::GenericMethod<(+[](cRopeEntity *o, int a0) -> bool { return o->GetRenderFlagBit(a0); })>},
+		{"iRopeEntity", "int GetRenderFlags() const", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> int { return o->GetRenderFlags(); })>},
+		{"iRopeEntity", "bool IsStatic()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> bool { return o->IsStatic(); })>},
+		{"iRopeEntity", "bool IsVisible()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> bool { return o->IsVisible(); })>},
+		{"iRopeEntity", "void SetVisible(bool abVisible)", SomaBind::GenericMethod<(+[](cRopeEntity *o, bool a0) { o->SetVisible(a0); })>},
+		{"iRopeEntity", "bool GetVisibleVar()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> bool { return o->GetVisibleVar(); })>},
+		{"iRopeEntity", "void SetIlluminationColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](cRopeEntity *o, const cColor & a0) { o->SetIlluminationColor(a0); })>},
+		{"iRopeEntity", "const cColor& GetIlluminationColor()const", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; })>},
+		{"iRopeEntity", "void SetCoverageAmount(float afX)", SomaBind::GenericMethod<(+[](cRopeEntity *o, float a0) { o->SetCoverageAmount(a0); })>},
+		{"iRopeEntity", "float GetCoverageAmount()const", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> float { return o->GetCoverageAmount(); })>},
+		{"iRopeEntity", "int GetMatrixUpdateCount()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> int { return o->GetMatrixUpdateCount(); })>},
+		{"iRopeEntity", "int GetRenderFrameCount() const", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> int { return o->GetRenderFrameCount(); })>},
+		{"iRopeEntity", "void SetRenderFrameCount(int alCount)", SomaBind::GenericMethod<(+[](cRopeEntity *o, int a0) { o->SetRenderFrameCount(a0); })>},
+		{"iRopeEntity", "void UseAutomaticLiquidAmount(float afTime = 0)", SomaBind::GenericMethod<(+[](cRopeEntity *o, float a0) { o->UseAutomaticLiquidAmount(a0); })>},
+		{"iRopeEntity", "void SetLiquidAmount(float afX)", SomaBind::GenericMethod<(+[](cRopeEntity *o, float a0) { o->SetLiquidAmount(a0); })>},
+		{"iRopeEntity", "float GetLiquidAmount()const", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> float { return o->GetLiquidAmount(); })>},
+		{"iRopeEntity", "iPhysicsRope @GetPhysicsRope()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> iPhysicsRope * { return o->GetPhysicsRope(); })>},
+		{"iRopeEntity", "void SetMaterial(cMaterial@ apMaterial)", SomaBind::GenericMethod<(+[](cRopeEntity *o, cMaterial * a0) { o->SetMaterial(a0); })>},
+		{"iRopeEntity", "void SetColor(const cColor &in aColor)", SomaBind::GenericMethod<(+[](cRopeEntity *o, const cColor & a0) { o->SetColor(a0); })>},
+		{"iRopeEntity", "const cColor& GetColor()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; })>},
+		{"iRopeEntity", "void SetRadius(float afX)", SomaBind::GenericMethod<(+[](cRopeEntity *o, float a0) { o->SetRadius(a0); })>},
+		{"iRopeEntity", "float GetRadius()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> float { return o->GetRadius(); })>},
+		{"iVerletParticleContainer", "const tString& GetName()", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iVerletParticleContainer", "int GetUniqueID()", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) -> int { return o->GetUniqueID(); })>},
+		{"iVerletParticleContainer", "void SetActive(bool abX)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, bool a0) { o->SetActive(a0); })>},
+		{"iVerletParticleContainer", "bool GetActive()", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) -> bool { return o->GetActive(); })>},
+		{"iVerletParticleContainer", "void RemoveAttachedBody(iPhysicsBody @apBody, bool abRemoveContainerFromBody)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, iPhysicsBody * a0, bool a1) { o->RemoveAttachedBody(a0, a1); })>},
+		{"iVerletParticleContainer", "void SetGravityForce(const cVector3f&in avX)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, const cVector3f & a0) { o->SetGravityForce(a0); })>},
+		{"iVerletParticleContainer", "const cVector3f& GetGravityForce()", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetGravityForce(); return r; })>},
+		{"iVerletParticleContainer", "void SetDamping(float afX)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, float a0) { o->SetDamping(a0); })>},
+		{"iVerletParticleContainer", "float GetDamping()", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) -> float { return o->GetDamping(); })>},
+		{"iVerletParticleContainer", "void SetParticleRadius(float afX)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, float a0) { o->SetParticleRadius(a0); })>},
+		{"iVerletParticleContainer", "float GetParticleRadius()", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) -> float { return o->GetParticleRadius(); })>},
+		{"iVerletParticleContainer", "void SetSlideAmount(float afX)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, float a0) { o->SetSlideAmount(a0); })>},
+		{"iVerletParticleContainer", "float GetSlideAmount()", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) -> float { return o->GetSlideAmount(); })>},
+		{"iVerletParticleContainer", "void SetCollide(bool abX)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, bool a0) { o->SetCollide(a0); })>},
+		{"iVerletParticleContainer", "bool GetCollide()", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) -> bool { return o->GetCollide(); })>},
+		{"iVerletParticleContainer", "void SetSleeping(bool abX)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, bool a0) { o->SetSleeping(a0); })>},
+		{"iVerletParticleContainer", "int GetParticleNum()", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) -> int { return o->GetParticleNum(); })>},
+		{"iVerletParticleContainer", "cVerletParticle@ GetParticle(int alIdx)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, int a0) -> cVerletParticle * { return o->GetParticle(a0); })>},
+		{"iVerletParticleContainer", "int GetUpdateCount() const", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) -> int { return o->GetUpdateCount(); })>},
+		{"iVerletParticleContainer", "void IncUpdateCount()", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) { o->IncUpdateCount(); })>},
+		{"iVerletParticleContainer", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, cVerletParticle * a0, cVerletParticle * a1, float a2) { o->UpdateLengthConstraint(a0, a1, a2); })>},
+		{"iVerletParticleContainer", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength, float afStiffness)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3) { o->UpdateLengthConstraint(a0, a1, a2, a3); })>},
+		{"iVerletParticleContainer", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afMinLength, float afMaxLength, float afStiffness)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3, float a4) { o->UpdateLengthConstraint(a0, a1, a2, a3, a4); })>},
+		{"iVerletParticleContainer", "void UpdateLengthConstraintStretch(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength, float afStiffness)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3) { o->UpdateLengthConstraintStretch(a0, a1, a2, a3); })>},
+		{"iVerletParticleContainer", "void UpdateParticleCollisionConstraint(cVerletParticle@ apPart, const cVector3f &in avPrevPos, float afRadius)", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o, cVerletParticle * a0, const cVector3f & a1, float a2) { o->UpdateParticleCollisionConstraint(a0, a1, a2); })>},
+		{"iWidget", "void Update(float afTimeStep)", SomaBind::GenericMethod<(+[](iWidget *o, float a0) { o->Update(a0); })>},
+		{"iWidget", "eWidgetType GetType()", SomaBind::GenericMethod<(+[](iWidget *o) -> int { return (int)o->GetType(); })>},
+		{"iWidget", "void Init()", SomaBind::GenericMethod<(+[](iWidget *o) { o->Init(); })>},
+		{"iWidget", "void SetToolTip(const tWString&in asToolTip)", SomaBind::GenericMethod<(+[](iWidget *o, const tWString & a0) { o->SetToolTip(a0); })>},
+		{"iWidget", "const tWString& GetToolTip()", SomaBind::GenericMethod<(+[](iWidget *o) -> const tWString & { static thread_local tWString r; r = o->GetToolTip(); return r; })>},
+		{"iWidget", "void SetToolTipEnabled(bool abX)", SomaBind::GenericMethod<(+[](iWidget *o, bool a0) { o->SetToolTipEnabled(a0); })>},
+		{"iWidget", "bool PointIsInside(const cVector2f&in avPoint, bool abOnlyClipped)", SomaBind::GenericMethod<(+[](iWidget *o, const cVector2f & a0, bool a1) -> bool { return o->PointIsInside(a0, a1); })>},
+		{"iWidget", "void AttachChild(iWidget@ apChild)", SomaBind::GenericMethod<(+[](iWidget *o, iWidget * a0) { o->AttachChild(a0); })>},
+		{"iWidget", "void RemoveChild(iWidget@ apChild)", SomaBind::GenericMethod<(+[](iWidget *o, iWidget * a0) { o->RemoveChild(a0); })>},
+		{"iWidget", "cGuiSet@ GetSet()", SomaBind::GenericMethod<(+[](iWidget *o) -> cGuiSet * { return o->GetSet(); })>},
+		{"iWidget", "iWidget@ GetParent()", SomaBind::GenericMethod<(+[](iWidget *o) -> iWidget * { return o->GetParent(); })>},
+		{"iWidget", "void SetEnabled(bool abX)", SomaBind::GenericMethod<(+[](iWidget *o, bool a0) { o->SetEnabled(a0); })>},
+		{"iWidget", "bool IsEnabled()", SomaBind::GenericMethod<(+[](iWidget *o) -> bool { return o->IsEnabled(); })>},
+		{"iWidget", "void SetVisible(bool abX)", SomaBind::GenericMethod<(+[](iWidget *o, bool a0) { o->SetVisible(a0); })>},
+		{"iWidget", "bool IsVisible()", SomaBind::GenericMethod<(+[](iWidget *o) -> bool { return o->IsVisible(); })>},
+		{"iWidget", "bool HasFocus()", SomaBind::GenericMethod<(+[](iWidget *o) -> bool { return o->HasFocus(); })>},
+		{"iWidget", "void SetName(const tString&in asName)", SomaBind::GenericMethod<(+[](iWidget *o, const tString & a0) { o->SetName(a0); })>},
+		{"iWidget", "const tString& GetName()const", SomaBind::GenericMethod<(+[](iWidget *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; })>},
+		{"iWidget", "void SetText(const tWString&in asText)", SomaBind::GenericMethod<(+[](iWidget *o, const tWString & a0) { o->SetText(a0); })>},
+		{"iWidget", "const tWString& GetText()const", SomaBind::GenericMethod<(+[](iWidget *o) -> const tWString & { static thread_local tWString r; r = o->GetText(); return r; })>},
+		{"iWidget", "iFontData@ GetDefaultFontType()const", SomaBind::GenericMethod<(+[](iWidget *o) -> iFontData * { return o->GetDefaultFontType(); })>},
+		{"iWidget", "void SetDefaultFontType(iFontData@ apFont)", SomaBind::GenericMethod<(+[](iWidget *o, iFontData * a0) { o->SetDefaultFontType(a0); })>},
+		{"iWidget", "const cColor& GetDefaultFontColor()const", SomaBind::GenericMethod<(+[](iWidget *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultFontColor(); return r; })>},
+		{"iWidget", "void SetDefaultFontColor(const cColor&in aColor)", SomaBind::GenericMethod<(+[](iWidget *o, const cColor & a0) { o->SetDefaultFontColor(a0); })>},
+		{"iWidget", "const cVector2f& GetDefaultFontSize()const", SomaBind::GenericMethod<(+[](iWidget *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetDefaultFontSize(); return r; })>},
+		{"iWidget", "void SetDefaultFontSize(const cVector2f&in avSize)", SomaBind::GenericMethod<(+[](iWidget *o, const cVector2f & a0) { o->SetDefaultFontSize(a0); })>},
+		{"iWidget", "void SetClipActive(bool abX)", SomaBind::GenericMethod<(+[](iWidget *o, bool a0) { o->SetClipActive(a0); })>},
+		{"iWidget", "bool GetClipActive()const", SomaBind::GenericMethod<(+[](iWidget *o) -> bool { return o->GetClipActive(); })>},
+		{"iWidget", "void SetPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](iWidget *o, const cVector3f & a0) { o->SetPosition(a0); })>},
+		{"iWidget", "void SetGlobalPosition(const cVector3f&in avPos)", SomaBind::GenericMethod<(+[](iWidget *o, const cVector3f & a0) { o->SetGlobalPosition(a0); })>},
+		{"iWidget", "const cVector3f& GetLocalPosition()const", SomaBind::GenericMethod<(+[](iWidget *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLocalPosition(); return r; })>},
+		{"iWidget", "const cVector3f& GetGlobalPosition()", SomaBind::GenericMethod<(+[](iWidget *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetGlobalPosition(); return r; })>},
+		{"iWidget", "void SetChildrenOffset(const cVector3f&in)", SomaBind::GenericMethod<(+[](iWidget *o, const cVector3f & a0) { o->SetChildrenOffset(a0); })>},
+		{"iWidget", "const cVector3f& GetChildrenOffset()const", SomaBind::GenericMethod<(+[](iWidget *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetChildrenOffset(); return r; })>},
+		{"iWidget", "void SetAffectedByScroll(bool abX)", SomaBind::GenericMethod<(+[](iWidget *o, bool a0) { o->SetAffectedByScroll(a0); })>},
+		{"iWidget", "void SetScrollAmount(const cVector3f&in avX)", SomaBind::GenericMethod<(+[](iWidget *o, const cVector3f & a0) { o->SetScrollAmount(a0); })>},
+		{"iWidget", "const cVector3f& GetScrollAmount()const", SomaBind::GenericMethod<(+[](iWidget *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetScrollAmount(); return r; })>},
+		{"iWidget", "void CenterGlobalPositionInSet()", SomaBind::GenericMethod<(+[](iWidget *o) { o->CenterGlobalPositionInSet(); })>},
+		{"iWidget", "void SetSize(const cVector2f&in avSize)", SomaBind::GenericMethod<(+[](iWidget *o, const cVector2f & a0) { o->SetSize(a0); })>},
+		{"iWidget", "const cVector2f& GetSize()const", SomaBind::GenericMethod<(+[](iWidget *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetSize(); return r; })>},
+		{"iWidget", "void SetColorMul(const cColor&in aColor)", SomaBind::GenericMethod<(+[](iWidget *o, const cColor & a0) { o->SetColorMul(a0); })>},
+		{"iWidget", "const cColor& GetColorMul()const", SomaBind::GenericMethod<(+[](iWidget *o) -> const cColor & { static thread_local cColor r; r = o->GetColorMul(); return r; })>},
+		{"iWidget", "bool ClipsGraphics()", SomaBind::GenericMethod<(+[](iWidget *o) -> bool { return o->ClipsGraphics(); })>},
+		{"iWidget", "bool GetMouseIsOver()const", SomaBind::GenericMethod<(+[](iWidget *o) -> bool { return o->GetMouseIsOver(); })>},
+		{"iWidget", "bool IsConnectedTo(iWidget@ apWidget, bool abIsStartWidget=true)", SomaBind::GenericMethod<(+[](iWidget *o, iWidget * a0, bool a1) -> bool { return o->IsConnectedTo(a0, a1); })>},
+		{"iWidget", "bool IsConnectedToChildren()", SomaBind::GenericMethod<(+[](iWidget *o) -> bool { return o->IsConnectedToChildren(); })>},
+		{"iWidget", "void SetConnectedToChildren(bool abX)", SomaBind::GenericMethod<(+[](iWidget *o, bool a0) { o->SetConnectedToChildren(a0); })>},
+		{"iWidget", "cGuiGfxElement@ GetPointerGfx()", SomaBind::GenericMethod<(+[](iWidget *o) -> cGuiGfxElement * { return o->GetPointerGfx(); })>},
+		{"iWidget", "void SetGlobalKeyPressListener(bool abX)", SomaBind::GenericMethod<(+[](iWidget *o, bool a0) { o->SetGlobalKeyPressListener(a0); })>},
+		{"iWidget", "bool IsGlobalKeyPressListener()const", SomaBind::GenericMethod<(+[](iWidget *o) -> bool { return o->IsGlobalKeyPressListener(); })>},
+		{"iWidget", "void SetUserValue(int alX)", SomaBind::GenericMethod<(+[](iWidget *o, int a0) { o->SetUserValue(a0); })>},
+		{"iWidget", "int GetUserValue()const", SomaBind::GenericMethod<(+[](iWidget *o) -> int { return o->GetUserValue(); })>},
+		{"iWidget", "void SetCallbacksDisabled(bool abX)", SomaBind::GenericMethod<(+[](iWidget *o, bool a0) { o->SetCallbacksDisabled(a0); })>},
+		{"iWidget", "bool GetCallbacksDisabled()const", SomaBind::GenericMethod<(+[](iWidget *o) -> bool { return o->GetCallbacksDisabled(); })>},
+		{"iWidget", "void SetFocusNavigation(eUIArrow aDir, iWidget@ apWidget)", SomaBind::GenericMethod<(+[](iWidget *o, int a0, iWidget * a1) { o->SetFocusNavigation((eUIArrow)a0, a1); })>},
+		{"iWidget", "iWidget@ GetFocusNavigation(eUIArrow aDir)", SomaBind::GenericMethod<(+[](iWidget *o, int a0) -> iWidget * { return o->GetFocusNavigation((eUIArrow)a0); })>},
+		{"iWidget", "bool HasFocusNavigation()", SomaBind::GenericMethod<(+[](iWidget *o) -> bool { return o->HasFocusNavigation(); })>},
+		{"iWidget", "void SetGlobalUIInputListener(bool abX)", SomaBind::GenericMethod<(+[](iWidget *o, bool a0) { o->SetGlobalUIInputListener(a0); })>},
+		{"iWidget", "bool IsGlobalUIInputListener()", SomaBind::GenericMethod<(+[](iWidget *o) -> bool { return o->IsGlobalUIInputListener(); })>},
+		{NULL, "void cEngine_Exit()", SomaBind::GenericFunc<(+[]() { gpSomaBase->mpEngine->Exit(); })>},
+		{NULL, "void cEngine_ResetLogicTimer()", SomaBind::GenericFunc<(+[]() { gpSomaBase->mpEngine->ResetLogicTimer(); })>},
+		{NULL, "void cEngine_SetUpdatesPerSec(int alUpdatesPerSec)", SomaBind::GenericFunc<(+[](int a0) { gpSomaBase->mpEngine->SetUpdatesPerSec(a0); })>},
+		{NULL, "int cEngine_GetUpdatesPerSec()", SomaBind::GenericFunc<(+[]() -> int { return gpSomaBase->mpEngine->GetUpdatesPerSec(); })>},
+		{NULL, "float cEngine_GetStepSize()", SomaBind::GenericFunc<(+[]() -> float { return gpSomaBase->mpEngine->GetStepSize(); })>},
+		{NULL, "float cEngine_GetFPS()", SomaBind::GenericFunc<(+[]() -> float { return gpSomaBase->mpEngine->GetFPS(); })>},
+		{NULL, "float cEngine_GetAvgFrameTimeInMS()", SomaBind::GenericFunc<(+[]() -> float { return gpSomaBase->mpEngine->GetAvgFrameTimeInMS(); })>},
+		{NULL, "void cEngine_SetFPSUpdateRate(float afSec)", SomaBind::GenericFunc<(+[](float a0) { gpSomaBase->mpEngine->SetFPSUpdateRate(a0); })>},
+		{NULL, "float cEngine_GetFPSUpdateRate()", SomaBind::GenericFunc<(+[]() -> float { return gpSomaBase->mpEngine->GetFPSUpdateRate(); })>},
+		{NULL, "float cEngine_GetFrameTime()", SomaBind::GenericFunc<(+[]() -> float { return gpSomaBase->mpEngine->GetFrameTime(); })>},
+		{NULL, "double cEngine_GetGameTime()", SomaBind::GenericFunc<(+[]() -> double { return gpSomaBase->mpEngine->GetGameTime(); })>},
+		{NULL, "void cEngine_SetLimitFPS(bool abX)", SomaBind::GenericFunc<(+[](bool a0) { gpSomaBase->mpEngine->SetLimitFPS(a0); })>},
+		{NULL, "bool cEngine_GetLimitFPS()", SomaBind::GenericFunc<(+[]() -> bool { return gpSomaBase->mpEngine->GetLimitFPS(); })>},
+		{NULL, "void cEngine_SetWaitIfAppOutOfFocus(bool abX)", SomaBind::GenericFunc<(+[](bool a0) { gpSomaBase->mpEngine->SetWaitIfAppOutOfFocus(a0); })>},
+		{NULL, "bool cEngine_GetWaitIfAppOutOfFocus()", SomaBind::GenericFunc<(+[]() -> bool { return gpSomaBase->mpEngine->GetWaitIfAppOutOfFocus(); })>},
+		{NULL, "void cScene_Reset()", SomaBind::GenericFunc<(+[]() { gpSomaBase->mpEngine->GetScene()->Reset(); })>},
+		{NULL, "cViewport@ cScene_CreateViewport(cCamera @apCamera, cWorld @apWorld, bool abAddLast)", SomaBind::GenericFunc<(+[](cCamera * a0, cWorld * a1, bool a2) -> cViewport * { return gpSomaBase->mpEngine->GetScene()->CreateViewport(a0, a1, a2); })>},
+		{NULL, "void cScene_DestroyViewport(cViewport@ apViewPort)", SomaBind::GenericFunc<(+[](cViewport * a0) { gpSomaBase->mpEngine->GetScene()->DestroyViewport(a0); })>},
+		{NULL, "bool cScene_ViewportExists(cViewport@ apViewPort)", SomaBind::GenericFunc<(+[](cViewport * a0) -> bool { return gpSomaBase->mpEngine->GetScene()->ViewportExists(a0); })>},
+		{NULL, "void cScene_SetCurrentListener(cViewport@ apViewPort)", SomaBind::GenericFunc<(+[](cViewport * a0) { gpSomaBase->mpEngine->GetScene()->SetCurrentListener(a0); })>},
+		{NULL, "cCamera@ cScene_CreateCamera(eCameraMoveMode aMoveMode)", SomaBind::GenericFunc<(+[](int a0) -> cCamera * { return gpSomaBase->mpEngine->GetScene()->CreateCamera((eCameraMoveMode)a0); })>},
+		{NULL, "void cScene_DestroyCamera(cCamera@ apCam)", SomaBind::GenericFunc<(+[](cCamera * a0) { gpSomaBase->mpEngine->GetScene()->DestroyCamera(a0); })>},
+		{NULL, "cWorld@ cScene_LoadWorld(const tString&in asFile, int aFlags)", SomaBind::GenericFunc<(+[](const tString & a0, int a1) -> cWorld * { return gpSomaBase->mpEngine->GetScene()->LoadWorld(a0, a1); })>},
+		{NULL, "cWorld@ cScene_CreateWorld(const tString&in asName)", SomaBind::GenericFunc<(+[](const tString & a0) -> cWorld * { return gpSomaBase->mpEngine->GetScene()->CreateWorld(a0); })>},
+		{NULL, "void cScene_DestroyWorld(cWorld@ apWorld)", SomaBind::GenericFunc<(+[](cWorld * a0) { gpSomaBase->mpEngine->GetScene()->DestroyWorld(a0); })>},
+		{NULL, "void cScene_WorldExists(cWorld@ apWorld)", SomaBind::GenericFunc<(+[](cWorld * a0) { gpSomaBase->mpEngine->GetScene()->WorldExists(a0); })>},
+		{NULL, "cAction@ cInput_CreateAction(const tString&in asName, int alId)", SomaBind::GenericFunc<(+[](const tString & a0, int a1) -> cAction * { return gpSomaBase->mpEngine->GetInput()->CreateAction(a0, a1); })>},
+		{NULL, "void cInput_DestroyAction(cAction @apAction)", SomaBind::GenericFunc<(+[](cAction * a0) { gpSomaBase->mpEngine->GetInput()->DestroyAction(a0); })>},
+		{NULL, "void cInput_Update(float afX)", SomaBind::GenericFunc<(+[](float a0) { gpSomaBase->mpEngine->GetInput()->Update(a0); })>},
+		{NULL, "bool cInput_CheckForInput()", SomaBind::GenericFunc<(+[]() -> bool { return gpSomaBase->mpEngine->GetInput()->CheckForInput(); })>},
+		{NULL, "bool cInput_IsTriggered(const tString&in asName)", SomaBind::GenericFunc<(+[](const tString & a0) -> bool { return gpSomaBase->mpEngine->GetInput()->IsTriggerd(a0); })>},
+		{NULL, "bool cInput_IsTriggered(int alId)", SomaBind::GenericFunc<(+[](int a0) -> bool { return gpSomaBase->mpEngine->GetInput()->IsTriggerd(a0); })>},
+		{NULL, "bool cInput_WasTriggered(const tString&in asName)", SomaBind::GenericFunc<(+[](const tString & a0) -> bool { return gpSomaBase->mpEngine->GetInput()->WasTriggerd(a0); })>},
+		{NULL, "bool cInput_WasTriggered(int alId)", SomaBind::GenericFunc<(+[](int a0) -> bool { return gpSomaBase->mpEngine->GetInput()->WasTriggerd(a0); })>},
+		{NULL, "bool cInput_BecameTriggered(const tString&in asName)", SomaBind::GenericFunc<(+[](const tString & a0) -> bool { return gpSomaBase->mpEngine->GetInput()->BecameTriggerd(a0); })>},
+		{NULL, "bool cInput_BecameTriggered(int alId)", SomaBind::GenericFunc<(+[](int a0) -> bool { return gpSomaBase->mpEngine->GetInput()->BecameTriggerd(a0); })>},
+		{NULL, "bool cInput_DoubleTriggered(const tString&in asName, float afLimit)", SomaBind::GenericFunc<(+[](const tString & a0, float a1) -> bool { return gpSomaBase->mpEngine->GetInput()->DoubleTriggerd(a0, a1); })>},
+		{NULL, "bool cInput_DoubleTriggered(int alId, float afLimit)", SomaBind::GenericFunc<(+[](int a0, float a1) -> bool { return gpSomaBase->mpEngine->GetInput()->DoubleTriggerd(a0, a1); })>},
+		{NULL, "iKeyboard@ cInput_GetKeyboard()", SomaBind::GenericFunc<(+[]() -> iKeyboard * { return gpSomaBase->mpEngine->GetInput()->GetKeyboard(); })>},
+		{NULL, "iMouse@ cInput_GetMouse()", SomaBind::GenericFunc<(+[]() -> iMouse * { return gpSomaBase->mpEngine->GetInput()->GetMouse(); })>},
+		{NULL, "cAction@ cInput_GetAction(const tString&in asName)", SomaBind::GenericFunc<(+[](const tString & a0) -> cAction * { return gpSomaBase->mpEngine->GetInput()->GetAction(a0); })>},
+		{NULL, "cAction@ cInput_GetAction(int alId)", SomaBind::GenericFunc<(+[](int a0) -> cAction * { return gpSomaBase->mpEngine->GetInput()->GetAction(a0); })>},
+		{NULL, "void cInput_ResetActionsToCurrentState()", SomaBind::GenericFunc<(+[]() { gpSomaBase->mpEngine->GetInput()->ResetActionsToCurrentState(); })>},
+		{NULL, "bool cResources_AddResourceDir(const tWString &in asDir, bool abAddSubDirectories, const tString &in asMask)", SomaBind::GenericFunc<(+[](const tWString & a0, bool a1, const tString & a2) -> bool { return gpSomaBase->mpEngine->GetResources()->AddResourceDir(a0, a1, a2); })>},
+		{NULL, "void cResources_ClearResourceDirs()", SomaBind::GenericFunc<(+[]() { gpSomaBase->mpEngine->GetResources()->ClearResourceDirs(); })>},
+		{NULL, "bool cResources_AddLanguageFile(const tString &in asFilePath, bool abAddResourceDirs)", SomaBind::GenericFunc<(+[](const tString & a0, bool a1) -> bool { return gpSomaBase->mpEngine->GetResources()->AddLanguageFile(a0, a1); })>},
+		{NULL, "void cResources_ClearTranslations()", SomaBind::GenericFunc<(+[]() { gpSomaBase->mpEngine->GetResources()->ClearTranslations(); })>},
+		{NULL, "const tWString& cResources_Translate(const tString&in asCat, const tString&in asName)", SomaBind::GenericFunc<(+[](const tString & a0, const tString & a1) -> const tWString & { return gpSomaBase->mpEngine->GetResources()->Translate(a0, a1); })>},
+		{NULL, "bool cResources_LoadResourceDirsFile(const tString &in asFile)", SomaBind::GenericFunc<(+[](const tString & a0) -> bool { return gpSomaBase->mpEngine->GetResources()->LoadResourceDirsFile(a0); })>},
+		{NULL, "iPhysicsWorld@ cPhysics_CreateWorld(bool abAddSurfaceData)", SomaBind::GenericFunc<(+[](bool a0) -> iPhysicsWorld * { return gpSomaBase->mpEngine->GetPhysics()->CreateWorld(a0); })>},
+		{NULL, "void cPhysics_DestroyWorld(iPhysicsWorld@ apWorld)", SomaBind::GenericFunc<(+[](iPhysicsWorld * a0) { gpSomaBase->mpEngine->GetPhysics()->DestroyWorld(a0); })>},
+		{NULL, "void cPhysics_SetImpactDuration(float afX)", SomaBind::GenericFunc<(+[](float a0) { gpSomaBase->mpEngine->GetPhysics()->SetImpactDuration(a0); })>},
+		{NULL, "float cPhysics_GetImpactDuration()", SomaBind::GenericFunc<(+[]() -> float { return gpSomaBase->mpEngine->GetPhysics()->GetImpactDuration(); })>},
+		{NULL, "void cPhysics_SetMaxImpacts(int alX)", SomaBind::GenericFunc<(+[](int a0) { gpSomaBase->mpEngine->GetPhysics()->SetMaxImpacts(a0); })>},
+		{NULL, "int cPhysics_GetMaxImpacts()", SomaBind::GenericFunc<(+[]() -> int { return gpSomaBase->mpEngine->GetPhysics()->GetMaxImpacts(); })>},
+		{NULL, "iLowLevelGraphics@ cGraphics_GetLowLevel()", SomaBind::GenericFunc<(+[]() -> iLowLevelGraphics * { return gpSomaBase->mpEngine->GetGraphics()->GetLowLevel(); })>},
+		{NULL, "void cGraphics_ReloadRendererData()", SomaBind::GenericFunc<(+[]() { gpSomaBase->mpEngine->GetGraphics()->ReloadRendererData(); })>},
+		{NULL, "iTexture@ cGraphics_CreateTexture(const tString &in asName,eTextureType aType, eTextureUsage aUsage)", SomaBind::GenericFunc<(+[](const tString & a0, int a1, int a2) -> iTexture * { return gpSomaBase->mpEngine->GetGraphics()->CreateTexture(a0, (eTextureType)a1, (eTextureUsage)a2); })>},
+		{NULL, "void cGraphics_DestroyTexture(iTexture@ apTexture)", SomaBind::GenericFunc<(+[](iTexture * a0) { gpSomaBase->mpEngine->GetGraphics()->DestroyTexture(a0); })>},
+		{NULL, "cPostEffectComposite@ cGraphics_CreatePostEffectComposite()", SomaBind::GenericFunc<(+[]() -> cPostEffectComposite * { return gpSomaBase->mpEngine->GetGraphics()->CreatePostEffectComposite(); })>},
+		{NULL, "void cGraphics_DestroyPostEffectComposite(cPostEffectComposite@ apComposite)", SomaBind::GenericFunc<(+[](cPostEffectComposite * a0) { gpSomaBase->mpEngine->GetGraphics()->DestroyPostEffectComposite(a0); })>},
+		{NULL, "void cGraphics_ReloadMaterials()", SomaBind::GenericFunc<(+[]() { gpSomaBase->mpEngine->GetGraphics()->ReloadMaterials(); })>},
+		{NULL, "cGuiSkin@ cGui_CreateSkin(const tString&in asFile)", SomaBind::GenericFunc<(+[](const tString & a0) -> cGuiSkin * { return gpSomaBase->mpEngine->GetGui()->CreateSkin(a0); })>},
+		{NULL, "cGuiSet@ cGui_CreateSet(const tString&in asName, cGuiSkin @apSkin)", SomaBind::GenericFunc<(+[](const tString & a0, cGuiSkin * a1) -> cGuiSet * { return gpSomaBase->mpEngine->GetGui()->CreateSet(a0, a1); })>},
+		{NULL, "cGuiSet@ cGui_GetSetFromName(const tString&in asName)", SomaBind::GenericFunc<(+[](const tString & a0) -> cGuiSet * { return gpSomaBase->mpEngine->GetGui()->GetSetFromName(a0); })>},
+		{NULL, "void cGui_SetFocus(cGuiSet@ apSet)", SomaBind::GenericFunc<(+[](cGuiSet * a0) { gpSomaBase->mpEngine->GetGui()->SetFocus(a0); })>},
+		{NULL, "void cGui_SetFocusByName(const tString&in asSetName)", SomaBind::GenericFunc<(+[](const tString & a0) { gpSomaBase->mpEngine->GetGui()->SetFocusByName(a0); })>},
+		{NULL, "cGuiSet@ cGui_GetFocusedSet()", SomaBind::GenericFunc<(+[]() -> cGuiSet * { return gpSomaBase->mpEngine->GetGui()->GetFocusedSet(); })>},
+		{NULL, "void cGui_DestroySet(cGuiSet @apSet)", SomaBind::GenericFunc<(+[](cGuiSet * a0) { gpSomaBase->mpEngine->GetGui()->DestroySet(a0); })>},
+		{NULL, "cGuiGfxElement@ cGui_CreateGfxFilledRect(const cColor&in aColor, eGuiMaterial aMaterial)", SomaBind::GenericFunc<(+[](const cColor & a0, int a1) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxFilledRect(a0, (eGuiMaterial)a1); })>},
+		{NULL, "cGuiGfxElement@ cGui_CreateGfxImage(const tString &in asFile,eGuiMaterial aMaterial)", SomaBind::GenericFunc<(+[](const tString & a0, int a1) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxImage(a0, (eGuiMaterial)a1); })>},
+		{NULL, "cGuiGfxElement@ cGui_CreateGfxImage(const tString &in asFile,eGuiMaterial aMaterial, const cColor&in aColor)", SomaBind::GenericFunc<(+[](const tString & a0, int a1, const cColor & a2) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxImage(a0, (eGuiMaterial)a1, a2); })>},
+		{NULL, "cGuiGfxElement@ cGui_CreateGfxTexture(const tString &in asFile,eGuiMaterial aMaterial, eTextureType aTextureType)", SomaBind::GenericFunc<(+[](const tString & a0, int a1, int a2) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxTexture(a0, (eGuiMaterial)a1, (eTextureType)a2); })>},
+		{NULL, "cGuiGfxElement@ cGui_CreateGfxTexture(const tString &in asFile,eGuiMaterial aMaterial, eTextureType aTextureType, const cColor&in aColor, bool abMipMaps)", SomaBind::GenericFunc<(+[](const tString & a0, int a1, int a2, const cColor & a3, bool a4) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxTexture(a0, (eGuiMaterial)a1, (eTextureType)a2, a3, a4); })>},
+		{NULL, "cGuiGfxElement@ cGui_CreateGfxTexture(iTexture @apTexture, bool abAutoDestroyTexture, eGuiMaterial aMaterial)", SomaBind::GenericFunc<(+[](iTexture * a0, bool a1, int a2) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxTexture(a0, a1, (eGuiMaterial)a2); })>},
+		{NULL, "cGuiGfxElement@ cGui_CreateGfxImageBuffer(const tString &in asFile,eGuiMaterial aMaterial, bool abCreateAnimation, const cColor&in aColor)", SomaBind::GenericFunc<(+[](const tString & a0, int a1, bool a2, const cColor & a3) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxImageBuffer(a0, (eGuiMaterial)a1, a2, a3); })>},
+		{NULL, "void cGui_DestroyGfx(cGuiGfxElement@ apGfx)", SomaBind::GenericFunc<(+[](cGuiGfxElement * a0) { gpSomaBase->mpEngine->GetGui()->DestroyGfx(a0); })>},
+		{NULL, "int cMath_RandRectl(int alMin, int alMax)", SomaBind::GenericFunc<(+[](int a0, int a1) -> int { return cMath::RandRectl(a0, a1); })>},
+		{NULL, "float cMath_RandRectf(float alMin, float alMax)", SomaBind::GenericFunc<(+[](float a0, float a1) -> float { return cMath::RandRectf(a0, a1); })>},
+		{NULL, "cVector2f cMath_RandRectVector2f(const cVector2f &in avMin,const cVector2f &in avMax)", SomaBind::GenericFunc<(+[](const cVector2f & a0, const cVector2f & a1) -> cVector2f { return cMath::RandRectVector2f(a0, a1); })>},
+		{NULL, "cVector3f cMath_RandRectVector3f(const cVector3f &in avMin,const cVector3f &in avMax)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::RandRectVector3f(a0, a1); })>},
+		{NULL, "cColor cMath_RandRectColor(const cColor &in aMin,const cColor &in aMax)", SomaBind::GenericFunc<(+[](const cColor & a0, const cColor & a1) -> cColor { return cMath::RandRectColor(a0, a1); })>},
+		{NULL, "void cMath_Randomize(int alSeed)", SomaBind::GenericFunc<(+[](int a0) { cMath::Randomize(a0); })>},
+		{NULL, "float cMath_FastRandomFloat(int alSeed)", SomaBind::GenericFunc<(+[](int a0) -> float { return cMath::FastRandomFloat(a0); })>},
+		{NULL, "bool cMath_CheckRectIntersection(const cRect2l&in aRect1, const cRect2l&in aRect2)", SomaBind::GenericFunc<(+[](const cRect2l & a0, const cRect2l & a1) -> bool { return cMath::CheckRectIntersection(a0, a1); })>},
+		{NULL, "bool cMath_CheckRectIntersection(const cRect2f&in aRect1, const cRect2f&in aRect2)", SomaBind::GenericFunc<(+[](const cRect2f & a0, const cRect2f & a1) -> bool { return cMath::CheckRectIntersection(a0, a1); })>},
+		{NULL, "bool cMath_CheckPointInRectIntersection(const cVector2f&in avPoint, const cRect2f&in aRect)", SomaBind::GenericFunc<(+[](const cVector2f & a0, const cRect2f & a1) -> bool { return cMath::CheckPointInRectIntersection(a0, a1); })>},
+		{NULL, "bool cMath_CheckRectFit(const cRect2l&in aRectSrc, const cRect2l&in aRectDest)", SomaBind::GenericFunc<(+[](const cRect2l & a0, const cRect2l & a1) -> bool { return cMath::CheckRectFit(a0, a1); })>},
+		{NULL, "bool cMath_CheckRectFit(const cRect2f&in aRectSrc, const cRect2f&in aRectDest)", SomaBind::GenericFunc<(+[](const cRect2f & a0, const cRect2f & a1) -> bool { return cMath::CheckRectFit(a0, a1); })>},
+		{NULL, "cRect2f cMath_GetClipRect(const cRect2f&in aRectSrc,const cRect2f&in aRectDest)", SomaBind::GenericFunc<(+[](const cRect2f & a0, const cRect2f & a1) -> cRect2f { return cMath::GetClipRect(a0, a1); })>},
+		{NULL, "bool cMath_CheckPointInSphereIntersection(const cVector3f&in avPoint, const cVector3f&in avSpherePos, float afSphereRadius)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1, float a2) -> bool { return cMath::CheckPointInSphereIntersection(a0, a1, a2); })>},
+		{NULL, "bool cMath_CheckSphereIntersection(const cVector3f&in avPosA, float afRadiusA,const cVector3f&in avPosB, float afRadiusB)", SomaBind::GenericFunc<(+[](const cVector3f & a0, float a1, const cVector3f & a2, float a3) -> bool { return cMath::CheckSphereIntersection(a0, a1, a2, a3); })>},
+		{NULL, "bool cMath_CheckAABBIntersection( const cVector3f&in avMin1,const cVector3f&in avMax1, const cVector3f&in avMin2,const cVector3f&in avMax2)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1, const cVector3f & a2, const cVector3f & a3) -> bool { return cMath::CheckAABBIntersection(a0, a1, a2, a3); })>},
+		{NULL, "bool cMath_CheckAABBInside(const cVector3f&in avInsideMin, const cVector3f&in avInsideMax, const cVector3f&in avOutsideMin,const cVector3f&in avOutsideMax)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1, const cVector3f & a2, const cVector3f & a3) -> bool { return cMath::CheckAABBInside(a0, a1, a2, a3); })>},
+		{NULL, "bool cMath_CheckPointInAABBIntersection(const cVector3f&in avPoint, const cVector3f&in avMin,const cVector3f&in avMax)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1, const cVector3f & a2) -> bool { return cMath::CheckPointInAABBIntersection(a0, a1, a2); })>},
+		{NULL, "cRect2l cMath_GetClipRectFromNormalizedMinMax(const cVector3f&in avMin, const cVector3f&in avMax, const cVector2l &in avScreenSize)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1, const cVector2l & a2) -> cRect2l { return cMath::GetClipRectFromNormalizedMinMax(a0, a1, a2); })>},
+		{NULL, "int cMath_RoundToInt(float afVal)", SomaBind::GenericFunc<(+[](float a0) -> int { return cMath::RoundToInt(a0); })>},
+		{NULL, "cVector2l cMath_RoundToInt(const cVector2f&in avX)", SomaBind::GenericFunc<(+[](const cVector2f & a0) -> cVector2l { return cMath::RoundToInt(a0); })>},
+		{NULL, "cVector3l cMath_RoundToInt(const cVector3f&in avX)", SomaBind::GenericFunc<(+[](const cVector3f & a0) -> cVector3l { return cMath::RoundToInt(a0); })>},
+		{NULL, "float cMath_RoundFloatToDecimals(float afVal, int alPrecision)", SomaBind::GenericFunc<(+[](float a0, int a1) -> float { return cMath::RoundFloatToDecimals(a0, a1); })>},
+		{NULL, "float cMath_GetFraction(float afVal)", SomaBind::GenericFunc<(+[](float a0) -> float { return cMath::GetFraction(a0); })>},
+		{NULL, "float cMath_Modulus(float afDividend, float afDivisor)", SomaBind::GenericFunc<(+[](float a0, float a1) -> float { return cMath::Modulus(a0, a1); })>},
+		{NULL, "float cMath_ToRad(float afAngle)", SomaBind::GenericFunc<(+[](float a0) -> float { return cMath::ToRad(a0); })>},
+		{NULL, "float cMath_ToDeg(float afAngle)", SomaBind::GenericFunc<(+[](float a0) -> float { return cMath::ToDeg(a0); })>},
+		{NULL, "int cMath_Log2ToInt(int alX)", SomaBind::GenericFunc<(+[](int a0) -> int { return cMath::Log2ToInt(a0); })>},
+		{NULL, "int cMath_Pow2(int alX)", SomaBind::GenericFunc<(+[](int a0) -> int { return cMath::Pow2(a0); })>},
+		{NULL, "bool cMath_IsPow2(int alX)", SomaBind::GenericFunc<(+[](int a0) -> bool { return cMath::IsPow2(a0); })>},
+		{NULL, "float cMath_Wrap(float afX, float afMin, float afMax)", SomaBind::GenericFunc<(+[](float a0, float a1, float a2) -> float { return cMath::Wrap(a0, a1, a2); })>},
+		{NULL, "float cMath_Clamp(float afX, float afMin, float afMax)", SomaBind::GenericFunc<(+[](float a0, float a1, float a2) -> float { return cMath::Clamp(a0, a1, a2); })>},
+		{NULL, "int cMath_Clamp(int alX, int alMin, int alMax)", SomaBind::GenericFunc<(+[](int a0, int a1, int a2) -> int { return cMath::Clamp(a0, a1, a2); })>},
+		{NULL, "float cMath_Max(float afX,float afY)", SomaBind::GenericFunc<(+[](float a0, float a1) -> float { return cMath::Max(a0, a1); })>},
+		{NULL, "float cMath_Min(float afX,float afY)", SomaBind::GenericFunc<(+[](float a0, float a1) -> float { return cMath::Min(a0, a1); })>},
+		{NULL, "int cMath_Max(int alX,int alY)", SomaBind::GenericFunc<(+[](int a0, int a1) -> int { return cMath::Max(a0, a1); })>},
+		{NULL, "int cMath_Min(int alX,int alY)", SomaBind::GenericFunc<(+[](int a0, int a1) -> int { return cMath::Min(a0, a1); })>},
+		{NULL, "float cMath_Abs(float afX)", SomaBind::GenericFunc<(+[](float a0) -> float { return cMath::Abs(a0); })>},
+		{NULL, "int cMath_Abs(int alX)", SomaBind::GenericFunc<(+[](int a0) -> int { return cMath::Abs(a0); })>},
+		{NULL, "float cMath_Sign(float afX)", SomaBind::GenericFunc<(+[](float a0) -> float { return cMath::Sign(a0); })>},
+		{NULL, "int cMath_Sign(int alX)", SomaBind::GenericFunc<(+[](int a0) -> int { return cMath::Sign(a0); })>},
+		{NULL, "float cMath_GetAngleDistance(float afAngle1, float afAngle2, float afMaxAngle)", SomaBind::GenericFunc<(+[](float a0, float a1, float a2) -> float { return cMath::GetAngleDistance(a0, a1, a2); })>},
+		{NULL, "float cMath_GetAngleDistanceRad(float afAngle1, float afAngle2)", SomaBind::GenericFunc<(+[](float a0, float a1) -> float { return cMath::GetAngleDistanceRad(a0, a1); })>},
+		{NULL, "float cMath_GetAngleDistanceDeg(float afAngle1, float afAngle2)", SomaBind::GenericFunc<(+[](float a0, float a1) -> float { return cMath::GetAngleDistanceDeg(a0, a1); })>},
+		{NULL, "float cMath_TurnAngle(float afAngle,float afFinalAngle,float afSpeed,float afMaxAngle)", SomaBind::GenericFunc<(+[](float a0, float a1, float a2, float a3) -> float { return cMath::TurnAngle(a0, a1, a2, a3); })>},
+		{NULL, "float cMath_TurnAngleRad(float afAngle,float afFinalAngle,float afSpeed)", SomaBind::GenericFunc<(+[](float a0, float a1, float a2) -> float { return cMath::TurnAngleRad(a0, a1, a2); })>},
+		{NULL, "float cMath_TurnAngleDeg(float afAngle,float afFinalAngle,float afSpeed)", SomaBind::GenericFunc<(+[](float a0, float a1, float a2) -> float { return cMath::TurnAngleDeg(a0, a1, a2); })>},
+		{NULL, "float cMath_GetCorrectSignOfSpeed(float afCurrent, float afDest, float afSpeed)", SomaBind::GenericFunc<(+[](float a0, float a1, float a2) -> float { return cMath::GetCorrectSignOfSpeed(a0, a1, a2); })>},
+		{NULL, "float cMath_IncreaseTo(float afX, float afAdd, float afDest)", SomaBind::GenericFunc<(+[](float a0, float a1, float a2) -> float { return cMath::IncreaseTo(a0, a1, a2); })>},
+		{NULL, "float cMath_Vector2Dist(const cVector2f &in avPosA,const cVector2f &in avPosB)", SomaBind::GenericFunc<(+[](const cVector2f & a0, const cVector2f & a1) -> float { return cMath::Vector2Dist(a0, a1); })>},
+		{NULL, "float cMath_Vector2DistXY(const cVector3f &in avPosA,const cVector3f &in avPosB)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector2DistXY(a0, a1); })>},
+		{NULL, "float cMath_Vector2DistXZ(const cVector3f &in avPosA,const cVector3f &in avPosB)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector2DistXZ(a0, a1); })>},
+		{NULL, "float cMath_Vector2DistSqr(const cVector2f &in avPosA,const cVector2f &in avPosB)", SomaBind::GenericFunc<(+[](const cVector2f & a0, const cVector2f & a1) -> float { return cMath::Vector2DistSqr(a0, a1); })>},
+		{NULL, "float cMath_Vector2DistSqrXY(const cVector3f &in avPosA,const cVector3f &in avPosB)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector2DistSqrXY(a0, a1); })>},
+		{NULL, "float cMath_Vector2DistSqrXZ(const cVector3f &in avPosA,const cVector3f &in avPosB)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector2DistSqrXZ(a0, a1); })>},
+		{NULL, "cVector2f cMath_Vector2IncreaseTo(const cVector2f&in avX, const cVector2f&in avAdd, const cVector2f&in avDest)", SomaBind::GenericFunc<(+[](const cVector2f & a0, const cVector2f & a1, const cVector2f & a2) -> cVector2f { return cMath::Vector2IncreaseTo(a0, a1, a2); })>},
+		{NULL, "float cMath_GetAngleFromPoints2D(const cVector2f &in aStartPos, const cVector2f &in avGoalPos)", SomaBind::GenericFunc<(+[](const cVector2f & a0, const cVector2f & a1) -> float { return cMath::GetAngleFromPoints2D(a0, a1); })>},
+		{NULL, "cVector2f cMath_GetVectorFromAngle2D(float afAngle, float afLength)", SomaBind::GenericFunc<(+[](float a0, float a1) -> cVector2f { return cMath::GetVectorFromAngle2D(a0, a1); })>},
+		{NULL, "cVector2f cMath_ProjectVector2D(const cVector2f &in avSrcVec, const cVector2f &in avDestVec)", SomaBind::GenericFunc<(+[](const cVector2f & a0, const cVector2f & a1) -> cVector2f { return cMath::ProjectVector2D(a0, a1); })>},
+		{NULL, "cVector2f cMath_Vector2Floor(const cVector2f &in avVec)", SomaBind::GenericFunc<(+[](const cVector2f & a0) -> cVector2f { return cMath::Vector2Floor(a0); })>},
+		{NULL, "cVector2f cMath_Vector2Ceil(const cVector2f &in avVec)", SomaBind::GenericFunc<(+[](const cVector2f & a0) -> cVector2f { return cMath::Vector2Ceil(a0); })>},
+		{NULL, "cVector2f cMath_Vector2Abs(const cVector2f &in avVec)", SomaBind::GenericFunc<(+[](const cVector2f & a0) -> cVector2f { return cMath::Vector2Abs(a0); })>},
+		{NULL, "cVector2f cMath_Vector2Min(const cVector2f &in avVecA, const cVector2f &in avVecB)", SomaBind::GenericFunc<(+[](const cVector2f & a0, const cVector2f & a1) -> cVector2f { return cMath::Vector2Min(a0, a1); })>},
+		{NULL, "cVector2f cMath_Vector2Max(const cVector2f &in avVecA, const cVector2f &in avVecB)", SomaBind::GenericFunc<(+[](const cVector2f & a0, const cVector2f & a1) -> cVector2f { return cMath::Vector2Max(a0, a1); })>},
+		{NULL, "cVector2f cMath_Vector2Normalize(const cVector2f &in avVec)", SomaBind::GenericFunc<(+[](const cVector2f & a0) -> cVector2f { return cMath::Vector2Normalize(a0); })>},
+		{NULL, "cVector2f cMath_Vector2ToRad(const cVector2f &in avVec)", SomaBind::GenericFunc<(+[](const cVector2f & a0) -> cVector2f { return cMath::Vector2ToRad(a0); })>},
+		{NULL, "cVector2f cMath_Vector2ToDeg(const cVector2f &in avVec)", SomaBind::GenericFunc<(+[](const cVector2f & a0) -> cVector2f { return cMath::Vector2ToDeg(a0); })>},
+		{NULL, "cVector3f cMath_Vector3MaxLength(const cVector3f &in avVec, float afMaxLength)", SomaBind::GenericFunc<(+[](const cVector3f & a0, float a1) -> cVector3f { return cMath::Vector3MaxLength(a0, a1); })>},
+		{NULL, "cVector3f cMath_Vector3MinLength(const cVector3f &in avVec, float afMinLength)", SomaBind::GenericFunc<(+[](const cVector3f & a0, float a1) -> cVector3f { return cMath::Vector3MinLength(a0, a1); })>},
+		{NULL, "cVector3f cMath_Vector3ClampLength(const cVector3f &in avVec,float afMinLength, float afMaxLength)", SomaBind::GenericFunc<(+[](const cVector3f & a0, float a1, float a2) -> cVector3f { return cMath::Vector3ClampLength(a0, a1, a2); })>},
+		{NULL, "cVector3f cMath_Vector3ToRad(const cVector3f &in avVec)", SomaBind::GenericFunc<(+[](const cVector3f & a0) -> cVector3f { return cMath::Vector3ToRad(a0); })>},
+		{NULL, "cVector3f cMath_Vector3ToDeg(const cVector3f &in avVec)", SomaBind::GenericFunc<(+[](const cVector3f & a0) -> cVector3f { return cMath::Vector3ToDeg(a0); })>},
+		{NULL, "cVector3f cMath_Vector3AngleDistance(const cVector3f &in avAngles1, const cVector3f &in avAngles2, float afMaxAngle)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1, float a2) -> cVector3f { return cMath::Vector3AngleDistance(a0, a1, a2); })>},
+		{NULL, "cVector3f cMath_Vector3AngleDistanceRad(const cVector3f &in avAngles1, const cVector3f &in avAngles2)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3AngleDistanceRad(a0, a1); })>},
+		{NULL, "cVector3f cMath_Vector3AngleDistanceDeg(const cVector3f &in avAngles1, const cVector3f &in avAngles2)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3AngleDistanceDeg(a0, a1); })>},
+		{NULL, "cVector3f cMath_Vector3Floor(const cVector3f &in avVec)", SomaBind::GenericFunc<(+[](const cVector3f & a0) -> cVector3f { return cMath::Vector3Floor(a0); })>},
+		{NULL, "cVector3f cMath_Vector3Ceil(const cVector3f &in avVec)", SomaBind::GenericFunc<(+[](const cVector3f & a0) -> cVector3f { return cMath::Vector3Ceil(a0); })>},
+		{NULL, "cVector3f cMath_Vector3Abs(const cVector3f &in avVec)", SomaBind::GenericFunc<(+[](const cVector3f & a0) -> cVector3f { return cMath::Vector3Abs(a0); })>},
+		{NULL, "cVector3f cMath_Vector3Min(const cVector3f &in avVecA, const cVector3f &in avVecB)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3Min(a0, a1); })>},
+		{NULL, "cVector3f cMath_Vector3Max(const cVector3f &in avVecA, const cVector3f &in avVecB)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3Max(a0, a1); })>},
+		{NULL, "cVector3f cMath_Vector3Normalize(const cVector3f &in avVec)", SomaBind::GenericFunc<(+[](const cVector3f & a0) -> cVector3f { return cMath::Vector3Normalize(a0); })>},
+		{NULL, "float cMath_Vector3DistSqr(const cVector3f &in avStartPos, const cVector3f &in avEndPos)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector3DistSqr(a0, a1); })>},
+		{NULL, "float cMath_Vector3Dist(const cVector3f &in avStartPos, const cVector3f &in avEndPos)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector3Dist(a0, a1); })>},
+		{NULL, "cVector3f cMath_GetAngleFromPoints3D(const cVector3f &in avStartPos, const cVector3f &in avGoalPos)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::GetAngleFromPoints3D(a0, a1); })>},
+		{NULL, "cVector3f cMath_Vector3Cross(const cVector3f&in avVecA,const cVector3f&in avVecB)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3Cross(a0, a1); })>},
+		{NULL, "float cMath_Vector3Dot(const cVector3f&in avVecA,const cVector3f&in avVecB)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector3Dot(a0, a1); })>},
+		{NULL, "cVector3f cMath_Vector3Project(const cVector3f &in avSrcVec, const cVector3f &in avDestVec)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3Project(a0, a1); })>},
+		{NULL, "cVector3f cMath_Vector3Reflect(const cVector3f &in avVec, const cVector3f &in avNormal)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3Reflect(a0, a1); })>},
+		{NULL, "float cMath_Vector3Angle(const cVector3f&in avVecA,const cVector3f&in avVecB)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector3Angle(a0, a1); })>},
+		{NULL, "cVector3f cMath_Vector3UnProject(const cVector3f&in avVec, const cRect2f &in aScreenRect, const cMatrixf&in a_mtxViewProj)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cRect2f & a1, const cMatrixf & a2) -> cVector3f { return cMath::Vector3UnProject(a0, a1, a2); })>},
+		{NULL, "void cMath_Vector3ClampToLength(cVector3f&in avVec, float afMaxLength)", SomaBind::GenericFunc<(+[](cVector3f & a0, float a1) { cMath::Vector3ClampToLength(a0, a1); })>},
+		{NULL, "void cMath_Vector3OrthonormalizeBasis(const cVector3f&in avSrcRight, const cVector3f&in avSrcUp, const cVector3f&in avSrcForward, cVector3f&out avDstRight, cVector3f&out avDstUp, cVector3f&out avDstForward)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1, const cVector3f & a2, cVector3f & a3, cVector3f & a4, cVector3f & a5) { cMath::Vector3OrthonormalizeBasis(a0, a1, a2, a3, a4, a5); })>},
+		{NULL, "cVector2f cMath_GetSphericalCoordsFromPoint3D(const cVector3f&in avSphCenter, const cVector3f&in avPoint)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1) -> cVector2f { return cMath::GetSphericalCoordsFromPoint3D(a0, a1); })>},
+		{NULL, "cVector3f cMath_GetPoint3DFromSphericalCoords(const cVector3f&in avSphCenter, float afSphRadius, const cVector2f&in avSphCoords)", SomaBind::GenericFunc<(+[](const cVector3f & a0, float a1, const cVector2f & a2) -> cVector3f { return cMath::GetPoint3DFromSphericalCoords(a0, a1, a2); })>},
+		{NULL, "float cMath_PlaneDot(const cPlanef&in aPlaneA, const cPlanef&in aPlaneB)", SomaBind::GenericFunc<(+[](const cPlanef & a0, const cPlanef & a1) -> float { return cMath::PlaneDot(a0, a1); })>},
+		{NULL, "bool cMath_PlaneParallel(const cPlanef&in aPlaneA, const cPlanef&in aPlaneB)", SomaBind::GenericFunc<(+[](const cPlanef & a0, const cPlanef & a1) -> bool { return cMath::PlaneParallel(a0, a1); })>},
+		{NULL, "cPlanef cMath_TransformPlane(const cMatrixf &in a_mtxTransform, const cPlanef&in aPlane)", SomaBind::GenericFunc<(+[](const cMatrixf & a0, const cPlanef & a1) -> cPlanef { return cMath::TransformPlane(a0, a1); })>},
+		{NULL, "float cMath_PlaneToPointDist(const cPlanef&in aPlane, const cVector3f&in avVec)", SomaBind::GenericFunc<(+[](const cPlanef & a0, const cVector3f & a1) -> float { return cMath::PlaneToPointDist(a0, a1); })>},
+		{NULL, "bool cMath_PlaneIntersectionPoint(const cPlanef&in aP1, const cPlanef&in aP2, const cPlanef&in aP3, cVector3f&in avPoint)", SomaBind::GenericFunc<(+[](const cPlanef & a0, const cPlanef & a1, const cPlanef & a2, cVector3f & a3) -> bool { return cMath::PlaneIntersectionPoint(a0, a1, a2, a3); })>},
+		{NULL, "bool cMath_CheckPlaneSphereCollision(const cPlanef&in aPlane, const cVector3f &in avCenter, float afRadius)", SomaBind::GenericFunc<(+[](const cPlanef & a0, const cVector3f & a1, float a2) -> bool { return cMath::CheckPlaneSphereCollision(a0, a1, a2); })>},
+		{NULL, "bool cMath_CheckPlaneAABBCollision(const cPlanef&in aPlane, const cVector3f &in avMin, const cVector3f &in avMax, const cVector3f &in avSphereCenter,float afSphereRadius)", SomaBind::GenericFunc<(+[](const cPlanef & a0, const cVector3f & a1, const cVector3f & a2, const cVector3f & a3, float a4) -> bool { return cMath::CheckPlaneAABBCollision(a0, a1, a2, a3, a4); })>},
+		{NULL, "bool cMath_CheckPlaneAABBCollision(const cPlanef&in aPlane, const cVector3f &in avMin, const cVector3f &in avMax)", SomaBind::GenericFunc<(+[](const cPlanef & a0, const cVector3f & a1, const cVector3f & a2) -> bool { return cMath::CheckPlaneAABBCollision(a0, a1, a2); })>},
+		{NULL, "cQuaternion cMath_QuaternionSlerp(float afT,const cQuaternion&in aqA, const cQuaternion&in aqB,bool abShortestPath)", SomaBind::GenericFunc<(+[](float a0, const cQuaternion & a1, const cQuaternion & a2, bool a3) -> cQuaternion { return cMath::QuaternionSlerp(a0, a1, a2, a3); })>},
+		{NULL, "float cMath_QuaternionDot(const cQuaternion&in aqA,const cQuaternion&in aqB)", SomaBind::GenericFunc<(+[](const cQuaternion & a0, const cQuaternion & a1) -> float { return cMath::QuaternionDot(a0, a1); })>},
+		{NULL, "cQuaternion cMath_QuaternionMul(const cQuaternion&in aqA,const cQuaternion&in aqB)", SomaBind::GenericFunc<(+[](const cQuaternion & a0, const cQuaternion & a1) -> cQuaternion { return cMath::QuaternionMul(a0, a1); })>},
+		{NULL, "cMatrixf cMath_MatrixSlerp(float afT,const cMatrixf&in a_mtxA, const cMatrixf&in a_mtxB, bool abShortestPath)", SomaBind::GenericFunc<(+[](float a0, const cMatrixf & a1, const cMatrixf & a2, bool a3) -> cMatrixf { return cMath::MatrixSlerp(a0, a1, a2, a3); })>},
+		{NULL, "cMatrixf cMath_MatrixMul(const cMatrixf &in a_mtxA,const cMatrixf &in a_mtxB)", SomaBind::GenericFunc<(+[](const cMatrixf & a0, const cMatrixf & a1) -> cMatrixf { return cMath::MatrixMul(a0, a1); })>},
+		{NULL, "cVector3f cMath_MatrixMul(const cMatrixf &in a_mtxA,const cVector3f &in avB)", SomaBind::GenericFunc<(+[](const cMatrixf & a0, const cVector3f & a1) -> cVector3f { return cMath::MatrixMul(a0, a1); })>},
+		{NULL, "cVector3f cMath_MatrixMul3x3(const cMatrixf &in a_mtxA,const cVector3f &in avB)", SomaBind::GenericFunc<(+[](const cMatrixf & a0, const cVector3f & a1) -> cVector3f { return cMath::MatrixMul3x3(a0, a1); })>},
+		{NULL, "cVector3f cMath_MatrixMulDivideW(const cMatrixf &in a_mtxA,const cVector3f &in avB)", SomaBind::GenericFunc<(+[](const cMatrixf & a0, const cVector3f & a1) -> cVector3f { return cMath::MatrixMulDivideW(a0, a1); })>},
+		{NULL, "cMatrixf cMath_MatrixMulScalar(const cMatrixf &in a_mtxA, float afB)", SomaBind::GenericFunc<(+[](const cMatrixf & a0, float a1) -> cMatrixf { return cMath::MatrixMulScalar(a0, a1); })>},
+		{NULL, "cMatrixf cMath_MatrixRotateX(float afAngle)", SomaBind::GenericFunc<(+[](float a0) -> cMatrixf { return cMath::MatrixRotateX(a0); })>},
+		{NULL, "cMatrixf cMath_MatrixRotateY(float afAngle)", SomaBind::GenericFunc<(+[](float a0) -> cMatrixf { return cMath::MatrixRotateY(a0); })>},
+		{NULL, "cMatrixf cMath_MatrixRotateZ(float afAngle)", SomaBind::GenericFunc<(+[](float a0) -> cMatrixf { return cMath::MatrixRotateZ(a0); })>},
+		{NULL, "cMatrixf cMath_MatrixScale(const cVector3f&in avScale)", SomaBind::GenericFunc<(+[](const cVector3f & a0) -> cMatrixf { return cMath::MatrixScale(a0); })>},
+		{NULL, "cMatrixf cMath_MatrixTranslate(const cVector3f&in avTrans)", SomaBind::GenericFunc<(+[](const cVector3f & a0) -> cMatrixf { return cMath::MatrixTranslate(a0); })>},
+		{NULL, "cMatrixf cMath_MatrixQuaternion(const cQuaternion &in aqRot)", SomaBind::GenericFunc<(+[](const cQuaternion & a0) -> cMatrixf { return cMath::MatrixQuaternion(a0); })>},
+		{NULL, "cMatrixf cMath_MatrixInverse(const cMatrixf &in a_mtxA)", SomaBind::GenericFunc<(+[](const cMatrixf & a0) -> cMatrixf { return cMath::MatrixInverse(a0); })>},
+		{NULL, "cMatrixf cMath_MatrixPlaneMirror(const cPlanef &in aPlane)", SomaBind::GenericFunc<(+[](const cPlanef & a0) -> cMatrixf { return cMath::MatrixPlaneMirror(a0); })>},
+		{NULL, "cVector3f cMath_MatrixEulerAngleDistance(const cMatrixf &in a_mtxA, const cMatrixf &in a_mtxB)", SomaBind::GenericFunc<(+[](const cMatrixf & a0, const cMatrixf & a1) -> cVector3f { return cMath::MatrixEulerAngleDistance(a0, a1); })>},
+		{NULL, "cMatrixf cMath_MatrixUnitVectors(const cVector3f&in avRight, const cVector3f&in avUp, const cVector3f&in avForward, const cVector3f&in avTranslate)", SomaBind::GenericFunc<(+[](const cVector3f & a0, const cVector3f & a1, const cVector3f & a2, const cVector3f & a3) -> cMatrixf { return cMath::MatrixUnitVectors(a0, a1, a2, a3); })>},
+		{NULL, "cMatrixf cMath_ProjectionMatrixObliqueNearClipPlane(const cMatrixf &in a_mtxProjMatrix, const cPlanef&in aClipPlane)", SomaBind::GenericFunc<(+[](const cMatrixf & a0, const cPlanef & a1) -> cMatrixf { return cMath::ProjectionMatrixObliqueNearClipPlane(a0, a1); })>},
+		{NULL, "cMatrixf cMath_MatrixPerspectiveProjection(float afNearClipPlane, float afFarClipPlane, float afFOV, float afAspect, bool abInfFarPlane)", SomaBind::GenericFunc<(+[](float a0, float a1, float a2, float a3, bool a4) -> cMatrixf { return cMath::MatrixPerspectiveProjection(a0, a1, a2, a3, a4); })>},
+		{NULL, "cMatrixf cMath_MatrixOrthographicProjection(float afNearClipPlane, float afFarClipPlane, const cVector2f&in avViewSize)", SomaBind::GenericFunc<(+[](float a0, float a1, const cVector2f & a2) -> cMatrixf { return cMath::MatrixOrthographicProjection(a0, a1, a2); })>},
+		{NULL, "tWString cString_To16Char(const tString &in asString)", SomaBind::GenericFunc<(+[](const tString & a0) -> tWString { return cString::To16Char(a0); })>},
+		{NULL, "tString cString_To8Char(const tWString &in awsString)", SomaBind::GenericFunc<(+[](const tWString & a0) -> tString { return cString::To8Char(a0); })>},
+		{NULL, "tString cString_S16BitToUTF8(const tWString&in awsString)", SomaBind::GenericFunc<(+[](const tWString & a0) -> tString { return cString::S16BitToUTF8(a0); })>},
+		{NULL, "tWString cString_Get16BitFromArray(const tString &in asArray)", SomaBind::GenericFunc<(+[](const tString & a0) -> tWString { return cString::Get16BitFromArray(a0); })>},
+		{NULL, "tString cString_ToString(float afX, int alNumOfDecimals=-1, bool abRemoveZeros=false)", SomaBind::GenericFunc<(+[](float a0, int a1, bool a2) -> tString { return cString::ToString(a0, a1, a2); })>},
+		{NULL, "tString cString_ToString(int alX, int alPaddingZeros)", SomaBind::GenericFunc<(+[](int a0, int a1) -> tString { return cString::ToString(a0, a1); })>},
+		{NULL, "tWString cString_ToStringW(float afX, int alNumOfDecimals=-1, bool abRemoveZeros=false)", SomaBind::GenericFunc<(+[](float a0, int a1, bool a2) -> tWString { return cString::ToStringW(a0, a1, a2); })>},
+		{NULL, "tWString cString_ToStringW(int alX, int alPaddingZeros)", SomaBind::GenericFunc<(+[](int a0, int a1) -> tWString { return cString::ToStringW(a0, a1); })>},
+		{NULL, "tString cString_Sub(const tString&in asString,int alStart, int alCount=-1)", SomaBind::GenericFunc<(+[](const tString & a0, int a1, int a2) -> tString { return cString::Sub(a0, a1, a2); })>},
+		{NULL, "tWString cString_SubW(const tWString&in asString,int alStart, int alCount=-1)", SomaBind::GenericFunc<(+[](const tWString & a0, int a1, int a2) -> tWString { return cString::SubW(a0, a1, a2); })>},
+		{NULL, "tString cString_ToLowerCase(const tString&in aString)", SomaBind::GenericFunc<(+[](const tString & a0) -> tString { return cString::ToLowerCase(a0); })>},
+		{NULL, "tWString cString_ToLowerCaseW(const tWString&in aString)", SomaBind::GenericFunc<(+[](const tWString & a0) -> tWString { return cString::ToLowerCaseW(a0); })>},
+		{NULL, "tString cString_ToUpperCase(const tString&in aString)", SomaBind::GenericFunc<(+[](const tString & a0) -> tString { return cString::ToUpperCase(a0); })>},
+		{NULL, "tWString cString_ToUpperCaseW(const tWString&in aString)", SomaBind::GenericFunc<(+[](const tWString & a0) -> tWString { return cString::ToUpperCaseW(a0); })>},
+		{NULL, "tString cString_ReplaceCharTo(const tString&in aString, const tString&in asOldChar,const tString&in asNewChar)", SomaBind::GenericFunc<(+[](const tString & a0, const tString & a1, const tString & a2) -> tString { return cString::ReplaceCharTo(a0, a1, a2); })>},
+		{NULL, "tWString cString_ReplaceCharToW(const tWString&in aString, const tWString&in asOldChar,const tWString&in asNewChar)", SomaBind::GenericFunc<(+[](const tWString & a0, const tWString & a1, const tWString & a2) -> tWString { return cString::ReplaceCharToW(a0, a1, a2); })>},
+		{NULL, "tString cString_ReplaceStringTo(const tString&in aString, const tString&in asOldString,const tString&in asNewString)", SomaBind::GenericFunc<(+[](const tString & a0, const tString & a1, const tString & a2) -> tString { return cString::ReplaceStringTo(a0, a1, a2); })>},
+		{NULL, "tString cString_GetLastChar(const tString&in aString)", SomaBind::GenericFunc<(+[](const tString & a0) -> tString { return cString::GetLastChar(a0); })>},
+		{NULL, "tWString cString_GetLastCharW(const tWString&in aString)", SomaBind::GenericFunc<(+[](const tWString & a0) -> tWString { return cString::GetLastCharW(a0); })>},
+		{NULL, "int cString_GetFirstStringPos(const tString&in aString, const tString&in aChar)", SomaBind::GenericFunc<(+[](const tString & a0, const tString & a1) -> int { return cString::GetFirstStringPos(a0, a1); })>},
+		{NULL, "int cString_GetFirstStringPosW(const tWString&in aString, const tWString&in aChar)", SomaBind::GenericFunc<(+[](const tWString & a0, const tWString & a1) -> int { return cString::GetFirstStringPosW(a0, a1); })>},
+		{NULL, "int cString_GetLastStringPos(const tString&in aString, const tString&in aChar)", SomaBind::GenericFunc<(+[](const tString & a0, const tString & a1) -> int { return cString::GetLastStringPos(a0, a1); })>},
+		{NULL, "int cString_GetLastStringPosW(const tWString&in aString, const tWString&in aChar)", SomaBind::GenericFunc<(+[](const tWString & a0, const tWString & a1) -> int { return cString::GetLastStringPosW(a0, a1); })>},
+		{NULL, "int cString_CountCharsInString(const tString&in aString, const tString&in aChar)", SomaBind::GenericFunc<(+[](const tString & a0, const tString & a1) -> int { return cString::CountCharsInString(a0, a1); })>},
+		{NULL, "int cString_CountCharsInStringW(const tWString&in aString, const tWString&in aChar)", SomaBind::GenericFunc<(+[](const tWString & a0, const tWString & a1) -> int { return cString::CountCharsInStringW(a0, a1); })>},
+		{NULL, "uint cString_GetHash(const tString&in asStr)", SomaBind::GenericFunc<(+[](const tString & a0) -> unsigned int { return cString::GetHash(a0); })>},
+		{NULL, "uint cString_GetHashW(const tWString&in asStr)", SomaBind::GenericFunc<(+[](const tWString & a0) -> unsigned int { return cString::GetHashW(a0); })>},
+		{NULL, "tString cString_GetFileExt(const tString&in aString)", SomaBind::GenericFunc<(+[](const tString & a0) -> tString { return cString::GetFileExt(a0); })>},
+		{NULL, "tWString cString_GetFileExtW(const tWString&in aString)", SomaBind::GenericFunc<(+[](const tWString & a0) -> tWString { return cString::GetFileExtW(a0); })>},
+		{NULL, "tString cString_SetFileExt(const tString&in aString,const tString&in aExt)", SomaBind::GenericFunc<(+[](const tString & a0, const tString & a1) -> tString { return cString::SetFileExt(a0, a1); })>},
+		{NULL, "tWString cString_SetFileExtW(const tWString&in aString,const tWString&in aExt)", SomaBind::GenericFunc<(+[](const tWString & a0, const tWString & a1) -> tWString { return cString::SetFileExtW(a0, a1); })>},
+		{NULL, "tString cString_GetFileName(const tString&in aString)", SomaBind::GenericFunc<(+[](const tString & a0) -> tString { return cString::GetFileName(a0); })>},
+		{NULL, "tWString cString_GetFileNameW(const tWString&in aString)", SomaBind::GenericFunc<(+[](const tWString & a0) -> tWString { return cString::GetFileNameW(a0); })>},
+		{NULL, "tString cString_GetFilePath(const tString&in aString)", SomaBind::GenericFunc<(+[](const tString & a0) -> tString { return cString::GetFilePath(a0); })>},
+		{NULL, "tWString cString_GetFilePathW(const tWString&in aString)", SomaBind::GenericFunc<(+[](const tWString & a0) -> tWString { return cString::GetFilePathW(a0); })>},
+		{NULL, "tString cString_SetFilePath(const tString&in aString,const tString&in aPath)", SomaBind::GenericFunc<(+[](const tString & a0, const tString & a1) -> tString { return cString::SetFilePath(a0, a1); })>},
+		{NULL, "tWString cString_SetFilePathW(const tWString&in aString,const tWString&in aPath)", SomaBind::GenericFunc<(+[](const tWString & a0, const tWString & a1) -> tWString { return cString::SetFilePathW(a0, a1); })>},
+		{NULL, "tString cString_AddSlashAtEnd(const tString&in asPath)", SomaBind::GenericFunc<(+[](const tString & a0) -> tString { return cString::AddSlashAtEnd(a0); })>},
+		{NULL, "tWString cString_AddSlashAtEndW(const tWString&in asPath)", SomaBind::GenericFunc<(+[](const tWString & a0) -> tWString { return cString::AddSlashAtEndW(a0); })>},
+		{NULL, "tString cString_RemoveSlashAtEnd(const tString&in asPath)", SomaBind::GenericFunc<(+[](const tString & a0) -> tString { return cString::RemoveSlashAtEnd(a0); })>},
+		{NULL, "tWString cString_RemoveSlashAtEndW(const tWString&in asPath)", SomaBind::GenericFunc<(+[](const tWString & a0) -> tWString { return cString::RemoveSlashAtEndW(a0); })>},
+		{NULL, "bool cMath_IsValid(float afX)", SomaBind::GenericFunc<(+[](float a0) -> bool { return cMath::IsValid(a0); })>},
+		{NULL, "int cMath_CeilToInt(float afVal)", SomaBind::GenericFunc<(+[](float a0) -> int { return cMath::CeilToInt(a0); })>},
+		{NULL, "int cMath_FloorToInt(float afVal)", SomaBind::GenericFunc<(+[](float a0) -> int { return cMath::FloorToInt(a0); })>},
+		{NULL, "float cMath_Ceil(float afVal)", SomaBind::GenericFunc<(+[](float a0) -> float { return cMath::Ceil(a0); })>},
+		{NULL, "float cMath_Floor(float afVal)", SomaBind::GenericFunc<(+[](float a0) -> float { return cMath::Floor(a0); })>},
+		{"cBeam", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cBeam *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cBeam@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cBeam * { return dynamic_cast<cBeam *>(o); })>},
+		{"cBillboard", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cBillboard *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cBillboard@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cBillboard * { return dynamic_cast<cBillboard *>(o); })>},
+		{"cBoneState", "cNode3D@ opImplCast()", SomaBind::GenericMethod<(+[](cBoneState *o) -> cNode3D * { return static_cast<cNode3D *>(o); })>},
+		{"cNode3D", "cBoneState@ opCast()", SomaBind::GenericMethod<(+[](cNode3D *o) -> cBoneState * { return dynamic_cast<cBoneState *>(o); })>},
+		{"cFogArea", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cFogArea *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cFogArea@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cFogArea * { return dynamic_cast<cFogArea *>(o); })>},
+		{"cForceField", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cForceField *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cForceField@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cForceField * { return dynamic_cast<cForceField *>(o); })>},
+		{"cLensFlare", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cLensFlare *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cLensFlare@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cLensFlare * { return dynamic_cast<cLensFlare *>(o); })>},
+		{"cLightBox", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cLightBox *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cLightBox@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cLightBox * { return dynamic_cast<cLightBox *>(o); })>},
+		{"cLightBox", "iLight@ opImplCast()", SomaBind::GenericMethod<(+[](cLightBox *o) -> iLight * { return static_cast<iLight *>(o); })>},
+		{"iLight", "cLightBox@ opCast()", SomaBind::GenericMethod<(+[](iLight *o) -> cLightBox * { return dynamic_cast<cLightBox *>(o); })>},
+		{"cLightDirectional", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cLightDirectional@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cLightDirectional * { return dynamic_cast<cLightDirectional *>(o); })>},
+		{"cLightDirectional", "iLight@ opImplCast()", SomaBind::GenericMethod<(+[](cLightDirectional *o) -> iLight * { return static_cast<iLight *>(o); })>},
+		{"iLight", "cLightDirectional@ opCast()", SomaBind::GenericMethod<(+[](iLight *o) -> cLightDirectional * { return dynamic_cast<cLightDirectional *>(o); })>},
+		{"cLightPoint", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cLightPoint@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cLightPoint * { return dynamic_cast<cLightPoint *>(o); })>},
+		{"cLightPoint", "iLight@ opImplCast()", SomaBind::GenericMethod<(+[](cLightPoint *o) -> iLight * { return static_cast<iLight *>(o); })>},
+		{"iLight", "cLightPoint@ opCast()", SomaBind::GenericMethod<(+[](iLight *o) -> cLightPoint * { return dynamic_cast<cLightPoint *>(o); })>},
+		{"cLightSpot", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cLightSpot@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cLightSpot * { return dynamic_cast<cLightSpot *>(o); })>},
+		{"cLightSpot", "iLight@ opImplCast()", SomaBind::GenericMethod<(+[](cLightSpot *o) -> iLight * { return static_cast<iLight *>(o); })>},
+		{"iLight", "cLightSpot@ opCast()", SomaBind::GenericMethod<(+[](iLight *o) -> cLightSpot * { return dynamic_cast<cLightSpot *>(o); })>},
+		{"cMeshEntity", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cMeshEntity *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cMeshEntity@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cMeshEntity * { return dynamic_cast<cMeshEntity *>(o); })>},
+		{"cParticleSystem", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cParticleSystem *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cParticleSystem@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cParticleSystem * { return dynamic_cast<cParticleSystem *>(o); })>},
+		{"cSoundEntity", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cSoundEntity *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cSoundEntity@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cSoundEntity * { return dynamic_cast<cSoundEntity *>(o); })>},
+		{"cSubMeshEntity", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cSubMeshEntity *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "cSubMeshEntity@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cSubMeshEntity * { return dynamic_cast<cSubMeshEntity *>(o); })>},
+		{"cWidgetWindow", "iWidget@ opImplCast()", SomaBind::GenericMethod<(+[](cWidgetWindow *o) -> iWidget * { return static_cast<iWidget *>(o); })>},
+		{"iWidget", "cWidgetWindow@ opCast()", SomaBind::GenericMethod<(+[](iWidget *o) -> cWidgetWindow * { return dynamic_cast<cWidgetWindow *>(o); })>},
+		{"iLight", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](iLight *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "iLight@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> iLight * { return dynamic_cast<iLight *>(o); })>},
+		{"iPhysicsBody", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](iPhysicsBody *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "iPhysicsBody@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> iPhysicsBody * { return dynamic_cast<iPhysicsBody *>(o); })>},
+		{"iPhysicsJointBall", "iPhysicsJoint@ opImplCast()", SomaBind::GenericMethod<(+[](iPhysicsJointBall *o) -> iPhysicsJoint * { return static_cast<iPhysicsJoint *>(o); })>},
+		{"iPhysicsJoint", "iPhysicsJointBall@ opCast()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> iPhysicsJointBall * { return dynamic_cast<iPhysicsJointBall *>(o); })>},
+		{"iPhysicsJointHinge", "iPhysicsJoint@ opImplCast()", SomaBind::GenericMethod<(+[](iPhysicsJointHinge *o) -> iPhysicsJoint * { return static_cast<iPhysicsJoint *>(o); })>},
+		{"iPhysicsJoint", "iPhysicsJointHinge@ opCast()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> iPhysicsJointHinge * { return dynamic_cast<iPhysicsJointHinge *>(o); })>},
+		{"iPhysicsJointSlider", "iPhysicsJoint@ opImplCast()", SomaBind::GenericMethod<(+[](iPhysicsJointSlider *o) -> iPhysicsJoint * { return static_cast<iPhysicsJoint *>(o); })>},
+		{"iPhysicsJoint", "iPhysicsJointSlider@ opCast()", SomaBind::GenericMethod<(+[](iPhysicsJoint *o) -> iPhysicsJointSlider * { return dynamic_cast<iPhysicsJointSlider *>(o); })>},
+		{"iPhysicsRope", "iVerletParticleContainer@ opImplCast()", SomaBind::GenericMethod<(+[](iPhysicsRope *o) -> iVerletParticleContainer * { return static_cast<iVerletParticleContainer *>(o); })>},
+		{"iVerletParticleContainer", "iPhysicsRope@ opCast()", SomaBind::GenericMethod<(+[](iVerletParticleContainer *o) -> iPhysicsRope * { return dynamic_cast<iPhysicsRope *>(o); })>},
+		{"iRopeEntity", "iEntity3D@ opImplCast()", SomaBind::GenericMethod<(+[](cRopeEntity *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); })>},
+		{"iEntity3D", "iRopeEntity@ opCast()", SomaBind::GenericMethod<(+[](iEntity3D *o) -> cRopeEntity * { return dynamic_cast<cRopeEntity *>(o); })>},
+	};
+}
+
+// Skips declarations already registered (hand-written natives take precedence over generated ones)
 void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 {
-	SOMA_METHOD_NEW(e, "cAINode", "const cVector3f& GetPosition()", +[](cAINode *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPosition(); return r; });
-	SOMA_METHOD_NEW(e, "cAINode", "const tString& GetName()", +[](cAINode *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cAINode", "int GetID()", +[](cAINode *o) -> int { return o->GetID(); });
-	SOMA_METHOD_NEW(e, "cAINodeContainer", "const tString& GetNodeName()", +[](cAINodeContainer *o) -> const tString & { static thread_local tString r; r = o->GetNodeName(); return r; });
-	SOMA_METHOD_NEW(e, "cAINodeContainer", "const tString& GetName()", +[](cAINodeContainer *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cAINodeContainer", "const cVector3f& GetCollideSize()", +[](cAINodeContainer *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetCollideSize(); return r; });
-	SOMA_METHOD_NEW(e, "cAINodeContainer", "int GetNodeNum() const", +[](cAINodeContainer *o) -> int { return o->GetNodeNum(); });
-	SOMA_METHOD_NEW(e, "cAINodeContainer", "cAINode@ GetNode(int alIdx)", +[](cAINodeContainer *o, int a0) -> cAINode * { return o->GetNode(a0); });
-	SOMA_METHOD_NEW(e, "cAINodeContainer", "cAINode@ GetNodeFromName(const tString &in asName)", +[](cAINodeContainer *o, const tString & a0) -> cAINode * { return o->GetNodeFromName(a0); });
-	SOMA_METHOD_NEW(e, "cAINodeContainer", "cAINode@ GetNodeFromID(int alID)", +[](cAINodeContainer *o, int a0) -> cAINode * { return o->GetNodeFromID(a0); });
-	SOMA_METHOD_NEW(e, "cAction", "void AddKey(eKey aKey)", +[](cAction *o, int a0) { o->AddKey((eKey)a0); });
-	SOMA_METHOD_NEW(e, "cAction", "void AddMouseButton(eMouseButton aButton)", +[](cAction *o, int a0) { o->AddMouseButton((eMouseButton)a0); });
-	SOMA_METHOD_NEW(e, "cAction", "void AddGamepadButton(int alPadIndex, eGamepadButton aButton)", +[](cAction *o, int a0, int a1) { o->AddGamepadButton(a0, (eGamepadButton)a1); });
-	SOMA_METHOD_NEW(e, "cAction", "void AddGamepadAxis(int alPadIndex, eGamepadAxis aAxis, eGamepadAxisRange aRange, float afMinThreshold, float afMaxThreshold)", +[](cAction *o, int a0, int a1, int a2, float a3, float a4) { o->AddGamepadAxis(a0, (eGamepadAxis)a1, (eGamepadAxisRange)a2, a3, a4); });
-	SOMA_METHOD_NEW(e, "cAction", "void AddGamepadHat(int alPadIndex, eGamepadHat aHat, eGamepadHatState aHatState)", +[](cAction *o, int a0, int a1, int a2) { o->AddGamepadHat(a0, (eGamepadHat)a1, (eGamepadHatState)a2); });
-	SOMA_METHOD_NEW(e, "cAction", "void ClearSubActions()", +[](cAction *o) { o->ClearSubActions(); });
-	SOMA_METHOD_NEW(e, "cAction", "bool IsTriggered()", +[](cAction *o) -> bool { return o->IsTriggerd(); });
-	SOMA_METHOD_NEW(e, "cAction", "bool WasTriggered()", +[](cAction *o) -> bool { return o->WasTriggerd(); });
-	SOMA_METHOD_NEW(e, "cAction", "bool BecameTriggered()", +[](cAction *o) -> bool { return o->BecameTriggerd(); });
-	SOMA_METHOD_NEW(e, "cAction", "bool DoubleTriggered(float afLimit)", +[](cAction *o, float a0) -> bool { return o->DoubleTriggerd(a0); });
-	SOMA_METHOD_NEW(e, "cAction", "void ResetToCurrentState()", +[](cAction *o) { o->ResetToCurrentState(); });
-	SOMA_METHOD_NEW(e, "cAction", "int GetSubActionNum()", +[](cAction *o) -> int { return o->GetSubActionNum(); });
-	SOMA_METHOD_NEW(e, "cAction", "const tString& GetName()", +[](cAction *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cAction", "int GetId()", +[](cAction *o) -> int { return o->GetId(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "const tString& GetName()", +[](cAnimationState *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void Update(float afTimeStep)", +[](cAnimationState *o, float a0) { o->Update(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "bool DataIsInMeshFile()", +[](cAnimationState *o) -> bool { return o->DataIsInMeshFile(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "bool IsFading()", +[](cAnimationState *o) -> bool { return o->IsFading(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "bool IsOver()", +[](cAnimationState *o) -> bool { return o->IsOver(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void FadeIn(float afTime)", +[](cAnimationState *o, float a0) { o->FadeIn(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void FadeOut(float afTime)", +[](cAnimationState *o, float a0) { o->FadeOut(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void SetLength(float afLength)", +[](cAnimationState *o, float a0) { o->SetLength(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "float GetLength()", +[](cAnimationState *o) -> float { return o->GetLength(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void SetWeight(float afWeight)", +[](cAnimationState *o, float a0) { o->SetWeight(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "float GetWeight()", +[](cAnimationState *o) -> float { return o->GetWeight(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void SetSpeed(float afSpeed)", +[](cAnimationState *o, float a0) { o->SetSpeed(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "float GetSpeed()", +[](cAnimationState *o) -> float { return o->GetSpeed(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void SetBaseSpeed(float afSpeed)", +[](cAnimationState *o, float a0) { o->SetBaseSpeed(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "float GetBaseSpeed()", +[](cAnimationState *o) -> float { return o->GetBaseSpeed(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void SetTimePosition(float afPosition)", +[](cAnimationState *o, float a0) { o->SetTimePosition(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "float GetTimePosition()", +[](cAnimationState *o) -> float { return o->GetTimePosition(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "float GetPreviousTimePosition()", +[](cAnimationState *o) -> float { return o->GetPreviousTimePosition(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void SetRelativeTimePosition(float afPosition)", +[](cAnimationState *o, float a0) { o->SetRelativeTimePosition(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "float GetRelativeTimePosition()", +[](cAnimationState *o) -> float { return o->GetRelativeTimePosition(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "bool IsActive()", +[](cAnimationState *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void SetActive(bool abActive)", +[](cAnimationState *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "bool IsLooping()", +[](cAnimationState *o) -> bool { return o->IsLooping(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void SetLoop(bool abLoop)", +[](cAnimationState *o, bool a0) { o->SetLoop(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "bool IsPaused()", +[](cAnimationState *o) -> bool { return o->IsPaused(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void SetPaused(bool abPaused)", +[](cAnimationState *o, bool a0) { o->SetPaused(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void AddTimePosition(float afAdd)", +[](cAnimationState *o, float a0) { o->AddTimePosition(a0); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "float GetFadeStep()", +[](cAnimationState *o) -> float { return o->GetFadeStep(); });
-	SOMA_METHOD_NEW(e, "cAnimationState", "void SetFadeStep(float afX)", +[](cAnimationState *o, float a0) { o->SetFadeStep(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "int GetUniqueID()", +[](cBeam *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cBeam", "void UpdateLogic(float afTimeStep)", +[](cBeam *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "const tString& GetName()const", +[](cBeam *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetName(const tString&in asName)", +[](cBeam *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "bool HasParent()", +[](cBeam *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cBeam", "bool IsActive()const", +[](cBeam *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetActive(bool abActive)", +[](cBeam *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "cVector3f GetLocalPosition()", +[](cBeam *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cBeam", "cMatrixf& GetLocalMatrix()", +[](cBeam *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cBeam", "cVector3f GetWorldPosition()", +[](cBeam *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cBeam", "cMatrixf& GetWorldMatrix()", +[](cBeam *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetPosition(const cVector3f&in avPos)", +[](cBeam *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cBeam *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cBeam *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cBeam *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "int GetTransformUpdateCount()", +[](cBeam *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cBeam", "void AddChild(iEntity3D @apEntity)", +[](cBeam *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "void RemoveChild(iEntity3D @apEntity)", +[](cBeam *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "bool IsChild(iEntity3D @apEntity)", +[](cBeam *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "iEntity3D @GetEntityParent()", +[](cBeam *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cBeam", "cMaterial @GetMaterial()", +[](cBeam *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "cBeam", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](cBeam *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "eRenderableType GetRenderType()", +[](cBeam *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cBeam *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "cBeam", "bool GetRenderFlagBit(int alFlagBit)", +[](cBeam *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "int GetRenderFlags() const", +[](cBeam *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "cBeam", "bool IsStatic()", +[](cBeam *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "cBeam", "bool IsVisible()", +[](cBeam *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetVisible(bool abVisible)", +[](cBeam *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "bool GetVisibleVar()", +[](cBeam *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetIlluminationColor(const cColor&in aColor)", +[](cBeam *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "const cColor& GetIlluminationColor()const", +[](cBeam *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetCoverageAmount(float afX)", +[](cBeam *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "float GetCoverageAmount()const", +[](cBeam *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "cBeam", "int GetMatrixUpdateCount()", +[](cBeam *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cBeam", "int GetRenderFrameCount() const", +[](cBeam *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetRenderFrameCount(int alCount)", +[](cBeam *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cBeam *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetLiquidAmount(float afX)", +[](cBeam *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "float GetLiquidAmount()const", +[](cBeam *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetSize(const cVector2f&in avSize)", +[](cBeam *o, const cVector2f & a0) { o->SetSize(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "cVector2f GetSize()", +[](cBeam *o) -> cVector2f { return o->GetSize(); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetColor(const cColor &in aColor)", +[](cBeam *o, const cColor & a0) { o->SetColor(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "const cColor& GetColor()", +[](cBeam *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetTileHeight(bool abX)", +[](cBeam *o, bool a0) { o->SetTileHeight(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "bool GetTileHeight()", +[](cBeam *o) -> bool { return o->GetTileHeight(); });
-	SOMA_METHOD_NEW(e, "cBeam", "void SetMultiplyAlphaWithColor(bool abX)", +[](cBeam *o, bool a0) { o->SetMultiplyAlphaWithColor(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "bool GetMultiplyAlphaWithColor()", +[](cBeam *o) -> bool { return o->GetMultiplyAlphaWithColor(); });
-	SOMA_METHOD_NEW(e, "cBeam", "cVector3f GetAxis()", +[](cBeam *o) -> cVector3f { return o->GetAxis(); });
-	SOMA_METHOD_NEW(e, "cBeam", "cVector3f GetMidPosition()", +[](cBeam *o) -> cVector3f { return o->GetMidPosition(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "int GetUniqueID()", +[](cBillboard *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void UpdateLogic(float afTimeStep)", +[](cBillboard *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "const tString& GetName()const", +[](cBillboard *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetName(const tString&in asName)", +[](cBillboard *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "bool HasParent()", +[](cBillboard *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "bool IsActive()const", +[](cBillboard *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetActive(bool abActive)", +[](cBillboard *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "cVector3f GetLocalPosition()", +[](cBillboard *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "cMatrixf& GetLocalMatrix()", +[](cBillboard *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "cVector3f GetWorldPosition()", +[](cBillboard *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "cMatrixf& GetWorldMatrix()", +[](cBillboard *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetPosition(const cVector3f&in avPos)", +[](cBillboard *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cBillboard *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cBillboard *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cBillboard *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "int GetTransformUpdateCount()", +[](cBillboard *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void AddChild(iEntity3D @apEntity)", +[](cBillboard *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void RemoveChild(iEntity3D @apEntity)", +[](cBillboard *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "bool IsChild(iEntity3D @apEntity)", +[](cBillboard *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "iEntity3D @GetEntityParent()", +[](cBillboard *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "cMaterial @GetMaterial()", +[](cBillboard *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](cBillboard *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "eRenderableType GetRenderType()", +[](cBillboard *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cBillboard *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "cBillboard", "bool GetRenderFlagBit(int alFlagBit)", +[](cBillboard *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "int GetRenderFlags() const", +[](cBillboard *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "bool IsStatic()", +[](cBillboard *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "bool IsVisible()", +[](cBillboard *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetVisible(bool abVisible)", +[](cBillboard *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "bool GetVisibleVar()", +[](cBillboard *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetIlluminationColor(const cColor&in aColor)", +[](cBillboard *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "const cColor& GetIlluminationColor()const", +[](cBillboard *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetCoverageAmount(float afX)", +[](cBillboard *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "float GetCoverageAmount()const", +[](cBillboard *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "int GetMatrixUpdateCount()", +[](cBillboard *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "int GetRenderFrameCount() const", +[](cBillboard *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetRenderFrameCount(int alCount)", +[](cBillboard *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cBillboard *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetLiquidAmount(float afX)", +[](cBillboard *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "float GetLiquidAmount()const", +[](cBillboard *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "eBillboardType GetType()", +[](cBillboard *o) -> int { return (int)o->GetType(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetAxis(const cVector3f&in avAxis)", +[](cBillboard *o, const cVector3f & a0) { o->SetAxis(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "const cVector3f& GetAxis()", +[](cBillboard *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetAxis(); return r; });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetForwardOffset(float afOffset)", +[](cBillboard *o, float a0) { o->SetForwardOffset(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "float GetForwardOffset()", +[](cBillboard *o) -> float { return o->GetForwardOffset(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetColor(const cColor &in aColor)", +[](cBillboard *o, const cColor & a0) { o->SetColor(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "const cColor& GetColor()", +[](cBillboard *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetHaloAlpha(float afX)", +[](cBillboard *o, float a0) { o->SetHaloAlpha(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "float GetHaloAlpha()", +[](cBillboard *o) -> float { return o->GetHaloAlpha(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetBrightness(float afX)", +[](cBillboard *o, float a0) { o->SetBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "float GetBrightness()", +[](cBillboard *o) -> float { return o->GetBrightness(); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetMaterial(cMaterial@ apMaterial)", +[](cBillboard *o, cMaterial * a0) { o->SetMaterial(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "void SetSize(const cVector2f&in avSize)", +[](cBillboard *o, const cVector2f & a0) { o->SetSize(a0); });
-	SOMA_METHOD_NEW(e, "cBillboard", "cVector2f GetSize()", +[](cBillboard *o) -> cVector2f { return o->GetSize(); });
-	SOMA_METHOD_NEW(e, "cBone", "const cMatrixf& GetLocalTransform()", +[](cBone *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetLocalTransform(); return r; });
-	SOMA_METHOD_NEW(e, "cBone", "const cMatrixf& GetWorldTransform()", +[](cBone *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetWorldTransform(); return r; });
-	SOMA_METHOD_NEW(e, "cBone", "const cMatrixf& GetInvWorldTransform()", +[](cBone *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetInvWorldTransform(); return r; });
-	SOMA_METHOD_NEW(e, "cBone", "const tString& GetName()", +[](cBone *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cBone", "const tString& GetSid()", +[](cBone *o) -> const tString & { static thread_local tString r; r = o->GetSid(); return r; });
-	SOMA_METHOD_NEW(e, "cBone", "cBone@ GetParent()", +[](cBone *o) -> cBone * { return o->GetParent(); });
-	SOMA_METHOD_NEW(e, "cBoneState", "bool AddEntity(iEntity3D@ apEntity)", +[](cBoneState *o, iEntity3D * a0) -> bool { return o->AddEntity(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "bool RemoveEntity(iEntity3D@ apEntity)", +[](cBoneState *o, iEntity3D * a0) -> bool { return o->RemoveEntity(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void ClearEntities()", +[](cBoneState *o) { o->ClearEntities(); });
-	SOMA_METHOD_NEW(e, "cBoneState", "cNode3D@ GetParent()", +[](cBoneState *o) -> cNode3D * { return o->GetParent(); });
-	SOMA_METHOD_NEW(e, "cBoneState", "cNode3D@ CreateChild(const tString &in asName=, bool abAutoDeleteChildren = true)", +[](cBoneState *o, const tString & a0, bool a1) -> cNode3D * { return o->CreateChild(a0, a1); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void RemoveChild(cNode3D@ apNode)", +[](cBoneState *o, cNode3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetParent(cNode3D@ apNode)", +[](cBoneState *o, cNode3D * a0) { o->SetParent(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void AddChild(cNode3D@ apChild)", +[](cBoneState *o, cNode3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "const tString& GetName()", +[](cBoneState *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetActive(bool abX)", +[](cBoneState *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "bool IsActive()", +[](cBoneState *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cBoneState", "int SetVisible(bool abX, bool abCascade)", +[](cBoneState *o, bool a0, bool a1) -> int { return o->SetVisible(a0, a1); });
-	SOMA_METHOD_NEW(e, "cBoneState", "cVector3f GetLocalPosition()", +[](cBoneState *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cBoneState", "const cMatrixf& GetLocalMatrix()", +[](cBoneState *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetLocalMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cBoneState", "cVector3f GetWorldPosition()", +[](cBoneState *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cBoneState", "const cMatrixf& GetWorldMatrix()", +[](cBoneState *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetWorldMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetPosition(const cVector3f&in avPos)", +[](cBoneState *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetMatrix(const cMatrixf&in a_mtxTransform, bool abSetChildrenUpdated=true)", +[](cBoneState *o, const cMatrixf & a0, bool a1) { o->SetMatrix(a0, a1); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cBoneState *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cBoneState *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void AddRotation(const cVector3f&in avRot, eEulerRotationOrder aOrder)", +[](cBoneState *o, const cVector3f & a0, int a1) { o->AddRotation(a0, (eEulerRotationOrder)a1); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void AddScale(const cVector3f&in avScale)", +[](cBoneState *o, const cVector3f & a0) { o->AddScale(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void AddTranslation(const cVector3f&in avTrans)", +[](cBoneState *o, const cVector3f & a0) { o->AddTranslation(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "bool GetUsePreAnimTransform()", +[](cBoneState *o) -> bool { return o->GetUsePreAnimTransform(); });
-	SOMA_METHOD_NEW(e, "cBoneState", "bool GetUsePostAnimTransform()", +[](cBoneState *o) -> bool { return o->GetUsePostAnimTransform(); });
-	SOMA_METHOD_NEW(e, "cBoneState", "const cMatrixf& GetPreAnimTransform()", +[](cBoneState *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetPreAnimTransform(); return r; });
-	SOMA_METHOD_NEW(e, "cBoneState", "const cMatrixf& GetPostAnimTransform()", +[](cBoneState *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetPostAnimTransform(); return r; });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetUsePreTransform(bool abX)", +[](cBoneState *o, bool a0) { o->SetUsePreTransform(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetUsePostTransform(bool abX)", +[](cBoneState *o, bool a0) { o->SetUsePostTransform(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetPreTransform(const cMatrixf&in a_mtxTransform)", +[](cBoneState *o, const cMatrixf & a0) { o->SetPreTransform(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetPostTransform(const cMatrixf&in a_mtxTransform)", +[](cBoneState *o, const cMatrixf & a0) { o->SetPostTransform(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void ApplyPreAnimTransform(bool abSetChildrenUpdated)", +[](cBoneState *o, bool a0) { o->ApplyPreAnimTransform(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void ApplyPostAnimTransform(bool abSetChildrenUpdated)", +[](cBoneState *o, bool a0) { o->ApplyPostAnimTransform(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetCustomFlags(int alX)", +[](cBoneState *o, int a0) { o->SetCustomFlags(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "int GetCustomFlags()", +[](cBoneState *o) -> int { return o->GetCustomFlags(); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void UpdateMatrix(bool abSetChildrenUpdated)", +[](cBoneState *o, bool a0) { o->UpdateMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void UpdateEntityChildren()", +[](cBoneState *o) { o->UpdateEntityChildren(); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetBody(iPhysicsBody @apBody)", +[](cBoneState *o, iPhysicsBody * a0) { o->SetBody(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "iPhysicsBody@ GetBody()", +[](cBoneState *o) -> iPhysicsBody * { return o->GetBody(); });
-	SOMA_METHOD_NEW(e, "cBoneState", "void SetColliderBody(iPhysicsBody @apBody)", +[](cBoneState *o, iPhysicsBody * a0) { o->SetColliderBody(a0); });
-	SOMA_METHOD_NEW(e, "cBoneState", "iPhysicsBody@ GetColliderBody()", +[](cBoneState *o) -> iPhysicsBody * { return o->GetColliderBody(); });
-	SOMA_METHOD_NEW(e, "cBoundingVolume", "cVector3f GetMax()", +[](cBoundingVolume *o) -> cVector3f { return o->GetMax(); });
-	SOMA_METHOD_NEW(e, "cBoundingVolume", "cVector3f GetMin()", +[](cBoundingVolume *o) -> cVector3f { return o->GetMin(); });
-	SOMA_METHOD_NEW(e, "cBoundingVolume", "const cVector3f& GetLocalMax()", +[](cBoundingVolume *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLocalMax(); return r; });
-	SOMA_METHOD_NEW(e, "cBoundingVolume", "const cVector3f& GetLocalMin()", +[](cBoundingVolume *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLocalMin(); return r; });
-	SOMA_METHOD_NEW(e, "cBoundingVolume", "void SetPosition(const cVector3f&in avPos)", +[](cBoundingVolume *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cBoundingVolume", "cVector3f GetPosition()", +[](cBoundingVolume *o) -> cVector3f { return o->GetPosition(); });
-	SOMA_METHOD_NEW(e, "cBoundingVolume", "cVector3f GetSize()", +[](cBoundingVolume *o) -> cVector3f { return o->GetSize(); });
-	SOMA_METHOD_NEW(e, "cBoundingVolume", "const cMatrixf& GetTransform()", +[](cBoundingVolume *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetTransform(); return r; });
-	SOMA_METHOD_NEW(e, "cBoundingVolume", "cVector3f GetLocalCenter()", +[](cBoundingVolume *o) -> cVector3f { return o->GetLocalCenter(); });
-	SOMA_METHOD_NEW(e, "cBoundingVolume", "cVector3f GetWorldCenter()", +[](cBoundingVolume *o) -> cVector3f { return o->GetWorldCenter(); });
-	SOMA_METHOD_NEW(e, "cBoundingVolume", "float GetRadius()", +[](cBoundingVolume *o) -> float { return o->GetRadius(); });
-	SOMA_METHOD_NEW(e, "cCamera", "const cVector3f& GetPosition()const", +[](cCamera *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPosition(); return r; });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetPosition(const cVector3f&in avPos)", +[](cCamera *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void MoveForward(float afDist)", +[](cCamera *o, float a0) { o->MoveForward(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void MoveRight(float afDist)", +[](cCamera *o, float a0) { o->MoveRight(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void MoveUp(float afDist)", +[](cCamera *o, float a0) { o->MoveUp(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetFOV(float afAngle)", +[](cCamera *o, float a0) { o->SetFOV(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "float GetFOV()", +[](cCamera *o) -> float { return o->GetFOV(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetAspect(float afSpect)", +[](cCamera *o, float a0) { o->SetAspect(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "float GetAspect()", +[](cCamera *o) -> float { return o->GetAspect(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetFarClipPlane(float afX)", +[](cCamera *o, float a0) { o->SetFarClipPlane(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "float GetFarClipPlane()", +[](cCamera *o) -> float { return o->GetFarClipPlane(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetNearClipPlane(float afX)", +[](cCamera *o, float a0) { o->SetNearClipPlane(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "float GetNearClipPlane()", +[](cCamera *o) -> float { return o->GetNearClipPlane(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetOrthoViewSize(const cVector2f &in avSize)", +[](cCamera *o, const cVector2f & a0) { o->SetOrthoViewSize(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "const cVector2f& GetOrthoViewSize()", +[](cCamera *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetOrthoViewSize(); return r; });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetInifintiveFarPlane(bool abX)", +[](cCamera *o, bool a0) { o->SetInifintiveFarPlane(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "bool GetInifintiveFarPlane()", +[](cCamera *o) -> bool { return o->GetInifintiveFarPlane(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetProjectionType(eProjectionType aType)", +[](cCamera *o, int a0) { o->SetProjectionType((eProjectionType)a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "eProjectionType GetProjectionType()", +[](cCamera *o) -> int { return (int)o->GetProjectionType(); });
-	SOMA_METHOD_NEW(e, "cCamera", "eCameraRotateMode GetRotateMode()", +[](cCamera *o) -> int { return (int)o->GetRotateMode(); });
-	SOMA_METHOD_NEW(e, "cCamera", "eCameraMoveMode GetMoveMode()", +[](cCamera *o) -> int { return (int)o->GetMoveMode(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetRotateMode(eCameraRotateMode aMode)", +[](cCamera *o, int a0) { o->SetRotateMode((eCameraRotateMode)a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetMoveMode(eCameraMoveMode aMode)", +[](cCamera *o, int a0) { o->SetMoveMode((eCameraMoveMode)a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void ResetRotation()", +[](cCamera *o) { o->ResetRotation(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void AttachEntity(iEntity3D@ aEntity)", +[](cCamera *o, iEntity3D * a0) { o->AttachEntity(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void RemoveEntity(iEntity3D@ aEntity)", +[](cCamera *o, iEntity3D * a0) { o->RemoveEntity(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "cNode3D@ GetAttachmentNode()", +[](cCamera *o) -> cNode3D * { return o->GetAttachmentNode(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void ClearAttachedEntities()", +[](cCamera *o) { o->ClearAttachedEntities(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetPitch(float afAngle)", +[](cCamera *o, float a0) { o->SetPitch(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetYaw(float afAngle)", +[](cCamera *o, float a0) { o->SetYaw(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetRoll(float afAngle)", +[](cCamera *o, float a0) { o->SetRoll(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void AddPitch(float afAngle)", +[](cCamera *o, float a0) { o->AddPitch(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void AddYaw(float afAngle)", +[](cCamera *o, float a0) { o->AddYaw(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void AddRoll(float afAngle)", +[](cCamera *o, float a0) { o->AddRoll(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "float GetPitch() const", +[](cCamera *o) -> float { return o->GetPitch(); });
-	SOMA_METHOD_NEW(e, "cCamera", "float GetYaw() const", +[](cCamera *o) -> float { return o->GetYaw(); });
-	SOMA_METHOD_NEW(e, "cCamera", "float GetRoll() const", +[](cCamera *o) -> float { return o->GetRoll(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetPitchLimits(float afMin, float afMax)", +[](cCamera *o, float a0, float a1) { o->SetPitchLimits(a0, a1); });
-	SOMA_METHOD_NEW(e, "cCamera", "float GetPitchMinLimit()", +[](cCamera *o) -> float { return o->GetPitchMinLimit(); });
-	SOMA_METHOD_NEW(e, "cCamera", "float GetPitchMaxLimit()", +[](cCamera *o) -> float { return o->GetPitchMaxLimit(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetYawLimits(float afMin, float afMax)", +[](cCamera *o, float a0, float a1) { o->SetYawLimits(a0, a1); });
-	SOMA_METHOD_NEW(e, "cCamera", "float GetYawMinLimit()", +[](cCamera *o) -> float { return o->GetYawMinLimit(); });
-	SOMA_METHOD_NEW(e, "cCamera", "float GetYawMaxLimit()", +[](cCamera *o) -> float { return o->GetYawMaxLimit(); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetForward(const cVector3f&in avX)", +[](cCamera *o, const cVector3f & a0) { o->SetForward(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetRight(const cVector3f&in avX)", +[](cCamera *o, const cVector3f & a0) { o->SetRight(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetUp(const cVector3f&in avX)", +[](cCamera *o, const cVector3f & a0) { o->SetUp(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "void SetRotationMatrix(const cMatrixf&in a_mtxRot)", +[](cCamera *o, const cMatrixf & a0) { o->SetRotationMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cCamera", "cVector3f GetForward()", +[](cCamera *o) -> cVector3f { return o->GetForward(); });
-	SOMA_METHOD_NEW(e, "cCamera", "cVector3f GetRight()", +[](cCamera *o) -> cVector3f { return o->GetRight(); });
-	SOMA_METHOD_NEW(e, "cCamera", "cVector3f GetUp()", +[](cCamera *o) -> cVector3f { return o->GetUp(); });
-	SOMA_METHOD_NEW(e, "cCamera", "const cMatrixf& GetRotationMatrix()", +[](cCamera *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetRotationMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cCamera", "const cMatrixf& GetViewMatrix()", +[](cCamera *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetViewMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cCamera", "const cMatrixf& GetProjectionMatrix()", +[](cCamera *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetProjectionMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cCamera", "const cMatrixf& GetMoveMatrix()", +[](cCamera *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetMoveMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cCollideData", "void SetMaxSize(int alSize)", +[](cCollideData *o, int a0) { o->SetMaxSize(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetBoxDistance(float afDistance)", +[](cEnvironmentParticles *o, float a0) { o->SetBoxDistance(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetFadeInStart(float afX)", +[](cEnvironmentParticles *o, float a0) { o->SetFadeInStart(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetFadeInEnd(float afX)", +[](cEnvironmentParticles *o, float a0) { o->SetFadeInEnd(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetFadeOutStart(float afX)", +[](cEnvironmentParticles *o, float a0) { o->SetFadeOutStart(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetFadeOutEnd(float afX)", +[](cEnvironmentParticles *o, float a0) { o->SetFadeOutEnd(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetIterationNum(float afNum)", +[](cEnvironmentParticles *o, float a0) { o->SetIterationNum(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "float GetIterationNum()", +[](cEnvironmentParticles *o) -> float { return o->GetIterationNum(); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "int GetIterationNumInt()", +[](cEnvironmentParticles *o) -> int { return o->GetIterationNumInt(); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetColor(const cColor &in aCol)", +[](cEnvironmentParticles *o, const cColor & a0) { o->SetColor(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetBrightness(float afX)", +[](cEnvironmentParticles *o, float a0) { o->SetBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "cColor GetColor()", +[](cEnvironmentParticles *o) -> cColor { return o->GetColor(); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "float GetBrightness()", +[](cEnvironmentParticles *o) -> float { return o->GetBrightness(); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetGravityVelocity(const cVector3f &in avVel)", +[](cEnvironmentParticles *o, const cVector3f & a0) { o->SetGravityVelocity(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetWindVelocity(const cVector3f &in avVel)", +[](cEnvironmentParticles *o, const cVector3f & a0) { o->SetWindVelocity(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetRotateVelocity(const cVector3f &in avVel)", +[](cEnvironmentParticles *o, const cVector3f & a0) { o->SetRotateVelocity(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "bool SetVisible(bool abX)", +[](cEnvironmentParticles *o, bool a0) -> bool { return o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "cVector3f GetGravityVelocity()", +[](cEnvironmentParticles *o) -> cVector3f { return o->GetGravityVelocity(); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "cVector3f GetWindVelocity()", +[](cEnvironmentParticles *o) -> cVector3f { return o->GetWindVelocity(); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "cVector3f GetRotateVelocity()", +[](cEnvironmentParticles *o) -> cVector3f { return o->GetRotateVelocity(); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetGravitySpeedRandomAmount(float afX)", +[](cEnvironmentParticles *o, float a0) { o->SetGravitySpeedRandomAmount(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetWindSpeedRandomAmount(float afX)", +[](cEnvironmentParticles *o, float a0) { o->SetWindSpeedRandomAmount(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetWindDirectionRandomAmount(float afX)", +[](cEnvironmentParticles *o, float a0) { o->SetWindDirectionRandomAmount(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetRotateSpeedRandomAmount(float afX)", +[](cEnvironmentParticles *o, float a0) { o->SetRotateSpeedRandomAmount(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetRotateSpeedRandomBothDirs(bool abX)", +[](cEnvironmentParticles *o, bool a0) { o->SetRotateSpeedRandomBothDirs(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetClipActive(bool abX)", +[](cEnvironmentParticles *o, bool a0) { o->SetClipActive(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "bool GetClipActive()", +[](cEnvironmentParticles *o) -> bool { return o->GetClipActive(); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void AddClipArea(iEntity3D@ apClipEntity, bool abSubtractive)", +[](cEnvironmentParticles *o, iEntity3D * a0, bool a1) { o->AddClipArea(a0, a1); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void RemoveClipArea(iEntity3D@ apClipEntity)", +[](cEnvironmentParticles *o, iEntity3D * a0) { o->RemoveClipArea(a0); });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "const tString& GetName()", +[](cEnvironmentParticles *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cEnvironmentParticles", "void SetSpotLight(cLightSpot@ apSpotLight, float afMul)", +[](cEnvironmentParticles *o, cLightSpot * a0, float a1) { o->SetSpotLight(a0, a1); });
-	SOMA_METHOD_NEW(e, "cFogArea", "int GetUniqueID()", +[](cFogArea *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void UpdateLogic(float afTimeStep)", +[](cFogArea *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "const tString& GetName()const", +[](cFogArea *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetName(const tString&in asName)", +[](cFogArea *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool HasParent()", +[](cFogArea *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool IsActive()const", +[](cFogArea *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetActive(bool abActive)", +[](cFogArea *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "cVector3f GetLocalPosition()", +[](cFogArea *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "cMatrixf& GetLocalMatrix()", +[](cFogArea *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "cVector3f GetWorldPosition()", +[](cFogArea *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "cMatrixf& GetWorldMatrix()", +[](cFogArea *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetPosition(const cVector3f&in avPos)", +[](cFogArea *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cFogArea *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cFogArea *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cFogArea *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "int GetTransformUpdateCount()", +[](cFogArea *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void AddChild(iEntity3D @apEntity)", +[](cFogArea *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void RemoveChild(iEntity3D @apEntity)", +[](cFogArea *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool IsChild(iEntity3D @apEntity)", +[](cFogArea *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "iEntity3D @GetEntityParent()", +[](cFogArea *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "cMaterial @GetMaterial()", +[](cFogArea *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](cFogArea *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "eRenderableType GetRenderType()", +[](cFogArea *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cFogArea *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool GetRenderFlagBit(int alFlagBit)", +[](cFogArea *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "int GetRenderFlags() const", +[](cFogArea *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool IsStatic()", +[](cFogArea *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool IsVisible()", +[](cFogArea *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetVisible(bool abVisible)", +[](cFogArea *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool GetVisibleVar()", +[](cFogArea *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetIlluminationColor(const cColor&in aColor)", +[](cFogArea *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "const cColor& GetIlluminationColor()const", +[](cFogArea *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetCoverageAmount(float afX)", +[](cFogArea *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "float GetCoverageAmount()const", +[](cFogArea *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "int GetMatrixUpdateCount()", +[](cFogArea *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "int GetRenderFrameCount() const", +[](cFogArea *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetRenderFrameCount(int alCount)", +[](cFogArea *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cFogArea *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetLiquidAmount(float afX)", +[](cFogArea *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "float GetLiquidAmount()const", +[](cFogArea *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "const cColor& GetColor()", +[](cFogArea *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetColor(const cColor&in aCol)", +[](cFogArea *o, const cColor & a0) { o->SetColor(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "const cVector3f& GetSize()", +[](cFogArea *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetSize(const cVector3f&in avSize)", +[](cFogArea *o, const cVector3f & a0) { o->SetSize(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetStart(float afX)", +[](cFogArea *o, float a0) { o->SetStart(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetEnd(float afX)", +[](cFogArea *o, float a0) { o->SetEnd(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "float GetStart()", +[](cFogArea *o) -> float { return o->GetStart(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "float GetEnd()", +[](cFogArea *o) -> float { return o->GetEnd(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetFalloffExp(float afX)", +[](cFogArea *o, float a0) { o->SetFalloffExp(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "float GetFalloffExp()", +[](cFogArea *o) -> float { return o->GetFalloffExp(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetShowBacksideWhenOutside(bool abX)", +[](cFogArea *o, bool a0) { o->SetShowBacksideWhenOutside(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetShowBacksideWhenInside(bool abX)", +[](cFogArea *o, bool a0) { o->SetShowBacksideWhenInside(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool GetShowBacksideWhenOutside()", +[](cFogArea *o) -> bool { return o->GetShowBacksideWhenOutside(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool GetShowBacksideWhenInside()", +[](cFogArea *o) -> bool { return o->GetShowBacksideWhenInside(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool GetExponential()", +[](cFogArea *o) -> bool { return o->GetExponential(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "bool GetHeightBased()", +[](cFogArea *o) -> bool { return o->GetHeightBased(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "float GetDensity()", +[](cFogArea *o) -> float { return o->GetDensity(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "float GetHeightDensity()", +[](cFogArea *o) -> float { return o->GetHeightDensity(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "float GetHeightHorizon()", +[](cFogArea *o) -> float { return o->GetHeightHorizon(); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetExponential(bool abX)", +[](cFogArea *o, bool a0) { o->SetExponential(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetHeightBased(bool abX)", +[](cFogArea *o, bool a0) { o->SetHeightBased(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetDensity(float afX)", +[](cFogArea *o, float a0) { o->SetDensity(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetHeightDensity(float afX)", +[](cFogArea *o, float a0) { o->SetHeightDensity(a0); });
-	SOMA_METHOD_NEW(e, "cFogArea", "void SetHeightHorizon(float afX)", +[](cFogArea *o, float a0) { o->SetHeightHorizon(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "int GetUniqueID()", +[](cForceField *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void UpdateLogic(float afTimeStep)", +[](cForceField *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "const tString& GetName()const", +[](cForceField *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetName(const tString&in asName)", +[](cForceField *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "bool HasParent()", +[](cForceField *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cForceField", "bool IsActive()const", +[](cForceField *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetActive(bool abActive)", +[](cForceField *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "cVector3f GetLocalPosition()", +[](cForceField *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cForceField", "cMatrixf& GetLocalMatrix()", +[](cForceField *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cForceField", "cVector3f GetWorldPosition()", +[](cForceField *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cForceField", "cMatrixf& GetWorldMatrix()", +[](cForceField *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetPosition(const cVector3f&in avPos)", +[](cForceField *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cForceField *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cForceField *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cForceField *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "int GetTransformUpdateCount()", +[](cForceField *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void AddChild(iEntity3D @apEntity)", +[](cForceField *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "void RemoveChild(iEntity3D @apEntity)", +[](cForceField *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "bool IsChild(iEntity3D @apEntity)", +[](cForceField *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "iEntity3D @GetEntityParent()", +[](cForceField *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cForceField", "cMaterial @GetMaterial()", +[](cForceField *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "cForceField", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](cForceField *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "eRenderableType GetRenderType()", +[](cForceField *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cForceField *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "cForceField", "bool GetRenderFlagBit(int alFlagBit)", +[](cForceField *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "int GetRenderFlags() const", +[](cForceField *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "cForceField", "bool IsStatic()", +[](cForceField *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "cForceField", "bool IsVisible()", +[](cForceField *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetVisible(bool abVisible)", +[](cForceField *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "bool GetVisibleVar()", +[](cForceField *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetIlluminationColor(const cColor&in aColor)", +[](cForceField *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "const cColor& GetIlluminationColor()const", +[](cForceField *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetCoverageAmount(float afX)", +[](cForceField *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "float GetCoverageAmount()const", +[](cForceField *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "cForceField", "int GetMatrixUpdateCount()", +[](cForceField *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cForceField", "int GetRenderFrameCount() const", +[](cForceField *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetRenderFrameCount(int alCount)", +[](cForceField *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cForceField *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetLiquidAmount(float afX)", +[](cForceField *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "float GetLiquidAmount()const", +[](cForceField *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void FadeTo(float afAmount, float afTime)", +[](cForceField *o, float a0, float a1) { o->FadeTo(a0, a1); });
-	SOMA_METHOD_NEW(e, "cForceField", "void FadeOut(float afTime)", +[](cForceField *o, float a0) { o->FadeOut(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetRadius(float afX)", +[](cForceField *o, float a0) { o->SetRadius(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "float GetRadius()", +[](cForceField *o) -> float { return o->GetRadius(); });
-	SOMA_METHOD_NEW(e, "cForceField", "float GetFinalRadius()", +[](cForceField *o) -> float { return o->GetFinalRadius(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetFalloffStartRadius(float afX)", +[](cForceField *o, float a0) { o->SetFalloffStartRadius(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "float GetFalloffStartRadius()", +[](cForceField *o) -> float { return o->GetFalloffStartRadius(); });
-	SOMA_METHOD_NEW(e, "cForceField", "float GetFinalFalloffStartRadius()", +[](cForceField *o) -> float { return o->GetFinalFalloffStartRadius(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetForce(float afX)", +[](cForceField *o, float a0) { o->SetForce(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "float GetForce()", +[](cForceField *o) -> float { return o->GetForce(); });
-	SOMA_METHOD_NEW(e, "cForceField", "float GetFinalForce()", +[](cForceField *o) -> float { return o->GetFinalForce(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetFreq(float afX)", +[](cForceField *o, float a0) { o->SetFreq(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "float GetFreq()", +[](cForceField *o) -> float { return o->GetFreq(); });
-	SOMA_METHOD_NEW(e, "cForceField", "float GetFinalFreq()", +[](cForceField *o) -> float { return o->GetFinalFreq(); });
-	SOMA_METHOD_NEW(e, "cForceField", "void SetAutoRemove(bool abX)", +[](cForceField *o, bool a0) { o->SetAutoRemove(a0); });
-	SOMA_METHOD_NEW(e, "cForceField", "bool GetAutoRemove()", +[](cForceField *o) -> bool { return o->GetAutoRemove(); });
-	SOMA_METHOD_NEW(e, "cForceField", "float GetT()", +[](cForceField *o) -> float { return o->GetT(); });
-	SOMA_METHOD_NEW(e, "cFrustum", "void SetupPerspectiveProj(const cMatrixf&in a_mtxProj, const cMatrixf&in a_mtxView, float afFarPlane,float afNearPlane,float afFOV, float afAspect, const cVector3f &in avOrigin)", +[](cFrustum *o, const cMatrixf & a0, const cMatrixf & a1, float a2, float a3, float a4, float a5, const cVector3f & a6) { o->SetupPerspectiveProj(a0, a1, a2, a3, a4, a5, a6); });
-	SOMA_METHOD_NEW(e, "cFrustum", "void SetupOrthoProj( const cMatrixf&in a_mtxProj, const cMatrixf&in a_mtxView, float afFarPlane,float afNearPlane,const cVector2f &in avViewSize, const cVector3f &in avOrigin)", +[](cFrustum *o, const cMatrixf & a0, const cMatrixf & a1, float a2, float a3, const cVector2f & a4, const cVector3f & a5) { o->SetupOrthoProj(a0, a1, a2, a3, a4, a5); });
-	SOMA_METHOD_NEW(e, "cFrustum", "const cPlanef& GetPlane(eFrustumPlane aType)", +[](cFrustum *o, int a0) -> const cPlanef & { static thread_local cPlanef r; r = o->GetPlane((eFrustumPlane)a0); return r; });
-	SOMA_METHOD_NEW(e, "cFrustum", "const cVector3f& GetVertex(int alIdx)", +[](cFrustum *o, int a0) -> const cVector3f & { static thread_local cVector3f r; r = o->GetVertex(a0); return r; });
-	SOMA_METHOD_NEW(e, "cFrustum", "bool CollidePoint(const cVector3f&in avPoint)", +[](cFrustum *o, const cVector3f & a0) -> bool { return o->CollidePoint(a0); });
-	SOMA_METHOD_NEW(e, "cFrustum", "eCollision CollideFustrumSphere(const cVector3f&in avCenter, float afRadius)", +[](cFrustum *o, const cVector3f & a0, float a1) -> int { return (int)o->CollideFustrumSphere(a0, a1); });
-	SOMA_METHOD_NEW(e, "cFrustum", "eCollision CollideSphere(const cVector3f&in avCenter, float afRadius, int alMaxPlanes)", +[](cFrustum *o, const cVector3f & a0, float a1, int a2) -> int { return (int)o->CollideSphere(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cFrustum", "eCollision CollideAABB(const cVector3f&in avMin,const cVector3f&in avMax, int alMaxPlanes)", +[](cFrustum *o, const cVector3f & a0, const cVector3f & a1, int a2) -> int { return (int)o->CollideAABB(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cFrustum", "const cMatrixf& GetProjectionMatrix()", +[](cFrustum *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetProjectionMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cFrustum", "const cMatrixf& GetViewMatrix()const", +[](cFrustum *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetViewMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cFrustum", "float GetFarPlane()const", +[](cFrustum *o) -> float { return o->GetFarPlane(); });
-	SOMA_METHOD_NEW(e, "cFrustum", "float GetNearPlane()const", +[](cFrustum *o) -> float { return o->GetNearPlane(); });
-	SOMA_METHOD_NEW(e, "cFrustum", "float GetAspect() const", +[](cFrustum *o) -> float { return o->GetAspect(); });
-	SOMA_METHOD_NEW(e, "cFrustum", "float GetFOV() const", +[](cFrustum *o) -> float { return o->GetFOV(); });
-	SOMA_METHOD_NEW(e, "cFrustum", "bool GetInfFarPlane()", +[](cFrustum *o) -> bool { return o->GetInfFarPlane(); });
-	SOMA_METHOD_NEW(e, "cFrustum", "void SetInvertsCullMode(bool abX)", +[](cFrustum *o, bool a0) { o->SetInvertsCullMode(a0); });
-	SOMA_METHOD_NEW(e, "cFrustum", "bool GetInvertsCullMode()", +[](cFrustum *o) -> bool { return o->GetInvertsCullMode(); });
-	SOMA_METHOD_NEW(e, "cFrustum", "eProjectionType GetProjectionType() const", +[](cFrustum *o) -> int { return (int)o->GetProjectionType(); });
-	SOMA_METHOD_NEW(e, "cFrustum", "const cVector2f& GetOrthoViewSize() const", +[](cFrustum *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetOrthoViewSize(); return r; });
-	SOMA_METHOD_NEW(e, "cFrustum", "bool CheckSphereNearPlaneIntersection(const cVector3f &in avCenter, float afRadius)", +[](cFrustum *o, const cVector3f & a0, float a1) -> bool { return o->CheckSphereNearPlaneIntersection(a0, a1); });
-	SOMA_METHOD_NEW(e, "cFrustum", "bool CheckAABBNearPlaneIntersection(const cVector3f &in avMin, const cVector3f &in avMax)", +[](cFrustum *o, const cVector3f & a0, const cVector3f & a1) -> bool { return o->CheckAABBNearPlaneIntersection(a0, a1); });
-	SOMA_METHOD_NEW(e, "cFrustum", "bool CheckLineIntersection(const cVector3f&in avStart, const cVector3f &in avEnd, cVector3f &in avIntersection)", +[](cFrustum *o, const cVector3f & a0, const cVector3f & a1, cVector3f & a2) -> bool { return o->CheckLineIntersection(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cFrustum", "const cVector3f& GetOrigin()", +[](cFrustum *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetOrigin(); return r; });
-	SOMA_METHOD_NEW(e, "cFrustum", "cVector3f GetForward()", +[](cFrustum *o) -> cVector3f { return o->GetForward(); });
-	SOMA_METHOD_NEW(e, "cGuiGfxElement", "void SetOffset(const cVector3f&in avOffset)", +[](cGuiGfxElement *o, const cVector3f & a0) { o->SetOffset(a0); });
-	SOMA_METHOD_NEW(e, "cGuiGfxElement", "const cVector3f& GetOffset()", +[](cGuiGfxElement *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetOffset(); return r; });
-	SOMA_METHOD_NEW(e, "cGuiGfxElement", "void SetActiveSize(const cVector2f&in avSize)", +[](cGuiGfxElement *o, const cVector2f & a0) { o->SetActiveSize(a0); });
-	SOMA_METHOD_NEW(e, "cGuiGfxElement", "const cVector2f& GetActiveSize()", +[](cGuiGfxElement *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetActiveSize(); return r; });
-	SOMA_METHOD_NEW(e, "cGuiGfxElement", "void PlayAnimation(int alNum)", +[](cGuiGfxElement *o, int a0) { o->PlayAnimation(a0); });
-	SOMA_METHOD_NEW(e, "cGuiGfxElement", "void SetAnimationTime(float afTime)", +[](cGuiGfxElement *o, float a0) { o->SetAnimationTime(a0); });
-	SOMA_METHOD_NEW(e, "cGuiGfxElement", "void SetAnimationPaused(bool abX)", +[](cGuiGfxElement *o, bool a0) { o->SetAnimationPaused(a0); });
-	SOMA_METHOD_NEW(e, "cGuiGfxElement", "void SetColor(const cColor &in aColor)", +[](cGuiGfxElement *o, const cColor & a0) { o->SetColor(a0); });
-	SOMA_METHOD_NEW(e, "cGuiGfxElement", "void SetFlipUvYAxis(bool abX)", +[](cGuiGfxElement *o, bool a0) { o->SetFlipUvYAxis(a0); });
-	SOMA_METHOD_NEW(e, "cGuiGfxElement", "bool GetFlipUvYAxis()", +[](cGuiGfxElement *o) -> bool { return o->GetFlipUvYAxis(); });
-	SOMA_METHOD_NEW(e, "cGuiGfxElement", "const cVector2f& GetImageSize()", +[](cGuiGfxElement *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetImageSize(); return r; });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void DestroyAllWidgets()", +[](cGuiSet *o) { o->DestroyAllWidgets(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void ResetMouseOver()", +[](cGuiSet *o) { o->ResetMouseOver(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void DrawGfx(cGuiGfxElement@ apGfx, const cVector3f &in avPos)", +[](cGuiSet *o, cGuiGfxElement * a0, const cVector3f & a1) { o->DrawGfx(a0, a1); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void DrawGfx(cGuiGfxElement@ apGfx, const cVector3f &in avPos, const cVector2f &in avSize, const cColor&in aColor)", +[](cGuiSet *o, cGuiGfxElement * a0, const cVector3f & a1, const cVector2f & a2, const cColor & a3) { o->DrawGfx(a0, a1, a2, a3); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void DrawGfx(cGuiGfxElement@ apGfx, const cVector3f &in avPos, const cVector2f &in avSize, const cColor&in aColor, eGuiMaterial aMaterial, float afRotationAngle, bool abUseCustomPivot, const cVector3f&in avCustomPivot)", +[](cGuiSet *o, cGuiGfxElement * a0, const cVector3f & a1, const cVector2f & a2, const cColor & a3, int a4, float a5, bool a6, const cVector3f & a7) { o->DrawGfx(a0, a1, a2, a3, (eGuiMaterial)a4, a5, a6, a7); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void DrawFont(const tWString &in asText,iFontData @apFont, const cVector3f &in avPos,const cVector2f &in avSize, const cColor&in aColor)", +[](cGuiSet *o, const tWString & a0, iFontData * a1, const cVector3f & a2, const cVector2f & a3, const cColor & a4) { o->DrawFont(a0, a1, a2, a3, a4); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "cWidgetWindow@ CreateWidgetWindow(int alFlags, const cVector3f &in avLocalPos, const cVector2f &in avSize, const tWString &in asText, iWidget @apParent, const tString&in asName )", +[](cGuiSet *o, int a0, const cVector3f & a1, const cVector2f & a2, const tWString & a3, iWidget * a4, const tString & a5) -> cWidgetWindow * { return o->CreateWidgetWindow(a0, a1, a2, a3, a4, a5); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "iWidget @GetWidgetFromName(const tString&in asName)", +[](cGuiSet *o, const tString & a0) -> iWidget * { return o->GetWidgetFromName(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void DestroyWidget(iWidget @apWidget, bool abDestroyChildren)", +[](cGuiSet *o, iWidget * a0, bool a1) { o->DestroyWidget(a0, a1); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "bool IsValidWidget(iWidget @apWidget)", +[](cGuiSet *o, iWidget * a0) -> bool { return o->IsValidWidget(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void RemoveWindow(cWidgetWindow@ apWin)", +[](cGuiSet *o, cWidgetWindow * a0) { o->RemoveWindow(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetLastWindowZ(float afX)", +[](cGuiSet *o, float a0) { o->SetLastWindowZ(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetWindowOnTop(cWidgetWindow@ apWin)", +[](cGuiSet *o, cWidgetWindow * a0) { o->SetWindowOnTop(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetActive(bool abX)", +[](cGuiSet *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "bool IsActive()", +[](cGuiSet *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "const tString& GetName()", +[](cGuiSet *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetDrawMouse(bool abX)", +[](cGuiSet *o, bool a0) { o->SetDrawMouse(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "bool GetDrawMouse()", +[](cGuiSet *o) -> bool { return o->GetDrawMouse(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetMouseZ(float afZ)", +[](cGuiSet *o, float a0) { o->SetMouseZ(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "float GetMouseZ()", +[](cGuiSet *o) -> float { return o->GetMouseZ(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetMouseMovementEnabled(bool abX)", +[](cGuiSet *o, bool a0) { o->SetMouseMovementEnabled(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "bool GetMouseMovementEnabled()", +[](cGuiSet *o) -> bool { return o->GetMouseMovementEnabled(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "const cVector2f& GetMousePos()", +[](cGuiSet *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetMousePos(); return r; });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetRootWidgetClips(bool abX)", +[](cGuiSet *o, bool a0) { o->SetRootWidgetClips(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "bool GetRootWidgetClips()", +[](cGuiSet *o) -> bool { return o->GetRootWidgetClips(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetVirtualSize(const cVector2f&in avSize, float afMinZ, float afMaxZ, const cVector2f&in avOffset)", +[](cGuiSet *o, const cVector2f & a0, float a1, float a2, const cVector2f & a3) { o->SetVirtualSize(a0, a1, a2, a3); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "const cVector2f& GetVirtualSize()", +[](cGuiSet *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetVirtualSize(); return r; });
-	SOMA_METHOD_NEW(e, "cGuiSet", "const cVector2f& GetVirtualSizeOffset()", +[](cGuiSet *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetVirtualSizeOffset(); return r; });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetFocusedWidget(iWidget@ apWidget, bool abCheckForValidity=false)", +[](cGuiSet *o, iWidget * a0, bool a1) { o->SetFocusedWidget(a0, a1); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "iWidget@ GetFocusedWidget()", +[](cGuiSet *o) -> iWidget * { return o->GetFocusedWidget(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetAttentionWidget(iWidget @apWidget, bool abClearFocus)", +[](cGuiSet *o, iWidget * a0, bool a1) { o->SetAttentionWidget(a0, a1); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "iWidget@ GetAttentionWidget()", +[](cGuiSet *o) -> iWidget * { return o->GetAttentionWidget(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetIs3D(bool abX)", +[](cGuiSet *o, bool a0) { o->SetIs3D(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "bool Is3D()", +[](cGuiSet *o) -> bool { return o->Is3D(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "int GetDrawPriority()", +[](cGuiSet *o) -> int { return o->GetDrawPriority(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetDrawPriority(int alPrio)", +[](cGuiSet *o, int a0) { o->SetDrawPriority(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetCurrentPointer(cGuiGfxElement @apGfx)", +[](cGuiSet *o, cGuiGfxElement * a0) { o->SetCurrentPointer(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "cGuiGfxElement@ GetCurrentPointer()", +[](cGuiSet *o) -> cGuiGfxElement * { return o->GetCurrentPointer(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void Set3DSize(const cVector3f&in avSize)", +[](cGuiSet *o, const cVector3f & a0) { o->Set3DSize(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "const cVector3f& Get3DSize()", +[](cGuiSet *o) -> const cVector3f & { static thread_local cVector3f r; r = o->Get3DSize(); return r; });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetCullBackface(bool abX)", +[](cGuiSet *o, bool a0) { o->SetCullBackface(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "bool GetCullBackface()", +[](cGuiSet *o) -> bool { return o->GetCullBackface(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void Set3DTransform(const cMatrixf&in a_mtxTransform)", +[](cGuiSet *o, const cMatrixf & a0) { o->Set3DTransform(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "const cMatrixf& Get3DTransform()", +[](cGuiSet *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->Get3DTransform(); return r; });
-	SOMA_METHOD_NEW(e, "cGuiSet", "bool HasFocus()", +[](cGuiSet *o) -> bool { return o->HasFocus(); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "void SetSkin(cGuiSkin@ apSkin)", +[](cGuiSet *o, cGuiSkin * a0) { o->SetSkin(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSet", "cGuiSkin@ GetSkin()", +[](cGuiSet *o) -> cGuiSkin * { return o->GetSkin(); });
-	SOMA_METHOD_NEW(e, "cGuiSkin", "const tString& GetName()", +[](cGuiSkin *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cGuiSkin", "bool LoadFromFile(const tWString&in asFile)", +[](cGuiSkin *o, const tWString & a0) -> bool { return o->LoadFromFile(a0); });
-	SOMA_METHOD_NEW(e, "cGuiSkin", "cGuiGfxElement@ GetGfx(eGuiSkinGfx aType)", +[](cGuiSkin *o, int a0) -> cGuiGfxElement * { return o->GetGfx((eGuiSkinGfx)a0); });
-	SOMA_METHOD_NEW(e, "cGuiSkin", "const cVector3f& GetAttribute(eGuiSkinAttribute aType)", +[](cGuiSkin *o, int a0) -> const cVector3f & { static thread_local cVector3f r; r = o->GetAttribute((eGuiSkinAttribute)a0); return r; });
-	SOMA_METHOD_NEW(e, "cLensFlare", "int GetUniqueID()", +[](cLensFlare *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void UpdateLogic(float afTimeStep)", +[](cLensFlare *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "const tString& GetName()const", +[](cLensFlare *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetName(const tString&in asName)", +[](cLensFlare *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool HasParent()", +[](cLensFlare *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool IsActive()const", +[](cLensFlare *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetActive(bool abActive)", +[](cLensFlare *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "cVector3f GetLocalPosition()", +[](cLensFlare *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "cMatrixf& GetLocalMatrix()", +[](cLensFlare *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "cVector3f GetWorldPosition()", +[](cLensFlare *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "cMatrixf& GetWorldMatrix()", +[](cLensFlare *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetPosition(const cVector3f&in avPos)", +[](cLensFlare *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cLensFlare *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cLensFlare *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cLensFlare *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "int GetTransformUpdateCount()", +[](cLensFlare *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void AddChild(iEntity3D @apEntity)", +[](cLensFlare *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void RemoveChild(iEntity3D @apEntity)", +[](cLensFlare *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool IsChild(iEntity3D @apEntity)", +[](cLensFlare *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "iEntity3D @GetEntityParent()", +[](cLensFlare *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "cMaterial @GetMaterial()", +[](cLensFlare *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](cLensFlare *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "eRenderableType GetRenderType()", +[](cLensFlare *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cLensFlare *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool GetRenderFlagBit(int alFlagBit)", +[](cLensFlare *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "int GetRenderFlags() const", +[](cLensFlare *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool IsStatic()", +[](cLensFlare *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool IsVisible()", +[](cLensFlare *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetVisible(bool abVisible)", +[](cLensFlare *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool GetVisibleVar()", +[](cLensFlare *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetIlluminationColor(const cColor&in aColor)", +[](cLensFlare *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "const cColor& GetIlluminationColor()const", +[](cLensFlare *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetCoverageAmount(float afX)", +[](cLensFlare *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetCoverageAmount()const", +[](cLensFlare *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "int GetMatrixUpdateCount()", +[](cLensFlare *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "int GetRenderFrameCount() const", +[](cLensFlare *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetRenderFrameCount(int alCount)", +[](cLensFlare *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cLensFlare *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetLiquidAmount(float afX)", +[](cLensFlare *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetLiquidAmount()const", +[](cLensFlare *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void FadeIn(float afTime)", +[](cLensFlare *o, float a0) { o->FadeIn(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void FadeOut(float afTime)", +[](cLensFlare *o, float a0) { o->FadeOut(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetFlareSourceSize(cVector3f avSize)", +[](cLensFlare *o, cVector3f a0) { o->SetFlareSourceSize(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "cVector3f GetFlareSourceSize()", +[](cLensFlare *o) -> cVector3f { return o->GetFlareSourceSize(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetOuterFieldOfView(float afAngle)", +[](cLensFlare *o, float a0) { o->SetOuterFieldOfView(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetOuterFieldOfView()", +[](cLensFlare *o) -> float { return o->GetOuterFieldOfView(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetInnerFieldOfView(float afAngle)", +[](cLensFlare *o, float a0) { o->SetInnerFieldOfView(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetInnerFieldOfView()", +[](cLensFlare *o) -> float { return o->GetInnerFieldOfView(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetMultiIrisTextureAtlasGrid(cVector2l avMultiIrisGrid)", +[](cLensFlare *o, cVector2l a0) { o->SetMultiIrisTextureAtlasGrid(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "cVector2l GetMultiIrisTextureAtlasGrid()", +[](cLensFlare *o) -> cVector2l { return o->GetMultiIrisTextureAtlasGrid(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetMultiIrisSeed(int alSeed)", +[](cLensFlare *o, int a0) { o->SetMultiIrisSeed(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "int GetMultiIrisSeed()", +[](cLensFlare *o) -> int { return o->GetMultiIrisSeed(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetMultiIrisCount(int alCount)", +[](cLensFlare *o, int a0) { o->SetMultiIrisCount(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "int GetMultiIrisCount()", +[](cLensFlare *o) -> int { return o->GetMultiIrisCount(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetRangeMax(float afRangeMaxStart, float afRangeMaxEnd)", +[](cLensFlare *o, float a0, float a1) { o->SetRangeMax(a0, a1); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void DisableRangeMax()", +[](cLensFlare *o) { o->DisableRangeMax(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetRangeMaxStart()", +[](cLensFlare *o) -> float { return o->GetRangeMaxStart(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetRangeMaxEnd()", +[](cLensFlare *o) -> float { return o->GetRangeMaxEnd(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetRangeMin(float afRangeMinStart, float afRangeMinEnd)", +[](cLensFlare *o, float a0, float a1) { o->SetRangeMin(a0, a1); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void DisableRangeMin()", +[](cLensFlare *o) { o->DisableRangeMin(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetRangeMinStart()", +[](cLensFlare *o) -> float { return o->GetRangeMinStart(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetRangeMinEnd()", +[](cLensFlare *o) -> float { return o->GetRangeMinEnd(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetGlareBrightness(float afBrightness)", +[](cLensFlare *o, float a0) { o->SetGlareBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetGlareBrightness()", +[](cLensFlare *o) -> float { return o->GetGlareBrightness(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetGlareFieldOfView(float afAngle)", +[](cLensFlare *o, float a0) { o->SetGlareFieldOfView(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetGlareFieldOfView()", +[](cLensFlare *o) -> float { return o->GetGlareFieldOfView(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetGlareStareAt(float afGlare)", +[](cLensFlare *o, float a0) { o->SetGlareStareAt(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetGlareRange(float afRangeMaxStart, float afRangeMaxEnd)", +[](cLensFlare *o, float a0, float a1) { o->SetGlareRange(a0, a1); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetGlareRangeMaxStart()", +[](cLensFlare *o) -> float { return o->GetGlareRangeMaxStart(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetGlareRangeMaxEnd()", +[](cLensFlare *o) -> float { return o->GetGlareRangeMaxEnd(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetSizeChangeBasedOnDistance(float afPercent)", +[](cLensFlare *o, float a0) { o->SetSizeChangeBasedOnDistance(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetSizeChangeBasedOnDistance()", +[](cLensFlare *o) -> float { return o->GetSizeChangeBasedOnDistance(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetFlareSize(eLensFlareType aType, cVector2f avSize)", +[](cLensFlare *o, int a0, cVector2f a1) { o->SetFlareSize((eLensFlareType)a0, a1); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "cVector2f GetFlareSize(eLensFlareType aType)", +[](cLensFlare *o, int a0) -> cVector2f { return o->GetFlareSize((eLensFlareType)a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetFlareColor(eLensFlareType aType, cColor aValue)", +[](cLensFlare *o, int a0, cColor a1) { o->SetFlareColor((eLensFlareType)a0, a1); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "cColor GetFlareColor(eLensFlareType aType)", +[](cLensFlare *o, int a0) -> cColor { return o->GetFlareColor((eLensFlareType)a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetFlareActive(eLensFlareType aType, bool abValue)", +[](cLensFlare *o, int a0, bool a1) { o->SetFlareActive((eLensFlareType)a0, a1); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool IsFlareActive(eLensFlareType aType)", +[](cLensFlare *o, int a0) -> bool { return o->IsFlareActive((eLensFlareType)a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetUseParentMeshForOcclusion(bool abValue)", +[](cLensFlare *o, bool a0) { o->SetUseParentMeshForOcclusion(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool GetUseParentMeshForOcclusion()", +[](cLensFlare *o) -> bool { return o->GetUseParentMeshForOcclusion(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetShrinkWhenOccluded(bool abValue)", +[](cLensFlare *o, bool a0) { o->SetShrinkWhenOccluded(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool GetShrinkWhenOccluded()", +[](cLensFlare *o) -> bool { return o->GetShrinkWhenOccluded(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetMultiplyGlareWithMultiIris(bool abValue)", +[](cLensFlare *o, bool a0) { o->SetMultiplyGlareWithMultiIris(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "bool GetMultiplyGlareWithMultiIris()", +[](cLensFlare *o) -> bool { return o->GetMultiplyGlareWithMultiIris(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetBrightness(float afX)", +[](cLensFlare *o, float a0) { o->SetBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "float GetBrightness()", +[](cLensFlare *o) -> float { return o->GetBrightness(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "eLensFlareType GetFirstActiveType()", +[](cLensFlare *o) -> int { return (int)o->GetFirstActiveType(); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "void SetMaterial(eLensFlareType aType, cMaterial@ apMaterial)", +[](cLensFlare *o, int a0, cMaterial * a1) { o->SetMaterial((eLensFlareType)a0, a1); });
-	SOMA_METHOD_NEW(e, "cLightBox", "int GetUniqueID()", +[](cLightBox *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void UpdateLogic(float afTimeStep)", +[](cLightBox *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const tString& GetName()const", +[](cLightBox *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetName(const tString&in asName)", +[](cLightBox *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool HasParent()", +[](cLightBox *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool IsActive()const", +[](cLightBox *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetActive(bool abActive)", +[](cLightBox *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "cVector3f GetLocalPosition()", +[](cLightBox *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "cMatrixf& GetLocalMatrix()", +[](cLightBox *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "cVector3f GetWorldPosition()", +[](cLightBox *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "cMatrixf& GetWorldMatrix()", +[](cLightBox *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetPosition(const cVector3f&in avPos)", +[](cLightBox *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cLightBox *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cLightBox *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cLightBox *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "int GetTransformUpdateCount()", +[](cLightBox *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void AddChild(iEntity3D @apEntity)", +[](cLightBox *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void RemoveChild(iEntity3D @apEntity)", +[](cLightBox *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool IsChild(iEntity3D @apEntity)", +[](cLightBox *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "iEntity3D @GetEntityParent()", +[](cLightBox *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "cMaterial @GetMaterial()", +[](cLightBox *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](cLightBox *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "eRenderableType GetRenderType()", +[](cLightBox *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cLightBox *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool GetRenderFlagBit(int alFlagBit)", +[](cLightBox *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "int GetRenderFlags() const", +[](cLightBox *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool IsStatic()", +[](cLightBox *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool IsVisible()", +[](cLightBox *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetVisible(bool abVisible)", +[](cLightBox *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool GetVisibleVar()", +[](cLightBox *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetIlluminationColor(const cColor&in aColor)", +[](cLightBox *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetIlluminationColor()const", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetCoverageAmount(float afX)", +[](cLightBox *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetCoverageAmount()const", +[](cLightBox *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "int GetMatrixUpdateCount()", +[](cLightBox *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "int GetRenderFrameCount() const", +[](cLightBox *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetRenderFrameCount(int alCount)", +[](cLightBox *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cLightBox *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetLiquidAmount(float afX)", +[](cLightBox *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetLiquidAmount()const", +[](cLightBox *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "eLightType GetLightType()", +[](cLightBox *o) -> int { return (int)o->GetLightType(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetGoboTexture(iTexture @apTexture)", +[](cLightBox *o, iTexture * a0) { o->SetGoboTexture(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "iTexture@ GetGoboTexture()", +[](cLightBox *o) -> iTexture * { return o->GetGoboTexture(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void RemoveBillboard(cBillboard @apBillboard)", +[](cLightBox *o, cBillboard * a0) { o->RemoveBillboard(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void AttachParticleSystem(cParticleSystem @apPS)", +[](cLightBox *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void RemoveParticleSystem(cParticleSystem @apPS)", +[](cLightBox *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", +[](cLightBox *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void StopFading()", +[](cLightBox *o) { o->StopFading(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool IsFading()", +[](cLightBox *o) -> bool { return o->IsFading(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetDestColor()", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetDestColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetDestRadius()", +[](cLightBox *o) -> float { return o->GetDestRadius(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetFlickerActive(bool abX)", +[](cLightBox *o, bool a0) { o->SetFlickerActive(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool GetFlickerActive()", +[](cLightBox *o) -> bool { return o->GetFlickerActive(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetFlicker(const cColor&in aOffCol, float afOffRadius,float afOnMinLength, float afOnMaxLength,const tString &in asOnSound,const tString &in asOnPS, float afOffMinLength, float afOffMaxLength,const tString &in asOffSound,const tString &in asOffPS, bool abFade, float afOnFadeMinLength, float afOnFadeMaxLength, float afOffFadeMinLength, float afOffFadeMaxLength)", +[](cLightBox *o, const cColor & a0, float a1, float a2, float a3, const tString & a4, const tString & a5, float a6, float a7, const tString & a8, const tString & a9, bool a10, float a11, float a12, float a13, float a14) { o->SetFlicker(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const tString& GetFlickerOffSound()", +[](cLightBox *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffSound(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "const tString& GetFlickerOnSound()", +[](cLightBox *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnSound(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "const tString& GetFlickerOffPS()", +[](cLightBox *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffPS(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "const tString& GetFlickerOnPS()", +[](cLightBox *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnPS(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetFlickerOnMinLength()", +[](cLightBox *o) -> float { return o->GetFlickerOnMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetFlickerOffMinLength()", +[](cLightBox *o) -> float { return o->GetFlickerOffMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetFlickerOnMaxLength()", +[](cLightBox *o) -> float { return o->GetFlickerOnMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetFlickerOffMaxLength()", +[](cLightBox *o) -> float { return o->GetFlickerOffMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetFlickerOffColor()", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOffColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetFlickerOffRadius()", +[](cLightBox *o) -> float { return o->GetFlickerOffRadius(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool GetFlickerFade()", +[](cLightBox *o) -> bool { return o->GetFlickerFade(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetFlickerOnFadeMinLength()", +[](cLightBox *o) -> float { return o->GetFlickerOnFadeMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetFlickerOnFadeMaxLength()", +[](cLightBox *o) -> float { return o->GetFlickerOnFadeMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetFlickerOffFadeMinLength()", +[](cLightBox *o) -> float { return o->GetFlickerOffFadeMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetFlickerOffFadeMaxLength()", +[](cLightBox *o) -> float { return o->GetFlickerOffFadeMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetFlickerOnColor()", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOnColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetFlickerOnRadius()", +[](cLightBox *o) -> float { return o->GetFlickerOnRadius(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetDiffuseColor()", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetDiffuseColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetDiffuseColor(const cColor&in aColor)", +[](cLightBox *o, const cColor & a0) { o->SetDiffuseColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetDefaultDiffuseColor()", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultDiffuseColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetDefaultDiffuseColor(const cColor&in aColor)", +[](cLightBox *o, const cColor & a0) { o->SetDefaultDiffuseColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetSpecularColor()", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetSpecularColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetSpecularColor(cColor aColor)", +[](cLightBox *o, cColor a0) { o->SetSpecularColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool GetCastShadows()", +[](cLightBox *o) -> bool { return o->GetCastShadows(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetCastShadows(bool afX)", +[](cLightBox *o, bool a0) { o->SetCastShadows(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "int GetShadowCastersAffected()", +[](cLightBox *o) -> int { return o->GetShadowCastersAffected(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetShadowCastersAffected(int alX)", +[](cLightBox *o, int a0) { o->SetShadowCastersAffected(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "eShadowMapResolution GetShadowMapResolution() const", +[](cLightBox *o) -> int { return (int)o->GetShadowMapResolution(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetShadowMapResolution(eShadowMapResolution aQuality)", +[](cLightBox *o, int a0) { o->SetShadowMapResolution((eShadowMapResolution)a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetShadowMapBlurAmount() const", +[](cLightBox *o) -> float { return o->GetShadowMapBlurAmount(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetShadowMapBlurAmount(float afX)", +[](cLightBox *o, float a0) { o->SetShadowMapBlurAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool GetOcclusionCullShadowCasters() const", +[](cLightBox *o) -> bool { return o->GetOcclusionCullShadowCasters(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetOcclusionCullShadowCasters(bool abX)", +[](cLightBox *o, bool a0) { o->SetOcclusionCullShadowCasters(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetShadowMapBiasMul()", +[](cLightBox *o) -> float { return o->GetShadowMapBiasMul(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetShadowMapSlopeScaleBiasMul()", +[](cLightBox *o) -> float { return o->GetShadowMapSlopeScaleBiasMul(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetShadowMapBiasMul(float afX)", +[](cLightBox *o, float a0) { o->SetShadowMapBiasMul(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetShadowMapSlopeScaleBiasMul(float afX)", +[](cLightBox *o, float a0) { o->SetShadowMapSlopeScaleBiasMul(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetRadius(float afX)", +[](cLightBox *o, float a0) { o->SetRadius(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetRadius()", +[](cLightBox *o) -> float { return o->GetRadius(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetFalloffPow(float afX)", +[](cLightBox *o, float a0) { o->SetFalloffPow(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetFalloffPow()", +[](cLightBox *o) -> float { return o->GetFalloffPow(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetSourceRadius()", +[](cLightBox *o) -> float { return o->GetSourceRadius(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetSourceRadius(float afX)", +[](cLightBox *o, float a0) { o->SetSourceRadius(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetBrightness(float afX)", +[](cLightBox *o, float a0) { o->SetBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetBrightness()", +[](cLightBox *o) -> float { return o->GetBrightness(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetTranslucency()", +[](cLightBox *o) -> float { return o->GetTranslucency(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetTranslucency(float afX)", +[](cLightBox *o, float a0) { o->SetTranslucency(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetSize(const cVector3f&in avSize)", +[](cLightBox *o, const cVector3f & a0) { o->SetSize(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const cVector3f& GetSize()", +[](cLightBox *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetBlendFunc(eLightBoxBlendFunc aFunc)", +[](cLightBox *o, int a0) { o->SetBlendFunc((eLightBoxBlendFunc)a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "eLightBoxBlendFunc GetBlendFunc()", +[](cLightBox *o) -> int { return (int)o->GetBlendFunc(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetAmbientColorSky(const cColor &in aColor)", +[](cLightBox *o, const cColor & a0) { o->SetAmbientColorSky(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetAmbientColorGround(const cColor &in aColor)", +[](cLightBox *o, const cColor & a0) { o->SetAmbientColorGround(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetAmbientColorSky()", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetAmbientColorSky(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetAmbientColorGround()", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetAmbientColorGround(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetWeight(float afX)", +[](cLightBox *o, float a0) { o->SetWeight(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetWeight()", +[](cLightBox *o) -> float { return o->GetWeight(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetBevel(float afX)", +[](cLightBox *o, float a0) { o->SetBevel(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetBevel()", +[](cLightBox *o) -> float { return o->GetBevel(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetUseSphericalHarmonics(bool abX)", +[](cLightBox *o, bool a0) { o->SetUseSphericalHarmonics(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "bool GetUseSphericalHarmonics()", +[](cLightBox *o) -> bool { return o->GetUseSphericalHarmonics(); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetProbeOffset(const cVector3f&in avPosition)", +[](cLightBox *o, const cVector3f & a0) { o->SetProbeOffset(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "const cVector3f& GetProbeOffset()", +[](cLightBox *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetProbeOffset(); return r; });
-	SOMA_METHOD_NEW(e, "cLightBox", "void FadeIrradianceSet(const tString&in asSetName, float afTime)", +[](cLightBox *o, const tString & a0, float a1) { o->FadeIrradianceSet(a0, a1); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetSpecularColor(const cColor&in aColor)", +[](cLightBox *o, const cColor & a0) { o->SetSpecularColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "void SetDefaultBrightness(float afX)", +[](cLightBox *o, float a0) { o->SetDefaultBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cLightBox", "float GetDefaultBrightness()", +[](cLightBox *o) -> float { return o->GetDefaultBrightness(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "int GetUniqueID()", +[](cLightDirectional *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void UpdateLogic(float afTimeStep)", +[](cLightDirectional *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const tString& GetName()const", +[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetName(const tString&in asName)", +[](cLightDirectional *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool HasParent()", +[](cLightDirectional *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool IsActive()const", +[](cLightDirectional *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetActive(bool abActive)", +[](cLightDirectional *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "cVector3f GetLocalPosition()", +[](cLightDirectional *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "cMatrixf& GetLocalMatrix()", +[](cLightDirectional *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "cVector3f GetWorldPosition()", +[](cLightDirectional *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "cMatrixf& GetWorldMatrix()", +[](cLightDirectional *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetPosition(const cVector3f&in avPos)", +[](cLightDirectional *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cLightDirectional *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cLightDirectional *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cLightDirectional *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "int GetTransformUpdateCount()", +[](cLightDirectional *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void AddChild(iEntity3D @apEntity)", +[](cLightDirectional *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void RemoveChild(iEntity3D @apEntity)", +[](cLightDirectional *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool IsChild(iEntity3D @apEntity)", +[](cLightDirectional *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "iEntity3D @GetEntityParent()", +[](cLightDirectional *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "cMaterial @GetMaterial()", +[](cLightDirectional *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](cLightDirectional *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "eRenderableType GetRenderType()", +[](cLightDirectional *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cLightDirectional *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool GetRenderFlagBit(int alFlagBit)", +[](cLightDirectional *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "int GetRenderFlags() const", +[](cLightDirectional *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool IsStatic()", +[](cLightDirectional *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool IsVisible()", +[](cLightDirectional *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetVisible(bool abVisible)", +[](cLightDirectional *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool GetVisibleVar()", +[](cLightDirectional *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetIlluminationColor(const cColor&in aColor)", +[](cLightDirectional *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const cColor& GetIlluminationColor()const", +[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetCoverageAmount(float afX)", +[](cLightDirectional *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetCoverageAmount()const", +[](cLightDirectional *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "int GetMatrixUpdateCount()", +[](cLightDirectional *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "int GetRenderFrameCount() const", +[](cLightDirectional *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetRenderFrameCount(int alCount)", +[](cLightDirectional *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cLightDirectional *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetLiquidAmount(float afX)", +[](cLightDirectional *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetLiquidAmount()const", +[](cLightDirectional *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "eLightType GetLightType()", +[](cLightDirectional *o) -> int { return (int)o->GetLightType(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetGoboTexture(iTexture @apTexture)", +[](cLightDirectional *o, iTexture * a0) { o->SetGoboTexture(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "iTexture@ GetGoboTexture()", +[](cLightDirectional *o) -> iTexture * { return o->GetGoboTexture(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void RemoveBillboard(cBillboard @apBillboard)", +[](cLightDirectional *o, cBillboard * a0) { o->RemoveBillboard(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void AttachParticleSystem(cParticleSystem @apPS)", +[](cLightDirectional *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void RemoveParticleSystem(cParticleSystem @apPS)", +[](cLightDirectional *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", +[](cLightDirectional *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void StopFading()", +[](cLightDirectional *o) { o->StopFading(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool IsFading()", +[](cLightDirectional *o) -> bool { return o->IsFading(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const cColor& GetDestColor()", +[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetDestColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetDestRadius()", +[](cLightDirectional *o) -> float { return o->GetDestRadius(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetFlickerActive(bool abX)", +[](cLightDirectional *o, bool a0) { o->SetFlickerActive(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool GetFlickerActive()", +[](cLightDirectional *o) -> bool { return o->GetFlickerActive(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetFlicker(const cColor&in aOffCol, float afOffRadius,float afOnMinLength, float afOnMaxLength,const tString &in asOnSound,const tString &in asOnPS, float afOffMinLength, float afOffMaxLength,const tString &in asOffSound,const tString &in asOffPS, bool abFade, float afOnFadeMinLength, float afOnFadeMaxLength, float afOffFadeMinLength, float afOffFadeMaxLength)", +[](cLightDirectional *o, const cColor & a0, float a1, float a2, float a3, const tString & a4, const tString & a5, float a6, float a7, const tString & a8, const tString & a9, bool a10, float a11, float a12, float a13, float a14) { o->SetFlicker(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const tString& GetFlickerOffSound()", +[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffSound(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const tString& GetFlickerOnSound()", +[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnSound(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const tString& GetFlickerOffPS()", +[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffPS(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const tString& GetFlickerOnPS()", +[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnPS(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetFlickerOnMinLength()", +[](cLightDirectional *o) -> float { return o->GetFlickerOnMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetFlickerOffMinLength()", +[](cLightDirectional *o) -> float { return o->GetFlickerOffMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetFlickerOnMaxLength()", +[](cLightDirectional *o) -> float { return o->GetFlickerOnMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetFlickerOffMaxLength()", +[](cLightDirectional *o) -> float { return o->GetFlickerOffMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const cColor& GetFlickerOffColor()", +[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOffColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetFlickerOffRadius()", +[](cLightDirectional *o) -> float { return o->GetFlickerOffRadius(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool GetFlickerFade()", +[](cLightDirectional *o) -> bool { return o->GetFlickerFade(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetFlickerOnFadeMinLength()", +[](cLightDirectional *o) -> float { return o->GetFlickerOnFadeMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetFlickerOnFadeMaxLength()", +[](cLightDirectional *o) -> float { return o->GetFlickerOnFadeMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetFlickerOffFadeMinLength()", +[](cLightDirectional *o) -> float { return o->GetFlickerOffFadeMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetFlickerOffFadeMaxLength()", +[](cLightDirectional *o) -> float { return o->GetFlickerOffFadeMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const cColor& GetFlickerOnColor()", +[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOnColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetFlickerOnRadius()", +[](cLightDirectional *o) -> float { return o->GetFlickerOnRadius(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const cColor& GetDiffuseColor()", +[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetDiffuseColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetDiffuseColor(const cColor&in aColor)", +[](cLightDirectional *o, const cColor & a0) { o->SetDiffuseColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const cColor& GetDefaultDiffuseColor()", +[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultDiffuseColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetDefaultDiffuseColor(const cColor&in aColor)", +[](cLightDirectional *o, const cColor & a0) { o->SetDefaultDiffuseColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const cColor& GetSpecularColor()", +[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetSpecularColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetSpecularColor(cColor aColor)", +[](cLightDirectional *o, cColor a0) { o->SetSpecularColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool GetCastShadows()", +[](cLightDirectional *o) -> bool { return o->GetCastShadows(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetCastShadows(bool afX)", +[](cLightDirectional *o, bool a0) { o->SetCastShadows(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "int GetShadowCastersAffected()", +[](cLightDirectional *o) -> int { return o->GetShadowCastersAffected(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetShadowCastersAffected(int alX)", +[](cLightDirectional *o, int a0) { o->SetShadowCastersAffected(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "eShadowMapResolution GetShadowMapResolution() const", +[](cLightDirectional *o) -> int { return (int)o->GetShadowMapResolution(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetShadowMapResolution(eShadowMapResolution aQuality)", +[](cLightDirectional *o, int a0) { o->SetShadowMapResolution((eShadowMapResolution)a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetShadowMapBlurAmount() const", +[](cLightDirectional *o) -> float { return o->GetShadowMapBlurAmount(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetShadowMapBlurAmount(float afX)", +[](cLightDirectional *o, float a0) { o->SetShadowMapBlurAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool GetOcclusionCullShadowCasters() const", +[](cLightDirectional *o) -> bool { return o->GetOcclusionCullShadowCasters(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetOcclusionCullShadowCasters(bool abX)", +[](cLightDirectional *o, bool a0) { o->SetOcclusionCullShadowCasters(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetShadowMapBiasMul()", +[](cLightDirectional *o) -> float { return o->GetShadowMapBiasMul(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetShadowMapSlopeScaleBiasMul()", +[](cLightDirectional *o) -> float { return o->GetShadowMapSlopeScaleBiasMul(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetShadowMapBiasMul(float afX)", +[](cLightDirectional *o, float a0) { o->SetShadowMapBiasMul(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetShadowMapSlopeScaleBiasMul(float afX)", +[](cLightDirectional *o, float a0) { o->SetShadowMapSlopeScaleBiasMul(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetRadius(float afX)", +[](cLightDirectional *o, float a0) { o->SetRadius(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetRadius()", +[](cLightDirectional *o) -> float { return o->GetRadius(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetFalloffPow(float afX)", +[](cLightDirectional *o, float a0) { o->SetFalloffPow(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetFalloffPow()", +[](cLightDirectional *o) -> float { return o->GetFalloffPow(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetSourceRadius()", +[](cLightDirectional *o) -> float { return o->GetSourceRadius(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetSourceRadius(float afX)", +[](cLightDirectional *o, float a0) { o->SetSourceRadius(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetBrightness(float afX)", +[](cLightDirectional *o, float a0) { o->SetBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetBrightness()", +[](cLightDirectional *o) -> float { return o->GetBrightness(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetTranslucency()", +[](cLightDirectional *o) -> float { return o->GetTranslucency(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetTranslucency(float afX)", +[](cLightDirectional *o, float a0) { o->SetTranslucency(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetDirection(const cVector3f&in avDir)", +[](cLightDirectional *o, const cVector3f & a0) { o->SetDirection(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const cVector3f& GetDirection()", +[](cLightDirectional *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetDirection(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetAmbientColorSky(const cColor &in aColor)", +[](cLightDirectional *o, const cColor & a0) { o->SetAmbientColorSky(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetAmbientColorGround(const cColor &in aColor)", +[](cLightDirectional *o, const cColor & a0) { o->SetAmbientColorGround(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const cColor& GetAmbientColorSky()", +[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetAmbientColorSky(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "const cColor& GetAmbientColorGround()", +[](cLightDirectional *o) -> const cColor & { static thread_local cColor r; r = o->GetAmbientColorGround(); return r; });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetShadowCasterDistance(float afX)", +[](cLightDirectional *o, float a0) { o->SetShadowCasterDistance(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetShadowCasterDistance()", +[](cLightDirectional *o) -> float { return o->GetShadowCasterDistance(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetAutoShadowSliceSettings(bool abX)", +[](cLightDirectional *o, bool a0) { o->SetAutoShadowSliceSettings(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "bool GetAutoShadowSliceSettings()", +[](cLightDirectional *o) -> bool { return o->GetAutoShadowSliceSettings(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetAutoShadowSliceLogTerm(float afX)", +[](cLightDirectional *o, float a0) { o->SetAutoShadowSliceLogTerm(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetAutoShadowSliceLogTerm()", +[](cLightDirectional *o) -> float { return o->GetAutoShadowSliceLogTerm(); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetSpecularColor(const cColor&in aColor)", +[](cLightDirectional *o, const cColor & a0) { o->SetSpecularColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetDefaultBrightness(float afX)", +[](cLightDirectional *o, float a0) { o->SetDefaultBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetDefaultBrightness()", +[](cLightDirectional *o) -> float { return o->GetDefaultBrightness(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "int GetUniqueID()", +[](cLightPoint *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void UpdateLogic(float afTimeStep)", +[](cLightPoint *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const tString& GetName()const", +[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetName(const tString&in asName)", +[](cLightPoint *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool HasParent()", +[](cLightPoint *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool IsActive()const", +[](cLightPoint *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetActive(bool abActive)", +[](cLightPoint *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "cVector3f GetLocalPosition()", +[](cLightPoint *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "cMatrixf& GetLocalMatrix()", +[](cLightPoint *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "cVector3f GetWorldPosition()", +[](cLightPoint *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "cMatrixf& GetWorldMatrix()", +[](cLightPoint *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetPosition(const cVector3f&in avPos)", +[](cLightPoint *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cLightPoint *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cLightPoint *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cLightPoint *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "int GetTransformUpdateCount()", +[](cLightPoint *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void AddChild(iEntity3D @apEntity)", +[](cLightPoint *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void RemoveChild(iEntity3D @apEntity)", +[](cLightPoint *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool IsChild(iEntity3D @apEntity)", +[](cLightPoint *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "iEntity3D @GetEntityParent()", +[](cLightPoint *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "cMaterial @GetMaterial()", +[](cLightPoint *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](cLightPoint *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "eRenderableType GetRenderType()", +[](cLightPoint *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cLightPoint *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool GetRenderFlagBit(int alFlagBit)", +[](cLightPoint *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "int GetRenderFlags() const", +[](cLightPoint *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool IsStatic()", +[](cLightPoint *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool IsVisible()", +[](cLightPoint *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetVisible(bool abVisible)", +[](cLightPoint *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool GetVisibleVar()", +[](cLightPoint *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetIlluminationColor(const cColor&in aColor)", +[](cLightPoint *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const cColor& GetIlluminationColor()const", +[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetCoverageAmount(float afX)", +[](cLightPoint *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetCoverageAmount()const", +[](cLightPoint *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "int GetMatrixUpdateCount()", +[](cLightPoint *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "int GetRenderFrameCount() const", +[](cLightPoint *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetRenderFrameCount(int alCount)", +[](cLightPoint *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cLightPoint *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetLiquidAmount(float afX)", +[](cLightPoint *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetLiquidAmount()const", +[](cLightPoint *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "eLightType GetLightType()", +[](cLightPoint *o) -> int { return (int)o->GetLightType(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetGoboTexture(iTexture @apTexture)", +[](cLightPoint *o, iTexture * a0) { o->SetGoboTexture(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "iTexture@ GetGoboTexture()", +[](cLightPoint *o) -> iTexture * { return o->GetGoboTexture(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void RemoveBillboard(cBillboard @apBillboard)", +[](cLightPoint *o, cBillboard * a0) { o->RemoveBillboard(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void AttachParticleSystem(cParticleSystem @apPS)", +[](cLightPoint *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void RemoveParticleSystem(cParticleSystem @apPS)", +[](cLightPoint *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", +[](cLightPoint *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void StopFading()", +[](cLightPoint *o) { o->StopFading(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool IsFading()", +[](cLightPoint *o) -> bool { return o->IsFading(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const cColor& GetDestColor()", +[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetDestColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetDestRadius()", +[](cLightPoint *o) -> float { return o->GetDestRadius(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetFlickerActive(bool abX)", +[](cLightPoint *o, bool a0) { o->SetFlickerActive(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool GetFlickerActive()", +[](cLightPoint *o) -> bool { return o->GetFlickerActive(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetFlicker(const cColor&in aOffCol, float afOffRadius,float afOnMinLength, float afOnMaxLength,const tString &in asOnSound,const tString &in asOnPS, float afOffMinLength, float afOffMaxLength,const tString &in asOffSound,const tString &in asOffPS, bool abFade, float afOnFadeMinLength, float afOnFadeMaxLength, float afOffFadeMinLength, float afOffFadeMaxLength)", +[](cLightPoint *o, const cColor & a0, float a1, float a2, float a3, const tString & a4, const tString & a5, float a6, float a7, const tString & a8, const tString & a9, bool a10, float a11, float a12, float a13, float a14) { o->SetFlicker(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const tString& GetFlickerOffSound()", +[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffSound(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const tString& GetFlickerOnSound()", +[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnSound(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const tString& GetFlickerOffPS()", +[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffPS(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const tString& GetFlickerOnPS()", +[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnPS(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetFlickerOnMinLength()", +[](cLightPoint *o) -> float { return o->GetFlickerOnMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetFlickerOffMinLength()", +[](cLightPoint *o) -> float { return o->GetFlickerOffMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetFlickerOnMaxLength()", +[](cLightPoint *o) -> float { return o->GetFlickerOnMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetFlickerOffMaxLength()", +[](cLightPoint *o) -> float { return o->GetFlickerOffMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const cColor& GetFlickerOffColor()", +[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOffColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetFlickerOffRadius()", +[](cLightPoint *o) -> float { return o->GetFlickerOffRadius(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool GetFlickerFade()", +[](cLightPoint *o) -> bool { return o->GetFlickerFade(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetFlickerOnFadeMinLength()", +[](cLightPoint *o) -> float { return o->GetFlickerOnFadeMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetFlickerOnFadeMaxLength()", +[](cLightPoint *o) -> float { return o->GetFlickerOnFadeMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetFlickerOffFadeMinLength()", +[](cLightPoint *o) -> float { return o->GetFlickerOffFadeMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetFlickerOffFadeMaxLength()", +[](cLightPoint *o) -> float { return o->GetFlickerOffFadeMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const cColor& GetFlickerOnColor()", +[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOnColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetFlickerOnRadius()", +[](cLightPoint *o) -> float { return o->GetFlickerOnRadius(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const cColor& GetDiffuseColor()", +[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetDiffuseColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetDiffuseColor(const cColor&in aColor)", +[](cLightPoint *o, const cColor & a0) { o->SetDiffuseColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const cColor& GetDefaultDiffuseColor()", +[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultDiffuseColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetDefaultDiffuseColor(const cColor&in aColor)", +[](cLightPoint *o, const cColor & a0) { o->SetDefaultDiffuseColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "const cColor& GetSpecularColor()", +[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetSpecularColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetSpecularColor(cColor aColor)", +[](cLightPoint *o, cColor a0) { o->SetSpecularColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool GetCastShadows()", +[](cLightPoint *o) -> bool { return o->GetCastShadows(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetCastShadows(bool afX)", +[](cLightPoint *o, bool a0) { o->SetCastShadows(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "int GetShadowCastersAffected()", +[](cLightPoint *o) -> int { return o->GetShadowCastersAffected(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetShadowCastersAffected(int alX)", +[](cLightPoint *o, int a0) { o->SetShadowCastersAffected(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "eShadowMapResolution GetShadowMapResolution() const", +[](cLightPoint *o) -> int { return (int)o->GetShadowMapResolution(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetShadowMapResolution(eShadowMapResolution aQuality)", +[](cLightPoint *o, int a0) { o->SetShadowMapResolution((eShadowMapResolution)a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetShadowMapBlurAmount() const", +[](cLightPoint *o) -> float { return o->GetShadowMapBlurAmount(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetShadowMapBlurAmount(float afX)", +[](cLightPoint *o, float a0) { o->SetShadowMapBlurAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "bool GetOcclusionCullShadowCasters() const", +[](cLightPoint *o) -> bool { return o->GetOcclusionCullShadowCasters(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetOcclusionCullShadowCasters(bool abX)", +[](cLightPoint *o, bool a0) { o->SetOcclusionCullShadowCasters(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetShadowMapBiasMul()", +[](cLightPoint *o) -> float { return o->GetShadowMapBiasMul(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetShadowMapSlopeScaleBiasMul()", +[](cLightPoint *o) -> float { return o->GetShadowMapSlopeScaleBiasMul(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetShadowMapBiasMul(float afX)", +[](cLightPoint *o, float a0) { o->SetShadowMapBiasMul(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetShadowMapSlopeScaleBiasMul(float afX)", +[](cLightPoint *o, float a0) { o->SetShadowMapSlopeScaleBiasMul(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetRadius(float afX)", +[](cLightPoint *o, float a0) { o->SetRadius(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetRadius()", +[](cLightPoint *o) -> float { return o->GetRadius(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetFalloffPow(float afX)", +[](cLightPoint *o, float a0) { o->SetFalloffPow(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetFalloffPow()", +[](cLightPoint *o) -> float { return o->GetFalloffPow(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetSourceRadius()", +[](cLightPoint *o) -> float { return o->GetSourceRadius(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetSourceRadius(float afX)", +[](cLightPoint *o, float a0) { o->SetSourceRadius(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetBrightness(float afX)", +[](cLightPoint *o, float a0) { o->SetBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetBrightness()", +[](cLightPoint *o) -> float { return o->GetBrightness(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetTranslucency()", +[](cLightPoint *o) -> float { return o->GetTranslucency(); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetTranslucency(float afX)", +[](cLightPoint *o, float a0) { o->SetTranslucency(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetSpecularColor(const cColor&in aColor)", +[](cLightPoint *o, const cColor & a0) { o->SetSpecularColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "void SetDefaultBrightness(float afX)", +[](cLightPoint *o, float a0) { o->SetDefaultBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "float GetDefaultBrightness()", +[](cLightPoint *o) -> float { return o->GetDefaultBrightness(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "int GetUniqueID()", +[](cLightSpot *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void UpdateLogic(float afTimeStep)", +[](cLightSpot *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const tString& GetName()const", +[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetName(const tString&in asName)", +[](cLightSpot *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool HasParent()", +[](cLightSpot *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool IsActive()const", +[](cLightSpot *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetActive(bool abActive)", +[](cLightSpot *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "cVector3f GetLocalPosition()", +[](cLightSpot *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "cMatrixf& GetLocalMatrix()", +[](cLightSpot *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "cVector3f GetWorldPosition()", +[](cLightSpot *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "cMatrixf& GetWorldMatrix()", +[](cLightSpot *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetPosition(const cVector3f&in avPos)", +[](cLightSpot *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cLightSpot *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cLightSpot *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cLightSpot *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "int GetTransformUpdateCount()", +[](cLightSpot *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void AddChild(iEntity3D @apEntity)", +[](cLightSpot *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void RemoveChild(iEntity3D @apEntity)", +[](cLightSpot *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool IsChild(iEntity3D @apEntity)", +[](cLightSpot *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "iEntity3D @GetEntityParent()", +[](cLightSpot *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "cMaterial @GetMaterial()", +[](cLightSpot *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](cLightSpot *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "eRenderableType GetRenderType()", +[](cLightSpot *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cLightSpot *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool GetRenderFlagBit(int alFlagBit)", +[](cLightSpot *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "int GetRenderFlags() const", +[](cLightSpot *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool IsStatic()", +[](cLightSpot *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool IsVisible()", +[](cLightSpot *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetVisible(bool abVisible)", +[](cLightSpot *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool GetVisibleVar()", +[](cLightSpot *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetIlluminationColor(const cColor&in aColor)", +[](cLightSpot *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const cColor& GetIlluminationColor()const", +[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetCoverageAmount(float afX)", +[](cLightSpot *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetCoverageAmount()const", +[](cLightSpot *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "int GetMatrixUpdateCount()", +[](cLightSpot *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "int GetRenderFrameCount() const", +[](cLightSpot *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetRenderFrameCount(int alCount)", +[](cLightSpot *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cLightSpot *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetLiquidAmount(float afX)", +[](cLightSpot *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetLiquidAmount()const", +[](cLightSpot *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "eLightType GetLightType()", +[](cLightSpot *o) -> int { return (int)o->GetLightType(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetGoboTexture(iTexture @apTexture)", +[](cLightSpot *o, iTexture * a0) { o->SetGoboTexture(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "iTexture@ GetGoboTexture()", +[](cLightSpot *o) -> iTexture * { return o->GetGoboTexture(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void RemoveBillboard(cBillboard @apBillboard)", +[](cLightSpot *o, cBillboard * a0) { o->RemoveBillboard(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void AttachParticleSystem(cParticleSystem @apPS)", +[](cLightSpot *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void RemoveParticleSystem(cParticleSystem @apPS)", +[](cLightSpot *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", +[](cLightSpot *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void StopFading()", +[](cLightSpot *o) { o->StopFading(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool IsFading()", +[](cLightSpot *o) -> bool { return o->IsFading(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const cColor& GetDestColor()", +[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetDestColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetDestRadius()", +[](cLightSpot *o) -> float { return o->GetDestRadius(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetFlickerActive(bool abX)", +[](cLightSpot *o, bool a0) { o->SetFlickerActive(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool GetFlickerActive()", +[](cLightSpot *o) -> bool { return o->GetFlickerActive(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetFlicker(const cColor&in aOffCol, float afOffRadius,float afOnMinLength, float afOnMaxLength,const tString &in asOnSound,const tString &in asOnPS, float afOffMinLength, float afOffMaxLength,const tString &in asOffSound,const tString &in asOffPS, bool abFade, float afOnFadeMinLength, float afOnFadeMaxLength, float afOffFadeMinLength, float afOffFadeMaxLength)", +[](cLightSpot *o, const cColor & a0, float a1, float a2, float a3, const tString & a4, const tString & a5, float a6, float a7, const tString & a8, const tString & a9, bool a10, float a11, float a12, float a13, float a14) { o->SetFlicker(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const tString& GetFlickerOffSound()", +[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffSound(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const tString& GetFlickerOnSound()", +[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnSound(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const tString& GetFlickerOffPS()", +[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffPS(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const tString& GetFlickerOnPS()", +[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnPS(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFlickerOnMinLength()", +[](cLightSpot *o) -> float { return o->GetFlickerOnMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFlickerOffMinLength()", +[](cLightSpot *o) -> float { return o->GetFlickerOffMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFlickerOnMaxLength()", +[](cLightSpot *o) -> float { return o->GetFlickerOnMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFlickerOffMaxLength()", +[](cLightSpot *o) -> float { return o->GetFlickerOffMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const cColor& GetFlickerOffColor()", +[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOffColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFlickerOffRadius()", +[](cLightSpot *o) -> float { return o->GetFlickerOffRadius(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool GetFlickerFade()", +[](cLightSpot *o) -> bool { return o->GetFlickerFade(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFlickerOnFadeMinLength()", +[](cLightSpot *o) -> float { return o->GetFlickerOnFadeMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFlickerOnFadeMaxLength()", +[](cLightSpot *o) -> float { return o->GetFlickerOnFadeMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFlickerOffFadeMinLength()", +[](cLightSpot *o) -> float { return o->GetFlickerOffFadeMinLength(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFlickerOffFadeMaxLength()", +[](cLightSpot *o) -> float { return o->GetFlickerOffFadeMaxLength(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const cColor& GetFlickerOnColor()", +[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOnColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFlickerOnRadius()", +[](cLightSpot *o) -> float { return o->GetFlickerOnRadius(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const cColor& GetDiffuseColor()", +[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetDiffuseColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetDiffuseColor(const cColor&in aColor)", +[](cLightSpot *o, const cColor & a0) { o->SetDiffuseColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const cColor& GetDefaultDiffuseColor()", +[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultDiffuseColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetDefaultDiffuseColor(const cColor&in aColor)", +[](cLightSpot *o, const cColor & a0) { o->SetDefaultDiffuseColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const cColor& GetSpecularColor()", +[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetSpecularColor(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetSpecularColor(cColor aColor)", +[](cLightSpot *o, cColor a0) { o->SetSpecularColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool GetCastShadows()", +[](cLightSpot *o) -> bool { return o->GetCastShadows(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetCastShadows(bool afX)", +[](cLightSpot *o, bool a0) { o->SetCastShadows(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "int GetShadowCastersAffected()", +[](cLightSpot *o) -> int { return o->GetShadowCastersAffected(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetShadowCastersAffected(int alX)", +[](cLightSpot *o, int a0) { o->SetShadowCastersAffected(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "eShadowMapResolution GetShadowMapResolution() const", +[](cLightSpot *o) -> int { return (int)o->GetShadowMapResolution(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetShadowMapResolution(eShadowMapResolution aQuality)", +[](cLightSpot *o, int a0) { o->SetShadowMapResolution((eShadowMapResolution)a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetShadowMapBlurAmount() const", +[](cLightSpot *o) -> float { return o->GetShadowMapBlurAmount(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetShadowMapBlurAmount(float afX)", +[](cLightSpot *o, float a0) { o->SetShadowMapBlurAmount(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "bool GetOcclusionCullShadowCasters() const", +[](cLightSpot *o) -> bool { return o->GetOcclusionCullShadowCasters(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetOcclusionCullShadowCasters(bool abX)", +[](cLightSpot *o, bool a0) { o->SetOcclusionCullShadowCasters(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetShadowMapBiasMul()", +[](cLightSpot *o) -> float { return o->GetShadowMapBiasMul(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetShadowMapSlopeScaleBiasMul()", +[](cLightSpot *o) -> float { return o->GetShadowMapSlopeScaleBiasMul(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetShadowMapBiasMul(float afX)", +[](cLightSpot *o, float a0) { o->SetShadowMapBiasMul(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetShadowMapSlopeScaleBiasMul(float afX)", +[](cLightSpot *o, float a0) { o->SetShadowMapSlopeScaleBiasMul(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetRadius(float afX)", +[](cLightSpot *o, float a0) { o->SetRadius(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetRadius()", +[](cLightSpot *o) -> float { return o->GetRadius(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetFalloffPow(float afX)", +[](cLightSpot *o, float a0) { o->SetFalloffPow(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFalloffPow()", +[](cLightSpot *o) -> float { return o->GetFalloffPow(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetSourceRadius()", +[](cLightSpot *o) -> float { return o->GetSourceRadius(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetSourceRadius(float afX)", +[](cLightSpot *o, float a0) { o->SetSourceRadius(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetBrightness(float afX)", +[](cLightSpot *o, float a0) { o->SetBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetBrightness()", +[](cLightSpot *o) -> float { return o->GetBrightness(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetTranslucency()", +[](cLightSpot *o) -> float { return o->GetTranslucency(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetTranslucency(float afX)", +[](cLightSpot *o, float a0) { o->SetTranslucency(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const cMatrixf& GetViewMatrix()", +[](cLightSpot *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetViewMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const cMatrixf& GetProjectionMatrix()", +[](cLightSpot *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetProjectionMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "const cMatrixf& GetViewProjMatrix()", +[](cLightSpot *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetViewProjMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetFOV(float afAngle)", +[](cLightSpot *o, float a0) { o->SetFOV(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetFOV() const", +[](cLightSpot *o) -> float { return o->GetFOV(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetTanHalfFOV() const", +[](cLightSpot *o) -> float { return o->GetTanHalfFOV(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetCosHalfFOV() const", +[](cLightSpot *o) -> float { return o->GetCosHalfFOV(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetAspect(float afAngle)", +[](cLightSpot *o, float a0) { o->SetAspect(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetAspect()", +[](cLightSpot *o) -> float { return o->GetAspect(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetNearClipPlane(float afX)", +[](cLightSpot *o, float a0) { o->SetNearClipPlane(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetNearClipPlane()", +[](cLightSpot *o) -> float { return o->GetNearClipPlane(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetSpotFalloffPow(float afX)", +[](cLightSpot *o, float a0) { o->SetSpotFalloffPow(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetSpotFalloffPow()", +[](cLightSpot *o) -> float { return o->GetSpotFalloffPow(); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetSpecularColor(const cColor&in aColor)", +[](cLightSpot *o, const cColor & a0) { o->SetSpecularColor(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "void SetDefaultBrightness(float afX)", +[](cLightSpot *o, float a0) { o->SetDefaultBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "float GetDefaultBrightness()", +[](cLightSpot *o) -> float { return o->GetDefaultBrightness(); });
-	SOMA_METHOD_NEW(e, "cMaterial", "bool GetForceFullScaleTextures()", +[](cMaterial *o) -> bool { return o->GetForceFullScaleTextures(); });
-	SOMA_METHOD_NEW(e, "cMaterial", "const tString& GetName()", +[](cMaterial *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cMaterial", "int GetUvAnimationNum()", +[](cMaterial *o) -> int { return o->GetUvAnimationNum(); });
-	SOMA_METHOD_NEW(e, "cMesh", "cSubMesh@ CreateSubMesh(const tString &in asName)", +[](cMesh *o, const tString & a0) -> cSubMesh * { return o->CreateSubMesh(a0); });
-	SOMA_METHOD_NEW(e, "cMesh", "cSubMesh@ GetSubMesh(uint alIdx)", +[](cMesh *o, unsigned int a0) -> cSubMesh * { return o->GetSubMesh(a0); });
-	SOMA_METHOD_NEW(e, "cMesh", "int GetSubMeshIndex(const tString &in asName)", +[](cMesh *o, const tString & a0) -> int { return o->GetSubMeshIndex(a0); });
-	SOMA_METHOD_NEW(e, "cMesh", "cSubMesh@ GetSubMeshName(const tString &in asName)", +[](cMesh *o, const tString & a0) -> cSubMesh * { return o->GetSubMeshName(a0); });
-	SOMA_METHOD_NEW(e, "cMesh", "int GetSubMeshNum()", +[](cMesh *o) -> int { return o->GetSubMeshNum(); });
-	SOMA_METHOD_NEW(e, "cMesh", "int GetTriangleCount()", +[](cMesh *o) -> int { return o->GetTriangleCount(); });
-	SOMA_METHOD_NEW(e, "cMesh", "int GetAnimationIndex(const tString&in asName)", +[](cMesh *o, const tString & a0) -> int { return o->GetAnimationIndex(a0); });
-	SOMA_METHOD_NEW(e, "cMesh", "void ClearAnimations(bool abDeleteAll)", +[](cMesh *o, bool a0) { o->ClearAnimations(a0); });
-	SOMA_METHOD_NEW(e, "cMesh", "int GetAnimationNum()", +[](cMesh *o) -> int { return o->GetAnimationNum(); });
-	SOMA_METHOD_NEW(e, "cMesh", "void CompileBonesAndSubMeshes()", +[](cMesh *o) { o->CompileBonesAndSubMeshes(); });
-	SOMA_METHOD_NEW(e, "cMesh", "float GetBoneBoundingRadius(int alIdx)", +[](cMesh *o, int a0) -> float { return o->GetBoneBoundingRadius(a0); });
-	SOMA_METHOD_NEW(e, "cMesh", "cNode3D@ GetRootNode()", +[](cMesh *o) -> cNode3D * { return o->GetRootNode(); });
-	SOMA_METHOD_NEW(e, "cMesh", "void AddNode(cNode3D@ apNode)", +[](cMesh *o, cNode3D * a0) { o->AddNode(a0); });
-	SOMA_METHOD_NEW(e, "cMesh", "int GetNodeNum()", +[](cMesh *o) -> int { return o->GetNodeNum(); });
-	SOMA_METHOD_NEW(e, "cMesh", "cNode3D@ GetNode(int alIdx)", +[](cMesh *o, int a0) -> cNode3D * { return o->GetNode(a0); });
-	SOMA_METHOD_NEW(e, "cMesh", "cNode3D@ GetNodeByName(const tString &in asName)", +[](cMesh *o, const tString & a0) -> cNode3D * { return o->GetNodeByName(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "int GetUniqueID()", +[](cMeshEntity *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void UpdateLogic(float afTimeStep)", +[](cMeshEntity *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "const tString& GetName()const", +[](cMeshEntity *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetName(const tString&in asName)", +[](cMeshEntity *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "bool HasParent()", +[](cMeshEntity *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "bool IsActive()const", +[](cMeshEntity *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetActive(bool abActive)", +[](cMeshEntity *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cVector3f GetLocalPosition()", +[](cMeshEntity *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cMatrixf& GetLocalMatrix()", +[](cMeshEntity *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cVector3f GetWorldPosition()", +[](cMeshEntity *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cMatrixf& GetWorldMatrix()", +[](cMeshEntity *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetPosition(const cVector3f&in avPos)", +[](cMeshEntity *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cMeshEntity *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cMeshEntity *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cMeshEntity *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "int GetTransformUpdateCount()", +[](cMeshEntity *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void AddChild(iEntity3D @apEntity)", +[](cMeshEntity *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void RemoveChild(iEntity3D @apEntity)", +[](cMeshEntity *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "bool IsChild(iEntity3D @apEntity)", +[](cMeshEntity *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "iEntity3D @GetEntityParent()", +[](cMeshEntity *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cMesh@ GetMesh()", +[](cMeshEntity *o) -> cMesh * { return o->GetMesh(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cSubMeshEntity@ GetSubMeshEntity(uint alIdx)", +[](cMeshEntity *o, unsigned int a0) -> cSubMeshEntity * { return o->GetSubMeshEntity(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cSubMeshEntity@ GetSubMeshEntityName(const tString &in asName)", +[](cMeshEntity *o, const tString & a0) -> cSubMeshEntity * { return o->GetSubMeshEntityName(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "int GetSubMeshEntityNum()", +[](cMeshEntity *o) -> int { return o->GetSubMeshEntityNum(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cAnimationState@ GetAnimationState(int alIndex)", +[](cMeshEntity *o, int a0) -> cAnimationState * { return o->GetAnimationState(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "int GetAnimationStateIndex(const tString &in asName)", +[](cMeshEntity *o, const tString & a0) -> int { return o->GetAnimationStateIndex(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cAnimationState@ GetAnimationStateFromName(const tString &in asName)", +[](cMeshEntity *o, const tString & a0) -> cAnimationState * { return o->GetAnimationStateFromName(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "int GetAnimationStateNum()", +[](cMeshEntity *o) -> int { return o->GetAnimationStateNum(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void Play(int alIndex,bool abLoop, bool bStopPrev)", +[](cMeshEntity *o, int a0, bool a1, bool a2) { o->Play(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void PlayName(const tString &in asName,bool abLoop, bool bStopPrev)", +[](cMeshEntity *o, const tString & a0, bool a1, bool a2) { o->PlayName(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void Stop()", +[](cMeshEntity *o) { o->Stop(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void PlayFadeTo(int alIndex,bool abLoop, float afTime)", +[](cMeshEntity *o, int a0, bool a1, float a2) { o->PlayFadeTo(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void PlayFadeToName(const tString &in asName,bool abLoop, float afTime)", +[](cMeshEntity *o, const tString & a0, bool a1, float a2) { o->PlayFadeToName(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "bool AnimationIsOver(const tString &in asName)", +[](cMeshEntity *o, const tString & a0) -> bool { return o->AnimationIsOver(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetNormalizeAnimationWeights(bool abX)", +[](cMeshEntity *o, bool a0) { o->SetNormalizeAnimationWeights(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "bool GetNormalizeAnimationWeights()", +[](cMeshEntity *o) -> bool { return o->GetNormalizeAnimationWeights(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cNode3D@ GetBoneStateRoot()", +[](cMeshEntity *o) -> cNode3D * { return o->GetBoneStateRoot(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cBoneState@ GetBoneState(int alIndex)", +[](cMeshEntity *o, int a0) -> cBoneState * { return o->GetBoneState(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "int GetBoneStateIndex(const tString &in asName)", +[](cMeshEntity *o, const tString & a0) -> int { return o->GetBoneStateIndex(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "int GetBoneStateIndexFromPtr(cBoneState@ apBoneState)", +[](cMeshEntity *o, cBoneState * a0) -> int { return o->GetBoneStateIndexFromPtr(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cBoneState@ GetBoneStateFromName(const tString &in asName)", +[](cMeshEntity *o, const tString & a0) -> cBoneState * { return o->GetBoneStateFromName(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "int GetBoneStateNum()", +[](cMeshEntity *o) -> int { return o->GetBoneStateNum(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetSkeletonPhysicsActive(bool abX)", +[](cMeshEntity *o, bool a0) { o->SetSkeletonPhysicsActive(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "bool GetSkeletonPhysicsActive()", +[](cMeshEntity *o) -> bool { return o->GetSkeletonPhysicsActive(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetSkeletonPhysicsCanSleep(bool abX)", +[](cMeshEntity *o, bool a0) { o->SetSkeletonPhysicsCanSleep(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "bool GetSkeletonPhysicsCanSleep()", +[](cMeshEntity *o) -> bool { return o->GetSkeletonPhysicsCanSleep(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "float GetSkeletonPhysicsWeight()", +[](cMeshEntity *o) -> float { return o->GetSkeletonPhysicsWeight(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetSkeletonPhysicsWeight(float afX)", +[](cMeshEntity *o, float a0) { o->SetSkeletonPhysicsWeight(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void FadeSkeletonPhysicsWeight(float afTime)", +[](cMeshEntity *o, float a0) { o->FadeSkeletonPhysicsWeight(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetSkeletonCollidersActive(bool abX)", +[](cMeshEntity *o, bool a0) { o->SetSkeletonCollidersActive(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "bool GetSkeletonCollidersActive()", +[](cMeshEntity *o) -> bool { return o->GetSkeletonCollidersActive(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void AlignBodiesToSkeleton(bool abCalculateSpeed)", +[](cMeshEntity *o, bool a0) { o->AlignBodiesToSkeleton(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void ResetGraphicsUpdated()", +[](cMeshEntity *o) { o->ResetGraphicsUpdated(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cNode3D@ GetNodeState(int alIndex)", +[](cMeshEntity *o, int a0) -> cNode3D * { return o->GetNodeState(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "int GetNodeStateIndex(const tString &in asName)", +[](cMeshEntity *o, const tString & a0) -> int { return o->GetNodeStateIndex(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "cNode3D@ GetNodeStateFromName(const tString &in asName)", +[](cMeshEntity *o, const tString & a0) -> cNode3D * { return o->GetNodeStateFromName(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "int GetNodeStateNum()", +[](cMeshEntity *o) -> int { return o->GetNodeStateNum(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "bool IsVisible()", +[](cMeshEntity *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetVisible(bool abVisible)", +[](cMeshEntity *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetStatic(bool abX)", +[](cMeshEntity *o, bool a0) { o->SetStatic(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "bool IsStatic()", +[](cMeshEntity *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cMeshEntity *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetIlluminationColor(const cColor&in aColor)", +[](cMeshEntity *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetCoverageAmount(float afX)", +[](cMeshEntity *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "float GetCoverageAmount()", +[](cMeshEntity *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetLiquidAmount(float afX)", +[](cMeshEntity *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "float GetLiquidAmount()", +[](cMeshEntity *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "void UseAutomaticLiquidAmount()", +[](cMeshEntity *o) { o->UseAutomaticLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cNode3D", "bool AddEntity(iEntity3D@ apEntity)", +[](cNode3D *o, iEntity3D * a0) -> bool { return o->AddEntity(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "bool RemoveEntity(iEntity3D@ apEntity)", +[](cNode3D *o, iEntity3D * a0) -> bool { return o->RemoveEntity(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void ClearEntities()", +[](cNode3D *o) { o->ClearEntities(); });
-	SOMA_METHOD_NEW(e, "cNode3D", "cNode3D@ GetParent()", +[](cNode3D *o) -> cNode3D * { return o->GetParent(); });
-	SOMA_METHOD_NEW(e, "cNode3D", "cNode3D@ CreateChild(const tString &in asName=, bool abAutoDeleteChildren = true)", +[](cNode3D *o, const tString & a0, bool a1) -> cNode3D * { return o->CreateChild(a0, a1); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void RemoveChild(cNode3D@ apNode)", +[](cNode3D *o, cNode3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void SetParent(cNode3D@ apNode)", +[](cNode3D *o, cNode3D * a0) { o->SetParent(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void AddChild(cNode3D@ apChild)", +[](cNode3D *o, cNode3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "const tString& GetName()", +[](cNode3D *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cNode3D", "void SetActive(bool abX)", +[](cNode3D *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "bool IsActive()", +[](cNode3D *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cNode3D", "int SetVisible(bool abX, bool abCascade)", +[](cNode3D *o, bool a0, bool a1) -> int { return o->SetVisible(a0, a1); });
-	SOMA_METHOD_NEW(e, "cNode3D", "cVector3f GetLocalPosition()", +[](cNode3D *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cNode3D", "const cMatrixf& GetLocalMatrix()", +[](cNode3D *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetLocalMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cNode3D", "cVector3f GetWorldPosition()", +[](cNode3D *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cNode3D", "const cMatrixf& GetWorldMatrix()", +[](cNode3D *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetWorldMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "cNode3D", "void SetPosition(const cVector3f&in avPos)", +[](cNode3D *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void SetMatrix(const cMatrixf&in a_mtxTransform, bool abSetChildrenUpdated=true)", +[](cNode3D *o, const cMatrixf & a0, bool a1) { o->SetMatrix(a0, a1); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cNode3D *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cNode3D *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void AddRotation(const cVector3f&in avRot, eEulerRotationOrder aOrder)", +[](cNode3D *o, const cVector3f & a0, int a1) { o->AddRotation(a0, (eEulerRotationOrder)a1); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void AddScale(const cVector3f&in avScale)", +[](cNode3D *o, const cVector3f & a0) { o->AddScale(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void AddTranslation(const cVector3f&in avTrans)", +[](cNode3D *o, const cVector3f & a0) { o->AddTranslation(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "bool GetUsePreAnimTransform()", +[](cNode3D *o) -> bool { return o->GetUsePreAnimTransform(); });
-	SOMA_METHOD_NEW(e, "cNode3D", "bool GetUsePostAnimTransform()", +[](cNode3D *o) -> bool { return o->GetUsePostAnimTransform(); });
-	SOMA_METHOD_NEW(e, "cNode3D", "const cMatrixf& GetPreAnimTransform()", +[](cNode3D *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetPreAnimTransform(); return r; });
-	SOMA_METHOD_NEW(e, "cNode3D", "const cMatrixf& GetPostAnimTransform()", +[](cNode3D *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetPostAnimTransform(); return r; });
-	SOMA_METHOD_NEW(e, "cNode3D", "void SetUsePreTransform(bool abX)", +[](cNode3D *o, bool a0) { o->SetUsePreTransform(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void SetUsePostTransform(bool abX)", +[](cNode3D *o, bool a0) { o->SetUsePostTransform(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void SetPreTransform(const cMatrixf&in a_mtxTransform)", +[](cNode3D *o, const cMatrixf & a0) { o->SetPreTransform(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void SetPostTransform(const cMatrixf&in a_mtxTransform)", +[](cNode3D *o, const cMatrixf & a0) { o->SetPostTransform(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void ApplyPreAnimTransform(bool abSetChildrenUpdated)", +[](cNode3D *o, bool a0) { o->ApplyPreAnimTransform(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void ApplyPostAnimTransform(bool abSetChildrenUpdated)", +[](cNode3D *o, bool a0) { o->ApplyPostAnimTransform(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void SetCustomFlags(int alX)", +[](cNode3D *o, int a0) { o->SetCustomFlags(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "int GetCustomFlags()", +[](cNode3D *o) -> int { return o->GetCustomFlags(); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void UpdateMatrix(bool abSetChildrenUpdated)", +[](cNode3D *o, bool a0) { o->UpdateMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cNode3D", "void UpdateEntityChildren()", +[](cNode3D *o) { o->UpdateEntityChildren(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "int GetUniqueID()", +[](cParticleSystem *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void UpdateLogic(float afTimeStep)", +[](cParticleSystem *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "const tString& GetName()const", +[](cParticleSystem *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetName(const tString&in asName)", +[](cParticleSystem *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "bool HasParent()", +[](cParticleSystem *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "bool IsActive()const", +[](cParticleSystem *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetActive(bool abActive)", +[](cParticleSystem *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "cVector3f GetLocalPosition()", +[](cParticleSystem *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "cMatrixf& GetLocalMatrix()", +[](cParticleSystem *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "cVector3f GetWorldPosition()", +[](cParticleSystem *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "cMatrixf& GetWorldMatrix()", +[](cParticleSystem *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetPosition(const cVector3f&in avPos)", +[](cParticleSystem *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cParticleSystem *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cParticleSystem *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cParticleSystem *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "int GetTransformUpdateCount()", +[](cParticleSystem *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void AddChild(iEntity3D @apEntity)", +[](cParticleSystem *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void RemoveChild(iEntity3D @apEntity)", +[](cParticleSystem *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "bool IsChild(iEntity3D @apEntity)", +[](cParticleSystem *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "iEntity3D @GetEntityParent()", +[](cParticleSystem *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "bool IsVisible()", +[](cParticleSystem *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetVisible(bool abVisible)", +[](cParticleSystem *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "bool GetRemoveWhenDead()", +[](cParticleSystem *o) -> bool { return o->GetRemoveWhenDead(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetRemoveWhenDead(bool abX)", +[](cParticleSystem *o, bool a0) { o->SetRemoveWhenDead(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void Kill()", +[](cParticleSystem *o) { o->Kill(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void KillInstantly()", +[](cParticleSystem *o) { o->KillInstantly(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetColor(const cColor&in aColor)", +[](cParticleSystem *o, const cColor & a0) { o->SetColor(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetFadeAtDistance(bool abX)", +[](cParticleSystem *o, bool a0) { o->SetFadeAtDistance(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetMinFadeDistanceStart(float afX)", +[](cParticleSystem *o, float a0) { o->SetMinFadeDistanceStart(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetMinFadeDistanceEnd(float afX)", +[](cParticleSystem *o, float a0) { o->SetMinFadeDistanceEnd(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetMaxFadeDistanceStart(float afX)", +[](cParticleSystem *o, float a0) { o->SetMaxFadeDistanceStart(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetMaxFadeDistanceEnd(float afX)", +[](cParticleSystem *o, float a0) { o->SetMaxFadeDistanceEnd(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetBrightness(float afX)", +[](cParticleSystem *o, float a0) { o->SetBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "const cColor& GetColor()", +[](cParticleSystem *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "bool GetFadeAtDistance()", +[](cParticleSystem *o) -> bool { return o->GetFadeAtDistance(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetMinFadeDistanceStart()", +[](cParticleSystem *o) -> float { return o->GetMinFadeDistanceStart(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetMinFadeDistanceEnd()", +[](cParticleSystem *o) -> float { return o->GetMinFadeDistanceEnd(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetMaxFadeDistanceStart()", +[](cParticleSystem *o) -> float { return o->GetMaxFadeDistanceStart(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetMaxFadeDistanceEnd()", +[](cParticleSystem *o) -> float { return o->GetMaxFadeDistanceEnd(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetBrightness()", +[](cParticleSystem *o) -> float { return o->GetBrightness(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "bool IsDead()", +[](cParticleSystem *o) -> bool { return o->IsDead(); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "bool IsDying()", +[](cParticleSystem *o) -> bool { return o->IsDying(); });
-	SOMA_METHOD_NEW(e, "cPostEffectComposite", "int GetPostEffectNum()", +[](cPostEffectComposite *o) -> int { return o->GetPostEffectNum(); });
-	SOMA_METHOD_NEW(e, "cPostEffectComposite", "bool HasActiveEffects()", +[](cPostEffectComposite *o) -> bool { return o->HasActiveEffects(); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "void AddVarBool(const tString&in asName, bool abDefault)", +[](cResourceVarsObject *o, const tString & a0, bool a1) { o->AddVarBool(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "void AddVarInt(const tString&in asName, int alDefault)", +[](cResourceVarsObject *o, const tString & a0, int a1) { o->AddVarInt(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "void AddVarFloat(const tString&in asName, float afDefault=0)", +[](cResourceVarsObject *o, const tString & a0, float a1) { o->AddVarFloat(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "void AddVarVector2f(const tString&in asName, const cVector2f&in avDefault)", +[](cResourceVarsObject *o, const tString & a0, const cVector2f & a1) { o->AddVarVector2f(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "void AddVarVector3f(const tString&in asName, const cVector3f&in avDefault)", +[](cResourceVarsObject *o, const tString & a0, const cVector3f & a1) { o->AddVarVector3f(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "void AddVarColor(const tString&in asName, const cColor&in aDefault)", +[](cResourceVarsObject *o, const tString & a0, const cColor & a1) { o->AddVarColor(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "void AddVarString(const tString&in asName, const tString&in alDefault)", +[](cResourceVarsObject *o, const tString & a0, const tString & a1) { o->AddVarString(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "bool GetVarBool(const tString&in asName, bool abDefault)", +[](cResourceVarsObject *o, const tString & a0, bool a1) -> bool { return o->GetVarBool(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "int GetVarInt(const tString&in asName, int alDefault)", +[](cResourceVarsObject *o, const tString & a0, int a1) -> int { return o->GetVarInt(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "float GetVarFloat(const tString&in asName, float afDefault)", +[](cResourceVarsObject *o, const tString & a0, float a1) -> float { return o->GetVarFloat(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "cVector2f GetVarVector2f(const tString&in asName, const cVector2f&in avDefault)", +[](cResourceVarsObject *o, const tString & a0, const cVector2f & a1) -> cVector2f { return o->GetVarVector2f(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "cVector3f GetVarVector3f(const tString&in asName, const cVector3f&in avDefault)", +[](cResourceVarsObject *o, const tString & a0, const cVector3f & a1) -> cVector3f { return o->GetVarVector3f(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "cColor GetVarColor(const tString&in asName, const cColor&in aDefault)", +[](cResourceVarsObject *o, const tString & a0, const cColor & a1) -> cColor { return o->GetVarColor(a0, a1); });
-	SOMA_METHOD_NEW(e, "cResourceVarsObject", "tString GetVarString(const tString&in asName, const tString&in asDefault)", +[](cResourceVarsObject *o, const tString & a0, const tString & a1) -> tString { return o->GetVarString(a0, a1); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "int GetUniqueID()", +[](cSoundEntity *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void UpdateLogic(float afTimeStep)", +[](cSoundEntity *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "const tString& GetName()const", +[](cSoundEntity *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void SetName(const tString&in asName)", +[](cSoundEntity *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "bool HasParent()", +[](cSoundEntity *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "bool IsActive()const", +[](cSoundEntity *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void SetActive(bool abActive)", +[](cSoundEntity *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "cVector3f GetLocalPosition()", +[](cSoundEntity *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "cMatrixf& GetLocalMatrix()", +[](cSoundEntity *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "cVector3f GetWorldPosition()", +[](cSoundEntity *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "cMatrixf& GetWorldMatrix()", +[](cSoundEntity *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void SetPosition(const cVector3f&in avPos)", +[](cSoundEntity *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cSoundEntity *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cSoundEntity *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cSoundEntity *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "int GetTransformUpdateCount()", +[](cSoundEntity *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void AddChild(iEntity3D @apEntity)", +[](cSoundEntity *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void RemoveChild(iEntity3D @apEntity)", +[](cSoundEntity *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "bool IsChild(iEntity3D @apEntity)", +[](cSoundEntity *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "iEntity3D @GetEntityParent()", +[](cSoundEntity *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void Play()", +[](cSoundEntity *o) { o->Play(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void Stop(bool abPlayEndSound)", +[](cSoundEntity *o, bool a0) { o->Stop(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void FadeIn(float afSpeed)", +[](cSoundEntity *o, float a0) { o->FadeIn(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void FadeOut(float afSpeed)", +[](cSoundEntity *o, float a0) { o->FadeOut(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "bool IsStopped()", +[](cSoundEntity *o) -> bool { return o->IsStopped(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "bool IsFadingOut()", +[](cSoundEntity *o) -> bool { return o->IsFadingOut(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "bool GetRemoveWhenOver()", +[](cSoundEntity *o) -> bool { return o->GetRemoveWhenOver(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "void SetVolume(float afX)", +[](cSoundEntity *o, float a0) { o->SetVolume(a0); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "float GetVolume()", +[](cSoundEntity *o) -> float { return o->GetVolume(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "float GetMinDistance()", +[](cSoundEntity *o) -> float { return o->GetMinDistance(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "float GetMaxDistance()", +[](cSoundEntity *o) -> float { return o->GetMaxDistance(); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "int GetCreationID()", +[](cSoundEntity *o) -> int { return o->GetCreationID(); });
-	SOMA_METHOD_NEW(e, "cSubMesh", "void SetMaterial(cMaterial@ apMaterial)", +[](cSubMesh *o, cMaterial * a0) { o->SetMaterial(a0); });
-	SOMA_METHOD_NEW(e, "cSubMesh", "cMaterial @GetMaterial()", +[](cSubMesh *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "cSubMesh", "const tString& GetName()", +[](cSubMesh *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cSubMesh", "int GetColliderNum()", +[](cSubMesh *o) -> int { return o->GetColliderNum(); });
-	SOMA_METHOD_NEW(e, "cSubMesh", "iCollideShape@ CreateCollideShape(iPhysicsWorld @apWorld)", +[](cSubMesh *o, iPhysicsWorld * a0) -> iCollideShape * { return o->CreateCollideShape(a0); });
-	SOMA_METHOD_NEW(e, "cSubMesh", "void SetIsCollideShape(bool abX)", +[](cSubMesh *o, bool a0) { o->SetIsCollideShape(a0); });
-	SOMA_METHOD_NEW(e, "cSubMesh", "bool IsCollideShape()", +[](cSubMesh *o) -> bool { return o->IsCollideShape(); });
-	SOMA_METHOD_NEW(e, "cSubMesh", "cVector3f GetModelScale()", +[](cSubMesh *o) -> cVector3f { return o->GetModelScale(); });
-	SOMA_METHOD_NEW(e, "cSubMesh", "const cMatrixf& GetLocalTransform()", +[](cSubMesh *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetLocalTransform(); return r; });
-	SOMA_METHOD_NEW(e, "cSubMesh", "void SetLocalTransform(const cMatrixf&in a_mtxTrans)", +[](cSubMesh *o, const cMatrixf & a0) { o->SetLocalTransform(a0); });
-	SOMA_METHOD_NEW(e, "cSubMesh", "const tString& GetMaterialName()", +[](cSubMesh *o) -> const tString & { static thread_local tString r; r = o->GetMaterialName(); return r; });
-	SOMA_METHOD_NEW(e, "cSubMesh", "void Compile()", +[](cSubMesh *o) { o->Compile(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "int GetUniqueID()", +[](cSubMeshEntity *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void UpdateLogic(float afTimeStep)", +[](cSubMeshEntity *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "const tString& GetName()const", +[](cSubMeshEntity *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetName(const tString&in asName)", +[](cSubMeshEntity *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "bool HasParent()", +[](cSubMeshEntity *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "bool IsActive()const", +[](cSubMeshEntity *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetActive(bool abActive)", +[](cSubMeshEntity *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "cVector3f GetLocalPosition()", +[](cSubMeshEntity *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "cMatrixf& GetLocalMatrix()", +[](cSubMeshEntity *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "cVector3f GetWorldPosition()", +[](cSubMeshEntity *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "cMatrixf& GetWorldMatrix()", +[](cSubMeshEntity *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetPosition(const cVector3f&in avPos)", +[](cSubMeshEntity *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cSubMeshEntity *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cSubMeshEntity *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cSubMeshEntity *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "int GetTransformUpdateCount()", +[](cSubMeshEntity *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void AddChild(iEntity3D @apEntity)", +[](cSubMeshEntity *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void RemoveChild(iEntity3D @apEntity)", +[](cSubMeshEntity *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "bool IsChild(iEntity3D @apEntity)", +[](cSubMeshEntity *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "iEntity3D @GetEntityParent()", +[](cSubMeshEntity *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "cMaterial @GetMaterial()", +[](cSubMeshEntity *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](cSubMeshEntity *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "eRenderableType GetRenderType()", +[](cSubMeshEntity *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cSubMeshEntity *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "bool GetRenderFlagBit(int alFlagBit)", +[](cSubMeshEntity *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "int GetRenderFlags() const", +[](cSubMeshEntity *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "bool IsStatic()", +[](cSubMeshEntity *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "bool IsVisible()", +[](cSubMeshEntity *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetVisible(bool abVisible)", +[](cSubMeshEntity *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "bool GetVisibleVar()", +[](cSubMeshEntity *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetIlluminationColor(const cColor&in aColor)", +[](cSubMeshEntity *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "const cColor& GetIlluminationColor()const", +[](cSubMeshEntity *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetCoverageAmount(float afX)", +[](cSubMeshEntity *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "float GetCoverageAmount()const", +[](cSubMeshEntity *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "int GetMatrixUpdateCount()", +[](cSubMeshEntity *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "int GetRenderFrameCount() const", +[](cSubMeshEntity *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetRenderFrameCount(int alCount)", +[](cSubMeshEntity *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cSubMeshEntity *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetLiquidAmount(float afX)", +[](cSubMeshEntity *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "float GetLiquidAmount()const", +[](cSubMeshEntity *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "cSubMesh@ GetSubMesh() const", +[](cSubMeshEntity *o) -> cSubMesh * { return o->GetSubMesh(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetLocalNode(cNode3D @apNode)", +[](cSubMeshEntity *o, cNode3D * a0) { o->SetLocalNode(a0); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "cNode3D@ GetLocalNode()", +[](cSubMeshEntity *o) -> cNode3D * { return o->GetLocalNode(); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetCustomMaterial(cMaterial @apMaterial, bool abDestroyOldCustom)", +[](cSubMeshEntity *o, cMaterial * a0, bool a1) { o->SetCustomMaterial(a0, a1); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "cMaterial@ GetCustomMaterial()", +[](cSubMeshEntity *o) -> cMaterial * { return o->GetCustomMaterial(); });
-	SOMA_METHOD_NEW(e, "cSurfaceData", "const tString& GetName() const", +[](cSurfaceData *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cSurfaceData", "void PreloadData()", +[](cSurfaceData *o) { o->PreloadData(); });
-	SOMA_METHOD_NEW(e, "cSurfaceData", "int GetImpactDataNum()", +[](cSurfaceData *o) -> int { return o->GetImpactDataNum(); });
-	SOMA_METHOD_NEW(e, "cSurfaceData", "int GetHitDataNum()", +[](cSurfaceData *o) -> int { return o->GetHitDataNum(); });
-	SOMA_METHOD_NEW(e, "cSurfaceData", "const tString& GetStepType()", +[](cSurfaceData *o) -> const tString & { static thread_local tString r; r = o->GetStepType(); return r; });
-	SOMA_METHOD_NEW(e, "cSurfaceData", "const tString& GetUserVar()", +[](cSurfaceData *o) -> const tString & { static thread_local tString r; r = o->GetUserVar(); return r; });
-	SOMA_METHOD_NEW(e, "cTerrain", "bool GetWorldPosHeightAndNormal(const cVector3f&in avPosition, float &out afHeight, cVector3f &out avNormal)", +[](cTerrain *o, const cVector3f & a0, float & a1, cVector3f & a2) -> bool { return o->GetWorldPosHeightAndNormal(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cTerrain", "void SetCheapMaterial(const tString&in asCheapMaterial, float afCheapMaterialMul)", +[](cTerrain *o, const tString & a0, float a1) { o->SetCheapMaterial(a0, a1); });
-	SOMA_METHOD_NEW(e, "cVerletParticle", "void SetPosition(const cVector3f&in avPos, bool abSetPrevPos)", +[](cVerletParticle *o, const cVector3f & a0, bool a1) { o->SetPosition(a0, a1); });
-	SOMA_METHOD_NEW(e, "cVerletParticle", "void AddPosition(const cVector3f&in avAdd, bool abSetPrevPos)", +[](cVerletParticle *o, const cVector3f & a0, bool a1) { o->AddPosition(a0, a1); });
-	SOMA_METHOD_NEW(e, "cVerletParticle", "const cVector3f& GetPosition() const", +[](cVerletParticle *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPosition(); return r; });
-	SOMA_METHOD_NEW(e, "cVerletParticle", "void SetPrevPosition(const cVector3f&in avPos)", +[](cVerletParticle *o, const cVector3f & a0) { o->SetPrevPosition(a0); });
-	SOMA_METHOD_NEW(e, "cVerletParticle", "const cVector3f& GetPrevPosition() const", +[](cVerletParticle *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPrevPosition(); return r; });
-	SOMA_METHOD_NEW(e, "cVerletParticle", "void SetSmoothPosition(const cVector3f&in avPos)", +[](cVerletParticle *o, const cVector3f & a0) { o->SetSmoothPosition(a0); });
-	SOMA_METHOD_NEW(e, "cVerletParticle", "const cVector3f& GetSmoothPosition() const", +[](cVerletParticle *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSmoothPosition(); return r; });
-	SOMA_METHOD_NEW(e, "cVerletParticle", "void AddForce(const cVector3f&in avForce)", +[](cVerletParticle *o, const cVector3f & a0) { o->AddForce(a0); });
-	SOMA_METHOD_NEW(e, "cVerletParticle", "void SetInvMass(float afInvMass)", +[](cVerletParticle *o, float a0) { o->SetInvMass(a0); });
-	SOMA_METHOD_NEW(e, "cVerletParticle", "float GetInvMass() const", +[](cVerletParticle *o) -> float { return o->GetInvMass(); });
-	SOMA_METHOD_NEW(e, "cViewport", "void SetActive(bool abX)", +[](cViewport *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cViewport", "void SetVisible(bool abX)", +[](cViewport *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cViewport", "bool IsActive()", +[](cViewport *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cViewport", "bool IsVisible()", +[](cViewport *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cViewport", "void SetIsListener(bool abX)", +[](cViewport *o, bool a0) { o->SetIsListener(a0); });
-	SOMA_METHOD_NEW(e, "cViewport", "bool IsListener()", +[](cViewport *o) -> bool { return o->IsListener(); });
-	SOMA_METHOD_NEW(e, "cViewport", "void SetCamera(cCamera @apCamera)", +[](cViewport *o, cCamera * a0) { o->SetCamera(a0); });
-	SOMA_METHOD_NEW(e, "cViewport", "cCamera@ GetCamera()", +[](cViewport *o) -> cCamera * { return o->GetCamera(); });
-	SOMA_METHOD_NEW(e, "cViewport", "cWorld@ GetWorld()", +[](cViewport *o) -> cWorld * { return o->GetWorld(); });
-	SOMA_METHOD_NEW(e, "cViewport", "void SetPostEffectComposite(cPostEffectComposite @apPostEffectComposite)", +[](cViewport *o, cPostEffectComposite * a0) { o->SetPostEffectComposite(a0); });
-	SOMA_METHOD_NEW(e, "cViewport", "cPostEffectComposite@ GetPostEffectComposite()", +[](cViewport *o) -> cPostEffectComposite * { return o->GetPostEffectComposite(); });
-	SOMA_METHOD_NEW(e, "cViewport", "void AddGuiSet(cGuiSet @apSet)", +[](cViewport *o, cGuiSet * a0) { o->AddGuiSet(a0); });
-	SOMA_METHOD_NEW(e, "cViewport", "void RemoveGuiSet(cGuiSet @apSet)", +[](cViewport *o, cGuiSet * a0) { o->RemoveGuiSet(a0); });
-	SOMA_METHOD_NEW(e, "cViewport", "void SetPosition(const cVector2l&in avPos)", +[](cViewport *o, const cVector2l & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cViewport", "void SetSize(const cVector2l&in avSize)", +[](cViewport *o, const cVector2l & a0) { o->SetSize(a0); });
-	SOMA_METHOD_NEW(e, "cViewport", "const cVector2l& GetPosition()", +[](cViewport *o) -> const cVector2l & { static thread_local cVector2l r; r = o->GetPosition(); return r; });
-	SOMA_METHOD_NEW(e, "cViewport", "const cVector2l& GetSize()", +[](cViewport *o) -> const cVector2l & { static thread_local cVector2l r; r = o->GetSize(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void Update(float afTimeStep)", +[](cWidgetWindow *o, float a0) { o->Update(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "eWidgetType GetType()", +[](cWidgetWindow *o) -> int { return (int)o->GetType(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void Init()", +[](cWidgetWindow *o) { o->Init(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetToolTip(const tWString&in asToolTip)", +[](cWidgetWindow *o, const tWString & a0) { o->SetToolTip(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "const tWString& GetToolTip()", +[](cWidgetWindow *o) -> const tWString & { static thread_local tWString r; r = o->GetToolTip(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetToolTipEnabled(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetToolTipEnabled(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool PointIsInside(const cVector2f&in avPoint, bool abOnlyClipped)", +[](cWidgetWindow *o, const cVector2f & a0, bool a1) -> bool { return o->PointIsInside(a0, a1); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void AttachChild(iWidget@ apChild)", +[](cWidgetWindow *o, iWidget * a0) { o->AttachChild(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void RemoveChild(iWidget@ apChild)", +[](cWidgetWindow *o, iWidget * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "cGuiSet@ GetSet()", +[](cWidgetWindow *o) -> cGuiSet * { return o->GetSet(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "iWidget@ GetParent()", +[](cWidgetWindow *o) -> iWidget * { return o->GetParent(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetEnabled(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetEnabled(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool IsEnabled()", +[](cWidgetWindow *o) -> bool { return o->IsEnabled(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetVisible(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool IsVisible()", +[](cWidgetWindow *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool HasFocus()", +[](cWidgetWindow *o) -> bool { return o->HasFocus(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetName(const tString&in asName)", +[](cWidgetWindow *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "const tString& GetName()const", +[](cWidgetWindow *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetText(const tWString&in asText)", +[](cWidgetWindow *o, const tWString & a0) { o->SetText(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "const tWString& GetText()const", +[](cWidgetWindow *o) -> const tWString & { static thread_local tWString r; r = o->GetText(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "iFontData@ GetDefaultFontType()const", +[](cWidgetWindow *o) -> iFontData * { return o->GetDefaultFontType(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetDefaultFontType(iFontData@ apFont)", +[](cWidgetWindow *o, iFontData * a0) { o->SetDefaultFontType(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "const cColor& GetDefaultFontColor()const", +[](cWidgetWindow *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultFontColor(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetDefaultFontColor(const cColor&in aColor)", +[](cWidgetWindow *o, const cColor & a0) { o->SetDefaultFontColor(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "const cVector2f& GetDefaultFontSize()const", +[](cWidgetWindow *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetDefaultFontSize(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetDefaultFontSize(const cVector2f&in avSize)", +[](cWidgetWindow *o, const cVector2f & a0) { o->SetDefaultFontSize(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetClipActive(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetClipActive(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool GetClipActive()const", +[](cWidgetWindow *o) -> bool { return o->GetClipActive(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetPosition(const cVector3f&in avPos)", +[](cWidgetWindow *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetGlobalPosition(const cVector3f&in avPos)", +[](cWidgetWindow *o, const cVector3f & a0) { o->SetGlobalPosition(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "const cVector3f& GetLocalPosition()const", +[](cWidgetWindow *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLocalPosition(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "const cVector3f& GetGlobalPosition()", +[](cWidgetWindow *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetGlobalPosition(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetChildrenOffset(const cVector3f&in)", +[](cWidgetWindow *o, const cVector3f & a0) { o->SetChildrenOffset(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "const cVector3f& GetChildrenOffset()const", +[](cWidgetWindow *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetChildrenOffset(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetAffectedByScroll(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetAffectedByScroll(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetScrollAmount(const cVector3f&in avX)", +[](cWidgetWindow *o, const cVector3f & a0) { o->SetScrollAmount(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "const cVector3f& GetScrollAmount()const", +[](cWidgetWindow *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetScrollAmount(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void CenterGlobalPositionInSet()", +[](cWidgetWindow *o) { o->CenterGlobalPositionInSet(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetSize(const cVector2f&in avSize)", +[](cWidgetWindow *o, const cVector2f & a0) { o->SetSize(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "const cVector2f& GetSize()const", +[](cWidgetWindow *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetSize(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetColorMul(const cColor&in aColor)", +[](cWidgetWindow *o, const cColor & a0) { o->SetColorMul(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "const cColor& GetColorMul()const", +[](cWidgetWindow *o) -> const cColor & { static thread_local cColor r; r = o->GetColorMul(); return r; });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool ClipsGraphics()", +[](cWidgetWindow *o) -> bool { return o->ClipsGraphics(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool GetMouseIsOver()const", +[](cWidgetWindow *o) -> bool { return o->GetMouseIsOver(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool IsConnectedTo(iWidget@ apWidget, bool abIsStartWidget=true)", +[](cWidgetWindow *o, iWidget * a0, bool a1) -> bool { return o->IsConnectedTo(a0, a1); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool IsConnectedToChildren()", +[](cWidgetWindow *o) -> bool { return o->IsConnectedToChildren(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetConnectedToChildren(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetConnectedToChildren(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "cGuiGfxElement@ GetPointerGfx()", +[](cWidgetWindow *o) -> cGuiGfxElement * { return o->GetPointerGfx(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetGlobalKeyPressListener(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetGlobalKeyPressListener(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool IsGlobalKeyPressListener()const", +[](cWidgetWindow *o) -> bool { return o->IsGlobalKeyPressListener(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetUserValue(int alX)", +[](cWidgetWindow *o, int a0) { o->SetUserValue(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "int GetUserValue()const", +[](cWidgetWindow *o) -> int { return o->GetUserValue(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetCallbacksDisabled(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetCallbacksDisabled(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool GetCallbacksDisabled()const", +[](cWidgetWindow *o) -> bool { return o->GetCallbacksDisabled(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetFocusNavigation(eUIArrow aDir, iWidget@ apWidget)", +[](cWidgetWindow *o, int a0, iWidget * a1) { o->SetFocusNavigation((eUIArrow)a0, a1); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "iWidget@ GetFocusNavigation(eUIArrow aDir)", +[](cWidgetWindow *o, int a0) -> iWidget * { return o->GetFocusNavigation((eUIArrow)a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool HasFocusNavigation()", +[](cWidgetWindow *o) -> bool { return o->HasFocusNavigation(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetGlobalUIInputListener(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetGlobalUIInputListener(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool IsGlobalUIInputListener()", +[](cWidgetWindow *o) -> bool { return o->IsGlobalUIInputListener(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetStatic(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetStatic(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool GetStatic()", +[](cWidgetWindow *o) -> bool { return o->GetStatic(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetDrawLabel(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetDrawLabel(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetCloseButtonDisablesWindow(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetCloseButtonDisablesWindow(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool GetCloseButtonDisablesWindow()", +[](cWidgetWindow *o) -> bool { return o->GetCloseButtonDisablesWindow(); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "void SetEscapeKeyClosesWindow(bool abX)", +[](cWidgetWindow *o, bool a0) { o->SetEscapeKeyClosesWindow(a0); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "bool GetEscapeKeyClosesWindow()", +[](cWidgetWindow *o) -> bool { return o->GetEscapeKeyClosesWindow(); });
-	SOMA_METHOD_NEW(e, "cWorld", "void Update(float afTimeStep)", +[](cWorld *o, float a0) { o->Update(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetActive(bool abX)", +[](cWorld *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool IsActive() const", +[](cWorld *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "cWorld", "const cVector3f& GetWorldSize()", +[](cWorld *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetWorldSize(); return r; });
-	SOMA_METHOD_NEW(e, "cWorld", "tString GetName()", +[](cWorld *o) -> tString { return o->GetName(); });
-	SOMA_METHOD_NEW(e, "cWorld", "void Compile(bool abCalcPhysicsWorldSize)", +[](cWorld *o, bool a0) { o->Compile(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullActive(bool abX)", +[](cWorld *o, bool a0) { o->SetDistanceCullActive(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullMinRange(float afX)", +[](cWorld *o, float a0) { o->SetDistanceCullMinRange(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullScreenSize(float afX)", +[](cWorld *o, float a0) { o->SetDistanceCullScreenSize(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullRandomSize(float afX)", +[](cWorld *o, float a0) { o->SetDistanceCullRandomSize(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullMaxRange(float afX)", +[](cWorld *o, float a0) { o->SetDistanceCullMaxRange(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullFadeSpeed(float afX)", +[](cWorld *o, float a0) { o->SetDistanceCullFadeSpeed(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetDistanceCullActive()", +[](cWorld *o) -> bool { return o->GetDistanceCullActive(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetDistanceCullMinRange()", +[](cWorld *o) -> float { return o->GetDistanceCullMinRange(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetDistanceCullScreenSize()", +[](cWorld *o) -> float { return o->GetDistanceCullScreenSize(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetDistanceCullRandomSize()", +[](cWorld *o) -> float { return o->GetDistanceCullRandomSize(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetDistanceCullMaxRange()", +[](cWorld *o) -> float { return o->GetDistanceCullMaxRange(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetDistanceCullFadeSpeed()", +[](cWorld *o) -> float { return o->GetDistanceCullFadeSpeed(); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetPhysicsWorld(iPhysicsWorld@ apWorld, bool abAutoDelete)", +[](cWorld *o, iPhysicsWorld * a0, bool a1) { o->SetPhysicsWorld(a0, a1); });
-	SOMA_METHOD_NEW(e, "cWorld", "iPhysicsWorld@ GetPhysicsWorld()", +[](cWorld *o) -> iPhysicsWorld * { return o->GetPhysicsWorld(); });
-	SOMA_METHOD_NEW(e, "cWorld", "cTerrain@ GetTerrain()", +[](cWorld *o) -> cTerrain * { return o->GetTerrain(); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBox(iTexture @apTexture, bool abAutoDestroy)", +[](cWorld *o, iTexture * a0, bool a1) { o->SetSkyBox(a0, a1); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBoxActive(bool abX)", +[](cWorld *o, bool a0) { o->SetSkyBoxActive(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBoxColor(const cColor&in aColor)", +[](cWorld *o, const cColor & a0) { o->SetSkyBoxColor(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBoxBrightness(float afX)", +[](cWorld *o, float a0) { o->SetSkyBoxBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "iTexture@ GetSkyBoxTexture()", +[](cWorld *o) -> iTexture * { return o->GetSkyBoxTexture(); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetSkyBoxActive()", +[](cWorld *o) -> bool { return o->GetSkyBoxActive(); });
-	SOMA_METHOD_NEW(e, "cWorld", "const cColor& GetSkyBoxColor()", +[](cWorld *o) -> const cColor & { static thread_local cColor r; r = o->GetSkyBoxColor(); return r; });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetSkyBoxBrightness()", +[](cWorld *o) -> float { return o->GetSkyBoxBrightness(); });
-	SOMA_METHOD_NEW(e, "cWorld", "cLightDirectional@ GetDirectionalLight()", +[](cWorld *o) -> cLightDirectional * { return o->GetDirectionalLight(); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetDirectionalLightActive(bool abX)", +[](cWorld *o, bool a0) { o->SetDirectionalLightActive(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetDirectionalLightActive()", +[](cWorld *o) -> bool { return o->GetDirectionalLightActive(); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogActive(bool abX)", +[](cWorld *o, bool a0) { o->SetFogActive(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogStart(float afX)", +[](cWorld *o, float a0) { o->SetFogStart(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogEnd(float afX)", +[](cWorld *o, float a0) { o->SetFogEnd(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogFalloffExp(float afX)", +[](cWorld *o, float a0) { o->SetFogFalloffExp(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogColor(const cColor&in aCol)", +[](cWorld *o, const cColor & a0) { o->SetFogColor(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogBrightness(float afX)", +[](cWorld *o, float a0) { o->SetFogBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSecondaryFogActive(bool abX)", +[](cWorld *o, bool a0) { o->SetSecondaryFogActive(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSecondaryFogStart(float afX)", +[](cWorld *o, float a0) { o->SetSecondaryFogStart(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSecondaryFogEnd(float afX)", +[](cWorld *o, float a0) { o->SetSecondaryFogEnd(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSecondaryFogFalloffExp(float afX)", +[](cWorld *o, float a0) { o->SetSecondaryFogFalloffExp(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSecondaryFogColor(const cColor&in aCol)", +[](cWorld *o, const cColor & a0) { o->SetSecondaryFogColor(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSecondaryFogBrightness(float afX)", +[](cWorld *o, float a0) { o->SetSecondaryFogBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogCulling(bool abX)", +[](cWorld *o, bool a0) { o->SetFogCulling(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogUnderwater(bool abX)", +[](cWorld *o, bool a0) { o->SetFogUnderwater(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogUseSkybox(bool abX)", +[](cWorld *o, bool a0) { o->SetFogUseSkybox(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogSkyboxTexture(iTexture@ apTexture)", +[](cWorld *o, iTexture * a0) { o->SetFogSkyboxTexture(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogApplyAfterFogAreas(bool abX)", +[](cWorld *o, bool a0) { o->SetFogApplyAfterFogAreas(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetFogActive()", +[](cWorld *o) -> bool { return o->GetFogActive(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetFogStart()", +[](cWorld *o) -> float { return o->GetFogStart(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetFogEnd()", +[](cWorld *o) -> float { return o->GetFogEnd(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetFogFalloffExp()", +[](cWorld *o) -> float { return o->GetFogFalloffExp(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetFogBrightness()", +[](cWorld *o) -> float { return o->GetSecondaryFogBrightness(); });
-	SOMA_METHOD_NEW(e, "cWorld", "const cColor& GetFogColor()", +[](cWorld *o) -> const cColor & { static thread_local cColor r; r = o->GetFogColor(); return r; });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetSecondaryFogActive()", +[](cWorld *o) -> bool { return o->GetSecondaryFogActive(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetSecondaryFogStart()", +[](cWorld *o) -> float { return o->GetSecondaryFogStart(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetSecondaryFogEnd()", +[](cWorld *o) -> float { return o->GetSecondaryFogEnd(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetSecondaryFogFalloffExp()", +[](cWorld *o) -> float { return o->GetSecondaryFogFalloffExp(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetSecondaryFogBrightness()", +[](cWorld *o) -> float { return o->GetSecondaryFogBrightness(); });
-	SOMA_METHOD_NEW(e, "cWorld", "const cColor& GetSecondaryFogColor()", +[](cWorld *o) -> const cColor & { static thread_local cColor r; r = o->GetSecondaryFogColor(); return r; });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetFogCulling()", +[](cWorld *o) -> bool { return o->GetFogCulling(); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetFogUnderwater()", +[](cWorld *o) -> bool { return o->GetFogUnderwater(); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetFogUseSkybox()", +[](cWorld *o) -> bool { return o->GetFogUseSkybox(); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetFogApplyAfterFogAreas()", +[](cWorld *o) -> bool { return o->GetFogApplyAfterFogAreas(); });
-	SOMA_METHOD_NEW(e, "cWorld", "iTexture@ GetFogSkyboxTexture()", +[](cWorld *o) -> iTexture * { return o->GetFogSkyboxTexture(); });
-	SOMA_METHOD_NEW(e, "cWorld", "cMeshEntity@ CreateMeshEntity(const tString &in asName,cMesh@ apMesh, bool abStatic)", +[](cWorld *o, const tString & a0, cMesh * a1, bool a2) -> cMeshEntity * { return o->CreateMeshEntity(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroyMeshEntity(cMeshEntity@ apMesh)", +[](cWorld *o, cMeshEntity * a0) { o->DestroyMeshEntity(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cMeshEntity@ GetDynamicMeshEntity(const tString&in asName)", +[](cWorld *o, const tString & a0) -> cMeshEntity * { return o->GetDynamicMeshEntity(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cLightPoint@ CreateLightPoint(const tString &in asName,const tString &in asGobo, bool abStatic)", +[](cWorld *o, const tString & a0, const tString & a1, bool a2) -> cLightPoint * { return o->CreateLightPoint(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cWorld", "cLightSpot@ CreateLightSpot(const tString &in asName, const tString &in asGobo, bool abStatic)", +[](cWorld *o, const tString & a0, const tString & a1, bool a2) -> cLightSpot * { return o->CreateLightSpot(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cWorld", "cLightBox@ CreateLightBox(const tString &in asName, bool abStatic)", +[](cWorld *o, const tString & a0, bool a1) -> cLightBox * { return o->CreateLightBox(a0, a1); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroyLight(iLight@ apLight)", +[](cWorld *o, iLight * a0) { o->DestroyLight(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "iLight@ GetLight(const tString&in asName)", +[](cWorld *o, const tString & a0) -> iLight * { return o->GetLight(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cBillboard@ CreateBillboard(const tString&in asName, const cVector2f&in avSize,eBillboardType aType,const tString&in asMaterial,bool abStatic)", +[](cWorld *o, const tString & a0, const cVector2f & a1, int a2, const tString & a3, bool a4) -> cBillboard * { return o->CreateBillboard(a0, a1, (eBillboardType)a2, a3, a4); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroyBillboard(cBillboard@ apObject)", +[](cWorld *o, cBillboard * a0) { o->DestroyBillboard(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cBillboard@ GetBillboard(const tString&in asName)", +[](cWorld *o, const tString & a0) -> cBillboard * { return o->GetBillboard(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cFogArea@ CreateFogArea(const tString&in asName, bool abStatic)", +[](cWorld *o, const tString & a0, bool a1) -> cFogArea * { return o->CreateFogArea(a0, a1); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroyFogArea(cFogArea@ apFogArea)", +[](cWorld *o, cFogArea * a0) { o->DestroyFogArea(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cFogArea@ GetFogArea(const tString&in asName)", +[](cWorld *o, const tString & a0) -> cFogArea * { return o->GetFogArea(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cForceField@ CreateForceField(const tString&in asName,bool abAutoRemove, bool abStatic)", +[](cWorld *o, const tString & a0, bool a1, bool a2) -> cForceField * { return o->CreateForceField(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroyForceField(cForceField@ apForce)", +[](cWorld *o, cForceField * a0) { o->DestroyForceField(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cForceField@ GetForceField(const tString&in asName)", +[](cWorld *o, const tString & a0) -> cForceField * { return o->GetForceField(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroyParticleSystem(cParticleSystem@ apPS)", +[](cWorld *o, cParticleSystem * a0) { o->DestroyParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cParticleSystem@ GetParticleSystem(const tString&in asName)", +[](cWorld *o, const tString & a0) -> cParticleSystem * { return o->GetParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool ParticleSystemExists(cParticleSystem@ apPS)", +[](cWorld *o, cParticleSystem * a0) -> bool { return o->ParticleSystemExists(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroyAllParticleSystems()", +[](cWorld *o) { o->DestroyAllParticleSystems(); });
-	SOMA_METHOD_NEW(e, "cWorld", "cEnvironmentParticles@ GetEnvironmentParticles(int i)", +[](cWorld *o, int a0) -> cEnvironmentParticles * { return o->GetEnvironmentParticles(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetEnvironmentParticlesActive(bool abX)", +[](cWorld *o, bool a0) { o->SetEnvironmentParticlesActive(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetEnvironmentParticlesActive()", +[](cWorld *o) -> bool { return o->GetEnvironmentParticlesActive(); });
-	SOMA_METHOD_NEW(e, "cWorld", "int GetEnvironmentParticleNum()", +[](cWorld *o) -> int { return o->GetEnvironmentParticleNum(); });
-	SOMA_METHOD_NEW(e, "cWorld", "cBeam@ CreateBeam(const tString&in asName, bool abStatic)", +[](cWorld *o, const tString & a0, bool a1) -> cBeam * { return o->CreateBeam(a0, a1); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroyBeam(cBeam@ apObject)", +[](cWorld *o, cBeam * a0) { o->DestroyBeam(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cBeam@ GetBeam(const tString&in asName)", +[](cWorld *o, const tString & a0) -> cBeam * { return o->GetBeam(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroyRopeEntity(iRopeEntity@ apRope)", +[](cWorld *o, cRopeEntity * a0) { o->DestroyRopeEntity(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "iRopeEntity@ GetRopeEntity(const tString&in asName)", +[](cWorld *o, const tString & a0) -> cRopeEntity * { return o->GetRopeEntity(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cSoundEntity@ CreateSoundEntity(const tString &in asName,const tString &in asSoundDataFile, bool abRemoveWhenOver)", +[](cWorld *o, const tString & a0, const tString & a1, bool a2) -> cSoundEntity * { return o->CreateSoundEntity(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroySoundEntity(cSoundEntity@ apEntity)", +[](cWorld *o, cSoundEntity * a0) { o->DestroySoundEntity(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cSoundEntity@ GetSoundEntity(const tString&in asName)", +[](cWorld *o, const tString & a0) -> cSoundEntity * { return o->GetSoundEntity(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroyAllSoundEntities()", +[](cWorld *o) { o->DestroyAllSoundEntities(); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool SoundEntityExists(cSoundEntity@ apEntity, int alCreationID)", +[](cWorld *o, cSoundEntity * a0, int a1) -> bool { return o->SoundEntityExists(a0, a1); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool IsValid(cSoundEntity@ apEntity)", +[](cWorld *o, cSoundEntity * a0) -> bool { return o->IsValid(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetDepthOfFieldActive(bool abX)", +[](cWorld *o, bool a0) { o->SetDepthOfFieldActive(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetDepthOfFieldFocusStart(float afX)", +[](cWorld *o, float a0) { o->SetDepthOfFieldFocusStart(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetDepthOfFieldFocusEnd(float afX)", +[](cWorld *o, float a0) { o->SetDepthOfFieldFocusEnd(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetDepthOfFieldFocusStart()", +[](cWorld *o) -> float { return o->GetDepthOfFieldFocusStart(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetDepthOfFieldFocusEnd()", +[](cWorld *o) -> float { return o->GetDepthOfFieldFocusEnd(); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool IsDepthOfFieldActive()", +[](cWorld *o) -> bool { return o->IsDepthOfFieldActive(); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetDepthOfFieldFalloff(float afX)", +[](cWorld *o, float a0) { o->SetDepthOfFieldFalloff(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetDepthOfFieldFalloff()", +[](cWorld *o) -> float { return o->GetDepthOfFieldFalloff(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetToneMappingExposure()", +[](cWorld *o) -> float { return o->GetToneMappingExposure(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetToneMappingKey()", +[](cWorld *o) -> float { return o->GetToneMappingKey(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetToneMappingWhiteCut()", +[](cWorld *o) -> float { return o->GetToneMappingWhiteCut(); });
-	SOMA_METHOD_NEW(e, "cWorld", "cLensFlare@ CreateLensFlare(const tString &in asName, const cVector2f &in avSize,const tString &in asMaterial,bool abStatic)", +[](cWorld *o, const tString & a0, const cVector2f & a1, const tString & a2, bool a3) -> cLensFlare * { return o->CreateLensFlare(a0, a1, a2, a3); });
-	SOMA_METHOD_NEW(e, "cWorld", "void DestroyLensFlare(cLensFlare@ apObject)", +[](cWorld *o, cLensFlare * a0) { o->DestroyLensFlare(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "cLensFlare@ GetLensFlare(const tString &in asName)", +[](cWorld *o, const tString & a0) -> cLensFlare * { return o->GetLensFlare(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetNightVisionColor(const cColor&in aColor)", +[](cWorld *o, const cColor & a0) { o->SetNightVisionColor(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetNightVisionBrightness(float afBrightness)", +[](cWorld *o, float a0) { o->SetNightVisionBrightness(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetNightVisionRadiusMin(float afRadius)", +[](cWorld *o, float a0) { o->SetNightVisionRadiusMin(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetNightVisionRadiusMax(float afRadius)", +[](cWorld *o, float a0) { o->SetNightVisionRadiusMax(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetNightVisionFalloff(float afFalloff)", +[](cWorld *o, float a0) { o->SetNightVisionFalloff(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetNightVisionVisible()", +[](cWorld *o) -> bool { return o->GetNightVisionVisible(); });
-	SOMA_METHOD_NEW(e, "cWorld", "const cColor& GetNightVisionColor()", +[](cWorld *o) -> const cColor & { static thread_local cColor r; r = o->GetNightVisionColor(); return r; });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetNightVisionBrightness()", +[](cWorld *o) -> float { return o->GetNightVisionBrightness(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetNightVisionRadiusMin()", +[](cWorld *o) -> float { return o->GetNightVisionRadiusMin(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetNightVisionRadiusMax()", +[](cWorld *o) -> float { return o->GetNightVisionRadiusMax(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetNightVisionFalloff()", +[](cWorld *o) -> float { return o->GetNightVisionFalloff(); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogLighten(bool abX)", +[](cWorld *o, bool a0) { o->SetFogLighten(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetFogLighten()", +[](cWorld *o) -> bool { return o->GetFogLighten(); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSecondaryFogDensity(float afX)", +[](cWorld *o, float a0) { o->SetSecondaryFogDensity(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSecondaryFogHeightDensity(float afX)", +[](cWorld *o, float a0) { o->SetSecondaryFogHeightDensity(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetSecondaryFogHeightHorizon(float afX)", +[](cWorld *o, float a0) { o->SetSecondaryFogHeightHorizon(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogHeightBased(bool abX)", +[](cWorld *o, bool a0) { o->SetFogHeightBased(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogExponential(bool abX)", +[](cWorld *o, bool a0) { o->SetFogExponential(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogDensity(float afX)", +[](cWorld *o, float a0) { o->SetFogDensity(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogHeightDensity(float afX)", +[](cWorld *o, float a0) { o->SetFogHeightDensity(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "void SetFogHeightHorizon(float afX)", +[](cWorld *o, float a0) { o->SetFogHeightHorizon(a0); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetSecondaryFogDensity()", +[](cWorld *o) -> float { return o->GetSecondaryFogDensity(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetSecondaryFogHeightDensity()", +[](cWorld *o) -> float { return o->GetSecondaryFogHeightDensity(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetSecondaryFogHeightHorizon()", +[](cWorld *o) -> float { return o->GetSecondaryFogHeightHorizon(); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetFogHeightBased()", +[](cWorld *o) -> bool { return o->GetFogHeightBased(); });
-	SOMA_METHOD_NEW(e, "cWorld", "bool GetFogExponential()", +[](cWorld *o) -> bool { return o->GetFogExponential(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetFogDensity()", +[](cWorld *o) -> float { return o->GetFogDensity(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetFogHeightDensity()", +[](cWorld *o) -> float { return o->GetFogHeightDensity(); });
-	SOMA_METHOD_NEW(e, "cWorld", "float GetFogHeightHorizon()", +[](cWorld *o) -> float { return o->GetFogHeightHorizon(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "const tString& GetName()", +[](iCharacterBody *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void Update(float afTimeStep)", +[](iCharacterBody *o, float a0) { o->Update(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetForce(const cVector3f &in avForce)", +[](iCharacterBody *o, const cVector3f & a0) { o->SetForce(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void AddForce(const cVector3f &in avForce)", +[](iCharacterBody *o, const cVector3f & a0) { o->AddForce(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "cVector3f GetForce()", +[](iCharacterBody *o) -> cVector3f { return o->GetForce(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void Move(eCharDir aDir, float afMul)", +[](iCharacterBody *o, int a0, float a1) { o->Move((eCharDir)a0, a1); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void StopMovement()", +[](iCharacterBody *o) { o->StopMovement(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "int AddExtraSize(const cVector3f&in avSize)", +[](iCharacterBody *o, const cVector3f & a0) -> int { return o->AddExtraSize(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetActiveSize(int alNum)", +[](iCharacterBody *o, int a0) { o->SetActiveSize(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "int GetActiveSize()", +[](iCharacterBody *o) -> int { return o->GetActiveSize(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetActive(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool IsActive()", +[](iCharacterBody *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMass()", +[](iCharacterBody *o) -> float { return o->GetMass(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMass(float afMass)", +[](iCharacterBody *o, float a0) { o->SetMass(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "const cVector3f& GetSize()", +[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "iCollideShape@ GetCurrentShape()", +[](iCharacterBody *o) -> iCollideShape * { return o->GetCurrentShape(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "iCollideShape@ GetShape(int alIdx)", +[](iCharacterBody *o, int a0) -> iCollideShape * { return o->GetShape(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "iPhysicsBody@ GetCurrentBody()", +[](iCharacterBody *o) -> iPhysicsBody * { return o->GetCurrentBody(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCollideCharacter(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetCollideCharacter(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCollideCharacter()", +[](iCharacterBody *o) -> bool { return o->GetCollideCharacter(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetTestCollision(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetTestCollision(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetTestCollision()", +[](iCharacterBody *o) -> bool { return o->GetTestCollision(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetPhysicsBodyActive(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetPhysicsBodyActive(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetPhysicsBodyActive()", +[](iCharacterBody *o) -> bool { return o->GetPhysicsBodyActive(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxPositiveMoveSpeed(eCharDir aDir, float afX)", +[](iCharacterBody *o, int a0, float a1) { o->SetMaxPositiveMoveSpeed((eCharDir)a0, a1); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxPositiveMoveSpeed(eCharDir aDir)", +[](iCharacterBody *o, int a0) -> float { return o->GetMaxPositiveMoveSpeed((eCharDir)a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxNegativeMoveSpeed(eCharDir aDir, float afX)", +[](iCharacterBody *o, int a0, float a1) { o->SetMaxNegativeMoveSpeed((eCharDir)a0, a1); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxNegativeMoveSpeed(eCharDir aDir)", +[](iCharacterBody *o, int a0) -> float { return o->GetMaxNegativeMoveSpeed((eCharDir)a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMoveSpeed(eCharDir aDir, float afX)", +[](iCharacterBody *o, int a0, float a1) { o->SetMoveSpeed((eCharDir)a0, a1); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMoveSpeed(eCharDir aDir)", +[](iCharacterBody *o, int a0) -> float { return o->GetMoveSpeed((eCharDir)a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMoveAcc(eCharDir aDir, float afX)", +[](iCharacterBody *o, int a0, float a1) { o->SetMoveAcc((eCharDir)a0, a1); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMoveAcc(eCharDir aDir)", +[](iCharacterBody *o, int a0) -> float { return o->GetMoveAcc((eCharDir)a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMoveDeacc(eCharDir aDir, float afX)", +[](iCharacterBody *o, int a0, float a1) { o->SetMoveDeacc((eCharDir)a0, a1); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMoveDeacc(eCharDir aDir)", +[](iCharacterBody *o, int a0) -> float { return o->GetMoveDeacc((eCharDir)a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMoveOppositeDirAccMul(eCharDir aDir, float afX)", +[](iCharacterBody *o, int a0, float a1) { o->SetMoveOppositeDirAccMul((eCharDir)a0, a1); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMoveOppositeDirAccMul(eCharDir aDir)", +[](iCharacterBody *o, int a0) -> float { return o->GetMoveOppositeDirAccMul((eCharDir)a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetDeaccelerateMoveSpeedInAir(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetDeaccelerateMoveSpeedInAir(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetDeaccelerateMoveSpeedInAir()", +[](iCharacterBody *o) -> bool { return o->GetDeaccelerateMoveSpeedInAir(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "cVector3f GetVelocity(float afFrameTime)", +[](iCharacterBody *o, float a0) -> cVector3f { return o->GetVelocity(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetPosition(const cVector3f&in avPos, bool abSmooth)", +[](iCharacterBody *o, const cVector3f & a0, bool a1) { o->SetPosition(a0, a1); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "const cVector3f& GetPosition()", +[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPosition(); return r; });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "const cVector3f& GetLastPosition()", +[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLastPosition(); return r; });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetFeetPosition(const cVector3f&in avPos, bool abSmooth)", +[](iCharacterBody *o, const cVector3f & a0, bool a1) { o->SetFeetPosition(a0, a1); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "cVector3f GetFeetPosition()", +[](iCharacterBody *o) -> cVector3f { return o->GetFeetPosition(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetYaw(float afX)", +[](iCharacterBody *o, float a0) { o->SetYaw(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void AddYaw(float afX)", +[](iCharacterBody *o, float a0) { o->AddYaw(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetYaw()", +[](iCharacterBody *o) -> float { return o->GetYaw(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetPitch(float afX)", +[](iCharacterBody *o, float a0) { o->SetPitch(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void AddPitch(float afX)", +[](iCharacterBody *o, float a0) { o->AddPitch(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetPitch()", +[](iCharacterBody *o) -> float { return o->GetPitch(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "const cVector3f& GetForward()", +[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetForward(); return r; });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "const cVector3f& GetRight()", +[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetRight(); return r; });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "const cVector3f& GetUp()", +[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetUp(); return r; });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "const cMatrixf& GetMoveMatrix()", +[](iCharacterBody *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetMoveMatrix(); return r; });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetGravityActive(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetGravityActive(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GravityIsActive()", +[](iCharacterBody *o) -> bool { return o->GravityIsActive(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxGravitySpeed(float afX)", +[](iCharacterBody *o, float a0) { o->SetMaxGravitySpeed(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxGravitySpeed()", +[](iCharacterBody *o) -> float { return o->GetMaxGravitySpeed(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCustomGravityActive()", +[](iCharacterBody *o) -> bool { return o->GetCustomGravityActive(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCustomGravityActive(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetCustomGravityActive(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCustomGravity(const cVector3f&in avCustomGravity)", +[](iCharacterBody *o, const cVector3f & a0) { o->SetCustomGravity(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "cVector3f GetCustomGravity()", +[](iCharacterBody *o) -> cVector3f { return o->GetCustomGravity(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void AddForceVelocity(const cVector3f&in avVel)", +[](iCharacterBody *o, const cVector3f & a0) { o->AddForceVelocity(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetForceVelocity(const cVector3f&in avVel)", +[](iCharacterBody *o, const cVector3f & a0) { o->SetForceVelocity(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "cVector3f GetForceVelocity()", +[](iCharacterBody *o) -> cVector3f { return o->GetForceVelocity(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool IsOnGround()", +[](iCharacterBody *o) -> bool { return o->IsOnGround(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxOnGroundCount(int alX)", +[](iCharacterBody *o, int a0) { o->SetMaxOnGroundCount(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "int GetMaxOnGroundCount()", +[](iCharacterBody *o) -> int { return o->GetMaxOnGroundCount(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCollideFlags(uint alX)", +[](iCharacterBody *o, unsigned int a0) { o->SetCollideFlags(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "uint GetCollideFlags() const", +[](iCharacterBody *o) -> unsigned int { return o->GetCollideFlags(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetGroundFriction(float afX)", +[](iCharacterBody *o, float a0) { o->SetGroundFriction(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetGroundFriction()", +[](iCharacterBody *o) -> float { return o->GetGroundFriction(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetAirFriction(float afX)", +[](iCharacterBody *o, float a0) { o->SetAirFriction(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetAirFriction()", +[](iCharacterBody *o) -> float { return o->GetAirFriction(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetDisableDiagSpeedBoost(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetDisableDiagSpeedBoost(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetDisableDiagSpeedBoost()", +[](iCharacterBody *o) -> bool { return o->GetDisableDiagSpeedBoost(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetMovedLastUpdate()", +[](iCharacterBody *o) -> bool { return o->GetMovedLastUpdate(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxPushMass(float afX)", +[](iCharacterBody *o, float a0) { o->SetMaxPushMass(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxPushForce(float afX)", +[](iCharacterBody *o, float a0) { o->SetPushForce(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetPushImpulse(float afX)", +[](iCharacterBody *o, float a0) { o->SetPushImpulse(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxPushMass()", +[](iCharacterBody *o) -> float { return o->GetMaxPushMass(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxPushForce()", +[](iCharacterBody *o) -> float { return o->GetPushForce(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetPushImpulse()", +[](iCharacterBody *o) -> float { return o->GetPushImpulse(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetPushIn2D()", +[](iCharacterBody *o) -> bool { return o->GetPushIn2D(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetPushIn2D(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetPushIn2D(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCharacterMaxPushMass(float afX)", +[](iCharacterBody *o, float a0) { o->SetCharacterMaxPushMass(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCharacterPushForce(float afX)", +[](iCharacterBody *o, float a0) { o->SetCharacterPushForce(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetCharacterMaxPushMass()", +[](iCharacterBody *o) -> float { return o->GetCharacterMaxPushMass(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetCharacterPushForce()", +[](iCharacterBody *o) -> float { return o->GetCharacterPushForce(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCharacterPushIn2D()", +[](iCharacterBody *o) -> bool { return o->GetCharacterPushIn2D(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCharacterPushIn2D(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetCharacterPushIn2D(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetConstantContactForceMul(float afX)", +[](iCharacterBody *o, float a0) { o->SetConstantContactForceMul(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetConstantContactForceMul()", +[](iCharacterBody *o) -> float { return o->GetConstantContactForceMul(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetVelocityContactForceMul(float afX)", +[](iCharacterBody *o, float a0) { o->SetVelocityContactForceMul(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetVelocityContactForceMul()", +[](iCharacterBody *o) -> float { return o->GetVelocityContactForceMul(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxContactForcePerMassUnit(float afX)", +[](iCharacterBody *o, float a0) { o->SetMaxContactForcePerMassUnit(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxContactForcePerMassUnit()", +[](iCharacterBody *o) -> float { return o->GetMaxContactForcePerMassUnit(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxNoSlideSlopeAngle(float afAngle)", +[](iCharacterBody *o, float a0) { o->SetMaxNoSlideSlopeAngle(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxNoSlideSlopeAngle()", +[](iCharacterBody *o) -> float { return o->GetMaxNoSlideSlopeAngle(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetStickToSlope(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetStickToSlope(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetStickToSlope()", +[](iCharacterBody *o) -> bool { return o->GetStickToSlope(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxStepSize()", +[](iCharacterBody *o) -> float { return o->GetMaxStepSize(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxStepSize(float afSize)", +[](iCharacterBody *o, float a0) { o->SetMaxStepSize(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxStepSizeInAir()", +[](iCharacterBody *o) -> float { return o->GetMaxStepSizeInAir(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxStepSizeInAir(float afSize)", +[](iCharacterBody *o, float a0) { o->SetMaxStepSizeInAir(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetStepClimbSpeed(float afX)", +[](iCharacterBody *o, float a0) { o->SetStepClimbSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetStepClimbSpeed()", +[](iCharacterBody *o) -> float { return o->GetStepClimbSpeed(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetAccurateClimbing(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetAccurateClimbing(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetAccurateClimbing()", +[](iCharacterBody *o) -> bool { return o->GetAccurateClimbing(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetClimbForwardMul(float afX)", +[](iCharacterBody *o, float a0) { o->SetClimbForwardMul(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetClimbForwardMul()", +[](iCharacterBody *o) -> float { return o->GetClimbForwardMul(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetClimbHeightAdd(float afX)", +[](iCharacterBody *o, float a0) { o->SetClimbHeightAdd(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetClimbHeightAdd()", +[](iCharacterBody *o) -> float { return o->GetClimbHeightAdd(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool IsClimbing()", +[](iCharacterBody *o) -> bool { return o->IsClimbing(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void ResetClimbing()", +[](iCharacterBody *o) { o->ResetClimbing(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetGroundAngleMin(float afX)", +[](iCharacterBody *o, float a0) { o->SetGroundAngleMin(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetGroundAngleMin()", +[](iCharacterBody *o) -> float { return o->GetGroundAngleMin(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "const cVector3f& GetLastGroundNormal()", +[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLastGroundNormal(); return r; });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetRotateYawWhenGravityAttached(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetRotateYawWhenGravityAttached(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetRotateYawWhenGravityAttached()", +[](iCharacterBody *o) -> bool { return o->GetRotateYawWhenGravityAttached(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "iPhysicsBody@ GetGravityAttachedBody()", +[](iCharacterBody *o) -> iPhysicsBody * { return o->GetGravityAttachedBody(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "iPhysicsMaterial@ GetGravityCollideMaterial()", +[](iCharacterBody *o) -> iPhysicsMaterial * { return o->GetGravityCollideMaterial(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCamera(cCamera@ apCam)", +[](iCharacterBody *o, cCamera * a0) { o->SetCamera(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "cCamera@ GetCamera()", +[](iCharacterBody *o) -> cCamera * { return o->GetCamera(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCameraPosAdd(const cVector3f &in avAdd)", +[](iCharacterBody *o, const cVector3f & a0) { o->SetCameraPosAdd(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "cVector3f GetCameraPosAdd()", +[](iCharacterBody *o) -> cVector3f { return o->GetCameraPosAdd(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCameraSmoothPosNum(int alNum)", +[](iCharacterBody *o, int a0) { o->SetCameraSmoothPosNum(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "int GetCameraSmoothPosNum()", +[](iCharacterBody *o) -> int { return o->GetCameraSmoothPosNum(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCameraUseSmoothing(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetCameraUseSmoothing(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCameraUseSmoothing()", +[](iCharacterBody *o) -> bool { return o->GetCameraUseSmoothing(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCameraUpdateActive(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetCameraUpdateActive(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCameraUpdateActive()", +[](iCharacterBody *o) -> bool { return o->GetCameraUpdateActive(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntity(iEntity3D@ apEntity)", +[](iCharacterBody *o, iEntity3D * a0) { o->SetEntity(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "iEntity3D@ GetEntity()", +[](iCharacterBody *o) -> iEntity3D * { return o->GetEntity(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntityPitchAmount(float afX)", +[](iCharacterBody *o, float a0) { o->SetEntityPitchAmount(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetEntityPitchAmount()", +[](iCharacterBody *o) -> float { return o->GetEntityPitchAmount(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntityOffset(const cMatrixf &in a_mtxOffset)", +[](iCharacterBody *o, const cMatrixf & a0) { o->SetEntityOffset(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "const cMatrixf & GetEntityOffset()", +[](iCharacterBody *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetEntityOffset(); return r; });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntityPostOffset(const cMatrixf &in a_mtxOffset)", +[](iCharacterBody *o, const cMatrixf & a0) { o->SetEntityPostOffset(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "const cMatrixf & GetEntityPostOffset()", +[](iCharacterBody *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetEntityPostOffset(); return r; });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntitySmoothPosNum(int alNum)", +[](iCharacterBody *o, int a0) { o->SetEntitySmoothPosNum(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "int GetEntitySmoothPosNum()", +[](iCharacterBody *o) -> int { return o->GetEntitySmoothPosNum(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetUseEntitySmoothYPos(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetUseEntitySmoothYPos(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntitySmoothYPosNum(int alX)", +[](iCharacterBody *o, int a0) { o->SetEntitySmoothYPosNum(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetUseEntitySmoothYPos()", +[](iCharacterBody *o) -> bool { return o->GetUseEntitySmoothYPos(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "int GetEntitySmoothYPosNum()", +[](iCharacterBody *o) -> int { return o->GetEntitySmoothYPosNum(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMoveSpeedMul(eCharDir aDir, float afX)", +[](iCharacterBody *o, int a0, float a1) { o->SetMoveSpeedMul((eCharDir)a0, a1); });
-	SOMA_METHOD_NEW(e, "iCollideShape", "iCollideShape@ GetSubShape(int alIdx)", +[](iCollideShape *o, int a0) -> iCollideShape * { return o->GetSubShape(a0); });
-	SOMA_METHOD_NEW(e, "iCollideShape", "int GetSubShapeNum()", +[](iCollideShape *o) -> int { return o->GetSubShapeNum(); });
-	SOMA_METHOD_NEW(e, "iCollideShape", "const cVector3f& GetSize()", +[](iCollideShape *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; });
-	SOMA_METHOD_NEW(e, "iCollideShape", "float GetHeight()", +[](iCollideShape *o) -> float { return o->GetHeight(); });
-	SOMA_METHOD_NEW(e, "iCollideShape", "float GetWidth()", +[](iCollideShape *o) -> float { return o->GetWidth(); });
-	SOMA_METHOD_NEW(e, "iCollideShape", "float GetDepth()", +[](iCollideShape *o) -> float { return o->GetDepth(); });
-	SOMA_METHOD_NEW(e, "iCollideShape", "const cMatrixf& GetOffset()", +[](iCollideShape *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetOffset(); return r; });
-	SOMA_METHOD_NEW(e, "iCollideShape", "eCollideShapeType GetType()", +[](iCollideShape *o) -> int { return (int)o->GetType(); });
-	SOMA_METHOD_NEW(e, "iCollideShape", "float GetVolume()", +[](iCollideShape *o) -> float { return o->GetVolume(); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "int GetUniqueID()", +[](iEntity3D *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "void UpdateLogic(float afTimeStep)", +[](iEntity3D *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "const tString& GetName()const", +[](iEntity3D *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iEntity3D", "void SetName(const tString&in asName)", +[](iEntity3D *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "bool HasParent()", +[](iEntity3D *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "bool IsActive()const", +[](iEntity3D *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "void SetActive(bool abActive)", +[](iEntity3D *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cVector3f GetLocalPosition()", +[](iEntity3D *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cMatrixf& GetLocalMatrix()", +[](iEntity3D *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cVector3f GetWorldPosition()", +[](iEntity3D *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cMatrixf& GetWorldMatrix()", +[](iEntity3D *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "void SetPosition(const cVector3f&in avPos)", +[](iEntity3D *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](iEntity3D *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](iEntity3D *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](iEntity3D *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "int GetTransformUpdateCount()", +[](iEntity3D *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "void AddChild(iEntity3D @apEntity)", +[](iEntity3D *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "void RemoveChild(iEntity3D @apEntity)", +[](iEntity3D *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "bool IsChild(iEntity3D @apEntity)", +[](iEntity3D *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "iEntity3D @GetEntityParent()", +[](iEntity3D *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "iFontData", "float GetHeight()", +[](iFontData *o) -> float { return o->GetHeight(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "tString GetGamepadName()", +[](iGamepad *o) -> tString { return o->GetGamepadName(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "int GetNumButtons()", +[](iGamepad *o) -> int { return o->GetNumButtons(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "int GetNumAxes()", +[](iGamepad *o) -> int { return o->GetNumAxes(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "int GetNumHats()", +[](iGamepad *o) -> int { return o->GetNumHats(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "int GetNumBalls()", +[](iGamepad *o) -> int { return o->GetNumBalls(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "bool HasInputUpdates()", +[](iGamepad *o) -> bool { return o->HasInputUpdates(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "bool ButtonIsDown(eGamepadButton aButton)", +[](iGamepad *o, int a0) -> bool { return o->ButtonIsDown((eGamepadButton)a0); });
-	SOMA_METHOD_NEW(e, "iGamepad", "bool ButtonIsPressed()", +[](iGamepad *o) -> bool { return o->ButtonIsPressed(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "bool ButtonIsReleased()", +[](iGamepad *o) -> bool { return o->ButtonIsReleased(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "float GetAxisValue(eGamepadAxis aAxis)", +[](iGamepad *o, int a0) -> float { return o->GetAxisValue((eGamepadAxis)a0); });
-	SOMA_METHOD_NEW(e, "iGamepad", "float GetAxisDeadZoneRadiusValue()", +[](iGamepad *o) -> float { return o->GetAxisDeadZoneRadiusValue(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "void SetAxisDeadZoneRadiusValue(float afValue)", +[](iGamepad *o, float a0) { o->SetAxisDeadZoneRadiusValue(a0); });
-	SOMA_METHOD_NEW(e, "iGamepad", "bool AxesUpdated()", +[](iGamepad *o) -> bool { return o->AxesUpdated(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "eGamepadHatState GetHatCurrentState(eGamepadHat aHat)", +[](iGamepad *o, int a0) -> int { return (int)o->GetHatCurrentState((eGamepadHat)a0); });
-	SOMA_METHOD_NEW(e, "iGamepad", "bool HatIsInState(eGamepadHat aHat, eGamepadHatState aState)", +[](iGamepad *o, int a0, int a1) -> bool { return o->HatIsInState((eGamepadHat)a0, (eGamepadHatState)a1); });
-	SOMA_METHOD_NEW(e, "iGamepad", "bool HatsChanged()", +[](iGamepad *o) -> bool { return o->HatsChanged(); });
-	SOMA_METHOD_NEW(e, "iGamepad", "cVector2l GetBallAbsPos(eGamepadBall aBall)", +[](iGamepad *o, int a0) -> cVector2l { return o->GetBallAbsPos((eGamepadBall)a0); });
-	SOMA_METHOD_NEW(e, "iKeyboard", "bool KeyIsDown(eKey aKey)", +[](iKeyboard *o, int a0) -> bool { return o->KeyIsDown((eKey)a0); });
-	SOMA_METHOD_NEW(e, "iKeyboard", "bool KeyIsPressed()", +[](iKeyboard *o) -> bool { return o->KeyIsPressed(); });
-	SOMA_METHOD_NEW(e, "iKeyboard", "int GetModifier()", +[](iKeyboard *o) -> int { return o->GetModifier(); });
-	SOMA_METHOD_NEW(e, "iKeyboard", "bool KeyIsReleased()", +[](iKeyboard *o) -> bool { return o->KeyIsReleased(); });
-	SOMA_METHOD_NEW(e, "iKeyboard", "tString KeyToString(eKey)", +[](iKeyboard *o, int a0) -> tString { return o->KeyToString((eKey)a0); });
-	SOMA_METHOD_NEW(e, "iKeyboard", "tString ModifierKeyToString(eKeyModifier)", +[](iKeyboard *o, int a0) -> tString { return o->ModifierKeyToString((eKeyModifier)a0); });
-	SOMA_METHOD_NEW(e, "iKeyboard", "eKey StringToKey(const tString&in)", +[](iKeyboard *o, const tString & a0) -> int { return (int)o->StringToKey(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "int GetUniqueID()", +[](iLight *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "iLight", "void UpdateLogic(float afTimeStep)", +[](iLight *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "const tString& GetName()const", +[](iLight *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "void SetName(const tString&in asName)", +[](iLight *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "bool HasParent()", +[](iLight *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "iLight", "bool IsActive()const", +[](iLight *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetActive(bool abActive)", +[](iLight *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "cVector3f GetLocalPosition()", +[](iLight *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "iLight", "cMatrixf& GetLocalMatrix()", +[](iLight *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "iLight", "cVector3f GetWorldPosition()", +[](iLight *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "iLight", "cMatrixf& GetWorldMatrix()", +[](iLight *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetPosition(const cVector3f&in avPos)", +[](iLight *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](iLight *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](iLight *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](iLight *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "int GetTransformUpdateCount()", +[](iLight *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "iLight", "void AddChild(iEntity3D @apEntity)", +[](iLight *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void RemoveChild(iEntity3D @apEntity)", +[](iLight *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "bool IsChild(iEntity3D @apEntity)", +[](iLight *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "iEntity3D @GetEntityParent()", +[](iLight *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "iLight", "cMaterial @GetMaterial()", +[](iLight *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "iLight", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](iLight *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "eRenderableType GetRenderType()", +[](iLight *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](iLight *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "iLight", "bool GetRenderFlagBit(int alFlagBit)", +[](iLight *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "int GetRenderFlags() const", +[](iLight *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "iLight", "bool IsStatic()", +[](iLight *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "iLight", "bool IsVisible()", +[](iLight *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetVisible(bool abVisible)", +[](iLight *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "bool GetVisibleVar()", +[](iLight *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetIlluminationColor(const cColor&in aColor)", +[](iLight *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "const cColor& GetIlluminationColor()const", +[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "void SetCoverageAmount(float afX)", +[](iLight *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetCoverageAmount()const", +[](iLight *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "iLight", "int GetMatrixUpdateCount()", +[](iLight *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "iLight", "int GetRenderFrameCount() const", +[](iLight *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetRenderFrameCount(int alCount)", +[](iLight *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](iLight *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetLiquidAmount(float afX)", +[](iLight *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetLiquidAmount()const", +[](iLight *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "iLight", "eLightType GetLightType()", +[](iLight *o) -> int { return (int)o->GetLightType(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetGoboTexture(iTexture @apTexture)", +[](iLight *o, iTexture * a0) { o->SetGoboTexture(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "iTexture@ GetGoboTexture()", +[](iLight *o) -> iTexture * { return o->GetGoboTexture(); });
-	SOMA_METHOD_NEW(e, "iLight", "void RemoveBillboard(cBillboard @apBillboard)", +[](iLight *o, cBillboard * a0) { o->RemoveBillboard(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void AttachParticleSystem(cParticleSystem @apPS)", +[](iLight *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void RemoveParticleSystem(cParticleSystem @apPS)", +[](iLight *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", +[](iLight *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "iLight", "void StopFading()", +[](iLight *o) { o->StopFading(); });
-	SOMA_METHOD_NEW(e, "iLight", "bool IsFading()", +[](iLight *o) -> bool { return o->IsFading(); });
-	SOMA_METHOD_NEW(e, "iLight", "const cColor& GetDestColor()", +[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetDestColor(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "float GetDestRadius()", +[](iLight *o) -> float { return o->GetDestRadius(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetFlickerActive(bool abX)", +[](iLight *o, bool a0) { o->SetFlickerActive(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "bool GetFlickerActive()", +[](iLight *o) -> bool { return o->GetFlickerActive(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetFlicker(const cColor&in aOffCol, float afOffRadius,float afOnMinLength, float afOnMaxLength,const tString &in asOnSound,const tString &in asOnPS, float afOffMinLength, float afOffMaxLength,const tString &in asOffSound,const tString &in asOffPS, bool abFade, float afOnFadeMinLength, float afOnFadeMaxLength, float afOffFadeMinLength, float afOffFadeMaxLength)", +[](iLight *o, const cColor & a0, float a1, float a2, float a3, const tString & a4, const tString & a5, float a6, float a7, const tString & a8, const tString & a9, bool a10, float a11, float a12, float a13, float a14) { o->SetFlicker(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14); });
-	SOMA_METHOD_NEW(e, "iLight", "const tString& GetFlickerOffSound()", +[](iLight *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffSound(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "const tString& GetFlickerOnSound()", +[](iLight *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnSound(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "const tString& GetFlickerOffPS()", +[](iLight *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOffPS(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "const tString& GetFlickerOnPS()", +[](iLight *o) -> const tString & { static thread_local tString r; r = o->GetFlickerOnPS(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "float GetFlickerOnMinLength()", +[](iLight *o) -> float { return o->GetFlickerOnMinLength(); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetFlickerOffMinLength()", +[](iLight *o) -> float { return o->GetFlickerOffMinLength(); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetFlickerOnMaxLength()", +[](iLight *o) -> float { return o->GetFlickerOnMaxLength(); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetFlickerOffMaxLength()", +[](iLight *o) -> float { return o->GetFlickerOffMaxLength(); });
-	SOMA_METHOD_NEW(e, "iLight", "const cColor& GetFlickerOffColor()", +[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOffColor(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "float GetFlickerOffRadius()", +[](iLight *o) -> float { return o->GetFlickerOffRadius(); });
-	SOMA_METHOD_NEW(e, "iLight", "bool GetFlickerFade()", +[](iLight *o) -> bool { return o->GetFlickerFade(); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetFlickerOnFadeMinLength()", +[](iLight *o) -> float { return o->GetFlickerOnFadeMinLength(); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetFlickerOnFadeMaxLength()", +[](iLight *o) -> float { return o->GetFlickerOnFadeMaxLength(); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetFlickerOffFadeMinLength()", +[](iLight *o) -> float { return o->GetFlickerOffFadeMinLength(); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetFlickerOffFadeMaxLength()", +[](iLight *o) -> float { return o->GetFlickerOffFadeMaxLength(); });
-	SOMA_METHOD_NEW(e, "iLight", "const cColor& GetFlickerOnColor()", +[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetFlickerOnColor(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "float GetFlickerOnRadius()", +[](iLight *o) -> float { return o->GetFlickerOnRadius(); });
-	SOMA_METHOD_NEW(e, "iLight", "const cColor& GetDiffuseColor()", +[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetDiffuseColor(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "void SetDiffuseColor(const cColor&in aColor)", +[](iLight *o, const cColor & a0) { o->SetDiffuseColor(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "const cColor& GetDefaultDiffuseColor()", +[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultDiffuseColor(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "void SetDefaultDiffuseColor(const cColor&in aColor)", +[](iLight *o, const cColor & a0) { o->SetDefaultDiffuseColor(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "const cColor& GetSpecularColor()", +[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetSpecularColor(); return r; });
-	SOMA_METHOD_NEW(e, "iLight", "void SetSpecularColor(cColor aColor)", +[](iLight *o, cColor a0) { o->SetSpecularColor(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "bool GetCastShadows()", +[](iLight *o) -> bool { return o->GetCastShadows(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetCastShadows(bool afX)", +[](iLight *o, bool a0) { o->SetCastShadows(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "int GetShadowCastersAffected()", +[](iLight *o) -> int { return o->GetShadowCastersAffected(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetShadowCastersAffected(int alX)", +[](iLight *o, int a0) { o->SetShadowCastersAffected(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "eShadowMapResolution GetShadowMapResolution() const", +[](iLight *o) -> int { return (int)o->GetShadowMapResolution(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetShadowMapResolution(eShadowMapResolution aQuality)", +[](iLight *o, int a0) { o->SetShadowMapResolution((eShadowMapResolution)a0); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetShadowMapBlurAmount() const", +[](iLight *o) -> float { return o->GetShadowMapBlurAmount(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetShadowMapBlurAmount(float afX)", +[](iLight *o, float a0) { o->SetShadowMapBlurAmount(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "bool GetOcclusionCullShadowCasters() const", +[](iLight *o) -> bool { return o->GetOcclusionCullShadowCasters(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetOcclusionCullShadowCasters(bool abX)", +[](iLight *o, bool a0) { o->SetOcclusionCullShadowCasters(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetShadowMapBiasMul()", +[](iLight *o) -> float { return o->GetShadowMapBiasMul(); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetShadowMapSlopeScaleBiasMul()", +[](iLight *o) -> float { return o->GetShadowMapSlopeScaleBiasMul(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetShadowMapBiasMul(float afX)", +[](iLight *o, float a0) { o->SetShadowMapBiasMul(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetShadowMapSlopeScaleBiasMul(float afX)", +[](iLight *o, float a0) { o->SetShadowMapSlopeScaleBiasMul(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetRadius(float afX)", +[](iLight *o, float a0) { o->SetRadius(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetRadius()", +[](iLight *o) -> float { return o->GetRadius(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetFalloffPow(float afX)", +[](iLight *o, float a0) { o->SetFalloffPow(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetFalloffPow()", +[](iLight *o) -> float { return o->GetFalloffPow(); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetSourceRadius()", +[](iLight *o) -> float { return o->GetSourceRadius(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetSourceRadius(float afX)", +[](iLight *o, float a0) { o->SetSourceRadius(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetBrightness(float afX)", +[](iLight *o, float a0) { o->SetBrightness(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetBrightness()", +[](iLight *o) -> float { return o->GetBrightness(); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetTranslucency()", +[](iLight *o) -> float { return o->GetTranslucency(); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetTranslucency(float afX)", +[](iLight *o, float a0) { o->SetTranslucency(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetSpecularColor(const cColor&in aColor)", +[](iLight *o, const cColor & a0) { o->SetSpecularColor(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "void SetDefaultBrightness(float afX)", +[](iLight *o, float a0) { o->SetDefaultBrightness(a0); });
-	SOMA_METHOD_NEW(e, "iLight", "float GetDefaultBrightness()", +[](iLight *o) -> float { return o->GetDefaultBrightness(); });
-	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "cVector2f GetScreenSizeFloat()", +[](iLowLevelGraphics *o) -> cVector2f { return o->GetScreenSizeFloat(); });
-	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "const cVector2l& GetScreenSizeInt()", +[](iLowLevelGraphics *o) -> const cVector2l & { static thread_local cVector2l r; r = o->GetScreenSizeInt(); return r; });
-	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "void DrawLine(const cVector3f&in avBegin, const cVector3f&in avEnd, const cColor&in aCol)", +[](iLowLevelGraphics *o, const cVector3f & a0, const cVector3f & a1, const cColor & a2) { o->DrawLine(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "void DrawBoxMinMax(const cVector3f&in avMin, const cVector3f&in avMax, const cColor&in aCol)", +[](iLowLevelGraphics *o, const cVector3f & a0, const cVector3f & a1, const cColor & a2) { o->DrawBoxMinMax(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "void DrawLineQuad(const cVector3f &in avPos,const cVector2f &in avSize, const cColor&in aCol)", +[](iLowLevelGraphics *o, const cVector3f & a0, const cVector2f & a1, const cColor & a2) { o->DrawLineQuad(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "void SetGammaCorrection(float afX)", +[](iLowLevelGraphics *o, float a0) { o->SetGammaCorrection(a0); });
-	SOMA_METHOD_NEW(e, "iMouse", "bool ButtonIsDown(eMouseButton)", +[](iMouse *o, int a0) -> bool { return o->ButtonIsDown((eMouseButton)a0); });
-	SOMA_METHOD_NEW(e, "iMouse", "void Update()", +[](iMouse *o) { o->Update(); });
-	SOMA_METHOD_NEW(e, "iMouse", "cVector2l GetAbsPosition()", +[](iMouse *o) -> cVector2l { return o->GetAbsPosition(); });
-	SOMA_METHOD_NEW(e, "iMouse", "cVector2l GetRelPosition()", +[](iMouse *o) -> cVector2l { return o->GetRelPosition(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "int GetUniqueID()", +[](iPhysicsBody *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void UpdateLogic(float afTimeStep)", +[](iPhysicsBody *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "const tString& GetName()const", +[](iPhysicsBody *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetName(const tString&in asName)", +[](iPhysicsBody *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool HasParent()", +[](iPhysicsBody *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool IsActive()const", +[](iPhysicsBody *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetActive(bool abActive)", +[](iPhysicsBody *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "cVector3f GetLocalPosition()", +[](iPhysicsBody *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "cMatrixf& GetLocalMatrix()", +[](iPhysicsBody *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "cVector3f GetWorldPosition()", +[](iPhysicsBody *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "cMatrixf& GetWorldMatrix()", +[](iPhysicsBody *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetPosition(const cVector3f&in avPos)", +[](iPhysicsBody *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](iPhysicsBody *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](iPhysicsBody *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](iPhysicsBody *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "int GetTransformUpdateCount()", +[](iPhysicsBody *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddChild(iEntity3D @apEntity)", +[](iPhysicsBody *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void RemoveChild(iEntity3D @apEntity)", +[](iPhysicsBody *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool IsChild(iEntity3D @apEntity)", +[](iPhysicsBody *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "iEntity3D @GetEntityParent()", +[](iPhysicsBody *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "iPhysicsMaterial@ GetMaterial()", +[](iPhysicsBody *o) -> iPhysicsMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "iCollideShape@ GetShape()", +[](iPhysicsBody *o) -> iCollideShape * { return o->GetShape(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "iPhysicsJoint@ GetJoint(int alIndex)", +[](iPhysicsBody *o, int a0) -> iPhysicsJoint * { return o->GetJoint(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "int GetJointNum()", +[](iPhysicsBody *o) -> int { return o->GetJointNum(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void RemoveJoint(iPhysicsJoint @apJoint)", +[](iPhysicsBody *o, iPhysicsJoint * a0) { o->RemoveJoint(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetLinearVelocity(const cVector3f &in avVel)", +[](iPhysicsBody *o, const cVector3f & a0) { o->SetLinearVelocity(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "cVector3f GetLinearVelocity() const", +[](iPhysicsBody *o) -> cVector3f { return o->GetLinearVelocity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetAngularVelocity(const cVector3f &in avVel)", +[](iPhysicsBody *o, const cVector3f & a0) { o->SetAngularVelocity(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "cVector3f GetAngularVelocity() const", +[](iPhysicsBody *o) -> cVector3f { return o->GetAngularVelocity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetLinearDamping(float afDamping)", +[](iPhysicsBody *o, float a0) { o->SetLinearDamping(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetLinearDamping() const", +[](iPhysicsBody *o) -> float { return o->GetLinearDamping(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetAngularDamping(float afDamping)", +[](iPhysicsBody *o, float a0) { o->SetAngularDamping(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetAngularDamping() const", +[](iPhysicsBody *o) -> float { return o->GetAngularDamping(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetMaxLinearSpeed(float afSpeed)", +[](iPhysicsBody *o, float a0) { o->SetMaxLinearSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetMaxLinearSpeed() const", +[](iPhysicsBody *o) -> float { return o->GetMaxLinearSpeed(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetMaxAngularSpeed(float afDamping)", +[](iPhysicsBody *o, float a0) { o->SetMaxAngularSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetMaxAngularSpeed() const", +[](iPhysicsBody *o) -> float { return o->GetMaxAngularSpeed(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "cVector3f GetInertiaVector()", +[](iPhysicsBody *o) -> cVector3f { return o->GetInertiaVector(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "cMatrixf GetInertiaMatrix()", +[](iPhysicsBody *o) -> cMatrixf { return o->GetInertiaMatrix(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetNoGravityWhenUnderwater(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetNoGravityWhenUnderwater(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetNoGravityWhenUnderwater()", +[](iPhysicsBody *o) -> bool { return o->GetNoGravityWhenUnderwater(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetIsUnderwater(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetIsUnderwater(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetIsUnderwater()", +[](iPhysicsBody *o) -> bool { return o->GetIsUnderwater(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "cVector3f GetVelocityAtPosition(const cVector3f&in avPos)", +[](iPhysicsBody *o, const cVector3f & a0) -> cVector3f { return o->GetVelocityAtPosition(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "cVector3f GetTorqueFromForceAtPosition(const cVector3f&in avForce, const cVector3f&in avPos)", +[](iPhysicsBody *o, const cVector3f & a0, const cVector3f & a1) -> cVector3f { return o->GetTorqueFromForceAtPosition(a0, a1); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetMass(float afMass)", +[](iPhysicsBody *o, float a0) { o->SetMass(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetMass() const", +[](iPhysicsBody *o) -> float { return o->GetMass(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetMassMulApplied(float afMul)", +[](iPhysicsBody *o, float a0) { o->SetMassMulApplied(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetMassMulApplied()", +[](iPhysicsBody *o) -> float { return o->GetMassMulApplied(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddForce(const cVector3f &in avForce)", +[](iPhysicsBody *o, const cVector3f & a0) { o->AddForce(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddForceAtPosition(const cVector3f &in avForce, const cVector3f &in avPos)", +[](iPhysicsBody *o, const cVector3f & a0, const cVector3f & a1) { o->AddForceAtPosition(a0, a1); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddTorque(const cVector3f &in avTorque)", +[](iPhysicsBody *o, const cVector3f & a0) { o->AddTorque(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddImpulse(const cVector3f &in avImpulse)", +[](iPhysicsBody *o, const cVector3f & a0) { o->AddImpulse(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddImpulseAtPosition(const cVector3f &in avImpulse, const cVector3f &in avPos)", +[](iPhysicsBody *o, const cVector3f & a0, const cVector3f & a1) { o->AddImpulseAtPosition(a0, a1); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void Freeze()", +[](iPhysicsBody *o) { o->Freeze(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetFrozen()", +[](iPhysicsBody *o) -> bool { return o->GetFrozen(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void Enable()", +[](iPhysicsBody *o) { o->Enable(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetEnabled() const", +[](iPhysicsBody *o) -> bool { return o->GetEnabled(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetAutoDisable(bool abEnabled)", +[](iPhysicsBody *o, bool a0) { o->SetAutoDisable(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetAutoDisable() const", +[](iPhysicsBody *o) -> bool { return o->GetAutoDisable(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetAutoDisableLinearThreshold(float afThresold)", +[](iPhysicsBody *o, float a0) { o->SetAutoDisableLinearThreshold(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetAutoDisableLinearThreshold() const", +[](iPhysicsBody *o) -> float { return o->GetAutoDisableLinearThreshold(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetAutoDisableAngularThreshold(float afThresold)", +[](iPhysicsBody *o, float a0) { o->SetAutoDisableAngularThreshold(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetAutoDisableAngularThreshold() const", +[](iPhysicsBody *o) -> float { return o->GetAutoDisableAngularThreshold(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetAutoDisableNumSteps(int alNum)", +[](iPhysicsBody *o, int a0) { o->SetAutoDisableNumSteps(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "int GetAutoDisableNumSteps() const", +[](iPhysicsBody *o) -> int { return o->GetAutoDisableNumSteps(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetContinuousCollision(bool abOn)", +[](iPhysicsBody *o, bool a0) { o->SetContinuousCollision(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetContinuousCollision()", +[](iPhysicsBody *o) -> bool { return o->GetContinuousCollision(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetGravity(bool abEnabled)", +[](iPhysicsBody *o, bool a0) { o->SetGravity(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetGravity() const", +[](iPhysicsBody *o) -> bool { return o->GetGravity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void RenderDebugGeometry(iLowLevelGraphics@ apLowLevel,const cColor &in aColor)", +[](iPhysicsBody *o, iLowLevelGraphics * a0, const cColor & a1) { o->RenderDebugGeometry(a0, a1); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void StaticLinearMove(const cVector3f&in avVelocity)", +[](iPhysicsBody *o, const cVector3f & a0) { o->StaticLinearMove(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void StaticAngularMove(const cVector3f&in avVelocity)", +[](iPhysicsBody *o, const cVector3f & a0) { o->StaticAngularMove(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetBlocksSound(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetBlocksSound(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetBlocksSound()", +[](iPhysicsBody *o) -> bool { return o->GetBlocksSound(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetBlocksLight(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetBlocksLight(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetBlocksLight()", +[](iPhysicsBody *o) -> bool { return o->GetBlocksLight(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetUseSurfaceEffects(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetUseSurfaceEffects(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetUseSurfaceEffects()", +[](iPhysicsBody *o) -> bool { return o->GetUseSurfaceEffects(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetCollide(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetCollide(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetCollide()const", +[](iPhysicsBody *o) -> bool { return o->GetCollide(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool IsCharacter()const", +[](iPhysicsBody *o) -> bool { return o->IsCharacter(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetCollideCharacter(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetCollideCharacter(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetCollideCharacter()const", +[](iPhysicsBody *o) -> bool { return o->GetCollideCharacter(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "iCharacterBody@ GetCharacterBody()", +[](iPhysicsBody *o) -> iCharacterBody * { return o->GetCharacterBody(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetPushStrength(int alX)", +[](iPhysicsBody *o, int a0) { o->SetPushStrength(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "int GetPushStrength()", +[](iPhysicsBody *o) -> int { return o->GetPushStrength(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetCollideFlags(uint alX)", +[](iPhysicsBody *o, unsigned int a0) { o->SetCollideFlags(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "uint GetCollideFlags() const", +[](iPhysicsBody *o) -> unsigned int { return o->GetCollideFlags(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool IsRagDoll()const", +[](iPhysicsBody *o) -> bool { return o->IsRagDoll(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetCollideRagDoll(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetCollideRagDoll(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetCollideRagDoll()const", +[](iPhysicsBody *o) -> bool { return o->GetCollideRagDoll(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetVolatile(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetVolatile(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool IsVolatile()const", +[](iPhysicsBody *o) -> bool { return o->IsVolatile(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetPushedByCharacterGravity(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetPushedByCharacterGravity(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetPushedByCharacterGravity()const", +[](iPhysicsBody *o) -> bool { return o->GetPushedByCharacterGravity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetBuoyancyActive(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetBuoyancyActive(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetBuoyancyDensity(float afX)", +[](iPhysicsBody *o, float a0) { o->SetBuoyancyDensity(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetBuoyancyLinearViscosity(float afX)", +[](iPhysicsBody *o, float a0) { o->SetBuoyancyLinearViscosity(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetBuoyancyAngularViscosity(float afX)", +[](iPhysicsBody *o, float a0) { o->SetBuoyancyAngularViscosity(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetBuoyancySurface(const cPlanef &in aP)", +[](iPhysicsBody *o, const cPlanef & a0) { o->SetBuoyancySurface(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetBuoyancyActive()", +[](iPhysicsBody *o) -> bool { return o->GetBuoyancyActive(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetBuoyancyDensity()", +[](iPhysicsBody *o) -> float { return o->GetBuoyancyDensity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetBuoyancyLinearViscosity()", +[](iPhysicsBody *o) -> float { return o->GetBuoyancyLinearViscosity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetBuoyancyAngularViscosity()", +[](iPhysicsBody *o) -> float { return o->GetBuoyancyAngularViscosity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetBuoyancyDensityMul()", +[](iPhysicsBody *o) -> float { return o->GetBuoyancyDensityMul(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetBuoyancyDensityMul(float afX)", +[](iPhysicsBody *o, float a0) { o->SetBuoyancyDensityMul(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetGravityCanAttachCharacter(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetGravityCanAttachCharacter(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetGravityAttachmentRotation(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetGravityAttachmentRotation(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetGravityAttachmentVelocity(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetGravityAttachmentVelocity(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetGravityAttachmentVelocityAxes(eVelocityAxes aAxes)", +[](iPhysicsBody *o, int a0) { o->SetGravityAttachmentVelocityAxes((eVelocityAxes)a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetGravityCanAttachCharacter()", +[](iPhysicsBody *o) -> bool { return o->GetGravityCanAttachCharacter(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetGravityAttachmentRotation()", +[](iPhysicsBody *o) -> bool { return o->GetGravityAttachmentRotation(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetGravityAttachmentVelocity()", +[](iPhysicsBody *o) -> bool { return o->GetGravityAttachmentVelocity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "eVelocityAxes GetGravityAttachmentVelocityAxes()", +[](iPhysicsBody *o) -> int { return (int)o->GetGravityAttachmentVelocityAxes(); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetMaterial(iPhysicsMaterial@ aMat)", +[](iPhysicsBody *o, iPhysicsMaterial * a0) { o->SetMaterial(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetIsCharacter(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetIsCharacter(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "const tString& GetName()", +[](iPhysicsJoint *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "int GetUniqueID()", +[](iPhysicsJoint *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "iPhysicsBody@ GetParentBody()", +[](iPhysicsJoint *o) -> iPhysicsBody * { return o->GetParentBody(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "iPhysicsBody@ GetChildBody()", +[](iPhysicsJoint *o) -> iPhysicsBody * { return o->GetChildBody(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void RemoveBody(iPhysicsBody @apBody)", +[](iPhysicsJoint *o, iPhysicsBody * a0) { o->RemoveBody(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "const cVector3f& GetPivotPoint()", +[](iPhysicsJoint *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPivotPoint(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "const cVector3f& GetPinDir()", +[](iPhysicsJoint *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPinDir(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "ePhysicsJointType GetType()", +[](iPhysicsJoint *o) -> int { return (int)o->GetType(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetCollideBodies(bool abX)", +[](iPhysicsJoint *o, bool a0) { o->SetCollideBodies(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "bool GetCollideBodies()", +[](iPhysicsJoint *o) -> bool { return o->GetCollideBodies(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetStiffness(float afX)", +[](iPhysicsJoint *o, float a0) { o->SetStiffness(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "float GetStiffness()", +[](iPhysicsJoint *o) -> float { return o->GetStiffness(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "cVector3f GetVelocity()", +[](iPhysicsJoint *o) -> cVector3f { return o->GetVelocity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "cVector3f GetAngularVelocity()", +[](iPhysicsJoint *o) -> cVector3f { return o->GetAngularVelocity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "float GetForceSize()", +[](iPhysicsJoint *o) -> float { return o->GetForceSize(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "float GetDistance()", +[](iPhysicsJoint *o) -> float { return o->GetDistance(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "float GetAngle()", +[](iPhysicsJoint *o) -> float { return o->GetAngle(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetBreakable(bool abX)", +[](iPhysicsJoint *o, bool a0) { o->SetBreakable(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "bool IsBreakable()", +[](iPhysicsJoint *o) -> bool { return o->IsBreakable(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetLimitAutoSleep(bool abX)", +[](iPhysicsJoint *o, bool a0) { o->SetLimitAutoSleep(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "bool GetLimitAutoSleep()", +[](iPhysicsJoint *o) -> bool { return o->GetLimitAutoSleep(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetStickyMinLimit(bool abX)", +[](iPhysicsJoint *o, bool a0) { o->SetStickyMinLimit(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetStickyMaxLimit(bool abX)", +[](iPhysicsJoint *o, bool a0) { o->SetStickyMaxLimit(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "bool GetStickyMinLimit()", +[](iPhysicsJoint *o) -> bool { return o->GetStickyMinLimit(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "bool GetStickyMaxLimit()", +[](iPhysicsJoint *o) -> bool { return o->GetStickyMaxLimit(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void Break()", +[](iPhysicsJoint *o) { o->Break(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "bool IsBroken()", +[](iPhysicsJoint *o) -> bool { return o->IsBroken(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetMoveSound(tString&in asName)", +[](iPhysicsJoint *o, tString & a0) { o->SetMoveSound(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", +[](iPhysicsJoint *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetMinMoveSpeed(float afX)", +[](iPhysicsJoint *o, float a0) { o->SetMinMoveSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetAllowPositionReset(bool abX)", +[](iPhysicsJoint *o, bool a0) { o->SetAllowPositionReset(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "bool GetAllowPositionReset()", +[](iPhysicsJoint *o) -> bool { return o->GetAllowPositionReset(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "const tString& GetName()", +[](iPhysicsJointBall *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "int GetUniqueID()", +[](iPhysicsJointBall *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "iPhysicsBody@ GetParentBody()", +[](iPhysicsJointBall *o) -> iPhysicsBody * { return o->GetParentBody(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "iPhysicsBody@ GetChildBody()", +[](iPhysicsJointBall *o) -> iPhysicsBody * { return o->GetChildBody(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void RemoveBody(iPhysicsBody @apBody)", +[](iPhysicsJointBall *o, iPhysicsBody * a0) { o->RemoveBody(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "const cVector3f& GetPivotPoint()", +[](iPhysicsJointBall *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPivotPoint(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "const cVector3f& GetPinDir()", +[](iPhysicsJointBall *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPinDir(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "ePhysicsJointType GetType()", +[](iPhysicsJointBall *o) -> int { return (int)o->GetType(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetCollideBodies(bool abX)", +[](iPhysicsJointBall *o, bool a0) { o->SetCollideBodies(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "bool GetCollideBodies()", +[](iPhysicsJointBall *o) -> bool { return o->GetCollideBodies(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetStiffness(float afX)", +[](iPhysicsJointBall *o, float a0) { o->SetStiffness(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "float GetStiffness()", +[](iPhysicsJointBall *o) -> float { return o->GetStiffness(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "cVector3f GetVelocity()", +[](iPhysicsJointBall *o) -> cVector3f { return o->GetVelocity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "cVector3f GetAngularVelocity()", +[](iPhysicsJointBall *o) -> cVector3f { return o->GetAngularVelocity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "float GetForceSize()", +[](iPhysicsJointBall *o) -> float { return o->GetForceSize(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "float GetDistance()", +[](iPhysicsJointBall *o) -> float { return o->GetDistance(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "float GetAngle()", +[](iPhysicsJointBall *o) -> float { return o->GetAngle(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetBreakable(bool abX)", +[](iPhysicsJointBall *o, bool a0) { o->SetBreakable(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "bool IsBreakable()", +[](iPhysicsJointBall *o) -> bool { return o->IsBreakable(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetLimitAutoSleep(bool abX)", +[](iPhysicsJointBall *o, bool a0) { o->SetLimitAutoSleep(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "bool GetLimitAutoSleep()", +[](iPhysicsJointBall *o) -> bool { return o->GetLimitAutoSleep(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetStickyMinLimit(bool abX)", +[](iPhysicsJointBall *o, bool a0) { o->SetStickyMinLimit(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetStickyMaxLimit(bool abX)", +[](iPhysicsJointBall *o, bool a0) { o->SetStickyMaxLimit(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "bool GetStickyMinLimit()", +[](iPhysicsJointBall *o) -> bool { return o->GetStickyMinLimit(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "bool GetStickyMaxLimit()", +[](iPhysicsJointBall *o) -> bool { return o->GetStickyMaxLimit(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void Break()", +[](iPhysicsJointBall *o) { o->Break(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "bool IsBroken()", +[](iPhysicsJointBall *o) -> bool { return o->IsBroken(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetMoveSound(tString&in asName)", +[](iPhysicsJointBall *o, tString & a0) { o->SetMoveSound(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", +[](iPhysicsJointBall *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetMinMoveSpeed(float afX)", +[](iPhysicsJointBall *o, float a0) { o->SetMinMoveSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetAllowPositionReset(bool abX)", +[](iPhysicsJointBall *o, bool a0) { o->SetAllowPositionReset(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "bool GetAllowPositionReset()", +[](iPhysicsJointBall *o) -> bool { return o->GetAllowPositionReset(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetConeLimits(float afMaxConeAngle, float afMaxTwistAngle)", +[](iPhysicsJointBall *o, float a0, float a1) { o->SetConeLimits(a0, a1); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "cVector3f GetAngles()", +[](iPhysicsJointBall *o) -> cVector3f { return o->GetAngles(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "float GetMaxConeAngle()", +[](iPhysicsJointBall *o) -> float { return o->GetMaxConeAngle(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "float GetMaxTwistAngle()", +[](iPhysicsJointBall *o) -> float { return o->GetMaxTwistAngle(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "const tString& GetName()", +[](iPhysicsJointHinge *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "int GetUniqueID()", +[](iPhysicsJointHinge *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "iPhysicsBody@ GetParentBody()", +[](iPhysicsJointHinge *o) -> iPhysicsBody * { return o->GetParentBody(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "iPhysicsBody@ GetChildBody()", +[](iPhysicsJointHinge *o) -> iPhysicsBody * { return o->GetChildBody(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void RemoveBody(iPhysicsBody @apBody)", +[](iPhysicsJointHinge *o, iPhysicsBody * a0) { o->RemoveBody(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "const cVector3f& GetPivotPoint()", +[](iPhysicsJointHinge *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPivotPoint(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "const cVector3f& GetPinDir()", +[](iPhysicsJointHinge *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPinDir(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "ePhysicsJointType GetType()", +[](iPhysicsJointHinge *o) -> int { return (int)o->GetType(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetCollideBodies(bool abX)", +[](iPhysicsJointHinge *o, bool a0) { o->SetCollideBodies(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "bool GetCollideBodies()", +[](iPhysicsJointHinge *o) -> bool { return o->GetCollideBodies(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetStiffness(float afX)", +[](iPhysicsJointHinge *o, float a0) { o->SetStiffness(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "float GetStiffness()", +[](iPhysicsJointHinge *o) -> float { return o->GetStiffness(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "cVector3f GetVelocity()", +[](iPhysicsJointHinge *o) -> cVector3f { return o->GetVelocity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "cVector3f GetAngularVelocity()", +[](iPhysicsJointHinge *o) -> cVector3f { return o->GetAngularVelocity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "float GetForceSize()", +[](iPhysicsJointHinge *o) -> float { return o->GetForceSize(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "float GetDistance()", +[](iPhysicsJointHinge *o) -> float { return o->GetDistance(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "float GetAngle()", +[](iPhysicsJointHinge *o) -> float { return o->GetAngle(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetBreakable(bool abX)", +[](iPhysicsJointHinge *o, bool a0) { o->SetBreakable(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "bool IsBreakable()", +[](iPhysicsJointHinge *o) -> bool { return o->IsBreakable(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetLimitAutoSleep(bool abX)", +[](iPhysicsJointHinge *o, bool a0) { o->SetLimitAutoSleep(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "bool GetLimitAutoSleep()", +[](iPhysicsJointHinge *o) -> bool { return o->GetLimitAutoSleep(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetStickyMinLimit(bool abX)", +[](iPhysicsJointHinge *o, bool a0) { o->SetStickyMinLimit(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetStickyMaxLimit(bool abX)", +[](iPhysicsJointHinge *o, bool a0) { o->SetStickyMaxLimit(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "bool GetStickyMinLimit()", +[](iPhysicsJointHinge *o) -> bool { return o->GetStickyMinLimit(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "bool GetStickyMaxLimit()", +[](iPhysicsJointHinge *o) -> bool { return o->GetStickyMaxLimit(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void Break()", +[](iPhysicsJointHinge *o) { o->Break(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "bool IsBroken()", +[](iPhysicsJointHinge *o) -> bool { return o->IsBroken(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetMoveSound(tString&in asName)", +[](iPhysicsJointHinge *o, tString & a0) { o->SetMoveSound(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", +[](iPhysicsJointHinge *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetMinMoveSpeed(float afX)", +[](iPhysicsJointHinge *o, float a0) { o->SetMinMoveSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetAllowPositionReset(bool abX)", +[](iPhysicsJointHinge *o, bool a0) { o->SetAllowPositionReset(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "bool GetAllowPositionReset()", +[](iPhysicsJointHinge *o) -> bool { return o->GetAllowPositionReset(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetMaxAngle(float afAngle)", +[](iPhysicsJointHinge *o, float a0) { o->SetMaxAngle(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetMinAngle(float afAngle)", +[](iPhysicsJointHinge *o, float a0) { o->SetMinAngle(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "float GetMaxAngle()", +[](iPhysicsJointHinge *o) -> float { return o->GetMaxAngle(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "float GetMinAngle()", +[](iPhysicsJointHinge *o) -> float { return o->GetMinAngle(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "const tString& GetName()", +[](iPhysicsJointSlider *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "int GetUniqueID()", +[](iPhysicsJointSlider *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "iPhysicsBody@ GetParentBody()", +[](iPhysicsJointSlider *o) -> iPhysicsBody * { return o->GetParentBody(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "iPhysicsBody@ GetChildBody()", +[](iPhysicsJointSlider *o) -> iPhysicsBody * { return o->GetChildBody(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void RemoveBody(iPhysicsBody @apBody)", +[](iPhysicsJointSlider *o, iPhysicsBody * a0) { o->RemoveBody(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "const cVector3f& GetPivotPoint()", +[](iPhysicsJointSlider *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPivotPoint(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "const cVector3f& GetPinDir()", +[](iPhysicsJointSlider *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPinDir(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "ePhysicsJointType GetType()", +[](iPhysicsJointSlider *o) -> int { return (int)o->GetType(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetCollideBodies(bool abX)", +[](iPhysicsJointSlider *o, bool a0) { o->SetCollideBodies(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "bool GetCollideBodies()", +[](iPhysicsJointSlider *o) -> bool { return o->GetCollideBodies(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetStiffness(float afX)", +[](iPhysicsJointSlider *o, float a0) { o->SetStiffness(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "float GetStiffness()", +[](iPhysicsJointSlider *o) -> float { return o->GetStiffness(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "cVector3f GetVelocity()", +[](iPhysicsJointSlider *o) -> cVector3f { return o->GetVelocity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "cVector3f GetAngularVelocity()", +[](iPhysicsJointSlider *o) -> cVector3f { return o->GetAngularVelocity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "float GetForceSize()", +[](iPhysicsJointSlider *o) -> float { return o->GetForceSize(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "float GetDistance()", +[](iPhysicsJointSlider *o) -> float { return o->GetDistance(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "float GetAngle()", +[](iPhysicsJointSlider *o) -> float { return o->GetAngle(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetBreakable(bool abX)", +[](iPhysicsJointSlider *o, bool a0) { o->SetBreakable(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "bool IsBreakable()", +[](iPhysicsJointSlider *o) -> bool { return o->IsBreakable(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetLimitAutoSleep(bool abX)", +[](iPhysicsJointSlider *o, bool a0) { o->SetLimitAutoSleep(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "bool GetLimitAutoSleep()", +[](iPhysicsJointSlider *o) -> bool { return o->GetLimitAutoSleep(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetStickyMinLimit(bool abX)", +[](iPhysicsJointSlider *o, bool a0) { o->SetStickyMinLimit(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetStickyMaxLimit(bool abX)", +[](iPhysicsJointSlider *o, bool a0) { o->SetStickyMaxLimit(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "bool GetStickyMinLimit()", +[](iPhysicsJointSlider *o) -> bool { return o->GetStickyMinLimit(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "bool GetStickyMaxLimit()", +[](iPhysicsJointSlider *o) -> bool { return o->GetStickyMaxLimit(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void Break()", +[](iPhysicsJointSlider *o) { o->Break(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "bool IsBroken()", +[](iPhysicsJointSlider *o) -> bool { return o->IsBroken(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetMoveSound(tString&in asName)", +[](iPhysicsJointSlider *o, tString & a0) { o->SetMoveSound(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", +[](iPhysicsJointSlider *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetMinMoveSpeed(float afX)", +[](iPhysicsJointSlider *o, float a0) { o->SetMinMoveSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetAllowPositionReset(bool abX)", +[](iPhysicsJointSlider *o, bool a0) { o->SetAllowPositionReset(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "bool GetAllowPositionReset()", +[](iPhysicsJointSlider *o) -> bool { return o->GetAllowPositionReset(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetMaxDistance(float afX)", +[](iPhysicsJointSlider *o, float a0) { o->SetMaxDistance(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetMinDistance(float afX)", +[](iPhysicsJointSlider *o, float a0) { o->SetMinDistance(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "float GetMaxDistance()", +[](iPhysicsJointSlider *o) -> float { return o->GetMaxDistance(); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "float GetMinDistance()", +[](iPhysicsJointSlider *o) -> float { return o->GetMinDistance(); });
-	SOMA_METHOD_NEW(e, "iPhysicsMaterial", "const tString& GetName() const", +[](iPhysicsMaterial *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsMaterial", "float GetElasticity()", +[](iPhysicsMaterial *o) -> float { return o->GetElasticity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsMaterial", "float GetStaticFriction()", +[](iPhysicsMaterial *o) -> float { return o->GetStaticFriction(); });
-	SOMA_METHOD_NEW(e, "iPhysicsMaterial", "float GetKineticFriction()", +[](iPhysicsMaterial *o) -> float { return o->GetKineticFriction(); });
-	SOMA_METHOD_NEW(e, "iPhysicsMaterial", "cSurfaceData@ GetSurfaceData()", +[](iPhysicsMaterial *o) -> cSurfaceData * { return o->GetSurfaceData(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "const tString& GetName()", +[](iPhysicsRope *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "int GetUniqueID()", +[](iPhysicsRope *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetActive(bool abX)", +[](iPhysicsRope *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "bool GetActive()", +[](iPhysicsRope *o) -> bool { return o->GetActive(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void RemoveAttachedBody(iPhysicsBody @apBody, bool abRemoveContainerFromBody)", +[](iPhysicsRope *o, iPhysicsBody * a0, bool a1) { o->RemoveAttachedBody(a0, a1); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetGravityForce(const cVector3f&in avX)", +[](iPhysicsRope *o, const cVector3f & a0) { o->SetGravityForce(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "const cVector3f& GetGravityForce()", +[](iPhysicsRope *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetGravityForce(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetDamping(float afX)", +[](iPhysicsRope *o, float a0) { o->SetDamping(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetDamping()", +[](iPhysicsRope *o) -> float { return o->GetDamping(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetParticleRadius(float afX)", +[](iPhysicsRope *o, float a0) { o->SetParticleRadius(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetParticleRadius()", +[](iPhysicsRope *o) -> float { return o->GetParticleRadius(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetSlideAmount(float afX)", +[](iPhysicsRope *o, float a0) { o->SetSlideAmount(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetSlideAmount()", +[](iPhysicsRope *o) -> float { return o->GetSlideAmount(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetCollide(bool abX)", +[](iPhysicsRope *o, bool a0) { o->SetCollide(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "bool GetCollide()", +[](iPhysicsRope *o) -> bool { return o->GetCollide(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetSleeping(bool abX)", +[](iPhysicsRope *o, bool a0) { o->SetSleeping(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "int GetParticleNum()", +[](iPhysicsRope *o) -> int { return o->GetParticleNum(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "cVerletParticle@ GetParticle(int alIdx)", +[](iPhysicsRope *o, int a0) -> cVerletParticle * { return o->GetParticle(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "int GetUpdateCount() const", +[](iPhysicsRope *o) -> int { return o->GetUpdateCount(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void IncUpdateCount()", +[](iPhysicsRope *o) { o->IncUpdateCount(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength)", +[](iPhysicsRope *o, cVerletParticle * a0, cVerletParticle * a1, float a2) { o->UpdateLengthConstraint(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength, float afStiffness)", +[](iPhysicsRope *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3) { o->UpdateLengthConstraint(a0, a1, a2, a3); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afMinLength, float afMaxLength, float afStiffness)", +[](iPhysicsRope *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3, float a4) { o->UpdateLengthConstraint(a0, a1, a2, a3, a4); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void UpdateLengthConstraintStretch(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength, float afStiffness)", +[](iPhysicsRope *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3) { o->UpdateLengthConstraintStretch(a0, a1, a2, a3); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void UpdateParticleCollisionConstraint(cVerletParticle@ apPart, const cVector3f &in avPrevPos, float afRadius)", +[](iPhysicsRope *o, cVerletParticle * a0, const cVector3f & a1, float a2) { o->UpdateParticleCollisionConstraint(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetPhysicsActive(bool abX)", +[](iPhysicsRope *o, bool a0) { o->SetPhysicsActive(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "bool GetPhysicsActive()", +[](iPhysicsRope *o) -> bool { return o->GetPhysicsActive(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetMotorActive(bool abX)", +[](iPhysicsRope *o, bool a0) { o->SetMotorActive(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "bool GetMotorActive()", +[](iPhysicsRope *o) -> bool { return o->GetMotorActive(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetMotorWantedLength(float afX)", +[](iPhysicsRope *o, float a0) { o->SetMotorWantedLength(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetMotorSpeedMul(float afX)", +[](iPhysicsRope *o, float a0) { o->SetMotorSpeedMul(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetMotorMaxSpeed(float afX)", +[](iPhysicsRope *o, float a0) { o->SetMotorMaxSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetMotorMinSpeed(float afX)", +[](iPhysicsRope *o, float a0) { o->SetMotorMinSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetMotorWantedLength()", +[](iPhysicsRope *o) -> float { return o->GetMotorWantedLength(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetMotorSpeedMul()", +[](iPhysicsRope *o) -> float { return o->GetMotorSpeedMul(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetMotorMaxSpeed()", +[](iPhysicsRope *o) -> float { return o->GetMotorMaxSpeed(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetMotorMinSpeed()", +[](iPhysicsRope *o) -> float { return o->GetMotorMinSpeed(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetMotorSound(const tString&in asSound)", +[](iPhysicsRope *o, const tString & a0) { o->SetMotorSound(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetMotorSoundStartSpeed(float afX)", +[](iPhysicsRope *o, float a0) { o->SetMotorSoundStartSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetMotorSoundStopSpeed(float afX)", +[](iPhysicsRope *o, float a0) { o->SetMotorSoundStopSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "const tString& GetMotorSound()", +[](iPhysicsRope *o) -> const tString & { static thread_local tString r; r = o->GetMotorSound(); return r; });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetMotorSoundStartSpeed()", +[](iPhysicsRope *o) -> float { return o->GetMotorSoundStartSpeed(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetMotorSoundStopSpeed()", +[](iPhysicsRope *o) -> float { return o->GetMotorSoundStopSpeed(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetAutoMoveActive(bool abX)", +[](iPhysicsRope *o, bool a0) { o->SetAutoMoveActive(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetAutoMoveAcc(float afX)", +[](iPhysicsRope *o, float a0) { o->SetAutoMoveAcc(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetAutoMoveMaxSpeed(float afX)", +[](iPhysicsRope *o, float a0) { o->SetAutoMoveMaxSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetAutoMoveSpeed(float afX)", +[](iPhysicsRope *o, float a0) { o->SetAutoMoveSpeed(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "bool GetAutoMoveActive()", +[](iPhysicsRope *o) -> bool { return o->GetAutoMoveActive(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetAutoMoveAcc()", +[](iPhysicsRope *o) -> float { return o->GetAutoMoveAcc(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetAutoMoveMaxSpeed()", +[](iPhysicsRope *o) -> float { return o->GetAutoMoveMaxSpeed(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetAutoMoveSpeed()", +[](iPhysicsRope *o) -> float { return o->GetAutoMoveSpeed(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "cVerletParticle@ GetStartParticle()", +[](iPhysicsRope *o) -> cVerletParticle * { return o->GetStartParticle(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "cVerletParticle@ GetEndParticle()", +[](iPhysicsRope *o) -> cVerletParticle * { return o->GetEndParticle(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetAttachedStartBody(iPhysicsBody @apBody)", +[](iPhysicsRope *o, iPhysicsBody * a0) { o->SetAttachedStartBody(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetAttachedEndBody(iPhysicsBody @apBody)", +[](iPhysicsRope *o, iPhysicsBody * a0) { o->SetAttachedEndBody(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "iPhysicsBody@ GetAttachedStartBody()", +[](iPhysicsRope *o) -> iPhysicsBody * { return o->GetAttachedStartBody(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "iPhysicsBody@ GetAttachedEndBody()", +[](iPhysicsRope *o) -> iPhysicsBody * { return o->GetAttachedEndBody(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetTotalLength(float afX)", +[](iPhysicsRope *o, float a0) { o->SetTotalLength(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetTotalLength()", +[](iPhysicsRope *o) -> float { return o->GetTotalLength(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetMinTotalLength(float afX)", +[](iPhysicsRope *o, float a0) { o->SetMinTotalLength(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetMaxTotalLength(float afX)", +[](iPhysicsRope *o, float a0) { o->SetMaxTotalLength(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetMinTotalLength()", +[](iPhysicsRope *o) -> float { return o->GetMinTotalLength(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetMaxTotalLength()", +[](iPhysicsRope *o) -> float { return o->GetMaxTotalLength(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetSegmentLength(float afX)", +[](iPhysicsRope *o, float a0) { o->SetSegmentLength(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetSegmentLength()", +[](iPhysicsRope *o) -> float { return o->GetSegmentLength(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetFirstSegmentLength()", +[](iPhysicsRope *o) -> float { return o->GetFirstSegmentLength(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetMaxIterations(int alX)", +[](iPhysicsRope *o, int a0) { o->SetMaxIterations(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "int GetMaxIterations()", +[](iPhysicsRope *o) -> int { return o->GetMaxIterations(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetStrength(float afX)", +[](iPhysicsRope *o, float a0) { o->SetStrength(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetStrength()", +[](iPhysicsRope *o) -> float { return o->GetStrength(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetStiffness(float afX)", +[](iPhysicsRope *o, float a0) { o->SetStiffness(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "float GetStiffness()", +[](iPhysicsRope *o) -> float { return o->GetStiffness(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void SetCollideAttachments(bool abX)", +[](iPhysicsRope *o, bool a0) { o->SetCollideAttachments(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "bool GetCollideAttachments()", +[](iPhysicsRope *o) -> bool { return o->GetCollideAttachments(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void UpdateConstraints()", +[](iPhysicsRope *o) { o->UpdateConstraints(); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "void RenderDebug(iLowLevelGraphics@ apLowLevel)", +[](iPhysicsRope *o, iLowLevelGraphics * a0) { o->RenderDebug(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void SetMaxTimeStep(float afTimeStep)", +[](iPhysicsWorld *o, float a0) { o->SetMaxTimeStep(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "float GetMaxTimeStep()", +[](iPhysicsWorld *o) -> float { return o->GetMaxTimeStep(); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void SetWorldSize(const cVector3f &in avMin,const cVector3f &in avMax)", +[](iPhysicsWorld *o, const cVector3f & a0, const cVector3f & a1) { o->SetWorldSize(a0, a1); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "cVector3f GetWorldSizeMin()", +[](iPhysicsWorld *o) -> cVector3f { return o->GetWorldSizeMin(); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "cVector3f GetWorldSizeMax()", +[](iPhysicsWorld *o) -> cVector3f { return o->GetWorldSizeMax(); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void SetGravity(const cVector3f&in avGravity)", +[](iPhysicsWorld *o, const cVector3f & a0) { o->SetGravity(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "cVector3f GetGravity()", +[](iPhysicsWorld *o) -> cVector3f { return o->GetGravity(); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void SetAccuracyLevel(ePhysicsAccuracy aAccuracy)", +[](iPhysicsWorld *o, int a0) { o->SetAccuracyLevel((ePhysicsAccuracy)a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "ePhysicsAccuracy GetAccuracyLevel()", +[](iPhysicsWorld *o) -> int { return (int)o->GetAccuracyLevel(); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void SetNumberOfThreads(int alThreads)", +[](iPhysicsWorld *o, int a0) { o->SetNumberOfThreads(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "int GetNumberOfThreads()", +[](iPhysicsWorld *o) -> int { return o->GetNumberOfThreads(); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void DestroyShape(iCollideShape @apShape)", +[](iPhysicsWorld *o, iCollideShape * a0) { o->DestroyShape(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsJointBall@ CreateJointBall(const tString &in asName, const cVector3f&in avPivotPoint,const cVector3f&in avPinDir, iPhysicsBody@ apParentBody, iPhysicsBody @apChildBody)", +[](iPhysicsWorld *o, const tString & a0, const cVector3f & a1, const cVector3f & a2, iPhysicsBody * a3, iPhysicsBody * a4) -> iPhysicsJointBall * { return o->CreateJointBall(a0, a1, a2, a3, a4); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsJointHinge@ CreateJointHinge(const tString &in asName, const cVector3f&in avPivotPoint,const cVector3f&in avPinDir, iPhysicsBody@ apParentBody, iPhysicsBody @apChildBody)", +[](iPhysicsWorld *o, const tString & a0, const cVector3f & a1, const cVector3f & a2, iPhysicsBody * a3, iPhysicsBody * a4) -> iPhysicsJointHinge * { return o->CreateJointHinge(a0, a1, a2, a3, a4); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsJointSlider@ CreateJointSlider(const tString &in asName, const cVector3f&in avPivotPoint,const cVector3f&in avPinDir, iPhysicsBody@ apParentBody, iPhysicsBody @apChildBody)", +[](iPhysicsWorld *o, const tString & a0, const cVector3f & a1, const cVector3f & a2, iPhysicsBody * a3, iPhysicsBody * a4) -> iPhysicsJointSlider * { return o->CreateJointSlider(a0, a1, a2, a3, a4); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void DestroyJoint(iPhysicsJoint@ apJoint)", +[](iPhysicsWorld *o, iPhysicsJoint * a0) { o->DestroyJoint(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsJoint @GetJoint(const tString &in asName)", +[](iPhysicsWorld *o, const tString & a0) -> iPhysicsJoint * { return o->GetJoint(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "bool JointExists(iPhysicsJoint@ apJoint)", +[](iPhysicsWorld *o, iPhysicsJoint * a0) -> bool { return o->JointExists(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsMaterial@ CreateMaterial(const tString &in asName)", +[](iPhysicsWorld *o, const tString & a0) -> iPhysicsMaterial * { return o->CreateMaterial(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsMaterial@ GetMaterialFromName(const tString &in asName)", +[](iPhysicsWorld *o, const tString & a0) -> iPhysicsMaterial * { return o->GetMaterialFromName(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void DestroyBody(iPhysicsBody@ apBody)", +[](iPhysicsWorld *o, iPhysicsBody * a0) { o->DestroyBody(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsBody @GetBody(const tString &in asName)", +[](iPhysicsWorld *o, const tString & a0) -> iPhysicsBody * { return o->GetBody(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iCharacterBody @CreateCharacterBody(const tString &in asName, const cVector3f &in avSize)", +[](iPhysicsWorld *o, const tString & a0, const cVector3f & a1) -> iCharacterBody * { return o->CreateCharacterBody(a0, a1); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void DestroyCharacterBody(iCharacterBody@ apBody)", +[](iPhysicsWorld *o, iCharacterBody * a0) { o->DestroyCharacterBody(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsBody @GetCharacterBody(const tString &in asName)", +[](iPhysicsWorld *o, const tString & a0) -> iPhysicsBody * { return o->GetCharacterBody(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsRope@ CreateRope(const tString &in asName, const cVector3f &in avStartPos, const cVector3f &in avEndPos)", +[](iPhysicsWorld *o, const tString & a0, const cVector3f & a1, const cVector3f & a2) -> iPhysicsRope * { return o->CreateRope(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsRope@ GetRope(const tString &in asName)", +[](iPhysicsWorld *o, const tString & a0) -> iPhysicsRope * { return o->GetRope(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsRope@ GetRopeFromUniqueID(int alID)", +[](iPhysicsWorld *o, int a0) -> iPhysicsRope * { return o->GetRopeFromUniqueID(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void DestroyRope(iPhysicsRope@ apRope)", +[](iPhysicsWorld *o, iPhysicsRope * a0) { o->DestroyRope(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void FadeoutAllLoopSounds(float afFadeSpeed)", +[](iPhysicsWorld *o, float a0) { o->FadeoutAllLoopSounds(a0); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "float CastRayOnShape(iCollideShape @apShape, const cMatrixf&in a_mtxTransform, const cVector3f &in avOrigin, const cVector3f&in avEnd,cVector3f&out avOutNormal, bool abLocalRayPositions)", +[](iPhysicsWorld *o, iCollideShape * a0, const cMatrixf & a1, const cVector3f & a2, const cVector3f & a3, cVector3f & a4, bool a5) -> float { return o->CastRayOnShape(a0, a1, a2, a3, a4, a5); });
-	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void RenderShapeDebugGeometry( iCollideShape @apShape, const cMatrixf&in a_mtxTransform, iLowLevelGraphics @apLowLevel, const cColor&in aColor)", +[](iPhysicsWorld *o, iCollideShape * a0, const cMatrixf & a1, iLowLevelGraphics * a2, const cColor & a3) { o->RenderShapeDebugGeometry(a0, a1, a2, a3); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "int GetUniqueID()", +[](cRopeEntity *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void UpdateLogic(float afTimeStep)", +[](cRopeEntity *o, float a0) { o->UpdateLogic(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "const tString& GetName()const", +[](cRopeEntity *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetName(const tString&in asName)", +[](cRopeEntity *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "bool HasParent()", +[](cRopeEntity *o) -> bool { return o->HasParent(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "bool IsActive()const", +[](cRopeEntity *o) -> bool { return o->IsActive(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetActive(bool abActive)", +[](cRopeEntity *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "cVector3f GetLocalPosition()", +[](cRopeEntity *o) -> cVector3f { return o->GetLocalPosition(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "cMatrixf& GetLocalMatrix()", +[](cRopeEntity *o) -> cMatrixf & { return o->GetLocalMatrix(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "cVector3f GetWorldPosition()", +[](cRopeEntity *o) -> cVector3f { return o->GetWorldPosition(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "cMatrixf& GetWorldMatrix()", +[](cRopeEntity *o) -> cMatrixf & { return o->GetWorldMatrix(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetPosition(const cVector3f&in avPos)", +[](cRopeEntity *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](cRopeEntity *o, const cMatrixf & a0) { o->SetMatrix(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetWorldPosition(const cVector3f&in avWorldPos)", +[](cRopeEntity *o, const cVector3f & a0) { o->SetWorldPosition(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetWorldMatrix(const cMatrixf&in a_mtxWorldTransform)", +[](cRopeEntity *o, const cMatrixf & a0) { o->SetWorldMatrix(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "int GetTransformUpdateCount()", +[](cRopeEntity *o) -> int { return o->GetTransformUpdateCount(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void AddChild(iEntity3D @apEntity)", +[](cRopeEntity *o, iEntity3D * a0) { o->AddChild(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void RemoveChild(iEntity3D @apEntity)", +[](cRopeEntity *o, iEntity3D * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "bool IsChild(iEntity3D @apEntity)", +[](cRopeEntity *o, iEntity3D * a0) -> bool { return o->IsChild(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "iEntity3D @GetEntityParent()", +[](cRopeEntity *o) -> iEntity3D * { return o->GetEntityParent(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "cMaterial @GetMaterial()", +[](cRopeEntity *o) -> cMaterial * { return o->GetMaterial(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "bool CollidesWithFrustum(cFrustum @apFrustum)", +[](cRopeEntity *o, cFrustum * a0) -> bool { return o->CollidesWithFrustum(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "eRenderableType GetRenderType()", +[](cRopeEntity *o) -> int { return (int)o->GetRenderType(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cRopeEntity *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "bool GetRenderFlagBit(int alFlagBit)", +[](cRopeEntity *o, int a0) -> bool { return o->GetRenderFlagBit(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "int GetRenderFlags() const", +[](cRopeEntity *o) -> int { return o->GetRenderFlags(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "bool IsStatic()", +[](cRopeEntity *o) -> bool { return o->IsStatic(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "bool IsVisible()", +[](cRopeEntity *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetVisible(bool abVisible)", +[](cRopeEntity *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "bool GetVisibleVar()", +[](cRopeEntity *o) -> bool { return o->GetVisibleVar(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetIlluminationColor(const cColor&in aColor)", +[](cRopeEntity *o, const cColor & a0) { o->SetIlluminationColor(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "const cColor& GetIlluminationColor()const", +[](cRopeEntity *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetCoverageAmount(float afX)", +[](cRopeEntity *o, float a0) { o->SetCoverageAmount(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "float GetCoverageAmount()const", +[](cRopeEntity *o) -> float { return o->GetCoverageAmount(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "int GetMatrixUpdateCount()", +[](cRopeEntity *o) -> int { return o->GetMatrixUpdateCount(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "int GetRenderFrameCount() const", +[](cRopeEntity *o) -> int { return o->GetRenderFrameCount(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetRenderFrameCount(int alCount)", +[](cRopeEntity *o, int a0) { o->SetRenderFrameCount(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cRopeEntity *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetLiquidAmount(float afX)", +[](cRopeEntity *o, float a0) { o->SetLiquidAmount(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "float GetLiquidAmount()const", +[](cRopeEntity *o) -> float { return o->GetLiquidAmount(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "iPhysicsRope @GetPhysicsRope()", +[](cRopeEntity *o) -> iPhysicsRope * { return o->GetPhysicsRope(); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetMaterial(cMaterial@ apMaterial)", +[](cRopeEntity *o, cMaterial * a0) { o->SetMaterial(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetColor(const cColor &in aColor)", +[](cRopeEntity *o, const cColor & a0) { o->SetColor(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "const cColor& GetColor()", +[](cRopeEntity *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetRadius(float afX)", +[](cRopeEntity *o, float a0) { o->SetRadius(a0); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "float GetRadius()", +[](cRopeEntity *o) -> float { return o->GetRadius(); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "const tString& GetName()", +[](iVerletParticleContainer *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "int GetUniqueID()", +[](iVerletParticleContainer *o) -> int { return o->GetUniqueID(); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void SetActive(bool abX)", +[](iVerletParticleContainer *o, bool a0) { o->SetActive(a0); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "bool GetActive()", +[](iVerletParticleContainer *o) -> bool { return o->GetActive(); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void RemoveAttachedBody(iPhysicsBody @apBody, bool abRemoveContainerFromBody)", +[](iVerletParticleContainer *o, iPhysicsBody * a0, bool a1) { o->RemoveAttachedBody(a0, a1); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void SetGravityForce(const cVector3f&in avX)", +[](iVerletParticleContainer *o, const cVector3f & a0) { o->SetGravityForce(a0); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "const cVector3f& GetGravityForce()", +[](iVerletParticleContainer *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetGravityForce(); return r; });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void SetDamping(float afX)", +[](iVerletParticleContainer *o, float a0) { o->SetDamping(a0); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "float GetDamping()", +[](iVerletParticleContainer *o) -> float { return o->GetDamping(); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void SetParticleRadius(float afX)", +[](iVerletParticleContainer *o, float a0) { o->SetParticleRadius(a0); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "float GetParticleRadius()", +[](iVerletParticleContainer *o) -> float { return o->GetParticleRadius(); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void SetSlideAmount(float afX)", +[](iVerletParticleContainer *o, float a0) { o->SetSlideAmount(a0); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "float GetSlideAmount()", +[](iVerletParticleContainer *o) -> float { return o->GetSlideAmount(); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void SetCollide(bool abX)", +[](iVerletParticleContainer *o, bool a0) { o->SetCollide(a0); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "bool GetCollide()", +[](iVerletParticleContainer *o) -> bool { return o->GetCollide(); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void SetSleeping(bool abX)", +[](iVerletParticleContainer *o, bool a0) { o->SetSleeping(a0); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "int GetParticleNum()", +[](iVerletParticleContainer *o) -> int { return o->GetParticleNum(); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "cVerletParticle@ GetParticle(int alIdx)", +[](iVerletParticleContainer *o, int a0) -> cVerletParticle * { return o->GetParticle(a0); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "int GetUpdateCount() const", +[](iVerletParticleContainer *o) -> int { return o->GetUpdateCount(); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void IncUpdateCount()", +[](iVerletParticleContainer *o) { o->IncUpdateCount(); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength)", +[](iVerletParticleContainer *o, cVerletParticle * a0, cVerletParticle * a1, float a2) { o->UpdateLengthConstraint(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength, float afStiffness)", +[](iVerletParticleContainer *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3) { o->UpdateLengthConstraint(a0, a1, a2, a3); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void UpdateLengthConstraint(cVerletParticle@ apP1, cVerletParticle@ apP2, float afMinLength, float afMaxLength, float afStiffness)", +[](iVerletParticleContainer *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3, float a4) { o->UpdateLengthConstraint(a0, a1, a2, a3, a4); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void UpdateLengthConstraintStretch(cVerletParticle@ apP1, cVerletParticle@ apP2, float afLength, float afStiffness)", +[](iVerletParticleContainer *o, cVerletParticle * a0, cVerletParticle * a1, float a2, float a3) { o->UpdateLengthConstraintStretch(a0, a1, a2, a3); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "void UpdateParticleCollisionConstraint(cVerletParticle@ apPart, const cVector3f &in avPrevPos, float afRadius)", +[](iVerletParticleContainer *o, cVerletParticle * a0, const cVector3f & a1, float a2) { o->UpdateParticleCollisionConstraint(a0, a1, a2); });
-	SOMA_METHOD_NEW(e, "iWidget", "void Update(float afTimeStep)", +[](iWidget *o, float a0) { o->Update(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "eWidgetType GetType()", +[](iWidget *o) -> int { return (int)o->GetType(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void Init()", +[](iWidget *o) { o->Init(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetToolTip(const tWString&in asToolTip)", +[](iWidget *o, const tWString & a0) { o->SetToolTip(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "const tWString& GetToolTip()", +[](iWidget *o) -> const tWString & { static thread_local tWString r; r = o->GetToolTip(); return r; });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetToolTipEnabled(bool abX)", +[](iWidget *o, bool a0) { o->SetToolTipEnabled(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool PointIsInside(const cVector2f&in avPoint, bool abOnlyClipped)", +[](iWidget *o, const cVector2f & a0, bool a1) -> bool { return o->PointIsInside(a0, a1); });
-	SOMA_METHOD_NEW(e, "iWidget", "void AttachChild(iWidget@ apChild)", +[](iWidget *o, iWidget * a0) { o->AttachChild(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "void RemoveChild(iWidget@ apChild)", +[](iWidget *o, iWidget * a0) { o->RemoveChild(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "cGuiSet@ GetSet()", +[](iWidget *o) -> cGuiSet * { return o->GetSet(); });
-	SOMA_METHOD_NEW(e, "iWidget", "iWidget@ GetParent()", +[](iWidget *o) -> iWidget * { return o->GetParent(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetEnabled(bool abX)", +[](iWidget *o, bool a0) { o->SetEnabled(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool IsEnabled()", +[](iWidget *o) -> bool { return o->IsEnabled(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetVisible(bool abX)", +[](iWidget *o, bool a0) { o->SetVisible(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool IsVisible()", +[](iWidget *o) -> bool { return o->IsVisible(); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool HasFocus()", +[](iWidget *o) -> bool { return o->HasFocus(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetName(const tString&in asName)", +[](iWidget *o, const tString & a0) { o->SetName(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "const tString& GetName()const", +[](iWidget *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetText(const tWString&in asText)", +[](iWidget *o, const tWString & a0) { o->SetText(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "const tWString& GetText()const", +[](iWidget *o) -> const tWString & { static thread_local tWString r; r = o->GetText(); return r; });
-	SOMA_METHOD_NEW(e, "iWidget", "iFontData@ GetDefaultFontType()const", +[](iWidget *o) -> iFontData * { return o->GetDefaultFontType(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetDefaultFontType(iFontData@ apFont)", +[](iWidget *o, iFontData * a0) { o->SetDefaultFontType(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "const cColor& GetDefaultFontColor()const", +[](iWidget *o) -> const cColor & { static thread_local cColor r; r = o->GetDefaultFontColor(); return r; });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetDefaultFontColor(const cColor&in aColor)", +[](iWidget *o, const cColor & a0) { o->SetDefaultFontColor(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "const cVector2f& GetDefaultFontSize()const", +[](iWidget *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetDefaultFontSize(); return r; });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetDefaultFontSize(const cVector2f&in avSize)", +[](iWidget *o, const cVector2f & a0) { o->SetDefaultFontSize(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetClipActive(bool abX)", +[](iWidget *o, bool a0) { o->SetClipActive(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool GetClipActive()const", +[](iWidget *o) -> bool { return o->GetClipActive(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetPosition(const cVector3f&in avPos)", +[](iWidget *o, const cVector3f & a0) { o->SetPosition(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetGlobalPosition(const cVector3f&in avPos)", +[](iWidget *o, const cVector3f & a0) { o->SetGlobalPosition(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "const cVector3f& GetLocalPosition()const", +[](iWidget *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLocalPosition(); return r; });
-	SOMA_METHOD_NEW(e, "iWidget", "const cVector3f& GetGlobalPosition()", +[](iWidget *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetGlobalPosition(); return r; });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetChildrenOffset(const cVector3f&in)", +[](iWidget *o, const cVector3f & a0) { o->SetChildrenOffset(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "const cVector3f& GetChildrenOffset()const", +[](iWidget *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetChildrenOffset(); return r; });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetAffectedByScroll(bool abX)", +[](iWidget *o, bool a0) { o->SetAffectedByScroll(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetScrollAmount(const cVector3f&in avX)", +[](iWidget *o, const cVector3f & a0) { o->SetScrollAmount(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "const cVector3f& GetScrollAmount()const", +[](iWidget *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetScrollAmount(); return r; });
-	SOMA_METHOD_NEW(e, "iWidget", "void CenterGlobalPositionInSet()", +[](iWidget *o) { o->CenterGlobalPositionInSet(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetSize(const cVector2f&in avSize)", +[](iWidget *o, const cVector2f & a0) { o->SetSize(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "const cVector2f& GetSize()const", +[](iWidget *o) -> const cVector2f & { static thread_local cVector2f r; r = o->GetSize(); return r; });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetColorMul(const cColor&in aColor)", +[](iWidget *o, const cColor & a0) { o->SetColorMul(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "const cColor& GetColorMul()const", +[](iWidget *o) -> const cColor & { static thread_local cColor r; r = o->GetColorMul(); return r; });
-	SOMA_METHOD_NEW(e, "iWidget", "bool ClipsGraphics()", +[](iWidget *o) -> bool { return o->ClipsGraphics(); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool GetMouseIsOver()const", +[](iWidget *o) -> bool { return o->GetMouseIsOver(); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool IsConnectedTo(iWidget@ apWidget, bool abIsStartWidget=true)", +[](iWidget *o, iWidget * a0, bool a1) -> bool { return o->IsConnectedTo(a0, a1); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool IsConnectedToChildren()", +[](iWidget *o) -> bool { return o->IsConnectedToChildren(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetConnectedToChildren(bool abX)", +[](iWidget *o, bool a0) { o->SetConnectedToChildren(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "cGuiGfxElement@ GetPointerGfx()", +[](iWidget *o) -> cGuiGfxElement * { return o->GetPointerGfx(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetGlobalKeyPressListener(bool abX)", +[](iWidget *o, bool a0) { o->SetGlobalKeyPressListener(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool IsGlobalKeyPressListener()const", +[](iWidget *o) -> bool { return o->IsGlobalKeyPressListener(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetUserValue(int alX)", +[](iWidget *o, int a0) { o->SetUserValue(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "int GetUserValue()const", +[](iWidget *o) -> int { return o->GetUserValue(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetCallbacksDisabled(bool abX)", +[](iWidget *o, bool a0) { o->SetCallbacksDisabled(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool GetCallbacksDisabled()const", +[](iWidget *o) -> bool { return o->GetCallbacksDisabled(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetFocusNavigation(eUIArrow aDir, iWidget@ apWidget)", +[](iWidget *o, int a0, iWidget * a1) { o->SetFocusNavigation((eUIArrow)a0, a1); });
-	SOMA_METHOD_NEW(e, "iWidget", "iWidget@ GetFocusNavigation(eUIArrow aDir)", +[](iWidget *o, int a0) -> iWidget * { return o->GetFocusNavigation((eUIArrow)a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool HasFocusNavigation()", +[](iWidget *o) -> bool { return o->HasFocusNavigation(); });
-	SOMA_METHOD_NEW(e, "iWidget", "void SetGlobalUIInputListener(bool abX)", +[](iWidget *o, bool a0) { o->SetGlobalUIInputListener(a0); });
-	SOMA_METHOD_NEW(e, "iWidget", "bool IsGlobalUIInputListener()", +[](iWidget *o) -> bool { return o->IsGlobalUIInputListener(); });
-	SOMA_FUNC_NEW(e, "void cEngine_Exit()", +[]() { gpSomaBase->mpEngine->Exit(); });
-	SOMA_FUNC_NEW(e, "void cEngine_ResetLogicTimer()", +[]() { gpSomaBase->mpEngine->ResetLogicTimer(); });
-	SOMA_FUNC_NEW(e, "void cEngine_SetUpdatesPerSec(int alUpdatesPerSec)", +[](int a0) { gpSomaBase->mpEngine->SetUpdatesPerSec(a0); });
-	SOMA_FUNC_NEW(e, "int cEngine_GetUpdatesPerSec()", +[]() -> int { return gpSomaBase->mpEngine->GetUpdatesPerSec(); });
-	SOMA_FUNC_NEW(e, "float cEngine_GetStepSize()", +[]() -> float { return gpSomaBase->mpEngine->GetStepSize(); });
-	SOMA_FUNC_NEW(e, "float cEngine_GetFPS()", +[]() -> float { return gpSomaBase->mpEngine->GetFPS(); });
-	SOMA_FUNC_NEW(e, "float cEngine_GetAvgFrameTimeInMS()", +[]() -> float { return gpSomaBase->mpEngine->GetAvgFrameTimeInMS(); });
-	SOMA_FUNC_NEW(e, "void cEngine_SetFPSUpdateRate(float afSec)", +[](float a0) { gpSomaBase->mpEngine->SetFPSUpdateRate(a0); });
-	SOMA_FUNC_NEW(e, "float cEngine_GetFPSUpdateRate()", +[]() -> float { return gpSomaBase->mpEngine->GetFPSUpdateRate(); });
-	SOMA_FUNC_NEW(e, "float cEngine_GetFrameTime()", +[]() -> float { return gpSomaBase->mpEngine->GetFrameTime(); });
-	SOMA_FUNC_NEW(e, "double cEngine_GetGameTime()", +[]() -> double { return gpSomaBase->mpEngine->GetGameTime(); });
-	SOMA_FUNC_NEW(e, "void cEngine_SetLimitFPS(bool abX)", +[](bool a0) { gpSomaBase->mpEngine->SetLimitFPS(a0); });
-	SOMA_FUNC_NEW(e, "bool cEngine_GetLimitFPS()", +[]() -> bool { return gpSomaBase->mpEngine->GetLimitFPS(); });
-	SOMA_FUNC_NEW(e, "void cEngine_SetWaitIfAppOutOfFocus(bool abX)", +[](bool a0) { gpSomaBase->mpEngine->SetWaitIfAppOutOfFocus(a0); });
-	SOMA_FUNC_NEW(e, "bool cEngine_GetWaitIfAppOutOfFocus()", +[]() -> bool { return gpSomaBase->mpEngine->GetWaitIfAppOutOfFocus(); });
-	SOMA_FUNC_NEW(e, "void cScene_Reset()", +[]() { gpSomaBase->mpEngine->GetScene()->Reset(); });
-	SOMA_FUNC_NEW(e, "cViewport@ cScene_CreateViewport(cCamera @apCamera, cWorld @apWorld, bool abAddLast)", +[](cCamera * a0, cWorld * a1, bool a2) -> cViewport * { return gpSomaBase->mpEngine->GetScene()->CreateViewport(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "void cScene_DestroyViewport(cViewport@ apViewPort)", +[](cViewport * a0) { gpSomaBase->mpEngine->GetScene()->DestroyViewport(a0); });
-	SOMA_FUNC_NEW(e, "bool cScene_ViewportExists(cViewport@ apViewPort)", +[](cViewport * a0) -> bool { return gpSomaBase->mpEngine->GetScene()->ViewportExists(a0); });
-	SOMA_FUNC_NEW(e, "void cScene_SetCurrentListener(cViewport@ apViewPort)", +[](cViewport * a0) { gpSomaBase->mpEngine->GetScene()->SetCurrentListener(a0); });
-	SOMA_FUNC_NEW(e, "cCamera@ cScene_CreateCamera(eCameraMoveMode aMoveMode)", +[](int a0) -> cCamera * { return gpSomaBase->mpEngine->GetScene()->CreateCamera((eCameraMoveMode)a0); });
-	SOMA_FUNC_NEW(e, "void cScene_DestroyCamera(cCamera@ apCam)", +[](cCamera * a0) { gpSomaBase->mpEngine->GetScene()->DestroyCamera(a0); });
-	SOMA_FUNC_NEW(e, "cWorld@ cScene_LoadWorld(const tString&in asFile, int aFlags)", +[](const tString & a0, int a1) -> cWorld * { return gpSomaBase->mpEngine->GetScene()->LoadWorld(a0, a1); });
-	SOMA_FUNC_NEW(e, "cWorld@ cScene_CreateWorld(const tString&in asName)", +[](const tString & a0) -> cWorld * { return gpSomaBase->mpEngine->GetScene()->CreateWorld(a0); });
-	SOMA_FUNC_NEW(e, "void cScene_DestroyWorld(cWorld@ apWorld)", +[](cWorld * a0) { gpSomaBase->mpEngine->GetScene()->DestroyWorld(a0); });
-	SOMA_FUNC_NEW(e, "void cScene_WorldExists(cWorld@ apWorld)", +[](cWorld * a0) { gpSomaBase->mpEngine->GetScene()->WorldExists(a0); });
-	SOMA_FUNC_NEW(e, "cAction@ cInput_CreateAction(const tString&in asName, int alId)", +[](const tString & a0, int a1) -> cAction * { return gpSomaBase->mpEngine->GetInput()->CreateAction(a0, a1); });
-	SOMA_FUNC_NEW(e, "void cInput_DestroyAction(cAction @apAction)", +[](cAction * a0) { gpSomaBase->mpEngine->GetInput()->DestroyAction(a0); });
-	SOMA_FUNC_NEW(e, "void cInput_Update(float afX)", +[](float a0) { gpSomaBase->mpEngine->GetInput()->Update(a0); });
-	SOMA_FUNC_NEW(e, "bool cInput_CheckForInput()", +[]() -> bool { return gpSomaBase->mpEngine->GetInput()->CheckForInput(); });
-	SOMA_FUNC_NEW(e, "bool cInput_IsTriggered(const tString&in asName)", +[](const tString & a0) -> bool { return gpSomaBase->mpEngine->GetInput()->IsTriggerd(a0); });
-	SOMA_FUNC_NEW(e, "bool cInput_IsTriggered(int alId)", +[](int a0) -> bool { return gpSomaBase->mpEngine->GetInput()->IsTriggerd(a0); });
-	SOMA_FUNC_NEW(e, "bool cInput_WasTriggered(const tString&in asName)", +[](const tString & a0) -> bool { return gpSomaBase->mpEngine->GetInput()->WasTriggerd(a0); });
-	SOMA_FUNC_NEW(e, "bool cInput_WasTriggered(int alId)", +[](int a0) -> bool { return gpSomaBase->mpEngine->GetInput()->WasTriggerd(a0); });
-	SOMA_FUNC_NEW(e, "bool cInput_BecameTriggered(const tString&in asName)", +[](const tString & a0) -> bool { return gpSomaBase->mpEngine->GetInput()->BecameTriggerd(a0); });
-	SOMA_FUNC_NEW(e, "bool cInput_BecameTriggered(int alId)", +[](int a0) -> bool { return gpSomaBase->mpEngine->GetInput()->BecameTriggerd(a0); });
-	SOMA_FUNC_NEW(e, "bool cInput_DoubleTriggered(const tString&in asName, float afLimit)", +[](const tString & a0, float a1) -> bool { return gpSomaBase->mpEngine->GetInput()->DoubleTriggerd(a0, a1); });
-	SOMA_FUNC_NEW(e, "bool cInput_DoubleTriggered(int alId, float afLimit)", +[](int a0, float a1) -> bool { return gpSomaBase->mpEngine->GetInput()->DoubleTriggerd(a0, a1); });
-	SOMA_FUNC_NEW(e, "iKeyboard@ cInput_GetKeyboard()", +[]() -> iKeyboard * { return gpSomaBase->mpEngine->GetInput()->GetKeyboard(); });
-	SOMA_FUNC_NEW(e, "iMouse@ cInput_GetMouse()", +[]() -> iMouse * { return gpSomaBase->mpEngine->GetInput()->GetMouse(); });
-	SOMA_FUNC_NEW(e, "cAction@ cInput_GetAction(const tString&in asName)", +[](const tString & a0) -> cAction * { return gpSomaBase->mpEngine->GetInput()->GetAction(a0); });
-	SOMA_FUNC_NEW(e, "cAction@ cInput_GetAction(int alId)", +[](int a0) -> cAction * { return gpSomaBase->mpEngine->GetInput()->GetAction(a0); });
-	SOMA_FUNC_NEW(e, "void cInput_ResetActionsToCurrentState()", +[]() { gpSomaBase->mpEngine->GetInput()->ResetActionsToCurrentState(); });
-	SOMA_FUNC_NEW(e, "bool cResources_AddResourceDir(const tWString &in asDir, bool abAddSubDirectories, const tString &in asMask)", +[](const tWString & a0, bool a1, const tString & a2) -> bool { return gpSomaBase->mpEngine->GetResources()->AddResourceDir(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "void cResources_ClearResourceDirs()", +[]() { gpSomaBase->mpEngine->GetResources()->ClearResourceDirs(); });
-	SOMA_FUNC_NEW(e, "bool cResources_AddLanguageFile(const tString &in asFilePath, bool abAddResourceDirs)", +[](const tString & a0, bool a1) -> bool { return gpSomaBase->mpEngine->GetResources()->AddLanguageFile(a0, a1); });
-	SOMA_FUNC_NEW(e, "void cResources_ClearTranslations()", +[]() { gpSomaBase->mpEngine->GetResources()->ClearTranslations(); });
-	SOMA_FUNC_NEW(e, "const tWString& cResources_Translate(const tString&in asCat, const tString&in asName)", +[](const tString & a0, const tString & a1) -> const tWString & { return gpSomaBase->mpEngine->GetResources()->Translate(a0, a1); });
-	SOMA_FUNC_NEW(e, "bool cResources_LoadResourceDirsFile(const tString &in asFile)", +[](const tString & a0) -> bool { return gpSomaBase->mpEngine->GetResources()->LoadResourceDirsFile(a0); });
-	SOMA_FUNC_NEW(e, "iPhysicsWorld@ cPhysics_CreateWorld(bool abAddSurfaceData)", +[](bool a0) -> iPhysicsWorld * { return gpSomaBase->mpEngine->GetPhysics()->CreateWorld(a0); });
-	SOMA_FUNC_NEW(e, "void cPhysics_DestroyWorld(iPhysicsWorld@ apWorld)", +[](iPhysicsWorld * a0) { gpSomaBase->mpEngine->GetPhysics()->DestroyWorld(a0); });
-	SOMA_FUNC_NEW(e, "void cPhysics_SetImpactDuration(float afX)", +[](float a0) { gpSomaBase->mpEngine->GetPhysics()->SetImpactDuration(a0); });
-	SOMA_FUNC_NEW(e, "float cPhysics_GetImpactDuration()", +[]() -> float { return gpSomaBase->mpEngine->GetPhysics()->GetImpactDuration(); });
-	SOMA_FUNC_NEW(e, "void cPhysics_SetMaxImpacts(int alX)", +[](int a0) { gpSomaBase->mpEngine->GetPhysics()->SetMaxImpacts(a0); });
-	SOMA_FUNC_NEW(e, "int cPhysics_GetMaxImpacts()", +[]() -> int { return gpSomaBase->mpEngine->GetPhysics()->GetMaxImpacts(); });
-	SOMA_FUNC_NEW(e, "iLowLevelGraphics@ cGraphics_GetLowLevel()", +[]() -> iLowLevelGraphics * { return gpSomaBase->mpEngine->GetGraphics()->GetLowLevel(); });
-	SOMA_FUNC_NEW(e, "void cGraphics_ReloadRendererData()", +[]() { gpSomaBase->mpEngine->GetGraphics()->ReloadRendererData(); });
-	SOMA_FUNC_NEW(e, "iTexture@ cGraphics_CreateTexture(const tString &in asName,eTextureType aType, eTextureUsage aUsage)", +[](const tString & a0, int a1, int a2) -> iTexture * { return gpSomaBase->mpEngine->GetGraphics()->CreateTexture(a0, (eTextureType)a1, (eTextureUsage)a2); });
-	SOMA_FUNC_NEW(e, "void cGraphics_DestroyTexture(iTexture@ apTexture)", +[](iTexture * a0) { gpSomaBase->mpEngine->GetGraphics()->DestroyTexture(a0); });
-	SOMA_FUNC_NEW(e, "cPostEffectComposite@ cGraphics_CreatePostEffectComposite()", +[]() -> cPostEffectComposite * { return gpSomaBase->mpEngine->GetGraphics()->CreatePostEffectComposite(); });
-	SOMA_FUNC_NEW(e, "void cGraphics_DestroyPostEffectComposite(cPostEffectComposite@ apComposite)", +[](cPostEffectComposite * a0) { gpSomaBase->mpEngine->GetGraphics()->DestroyPostEffectComposite(a0); });
-	SOMA_FUNC_NEW(e, "void cGraphics_ReloadMaterials()", +[]() { gpSomaBase->mpEngine->GetGraphics()->ReloadMaterials(); });
-	SOMA_FUNC_NEW(e, "cGuiSkin@ cGui_CreateSkin(const tString&in asFile)", +[](const tString & a0) -> cGuiSkin * { return gpSomaBase->mpEngine->GetGui()->CreateSkin(a0); });
-	SOMA_FUNC_NEW(e, "cGuiSet@ cGui_CreateSet(const tString&in asName, cGuiSkin @apSkin)", +[](const tString & a0, cGuiSkin * a1) -> cGuiSet * { return gpSomaBase->mpEngine->GetGui()->CreateSet(a0, a1); });
-	SOMA_FUNC_NEW(e, "cGuiSet@ cGui_GetSetFromName(const tString&in asName)", +[](const tString & a0) -> cGuiSet * { return gpSomaBase->mpEngine->GetGui()->GetSetFromName(a0); });
-	SOMA_FUNC_NEW(e, "void cGui_SetFocus(cGuiSet@ apSet)", +[](cGuiSet * a0) { gpSomaBase->mpEngine->GetGui()->SetFocus(a0); });
-	SOMA_FUNC_NEW(e, "void cGui_SetFocusByName(const tString&in asSetName)", +[](const tString & a0) { gpSomaBase->mpEngine->GetGui()->SetFocusByName(a0); });
-	SOMA_FUNC_NEW(e, "cGuiSet@ cGui_GetFocusedSet()", +[]() -> cGuiSet * { return gpSomaBase->mpEngine->GetGui()->GetFocusedSet(); });
-	SOMA_FUNC_NEW(e, "void cGui_DestroySet(cGuiSet @apSet)", +[](cGuiSet * a0) { gpSomaBase->mpEngine->GetGui()->DestroySet(a0); });
-	SOMA_FUNC_NEW(e, "cGuiGfxElement@ cGui_CreateGfxFilledRect(const cColor&in aColor, eGuiMaterial aMaterial)", +[](const cColor & a0, int a1) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxFilledRect(a0, (eGuiMaterial)a1); });
-	SOMA_FUNC_NEW(e, "cGuiGfxElement@ cGui_CreateGfxImage(const tString &in asFile,eGuiMaterial aMaterial)", +[](const tString & a0, int a1) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxImage(a0, (eGuiMaterial)a1); });
-	SOMA_FUNC_NEW(e, "cGuiGfxElement@ cGui_CreateGfxImage(const tString &in asFile,eGuiMaterial aMaterial, const cColor&in aColor)", +[](const tString & a0, int a1, const cColor & a2) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxImage(a0, (eGuiMaterial)a1, a2); });
-	SOMA_FUNC_NEW(e, "cGuiGfxElement@ cGui_CreateGfxTexture(const tString &in asFile,eGuiMaterial aMaterial, eTextureType aTextureType)", +[](const tString & a0, int a1, int a2) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxTexture(a0, (eGuiMaterial)a1, (eTextureType)a2); });
-	SOMA_FUNC_NEW(e, "cGuiGfxElement@ cGui_CreateGfxTexture(const tString &in asFile,eGuiMaterial aMaterial, eTextureType aTextureType, const cColor&in aColor, bool abMipMaps)", +[](const tString & a0, int a1, int a2, const cColor & a3, bool a4) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxTexture(a0, (eGuiMaterial)a1, (eTextureType)a2, a3, a4); });
-	SOMA_FUNC_NEW(e, "cGuiGfxElement@ cGui_CreateGfxTexture(iTexture @apTexture, bool abAutoDestroyTexture, eGuiMaterial aMaterial)", +[](iTexture * a0, bool a1, int a2) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxTexture(a0, a1, (eGuiMaterial)a2); });
-	SOMA_FUNC_NEW(e, "cGuiGfxElement@ cGui_CreateGfxImageBuffer(const tString &in asFile,eGuiMaterial aMaterial, bool abCreateAnimation, const cColor&in aColor)", +[](const tString & a0, int a1, bool a2, const cColor & a3) -> cGuiGfxElement * { return gpSomaBase->mpEngine->GetGui()->CreateGfxImageBuffer(a0, (eGuiMaterial)a1, a2, a3); });
-	SOMA_FUNC_NEW(e, "void cGui_DestroyGfx(cGuiGfxElement@ apGfx)", +[](cGuiGfxElement * a0) { gpSomaBase->mpEngine->GetGui()->DestroyGfx(a0); });
-	SOMA_FUNC_NEW(e, "int cMath_RandRectl(int alMin, int alMax)", +[](int a0, int a1) -> int { return cMath::RandRectl(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_RandRectf(float alMin, float alMax)", +[](float a0, float a1) -> float { return cMath::RandRectf(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_RandRectVector2f(const cVector2f &in avMin,const cVector2f &in avMax)", +[](const cVector2f & a0, const cVector2f & a1) -> cVector2f { return cMath::RandRectVector2f(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_RandRectVector3f(const cVector3f &in avMin,const cVector3f &in avMax)", +[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::RandRectVector3f(a0, a1); });
-	SOMA_FUNC_NEW(e, "cColor cMath_RandRectColor(const cColor &in aMin,const cColor &in aMax)", +[](const cColor & a0, const cColor & a1) -> cColor { return cMath::RandRectColor(a0, a1); });
-	SOMA_FUNC_NEW(e, "void cMath_Randomize(int alSeed)", +[](int a0) { cMath::Randomize(a0); });
-	SOMA_FUNC_NEW(e, "float cMath_FastRandomFloat(int alSeed)", +[](int a0) -> float { return cMath::FastRandomFloat(a0); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckRectIntersection(const cRect2l&in aRect1, const cRect2l&in aRect2)", +[](const cRect2l & a0, const cRect2l & a1) -> bool { return cMath::CheckRectIntersection(a0, a1); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckRectIntersection(const cRect2f&in aRect1, const cRect2f&in aRect2)", +[](const cRect2f & a0, const cRect2f & a1) -> bool { return cMath::CheckRectIntersection(a0, a1); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckPointInRectIntersection(const cVector2f&in avPoint, const cRect2f&in aRect)", +[](const cVector2f & a0, const cRect2f & a1) -> bool { return cMath::CheckPointInRectIntersection(a0, a1); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckRectFit(const cRect2l&in aRectSrc, const cRect2l&in aRectDest)", +[](const cRect2l & a0, const cRect2l & a1) -> bool { return cMath::CheckRectFit(a0, a1); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckRectFit(const cRect2f&in aRectSrc, const cRect2f&in aRectDest)", +[](const cRect2f & a0, const cRect2f & a1) -> bool { return cMath::CheckRectFit(a0, a1); });
-	SOMA_FUNC_NEW(e, "cRect2f cMath_GetClipRect(const cRect2f&in aRectSrc,const cRect2f&in aRectDest)", +[](const cRect2f & a0, const cRect2f & a1) -> cRect2f { return cMath::GetClipRect(a0, a1); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckPointInSphereIntersection(const cVector3f&in avPoint, const cVector3f&in avSpherePos, float afSphereRadius)", +[](const cVector3f & a0, const cVector3f & a1, float a2) -> bool { return cMath::CheckPointInSphereIntersection(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckSphereIntersection(const cVector3f&in avPosA, float afRadiusA,const cVector3f&in avPosB, float afRadiusB)", +[](const cVector3f & a0, float a1, const cVector3f & a2, float a3) -> bool { return cMath::CheckSphereIntersection(a0, a1, a2, a3); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckAABBIntersection( const cVector3f&in avMin1,const cVector3f&in avMax1, const cVector3f&in avMin2,const cVector3f&in avMax2)", +[](const cVector3f & a0, const cVector3f & a1, const cVector3f & a2, const cVector3f & a3) -> bool { return cMath::CheckAABBIntersection(a0, a1, a2, a3); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckAABBInside(const cVector3f&in avInsideMin, const cVector3f&in avInsideMax, const cVector3f&in avOutsideMin,const cVector3f&in avOutsideMax)", +[](const cVector3f & a0, const cVector3f & a1, const cVector3f & a2, const cVector3f & a3) -> bool { return cMath::CheckAABBInside(a0, a1, a2, a3); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckPointInAABBIntersection(const cVector3f&in avPoint, const cVector3f&in avMin,const cVector3f&in avMax)", +[](const cVector3f & a0, const cVector3f & a1, const cVector3f & a2) -> bool { return cMath::CheckPointInAABBIntersection(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "cRect2l cMath_GetClipRectFromNormalizedMinMax(const cVector3f&in avMin, const cVector3f&in avMax, const cVector2l &in avScreenSize)", +[](const cVector3f & a0, const cVector3f & a1, const cVector2l & a2) -> cRect2l { return cMath::GetClipRectFromNormalizedMinMax(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "int cMath_RoundToInt(float afVal)", +[](float a0) -> int { return cMath::RoundToInt(a0); });
-	SOMA_FUNC_NEW(e, "cVector2l cMath_RoundToInt(const cVector2f&in avX)", +[](const cVector2f & a0) -> cVector2l { return cMath::RoundToInt(a0); });
-	SOMA_FUNC_NEW(e, "cVector3l cMath_RoundToInt(const cVector3f&in avX)", +[](const cVector3f & a0) -> cVector3l { return cMath::RoundToInt(a0); });
-	SOMA_FUNC_NEW(e, "float cMath_RoundFloatToDecimals(float afVal, int alPrecision)", +[](float a0, int a1) -> float { return cMath::RoundFloatToDecimals(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_GetFraction(float afVal)", +[](float a0) -> float { return cMath::GetFraction(a0); });
-	SOMA_FUNC_NEW(e, "float cMath_Modulus(float afDividend, float afDivisor)", +[](float a0, float a1) -> float { return cMath::Modulus(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_ToRad(float afAngle)", +[](float a0) -> float { return cMath::ToRad(a0); });
-	SOMA_FUNC_NEW(e, "float cMath_ToDeg(float afAngle)", +[](float a0) -> float { return cMath::ToDeg(a0); });
-	SOMA_FUNC_NEW(e, "int cMath_Log2ToInt(int alX)", +[](int a0) -> int { return cMath::Log2ToInt(a0); });
-	SOMA_FUNC_NEW(e, "int cMath_Pow2(int alX)", +[](int a0) -> int { return cMath::Pow2(a0); });
-	SOMA_FUNC_NEW(e, "bool cMath_IsPow2(int alX)", +[](int a0) -> bool { return cMath::IsPow2(a0); });
-	SOMA_FUNC_NEW(e, "float cMath_Wrap(float afX, float afMin, float afMax)", +[](float a0, float a1, float a2) -> float { return cMath::Wrap(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "float cMath_Clamp(float afX, float afMin, float afMax)", +[](float a0, float a1, float a2) -> float { return cMath::Clamp(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "int cMath_Clamp(int alX, int alMin, int alMax)", +[](int a0, int a1, int a2) -> int { return cMath::Clamp(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "float cMath_Max(float afX,float afY)", +[](float a0, float a1) -> float { return cMath::Max(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_Min(float afX,float afY)", +[](float a0, float a1) -> float { return cMath::Min(a0, a1); });
-	SOMA_FUNC_NEW(e, "int cMath_Max(int alX,int alY)", +[](int a0, int a1) -> int { return cMath::Max(a0, a1); });
-	SOMA_FUNC_NEW(e, "int cMath_Min(int alX,int alY)", +[](int a0, int a1) -> int { return cMath::Min(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_Abs(float afX)", +[](float a0) -> float { return cMath::Abs(a0); });
-	SOMA_FUNC_NEW(e, "int cMath_Abs(int alX)", +[](int a0) -> int { return cMath::Abs(a0); });
-	SOMA_FUNC_NEW(e, "float cMath_Sign(float afX)", +[](float a0) -> float { return cMath::Sign(a0); });
-	SOMA_FUNC_NEW(e, "int cMath_Sign(int alX)", +[](int a0) -> int { return cMath::Sign(a0); });
-	SOMA_FUNC_NEW(e, "float cMath_GetAngleDistance(float afAngle1, float afAngle2, float afMaxAngle)", +[](float a0, float a1, float a2) -> float { return cMath::GetAngleDistance(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "float cMath_GetAngleDistanceRad(float afAngle1, float afAngle2)", +[](float a0, float a1) -> float { return cMath::GetAngleDistanceRad(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_GetAngleDistanceDeg(float afAngle1, float afAngle2)", +[](float a0, float a1) -> float { return cMath::GetAngleDistanceDeg(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_TurnAngle(float afAngle,float afFinalAngle,float afSpeed,float afMaxAngle)", +[](float a0, float a1, float a2, float a3) -> float { return cMath::TurnAngle(a0, a1, a2, a3); });
-	SOMA_FUNC_NEW(e, "float cMath_TurnAngleRad(float afAngle,float afFinalAngle,float afSpeed)", +[](float a0, float a1, float a2) -> float { return cMath::TurnAngleRad(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "float cMath_TurnAngleDeg(float afAngle,float afFinalAngle,float afSpeed)", +[](float a0, float a1, float a2) -> float { return cMath::TurnAngleDeg(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "float cMath_GetCorrectSignOfSpeed(float afCurrent, float afDest, float afSpeed)", +[](float a0, float a1, float a2) -> float { return cMath::GetCorrectSignOfSpeed(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "float cMath_IncreaseTo(float afX, float afAdd, float afDest)", +[](float a0, float a1, float a2) -> float { return cMath::IncreaseTo(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "float cMath_Vector2Dist(const cVector2f &in avPosA,const cVector2f &in avPosB)", +[](const cVector2f & a0, const cVector2f & a1) -> float { return cMath::Vector2Dist(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_Vector2DistXY(const cVector3f &in avPosA,const cVector3f &in avPosB)", +[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector2DistXY(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_Vector2DistXZ(const cVector3f &in avPosA,const cVector3f &in avPosB)", +[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector2DistXZ(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_Vector2DistSqr(const cVector2f &in avPosA,const cVector2f &in avPosB)", +[](const cVector2f & a0, const cVector2f & a1) -> float { return cMath::Vector2DistSqr(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_Vector2DistSqrXY(const cVector3f &in avPosA,const cVector3f &in avPosB)", +[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector2DistSqrXY(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_Vector2DistSqrXZ(const cVector3f &in avPosA,const cVector3f &in avPosB)", +[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector2DistSqrXZ(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_Vector2IncreaseTo(const cVector2f&in avX, const cVector2f&in avAdd, const cVector2f&in avDest)", +[](const cVector2f & a0, const cVector2f & a1, const cVector2f & a2) -> cVector2f { return cMath::Vector2IncreaseTo(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "float cMath_GetAngleFromPoints2D(const cVector2f &in aStartPos, const cVector2f &in avGoalPos)", +[](const cVector2f & a0, const cVector2f & a1) -> float { return cMath::GetAngleFromPoints2D(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_GetVectorFromAngle2D(float afAngle, float afLength)", +[](float a0, float a1) -> cVector2f { return cMath::GetVectorFromAngle2D(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_ProjectVector2D(const cVector2f &in avSrcVec, const cVector2f &in avDestVec)", +[](const cVector2f & a0, const cVector2f & a1) -> cVector2f { return cMath::ProjectVector2D(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_Vector2Floor(const cVector2f &in avVec)", +[](const cVector2f & a0) -> cVector2f { return cMath::Vector2Floor(a0); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_Vector2Ceil(const cVector2f &in avVec)", +[](const cVector2f & a0) -> cVector2f { return cMath::Vector2Ceil(a0); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_Vector2Abs(const cVector2f &in avVec)", +[](const cVector2f & a0) -> cVector2f { return cMath::Vector2Abs(a0); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_Vector2Min(const cVector2f &in avVecA, const cVector2f &in avVecB)", +[](const cVector2f & a0, const cVector2f & a1) -> cVector2f { return cMath::Vector2Min(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_Vector2Max(const cVector2f &in avVecA, const cVector2f &in avVecB)", +[](const cVector2f & a0, const cVector2f & a1) -> cVector2f { return cMath::Vector2Max(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_Vector2Normalize(const cVector2f &in avVec)", +[](const cVector2f & a0) -> cVector2f { return cMath::Vector2Normalize(a0); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_Vector2ToRad(const cVector2f &in avVec)", +[](const cVector2f & a0) -> cVector2f { return cMath::Vector2ToRad(a0); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_Vector2ToDeg(const cVector2f &in avVec)", +[](const cVector2f & a0) -> cVector2f { return cMath::Vector2ToDeg(a0); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3MaxLength(const cVector3f &in avVec, float afMaxLength)", +[](const cVector3f & a0, float a1) -> cVector3f { return cMath::Vector3MaxLength(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3MinLength(const cVector3f &in avVec, float afMinLength)", +[](const cVector3f & a0, float a1) -> cVector3f { return cMath::Vector3MinLength(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3ClampLength(const cVector3f &in avVec,float afMinLength, float afMaxLength)", +[](const cVector3f & a0, float a1, float a2) -> cVector3f { return cMath::Vector3ClampLength(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3ToRad(const cVector3f &in avVec)", +[](const cVector3f & a0) -> cVector3f { return cMath::Vector3ToRad(a0); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3ToDeg(const cVector3f &in avVec)", +[](const cVector3f & a0) -> cVector3f { return cMath::Vector3ToDeg(a0); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3AngleDistance(const cVector3f &in avAngles1, const cVector3f &in avAngles2, float afMaxAngle)", +[](const cVector3f & a0, const cVector3f & a1, float a2) -> cVector3f { return cMath::Vector3AngleDistance(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3AngleDistanceRad(const cVector3f &in avAngles1, const cVector3f &in avAngles2)", +[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3AngleDistanceRad(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3AngleDistanceDeg(const cVector3f &in avAngles1, const cVector3f &in avAngles2)", +[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3AngleDistanceDeg(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3Floor(const cVector3f &in avVec)", +[](const cVector3f & a0) -> cVector3f { return cMath::Vector3Floor(a0); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3Ceil(const cVector3f &in avVec)", +[](const cVector3f & a0) -> cVector3f { return cMath::Vector3Ceil(a0); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3Abs(const cVector3f &in avVec)", +[](const cVector3f & a0) -> cVector3f { return cMath::Vector3Abs(a0); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3Min(const cVector3f &in avVecA, const cVector3f &in avVecB)", +[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3Min(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3Max(const cVector3f &in avVecA, const cVector3f &in avVecB)", +[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3Max(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3Normalize(const cVector3f &in avVec)", +[](const cVector3f & a0) -> cVector3f { return cMath::Vector3Normalize(a0); });
-	SOMA_FUNC_NEW(e, "float cMath_Vector3DistSqr(const cVector3f &in avStartPos, const cVector3f &in avEndPos)", +[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector3DistSqr(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_Vector3Dist(const cVector3f &in avStartPos, const cVector3f &in avEndPos)", +[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector3Dist(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_GetAngleFromPoints3D(const cVector3f &in avStartPos, const cVector3f &in avGoalPos)", +[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::GetAngleFromPoints3D(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3Cross(const cVector3f&in avVecA,const cVector3f&in avVecB)", +[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3Cross(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_Vector3Dot(const cVector3f&in avVecA,const cVector3f&in avVecB)", +[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector3Dot(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3Project(const cVector3f &in avSrcVec, const cVector3f &in avDestVec)", +[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3Project(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3Reflect(const cVector3f &in avVec, const cVector3f &in avNormal)", +[](const cVector3f & a0, const cVector3f & a1) -> cVector3f { return cMath::Vector3Reflect(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_Vector3Angle(const cVector3f&in avVecA,const cVector3f&in avVecB)", +[](const cVector3f & a0, const cVector3f & a1) -> float { return cMath::Vector3Angle(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_Vector3UnProject(const cVector3f&in avVec, const cRect2f &in aScreenRect, const cMatrixf&in a_mtxViewProj)", +[](const cVector3f & a0, const cRect2f & a1, const cMatrixf & a2) -> cVector3f { return cMath::Vector3UnProject(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "void cMath_Vector3ClampToLength(cVector3f&in avVec, float afMaxLength)", +[](cVector3f & a0, float a1) { cMath::Vector3ClampToLength(a0, a1); });
-	SOMA_FUNC_NEW(e, "void cMath_Vector3OrthonormalizeBasis(const cVector3f&in avSrcRight, const cVector3f&in avSrcUp, const cVector3f&in avSrcForward, cVector3f&out avDstRight, cVector3f&out avDstUp, cVector3f&out avDstForward)", +[](const cVector3f & a0, const cVector3f & a1, const cVector3f & a2, cVector3f & a3, cVector3f & a4, cVector3f & a5) { cMath::Vector3OrthonormalizeBasis(a0, a1, a2, a3, a4, a5); });
-	SOMA_FUNC_NEW(e, "cVector2f cMath_GetSphericalCoordsFromPoint3D(const cVector3f&in avSphCenter, const cVector3f&in avPoint)", +[](const cVector3f & a0, const cVector3f & a1) -> cVector2f { return cMath::GetSphericalCoordsFromPoint3D(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_GetPoint3DFromSphericalCoords(const cVector3f&in avSphCenter, float afSphRadius, const cVector2f&in avSphCoords)", +[](const cVector3f & a0, float a1, const cVector2f & a2) -> cVector3f { return cMath::GetPoint3DFromSphericalCoords(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "float cMath_PlaneDot(const cPlanef&in aPlaneA, const cPlanef&in aPlaneB)", +[](const cPlanef & a0, const cPlanef & a1) -> float { return cMath::PlaneDot(a0, a1); });
-	SOMA_FUNC_NEW(e, "bool cMath_PlaneParallel(const cPlanef&in aPlaneA, const cPlanef&in aPlaneB)", +[](const cPlanef & a0, const cPlanef & a1) -> bool { return cMath::PlaneParallel(a0, a1); });
-	SOMA_FUNC_NEW(e, "cPlanef cMath_TransformPlane(const cMatrixf &in a_mtxTransform, const cPlanef&in aPlane)", +[](const cMatrixf & a0, const cPlanef & a1) -> cPlanef { return cMath::TransformPlane(a0, a1); });
-	SOMA_FUNC_NEW(e, "float cMath_PlaneToPointDist(const cPlanef&in aPlane, const cVector3f&in avVec)", +[](const cPlanef & a0, const cVector3f & a1) -> float { return cMath::PlaneToPointDist(a0, a1); });
-	SOMA_FUNC_NEW(e, "bool cMath_PlaneIntersectionPoint(const cPlanef&in aP1, const cPlanef&in aP2, const cPlanef&in aP3, cVector3f&in avPoint)", +[](const cPlanef & a0, const cPlanef & a1, const cPlanef & a2, cVector3f & a3) -> bool { return cMath::PlaneIntersectionPoint(a0, a1, a2, a3); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckPlaneSphereCollision(const cPlanef&in aPlane, const cVector3f &in avCenter, float afRadius)", +[](const cPlanef & a0, const cVector3f & a1, float a2) -> bool { return cMath::CheckPlaneSphereCollision(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckPlaneAABBCollision(const cPlanef&in aPlane, const cVector3f &in avMin, const cVector3f &in avMax, const cVector3f &in avSphereCenter,float afSphereRadius)", +[](const cPlanef & a0, const cVector3f & a1, const cVector3f & a2, const cVector3f & a3, float a4) -> bool { return cMath::CheckPlaneAABBCollision(a0, a1, a2, a3, a4); });
-	SOMA_FUNC_NEW(e, "bool cMath_CheckPlaneAABBCollision(const cPlanef&in aPlane, const cVector3f &in avMin, const cVector3f &in avMax)", +[](const cPlanef & a0, const cVector3f & a1, const cVector3f & a2) -> bool { return cMath::CheckPlaneAABBCollision(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "cQuaternion cMath_QuaternionSlerp(float afT,const cQuaternion&in aqA, const cQuaternion&in aqB,bool abShortestPath)", +[](float a0, const cQuaternion & a1, const cQuaternion & a2, bool a3) -> cQuaternion { return cMath::QuaternionSlerp(a0, a1, a2, a3); });
-	SOMA_FUNC_NEW(e, "float cMath_QuaternionDot(const cQuaternion&in aqA,const cQuaternion&in aqB)", +[](const cQuaternion & a0, const cQuaternion & a1) -> float { return cMath::QuaternionDot(a0, a1); });
-	SOMA_FUNC_NEW(e, "cQuaternion cMath_QuaternionMul(const cQuaternion&in aqA,const cQuaternion&in aqB)", +[](const cQuaternion & a0, const cQuaternion & a1) -> cQuaternion { return cMath::QuaternionMul(a0, a1); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixSlerp(float afT,const cMatrixf&in a_mtxA, const cMatrixf&in a_mtxB, bool abShortestPath)", +[](float a0, const cMatrixf & a1, const cMatrixf & a2, bool a3) -> cMatrixf { return cMath::MatrixSlerp(a0, a1, a2, a3); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixMul(const cMatrixf &in a_mtxA,const cMatrixf &in a_mtxB)", +[](const cMatrixf & a0, const cMatrixf & a1) -> cMatrixf { return cMath::MatrixMul(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_MatrixMul(const cMatrixf &in a_mtxA,const cVector3f &in avB)", +[](const cMatrixf & a0, const cVector3f & a1) -> cVector3f { return cMath::MatrixMul(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_MatrixMul3x3(const cMatrixf &in a_mtxA,const cVector3f &in avB)", +[](const cMatrixf & a0, const cVector3f & a1) -> cVector3f { return cMath::MatrixMul3x3(a0, a1); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_MatrixMulDivideW(const cMatrixf &in a_mtxA,const cVector3f &in avB)", +[](const cMatrixf & a0, const cVector3f & a1) -> cVector3f { return cMath::MatrixMulDivideW(a0, a1); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixMulScalar(const cMatrixf &in a_mtxA, float afB)", +[](const cMatrixf & a0, float a1) -> cMatrixf { return cMath::MatrixMulScalar(a0, a1); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixRotateX(float afAngle)", +[](float a0) -> cMatrixf { return cMath::MatrixRotateX(a0); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixRotateY(float afAngle)", +[](float a0) -> cMatrixf { return cMath::MatrixRotateY(a0); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixRotateZ(float afAngle)", +[](float a0) -> cMatrixf { return cMath::MatrixRotateZ(a0); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixScale(const cVector3f&in avScale)", +[](const cVector3f & a0) -> cMatrixf { return cMath::MatrixScale(a0); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixTranslate(const cVector3f&in avTrans)", +[](const cVector3f & a0) -> cMatrixf { return cMath::MatrixTranslate(a0); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixQuaternion(const cQuaternion &in aqRot)", +[](const cQuaternion & a0) -> cMatrixf { return cMath::MatrixQuaternion(a0); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixInverse(const cMatrixf &in a_mtxA)", +[](const cMatrixf & a0) -> cMatrixf { return cMath::MatrixInverse(a0); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixPlaneMirror(const cPlanef &in aPlane)", +[](const cPlanef & a0) -> cMatrixf { return cMath::MatrixPlaneMirror(a0); });
-	SOMA_FUNC_NEW(e, "cVector3f cMath_MatrixEulerAngleDistance(const cMatrixf &in a_mtxA, const cMatrixf &in a_mtxB)", +[](const cMatrixf & a0, const cMatrixf & a1) -> cVector3f { return cMath::MatrixEulerAngleDistance(a0, a1); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixUnitVectors(const cVector3f&in avRight, const cVector3f&in avUp, const cVector3f&in avForward, const cVector3f&in avTranslate)", +[](const cVector3f & a0, const cVector3f & a1, const cVector3f & a2, const cVector3f & a3) -> cMatrixf { return cMath::MatrixUnitVectors(a0, a1, a2, a3); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_ProjectionMatrixObliqueNearClipPlane(const cMatrixf &in a_mtxProjMatrix, const cPlanef&in aClipPlane)", +[](const cMatrixf & a0, const cPlanef & a1) -> cMatrixf { return cMath::ProjectionMatrixObliqueNearClipPlane(a0, a1); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixPerspectiveProjection(float afNearClipPlane, float afFarClipPlane, float afFOV, float afAspect, bool abInfFarPlane)", +[](float a0, float a1, float a2, float a3, bool a4) -> cMatrixf { return cMath::MatrixPerspectiveProjection(a0, a1, a2, a3, a4); });
-	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixOrthographicProjection(float afNearClipPlane, float afFarClipPlane, const cVector2f&in avViewSize)", +[](float a0, float a1, const cVector2f & a2) -> cMatrixf { return cMath::MatrixOrthographicProjection(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "tWString cString_To16Char(const tString &in asString)", +[](const tString & a0) -> tWString { return cString::To16Char(a0); });
-	SOMA_FUNC_NEW(e, "tString cString_To8Char(const tWString &in awsString)", +[](const tWString & a0) -> tString { return cString::To8Char(a0); });
-	SOMA_FUNC_NEW(e, "tString cString_S16BitToUTF8(const tWString&in awsString)", +[](const tWString & a0) -> tString { return cString::S16BitToUTF8(a0); });
-	SOMA_FUNC_NEW(e, "tWString cString_Get16BitFromArray(const tString &in asArray)", +[](const tString & a0) -> tWString { return cString::Get16BitFromArray(a0); });
-	SOMA_FUNC_NEW(e, "tString cString_ToString(float afX, int alNumOfDecimals=-1, bool abRemoveZeros=false)", +[](float a0, int a1, bool a2) -> tString { return cString::ToString(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "tString cString_ToString(int alX, int alPaddingZeros)", +[](int a0, int a1) -> tString { return cString::ToString(a0, a1); });
-	SOMA_FUNC_NEW(e, "tWString cString_ToStringW(float afX, int alNumOfDecimals=-1, bool abRemoveZeros=false)", +[](float a0, int a1, bool a2) -> tWString { return cString::ToStringW(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "tWString cString_ToStringW(int alX, int alPaddingZeros)", +[](int a0, int a1) -> tWString { return cString::ToStringW(a0, a1); });
-	SOMA_FUNC_NEW(e, "tString cString_Sub(const tString&in asString,int alStart, int alCount=-1)", +[](const tString & a0, int a1, int a2) -> tString { return cString::Sub(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "tWString cString_SubW(const tWString&in asString,int alStart, int alCount=-1)", +[](const tWString & a0, int a1, int a2) -> tWString { return cString::SubW(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "tString cString_ToLowerCase(const tString&in aString)", +[](const tString & a0) -> tString { return cString::ToLowerCase(a0); });
-	SOMA_FUNC_NEW(e, "tWString cString_ToLowerCaseW(const tWString&in aString)", +[](const tWString & a0) -> tWString { return cString::ToLowerCaseW(a0); });
-	SOMA_FUNC_NEW(e, "tString cString_ToUpperCase(const tString&in aString)", +[](const tString & a0) -> tString { return cString::ToUpperCase(a0); });
-	SOMA_FUNC_NEW(e, "tWString cString_ToUpperCaseW(const tWString&in aString)", +[](const tWString & a0) -> tWString { return cString::ToUpperCaseW(a0); });
-	SOMA_FUNC_NEW(e, "tString cString_ReplaceCharTo(const tString&in aString, const tString&in asOldChar,const tString&in asNewChar)", +[](const tString & a0, const tString & a1, const tString & a2) -> tString { return cString::ReplaceCharTo(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "tWString cString_ReplaceCharToW(const tWString&in aString, const tWString&in asOldChar,const tWString&in asNewChar)", +[](const tWString & a0, const tWString & a1, const tWString & a2) -> tWString { return cString::ReplaceCharToW(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "tString cString_ReplaceStringTo(const tString&in aString, const tString&in asOldString,const tString&in asNewString)", +[](const tString & a0, const tString & a1, const tString & a2) -> tString { return cString::ReplaceStringTo(a0, a1, a2); });
-	SOMA_FUNC_NEW(e, "tString cString_GetLastChar(const tString&in aString)", +[](const tString & a0) -> tString { return cString::GetLastChar(a0); });
-	SOMA_FUNC_NEW(e, "tWString cString_GetLastCharW(const tWString&in aString)", +[](const tWString & a0) -> tWString { return cString::GetLastCharW(a0); });
-	SOMA_FUNC_NEW(e, "int cString_GetFirstStringPos(const tString&in aString, const tString&in aChar)", +[](const tString & a0, const tString & a1) -> int { return cString::GetFirstStringPos(a0, a1); });
-	SOMA_FUNC_NEW(e, "int cString_GetFirstStringPosW(const tWString&in aString, const tWString&in aChar)", +[](const tWString & a0, const tWString & a1) -> int { return cString::GetFirstStringPosW(a0, a1); });
-	SOMA_FUNC_NEW(e, "int cString_GetLastStringPos(const tString&in aString, const tString&in aChar)", +[](const tString & a0, const tString & a1) -> int { return cString::GetLastStringPos(a0, a1); });
-	SOMA_FUNC_NEW(e, "int cString_GetLastStringPosW(const tWString&in aString, const tWString&in aChar)", +[](const tWString & a0, const tWString & a1) -> int { return cString::GetLastStringPosW(a0, a1); });
-	SOMA_FUNC_NEW(e, "int cString_CountCharsInString(const tString&in aString, const tString&in aChar)", +[](const tString & a0, const tString & a1) -> int { return cString::CountCharsInString(a0, a1); });
-	SOMA_FUNC_NEW(e, "int cString_CountCharsInStringW(const tWString&in aString, const tWString&in aChar)", +[](const tWString & a0, const tWString & a1) -> int { return cString::CountCharsInStringW(a0, a1); });
-	SOMA_FUNC_NEW(e, "uint cString_GetHash(const tString&in asStr)", +[](const tString & a0) -> unsigned int { return cString::GetHash(a0); });
-	SOMA_FUNC_NEW(e, "uint cString_GetHashW(const tWString&in asStr)", +[](const tWString & a0) -> unsigned int { return cString::GetHashW(a0); });
-	SOMA_FUNC_NEW(e, "tString cString_GetFileExt(const tString&in aString)", +[](const tString & a0) -> tString { return cString::GetFileExt(a0); });
-	SOMA_FUNC_NEW(e, "tWString cString_GetFileExtW(const tWString&in aString)", +[](const tWString & a0) -> tWString { return cString::GetFileExtW(a0); });
-	SOMA_FUNC_NEW(e, "tString cString_SetFileExt(const tString&in aString,const tString&in aExt)", +[](const tString & a0, const tString & a1) -> tString { return cString::SetFileExt(a0, a1); });
-	SOMA_FUNC_NEW(e, "tWString cString_SetFileExtW(const tWString&in aString,const tWString&in aExt)", +[](const tWString & a0, const tWString & a1) -> tWString { return cString::SetFileExtW(a0, a1); });
-	SOMA_FUNC_NEW(e, "tString cString_GetFileName(const tString&in aString)", +[](const tString & a0) -> tString { return cString::GetFileName(a0); });
-	SOMA_FUNC_NEW(e, "tWString cString_GetFileNameW(const tWString&in aString)", +[](const tWString & a0) -> tWString { return cString::GetFileNameW(a0); });
-	SOMA_FUNC_NEW(e, "tString cString_GetFilePath(const tString&in aString)", +[](const tString & a0) -> tString { return cString::GetFilePath(a0); });
-	SOMA_FUNC_NEW(e, "tWString cString_GetFilePathW(const tWString&in aString)", +[](const tWString & a0) -> tWString { return cString::GetFilePathW(a0); });
-	SOMA_FUNC_NEW(e, "tString cString_SetFilePath(const tString&in aString,const tString&in aPath)", +[](const tString & a0, const tString & a1) -> tString { return cString::SetFilePath(a0, a1); });
-	SOMA_FUNC_NEW(e, "tWString cString_SetFilePathW(const tWString&in aString,const tWString&in aPath)", +[](const tWString & a0, const tWString & a1) -> tWString { return cString::SetFilePathW(a0, a1); });
-	SOMA_FUNC_NEW(e, "tString cString_AddSlashAtEnd(const tString&in asPath)", +[](const tString & a0) -> tString { return cString::AddSlashAtEnd(a0); });
-	SOMA_FUNC_NEW(e, "tWString cString_AddSlashAtEndW(const tWString&in asPath)", +[](const tWString & a0) -> tWString { return cString::AddSlashAtEndW(a0); });
-	SOMA_FUNC_NEW(e, "tString cString_RemoveSlashAtEnd(const tString&in asPath)", +[](const tString & a0) -> tString { return cString::RemoveSlashAtEnd(a0); });
-	SOMA_FUNC_NEW(e, "tWString cString_RemoveSlashAtEndW(const tWString&in asPath)", +[](const tWString & a0) -> tWString { return cString::RemoveSlashAtEndW(a0); });
-	SOMA_FUNC_NEW(e, "bool cMath_IsValid(float afX)", +[](float a0) -> bool { return cMath::IsValid(a0); });
-	SOMA_FUNC_NEW(e, "int cMath_CeilToInt(float afVal)", +[](float a0) -> int { return cMath::CeilToInt(a0); });
-	SOMA_FUNC_NEW(e, "int cMath_FloorToInt(float afVal)", +[](float a0) -> int { return cMath::FloorToInt(a0); });
-	SOMA_FUNC_NEW(e, "float cMath_Ceil(float afVal)", +[](float a0) -> float { return cMath::Ceil(a0); });
-	SOMA_FUNC_NEW(e, "float cMath_Floor(float afVal)", +[](float a0) -> float { return cMath::Floor(a0); });
-	SOMA_METHOD_NEW(e, "cBeam", "iEntity3D@ opImplCast()", +[](cBeam *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cBeam@ opCast()", +[](iEntity3D *o) -> cBeam * { return dynamic_cast<cBeam *>(o); });
-	SOMA_METHOD_NEW(e, "cBillboard", "iEntity3D@ opImplCast()", +[](cBillboard *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cBillboard@ opCast()", +[](iEntity3D *o) -> cBillboard * { return dynamic_cast<cBillboard *>(o); });
-	SOMA_METHOD_NEW(e, "cBoneState", "cNode3D@ opImplCast()", +[](cBoneState *o) -> cNode3D * { return static_cast<cNode3D *>(o); });
-	SOMA_METHOD_NEW(e, "cNode3D", "cBoneState@ opCast()", +[](cNode3D *o) -> cBoneState * { return dynamic_cast<cBoneState *>(o); });
-	SOMA_METHOD_NEW(e, "cFogArea", "iEntity3D@ opImplCast()", +[](cFogArea *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cFogArea@ opCast()", +[](iEntity3D *o) -> cFogArea * { return dynamic_cast<cFogArea *>(o); });
-	SOMA_METHOD_NEW(e, "cForceField", "iEntity3D@ opImplCast()", +[](cForceField *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cForceField@ opCast()", +[](iEntity3D *o) -> cForceField * { return dynamic_cast<cForceField *>(o); });
-	SOMA_METHOD_NEW(e, "cLensFlare", "iEntity3D@ opImplCast()", +[](cLensFlare *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cLensFlare@ opCast()", +[](iEntity3D *o) -> cLensFlare * { return dynamic_cast<cLensFlare *>(o); });
-	SOMA_METHOD_NEW(e, "cLightBox", "iEntity3D@ opImplCast()", +[](cLightBox *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cLightBox@ opCast()", +[](iEntity3D *o) -> cLightBox * { return dynamic_cast<cLightBox *>(o); });
-	SOMA_METHOD_NEW(e, "cLightBox", "iLight@ opImplCast()", +[](cLightBox *o) -> iLight * { return static_cast<iLight *>(o); });
-	SOMA_METHOD_NEW(e, "iLight", "cLightBox@ opCast()", +[](iLight *o) -> cLightBox * { return dynamic_cast<cLightBox *>(o); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "iEntity3D@ opImplCast()", +[](cLightDirectional *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cLightDirectional@ opCast()", +[](iEntity3D *o) -> cLightDirectional * { return dynamic_cast<cLightDirectional *>(o); });
-	SOMA_METHOD_NEW(e, "cLightDirectional", "iLight@ opImplCast()", +[](cLightDirectional *o) -> iLight * { return static_cast<iLight *>(o); });
-	SOMA_METHOD_NEW(e, "iLight", "cLightDirectional@ opCast()", +[](iLight *o) -> cLightDirectional * { return dynamic_cast<cLightDirectional *>(o); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "iEntity3D@ opImplCast()", +[](cLightPoint *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cLightPoint@ opCast()", +[](iEntity3D *o) -> cLightPoint * { return dynamic_cast<cLightPoint *>(o); });
-	SOMA_METHOD_NEW(e, "cLightPoint", "iLight@ opImplCast()", +[](cLightPoint *o) -> iLight * { return static_cast<iLight *>(o); });
-	SOMA_METHOD_NEW(e, "iLight", "cLightPoint@ opCast()", +[](iLight *o) -> cLightPoint * { return dynamic_cast<cLightPoint *>(o); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "iEntity3D@ opImplCast()", +[](cLightSpot *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cLightSpot@ opCast()", +[](iEntity3D *o) -> cLightSpot * { return dynamic_cast<cLightSpot *>(o); });
-	SOMA_METHOD_NEW(e, "cLightSpot", "iLight@ opImplCast()", +[](cLightSpot *o) -> iLight * { return static_cast<iLight *>(o); });
-	SOMA_METHOD_NEW(e, "iLight", "cLightSpot@ opCast()", +[](iLight *o) -> cLightSpot * { return dynamic_cast<cLightSpot *>(o); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "iEntity3D@ opImplCast()", +[](cMeshEntity *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cMeshEntity@ opCast()", +[](iEntity3D *o) -> cMeshEntity * { return dynamic_cast<cMeshEntity *>(o); });
-	SOMA_METHOD_NEW(e, "cParticleSystem", "iEntity3D@ opImplCast()", +[](cParticleSystem *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cParticleSystem@ opCast()", +[](iEntity3D *o) -> cParticleSystem * { return dynamic_cast<cParticleSystem *>(o); });
-	SOMA_METHOD_NEW(e, "cSoundEntity", "iEntity3D@ opImplCast()", +[](cSoundEntity *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cSoundEntity@ opCast()", +[](iEntity3D *o) -> cSoundEntity * { return dynamic_cast<cSoundEntity *>(o); });
-	SOMA_METHOD_NEW(e, "cSubMeshEntity", "iEntity3D@ opImplCast()", +[](cSubMeshEntity *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "cSubMeshEntity@ opCast()", +[](iEntity3D *o) -> cSubMeshEntity * { return dynamic_cast<cSubMeshEntity *>(o); });
-	SOMA_METHOD_NEW(e, "cWidgetWindow", "iWidget@ opImplCast()", +[](cWidgetWindow *o) -> iWidget * { return static_cast<iWidget *>(o); });
-	SOMA_METHOD_NEW(e, "iWidget", "cWidgetWindow@ opCast()", +[](iWidget *o) -> cWidgetWindow * { return dynamic_cast<cWidgetWindow *>(o); });
-	SOMA_METHOD_NEW(e, "iLight", "iEntity3D@ opImplCast()", +[](iLight *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "iLight@ opCast()", +[](iEntity3D *o) -> iLight * { return dynamic_cast<iLight *>(o); });
-	SOMA_METHOD_NEW(e, "iPhysicsBody", "iEntity3D@ opImplCast()", +[](iPhysicsBody *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "iPhysicsBody@ opCast()", +[](iEntity3D *o) -> iPhysicsBody * { return dynamic_cast<iPhysicsBody *>(o); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "iPhysicsJoint@ opImplCast()", +[](iPhysicsJointBall *o) -> iPhysicsJoint * { return static_cast<iPhysicsJoint *>(o); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "iPhysicsJointBall@ opCast()", +[](iPhysicsJoint *o) -> iPhysicsJointBall * { return dynamic_cast<iPhysicsJointBall *>(o); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "iPhysicsJoint@ opImplCast()", +[](iPhysicsJointHinge *o) -> iPhysicsJoint * { return static_cast<iPhysicsJoint *>(o); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "iPhysicsJointHinge@ opCast()", +[](iPhysicsJoint *o) -> iPhysicsJointHinge * { return dynamic_cast<iPhysicsJointHinge *>(o); });
-	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "iPhysicsJoint@ opImplCast()", +[](iPhysicsJointSlider *o) -> iPhysicsJoint * { return static_cast<iPhysicsJoint *>(o); });
-	SOMA_METHOD_NEW(e, "iPhysicsJoint", "iPhysicsJointSlider@ opCast()", +[](iPhysicsJoint *o) -> iPhysicsJointSlider * { return dynamic_cast<iPhysicsJointSlider *>(o); });
-	SOMA_METHOD_NEW(e, "iPhysicsRope", "iVerletParticleContainer@ opImplCast()", +[](iPhysicsRope *o) -> iVerletParticleContainer * { return static_cast<iVerletParticleContainer *>(o); });
-	SOMA_METHOD_NEW(e, "iVerletParticleContainer", "iPhysicsRope@ opCast()", +[](iVerletParticleContainer *o) -> iPhysicsRope * { return dynamic_cast<iPhysicsRope *>(o); });
-	SOMA_METHOD_NEW(e, "iRopeEntity", "iEntity3D@ opImplCast()", +[](cRopeEntity *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
-	SOMA_METHOD_NEW(e, "iEntity3D", "iRopeEntity@ opCast()", +[](iEntity3D *o) -> cRopeEntity * { return dynamic_cast<cRopeEntity *>(o); });
+	for (const cGenBinding &b : gvBindings)
+	{
+		std::string sDecl = cSomaScriptApi::NativeDecl(b.mpType, b.mpDecl);
+		if (b.mpType)
+		{
+			asITypeInfo *pType = e->GetTypeInfoByName(b.mpType);
+			if (pType && pType->GetMethodByDecl(sDecl.c_str()) == NULL)
+				e->RegisterObjectMethod(b.mpType, sDecl.c_str(), asFUNCTION(b.mpFunc), asCALL_GENERIC);
+		}
+		else if (e->GetGlobalFunctionByDecl(sDecl.c_str()) == NULL)
+			e->RegisterGlobalFunction(sDecl.c_str(), asFUNCTION(b.mpFunc), asCALL_GENERIC);
+	}
 }
+
+size_t SomaScriptGenBindingCount() { return sizeof(gvBindings) / sizeof(gvBindings[0]); }
+void (*SomaScriptGenBindingFunc(size_t alIdx))(asIScriptGeneric *) { return gvBindings[alIdx].mpFunc; }

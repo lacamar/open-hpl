@@ -11,7 +11,10 @@ void RegisterSomaScriptMathNatives(asIScriptEngine *apEngine);
 void RegisterSomaScriptStringNatives(asIScriptEngine *apEngine);
 void RegisterSomaScriptLuxNatives(asIScriptEngine *apEngine);
 void RegisterSomaScriptGlobalNatives(asIScriptEngine *apEngine);
+void SomaRegisterGlobalEngineBlock(asIScriptEngine *apEngine);
 void RegisterSomaScriptGenBindings(asIScriptEngine *apEngine);
+size_t SomaScriptGenBindingCount();
+void (*SomaScriptGenBindingFunc(size_t alIdx))(asIScriptGeneric *);
 
 // Types whose constructors all come from natives (the API's recorded ones are skipped)
 bool SomaScriptHasNativeBehaviours(const char *apType);

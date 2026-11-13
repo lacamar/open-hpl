@@ -5,7 +5,12 @@ use crate::string_ffi::{Sink, emit, units};
 
 use std::ffi::c_void;
 
-fn with_variant<R>(scope: u32, name: &[u8], idx: i32, f: impl FnOnce(&mut Variant) -> R) -> R {
+pub(super) fn with_variant<R>(
+    scope: u32,
+    name: &[u8],
+    idx: i32,
+    f: impl FnOnce(&mut Variant) -> R,
+) -> R {
     let mut g = globals::lock();
     let g: &mut Globals = &mut g;
     match scope {

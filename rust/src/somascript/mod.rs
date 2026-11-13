@@ -15,6 +15,20 @@ mod globals;
 mod math;
 mod patches;
 mod runtime;
+mod s1_gen;
+#[cfg(test)]
+mod s1_tests;
+mod s2_api;
+mod s2_as;
+mod s2_builder;
+mod s2_check;
+mod s2_entry;
+mod s2_globals;
+mod s2_host;
+mod s2_math;
+mod s2_strings;
+#[cfg(test)]
+mod s2_tests;
 mod stream;
 mod strings;
 #[cfg(test)]

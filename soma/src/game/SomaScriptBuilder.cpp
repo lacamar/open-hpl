@@ -1,5 +1,6 @@
 #include "SomaScriptBuilder.h"
 #include "RustSomaScript.h"
+#include "RustSomaScriptS2.h"
 #include "SomaConfig.h"
 #include "system/LowLevelSystem.h"
 
@@ -91,6 +92,16 @@ bool cSomaScriptBuilder::Collect(std::vector<std::pair<std::string, std::string>
 int cSomaScriptBuilder::Build(asIScriptEngine *apEngine, const std::string &asModuleName, const std::string &asEntryFile,
 							  std::string *apMissingInclude)
 {
+	if (OhplS2Rust())
+	{
+		std::string sMissing;
+		OhplS2InstallHost();
+		int r = ohpl_s2_builder_build(mpRust, U(msCacheDir), msCacheDir.size(), apEngine, U(asModuleName), asModuleName.size(), U(asEntryFile), asEntryFile.size(),
+									  +[](void *c, const unsigned char *p, size_t n) { ((std::string *)c)->assign((const char *)p, n); }, &sMissing);
+		if (apMissingInclude && apMissingInclude->empty())
+			*apMissingInclude = sMissing;
+		return r;
+	}
 	std::vector<std::pair<std::string, std::string>> vSections;
 	if (Collect(vSections, asEntryFile, apMissingInclude) == false)
 		return asERROR;
