@@ -260,6 +260,77 @@ static void ForwardToEntityScript(asIScriptGeneric *g)
 		new (g->GetAddressOfReturnLocation()) cVector2f(GetField<cVector2f>(kOhplGs6ScopeReturn, gsNoName, 0));
 }
 
+// Natives that need engine objects: resources, languages, the world
+void SomaRegisterGlobalEngineBlock(asIScriptEngine *e)
+{
+	typedef const tString &S;
+	SOMA_FUNC(e, "const tString &cLux_GetCurrentLanguage()", +[]() -> const tString & { return SomaCurrentLanguage(); });
+	SOMA_FUNC(e, "tString cLux_GetDefaultGameLanguage()", +[]() { return tString("english.lang"); });
+	SOMA_FUNC(e, "iEyeTracker@ cInput_GetEyeTracker()", +[]() -> void * { return NULL; });
+	SOMA_FUNC(e, "const tWString& cLux_Translate(const tString &in asCat, const tString &in asEntry)",
+			  +[](S c, S n) -> const tWString & { return gpSomaBase->mpEngine->GetResources()->Translate(c, n); });
+	// cLanguageFile::TranslatePlatformSpecific: entry + platform suffix, else the plain entry
+	SOMA_FUNC(e, "const tWString& cLux_TranslatePlatformSpecific(const tString &in asCat, const tString &in asEntry)",
+			  +[](S c, S n) -> const tWString & { return gpSomaBase->mpEngine->GetResources()->Translate(c, n); });
+	SOMA_FUNC(e, "bool cLux_HasTranslation(const tString &in asCat, const tString &in asEntry)",
+			  +[](S c, S n) {
+				  cLanguageFile *pLang = gpSomaBase->mpEngine->GetResources()->GetLanguageFile();
+				  if (pLang == NULL)
+					  return false;
+				  auto it = pLang->GetCategoryMap()->find(c);
+				  return it != pLang->GetCategoryMap()->end() && it->second->m_mapEntries.count(n) > 0;
+			  });
+	SOMA_FUNC(e, "tWString cLux_ParseString(const tWString&in asInput)", +[](const tWString &s) { return SomaParseString(s); });
+	SOMA_FUNC(e, "cMaterial@ cResources_CreateMaterial(const tString&in asName)",
+			  +[](S n) { return gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->CreateMaterial(cString::SetFileExt(n, "mat")); });
+	SOMA_FUNC(e, "void cResources_DestroyMaterial(cMaterial @apMaterial)",
+			  +[](cMaterial *m) { if (m) gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->Destroy(m); });
+	SOMA_FUNC(e, "cMesh@ cResources_CreateMesh(const tString&in asName)",
+			  +[](S n) {
+				  cResources *pRes = gpSomaBase->mpEngine->GetResources();
+				  tString sName = n;
+				  // shipped .msh is the official binary format; load its source model
+				  if (cString::GetFileExt(n) == "msh")
+					  for (const char *sExt : {"dae", "fbx"})
+						  if (pRes->GetFileSearcher()->GetFilePath(cString::SetFileExt(n, sExt)) != _W("")) {
+							  sName = cString::SetFileExt(n, sExt);
+							  break;
+						  }
+				  return pRes->GetMeshManager()->CreateMesh(sName);
+			  });
+	SOMA_FUNC(e, "void cResources_DestroyMesh(cMesh@ apMesh)",
+			  +[](cMesh *m) { if (m) gpSomaBase->mpEngine->GetResources()->GetMeshManager()->Destroy(m); });
+	SOMA_FUNC(e, "iTexture@ cResources_CreateTexture2D(const tString&in asName, bool abUseMipMaps)",
+			  +[](S n, bool mip) { return gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Create2D(n, mip); });
+	SOMA_FUNC(e, "iTexture@ cResources_CreateTextureCubeMap(const tString&in asName, bool abUseMipMaps)",
+			  +[](S n, bool mip) { return gpSomaBase->mpEngine->GetResources()->GetTextureManager()->CreateCubeMap(n, mip); });
+	SOMA_METHOD(e, "cMeshEntity", "void SetDiffuseColorMul(const cColor&in aColor)", +[](cMeshEntity *m, const cColor &c) { m->SetColorMul(c); });
+	SOMA_METHOD_NEW(e, "cMeshEntity", "const cColor& GetDiffuseColorMul()", +[](cMeshEntity *m) -> const cColor & {
+		static const cColor gWhite(1, 1);
+		return m->GetSubMeshEntityNum() > 0 ? m->GetSubMeshEntity(0)->GetColorMul() : gWhite;
+	});
+	SOMA_METHOD(e, "cMeshEntity", "int GetSubMeshEntityIndex(const tString &in asName)", +[](cMeshEntity *m, const tString &asName) -> int {
+		for (int i = 0; i < m->GetSubMeshEntityNum(); ++i)
+			if (m->GetSubMeshEntity(i)->GetName() == asName) return i;
+		return -1;
+	});
+	SOMA_METHOD(e, "cWorld", "void GetSubMeshEntityInArea(array<cSubMeshEntity@> &inout avObjects, const cVector3f&in avMin, const cVector3f&in avMax)",
+				+[](cWorld *w, CScriptArray &a, const cVector3f &vMin, const cVector3f &vMax) {
+					for (cMeshEntityIterator it : {w->GetStaticMeshEntityIterator(), w->GetDynamicMeshEntityIterator()})
+						while (it.HasNext())
+						{
+							cMeshEntity *pMesh = it.Next();
+							for (int i = 0; i < pMesh->GetSubMeshEntityNum(); ++i)
+							{
+								cSubMeshEntity *pSub = pMesh->GetSubMeshEntity(i);
+								cBoundingVolume *pBV = pSub->GetBoundingVolume();
+								if (cMath::CheckAABBIntersection(pBV->GetMin(), pBV->GetMax(), vMin, vMax))
+									a.InsertLast(&pSub);
+							}
+						}
+				});
+}
+
 void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 {
 	for (int i = 0; i < glSomaGlobalFuncsNum; ++i)
@@ -333,71 +404,7 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "tID cScript_GetGlobalReturnID()", +[]() { return GetField<cSomaID>(kOhplGs6ScopeReturn, gsNoName, 0); });
 
 	typedef const tString &S;
-	SOMA_FUNC(e, "const tString &cLux_GetCurrentLanguage()", +[]() -> const tString & { return SomaCurrentLanguage(); });
-	SOMA_FUNC(e, "tString cLux_GetDefaultGameLanguage()", +[]() { return tString("english.lang"); });
-	SOMA_FUNC(e, "iEyeTracker@ cInput_GetEyeTracker()", +[]() -> void * { return NULL; });
-	SOMA_FUNC(e, "const tWString& cLux_Translate(const tString &in asCat, const tString &in asEntry)",
-			  +[](S c, S n) -> const tWString & { return gpSomaBase->mpEngine->GetResources()->Translate(c, n); });
-	// cLanguageFile::TranslatePlatformSpecific: entry + platform suffix, else the plain entry
-	SOMA_FUNC(e, "const tWString& cLux_TranslatePlatformSpecific(const tString &in asCat, const tString &in asEntry)",
-			  +[](S c, S n) -> const tWString & { return gpSomaBase->mpEngine->GetResources()->Translate(c, n); });
-	SOMA_FUNC(e, "bool cLux_HasTranslation(const tString &in asCat, const tString &in asEntry)",
-			  +[](S c, S n) {
-				  cLanguageFile *pLang = gpSomaBase->mpEngine->GetResources()->GetLanguageFile();
-				  if (pLang == NULL)
-					  return false;
-				  auto it = pLang->GetCategoryMap()->find(c);
-				  return it != pLang->GetCategoryMap()->end() && it->second->m_mapEntries.count(n) > 0;
-			  });
-	SOMA_FUNC(e, "tWString cLux_ParseString(const tWString&in asInput)", +[](const tWString &s) { return SomaParseString(s); });
-	SOMA_FUNC(e, "cMaterial@ cResources_CreateMaterial(const tString&in asName)",
-			  +[](S n) { return gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->CreateMaterial(cString::SetFileExt(n, "mat")); });
-	SOMA_FUNC(e, "void cResources_DestroyMaterial(cMaterial @apMaterial)",
-			  +[](cMaterial *m) { if (m) gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->Destroy(m); });
-	SOMA_FUNC(e, "cMesh@ cResources_CreateMesh(const tString&in asName)",
-			  +[](S n) {
-				  cResources *pRes = gpSomaBase->mpEngine->GetResources();
-				  tString sName = n;
-				  // shipped .msh is the official binary format; load its source model
-				  if (cString::GetFileExt(n) == "msh")
-					  for (const char *sExt : {"dae", "fbx"})
-						  if (pRes->GetFileSearcher()->GetFilePath(cString::SetFileExt(n, sExt)) != _W("")) {
-							  sName = cString::SetFileExt(n, sExt);
-							  break;
-						  }
-				  return pRes->GetMeshManager()->CreateMesh(sName);
-			  });
-	SOMA_FUNC(e, "void cResources_DestroyMesh(cMesh@ apMesh)",
-			  +[](cMesh *m) { if (m) gpSomaBase->mpEngine->GetResources()->GetMeshManager()->Destroy(m); });
-	SOMA_FUNC(e, "iTexture@ cResources_CreateTexture2D(const tString&in asName, bool abUseMipMaps)",
-			  +[](S n, bool mip) { return gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Create2D(n, mip); });
-	SOMA_FUNC(e, "iTexture@ cResources_CreateTextureCubeMap(const tString&in asName, bool abUseMipMaps)",
-			  +[](S n, bool mip) { return gpSomaBase->mpEngine->GetResources()->GetTextureManager()->CreateCubeMap(n, mip); });
-	SOMA_METHOD(e, "cMeshEntity", "void SetDiffuseColorMul(const cColor&in aColor)", +[](cMeshEntity *m, const cColor &c) { m->SetColorMul(c); });
-	SOMA_METHOD_NEW(e, "cMeshEntity", "const cColor& GetDiffuseColorMul()", +[](cMeshEntity *m) -> const cColor & {
-		static const cColor gWhite(1, 1);
-		return m->GetSubMeshEntityNum() > 0 ? m->GetSubMeshEntity(0)->GetColorMul() : gWhite;
-	});
-	SOMA_METHOD(e, "cMeshEntity", "int GetSubMeshEntityIndex(const tString &in asName)", +[](cMeshEntity *m, const tString &asName) -> int {
-		for (int i = 0; i < m->GetSubMeshEntityNum(); ++i)
-			if (m->GetSubMeshEntity(i)->GetName() == asName) return i;
-		return -1;
-	});
-	SOMA_METHOD(e, "cWorld", "void GetSubMeshEntityInArea(array<cSubMeshEntity@> &inout avObjects, const cVector3f&in avMin, const cVector3f&in avMax)",
-				+[](cWorld *w, CScriptArray &a, const cVector3f &vMin, const cVector3f &vMax) {
-					for (cMeshEntityIterator it : {w->GetStaticMeshEntityIterator(), w->GetDynamicMeshEntityIterator()})
-						while (it.HasNext())
-						{
-							cMeshEntity *pMesh = it.Next();
-							for (int i = 0; i < pMesh->GetSubMeshEntityNum(); ++i)
-							{
-								cSubMeshEntity *pSub = pMesh->GetSubMeshEntity(i);
-								cBoundingVolume *pBV = pSub->GetBoundingVolume();
-								if (cMath::CheckAABBIntersection(pBV->GetMin(), pBV->GetMax(), vMin, vMax))
-									a.InsertLast(&pSub);
-							}
-						}
-				});
+	SomaRegisterGlobalEngineBlock(e);
 	SOMA_FUNC(e, "bool cLux_ScriptDebugOn()", +[]() { return false; });
 	SOMA_FUNC(e, "bool cLux_DebugModeOn()", +[]() { return false; });
 	SOMA_FUNC(e, "bool cLux_GetGodModeActivated()", +[]() { static bool b = getenv("OPENHPL_SOMA_GODMODE") != NULL; return b; });

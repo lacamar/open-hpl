@@ -17,6 +17,7 @@ void* ohpl_as2_g_arg_addr(void* g, unsigned i);
 void* ohpl_as2_g_ret_loc(void* g);
 void ohpl_as2_g_set_ret_addr(void* g, void* p);
 unsigned ohpl_as2_g_arg_count(void* g);
+int ohpl_as2_g_arg_type_id(void* g, unsigned i);
 void* ohpl_as2_g_aux(void* g);
 
 /* registration; fn is a generic-convention function, aux reaches it through g_aux */

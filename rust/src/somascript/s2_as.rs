@@ -11,6 +11,10 @@ pub const OBJ_VALUE: u32 = 1 << 1;
 pub const OBJ_NOCOUNT: u32 = 1 << 18;
 pub const OBJ_POD: u32 = 1 << 3;
 pub const OBJ_SCRIPT_OBJECT: u32 = 1 << 21;
+pub const OBJ_ENUM: u32 = 1 << 26;
+pub const TYPEID_BOOL: i32 = 1;
+pub const TYPEID_FLOAT: i32 = 10;
+pub const TYPEID_DOUBLE: i32 = 11;
 pub const OBJ_APP_PRIMITIVE: u64 = 1 << 13;
 pub const TYPEID_OBJHANDLE: i32 = 0x4000_0000;
 pub const TYPEID_VOID: i32 = 0;
@@ -31,6 +35,7 @@ unsafe extern "C" {
     pub fn ohpl_as2_g_ret_loc(g: *mut c_void) -> *mut c_void;
     pub fn ohpl_as2_g_set_ret_addr(g: *mut c_void, p: *mut c_void);
     pub fn ohpl_as2_g_arg_count(g: *mut c_void) -> u32;
+    pub fn ohpl_as2_g_arg_type_id(g: *mut c_void, i: u32) -> c_int;
     pub fn ohpl_as2_g_aux(g: *mut c_void) -> *mut c_void;
     fn ohpl_as2_reg_global_function(
         e: *mut c_void,
@@ -133,6 +138,7 @@ pub const MAX_ARGS: usize = 16;
 pub struct Frame {
     pub this: *mut c_void,
     addr: [*mut c_void; MAX_ARGS],
+    objs: [*mut c_void; MAX_ARGS],
     pub ret: *mut c_void,
     pub ret_addr: std::cell::Cell<Option<*mut c_void>>,
 }
@@ -150,6 +156,9 @@ impl Frame {
             for (i, slot) in f.addr.iter_mut().enumerate().take(n) {
                 *slot = ohpl_as2_g_arg_addr(g, i as u32);
             }
+            for (i, slot) in f.objs.iter_mut().enumerate().take(n) {
+                *slot = ohpl_as2_g_arg_object(g, i as u32);
+            }
         }
         f
     }
@@ -158,6 +167,7 @@ impl Frame {
         Self {
             this,
             addr: [std::ptr::null_mut(); MAX_ARGS],
+            objs: [std::ptr::null_mut(); MAX_ARGS],
             ret,
             ret_addr: std::cell::Cell::new(None),
         }
@@ -172,6 +182,11 @@ impl Frame {
 
     fn slot(&self, i: usize) -> *mut c_void {
         self.addr.get(i).copied().unwrap_or(std::ptr::null_mut())
+    }
+
+    /// A value-type argument passed by value (`GetArgObject`).
+    pub fn obj_arg(&self, i: usize) -> *mut c_void {
+        self.objs.get(i).copied().unwrap_or(std::ptr::null_mut())
     }
 
     /// `const T &in` argument.

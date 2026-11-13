@@ -13,12 +13,14 @@
 #include "SomaSound.h"
 #include "SomaSoundscape.h"
 #include "SomaToneMapping.h"
+#include "SomaGlobalFuncsTable.h"
 
 #include "impl/scriptarray.h"
 
 #include <string>
 
 const cSomaStructDefaults *FindStructDefaults(const char *apType);
+extern std::string gsSomaExecOutput;
 int SomaNativeOffset(const std::string &asType, const std::string &asDecl, int alOffset);
 
 namespace
@@ -52,8 +54,8 @@ namespace
 		case kOhplS2StepLux:
 			RegisterSomaScriptLuxNatives(e);
 			break;
-		case kOhplS2StepGlobals:
-			RegisterSomaScriptGlobalNatives(e);
+		case kOhplS2StepGlobalEngine:
+			SomaRegisterGlobalEngineBlock(e);
 			break;
 		default:
 			cSomaImGui::RegisterNatives(e);
@@ -101,11 +103,48 @@ namespace
 
 	const void *GenOp(size_t alIdx) { return (const void *)SomaScriptGenBindingFunc(alIdx); }
 
-	bool GlobalFuncs(size_t, const unsigned char **, const unsigned char **, const unsigned char **) { return false; }
+	bool GlobalFuncs(size_t alIdx, const unsigned char **appDecl, const unsigned char **appClass, const unsigned char **appFunc)
+	{
+		if ((int)alIdx >= glSomaGlobalFuncsNum)
+			return false;
+		*appDecl = (const unsigned char *)gvSomaGlobalFuncs[alIdx].mpDecl;
+		*appClass = (const unsigned char *)gvSomaGlobalFuncs[alIdx].mpClass;
+		*appFunc = (const unsigned char *)gvSomaGlobalFuncs[alIdx].mpFunc;
+		return true;
+	}
+
+	int Misc(unsigned alKind, int alArg, const unsigned char *apText, size_t alLen)
+	{
+		switch (alKind)
+		{
+		case kOhplS2MiscUnderwaterGet:
+			return gbSomaUnderwaterEffects;
+		case kOhplS2MiscUnderwaterSet:
+			gbSomaUnderwaterEffects = alArg != 0;
+			return 0;
+		case kOhplS2MiscUnderwaterInc:
+			++glSomaUnderwaterUsers;
+			return 0;
+		case kOhplS2MiscUnderwaterDec:
+			--glSomaUnderwaterUsers;
+			return 0;
+		case kOhplS2MiscUnderwaterUsers:
+			return glSomaUnderwaterUsers;
+		case kOhplS2MiscExecPrint:
+			gsSomaExecOutput += S(apText, alLen);
+			return 0;
+		default:
+		{
+			std::string sText = S(apText, alLen);
+			(alArg == 0 ? Log : alArg == 1 ? Warning : Error)("%s", sText.c_str());
+			return 0;
+		}
+		}
+	}
 
 	const OhplS2HostOps gHost = {StructDefaults, InternEmpty, NativeOffset, RegisterStep, SetReset, SetAssign, SetAdd, SetErase, SetCount, SetSize, SetToArray,
 								 ArrInsertLast, ArrInsertAt, ArrRemoveLast, ArrRemoveAt, ArrSize, ArrResize, RunGlobalFunc, SomaScriptGenBindingCount,
-								 GenOp, GlobalFuncs, SomaEasing};
+								 GenOp, GlobalFuncs, SomaEasing, Misc};
 }
 
 void OhplS2InstallHost()

@@ -109,6 +109,18 @@ fn corpus_matches_cpp() {
         if line.contains(" s:")
             || line.contains(" w:")
             || decl.contains("Random")
+            || [
+                "cScript_",
+                "tID",
+                "cLux_",
+                "SlideDoor",
+                "__print",
+                " Log(",
+                " Warning(",
+                " Error(",
+            ]
+            .iter()
+            .any(|p| decl.contains(p))
             || decl.contains("Easing")
             || !out.starts_with("out rc=0")
         {

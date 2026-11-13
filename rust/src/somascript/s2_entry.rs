@@ -3,12 +3,12 @@
 use super::s2_api::{self, Api};
 use super::s2_as::{self, Engine, Func};
 use super::s2_host;
-use super::{s1_gen, s2_math, s2_strings};
+use super::{s1_gen, s2_globals, s2_math, s2_strings};
 use crate::string_ffi::{Sink, emit, units};
 use std::ffi::{CStr, c_char, c_int, c_void};
 
 pub(crate) const STEP_LUX: u32 = 0;
-pub(crate) const STEP_GLOBALS: u32 = 1;
+pub(crate) const STEP_GLOBAL_ENGINE: u32 = 1;
 pub(crate) const STEP_CLASSES: u32 = 2;
 
 fn step(e: Engine, n: u32) {
@@ -28,7 +28,9 @@ pub unsafe extern "C" fn ohpl_s2_register_natives(engine: *mut c_void) {
     s2_math::register(e);
     s2_strings::register_natives(e);
     step(e, STEP_LUX);
-    step(e, STEP_GLOBALS);
+    s2_globals::register_before_engine(e);
+    step(e, STEP_GLOBAL_ENGINE);
+    s2_globals::register_after_engine(e);
     step(e, STEP_CLASSES);
     s1_gen::register(e);
 }

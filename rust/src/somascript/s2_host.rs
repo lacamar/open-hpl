@@ -38,6 +38,7 @@ pub struct OhplS2HostOps {
     pub global_funcs:
         unsafe extern "C" fn(usize, *mut *const u8, *mut *const u8, *mut *const u8) -> bool,
     pub easing: unsafe extern "C" fn(i32, f32) -> f32,
+    pub misc: unsafe extern "C" fn(u32, i32, *const u8, usize) -> i32,
 }
 
 static HOST: OnceLock<&'static OhplS2HostOps> = OnceLock::new();
@@ -140,4 +141,46 @@ pub fn gen_op(i: usize) -> Option<*const c_void> {
     // SAFETY: plain call into the host.
     let p = unsafe { (h.gen_op)(i) };
     (!p.is_null()).then_some(p)
+}
+
+pub const MISC_UNDERWATER_GET: u32 = 0;
+pub const MISC_UNDERWATER_SET: u32 = 1;
+pub const MISC_UNDERWATER_INC: u32 = 2;
+pub const MISC_UNDERWATER_DEC: u32 = 3;
+pub const MISC_UNDERWATER_USERS: u32 = 4;
+pub const MISC_EXEC_PRINT: u32 = 5;
+pub const MISC_LOG: u32 = 6;
+
+pub fn misc(kind: u32, arg: i32, text: &[u8]) -> i32 {
+    // SAFETY: the text is valid for the call.
+    ops().map_or(0, |h| unsafe {
+        (h.misc)(kind, arg, text.as_ptr(), text.len())
+    })
+}
+
+pub fn run_global_func(obj: &[u8], class: &[u8], func: &[u8]) -> bool {
+    // SAFETY: the strings are valid for the call.
+    ops().is_some_and(|h| unsafe {
+        (h.run_global_func)(
+            obj.as_ptr(),
+            obj.len(),
+            class.as_ptr(),
+            class.len(),
+            func.as_ptr(),
+            func.len(),
+        )
+    })
+}
+
+pub fn global_func(i: usize) -> Option<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+    let h = ops()?;
+    let (mut d, mut c, mut f) = (std::ptr::null(), std::ptr::null(), std::ptr::null());
+    // SAFETY: the host returns NUL-terminated strings of a static table.
+    unsafe {
+        if !(h.global_funcs)(i, &mut d, &mut c, &mut f) {
+            return None;
+        }
+        let s = |p: *const u8| std::ffi::CStr::from_ptr(p.cast()).to_bytes().to_vec();
+        Some((s(d), s(c), s(f)))
+    }
 }

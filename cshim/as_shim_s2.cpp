@@ -99,14 +99,14 @@ struct Rng
 bool Known(const std::string& n)
 {
 	static const char* t[] = {"cVector2f", "cVector3f", "cVector4f", "cVector2l", "cVector3l", "cColor", "cMatrixf", "cQuaternion",
-							  "cRect2f", "cRect2l", "cPlanef", "cDate", "tString", "tWString"};
+							  "cRect2f", "cRect2l", "cPlanef", "cDate", "tString", "tWString", "tID"};
 	for (const char* x : t)
 		if (n == x)
 			return true;
 	return false;
 }
 
-bool IntLanes(const std::string& n) { return n == "cVector2l" || n == "cVector3l" || n == "cRect2l" || n == "cDate"; }
+bool IntLanes(const std::string& n) { return n == "tID" || n == "cVector2l" || n == "cVector3l" || n == "cRect2l" || n == "cDate"; }
 
 struct Slot
 {
@@ -155,6 +155,14 @@ std::string Dump(const Slot& s)
 		{
 			const std::wstring& x = *(const std::wstring*)s.obj;
 			return "w:" + Hex(x.data(), x.size() * sizeof(wchar_t));
+		}
+		if (n == "tID")
+		{
+			// padding after the uint8 member is uninitialised in the C++ natives
+			unsigned char b[12];
+			memcpy(b, s.obj, 12);
+			memset(b + 1, 0, 3);
+			return "o:" + Hex(b, 12);
 		}
 		return "o:" + Hex(s.obj, s.type->GetSize());
 	}
@@ -243,7 +251,15 @@ void SetArg(asIScriptContext* c, unsigned i, Slot& s)
 
 bool WantGlobal(const char* n)
 {
-	static const char* pre[] = {"cMath_", "Math_", "cString_", "String_", "cGenerate_"};
+	static const char* exact[] = {"cLux_ScriptDebugOn", "cLux_DebugModeOn", "cLux_GetGodModeActivated", "cLux_GetUnderwaterEffectsActive",
+								  "cLux_SetUnderwaterEffectsActive", "cLux_IncUnderwaterEffectUserCount", "cLux_DecUnderwaterEffectUserCount",
+								  "cLux_HasUnderwaterEffectUsers", "cLux_DropPageFocus", "cLux_PreloadWebpage", "cLux_SetAreaOffline",
+								  "cLux_RegisterCollisionRadius", "cLux_ResetShudderEffects", "SlideDoor_SetClosed", "Log", "Warning", "Error",
+								  "__print", "cLux_AddDebugMessage", "cLux_AddTodoMessage"};
+	for (const char* x : exact)
+		if (strcmp(n, x) == 0)
+			return true;
+	static const char* pre[] = {"cMath_", "Math_", "cString_", "String_", "cGenerate_", "cScript_"};
 	for (const char* p : pre)
 		if (strncmp(n, p, strlen(p)) == 0)
 			return strcmp(n, "cMath_Randomize") != 0;
@@ -333,6 +349,7 @@ void* ohpl_as2_g_arg_addr(void* g, unsigned i) { return G(g)->GetAddressOfArg(i)
 void* ohpl_as2_g_ret_loc(void* g) { return G(g)->GetAddressOfReturnLocation(); }
 void ohpl_as2_g_set_ret_addr(void* g, void* p) { G(g)->SetReturnAddress(p); }
 unsigned ohpl_as2_g_arg_count(void* g) { return G(g)->GetArgCount(); }
+int ohpl_as2_g_arg_type_id(void* g, unsigned i) { return G(g)->GetArgTypeId(i); }
 void* ohpl_as2_g_aux(void* g) { return G(g)->GetAuxiliary(); }
 
 int ohpl_as2_reg_global_function(void* e, const char* decl, void* fn, void* aux)

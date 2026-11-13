@@ -46,9 +46,11 @@ struct OhplS2HostOps
 	const void *(*gen_op)(size_t);
 	bool (*global_funcs)(size_t, const unsigned char **, const unsigned char **, const unsigned char **);
 	float (*easing)(int, float);
+	int (*misc)(unsigned, int, const unsigned char *, size_t);
 };
 
-enum { kOhplS2StepLux, kOhplS2StepGlobals, kOhplS2StepClasses };
+enum { kOhplS2StepLux, kOhplS2StepGlobalEngine, kOhplS2StepClasses };
+enum { kOhplS2MiscUnderwaterGet, kOhplS2MiscUnderwaterSet, kOhplS2MiscUnderwaterInc, kOhplS2MiscUnderwaterDec, kOhplS2MiscUnderwaterUsers, kOhplS2MiscExecPrint, kOhplS2MiscLog };
 enum { kOhplS2ListErrors, kOhplS2ListWarnings, kOhplS2ListRemaps };
 
 extern "C" {
