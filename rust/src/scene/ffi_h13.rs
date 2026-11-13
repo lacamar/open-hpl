@@ -3,7 +3,8 @@
 //! `reg` is a live registry from `ohpl_h13_reg_new`. Entity addresses are opaque. Accessor
 //! callbacks only read an entity's name or id and never reach the registry.
 
-use super::h13_world::{BodyItem, MeshItem, Reg, plan_bodies, plan_meshes};
+use super::h13_world::{AREA, BodyItem, EntityRef, MeshItem, Reg, plan_bodies, plan_meshes};
+use crate::obj::{DropFn, Foreign, IdFn as FIdFn, NameFn as FNameFn};
 use std::ffi::c_void;
 
 const _: () = {
@@ -195,6 +196,196 @@ pub unsafe extern "C" fn ohpl_h13_area_get(reg: *const Reg, name: Name) -> *mut 
 pub unsafe extern "C" fn ohpl_h13_area_clear(reg: *mut Reg) {
     // SAFETY: caller contract.
     unsafe { (*reg).area_clear() }
+}
+
+/// Registers the C++ shell's virtuals for `kind` (`AREA` for the area map; only `drop` is used).
+///
+/// # Safety
+/// `reg` live; the thunks stay valid for the registry's life.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_reg_set_foreign(
+    reg: *mut Reg,
+    kind: u32,
+    name: Option<FNameFn>,
+    id: Option<FIdFn>,
+    drop: Option<DropFn>,
+) {
+    // SAFETY: caller contract.
+    unsafe { (*reg).set_foreign(kind as usize, Foreign { name, id, drop }) }
+}
+
+/// # Safety
+/// `reg` live; `key` valid; the kind's `name` thunk registered when the list is non-empty.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_reg_find_name_f(
+    reg: *const Reg,
+    kind: u32,
+    key: Name,
+    last: bool,
+) -> *mut c_void {
+    // SAFETY: caller contract; the thunk only reads a name and never reaches the registry.
+    unsafe {
+        let f = (*reg).foreign(kind as usize);
+        (*reg).find_name(kind as usize, bytes(key), last, |p| f.name_of(p)) as *mut c_void
+    }
+}
+
+/// # Safety
+/// As `ohpl_h13_reg_find_name_f` for the `id` thunk.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_reg_find_id_f(
+    reg: *const Reg,
+    kind: u32,
+    id: i32,
+) -> *mut c_void {
+    // SAFETY: caller contract.
+    unsafe {
+        let f = (*reg).foreign(kind as usize);
+        (*reg).find_id(kind as usize, id, |p| f.id_of(p)) as *mut c_void
+    }
+}
+
+/// # Safety
+/// As `ohpl_h13_reg_find_name_f`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_reg_first_by_name_f(reg: *const Reg, kind: u32) -> *mut c_void {
+    // SAFETY: caller contract.
+    unsafe {
+        let f = (*reg).foreign(kind as usize);
+        (*reg).first_by_name(kind as usize, |p| f.name_of(p)) as *mut c_void
+    }
+}
+
+/// `STLFindAndDelete` (`only_if_found` false) or erase-then-delete-if-found: unlinks the first
+/// match, then runs the destructor with no registry borrow held. Returns whether it was linked.
+///
+/// # Safety
+/// `reg` live; `p` a live object of the kind (or, with `only_if_found`, possibly dangling).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_reg_destroy(
+    reg: *mut Reg,
+    kind: u32,
+    p: *mut c_void,
+    only_if_found: bool,
+) -> bool {
+    // SAFETY: caller contract; each registry call ends before the destructor runs.
+    unsafe {
+        let found = (*reg).remove_first(kind as usize, p as usize);
+        if found || !only_if_found {
+            (*reg).foreign(kind as usize).destroy(p as usize);
+        }
+        found
+    }
+}
+
+/// `STLDeleteAll`: destructors in creation order while the list is still populated, then clear.
+///
+/// # Safety
+/// `reg` live; every linked object of the kind is live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_reg_destroy_all(reg: *mut Reg, kind: u32) {
+    // SAFETY: caller contract; destructors may re-enter the registry, so only the snapshot and
+    // the copied vtable are held across them.
+    unsafe {
+        let f = (*reg).foreign(kind as usize);
+        for p in (*reg).snapshot(kind as usize) {
+            f.destroy(p);
+        }
+        (*reg).clear(kind as usize);
+    }
+}
+
+/// `STLMapDeleteAll` over the area map (key order).
+///
+/// # Safety
+/// `reg` live; every area is live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_area_destroy_all(reg: *mut Reg) {
+    // SAFETY: caller contract.
+    unsafe {
+        let f = (*reg).foreign(AREA);
+        for (_, p) in (*reg).areas() {
+            f.destroy(p);
+        }
+        (*reg).area_clear();
+    }
+}
+
+/// # Safety
+/// `reg` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_area_len(reg: *const Reg) -> usize {
+    // SAFETY: caller contract.
+    unsafe { (*reg).areas().len() }
+}
+
+/// The `i`-th area in key order; the key bytes stay valid until the map changes.
+///
+/// # Safety
+/// `reg` live; `key` writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_area_at(
+    reg: *const Reg,
+    i: usize,
+    key: *mut Name,
+) -> *mut c_void {
+    // SAFETY: caller contract.
+    unsafe {
+        (*reg).area_at(i, |k| {
+            *key = Name {
+                ptr: k.as_ptr(),
+                len: k.len(),
+            }
+        }) as *mut c_void
+    }
+}
+
+/// First position of the kind's list as cursor bits; 0 when empty.
+///
+/// # Safety
+/// `reg` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_cur_begin(reg: *const Reg, kind: u32) -> u64 {
+    // SAFETY: caller contract.
+    unsafe { (*reg).begin(kind as usize).map_or(0, EntityRef::to_bits) }
+}
+
+/// The entity at a cursor; null for 0, an erased or a cleared position.
+///
+/// # Safety
+/// `reg` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_cur_get(reg: *const Reg, kind: u32, cur: u64) -> *mut c_void {
+    // SAFETY: caller contract.
+    unsafe {
+        EntityRef::from_bits(kind as usize, cur).map_or(0, |at| (*reg).resolve(at)) as *mut c_void
+    }
+}
+
+/// # Safety
+/// `reg` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_cur_next(reg: *const Reg, kind: u32, cur: u64) -> u64 {
+    // SAFETY: caller contract.
+    unsafe {
+        EntityRef::from_bits(kind as usize, cur)
+            .and_then(|at| (*reg).next(at))
+            .map_or(0, EntityRef::to_bits)
+    }
+}
+
+/// Unlinks the entity at a cursor without destroying it; returns the next cursor.
+///
+/// # Safety
+/// `reg` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h13_cur_erase(reg: *mut Reg, kind: u32, cur: u64) -> u64 {
+    // SAFETY: caller contract.
+    unsafe {
+        EntityRef::from_bits(kind as usize, cur)
+            .and_then(|at| (*reg).erase(at))
+            .map_or(0, EntityRef::to_bits)
+    }
 }
 
 /// Writes at most `cap` `[first, last]` pairs to `out`; returns the pair count.

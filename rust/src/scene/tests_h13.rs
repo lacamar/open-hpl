@@ -2,7 +2,7 @@
 //! `reg_plan.txt` (world registry sequences, static-combine plans) and `maps.txt` (one parse-trace
 //! hash per Amnesia TDD / AMFP `.map`; replayed only when the game data is installed).
 
-use super::h13_world::{BodyItem, DYNAMIC_MESH, MeshItem, Reg, STATIC_MESH};
+use super::h13_world::{BodyItem, DYNAMIC_MESH, EntityRef, MeshItem, Reg, STATIC_MESH};
 use super::h13_world::{plan_bodies, plan_meshes};
 use crate::binary_buffer::BinaryBuffer;
 use crate::hplmap::{
@@ -69,7 +69,7 @@ fn replay_reg<'a>(it: &mut std::iter::Peekable<impl Iterator<Item = &'a [u8]>>) 
     let mut reg = Reg::default();
     let mut ops = 0;
     while let Some(l) = it.peek().copied() {
-        if l.starts_with(b"reg ") || l.starts_with(b"plan ") {
+        if l.starts_with(b"reg ") || l.starts_with(b"walk ") || l.starts_with(b"plan ") {
             break;
         }
         it.next();
@@ -156,11 +156,18 @@ fn replay_plan<'a>(it: &mut std::iter::Peekable<impl Iterator<Item = &'a [u8]>>,
 #[test]
 fn registry_and_planner_match_cpp_golden() {
     let mut it = lines(REG_PLAN).peekable();
-    let (mut seeds, mut ops, mut plans) = (0, 0, 0);
+    let (mut seeds, mut ops, mut plans, mut walks) = (0, 0, 0, 0);
     while let Some(l) = it.next() {
         if l.starts_with(b"reg ") {
             seeds += 1;
             ops += replay_reg(&mut it);
+        } else if l.starts_with(b"walk ") {
+            // Op stream is RNG-driven in the harness (std::list oracle vs Rust cursors in process).
+            walks += 1;
+            while it
+                .next_if(|n| !n.starts_with(b"plan ") && !n.starts_with(b"walk "))
+                .is_some()
+            {}
         } else if l.starts_with(b"plan ") {
             plans += 1;
             replay_plan(&mut it, num(words(l)[2]) as usize);
@@ -168,7 +175,7 @@ fn registry_and_planner_match_cpp_golden() {
             panic!("unexpected {}", String::from_utf8_lossy(l));
         }
     }
-    assert_eq!((seeds, plans), (6, 400));
+    assert_eq!((seeds, walks, plans), (6, 6, 400));
     assert!(ops > 2000, "{ops}");
 }
 
@@ -453,4 +460,67 @@ fn map_parse_traces_match_cpp_golden() {
         checked += 1;
     }
     eprintln!("maps checked {checked}, data missing {missing}");
+}
+
+#[test]
+fn cursor_walk_matches_std_list_with_erase_and_append() {
+    let mut reg = Reg::default();
+    for p in 1..=5usize {
+        reg.add(1, p);
+    }
+    let mut seen = Vec::new();
+    let mut at = reg.begin(1);
+    let mut appended = false;
+    while let Some(c) = at {
+        let p = reg.resolve(c);
+        seen.push(p);
+        if p == 2 {
+            at = reg.erase(c);
+            continue;
+        }
+        if p == 4 && !appended {
+            reg.add(1, 6);
+            appended = true;
+        }
+        at = reg.next(c);
+    }
+    assert_eq!(seen, [1, 2, 3, 4, 5, 6]);
+    assert_eq!(reg.snapshot(1), [1, 3, 4, 5, 6]);
+    let c = reg.begin(1).expect("first");
+    assert_eq!(EntityRef::from_bits(1, c.to_bits()), Some(c));
+    assert_eq!(EntityRef::from_bits(1, 0), None);
+    reg.clear(1);
+    assert_eq!(reg.resolve(c), 0);
+}
+
+thread_local! {
+    static DROPS: std::cell::RefCell<Vec<usize>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+unsafe extern "C" fn record_drop(p: *mut std::ffi::c_void) {
+    DROPS.with(|d| d.borrow_mut().push(p as usize));
+}
+
+#[test]
+fn destroy_runs_foreign_drop_in_creation_order() {
+    use super::ffi_h13::{
+        ohpl_h13_reg_add, ohpl_h13_reg_destroy, ohpl_h13_reg_destroy_all, ohpl_h13_reg_free,
+        ohpl_h13_reg_len, ohpl_h13_reg_new, ohpl_h13_reg_set_foreign,
+    };
+    DROPS.with(|d| d.borrow_mut().clear());
+    let reg = ohpl_h13_reg_new();
+    // SAFETY: `reg` is live until freed below; entities are opaque addresses.
+    unsafe {
+        ohpl_h13_reg_set_foreign(reg, 9, None, None, Some(record_drop));
+        for p in [10usize, 20, 30] {
+            ohpl_h13_reg_add(reg, 9, p as *mut _);
+        }
+        assert!(ohpl_h13_reg_destroy(reg, 9, 20 as *mut _, true));
+        assert!(!ohpl_h13_reg_destroy(reg, 9, 99 as *mut _, true));
+        assert!(!ohpl_h13_reg_destroy(reg, 9, 98 as *mut _, false));
+        ohpl_h13_reg_destroy_all(reg, 9);
+        assert_eq!(ohpl_h13_reg_len(reg, 9), 0);
+        ohpl_h13_reg_free(reg);
+    }
+    DROPS.with(|d| assert_eq!(*d.borrow(), [20, 98, 10, 30]));
 }
