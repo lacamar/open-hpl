@@ -82,24 +82,24 @@ private:
 	
 	/////////////////////////
 	// Data
-	float mfDensity;
-	float mfLinearViscosity;
-	float mfAngularViscosity;
+	float &mfDensity;
+	float &mfLinearViscosity;
+	float &mfAngularViscosity;
 	
 	iPhysicsMaterial *mpPhysicsMaterial;
 
-	bool mbHasWaves;
-	float mfWaveAmp;
-	float mfWaveFreq;
+	bool &mbHasWaves;
+	float &mfWaveAmp;
+	float &mfWaveFreq;
 
-	float mfPlayerSpeedMul;
-	float mfMaxWaveDistanceSqr;
+	float &mfPlayerSpeedMul;
+	float &mfMaxWaveDistanceSqr;
 
 	/////////////////////////
 	// Variables
-	float mfTimeCount;
+	float &mfTimeCount;
 
-	cPlanef mSurfacePlane;
+	cPlanef &mSurfacePlane;
 };
 
 //----------------------------------------------

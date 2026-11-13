@@ -83,7 +83,7 @@ private:
 
 	/////////////////////////
 	// Data
-	float mfInsaneLimit;
+	float &mfInsaneLimit;
 
 	tString msDescCat;
 	tString msDescEntry;
@@ -96,7 +96,7 @@ private:
 	
 	/////////////////////////
 	// Variables
-	float mfPlaySoundCount;
+	float &mfPlaySoundCount;
 };
 
 //----------------------------------------------

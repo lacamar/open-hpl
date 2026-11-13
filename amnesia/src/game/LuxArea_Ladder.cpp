@@ -77,7 +77,10 @@ void cLuxAreaLoader_Ladder::SetupArea(iLuxArea *apArea, cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-cLuxArea_Ladder::cLuxArea_Ladder(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Ladder)
+cLuxArea_Ladder::cLuxArea_Ladder(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Ladder),
+	mvForward(*reinterpret_cast<cVector3f*>(&Pod<OhplA7Ladder>().forward)),
+	mfMaxY(Pod<OhplA7Ladder>().maxY),
+	mfMinY(Pod<OhplA7Ladder>().minY)
 {
 	mfMaxFocusDistance = gpBase->mpGameCfg->GetFloat("Player_Interaction","Ladder_MaxFocusDist",0);
 }
@@ -101,6 +104,11 @@ void cLuxArea_Ladder::SetupAfterLoad(cWorld *apWorld)
 	/////////////////////////////////
 	//Generate some variables based on the area body
 	cMatrixf mtxWorld = mpBody->GetWorldMatrix();
+	if(mpA7Area)
+	{
+		ohpl_a7_area_ladder_setup(mpA7Area, reinterpret_cast<const OhplGa5Mtx*>(&mtxWorld), mpBody->GetWorldPosition().y, mpBody->GetShape()->GetSize().y);
+		return;
+	}
 	OhplGa5LadderSetup setup;
 	ohpl_ga5_ladder_setup(reinterpret_cast<const OhplGa5Mtx*>(&mtxWorld), mpBody->GetWorldPosition().y, mpBody->GetShape()->GetSize().y, &setup);
 	mvForward = cVector3f(setup.forward.x, setup.forward.y, setup.forward.z);
@@ -118,6 +126,7 @@ void cLuxArea_Ladder::OnUpdate(float afTimeStep)
 
 bool cLuxArea_Ladder::CanInteract(iPhysicsBody *apBody)
 {
+	if(mpA7Area) return ohpl_a7_area_can_interact(mpA7Area, false);
 	return true;
 }
 
@@ -158,6 +167,11 @@ bool cLuxArea_Ladder::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 eLuxFocusCrosshair cLuxArea_Ladder::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
+	if(mpA7Area)
+	{
+		const int vTable[4] = { eLuxFocusCrosshair_Default, eLuxFocusCrosshair_Grab, eLuxFocusCrosshair_Ladder, eLuxFocusCrosshair_LastEnum };
+		return (eLuxFocusCrosshair)ohpl_a7_area_crosshair(mpA7Area, false, 0, &vTable);
+	}
 	return eLuxFocusCrosshair_Ladder;	
 }
 
@@ -179,6 +193,11 @@ cVector3f cLuxArea_Ladder::GetStartPosition()
 	cVector3f vForward = GetForward();
 
 	cVector3f vResult;
+	if(mpA7Area)
+	{
+		ohpl_a7_area_ladder_start(mpA7Area, reinterpret_cast<const OhplGa5Vec3*>(&vLadderPos), reinterpret_cast<const OhplGa5Vec3*>(&vCharSize), vPos.y, reinterpret_cast<OhplGa5Vec3*>(&vResult));
+		return vResult;
+	}
 	ohpl_ga5_ladder_start_pos(reinterpret_cast<const OhplGa5Vec3*>(&vLadderPos), reinterpret_cast<const OhplGa5Vec3*>(&vForward), reinterpret_cast<const OhplGa5Vec3*>(&vCharSize), vPos.y, mfMaxY, mfMinY, reinterpret_cast<OhplGa5Vec3*>(&vResult));
 	return vResult;
 }

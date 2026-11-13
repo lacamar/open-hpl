@@ -74,7 +74,8 @@ void cLuxAreaLoader_Flashback::SetupArea(iLuxArea *apArea, cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-cLuxArea_Flashback::cLuxArea_Flashback(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Flashback)
+cLuxArea_Flashback::cLuxArea_Flashback(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Flashback),
+	mfCheckCollisionCount(Pod<OhplA7Flashback>().checkCollisionCount)
 {
 	mfCheckCollisionCount =0;
 }
@@ -95,12 +96,19 @@ cLuxArea_Flashback::~cLuxArea_Flashback()
 
 void cLuxArea_Flashback::OnUpdate(float afTimeStep)
 {
-	//Do not update this unless it is a proper game update (when eveything is 100% intialized)
-	if(ohpl_ga5_step_too_small(afTimeStep, gpBase->mpEngine->GetStepSize())) return;
+	if(mpA7Area)
+	{
+		if(ohpl_a7_area_tick(mpA7Area, afTimeStep, gpBase->mpEngine->GetStepSize())==false) return;
+	}
+	else
+	{
+		//Do not update this unless it is a proper game update (when eveything is 100% intialized)
+		if(ohpl_ga5_step_too_small(afTimeStep, gpBase->mpEngine->GetStepSize())) return;
 
-	//////////////////////////
-	// Check update count
-	if(ohpl_ga5_tick_fixed(&mfCheckCollisionCount, afTimeStep, 0.1f)==false) return;
+		//////////////////////////
+		// Check update count
+		if(ohpl_ga5_tick_fixed(&mfCheckCollisionCount, afTimeStep, 0.1f)==false) return;
+	}
 
 	//////////////////////////
 	// Check collision

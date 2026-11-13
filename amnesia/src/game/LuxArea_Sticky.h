@@ -84,7 +84,7 @@ public:
 	static void SetAllowAttachment(bool abX){ mbAllowAttachment = abX;}
 
 	iPhysicsBody *GetAttachedBody(){ return mpAttachedBody;}
-	bool CanDetach(){ return mbCanDetach && mfSetMtxTime>=1;}
+	bool CanDetach(){ return mpA7Area ? ohpl_a7_area_sticky_can_detach(mpA7Area) : (mbCanDetach && mfSetMtxTime>=1);}
 
 	//////////////////////
 	//Connection callbacks
@@ -117,27 +117,27 @@ private:
 
 	tString msAttachableBodyName;
 
-	bool mbMoveBody;
-	bool mbRotateBody;
+	bool &mbMoveBody;
+	bool &mbRotateBody;
 
-	bool mbCheckCenterInArea;
+	bool &mbCheckCenterInArea;
 
-	bool mbCanDetach;
+	bool &mbCanDetach;
 
-	float mfPoseTime;
+	float &mfPoseTime;
 
 	/////////////////////////
 	// Variables
-	bool mbAttachedBodyGravity;
-	float mfAttachedBodyMass;
+	bool &mbAttachedBodyGravity;
+	float &mfAttachedBodyMass;
 
-	bool mbAttachedEntityFullGameSaved;
+	bool &mbAttachedEntityFullGameSaved;
 
 	iPhysicsBody *mpAttachedBody;
 	iPhysicsBody *mpLastAttachedBody;
 
-	float mfSetMtxTime;
-	cMatrixf mtxAttachedStart;
+	float &mfSetMtxTime;
+	cMatrixf &mtxAttachedStart;
 
 	static bool mbAllowAttachment;
 };

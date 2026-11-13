@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxEntity.h"
+#include "RustLuxMapA7.h"
 
 //----------------------------------------------
 
@@ -99,16 +100,22 @@ protected:
 	void OnSetActive(bool abX);
 	void OnUpdate(float afTimeStep);
 
+	template<class T> T& Pod(){ return *static_cast<T*>(mpA7Pod); }
+
 	eLuxAreaType mAreaType;
-	
+
+	OhplA7Area *mpA7Area;
+	OhplA7Base *mpA7Base;
+	void *mpA7Pod;
+
 	iPhysicsBody *mpBody;
-	cVector3f mvSize;
-	cMatrixf m_mtxTransform;
+	cVector3f &mvSize;
+	cMatrixf &m_mtxTransform;
 
 	iPhysicsBody *mpParentBody;
-	cVector3f mvRelativeOffset; 
+	cVector3f &mvRelativeOffset;
 	tString msPropName;
-	int mlBodyId;
+	int &mlBodyId;
 };
 
 //----------------------------------------------

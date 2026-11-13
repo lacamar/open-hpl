@@ -89,7 +89,15 @@ void cLuxAreaLoader_SlimeDamage::SetupArea(iLuxArea *apArea, cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-cLuxArea_SlimeDamage::cLuxArea_SlimeDamage(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_SlimeDamage)
+cLuxArea_SlimeDamage::cLuxArea_SlimeDamage(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_SlimeDamage),
+	mlSlimeType(Pod<OhplA7Slime>().slimeType),
+	mfMinCheckAttackTime(Pod<OhplA7Slime>().minCheckAttackTime),
+	mfMaxCheckAttackTime(Pod<OhplA7Slime>().maxCheckAttackTime),
+	mbDisableAfterAttack(Pod<OhplA7Slime>().disableAfterAttack),
+	mfMinAttackDamage(Pod<OhplA7Slime>().minAttackDamage),
+	mfMaxAttackDamage(Pod<OhplA7Slime>().maxAttackDamage),
+	mfScreenShakeAmount(Pod<OhplA7Slime>().screenShakeAmount),
+	mfCheckCollisionCount(Pod<OhplA7Slime>().checkCollisionCount)
 {
 	mfCheckCollisionCount = 0;
 }
@@ -112,7 +120,8 @@ void cLuxArea_SlimeDamage::OnUpdate(float afTimeStep)
 {
 	//////////////////////////
 	// Check update count
-	if(ohpl_ga5_tick_random(&mfCheckCollisionCount, afTimeStep, mfMinCheckAttackTime, mfMaxCheckAttackTime)==false) return;
+	if(mpA7Area ? ohpl_a7_area_tick(mpA7Area, afTimeStep, 0)==false
+				: ohpl_ga5_tick_random(&mfCheckCollisionCount, afTimeStep, mfMinCheckAttackTime, mfMaxCheckAttackTime)==false) return;
 
 	//////////////////////////
 	// Check collision

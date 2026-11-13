@@ -84,7 +84,9 @@ void cLuxAreaLoader_Examine::SetupArea(iLuxArea *apArea, cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-cLuxArea_Examine::cLuxArea_Examine(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Examine)
+cLuxArea_Examine::cLuxArea_Examine(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Examine),
+	mfInsaneLimit(Pod<OhplA7Examine>().insaneLimit),
+	mfPlaySoundCount(Pod<OhplA7Examine>().playSoundCount)
 {
 	mfMaxFocusDistance = gpBase->mpGameCfg->GetFloat("Player_Interaction","Examine_MaxFocusDist",0);
 	mfInsaneLimit = gpBase->mpGameCfg->GetFloat("Player_Interaction","MaxExamineSanity",0);
@@ -116,13 +118,15 @@ void cLuxArea_Examine::SetupAfterLoad(cWorld *apWorld)
 
 void cLuxArea_Examine::OnUpdate(float afTimeStep)
 {
-	ohpl_ga5_examine_tick(&mfPlaySoundCount, afTimeStep);
+	if(mpA7Area) ohpl_a7_area_tick(mpA7Area, afTimeStep, 0);
+	else ohpl_ga5_examine_tick(&mfPlaySoundCount, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxArea_Examine::CanInteract(iPhysicsBody *apBody)
 {
+	if(mpA7Area) return ohpl_a7_area_can_interact(mpA7Area, false);
 	return true;
 }
 
@@ -135,7 +139,8 @@ bool cLuxArea_Examine::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 	OhplGa5ExamineIn examineIn = {	msDescCat != "", msDescInsaneCat != "", msDescInsaneEntry != "",
 									msSound != "", msInsaneSound != "" };
 	OhplGa5ExamineOut examineOut;
-	ohpl_ga5_examine_interact(&examineIn, fSanity, mfInsaneLimit, mfPlaySoundCount, &examineOut);
+	if(mpA7Area) ohpl_a7_area_examine(mpA7Area, &examineIn, fSanity, &examineOut);
+	else ohpl_ga5_examine_interact(&examineIn, fSanity, mfInsaneLimit, mfPlaySoundCount, &examineOut);
 
 	////////////////////////////////
 	// Show text
@@ -162,7 +167,7 @@ bool cLuxArea_Examine::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 		gpBase->mpHelpFuncs->PlayGuiSoundData(sSound, eSoundEntryType_Gui);
 	}
-	mfPlaySoundCount = 0.5f;
+	if(mpA7Area == NULL) mfPlaySoundCount = 0.5f;
 
 	return true;
 }
@@ -171,6 +176,11 @@ bool cLuxArea_Examine::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 eLuxFocusCrosshair cLuxArea_Examine::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
+	if(mpA7Area)
+	{
+		const int vTable[4] = { eLuxFocusCrosshair_Default, eLuxFocusCrosshair_Grab, eLuxFocusCrosshair_Ladder, eLuxFocusCrosshair_LastEnum };
+		return (eLuxFocusCrosshair)ohpl_a7_area_crosshair(mpA7Area, false, 0, &vTable);
+	}
 	return eLuxFocusCrosshair_Grab;	
 }
 

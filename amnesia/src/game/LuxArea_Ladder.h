@@ -83,9 +83,9 @@ private:
 
 	/////////////////////////
 	// Data
-	cVector3f mvForward;
-	float mfMaxY;
-	float mfMinY;
+	cVector3f &mvForward;
+	float &mfMaxY;
+	float &mfMinY;
 
 	tString msMaterial;
 

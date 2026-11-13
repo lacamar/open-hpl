@@ -63,13 +63,13 @@ private:
 
 	/////////////////////////
 	// Data
-	float mfCheckTimeMin;
-	float mfCheckTimeMax;
-	
+	float &mfCheckTimeMin;
+	float &mfCheckTimeMax;
+
 	/////////////////////////
 	// Variables
-	float mfCheckCollisionCount;
-	bool mbAutoDisable;
+	float &mfCheckCollisionCount;
+	bool &mbAutoDisable;
 };
 
 //----------------------------------------------

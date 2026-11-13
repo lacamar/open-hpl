@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxMapA7.h"
 
 //----------------------------------------------
 
@@ -158,6 +159,7 @@ private:
 	cLuxMap* mpCurrentMap;
 
 	tLuxMapList mlstMaps;
+	OhplA7Ctx *mpA7Maps;
 
 	cViewport *mpViewport;
 	cMapHandlerSoundCallback* mpSoundCallback;

@@ -88,7 +88,17 @@ void cLuxAreaLoader_Liquid::SetupArea(iLuxArea *apArea, cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-cLuxArea_Liquid::cLuxArea_Liquid(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Liquid)
+cLuxArea_Liquid::cLuxArea_Liquid(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Liquid),
+	mfDensity(Pod<OhplA7Liquid>().density),
+	mfLinearViscosity(Pod<OhplA7Liquid>().linearViscosity),
+	mfAngularViscosity(Pod<OhplA7Liquid>().angularViscosity),
+	mbHasWaves(Pod<OhplA7Liquid>().hasWaves),
+	mfWaveAmp(Pod<OhplA7Liquid>().waveAmp),
+	mfWaveFreq(Pod<OhplA7Liquid>().waveFreq),
+	mfPlayerSpeedMul(Pod<OhplA7Liquid>().playerSpeedMul),
+	mfMaxWaveDistanceSqr(Pod<OhplA7Liquid>().maxWaveDistanceSqr),
+	mfTimeCount(Pod<OhplA7Liquid>().timeCount),
+	mSurfacePlane(*reinterpret_cast<cPlanef*>(&Pod<OhplA7Liquid>().surfacePlane))
 {
 	mpPhysicsMaterial = NULL;
 	mbFullGameSave = true;
@@ -115,7 +125,8 @@ void cLuxArea_Liquid::SetupAfterLoad(cWorld *apWorld)
 	float fHeight = mpBody->GetShape()->GetSize().y;
 	cVector3f vPos = mpBody->GetWorldPosition();
 
-	ohpl_ga5_liquid_surface_plane(vPos.y, fHeight, reinterpret_cast<OhplGa5Plane*>(&mSurfacePlane));
+	if(mpA7Area) ohpl_a7_area_liquid_setup(mpA7Area, vPos.y, fHeight);
+	else ohpl_ga5_liquid_surface_plane(vPos.y, fHeight, reinterpret_cast<OhplGa5Plane*>(&mSurfacePlane));
 }
 
 //-----------------------------------------------------------------------
@@ -123,7 +134,11 @@ void cLuxArea_Liquid::SetupAfterLoad(cWorld *apWorld)
 void cLuxArea_Liquid::OnUpdate(float afTimeStep)
 {
 	//Do not update this unless it is a proper game update (when eveything is 100% intialized)
-	if(ohpl_ga5_step_too_small(afTimeStep, gpBase->mpEngine->GetStepSize())) return;
+	if(mpA7Area)
+	{
+		if(ohpl_a7_area_tick(mpA7Area, afTimeStep, gpBase->mpEngine->GetStepSize())==false) return;
+	}
+	else if(ohpl_ga5_step_too_small(afTimeStep, gpBase->mpEngine->GetStepSize())) return;
 
 	///////////////////////////
 	// Get data
@@ -137,7 +152,7 @@ void cLuxArea_Liquid::OnUpdate(float afTimeStep)
 
 	///////////////////////////
 	// Update count
-	mfTimeCount += afTimeStep;
+	if(mpA7Area == NULL) mfTimeCount += afTimeStep;
 
 	///////////////////////////
 	// Iterate bodies

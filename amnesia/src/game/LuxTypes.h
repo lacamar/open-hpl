@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "StdAfx.h"
+#include "RustLuxMapA7.h"
 
 //----------------------------------------------
 
@@ -520,7 +521,7 @@ typedef tLuxEntityIDMap::iterator tLuxEntityIDMapIt;
 typedef std::list<iLuxEntity*> tLuxEntityList;
 typedef tLuxEntityList::iterator tLuxEntityListIt;
 
-typedef cSTLIterator<iLuxEntity*, tLuxEntityList, tLuxEntityListIt> cLuxEntityIterator;
+typedef ohpl_a7::Iterator<iLuxEntity*, tLuxEntityList, tLuxEntityListIt> cLuxEntityIterator;
 
 //----------------------------------------------
 
@@ -532,7 +533,7 @@ typedef tLuxEnemyList::iterator tLuxEnemyListIt;
 typedef std::set<iLuxEnemy*> tLuxEnemySet;
 typedef tLuxEnemySet::iterator tLuxEnemySetIt;
 
-typedef cSTLIterator<iLuxEnemy*, tLuxEnemyList, tLuxEnemyListIt> cLuxEnemyIterator;
+typedef ohpl_a7::Iterator<iLuxEnemy*, tLuxEnemyList, tLuxEnemyListIt> cLuxEnemyIterator;
 
 //----------------------------------------------
 

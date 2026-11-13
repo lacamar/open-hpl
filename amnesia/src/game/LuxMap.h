@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxMapA7.h"
 
 //----------------------------------------------
 
@@ -95,6 +96,8 @@ public:
 
 	void OnRenderSolid(cRendererCallbackFunctions* apFunctions);
 	
+	OhplA7Ctx* GetA7(){ return mpA7; }
+
 	cWorld* GetWorld(){ return mpWorld; }
 	iPhysicsWorld* GetPhysicsWorld(){ return mpPhysicsWorld; }
 
@@ -115,8 +118,8 @@ public:
 	void DestroyEntity(iLuxEntity *apEntity);
 	iLuxEntity *GetEntityByName(const tString& asName, eLuxEntityType aType=eLuxEntityType_LastEnum, int alSubType=-1);
 	iLuxEntity *GetEntityByID(int alID, eLuxEntityType aType=eLuxEntityType_LastEnum, int alSubType=-1);
-	iLuxEntity *GetLatestEntity(){ return mpLatestAddedEntity;}
-	void ResetLatestEntity(){ mpLatestAddedEntity=NULL;}
+	iLuxEntity *GetLatestEntity(){ return mpA7 ? static_cast<iLuxEntity*>(ohpl_a7_ent_latest(mpA7)) : mpLatestAddedEntity;}
+	void ResetLatestEntity(){ if(mpA7) ohpl_a7_ent_reset_latest(mpA7); else mpLatestAddedEntity=NULL;}
 	bool EntityExists(iLuxEntity *apEntity);
 	cLuxEntityIterator GetEntityIterator();
 	cLuxEnemyIterator GetEnemyIterator();
@@ -149,8 +152,8 @@ public:
 	void AddPlayerStart(cLuxNode_PlayerStart *apNode);
 	cLuxNode_PlayerStart *GetPlayerStart(const tString & asName);
 	cLuxNode_PlayerStart *GetFirstPlayerStart();
-	int GetPlayerStartNodeNum(){ return (int)mvPlayerStartNodes.size();}
-	cLuxNode_PlayerStart *GetPlayerStartNode(int alIdx){ return mvPlayerStartNodes[alIdx];}
+	int GetPlayerStartNodeNum(){ return mpA7 ? (int)ohpl_a7_start_num(mpA7) : (int)mvPlayerStartNodes.size();}
+	cLuxNode_PlayerStart *GetPlayerStartNode(int alIdx){ return mpA7 ? static_cast<cLuxNode_PlayerStart*>(ohpl_a7_start_at(mpA7, alIdx)) : mvPlayerStartNodes[alIdx];}
 
 	void AddPosNode(cLuxNode_Pos *apNode);
 	cLuxNode_Pos *GetPosNode(const tString & asName);
@@ -162,6 +165,13 @@ public:
 								const tString& asFunction, bool abAutoCallback);
 	void RemoveUseItemCallback( const tString& asName);
 
+	// Save glue: the callbacks, timers and vars as the save data holds them.
+	void CopyUseItemCallbacks(std::vector<cLuxUseItemCallback> &avOut);
+	void SetUseItemCallbacks(const std::vector<cLuxUseItemCallback> &avIn);
+	void CopyTimers(std::vector<cLuxEventTimer> &avOut);
+	void SetTimers(const std::vector<cLuxEventTimer> &avIn);
+	bool GetTimerCount(const tString& asName, float *apCount);
+
 	/**
 	 * if asName is not "" it can be used as a safty check so it really is the correct callback that is destroyed!
 	 */
@@ -170,7 +180,6 @@ public:
 
 	void AddTimer(const tString& asName, float afTime, const tString& asFunction);
 	void RemoveTimer(const tString& asName);
-	cLuxEventTimer* GetTimer(const tString& asName);
 	
 	void AddDissolveEntity(cMeshEntity *apMeshEntity, float afTime);
 
@@ -179,7 +188,7 @@ public:
 
 	cLuxScriptVar* GetVar(const tString &asName);
 
-	bool IsDeletingAllWorldEntities(){ return mbDeletingAllWorldEntities;}
+	bool IsDeletingAllWorldEntities(){ return mpA7 ? ohpl_a7_deleting_all(mpA7) : mbDeletingAllWorldEntities;}
 
 	//////////////////////////
 	// Properties	
@@ -201,11 +210,16 @@ private:
 	void UpdateDissolveEntities(float afTimeStep);
 	void UpdateLampLightConnections(float afTimeStep);
 	void UpdateCheckCommentaryIconActive(float afTimeStep);
+	void DumpA7(const char *asFile, const char *asLabel);
+
+	int mlA7Frames;
 
 	tString msName;
 	tString msFileName;
 
 	tString msDisplayNameEntry;
+
+	OhplA7Ctx *mpA7;
 
 	bool mbUpdatingTimers;
 

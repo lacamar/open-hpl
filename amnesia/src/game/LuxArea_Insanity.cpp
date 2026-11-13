@@ -70,7 +70,11 @@ void cLuxAreaLoader_Insanity::SetupArea(iLuxArea *apArea, cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-cLuxArea_Insanity::cLuxArea_Insanity(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Insanity)
+cLuxArea_Insanity::cLuxArea_Insanity(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Insanity),
+	mfCheckTimeMin(Pod<OhplA7Insanity>().checkTimeMin),
+	mfCheckTimeMax(Pod<OhplA7Insanity>().checkTimeMax),
+	mfCheckCollisionCount(Pod<OhplA7Insanity>().checkCollisionCount),
+	mbAutoDisable(Pod<OhplA7Insanity>().autoDisable)
 {
 	mfCheckTimeMin = gpBase->mpGameCfg->GetFloat("Insanity", "InsanityArea_CheckTimeMin",0);
 	mfCheckTimeMax = gpBase->mpGameCfg->GetFloat("Insanity", "IsanityArea_CheckTimeMax",0);
@@ -96,7 +100,8 @@ void cLuxArea_Insanity::OnUpdate(float afTimeStep)
 {
 	//////////////////////////
 	// Check update count
-	if(ohpl_ga5_tick_random(&mfCheckCollisionCount, afTimeStep, mfCheckTimeMin, mfCheckTimeMax)==false) return;
+	if(mpA7Area ? ohpl_a7_area_tick(mpA7Area, afTimeStep, 0)==false
+				: ohpl_ga5_tick_random(&mfCheckCollisionCount, afTimeStep, mfCheckTimeMin, mfCheckTimeMax)==false) return;
 
 	//////////////////////////
 	// Check collision
