@@ -25,6 +25,7 @@
 
 #include "graphics/FontData.h"
 #include "gui/RustWidget3.h"
+#include "impl/RustBackends.h"
 
 #include "system/LowLevelSystem.h"
 
@@ -39,8 +40,10 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	cWidgetContextMenu::cWidgetContextMenu(cGuiSet *apSet, cGuiSkin *apSkin) : iWidgetMenu(eWidgetType_ContextMenu,apSet,apSkin)
+	cWidgetContextMenu::cWidgetContextMenu(cGuiSet *apSet, cGuiSkin *apSkin) : iWidgetMenu(eWidgetType_ContextMenu,apSet,apSkin),
+		mfTimer(mH.timer), mfHideTime(mH.hideTime)
 	{
+		ohpl_h20_cm_init(&gH20Host, &mH, (uintptr_t)(iWidget*)this, &mB);
 		mfTimer = 0;
 		mfHideTime = 0;
 	}
@@ -66,6 +69,12 @@ namespace hpl {
 
 	void cWidgetContextMenu::Hide()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cm_hide(&gH20Host, &mH);
+			return;
+		}
+
 		//////////////////////////////////////////
 		// This does the following:
 		// - Closes any submenu that is being shown at the moment
@@ -106,6 +115,11 @@ namespace hpl {
 
 	float cWidgetContextMenu::GetMenuItemWidth()
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cm_item_width(&gH20Host, &mH);
+		}
+
 		return ohpl_w3_ctx_item_width(mvSize.x, mvGfxBorders[0]->GetImageSize().x, mvGfxBorders[1]->GetImageSize().x);
 	}
 
@@ -119,6 +133,12 @@ namespace hpl {
 
 	void cWidgetContextMenu::UpdateMenuItemsPos(cWidgetMenuItem* apNewItem)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cm_update_items_pos(&gH20Host, &mH, (uintptr_t)(iWidget*)apNewItem);
+			return;
+		}
+
 		cVector3f vPos;
 		ohpl_w3_ctx_item_pos(mvSize.y, mvGfxBorders[2]->GetImageSize().y, mvGfxBorders[0]->GetImageSize().x,
 							 mvMenuItems.size(), &vPos);
@@ -130,6 +150,12 @@ namespace hpl {
 
 	void cWidgetContextMenu::UpdateMenuItemsSize(cWidgetMenuItem* apNewItem)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cm_update_items_size(&gH20Host, &mH, (uintptr_t)(iWidget*)apNewItem);
+			return;
+		}
+
 		float fTextLength = apNewItem->GetTextLength();
 
 		UpdateMenuWidth(fTextLength);
@@ -158,6 +184,12 @@ namespace hpl {
 
 	void cWidgetContextMenu::UpdateMenuWidth(float afItemTextWidth)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cm_update_width(&gH20Host, &mH, afItemTextWidth);
+			return;
+		}
+
 		OhplW3CtxMetrics met = { mfItemHPadding, mfItemCheckIconSize, mfItemTextLeftPadding, mfItemTextRightPadding,
 								 mfItemArrowIconSize, mfItemVPadding,
 								 mvGfxBorders[0]->GetImageSize().x, mvGfxBorders[1]->GetImageSize().x };
@@ -193,6 +225,12 @@ namespace hpl {
     
 	void cWidgetContextMenu::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cm_on_draw(&gH20Host, &mH);
+			return;
+		}
+
 		////////////////////////////////
 		// Background and borders
 		DrawBordersAndCorners(	 mpGfxBackground, mvGfxBorders, mvGfxCorners, 
@@ -205,6 +243,12 @@ namespace hpl {
 
 	void cWidgetContextMenu::OnUpdate(float afTimeStep)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cm_on_update(&gH20Host, &mH, afTimeStep);
+			return;
+		}
+
 		////////////////////////////////////////////////
 		// Checks if should hide (ie if parent menu highlights some item other 
 		// than this menu's parent item, or if SetMustHide(true) has been called)
@@ -258,6 +302,11 @@ namespace hpl {
 
 	bool cWidgetContextMenu::OnLostFocus(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cm_on_lost_focus(&gH20Host, &mH);
+		}
+
 		iWidget* pFocus = mpSet->GetFocusedWidget();
 		bool bConnectedToFocus = pFocus ? IsConnectedTo(pFocus, false) : false;
 		bool bFocusConnectedToMenu = pFocus ? pFocus->IsConnectedTo(this, false) : false;
@@ -269,6 +318,11 @@ namespace hpl {
 
 	bool cWidgetContextMenu::OnGotFocus(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cm_on_got_focus(&gH20Host, &mH);
+		}
+
 		mfTimer=0;
 
 		return true;
@@ -278,6 +332,12 @@ namespace hpl {
 
 	void	cWidgetContextMenu::OnLoadGraphics()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cm_on_load_graphics(&gH20Host, &mH);
+			return;
+		}
+
 		mpGfxBackground = mpSkin->GetGfx(eGuiSkinGfx_ButtonUpBackground);
 
 		mvGfxBorders[0] = mpSkin->GetGfx(eGuiSkinGfx_ComboBoxBorderRight);
@@ -303,6 +363,11 @@ namespace hpl {
 
 	bool cWidgetContextMenu::OnKeyPress(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cm_on_key_press(&gH20Host, &mH, &aData);
+		}
+
 		if(ohpl_w3_ctx_key_hides(aData.mKeyPress.mKey))
 		{
 			Hide();

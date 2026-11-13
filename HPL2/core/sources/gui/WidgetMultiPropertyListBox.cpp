@@ -29,6 +29,7 @@
 
 #include "gui/GuiSet.h"
 #include "gui/GuiSkin.h"
+#include "impl/RustBackends.h"
 
 
 namespace hpl {
@@ -39,7 +40,7 @@ namespace hpl {
 
 	//-------------------------------------------------------------------------------
 
-	cWidgetMultiPropertyListBox::cWidgetMultiPropertyListBox(cGuiSet* apSet, cGuiSkin* apSkin) : iWidgetListBoxBase(apSet,apSkin)
+	cWidgetMultiPropertyListBox::cWidgetMultiPropertyListBox(cGuiSet* apSet, cGuiSkin* apSkin) : iWidgetListBoxBase(apSet,apSkin,1)
 	{
 		mbClipsGraphics = true;
 		mList.num_blank_rows = 1;
@@ -49,6 +50,7 @@ namespace hpl {
 	{
 		if(mpSet->IsDestroyingSet()==false)
 		{
+			if(OhplBackendRustRequested()) ohpl_h20_lb_destroy_columns(&gH20Host, &mH);
 			for(size_t i=0;i<mvColumns.size();++i)
 			{
 				mpSet->DestroyWidget(mvColumns[i]);
@@ -72,6 +74,13 @@ namespace hpl {
 	 */
 	void cWidgetMultiPropertyListBox::AddColumn(const tString& asName, const int alIndex, eFontAlign aAlign)
 	{
+		if(OhplBackendRustRequested())
+		{
+			tWString sName = cString::To16Char(asName);
+			ohpl_h20_lb_add_column(&gH20Host, &mH, sName.data(), sName.size(), alIndex, aAlign);
+			return;
+		}
+
 		mvSubLists.push_back(cSubList(asName,alIndex, aAlign));
 
 		cWidgetLabel* pLabel = mpSet->CreateWidgetLabel( cVector3f(0,0,mfBackgroundZ+0.5f),
@@ -96,6 +105,12 @@ namespace hpl {
 	 */
 	void cWidgetMultiPropertyListBox::SetColumnWidth(const int alIdx, float afWidth)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_set_column_width(&gH20Host, &mH, alIdx, afWidth);
+			return;
+		}
+
 		if(alIdx>=0 && alIdx<(int)mvColumns.size())
 		{
 			cWidgetLabel* pLabel = mvColumns[alIdx];

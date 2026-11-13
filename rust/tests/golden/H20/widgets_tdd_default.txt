@@ -1,0 +1,1154 @@
+seed 1 skin gui_default.skin
+set foc=-1 att=-1 mouse=00000000,00000000 tip=-1
+w tb vis=1 en=1 over=0 pos=41200000,41200000,00000000 sz=43200000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=5:409a25aea1097541 mk=-1 se=-1 fv=0 vs=5 tms=43160000 max=-1 edit=1 num=00000000 chg=0 prs=0 gf=0
+w ntb vis=1 en=1 over=0 pos=41200000,42480000,00000000 sz=42f00000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=1:44bd5bd473cd4929 mk=-1 se=-1 fv=0 vs=1 tms=42c80000 max=-1 edit=1 num=00000000 chg=1 prs=0 gf=0
+w combo vis=1 en=1 over=0 pos=43480000,41200000,00000000 sz=43160000,41b00000 sc=00000000,00000000 ch=00000000,00000000 open=0 sel=1 first=0 over=-1 shown=4 ui=0 mh=42880000 n=7 txt=7
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=-1 last=0 anc=-1 clk=0 lock=0 n=14 sel=
+w mpl vis=1 en=1 over=0 pos=43480000,42c80000,00000000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=-1 last=0 anc=-1 clk=0 lock=0 n=9 sel=
+w tabs vis=1 en=1 over=0 pos=41200000,43660000,00000000 sz=43960000,43160000 sc=00000000,00000000 ch=00000000,00000000 top=0 n=5 fv=0 lv=0 tabs=1100000000,11440c0000,1144dac000,11450f8000,1145574000,
+w ctx vis=0 en=1 over=0 pos=43e10000,42200000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w mm vis=1 en=1 over=0 pos=00000000,00000000,3f800000 sz=44480000,41b00000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w out vis=1 en=1 over=0 pos=44160000,43960000,00000000 sz=42b40000,41d00000 sc=00000000,00000000 ch=00000000,00000000 pressed=0 timer=00000000 times=0
+w ci0 vis=0 en=1 over=0 pos=43e18000,42240000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+w ci1 vis=0 en=1 over=0 pos=43e18000,426c0000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=0 tm=00000000 open=0 prs=0
+w ci2 vis=0 en=1 over=0 pos=43e18000,42a40000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+w ci3 vis=0 en=1 over=0 pos=43e18000,42c80000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=00000000 open=0 prs=0
+w mm0 vis=1 en=1 over=0 pos=40400000,40000000,40000000 sz=43dd0000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+w mm1 vis=1 en=1 over=0 pos=43e28000,40000000,40000000 sz=43dd0000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+w csub vis=0 en=1 over=0 pos=43e10000,42200000,00000000 sz=445d8000,42180000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w msub vis=0 en=1 over=0 pos=00000000,00000000,3f800000 sz=43f00000,42180000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+frame 0
+op nav 2 0
+cb list m14 key=90,0 ret=1
+= ret=1
+set foc=3 att=-1 mouse=00000000,00000000 tip=-1
+op setpos tb 42a60000 42240000 00000000
+= ret=0
+w tb vis=1 en=1 over=0 pos=42a60000,42240000,00000000 sz=43200000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=5:409a25aea1097541 mk=-1 se=-1 fv=0 vs=5 tms=43160000 max=-1 edit=1 num=00000000 chg=0 prs=0 gf=0
+op move 4458c000 428a0000
+cb list m0 pos=4458c000,428a0000 val=0 ret=0
+= ret=1
+set foc=3 att=-1 mouse=4458c000,428a0000 tip=-1
+op up 1
+cb list m2 pos=4458c000,428a0000 val=1 ret=1
+= ret=1
+op menu 3
+= ret=0
+set foc=12 att=-1 mouse=4458c000,428a0000 tip=-1
+op move 449be000 42e20000
+= ret=0
+set foc=12 att=-1 mouse=449be000,42e20000 tip=-1
+op down 1
+= ret=0
+set foc=-1 att=-1 mouse=449be000,42e20000 tip=-1
+op up 1
+= ret=0
+op click 43020000 42e40000 0 1 0
+cb list m0 pos=43020000,42e40000 val=0 ret=0
+cb list m1 pos=43020000,42e40000 val=1 ret=0
+cb list m2 pos=43020000,42e40000 val=1 ret=0
+= click 1
+set foc=3 att=-1 mouse=43020000,42e40000 tip=-1
+w list vis=1 en=1 over=1 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=0 last=-1 anc=0 clk=1 lock=0 n=14 sel=0,
+op setsize tb 42a60000 42a00000
+= ret=0
+w tb vis=1 en=1 over=0 pos=42a60000,42240000,00000000 sz=42a60000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=5:409a25aea1097541 mk=-1 se=-1 fv=0 vs=5 tms=42920000 max=-1 edit=1 num=00000000 chg=0 prs=0 gf=0
+op dbl
+cb list m3 pos=43020000,42e40000 val=1 ret=0
+= ret=1
+op setvalue 15
+= ret=0
+op tab 1 0
+= ret=0
+op tset tb 5 7
+= ret=0
+op vis mpl 1
+= ret=0
+op update 3e343959
+= ret=0
+op tkey tb 90 0
+cb tb m14 key=90,0 ret=1
+= ret=1
+set foc=0 att=-1 mouse=43020000,42e40000 tip=-1
+w tb vis=1 en=1 over=0 pos=42a60000,42240000,00000000 sz=42a60000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=5:409a25aea1097541 mk=-1 se=-1 fv=0 vs=5 tms=42920000 max=-1 edit=1 num=00000000 chg=0 prs=0 gf=1
+op click 438d8000 43844000 0 1 0
+cb tabs m4 pos=438d8000,43844000 val=0 ret=0
+cb list m5 pos=438d8000,43844000 val=0 ret=0
+cb tb m0 pos=438d8000,43844000 val=0 ret=0
+= click 1
+set foc=-1 att=-1 mouse=438d8000,43844000 tip=-1
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=0 last=-1 anc=0 clk=1 lock=0 n=14 sel=0,
+w tabs vis=1 en=1 over=1 pos=41200000,43660000,00000000 sz=43960000,43160000 sc=00000000,00000000 ch=00000000,00000000 top=0 n=5 fv=0 lv=0 tabs=1100000000,11440c0000,1144dac000,11450f8000,1145574000,
+op move 446ac000 42800000
+cb tabs m5 pos=446ac000,42800000 val=0 ret=1
+= ret=1
+set foc=-1 att=-1 mouse=446ac000,42800000 tip=-1
+w tabs vis=1 en=1 over=0 pos=41200000,43660000,00000000 sz=43960000,43160000 sc=00000000,00000000 ch=00000000,00000000 top=0 n=5 fv=0 lv=0 tabs=1100000000,11440c0000,1144dac000,11450f8000,1145574000,
+op move 44798000 42380000
+= ret=1
+set foc=-1 att=-1 mouse=44798000,42380000 tip=-1
+op move 43f60000 41a00000
+cb mm1 m4 pos=43f60000,41a00000 val=0 ret=0
+cb mm m0 pos=43f60000,41a00000 val=0 ret=0
+= ret=1
+set foc=-1 att=-1 mouse=43f60000,41a00000 tip=-1
+w mm vis=1 en=1 over=1 pos=00000000,00000000,3f800000 sz=44480000,41b00000 sc=00000000,00000000 ch=00000000,00000000 hl=14 must=0 sub=0
+w mm1 vis=1 en=1 over=1 pos=43e28000,40000000,40000000 sz=43dd0000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+op vis mm1 1
+= ret=0
+op move 441d8000 439e0000
+cb mm m5 pos=441d8000,439e0000 val=0 ret=0
+cb out m4 pos=441d8000,439e0000 val=0 ret=1
+cb out m0 pos=441d8000,439e0000 val=0 ret=1
+= ret=1
+set foc=-1 att=-1 mouse=441d8000,439e0000 tip=-1
+w mm vis=1 en=1 over=0 pos=00000000,00000000,3f800000 sz=44480000,41b00000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w out vis=1 en=1 over=1 pos=44160000,43960000,00000000 sz=42b40000,41d00000 sc=00000000,00000000 ch=00000000,00000000 pressed=0 timer=00000000 times=0
+w mm1 vis=1 en=1 over=0 pos=43e28000,40000000,40000000 sz=43dd0000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+op dbl
+cb out m3 pos=441d8000,439e0000 val=1 ret=0
+= ret=1
+op list 7 10
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=0 last=-1 anc=0 clk=1 lock=1 n=14 sel=
+op update 3eb43959
+= ret=0
+op up 1
+= ret=1
+op click 42d0cccc 43450000 0 1 0
+cb out m5 pos=42d0cccc,43450000 val=0 ret=0
+cb list m0 pos=42d0cccc,43450000 val=0 ret=0
+cb list m1 pos=42d0cccc,43450000 val=1 ret=0
+cb list m2 pos=42d0cccc,43450000 val=1 ret=1
+= click 1
+set foc=3 att=-1 mouse=42d0cccc,43450000 tip=-1
+w list vis=1 en=1 over=1 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=1 cur=5 last=0 anc=5 clk=1 lock=1 n=14 sel=5,
+w out vis=1 en=1 over=0 pos=44160000,43960000,00000000 sz=42b40000,41d00000 sc=00000000,00000000 ch=00000000,00000000 pressed=0 timer=00000000 times=0
+op combo 4 5
+cb list m1 pos=42d0cccc,43450000 val=1 ret=0
+= ret=1
+w list vis=1 en=1 over=1 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=2 cur=6 last=5 anc=6 clk=1 lock=1 n=14 sel=6,
+op combo 4 0
+cb list m2 pos=42d0cccc,43450000 val=1 ret=1
+= ret=1
+op menu 2
+= ret=0
+w ci0 vis=0 en=1 over=0 pos=43e18000,42240000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=00000000 open=0 prs=0
+op click 443a2e14 411eb852 0 1 0
+cb mm1 m4 pos=443a2e14,411eb852 val=0 ret=0
+cb mm m0 pos=443a2e14,411eb852 val=0 ret=0
+cb list m5 pos=443a2e14,411eb852 val=0 ret=0
+cb list m0 pos=443a2e14,411eb852 val=0 ret=0
+cb mm1 m6 pos=443a2e14,411eb852 ret=0
+cb mm1 m1 pos=443a2e14,411eb852 val=1 ret=1
+= click 1
+set foc=14 att=-1 mouse=443a2e14,411eb852 tip=-1
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=2 cur=6 last=5 anc=6 clk=1 lock=1 n=14 sel=6,
+w mm vis=1 en=1 over=1 pos=00000000,00000000,3f800000 sz=44480000,41b00000 sc=00000000,00000000 ch=00000000,00000000 hl=14 must=0 sub=0
+w mm1 vis=1 en=1 over=1 pos=43e28000,40000000,40000000 sz=43dd0000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=3f000000 open=0 prs=0
+op tab 5 4
+= ret=0
+op combo 1 1
+= ret=0
+w combo vis=1 en=1 over=0 pos=43480000,41200000,00000000 sz=43160000,41b00000 sc=00000000,00000000 ch=00000000,00000000 open=0 sel=1 first=0 over=-1 shown=2 ui=0 mh=42100000 n=7 txt=7
+op setsize mm0 42d40000 430e0000
+= ret=0
+w mm0 vis=1 en=1 over=0 pos=40400000,40000000,40000000 sz=42d40000,430e0000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+op move 43930000 432f0000
+cb mm m5 pos=43930000,432f0000 val=0 ret=0
+cb mpl m4 pos=43930000,432f0000 val=0 ret=0
+cb mpl m0 pos=43930000,432f0000 val=0 ret=0
+= ret=1
+set foc=14 att=-1 mouse=43930000,432f0000 tip=-1
+w mpl vis=1 en=1 over=1 pos=43480000,42c80000,00000000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=-1 last=0 anc=-1 clk=0 lock=0 n=9 sel=
+w mm vis=1 en=1 over=0 pos=00000000,00000000,3f800000 sz=44480000,41b00000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w mm1 vis=1 en=1 over=0 pos=43e28000,40000000,40000000 sz=43dd0000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+op click 43c70000 43106666 2 1 0
+cb mpl m0 pos=43c70000,43106666 val=0 ret=0
+cb mpl m6 pos=43c70000,43106666 ret=1
+cb mpl m1 pos=43c70000,43106666 val=1 ret=0
+cb mm1 m8 pos=43c70000,43106666 ret=0
+cb mpl m2 pos=43c70000,43106666 val=1 ret=0
+= click 1
+set foc=4 att=-1 mouse=43c70000,43106666 tip=-1
+w mpl vis=1 en=1 over=1 pos=43480000,42c80000,00000000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=1 last=-1 anc=-1 clk=1 lock=0 n=9 sel=0,1,
+op menu 3
+cb mpl m8 pos=43c70000,43106666 ret=0
+= ret=0
+set foc=15 att=-1 mouse=43c70000,43106666 tip=-1
+op arrowpress 4
+= ret=0
+cb ntb m6 pos=43c70000,43106666 ret=0
+op type ntb 55
+cb ntb m8 pos=43c70000,43106666 ret=1
+cb ntb m6 pos=43c70000,43106666 ret=0
+cb mpl m14 key=31,0 ret=0
+= ret=0
+set foc=1 att=-1 mouse=43c70000,43106666 tip=-1
+w ntb vis=1 en=1 over=0 pos=41200000,42480000,00000000 sz=42f00000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=1:44bd5bd473cd4929 mk=-1 se=-1 fv=0 vs=1 tms=42c80000 max=-1 edit=1 num=00000000 chg=0 prs=0 gf=1
+op dbl
+cb mpl m3 pos=43c70000,43106666 val=1 ret=0
+= ret=1
+op down 16
+cb mpl m6 pos=43c70000,43106666 ret=0
+cb mpl m1 pos=43c70000,43106666 val=16 ret=0
+cb ntb m8 pos=43c70000,43106666 ret=0
+= ret=1
+set foc=4 att=-1 mouse=43c70000,43106666 tip=-1
+w mpl vis=1 en=1 over=1 pos=43480000,42c80000,00000000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=3 cur=1 last=-1 anc=-1 clk=1 lock=0 n=9 sel=0,1,
+op list 3 12
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=2 cur=10 last=6 anc=6 clk=1 lock=1 n=14 sel=6,
+op down 8
+cb mpl m1 pos=43c70000,43106666 val=8 ret=0
+= ret=1
+w mpl vis=1 en=1 over=1 pos=43480000,42c80000,00000000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=1 last=-1 anc=-1 clk=1 lock=0 n=9 sel=0,1,
+op menu 2
+= ret=0
+op move 437b0000 420c0000
+cb mpl m0 pos=437b0000,420c0000 val=24 ret=0
+= ret=1
+set foc=4 att=-1 mouse=437b0000,420c0000 tip=-1
+w mpl vis=1 en=1 over=0 pos=43480000,42c80000,00000000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=1 last=-1 anc=-1 clk=1 lock=0 n=9 sel=0,1,
+op dbl
+= ret=0
+op up 1
+cb mpl m2 pos=437b0000,420c0000 val=1 ret=0
+= ret=1
+op click 417b851e 42d90000 0 1 0
+cb mm0 m4 pos=417b851e,42d90000 val=24 ret=1
+cb mm0 m0 pos=417b851e,42d90000 val=24 ret=0
+cb mpl m0 pos=417b851e,42d90000 val=24 ret=0
+cb mpl m8 pos=417b851e,42d90000 ret=0
+cb mm0 m2 pos=417b851e,42d90000 val=1 ret=0
+= click 1
+set foc=13 att=-1 mouse=417b851e,42d90000 tip=-1
+w mm vis=1 en=1 over=0 pos=00000000,00000000,3f800000 sz=44480000,41b00000 sc=00000000,00000000 ch=00000000,00000000 hl=13 must=0 sub=0
+w mm0 vis=1 en=1 over=1 pos=40400000,40000000,40000000 sz=42d40000,430e0000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=3f000000 open=0 prs=0
+cb mm0 m8 pos=417b851e,42d90000 ret=0
+op nav 1 0
+cb list m13 val=1 ret=0
+cb list m19 val=1 ret=0
+= ret=1
+set foc=3 att=-1 mouse=417b851e,42d90000 tip=-1
+op keypress 30 2
+cb list m14 key=30,2 ret=0
+= ret=0
+op up 1
+cb list m2 pos=417b851e,42d90000 val=1 ret=0
+= ret=1
+op tmouse ntb 2 41c00000 42800000
+cb list m2 pos=417b851e,42d90000 val=1 ret=0
+= ret=1
+op combo 1 0
+= ret=0
+w combo vis=1 en=1 over=0 pos=43480000,41200000,00000000 sz=43160000,41b00000 sc=00000000,00000000 ch=00000000,00000000 open=0 sel=1 first=0 over=-1 shown=1 ui=0 mh=41a00000 n=7 txt=7
+op btnrel 1
+cb list m20 val=1 ret=1
+= ret=1
+op list 5 10
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=6 cur=10 last=6 anc=6 clk=1 lock=1 n=15 sel=6,
+op down 16
+= ret=1
+set foc=13 att=-1 mouse=417b851e,42d90000 tip=-1
+op click 42c58a3d 422f70a4 0 1 1
+cb mm0 m0 pos=42c58a3d,422f70a4 val=24 ret=0
+cb mm0 m2 pos=42c58a3d,422f70a4 val=1 ret=1
+= click 1
+set foc=13 att=-1 mouse=42c58a3d,422f70a4 tip=-1
+op arrowrel 2
+= ret=0
+op up 1
+cb mm0 m2 pos=42c58a3d,422f70a4 val=1 ret=0
+= ret=1
+op list 3 7
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=6 cur=5 last=10 anc=6 clk=1 lock=1 n=15 sel=6,
+op click 4398cccd 430f3333 2 4 1
+cb mm0 m0 pos=4398cccd,430f3333 val=24 ret=0
+cb mpl m4 pos=4398cccd,430f3333 val=24 ret=0
+cb mpl m0 pos=4398cccd,430f3333 val=24 ret=0
+cb mpl m6 pos=4398cccd,430f3333 ret=1
+cb mpl m1 pos=4398cccd,430f3333 val=4 ret=1
+cb mm0 m8 pos=4398cccd,430f3333 ret=0
+cb mpl m3 pos=4398cccd,430f3333 val=4 ret=1
+cb mpl m2 pos=4398cccd,430f3333 val=4 ret=0
+= click 1
+set foc=4 att=-1 mouse=4398cccd,430f3333 tip=-1
+w mpl vis=1 en=1 over=1 pos=43480000,42c80000,00000000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=1 last=1 anc=-1 clk=0 lock=0 n=9 sel=0,1,
+w mm vis=1 en=1 over=0 pos=00000000,00000000,3f800000 sz=44480000,41b00000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w mm0 vis=1 en=1 over=0 pos=40400000,40000000,40000000 sz=42d40000,430e0000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+op move 42d20000 42440000
+cb mm0 m4 pos=42d20000,42440000 val=24 ret=0
+cb mm0 m0 pos=42d20000,42440000 val=24 ret=0
+cb mpl m0 pos=42d20000,42440000 val=24 ret=0
+= ret=1
+set foc=4 att=-1 mouse=42d20000,42440000 tip=-1
+w mpl vis=1 en=1 over=0 pos=43480000,42c80000,00000000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=1 last=1 anc=-1 clk=0 lock=0 n=9 sel=0,1,
+w mm vis=1 en=1 over=0 pos=00000000,00000000,3f800000 sz=44480000,41b00000 sc=00000000,00000000 ch=00000000,00000000 hl=13 must=0 sub=0
+w mm0 vis=1 en=1 over=1 pos=40400000,40000000,40000000 sz=42d40000,430e0000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+op tmouse tb 3 43df8000 42280000
+= ret=0
+op combo 4 4
+cb mpl m2 pos=42d20000,42440000 val=1 ret=0
+= ret=1
+op combo 3 7
+= ret=0
+w combo vis=1 en=1 over=0 pos=43480000,41200000,00000000 sz=43160000,41b00000 sc=00000000,00000000 ch=00000000,00000000 open=0 sel=1 first=0 over=-1 shown=1 ui=0 mh=41a00000 n=7 txt=5
+op move 42d00000 42ae0000
+cb mm0 m0 pos=42d00000,42ae0000 val=24 ret=1
+cb mpl m0 pos=42d00000,42ae0000 val=24 ret=0
+= ret=1
+set foc=4 att=-1 mouse=42d00000,42ae0000 tip=-1
+cb mpl m8 pos=42d00000,42ae0000 ret=0
+op nav 3 0
+cb combo m20 val=1 ret=1
+= ret=1
+set foc=2 att=-1 mouse=42d00000,42ae0000 tip=-1
+op list 3 15
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=6 cur=13 last=5 anc=6 clk=1 lock=1 n=15 sel=6,
+op tab 5 5
+= ret=0
+op update 3e75c290
+= ret=0
+op list 0 12
+= ret=0
+w mpl vis=1 en=1 over=0 pos=43480000,42c80000,00000000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=3 cur=8 last=1 anc=-1 clk=0 lock=0 n=9 sel=0,1,2,3,4,5,6,7,8,
+op up 1
+cb combo m2 pos=42d00000,42ae0000 val=1 ret=0
+cb mm0 m2 pos=42d00000,42ae0000 val=1 ret=0
+= ret=1
+op move 446a8000 43720000
+= ret=0
+set foc=2 att=-1 mouse=446a8000,43720000 tip=-1
+w mm vis=1 en=1 over=0 pos=00000000,00000000,3f800000 sz=44480000,41b00000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w mm0 vis=1 en=1 over=0 pos=40400000,40000000,40000000 sz=42d40000,430e0000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+cb ntb m6 pos=446a8000,43720000 ret=1
+cb combo m8 pos=446a8000,43720000 ret=0
+op type ntb 51
+cb ntb m8 pos=446a8000,43720000 ret=1
+cb ntb m6 pos=446a8000,43720000 ret=0
+= ret=0
+set foc=1 att=-1 mouse=446a8000,43720000 tip=-1
+op up 16
+cb ntb m2 pos=446a8000,43720000 val=16 ret=0
+= ret=1
+op btnpress 1
+cb ntb m8 pos=446a8000,43720000 ret=0
+= ret=1
+set foc=-1 att=-1 mouse=446a8000,43720000 tip=-1
+w ntb vis=1 en=1 over=0 pos=41200000,42480000,00000000 sz=42f00000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=1:44bd5bd473cd4929 mk=1 se=0 fv=0 vs=1 tms=42c80000 max=-1 edit=1 num=00000000 chg=0 prs=0 gf=1
+cb ntb m6 pos=446a8000,43720000 ret=0
+op type ntb 90
+= ret=1
+set foc=1 att=-1 mouse=446a8000,43720000 tip=-1
+cb ctx m6 pos=446a8000,43720000 ret=1
+cb ntb m8 pos=446a8000,43720000 ret=0
+op click 449490a4 4268ae14 0 1 0
+cb ci0 m0 pos=449490a4,4268ae14 val=8 ret=0
+cb ctx m4 pos=449490a4,4268ae14 val=8 ret=1
+cb ctx m0 pos=449490a4,4268ae14 val=8 ret=1
+cb ci0 m6 pos=449490a4,4268ae14 ret=0
+cb ci0 m1 pos=449490a4,4268ae14 val=1 ret=0
+cb ctx m8 pos=449490a4,4268ae14 ret=0
+cb ci0 m11 ret=1
+= click 1
+set foc=-1 att=-1 mouse=449490a4,4268ae14 tip=-1
+w ntb vis=1 en=1 over=0 pos=41200000,42480000,00000000 sz=42f00000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=1:44bd5bd473cd4929 mk=-1 se=-1 fv=0 vs=1 tms=42c80000 max=-1 edit=1 num=00000000 chg=0 prs=0 gf=1
+w ctx vis=0 en=1 over=1 pos=43e10000,42200000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w ci0 vis=0 en=1 over=1 pos=43e18000,42240000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=3f000000 open=0 prs=0
+op list 5 11
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=6 cur=13 last=5 anc=6 clk=1 lock=1 n=16 sel=6,
+op tset ntb 6 1
+= ret=0
+cb mpl m6 pos=449490a4,4268ae14 ret=0
+op nav 1 0
+cb mpl m14 key=89,0 ret=1
+= ret=1
+set foc=4 att=-1 mouse=449490a4,4268ae14 tip=-1
+w mpl vis=1 en=1 over=0 pos=43480000,42c80000,00000000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=3 cur=8 last=8 anc=8 clk=0 lock=0 n=9 sel=8,
+op menu 2
+= ret=0
+w ci0 vis=0 en=1 over=1 pos=43e18000,42240000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=3f000000 open=0 prs=0
+op update 3e54fdf4
+= ret=0
+op menu 5
+= ret=0
+op up 1
+cb mpl m2 pos=449490a4,4268ae14 val=1 ret=0
+= ret=1
+op move 449c6000 43c08000
+= ret=0
+set foc=4 att=-1 mouse=449c6000,43c08000 tip=-1
+op down 1
+cb mpl m8 pos=449c6000,43c08000 ret=1
+= ret=0
+set foc=-1 att=-1 mouse=449c6000,43c08000 tip=-1
+op text ntb 2
+cb ntb m12 ret=0
+= ret=0
+w ntb vis=1 en=1 over=0 pos=41200000,42480000,00000000 sz=42f00000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=72:afe7122fcd9175b5 mk=-1 se=-1 fv=0 vs=32 tms=42c80000 max=-1 edit=1 num=00000000 chg=0 prs=0 gf=1
+op msg tabs 21 435c0000 437b0000 14
+= ret=0
+op list 4 2
+= ret=0
+w mpl vis=1 en=1 over=0 pos=43480000,42c80000,00000000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=3 cur=8 last=8 anc=2 clk=0 lock=0 n=9 sel=8,
+op en combo 1
+= ret=0
+op arrowpress 8
+= ret=1
+op keyrel 89 2
+= ret=0
+op tmouse ntb 1 41e80000 42480000
+= ret=0
+op vis mm1 1
+= ret=0
+op text ci0 0
+= ret=0
+op tab 4 3
+= ret=0
+w tabs vis=1 en=1 over=0 pos=41200000,43660000,00000000 sz=43310000,431d0000 sc=00000000,00000000 ch=00000000,00000000 top=0 n=5 fv=0 lv=0 tabs=1100000000,1142e00000,1144a2c000,1144e70000,11453b4000,
+op tset tb 0 1
+cb tb m12 ret=1
+= ret=0
+w tb vis=1 en=1 over=0 pos=42a60000,42240000,00000000 sz=42a60000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=3:e16801510db89efd mk=-1 se=-1 fv=0 vs=3 tms=42920000 max=-1 edit=1 num=00000000 chg=0 prs=0 gf=1
+op up 1
+= ret=0
+op keypress 30 0
+= ret=0
+op down 1
+= ret=0
+op pad
+= ret=0
+op text out 2
+= ret=0
+op combo 4 6
+= ret=0
+op tset ntb 4 4
+= ret=0
+w ntb vis=1 en=1 over=0 pos=41200000,42480000,00000000 sz=42f00000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=72:afe7122fcd9175b5 mk=-1 se=-1 fv=0 vs=32 tms=42c80000 max=-1 edit=0 num=00000000 chg=0 prs=0 gf=1
+op text csub 0
+= ret=0
+op combo 3 4
+= ret=0
+w combo vis=1 en=1 over=0 pos=43480000,41200000,00000000 sz=43160000,41b00000 sc=00000000,00000000 ch=00000000,00000000 open=0 sel=1 first=0 over=-1 shown=1 ui=0 mh=41a00000 n=7 txt=0
+op move 44ad6000 42b20000
+= ret=0
+set foc=-1 att=-1 mouse=44ad6000,42b20000 tip=-1
+op setpos mpl 42f00000 42580000 40800000
+= ret=0
+w mpl vis=1 en=1 over=0 pos=42f00000,42580000,40800000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=3 cur=8 last=8 anc=2 clk=0 lock=0 n=9 sel=8,
+op pad
+= ret=0
+op tab 1 0
+= ret=0
+cb ntb m6 pos=44ad6000,42b20000 ret=0
+op type ntb 99
+cb ntb m12 ret=0
+cb ntb m8 pos=44ad6000,42b20000 ret=0
+cb ntb m6 pos=44ad6000,42b20000 ret=1
+= ret=0
+set foc=1 att=-1 mouse=44ad6000,42b20000 tip=-1
+w ntb vis=1 en=1 over=0 pos=41200000,42480000,00000000 sz=42f00000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=1:44bd5bd473cd4929 mk=-1 se=-1 fv=0 vs=1 tms=42c80000 max=-1 edit=0 num=00000000 chg=0 prs=0 gf=1
+op down 1
+cb ntb m8 pos=44ad6000,42b20000 ret=0
+= ret=0
+set foc=-1 att=-1 mouse=44ad6000,42b20000 tip=-1
+op down 1
+= ret=0
+op type tb 89
+cb tb m14 key=29,0 ret=0
+= ret=0
+set foc=0 att=-1 mouse=44ad6000,42b20000 tip=-1
+op up 4
+= ret=1
+op combo 4 5
+= ret=0
+set foc=-1 att=-1 mouse=44ad6000,42b20000 tip=-1
+op down 4
+= ret=0
+op down 1
+= ret=0
+frame 120
+op combo 3 2
+= ret=0
+w combo vis=1 en=1 over=0 pos=43480000,41200000,00000000 sz=43160000,41b00000 sc=00000000,00000000 ch=00000000,00000000 open=0 sel=1 first=0 over=-1 shown=1 ui=0 mh=41a00000 n=7 txt=5
+op dbl
+= ret=0
+op list 4 1
+= ret=0
+w mpl vis=1 en=1 over=0 pos=42f00000,42580000,40800000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=3 cur=8 last=8 anc=1 clk=0 lock=0 n=9 sel=8,
+op keyrel 1 0
+= ret=0
+op keypress 30 0
+= ret=0
+op tset ntb 4 0
+= ret=0
+op tmouse tb 1 43d98000 42580000
+= ret=0
+op move 43890000 41400000
+= ret=0
+set foc=-1 att=-1 mouse=43890000,41400000 tip=-1
+op nav 0 0
+= ret=1
+op tset tb 6 5
+= ret=0
+op keypress 89 0
+= ret=1
+op tab 3 0
+= ret=0
+op keypress 91 0
+= ret=1
+op type tb 57
+cb tb m14 key=28,2 ret=0
+= ret=0
+set foc=0 att=-1 mouse=43890000,41400000 tip=-1
+op pad
+= ret=0
+op combo 0 0
+= ret=0
+w combo vis=1 en=1 over=0 pos=43480000,41200000,00000000 sz=43160000,41b00000 sc=00000000,00000000 ch=00000000,00000000 open=0 sel=-1 first=0 over=-1 shown=1 ui=0 mh=41a00000 n=7 txt=0
+op tkey tb 0 0
+cb tb m14 key=0,0 ret=0
+= ret=0
+op move 40e00000 41600000
+= ret=0
+set foc=0 att=-1 mouse=40e00000,41600000 tip=-1
+op keypress 1 0
+cb tb m14 key=1,0 ret=1
+= ret=1
+op dbl
+= ret=0
+op move 435a0000 431f0000
+= ret=1
+set foc=0 att=-1 mouse=435a0000,431f0000 tip=-1
+op move 44214000 428e0000
+= ret=0
+set foc=0 att=-1 mouse=44214000,428e0000 tip=-1
+op move 44794000 42ba0000
+= ret=0
+set foc=0 att=-1 mouse=44794000,42ba0000 tip=-1
+op update 3ee56042
+= ret=0
+op move 435a0000 429c0000
+= ret=0
+set foc=0 att=-1 mouse=435a0000,429c0000 tip=-1
+op tmouse tb 3 430c0000 42400000
+= ret=0
+op list 7 15
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=6 cur=13 last=5 anc=6 clk=1 lock=1 n=16 sel=
+cb ntb m6 pos=435a0000,429c0000 ret=0
+op type ntb 88
+cb ntb m8 pos=435a0000,429c0000 ret=0
+cb ntb m6 pos=435a0000,429c0000 ret=0
+= ret=0
+set foc=1 att=-1 mouse=435a0000,429c0000 tip=-1
+op move 43ab8000 42900000
+= ret=0
+set foc=1 att=-1 mouse=43ab8000,42900000 tip=-1
+op tset ntb 3 6
+cb ntb m12 ret=0
+= ret=0
+w ntb vis=1 en=1 over=0 pos=41200000,42480000,00000000 sz=42f00000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=1:44bd5dd473cd4c8f mk=-1 se=-1 fv=0 vs=1 tms=42c80000 max=-1 edit=0 num=40c66668 chg=1 prs=0 gf=1
+cb ntb m8 pos=43ab8000,42900000 ret=0
+op tkey tb 3 0
+cb tb m14 key=3,0 ret=0
+= ret=0
+set foc=0 att=-1 mouse=43ab8000,42900000 tip=-1
+w ntb vis=1 en=1 over=0 pos=41200000,42480000,00000000 sz=42f00000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=1:44bd5dd473cd4c8f mk=-1 se=-1 fv=0 vs=1 tms=42c80000 max=-1 edit=0 num=40c66668 chg=0 prs=0 gf=1
+op click 447c30a4 426a8f5c 0 1 1
+= click 0
+set foc=-1 att=-1 mouse=447c30a4,426a8f5c tip=-1
+cb mpl m6 pos=447c30a4,426a8f5c ret=0
+op nav 3 0
+cb mpl m14 key=91,0 ret=0
+cb mpl m8 pos=447c30a4,426a8f5c ret=0
+= ret=1
+op list 1 2
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=1 cur=1 last=13 anc=6 clk=1 lock=1 n=16 sel=13,12,11,10,9,8,7,6,5,4,3,2,1,
+op keypress 1 2
+= ret=0
+op tab 0 6
+= ret=0
+op click 43017ae1 4235999a 0 1 0
+= click 1
+set foc=-1 att=-1 mouse=43017ae1,4235999a tip=-1
+op click 4239d70a 42efb852 0 1 0
+= click 1
+set foc=-1 att=-1 mouse=4239d70a,42efb852 tip=-1
+op menu 0
+cb ctx m6 pos=4239d70a,42efb852 ret=0
+= ret=0
+set foc=6 att=6 mouse=4239d70a,42efb852 tip=-1
+w ctx vis=1 en=1 over=1 pos=43720000,42600000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w ci0 vis=1 en=1 over=1 pos=43730000,42640000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=3f000000 open=0 prs=0
+w ci1 vis=1 en=1 over=0 pos=43730000,42960000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=0 tm=00000000 open=0 prs=0
+w ci2 vis=1 en=1 over=0 pos=43730000,42c40000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+w ci3 vis=1 en=1 over=0 pos=43730000,42e80000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=00000000 open=0 prs=0
+w csub vis=0 en=1 over=0 pos=43720000,42600000,00000000 sz=445d8000,42180000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+op dbl
+cb ci0 m3 pos=4239d70a,42efb852 val=1 ret=0
+cb ctx m3 pos=4239d70a,42efb852 val=1 ret=0
+= ret=0
+op click 449741ec 42861eb8 2 1 0
+cb ci0 m0 pos=449741ec,42861eb8 val=12 ret=0
+cb ctx m0 pos=449741ec,42861eb8 val=12 ret=0
+cb ci0 m6 pos=449741ec,42861eb8 ret=0
+cb ci0 m1 pos=449741ec,42861eb8 val=1 ret=0
+cb ctx m6 pos=449741ec,42861eb8 ret=0
+cb ctx m1 pos=449741ec,42861eb8 val=1 ret=0
+cb ctx m2 pos=449741ec,42861eb8 val=1 ret=0
+= click 1
+set foc=6 att=6 mouse=449741ec,42861eb8 tip=-1
+w ctx vis=1 en=1 over=1 pos=43720000,42600000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=9 must=0 sub=0
+op up 1
+cb ctx m2 pos=449741ec,42861eb8 val=1 ret=0
+= ret=1
+op move 44694000 42880000
+cb ci0 m0 pos=44694000,42880000 val=12 ret=1
+cb ctx m0 pos=44694000,42880000 val=12 ret=0
+= ret=1
+set foc=6 att=6 mouse=44694000,42880000 tip=-1
+op down 1
+cb ci0 m6 pos=44694000,42880000 ret=1
+cb ci0 m1 pos=44694000,42880000 val=1 ret=0
+cb ctx m6 pos=44694000,42880000 ret=0
+cb ctx m1 pos=44694000,42880000 val=1 ret=1
+= ret=1
+op click 43fff5c3 4305199a 3 8 0
+cb ci3 m0 pos=43fff5c3,4305199a val=13 ret=1
+cb ci0 m5 pos=43fff5c3,4305199a val=13 ret=0
+cb ctx m0 pos=43fff5c3,4305199a val=13 ret=0
+cb ci3 m1 pos=43fff5c3,4305199a val=8 ret=1
+cb ctx m8 pos=43fff5c3,4305199a ret=1
+cb ci3 m2 pos=43fff5c3,4305199a val=8 ret=0
+cb ctx m2 pos=43fff5c3,4305199a val=8 ret=1
+= click 1
+set foc=12 att=6 mouse=43fff5c3,4305199a tip=-1
+w ctx vis=1 en=1 over=1 pos=43720000,42600000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w ci0 vis=1 en=1 over=0 pos=43730000,42640000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=00000000 open=0 prs=0
+w ci3 vis=1 en=1 over=1 pos=43730000,42e80000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=3f000000 open=0 prs=0
+op down 1
+cb ci3 m1 pos=43fff5c3,4305199a val=1 ret=0
+= ret=1
+op menu 5
+= ret=0
+op move 42180000 41880000
+cb ci3 m0 pos=42180000,41880000 val=5 ret=0
+cb ctx m5 pos=42180000,41880000 val=5 ret=1
+= ret=1
+set foc=12 att=6 mouse=42180000,41880000 tip=-1
+w ctx vis=1 en=1 over=0 pos=43720000,42600000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w ci3 vis=1 en=1 over=0 pos=43730000,42e80000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=00000000 open=0 prs=0
+op tmouse tb 2 42c20000 426c0000
+cb ci3 m2 pos=42180000,41880000 val=1 ret=0
+= ret=0
+op click 43a78000 41a80000 1 1 0
+cb ci3 m0 pos=43a78000,41a80000 val=4 ret=0
+= click 1
+set foc=-1 att=6 mouse=43a78000,41a80000 tip=-1
+op update 3da3d70b
+= ret=0
+op list 5 14
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=1 cur=1 last=13 anc=6 clk=1 lock=1 n=17 sel=13,12,11,10,9,8,7,6,5,4,3,2,1,
+op list 2 3
+= ret=0
+w mpl vis=1 en=1 over=0 pos=42f00000,42580000,40800000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=3 cur=1 last=8 anc=1 clk=0 lock=0 n=9 sel=8,
+op menu 3
+= ret=0
+set foc=12 att=6 mouse=43a78000,41a80000 tip=-1
+op vis list 1
+= ret=0
+op click 4424147b 414ccccd 3 1 0
+cb ci3 m0 pos=4424147b,414ccccd val=4 ret=1
+= click 1
+set foc=-1 att=6 mouse=4424147b,414ccccd tip=-1
+op move 42c20000 41a80000
+= ret=0
+set foc=-1 att=6 mouse=42c20000,41a80000 tip=-1
+op move 440a0000 40e00000
+= ret=0
+set foc=-1 att=6 mouse=440a0000,40e00000 tip=-1
+op move 43b80000 42920000
+cb ci0 m0 pos=43b80000,42920000 val=4 ret=0
+cb ctx m4 pos=43b80000,42920000 val=4 ret=0
+cb ctx m0 pos=43b80000,42920000 val=4 ret=0
+= ret=1
+set foc=-1 att=6 mouse=43b80000,42920000 tip=-1
+w ctx vis=1 en=1 over=1 pos=43720000,42600000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=9 must=0 sub=0
+w ci0 vis=1 en=1 over=1 pos=43730000,42640000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=00000000 open=0 prs=0
+op en mm0 0
+= ret=0
+w mm0 vis=1 en=0 over=0 pos=40400000,40000000,40000000 sz=42d40000,430e0000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+op move 42a80000 42800000
+cb ci0 m5 pos=42a80000,42800000 val=4 ret=0
+cb ctx m5 pos=42a80000,42800000 val=4 ret=0
+= ret=0
+set foc=-1 att=6 mouse=42a80000,42800000 tip=-1
+w ctx vis=1 en=1 over=0 pos=43720000,42600000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w ci0 vis=1 en=1 over=0 pos=43730000,42640000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=00000000 open=0 prs=0
+op down 1
+= ret=0
+op click 42ef0a3e 4260b852 1 1 0
+= click 0
+set foc=-1 att=6 mouse=42ef0a3e,4260b852 tip=-1
+op en tb 0
+= ret=0
+w tb vis=1 en=0 over=0 pos=42a60000,42240000,00000000 sz=42a60000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=3:e16801510db89efd mk=-1 se=-1 fv=0 vs=3 tms=42920000 max=-1 edit=1 num=00000000 chg=0 prs=0 gf=1
+op down 1
+= ret=0
+op pad
+= ret=0
+op tab 4 3
+= ret=0
+w tabs vis=1 en=1 over=0 pos=41200000,43660000,00000000 sz=42b00000,433e0000 sc=00000000,00000000 ch=00000000,00000000 top=0 n=5 fv=0 lv=0 tabs=1100000000,1142e00000,1144a2c000,1144e70000,11453b4000,
+op up 1
+= ret=0
+op text mm 0
+= ret=0
+op up 1
+= ret=0
+op click 428bae14 43ac0000 2 1 1
+= click 0
+set foc=-1 att=6 mouse=428bae14,43ac0000 tip=-1
+op down 1
+= ret=0
+op list 2 6
+= ret=0
+w mpl vis=1 en=1 over=0 pos=42f00000,42580000,40800000 sz=435c0000,42f00000 sc=00000000,00000000 ch=00000000,00000000 first=3 cur=4 last=1 anc=1 clk=0 lock=0 n=9 sel=8,
+op click 43ab4000 41830a3d 3 1 0
+= click 0
+set foc=-1 att=6 mouse=43ab4000,41830a3d tip=-1
+op move 421c0000 425c0000
+= ret=0
+set foc=-1 att=6 mouse=421c0000,425c0000 tip=-1
+op btndbl 1
+= ret=0
+op move 43868000 42820000
+cb ci0 m0 pos=43868000,42820000 val=4 ret=0
+cb ctx m4 pos=43868000,42820000 val=4 ret=0
+cb ctx m0 pos=43868000,42820000 val=4 ret=1
+= ret=1
+set foc=-1 att=6 mouse=43868000,42820000 tip=-1
+w ctx vis=1 en=1 over=1 pos=43720000,42600000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=9 must=0 sub=0
+w ci0 vis=1 en=1 over=1 pos=43730000,42640000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=00000000 open=0 prs=0
+op tset tb 5 8
+= ret=0
+cb ntb m6 pos=43868000,42820000 ret=0
+op type ntb 97
+cb ntb m8 pos=43868000,42820000 ret=0
+cb ntb m6 pos=43868000,42820000 ret=1
+cb ci0 m14 key=33,0 ret=0
+cb ci0 m14 key=33,0 ret=0
+cb ci1 m14 key=33,0 ret=0
+cb ci2 m14 key=33,0 ret=0
+cb ci3 m14 key=33,0 ret=0
+cb ctx m14 key=33,0 ret=0
+= ret=1
+set foc=1 att=6 mouse=43868000,42820000 tip=-1
+op combo 4 1
+cb ci0 m6 pos=43868000,42820000 ret=1
+cb ci0 m1 pos=43868000,42820000 val=1 ret=0
+cb ctx m6 pos=43868000,42820000 ret=1
+cb ctx m1 pos=43868000,42820000 val=1 ret=1
+cb ntb m8 pos=43868000,42820000 ret=0
+= ret=1
+set foc=6 att=6 mouse=43868000,42820000 tip=-1
+op move 43aa0000 41700000
+cb ci0 m5 pos=43aa0000,41700000 val=5 ret=0
+cb ctx m5 pos=43aa0000,41700000 val=5 ret=0
+cb ctx m0 pos=43aa0000,41700000 val=5 ret=0
+= ret=0
+set foc=6 att=6 mouse=43aa0000,41700000 tip=-1
+w ctx vis=1 en=1 over=0 pos=43720000,42600000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w ci0 vis=1 en=1 over=0 pos=43730000,42640000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=00000000 open=0 prs=0
+cb mpl m6 pos=43aa0000,41700000 ret=1
+cb ctx m8 pos=43aa0000,41700000 ret=0
+op nav 1 0
+cb mpl m14 key=3,0 ret=0
+cb mpl m8 pos=43aa0000,41700000 ret=0
+cb mpl m6 pos=43aa0000,41700000 ret=0
+= ret=0
+set foc=4 att=6 mouse=43aa0000,41700000 tip=-1
+w ctx vis=1 en=1 over=0 pos=43720000,42600000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=1 sub=0
+op keyrel 20 0
+= ret=0
+op up 1
+cb mpl m2 pos=43aa0000,41700000 val=1 ret=1
+= ret=1
+op down 1
+cb mpl m8 pos=43aa0000,41700000 ret=0
+= ret=0
+set foc=-1 att=6 mouse=43aa0000,41700000 tip=-1
+op nav 1 0
+= ret=0
+set foc=3 att=6 mouse=43aa0000,41700000 tip=-1
+op click 4226b852 43bff333 0 1 0
+= click 0
+set foc=-1 att=6 mouse=4226b852,43bff333 tip=-1
+op move 43010000 424c0000
+= ret=0
+set foc=-1 att=6 mouse=43010000,424c0000 tip=-1
+op down 4
+= ret=0
+op update 3d83126f
+= ret=0
+set foc=-1 att=-1 mouse=43010000,424c0000 tip=-1
+w ctx vis=0 en=1 over=0 pos=43720000,42600000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w ci0 vis=0 en=1 over=0 pos=43730000,42640000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=00000000 open=0 prs=0
+w ci1 vis=0 en=1 over=0 pos=43730000,42960000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=0 tm=00000000 open=0 prs=0
+w ci2 vis=0 en=1 over=0 pos=43730000,42c40000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+w ci3 vis=0 en=1 over=0 pos=43730000,42e80000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=00000000 open=0 prs=0
+op arrowrel 2
+= ret=0
+op tmouse ntb 1 42be0000 428a0000
+= ret=1
+op move 43998000 42fc0000
+= ret=1
+set foc=-1 att=-1 mouse=43998000,42fc0000 tip=-1
+op tkey tb 0 2
+= ret=0
+set foc=0 att=-1 mouse=43998000,42fc0000 tip=-1
+op menu 0
+cb ctx m6 pos=43998000,42fc0000 ret=0
+= ret=0
+set foc=6 att=6 mouse=43998000,42fc0000 tip=-1
+w ctx vis=1 en=1 over=0 pos=43370000,437e0000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w ci0 vis=1 en=1 over=0 pos=43380000,437f0000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=00000000 open=0 prs=0
+w ci1 vis=1 en=1 over=0 pos=43380000,43888000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=0 tm=00000000 open=0 prs=0
+w ci2 vis=1 en=1 over=0 pos=43380000,43940000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+w ci3 vis=1 en=1 over=0 pos=43380000,439d0000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=00000000 open=0 prs=0
+w csub vis=0 en=1 over=0 pos=43370000,437e0000,00000000 sz=445d8000,42180000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+op down 1
+cb ctx m8 pos=43998000,42fc0000 ret=1
+= ret=0
+set foc=-1 att=6 mouse=43998000,42fc0000 tip=-1
+w ctx vis=1 en=1 over=0 pos=43370000,437e0000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=1 sub=0
+op type tb 54
+= ret=0
+set foc=0 att=6 mouse=43998000,42fc0000 tip=-1
+op keyrel 40 2
+= ret=0
+op move 43b50000 43950000
+cb ci2 m4 pos=43b50000,43950000 val=5 ret=0
+cb ci2 m0 pos=43b50000,43950000 val=5 ret=0
+cb ctx m4 pos=43b50000,43950000 val=5 ret=0
+cb ctx m0 pos=43b50000,43950000 val=5 ret=0
+= ret=1
+set foc=0 att=6 mouse=43b50000,43950000 tip=-1
+w ctx vis=1 en=1 over=1 pos=43370000,437e0000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=11 must=1 sub=0
+w ci2 vis=1 en=1 over=1 pos=43380000,43940000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+op menu 2
+= ret=0
+op list 6 9
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=1 cur=1 last=13 anc=6 clk=1 lock=1 n=16 sel=13,12,11,10,9,8,7,6,5,4,3,2,1,
+op type tb 56
+cb ci2 m14 key=54,0 ret=0
+cb ci0 m14 key=54,0 ret=0
+cb ci1 m14 key=54,0 ret=0
+cb ci2 m14 key=54,0 ret=0
+cb ci3 m14 key=54,0 ret=0
+cb ctx m14 key=54,0 ret=0
+= ret=1
+op update 3e343959
+= ret=0
+set foc=-1 att=-1 mouse=43b50000,43950000 tip=-1
+w ctx vis=0 en=1 over=1 pos=43370000,437e0000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w ci0 vis=0 en=1 over=0 pos=43380000,437f0000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=00000000 open=0 prs=0
+w ci1 vis=0 en=1 over=0 pos=43380000,43888000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=0 tm=00000000 open=0 prs=0
+w ci2 vis=0 en=1 over=1 pos=43380000,43940000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=3e343959 open=0 prs=0
+w ci3 vis=0 en=1 over=0 pos=43380000,439d0000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=00000000 open=0 prs=0
+op up 1
+= ret=1
+op up 16
+= ret=1
+op text csub 3
+= ret=0
+op combo 0 7
+= ret=0
+w combo vis=1 en=1 over=0 pos=43480000,41200000,00000000 sz=43160000,41b00000 sc=00000000,00000000 ch=00000000,00000000 open=0 sel=6 first=6 over=-1 shown=1 ui=0 mh=41a00000 n=7 txt=7
+op tmouse ntb 3 41400000 42640000
+= ret=1
+op nav 3 0
+cb combo m8 pos=43b50000,43950000 ret=1
+= ret=1
+op tset ntb 1 7
+= ret=0
+w ntb vis=1 en=1 over=0 pos=41200000,42480000,00000000 sz=42f00000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=1:44bd5dd473cd4c8f mk=-1 se=-1 fv=0 vs=1 tms=42c80000 max=5 edit=0 num=40c66668 chg=0 prs=0 gf=1
+op click 4213ae14 421051eb 0 1 0
+= click 1
+set foc=-1 att=-1 mouse=4213ae14,421051eb tip=-1
+op en combo 1
+= ret=0
+op setsize out 43690000 43530000
+= ret=0
+w out vis=1 en=1 over=0 pos=44160000,43960000,00000000 sz=43690000,43530000 sc=00000000,00000000 ch=00000000,00000000 pressed=0 timer=00000000 times=0
+op nav 3 0
+cb list m14 key=6,0 ret=0
+= ret=1
+set foc=3 att=-1 mouse=4213ae14,421051eb tip=-1
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=1 cur=1 last=13 anc=6 clk=1 lock=1 n=16 sel=1,
+op move 42be0000 42780000
+= ret=0
+set foc=3 att=-1 mouse=42be0000,42780000 tip=-1
+op move 445d0000 41100000
+= ret=0
+set foc=3 att=-1 mouse=445d0000,41100000 tip=-1
+op down 1
+= ret=0
+set foc=-1 att=-1 mouse=445d0000,41100000 tip=-1
+op up 1
+= ret=0
+op vis ci0 1
+= ret=0
+op msg mm0 21 426c0000 433a0000 8
+= ret=0
+op move 445a4000 43870000
+= ret=0
+set foc=-1 att=-1 mouse=445a4000,43870000 tip=-1
+op combo 4 2
+= ret=0
+op dbl
+= ret=0
+op combo 4 4
+= ret=0
+op up 1
+= ret=0
+cb ntb m6 pos=445a4000,43870000 ret=0
+op type ntb 32
+cb ntb m8 pos=445a4000,43870000 ret=0
+cb ntb m6 pos=445a4000,43870000 ret=0
+= ret=0
+set foc=1 att=-1 mouse=445a4000,43870000 tip=-1
+op up 1
+cb ntb m2 pos=445a4000,43870000 val=1 ret=0
+= ret=1
+op update 3eed9169
+= ret=0
+op move 44008000 439e0000
+= ret=0
+set foc=1 att=-1 mouse=44008000,439e0000 tip=-1
+op tab 2 4
+= ret=0
+w tabs vis=1 en=1 over=0 pos=41200000,43660000,00000000 sz=42b00000,433e0000 sc=00000000,00000000 ch=00000000,00000000 top=0 n=6 fv=0 lv=0 tabs=1100000000,1142e00000,1144a2c000,1144e70000,11453b4000,114598b000,
+op move 442e8000 438d0000
+= ret=0
+set foc=1 att=-1 mouse=442e8000,438d0000 tip=-1
+op move 436e0000 41600000
+= ret=0
+set foc=1 att=-1 mouse=436e0000,41600000 tip=-1
+op tset tb 3 1
+= ret=0
+op click 43998000 42700000 3 1 1
+cb ntb m8 pos=43998000,42700000 ret=0
+= click 0
+set foc=-1 att=-1 mouse=43998000,42700000 tip=-1
+op move 43370000 42800000
+= ret=0
+set foc=-1 att=-1 mouse=43370000,42800000 tip=-1
+op setsize ci3 42b80000 42d20000
+= ret=0
+w ci3 vis=0 en=1 over=0 pos=43380000,439d0000,3dcccccd sz=42b80000,42d20000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=00000000 open=0 prs=0
+op click 43a48000 41a9c28f 2 1 0
+= click 0
+set foc=-1 att=-1 mouse=43a48000,41a9c28f tip=-1
+op update 3da3d70b
+= ret=0
+op tmouse ntb 1 42080000 428c0000
+= ret=0
+op down 1
+= ret=0
+op up 1
+= ret=0
+op tkey tb 3 0
+= ret=0
+set foc=0 att=-1 mouse=43a48000,41a9c28f tip=-1
+op click 42840000 42ea0000 1 1 0
+= click 1
+set foc=-1 att=-1 mouse=42840000,42ea0000 tip=-1
+op tab 3 3
+= ret=0
+op move 438e0000 430e0000
+= ret=1
+set foc=-1 att=-1 mouse=438e0000,430e0000 tip=-1
+op up 1
+= ret=1
+op down 1
+= ret=1
+op move 41c80000 43370000
+= ret=1
+set foc=-1 att=-1 mouse=41c80000,43370000 tip=-1
+op click 41c0a3d7 43660000 0 1 0
+= click 1
+set foc=-1 att=-1 mouse=41c0a3d7,43660000 tip=-1
+op up 1
+= ret=1
+op vis mpl 1
+= ret=0
+op menu 0
+cb ctx m6 pos=41c0a3d7,43660000 ret=0
+= ret=0
+set foc=6 att=6 mouse=41c0a3d7,43660000 tip=-1
+w ctx vis=1 en=1 over=1 pos=43a38000,42be0000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w ci0 vis=1 en=1 over=0 pos=43a40000,42c00000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=00000000 open=0 prs=0
+w ci1 vis=1 en=1 over=0 pos=43a40000,42e40000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=0 tm=00000000 open=0 prs=0
+w ci2 vis=1 en=1 over=1 pos=43a40000,43090000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=3e343959 open=0 prs=0
+w ci3 vis=1 en=1 over=0 pos=43a40000,431b0000,3dcccccd sz=42b80000,42d20000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=00000000 open=0 prs=0
+w csub vis=0 en=1 over=0 pos=43a38000,42be0000,00000000 sz=445d8000,42180000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+cb mpl m6 pos=41c0a3d7,43660000 ret=0
+cb ctx m8 pos=41c0a3d7,43660000 ret=0
+op nav 1 0
+cb mpl m20 val=1 ret=0
+= ret=1
+set foc=4 att=6 mouse=41c0a3d7,43660000 tip=-1
+w ctx vis=1 en=1 over=1 pos=43a38000,42be0000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=1 sub=0
+op update 3ebc6a80
+cb mpl m8 pos=41c0a3d7,43660000 ret=0
+= ret=0
+set foc=-1 att=-1 mouse=41c0a3d7,43660000 tip=-1
+w ctx vis=0 en=1 over=1 pos=43a38000,42be0000,00000000 sz=44798000,429e0000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w ci0 vis=0 en=1 over=0 pos=43a40000,42c00000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=1 tm=00000000 open=0 prs=0
+w ci1 vis=0 en=1 over=0 pos=43a40000,42e40000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=1 def=0 tm=00000000 open=0 prs=0
+w ci2 vis=0 en=1 over=1 pos=43a40000,43090000,3dcccccd sz=44790000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=3f0b4396 open=0 prs=0
+w ci3 vis=0 en=1 over=0 pos=43a40000,431b0000,3dcccccd sz=42b80000,42d20000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=1 tm=00000000 open=0 prs=0
+op type tb 90
+= ret=0
+set foc=0 att=-1 mouse=41c0a3d7,43660000 tip=-1
+cb ntb m6 pos=41c0a3d7,43660000 ret=0
+op tkey ntb 0 0
+cb ntb m8 pos=41c0a3d7,43660000 ret=0
+cb ntb m6 pos=41c0a3d7,43660000 ret=0
+= ret=0
+set foc=1 att=-1 mouse=41c0a3d7,43660000 tip=-1
+op down 2
+cb ntb m8 pos=41c0a3d7,43660000 ret=1
+= ret=0
+set foc=-1 att=-1 mouse=41c0a3d7,43660000 tip=-1
+op up 2
+= ret=1
+op vis out 0
+= ret=0
+w out vis=0 en=1 over=0 pos=44160000,43960000,00000000 sz=43690000,43530000 sc=00000000,00000000 ch=00000000,00000000 pressed=0 timer=00000000 times=0
+op click 43a78000 4123851f 0 1 0
+= click 0
+set foc=-1 att=-1 mouse=43a78000,4123851f tip=-1
+op setsize out 42500000 42640000
+= ret=0
+w out vis=0 en=1 over=0 pos=44160000,43960000,00000000 sz=42500000,42640000 sc=00000000,00000000 ch=00000000,00000000 pressed=0 timer=00000000 times=0
+op nav 1 0
+cb list m20 val=1 ret=0
+= ret=1
+set foc=3 att=-1 mouse=43a78000,4123851f tip=-1
+op up 1
+cb list m2 pos=43a78000,4123851f val=1 ret=0
+= ret=1
+cb ntb m6 pos=43a78000,4123851f ret=0
+op type ntb 51
+cb ntb m8 pos=43a78000,4123851f ret=1
+cb ntb m6 pos=43a78000,4123851f ret=1
+= ret=0
+set foc=1 att=-1 mouse=43a78000,4123851f tip=-1
+op keypress 1 0
+cb ntb m8 pos=43a78000,4123851f ret=1
+cb ntb m6 pos=43a78000,4123851f ret=1
+= ret=0
+op setpos mm 42980000 42940000 40800000
+= ret=0
+w mm vis=1 en=1 over=0 pos=42980000,42940000,40800000 sz=44480000,41b00000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+w mm0 vis=1 en=0 over=0 pos=429e0000,42980000,40a00000 sz=42d40000,430e0000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+w mm1 vis=1 en=1 over=0 pos=44044000,42980000,40a00000 sz=43dd0000,41900000 sc=00000000,00000000 ch=00000000,00000000 chk=0 def=0 tm=00000000 open=0 prs=0
+w msub vis=0 en=1 over=0 pos=42980000,42940000,40800000 sz=43f00000,42180000 sc=00000000,00000000 ch=00000000,00000000 hl=-1 must=0 sub=0
+op keypress 88 0
+cb ntb m8 pos=43a78000,4123851f ret=0
+= ret=1
+set foc=-1 att=-1 mouse=43a78000,4123851f tip=-1
+op text mm1 2
+= ret=0
+op list 6 3
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=1 cur=1 last=13 anc=6 clk=1 lock=1 n=15 sel=1,
+op combo 4 7
+= ret=0
+op tset tb 5 10
+= ret=0
+op down 16
+= ret=0
+op btnpress 1
+= ret=0
+op tab 1 3
+= ret=0
+w tabs vis=1 en=1 over=0 pos=41200000,43660000,00000000 sz=42b00000,433e0000 sc=00000000,00000000 ch=00000000,00000000 top=2 n=6 fv=0 lv=0 tabs=1100000000,1142e00000,1144a2c000,1144e70000,11453b4000,114598b000,
+op nav 1 0
+= ret=1
+op tab 2 3
+= ret=0
+w tabs vis=1 en=1 over=0 pos=41200000,43660000,00000000 sz=42b00000,433e0000 sc=00000000,00000000 ch=00000000,00000000 top=2 n=7 fv=0 lv=0 tabs=1100000000,1142e00000,1144a2c000,1144e70000,11453b4000,114598b000,1145d43000,
+op update 3e75c290
+= ret=0
+op click 42b970a4 438ac000 0 1 0
+= click 1
+set foc=-1 att=-1 mouse=42b970a4,438ac000 tip=-1
+op update 3e9374bd
+= ret=0
+op dbl
+= ret=0
+op list 3 2
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=0 last=1 anc=6 clk=1 lock=1 n=15 sel=1,
+op up 1
+= ret=0
+op list 4 1
+= ret=0
+op combo 1 5
+= ret=0
+op update 3eb43959
+= ret=0
+op tab 3 6
+= ret=0
+op tab 1 7
+= ret=0
+w tabs vis=1 en=1 over=0 pos=41200000,43660000,00000000 sz=42b00000,433e0000 sc=00000000,00000000 ch=00000000,00000000 top=6 n=7 fv=0 lv=0 tabs=1100000000,1142e00000,1144a2c000,1144e70000,11453b4000,114598b000,1145d43000,
+op list 7 4
+= ret=0
+w list vis=1 en=1 over=0 pos=41200000,42c80000,00000000 sz=43200000,42c80000 sc=00000000,00000000 ch=00000000,00000000 first=0 cur=0 last=1 anc=6 clk=1 lock=1 n=15 sel=
+op click 4309999a 43066666 1 1 0
+= click 1
+set foc=-1 att=-1 mouse=4309999a,43066666 tip=-1
+op move 42d80000 42540000
+= ret=1
+set foc=-1 att=-1 mouse=42d80000,42540000 tip=-1
+op btnpress 1
+= ret=1
+op up 1
+= ret=0
+op combo 3 4
+= ret=0
+w combo vis=1 en=1 over=0 pos=43480000,41200000,00000000 sz=43160000,41b00000 sc=00000000,00000000 ch=00000000,00000000 open=0 sel=6 first=6 over=-1 shown=1 ui=0 mh=41a00000 n=7 txt=0
+op tab 4 2
+= ret=0
+w tabs vis=1 en=1 over=0 pos=41200000,43660000,00000000 sz=43b10000,431c0000 sc=00000000,00000000 ch=00000000,00000000 top=6 n=7 fv=0 lv=0 tabs=1100000000,1142e00000,1144a2c000,1144e70000,11453b4000,114598b000,1145d43000,
+op click 43024f5c 42473333 0 1 0
+= click 1
+set foc=-1 att=-1 mouse=43024f5c,42473333 tip=-1
+op up 1
+= ret=0
+op keypress 90 0
+= ret=1
+op down 1
+= ret=0
+op move 43960000 43a10000
+= ret=0
+set foc=-1 att=-1 mouse=43960000,43a10000 tip=-1
+frame 319
+op btnpress 2
+cb ntb m12 ret=1
+= ret=1
+w ntb vis=1 en=1 over=0 pos=41200000,42480000,00000000 sz=42f00000,41b00000 sc=00000000,00000000 ch=00000000,00000000 txt=1:44bd5bd473cd4929 mk=-1 se=-1 fv=0 vs=1 tms=42c80000 max=5 edit=0 num=40c66668 chg=0 prs=0 gf=1
+trace lines=16646 fnv1a64=b6e32ddfc21c83f0

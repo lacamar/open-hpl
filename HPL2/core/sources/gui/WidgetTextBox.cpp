@@ -34,6 +34,7 @@
 #include "gui/GuiGfxElement.h"
 
 #include "gui/WidgetButton.h"
+#include "impl/RustBackends.h"
 
 #include <cstring>
 #include <vector>
@@ -193,8 +194,10 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cWidgetTextBox::cWidgetTextBox(cGuiSet *apSet, cGuiSkin *apSkin, eWidgetTextBoxInputType aType) : iWidget(eWidgetType_TextBox,apSet, apSkin)
+	cWidgetTextBox::cWidgetTextBox(cGuiSet *apSet, cGuiSkin *apSkin, eWidgetTextBoxInputType aType) : iWidget(eWidgetType_TextBox,apSet, apSkin),
+		mpPrevAttention(mH.prevAttention), mState(mH.st), mbShowButtons(mH.showButtons)
 	{
+		ohpl_h20_tb_init(&gH20Host, &mH, (uintptr_t)(iWidget*)this, &mB, aType==eWidgetTextBoxInputType_Numeric);
 		mvButtons[0] = NULL;
 		mvButtons[1] = NULL;
 		mInputType = aType;
@@ -221,9 +224,14 @@ namespace hpl {
 	{
 		if(mpSet->IsDestroyingSet()==false)
 		{
-			for(int i=0;i<2;++i)
-				if(mvButtons[i]) mpSet->DestroyWidget(mvButtons[i]);
+			if(OhplBackendRustRequested()) ohpl_h20_tb_destroy_buttons(&gH20Host, &mH);
+			else
+			{
+				for(int i=0;i<2;++i)
+					if(mvButtons[i]) mpSet->DestroyWidget(mvButtons[i]);
+			}
 		}
+		ohpl_h20_tb_free(&mH);
 	}
 
 	//-----------------------------------------------------------------------
@@ -244,6 +252,12 @@ namespace hpl {
 
 	void cWidgetTextBox::SetMaxTextLength(int alLength)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tb_set_max_text_length(&gH20Host, &mH, alLength);
+			return;
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -255,6 +269,12 @@ namespace hpl {
 
 	void cWidgetTextBox::SetSelectedText(int alStart, int alCount)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tb_set_selected_text(&gH20Host, &mH, alStart, alCount);
+			return;
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -266,6 +286,13 @@ namespace hpl {
 
 	cVector2f cWidgetTextBox::GetBackgroundSize()
 	{
+		if(OhplBackendRustRequested())
+		{
+			cVector2f vSize;
+			ohpl_h20_tb_background_size(&gH20Host, &mH, &vSize);
+			return vSize;
+		}
+
 		return cVector2f(mvSize.x - mvGfxCorners[0]->GetActiveSize().x -
 										mvGfxCorners[1]->GetActiveSize().x,
 						mvSize.y - mvGfxCorners[0]->GetActiveSize().y -
@@ -285,6 +312,12 @@ namespace hpl {
 
 	void cWidgetTextBox::SetCanEdit(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tb_set_can_edit(&gH20Host, &mH, abX);
+			return;
+		}
+
 		mState.can_edit = abX;
 
 		if(mState.can_edit)	mpPointerGfx = mpSkin->GetGfx(eGuiSkinGfx_PointerText);
@@ -303,6 +336,12 @@ namespace hpl {
 
 	void cWidgetTextBox::SetNumericValue(float afX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tb_set_numeric_value(&gH20Host, &mH, afX);
+			return;
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -314,6 +353,11 @@ namespace hpl {
 
 	float cWidgetTextBox::GetNumericValue()
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tb_numeric_value(&gH20Host, &mH);
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -352,6 +396,13 @@ namespace hpl {
 
 	void cWidgetTextBox::SetIllegalChars(const tWString &asIllegalChars)
 	{
+		if(OhplBackendRustRequested())
+		{
+			msIllegalChars = asIllegalChars;
+			ohpl_h20_tb_set_illegal_chars(&gH20Host, &mH, asIllegalChars.data(), asIllegalChars.size());
+			return;
+		}
+
 		msIllegalChars = asIllegalChars;
 	}
 
@@ -422,6 +473,12 @@ namespace hpl {
 
 	void cWidgetTextBox::OnChangeSize()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tb_on_change_size(&gH20Host, &mH);
+			return;
+		}
+
 		cVector2f vBorders[3] = {mvGfxBorders[0]->GetActiveSize(), mvGfxBorders[1]->GetActiveSize(),
 								 mvGfxBorders[2]->GetActiveSize()};
 
@@ -441,6 +498,12 @@ namespace hpl {
 
 	void cWidgetTextBox::OnChangeText()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tb_on_change_text(&gH20Host, &mH);
+			return;
+		}
+
 		if(mbReplaying)
 		{
 			// Rust already ran OnChangeText; only the nested truncating SetText is left to issue
@@ -463,6 +526,12 @@ namespace hpl {
 
 	void cWidgetTextBox::OnInit()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tb_on_init(&gH20Host, &mH);
+			return;
+		}
+
 		if(mInputType!=eWidgetTextBoxInputType_Numeric)
 			return;
 
@@ -493,6 +562,12 @@ namespace hpl {
 
 	void cWidgetTextBox::OnLoadGraphics()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tb_on_load_graphics(&gH20Host, &mH);
+			return;
+		}
+
 		mpGfxMarker = mpSkin->GetGfx(eGuiSkinGfx_TextBoxMarker);
 		mpGfxSelectedTextBack = mpSkin->GetGfx(eGuiSkinGfx_TextBoxSelectedTextBack);
 
@@ -515,6 +590,12 @@ namespace hpl {
 
 	void cWidgetTextBox::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tb_on_draw(&gH20Host, &mH);
+			return;
+		}
+
 		cColor col = IsEnabled()? mDefaultFontColor : mpSkin->GetFont(eGuiSkinFont_Disabled)->mColor;
 
 		OhplW2TbCtx ctx;
@@ -557,6 +638,11 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnMouseMove(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tb_on_mouse_move(&gH20Host, &mH, &aData);
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -571,6 +657,11 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnMouseDown(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tb_on_mouse_down(&gH20Host, &mH, &aData);
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -593,6 +684,11 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnMouseUp(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tb_on_mouse_up(&gH20Host, &mH, &aData);
+		}
+
 		int lMarker, lSelectEnd;
 		{
 			OhplW2TbCtx ctx;
@@ -622,6 +718,11 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnMouseDoubleClick(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tb_on_mouse_double_click(&gH20Host, &mH, &aData);
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -650,6 +751,11 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnGotFocus(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tb_on_got_focus(&gH20Host, &mH);
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -662,6 +768,11 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnGotTabFocus(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tb_on_got_tab_focus(&gH20Host, &mH);
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -674,6 +785,11 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnLostFocus(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tb_on_lost_focus(&gH20Host, &mH, &aData);
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -687,6 +803,11 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnKeyPress(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tb_on_key_press(&gH20Host, &mH, &aData);
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -702,6 +823,11 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnUIButtonPress(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tb_on_ui_button_press(&gH20Host, &mH, &aData);
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -720,6 +846,11 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnEnter(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tb_on_enter(&gH20Host, &mH, &aData);
+		}
+
 		OhplW2TbCtx ctx;
 		OhplW2TextCall call;
 		SetupCall(ctx, call);
@@ -733,6 +864,13 @@ namespace hpl {
 
 	void cWidgetTextBox::OnUIKeyboardOpen()
 	{
+		if(OhplBackendRustRequested())
+		{
+			mbUIKeyboardOpen = true;
+			ohpl_h20_tb_ui_keyboard_open(&gH20Host, &mH);
+			return;
+		}
+
 		mbUIKeyboardOpen = true;
 
 		OhplW2TbCtx ctx;

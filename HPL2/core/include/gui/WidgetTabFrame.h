@@ -22,6 +22,7 @@
 
 #include "gui/Widget.h"
 #include "gui/RustWidget2.h"
+#include "gui/RustGuiH20.h"
 
 using namespace std;
 
@@ -51,6 +52,7 @@ namespace hpl
 	{
 	friend class cWidgetTab;
 	friend class cWidgetTabFrame;
+	friend struct OhplH20Access;
 	public:
 		cWidgetTabLabel(cGuiSet* apSet, cGuiSkin* apSkin);
 		virtual ~cWidgetTabLabel();
@@ -78,7 +80,9 @@ namespace hpl
 		cGuiGfxElement* mvGfxCorners[4];
 		cGuiGfxElement* mpGfxBackground;
 
-		cGuiGfxElement* mpGfxIcon;
+		// Rust state (OHPL_IMPL=rust); the references keep the member names.
+		OhplH20TabLabel mH;
+		cGuiGfxElement*& mpGfxIcon;
 	};
 
 	//////////////////////////////////////////////////////////////////
@@ -89,6 +93,7 @@ namespace hpl
 	{
     friend class cWidgetTabFrame;
 	friend class cWidgetTabLabel;
+	friend struct OhplH20Access;
 	public:
 		cWidgetTab(cWidgetTabFrame* apParent);
 		virtual ~cWidgetTab();
@@ -124,14 +129,15 @@ namespace hpl
 
 		////////////////////////////
 		// Data
-		int mlIndex;
+		OhplH20Tab mH;
+		int& mlIndex;
 
-		bool mbOnTop;
+		bool& mbOnTop;
 
-		cWidgetTabFrame* mpParentTabFrame;
+		cWidgetTabFrame*& mpParentTabFrame;
 
-		cWidgetTabLabel* mpTabLabel;
-		cWidgetFrame*	mpFrame;
+		cWidgetTabLabel*& mpTabLabel;
+		cWidgetFrame*& mpFrame;
 	};
 
 	//////////////////////////////////////////////////////////////////
@@ -142,6 +148,7 @@ namespace hpl
 	{
 	friend class cWidgetTab;
 	friend class cWidgetTabLabel;
+	friend struct OhplH20Access;
 	public:
 		cWidgetTabFrame(cGuiSet* apSet, cGuiSkin* apSkin);
 		virtual ~cWidgetTabFrame();
@@ -188,19 +195,20 @@ namespace hpl
 		
 		/////////////////////////////
 		// Data
+		OhplH20TabFrame mH;
 		tWidgetTabVector mvTabs;
-		cWidgetTab*		mpTopTab;
+		cWidgetTab*& mpTopTab;
 
 		cWidgetButton* mvArrowButtons[2];
 
-		float mfBackgroundZ;
-		float mfForegroundZ;
+		float& mfBackgroundZ;
+		float& mfForegroundZ;
 
 
 
 		bool mbTabOnTopChanged;
 
-		OhplW2TabState mState;
+		OhplW2TabState& mState;
 
 
 		cGuiGfxElement* mvGfxArrows[2];
@@ -217,8 +225,8 @@ namespace hpl
 		cGuiGfxElement* mvGfxTabCorners[4];
 		cGuiGfxElement* mpGfxTabBG;
 
-		bool mbHoriScrollEnabled;
-		bool mbVertScrollEnabled;
+		bool& mbHoriScrollEnabled;
+		bool& mbVertScrollEnabled;
 	};
 };
 

@@ -24,6 +24,7 @@
 
 #include "graphics/FontData.h"
 #include "gui/RustWidget3.h"
+#include "impl/RustBackends.h"
 
 #include "system/LowLevelSystem.h"
 
@@ -40,6 +41,7 @@ namespace hpl {
 
 	cWidgetMainMenu::cWidgetMainMenu(cGuiSet *apSet, cGuiSkin *apSkin) : iWidgetMenu(eWidgetType_MainMenu,apSet,apSkin)
 	{
+		ohpl_h20_mm_init(&gH20Host, &mH, (uintptr_t)(iWidget*)this, &mB);
 		LoadGraphics();
 	}
 
@@ -57,6 +59,12 @@ namespace hpl {
 
 	void cWidgetMainMenu::UpdateMenuItemsPos(cWidgetMenuItem* apNewItem)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mm_update_items_pos(&gH20Host, &mH, (uintptr_t)(iWidget*)apNewItem);
+			return;
+		}
+
 		size_t lNumItems = mvMenuItems.size();
 
 		/////////////////////////////////////
@@ -79,6 +87,12 @@ namespace hpl {
 
 	void cWidgetMainMenu::UpdateMenuItemsSize(cWidgetMenuItem* apNewItem)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mm_update_items_size(&gH20Host, &mH, (uintptr_t)(iWidget*)apNewItem);
+			return;
+		}
+
 		//////////////////////////////////////
 		// Set item text length as items size 
 		float fLength = apNewItem->GetTextLength();
@@ -95,6 +109,12 @@ namespace hpl {
 
 	void cWidgetMainMenu::OnChildMenuHide()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mm_on_child_menu_hide(&gH20Host, &mH);
+			return;
+		}
+
 		mpSet->SetAttentionWidget(mpPrevAttention);
 	}
     
@@ -102,6 +122,12 @@ namespace hpl {
 
 	void cWidgetMainMenu::Hide()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mm_hide(&gH20Host, &mH);
+			return;
+		}
+
 		///////////////////////////////////////////////////
 		// In MainMenu, topmost menu should never be hidden, so hide submenues only
 		if(IsSubmenuOpen())
@@ -117,6 +143,12 @@ namespace hpl {
 
 	void cWidgetMainMenu::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mm_on_draw(&gH20Host, &mH);
+			return;
+		}
+
 		////////////////////////////////
 		// Draw background 
 		mpSet->DrawGfx( mpGfxBackground,GetGlobalPosition(),mvSize-cVector2f(0,1));
@@ -128,6 +160,12 @@ namespace hpl {
 
 	void cWidgetMainMenu::OnUpdate(float afTimeStep)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mm_on_update(&gH20Host, &mH);
+			return;
+		}
+
 		if(mbMustHide)
 		{
 			Hide();
@@ -139,6 +177,12 @@ namespace hpl {
 
 	void cWidgetMainMenu::OnInit()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mm_on_init(&gH20Host, &mH);
+			return;
+		}
+
 		/////////////////////////////////////////////////////////////////////
 		// If has parent, use parent width. If not, use screen width (temp)
 
@@ -158,6 +202,12 @@ namespace hpl {
 
 	void cWidgetMainMenu::OnLoadGraphics()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_mm_on_load_graphics(&gH20Host, &mH);
+			return;
+		}
+
 		mpGfxBackground = mpSkin->GetGfx(eGuiSkinGfx_ButtonUpBackground);
 
 		mfItemTextPadding = mpSkin->GetAttribute(eGuiSkinAttribute_MainMenuItemTextPadding).x;

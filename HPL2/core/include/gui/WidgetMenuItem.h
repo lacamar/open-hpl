@@ -23,6 +23,7 @@
 #include "gui/Widget.h"
 
 #include "input/InputTypes.h"
+#include "gui/RustGuiH20.h"
 
 namespace hpl {
 
@@ -38,6 +39,7 @@ namespace hpl {
 
 	class cWidgetMenuItem : public iWidget
 	{
+		friend struct OhplH20Access;
 	public:
 		cWidgetMenuItem(iWidgetMenu* apParent);
 		virtual ~cWidgetMenuItem();
@@ -99,15 +101,17 @@ namespace hpl {
 		// Data
 		eWidgetType mItemType;
 
-		bool	mbChecked;
-		bool	mbDefault;
+		// Rust state (OHPL_IMPL=rust); the references keep the member names.
+		OhplH20MenuItem mH;
+		bool&	mbChecked;
+		bool&	mbDefault;
 
-		float	mfTimer;
-		float	mfOpenMenuTime;
+		float&	mfTimer;
+		float&	mfOpenMenuTime;
 
 		bool	mbPressed;
 
-		iWidgetMenu*	mpChildMenu;
+		iWidgetMenu*&	mpChildMenu;
 
 		cGuiGfxElement*	mpGfxSelection;
 		cGuiGfxElement*	mpGfxSubMenuArrow;

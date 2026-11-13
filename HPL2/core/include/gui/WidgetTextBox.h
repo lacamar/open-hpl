@@ -22,6 +22,7 @@
 
 #include "gui/Widget.h"
 #include "gui/RustWidget2.h"
+#include "gui/RustGuiH20.h"
 
 namespace hpl {
 
@@ -36,6 +37,7 @@ namespace hpl {
 	{
 		friend class cGuiPopUpUIKeyboard;
 		friend struct OhplW2TbCtx;
+		friend struct OhplH20Access;
 	public:
 		cWidgetTextBox(cGuiSet *apSet, cGuiSkin *apSkin, eWidgetTextBoxInputType aType);
 		virtual ~cWidgetTextBox();
@@ -76,7 +78,7 @@ namespace hpl {
 		void SetDecimals(int alX) { mState.decimals = alX; }
 		int GetDecimals();
 
-		static void SetDefaultDecimals(int alX) { mlDefaultDecimals = alX; }
+		static void SetDefaultDecimals(int alX) { mlDefaultDecimals = alX; ohpl_h20_tb_set_default_decimals(alX); }
 
 		void SetIllegalChars(const tWString &asIllegalChars);
 		const tWString& GetIllegalChars();
@@ -143,11 +145,13 @@ namespace hpl {
 
 		/////////////////////////
 		// Data
-		iWidget* mpPrevAttention;
-		OhplW2Text mState;
+		// Rust state (OHPL_IMPL=rust); the references keep the member names.
+		OhplH20TextBox mH;
+		iWidget*& mpPrevAttention;
+		OhplW2Text& mState;
 
 		eWidgetTextBoxInputType mInputType;
-		bool mbShowButtons;
+		bool& mbShowButtons;
 
 		static int mlDefaultDecimals;
 

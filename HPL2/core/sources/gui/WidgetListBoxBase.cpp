@@ -29,6 +29,7 @@
 #include "gui/GuiGfxElement.h"
 
 #include "gui/WidgetSlider.h"
+#include "impl/RustBackends.h"
 
 #include <vector>
 
@@ -40,13 +41,14 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	iWidgetListBoxBase::iWidgetListBoxBase(cGuiSet *apSet, cGuiSkin *apSkin) : iWidget(eWidgetType_ListBox,apSet, apSkin)
+	iWidgetListBoxBase::iWidgetListBoxBase(cGuiSet *apSet, cGuiSkin *apSkin, int alKind) : iWidget(eWidgetType_ListBox,apSet, apSkin),
+		mfBackgroundZ(mH.bgZ), mfSliderWidth(mH.sliderW), mList(mH.list)
 	{
+		ohpl_h20_lb_init(&gH20Host, &mH, (uintptr_t)(iWidget*)this, (uintptr_t)(iWidgetItemContainer*)this, &mB, alKind);
+
 		mbClipsGraphics = true;
 
 		mfBackgroundZ = -0.5;
-
-		mList = ohpl_w2_list_init();
 
 		mfSliderWidth = mpSkin->GetAttribute(eGuiSkinAttribute_ListBoxSliderWidth).x;
 
@@ -61,8 +63,10 @@ namespace hpl {
 	{
 		if(mpSet->IsDestroyingSet()==false)
 		{
-			mpSet->DestroyWidget(mpSlider);
+			if(OhplBackendRustRequested()) ohpl_h20_lb_destroy_slider(&gH20Host, &mH);
+			else mpSet->DestroyWidget(mpSlider);
 		}
+		ohpl_h20_lb_free(&mH);
 	}
 
 	//-----------------------------------------------------------------------
@@ -76,6 +80,12 @@ namespace hpl {
 	void iWidgetListBoxBase::SetSelectedItem(int alX, bool abMoveList, bool abGenerateCallback, eListBoxSelectType aType,
 												bool abClearPrevious)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_set_selected_item(&gH20Host, &mH, alX, abMoveList, abGenerateCallback, aType, abClearPrevious);
+			return;
+		}
+
 		if(abClearPrevious || mList.allow_multi==false)
 			ClearSelection();
 
@@ -97,6 +107,11 @@ namespace hpl {
 
 	int iWidgetListBoxBase::GetSelectedItem()
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_lb_selected_item(&gH20Host, &mH);
+		}
+
 		if(mlstSelectedItems.empty())
 			return -1;
 
@@ -107,6 +122,11 @@ namespace hpl {
 
 	int iWidgetListBoxBase::GetMultiSelection(int alIdx)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_lb_multi_selection(&gH20Host, &mH, alIdx);
+		}
+
 		std::vector<int> vSelected(mlstSelectedItems.begin(), mlstSelectedItems.end());
 		return ohpl_w2_list_multi_selection(vSelected.data(), vSelected.size(), alIdx);
 	}
@@ -115,12 +135,23 @@ namespace hpl {
 
 	int iWidgetListBoxBase::GetMultiSelectionNum()
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_lb_multi_selection_num(&gH20Host, &mH);
+		}
+
 		return (int)mlstSelectedItems.size();
 	}
 	//-----------------------------------------------------------------------
 
 	void iWidgetListBoxBase::ClearSelection()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_clear_selection(&gH20Host, &mH);
+			return;
+		}
+
 		mbClearingSelection = true;
 
 		tIntListIt it = mlstSelectedItems.begin();
@@ -138,6 +169,13 @@ namespace hpl {
 
 	cVector3f iWidgetListBoxBase::GetItemStartPos()
 	{
+		if(OhplBackendRustRequested())
+		{
+			cVector3f vPos;
+			ohpl_h20_lb_item_start_pos(&gH20Host, &mH, &vPos);
+			return vPos;
+		}
+
 		return GetGlobalPosition() + cVector3f(0,2,0.01f);
 	}
 
@@ -171,6 +209,12 @@ namespace hpl {
 
 	void iWidgetListBoxBase::UpdateProperties()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_update_properties(&gH20Host, &mH);
+			return;
+		}
+
 		OhplW2ListUpdate update;
 		ohpl_w2_list_update(&mList, mvSize.y, mvDefaultFontSize.y, (int)mvItems.size(), &update);
 
@@ -205,6 +249,12 @@ namespace hpl {
 
 	void iWidgetListBoxBase::OnChangeSize()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_on_change_size(&gH20Host, &mH);
+			return;
+		}
+
 		if(mpSlider)
 		{
 			mpSlider->SetSize(cVector2f(mfSliderWidth,mvSize.y));
@@ -218,6 +268,12 @@ namespace hpl {
 
 	void iWidgetListBoxBase::OnInit()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_on_init(&gH20Host, &mH);
+			return;
+		}
+
 		mpSlider = mpSet->CreateWidgetSlider(eWidgetSliderOrientation_Vertical,0,0,0,this);
 		mpSlider->AddCallback(eGuiMessage_SliderMove,this,kGuiCallback(MoveSlider));
 
@@ -228,11 +284,23 @@ namespace hpl {
 
 	void iWidgetListBoxBase::AddItemToSelection(cWidgetItem* apItem)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_add_item_to_selection(&gH20Host, &mH, (uintptr_t)apItem);
+			return;
+		}
+
 		mlstSelectedItems.push_back(apItem->GetIndex());
 	}
 
 	void iWidgetListBoxBase::RemoveItemFromSelection(cWidgetItem* apItem)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_remove_item_from_selection(&gH20Host, &mH, (uintptr_t)apItem);
+			return;
+		}
+
 		if(mbClearingSelection==false)
 			mlstSelectedItems.remove(apItem->GetIndex());
 	}
@@ -251,6 +319,12 @@ namespace hpl {
 
 	void iWidgetListBoxBase::OnLoadGraphics()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_on_load_graphics(&gH20Host, &mH);
+			return;
+		}
+
 		mpGfxBackground = mpSkin->GetGfx(eGuiSkinGfx_ListBoxBackground);
 
 		mpGfxSelection = mpSkin->GetGfx(eGuiSkinGfx_TextBoxSelectedTextBack);
@@ -270,6 +344,12 @@ namespace hpl {
 
 	void iWidgetListBoxBase::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_on_draw(&gH20Host, &mH);
+			return;
+		}
+
 		////////////////////////////////
 		// Background
 		mpSet->DrawGfx(	mpGfxBackground,GetGlobalPosition() +cVector3f(0,0,mfBackgroundZ),
@@ -290,6 +370,12 @@ namespace hpl {
 
 	void iWidgetListBoxBase::OnDrawAfterClip(float afTimeStep, cGuiClipRegion* apClipRegion)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_on_draw_after_clip(&gH20Host, &mH, (uintptr_t)apClipRegion);
+			return;
+		}
+
 		cGuiClipRegion* pRegion = apClipRegion->CreateChild(GetGlobalPosition(), mvSize-cVector2f(mfSliderWidth,0));
 		mpSet->SetCurrentClipRegion(pRegion);
 
@@ -323,6 +409,11 @@ namespace hpl {
 
 	bool iWidgetListBoxBase::OnMouseDown(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_lb_on_mouse_down(&gH20Host, &mH, &aData);
+		}
+
 		int lSliderValue = mpSlider->GetValue();
 		int lWheel = ohpl_w2_list_wheel(aData.mlVal);
 		if(lWheel==0)
@@ -368,6 +459,11 @@ namespace hpl {
 
 	bool iWidgetListBoxBase::OnMouseDoubleClick(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_lb_on_mouse_double_click(&gH20Host, &mH, &aData);
+		}
+
 		cVector3f vLocalPos = WorldToLocalPosition(aData.mvPos);
 
 		bool bFire = false;
@@ -397,6 +493,11 @@ namespace hpl {
 
 	bool iWidgetListBoxBase::OnKeyPress(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_lb_on_key_press(&gH20Host, &mH, &aData);
+		}
+
 		int lMod = aData.mKeyPress.mlModifier;
 		OhplW2ListKey key = ohpl_w2_list_key(&mList, aData.mKeyPress.mKey, lMod);
 
@@ -424,6 +525,11 @@ namespace hpl {
 
 	bool iWidgetListBoxBase::OnUIArrowPress(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_lb_on_ui_arrow_press(&gH20Host, &mH, &aData);
+		}
+
 		OhplW2ListArrow arrow = ohpl_w2_list_ui_arrow(&mList, aData.mlVal);
 		if(arrow.handled==false)
 			return false;
@@ -450,6 +556,11 @@ namespace hpl {
 
 	bool iWidgetListBoxBase::OnUIButtonPress(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_lb_on_ui_button_press(&gH20Host, &mH, &aData);
+		}
+
 		OhplW2ListButton button = ohpl_w2_list_ui_button(&mList, HasFocus(), aData.mlVal, GetSelectedItem());
 		if(button.ret==0) return false;
 		if(button.ret==1) return true;
@@ -475,11 +586,21 @@ namespace hpl {
 
 	bool iWidgetListBoxBase::OnUIButtonRelease(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_lb_on_ui_button_release(&gH20Host, &mH);
+		}
+
 		return HasFocus();
 	}
 
 	bool iWidgetListBoxBase::OnUIButtonDoublePress(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_lb_on_ui_button_double_press(&gH20Host, &mH, &aData);
+		}
+
 		if(HasFocus())
 		{
 			if(aData.mlVal==eUIButton_Primary)
@@ -506,6 +627,12 @@ namespace hpl {
 
 	void iWidgetListBoxBase::SetCursorPos(int alPos, bool abMoveList, bool abClamp)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_lb_set_cursor_pos(&gH20Host, &mH, alPos, abMoveList, abClamp);
+			return;
+		}
+
 		ApplyCursor(ohpl_w2_list_cursor1(&mList, alPos, abMoveList, abClamp), abMoveList);
 	}
 

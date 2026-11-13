@@ -31,6 +31,7 @@
 #include "gui/WidgetTextBox.h"
 #include "gui/WidgetButton.h"
 #include "gui/WidgetSlider.h"
+#include "impl/RustBackends.h"
 
 #include <vector>
 
@@ -42,8 +43,11 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cWidgetComboBox::cWidgetComboBox(cGuiSet *apSet, cGuiSkin *apSkin) : iWidget(eWidgetType_ComboBox,apSet, apSkin)
+	cWidgetComboBox::cWidgetComboBox(cGuiSet *apSet, cGuiSkin *apSkin) : iWidget(eWidgetType_ComboBox,apSet, apSkin),
+		mCombo(mH.combo), mfButtonWidth(mH.buttonW), mfSliderWidth(mH.sliderW)
 	{
+		ohpl_h20_cb_init(&gH20Host, &mH, (uintptr_t)(iWidget*)this, (uintptr_t)(iWidgetItemContainer*)this, &mB);
+
 		mfButtonWidth = mpSkin->GetAttribute(eGuiSkinAttribute_ComboBoxButtonWidth).x;
 		mfSliderWidth = mpSkin->GetAttribute(eGuiSkinAttribute_ComboBoxSliderWidth).x;
 
@@ -60,6 +64,11 @@ namespace hpl {
 	{
 		if(mpSet->IsDestroyingSet()==false)
 		{
+			if(OhplBackendRustRequested())
+			{
+				ohpl_h20_cb_destroy_children(&gH20Host, &mH);
+				return;
+			}
 			mpSet->DestroyWidget(mpText);
 			mpSet->DestroyWidget(mpButton);
 			mpSet->DestroyWidget(mpSlider);
@@ -76,6 +85,12 @@ namespace hpl {
 
 	void cWidgetComboBox::SetSelectedItem(int alX, bool abMoveList, bool abGenCallback)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cb_set_selected_item(&gH20Host, &mH, alX, abMoveList, abGenCallback);
+			return;
+		}
+
 		OhplW2SliderSet slider;
 		if(ohpl_w2_combo_select1(&mCombo, alX, abMoveList, GetItemNum(), &slider)==false) return;
 
@@ -97,11 +112,22 @@ namespace hpl {
 
 	void cWidgetComboBox::SetCanEdit(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cb_set_can_edit(&gH20Host, &mH, abX);
+			return;
+		}
+
 		mpText->SetCanEdit(abX);
 	}
 
 	bool cWidgetComboBox::GetCanEdit()
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cb_can_edit(&gH20Host, &mH);
+		}
+
 		return mpText->GetCanEdit();
 	}
 
@@ -109,6 +135,12 @@ namespace hpl {
 
 	void cWidgetComboBox::SetMaxShownItems(int alX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cb_set_max_shown_items(&gH20Host, &mH, alX);
+			return;
+		}
+
 		mCombo.max_items = alX;
 
 		UpdateProperties();
@@ -118,6 +150,13 @@ namespace hpl {
 
 	void cWidgetComboBox::SetDefaultFontSize(const cVector2f& avSize)
 	{
+		if(OhplBackendRustRequested())
+		{
+			iWidget::SetDefaultFontSize(avSize);
+			ohpl_h20_cb_set_default_font_size(&gH20Host, &mH, avSize.x, avSize.y);
+			return;
+		}
+
 		iWidget::SetDefaultFontSize(avSize);
 		mpText->SetDefaultFontSize(avSize);
 	}
@@ -132,6 +171,12 @@ namespace hpl {
 
 	void cWidgetComboBox::UpdateProperties()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cb_update_properties(&gH20Host, &mH);
+			return;
+		}
+
 		if(ohpl_w2_combo_update(&mCombo, mvDefaultFontSize.y, (int)mvItems.size()))
 			SetSelectedItem((int)mvItems.size()-1);
 
@@ -237,6 +282,12 @@ namespace hpl {
 
 	void cWidgetComboBox::OnInit()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cb_on_init(&gH20Host, &mH);
+			return;
+		}
+
 		mpText = mpSet->CreateWidgetTextBox(0,mvSize,_W(""),this);
 		mpText->SetText(msText);
 		mpText->SetCanEdit(false);
@@ -265,6 +316,12 @@ namespace hpl {
 
 	void cWidgetComboBox::OnChangeSize()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cb_on_change_size(&gH20Host, &mH);
+			return;
+		}
+
 		if(mpText && mpButton && mpSlider)
 		{
 			mpText->SetSize(mvSize);
@@ -286,6 +343,12 @@ namespace hpl {
 
 	void cWidgetComboBox::OnChangeText()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cb_on_change_text(&gH20Host, &mH);
+			return;
+		}
+
 		if(mpText) mpText->SetText(msText);
 	}
 
@@ -293,6 +356,12 @@ namespace hpl {
 
 	void cWidgetComboBox::OnLoadGraphics()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cb_on_load_graphics(&gH20Host, &mH);
+			return;
+		}
+
 		mpGfxBackground = mpSkin->GetGfx(eGuiSkinGfx_ComboBoxBackground);
 
 		mpGfxSelection = mpSkin->GetGfx(eGuiSkinGfx_TextBoxSelectedTextBack);
@@ -312,6 +381,12 @@ namespace hpl {
 
 	void cWidgetComboBox::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_cb_on_draw(&gH20Host, &mH);
+			return;
+		}
+
 		if(mCombo.menu_open)
 		{
 			///////////////////////////////
@@ -385,6 +460,11 @@ namespace hpl {
 
 	bool cWidgetComboBox::OnMouseMove(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cb_on_mouse_move(&gH20Host, &mH, &aData);
+		}
+
 		if(mCombo.menu_open==false) return false;
 
 		if(GetMouseIsOver()==false) return false;
@@ -399,6 +479,11 @@ namespace hpl {
 
 	bool cWidgetComboBox::OnMouseDown(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cb_on_mouse_down(&gH20Host, &mH, &aData);
+		}
+
 		int lWheel;
 		if(ohpl_w2_combo_mouse_down_pre(&mCombo, aData.mlVal, &lWheel)==false) return false;
 
@@ -426,6 +511,11 @@ namespace hpl {
 
 	bool cWidgetComboBox::OnMouseUp(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cb_on_mouse_up(&gH20Host, &mH, &aData);
+		}
+
 		if(ohpl_w2_combo_mouse_up_pre(&mCombo, aData.mlVal)==false) return false;
 
 		cVector3f vLocal = WorldToLocalPosition(aData.mvPos);
@@ -457,6 +547,11 @@ namespace hpl {
 
 	bool cWidgetComboBox::OnUIArrowPress(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cb_on_ui_arrow_press(&gH20Host, &mH, &aData);
+		}
+
 		if(mCombo.menu_open==false) return false;
 
 		int lSet;
@@ -471,6 +566,11 @@ namespace hpl {
 
 	bool cWidgetComboBox::OnUIButtonPress(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cb_on_ui_button_press(&gH20Host, &mH, &aData);
+		}
+
 		OhplW2ComboUiButton button = ohpl_w2_combo_ui_button(&mCombo, HasFocus(), aData.mlVal);
 
 		switch(button.action)
@@ -494,6 +594,11 @@ namespace hpl {
 
 	bool cWidgetComboBox::OnUIButtonRelease(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cb_on_ui_button_release(&gH20Host, &mH, &aData);
+		}
+
 		if(HasFocus())
 			return aData.mlVal==eUIButton_Primary;
 
@@ -504,6 +609,11 @@ namespace hpl {
 
 	bool cWidgetComboBox::OnLostFocus(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cb_on_lost_focus(&gH20Host, &mH, &aData);
+		}
+
 		if(mCombo.menu_open && mCombo.open_by_ui==false)
 		{
 			cVector3f vLocal = WorldToLocalPosition(aData.mvPos);
@@ -518,6 +628,11 @@ namespace hpl {
 
 	bool cWidgetComboBox::PointIsInside(const cVector2f& avPoint, bool abOnlyClipped)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_cb_point_is_inside(&gH20Host, &mH, avPoint.x, avPoint.y, abOnlyClipped);
+		}
+
 		if(mCombo.menu_open==false && CheckPointInsideClippingParent(avPoint)==false)
 			return false;
 
