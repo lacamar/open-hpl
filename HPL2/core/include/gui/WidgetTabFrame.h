@@ -72,15 +72,6 @@ namespace hpl
 
 		///////////////////////////
 		// Data
-		cWidgetTab* mpParentTab;
-
-		
-
-		cGuiGfxElement* mvGfxBorders[4];
-		cGuiGfxElement* mvGfxCorners[4];
-		cGuiGfxElement* mpGfxBackground;
-
-		// Rust state (OHPL_IMPL=rust); the references keep the member names.
 		OhplH20TabLabel mH;
 		cGuiGfxElement*& mpGfxIcon;
 	};
@@ -180,9 +171,6 @@ namespace hpl
 
 		/////////////////////////////
 		// Own fuctions
-		bool ArrowButton_Pressed(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(ArrowButton_Pressed);
-
 		void SetScrollButtonsHidden(bool abX);
 		void UpdateTabVisibility();
 
@@ -196,34 +184,12 @@ namespace hpl
 		/////////////////////////////
 		// Data
 		OhplH20TabFrame mH;
-		tWidgetTabVector mvTabs;
 		cWidgetTab*& mpTopTab;
-
-		cWidgetButton* mvArrowButtons[2];
 
 		float& mfBackgroundZ;
 		float& mfForegroundZ;
 
-
-
-		bool mbTabOnTopChanged;
-
 		OhplW2TabState& mState;
-
-
-		cGuiGfxElement* mvGfxArrows[2];
-		cGuiGfxElement* mvGfxDisabledArrows[2];
-
-
-		cGuiGfxElement* mvGfxTabLabelBorders[4];
-		cGuiGfxElement* mvGfxTabLabelCorners[4];
-		cGuiGfxElement* mpGfxTabLabelBG;
-		cGuiGfxElement* mpGfxTabLabelBGActive;
-
-
-		cGuiGfxElement* mvGfxTabBorders[4];
-		cGuiGfxElement* mvGfxTabCorners[4];
-		cGuiGfxElement* mpGfxTabBG;
 
 		bool& mbHoriScrollEnabled;
 		bool& mbVertScrollEnabled;

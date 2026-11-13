@@ -18,7 +18,6 @@
  */
 
 #include "gui/GuiSet.h"
-#include "impl/RustBackends.h"
 
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
@@ -258,7 +257,7 @@ namespace hpl {
 		mlDrawPrio = 0;
 		
 		// 9 mouse buttons defined in InputTypes and GuiTypes
-		if(OhplBackendRustRequested()) mS.lists = ohpl_h18_lists_new();
+		mS.lists = ohpl_h18_lists_new();
 		mS.mouseMovement = true;
 
 		SetSkin(apSkin);
@@ -357,40 +356,9 @@ namespace hpl {
 
 	bool cGuiSet::SendMessage(eGuiMessage aMessage, const cGuiMessageData& aData)
 	{
-		if(OhplBackendRustRequested())
-		{
-			OhplH18Host host;
-			FillRustHost(host);
-			return ohpl_h18_send_message(&mS, &host, aMessage, &aData);
-		}
-
-		// Sort widgets so that highest Z value mean first on the list (if needed)
-		if(mbSortWidgets)
-		{
-			mbSortWidgets = false;
-			mlstWidgets.sort(SortWidget_Z);
-		}
-
-		switch(aMessage)
-		{
-			case eGuiMessage_MouseMove:				return OnMouseMove(aData);
-			case eGuiMessage_MouseDown:				return OnMouseDown(aData);
-			case eGuiMessage_MouseUp:				return OnMouseUp(aData);
-			case eGuiMessage_MouseDoubleClick:		return OnMouseDoubleClick(aData);
-
-			case eGuiMessage_KeyPress:				return OnKeyPress(aData);
-			case eGuiMessage_KeyRelease:			return OnKeyRelease(aData);
-
-			case eGuiMessage_GamepadInput:			return OnGamepadInput(aData);
-
-			case eGuiMessage_UIArrowPress:			return OnUIArrowPress(aData);
-			case eGuiMessage_UIArrowRelease:		return OnUIArrowRelease(aData);
-			case eGuiMessage_UIButtonPress:			return OnUIButtonPress(aData);
-			case eGuiMessage_UIButtonRelease:		return OnUIButtonRelease(aData);
-			case eGuiMessage_UIButtonDoublePress:	return OnUIButtonDoublePress(aData);
-		}
-		
-		return false;
+		OhplH18Host host;
+		FillRustHost(host);
+		return ohpl_h18_send_message(&mS, &host, aMessage, &aData);
 	}
 
 	//-----------------------------------------------------------------------
@@ -606,8 +574,7 @@ namespace hpl {
 		pWindow->SetName(asName);
 		AddWidget(pWindow, apParent);
 
-		if(OhplBackendRustRequested()) ohpl_h18_add_window(&mS, (OhplH18W)pWindow);
-		else mlstWindows.push_back(pWindow);
+		ohpl_h18_add_window(&mS, (OhplH18W)pWindow);
 
 		return pWindow;
 	}
@@ -925,22 +892,7 @@ namespace hpl {
 
 	void cGuiSet::DestroyWidget(iWidget *apWidget, bool abDestroyChildren)
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h18_destroy_prelude(&mS, (OhplH18W)apWidget);
-		}
-		else
-		{
-		if(apWidget == mS.focused) mS.focused = NULL;
-		mlstTabOrderWidgets.remove(apWidget);
-		mS.tabWidget = NULL;
-		
-		if(apWidget==mS.tooltipWidget)
-			SetToolTipWidget(NULL);
-
-		if(apWidget==mS.defaultNav)
-			mS.defaultNav = NULL;
-		}
+		ohpl_h18_destroy_prelude(&mS, (OhplH18W)apWidget);
 
 		tWidgetList& lstChildren = apWidget->GetChildren();
 		if(abDestroyChildren && lstChildren.empty()==false)
@@ -1108,12 +1060,7 @@ namespace hpl {
 
 	void cGuiSet::RemoveWindow(cWidgetWindow* apWin)
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h18_remove_window(&mS, (OhplH18W)apWin);
-			return;
-		}
-		mlstWindows.remove(apWin);
+		ohpl_h18_remove_window(&mS, (OhplH18W)apWin);
 	}
 
 	void cGuiSet::SetLastWindowZ(float afX)
@@ -1123,30 +1070,9 @@ namespace hpl {
 
 	void cGuiSet::SetWindowOnTop(cWidgetWindow* apWin)
 	{
-		if(OhplBackendRustRequested())
-		{
-			OhplH18Host host;
-			FillRustHost(host);
-			ohpl_h18_set_window_on_top(&mS, &host, (OhplH18W)apWin);
-			return;
-		}
-		tWidgetListIt it = find(mlstWindows.begin(), mlstWindows.end(), apWin);
-		if(it==mlstWindows.end())
-			return;
-		RemoveWindow(apWin);
-		mlstWindows.push_back(apWin);
-
-		it = mlstWindows.begin();
-		float fHeight = 20.0f;
-		for(;it!=mlstWindows.end();++it)
-		{
-			iWidget* pWin = *it;
-			cVector3f vPos = pWin->GetGlobalPosition();
-			vPos.z = fHeight;
-
-			pWin->SetGlobalPosition(vPos);
-			fHeight+=10.0f;
-		}
+		OhplH18Host host;
+		FillRustHost(host);
+		ohpl_h18_set_window_on_top(&mS, &host, (OhplH18W)apWin);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1198,125 +1124,46 @@ namespace hpl {
 
 	void cGuiSet::SetFocusedWidget(iWidget* apWidget, bool abCheckForValidity)
 	{
-		if(OhplBackendRustRequested())
-		{
-			OhplH18Host host;
-			FillRustHost(host);
-			ohpl_h18_set_focused(&mS, &host, (OhplH18W)apWidget, abCheckForValidity);
-			return;
-		}
-		if(mS.focused==apWidget)
-			return;
-		
-		if(abCheckForValidity && IsValidWidget(apWidget)==false)
-			apWidget = NULL;
-
-		iWidget* pOldFocus = mS.focused;
-		cGuiMessageData data = cGuiMessageData(mS.mousePos,0);
-
-		mS.focused = apWidget;
-
-		if(mS.focused)
-			mS.focused->GetFocus(data);
-		
-		if(pOldFocus)
-			pOldFocus->ProcessMessage(eGuiMessage_LostFocus, data);
+		OhplH18Host host;
+		FillRustHost(host);
+		ohpl_h18_set_focused(&mS, &host, (OhplH18W)apWidget, abCheckForValidity);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cGuiSet::PushFocusedWidget()
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h18_push_focused(&mS);
-			return;
-		}
-		mlstFocusedStack.push_back(mS.focused);
+		ohpl_h18_push_focused(&mS);
 	}
 
 	void cGuiSet::PopFocusedWidget()
 	{
-		if(OhplBackendRustRequested())
-		{
-			OhplH18Host host;
-			FillRustHost(host);
-			ohpl_h18_pop_focused(&mS, &host);
-			return;
-		}
-		if(mlstFocusedStack.empty()) return;
-
-		SetFocusedWidget(mlstFocusedStack.back(), true);
-		mlstFocusedStack.pop_back();
+		OhplH18Host host;
+		FillRustHost(host);
+		ohpl_h18_pop_focused(&mS, &host);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cGuiSet::SetAttentionWidget(iWidget *apWidget, bool abClearFocus, bool abCheckForValidity)
 	{
-		if(OhplBackendRustRequested())
-		{
-			OhplH18Host host;
-			FillRustHost(host);
-			ohpl_h18_set_attention(&mS, &host, (OhplH18W)apWidget, abClearFocus, abCheckForValidity);
-			return;
-		}
-		if(mS.attention == apWidget) return;
-
-		if(abCheckForValidity && IsValidWidget(apWidget)==false)
-			apWidget = NULL;
-
-		mS.attention = apWidget;
-		cGuiMessageData data = cGuiMessageData(mS.mousePos, 0);
-
-		//Log("Sett attn: %d\n",mS.attention);
-		iWidget* pOldFocus = mS.focused;
-		
-		if(mS.focused && mS.focused->IsConnectedTo(mS.attention)==false)
-		{
-			//Log("Lost focus %d\n",mS.focused);
-			
-			if(mS.attention!= NULL || abClearFocus)
-				mS.focused = NULL;
-		}
-
-		if(mS.attention && mS.focused == NULL)
-		{
-			//Log("Got focus %d\n",apWidget);
-			mS.focused = apWidget;
-			if(mS.focused) mS.focused->ProcessMessage(eGuiMessage_GotFocus, data);
-		}
-
-		if(pOldFocus && pOldFocus != mS.focused)
-			pOldFocus->ProcessMessage(eGuiMessage_LostFocus, data);
+		OhplH18Host host;
+		FillRustHost(host);
+		ohpl_h18_set_attention(&mS, &host, (OhplH18W)apWidget, abClearFocus, abCheckForValidity);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cGuiSet::PushAttentionWidget()
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h18_push_attention(&mS);
-			return;
-		}
-		mlstAttentionStack.push_back(mS.attention);
+		ohpl_h18_push_attention(&mS);
 	}
 
 	void cGuiSet::PopAttentionWidget(bool abClearFocus)
 	{
-		if(OhplBackendRustRequested())
-		{
-			OhplH18Host host;
-			FillRustHost(host);
-			ohpl_h18_pop_attention(&mS, &host, abClearFocus);
-			return;
-		}
-		if(mlstAttentionStack.empty()) return;
-
-		SetAttentionWidget(mlstAttentionStack.back(), abClearFocus, true);
-
-		mlstAttentionStack.pop_back();
+		OhplH18Host host;
+		FillRustHost(host);
+		ohpl_h18_pop_attention(&mS, &host, abClearFocus);
 	}
 
 	void cGuiSet::SetRendersBeforePostEffects(bool abX)
@@ -1517,8 +1364,6 @@ namespace hpl {
 	}
 	//-----------------------------------------------------------------------
 
-	//-----------------------------------------------------------------------
-
 	void cGuiSet::FillRustHost(OhplH18Host& aHost)
 	{
 		aHost.ctx = this;
@@ -1578,701 +1423,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	bool cGuiSet::OnMouseMove(const cGuiMessageData &aData)
-	{
-		if(GetMouseMovementEnabled()==false)
-			return false;
-
-		///////////////////////////
-		//Set up variables
-		mS.mousePos = aData.mvPos;
-		
-		iWidget* pOldToolTipWidget = mS.tooltipWidget;
-		iWidget* pNewToolTipWidget = NULL;
 	
-		cGuiMessageData tData = aData;
-		tData.mlVal = 0;
-		if(mS.mouseDown[0]) tData.mlVal |= eGuiMouseButton_Left;
-		if(mS.mouseDown[1]) tData.mlVal |= eGuiMouseButton_Middle;
-		if(mS.mouseDown[2]) tData.mlVal |= eGuiMouseButton_Right;
-		if(mS.mouseDown[3]) tData.mlVal |= eGuiMouseButton_WheelUp;
-		if(mS.mouseDown[4]) tData.mlVal |= eGuiMouseButton_WheelDown;
-
-		///////////////////////////
-		//Call widgets
-		bool bRet = false;
-		bool bPointerSet = false;
-		bool bToolTipWidgetSet = false;
-		bool bToolTipWidgetLeft = false;
-		iWidget* pWidgetUnderMouse=NULL;
-
-		///////////////////////////
-		// Widgets should be sorted by z value, so the first check must be the widget that is right under the mouse
-		tWidgetListIt it = mlstWidgets.begin();
-		for(; it != mlstWidgets.end(); ++it)
-		{
-			iWidget *pWidget = *it;
-			if(pWidget->IsVisible()==false)
-				continue;	
-			
-			if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
-				continue;
-
-			if(pWidget->PointIsInside(mS.mousePos,false))
-			{
-				if(pWidgetUnderMouse==NULL || 
-					pWidgetUnderMouse->IsConnectedTo(pWidget) || 
-					pWidget->IsConnectedTo(pWidgetUnderMouse))
-				{
-					if(pWidgetUnderMouse==NULL)
-						pWidgetUnderMouse=pWidget;
-
-					////////////////////////////
-					//Mouse enter event
-					if(pWidget->GetMouseIsOver()==false)
-					{
-						pWidget->SetMouseIsOver(true);
-						if(pWidget->ProcessMessage(eGuiMessage_MouseEnter, tData))
-						{
-							bRet = true;
-						}
-
-						////////////////////////////
-						//Set up tooltips on mouse enter		
-						if(pWidget->IsToolTipEnabled())
-						{
-							if(bToolTipWidgetSet==false)
-							{
-								bToolTipWidgetSet = true;
-								pNewToolTipWidget = pWidget;
-
-								if(pNewToolTipWidget!=pOldToolTipWidget)
-									mS.tooltipTimer = 0;
-							}
-						}
-
-						if(pWidget->HasFocusNavigation() && pWidget->IsVisible() && pWidget->IsEnabled())
-						{
-							iWidget *pOldFocus = mS.focused;
-
-							if(pOldFocus==NULL || (pOldFocus->GetParent() == pWidget->GetParent()
-													&& pOldFocus->GetSet() == pWidget->GetSet()))
-							{
-								SetFocusedWidget(pWidget);
-							}
-						}
-					}
-
-					////////////////////////////
-					//Set pointer
-					if(bPointerSet==false && pWidget->GetPointerGfx())
-					{
-						if(	mS.attention &&
-							pWidget->IsConnectedTo(mS.attention)==false)
-						{
-						}
-						else
-						{
-							if(pWidget->IsEnabled())
-							{
-								if(mpGfxCurrentPointer != pWidget->GetPointerGfx())
-									SetCurrentPointer(pWidget->GetPointerGfx());							
-							}
-							else
-							{
-								SetCurrentPointer(mpSkin->GetGfx(eGuiSkinGfx_PointerNormal));
-							}
-							bPointerSet = true;
-						}
-					}
-				}
-			}
-			else
-			{
-				////////////////////////////
-				//Mouse leave event
-				if(pWidget->GetMouseIsOver())
-				{
-					pWidget->SetMouseIsOver(false);
-					pWidget->ProcessMessage(eGuiMessage_MouseLeave, tData);
-
-					//In case the widget is moved under the mouse again, check:
-					if(mS.focused == pWidget && pWidget->PointIsInside(mS.mousePos, false))
-					{
-						pWidget->SetMouseIsOver(true);
-						if(pWidget->ProcessMessage(eGuiMessage_MouseEnter, tData)) bRet = true;
-					}
-					else
-					{
-						if(pOldToolTipWidget==pWidget)
-							bToolTipWidgetLeft = true;
-					}
-				}
-			}
-
-			////////////////////////////
-			//Mouse move event
-			if(pWidget->GetMouseIsOver() || mS.focused == pWidget)
-			{
-				if(pWidget->ProcessMessage(eGuiMessage_MouseMove, tData)) bRet = true;
-			}
-		}
-
-		if(bToolTipWidgetSet)
-		{
-			mS.tooltipWidget = pNewToolTipWidget;
-		}
-		else if(bToolTipWidgetLeft)
-		{
-			mS.tooltipWidget=NULL;
-		}
-		
-		return bRet;
-	}
-	
-	//-----------------------------------------------------------------------
-
-	bool cGuiSet::OnMouseDown(const cGuiMessageData& aData)
-	{
-		///////////////////////////
-		//Set up variables
-		mS.mouseDown[cMath::Log2ToInt(aData.mlVal)] = true;
-
-		cGuiMessageData tData = aData;
-		tData.mvPos = mS.mousePos;
-
-		iWidget *pOldFocus = mS.focused;
-
-		///////////////////////////
-		//Call widgets
-		bool bRet = false;
-
-		tWidgetListIt it = mlstWidgets.begin();
-		for(; it != mlstWidgets.end(); ++it)
-		{
-			iWidget *pWidget = *it;
-
-			//If widget is not visible, skip it
-			if(pWidget->IsVisible()==false)
-				continue;
-
-			//If there is an attention set, do not send clicks to any other widgets
-			if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
-			{
-				continue;
-			}
-
-			if(pWidget->GetMouseIsOver())
-			{
-				if(mS.focused != pWidget)
-				{
-					if(pWidget->GetFocus(tData))
-					{
-						mS.focused = pWidget;
-					}
-				}
-				//else
-				//{
-				//	mS.focused = pWidget;
-				//}
-
-				//Log("Got focus %d\n",pWidget);
-
-				if(pWidget->ProcessMessage(eGuiMessage_MouseDown, tData))
-				{
-					bRet = true;
-					break;
-				}
-			}
-		}
-
-		//Se if anything was clicked
-		if(bRet == false)
-			mS.focused = NULL;
-		
-		//Lost focus callback
-		if(mS.focused != pOldFocus)
-		{
-			//Log("Lost focus %d\n",pOldFocus);
-			if(pOldFocus && IsValidWidget(pOldFocus)) pOldFocus->ProcessMessage(eGuiMessage_LostFocus, tData, true, true);			
-		}
-
-		return bRet;
-	}
-	
-	//-----------------------------------------------------------------------
-	
-	bool cGuiSet::OnMouseUp(const cGuiMessageData& aData)
-	{
-		///////////////////////////
-		//Set up variables
-		mS.mouseDown[cMath::Log2ToInt(aData.mlVal)] = false;
-
-		cGuiMessageData tData = aData;
-		tData.mvPos = mS.mousePos;
-
-		//mlstWidgets.sort(SortWidget_Z);
-		
-		///////////////////////////
-		//Call widgets
-		bool bRet = false;
-		
-		if(mS.focused)
-		{
-			bRet = mS.focused->ProcessMessage(eGuiMessage_MouseUp, tData);
-		}
-
-		if(bRet == false)
-		{
-			tWidgetListIt it = mlstWidgets.begin();
-			for(; it != mlstWidgets.end(); ++it)
-			{
-				iWidget *pWidget = *it;
-
-				//If these is an attention set, do send clicks to any other widgets
-				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
-				{
-					continue;
-				}
-
-				if(pWidget != mS.focused && pWidget->GetMouseIsOver())
-				{
-					if(pWidget->ProcessMessage(eGuiMessage_MouseUp, tData))
-					{
-						bRet = true;
-						break;
-					}
-				}
-			}
-		}
-
-		return bRet;
-	}
-	
-	//-----------------------------------------------------------------------
-
-	bool cGuiSet::OnMouseDoubleClick(const cGuiMessageData& aData)
-	{
-		///////////////////////////
-		//Set up variables
-		cGuiMessageData tData = aData;
-		tData.mvPos = mS.mousePos;
-		
-		///////////////////////////
-		//Call widgets
-        bool bRet = false;
-		tWidgetListIt it = mlstWidgets.begin();
-		for(; it != mlstWidgets.end(); ++it)
-		{
-			iWidget *pWidget = *it;
-
-			//If these is an attention set, do send clicks to any other widgets
-			if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
-			{
-				continue;
-			}
-
-			if(pWidget->GetMouseIsOver())
-			{
-				if(pWidget->ProcessMessage(eGuiMessage_MouseDoubleClick, tData))
-				{
-					bRet = true;
-					break;
-				}
-			}
-		}
-
-		return bRet;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cGuiSet::OnKeyPress(const cGuiMessageData& aData)
-	{
-		///////////////////////////
-		//Set up variables
-		cGuiMessageData tData = aData;
-		tData.mvPos = mS.mousePos;
-
-		///////////////////////////
-		//Call widgets
-		bool bRet = false;
-
-		///////////////////////////
-		// Check tab order (temporary - this should be handled by iWidget, for widgets capable of containing other widgets)
-		if(bRet==false && tData.mKeyPress.mKey==eKey_Tab && mlstTabOrderWidgets.empty()==false)
-		{
-			iWidget* pOldWidgetToFocus = mS.tabWidget;
-			iWidget* pNewWidgetToFocus=NULL;
-
-			tWidgetListIt it = find(mlstTabOrderWidgets.begin(), mlstTabOrderWidgets.end(), mS.focused);
-			if(it==mlstTabOrderWidgets.end())
-				it = find(mlstTabOrderWidgets.begin(), mlstTabOrderWidgets.end(), pOldWidgetToFocus);
-
-			if(it!=mlstTabOrderWidgets.end())
-			{
-				do
-				{
-					if(tData.mKeyPress.mlModifier==eKeyModifier_Shift) 
-					{
-						if(it==mlstTabOrderWidgets.begin())
-							it=mlstTabOrderWidgets.end();
-						--it;
-					}
-					else if(tData.mKeyPress.mlModifier==eKeyModifier_None)
-					{
-						++it;
-						if(it==mlstTabOrderWidgets.end())
-							it=mlstTabOrderWidgets.begin();
-					}
-
-					pNewWidgetToFocus = *it;
-				}
-				while(pNewWidgetToFocus->IsVisible()==false && pNewWidgetToFocus->IsEnabled()==false);
-			}
-			
-			if(pNewWidgetToFocus && pNewWidgetToFocus->IsVisible() && pNewWidgetToFocus->IsEnabled())
-			{
-				mS.tabWidget = pNewWidgetToFocus;
-				SetFocusedWidget(mS.tabWidget);
-				mS.tabWidget->OnGotTabFocus(tData);
-				bRet = true;
-			}
-		}
-		
-
-		if(bRet==false)
-		{
-			if(mS.focused)
-				bRet = mS.focused->ProcessMessage(eGuiMessage_KeyPress, tData);
-
-			if(bRet==false)
-			{
-				eKey key = tData.mKeyPress.mKey;
-				eUIArrow dir = TranslateKeyToUIArrow(key);
-
-				if(dir!=eUIArrow_LastEnum)
-					bRet = SendMessage(eGuiMessage_UIArrowPress, dir);
-			}
-		}
-
-		
-
-		if(bRet==false)
-		{
-			// Steal focus from current widget
-			iWidget* pFocusedWidget = mS.focused;
-			SetFocusedWidget(NULL);
-
-			bRet = ExecShortcut(tData.mKeyPress);
-
-			// Restore focus if shortcut did not set own
-			if(mS.focused==NULL)
-                SetFocusedWidget(pFocusedWidget);
-		}
-		
-		if(bRet==false)
-		{
-			tWidgetListIt it = mlstWidgets.begin();
-			for(; it != mlstWidgets.end(); ++it)
-			{
-				iWidget *pWidget = *it;
-
-				//If these is an attention set, do send clicks to any other widgets
-				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
-				{
-					continue;
-				}
-
-				if(pWidget->GetMouseIsOver() || pWidget->IsGlobalKeyPressListener() && mS.focused != pWidget)
-				{
-					if(pWidget->ProcessMessage(eGuiMessage_KeyPress, tData))
-					{
-						bRet = true;
-						break;
-					}
-				}
-			}
-		}
-
-		return bRet;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cGuiSet::OnKeyRelease(const cGuiMessageData& aData)
-	{
-		///////////////////////////
-		//Set up variables
-		cGuiMessageData tData = aData;
-		tData.mvPos = mS.mousePos;
-
-		///////////////////////////
-		//Call widgets
-		bool bRet = false;
-
-		if(mS.focused)
-		{
-			bRet = mS.focused->ProcessMessage(eGuiMessage_KeyRelease, tData);
-			if(bRet==false)
-			{
-				eKey key = tData.mKeyPress.mKey;
-				eUIArrow dir = TranslateKeyToUIArrow(key);
-
-				if(dir!=eUIArrow_LastEnum)
-					bRet = SendMessage(eGuiMessage_UIArrowRelease, dir);
-			}
-		}
-		
-		if(bRet==false)
-		{
-			tWidgetListIt it = mlstWidgets.begin();
-			for(; it != mlstWidgets.end(); ++it)
-			{
-				iWidget *pWidget = *it;
-
-				//If these is an attention set, do send clicks to any other widgets
-				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
-				{
-					continue;
-				}
-
-				if(pWidget->GetMouseIsOver() && mS.focused != pWidget)
-				{
-					if(pWidget->ProcessMessage(eGuiMessage_KeyRelease, tData))
-					{
-						bRet = true;
-						break;
-					}
-				}
-			}
-		}
-
-		return bRet;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cGuiSet::OnGamepadInput(const cGuiMessageData& aData)
-	{
-		///////////////////////////
-		//Set up variables
-		cGuiMessageData tData = aData;
-		
-		///////////////////////////
-		//Call widgets
-		bool bRet = false;
-
-		if(mS.focused)
-		{
-			bRet = mS.focused->ProcessMessage(eGuiMessage_GamepadInput, tData);
-		}
-		
-		if(bRet==false)
-		{
-			tWidgetListIt it = mlstWidgets.begin();
-			for(; it != mlstWidgets.end(); ++it)
-			{
-				iWidget *pWidget = *it;
-
-				//If these is an attention set, do send clicks to any other widgets
-				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
-				{
-					continue;
-				}
-
-				if(pWidget->GetMouseIsOver() && mS.focused != pWidget)
-				{
-					if(pWidget->ProcessMessage(eGuiMessage_GamepadInput, tData))
-					{
-						bRet = true;
-						break;
-					}
-				}
-			}
-		}
-
-		return bRet;
-	}
-		
-	//-----------------------------------------------------------------------
-
-	bool cGuiSet::OnUIArrowPress(const cGuiMessageData& aData)
-	{
-		///////////////////////////////////////////////////////////////////////////////////////////////
-		// First check if we have a proper start point, if we are not and cannot set one, just skip
-		if(mS.focused==NULL ||
-			mS.focused->HasFocusNavigation()==false && mS.focused!=mS.defaultNav)
-		{
-			if(mS.defaultNav==NULL)
-			{
-				return false;
-			}
-			else
-			{
-				if(mS.attention==NULL || mS.defaultNav->IsConnectedTo(mS.attention))
-				{
-					SetFocusedWidget(mS.defaultNav);
-					mS.focused->ProcessMessage(eGuiMessage_GetUINavFocus, cGuiMessageData());
-
-					return true;
-				}
-				return false;
-			}
-		}
-
-		bool bRet = false;
-
-		///////////////////////////////////////////////////////////////////////////////////////////////
-		// Check if widget likes the arrow press for anything else other than moving away,
-		// if not the case, just get next widget and check for validity
-		if(mS.focused) bRet = mS.focused->ProcessMessage(eGuiMessage_UIArrowPress, aData);
-
-		if(bRet==false)
-		{
-			iWidget* pNextWidget = mS.focused->GetFocusNavigation((eUIArrow)aData.mlVal);
-
-			if(pNextWidget && 
-				pNextWidget->IsEnabled() && 
-				pNextWidget->IsVisible() &&
-				(mS.attention==NULL || pNextWidget->IsConnectedTo(mS.attention)))
-			{
-				iWidget *pOldFocus = mS.focused;
-				SetFocusedWidget(pNextWidget);
-
-				// Do whatever stuff the widget wants to do when getting the focus through arrows
-				mS.focused->ProcessMessage(eGuiMessage_GetUINavFocus, cGuiMessageData());
-				pOldFocus->ProcessMessage(eGuiMessage_LoseUINavFocus, cGuiMessageData());
-				bRet = true;
-			}
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		// If we still haven't consumed the input, check for global listeners
-		if(bRet==false)
-		{
-			tWidgetListIt it = mlstWidgets.begin();
-			for(; it != mlstWidgets.end(); ++it)
-			{
-				iWidget *pWidget = *it;
-
-				// If widget is not eligible for input check, skip it (or if it's the focused one, we already checked that)
-				if(pWidget->IsGlobalUIInputListener()==false || pWidget==mS.focused || pWidget->IsVisible()==false)
-					continue;
-
-				//If there is an attention set, do not send clicks to any other widgets
-				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
-				{
-					continue;
-				}
-
-				bRet = pWidget->ProcessMessage(eGuiMessage_UIArrowPress, aData);
-				if(bRet)
-					break;
-			}
-		}
-
-
-		return bRet;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cGuiSet::OnUIArrowRelease(const cGuiMessageData& aData)
-	{
-		if(mS.focused==NULL)
-		{
-			return false;
-		}
-
-		bool bRet = mS.focused->ProcessMessage(eGuiMessage_UIArrowRelease, aData);
-
-		return bRet;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cGuiSet::OnUIButtonPress(const cGuiMessageData& aData)
-	{
-		///////////////////////////
-		//Call widgets
-		bool bRet = false;
-		if(mS.focused)
-			bRet = mS.focused->ProcessMessage(eGuiMessage_UIButtonPress, aData);
-
-		if(bRet==false)
-		{
-			tWidgetListIt it = mlstWidgets.begin();
-			for(; it != mlstWidgets.end(); ++it)
-			{
-				iWidget *pWidget = *it;
-
-				// If widget is not eligible for input check, skip it (or if it's the focused one, we already checked that)
-				if(pWidget->IsGlobalUIInputListener()==false || pWidget==mS.focused || pWidget->IsVisible()==false)
-					continue;
-
-				//If there is an attention set, do not send clicks to any other widgets
-				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
-				{
-					continue;
-				}
-
-				bRet = pWidget->ProcessMessage(eGuiMessage_UIButtonPress, aData);
-				if(bRet)
-					break;
-			}
-		}
-
-		return bRet;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cGuiSet::OnUIButtonRelease(const cGuiMessageData& aData)
-	{
-		///////////////////////////
-		//Call widgets
-		bool bRet = false;
-		if(mS.focused)
-			bRet = mS.focused->ProcessMessage(eGuiMessage_UIButtonRelease, aData);
-
-		if(bRet==false)
-		{
-			tWidgetListIt it = mlstWidgets.begin();
-			for(; it != mlstWidgets.end(); ++it)
-			{
-				iWidget *pWidget = *it;
-
-				// If widget is not eligible for input check, skip it (or if it's the focused one, we already checked that)
-				if(pWidget->IsGlobalUIInputListener()==false || pWidget==mS.focused || pWidget->IsVisible()==false)
-					continue;
-
-				//If there is an attention set, do not send clicks to any other widgets
-				if(mS.attention && pWidget->IsConnectedTo(mS.attention)==false)
-				{
-					continue;
-				}
-
-				bRet = pWidget->ProcessMessage(eGuiMessage_UIButtonRelease, aData);
-				if(bRet)
-					break;
-			}
-		}
-
-		return bRet;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cGuiSet::OnUIButtonDoublePress(const cGuiMessageData& aData)
-	{
-		if(mS.focused==NULL) return false;
-
-		return mS.focused->ProcessMessage(eGuiMessage_UIButtonDoublePress, aData);
-	}
-
-	//-----------------------------------------------------------------------
-
 	bool cGuiSet::DrawMouse(iWidget* apWidget, const cGuiMessageData& aData)
 	{	
 		if(HasFocus() && mbDrawMouse && mpGfxCurrentPointer)
@@ -2404,92 +1555,39 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	eUIArrow cGuiSet::TranslateKeyToUIArrow(eKey aKey)
-	{
-		switch(aKey)
-		{
-		case eKey_Up:			return eUIArrow_Up;					
-		case eKey_Right:		return eUIArrow_Right;	
-		case eKey_Down:			return eUIArrow_Down;
-		case eKey_Left:			return eUIArrow_Left;		
-		default:				return eUIArrow_LastEnum;
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
 	void cGuiSet::AddToTabOrder(iWidget* apWidget)
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h18_add_to_tab_order(&mS, (OhplH18W)apWidget);
-			return;
-		}
-		if(apWidget && find(mlstTabOrderWidgets.begin(), mlstTabOrderWidgets.end(), apWidget)==mlstTabOrderWidgets.end())
-			mlstTabOrderWidgets.push_back(apWidget);
-
-		mS.tabWidget = mlstTabOrderWidgets.front();
+		ohpl_h18_add_to_tab_order(&mS, (OhplH18W)apWidget);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cGuiSet::ClearTabOrder()
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h18_clear_tab_order(&mS);
-			return;
-		}
-		mlstTabOrderWidgets.clear();
-
-		mS.tabWidget = NULL;
+		ohpl_h18_clear_tab_order(&mS);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cGuiSet::SetDefaultFocusNavWidget(iWidget* apWidget, bool abCheckForValidity)
 	{
-		if(OhplBackendRustRequested())
-		{
-			OhplH18Host host;
-			FillRustHost(host);
-			ohpl_h18_set_default_nav(&mS, &host, (OhplH18W)apWidget, abCheckForValidity);
-			return;
-		}
-		if(mS.defaultNav==apWidget) return;
-
-		if(abCheckForValidity && IsValidWidget(apWidget)==false)
-			apWidget = NULL;
-
-		mS.defaultNav = apWidget;
+		OhplH18Host host;
+		FillRustHost(host);
+		ohpl_h18_set_default_nav(&mS, &host, (OhplH18W)apWidget, abCheckForValidity);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cGuiSet::PushDefaultFocusNavWidget()
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h18_push_default_nav(&mS);
-			return;
-		}
-		mlstDefaultFocusStack.push_back(mS.defaultNav);
+		ohpl_h18_push_default_nav(&mS);
 	}
 
 	void cGuiSet::PopDefaultFocusNavWidget()
 	{
-		if(OhplBackendRustRequested())
-		{
-			OhplH18Host host;
-			FillRustHost(host);
-			ohpl_h18_pop_default_nav(&mS, &host);
-			return;
-		}
-		if(mlstDefaultFocusStack.empty()) return;
-
-		SetDefaultFocusNavWidget(mlstDefaultFocusStack.back(), true);
-
-		mlstDefaultFocusStack.pop_back();
+		OhplH18Host host;
+		FillRustHost(host);
+		ohpl_h18_pop_default_nav(&mS, &host);
 	}
 
 	//-----------------------------------------------------------------------

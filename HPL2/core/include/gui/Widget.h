@@ -44,23 +44,6 @@ namespace hpl {
 
 	//--------------------------------
 
-	struct cWidgetCallback
-	{
-		cWidgetCallback(void *apObject, tGuiCallbackFunc apFunc)
-		{
-			mpObject = apObject;
-            mpFunc = apFunc;
-		}
-
-		void *mpObject;
-		tGuiCallbackFunc mpFunc;
-	};
-
-	typedef std::list<cWidgetCallback> tWidgetCallbackList;
-	typedef tWidgetCallbackList::iterator tWidgetCallbackListIt;
-
-	//--------------------------------
-	
 	class iWidget
 	{
 	friend class cGuiSet;
@@ -263,8 +246,6 @@ namespace hpl {
 		void DrawDefaultTextHighlight(	const tWString& asText,
 										const cVector3f& avPosition, eFontAlign aAlign); //, int alFirstVisibleChar, int alHighlightStart, int alHighlightSize);
 		
-		void SetPositionUpdated();
-
 		void LoadGraphics();
 
 		/////////////////////////
@@ -326,18 +307,10 @@ namespace hpl {
 		bool &mbCallbacksDisabled = mB.callbacksDisabled;
 	private:
 		void SetMouseIsOver(bool abX){ mbMouseIsOver = abX;}        
-		bool ProcessCallbacks(eGuiMessage aMessage, const cGuiMessageData& aData);
-
-		int UIArrowToArrayPos(eUIArrow aDir);
-
-        std::vector<tWidgetCallbackList> mvCallbackLists;
-
 		bool &mbPositionIsUpdated = mB.positionUpdated;
 
 		void *mpUserData;
 		int mlUserValue;
-
-		std::vector<iWidget*>			mvFocusNavWidgets;
 	};
 
 };

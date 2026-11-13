@@ -51,35 +51,8 @@ namespace hpl {
 		void SetLoadFileListDest( tWStringVec &asFileList );
 
 	protected:
-		/////////////////////////////
-		// Own functions
-		bool Button_Pressed(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Button_Pressed);
-
-		bool MessageBoxReturnCallback( iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(MessageBoxReturnCallback);
-
-		bool Directory_OnSelectionChange(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Directory_OnSelectionChange);
-
-		bool FileList_OnSelectionDblClick(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(FileList_OnSelectionDblClick);
-
-		bool FileList_OnSelectionChange(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(FileList_OnSelectionChange);
-
-		bool FilterList_OnSelectionChange(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(FilterList_OnSelectionChange);
-
-
-		void BuildSaveFileName();
-		void BuildLoadFileList();
-
 		void OnAddFilter();
 		void OnNavigate();
-		void PopulateFileList();
-
-		void ClosePopUp(bool abPickedFile);
 		bool H21Ext(const OhplH21Cmd &aCmd, OhplH21Ret &aRet);
 
 
@@ -97,14 +70,6 @@ namespace hpl {
 		cGuiGfxElement* mvGfxFileTypeIcons[6];
 		cGuiGfxElement* mpGfxUpButton;
 
-		cWidgetComboBox* mpCurrentDirectory;
-		cWidgetMultiPropertyListBox* mpFileList;
-		cWidgetTextBox* mpCurrentFileName;
-		cWidgetComboBox* mpFilterList;
-		cWidgetButton* mvButtons[3];
-		
-		void* mpCallbackObject;
-		tGuiCallbackFunc mpCallback;
 		std::vector<tWString> mvH21Files;
 	};
 };

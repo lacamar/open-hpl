@@ -20,7 +20,6 @@
 #include "math/Math.h"
 #include "engine/RustEngine.h"
 #include "engine/RustEngineH22.h"
-#include "impl/RustBackends.h"
 #include "resources/FileSearcher.h"
 #include "resources/FontManager.h"
 #include "resources/Resources.h"
@@ -125,7 +124,7 @@ namespace hpl {
 		return true;
 	}
 
-	void cDevHud::RenderRust(bool abHud)
+	void cDevHud::Render(bool abHud)
 	{
 		OhplH22HudHost Host;
 		Host.ctx = this;
@@ -180,114 +179,6 @@ namespace hpl {
 		tString sLast = msLastSaved;
 		ohpl_h22_hud_render(&Host, abHud, mbBugOpen, mbBugCapture, mlSavedTime,
 							(const uint32_t*)msBugText.data(), msBugText.size(), OhplEnP(sLast), sLast.size());
-	}
-
-	void cDevHud::Render(bool abHud)
-	{
-		if(OhplBackendRustRequested())
-		{
-			RenderRust(abHud);
-			return;
-		}
-
-		bool bToast = mlSavedTime && ohpl_en_toast_active(mlSavedTime, cPlatform::GetApplicationTime());
-		if(!ohpl_en_should_render(abHud, mbBugOpen, bToast)) return;
-		if(!Init()) return;
-
-		iLowLevelGraphics *pLowGfx = mpEngine->GetGraphics()->GetLowLevel();
-
-		if(mbBugCapture)
-		{
-			mbBugCapture = false;
-			mpBugShot = pLowGfx->CopyFrameBufferToBitmap();
-			if(mpBugShot && mpBugShot->GetBytesPerPixel() == 4)
-			{
-				cBitmapData *pData = mpBugShot->GetData(0,0);
-				for(size_t i = 3; i < (size_t)pData->mlSize; i += 4) pData->mpData[i] = 255;
-			}
-			if(mpBugShot) cEngineDiagnostics::ApplyDisplayGamma(mpBugShot, pLowGfx->GetGammaCorrection());
-		}
-
-		const cVector2l &vScreen = pLowGfx->GetScreenSizeInt();
-		mpSet->SetVirtualSize(cVector2f((float)vScreen.x, (float)vScreen.y), -1000, 1000, 0, true);
-
-		if(abHud)
-		{
-			float fSize = ohpl_en_hud_font_size(vScreen.y);
-			cVector2f vFont(fSize);
-			tWStringVec vLines;
-			for(const tString &sLine : mvSystem) vLines.push_back(cString::UTF8ToWChar(sLine));
-			tString sStats;
-			ohpl_en_hud_stats_line(vScreen.x, vScreen.y, mpEngine->GetFPS(), mpEngine->GetAvgFrameTimeInMS(), OhplEnAssign, &sStats);
-			vLines.push_back(cString::UTF8ToWChar(sStats));
-
-			float fWidth = 0;
-			for(const tWString &sLine : vLines)
-				fWidth = cMath::Max(fWidth, mpFont->GetLength(vFont, sLine.c_str()));
-
-			OhplEnHudLayout Layout = ohpl_en_hud_layout(fSize, fWidth, vLines.size());
-			cVector3f vPos(Layout.pad, Layout.pad, 0);
-			mpSet->DrawGfx(mpBackground, vPos, cVector2f(Layout.bgW, Layout.bgH));
-
-			vPos = cVector3f(Layout.textX, Layout.textY, 1);
-			for(size_t i = 0; i < vLines.size(); ++i)
-			{
-				cColor col = i == 0 ? cColor(1, 0.75f, 0.2f, 1) : cColor(1, 1);
-				mpSet->DrawFont(vLines[i], mpFont, vPos, vFont, col);
-				vPos.y += Layout.lineH;
-			}
-		}
-
-		if(mbBugOpen || bToast) RenderBugReport(vScreen);
-
-		pLowGfx->SetCurrentFrameBuffer(NULL);
-		mpSet->Render(NULL);
-	}
-
-	void cDevHud::RenderBugReport(const cVector2l &avScreen)
-	{
-		OhplEnBugMetrics Metrics = ohpl_en_bug_metrics(avScreen.x, avScreen.y);
-		cVector2f vFont(Metrics.font);
-		float fBoxW = Metrics.boxW;
-
-		tWStringVec vLines;
-		if(mbBugOpen)
-		{
-			vLines.push_back(_W("Bug report  -  Enter: save   Shift+Enter: new line   Esc: cancel"));
-			tWString sText = msBugText;
-			sText += (wchar_t)ohpl_en_cursor_char(cPlatform::GetApplicationTime());
-
-			struct tWrapCtx { iFontData *mpFont; cVector2f mvFont; tWStringVec *mpLines; } Ctx = { mpFont, vFont, &vLines };
-			ohpl_en_wrap_bug_text((const uint32_t*)sText.data(), sText.size(), Metrics.textW,
-				[](void *apCtx, const uint32_t *apText, size_t alLen) -> float
-				{
-					tWrapCtx *pCtx = static_cast<tWrapCtx*>(apCtx);
-					tWString sLine((const wchar_t*)apText, alLen);
-					return pCtx->mpFont->GetLength(pCtx->mvFont, sLine.c_str());
-				},
-				[](void *apCtx, const uint32_t *apText, size_t alLen)
-				{
-					static_cast<tWrapCtx*>(apCtx)->mpLines->push_back(tWString((const wchar_t*)apText, alLen));
-				}, &Ctx);
-		}
-		else
-		{
-			vLines.push_back(_W("Bug report saved"));
-			vLines.push_back(cString::UTF8ToWChar(msLastSaved));
-			fBoxW = ohpl_en_bug_toast_box_w(Metrics, mpFont->GetLength(vFont, vLines[1].c_str()));
-		}
-
-		OhplEnBugBox Box = ohpl_en_bug_box(Metrics, fBoxW, vLines.size(), avScreen.x, avScreen.y);
-		cVector3f vPos(Box.x, Box.y, 10);
-		mpSet->DrawGfx(mpBackground, vPos, cVector2f(Box.w, Box.h));
-
-		vPos = cVector3f(Box.textX, Box.textY, 11);
-		for(size_t i = 0; i < vLines.size(); ++i)
-		{
-			cColor col = i == 0 ? cColor(1, 0.75f, 0.2f, 1) : cColor(1, 1);
-			mpSet->DrawFont(vLines[i], mpFont, vPos, vFont, col);
-			vPos.y += Metrics.lineH;
-		}
 	}
 
 	void cDevHud::OpenBugReport()

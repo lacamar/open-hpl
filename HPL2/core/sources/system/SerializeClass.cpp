@@ -25,7 +25,6 @@
 #include "system/Platform.h"
 #include "system/RustSystem.h"
 #include "system/RustH1.h"
-#include "impl/RustBackends.h"
 
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
@@ -78,15 +77,7 @@ namespace hpl {
 									cSerializeMemberField* apMemberFields,size_t alSize,
 									iSerializable* (*apCreateFunc)())
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h1_ser_defer(asName, asParent, apMemberFields, alSize, reinterpret_cast<void*(*)()>(apCreateFunc));
-			return;
-		}
-		gvSerializeTempClasses[glSerializeTempClassesNum] = cSerializeSavedClass(asName,asParent,
-													apMemberFields,alSize,apCreateFunc);
-
-		glSerializeTempClassesNum++;
+		ohpl_h1_ser_defer(asName, asParent, apMemberFields, alSize, reinterpret_cast<void*(*)()>(apCreateFunc));
 	}
 
 	//-----------------------------------------------------------------------
@@ -97,26 +88,7 @@ namespace hpl {
 
 		mbDataSetup = true;
 
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h1_ser_flush();
-			return;
-		}
-
-		for(int i=0; i< glSerializeTempClassesNum; i++)
-		{
-			cSerializeSavedClass &saved = gvSerializeTempClasses[i];
-			std::vector<OhplSerField> vFields;
-			for(cSerializeMemberField *pField = saved.mpMemberFields; ; ++pField)
-			{
-				OhplSerField field = { pField->msName.c_str(), pField->msClassName.c_str(), pField->mlOffset,
-										pField->mlSize, pField->mType, pField->mMainType, pField->mlArraySize };
-				vFields.push_back(field);
-				if(pField->mType == eSerializeType_NULL) break;
-			}
-			ohpl_ser_register(saved.msName, saved.msParentName, vFields.data(), vFields.size(), saved.mlSize,
-							  reinterpret_cast<void*(*)()>(saved.mpCreateFunc));
-		}
+		ohpl_h1_ser_flush();
 	}
 
 	//-----------------------------------------------------------------------

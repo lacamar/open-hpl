@@ -32,7 +32,6 @@
 #endif
 
 #include "engine/Engine.h"
-#include "impl/RustBackends.h"
 
 namespace hpl 
 {
@@ -52,8 +51,8 @@ namespace hpl
 		mlstInputDevices.push_back(mpMouse);
 		mlstInputDevices.push_back(mpKeyboard);
 
-		mpRegistry = OhplBackendRustRequested() ? ohpl_input_reg_new() : NULL;
-		if(mpRegistry) ohpl_input_reg_set_devices(mpRegistry, mpKeyboard->RustHandle(), mpMouse->RustHandle());
+		mpRegistry = ohpl_input_reg_new();
+		ohpl_input_reg_set_devices(mpRegistry, mpKeyboard->RustHandle(), mpMouse->RustHandle());
 
 		RefreshGamepads();
 	}
@@ -65,17 +64,13 @@ namespace hpl
 		Log("Exiting Input Module\n");
 		Log("--------------------------------------------------------\n");
 
-		STLMapDeleteAll(m_mapActions);
-		if(mpRegistry)
-		{
-			while(void *pAction = ohpl_input_reg_pop_registered(mpRegistry)) hplDelete(static_cast<cAction*>(pAction));
-			ohpl_input_reg_set_devices(mpRegistry, NULL, NULL);
-			ohpl_input_reg_set_pads(mpRegistry, NULL, 0);
-		}
+		while(void *pAction = ohpl_input_reg_pop_registered(mpRegistry)) hplDelete(static_cast<cAction*>(pAction));
+		ohpl_input_reg_set_devices(mpRegistry, NULL, NULL);
+		ohpl_input_reg_set_pads(mpRegistry, NULL, 0);
 
 		if(mpKeyboard)hplDelete(mpKeyboard);
 		if(mpMouse)hplDelete(mpMouse);
-		if(mpRegistry) ohpl_input_reg_free(mpRegistry);
+		ohpl_input_reg_free(mpRegistry);
 
 		Log("--------------------------------------------------------\n\n");
 	}
@@ -115,32 +110,14 @@ namespace hpl
 
 		mpLowLevelInput->EndInputUpdate();
 
-		if(mpRegistry)
-		{
-			ohpl_input_reg_update(mpRegistry, afTimeStep);
-			return;
-		}
-
-		for(tActionMapIt it = m_mapActions.begin(); it!= m_mapActions.end();++it)
-		{
-			it->second->Update(afTimeStep);
-		}
+		ohpl_input_reg_update(mpRegistry, afTimeStep);
 	}
 	
 	//-----------------------------------------------------------------------
 	
 	cAction * cInput::CreateAction(const tString& asName, int alId)
 	{
-		cAction *pAction = hplNew( cAction, (asName, alId,this) );
-		if(mpRegistry) return pAction;
-
-		tActionMap::value_type val = tActionMap::value_type(asName,pAction);
-		m_mapActions.insert(val);
-
-		tActionIdMap::value_type val2 = tActionIdMap::value_type(alId,pAction);
-		m_mapActionIds.insert(val2);
-		
-		return pAction;
+		return hplNew( cAction, (asName, alId,this) );
 	}
 	
 	//-----------------------------------------------------------------------
@@ -232,7 +209,6 @@ namespace hpl
 
 	void cInput::SyncRustDevices()
 	{
-		if(!mpRegistry) return;
 		std::vector<const OhplGamepad*> vPads;
 		for(tGamepadListIt it = mlstGamepads.begin(); it!=mlstGamepads.end(); ++it) vPads.push_back((*it)->RustHandle());
 		ohpl_input_reg_set_pads(mpRegistry, vPads.data(), vPads.size());
@@ -240,7 +216,7 @@ namespace hpl
 
 	void cInput::RefreshGamepads()
 	{
-		if(mpRegistry) ohpl_input_reg_set_pads(mpRegistry, NULL, 0);
+		ohpl_input_reg_set_pads(mpRegistry, NULL, 0);
 		tGamepadListIt it = mlstGamepads.begin();
 		for(; it!=mlstGamepads.end(); ++it)
 			mlstInputDevices.remove(*it);
@@ -310,142 +286,51 @@ namespace hpl
 
 	cAction* cInput::GetAction(const tString& asName)
 	{
-		if(mpRegistry)
-		{
-			uint64_t lHandle = ohpl_input_reg_find_name(mpRegistry, (const unsigned char*)asName.data(), asName.size());
-			return static_cast<cAction*>(ohpl_input_reg_user(mpRegistry, lHandle));
-		}
-		tActionMapIt it = m_mapActions.find(asName);
-		if(it==m_mapActions.end())return NULL;
-
-		return it->second;
+		uint64_t lHandle = ohpl_input_reg_find_name(mpRegistry, (const unsigned char*)asName.data(), asName.size());
+		return static_cast<cAction*>(ohpl_input_reg_user(mpRegistry, lHandle));
 	}
 
 	cAction* cInput::GetAction(int alId)
 	{
-		if(mpRegistry) return static_cast<cAction*>(ohpl_input_reg_user(mpRegistry, ohpl_input_reg_find_id(mpRegistry, alId)));
-		tActionIdMapIt it = m_mapActionIds.find(alId);
-		if(it==m_mapActionIds.end()) return NULL;
-
-		return it->second;
+		return static_cast<cAction*>(ohpl_input_reg_user(mpRegistry, ohpl_input_reg_find_id(mpRegistry, alId)));
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cInput::DestroyAction(cAction *apAction)
 	{
-		if(mpRegistry)
+		if(apAction)
 		{
-			if(apAction)
-			{
-				ohpl_input_reg_destroy(mpRegistry, apAction->GetRustHandle());
-				hplDelete(apAction);
-			}
-			return;
+			ohpl_input_reg_destroy(mpRegistry, apAction->GetRustHandle());
+			hplDelete(apAction);
 		}
-		for(tActionMapIt it = m_mapActions.begin(); it!= m_mapActions.end();++it)
-		{
-			if(it->second == apAction)
-			{
-				m_mapActions.erase(it);
-				break;
-			}
-		}
-
-		for(tActionIdMapIt it = m_mapActionIds.begin(); it!= m_mapActionIds.end();++it)
-		{
-			if(it->second == apAction)
-			{
-				m_mapActionIds.erase(it);
-				break;
-			}
-		}
-
-		if(apAction) hplDelete(apAction);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cInput::CheckForInput()
 	{
-		if(mpRegistry) return ohpl_input_reg_first_down(mpRegistry, NULL, NULL);
-		//////////////////////
-		//Keyboard
-		for(int i=0; i< eKey_LastEnum; ++i)
-		{
-			if(mpKeyboard->KeyIsDown((eKey)i)) return true;
-		}
-
-		//////////////////////
-		//Mouse
-		for(int i=0; i< eMouseButton_LastEnum; ++i)
-		{
-			if(mpMouse->ButtonIsDown((eMouseButton)i)) return true;
-		}
-		
-		return false;
+		return ohpl_input_reg_first_down(mpRegistry, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cInput::ResetActionsToCurrentState()
 	{
-		if(mpRegistry)
-		{
-			ohpl_input_reg_reset_all(mpRegistry);
-			return;
-		}
-		for(tActionMapIt it = m_mapActions.begin(); it!= m_mapActions.end();++it)
-		{
-			cAction *pAction = it->second;
-			pAction->ResetToCurrentState();			
-		}
-
+		ohpl_input_reg_reset_all(mpRegistry);
 	}
 
 	//-----------------------------------------------------------------------
 	
 	iSubAction* cInput::InputToSubAction()
 	{
-		iSubAction *pSubAction=NULL;
-
-		if(mpRegistry)
-		{
-			uint32_t lKind;
-			int32_t lId;
-			if(!ohpl_input_reg_first_down(mpRegistry, &lKind, &lId)) return NULL;
-			if(lKind == eOhplSub_Key) return hplNew( cActionKeyboard, (this,(eKey)lId));
-			return hplNew( cActionMouseButton, (this,(eMouseButton)lId));
-		}
-		
-		//////////////////////
-		//Keyboard
-		for(int i=0; i< eKey_LastEnum; ++i)
-		{
-			if(mpKeyboard->KeyIsDown((eKey)i))
-			{
-				pSubAction = hplNew( cActionKeyboard, (this,(eKey)i));
-				break;
-			}
-		}
-
-		//////////////////////
-		//Mouse
-		if(pSubAction==NULL)
-		{
-			for(int i=0; i< eMouseButton_LastEnum; ++i)
-			{
-				if(mpMouse->ButtonIsDown((eMouseButton)i))
-				{
-					pSubAction = hplNew( cActionMouseButton, (this,(eMouseButton)i));					
-					break;
-				}
-			}
-		}
-
-		return pSubAction;
+		uint32_t lKind;
+		int32_t lId;
+		if(!ohpl_input_reg_first_down(mpRegistry, &lKind, &lId)) return NULL;
+		if(lKind == eOhplSub_Key) return hplNew( cActionKeyboard, (this,(eKey)lId));
+		return hplNew( cActionMouseButton, (this,(eMouseButton)lId));
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void cInput::AppDeviceWasPlugged()

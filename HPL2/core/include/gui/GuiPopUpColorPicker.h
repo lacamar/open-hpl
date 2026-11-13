@@ -42,49 +42,7 @@ namespace hpl {
 	{
 	public:
 		cGuiPopUpColorPicker(cGuiSet* apSet, cGuiSkin* apSkin,const cVector3f& avPos,cColor* apDestColor, void *apCallbackObject, tGuiCallbackFunc apCallback);
-		virtual ~cGuiPopUpColorPicker();		
-
-	protected:
-		/////////////////////////////
-		// Own functions
-		bool Button_Pressed(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Button_Pressed);
-
-		bool Slider_OnMove(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Slider_OnMove);
-
-		bool Input_OnTextBoxEnter(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Input_OnTextBoxEnter);
-
-		bool WindowClose(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(WindowClose);
-
-		void Init();
-
-		void ClosePopUp();
-
-		void UpdateSliders();
-		void UpdateInputs();		
-
-		//////////////////////////////
-		// Data
-		cVector3f mvPos;
-
-		cColor mOldColor;
-		cColor mColor;
-		cColor* mpDestColor;
-
-		cWidgetFrame* mpFrameCurrentColor;
-		cWidgetFrame* mpFramePreviousColor;
-
-		cWidgetLabel* mvLabelColorComponent[4];
-		cWidgetSlider* mvSliderColorComponent[4];
-		cWidgetTextBox* mvInputColorComponent[4];
-
-		cWidgetButton* mvButtons[3];
-
-		void * mpCallbackObject;
-		tGuiCallbackFunc mpCallback;	
+		virtual ~cGuiPopUpColorPicker();
 	};
 };
 

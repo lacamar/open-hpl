@@ -20,10 +20,8 @@
 #ifndef HPL_GUI_POP_UP_H
 #define HPL_GUI_POP_UP_H
 
-#include "gui/RustWidget3.h"
 #include "gui/RustGuiH21.h"
 #include "gui/GuiTypes.h"
-#include "impl/RustBackends.h"
 #include <list>
 
 namespace hpl {
@@ -47,35 +45,17 @@ namespace hpl {
 		void SetKillOnEscapeKey(bool abX);
 		bool GetKillOnEscapeKey();
 
-		void SetNextFocusWidget(iWidget *apNewFocused)  { if(mR) ohpl_h21_set_next_focus(mR, (uintptr_t)apNewFocused); else ohpl_w3_popup_set_next_focus(&mPopUp, (size_t)apNewFocused); }
+		void SetNextFocusWidget(iWidget *apNewFocused)  { ohpl_h21_set_next_focus(mR, (uintptr_t)apNewFocused); }
 		cGuiSet* GetGuiSet() { return mpSet; }
 
 	protected:
-		bool Window_OnClose(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Window_OnClose);
-
-		virtual void OnCloseSpecific() {}
-
 		void SelfDestruct();
-
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		// Use this func to safely execute callbacks (makes sure right attention and focus widgets are set after destroying popup)
-		bool RunCallback(void* apObj, tGuiCallbackFunc apCallback, 
-							iWidget* apWidget, const cGuiMessageData& aData, bool abRunFocusChangeChecks);
-
-		void SetUpDefaultFocus(iWidget* apWidget);
 
 		cGuiSet *mpSet;
 		cGuiSkin *mpSkin;
 
 		cWidgetWindow* mpWindow;
 
-		void* mpDestroyCallbackObject;
-		tGuiCallbackFunc mpDestroyCallback;
-
-		OhplW3PopUp mPopUp;
-
-		// OHPL_IMPL=rust: the popup state machine lives in Rust, the members above stay unused.
 		OhplH21Popup *mR;
 		bool mbDestroyQueued;
 		std::list<OhplH21Binding> mBindings;

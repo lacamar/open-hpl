@@ -71,9 +71,6 @@ namespace hpl {
 	protected:
 
 		/////////////////////////
-		// Own functions
-		void ShowSubMenu();
-		/////////////////////////
 		// Implemented functions
 		void OnInit();
 		void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion);
@@ -101,7 +98,6 @@ namespace hpl {
 		// Data
 		eWidgetType mItemType;
 
-		// Rust state (OHPL_IMPL=rust); the references keep the member names.
 		OhplH20MenuItem mH;
 		bool&	mbChecked;
 		bool&	mbDefault;
@@ -109,26 +105,7 @@ namespace hpl {
 		float&	mfTimer;
 		float&	mfOpenMenuTime;
 
-		bool	mbPressed;
-
 		iWidgetMenu*&	mpChildMenu;
-
-		cGuiGfxElement*	mpGfxSelection;
-		cGuiGfxElement*	mpGfxSubMenuArrow;
-		cGuiGfxElement* mpGfxChecked[2];
-
-		cGuiGfxElement* mpGfxLine;
-
-		float mfItemHPadding;
-		float mfItemTextLeftPadding;
-		float mfItemTextRightPadding;
-		float mfItemVPadding;
-		float mfItemSeparation;
-		float mfItemArrowIconSize;
-		float mfItemCheckIconSize;
-
-		float mfSeparatorPadding;
-		float mfSeparatorHeight;
 
 		tWString msShortcutText;
 	};

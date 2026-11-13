@@ -57,21 +57,6 @@ namespace hpl {
 		// Own functions
 		void UpdateProperties();
 
-		void OpenMenu();
-		void CloseMenu();
-
-		bool ButtonPress(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(ButtonPress);
-
-		bool DrawText(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(DrawText);	
-
-		bool SliderMove(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(SliderMove);
-
-		bool SliderLostFocus(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(SliderLostFocus);
-
 		/////////////////////////
 		// Implemented functions
 		void OnLoadGraphics();
@@ -96,36 +81,15 @@ namespace hpl {
 
 		bool PointIsInside(const cVector2f& avPoint, bool abOnlyClipped);
 
-		bool SliderOnUIArrowPress(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(SliderOnUIArrowPress);
-
-		bool SliderOnUIButtonPress(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(SliderOnUIButtonPress);
-
-		bool SliderOnUIButtonRelease(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(SliderOnUIButtonRelease);
-
 		/////////////////////////
 		// Data
 		
-		cWidgetTextBox *mpText;
-		cWidgetButton *mpButton;
-		cWidgetSlider *mpSlider;
-
-		// Rust state (OHPL_IMPL=rust); the references keep the member names.
 		OhplH20Combo mH;
 		OhplW2Combo& mCombo;
 
 		float& mfButtonWidth;
 		float& mfSliderWidth;
 
-
-		cGuiGfxElement *mpGfxBackground;
-
-		cGuiGfxElement *mpGfxSelection;
-		
-		cGuiGfxElement *mvGfxBorders[4];
-		cGuiGfxElement *mvGfxCorners[4];
 	};
 
 };

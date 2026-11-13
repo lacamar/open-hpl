@@ -1,4 +1,4 @@
-// H22 headless-control differential harness. Runs cHeadlessControlServer (OHPL_IMPL=cpp|rust, the
+// H22 headless-control differential harness. Runs cHeadlessControlServer (the
 // same class) over a fake cEngine and prints a transcript: the script lines interleaved with the
 // replies, SDL events, injected text and engine effects they caused.
 //   usage: H22_SCRIPT=<script> h22_hc ; env H22_XDG = scratch XDG_CACHE_HOME (printed as $XDG)

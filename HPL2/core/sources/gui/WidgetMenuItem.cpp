@@ -30,7 +30,6 @@
 
 #include "graphics/FontData.h"
 #include "gui/RustWidget3.h"
-#include "impl/RustBackends.h"
 
 namespace hpl {
 	static int ItemKind(eWidgetType aType)
@@ -156,105 +155,23 @@ namespace hpl {
 
 	//----------------------------------------------------------------
 
-	void cWidgetMenuItem::ShowSubMenu()
-	{
-		if(mpChildMenu==NULL) return;
-
-		cVector3f vParentGlobal = GetParentMenu()->GetGlobalPosition();
-		cVector3f vChildPos;
-		ohpl_w3_item_submenu_pos(ItemKind(mItemType), &vParentGlobal, &mvPosition, mvSize.y,
-								 GetParentMenu()->GetSize().x, mpChildMenu->GetSize().x,
-								 mpSet->GetVirtualSize().x, &vChildPos);
-
-		//mpChildMenu->SetGlobalPosition(vChildPos);
-		//mpChildMenu->SetEnabled(true);
-		//mpChildMenu->SetVisible(true);
-		mpSet->ShowContextMenu((cWidgetContextMenu*)mpChildMenu,vChildPos);		
-	}
-	//----------------------------------------------------------------
-
 	void cWidgetMenuItem::OnInit()
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h20_mi_on_init(&gH20Host, &mH);
-			return;
-		}
-
-		cVector2f vSize;
-		ohpl_w3_item_init_size(IsSeparator(), mfSeparatorHeight, mfItemVPadding, mpDefaultFont->mvSize.y,
-							   GetParentMenu()->GetMenuItemWidth(), &vSize);
-		SetSize(vSize);
+		ohpl_h20_mi_on_init(&gH20Host, &mH);
 	}
 
 	//----------------------------------------------------------------
 
 	void cWidgetMenuItem::OnUpdate(float afTimeStep)
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h20_mi_on_update(&gH20Host, &mH, afTimeStep);
-			return;
-		}
-
-		if(IsVisible() == false || (mpSet->GetAttentionWidget()!=NULL && IsConnectedTo(mpSet->GetAttentionWidget())==false))
-			return;
-
-		OhplW3ItemUpdate update = ohpl_w3_item_update(mfTimer, afTimeStep, mfOpenMenuTime, GetMouseIsOver(),
-													  ItemKind(mItemType),
-													  GetParentMenu()->GetHightlightedItem()==this, IsParent(),
-													  IsMenuOpen());
-		mfTimer = update.timer;
-		if(update.show_submenu)
-			ShowSubMenu();
+		ohpl_h20_mi_on_update(&gH20Host, &mH, afTimeStep);
 	}
 
 	//----------------------------------------------------------------
 
 	void cWidgetMenuItem::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h20_mi_on_draw(&gH20Host, &mH);
-			return;
-		}
-
-		OhplW3ItemDrawIn in;
-		in.kind = ItemKind(mItemType);
-		in.separator = IsSeparator();
-		in.highlighted = (GetParentMenu()->GetHightlightedItem()==this);
-		in.enabled = IsEnabled();
-		in.widget_enabled = mbEnabled;
-		in.is_parent = IsParent();
-		in.checked = mbChecked;
-		in.global = GetGlobalPosition();
-		in.size = mvSize;
-		in.separator_padding = mfSeparatorPadding;
-		in.separator_height = mfSeparatorHeight;
-		in.arrow_offset = GetParentMenu()->GetArrowOffset();
-		in.check_offset = GetParentMenu()->GetCheckOffset();
-		in.text_offset = GetParentMenu()->GetTextOffset();
-
-		OhplW3MenuOp vOps[kOhplW3MaxItemOps];
-		size_t lOps = ohpl_w3_item_draw(&in, vOps, kOhplW3MaxItemOps);
-		cGuiGfxElement* vGfx[5] = { mpGfxLine, mpGfxSubMenuArrow, mpGfxChecked[0], mpGfxChecked[1], mpGfxSelection };
-		for(size_t i=0; i<lOps && i<kOhplW3MaxItemOps; ++i)
-		{
-			const OhplW3MenuOp& op = vOps[i];
-			if(op.kind==kOhplW3OpGfx)
-			{
-				if(op.has_size)
-					mpSet->DrawGfx(vGfx[op.slot], op.pos, op.size);
-				else
-					mpSet->DrawGfx(vGfx[op.slot], op.pos);
-			}
-			else
-			{
-				cColor col = op.color==kOhplW3ColorDisabled ? mpSkin->GetFont(eGuiSkinFont_Disabled)->mColor :
-							 (op.color==kOhplW3ColorHighlight ? mDefaultFontHighlightColor : mDefaultFontColor);
-				DrawDefaultText(op.slot==kOhplW3TextShortcut ? msShortcutText : msText, op.pos, (eFontAlign)op.align, col);
-			}
-		}
+		ohpl_h20_mi_on_draw(&gH20Host, &mH);
 	}
 
 	//----------------------------------------------------------------
@@ -280,37 +197,14 @@ namespace hpl {
 
 	bool cWidgetMenuItem::OnMouseDown(const cGuiMessageData& aData)
 	{
-		if(OhplBackendRustRequested())
-		{
-			return ohpl_h20_mi_on_mouse_down(&gH20Host, &mH);
-		}
-
-		if(IsSeparator()) return false;
-		///////////////////////////
-		// If clicked, skip timer
-		mfTimer = mfOpenMenuTime;
-
-		return true;
+		return ohpl_h20_mi_on_mouse_down(&gH20Host, &mH);
 	}
 
 	//----------------------------------------------------------------
 
 	bool cWidgetMenuItem::OnMouseUp(const cGuiMessageData& aData)
 	{
-		if(OhplBackendRustRequested())
-		{
-			return ohpl_h20_mi_on_mouse_up(&gH20Host, &mH, &aData);
-		}
-
-		OhplW3ItemUp up = ohpl_w3_item_mouse_up(IsSeparator(), GetParentMenu()->GetHightlightedItem()==this, IsParent());
-		if(up.ret==false) return false;
-
-		if(up.hide_topmost)
-			GetParentMenu()->GetTopMostMenu()->Hide();
-
-		ProcessMessage(eGuiMessage_ButtonPressed, aData, true, true);
-
-		return true;
+		return ohpl_h20_mi_on_mouse_up(&gH20Host, &mH, &aData);
 	}
 
 	//----------------------------------------------------------------
@@ -326,85 +220,28 @@ namespace hpl {
 
 	bool cWidgetMenuItem::OnMouseMove(const cGuiMessageData& aData)
 	{
-		if(OhplBackendRustRequested())
-		{
-			return ohpl_h20_mi_on_mouse_move(&gH20Host, &mH);
-		}
-
-		bool bAttentionBlocks = mpSet->GetAttentionWidget()!=NULL && IsConnectedTo(mpSet->GetAttentionWidget())==false;
-		if(ohpl_w3_item_mouse_move_highlights(IsVisible(), mpSet->GetDrawMouse(), bAttentionBlocks, GetMouseIsOver()))
-			GetParentMenu()->SetHighlightedItem(this);
-		return true;
+		return ohpl_h20_mi_on_mouse_move(&gH20Host, &mH);
 	}
 
 	//----------------------------------------------------------------
 
 	bool cWidgetMenuItem::OnMouseLeave(const cGuiMessageData& aData)
 	{
-		if(OhplBackendRustRequested())
-		{
-			return ohpl_h20_mi_on_mouse_leave(&gH20Host, &mH);
-		}
-
-		bool bAttentionBlocks = mpSet->GetAttentionWidget()!=NULL && IsConnectedTo(mpSet->GetAttentionWidget())==false;
-		OhplW3ItemLeave leave = ohpl_w3_item_mouse_leave(bAttentionBlocks, IsMenuOpen());
-		if(leave.ret==false) return false;
-
-		if(leave.clear_highlight)
-			GetParentMenu()->SetHighlightedItem(NULL);
-
-		if(leave.reset_timer)
-			mfTimer = 0;
-
-		return true;
+		return ohpl_h20_mi_on_mouse_leave(&gH20Host, &mH);
 	}
 
 	//----------------------------------------------------------------
 	
 	bool cWidgetMenuItem::OnKeyPress(const cGuiMessageData& aData)
 	{
-		if(OhplBackendRustRequested())
-		{
-			return ohpl_h20_mi_on_key_press(&gH20Host, &mH, &aData);
-		}
-
-		eKey key = aData.mKeyPress.mKey;
-
-		if(IsParent())
-			return mpChildMenu->ProcessMessage(eGuiMessage_KeyPress, aData);
-
-		return false;
+		return ohpl_h20_mi_on_key_press(&gH20Host, &mH, &aData);
 	}
 
 	//----------------------------------------------------------------
 
 	void cWidgetMenuItem::OnLoadGraphics()
 	{
-		if(OhplBackendRustRequested())
-		{
-			ohpl_h20_mi_on_load_graphics(&gH20Host, &mH);
-			return;
-		}
-
-		mpGfxSelection = mpSkin->GetGfx(eGuiSkinGfx_TextBoxSelectedTextBack);
-		mpGfxSubMenuArrow = mpSkin->GetGfx(eGuiSkinGfx_MenuItemArrow);
-
-		mpGfxChecked[0] = mpSkin->GetGfx(eGuiSkinGfx_MenuDisabledChecked); 
-		mpGfxChecked[1] = mpSkin->GetGfx(eGuiSkinGfx_MenuEnabledChecked);
-
-		mpGfxLine = mpSkin->GetGfx(eGuiSkinGfx_MenuSeparatorLine);
-
-		mfSeparatorPadding = mpSkin->GetAttribute(eGuiSkinAttribute_MenuSeparatorPadding).x;
-		mfSeparatorHeight = mpSkin->GetAttribute(eGuiSkinAttribute_MenuSeparatorHeight).x;
-		mfItemHPadding = mpSkin->GetAttribute(eGuiSkinAttribute_ContextMenuItemHPadding).x;
-		mfItemVPadding = mpSkin->GetAttribute(eGuiSkinAttribute_ContextMenuItemVPadding).x;
-		mfItemSeparation = mpSkin->GetAttribute(eGuiSkinAttribute_ContextMenuItemSeparation).x;
-		mfItemArrowIconSize = mpSkin->GetAttribute(eGuiSkinAttribute_ContextMenuItemArrowSize).x;
-		mfItemCheckIconSize = mpSkin->GetAttribute(eGuiSkinAttribute_ContextMenuItemCheckSize).x;
-		mfItemTextLeftPadding = mpSkin->GetAttribute(eGuiSkinAttribute_ContextMenuItemTextLeftPadding).x;
-		mfItemTextRightPadding = mpSkin->GetAttribute(eGuiSkinAttribute_ContextMenuItemTextRightPadding).x;
-
-		SetDefaultFontSize(12.5f);
+		ohpl_h20_mi_on_load_graphics(&gH20Host, &mH);
 	}
 
 	//----------------------------------------------------------------

@@ -173,8 +173,6 @@ namespace hpl {
 		OhplInputReg* GetRustRegistry(){ return mpRegistry;}
 	private:
 		
-		tActionMap m_mapActions;
-		tActionIdMap m_mapActionIds;
 		tInputDeviceList mlstInputDevices;
 
 		iLowLevelInput *mpLowLevelInput;

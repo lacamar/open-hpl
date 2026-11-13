@@ -476,25 +476,7 @@ namespace hpl {
 
 		void AddWidget(iWidget *apWidget,iWidget *apParent);
 
-		bool OnMouseMove(const cGuiMessageData &aData);
-		bool OnMouseDown(const cGuiMessageData& aData);
-		bool OnMouseUp(const cGuiMessageData& aData);
-		bool OnMouseDoubleClick(const cGuiMessageData& aData);
-
-		bool OnKeyPress(const cGuiMessageData& aData);
-		bool OnKeyRelease(const cGuiMessageData& aData);
-
-		bool OnGamepadInput(const cGuiMessageData& aData);
-
-		bool OnUIArrowPress(const cGuiMessageData& aData);
-		bool OnUIArrowRelease(const cGuiMessageData& aData);
-		bool OnUIButtonPress(const cGuiMessageData& aData);
-		bool OnUIButtonRelease(const cGuiMessageData& aData);
-		bool OnUIButtonDoublePress(const cGuiMessageData& aData);
-
 		void FillRustHost(OhplH18Host& aHost);
-		bool OnGetUINavFocus(const cGuiMessageData& aData);
-		bool OnLoseUINavFocus(const cGuiMessageData& aData);
 
 		bool DrawMouse(iWidget* apWidget, const cGuiMessageData& aData);
 		kGuiCallbackDeclarationEnd(DrawMouse);
@@ -508,8 +490,6 @@ namespace hpl {
 
 		void CreateToolTipWidgets();
 
-		eUIArrow TranslateKeyToUIArrow(eKey aKey);
-
 		OhplH18SetState mS;
 
 		cGui *mpGui;
@@ -521,10 +501,6 @@ namespace hpl {
 		cGraphics* mpGraphics;
 		cSound *mpSound;
 		cScene *mpScene;
-
-		tWidgetList mlstAttentionStack;
-
-		tWidgetList mlstFocusedStack;
 
 		iWidget* mpWidgetRoot;
 		tWidgetList mlstWidgets;
@@ -568,8 +544,6 @@ namespace hpl {
 
 		tShortcutList mlstShortcuts;
 
-		tWidgetList mlstWindows;
-
 		bool mbSortWidgets;
 
 		///////////////////////////////////
@@ -581,16 +555,10 @@ namespace hpl {
 		cWidgetFrame* mpFrameBGToolTip;
 		cWidgetLabel* mpLabelToolTip;
 
-		////////////////////////////////////
-		// Tab Order
-		tWidgetList mlstTabOrderWidgets;
-
 		bool mbDestroyingSet;
 
 		bool mbOldDestroyingSet;
 		iWidget* mpTopMostDestroyingWidget;
-
-		tWidgetList	mlstDefaultFocusStack;
 
 		bool				mbDrawFocus;
 		void*				mpFocusDrawObject;

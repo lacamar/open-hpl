@@ -61,12 +61,6 @@ namespace hpl {
 		// Data
 
 		OhplH20MainMenu mH;
-		float mfItemSeparation;
-		float mfItemVPadding;
-		float mfItemTextPadding;
-
-		cGuiGfxElement* mpGfxBackground;
-		
 	};
 };
 
