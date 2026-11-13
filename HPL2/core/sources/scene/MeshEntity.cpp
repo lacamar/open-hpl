@@ -228,6 +228,21 @@ namespace hpl {
 		static iPhysicsBody* Body(size_t a){ return reinterpret_cast<iPhysicsBody*>(a); }
 		static size_t P(const void *p){ return reinterpret_cast<size_t>(p); }
 
+		static const tString* Str(cMeshEntity *e, size_t kind, size_t j, int32_t i)
+		{
+			switch(kind)
+			{
+			case 0: return &e->mpMesh->GetSubMesh(i)->GetName();
+			case 1: return &e->mpMesh->GetAnimation(i)->GetName();
+			case 2: return &e->mpMesh->GetSkeleton()->GetBoneByIndex(i)->GetName();
+			case 3: { cBone *pParent = e->mpMesh->GetSkeleton()->GetBoneByIndex(i)->GetParent(); return pParent ? &pParent->GetName() : NULL; }
+			case 4: return &e->mpMesh->GetNode(i)->GetName();
+			case 5: { cNode3D *pParent = e->mpMesh->GetNode(i)->GetParent(); return pParent ? &pParent->GetName() : NULL; }
+			case 6: return &(*std::next(e->mpMesh->GetNode(i)->GetChildList()->begin(), j))->GetName();
+			}
+			return NULL;
+		}
+
 		static size_t Call(void *p, int32_t op, size_t a, size_t b, int32_t i, float f)
 		{
 			cMeshEntity *e = E(p);
@@ -328,6 +343,86 @@ namespace hpl {
 				}
 				return 0;
 			}
+			case OhplH11Op_SubMeshNum: return e->mpMesh->GetSubMeshNum();
+			case OhplH11Op_CreateSub:
+			{
+				cSubMesh *pSubMesh = e->mpMesh->GetSubMesh(i);
+				cSubMeshEntity* pSub = hplNew( cSubMeshEntity, (e->msName + "_" + pSubMesh->GetName(),e,pSubMesh,e->mpMaterialManager) );
+				e->mvSubMeshes.push_back(pSub);
+				iVertexBuffer *pVtxBuffer = pSubMesh->GetVertexBuffer();
+				e->InitSubBounds(pSub, pVtxBuffer);
+				return 0;
+			}
+			case OhplH11Op_AnimNum: return e->mpMesh->GetAnimationNum();
+			case OhplH11Op_CreateAnimState:
+			{
+				cAnimation* pAnimation = e->mpMesh->GetAnimation(i);
+				e->mvAnimationStates.push_back(hplNew( cAnimationState, (pAnimation,pAnimation->GetName(),NULL) ));
+				return 0;
+			}
+			case OhplH11Op_CreateBoneRoot:
+				e->mpBoneStateRoot = hplNew( cNode3D, ("BoneStateRoot",false) );
+				e->AddNodeChild(e->mpBoneStateRoot);
+				return 0;
+			case OhplH11Op_SkelBoneNum: return e->mpMesh->GetSkeleton()->GetBoneNum();
+			case OhplH11Op_CreateBone:
+			{
+				cBone* pBone = e->mpMesh->GetSkeleton()->GetBoneByIndex(i);
+				cBoneState *pState = hplNew( cBoneState,(pBone->GetName(), false) );
+				pState->SetMatrix(pBone->GetLocalTransform());
+				e->mvBoneStates.push_back(pState);
+				return 0;
+			}
+			case OhplH11Op_BoneSetParent: e->mvBoneStates[a]->SetParent(b ? static_cast<cNode3D*>(e->mvBoneStates[b-1]) : e->mpBoneStateRoot); return 0;
+			case OhplH11Op_BoneInitMatrices: e->mvBoneMatrices.resize(e->mpMesh->GetSkeleton()->GetBoneNum()); return 0;
+			case OhplH11Op_BoneResetMatrix: e->mvBoneStates[i]->SetMatrix(e->mpMesh->GetSkeleton()->GetBoneByIndex(i)->GetLocalTransform()); return 0;
+			case OhplH11Op_TempBoneInit: e->mvTempBoneStates.resize(e->mvBoneStates.size()); return 0;
+			case OhplH11Op_TempBoneCreate: e->mvTempBoneStates[i] = hplNew( cBoneState,(e->mvBoneStates[i]->GetName(),false)); return 0;
+			case OhplH11Op_SubAttach: e->AddChild(e->mvSubMeshes[i]); return 0;
+			case OhplH11Op_SubDetach: e->RemoveChild(e->mvSubMeshes[i]); e->mvSubMeshes[i]->SetMatrix(cMatrixf::Identity); return 0;
+			case OhplH11Op_MeshNodeNum: return e->mpMesh->GetNodeNum();
+			case OhplH11Op_SubFromMeshNode:
+			{
+				cSubMesh *pSubMesh = e->mpMesh->GetSubMesh(i);
+				cNode3D* pNode = e->mpMesh->GetNodeByName(pSubMesh->GetName());
+				if(pNode) e->mvSubMeshes[i]->SetMatrix(pNode->GetWorldMatrix());
+				else Error("Cannot find node '%s' in mesh '%s'\n",pSubMesh->GetName().c_str(), e->mpMesh->GetName().c_str());
+				return 0;
+			}
+			case OhplH11Op_NodeStateCount: return e->mvNodeStates.size();
+			case OhplH11Op_AnimStateCount: return e->mvAnimationStates.size();
+			case OhplH11Op_CreateNodeState:
+			{
+				cNode3D* pMeshNode = e->mpMesh->GetNode(i);
+				cBoneState *pNode = hplNew( cBoneState, (pMeshNode->GetName(), false) );
+				pNode->SetMatrix(pMeshNode->GetLocalMatrix());
+				e->mvNodeStates.push_back(pNode);
+				return 0;
+			}
+			case OhplH11Op_NodeSetParent: e->mvNodeStates[a]->SetParent(e->mvNodeStates[b]); return 0;
+			case OhplH11Op_NodeAddRoot: e->AddNodeChild(e->mvNodeStates[a]); return 0;
+			case OhplH11Op_NodeAddChild: e->mvNodeStates[a]->AddChild(b < e->mvNodeStates.size() ? static_cast<cNode3D*>(e->mvNodeStates[b]) : NULL); return 0;
+			case OhplH11Op_TransformUpdated: e->SetTransformUpdated(true); return 0;
+			case OhplH11Op_StrPtr: { const tString *s = Str(e, a, b, i); return s ? P(s->data()) : 0; }
+			case OhplH11Op_StrLen: { const tString *s = Str(e, a, b, i); return s ? s->size() : 0; }
+			case OhplH11Op_SubSetLocalNode: e->mvSubMeshes[i]->SetLocalNode(e->mvNodeStates[a]); return 0;
+			case OhplH11Op_MeshNodeChildCount: return e->mpMesh->GetNode(a)->GetChildList()->size();
+			case OhplH11Op_SubDestroy:
+			{
+				cSubMeshEntity *pSub = e->mvSubMeshes[i];
+				iEntity3D *pParent = pSub->GetEntityParent();
+				if(pParent) pParent->RemoveChild(pSub);
+				hplDelete(pSub);
+				return 0;
+			}
+			case OhplH11Op_RootDelete: if(e->mpBoneStateRoot) hplDelete(e->mpBoneStateRoot); return 0;
+			case OhplH11Op_MeshDestroy: e->mpMeshManager->Destroy(e->mpMesh); return 0;
+			case OhplH11Op_DeleteAll:
+				if(a == 0) STLDeleteAll(e->mvNodeStates);
+				else if(a == 1) STLDeleteAll(e->mvBoneStates);
+				else if(a == 2) STLDeleteAll(e->mvTempBoneStates);
+				else STLDeleteAll(e->mvAnimationStates);
+				return 0;
 			case OhplH11Op_ListCount: return e->mlstNodeChildren.size();
 			case OhplH11Op_ListAt: return P(*std::next(e->mlstNodeChildren.begin(), i));
 			}
@@ -422,6 +517,13 @@ namespace hpl {
 
 		mCtl.updated_bones = false;
 		mCtl.has_updated_animation = true;
+
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_build(&c, mpNames);
+			return;
+		}
 
 		////////////////////////////////////////////////
 		//Create sub entities
@@ -576,8 +678,21 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cMeshEntity::InitSubBounds(cSubMeshEntity *apSub, iVertexBuffer *apVtxBuffer)
+	{
+		apSub->mBoundingVolume.AddArrayPoints(apVtxBuffer->GetFloatArray(eVertexBufferElement_Position), apVtxBuffer->GetVertexNum());
+		apSub->mBoundingVolume.CreateFromPoints(apVtxBuffer->GetElementNum(eVertexBufferElement_Position));
+	}
+
 	cMeshEntity::~cMeshEntity()
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_destroy(&c);
+			ohpl_h11b_names_free(mpNames);
+			return;
+		}
 		for(int i=0;i<(int)mvSubMeshes.size();i++)
 		{
 			cSubMeshEntity *pSub = mvSubMeshes[i];
@@ -1952,6 +2067,12 @@ namespace hpl {
 
 	void cMeshEntity::CreateNodes()
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplH11Call c = OhplH11MeshHostImpl::MakeCall(this);
+			ohpl_h11b_create_nodes(&c, mpNames);
+			return;
+		}
 		/////////////////////////////////
 		//Check so it is okay to add nodes
 		if(mvNodeStates.empty() ==false) return;

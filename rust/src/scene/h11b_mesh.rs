@@ -81,6 +81,49 @@ pub enum Op {
     EvPlaySound,
     ListCount,
     ListAt,
+    SubMeshNum,
+    CreateSub,
+    AnimNum,
+    CreateAnimState,
+    CreateBoneRoot,
+    SkelBoneNum,
+    CreateBone,
+    BoneSetParent,
+    BoneInitMatrices,
+    BoneResetMatrix,
+    TempBoneInit,
+    TempBoneCreate,
+    SubAttach,
+    SubDetach,
+    MeshNodeNum,
+    SubFromMeshNode,
+    NodeStateCount,
+    CreateNodeState,
+    NodeSetParent,
+    NodeAddRoot,
+    NodeAddChild,
+    TransformUpdated,
+    StrPtr,
+    StrLen,
+    SubSetLocalNode,
+    MeshNodeChildCount,
+    SubDestroy,
+    RootDelete,
+    MeshDestroy,
+    DeleteAll,
+    AnimStateCount,
+}
+
+/// `StrPtr`/`StrLen` kinds.
+#[derive(Clone, Copy)]
+enum Str {
+    SubMesh = 0,
+    Anim,
+    Bone,
+    BoneParent,
+    MeshNode,
+    MeshNodeParent,
+    MeshNodeChild,
 }
 
 /// `cMeshEntity::*` host ops, one wrapper per op.
@@ -425,4 +468,120 @@ pub(super) fn anim_is_over(h: &Host, n: &Names, name: &[u8]) -> bool {
         return false;
     }
     h.c(Op::AnimIsOver, 0, 0, idx, 0.0) != 0
+}
+
+impl Host<'_> {
+    fn text(&self, kind: Str, idx: usize, j: usize) -> Vec<u8> {
+        let p = self.c(Op::StrPtr, kind as usize, j, idx as i32, 0.0) as *const u8;
+        let n = self.c(Op::StrLen, kind as usize, j, idx as i32, 0.0);
+        if p.is_null() {
+            return Vec::new();
+        }
+        // SAFETY: the host returns `n` valid bytes, copied at once.
+        unsafe { std::slice::from_raw_parts(p, n) }.to_vec()
+    }
+
+    fn has(&self, kind: Str, idx: usize) -> bool {
+        self.c(Op::StrPtr, kind as usize, 0, idx as i32, 0.0) != 0
+    }
+}
+
+/// `cMeshEntity::CreateNodes`.
+pub(super) fn create_nodes(h: &Host, names: &mut Names) {
+    if h.op(Op::NodeStateCount, 0) != 0
+        || h.op(Op::HasSkeleton, 0) != 0
+        || h.op(Op::MeshNodeNum, 0) == 0
+    {
+        return;
+    }
+    for i in 0..h.op(Op::SubMeshNum, 0) {
+        h.c(Op::SubDetach, 0, 0, i as i32, 0.0);
+    }
+    let nodes = h.op(Op::MeshNodeNum, 0);
+    for i in 0..nodes {
+        h.c(Op::CreateNodeState, 0, 0, i as i32, 0.0);
+        let name = h.text(Str::MeshNode, i, 0);
+        names.insert(2, &name, i as i32);
+        let sub = names.find(3, &name);
+        if sub >= 0 {
+            h.c(Op::SubSetLocalNode, i, 0, sub, 0.0);
+        }
+    }
+    for i in 0..nodes {
+        if h.has(Str::MeshNodeParent, i) {
+            let parent = names.find(2, &h.text(Str::MeshNodeParent, i, 0));
+            if parent >= 0 {
+                h.c(Op::NodeSetParent, i, parent as usize, 0, 0.0);
+            } else {
+                h.c(Op::NodeAddRoot, i, 0, 0, 0.0);
+            }
+        } else {
+            h.c(Op::NodeAddRoot, i, 0, 0, 0.0);
+        }
+        for j in 0..h.c(Op::MeshNodeChildCount, i, 0, 0, 0.0) {
+            let child = names.find(2, &h.text(Str::MeshNodeChild, i, j));
+            h.c(Op::NodeAddChild, i, child as usize, 0, 0.0);
+        }
+    }
+    h.op(Op::TransformUpdated, 0);
+}
+
+/// The constructor of `cMeshEntity`: sub entities, animation states, skeleton or node states.
+pub(super) fn build_entity(h: &Host, names: &mut Names) {
+    for i in 0..h.op(Op::SubMeshNum, 0) {
+        h.c(Op::CreateSub, 0, 0, i as i32, 0.0);
+        names.insert(3, &h.text(Str::SubMesh, i, 0), i as i32);
+    }
+    for i in 0..h.op(Op::AnimNum, 0) {
+        h.c(Op::CreateAnimState, 0, 0, i as i32, 0.0);
+        names.insert(0, &h.text(Str::Anim, i, 0), i as i32);
+    }
+    if h.op(Op::HasSkeleton, 0) != 0 {
+        h.op(Op::CreateBoneRoot, 0);
+        let bones = h.op(Op::SkelBoneNum, 0);
+        for i in 0..bones {
+            h.c(Op::CreateBone, 0, 0, i as i32, 0.0);
+            names.insert(1, &h.text(Str::Bone, i, 0), i as i32);
+        }
+        for i in 0..bones {
+            let parent = if h.has(Str::BoneParent, i) {
+                names.find(1, &h.text(Str::BoneParent, i, 0))
+            } else {
+                -1
+            };
+            h.c(Op::BoneSetParent, i, (parent + 1) as usize, 0, 0.0);
+        }
+        h.op(Op::BoneInitMatrices, 0);
+        for i in 0..bones {
+            h.c(Op::BoneResetMatrix, 0, 0, i as i32, 0.0);
+        }
+        h.op(Op::TempBoneInit, 0);
+        for i in 0..bones {
+            h.c(Op::TempBoneCreate, 0, 0, i as i32, 0.0);
+        }
+        for i in 0..h.op(Op::SubCount, 0) {
+            h.c(Op::SubAttach, 0, 0, i as i32, 0.0);
+        }
+    } else if h.op(Op::AnimStateCount, 0) != 0 {
+        create_nodes(h, names);
+    } else {
+        for i in 0..h.op(Op::SubCount, 0) {
+            if h.op(Op::MeshNodeNum, 0) > 0 {
+                h.c(Op::SubFromMeshNode, 0, 0, i as i32, 0.0);
+            }
+            h.c(Op::SubAttach, 0, 0, i as i32, 0.0);
+        }
+    }
+}
+
+/// The destructor of `cMeshEntity`.
+pub(super) fn destroy(h: &Host) {
+    for i in 0..h.op(Op::SubCount, 0) {
+        h.c(Op::SubDestroy, 0, 0, i as i32, 0.0);
+    }
+    h.op(Op::RootDelete, 0);
+    h.op(Op::MeshDestroy, 0);
+    for kind in 0..4 {
+        h.c(Op::DeleteAll, kind, 0, 0, 0.0);
+    }
 }

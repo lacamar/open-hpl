@@ -41,6 +41,36 @@ entry! {
 }
 
 /// # Safety
+/// `vt`, `n` valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h11b_build(vt: *const HostCall, n: *mut Names) {
+    // SAFETY: caller contract.
+    if let (Some(h), Some(n)) = (unsafe { host(vt) }, unsafe { n.as_mut() }) {
+        m::build_entity(&h, n);
+    }
+}
+
+/// # Safety
+/// `vt`, `n` valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h11b_create_nodes(vt: *const HostCall, n: *mut Names) {
+    // SAFETY: caller contract.
+    if let (Some(h), Some(n)) = (unsafe { host(vt) }, unsafe { n.as_mut() }) {
+        m::create_nodes(&h, n);
+    }
+}
+
+/// # Safety
+/// `vt` valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h11b_destroy(vt: *const HostCall) {
+    // SAFETY: caller contract.
+    if let Some(h) = unsafe { host(vt) } {
+        m::destroy(&h);
+    }
+}
+
+/// # Safety
 /// `vt` valid.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h11b_fan_out(

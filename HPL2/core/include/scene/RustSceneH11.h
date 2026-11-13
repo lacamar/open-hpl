@@ -68,7 +68,15 @@ namespace hpl {
 		OhplH11Op_SubBvMax, OhplH11Op_BvFlag, OhplH11Op_BvClearFlag, OhplH11Op_BvFromVertices,
 		OhplH11Op_BvSetLocal, OhplH11Op_BvSetIdentity, OhplH11Op_BoneRadius, OhplH11Op_HasSkeleton,
 		OhplH11Op_Play, OhplH11Op_PlayFade, OhplH11Op_Warn, OhplH11Op_AnimIsOver, OhplH11Op_EvCallback,
-		OhplH11Op_EvValueEmpty, OhplH11Op_EvType, OhplH11Op_EvPlaySound, OhplH11Op_ListCount, OhplH11Op_ListAt
+		OhplH11Op_EvValueEmpty, OhplH11Op_EvType, OhplH11Op_EvPlaySound, OhplH11Op_ListCount, OhplH11Op_ListAt,
+		OhplH11Op_SubMeshNum, OhplH11Op_CreateSub, OhplH11Op_AnimNum, OhplH11Op_CreateAnimState, OhplH11Op_CreateBoneRoot,
+		OhplH11Op_SkelBoneNum, OhplH11Op_CreateBone, OhplH11Op_BoneSetParent, OhplH11Op_BoneInitMatrices,
+		OhplH11Op_BoneResetMatrix, OhplH11Op_TempBoneInit, OhplH11Op_TempBoneCreate, OhplH11Op_SubAttach,
+		OhplH11Op_SubDetach, OhplH11Op_MeshNodeNum, OhplH11Op_SubFromMeshNode, OhplH11Op_NodeStateCount,
+		OhplH11Op_CreateNodeState, OhplH11Op_NodeSetParent, OhplH11Op_NodeAddRoot, OhplH11Op_NodeAddChild,
+		OhplH11Op_TransformUpdated, OhplH11Op_StrPtr, OhplH11Op_StrLen, OhplH11Op_SubSetLocalNode,
+		OhplH11Op_MeshNodeChildCount, OhplH11Op_SubDestroy, OhplH11Op_RootDelete, OhplH11Op_MeshDestroy,
+		OhplH11Op_DeleteAll, OhplH11Op_AnimStateCount
 	};
 
 	struct OhplH11MeshHost
@@ -138,6 +146,9 @@ void ohpl_h11_shadow_cache_clear(OhplH11ShadowCache*);
 int32_t ohpl_h11_shadow_cache_len(const OhplH11ShadowCache*);
 void ohpl_h11_fog_bounds_size(const cVector3f*, cVector3f*);
 
+void ohpl_h11b_build(const OhplH11Call*, OhplH11Names*);
+void ohpl_h11b_create_nodes(const OhplH11Call*, OhplH11Names*);
+void ohpl_h11b_destroy(const OhplH11Call*);
 void ohpl_h11b_physics_from_bodies(const OhplH11Call*);
 void ohpl_h11b_bone_nodes_update(const OhplH11Call*);
 void ohpl_h11b_node_update(const OhplH11Call*);
