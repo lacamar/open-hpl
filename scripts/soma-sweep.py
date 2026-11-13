@@ -359,7 +359,7 @@ def main():
         print(f"\n{passing}/{len(results['maps'])} maps passing -> {args.out}")
         sys.exit(0 if passing == len(results["maps"]) else 1)
 
-    sock = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "ohpl-sweep.sock")
+    sock = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), f"ohpl-sweep-{os.getpid()}.sock")
     for name in names:
         print(f"{name:34s} ", end="", flush=True)
         result = run_map(name, args.scratch, args.frames, args.boot_timeout, sock, args.play)
