@@ -1,26 +1,26 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "impl/PhysicsMaterialNewton.h"
+#include "physics/PhysicsMaterial.h"
 
-#include "impl/PhysicsWorldNewton.h"
-#include "impl/PhysicsBodyNewton.h"
+#include "physics/PhysicsWorld.h"
+#include "physics/PhysicsBody.h"
 #include "physics/SurfaceData.h"
 #include "impl/RustNewton.h"
 #include "impl/RustNewtonBackend.h"
@@ -37,10 +37,10 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cPhysicsMaterialNewton::cPhysicsMaterialNewton(const tString &asName, iPhysicsWorld *apWorld,int alMatId)
-		: iPhysicsMaterial(asName,apWorld)
+	iPhysicsMaterial::iPhysicsMaterial(const tString &asName, iPhysicsWorld *apWorld,int alMatId)
+		: mpWorld(apWorld), msName(asName), mbPreloaded(false), mpSurfaceData(NULL)
 	{
-		cPhysicsWorldNewton *pNWorld = static_cast<cPhysicsWorldNewton*>(mpWorld);
+		iPhysicsWorld *pNWorld = static_cast<iPhysicsWorld*>(mpWorld);
 
 		mpNewtonWorld = pNWorld->GetNewtonWorld();
 
@@ -66,10 +66,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cPhysicsMaterialNewton::~cPhysicsMaterialNewton()
-	{
-		/*Might be just as well to let newton handle this*/
-	}
 
 	//-----------------------------------------------------------------------
 
@@ -79,63 +75,63 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cPhysicsMaterialNewton::SetElasticity(float afElasticity)
+	void iPhysicsMaterial::SetElasticity(float afElasticity)
 	{
 		mfElasticity = afElasticity;
 
 		UpdateMaterials();
 	}
 
-	float cPhysicsMaterialNewton::GetElasticity() const
+	float iPhysicsMaterial::GetElasticity() const
 	{
 		return mfElasticity;
 	}
 
 	//-----------------------------------------------------------------------
 
-	void cPhysicsMaterialNewton::SetStaticFriction(float afElasticity)
+	void iPhysicsMaterial::SetStaticFriction(float afElasticity)
 	{
 		mfStaticFriction = afElasticity;
 
 		UpdateMaterials();
 	}
 
-	float cPhysicsMaterialNewton::GetStaticFriction() const
+	float iPhysicsMaterial::GetStaticFriction() const
 	{
 		return mfStaticFriction;
 	}
 
 	//-----------------------------------------------------------------------
 
-	void cPhysicsMaterialNewton::SetKineticFriction(float afElasticity)
+	void iPhysicsMaterial::SetKineticFriction(float afElasticity)
 	{
 		mfKineticFriction = afElasticity;
 
 		UpdateMaterials();
 	}
 
-	float cPhysicsMaterialNewton::GetKineticFriction() const
+	float iPhysicsMaterial::GetKineticFriction() const
 	{
 		return mfKineticFriction;
 	}
 
 	//-----------------------------------------------------------------------
 
-	void cPhysicsMaterialNewton::SetFrictionCombMode(ePhysicsMaterialCombMode aMode)
+	void iPhysicsMaterial::SetFrictionCombMode(ePhysicsMaterialCombMode aMode)
 	{
 		mFrictionMode = aMode;
 
 		UpdateMaterials();
 	}
 
-	ePhysicsMaterialCombMode cPhysicsMaterialNewton::GetFrictionCombMode() const
+	ePhysicsMaterialCombMode iPhysicsMaterial::GetFrictionCombMode() const
 	{
 		return mFrictionMode;
 	}
 
 	//-----------------------------------------------------------------------
 
-	void cPhysicsMaterialNewton::SetElasticityCombMode(ePhysicsMaterialCombMode aMode)
+	void iPhysicsMaterial::SetElasticityCombMode(ePhysicsMaterialCombMode aMode)
 	{
 		mElasticityMode = aMode;
 
@@ -144,7 +140,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	ePhysicsMaterialCombMode cPhysicsMaterialNewton::GetElasticityCombMode() const
+	ePhysicsMaterialCombMode iPhysicsMaterial::GetElasticityCombMode() const
 	{
 		return mElasticityMode;
 	}
@@ -157,18 +153,18 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cPhysicsMaterialNewton::UpdateMaterials()
+	void iPhysicsMaterial::UpdateMaterials()
 	{
 		cPhysicsMaterialIterator MatIt = mpWorld->GetMaterialIterator();
 
 		while(MatIt.HasNext())
 		{
-			cPhysicsMaterialNewton* pMat = static_cast<cPhysicsMaterialNewton*>(MatIt.Next());
+			iPhysicsMaterial* pMat = static_cast<iPhysicsMaterial*>(MatIt.Next());
 
 			OhplNewtonMatProps propsA{mFrictionMode, mElasticityMode, mfElasticity, mfStaticFriction, mfKineticFriction};
 			OhplNewtonMatProps propsB{pMat->mFrictionMode, pMat->mElasticityMode, pMat->mfElasticity,
 										pMat->mfStaticFriction, pMat->mfKineticFriction};
-			ohpl_ntm_update_pair(static_cast<cPhysicsWorldNewton*>(mpWorld)->RustHandle(), mlMaterialId, pMat->mlMaterialId,
+			ohpl_ntm_update_pair(static_cast<iPhysicsWorld*>(mpWorld)->RustHandle(), mlMaterialId, pMat->mlMaterialId,
 								&propsA, &propsB, pMat == this);
 		}
 	}
@@ -178,10 +174,10 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 	// STATIC NEWTON CALLBACKS
 	//////////////////////////////////////////////////////////////////////////
-	
+
 	//-----------------------------------------------------------------------
 
-	void cPhysicsMaterialNewton::DispatchContacts(cPhysicsBodyNewton* pContactBody1, cPhysicsBodyNewton* pContactBody2,
+	void iPhysicsMaterial::DispatchContacts(iPhysicsBody* pContactBody1, iPhysicsBody* pContactBody2,
 												cPhysicsContactData &contactData, int lContactNum)
 	{
 		iPhysicsMaterial *pMaterial1 = pContactBody1->GetMaterial();

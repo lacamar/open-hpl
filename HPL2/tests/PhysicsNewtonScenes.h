@@ -9,9 +9,9 @@
 #include <cstring>
 #include <vector>
 
-#include "impl/PhysicsWorldNewton.h"
-#include "impl/CollideShapeNewton.h"
-#include "impl/PhysicsBodyNewton.h"
+#include "physics/PhysicsWorld.h"
+#include "physics/CollideShape.h"
+#include "physics/PhysicsBody.h"
 #include "physics/PhysicsBody.h"
 #include "physics/PhysicsJointBall.h"
 #include "physics/PhysicsJointHinge.h"
@@ -57,7 +57,7 @@ struct Dump
 
 static Dump gD;
 
-static void Step(cPhysicsWorldNewton& w, std::vector<iPhysicsBody*>& bodies, int steps, float dt = 1.0f / 60.0f)
+static void Step(iPhysicsWorld& w, std::vector<iPhysicsBody*>& bodies, int steps, float dt = 1.0f / 60.0f)
 {
 	for (int i = 0; i < steps; ++i)
 	{
@@ -84,9 +84,9 @@ static void Step(cPhysicsWorldNewton& w, std::vector<iPhysicsBody*>& bodies, int
 	}
 }
 
-static cPhysicsWorldNewton* NewWorld(ePhysicsAccuracy acc = ePhysicsAccuracy_High)
+static iPhysicsWorld* NewWorld(ePhysicsAccuracy acc = ePhysicsAccuracy_High)
 {
-	cPhysicsWorldNewton* w = hplNew(cPhysicsWorldNewton, ());
+	iPhysicsWorld* w = hplNew(iPhysicsWorld, ());
 	w->SetGravity(cVector3f(0, -9.81f, 0));
 	w->SetMaxTimeStep(1.0f / 60.0f);
 	w->SetAccuracyLevel(acc);
@@ -94,9 +94,9 @@ static cPhysicsWorldNewton* NewWorld(ePhysicsAccuracy acc = ePhysicsAccuracy_Hig
 	return w;
 }
 
-static iPhysicsBody* Floor(cPhysicsWorldNewton& w, float y = 0)
+static iPhysicsBody* Floor(iPhysicsWorld& w, float y = 0)
 {
-	cCollideShapeNewton* s = hplNew(cCollideShapeNewton, (eCollideShapeType_Mesh, 0, NULL, w.GetNewtonWorld(), &w));
+	iCollideShape* s = hplNew(iCollideShape, (eCollideShapeType_Mesh, 0, NULL, w.GetNewtonWorld(), &w));
 	const unsigned int idx[6] = { 0, 1, 2, 0, 2, 3 };
 	const float vtx[12] = { -20, y, -20, 20, y, -20, 20, y, 20, -20, y, 20 };
 	s->CreateFromVertices(idx, 6, vtx, 3, 4);
@@ -110,7 +110,7 @@ static iPhysicsBody* Floor(cPhysicsWorldNewton& w, float y = 0)
 static void SceneStack()
 {
 	gD.Begin("stack");
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	std::vector<iPhysicsBody*> bodies;
 	bodies.push_back(Floor(w));
 	for (int i = 0; i < 6; ++i)
@@ -128,7 +128,7 @@ static void SceneStack()
 static void ScenePile()
 {
 	gD.Begin("pile");
-	cPhysicsWorldNewton& w = *NewWorld(ePhysicsAccuracy_Medium);
+	iPhysicsWorld& w = *NewWorld(ePhysicsAccuracy_Medium);
 	std::vector<iPhysicsBody*> bodies;
 	bodies.push_back(Floor(w));
 	cMatrixf off = cMath::MatrixRotateY(0.3f);
@@ -179,7 +179,7 @@ static void ScenePile()
 static void SceneJoints()
 {
 	gD.Begin("joints");
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	std::vector<iPhysicsBody*> bodies;
 	bodies.push_back(Floor(w, -8));
 	iPhysicsBody* anchor = w.CreateBody("Anchor", w.CreateBoxShape(cVector3f(0.2f, 0.2f, 0.2f), NULL));
@@ -286,7 +286,7 @@ public:
 static void SceneContacts()
 {
 	gD.Begin("contacts");
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	w.SetSaveContactPoints(true);
 	std::vector<iPhysicsBody*> bodies;
 	iPhysicsMaterial* mat = w.CreateMaterial("Bouncy");
@@ -337,7 +337,7 @@ public:
 static void SceneQueries()
 {
 	gD.Begin("queries");
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	std::vector<iPhysicsBody*> bodies;
 	bodies.push_back(Floor(w));
 	iCollideShape* shp[3] = { w.CreateBoxShape(cVector3f(1, 1, 1), NULL), w.CreateSphereShape(cVector3f(0.5f, 0, 0), NULL),
@@ -407,7 +407,7 @@ static void SceneQueries()
 static void SceneSleepForces()
 {
 	gD.Begin("sleep");
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	std::vector<iPhysicsBody*> bodies;
 	bodies.push_back(Floor(w));
 	for (int i = 0; i < 5; ++i)
@@ -453,7 +453,7 @@ static void SceneBuoyancy()
 	for (int mode = 0; mode < 2; ++mode)
 	{
 		iPhysicsBody::SetHpl3Buoyancy(mode == 1);
-		cPhysicsWorldNewton& w = *NewWorld();
+		iPhysicsWorld& w = *NewWorld();
 		std::vector<iPhysicsBody*> bodies;
 		for (int i = 0; i < 4; ++i)
 		{
@@ -482,7 +482,7 @@ static void SceneBuoyancy()
 static void SceneCharacter()
 {
 	gD.Begin("character");
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	std::vector<iPhysicsBody*> bodies;
 	bodies.push_back(Floor(w));
 	iPhysicsBody* step = w.CreateBody("Step", w.CreateBoxShape(cVector3f(1, 0.2f, 1), NULL));
@@ -513,7 +513,7 @@ static void SceneCharacter()
 static void SceneStress()
 {
 	gD.Begin("stress");
-	cPhysicsWorldNewton& w = *NewWorld(ePhysicsAccuracy_Medium);
+	iPhysicsWorld& w = *NewWorld(ePhysicsAccuracy_Medium);
 	std::vector<iPhysicsBody*> bodies;
 	bodies.push_back(Floor(w));
 	iPhysicsMaterial* mats[3];
@@ -551,8 +551,8 @@ static void SceneStress()
 static void SceneSerialized()
 {
 	gD.Begin("serialized");
-	cPhysicsWorldNewton& src = *NewWorld();
-	cCollideShapeNewton* mesh = hplNew(cCollideShapeNewton, (eCollideShapeType_Mesh, 0, NULL, src.GetNewtonWorld(), &src));
+	iPhysicsWorld& src = *NewWorld();
+	iCollideShape* mesh = hplNew(iCollideShape, (eCollideShapeType_Mesh, 0, NULL, src.GetNewtonWorld(), &src));
 	const int tris = 300;
 	std::vector<unsigned int> idx(tris * 3);
 	std::vector<float> vtx(tris * 9);
@@ -569,7 +569,7 @@ static void SceneSerialized()
 	gD.Int((int)buf.GetSize());
 	gD.Mix(buf.GetDataPointer(), buf.GetSize());
 	buf.SetPos(0);
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	iPhysicsBody* ground = w.CreateBody("Ground", w.LoadMeshShapeFromBuffer(&buf));
 	ground->SetMass(0);
 	std::vector<iPhysicsBody*> bodies;
@@ -591,7 +591,7 @@ static void SceneSerialized()
 static void SceneJointsAdvanced()
 {
 	gD.Begin("joints2");
-	cPhysicsWorldNewton& w = *NewWorld(ePhysicsAccuracy_Low);
+	iPhysicsWorld& w = *NewWorld(ePhysicsAccuracy_Low);
 	std::vector<iPhysicsBody*> bodies;
 	bodies.push_back(Floor(w, -6));
 	iPhysicsBody* anchor = w.CreateBody("Anchor", w.CreateBoxShape(cVector3f(0.3f, 0.3f, 0.3f), NULL));
@@ -664,7 +664,7 @@ static void SceneJointsAdvanced()
 }
 
 
-// Hinge row geometry exactly as cPhysicsJointHingeNewton::SubmitConstraints computes it; inputs and outputs as raw bits.
+// Hinge row geometry exactly as iPhysicsJointHinge::SubmitConstraints computes it; inputs and outputs as raw bits.
 static void DumpHingeMath()
 {
 	if (!gD.f) return;

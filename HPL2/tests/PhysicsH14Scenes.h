@@ -8,8 +8,8 @@
 #include <cstdio>
 #include <vector>
 
-#include "impl/PhysicsWorldNewton.h"
-#include "impl/CollideShapeNewton.h"
+#include "physics/PhysicsWorld.h"
+#include "physics/CollideShape.h"
 #include "physics/PhysicsBody.h"
 #include "physics/PhysicsController.h"
 #include "physics/PhysicsRope.h"
@@ -57,9 +57,9 @@ public:
 	tString GetEntityType() { return "H14"; }
 };
 
-static cPhysicsWorldNewton* NewWorld()
+static iPhysicsWorld* NewWorld()
 {
-	cPhysicsWorldNewton* w = hplNew(cPhysicsWorldNewton, ());
+	iPhysicsWorld* w = hplNew(iPhysicsWorld, ());
 	w->SetGravity(cVector3f(0, -9.81f, 0));
 	w->SetMaxTimeStep(1.0f / 60.0f);
 	w->SetAccuracyLevel(ePhysicsAccuracy_High);
@@ -67,9 +67,9 @@ static cPhysicsWorldNewton* NewWorld()
 	return w;
 }
 
-static iPhysicsBody* Floor(cPhysicsWorldNewton& w)
+static iPhysicsBody* Floor(iPhysicsWorld& w)
 {
-	cCollideShapeNewton* s = hplNew(cCollideShapeNewton, (eCollideShapeType_Mesh, 0, NULL, w.GetNewtonWorld(), &w));
+	iCollideShape* s = hplNew(iCollideShape, (eCollideShapeType_Mesh, 0, NULL, w.GetNewtonWorld(), &w));
 	const unsigned int idx[6] = { 0, 1, 2, 0, 2, 3 };
 	const float vtx[12] = { -30, 0, -30, 30, 0, -30, 30, 0, 30, -30, 0, 30 };
 	s->CreateFromVertices(idx, 6, vtx, 3, 4);
@@ -78,7 +78,7 @@ static iPhysicsBody* Floor(cPhysicsWorldNewton& w)
 	return b;
 }
 
-static iPhysicsBody* Box(cPhysicsWorldNewton& w, const char* name, const cVector3f& size, float mass, const cVector3f& pos)
+static iPhysicsBody* Box(iPhysicsWorld& w, const char* name, const cVector3f& size, float mass, const cVector3f& pos)
 {
 	iPhysicsBody* b = w.CreateBody(name, w.CreateBoxShape(size, NULL));
 	b->SetMass(mass);
@@ -121,7 +121,7 @@ static void Rope(iPhysicsRope* r)
 static void ScenePlayer(bool useCamera, bool useEntity, const char* name)
 {
 	gD.Begin(name);
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	Floor(w);
 	Box(w, "Step", cVector3f(1, 0.2f, 1), 0, cVector3f(0, 0.1f, 2));
 	iPhysicsBody* crate = Box(w, "Crate", cVector3f(0.6f, 0.6f, 0.6f), 5, cVector3f(1.5f, 0.3f, -1));
@@ -176,7 +176,7 @@ static void ScenePlayer(bool useCamera, bool useEntity, const char* name)
 static void ScenePlatform(const char* name, bool rotate, bool velocity, int axes, bool yaw)
 {
 	gD.Begin(name);
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	Floor(w);
 	iPhysicsBody* plat = Box(w, "Platform", cVector3f(3, 0.3f, 3), 20, cVector3f(0, 0.15f, 0));
 	plat->SetGravity(false);
@@ -209,7 +209,7 @@ static void ScenePlatform(const char* name, bool rotate, bool velocity, int axes
 static void SceneConnect(const char* name, unsigned flags, bool charRot)
 {
 	gD.Begin(name);
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	Floor(w);
 	iPhysicsBody* crate = Box(w, "Crate", cVector3f(0.8f, 0.8f, 0.8f), 8, cVector3f(0, 0.4f, -1.2f));
 	iCharacterBody* ch = w.CreateCharacterBody("Player", cVector3f(0.5f, 1.8f, 0.5f));
@@ -238,7 +238,7 @@ static void SceneConnect(const char* name, unsigned flags, bool charRot)
 static void SceneRope(const char* name, bool collide, bool attachEnd, float stiffness)
 {
 	gD.Begin(name);
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	Floor(w);
 	iPhysicsBody* anchor = Box(w, "Anchor", cVector3f(0.4f, 0.4f, 0.4f), 0, cVector3f(0, 4, 0));
 	iPhysicsBody* weight = Box(w, "Weight", cVector3f(0.4f, 0.4f, 0.4f), 3, cVector3f(2.5f, 3.9f, 0));
@@ -266,7 +266,7 @@ static void SceneRope(const char* name, bool collide, bool attachEnd, float stif
 static void SceneController()
 {
 	gD.Begin("controller");
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	Floor(w);
 	iPhysicsBody* body = Box(w, "Body", cVector3f(0.5f, 0.5f, 0.5f), 2, cVector3f(0, 2, 0));
 	body->SetGravity(false);
@@ -298,7 +298,7 @@ static void SceneController()
 static void ScenePush(const char* name, bool in2d, bool impulse, bool customGravity)
 {
 	gD.Begin(name);
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	Floor(w);
 	iPhysicsBody* crate = Box(w, "Crate", cVector3f(0.6f, 0.6f, 0.6f), 4, cVector3f(1.0f, 0.3f, -2.2f));
 	iPhysicsBody* ball = w.CreateBody("Ball", w.CreateSphereShape(cVector3f(0.3f, 0.3f, 0.3f), NULL));
@@ -341,7 +341,7 @@ static void ScenePush(const char* name, bool in2d, bool impulse, bool customGrav
 static void SceneRopeMotor()
 {
 	gD.Begin("rope_motor");
-	cPhysicsWorldNewton& w = *NewWorld();
+	iPhysicsWorld& w = *NewWorld();
 	Floor(w);
 	iPhysicsBody* anchor = Box(w, "Anchor", cVector3f(0.4f, 0.4f, 0.4f), 0, cVector3f(0, 4, 0));
 	iPhysicsBody* weight = Box(w, "Weight", cVector3f(0.4f, 0.4f, 0.4f), 3, cVector3f(2.0f, 3.9f, 0));

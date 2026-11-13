@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -160,12 +160,36 @@ namespace hpl {
 		mbLogDebug = false;
 		mpWorld = NULL;
 		mRsBook = ohpl_h15w_new(WorldOp, reinterpret_cast<size_t>(this));
+
+		OhplL4InstallHost();
+		mhRust = ohpl_ntw_create(&mpNewtonWorld);
+
+		if(mpNewtonWorld==NULL){
+			Warning("Couldn't create newton world!\n");
+		}
+
+		/////////////////////////////////
+        //Set default values to properties
+		mvWorldSizeMin = cVector3f(0,0,0);
+		mvWorldSizeMax = cVector3f(0,0,0);
+
+		mvGravity = cVector3f(0,-9.81f,0);
+		mfMaxTimeStep = 1.0f/60.0f;
+
+		/////////////////////////////////
+		//Create default material.
+		int lDefaultMatId = 0;//NewtonMaterialGetDefaultGroupID(mpNewtonWorld);
+		iPhysicsMaterial *pMaterial = hplNew( iPhysicsMaterial, ("Default",this,lDefaultMatId) );
+		RegisterMaterial("Default", pMaterial);
+		pMaterial->UpdateMaterials();
 	}
 
 	//-----------------------------------------------------------------------
 
 	iPhysicsWorld::~iPhysicsWorld()
 	{
+		DestroyAll();
+		ohpl_ntw_destroy(mhRust);
 		ohpl_h15_world_free(mRsBook);
 	}
 
@@ -187,14 +211,14 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
 	//////////////////////////////////////////////////////////////////////////
-	
+
 	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::Update(float afTimeStep)
 	{
 		ohpl_h15w_update(mRsBook, afTimeStep);
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::DestroyShape(iCollideShape *apShape)
@@ -203,7 +227,7 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	void iPhysicsWorld::DestroyBody(iPhysicsBody* apBody)
 	{
 		ohpl_h15w_destroy_body(mRsBook, reinterpret_cast<size_t>(apBody));
@@ -240,7 +264,7 @@ namespace hpl {
 		ohpl_h15w_update_add(mRsBook, reinterpret_cast<size_t>(apBody));
 	}
 
-	//NOTE: Skipping removing dynamic bodies for now since they will need to be checked if enabled 
+	//NOTE: Skipping removing dynamic bodies for now since they will need to be checked if enabled
 	//		Still want to remove when destroying though.
 	void iPhysicsWorld::RemoveBodyFromUpdateList(iPhysicsBody *apBody, bool abDestroyingBody)
 	{
@@ -277,19 +301,19 @@ namespace hpl {
 	{
 		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Char, reinterpret_cast<size_t>(apBody));
 	}
-		
+
 	iPhysicsBody *iPhysicsWorld::GetCharacterBody(const tString &asName)
 	{
 		return reinterpret_cast<iPhysicsBody*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Char, asName.c_str(), asName.size()));
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	iPhysicsMaterial* iPhysicsWorld::GetMaterialFromName(const tString &asName)
 	{
 		return reinterpret_cast<iPhysicsMaterial*>(ohpl_h15w_get_material(mRsBook, asName.c_str(), asName.size()));
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	cPhysicsMaterialIterator iPhysicsWorld::GetMaterialIterator()
@@ -321,7 +345,7 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	void iPhysicsWorld::DestroyAll()
 	{
 		ohpl_h15w_destroy_all(mRsBook);
@@ -329,7 +353,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	
+
 	void iPhysicsWorld::DestroyController(iPhysicsController *apController)
 	{
 		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Ctrl, reinterpret_cast<size_t>(apController));
@@ -380,7 +404,7 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	bool iPhysicsWorld::CheckShapeWorldCollision(cVector3f *apPushVector,
 							iCollideShape* apShape, const cMatrixf& a_mtxTransform,
 							iPhysicsBody *apSkipBody, bool abSkipStatic, bool abIsCharacter,

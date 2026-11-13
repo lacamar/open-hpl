@@ -89,6 +89,30 @@ namespace hpl {
 	{
 		mRsBook = ohpl_h15_body_new();
 		ohpl_h15b_new(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(apWorld), reinterpret_cast<size_t>(apShape));
+
+		iPhysicsWorld *pWorldNewton = static_cast<iPhysicsWorld*>(apWorld);
+		iCollideShape *pShapeNewton = static_cast<iCollideShape*>(apShape);
+
+		mpNewtonWorld = pWorldNewton->GetNewtonWorld();
+		cMatrixf mtxIdentity = cMatrixf::Identity;
+		mhRust = ohpl_ntb_create(pWorldNewton->RustHandle(), pShapeNewton->GetNewtonCollision(), (size_t)this, &mpNewtonBody);
+
+		mpCallback = hplNew( cPhysicsBodyNewtonCallback, () );
+
+		AddCallback(mpCallback);
+
+		//Set default property settings
+		mbGravity = true;
+
+		mfMaxLinearSpeed =0;
+		mfMaxAngularSpeed =0;
+		mfMass =0;
+
+		mfAutoDisableLinearThreshold = 0.01f;
+		mfAutoDisableAngularThreshold = 0.01f;
+		mlAutoDisableNumSteps = 10;
+
+		//Log("Creating newton body '%s' %d\n",msName.c_str(),(size_t)this);
 	}
 
 	//-----------------------------------------------------------------------

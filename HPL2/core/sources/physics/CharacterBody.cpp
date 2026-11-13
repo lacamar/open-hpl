@@ -428,7 +428,7 @@ namespace hpl {
 		ohpl_h14_setup_safe_positions(mpAux, afSaveInterval, afBufferTime);
 	}
 
-	// cCharacterBodyNewton::PostUpdate 0x14b4a20, iCharacterBody::TeleportToSafePosition 0xe787c0 (Rebirth)
+	// iCharacterBody::PostUpdate 0x14b4a20, iCharacterBody::TeleportToSafePosition 0xe787c0 (Rebirth)
 	void iCharacterBody::UpdateSafePositions(float afTimeStep)
 	{
 		ohpl_h14_update_safe_positions(mpAux, afTimeStep, OhplV3{mS.position.x, mS.position.y, mS.position.z});

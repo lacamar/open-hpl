@@ -82,12 +82,140 @@ namespace hpl {
 		ohpl_h15j_new(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(OhplPhysHost()), reinterpret_cast<size_t>(apParentBody),
 			reinterpret_cast<size_t>(apChildBody), reinterpret_cast<size_t>(apWorld), OhplV3Pod{avPivotPoint.x, avPivotPoint.y, avPivotPoint.z},
 			OhplV3Pod{avPinDir.x, avPinDir.y, avPinDir.z});
+
+		iPhysicsWorld *pNWorld = apWorld;
+		mpNewtonWorld = pNWorld->GetNewtonWorld();
+		if(apParentBody==NULL)
+			mpNewtonParentBody = NULL;
+		else
+			mpNewtonParentBody = apParentBody->GetNewtonBody();
+		mpNewtonChildBody = apChildBody->GetNewtonBody();
+		mhRustWorld = pNWorld->RustHandle();
 	}
 
 	iPhysicsJoint::~iPhysicsJoint()
 	{
+		if(mpChildBody || mpParentBody)
+		{
+			ohpl_ntj_destroy(mhRustWorld, mhRust);
+		}
 		ohpl_h15j_drop(mS.shell, reinterpret_cast<size_t>(this));
 	}
+
+	//-----------------------------------------------------------------------
+
+void iPhysicsJoint::SetCollideBodies(bool abX)
+		{
+			ohpl_ntj_set_collide(mhRust, abX);
+		}
+
+bool iPhysicsJoint::GetCollideBodies()
+		{
+			return ohpl_ntj_collide(mhRust);
+		}
+
+void iPhysicsJoint::SetStiffness(float afX)
+		{
+			ohpl_ntj_set_stiffness(mhRust, afX);
+		}
+
+float iPhysicsJoint::GetStiffness()
+		{
+			return ohpl_ntj_stiffness(mhRust);
+		}
+
+cMatrixf iPhysicsJoint::GetMatrixFromPinAndPivot(const cVector3f& avPinDir,const cVector3f& avPivot)
+		{
+			cMatrixf mtxPinAndPivot = cMatrixf::Identity;
+			cVector3f vUp = cMath::Vector3Normalize(avPinDir);
+			cVector3f vTemp = cMath::Vector3Normalize(cVector3f(1) - vUp);
+			if(vTemp == vUp) vTemp = cMath::Vector3Normalize(vTemp * cVector3f(1.5f, 0.5f, 2.0f)); //Make sure all does not become wierd in the special case.
+
+			cVector3f vRight = cMath::Vector3Normalize( cMath::Vector3Cross(vUp, vTemp ));
+			cVector3f vForward = cMath::Vector3Normalize(cMath::Vector3Cross(vUp, vRight));
+
+			mtxPinAndPivot.SetUp(vUp);
+			mtxPinAndPivot.SetRight(vRight);
+			mtxPinAndPivot.SetForward(vForward);
+			mtxPinAndPivot = mtxPinAndPivot.GetTranspose();
+
+			mtxPinAndPivot.SetTranslation(avPivot);
+
+			return mtxPinAndPivot;
+		}
+
+void iPhysicsJoint::CalculateGlobalMatrix(const cMatrixf& a_mtxLocalMatrix0, const cMatrixf& a_mtxLocalMatrix1, cMatrixf& a_mtxMatrix0, cMatrixf& a_mtxMatrix1)
+		{
+			cMatrixf mtxMatrix0 = mpChildBody->GetLocalMatrix();
+			cMatrixf mtxMatrix1 = mpParentBody ? mpParentBody->GetLocalMatrix() : cMatrixf::Identity;
+
+			a_mtxMatrix0 = cMath::MatrixMul(mtxMatrix0, a_mtxLocalMatrix0);
+			a_mtxMatrix1 = cMath::MatrixMul(mtxMatrix1, a_mtxLocalMatrix1);
+		}
+
+void iPhysicsJoint::CalculateLocalMatrix(const cMatrixf& a_mtxPinsAndPivotFrame, cMatrixf& a_mtxLocalMatrix0, cMatrixf& a_mtxLocalMatrix1)
+		{
+			cMatrixf mtxMatrix0 = mpChildBody->GetLocalMatrix();
+			cMatrixf mtxMatrix1 = mpParentBody ? mpParentBody->GetLocalMatrix() : cMatrixf::Identity;
+
+			// calculate the relative matrix of the pin and pivot on each body
+			a_mtxLocalMatrix0 = cMath::MatrixMul( cMath::MatrixInverse(mtxMatrix0), a_mtxPinsAndPivotFrame);
+			a_mtxLocalMatrix1 = cMath::MatrixMul( cMath::MatrixInverse(mtxMatrix1), a_mtxPinsAndPivotFrame);
+		}
+
+const OhplL4JointOps* iPhysicsJoint::RustOps()
+		{
+			static const OhplL4JointOps ops = { RustLimitEvent, RustCheckAutoSleep, RustNoLimit, RustMatrices, RustPositionCheck };
+			return &ops;
+		}
+
+void iPhysicsJoint::RustLimitEvent(size_t j, int32_t kind)
+		{
+			iPhysicsJoint* p = Self(j);
+			if(kind == 0) p->OnMinLimit();
+			else if(kind == 1) p->OnMaxLimit();
+			else p->OnNoLimit();
+		}
+
+void iPhysicsJoint::RustCheckAutoSleep(size_t j, float afMin, float afMax, float afValue)
+		{
+			CheckLimitAutoSleep(Self(j), afMin, afMax, afValue);
+		}
+
+void iPhysicsJoint::RustNoLimit(size_t j, float afPrev, float afMin, float afMax, bool abSkip)
+		{
+			iPhysicsJoint* p = Self(j);
+			if(p->mpParentBody==NULL || p->mpParentBody->GetMass()==0)
+			{
+				if( abSkip==false &&
+					( (p->mbStickyMaxLimit && afPrev > afMax) || (p->mbStickyMinLimit && afPrev < afMin) ) )
+				{
+					p->mpChildBody->SetAngularVelocity(0);
+					p->mpChildBody->SetLinearVelocity(0);
+				}
+			}
+			p->OnNoLimit();
+		}
+
+void iPhysicsJoint::RustMatrices(size_t j, cMatrixf* apChild, cMatrixf* apParent)
+		{
+			iPhysicsJoint* p = Self(j);
+			*apChild = p->mpChildBody->GetLocalMatrix();
+			*apParent = p->mpParentBody ? p->mpParentBody->GetLocalMatrix() : cMatrixf::Identity;
+		}
+
+void iPhysicsJoint::RustPositionCheck(size_t j, float afDistSqr)
+		{
+			iPhysicsJoint* p = Self(j);
+			if(p->mbAllowPositionReset && p->mpChildBody->IsActive())
+			{
+				if(!(afDistSqr <= 0.0025f))
+				{
+					Error("Body %s jumped more than 0.05 units (%f)- restoring!\n", p->mpChildBody->GetName().c_str(), sqrtf(afDistSqr));
+					p->mbPositionResetPending = true;
+				}
+			}
+		}
 
 	//-----------------------------------------------------------------------
 
