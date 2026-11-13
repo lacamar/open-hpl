@@ -263,11 +263,25 @@ namespace hpl {
 		
 		void DestroyAll();
 
+		std::vector<iPhysicsBody*>& GetTempBodies(){ return mvTempBodies;}
+		void FadeoutBodySounds(iPhysicsBody *apBody, float afFadeSpeed);
+		void FadeoutJointSound(iPhysicsJoint *apJoint, float afFadeSpeed);
+		void RenderContactPoint(iLowLevelGraphics *apLowLevel, size_t alIdx, const cColor& aPointColor, const cColor& aLineColor);
+
 		cWorld* GetWorld(){ return mpWorld;}
 		void SetWorld(cWorld *apWorld){ mpWorld = apWorld;}
 		//! @}
 
 	protected:
+		void RegisterShape(iCollideShape *apShape);
+		void RegisterBody(iPhysicsBody *apBody);
+		void RegisterCharBody(iCharacterBody *apBody);
+		void RegisterJoint(iPhysicsJoint *apJoint);
+		void RegisterController(iPhysicsController *apController);
+		void RegisterRope(iPhysicsRope *apRope);
+		void RegisterMaterial(const tString &asName, iPhysicsMaterial *apMaterial);
+		tPhysicsBodyList& BodyList();
+
 		tCollideShapeList mlstShapes;
 		tPhysicsBodyList mlstBodies;
 		tPhysicsBodySet m_setUpdateBodies;

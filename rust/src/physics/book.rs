@@ -4,7 +4,7 @@
 use crate::math::{IDENTITY, v3};
 use crate::obj::{Arena, Handle};
 use crate::types::{Matrixf, Vector3f};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Bound;
 use std::sync::{LazyLock, Mutex, MutexGuard};
 
@@ -41,10 +41,25 @@ pub struct JointBook {
     pub limit_step_count: i32,
 }
 
+/// Object lists of one `iPhysicsWorld`, in C++ `std::list` insertion order (materials: `std::map` key order).
+#[derive(Default)]
+pub struct Lists {
+    pub shapes: Vec<usize>,
+    pub bodies: Vec<usize>,
+    pub chars: Vec<usize>,
+    pub joints: Vec<usize>,
+    pub ctrls: Vec<usize>,
+    pub ropes: Vec<usize>,
+    pub mats: BTreeMap<Vec<u8>, usize>,
+}
+
 /// Per-world set of bodies updated every step, ordered by address like `std::set<iPhysicsBody*>`.
 #[derive(Default)]
 pub struct WorldBook {
     update: BTreeSet<usize>,
+    pub lists: Lists,
+    pub op: Option<super::wreg::WorldOp>,
+    pub me: usize,
 }
 
 #[derive(Default)]

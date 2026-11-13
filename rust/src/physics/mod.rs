@@ -9,6 +9,7 @@ pub mod controller;
 mod ffi;
 mod ffi_character;
 mod ffi_h14;
+mod ffi_h15w;
 pub mod host;
 pub mod joint;
 pub(crate) mod newton_body;
@@ -19,6 +20,7 @@ pub mod rope;
 pub mod surface;
 pub mod surface_xml;
 pub mod world;
+pub mod wreg;
 
 #[cfg(test)]
 mod tests;

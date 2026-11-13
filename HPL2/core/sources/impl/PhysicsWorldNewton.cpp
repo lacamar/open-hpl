@@ -76,8 +76,7 @@ namespace hpl {
 		//Create default material.
 		int lDefaultMatId = 0;//NewtonMaterialGetDefaultGroupID(mpNewtonWorld);
 		cPhysicsMaterialNewton *pMaterial = hplNew( cPhysicsMaterialNewton, ("Default",this,lDefaultMatId) );
-		tPhysicsMaterialMap::value_type Val("Default",pMaterial);
-		m_mapMaterials.insert(Val);
+		RegisterMaterial("Default", pMaterial);
 		pMaterial->UpdateMaterials();
 
 		mpTempDepths = hplNewArray( float,500);
@@ -245,7 +244,7 @@ namespace hpl {
 	{
 		iCollideShape *pShape = hplNew( cCollideShapeNewton, (eCollideShapeType_Null, 0, NULL, 
 													mpNewtonWorld, this) );
-		mlstShapes.push_back(pShape);
+		RegisterShape(pShape);
 
 		return pShape;
 	}
@@ -256,7 +255,7 @@ namespace hpl {
 	{
 		iCollideShape *pShape = hplNew( cCollideShapeNewton, (eCollideShapeType_Box, avSize, apOffsetMtx, 
 													mpNewtonWorld, this) );
-		mlstShapes.push_back(pShape);
+		RegisterShape(pShape);
 		
 		return pShape;
 	}
@@ -267,7 +266,7 @@ namespace hpl {
 	{
 		iCollideShape *pShape = hplNew( cCollideShapeNewton, (eCollideShapeType_Sphere, avRadii, apOffsetMtx, 
 														mpNewtonWorld, this) ); 
-		mlstShapes.push_back(pShape);
+		RegisterShape(pShape);
 
 		return pShape;
 	}
@@ -280,7 +279,7 @@ namespace hpl {
 													cVector3f(afRadius,afHeight,afRadius), 
 													apOffsetMtx, 
 													mpNewtonWorld, this) );
-		mlstShapes.push_back(pShape);
+		RegisterShape(pShape);
 
 		return pShape;
 	}
@@ -293,7 +292,7 @@ namespace hpl {
 													cVector3f(afRadius,afHeight,afRadius), 
 													apOffsetMtx, 
 													mpNewtonWorld, this) );
-		mlstShapes.push_back(pShape);
+		RegisterShape(pShape);
 
 		return pShape;
 	}
@@ -308,7 +307,7 @@ namespace hpl {
 									apVtxBuffer->GetFloatArray(eVertexBufferElement_Position),
 									apVtxBuffer->GetElementNum(eVertexBufferElement_Position),
 									apVtxBuffer->GetVertexNum());
-		mlstShapes.push_back(pShape);
+		RegisterShape(pShape);
 
 		return pShape;
 	}
@@ -319,7 +318,7 @@ namespace hpl {
 	{
 		cCollideShapeNewton *pShape = hplNew( cCollideShapeNewton, (eCollideShapeType_Mesh, 0, NULL, mpNewtonWorld,this) );
 		pShape->CreateHeightField(alSize, apElevation, afUnitSize, afVerticalScale);
-		mlstShapes.push_back(pShape);
+		RegisterShape(pShape);
 
 		return pShape;
 	}
@@ -332,7 +331,7 @@ namespace hpl {
 		
 		pShape->CreateFromSerializedData(apBuffer);
 		
-		mlstShapes.push_back(pShape);
+		RegisterShape(pShape);
 
 		return pShape;
 	}
@@ -352,7 +351,7 @@ namespace hpl {
 	{
 		cCollideShapeNewton *pShape = hplNew( cCollideShapeNewton, (eCollideShapeType_Compound,0, NULL, mpNewtonWorld,this) );
 		pShape->CreateCompoundFromShapeVec(avShapes);
-		mlstShapes.push_back(pShape);
+		RegisterShape(pShape);
 
 		return pShape;
 	}
@@ -364,7 +363,7 @@ namespace hpl {
 		cCollideShapeNewton *pShape = hplNew(	cCollideShapeNewton, (eCollideShapeType_StaticScene,0, NULL, mpNewtonWorld,this) );
 
         pShape->CreateStaticSceneFromShapeVec(avShapes, apMatrices);
-		mlstShapes.push_back(pShape);
+		RegisterShape(pShape);
 		return pShape;
 	}
 
@@ -376,7 +375,7 @@ namespace hpl {
 	{
 		iPhysicsJointBall *pJoint = hplNew( cPhysicsJointBallNewton, (asName,apParentBody,apChildBody,this,
 														avPivotPoint,avPinDir) );
-		mlstJoints.push_back(pJoint);
+		RegisterJoint(pJoint);
 		return pJoint;
 	}
 
@@ -386,7 +385,7 @@ namespace hpl {
 	{
 		iPhysicsJointHinge *pJoint = hplNew( cPhysicsJointHingeNewton, (asName,apParentBody,apChildBody,this,
 										avPivotPoint,avPinDir) );
-		mlstJoints.push_back(pJoint);
+		RegisterJoint(pJoint);
 		return pJoint;
 	}
 
@@ -396,7 +395,7 @@ namespace hpl {
 	{
 		iPhysicsJointSlider *pJoint = hplNew( cPhysicsJointSliderNewton, (asName,apParentBody,apChildBody,this,
 											avPivotPoint,avPinDir) );
-		mlstJoints.push_back(pJoint);
+		RegisterJoint(pJoint);
 		return pJoint;
 	}
 
@@ -406,7 +405,7 @@ namespace hpl {
 	{
 		iPhysicsJointScrew *pJoint = hplNew( cPhysicsJointScrewNewton, (asName,apParentBody,apChildBody,this,
 											avPivotPoint,avPinDir) );
-		mlstJoints.push_back(pJoint);
+		RegisterJoint(pJoint);
 		return pJoint;
 	}
 
@@ -416,7 +415,7 @@ namespace hpl {
 	{
 		cPhysicsBodyNewton *pBody = hplNew( cPhysicsBodyNewton, (asName,this, apShape) );
 
-		mlstBodies.push_back(pBody);
+		RegisterBody(pBody);
 
 		return pBody;
 	}
@@ -448,7 +447,7 @@ namespace hpl {
 	{
 		cCharacterBodyNewton *pChar = hplNew( cCharacterBodyNewton, (asName,this,avSize) );
 
-		mlstCharBodies.push_back(pChar);
+		RegisterCharBody(pChar);
 
 		return pChar;
 	}
@@ -459,8 +458,7 @@ namespace hpl {
 	{
 		cPhysicsMaterialNewton *pMaterial = hplNew( cPhysicsMaterialNewton, (asName,this) );
 		
-		tPhysicsMaterialMap::value_type Val(asName,pMaterial);
-        m_mapMaterials.insert(Val);
+		RegisterMaterial(asName, pMaterial);
 		
 		pMaterial->UpdateMaterials();
 
@@ -473,7 +471,7 @@ namespace hpl {
 	{
 		iPhysicsController* pController = hplNew( cPhysicsControllerNewton, (asName, this) );	
 
-		mlstControllers.push_back(pController);
+		RegisterController(pController);
 
 		return pController;
 	}
@@ -484,7 +482,7 @@ namespace hpl {
 	{
 		iPhysicsRope *pRope = hplNew( cPhysicsRopeNewton, (asName, this,avStartPos, avEndPos));
 		
-		mlstRopes.push_back(pRope);
+		RegisterRope(pRope);
 
 		return pRope;
 	}
@@ -820,8 +818,9 @@ namespace hpl {
 
 	void cPhysicsWorldNewton::RenderDebugGeometry(iLowLevelGraphics *apLowLevel,const cColor &aColor)
 	{
-		tPhysicsBodyListIt it = mlstBodies.begin();
-		for(;it != mlstBodies.end(); ++it)
+		tPhysicsBodyList &lstBodies = BodyList();
+		tPhysicsBodyListIt it = lstBodies.begin();
+		for(;it != lstBodies.end(); ++it)
 		{
 			iPhysicsBody *pBody = *it;
 			pBody->RenderDebugGeometry(apLowLevel,aColor);
