@@ -19,6 +19,8 @@
 
 #include "graphics/RendererDeferred.h"
 #include "graphics/RustRendererDeferred.h"
+#include "graphics/RustRendererH9.h"
+#include "impl/RustBackends.h"
 #include "graphics/MaterialType_BasicTranslucent.h"
 
 #include "math/Math.h"
@@ -447,6 +449,162 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
+	static void SetupRustCombos(cProgramComboManager *apMgr, int alTable, int alMode, const char *asName, const char *asVtx, const char *asFrag, const OhplH9Define *apDefs, size_t alDefNum)
+	{
+		cParserVarContainer vars;
+		for(size_t i=0; i<alDefNum; ++i)
+		{
+			if(apDefs[i].kind == 1) vars.Add(apDefs[i].name, apDefs[i].ival);
+			else if(apDefs[i].kind == 2) vars.Add(apDefs[i].name, apDefs[i].fval);
+			else vars.Add(apDefs[i].name);
+		}
+		std::vector<cProgramComboFeature> vFeatures;
+		for(size_t i=0; i<ohpl_h9_feature_count(alTable); ++i)
+		{
+			unsigned lStages, lNeeded;
+			const char *sName = ohpl_h9_feature(alTable, i, &lStages, &lNeeded);
+			vFeatures.push_back(cProgramComboFeature(sName, lStages, lNeeded));
+		}
+		apMgr->SetupGenerateProgramData(alMode, asName, asVtx, asFrag, &vFeatures[0], (int)vFeatures.size(), vars);
+		for(size_t i=0; i<ohpl_h9_var_count(alTable); ++i)
+		{
+			int lId;
+			const char *sVar = ohpl_h9_var(alTable, i, &lId);
+			apMgr->AddGenerateProgramVariableId(sVar, lId, alMode);
+		}
+	}
+
+	void OhplH9SetupFogCombos(cProgramComboManager *apMgr, bool abPackedDepth, bool abRust)
+	{
+		if(abRust)
+		{
+			OhplH9Define vDefs[4];
+			size_t lNum = ohpl_h9_fog_defaults(!abPackedDepth, vDefs, 4);
+			SetupRustCombos(apMgr, 0, 0, "Fog", "deferred_fog_vtx.glsl", "deferred_fog_frag.glsl", vDefs, lNum);
+			return;
+		}
+				cParserVarContainer vars;
+				if(abPackedDepth)	vars.Add("PackedDepth");
+
+
+				apMgr->SetupGenerateProgramData(0,"Fog","deferred_fog_vtx.glsl","deferred_fog_frag.glsl",gvFogAreaFeatureVec,kFogAreaFeatureNum,vars);
+
+				apMgr->AddGenerateProgramVariableId("afNegFarPlane", kVar_afNegFarPlane,0);
+				apMgr->AddGenerateProgramVariableId("avFogSettings", kVar_avFogSettings,0);
+				apMgr->AddGenerateProgramVariableId("avSecondFogSettings", kVar_avSecondFogSettings,0);
+				apMgr->AddGenerateProgramVariableId("avCameraPos", kVar_avCameraPos,0);
+				apMgr->AddGenerateProgramVariableId("alFogType", kVar_alFogType,0);
+				apMgr->AddGenerateProgramVariableId("a_mtxSkybox", kVar_a_mtxSkybox,0);
+				apMgr->AddGenerateProgramVariableId("afSkyboxMipNum", kVar_afSkyboxMipNum,0);
+				apMgr->AddGenerateProgramVariableId("avFogStartAndLength", kVar_avFogStartAndLength,0);
+				apMgr->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor,0);
+				apMgr->AddGenerateProgramVariableId("avRayCastStart", kVar_avRayCastStart,0);
+				apMgr->AddGenerateProgramVariableId("a_mtxBoxInvViewModelRotation", kVar_a_mtxBoxInvViewModelRotation,0);
+				apMgr->AddGenerateProgramVariableId("avNegPlaneDistNeg",kVar_avNegPlaneDistNeg,0);
+				apMgr->AddGenerateProgramVariableId("avNegPlaneDistPos",kVar_avNegPlaneDistPos,0);
+				apMgr->AddGenerateProgramVariableId("afFalloffExp",kVar_afFalloffExp,0);
+
+				apMgr->AddGenerateProgramVariableId("avScreenToFarPlane", kVar_avScreenToFarPlane, 0);
+				apMgr->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, 0);
+				apMgr->AddGenerateProgramVariableId("a_mtxNoise", kVar_a_mtxNoise, 0);
+				apMgr->AddGenerateProgramVariableId("afInvNoiseScale", kVar_afInvNoiseScale, 0);
+				apMgr->AddGenerateProgramVariableId("afNoiseStrength", kVar_afNoiseStrength, 0);
+				apMgr->AddGenerateProgramVariableId("avSkyboxColor", kVar_avSkyboxColor, 0);
+				apMgr->AddGenerateProgramVariableId("avSecondFogColor", kVar_avSecondFogColor, 0);
+				apMgr->AddGenerateProgramVariableId("avSecondFogStartAndLength", kVar_avSecondFogStartAndLength, 0);
+				apMgr->AddGenerateProgramVariableId("afSecondFalloffExp", kVar_afSecondFalloffExp, 0);
+	}
+
+	void OhplH9SetupLightCombos(cProgramComboManager *apMgr, eShadowMapQuality aQuality, bool abGBuffer64, int alGBufferTextures, int alJitterSize, int alJitterSamples, bool abRust)
+	{
+		if(abRust)
+		{
+			OhplH9Define vDefs[16];
+			size_t lNum = ohpl_h9_light_defaults((int)aQuality, abGBuffer64, alGBufferTextures == 4, alJitterSize, alJitterSamples, vDefs, 16);
+			SetupRustCombos(apMgr, 1, eDefferredProgramMode_Lights, "Lights", "deferred_base_vtx.glsl", "deferred_light_frag.glsl", vDefs, lNum);
+			return;
+		}
+					cParserVarContainer defaultVars;
+
+					//Shadow variables
+					defaultVars.Add("ShadowJitterLookupMul",1.0f / (float)alJitterSize);
+					defaultVars.Add("ShadowJitterSamplesDiv2",alJitterSamples / 2);
+					defaultVars.Add("ShadowJitterSamples", alJitterSamples);
+
+					if(aQuality == eShadowMapQuality_High)		defaultVars.Add("ShadowMapQuality_High");
+					if(aQuality == eShadowMapQuality_Medium)	defaultVars.Add("ShadowMapQuality_Medium");
+					if(aQuality == eShadowMapQuality_Low)		defaultVars.Add("ShadowMapQuality_Low");
+
+					//Vertex shader will handles deferred lights
+					defaultVars.Add("DeferredLight");
+
+					//Deferred renderer type
+					if(!abGBuffer64)	defaultVars.Add("Deferred_32bit","");
+					else										defaultVars.Add("Deferred_64bit","");
+
+					if(alGBufferTextures == 4)				defaultVars.Add("RenderTargets_4","");
+					else										defaultVars.Add("RenderTargets_3","");
+
+					apMgr->SetupGenerateProgramData(	eDefferredProgramMode_Lights,"Lights", "deferred_base_vtx.glsl", "deferred_light_frag.glsl",gvLightFeatureVec,
+														kLightFeatureNum,defaultVars);
+														//1, defaultVars);
+
+
+					apMgr->AddGenerateProgramVariableId("avLightPos",	kVar_avLightPos, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avLightColor",	kVar_avLightColor, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("afInvLightRadius",	kVar_afInvLightRadius, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("afNegFarPlane",	kVar_afNegFarPlane, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("afOneMinusCosHalfSpotFOV",	kVar_afOneMinusCosHalfSpotFOV, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avLightForward", kVar_avLightForward, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("a_mtxSpotViewProj", kVar_a_mtxSpotViewProj, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avShadowMapOffsetMul", kVar_avShadowMapOffsetMul, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avShadowParams", kVar_avShadowParams, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avShadowMapSize", kVar_avShadowMapSize, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avScreenToFarPlane", kVar_avScreenToFarPlane, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("a_mtxLightViewProj", kVar_a_mtxLightViewProj, eDefferredProgramMode_Lights);
+					for(int i=0; i<4; ++i)
+						apMgr->AddGenerateProgramVariableId("a_mtxLightViewProj"+cString::ToString(i), kVar_a_mtxLightViewProj0+i, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("afShadowDistance", kVar_afShadowDistance, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("alSliceNum", kVar_alSliceNum, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("afSliceDiv", kVar_afSliceDiv, eDefferredProgramMode_Lights);
+					for(int i=0; i<4; ++i)
+						apMgr->AddGenerateProgramVariableId("a_mtxLightViewProj["+cString::ToString(i)+"]", kVar_a_mtxLightViewProjSlice0+i, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avSplitsNear", kVar_avSplitsNear, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avSplitsFar", kVar_avSplitsFar, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avSplitOffsetMul", kVar_avSplitOffsetMul, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("afSpotNearClip", kVar_afSpotNearClip, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("afFalloffPow", kVar_afFalloffPow, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("afTranslucencyScale", kVar_afTranslucencyScale, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("afSpotFalloffPow", kVar_afSpotFalloffPow, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("a_mtxInvView", kVar_a_mtxInvView, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avMaskCenter", kVar_avMaskCenter, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avMaskExtent", kVar_avMaskExtent, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("afLightSourceRadius", kVar_afLightSourceRadius, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avLightUp", kVar_avLightUp, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avLightRight", kVar_avLightRight, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avFogStartAndLength", kVar_avFogStartAndLength, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("afFogFalloffExp", kVar_afFogFalloffExp, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avLightDirection", kVar_avLightDirection, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avAmbientColorSky", kVar_avAmbientColorSky, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avAmbientColorGround", kVar_avAmbientColorGround, eDefferredProgramMode_Lights);
+					apMgr->AddGenerateProgramVariableId("avViewSpaceUp", kVar_avViewSpaceUp, eDefferredProgramMode_Lights);
+
+					// per-light inputs of the newer light shader; a program only has one name of each pair
+					static const struct { const char *msName; int mlId; } vAliases[] = {
+						{"px_vLightColor", kVar_avLightColor}, {"px_fFalloff", kVar_afFalloffPow}, {"px_fSpotFalloffPow", kVar_afSpotFalloffPow},
+						{"px_fTranslucenyMul", kVar_afTranslucencyScale}, {"px_fLightSourceRadius", kVar_afLightSourceRadius},
+						{"px_mtxLightViewProj", kVar_a_mtxLightViewProj}, {"px_vLightForward", kVar_avLightForward},
+						{"px_vLightUp", kVar_avLightUp}, {"px_vLightRight", kVar_avLightRight},
+						{"px_vMaskCenter", kVar_avMaskCenter}, {"px_vMaskExtent", kVar_avMaskExtent},
+						{"px_vLightPosScale", kVar_avLightPosScale}, {"afFarPlane", kVar_afFarPlane},
+					};
+					for(size_t i=0; i<sizeof(vAliases)/sizeof(vAliases[0]); ++i)
+						apMgr->AddGenerateProgramVariableId(vAliases[i].msName, vAliases[i].mlId, eDefferredProgramMode_Lights);
+	}
+
 	bool cRendererDeferred::LoadData()
 	{
 		cVector2l vRelfectionSize = cVector2l(mvScreenSize.x/mlReflectionSizeDiv, mvScreenSize.y/mlReflectionSizeDiv);
@@ -663,37 +821,8 @@ namespace hpl {
 		////////////////////////////////////
 		//Create Fog program
 		{
-			cParserVarContainer vars;
-			if(GetGBufferType() == eDeferredGBuffer_32Bit)	vars.Add("PackedDepth");
-			
 			mpFogProgramManager = hplNew(	cProgramComboManager, ("FogArea", mpGraphics, mpResources, 1));
-
-			mpFogProgramManager->SetupGenerateProgramData(0,"Fog","deferred_fog_vtx.glsl","deferred_fog_frag.glsl",gvFogAreaFeatureVec,kFogAreaFeatureNum,vars);
-
-			mpFogProgramManager->AddGenerateProgramVariableId("afNegFarPlane", kVar_afNegFarPlane,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avFogSettings", kVar_avFogSettings,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avSecondFogSettings", kVar_avSecondFogSettings,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avCameraPos", kVar_avCameraPos,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("alFogType", kVar_alFogType,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("a_mtxSkybox", kVar_a_mtxSkybox,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("afSkyboxMipNum", kVar_afSkyboxMipNum,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avFogStartAndLength", kVar_avFogStartAndLength,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avRayCastStart", kVar_avRayCastStart,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("a_mtxBoxInvViewModelRotation", kVar_a_mtxBoxInvViewModelRotation,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avNegPlaneDistNeg",kVar_avNegPlaneDistNeg,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avNegPlaneDistPos",kVar_avNegPlaneDistPos,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("afFalloffExp",kVar_afFalloffExp,0);
-
-			mpFogProgramManager->AddGenerateProgramVariableId("avScreenToFarPlane", kVar_avScreenToFarPlane, 0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, 0);
-			mpFogProgramManager->AddGenerateProgramVariableId("a_mtxNoise", kVar_a_mtxNoise, 0);
-			mpFogProgramManager->AddGenerateProgramVariableId("afInvNoiseScale", kVar_afInvNoiseScale, 0);
-			mpFogProgramManager->AddGenerateProgramVariableId("afNoiseStrength", kVar_afNoiseStrength, 0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avSkyboxColor", kVar_avSkyboxColor, 0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avSecondFogColor", kVar_avSecondFogColor, 0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avSecondFogStartAndLength", kVar_avSecondFogStartAndLength, 0);
-			mpFogProgramManager->AddGenerateProgramVariableId("afSecondFalloffExp", kVar_afSecondFalloffExp, 0);
+			OhplH9SetupFogCombos(mpFogProgramManager, GetGBufferType() == eDeferredGBuffer_32Bit, OhplBackendRustRequested());
 		}
 		
 		////////////////////////////////////
@@ -776,85 +905,7 @@ namespace hpl {
 			/////////////////////////////
 			//Lights
 			{
-				cParserVarContainer defaultVars;
-				
-				//Shadow variables
-				defaultVars.Add("ShadowJitterLookupMul",1.0f / (float)mlShadowJitterSize);
-				defaultVars.Add("ShadowJitterSamplesDiv2",mlShadowJitterSamples / 2);
-				defaultVars.Add("ShadowJitterSamples", mlShadowJitterSamples);
-
-				if(mShadowMapQuality == eShadowMapQuality_High)		defaultVars.Add("ShadowMapQuality_High");
-				if(mShadowMapQuality == eShadowMapQuality_Medium)	defaultVars.Add("ShadowMapQuality_Medium");
-				if(mShadowMapQuality == eShadowMapQuality_Low)		defaultVars.Add("ShadowMapQuality_Low");
-
-				//Vertex shader will handles deferred lights
-				defaultVars.Add("DeferredLight");
-
-				//Deferred renderer type
-				if(mGBufferType == eDeferredGBuffer_32Bit)	defaultVars.Add("Deferred_32bit","");
-				else										defaultVars.Add("Deferred_64bit","");
-				
-				if(mlNumOfGBufferTextures == 4)				defaultVars.Add("RenderTargets_4","");
-				else										defaultVars.Add("RenderTargets_3","");
-
-				mpProgramManager->SetupGenerateProgramData(	eDefferredProgramMode_Lights,"Lights", "deferred_base_vtx.glsl", "deferred_light_frag.glsl",gvLightFeatureVec,
-													kLightFeatureNum,defaultVars);
-													//1, defaultVars);
-
-				
-				mpProgramManager->AddGenerateProgramVariableId("avLightPos",	kVar_avLightPos, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avLightColor",	kVar_avLightColor, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afInvLightRadius",	kVar_afInvLightRadius, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afNegFarPlane",	kVar_afNegFarPlane, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afOneMinusCosHalfSpotFOV",	kVar_afOneMinusCosHalfSpotFOV, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avLightForward", kVar_avLightForward, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("a_mtxSpotViewProj", kVar_a_mtxSpotViewProj, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avShadowMapOffsetMul", kVar_avShadowMapOffsetMul, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avShadowParams", kVar_avShadowParams, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avShadowMapSize", kVar_avShadowMapSize, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avScreenToFarPlane", kVar_avScreenToFarPlane, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj", kVar_a_mtxLightViewProj, eDefferredProgramMode_Lights);
-				for(int i=0; i<4; ++i)
-					mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj"+cString::ToString(i), kVar_a_mtxLightViewProj0+i, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afShadowDistance", kVar_afShadowDistance, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("alSliceNum", kVar_alSliceNum, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afSliceDiv", kVar_afSliceDiv, eDefferredProgramMode_Lights);
-				for(int i=0; i<4; ++i)
-					mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj["+cString::ToString(i)+"]", kVar_a_mtxLightViewProjSlice0+i, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avSplitsNear", kVar_avSplitsNear, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avSplitsFar", kVar_avSplitsFar, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avSplitOffsetMul", kVar_avSplitOffsetMul, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afSpotNearClip", kVar_afSpotNearClip, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afFalloffPow", kVar_afFalloffPow, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afTranslucencyScale", kVar_afTranslucencyScale, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afSpotFalloffPow", kVar_afSpotFalloffPow, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView", kVar_a_mtxInvView, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avMaskCenter", kVar_avMaskCenter, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avMaskExtent", kVar_avMaskExtent, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afLightSourceRadius", kVar_afLightSourceRadius, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avLightUp", kVar_avLightUp, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avLightRight", kVar_avLightRight, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avFogStartAndLength", kVar_avFogStartAndLength, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afFogFalloffExp", kVar_afFogFalloffExp, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avLightDirection", kVar_avLightDirection, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avAmbientColorSky", kVar_avAmbientColorSky, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avAmbientColorGround", kVar_avAmbientColorGround, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avViewSpaceUp", kVar_avViewSpaceUp, eDefferredProgramMode_Lights);
-
-				// per-light inputs of the newer light shader; a program only has one name of each pair
-				static const struct { const char *msName; int mlId; } vAliases[] = {
-					{"px_vLightColor", kVar_avLightColor}, {"px_fFalloff", kVar_afFalloffPow}, {"px_fSpotFalloffPow", kVar_afSpotFalloffPow},
-					{"px_fTranslucenyMul", kVar_afTranslucencyScale}, {"px_fLightSourceRadius", kVar_afLightSourceRadius},
-					{"px_mtxLightViewProj", kVar_a_mtxLightViewProj}, {"px_vLightForward", kVar_avLightForward},
-					{"px_vLightUp", kVar_avLightUp}, {"px_vLightRight", kVar_avLightRight},
-					{"px_vMaskCenter", kVar_avMaskCenter}, {"px_vMaskExtent", kVar_avMaskExtent},
-					{"px_vLightPosScale", kVar_avLightPosScale}, {"afFarPlane", kVar_afFarPlane},
-				};
-				for(size_t i=0; i<sizeof(vAliases)/sizeof(vAliases[0]); ++i)
-					mpProgramManager->AddGenerateProgramVariableId(vAliases[i].msName, vAliases[i].mlId, eDefferredProgramMode_Lights);
+				OhplH9SetupLightCombos(mpProgramManager, mShadowMapQuality, mGBufferType == eDeferredGBuffer_64Bit, mlNumOfGBufferTextures, mlShadowJitterSize, mlShadowJitterSamples, OhplBackendRustRequested());
 			}
 
 			//////////////////////////////
