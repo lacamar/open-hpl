@@ -103,6 +103,7 @@ namespace hpl {
 		};
 		typedef std::tuple<tString, bool, int, int, int> tStaticBatchKey;
 		void FlushStaticBatch(const tStaticBatchKey& aKey, cStaticBatch& aBatch);
+		void BuildShapeBodies();
 		std::map<tStaticBatchKey, cStaticBatch> m_mapStaticBatches;
 		int mlCombinedObjects;
 		void CombineStaticMeshes();

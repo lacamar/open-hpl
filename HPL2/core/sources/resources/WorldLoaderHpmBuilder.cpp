@@ -14,6 +14,7 @@
 #include "resources/XmlDocument.h"
 #include "resources/EngineFileLoading.h"
 #include "resources/EntityLoader_Object.h"
+#include "resources/RustWorldH4.h"
 #include "resources/FileSearcher.h"
 #include "physics/PhysicsMaterial.h"
 
@@ -52,16 +53,66 @@
 
 #include "scene/Terrain.h"
 #include <array>
+#include <memory>
 #include <cmath>
 #include <cstring>
 
 namespace hpl {
 
+	namespace
+	{
+		const float* F3(const cVector3f& v) { return &v.x; }
+
+		cMatrixf H4RotTrans(const cVector3f& avRot, const cVector3f& avPos)
+		{
+			if (OhplH4UseRust())
+			{
+				cMatrixf m;
+				ohpl_h4_rot_trans(F3(avRot), F3(avPos), &m);
+				return m;
+			}
+			cMatrixf m = cMath::MatrixRotate(avRot, eEulerRotationOrder_XYZ);
+			m.SetTranslation(avPos);
+			return m;
+		}
+
+		// world = rotate * scale, body = rotate + translation
+		void H4StaticXform(const cVector3f& avRot, const cVector3f& avScale, const cVector3f& avPos, cMatrixf& a_mtxWorld, cMatrixf& a_mtxBody)
+		{
+			if (OhplH4UseRust())
+			{
+				OhplH4Xform x;
+				ohpl_h4_static_xform(F3(avRot), F3(avScale), F3(avPos), &x);
+				a_mtxWorld = x.world;
+				a_mtxBody = x.body;
+				return;
+			}
+			a_mtxWorld = cMath::MatrixMul(cMath::MatrixRotate(avRot, eEulerRotationOrder_XYZ), cMath::MatrixScale(avScale));
+			a_mtxBody = cMath::MatrixRotate(avRot, eEulerRotationOrder_XYZ);
+			a_mtxBody.SetTranslation(avPos);
+		}
+
+		// Object creation sequence for A/B runs: OHPL_H4_SEQDUMP=<file> appends one line per object.
+		void H4Seq(const char* asType, const tString& asName, const tString& asFile, const cMatrixf* apMtx, const char* asFlags)
+		{
+			static FILE* pOut = [] { const char* s = getenv("OHPL_H4_SEQDUMP"); return s ? fopen(s, "a") : (FILE*)NULL; }();
+			if (pOut == NULL) return;
+			fprintf(pOut, "%s\t%s\t%s\t", asType, asName.c_str(), asFile.c_str());
+			if (apMtx)
+				for (int r = 0; r < 4; ++r)
+					for (int c = 0; c < 4; ++c) fprintf(pOut, "%a%c", apMtx->m[r][c], r == 3 && c == 3 ? '\t' : ',');
+			else fputs("-\t", pOut);
+			fprintf(pOut, "%s\n", asFlags);
+			fflush(pOut);
+		}
+	}
+
 	// HPL3 ships prebaked static batches; build them here like cWorldLoaderHplMap to cut draw calls
 	void cHpmWorldBuilder::CombineStaticMeshes()
 	{
 		typedef std::tuple<int, int, int, cMaterial*, bool, bool, std::vector<int>, std::array<float, 9>, bool, bool> tKey;
-		std::map<tKey, std::vector<std::pair<cMeshEntity*, cSubMeshEntity*> > > mapGroups;
+		typedef std::vector<std::pair<cMeshEntity*, cSubMeshEntity*> > tSubList;
+		std::vector<std::pair<tKey, std::pair<cMeshEntity*, cSubMeshEntity*> > > vRecs;
 		for (cMeshEntity* pEnt : mvCombineCandidates)
 		{
 			for (int i = 0; i < pEnt->GetSubMeshEntityNum(); ++i)
@@ -101,14 +152,70 @@ namespace hpl {
 				const cColor& ic = pSub->GetIlluminationColor();
 				tKey key((int)floorf(vC.x), (int)floorf(vC.y), (int)floorf(vC.z), pMat, pSub->GetRenderFlagBit(eRenderableFlag_ShadowCaster),
 						 pSub->GetIsOneSided(), vLayout, {cm.r, cm.g, cm.b, cm.a, ic.r, ic.g, ic.b, ic.a, pSub->GetIlluminationAmount()}, pSub->IsCulledByDistance(), pSub->IsCulledByFog());
-				mapGroups[key].push_back({pEnt, pSub});
+				vRecs.push_back({key, {pEnt, pSub}});
 			}
 		}
 
-		std::map<cMeshEntity*, int> mapCombinedSubs;
-		for (auto& [key, vSubs] : mapGroups)
+		std::vector<std::pair<tKey, tSubList> > vGroups;
+		std::vector<cMeshEntity*> vPlanEnts;
+		OhplH4CombineOut plan = {};
+		std::vector<uint32_t> vPlanOrder, vPlanSizes;
+		std::unique_ptr<bool[]> pPlanDestroy;
+		if (OhplH4UseRust())
 		{
-			if (vSubs.size() < 2) continue;
+			std::map<cMeshEntity*, uint32_t> mapEntIdx;
+			std::vector<uint32_t> vEntSubs;
+			std::vector<int32_t> vPool;
+			std::vector<OhplH4Cand> vCands;
+			for (auto& [key, rec] : vRecs)
+			{
+				auto itEnt = mapEntIdx.insert({rec.first, (uint32_t)vPlanEnts.size()});
+				if (itEnt.second)
+				{
+					vPlanEnts.push_back(rec.first);
+					vEntSubs.push_back(rec.first->GetSubMeshEntityNum());
+				}
+				OhplH4Cand c = {};
+				c.ent = itEnt.first->second;
+				c.cell[0] = std::get<0>(key); c.cell[1] = std::get<1>(key); c.cell[2] = std::get<2>(key);
+				c.mat = (uint64_t)(uintptr_t)std::get<3>(key);
+				c.shadow = std::get<4>(key);
+				c.oneSided = std::get<5>(key);
+				c.layoutOff = (uint32_t)vPool.size();
+				c.layoutLen = (uint32_t)std::get<6>(key).size();
+				vPool.insert(vPool.end(), std::get<6>(key).begin(), std::get<6>(key).end());
+				std::copy(std::get<7>(key).begin(), std::get<7>(key).end(), c.v);
+				c.culledDist = std::get<8>(key);
+				c.culledFog = std::get<9>(key);
+				vCands.push_back(c);
+			}
+			vPlanOrder.resize(vCands.size());
+			vPlanSizes.resize(vCands.size());
+			pPlanDestroy.reset(new bool[vPlanEnts.size() + 1]());
+			plan.order = vPlanOrder.data();
+			plan.groupSizes = vPlanSizes.data();
+			plan.destroy = pPlanDestroy.get();
+			ohpl_h4_combine_plan(vCands.data(), vCands.size(), vPool.data(), vPool.size(), vEntSubs.data(), vEntSubs.size(), &plan);
+			size_t lAt = 0;
+			for (uint32_t g = 0; g < plan.numGroups; ++g)
+			{
+				tSubList vSubs;
+				const size_t lFirst = lAt;
+				for (uint32_t i = 0; i < vPlanSizes[g]; ++i) vSubs.push_back(vRecs[vPlanOrder[lAt++]].second);
+				vGroups.push_back({vRecs[vPlanOrder[lFirst]].first, vSubs});
+			}
+		}
+		else
+		{
+			std::map<tKey, tSubList> mapGroups;
+			for (auto& [key, rec] : vRecs) mapGroups[key].push_back(rec);
+			for (auto& [key, vSubs] : mapGroups)
+				if (vSubs.size() >= 2) vGroups.push_back({key, vSubs});
+		}
+
+		std::map<cMeshEntity*, int> mapCombinedSubs;
+		for (auto& [key, vSubs] : vGroups)
+		{
 			const std::vector<int>& vLayout = std::get<6>(key);
 			int lVtxNum = 0, lIdxNum = 0;
 			for (auto [pEnt, pSub] : vSubs)
@@ -163,6 +270,7 @@ namespace hpl {
 			pSubMesh->Compile();
 
 			cMeshEntity* pEnt = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
+			H4Seq("combined", sName, pMat->GetName(), NULL, (cString::ToString((int)vSubs.size()) + (std::get<4>(key) ? ",shadow" : "")).c_str());
 			const std::array<float, 9>& v = std::get<7>(key);
 			pEnt->SetRenderFlagBit(eRenderableFlag_ShadowCaster, std::get<4>(key));
 			pEnt->SetCulledByDistance(std::get<8>(key));
@@ -174,10 +282,21 @@ namespace hpl {
 		}
 
 		std::set<cMeshEntity*> setDestroy;
-		for (auto& [pEnt, lNum] : mapCombinedSubs)
-			if (lNum == pEnt->GetSubMeshEntityNum()) setDestroy.insert(pEnt);
+		int lCombinedSubs = 0;
+		if (OhplH4UseRust())
+		{
+			for (size_t i = 0; i < vPlanEnts.size(); ++i)
+				if (pPlanDestroy[i]) setDestroy.insert(vPlanEnts[i]);
+			lCombinedSubs = (int)plan.combinedSubs;
+		}
+		else
+		{
+			for (auto& [pEnt, lNum] : mapCombinedSubs)
+				if (lNum == pEnt->GetSubMeshEntityNum()) setDestroy.insert(pEnt);
+			for (auto& p : mapCombinedSubs) lCombinedSubs += p.second;
+		}
 		mpCurrentWorld->DestroyStaticMeshEntities(setDestroy);
-		::hpl::Log("  SOMA hpm combined %d static submeshes into %d meshes\n", (int)[&] { int n = 0; for (auto& p : mapCombinedSubs) n += p.second; return n; }(), mlCombinedMeshes);
+		::hpl::Log("  SOMA hpm combined %d static submeshes into %d meshes\n", lCombinedSubs, mlCombinedMeshes);
 	}
 
 	namespace
@@ -254,9 +373,11 @@ namespace hpl {
 
 				// HPL3 iHplMapLoader::CombineStaticBodies: merged by flags, material and an 8x8x24 cell
 				cVector3f vPos = mtxBody.GetTranslation();
+				int32_t vCellI[3] = {(int)std::floor(vPos.x / 8), (int)std::floor(vPos.y / 8), (int)std::floor(vPos.z / 24)};
+				if (OhplH4UseRust()) ohpl_h4_body_cell(F3(vPos), vCellI);
 				tStaticShapeBatchKey key(pBodyElem->GetAttributeString("Material"), pBodyElem->GetAttributeBool("CollideCharacter", true),
 										 pBodyElem->GetAttributeBool("CollideNonCharacter", true), pBodyElem->GetAttributeBool("BlocksSound", false),
-										 (int)std::floor(vPos.x / 8), (int)std::floor(vPos.y / 8), (int)std::floor(vPos.z / 24));
+										 vCellI[0], vCellI[1], vCellI[2]);
 				cStaticShapeBatch& batch = m_mapStaticShapeBatches[key];
 				cXmlNodeListIterator shapeIt = pBodyElem->GetChildIterator();
 				while (shapeIt.HasNext())
@@ -280,24 +401,32 @@ namespace hpl {
 	// HPL3 iHplMapLoader::CreateSubMeshShapeBodies: submesh colliders and _collider/_charcollider meshes
 	void cHpmWorldBuilder::CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const cMatrixf& a_mtxTransform, const cVector3f& avScale)
 	{
+		const bool bRust = OhplH4UseRust();
 		bool bHasColliderMesh = false;
 		for (int i = 0; i < apMeshEntity->GetSubMeshEntityNum(); ++i)
-			bHasColliderMesh |= cString::Sub(apMeshEntity->GetSubMeshEntity(i)->GetSubMesh()->GetName(), 0, 9) == "_collider";
+		{
+			const tString& sSubName = apMeshEntity->GetSubMeshEntity(i)->GetSubMesh()->GetName();
+			bHasColliderMesh |= bRust ? ohpl_h4_is_collider_name(sSubName.c_str()) : cString::Sub(sSubName, 0, 9) == "_collider";
+		}
 
 		for (int i = 0; i < apMeshEntity->GetSubMeshEntityNum(); ++i)
 		{
 			cSubMeshEntity* pSubEnt = apMeshEntity->GetSubMeshEntity(i);
 			cSubMesh* pSubMesh = pSubEnt->GetSubMesh();
 			tString sPhysMat = pSubEnt->GetMaterial() ? pSubEnt->GetMaterial()->GetPhysicsMaterial() : "";
-			bool bCharMesh = cString::Sub(pSubMesh->GetName(), 0, 13) == "_charcollider";
-			bool bColliderMesh = bCharMesh || cString::Sub(pSubMesh->GetName(), 0, 9) == "_collider";
+			OhplH4SubMesh subPlan = {};
+			if (bRust) ohpl_h4_sub_mesh_plan(pSubMesh->GetName().c_str(), &subPlan);
+			bool bCharMesh = bRust ? subPlan.isCharColliderMesh : cString::Sub(pSubMesh->GetName(), 0, 13) == "_charcollider";
+			bool bColliderMesh = bRust ? subPlan.isColliderMesh : (bCharMesh || cString::Sub(pSubMesh->GetName(), 0, 9) == "_collider");
 			bool bTriangles = !bHasColliderMesh;
-			if (bColliderMesh || cString::Sub(pSubMesh->GetName(), 0, 16) == "_noncharcollider") pSubEnt->SetVisible(false);
+			if (bRust ? subPlan.hide : (bColliderMesh || cString::Sub(pSubMesh->GetName(), 0, 16) == "_noncharcollider")) pSubEnt->SetVisible(false);
 
 			std::vector<iCollideShape*> vShapes[2];
+			std::unique_ptr<bool[]> vIsChar(new bool[pSubMesh->GetColliderNum() + 1]());
 			for (int j = 0; j < pSubMesh->GetColliderNum(); ++j)
 			{
 				cMeshCollider* pCollider = pSubMesh->GetCollider(j);
+				vIsChar[j] = pCollider->mbCharCollider;
 				if (pCollider->mbCharCollider == false) bTriangles = false;
 				cMatrixf mtxOffset = pCollider->m_mtxOffset;
 				mtxOffset.SetTranslation(mtxOffset.GetTranslation() * avScale);
@@ -316,12 +445,25 @@ namespace hpl {
 			}
 
 			iVertexBuffer* pSrcVtx = pSubMesh->GetVertexBuffer();
-			if (pSrcVtx == NULL || (bTriangles || bColliderMesh) == false) continue;
+			if (pSrcVtx == NULL) continue;
+			if (bRust ? ohpl_h4_sub_mesh_batches(bHasColliderMesh, bColliderMesh, vIsChar.get(), pSubMesh->GetColliderNum()) == false
+					  : (bTriangles || bColliderMesh) == false) continue;
 
-			cVector3f vCell = pSubEnt->GetBoundingVolume()->GetWorldCenter() / 16.0f;
-			tStaticBatchKey key(sPhysMat, bCharMesh, (int)std::floor(vCell.x), (int)std::floor(vCell.y), (int)std::floor(vCell.z));
+			int32_t vCellI[3];
+			if (bRust)
+			{
+				cVector3f vCenter = pSubEnt->GetBoundingVolume()->GetWorldCenter();
+				ohpl_h4_mesh_cell(F3(vCenter), vCellI);
+			}
+			else
+			{
+				cVector3f vCell = pSubEnt->GetBoundingVolume()->GetWorldCenter() / 16.0f;
+				vCellI[0] = (int)std::floor(vCell.x); vCellI[1] = (int)std::floor(vCell.y); vCellI[2] = (int)std::floor(vCell.z);
+			}
+			tStaticBatchKey key(sPhysMat, bCharMesh, vCellI[0], vCellI[1], vCellI[2]);
 			cStaticBatch& batch = m_mapStaticBatches[key];
-			if (batch.mvIdx.size() + pSrcVtx->GetIndexNum() > 50000) FlushStaticBatch(key, batch);
+			if (bRust ? ohpl_h4_batch_must_flush(batch.mvIdx.size(), pSrcVtx->GetIndexNum()) : batch.mvIdx.size() + pSrcVtx->GetIndexNum() > 50000)
+				FlushStaticBatch(key, batch);
 
 			iVertexBuffer* pVtx = pSrcVtx->CreateCopy(eVertexBufferType_Software, eVertexBufferUsageType_Static, eVertexElementFlag_Position);
 			pVtx->Transform(pSubEnt->GetWorldMatrix());
@@ -350,6 +492,7 @@ namespace hpl {
 		hplDelete(pVtx);
 		if (pShape)
 		{
+			H4Seq("batch", "CombinedObjects" + cString::ToString(mlCombinedObjects), std::get<0>(aKey), NULL, std::get<1>(aKey) ? "char" : "-");
 			iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody("CombinedObjects" + cString::ToString(mlCombinedObjects++), pShape);
 			pBody->SetMass(0);
 			pBody->SetCollide(std::get<1>(aKey) == false);
@@ -374,14 +517,52 @@ namespace hpl {
 
 	void cHpmWorldBuilder::Finish()
 	{
+		const bool bNoCombine = getenv("OPENHPL_NO_MESH_COMBINE") != NULL;
+		if (OhplH4UseRust())
+		{
+			OhplH4FinishStep vSteps[8];
+			size_t lSteps = ohpl_h4_finish_steps(bNoCombine, vSteps);
+			for (size_t i = 0; i < lSteps; ++i)
+			{
+				switch (vSteps[i])
+				{
+				case OhplH4Finish_FlushStaticBatches:
+					for (auto& [key, batch] : m_mapStaticBatches)
+					{
+						FlushStaticBatch(key, batch);
+						if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
+					}
+					m_mapStaticBatches.clear();
+					break;
+				case OhplH4Finish_BuildShapeBodies: BuildShapeBodies(); break;
+				case OhplH4Finish_CombineStaticMeshes: CombineStaticMeshes(); mvCombineCandidates.clear(); break;
+				case OhplH4Finish_ObjectDone:
+					if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
+					break;
+				case OhplH4Finish_CompileWorld: mpCurrentWorld->Compile(true); break;
+				}
+			}
+			mvCombineCandidates.clear();
+			return;
+		}
 		for (auto& [key, batch] : m_mapStaticBatches)
 		{
 			FlushStaticBatch(key, batch);
 			if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
 		}
 		m_mapStaticBatches.clear();
+		BuildShapeBodies();
+		if (bNoCombine == false) CombineStaticMeshes();
+		mvCombineCandidates.clear();
+		if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
+		mpCurrentWorld->Compile(true);
+	}
+
+	void cHpmWorldBuilder::BuildShapeBodies()
+	{
 		for (auto& [key, batch] : m_mapStaticShapeBatches)
 		{
+			H4Seq("shapebody", batch.msName, std::get<0>(key), NULL, cString::ToString((int)batch.mvShapes.size()).c_str());
 			iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody(batch.msName, batch.mvShapes.size() == 1 ? batch.mvShapes[0] : mpCurrentPhysicsWorld->CreateCompundShape(batch.mvShapes));
 			pBody->SetMass(0);
 			pBody->SetCollideCharacter(std::get<1>(key));
@@ -390,10 +571,6 @@ namespace hpl {
 			if (iPhysicsMaterial* pMat = mpCurrentPhysicsWorld->GetMaterialFromName(std::get<0>(key))) pBody->SetMaterial(pMat);
 		}
 		m_mapStaticShapeBatches.clear();
-		if (getenv("OPENHPL_NO_MESH_COMBINE") == NULL) CombineStaticMeshes();
-		mvCombineCandidates.clear();
-		if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
-		mpCurrentWorld->Compile(true);
 	}
 
 	uint64_t cHpmWorldBuilder::NowMs()
@@ -565,15 +742,18 @@ namespace hpl {
 		pMeshEntity->SetIlluminationAmount(o.illumBrightness);
 		pMeshEntity->SetIlluminationColor(cColor(o.illumColor[0], o.illumColor[1], o.illumColor[2], o.illumColor[3]));
 
-		pMeshEntity->SetWorldMatrix(cMath::MatrixMul(cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ), cMath::MatrixScale(vScale)));
+		cMatrixf mtxWorld, mtxTransform;
+		H4StaticXform(vRotation, vScale, vPosition, mtxWorld, mtxTransform);
+		pMeshEntity->SetWorldMatrix(mtxWorld);
 		pMeshEntity->SetPosition(vPosition);
 		tFloatVec vPose(o.pose, o.pose + o.numPose);
-		if (o.hasPose == false || pMeshEntity->SetBoneRestPoseFromMapValues(vPose) == false) mvCombineCandidates.push_back(pMeshEntity);
+		const bool bPoseApplied = o.hasPose && pMeshEntity->SetBoneRestPoseFromMapValues(vPose);
+		const bool bCandidate = OhplH4UseRust() ? ohpl_h4_is_combine_candidate(o.hasPose, bPoseApplied) : (o.hasPose == false || bPoseApplied == false);
+		if (bCandidate) mvCombineCandidates.push_back(pMeshEntity);
+		H4Seq("static", sName, sFileName, &mtxTransform, o.collides ? "collides" : "-");
 
 		if (o.collides)
 		{
-			cMatrixf mtxTransform = cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ);
-			mtxTransform.SetTranslation(vPosition);
 			if (CreateStaticBodiesFromEnt(sFileName, mtxTransform, vScale, sName) == false)
 				CreateStaticBodyForMesh(pMeshEntity, mtxTransform, vScale);
 		}
@@ -606,8 +786,11 @@ namespace hpl {
 		pMeshEntity->GetSubMeshEntity(0)->GetSubMesh()->SetMaterialName(sMaterial);
 		pMeshEntity->SetUniqueID(p.id);
 
-		pMeshEntity->SetWorldMatrix(cMath::MatrixMul(cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ), cMath::MatrixScale(vScale)));
+		cMatrixf mtxWorld, mtxBody;
+		H4StaticXform(vRotation, vScale, vPosition, mtxWorld, mtxBody);
+		pMeshEntity->SetWorldMatrix(mtxWorld);
 		pMeshEntity->SetPosition(vPosition);
+		H4Seq("plane", sName, sMaterial, &mtxBody, p.collides ? "collides" : "-");
 
 		if (p.collides)
 			CreateStaticBodyForMesh(pMeshEntity, cMatrixf::Identity, 1);
@@ -630,8 +813,8 @@ namespace hpl {
 		if (pUserVarsElem) userVars.LoadVariables(pUserVarsElem);
 		userVars.AddVarBool("Static", e.isStatic);
 
-		cMatrixf mtxTransform = cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ);
-		mtxTransform.SetTranslation(vPosition);
+		cMatrixf mtxTransform = H4RotTrans(vRotation, vPosition);
+		H4Seq("entity", sName, sFilename, &mtxTransform, e.active ? (e.isStatic ? "active,static" : "active") : (e.isStatic ? "static" : "-"));
 
 		iEntity3D* pEntity = mpCurrentWorld->CreateEntity(sName, mtxTransform, sFilename, e.id, e.active, vScale, &userVars, false);
 		if (pEntity && pEntity->GetEntityType() == "MeshEntity")
@@ -656,10 +839,10 @@ namespace hpl {
 
 		*mppCurrentElement = apElement;
 
-		cMatrixf mtxTransform = cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ);
-		mtxTransform.SetTranslation(cVector3f(a.position[0], a.position[1], a.position[2]));
+		cMatrixf mtxTransform = H4RotTrans(vRotation, cVector3f(a.position[0], a.position[1], a.position[2]));
 
 		tString sType = a.areaType;
+		H4Seq("area", sName, sType, &mtxTransform, a.active ? "active" : "-");
 
 		iAreaLoader* pLoader = mpResources->GetAreaLoader(sType);
 		if (pLoader == NULL)
@@ -722,6 +905,13 @@ namespace hpl {
 
 	void cHpmWorldBuilder::LightMaskBox(const OhplHpmLightMask& m)
 	{
+		if (OhplH4UseRust())
+		{
+			OhplH4LightMask p;
+			ohpl_h4_light_mask(m.rotation, m.size, m.scale, m.worldPos, &p);
+			mmapLightMasks[m.id] = std::make_pair(cVector3f(p.center[0], p.center[1], p.center[2]), cVector3f(p.extent[0], p.extent[1], p.extent[2]));
+			return;
+		}
 		cMatrixf mtxRot = cMath::MatrixRotate(cVector3f(m.rotation[0], m.rotation[1], m.rotation[2]), eEulerRotationOrder_XYZ);
 		cVector3f vHalf = cVector3f(m.size[0], m.size[1], m.size[2]) * cVector3f(m.scale[0], m.scale[1], m.scale[2]) * 0.5f;
 		cVector3f vExtent;
@@ -779,7 +969,17 @@ namespace hpl {
 			if (pMesh == NULL) return i;
 
 			// Instance scale = stored radius / mesh radius (cDetailMesh)
-			if (fMeshRadius == 0)
+			if (fMeshRadius == 0 && OhplH4UseRust())
+			{
+				std::vector<float> vMins, vMaxs;
+				for (int j = 0; j < pMesh->GetSubMeshNum(); ++j)
+				{
+					cBoundingVolume bv = pMesh->GetSubMesh(j)->GetVertexBuffer()->CreateBoundingVolume();
+					for (int k = 0; k < 3; ++k) { vMins.push_back(bv.GetLocalMin().v[k]); vMaxs.push_back(bv.GetLocalMax().v[k]); }
+				}
+				fMeshRadius = ohpl_h4_detail_mesh_radius(vMins.data(), vMaxs.data(), vMins.size() / 3);
+			}
+			else if (fMeshRadius == 0)
 			{
 				cVector3f vMin(1e9f), vMax(-1e9f);
 				for (int j = 0; j < pMesh->GetSubMeshNum(); ++j)
@@ -790,14 +990,22 @@ namespace hpl {
 				}
 				fMeshRadius = cMath::Max(vMin.Length(), vMax.Length());
 			}
-			float fScale = i < (int)d.numRadii && fMeshRadius > 0 ? d.radii[i] / fMeshRadius : 1;
+			float fScale = OhplH4UseRust() ? ohpl_h4_detail_scale(i < (int)d.numRadii, i < (int)d.numRadii ? d.radii[i] : 0, fMeshRadius)
+										   : (i < (int)d.numRadii && fMeshRadius > 0 ? d.radii[i] / fMeshRadius : 1);
 
 			cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity("DetailMesh_" + cString::ToString(d.firstIndex + i), pMesh, true);
 			pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, false);
 
-			cQuaternion qRot(d.rotations[i*4], d.rotations[i*4+1], d.rotations[i*4+2], d.rotations[i*4+3]);
-			cMatrixf mtxTransform = cMath::MatrixMul(cMath::MatrixQuaternion(qRot), cMath::MatrixScale(fScale));
-			mtxTransform.SetTranslation(cVector3f(d.positions[i*3], d.positions[i*3+1], d.positions[i*3+2]));
+			cMatrixf mtxTransform;
+			if (OhplH4UseRust())
+				ohpl_h4_detail_matrix(&d.rotations[i*4], &d.positions[i*3], fScale, &mtxTransform);
+			else
+			{
+				cQuaternion qRot(d.rotations[i*4], d.rotations[i*4+1], d.rotations[i*4+2], d.rotations[i*4+3]);
+				mtxTransform = cMath::MatrixMul(cMath::MatrixQuaternion(qRot), cMath::MatrixScale(fScale));
+				mtxTransform.SetTranslation(cVector3f(d.positions[i*3], d.positions[i*3+1], d.positions[i*3+2]));
+			}
+			H4Seq("detail", "DetailMesh_" + cString::ToString(d.firstIndex + i), d.file, &mtxTransform, "-");
 			pEntity->SetMatrix(mtxTransform);
 			mvCombineCandidates.push_back(pEntity);
 		}
@@ -808,10 +1016,21 @@ namespace hpl {
 	{
 		cWorldExposureArea area;
 		area.msName = a.name;
-		cMatrixf mtxTransform = cMath::MatrixRotate(cVector3f(a.rotation[0], a.rotation[1], a.rotation[2]), eEulerRotationOrder_XYZ);
-		mtxTransform.SetTranslation(cVector3f(a.worldPos[0], a.worldPos[1], a.worldPos[2]));
-		area.m_mtxInvTransform = cMath::MatrixInverse(mtxTransform);
-		area.mvHalfSize = cVector3f(a.scale[0], a.scale[1], a.scale[2]) * 0.5f;
+		if (OhplH4UseRust())
+		{
+			OhplH4Exposure p;
+			ohpl_h4_exposure_area(a.rotation, a.worldPos, a.scale, &p);
+			area.m_mtxInvTransform = p.invTransform;
+			area.mvHalfSize = cVector3f(p.halfSize[0], p.halfSize[1], p.halfSize[2]);
+		}
+		else
+		{
+			cMatrixf mtxTransform = cMath::MatrixRotate(cVector3f(a.rotation[0], a.rotation[1], a.rotation[2]), eEulerRotationOrder_XYZ);
+			mtxTransform.SetTranslation(cVector3f(a.worldPos[0], a.worldPos[1], a.worldPos[2]));
+			area.m_mtxInvTransform = cMath::MatrixInverse(mtxTransform);
+			area.mvHalfSize = cVector3f(a.scale[0], a.scale[1], a.scale[2]) * 0.5f;
+		}
+		H4Seq("exposure", area.msName, "", &area.m_mtxInvTransform, "-");
 		area.mfExposure = a.exposure;
 		area.mfWhiteCut = a.whiteCut;
 		area.mfTransitionTime = a.transitionTime;
