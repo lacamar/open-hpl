@@ -77,6 +77,7 @@ extern "C" {
 	void ohpl_s2_free_prop_block(const unsigned char *, size_t, void *);
 	void ohpl_s2_stub_counts(OhplS2CountSink, void *);
 	int ohpl_s2_dump_decls(void *engine, const char *path);
+	int ohpl_s2_call_corpus(void *engine, unsigned seed, unsigned calls, const char *path);
 }
 
 inline bool OhplS2Rust() { return hpl::OhplBackendRustRequested(); }

@@ -1,5 +1,6 @@
 //! S2: AngelScript access for the script natives: the `asIScriptGeneric` frame, native registration
 //! with the generic calling convention, and engine/type queries (all through `cshim/as_shim_s2.cpp`).
+#![cfg_attr(test, allow(dead_code))]
 
 use super::s2_api;
 use std::ffi::{CStr, CString, c_char, c_int, c_void};
@@ -106,6 +107,12 @@ unsafe extern "C" {
     pub fn ohpl_as2_wstr_data(s: *const c_void) -> *const u32;
     pub fn ohpl_as2_wstr_len(s: *const c_void) -> usize;
     pub fn ohpl_as2_dump_decls(e: *mut c_void, path: *const c_char) -> c_int;
+    pub fn ohpl_as2_call_corpus(
+        e: *mut c_void,
+        seed: u32,
+        calls: u32,
+        path: *const c_char,
+    ) -> c_int;
     fn ohpl_as_str_data(s: *const c_void) -> *const c_char;
     fn ohpl_as_str_len(s: *const c_void) -> usize;
     fn ohpl_as_reg_object_type(e: *mut c_void, n: *const c_char, size: c_int, flags: u64) -> c_int;
@@ -153,6 +160,13 @@ impl Frame {
             addr: [std::ptr::null_mut(); MAX_ARGS],
             ret,
             ret_addr: std::cell::Cell::new(None),
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_slot(&mut self, i: usize, p: *mut c_void) {
+        if let Some(s) = self.addr.get_mut(i) {
+            *s = p;
         }
     }
 
@@ -261,6 +275,12 @@ impl Engine {
         Box::into_raw(Box::new(Native { kind, f })).cast()
     }
 
+    #[cfg(test)]
+    pub fn reg_func(self, decl: &[u8], f: NativeFn) -> c_int {
+        testreg::record(None, decl, f)
+    }
+
+    #[cfg(not(test))]
     pub fn reg_func(self, decl: &[u8], f: NativeFn) -> c_int {
         let d = cs(decl);
         // SAFETY: strings outlive the call; `tramp` is a generic-convention function.
@@ -274,6 +294,12 @@ impl Engine {
         }
     }
 
+    #[cfg(test)]
+    pub fn reg_method(self, ty: &[u8], decl: &[u8], _kind: Kind, f: NativeFn) -> c_int {
+        testreg::record(Some(ty), decl, f)
+    }
+
+    #[cfg(not(test))]
     pub fn reg_method(self, ty: &[u8], decl: &[u8], kind: Kind, f: NativeFn) -> c_int {
         let (t, d) = (cs(ty), cs(decl));
         // SAFETY: as `reg_func`.
@@ -288,6 +314,12 @@ impl Engine {
         }
     }
 
+    #[cfg(test)]
+    pub fn reg_behaviour(self, _b: c_int, ty: &[u8], decl: &[u8], f: NativeFn) -> c_int {
+        testreg::record(Some(ty), decl, f)
+    }
+
+    #[cfg(not(test))]
     pub fn reg_behaviour(self, b: c_int, ty: &[u8], decl: &[u8], f: NativeFn) -> c_int {
         let (t, d) = (cs(ty), cs(decl));
         // SAFETY: as `reg_func`.
@@ -401,6 +433,14 @@ impl Engine {
 
     /// # Safety
     /// `p` outlives the engine.
+    #[cfg(test)]
+    pub unsafe fn reg_global_property(self, _decl: &[u8], _p: *mut c_void) -> c_int {
+        0
+    }
+
+    /// # Safety
+    /// `p` outlives the engine.
+    #[cfg(not(test))]
     pub unsafe fn reg_global_property(self, decl: &[u8], p: *mut c_void) -> c_int {
         let d = cs(decl);
         // SAFETY: caller contract.
@@ -632,9 +672,11 @@ impl Soma {
 
     pub fn func_new(&self, decl: &str, f: impl Fn(&Frame) + 'static) {
         let d = s2_api::active_native_decl(None, decl.as_bytes());
-        if self.0.global_func_by_decl(&d).is_none() {
-            self.0.reg_func(&d, Box::new(f));
+        #[cfg(not(test))]
+        if self.0.global_func_by_decl(&d).is_some() {
+            return;
         }
+        self.0.reg_func(&d, Box::new(f));
     }
 
     pub fn method(&self, ty: &str, decl: &str, f: impl Fn(&Frame) + 'static) {
@@ -666,4 +708,37 @@ impl Soma {
 pub unsafe fn str_cptr(p: *const c_void) -> *const c_char {
     // SAFETY: caller contract.
     unsafe { ohpl_as_str_data(p) }
+}
+
+#[cfg(test)]
+pub(crate) mod testreg {
+    use super::{Frame, NativeFn};
+    use std::cell::RefCell;
+    use std::ffi::c_int;
+
+    pub(crate) type Entry = (Option<Vec<u8>>, Vec<u8>, NativeFn);
+
+    thread_local! {
+        pub(crate) static REG: RefCell<Vec<Entry>> = const { RefCell::new(Vec::new()) };
+    }
+
+    pub(super) fn record(ty: Option<&[u8]>, decl: &[u8], f: NativeFn) -> c_int {
+        REG.with(|r| {
+            r.borrow_mut()
+                .push((ty.map(<[u8]>::to_vec), decl.to_vec(), f))
+        });
+        0
+    }
+
+    // the C++ std::string shim is not linked into unit tests
+    #[unsafe(no_mangle)]
+    pub extern "C" fn ohpl_as2_str_ctor(_mem: *mut std::ffi::c_void, _p: *const u8, _n: usize) {}
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn ohpl_as2_wstr_ctor(_mem: *mut std::ffi::c_void, _p: *const u32, _n: usize) {}
+
+    #[allow(dead_code)]
+    pub(crate) fn call(f: &NativeFn, fr: &Frame) {
+        f(fr);
+    }
 }

@@ -5,6 +5,7 @@
 #include <map>
 #include <new>
 #include <string>
+#include <vector>
 
 #include "as_shim_s2.h"
 
@@ -58,6 +59,266 @@ private:
 void DumpFunc(FILE* f, asIScriptFunction* fn, const char* prefix)
 {
 	fprintf(f, "%s%s\n", prefix, fn->GetDeclaration(true, true, true));
+}
+
+} // namespace
+
+
+namespace {
+
+struct Rng
+{
+	uint64_t s;
+	uint32_t Next()
+	{
+		s = s * 6364136223846793005ULL + 1442695040888963407ULL;
+		return (uint32_t)(s >> 33);
+	}
+	float F()
+	{
+		static const float sp[] = {0, 1, -1, 0.5f, -0.5f, 2, 3.14159f, 1e-9f, 100, -100, 0.001f};
+		uint32_t k = Next();
+		if (k % 4 == 0)
+			return sp[(k >> 3) % 11];
+		return ((int)(Next() % 20001) - 10000) / 1000.0f;
+	}
+	int I()
+	{
+		uint32_t k = Next();
+		if (k % 5 == 0)
+			return (int)(k >> 3) % 3 - 1;
+		return (int)(Next() % 41) - 10;
+	}
+	std::string Text()
+	{
+		static const char* pool[] = {"", "12", "3.5", "1 2 3", "true", "a,b,c", "Hello_World", "x007", "abc", "-4", "1 2 3 4", "[br]x", "a b", "A_b9"};
+		return pool[Next() % 14];
+	}
+};
+
+bool Known(const std::string& n)
+{
+	static const char* t[] = {"cVector2f", "cVector3f", "cVector4f", "cVector2l", "cVector3l", "cColor", "cMatrixf", "cQuaternion",
+							  "cRect2f", "cRect2l", "cPlanef", "cDate", "tString", "tWString"};
+	for (const char* x : t)
+		if (n == x)
+			return true;
+	return false;
+}
+
+bool IntLanes(const std::string& n) { return n == "cVector2l" || n == "cVector3l" || n == "cRect2l" || n == "cDate"; }
+
+struct Slot
+{
+	int typeId = 0;
+	asDWORD flags = 0;
+	asITypeInfo* type = nullptr;
+	void* obj = nullptr;
+	uint64_t prim = 0;
+	bool ref = false;
+};
+
+std::string Hex(const void* p, size_t n)
+{
+	std::string r;
+	char b[4];
+	for (size_t i = 0; i < n; ++i)
+	{
+		snprintf(b, sizeof b, "%02x", ((const unsigned char*)p)[i]);
+		r += b;
+	}
+	return r;
+}
+
+size_t PrimSize(int id)
+{
+	switch (id)
+	{
+	case asTYPEID_BOOL: case asTYPEID_INT8: case asTYPEID_UINT8: return 1;
+	case asTYPEID_INT16: case asTYPEID_UINT16: return 2;
+	case asTYPEID_INT64: case asTYPEID_UINT64: case asTYPEID_DOUBLE: return 8;
+	default: return 4;
+	}
+}
+
+std::string Dump(const Slot& s)
+{
+	if (s.type && !(s.type->GetFlags() & asOBJ_ENUM))
+	{
+		std::string n = s.type->GetName();
+		if (n == "tString")
+		{
+			const std::string& x = *(const std::string*)s.obj;
+			return "s:" + Hex(x.data(), x.size());
+		}
+		if (n == "tWString")
+		{
+			const std::wstring& x = *(const std::wstring*)s.obj;
+			return "w:" + Hex(x.data(), x.size() * sizeof(wchar_t));
+		}
+		return "o:" + Hex(s.obj, s.type->GetSize());
+	}
+	return "p:" + Hex(&s.prim, PrimSize(s.typeId));
+}
+
+bool Supported(asIScriptEngine* e, int id, asDWORD fl, asITypeInfo** type)
+{
+	*type = nullptr;
+	if (id & asTYPEID_OBJHANDLE)
+		return false;
+	if (id <= asTYPEID_DOUBLE)
+		return id != asTYPEID_VOID || fl == 0;
+	asITypeInfo* t = e->GetTypeInfoById(id);
+	if (!t)
+		return false;
+	*type = t;
+	if (t->GetFlags() & asOBJ_ENUM)
+		return true;
+	return Known(t->GetName());
+}
+
+void FillObj(asIScriptEngine* e, Rng& r, Slot& s)
+{
+	std::string n = s.type->GetName();
+	s.obj = e->CreateScriptObject(s.type);
+	if (n == "tString")
+		*(std::string*)s.obj = r.Text();
+	else if (n == "tWString")
+	{
+		std::string t = r.Text();
+		*(std::wstring*)s.obj = std::wstring(t.begin(), t.end());
+	}
+	else
+	{
+		unsigned lanes = s.type->GetSize() / 4;
+		for (unsigned i = 0; i < lanes; ++i)
+		{
+			if (IntLanes(n))
+				((int*)s.obj)[i] = r.I();
+			else
+				((float*)s.obj)[i] = r.F();
+		}
+	}
+}
+
+void FillPrim(Rng& r, Slot& s, bool small)
+{
+	switch (s.typeId)
+	{
+	case asTYPEID_BOOL: s.prim = r.Next() & 1; break;
+	case asTYPEID_FLOAT: { float f = r.F(); memcpy(&s.prim, &f, 4); break; }
+	case asTYPEID_DOUBLE: { double d = r.F(); memcpy(&s.prim, &d, 8); break; }
+	default: { int v = small ? (int)(r.Next() % 4) : r.I(); s.prim = (uint64_t)(int64_t)v; if (PrimSize(s.typeId) == 4) s.prim &= 0xffffffffu; else if (PrimSize(s.typeId) == 1) s.prim &= 0xff; }
+	}
+}
+
+void SetArg(asIScriptContext* c, unsigned i, Slot& s)
+{
+	if (s.type && !(s.type->GetFlags() & asOBJ_ENUM))
+	{
+		if (s.ref)
+			c->SetArgAddress(i, s.obj);
+		else
+			c->SetArgObject(i, s.obj);
+		return;
+	}
+	if (s.ref)
+	{
+		c->SetArgAddress(i, &s.prim);
+		return;
+	}
+	switch (PrimSize(s.typeId))
+	{
+	case 1: c->SetArgByte(i, (asBYTE)s.prim); break;
+	case 2: c->SetArgWord(i, (asWORD)s.prim); break;
+	case 8:
+		if (s.typeId == asTYPEID_DOUBLE) { double d; memcpy(&d, &s.prim, 8); c->SetArgDouble(i, d); }
+		else c->SetArgQWord(i, s.prim);
+		break;
+	default:
+		if (s.typeId == asTYPEID_FLOAT) { float f; memcpy(&f, &s.prim, 4); c->SetArgFloat(i, f); }
+		else c->SetArgDWord(i, (asDWORD)s.prim);
+	}
+}
+
+bool WantGlobal(const char* n)
+{
+	static const char* pre[] = {"cMath_", "Math_", "cString_", "String_", "cGenerate_"};
+	for (const char* p : pre)
+		if (strncmp(n, p, strlen(p)) == 0)
+			return strcmp(n, "cMath_Randomize") != 0;
+	return false;
+}
+
+void CallOne(asIScriptEngine* e, asIScriptContext* c, asIScriptFunction* f, Rng& r, FILE* out, unsigned k)
+{
+	asITypeInfo* objType = f->GetObjectType();
+	if (objType && !Known(objType->GetName()))
+		return;
+	unsigned np = f->GetParamCount();
+	std::vector<Slot> args(np);
+	for (unsigned i = 0; i < np; ++i)
+	{
+		f->GetParam(i, &args[i].typeId, &args[i].flags);
+		if (!Supported(e, args[i].typeId, args[i].flags, &args[i].type))
+			return;
+		args[i].ref = args[i].flags != 0;
+	}
+	Slot ret;
+	ret.typeId = f->GetReturnTypeId(&ret.flags);
+	if (ret.typeId != asTYPEID_VOID && !Supported(e, ret.typeId, 0, &ret.type))
+		return;
+	Slot self;
+	if (objType)
+	{
+		self.type = objType;
+		FillObj(e, r, self);
+	}
+	std::string line = std::string(f->GetDeclaration(true, true, true)) + "\t" + std::to_string(k) + "\tin";
+	if (objType)
+		line += " " + Dump(self);
+	for (unsigned i = 0; i < np; ++i)
+	{
+		if (args[i].type && !(args[i].type->GetFlags() & asOBJ_ENUM))
+			FillObj(e, r, args[i]);
+		else
+			FillPrim(r, args[i], PrimSize(args[i].typeId) == 8 && args[i].typeId != asTYPEID_DOUBLE);
+		line += " " + Dump(args[i]);
+	}
+	c->Prepare(f);
+	if (objType)
+		c->SetObject(self.obj);
+	for (unsigned i = 0; i < np; ++i)
+		SetArg(c, i, args[i]);
+	int rc = c->Execute();
+	line += "\tout rc=" + std::to_string(rc);
+	if (rc == asEXECUTION_FINISHED && ret.typeId != asTYPEID_VOID)
+	{
+		if (ret.type && !(ret.type->GetFlags() & asOBJ_ENUM))
+		{
+			ret.obj = (f->GetReturnTypeId(&ret.flags), ret.flags ? c->GetReturnAddress() : c->GetReturnObject());
+			line += " ret " + Dump(ret);
+		}
+		else
+		{
+			switch (PrimSize(ret.typeId))
+			{
+			case 8: ret.prim = c->GetReturnQWord(); break;
+			default: ret.prim = c->GetReturnDWord(); if (ret.typeId == asTYPEID_FLOAT) { float v = c->GetReturnFloat(); ret.prim = 0; memcpy(&ret.prim, &v, 4); } else if (PrimSize(ret.typeId) == 1) ret.prim &= 0xff; else if (PrimSize(ret.typeId) == 2) ret.prim &= 0xffff;
+			}
+			line += " ret " + Dump(ret);
+		}
+	}
+	if (objType)
+		line += " this " + Dump(self);
+	for (unsigned i = 0; i < np; ++i)
+		line += " a" + std::to_string(i) + " " + Dump(args[i]);
+	fprintf(out, "%s\n", line.c_str());
+	for (Slot& a : args)
+		if (a.obj)
+			e->ReleaseScriptObject(a.obj, a.type);
+	if (self.obj)
+		e->ReleaseScriptObject(self.obj, self.type);
 }
 
 } // namespace
@@ -155,6 +416,42 @@ void ohpl_as2_wstr_append(void* s, const uint32_t* p, size_t n) { static_cast<st
 void ohpl_as2_wstr_resize(void* s, size_t n) { static_cast<std::wstring*>(s)->resize(n); }
 const uint32_t* ohpl_as2_wstr_data(const void* s) { return (const uint32_t*)static_cast<const std::wstring*>(s)->data(); }
 size_t ohpl_as2_wstr_len(const void* s) { return static_cast<const std::wstring*>(s)->size(); }
+
+int ohpl_as2_call_corpus(void* e, unsigned seed, unsigned calls, const char* path)
+{
+	asIScriptEngine* en = E(e);
+	FILE* out = fopen(path, "w");
+	if (!out)
+		return -1;
+	asIScriptContext* c = en->CreateContext();
+	if (asIScriptFunction* rnd = en->GetGlobalFunctionByDecl("void cMath_Randomize(int alSeed)"))
+	{
+		c->Prepare(rnd);
+		c->SetArgDWord(0, seed);
+		c->Execute();
+	}
+	Rng r{seed};
+	for (asUINT i = 0; i < en->GetGlobalFunctionCount(); ++i)
+	{
+		asIScriptFunction* f = en->GetGlobalFunctionByIndex(i);
+		if (!WantGlobal(f->GetName()))
+			continue;
+		for (unsigned k = 0; k < calls; ++k)
+			CallOne(en, c, f, r, out, k);
+	}
+	for (asUINT i = 0; i < en->GetObjectTypeCount(); ++i)
+	{
+		asITypeInfo* t = en->GetObjectTypeByIndex(i);
+		if (!Known(t->GetName()))
+			continue;
+		for (asUINT j = 0; j < t->GetMethodCount(); ++j)
+			for (unsigned k = 0; k < calls; ++k)
+				CallOne(en, c, t->GetMethodByIndex(j, false), r, out, k);
+	}
+	c->Release();
+	fclose(out);
+	return 0;
+}
 
 int ohpl_as2_dump_decls(void* e, const char* path)
 {

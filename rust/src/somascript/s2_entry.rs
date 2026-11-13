@@ -272,3 +272,16 @@ pub unsafe extern "C" fn ohpl_s2_configure_engine(engine: *mut c_void) {
     e.set_property(14, 3);
     e.set_property(38, 0);
 }
+
+/// # Safety
+/// `engine` is live; `path` is NUL-terminated.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_s2_call_corpus(
+    engine: *mut c_void,
+    seed: u32,
+    calls: u32,
+    path: *const c_char,
+) -> c_int {
+    // SAFETY: caller contract.
+    unsafe { s2_as::ohpl_as2_call_corpus(engine, seed, calls, path) }
+}

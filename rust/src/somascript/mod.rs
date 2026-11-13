@@ -22,6 +22,8 @@ mod s2_entry;
 mod s2_host;
 mod s2_math;
 mod s2_strings;
+#[cfg(test)]
+mod s2_tests;
 mod stream;
 mod strings;
 #[cfg(test)]

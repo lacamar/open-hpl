@@ -179,7 +179,14 @@ fn vec_ops<T: Lane + Default + 'static, const N: usize>(s: &Soma, name: &str, sn
         &format!("{name} &opAssign(const {sname} &in)"),
         |fr| {
             let a = fr.me::<A<T, N>>();
-            *a = splat(*fr.rf::<T>(0));
+            // cVector4f is an aggregate: `V(f)` initialises lane 0 only
+            *a = if N == 4 {
+                let mut v = splat(T::zero());
+                v[0] = *fr.rf::<T>(0);
+                v
+            } else {
+                splat(*fr.rf::<T>(0))
+            };
             fr.ret_ref(std::ptr::from_mut(a));
         },
     );
@@ -843,7 +850,7 @@ fn functions(s: &Soma) {
                 fr.arg::<f32>(2),
                 fr.arg::<f32>(3),
             );
-            fr.ret(a + (b - a) * easing(t, hm::clamp(x, 0.0, 1.0)));
+            fr.ret(hm::fma(b - a, easing(t, hm::clamp(x, 0.0, 1.0)), a));
         },
     );
     s.func(

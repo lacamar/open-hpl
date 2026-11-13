@@ -142,6 +142,8 @@ int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFil
 	api.Register(pEngine);
 	if (const char *pDump = getenv("OHPL_S2_DECL_DUMP"))
 		ohpl_s2_dump_decls(pEngine, pDump);
+	if (const char *pCorpus = getenv("OHPL_S2_CORPUS"))
+		ohpl_s2_call_corpus(pEngine, 20260101, getenv("OHPL_S2_CORPUS_CALLS") ? atoi(getenv("OHPL_S2_CORPUS_CALLS")) : 6, pCorpus);
 	for (size_t i = 0; i < api.GetWarnings().size(); ++i)
 		fprintf(stderr, "warning: %s\n", api.GetWarnings()[i].c_str());
 	for (const std::string &sRemap : api.GetRemaps())
