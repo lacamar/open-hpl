@@ -26,6 +26,7 @@ for g in soma amnesia rebirth bunker; do
 	printf '%s\t%s\t%s\n' "$g" "$OPS" "$(sed 's/.*digest=//' $L.mgr.cpp.sum)" >> "$OUT/golden/mgr.txt"
 
 	FOPS=${FLOW_OPS:-20000}
+	export FLOW_EXTRA_DIR="$(cd "$(dirname "$0")" && pwd)/matcases"
 	OHPL_IMPL=cpp "$OUT/flow_probe" "$R" "$FOPS" "$L.flow.cpp" > "$L.flow.cpp.sum" 2>/dev/null
 	OHPL_IMPL=rust "$OUT/flow_probe" "$R" "$FOPS" "$L.flow.rust" > "$L.flow.rust.sum" 2>/dev/null
 	report "$g flow ops=$FOPS lines=$(wc -l < $L.flow.cpp) cpp-vs-rust diff lines=$(diff $L.flow.cpp $L.flow.rust | grep -c '^<') digest=$(sed 's/.*digest=//' $L.flow.cpp.sum)"

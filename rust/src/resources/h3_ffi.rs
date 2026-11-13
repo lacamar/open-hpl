@@ -10,7 +10,7 @@ use std::sync::atomic::Ordering;
 /// `m` and `ops` are live for the call.
 unsafe fn flow<'a>(m: *mut Manager, ops: *const Ops) -> Flow<'a> {
     // SAFETY: caller contract.
-    unsafe { Flow::new(&mut *m, &*ops) }
+    unsafe { Flow::from_raw(m, &*ops) }
 }
 
 /// # Safety
@@ -255,4 +255,9 @@ ffi!(fn ohpl_h3f_image_destroy(m, o, res: *mut c_void) {
 
 ffi!(fn ohpl_h3f_for_each(m, o, what: i32, arg: i64) {
     flow(m, o).for_each(what, arg);
+});
+
+ffi!(fn ohpl_h3f_material_blank(m, o, on: bool) {
+    let _ = o;
+    (*m).mat_blank = on;
 });

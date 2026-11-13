@@ -57,7 +57,7 @@ impl Flow<'_> {
     /// `~cXManager`: destroy everything, then the closing log line.
     pub fn shutdown(&mut self, which: i32) {
         if which == shutdown::PARTICLE {
-            for r in self.m.resources() {
+            for r in self.m().resources() {
                 // SAFETY: the meta lives in the live resource.
                 if let Some(m) = unsafe { self.ops.info(r).meta.as_mut() } {
                     m.user_count = 0;
@@ -203,10 +203,7 @@ impl Flow<'_> {
         };
         let mut obj = lk.res;
         if obj.is_null() && !lk.path.is_empty() {
-            let mut cr = Create::new(k::MATERIAL);
-            cr.name = Str::of(&nn);
-            cr.path = WStr::of(&lk.path);
-            obj = self.ops.create(&mut cr);
+            obj = self.material_load(&nn, &lk.path);
             if obj.is_null() {
                 self.ops.err(&[b"Couldn't load material '", &nn, b"'\n"]);
                 self.end();
@@ -239,7 +236,7 @@ impl Flow<'_> {
     }
 
     pub fn sound_entity(&mut self, name: &[u8], has_resolver: bool) -> *mut c_void {
-        if let Some(stored) = self.m.custom.get(name) {
+        if let Some(stored) = self.m().custom.get(name) {
             if !stored.is_null() {
                 self.inc_user(stored);
             }
@@ -249,7 +246,7 @@ impl Flow<'_> {
             let mut cr = Create::new(k::CUSTOM_RESOLVER);
             cr.name = Str::of(name);
             let custom = self.ops.create(&mut cr);
-            self.m.custom.set(name, custom);
+            self.m().custom.set(name, custom);
             if !custom.is_null() {
                 self.inc_user(custom);
                 self.inc_user(custom);
@@ -274,7 +271,7 @@ impl Flow<'_> {
 
     pub fn sound_entity_add_custom(&mut self, name: &[u8], data: *mut c_void) {
         self.inc_user(data);
-        self.m.custom.set(name, data);
+        self.m().custom.set(name, data);
     }
 
     pub fn sound_entity_preload(&mut self, name: &[u8], has_resolver: bool) {
@@ -312,20 +309,20 @@ impl Flow<'_> {
     }
 
     pub fn for_each(&mut self, what: i32, arg: i64) {
-        for r in self.m.resources() {
+        for r in self.m().resources() {
             self.ops.call(what, r, arg);
         }
     }
 
     pub fn video_destroy(&mut self, obj: *mut c_void) {
         if !obj.is_null() {
-            self.m.remove(obj);
+            self.m().remove(obj);
             self.ops.destroy(obj);
         }
     }
 
     pub fn video_update(&mut self, dt_bits: i64) {
-        for r in self.m.resources() {
+        for r in self.m().resources() {
             self.ops.call(c::UPDATE, r, dt_bits);
         }
     }
@@ -349,7 +346,7 @@ impl Flow<'_> {
                 obj = self.ops.create(&mut cr);
                 if !obj.is_null() {
                     self.add(obj, true, false);
-                    self.m.streams.push(obj.expose_provenance());
+                    self.m().streams.push(obj.expose_provenance());
                     self.ops.call(c::SOUND_SET_MGR, obj, 0);
                 }
             }
@@ -376,15 +373,15 @@ impl Flow<'_> {
         let gone = unsafe { meta.as_mut() }.is_some_and(|m| resmgr::destroy_sound(m, is_stream));
         if gone {
             let key = obj.expose_provenance();
-            if let Some(pos) = self.m.streams.iter().position(|&s| s == key) {
-                self.m.streams.remove(pos);
+            if let Some(pos) = self.m().streams.iter().position(|&s| s == key) {
+                self.m().streams.remove(pos);
                 self.ops.destroy(obj);
             }
         }
     }
 
     pub fn sound_destroy_all(&mut self) {
-        for s in std::mem::take(&mut self.m.streams) {
+        for s in std::mem::take(&mut self.m().streams) {
             let p: *mut c_void = std::ptr::with_exposed_provenance_mut(s);
             let info = self.ops.info(p);
             self.ops.log(
@@ -398,11 +395,11 @@ impl Flow<'_> {
             self.ops.destroy(p);
         }
         loop {
-            let r = self.m.first();
+            let r = self.m().first();
             if r.is_null() {
                 break;
             }
-            self.m.remove(r);
+            self.m().remove(r);
             self.ops.destroy(r);
         }
     }
@@ -515,7 +512,7 @@ impl Flow<'_> {
             m.dec_user();
         }
         if self.users(obj) == 0 {
-            self.m.remove(obj);
+            self.m().remove(obj);
             self.ops.destroy(obj);
         }
     }
@@ -523,15 +520,15 @@ impl Flow<'_> {
     pub fn texture_destroy(&mut self, obj: *mut c_void) {
         if self.dec_user_is_free(obj) {
             let size = self.ops.call(c::MEM_SIZE, obj, 0);
-            self.m.mem_usage = self.m.mem_usage.wrapping_sub(size as i32);
-            self.m.anim.remove(&obj.expose_provenance());
-            self.m.remove(obj);
+            self.m().mem_usage = self.m().mem_usage.wrapping_sub(size as i32);
+            self.m().anim.remove(&obj.expose_provenance());
+            self.m().remove(obj);
             self.ops.destroy(obj);
         }
     }
 
     pub fn texture_update(&mut self, dt_bits: i64) {
-        let all: Vec<usize> = self.m.anim.iter().copied().collect();
+        let all: Vec<usize> = self.m().anim.iter().copied().collect();
         for p in all {
             self.ops
                 .call(c::UPDATE, std::ptr::with_exposed_provenance_mut(p), dt_bits);
@@ -580,7 +577,7 @@ impl Flow<'_> {
                 return null();
             }
             let size = self.ops.call(c::MEM_SIZE, tex, 0);
-            self.m.mem_usage = self.m.mem_usage.wrapping_add(size as i32);
+            self.m().mem_usage = self.m().mem_usage.wrapping_add(size as i32);
             self.add(tex, true, true);
         }
         self.finish(tex, &[b"Couldn't texture '", name, b"'\n"])
@@ -654,9 +651,9 @@ impl Flow<'_> {
                 }
                 tex = made;
                 let size = self.ops.call(c::MEM_SIZE, tex, 0);
-                self.m.mem_usage = self.m.mem_usage.wrapping_add(size as i32);
+                self.m().mem_usage = self.m().mem_usage.wrapping_add(size as i32);
                 self.add(tex, true, true);
-                self.m.anim.insert(tex.expose_provenance());
+                self.m().anim.insert(tex.expose_provenance());
             }
         }
         self.finish(tex, &[b"Couldn't texture '", &first, b"'\n"])
@@ -718,7 +715,7 @@ impl Flow<'_> {
                 return null();
             }
             let size = self.ops.call(c::MEM_SIZE, tex, 0);
-            self.m.mem_usage = self.m.mem_usage.wrapping_add(size as i32);
+            self.m().mem_usage = self.m().mem_usage.wrapping_add(size as i32);
             self.add(tex, true, true);
         }
         self.finish(tex, &[b"Couldn't texture '", &name, b"'\n"])

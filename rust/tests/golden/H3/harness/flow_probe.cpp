@@ -9,6 +9,8 @@
 #include "resources/ResourceManager.h"
 #include "resources/RustResMgr.h"
 #include "resources/RustShader.h"
+#include "resources/XmlDocument.h"
+#include "impl/XmlDocumentTiny.h"
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
 #include <algorithm>
@@ -162,7 +164,14 @@ public:
 		case OHPL_H3_TEX_SIMPLE: return Tex(c, 1);
 		case OHPL_H3_TEX_ANIM: case OHPL_H3_TEX_CUBE: return Tex(c, (int)c.npaths);
 		case OHPL_H3_IMAGE: return Bitmap(sPath);
-		case OHPL_H3_MATERIAL: return static_cast<iResourceBase*>(Make("mat", sName, sPath, 0));
+		case OHPL_H3_MAT_NEW: return static_cast<iResourceBase*>(MatNew(sName, sPath, c.i[0] != 0, c.ptr));
+		case OHPL_H3_MAT_TYPE: return MatType(sName);
+		case OHPL_H3_MAT_SET: MatSet(H3Res<cRes>(c.ptr), c.i[0], c.i[1], c.i[2], sName); return NULL;
+		case OHPL_H3_MAT_TEXTURE: return static_cast<iResourceBase*>(MatTexture(sName, c.i[0], c.i[1], c.i[2], c.i[3]));
+		case OHPL_H3_MAT_TEX_SETUP: MatTexSetup(H3Res<cRes>(c.ptr), H3Res<cRes>(c.ptr2), c.i[0], c.i[1], c.i[2], c.f[0]); return NULL;
+		case OHPL_H3_MAT_VAR: MatVar(c.i[0] != 0, sName, H3Name(c.name2)); return NULL;
+		case OHPL_H3_MAT_VARS_APPLY: MatVarsApply(c.ptr, H3Res<cRes>(c.ptr2)); return NULL;
+		case OHPL_H3_MAT_ADD_UV: MatUv(H3Res<cRes>(c.ptr), c.i[0], c.i[1], c.f[0], c.f[1]); return NULL;
 		case OHPL_H3_IMG_BITMAP_FRAME: return NewBitmapFrame(c.i[0], c.i[1], c.i[2]);
 		case OHPL_H3_IMG_CUSTOM_FRAME: { cTF *p = new cTF{c.i[0], 0, true}; return p; }
 		case OHPL_H3_IMG_ADD_BITMAP: return static_cast<iResourceBase*>(AddBitmap(static_cast<cBF*>(c.ptr), static_cast<int*>(c.ptr2), sPath));
@@ -210,6 +219,14 @@ public:
 		case OHPL_H3C_BMP_WIDTH: return *static_cast<int*>(p) % 97 * 7 + 1;
 		case OHPL_H3C_BMP_HEIGHT: return *static_cast<int*>(p) % 89 * 11 + 1;
 		case OHPL_H3C_BMP_DELETE: delete static_cast<int*>(p); return 0;
+		case OHPL_H3C_MAT_TYPE_Q:
+		{
+			cMT *pType = static_cast<cMT*>(p);
+			if(arg == 0) return pType->trans;
+			if(arg == 1) return (int64_t)pType->used.size();
+			return pType->used[arg - 2];
+		}
+		case OHPL_H3C_MAT_COMPILE: gLog += "mat-compile " + H3Res<cRes>(p)->GetName() + "\n"; return 0;
 		case OHPL_H3C_SHADER_POST: gLog += "S:post " + H3Res<cRes>(p)->GetName() + " " + std::to_string(arg) + "\n"; return 0;
 		}
 		return 0;
@@ -219,6 +236,21 @@ public:
 	{
 		std::string s;
 		if(what == OHPL_H3C_SHADER_ERROR) s = msErr;
+		else if(what == OHPL_H3C_FILE_BYTES)
+		{
+			FILE *pFile = fopen(Narrow(H3Wide(path)).c_str(), "rb");
+			if(pFile == NULL) s = std::string(1, '\0');
+			else
+			{
+				fseek(pFile, 0, SEEK_END);
+				long lLength = ftell(pFile);
+				fseek(pFile, 0, SEEK_SET);
+				std::vector<char> vData(lLength > 0 ? lLength : 0);
+				bool bRead = lLength > 0 && fread(vData.data(), lLength, 1, pFile) == 1;
+				fclose(pFile);
+				s = std::string(1, (lLength <= 0 || bRead) ? '\2' : '\1') + std::string(vData.begin(), vData.end());
+			}
+		}
 		else if(what == OHPL_H3C_PHYSICS_NAME_OF) s = p ? "phys-of-" + H3Res<cRes>(p)->GetName() : "phys-file-" + Narrow(H3Wide(path));
 		sink(ctx, reinterpret_cast<const uint8_t*>(s.data()), s.size());
 	}
@@ -280,6 +312,177 @@ public:
 		cRes *p = new cRes(asName, _W(""), "custom");
 		p->SetHandle(++mlSerial);
 		return p;
+	}
+
+
+	// ---------------------------------------------------------------- material stubs
+	struct cMT { bool trans; std::vector<int> used; };
+
+	void *MatType(const tString &asType)
+	{
+		uint64_t h = Fnv(asType);
+		gLog += "mat-type " + asType + "\n";
+		if(h % 9 == 0) return NULL;
+		static std::map<tString, cMT*> mapTypes;
+		cMT *&pType = mapTypes[asType];
+		if(pType == NULL)
+		{
+			static const int vAll[] = { 0, 1, 2, 3, 5, 6, 12, 13, 14, 21, 22 };
+			pType = new cMT{ h % 3 == 0, {} };
+			for(int i = 0; i < 11; ++i) if((h >> i) & 1) pType->used.push_back(vAll[i]);
+			if(pType->used.empty()) pType->used.push_back(0);
+		}
+		return pType;
+	}
+
+	cRes *MatNew(const tString &asName, const tWString &asPath, bool abBlank, void *apType)
+	{
+		gLog += "mat-new " + asName + " " + Narrow(asPath) + (abBlank ? " blank" : " typed") + "\n";
+		cRes *p = new cRes(asName, asPath, "mat");
+		p->SetHandle(++mlSerial);
+		return p;
+	}
+
+	void MatSet(cRes *apMat, int alCode, int a, int b, const tString &asText)
+	{
+		gLog += "mat-set " + apMat->GetName() + " " + std::to_string(alCode) + " " + std::to_string(a) + " " + std::to_string(b) + " " + asText + "\n";
+	}
+
+	cRes *MatTexture(const tString &asFile, int abMip, int aType, int alKind, int alUsed)
+	{
+		gLog += "mat-tex " + asFile + " " + std::to_string(abMip) + " " + std::to_string(aType) + " " + std::to_string(alKind) + " " + std::to_string(alUsed) + "\n";
+		if(alKind < 0 || Fails(asFile, 3)) return NULL;
+		cRes *p = new cRes(asFile, _W(""), "mattex");
+		p->SetHandle(++mlSerial);
+		return p;
+	}
+
+	void MatTexSetup(cRes *apTex, cRes *apMat, int alUsed, int aAnim, int aWrap, float afFrame)
+	{
+		gLog += "mat-texsetup " + apTex->GetName() + " " + apMat->GetName() + " " + std::to_string(alUsed) + " " + std::to_string(aAnim) + " " + std::to_string(aWrap) + " " + std::to_string(afFrame) + "\n";
+	}
+
+	void MatVar(bool abClear, const tString &asName, const tString &asValue)
+	{
+		if(abClear) { gLog += "mat-vars-clear\n"; return; }
+		gLog += "mat-var " + asName + "=" + asValue + "\n";
+	}
+
+	void MatVarsApply(void *apType, cRes *apMat) { gLog += "mat-vars-apply " + apMat->GetName() + "\n"; }
+
+	void MatUv(cRes *apMat, int aType, int aAxis, float afSpeed, float afAmp)
+	{
+		gLog += "mat-uv " + apMat->GetName() + " " + std::to_string(aType) + " " + std::to_string(aAxis) + " " + std::to_string(afSpeed) + " " + std::to_string(afAmp) + "\n";
+	}
+
+	static tString TexString(int alType)
+	{
+		tString sOut;
+		ohpl_rm_mat_texture_string(alType, [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sOut);
+		return sOut;
+	}
+
+	// pre-port cMaterialManager::LoadFromFile
+	cRes *LoadMat(const tString &asName, const tWString &asPath)
+	{
+		cXmlDocumentTiny *pDoc = new cXmlDocumentTiny("");
+		struct cGuard { cXmlDocumentTiny *p; ~cGuard() { delete p; } } guard = { pDoc };
+		if(pDoc->CreateFromFile(asPath) == false) return NULL;
+		cXmlElement *pMain = pDoc->GetFirstElement("Main");
+		if(pMain == NULL) { Error("Main child not found.\n"); return NULL; }
+		tString sType = pMain->GetAttributeString("Type");
+		if(sType == "") { Error("Type not found.\n"); return NULL; }
+		bool bDepthTest = pMain->GetAttributeBool("DepthTest", true);
+		tString sPhysicsMatName = pMain->GetAttributeString("PhysicsMaterial", "Default");
+		tString sBlendMode = pMain->GetAttributeString("BlendMode", "Add");
+		if(mbBlank)
+		{
+			cRes *pBlank = MatNew(asName, asPath, true, NULL);
+			MatSet(pBlank, 2, 0, 0, sPhysicsMatName);
+			return pBlank;
+		}
+		cMT *pMatType = static_cast<cMT*>(MatType(sType));
+		if(pMatType == NULL) { Error("Invalid material type '%s'!\n", sType.c_str()); return NULL; }
+		cRes *pMat = MatNew(asName, asPath, false, pMatType);
+		MatSet(pMat, 0, bDepthTest, 0, "");
+		MatSet(pMat, 1, pMain->GetAttributeBool("ForceFullScaleTextures", false), 0, "");
+		MatSet(pMat, 2, 0, 0, sPhysicsMatName);
+		cVector2f vSubDivs = pMain->GetAttributeVector2f("UVSubDivs", 1);
+		MatSet(pMat, 3, (int)vSubDivs.x, (int)vSubDivs.y, "");
+		if(pMatType->trans)
+		{
+			bool bWarn = false;
+			int lMode = ohpl_rm_mat_blend_mode(RM_STR(sBlendMode), &bWarn);
+			if(bWarn) Warning("Material BlendMode '%s' does not exist!\n", sBlendMode.c_str());
+			MatSet(pMat, 4, lMode, 0, "");
+		}
+		cXmlElement *pTexRoot = pDoc->GetFirstElement("TextureUnits");
+		if(pTexRoot == NULL) { Error("TextureUnits child not found.\n"); return NULL; }
+		for(size_t i = 0; i < pMatType->used.size(); ++i)
+		{
+			int lUsed = pMatType->used[i];
+			tString sTextureType = TexString(lUsed);
+			cXmlElement *pTexChild = pTexRoot->GetFirstElement(sTextureType.c_str());
+			if(pTexChild == NULL) pTexChild = pTexRoot->GetFirstElement((sTextureType + "Side").c_str());
+			if(pTexChild == NULL) continue;
+			int type = ohpl_rm_mat_texture_type(RM_STR(pTexChild->GetAttributeString("Type", "")));
+			tString sFile = pTexChild->GetAttributeString("File", "");
+			bool bMipMaps = pTexChild->GetAttributeBool("MipMaps", true);
+			int wrap = ohpl_rm_mat_wrap(RM_STR(pTexChild->GetAttributeString("Wrap", "")));
+			int animMode = ohpl_rm_mat_anim_mode(RM_STR(pTexChild->GetAttributeString("AnimMode", "None")));
+			float fFrameTime = pTexChild->GetAttributeFloat("AnimFrameTime", 1.0f);
+			if(sFile == "") continue;
+			{
+				tString sNewFile;
+				ohpl_rm_mat_texture_file(RM_STR(sFile), reinterpret_cast<const uint32_t*>(asPath.data()), asPath.size(),
+					[](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sNewFile);
+				sFile = sNewFile;
+			}
+			int lKind = ohpl_rm_mat_create_kind(animMode, type);
+			if(lKind == 5) lKind = -1;
+			cRes *pTex = MatTexture(sFile, bMipMaps, type, lKind, lUsed);
+			if(pTex == NULL)
+			{
+				if(lUsed == 5) continue;
+				delete pMat;
+				return NULL;
+			}
+			MatTexSetup(pTex, pMat, lUsed, animMode, wrap, fFrameTime);
+		}
+		cXmlElement *pUvAnimRoot = pDoc->GetFirstElement("UvAnimations");
+		if(pUvAnimRoot)
+		{
+			cXmlNodeListIterator it = pUvAnimRoot->GetChildIterator();
+			while(it.HasNext())
+			{
+				cXmlElement *pAnimElem = it.Next()->ToElement();
+				tString sT = pAnimElem->GetAttributeString("Type");
+				bool bErr = false;
+				int lType = ohpl_rm_mat_uv_anim_type(reinterpret_cast<const uint8_t*>(sT.c_str()), sT.size(), &bErr);
+				if(bErr) Error("Invalid uv animation type %s\n", sT.c_str());
+				tString sA = pAnimElem->GetAttributeString("Axis");
+				bool bErr2 = false;
+				int lAxis = ohpl_rm_mat_anim_axis(reinterpret_cast<const uint8_t*>(sA.c_str()), sA.size(), &bErr2);
+				if(bErr2) Error("Invalid animation axis %s\n", sA.c_str());
+				MatUv(pMat, lType, lAxis, pAnimElem->GetAttributeFloat("Speed", 0), pAnimElem->GetAttributeFloat("Amplitude", 0));
+			}
+		}
+		cXmlElement *pUserVarsRoot = pDoc->GetFirstElement("SpecificVariables");
+		MatVar(true, "", "");
+		if(pUserVarsRoot)
+		{
+			std::map<tString, tString> mapVars;
+			cXmlNodeListIterator it = pUserVarsRoot->GetChildIterator();
+			while(it.HasNext())
+			{
+				cXmlElement *pVarElem = it.Next()->ToElement();
+				mapVars.insert(std::make_pair(pVarElem->GetAttributeString("Name"), pVarElem->GetAttributeString("Value")));
+			}
+			for(auto &kv : mapVars) MatVar(false, kv.first, kv.second);
+		}
+		MatVarsApply(pMatType, pMat);
+		gLog += "mat-compile " + pMat->GetName() + "\n";
+		return pMat;
 	}
 
 	// ---------------------------------------------------------------- Destroy / Update
@@ -490,7 +693,7 @@ public:
 				if(pRes) AddResource(pRes);
 				break;
 			case 4:
-				pRes = Make("mat", asNewName, sPath, 0);
+				pRes = LoadMat(asNewName, sPath);
 				if(pRes == NULL)
 				{
 					Error("Couldn't load material '%s'\n", asNewName.c_str());
@@ -800,6 +1003,12 @@ public:
 		return pTexture;
 	}
 
+	void SetBlank(bool abX)
+	{
+		mbBlank = abX;
+		if(mpRs) ohpl_h3f_material_blank(mpRs, &mOps, abX);
+	}
+
 	int MemUsage() { return mpRs ? ohpl_h3f_mem_usage(mpRs, &mOps) : mlMem; }
 
 	// image
@@ -1052,6 +1261,7 @@ public:
 	int mlFrameHandle, mlImg = 0;
 	cVector2l mvFrameSize;
 	bool mbHasResolver;
+	bool mbBlank = false;
 	std::set<cRes*> msetAnim;
 	std::list<cRes*> mlstStreams;
 	std::map<tString, cRes*> mCustom;
@@ -1071,8 +1281,10 @@ int main(int argc, char **argv)
 	cFileSearcher searcher;
 	searcher.AddDirectory(cString::To16Char(root), "*.*", true);
 	iResourceBase::SetLogCreateAndDelete(true);
+	const char *sExtra = getenv("FLOW_EXTRA_DIR");
+	if(sExtra) searcher.AddDirectory(cString::To16Char(sExtra), "*.*", true);
 
-	std::vector<std::string> names, snames;
+	std::vector<std::string> names, snames, mnames;
 	{
 		std::vector<std::string> rels;
 		std::error_code ec;
@@ -1098,6 +1310,12 @@ int main(int argc, char **argv)
 			std::string up = base;
 			for(char &c : up) c = toupper((unsigned char)c);
 			names.push_back(up);
+		}
+		if(sExtra)
+		{
+			for(fs::directory_iterator it(sExtra), end; it != end; ++it) mnames.push_back(it->path().filename().string());
+			std::sort(mnames.begin(), mnames.end());
+			for(const std::string &sM : mnames) for(int r = 0; r < 6; ++r) names.push_back(sM);
 		}
 		names.push_back("does_not_exist.png");
 		names.push_back("anim01.png");
@@ -1139,8 +1357,12 @@ int main(int argc, char **argv)
 					if(Rnd(4) == 0) { m.Preload(n); line += "preload " + n; }
 					else line += "create " + n + " -> " + m.Id(m.Simple(3, n, 0, 0, 0));
 					break;
-				case fMat: line += "create " + n + " -> " + m.Id(m.Simple(4, n, 0, 0, 0)); break;
-				case fSound: line += "create " + n + " -> " + m.Id(m.Sound(n, Rnd(2), Rnd(2))); break;
+				case fMat:
+					if(Rnd(12) == 0) { bool bB = Rnd(2); m.SetBlank(bB); line += "blank " + std::to_string(bB) + " "; }
+					if(!mnames.empty() && Rnd(2)) n = mnames[Rnd(mnames.size())];
+					line += "create " + n + " -> " + m.Id(m.Simple(4, n, 0, 0, 0));
+					break;
+				case fSound: { bool bStream = Rnd(2); bool bLoop = Rnd(2); line += "create " + n + " -> " + m.Id(m.Sound(n, bStream, bLoop)); break; }
 				case fVideo: line += "create " + n + " -> " + m.Id(m.Video(n)); break;
 				case fPs:
 				{
@@ -1162,7 +1384,7 @@ int main(int argc, char **argv)
 				{
 					uint64_t v = Rnd(8);
 					if(v == 0) { int *pBmp = new int(lImgBmpSeed += 37); line += "frombmp -> " + m.Id(m.ImageFromBitmap(pBmp, Rnd(3) ? -1 : (int)Rnd(4))); delete pBmp; }
-					else if(v == 1) line += "createframe " + std::to_string(m.CreateFrame(64 + (int)Rnd(300), 64 + (int)Rnd(300)));
+					else if(v == 1) { int w = 64 + (int)Rnd(300); int h = 64 + (int)Rnd(300); line += "createframe " + std::to_string(m.CreateFrame(w, h)); }
 					else if(v == 2) { int h = (int)Rnd(5); m.SetLocked(h, Rnd(2)); line += "lock " + std::to_string(h); }
 					else if(v == 3) line += "flush " + std::to_string(m.FlushAll());
 					else line += "create " + n + " -> " + m.Id(m.ImageCreate(n, Rnd(4) ? -1 : (int)Rnd(4)));
@@ -1172,7 +1394,8 @@ int main(int argc, char **argv)
 				{
 					bool bVars = Rnd(2);
 					if(!snames.empty() && Rnd(4)) n = snames[Rnd(snames.size())];
-					line += std::string(bVars ? "vars " : "plain ") + n + " -> " + m.Id(m.Shader(n, (int)Rnd(2), bVars, Rnd(3) != 0));
+					int lType = (int)Rnd(2); bool bTranspile = Rnd(3) != 0;
+					line += std::string(bVars ? "vars " : "plain ") + n + " -> " + m.Id(m.Shader(n, lType, bVars, bTranspile));
 					break;
 				}
 				default: break;

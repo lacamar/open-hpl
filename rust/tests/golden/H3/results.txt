@@ -1,12 +1,12 @@
 soma mgr ops=6000 lines=6001 cpp-vs-rust diff lines=0 digest=486309da8bb056a0
-soma flow ops=20000 lines=45789 cpp-vs-rust diff lines=0 digest=df7121bd37a112a0
+soma flow ops=20000 lines=49991 cpp-vs-rust diff lines=0 digest=0141857f6b220a61
 soma ent files=4247 calls=282816 old-vs-new file diffs=0 full-log diff lines=0
 amnesia mgr ops=6000 lines=6001 cpp-vs-rust diff lines=0 digest=5b7036db3b225bcb
-amnesia flow ops=20000 lines=45685 cpp-vs-rust diff lines=0 digest=6323becce3f1fe43
+amnesia flow ops=20000 lines=48532 cpp-vs-rust diff lines=0 digest=c67a392891207cc7
 amnesia ent files=909 calls=56033 old-vs-new file diffs=0 full-log diff lines=0
 rebirth mgr ops=6000 lines=6001 cpp-vs-rust diff lines=0 digest=caba9851ceedc9a6
-rebirth flow ops=20000 lines=45651 cpp-vs-rust diff lines=0 digest=82db264bf591a7d7
+rebirth flow ops=20000 lines=49276 cpp-vs-rust diff lines=0 digest=b02c6ad301437c24
 rebirth ent files=3399 calls=296829 old-vs-new file diffs=0 full-log diff lines=0
 bunker mgr ops=6000 lines=6001 cpp-vs-rust diff lines=0 digest=05582c8bde9c5d4e
-bunker flow ops=20000 lines=45608 cpp-vs-rust diff lines=0 digest=dbec08f68352a179
+bunker flow ops=20000 lines=49745 cpp-vs-rust diff lines=0 digest=cf981bcec27b726b
 bunker ent files=3012 calls=193616 old-vs-new file diffs=0 full-log diff lines=0

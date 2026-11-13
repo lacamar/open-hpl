@@ -23,6 +23,7 @@ pub struct Manager {
     pub streams: Vec<usize>,
     pub custom: CustomMap,
     pub frames: super::h3_image::Frames,
+    pub mat_blank: bool,
 }
 
 impl Manager {

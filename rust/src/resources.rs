@@ -6,9 +6,12 @@ pub mod ffi;
 #[cfg(test)]
 mod golden_tests;
 pub mod h3_ffi;
+#[cfg(test)]
+mod h3_flow_golden;
 pub mod h3_flows;
 pub mod h3_gpu;
 pub mod h3_image;
+pub mod h3_material;
 pub mod h3_ops;
 #[cfg(test)]
 mod h3_tests;

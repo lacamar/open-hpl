@@ -3,3 +3,4 @@ fs.txt: "game<TAB>files<TAB>queries<TAB>fnv64" of cFileSearcher lookups (name, p
 results.txt: differential run, pre-port C++ vs current vs OHPL_IMPL=rust (diffs per probe).
 Replay without C++: cargo test resources::golden_tests (skipped per game when the Steam data is absent; OHPL_H2_CORPUS overrides the common dir).
 Regenerate: harness/build.sh BUILD_DIR OUT; harness/compare.sh OUT (needs the HPL2 target built in BUILD_DIR).
+res.txt: "game<TAB>ops<TAB>fnv64" of harness/res_probe.cpp: cResources (resource dirs, dir files, XML documents, binary buffers, entity/area loader tables, language files, destruction log), cResourceVarsObject and the loader handlers (stub loaders) over the game data; OHPL_IMPL=cpp and rust transcripts are byte-equal. Probes run with XDG_CACHE_HOME pointed at a scratch dir (GetCacheFile creates directories).

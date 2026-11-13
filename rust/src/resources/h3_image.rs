@@ -34,13 +34,13 @@ fn handle_arg(h: i32) -> i64 {
 
 impl Flow<'_> {
     pub fn image_bitmap_frame(&mut self, w: i32, h: i32) -> *mut c_void {
-        let handle = self.m.frames.handle;
+        let handle = self.m().frames.handle;
         let mut cr = Create::new(k::IMG_BITMAP_FRAME);
         cr.i = [w, h, handle, 0];
         let f = self.ops.create(&mut cr);
-        self.m.frames.bitmap.push(f.expose_provenance());
+        self.m().frames.bitmap.push(f.expose_provenance());
         let tf = self.ops.call(c::BMPFRAME_TEX, f, 0) as usize;
-        match self.m.frames.textures.entry(handle) {
+        match self.m().frames.textures.entry(handle) {
             Entry::Occupied(_) => {
                 let shown = tf as u32 as i32;
                 self.ops.err(&[
@@ -55,7 +55,7 @@ impl Flow<'_> {
                 v.insert(tf);
             }
         }
-        self.m.frames.handle = handle.wrapping_add(1);
+        self.m().frames.handle = handle.wrapping_add(1);
         f
     }
 
@@ -79,13 +79,13 @@ impl Flow<'_> {
         handle: i32,
     ) -> *mut c_void {
         let mut img = null();
-        if self.m.frames.bitmap.is_empty() {
-            let (w, h) = self.m.frames.size;
+        if self.m().frames.bitmap.is_empty() {
+            let (w, h) = self.m().frames.size;
             self.image_bitmap_frame(w, h);
         }
         if handle < 0 {
             let mut found = false;
-            for f in self.m.frames.bitmap.clone().into_iter().map(ptr) {
+            for f in self.m().frames.bitmap.clone().into_iter().map(ptr) {
                 if self.ops.call(c::BMPFRAME_IS_FULL, f, 0) == 0
                     && self.ops.call(c::BMPFRAME_IS_LOCKED, f, 0) == 0
                 {
@@ -103,7 +103,7 @@ impl Flow<'_> {
             if !found {
                 let bw = self.ops.call(c::BMP_WIDTH, bmp, 0) as i32;
                 let bh = self.ops.call(c::BMP_HEIGHT, bmp, 0) as i32;
-                let (w, h) = resmgr::image_frame_size(self.m.frames.size, (bw, bh));
+                let (w, h) = resmgr::image_frame_size(self.m().frames.size, (bw, bh));
                 let f = self.image_bitmap_frame(w, h);
                 if !f.is_null() {
                     img = self.image_add_bitmap(f, bmp, path);
@@ -113,7 +113,7 @@ impl Flow<'_> {
                 }
             }
         } else {
-            for f in self.m.frames.bitmap.clone().into_iter().map(ptr) {
+            for f in self.m().frames.bitmap.clone().into_iter().map(ptr) {
                 if self.ops.call(c::BMPFRAME_HANDLE, f, 0) == handle_arg(handle) {
                     img = self.image_add_bitmap(f, bmp, path);
                     break;
@@ -183,22 +183,22 @@ impl Flow<'_> {
     }
 
     pub fn image_custom_frame(&mut self, tex: *mut c_void) -> *mut c_void {
-        let handle = self.m.frames.handle;
+        let handle = self.m().frames.handle;
         let mut cr = Create::new(k::IMG_CUSTOM_FRAME);
         cr.ptr = tex;
         cr.i[0] = handle;
         let f = self.ops.create(&mut cr);
-        self.m
+        self.m()
             .frames
             .textures
             .entry(handle)
             .or_insert(f.expose_provenance());
-        self.m.frames.handle = handle.wrapping_add(1);
+        self.m().frames.handle = handle.wrapping_add(1);
         f
     }
 
     pub fn image_frame_texture(&self, handle: i32) -> *mut c_void {
-        self.m
+        self.m_ref()
             .frames
             .textures
             .get(&handle)
@@ -214,7 +214,7 @@ impl Flow<'_> {
     }
 
     pub fn image_set_frame_locked(&mut self, handle: i32, locked: bool) {
-        for f in self.m.frames.bitmap.clone().into_iter().map(ptr) {
+        for f in self.m().frames.bitmap.clone().into_iter().map(ptr) {
             if self.ops.call(c::BMPFRAME_HANDLE, f, 0) == handle_arg(handle) {
                 self.ops.call(c::BMPFRAME_SET_LOCKED, f, i64::from(locked));
                 break;
@@ -224,7 +224,7 @@ impl Flow<'_> {
 
     pub fn image_flush_all(&mut self) -> i32 {
         let mut n = 0;
-        for f in self.m.frames.bitmap.clone().into_iter().map(ptr) {
+        for f in self.m().frames.bitmap.clone().into_iter().map(ptr) {
             if self.ops.call(c::BMPFRAME_FLUSH, f, 0) != 0 {
                 n += 1;
             }
@@ -233,7 +233,7 @@ impl Flow<'_> {
     }
 
     pub fn image_reorganize_all(&mut self) {
-        for f in self.m.frames.bitmap.clone().into_iter().map(ptr) {
+        for f in self.m().frames.bitmap.clone().into_iter().map(ptr) {
             self.ops.call(c::BMPFRAME_REORGANIZE, f, 0);
         }
     }
@@ -246,7 +246,7 @@ impl Flow<'_> {
             if !bmp_frame.is_null() {
                 self.ops.call(c::BMPFRAME_DEC_PIC, bmp_frame, 0);
             }
-            self.m.remove(img);
+            self.m().remove(img);
             self.ops.destroy(img);
         }
         let after = resmgr::destroy_image_frame(
@@ -257,19 +257,17 @@ impl Flow<'_> {
         if after.delete_frame {
             if after.delete_frame_bitmap {
                 let want = frame.expose_provenance() as i64;
-                let pos = self
-                    .m
-                    .frames
-                    .bitmap
+                let list = self.m_ref().frames.bitmap.clone();
+                let pos = list
                     .iter()
                     .position(|&f| self.ops.call(c::BMPFRAME_TEX, ptr(f), 0) == want);
                 if let Some(pos) = pos {
-                    let f = self.m.frames.bitmap.remove(pos);
+                    let f = self.m().frames.bitmap.remove(pos);
                     self.ops.call(c::BMPFRAME_DELETE, ptr(f), 0);
                 }
             }
             let h = self.ops.call(c::FRAME_HANDLE, frame, 0) as i32;
-            self.m.frames.textures.remove(&h);
+            self.m().frames.textures.remove(&h);
             self.ops.call(c::FRAME_DELETE, frame, 0);
         }
     }

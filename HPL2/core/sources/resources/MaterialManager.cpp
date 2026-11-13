@@ -595,12 +595,84 @@ namespace hpl {
 
 	void* cMaterialManager::H3Create(OhplH3Create &aCreate)
 	{
-		return static_cast<iResourceBase*>(LoadFromFile(H3Name(aCreate.name), H3Wide(aCreate.path)));
+		cMaterial *pMat = NULL;
+		switch(aCreate.kind)
+		{
+		case OHPL_H3_MAT_NEW:
+			return static_cast<iResourceBase*>(hplNew( cMaterial, (H3Name(aCreate.name), H3Wide(aCreate.path), mpGraphics, mpResources,
+																	aCreate.i[0] ? &gBlankMaterialType : static_cast<iMaterialType*>(aCreate.ptr)) ));
+		case OHPL_H3_MAT_TYPE:
+			return mpGraphics->GetMaterialType(H3Name(aCreate.name));
+		case OHPL_H3_MAT_SET:
+			pMat = H3Res<cMaterial>(aCreate.ptr);
+			switch(aCreate.i[0])
+			{
+			case 0: pMat->SetDepthTest(aCreate.i[1] != 0); break;
+			case 1: pMat->SetForceFullScaleTextures(aCreate.i[1] != 0); break;
+			case 2: pMat->SetPhysicsMaterial(H3Name(aCreate.name)); break;
+			case 3: pMat->SetUVSubDivisions(cVector2l(aCreate.i[1], aCreate.i[2])); break;
+			case 4: pMat->SetBlendMode((eMaterialBlendMode)aCreate.i[1]); break;
+			}
+			return NULL;
+		case OHPL_H3_MAT_TEXTURE:
+		{
+			cTextureManager *pTexMgr = mpResources->GetTextureManager();
+			tString sFile = H3Name(aCreate.name);
+			bool bMipMaps = aCreate.i[0] != 0;
+			eTextureType type = (eTextureType)aCreate.i[1];
+			iTexture *pTex = NULL;
+			pTexMgr->SetSRGB(ohpl_rm_mat_texture_is_srgb(aCreate.i[3]));
+			switch(aCreate.i[2])
+			{
+			case 0: pTex = pTexMgr->CreateAnim(sFile,bMipMaps,type,eTextureUsage_Normal,mlTextureSizeDownScaleLevel); break;
+			case 1: pTex = pTexMgr->Create1D(sFile,bMipMaps,eTextureUsage_Normal,mlTextureSizeDownScaleLevel); break;
+			case 2: pTex = pTexMgr->Create2D(sFile,bMipMaps,eTextureType_2D,eTextureUsage_Normal,mlTextureSizeDownScaleLevel); break;
+			case 3: pTex = pTexMgr->Create3D(sFile,bMipMaps,eTextureUsage_Normal,mlTextureSizeDownScaleLevel); break;
+			case 4: pTex = pTexMgr->CreateCubeMap(sFile,bMipMaps,eTextureUsage_Normal,mlTextureSizeDownScaleLevel); break;
+			}
+			pTexMgr->SetSRGB(false);
+			return static_cast<iResourceBase*>(pTex);
+		}
+		case OHPL_H3_MAT_TEX_SETUP:
+		{
+			iTexture *pTex = static_cast<iTexture*>(static_cast<iResourceBase*>(aCreate.ptr));
+			pTex->SetFrameTime(aCreate.f[0]);
+			pTex->SetAnimMode((eTextureAnimMode)aCreate.i[1]);
+			pTex->SetWrapSTR((eTextureWrap)aCreate.i[2]);
+			pTex->SetFilter(mTextureFilter);
+			pTex->SetAnisotropyDegree(mfTextureAnisotropy);
+			H3Res<cMaterial>(aCreate.ptr2)->SetTexture((eMaterialTexture)aCreate.i[0], pTex);
+			return NULL;
+		}
+		case OHPL_H3_MAT_VAR:
+			if(aCreate.i[0]) mUserVars = cResourceVarsObject();
+			else mUserVars.SetUserVariable(H3Name(aCreate.name), H3Name(aCreate.name2));
+			return NULL;
+		case OHPL_H3_MAT_VARS_APPLY:
+			static_cast<iMaterialType*>(aCreate.ptr)->LoadVariables(H3Res<cMaterial>(aCreate.ptr2), &mUserVars);
+			return NULL;
+		case OHPL_H3_MAT_ADD_UV:
+			H3Res<cMaterial>(aCreate.ptr)->AddUvAnimation((eMaterialUvAnimation)aCreate.i[0], aCreate.f[0], aCreate.f[1], (eMaterialAnimationAxis)aCreate.i[1]);
+			return NULL;
+		}
+		return NULL;
 	}
 
 	int64_t cMaterialManager::H3Call(int alWhat, void *apObj, int64_t alArg)
 	{
+		if(alWhat == OHPL_H3C_MAT_TYPE_Q)
+		{
+			iMaterialType *pType = static_cast<iMaterialType*>(apObj);
+			if(alArg == 0) return pType->IsTranslucent();
+			if(alArg == 1) return pType->GetUsedTextureNum();
+			return pType->GetUsedTexture((int)alArg - 2)->mType;
+		}
 		cMaterial *pMat = H3Res<cMaterial>(apObj);
+		if(alWhat == OHPL_H3C_MAT_COMPILE)
+		{
+			pMat->Compile();
+			return 0;
+		}
 		if(alWhat == OHPL_H3C_MAT_COMPILE_LOOKUP)
 		{
 			if(pMat->GetType()) pMat->CompileTextureLookup();
@@ -618,6 +690,25 @@ namespace hpl {
 
 	void cMaterialManager::H3Text(int alWhat, void *apObj, const OhplH3WStr &aPath, void (*apSink)(void*, const uint8_t*, size_t), void *apCtx)
 	{
+		if(alWhat == OHPL_H3C_FILE_BYTES)
+		{
+			// first byte: 0 not opened, 1 short read, 2 ok (as OhplXmlLoadFile reads it)
+			std::string sBytes(1, '\0');
+			FILE *pXmlFile = cPlatform::OpenFile(H3Wide(aPath), _W("rb"));
+			if(pXmlFile != NULL)
+			{
+				fseek(pXmlFile, 0, SEEK_END);
+				long lLength = ftell(pXmlFile);
+				fseek(pXmlFile, 0, SEEK_SET);
+				std::vector<char> vData(lLength > 0 ? lLength : 0);
+				bool bRead = lLength > 0 && fread(vData.data(), lLength, 1, pXmlFile) == 1;
+				fclose(pXmlFile);
+				sBytes[0] = (lLength <= 0 || bRead) ? 2 : 1;
+				sBytes.append(vData.begin(), vData.end());
+			}
+			apSink(apCtx, reinterpret_cast<const uint8_t*>(sBytes.data()), sBytes.size());
+			return;
+		}
 		tString sName;
 		if(apObj) sName = H3Res<cMaterial>(apObj)->GetPhysicsMaterial();
 		else

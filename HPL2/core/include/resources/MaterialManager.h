@@ -21,6 +21,7 @@
 #define HPL_MATERIAL_MANAGER_H
 
 #include "resources/ResourceManager.h"
+#include "resources/Resources.h"
 #include "graphics/Texture.h"
 #include "graphics/Material.h"
 
@@ -60,7 +61,7 @@ namespace hpl {
 
 		tString GetTextureString(eMaterialTexture aType);
 
-		void SetDisableRenderDataLoading(bool abX){ mbDisableRenderDataLoading = abX;}
+		void SetDisableRenderDataLoading(bool abX){ mbDisableRenderDataLoading = abX; if(mpRs) ohpl_h3f_material_blank(mpRs, &mOps, abX); }
 
 		// Useful stuff if public
 		eTextureType GetType(const tString& asType);
@@ -90,6 +91,7 @@ namespace hpl {
 		cResources* mpResources;
 
 		bool mbDisableRenderDataLoading;
+		cResourceVarsObject mUserVars;
 
 		int mlIdCounter;
 	};

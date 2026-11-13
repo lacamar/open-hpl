@@ -98,6 +98,14 @@ pub mod k {
     pub const SHADER_STRING: i32 = 23;
     pub const SHADER_PARSE: i32 = 24;
     pub const SHADER_TRANSPILE: i32 = 25;
+    pub const MAT_NEW: i32 = 26;
+    pub const MAT_TYPE: i32 = 27;
+    pub const MAT_SET: i32 = 28;
+    pub const MAT_TEXTURE: i32 = 29;
+    pub const MAT_TEX_SETUP: i32 = 30;
+    pub const MAT_VAR: i32 = 31;
+    pub const MAT_VARS_APPLY: i32 = 32;
+    pub const MAT_ADD_UV: i32 = 33;
 }
 
 /// Small host calls (`Ops::call`).
@@ -135,6 +143,9 @@ pub mod c {
     pub const MAT_COMPILE_LOOKUP: i32 = 32;
     pub const MAT_SET_FILTER: i32 = 33;
     pub const MAT_SET_ANISO: i32 = 34;
+    pub const FILE_BYTES: i32 = 35;
+    pub const MAT_TYPE_Q: i32 = 36;
+    pub const MAT_COMPILE: i32 = 37;
 }
 
 #[repr(C)]
@@ -286,8 +297,18 @@ unsafe extern "C" {
     fn time(t: *mut i64) -> i64;
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Test hook: a fixed value for `time(NULL)`.
+    pub static TEST_TIME: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
+}
+
 /// `time(NULL)`.
 pub fn unix_time() -> u64 {
+    #[cfg(test)]
+    if let Some(t) = TEST_TIME.with(std::cell::Cell::get) {
+        return t;
+    }
     // SAFETY: libc `time` accepts a null pointer.
     u64::try_from(unsafe { time(std::ptr::null_mut()) }).unwrap_or(0)
 }
@@ -318,7 +339,9 @@ pub fn null() -> *mut c_void {
 
 /// One manager call: the manager state plus the host, with the `iResourceManager` protected API.
 pub struct Flow<'a> {
-    pub m: &'a mut Manager,
+    /// Raw so no `&mut Manager` is held across a host call that may re-enter this manager.
+    m: *mut Manager,
+    _manager: std::marker::PhantomData<&'a mut Manager>,
     pub ops: &'a Ops,
     /// Initial equal-count a lookup reports (the caller's pointee in `FindLoadedResource`).
     pub seed: i32,
@@ -326,20 +349,47 @@ pub struct Flow<'a> {
 
 impl<'a> Flow<'a> {
     pub fn new(m: &'a mut Manager, ops: &'a Ops) -> Self {
-        Self { m, ops, seed: 0 }
+        Self {
+            m: std::ptr::from_mut(m),
+            _manager: std::marker::PhantomData,
+            ops,
+            seed: 0,
+        }
+    }
+
+    /// # Safety
+    /// `m` is a live manager for `'a`; other `Flow`s on it may run re-entrantly from host calls.
+    pub unsafe fn from_raw(m: *mut Manager, ops: &'a Ops) -> Self {
+        Self {
+            m,
+            _manager: std::marker::PhantomData,
+            ops,
+            seed: 0,
+        }
+    }
+
+    /// Short-lived access; never keep the result across an `ops` call.
+    pub fn m(&mut self) -> &mut Manager {
+        // SAFETY: `new`/`from_raw` contract; callers use the result within one statement.
+        unsafe { &mut *self.m }
+    }
+
+    pub fn m_ref(&self) -> &Manager {
+        // SAFETY: as `m`.
+        unsafe { &*self.m }
     }
 
     pub fn env(&self) -> impl Env + '_ {
         FlowEnv {
             ops: self.ops,
-            m: self.m,
+            m: self.m_ref(),
             seed: self.seed,
         }
     }
 
     pub fn begin(&mut self, name: &[u8]) {
-        self.m.time_start = self.ops.now();
-        manager::begin_load(name, self.m.time_start);
+        self.m().time_start = self.ops.now();
+        manager::begin_load(name, self.m().time_start);
     }
 
     pub fn end(&mut self) {
@@ -358,10 +408,10 @@ impl<'a> Flow<'a> {
         let info = self.ops.info(res);
         if to_set {
             // SAFETY: the meta lives in the resource until `remove`.
-            unsafe { self.m.add(res, &info.path, info.meta) };
+            unsafe { self.m().add(res, &info.path, info.meta) };
         }
         if log && LOG_CREATE_AND_DELETE.load(Ordering::Relaxed) {
-            let elapsed = self.ops.now().wrapping_sub(self.m.time_start);
+            let elapsed = self.ops.now().wrapping_sub(self.m().time_start);
             // `%d` of an unsigned long prints the low 32 bits as an int.
             let shown = elapsed as u32 as i32;
             let tabs = self.tabs();
@@ -408,7 +458,7 @@ impl<'a> Flow<'a> {
 
     pub fn destroy_all(&mut self) {
         loop {
-            let r = self.m.first();
+            let r = self.m().first();
             if r.is_null() {
                 break;
             }
@@ -421,9 +471,9 @@ impl<'a> Flow<'a> {
     }
 
     pub fn destroy_unused(&mut self, keep: i64) {
-        for r in self.m.eviction_tail(keep) {
+        for r in self.m().eviction_tail(keep) {
             if self.users(r) == 0 {
-                self.m.remove(r);
+                self.m().remove(r);
                 self.ops.destroy(r);
             }
         }
@@ -432,7 +482,7 @@ impl<'a> Flow<'a> {
     /// `if(destroy_standard) { RemoveResource; hplDelete }`.
     pub fn destroy_standard(&mut self, res: *mut c_void) {
         if self.dec_user_is_free(res) {
-            self.m.remove(res);
+            self.m().remove(res);
             self.ops.destroy(res);
         }
     }
