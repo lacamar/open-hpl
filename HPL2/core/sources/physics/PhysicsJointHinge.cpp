@@ -28,12 +28,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iPhysicsJointHinge::iPhysicsJointHinge(const tString &asName,
 		iPhysicsBody *apParentBody, iPhysicsBody *apChildBody,
 		iPhysicsWorld *apWorld,const cVector3f &avPivotPoint, const cVector3f &avPinDir)
@@ -50,20 +44,12 @@ namespace hpl {
 										&m_mtxLocalPinPivot0, &m_mtxLocalPinPivot1, &mpNewtonJoint);
 	}
 
-	//-----------------------------------------------------------------------
-
 	iPhysicsJointHinge::~iPhysicsJointHinge()
 	{
 
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsJointHinge::SetMaxAngle(float afAngle)
 	{
@@ -83,8 +69,6 @@ namespace hpl {
 	{
 		return ohpl_ntj_min(mhRust);
 	}
-
-	//-----------------------------------------------------------------------
 
 	cVector3f iPhysicsJointHinge::GetVelocity()
 	{
@@ -106,14 +90,10 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
 	float iPhysicsJointHinge::GetForceSize()
 	{
 		return ohpl_ntj_hinge_force_size(mhRust);
 	}
-
-	//-----------------------------------------------------------------------
 
 	float iPhysicsJointHinge::GetDistance()
 	{
@@ -137,9 +117,6 @@ namespace hpl {
 		return fAngle;
 	}
 
-
-	//-----------------------------------------------------------------------
-
 	void iPhysicsJointHinge::ResetPosition()
 	{
 		cMatrixf mtxParent = mpParentBody ? mpParentBody->GetLocalMatrix() : cMatrixf::Identity;
@@ -147,7 +124,5 @@ namespace hpl {
 		mpChildBody->SetLinearVelocity(0);
 		mpChildBody->SetAngularVelocity(0);
 	}
-
-	//-----------------------------------------------------------------------
 
 }

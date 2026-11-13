@@ -85,17 +85,13 @@ namespace hpl {
 	typedef cSTLIterator<iPhysicsBody*, tPhysicsBodyList, tPhysicsBodyListIt> cPhysicsBodyIterator;
 	typedef cSTLIterator<iPhysicsJoint*, tPhysicsJointList, tPhysicsJointListIt> cPhysicsJointIterator;
 
-	//----------------------------------------------------
-
 	class iPhysicsWorld
 	{
 	public:
 		iPhysicsWorld();
 		virtual ~iPhysicsWorld();
 
-		//########################################################################################
 		//! \name General
-		//########################################################################################
 		//! @{
 
 		void Update(float afTimeStep);
@@ -119,9 +115,7 @@ namespace hpl {
 
 		//! @}
 
-		//########################################################################################
 		//! \name Shapes
-		//########################################################################################
 		//! @{
 
 		iCollideShape* CreateNullShape();
@@ -147,9 +141,7 @@ namespace hpl {
 
 		//! @}
 
-		//########################################################################################
 		//! \name Joints
-		//########################################################################################
 		//! @{
 
 		iPhysicsJointBall* CreateJointBall(const tString &asName,
@@ -171,9 +163,7 @@ namespace hpl {
 
 		//! @}
 
-		//########################################################################################
 		//! \name Materials
-		//########################################################################################
 		//! @{
 
 		iPhysicsMaterial* CreateMaterial(const tString &asName);
@@ -182,15 +172,13 @@ namespace hpl {
 
 		//! @}
 
-		//########################################################################################
 		//! \name Bodies
-		//########################################################################################
 		//! @{
 
 		iPhysicsBody* CreateBody(const tString &asName,iCollideShape *apShape);
 		void DestroyBody(iPhysicsBody* apBody);
 		iPhysicsBody *GetBody(const tString &asName);
-		cPhysicsBodyIterator GetBodyIterator();
+		cPhysicsBodyIterator GetBodyIterator() { return cPhysicsBodyIterator(&BodyList()); }
 
 		iCharacterBody *CreateCharacterBody(const tString &asName, const cVector3f &avSize);
 		void DestroyCharacterBody(iCharacterBody* apBody);
@@ -202,12 +190,9 @@ namespace hpl {
 		void AddBodyToUpdateList(iPhysicsBody *apBody);
 		void RemoveBodyFromUpdateList(iPhysicsBody *apBody, bool abDestroyingBody);
 
-
 		//! @}
 
-		//########################################################################################
 		//! \name Misc
-		//########################################################################################
 		//! @{
 
 		iPhysicsRope* CreateRope(const tString &asName, const cVector3f &avStartPos, const cVector3f &avEndPos);
@@ -215,12 +200,9 @@ namespace hpl {
 		iPhysicsRope* GetRopeFromUniqueID(int alID);
 		void DestroyRope(iPhysicsRope* apRope);
 
-
 		//! @}
 
-		//########################################################################################
 		//! \name Tools
-		//########################################################################################
 		//! @{
 
 		void SetLogDebug(bool abX){ mbLogDebug = abX;}

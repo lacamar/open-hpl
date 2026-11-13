@@ -35,12 +35,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iCollideShape::iCollideShape(eCollideShapeType aType, const cVector3f &avSize,
 											cMatrixf* apOffsetMtx, NewtonWorld* apNewtonWorld,
 											iPhysicsWorld *apWorld)
@@ -59,13 +53,11 @@ namespace hpl {
 		else
 			m_mtxOffset = cMatrixf::Identity;
 
-		////////////////////////////////////////////
 		// Create Newton collision
 
 		if(aType >= eCollideShapeType_Null && aType <= eCollideShapeType_Capsule)
 			mpNewtonCollision = ohpl_nts_create(mhWorld, (int32_t)aType, &mvSize, apOffsetMtx);
 
-		////////////////////////////////////////////
 		// Calculate Bounding volume and volume.
 		if(mType == eCollideShapeType_Box)
 		{
@@ -105,8 +97,6 @@ namespace hpl {
 		mBoundingVolume.SetTransform(m_mtxOffset);
 	}
 
-	//-----------------------------------------------------------------------
-
 	iCollideShape::~iCollideShape()
 	{
 		//Release Newton Collision
@@ -116,13 +106,7 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	iCollideShape* iCollideShape::GetSubShape(int alIdx)
 	{
@@ -140,8 +124,6 @@ namespace hpl {
 			return 1;
 	}
 
-	//-----------------------------------------------------------------------
-
 	const tVector3fVec& iCollideShape::GetBuoyancyPoints(float &afRadius)
 	{
 		if(mfBuoyancyPointRadius < 0)
@@ -156,8 +138,6 @@ namespace hpl {
 		afRadius = mfBuoyancyPointRadius;
 		return mvBuoyancyPoints;
 	}
-
-	//-----------------------------------------------------------------------
 
 	cVector3f iCollideShape::GetInertia(float afMass)
 	{
@@ -215,8 +195,6 @@ namespace hpl {
 		return vInertia;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iCollideShape::CreateStaticSceneFromShapeVec(tCollideShapeVec &avShapes, tMatrixfVec *apMatrices)
 	{
 		std::vector<NewtonCollision*> vColliders;
@@ -227,10 +205,6 @@ namespace hpl {
 		}
 		mpNewtonCollision = ohpl_nts_static_scene(mhWorld, vColliders.data(), vColliders.size());
 	}
-
-
-	//-----------------------------------------------------------------------
-
 
 	void iCollideShape::CreateCompoundFromShapeVec(tCollideShapeVec &avShapes)
 	{
@@ -276,8 +250,6 @@ namespace hpl {
 
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iCollideShape::CreateFromVertices(	const unsigned int* apIndexArray, int alIndexNum,
 													const float *apVertexArray, int alVtxStride, int alVtxNum)
 	{
@@ -304,7 +276,6 @@ namespace hpl {
 
 		mpNewtonCollision = ohpl_nts_tree(mhWorld, apIndexArray, alIndexNum, apVertexArray, alVtxStride, alVtxNum);
 
-
 		//Set bounding box size
 		mBoundingVolume.AddArrayPoints(apVertexArray, alVtxNum);
 		mBoundingVolume.CreateFromPoints(alVtxStride);
@@ -318,8 +289,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iCollideShape::CreateHeightField(int alSize, const unsigned short* apElevation, float afUnitSize, float afVerticalScale)
 	{
 		mpNewtonCollision = ohpl_nts_height_field(mhWorld, alSize, apElevation, afUnitSize, afVerticalScale);
@@ -328,16 +297,12 @@ namespace hpl {
 									   cVector3f((alSize - 1) * afUnitSize, *std::max_element(apElevation, pEnd) * afVerticalScale, (alSize - 1) * afUnitSize));
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iCollideShape::SaveToSerializedData(cBinaryBuffer* apBinBuffer)
 	{
 		apBinBuffer->AddVector3f(mBoundingVolume.GetLocalMin());
 		apBinBuffer->AddVector3f(mBoundingVolume.GetLocalMax());
 		ohpl_nts_serialize(mhWorld, mpNewtonCollision, (size_t)apBinBuffer);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iCollideShape::CreateFromSerializedData(cBinaryBuffer* apBinBuffer)
 	{
@@ -350,12 +315,6 @@ namespace hpl {
 		mBoundingVolume.SetLocalMinMax(vMin, vMax);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 }

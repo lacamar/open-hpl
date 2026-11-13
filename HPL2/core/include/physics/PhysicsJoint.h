@@ -45,10 +45,7 @@ namespace hpl {
 	typedef std::map<tString, iPhysicsController*> tPhysicsControllerMap;
 	typedef tPhysicsControllerMap::iterator tPhysicsControllerMapIt;
 
-
 	typedef cSTLMapIterator<iPhysicsController*, tPhysicsControllerMap, tPhysicsControllerMapIt> cPhysicsControllerIterator;
-
-	//-----------------------------------
 
 	enum ePhysicsJointType
 	{
@@ -59,17 +56,12 @@ namespace hpl {
 		ePhysicsJointType_LastEnum
 	};
 
-	//-----------------------------------
-
 	enum ePhysicsJointSpeed
 	{
 		ePhysicsJointSpeed_Linear,
 		ePhysicsJointSpeed_Angular,
 		ePhysicsJointSpeed_LastEnum
 	};
-
-	//-----------------------------------
-
 
 	class iPhysicsBody;
 	class iPhysicsWorld;
@@ -105,8 +97,6 @@ namespace hpl {
 		float mfMaxSpeed;
 	};
 
-	//-----------------------------------
-
 	class iPhysicsJointCallback
 	{
 	public:
@@ -118,8 +108,6 @@ namespace hpl {
 		//Ugly trick to support joint script callback.
 		virtual bool IsScript(){ return false;}
 	};
-
-	//-----------------------------------
 
 	class iPhysicsJoint
 	{
@@ -208,7 +196,7 @@ namespace hpl {
 		bool GetAllowPositionReset(){ return mbAllowPositionReset;}
 		virtual void ResetPosition(){}
 
-		void Break();
+		void Break() { mbBroken = true; mbBreakable = true; }
 
 		bool IsBroken(){ return mbBroken;}
 
@@ -238,7 +226,6 @@ namespace hpl {
 		iPhysicsBody *&mpChildBody = mS.child;
 		iPhysicsWorld *&mpWorld = mS.world;
 
-
 		cVector3f &mvPinDir = mS.pinDir;
 		cVector3f &mvPivotPoint = mS.pivot;
 
@@ -253,8 +240,6 @@ namespace hpl {
 
 		cJointLimitEffect mMaxLimit;
 		cJointLimitEffect mMinLimit;
-
-
 
 		tString msMoveSound;
 
@@ -293,10 +278,9 @@ namespace hpl {
 		static void CheckLimitAutoSleep(iPhysicsJoint *apJoint, const float afMin, const float afMax,
 										const float afDist);
 
-
 		void OnMaxLimit();
 		void OnMinLimit();
-		void OnNoLimit();
+		void OnNoLimit() { mbHasCollided = false; }
 
 		cMatrixf GetMatrixFromPinAndPivot(const cVector3f& avPinDir,const cVector3f& avPivot);
 		void CalculateGlobalMatrix (const cMatrixf& a_mtxLocalMatrix0, const cMatrixf& a_mtxLocalMatrix1, cMatrixf& a_mtxMatrix0, cMatrixf& a_mtxMatrix1);
@@ -315,7 +299,6 @@ namespace hpl {
 		uint64_t mhRustWorld = 0;
 		NewtonBody* mpNewtonParentBody;
 		NewtonBody* mpNewtonChildBody;
-
 
 	};
 };

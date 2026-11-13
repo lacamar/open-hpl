@@ -35,31 +35,13 @@ namespace hpl {
 
 	bool iPhysicsBody::mbUseCallback = true;
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
 	void iPhysicsBody::DeleteLowLevel()
 	{
 		ohpl_ntb_destroy(mhRust);
 		hplDelete(mpCallback);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// CALLBACK METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
     void cPhysicsBodyNewtonCallback::OnTransformUpdate(iEntity3D * apEntity)
 	{
@@ -68,13 +50,7 @@ namespace hpl {
 		ohpl_ntb_set_matrix(pBody->mhRust, &apEntity->GetLocalMatrix());
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsBody::SetMaterial(iPhysicsMaterial* apMaterial)
 	{
@@ -82,8 +58,6 @@ namespace hpl {
 		if(apMaterial == NULL) return;
 		ohpl_ntb_set_material(mhRust, static_cast<iPhysicsMaterial*>(mpMaterial)->GetId());
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsBody::SetLinearVelocity(const cVector3f &avVel)
 	{
@@ -96,8 +70,6 @@ namespace hpl {
 		return vVel;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsBody::SetAngularVelocity(const cVector3f &avVel)
 	{
 		ohpl_ntb_set_omega(mhRust, &avVel);
@@ -109,8 +81,6 @@ namespace hpl {
 		return vVel;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsBody::SetLinearDamping(float afDamping)
 	{
 		ohpl_ntb_set_linear_damping(mhRust, afDamping);
@@ -120,8 +90,6 @@ namespace hpl {
 		return ohpl_ntb_linear_damping(mhRust);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsBody::SetAngularDamping(float afDamping)
 	{
 		ohpl_ntb_set_angular_damping(mhRust, afDamping);
@@ -130,8 +98,6 @@ namespace hpl {
 	{
 		return ohpl_ntb_angular_damping(mhRust);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsBody::SetMaxLinearSpeed(float afSpeed)
 	{
@@ -143,8 +109,6 @@ namespace hpl {
 		return ohpl_ntb_max_linear(mhRust);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsBody::SetMaxAngularSpeed(float afDamping)
 	{
 		mfMaxAngularSpeed = afDamping;
@@ -155,16 +119,12 @@ namespace hpl {
 		return ohpl_ntb_max_angular(mhRust);
 	}
 
-	//-----------------------------------------------------------------------
-
 	cVector3f iPhysicsBody::GetInertiaVector()
 	{
 		cVector3f vInertia;
 		ohpl_ntb_inertia(mhRust, &vInertia);
 		return vInertia;
 	}
-
-	//-----------------------------------------------------------------------
 
 	cMatrixf iPhysicsBody::GetInertiaMatrix()
 	{
@@ -177,8 +137,6 @@ namespace hpl {
 						0,	 0,	  0,	1);
 		return cMath::MatrixMul(cMath::MatrixMul(mtxRot,mtxI), mtxTransRot);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void  iPhysicsBody::SetMass(float afMass)
 	{
@@ -202,8 +160,6 @@ namespace hpl {
 		return vCentre;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsBody::AddForce(const cVector3f &avForce)
 	{
 		ohpl_ntb_add_force(mhRust, &avForce);
@@ -216,15 +172,11 @@ namespace hpl {
 		Enable();
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsBody::AddTorque(const cVector3f &avTorque)
 	{
 		ohpl_ntb_add_torque(mhRust, &avTorque);
 		Enable();
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsBody::AddImpulse(const cVector3f &avImpulse)
 	{
@@ -234,8 +186,6 @@ namespace hpl {
 	{
 		ohpl_ntb_add_impulse_at(mhRust, &avImpulse, &avPos);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsBody::Sleep()
 	{
@@ -252,8 +202,6 @@ namespace hpl {
 		return ohpl_ntb_enabled(mhRust);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsBody::SetAutoDisable(bool abEnabled)
 	{
 		ohpl_ntb_set_auto_sleep(mhRust, abEnabled);
@@ -262,8 +210,6 @@ namespace hpl {
 	{
 		return ohpl_ntb_auto_sleep(mhRust);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsBody::SetAutoDisableLinearThreshold(float afThresold)
 	{
@@ -276,8 +222,6 @@ namespace hpl {
 		return mfAutoDisableLinearThreshold;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsBody::SetAutoDisableAngularThreshold(float afThresold)
 	{
 		mfAutoDisableAngularThreshold = afThresold;
@@ -288,8 +232,6 @@ namespace hpl {
 	{
 		return mfAutoDisableAngularThreshold;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsBody::SetAutoDisableNumSteps(int anNum)
 	{
@@ -303,8 +245,6 @@ namespace hpl {
 		return mlAutoDisableNumSteps;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsBody::SetContinuousCollision(bool abOn)
 	{
 		ohpl_ntb_set_continuous(mhRust, abOn);
@@ -314,8 +254,6 @@ namespace hpl {
 	{
 		return ohpl_ntb_continuous(mhRust);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsBody::SetGravity(bool abEnabled)
 	{
@@ -327,17 +265,10 @@ namespace hpl {
 		return ohpl_ntb_gravity(mhRust);
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	////////////////////////////////////////////
-
 	void iPhysicsBody::RenderDebugGeometry(iLowLevelGraphics *apLowLevel,const cColor &aColor)
 	{
 		mpWorld->RenderShapeDebugGeometry(mpShape,GetLocalMatrix(),apLowLevel, aColor);
 	}
-
-	//-----------------------------------------------------------------------
 
 	// HPL3 iCollideShape::CalculateBouyancyForces: lift from spheres packed in the shape, then drag
 	bool iPhysicsBody::CalcHpl3Buoyancy(const cVector3f &avGravity, float afTimeStep)
@@ -403,8 +334,5 @@ namespace hpl {
 		mvBuoyancyTorque = out.torque;
 		return true;
 	}
-
-	//-----------------------------------------------------------------------
-
 
 }

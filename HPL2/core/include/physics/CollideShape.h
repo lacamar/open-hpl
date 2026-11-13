@@ -31,14 +31,10 @@ class NewtonCollision;
 
 namespace hpl {
 
-	//-----------------------------------------------
-
 	class iPhysicsWorld;
 	class iCollideShape;
 	class cBinaryBuffer;
 	typedef std::vector<iCollideShape*> tCollideShapeVec;
-
-	//-----------------------------------------------
 
 	class iCollideShape
 	{

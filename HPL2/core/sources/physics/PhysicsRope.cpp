@@ -37,12 +37,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	size_t iPhysicsRope::HostOp(int32_t alOp, OhplH15Wa *a)
 	{
 		iPhysicsBody *pBody = reinterpret_cast<iPhysicsBody*>(a->p[0]);
@@ -78,9 +72,6 @@ namespace hpl {
 			OhplV3{avEndPos.x, avEndPos.y, avEndPos.z});
 	}
 
-
-	//-----------------------------------------------------------------------
-
 	iPhysicsRope::~iPhysicsRope()
 	{
 		for(size_t i=0;i<2;++i)
@@ -95,60 +86,22 @@ namespace hpl {
 		hplDelete(mpRayParticleCallback);
 	}
 
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsRope::SetMotorActive(bool abX)
 	{
 		ohpl_h14_rope_set_motor(HostOp, reinterpret_cast<size_t>(this), &mS, abX);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsRope::SetAutoMoveActive(bool abX)
 	{
 		ohpl_h14_rope_set_auto_move(HostOp, reinterpret_cast<size_t>(this), &mS, abX);
 	}
 
-	bool iPhysicsRope::GetAutoMoveActive()
-	{
-		return mS.autoMoveActive;
-	}
-
-	//-----------------------------------------------------------------------
-
 	void iPhysicsRope::RemoveAttachedBody(iPhysicsBody *apBody, bool abRemoveContainerFromBody)
 	{
 		ohpl_h14_rope_remove_attached(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(apBody), abRemoveContainerFromBody);
 	}
-
-	//-----------------------------------------------------------------------
-
-	void iPhysicsRope::SetAttachedStartBody(iPhysicsBody *apBody)
-	{
-		SetAttachedBody(0, GetStartParticle(), apBody);
-
-		//TODO: Need to change inverse mass of start particle, if body mass > 0?
-	}
-
-	void iPhysicsRope::SetAttachedEndBody(iPhysicsBody *apBody)
-	{
-		SetAttachedBody(1, GetEndParticle(), apBody);
-	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsRope::SetTotalLength(float afX)
 	{
@@ -161,20 +114,6 @@ namespace hpl {
 		SetSleeping(false);
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iPhysicsRope::SetMinTotalLength(float afX)
-	{
-		mS.minTotalLength = afX;
-	}
-
-	void iPhysicsRope::SetMaxTotalLength(float afX)
-	{
-		mS.maxTotalLength = afX;
-	}
-
-	//-----------------------------------------------------------------------
-
 	void iPhysicsRope::SetSegmentLength(float afX)
 	{
 		if(afX<0 || mS.segmentLength == afX) return;
@@ -185,8 +124,6 @@ namespace hpl {
 		RefreshParticleCache();
 		SetSleeping(false);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsRope::RenderDebug(iLowLevelGraphics *apLowLevel)
 	{
@@ -209,14 +146,7 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
 	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsRope::UpdateBeforeSimulate(float afTimeStep)
 	{
@@ -224,15 +154,11 @@ namespace hpl {
 		ohpl_rope_update_before(&vt, &mS, afTimeStep);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsRope::UpdateAfterSimulate(float afTimeStep)
 	{
 		OhplRopeVt vt = MakeVt();
 		ohpl_rope_update_after(&vt, &mS);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsRope::UpdateConstraints()
 	{
@@ -240,11 +166,8 @@ namespace hpl {
 		ohpl_rope_update_constraints(&vt, &mS);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsRope::UpdateMotorSound(float fVel)
 	{
-		//////////////////
 		// Update sound
 		if(mpMotorSoundEntity==NULL && fVel==0) return;
 
@@ -257,14 +180,12 @@ namespace hpl {
 			mpMotorSoundEntity = NULL;
 		}
 
-		///////////////////////
 		//Sound is playing. Check if speed is under the stop speed
 		if(mpMotorSoundEntity && cMath::Abs(fVel) < mfMotorSoundStopSpeed)
 		{
 			mpMotorSoundEntity->FadeOut(10.0f);
 			mpMotorSoundEntity = NULL;
 		}
-		///////////////////////
 		//Sound is NOT playing. See if one should be started.
 		else if(msMotorSound != "" && mpMotorSoundEntity==NULL && cMath::Abs(fVel) > mfMotorSoundStartSpeed)
 		{
@@ -279,8 +200,6 @@ namespace hpl {
 			}
 		}
 	}
-
-	//-----------------------------------------------------------------------
 
 	OhplRopeVt iPhysicsRope::MakeVt()
 	{
@@ -317,14 +236,10 @@ namespace hpl {
 		return vt;
 	}
 
-	//-----------------------------------------------------------------------
-
 	bool iPhysicsRope::CheckParticleBodyCollision(iPhysicsBody *apBody)
 	{
 		return ohpl_h14_rope_check_collision(&mS, reinterpret_cast<size_t>(apBody));
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool iPhysicsRope::CheckSpecificDataSleeping()
 	{
@@ -341,30 +256,8 @@ namespace hpl {
 		ohpl_h14_rope_set_specific_sleeping(HostOp, &mS, abSleeping);
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
 	void iPhysicsRope::BuildRopeParticles()
 	{
-		////////////////////////
 		//If not updated, clear data
 		if(mS.hasUpdated==false)
 		{
@@ -378,11 +271,9 @@ namespace hpl {
 			}
 		}
 
-		////////////////////////
 		//Set up
 		int lParticleNum = (int)mlstParticles.size() - 2;
 
-		////////////////////////
 		//Calculate number of particles needed and update vars
 		OhplH14RopePlan plan;
 		ohpl_h14_rope_plan(mS.totalLength, mS.segmentLength, &plan);
@@ -393,7 +284,6 @@ namespace hpl {
 
 		if(lWantedNum == lParticleNum) return;
 
-		////////////////////////
 		//Remove particles if needed
 		if(lWantedNum < lParticleNum)
 		{
@@ -407,7 +297,6 @@ namespace hpl {
 				hplDelete(pPart);
 			}
 		}
-		////////////////////////
 		//Add particles if needed
 		else if(lWantedNum > lParticleNum)
 		{
@@ -433,14 +322,10 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsRope::SetAttachedBody(int alIdx, cVerletParticle *apParticle, iPhysicsBody *apBody)
 	{
 		ohpl_h14_rope_set_attached(HostOp, reinterpret_cast<size_t>(this), &mS, alIdx, reinterpret_cast<size_t>(apParticle), reinterpret_cast<size_t>(apBody));
 	}
-
-	//-----------------------------------------------------------------------
 
 	cVector3f iPhysicsRope::GetStartDirection()
 	{
@@ -452,5 +337,4 @@ namespace hpl {
 		return cMath::Vector3Normalize(pP2->GetPosition() - pP1->GetPosition());
 	}
 
-	//-----------------------------------------------------------------------
 }

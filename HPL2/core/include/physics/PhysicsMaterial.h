@@ -22,8 +22,6 @@
 
 #include "math/MathTypes.h"
 
-
-
 class NewtonWorld;
 
 namespace hpl {
@@ -31,8 +29,6 @@ namespace hpl {
 	class iPhysicsWorld;
 	class iPhysicsBody;
 	class cSurfaceData;
-
-	//----------------------------------------------------
 
 	//! Enum the different combination modes
 	//! This decides how two material properties are combined when colliding.
@@ -51,8 +47,6 @@ namespace hpl {
 		ePhysicsMaterialCombMode_LastEnum
 	};
 
-	//----------------------------------------------------
-
 	class cPhysicsContactData
 	{
 	public:
@@ -70,10 +64,6 @@ namespace hpl {
 		cVector3f mvContactPosition;
 		cVector3f mvForce;
 	};
-
-
-	//----------------------------------------------------
-
 
 	class iPhysicsMaterial
 	{

@@ -24,8 +24,6 @@
 
 namespace hpl {
 
-	//-----------------------------------------
-
 	enum eCollideShapeType
 	{
 		eCollideShapeType_Null,
@@ -40,8 +38,6 @@ namespace hpl {
 		eCollideShapeType_LastEnum
 	};
 
-	//-----------------------------------------
-
 	enum ePhysicsAccuracy
 	{
 		ePhysicsAccuracy_Low,
@@ -50,8 +46,6 @@ namespace hpl {
 		ePhysicsAccuracy_LastEnum
 	};
 
-	//----------------------------------------------------
-
 	enum eVelocityAxes
 	{
 		eVelocityAxes_XZ,
@@ -59,8 +53,6 @@ namespace hpl {
 		eVelocityAxes_XYZ,
 		eVelocityAxes_LastEnum
 	};
-
-	//----------------------------------------------------
 
 	typedef tFlag tPhysicsConnectionFlag;
 
@@ -73,15 +65,10 @@ namespace hpl {
 	#define ePhysicsConnectionFlag_DependOnCharRotation		(0x00000040)
 	#define ePhysicsConnectionFlag_AllowCollision			(0x00000080)
 
-	//----------------------------------------------------
-
 	class iVerletParticleContainer;
 
 	typedef std::list<iVerletParticleContainer*> tVerletParticleContainerList;
 	typedef tVerletParticleContainerList::iterator tVerletParticleContainerListIt;
-
-
-	//----------------------------------------------------
 
 	class cPhysicsRayParams
 	{
@@ -92,8 +79,6 @@ namespace hpl {
 		cVector3f mvPoint;
 	};
 
-	//----------------------------------------------------
-
 	class iPhysicsBody;
 
 	class iPhysicsRayCallback
@@ -103,8 +88,6 @@ namespace hpl {
 		virtual bool OnIntersect(iPhysicsBody *pBody,cPhysicsRayParams *apParams)=0;
 	};
 
-	//----------------------------------------------------
-
 	class cCollideData;
 
 	class iPhysicsWorldCollisionCallback
@@ -113,8 +96,6 @@ namespace hpl {
 		virtual void OnCollision(iPhysicsBody *apBody, cCollideData *apCollideData)=0;
 	};
 
-
-	//----------------------------------------------------
 }
 
 #endif // HPL_PHYSICS_TYPES_H

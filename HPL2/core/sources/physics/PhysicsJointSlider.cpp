@@ -26,12 +26,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iPhysicsJointSlider::iPhysicsJointSlider(const tString &asName,
 		iPhysicsBody *apParentBody, iPhysicsBody *apChildBody,
 		iPhysicsWorld *apWorld,const cVector3f &avPivotPoint, const cVector3f& avPinDir)
@@ -46,20 +40,12 @@ namespace hpl {
 		mfPreviousDist =0;
 	}
 
-	//-----------------------------------------------------------------------
-
 	iPhysicsJointSlider::~iPhysicsJointSlider()
 	{
 
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsJointSlider::SetMaxDistance(float afX)
 	{
@@ -80,8 +66,6 @@ namespace hpl {
 		return ohpl_ntj_min(mhRust);
 	}
 
-	//-----------------------------------------------------------------------
-
 	cVector3f iPhysicsJointSlider::GetVelocity()
 	{
 		float fSpeed = ohpl_ntj_axis(mhRust, 1);
@@ -98,9 +82,6 @@ namespace hpl {
 		return vForce.Length();
 	}
 
-
-	//-----------------------------------------------------------------------
-
 	float iPhysicsJointSlider::GetDistance()
 	{
 		return ohpl_ntj_axis(mhRust, 0);
@@ -109,7 +90,5 @@ namespace hpl {
 	{
 		return 0;
 	}
-
-	//-----------------------------------------------------------------------
 
 }

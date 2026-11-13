@@ -149,12 +149,6 @@ namespace hpl {
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iPhysicsWorld::iPhysicsWorld()
 	{
 		mbLogDebug = false;
@@ -168,7 +162,6 @@ namespace hpl {
 			Warning("Couldn't create newton world!\n");
 		}
 
-		/////////////////////////////////
         //Set default values to properties
 		mvWorldSizeMin = cVector3f(0,0,0);
 		mvWorldSizeMax = cVector3f(0,0,0);
@@ -176,7 +169,6 @@ namespace hpl {
 		mvGravity = cVector3f(0,-9.81f,0);
 		mfMaxTimeStep = 1.0f/60.0f;
 
-		/////////////////////////////////
 		//Create default material.
 		int lDefaultMatId = 0;//NewtonMaterialGetDefaultGroupID(mpNewtonWorld);
 		iPhysicsMaterial *pMaterial = hplNew( iPhysicsMaterial, ("Default",this,lDefaultMatId) );
@@ -184,16 +176,12 @@ namespace hpl {
 		pMaterial->UpdateMaterials();
 	}
 
-	//-----------------------------------------------------------------------
-
 	iPhysicsWorld::~iPhysicsWorld()
 	{
 		DestroyAll();
 		ohpl_ntw_destroy(mhRust);
 		ohpl_h15_world_free(mRsBook);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::RegisterShape(iCollideShape *apShape){ ohpl_h15w_add(mRsBook, OhplKind_Shape, reinterpret_cast<size_t>(apShape)); }
 	void iPhysicsWorld::RegisterBody(iPhysicsBody *apBody){ ohpl_h15w_add(mRsBook, OhplKind_Body, reinterpret_cast<size_t>(apBody)); }
@@ -206,27 +194,17 @@ namespace hpl {
 		ohpl_h15w_add_material(mRsBook, asName.c_str(), asName.size(), reinterpret_cast<size_t>(apMaterial));
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::Update(float afTimeStep)
 	{
 		ohpl_h15w_update(mRsBook, afTimeStep);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::DestroyShape(iCollideShape *apShape)
 	{
 		ohpl_h15w_destroy_shape(mRsBook, reinterpret_cast<size_t>(apShape));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::DestroyBody(iPhysicsBody* apBody)
 	{
@@ -245,19 +223,10 @@ namespace hpl {
 		return mlstBodies;
 	}
 
-	cPhysicsBodyIterator iPhysicsWorld::GetBodyIterator()
-	{
-		return cPhysicsBodyIterator(&BodyList());
-	}
-
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::EnableBodiesInBV(cBoundingVolume *apBV, bool abEnabled)
 	{
 		ohpl_h15w_enable_bodies_in_bv(mRsBook, reinterpret_cast<size_t>(apBV));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::AddBodyToUpdateList(iPhysicsBody *apBody)
 	{
@@ -270,8 +239,6 @@ namespace hpl {
 	{
 		ohpl_h15w_update_remove(mRsBook, reinterpret_cast<size_t>(apBody));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::DestroyJoint(iPhysicsJoint* apJoint)
 	{
@@ -295,8 +262,6 @@ namespace hpl {
 		return cPhysicsJointIterator(&mlstJoints);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::DestroyCharacterBody(iCharacterBody* apBody)
 	{
 		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Char, reinterpret_cast<size_t>(apBody));
@@ -307,14 +272,10 @@ namespace hpl {
 		return reinterpret_cast<iPhysicsBody*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Char, asName.c_str(), asName.size()));
 	}
 
-	//-----------------------------------------------------------------------
-
 	iPhysicsMaterial* iPhysicsWorld::GetMaterialFromName(const tString &asName)
 	{
 		return reinterpret_cast<iPhysicsMaterial*>(ohpl_h15w_get_material(mRsBook, asName.c_str(), asName.size()));
 	}
-
-	//-----------------------------------------------------------------------
 
 	cPhysicsMaterialIterator iPhysicsWorld::GetMaterialIterator()
 	{
@@ -326,8 +287,6 @@ namespace hpl {
 		}
 		return cPhysicsMaterialIterator(&m_mapMaterials);
 	}
-
-	//-----------------------------------------------------------------------
 
 	iPhysicsRope* iPhysicsWorld::GetRope(const tString &asName)
 	{
@@ -344,22 +303,15 @@ namespace hpl {
 		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Rope, reinterpret_cast<size_t>(apRope));
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::DestroyAll()
 	{
 		ohpl_h15w_destroy_all(mRsBook);
 	}
 
-	//-----------------------------------------------------------------------
-
-
 	void iPhysicsWorld::DestroyController(iPhysicsController *apController)
 	{
 		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Ctrl, reinterpret_cast<size_t>(apController));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::FadeoutBodySounds(iPhysicsBody *pBody, float afFadeSpeed)
 	{
@@ -384,8 +336,6 @@ namespace hpl {
 		ohpl_h15w_fadeout_all_loop_sounds(mRsBook, afFadeSpeed);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::RenderContactPoint(iLowLevelGraphics *apLowLevel, size_t i, const cColor& aPointColor, const cColor& aLineColor)
 	{
 		apLowLevel->DrawSphere(mvContactPoints[i].mvPoint,0.2f, aPointColor);
@@ -394,16 +344,12 @@ namespace hpl {
 							aLineColor);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::RenderContactPoints(iLowLevelGraphics *apLowLevel, const cColor& aPointColor,
 											const cColor& aLineColor)
 	{
 		const cColor colors[2] = { aPointColor, aLineColor };
 		ohpl_h15w_render_contacts(mRsBook, reinterpret_cast<size_t>(apLowLevel), reinterpret_cast<size_t>(colors));
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool iPhysicsWorld::CheckShapeWorldCollision(cVector3f *apPushVector,
 							iCollideShape* apShape, const cMatrixf& a_mtxTransform,
@@ -417,7 +363,5 @@ namespace hpl {
 		const OhplH15Query query = { reinterpret_cast<size_t>(apSkipBody), (uint32_t)alCollideFlags, abCollideCharacter, abIsCharacter, abSkipStatic, (int32_t)alMinPushStrength };
 		return ohpl_h15w_shape_world_collision(mRsBook, apPushVector, reinterpret_cast<size_t>(apShape), &a_mtxTransform, &query, reinterpret_cast<size_t>(apCallback));
 	}
-
-	//-----------------------------------------------------------------------
 
 }

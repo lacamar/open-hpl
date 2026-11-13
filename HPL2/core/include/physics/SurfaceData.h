@@ -36,8 +36,6 @@ namespace hpl {
 	class iPhysicsBody;
 	class cResources;
 
-	//----------------------------------------
-
 	class cSurfaceImpactData
 	{
 	friend class cSurfaceData;
@@ -136,7 +134,6 @@ namespace hpl {
 		*/
 		cSurfaceImpactData* GetImpactDataFromSpeed(float afSpeed);
 
-
 		/**
 		* This must be added with the largest speed first.
 		**/
@@ -149,7 +146,6 @@ namespace hpl {
 		 * \return
 		 */
 		cSurfaceImpactData* GetHitDataFromSpeed(float afSpeed);
-
 
 	protected:
 		void RustParams(OhplSurfaceParams &aParams) const;

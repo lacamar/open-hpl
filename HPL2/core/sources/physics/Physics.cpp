@@ -30,12 +30,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	size_t cPhysics::HostOp(int32_t alOp, OhplH15Wa *a)
 	{
 		cPhysics *pPhysics = reinterpret_cast<cPhysics*>(a->p[0]);
@@ -70,8 +64,6 @@ namespace hpl {
 		mRs = ohpl_h15p_new(HostOp, reinterpret_cast<size_t>(this), &mS);
 	}
 
-	//-----------------------------------------------------------------------
-
 	cPhysics::~cPhysics()
 	{
 		Log("Exiting Physics Module\n");
@@ -81,21 +73,15 @@ namespace hpl {
 		Log("--------------------------------------------------------\n\n");
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cPhysics::Init(cResources *apResources)
 	{
 		mpResources = apResources;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cPhysics::Update(float afTimeStep)
 	{
 		ohpl_h15p_update_impacts(mRs, afTimeStep, mfImpactDuration);
 	}
-
-	//-----------------------------------------------------------------------
 
 	iPhysicsWorld* cPhysics::CreateWorld(bool abAddSurfaceData)
 	{
@@ -106,8 +92,6 @@ namespace hpl {
 	{
 		ohpl_h15p_destroy_world(mRs, reinterpret_cast<size_t>(apWorld));
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool cPhysics::CanPlayImpact()
 	{
@@ -123,8 +107,6 @@ namespace hpl {
 	{
 		return (int)ohpl_h15p_impact_count(mRs);
 	}
-
-	//-----------------------------------------------------------------------
 
 	cSurfaceDataIterator cPhysics::GetSurfaceDataIterator()
 	{

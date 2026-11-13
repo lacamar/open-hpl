@@ -24,12 +24,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iPhysicsJointBall::iPhysicsJointBall(const tString &asName,
 						iPhysicsBody *apParentBody, iPhysicsBody *apChildBody,
 						iPhysicsWorld *apWorld, const cVector3f &avPivotPoint, const cVector3f &avPinDir)
@@ -41,19 +35,11 @@ namespace hpl {
 		mfMaxTwistAngle = 0;
 	}
 
-	//-----------------------------------------------------------------------
-
 	iPhysicsJointBall::~iPhysicsJointBall()
 	{
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsJointBall::SetConeLimits(float afMaxConeAngle, float afMaxTwistAngle)
 	{
@@ -68,8 +54,6 @@ namespace hpl {
 		ohpl_ntj_ball_angles(mhRust, &vAngles);
 		return vAngles;
 	}
-
-	//-----------------------------------------------------------------------
 
 	cVector3f iPhysicsJointBall::GetVelocity()
 	{
@@ -88,8 +72,6 @@ namespace hpl {
 		return vForce.Length();
 	}
 
-	//-----------------------------------------------------------------------
-
 	float iPhysicsJointBall::GetDistance()
 	{
 		return 0;
@@ -98,7 +80,5 @@ namespace hpl {
 	{
 		return 0;
 	}
-
-	//-----------------------------------------------------------------------
 
 }

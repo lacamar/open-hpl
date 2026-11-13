@@ -41,8 +41,6 @@ namespace hpl {
 	class iCharacterBody;
 	class iVerletParticleContainer;
 
-	//------------------------------------------
-
 	class iPhysicsBody;
 	class iPhysicsWorld;
 	class iCollideShape;
@@ -83,8 +81,6 @@ namespace hpl {
 	typedef std::list<iPhysicsBodyCallback*> tPhysicsBodyCallbackList;
 	typedef tPhysicsBodyCallbackList::iterator tPhysicsBodyCallbackListIt;
 
-	//------------------------------------------
-
 	struct cPhysicsBody_Buoyancy
 	{
 		cPhysicsBody_Buoyancy() : mbActive(false), mfDensity(1),
@@ -103,8 +99,6 @@ namespace hpl {
 		float mfDragDensityMul = 1;
 		bool mbNoPrevVel = true;
 	};
-
-	//------------------------------------------
 
 	class cPhysicsBodyNewtonCallback : public iEntityCallback
 	{
@@ -129,9 +123,9 @@ namespace hpl {
 		void Destroy();
 
 		void SetMaterial(iPhysicsMaterial* apMaterial);
-		iPhysicsMaterial* GetMaterial();
+		iPhysicsMaterial* GetMaterial() { return mpMaterial; }
 
-		iCollideShape* GetShape();
+		iCollideShape* GetShape() { return mpShape; }
 
 		void AddJoint(iPhysicsJoint *apJoint);
 		iPhysicsJoint* GetJoint(int alIndex);
@@ -210,7 +204,6 @@ namespace hpl {
 		 */
 		void SetUseSurfaceEffects(bool abX){ mbUseSurfaceEffects = abX;}
 		bool GetUseSurfaceEffects(){ return mbUseSurfaceEffects;}
-
 
 		void SetScrapeSoundEntity(cSoundEntity *apEntity);
 		cSoundEntity* GetScrapeSoundEntity(){ return mpScrapeSoundEntity;}
@@ -351,7 +344,6 @@ namespace hpl {
 		iPhysicsMaterial *&mpMaterial = mS.material;
 
 		iCharacterBody *&mpCharacterBody = mS.charBody;
-
 
 		iPhysicsBody *&mpScrapeBody = mS.scrapeBody;
 		cSoundEntity *&mpScrapeSoundEntity = mS.scrapeSound;

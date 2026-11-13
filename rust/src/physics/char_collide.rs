@@ -17,7 +17,7 @@ pub const CC_CD_POINT: i32 = 512;
 pub const CC_CALLBACK_GRAVITY: i32 = 514;
 pub const CC_WORLD_GRAVITY_Y: i32 = 515;
 pub const CC_BODY_ADD_FORCE_AT: i32 = 516;
-pub const CC_CHAR_PUSH: i32 = 517;
+pub const CC_CHAR_STATE: i32 = 519;
 
 const FLAG_CAN_ATTACH: usize = 1;
 const FLAG_IS_CHARACTER: usize = 2;
@@ -142,14 +142,7 @@ pub unsafe fn collide_gravity(
 ///
 /// # Safety
 /// `ext` and `st` are the live embedded states of character `ch`; `cd` is the live collide data.
-pub unsafe fn collide_push(
-    op: WorldOp,
-    ch: H,
-    ext: *const CharExt,
-    st: *const CharState,
-    body: H,
-    cd: H,
-) {
+pub unsafe fn collide_push(op: WorldOp, ext: *const CharExt, st: *const CharState, body: H, cd: H) {
     // SAFETY: caller contract.
     let (Some(x), Some(s)) = (unsafe { (ext.as_ref(), st.as_ref()) }) else {
         return;
@@ -165,8 +158,35 @@ pub unsafe fn collide_push(
     }
 
     if is_char {
-        // Character-on-character push: the force add fuses differently in the C++ inlining.
-        call(op, CC_CHAR_PUSH, [ch, body, 0, 0, 0, 0]);
+        let hit = call(op, CC_CHAR_STATE, [body, 0, 0, 0, 0, 0]).p[5] as *mut CharState;
+        // SAFETY: the host returns the embedded state of the hit body's character; it is not `ch`'s own.
+        let Some(h) = (unsafe { hit.as_mut() }) else {
+            return;
+        };
+        if h.mass > x.char_max_push_mass {
+            return;
+        }
+        let hit_top = h.position.y + h.size.y / 2.0;
+        let bottom = s.position.y - (s.size.y / 2.0 - s.size.y * 0.1);
+        if hit_top < bottom {
+            return;
+        }
+        let mut dir = sub3(h.position, s.position);
+        if x.char_push_in_2d {
+            dir.y = 0.0;
+        }
+        // gcc contracts this inlined Normalize as fma(y, y, x * x) + z * z.
+        let len = (dir.y.mul_add(dir.y, dir.x * dir.x) + dir.z * dir.z).sqrt();
+        if f64::from(len) > 1e-08 {
+            let inv = 1.0f32 / len;
+            dir.x *= inv;
+            dir.y *= inv;
+            dir.z *= inv;
+        }
+        // gcc inlines AddForce here and fuses `force += dir * pushForce`.
+        h.force.x = dir.x.mul_add(x.char_push_force, h.force.x);
+        h.force.y = dir.y.mul_add(x.char_push_force, h.force.y);
+        h.force.z = dir.z.mul_add(x.char_push_force, h.force.z);
     } else {
         let num = call(op, CC_CD_NUM, [cd, 0, 0, 0, 0, 0]).p[5];
         let mut median = v3(0.0, 0.0, 0.0);

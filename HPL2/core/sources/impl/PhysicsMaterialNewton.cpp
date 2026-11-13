@@ -31,12 +31,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iPhysicsMaterial::iPhysicsMaterial(const tString &asName, iPhysicsWorld *apWorld,int alMatId)
 		: mpWorld(apWorld), msName(asName), mbPreloaded(false), mpSurfaceData(NULL)
 	{
@@ -64,17 +58,6 @@ namespace hpl {
 		//Log(" Created physics material '%s' with Newton id %d\n",asName.c_str(),mlMaterialId);
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	void iPhysicsMaterial::SetElasticity(float afElasticity)
 	{
 		mfElasticity = afElasticity;
@@ -86,8 +69,6 @@ namespace hpl {
 	{
 		return mfElasticity;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsMaterial::SetStaticFriction(float afElasticity)
 	{
@@ -101,8 +82,6 @@ namespace hpl {
 		return mfStaticFriction;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsMaterial::SetKineticFriction(float afElasticity)
 	{
 		mfKineticFriction = afElasticity;
@@ -114,8 +93,6 @@ namespace hpl {
 	{
 		return mfKineticFriction;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsMaterial::SetFrictionCombMode(ePhysicsMaterialCombMode aMode)
 	{
@@ -129,8 +106,6 @@ namespace hpl {
 		return mFrictionMode;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsMaterial::SetElasticityCombMode(ePhysicsMaterialCombMode aMode)
 	{
 		mElasticityMode = aMode;
@@ -138,20 +113,12 @@ namespace hpl {
 		UpdateMaterials();
 	}
 
-	//-----------------------------------------------------------------------
-
 	ePhysicsMaterialCombMode iPhysicsMaterial::GetElasticityCombMode() const
 	{
 		return mElasticityMode;
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsMaterial::UpdateMaterials()
 	{
@@ -169,13 +136,7 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// STATIC NEWTON CALLBACKS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsMaterial::DispatchContacts(iPhysicsBody* pContactBody1, iPhysicsBody* pContactBody2,
 												cPhysicsContactData &contactData, int lContactNum)
@@ -183,7 +144,6 @@ namespace hpl {
 		iPhysicsMaterial *pMaterial1 = pContactBody1->GetMaterial();
 		iPhysicsMaterial *pMaterial2 = pContactBody2->GetMaterial();
 
-		////////////////////////////
 		//Surface data stuff
 		//Only do the effects if both bodies uses surfaces effects!
 		if(	pMaterial1->GetSurfaceData() && pMaterial2->GetSurfaceData() &&
@@ -221,7 +181,5 @@ namespace hpl {
 		pContactBody1->OnCollide(pContactBody2,&contactData);
 		pContactBody2->OnCollide(pContactBody1,&contactData);
 	}
-
-	//-----------------------------------------------------------------------
 
 }

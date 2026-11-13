@@ -43,12 +43,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	size_t iPhysicsJoint::HostOp(int32_t alOp, OhplH15Wa *a)
 	{
 		iPhysicsJoint *pJ = reinterpret_cast<iPhysicsJoint*>(a->p[0]);
@@ -101,8 +95,6 @@ namespace hpl {
 		}
 		ohpl_h15j_drop(mS.shell, reinterpret_cast<size_t>(this));
 	}
-
-	//-----------------------------------------------------------------------
 
 void iPhysicsJoint::SetCollideBodies(bool abX)
 		{
@@ -217,13 +209,7 @@ void iPhysicsJoint::RustPositionCheck(size_t j, float afDistSqr)
 			}
 		}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	/**
 	 * This should only be used by PhysicsBody.
@@ -234,35 +220,25 @@ void iPhysicsJoint::RustPositionCheck(size_t j, float afDistSqr)
 		if(mpChildBody == apBody) mpChildBody = NULL;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsJoint::AddController(iPhysicsController *apController)
 	{
 		ohpl_h15j_add_controller(mS.shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apController));
 	}
-
-	//-----------------------------------------------------------------------
 
 	iPhysicsController* iPhysicsJoint::GetController(const tString &asName)
 	{
 		return reinterpret_cast<iPhysicsController*>(ohpl_h15j_get_controller(mS.shell, asName.c_str(), asName.size()));
 	}
 
-	//-----------------------------------------------------------------------
-
 	bool iPhysicsJoint::ChangeController(const tString &asName)
 	{
 		return ohpl_h15j_change_controller(mS.shell, asName.c_str(), asName.size());
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsJoint::SetAllControllersPaused(bool abX)
 	{
 		ohpl_h15j_set_all_paused(mS.shell, abX);
 	}
-
-	//-----------------------------------------------------------------------
 
 	int iPhysicsJoint::ControllerCount()
 	{
@@ -287,13 +263,7 @@ void iPhysicsJoint::RustPositionCheck(size_t j, float afDistSqr)
 		return cPhysicsControllerIterator(&m_mapControllers);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PROTECTED METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsJoint::OnMaxLimit()
 	{
@@ -301,26 +271,16 @@ void iPhysicsJoint::RustPositionCheck(size_t j, float afDistSqr)
 		ohpl_phys_joint_on_limit(OhplPhysHost(), reinterpret_cast<size_t>(this), true, &effect);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsJoint::OnMinLimit()
 	{
 		OhplLimitEffect effect = { OhplS(mMinLimit.msSound), mMinLimit.mfMinSpeed, mMinLimit.mfMaxSpeed };
 		ohpl_phys_joint_on_limit(OhplPhysHost(), reinterpret_cast<size_t>(this), false, &effect);
 	}
 
-	//-----------------------------------------------------------------------
-
-
-
-	//-----------------------------------------------------------------------
-
 	bool iPhysicsJoint::OnPhysicsUpdate()
 	{
 		return ohpl_h15j_update(mS.shell, reinterpret_cast<size_t>(this));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsJoint::SetSound(cSoundEntity *apSound)
 	{
@@ -331,33 +291,10 @@ void iPhysicsJoint::RustPositionCheck(size_t j, float afDistSqr)
 			mlSoundID = -1;
 	}
 
-	//-----------------------------------------------------------------------
-
-
-
-	//-----------------------------------------------------------------------
-
-	void iPhysicsJoint::OnNoLimit()
-	{
-		mbHasCollided = false;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iPhysicsJoint::Break()
-	{
-		mbBroken = true;
-		mbBreakable = true;
-	}
-
-	//-----------------------------------------------------------------------
-
 	bool iPhysicsJoint::CheckBreakage()
 	{
 		return ohpl_h15j_check_breakage(mS.shell, reinterpret_cast<size_t>(this));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsJoint::CheckLimitAutoSleep(iPhysicsJoint *apJoint,
 											const float afMin, const float afMax,
@@ -372,5 +309,4 @@ void iPhysicsJoint::RustPositionCheck(size_t j, float afDistSqr)
 		}
 	}
 
-	//-----------------------------------------------------------------------
 }

@@ -40,11 +40,7 @@ namespace hpl {
 
 	class cSoundEntity;
 
-	//------------------------------------------
-
 	typedef OhplRopeAttachment cPhysicsRopeAttachment;
-
-	//------------------------------------------
 
 	class iPhysicsRope : public iVerletParticleContainer
 	{
@@ -52,15 +48,12 @@ namespace hpl {
 		iPhysicsRope(const tString &asName, iPhysicsWorld *apWorld, const cVector3f &avStartPos, const cVector3f &avEndPos);
 		virtual ~iPhysicsRope();
 
-		/////////////////////////////
 		// General
 		void UpdateBeforeSimulate(float afTimeStep);
 		void UpdateAfterSimulate(float afTimeStep);
 
 		void RemoveAttachedBody(iPhysicsBody *apBody, bool abRemoveContainerFromBody=true);
 
-
-		/////////////////////////////
 		// Motor
 		void SetPhysicsActive(bool abX){ mS.physicsActive = abX; }
 		bool GetPhysicsActive(){ return mS.physicsActive; }
@@ -86,26 +79,23 @@ namespace hpl {
 		float GetMotorSoundStartSpeed() { return mfMotorSoundStartSpeed;}
 		float GetMotorSoundStopSpeed() { return mfMotorSoundStopSpeed;}
 
-
-		/////////////////////////////
 		// Auto Move
 		void SetAutoMoveActive(bool abX);
 		void SetAutoMoveAcc(float afX){ mS.autoMoveAcc = afX;}
 		void SetAutoMoveMaxSpeed(float afX){ mS.autoMoveMaxSpeed = afX;}
 		void SetAutoMoveSpeed(float afX){ mS.autoMoveSpeed = afX;}
 
-		bool GetAutoMoveActive();
+		bool GetAutoMoveActive() { return mS.autoMoveActive; }
 		float GetAutoMoveAcc(){ return mS.autoMoveAcc;}
 		float GetAutoMoveMaxSpeed(){ return mS.autoMoveMaxSpeed;}
 		float GetAutoMoveSpeed(){ return mS.autoMoveSpeed;}
 
-		/////////////////////////////
 		// Properties
 		cVerletParticle* GetStartParticle(){ return mlstParticles.front();}
 		cVerletParticle* GetEndParticle(){ return mlstParticles.back();}
 
-		void SetAttachedStartBody(iPhysicsBody *apBody);
-		void SetAttachedEndBody(iPhysicsBody *apBody);
+		void SetAttachedStartBody(iPhysicsBody *apBody) { SetAttachedBody(0, GetStartParticle(), apBody); }
+		void SetAttachedEndBody(iPhysicsBody *apBody) { SetAttachedBody(1, GetEndParticle(), apBody); }
 
 		iPhysicsBody* GetAttachedStartBody(){ return mS.attached[0].mpBody;}
 		iPhysicsBody* GetAttachedEndBody(){ return mS.attached[1].mpBody;}
@@ -115,8 +105,8 @@ namespace hpl {
 		void SetTotalLength(float afX);
 		float GetTotalLength(){ return mS.totalLength;}
 
-		void SetMinTotalLength(float afX);
-		void SetMaxTotalLength(float afX);
+		void SetMinTotalLength(float afX) { mS.minTotalLength = afX; }
+		void SetMaxTotalLength(float afX) { mS.maxTotalLength = afX; }
 		float GetMinTotalLength(){ return mS.minTotalLength;}
 		float GetMaxTotalLength(){ return mS.maxTotalLength;}
 
@@ -136,7 +126,6 @@ namespace hpl {
 		void SetCollideAttachments(bool abX){ mS.collideAttachments  = abX;}
 		bool GetCollideAttachments(){ return mS.collideAttachments;}
 
-		/////////////////////////////
 		// Debug
 		void UpdateConstraints();
 
@@ -150,7 +139,6 @@ namespace hpl {
 
 		void UpdateMotor(float afTimeStep);
 
-
 		void UpdateMotorSound(float afVel);
 		OhplRopeVt MakeVt();
 
@@ -163,21 +151,13 @@ namespace hpl {
 		cPidControllerVec3 mForcePid[2];
 		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
 
-
-
 		int mlUniqueID;
-
 
 		tString msMotorSound;
 		float mfMotorSoundStartSpeed = 0.1f;
 		float mfMotorSoundStopSpeed = 0.05f;
 		cSoundEntity *mpMotorSoundEntity = NULL;
 		int mlMotorSoundEntityID = -1;
-
-
-
-
-
 
 	};
 };

@@ -30,16 +30,12 @@ struct OhplPid;
 
 namespace hpl {
 
-	//-------------------------------------------
-
 	enum ePhysicsControllerType
 	{
 		ePhysicsControllerType_Pid,
 		ePhysicsControllerType_Spring,
 		ePhysicsControllerType_LastEnum
 	};
-
-	//-------------------------------------------
 
 	enum ePhysicsControllerInput
 	{
@@ -50,16 +46,12 @@ namespace hpl {
 		ePhysicsControllerInput_LastEnum
 	};
 
-	//-------------------------------------------
-
 	enum ePhysicsControllerOutput
 	{
 		ePhysicsControllerOutput_Force,
 		ePhysicsControllerOutput_Torque,
 		ePhysicsControllerOutput_LastEnum
 	};
-
-	//-------------------------------------------
 
 	enum ePhysicsControllerAxis
 	{
@@ -69,8 +61,6 @@ namespace hpl {
 		ePhysicsControllerAxis_LastEnum
 	};
 
-	//-------------------------------------------
-
 	enum ePhysicsControllerEnd
 	{
 		ePhysicsControllerEnd_Null,
@@ -79,8 +69,6 @@ namespace hpl {
 		ePhysicsControllerEnd_OnMax,
 		ePhysicsControllerEnd_LastEnum
 	};
-
-	//-------------------------------------------
 
 	class iPhysicsWorld;
 	class iPhysicsJoint;
@@ -165,7 +153,6 @@ namespace hpl {
 		void SetLogInfo(bool abX){mbLogInfo = abX;}
 
 		void SetPaused(bool abX){mbPaused = abX;}
-
 
 	protected:
 		OhplCtrlState mS = OhplCtrlState();

@@ -24,8 +24,6 @@
 
 namespace hpl {
 
-	//-----------------------------------
-
 	class iPhysicsJointSlider : public iPhysicsJoint
 	{
 	#ifdef __GNUC__
@@ -45,7 +43,6 @@ namespace hpl {
 		* Set the minimum distance the bodies can be from each other, relative to the start dist between them
 		* This is true if pin points towards the child.
 		*/
-
 
 		void SetMaxDistance(float afX);
 		void SetMinDistance(float afX);

@@ -24,8 +24,6 @@
 
 namespace hpl {
 
-	//-----------------------------------
-
 	class iPhysicsJointScrew : public iPhysicsJoint
 	{
 	#ifdef __GNUC__
@@ -42,7 +40,6 @@ namespace hpl {
 		* In other words, distance increases as the distance between start pivot and current pivot
 		* increases in the opposite direction of the pin.
 		*/
-
 
         void SetMaxDistance(float afX);
 		void SetMinDistance(float afX);

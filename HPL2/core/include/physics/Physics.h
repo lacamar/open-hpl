@@ -33,14 +33,10 @@ namespace hpl {
 	class cSurfaceData;
 	class cResources;
 
-	//------------------------------------------------
-
 	typedef std::map<tString, cSurfaceData*> tSurfaceDataMap;
 	typedef tSurfaceDataMap::iterator tSurfaceDataMapIt;
 
 	typedef cSTLMapIterator<cSurfaceData*, tSurfaceDataMap, tSurfaceDataMapIt> cSurfaceDataIterator;
-
-	//------------------------------------------------
 
 	class cPhysics : public iUpdateable
 	{
@@ -58,7 +54,6 @@ namespace hpl {
 		cSurfaceData *CreateSurfaceData(const tString& asName);
 		cSurfaceData *GetSurfaceData(const tString& asName);
 		bool LoadSurfaceData(const tString& asFile);
-
 
 		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
 

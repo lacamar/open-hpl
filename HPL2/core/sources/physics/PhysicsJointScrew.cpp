@@ -24,12 +24,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iPhysicsJointScrew::iPhysicsJointScrew(const tString &asName,
 		iPhysicsBody *apParentBody, iPhysicsBody *apChildBody,
 		iPhysicsWorld *apWorld,const cVector3f &avPivotPoint, const cVector3f& avPinDir)
@@ -50,20 +44,12 @@ namespace hpl {
 		mvPivotPoint = avPivotPoint;
 	}
 
-	//-----------------------------------------------------------------------
-
 	iPhysicsJointScrew::~iPhysicsJointScrew()
 	{
 
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsJointScrew::SetMaxDistance(float afX)
 	{
@@ -84,8 +70,6 @@ namespace hpl {
 		return ohpl_ntj_min(mhRust);
 	}
 
-	//-----------------------------------------------------------------------
-
 	cVector3f iPhysicsJointScrew::GetVelocity()
 	{
 		float fSpeed = ohpl_ntj_axis(mhRust, 1);
@@ -101,7 +85,6 @@ namespace hpl {
 		ohpl_ntj_force(mhRust, &vForce);
 		return vForce.Length();
 	}
-	//-----------------------------------------------------------------------
 
 	float iPhysicsJointScrew::GetDistance()
 	{
@@ -111,8 +94,5 @@ namespace hpl {
 	{
 		return ohpl_ntj_axis(mhRust, 2);
 	}
-
-	//-----------------------------------------------------------------------
-
 
 }

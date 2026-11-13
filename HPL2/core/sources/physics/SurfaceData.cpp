@@ -41,12 +41,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	size_t cSurfaceData::HostOp(int32_t alOp, OhplH15Wa *a)
 	{
 		cSurfaceData *pS = reinterpret_cast<cSurfaceData*>(a->p[0]);
@@ -95,20 +89,12 @@ namespace hpl {
 		ohpl_h15s_new(HostOp, reinterpret_cast<size_t>(this), &mS);
 	}
 
-	//-----------------------------------------------------------------------
-
 	cSurfaceData::~cSurfaceData()
 	{
 		ohpl_h15s_free(mS.rs);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cSurfaceData::RustParams(OhplSurfaceParams &aParams) const
 	{
@@ -122,8 +108,6 @@ namespace hpl {
 		ohpl_phys_surface_on_impact(OhplPhysHost(), &params, afSpeed, &avPos, reinterpret_cast<size_t>(apBody));
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cSurfaceData::OnSlide(float afSpeed,const cVector3f &avPos,int alContacts, iPhysicsBody *apBody,
 								iPhysicsBody *apSlideAgainstBody)
 	{
@@ -132,8 +116,6 @@ namespace hpl {
 		ohpl_phys_surface_on_slide(OhplPhysHost(), &params, afSpeed, &avPos, alContacts,
 									reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apSlideAgainstBody));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cSurfaceData::CreateImpactEffect(	float afSpeed,const cVector3f &avPos,int alContacts,
 											cSurfaceData *apSecondSurface, iPhysicsWorld *apPhysicsWorld)
@@ -144,17 +126,12 @@ namespace hpl {
 												reinterpret_cast<size_t>(apSecondSurface), reinterpret_cast<size_t>(apPhysicsWorld));
 	}
 
-
-	//-----------------------------------------------------------------------
-
 	void cSurfaceData::UpdateRollEffect(iPhysicsBody *apBody)
 	{
 		OhplSurfaceParams params;
 		RustParams(params);
 		ohpl_phys_surface_update_roll_effect(OhplPhysHost(), &params, reinterpret_cast<size_t>(apBody));
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cSurfaceData::SetElasticity(float afElasticity)
 	{
@@ -166,8 +143,6 @@ namespace hpl {
 		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(&mS), 0);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cSurfaceData::SetStaticFriction(float afElasticity)
 	{
 		ohpl_h15s_set_f32(&mS, 1, afElasticity);
@@ -177,8 +152,6 @@ namespace hpl {
 	{
 		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(&mS), 1);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cSurfaceData::SetKineticFriction(float afElasticity)
 	{
@@ -190,8 +163,6 @@ namespace hpl {
 		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(&mS), 2);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cSurfaceData::SetPriority(int alPriority)
 	{
 		ohpl_h15s_set_i32(&mS, 0, alPriority);
@@ -201,8 +172,6 @@ namespace hpl {
 	{
 		return ohpl_h15s_get_i32(&mS, 0);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cSurfaceData::SetFrictionCombMode(ePhysicsMaterialCombMode aMode)
 	{
@@ -214,35 +183,25 @@ namespace hpl {
 		return (ePhysicsMaterialCombMode)ohpl_h15s_get_i32(&mS, 1);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cSurfaceData::SetElasticityCombMode(ePhysicsMaterialCombMode aMode)
 	{
 		ohpl_h15s_set_i32(&mS, 2, aMode);
 	}
-
-	//-----------------------------------------------------------------------
 
 	ePhysicsMaterialCombMode cSurfaceData::GetElasticityCombMode() const
 	{
 		return (ePhysicsMaterialCombMode)ohpl_h15s_get_i32(&mS, 2);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cSurfaceData::PreloadData()
 	{
 		ohpl_h15s_preload(mS.rs);
 	}
 
-	//-----------------------------------------------------------------------
-
 	iPhysicsMaterial* cSurfaceData::ToMaterial(iPhysicsWorld *apWorld)
 	{
 		return reinterpret_cast<iPhysicsMaterial*>(ohpl_h15s_to_material(mS.rs, &mS, msName.c_str(), msName.size(), reinterpret_cast<size_t>(apWorld)));
 	}
-
-	//-----------------------------------------------------------------------
 
 	cSurfaceImpactData* cSurfaceData::CreateImpactData(float afMinSpeed)
 	{
@@ -264,8 +223,6 @@ namespace hpl {
 		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_from_speed(mS.rs, false, afSpeed));
 	}
 
-	//-----------------------------------------------------------------------
-
 	cSurfaceImpactData* cSurfaceData::CreateHitData(float afMinSpeed)
 	{
 		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_create_impact(mS.rs, afMinSpeed, true));
@@ -286,14 +243,6 @@ namespace hpl {
 		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_from_speed(mS.rs, true, afSpeed));
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
 	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
 }

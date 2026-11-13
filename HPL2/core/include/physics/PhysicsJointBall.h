@@ -24,8 +24,6 @@
 
 namespace hpl {
 
-	//-----------------------------------
-
 	class iPhysicsJointBall : public iPhysicsJoint
 	{
 	#ifdef __GNUC__

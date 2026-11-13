@@ -43,30 +43,12 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::Simulate(float afTimeStep)
 	{
 		ohpl_ntw_simulate(mhRust, afTimeStep);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::SetMaxTimeStep(float afTimeStep)
 	{
@@ -78,8 +60,6 @@ namespace hpl {
 	{
 		return mfMaxTimeStep;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::SetWorldSize(const cVector3f &avMin,const cVector3f &avMax)
 	{
@@ -99,22 +79,15 @@ namespace hpl {
 		return mvWorldSizeMax;
 	}
 
-
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::SetGravity(const cVector3f& avGravity)
 	{
 		mvGravity = avGravity;
 	}
 
-	//-----------------------------------------------------------------------
-
 	cVector3f iPhysicsWorld::GetGravity()
 	{
 		return mvGravity;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::SetAccuracyLevel(ePhysicsAccuracy aAccuracy)
 	{
@@ -123,14 +96,10 @@ namespace hpl {
 		ohpl_ntw_set_accuracy(mhRust, (int32_t)aAccuracy);
 	}
 
-	//-----------------------------------------------------------------------
-
 	ePhysicsAccuracy iPhysicsWorld::GetAccuracyLevel()
 	{
 		return mAccuracy;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::SetNumberOfThreads(int alThreads)
 	{
@@ -142,8 +111,6 @@ namespace hpl {
 		return ohpl_ntw_threads(mhRust);
 	}
 
-	//-----------------------------------------------------------------------
-
 	iCollideShape* iPhysicsWorld::CreateNullShape()
 	{
 		iCollideShape *pShape = hplNew( iCollideShape, (eCollideShapeType_Null, 0, NULL,
@@ -152,8 +119,6 @@ namespace hpl {
 
 		return pShape;
 	}
-
-	//-----------------------------------------------------------------------
 
 	iCollideShape* iPhysicsWorld::CreateBoxShape(const cVector3f &avSize, cMatrixf* apOffsetMtx)
 	{
@@ -164,8 +129,6 @@ namespace hpl {
 		return pShape;
 	}
 
-	//-----------------------------------------------------------------------
-
 	iCollideShape* iPhysicsWorld::CreateSphereShape(const cVector3f &avRadii, cMatrixf* apOffsetMtx)
 	{
 		iCollideShape *pShape = hplNew( iCollideShape, (eCollideShapeType_Sphere, avRadii, apOffsetMtx,
@@ -174,8 +137,6 @@ namespace hpl {
 
 		return pShape;
 	}
-
-	//-----------------------------------------------------------------------
 
 	iCollideShape* iPhysicsWorld::CreateCylinderShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx)
 	{
@@ -188,8 +149,6 @@ namespace hpl {
 		return pShape;
 	}
 
-	//-----------------------------------------------------------------------
-
 	iCollideShape* iPhysicsWorld::CreateCapsuleShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx)
 	{
 		iCollideShape *pShape = hplNew( iCollideShape, (eCollideShapeType_Capsule,
@@ -200,8 +159,6 @@ namespace hpl {
 
 		return pShape;
 	}
-
-	//-----------------------------------------------------------------------
 
 	iCollideShape* iPhysicsWorld::CreateMeshShape(iVertexBuffer *apVtxBuffer)
 	{
@@ -216,8 +173,6 @@ namespace hpl {
 		return pShape;
 	}
 
-	//-----------------------------------------------------------------------
-
 	iCollideShape* iPhysicsWorld::CreateHeightFieldShape(int alSize, const unsigned short* apElevation, float afUnitSize, float afVerticalScale)
 	{
 		iCollideShape *pShape = hplNew( iCollideShape, (eCollideShapeType_Mesh, 0, NULL, mpNewtonWorld,this) );
@@ -226,8 +181,6 @@ namespace hpl {
 
 		return pShape;
 	}
-
-	//-----------------------------------------------------------------------
 
 	iCollideShape* iPhysicsWorld::LoadMeshShapeFromBuffer(cBinaryBuffer *apBuffer)
 	{
@@ -240,16 +193,11 @@ namespace hpl {
 		return pShape;
 	}
 
-	//-----------------------------------------------------------------------
-
-
 	void iPhysicsWorld::SaveMeshShapeToBuffer(iCollideShape* apMeshShape, cBinaryBuffer *apBuffer)
 	{
 		iCollideShape *pNewtonMeshShape = static_cast<iCollideShape*>(apMeshShape);
 		pNewtonMeshShape->SaveToSerializedData(apBuffer);
 	}
-
-	//-----------------------------------------------------------------------
 
 	iCollideShape* iPhysicsWorld::CreateCompundShape(tCollideShapeVec &avShapes)
 	{
@@ -260,8 +208,6 @@ namespace hpl {
 		return pShape;
 	}
 
-	//-----------------------------------------------------------------------
-
 	iCollideShape* iPhysicsWorld::CreateStaticSceneShape(tCollideShapeVec &avShapes, tMatrixfVec *apMatrices)
 	{
 		iCollideShape *pShape = hplNew(	iCollideShape, (eCollideShapeType_StaticScene,0, NULL, mpNewtonWorld,this) );
@@ -270,8 +216,6 @@ namespace hpl {
 		RegisterShape(pShape);
 		return pShape;
 	}
-
-	//-----------------------------------------------------------------------
 
 	iPhysicsJointBall* iPhysicsWorld::CreateJointBall(const tString &asName,
 										const cVector3f& avPivotPoint,const cVector3f& avPinDir,
@@ -313,8 +257,6 @@ namespace hpl {
 		return pJoint;
 	}
 
-	//-----------------------------------------------------------------------
-
 	iPhysicsBody* iPhysicsWorld::CreateBody(const tString &asName,iCollideShape *apShape)
 	{
 		iPhysicsBody *pBody = hplNew( iPhysicsBody, (asName,this, apShape) );
@@ -324,14 +266,10 @@ namespace hpl {
 		return pBody;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::GetBodiesInBV(cBoundingVolume *apBV, std::vector<iPhysicsBody*> *apBodyVec)
 	{
 		ohpl_ntw_bodies_in_aabb(mhRust, apBV->GetMin().v, apBV->GetMax().v, (size_t)apBodyVec);
 	}
-
-	//-----------------------------------------------------------------------
 
 	iCharacterBody* iPhysicsWorld::CreateCharacterBody(const tString &asName, const cVector3f &avSize)
 	{
@@ -341,8 +279,6 @@ namespace hpl {
 
 		return pChar;
 	}
-
-	//-----------------------------------------------------------------------
 
 	iPhysicsMaterial* iPhysicsWorld::CreateMaterial(const tString &asName)
 	{
@@ -355,8 +291,6 @@ namespace hpl {
 		return pMaterial;
 	}
 
-	//-----------------------------------------------------------------------
-
 	iPhysicsController* iPhysicsWorld::CreateController(const tString &asName)
 	{
 		iPhysicsController* pController = hplNew( iPhysicsController, (asName, this) );
@@ -365,8 +299,6 @@ namespace hpl {
 
 		return pController;
 	}
-
-	//-----------------------------------------------------------------------
 
 	iPhysicsRope* iPhysicsWorld::CreateRope(const tString &asName, const cVector3f &avStartPos, const cVector3f &avEndPos)
 	{
@@ -377,8 +309,6 @@ namespace hpl {
 		return pRope;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::CastRay(iPhysicsRayCallback *apCallback,
 								const cVector3f &avOrigin, const cVector3f& avEnd,
 								bool abCalcDist, bool abCalcNormal,bool abCalcPoint,
@@ -386,8 +316,6 @@ namespace hpl {
 	{
 		ohpl_ntw_cast_ray(mhRust, (size_t)apCallback, &avOrigin, &avEnd, abCalcDist, abCalcNormal, abCalcPoint, abUsePrefilter);
 	}
-
-	//-----------------------------------------------------------------------
 
 	float iPhysicsWorld::CastRayOnShape(iCollideShape* apShape, const cMatrixf& a_mtxTransform, const cVector3f& avOrigin, const cVector3f& avEnd,
 											cVector3f& avOutNormal, bool abLocalRayPositions)
@@ -428,16 +356,12 @@ namespace hpl {
 		return bHit;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsWorld::RenderShapeDebugGeometry(	iCollideShape *apShape, const cMatrixf& a_mtxTransform,
 														iLowLevelGraphics *apLowLevel, const cColor& aColor)
 	{
 		ohpl_ntw_debug_shape(static_cast<iCollideShape*>(apShape)->GetNewtonCollision(), &a_mtxTransform,
 							(size_t)apLowLevel, (size_t)&aColor);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsWorld::RenderDebugGeometry(iLowLevelGraphics *apLowLevel,const cColor &aColor)
 	{
@@ -450,5 +374,4 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
 }

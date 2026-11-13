@@ -28,22 +28,16 @@
 
 namespace hpl {
 
-	//------------------------------------------
-
 	class iPhysicsBody;
 	class iPhysicsWorld;
 
 	class cVerletParticle;
 	class iVerletParticleContainer;
 
-	//------------------------------------------
-
 	typedef std::list<cVerletParticle*> tVerletParticleList;
 	typedef tVerletParticleList::iterator tVerletParticleListIt;
 
 	typedef cSTLIterator<cVerletParticle*, tVerletParticleList, tVerletParticleListIt> cVerletParticleIterator;
-
-	//------------------------------------------
 
 	class cVerletParticleRayCallback : public iPhysicsRayCallback
 	{
@@ -65,8 +59,6 @@ namespace hpl {
 		cVector3f mvIntersectNormal;
 		float mfClosestDist;
 	};
-
-	//------------------------------------------
 
 	class cVerletParticle
 	{
@@ -102,8 +94,6 @@ namespace hpl {
 		cVector3f mvForce = 0;
 		float mfInvMass;
 	};
-
-	//------------------------------------------
 
 	class iVerletParticleContainer
 	{
@@ -159,8 +149,6 @@ namespace hpl {
 		virtual bool CheckSpecificDataAwake()=0;		//Tested when container IS sleeping
 		virtual void SetSpecificDataSleeping(bool abSleeping)=0;
 
-
-
 		OhplRopeState mS;
 		std::vector<cVerletParticle*> mvParticleCache;
 		void RefreshParticleCache(){ mvParticleCache.assign(mlstParticles.begin(), mlstParticles.end()); }
@@ -177,16 +165,9 @@ namespace hpl {
 
 		bool mbActive = true;
 
-
 		float mfDamping = 0.001f;
 
-
-
 	};
-
-
-	//------------------------------------------
-
 
 };
 #endif // HPL_VERLET_PARTICLE_H
