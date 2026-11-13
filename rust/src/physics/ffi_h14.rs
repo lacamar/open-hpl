@@ -305,3 +305,44 @@ pub extern "C" fn ohpl_h14_rope_particle_pos(
 ) -> Vector3f {
     rope_particle_pos(start, dir, length)
 }
+
+/// # Safety
+/// `ext` and `st` are writable and embedded in the character; `st.size` is set.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_char_init(
+    ext: *mut super::char_conn::CharExt,
+    st: *mut super::character::CharState,
+    world: usize,
+    max_no_slide_slope_cos: f32,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::char_conn::char_init(ext, st, world, max_no_slide_slope_cos) };
+}
+
+/// # Safety
+/// `ext` and `st` are the live embedded states of character `me`; `op` is its host op.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_connect_to_body(
+    op: super::wreg::WorldOp,
+    me: usize,
+    ext: *mut super::char_conn::CharExt,
+    st: *mut super::character::CharState,
+    body: usize,
+    pos: crate::types::Vector3f,
+    flags: u32,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::char_conn::connect_to_body(op, me, ext, st, body, pos, flags) };
+}
+
+/// # Safety
+/// `ext` is the live embedded state of character `me`; `op` is its host op.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_disconnect_body(
+    op: super::wreg::WorldOp,
+    me: usize,
+    ext: *mut super::char_conn::CharExt,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::char_conn::disconnect_body(op, me, ext) };
+}

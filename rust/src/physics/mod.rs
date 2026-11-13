@@ -4,6 +4,7 @@
 pub mod body;
 pub mod book;
 mod char_aux;
+mod char_conn;
 pub mod character;
 pub mod controller;
 mod ffi;

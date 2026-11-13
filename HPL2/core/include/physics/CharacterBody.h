@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -36,7 +36,7 @@ namespace hpl {
 	class iEntity3D;
 
 	//------------------------------------------------
-	
+
 	class iCharacterBodyCallback
 	{
 	public:
@@ -52,7 +52,7 @@ namespace hpl {
 		eCharDir_Right=1,
 		eCharDir_LastEnum=2
 	};
-	
+
 	//------------------------------------------------
 
 	class cCharacterBodyCollideGravity : public iPhysicsWorldCollisionCallback
@@ -97,7 +97,36 @@ namespace hpl {
 	};
 
 	//------------------------------------------------
-	
+
+
+	class iPhysicsWorld;
+	class iPhysicsMaterial;
+	class cCamera;
+	class iEntity3D;
+
+	// Remaining scalar and pointer state of iCharacterBody, owned by rust/src/physics/char_conn.rs; the members are references into it.
+	struct OhplCharExt
+	{
+		iPhysicsWorld *world;
+		iCharacterBodyCallback *callback;
+		void *userData;
+		cCamera *camera;
+		iEntity3D *entity;
+		iPhysicsBody *connectedBody;
+		iPhysicsBody *gravityAttachedBody;
+		iPhysicsBody *gravityLastAttachedBody;
+		iPhysicsMaterial *gravityCollideMaterial;
+		cVector3f cameraPosAdd, connPosLocalToBody, connPosLocalToChar, connNormalLocalToBody, connLocalUpBody, connBodyStartRotation,
+			connCharLocalForward, gravityAttachBodyVelocity;
+		cMatrixf entityOffset, entityPostOffset, gravityAttachedPrevMatrix;
+		float maxPushMass, pushForce, pushImpulse, charMaxPushMass, charPushForce, constantContactForceMul, velocityContactForceMul,
+			maxContactForcePerMassUnit, entityPitchAmount, maxConnectionTorque, maxConnectionForce, connDistanceToBody;
+		int32_t minBodyPushStrength, cameraSmoothPosNum, entitySmoothPosNum, entitySmoothYPosNum, gravityAttachmentContacts;
+		bool collideCharacter, physicsBodyActive, stickToSlope, pushIn2D, charPushIn2D, cameraUseSmoothing, cameraUpdateActive, entitySmoothYPos,
+			connectedBodyHadGravity, connDependOnBodyRotation, connAlignCenter, connAlignRotation, connCollision, connectedBodyIsActive,
+			connAffectChar, connDependOnCharRotation, connAlignCharRotation, rotateYawWhenGravityAttached;
+	};
+	static_assert(sizeof(OhplCharExt) == 448, "char ext layout");
 
 	class iCharacterBody
 	{
@@ -146,9 +175,9 @@ namespace hpl {
 
 		float GetMass();
 		void SetMass(float afMass);
-		
+
 		cVector3f GetSize();
-		
+
 		iCollideShape *GetCurrentShape();
 		iCollideShape *GetShape(int alIdx);
 		int GetShapeNum(){ return (int)mvShapes.size();}
@@ -178,8 +207,8 @@ namespace hpl {
 
 		void SetMoveOppositeDirAccMul(eCharDir aDir, float afX){mS.moveOppositeDirAccMul[aDir] = afX;}
 		float GetMoveOppositeDirAccMul(eCharDir aDir){ return mS.moveOppositeDirAccMul[aDir];}
-		
-		
+
+
 		void SetDeaccelerateMoveSpeedInAir(bool abX){ mS.deaccelerateMoveSpeedInAir = abX;}
 		bool GetDeaccelerateMoveSpeedInAir(){ return mS.deaccelerateMoveSpeedInAir;}
 
@@ -305,7 +334,7 @@ namespace hpl {
 		iPhysicsBody* GetGravityAttachedBody(){ return mpGravityAttachedBody;}
 
 		iPhysicsMaterial * GetGravityCollideMaterial(){ return mpGravityCollideMaterial;}
-		
+
 		///////////////////////////////////////
 		// Connection Properties
 
@@ -325,7 +354,7 @@ namespace hpl {
 		void SetMaxConnectionTorque(float afX){ mfMaxConnectionTorque = afX; }
 		float GetMaxConnectionForce(){ return mfMaxConnectionForce; }
 		float GetMaxConnectionTorque(){ return mfMaxConnectionTorque; }
-		
+
 		///////////////////////////////////////
 		// User Properties
 
@@ -342,13 +371,13 @@ namespace hpl {
 
 		void SetEntity(iEntity3D *apEntity);
 		iEntity3D* GetEntity();
-		
+
 		void SetEntityOffset(const cMatrixf &a_mtxOffset);
 		const cMatrixf & GetEntityOffset();
-		
+
 		void SetEntityPostOffset(const cMatrixf &a_mtxOffset);
 		const cMatrixf & GetEntityPostOffset();
-		
+
 		void SetEntitySmoothPosNum(int alNum){ mlEntitySmoothPosNum = alNum;}
 		int GetEntitySmoothPosNum(){ return mlEntitySmoothPosNum;}
 
@@ -362,13 +391,13 @@ namespace hpl {
 
 		void SetUserData(void* apUserData){ mpUserData = apUserData;}
 		void* GetUserData(){ return mpUserData;}
-		
+
 		void SetCallback(iCharacterBodyCallback *apCallback){ mpCallback = apCallback;}
-		
+
 		///////////////////////////////////////
 		//Debug:
 		const cVector3f& GetLastMovePosAdd(){ return mS.lastMovePosAdd;}
-		
+
 	protected:
 		void UpdateMoveMatrix();
 
@@ -377,11 +406,12 @@ namespace hpl {
 		void UpdateSafePositions(float afTimeStep);
 		void UpdateBodyConnection(float afTimeStep);
 		void UpdateCharacterConnection(float afTimeStep);
-		
 
 
-		
+
+
 		static bool mbHpl3;
+		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
 
 
 
@@ -402,6 +432,7 @@ namespace hpl {
 		bool CheckCollision(cVector3f *apPushBackVector, const cVector3f& avPos, iPhysicsWorldCollisionCallback *apCallback,int alShapeIdx=-1);
 
 		OhplCharState mS;
+		OhplCharExt mE = OhplCharExt();
 		OhplH14Aux *mpAux;
 		OhplH14Conn MakeConn();
 		OhplCharVt MakeVt();
@@ -410,87 +441,87 @@ namespace hpl {
 
 
 
-		bool mbCollideCharacter;
+		bool &mbCollideCharacter = mE.collideCharacter;
 
-		bool mbPhysicsBodyActive;
+		bool &mbPhysicsBodyActive = mE.physicsBodyActive;
 
-		bool mbStickToSlope;
-
-
-
-
-		
+		bool &mbStickToSlope = mE.stickToSlope;
 
 
 
 
 
-		float mfMaxPushMass;
-		float mfPushForce;
-		float mfPushImpulse;
-		bool mbPushIn2D;
 
-		float mfCharacterMaxPushMass;
-		float mfCharacterPushForce;
-		bool mbCharacterPushIn2D;
 
-		int mlMinBodyPushStrength;
+
+
+
+		float &mfMaxPushMass = mE.maxPushMass;
+		float &mfPushForce = mE.pushForce;
+		float &mfPushImpulse = mE.pushImpulse;
+		bool &mbPushIn2D = mE.pushIn2D;
+
+		float &mfCharacterMaxPushMass = mE.charMaxPushMass;
+		float &mfCharacterPushForce = mE.charPushForce;
+		bool &mbCharacterPushIn2D = mE.charPushIn2D;
+
+		int &mlMinBodyPushStrength = mE.minBodyPushStrength;
 
 
 
 		std::vector<cVector3f> mvSafePositions;
 		cVector3f mvSafePosHistory[4];
 		float mfSafePosTimer, mfSafePosInterval, mfSafePosBuffer;
-		
 
 
-		float mfConstantContactForceMul;
-		float mfVelocityContactForceMul;
-		float mfMaxContactForcePerMassUnit;
 
-		cCamera *mpCamera;
-		cVector3f mvCameraPosAdd;
-		int mlCameraSmoothPosNum;
-		bool mbCameraUseSmoothing;
-		bool mbCameraUpdateActive;
+		float &mfConstantContactForceMul = mE.constantContactForceMul;
+		float &mfVelocityContactForceMul = mE.velocityContactForceMul;
+		float &mfMaxContactForcePerMassUnit = mE.maxContactForcePerMassUnit;
+
+		cCamera *&mpCamera = mE.camera;
+		cVector3f &mvCameraPosAdd = mE.cameraPosAdd;
+		int &mlCameraSmoothPosNum = mE.cameraSmoothPosNum;
+		bool &mbCameraUseSmoothing = mE.cameraUseSmoothing;
+		bool &mbCameraUpdateActive = mE.cameraUpdateActive;
 		tVector3fList mlstCameraPos;
 
-		iEntity3D *mpEntity;
-		cMatrixf m_mtxEntityOffset;
-		cMatrixf m_mtxEntityPostOffset;
-		int mlEntitySmoothPosNum;
+		iEntity3D *&mpEntity = mE.entity;
+		cMatrixf &m_mtxEntityOffset = mE.entityOffset;
+		cMatrixf &m_mtxEntityPostOffset = mE.entityPostOffset;
+		int &mlEntitySmoothPosNum = mE.entitySmoothPosNum;
 		tVector3fList mlstEntityPos;
 
-		bool mbEntitySmoothYPos;
-		float mfEntityPitchAmount = 1;
-		int mlEntitySmoothYPosNum;
+		bool &mbEntitySmoothYPos = mE.entitySmoothYPos;
+		float &mfEntityPitchAmount = mE.entityPitchAmount;
+		int &mlEntitySmoothYPosNum = mE.entitySmoothYPosNum;
 		tFloatList mlstEntityYPositions;
 
 
 
-		void *mpUserData;
-	
-		float mfMaxConnectionTorque;
-		float mfMaxConnectionForce;
-		iPhysicsBody *mpConnectedBody;
-		bool mbConnectedBodyHadGravity;
-		bool mbConnectionDependOnBodyRotation;
-		cVector3f mvConnectionPosLocalToBody;
-		cVector3f mvConnectionPosLocalToChar;
-		cVector3f mvConnectionNormalLocalToBody;
-		cVector3f mvConnectionLocalUpBody;
-		cVector3f mvConnectionBodyStartRotation;
-		float mfConnectionDistanceToBody;
-		bool mbConnectionAlignCenter;
-		bool mbConnectionAlignRotation;
-		bool mbConnectionCollision;
-		bool mbConnectedBodyIsActive;
-		
-		bool mbConnectionAffectChar;
-		bool mbConnectionDependOnCharRotation;
-		bool mbConnectionAlignCharacterRotation;
-		cVector3f mvConnectionCharLocalForward;
-				
+		void *&mpUserData = mE.userData;
+
+		float &mfMaxConnectionTorque = mE.maxConnectionTorque;
+		float &mfMaxConnectionForce = mE.maxConnectionForce;
+		iPhysicsBody *&mpConnectedBody = mE.connectedBody;
+		bool &mbConnectedBodyHadGravity = mE.connectedBodyHadGravity;
+		bool &mbConnectionDependOnBodyRotation = mE.connDependOnBodyRotation;
+		cVector3f &mvConnectionPosLocalToBody = mE.connPosLocalToBody;
+		cVector3f &mvConnectionPosLocalToChar = mE.connPosLocalToChar;
+		cVector3f &mvConnectionNormalLocalToBody = mE.connNormalLocalToBody;
+		cVector3f &mvConnectionLocalUpBody = mE.connLocalUpBody;
+		cVector3f &mvConnectionBodyStartRotation = mE.connBodyStartRotation;
+		float &mfConnectionDistanceToBody = mE.connDistanceToBody;
+		bool &mbConnectionAlignCenter = mE.connAlignCenter;
+		bool &mbConnectionAlignRotation = mE.connAlignRotation;
+		bool &mbConnectionCollision = mE.connCollision;
+		bool &mbConnectedBodyIsActive = mE.connectedBodyIsActive;
+
+		bool &mbConnectionAffectChar = mE.connAffectChar;
+		bool &mbConnectionDependOnCharRotation = mE.connDependOnCharRotation;
+		bool &mbConnectionAlignCharacterRotation = mE.connAlignCharRotation;
+		cVector3f &mvConnectionCharLocalForward = mE.connCharLocalForward;
+
 		cPidControllerVec3 mBodyConnectionPointPid;
 		cPidControllerVec3 mBodyCenterPid;
 		cPidControllerf mBodyOneAxisAngularPid;
@@ -499,23 +530,23 @@ namespace hpl {
 		cPidControllerVec3 mCharConnectionPointPid;
 		cPidControllerVec3 mCharRotatePid;
 
-		bool mbRotateYawWhenGravityAttached;
-		iPhysicsBody *mpGravityAttachedBody;
-		iPhysicsBody *mpGravityLastAttachedBody;
-		cMatrixf m_mtxGravityAttachedPrevMatrix;
-		int mlGravityAttachmentContacts;
-		cVector3f mvGravityAttachmentBodyVelocity;
-		
+		bool &mbRotateYawWhenGravityAttached = mE.rotateYawWhenGravityAttached;
+		iPhysicsBody *&mpGravityAttachedBody = mE.gravityAttachedBody;
+		iPhysicsBody *&mpGravityLastAttachedBody = mE.gravityLastAttachedBody;
+		cMatrixf &m_mtxGravityAttachedPrevMatrix = mE.gravityAttachedPrevMatrix;
+		int &mlGravityAttachmentContacts = mE.gravityAttachmentContacts;
+		cVector3f &mvGravityAttachmentBodyVelocity = mE.gravityAttachBodyVelocity;
 
-		iCharacterBodyCallback *mpCallback;
 
-		iPhysicsWorld *mpWorld;
+		iCharacterBodyCallback *&mpCallback = mE.callback;
+
+		iPhysicsWorld *&mpWorld = mE.world;
 
 		cCharacterBodyCollideGravity *mpCollideGravityCallback;
 		cCharacterBodyCollidePush *mpCollidePushCallback;
 		cCharacterBodyRay *mpRayCallback;
 
-		iPhysicsMaterial *mpGravityCollideMaterial;
+		iPhysicsMaterial *&mpGravityCollideMaterial = mE.gravityCollideMaterial;
 
 		iCollideShape *mpCurrentShape;
 		iPhysicsBody *mpCurrentBody;
