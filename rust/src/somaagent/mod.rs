@@ -9,6 +9,9 @@ mod ffi;
 mod host;
 mod misc;
 mod pathfinder;
+pub mod s4;
+#[cfg(test)]
+mod s4_tests;
 mod statemachine;
 #[cfg(test)]
 mod tests;
