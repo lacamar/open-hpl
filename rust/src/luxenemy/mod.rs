@@ -5,6 +5,9 @@
 //! re-enter the enemy come back as ordered `Cmd`s that C++ replays right after the handler
 //! returns.
 
+mod a4_enemy;
+mod a4_ffi;
+mod a4_state;
 mod ctx;
 mod ffi;
 mod grunt;
