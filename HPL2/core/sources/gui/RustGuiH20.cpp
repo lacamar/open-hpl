@@ -10,6 +10,8 @@
 #include "gui/WidgetListBoxBase.h"
 #include "gui/WidgetSlider.h"
 #include "gui/WidgetTextBox.h"
+#include "gui/WidgetTabFrame.h"
+#include "gui/WidgetFrame.h"
 #include "gui/WidgetButton.h"
 #include "graphics/FontData.h"
 
@@ -27,6 +29,13 @@ namespace hpl {
 		static cGuiSkin* Skin(iWidget* apW) { return apW->*(&OhplH20Access::mpSkin); }
 		static cVector2f FontSize(iWidget* apW) { return apW->*(&OhplH20Access::mvDefaultFontSize); }
 		static iFontData* Font(iWidget* apW) { return apW->*(&OhplH20Access::mpDefaultFontType); }
+		static cGuiSkinFont* SkinFont(iWidget* apW) { return apW->*(&OhplH20Access::mpDefaultFont); }
+		static void* State(iWidget* apW, int alKind)
+		{
+			if(alKind==0) return &((cWidgetTabLabel*)apW)->mH;
+			if(alKind==1) return &((cWidgetTab*)apW)->mH;
+			return &((cWidgetTabFrame*)apW)->mH;
+		}
 		static bool CheckClip(iWidget* apW, const cVector2f& avPoint) { return (apW->*(&OhplH20Access::CheckPointInsideClippingParent))(avPoint); }
 		static cVector3f ToLocal(iWidget* apW, const cVector3f& avPos) { return (apW->*(&OhplH20Access::WorldToLocalPosition))(avPos); }
 	};
@@ -289,6 +298,35 @@ namespace hpl {
 			}
 			return 0;
 		}
+		case kOhplH20Op_STATE_PTR:
+			return (uintptr_t)OhplH20Access::State(W(a->w), a->i[0]);
+		case kOhplH20Op_CREATE_TAB:
+			return (uintptr_t)(iWidget*)OhplH20Access::Set(W(a->w))->CreateWidgetTab(cVector3f(a->f[0], a->f[1], a->f[2]), cVector2f(a->f[3], a->f[4]), _W(""), W(a->w));
+		case kOhplH20Op_CREATE_TAB_LABEL:
+			return (uintptr_t)(iWidget*)OhplH20Access::Set(W(a->w))->CreateWidgetTabLabel(0, cVector2f(a->f[0], a->f[1]), W(a->w)->GetText(), NULL);
+		case kOhplH20Op_CREATE_FRAME:
+			return (uintptr_t)(iWidget*)OhplH20Access::Set(W(a->w))->CreateWidgetFrame(0, cVector2f(a->f[0], a->f[1]), false, NULL, a->i[0]!=0, a->i[1]!=0);
+		case kOhplH20Op_WIDGET_SET_CLIP_ACTIVE:
+			W(a->w)->SetClipActive(a->i[0]!=0);
+			return 0;
+		case kOhplH20Op_ATTACH_CHILD:
+			if(a->i[0]) W(a->w)->AttachChild(W(a->p[0]));
+			else		W(a->w)->iWidget::AttachChild(W(a->p[0]));
+			return 0;
+		case kOhplH20Op_REMOVE_CHILD:
+			if(a->i[0]) W(a->w)->RemoveChild(W(a->p[0]));
+			else		W(a->w)->iWidget::RemoveChild(W(a->p[0]));
+			return 0;
+		case kOhplH20Op_SKIN_FONT_SIZE:
+		{
+			cVector2f vSize = OhplH20Access::SkinFont(W(a->w))->mvSize;
+			a->rf[0] = vSize.x;
+			a->rf[1] = vSize.y;
+			return 0;
+		}
+		case kOhplH20Op_TEXT_LENGTH_SKIN:
+			a->rf[0] = OhplH20Access::Font(W(a->w))->GetLength(OhplH20Access::SkinFont(W(a->w))->mvSize, W(a->w)->GetText().c_str());
+			return 0;
 		default:
 			return 0;
 		}

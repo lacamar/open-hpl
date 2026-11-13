@@ -8,6 +8,7 @@ use super::h19_widget::Base;
 use super::h20_combo::{self as cb, Combo};
 use super::h20_host::{HostVt, Hx};
 use super::h20_list::{self as l, ListBase};
+use super::h20_tab::{self as tb, Frame, Label, Tab};
 use super::set::{Msg, W};
 use crate::types::Vector3f;
 
@@ -315,3 +316,159 @@ ffn!(Combo, ohpl_h20_cb_point_is_inside, |hx,
  -> bool {
     cb::point_is_inside(hx, c, [x, y], only_clipped)
 });
+
+/// # Safety
+/// `f` is uninitialised storage, `base` the widget's base state.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h20_tf_init(
+    vt: *const HostVt,
+    f: *mut Frame,
+    this: W,
+    base: *mut Base,
+) {
+    if !f.is_null() {
+        // SAFETY: caller contract.
+        unsafe { tb::frame_init(f, vt, this, base) };
+    }
+}
+
+/// # Safety
+/// `f` is null or initialised and not used afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h20_tf_free(f: *mut Frame) {
+    if !f.is_null() {
+        // SAFETY: caller contract.
+        unsafe { tb::frame_free(f) };
+    }
+}
+
+ffn!(Frame, ohpl_h20_tf_destroy, |hx, f| tb::frame_destroy(hx, f));
+ffn!(Frame, ohpl_h20_tf_add_tab, |hx,
+                                  f,
+                                  text: *const u32,
+                                  len: usize|
+ -> usize {
+    tb::add_tab(hx, f, (text, len))
+});
+ffn!(Frame, ohpl_h20_tf_clear_tabs, |hx, f| tb::clear_tabs(hx, f));
+ffn!(Frame, ohpl_h20_tf_tab_num, |hx, f| -> i32 {
+    let _ = hx;
+    tb::tab_num(f)
+});
+ffn!(Frame, ohpl_h20_tf_tab, |hx, f, idx: i32| -> usize {
+    let _ = hx;
+    tb::tab_at(f, idx)
+});
+ffn!(Frame, ohpl_h20_tf_tab_on_top_index, |hx, f| -> i32 {
+    let _ = hx;
+    tb::tab_on_top_index(f)
+});
+ffn!(Frame, ohpl_h20_tf_set_tab_on_top, |hx, f, tab: usize| {
+    tb::set_tab_on_top(hx, f, tab)
+});
+ffn!(
+    Frame,
+    ohpl_h20_tf_set_tab_on_top_by_index,
+    |hx, f, idx: i32| tb::set_tab_on_top_by_index(hx, f, idx)
+);
+ffn!(Frame, ohpl_h20_tf_set_hori_scroll, |hx, f, v: bool| {
+    let _ = hx;
+    tb::set_horizontal_scroll_enabled(f, v)
+});
+ffn!(Frame, ohpl_h20_tf_set_vert_scroll, |hx, f, v: bool| {
+    let _ = hx;
+    tb::set_vertical_scroll_enabled(f, v)
+});
+ffn!(Frame, ohpl_h20_tf_on_ui_button_press, |hx,
+                                             f,
+                                             d: *const Msg|
+ -> bool {
+    tb::on_ui_button_press(hx, f, &rd_msg(d))
+});
+ffn!(
+    Frame,
+    ohpl_h20_tf_set_scroll_buttons_hidden,
+    |hx, f, v: bool| tb::set_scroll_buttons_hidden(hx, f, v)
+);
+ffn!(Frame, ohpl_h20_tf_update_tab_visibility, |hx, f| {
+    tb::update_tab_visibility(hx, f)
+});
+ffn!(Frame, ohpl_h20_tf_on_init, |hx, f| tb::frame_on_init(hx, f));
+ffn!(Frame, ohpl_h20_tf_on_change_size, |hx, f| {
+    tb::frame_on_change_size(hx, f)
+});
+ffn!(Frame, ohpl_h20_tf_on_load_graphics, |hx, f| {
+    tb::frame_on_load_graphics(hx, f)
+});
+
+/// # Safety
+/// `t` is uninitialised storage; `fs` the parent frame's state.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h20_tab_init(
+    vt: *const HostVt,
+    t: *mut Tab,
+    this: W,
+    frame_w: W,
+    fs: *mut Frame,
+    base: *mut Base,
+) {
+    if !t.is_null() && !fs.is_null() {
+        // SAFETY: caller contract.
+        unsafe { tb::tab_init_state(t, vt, this, frame_w, fs, base) };
+    }
+}
+
+ffn!(Tab, ohpl_h20_tab_destroy, |hx, t| tb::tab_destroy(hx, t));
+ffn!(
+    Tab,
+    ohpl_h20_tab_attach_child,
+    |hx, t, child: usize, remove: bool| tb::tab_attach_child(hx, t, child, remove)
+);
+ffn!(Tab, ohpl_h20_tab_set_icon, |hx, t, icon: usize| {
+    tb::tab_set_icon(hx, t, icon)
+});
+ffn!(Tab, ohpl_h20_tab_set_on_top, |hx, t, v: bool| {
+    tb::tab_set_on_top(hx, t, v)
+});
+ffn!(Tab, ohpl_h20_tab_point_is_inside, |hx,
+                                         t,
+                                         x: f32,
+                                         y: f32,
+                                         only_clipped: bool|
+ -> bool {
+    tb::tab_point_is_inside(hx, t, [x, y], only_clipped)
+});
+ffn!(Tab, ohpl_h20_tab_on_change_text, |hx, t| {
+    tb::tab_on_change_text(hx, t)
+});
+ffn!(Tab, ohpl_h20_tab_on_change_size, |hx, t| {
+    tb::tab_on_change_size(hx, t)
+});
+ffn!(Tab, ohpl_h20_tab_on_init, |hx, t| tb::tab_on_init(hx, t));
+ffn!(Tab, ohpl_h20_tab_on_draw, |hx, t| tb::tab_on_draw(hx, t));
+
+/// # Safety
+/// `l` is uninitialised storage, `base` the widget's base state.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h20_tl_init(
+    vt: *const HostVt,
+    l: *mut Label,
+    this: W,
+    base: *mut Base,
+) {
+    if !l.is_null() {
+        // SAFETY: caller contract.
+        unsafe { tb::label_init(l, vt, this, base) };
+    }
+}
+
+ffn!(Label, ohpl_h20_tl_on_mouse_down, |hx, l| -> bool {
+    tb::label_on_mouse_down(hx, l)
+});
+ffn!(Label, ohpl_h20_tl_on_change_text, |hx, l| {
+    tb::label_on_change_text(hx, l)
+});
+ffn!(Label, ohpl_h20_tl_on_get_ui_nav_focus, |hx, l| -> bool {
+    tb::label_on_get_ui_nav_focus(hx, l)
+});
+ffn!(Label, ohpl_h20_tl_on_draw, |hx, l| tb::label_on_draw(hx, l));

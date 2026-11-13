@@ -29,6 +29,7 @@
 #include "gui/GuiSet.h"
 #include "gui/GuiSkin.h"
 #include "gui/RustWidget2.h"
+#include "impl/RustBackends.h"
 
 #include <cstring>
 #include <vector>
@@ -57,8 +58,9 @@ namespace hpl
 
 	//-------------------------------------------------------------------
 
-	cWidgetTabLabel::cWidgetTabLabel(cGuiSet* apSet, cGuiSkin* apSkin) : iWidget(eWidgetType_Label, apSet, apSkin)
+	cWidgetTabLabel::cWidgetTabLabel(cGuiSet* apSet, cGuiSkin* apSkin) : iWidget(eWidgetType_Label, apSet, apSkin), mpGfxIcon(mH.icon)
 	{
+		ohpl_h20_tl_init(&gH20Host, &mH, (uintptr_t)(iWidget*)this, &mB);
 		mpGfxIcon = NULL;
 
 		LoadGraphics();
@@ -79,6 +81,11 @@ namespace hpl
 	
 	bool cWidgetTabLabel::OnMouseDown(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tl_on_mouse_down(&gH20Host, &mH);
+		}
+
 		cWidgetTabFrame* pFrame = mpParentTab->mpParentTabFrame;
 		
 		// The C++ loops forever (or reads past the tab vector) when the label cannot be scrolled into view
@@ -98,6 +105,12 @@ namespace hpl
 
 	void cWidgetTabLabel::OnChangeText()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tl_on_change_text(&gH20Host, &mH);
+			return;
+		}
+
 		cWidgetTabFrame* pTabFrame = mpParentTab->mpParentTabFrame;
 		float fBordersWidth = pTabFrame->mvGfxTabLabelBorders[0]->GetImageSize().x + 
 								pTabFrame->mvGfxTabLabelBorders[1]->GetImageSize().x;
@@ -112,6 +125,11 @@ namespace hpl
 
 	bool cWidgetTabLabel::OnGetUINavFocus(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tl_on_get_ui_nav_focus(&gH20Host, &mH);
+		}
+
 		mpParentTab->GetParentTabFrame()->SetTabOnTop(this->mpParentTab);
 
 		return true;
@@ -121,6 +139,12 @@ namespace hpl
 
 	void cWidgetTabLabel::OnDraw(float afTimeStep, cGuiClipRegion* apClipRegion)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tl_on_draw(&gH20Host, &mH);
+			return;
+		}
+
 		cWidgetTabFrame* pTabFrame = mpParentTab->mpParentTabFrame;
 		cVector3f vGlobal = GetGlobalPosition();
 		cVector3f vTextPos;
@@ -172,8 +196,10 @@ namespace hpl
 	//////////////////////////////////////////////////////////////////
 
 
-	cWidgetTab::cWidgetTab(cWidgetTabFrame* apParent) : iWidget(eWidgetType_Tab, apParent->GetSet(), apParent->GetSet()->GetSkin())
+	cWidgetTab::cWidgetTab(cWidgetTabFrame* apParent) : iWidget(eWidgetType_Tab, apParent->GetSet(), apParent->GetSet()->GetSkin()),
+		mlIndex(mH.index), mbOnTop(mH.onTop), mpParentTabFrame(mH.frame), mpTabLabel(mH.label), mpFrame(mH.inner)
 	{
+		ohpl_h20_tab_init(&gH20Host, &mH, (uintptr_t)(iWidget*)this, (uintptr_t)(iWidget*)apParent, &apParent->mH, &mB);
 		LoadGraphics();
 
 		mpTabLabel = NULL;
@@ -189,6 +215,11 @@ namespace hpl
 	{
 		if(mpSet->IsDestroyingSet()==false)
 		{
+			if(OhplBackendRustRequested())
+			{
+				ohpl_h20_tab_destroy(&gH20Host, &mH);
+				return;
+			}
 			mpSet->DestroyWidget(mpTabLabel);
 			mpSet->DestroyWidget(mpFrame);
 		}
@@ -206,6 +237,12 @@ namespace hpl
 
 	void cWidgetTab::AttachChild(iWidget* apChild)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tab_attach_child(&gH20Host, &mH, (uintptr_t)apChild, false);
+			return;
+		}
+
 		if(apChild==mpTabLabel || apChild==mpFrame)
 			iWidget::AttachChild(apChild);
 		else
@@ -216,6 +253,12 @@ namespace hpl
 
 	void cWidgetTab::RemoveChild(iWidget* apChild)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tab_attach_child(&gH20Host, &mH, (uintptr_t)apChild, true);
+			return;
+		}
+
 		if(apChild==mpTabLabel || apChild==mpFrame)
 			iWidget::RemoveChild(apChild);
 		else
@@ -235,6 +278,12 @@ namespace hpl
 
 	void cWidgetTab::SetIcon(cGuiGfxElement* apIcon)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tab_set_icon(&gH20Host, &mH, (uintptr_t)apIcon);
+			return;
+		}
+
 		mpTabLabel->mpGfxIcon = apIcon;
 		mpTabLabel->OnChangeText();
 	}
@@ -243,6 +292,12 @@ namespace hpl
 
 	void cWidgetTab::SetOnTop(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tab_set_on_top(&gH20Host, &mH, abX);
+			return;
+		}
+
 		mbOnTop = abX;
 		cVector3f vPos = mpTabLabel->GetLocalPosition();
 		vPos.y = ohpl_w2_tab_label_pos_y(&mpParentTabFrame->mState, abX);
@@ -256,6 +311,11 @@ namespace hpl
 
 	bool cWidgetTab::PointIsInside(const cVector2f& avPoint, bool abOnlyClipped)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tab_point_is_inside(&gH20Host, &mH, avPoint.x, avPoint.y, abOnlyClipped);
+		}
+
 		if(CheckPointInsideClippingParent(avPoint)==false)
 			return false;
 
@@ -281,6 +341,12 @@ namespace hpl
 
 	void cWidgetTab::OnChangeText()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tab_on_change_text(&gH20Host, &mH);
+			return;
+		}
+
 		if(mpTabLabel!=NULL) mpTabLabel->SetText(msText);
 	}
 
@@ -288,6 +354,12 @@ namespace hpl
 
 	void cWidgetTab::OnChangeSize()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tab_on_change_size(&gH20Host, &mH);
+			return;
+		}
+
 		if(mpTabLabel == NULL || mpFrame == NULL) return;
 
 		OhplW2TabLayout l;
@@ -303,6 +375,12 @@ namespace hpl
 
 	void cWidgetTab::OnInit()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tab_on_init(&gH20Host, &mH);
+			return;
+		}
+
 		cVector2f vCorners[3] = {mpParentTabFrame->mvGfxTabCorners[0]->GetActiveSize(),
 								 mpParentTabFrame->mvGfxTabCorners[1]->GetActiveSize(),
 								 mpParentTabFrame->mvGfxTabCorners[2]->GetActiveSize()};
@@ -335,6 +413,12 @@ namespace hpl
 
 	void cWidgetTab::OnDraw(float afTimeStep, cGuiClipRegion* apClipRegion)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tab_on_draw(&gH20Host, &mH);
+			return;
+		}
+
 		DrawBordersAndCorners(mpParentTabFrame->mpGfxTabBG, 
 								mpParentTabFrame->mvGfxTabBorders, 
 								mpParentTabFrame->mvGfxTabCorners, 
@@ -367,8 +451,10 @@ namespace hpl
 
 	//-------------------------------------------------------------------
 
-	cWidgetTabFrame::cWidgetTabFrame(cGuiSet* apSet, cGuiSkin* apSkin) : iWidget(eWidgetType_TabFrame, apSet, apSkin)
+	cWidgetTabFrame::cWidgetTabFrame(cGuiSet* apSet, cGuiSkin* apSkin) : iWidget(eWidgetType_TabFrame, apSet, apSkin),
+		mpTopTab(mH.top), mfBackgroundZ(mH.bgZ), mfForegroundZ(mH.fgZ), mState(mH.state), mbHoriScrollEnabled(mH.hori), mbVertScrollEnabled(mH.vert)
 	{
+		ohpl_h20_tf_init(&gH20Host, &mH, (uintptr_t)(iWidget*)this, &mB);
 		mfBackgroundZ = 0;
 		mfForegroundZ = 0.9f;
 
@@ -393,10 +479,15 @@ namespace hpl
 	{
 		if(mpSet->IsDestroyingSet()==false)
 		{
-			for(int i=0;i<2;++i)
-				mpSet->DestroyWidget(mvArrowButtons[i]);
-			ClearTabs();
+			if(OhplBackendRustRequested()) ohpl_h20_tf_destroy(&gH20Host, &mH);
+			else
+			{
+				for(int i=0;i<2;++i)
+					mpSet->DestroyWidget(mvArrowButtons[i]);
+				ClearTabs();
+			}
 		}
+		ohpl_h20_tf_free(&mH);
 	}
 
 	//-------------------------------------------------------------------
@@ -409,6 +500,11 @@ namespace hpl
 
 	cWidgetTab* cWidgetTabFrame::AddTab(const tWString& asTabCaption)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return (cWidgetTab*)ohpl_h20_tf_add_tab(&gH20Host, &mH, asTabCaption.data(), asTabCaption.size());
+		}
+
 		////////////////////////////////////////////////////////////////////
 		// Create new tab, if first tab created, set as topmost
 		// If not, check if fits in frame, and show scroll buttons if needed.
@@ -431,6 +527,12 @@ namespace hpl
 
 	void cWidgetTabFrame::ClearTabs()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tf_clear_tabs(&gH20Host, &mH);
+			return;
+		}
+
 		for(tWidgetTabVectorIt it = mvTabs.begin(); it != mvTabs.end(); ++it)
 			mpSet->DestroyWidget(*it);
 
@@ -441,6 +543,11 @@ namespace hpl
 
 	int cWidgetTabFrame::GetTabNum()
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tf_tab_num(&gH20Host, &mH);
+		}
+
 		return (int)mvTabs.size();
 	}
 
@@ -448,6 +555,11 @@ namespace hpl
 
 	cWidgetTab* cWidgetTabFrame::GetTab(int alIdx)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return (cWidgetTab*)ohpl_h20_tf_tab(&gH20Host, &mH, alIdx);
+		}
+
 		return mvTabs[alIdx];
 	}
 
@@ -471,6 +583,11 @@ namespace hpl
 
 	int cWidgetTabFrame::GetTabOnTopIndex()
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tf_tab_on_top_index(&gH20Host, &mH);
+		}
+
 		int lIndex = -1;
 		for(int i=0;i<(int)mvTabs.size();++i)
 		{
@@ -488,6 +605,12 @@ namespace hpl
 
 	void cWidgetTabFrame::SetTabOnTop(cWidgetTab* apTab)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tf_set_tab_on_top(&gH20Host, &mH, (uintptr_t)apTab);
+			return;
+		}
+
 		/////////////////////////////////////////////
 		// Move current top tab to the background, 
 		// and then move apTab to top
@@ -518,6 +641,12 @@ namespace hpl
 
 	void cWidgetTabFrame::SetTabOnTopByIndex(int alIdx)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tf_set_tab_on_top_by_index(&gH20Host, &mH, alIdx);
+			return;
+		}
+
 		if(alIdx<0 || alIdx>=(int)mvTabs.size())
 			return;
 
@@ -528,6 +657,12 @@ namespace hpl
 
 	void cWidgetTabFrame::SetHorizontalScrollEnabled(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tf_set_hori_scroll(&gH20Host, &mH, abX);
+			return;
+		}
+
 		if(mvTabs.empty())
 			mbHoriScrollEnabled = abX;
 	}
@@ -536,6 +671,12 @@ namespace hpl
 
 	void cWidgetTabFrame::SetVerticalScrollEnabled(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tf_set_vert_scroll(&gH20Host, &mH, abX);
+			return;
+		}
+
 		if(mvTabs.empty())
 			mbVertScrollEnabled = abX;
 	}
@@ -550,6 +691,11 @@ namespace hpl
 
 	bool cWidgetTabFrame::OnUIButtonPress(const cGuiMessageData& aData)
 	{
+		if(OhplBackendRustRequested())
+		{
+			return ohpl_h20_tf_on_ui_button_press(&gH20Host, &mH, &aData);
+		}
+
 		int lTabOnTopIndex = GetTabOnTopIndex();
 		int lTarget;
 
@@ -579,6 +725,12 @@ namespace hpl
 
 	void cWidgetTabFrame::UpdateTabVisibility()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tf_update_tab_visibility(&gH20Host, &mH);
+			return;
+		}
+
 		size_t lNum = mvTabs.size();
 		std::vector<float> vWidths(lNum);
 		std::vector<OhplW2TabItem> vItems(lNum);
@@ -624,6 +776,12 @@ namespace hpl
 
 	void cWidgetTabFrame::SetScrollButtonsHidden(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tf_set_scroll_buttons_hidden(&gH20Host, &mH, abX);
+			return;
+		}
+
 		for(int i=0; i<2; ++i)
 		{
 			cWidgetButton* pArrow = mvArrowButtons[i];
@@ -638,6 +796,12 @@ namespace hpl
 
 	void cWidgetTabFrame::OnInit()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tf_on_init(&gH20Host, &mH);
+			return;
+		}
+
 		////////////////////////////////
 		// Init Scroll buttons
 
@@ -656,6 +820,12 @@ namespace hpl
 
 	void cWidgetTabFrame::OnChangeSize()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tf_on_change_size(&gH20Host, &mH);
+			return;
+		}
+
 		if(mvArrowButtons[0]==NULL || mvArrowButtons[1]==NULL) return;
 		for(int i = 0; i<2; ++i)
 		{
@@ -674,6 +844,12 @@ namespace hpl
 
 	void cWidgetTabFrame::OnLoadGraphics()
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h20_tf_on_load_graphics(&gH20Host, &mH);
+			return;
+		}
+
 		//////////////////////////////////////////////
 		// Attributes
 		mState.button_size = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameButtonSize).x;

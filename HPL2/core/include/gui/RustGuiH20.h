@@ -74,6 +74,15 @@ enum OhplH20Op {
 	kOhplH20Op_CHECK_POINT_CLIP = 59,
 	kOhplH20Op_WIDGET_GET_POSITION = 60,
 	kOhplH20Op_WIDGET_IS_VISIBLE = 61,
+	kOhplH20Op_STATE_PTR = 62,
+	kOhplH20Op_CREATE_TAB = 63,
+	kOhplH20Op_CREATE_TAB_LABEL = 64,
+	kOhplH20Op_CREATE_FRAME = 65,
+	kOhplH20Op_WIDGET_SET_CLIP_ACTIVE = 66,
+	kOhplH20Op_ATTACH_CHILD = 67,
+	kOhplH20Op_REMOVE_CHILD = 68,
+	kOhplH20Op_SKIN_FONT_SIZE = 69,
+	kOhplH20Op_TEXT_LENGTH_SKIN = 70,
 };
 
 struct OhplH20Args {
@@ -129,6 +138,49 @@ static_assert(sizeof(OhplH20Combo) == 184 && offsetof(OhplH20Combo, text) == 40 
 			  offsetof(OhplH20Combo, buttonW) == 144 && offsetof(OhplH20Combo, self) == 152 && offsetof(OhplH20Combo, host) == 176,
 			  "OhplH20Combo ABI");
 
+struct OhplH20Access;
+class cWidgetTab;
+class cWidgetTabLabel;
+class cWidgetFrame;
+class cWidgetTabFrame;
+class cGuiGfxElement;
+
+struct OhplH20TabFrame {
+	OhplW2TabState state;
+	cWidgetTab* top;
+	uintptr_t arrows[2];
+	void* tabs;
+	uintptr_t gfx[21];
+	float bgZ, fgZ;
+	bool hori, vert;
+	uintptr_t self;
+	OhplH19Base* base;
+	const OhplH20Host* host;
+};
+struct OhplH20Tab {
+	int32_t index;
+	bool onTop;
+	cWidgetTabFrame* frame;
+	OhplH20TabFrame* fs;
+	cWidgetTabLabel* label;
+	cWidgetFrame* inner;
+	void* ls;
+	uintptr_t self;
+	OhplH19Base* base;
+	const OhplH20Host* host;
+};
+struct OhplH20TabLabel {
+	void* tab;
+	cGuiGfxElement* icon;
+	uintptr_t self;
+	OhplH19Base* base;
+	const OhplH20Host* host;
+};
+static_assert(sizeof(OhplW2TabState) == 40 && sizeof(OhplH20TabFrame) == 280 && offsetof(OhplH20TabFrame, tabs) == 64 &&
+			  offsetof(OhplH20TabFrame, gfx) == 72 && offsetof(OhplH20TabFrame, bgZ) == 240 && offsetof(OhplH20TabFrame, self) == 256 &&
+			  sizeof(OhplH20Tab) == 72 && offsetof(OhplH20Tab, label) == 24 && offsetof(OhplH20Tab, host) == 64 &&
+			  sizeof(OhplH20TabLabel) == 40, "tab state ABI");
+
 extern "C" {
 
 void ohpl_h20_lb_init(const OhplH20Host*, OhplH20ListBase*, uintptr_t self, uintptr_t container, OhplH19Base* base, int kind);
@@ -181,6 +233,42 @@ bool ohpl_h20_cb_on_ui_button_press(const OhplH20Host*, OhplH20Combo*, const cGu
 bool ohpl_h20_cb_on_ui_button_release(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
 bool ohpl_h20_cb_on_lost_focus(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
 bool ohpl_h20_cb_point_is_inside(const OhplH20Host*, OhplH20Combo*, float x, float y, bool onlyClipped);
+
+void ohpl_h20_tf_init(const OhplH20Host*, OhplH20TabFrame*, uintptr_t self, OhplH19Base* base);
+void ohpl_h20_tf_free(OhplH20TabFrame*);
+void ohpl_h20_tf_destroy(const OhplH20Host*, OhplH20TabFrame*);
+uintptr_t ohpl_h20_tf_add_tab(const OhplH20Host*, OhplH20TabFrame*, const wchar_t* text, size_t len);
+void ohpl_h20_tf_clear_tabs(const OhplH20Host*, OhplH20TabFrame*);
+int ohpl_h20_tf_tab_num(const OhplH20Host*, OhplH20TabFrame*);
+uintptr_t ohpl_h20_tf_tab(const OhplH20Host*, OhplH20TabFrame*, int idx);
+int ohpl_h20_tf_tab_on_top_index(const OhplH20Host*, OhplH20TabFrame*);
+void ohpl_h20_tf_set_tab_on_top(const OhplH20Host*, OhplH20TabFrame*, uintptr_t tab);
+void ohpl_h20_tf_set_tab_on_top_by_index(const OhplH20Host*, OhplH20TabFrame*, int idx);
+void ohpl_h20_tf_set_hori_scroll(const OhplH20Host*, OhplH20TabFrame*, bool v);
+void ohpl_h20_tf_set_vert_scroll(const OhplH20Host*, OhplH20TabFrame*, bool v);
+bool ohpl_h20_tf_on_ui_button_press(const OhplH20Host*, OhplH20TabFrame*, const cGuiMessageData*);
+void ohpl_h20_tf_set_scroll_buttons_hidden(const OhplH20Host*, OhplH20TabFrame*, bool v);
+void ohpl_h20_tf_update_tab_visibility(const OhplH20Host*, OhplH20TabFrame*);
+void ohpl_h20_tf_on_init(const OhplH20Host*, OhplH20TabFrame*);
+void ohpl_h20_tf_on_change_size(const OhplH20Host*, OhplH20TabFrame*);
+void ohpl_h20_tf_on_load_graphics(const OhplH20Host*, OhplH20TabFrame*);
+
+void ohpl_h20_tab_init(const OhplH20Host*, OhplH20Tab*, uintptr_t self, uintptr_t frameW, OhplH20TabFrame* fs, OhplH19Base* base);
+void ohpl_h20_tab_destroy(const OhplH20Host*, OhplH20Tab*);
+void ohpl_h20_tab_attach_child(const OhplH20Host*, OhplH20Tab*, uintptr_t child, bool remove);
+void ohpl_h20_tab_set_icon(const OhplH20Host*, OhplH20Tab*, uintptr_t icon);
+void ohpl_h20_tab_set_on_top(const OhplH20Host*, OhplH20Tab*, bool v);
+bool ohpl_h20_tab_point_is_inside(const OhplH20Host*, OhplH20Tab*, float x, float y, bool onlyClipped);
+void ohpl_h20_tab_on_change_text(const OhplH20Host*, OhplH20Tab*);
+void ohpl_h20_tab_on_change_size(const OhplH20Host*, OhplH20Tab*);
+void ohpl_h20_tab_on_init(const OhplH20Host*, OhplH20Tab*);
+void ohpl_h20_tab_on_draw(const OhplH20Host*, OhplH20Tab*);
+
+void ohpl_h20_tl_init(const OhplH20Host*, OhplH20TabLabel*, uintptr_t self, OhplH19Base* base);
+bool ohpl_h20_tl_on_mouse_down(const OhplH20Host*, OhplH20TabLabel*);
+void ohpl_h20_tl_on_change_text(const OhplH20Host*, OhplH20TabLabel*);
+bool ohpl_h20_tl_on_get_ui_nav_focus(const OhplH20Host*, OhplH20TabLabel*);
+void ohpl_h20_tl_on_draw(const OhplH20Host*, OhplH20TabLabel*);
 
 }
 
