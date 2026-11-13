@@ -19,6 +19,8 @@
 
 #include "scene/Beam.h"
 #include "scene/RustLight.h"
+#include "scene/RustSceneH12.h"
+#include "impl/RustBackends.h"
 
 #include "impl/tinyXML/tinyxml.h"
 
@@ -202,6 +204,11 @@ namespace hpl {
 
 	void cBeam::UpdateGraphicsForFrame(float afFrameTime)
 	{
+		if(OhplBackendRustRequested())
+		{
+			if(ohpl_h12b_beam_needs_geometry(mlStartTransformCount, mlEndTransformCount, GetTransformUpdateCount())==false) return;
+		}
+		else
 		if(	mlStartTransformCount == GetTransformUpdateCount() &&
 			mlEndTransformCount == GetTransformUpdateCount())
 		{
@@ -312,6 +319,7 @@ namespace hpl {
 
 	bool cBeam::IsVisible()
 	{
+		if(OhplBackendRustRequested()) return ohpl_h12b_is_visible(&mColor, mbIsVisible);
 		if(mColor.r <= 0 && mColor.g <= 0 && mColor.b <= 0) return false;
 
 		return mbIsVisible;

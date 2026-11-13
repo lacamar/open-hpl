@@ -1,0 +1,989 @@
+dec pe_update 300 0 0 0 0 -1 7 -> 0 300 -1 0 0
+dec pe_update 300 0 0 0 0 -1 8 -> 0 300 -1 0 0
+dec pe_update 300 0 0 0 0 7 7 -> 0 300 7 0 0
+dec pe_update 300 0 0 0 0 7 8 -> 0 300 7 0 0
+dec pe_update 300 0 0 0 1 -1 7 -> 0 300 -1 0 0
+dec pe_update 300 0 0 0 1 -1 8 -> 0 300 -1 0 0
+dec pe_update 300 0 0 0 1 7 7 -> 0 300 7 0 0
+dec pe_update 300 0 0 0 1 7 8 -> 0 300 7 0 0
+dec pe_update 300 0 0 1 0 -1 7 -> 0 300 -1 0 0
+dec pe_update 300 0 0 1 0 -1 8 -> 0 300 -1 0 0
+dec pe_update 300 0 0 1 0 7 7 -> 0 300 7 0 0
+dec pe_update 300 0 0 1 0 7 8 -> 0 300 7 0 0
+dec pe_update 300 0 0 1 1 -1 7 -> 0 300 -1 0 0
+dec pe_update 300 0 0 1 1 -1 8 -> 0 300 -1 0 0
+dec pe_update 300 0 0 1 1 7 7 -> 0 300 7 0 0
+dec pe_update 300 0 0 1 1 7 8 -> 0 300 7 0 0
+dec pe_update 300 0 1 0 0 -1 7 -> 0 300 -1 0 0
+dec pe_update 300 0 1 0 0 -1 8 -> 0 300 -1 0 0
+dec pe_update 300 0 1 0 0 7 7 -> 0 300 7 0 0
+dec pe_update 300 0 1 0 0 7 8 -> 0 300 7 0 0
+dec pe_update 300 0 1 0 1 -1 7 -> 0 300 -1 0 0
+dec pe_update 300 0 1 0 1 -1 8 -> 0 300 -1 0 0
+dec pe_update 300 0 1 0 1 7 7 -> 0 300 7 0 0
+dec pe_update 300 0 1 0 1 7 8 -> 0 300 7 0 0
+dec pe_update 300 0 1 1 0 -1 7 -> 0 300 -1 0 0
+dec pe_update 300 0 1 1 0 -1 8 -> 0 300 -1 0 0
+dec pe_update 300 0 1 1 0 7 7 -> 0 300 7 0 0
+dec pe_update 300 0 1 1 0 7 8 -> 0 300 7 0 0
+dec pe_update 300 0 1 1 1 -1 7 -> 0 300 -1 0 0
+dec pe_update 300 0 1 1 1 -1 8 -> 0 300 -1 0 0
+dec pe_update 300 0 1 1 1 7 7 -> 0 300 7 0 0
+dec pe_update 300 0 1 1 1 7 8 -> 0 300 7 0 0
+dec pe_update 300 1 0 0 0 -1 7 -> 1 299 -1 1 1
+dec pe_update 300 1 0 0 0 -1 8 -> 1 299 -1 1 1
+dec pe_update 300 1 0 0 0 7 7 -> 1 299 7 1 1
+dec pe_update 300 1 0 0 0 7 8 -> 1 299 7 1 1
+dec pe_update 300 1 0 0 1 -1 7 -> 3 299 7 1 1
+dec pe_update 300 1 0 0 1 -1 8 -> 3 299 8 1 1
+dec pe_update 300 1 0 0 1 7 7 -> 1 299 7 1 1
+dec pe_update 300 1 0 0 1 7 8 -> 3 299 8 1 1
+dec pe_update 300 1 0 1 0 -1 7 -> 1 300 -1 1 1
+dec pe_update 300 1 0 1 0 -1 8 -> 1 300 -1 1 1
+dec pe_update 300 1 0 1 0 7 7 -> 1 300 7 1 1
+dec pe_update 300 1 0 1 0 7 8 -> 1 300 7 1 1
+dec pe_update 300 1 0 1 1 -1 7 -> 3 300 7 1 1
+dec pe_update 300 1 0 1 1 -1 8 -> 3 300 8 1 1
+dec pe_update 300 1 0 1 1 7 7 -> 1 300 7 1 1
+dec pe_update 300 1 0 1 1 7 8 -> 3 300 8 1 1
+dec pe_update 300 1 1 0 0 -1 7 -> 1 300 -1 1 1
+dec pe_update 300 1 1 0 0 -1 8 -> 1 300 -1 1 1
+dec pe_update 300 1 1 0 0 7 7 -> 1 300 7 1 1
+dec pe_update 300 1 1 0 0 7 8 -> 1 300 7 1 1
+dec pe_update 300 1 1 0 1 -1 7 -> 3 300 7 1 1
+dec pe_update 300 1 1 0 1 -1 8 -> 3 300 8 1 1
+dec pe_update 300 1 1 0 1 7 7 -> 1 300 7 1 1
+dec pe_update 300 1 1 0 1 7 8 -> 3 300 8 1 1
+dec pe_update 300 1 1 1 0 -1 7 -> 1 300 -1 1 1
+dec pe_update 300 1 1 1 0 -1 8 -> 1 300 -1 1 1
+dec pe_update 300 1 1 1 0 7 7 -> 1 300 7 1 1
+dec pe_update 300 1 1 1 0 7 8 -> 1 300 7 1 1
+dec pe_update 300 1 1 1 1 -1 7 -> 3 300 7 1 1
+dec pe_update 300 1 1 1 1 -1 8 -> 3 300 8 1 1
+dec pe_update 300 1 1 1 1 7 7 -> 1 300 7 1 1
+dec pe_update 300 1 1 1 1 7 8 -> 3 300 8 1 1
+dec pe_update 11 0 0 0 0 -1 7 -> 0 11 -1 0 0
+dec pe_update 11 0 0 0 0 -1 8 -> 0 11 -1 0 0
+dec pe_update 11 0 0 0 0 7 7 -> 0 11 7 0 0
+dec pe_update 11 0 0 0 0 7 8 -> 0 11 7 0 0
+dec pe_update 11 0 0 0 1 -1 7 -> 0 11 -1 0 0
+dec pe_update 11 0 0 0 1 -1 8 -> 0 11 -1 0 0
+dec pe_update 11 0 0 0 1 7 7 -> 0 11 7 0 0
+dec pe_update 11 0 0 0 1 7 8 -> 0 11 7 0 0
+dec pe_update 11 0 0 1 0 -1 7 -> 0 11 -1 0 0
+dec pe_update 11 0 0 1 0 -1 8 -> 0 11 -1 0 0
+dec pe_update 11 0 0 1 0 7 7 -> 0 11 7 0 0
+dec pe_update 11 0 0 1 0 7 8 -> 0 11 7 0 0
+dec pe_update 11 0 0 1 1 -1 7 -> 0 11 -1 0 0
+dec pe_update 11 0 0 1 1 -1 8 -> 0 11 -1 0 0
+dec pe_update 11 0 0 1 1 7 7 -> 0 11 7 0 0
+dec pe_update 11 0 0 1 1 7 8 -> 0 11 7 0 0
+dec pe_update 11 0 1 0 0 -1 7 -> 0 11 -1 0 0
+dec pe_update 11 0 1 0 0 -1 8 -> 0 11 -1 0 0
+dec pe_update 11 0 1 0 0 7 7 -> 0 11 7 0 0
+dec pe_update 11 0 1 0 0 7 8 -> 0 11 7 0 0
+dec pe_update 11 0 1 0 1 -1 7 -> 0 11 -1 0 0
+dec pe_update 11 0 1 0 1 -1 8 -> 0 11 -1 0 0
+dec pe_update 11 0 1 0 1 7 7 -> 0 11 7 0 0
+dec pe_update 11 0 1 0 1 7 8 -> 0 11 7 0 0
+dec pe_update 11 0 1 1 0 -1 7 -> 0 11 -1 0 0
+dec pe_update 11 0 1 1 0 -1 8 -> 0 11 -1 0 0
+dec pe_update 11 0 1 1 0 7 7 -> 0 11 7 0 0
+dec pe_update 11 0 1 1 0 7 8 -> 0 11 7 0 0
+dec pe_update 11 0 1 1 1 -1 7 -> 0 11 -1 0 0
+dec pe_update 11 0 1 1 1 -1 8 -> 0 11 -1 0 0
+dec pe_update 11 0 1 1 1 7 7 -> 0 11 7 0 0
+dec pe_update 11 0 1 1 1 7 8 -> 0 11 7 0 0
+dec pe_update 11 1 0 0 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 11 1 0 0 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 11 1 0 0 0 7 7 -> 1 10 7 1 1
+dec pe_update 11 1 0 0 0 7 8 -> 1 10 7 1 1
+dec pe_update 11 1 0 0 1 -1 7 -> 3 10 7 1 1
+dec pe_update 11 1 0 0 1 -1 8 -> 3 10 8 1 1
+dec pe_update 11 1 0 0 1 7 7 -> 1 10 7 1 1
+dec pe_update 11 1 0 0 1 7 8 -> 3 10 8 1 1
+dec pe_update 11 1 0 1 0 -1 7 -> 1 11 -1 1 1
+dec pe_update 11 1 0 1 0 -1 8 -> 1 11 -1 1 1
+dec pe_update 11 1 0 1 0 7 7 -> 1 11 7 1 1
+dec pe_update 11 1 0 1 0 7 8 -> 1 11 7 1 1
+dec pe_update 11 1 0 1 1 -1 7 -> 3 11 7 1 1
+dec pe_update 11 1 0 1 1 -1 8 -> 3 11 8 1 1
+dec pe_update 11 1 0 1 1 7 7 -> 1 11 7 1 1
+dec pe_update 11 1 0 1 1 7 8 -> 3 11 8 1 1
+dec pe_update 11 1 1 0 0 -1 7 -> 1 11 -1 1 1
+dec pe_update 11 1 1 0 0 -1 8 -> 1 11 -1 1 1
+dec pe_update 11 1 1 0 0 7 7 -> 1 11 7 1 1
+dec pe_update 11 1 1 0 0 7 8 -> 1 11 7 1 1
+dec pe_update 11 1 1 0 1 -1 7 -> 3 11 7 1 1
+dec pe_update 11 1 1 0 1 -1 8 -> 3 11 8 1 1
+dec pe_update 11 1 1 0 1 7 7 -> 1 11 7 1 1
+dec pe_update 11 1 1 0 1 7 8 -> 3 11 8 1 1
+dec pe_update 11 1 1 1 0 -1 7 -> 1 11 -1 1 1
+dec pe_update 11 1 1 1 0 -1 8 -> 1 11 -1 1 1
+dec pe_update 11 1 1 1 0 7 7 -> 1 11 7 1 1
+dec pe_update 11 1 1 1 0 7 8 -> 1 11 7 1 1
+dec pe_update 11 1 1 1 1 -1 7 -> 3 11 7 1 1
+dec pe_update 11 1 1 1 1 -1 8 -> 3 11 8 1 1
+dec pe_update 11 1 1 1 1 7 7 -> 1 11 7 1 1
+dec pe_update 11 1 1 1 1 7 8 -> 3 11 8 1 1
+dec pe_update 10 0 0 0 0 -1 7 -> 0 10 -1 0 0
+dec pe_update 10 0 0 0 0 -1 8 -> 0 10 -1 0 0
+dec pe_update 10 0 0 0 0 7 7 -> 0 10 7 0 0
+dec pe_update 10 0 0 0 0 7 8 -> 0 10 7 0 0
+dec pe_update 10 0 0 0 1 -1 7 -> 0 10 -1 0 0
+dec pe_update 10 0 0 0 1 -1 8 -> 0 10 -1 0 0
+dec pe_update 10 0 0 0 1 7 7 -> 0 10 7 0 0
+dec pe_update 10 0 0 0 1 7 8 -> 0 10 7 0 0
+dec pe_update 10 0 0 1 0 -1 7 -> 0 10 -1 0 0
+dec pe_update 10 0 0 1 0 -1 8 -> 0 10 -1 0 0
+dec pe_update 10 0 0 1 0 7 7 -> 0 10 7 0 0
+dec pe_update 10 0 0 1 0 7 8 -> 0 10 7 0 0
+dec pe_update 10 0 0 1 1 -1 7 -> 0 10 -1 0 0
+dec pe_update 10 0 0 1 1 -1 8 -> 0 10 -1 0 0
+dec pe_update 10 0 0 1 1 7 7 -> 0 10 7 0 0
+dec pe_update 10 0 0 1 1 7 8 -> 0 10 7 0 0
+dec pe_update 10 0 1 0 0 -1 7 -> 0 10 -1 0 0
+dec pe_update 10 0 1 0 0 -1 8 -> 0 10 -1 0 0
+dec pe_update 10 0 1 0 0 7 7 -> 0 10 7 0 0
+dec pe_update 10 0 1 0 0 7 8 -> 0 10 7 0 0
+dec pe_update 10 0 1 0 1 -1 7 -> 0 10 -1 0 0
+dec pe_update 10 0 1 0 1 -1 8 -> 0 10 -1 0 0
+dec pe_update 10 0 1 0 1 7 7 -> 0 10 7 0 0
+dec pe_update 10 0 1 0 1 7 8 -> 0 10 7 0 0
+dec pe_update 10 0 1 1 0 -1 7 -> 0 10 -1 0 0
+dec pe_update 10 0 1 1 0 -1 8 -> 0 10 -1 0 0
+dec pe_update 10 0 1 1 0 7 7 -> 0 10 7 0 0
+dec pe_update 10 0 1 1 0 7 8 -> 0 10 7 0 0
+dec pe_update 10 0 1 1 1 -1 7 -> 0 10 -1 0 0
+dec pe_update 10 0 1 1 1 -1 8 -> 0 10 -1 0 0
+dec pe_update 10 0 1 1 1 7 7 -> 0 10 7 0 0
+dec pe_update 10 0 1 1 1 7 8 -> 0 10 7 0 0
+dec pe_update 10 1 0 0 0 -1 7 -> 1 9 -1 1 1
+dec pe_update 10 1 0 0 0 -1 8 -> 1 9 -1 1 1
+dec pe_update 10 1 0 0 0 7 7 -> 1 9 7 1 1
+dec pe_update 10 1 0 0 0 7 8 -> 1 9 7 1 1
+dec pe_update 10 1 0 0 1 -1 7 -> 3 9 7 1 1
+dec pe_update 10 1 0 0 1 -1 8 -> 3 9 8 1 1
+dec pe_update 10 1 0 0 1 7 7 -> 1 9 7 1 1
+dec pe_update 10 1 0 0 1 7 8 -> 3 9 8 1 1
+dec pe_update 10 1 0 1 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 10 1 0 1 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 10 1 0 1 0 7 7 -> 1 10 7 1 1
+dec pe_update 10 1 0 1 0 7 8 -> 1 10 7 1 1
+dec pe_update 10 1 0 1 1 -1 7 -> 3 10 7 1 1
+dec pe_update 10 1 0 1 1 -1 8 -> 3 10 8 1 1
+dec pe_update 10 1 0 1 1 7 7 -> 1 10 7 1 1
+dec pe_update 10 1 0 1 1 7 8 -> 3 10 8 1 1
+dec pe_update 10 1 1 0 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 10 1 1 0 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 10 1 1 0 0 7 7 -> 1 10 7 1 1
+dec pe_update 10 1 1 0 0 7 8 -> 1 10 7 1 1
+dec pe_update 10 1 1 0 1 -1 7 -> 3 10 7 1 1
+dec pe_update 10 1 1 0 1 -1 8 -> 3 10 8 1 1
+dec pe_update 10 1 1 0 1 7 7 -> 1 10 7 1 1
+dec pe_update 10 1 1 0 1 7 8 -> 3 10 8 1 1
+dec pe_update 10 1 1 1 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 10 1 1 1 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 10 1 1 1 0 7 7 -> 1 10 7 1 1
+dec pe_update 10 1 1 1 0 7 8 -> 1 10 7 1 1
+dec pe_update 10 1 1 1 1 -1 7 -> 3 10 7 1 1
+dec pe_update 10 1 1 1 1 -1 8 -> 3 10 8 1 1
+dec pe_update 10 1 1 1 1 7 7 -> 1 10 7 1 1
+dec pe_update 10 1 1 1 1 7 8 -> 3 10 8 1 1
+dec pe_update 9 0 0 0 0 -1 7 -> 0 9 -1 0 0
+dec pe_update 9 0 0 0 0 -1 8 -> 0 9 -1 0 0
+dec pe_update 9 0 0 0 0 7 7 -> 0 9 7 0 0
+dec pe_update 9 0 0 0 0 7 8 -> 0 9 7 0 0
+dec pe_update 9 0 0 0 1 -1 7 -> 0 9 -1 0 0
+dec pe_update 9 0 0 0 1 -1 8 -> 0 9 -1 0 0
+dec pe_update 9 0 0 0 1 7 7 -> 0 9 7 0 0
+dec pe_update 9 0 0 0 1 7 8 -> 0 9 7 0 0
+dec pe_update 9 0 0 1 0 -1 7 -> 0 9 -1 0 0
+dec pe_update 9 0 0 1 0 -1 8 -> 0 9 -1 0 0
+dec pe_update 9 0 0 1 0 7 7 -> 0 9 7 0 0
+dec pe_update 9 0 0 1 0 7 8 -> 0 9 7 0 0
+dec pe_update 9 0 0 1 1 -1 7 -> 0 9 -1 0 0
+dec pe_update 9 0 0 1 1 -1 8 -> 0 9 -1 0 0
+dec pe_update 9 0 0 1 1 7 7 -> 0 9 7 0 0
+dec pe_update 9 0 0 1 1 7 8 -> 0 9 7 0 0
+dec pe_update 9 0 1 0 0 -1 7 -> 0 9 -1 0 0
+dec pe_update 9 0 1 0 0 -1 8 -> 0 9 -1 0 0
+dec pe_update 9 0 1 0 0 7 7 -> 0 9 7 0 0
+dec pe_update 9 0 1 0 0 7 8 -> 0 9 7 0 0
+dec pe_update 9 0 1 0 1 -1 7 -> 0 9 -1 0 0
+dec pe_update 9 0 1 0 1 -1 8 -> 0 9 -1 0 0
+dec pe_update 9 0 1 0 1 7 7 -> 0 9 7 0 0
+dec pe_update 9 0 1 0 1 7 8 -> 0 9 7 0 0
+dec pe_update 9 0 1 1 0 -1 7 -> 0 9 -1 0 0
+dec pe_update 9 0 1 1 0 -1 8 -> 0 9 -1 0 0
+dec pe_update 9 0 1 1 0 7 7 -> 0 9 7 0 0
+dec pe_update 9 0 1 1 0 7 8 -> 0 9 7 0 0
+dec pe_update 9 0 1 1 1 -1 7 -> 0 9 -1 0 0
+dec pe_update 9 0 1 1 1 -1 8 -> 0 9 -1 0 0
+dec pe_update 9 0 1 1 1 7 7 -> 0 9 7 0 0
+dec pe_update 9 0 1 1 1 7 8 -> 0 9 7 0 0
+dec pe_update 9 1 0 0 0 -1 7 -> 1 8 -1 1 1
+dec pe_update 9 1 0 0 0 -1 8 -> 1 8 -1 1 1
+dec pe_update 9 1 0 0 0 7 7 -> 1 8 7 1 1
+dec pe_update 9 1 0 0 0 7 8 -> 1 8 7 1 1
+dec pe_update 9 1 0 0 1 -1 7 -> 3 8 7 1 1
+dec pe_update 9 1 0 0 1 -1 8 -> 3 8 8 1 1
+dec pe_update 9 1 0 0 1 7 7 -> 1 8 7 1 1
+dec pe_update 9 1 0 0 1 7 8 -> 3 8 8 1 1
+dec pe_update 9 1 0 1 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 9 1 0 1 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 9 1 0 1 0 7 7 -> 1 10 7 1 1
+dec pe_update 9 1 0 1 0 7 8 -> 1 10 7 1 1
+dec pe_update 9 1 0 1 1 -1 7 -> 3 10 7 1 1
+dec pe_update 9 1 0 1 1 -1 8 -> 3 10 8 1 1
+dec pe_update 9 1 0 1 1 7 7 -> 1 10 7 1 1
+dec pe_update 9 1 0 1 1 7 8 -> 3 10 8 1 1
+dec pe_update 9 1 1 0 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 9 1 1 0 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 9 1 1 0 0 7 7 -> 1 10 7 1 1
+dec pe_update 9 1 1 0 0 7 8 -> 1 10 7 1 1
+dec pe_update 9 1 1 0 1 -1 7 -> 3 10 7 1 1
+dec pe_update 9 1 1 0 1 -1 8 -> 3 10 8 1 1
+dec pe_update 9 1 1 0 1 7 7 -> 1 10 7 1 1
+dec pe_update 9 1 1 0 1 7 8 -> 3 10 8 1 1
+dec pe_update 9 1 1 1 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 9 1 1 1 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 9 1 1 1 0 7 7 -> 1 10 7 1 1
+dec pe_update 9 1 1 1 0 7 8 -> 1 10 7 1 1
+dec pe_update 9 1 1 1 1 -1 7 -> 3 10 7 1 1
+dec pe_update 9 1 1 1 1 -1 8 -> 3 10 8 1 1
+dec pe_update 9 1 1 1 1 7 7 -> 1 10 7 1 1
+dec pe_update 9 1 1 1 1 7 8 -> 3 10 8 1 1
+dec pe_update 1 0 0 0 0 -1 7 -> 0 1 -1 0 0
+dec pe_update 1 0 0 0 0 -1 8 -> 0 1 -1 0 0
+dec pe_update 1 0 0 0 0 7 7 -> 0 1 7 0 0
+dec pe_update 1 0 0 0 0 7 8 -> 0 1 7 0 0
+dec pe_update 1 0 0 0 1 -1 7 -> 0 1 -1 0 0
+dec pe_update 1 0 0 0 1 -1 8 -> 0 1 -1 0 0
+dec pe_update 1 0 0 0 1 7 7 -> 0 1 7 0 0
+dec pe_update 1 0 0 0 1 7 8 -> 0 1 7 0 0
+dec pe_update 1 0 0 1 0 -1 7 -> 0 1 -1 0 0
+dec pe_update 1 0 0 1 0 -1 8 -> 0 1 -1 0 0
+dec pe_update 1 0 0 1 0 7 7 -> 0 1 7 0 0
+dec pe_update 1 0 0 1 0 7 8 -> 0 1 7 0 0
+dec pe_update 1 0 0 1 1 -1 7 -> 0 1 -1 0 0
+dec pe_update 1 0 0 1 1 -1 8 -> 0 1 -1 0 0
+dec pe_update 1 0 0 1 1 7 7 -> 0 1 7 0 0
+dec pe_update 1 0 0 1 1 7 8 -> 0 1 7 0 0
+dec pe_update 1 0 1 0 0 -1 7 -> 0 1 -1 0 0
+dec pe_update 1 0 1 0 0 -1 8 -> 0 1 -1 0 0
+dec pe_update 1 0 1 0 0 7 7 -> 0 1 7 0 0
+dec pe_update 1 0 1 0 0 7 8 -> 0 1 7 0 0
+dec pe_update 1 0 1 0 1 -1 7 -> 0 1 -1 0 0
+dec pe_update 1 0 1 0 1 -1 8 -> 0 1 -1 0 0
+dec pe_update 1 0 1 0 1 7 7 -> 0 1 7 0 0
+dec pe_update 1 0 1 0 1 7 8 -> 0 1 7 0 0
+dec pe_update 1 0 1 1 0 -1 7 -> 0 1 -1 0 0
+dec pe_update 1 0 1 1 0 -1 8 -> 0 1 -1 0 0
+dec pe_update 1 0 1 1 0 7 7 -> 0 1 7 0 0
+dec pe_update 1 0 1 1 0 7 8 -> 0 1 7 0 0
+dec pe_update 1 0 1 1 1 -1 7 -> 0 1 -1 0 0
+dec pe_update 1 0 1 1 1 -1 8 -> 0 1 -1 0 0
+dec pe_update 1 0 1 1 1 7 7 -> 0 1 7 0 0
+dec pe_update 1 0 1 1 1 7 8 -> 0 1 7 0 0
+dec pe_update 1 1 0 0 0 -1 7 -> 1 0 -1 1 1
+dec pe_update 1 1 0 0 0 -1 8 -> 1 0 -1 1 1
+dec pe_update 1 1 0 0 0 7 7 -> 1 0 7 1 1
+dec pe_update 1 1 0 0 0 7 8 -> 1 0 7 1 1
+dec pe_update 1 1 0 0 1 -1 7 -> 3 0 7 1 1
+dec pe_update 1 1 0 0 1 -1 8 -> 3 0 8 1 1
+dec pe_update 1 1 0 0 1 7 7 -> 1 0 7 1 1
+dec pe_update 1 1 0 0 1 7 8 -> 3 0 8 1 1
+dec pe_update 1 1 0 1 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 1 1 0 1 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 1 1 0 1 0 7 7 -> 1 10 7 1 1
+dec pe_update 1 1 0 1 0 7 8 -> 1 10 7 1 1
+dec pe_update 1 1 0 1 1 -1 7 -> 3 10 7 1 1
+dec pe_update 1 1 0 1 1 -1 8 -> 3 10 8 1 1
+dec pe_update 1 1 0 1 1 7 7 -> 1 10 7 1 1
+dec pe_update 1 1 0 1 1 7 8 -> 3 10 8 1 1
+dec pe_update 1 1 1 0 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 1 1 1 0 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 1 1 1 0 0 7 7 -> 1 10 7 1 1
+dec pe_update 1 1 1 0 0 7 8 -> 1 10 7 1 1
+dec pe_update 1 1 1 0 1 -1 7 -> 3 10 7 1 1
+dec pe_update 1 1 1 0 1 -1 8 -> 3 10 8 1 1
+dec pe_update 1 1 1 0 1 7 7 -> 1 10 7 1 1
+dec pe_update 1 1 1 0 1 7 8 -> 3 10 8 1 1
+dec pe_update 1 1 1 1 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 1 1 1 1 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 1 1 1 1 0 7 7 -> 1 10 7 1 1
+dec pe_update 1 1 1 1 0 7 8 -> 1 10 7 1 1
+dec pe_update 1 1 1 1 1 -1 7 -> 3 10 7 1 1
+dec pe_update 1 1 1 1 1 -1 8 -> 3 10 8 1 1
+dec pe_update 1 1 1 1 1 7 7 -> 1 10 7 1 1
+dec pe_update 1 1 1 1 1 7 8 -> 3 10 8 1 1
+dec pe_update 0 0 0 0 0 -1 7 -> 0 0 -1 0 0
+dec pe_update 0 0 0 0 0 -1 8 -> 0 0 -1 0 0
+dec pe_update 0 0 0 0 0 7 7 -> 0 0 7 0 0
+dec pe_update 0 0 0 0 0 7 8 -> 0 0 7 0 0
+dec pe_update 0 0 0 0 1 -1 7 -> 0 0 -1 0 0
+dec pe_update 0 0 0 0 1 -1 8 -> 0 0 -1 0 0
+dec pe_update 0 0 0 0 1 7 7 -> 0 0 7 0 0
+dec pe_update 0 0 0 0 1 7 8 -> 0 0 7 0 0
+dec pe_update 0 0 0 1 0 -1 7 -> 0 0 -1 0 0
+dec pe_update 0 0 0 1 0 -1 8 -> 0 0 -1 0 0
+dec pe_update 0 0 0 1 0 7 7 -> 0 0 7 0 0
+dec pe_update 0 0 0 1 0 7 8 -> 0 0 7 0 0
+dec pe_update 0 0 0 1 1 -1 7 -> 0 0 -1 0 0
+dec pe_update 0 0 0 1 1 -1 8 -> 0 0 -1 0 0
+dec pe_update 0 0 0 1 1 7 7 -> 0 0 7 0 0
+dec pe_update 0 0 0 1 1 7 8 -> 0 0 7 0 0
+dec pe_update 0 0 1 0 0 -1 7 -> 0 0 -1 0 0
+dec pe_update 0 0 1 0 0 -1 8 -> 0 0 -1 0 0
+dec pe_update 0 0 1 0 0 7 7 -> 0 0 7 0 0
+dec pe_update 0 0 1 0 0 7 8 -> 0 0 7 0 0
+dec pe_update 0 0 1 0 1 -1 7 -> 0 0 -1 0 0
+dec pe_update 0 0 1 0 1 -1 8 -> 0 0 -1 0 0
+dec pe_update 0 0 1 0 1 7 7 -> 0 0 7 0 0
+dec pe_update 0 0 1 0 1 7 8 -> 0 0 7 0 0
+dec pe_update 0 0 1 1 0 -1 7 -> 0 0 -1 0 0
+dec pe_update 0 0 1 1 0 -1 8 -> 0 0 -1 0 0
+dec pe_update 0 0 1 1 0 7 7 -> 0 0 7 0 0
+dec pe_update 0 0 1 1 0 7 8 -> 0 0 7 0 0
+dec pe_update 0 0 1 1 1 -1 7 -> 0 0 -1 0 0
+dec pe_update 0 0 1 1 1 -1 8 -> 0 0 -1 0 0
+dec pe_update 0 0 1 1 1 7 7 -> 0 0 7 0 0
+dec pe_update 0 0 1 1 1 7 8 -> 0 0 7 0 0
+dec pe_update 0 1 0 0 0 -1 7 -> 0 0 -1 0 0
+dec pe_update 0 1 0 0 0 -1 8 -> 0 0 -1 0 0
+dec pe_update 0 1 0 0 0 7 7 -> 0 0 7 0 0
+dec pe_update 0 1 0 0 0 7 8 -> 0 0 7 0 0
+dec pe_update 0 1 0 0 1 -1 7 -> 0 0 -1 0 0
+dec pe_update 0 1 0 0 1 -1 8 -> 0 0 -1 0 0
+dec pe_update 0 1 0 0 1 7 7 -> 0 0 7 0 0
+dec pe_update 0 1 0 0 1 7 8 -> 0 0 7 0 0
+dec pe_update 0 1 0 1 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 0 1 0 1 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 0 1 0 1 0 7 7 -> 1 10 7 1 1
+dec pe_update 0 1 0 1 0 7 8 -> 1 10 7 1 1
+dec pe_update 0 1 0 1 1 -1 7 -> 3 10 7 1 1
+dec pe_update 0 1 0 1 1 -1 8 -> 3 10 8 1 1
+dec pe_update 0 1 0 1 1 7 7 -> 1 10 7 1 1
+dec pe_update 0 1 0 1 1 7 8 -> 3 10 8 1 1
+dec pe_update 0 1 1 0 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 0 1 1 0 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 0 1 1 0 0 7 7 -> 1 10 7 1 1
+dec pe_update 0 1 1 0 0 7 8 -> 1 10 7 1 1
+dec pe_update 0 1 1 0 1 -1 7 -> 3 10 7 1 1
+dec pe_update 0 1 1 0 1 -1 8 -> 3 10 8 1 1
+dec pe_update 0 1 1 0 1 7 7 -> 1 10 7 1 1
+dec pe_update 0 1 1 0 1 7 8 -> 3 10 8 1 1
+dec pe_update 0 1 1 1 0 -1 7 -> 1 10 -1 1 1
+dec pe_update 0 1 1 1 0 -1 8 -> 1 10 -1 1 1
+dec pe_update 0 1 1 1 0 7 7 -> 1 10 7 1 1
+dec pe_update 0 1 1 1 0 7 8 -> 1 10 7 1 1
+dec pe_update 0 1 1 1 1 -1 7 -> 3 10 7 1 1
+dec pe_update 0 1 1 1 1 -1 8 -> 3 10 8 1 1
+dec pe_update 0 1 1 1 1 7 7 -> 1 10 7 1 1
+dec pe_update 0 1 1 1 1 7 8 -> 3 10 8 1 1
+dec pe_bv 0 0 -1 5 -> 0 -1 0
+dec pe_axis 0 0 -1 5 -> 0 -1
+dec pe_bv 0 0 -1 6 -> 0 -1 0
+dec pe_axis 0 0 -1 6 -> 0 -1
+dec pe_bv 0 0 5 5 -> 0 5 0
+dec pe_axis 0 0 5 5 -> 0 5
+dec pe_bv 0 0 5 6 -> 0 5 0
+dec pe_axis 0 0 5 6 -> 0 5
+dec pe_bv 0 1 -1 5 -> 0 -1 0
+dec pe_axis 0 1 -1 5 -> 1 5
+dec pe_bv 0 1 -1 6 -> 0 -1 0
+dec pe_axis 0 1 -1 6 -> 1 6
+dec pe_bv 0 1 5 5 -> 0 5 0
+dec pe_axis 0 1 5 5 -> 0 5
+dec pe_bv 0 1 5 6 -> 0 5 0
+dec pe_axis 0 1 5 6 -> 1 6
+dec pe_bv 1 0 -1 5 -> 1 -1 0
+dec pe_axis 1 0 -1 5 -> 0 -1
+dec pe_bv 1 0 -1 6 -> 1 -1 0
+dec pe_axis 1 0 -1 6 -> 0 -1
+dec pe_bv 1 0 5 5 -> 1 5 0
+dec pe_axis 1 0 5 5 -> 0 5
+dec pe_bv 1 0 5 6 -> 1 5 0
+dec pe_axis 1 0 5 6 -> 0 5
+dec pe_bv 1 1 -1 5 -> 3 5 0
+dec pe_axis 1 1 -1 5 -> 1 5
+dec pe_bv 1 1 -1 6 -> 3 6 0
+dec pe_axis 1 1 -1 6 -> 1 6
+dec pe_bv 1 1 5 5 -> 1 5 0
+dec pe_axis 1 1 5 5 -> 0 5
+dec pe_bv 1 1 5 6 -> 3 6 0
+dec pe_axis 1 1 5 6 -> 1 6
+dec pe_model 0 0 -> 0
+dec pe_model 0 1 -> 0
+dec pe_model 1 0 -> 2
+dec pe_model 1 1 -> 1
+dec psdata 0 0 0 0 ->  0
+dec psdata 0 0 0 1 -> 0 0
+dec psdata 0 0 0 2 -> 00 0
+dec psdata 0 0 0 3 -> 000 0
+dec psdata 0 0 0 4 -> 0000 0
+dec psdata 0 0 1 1 -> 0 0
+dec psdata 0 0 1 2 -> 00 0
+dec psdata 0 0 1 3 -> 000 0
+dec psdata 0 0 1 4 -> 0000 0
+dec psdata 0 0 2 2 -> 00 0
+dec psdata 0 0 2 3 -> 000 0
+dec psdata 0 0 2 4 -> 0000 0
+dec psdata 0 0 3 2 -> 00 0
+dec psdata 0 0 3 3 -> 000 0
+dec psdata 0 0 3 4 -> 0000 0
+dec psdata 0 0 4 3 -> 000 0
+dec psdata 0 0 4 4 -> 0000 0
+dec psdata 0 0 5 3 -> 000 0
+dec psdata 0 0 5 4 -> 0000 0
+dec psdata 0 0 6 3 -> 000 0
+dec psdata 0 0 6 4 -> 0000 0
+dec psdata 0 0 7 3 -> 000 0
+dec psdata 0 0 7 4 -> 0000 0
+dec psdata 0 0 8 4 -> 0000 0
+dec psdata 0 0 9 4 -> 0000 0
+dec psdata 0 0 10 4 -> 0000 0
+dec psdata 0 0 11 4 -> 0000 0
+dec psdata 0 0 12 4 -> 0000 0
+dec psdata 0 0 13 4 -> 0000 0
+dec psdata 0 0 14 4 -> 0000 0
+dec psdata 0 0 15 4 -> 0000 0
+dec psdata 0 2 0 0 ->  0
+dec psdata 0 2 0 1 -> 0 0
+dec psdata 0 2 0 2 -> 00 0
+dec psdata 0 2 0 3 -> 000 0
+dec psdata 0 2 0 4 -> 0000 0
+dec psdata 0 2 1 1 -> 0 0
+dec psdata 0 2 1 2 -> 00 0
+dec psdata 0 2 1 3 -> 000 0
+dec psdata 0 2 1 4 -> 0000 0
+dec psdata 0 2 2 2 -> 00 0
+dec psdata 0 2 2 3 -> 000 0
+dec psdata 0 2 2 4 -> 0000 0
+dec psdata 0 2 3 2 -> 00 0
+dec psdata 0 2 3 3 -> 000 0
+dec psdata 0 2 3 4 -> 0000 0
+dec psdata 0 2 4 3 -> 000 0
+dec psdata 0 2 4 4 -> 0000 0
+dec psdata 0 2 5 3 -> 000 0
+dec psdata 0 2 5 4 -> 0000 0
+dec psdata 0 2 6 3 -> 000 0
+dec psdata 0 2 6 4 -> 0000 0
+dec psdata 0 2 7 3 -> 000 0
+dec psdata 0 2 7 4 -> 0000 0
+dec psdata 0 2 8 4 -> 0000 0
+dec psdata 0 2 9 4 -> 0000 0
+dec psdata 0 2 10 4 -> 0000 0
+dec psdata 0 2 11 4 -> 0000 0
+dec psdata 0 2 12 4 -> 0000 0
+dec psdata 0 2 13 4 -> 0000 0
+dec psdata 0 2 14 4 -> 0000 0
+dec psdata 0 2 15 4 -> 0000 0
+dec psdata 1 0 0 0 ->  0
+dec psdata 1 0 0 1 -> 0 0
+dec psdata 1 0 0 2 -> 00 0
+dec psdata 1 0 0 3 -> 000 0
+dec psdata 1 0 0 4 -> 0000 0
+dec psdata 1 0 1 1 -> 1 1
+dec psdata 1 0 1 2 -> 10 1
+dec psdata 1 0 1 3 -> 100 1
+dec psdata 1 0 1 4 -> 1000 1
+dec psdata 1 0 2 2 -> 01 1
+dec psdata 1 0 2 3 -> 010 1
+dec psdata 1 0 2 4 -> 0100 1
+dec psdata 1 0 3 2 -> 11 1
+dec psdata 1 0 3 3 -> 110 1
+dec psdata 1 0 3 4 -> 1100 1
+dec psdata 1 0 4 3 -> 001 1
+dec psdata 1 0 4 4 -> 0010 1
+dec psdata 1 0 5 3 -> 101 1
+dec psdata 1 0 5 4 -> 1010 1
+dec psdata 1 0 6 3 -> 011 1
+dec psdata 1 0 6 4 -> 0110 1
+dec psdata 1 0 7 3 -> 111 1
+dec psdata 1 0 7 4 -> 1110 1
+dec psdata 1 0 8 4 -> 0001 1
+dec psdata 1 0 9 4 -> 1001 1
+dec psdata 1 0 10 4 -> 0101 1
+dec psdata 1 0 11 4 -> 1101 1
+dec psdata 1 0 12 4 -> 0011 1
+dec psdata 1 0 13 4 -> 1011 1
+dec psdata 1 0 14 4 -> 0111 1
+dec psdata 1 0 15 4 -> 1111 1
+dec psdata 1 2 0 0 ->  1
+dec psdata 1 2 0 1 -> 0 1
+dec psdata 1 2 0 2 -> 00 1
+dec psdata 1 2 0 3 -> 000 1
+dec psdata 1 2 0 4 -> 0000 1
+dec psdata 1 2 1 1 -> 1 1
+dec psdata 1 2 1 2 -> 10 1
+dec psdata 1 2 1 3 -> 100 1
+dec psdata 1 2 1 4 -> 1000 1
+dec psdata 1 2 2 2 -> 01 1
+dec psdata 1 2 2 3 -> 010 1
+dec psdata 1 2 2 4 -> 0100 1
+dec psdata 1 2 3 2 -> 11 1
+dec psdata 1 2 3 3 -> 110 1
+dec psdata 1 2 3 4 -> 1100 1
+dec psdata 1 2 4 3 -> 001 1
+dec psdata 1 2 4 4 -> 0010 1
+dec psdata 1 2 5 3 -> 101 1
+dec psdata 1 2 5 4 -> 1010 1
+dec psdata 1 2 6 3 -> 011 1
+dec psdata 1 2 6 4 -> 0110 1
+dec psdata 1 2 7 3 -> 111 1
+dec psdata 1 2 7 4 -> 1110 1
+dec psdata 1 2 8 4 -> 0001 1
+dec psdata 1 2 9 4 -> 1001 1
+dec psdata 1 2 10 4 -> 0101 1
+dec psdata 1 2 11 4 -> 1101 1
+dec psdata 1 2 12 4 -> 0011 1
+dec psdata 1 2 13 4 -> 1011 1
+dec psdata 1 2 14 4 -> 0111 1
+dec psdata 1 2 15 4 -> 1111 1
+dec psdata_create 0 -> 0
+dec psdata_create 1 -> 1
+dec psdata_create 3 -> 1
+dec visible bf800000 bf800000 bf800000 3f800000 0 -> 0
+dec visible bf800000 bf800000 bf800000 3f800000 1 -> 0
+dec visible bf800000 bf800000 00000000 3f800000 0 -> 0
+dec visible bf800000 bf800000 00000000 3f800000 1 -> 0
+dec visible bf800000 bf800000 3f000000 3f800000 0 -> 0
+dec visible bf800000 bf800000 3f000000 3f800000 1 -> 1
+dec visible bf800000 00000000 bf800000 3f800000 0 -> 0
+dec visible bf800000 00000000 bf800000 3f800000 1 -> 0
+dec visible bf800000 00000000 00000000 3f800000 0 -> 0
+dec visible bf800000 00000000 00000000 3f800000 1 -> 0
+dec visible bf800000 00000000 3f000000 3f800000 0 -> 0
+dec visible bf800000 00000000 3f000000 3f800000 1 -> 1
+dec visible bf800000 3f000000 bf800000 3f800000 0 -> 0
+dec visible bf800000 3f000000 bf800000 3f800000 1 -> 1
+dec visible bf800000 3f000000 00000000 3f800000 0 -> 0
+dec visible bf800000 3f000000 00000000 3f800000 1 -> 1
+dec visible bf800000 3f000000 3f000000 3f800000 0 -> 0
+dec visible bf800000 3f000000 3f000000 3f800000 1 -> 1
+dec visible 00000000 bf800000 bf800000 3f800000 0 -> 0
+dec visible 00000000 bf800000 bf800000 3f800000 1 -> 0
+dec visible 00000000 bf800000 00000000 3f800000 0 -> 0
+dec visible 00000000 bf800000 00000000 3f800000 1 -> 0
+dec visible 00000000 bf800000 3f000000 3f800000 0 -> 0
+dec visible 00000000 bf800000 3f000000 3f800000 1 -> 1
+dec visible 00000000 00000000 bf800000 3f800000 0 -> 0
+dec visible 00000000 00000000 bf800000 3f800000 1 -> 0
+dec visible 00000000 00000000 00000000 3f800000 0 -> 0
+dec visible 00000000 00000000 00000000 3f800000 1 -> 0
+dec visible 00000000 00000000 3f000000 3f800000 0 -> 0
+dec visible 00000000 00000000 3f000000 3f800000 1 -> 1
+dec visible 00000000 3f000000 bf800000 3f800000 0 -> 0
+dec visible 00000000 3f000000 bf800000 3f800000 1 -> 1
+dec visible 00000000 3f000000 00000000 3f800000 0 -> 0
+dec visible 00000000 3f000000 00000000 3f800000 1 -> 1
+dec visible 00000000 3f000000 3f000000 3f800000 0 -> 0
+dec visible 00000000 3f000000 3f000000 3f800000 1 -> 1
+dec visible 3f000000 bf800000 bf800000 3f800000 0 -> 0
+dec visible 3f000000 bf800000 bf800000 3f800000 1 -> 1
+dec visible 3f000000 bf800000 00000000 3f800000 0 -> 0
+dec visible 3f000000 bf800000 00000000 3f800000 1 -> 1
+dec visible 3f000000 bf800000 3f000000 3f800000 0 -> 0
+dec visible 3f000000 bf800000 3f000000 3f800000 1 -> 1
+dec visible 3f000000 00000000 bf800000 3f800000 0 -> 0
+dec visible 3f000000 00000000 bf800000 3f800000 1 -> 1
+dec visible 3f000000 00000000 00000000 3f800000 0 -> 0
+dec visible 3f000000 00000000 00000000 3f800000 1 -> 1
+dec visible 3f000000 00000000 3f000000 3f800000 0 -> 0
+dec visible 3f000000 00000000 3f000000 3f800000 1 -> 1
+dec visible 3f000000 3f000000 bf800000 3f800000 0 -> 0
+dec visible 3f000000 3f000000 bf800000 3f800000 1 -> 1
+dec visible 3f000000 3f000000 00000000 3f800000 0 -> 0
+dec visible 3f000000 3f000000 00000000 3f800000 1 -> 1
+dec visible 3f000000 3f000000 3f000000 3f800000 0 -> 0
+dec visible 3f000000 3f000000 3f000000 3f800000 1 -> 1
+dec bb_axis 0 00000000 3f800000 00000000 3f800000 40000000 -> 0
+dec bb_axis 0 00000000 3f800000 00000000 40400000 3f800000 -> 0
+dec bb_axis 0 00000000 3f800000 00000000 40000000 40000000 -> 0
+dec bb_axis 0 00000000 3f800000 00000000 3f000000 3e800000 -> 0
+dec bb_axis 0 00000000 bf800000 00000000 3f800000 40000000 -> 0
+dec bb_axis 0 00000000 bf800000 00000000 40400000 3f800000 -> 0
+dec bb_axis 0 00000000 bf800000 00000000 40000000 40000000 -> 0
+dec bb_axis 0 00000000 bf800000 00000000 3f000000 3e800000 -> 0
+dec bb_axis 0 3f800000 00000000 00000000 3f800000 40000000 -> 0
+dec bb_axis 0 3f800000 00000000 00000000 40400000 3f800000 -> 0
+dec bb_axis 0 3f800000 00000000 00000000 40000000 40000000 -> 0
+dec bb_axis 0 3f800000 00000000 00000000 3f000000 3e800000 -> 0
+dec bb_axis 0 3f19999a 3f4ccccd 00000000 3f800000 40000000 -> 0
+dec bb_axis 0 3f19999a 3f4ccccd 00000000 40400000 3f800000 -> 0
+dec bb_axis 0 3f19999a 3f4ccccd 00000000 40000000 40000000 -> 0
+dec bb_axis 0 3f19999a 3f4ccccd 00000000 3f000000 3e800000 -> 0
+dec bb_axis 0 00000000 3f7fffff 00000000 3f800000 40000000 -> 0
+dec bb_axis 0 00000000 3f7fffff 00000000 40400000 3f800000 -> 0
+dec bb_axis 0 00000000 3f7fffff 00000000 40000000 40000000 -> 0
+dec bb_axis 0 00000000 3f7fffff 00000000 3f000000 3e800000 -> 0
+dec bb_axis 0 00000000 3f800000 0da24260 3f800000 40000000 -> 0
+dec bb_axis 0 00000000 3f800000 0da24260 40400000 3f800000 -> 0
+dec bb_axis 0 00000000 3f800000 0da24260 40000000 40000000 -> 0
+dec bb_axis 0 00000000 3f800000 0da24260 3f000000 3e800000 -> 0
+dec bb_axis 1 00000000 3f800000 00000000 3f800000 40000000 -> 0
+dec bb_axis 1 00000000 3f800000 00000000 40400000 3f800000 -> 0
+dec bb_axis 1 00000000 3f800000 00000000 40000000 40000000 -> 0
+dec bb_axis 1 00000000 3f800000 00000000 3f000000 3e800000 -> 0
+dec bb_axis 1 00000000 bf800000 00000000 3f800000 40000000 -> 1 403504f3
+dec bb_axis 1 00000000 bf800000 00000000 40400000 3f800000 -> 1 4087c3b6
+dec bb_axis 1 00000000 bf800000 00000000 40000000 40000000 -> 1 403504f3
+dec bb_axis 1 00000000 bf800000 00000000 3f000000 3e800000 -> 1 3f3504f3
+dec bb_axis 1 3f800000 00000000 00000000 3f800000 40000000 -> 1 403504f3
+dec bb_axis 1 3f800000 00000000 00000000 40400000 3f800000 -> 1 4087c3b6
+dec bb_axis 1 3f800000 00000000 00000000 40000000 40000000 -> 1 403504f3
+dec bb_axis 1 3f800000 00000000 00000000 3f000000 3e800000 -> 1 3f3504f3
+dec bb_axis 1 3f19999a 3f4ccccd 00000000 3f800000 40000000 -> 1 403504f3
+dec bb_axis 1 3f19999a 3f4ccccd 00000000 40400000 3f800000 -> 1 4087c3b6
+dec bb_axis 1 3f19999a 3f4ccccd 00000000 40000000 40000000 -> 1 403504f3
+dec bb_axis 1 3f19999a 3f4ccccd 00000000 3f000000 3e800000 -> 1 3f3504f3
+dec bb_axis 1 00000000 3f7fffff 00000000 3f800000 40000000 -> 1 403504f3
+dec bb_axis 1 00000000 3f7fffff 00000000 40400000 3f800000 -> 1 4087c3b6
+dec bb_axis 1 00000000 3f7fffff 00000000 40000000 40000000 -> 1 403504f3
+dec bb_axis 1 00000000 3f7fffff 00000000 3f000000 3e800000 -> 1 3f3504f3
+dec bb_axis 1 00000000 3f800000 0da24260 3f800000 40000000 -> 1 403504f3
+dec bb_axis 1 00000000 3f800000 0da24260 40400000 3f800000 -> 1 4087c3b6
+dec bb_axis 1 00000000 3f800000 0da24260 40000000 40000000 -> 1 403504f3
+dec bb_axis 1 00000000 3f800000 0da24260 3f000000 3e800000 -> 1 3f3504f3
+dec bb_halo_alpha 0 1 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 1 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 0 1 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 0 1 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 1 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 1 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 1 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 1 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 0 1 1 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 1 1 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 0 1 1 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 0 1 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 1 1 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 1 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 1 1 c0400000 3e800000 c0000000 3f000000 -> 80000000
+dec bb_halo_alpha 0 1 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 0 64 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 64 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 0 64 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 0 64 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 64 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 64 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 64 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 64 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 0 64 1 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 64 1 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 0 64 1 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 0 64 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 64 1 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 64 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 64 1 c0400000 3e800000 c0000000 3f000000 -> 80000000
+dec bb_halo_alpha 0 64 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 0 100 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 100 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 0 100 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 0 100 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 100 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 100 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 100 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 100 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 0 100 1 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 100 1 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 0 100 1 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 0 100 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 0 100 1 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 100 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 0 100 1 c0400000 3e800000 c0000000 3f000000 -> 80000000
+dec bb_halo_alpha 0 100 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 1 1 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 1 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 1 1 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 1 1 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 1 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 1 1 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 1 1 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 1 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 1 1 1 bf000000 bf000000 3f000000 3f000000 -> 3f800000
+dec bb_halo_alpha 1 1 1 c0000000 c0000000 40000000 40000000 -> 3e800000
+dec bb_halo_alpha 1 1 1 00000000 00000000 40400000 3f000000 -> 3eaaaaab
+dec bb_halo_alpha 1 1 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 1 1 bf800000 bf800000 3f800000 3f800000 -> 3f800000
+dec bb_halo_alpha 1 1 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 1 1 1 c0400000 3e800000 c0000000 3f000000 -> bf800000
+dec bb_halo_alpha 1 1 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 1 64 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 64 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 1 64 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 1 64 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 64 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 1 64 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 1 64 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 64 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 1 64 1 bf000000 bf000000 3f000000 3f000000 -> 3c800000
+dec bb_halo_alpha 1 64 1 c0000000 c0000000 40000000 40000000 -> 3b800000
+dec bb_halo_alpha 1 64 1 00000000 00000000 40400000 3f000000 -> 3baaaaab
+dec bb_halo_alpha 1 64 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 64 1 bf800000 bf800000 3f800000 3f800000 -> 3c800000
+dec bb_halo_alpha 1 64 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 1 64 1 c0400000 3e800000 c0000000 3f000000 -> bc800000
+dec bb_halo_alpha 1 64 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 1 100 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 100 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 1 100 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 1 100 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 100 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 1 100 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 1 100 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 100 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 1 100 1 bf000000 bf000000 3f000000 3f000000 -> 3c23d70a
+dec bb_halo_alpha 1 100 1 c0000000 c0000000 40000000 40000000 -> 3b23d70a
+dec bb_halo_alpha 1 100 1 00000000 00000000 40400000 3f000000 -> 3b5a740e
+dec bb_halo_alpha 1 100 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 1 100 1 bf800000 bf800000 3f800000 3f800000 -> 3c23d70a
+dec bb_halo_alpha 1 100 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 1 100 1 c0400000 3e800000 c0000000 3f000000 -> bc23d70a
+dec bb_halo_alpha 1 100 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 50 1 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 1 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 50 1 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 50 1 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 1 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 50 1 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 50 1 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 1 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 50 1 1 bf000000 bf000000 3f000000 3f000000 -> 42480000
+dec bb_halo_alpha 50 1 1 c0000000 c0000000 40000000 40000000 -> 41480000
+dec bb_halo_alpha 50 1 1 00000000 00000000 40400000 3f000000 -> 41855556
+dec bb_halo_alpha 50 1 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 1 1 bf800000 bf800000 3f800000 3f800000 -> 42480000
+dec bb_halo_alpha 50 1 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 50 1 1 c0400000 3e800000 c0000000 3f000000 -> c2480000
+dec bb_halo_alpha 50 1 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 50 64 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 64 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 50 64 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 50 64 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 64 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 50 64 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 50 64 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 64 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 50 64 1 bf000000 bf000000 3f000000 3f000000 -> 3f480000
+dec bb_halo_alpha 50 64 1 c0000000 c0000000 40000000 40000000 -> 3e480000
+dec bb_halo_alpha 50 64 1 00000000 00000000 40400000 3f000000 -> 3e855556
+dec bb_halo_alpha 50 64 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 64 1 bf800000 bf800000 3f800000 3f800000 -> 3f480000
+dec bb_halo_alpha 50 64 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 50 64 1 c0400000 3e800000 c0000000 3f000000 -> bf480000
+dec bb_halo_alpha 50 64 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 50 100 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 100 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 50 100 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 50 100 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 100 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 50 100 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 50 100 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 100 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 50 100 1 bf000000 bf000000 3f000000 3f000000 -> 3f000000
+dec bb_halo_alpha 50 100 1 c0000000 c0000000 40000000 40000000 -> 3e000000
+dec bb_halo_alpha 50 100 1 00000000 00000000 40400000 3f000000 -> 3e2aaaab
+dec bb_halo_alpha 50 100 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 50 100 1 bf800000 bf800000 3f800000 3f800000 -> 3f000000
+dec bb_halo_alpha 50 100 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 50 100 1 c0400000 3e800000 c0000000 3f000000 -> bf000000
+dec bb_halo_alpha 50 100 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 100 1 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 1 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 100 1 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 100 1 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 1 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 100 1 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 100 1 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 1 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 100 1 1 bf000000 bf000000 3f000000 3f000000 -> 42c80000
+dec bb_halo_alpha 100 1 1 c0000000 c0000000 40000000 40000000 -> 41c80000
+dec bb_halo_alpha 100 1 1 00000000 00000000 40400000 3f000000 -> 42055556
+dec bb_halo_alpha 100 1 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 1 1 bf800000 bf800000 3f800000 3f800000 -> 42c80000
+dec bb_halo_alpha 100 1 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 100 1 1 c0400000 3e800000 c0000000 3f000000 -> c2c80000
+dec bb_halo_alpha 100 1 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 100 64 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 64 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 100 64 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 100 64 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 64 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 100 64 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 100 64 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 64 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 100 64 1 bf000000 bf000000 3f000000 3f000000 -> 3fc80000
+dec bb_halo_alpha 100 64 1 c0000000 c0000000 40000000 40000000 -> 3ec80000
+dec bb_halo_alpha 100 64 1 00000000 00000000 40400000 3f000000 -> 3f055556
+dec bb_halo_alpha 100 64 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 64 1 bf800000 bf800000 3f800000 3f800000 -> 3fc80000
+dec bb_halo_alpha 100 64 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 100 64 1 c0400000 3e800000 c0000000 3f000000 -> bfc80000
+dec bb_halo_alpha 100 64 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 100 100 0 bf000000 bf000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 100 0 c0000000 c0000000 40000000 40000000 -> 00000000
+dec bb_halo_alpha 100 100 0 00000000 00000000 40400000 3f000000 -> 00000000
+dec bb_halo_alpha 100 100 0 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 100 0 bf800000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 100 100 0 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 100 100 0 c0400000 3e800000 c0000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 100 0 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_alpha 100 100 1 bf000000 bf000000 3f000000 3f000000 -> 3f800000
+dec bb_halo_alpha 100 100 1 c0000000 c0000000 40000000 40000000 -> 3e800000
+dec bb_halo_alpha 100 100 1 00000000 00000000 40400000 3f000000 -> 3eaaaaab
+dec bb_halo_alpha 100 100 1 3f000000 3f000000 3f000000 3f000000 -> 00000000
+dec bb_halo_alpha 100 100 1 bf800000 bf800000 3f800000 3f800000 -> 3f800000
+dec bb_halo_alpha 100 100 1 7fc00000 bf800000 3f800000 3f800000 -> 00000000
+dec bb_halo_alpha 100 100 1 c0400000 3e800000 c0000000 3f000000 -> bf800000
+dec bb_halo_alpha 100 100 1 3f000000 3f000000 3e800000 3f400000 -> 00000000
+dec bb_halo_gates 0 -1 4 -> 2 0 4
+dec bb_halo_gates 0 -1 5 -> 2 0 5
+dec bb_halo_gates 0 4 4 -> 0 0 4
+dec bb_halo_gates 0 4 5 -> 2 0 5
+dec bb_halo_gates 0 5 4 -> 2 0 4
+dec bb_halo_gates 0 5 5 -> 0 0 5
+dec bb_halo_gates 1 -1 4 -> 3 0 4
+dec bb_halo_gates 1 -1 5 -> 3 0 5
+dec bb_halo_gates 1 4 4 -> 1 0 4
+dec bb_halo_gates 1 4 5 -> 3 0 5
+dec bb_halo_gates 1 5 4 -> 3 0 4
+dec bb_halo_gates 1 5 5 -> 1 0 5
+dec beam_geom -1 -1 4 -> 1
+dec beam_geom -1 -1 -1 -> 0
+dec beam_geom -1 -1 5 -> 1
+dec beam_geom -1 4 4 -> 1
+dec beam_geom -1 4 -1 -> 1
+dec beam_geom -1 4 5 -> 1
+dec beam_geom -1 5 4 -> 1
+dec beam_geom -1 5 -1 -> 1
+dec beam_geom -1 5 5 -> 1
+dec beam_geom 4 -1 4 -> 1
+dec beam_geom 4 -1 -1 -> 1
+dec beam_geom 4 -1 5 -> 1
+dec beam_geom 4 4 4 -> 0
+dec beam_geom 4 4 -1 -> 1
+dec beam_geom 4 4 5 -> 1
+dec beam_geom 4 5 4 -> 1
+dec beam_geom 4 5 -1 -> 1
+dec beam_geom 4 5 5 -> 1
+dec rope_points 0 0 -> 0
+dec rope_elems 0 0 -> -6
+dec rope_points 0 1 -> 0
+dec rope_elems 0 1 -> -6
+dec rope_points 0 4 -> 0
+dec rope_elems 0 4 -> -6
+dec rope_points 0 8 -> 0
+dec rope_elems 0 8 -> -6
+dec rope_points 0 -3 -> 0
+dec rope_elems 0 -3 -> -6
+dec rope_points 1 0 -> 0
+dec rope_elems 1 0 -> -6
+dec rope_points 1 1 -> 1
+dec rope_elems 1 1 -> 0
+dec rope_points 1 4 -> 1
+dec rope_elems 1 4 -> 0
+dec rope_points 1 8 -> 1
+dec rope_elems 1 8 -> 0
+dec rope_points 1 -3 -> 0
+dec rope_elems 1 -3 -> -6
+dec rope_points 2 0 -> 0
+dec rope_elems 2 0 -> -6
+dec rope_points 2 1 -> 1
+dec rope_elems 2 1 -> 0
+dec rope_points 2 4 -> 2
+dec rope_elems 2 4 -> 6
+dec rope_points 2 8 -> 2
+dec rope_elems 2 8 -> 6
+dec rope_points 2 -3 -> 0
+dec rope_elems 2 -3 -> -6
+dec rope_points 5 0 -> 0
+dec rope_elems 5 0 -> -6
+dec rope_points 5 1 -> 1
+dec rope_elems 5 1 -> 0
+dec rope_points 5 4 -> 4
+dec rope_elems 5 4 -> 18
+dec rope_points 5 8 -> 5
+dec rope_elems 5 8 -> 24
+dec rope_points 5 -3 -> 0
+dec rope_elems 5 -3 -> -6
+dec rope_points 100 0 -> 0
+dec rope_elems 100 0 -> -6
+dec rope_points 100 1 -> 1
+dec rope_elems 100 1 -> 0
+dec rope_points 100 4 -> 4
+dec rope_elems 100 4 -> 18
+dec rope_points 100 8 -> 8
+dec rope_elems 100 8 -> 42
+dec rope_points 100 -3 -> 0
+dec rope_elems 100 -3 -> -6
+dec iris 0 -3 -1 -> 0
+dec iris 0 -3 0 -> 0
+dec iris 0 -3 4 -> 0
+dec iris 0 -3 64 -> 0
+dec iris 0 0 -1 -> 0
+dec iris 0 0 0 -> 0
+dec iris 0 0 4 -> 0
+dec iris 0 0 64 -> 0
+dec iris 0 1 -1 -> 0
+dec iris 0 1 0 -> 0
+dec iris 0 1 4 -> 0
+dec iris 0 1 64 -> 0
+dec iris 0 16 -1 -> 0
+dec iris 0 16 0 -> 0
+dec iris 0 16 4 -> 0
+dec iris 0 16 64 -> 0
+dec iris 1 -3 -1 -> 0
+dec iris 1 -3 0 -> 0
+dec iris 1 -3 4 -> 0
+dec iris 1 -3 64 -> 0
+dec iris 1 0 -1 -> 0
+dec iris 1 0 0 -> 0
+dec iris 1 0 4 -> 0
+dec iris 1 0 64 -> 0
+dec iris 1 1 -1 -> 3
+dec iris 1 1 0 -> 2
+dec iris 1 1 4 -> 1
+dec iris 1 1 64 -> 2
+dec iris 1 16 -1 -> 3
+dec iris 1 16 0 -> 2
+dec iris 1 16 4 -> 2
+dec iris 1 16 64 -> 1
+dec flare 0 3f800000 -> 1 0
+dec flare 0 00000000 -> 1 0
+dec flare 0 bf800000 -> 1 0
+dec flare 0 3f000000 -> 1 0
+dec flare 1 3f800000 -> 0 1
+dec flare 1 00000000 -> 0 0
+dec flare 1 bf800000 -> 0 0
+dec flare 1 3f000000 -> 0 1
+dec flare 2 3f800000 -> 1 1
+dec flare 2 00000000 -> 1 0
+dec flare 2 bf800000 -> 1 0
+dec flare 2 3f000000 -> 1 1
+dec flare 3 3f800000 -> 1 1
+dec flare 3 00000000 -> 1 0
+dec flare 3 bf800000 -> 1 0
+dec flare 3 3f000000 -> 1 1
+dec flare 4 3f800000 -> 2 1
+dec flare 4 00000000 -> 2 0
+dec flare 4 bf800000 -> 2 0
+dec flare 4 3f000000 -> 2 1
+dec flare 5 3f800000 -> 0 1
+dec flare 5 00000000 -> 0 0
+dec flare 5 bf800000 -> 0 0
+dec flare 5 3f000000 -> 0 1
+dec flare 6 3f800000 -> 1 1
+dec flare 6 00000000 -> 1 0
+dec flare 6 bf800000 -> 1 0
+dec flare 6 3f000000 -> 1 1
+dec flare 7 3f800000 -> 1 1
+dec flare 7 00000000 -> 1 0
+dec flare 7 bf800000 -> 1 0
+dec flare 7 3f000000 -> 1 1
+dec snd_route 0 0 -> 0 1 0
+dec snd_route 0 1 -> 0 0 1
+dec snd_route 1 0 -> 1 1 0
+dec snd_route 1 1 -> 1 1 0

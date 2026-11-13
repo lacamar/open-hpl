@@ -38,6 +38,7 @@
 #include "scene/World.h"
 
 #include "scene/ParticleSystem.h"
+#include "impl/RustBackends.h"
 
 
 namespace hpl {
@@ -143,17 +144,10 @@ namespace hpl {
 		
 		////////////////////////////////////
 		//Setup vars
-		mlSleepCount = 60*5; //Start with high sleep count to make sure a looping particle system reaches equilibrium. 5 secs should eb enough!
-
-		mbUpdateGfx = true;
-		mbUpdateBV = true;
-
-		mlDirectionUpdateCount = -1;
+		//mCtl starts with a high sleep count to make sure a looping particle system reaches equilibrium. 5 secs should eb enough!
 		mvDirection = cVector3f(0,0,0);
 
 		mvMaxDrawSize =0;
-
-		mlAxisDrawUpdateCount = -1;
 
 		mbApplyTransformToBV = false; 
 
@@ -189,30 +183,45 @@ namespace hpl {
 	{
 		if(IsActive()==false) return;
 
+		if(OhplBackendRustRequested())
+		{
+			uint32_t lGate = ohpl_h12b_pe_update_gate(&mCtl, true, IsDying(), iRenderer::GetRenderFrameCount() == mlRenderFrameCount,
+													mbUsesDirection, GetMatrixUpdateCount());
+			if(lGate == 0) return;
+			if(lGate & kOhplH12GateDirection)
+			{
+				cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
+				mvDirection = mtxInv.GetUp();
+			}
+			UpdateMotion(afTimeStep);
+			SetTransformUpdated();
+			return;
+		}
+
 		//////////////////////////////
 		// Update sleep
 		if(IsDying()==false && iRenderer::GetRenderFrameCount() != mlRenderFrameCount)
 		{
-			if(mlSleepCount <= 0)return;
-			mlSleepCount--;
+			if(mCtl.sleep_count <= 0)return;
+			mCtl.sleep_count--;
 		}
 		else
 		{
-			if(mlSleepCount<10) mlSleepCount =10;
+			if(mCtl.sleep_count<10) mCtl.sleep_count =10;
 		}
 
 		//////////////////////////////
 		// Update vars
-		mbUpdateGfx = true;
-		mbUpdateBV = true;
+		mCtl.update_gfx = true;
+		mCtl.update_bv = true;
 
 		//////////////////////////////
 		// Update direction
 		if(mbUsesDirection)
 		{
-			if(mlDirectionUpdateCount != GetMatrixUpdateCount())
+			if(mCtl.direction_update_count != GetMatrixUpdateCount())
 			{
-				mlDirectionUpdateCount = GetMatrixUpdateCount();
+				mCtl.direction_update_count = GetMatrixUpdateCount();
 				cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
 				mvDirection = mtxInv.GetUp();
 			}
@@ -293,9 +302,11 @@ namespace hpl {
 			in.m_mtxPsWorld = mpParentSystem->GetWorldMatrix();
 		if(mDrawType == eParticleEmitterType_Axis)
 		{
-			if(mlAxisDrawUpdateCount != GetMatrixUpdateCount())
+			const bool bAxisUpdate = OhplBackendRustRequested() ?
+				ohpl_h12b_pe_axis_gate(&mCtl, true, GetMatrixUpdateCount()) : mCtl.axis_update_count != GetMatrixUpdateCount();
+			if(bAxisUpdate)
 			{
-				mlAxisDrawUpdateCount = GetMatrixUpdateCount();
+				mCtl.axis_update_count = GetMatrixUpdateCount();
 				cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
 				mvRight = mtxInv.GetRight();
 				mvForward = mtxInv.GetForward();
@@ -348,11 +359,24 @@ namespace hpl {
 
 	cBoundingVolume* iParticleEmitter::GetBoundingVolume()
 	{
-		if(mbUpdateBV)
+		bool bUpdate, bAxisUpdate;
+		if(OhplBackendRustRequested())
 		{
-			if(mDrawType == eParticleEmitterType_Axis && mlAxisDrawUpdateCount != GetMatrixUpdateCount())
+			const uint32_t lGate = ohpl_h12b_pe_bv_gate(&mCtl, mDrawType == eParticleEmitterType_Axis, GetMatrixUpdateCount());
+			bUpdate = lGate & 1;
+			bAxisUpdate = lGate & 2;
+		}
+		else
+		{
+			bUpdate = mCtl.update_bv;
+			bAxisUpdate = bUpdate && mDrawType == eParticleEmitterType_Axis && mCtl.axis_update_count != GetMatrixUpdateCount();
+			if(bAxisUpdate) mCtl.axis_update_count = GetMatrixUpdateCount();
+		}
+
+		if(bUpdate)
+		{
+			if(bAxisUpdate)
 			{
-				mlAxisDrawUpdateCount = GetMatrixUpdateCount();
 				cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
 				mvRight = mtxInv.GetRight();
 				mvForward = mtxInv.GetForward();
@@ -369,7 +393,7 @@ namespace hpl {
 				mBoundingVolume.SetTransform(mpParentSystem->GetWorldMatrix());
 			}
 
-			mbUpdateBV = false;
+			mCtl.update_bv = false;
 		}
 
 		return &mBoundingVolume;
@@ -379,6 +403,17 @@ namespace hpl {
 
 	cMatrixf* iParticleEmitter::GetModelMatrix(cFrustum *apFrustum)
 	{
+		if(OhplBackendRustRequested())
+		{
+			switch(ohpl_h12b_pe_model_kind(apFrustum != NULL, mDrawType == eParticleEmitterType_Axis))
+			{
+			case 0: return &GetWorldMatrix();
+			case 1: m_mtxTemp = cMatrixf::Identity; break;
+			default: m_mtxTemp = cMath::MatrixInverse(apFrustum->GetViewMatrix()); break;
+			}
+			return &m_mtxTemp;
+		}
+
 		if(apFrustum)
 		{
 			if(mDrawType == eParticleEmitterType_Axis)

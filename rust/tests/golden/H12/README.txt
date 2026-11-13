@@ -5,3 +5,7 @@ ps_emitters.txt: HPL2/tests/SceneH12Tests.cpp dump of 139 sampled emitters (ever
 Replay: cargo test scene::tests_h12 (no C++, no game data).
 Compare: scripts/h12-diff.sh <build-dir>   (reads Steam .ps files read-only)
 Record:  scripts/h12-diff.sh <build-dir> record
+
+Pass 2 (particle system lifecycle, emitter shell, billboard, beam, rope, flare, sound-entity routing):
+dec.txt: "dec <probe> <inputs> -> <result>", the original C++ expressions of HPL2/tests/SceneH12bTests.cpp over input grids (float bits hex); the Rust gates in h12b_psys.rs / h12b_ent.rs must give the same string. Replay: cargo test scene::tests_h12b.
+Object scenes (cParticleSystem over 536 real .ps files x 40 frames, cBillboard, cBeam, cLensFlare, RecordingLowLevelGraphics trace hash) are compared cpp vs rust by scripts/h12b-diff.sh <build-dir> [record]; they are not recorded (3.8 MB).

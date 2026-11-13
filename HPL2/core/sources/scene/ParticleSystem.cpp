@@ -19,6 +19,9 @@
 
 #include "scene/ParticleSystem.h"
 
+#include <memory>
+#include <vector>
+
 #include "impl/tinyXML/tinyxml.h"
 
 #include "system/String.h"
@@ -35,8 +38,42 @@
 #include "scene/Scene.h"
 #include "scene/World.h"
 #include "scene/Light.h"
+#include "scene/RustSceneH12.h"
+#include "impl/RustBackends.h"
 
 namespace hpl {
+
+	// Calls the Rust lifecycle makes back into the system (OHPL_IMPL=rust); each repeats one statement of the C++ path.
+	struct OhplH12PsHostImpl
+	{
+		static cParticleSystem* S(void *c){ return static_cast<cParticleSystem*>(c); }
+		static int32_t Count(void *c){ return S(c)->GetEmitterNum(); }
+		static float WarmTime(void *c, int32_t i){ return S(c)->mpData->GetEmitterData((int)i)->GetWarmUpTime(); }
+		static float WarmSteps(void *c, int32_t i){ return S(c)->mpData->GetEmitterData((int)i)->GetWarmUpStepsPerSec(); }
+		static void Update(void *c, int32_t i, float afStep){ S(c)->GetEmitter((int)i)->UpdateLogic(afStep); }
+		static void Apply(void *c, int32_t i, int32_t alOp, bool abArg)
+		{
+			iParticleEmitter *pPE = S(c)->GetEmitter((int)i);
+			switch(alOp)
+			{
+			case kOhplH12OpVisible: pPE->SetVisible(abArg); break;
+			case kOhplH12OpCullDistance: pPE->SetCulledByDistance(abArg); break;
+			case kOhplH12OpCullFog: pPE->SetCulledByFog(abArg); break;
+			case kOhplH12OpKill: pPE->Kill(); break;
+			default: pPE->KillInstantly(); break;
+			}
+		}
+		static bool Query(void *c, int32_t i, int32_t alQuery)
+		{
+			iParticleEmitter *pPE = S(c)->GetEmitter((int)i);
+			return alQuery == kOhplH12QueryDead ? pPE->IsDead() : pPE->IsDying();
+		}
+		static OhplH12PsHost Make(cParticleSystem *apSystem)
+		{
+			OhplH12PsHost h = { apSystem, Count, WarmTime, WarmSteps, Update, Apply, Query };
+			return h;
+		}
+	};
 
 	//////////////////////////////////////////////////////////////////////////
 	// CREATOR
@@ -70,7 +107,7 @@ namespace hpl {
 
 	cParticleSystem* cParticleSystemData::Create(tString asName, cVector3f avSize)
 	{
-		if(mvEmitterData.empty())
+		if(OhplBackendRustRequested() ? !ohpl_h12b_psdata_can_create((uint32_t)mvEmitterData.size()) : mvEmitterData.empty())
 		{
 			Warning("Particle system '%s' has no emitters.\n",msName.c_str());
 			return NULL;
@@ -135,6 +172,34 @@ namespace hpl {
 
 	bool cParticleSystemData::LoadFromElement(cXmlElement* apElement)
 	{
+		if(OhplBackendRustRequested())
+		{
+			if(apElement->GetValue()!="ParticleSystem")
+				return ohpl_h12b_psdata_plan(false, NULL, 0, (uint32_t)mvEmitterData.size(), NULL);
+
+			std::vector<tString> vValues;
+			cXmlNodeListIterator itV = apElement->GetChildIterator();
+			while(itV.HasNext()) vValues.push_back(itV.Next()->ToElement()->GetValue());
+
+			std::unique_ptr<bool[]> vIsEmitter(new bool[vValues.size() + 1]), vLoad(new bool[vValues.size() + 1]);
+			for(size_t i=0; i<vValues.size(); ++i) vIsEmitter[i] = vValues[i]=="ParticleEmitter";
+
+			const bool bRet = ohpl_h12b_psdata_plan(apElement->GetValue()=="ParticleSystem", vIsEmitter.get(), (uint32_t)vValues.size(),
+													(uint32_t)mvEmitterData.size(), vLoad.get());
+
+			cXmlNodeListIterator itL = apElement->GetChildIterator();
+			for(size_t i=0; itL.HasNext(); ++i)
+			{
+				cXmlElement* pElem = itL.Next()->ToElement();
+				if(vLoad[i]==false) continue;
+
+				cParticleEmitterData_UserData *pPE = hplNew( cParticleEmitterData_UserData,("",	mpResources,mpGraphics) );
+				pPE->LoadFromElement(pElem);
+				mvEmitterData.push_back(pPE);
+			}
+			return bRet;
+		}
+
 		if(apElement->GetValue()!="ParticleSystem")
 			return false;
 
@@ -226,6 +291,13 @@ namespace hpl {
 
 	void cParticleSystem::SetVisible(bool abVisible)
 	{
+		if(OhplBackendRustRequested())
+		{
+			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+			ohpl_h12b_ps_set_visible(&h, &mbIsVisible, abVisible);
+			return;
+		}
+
 		if(mbIsVisible == abVisible) return;
 
 		mbIsVisible = abVisible;
@@ -239,11 +311,23 @@ namespace hpl {
 
 	void cParticleSystem::SetCulledByDistance(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+			ohpl_h12b_ps_apply_all(&h, kOhplH12OpCullDistance, abX);
+			return;
+		}
 		for(size_t i=0; i< mvEmitters.size(); ++i) mvEmitters[i]->SetCulledByDistance(abX);
 	}
 
 	void cParticleSystem::SetCulledByFog(bool abX)
 	{
+		if(OhplBackendRustRequested())
+		{
+			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+			ohpl_h12b_ps_apply_all(&h, kOhplH12OpCullFog, abX);
+			return;
+		}
 		for(size_t i=0; i< mvEmitters.size(); ++i) mvEmitters[i]->SetCulledByFog(abX);
 	}
 	
@@ -251,6 +335,12 @@ namespace hpl {
 
 	bool cParticleSystem::IsDead()
 	{
+		if(OhplBackendRustRequested())
+		{
+			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+			return ohpl_h12b_ps_all(&h, kOhplH12QueryDead);
+		}
+
 		size_t lCount =0;
 
 		for(size_t i=0; i< mvEmitters.size(); ++i)
@@ -267,6 +357,12 @@ namespace hpl {
 
 	bool cParticleSystem::IsDying()
 	{
+		if(OhplBackendRustRequested())
+		{
+			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+			return ohpl_h12b_ps_all(&h, kOhplH12QueryDying);
+		}
+
 		size_t lCount =0;
 
 		for(size_t i=0; i< mvEmitters.size(); ++i)
@@ -285,6 +381,12 @@ namespace hpl {
 
 	void cParticleSystem::Kill()
 	{
+		if(OhplBackendRustRequested())
+		{
+			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+			ohpl_h12b_ps_apply_all(&h, kOhplH12OpKill, false);
+			return;
+		}
 		//SetIsSaved(false);
 		for(size_t i=0; i< mvEmitters.size(); ++i)
 		{
@@ -298,6 +400,12 @@ namespace hpl {
 
 	void cParticleSystem::KillInstantly()
 	{
+		if(OhplBackendRustRequested())
+		{
+			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+			ohpl_h12b_ps_apply_all(&h, kOhplH12OpKillInstantly, false);
+			return;
+		}
 		//SetIsSaved(false);
 		for(size_t i=0; i< mvEmitters.size(); ++i)
 		{
@@ -311,6 +419,13 @@ namespace hpl {
 	
 	void cParticleSystem::UpdateLogic(float afTimeStep)
 	{
+		if(OhplBackendRustRequested())
+		{
+			const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
+			ohpl_h12b_ps_update_logic(&h, &mbFirstUpdate, IsActive(), afTimeStep);
+			return;
+		}
+
 		if(IsActive()==false) return;
 
 		for(size_t i=0; i< mvEmitters.size(); ++i)
