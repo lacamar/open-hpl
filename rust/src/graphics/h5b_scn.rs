@@ -571,7 +571,16 @@ fn step(g: &mut dyn Gfx, r: &mut Rng, l: &mut Live, out: &mut String, a: u32) {
     }
 }
 
-fn draws(g: &mut dyn Gfx, r: &mut Rng, which: u32) {
+/// Random draw and batch calls only: `n` of them, for devices that implement just `Draw`.
+pub fn run_draws<D: Draw + ?Sized>(g: &mut D, seed: u64, n: u32) {
+    let mut r = Rng(seed.wrapping_mul(0x9e37_79b9_7f4a_7c15) | 1);
+    for _ in 0..n {
+        let which = r.below(27);
+        draws(g, &mut r, which);
+    }
+}
+
+fn draws<D: Draw + ?Sized>(g: &mut D, r: &mut Rng, which: u32) {
     let (p, s, c) = (r.v3(), r.v2(), r.col());
     match which {
         0 => g.draw_triangle(&r.vtxs(3)),

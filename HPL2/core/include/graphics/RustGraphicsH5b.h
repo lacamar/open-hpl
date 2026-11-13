@@ -217,6 +217,8 @@ void ohpl_h5b_gfx_attach_foreign(void *ctx, OhplH5bCallFn call);
 void ohpl_h5b_gfx_detach();
 // Runs the seeded scenario against the facade; copies the result log to out and returns its length.
 size_t ohpl_h5b_run_foreign(void *ctx, OhplH5bCallFn call, uint64_t seed, uint32_t rounds, char *out, size_t cap);
+// Runs n random draw and batch calls (Draw trait only) against the facade.
+void ohpl_h5b_run_draws(void *ctx, OhplH5bCallFn call, uint64_t seed, uint32_t n);
 
 }
 

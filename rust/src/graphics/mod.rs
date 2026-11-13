@@ -41,6 +41,8 @@ mod tests_h5;
 #[cfg(test)]
 mod tests_h5b;
 #[cfg(test)]
+mod tests_h5b_imm;
+#[cfg(test)]
 mod tests_h6;
 #[cfg(test)]
 mod tests_mesh;

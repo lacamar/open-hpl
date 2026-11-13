@@ -188,10 +188,6 @@ impl Imm for ForeignGfx {
 }
 
 impl Gfx for ForeignGfx {
-    fn batch(&mut self) -> &mut Batch {
-        &mut self.batch
-    }
-
     fn init(&mut self, a: &InitArgs) -> bool {
         let args = A::default()
             .v2i(a.size)
@@ -1005,6 +1001,12 @@ impl Gfx for ForeignGfx {
 
     fn font_from_bitmap_file(&mut self, f: FontId, file: &str) -> bool {
         self.cb(op::FONT_FROM_BITMAP_FILE, A::default().u(f.0).s(file))
+    }
+}
+
+impl Draw for ForeignGfx {
+    fn batch(&mut self) -> &mut Batch {
+        &mut self.batch
     }
 
     fn draw_triangle(&mut self, v: &[Vtx]) {

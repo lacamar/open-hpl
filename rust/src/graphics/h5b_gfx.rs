@@ -78,10 +78,92 @@ pub trait Imm {
     fn im_blend_off(&mut self);
 }
 
-pub trait Gfx: Imm {
+/// Immediate-mode drawing and the CPU vertex batch: everything the draw helpers need, so it can be
+/// driven (and tested) without a device.
+pub trait Draw: Imm {
     fn batch(&mut self) -> &mut Batch;
 
     // ---- device
+    fn draw_triangle(&mut self, v: &[Vtx]) {
+        h5b_imm::draw_triangle(self, v);
+    }
+    fn draw_quad_pos(&mut self, pos: V3f, size: V2f, col: Col) {
+        h5b_imm::draw_quad_pos(self, pos, size, col);
+    }
+    fn draw_quad_uv(&mut self, pos: V3f, size: V2f, min: V2f, max: V2f, col: Col) {
+        h5b_imm::draw_quad_uv(self, pos, size, min, max, col);
+    }
+    /// `uv` = min0, max0, min1, max1.
+    fn draw_quad_uv2(&mut self, pos: V3f, size: V2f, uv: [V2f; 4], col: Col) {
+        h5b_imm::draw_quad_uv2(self, pos, size, uv, col);
+    }
+    fn draw_quad_vtx(&mut self, v: &[Vtx]) {
+        h5b_imm::draw_quad_vtx(self, v);
+    }
+    fn draw_quad_vtx_col(&mut self, v: &[Vtx], col: Col) {
+        h5b_imm::draw_quad_vtx_col(self, v, col);
+    }
+    fn draw_quad_vtx_z(&mut self, v: &[Vtx], z: f32) {
+        h5b_imm::draw_quad_vtx_z(self, v, z);
+    }
+    fn draw_quad_vtx_z_col(&mut self, v: &[Vtx], z: f32, col: Col) {
+        h5b_imm::draw_quad_vtx_z_col(self, v, z, col);
+    }
+    fn draw_quad_multitex(&mut self, v: &[Vtx], extra: &[V3f]) {
+        h5b_imm::draw_quad_multitex(self, v, extra);
+    }
+    fn draw_line(&mut self, b: V3f, e: V3f, col: Col) {
+        h5b_imm::draw_line(self, b, e, col);
+    }
+    fn draw_line_cols(&mut self, b: V3f, bc: Col, e: V3f, ec: Col) {
+        h5b_imm::draw_line_cols(self, b, bc, e, ec);
+    }
+    fn draw_box_min_max(&mut self, min: V3f, max: V3f, col: Col) {
+        h5b_imm::draw_box_min_max(self, min, max, col);
+    }
+    fn draw_sphere(&mut self, pos: V3f, radius: f32, col: Col) {
+        h5b_imm::draw_sphere(self, pos, radius, col);
+    }
+    fn draw_sphere_axes(&mut self, pos: V3f, radius: f32, cols: [Col; 3]) {
+        h5b_imm::draw_sphere_axes(self, pos, radius, cols);
+    }
+    fn draw_line_quad_rect(&mut self, r: Rect, z: f32, col: Col) {
+        h5b_imm::draw_line_quad_rect(self, r, z, col);
+    }
+    fn draw_line_quad_pos(&mut self, pos: V3f, size: V2f, col: Col) {
+        h5b_imm::draw_line_quad_pos(self, pos, size, col);
+    }
+
+    // ---- vertex batching
+    fn add_vertex_to_batch(&mut self, v: &Vtx) {
+        self.batch().add_vertex(v);
+    }
+    fn add_vertex_to_batch_translated(&mut self, v: &Vtx, t: V3f) {
+        self.batch().add_vertex_translated(v, t);
+    }
+    /// The C++ body is empty.
+    fn add_vertex_to_batch_matrix(&mut self, _v: &Vtx, _m: &Mat) {}
+    fn add_vertex_to_batch_size2d(&mut self, v: &Vtx, t: V3f, col: Option<Col>, w: f32, h: f32) {
+        self.batch().add_vertex_size2d(v, t, col, w, h);
+    }
+    fn add_vertex_to_batch_raw(&mut self, pos: V3f, col: Col, tex: V3f) {
+        self.batch().add_vertex_raw(pos, col, tex);
+    }
+    fn add_index_to_batch(&mut self, i: i32) {
+        self.batch().add_index(i);
+    }
+    fn add_texcoord_to_batch(&mut self, unit: u32, c: V3f) {
+        self.batch().add_texcoord(unit, c);
+    }
+    fn set_batch_texture_unit_active(&mut self, unit: u32, active: bool);
+    fn flush_tri_batch(&mut self, flags: u32, auto_clear: bool);
+    fn flush_quad_batch(&mut self, flags: u32, auto_clear: bool);
+    fn clear_batch(&mut self) {
+        self.batch().clear();
+    }
+}
+
+pub trait Gfx: Draw {
     fn init(&mut self, a: &InitArgs) -> bool;
     fn gpu_program_format(&mut self) -> i32;
     fn caps(&mut self, kind: i32) -> i32;
@@ -299,81 +381,4 @@ pub trait Gfx: Imm {
     fn font_from_bitmap_file(&mut self, f: FontId, file: &str) -> bool;
 
     // ---- immediate drawing (`LowLevelGraphicsImmediate.inl`)
-    fn draw_triangle(&mut self, v: &[Vtx]) {
-        h5b_imm::draw_triangle(self, v);
-    }
-    fn draw_quad_pos(&mut self, pos: V3f, size: V2f, col: Col) {
-        h5b_imm::draw_quad_pos(self, pos, size, col);
-    }
-    fn draw_quad_uv(&mut self, pos: V3f, size: V2f, min: V2f, max: V2f, col: Col) {
-        h5b_imm::draw_quad_uv(self, pos, size, min, max, col);
-    }
-    /// `uv` = min0, max0, min1, max1.
-    fn draw_quad_uv2(&mut self, pos: V3f, size: V2f, uv: [V2f; 4], col: Col) {
-        h5b_imm::draw_quad_uv2(self, pos, size, uv, col);
-    }
-    fn draw_quad_vtx(&mut self, v: &[Vtx]) {
-        h5b_imm::draw_quad_vtx(self, v);
-    }
-    fn draw_quad_vtx_col(&mut self, v: &[Vtx], col: Col) {
-        h5b_imm::draw_quad_vtx_col(self, v, col);
-    }
-    fn draw_quad_vtx_z(&mut self, v: &[Vtx], z: f32) {
-        h5b_imm::draw_quad_vtx_z(self, v, z);
-    }
-    fn draw_quad_vtx_z_col(&mut self, v: &[Vtx], z: f32, col: Col) {
-        h5b_imm::draw_quad_vtx_z_col(self, v, z, col);
-    }
-    fn draw_quad_multitex(&mut self, v: &[Vtx], extra: &[V3f]) {
-        h5b_imm::draw_quad_multitex(self, v, extra);
-    }
-    fn draw_line(&mut self, b: V3f, e: V3f, col: Col) {
-        h5b_imm::draw_line(self, b, e, col);
-    }
-    fn draw_line_cols(&mut self, b: V3f, bc: Col, e: V3f, ec: Col) {
-        h5b_imm::draw_line_cols(self, b, bc, e, ec);
-    }
-    fn draw_box_min_max(&mut self, min: V3f, max: V3f, col: Col) {
-        h5b_imm::draw_box_min_max(self, min, max, col);
-    }
-    fn draw_sphere(&mut self, pos: V3f, radius: f32, col: Col) {
-        h5b_imm::draw_sphere(self, pos, radius, col);
-    }
-    fn draw_sphere_axes(&mut self, pos: V3f, radius: f32, cols: [Col; 3]) {
-        h5b_imm::draw_sphere_axes(self, pos, radius, cols);
-    }
-    fn draw_line_quad_rect(&mut self, r: Rect, z: f32, col: Col) {
-        h5b_imm::draw_line_quad_rect(self, r, z, col);
-    }
-    fn draw_line_quad_pos(&mut self, pos: V3f, size: V2f, col: Col) {
-        h5b_imm::draw_line_quad_pos(self, pos, size, col);
-    }
-
-    // ---- vertex batching
-    fn add_vertex_to_batch(&mut self, v: &Vtx) {
-        self.batch().add_vertex(v);
-    }
-    fn add_vertex_to_batch_translated(&mut self, v: &Vtx, t: V3f) {
-        self.batch().add_vertex_translated(v, t);
-    }
-    /// The C++ body is empty.
-    fn add_vertex_to_batch_matrix(&mut self, _v: &Vtx, _m: &Mat) {}
-    fn add_vertex_to_batch_size2d(&mut self, v: &Vtx, t: V3f, col: Option<Col>, w: f32, h: f32) {
-        self.batch().add_vertex_size2d(v, t, col, w, h);
-    }
-    fn add_vertex_to_batch_raw(&mut self, pos: V3f, col: Col, tex: V3f) {
-        self.batch().add_vertex_raw(pos, col, tex);
-    }
-    fn add_index_to_batch(&mut self, i: i32) {
-        self.batch().add_index(i);
-    }
-    fn add_texcoord_to_batch(&mut self, unit: u32, c: V3f) {
-        self.batch().add_texcoord(unit, c);
-    }
-    fn set_batch_texture_unit_active(&mut self, unit: u32, active: bool);
-    fn flush_tri_batch(&mut self, flags: u32, auto_clear: bool);
-    fn flush_quad_batch(&mut self, flags: u32, auto_clear: bool);
-    fn clear_batch(&mut self) {
-        self.batch().clear();
-    }
 }

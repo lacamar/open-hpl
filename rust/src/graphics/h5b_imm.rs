@@ -212,7 +212,10 @@ pub fn draw_line_quad_pos<I: Imm + ?Sized>(g: &mut I, p: V3f, s: V2f, c: Col) {
 /// The CPU arrays behind `AddVertexToBatch*`: 13-float vertices, indices, per-unit texcoords.
 #[derive(Debug, Default)]
 pub struct Batch {
-    pub vertices: Vec<f32>,
+    /// Backing store; a clear only resets `count`, so slots a vertex does not write keep stale
+    /// values from earlier vertices, as the C++ arrays do.
+    store: Vec<f32>,
+    count: usize,
     pub indices: Vec<u32>,
     pub texcoords: [Vec<f32>; MAX_TEXTURE_UNITS],
 }
@@ -222,10 +225,18 @@ impl Batch {
         Self::default()
     }
 
+    /// The vertex floats in use (`mlVertexCount`).
+    pub fn vertices(&self) -> &[f32] {
+        self.store.get(..self.count).unwrap_or_default()
+    }
+
     fn slot(&mut self) -> &mut [f32] {
-        let at = self.vertices.len();
-        self.vertices.resize(at + BATCH_STRIDE, 0.0);
-        self.vertices.get_mut(at..).unwrap_or_default()
+        let at = self.count;
+        self.count += BATCH_STRIDE;
+        if self.store.len() < self.count {
+            self.store.resize(self.count, 0.0);
+        }
+        self.store.get_mut(at..self.count).unwrap_or_default()
     }
 
     fn write(&mut self, vals: &[(usize, &[f32])]) {
@@ -268,7 +279,7 @@ impl Batch {
 
     /// `ClearBatch`: only the vertex and index counts; the texcoord counts stay.
     pub fn clear(&mut self) {
-        self.vertices.clear();
+        self.count = 0;
         self.indices.clear();
     }
 

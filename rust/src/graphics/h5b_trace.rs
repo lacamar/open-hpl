@@ -351,10 +351,6 @@ macro_rules! prog_rec {
 }
 
 impl Gfx for TraceGfx {
-    fn batch(&mut self) -> &mut Batch {
-        &mut self.batch
-    }
-
     fn init(&mut self, a: &InitArgs) -> bool {
         rec!(
             self,
@@ -1533,6 +1529,12 @@ impl Gfx for TraceGfx {
             &[w(file)],
         );
         true
+    }
+}
+
+impl Draw for TraceGfx {
+    fn batch(&mut self) -> &mut Batch {
+        &mut self.batch
     }
 
     fn add_vertex_to_batch(&mut self, v: &Vtx) {

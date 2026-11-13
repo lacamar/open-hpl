@@ -71,3 +71,14 @@ pub unsafe extern "C" fn ohpl_h5b_run_foreign(
     }
     log.len()
 }
+
+/// Runs `n` random draw and batch calls over the facade.
+///
+/// # Safety
+/// As `ohpl_h5b_gfx_attach_foreign`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h5b_run_draws(ctx: *mut c_void, call: CallFn, seed: u64, n: u32) {
+    // SAFETY: caller contract.
+    let mut g = unsafe { ForeignGfx::new(ctx, call) };
+    h5b_scn::run_draws(&mut g, seed, n);
+}

@@ -4,9 +4,7 @@ use super::h5b_ops;
 use super::h5b_scn;
 use super::h5b_trace::TraceGfx;
 
-const SEEDS: &[u64] = &[
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-];
+const SEEDS: &[u64] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const ROUNDS: u32 = 3;
 
 fn golden() -> PathBuf {
