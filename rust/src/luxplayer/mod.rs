@@ -11,6 +11,17 @@
 mod a2_core;
 #[cfg(test)]
 mod a2_tests;
+mod a3_default;
+mod a3_ffi;
+mod a3_grab;
+mod a3_host;
+mod a3_ladder;
+mod a3_push;
+mod a3_rotate;
+mod a3_slide;
+mod a3_state;
+#[cfg(test)]
+mod a3_tests;
 mod camera;
 mod ffi;
 mod hands;

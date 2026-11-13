@@ -39,7 +39,7 @@ public:
 
 //----------------------------------------------
 
-class cLuxPlayerState_InteractPush : public iLuxPlayerState_Interact
+class cLuxPlayerState_InteractPush : private OhplA3Holder<OhplA3Push>, public iLuxPlayerState_Interact
 {
 typedef iLuxPlayerState_Interact super_class;
 public:	
@@ -82,36 +82,36 @@ public:
 protected:
 	void ClearMoveVars();
 
-	cLuxInteractData_Push *mpPushData;
+	cLuxInteractData_Push *&mpPushData = mR.data;
 
-	float mfTotalMoveMul[2];
-	bool mbMoving[2];
+	float (&mfTotalMoveMul)[2] = mR.totalMoveMul;
+	bool (&mbMoving)[2] = mR.moving;
 
-	float mfMaxSpeedInDir[2];
+	float (&mfMaxSpeedInDir)[2] = mR.maxSpeedInDir;
 
-	OhplGa2bPid3 mVelocityPid;
-	OhplGa2bPid3 mStopVelocityPid;
+	OhplGa2bPid3 &mVelocityPid = mR.velocityPid;
+	OhplGa2bPid3 &mStopVelocityPid = mR.stopPid;
 	
-	cVector3f mvLocalAttachPos;
+	cVector3f &mvLocalAttachPos = mR.localAttach;
 
-	cVector3f mvPushDir;
-	float mfMaxAttachPointDist;
+	cVector3f &mvPushDir = mR.pushDir;
+	float &mfMaxAttachPointDist = mR.maxAttachDist;
 
-	float mfWalkMaxSpeed;
-	float mfWalkForce;
-	float mfRunMaxSpeed;
-	float mfRunForce;
-	float mfCrouchMaxSpeed;
-	float mfCrouchForce;
+	float &mfWalkMaxSpeed = mR.walkMaxSpeed;
+	float &mfWalkForce = mR.walkForce;
+	float &mfRunMaxSpeed = mR.runMaxSpeed;
+	float &mfRunForce = mR.runForce;
+	float &mfCrouchMaxSpeed = mR.crouchMaxSpeed;
+	float &mfCrouchForce = mR.crouchForce;
 
-	float mfPitchMinRange;
-	float mfPitchMaxRange;
-	float mfYawRange;
+	float &mfPitchMinRange = mR.pitchMinRange;
+	float &mfPitchMaxRange = mR.pitchMaxRange;
+	float &mfYawRange = mR.yawRange;
 
-	float mfPrevMinPitchLimit;
-	float mfPrevMaxPitchLimit;
+	float &mfPrevMinPitchLimit = mR.prevMinPitch;
+	float &mfPrevMaxPitchLimit = mR.prevMaxPitch;
 
-	float mfMaxForce;
+	float &mfMaxForce = mR.maxForce;
 };
 
 //----------------------------------------------

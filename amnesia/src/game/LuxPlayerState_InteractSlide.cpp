@@ -20,6 +20,7 @@
 #include "LuxPlayerState_InteractSlide.h"
 
 #include "LuxPlayer.h"
+#include "impl/RustBackends.h"
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
@@ -34,8 +35,15 @@
 
 //-----------------------------------------------------------------------
 
-cLuxPlayerState_InteractSlide::cLuxPlayerState_InteractSlide(cLuxPlayer *apPlayer) : iLuxPlayerState_Interact(apPlayer, eLuxPlayerState_InteractSlide)
+cLuxPlayerState_InteractSlide::cLuxPlayerState_InteractSlide(cLuxPlayer *apPlayer) : iLuxPlayerState_Interact(apPlayer, eLuxPlayerState_InteractSlide, &mR.base)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_init(&mR.base, &h, eLuxPlayerState_InteractSlide);
+		return;
+	}
+
 	mfMoveToMouseAddFactor = gpBase->mpGameCfg->GetFloat("Player_Interaction","MoveToMouseAddFactor", 0.01f);
 	mfMaxForce = gpBase->mpGameCfg->GetFloat("Player_Interaction","SlideMaxForce", 1000.0f);
 
@@ -59,6 +67,12 @@ cLuxPlayerState_InteractSlide::~cLuxPlayerState_InteractSlide()
 
 void cLuxPlayerState_InteractSlide::OnEnterState(eLuxPlayerState aPrevState)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_enter(mpA3, &h, aPrevState);
+		return;
+	}
 	/////////////////////////////////
 	//Get the static variables
 	SetupInteractVars();
@@ -100,6 +114,12 @@ void cLuxPlayerState_InteractSlide::OnEnterState(eLuxPlayerState aPrevState)
 
 void cLuxPlayerState_InteractSlide::OnLeaveState(eLuxPlayerState aNewState)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_leave(mpA3, &h, aNewState);
+		return;
+	}
 	mpCurrentBody->SetGravity(mbHasGravity);
 
 	ResetInteractVars();
@@ -109,6 +129,12 @@ void cLuxPlayerState_InteractSlide::OnLeaveState(eLuxPlayerState aNewState)
 
 void cLuxPlayerState_InteractSlide::Update(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_update(mpA3, &h, afTimeStep);
+		return;
+	}
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 	cCamera *pCam = mpPlayer->GetCamera();
 
@@ -153,6 +179,11 @@ void cLuxPlayerState_InteractSlide::PostUpdate(float afTimeStep)
 
 bool cLuxPlayerState_InteractSlide::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
+	}
 	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
 	if(lKind == 1)
 	{
@@ -176,6 +207,11 @@ bool cLuxPlayerState_InteractSlide::OnDoAction(eLuxPlayerAction aAction,bool abP
 
 bool cLuxPlayerState_InteractSlide::OnAddYaw(float afAmount)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_add_yaw(mpA3, &h, afAmount);
+	}
 	mvMouseAdd.x += afAmount;
 
 	return false;
@@ -183,6 +219,11 @@ bool cLuxPlayerState_InteractSlide::OnAddYaw(float afAmount)
 
 bool cLuxPlayerState_InteractSlide::OnAddPitch(float afAmount)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_add_pitch(mpA3, &h, afAmount);
+	}
 #ifdef USE_GAMEPAD
 	////////////////
 	// We have both gamepad and mouse connected?
@@ -214,6 +255,11 @@ bool cLuxPlayerState_InteractSlide::OnAddPitch(float afAmount)
 
 bool cLuxPlayerState_InteractSlide::OnMove(eCharDir aDir, float afMul)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
+	}
 	ohpl_ga2b_move_to_mouse(aDir == eCharDir_Forward, afMul, mfMoveToMouseAddFactor, &mvMouseAdd);
 	return true;
 }

@@ -20,6 +20,7 @@
 #include "LuxPlayerState_Ladder.h"
 
 #include "LuxPlayer.h"
+#include "impl/RustBackends.h"
 #include "LuxArea_Ladder.h"
 #include "LuxMoveState_Normal.h"
 #include "LuxHelpFuncs.h"
@@ -34,8 +35,15 @@
 
 //-----------------------------------------------------------------------
 
-cLuxPlayerState_Ladder::cLuxPlayerState_Ladder(cLuxPlayer *apPlayer) : iLuxPlayerState(apPlayer, eLuxPlayerState_Ladder)
+cLuxPlayerState_Ladder::cLuxPlayerState_Ladder(cLuxPlayer *apPlayer) : iLuxPlayerState(apPlayer, eLuxPlayerState_Ladder, &mR.base)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_init(&mR.base, &h, eLuxPlayerState_Ladder);
+		return;
+	}
+
 	mpLadder = NULL;
 
 	mfUpSpeed = gpBase->mpGameCfg->GetFloat("Player_Ladder","UpSpeed",0);
@@ -64,6 +72,12 @@ cLuxPlayerState_Ladder::~cLuxPlayerState_Ladder()
 
 void cLuxPlayerState_Ladder::OnEnterState(eLuxPlayerState aPrevState)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_enter(mpA3, &h, aPrevState);
+		return;
+	}
 	
 	/////////////////////////////////////
 	// Load the data
@@ -137,6 +151,12 @@ void cLuxPlayerState_Ladder::OnEnterState(eLuxPlayerState aPrevState)
 
 void cLuxPlayerState_Ladder::OnLeaveState(eLuxPlayerState aNewState)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_leave(mpA3, &h, aNewState);
+		return;
+	}
 	//////////////////////////////
 	//Reset variables
 	// Need to so pointer exists! (as this might be on leave!)
@@ -159,6 +179,12 @@ void cLuxPlayerState_Ladder::OnLeaveState(eLuxPlayerState aNewState)
 
 void cLuxPlayerState_Ladder::Update(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_update(mpA3, &h, afTimeStep);
+		return;
+	}
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 	cCamera *pCam = mpPlayer->GetCamera();
 
@@ -305,6 +331,11 @@ cGuiGfxElement* cLuxPlayerState_Ladder::GetCrosshair()
 
 bool cLuxPlayerState_Ladder::OnMove(eCharDir aDir, float afMul)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
+	}
 	ohpl_ga2b_ladder_on_move(mlState, aDir == eCharDir_Right, afMul, &mfMoveMul);
 	return false;
 }
@@ -313,6 +344,11 @@ bool cLuxPlayerState_Ladder::OnMove(eCharDir aDir, float afMul)
 
 bool cLuxPlayerState_Ladder::OnAddYaw(float afAmount)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_add_yaw(mpA3, &h, afAmount);
+	}
 	return ohpl_ga2b_ladder_camera_free(mlState);
 }
 
@@ -320,6 +356,11 @@ bool cLuxPlayerState_Ladder::OnAddYaw(float afAmount)
 
 bool cLuxPlayerState_Ladder::OnAddPitch(float afAmount)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_add_pitch(mpA3, &h, afAmount);
+	}
 	return ohpl_ga2b_ladder_camera_free(mlState);
 }
 
@@ -327,6 +368,11 @@ bool cLuxPlayerState_Ladder::OnAddPitch(float afAmount)
 
 bool cLuxPlayerState_Ladder::OnRun(bool abPressed)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_on_run(mpA3, &h, abPressed);
+	}
 	return false;
 }
 
@@ -334,6 +380,11 @@ bool cLuxPlayerState_Ladder::OnRun(bool abPressed)
 
 bool cLuxPlayerState_Ladder::OnJump(bool abPressed)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_on_jump(mpA3, &h, abPressed);
+	}
     if(abPressed)
 	{
 		mpPlayer->ChangeState(eLuxPlayerState_Normal);
@@ -348,6 +399,11 @@ bool cLuxPlayerState_Ladder::OnJump(bool abPressed)
 
 bool cLuxPlayerState_Ladder::OnCrouch(bool abPressed)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_on_crouch(mpA3, &h, abPressed);
+	}
 	return false;
 }
 
@@ -355,6 +411,11 @@ bool cLuxPlayerState_Ladder::OnCrouch(bool abPressed)
 
 bool cLuxPlayerState_Ladder::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
+	}
 	bool bRelease;
 	bool bPass = ohpl_ga2b_ladder_action(OhplGa2bActOf(aAction), abPressed, &bRelease);
 	if(bRelease)

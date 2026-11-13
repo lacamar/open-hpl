@@ -20,6 +20,7 @@
 #include "LuxPlayerState_InteractRotateBase.h"
 
 #include "LuxPlayer.h"
+#include "impl/RustBackends.h"
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
@@ -34,8 +35,14 @@
 //-----------------------------------------------------------------------
 
 iLuxPlayerState_InteractRotateBase::iLuxPlayerState_InteractRotateBase(cLuxPlayer *apPlayer, eLuxPlayerState aState) 
-: iLuxPlayerState_Interact(apPlayer, aState)
+: iLuxPlayerState_Interact(apPlayer, aState, &mR.base)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_init(&mR.base, &h, aState);
+		return;
+	}
 	mfMoveToMouseAddFactor = gpBase->mpGameCfg->GetFloat("Player_Interaction","MoveToMouseAddFactor", 0.01f);
 	mfMaxTorque = gpBase->mpGameCfg->GetFloat("Player_Interaction","MoveMaxForce", 1000.0f);
 
@@ -47,6 +54,7 @@ iLuxPlayerState_InteractRotateBase::iLuxPlayerState_InteractRotateBase(cLuxPlaye
 
 iLuxPlayerState_InteractRotateBase::~iLuxPlayerState_InteractRotateBase()
 {
+	ohpl_a3_free(&mR.base);
 	
 }
 
@@ -60,6 +68,12 @@ iLuxPlayerState_InteractRotateBase::~iLuxPlayerState_InteractRotateBase()
 
 void iLuxPlayerState_InteractRotateBase::OnEnterState(eLuxPlayerState aPrevState)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_enter(mpA3, &h, aPrevState);
+		return;
+	}
 	//Log("---- Interact Start -------\n");
 
 	/////////////////////////////////
@@ -109,6 +123,12 @@ void iLuxPlayerState_InteractRotateBase::OnEnterState(eLuxPlayerState aPrevState
 
 void iLuxPlayerState_InteractRotateBase::OnLeaveState(eLuxPlayerState aNewState)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_leave(mpA3, &h, aNewState);
+		return;
+	}
 	//Log("---- Interact End -------\n");
 	/////////////////////////////////
 	//Reset body
@@ -202,6 +222,12 @@ void iLuxPlayerState_InteractRotateBase::SetupForceAxes()
 
 void iLuxPlayerState_InteractRotateBase::Update(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_update(mpA3, &h, afTimeStep);
+		return;
+	}
 	if(gpBase->mpInputHandler->GetSmoothMouse()==false)
 		mvMouseAdd = gpBase->mpInputHandler->GetSmoothMousePos(mvMouseAdd);
 
@@ -244,6 +270,11 @@ void iLuxPlayerState_InteractRotateBase::PostUpdate(float afTimeStep)
 
 bool iLuxPlayerState_InteractRotateBase::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
+	}
 	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
 	if(lKind == 1)
 	{
@@ -271,6 +302,11 @@ void iLuxPlayerState_InteractRotateBase::OnScroll(float afAmount)
 
 bool iLuxPlayerState_InteractRotateBase::OnMove(eCharDir aDir, float afMul)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
+	}
 	ohpl_ga2b_move_to_mouse(aDir == eCharDir_Forward, afMul, mfMoveToMouseAddFactor, &mvMouseAdd);
 	return true;
 }
@@ -279,6 +315,11 @@ bool iLuxPlayerState_InteractRotateBase::OnMove(eCharDir aDir, float afMul)
 
 bool iLuxPlayerState_InteractRotateBase::OnAddYaw(float afAmount)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_add_yaw(mpA3, &h, afAmount);
+	}
 	mvMouseAdd.x += afAmount;
 
 	return false;
@@ -286,6 +327,11 @@ bool iLuxPlayerState_InteractRotateBase::OnAddYaw(float afAmount)
 
 bool iLuxPlayerState_InteractRotateBase::OnAddPitch(float afAmount)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_add_pitch(mpA3, &h, afAmount);
+	}
 #ifdef USE_GAMEPAD
 	////////////////
 	// We have both gamepad and mouse connected?

@@ -39,7 +39,7 @@ public:
 
 //----------------------------------------------
 
-class cLuxPlayerState_HandObject : public iLuxPlayerState_DefaultBase
+class cLuxPlayerState_HandObject : private OhplA3Holder<OhplA3Plain>, public iLuxPlayerState_DefaultBase
 {
 typedef iLuxPlayerState_DefaultBase super_class;
 public:	

@@ -41,7 +41,7 @@ public:
 
 //----------------------------------------------
 
-class cLuxPlayerState_UseItem : public iLuxPlayerState_DefaultBase
+class cLuxPlayerState_UseItem : private OhplA3Holder<OhplA3UseItem>, public iLuxPlayerState_DefaultBase
 {
 typedef iLuxPlayerState_DefaultBase super_class;
 public:	
@@ -72,10 +72,10 @@ protected:
 	bool ShowOutlineOnEntity(iLuxEntity *apEntity, iPhysicsBody *apBody, const cVector3f &avFocusPos);
 	void UseItem();
 	
-	cLuxInventory_Item *mpCurrentItem;
-	cLinearOscillation mFlashOscill;
+	cLuxInventory_Item *&mpCurrentItem = mR.item;
+	cLinearOscillation &mFlashOscill = *reinterpret_cast<cLinearOscillation*>(mR.flash);
 
-	float mfMinUseItemDistance;
+	float &mfMinUseItemDistance = mR.minUseDistance;
 };
 
 //----------------------------------------------

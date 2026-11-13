@@ -45,7 +45,7 @@ class iLuxPlayerState_Interact : public iLuxPlayerState
 {
 typedef iLuxPlayerState super_class;
 public:	
-	iLuxPlayerState_Interact(cLuxPlayer *apPlayer, eLuxPlayerState aType);
+	iLuxPlayerState_Interact(cLuxPlayer *apPlayer, eLuxPlayerState aType, OhplA3Base *apA3);
 	virtual ~iLuxPlayerState_Interact();
 	
 	void OnDestroyEntity(iLuxEntity *apEntity);
@@ -61,9 +61,9 @@ protected:
 	void SetupInteractVars();
 	void ResetInteractVars();
 
-	iPhysicsBody *mpCurrentBody;
-	iLuxProp *mpCurrentProp;
-	cVector3f mvCurrentFocusPos;
+	iPhysicsBody *&mpCurrentBody;
+	iLuxProp *&mpCurrentProp;
+	cVector3f &mvCurrentFocusPos;
 };
 
 //----------------------------------------------

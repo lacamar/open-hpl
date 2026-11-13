@@ -44,7 +44,7 @@ class iLuxPlayerState_DefaultBase : public iLuxPlayerState
 {
 typedef iLuxPlayerState super_class;
 public:	
-	iLuxPlayerState_DefaultBase(cLuxPlayer *apPlayer, eLuxPlayerState aType);
+	iLuxPlayerState_DefaultBase(cLuxPlayer *apPlayer, eLuxPlayerState aType, OhplA3Base *apA3);
 	virtual ~iLuxPlayerState_DefaultBase();
 
 	void OnEnterState(eLuxPlayerState aPrevState);
@@ -86,11 +86,13 @@ protected:
 	void AddOutlineObjects(iPhysicsBody *apBody, iLuxEntity *apEntity, const cVector3f &avFocusPos);
 	void GetAttachedBodies(iPhysicsBody *apBody, tPhysicsBodyList &alstBodies);
 
-	iPhysicsBody *mpBodyInFocus;
-	iLuxEntity *mpEntityInFocus;
-	float mfFocusDistance;
-	cVector3f mvFocusPos;
-	bool mbCurrentEntityHasOutline;
+	cGuiGfxElement* A3Gfx(int32_t alCode);
+
+	iPhysicsBody *&mpBodyInFocus;
+	iLuxEntity *&mpEntityInFocus;
+	float &mfFocusDistance;
+	cVector3f &mvFocusPos;
+	bool &mbCurrentEntityHasOutline;
 };
 
 //----------------------------------------------

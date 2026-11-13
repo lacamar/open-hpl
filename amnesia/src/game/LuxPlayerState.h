@@ -25,6 +25,7 @@
 #include "LuxBase.h"
 #include "LuxTypes.h"
 #include "RustLuxPlayer.h"
+#include "RustLuxPlayerA3.h"
 
 //----------------------------------------------
 
@@ -82,7 +83,7 @@ public:
 class iLuxPlayerState
 {
 public:	
-	iLuxPlayerState(cLuxPlayer *apPlayer, eLuxPlayerState aType);
+	iLuxPlayerState(cLuxPlayer *apPlayer, eLuxPlayerState aType, OhplA3Base *apA3);
 	virtual ~iLuxPlayerState();
 
 	virtual void OnEnterState(eLuxPlayerState aPrevState)=0;
@@ -126,6 +127,9 @@ public:
 
 	void SetPreviousState(eLuxPlayerState aState) { mPreviousState = aState; }
 
+	static int32_t A3Host(void *apCtx, uint32_t alOp, OhplA3Io *apIo);
+	OhplA3Host A3HostTable(){ OhplA3Host h = {this, A3Host}; return h; }
+
 	/////////////////////////////////
 	//Save data stuff
 	virtual bool IsSaved()=0;
@@ -136,6 +140,7 @@ public:
 	virtual void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:
+	OhplA3Base *mpA3;
 	eLuxPlayerState mType; 
 	cLuxPlayer *mpPlayer;
 

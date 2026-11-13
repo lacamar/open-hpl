@@ -20,6 +20,7 @@
 #include "LuxPlayerState_InteractGrab.h"
 
 #include "LuxPlayer.h"
+#include "impl/RustBackends.h"
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
@@ -34,8 +35,15 @@
 
 //-----------------------------------------------------------------------
 
-cLuxPlayerState_InteractGrab::cLuxPlayerState_InteractGrab(cLuxPlayer *apPlayer) : iLuxPlayerState_Interact(apPlayer, eLuxPlayerState_InteractGrab)
+cLuxPlayerState_InteractGrab::cLuxPlayerState_InteractGrab(cLuxPlayer *apPlayer) : iLuxPlayerState_Interact(apPlayer, eLuxPlayerState_InteractGrab, &mR.base)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_init(&mR.base, &h, eLuxPlayerState_InteractGrab);
+		return;
+	}
+
 	mfMaxForce = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMaxForce",0);
 	mfMaxTorque = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMaxTorque",0);
 	mfMaxAngularSpeed = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMaxAngularSpeed",0);
@@ -55,6 +63,7 @@ cLuxPlayerState_InteractGrab::cLuxPlayerState_InteractGrab(cLuxPlayer *apPlayer)
 
 cLuxPlayerState_InteractGrab::~cLuxPlayerState_InteractGrab()
 {
+	ohpl_a3_free(&mR.base);
 	
 }
 
@@ -68,6 +77,12 @@ cLuxPlayerState_InteractGrab::~cLuxPlayerState_InteractGrab()
 
 void cLuxPlayerState_InteractGrab::OnEnterState(eLuxPlayerState aPrevState)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_enter(mpA3, &h, aPrevState);
+		return;
+	}
 	/////////////////////////////////
 	//Get the variables
 	SetupInteractVars();
@@ -194,6 +209,12 @@ void cLuxPlayerState_InteractGrab::OnEnterState(eLuxPlayerState aPrevState)
 
 void cLuxPlayerState_InteractGrab::OnLeaveState(eLuxPlayerState aNewState)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_leave(mpA3, &h, aNewState);
+		return;
+	}
 	///////////////////////
 	//Reset Material
 	/*cMeshEntity *pMeshEntity = mpCurrentProp->GetMeshEntity();
@@ -245,6 +266,12 @@ void cLuxPlayerState_InteractGrab::Update(float afTimeStep)
 
 void cLuxPlayerState_InteractGrab::PostUpdate(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_post_update(mpA3, &h, afTimeStep);
+		return;
+	}
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 	iPhysicsWorld *pPhysicsWorld = pMap->GetWorld()->GetPhysicsWorld();
 	cCamera *pCam = mpPlayer->GetCamera();
@@ -289,6 +316,11 @@ void cLuxPlayerState_InteractGrab::PostUpdate(float afTimeStep)
 
 bool cLuxPlayerState_InteractGrab::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
+	}
 	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
 	if(lKind == 1)
 	{
@@ -326,6 +358,12 @@ bool cLuxPlayerState_InteractGrab::OnDoAction(eLuxPlayerAction aAction,bool abPr
 
 void cLuxPlayerState_InteractGrab::OnScroll(float afAmount)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_scroll(mpA3, &h, afAmount);
+		return;
+	}
 	mfDepth = ohpl_ga2b_grab_scroll(mfDepth, afAmount, mpGrabData->mfGrabDepthInc, mpGrabData->mfGrabMinDepth, mpGrabData->mfGrabMaxDepth);
 }
 
@@ -333,6 +371,11 @@ void cLuxPlayerState_InteractGrab::OnScroll(float afAmount)
 
 bool cLuxPlayerState_InteractGrab::OnAddYaw(float afAmount)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_add_yaw(mpA3, &h, afAmount);
+	}
 	cInput* pInput = gpBase->mpEngine->GetInput();
 	if(pInput->IsTriggerd(eLuxAction_Rotate) && mpGrabData->mbUseRotation)
 	{
@@ -347,6 +390,11 @@ bool cLuxPlayerState_InteractGrab::OnAddYaw(float afAmount)
 
 bool cLuxPlayerState_InteractGrab::OnAddPitch(float afAmount)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_add_pitch(mpA3, &h, afAmount);
+	}
 	cInput* pInput = gpBase->mpEngine->GetInput();
 	if(pInput->IsTriggerd(eLuxAction_Rotate) && mpGrabData->mbUseRotation)
 	{
@@ -392,6 +440,12 @@ cGuiGfxElement* cLuxPlayerState_InteractGrab::GetCrosshair()
 
 void cLuxPlayerState_InteractGrab::OnSaveBody(iPhysicsBody *apBody, float &afMass, bool &abCollideCharacter)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_save_body(mpA3, apBody, &afMass, &abCollideCharacter);
+		return;
+	}
 	for(size_t i=0; i<mvBodyProperties.size(); ++i)
 	{
 		if(mvBodyProperties[i].mpBody == apBody)
@@ -407,6 +461,11 @@ void cLuxPlayerState_InteractGrab::OnSaveBody(iPhysicsBody *apBody, float &afMas
 
 bool cLuxPlayerState_InteractGrab::AllowBuoyancy(iPhysicsBody *apBody)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_allow_buoyancy(mpA3, &h, apBody);
+	}
 	iLuxEntity *pBodyEntity = static_cast<iLuxEntity*>(apBody->GetUserData());
 
 	if(pBodyEntity == (iLuxEntity*)mpCurrentProp) return false;

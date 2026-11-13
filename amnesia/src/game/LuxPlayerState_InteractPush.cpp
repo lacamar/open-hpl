@@ -20,6 +20,7 @@
 #include "LuxPlayerState_InteractPush.h"
 
 #include "LuxPlayer.h"
+#include "impl/RustBackends.h"
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
@@ -32,8 +33,15 @@
 
 //-----------------------------------------------------------------------
 
-cLuxPlayerState_InteractPush::cLuxPlayerState_InteractPush(cLuxPlayer *apPlayer) : iLuxPlayerState_Interact(apPlayer, eLuxPlayerState_InteractPush)
+cLuxPlayerState_InteractPush::cLuxPlayerState_InteractPush(cLuxPlayer *apPlayer) : iLuxPlayerState_Interact(apPlayer, eLuxPlayerState_InteractPush, &mR.base)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_init(&mR.base, &h, eLuxPlayerState_InteractPush);
+		return;
+	}
+
 	mfWalkMaxSpeed = gpBase->mpGameCfg->GetFloat("Player_Interaction","PushMaxSpeedWalk",0);
 	mfWalkForce = gpBase->mpGameCfg->GetFloat("Player_Interaction","PushForceWalk",0);
 	
@@ -70,6 +78,12 @@ cLuxPlayerState_InteractPush::~cLuxPlayerState_InteractPush()
 
 void cLuxPlayerState_InteractPush::OnEnterState(eLuxPlayerState aPrevState)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_enter(mpA3, &h, aPrevState);
+		return;
+	}
 	/////////////////////////////////
 	//Get the static variables
 	SetupInteractVars();
@@ -126,6 +140,12 @@ void cLuxPlayerState_InteractPush::OnEnterState(eLuxPlayerState aPrevState)
 
 void cLuxPlayerState_InteractPush::OnLeaveState(eLuxPlayerState aNewState)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_leave(mpA3, &h, aNewState);
+		return;
+	}
 	if(mpPlayer->GetCharacterBody())
 	{
 		mpPlayer->GetCharacterBody()->SetDisableDiagSpeedBoost(true);
@@ -141,6 +161,12 @@ void cLuxPlayerState_InteractPush::OnLeaveState(eLuxPlayerState aNewState)
 
 void cLuxPlayerState_InteractPush::Update(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_update(mpA3, &h, afTimeStep);
+		return;
+	}
 	iPhysicsWorld *pPhysicsWorld = gpBase->mpMapHandler->GetCurrentMap()->GetWorld()->GetPhysicsWorld();
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 
@@ -254,6 +280,12 @@ void cLuxPlayerState_InteractPush::Update(float afTimeStep)
 
 void cLuxPlayerState_InteractPush::PostUpdate(float afTimeStep)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_post_update(mpA3, &h, afTimeStep);
+		return;
+	}
 	ClearMoveVars();
 }
 
@@ -261,6 +293,11 @@ void cLuxPlayerState_InteractPush::PostUpdate(float afTimeStep)
 
 bool cLuxPlayerState_InteractPush::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
+	}
 	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
 	if(lKind == 1)
 	{
@@ -299,6 +336,11 @@ void cLuxPlayerState_InteractPush::OnScroll(float afAmount)
 
 bool cLuxPlayerState_InteractPush::OnMove(eCharDir aDir, float afMul)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
+	}
 	mfTotalMoveMul[aDir] += afMul;
 	mbMoving[aDir] = true;
 

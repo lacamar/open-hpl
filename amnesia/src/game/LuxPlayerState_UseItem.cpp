@@ -27,6 +27,7 @@
 #include "LuxProp.h"
 #include "LuxProp_Lamp.h"
 #include "LuxMessageHandler.h"
+#include "impl/RustBackends.h"
 
 
 
@@ -36,8 +37,14 @@
 
 //-----------------------------------------------------------------------
 
-cLuxPlayerState_UseItem::cLuxPlayerState_UseItem(cLuxPlayer *apPlayer) : iLuxPlayerState_DefaultBase(apPlayer, eLuxPlayerState_UseItem)
+cLuxPlayerState_UseItem::cLuxPlayerState_UseItem(cLuxPlayer *apPlayer) : iLuxPlayerState_DefaultBase(apPlayer, eLuxPlayerState_UseItem, &mR.base)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		ohpl_a3_init(&mR.base, &h, eLuxPlayerState_UseItem);
+		return;
+	}
 	mpCurrentItem = NULL; 
 	mFlashOscill.SetUp(0,1,0,1.5f,1.5f);
 
@@ -87,6 +94,11 @@ void cLuxPlayerState_UseItem::ImplementedUpdate(float afTimeStep)
 
 cGuiGfxElement* cLuxPlayerState_UseItem::GetCrosshair()
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_crosshair(mpA3, &h) == kOhplA3Crosshair_Item ? mpCurrentItem->GetImage() : NULL;
+	}
 	if(mpCurrentItem==NULL) return NULL;
 
 	return mpCurrentItem->GetImage();
@@ -96,6 +108,11 @@ cGuiGfxElement* cLuxPlayerState_UseItem::GetCrosshair()
 
 bool cLuxPlayerState_UseItem::OnDrawCrossHair(cGuiGfxElement *apGfx, const cVector3f& avPos, const cVector2f &avSize)
 {
+	if(OhplBackendRustRequested())
+	{
+		OhplA3Host h = A3HostTable();
+		return ohpl_a3_draw_crosshair(mpA3, &h, apGfx, &avPos, &avSize);
+	}
 	if(mpEntityInFocus==NULL) return true;
 
 	float fMaxFocusDistance = ohpl_ga2b_use_item_max_focus(mpEntityInFocus->GetMaxFocusDistance(), mfMinUseItemDistance);

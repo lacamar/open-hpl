@@ -62,7 +62,7 @@ public:
 //------------------------------------
 
 
-class cLuxPlayerState_InteractGrab : public iLuxPlayerState_Interact
+class cLuxPlayerState_InteractGrab : private OhplA3Holder<OhplA3Grab>, public iLuxPlayerState_Interact
 {
 typedef iLuxPlayerState_Interact super_class;
 public:	
@@ -104,33 +104,33 @@ protected:
 	void SaveBodyProperties(iPhysicsBody *apBody);
 	bool BodyIsAdded(iPhysicsBody *apBody);
 
-	cLuxInteractData_Grab *mpGrabData;
+	cLuxInteractData_Grab *&mpGrabData = mR.data;
 
-	float mfMaxForce;
-	float mfMaxTorque;
-	float mfMaxAngularSpeed;
+	float &mfMaxForce = mR.maxForce;
+	float &mfMaxTorque = mR.maxTorque;
+	float &mfMaxAngularSpeed = mR.maxAngularSpeed;
 
-	float mfMinSlowPlayerMass;
-	float mfMaxSlowPlayerMass;
-	float mfMinSlowPlayerMul;
+	float &mfMinSlowPlayerMass = mR.minSlowMass;
+	float &mfMaxSlowPlayerMass = mR.maxSlowMass;
+	float &mfMinSlowPlayerMul = mR.minSlowMul;
 
-	float mfMaxLeaveAngularSpeed;
-	float mfMaxLeaveLinearSpeed;
+	float &mfMaxLeaveAngularSpeed = mR.maxLeaveAngular;
+	float &mfMaxLeaveLinearSpeed = mR.maxLeaveLinear;
 	
 	std::vector<cGrabbedBodyProperties> mvBodyProperties;
 	std::vector<cGrabbedSubMeshProperties> mvSubMeshProperties;
 
-	bool mbCustomMaterialsSetup;
+	bool &mbCustomMaterialsSetup = mR.customMaterials;
 
-	cVector3f mvLocalBodyOffset;
-	cMatrixf m_mtxBodyRotation;
+	cVector3f &mvLocalBodyOffset = mR.localBodyOffset;
+	cMatrixf &m_mtxBodyRotation = mR.bodyRotation;
 
-	OhplGa2bPid3 mForcePid;
-	OhplGa2bPid3 mSpeedTorquePid;
+	OhplGa2bPid3 &mForcePid = mR.forcePid;
+	OhplGa2bPid3 &mSpeedTorquePid = mR.torquePid;
 
-	float mfDepth;
-	float mfMaxDistance;
-	float mfMassSum;
+	float &mfDepth = mR.depth;
+	float &mfMaxDistance = mR.maxDistance;
+	float &mfMassSum = mR.massSum;
 };
 
 //----------------------------------------------

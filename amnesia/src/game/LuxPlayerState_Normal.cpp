@@ -25,6 +25,7 @@
 #include "LuxMoveState.h"
 #include "LuxEffectRenderer.h"
 #include "LuxPlayerHands.h"
+#include "impl/RustBackends.h"
 
 
 
@@ -34,8 +35,10 @@
 
 //-----------------------------------------------------------------------
 
-cLuxPlayerState_Normal::cLuxPlayerState_Normal(cLuxPlayer *apPlayer) : iLuxPlayerState_DefaultBase(apPlayer, eLuxPlayerState_Normal)
+cLuxPlayerState_Normal::cLuxPlayerState_Normal(cLuxPlayer *apPlayer) : iLuxPlayerState_DefaultBase(apPlayer, eLuxPlayerState_Normal, &mR.base)
 {
+	OhplA3Host h = A3HostTable();
+	if(OhplBackendRustRequested()) ohpl_a3_init(&mR.base, &h, eLuxPlayerState_Normal);
 }
 
 //-----------------------------------------------------------------------

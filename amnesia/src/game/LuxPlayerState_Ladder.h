@@ -69,7 +69,7 @@ public:
 
 //----------------------------------------------
 
-class cLuxPlayerState_Ladder : public iLuxPlayerState
+class cLuxPlayerState_Ladder : private OhplA3Holder<OhplA3Ladder>, public iLuxPlayerState
 {
 typedef iLuxPlayerState super_class;
 public:	
@@ -117,35 +117,35 @@ private:
 	void SetupHeadTurnLimits();
 	void PlaySound(const tString &asType);
 
-	int mlState;
-	cLuxArea_Ladder* mpLadder;
-	cVector3f mvStartPosition;
+	int &mlState = mR.state;
+	cLuxArea_Ladder *&mpLadder = mR.ladder;
+	cVector3f &mvStartPosition = mR.startPosition;
 
-	float mfTimeCount;
+	float &mfTimeCount = mR.timeCount;
 
-	cVector3f mvCharPosition;
+	cVector3f &mvCharPosition = mR.charPosition;
 
-	cVector3f mvGoalPos;
-	cVector3f mvGoalRot;
+	cVector3f &mvGoalPos = mR.goalPos;
+	cVector3f &mvGoalRot = mR.goalRot;
 
-	cVector3f mvPosAdd;
-	cVector3f mvRotAdd;
+	cVector3f &mvPosAdd = mR.posAdd;
+	cVector3f &mvRotAdd = mR.rotAdd;
 
-	float mfMoveMul;
+	float &mfMoveMul = mR.moveMul;
 
-	float mfUpSpeed;
-	float mfDownSpeed;
+	float &mfUpSpeed = mR.upSpeed;
+	float &mfDownSpeed = mR.downSpeed;
 
-	float mfStepLength;
-	float mfStepCount;
-	bool mbPlayedSound;
+	float &mfStepLength = mR.stepLength;
+	float &mfStepCount = mR.stepCount;
+	bool &mbPlayedSound = mR.playedSound;
 
-	float mfPitchMaxLimit;
-	float mfPitchMinLimit;
+	float &mfPitchMaxLimit = mR.pitchMaxLimit;
+	float &mfPitchMinLimit = mR.pitchMinLimit;
 	
-	float mfLeaveAtTopCount;
+	float &mfLeaveAtTopCount = mR.leaveAtTop;
 
-	bool mbLanternDrawn;
+	bool &mbLanternDrawn = mR.lanternDrawn;
 };
 
 //----------------------------------------------

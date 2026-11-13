@@ -38,7 +38,7 @@ public:
 };
 //----------------------------------------------
 
-class iLuxPlayerState_InteractRotateBase : public iLuxPlayerState_Interact
+class iLuxPlayerState_InteractRotateBase : private OhplA3Holder<OhplA3Rotate>, public iLuxPlayerState_Interact
 {
 typedef iLuxPlayerState_Interact super_class;
 public:	
@@ -89,31 +89,31 @@ protected:
 
 	void SetupForceAxes();
 
-	iLuxInteractData_RotateBase *mpMoveBaseData;
+	iLuxInteractData_RotateBase *&mpMoveBaseData = mR.data;
 
-	iPhysicsJoint *mpCurrentJoint;
+	iPhysicsJoint *&mpCurrentJoint = mR.joint;
 
-	float mfMoveToMouseAddFactor;
-	float mfMaxTorque;
+	float &mfMoveToMouseAddFactor = mR.moveToMouseFactor;
+	float &mfMaxTorque = mR.maxTorque;
 
-	bool mbHasGravity;
+	bool &mbHasGravity = mR.hasGravity;
 	
-	float mfMaxDistance;
+	float &mfMaxDistance = mR.maxDistance;
 
-	cVector3f mvJointRight;
-	cVector3f mvJointForward;
+	cVector3f &mvJointRight = mR.jointRight;
+	cVector3f &mvJointForward = mR.jointForward;
 	
-	cVector3f mvForceAxis[2];
+	cVector3f (&mvForceAxis)[2] = mR.forceAxis;
 	
-	cVector2f mvMouseAdd;
-	cVector2f mvLastMouseAdd;
+	cVector2f &mvMouseAdd = mR.mouseAdd;
+	cVector2f &mvLastMouseAdd = mR.lastMouseAdd;
 	
-	float mfRotSpeed;
+	float &mfRotSpeed = mR.rotSpeed;
 	
-	OhplGa2bPid3 mRotatePid;
+	OhplGa2bPid3 &mRotatePid = mR.rotatePid;
 
-	cVector3f mvCamDir[3];
-	float mfAxisCos[2];
+	cVector3f (&mvCamDir)[3] = mR.camDir;
+	float (&mfAxisCos)[2] = mR.axisCos;
 };
 
 //----------------------------------------------
