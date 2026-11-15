@@ -18,103 +18,54 @@
  */
 
 #include "LuxPostEffects.h"
-#include "RustLuxFx.h"
 
 #include "LuxMapHandler.h"
-#include "LuxA12aDump.h"
-
-//////////////////////////////////////////////////////////////////////////
-// VARIABLES
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
-#define kVar_afAlpha			0
-#define kVar_afT				1
-#define kVar_avScreenSize		2
-#define kVar_afAmpT				3
-#define kVar_afWaveAlpha		4
-#define kVar_afZoomAlpha		5
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// INSANITY
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 cLuxPostEffect_Insanity::cLuxPostEffect_Insanity(cGraphics *apGraphics, cResources *apResources) : iLuxPostEffect(apGraphics, apResources)
 {
-	//////////////////////////////
-	// Create program
 	cParserVarContainer vars;
 	vars.Add("UseUv");
 	mpProgram = mpGraphics->CreateGpuProgramFromShaders("LuxInsanity","deferred_base_vtx.glsl", "posteffect_insanity_frag.glsl", &vars);
 	if(mpProgram)
 	{
-		mpProgram->GetVariableAsId("afAlpha",kVar_afAlpha);
-		mpProgram->GetVariableAsId("afT",kVar_afT);
-		mpProgram->GetVariableAsId("avScreenSize",kVar_avScreenSize);
-		mpProgram->GetVariableAsId("afAmpT",kVar_afAmpT);
-		mpProgram->GetVariableAsId("afWaveAlpha",kVar_afWaveAlpha);
-		mpProgram->GetVariableAsId("afZoomAlpha",kVar_afZoomAlpha);
+		mpProgram->GetVariableAsId("afAlpha",0);
+		mpProgram->GetVariableAsId("afT",1);
+		mpProgram->GetVariableAsId("avScreenSize",2);
+		mpProgram->GetVariableAsId("afAmpT",3);
+		mpProgram->GetVariableAsId("afWaveAlpha",4);
+		mpProgram->GetVariableAsId("afZoomAlpha",5);
 	}
 
-
-	//////////////////////////////
-	// Textures
 	mvAmpMaps.resize(3);
-	
+
 	for(size_t i=0; i<mvAmpMaps.size(); ++i)
 		mvAmpMaps[i] = mpResources->GetTextureManager()->Create2D("posteffect_insanity_ampmap"+cString::ToString((int)i), false);
 
 	mpZoomMap = mpResources->GetTextureManager()->Create2D("posteffect_insanity_zoom.jpg", false);
 
-	//////////////////////////////
-	// Init vars
-	mfT =0;
-	mfAnimCount =0;
-	mfWaveAlpha = 0.0f;
-	mfZoomAlpha = 0.0f;
-	mfWaveSpeed =0.0f;
+	OhplA12aInitHost();
+	mlH = ohpl_a12a_ins_new();
 }
-
-//-----------------------------------------------------------------------
-
-cLuxPostEffect_Insanity::~cLuxPostEffect_Insanity()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPostEffect_Insanity::Update(float afTimeStep)
-{
-	OhplGa9bClock clock = { mfT, mfAnimCount, mfWaveAlpha, mfZoomAlpha, mfWaveSpeed };
-	ohpl_ga9b_post_update(&clock, afTimeStep);
-	mfT = clock.t;
-	mfAnimCount = clock.animCount;
-}
-
-//-----------------------------------------------------------------------
-
 
 iTexture* cLuxPostEffect_Insanity::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 {
-	OhplGa9bClock clock = { mfT, mfAnimCount, mfWaveAlpha, mfZoomAlpha, mfWaveSpeed };
 	cVector2f vScreenSize(0);
 	if(mpProgram) vScreenSize = mpLowLevelGraphics->GetScreenSizeFloat();
 	if(OhplA12Enabled() && OhplA12Frame() >= 10)
 		OhplA12Log("p_in %s %s %d", OhplA12F(vScreenSize.x).c_str(), OhplA12F(vScreenSize.y).c_str(), mpProgram != NULL ? 1 : 0);
-	OhplGa9bPPlan *pPlan = ohpl_ga9b_post_plan(&clock, vScreenSize.x, vScreenSize.y, mpProgram != NULL);
+	ohpl_a12a_ins_render(mlH, vScreenSize.x, vScreenSize.y, mpProgram != NULL, (size_t)this, (size_t)apInputTexture, (size_t)apFinalTempBuffer);
 
+	return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
+}
+
+void cLuxPostEffect_Insanity::Replay(const OhplGa9bPOp *apOps, size_t alOps, iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
+{
 	iTexture *vTextures[5] = { apInputTexture, mvAmpMaps[0], mvAmpMaps[1], mvAmpMaps[2], mpZoomMap };
 	auto Tex = [&](int i) { return i >= 0 ? vTextures[i] : (iTexture*)NULL; };
 
-	OhplGa9bPOp op;
-	while(ohpl_ga9b_pplan_next(pPlan, &op))
+	for(size_t n=0; n<alOps; ++n)
 	{
+		const OhplGa9bPOp &op = apOps[n];
 		if(OhplA12Enabled() && OhplA12Frame() >= 10)
 			OhplA12Log("P %u %d %d %s %s", op.kind, op.a, op.b, op.kind == kOhplGa9bPFloat && (op.b == 1 || op.b == 3) ? "~" : OhplA12F(op.f[0]).c_str(), OhplA12F(op.f[1]).c_str());
 		switch(op.kind)
@@ -131,77 +82,25 @@ iTexture* cLuxPostEffect_Insanity::RenderEffect(iTexture *apInputTexture, iFrame
 		case kOhplGa9bPTextureRangeNull:	mpCurrentComposite->SetTextureRange(NULL, op.a); break;
 		}
 	}
-	ohpl_ga9b_pplan_free(pPlan);
-
-	return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
 }
-
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// POST EFFECT HANDLER
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 cLuxPostEffectHandler::cLuxPostEffectHandler() : iLuxUpdateable("LuxPostEffectHandler")
 {
 	cGraphics *pGraphics = gpBase->mpEngine->GetGraphics();
 	cResources *pResources = gpBase->mpEngine->GetResources();
 
-	///////////////////////
-	// Create post effects
 	mpInsanity = hplNew(cLuxPostEffect_Insanity, (pGraphics, pResources) );
-	AddEffect(mpInsanity, 25);
+	mpInsanity->SetActive(false);
+	gpBase->mpMapHandler->GetViewport()->GetPostEffectComposite()->AddPostEffect(mpInsanity, 25);
 	mpInsanity->SetActive(true);
 }
-
-//-----------------------------------------------------------------------
-
-cLuxPostEffectHandler::~cLuxPostEffectHandler()
-{
-	STLDeleteAll(mvPostEffects);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPostEffectHandler::OnStart()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPostEffectHandler::Update(float afTimeStep)
-{
-	if(OhplA12Enabled() && OhplA12InTick() == false) return;
-	for(size_t i=0; i<mvPostEffects.size(); ++i)
-	{
-		iLuxPostEffect *pPostEffect = mvPostEffects[i];
-
-        if(pPostEffect->IsActive()) pPostEffect->Update(afTimeStep);
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPostEffectHandler::Reset()
-{
-
-}
-
-//-----------------------------------------------------------------------
 
 void cLuxPostEffectHandler::LoadMainConfig()
 {
 	cConfigFile *pMainCfg = gpBase->mpMainConfig;
 
 	mpInsanity->SetDisabled(pMainCfg->GetBool("Graphics", "PostEffectInsanity", true)==false);
-
 }
-
-//-----------------------------------------------------------------------
 
 void cLuxPostEffectHandler::SaveMainConfig()
 {
@@ -209,14 +108,3 @@ void cLuxPostEffectHandler::SaveMainConfig()
 
 	pMainCfg->SetBool("Graphics", "PostEffectInsanity", mpInsanity->IsDisabled()==false);
 }
-
-//-----------------------------------------------------------------------
-
-void cLuxPostEffectHandler::AddEffect(iLuxPostEffect *apPostEffect, int alPrio)
-{
-	mvPostEffects.push_back(apPostEffect);
-	apPostEffect->SetActive(false);
-	gpBase->mpMapHandler->GetViewport()->GetPostEffectComposite()->AddPostEffect(apPostEffect, alPrio);
-}
-
-//-----------------------------------------------------------------------

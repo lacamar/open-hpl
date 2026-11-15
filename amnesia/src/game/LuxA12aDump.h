@@ -2,21 +2,10 @@
 #define LUX_A12A_DUMP_H
 
 #include "LuxBase.h"
-#include "RustLuxFx.h"
+#include "RustLuxFxA12a.h"
 
-struct OhplA12aState
+struct OhplA12aState : OhplA12aFxState
 {
-	OhplGa9bFade fade;
-	OhplGa9bFlash flash, sanity;
-	OhplGa9bAmount trail, sepia, radial;
-	float radialStart;
-	OhplGa9bEmotion emotion;
-	uint32_t shakeActive, shakeCount;
-	uint32_t voiceActive, voicePaused, voiceCount, voiceRows, voiceQueue, voiceEntries;
-	float voiceVol;
-	uint32_t commentaryActive;
-	int32_t commentaryIcon;
-	uint32_t playerPaused;
 	float insT, insAnim, insWave, insZoom, insSpeed;
 	uint32_t insActive;
 };

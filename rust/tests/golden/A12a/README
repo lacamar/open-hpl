@@ -1,0 +1,5 @@
+expected.txt: dump of the original C++ (commit ba54c21, OHPL_A12A_DUMP) on Amnesia 02_library, frames 1..299, step fixed at 1/60.
+script.txt drives it (OHPL_A12A_SCRIPT); trailing blanks are stripped from expected.txt.
+Re-record: build ba54c21, then OHPL_A12A_DUMP=out.txt OHPL_A12A_SCRIPT=script.txt scripts/soma-sweep.py --map 02_library (OHPL_GAME=amnesia), cut at "tick 300".
+Masked: game_time values and shake offsets (random draws); insanity clock t/anim and the t/amp_t program floats.
+Frames after 299 depend on when the run shuts down; 00_rainy_hall and 04_final also see game scripts firing effects at real-time moments, so only 02_library is compared.

@@ -339,54 +339,58 @@ int cLuxEffectHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int a
 	{
 	case eOhplGa6Op_EffectFromBase:
 		{
-				cLuxEffect_Fade *pFade = apEffects->GetFade();
+			uint64_t lH = apEffects->GetHandle();
+			OhplA12aFxState st;
+			ohpl_a12a_fx_get_state(lH, &st);
 
-				mbFade_Active = pFade->IsActive();
-				mfFade_GoalAlpha = pFade->mfGoalAlpha;
-				mfFade_Alpha = pFade->mfAlpha;
-				mfFade_FadeSpeed = pFade->mfFadeSpeed;
+			mbFade_Active = st.fade.active;
+			mfFade_GoalAlpha = st.fade.goal;
+			mfFade_Alpha = st.fade.alpha;
+			mfFade_FadeSpeed = st.fade.speed;
 
-				//////////////////////
-				// ImageTrail
-				cLuxEffect_ImageTrail *pImageTrail = apEffects->GetImageTrail();
+			mbImageTrail_Active = st.trail.active;
+			mfImageTrail_Amount = st.trail.amount;
+			mfImageTrail_AmountGoal = st.trail.goal;
+			mfImageTrail_FadeSpeed = st.trail.speed;
 
-				mbImageTrail_Active = pImageTrail->mbActive;
-				mfImageTrail_Amount = pImageTrail->mfAmount;
-				mfImageTrail_AmountGoal = pImageTrail->mfAmountGoal;
-				mfImageTrail_FadeSpeed = pImageTrail->mfFadeSpeed;
+			mbSepiaColor_Active = st.sepia.active;
+			mfSepiaColor_Amount = st.sepia.amount;
+			mfSepiaColor_AmountGoal = st.sepia.goal;
+			mfSepiaColor_FadeSpeed = st.sepia.speed;
 
-				//////////////////////
-				// Sepia COlor
-				cLuxEffect_SepiaColor *pSepiaColor = apEffects->GetSepiaColor();
+			mbRadialBlur_Active = st.radial.active;
+			mfRadialBlur_Size = st.radial.amount;
+			mfRadialBlur_BlurStartDist = st.radialStart;
+			mfRadialBlur_SizeGoal = st.radial.goal;
+			mfRadialBlur_FadeSpeed = st.radial.speed;
 
-				mbSepiaColor_Active = pSepiaColor->mbActive;
-				mfSepiaColor_Amount = pSepiaColor->mfAmount;
-				mfSepiaColor_AmountGoal = pSepiaColor->mfAmountGoal;
-				mfSepiaColor_FadeSpeed = pSepiaColor->mfFadeSpeed;
-
-				//////////////////////
-				// Radial blur
-				cLuxEffect_RadialBlur *pRadialBlur = apEffects->GetRadialBlur();
-
-				mbRadialBlur_Active = pRadialBlur->mbActive;
-				mfRadialBlur_Size = pRadialBlur->mfSize;
-				mfRadialBlur_BlurStartDist = pRadialBlur->mfBlurStartDist;
-				mfRadialBlur_SizeGoal = pRadialBlur->mfSizeGoal;
-				mfRadialBlur_FadeSpeed = pRadialBlur->mfFadeSpeed;
-
-				//////////////////////
-				// Voice data
-				mbVoiceActive = apEffects->GetPlayVoice()->mbActive;
-				msVoiceOverCallback = apEffects->GetPlayVoice()->msOverCallback;
-			    mvVoiceData.Clear();
-				tLuxVoiceDataListIt voiceIt = apEffects->GetPlayVoice()->mlstVoices.begin();
-				for(; voiceIt != apEffects->GetPlayVoice()->mlstVoices.end(); ++voiceIt)
+			mbVoiceActive = st.voiceActive != 0;
+			msVoiceOverCallback.clear();
+			ohpl_a12a_fx_voice_cb_get(lH, [](void *apCtx, const unsigned char *apP, size_t alN){ ((tString*)apCtx)->assign((const char*)apP, alN); }, &msVoiceOverCallback);
+			mvVoiceData.Clear();
+			for(size_t i=0; i<ohpl_a12a_fx_voice_count(lH); ++i)
+			{
+				OhplA12aVoiceSave v;
+				if(ohpl_a12a_fx_voice_get(lH, i, &v) == 0) continue;
+				cLuxVoiceData data;
+				tWString *vTexts[7] = { &data.msText, &data.msText2, &data.msText3, &data.msText4, &data.msText5, &data.msText6, &data.msText7 };
+				float *vDelays[7] = { &data.mfTextDelay, &data.mfText2Delay, &data.mfText3Delay, &data.mfText4Delay, &data.mfText5Delay, &data.mfText6Delay, &data.mfText7Delay };
+				for(int t=0; t<7; ++t)
 				{
-					mvVoiceData.Add(*voiceIt);
+					vTexts[t]->assign((const wchar_t*)v.texts[t].p, v.texts[t].n);
+					*vDelays[t] = v.delays[t];
 				}
-	
-				//////////////////////
-				// Sound volume and speed mul
+				data.msVoiceFile.assign((const char*)v.voice.p, v.voice.n);
+				data.msEffectFile.assign((const char*)v.effect.p, v.effect.n);
+				data.mbUsePosition = v.usePos != 0;
+				data.mvPosition = cVector3f(v.pos[0], v.pos[1], v.pos[2]);
+				data.mfMinDistance = v.minDist;
+				data.mfMaxDistance = v.maxDist;
+				data.mlPriority = v.priority;
+				data.mfCurrentTime = v.currentTime;
+				data.mfInterruptedAt = v.interruptedAt;
+				mvVoiceData.Add(data);
+			}
 		}
 		return 0;
 	case eOhplGa6Op_EffectVolumeCount:
@@ -408,56 +412,62 @@ int cLuxEffectHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int a
 		return 0;
 	case eOhplGa6Op_EffectToBase:
 		{
-				cLuxEffect_Fade *pFade = apEffects->GetFade();
+			uint64_t lH = apEffects->GetHandle();
+			OhplA12aFxState st;
+			ohpl_a12a_fx_get_state(lH, &st);
 
-				pFade->mbActive = mbFade_Active;
-				pFade->mfGoalAlpha = mfFade_GoalAlpha;
-				pFade->mfAlpha = mfFade_Alpha;
-				pFade->mfFadeSpeed = mfFade_FadeSpeed;
+			st.fade.active = mbFade_Active;
+			st.fade.goal = mfFade_GoalAlpha;
+			st.fade.alpha = mfFade_Alpha;
+			st.fade.speed = mfFade_FadeSpeed;
 
-				//////////////////////
-				// ImageTrail
-				cLuxEffect_ImageTrail *pImageTrail = apEffects->GetImageTrail();
+			gpBase->mpMapHandler->GetPostEffect_ImageTrail()->SetActive(mbImageTrail_Active);
+			st.trail.active = mbImageTrail_Active;
+			st.trail.amount = mfImageTrail_Amount;
+			st.trail.goal = mfImageTrail_AmountGoal;
+			st.trail.speed = mfImageTrail_FadeSpeed;
 
-				gpBase->mpMapHandler->GetPostEffect_ImageTrail()->SetActive(mbImageTrail_Active);
-				pImageTrail->mbActive = mbImageTrail_Active;
-				pImageTrail->mfAmount = mfImageTrail_Amount;
-				pImageTrail->mfAmountGoal = mfImageTrail_AmountGoal;
-				pImageTrail->mfFadeSpeed = mfImageTrail_FadeSpeed;
+			gpBase->mpMapHandler->GetPostEffect_Sepia()->SetActive(mbSepiaColor_Active);
+			st.sepia.active = mbSepiaColor_Active;
+			st.sepia.amount = mfSepiaColor_Amount;
+			st.sepia.goal = mfSepiaColor_AmountGoal;
+			st.sepia.speed = mfSepiaColor_FadeSpeed;
 
-				//////////////////////
-				// Sepia COlor
-				cLuxEffect_SepiaColor *pSepiaColor = apEffects->GetSepiaColor();
+			gpBase->mpMapHandler->GetPostEffect_RadialBlur()->SetActive(mbRadialBlur_Active);
+			st.radial.active = mbRadialBlur_Active;
+			st.radial.amount = mfRadialBlur_Size;
+			st.radialStart = mfRadialBlur_BlurStartDist;
+			st.radial.goal = mfRadialBlur_SizeGoal;
+			st.radial.speed = mfRadialBlur_FadeSpeed;
 
-				gpBase->mpMapHandler->GetPostEffect_Sepia()->SetActive(mbSepiaColor_Active);
-				pSepiaColor->mbActive = mbSepiaColor_Active;
-				pSepiaColor->mfAmount = mfSepiaColor_Amount;
-				pSepiaColor->mfAmountGoal = mfSepiaColor_AmountGoal;
-				pSepiaColor->mfFadeSpeed = mfSepiaColor_FadeSpeed;
-
-				//////////////////////
-				// Radial blur
-				cLuxEffect_RadialBlur *pRadialBlur = apEffects->GetRadialBlur();
-
-				gpBase->mpMapHandler->GetPostEffect_RadialBlur()->SetActive(mbRadialBlur_Active);
-				pRadialBlur->mbActive = mbRadialBlur_Active;
-				pRadialBlur->mfSize = mfRadialBlur_Size;
-				pRadialBlur->mfBlurStartDist = mfRadialBlur_BlurStartDist;
-				pRadialBlur->mfSizeGoal = mfRadialBlur_SizeGoal;
-				pRadialBlur->mfFadeSpeed = mfRadialBlur_FadeSpeed;
-
-				//////////////////////
-				// Voice data
-				apEffects->GetPlayVoice()->mbActive = mbVoiceActive;
-				apEffects->GetPlayVoice()->msOverCallback = msVoiceOverCallback;
-				apEffects->GetPlayVoice()->mlstVoices.clear();
-				for(size_t i=0; i<mvVoiceData.Size(); ++i)
+			st.voiceActive = mbVoiceActive;
+			ohpl_a12a_fx_set_state(lH, &st);
+			ohpl_a12a_fx_voice_cb_set(lH, msVoiceOverCallback.data(), msVoiceOverCallback.size());
+			ohpl_a12a_fx_voice_clear(lH);
+			for(size_t i=0; i<mvVoiceData.Size(); ++i)
+			{
+				cLuxVoiceData &data = mvVoiceData[i];
+				OhplA12aVoiceSave v;
+				memset(&v, 0, sizeof(v));
+				tWString *vTexts[7] = { &data.msText, &data.msText2, &data.msText3, &data.msText4, &data.msText5, &data.msText6, &data.msText7 };
+				float vDelays[7] = { data.mfTextDelay, data.mfText2Delay, data.mfText3Delay, data.mfText4Delay, data.mfText5Delay, data.mfText6Delay, data.mfText7Delay };
+				for(int t=0; t<7; ++t)
 				{
-					apEffects->GetPlayVoice()->mlstVoices.push_back(mvVoiceData[i]);
+					v.texts[t].p = (const unsigned*)vTexts[t]->data();
+					v.texts[t].n = vTexts[t]->size();
+					v.delays[t] = vDelays[t];
 				}
-
-				//////////////////////
-				// Sound volume and speed mul
+				v.voice.p = (const unsigned char*)data.msVoiceFile.data(); v.voice.n = data.msVoiceFile.size();
+				v.effect.p = (const unsigned char*)data.msEffectFile.data(); v.effect.n = data.msEffectFile.size();
+				v.usePos = data.mbUsePosition;
+				v.pos[0] = data.mvPosition.x; v.pos[1] = data.mvPosition.y; v.pos[2] = data.mvPosition.z;
+				v.minDist = data.mfMinDistance;
+				v.maxDist = data.mfMaxDistance;
+				v.priority = data.mlPriority;
+				v.currentTime = data.mfCurrentTime;
+				v.interruptedAt = data.mfInterruptedAt;
+				ohpl_a12a_fx_voice_push(lH, &v);
+			}
 		}
 		return 0;
 	case eOhplGa6Op_EffectSavedCount:
