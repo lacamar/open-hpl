@@ -25,6 +25,7 @@
 #include "LuxBase.h"
 #include "LuxTypes.h"
 #include "RustLuxBase.h"
+#include "LuxInputHost.h"
 
 //----------------------------------------------
 
@@ -106,7 +107,7 @@ public:
 	float GetGamepadLookSensitivity() { return mfGamepadLookSensitivity; }
 	void SetGamepadLookSensitivity(float afX);
 
-	iGamepad* GetGamepad() { return mpPad; }
+	iGamepad* GetGamepad() { return OhplInPad(); }
 #endif
 
 	cLuxAction*   GetActionByName(const tString& asName);
@@ -180,7 +181,6 @@ private:
 	float mfGamepadWalkSensitivity;
 	float mfGamepadLookSensitivity;
 	bool mbGamepadLookInvert;
-	iGamepad* mpPad;
 	bool mbGamepadUIInput;
 #endif
 };
