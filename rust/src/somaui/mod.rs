@@ -20,3 +20,9 @@ pub mod screens;
 #[cfg(test)]
 mod tests;
 pub mod tonemap;
+
+mod ffi_s8;
+pub mod s8;
+#[cfg(test)]
+mod s8_tests;
+mod s8_trace;
