@@ -98,6 +98,8 @@ void cSomaSplash::Update(float afTimeStep)
 	if (mbFinished)
 		return;
 
+	if (s8::Pass(0, true) == false)
+		return;
 	if (s8::On())
 		afTimeStep = 1.0f / 60;
 	if (ohpl_gs7_splash_update(&mfElapsed, afTimeStep))
@@ -155,7 +157,9 @@ void cSomaSplash::DrawLoadingScreen(bool abBoot)
 	{
 		// Hold before the fade-out until the menu has loaded
 		mfElapsed = ohpl_gs7_splash_boot_elapsed(lNow, mlBootStart);
+		s8::Bypass() = true;
 		OnDraw(0);
+		s8::Bypass() = false;
 	}
 	else
 	{
@@ -187,6 +191,8 @@ void cSomaSplash::DrawLoadingScreen(bool abBoot)
 void cSomaSplash::OnDraw(float afFrameTime)
 {
 	if (mbFinished)
+		return;
+	if (s8::Pass(0, false, s8::Bypass()) == false)
 		return;
 
 	s8::Tr("draw_gfx", {mpGuiSet, mpBlackBg, 0.0f, 0.0f, 0.0f, mvScreenSize.x, mvScreenSize.y, 1.0f, 1.0f, 1.0f, 1.0f});

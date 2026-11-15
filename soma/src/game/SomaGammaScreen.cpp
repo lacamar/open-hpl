@@ -64,7 +64,7 @@ cSomaGammaScreen::cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpda
 			for (const tWString &r : mvInstructionRows)
 				vRows.emplace_back(r);
 			s8::Tr("font_wrap", {mpInstructionsFont, fWrapWidth, mfInstructionsRowHeight, mfInstructionsFontHeight,
-								 _W("Adjust gamma so you can barely make out the details on the robot poster on the left.")}, vRows);
+								 tWString(_W("Adjust gamma so you can barely make out the details on the robot poster on the left."))}, vRows);
 		}
 	}
 
@@ -96,7 +96,7 @@ cSomaGammaScreen::cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpda
 	cVector2f vButtonSize(layout.button_size[0], layout.button_size[1]);
 	cVector3f vButtonPos(layout.button_pos[0], layout.button_pos[1], layout.button_pos[2]);
 	mpContinueButton = mpGuiSet->CreateWidgetButton(vButtonPos, vButtonSize, _W("Continue"), NULL);
-	s8::Tr("button_new", {mpGuiSet, vButtonPos.x, vButtonPos.y, vButtonPos.z, vButtonSize.x, vButtonSize.y, _W("Continue"), 1}, {mpContinueButton});
+	s8::Tr("button_new", {mpGuiSet, vButtonPos.x, vButtonPos.y, vButtonPos.z, vButtonSize.x, vButtonSize.y, tWString(_W("Continue")), 1}, {mpContinueButton});
 	mpContinueButton->AddCallback(eGuiMessage_ButtonPressed, this, &cSomaGammaScreen::ContinuePressed_static_gui);
 
 	s8::Tr("default_focus_nav", {mpGuiSet, mpContinueButton});
@@ -192,6 +192,8 @@ void cSomaGammaScreen::Update(float afTimeStep)
 	if (mbFinished)
 		return;
 
+	if (s8::Pass(1, true) == false)
+		return;
 	// cGui does not poll iMouse itself
 	iMouse *pMouse = mpEngine->GetInput()->GetMouse();
 	if (pMouse)
@@ -229,6 +231,8 @@ void cSomaGammaScreen::Update(float afTimeStep)
 void cSomaGammaScreen::OnDraw(float afFrameTime)
 {
 	if (mbFinished)
+		return;
+	if (s8::Pass(1, false) == false)
 		return;
 
 	if (mpBackgroundGfx)

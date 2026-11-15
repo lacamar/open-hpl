@@ -76,6 +76,23 @@ namespace s8
 		fflush(f);
 	}
 
+	// Traced runs do one Update, then one OnDraw per class, whatever the engine loop does
+	inline bool Pass(int alClass, bool abUpdate, bool abBypass = false)
+	{
+		static bool vNextUpdate[2] = {true, true};
+		if (On() == false || abBypass)
+			return true;
+		if (vNextUpdate[alClass] != abUpdate)
+			return false;
+		vNextUpdate[alClass] = !abUpdate;
+		return true;
+	}
+	inline bool &Bypass()
+	{
+		static bool b = false;
+		return b;
+	}
+
 	inline bool AutoKey()
 	{
 		static int n = 0;
