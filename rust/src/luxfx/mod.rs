@@ -16,3 +16,10 @@ mod renderer;
 #[cfg(test)]
 mod tests;
 mod voice;
+
+mod fxffi;
+mod fxobj;
+pub mod host;
+mod rend;
+#[cfg(test)]
+mod tests_a12a;

@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -20,55 +20,42 @@
 #ifndef LUX_EFFECT_RENDERER_H
 #define LUX_EFFECT_RENDERER_H
 
-//----------------------------------------------
-
 #include "LuxBase.h"
-#include "RustLuxFx.h"
+#include "RustLuxFxA12a.h"
+#include "LuxA12aDump.h"
 
-class cGlowObject
-{
-public:
-	cGlowObject() {}
-	cGlowObject(iRenderable* apObject, float afAlpha) : mpObject(apObject), mfAlpha(afAlpha) {}
-
-	iRenderable* mpObject;
-	float mfAlpha;
-};
-
-//----------------------------------------------
+// The object lists, flash oscillation and pass plans live in Rust (rust/src/luxfx/rend.rs); this
+// shell owns the GPU programs and buffers and replays the plans.
 
 class cLuxEffectRenderer : public iLuxUpdateable
 {
-public:	
+public:
 	cLuxEffectRenderer();
-	~cLuxEffectRenderer();
+	~cLuxEffectRenderer(){ ohpl_a12a_rend_free(mlH); }
 
-	void Reset();
+	void Reset(){ ohpl_a12a_rend_clear(mlH, 0); }
 
-	void Update(float afTimeStep);
+	void Update(float afTimeStep)
+	{
+		if(OhplA12Enabled() && OhplA12InTick() == false) return;
+		ohpl_a12a_rend_update(mlH, afTimeStep);
+	}
 
-	void ClearRenderLists();
+	void ClearRenderLists(){ ohpl_a12a_rend_clear(mlH, 1); }
 
-	void RenderSolid(cRendererCallbackFunctions* apFunctions);
-	void RenderTrans(cRendererCallbackFunctions* apFunctions);
+	void RenderSolid(cRendererCallbackFunctions* apFunctions){}
+	void RenderTrans(cRendererCallbackFunctions* apFunctions){ ohpl_a12a_rend_render(mlH, (size_t)apFunctions); }
 
-	void AddOutlineObject(iRenderable *apObject);
-	void ClearOutlineObjects();
+	void AddOutlineObject(iRenderable *apObject){ ohpl_a12a_rend_add(mlH, 2, (size_t)apObject, 0); }
+	void ClearOutlineObjects(){ ohpl_a12a_rend_clear(mlH, 2); }
 
-	void AddFlashObject(iRenderable *apObject, float afAlpha);
-	void AddEnemyGlow(iRenderable *apObject, float afAlpha);
+	void AddFlashObject(iRenderable *apObject, float afAlpha){ ohpl_a12a_rend_add(mlH, 0, (size_t)apObject, afAlpha); }
+	void AddEnemyGlow(iRenderable *apObject, float afAlpha){ ohpl_a12a_rend_add(mlH, 1, (size_t)apObject, afAlpha); }
+
+	void Replay(cRendererCallbackFunctions* apFunctions, const size_t *apObjects, const OhplGa9bROp *apOps, size_t alOps, const cRect2l &aClipRect);
 
 private:
-	void RenderFlashObjects(cRendererCallbackFunctions* apFunctions);
-	void RenderEnemyGlow(cRendererCallbackFunctions* apFunctions);
-	
-	void RenderOutline(cRendererCallbackFunctions* apFunctions);
-	void Replay(OhplGa9bRPlan *apPlan, cRendererCallbackFunctions* apFunctions, const std::vector<iRenderable*> &avObjects, const cRect2l &aClipRect);
-		
-	std::vector<cGlowObject> mvFlashObjects;
-	std::vector<cGlowObject> mvEnemyGlowObjects;
-	
-	std::vector<iRenderable*> mvOutlineObjects;
+	uint64_t mlH;
 
 	iFrameBuffer *mpDeferredAccumBuffer;
 	iFrameBuffer *mpFrameBufferColor;
@@ -85,14 +72,9 @@ private:
 	iGpuProgram *mpOutlineStencilAlphaProgram;
 
 	iGpuProgram *mpFlashProgram;
-	cLinearOscillation mFlashOscill;
-
 	iGpuProgram *mpEnemyGlowProgram;
 
 	cMatrixf m_mtxTemp;
 };
-
-//----------------------------------------------
-
 
 #endif // LUX_EFFECT_RENDERER_H

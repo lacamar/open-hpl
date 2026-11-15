@@ -60,17 +60,9 @@ pub struct Op {
 
 pub struct Plan {
     ops: Vec<Op>,
-    pos: usize,
 }
 
 impl Plan {
-    pub fn next_op(&mut self) -> Option<Op> {
-        let op = self.ops.get(self.pos).copied();
-        self.pos += 1;
-        op
-    }
-
-    #[cfg(test)]
     pub fn ops(&self) -> &[Op] {
         &self.ops
     }
@@ -161,5 +153,5 @@ pub fn plan(c: &Clock, screen: [f32; 2], program_ok: bool) -> Plan {
         a: 1,
         ..Op::default()
     });
-    Plan { ops, pos: 0 }
+    Plan { ops }
 }

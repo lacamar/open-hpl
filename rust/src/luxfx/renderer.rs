@@ -81,7 +81,6 @@ pub struct Op {
 
 pub struct Plan {
     ops: Vec<Op>,
-    pos: usize,
     pub clip_min: Vector3f,
     pub clip_max: Vector3f,
 }
@@ -90,7 +89,6 @@ impl Plan {
     fn new() -> Self {
         Self {
             ops: Vec::new(),
-            pos: 0,
             clip_min: Vector3f::default(),
             clip_max: Vector3f::default(),
         }
@@ -116,13 +114,6 @@ impl Plan {
         });
     }
 
-    pub fn next_op(&mut self) -> Option<Op> {
-        let op = self.ops.get(self.pos).copied();
-        self.pos += 1;
-        op
-    }
-
-    #[cfg(test)]
     pub fn ops(&self) -> &[Op] {
         &self.ops
     }

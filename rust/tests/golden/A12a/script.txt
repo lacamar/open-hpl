@@ -1,0 +1,53 @@
+# frame[-frame] command args; "-" is an empty string
+2 insanity 0 0 0 0
+3 fade_out 0.4
+30 fade_in 0.2
+45 fade_direct 0.4
+47 fade_direct 0
+48 fade_in 0
+49 fade_out 0
+50 fade_in 0.1
+6 flash 0.1 0.1 0.1
+4 radial 0.3 2
+8 radial_dist 0.7
+20 radial 0 4
+5 sepia 0.8 3
+22 sepia 0 4
+7 trail 0.5 4
+24 trail 0 4
+50 shake 0.1 0.2 0.1 0.1
+52 shake 0.05 0.1 0 0.1
+55 sanity
+20 emotion Cat Entry
+100 emotion_act 1
+145 emotion_act 1
+146 emotion_act 0
+60 voice_cb on_voice_a
+61 voice a.ogg b.ogg Cat Entry 0.5 0 0 0 0 0 0 2 1
+61 voice c.ogg - Cat Entry2 0 1 1 2 3 1 5 7 1
+66 voice_pause
+67 voice_unpause
+68 voice_vol 0.5
+69 voice_vol 1
+75 multivoice d.ogg e.ogg Cat E1 0 E2 0.5 E3 0.25 - 0 - 0 - 0 - 0 0 0 0 0 0 0 -1 1
+80 voice_stop 0.5
+82 voice_cb on_voice_b
+83 voice f.ogg - Cat Entry 0 0 0 0 0 0 0 1 1
+84 voice g.ogg - Cat Entry 0 0 0 0 0 0 0 -1 1
+85 voice h.ogg - Cat Entry 0 0 0 0 0 0 0 3 0
+90 commentary missing.ogg 5
+91 commentary_stop
+120 insanity 1 0.5 0.3 1
+140 insanity 1 0.2 0.7 2
+150 insanity 0 0 0 0
+110-125 rflash 0.5
+118-135 rglow 0.7
+112-140 routline
+141 rclear_outline
+142 rreset
+190 player_paused 1
+191 player_paused 0
+205 sepia 0.5 1
+206 radial 0.2 1
+207 map_leave
+230 reset
