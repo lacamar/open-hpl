@@ -129,7 +129,14 @@ mod hook {
         .as_ref()
     }
 
+    #[cfg(test)]
+    thread_local! {
+        pub(in super::super) static CAPTURE: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+
     pub(super) fn write(b: &[u8]) {
+        #[cfg(test)]
+        CAPTURE.with(|c| c.borrow_mut().extend_from_slice(b));
         if let Some(Ok(mut f)) = out().map(Mutex::lock) {
             let _ = f.write_all(b);
         }
@@ -190,6 +197,12 @@ mod hook {
             write(&o);
         }
     }
+}
+
+#[cfg(test)]
+pub(super) fn captured() -> String {
+    hook::CAPTURE
+        .with(|c| String::from_utf8_lossy(&std::mem::take(&mut *c.borrow_mut())).into_owned())
 }
 
 pub(super) fn text(tag: &[u8], x: &[u8]) {

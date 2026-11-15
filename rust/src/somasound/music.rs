@@ -415,3 +415,7 @@ pub(super) fn read_id(p: *mut c_void) -> Id {
         |o: usize| i32::from_ne_bytes(std::array::from_fn(|k| b.get(o + k).copied().unwrap_or(0)));
     (b.first().copied().unwrap_or(0), w(4), w(8))
 }
+
+#[cfg(test)]
+#[path = "music_tests.rs"]
+mod tests;

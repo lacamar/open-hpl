@@ -1,7 +1,7 @@
 #ifndef SOMA_RUST_SOUND_H
 #define SOMA_RUST_SOUND_H
 
-// C ABI of rust/src/somasound (ffi_game.rs, ffi_fsb.rs, ffi_voice.rs, ffi_scape.rs, host.rs).
+// C ABI of rust/src/somasound (ffi_game.rs, ffi_fsb.rs, ffi_voice.rs, host.rs).
 
 #include <cstddef>
 #include <cstdint>
@@ -45,7 +45,22 @@ struct OhplS7Str
 	size_t n;
 };
 
+struct OhplGs5Str
+{
+	const unsigned char *p;
+	size_t n;
+};
+
 typedef void (*OhplS7Sink)(void *, const unsigned char *, size_t);
+
+struct OhplS7CallArg
+{
+	uint8_t kind; // 0 string, 1 bool, 2 int
+	int32_t i;
+	OhplGs5Str s;
+};
+
+struct OhplGs5AreaDef;
 
 struct OhplS7Host
 {
@@ -99,6 +114,22 @@ struct OhplS7Host
 	void (*se_reset_props)(size_t);
 	void (*log)(const unsigned char *, size_t);
 	void (*warning)(const unsigned char *, size_t);
+	size_t (*scape_world)(size_t);
+	void (*scape_areas)(size_t, void (*)(void *, const OhplGs5AreaDef *), void *);
+	size_t (*world_sound_by_name)(size_t, const unsigned char *, size_t);
+	void (*area_state)(size_t, bool *, float *);
+	bool (*camera_pos)(float *);
+	bool (*body_pos)(float *);
+	void (*apply_reverb)(const float *);
+	void (*ent_name)(size_t, OhplS7Sink, void *);
+	const void *(*prefix_ref)(const unsigned char *, size_t);
+	bool (*voice_present)();
+	bool (*voice_play)(const unsigned char *, size_t, uint64_t, void (*)(uint64_t));
+	int (*voice_line_count)(const unsigned char *, size_t);
+	void (*voice_stop_all)();
+	bool (*voice_scene_involving)(const unsigned char *, size_t);
+	bool (*voice_subject_involves)(const unsigned char *, size_t, const unsigned char *, size_t);
+	int (*script_call)(const unsigned char *, size_t, const OhplS7CallArg *, size_t, bool);
 };
 
 extern "C" {
@@ -137,6 +168,14 @@ extern "C" {
 	void ohpl_s7_music_serialize(OhplS7Sink sink, void *ctx);
 	void ohpl_s7_music_deserialize(const unsigned char *data, size_t n);
 	void ohpl_s7_install_host(const void *ops);
+	void ohpl_s7_dialog_update(float dt);
+	void ohpl_s7_dialog_stop_all();
+	void ohpl_s7_register_dialog(void *engine);
+	void ohpl_s7_scape_update(size_t map, float dt);
+	void ohpl_s7_scape_forget(size_t map);
+	void ohpl_s7_scape_set_paused(bool on);
+	void ohpl_s7_scape_describe(OhplS7Sink sink, void *ctx);
+	void ohpl_s7_register_soundscape(void *engine);
 	void ohpl_s7_cache_dir(const unsigned char *game, size_t gn, const unsigned char *sub, size_t sn, void (*sink)(void *, const unsigned char *, size_t), void *ctx);
 	void ohpl_s7_extract_samples(const unsigned char *bank, size_t bn, const unsigned char *cache, size_t cn, const unsigned char *prefix, size_t pn,
 								 const OhplS7Str *samples, size_t count, void (*sink)(void *, const unsigned char *, size_t, const unsigned char *, size_t), void *ctx);
@@ -149,13 +188,7 @@ inline void OhplS7Text(const char *tag, const std::string &text)
 }
 
 struct OhplGs5Voices;
-struct OhplGs5Scape;
 
-struct OhplGs5Str
-{
-	const unsigned char *p;
-	size_t n;
-};
 
 struct OhplGs5VoiceHost
 {
@@ -221,32 +254,6 @@ struct OhplGs5AreaDef
 	float reverb_amount, reverb_fade;
 };
 
-struct OhplGs5ScapeHost
-{
-	void *ctx;
-	bool (*bg_live)(void *, size_t, int);
-	void (*bg_fade_out)(void *, size_t, float);
-	void (*bg_fade_volume_mul_to)(void *, size_t, float, float);
-	bool (*bg_play)(void *, const unsigned char *, size_t, size_t *, int *);
-	void (*bg_set_volume_mul)(void *, size_t, float);
-	void (*bg_fade_in)(void *, size_t, float);
-	void (*bg_set_paused)(void *, size_t, bool);
-	bool (*world_present)(void *);
-	void (*entity_fade)(void *, const unsigned char *, size_t, bool fade_in, float speed);
-	void (*area)(void *, size_t ent, bool *active, float *matrix16_size3);
-	bool (*camera_pos)(void *, float *);
-	bool (*body_pos)(void *, float *);
-	void (*apply_reverb)(void *, const float *env16);
-};
-
-struct OhplGs5ScapeInfo
-{
-	int rev_type;
-	float rev_amount, rev_room;
-	size_t rev_area_ent;
-	bool rev_has_area;
-};
-
 extern "C" {
 	OhplGs5Voices *ohpl_gs5_voice_new();
 	void ohpl_gs5_voice_free(OhplGs5Voices *);
@@ -297,16 +304,6 @@ extern "C" {
 	void ohpl_gs5_voice_lip_weights(OhplGs5Voices *, const OhplGs5VoiceHost *, void (*sink)(void *, const unsigned char *, size_t, const float *), void *ctx);
 	void ohpl_gs5_spectrum(const float *pcm, size_t n, int channels, int rate, double elapsed, int num, float *out);
 
-	OhplGs5Scape *ohpl_gs5_scape_new();
-	void ohpl_gs5_scape_free(OhplGs5Scape *);
-	void ohpl_gs5_scape_load(OhplGs5Scape *, const OhplGs5AreaDef *defs, size_t count);
-	void ohpl_gs5_scape_update(OhplGs5Scape *, const OhplGs5ScapeHost *, float dt);
-	void ohpl_gs5_scape_set_default_reverb(OhplGs5Scape *, int preset, float fade);
-	void ohpl_gs5_scape_set_paused(OhplGs5Scape *, const OhplGs5ScapeHost *, bool on);
-	const unsigned char *ohpl_gs5_scape_prefix(OhplGs5Scape *, size_t *len);
-	void ohpl_gs5_scape_info(OhplGs5Scape *, OhplGs5ScapeInfo *out);
-	void ohpl_gs5_scape_level(OhplGs5Scape *, size_t i, size_t *ent, bool *has_area, bool *has_bg, void (*name)(void *, const unsigned char *, size_t), void *ctx);
-	const unsigned char *ohpl_gs5_reverb_name(int i, size_t *len);
 
 	bool ohpl_gs5_fsb_mode_supported(unsigned int mode);
 	unsigned char ohpl_gs5_fsb_cached_state(bool has_ogg, bool has_wav);

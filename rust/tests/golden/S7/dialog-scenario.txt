@@ -1,0 +1,11 @@
+DI   1
+DI   0
+DI   1
+DI   0
+DF t1 
+DI   1
+DI   1
+DI   1
+DI   0
+DO Yes  7
+DF t4 

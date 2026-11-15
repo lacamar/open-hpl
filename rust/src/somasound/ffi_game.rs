@@ -263,3 +263,55 @@ pub unsafe extern "C" fn ohpl_s7_music_deserialize(data: *const u8, n: usize) {
     // SAFETY: caller contract.
     game().music.deserialize(unsafe { units(data, n) });
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_s7_scape_update(map: usize, dt: f32) {
+    super::soundscape::update(map, dt);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_s7_scape_forget(map: usize) {
+    super::soundscape::forget(map);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_s7_scape_set_paused(on: bool) {
+    super::soundscape::set_paused(on);
+}
+
+/// # Safety
+/// `sink` accepts `ctx`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_s7_scape_describe(sink: Sink, ctx: *mut c_void) {
+    let d = super::soundscape::describe();
+    // SAFETY: caller contract.
+    unsafe { sink(ctx, d.as_ptr(), d.len()) };
+}
+
+/// # Safety
+/// `engine` is a live `asIScriptEngine`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_s7_register_soundscape(engine: *mut c_void) {
+    super::soundscape::register(&crate::somascript::s2_as::Soma(
+        crate::somascript::s2_as::Engine(engine),
+    ));
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_s7_dialog_update(dt: f32) {
+    super::dialog::update(dt);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_s7_dialog_stop_all() {
+    super::dialog::stop_all();
+}
+
+/// # Safety
+/// `engine` is a live `asIScriptEngine`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_s7_register_dialog(engine: *mut c_void) {
+    super::dialog::register(&crate::somascript::s2_as::Soma(
+        crate::somascript::s2_as::Engine(engine),
+    ));
+}

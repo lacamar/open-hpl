@@ -127,6 +127,14 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
         if ticks != last_ticks:
             last_ticks, flat_since = ticks, time.time()
         if time.time() - flat_since > 30:
+            try:
+                # blocked in flock(2) (aarch64 syscall 32): queued behind another headless instance, not hung
+                if open(f"/proc/{proc.pid}/syscall").read().split()[0] == "32":
+                    flat_since = time.time()
+                    time.sleep(1)
+                    continue
+            except (OSError, IndexError):
+                pass
             # A crashed process sits idle while systemd-coredump writes its core.
             try:
                 proc.wait(timeout=120)
@@ -157,7 +165,10 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
             lines = []
             for n, code in enumerate(open(os.environ["OHPL_S7_SCENARIO"]).read().split("\n---\n")):
                 if code.strip():
-                    r = hpl.send({"cmd": "script_exec", "code": code})
+                    try:
+                        r = hpl.send({"cmd": "script_exec", "code": code})
+                    except HplControlError as e:
+                        r = {"error": "ERR " + str(e).replace("\n", " | ")}
                     lines.append(f"[{n}] {r.get('output', '')} {r.get('error', '')}".rstrip())
                     hpl.send({"cmd": "wait_frames", "n": 30, "max_ms": 8000})
             open(os.environ["OHPL_S7_SCENARIO_OUT"], "w").write("\n".join(lines) + "\n")

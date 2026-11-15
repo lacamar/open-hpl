@@ -72,6 +72,63 @@ pub struct S7Host {
     pub se_reset_props: unsafe extern "C" fn(usize),
     pub log: unsafe extern "C" fn(*const u8, usize),
     pub warning: unsafe extern "C" fn(*const u8, usize),
+    pub scape_world: unsafe extern "C" fn(usize) -> usize,
+    pub scape_areas: unsafe extern "C" fn(
+        usize,
+        unsafe extern "C" fn(*mut c_void, *const AreaDefC),
+        *mut c_void,
+    ),
+    pub world_sound_by_name: unsafe extern "C" fn(usize, *const u8, usize) -> usize,
+    pub area_state: unsafe extern "C" fn(usize, *mut bool, *mut f32),
+    pub camera_pos: unsafe extern "C" fn(*mut f32) -> bool,
+    pub body_pos: unsafe extern "C" fn(*mut f32) -> bool,
+    pub apply_reverb: unsafe extern "C" fn(*const f32),
+    pub ent_name: unsafe extern "C" fn(usize, Sink, *mut c_void),
+    pub prefix_ref: unsafe extern "C" fn(*const u8, usize) -> *const c_void,
+    pub voice_present: unsafe extern "C" fn() -> bool,
+    pub voice_play: unsafe extern "C" fn(*const u8, usize, u64, unsafe extern "C" fn(u64)) -> bool,
+    pub voice_line_count: unsafe extern "C" fn(*const u8, usize) -> i32,
+    pub voice_stop_all: unsafe extern "C" fn(),
+    pub voice_scene_involving: unsafe extern "C" fn(*const u8, usize) -> bool,
+    pub voice_subject_involves: unsafe extern "C" fn(*const u8, usize, *const u8, usize) -> bool,
+    pub script_call: unsafe extern "C" fn(*const u8, usize, *const CallArg, usize, bool) -> i32,
+}
+
+/// One argument of a map script call: kind 0 string, 1 bool, 2 int.
+#[repr(C)]
+pub struct CallArg {
+    pub kind: u8,
+    pub i: i32,
+    pub s: Str,
+}
+
+#[repr(C)]
+pub struct Str {
+    pub p: *const u8,
+    pub n: usize,
+}
+
+#[repr(C)]
+pub struct AreaDefC {
+    pub ent: usize,
+    pub level: Str,
+    pub prio: i32,
+    pub bg: Str,
+    pub bg_volume: f32,
+    pub bg_fade_in: f32,
+    pub bg_trans_speed: f32,
+    pub parent_vol_mul: f32,
+    pub in_names: Str,
+    pub out_names: Str,
+    pub ent_fade_in: f32,
+    pub ent_fade_out: f32,
+    pub prefix: Str,
+    pub prefix_prio: i32,
+    pub use_reverb: bool,
+    pub reverb_prio: i32,
+    pub reverb_type: Str,
+    pub reverb_amount: f32,
+    pub reverb_fade: f32,
 }
 
 static HOST: OnceLock<&'static S7Host> = OnceLock::new();

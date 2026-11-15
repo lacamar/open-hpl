@@ -17,6 +17,8 @@ pub struct Game {
     pub bank: Bank,
     pub music: Music,
     pub shells: Vec<Shell>,
+    pub soundscape: super::soundscape::Soundscape,
+    pub dialogs: super::dialog::Dialogs,
     updater_added: bool,
     pub factory: bool,
 }
@@ -39,6 +41,8 @@ pub fn game() -> &'static mut Game {
             bank: Bank::default(),
             music: Music::new(),
             shells: Vec::new(),
+            soundscape: Default::default(),
+            dialogs: Default::default(),
             updater_added: false,
             factory: false,
         })

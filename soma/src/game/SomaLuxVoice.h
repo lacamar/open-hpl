@@ -104,77 +104,14 @@ private:
 class cSomaLuxDialogHandler
 {
 public:
-	static cSomaLuxDialogHandler *Get();
-
-	void Begin(const tString &asName);
-	void End(const tString &asStartBranch);
-	void AddBranch(const tString &asName, const tString &asNext);
-	void AddSubject(const tString &asSubject, const tString &asCallback);
-	void AddPause(float afTime, const tString &asCallback);
-	void AddResponseOption(const tString &asEntry, const tString &asBranch, int alId, const tString &asCallback);
-	void AddBranchEvent(int alType, float afVar, const tString &asVar, const tString &asNewBranch, bool abOnlyEnd);
-	void SetCallbackFunc(const tString &asFunc) { msPendingCallback = asFunc; }
-	void Stop(const tString &asName);
-	void StopAll();
-	bool CharacterIsActive(const tString &asName);
-	void Update(float afTimeStep);
-
-	std::map<tString, int> mmapVars;
-
-	static void RegisterNatives(asIScriptEngine *apEngine);
-
-private:
-	struct cEvent
+	static cSomaLuxDialogHandler *Get()
 	{
-		int mlType;
-		int mlVal;
-		tString msVar;
-		tString msNewBranch;
-		bool mbOnlyEnd;
-	};
-	struct cItem
-	{
-		tString msSubject;
-		float mfPause = -1;
-		tString msCallback;
-		std::vector<cEvent> mvEvents;
-	};
-	struct cOption
-	{
-		tString msEntry;
-		tString msBranch;
-		int mlId;
-		tString msCallback;
-	};
-	struct cBranch
-	{
-		tString msName;
-		tString msNext;
-		std::vector<cItem> mvItems;
-		std::vector<cOption> mvOptions;
-	};
-	struct cDialog
-	{
-		tString msName;
-		tString msCallback;
-		std::vector<cBranch> mvBranches;
-		int mlBranch = -1;
-		int mlItem = -1;
-		bool mbWaiting = false;
-		float mfPauseLeft = 0;
-		bool mbDone = false;
-	};
-	cBranch *FindBranch(cDialog &aD, const tString &asName, int *apIdx);
-	void StartItem(cDialog &aD);
-	void NextItem(cDialog &aD);
-	void EndBranch(cDialog &aD);
-	void Finish(cDialog &aD);
-	bool CheckEvent(cDialog &aD, const cItem &aItem, const cEvent &aE);
-	bool CheckEndEvents(cDialog &aD);
-
-	cDialog mBuilding;
-	tString msPendingCallback;
-	std::vector<std::shared_ptr<cDialog>> mvActive;
+		static cSomaLuxDialogHandler handler;
+		return &handler;
+	}
+	void Update(float afTimeStep) { ohpl_s7_dialog_update(afTimeStep); }
+	void StopAll() { ohpl_s7_dialog_stop_all(); }
+	static void RegisterNatives(asIScriptEngine *apEngine) { ohpl_s7_register_dialog(apEngine); }
 };
 
 void SomaMapScriptCall(const tString &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs);
