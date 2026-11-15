@@ -13,6 +13,7 @@ eval "$(scripts/soma-init.sh --env-only "$GAME" 2> /dev/null)"
 SOCK=$XDG_RUNTIME_DIR/${OHPL_PLAY_NAME:-ohpl-a10b}.sock
 C() { scripts/hpl_control.py --socket "$SOCK" --timeout 240 "$@"; }
 rm -f "$OUT"
+touch "$OUT.start"
 export OHPL_A10B_DUMP=$OUT
 read -r PID _ < <(scripts/soma-run.sh 02_library.map "$SOCK")
 for _ in $(seq 60); do C state > /dev/null 2>&1 && break; sleep 2; done
@@ -28,5 +29,8 @@ else
 	C wait_frames n=400 max_ms=120000 > /dev/null
 fi
 C quit > /dev/null 2>&1
-for _ in $(seq 30); do kill -0 "$PID" 2> /dev/null || exit 0; sleep 1; done
-kill -9 "$PID"
+for _ in $(seq 30); do kill -0 "$PID" 2> /dev/null && sleep 1 || break; done
+kill -9 "$PID" 2> /dev/null
+# the map change autosaves; a save in the scratch dir changes how later maps load
+find "$XDG_DATA_HOME" -name '*.sav' -newer "$OUT.start" -delete 2> /dev/null
+rm -f "$OUT.start"
