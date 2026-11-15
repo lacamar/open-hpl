@@ -1,5 +1,5 @@
 // H5b harness: iFontData glyph table, GetLength and GetWordWrapRows with a seeded font and queries.
-// Run with OHPL_IMPL=cpp and =rust and diff stdout. usage: H5B_SEED=<n> h5b_font
+// Compare stdout with the golden. usage: H5B_SEED=<n> h5b_font
 // Lines: "font <first> <last> <height bits>", "g <idx> <advance> <ox> <oy> <sx> <sy>" (hex float bits),
 // "len <size_x> <text> -> <length>", "wrap <max> <size_x> <text> -> <rows>|throw" (text = hex units, ',' apart).
 #include <cstdio>

@@ -1,5 +1,5 @@
 // H11 differential harness: cMeshEntity/cSubMeshEntity/cAnimationState driven over real game meshes and animations,
-// iLight (point/spot/box) and cFogArea driven by random op scripts. OHPL_IMPL=cpp and =rust must print the same text.
+// iLight (point/spot/box) and cFogArea driven by random op scripts. must print the golden text.
 //   h11_script mesh <seed> <steps> <file.msh> [extra.anm ...]
 //   h11_script light <seed> <steps>
 //   h11_script fog <seed> <steps>

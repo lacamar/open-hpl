@@ -19,7 +19,6 @@
 
 #include "scene/LightSpot.h"
 #include "scene/RustLight.h"
-#include "impl/RustBackends.h"
 
 #include "impl/tinyXML/tinyxml.h"
 #include "math/Math.h"
@@ -119,7 +118,7 @@ namespace hpl {
 	
 	const cMatrixf& cLightSpot::GetViewMatrix()
 	{
-		if(OhplBackendRustRequested() ? ohpl_h11_spot_view_stale(&mSpot, GetTransformUpdateCount()) : mSpot.view_count != GetTransformUpdateCount())
+		if(ohpl_h11_spot_view_stale(&mSpot, GetTransformUpdateCount()))
 		{
 			mSpot.view_count = GetTransformUpdateCount();
 			m_mtxView = cMath::MatrixInverse(GetWorldMatrix());
@@ -133,16 +132,9 @@ namespace hpl {
 
 	const cMatrixf& cLightSpot::GetProjectionMatrix()
 	{
-		if(OhplBackendRustRequested() ? ohpl_h11_spot_projection_stale(&mSpot) : mSpot.projection_updated)
+		if(ohpl_h11_spot_projection_stale(&mSpot))
 		{
 			ohpl_light_spot_projection(mfFOV, mfAspect, mfNearClipPlane, mfShadowNearClip, mfRadius, &m_mtxProjection);
-
-			if(!OhplBackendRustRequested())
-			{
-				mSpot.projection_updated = false;
-				mSpot.view_proj_updated = true;
-				mSpot.frustum_updated = true;
-			}
 		}
 
 		return m_mtxProjection;
@@ -152,19 +144,13 @@ namespace hpl {
 	
 	const cMatrixf& cLightSpot::GetViewProjMatrix()
 	{
-		if(OhplBackendRustRequested() ? ohpl_h11_spot_view_proj_stale(&mSpot, GetTransformUpdateCount())
-									  : (mSpot.view_proj_count != GetTransformUpdateCount() || mSpot.view_proj_updated || mSpot.projection_updated))
+		if(ohpl_h11_spot_view_proj_stale(&mSpot, GetTransformUpdateCount()))
 		{
 			const cMatrixf &mtxProj = GetProjectionMatrix();
 			const cMatrixf &mtxView = GetViewMatrix();
 			ohpl_light_spot_view_proj(&mtxProj, &mtxView, &m_mtxViewProj);
 			
-			if(OhplBackendRustRequested()) ohpl_h11_spot_view_proj_done(&mSpot, GetTransformUpdateCount());
-			else
-			{
-				mSpot.view_proj_count = GetTransformUpdateCount();
-				mSpot.view_proj_updated = false;
-			}
+			ohpl_h11_spot_view_proj_done(&mSpot, GetTransformUpdateCount());
 		}
 
 		return m_mtxViewProj;
@@ -174,19 +160,13 @@ namespace hpl {
 
 	cFrustum* cLightSpot::GetFrustum()
 	{
-		if(OhplBackendRustRequested() ? ohpl_h11_spot_frustum_stale(&mSpot, GetTransformUpdateCount())
-									  : (mSpot.frustum_count != GetTransformUpdateCount() || mSpot.frustum_updated || mSpot.projection_updated))
+		if(ohpl_h11_spot_frustum_stale(&mSpot, GetTransformUpdateCount()))
 		{
 			mpFrustum->SetupPerspectiveProj(GetProjectionMatrix(),
 											GetViewMatrix(),
 											mfRadius,ohpl_light_spot_near(mfNearClipPlane, mfShadowNearClip),
 											mfFOV,mfAspect,GetWorldPosition(),false);
-			if(OhplBackendRustRequested()) ohpl_h11_spot_frustum_done(&mSpot, GetTransformUpdateCount());
-			else
-			{
-				mSpot.frustum_updated = false;
-				mSpot.frustum_count = GetTransformUpdateCount();
-			}
+			ohpl_h11_spot_frustum_done(&mSpot, GetTransformUpdateCount());
 		}
 
 		return mpFrustum;

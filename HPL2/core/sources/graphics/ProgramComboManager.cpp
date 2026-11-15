@@ -35,7 +35,6 @@
 
 #include "system/String.h"
 #include "graphics/RustGraphicsH5.h"
-#include "impl/RustBackends.h"
 
 namespace hpl {
 
@@ -61,10 +60,9 @@ namespace hpl {
 		mvCombinationNum.resize(mlNumOfMainModes);
 		
 		mpCombo = ohpl_combo_new(mlNumOfMainModes);
-		mpSettings = OhplBackendRustRequested() ? ohpl_h5_combo_new((const unsigned char*)msName.data(), msName.size(), mlNumOfMainModes > 0 ? mlNumOfMainModes : 0) : NULL;
+		mpSettings = ohpl_h5_combo_new((const unsigned char*)msName.data(), msName.size(), mlNumOfMainModes > 0 ? mlNumOfMainModes : 0);
 
 		mvVarLists.resize(mlNumOfMainModes);
-		mvSettings.resize(mlNumOfMainModes);
 	}
 
 	cProgramComboManager::~cProgramComboManager()
@@ -77,7 +75,7 @@ namespace hpl {
 	void cProgramComboManager::SetName(const tString& asName)
 	{
 		msName = asName;
-		if(mpSettings) ohpl_h5_combo_set_name(mpSettings, (const unsigned char*)msName.data(), msName.size());
+		ohpl_h5_combo_set_name(mpSettings, (const unsigned char*)msName.data(), msName.size());
 	}
 
 	static void CollectBytes(void *apCtx, const unsigned char *apData, size_t alLen)
@@ -106,15 +104,11 @@ namespace hpl {
 			return reinterpret_cast<iGpuProgram*>(lFound);
 		}
 
-		cProgramComboSettings& comboSettings = mvSettings[alMainMode];
 		tString sProgramName = GenerateProgramName(alMainMode, alFlags);
 
-		tString sVtxName = comboSettings.msVtxShader, sFragName = comboSettings.msFragShader;
-		if(mpSettings)
-		{
-			ohpl_h5_combo_shader_file(mpSettings, alMainMode, kPC_VertexBit, CollectBytes, &sVtxName);
-			ohpl_h5_combo_shader_file(mpSettings, alMainMode, kPC_FragmentBit, CollectBytes, &sFragName);
-		}
+		tString sVtxName, sFragName;
+		ohpl_h5_combo_shader_file(mpSettings, alMainMode, kPC_VertexBit, CollectBytes, &sVtxName);
+		ohpl_h5_combo_shader_file(mpSettings, alMainMode, kPC_FragmentBit, CollectBytes, &sFragName);
 
 		////////////////////////////////////
 		// Create (or get) shaders
@@ -163,39 +157,16 @@ namespace hpl {
 			vStages[i] = apFeatures[i].mlShaders;
 		mvCombinationNum[alMainMode] = ohpl_combo_setup(mpCombo, alMainMode, vStages.data(), vStages.size());
 				
-		if(mpSettings)
-		{
-			ohpl_h5_combo_setup_mode(mpSettings, alMainMode, (const unsigned char*)asModeName.data(), asModeName.size(),
-									 (const unsigned char*)asVtxShaderName.data(), asVtxShaderName.size(),
-									 (const unsigned char*)asFragShaderName.data(), asFragShaderName.size());
-			for(int i=0;i<alFeatureNum; ++i)
-				ohpl_h5_combo_add_feature(mpSettings, alMainMode, apFeatures[i].mlShaders,
-										  (const unsigned char*)apFeatures[i].msVariable.data(), apFeatures[i].msVariable.size());
-			tParseVarMap* pRustVars = avDefaultVars.GetMapPtr();
-			for(tParseVarMapIt it = pRustVars->begin(); it != pRustVars->end(); ++it)
-				ohpl_h5_combo_add_default(mpSettings, alMainMode, (const unsigned char*)it->first.data(), it->first.size(),
-										  (const unsigned char*)it->second.data(), it->second.size());
-		}
-
-		////////////////////////////////
-		//Save settings
-		cProgramComboSettings& comboSettings = mvSettings[alMainMode];
-		comboSettings.msName = asModeName;
-		comboSettings.msVtxShader = asVtxShaderName;
-		comboSettings.msFragShader = asFragShaderName;
-		
-		comboSettings.mvFeatures.resize(alFeatureNum);
+		ohpl_h5_combo_setup_mode(mpSettings, alMainMode, (const unsigned char*)asModeName.data(), asModeName.size(),
+								 (const unsigned char*)asVtxShaderName.data(), asVtxShaderName.size(),
+								 (const unsigned char*)asFragShaderName.data(), asFragShaderName.size());
 		for(int i=0;i<alFeatureNum; ++i)
-			comboSettings.mvFeatures[i] = apFeatures[i];		
-		
-		tParseVarMap* pVarMap = avDefaultVars.GetMapPtr();
-		comboSettings.mvDefaultVars.reserve(pVarMap->size());
-
-		tParseVarMapIt it = pVarMap->begin();
-		for(; it != pVarMap->end(); ++it)
-		{
-			comboSettings.mvDefaultVars.push_back(cProgramComboSettingsVar(it->first, it->second));
-		}
+			ohpl_h5_combo_add_feature(mpSettings, alMainMode, apFeatures[i].mlShaders,
+									  (const unsigned char*)apFeatures[i].msVariable.data(), apFeatures[i].msVariable.size());
+		tParseVarMap* pRustVars = avDefaultVars.GetMapPtr();
+		for(tParseVarMapIt it = pRustVars->begin(); it != pRustVars->end(); ++it)
+			ohpl_h5_combo_add_default(mpSettings, alMainMode, (const unsigned char*)it->first.data(), it->first.size(),
+									  (const unsigned char*)it->second.data(), it->second.size());
 	}
 	
 	//-----------------------------------------------------------------------
@@ -440,25 +411,9 @@ namespace hpl {
 
 	tString cProgramComboManager::GenerateProgramName(int alMainMode, int alBitFlags)
 	{
-		if(mpSettings)
-		{
-			tString sRust;
-			ohpl_h5_combo_program_name(mpSettings, alMainMode, alBitFlags, CollectBytes, &sRust);
-			return sRust;
-		}
-
-		cProgramComboSettings& settings = mvSettings[alMainMode];
-
-		tString sName = msName + "_" + settings.msName;
-		for(size_t i=0; i<settings.mvFeatures.size(); ++i)
-		{
-			if(alBitFlags & cMath::GetFlagBit((int)i)) 
-			{
-				sName += "_" + settings.mvFeatures[i].msVariable;
-			}
-		}
-
-		return sName;
+		tString sRust;
+		ohpl_h5_combo_program_name(mpSettings, alMainMode, alBitFlags, CollectBytes, &sRust);
+		return sRust;
 	}
 
 	//--------------------------------------------------------------------------
@@ -466,8 +421,6 @@ namespace hpl {
 
 	iGpuShader* cProgramComboManager::GetShaderForCombo(int alMainMode, int alBitFlags, const tString& asShaderName, tFlag aShaderType)
 	{
-		cProgramComboSettings &comboSettings = mvSettings[alMainMode];
-
 		//////////////////////////////
 		// Calculate the valid bit flags for current shader type
 		// Valid means that only bits use the correct shader type is part of bit string.
@@ -483,10 +436,7 @@ namespace hpl {
 
 		//////////////////////////////
 		// Create program, add to set and return it
-		iGpuShader* pShader = mpSettings ? CreateShaderFromRustVars(asShaderName, alMainMode, aShaderType, alBitFlags) :
-						CreateShaderFromFeatures(	asShaderName, aShaderType, alBitFlags,
-														comboSettings.mvFeatures.empty() ? NULL : &comboSettings.mvFeatures[0], (int)comboSettings.mvFeatures.size(),
-														comboSettings.mvDefaultVars.empty() ? NULL : &comboSettings.mvDefaultVars[0], (int)comboSettings.mvDefaultVars.size());
+		iGpuShader* pShader = CreateShaderFromRustVars(asShaderName, alMainMode, aShaderType, alBitFlags);
 		ohpl_combo_shader_insert(mpCombo, alMainMode, aShaderType, lValidBits, PtrId(pShader));
 
 		if(pShader) pShader->SetUserId(lValidBits);
@@ -505,39 +455,6 @@ namespace hpl {
 	}
 
 	//--------------------------------------------------------------------
-
-	iGpuShader* cProgramComboManager::CreateShaderFromFeatures(	const tString& asShaderFile, tFlag aShaderType,
-																int alBitFlags, cProgramComboFeature* apFeatures, int alFeatureNum, 
-																cProgramComboSettingsVar *apDefaultVars, int alDefaultVarsNum)
-	{
-		cParserVarContainer vars;
-
-		///////////////////////////
-		//Add variables to variable container
-		for(int lFeature=0; lFeature<alFeatureNum; ++lFeature)
-		{
-			//This check if feature j in in current flag
-			if( alBitFlags & cMath::GetFlagBit(lFeature))
-			{
-				if(apFeatures[lFeature].mlShaders & aShaderType)
-				{
-					vars.Add(apFeatures[lFeature].msVariable);
-				}
-			}
-		}
-		
-		/////////////////////////
-		//Add the default variables,
-		for(int i=0; i<alDefaultVarsNum; ++i)
-		{
-			vars.Add(apDefaultVars[i].msName, apDefaultVars[i].msValue);
-		}
-
-		/////////////////////////
-		//Create the shader
-		eGpuShaderType shaderType = aShaderType == kPC_VertexBit ? eGpuShaderType_Vertex : eGpuShaderType_Fragment;
-		return CreateShader(asShaderFile,shaderType,&vars,false);
-	}
 
 	//--------------------------------------------------------------------------
 

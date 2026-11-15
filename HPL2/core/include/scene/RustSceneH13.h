@@ -127,127 +127,79 @@ size_t ohpl_h13_plan_bodies(const OhplH13BodyItem*, size_t n, size_t meshCount, 
 	template<class T>
 	void OhplH13Foreign(OhplH13Reg *apReg, uint32_t alKind)
 	{
-		if(apReg) ohpl_h13_reg_set_foreign(apReg, alKind, OhplH13NameThunk<T>(0), OhplH13IdThunk<T>(0), OhplH13DeleteOf<T>);
+		ohpl_h13_reg_set_foreign(apReg, alKind, OhplH13NameThunk<T>(0), OhplH13IdThunk<T>(0), OhplH13DeleteOf<T>);
 	}
 
-	template<class CONT>
-	void OhplH13Push(OhplH13Reg *apReg, uint32_t alKind, CONT &aCont, typename CONT::value_type apItem)
+	template<class T>
+	void OhplH13Push(OhplH13Reg *apReg, uint32_t alKind, T *apItem)
 	{
-		if(apReg) ohpl_h13_reg_add(apReg, alKind, (void*)apItem);
-		else aCont.push_back(apItem);
+		ohpl_h13_reg_add(apReg, alKind, (void*)apItem);
 	}
 
-	// STLFindAndDelete: unlink the first match, delete regardless. With abOnlyIfFound delete only when linked.
-	template<class CONT, class T>
-	void OhplH13Destroy(OhplH13Reg *apReg, uint32_t alKind, CONT &aCont, T *apItem, bool abOnlyIfFound = false)
+	template<class T>
+	void OhplH13Destroy(OhplH13Reg *apReg, uint32_t alKind, T *apItem, bool abOnlyIfFound = false)
 	{
-		typename CONT::value_type pItem = apItem;
-		if(apReg) { ohpl_h13_reg_destroy(apReg, alKind, (void*)pItem, abOnlyIfFound); return; }
-		bool bFound = false;
-		for(typename CONT::iterator it = aCont.begin(); it != aCont.end(); ++it)
-		{
-			if(*it == pItem) { aCont.erase(it); bFound = true; break; }
-		}
-		if(bFound || abOnlyIfFound == false) hplDelete(pItem);
+		ohpl_h13_reg_destroy(apReg, alKind, (void*)apItem, abOnlyIfFound);
 	}
 
-	// STLFindAndRemove
-	template<class CONT, class T>
-	void OhplH13Erase(OhplH13Reg *apReg, uint32_t alKind, CONT &aCont, T *apItem)
+	template<class T>
+	void OhplH13Erase(OhplH13Reg *apReg, uint32_t alKind, T *apItem)
 	{
-		typename CONT::value_type pItem = apItem;
-		if(apReg) ohpl_h13_reg_remove(apReg, alKind, (void*)pItem);
-		else STLFindAndRemove(aCont, pItem);
+		ohpl_h13_reg_remove(apReg, alKind, (void*)apItem);
 	}
 
-	template<class CONT>
-	void OhplH13DeleteAll(OhplH13Reg *apReg, uint32_t alKind, CONT &aCont)
+	inline void OhplH13DeleteAll(OhplH13Reg *apReg, uint32_t alKind)
 	{
-		if(apReg) ohpl_h13_reg_destroy_all(apReg, alKind);
-		else STLDeleteAll(aCont);
+		ohpl_h13_reg_destroy_all(apReg, alKind);
 	}
 
-	template<class CONT>
-	void OhplH13Clear(OhplH13Reg *apReg, uint32_t alKind, CONT &aCont)
+	inline void OhplH13Clear(OhplH13Reg *apReg, uint32_t alKind)
 	{
-		if(apReg) ohpl_h13_reg_clear(apReg, alKind);
-		else aCont.clear();
+		ohpl_h13_reg_clear(apReg, alKind);
 	}
 
-	template<class CONT>
-	size_t OhplH13Size(OhplH13Reg *apReg, uint32_t alKind, CONT &aCont)
+	inline size_t OhplH13Size(OhplH13Reg *apReg, uint32_t alKind)
 	{
-		return apReg ? ohpl_h13_reg_len(apReg, alKind) : aCont.size();
+		return ohpl_h13_reg_len(apReg, alKind);
 	}
 
-	template<class CONT>
-	typename CONT::value_type OhplH13Name(OhplH13Reg *apReg, uint32_t alKind, CONT &aCont, const tString &asName, bool abLast = false)
+	template<class V>
+	V OhplH13Name(OhplH13Reg *apReg, uint32_t alKind, const tString &asName, bool abLast = false)
 	{
-		typedef typename CONT::value_type V;
-		if(apReg == NULL) return OhplFindByName(aCont, asName, abLast);
 		OhplName key{asName.data(), asName.size()};
 		return static_cast<V>(ohpl_h13_reg_find_name_f(apReg, alKind, key, abLast));
 	}
 
-	template<class CONT>
-	typename CONT::value_type OhplH13Id(OhplH13Reg *apReg, uint32_t alKind, CONT &aCont, int alID)
+	template<class V>
+	V OhplH13Id(OhplH13Reg *apReg, uint32_t alKind, int alID)
 	{
-		typedef typename CONT::value_type V;
-		if(apReg == NULL) return OhplFindByUniqueID(aCont, alID);
 		return static_cast<V>(ohpl_h13_reg_find_id_f(apReg, alKind, alID));
 	}
 
-	template<class CONT, class T>
-	int OhplH13Index(OhplH13Reg *apReg, uint32_t alKind, CONT &aCont, T *apItem)
+	template<class T>
+	int OhplH13Index(OhplH13Reg *apReg, uint32_t alKind, T *apItem)
 	{
-		if(apReg == NULL) return OhplPtrIndex(aCont, apItem);
 		return ohpl_h13_reg_index(apReg, alKind, (const void*)apItem);
 	}
 
-	// One loop body for both paths: cursor on the Rust-owned list, or the std container's iterator.
-	// Get() is the element at the position; Erase() unlinks it (the caller deletes) and moves to the next.
-	template<class CONT>
+	template<class V>
 	class OhplH13Walk
 	{
 	public:
-		typedef typename CONT::value_type V;
-
-		OhplH13Walk(OhplH13Reg *apReg, uint32_t alKind, CONT &aCont) : mpReg(apReg), mlKind(alKind), mpCont(&aCont)
+		OhplH13Walk(OhplH13Reg *apReg, uint32_t alKind) : mpReg(apReg), mlKind(alKind)
 		{
-			if(mpReg) mlCur = ohpl_h13_cur_begin(mpReg, mlKind);
-			else mIt = mpCont->begin();
+			mlCur = ohpl_h13_cur_begin(mpReg, mlKind);
 		}
 
-		bool Has() const
-		{
-			if(mpReg) return ohpl_h13_cur_get(mpReg, mlKind, mlCur) != NULL;
-			return mIt != mpCont->end();
-		}
-
-		V Get() const
-		{
-			if(mpReg) return static_cast<V>(ohpl_h13_cur_get(mpReg, mlKind, mlCur));
-			return *mIt;
-		}
-
-		void Advance()
-		{
-			if(mpReg) mlCur = ohpl_h13_cur_next(mpReg, mlKind, mlCur);
-			else ++mIt;
-		}
-
-		void Erase()
-		{
-			if(mpReg) mlCur = ohpl_h13_cur_erase(mpReg, mlKind, mlCur);
-			else mIt = mpCont->erase(mIt);
-		}
+		bool Has() const { return ohpl_h13_cur_get(mpReg, mlKind, mlCur) != NULL; }
+		V Get() const { return static_cast<V>(ohpl_h13_cur_get(mpReg, mlKind, mlCur)); }
+		void Advance() { mlCur = ohpl_h13_cur_next(mpReg, mlKind, mlCur); }
+		void Erase() { mlCur = ohpl_h13_cur_erase(mpReg, mlKind, mlCur); }
 
 	private:
 		OhplH13Reg *mpReg;
 		uint32_t mlKind;
-		CONT *mpCont;
 		uint64_t mlCur = 0;
-		typename CONT::iterator mIt;
 	};
 }
 

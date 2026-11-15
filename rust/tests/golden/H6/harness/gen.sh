@@ -2,8 +2,8 @@
 # Usage: gen.sh <build-dir> <source.cpp> <outbin>   (build-dir: configured and built `HPL2`)
 # source: h6_gen.cpp (census; CreateMaterial replaced so no material is loaded), h6_script.cpp,
 # h6_creator.cpp (needs `make HPL2TraceRecorder` in the build dir).
-# Census run:  OHPL_IMPL=cpp <outbin> h6msh a.msh > cpp.txt; OHPL_IMPL=rust <outbin> h6msh a.msh > rust.txt; diff cpp.txt rust.txt
-# Script run:  H6_SCENARIO=skel|anim|mesh H6_SEED=<n> OHPL_IMPL=cpp|rust <outbin>
+# Census run:  <outbin> h6msh a.msh > rust.txt; compare with the golden census
+# Script run:  H6_SCENARIO=skel|anim|mesh H6_SEED=<n> <outbin>
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(git -C "$here" rev-parse --show-toplevel)

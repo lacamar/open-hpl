@@ -20,7 +20,6 @@
 #include "graphics/FrameBitmap.h"
 #include "graphics/RustGraphics.h"
 #include "graphics/RustGraphicsH5.h"
-#include "impl/RustBackends.h"
 
 #include "math/Math.h"
 
@@ -64,27 +63,15 @@ namespace hpl {
 		mpFrameTexture = apFrmTex;
 		//TODO: Make a filling method
 		mpBitmap->Clear(cColor(1,0,1,0),0,0);
-		mlMinHole = 6;
 		mlHandle = alHandle;
-		mbIsFull = false;
-		mbIsLocked = false;
 		mlPicCount =0;
-		mlAdditionsSinceReorganization =0;
-
-		mbNeedNeedReorganisation = false;
 
 		//Root node in rect tree
-		mpAtlas = NULL;
-		mpPacker = NULL;
-		if(OhplBackendRustRequested())
-			mpAtlas = ohpl_h5_atlas_new(mpBitmap->GetWidth(), mpBitmap->GetHeight(), alHandle);
-		else
-			mpPacker = ohpl_packer_new(mpBitmap->GetWidth(), mpBitmap->GetHeight());
+		mpAtlas = ohpl_h5_atlas_new(mpBitmap->GetWidth(), mpBitmap->GetHeight(), alHandle);
 	}
 
 	cFrameBitmap::~cFrameBitmap()
 	{
-		ohpl_packer_free(mpPacker);
 		ohpl_h5_atlas_free(mpAtlas);
 		STLDeleteAll(mlstImages);
 		hplDelete(mpBitmap);
@@ -109,7 +96,7 @@ namespace hpl {
 		alLen = (pData && apData) ? (size_t)pData->mlSize : 0;
 	}
 
-	cFrameSubImage *cFrameBitmap::AddBitmapRust(cBitmap *apSrc, const tWString& asFullPath, cFrameSubImage *apSubImageCreated, bool *apFoundNode)
+	cFrameSubImage *cFrameBitmap::AddBitmap(cBitmap *apSrc, const tWString& asFullPath, cFrameSubImage *apSubImageCreated, bool *apFoundNode)
 	{
 		OhplH5Surface dst, src;
 		unsigned char *pDst, *pSrc;
@@ -149,182 +136,55 @@ namespace hpl {
 		return pImage;
 	}
 
-	cFrameSubImage *cFrameBitmap::AddBitmap(cBitmap *apSrc, const tWString& asFullPath, cFrameSubImage *apSubImageCreated, bool *apFoundNode)
-	{
-		if(mpAtlas) return AddBitmapRust(apSrc, asFullPath, apSubImageCreated, apFoundNode);
-
-		cFBitmapImage *pBitmapImage=NULL;
-		cFrameSubImage *pImage=NULL;
-		//source size
-		//+2 because we are gonna have a border to get rid if some antialiasing problems
-		int lSW = apSrc->GetWidth()+2; 
-		int lSH = apSrc->GetHeight()+2;
-
-		cVector2l vPos;
-		cRect2l NewRect;
-		bool bFoundEmptyNode = false;
-		bool bFoundNode = ohpl_packer_insert(mpPacker, apSrc->GetWidth(), apSrc->GetHeight(), &NewRect, &bFoundEmptyNode);
-
-		if(bFoundNode)
-		{
-			vPos = cVector2l(NewRect.x+1,NewRect.y+1);//+1 for the right pos
-
-			//Draw corners for border
-			mpBitmap->Blit(	apSrc,cVector3l(NewRect.x, NewRect.y, 0),
-							cVector3l(1,1,1),0);
-			mpBitmap->Blit(	apSrc,cVector3l(NewRect.x + apSrc->GetWidth()+1, NewRect.y,0),
-							cVector3l(1,1,1), cVector3l(apSrc->GetWidth()-1,0,0) );
-			mpBitmap->Blit(	apSrc,cVector3l(NewRect.x + apSrc->GetWidth()+1, NewRect.y + apSrc->GetHeight()+1,0),
-							cVector3l(1,1,1), cVector3l(apSrc->GetWidth()-1,apSrc->GetHeight()-1,0) );
-			mpBitmap->Blit(	apSrc,cVector3l(NewRect.x, NewRect.y + apSrc->GetHeight()+1,0),
-							cVector3l(1,1,1), cVector3l(0,apSrc->GetHeight()-1,0) );
-			
-			//Draw sides for border
-			mpBitmap->Blit(	apSrc,cVector3l(NewRect.x+1, NewRect.y, 0),
-							cVector3l(apSrc->GetWidth(),1,1),0);
-			mpBitmap->Blit(	apSrc,cVector3l(NewRect.x+1, NewRect.y+apSrc->GetHeight()+1, 0),
-							cVector3l(apSrc->GetWidth(),1,1), cVector3l(0,apSrc->GetHeight()-1,0));
-			mpBitmap->Blit(	apSrc,cVector3l(NewRect.x, NewRect.y+1, 0),
-							cVector3l(1,apSrc->GetHeight(),1),0);
-			mpBitmap->Blit(	apSrc,cVector3l(NewRect.x+apSrc->GetWidth()+1, NewRect.y+1, 0),
-							cVector3l(1,apSrc->GetHeight(),1),cVector3l(apSrc->GetWidth()-1,0,0));
-
-			//Draw the final
-			mpBitmap->Blit(apSrc,cVector3l(NewRect.x+1,NewRect.y+1,0), apSrc->GetSize(),0);
-
-			//Add image data
-			pBitmapImage = hplNew( cFBitmapImage, () );
-			//Connect the subimage with the frame image.
-			if(apSubImageCreated){
-				pBitmapImage->mpSubImage = apSubImageCreated;
-				apSubImageCreated->mpFrameBitmapImage = pBitmapImage;
-			}
-			pBitmapImage->mRect.x = NewRect.x+1; pBitmapImage->mRect.y = NewRect.y+1;
-			pBitmapImage->mRect.w = apSrc->GetWidth(); pBitmapImage->mRect.h = apSrc->GetHeight();
-			mlstImages.push_back(pBitmapImage);
-
-			mlAdditionsSinceReorganization++;
-			mlPicCount++;
-			mpFrameTexture->SetPicCount(mlPicCount);
-		}
-
-		if(bFoundNode && apSubImageCreated == NULL)
-		{
-			//Create the image resource
-			pImage = hplNew( cFrameSubImage, (cString::To8Char(apSrc->GetFileName()),asFullPath, 
-							mpFrameTexture, this,
-							cRect2l(vPos,cVector2l(lSW-2,lSH-2)),//-2 to get the correct size.
-							cVector2l(mpBitmap->GetWidth(),mpBitmap->GetHeight()),
-							mlHandle, pBitmapImage) );
-			
-			pBitmapImage->mpSubImage = pImage;
-
-			if(!bFoundEmptyNode)
-			{
-				mbIsFull = true;
-			}
-
-			mbIsUpdated = true;
-		}
-
-		if(apFoundNode) *apFoundNode = bFoundNode;
-
-		return pImage;
-	}
-
 	//-----------------------------------------------------------------------
-
-	bool cFrameBitmap::MinimumFit(cRect2l aSrc,cRect2l aDest)
-	{
-		if(mpAtlas) return ohpl_h5_atlas_minimum_fit(&aSrc, &aDest);
-		if(aDest.w-aSrc.w<mlMinHole && aDest.h-aSrc.h<mlMinHole) return true;
-
-		return false;
-	}
 
 	//-----------------------------------------------------------------------
 
 	bool cFrameBitmap::IsUpdated()
 	{
-		if(mpAtlas) return ohpl_h5_atlas_updated(mpAtlas);
-		return mbIsUpdated;
+		return ohpl_h5_atlas_updated(mpAtlas);
 	}
     
 	//-----------------------------------------------------------------------
 
 	bool cFrameBitmap::IsFull()
 	{
-		if(mpAtlas) return ohpl_h5_atlas_full(mpAtlas);
-		return mbIsFull;
+		return ohpl_h5_atlas_full(mpAtlas);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cFrameBitmap::IsLocked()const
 	{
-		return mpAtlas ? ohpl_h5_atlas_locked(mpAtlas) : mbIsLocked;
+		return ohpl_h5_atlas_locked(mpAtlas);
 	}
 
 	void cFrameBitmap::SetLocked(bool abX)
 	{
-		if(mpAtlas) ohpl_h5_atlas_set_locked(mpAtlas, abX);
-		else mbIsLocked = abX;
+		ohpl_h5_atlas_set_locked(mpAtlas, abX);
 	}
 
 	int cFrameBitmap::GetAdditionsSinceReorganization()
 	{
-		return mpAtlas ? ohpl_h5_atlas_additions(mpAtlas) : mlAdditionsSinceReorganization;
+		return ohpl_h5_atlas_additions(mpAtlas);
 	}
 
 	void cFrameBitmap::SetNeedReorganisation()
 	{
-		if(mpAtlas){ ohpl_h5_atlas_set_need_reorg(mpAtlas, true); return; }
-		mbNeedNeedReorganisation = true;
+		ohpl_h5_atlas_set_need_reorg(mpAtlas, true);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cFrameBitmap::UpdateBeforeDraw()
 	{
-		if(mpAtlas)
-		{
-			if(ohpl_h5_atlas_take_need_reorg(mpAtlas)) Reorganize();
-			FlushToTexture();
-			return;
-		}
-		if(mbNeedNeedReorganisation)
-		{
-			Reorganize();
-			mbNeedNeedReorganisation = false;
-		}
-
+		if(ohpl_h5_atlas_take_need_reorg(mpAtlas)) Reorganize();
 		FlushToTexture();
 	}
 
 	//-----------------------------------------------------------------------
 
-	class cBitmapSubImageComb
-	{
-	public: 
-		cBitmapSubImageComb(cBitmap *apBitmap, cFrameSubImage *apSubImage){
-			mpBitmap = apBitmap;
-			mpSubImage = apSubImage;
-		}
-		~cBitmapSubImageComb(){
-			hplDelete( mpBitmap );
-		}
-
-		cBitmap *mpBitmap;
-		cFrameSubImage *mpSubImage;
-	};
-
-	typedef std::list<cBitmapSubImageComb*> tFrameBitmapCombList;
-	typedef tFrameBitmapCombList::iterator tFrameBitmapCombListIt;
-
-	//-----------------------------------------------------------------------
-
-
-	void cFrameBitmap::ReorganizeRust()
+	void cFrameBitmap::Reorganize()
 	{
 		std::vector<cFrameSubImage*> vSubs;
 		std::vector<cRect2l> vRects;
@@ -374,126 +234,17 @@ namespace hpl {
 			(*it)->mpSubImage->SetNeedUpdateUvs();
 	}
 
-	void cFrameBitmap::Reorganize()
-	{
-		if(mpAtlas){ ReorganizeRust(); return; }
-
-		tFrameBitmapCombList lstBitmaps;
-
-		bool mbLogTime = false;
-
-		///////////////////////////////////////
-		//Iterate nodes and retrive all bitmaps
-		unsigned long lStartTime = cPlatform::GetApplicationTime();
-		
-		cFBitmapImageListIt imageIt = mlstImages.begin();
-		for(; imageIt != mlstImages.end(); ++imageIt)
-		{
-			cFBitmapImage* pImage = *imageIt;
-			if(pImage->mpSubImage==NULL) continue;
-			
-			//Log("Node: %dx%d (%d, %d)\n",pRect->mRect.w,pRect->mRect.h,pRect->mRect.x,pRect->mRect.y);
-
-			//Create bitmap according to node rect
-            cBitmap *pBitmap = hplNew( cBitmap, ());
-			//-2 since we do not want borders
-			pBitmap->CreateData(cVector3l(pImage->mRect.w,pImage->mRect.h,1),ePixelFormat_RGBA,0,0);
-
-			//Copy from from bitmap to temp bitmap. +1 because we do not want borders.
-			pBitmap->Blit(mpBitmap, 0, pBitmap->GetSize(),cVector3l(pImage->mRect.x, pImage->mRect.y,0));
-
-			//Add bitmap to list
-			cBitmapSubImageComb *pBmpComb = hplNew( cBitmapSubImageComb,(pBitmap,pImage->mpSubImage) );
-			lstBitmaps.push_back(pBmpComb);
-		}
-		if(mbLogTime)Log(" getting image data took: %dms\n",cPlatform::GetApplicationTime()-lStartTime);
-        
-
-		///////////////////////////////////////
-		//Clear Frame data
-		lStartTime = cPlatform::GetApplicationTime();
-
-		ClearAddedImages();//Clears the tree and image list.
-
-		if(mbLogTime)Log(" clearing data took: %dms\n",cPlatform::GetApplicationTime()-lStartTime);
-
-
-		lStartTime = cPlatform::GetApplicationTime();
-
-		///////////////////////////////////////
-		//Add all bitmaps again
-		bool bAllNodesFit = false;
-		std::vector<cBitmapSubImageComb*> vComb(lstBitmaps.begin(), lstBitmaps.end());
-		std::vector<int> vSizes;
-		for(size_t i=0; i<vComb.size(); ++i)
-		{
-			vSizes.push_back(vComb[i]->mpBitmap->GetSize().x);
-			vSizes.push_back(vComb[i]->mpBitmap->GetSize().y);
-		}
-		std::vector<size_t> vOrder(vComb.size());
-		ohpl_packer_reorganize_order(vSizes.data(), vComb.size(), vOrder.data());
-		for(size_t i=0; i<vOrder.size(); ++i)
-		{
-			cBitmapSubImageComb *pComb = vComb[vOrder[i]];
-			
-			AddBitmap(pComb->mpBitmap, pComb->mpSubImage->GetFullPath(), pComb->mpSubImage, &bAllNodesFit);
-			if(bAllNodesFit==false) break;
-		}
-		
-		///////////////////////////////////////
-		// Check if all could be added
-		// If no room for bitmap was found, need to add again, according to previous order
-		if(bAllNodesFit==false)
-		{
-			ClearAddedImages();
-            
-			for(tFrameBitmapCombListIt it = lstBitmaps.begin(); it != lstBitmaps.end(); ++it)
-			{
-				cBitmapSubImageComb *pComb = *it;
-
-				bool bFit = false;
-				AddBitmap(pComb->mpBitmap, pComb->mpSubImage->GetFullPath(), pComb->mpSubImage, &bFit);
-				if(bFit==false){
-					Error("When reorganizing images according to previous order an image still does not fit!!!\n");
-					pComb->mpSubImage->mpFrameBitmapImage = NULL;
-				}
-			}
-		}
-
-
-		if(mbLogTime)Log(" adding again took: %dms\n",cPlatform::GetApplicationTime()-lStartTime);
-
-		
-		//Do this on demand instead...
-		imageIt = mlstImages.begin();
-		for(; imageIt != mlstImages.end(); ++imageIt)
-		{
-			cFBitmapImage* pImage = *imageIt;
-			if(pImage->mpSubImage) pImage->mpSubImage->SetNeedUpdateUvs();
-		}
-
-		
-		///////////////////////////////////////
-		//Clean up and exit
-		STLDeleteAll(lstBitmaps);
-		
-		mlAdditionsSinceReorganization =0;
-		//Set as updated!
-		mbIsUpdated = true;
-	}
-	
 	//-----------------------------------------------------------------------
 
 	bool cFrameBitmap::FlushToTexture()
 	{
-		if(mpAtlas ? ohpl_h5_atlas_take_updated(mpAtlas) : mbIsUpdated)
+		if(ohpl_h5_atlas_take_updated(mpAtlas))
 		{
 			mpFrameTexture->GetTexture()->CreateFromBitmap(mpBitmap);
 			mpFrameTexture->GetTexture()->SetWrapS(eTextureWrap_ClampToEdge);
 			mpFrameTexture->GetTexture()->SetWrapT(eTextureWrap_ClampToEdge);
 
 			//mpFrameTexture->SetPicCount(mlPicCount);
-			mbIsUpdated = false;
 			return true;
 		}
 		else
@@ -504,16 +255,5 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cFrameBitmap::ClearAddedImages()
-	{
-		mpBitmap->Clear(cColor(1,0,1,0),0,0);
-
-		mlPicCount =0;
-		STLDeleteAll(mlstImages);
-		mlstImages.clear();
-
-		ohpl_packer_clear(mpPacker, mpBitmap->GetWidth(), mpBitmap->GetHeight());
-	}
-	
 	//-----------------------------------------------------------------------
 }

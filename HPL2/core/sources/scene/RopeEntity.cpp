@@ -20,7 +20,6 @@
 #include "scene/RopeEntity.h"
 #include "scene/RustLight.h"
 #include "scene/RustSceneH12.h"
-#include "impl/RustBackends.h"
 
 #include "math/Math.h"
 
@@ -181,21 +180,11 @@ namespace hpl {
 
 		mvPoints.clear();
 		cVerletParticleIterator it = mpRope->GetParticleIterator();
-		if(OhplBackendRustRequested())
+		const int lTake = ohpl_h12b_rope_points(mpRope->GetParticleNum(), mlMaxSegments);
+		for(int i=0; i<lTake && it.HasNext(); ++i)
 		{
-			const int lTake = ohpl_h12b_rope_points(mpRope->GetParticleNum(), mlMaxSegments);
-			for(int i=0; i<lTake && it.HasNext(); ++i)
-			{
-				cVerletParticle *pPart = it.Next();
-				mvPoints.push_back(i==0 ? pPart->GetPosition() : pPart->GetSmoothPosition());
-			}
-		}
-		else
-		while(it.HasNext())
-		{
-			if((int)mvPoints.size() >= mlMaxSegments) break;
 			cVerletParticle *pPart = it.Next();
-			mvPoints.push_back(mvPoints.empty() ? pPart->GetPosition() : pPart->GetSmoothPosition());
+			mvPoints.push_back(i==0 ? pPart->GetPosition() : pPart->GetSmoothPosition());
 		}
 		int lCount = (int)mvPoints.size();
 
@@ -207,7 +196,7 @@ namespace hpl {
 		params.tile_size = mfLengthTileSize;
 		ohpl_rope_quads(mvPoints.data(), lCount, &params, pPosArray, pUvArray, pNrmArray, pTanArray, mlMaxSegments);
 
-		mpVtxBuffer->SetElementNum(OhplBackendRustRequested() ? ohpl_h12b_rope_elements(lCount) : (lCount-1) * 6);
+		mpVtxBuffer->SetElementNum(ohpl_h12b_rope_elements(lCount));
 
 		mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0 | eVertexElementFlag_Texture1 | eVertexElementFlag_Normal, false);
 
@@ -234,10 +223,7 @@ namespace hpl {
 
 	bool cRopeEntity::IsVisible()
 	{
-		if(OhplBackendRustRequested()) return ohpl_h12b_is_visible(&mColor, mbIsVisible);
-		if(mColor.r <= 0 && mColor.g <= 0 && mColor.b <= 0) return false;
-
-		return mbIsVisible;
+		return ohpl_h12b_is_visible(&mColor, mbIsVisible);
 	}
 
 	

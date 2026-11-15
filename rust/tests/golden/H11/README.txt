@@ -1,5 +1,5 @@
 H11 (cMeshEntity, cSubMeshEntity, cAnimationState, iLight point/spot/box, cFogArea) golden vectors, recorded from the C++ path
-(OHPL_IMPL=cpp, pristine HEAD abe230f libraries) by harness/h11_script.cpp.
+(C++ path, pristine HEAD abe230f libraries; the C++ bodies are gone, harness/run.sh now checks the Rust path against them) by harness/h11_script.cpp.
 
 mesh_<name>.txt   21 real meshes + animations of TDD, Rebirth, Bunker and SOMA (harness/scenarios.txt; skeleton, bone-less
                   node meshes, .msh/.anm/.fbx/.dae_anim animations), 300 random ops each (UpdateLogic, Play/PlayFadeTo/Stop, state
@@ -13,5 +13,5 @@ Lines: o = op, = = result, e = callback event (AfterAnimationUpdate, OnAnimation
   live by harness/run.sh (cpp vs rust: 36 files, 10260 ops, 0 differences; harness/soak.sh: 75 runs, 61800 ops, 0 differences).
 Replay: cargo test scene::tests_h11 (mock entity around rust/src/scene/h11.rs, no C++).
 Compare: scripts/h11-diff.sh <build-dir>
-Record:  harness/gen.sh <baseline build> h11_script.cpp <bin> <baseline tree>; harness/run.sh <bin> <dir> cpp
+Record:  harness/gen.sh <baseline build> h11_script.cpp <bin> <baseline tree>; harness/run.sh <bin> <dir>
 Not covered: skeleton bodies/colliders (the harness has no physics world), light particle/sound flicker callbacks (no world).

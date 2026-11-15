@@ -58,32 +58,6 @@ namespace hpl {
 
 	//---------------------------------------------------
 
-	class cProgramComboSettingsVar
-	{
-	public: 
-		cProgramComboSettingsVar(){}
-		cProgramComboSettingsVar(const tString& asName, const tString& asValue) : msName(asName), msValue(asValue) {}
-
-		tString msName;
-		tString msValue;
-	};
-
-	//---------------------------------------------------
-
-	class cProgramComboSettings
-	{
-	public:
-		tString msName;
-
-		tString msVtxShader;
-		tString msFragShader;
-		
-		std::vector<cProgramComboFeature> mvFeatures;
-		std::vector<cProgramComboSettingsVar> mvDefaultVars;       		
-	};
-
-	//---------------------------------------------------
-
 	class cProgramComboManager
 	{
 	public:
@@ -127,8 +101,6 @@ namespace hpl {
 
 		iGpuShader* GetShaderForCombo(int alMainMode, int alBitFlags, const tString& asShaderName, tFlag aShaderType);
 		iGpuShader* CreateShaderFromRustVars(const tString& asShaderFile, int alMainMode, tFlag aShaderType, int alBitFlags);
-		iGpuShader* CreateShaderFromFeatures(	const tString& asShaderFile, tFlag aShaderType, int alBitFlags, cProgramComboFeature* apFeatures, int alFeatureNum, 
-												cProgramComboSettingsVar *apDefaultVars, int alDefaultVarsNum);
 
 
 		/*void CreateValidShaderCombos(	const tString& asFile, tFlag aShaderType, iGpuShader **apShaderVec,
@@ -148,7 +120,6 @@ namespace hpl {
 		tString msName;
 
 		std::vector< tProgramComboVariableList > mvVarLists;
-		std::vector< cProgramComboSettings > mvSettings;
 
 		int mlNumOfMainModes;
 		std::vector<int> mvCombinationNum;

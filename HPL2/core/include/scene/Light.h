@@ -69,8 +69,6 @@ namespace hpl {
 
 	//------------------------------------------
 
-	typedef std::map<iRenderable*, int> tShadowCasterCacheMap;
-	typedef tShadowCasterCacheMap::iterator tShadowCasterCacheMapIt;
 
 	//------------------------------------------
 
@@ -306,7 +304,6 @@ namespace hpl {
 		bool mbCastShadows;
 		tObjectVariabilityFlag mlShadowCastersAffected;
 
-		tShadowCasterCacheMap m_mapShadowCasterCache;
 		OhplH11ShadowCache *mpH11ShadowCache = NULL;
 
 		float mfShadowMapBiasMul;

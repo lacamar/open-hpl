@@ -1,4 +1,4 @@
-// H7 differential harness. OHPL_IMPL=cpp and =rust must print the same text.
+// H7 harness. must print the golden text.
 //   h7_gen script   (H7_SCENARIO=mat|pe|reg H7_SEED=n)  cMaterial state, iPostEffect base state, registries
 //   h7_gen census   (.mat paths on stdin, relative to the cwd)  per-.mat outputs; unique inputs on stderr-free "U" lines
 //   h7_gen pass     (H7_SEED=n)  post-effect passes over the recording low-level graphics: output + GPU trace

@@ -8,11 +8,11 @@ census.txt      G = OhplGlobals bytes; M = "fnv32(path) fnv64(outputs)" for ever
                 U = one line per distinct setup (kind, texture mask, blend, uv flag, vars bytes with padding zeroed, hash of the Rust-side
                 outputs). cargo test (material::h7_tests) replays the U lines through ohpl_mat_program/texture_unit/compile.
 pass_<seed>.txt cPostEffectComposite::Render over the real post effect types and the recording low-level graphics: frame summary + GPU trace.
-                Equal for OHPL_IMPL=cpp and rust (not replayed by cargo, it needs the C++ shell).
+                Equal on the Rust backend (not replayed by cargo, it needs the C++ shell).
 Seeds 0-11 of 300 compared (mat, pe, pass).
 
 Record (needs a build dir of this tree with `make HPL2 HPL2TraceRecorder`):
   harness/gen.sh <build dir> h7_gen.cpp <out>/h7_gen
-  harness/compare.sh <out>/h7_gen 300 <dir>      OHPL_IMPL=cpp vs rust per scenario, copies seeds 0-11
+  harness/compare.sh <out>/h7_gen 300 <dir>      Rust vs golden per scenario, seeds 0-11 (record arg rewrites)
   harness/census.sh <out>/h7_gen <dir>           census.cpp / census.rust over the Steam data (read-only)
   H7_SCENARIO=reg <out>/h7_gen script           reg.txt

@@ -34,7 +34,6 @@
 #include "math/Math.h"
 #include "math/Frustum.h"
 
-#include "impl/RustBackends.h"
 
 #include <algorithm>
 #include <cstring>
@@ -92,125 +91,7 @@ namespace hpl {
 			return;
 		}
 
-		if(OhplBackendRustRequested())
-		{
-			AddObjectRust(apObject, renderType);
-			return;
-		}
-
-		////////////////////////////////////////
-		//Update material, if not already done this frame
-		cMaterial *pMaterial = apObject->GetMaterial();
-		iMaterialType *pMaterialType = pMaterial ? pMaterial->GetType() : NULL;
-		if(pMaterial && pMaterial->GetRenderFrameCount() != iRenderer::GetRenderFrameCount())
-		{
-			pMaterial->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
-			pMaterial->UpdateBeforeRendering(mfFrameTime);
-		}
-
-		////////////////////////////////////////
-		// Update per frame things, if not done yet.
-		if(apObject->GetRenderFrameCount() != iRenderer::GetRenderFrameCount())
-		{
-			apObject->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
-			apObject->UpdateGraphicsForFrame(mfFrameTime);
-		}
-
-		////////////////////////////////////////
-		//Update per viewport specific and set amtrix point
-		//Skip this for non-decal translucent! This is because the water rendering might mess it up otherwise!
-		if(pMaterialType==NULL || pMaterialType->IsTranslucent()==false || pMaterialType->IsDecal() )
-		{
-			//skip rendering if the update return false
-			if(apObject->UpdateGraphicsForViewport(mpFrustum,mfFrameTime)==false)
-			{
-				return;
-			}
-
-			apObject->SetModelMatrixPtr(apObject->GetModelMatrix(mpFrustum));
-		}
-		//Only set a matrix used for sorting. Calculate the proper in the trans rendering!
-		else
-		{
-			apObject->SetModelMatrixPtr(apObject->GetModelMatrix(NULL));
-		}
-
-		////////////////////////////////////////
-        //Calculate the View Z value
-		// For transparent and non decals!
-		if(pMaterialType && pMaterialType->IsTranslucent() && pMaterialType->IsDecal()==false)
-		{
-			cVector3f vIntersectionPos;
-			cBoundingVolume *pBV = apObject->GetBoundingVolume();
-
-			//If there is an intersection (which happens unless inside), use that. Else use world center
-			if(cMath::CheckAABBLineIntersection(pBV->GetMin(), pBV->GetMax(), mpFrustum->GetOrigin(), pBV->GetWorldCenter(), &vIntersectionPos, NULL)==false)
-			{
-				vIntersectionPos = pBV->GetWorldCenter();		
-			}
-			
-			vIntersectionPos = cMath::MatrixMul(mpFrustum->GetViewMatrix(), vIntersectionPos);
-			apObject->SetViewSpaceZ(vIntersectionPos.z);			
-		}
-		else
-		{
-			cVector3f vCameraPos = cMath::MatrixMul(mpFrustum->GetViewMatrix(), apObject->GetBoundingVolume()->GetWorldCenter());
-			apObject->SetViewSpaceZ(vCameraPos.z);
-		}
-		
-		
-
-		//////////////////////////////
-		// If objects uses occlusion queries, add it as such
-		if(apObject->UsesOcclusionQuery())
-		{
-			mvOcclusionQueryObjects.push_back(apObject);
-		}
-        
-		//////////////////////////////
-		// Light, add to special list
-		if(renderType == eRenderableType_Light)
-		{
-			mvLights.push_back( static_cast<iLight*>(apObject) );
-		}
-		//////////////////////////////
-		// Fog area, add to special list
-		if(renderType == eRenderableType_FogArea)
-		{
-			mvFogAreas.push_back( static_cast<cFogArea*>(apObject) );
-		}
-		//////////////////////////////
-		// GuiSet, add to special list
-		else if(renderType == eRenderableType_GuiSet)
-		{
-			//TODO....
-		}
-		///////////////////////////
-		// Normal addition
-		else
-		{
-			if(pMaterial==NULL) return; //Skip if it has no material...
-
-			////////////////////////
-			// Transparent
-			if(pMaterialType->IsTranslucent())
-			{
-				if(pMaterialType->IsDecal())
-					mvDecalObjects.push_back(apObject);
-				else
-					mvTransObjects.push_back(apObject);
-			}
-			////////////////////////
-			// Solid
-			else
-			{
-				mvSolidObjects.push_back(apObject);
-				if(pMaterial->GetTexture(eMaterialTexture_Illumination) && apObject->GetIlluminationAmount()>0)
-				{
-					mvIllumObjects.push_back(apObject);
-				}
-			}
-		}
+		AddObjectRust(apObject, renderType);
 	}
 
 	void cRenderList::AddObjectRust(iRenderable *apObject, eRenderableType aRenderType)

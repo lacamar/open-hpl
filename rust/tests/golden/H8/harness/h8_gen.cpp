@@ -1,4 +1,4 @@
-// H8 differential harness. OHPL_IMPL=cpp and =rust must print the same text.
+// H8 harness. must print the golden text.
 //   H8_SCENARIO=list H8_SEED=n h8_gen   cRenderList::AddObject + Compile over stub renderables
 //   H8_SCENARIO=clip H8_SEED=n h8_gen   iRenderer::GetClipRectFromObject padding (C++ formula copied from Renderer.cpp)
 #include <cstdio>
@@ -25,7 +25,6 @@
 #include "math/BoundingVolume.h"
 #include "math/Math.h"
 #include "system/String.h"
-#include "impl/RustBackends.h"
 #undef private
 #undef protected
 
@@ -214,7 +213,6 @@ static int ClipScenario(int seed)
 
 int main()
 {
-	fprintf(stderr, "rs %d\n", (int)OhplBackendRustRequested());
 	const char *sc = getenv("H8_SCENARIO");
 	int seed = getenv("H8_SEED") ? atoi(getenv("H8_SEED")) : 0;
 	if(sc && !strcmp(sc, "clip")) return ClipScenario(seed);

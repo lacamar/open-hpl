@@ -3,7 +3,6 @@
 
 // C ABI of rust/src/world_hpm/h4_ffi.rs: the plans cHpmWorldBuilder executes.
 
-#include "impl/RustBackends.h"
 #include "math/MathTypes.h"
 #include <cstddef>
 #include <cstdint>
@@ -76,14 +75,6 @@ extern "C"
 	void ohpl_h4_combine_plan(const OhplH4Cand* cands, size_t n, const int32_t* layouts, size_t numLayout, const uint32_t* entSubNum,
 							  size_t numEnts, OhplH4CombineOut* out);
 	size_t ohpl_h4_finish_steps(bool noMeshCombine, OhplH4FinishStep* out);
-}
-
-namespace hpl
-{
-	inline bool OhplH4UseRust()
-	{
-		return OhplBackendRustRequested();
-	}
 }
 
 #endif

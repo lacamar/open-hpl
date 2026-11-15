@@ -1,5 +1,5 @@
 // H6 differential harness: seeded scripts against cSkeleton/cBone, cAnimation/cAnimationTrack and
-// cMesh. Prints "<op>\t<result>" per line; OHPL_IMPL=cpp and =rust must print the same text.
+// cMesh. Prints "<op>\t<result>" per line; must print the golden text.
 // usage: H6_SCENARIO=skel|anim|mesh H6_SEED=<n> h6_script
 #include <cstdio>
 #include <cstdlib>

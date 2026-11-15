@@ -1,13 +1,14 @@
 #!/bin/bash
-# usage: compare.sh <h9_gen binary> [out dir]; OHPL_IMPL=cpp vs rust dumps; with an out dir keeps the C++ output as <out>/combos.txt (golden).
-B=$1 O=${2:-}
+# usage: compare.sh <h9_gen binary> [record]; runs the Rust combo setup and compares the dump with ../combos.txt (golden).
+B=$1
+g=$(cd "$(dirname "$0")/.." && pwd)
 mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/open-hpl/h9-tmp"
 t=$(mktemp -d "${XDG_CACHE_HOME:-$HOME/.cache}/open-hpl/h9-tmp/cmp.XXXXXX")
-for m in cpp rust; do OHPL_IMPL=$m "$B" >"$t/$m" 2>"$t/$m.err"; done
+"$B" >"$t/out" 2>"$t/err"
+n=$(grep -c '^light\|^fog' "$t/out")
+if [ "${2:-}" = record ]; then cp "$t/out" "$g/combos.txt"; echo "recorded $n configurations"; rm -rf "$t"; exit 0; fi
 bad=0
-cmp -s "$t/cpp" "$t/rust" || { bad=1; echo "DIFF: $(diff "$t/cpp" "$t/rust" | head -5)"; }
-grep -q '^rs 1' "$t/rust.err" || { echo "rust path not active"; bad=1; }
-n=$(grep -c '^light\|^fog' "$t/cpp")
-[ -n "$O" ] && cp "$t/cpp" "$O/combos.txt"
+cmp -s "$t/out" "$g/combos.txt" || { bad=1; echo "DIFF: $(diff "$t/out" "$g/combos.txt" | head -5)"; }
 rm -rf "$t"
 echo "compared $n configurations, $bad diffs"
+[ $bad = 0 ]

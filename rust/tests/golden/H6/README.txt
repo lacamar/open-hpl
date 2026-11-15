@@ -9,7 +9,7 @@ cargo test (graphics::tests_h6) replays the scripts against the Rust state witho
 
 Record (needs a build dir of this tree with `make HPL2`; `make HPL2TraceRecorder` for h6_creator):
   harness/gen.sh <build dir> h6_script.cpp <out>/h6_script    (also h6_gen.cpp, h6_creator.cpp)
-  harness/compare.sh <out>/h6_script 300 <dir>                OHPL_IMPL=cpp vs rust per scenario, copies seeds 0-11
+  harness/compare.sh <out>/h6_script 300 <dir>                Rust vs golden per scenario, seeds 0-11 (record arg rewrites)
   harness/census.sh <out>/h6_gen <msh|dae|fbx|anm|daeanim|fbxanim> <list> <out dir>
 h6 hash: bone local/world/inverse/inverse-bind matrices, name/sid lookups, sub-mesh and animation lookups,
   triangle count, track interpolation and key-frame pair at 11 times per track.
