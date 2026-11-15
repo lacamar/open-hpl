@@ -249,6 +249,10 @@ def same(name, a, b):
         return (r.returncode == 0, "equal after masking" if r.returncode == 0 else f"DIFFER {last}")
     if filecmp.cmp(a, b, shallow=False):
         return (True, "identical")
+    if name.startswith("a10a-"):
+        mask = lambda p: [re.sub(r"combo=-?\d+\[.*\]|text=\"[^\"]*\"", "", l) if "size=400,18" in l else l for l in open(p, errors="replace")]
+        if mask(a) == mask(b):
+            return (True, "identical (sound device names masked)")
     if name.startswith("h4seq") and multiset(a) == multiset(b):
         return (True, "same multiset (combine order is pointer-ordered in C++)")
     return (False, "DIFFER")
