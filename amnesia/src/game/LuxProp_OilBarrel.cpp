@@ -197,9 +197,9 @@ float cLuxProp_OilBarrel::HostTotalOil(void *apCtx)
 	for(int i=0; i<gpBase->mpInventory->GetItemNum(); ++i)
 	{
 		cLuxInventory_Item *pItem = gpBase->mpInventory->GetItem(i);
-		if(pItem->GetType() != eLuxItemType_LampOil) continue;
+		if(OhplInvType(pItem) != eLuxItemType_LampOil) continue;
 
-		fTotalOil += pItem->GetAmount() * (float)pItem->GetCount();
+		fTotalOil += OhplInvAmount(pItem) * (float)OhplInvCount(pItem);
 	}
 	return fTotalOil;
 }

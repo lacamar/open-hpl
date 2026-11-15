@@ -327,7 +327,7 @@ int32_t iLuxPlayerState::A3Host(void *apCtx, uint32_t alOp, OhplA3Io *apIo)
 	}
 	case kOhplA3Op_MAP_EXISTS: return gpBase->mpMapHandler->GetCurrentMap() != NULL;
 	case kOhplA3Op_USE_CB_GET:
-		io.p[2] = gpBase->mpMapHandler->GetCurrentMap()->GetUseItemCallback(((cLuxInventory_Item*)io.p[0])->GetName(), ((iLuxEntity*)io.p[1])->GetName());
+		io.p[2] = gpBase->mpMapHandler->GetCurrentMap()->GetUseItemCallback(OhplInvName((cLuxInventory_Item*)io.p[0]), ((iLuxEntity*)io.p[1])->GetName());
 		break;
 	case kOhplA3Op_USE_CB_RUN:
 	{

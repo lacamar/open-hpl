@@ -13,3 +13,10 @@ pub mod keyentry;
 pub mod message;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod inv_tests;
+pub mod invffi;
+pub mod invgui;
+pub mod invhost;
+pub mod invobj;

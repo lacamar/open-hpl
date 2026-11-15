@@ -926,7 +926,7 @@ void cLuxPlayer::SetCurrentHandObjectDrawn(bool abX)
 	// Draw
     if(abX)
 	{
-		mpHands->SetActiveHandObject(pItem->GetSubType());
+		mpHands->SetActiveHandObject(OhplInvSubType(pItem));
 	}
 	////////////////
 	// Holster

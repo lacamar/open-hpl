@@ -9,7 +9,7 @@ mod ffi;
 mod help;
 mod lookup;
 mod tables;
-mod types;
+pub(crate) mod types;
 mod vars;
 
 #[cfg(test)]

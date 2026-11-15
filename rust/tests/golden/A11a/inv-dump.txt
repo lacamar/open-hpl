@@ -1,0 +1,137 @@
+type Puzzle -> 0 name=Puzzle count=0 max=0 pickup=1 hasmax=0
+type coins -> 1 name=Coins count=0 max=0 pickup=1 hasmax=0
+type NOTE -> 2 name=Note count=0 max=0 pickup=0 hasmax=0
+type Diary -> 3 name=Diary count=0 max=0 pickup=0 hasmax=0
+type Lantern -> 4 name=Lantern count=0 max=0 pickup=1 hasmax=0
+type Health -> 5 name=Health count=1 max=99 pickup=1 hasmax=0
+type Sanity -> 6 name=Sanity count=1 max=99 pickup=1 hasmax=0
+type LampOil -> 7 name=LampOil count=1 max=99 pickup=1 hasmax=0
+type Tinderbox -> 8 name=Tinderbox count=1 max=99 pickup=1 hasmax=0
+type HandObject -> 9 name=HandObject count=0 max=0 pickup=1 hasmax=0
+add puz_a -> 1 remove=1 idx=0
+ state n=1 eq=-1 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+add puz_b -> 1 remove=1 idx=1
+ state n=2 eq=-1 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+add hp_a -> 1 remove=1 idx=2
+ state n=3 eq=-1 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+add hp_b -> 1 remove=1 idx=2
+ state n=3 eq=-1 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+add san_a -> 1 remove=1 idx=3
+ state n=4 eq=-1 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+  [3] name=san_a type=6 sub=sanity val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=30 ne=ItemName_sanity de=ItemDesc_sanity gfx=1
+add oil_a -> 1 remove=1 idx=4
+ state n=5 eq=-1 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+  [3] name=san_a type=6 sub=sanity val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=30 ne=ItemName_sanity de=ItemDesc_sanity gfx=1
+  [4] name=oil_a type=7 sub=oil val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=20 ne=ItemName_oil de=ItemDesc_oil gfx=1
+add oil_b -> 1 remove=1 idx=4
+ state n=5 eq=-1 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+  [3] name=san_a type=6 sub=sanity val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=30 ne=ItemName_sanity de=ItemDesc_sanity gfx=1
+  [4] name=oil_a type=7 sub=oil val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=20 ne=ItemName_oil de=ItemDesc_oil gfx=1
+add lantern -> 1 remove=1 idx=5
+ state n=6 eq=-1 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+  [3] name=san_a type=6 sub=sanity val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=30 ne=ItemName_sanity de=ItemDesc_sanity gfx=1
+  [4] name=oil_a type=7 sub=oil val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=20 ne=ItemName_oil de=ItemDesc_oil gfx=1
+  [5] name=lantern type=4 sub=lantern val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_lantern de=ItemDesc_lantern gfx=1
+add hand_a -> 1 remove=1 idx=6
+ state n=7 eq=6 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+  [3] name=san_a type=6 sub=sanity val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=30 ne=ItemName_sanity de=ItemDesc_sanity gfx=1
+  [4] name=oil_a type=7 sub=oil val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=20 ne=ItemName_oil de=ItemDesc_oil gfx=1
+  [5] name=lantern type=4 sub=lantern val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_lantern de=ItemDesc_lantern gfx=1
+  [6] name=hand_a type=9 sub=bucket_of_tar val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bucket_of_tar de=ItemDesc_bucket_of_tar gfx=1
+add hand_b -> 1 remove=1 idx=7
+ state n=8 eq=6 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+  [3] name=san_a type=6 sub=sanity val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=30 ne=ItemName_sanity de=ItemDesc_sanity gfx=1
+  [4] name=oil_a type=7 sub=oil val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=20 ne=ItemName_oil de=ItemDesc_oil gfx=1
+  [5] name=lantern type=4 sub=lantern val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_lantern de=ItemDesc_lantern gfx=1
+  [6] name=hand_a type=9 sub=bucket_of_tar val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bucket_of_tar de=ItemDesc_bucket_of_tar gfx=1
+  [7] name=hand_b type=9 sub=bone_saw val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+add tb_a -> 0 remove=1 idx=-1
+ state n=8 eq=6 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+  [3] name=san_a type=6 sub=sanity val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=30 ne=ItemName_sanity de=ItemDesc_sanity gfx=1
+  [4] name=oil_a type=7 sub=oil val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=20 ne=ItemName_oil de=ItemDesc_oil gfx=1
+  [5] name=lantern type=4 sub=lantern val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_lantern de=ItemDesc_lantern gfx=1
+  [6] name=hand_a type=9 sub=bucket_of_tar val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bucket_of_tar de=ItemDesc_bucket_of_tar gfx=1
+  [7] name=hand_b type=9 sub=bone_saw val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+add coins -> 0 remove=1 idx=-1
+ state n=8 eq=6 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+  [3] name=san_a type=6 sub=sanity val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=30 ne=ItemName_sanity de=ItemDesc_sanity gfx=1
+  [4] name=oil_a type=7 sub=oil val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=20 ne=ItemName_oil de=ItemDesc_oil gfx=1
+  [5] name=lantern type=4 sub=lantern val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_lantern de=ItemDesc_lantern gfx=1
+  [6] name=hand_a type=9 sub=bucket_of_tar val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bucket_of_tar de=ItemDesc_bucket_of_tar gfx=1
+  [7] name=hand_b type=9 sub=bone_saw val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+capped n=8 eq=6 dis=0 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/agrippa_head.tga cnt=99 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+  [3] name=san_a type=6 sub=sanity val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=30 ne=ItemName_sanity de=ItemDesc_sanity gfx=1
+  [4] name=oil_a type=7 sub=oil val= extra= img=graphics/item/agrippa_head.tga cnt=2 amt=20 ne=ItemName_oil de=ItemDesc_oil gfx=1
+  [5] name=lantern type=4 sub=lantern val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_lantern de=ItemDesc_lantern gfx=1
+  [6] name=hand_a type=9 sub=bucket_of_tar val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bucket_of_tar de=ItemDesc_bucket_of_tar gfx=1
+  [7] name=hand_b type=9 sub=bone_saw val= extra= img=graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+has lantern=1 oil=1 tinder=0 note=0
+get puz_b=1 sub bone_saw=1 nothing=0
+comb puz_a,puz_b -> cb1,CombineFn
+comb puz_b,puz_a -> cb1,CombineFn
+comb hp_a,oil_a -> cb2,OtherFn
+comb puz_a,puz_a -> none
+save dis=1 eq=7 items=8 cbs=2
+  s[0] puz_a 0 agrippa_head   graphics/item/agrippa_head.tga 0 1 ItemName_agrippa_head ItemDesc_agrippa_head
+  s[1] puz_b 0 bone_saw L02_Shipment x graphics/item/agrippa_head.tga 1 1 ItemName_bone_saw ItemDesc_bone_saw
+  s[2] hp_a 5 health   graphics/item/agrippa_head.tga 25 99 ItemName_health ItemDesc_health
+  s[3] san_a 6 sanity   graphics/item/agrippa_head.tga 30 1 ItemName_sanity ItemDesc_sanity
+  s[4] oil_a 7 oil   graphics/item/agrippa_head.tga 20 2 ItemName_oil ItemDesc_oil
+  s[5] lantern 4 lantern   graphics/item/agrippa_head.tga 0 1 ItemName_lantern ItemDesc_lantern
+  s[6] hand_a 9 bucket_of_tar   graphics/item/agrippa_head.tga 0 1 ItemName_bucket_of_tar ItemDesc_bucket_of_tar
+  s[7] hand_b 9 bone_saw   graphics/item/agrippa_head.tga 0 1 ItemName_bone_saw ItemDesc_bone_saw
+  c[0] cb1 puz_a puz_b CombineFn 1
+  c[1] cb2 hp_a oil_a OtherFn 0
+reset n=0 eq=-1 dis=0 msg=0 picked=0
+restored n=8 eq=-2 dis=1 msg=0 picked=0
+  [0] name=puz_a type=0 sub=agrippa_head val= extra= img=graphics/item/graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_agrippa_head de=ItemDesc_agrippa_head gfx=1
+  [1] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [2] name=hp_a type=5 sub=health val= extra= img=graphics/item/graphics/item/agrippa_head.tga cnt=99 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+  [3] name=san_a type=6 sub=sanity val= extra= img=graphics/item/graphics/item/agrippa_head.tga cnt=1 amt=30 ne=ItemName_sanity de=ItemDesc_sanity gfx=1
+  [4] name=oil_a type=7 sub=oil val= extra= img=graphics/item/graphics/item/agrippa_head.tga cnt=2 amt=20 ne=ItemName_oil de=ItemDesc_oil gfx=1
+  [5] name=lantern type=4 sub=lantern val= extra= img=graphics/item/graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_lantern de=ItemDesc_lantern gfx=1
+  [6] name=hand_a type=9 sub=bucket_of_tar val= extra= img=graphics/item/graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bucket_of_tar de=ItemDesc_bucket_of_tar gfx=1
+  [7] name=hand_b type=9 sub=bone_saw val= extra= img=graphics/item/graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+restored comb=1
+removed n=5 eq=-2 dis=1 msg=0 picked=0
+  [0] name=puz_b type=0 sub=bone_saw val=L02_Shipment extra=x img=graphics/item/graphics/item/agrippa_head.tga cnt=1 amt=1 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1
+  [1] name=hp_a type=5 sub=health val= extra= img=graphics/item/graphics/item/agrippa_head.tga cnt=98 amt=25 ne=ItemName_health de=ItemDesc_health gfx=1
+  [2] name=lantern type=4 sub=lantern val= extra= img=graphics/item/graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_lantern de=ItemDesc_lantern gfx=1
+  [3] name=hand_a type=9 sub=bucket_of_tar val= extra= img=graphics/item/graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bucket_of_tar de=ItemDesc_bucket_of_tar gfx=1
+  [4] name=hand_b type=9 sub=bone_saw val= extra= img=graphics/item/graphics/item/agrippa_head.tga cnt=1 amt=0 ne=ItemName_bone_saw de=ItemDesc_bone_saw gfx=1

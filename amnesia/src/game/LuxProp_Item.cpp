@@ -23,7 +23,6 @@
 #include "LuxMap.h"
 #include "LuxHelpFuncs.h"
 #include "LuxInventory.h"
-#include "LuxItemType.h"
 #include "LuxMessageHandler.h"
 #include "LuxEffectRenderer.h"
 
@@ -141,8 +140,7 @@ private:
 	static cLuxItemHost *Me(void *c) { return (cLuxItemHost*)c; }
 	static bool ShowPickup(void *c)
 	{
-		iLuxItemType *pType = gpBase->mpInventory->GetItemTypeData(Me(c)->mpItem->mItemType);
-		return pType->ShowPickUpMessage();
+		return ohpl_inv_type_show_pickup(Me(c)->mpItem->mItemType) != 0;
 	}
 	static int SubMeshNum(void *c) { return Me(c)->mpItem->mpMeshEntity->GetSubMeshEntityNum(); }
 	static bool SubMeshVisible(void *c, int i)

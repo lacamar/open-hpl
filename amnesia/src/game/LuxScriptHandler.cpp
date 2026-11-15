@@ -61,7 +61,7 @@
 
 #include "LuxEnemy.h"
 #include "LuxEnemyPathfinder.h"
-#include "LuxItemType.h"
+#include "LuxInventory.h"
 
 #include "LuxInteractConnections.h"
 
@@ -2073,7 +2073,7 @@ void __stdcall cLuxScriptHandler::AddDiary(string& asNameAndTextEntry, string& a
 
 void __stdcall cLuxScriptHandler::ReturnOpenJournal(bool abOpenJournal)
 {
-	cLuxItemType_Diary::mbShowJournalOnPickup = abOpenJournal;
+	ohpl_inv_set_show_journal(abOpenJournal);
 }
 
 //-----------------------------------------------------------------------
