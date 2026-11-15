@@ -1,7 +1,6 @@
 //! C ABI of the soundscapes and the FSB glue, mirrored in `soma/src/game/RustSomaSound.h`.
 
 use super::ffi_voice::OhplGs5Str;
-use super::fsb;
 use super::scape::{AreaDef, AreaState, ReverbEnv, Scape, ScapeHost};
 use crate::string_ffi::units;
 use std::ffi::c_void;
@@ -310,93 +309,4 @@ pub unsafe extern "C" fn ohpl_gs5_reverb_name(i: i32, len: *mut usize) -> *const
     // SAFETY: caller contract.
     unsafe { *len = n.len() };
     n.as_ptr()
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs5_fsb_mode_supported(mode: u32) -> bool {
-    fsb::mode_supported(mode)
-}
-
-/// 0 extract, 1 cached `.ogg`, 2 cached `.wav`.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs5_fsb_cached_state(has_ogg: bool, has_wav: bool) -> u8 {
-    fsb::cached_state(has_ogg, has_wav)
-}
-
-/// # Safety
-/// `prefix` and `sample` are readable for their lengths; `sink` accepts `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs5_fsb_output_name(
-    prefix: *const u8,
-    pn: usize,
-    sample: *const u8,
-    sn: usize,
-    mode: u32,
-    channels: i32,
-    sink: unsafe extern "C" fn(Ctx, *const u8, usize),
-    ctx: Ctx,
-) {
-    // SAFETY: caller contract.
-    let n = fsb::output_name(
-        unsafe { units(prefix, pn) },
-        unsafe { units(sample, sn) },
-        mode,
-        channels,
-    );
-    // SAFETY: caller contract.
-    unsafe { sink(ctx, n.as_ptr(), n.len()) };
-}
-
-/// The index of the first of `count` wanted names equal to `sample`, -1 for none.
-///
-/// # Safety
-/// `wanted` holds `count` strings.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs5_fsb_wanted_index(
-    sample: *const u8,
-    sn: usize,
-    wanted: *const OhplGs5Str,
-    count: usize,
-) -> i64 {
-    let mut names: Vec<&[u8]> = Vec::new();
-    for i in 0..count {
-        // SAFETY: caller contract.
-        let w = unsafe { &*wanted.add(i) };
-        // SAFETY: caller contract.
-        names.push(unsafe { units(w.p, w.n) });
-    }
-    // SAFETY: caller contract.
-    fsb::wanted_index(unsafe { units(sample, sn) }, &names).map_or(-1, |i| i as i64)
-}
-
-/// Mixes `n` frames of `ch` planar channels (`planes[c][i]`) to interleaved stereo 16 bit, appended
-/// to `out` (which must hold `2 * n` shorts).
-///
-/// # Safety
-/// `planes` holds `ch` pointers to `n` floats; `left`/`right` hold `ch` floats; `out` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs5_fsb_downmix_block(
-    planes: *const *const f32,
-    ch: usize,
-    n: usize,
-    left: *const f32,
-    right: *const f32,
-    out: *mut i16,
-) {
-    let mut p: Vec<&[f32]> = Vec::new();
-    for c in 0..ch {
-        // SAFETY: caller contract.
-        p.push(unsafe { units(*planes.add(c), n) });
-    }
-    let mut v = Vec::with_capacity(2 * n);
-    // SAFETY: caller contract.
-    fsb::downmix_block(
-        &p,
-        unsafe { units(left, ch) },
-        unsafe { units(right, ch) },
-        n,
-        &mut v,
-    );
-    // SAFETY: caller contract.
-    unsafe { out.copy_from_nonoverlapping(v.as_ptr(), v.len()) };
 }

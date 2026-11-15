@@ -152,6 +152,15 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
             if hpl.send({"cmd": "frame_stats"})["frame"]["lum_mean"] >= LUM_MIN:
                 break
             hpl.send({"cmd": "wait_frames", "n": 120, "max_ms": 4000})
+        if os.environ.get("OHPL_S7_SCENARIO"):
+            # snippets separated by a line "---"; the printed output of each goes to OHPL_S7_SCENARIO_OUT
+            lines = []
+            for n, code in enumerate(open(os.environ["OHPL_S7_SCENARIO"]).read().split("\n---\n")):
+                if code.strip():
+                    r = hpl.send({"cmd": "script_exec", "code": code})
+                    lines.append(f"[{n}] {r.get('output', '')} {r.get('error', '')}".rstrip())
+                    hpl.send({"cmd": "wait_frames", "n": 30, "max_ms": 8000})
+            open(os.environ["OHPL_S7_SCENARIO_OUT"], "w").write("\n".join(lines) + "\n")
         if play:
             hpl.send({"cmd": "wait_frames", "n": int(play * 60), "max_ms": int(play * 4000)})
             result["stubs"] = {k: v for k, v in hpl.send({"cmd": "stub_report", "n": 40}).items() if k != "ok"}

@@ -5,16 +5,24 @@
 
 mod dump;
 pub mod events;
-mod ffi;
+mod extract;
+mod ffi_fsb;
+mod ffi_game;
 mod ffi_scape;
 mod ffi_voice;
 pub mod fsb;
+mod game;
+mod glue;
+mod host;
 pub mod instance;
+pub mod music;
+mod natives;
 mod presets;
 pub mod scape;
 #[cfg(test)]
 mod tests;
 pub mod voice;
+mod vorbis_setups;
 
 unsafe extern "C" {
     #[link_name = "powf"]

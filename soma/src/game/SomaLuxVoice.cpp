@@ -232,7 +232,10 @@ bool cSomaLuxVoiceHandler::Play(const tString &asSubject, int alLine, const tStr
 								bool abPlayWhilePaused)
 {
 	if (ohpl_gs5_voice_play_check(mpV, VHost(), U(asSubject), asSubject.size(), alPrio) <= 0)
+	{
+		OhplS7Text("VP", asSubject + " " + cString::ToString(alLine) + " " + asCallback + " " + cString::ToString(alPrio) + " check-fail");
 		return false;
+	}
 	tString sScene;
 	ohpl_gs5_voice_scene_of(mpV, U(asSubject), asSubject.size(), SinkString, &sScene);
 	StopScene(sScene);
@@ -245,6 +248,7 @@ bool cSomaLuxVoiceHandler::Play(const tString &asSubject, int alLine, const tStr
 	bool bOk = ohpl_gs5_voice_play_start(mpV, VHost(), U(asSubject), asSubject.size(), alLine, U(asCallback), asCallback.size(), alPrio, lToken, abPlayWhilePaused);
 	if (bOk == false && lToken)
 		mmapOnDone.erase(lToken);
+	OhplS7Text("VP", asSubject + " " + cString::ToString(alLine) + " " + asCallback + " " + cString::ToString(alPrio) + " " + (bOk ? "ok" : "fail") + " scene=" + sScene);
 	return bOk;
 }
 
@@ -324,6 +328,7 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 		bool bMore = ohpl_gs5_voice_update_step(mpV, VHost(), +[](void *apCtx, const OhplGs5VoiceEvent *e) {
 			cOne *p = static_cast<cOne *>(apCtx);
 			tString sFunc((const char *)e->func, e->func_len), sScene((const char *)e->scene, e->scene_len), sName((const char *)e->name, e->name_len);
+			OhplS7Text("VE", cString::ToString(e->kind) + " " + sFunc + " " + sScene + " " + sName + " " + cString::ToString(e->line) + " " + (e->start ? "1" : "0"));
 			if (e->kind == 0)
 			{
 				// the script may stop everything; the finished scene's completion still runs
@@ -422,6 +427,17 @@ void cSomaLuxVoiceHandler::OnDraw(float afFrameTime)
 																						const float *apColor, float afY, size_t alRows) {
 		cDraw *d = static_cast<cDraw *>(apCtx);
 		const tWStringVec &vRows = d->mpSelf->mvRowCache[d->mlNext++];
+		{
+			uint32_t uA, uY;
+			memcpy(&uA, &afAlpha, 4);
+			memcpy(&uY, &afY, 4);
+			char sB[40];
+			snprintf(sB, sizeof sB, "%08x %08x %d ", uA, uY, (int)abColor);
+			tString sRows;
+			for (const tWString &r : vRows)
+				sRows += cString::To8Char(r) + "|";
+			OhplS7Text("VS", sB + tString((const char *)t, l) + " => " + sRows);
+		}
 		cColor col = abColor ? cColor(apColor[0], apColor[1], apColor[2], apColor[3]) : cColor(1, afAlpha);
 		for (size_t r = 0; r < vRows.size(); ++r)
 		{
@@ -656,6 +672,7 @@ void cSomaLuxDialogHandler::End(const tString &asStartBranch)
 
 static void ItemCallback(const tString &asFunc, const tString &asSubject, bool abStart)
 {
+	OhplS7Text("DI", asFunc + " " + asSubject + " " + (abStart ? "1" : "0"));
 	if (asFunc == "")
 		return;
 	SomaMapScriptCall("void " + asFunc + "(const tString&in, bool)", [&](asIScriptContext *c) {
@@ -720,6 +737,7 @@ void cSomaLuxDialogHandler::EndBranch(cDialog &aD)
 		// No dialog UI yet: take the first option
 		const cOption &opt = b.mvOptions[0];
 		Log("SOMA dialog: auto-selected option '%s'\n", opt.msEntry.c_str());
+		OhplS7Text("DO", opt.msEntry + " " + opt.msBranch + " " + cString::ToString(opt.mlId));
 		if (opt.msCallback != "")
 			SomaMapScriptCall("void " + opt.msCallback + "(const tString&in, const tString&in, int)", [&](asIScriptContext *c) {
 				c->SetArgObject(0, &b.msName);
@@ -741,6 +759,7 @@ void cSomaLuxDialogHandler::EndBranch(cDialog &aD)
 void cSomaLuxDialogHandler::Finish(cDialog &aD)
 {
 	aD.mbDone = true;
+	OhplS7Text("DF", aD.msName + " " + aD.msCallback);
 	if (aD.msCallback != "")
 		SomaMapScriptCall("void " + aD.msCallback + "(const tString&in)", [&](asIScriptContext *c) { c->SetArgObject(0, &aD.msName); });
 }

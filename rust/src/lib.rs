@@ -23,7 +23,6 @@ pub mod engine;
 pub mod entity_loader;
 mod ffi;
 pub mod fsb5;
-mod fsb5_ffi;
 pub mod gl;
 pub mod graphics;
 pub mod gui;

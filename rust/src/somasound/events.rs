@@ -196,6 +196,13 @@ impl Default for Event {
 }
 
 impl Event {
+    pub fn files(&self) -> impl Iterator<Item = &Vec<u8>> {
+        self.defs
+            .iter()
+            .flat_map(|d| &d.files)
+            .filter(|f| !f.is_empty())
+    }
+
     pub fn has_files(&self) -> bool {
         self.defs
             .iter()
