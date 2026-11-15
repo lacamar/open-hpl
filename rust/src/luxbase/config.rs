@@ -2,7 +2,7 @@
 
 use super::cfg::Cfg;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct MainCfg {
     pub load_debug_menu: bool,
     pub first_start: bool,

@@ -97,19 +97,21 @@ kEndSerialize()
 
 void cLuxInsanityHandler_SaveData::FromInsanityHandler(cLuxInsanityHandler *apData)
 {
-	mfNewEventCount = apData->mfNewEventCount;
+	mfNewEventCount = apData->GetNewEventCount();
 
 	//Events
-    mvEvents.Resize(apData->mvEvents.size());
+    mvEvents.Resize(apData->GetEventNum());
 	for(size_t i=0; i<mvEvents.Size(); ++i)
 	{
-		mvEvents[i].mbUsed = apData->mvEvents[i]->IsUsed();
+		mvEvents[i].mbUsed = apData->EventIsUsed((int)i);
 	}
 
 	//Disabled Events
-	for(tStringSetIt it = apData->m_setDisabledSets.begin(); it != apData->m_setDisabledSets.end(); ++it)
+	tStringVec vSets;
+	apData->GetDisabledSets(vSets);
+	for(size_t i=0; i<vSets.size(); ++i)
 	{
-		mvDisabledSets.Add(cLuxInsanityHandler_Set_SaveData(*it));
+		mvDisabledSets.Add(cLuxInsanityHandler_Set_SaveData(vSets[i]));
 	}
 }
 
@@ -131,22 +133,22 @@ int cLuxInsanityHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int
 	switch(alOp)
 	{
 	case eOhplGa6Op_InsToCount:
-		apData->mfNewEventCount = mfNewEventCount;
+		apData->SetNewEventCount(mfNewEventCount);
 		return 0;
 	case eOhplGa6Op_InsSavedEventN:
 		return (int)mvEvents.Size();
 	case eOhplGa6Op_InsLiveEventN:
-		return (int)apData->mvEvents.size();
+		return apData->GetEventNum();
 	case eOhplGa6Op_InsEventTo:
-		apData->mvEvents[alA]->SetUsed(mvEvents[alA].mbUsed);
+		apData->SetEventUsed(alA, mvEvents[alA].mbUsed);
 		return 0;
 	case eOhplGa6Op_InsClearSets:
-		apData->m_setDisabledSets.clear();
+		apData->ClearDisabledSets();
 		return 0;
 	case eOhplGa6Op_InsSavedSetN:
 		return (int)mvDisabledSets.Size();
 	case eOhplGa6Op_InsInsertSet:
-		apData->m_setDisabledSets.insert(mvDisabledSets[alA].msName);
+		apData->DisableSet(mvDisabledSets[alA].msName);
 		return 0;
 	}
 	return 0;
@@ -560,7 +562,7 @@ int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int al
 	switch(alOp)
 	{
 	case eOhplGa6Op_MusicHasSong:
-		e.mpEntry = apMusic->mpMusicHandler->GetCurrentSong();
+		e.mpEntry = apMusic->Engine()->GetCurrentSong();
 		return e.mpEntry != NULL;
 	case eOhplGa6Op_MusicFromSong:
 		{
@@ -582,10 +584,10 @@ int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int al
 		return 0;
 	case eOhplGa6Op_MusicFromMisc:
 		{
-				mlCurrentMaxPrio = apMusic->mlCurrentMaxPrio;
-				mbEnemyClosePlaying = apMusic->mbEnemyClosePlaying;
-				mbAttackPlaying = apMusic->mbEnemyPlaying[eLuxEnemyMusic_Attack];
-				mbSearchPlaying = apMusic->mbEnemyPlaying[eLuxEnemyMusic_Search];
+				mlCurrentMaxPrio = apMusic->GetCurrentMaxPrio();
+				mbEnemyClosePlaying = apMusic->EnemyClosePlaying();
+				mbAttackPlaying = apMusic->EnemyPlaying(eLuxEnemyMusic_Attack);
+				mbSearchPlaying = apMusic->EnemyPlaying(eLuxEnemyMusic_Search);
 
 				///////////////////
 				// Music
@@ -593,14 +595,15 @@ int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int al
 		return 0;
 	case eOhplGa6Op_MusicFromEntries:
 		{
-				mvMusic.Resize(apMusic->mvGameMusic.size());
+				mvMusic.Resize(apMusic->GetSlotNum());
 				for(size_t i=0; i<mvMusic.Size(); ++i)
 				{
-					mvMusic[i].msFile = apMusic->mvGameMusic[i].msFile;
-					mvMusic[i].mbLoop = apMusic->mvGameMusic[i].mbLoop;
-					mvMusic[i].mbResume = apMusic->mvGameMusic[i].mbResume;
-					mvMusic[i].mfVolume = apMusic->mvGameMusic[i].mfVolume;
-					mvMusic[i].mbSpecialEffect = apMusic->mvGameMusic[i].mbSpecialEffect;
+					cLuxMusic music = apMusic->GetMusic((int)i);
+					mvMusic[i].msFile = music.msFile;
+					mvMusic[i].mbLoop = music.mbLoop;
+					mvMusic[i].mbResume = music.mbResume;
+					mvMusic[i].mfVolume = music.mfVolume;
+					mvMusic[i].mbSpecialEffect = music.mbSpecialEffect;
 				}
 
 				///////////////////
@@ -612,9 +615,7 @@ int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int al
 	case eOhplGa6Op_MusicEnemyN:
 		{
 			e.mvEnemies[alA].clear();
-			tLuxEnemySetIt it = apMusic->m_setEnemies[setKind].begin();
-			for(; it != apMusic->m_setEnemies[setKind].end(); ++it)
-				e.mvEnemies[alA].push_back(*it);
+			apMusic->GetEnemies(setKind, e.mvEnemies[alA]);
 			return (int)e.mvEnemies[alA].size();
 		}
 	case eOhplGa6Op_MusicEnemyId:
@@ -625,9 +626,9 @@ int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int al
 	case eOhplGa6Op_MusicHasSavedSong:
 		return msCurrentMusic != "";
 	case eOhplGa6Op_MusicPlay:
-		return apMusic->mpMusicHandler->Play(msCurrentMusic,mfCurrentMusicMaxVolume,0.1f, mbCurrentMusicLoop, false);
+		return apMusic->Engine()->Play(msCurrentMusic,mfCurrentMusicMaxVolume,0.1f, mbCurrentMusicLoop, false);
 	case eOhplGa6Op_MusicHasCurrentSong:
-		e.mpEntry = apMusic->mpMusicHandler->GetCurrentSong();
+		e.mpEntry = apMusic->Engine()->GetCurrentSong();
 		return e.mpEntry != NULL;
 	case eOhplGa6Op_MusicApplySong:
 		pMusicEntry->mfMaxVolume = mfCurrentMusicMaxVolume;
@@ -638,10 +639,7 @@ int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int al
 		return 0;
 	case eOhplGa6Op_MusicToMisc:
 		{
-				apMusic->mlCurrentMaxPrio = mlCurrentMaxPrio;
-				apMusic->mbEnemyClosePlaying = mbEnemyClosePlaying;
-				apMusic->mbEnemyPlaying[eLuxEnemyMusic_Attack] = mbAttackPlaying;
-				apMusic->mbEnemyPlaying[eLuxEnemyMusic_Search] = mbSearchPlaying;
+				apMusic->SetSaveState(mlCurrentMaxPrio, mbEnemyClosePlaying, mbAttackPlaying, mbSearchPlaying);
 
 
 				///////////////////
@@ -649,15 +647,19 @@ int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int al
 		}
 		return 0;
 	case eOhplGa6Op_MusicLiveEntryN:
-		return (int)apMusic->mvGameMusic.size();
+		return apMusic->GetSlotNum();
 	case eOhplGa6Op_MusicSavedEntryN:
 		return (int)mvMusic.Size();
 	case eOhplGa6Op_MusicEntryTo:
-		apMusic->mvGameMusic[alA].msFile = mvMusic[alA].msFile;
-		apMusic->mvGameMusic[alA].mbLoop = mvMusic[alA].mbLoop;
-		apMusic->mvGameMusic[alA].mbResume = mvMusic[alA].mbResume;
-		apMusic->mvGameMusic[alA].mfVolume = mvMusic[alA].mfVolume;
-		apMusic->mvGameMusic[alA].mbSpecialEffect = mvMusic[alA].mbSpecialEffect;
+		{
+			cLuxMusic music;
+			music.msFile = mvMusic[alA].msFile;
+			music.mbLoop = mvMusic[alA].mbLoop;
+			music.mbResume = mvMusic[alA].mbResume;
+			music.mfVolume = mvMusic[alA].mfVolume;
+			music.mbSpecialEffect = mvMusic[alA].mbSpecialEffect;
+			apMusic->SetMusic(alA, music);
+		}
 		return 0;
 	case eOhplGa6Op_MusicSavedIdN:
 		return (int)(alA == eOhplGa6Set_Attack ? mvAttackerIDs.Size() : mvSearcherIDs.Size());
@@ -667,7 +669,7 @@ int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int al
 		e.mpEntity = apMap->GetEntityByID(alA);
 		return e.mpEntity && e.mpEntity->GetEntityType() == eLuxEntityType_Enemy;
 	case eOhplGa6Op_MusicInsertEnemy:
-		apMusic->m_setEnemies[alB == eOhplGa6Set_Attack ? eLuxEnemyMusic_Attack : eLuxEnemyMusic_Search].insert(static_cast<iLuxEnemy*>(e.mpEntity));
+		apMusic->AddEnemy(alB == eOhplGa6Set_Attack ? eLuxEnemyMusic_Attack : eLuxEnemyMusic_Search, static_cast<iLuxEnemy*>(e.mpEntity));
 		return 0;
 	case eOhplGa6Op_MusicWarn:
 		Warning("Could not find entity with id %d\n", alA);

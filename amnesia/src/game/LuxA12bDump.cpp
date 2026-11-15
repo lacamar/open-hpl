@@ -272,6 +272,7 @@ void OhplA12Tick()
 	gbDone = true;
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 	OhplA12Log("map %s", pMap->GetName().c_str());
+	cMath::Randomize(1234);
 	ConfigScenario();
 	MusicScenario(pMap);
 	InsanityScenario(pMap);

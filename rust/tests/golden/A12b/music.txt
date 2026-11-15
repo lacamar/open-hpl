@@ -1,0 +1,381 @@
+m begin max=10 mul=0.850000024
+m play 00_event_gallery.ogg 0.850000024 0.850000024 1 0
+m p2 cur=2 song=00_event_gallery.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 2 00_event_gallery.ogg loop=1 resume=0 vol=0.850000024 special=0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m p2again cur=2 song=00_event_gallery.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 2 00_event_gallery.ogg loop=1 resume=0 vol=0.850000024 special=0
+m play 01_event_dust.ogg 0.680000007 0.680000007 0 1
+m p4 cur=4 song=01_event_dust.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 2 00_event_gallery.ogg loop=1 resume=0 vol=0.850000024 special=0
+m slot 4 01_event_dust.ogg loop=0 resume=1 vol=0.680000007 special=1
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m p1 cur=4 song=01_event_dust.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 1 02_puzzle.ogg loop=1 resume=1 vol=0.850000024 special=0
+m slot 2 00_event_gallery.ogg loop=1 resume=0 vol=0.850000024 special=0
+m slot 4 01_event_dust.ogg loop=0 resume=1 vol=0.680000007 special=1
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m p3 cur=4 song=01_event_dust.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 1 02_puzzle.ogg loop=1 resume=1 vol=0.850000024 special=0
+m slot 2 00_event_gallery.ogg loop=1 resume=0 vol=0.850000024 special=0
+m slot 3 02_amb_safe.ogg loop=1 resume=1 vol=0.51000005 special=0
+m slot 4 01_event_dust.ogg loop=0 resume=1 vol=0.680000007 special=1
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m stop 0.680000007
+m play 02_amb_safe.ogg 0.51000005 0.300000012 1 1
+m s4 cur=3 song=02_amb_safe.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 1 02_puzzle.ogg loop=1 resume=1 vol=0.850000024 special=0
+m slot 2 00_event_gallery.ogg loop=1 resume=0 vol=0.850000024 special=0
+m slot 3 02_amb_safe.ogg loop=1 resume=1 vol=0.51000005 special=0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m stop 0.51000005
+m play 00_event_gallery.ogg 0.850000024 0.300000012 1 0
+m s3 cur=2 song=00_event_gallery.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 1 02_puzzle.ogg loop=1 resume=1 vol=0.850000024 special=0
+m slot 2 00_event_gallery.ogg loop=1 resume=0 vol=0.850000024 special=0
+m s7 cur=2 song=00_event_gallery.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 1 02_puzzle.ogg loop=1 resume=1 vol=0.850000024 special=0
+m slot 2 00_event_gallery.ogg loop=1 resume=0 vol=0.850000024 special=0
+m play 03_event_books.ogg 0.850000024 0.850000024 1 1
+m p99 cur=10 song=03_event_books.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 1 02_puzzle.ogg loop=1 resume=1 vol=0.850000024 special=0
+m slot 2 00_event_gallery.ogg loop=1 resume=0 vol=0.850000024 special=0
+m slot 10 03_event_books.ogg loop=1 resume=1 vol=0.850000024 special=0
+m pm1 cur=10 song=03_event_books.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 1 02_puzzle.ogg loop=1 resume=1 vol=0.850000024 special=0
+m slot 2 00_event_gallery.ogg loop=1 resume=0 vol=0.850000024 special=0
+m slot 10 03_event_books.ogg loop=1 resume=1 vol=0.850000024 special=0
+m s2 cur=10 song=03_event_books.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 1 02_puzzle.ogg loop=1 resume=1 vol=0.850000024 special=0
+m slot 10 03_event_books.ogg loop=1 resume=1 vol=0.850000024 special=0
+m s1 cur=10 song=03_event_books.ogg vol=0
+m slot 0 21_amb loop=1 resume=1 vol=0.51000005 special=0
+m slot 10 03_event_books.ogg loop=1 resume=1 vol=0.850000024 special=0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m dead 0
+m nosong 0
+m s0 cur=10 song=03_event_books.ogg vol=0
+m slot 10 03_event_books.ogg loop=1 resume=1 vol=0.850000024 special=0

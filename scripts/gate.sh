@@ -281,6 +281,10 @@ def same(name, a, b):
         r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)
         last = (r.stdout.strip().splitlines() or [""])[-1]
         return (r.returncode == 0, "equal after masking" if r.returncode == 0 else f"DIFFER {last}")
+    if name.startswith("a12b-"):
+        # camera positions follow the player body, which settles with real time
+        mask = lambda p: [l for l in open(p, errors="replace") if not l.startswith(("i ps pos", "i step_pos"))]
+        return (mask(a) == mask(b), "equal (camera positions masked)" if mask(a) == mask(b) else "DIFFER")
     if name.startswith("a11b-"):
         # runs stop at different frames: compare up to the last whole frame of the shorter one
         la, lb = (open(x, errors="replace").read().splitlines() for x in (a, b))

@@ -16,3 +16,10 @@ mod renderer;
 #[cfg(test)]
 mod tests;
 mod voice;
+
+mod ffi12;
+pub(crate) mod host12;
+mod insanity_h;
+mod music_h;
+#[cfg(test)]
+mod tests12;

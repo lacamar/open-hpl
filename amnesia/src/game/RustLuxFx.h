@@ -46,29 +46,11 @@ enum OhplGa9bOpKind : uint32_t
 	kOhplGa9bVoiceQueue = 21,
 };
 
-enum OhplGa9bMusicOpKind : uint32_t
-{
-	kOhplGa9bMusicPlay = 1,
-	kOhplGa9bMusicClearSlot = 3,
-	kOhplGa9bMusicPlayDanger = 4,
-	kOhplGa9bMusicStopDanger = 5,
-	kOhplGa9bMusicStopClose = 6,
-	kOhplGa9bMusicStopLower = 7,
-	kOhplGa9bMusicPlayEnemy = 8,
-	kOhplGa9bMusicStopEnemy = 9,
-};
-
 enum
 {
 	kOhplGa9bVoiceReturn = 0,
 	kOhplGa9bVoiceFinalize = 1,
 	kOhplGa9bVoicePlay = 2,
-	kOhplGa9bDangerReturn = 0,
-	kOhplGa9bDangerScanIdle = 1,
-	kOhplGa9bDangerScanPlaying = 2,
-	kOhplGa9bEnemyReturn = 0,
-	kOhplGa9bEnemyScan = 1,
-	kOhplGa9bEnemyDone = 2,
 	kOhplGa9bUnlockOk = 0,
 	kOhplGa9bUnlockNotRegistered = 1,
 	kOhplGa9bUnlockUnknown = 2,
@@ -252,71 +234,6 @@ struct OhplGa9bClock
 	float t, animCount, waveAlpha, zoomAlpha, waveSpeed;
 };
 
-struct OhplGa9bBug
-{
-	bool active;
-	unsigned char pad[3];
-	float pos[2], vel[2];
-	float sizeMul, angle, alpha;
-};
-
-struct OhplGa9bBugsParams
-{
-	float minSizeMul, maxSizeMul, wanderDist, wanderRadius, swarmMul, maxSpeed;
-};
-
-struct OhplGa9bStream
-{
-	float soundCount, fadeAlpha, fadeAlphaSpeed, fadeOutSpeed;
-	uint32_t fadeScreen;
-};
-
-struct OhplGa9bSteps
-{
-	float soundCount, soundCountMax;
-	int32_t count;
-	float pos[3];
-	float timeMul, distMul;
-};
-
-struct OhplGa9bPick
-{
-	int32_t index;
-	uint32_t resetUsed;
-};
-
-struct OhplGa9bTiming
-{
-	float maxSanityLong, maxSanityMed, maxSanityShort, timeLong, timeMed, timeShort;
-};
-
-struct OhplGa9bSlot
-{
-	uint32_t hasFile, loop, resume;
-	float volume;
-};
-
-struct OhplGa9bPlayOut
-{
-	uint32_t play;
-	float volume, fadeSpeed;
-	int32_t curPrio;
-};
-
-struct OhplGa9bStopOut
-{
-	uint32_t clear, stop;
-	float fadeSpeed;
-};
-
-struct OhplGa9bEnemyMusic
-{
-	uint32_t playing[2];
-	float playCount[2], stopCount[2];
-	uint32_t closePlaying;
-	float closeCount, goneCount;
-};
-
 struct OhplGa9bCompletion
 {
 	uint32_t active;
@@ -328,10 +245,7 @@ static_assert(sizeof(OhplGa9bFlash) == 28 && sizeof(OhplGa9bEmotion) == 24 && si
 static_assert(sizeof(OhplGa9bRow) == 20 && sizeof(OhplGa9bVoiceAdd) == 28 && sizeof(OhplGa9bVoiceUpdate) == 24, "layout");
 static_assert(sizeof(OhplGa9bVoiceTexts) == 44 && sizeof(OhplGa9bGlow) == 8 && sizeof(OhplGa9bOutline) == 132, "layout");
 static_assert(sizeof(OhplGa9bROp) == 76 && sizeof(OhplGa9bPOp) == 20 && sizeof(OhplGa9bClock) == 20, "layout");
-static_assert(sizeof(OhplGa9bBug) == 32 && sizeof(OhplGa9bBugsParams) == 24 && sizeof(OhplGa9bStream) == 20, "layout");
-static_assert(sizeof(OhplGa9bSteps) == 32 && sizeof(OhplGa9bPick) == 8 && sizeof(OhplGa9bTiming) == 24, "layout");
-static_assert(sizeof(OhplGa9bSlot) == 16 && sizeof(OhplGa9bPlayOut) == 16 && sizeof(OhplGa9bStopOut) == 12, "layout");
-static_assert(sizeof(OhplGa9bEnemyMusic) == 36 && sizeof(OhplGa9bCompletion) == 24, "layout");
+static_assert(sizeof(OhplGa9bCompletion) == 24, "layout");
 
 extern "C"
 {
@@ -370,32 +284,6 @@ extern "C"
 	OhplGa9bPPlan *ohpl_ga9b_post_plan(const OhplGa9bClock *c, float sx, float sy, bool ok);
 	bool ohpl_ga9b_pplan_next(OhplGa9bPPlan *p, OhplGa9bPOp *out);
 	void ohpl_ga9b_pplan_free(OhplGa9bPPlan *p);
-
-	void ohpl_ga9b_bugs_start(OhplGa9bBug *bugs, size_t n, const OhplGa9bBugsParams *p, float minX, float minY, float maxX, float maxY);
-	bool ohpl_ga9b_bugs_update(OhplGa9bBug *bugs, size_t total, int count, const OhplGa9bBugsParams *p, float dt, float *time);
-	bool ohpl_ga9b_timer_expired(float *time, float dt);
-	void ohpl_ga9b_stream_load(float delay, float fadeIn, float fadeOut, float *out3);
-	bool ohpl_ga9b_stream_a(OhplGa9bStream *s, bool entryNull, float dt);
-	bool ohpl_ga9b_stream_b(OhplGa9bStream *s, bool entryGone, float dt);
-	void ohpl_ga9b_steps_start(OhplGa9bSteps *s, float stepTime, int stepNum, float distance);
-	bool ohpl_ga9b_steps_update(OhplGa9bSteps *s, float dt, bool *create);
-	OhplGa9bPick ohpl_ga9b_insanity_pick(float sanity, size_t n, const uint32_t *setDisabled, uint32_t *used, const float *maxSanity);
-	float ohpl_ga9b_insanity_wait_after(const OhplGa9bTiming *t, float sanity);
-	float ohpl_ga9b_insanity_count_down(float count, int current, float dt);
-	bool ohpl_ga9b_insanity_possible(const OhplGa9bTiming *t, float count, float sanity, int current);
-
-	int ohpl_ga9b_music_prio(int p, int max);
-	bool ohpl_ga9b_music_play(int cur, int p, bool sameFile, float volume, float volumeMul, float fadeTime, OhplGa9bPlayOut *out);
-	OhplGa9bStopOut ohpl_ga9b_music_stop(int cur, int p, bool hasFile, float slotVolume, float fadeTime);
-	int ohpl_ga9b_music_play_highest(const OhplGa9bSlot *slots, size_t n, int maxPrio, OhplGa9bOps *o);
-	bool ohpl_ga9b_music_song_over(int cur, bool noSong);
-	int ohpl_ga9b_music_pick_danger(const uint32_t *nonEmpty, const int *prios, size_t n);
-	int ohpl_ga9b_music_pick_enemy(const uint32_t *nonEmpty, const int *prios, size_t n);
-	int ohpl_ga9b_music_danger_begin(bool hard, const OhplGa9bEnemyMusic *e, bool hasMap);
-	void ohpl_ga9b_music_danger_idle(OhplGa9bEnemyMusic *e, bool found, float dt, OhplGa9bOps *o);
-	void ohpl_ga9b_music_danger_playing(OhplGa9bEnemyMusic *e, bool found, float dt, OhplGa9bOps *o);
-	int ohpl_ga9b_music_enemy_begin(OhplGa9bEnemyMusic *e, int t, bool hasMap, bool setEmpty, float dt, OhplGa9bOps *o);
-	void ohpl_ga9b_music_enemy_found(OhplGa9bEnemyMusic *e, int t, OhplGa9bOps *o);
 
 	void ohpl_ga9b_completion_reset(OhplGa9bCompletion *c);
 	void ohpl_ga9b_completion_update(OhplGa9bCompletion *c, float dt);
