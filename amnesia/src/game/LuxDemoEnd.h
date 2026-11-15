@@ -20,115 +20,27 @@
 #ifndef LUX_DEMO_END_H
 #define LUX_DEMO_END_H
 
-//----------------------------------------------
-
-#include "LuxBase.h"
-#include "RustLuxMenu2.h"
-
-
-//----------------------------------------------
+#include "LuxA10bHost.h"
 
 class cLuxDemoEnd : public iLuxUpdateable
 {
-public:	
-	cLuxDemoEnd();
-	~cLuxDemoEnd();
+public:
+	cLuxDemoEnd() : iLuxUpdateable("LuxDemoEnd"), mR(this, eOhplA10bKind_DemoEnd) { mR.mH = ohpl_a10b_de_new(&mR.mHost); }
+	~cLuxDemoEnd() { ohpl_a10b_de_delete(mR.mH); }
 
-	void LoadFonts();
+	void LoadFonts() { ohpl_a10b_de_load_fonts(&mR.mHost, mR.mH); }
+	void Reset() { ohpl_a10b_de_reset(&mR.mHost, mR.mH); }
+	void Update(float afTimeStep) { ohpl_a10b_de_update(&mR.mHost, mR.mH, afTimeStep); }
+	void OnEnterContainer(const tString& asOldContainer) { ohpl_a10b_de_enter(&mR.mHost, mR.mH); }
+	void OnLeaveContainer(const tString& asNewContainer) { ohpl_a10b_de_leave(&mR.mHost, mR.mH); }
+	void OnDraw(float afFrameTime) { ohpl_a10b_de_draw(&mR.mHost, mR.mH); }
+	void Exit(bool abShowWebsite) { ohpl_a10b_de_exit(&mR.mHost, mR.mH, abShowWebsite); }
+	void AppLostInputFocus() { ohpl_a10b_de_focus(&mR.mHost, false); }
+	void AppGotInputFocus() { ohpl_a10b_de_focus(&mR.mHost, true); }
+	bool ShowOnAllExit() { return ohpl_a10b_de_show_on_all_exit(mR.mH); }
 
-	void Reset();
-
-	void Update(float afTimeStep);
-
-	void OnEnterContainer(const tString& asOldContainer);
-	void OnLeaveContainer(const tString& asNewContainer);
-
-	void OnDraw(float afFrameTime);
-
-	void Exit(bool abShowWebsite);
-
-	void AppLostInputFocus();
-	void AppGotInputFocus();
-
-	bool ShowOnAllExit(){ return mbShowOnAllExit;}
-	
 private:
-	void SetUpButtonLabel(cWidgetLabel* apLabel, float* apFadeValue, tGuiCallbackFunc apCallback);
-
-	bool BuyNowOnPressed(iWidget* apWidget, const cGuiMessageData& aData);
-	kGuiCallbackDeclarationEnd(BuyNowOnPressed);
-
-	bool ExitOnPressed(iWidget* apWidget, const cGuiMessageData& aData);
-	kGuiCallbackDeclarationEnd(ExitOnPressed);
-
-	bool ButtonLabelOnUpdate(iWidget* apWidget, const cGuiMessageData& aData);
-	kGuiCallbackDeclarationEnd(ButtonLabelOnUpdate);
-	bool ButtonLabelOnDraw(iWidget* apWidget, const cGuiMessageData& aData);
-	kGuiCallbackDeclarationEnd(ButtonLabelOnDraw);
-	bool ButtonLabelOnMouseEnter(iWidget* apWidget, const cGuiMessageData& aData);
-	kGuiCallbackDeclarationEnd(ButtonLabelOnMouseEnter);
-	bool ButtonLabelOnMouseLeave(iWidget* apWidget, const cGuiMessageData& aData);
-	kGuiCallbackDeclarationEnd(ButtonLabelOnMouseLeave);
-	///////////////////////
-	// Data
-	cGraphics *mpGraphics;
-
-	cGui* mpGui;
-	cGuiSet* mpGuiSet;
-
-	iFontData *mpFontMessage;
-	iFontData *mpFontButton;
-
-	cViewport *mpViewport;
-
-	cGuiGfxElement *mpBlackGfx;
-
-	cVector2f mvScreenSize;
-	cVector2f mvGuiSetSize;
-	cVector2f mvGuiSetCenterSize;
-	cVector2f mvGuiSetOffset;
-	cVector3f mvGuiSetStartPos;
-
-	float mfTextWidth;
-	float mfTextY;
-
-	float mfAvailableAtY;
-
-	float mfBuyButtonY;
-	float mfExitButtonY;
-	
-	cVector2f mvMessageFontSize;
-	cVector2f mvAvailableAtFontSize;
-	cVector2f mvButtonFontSize;
-
-	cColor mMessageFontColor;
-	cColor mAvailableAtFontColor;
-	cColor mButtonFontColor;
-
-	float mfFadeSpeed;
-
-	bool mbShowOnAllExit;
-
-	///////////////////////
-	// Vars
-	bool mbActive;
-	OhplGa7bDemoEnd mS;
-
-		
-	float mfBuyNowFade;
-	cWidgetLabel* mpLBuyNow;
-	float mfExitFade;
-	cWidgetLabel* mpLExit;
-
-	tString msBackgroundFile;
-	cGuiGfxElement* mpGfxBackground;
-
-    tWStringVec mvTextRows;
-	
-	tString msDestinationURL;
+	cOhplA10bShell mR;
 };
 
-//----------------------------------------------
-
-
-#endif // LUX_DEMO_END_H
+#endif

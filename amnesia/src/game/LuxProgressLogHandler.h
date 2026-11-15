@@ -20,39 +20,25 @@
 #ifndef LUX_PROGRESS_LOG_HANDLER_H
 #define LUX_PROGRESS_LOG_HANDLER_H
 
-//----------------------------------------------
-
-#include "LuxBase.h"
-
-//----------------------------------------
+#include "LuxA10bHost.h"
 
 class cLuxProgressLogHandler : public iLuxUpdateable
 {
-public:	
-	cLuxProgressLogHandler();
-	~cLuxProgressLogHandler();
+public:
+	cLuxProgressLogHandler() : iLuxUpdateable("LuxProgressLogHandler"), mR(this, eOhplA10bKind_Other) { mR.mH = ohpl_a10b_log_new(); }
+	~cLuxProgressLogHandler() { ohpl_a10b_log_delete(mR.mH); }
 
-	void LoadUserConfig();
-	void SaveUserConfig();
-	
-	void OnStart();
-	void Update(float afTimeStep);
-	void Reset();
+	void LoadUserConfig() { ohpl_a10b_log_load_user_config(&mR.mHost, mR.mH); }
+	void SaveUserConfig() { ohpl_a10b_log_save_user_config(&mR.mHost, mR.mH); }
+	void Update(float afTimeStep) { ohpl_a10b_log_update(mR.mH); }
+	void CreateAndResetLogFile() { ohpl_a10b_log_create(&mR.mHost, mR.mH); }
+	void AddLog(eLuxProgressLogLevel aLevel, const tString& asMessage)
+	{
+		ohpl_a10b_log_add(&mR.mHost, mR.mH, (int)aLevel, asMessage.data(), asMessage.size());
+	}
 
-	void CreateAndResetLogFile();
-
-	void AddLog(eLuxProgressLogLevel aLevel, const tString& asMessage);
-	
 private:
-
-	int mlCounter;
-	int mlFileNameCount;
-	bool mbActive;
-
-	FILE *mpFile;
+	cOhplA10bShell mR;
 };
 
-//----------------------------------------------
-
-
-#endif // LUX_PROGRESS_LOG_HANDLER_H
+#endif

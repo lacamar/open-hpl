@@ -64,7 +64,7 @@ void cLuxLoadScreenHandler_SaveData::FromLoadScreenHandler(cLuxLoadScreenHandler
 	msLoadTextEntry = apData->GetLoadTextEntry();
 	msLoadTextImage = apData->GetLoadTextImage ();
 	mlTextRandomNum = apData->GetLoadTextEntryRandomNum();
-	mlPrevTextNumBitFlags = apData->mlPrevTextNumBitFlags;
+	mlPrevTextNumBitFlags = apData->GetPrevTextNumBitFlags();
 }
 
 //-----------------------------------------------------------------------
@@ -72,7 +72,7 @@ void cLuxLoadScreenHandler_SaveData::FromLoadScreenHandler(cLuxLoadScreenHandler
 void cLuxLoadScreenHandler_SaveData::ToLoadScreenHandler(cLuxMap *apMap, cLuxLoadScreenHandler *apData)
 {
 	apData->SetupLoadText(msLoadTextCat, msLoadTextEntry, mlTextRandomNum, msLoadTextImage);
-	apData->mlPrevTextNumBitFlags = mlPrevTextNumBitFlags;
+	apData->SetPrevTextNumBitFlags(mlPrevTextNumBitFlags);
 }
 
 //-----------------------------------------------------------------------
