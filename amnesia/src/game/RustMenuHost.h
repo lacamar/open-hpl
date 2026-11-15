@@ -55,20 +55,11 @@ struct OhplA10aCb
 extern "C"
 {
 	int ohpl_a10a_set_host(size_t (*apHost)(int, OhplA10aArgs*), size_t alOptsSize);
-	uint64_t ohpl_a10a_opt_new(size_t alSet);
-	size_t ohpl_a10a_opt_create_gui(uint64_t alMe);
-	void ohpl_a10a_opt_exit_pressed(uint64_t alMe);
-	void ohpl_a10a_opt_on_set_active(uint64_t alMe, int alActive);
-	void ohpl_a10a_opt_free(uint64_t alMe);
-	uint64_t ohpl_a10a_kc_new(size_t alSet);
-	size_t ohpl_a10a_kc_create_gui(uint64_t alMe);
-	void ohpl_a10a_kc_exit_pressed(uint64_t alMe);
-	void ohpl_a10a_kc_on_set_active(uint64_t alMe, int alActive);
-	void ohpl_a10a_kc_free(uint64_t alMe);
 	int ohpl_a10a_cb(size_t alToken, size_t alWidget, const OhplA10aCb* apData);
 }
 
 void OhplA10aHostInit();
+void OhplA9RegisterHost();
 void OhplA10aDumpWindow(const char* asName, iWidget* apRoot);
 
 #endif

@@ -1,9 +1,9 @@
 //! Start game, load game, profile and custom story windows of the Amnesia main menu (A9a). Rust owns
-//! the window objects; the C++ adapter (`cOhplA9Window`) forwards the `iLuxMainMenuWindow` virtuals
-//! and widget callbacks, and every widget call goes through `host`.
+//! the window objects and the main menu (`mainmenu`) drives them; every widget call goes through
+//! `host`.
 
 #[cfg(test)]
-mod fake;
+pub(crate) mod fake;
 pub mod host;
 mod load;
 mod profwin;
@@ -26,16 +26,14 @@ pub const EXIT_START_GAME: usize = 2;
 
 pub struct Base {
     bits: Cell<u64>,
-    adapter: W,
     set: W,
     window: Cell<W>,
 }
 
 impl Base {
-    fn new(adapter: W, set: W) -> Base {
+    fn new(set: W) -> Base {
         Base {
             bits: Cell::new(0),
-            adapter,
             set,
             window: Cell::new(W::NULL),
         }
@@ -48,7 +46,6 @@ impl Base {
 
     fn set_window(&self, w: W) {
         self.window.set(w);
-        self.adapter.adapter_set_window(w);
     }
 
     fn popup_active(&self) -> bool {
@@ -129,15 +126,20 @@ fn lookup(bits: u64) -> Option<Rc<Win>> {
     REG.with(|r| r.borrow().get(h).cloned())
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a9_win_new(kind: i32, adapter: W, set: W, story_win: u64) -> u64 {
-    let base = Base::new(adapter, set);
+pub const KIND_PROFILE: i32 = 0;
+pub const KIND_LOAD: i32 = 1;
+pub const KIND_START: i32 = 2;
+pub const KIND_STORY: i32 = 3;
+pub const KIND_STORY_LIST: i32 = 4;
+
+pub fn new(kind: i32, set: W, story_win: u64) -> u64 {
+    let base = Base::new(set);
     let win = match kind {
-        0 => Win::Profile(profwin::Profile::new(base)),
-        1 => Win::Load(load::Load::new(base)),
-        2 => Win::Start(start::Start::new(base)),
-        3 => Win::Story(story::Story::new(base)),
-        4 => Win::List(story::List::new(base, story_win)),
+        KIND_PROFILE => Win::Profile(profwin::Profile::new(base)),
+        KIND_LOAD => Win::Load(load::Load::new(base)),
+        KIND_START => Win::Start(start::Start::new(base)),
+        KIND_STORY => Win::Story(story::Story::new(base)),
+        KIND_STORY_LIST => Win::List(story::List::new(base, story_win)),
         _ => return 0,
     };
     let win = Rc::new(win);
@@ -154,8 +156,7 @@ pub extern "C" fn ohpl_a9_win_new(kind: i32, adapter: W, set: W, story_win: u64)
     bits
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a9_win_free(bits: u64) {
+pub fn free(bits: u64) {
     let Some(h) = Handle::<Rc<Win>>::from_bits(bits) else {
         return;
     };
@@ -163,25 +164,27 @@ pub extern "C" fn ohpl_a9_win_free(bits: u64) {
     drop(win);
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a9_win_create_gui(bits: u64) {
+pub fn create_gui(bits: u64) {
     if let Some(w) = lookup(bits) {
         w.create_gui();
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a9_win_exit_pressed(bits: u64) {
+pub fn exit_pressed(bits: u64) {
     if let Some(w) = lookup(bits) {
         w.exit_pressed();
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a9_win_set_active(bits: u64, on: bool) {
+pub fn set_active(bits: u64, on: bool) {
     if let Some(w) = lookup(bits) {
         w.set_active(on);
     }
+}
+
+/// The window widget once `create_gui` has run, else 0.
+pub fn widget(bits: u64) -> usize {
+    lookup(bits).map_or(0, |w| w.base().window.get().addr())
 }
 
 #[unsafe(no_mangle)]

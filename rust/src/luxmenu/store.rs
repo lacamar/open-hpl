@@ -21,6 +21,7 @@ pub enum Kind {
     Options,
     KeyConfig,
     Entry,
+    Main,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

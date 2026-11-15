@@ -18,3 +18,5 @@ pub mod store;
 #[cfg(test)]
 mod tests_win;
 pub mod win;
+
+pub mod mainmenu;

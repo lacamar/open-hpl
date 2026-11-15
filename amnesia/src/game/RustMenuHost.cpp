@@ -11,6 +11,10 @@
 #include "LuxPlayerHelpers.h"
 #include "LuxPlayer.h"
 #include "LuxMainMenu.h"
+#include "LuxSaveHandler.h"
+#include "LuxLoadScreenHandler.h"
+#include "LuxAchievementHandler.h"
+#include "LuxDemoEnd.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -40,7 +44,22 @@ enum eOhplA10aOp
 	eShowCommentaryCfg = 114, eLangFiles, eListStr, eVideoModes, eVideoMode, eDisplayName, eSndDevices, eSndDevice,
 	eActions = 140, eAction, eDefaultInputs, eDefaultInput, eInitialInputs, eActionClear, eActionAdd, eActionName,
 	eGuiMouse, eAxisRange,
+	eSkinNew = 200, eSetNew, eIsChinese, eSkinFontMul, eSetActive, eVpNew, eVpActive, eVpVisible, eVpAddSet, eVpWorld,
+	eVpCamera, eCfg, eGfxRect, eGfxImage, eGfxSize, eGfxTex, eGfxDestroy, eDrawGfx, eSetVSize, eWidgetDestroy,
+	eSetDestroyAll, eWidgetName, eHasFocus, eIsEnabled, eNavGet, eFontType, eFontLen, eFontLoad, eSetDrawFocus,
+	eGetDrawFocus, eGetFocused, ePopupOpts, eProcessMouseDown, eWorldDestroy, eCameraDestroy, eWorldLoad, eCameraNew,
+	eCameraFov, eCameraAspect, eCameraPlace, eScreenSize, eTexNew, eTexDestroy, eFbNew, eFbDestroy, eProgNew,
+	eProgBind, eGfxState, eGfxOrtho, eGfxCopyScreen, eGfxSetFb, eGfxSetTex, eGfxQuad, eGfxFlush, eLabelNamed,
+	eSetGlobalPos = 256, eGuiFocus, eCenter,
+	eMapLoaded = 260, eMusic, ePauseMap, eProgLog, eInputState, eLockInput, eRelativeMouse, eFlag, eSetHard, eTinder,
+	eSave, eHasMap, eDestroyMap, eUpdater, eCustomClear, eProfile, eStartGame, eDrawMenuScreen, eZoomSound, eMapName,
+	eUnlockNope, eLogError,
 };
+
+static const cGuiMessageData* gpCbData;
+
+static cGui* Gui() { return gpBase->mpEngine->GetGui(); }
+static iLowLevelGraphics* LowGfx() { return gpBase->mpEngine->GetGraphics()->GetLowLevel(); }
 
 static tWString gOut;
 static std::vector<tWString> gLists[6];
@@ -68,7 +87,7 @@ static const eGuiMessage kMsgs[] = {
 	eGuiMessage_OnUpdate, eGuiMessage_ButtonPressed, eGuiMessage_UIButtonPress, eGuiMessage_SelectionChange,
 	eGuiMessage_CheckChange, eGuiMessage_SliderMove, eGuiMessage_MouseMove, eGuiMessage_GetUINavFocus,
 	eGuiMessage_LoseUINavFocus, eGuiMessage_MouseEnter, eGuiMessage_MouseLeave, eGuiMessage_MouseDown,
-	eGuiMessage_TextChange, eGuiMessage_KeyPress, eGuiMessage_UIArrowPress, eGuiMessage_GamepadInput,
+	eGuiMessage_TextChange, eGuiMessage_KeyPress, eGuiMessage_UIArrowPress, eGuiMessage_GamepadInput, eGuiMessage_OnDraw,
 };
 static const eUIArrow kArrows[] = { eUIArrow_Up, eUIArrow_Right, eUIArrow_Down, eUIArrow_Left };
 
@@ -88,7 +107,11 @@ static bool Trampoline(void* apToken, iWidget* apWidget, const cGuiMessageData& 
 		break;
 	default: cb.lval = aData.mlVal; break;
 	}
-	return ohpl_a10a_cb((size_t)apToken, (size_t)apWidget, &cb) != 0;
+	const cGuiMessageData* pPrev = gpCbData;
+	gpCbData = &aData;
+	bool bHandled = ohpl_a10a_cb((size_t)apToken, (size_t)apWidget, &cb) != 0;
+	gpCbData = pPrev;
+	return bHandled;
 }
 
 static void OptRead(OhplA10aOpts& o)
@@ -213,6 +236,7 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 	case eWindow: return (size_t)pSet->CreateWidgetWindow(eWidgetWindowButtonFlag_None, Pos(a), Size(a), Wide(a, 0));
 	case eButton: return (size_t)pSet->CreateWidgetButton(Pos(a), Size(a), Wide(a, 0), pParent);
 	case eLabel: return (size_t)pSet->CreateWidgetLabel(Pos(a), Size(a), Wide(a, 0), pParent);
+	case eLabelNamed: return (size_t)pSet->CreateWidgetLabel(Pos(a), 0, Wide(a, 0), NULL, Narrow(a, 1));
 	case eCheckBox: return (size_t)pSet->CreateWidgetCheckBox(Pos(a), Size(a), Wide(a, 0), pParent);
 	case eCombo: return (size_t)pSet->CreateWidgetComboBox(Pos(a), Size(a), _W(""), pParent);
 	case eSlider: return (size_t)pSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal, Pos(a), Size(a), 0, pParent);
@@ -292,9 +316,8 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 	case eSetAttention: pSet->SetAttentionWidget(pParent); return 0;
 	case eSetMouseMove: pSet->SetMouseMovementEnabled(a.i[0] != 0); return 0;
 	case eSetDrawMouse: pSet->SetDrawMouse(a.i[0] != 0); return 0;
-	case eMsgBox: pSet->CreatePopUpMessageBox(Wide(a, 0), Wide(a, 1), Wide(a, 2), Wide(a, 3), (void*)a.p[1], &Trampoline); return 0;
+	case eMsgBox: return (size_t)pSet->CreatePopUpMessageBox(Wide(a, 0), Wide(a, 1), Wide(a, 2), Wide(a, 3), (void*)a.p[1], &Trampoline);
 
-	case eSetWindowActive: gpBase->mpMainMenu->SetWindowActive((eLuxMainMenuWindow)a.i[0]); return 0;
 	case eTranslate: Out(a, kTranslate(Narrow(a, 0), Narrow(a, 1))); return 0;
 	case eOptRead: OptRead(*(OhplA10aOpts*)a.p[0]); return 0;
 	case eOptApply: OptApply(*(const OhplA10aOpts*)a.p[0], a.i[0] != 0); return 0;
@@ -378,6 +401,242 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 		return 0;
 	}
 	case eActionName: Out(a, Widen(gpBase->mpEngine->GetInput()->GetAction(a.i[0])->GetName())); return 0;
+
+	case eSkinNew: return (size_t)Gui()->CreateSkin(Narrow(a, 0));
+	case eSetNew: return (size_t)Gui()->CreateSet(Narrow(a, 0), (cGuiSkin*)a.p[0]);
+	case eIsChinese: return gpBase->msCurrentLanguage == "chinese.lang";
+	case eSkinFontMul:
+		{
+			cGuiSkin* pSkin = (cGuiSkin*)a.p[0];
+			pSkin->GetFont(eGuiSkinFont_Default)->mvSize *= a.f[0];
+			pSkin->GetFont(eGuiSkinFont_Disabled)->mvSize *= a.f[0];
+			return 0;
+		}
+	case eSetActive: pSet->SetActive(a.i[0] != 0); return 0;
+	case eVpNew: return (size_t)gpBase->mpEngine->GetScene()->CreateViewport();
+	case eVpActive: ((cViewport*)a.p[0])->SetActive(a.i[0] != 0); return 0;
+	case eVpVisible: ((cViewport*)a.p[0])->SetVisible(a.i[0] != 0); return 0;
+	case eVpAddSet: ((cViewport*)a.p[0])->AddGuiSet((cGuiSet*)a.p[1]); return 0;
+	case eVpWorld: ((cViewport*)a.p[0])->SetWorld((cWorld*)a.p[1]); return 0;
+	case eVpCamera: ((cViewport*)a.p[0])->SetCamera((cCamera*)a.p[1]); return 0;
+	case eCfg:
+		{
+			cConfigFile* pCfg = gpBase->mpMenuCfg;
+			switch(a.i[0])
+			{
+			case 0: a.f[0] = pCfg->GetFloat(Narrow(a, 0), Narrow(a, 1), a.f[0]); break;
+			case 1: { cVector2f v = pCfg->GetVector2f(Narrow(a, 0), Narrow(a, 1), 0); a.f[0] = v.x; a.f[1] = v.y; break; }
+			default: Out(a, Widen(pCfg->GetString(Narrow(a, 0), Narrow(a, 1), Narrow(a, 2)))); break;
+			}
+			return 0;
+		}
+	case eGfxRect: return (size_t)Gui()->CreateGfxFilledRect(col, eGuiMaterial_Alpha);
+	case eGfxImage: return (size_t)Gui()->CreateGfxImage(Narrow(a, 0), eGuiMaterial_Alpha);
+	case eGfxSize: { cVector2f v = ((cGuiGfxElement*)a.p[0])->GetActiveSize(); a.f[0] = v.x; a.f[1] = v.y; return 0; }
+	case eGfxTex: return (size_t)Gui()->CreateGfxTexture((iTexture*)a.p[0], false, a.i[0] ? eGuiMaterial_Alpha : eGuiMaterial_Diffuse);
+	case eGfxDestroy: Gui()->DestroyGfx((cGuiGfxElement*)a.p[0]); return 0;
+	case eDrawGfx:
+		if(a.i[0]) pSet->DrawGfx((cGuiGfxElement*)a.p[1], Pos(a), Size(a), cColor(1, a.f[5]));
+		else pSet->DrawGfx((cGuiGfxElement*)a.p[1], Pos(a), Size(a));
+		return 0;
+	case eSetVSize: { cVector2f v = pSet->GetVirtualSize(); a.f[0] = v.x; a.f[1] = v.y; return 0; }
+	case eWidgetDestroy: pSet->DestroyWidget(pParent); return 0;
+	case eSetDestroyAll: pSet->DestroyAllWidgets(); return 0;
+	case eWidgetName: Out(a, Widen(pW->GetName())); return 0;
+	case eHasFocus: return pW->HasFocus();
+	case eIsEnabled: return pW->IsEnabled();
+	case eNavGet: return (size_t)pW->GetFocusNavigation(kArrows[a.i[0] & 3]);
+	case eFontType: pW->SetDefaultFontType((iFontData*)a.p[1]); return 0;
+	case eFontLen:
+		{
+			float fLength = pW->GetDefaultFontType()->GetLength(cVector2f(a.f[0], a.f[1]), Wide(a, 0).c_str());
+			a.f[0] = fLength;
+			return 0;
+		}
+	case eFontLoad: return (size_t)gpBase->mpMainMenu->LoadFont(Narrow(a, 0));
+	case eSetDrawFocus: pSet->SetDrawFocus(a.i[0] != 0); return 0;
+	case eGetDrawFocus: return pSet->GetDrawFocus();
+	case eGetFocused: return (size_t)pSet->GetFocusedWidget();
+	case ePopupOpts:
+		{
+			cGuiPopUpMessageBox* pPopUp = (cGuiPopUpMessageBox*)a.p[0];
+			pPopUp->GetGuiSet()->SetDrawFocus(((cGuiSet*)a.p[1])->GetDrawFocus());
+			pPopUp->SetKillOnEscapeKey(false);
+			return 0;
+		}
+	case eProcessMouseDown: return pW->ProcessMessage(eGuiMessage_MouseDown, gpCbData ? *gpCbData : cGuiMessageData());
+	case eWorldDestroy: gpBase->mpEngine->GetScene()->DestroyWorld((cWorld*)a.p[0]); return 0;
+	case eCameraDestroy: gpBase->mpEngine->GetScene()->DestroyCamera((cCamera*)a.p[0]); return 0;
+	case eWorldLoad: return (size_t)gpBase->mpEngine->GetScene()->LoadWorld(Narrow(a, 0), 0);
+	case eCameraNew:
+		{
+			cCamera* pCamera = gpBase->mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
+			pCamera->SetRotateMode(eCameraRotateMode_Matrix);
+			return (size_t)pCamera;
+		}
+	case eCameraFov: ((cCamera*)a.p[0])->SetFOV(a.f[0]); return 0;
+	case eCameraAspect: ((cCamera*)a.p[0])->SetAspect(a.f[0]); return 0;
+	case eCameraPlace:
+		{
+			cCamera* pCamera = (cCamera*)a.p[0];
+			cWorld* pWorld = (cWorld*)a.p[1];
+			cMatrixf mtxCam = cMatrixf::Identity;
+			bool bFound = true;
+			if(pWorld)
+			{
+				cStartPosEntity* pStartPos = pWorld->GetStartPosEntity(Narrow(a, 0));
+				if(pStartPos) mtxCam = pStartPos->GetWorldMatrix();
+				else bFound = false;
+			}
+			pCamera->SetRotationMatrix(cMath::MatrixInverse(mtxCam.GetRotation()));
+			pCamera->SetPosition(mtxCam.GetTranslation());
+			return bFound;
+		}
+	case eScreenSize:
+		{
+			iLowLevelGraphics* pLow = LowGfx();
+			cVector2f vF = pLow->GetScreenSizeFloat();
+			cVector3l vI = pLow->GetScreenSizeInt();
+			a.f[0] = vF.x; a.f[1] = vF.y; a.i[0] = vI.x; a.i[1] = vI.y;
+			return 0;
+		}
+	case eTexNew:
+		{
+			iTexture* pTex = gpBase->mpEngine->GetGraphics()->CreateTexture(Narrow(a, 0), eTextureType_Rect, eTextureUsage_RenderTarget);
+			pTex->CreateFromRawData(cVector3l(a.i[0], a.i[1], 0), ePixelFormat_RGBA, NULL);
+			if(a.i[2]) pTex->SetWrapSTR(eTextureWrap_ClampToEdge);
+			return (size_t)pTex;
+		}
+	case eTexDestroy: gpBase->mpEngine->GetGraphics()->DestroyTexture((iTexture*)a.p[0]); return 0;
+	case eFbNew:
+		{
+			iFrameBuffer* pBuffer = gpBase->mpEngine->GetGraphics()->CreateFrameBuffer(Narrow(a, 0));
+			pBuffer->SetTexture2D(0, (iTexture*)a.p[0]);
+			pBuffer->CompileAndValidate();
+			return (size_t)pBuffer;
+		}
+	case eFbDestroy: gpBase->mpEngine->GetGraphics()->DestroyFrameBuffer((iFrameBuffer*)a.p[0]); return 0;
+	case eProgNew:
+		{
+			cParserVarContainer programVars;
+			if(a.i[0]) programVars.Add("BlurHorisontal");
+			return (size_t)gpBase->mpEngine->GetGraphics()->CreateGpuProgramFromShaders(Narrow(a, 0), Narrow(a, 1), Narrow(a, 2), &programVars);
+		}
+	case eProgBind:
+		if(a.i[0]) ((iGpuProgram*)a.p[0])->Bind();
+		else ((iGpuProgram*)a.p[0])->UnBind();
+		return 0;
+	case eGfxState:
+		switch(a.i[0])
+		{
+		case 0: LowGfx()->SetBlendActive(a.i[1] != 0); break;
+		case 1: LowGfx()->SetDepthTestActive(a.i[1] != 0); break;
+		case 2: LowGfx()->SetDepthWriteActive(a.i[1] != 0); break;
+		}
+		return 0;
+	case eGfxOrtho:
+		LowGfx()->SetOrthoProjection(cVector2f(a.f[0], a.f[1]), -1000, 1000);
+		LowGfx()->SetIdentityMatrix(eMatrix_ModelView);
+		return 0;
+	case eGfxCopyScreen: LowGfx()->CopyFrameBufferToTexure((iTexture*)a.p[0], 0, LowGfx()->GetScreenSizeInt(), 0); return 0;
+	case eGfxSetFb: LowGfx()->SetCurrentFrameBuffer((iFrameBuffer*)a.p[0]); return 0;
+	case eGfxSetTex: LowGfx()->SetTexture(0, (iTexture*)a.p[0]); return 0;
+	case eGfxQuad:
+		{
+			cVector2f vSize(a.f[0], a.f[1]);
+			LowGfx()->DrawQuad(0, vSize, cVector2f(0, vSize.y), cVector2f(vSize.x, 0), cColor(1, 1));
+			return 0;
+		}
+	case eGfxFlush: LowGfx()->FlushRendering(); LowGfx()->WaitAndFinishRendering(); return 0;
+	case eSetGlobalPos: pW->SetGlobalPosition(Pos(a)); return 0;
+	case eGuiFocus: Gui()->SetFocus((cGuiSet*)a.p[0]); return 0;
+	case eCenter: pW->CenterGlobalPositionInSet(); return 0;
+
+	case eMapLoaded: return gpBase->mpMapHandler->MapIsLoaded();
+	case eMusic:
+		{
+			cMusicHandler* pMusic = gpBase->mpEngine->GetSound()->GetMusicHandler();
+			switch(a.i[0])
+			{
+			case 0: pMusic->Play(Narrow(a, 0), 1.0f, 0.35f, true, false); break;
+			case 1: pMusic->Stop(0.33f); break;
+			case 2: pMusic->Pause(); break;
+			case 3: pMusic->Resume(); break;
+			}
+			return 0;
+		}
+	case ePauseMap: gpBase->mpMapHandler->PauseSoundsAndMusic(); return 0;
+	case eProgLog: ProgLog(eLuxProgressLogLevel_Low, Narrow(a, 0)); return 0;
+	case eInputState:
+		{
+			static const eLuxInputState vStates[3] = { eLuxInputState_Null, eLuxInputState_Game, eLuxInputState_MainMenu };
+			gpBase->mpInputHandler->ChangeState(vStates[a.i[0]]);
+			return 0;
+		}
+	case eLockInput: gpBase->mpEngine->GetInput()->GetLowLevel()->LockInput(a.i[0] != 0); return 0;
+	case eRelativeMouse: gpBase->mpEngine->GetInput()->GetLowLevel()->RelativeMouse(a.i[0] != 0); return 0;
+	case eFlag:
+		switch(a.i[0])
+		{
+		case 0: return gpBase->mpConfigHandler->mbFullscreen;
+		case 1: return gpBase->mpDebugHandler->GetDebugWindowActive();
+		case 2: return gpBase->mpInputHandler->IsGamepadPresent();
+		case 3: return gpBase->mpUserConfig == NULL;
+		case 4: return gpBase->mbAllowHardmode;
+		case 5: return gpBase->mpCustomStory == 0;
+		case 6: return gpBase->mbPTestActivated;
+		case 7: return gpBase->mpSaveHandler->SaveFileExists();
+		case 8: return gpBase->mbExitMenuDirectly;
+		case 9: return gpBase->mpPlayer->IsDead();
+		case 10: return gpBase->mbHardMode;
+		case 11: return gpBase->mpDemoEnd && gpBase->mpDemoEnd->ShowOnAllExit();
+#ifdef USE_GAMEPAD
+		case 12: return 1;
+#endif
+#ifdef LUX_DEMO_VERSION
+		case 13: return 1;
+#endif
+		}
+		return 0;
+	case eSetHard: gpBase->mbHardMode = a.i[0] != 0; return 0;
+	case eTinder:
+		if(a.i[0] == 0) return (size_t)(unsigned)gpBase->mpPlayer->GetTinderboxes();
+		gpBase->mpPlayer->SetTinderboxes(a.i[1]);
+		return 0;
+	case eSave:
+		switch(a.i[0])
+		{
+		case 0: gpBase->mpSaveHandler->AutoSave(); break;
+		case 1: gpBase->mpSaveHandler->AutoLoad(true); break;
+		case 2: gpBase->mpSaveHandler->HardModeSave(); break;
+		}
+		return 0;
+	case eHasMap: return gpBase->mpMapHandler->GetCurrentMap() != NULL;
+	case eDestroyMap: gpBase->mpMapHandler->DestroyMap(gpBase->mpMapHandler->GetCurrentMap(), false); return 0;
+	case eUpdater:
+		switch(a.i[0])
+		{
+		case 0: gpBase->mpEngine->GetUpdater()->BroadcastMessageToAll(eUpdateableMessage_Reset); break;
+		case 1: gpBase->mpEngine->GetUpdater()->SetContainer("Default"); break;
+		case 2: gpBase->mpEngine->GetUpdater()->SetContainer("DemoEnd"); break;
+		case 3: gpBase->mpEngine->Exit(); break;
+		}
+		return 0;
+	case eCustomClear: gpBase->SetCustomStory(NULL); return 0;
+	case eProfile:
+		switch(a.i[0])
+		{
+		case 0: gpBase->CreateProfile(gpBase->msDefaultProfileName); break;
+		case 1: gpBase->SetProfile(gpBase->msDefaultProfileName); break;
+		case 2: gpBase->InitUserConfig(); break;
+		}
+		return 0;
+	case eStartGame: gpBase->StartGame("", "", ""); return 0;
+	case eDrawMenuScreen: gpBase->mpLoadScreenHandler->DrawMenuScreen(); return 0;
+	case eZoomSound: gpBase->mpEngine->GetSound()->GetSoundHandler()->PlayGui(Narrow(a, 0), false, 1.0f); return 0;
+	case eMapName: Out(a, gpBase->mpMapHandler->GetCurrentMap() ? Widen(gpBase->mpMapHandler->GetCurrentMap()->GetName()) : tWString()); return 0;
+	case eUnlockNope: gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_NOPE); return 0;
+	case eLogError: Error("%s", Narrow(a, 0).c_str()); return 0;
 	case eGuiMouse: return (size_t)(unsigned)gpBase->mpEngine->GetGui()->TranslateGuiMouseToMouse((eGuiMouseButton)a.i[0]);
 	case eAxisRange: return (size_t)(unsigned)iGamepad::GetAxisRangeFromValue(a.f[0]);
 	}

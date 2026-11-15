@@ -33,7 +33,6 @@ pub struct State {
     pub default_focus: usize,
     pub attention: usize,
     pub draw_focus: bool,
-    pub adapter_window: usize,
     pub files: Vec<WStr>,
     pub folders: Vec<WStr>,
     pub dates: HashMap<WStr, [i32; 8]>,
@@ -264,10 +263,6 @@ pub(super) unsafe fn ohpl_a9h_image_file(w: W, t: *const u32, n: usize) {
             x.image = slice(t, n).to_vec();
         }
     })
-}
-
-pub(super) unsafe fn ohpl_a9h_adapter_window(_a: W, w: W) {
-    with(|s| s.adapter_window = wid(w));
 }
 
 pub(super) unsafe fn ohpl_a9h_lux(op: i32, arg: usize) -> usize {

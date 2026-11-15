@@ -7,7 +7,6 @@ use super::*;
 
 const GOLDEN: &str = include_str!("../../../tests/golden/A9/created.txt");
 
-const ADAPTER: usize = 0xA0;
 const SET: usize = 0x5E7;
 
 #[derive(Debug, Clone)]
@@ -130,7 +129,7 @@ fn seed_config(all: &[G]) {
 }
 
 fn new_window(kind: i32, story: u64) -> u64 {
-    ohpl_a9_win_new(kind, W::from_addr(ADAPTER), W::from_addr(SET), story)
+    new(kind, W::from_addr(SET), story)
 }
 
 fn raw(w: &Widget) -> String {
@@ -144,7 +143,7 @@ fn replay(kind: i32, titles: &[&str]) {
     let want: Vec<G> = titles.iter().flat_map(|t| group(&all, t)).collect();
     let title = titles;
     let bits = new_window(kind, 0);
-    ohpl_a9_win_create_gui(bits);
+    create_gui(bits);
     let made = widgets();
     let mut used = vec![false; want.len()];
     let mut pair = Vec::new();
@@ -217,7 +216,7 @@ fn lux_log() -> Vec<String> {
 fn start_flow() {
     fake::reset();
     let bits = new_window(2, 0);
-    ohpl_a9_win_create_gui(bits);
+    create_gui(bits);
     assert!(press_text("HardMode"));
     assert_eq!(with(|s| s.lux.get(&0).copied()), Some(1));
     let w = widgets();
@@ -254,7 +253,7 @@ fn start_flow() {
 #[test]
 fn ui_press_routes_buttons() {
     fake::reset();
-    ohpl_a9_win_create_gui(new_window(2, 0));
+    create_gui(new_window(2, 0));
     let w = widgets();
     let start = w
         .iter()
@@ -285,8 +284,8 @@ fn load_flow() {
         }
     });
     let bits = new_window(1, 0);
-    ohpl_a9_win_create_gui(bits);
-    ohpl_a9_win_set_active(bits, true);
+    create_gui(bits);
+    set_active(bits, true);
     let list = widgets().into_iter().find(|x| x.kind == 3).expect("list");
     let names: Vec<String> = list
         .items
@@ -355,14 +354,14 @@ fn profile_flow() {
         s.lux_path.insert(lux_path::BASE_CONFIG, ws("/c/"));
     });
     let bits = new_window(0, 0);
-    ohpl_a9_win_create_gui(bits);
+    create_gui(bits);
     let list_at = |w: &[Widget]| w.iter().position(|x| x.kind == 3).expect("list");
     let w = widgets();
     let names = |w: &Widget| w.items.iter().map(|i| i.0.clone()).collect::<Vec<_>>();
     assert_eq!(names(&w[list_at(&w)]), [ws("zeta"), ws("alpha")]);
     assert_eq!(w[list_at(&w)].selected, 0);
 
-    ohpl_a9_win_set_active(bits, true);
+    set_active(bits, true);
     assert!(widgets()[list_at(&w)].locked);
 
     assert!(press_text("Create"));
@@ -426,7 +425,7 @@ fn profile_close_asks_when_no_user_config() {
     fake::reset();
     seed_config(&golden());
     let bits = new_window(0, 0);
-    ohpl_a9_win_create_gui(bits);
+    create_gui(bits);
     let w = widgets();
     let win = w.iter().position(|x| x.kind == 0).expect("window");
     let obj = tok_of(&w[win], msg::WINDOW_CLOSE).expect("close cb");
@@ -467,9 +466,9 @@ fn story_flow() {
     });
     let story = new_window(3, 0);
     let list = new_window(4, story);
-    ohpl_a9_win_create_gui(story);
-    ohpl_a9_win_create_gui(list);
-    ohpl_a9_win_set_active(list, true);
+    create_gui(story);
+    create_gui(list);
+    set_active(list, true);
     let w = widgets();
     let at = w.iter().position(|x| x.kind == 3).expect("list");
     assert_eq!(w[at].items.len(), 2);
@@ -525,7 +524,7 @@ fn story_flow() {
     assert!(press_text("Cancel"));
     let tail: Vec<String> = with(|s| s.log[before..].to_vec());
     assert_eq!(tail, ["lux 3 0", "lux 14 4"]);
-    ohpl_a9_win_set_active(list, false);
+    set_active(list, false);
     assert_eq!(
         with(|s| s.log.iter().filter(|l| *l == "story_free").count()),
         2
@@ -536,8 +535,8 @@ fn story_flow() {
 fn stale_handles_resolve_to_nothing() {
     fake::reset();
     let bits = new_window(2, 0);
-    ohpl_a9_win_free(bits);
-    ohpl_a9_win_create_gui(bits);
+    free(bits);
+    create_gui(bits);
     assert!(widgets().is_empty());
     assert_eq!(new_window(9, 0), 0);
     assert!(!ohpl_a9_cb(0, W::NULL, 0));

@@ -1,5 +1,5 @@
 //! Safe wrappers over the C++ host ops of `amnesia/src/game/LuxMenuHost.cpp`. A `W` is an opaque
-//! pointer to a C++ widget, GUI set, popup, window adapter or story; the host ignores null and the
+//! pointer to a C++ widget, GUI set, popup, or story; the host ignores null and the
 //! windows rebuild every widget in `create_gui`, as the C++ windows did.
 
 use std::ffi::c_void;
@@ -104,7 +104,6 @@ mod ffi {
         ohpl_a9h_w_nav(w: W, dir: i32, target: W);
         ohpl_a9h_text_width(w: W, t: *const u32, n: usize) -> f32;
         ohpl_a9h_image_file(w: W, t: *const u32, n: usize);
-        ohpl_a9h_adapter_window(adapter: W, w: W);
         ohpl_a9h_lux(op: i32, arg: usize) -> usize;
         ohpl_a9h_lux_str(op: i32, sink: Sink, ctx: *mut c_void);
         ohpl_a9h_lux_with(op: i32, t: *const u32, n: usize) -> usize;
@@ -564,10 +563,6 @@ impl W {
     pub fn set_image_file(self, file: &[u32]) {
         host!(ffi::ohpl_a9h_image_file(self, file.as_ptr(), file.len()));
     }
-
-    pub fn adapter_set_window(self, w: W) {
-        host!(ffi::ohpl_a9h_adapter_window(self, w));
-    }
 }
 
 pub mod lux_op {
@@ -593,7 +588,22 @@ pub mod lux_op {
 }
 
 pub fn lux(op: i32, arg: usize) -> usize {
-    host!(ffi::ohpl_a9h_lux(op, arg))
+    #[cfg(not(test))]
+    {
+        use crate::luxmenu::mainmenu as mm;
+        match op {
+            lux_op::MENU_SET_WINDOW => mm::set_window(arg),
+            lux_op::MENU_EXIT => mm::exit_menu(arg),
+            lux_op::MENU_TOP_ALPHA => mm::set_top_alpha(arg),
+            lux_op::MENU_RECREATE => mm::recreate_gui(),
+            _ => return host!(ffi::ohpl_a9h_lux(op, arg)),
+        }
+        0
+    }
+    #[cfg(test)]
+    {
+        host!(ffi::ohpl_a9h_lux(op, arg))
+    }
 }
 
 pub mod lux_path {

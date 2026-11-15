@@ -19,15 +19,6 @@ struct OhplA9Str
 
 static_assert(sizeof(OhplA9Str) == 2 * sizeof(size_t), "OhplA9Str layout");
 
-enum eOhplA9Win
-{
-	eOhplA9Win_Profile,
-	eOhplA9Win_LoadGame,
-	eOhplA9Win_StartGame,
-	eOhplA9Win_CustomStory,
-	eOhplA9Win_CustomStoryList,
-};
-
 // Host ops handed to Rust once (same order as rust/src/luxmenu/win/host.rs `table!`).
 struct OhplA9Host
 {
@@ -43,7 +34,6 @@ struct OhplA9Host
 	void (*ohpl_a9h_w_nav)(OhplA9W apWidget, int alDir, OhplA9W apTarget);
 	float (*ohpl_a9h_text_width)(OhplA9W apWidget, const uint32_t *apText, size_t alLen);
 	void (*ohpl_a9h_image_file)(OhplA9W apWidget, const uint32_t *apText, size_t alLen);
-	void (*ohpl_a9h_adapter_window)(OhplA9W apAdapter, OhplA9W apWidget);
 	size_t (*ohpl_a9h_lux)(int alOp, size_t alArg);
 	void (*ohpl_a9h_lux_str)(int alOp, OhplA9Sink apSink, void *apCtx);
 	size_t (*ohpl_a9h_lux_with)(int alOp, const uint32_t *apText, size_t alLen);
@@ -62,11 +52,6 @@ struct OhplA9Host
 extern "C"
 {
 	// C++ -> Rust
-	uint64_t ohpl_a9_win_new(int alKind, OhplA9W apAdapter, OhplA9W apSet, uint64_t alStoryWin);
-	void ohpl_a9_win_free(uint64_t alWin);
-	void ohpl_a9_win_create_gui(uint64_t alWin);
-	void ohpl_a9_win_exit_pressed(uint64_t alWin);
-	void ohpl_a9_win_set_active(uint64_t alWin, bool abActive);
 	bool ohpl_a9_cb(size_t alObj, OhplA9W apWidget, int alVal);
 	void ohpl_a9_set_host(const OhplA9Host *apHost);
 }
