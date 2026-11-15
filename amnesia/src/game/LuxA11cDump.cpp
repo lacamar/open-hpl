@@ -133,7 +133,7 @@ void OhplA11cTick()
 			Snap(f, "restored");
 		}
 		break;
-	case 300:
+	case 28: case 98: case 158: case 188: case 228: case 300:
 		if(gpBase->mpEngine->GetUpdater()->GetCurrentContainerName() != "Journal") gpBase->mpEngine->GetUpdater()->SetContainer("Journal");
 		break;
 	case 8:
@@ -151,8 +151,8 @@ void OhplA11cTick()
 		case 68: Primary(); break;
 		case 72: Secondary(); break;
 		case 76: Secondary(); break;
-		case 80: Secondary(); break;
-		case 84: Secondary(); break;
+		case 80: pJ->ExitPressed(false); break;
+		case 84: pJ->ExitPressed(false); break;
 		case 100: Arrow(eUIArrow_Down); break;
 		case 104: Primary(); break;
 		case 112: Arrow(eUIArrow_Down); break;
@@ -160,9 +160,8 @@ void OhplA11cTick()
 		case 130: Primary(); break;
 		case 134: Secondary(); break;
 		case 138: Secondary(); break;
-		case 142: Secondary(); break;
-		case 150: pJ->ExitPressed(false); break;
-		case 154: pJ->ExitPressed(false); break;
+		case 142: pJ->ExitPressed(false); break;
+		case 146: pJ->ExitPressed(false); break;
 		case 160: Arrow(eUIArrow_Down); break;
 		case 164: Arrow(eUIArrow_Down); break;
 		case 168: Primary(); break;
