@@ -20,7 +20,7 @@
 #include "scene/LightSpot.h"
 #include "scene/RustLight.h"
 
-#include "impl/tinyXML/tinyxml.h"
+#include "resources/XmlDocument.h"
 #include "math/Math.h"
 #include "math/Frustum.h"
 #include "resources/TextureManager.h"
@@ -226,12 +226,12 @@ namespace hpl {
 		return eTextureAnimMode_None;
 	}
 
-	void cLightSpot::ExtraXMLProperties(TiXmlElement *apMainElem)
+	void cLightSpot::ExtraXMLProperties(cXmlElement *apMainElem)
 	{
-		tString sTexture = cString::ToString(apMainElem->Attribute("ProjectionImage"),"");
+		tString sTexture = cString::ToString(apMainElem->GetAttribute("ProjectionImage"),"");
 
-		eTextureAnimMode animMode = GetAnimMode(cString::ToString(apMainElem->Attribute("ProjectionAnimMode"),"None"));
-		float fFrameTime = cString::ToFloat(apMainElem->Attribute("ProjectionFrameTime"),1.0f);
+		eTextureAnimMode animMode = GetAnimMode(cString::ToString(apMainElem->GetAttribute("ProjectionAnimMode"),"None"));
+		float fFrameTime = cString::ToFloat(apMainElem->GetAttribute("ProjectionFrameTime"),1.0f);
 		iTexture *pTex = NULL;
 
         if(animMode != eTextureAnimMode_None)
@@ -251,9 +251,9 @@ namespace hpl {
 			SetGoboTexture(pTex);
 		}
 
-		mfAspect = cString::ToFloat(apMainElem->Attribute("Aspect"),mfAspect);
+		mfAspect = cString::ToFloat(apMainElem->GetAttribute("Aspect"),mfAspect);
 
-		mfNearClipPlane = cString::ToFloat(apMainElem->Attribute("NearClipPlane"),mfNearClipPlane);
+		mfNearClipPlane = cString::ToFloat(apMainElem->GetAttribute("NearClipPlane"),mfNearClipPlane);
 	}
 
 	//-----------------------------------------------------------------------

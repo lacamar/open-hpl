@@ -17,7 +17,8 @@
 #include <sys/stat.h>
 #include <vector>
 
-#include "impl/tinyXML/tinyxml.h"
+#include "impl/XmlDocumentTiny.h"
+#include "system/String.h"
 #include "math/Math.h"
 #include "resources/XmlDocument.h"
 #include "scene/ParticleEmitter_UserData.h"
@@ -212,15 +213,15 @@ int hplMain(const hpl::tString&)
 
 	for(const std::string &path : files)
 	{
-		TiXmlDocument doc;
-		if(!doc.LoadFile(path.c_str())) { ++lFilesBad; continue; }
-		TiXmlElement *root = doc.RootElement();
-		if(!root || std::string(root->Value()) != "ParticleSystem") { ++lFilesBad; continue; }
-		for(TiXmlElement *e = root->FirstChildElement(); e; e = e->NextSiblingElement())
+		cXmlDocumentTiny doc("");
+		if(!doc.CreateFromFile(cString::To16Char(path))) { ++lFilesBad; continue; }
+		if(doc.GetValue() != "ParticleSystem") { ++lFilesBad; continue; }
+		for(cXmlNodeListIterator it = doc.GetChildIterator(); it.HasNext();)
 		{
-			if(std::string(e->Value()) != "ParticleEmitter") continue;
+			cXmlElement *e = it.Next()->ToElement();
+			if(e->GetValue() != "ParticleEmitter") continue;
 			cXmlElement el("ParticleEmitter", NULL);
-			for(TiXmlAttribute *a = e->FirstAttribute(); a; a = a->Next()) el.SetAttribute(a->Name(), a->Value());
+			for(auto &a : *e->GetAttributeMap()) el.SetAttribute(a.first, a.second.c_str());
 			emit(path.c_str(), el, false, false);
 		}
 	}

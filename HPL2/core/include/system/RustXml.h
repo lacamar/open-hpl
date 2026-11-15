@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -58,7 +59,7 @@ struct OhplXmlDocPtr
 	~OhplXmlDocPtr() { ohpl_xml_doc_free(p); }
 };
 
-// TiXmlDocument::LoadFile(FILE*): the whole file, size taken from the file position
+// whole-file load: the whole file, size taken from the file position
 inline bool OhplXmlLoadFile(OhplXmlDoc* doc, FILE* file)
 {
 	fseek(file, 0, SEEK_END);
@@ -69,6 +70,16 @@ inline bool OhplXmlLoadFile(OhplXmlDoc* doc, FILE* file)
 	std::vector<char> buf(length);
 	bool ok = fread(buf.data(), length, 1, file) == 1;
 	return ohpl_xml_doc_load(doc, buf.data(), length, ok);
+}
+
+inline unsigned OhplXmlAddElement(OhplXmlDoc* doc, unsigned parent, const std::string& name)
+{
+	return ohpl_xml_doc_add_element(doc, parent, name.c_str(), name.size());
+}
+
+inline void OhplXmlSetAttr(OhplXmlDoc* doc, unsigned id, const char* name, const std::string& val)
+{
+	ohpl_xml_doc_set_attr(doc, id, name, strlen(name), val.c_str(), val.size());
 }
 
 inline void OhplXmlDumpBytes(const char* tag, const char* data, size_t n)

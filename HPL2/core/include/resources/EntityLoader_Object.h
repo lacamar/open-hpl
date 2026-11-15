@@ -26,7 +26,6 @@
 
 #include "resources/Resources.h"
 
-class TiXmlElement;
 
 namespace hpl {
 
@@ -96,7 +95,6 @@ namespace hpl {
 		cBillboard* GetBillboardFromID(int alID);
 		iLight* GetLightFromName(const tString& asName);
 
-		void LoadController(iPhysicsJoint *apJoint,iPhysicsWorld *apPhysicsWorld, TiXmlElement *apElem);
 
 		eAnimationEventType GetAnimationEventType(const char* apString);
 

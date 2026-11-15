@@ -27,7 +27,6 @@
 #include "scene/RustLight.h"
 #include "scene/RustSceneH11.h"
 
-class TiXmlElement;
 
 namespace hpl {
 	
@@ -43,6 +42,7 @@ namespace hpl {
 	class cResources;
 	class cFileSearcher;
 	class cBillboard;
+	class cXmlElement;
 	class cParticleSystem;
 	class cSectorVisibilityContainer;
 	class cWorld;
@@ -257,7 +257,7 @@ namespace hpl {
 		void OnSetDiffuse();
 		OhplLightLive LiveState() const;
 
-        virtual void ExtraXMLProperties(TiXmlElement *apMainElem){}
+        virtual void ExtraXMLProperties(cXmlElement *apMainElem){}
 		virtual void UpdateBoundingVolume()=0;
 		
 		eLightType mLightType;

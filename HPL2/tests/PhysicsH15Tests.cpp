@@ -21,7 +21,7 @@
 #include "physics/PhysicsJoint.h"
 #include "physics/RustPhysics.h"
 #include "system/String.h"
-#include "impl/tinyXML/tinyxml.h"
+#include "impl/XmlDocumentTiny.h"
 
 using namespace hpl;
 
@@ -83,46 +83,54 @@ ePhysicsMaterialCombMode LegacyCombMode(const char* apName)
 	return ePhysicsMaterialCombMode_Average;
 }
 
+static std::vector<cXmlElement*> Kids(cXmlElement* apParent, const char* asName)
+{
+	std::vector<cXmlElement*> v;
+	for (cXmlNodeListIterator it = apParent->GetChildIterator(); it.HasNext();)
+	{
+		cXmlElement* e = it.Next()->ToElement();
+		if (e->GetValue() == asName) v.push_back(e);
+	}
+	return v;
+}
+
 // Pre-Rust cPhysics::LoadSurfaceData (git a32587b^) without the haptic branch.
 bool LegacyLoad(cPhysics& phys, const tString& asFile)
 {
-	TiXmlDocument* pXmlDoc = new TiXmlDocument(asFile.c_str());
-	if (pXmlDoc->LoadFile() == false) { delete pXmlDoc; return false; }
-	TiXmlElement* pRootElem = pXmlDoc->RootElement();
-	if (pRootElem == NULL) { delete pXmlDoc; return true; }
-	TiXmlElement* pChildElem = pRootElem->FirstChildElement("Material");
-	for (; pChildElem != NULL; pChildElem = pChildElem->NextSiblingElement("Material"))
+	cXmlDocumentTiny xmlDoc("");
+	if (xmlDoc.CreateFromFile(cString::To16Char(asFile)) == false) return false;
+	for (cXmlElement* pChildElem : Kids(&xmlDoc, "Material"))
 	{
-		tString sName = cString::ToString(pChildElem->Attribute("Name"), "");
+		tString sName = cString::ToString(pChildElem->GetAttribute("Name"), "");
 		if (sName == "") continue;
 		cSurfaceData* pData = phys.CreateSurfaceData(sName);
-		pData->SetElasticity(cString::ToFloat(pChildElem->Attribute("Elasticity"), 0.5f));
-		pData->SetKineticFriction(cString::ToFloat(pChildElem->Attribute("KineticFriction"), 0.3f));
-		pData->SetStaticFriction(cString::ToFloat(pChildElem->Attribute("StaticFriction"), 0.3f));
-		pData->SetPriority(cString::ToInt(pChildElem->Attribute("Priority"), 0));
-		pData->SetUserVar(cString::ToString(pChildElem->Attribute("UserVar"), ""));
-		pData->SetElasticityCombMode(LegacyCombMode(pChildElem->Attribute("ElasticityMode")));
-		pData->SetFrictionCombMode(LegacyCombMode(pChildElem->Attribute("FrictionMode")));
-		pData->GetStepType(cString::ToString(pChildElem->Attribute("StepType"), ""));
-		pData->SetMinScrapeSpeed(cString::ToFloat(pChildElem->Attribute("MinScrapeSpeed"), 0.7f));
-		pData->SetMinScrapeFreq(cString::ToFloat(pChildElem->Attribute("MinScrapeFreq"), 0.7f));
-		pData->SetMinScrapeFreqSpeed(cString::ToFloat(pChildElem->Attribute("MinScrapeFreqSpeed"), 0.7f));
-		pData->SetMiddleScrapeSpeed(cString::ToFloat(pChildElem->Attribute("MiddleScrapeSpeed"), 1.2f));
-		pData->SetMaxScrapeFreqSpeed(cString::ToFloat(pChildElem->Attribute("MaxScrapeFreqSpeed"), 3));
-		pData->SetMaxScrapeFreq(cString::ToFloat(pChildElem->Attribute("MaxScrapeFreq"), 2));
-		pData->SetMinScrapeContacts(cString::ToInt(pChildElem->Attribute("MinScrapeContacts"), 4));
-		pData->SetScrapeSoundName(cString::ToString(pChildElem->Attribute("ScrapeSoundName"), ""));
-		pData->SetMinRollSpeed(cString::ToFloat(pChildElem->Attribute("MinRollSpeed"), 0.7f));
-		pData->SetMinRollFreq(cString::ToFloat(pChildElem->Attribute("MinRollFreq"), 0.7f));
-		pData->SetMinRollVolume(cString::ToFloat(pChildElem->Attribute("MinRollVolume"), 0.7f));
-		pData->SetMinRollFreqSpeed(cString::ToFloat(pChildElem->Attribute("MinRollFreqSpeed"), 0.7f));
-		pData->SetMiddleRollSpeed(cString::ToFloat(pChildElem->Attribute("MiddleRollSpeed"), 1.2f));
-		pData->SetMaxRollFreqSpeed(cString::ToFloat(pChildElem->Attribute("MaxRollFreqSpeed"), 3));
-		pData->SetMaxRollFreq(cString::ToFloat(pChildElem->Attribute("MaxRollFreq"), 2));
-		pData->SetMaxRollVolume(cString::ToFloat(pChildElem->Attribute("MaxRollVolume"), 2));
-		pData->SetRollSoundName(cString::ToString(pChildElem->Attribute("RollSoundName"), ""));
+		pData->SetElasticity(cString::ToFloat(pChildElem->GetAttribute("Elasticity"), 0.5f));
+		pData->SetKineticFriction(cString::ToFloat(pChildElem->GetAttribute("KineticFriction"), 0.3f));
+		pData->SetStaticFriction(cString::ToFloat(pChildElem->GetAttribute("StaticFriction"), 0.3f));
+		pData->SetPriority(cString::ToInt(pChildElem->GetAttribute("Priority"), 0));
+		pData->SetUserVar(cString::ToString(pChildElem->GetAttribute("UserVar"), ""));
+		pData->SetElasticityCombMode(LegacyCombMode(pChildElem->GetAttribute("ElasticityMode")));
+		pData->SetFrictionCombMode(LegacyCombMode(pChildElem->GetAttribute("FrictionMode")));
+		pData->GetStepType(cString::ToString(pChildElem->GetAttribute("StepType"), ""));
+		pData->SetMinScrapeSpeed(cString::ToFloat(pChildElem->GetAttribute("MinScrapeSpeed"), 0.7f));
+		pData->SetMinScrapeFreq(cString::ToFloat(pChildElem->GetAttribute("MinScrapeFreq"), 0.7f));
+		pData->SetMinScrapeFreqSpeed(cString::ToFloat(pChildElem->GetAttribute("MinScrapeFreqSpeed"), 0.7f));
+		pData->SetMiddleScrapeSpeed(cString::ToFloat(pChildElem->GetAttribute("MiddleScrapeSpeed"), 1.2f));
+		pData->SetMaxScrapeFreqSpeed(cString::ToFloat(pChildElem->GetAttribute("MaxScrapeFreqSpeed"), 3));
+		pData->SetMaxScrapeFreq(cString::ToFloat(pChildElem->GetAttribute("MaxScrapeFreq"), 2));
+		pData->SetMinScrapeContacts(cString::ToInt(pChildElem->GetAttribute("MinScrapeContacts"), 4));
+		pData->SetScrapeSoundName(cString::ToString(pChildElem->GetAttribute("ScrapeSoundName"), ""));
+		pData->SetMinRollSpeed(cString::ToFloat(pChildElem->GetAttribute("MinRollSpeed"), 0.7f));
+		pData->SetMinRollFreq(cString::ToFloat(pChildElem->GetAttribute("MinRollFreq"), 0.7f));
+		pData->SetMinRollVolume(cString::ToFloat(pChildElem->GetAttribute("MinRollVolume"), 0.7f));
+		pData->SetMinRollFreqSpeed(cString::ToFloat(pChildElem->GetAttribute("MinRollFreqSpeed"), 0.7f));
+		pData->SetMiddleRollSpeed(cString::ToFloat(pChildElem->GetAttribute("MiddleRollSpeed"), 1.2f));
+		pData->SetMaxRollFreqSpeed(cString::ToFloat(pChildElem->GetAttribute("MaxRollFreqSpeed"), 3));
+		pData->SetMaxRollFreq(cString::ToFloat(pChildElem->GetAttribute("MaxRollFreq"), 2));
+		pData->SetMaxRollVolume(cString::ToFloat(pChildElem->GetAttribute("MaxRollVolume"), 2));
+		pData->SetRollSoundName(cString::ToString(pChildElem->GetAttribute("RollSoundName"), ""));
 
-		tString sAxisVec = cString::ToString(pChildElem->Attribute("RollAxis"), "");
+		tString sAxisVec = cString::ToString(pChildElem->GetAttribute("RollAxis"), "");
 		tStringVec vAxes;
 		tFlag axisFlags = 0;
 		cString::GetStringVec(sAxisVec, vAxes);
@@ -135,22 +143,21 @@ bool LegacyLoad(cPhysics& phys, const tString& asFile)
 		}
 		pData->SetRollAxisFlags(axisFlags);
 
-		for (TiXmlElement* e = pChildElem->FirstChildElement("Impact"); e != NULL; e = e->NextSiblingElement("Impact"))
+		for (cXmlElement* e : Kids(pChildElem, "Impact"))
 		{
-			cSurfaceImpactData* d = pData->CreateImpactData(cString::ToFloat(e->Attribute("MinSpeed"), 1));
-			d->SetSoundName(cString::ToString(e->Attribute("SoundName"), ""));
-			d->SetPSName(cString::ToString(e->Attribute("PSName"), ""));
-			d->SetPSPrio(cString::ToInt(e->Attribute("PSPrio"), 10));
+			cSurfaceImpactData* d = pData->CreateImpactData(cString::ToFloat(e->GetAttribute("MinSpeed"), 1));
+			d->SetSoundName(cString::ToString(e->GetAttribute("SoundName"), ""));
+			d->SetPSName(cString::ToString(e->GetAttribute("PSName"), ""));
+			d->SetPSPrio(cString::ToInt(e->GetAttribute("PSPrio"), 10));
 		}
-		for (TiXmlElement* e = pChildElem->FirstChildElement("Hit"); e != NULL; e = e->NextSiblingElement("Hit"))
+		for (cXmlElement* e : Kids(pChildElem, "Hit"))
 		{
-			cSurfaceImpactData* d = pData->CreateHitData(cString::ToFloat(e->Attribute("MinSpeed"), 1));
-			d->SetSoundName(cString::ToString(e->Attribute("SoundName"), ""));
-			d->SetPSName(cString::ToString(e->Attribute("PSName"), ""));
-			d->SetPSPrio(cString::ToInt(e->Attribute("PSPrio"), 10));
+			cSurfaceImpactData* d = pData->CreateHitData(cString::ToFloat(e->GetAttribute("MinSpeed"), 1));
+			d->SetSoundName(cString::ToString(e->GetAttribute("SoundName"), ""));
+			d->SetPSName(cString::ToString(e->GetAttribute("PSName"), ""));
+			d->SetPSPrio(cString::ToInt(e->GetAttribute("PSPrio"), 10));
 		}
 	}
-	delete pXmlDoc;
 	return true;
 }
 

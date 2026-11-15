@@ -24,7 +24,7 @@
 
 #include "system/String.h"
 
-#include "impl/tinyXML/tinyxml.h"
+#include "impl/XmlDocumentTiny.h"
 
 
 #include "system/LowLevelSystem.h"
@@ -450,20 +450,19 @@ namespace hpl {
 		{
 			FILE *pFile = cPlatform::OpenFile(sPath, _W("rb"));
 			if(pFile==NULL) return;
+			fclose(pFile);
 
-			TiXmlDocument *pDoc = hplNew( TiXmlDocument,() );
-			if(pDoc->LoadFile(pFile))
+			cXmlDocumentTiny doc("");
+			if(doc.CreateFromFile(sPath))
 			{
-				TiXmlElement *pRootElem = pDoc->RootElement();
-				
-                TiXmlElement *pMainElem = pRootElem->FirstChildElement("MAIN");
+				cXmlElement *pMainElem = doc.GetFirstElement("MAIN");
 				if(pMainElem!=NULL)
 				{
-					mbCastShadows = cString::ToBool(pMainElem->Attribute("CastsShadows"),mbCastShadows);
+					mbCastShadows = cString::ToBool(pMainElem->GetAttribute("CastsShadows"),mbCastShadows);
 
-					mDiffuseColor.a = cString::ToFloat(pMainElem->Attribute("Specular"),mDiffuseColor.a);
+					mDiffuseColor.a = cString::ToFloat(pMainElem->GetAttribute("Specular"),mDiffuseColor.a);
 					
-					tString sFalloffImage = cString::ToString(pMainElem->Attribute("FalloffImage"),"");
+					tString sFalloffImage = cString::ToString(pMainElem->GetAttribute("FalloffImage"),"");
 					iTexture *pTexture = mpTextureManager->Create1D(sFalloffImage,false);
 					if(pTexture) SetFalloffMap(pTexture);
 
@@ -478,8 +477,6 @@ namespace hpl {
 			{
 				Error("Couldn't load file '%s'\n",asFile.c_str());
 			}
-			if(pFile) fclose(pFile);
-			hplDelete(pDoc);
 		}
 		else
 		{

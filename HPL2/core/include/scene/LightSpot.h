@@ -69,7 +69,7 @@ namespace hpl {
 		bool CollidesWithFrustum(cFrustum *apFrustum);
 
 	private:
-		void ExtraXMLProperties(TiXmlElement *apMainElem);
+		void ExtraXMLProperties(cXmlElement *apMainElem);
 		void UpdateBoundingVolume();
 		
 

@@ -27,7 +27,6 @@
 #include "system/SerializeClass.h"
 #include "engine/RustEngine.h"
 
-class TiXmlElement;
 
 #define kSaveData_LoadFromBegin(aClass) \
 							__super::LoadFromSaveData(apSaveData); \

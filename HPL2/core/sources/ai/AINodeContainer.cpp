@@ -29,8 +29,8 @@
 #include "impl/RustBackends.h"
 
 
-#include "impl/tinyXML/tinyxml.h"
 #include "system/RustXml.h"
+#include "impl/XmlDocumentTiny.h"
 
 #include <algorithm>
 
@@ -368,39 +368,34 @@ namespace hpl {
 	
 	void cAINodeContainer::SaveToFile(const tWString &asFile)
 	{
-		TiXmlDocument* pXmlDoc = hplNew( TiXmlDocument,() );
-		
-		TiXmlElement *pRootElem = static_cast<TiXmlElement*>(pXmlDoc->InsertEndChild(TiXmlElement("AINodes")));
+		OhplXmlDocPtr xmlDoc;
+		unsigned lRoot = OhplXmlAddElement(xmlDoc.p, 0, "AINodes");
 
 		for(size_t i=0; i< mvNodes.size(); ++i)
 		{
 			cAINode * pNode = mvNodes[i];
-			TiXmlElement *pNodeElem = static_cast<TiXmlElement*>(pRootElem->InsertEndChild(TiXmlElement("Node")));
+			unsigned lNode = OhplXmlAddElement(xmlDoc.p, lRoot, "Node");
 
-			pNodeElem->SetAttribute("Name", pNode->GetName().c_str());
-			pNodeElem->SetAttribute("ID", cString::ToString(pNode->GetID()).c_str());
+			OhplXmlSetAttr(xmlDoc.p, lNode, "Name", pNode->GetName());
+			OhplXmlSetAttr(xmlDoc.p, lNode, "ID", cString::ToString(pNode->GetID()));
 
 			for(int edge =0; edge < pNode->GetEdgeNum(); ++edge)
 			{
 				cAINodeEdge *pEdge = pNode->GetEdge(edge);
-				TiXmlElement *pEdgeElem = static_cast<TiXmlElement*>(pNodeElem->InsertEndChild(TiXmlElement("Edge")));
+				unsigned lEdge = OhplXmlAddElement(xmlDoc.p, lNode, "Edge");
 
-				pEdgeElem->SetAttribute("Node", pEdge->mpNode->GetName().c_str());
-				tString sDistance = cString::ToString(pEdge->mfDistance);
-				pEdgeElem->SetAttribute("Distance", sDistance.c_str());
+				OhplXmlSetAttr(xmlDoc.p, lEdge, "Node", pEdge->mpNode->GetName());
+				OhplXmlSetAttr(xmlDoc.p, lEdge, "Distance", cString::ToString(pEdge->mfDistance));
 			}
 		}
 
 		FILE *pFile = cPlatform::OpenFile(asFile, _W("w+"));
-		if(pFile==NULL || pXmlDoc->SaveFile(pFile)==false)
+		if(pFile==NULL || OhplXmlSaveFile(xmlDoc.p, pFile)==false)
 		{
 			Error("Couldn't save XML file %s\n",asFile.c_str());
-			hplDelete(pXmlDoc);
 			return;
 		}
-		OhplXmlDumpFile(pFile);
 		fclose(pFile);
-		hplDelete(pXmlDoc);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -411,38 +406,40 @@ namespace hpl {
 
 		FILE *pFile = cPlatform::OpenFile(asFile, _W("rb"));
 		if(pFile==NULL) return;
-		
-		TiXmlDocument* pXmlDoc = hplNew( TiXmlDocument, () );
-		if(pXmlDoc->LoadFile(pFile)==false)
-		{
-			Warning("Couldn't open XML file %s\n",cString::To8Char(asFile).c_str());
-			fclose(pFile);
-			hplDelete(pXmlDoc);
-			return;
-		}
 		fclose(pFile);
 
-		TiXmlElement *pRootElem = pXmlDoc->RootElement();
-
-		TiXmlElement *pNodeElem = pRootElem->FirstChildElement("Node");
-		for(; pNodeElem != NULL; pNodeElem = pNodeElem->NextSiblingElement("Node"))
+		cXmlDocumentTiny xmlDoc("AINodes");
+		if(xmlDoc.CreateFromFile(asFile)==false)
 		{
-			tString sName = cString::ToString(pNodeElem->Attribute("Name"),"");
-			int alID = cString::ToInt(pNodeElem->Attribute("ID"),-1);
+			Warning("Couldn't open XML file %s\n",cString::To8Char(asFile).c_str());
+			return;
+		}
+
+		cXmlNodeListIterator nodeIt = xmlDoc.GetChildIterator();
+		while(nodeIt.HasNext())
+		{
+			cXmlElement *pNodeElem = nodeIt.Next()->ToElement();
+			if(pNodeElem->GetValue()!="Node") continue;
+
+			tString sName = cString::ToString(pNodeElem->GetAttribute("Name"),"");
+			int alID = cString::ToInt(pNodeElem->GetAttribute("ID"),-1);
 
 			cAINode *pNode = GetNodeFromID(alID);
 			if(pNode==NULL) continue;
             
-			TiXmlElement *pEdgeElem = pNodeElem->FirstChildElement("Edge");
-			for(; pEdgeElem != NULL; pEdgeElem = pEdgeElem->NextSiblingElement("Edge"))
+			cXmlNodeListIterator edgeIt = pNodeElem->GetChildIterator();
+			while(edgeIt.HasNext())
 			{
-				tString sNodeName = cString::ToString(pEdgeElem->Attribute("Node"),"");			
+				cXmlElement *pEdgeElem = edgeIt.Next()->ToElement();
+				if(pEdgeElem->GetValue()!="Edge") continue;
+
+				tString sNodeName = cString::ToString(pEdgeElem->GetAttribute("Node"),"");
 				cAINode *pEdgeNode = GetNodeFromName(sNodeName);
 				if(pEdgeNode==NULL) continue;
 
 				cAINodeEdge Edge;
 				Edge.mpNode = pEdgeNode;
-				Edge.mfDistance = cString::ToFloat(pEdgeElem->Attribute("Distance"),0);
+				Edge.mfDistance = cString::ToFloat(pEdgeElem->GetAttribute("Distance"),0);
 				Edge.mfSqrDistance = Edge.mfDistance*Edge.mfDistance;
 
 				pNode->mvEdges.push_back(Edge);
@@ -450,7 +447,6 @@ namespace hpl {
 			}
 		}
 
-		hplDelete(pXmlDoc);
 	}
 	//-----------------------------------------------------------------------
 	

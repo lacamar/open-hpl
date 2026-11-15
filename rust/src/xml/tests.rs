@@ -283,3 +283,33 @@ fn encode_string_truncated_hex_entity() {
         assert_eq!(out, want, "input: {inp:?}");
     }
 }
+
+fn unhex(h: &str) -> Vec<u8> {
+    (0..h.len() / 2)
+        .filter_map(|i| u8::from_str_radix(h.get(2 * i..2 * i + 2)?, 16).ok())
+        .collect()
+}
+
+#[test]
+fn ainodes_writers_match_tinyxml() {
+    let strings = include_str!("../../tests/golden/L9/strings.txt");
+    let outs = include_str!("../../tests/golden/L9/out.txt");
+    assert_eq!(strings.lines().count(), outs.lines().count());
+    for (s, want) in strings.lines().zip(outs.lines()) {
+        let s = unhex(s);
+        let mut d = Doc::new();
+        let root = d.add_element(DOC, b"AINodes");
+        let n1 = d.add_element(root, b"Node");
+        d.set_attribute(n1, b"Name", &s);
+        d.set_attribute(n1, b"ID", b"7");
+        let e = d.add_element(n1, b"Edge");
+        d.set_attribute(e, b"Node", &s);
+        d.set_attribute(e, b"Distance", &s);
+        let n2 = d.add_element(root, b"Node");
+        d.set_attribute(n2, b"Pos", &s);
+        d.set_attribute(n2, b"Name", &s);
+        d.set_attribute(n2, b"Name", b"9");
+        d.add_element(root, b"Node");
+        assert_eq!(d.print_file(), unhex(want), "{s:?}");
+    }
+}

@@ -18,7 +18,6 @@
  */
 
 #include "impl/OpenALSoundEnvironment.h"
-#include "impl/tinyXML/tinyxml.h"
 
 namespace hpl
 {
