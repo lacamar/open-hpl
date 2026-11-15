@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.95
+Version:        1.3.96
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,11 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Sun Nov 15 2026 lacamar <lchlnm@pm.me> - 1.3.96-1
+- Scene and graphics code Rust-only
+- Game code (scripts, player, enemies, props, areas, save) Rust-only
+- Gate, C++ line count and release scripts
+
 * Sat Nov 14 2026 lacamar <lchlnm@pm.me> - 1.3.95-1
 - Make resources and physics Rust-only
 - Merge Newton physics classes, drop about 5k lines of C++
