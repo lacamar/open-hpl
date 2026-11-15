@@ -8,7 +8,7 @@ mod effects;
 mod ffi;
 mod hw;
 mod insanity;
-mod misc;
+pub(crate) mod misc;
 mod music;
 mod ops;
 mod postfx;

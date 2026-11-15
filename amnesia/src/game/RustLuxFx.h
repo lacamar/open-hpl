@@ -317,17 +317,6 @@ struct OhplGa9bEnemyMusic
 	float closeCount, goneCount;
 };
 
-struct OhplGa9bVitals
-{
-	float health, sanity, oil;
-	int32_t tinderboxes, coins;
-};
-
-struct OhplGa9bDate
-{
-	int32_t year, month, monthDay, hours, minutes, seconds;
-};
-
 struct OhplGa9bCompletion
 {
 	uint32_t active;
@@ -342,8 +331,7 @@ static_assert(sizeof(OhplGa9bROp) == 76 && sizeof(OhplGa9bPOp) == 20 && sizeof(O
 static_assert(sizeof(OhplGa9bBug) == 32 && sizeof(OhplGa9bBugsParams) == 24 && sizeof(OhplGa9bStream) == 20, "layout");
 static_assert(sizeof(OhplGa9bSteps) == 32 && sizeof(OhplGa9bPick) == 8 && sizeof(OhplGa9bTiming) == 24, "layout");
 static_assert(sizeof(OhplGa9bSlot) == 16 && sizeof(OhplGa9bPlayOut) == 16 && sizeof(OhplGa9bStopOut) == 12, "layout");
-static_assert(sizeof(OhplGa9bEnemyMusic) == 36 && sizeof(OhplGa9bVitals) == 20, "layout");
-static_assert(sizeof(OhplGa9bDate) == 24 && sizeof(OhplGa9bCompletion) == 24, "layout");
+static_assert(sizeof(OhplGa9bEnemyMusic) == 36 && sizeof(OhplGa9bCompletion) == 24, "layout");
 
 extern "C"
 {
@@ -409,10 +397,6 @@ extern "C"
 	int ohpl_ga9b_music_enemy_begin(OhplGa9bEnemyMusic *e, int t, bool hasMap, bool setEmpty, float dt, OhplGa9bOps *o);
 	void ohpl_ga9b_music_enemy_found(OhplGa9bEnemyMusic *e, int t, OhplGa9bOps *o);
 
-	int ohpl_ga9b_proglog_tick(bool active, int counter);
-	size_t ohpl_ga9b_proglog_line(int level, int counter, const unsigned char *map, size_t mapLen, const OhplGa9bVitals *v, const unsigned char *msg, size_t msgLen, unsigned char *out, size_t cap);
-	size_t ohpl_ga9b_proglog_file_name(const uint32_t *profile, size_t len, const OhplGa9bDate *d, int fileCount, uint32_t *out, size_t cap);
-	size_t ohpl_ga9b_proglog_header(const unsigned char *profile, size_t len, const OhplGa9bDate *d, unsigned char *out, size_t cap);
 	void ohpl_ga9b_completion_reset(OhplGa9bCompletion *c);
 	void ohpl_ga9b_completion_update(OhplGa9bCompletion *c, float dt);
 	void ohpl_ga9b_completion_show(OhplGa9bCompletion *c, float previous, float newAmount, float delay);

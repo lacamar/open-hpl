@@ -536,38 +536,6 @@ ffi! {
     }
 
     /// # Safety
-    /// Plain values.
-    fn ohpl_ga9b_proglog_tick(active: bool, counter: i32) -> i32 {
-        misc::proglog_tick(active, counter)
-    }
-
-    /// Writes the entry into `out` (up to `cap` bytes) and returns its full length.
-    ///
-    /// # Safety
-    /// `map` and `msg` hold their lengths, `v` valid, `out` holds `cap` bytes.
-    fn ohpl_ga9b_proglog_line(level: i32, counter: i32, map: *const u8, map_len: usize, v: *const Vitals, msg: *const u8, msg_len: usize, out: *mut u8, cap: usize) -> usize {
-        // SAFETY: caller contract.
-        let line = misc::proglog_line(level, counter, unsafe { slice(map, map_len) }, unsafe { rd(v) }, unsafe { slice(msg, msg_len) });
-        copy_out(&line, out, cap)
-    }
-
-    /// # Safety
-    /// `profile` holds its length, `d` valid, `out` holds `cap` elements.
-    fn ohpl_ga9b_proglog_file_name(profile: *const u32, len: usize, d: *const Date, file_count: i32, out: *mut u32, cap: usize) -> usize {
-        // SAFETY: caller contract.
-        let name = misc::proglog_file_name(unsafe { slice(profile, len) }, unsafe { rd(d) }, file_count);
-        copy_out(&name, out, cap)
-    }
-
-    /// # Safety
-    /// `profile` holds its length, `d` valid, `out` holds `cap` bytes.
-    fn ohpl_ga9b_proglog_header(profile: *const u8, len: usize, d: *const Date, out: *mut u8, cap: usize) -> usize {
-        // SAFETY: caller contract.
-        let h = misc::proglog_header(unsafe { slice(profile, len) }, unsafe { rd(d) });
-        copy_out(&h, out, cap)
-    }
-
-    /// # Safety
     /// `c` valid.
     fn ohpl_ga9b_completion_reset(c: *mut Completion) {
         // SAFETY: caller contract.

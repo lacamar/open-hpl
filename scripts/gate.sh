@@ -64,7 +64,7 @@ if [ -n "$SINCE" ]; then
 	changed=$( { git diff --name-only "$SINCE"...HEAD; git diff --name-only HEAD; } | sort -u)
 	if [ -z "$changed" ]; then
 		GAMES=
-	elif ! grep -qvE '^(amnesia/src/game/|amfp/|rust/src/lux|rust/tests/golden/A[0-9])' <<<"$changed"; then
+	elif ! grep -qvE '^(amnesia/src/game/|amfp/|rust/src/lux|rust/tests/golden/A[0-9]|scripts/(a10b-scenario|gate).sh)' <<<"$changed"; then
 		GAMES="amnesia amfp"
 	elif ! grep -qvE '^(soma/|rust/src/soma|rust/tests/golden/S[0-9])' <<<"$changed"; then
 		GAMES="soma rebirth bunker"
@@ -144,6 +144,15 @@ half() {
 				sweep "$impl" amnesia "$OUT/dump-$impl-amnesia.json" --map "$M"
 		done
 	fi
+	for g in amnesia amfp; do
+		has "$g" || continue
+		for mode in boot play; do
+			[ "$g$mode" = amfpplay ] && continue
+			rm -f "$OUT/a10b-$mode-$g-$impl.txt"
+			env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-a10b-$impl-$g" OHPL_GAME="$g" \
+				scripts/a10b-scenario.sh "$mode" "$OUT/a10b-$mode-$g-$impl.txt" >> "$OUT/a10b-$impl-$g.log" 2>&1
+		done
+	done
 	if [ -z "$RECORD" ] && has soma; then
 		# shellcheck disable=SC2046
 		ENVX=$extra sweep "$impl" soma "$OUT/play-$impl-soma.json" --play 10 $(mapargs $PLAY_MAPS)
@@ -153,7 +162,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10b-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -242,6 +251,11 @@ def multiset(p):
     return sorted(re.sub(r"CombinedMesh\d+", "", l) for l in open(p, errors="replace"))
 
 def same(name, a, b):
+    if name.startswith("a10b-"):
+        tool = os.path.join(repo, "rust/tests/golden/A10b/dump-diff.py")
+        r = subprocess.run([sys.executable, tool, name.split("-")[1], a, b], capture_output=True, text=True)
+        last = (r.stdout.strip().splitlines() or [""])[0]
+        return (r.returncode == 0, last if r.returncode == 0 else f"DIFFER {last}")
     if name.startswith("a7-"):
         tool = os.path.join(repo, "rust/tests/golden/A7/mapdump-diff.py")
         r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)
@@ -260,6 +274,9 @@ if not quick:
     names = [f"h4seq-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
         names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7")]
+    names += [f"a10b-boot-{g}" for g in ("amnesia", "amfp") if g in games]
+    if "amnesia" in games:
+        names += ["a10b-play-amnesia"]
     has_base = os.path.isdir(base)
     if not has_base:
         print(f"no C++ baseline at {base} (record one with --record-baseline before flipping a family)")

@@ -20,84 +20,32 @@
 #ifndef LUX_CREDITS_H
 #define LUX_CREDITS_H
 
-//----------------------------------------------
-
-#include "LuxBase.h"
-#include "RustLuxMenu2.h"
-
-
-//----------------------------------------------
+#include "LuxA10bHost.h"
 
 class cLuxCredits : public iLuxUpdateable
 {
-public:	
-	cLuxCredits();
-	~cLuxCredits();
+public:
+	cLuxCredits() : iLuxUpdateable("LuxCredits"), mR(this, eOhplA10bKind_Other) { mR.mH = ohpl_a10b_cr_new(&mR.mHost); }
+	~cLuxCredits() { ohpl_a10b_cr_delete(mR.mH); }
 
-	void LoadFonts();
+	void LoadFonts() { ohpl_a10b_cr_load_fonts(&mR.mHost, mR.mH); }
+	void Reset() { ohpl_a10b_cr_reset(&mR.mHost, mR.mH); }
+	void Update(float afTimeStep) { ohpl_a10b_cr_update(&mR.mHost, mR.mH, afTimeStep); }
+	void AddKeyPart(int alKey) { ohpl_a10b_cr_add_key(&mR.mHost, mR.mH, alKey); }
+	void Setup(const tString& asMusic, bool abLoopMusic, const tString& asTextCat, const tString& asTextEntry, int alEndNum)
+	{
+		ohpl_a10b_cr_setup(&mR.mHost, mR.mH, asMusic.data(), asMusic.size(), abLoopMusic, asTextCat.data(), asTextCat.size(),
+							asTextEntry.data(), asTextEntry.size(), alEndNum);
+	}
+	void OnEnterContainer(const tString& asOldContainer) { ohpl_a10b_cr_enter(&mR.mHost, mR.mH); }
+	void OnLeaveContainer(const tString& asNewContainer) { ohpl_a10b_cr_leave(&mR.mHost, mR.mH); }
+	void OnDraw(float afFrameTime) { ohpl_a10b_cr_draw(&mR.mHost, mR.mH); }
+	void ExitPressed() { ohpl_a10b_cr_exit_pressed(&mR.mHost, mR.mH); }
+	void AppLostInputFocus() { ohpl_a10b_cr_focus(&mR.mHost, false); }
+	void AppGotInputFocus() { ohpl_a10b_cr_focus(&mR.mHost, true); }
 
-	void Reset();
-
-	void Update(float afTimeStep);
-
-	void AddKeyPart(int alKey);
-	void Setup(const tString& asMusic, bool abLoopMusic, const tString& asTextCat, const tString& asTextEntry, int alEndNum);
-
-	void OnEnterContainer(const tString& asOldContainer);
-	void OnLeaveContainer(const tString& asNewContainer);
-
-	void OnDraw(float afFrameTime);
-
-	void ExitPressed();
-
-	void AppLostInputFocus();
-	void AppGotInputFocus();
-	
 private:
-	///////////////////////
-	// Data
-	cGraphics *mpGraphics;
-
-	cGui* mpGui;
-	cGuiSet* mpGuiSet;
-
-	iFontData *mpFontNormal;
-	iFontData *mpFontHeader;
-
-	cViewport *mpViewport;
-
-	cGuiGfxElement *mpBlackGfx;
-
-	cVector2f mvScreenSize;
-	cVector2f mvGuiSetSize;
-	cVector2f mvGuiSetCenterSize;
-	cVector2f mvGuiSetOffset;
-	cVector3f mvGuiSetStartPos;
-
-	cVector2f mvNormalFontSize;
-	cVector2f mvHeaderFontSize;
-	cVector2f mvTheEndFontSize;
-
-	float mfScrollSpeed;
-	float mfFadeSpeed;
-
-	///////////////////////
-	// Vars
-	cBinaryBuffer mKeyBuffer;
-	tString msMusic;
-	bool mbLoopMusic;
-
-
-	tWStringVec mvTextRows;
-
-	bool mbActive;
-	OhplGa7bCredits mS;
-	std::vector<OhplGa7bRow> mvRows;
-
-
+	cOhplA10bShell mR;
 };
 
-//----------------------------------------------
-
-
-#endif // LUX_CREDITS_H
+#endif

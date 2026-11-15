@@ -20,122 +20,61 @@
 #ifndef LUX_LOAD_SCREEN_HANDLER_H
 #define LUX_LOAD_SCREEN_HANDLER_H
 
-//----------------------------------------------
-
-#include "LuxBase.h"
-#include "RustLuxMenu2.h"
-
-
-enum eLuxLoadScreenState
-{
-	eLuxLoadScreenState_Game,
-	eLuxLoadScreenState_LastEnum
-};
-
-//----------------------------------------
+#include "LuxA10bHost.h"
 
 class cLuxLoadScreenHandler : public iLuxUpdateable
 {
-friend class cLuxLoadScreenHandler_SaveData;
-public:	
-	cLuxLoadScreenHandler();
-	~cLuxLoadScreenHandler();
-	
-	void LoadFonts();
+public:
+	cLuxLoadScreenHandler() : iLuxUpdateable("LuxLoadScreenHandler"), mR(this, eOhplA10bKind_Other) { mR.mH = ohpl_a10b_ls_new(&mR.mHost); }
+	~cLuxLoadScreenHandler() { ohpl_a10b_ls_delete(mR.mH); }
 
-	void OnStart();
-	void Reset();
-
-	void Update(float afTimeStep);
-
-	void OnEnterContainer(const tString& asOldContainer);
-	void OnLeaveContainer(const tString& asNewContainer);
-
-	void OnDraw(float afFrameTime);
+	void LoadFonts() { ohpl_a10b_ls_load_fonts(&mR.mHost, mR.mH); }
+	void Reset() { ohpl_a10b_ls_reset(&mR.mHost, mR.mH); }
+	void Update(float afTimeStep) { ohpl_a10b_ls_update(&mR.mHost, mR.mH, afTimeStep); }
+	void OnEnterContainer(const tString& asOldContainer) { ohpl_a10b_ls_enter(&mR.mHost, mR.mH); }
+	void OnLeaveContainer(const tString& asNewContainer) { ohpl_a10b_ls_leave(&mR.mHost, mR.mH); }
+	void OnDraw(float afFrameTime) { ohpl_a10b_ls_draw(&mR.mHost, mR.mH); }
 
 	/**
 	* Called when game loading is done. Must be called after DrawGameScreen has been called!
 	*/
-	void GameScreenLoadDone(const tString& asEndSound, float afLoadTime);
-	
-	void DrawGameScreen();
-	void DrawMenuScreen();
-	void DrawBlankScreen();
+	void GameScreenLoadDone(const tString& asEndSound, float afLoadTime)
+	{
+		ohpl_a10b_ls_load_done(&mR.mHost, mR.mH, asEndSound.data(), asEndSound.size(), afLoadTime);
+	}
 
-	void ExitPressed();
+	void DrawGameScreen() { ohpl_a10b_ls_draw_game_screen(&mR.mHost, mR.mH); }
+	void DrawMenuScreen() { ohpl_a10b_ls_draw_menu_screen(&mR.mHost, mR.mH); }
+	void DrawBlankScreen() {}
+	void ExitPressed() { ohpl_a10b_ls_exit_pressed(&mR.mHost, mR.mH); }
 
-	/////////////////////
-	//Properties
 	/**
 	* If alRandomNum > 1, then it will randomize between 1 and alRandom for each LoadScreen giving entry the suffix XX (eg 01). If <=1 then no suffix is added
 	*/
-	void SetupLoadText(const tString& asCat, const tString& asEntry, int alRandomNum, const tString& asImage);
-	
-	const tString& GetLoadTextCat(){ return msLoadTextCat;}
-	const tString& GetLoadTextEntry(){ return msLoadTextEntry;}
-	const tString& GetLoadTextImage(){ return msLoadTextImage;}
-	int GetLoadTextEntryRandomNum(){ return mS.mlRandNum; }
+	void SetupLoadText(const tString& asCat, const tString& asEntry, int alRandomNum, const tString& asImage)
+	{
+		ohpl_a10b_ls_setup(&mR.mHost, mR.mH, asCat.data(), asCat.size(), asEntry.data(), asEntry.size(), alRandomNum,
+							asImage.data(), asImage.size());
+	}
+
+	tString GetLoadTextCat() { return Text(0); }
+	tString GetLoadTextEntry() { return Text(1); }
+	tString GetLoadTextImage() { return Text(2); }
+	int GetLoadTextEntryRandomNum() { return ohpl_a10b_ls_rand_num(mR.mH); }
+	int GetPrevTextNumBitFlags() { return ohpl_a10b_ls_prev_bits(mR.mH); }
+	void SetPrevTextNumBitFlags(int alBits) { ohpl_a10b_ls_set_prev_bits(mR.mH, alBits); }
 
 private:
-	void Exit();
-	tString GetGameScreenTextEntry();
-	void LoadCurrentImage(const tString &asImage);
-	    
-	void UpdateGameState(float afTimeStep);
-	void DrawGameState(float afFrameTime);
-	void DrawGameScreen(cGuiSet *apSet);
-	
-	//////////////////
-	// Data
-	cGui *mpGui;
-	cScene *mpScene;
-	cGraphics *mpGraphics;
+	static void Sink(void *apCtx, const unsigned char *apData, size_t alLen) { ((tString*)apCtx)->assign((const char*)apData, alLen); }
 
-	cViewport *mpViewport;
-	cGuiSkin *mpGuiSkin;
-	cGuiSet *mpGuiSet;
+	tString Text(int alWhich)
+	{
+		tString sText;
+		ohpl_a10b_ls_text(mR.mH, alWhich, &Sink, &sText);
+		return sText;
+	}
 
-	cGuiGfxElement* mpWhiteGfx;
-	
-	cVector2f mvScreenSize;
-	cVector2f mvGuiSetCenterSize;//Size of the part that is inside a 4:3 ratio!
-	cVector2f mvGuiSetSize;
-	cVector2f mvGuiSetOffset;
-	cVector3f mvGuiSetStartPos;
-
-	iFontData *mpFontDefault;
-
-	cVector2f mvLoadingFontSize;
-	cVector2f mvTextFontSize;
-	float mfLoadingY;
-	float mfTextWithImageY;
-	float mfTextAloneY;
-	float mfImageY;
-	float mfTextMaxWidth;
-
-	float mfFadeOutTime;
-	float mfTextDurationMul;
-
-	//////////////////
-	// Variables
-	cGuiGfxElement* mpCurrentImage;
-	tString msCurrentImage;
-	
-	tString msLoadTextCat;
-	tString msLoadTextEntry;
-	tString msLoadTextImage;
-
-
-	tString msGameScreenEndSound;
-
-	OhplGa7bLoad mS;
-	int &mlPrevTextNumBitFlags = mS.mlPrevBits;
-
-	tString msCurrentGameScreenTextEntry;
-	tString msCurrentGameScreenImage;
+	cOhplA10bShell mR;
 };
 
-//----------------------------------------------
-
-
-#endif // LUX_LOAD_SCREEN_HANDLER_H
+#endif
