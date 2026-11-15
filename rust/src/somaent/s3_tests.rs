@@ -80,7 +80,7 @@ fn nums(s: &str) -> Vec<i64> {
 }
 
 #[test]
-fn id_registry_matches_cpp_trace() {
+fn id_registry_matches_golden_trace() {
     let data = include_str!("../../tests/golden/S3/s3.txt");
     let mut m = Mock::default();
     let mut ids = Ids::new(0);
@@ -141,7 +141,7 @@ fn id_registry_matches_cpp_trace() {
 }
 
 #[test]
-fn liquid_body_plan_matches_cpp_table() {
+fn liquid_body_plan_matches_golden_table() {
     let data = include_str!("../../tests/golden/S3/s3.txt");
     let mut n = 0;
     for line in data.lines().filter(|l| l.starts_with("LQ ")) {

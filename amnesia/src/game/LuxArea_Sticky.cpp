@@ -181,49 +181,16 @@ void cLuxArea_Sticky::AttachBody(iPhysicsBody *apBody)
 	//If in an interact state, set the previous state		
 	gpBase->mpPlayer->GetCurrentStateData()->OnAttachBodyToStickyArea(apBody);
 
-	if(mpA7Area)
-	{
-		cMatrixf mtxStart = apBody->GetLocalMatrix();
-		bool bGravity = apBody->GetGravity();
-		float fMass = apBody->GetMass();
-		iLuxEntity *pAttachEntity = (iLuxEntity*)apBody->GetUserData();
-		ohpl_a7_area_sticky_attach(mpA7Area, reinterpret_cast<const OhplGa5Mtx*>(&mtxStart), bGravity, fMass, pAttachEntity ? (int)pAttachEntity->GetFullGameSave() : -1);
-		apBody->SetLinearVelocity(0);
-		apBody->SetAngularVelocity(0);
-		apBody->SetGravity(false);
-		apBody->SetMass(0);
-		if(pAttachEntity) pAttachEntity->SetFullGameSave(true);
-		mpAttachedBody = apBody;
-		mpLastAttachedBody = mpAttachedBody;
-		return;
-	}
-
-	/////////////////////////
-	//Snap it into place.
-	mtxAttachedStart = apBody->GetLocalMatrix();
-
-	mfSetMtxTime = 0;
-
+	cMatrixf mtxStart = apBody->GetLocalMatrix();
+	bool bGravity = apBody->GetGravity();
+	float fMass = apBody->GetMass();
+	iLuxEntity *pAttachEntity = (iLuxEntity*)apBody->GetUserData();
+	ohpl_a7_area_sticky_attach(mpA7Area, reinterpret_cast<const OhplGa5Mtx*>(&mtxStart), bGravity, fMass, pAttachEntity ? (int)pAttachEntity->GetFullGameSave() : -1);
 	apBody->SetLinearVelocity(0);
 	apBody->SetAngularVelocity(0);
-
-	mbAttachedBodyGravity = apBody->GetGravity();
 	apBody->SetGravity(false);
-
-	mfAttachedBodyMass = apBody->GetMass();
 	apBody->SetMass(0);
-
-	iLuxEntity *pEntity = (iLuxEntity*)apBody->GetUserData();
-	if(pEntity)
-	{
-		mbAttachedEntityFullGameSaved = pEntity->GetFullGameSave();
-		pEntity->SetFullGameSave(true);
-	}
-	else
-	{
-		mbAttachedEntityFullGameSaved = false;
-	}
-
+	if(pAttachEntity) pAttachEntity->SetFullGameSave(true);
 	mpAttachedBody = apBody;
 	mpLastAttachedBody = mpAttachedBody;
 }
@@ -281,38 +248,13 @@ void cLuxArea_Sticky::UpdateAttachBody(float afTimeStep)
 	if(mpAttachedBody==NULL || mfSetMtxTime >= 1) return;
 
 	OhplGa5StickyOut attachOut;
-	if(mpA7Area)
-	{
-		cMatrixf mtxArea = mpBody->GetWorldMatrix();
-		cVector3f vAreaPos = mpBody->GetWorldPosition();
-		cVector3f vMassCentre = mpAttachedBody->GetMassCentre();
-		cVector3f vAttachedPos = mpAttachedBody->GetWorldPosition();
-		if(ohpl_a7_area_sticky_step(mpA7Area, reinterpret_cast<const OhplGa5Mtx*>(&mtxArea), reinterpret_cast<const OhplGa5Vec3*>(&vAreaPos),
-									reinterpret_cast<const OhplGa5Vec3*>(&vMassCentre), reinterpret_cast<const OhplGa5Vec3*>(&vAttachedPos),
-									afTimeStep, &attachOut)==false) return;
-	}
-	else
-	{
-		OhplGa5StickyIn attachIn;
-		memcpy(&attachIn.start, &mtxAttachedStart, sizeof(attachIn.start));
-		cMatrixf mtxArea = mpBody->GetWorldMatrix();
-		memcpy(&attachIn.areaWorld, &mtxArea, sizeof(attachIn.areaWorld));
-		cVector3f vAreaPos = mpBody->GetWorldPosition();
-		cVector3f vMassCentre = mpAttachedBody->GetMassCentre();
-		cVector3f vAttachedPos = mpAttachedBody->GetWorldPosition();
-		memcpy(&attachIn.areaPos, &vAreaPos, sizeof(attachIn.areaPos));
-		memcpy(&attachIn.massCentre, &vMassCentre, sizeof(attachIn.massCentre));
-		memcpy(&attachIn.attachedPos, &vAttachedPos, sizeof(attachIn.attachedPos));
-		attachIn.poseTime = mfPoseTime;
-		attachIn.step = afTimeStep;
-		attachIn.setTime = mfSetMtxTime;
-		attachIn.moveBody = mbMoveBody;
-		attachIn.rotateBody = mbRotateBody;
-
-		ohpl_ga5_sticky_attach(&attachIn, &attachOut);
-
-		mfSetMtxTime = attachOut.setTime;
-	}
+	cMatrixf mtxArea = mpBody->GetWorldMatrix();
+	cVector3f vAreaPos = mpBody->GetWorldPosition();
+	cVector3f vMassCentre = mpAttachedBody->GetMassCentre();
+	cVector3f vAttachedPos = mpAttachedBody->GetWorldPosition();
+	if(ohpl_a7_area_sticky_step(mpA7Area, reinterpret_cast<const OhplGa5Mtx*>(&mtxArea), reinterpret_cast<const OhplGa5Vec3*>(&vAreaPos),
+								reinterpret_cast<const OhplGa5Vec3*>(&vMassCentre), reinterpret_cast<const OhplGa5Vec3*>(&vAttachedPos),
+								afTimeStep, &attachOut)==false) return;
 	if(attachOut.mode == kOhplGa5AttachSetMatrix)
 	{
 		cMatrixf mtxNew;

@@ -84,7 +84,6 @@ public:
 
 
 private:
-	void UpdateLightLevel(float afTimeStep);
 	static void HostBounds(void *apCtx, float *apSize, float *apCenter);
 	static float HostLightAt(void *apCtx, const float *apPos);
 	static bool HostIllumination(void *apCtx, float *apOut);
@@ -92,15 +91,7 @@ private:
 	//General
 
 
-	//Vars
-	bool mbLit;
-	float mfLightLevel;
-	float mfLightLevelCheckCount;
-
-	float mfLightLevelOnLimit;
-	float mfLightLevelOffLimit;
-
-	OhplA5Photocell mS; //used instead of the vars above when OHPL_IMPL=rust
+	OhplA5Photocell mS;
 };
 
 //----------------------------------------------

@@ -521,7 +521,7 @@ typedef tLuxEntityIDMap::iterator tLuxEntityIDMapIt;
 typedef std::list<iLuxEntity*> tLuxEntityList;
 typedef tLuxEntityList::iterator tLuxEntityListIt;
 
-typedef ohpl_a7::Iterator<iLuxEntity*, tLuxEntityList, tLuxEntityListIt> cLuxEntityIterator;
+typedef ohpl_a7::Iterator<iLuxEntity*> cLuxEntityIterator;
 
 //----------------------------------------------
 
@@ -533,7 +533,7 @@ typedef tLuxEnemyList::iterator tLuxEnemyListIt;
 typedef std::set<iLuxEnemy*> tLuxEnemySet;
 typedef tLuxEnemySet::iterator tLuxEnemySetIt;
 
-typedef ohpl_a7::Iterator<iLuxEnemy*, tLuxEnemyList, tLuxEnemyListIt> cLuxEnemyIterator;
+typedef ohpl_a7::Iterator<iLuxEnemy*> cLuxEnemyIterator;
 
 //----------------------------------------------
 

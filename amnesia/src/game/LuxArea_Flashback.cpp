@@ -96,19 +96,7 @@ cLuxArea_Flashback::~cLuxArea_Flashback()
 
 void cLuxArea_Flashback::OnUpdate(float afTimeStep)
 {
-	if(mpA7Area)
-	{
-		if(ohpl_a7_area_tick(mpA7Area, afTimeStep, gpBase->mpEngine->GetStepSize())==false) return;
-	}
-	else
-	{
-		//Do not update this unless it is a proper game update (when eveything is 100% intialized)
-		if(ohpl_ga5_step_too_small(afTimeStep, gpBase->mpEngine->GetStepSize())) return;
-
-		//////////////////////////
-		// Check update count
-		if(ohpl_ga5_tick_fixed(&mfCheckCollisionCount, afTimeStep, 0.1f)==false) return;
-	}
+	if(ohpl_a7_area_tick(mpA7Area, afTimeStep, gpBase->mpEngine->GetStepSize())==false) return;
 
 	//////////////////////////
 	// Check collision

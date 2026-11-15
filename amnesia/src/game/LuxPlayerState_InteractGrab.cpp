@@ -20,7 +20,6 @@
 #include "LuxPlayerState_InteractGrab.h"
 
 #include "LuxPlayer.h"
-#include "impl/RustBackends.h"
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
@@ -37,26 +36,8 @@
 
 cLuxPlayerState_InteractGrab::cLuxPlayerState_InteractGrab(cLuxPlayer *apPlayer) : iLuxPlayerState_Interact(apPlayer, eLuxPlayerState_InteractGrab, &mR.base)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_init(&mR.base, &h, eLuxPlayerState_InteractGrab);
-		return;
-	}
-
-	mfMaxForce = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMaxForce",0);
-	mfMaxTorque = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMaxTorque",0);
-	mfMaxAngularSpeed = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMaxAngularSpeed",0);
-
-	mfMaxLeaveAngularSpeed = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMaxLeaveAngularSpeed",0);
-	mfMaxLeaveLinearSpeed = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMaxLeaveLinearSpeed",0);
-
-	mfMinSlowPlayerMass = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMinSlowPlayerMass",0);
-	mfMaxSlowPlayerMass = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMaxSlowPlayerMass",0);
-	mfMinSlowPlayerMul = gpBase->mpGameCfg->GetFloat("Player_Interaction","GrabMinSlowPlayerMul",0);
-
-	ohpl_ga2b_pid_init(&mForcePid, 20, 400, 0, 40);
-	ohpl_ga2b_pid_init(&mSpeedTorquePid, 20, 40, 0, 0.4f);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_init(&mR.base, &h, eLuxPlayerState_InteractGrab);
 }
 
 //-----------------------------------------------------------------------
@@ -77,184 +58,16 @@ cLuxPlayerState_InteractGrab::~cLuxPlayerState_InteractGrab()
 
 void cLuxPlayerState_InteractGrab::OnEnterState(eLuxPlayerState aPrevState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_enter(mpA3, &h, aPrevState);
-		return;
-	}
-	/////////////////////////////////
-	//Get the variables
-	SetupInteractVars();
-
-	cCamera *pCam = mpPlayer->GetCamera();
-
-	mpGrabData = mpCurrentProp->GetGrabData();
-
-	//////////////////////////////
-	//Reset variables
-	ohpl_ga2b_pid_reset(&mForcePid);
-	ohpl_ga2b_pid_reset(&mSpeedTorquePid);
-
-	//////////////////////////////////
-	//Save properties of the current body and all bodies attached to it
-	mvBodyProperties.clear();
-	SaveBodyProperties(mpCurrentBody);
-
-	//////////////////////////////
-	//Set up properties for all bodies and calculate total mass
-	mfMassSum = 0;
-	float fProperMassSum=0;
-	for(size_t i=0; i<mvBodyProperties.size(); ++i)
-	{
-		iPhysicsBody *pBody = mvBodyProperties[i].mpBody;
-
-		fProperMassSum += pBody->GetMass();
-
-		if(pBody==mpCurrentBody) pBody->SetGravity(false);
-		if(pBody==mpCurrentBody) pBody->SetCollideCharacter(false);
-		pBody->SetMass(pBody->GetMass() * mpGrabData->mfGrabMassMul);
-		
-		pBody->SetAngularVelocity(0);
-		pBody->SetLinearVelocity(0);
-
-		mfMassSum += pBody->GetMass();
-	}
-
-	OhplGa2bGrabEnterIn gi;
-	gi.camPos = pCam->GetPosition();
-	gi.camRot = cVector3f(pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
-	gi.bodyMatrix = mpCurrentBody->GetLocalMatrix();
-	gi.bodyPos = mpCurrentBody->GetLocalPosition();
-	gi.focusPos = mvCurrentFocusPos;
-	gi.rotOffset = mpGrabData->mvGrabRotationOffset;
-	gi.useOffset = mpGrabData->mbGrabUseOffset;
-	gi.useDepth = mpGrabData->mbGrabUseDepth;
-	gi.depth = mpGrabData->mfGrabDepth;
-	gi.maxDepth = mpGrabData->mfGrabMaxDepth;
-	gi.properMassSum = fProperMassSum;
-	gi.minSlowMass = mfMinSlowPlayerMass;
-	gi.maxSlowMass = mfMaxSlowPlayerMass;
-	gi.minSlowMul = mfMinSlowPlayerMul;
-	OhplGa2bGrabEnterOut go;
-	go.localOffset = mvLocalBodyOffset;
-	ohpl_ga2b_grab_enter(&gi, &go);
-	m_mtxBodyRotation = go.bodyRot;
-	if(mpGrabData->mbGrabUseOffset == false) mvLocalBodyOffset = go.localOffset;
-	mfDepth = go.depth;
-	mfMaxDistance = go.maxDistance;
-
-	mpPlayer->GetCharacterBody()->SetMass(mpPlayer->GetDefaultMass() + fProperMassSum);
-
-	mpCurrentProp->SetDisableCollisionUntilOutSidePlayer(false);
-
-	if(go.slow) mpPlayer->SetInteractionMoveSpeedMul(go.slowMul);
-
-	//Setup Material
-	mbCustomMaterialsSetup = true;
-	/*
-	mbCustomMaterialsSetup = false;
-	cMeshEntity *pMeshEntity = mpCurrentProp->GetMeshEntity();
-	mvSubMeshProperties.resize(pMeshEntity->GetSubMeshEntityNum());
-	for(int i=0; i<pMeshEntity->GetSubMeshEntityNum(); ++i)
-	{
-		cSubMeshEntity *pSubEnt = pMeshEntity->GetSubMeshEntity(i);
-		cGrabbedSubMeshProperties *pSubProp = &mvSubMeshProperties[i];
-
-		cMaterial *pOldMat = pSubEnt->GetMaterial();
-		
-		//////////////
-		// Only make a transperant version if the material is solid diffuse
-		tString sOldMatName = cString::ToLowerCase(pOldMat->GetType()->GetName());
-        if(sOldMatName == "soliddiffuse")
-		{
-			iMaterialType *pMatType = gpBase->mpEngine->GetGraphics()->GetMaterialType("translucent");
-			cMaterial* pCustomMat = hplNew( cMaterial, ("GrabTransCustom",	gpBase->mpEngine->GetGraphics(), 
-																			gpBase->mpEngine->GetResources(), pMatType) );
-			pCustomMat->SetDepthTest(true);
-			pCustomMat->SetBlendMode(eMaterialBlendMode_Mul);
-
-			iTexture *pDiffTex = pOldMat->GetTexture(eMaterialTexture_Diffuse);
-			pDiffTex->IncUserCount();
-			pCustomMat->SetTexture(eMaterialTexture_Diffuse,pDiffTex);
-			
-			pCustomMat->Compile();
-			
-			pSubProp->mpCustomTransMaterial = pCustomMat;
-		}
-		else
-		{
-			pSubProp->mpCustomTransMaterial = NULL;
-		}
-
-		/////////////////////////////////////
-		// Set up material
-		if(mbCustomMaterialsSetup==false)
-		{
-		cMeshEntity *pMeshEntity = mpCurrentProp->GetMeshEntity();
-		for(int i=0; i<pMeshEntity->GetSubMeshEntityNum(); ++i)
-		{
-		cSubMeshEntity *pSubEnt = pMeshEntity->GetSubMeshEntity(i);
-		cGrabbedSubMeshProperties *pSubProp = &mvSubMeshProperties[i];
-
-		pSubEnt->SetCustomMaterial(pSubProp->mpCustomTransMaterial);
-		}
-		mbCustomMaterialsSetup = true;
-		}
-
-	}*/
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_enter(mpA3, &h, aPrevState);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerState_InteractGrab::OnLeaveState(eLuxPlayerState aNewState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_leave(mpA3, &h, aNewState);
-		return;
-	}
-	///////////////////////
-	//Reset Material
-	/*cMeshEntity *pMeshEntity = mpCurrentProp->GetMeshEntity();
-	for(int i=0; i<pMeshEntity->GetSubMeshEntityNum(); ++i)
-	{
-		cSubMeshEntity *pSubEnt = pMeshEntity->GetSubMeshEntity(i);
-		cGrabbedSubMeshProperties *pSubProp = &mvSubMeshProperties[i];
-		
-		if(pSubProp->mpCustomTransMaterial)
-		{
-			pSubEnt->SetCustomMaterial(NULL, false);
-
-			hplDelete(pSubProp->mpCustomTransMaterial);
-			pSubProp->mpCustomTransMaterial = NULL;
-		}
-	}*/
-	mvSubMeshProperties.clear();
-
-	///////////////////////
-	//Reset body
-	for(size_t i=0; i<mvBodyProperties.size(); ++i)
-	{
-		iPhysicsBody *pBody = mvBodyProperties[i].mpBody;
-
-		pBody->SetGravity(mvBodyProperties[i].mbHasGravity);
-		pBody->SetMass(mvBodyProperties[i].mfMass);
-
-	}
-
-	//Do want player to collide with prop until outside of it.
-	mpCurrentProp->SetDisableCollisionUntilOutSidePlayer(true);
-
-	// Need to so pointer exists! (as this might be on leave!)
-	if(mpPlayer->GetCharacterBody())
-	{
-		mpPlayer->GetCharacterBody()->SetMass(mpPlayer->GetDefaultMass());
-		mpPlayer->SetInteractionMoveSpeedMul(1.0f);
-	}
-
-	ResetInteractVars();
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_leave(mpA3, &h, aNewState);
 }
 
 //-----------------------------------------------------------------------
@@ -266,167 +79,38 @@ void cLuxPlayerState_InteractGrab::Update(float afTimeStep)
 
 void cLuxPlayerState_InteractGrab::PostUpdate(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_post_update(mpA3, &h, afTimeStep);
-		return;
-	}
-	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
-	iPhysicsWorld *pPhysicsWorld = pMap->GetWorld()->GetPhysicsWorld();
-	cCamera *pCam = mpPlayer->GetCamera();
-	iCharacterBody *pPlayerBody = mpPlayer->GetCharacterBody();
-
-	OhplGa2bGrabPost gp;
-	gp.camPos = pCam->GetPosition();
-	gp.camRot = cVector3f(pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
-	gp.bodyMatrix = mpCurrentBody->GetLocalMatrix();
-	gp.bodyPos = mpCurrentBody->GetLocalPosition();
-	gp.bodyAngVel = mpCurrentBody->GetAngularVelocity();
-	gp.inertia = mpCurrentBody->GetInertiaMatrix();
-	gp.bodyRot = m_mtxBodyRotation;
-	gp.localOffset = mvLocalBodyOffset;
-	gp.posOffset = mpGrabData->mvGrabPositionOffset;
-	gp.depth = mfDepth;
-	gp.maxDistance = mfMaxDistance;
-	gp.useOffset = mpGrabData->mbGrabUseOffset;
-	gp.useRotation = mpGrabData->mbUseRotation;
-	gp.massSum = mfMassSum;
-	gp.maxForce = mfMaxForce;
-	gp.maxTorque = mfMaxTorque;
-	gp.maxAngularSpeed = mfMaxAngularSpeed;
-	gp.forceMul = mpGrabData->mfForceMul;
-	gp.torqueMul = mpGrabData->mfTorqueMul;
-	OhplGa2bGrabPostOut go;
-	ohpl_ga2b_grab_post(&gp, &mForcePid, &mSpeedTorquePid, afTimeStep, &go);
-
-	if(go.status == kOhplGa2bGrabTooFar)
-	{
-		mpPlayer->ChangeState(mPreviousState);
-		return;
-	}
-
-	mpCurrentBody->AddForce(go.force);
-	if(go.status != kOhplGa2bGrabForceTorque) return;
-
-	mpCurrentBody->AddTorque(go.torque);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_post_update(mpA3, &h, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_InteractGrab::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
-	}
-	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
-	if(lKind == 1)
-	{
-		for(size_t i=0; i<mvBodyProperties.size(); ++i)
-		{
-			iPhysicsBody *pBody = mvBodyProperties[i].mpBody;
-			cVector3f vNew;
-
-			cVector3f vLinear = pBody->GetLinearVelocity();
-			if(ohpl_ga2b_leave_limit(&vLinear, mfMaxLeaveLinearSpeed, &vNew)) pBody->SetLinearVelocity(vNew);
-
-			cVector3f vAngular = pBody->GetAngularVelocity();
-			if(ohpl_ga2b_leave_limit(&vAngular, mfMaxLeaveAngularSpeed, &vNew)) pBody->SetAngularVelocity(vNew);
-		}
-
-		mpPlayer->ChangeState(mPreviousState);
-		return false;
-	}
-	else if(lKind == 2)
-	{
-		cCamera *pCam = mpPlayer->GetCamera();
-
-		mpCurrentBody->SetLinearVelocity(0);
-		mpCurrentBody->SetAngularVelocity(0);
-		mpCurrentBody->AddImpulse(pCam->GetForward() * mpGrabData->mfGrabThrowImpulse);
-
-		mpPlayer->ChangeState(mPreviousState);
-		return false;
-	}
-
-	return true;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerState_InteractGrab::OnScroll(float afAmount)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_scroll(mpA3, &h, afAmount);
-		return;
-	}
-	mfDepth = ohpl_ga2b_grab_scroll(mfDepth, afAmount, mpGrabData->mfGrabDepthInc, mpGrabData->mfGrabMinDepth, mpGrabData->mfGrabMaxDepth);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_scroll(mpA3, &h, afAmount);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_InteractGrab::OnAddYaw(float afAmount)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_add_yaw(mpA3, &h, afAmount);
-	}
-	cInput* pInput = gpBase->mpEngine->GetInput();
-	if(pInput->IsTriggerd(eLuxAction_Rotate) && mpGrabData->mbUseRotation)
-	{
-		cMatrixf mtxRot;
-		ohpl_ga2b_grab_rotate(&m_mtxBodyRotation, false, afAmount, &mtxRot);
-		m_mtxBodyRotation = mtxRot;
-		return false;
-	}
-
-	return true;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_add_yaw(mpA3, &h, afAmount);
 }
 
 bool cLuxPlayerState_InteractGrab::OnAddPitch(float afAmount)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_add_pitch(mpA3, &h, afAmount);
-	}
-	cInput* pInput = gpBase->mpEngine->GetInput();
-	if(pInput->IsTriggerd(eLuxAction_Rotate) && mpGrabData->mbUseRotation)
-	{
-#ifdef USE_GAMEPAD
-		////////////////
-		// We have both gamepad and mouse connected?
-		if(gpBase->mpInputHandler->IsGamepadPresent())
-		{
-			/////////////
-			// Check which one of them was used for the input this frame
-#if USE_SDL2
-			if(cMath::Abs(gpBase->mpInputHandler->GetGamepad()->GetAxisValue(eGamepadAxis_RightY)) > 0.0f)
-#else
-			if(cMath::Abs(gpBase->mpInputHandler->GetGamepad()->GetAxisValue(eGamepadAxis_3)) > 0.0f)
-#endif
-			{
-				//Gamepad was used
-				if(gpBase->mpInputHandler->GetInvertGamepadLook()) afAmount = -afAmount;
-			}
-			else if(gpBase->mpInputHandler->GetInvertMouse()) afAmount = -afAmount;
-		}
-		else if(gpBase->mpInputHandler->GetInvertMouse()) afAmount = -afAmount;
-#else
-		if(gpBase->mpInputHandler->GetInvertMouse()) afAmount = -afAmount;
-#endif
-		cMatrixf mtxRot;
-		ohpl_ga2b_grab_rotate(&m_mtxBodyRotation, true, afAmount, &mtxRot);
-		m_mtxBodyRotation = mtxRot;
-		return false;
-	}
-
-	return true;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_add_pitch(mpA3, &h, afAmount);
 }
 
 //-----------------------------------------------------------------------
@@ -440,68 +124,24 @@ cGuiGfxElement* cLuxPlayerState_InteractGrab::GetCrosshair()
 
 void cLuxPlayerState_InteractGrab::OnSaveBody(iPhysicsBody *apBody, float &afMass, bool &abCollideCharacter)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_save_body(mpA3, apBody, &afMass, &abCollideCharacter);
-		return;
-	}
-	for(size_t i=0; i<mvBodyProperties.size(); ++i)
-	{
-		if(mvBodyProperties[i].mpBody == apBody)
-		{
-			afMass = mvBodyProperties[i].mfMass;
-			abCollideCharacter = mvBodyProperties[i].mbCollideCharacter;
-			break;
-		}
-	}
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_save_body(mpA3, apBody, &afMass, &abCollideCharacter);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_InteractGrab::AllowBuoyancy(iPhysicsBody *apBody)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_allow_buoyancy(mpA3, &h, apBody);
-	}
-	iLuxEntity *pBodyEntity = static_cast<iLuxEntity*>(apBody->GetUserData());
-
-	if(pBodyEntity == (iLuxEntity*)mpCurrentProp) return false;
-
-	return true;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_allow_buoyancy(mpA3, &h, apBody);
 }
 
 //-----------------------------------------------------------------------
 
 float cLuxPlayerState_InteractGrab::DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
-	}
-	cVector3f vCurrentRot = cMath::MatrixToEulerAngles(mpCurrentBody->GetLocalMatrix().GetRotation(), eEulerRotationOrder_XYZ);
-	cVector3f vWantedRot = cMath::MatrixToEulerAngles(m_mtxBodyRotation, eEulerRotationOrder_XYZ);
-	cVector3f vRotError(	cMath::GetAngleDistanceRad(vCurrentRot.x, vWantedRot.x),
-							cMath::GetAngleDistanceRad(vCurrentRot.y, vWantedRot.y),
-							cMath::GetAngleDistanceRad(vCurrentRot.z, vWantedRot.z));
-
-	vCurrentRot = cMath::Vector3ToDeg(vCurrentRot);
-	vWantedRot = cMath::Vector3ToDeg(vWantedRot);
-	vRotError = cMath::Vector3ToDeg(vRotError);
-
-
-	/*apSet->DrawFont(apFont, cVector3f(5,afStartY,0),12,cColor(1,1),_W("Current: %ls"), cString::To16Char(vCurrentRot.ToString()).c_str());
-	afStartY += 13;
-	apSet->DrawFont(apFont, cVector3f(5,afStartY,0),12,cColor(1,1),_W("Wanted: %ls"), cString::To16Char(vWantedRot.ToString()).c_str());
-	afStartY += 13;
-	apSet->DrawFont(apFont, cVector3f(5,afStartY,0),12,cColor(1,1),_W("Error: %ls"), cString::To16Char(vRotError.ToString()).c_str());
-	afStartY += 13;*/
-
-
-	return afStartY;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
 }
 
 void cLuxPlayerState_InteractGrab::RenderSolid(cRendererCallbackFunctions* apFunctions)
@@ -515,8 +155,8 @@ void cLuxPlayerState_InteractGrab::RenderSolid(cRendererCallbackFunctions* apFun
 	cMatrixf mtxCamTransform = cMath::MatrixRotate(vCamRotation, eEulerRotationOrder_XYZ);
 	mtxCamTransform.SetTranslation(pCam->GetPosition());
 
-	cVector3f vBasePos = mpGrabData->mvGrabPositionOffset + cVector3f(0,0,-mfDepth);
-	cMatrixf mtxGoal = cMath::MatrixMul(cMath::MatrixTranslate(vBasePos), m_mtxBodyRotation);
+	cVector3f vBasePos = mR.data->mvGrabPositionOffset + cVector3f(0,0,-mR.depth);
+	cMatrixf mtxGoal = cMath::MatrixMul(cMath::MatrixTranslate(vBasePos), mR.bodyRotation);
 	mtxGoal = cMath::MatrixMul(mtxCamTransform,mtxGoal);
 
 	cMatrixf mtxGoalInv = cMath::MatrixInverse(mtxGoal);
@@ -615,9 +255,9 @@ void cLuxPlayerState_InteractGrab::SaveToSaveData(iLuxPlayerState_SaveData* apSa
 	
 	///////////////////////
 	// Save vars
-	kCopyToVar(pData, m_mtxBodyRotation);
-	kCopyToVar(pData, mvLocalBodyOffset);
-	kCopyToVar(pData, mfDepth);
+	(pData->m_mtxBodyRotation = mR.bodyRotation);
+	(pData->mvLocalBodyOffset = mR.localBodyOffset);
+	(pData->mfDepth = mR.depth);
 	kCopyToVar(pData, mfMaxDistance);
 }
 
@@ -646,9 +286,9 @@ void cLuxPlayerState_InteractGrab::LoadFromSaveDataAfterEnter(cLuxMap *apMap, iL
 
 	///////////////////////
 	// Load vars
-	kCopyFromVar(pData, m_mtxBodyRotation);
-	kCopyFromVar(pData, mvLocalBodyOffset);
-	kCopyFromVar(pData, mfDepth);
+	(mR.bodyRotation = pData->m_mtxBodyRotation);
+	(mR.localBodyOffset = pData->mvLocalBodyOffset);
+	(mR.depth = pData->mfDepth);
 	kCopyFromVar(pData, mfMaxDistance);
 }
 

@@ -79,7 +79,6 @@ public:
 	void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:
-	cLuxInteractData_Slide *&mpSlideData = mR.data;
 
 	OhplGa2bPid3 &mForcePid = mR.forcePid;
 
@@ -87,13 +86,10 @@ protected:
 	bool &mbHasGravity = mR.hasGravity;
 
 	float &mfMaxDistance = mR.maxDistance;
-	cVector3f &mvLocalInteractPos = mR.localInteractPos;
 
 	cVector2f &mvMouseAdd = mR.mouseAdd;
 	cVector2f &mvLastMouseAdd = mR.lastMouseAdd;
-	cVector3f &mvLastForce = mR.lastForce;
 
-	float &mfSlideSpeed = mR.slideSpeed;
 
 	float &mfMoveToMouseAddFactor = mR.moveToMouseFactor;
 	float &mfMaxForce = mR.maxForce;

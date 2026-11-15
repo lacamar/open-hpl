@@ -104,33 +104,20 @@ protected:
 	void SaveBodyProperties(iPhysicsBody *apBody);
 	bool BodyIsAdded(iPhysicsBody *apBody);
 
-	cLuxInteractData_Grab *&mpGrabData = mR.data;
 
 	float &mfMaxForce = mR.maxForce;
 	float &mfMaxTorque = mR.maxTorque;
-	float &mfMaxAngularSpeed = mR.maxAngularSpeed;
 
-	float &mfMinSlowPlayerMass = mR.minSlowMass;
-	float &mfMaxSlowPlayerMass = mR.maxSlowMass;
-	float &mfMinSlowPlayerMul = mR.minSlowMul;
 
-	float &mfMaxLeaveAngularSpeed = mR.maxLeaveAngular;
-	float &mfMaxLeaveLinearSpeed = mR.maxLeaveLinear;
 	
 	std::vector<cGrabbedBodyProperties> mvBodyProperties;
 	std::vector<cGrabbedSubMeshProperties> mvSubMeshProperties;
 
-	bool &mbCustomMaterialsSetup = mR.customMaterials;
 
-	cVector3f &mvLocalBodyOffset = mR.localBodyOffset;
-	cMatrixf &m_mtxBodyRotation = mR.bodyRotation;
 
 	OhplGa2bPid3 &mForcePid = mR.forcePid;
-	OhplGa2bPid3 &mSpeedTorquePid = mR.torquePid;
 
-	float &mfDepth = mR.depth;
 	float &mfMaxDistance = mR.maxDistance;
-	float &mfMassSum = mR.massSum;
 };
 
 //----------------------------------------------

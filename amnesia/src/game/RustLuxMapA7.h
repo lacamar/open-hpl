@@ -7,7 +7,6 @@
 #include <cstdlib>
 
 #include "RustLuxMap.h"
-#include "impl/RustBackends.h"
 
 struct OhplA7Ctx;
 struct OhplA7Area;
@@ -145,85 +144,48 @@ extern "C" {
 
 namespace ohpl_a7
 {
-// Walks a list of the Rust-owned map (cursor) or the std container; same HasNext/Next/PeekNext as cSTLIterator.
-template<class T, class CONT, class IT>
+// Walks a list of the Rust-owned map (cursor); same HasNext/Next/PeekNext as cSTLIterator.
+template<class T>
 class Iterator
 {
 public:
-	Iterator(CONT *apCont) : mpCont(apCont), mIt(apCont->begin()), mpCtx(NULL), mWhich(0), mCur(0) {}
-	Iterator(OhplA7Ctx *apCtx, unsigned alWhich) : mpCont(NULL), mpCtx(apCtx), mWhich(alWhich), mCur(ohpl_a7_cur_begin(apCtx, alWhich)) {}
+	Iterator(OhplA7Ctx *apCtx, unsigned alWhich) : mpCtx(apCtx), mWhich(alWhich), mCur(ohpl_a7_cur_begin(apCtx, alWhich)) {}
 
-	bool HasNext()
-	{
-		if(mpCtx) return ohpl_a7_cur_get(mpCtx, mWhich, mCur) != NULL;
-		return mIt != mpCont->end();
-	}
+	bool HasNext() { return ohpl_a7_cur_get(mpCtx, mWhich, mCur) != NULL; }
 
 	T Next()
 	{
-		if(mpCtx)
-		{
-			T val = static_cast<T>(ohpl_a7_cur_get(mpCtx, mWhich, mCur));
-			mCur = ohpl_a7_cur_next(mpCtx, mWhich, mCur);
-			return val;
-		}
-		if(mIt == mpCont->end()) return NULL;
-		T &temp = const_cast<T &>(*mIt);
-		++mIt;
-		return temp;
+		T val = static_cast<T>(ohpl_a7_cur_get(mpCtx, mWhich, mCur));
+		mCur = ohpl_a7_cur_next(mpCtx, mWhich, mCur);
+		return val;
 	}
 
-	T PeekNext()
-	{
-		if(mpCtx) return static_cast<T>(ohpl_a7_cur_get(mpCtx, mWhich, mCur));
-		if(mIt == mpCont->end()) return NULL;
-		return *mIt;
-	}
+	T PeekNext() { return static_cast<T>(ohpl_a7_cur_get(mpCtx, mWhich, mCur)); }
 
 private:
-	CONT *mpCont;
-	IT mIt;
 	OhplA7Ctx *mpCtx;
 	unsigned mWhich;
 	uint64_t mCur;
 };
 
-// One loop body for both paths: cursor on the Rust-owned list, or the std list's iterator. The
-// position advances after the body, so an element appended during the body is still visited.
+// The position advances after the body, so an element appended during the body is still visited.
 template<class CONT>
 class Walk
 {
 public:
 	typedef typename CONT::value_type V;
 
-	Walk(OhplA7Ctx *apCtx, unsigned alWhich, CONT &aCont) : mpCtx(apCtx), mWhich(alWhich), mIt(aCont.begin()), mpCont(&aCont), mCur(0)
-	{
-		if(mpCtx) mCur = ohpl_a7_cur_begin(mpCtx, mWhich);
-	}
+	Walk(OhplA7Ctx *apCtx, unsigned alWhich) : mpCtx(apCtx), mWhich(alWhich), mCur(ohpl_a7_cur_begin(apCtx, alWhich)) {}
 
-	bool Has() const
-	{
-		if(mpCtx) return ohpl_a7_cur_get(mpCtx, mWhich, mCur) != NULL;
-		return mIt != mpCont->end();
-	}
+	bool Has() const { return ohpl_a7_cur_get(mpCtx, mWhich, mCur) != NULL; }
 
-	V Get() const
-	{
-		if(mpCtx) return static_cast<V>(ohpl_a7_cur_get(mpCtx, mWhich, mCur));
-		return *mIt;
-	}
+	V Get() const { return static_cast<V>(ohpl_a7_cur_get(mpCtx, mWhich, mCur)); }
 
-	void Advance()
-	{
-		if(mpCtx) mCur = ohpl_a7_cur_next(mpCtx, mWhich, mCur);
-		else ++mIt;
-	}
+	void Advance() { mCur = ohpl_a7_cur_next(mpCtx, mWhich, mCur); }
 
 private:
 	OhplA7Ctx *mpCtx;
 	unsigned mWhich;
-	typename CONT::iterator mIt;
-	CONT *mpCont;
 	uint64_t mCur;
 };
 

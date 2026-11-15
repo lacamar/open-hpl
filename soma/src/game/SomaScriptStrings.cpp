@@ -49,34 +49,9 @@ private:
 
 static cStringFactory gStringFactory;
 
-template <class S> static void Construct(S *apMem) { new (apMem) S(); }
-template <class S> static void CopyConstruct(const S &aOther, S *apMem) { new (apMem) S(aOther); }
-template <class S> static void Destruct(S *apMem) { apMem->~S(); }
-template <class S> static int Cmp(const S &a, const S &b) { return a.compare(b) < 0 ? -1 : (a.compare(b) > 0 ? 1 : 0); }
 template <class S> static S Add(const S &a, const S &b) { return a + b; }
 template <class S> static asQWORD Length(const S &s) { return s.size(); }
 template <class S> static void Resize(asQWORD alSize, S &s) { s.resize((size_t)alSize); }
-
-static void ConstructWFromNarrow(const std::string &asIn, std::wstring *apMem)
-{
-	new (apMem) std::wstring(OhplGs6::Call32([&](OhplGs6Sink32 k, void *c) { ohpl_gs6_widen(OhplGs6::U(asIn), asIn.size(), k, c); }));
-}
-
-static uint8_t &CharAt(unsigned int alIdx, std::string &s)
-{
-	static uint8_t lDummy = 0;
-	if (alIdx >= s.size())
-		return lDummy;
-	return *(uint8_t *)&s[alIdx];
-}
-
-static uint16_t &WCharAt(unsigned int alIdx, std::wstring &s)
-{
-	static uint16_t lDummy = 0;
-	if (alIdx >= s.size())
-		return lDummy;
-	return *(uint16_t *)&s[alIdx];
-}
 
 static std::string Tos(unsigned int alKind, const float *apF, size_t alF, const int *apI = nullptr, size_t alI = 0)
 {
@@ -225,79 +200,14 @@ void RegisterSomaScriptStringConcats(asIScriptEngine *apEngine)
 
 void RegisterSomaScriptStrings(asIScriptEngine *apEngine)
 {
-	if (OhplS2Rust())
-	{
-		OhplS2InstallHost();
-		ohpl_s2_register_strings(apEngine);
-		return;
-	}
-	int r;
-	r = apEngine->RegisterObjectType("tString", sizeof(std::string), asOBJ_VALUE | asGetTypeTraits<std::string>()); assert(r >= 0);
-	r = apEngine->RegisterObjectType("tWString", sizeof(std::wstring), asOBJ_VALUE | asGetTypeTraits<std::wstring>()); assert(r >= 0);
-	r = apEngine->RegisterStringFactory("tString", &gStringFactory); assert(r >= 0);
-
-	r = apEngine->RegisterObjectBehaviour("tString", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(Construct<std::string>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectBehaviour("tString", asBEHAVE_CONSTRUCT, "void f(const tString &in)", asFUNCTION(CopyConstruct<std::string>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectBehaviour("tString", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(Destruct<std::string>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tString", "tString &opAssign(const tString &in)", asMETHODPR(std::string, operator=, (const std::string &), std::string &), asCALL_THISCALL); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tString", "tString &opAddAssign(const tString &in)", asMETHODPR(std::string, operator+=, (const std::string &), std::string &), asCALL_THISCALL); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tString", "bool opEquals(const tString &in) const", asFUNCTIONPR(std::operator==, (const std::string &, const std::string &), bool), asCALL_CDECL_OBJFIRST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tString", "int opCmp(const tString &in) const", asFUNCTION(Cmp<std::string>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tString", "tString opAdd(const tString &in) const", asFUNCTION(Add<std::string>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tString", "uint64 length() const", asFUNCTION(Length<std::string>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tString", "void resize(uint64)", asFUNCTION(Resize<std::string>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tString", "uint8 &opIndex(uint)", asFUNCTION(CharAt), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tString", "const uint8 &opIndex(uint) const", asFUNCTION(CharAt), asCALL_CDECL_OBJLAST); assert(r >= 0);
-
-	r = apEngine->RegisterObjectBehaviour("tWString", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(Construct<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectBehaviour("tWString", asBEHAVE_CONSTRUCT, "void f(const tWString &in)", asFUNCTION(CopyConstruct<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectBehaviour("tWString", asBEHAVE_CONSTRUCT, "void f(const tString &in)", asFUNCTION(ConstructWFromNarrow), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectBehaviour("tWString", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(Destruct<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tWString", "tWString &opAssign(const tWString &in)", asMETHODPR(std::wstring, operator=, (const std::wstring &), std::wstring &), asCALL_THISCALL); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tWString", "tWString &opAddAssign(const tWString &in)", asMETHODPR(std::wstring, operator+=, (const std::wstring &), std::wstring &), asCALL_THISCALL); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tWString", "bool opEquals(const tWString &in) const", asFUNCTIONPR(std::operator==, (const std::wstring &, const std::wstring &), bool), asCALL_CDECL_OBJFIRST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tWString", "int opCmp(const tWString &in) const", asFUNCTION(Cmp<std::wstring>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tWString", "tWString opAdd(const tWString &in) const", asFUNCTION(Add<std::wstring>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tWString", "uint64 length() const", asFUNCTION(Length<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tWString", "uint16 &opIndex(uint)", asFUNCTION(WCharAt), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tWString", "const uint16 &opIndex(uint) const", asFUNCTION(WCharAt), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tWString", "void resize(uint64)", asFUNCTION(Resize<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	RegisterWConcat<std::string>(apEngine, "tString");
-	RegisterConcat<float>(apEngine, "float");
-	RegisterConcat<int>(apEngine, "int");
-	RegisterConcat<unsigned int>(apEngine, "uint");
-	RegisterConcat<bool>(apEngine, "bool");
-	(void)r;
+	OhplS2InstallHost();
+	ohpl_s2_register_strings(apEngine);
 }
 
 // SOMA's array<T> also has STL-style names
 
-static void ArrPushBack(void *apValue, CScriptArray *apArr) { apArr->InsertLast(apValue); }
-static void ArrPushFront(void *apValue, CScriptArray *apArr) { apArr->InsertAt(0, apValue); }
-static void ArrPopBack(CScriptArray *apArr) { if (apArr->GetSize()) apArr->RemoveLast(); }
-static void ArrPopFront(CScriptArray *apArr) { if (apArr->GetSize()) apArr->RemoveAt(0); }
 static asUINT ArrSize(const CScriptArray *apArr) { return apArr->GetSize(); }
-static bool ArrEmpty(const CScriptArray *apArr) { return apArr->IsEmpty(); }
-static void ArrInsertBack(void *apValue, CScriptArray *apArr) { apArr->InsertLast(apValue); }
-static void ArrInsert(asUINT alIdx, void *apValue, CScriptArray *apArr) { apArr->InsertAt(alIdx, apValue); }
-static void ArrErase(asUINT alIdx, CScriptArray *apArr) { apArr->RemoveAt(alIdx); }
-
 void RegisterSomaScriptArrayExtras(asIScriptEngine *apEngine)
 {
-	if (OhplS2Rust())
-	{
-		ohpl_s2_register_array_extras(apEngine);
-		return;
-	}
-	int r;
-	r = apEngine->RegisterObjectMethod("array<T>", "void push_back(const T&in)", asFUNCTION(ArrPushBack), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("array<T>", "void push_front(const T&in)", asFUNCTION(ArrPushFront), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("array<T>", "void insertBack(const T&in)", asFUNCTION(ArrInsertBack), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("array<T>", "void pop_back()", asFUNCTION(ArrPopBack), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("array<T>", "void pop_front()", asFUNCTION(ArrPopFront), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("array<T>", "void insert(uint, const T&in)", asFUNCTION(ArrInsert), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("array<T>", "void erase(uint)", asFUNCTION(ArrErase), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("array<T>", "uint size() const", asFUNCTION(ArrSize), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("array<T>", "bool empty() const", asFUNCTION(ArrEmpty), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	(void)r;
+	ohpl_s2_register_array_extras(apEngine);
 }

@@ -125,8 +125,7 @@ void cLuxArea_Liquid::SetupAfterLoad(cWorld *apWorld)
 	float fHeight = mpBody->GetShape()->GetSize().y;
 	cVector3f vPos = mpBody->GetWorldPosition();
 
-	if(mpA7Area) ohpl_a7_area_liquid_setup(mpA7Area, vPos.y, fHeight);
-	else ohpl_ga5_liquid_surface_plane(vPos.y, fHeight, reinterpret_cast<OhplGa5Plane*>(&mSurfacePlane));
+	ohpl_a7_area_liquid_setup(mpA7Area, vPos.y, fHeight);
 }
 
 //-----------------------------------------------------------------------
@@ -134,11 +133,7 @@ void cLuxArea_Liquid::SetupAfterLoad(cWorld *apWorld)
 void cLuxArea_Liquid::OnUpdate(float afTimeStep)
 {
 	//Do not update this unless it is a proper game update (when eveything is 100% intialized)
-	if(mpA7Area)
-	{
-		if(ohpl_a7_area_tick(mpA7Area, afTimeStep, gpBase->mpEngine->GetStepSize())==false) return;
-	}
-	else if(ohpl_ga5_step_too_small(afTimeStep, gpBase->mpEngine->GetStepSize())) return;
+	if(ohpl_a7_area_tick(mpA7Area, afTimeStep, gpBase->mpEngine->GetStepSize())==false) return;
 
 	///////////////////////////
 	// Get data
@@ -152,7 +147,6 @@ void cLuxArea_Liquid::OnUpdate(float afTimeStep)
 
 	///////////////////////////
 	// Update count
-	if(mpA7Area == NULL) mfTimeCount += afTimeStep;
 
 	///////////////////////////
 	// Iterate bodies

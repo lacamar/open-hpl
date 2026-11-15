@@ -7,7 +7,6 @@
 #include <cstdint>
 
 #include "RustSomaScript.h"
-#include "impl/RustBackends.h"
 
 struct OhplS2Api;
 
@@ -86,7 +85,6 @@ extern "C" {
 	int ohpl_s2_call_corpus(void *engine, unsigned seed, unsigned calls, const char *path);
 }
 
-inline bool OhplS2Rust() { return hpl::OhplBackendRustRequested(); }
 void OhplS2InstallHost();
 
 #endif

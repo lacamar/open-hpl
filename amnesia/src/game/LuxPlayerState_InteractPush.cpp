@@ -20,7 +20,6 @@
 #include "LuxPlayerState_InteractPush.h"
 
 #include "LuxPlayer.h"
-#include "impl/RustBackends.h"
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
@@ -35,30 +34,8 @@
 
 cLuxPlayerState_InteractPush::cLuxPlayerState_InteractPush(cLuxPlayer *apPlayer) : iLuxPlayerState_Interact(apPlayer, eLuxPlayerState_InteractPush, &mR.base)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_init(&mR.base, &h, eLuxPlayerState_InteractPush);
-		return;
-	}
-
-	mfWalkMaxSpeed = gpBase->mpGameCfg->GetFloat("Player_Interaction","PushMaxSpeedWalk",0);
-	mfWalkForce = gpBase->mpGameCfg->GetFloat("Player_Interaction","PushForceWalk",0);
-	
-	mfRunMaxSpeed = gpBase->mpGameCfg->GetFloat("Player_Interaction","PushMaxSpeedRun",0);
-	mfRunForce = gpBase->mpGameCfg->GetFloat("Player_Interaction","PushForceRun",0);
-	
-	mfCrouchMaxSpeed = gpBase->mpGameCfg->GetFloat("Player_Interaction","PushMaxSpeedCrouch",0);
-	mfCrouchForce = gpBase->mpGameCfg->GetFloat("Player_Interaction","PushForceCrouch",0);
-	
-	mfYawRange = cMath::ToRad(gpBase->mpGameCfg->GetFloat("Player_Interaction","PushYawRange",0));
-	mfPitchMinRange = cMath::ToRad(gpBase->mpGameCfg->GetFloat("Player_Interaction","PushPitchMinRange",0));
-	mfPitchMaxRange = cMath::ToRad(gpBase->mpGameCfg->GetFloat("Player_Interaction","PushPitchMaxRange",0));
-	
-	mfMaxForce = gpBase->mpGameCfg->GetFloat("Player_Interaction","PushMaxForce",0);
-
-	ohpl_ga2b_pid_init(&mVelocityPid, 20, 15, 0, 0.1f);
-	ohpl_ga2b_pid_init(&mStopVelocityPid, 20, 10, 0, 0.1f);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_init(&mR.base, &h, eLuxPlayerState_InteractPush);
 }
 
 //-----------------------------------------------------------------------
@@ -78,60 +55,8 @@ cLuxPlayerState_InteractPush::~cLuxPlayerState_InteractPush()
 
 void cLuxPlayerState_InteractPush::OnEnterState(eLuxPlayerState aPrevState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_enter(mpA3, &h, aPrevState);
-		return;
-	}
-	/////////////////////////////////
-	//Get the static variables
-	SetupInteractVars();
-	
-	cVector3f vInteractPos = cLuxPlayerStateVars::mvInteractPos;
-
-	mpPushData = mpCurrentProp->GetPushData();
-	
-	/////////////////////////////////
-	//Reset variables
-	ClearMoveVars();
-
-	ohpl_ga2b_pid_reset(&mVelocityPid);
-	ohpl_ga2b_pid_reset(&mStopVelocityPid);
-	
-	mvPushDir =0;
-	
-	/////////////////////////////////
-	//Set up character body
-	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-	pCharBody->SetDisableDiagSpeedBoost(false);
-
-	/////////////////////////////////
-	//Set up camera
-	cCamera *pCam = mpPlayer->GetCamera();
-	mfPrevMinPitchLimit = pCam->GetPitchMinLimit();
-	mfPrevMaxPitchLimit = pCam->GetPitchMaxLimit();
-
-	OhplGa2bPushEnterIn pi;
-	pi.pitch = pCam->GetPitch();
-	pi.yaw = pCam->GetYaw();
-	pi.pitchMinRange = mfPitchMinRange;
-	pi.pitchMaxRange = mfPitchMaxRange;
-	pi.yawRange = mfYawRange;
-	pi.atPoint = mpPushData->mbPushAtPoint;
-	pi.bodyMatrix = mpCurrentBody->GetLocalMatrix();
-	pi.bodyPos = mpCurrentBody->GetLocalPosition();
-	pi.feet = pCharBody->GetFeetPosition();
-	pi.interactPos = vInteractPos;
-	OhplGa2bPushEnterOut po;
-	po.localAttach = mvLocalAttachPos;
-	ohpl_ga2b_push_enter(&pi, &po);
-
-	pCam->SetPitchLimits(po.pitchMin, po.pitchMax);
-	pCam->SetYawLimits(po.yawMin, po.yawMax);
-
-	mvLocalAttachPos = po.localAttach;
-	mfMaxAttachPointDist = po.maxAttachDist;
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_enter(mpA3, &h, aPrevState);
 }
 
 //-----}
@@ -140,189 +65,30 @@ void cLuxPlayerState_InteractPush::OnEnterState(eLuxPlayerState aPrevState)
 
 void cLuxPlayerState_InteractPush::OnLeaveState(eLuxPlayerState aNewState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_leave(mpA3, &h, aNewState);
-		return;
-	}
-	if(mpPlayer->GetCharacterBody())
-	{
-		mpPlayer->GetCharacterBody()->SetDisableDiagSpeedBoost(true);
-	}
-
-	mpPlayer->GetCamera()->SetPitchLimits(mfPrevMinPitchLimit, mfPrevMaxPitchLimit);
-	mpPlayer->GetCamera()->SetYawLimits(0, 0);
-
-	ResetInteractVars();
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_leave(mpA3, &h, aNewState);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerState_InteractPush::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_update(mpA3, &h, afTimeStep);
-		return;
-	}
-	iPhysicsWorld *pPhysicsWorld = gpBase->mpMapHandler->GetCurrentMap()->GetWorld()->GetPhysicsWorld();
-	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-
-	OhplGa2bPushBegin pb;
-	pb.atPoint = mpPushData->mbPushAtPoint;
-	pb.bodyMatrix = mpCurrentBody->GetLocalMatrix();
-	pb.localAttach = mvLocalAttachPos;
-	pb.bodyPos = mpCurrentBody->GetLocalPosition();
-	pb.feet = pCharBody->GetFeetPosition();
-	pb.maxAttachDist = mfMaxAttachPointDist;
-	pb.forward = pCharBody->GetForward();
-	pb.right = pCharBody->GetRight();
-	for(int i=0; i<2; ++i)
-	{
-		pb.moving[i] = mbMoving[i];
-		pb.totalMoveMul[i] = mfTotalMoveMul[i];
-	}
-	OhplGa2bPushBeginOut pbo;
-	ohpl_ga2b_push_begin(&pb, &pbo);
-
-	if(pbo.tooFar)
-	{
-		mpPlayer->ChangeState(mPreviousState);
-		return;
-	}
-
-	cVector3f vAttachPos = pbo.attach;
-	mvPushDir = pbo.pushDir;
-
-	cVector3f vBodyVel = mpPushData->mbPushAtPoint ?  mpCurrentBody->GetVelocityAtPosition(vAttachPos) : mpCurrentBody->GetLinearVelocity();
-
-	if(pbo.noMovement)
-	{
-		cVector3f vForce;
-		ohpl_ga2b_push_stop(&mStopVelocityPid, &vBodyVel, mpCurrentBody->GetMass(), mfMaxForce, afTimeStep, &vForce);
-
-		if(mpPushData->mbPushAtPoint)
-			mpCurrentBody->AddForceAtPosition(vForce,vAttachPos);
-		else
-			mpCurrentBody->AddForce(vForce);
-		return;
-	}
-
-	bool bNormalMove = mpPlayer->GetCurrentMoveState() == eLuxMoveState_Normal;
-	bool bRunning = false;
-	bool bCrouching = false;
-	if(bNormalMove)
-	{
-		cLuxMoveState_Normal *pNormalMove = static_cast<cLuxMoveState_Normal*>(mpPlayer->GetMoveStateData(eLuxMoveState_Normal));
-		bRunning = pNormalMove->IsRunning();
-		bCrouching = pNormalMove->IsCrouching();
-	}
-	float vWalk[2] = {mfWalkMaxSpeed, mfWalkForce};
-	float vRun[2] = {mfRunMaxSpeed, mfRunForce};
-	float vCrouch[2] = {mfCrouchMaxSpeed, mfCrouchForce};
-	float vPick[2];
-	ohpl_ga2b_push_pick(bNormalMove, bRunning, bCrouching, vWalk, vRun, vCrouch, vPick);
-
-	OhplGa2bPushDrive pd;
-	pd.pushDir = mvPushDir;
-	pd.vel = vBodyVel;
-	pd.mass = mpCurrentBody->GetMass();
-	pd.maxForce = mfMaxForce;
-	pd.maxSpeed = vPick[0];
-	pd.pushForce = vPick[1];
-	pd.forceMul = mpPushData->mfPushForceMul;
-	pd.bodyMatrix = mpCurrentBody->GetLocalMatrix();
-	pd.forward = pCharBody->GetForward();
-	pd.right = pCharBody->GetRight();
-	OhplGa2bPushDriveOut pdo;
-	ohpl_ga2b_push_drive(&mVelocityPid, &pd, afTimeStep, &pdo);
-
-	if(mpPushData->mbPushAtPoint)
-		mpCurrentBody->AddForceAtPosition(pdo.correctForce,vAttachPos);
-	else
-		mpCurrentBody->AddForce(pdo.correctForce);
-
-	if(pdo.hasPushForce)
-	{
-		if(mpPushData->mbPushAtPoint)
-		{
-			mpCurrentBody->AddForceAtPosition(pdo.pushForce,vAttachPos);
-		}
-		else
-		{
-			mpCurrentBody->AddForce(pdo.pushForce);
-		}
-	}
-
-	cCollideData collideData;collideData.SetMaxSize(1);
-	bool bWillCollideWithPlayer = pPhysicsWorld->CheckShapeCollision(
-										pCharBody->GetCurrentShape(), cMath::MatrixTranslate(pCharBody->GetPosition()),
-										mpCurrentBody->GetShape(), pdo.nextTransform,
-										collideData,1,false);
-
-	if(bWillCollideWithPlayer==false)
-	{
-		for(int i=0; i<2; ++i)
-		{
-			pCharBody->SetMaxPositiveMoveSpeed((eCharDir)i,pdo.maxSpeed[i]);
-			pCharBody->SetMaxNegativeMoveSpeed((eCharDir)i,-pdo.maxSpeed[i]);
-		}
-	}
-
-	for(int i=0; i<2; ++i)
-	{
-		if(mbMoving[i])
-			pCharBody->Move((eCharDir)i, mfTotalMoveMul[i]);
-	}
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_update(mpA3, &h, afTimeStep);
 }
 
 void cLuxPlayerState_InteractPush::PostUpdate(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_post_update(mpA3, &h, afTimeStep);
-		return;
-	}
-	ClearMoveVars();
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_post_update(mpA3, &h, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_InteractPush::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
-	}
-	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
-	if(lKind == 1)
-	{
-		mpPlayer->ChangeState(mPreviousState);
-		return false;
-	}
-	else if(lKind == 2)
-	{
-		iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-
-		if(mpPushData->mbPushAtPoint)
-		{
-			cVector3f vAttachPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mvLocalAttachPos);
-			mpCurrentBody->AddImpulseAtPosition(mvPushDir * mpPushData->mfPushImpulse,vAttachPos);
-		}
-		else
-		{
-			mpCurrentBody->AddImpulse(mvPushDir * mpPushData->mfPushImpulse);
-		}
-
-		mpPlayer->ChangeState(mPreviousState);
-		return false;
-	}
-
-	return true;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
 }
 
 //-----------------------------------------------------------------------
@@ -336,15 +102,8 @@ void cLuxPlayerState_InteractPush::OnScroll(float afAmount)
 
 bool cLuxPlayerState_InteractPush::OnMove(eCharDir aDir, float afMul)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
-	}
-	mfTotalMoveMul[aDir] += afMul;
-	mbMoving[aDir] = true;
-
-	return false;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
 }
 
 //-----------------------------------------------------------------------
@@ -370,21 +129,8 @@ cGuiGfxElement* cLuxPlayerState_InteractPush::GetCrosshair()
 
 float cLuxPlayerState_InteractPush::DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
-	}
-	cVector3f vBodyVel = mpCurrentBody->GetLinearVelocity(); //TODO: Get vel at point if pick at point!
-	cVector3f vVelInDir = mvPushDir * cMath::Vector3Dot(mvPushDir, vBodyVel);
-	
-	apSet->DrawFont(apFont,cVector3f(5,afStartY,5),12,cColor(1,1),_W("CurrentVel: %ls"), cString::To16Char(vBodyVel.ToString()).c_str());
-	afStartY += 13.0f;
-	
-	apSet->DrawFont(apFont,cVector3f(5,afStartY,5),12,cColor(1,1),_W("WantedVel: %ls"), cString::To16Char(vVelInDir.ToString()).c_str());
-	afStartY += 13.0f;
-
-	return afStartY;	
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
 }
 
 //-----------------------------------------------------------------------
@@ -395,15 +141,6 @@ float cLuxPlayerState_InteractPush::DrawDebug(cGuiSet *apSet,iFontData *apFont, 
 //////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------
-
-void cLuxPlayerState_InteractPush::ClearMoveVars()
-{
-	for(int i=0; i<2; ++i)
-	{
-		mfTotalMoveMul[i] = 0;
-		mbMoving[i] = false;
-	}
-}
 
 //-----------------------------------------------------------------------
 

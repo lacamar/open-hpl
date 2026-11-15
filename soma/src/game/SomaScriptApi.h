@@ -8,17 +8,6 @@
 #include <string>
 #include <vector>
 
-struct cSomaScriptApiType
-{
-	std::string msName;
-	std::string msKind; // value, ref, interface, template
-	int mlSize;
-	std::vector<std::pair<std::string, std::string>> mvBehaviours; // kind, params
-	std::vector<std::string> mvMethods;
-	std::vector<std::pair<std::string, int>> mvProps; // decl, offset (-1 unknown)
-	std::vector<std::string> mvCasts;
-};
-
 struct OhplS2Api;
 
 class cSomaScriptApi
@@ -42,25 +31,15 @@ public:
 	static std::string NativeDecl(const char *apType, const char *apDecl);
 
 	static std::map<std::string, int> &GetStubCallCounts();
-	static bool IsValueTypeNative(const std::string &asName);
 
 private:
-	void RegisterPropertyAccessors(asIScriptEngine *apEngine, const cSomaScriptApiType &aType, const std::string &asDecl);
-	void Fail(const std::string &asWhat, int alCode);
 	void Sync() const;
 
 	OhplS2Api *mpRust = NULL;
 
-	std::vector<std::pair<std::string, std::vector<std::pair<std::string, int>>>> mvEnums;
-	std::vector<cSomaScriptApiType> mvTypes;
-	std::vector<std::string> mvGlobals;
-	std::vector<std::string> mvGlobalProps;
 	mutable std::vector<std::string> mvErrors;
 	mutable std::vector<std::string> mvWarnings;
 	mutable std::vector<std::string> mvRemaps;
-	std::map<std::string, std::vector<std::string>> mmapSigs;
-	std::set<std::string> msetEnumNames;
-	bool mbTypesRegistered = false;
 };
 
 void ConfigureSomaScriptEngine(asIScriptEngine *apEngine);

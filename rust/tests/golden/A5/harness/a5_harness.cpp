@@ -1,4 +1,4 @@
-// a5_harness cpp|rust: seeded steps through the pre-A5 shell composition (cpp) or ohpl_a5_* (rust).
+// a5_harness: seeded steps through ohpl_a5_*; the output is compared with ../small_props.txt.
 #include "RustLuxPropA5.h"
 #include <cstdint>
 #include <cstdio>
@@ -36,15 +36,6 @@ static void Emit(const std::string &head, const std::string &tail)
 static std::vector<std::string> gLog;
 static void Push(void *, const OhplGa4Op *op) { gLog.push_back(OpLine(op->code, op->i, op->j, op->f[0])); }
 static OhplGa4Sink gSink = { NULL, &Push };
-static bool gRust;
-
-static void ButtonSet(OhplA5Button &s, bool nw, bool fx)
-{
-	int c;
-	if(ohpl_ga4b_button_set(&s.on, nw, &c) == false) return;
-	gLog.push_back(OpLine(kOhplA5Op_ConnState, c, 0, 0));
-	gLog.push_back(OpLine(kOhplA5Op_SetEffects, s.on, fx, 0));
-}
 
 static void Button(uint64_t seed)
 {
@@ -57,26 +48,11 @@ static void Button(uint64_t seed)
 		bool a = r.b();
 		int c = (int)(r.next() % 3) - 1;
 		gLog.clear();
-		if(k == 0)
-		{
-			if(gRust) ohpl_a5_button_interact(&st, &gSink); else ButtonSet(st, !st.on, true);
-		}
-		else if(k == 1)
-		{
-			if(gRust) ohpl_a5_button_set_on(&st, a, false, &gSink); else ButtonSet(st, a, false);
-		}
-		else if(k == 2)
-		{
-			if(gRust) ohpl_a5_button_conn(&st, c, &gSink);
-			else
-			{
-				int sw = ohpl_ga4b_button_conn_state(c);
-				if(sw == 1) ButtonSet(st, true, true);
-				else if(sw == 0) ButtonSet(st, false, true);
-			}
-		}
+		if(k == 0) ohpl_a5_button_interact(&st, &gSink);
+		else if(k == 1) ohpl_a5_button_set_on(&st, a, false, &gSink);
+		else if(k == 2) ohpl_a5_button_conn(&st, c, &gSink);
 		else { st.can_on = a; st.can_off = !a; }
-		bool ci = gRust ? ohpl_a5_button_can_interact(&st) : ohpl_ga4b_button_can_interact(st.on, st.can_on, st.can_off);
+		bool ci = ohpl_a5_button_can_interact(&st);
 		if(ci != ohpl_ga4b_button_can_interact(st.on, st.can_on, st.can_off)) puts("MISMATCH can_interact");
 		Emit("b " + std::to_string(k) + " " + B(st.on), Join(gLog));
 	}
@@ -102,23 +78,8 @@ static void Photocell(uint64_t seed)
 		p.illum = p.has ? r.f(0.5f) : 0;
 		p.asked = 0;
 		gLog.clear();
-		if(gRust)
-		{
-			OhplA5PhotoHost host = { &p, &PBounds, &PLight, &PIllum };
-			ohpl_a5_photocell_update(&st, dt, &host, &gSink);
-		}
-		else
-		{
-			if(ohpl_ga4b_photo_tick(&st.check_count, dt))
-			{
-				st.light_level = ohpl_ga4b_photo_level(p.lv, 6);
-				int c = ohpl_ga4b_photo_switch(st.light_level, &st.lit, st.on_limit, st.off_limit);
-				if(c != 0) gLog.push_back(OpLine(kOhplA5Op_ConnState, c, 0, 0));
-			}
-			float goal = ohpl_ga4b_photo_goal(st.light_level, st.on_limit, st.off_limit);
-			if(p.has && p.illum != goal)
-				gLog.push_back(OpLine(kOhplA5Op_PhotoIllum, 0, 0, ohpl_ga4b_photo_illum_step(p.illum, goal, dt)));
-		}
+		OhplA5PhotoHost host = { &p, &PBounds, &PLight, &PIllum };
+		ohpl_a5_photocell_update(&st, dt, &host, &gSink);
 		Emit("p " + Bits(st.light_level) + " " + B(st.lit), Join(gLog));
 	}
 }
@@ -133,17 +94,10 @@ static void Door(uint64_t seed)
 		if(r.b())
 		{
 			float dt = r.f(0.5f);
-			if(gRust) ohpl_a5_door_update(&st, dt); else st.locked_count = ohpl_ga4b_door_tick(st.locked_count, dt);
+			ohpl_a5_door_update(&st, dt);
 		}
 		gLog.clear();
-		if(gRust) ohpl_a5_door_interact(&st, &gSink);
-		else
-		{
-			OhplGa4bDoorAct act;
-			ohpl_ga4b_door_interact(st.locked, st.locked_count, &act);
-			if(act.locked_feedback) { gLog.push_back(OpLine(kOhplA5Op_DoorLockedFeedback, 0, 0, 0)); st.locked_count = act.count; }
-			if(act.change_map) gLog.push_back(OpLine(kOhplA5Op_DoorChangeMap, 0, 0, 0));
-		}
+		ohpl_a5_door_interact(&st, &gSink);
 		Emit("d " + Bits(st.locked_count), Join(gLog));
 	}
 }
@@ -152,14 +106,6 @@ struct OilCtx { bool hard; float lamp; float total; };
 static bool OHard(void *c) { return ((OilCtx *)c)->hard; }
 static float OLamp(void *c) { return ((OilCtx *)c)->lamp; }
 static float OTotal(void *c) { return ((OilCtx *)c)->total; }
-
-static void CalcOil(OhplA5Oil &s, OilCtx &h)
-{
-	if(s.calculated) return;
-	if(h.hard) { s.amount = 10.0f; s.calculated = true; return; }
-	s.amount = ohpl_ga4b_oil_amount(h.total);
-	s.calculated = true;
-}
 
 static void Oil(uint64_t seed)
 {
@@ -175,46 +121,16 @@ static void Oil(uint64_t seed)
 		for(int n = 0; n < 5; ++n)
 		{
 			gLog.clear();
-			bool res;
-			if(gRust) res = ohpl_a5_oil_interact(&st, &host, &gSink);
-			else
-			{
-				CalcOil(st, h);
-				OhplGa4bOilFill fill;
-				ohpl_ga4b_oil_fill(st.amount, h.lamp, &fill);
-				if(fill.result == kOhplGa4bOil_Empty)
-				{
-					gLog.push_back(OpLine(kOhplA5Op_OilSound, kOhplA5Snd_Empty, 0, 0));
-					gLog.push_back(OpLine(kOhplA5Op_OilMessage, kOhplA5Msg_Empty, 0, 0));
-					res = false;
-				}
-				else if(fill.result == kOhplGa4bOil_Full)
-				{
-					gLog.push_back(OpLine(kOhplA5Op_OilMessage, kOhplA5Msg_LanternFull, 0, 0));
-					res = false;
-				}
-				else
-				{
-					st.amount = fill.barrel;
-					gLog.push_back(OpLine(kOhplA5Op_OilSetLamp, 0, 0, fill.lamp));
-					gLog.push_back(OpLine(kOhplA5Op_OilSound, kOhplA5Snd_Fill, 0, 0));
-					int msg = fill.tier == 0 ? kOhplA5Msg_RefillFull : fill.tier == 1 ? kOhplA5Msg_Refill025 : fill.tier == 2 ? kOhplA5Msg_Refill050 : fill.tier == 3 ? kOhplA5Msg_Refill075 : kOhplA5Msg_Refill100;
-					gLog.push_back(OpLine(kOhplA5Op_OilMessage, msg, 0, 0));
-					res = true;
-				}
-			}
+			bool res = ohpl_a5_oil_interact(&st, &host, &gSink);
 			if(r.b()) h.lamp = r.f(50.0f);
-			int tier;
-			if(gRust) tier = ohpl_a5_oil_focus_tier(&st, &host);
-			else { CalcOil(st, h); tier = ohpl_ga4b_oil_focus_tier(st.amount); }
+			int tier = ohpl_a5_oil_focus_tier(&st, &host);
 			Emit("o " + B(res) + " " + Bits(st.amount) + " " + std::to_string(tier), Join(gLog));
 		}
 	}
 }
 
-int main(int argc, char **argv)
+int main()
 {
-	gRust = argc > 1 && !strcmp(argv[1], "rust");
 	for(uint64_t seed = 1; seed <= 8; ++seed) { Button(seed); Photocell(seed); Door(seed); Oil(seed); }
 	return 0;
 }

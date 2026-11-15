@@ -399,10 +399,6 @@ private:
 	float &mfPitchSpeedMul = mCore.cam.mfPitchSpeedMul;
 	float &mfPitchMaxSpeed = mCore.cam.mfPitchMaxSpeed;
 
-	float &mfLeanRoll = mCore.cam.mfLeanRoll;
-	float &mfLeanRollGoal = mCore.cam.mfLeanRollGoal;
-	float &mfLeanRollSpeedMul = mCore.cam.mfLeanRollSpeedMul;
-	float &mfLeanRollMaxSpeed = mCore.cam.mfLeanRollMaxSpeed;
 
 	cVector3f &mvCamAnimPos = mCore.cam.mvCamAnimPos;
 	cVector3f &mvCamAnimPosGoal = mCore.cam.mvCamAnimPosGoal;
@@ -411,7 +407,6 @@ private:
 	
 	tWString msFocusText;
 	tWString msLastFocusText;
-	float &mfFocusTextAlpha = mCore.mfFocusTextAlpha;
 
 	bool mbShowCrossHair;
 	bool mbScriptShowFocusIconAndCrossHair;
@@ -428,16 +423,12 @@ private:
 	cVector3f mvBodyCrouchSize;
 	cVector3f mvCameraPosAdd;
 
-	float &mfHeadSpinDamageSpeed = mCore.mfHeadSpinDamageSpeed;
-	float &mfHeadSpinDeacc = mCore.mfHeadSpinDeacc;
 
 	float mfDefaultMass;
 
 	float &mfAspect = mCore.cam.mfAspect;
 	float &mfFOV = mCore.cam.mfFOV;
 
-	float &mfTerrorIncSpeed = mCore.mfTerrorIncSpeed;
-	float &mfTerrorDecSpeed = mCore.mfTerrorDecSpeed;
 
 	float mfAutoKillYPos;
 

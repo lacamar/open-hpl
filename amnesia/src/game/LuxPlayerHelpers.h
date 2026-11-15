@@ -57,19 +57,12 @@ private:
 
 	int32_t &mlState = mS.mlState;
 
-	float &mfHeightAddCollapseSpeed = mS.mfHeightAddCollapseSpeed;
-	float &mfHeightAddAwakeSpeed = mS.mfHeightAddAwakeSpeed;
-	float &mfRollCollapseSpeed = mS.mfRollCollapseSpeed;
 	float mfRollAwakeSpeed;
 
-	float &mfHeightAddGoal = mS.mfHeightAddGoal;
 	
-	float &mfAwakenSanity = mS.mfAwakenSanity;
     
-	float &mfSleepTime = mS.mfSleepTime;
 
 	float mfSleepSpeedMul;
-	float &mfWakeUpSpeedMul = mS.mfWakeUpSpeedMul;
 	
 	tString msStartSound;
 	tString msAwakenSound;
@@ -77,14 +70,11 @@ private:
 	float mfSleepLoopSoundVolume;
 
 	tString msSleepRandomSound;
-	float &mfSleepRandomMinTime = mS.mfSleepRandomMinTime;
-	float &mfSleepRandomMaxTime = mS.mfSleepRandomMaxTime;
 	
 	float &mfHeightAdd = mS.mfHeightAdd;
 	float &mfRoll = mS.mfRoll;
 
 	float &mfT = mS.mfT;
-	float &mfRandomCount = mS.mfRandomCount;
 
 	cSoundEntry *mpLoopSound;
 	int mlLoopSoundID;
@@ -109,16 +99,10 @@ private:
 	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
 	OhplA2bCamDir mS;
 
-	float &mfStartSwayMaxSanity = mS.k.mfStartSwayMaxSanity;
 
-	uint32_t &mbSwayActive = mS.k.mbSwayActive;
 
-	cVector2f &mvSwayAdd = mS.k.mvSwayAdd;
-	int32_t &mlMaxPositions = mS.k.mlMaxPositions;
 
-	float &mfSwayAlpha = mS.k.mfSwayAlpha;
 
-	cVector2f &mvNextAdd = mS.k.mvNextAdd;
 };
 
 //----------------------------------------------
@@ -194,27 +178,13 @@ private:
 	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
 	OhplA2bHurt mS;
 	std::vector<cGuiGfxElement*> mvNoiseGfx;
-	float &mfEffectStartHealth = mS.k.mfEffectStartHealth;
-	float &mfMinMoveMul = mS.k.mfMinMoveMul;
-	float &mfMaxPantCount = mS.k.mfMaxPantCount;
-	float &mfPantSpeed = mS.k.mfPantSpeed;
-	float &mfPantSize = mS.k.mfPantSize;
 
-	int32_t &mlCurrentNoise = mS.k.mlCurrentNoise;
-	float &mfNoiseUpdateCount = mS.k.mfNoiseUpdateCount;
 
 	float mfNoiseAlpha;
-	float &mfNoiseFreq = mS.k.mfNoiseFreq;
 	cColor mNoiseColor;
 	
-	float &mfPantCount = mS.k.mfPantCount;
-	float &mfPantPosAdd = mS.k.mfPantPosAdd;
-	float &mfPantPosAddVel = mS.k.mfPantPosAddVel;
-	float &mfPantPosAddDir = mS.k.mfPantPosAddDir;
 	float &mfAlpha = mS.k.mfAlpha;
 
-	float &mfHealthRegainSpeed = mS.mfHealthRegainSpeed;
-	float &mfHealthRegainLimit = mS.mfHealthRegainLimit;
 };
 
 //----------------------------------------------
@@ -258,10 +228,7 @@ private:
 	void LoadAndPlayFlashbackFile(const tString& asFlashbackFile);
 
 	//Data
-	float &mfRadialBlurSize = mS.mfRadialBlurSize;
-	float &mfRadialBlurStartDist = mS.mfRadialBlurStartDist;
 	float mfWorldSoundVolume;
-	float &mfMoveSpeedMul = mS.mfMoveSpeedMul;
 	float &mfRunSpeedMul = mS.mfRunSpeedMul;
 
 	//Variables
@@ -434,8 +401,6 @@ private:
 	tString msTurnOffSound;
 	tString msOutOfOilSound;
 	tString msDisabledSound;
-	float &mfLowerOilSpeed = mS.k.mfLowerOilSpeed;
-	float &mfFadeLightOilAmount = mS.k.mfFadeLightOilAmount;
 	
 	uint32_t &mbDisabled = mS.mbDisabled;
 	uint32_t &mbActive = mS.k.mbActive;
@@ -653,19 +618,15 @@ public:
 
 	void OnMapEnter(cLuxMap *apMap);
 
-	float GetExtendedLightLevel(){ return mfExtendedLightLevel;}
-	float GetNormalLightLevel(){ return mfNormalLightLevel;}
+	float GetExtendedLightLevel(){ return mS.mfExtendedLightLevel;}
+	float GetNormalLightLevel(){ return mS.mfNormalLightLevel;}
 
 private:
 	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
 	static void HostFill(void *apCtx, uint32_t alKind, float *apBuf);
 	OhplA2bLight mS;
 	void SampleLevels(const cVector3f *apPos, float *apExt, float *apNormal);
-	float &mfExtendedLightLevel = mS.mfExtendedLightLevel;
-	float &mfNormalLightLevel = mS.mfNormalLightLevel;
-	float &mfUpdateCount = mS.mfUpdateCount;
 
-	float &mfRadiusAdd = mS.mfRadiusAdd;
 };
 
 //----------------------------------------------
@@ -689,7 +650,6 @@ public:
 
 	cLightPoint* GetAmbientLight(){ return mpAmbientLight;}
 
-	bool InDarkness();
 
 	void SetActive(bool abX);
 
@@ -700,9 +660,7 @@ private:
 	OhplA2bDark mS;
 	cSoundHandler *mpSoundHandler;
 
-	float &mfMinDarknessLightLevel = mS.k.mfMinDarknessLightLevel;
 	
-	float &mfAmbientLightMinLightLevel = mS.k.mfAmbientLightMinLightLevel;
 	float mfAmbientLightRadius;
 	float mfAmbientLightIntensity;
 	float mfAmbientLightFadeInTime;
@@ -711,21 +669,14 @@ private:
 
 	tString msLoopSoundFile;
 	float mfLoopSoundVolume;
-	float &mfLoopSoundStartupTime = mS.k.mfLoopSoundStartupTime;
 	float mfLoopSoundFadeInSpeed;
 	float mfLoopSoundFadeOutSpeed;
 
-	float &mfSanityLossPerSecond = mS.k.mfSanityLossPerSecond;
-	float &mfSanityLossMul = mS.k.mfSanityLossMul;
 
-	uint32_t &mbInDarkness = mS.k.mbInDarkness;
-	float &mfShowHintTimer = mS.k.mfShowHintTimer;
 
 	cSoundEntry *mpLoopSound;
-	float &mfLoopSoundCount = mS.k.mfLoopSoundCount;
 
 	cLightPoint *mpAmbientLight;
-	uint32_t &mbAmbientLightIsOn = mS.k.mbAmbientLightIsOn;
 
 	uint32_t &mbActive = mS.mbActive;
 };

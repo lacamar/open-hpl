@@ -85,12 +85,7 @@ public:
 
 
 private:
-	//Vars
-	bool mbSwitchedOn;
-	bool mbCanBeSwitchedOn;
-	bool mbCanBeSwitchedOff;
-
-	OhplA5Button mS; //used instead of the vars above when OHPL_IMPL=rust
+	OhplA5Button mS;
 };
 
 //----------------------------------------------

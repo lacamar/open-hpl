@@ -82,7 +82,7 @@ fn item(s: &str) -> Option<(char, Vec<u8>)> {
 }
 
 #[test]
-fn corpus_matches_cpp() {
+fn corpus_matches_golden() {
     testreg::REG.with(|r| r.borrow_mut().clear());
     s2_math::register(Engine(std::ptr::null_mut()));
     let reg: HashMap<String, usize> = testreg::REG.with(|r| {

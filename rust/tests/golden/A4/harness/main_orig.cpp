@@ -1,5 +1,0 @@
-#include "prelude.h"
-#include "orig_decl.inc"
-#include "fake.inc"
-#include "orig_body.inc"
-#include "driver.inc"

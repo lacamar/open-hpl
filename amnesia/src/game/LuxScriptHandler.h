@@ -74,7 +74,6 @@ private:
 	static float __stdcall RandFloat(float afMin, float afMax);
 	static int __stdcall RandInt(int alMin, int alMax);
 
-	static bool __stdcall StringContains(string& asString, string& asSubString);
 	static string& __stdcall StringSub(string& asString, int alStart, int alCount);
 
 	//Function syntax: Func(string &in asTimer)
@@ -120,28 +119,14 @@ private:
 	static void __stdcall CheckPoint(string& asName,string& asStartPos ,string& asCallback, string &asDeathHintCat, string &asDeathHintEntry);
 	static void __stdcall CheckPointAmfp(string& asName,string& asStartPos ,string& asCallback, string &asDeathHintCat, string &asDeathHintEntry, bool abAmfpExtraArg);
 
-	static void __stdcall AmfpStub_AddHint(string &asEntity, string &asUnknown);
 	static bool __stdcall AmfpStub_GetEntityActive(string &asName);
-	static void __stdcall AmfpStub_SetEnemyMoveType(string &asEnemyName, string &asMoveType);
-	static void __stdcall AmfpStub_SetJournalDisabled(bool abDisabled);
-	static void __stdcall AmfpStub_SetLampFlickerActive(string &asName, bool abActive);
-	static void __stdcall AmfpStub_SetLanternFlickerActive(bool abActive);
-	static void __stdcall AmfpStub_SetManPigType(string &asEnemyName, string &asType);
-	static void __stdcall AmfpStub_SetParticleSystemActive(string &asName, bool abActive);
-	static void __stdcall AmfpStub_SetPhysicsAutoDisable(string &asName, bool abActive);
-	static void __stdcall AmfpStub_SetPlayerInfection(float afAmount);
-	static void __stdcall AmfpStub_ShowScreenImage(string &asFile, float afX, float afY, float afZ, bool abFadeIn, float afA, float afB, float afC);
-	static void __stdcall AmfpStub_StartPhoneRinging(string &asName);
-	static void __stdcall AmfpStub_StopPhoneRinging(string &asName);
 	static void __stdcall AddEffectVoice2(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, float afTextDelay, string& asText2Entry, float afText2Delay, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance);
 	static void __stdcall AddEffectVoice3(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, float afTextDelay, string& asText2Entry, float afText2Delay, string& asText3Entry, float afText3Delay, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance);
 	static void __stdcall AddEffectVoice5(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, float afTextDelay, string& asText2Entry, float afText2Delay, string& asText3Entry, float afText3Delay, string& asText4Entry, float afText4Delay, string& asText5Entry, float afText5Delay, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance);
 	static void __stdcall AddEffectVoice6(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, float afTextDelay, string& asText2Entry, float afText2Delay, string& asText3Entry, float afText3Delay, string& asText4Entry, float afText4Delay, string& asText5Entry, float afText5Delay, string& asText6Entry, float afText6Delay, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance);
 	static void __stdcall AddEffectVoice7(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, float afTextDelay, string& asText2Entry, float afText2Delay, string& asText3Entry, float afText3Delay, string& asText4Entry, float afText4Delay, string& asText5Entry, float afText5Delay, string& asText6Entry, float afText6Delay, string& asText7Entry, float afText7Delay, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance);
-	static void __stdcall AmfpStub_AddPlayerInfection(float afInfection);
 	static void __stdcall AttachAreaToProp(string& asAreaName, string& asProp, int alBody);
 	static void __stdcall AttachPropToBone(string& asChildEntityName, string& asParentEntityName, string& asParentBoneName, float fPosX, float fPosY, float fPosZ, float fRotX, float fRotY, float fRotZ);
-	static void __stdcall AmfpStub_ChangeEnemyPose(string& asName, string& asPoseType);
 	static void __stdcall DestroyParticleSystemInstantly(string& asName);
 	static void __stdcall DetachPropFromBone(string& asChildEntityName);
 	static void __stdcall FadeLampTo(string& asName, float afR, float afG, float afB, float afA, float afRadius, float afTime);
@@ -152,24 +137,17 @@ private:
 	static bool __stdcall AmfpStub_GetJournalDisabled();
 	static bool __stdcall GetPlayerCanSeeEnemy(string & asEnemyName);
 	static float __stdcall AmfpStub_GetPlayerInfection();
-	static void __stdcall AmfpStub_GiveInfectionDamage(float afAmount, bool abUseEffect);
-	static void __stdcall AmfpStub_HangUpPhone(string & asName);
-	static void __stdcall AmfpStub_HideScreenImageImmediately();
-	static void __stdcall AmfpStub_HideScreenImageWithFade(float afFadeOut);
 	static void __stdcall PauseCurrentAnimation(string& asProp, float afFadeTime);
 	static void __stdcall PlayCurrentAnimation(string& asProp, float afFadeTime, bool abLoop);
 	static void __stdcall PlayEnemyAnimation(string & asName, string & asAnimName, bool abLoop, float afFadeTime);
 	static void __stdcall PlayScriptedAnimation(string& asName, string& asAnimationName, bool abLoopAnimation);
 	static void __stdcall PlaySoundAtPosition(string& asSoundName, string& asSoundFile, float afX, float afY, float afZ, float afFadeTime, bool abSaveSound);
-	static void __stdcall AmfpStub_ReleasePlayerFromLimbo();
-	static void __stdcall AmfpStub_RemoveAllHints();
 	static void __stdcall SendEnemyTimeOut(string& asName, float afTimeOut);
 	static void __stdcall SetButtonCanBeSwitchedOff(string& asName, bool abCanBeSwitchedOff);
 	static void __stdcall SetButtonCanBeSwitchedOn(string& asName, bool abCanBeSwitchedOn);
 	static void __stdcall SetEnemyActivationDistance(string& asName, float afX);
 	static void __stdcall SetEnemyBlind(string& asName, bool abX);
 	static void __stdcall SetEnemyDeaf(string& asName, bool abX);
-	static void __stdcall AmfpStub_SetInfectionFauxMode(bool abFauxMode);
 	static void __stdcall SetLampCanBeLitByPlayer(string& asName, bool abLit);
 	static void __stdcall SetPlayerUsesDragFootsteps(bool abX);
 	static void __stdcall SetPropAnimationPosition(string& asProp, float afPos);
@@ -234,7 +212,6 @@ private:
 	static bool __stdcall GetFlashbackIsActive();
 		
 	static void __stdcall StartPlayerSpawnPS(string& asSPSFile);
-	static void __stdcall StopPlayerSpawnPS();
 
 	static void __stdcall PlayGuiSound(string& asSoundFile, float afVolume);
 
@@ -581,25 +558,9 @@ private:
 
 	//////////////////////////////
 	// Math
-	static float __stdcall ScriptSin(float afX);
-	static float __stdcall ScriptCos(float afX);
-	static float __stdcall ScriptTan(float afX);
-	static float __stdcall ScriptAsin(float afX);
-	static float __stdcall ScriptAcos(float afX);
-	static float __stdcall ScriptAtan(float afX);
-	static float __stdcall ScriptAtan2(float afX, float afY);
-	static float __stdcall ScriptSqrt(float afX);
-	static float __stdcall ScriptPow(float afBase, float afExp);
-	static float __stdcall ScriptMin(float afA, float afB);
-	static float __stdcall ScriptMax(float afA, float afB);
-	static float __stdcall ScriptClamp(float afX, float afMin, float afMax);
-	static float __stdcall ScriptAbs(float afX);
 
 	//////////////////////////////
 	// Parsing
-	static int __stdcall ScriptStringToInt(string& asString);
-	static float __stdcall ScriptStringToFloat(string& asString);
-	static bool __stdcall ScriptStringToBool(string& asString);
 };
 
 //----------------------------------------------

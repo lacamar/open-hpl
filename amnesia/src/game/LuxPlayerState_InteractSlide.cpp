@@ -20,7 +20,6 @@
 #include "LuxPlayerState_InteractSlide.h"
 
 #include "LuxPlayer.h"
-#include "impl/RustBackends.h"
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
@@ -37,17 +36,8 @@
 
 cLuxPlayerState_InteractSlide::cLuxPlayerState_InteractSlide(cLuxPlayer *apPlayer) : iLuxPlayerState_Interact(apPlayer, eLuxPlayerState_InteractSlide, &mR.base)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_init(&mR.base, &h, eLuxPlayerState_InteractSlide);
-		return;
-	}
-
-	mfMoveToMouseAddFactor = gpBase->mpGameCfg->GetFloat("Player_Interaction","MoveToMouseAddFactor", 0.01f);
-	mfMaxForce = gpBase->mpGameCfg->GetFloat("Player_Interaction","SlideMaxForce", 1000.0f);
-
-	ohpl_ga2b_pid_init(&mForcePid, 10, 6, 0, 0.1f);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_init(&mR.base, &h, eLuxPlayerState_InteractSlide);
 }
 
 //-----------------------------------------------------------------------
@@ -67,105 +57,24 @@ cLuxPlayerState_InteractSlide::~cLuxPlayerState_InteractSlide()
 
 void cLuxPlayerState_InteractSlide::OnEnterState(eLuxPlayerState aPrevState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_enter(mpA3, &h, aPrevState);
-		return;
-	}
-	/////////////////////////////////
-	//Get the static variables
-	SetupInteractVars();
-
-	mpSlideData = mpCurrentProp->GetSlideData();
-
-	mpCurrentJoint = mpCurrentBody->GetJoint(0);
-
-	//////////////////////////////
-	//Reset variables
-	ohpl_ga2b_pid_reset(&mForcePid);
-
-	mvMouseAdd =0;
-	mvLastMouseAdd =0;
-
-	mfSlideSpeed =0;
-
-	/////////////////////////////////
-	//Setup body
-	mbHasGravity = mpCurrentBody->GetGravity();
-
-	mpCurrentBody->SetGravity(false);
-
-
-	//////////////////////////////
-	//Setup variables
-
-	//Get the local position
-	cMatrixf mtxTransformInv = cMath::MatrixInverse(mpCurrentBody->GetLocalMatrix());
-	mvLocalInteractPos = cMath::MatrixMul(mtxTransformInv ,mvCurrentFocusPos);
-	
-			
-	///////////////////////
-	//Calculate the max distance
-	mfMaxDistance = cMath::Vector3Dist(mpPlayer->GetCamera()->GetPosition(), mvCurrentFocusPos)*1.4f;
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_enter(mpA3, &h, aPrevState);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerState_InteractSlide::OnLeaveState(eLuxPlayerState aNewState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_leave(mpA3, &h, aNewState);
-		return;
-	}
-	mpCurrentBody->SetGravity(mbHasGravity);
-
-	ResetInteractVars();
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_leave(mpA3, &h, aNewState);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayerState_InteractSlide::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_update(mpA3, &h, afTimeStep);
-		return;
-	}
-	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-	cCamera *pCam = mpPlayer->GetCamera();
-
-	OhplGa2bSlideIn si;
-	si.camPos = pCam->GetPosition();
-	si.up = pCam->GetUp();
-	si.right = pCam->GetRight();
-	si.bodyMatrix = mpCurrentBody->GetLocalMatrix();
-	si.localInteract = mvLocalInteractPos;
-	si.mouse = mvMouseAdd;
-	si.pin = mpCurrentJoint->GetPinDir();
-	si.vel = mpCurrentBody->GetLinearVelocity();
-	si.mass = mpCurrentBody->GetMass();
-	si.maxDistance = mfMaxDistance;
-	si.slowDownFactor = mpSlideData->mfSlideSlowDownFactor;
-	si.speedFactor = mpSlideData->mfSlideSpeedFactor;
-	si.maxSpeed = mpSlideData->mfSlideMaxSpeed;
-	si.maxForce = mfMaxForce;
-	OhplGa2bSlideOut so;
-	ohpl_ga2b_slide_update(&si, &mfSlideSpeed, &mForcePid, afTimeStep, &so);
-
-	if(so.outOfRange)
-	{
-		mpPlayer->ChangeState(mPreviousState);
-	}
-
-	mpCurrentBody->AddForce(so.force);
-	mvLastForce = so.force;
-
-	mvLastMouseAdd = mvMouseAdd;
-	mvMouseAdd = 0;
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_update(mpA3, &h, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -179,89 +88,30 @@ void cLuxPlayerState_InteractSlide::PostUpdate(float afTimeStep)
 
 bool cLuxPlayerState_InteractSlide::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
-	}
-	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
-	if(lKind == 1)
-	{
-		mpPlayer->ChangeState(mPreviousState);
-		return false;
-	}
-	else if(lKind == 2)
-	{
-		cVector3f vPin = mpCurrentJoint->GetPinDir();
-		cVector3f vForward = mpPlayer->GetCamera()->GetForward();
-		cVector3f vImpulse;
-		ohpl_ga2b_slide_throw(&vPin, &vForward, mpSlideData->mfSlideThrowImpulse, &vImpulse);
-		mpCurrentBody->AddImpulse(vImpulse);
-		return false;
-	}
-
-	return true;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_InteractSlide::OnAddYaw(float afAmount)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_add_yaw(mpA3, &h, afAmount);
-	}
-	mvMouseAdd.x += afAmount;
-
-	return false;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_add_yaw(mpA3, &h, afAmount);
 }
 
 bool cLuxPlayerState_InteractSlide::OnAddPitch(float afAmount)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_add_pitch(mpA3, &h, afAmount);
-	}
-#ifdef USE_GAMEPAD
-	////////////////
-	// We have both gamepad and mouse connected?
-	if(gpBase->mpInputHandler->IsGamepadPresent())
-	{
-		/////////////
-		// Check which one of them was used for the input this frame
-#if USE_SDL2
-		if(cMath::Abs(gpBase->mpInputHandler->GetGamepad()->GetAxisValue(eGamepadAxis_RightY)) > 0.0f)
-#else
-		if(cMath::Abs(gpBase->mpInputHandler->GetGamepad()->GetAxisValue(eGamepadAxis_3)) > 0.0f)
-#endif
-		{
-			//Gamepad was used
-			if(gpBase->mpInputHandler->GetInvertGamepadLook()) afAmount = -afAmount;
-		}
-		else if(gpBase->mpInputHandler->GetInvertMouse()) afAmount = -afAmount;
-	}
-	else if(gpBase->mpInputHandler->GetInvertMouse()) afAmount = -afAmount;
-#else
-	if(gpBase->mpInputHandler->GetInvertMouse()) afAmount = -afAmount;
-#endif
-	mvMouseAdd.y += afAmount;
-
-	return false;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_add_pitch(mpA3, &h, afAmount);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_InteractSlide::OnMove(eCharDir aDir, float afMul)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
-	}
-	ohpl_ga2b_move_to_mouse(aDir == eCharDir_Forward, afMul, mfMoveToMouseAddFactor, &mvMouseAdd);
-	return true;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
 }
 
 //-----------------------------------------------------------------------
@@ -282,18 +132,8 @@ void cLuxPlayerState_InteractSlide::OnSaveBody(iPhysicsBody *apBody, float &afMa
 
 float cLuxPlayerState_InteractSlide::DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
-	}
-	
-	apSet->DrawFont(apFont, cVector3f(5,afStartY,0),12,cColor(1,1),_W("SideSpeed: %f Force: %ls"), mfSlideSpeed, cString::To16Char(mvLastForce.ToString()).c_str());
-	afStartY += 13;
-
-	
-
-	return afStartY;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
 }
 
 void cLuxPlayerState_InteractSlide::RenderSolid(cRendererCallbackFunctions* apFunctions)
@@ -310,7 +150,7 @@ void cLuxPlayerState_InteractSlide::RenderSolid(cRendererCallbackFunctions* apFu
 	cMatrixf mtxCamTransform = cMath::MatrixRotate(vCamRotation, eEulerRotationOrder_XYZ);
 	mtxCamTransform.SetTranslation(pCam->GetPosition());
 
-	cVector3f vWorldInteractPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mvLocalInteractPos);
+	cVector3f vWorldInteractPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mR.localInteractPos);
 
 	apFunctions->GetLowLevelGfx()->DrawSphere(vWorldInteractPos, 0.1f, cColor(0,1,0,1));
 	

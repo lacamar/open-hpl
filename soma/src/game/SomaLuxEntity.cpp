@@ -1,6 +1,5 @@
 #include "SomaLuxEntity.h"
 #include "RustSomaEntS3.h"
-#include "impl/RustBackends.h"
 #include "SomaScriptApi.h"
 #include "scene/GuiSetEntity.h"
 #include <cstring>
@@ -1355,10 +1354,6 @@ namespace
 		tString msType;
 		int mlCreationID;
 	};
-	std::map<void *, cSomaID> gmapObjectToID;
-	std::map<int32_t, cObjectEntry> gmapIDToObject;
-	// Saved tIDs of runtime objects must not alias this session's objects
-	int32_t glNextObjectID = (int32_t)(std::random_device{}() & 0x3fffffff) + 1;
 
 	void SetLimitSound(cJointLimitEffect *apLimit, const tString &asSound, float afMinSpeed)
 	{
@@ -1403,7 +1398,8 @@ namespace
 
 static OhplS3Ids *S3Ids()
 {
-	static OhplS3Ids *pIds = ohpl_s3_ids_new(glNextObjectID);
+	// Saved tIDs of runtime objects must not alias this session's objects
+	static OhplS3Ids *pIds = ohpl_s3_ids_new((int32_t)(std::random_device{}() & 0x3fffffff) + 1);
 	return pIds;
 }
 
@@ -1426,102 +1422,32 @@ static OhplS3IdHost S3IdHost()
 
 void SomaClearObjectIDs()
 {
-	if (OhplBackendRustRequested())
-	{
-		ohpl_s3_ids_clear(S3Ids());
-		return;
-	}
-	gmapObjectToID.clear();
-	gmapIDToObject.clear();
+	ohpl_s3_ids_clear(S3Ids());
 }
 
 // Saved script vars hold body tIDs: same map, same ids
 void SomaRegisterBodyIDs(const std::vector<cSomaLuxEntity *> &avEnts)
 {
-	if (OhplBackendRustRequested())
-	{
-		std::vector<size_t> vBodies;
-		for (cSomaLuxEntity *p : avEnts)
-			for (iPhysicsBody *b : p->mvBodies)
-				vBodies.push_back((size_t)b);
-		ohpl_s3_ids_register_bodies(S3Ids(), vBodies.data(), vBodies.size());
-		return;
-	}
-	int32_t l = 0;
+	std::vector<size_t> vBodies;
 	for (cSomaLuxEntity *p : avEnts)
 		for (iPhysicsBody *b : p->mvBodies)
-		{
-			cSomaID id;
-			id.mA = 0xfe;
-			id.mB = --l;
-			gmapObjectToID[b] = id;
-			gmapIDToObject[id.mB] = cObjectEntry{b, "iPhysicsBody", 0};
-		}
+			vBodies.push_back((size_t)b);
+	ohpl_s3_ids_register_bodies(S3Ids(), vBodies.data(), vBodies.size());
 }
 
 cSomaID SomaObjectID(void *apObj, const tString &asType)
 {
-	if (OhplBackendRustRequested())
-	{
-		static_assert(sizeof(cSomaID) == sizeof(OhplS3Id), "layout");
-		cSomaID id;
-		OhplS3IdHost host = S3IdHost();
-		ohpl_s3_object_id(S3Ids(), &host, (size_t)apObj, (const unsigned char *)asType.data(), asType.size(), (OhplS3Id *)&id);
-		return id;
-	}
-	if (apObj == NULL)
-		return cSomaID();
-	auto it = gmapObjectToID.find(apObj);
-	if (it != gmapObjectToID.end())
-	{
-		const cObjectEntry &entry = gmapIDToObject[it->second.mB];
-		// Same object when alive and of the same kind; freed memory reused by a new object gets a new id
-		if (IsAlive(entry) && IsEntity3DType(entry.msType) == IsEntity3DType(asType) &&
-			(entry.msType == asType || IsEntity3DType(asType) == false || CastEntity3D((iEntity3D *)apObj, entry.msType) != NULL))
-			return it->second;
-		gmapIDToObject.erase(it->second.mB);
-	}
+	static_assert(sizeof(cSomaID) == sizeof(OhplS3Id), "layout");
 	cSomaID id;
-	id.mA = 0xfe;
-	id.mB = glNextObjectID++;
-	int lCreationID = asType == "cSoundEntity" ? ((cSoundEntity *)apObj)->GetCreationID() : 0;
-	gmapObjectToID[apObj] = id;
-	gmapIDToObject[id.mB] = cObjectEntry{apObj, asType, lCreationID};
+	OhplS3IdHost host = S3IdHost();
+	ohpl_s3_object_id(S3Ids(), &host, (size_t)apObj, (const unsigned char *)asType.data(), asType.size(), (OhplS3Id *)&id);
 	return id;
 }
 
 void *SomaObjectFromID(const cSomaID &aID, const tString &asType)
 {
-	if (OhplBackendRustRequested())
-	{
-		OhplS3IdHost host = S3IdHost();
-		return (void *)ohpl_s3_object_from_id(S3Ids(), &host, (const OhplS3Id *)&aID, (const unsigned char *)asType.data(), asType.size());
-	}
-	if (aID.mA != 0xfe)
-		return NULL;
-	auto it = gmapIDToObject.find(aID.mB);
-	if (it == gmapIDToObject.end() || IsAlive(it->second) == false)
-		return NULL;
-	const cObjectEntry &entry = it->second;
-	if (entry.msType == asType)
-		return entry.mpObj;
-	if (IsEntity3DType(entry.msType) && IsEntity3DType(asType))
-	{
-		// Lights etc. have no liveness check: never dynamic_cast a concrete entry, it may be freed
-		if (entry.msType != "iEntity3D" && entry.msType != "iLight")
-			return asType == "iEntity3D" || (asType == "iLight" && entry.msType.compare(0, 6, "cLight") == 0) ? entry.mpObj : NULL;
-		return CastEntity3D((iEntity3D *)entry.mpObj, asType);
-	}
-	if (asType == "iPhysicsJoint" && entry.msType.compare(0, 13, "iPhysicsJoint") == 0)
-		return entry.mpObj;
-	if (asType.compare(0, 13, "iPhysicsJoint") == 0 && entry.msType == "iPhysicsJoint")
-	{
-		iPhysicsJoint *j = (iPhysicsJoint *)entry.mpObj;
-		if (asType == "iPhysicsJointHinge") return dynamic_cast<iPhysicsJointHinge *>(j);
-		if (asType == "iPhysicsJointSlider") return dynamic_cast<iPhysicsJointSlider *>(j);
-		if (asType == "iPhysicsJointBall") return dynamic_cast<iPhysicsJointBall *>(j);
-	}
-	return NULL;
+	OhplS3IdHost host = S3IdHost();
+	return (void *)ohpl_s3_object_from_id(S3Ids(), &host, (const OhplS3Id *)&aID, (const unsigned char *)asType.data(), asType.size());
 }
 
 // cLuxMapHelper::GetClosestEntity: nearest entity along the ray, blocked by colliding world geometry
@@ -1891,81 +1817,10 @@ static void LiquidBuoyancy(cSomaLuxEntity *apArea, const cSomaOBB &aBox, float a
 	std::vector<iPhysicsBody *> vBodies;
 	pWorld->GetBodiesInBV(&bv, &vBodies);
 
-	cResourceVarsObject &vars = apArea->mInstanceVars;
 	cPlanef surface;
 	surface.FromNormalPoint(cVector3f(0, 1, 0), cVector3f(0, afSurfaceY, 0));
-	float fWaveAmp = vars.GetVarFloat("WaveAmp", 0), fWaveFreq = vars.GetVarFloat("WaveFreq", 0);
-	float fMaxWaveDist = vars.GetVarFloat("MaxWaveDistance", 25);
-	bool bWaves = vars.GetVarBool("HasWaves", false);
 	for (iPhysicsBody *pBody : vBodies)
-	{
-		if (OhplBackendRustRequested())
-		{
-			LiquidBodyPlanned(apArea, pBody, aBox, vExt, surface, afSurfaceY, abSurfaceMoved, afTime, apCam, pMap);
-			continue;
-		}
-		if (pBody->GetCollide() == false || pBody->IsActive() == false || pBody->GetMass() == 0 || pBody->IsCharacter())
-			continue;
-		std::vector<cSomaOBB> vShape;
-		ShapeBoxes(pBody->GetShape(), pBody->GetLocalMatrix(), vShape);
-		bool bInside = false;
-		for (const cSomaOBB &b : vShape)
-			bInside = bInside || OBBOverlap(aBox, b);
-		cSomaLuxEntity *pOwner = NULL;
-		if (pBody->GetNoGravityWhenUnderwater())
-			for (cSomaLuxEntity *p : pMap->GetEntities())
-				if (std::find(p->mvBodies.begin(), p->mvBodies.end(), pBody) != p->mvBodies.end())
-					pOwner = p;
-		if (bInside == false)
-		{
-			if (pBody->GetBuoyancyActive())
-				apArea->Call("void OnBodyExitLiquid(iPhysicsBody@)", [&](asIScriptContext *c) { c->SetArgAddress(0, pBody); });
-			pBody->SetBuoyancyActive(false);
-			if (pBody->GetNoGravityWhenUnderwater())
-			{
-				pBody->SetIsUnderwater(false);
-				if (pOwner == NULL || pOwner->mbInteractedWith == false)
-					pBody->SetGravity(true);
-				pBody->SetMaxLinearSpeed(20);
-				pBody->SetMaxAngularSpeed(20);
-			}
-			continue;
-		}
-		if (pBody->GetNoGravityWhenUnderwater())
-		{
-			bool bUnder = ohpl_gs1_liquid_body_under(pBody->GetBoundingVolume()->GetMax().y, aBox.center.y, vExt.y);
-			if (pOwner == NULL || pOwner->mbInteractedWith == false)
-				pBody->SetGravity(!bUnder);
-			pBody->SetIsUnderwater(bUnder);
-			pBody->SetMaxLinearSpeed(bUnder ? 1 : 20);
-			pBody->SetMaxAngularSpeed(bUnder ? 1 : 20);
-		}
-		if (pBody->GetBuoyancyActive() == false)
-		{
-			pBody->SetBuoyancySurface(surface);
-			pBody->SetBuoyancyDensity(vars.GetVarFloat("Density", 0));
-			pBody->SetBuoyancyLinearViscosity(vars.GetVarFloat("LinearViscosity", 0));
-			pBody->SetBuoyancyAngularViscosity(vars.GetVarFloat("AngularViscosity", 0));
-			LiquidSplash(apArea, pBody, pBody->GetLinearVelocity(), afSurfaceY);
-			pBody->SetBuoyancyActive(true);
-			pBody->Enable();
-			apArea->Call("void OnBodyEnterLiquid(iPhysicsBody@)", [&](asIScriptContext *c) { c->SetArgAddress(0, pBody); });
-		}
-		if (bWaves && apCam && cMath::Vector3DistSqr(pBody->GetLocalPosition(), apCam->GetPosition()) < fMaxWaveDist * fMaxWaveDist)
-		{
-			cVector3f c = cMath::MatrixMul(pBody->GetLocalMatrix(), pBody->GetMassCentre());
-			float fH = ohpl_gs1_liquid_wave_height(afSurfaceY, fWaveAmp, fWaveFreq, afTime, c.x, c.z);
-			cPlanef wave;
-			wave.FromNormalPoint(cVector3f(0, 1, 0), cVector3f(0, fH, 0));
-			pBody->SetBuoyancySurface(wave);
-			pBody->Enable();
-		}
-		else if (abSurfaceMoved)
-		{
-			pBody->SetBuoyancySurface(surface);
-			pBody->Enable();
-		}
-	}
+		LiquidBodyPlanned(apArea, pBody, aBox, vExt, surface, afSurfaceY, abSurfaceMoved, afTime, apCam, pMap);
 }
 
 void cSomaLuxEntity::UpdateLiquid(float afTimeStep)

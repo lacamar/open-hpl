@@ -102,8 +102,7 @@ void cLuxArea_Sign::OnUpdate(float afTimeStep)
 
 bool cLuxArea_Sign::CanInteract(iPhysicsBody *apBody)
 {
-	if(mpA7Area) return ohpl_a7_area_can_interact(mpA7Area, false);
-	return true;
+	return ohpl_a7_area_can_interact(mpA7Area, false);
 }
 
 //-----------------------------------------------------------------------
@@ -117,12 +116,8 @@ bool cLuxArea_Sign::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 eLuxFocusCrosshair cLuxArea_Sign::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(mpA7Area)
-	{
-		const int vTable[4] = { eLuxFocusCrosshair_Default, eLuxFocusCrosshair_Grab, eLuxFocusCrosshair_Ladder, eLuxFocusCrosshair_LastEnum };
-		return (eLuxFocusCrosshair)ohpl_a7_area_crosshair(mpA7Area, false, 0, &vTable);
-	}
-	return eLuxFocusCrosshair_Default;	
+	const int vTable[4] = { eLuxFocusCrosshair_Default, eLuxFocusCrosshair_Grab, eLuxFocusCrosshair_Ladder, eLuxFocusCrosshair_LastEnum };
+	return (eLuxFocusCrosshair)ohpl_a7_area_crosshair(mpA7Area, false, 0, &vTable);
 }
 
 //-----------------------------------------------------------------------

@@ -27,7 +27,6 @@
 #include "LuxProp.h"
 #include "LuxProp_Lamp.h"
 #include "LuxMessageHandler.h"
-#include "impl/RustBackends.h"
 
 
 
@@ -39,16 +38,8 @@
 
 cLuxPlayerState_UseItem::cLuxPlayerState_UseItem(cLuxPlayer *apPlayer) : iLuxPlayerState_DefaultBase(apPlayer, eLuxPlayerState_UseItem, &mR.base)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_init(&mR.base, &h, eLuxPlayerState_UseItem);
-		return;
-	}
-	mpCurrentItem = NULL; 
-	mFlashOscill.SetUp(0,1,0,1.5f,1.5f);
-
-	mfMinUseItemDistance = gpBase->mpGameCfg->GetFloat("Player_Interaction", "MinUseItemDistance",0);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_init(&mR.base, &h, eLuxPlayerState_UseItem);
 }
 
 //-----------------------------------------------------------------------
@@ -67,7 +58,7 @@ cLuxPlayerState_UseItem::~cLuxPlayerState_UseItem()
 
 void cLuxPlayerState_UseItem::ImplementedOnEnterState(eLuxPlayerState aPrevState)
 {
-	mpCurrentItem = cLuxPlayerStateVars::mpInventoryItem;
+	mR.item = cLuxPlayerStateVars::mpInventoryItem;
 	cLuxPlayerStateVars::mpInventoryItem = NULL;
 }
 
@@ -94,45 +85,16 @@ void cLuxPlayerState_UseItem::ImplementedUpdate(float afTimeStep)
 
 cGuiGfxElement* cLuxPlayerState_UseItem::GetCrosshair()
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_crosshair(mpA3, &h) == kOhplA3Crosshair_Item ? mpCurrentItem->GetImage() : NULL;
-	}
-	if(mpCurrentItem==NULL) return NULL;
-
-	return mpCurrentItem->GetImage();
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_crosshair(mpA3, &h) == kOhplA3Crosshair_Item ? mR.item->GetImage() : NULL;
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_UseItem::OnDrawCrossHair(cGuiGfxElement *apGfx, const cVector3f& avPos, const cVector2f &avSize)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_draw_crosshair(mpA3, &h, apGfx, &avPos, &avSize);
-	}
-	if(mpEntityInFocus==NULL) return true;
-
-	float fMaxFocusDistance = ohpl_ga2b_use_item_max_focus(mpEntityInFocus->GetMaxFocusDistance(), mfMinUseItemDistance);
-
-	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
-	bool bIsProp = mpEntityInFocus->GetEntityType() == eLuxEntityType_Prop;
-	bool bIsItem = bIsProp && static_cast<iLuxProp*>(mpEntityInFocus)->GetPropType() == eLuxPropType_Item;
-	int lDraw = ohpl_ga2b_use_item_draw(true, mfFocusDistance, fMaxFocusDistance, bIsProp, bIsItem);
-	if(lDraw == kOhplGa2bDrawNo) return true;
-	if(lDraw == kOhplGa2bDrawCheckCallback)
-	{
-		if(pMap->GetUseItemCallback(mpCurrentItem->GetName(), mpEntityInFocus->GetName())==NULL) return true;
-	}
-
-	cVector3f vNewPos = avPos;
-	vNewPos.z += 1;
-
-	for(int i=0; i<3; ++i)
-		gpBase->mpGameHudSet->DrawGfx(apGfx, vNewPos, avSize, cColor(mFlashOscill.val), eGuiMaterial_Additive);
-	return true;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_draw_crosshair(mpA3, &h, apGfx, &avPos, &avSize);
 }
 
 //-----------------------------------------------------------------------
@@ -153,7 +115,7 @@ bool cLuxPlayerState_UseItem::ShowOutlineOnEntity(iLuxEntity *apEntity, iPhysics
 	
 	/////////////////////////////////
 	// Tinder box
-	if(mpCurrentItem->GetType() == eLuxItemType_Tinderbox)
+	if(mR.item->GetType() == eLuxItemType_Tinderbox)
 	{
 		if(apEntity->GetEntityType()!=eLuxEntityType_Prop) return false;
 
@@ -180,7 +142,7 @@ bool cLuxPlayerState_UseItem::ShowOutlineOnEntity(iLuxEntity *apEntity, iPhysics
 			}
 		}
 
-		return pMap->GetUseItemCallback(mpCurrentItem->GetName(), apEntity->GetName())!=NULL;
+		return pMap->GetUseItemCallback(mR.item->GetName(), apEntity->GetName())!=NULL;
 	}*/
 }
 
@@ -191,13 +153,13 @@ void cLuxPlayerState_UseItem::UseItem()
 	iLuxEntity *pEntity = mpEntityInFocus;
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 
-	float fMaxFocus = pEntity ? ohpl_ga2b_use_item_max_focus(pEntity->GetMaxFocusDistance(), mfMinUseItemDistance) : 0.0f;
-	int lPlan = ohpl_ga2b_use_item_focus(mpCurrentItem != NULL, pEntity != NULL, pMap != NULL, mfFocusDistance, fMaxFocus);
+	float fMaxFocus = pEntity ? ohpl_ga2b_use_item_max_focus(pEntity->GetMaxFocusDistance(), mR.minUseDistance) : 0.0f;
+	int lPlan = ohpl_ga2b_use_item_focus(mR.item != NULL, pEntity != NULL, pMap != NULL, mfFocusDistance, fMaxFocus);
 	if(lPlan == kOhplGa2bPlanNone) return;
 
 	if(lPlan == kOhplGa2bPlanCallback)
 	{
-		cLuxUseItemCallback *pCallback = pMap->GetUseItemCallback(mpCurrentItem->GetName(), pEntity->GetName());
+		cLuxUseItemCallback *pCallback = pMap->GetUseItemCallback(mR.item->GetName(), pEntity->GetName());
 		if(ohpl_ga2b_use_item_plan(pCallback != NULL) == kOhplGa2bPlanCallback)
 		{
 			bool bAutoDestroy = pCallback->mbAutoDestroy;

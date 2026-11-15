@@ -5,7 +5,7 @@ use super::s1_gen;
 use super::s2_as::Engine;
 
 #[test]
-fn generated_registrations_match_cpp_table() {
+fn generated_registrations_match_golden() {
     s1_gen::seen::CALLS.with(|c| c.borrow_mut().clear());
     s1_gen::register(Engine(std::ptr::null_mut()));
     let text = std::fs::read_to_string(concat!(

@@ -20,7 +20,6 @@
 #include "LuxPlayerState_InteractRotateBase.h"
 
 #include "LuxPlayer.h"
-#include "impl/RustBackends.h"
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
@@ -37,17 +36,8 @@
 iLuxPlayerState_InteractRotateBase::iLuxPlayerState_InteractRotateBase(cLuxPlayer *apPlayer, eLuxPlayerState aState) 
 : iLuxPlayerState_Interact(apPlayer, aState, &mR.base)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_init(&mR.base, &h, aState);
-		return;
-	}
-	mfMoveToMouseAddFactor = gpBase->mpGameCfg->GetFloat("Player_Interaction","MoveToMouseAddFactor", 0.01f);
-	mfMaxTorque = gpBase->mpGameCfg->GetFloat("Player_Interaction","MoveMaxForce", 1000.0f);
-
-
-	ohpl_ga2b_pid_init(&mRotatePid, 10, 10.0f, 0.0f, 1.0f);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_init(&mR.base, &h, aState);
 }
 
 //-----------------------------------------------------------------------
@@ -68,198 +58,26 @@ iLuxPlayerState_InteractRotateBase::~iLuxPlayerState_InteractRotateBase()
 
 void iLuxPlayerState_InteractRotateBase::OnEnterState(eLuxPlayerState aPrevState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_enter(mpA3, &h, aPrevState);
-		return;
-	}
-	//Log("---- Interact Start -------\n");
-
-	/////////////////////////////////
-	//Clear smoothing
-	if(gpBase->mpInputHandler->GetSmoothMouse()==false)
-		gpBase->mpInputHandler->ResetSmoothMousePos();
-
-	/////////////////////////////////
-	//Get the static variables
-	SetupInteractVars();
-
-	mpMoveBaseData = mpCurrentProp->GetMoveBaseData();
-	
-    mpCurrentJoint = mpCurrentBody->GetJoint(0);
-	
-	/////////////////////////////////
-	//Reset data
-	ohpl_ga2b_pid_reset(&mRotatePid);
-	mfRotSpeed =0;
-	mvMouseAdd =0;
-
-	/////////////////////////////////
-	//Setup body
-	mbHasGravity = mpCurrentBody->GetGravity();
-	
-	mpCurrentBody->SetGravity(false);//TODO: User var!
-	
-	/////////////////////////////////
-	// Setup vectors
-	/*cVector3f vBodyCenter = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mpCurrentBody->GetMassCentre());
-	cVector3f vJointToBody =  cMath::Vector3Normalize(vBodyCenter - mpCurrentJoint->GetPivotPoint());
-	mvJointForward = cMath::Vector3Cross(mpCurrentJoint->GetPinDir(), vJointToBody);
-	*/
-
-	/////////////////////////////////
-	//Get Max distance
-	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-	cVector3f vFeet = pCharBody->GetFeetPosition();
-	cVector3f vPivot = mpCurrentJoint->GetPivotPoint();
-	mfMaxDistance = ohpl_ga2b_rotate_max_distance(&vFeet, &vPivot);
-
-	//Callback
-	EnterRotateBase(aPrevState);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_enter(mpA3, &h, aPrevState);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxPlayerState_InteractRotateBase::OnLeaveState(eLuxPlayerState aNewState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_leave(mpA3, &h, aNewState);
-		return;
-	}
-	//Log("---- Interact End -------\n");
-	/////////////////////////////////
-	//Reset body
-	mpCurrentBody->SetGravity(mbHasGravity);
-
-	ResetInteractVars();
-
-	LeaveRotateBase(aNewState);
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_leave(mpA3, &h, aNewState);
 }
 
 //-----------------------------------------------------------------------
-
-void iLuxPlayerState_InteractRotateBase::SetupForceAxes()
-{
-	/////////////////////////////
-	//Set up variables
-	cCamera *pCam = mpPlayer->GetCamera();
-
-	cVector3f vCamDir[3];
-	vCamDir[1] = cVector3f(0,1,0);
-	vCamDir[0] = cMath::Vector3Cross(pCam->GetForward(), vCamDir[1]);
-	vCamDir[2] = cMath::Vector3Cross(vCamDir[1], vCamDir[0]);
-
-	for(int i=0; i<3; ++i) mvCamDir[i] = vCamDir[i];
-	
-	cVector3f vForceDir[2];
-	float fMaxCos[2] = {0,0};
-	int lMaxCam[2] = {-1,-1};
-	int lForceAxis[2] = {-1,-1};
-
-	/////////////////////////////
-	//Get the directions
-	vForceDir[0] = cMath::Vector3Cross(pCam->GetForward(), mpCurrentJoint->GetPinDir());
-	vForceDir[1] = cMath::Vector3Cross(mpCurrentJoint->GetPinDir(),vForceDir[0]);
-
-	/////////////////////////////
-	//Determine the cam direction closes to each force direction
-	for(int force=0; force < 2; ++force)
-	for(int cam=0; cam < 3; ++cam)
-	{
-		float fCos = cMath::Vector3Dot(vForceDir[force], vCamDir[cam]);
-		if(cMath::Abs(fCos) > cMath::Abs(fMaxCos[force]))
-		{
-			fMaxCos[force] = fCos;
-			lMaxCam[force] = cam;
-		}
-	}
-
-	/////////////////////////////
-	//Determine what axis to place each force dir
-	for(int force=0; force < 2; ++force)
-	{
-		int lOther = force==0?1:0;
-		if(lMaxCam[force]==0)
-		{
-			lForceAxis[force] =0;
-			lForceAxis[lOther] = 1;
-			break;
-		}
-		if(lMaxCam[force]==1)
-		{
-			lForceAxis[force] = 1;
-			lForceAxis[lOther] = 0;
-			break;
-		}
-	}
-
-	/////////////////////////////
-	//Set the forces axes
-	for(int force=0; force < 2; ++force)
-	{
-		float fMul = 1.0f;
-		if(fMaxCos[force] < 0) fMul = -1.0f;
-		mvForceAxis[lForceAxis[force]] = vForceDir[force] * fMul;
-		
-		//debug:
-		mfAxisCos[lForceAxis[force]] = fMaxCos[force];
-	}
-
-	/////////////////////////////
-	//If right force is close to forward, turn up a little bit to compensate.
-	float fFwdRightDot = cMath::Vector3Dot(vCamDir[2], mvForceAxis[0]);
-	if(fFwdRightDot > 0)
-	{
-		mvForceAxis[1] += mvForceAxis[0]*fFwdRightDot;
-		mvForceAxis[1].Normalize();
-	}
-}
 
 //-----------------------------------------------------------------------
 
 void iLuxPlayerState_InteractRotateBase::Update(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		ohpl_a3_update(mpA3, &h, afTimeStep);
-		return;
-	}
-	if(gpBase->mpInputHandler->GetSmoothMouse()==false)
-		mvMouseAdd = gpBase->mpInputHandler->GetSmoothMousePos(mvMouseAdd);
-
-	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-	cCamera *pCam = mpPlayer->GetCamera();
-	iPhysicsJointHinge *pHingeJoint = static_cast<iPhysicsJointHinge*>(mpCurrentJoint);
-
-	cVector3f vFeet = pCharBody->GetFeetPosition();
-	cVector3f vPivot = mpCurrentJoint->GetPivotPoint();
-	if(ohpl_ga2b_rotate_far(&vFeet, &vPivot, mfMaxDistance))
-	{
-		mpPlayer->ChangeState(mPreviousState);
-	}
-
-	ohpl_ga2b_rotate_slow(&mfRotSpeed, &mvMouseAdd, mpMoveBaseData->mfMoveSlowDownFactor, afTimeStep);
-
-	float fSpeedAdd = GetSpeedAdd(pCam);
-
-	OhplGa2bRotateTorqueIn ti;
-	ti.pin = mpCurrentJoint->GetPinDir();
-	ti.angVel = mpCurrentBody->GetAngularVelocity();
-	ti.inertia = mpCurrentBody->GetInertiaMatrix();
-	ti.speedAdd = fSpeedAdd;
-	ti.speedFactor = mpMoveBaseData->mfMoveSpeedFactor;
-	ti.maxSpeed = mpMoveBaseData->mfMoveMaxSpeed;
-	ti.maxTorque = mfMaxTorque;
-	cVector3f vTorque;
-	ohpl_ga2b_rotate_torque(&ti, &mfRotSpeed, &mRotatePid, afTimeStep, &vTorque);
-	mpCurrentBody->AddTorque(vTorque);
-
-	mvLastMouseAdd = mvMouseAdd;
-	mvMouseAdd = 0;
+	OhplA3Host h = A3HostTable();
+	ohpl_a3_update(mpA3, &h, afTimeStep);
 }
 
 void iLuxPlayerState_InteractRotateBase::PostUpdate(float afTimeStep)
@@ -270,25 +88,8 @@ void iLuxPlayerState_InteractRotateBase::PostUpdate(float afTimeStep)
 
 bool iLuxPlayerState_InteractRotateBase::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
-	}
-	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
-	if(lKind == 1)
-	{
-		mpPlayer->ChangeState(mPreviousState);
-		return false;
-	}
-	else if(lKind == 2)
-	{
-		OnThrow();
-		mpPlayer->ChangeState(mPreviousState);
-		return false;
-	}
-
-	return true;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_do_action(mpA3, &h, aAction, abPressed);
 }
 
 //-----------------------------------------------------------------------
@@ -302,61 +103,22 @@ void iLuxPlayerState_InteractRotateBase::OnScroll(float afAmount)
 
 bool iLuxPlayerState_InteractRotateBase::OnMove(eCharDir aDir, float afMul)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
-	}
-	ohpl_ga2b_move_to_mouse(aDir == eCharDir_Forward, afMul, mfMoveToMouseAddFactor, &mvMouseAdd);
-	return true;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_on_move(mpA3, &h, aDir, afMul);
 }
 
 //-----------------------------------------------------------------------
 
 bool iLuxPlayerState_InteractRotateBase::OnAddYaw(float afAmount)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_add_yaw(mpA3, &h, afAmount);
-	}
-	mvMouseAdd.x += afAmount;
-
-	return false;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_add_yaw(mpA3, &h, afAmount);
 }
 
 bool iLuxPlayerState_InteractRotateBase::OnAddPitch(float afAmount)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_add_pitch(mpA3, &h, afAmount);
-	}
-#ifdef USE_GAMEPAD
-	////////////////
-	// We have both gamepad and mouse connected?
-	if(gpBase->mpInputHandler->IsGamepadPresent())
-	{
-		/////////////
-		// Check which one of them was used for the input this frame
-#if USE_SDL2
-		if(cMath::Abs(gpBase->mpInputHandler->GetGamepad()->GetAxisValue(eGamepadAxis_RightY)) > 0.0f)
-#else
-		if(cMath::Abs(gpBase->mpInputHandler->GetGamepad()->GetAxisValue(eGamepadAxis_3)) > 0.0f)
-#endif
-		{
-			//Gamepad was used
-			if(gpBase->mpInputHandler->GetInvertGamepadLook()) afAmount = -afAmount;
-		}
-		else if(gpBase->mpInputHandler->GetInvertMouse()) afAmount = -afAmount;
-	}
-	else if(gpBase->mpInputHandler->GetInvertMouse()) afAmount = -afAmount;
-#else
-	if(gpBase->mpInputHandler->GetInvertMouse()) afAmount = -afAmount;
-#endif
-	mvMouseAdd.y += afAmount;
-
-	return false;
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_add_pitch(mpA3, &h, afAmount);
 }
 
 //-----------------------------------------------------------------------
@@ -370,30 +132,8 @@ cGuiGfxElement* iLuxPlayerState_InteractRotateBase::GetCrosshair()
 
 float iLuxPlayerState_InteractRotateBase::DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA3Host h = A3HostTable();
-		return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
-	}
-	apSet->DrawFont(apFont,cVector3f(5,afStartY,5),12,cColor(1,1),_W("Speed: %f"), mfRotSpeed);//mSmoothSpeed.GetOutput());
-	afStartY += 13.0f;
-
-	apSet->DrawFont(apFont,cVector3f(5,afStartY,5),12,cColor(1,1),_W("Angle: %f"),  cMath::ToDeg(mpCurrentJoint->GetAngle()));
-	afStartY += 13.0f;
-
-	apSet->DrawFont(apFont,cVector3f(5,afStartY,5),12,cColor(1,1),_W("AngularVel: (%ls)"),cString::To16Char(mpCurrentBody->GetAngularVelocity().ToString()).c_str());
-	afStartY += 13.0f;
-
-	
-	//apSet->DrawFont(apFont,cVector3f(5,afStartY,5),12,cColor(1,1),_W("YForce: (%ls) YCam: (%ls)"),  
-	//									cString::To16Char(mvForceAxis[1].ToString()).c_str(),
-	//									cString::To16Char(mpPlayer->GetCamera()->GetUp().ToString()).c_str());
-	//afStartY += 13.0f;
-
-
-	afStartY = mpCurrentProp->OnInteractDebugDraw(apSet,apFont,afStartY);
-
-	return afStartY;	
+	OhplA3Host h = A3HostTable();
+	return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
 }
 
 //-----------------------------------------------------------------------

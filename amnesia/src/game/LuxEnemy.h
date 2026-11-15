@@ -426,11 +426,9 @@ public:
 						bool abSyncWithPrevFrame,
 						bool abUseMoveAnimWhenCurrentIsOver);
 	bool FadeOutCurrentAnimImpl(float afFadeTime);
-	float ConvertAnimToAbsoluteTime(float afRelativeTimePostion);
     
 	cSoundEntity* PlaySound(const tString &asName);
 
-	void SetPositionAtStartPos();
 
 	void ResetProperties();
 
@@ -449,9 +447,6 @@ public:
 	void AddPatrolNode(cAINode *apNode, float afWaitTime, const tString & asAnimation, bool abLoopAnimation=false);
 	void ClearPatrolNodes();
 
-    cLuxEnemyPatrolNode* GetCurrentPatrolNode();
-	bool IsAtLastPatrolNode();
-	void IncCurrentPatrolNode(bool abLoopIfAtEnd);
 
 	cLuxEnemyPatrolNode* GetPatrolNode(int alIdx){ return &mvPatrolNodes[alIdx];}
 	int GetPatrolNodeNum(){ return (int)mvPatrolNodes.size();}
@@ -485,7 +480,7 @@ public:
 
 	float GetHealth(){ return mfHealth; }
 
-	cAnimationState* GetCurrentAnimation(){ return mpCurrentAnimation;}
+	cAnimationState* GetCurrentAnimation(){ return mA4.curAnim;}
 
 	const tString& GetDangerMusic() { return msDangerMusic; }
 	int GetDangerMusicPrio() { return mlDangerMusicPrio; }
@@ -513,8 +508,8 @@ public:
 	bool CausesSanityDecrease(){ return mbCausesSanityDecrease;}
 	void SetSanityDecreaseActive(bool abX){ mbCausesSanityDecrease = abX;}
 
-	void SetHallucination(bool abX){ mbHallucination = abX;}
-	void SetHallucinationEndDist(float afX){ mfHallucinationEndDist = afX;}
+	void SetHallucination(bool abX){ mA4.hallucination = abX;}
+	void SetHallucinationEndDist(float afX){ mA4.hallucinationEndDist = afX;}
 
 	float GetInLanternLightCount(){ return mfInLanternLightCount;}
 
@@ -557,7 +552,6 @@ protected:
 
 	void ChangeSoundState(eLuxEnemySoundState aState);
 
-	void UpdateSoundState(float afTimeStep);
 	void UpdateAnimation(float afTimeStep);
 	void UpdateCharBody(float afTimeStep);
 	void UpdateCanSeePlayer(float afTimeStep);
@@ -565,10 +559,7 @@ protected:
 	void UpdatePlayerInRange(float afTimeStep);
 	void UpdateCheckStuckAtDoor(float afTimeStep);
 	void UpdateCheckLastPlayerPos(float afTimeStep);
-	void UpdateDarknessGlow(float afTimeStep);
 	void UpdateRegenHealth(float afTimeStep);
-	void UpdateHallucination(float afTimeStep);
-	void UpdateAlignEntityWithGroundRay(float afTimeStep);
 
 	//////////////////////////////
 	// Callbacks
@@ -601,26 +592,17 @@ protected:
 	bool IsInPlayerFovAtFeetPos(const cVector3f& avFeetPos);
 	bool IsVisibleToPlayerAtFeetPos(const cVector3f& avFeetPos);
 	
-	cVector3f GetPlayerFeetPos();
 
-	float Dist2D(const cVector3f &avPos);
-	float DistToChar(iCharacterBody *apBody);
-	float DistToChar2D(iCharacterBody *apBody);
-	float AbsHeightDistToChar(iCharacterBody *apBody);
 	cVector3f GetDirection2D(const cVector3f &avPos);
     
 	float DistToPlayer();
 	float DistToPlayer2D();
 	float DistToPlayer2D(const cVector3f& avPos);
 	float AbsHeightDistToPlayer();
-	cVector3f GetDirection2DToPlayer();
 	
 	//gets the cos of angle between player->enemy and player move dir. 1=directly towards, -1=directly away
 	float GetPlayerMovementTowardEnemyAmount();
 	
-	bool OutsideStartRadius();
-	bool InFOV(const cVector3f &avPos);
-	bool PlayerInFOV();
 
 	void OnSetActive(bool abX);
 	
@@ -642,8 +624,6 @@ protected:
 	bool mbBlind;
 	bool mbDeaf;
 
-	bool &mbHallucination = mA4.hallucination;
-	float &mfHallucinationEndDist = mA4.hallucinationEndDist;
 
 	float mfHealth;
 	bool &mbCausesSanityDecrease = mA4.causesSanity;
@@ -653,11 +633,7 @@ protected:
 	eLuxEnemyState mNextState;
 	eLuxEnemyState mPreviousState;
 
-	int32_t &mSoundState = mA4.soundState;
 
-	cSoundEntity *&mpCurrentSound = mA4.curSound;
-	int32_t &mlCurrentSoundID = mA4.curSoundId;
-	float &mfAmbientSoundCount = mA4.ambientCount;
 
 	float mfLookForPlayerCount;
 	int mlPlayerInLOSCount;
@@ -669,9 +645,6 @@ protected:
 	bool mbStuckAtDoor;
 	int mlStuckDoorID;
 
-	float &mfDarknessGlowAlpha = mA4.glowAlpha;
-	float &mfDarknessGlowAlphaGoal = mA4.glowGoal;
-	float &mfDarknessGlowUpdateCount = mA4.glowUpdateCount;
 
 	float mfForwardSpeed;
 	float mfBackwardSpeed;
@@ -682,10 +655,6 @@ protected:
 
 	float mfInLanternLightCount;
 
-	cAnimationState *&mpCurrentAnimation = mA4.curAnim;
-	bool &mbAnimationIsSpeedDependant = mA4.animSpeedDependant;
-	float &mfAnimationSpeedMul = mA4.animSpeedMul;
-	bool &mbUseMoveAnimWhenCurrentIsOver = mA4.useMoveAnimWhenOver;
 
 	OhplGa3Queue *mpGa3Queue;
 	OhplGa3Ctx mGa3Ctx;
@@ -711,7 +680,6 @@ protected:
 
 	bool mbIsSeenByPlayer;
 
-	float &mfCheckGroundRayCount = mA4.groundRayCount;
 	tFloatList mlstGroundCheckDists;
 	int mlMaxGroundCheckDists;
 
@@ -744,7 +712,6 @@ protected:
 	float mfMaxRegenHealth;
 	float mfRegenHealthSpeed;
 
-	float &mfEnemyDarknessGlowMaxDistance = mA4.glowMaxDist;
 
 	float mfPlayerInDarknessLightLevel;
 	float mfCrouchVisibleRangeMul;
@@ -769,7 +736,6 @@ protected:
 	float mfTurnMinBreakAngle;
 	float mfTurnBreakMul;
 
-	float &mfMoveSpeedAnimMul = mA4.moveSpeedAnimMul;
 
 	float mfStoppedToWalkSpeed[eLuxEnemyPoseType_LastEnum];
 	float mfWalkToStoppedSpeed[eLuxEnemyPoseType_LastEnum];

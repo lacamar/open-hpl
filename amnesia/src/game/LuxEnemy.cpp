@@ -21,7 +21,6 @@
 
 #include <cstring>
 
-#include "impl/RustBackends.h"
 #include "LuxEnemyMover.h"
 #include "LuxEnemyPathfinder.h"
 
@@ -241,7 +240,7 @@ void iLuxEnemyLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTr
 	pEnemy->mfTurnMinBreakAngle = cMath::ToRad(GetVarFloat("TurnMinBreakAngle", 1));
 	pEnemy->mfTurnBreakMul = GetVarFloat("TurnBreakMul", 1);
 
-	pEnemy->mfMoveSpeedAnimMul =	GetVarFloat("MoveSpeedAnimMul", 1);
+	pEnemy->mA4.moveSpeedAnimMul =	GetVarFloat("MoveSpeedAnimMul", 1);
 
 	pEnemy->mfStoppedToWalkSpeed[eLuxEnemyPoseType_Biped] =	GetVarFloat("StoppedToWalkSpeed", 0);
 	pEnemy->mfWalkToStoppedSpeed[eLuxEnemyPoseType_Biped] =	GetVarFloat("WalkToStoppedSpeed", 0);
@@ -365,8 +364,8 @@ void iLuxEnemyLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTr
 	{
 		pEnemy->msCallbackFunc = apInstanceVars->GetVarString("CallbackFunc", "");
 		pEnemy->mbDisableTriggers = apInstanceVars->GetVarBool("DisableTriggers", false);
-		pEnemy->mbHallucination =  apInstanceVars->GetVarBool("Hallucination", false);
-		pEnemy->mfHallucinationEndDist = apInstanceVars->GetVarFloat("HallucinationEndDist", false);
+		pEnemy->mA4.hallucination =  apInstanceVars->GetVarBool("Hallucination", false);
+		pEnemy->mA4.hallucinationEndDist = apInstanceVars->GetVarFloat("HallucinationEndDist", false);
 		pEnemy->mbBlind = apInstanceVars->GetVarBool("Blind", false);
 		pEnemy->mbDeaf = apInstanceVars->GetVarBool("Deaf", false);
 
@@ -449,10 +448,10 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mCurrentState = eLuxEnemyState_LastEnum;
 	mPreviousState = eLuxEnemyState_LastEnum;
 	
-	mSoundState = eLuxEnemySoundState_Silent;
+	mA4.soundState = eLuxEnemySoundState_Silent;
 
-	mpCurrentSound = NULL;
-	mfAmbientSoundCount = 0;
+	mA4.curSound = NULL;
+	mA4.ambientCount = 0;
 
 	mfLookForPlayerCount =0;
 	mbCanSeePlayer = false;
@@ -468,16 +467,16 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mfForwardAcc =1;
 	mfForwardDeacc =1;
 
-	mfDarknessGlowAlpha =0;
-	mfDarknessGlowUpdateCount =0;
+	mA4.glowAlpha =0;
+	mA4.glowUpdateCount =0;
 
 	mfFOVMul = 1.0f;
 
-	mpCurrentAnimation = NULL;
+	mA4.curAnim = NULL;
 
-	mbAnimationIsSpeedDependant = false;
-	mfAnimationSpeedMul = 1;
-	mbUseMoveAnimWhenCurrentIsOver = true;
+	mA4.animSpeedDependant = false;
+	mA4.animSpeedMul = 1;
+	mA4.useMoveAnimWhenOver = true;
 
 	mpLastSearchNode = NULL;
 
@@ -499,10 +498,10 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mbBlind = false;
 	mbDeaf = false;
 
-	mbHallucination = false;
-	mfHallucinationEndDist = 3.0f;
+	mA4.hallucination = false;
+	mA4.hallucinationEndDist = 3.0f;
 	
-	mfEnemyDarknessGlowMaxDistance = gpBase->mpGameCfg->GetFloat("Enemy", "EnemyDarknessGlowMaxDistance",0);
+	mA4.glowMaxDist = gpBase->mpGameCfg->GetFloat("Enemy", "EnemyDarknessGlowMaxDistance",0);
 
 	mfPlayerInDarknessLightLevel = 0.35;
 	mfCrouchVisibleRangeMul = 0.5f;
@@ -561,7 +560,7 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mGa3Ctx.autoRemoveAtPathEnd = &mbAutoRemoveAtPathEnd;
 	ohpl_a4_init(&mA4, &mGa3Ctx, (int)aEnemyType);
 
-	mfCheckGroundRayCount =0;
+	mA4.groundRayCount =0;
 	mlMaxGroundCheckDists = 3;
 	mbAlignEntityWithGroundRay = false;
 
@@ -687,96 +686,8 @@ void iLuxEnemy::OnMapEnter()
 
 void iLuxEnemy::OnUpdate(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_on_update(&mA4,&h,afTimeStep); return;
-	}
-	if(mbDisabled) return;
-
-	//In case the update is called in save or anyhting else that just want a quick update, we do not want to be updated.
-	//Enemies can be disabled when player is not properly placed and the like.
-	if(afTimeStep < gpBase->mpEngine->GetStepSize()*0.8f)
-	{
-		return;
-	}
-
-	//////////////////////
-	// Helpers
-	mpPathfinder->OnUpdate(afTimeStep);
-	mpMover->OnUpdate(afTimeStep);
-
-	//////////////////////
-	// Senses
-	if(mfHealth > 0)
-	{
-		// Sight
-		UpdateCanSeePlayer(afTimeStep);
-		
-		// Detection
-		UpdatePlayerDetected(afTimeStep);
-
-		// In Range
-		UpdatePlayerInRange(afTimeStep);
-
-		// Is stuck at door check
-		UpdateCheckStuckAtDoor(afTimeStep);
-
-		// Check last player position
-		UpdateCheckLastPlayerPos(afTimeStep);
-	}
-	else
-	{
-		mbCanSeePlayer = false;
-		mbPlayerDetected = false;
-		mbPlayerInRange = false;
-	}
-	
-	//////////////////////
-	// State update
-	UpdateStateMachine(afTimeStep);
-	
-	//////////////////////
-	// Specific
-	UpdateEnemySpecific(afTimeStep);
-
-	//////////////////////
-	// Character body
-	UpdateCharBody(afTimeStep);
-
-	//////////////////////
-	// Animation
-	UpdateAnimation(afTimeStep);
-
-	//////////////////////
-	// Sound
-	UpdateSoundState(afTimeStep);
-
-	//////////////////////
-	// Glow
-	UpdateDarknessGlow(afTimeStep);
-
-	//////////////////////
-	// Health Regeneration
-	UpdateRegenHealth(afTimeStep);
-
-	//////////////////////
-	// Hallucination
-	UpdateHallucination(afTimeStep);
-
-	//////////////////////
-	// Align with ground ray
-	UpdateAlignEntityWithGroundRay(afTimeStep);
-
-	//////////////////////
-	// Debug
-	/*Log("Animations\n------------------\n");
-	for(int i=0; i<mpMeshEntity->GetAnimationStateNum(); ++i)
-	{
-		cAnimationState *pState = mpMeshEntity->GetAnimationState(i);
-		if(pState->GetWeight() == 0 || pState->IsActive()==false) continue;
-		Log("  %s \tt: %f w:%f\n", pState->GetName().c_str(), pState->GetRelativeTimePosition(), pState->GetWeight());
-	}*/
+	OhplA4Host h = A4Host();
+	ohpl_a4_on_update(&mA4,&h,afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -863,80 +774,29 @@ iEntity3D* iLuxEnemy::GetAttachEntity()
 
 void iLuxEnemy::GiveDamage(float afAmount, int alStrength)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_give_damage(&mA4,&h,afAmount,alStrength); return;
-	}
-	if(mfHealth > 0)
-
-	if(alStrength < mlToughness-1)			afAmount =0;
-	else if(alStrength == mlToughness-1)	afAmount *= 0.5;
-
-	afAmount *= GetDamageMul(afAmount, alStrength);
-	
-	mfHealth -= afAmount;
-
-	gpBase->mpDebugHandler->AddMessage(_W("Enemy damage ") + cString::ToStringW(afAmount), false);
-
-	if(mfHealth <=0)
-	{
-		ChangeSoundState(eLuxEnemySoundState_Silent);
-		ChangeState(eLuxEnemyState_Dead);
-
-		RunCallbackFunc("OnDeath");
-	}
-	else
-	{
-		SendMessage(eLuxEnemyMessage_TakeHit,0,false,0,afAmount,alStrength);
-		OnDamage(afAmount, alStrength);
-	}
+	OhplA4Host h = A4Host();
+	ohpl_a4_give_damage(&mA4,&h,afAmount,alStrength);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::ShowPlayerPosition()
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_show_player_position(&mA4,&h); return;
-	}
-	mvLastKnownPlayerPos = gpBase->mpPlayer->GetCharacterBody()->GetFeetPosition();
+	OhplA4Host h = A4Host();
+	ohpl_a4_show_player_position(&mA4,&h);
 }
 
 void iLuxEnemy::AlertOfPlayerPresence()
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_alert_of_player_presence(&mA4,&h); return;
-	}
-	if(TriggersDisabled()) return;
-
-	ShowPlayerPosition();
-	if(	mCurrentState == eLuxEnemyState_Idle ||	mCurrentState == eLuxEnemyState_Patrol)
-	{
-		ChangeState(eLuxEnemyState_Search);
-	}
+	OhplA4Host h = A4Host();
+	ohpl_a4_alert_of_player_presence(&mA4,&h);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::ChangeState(eLuxEnemyState aState)
 {
-	if(OhplBackendRustRequested())
-	{
-		ohpl_a4_change_state(&mA4,(int)aState);
-		return;
-	}
-	if(aState == eLuxEnemyState_LastEnum) return;
-	if(mCurrentState == aState) return;
-
-	//Log("State %s' -> '%s' LOS: %d\n", cString::To8Char(gsLuxEnemyStates[mCurrentState]).c_str(), cString::To8Char(gsLuxEnemyStates[aState]).c_str(),
-	//									mbCanSeePlayer);
-	
-	mNextState = aState;
+	ohpl_a4_change_state(&mA4,(int)aState);
 }
 
 //-----------------------------------------------------------------------
@@ -962,13 +822,8 @@ void iLuxEnemy::PlayAnim(	const tString &asName, bool abLoop, float afFadeTime,
 							bool abOverideMoveState,
 							bool abUseMoveAnimWhenCurrentIsOver)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_play_anim(&mA4,&h,asName.c_str(),abLoop,afFadeTime,abDependsOnSpeed,afSpeedMul,abSyncWithPrevFrame,abOverideMoveState,abUseMoveAnimWhenCurrentIsOver); return;
-	}
-	if(PlayAnimImpl(asName, abLoop, afFadeTime, abDependsOnSpeed, afSpeedMul, abSyncWithPrevFrame, abUseMoveAnimWhenCurrentIsOver))
-		mpMover->SetOverideMoveState(abOverideMoveState);
+	OhplA4Host h = A4Host();
+	ohpl_a4_play_anim(&mA4,&h,asName.c_str(),abLoop,afFadeTime,abDependsOnSpeed,afSpeedMul,abSyncWithPrevFrame,abOverideMoveState,abUseMoveAnimWhenCurrentIsOver);
 }
 
 //-----------------------------------------------------------------------
@@ -978,110 +833,25 @@ bool iLuxEnemy::PlayAnimImpl(	const tString &asName, bool abLoop, float afFadeTi
 								bool abSyncWithPrevFrame,
 								bool abUseMoveAnimWhenCurrentIsOver)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		return ohpl_a4_play_anim_impl(&mA4,&h,asName.c_str(),abLoop,afFadeTime,abDependsOnSpeed,afSpeedMul,abSyncWithPrevFrame,abUseMoveAnimWhenCurrentIsOver);
-	}
-	//if not using animations, then return.
-	if(mbUseAnimations==false) return false;
-
-	//Check if the animation is already playing.
-	if(	mpCurrentAnimation != NULL && 
-		mpCurrentAnimation->GetName() == asName && 
-		mpCurrentAnimation->IsActive() &&
-		mpCurrentAnimation->IsOver()== false)
-	{
-		return false;
-	}
-
-	//////////////////////////
-	//Get animation
-	cAnimationState *pNewAnim = mpMeshEntity->GetAnimationStateFromName(asName);
-	if(pNewAnim==NULL)
-	{
-		Warning("Animation '%s' does not exist!\n",asName.c_str());
-		return false;
-	}
-
-	//////////////////////////
-	//Start animation and fade previous
-	pNewAnim->SetActive(true);
-	if(mpCurrentAnimation && mpCurrentAnimation != pNewAnim) 
-	{
-		mpCurrentAnimation->FadeOut(afFadeTime);
-
-		if(pNewAnim->IsFading()==false) pNewAnim->SetWeight(0);
-		pNewAnim->FadeIn(afFadeTime);
-	}
-	else
-	{
-		pNewAnim->SetWeight(1.0f);
-	}
-	pNewAnim->SetLoop(abLoop);
-
-	/////////////////////////////////////////
-	//Check if this animation should start at the same place as the previous
-	if(abSyncWithPrevFrame && mpCurrentAnimation)
-	{
-		pNewAnim->SetRelativeTimePosition(mpCurrentAnimation->GetRelativeTimePosition());
-	}
-	else
-	{
-		pNewAnim->SetTimePosition(0);
-	}
-
-
-	mpCurrentAnimation  = pNewAnim;
-
-	mbAnimationIsSpeedDependant = abDependsOnSpeed;
-	mfAnimationSpeedMul = afSpeedMul;
-	mbUseMoveAnimWhenCurrentIsOver = abUseMoveAnimWhenCurrentIsOver;
-
-	return true;
+	OhplA4Host h = A4Host();
+	return ohpl_a4_play_anim_impl(&mA4,&h,asName.c_str(),abLoop,afFadeTime,abDependsOnSpeed,afSpeedMul,abSyncWithPrevFrame,abUseMoveAnimWhenCurrentIsOver);
 }
 
 //-----------------------------------------------------------------------
 
 bool iLuxEnemy::FadeOutCurrentAnimImpl(float afFadeTime)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		return ohpl_a4_fade_out_current_anim_impl(&mA4,&h,afFadeTime);
-	}
-	if(mpCurrentAnimation==NULL) return false;
-	if(mpCurrentAnimation->IsLooping()) return false;
-
-	mpCurrentAnimation->FadeOut(afFadeTime);
-	mpCurrentAnimation = NULL;
-
-	return mbUseMoveAnimWhenCurrentIsOver;
+	OhplA4Host h = A4Host();
+	return ohpl_a4_fade_out_current_anim_impl(&mA4,&h,afFadeTime);
 }
 
 void iLuxEnemy::FadeOutCurrentAnim(float afFadeTime)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_fade_out_current_anim(&mA4,&h,afFadeTime); return;
-	}
-	if(FadeOutCurrentAnimImpl(afFadeTime)) mpMover->UseMoveStateAnimations();
+	OhplA4Host h = A4Host();
+	ohpl_a4_fade_out_current_anim(&mA4,&h,afFadeTime);
 }
 
 //-----------------------------------------------------------------------
-
-float iLuxEnemy::ConvertAnimToAbsoluteTime(float afRelativeTimePostion)
-{
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		return ohpl_a4_anim_absolute_time(&mA4,&h,afRelativeTimePostion);
-	}
-	if(mpCurrentAnimation==NULL) return 0;
-
-    return mpCurrentAnimation->GetLength() * afRelativeTimePostion;	
-}
 
 //-----------------------------------------------------------------------
 
@@ -1101,56 +871,12 @@ cSoundEntity* iLuxEnemy::PlaySound(const tString &asName)
 
 //-----------------------------------------------------------------------
 
-void iLuxEnemy::SetPositionAtStartPos()
-{
-	mpCharBody->SetFeetPosition(mvStartPosition);
-}
-
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::ResetProperties()
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_reset_properties(&mA4,&h); return;
-	}
-	SetPositionAtStartPos();
-	ChangeState(eLuxEnemyState_Idle);
-
-	mbCausesSanityDecrease = mbCausesSanityDecreaseAsDefault;
-
-	mbDisabled = false;
-	mfLookForPlayerCount =0;
-	mbCanSeePlayer = false;
-	mlPlayerInLOSCount =0;
-	mbPlayerDetected = false;
-	mbPlayerInRange = false;
-
-	mfCheckAtDoorCount =0;
-	mbStuckAtDoor = false;
-
-	mfDarknessGlowAlpha =0;
-	mfDarknessGlowUpdateCount =0;
-
-	mfFOVMul = 1.0f;
-
-	mfDamageCount =0;
-
-	mvLastKnownPlayerPos =0;
-	mfLastPlayerPosCount =0;
-
-	mlCurrentPatrolNode = 0;
-
-	mlAttackHitCounter =0;
-
-	mbIsSeenByPlayer = false;
-
-	mbSkipVisibilityRangeHandicaps = false;
-
-	SetMoveSpeed(eLuxEnemyMoveSpeed_Walk);
-		
-	OnResetProperties();
+	OhplA4Host h = A4Host();
+	ohpl_a4_reset_properties(&mA4,&h);
 }
 
 //-----------------------------------------------------------------------
@@ -1213,24 +939,6 @@ void iLuxEnemy::ClearPatrolNodes()
 }
 
 //-----------------------------------------------------------------------
-
-cLuxEnemyPatrolNode* iLuxEnemy::GetCurrentPatrolNode()
-{
-	if(mlCurrentPatrolNode>= (int)mvPatrolNodes.size() || mlCurrentPatrolNode<0)
-		return NULL;
-
-	return &mvPatrolNodes[mlCurrentPatrolNode];
-}
-
-bool iLuxEnemy::IsAtLastPatrolNode()
-{
-	return ohpl_ga3_patrol_is_at_last(mlCurrentPatrolNode, (int)mvPatrolNodes.size());
-}
-
-void iLuxEnemy::IncCurrentPatrolNode(bool abLoopIfAtEnd)
-{
-	ohpl_ga3_patrol_inc(&mlCurrentPatrolNode, (int)mvPatrolNodes.size(), abLoopIfAtEnd);
-}
 
 //-----------------------------------------------------------------------
 
@@ -1351,92 +1059,18 @@ void iLuxEnemy::UpdateStateMachine(float afTimeStep)
 
 void iLuxEnemy::ChangeSoundState(eLuxEnemySoundState aState)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_change_sound_state(&mA4,&h,(int)aState); return;
-	}
-	if(mSoundState == aState) return;
-
-	mSoundState = aState;
-
-    if(mpCurrentSound && mpMap->GetWorld()->SoundEntityExists(mpCurrentSound, mlCurrentSoundID))
-	{
-		mpCurrentSound->FadeOut(3.0f);
-        mpCurrentSound = NULL;
-	}
-
-	mfAmbientSoundCount = cMath::RandRectf(mfAmbientSoundMinTime[mSoundState], mfAmbientSoundMaxTime[mSoundState]);
+	OhplA4Host h = A4Host();
+	ohpl_a4_change_sound_state(&mA4,&h,(int)aState);
 }
 
 //-----------------------------------------------------------------------
-
-void iLuxEnemy::UpdateSoundState(float afTimeStep)
-{
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_update_sound_state(&mA4,&h,afTimeStep); return;
-	}
-	if(mSoundState == eLuxEnemySoundState_Silent) return;
-	if(msAmbientSound[mSoundState] == "") return;
-
-	//If sound is playing still do nothing.
-	if(mpCurrentSound && mpMap->GetWorld()->SoundEntityExists(mpCurrentSound,mlCurrentSoundID)) return;
-	
-	mpCurrentSound = NULL;
-	
-	
-	if(mfAmbientSoundCount <=0)
-	{
-		mpCurrentSound = PlaySound(msAmbientSound[mSoundState]);
-		if(mpCurrentSound )mlCurrentSoundID = mpCurrentSound->GetCreationID();
-		mfAmbientSoundCount = cMath::RandRectf(mfAmbientSoundMinTime[mSoundState], mfAmbientSoundMaxTime[mSoundState]);
-	}
-	else
-	{
-		mfAmbientSoundCount -= afTimeStep;
-	}
-}
 
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::UpdateAnimation(float afTimeStep)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_update_animation(&mA4,&h,afTimeStep); return;
-	}
-	if(mbUseAnimations==false) return;
-	if(mpMover->GetOverideMoveState()==false || mpCurrentAnimation==NULL) return;
-
-
-	//////////////////
-	// Check for special event
-	if(	mpCurrentAnimation->GetPreviousTimePosition() <= mpCurrentAnimation->GetSpecialEventTime() &&
-		mpCurrentAnimation->GetTimePosition() > mpCurrentAnimation->GetSpecialEventTime())
-	{
-		SendMessage(eLuxEnemyMessage_AnimationSpecialEvent,0,false);
-	}
-
-	//////////////////
-	// Check if over
-	if(mpCurrentAnimation->IsOver())
-	{
-		if(mbUseMoveAnimWhenCurrentIsOver) mpMover->UseMoveStateAnimations();
-		SendMessage(eLuxEnemyMessage_AnimationOver,0,false);
-	}
-
-	//////////////////
-	// Update speed if needed.
-	if(mbAnimationIsSpeedDependant)
-	{
-		float fSpeed = mpCharBody->GetVelocity(afTimeStep).Length();
-		if(mpCharBody->GetMoveSpeed(eCharDir_Forward) <0) fSpeed = -fSpeed;
-
-		mpCurrentAnimation->SetSpeed(std::fabs(fSpeed) * mfMoveSpeedAnimMul);
-	}
+	OhplA4Host h = A4Host();
+	ohpl_a4_update_animation(&mA4,&h,afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -1491,84 +1125,6 @@ void iLuxEnemy::UpdateCheckLastPlayerPos(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void iLuxEnemy::UpdateDarknessGlow(float afTimeStep)
-{
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_update_darkness_glow(&mA4,&h,afTimeStep); return;
-	}
-	///////////////////////////////
-	//Update darkness alpha according to goal
-	if(mfDarknessGlowAlpha != mfDarknessGlowAlphaGoal)
-	{
-		if(mfDarknessGlowAlpha > mfDarknessGlowAlphaGoal)
-		{
-			mfDarknessGlowAlpha -= afTimeStep;
-			if(mfDarknessGlowAlpha < mfDarknessGlowAlphaGoal) mfDarknessGlowAlpha = mfDarknessGlowAlphaGoal;
-		}
-		else
-		{
-			mfDarknessGlowAlpha += afTimeStep;
-			if(mfDarknessGlowAlpha > mfDarknessGlowAlphaGoal) mfDarknessGlowAlpha = mfDarknessGlowAlphaGoal;
-		}
-	}
-
-    if(mfDarknessGlowAlpha > 0)
-	{
-		cCamera *pCam = gpBase->mpPlayer->GetCamera();
-		//Check if in frustum
-		if(pCam->GetFrustum()->CollideBoundingVolume(mpMeshEntity->GetBoundingVolume()) != eCollision_Outside)
-		{
-			//Check if in range
-			float fDistSqrt = cMath::Vector3DistSqr(pCam->GetPosition(), mpCharBody->GetPosition());
-			if(fDistSqrt < mfEnemyDarknessGlowMaxDistance*mfEnemyDarknessGlowMaxDistance)
-			{
-				float fDist = sqrtf(fDistSqrt);
-				
-				float fDistMul=1.0f;
-				if(fDist > mfEnemyDarknessGlowMaxDistance * 0.5f)
-				{
-					fDistMul = 1 - ((fDist-mfEnemyDarknessGlowMaxDistance * 0.5f) / (mfEnemyDarknessGlowMaxDistance * 0.5f));
-					if(fDistMul<0) fDistMul =0;
-				}
-
-				float fSanityMul =  gpBase->mpPlayer->GetSanity()/100.0f;
-				fSanityMul = sqrtf(fSanityMul);
-				
-				float fAlpha = mfDarknessGlowAlpha*mfDarknessGlowAlpha*fDistMul*fSanityMul;
-
-				for(int i=0; i<mpMeshEntity->GetSubMeshEntityNum(); ++i)
-				{
-					gpBase->mpEffectRenderer->AddEnemyGlow(mpMeshEntity->GetSubMeshEntity(i),fAlpha);
-				}
-			}
-		}
-	}
-
-
-	////////////////////////////////
-	//Check if darkness level should be updated
-	if(mpMeshEntity->IsVisible()==false) return;
-	if(mfDarknessGlowUpdateCount > 0)
-	{
-		mfDarknessGlowUpdateCount -=afTimeStep;
-	}
-	mfDarknessGlowUpdateCount = 0.3f;
-
-
-	////////////////////////////////
-	//Update darkness alpha goal
-	mfDarknessGlowAlphaGoal = gpBase->mpMapHelper->GetLightLevelAtPos(mpCharBody->GetPosition());
-	mfDarknessGlowAlphaGoal += gpBase->mpMapHelper->GetLightLevelAtPos(mpCharBody->GetFeetPosition()+cVector3f(0,0.1f,0));
-	mfDarknessGlowAlphaGoal /= 2.0f;
-	
-	mfDarknessGlowAlphaGoal *= 2;
-	if(mfDarknessGlowAlphaGoal>1.0f) mfDarknessGlowAlphaGoal = 1.0f;
-
-	mfDarknessGlowAlphaGoal = 1.0f - mfDarknessGlowAlphaGoal;
-}
-
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::UpdateRegenHealth(float afTimeStep)
@@ -1577,73 +1133,7 @@ void iLuxEnemy::UpdateRegenHealth(float afTimeStep)
 	ohpl_ga3_update_regen_health(&mGa3Ctx, &host, afTimeStep);
 }
 
-void iLuxEnemy::UpdateHallucination(float afTimeStep)
-{
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_update_hallucination(&mA4,&h); return;
-	}
-	if(mbHallucination==false || mfHealth <= 0) return;
-
-	float fDistSqr = cMath::Vector3DistSqr(mpCharBody->GetPosition(), gpBase->mpPlayer->GetCharacterBody()->GetPosition());
-	if(fDistSqr < mfHallucinationEndDist * mfHallucinationEndDist)
-	{
-		FadeToSmoke(true);
-	}
-}
-
 //-----------------------------------------------------------------------
-
-void iLuxEnemy::UpdateAlignEntityWithGroundRay(float afTimeStep)
-{
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_update_align_ground_ray(&mA4,&h,afTimeStep); return;
-	}
-	if(mbAlignEntityWithGroundRay==false) return;
-
-	mfCheckGroundRayCount -= afTimeStep;
-	if(mfCheckGroundRayCount > 0) return;
-
-	mfCheckGroundRayCount = 0.02f;
-
-	///////////////////////////////////
-	// Get the distance to ground
-	float fStartAdd = 0.05f;
-	float fDist=0;
-	cVector3f vNormal;
-
-	//Calculate the start postion depending the way that the character faces.
-	cVector3f vMoveDir = cMath::MatrixMul(cMath::MatrixRotateY(mpCharBody->GetYaw()),cVector3f(0,0,-1));
-	cVector3f vStartPos = mpCharBody->GetFeetPosition()+cVector3f(0,fStartAdd,0) + vMoveDir * mpCharBody->GetSize().x*0.5f;
-
-    bool bIntersect = gpBase->mpMapHelper->GetClosestCharCollider(vStartPos, cVector3f(0,-1,0),0.5f,&fDist,&vNormal,NULL);
-    if(bIntersect==false) return;
-	fDist -= fStartAdd;
-
-	///////////////////////////////////
-	// Add dist to list, pop oldest element if full
-	mlstGroundCheckDists.push_back(fDist);
-	if((int)mlstGroundCheckDists.size() > mlMaxGroundCheckDists)
-		mlstGroundCheckDists.pop_front();
-
-	///////////////////////////////////
-	// Calculate avg dist.
-	float fFinalDist =0;
-	for(tFloatListIt it = mlstGroundCheckDists.begin(); it != mlstGroundCheckDists.end(); ++it)
-	{
-		fFinalDist += *it;
-	}
-	fFinalDist /= (float)mlstGroundCheckDists.size();
-	
-	///////////////////////////////////
-	// Set the offset matrix
-	cMatrixf mtxOffset = m_mtxCharMeshOffset;
-	mtxOffset.SetTranslation(mtxOffset.GetTranslation() + cVector3f(0,-fFinalDist,0));
-    mpCharBody->SetEntityOffset(mtxOffset);
-}
 
 //-----------------------------------------------------------------------
 
@@ -1656,42 +1146,15 @@ bool iLuxEnemy::TriggersDisabled()
 
 bool iLuxEnemy::Attack(const cEnemyAttackSizeData &aSizeData, const cEnemyAttackDamageData &aDamageData, float afDamageMul)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		return ohpl_a4_attack(&mA4,&h,&aSizeData,&aDamageData,afDamageMul);
-	}
-	bool bHitPlayer = false;
-	bool bHit = gpBase->mpMapHelper->ShapeDamage(GetAttackShape(aSizeData.mlShapeIdx), GetDamageShapeMatrix(aSizeData.mvOffset), mpCharBody->GetPosition(),
-												aDamageData.mfMinDamage*afDamageMul, aDamageData.mfMaxDamage*afDamageMul, 
-												aDamageData.mfForce, aDamageData.mfMaxImpulse, 
-												aDamageData.mlStrength, aDamageData.mfHitSpeed,
-												aDamageData.mDamageType, aDamageData.mWeaponHitType,
-												false, aDamageData.mbCheckPlayer, aDamageData.mbCheckProps, true,
-												&bHitPlayer);	
-	if(bHit)
-	{
-		mlAttackHitCounter++;
-		PlaySound(aDamageData.msHitSound);
-	}
-
-	return bHitPlayer;
+	OhplA4Host h = A4Host();
+	return ohpl_a4_attack(&mA4,&h,&aSizeData,&aDamageData,afDamageMul);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::SetMoveSpeed(eLuxEnemyMoveSpeed aType)
 {
-	if(OhplBackendRustRequested())
-	{
-		ohpl_a4_set_move_speed(&mA4,(int)aType);
-		return;
-	}
-	mfForwardSpeed = mfDefaultForwardSpeed[mCurrentPose][aType];
-	mfBackwardSpeed = mfDefaultBackwardSpeed[mCurrentPose][aType];
-	mfForwardAcc = mfDefaultForwardAcc[mCurrentPose][aType];
-	mfForwardDeacc = mfDefaultForwardDeacc[mCurrentPose][aType];
-
+	ohpl_a4_set_move_speed(&mA4,(int)aType);
 }
 
 //-----------------------------------------------------------------------
@@ -1774,153 +1237,30 @@ int iLuxEnemy::CreateAttackShape(cWorld *apWorld, cVector3f &avSize, eCollideSha
 
 cMatrixf iLuxEnemy::GetDamageShapeMatrix(const cVector3f& avOffset)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		cMatrixf mtxOut;
-		ohpl_a4_damage_shape_matrix(&mA4,&h,&avOffset.x,&mtxOut.m[0][0]);
-		return mtxOut;
-	}
-	cVector3f vPos =	mpCharBody->GetPosition() +
-						mpCharBody->GetRight() * avOffset.x +
-						mpCharBody->GetUp() * avOffset.y +
-						mpCharBody->GetForward() * avOffset.z;
-		
-
-	cVector3f vRot = cVector3f(0,mpCharBody->GetYaw(),0);
-	cMatrixf mtxOffset = cMath::MatrixRotate(vRot,eEulerRotationOrder_XYZ);
-	mtxOffset.SetTranslation(vPos);
-
-	return mtxOffset;
+	OhplA4Host h = A4Host();
+	cMatrixf mtxOut;
+	ohpl_a4_damage_shape_matrix(&mA4,&h,&avOffset.x,&mtxOut.m[0][0]);
+	return mtxOut;
 }
 
 //-----------------------------------------------------------------------
 
 cLuxProp_Object* iLuxEnemy::GetClosestFood(float afMaxDist, float afMaxHeightDist)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		return (cLuxProp_Object*)ohpl_a4_closest_food(&mA4,&h,afMaxDist,afMaxHeightDist);
-	}
-	cLuxProp_Object *pOutputFood=NULL;
-	float fShortestDist=-1;
-
-	cLuxEntityIterator it = mpMap->GetEntityIterator();
-	while(it.HasNext())
-	{
-		///////////////////////////////////////////
-		// Check so type is correct
-		iLuxEntity *pEntity = it.Next();
-        if(pEntity->GetEntityType() != eLuxEntityType_Prop) continue;
-		
-		iLuxProp *pProp = static_cast<iLuxProp*>(pEntity);
-		if(pProp->GetPropType() != eLuxPropType_Object) continue;
-
-		cLuxProp_Object *pObject = static_cast<cLuxProp_Object*>(pProp);
-		if(pObject->IsFood()==false) continue;
-
-		///////////////////////////////////////////
-		// Check if height is correct
-       	float fFoodLowestY = pObject->GetBody(0)->GetBoundingVolume()->GetMin().y;
-
-		if(cMath::Abs(fFoodLowestY - mpCharBody->GetFeetPosition().y) > afMaxHeightDist) continue;
-
-
-		///////////////////////////////////////////
-		// Check distance
-		cVector3f vFoodPos = pObject->GetBody(0)->GetLocalPosition();
-
-		float fDistSqr = cMath::Vector3DistSqr(mpCharBody->GetPosition(), vFoodPos);
-		if(fDistSqr > afMaxDist*afMaxDist) continue;
-
-		if(fShortestDist <0 || fDistSqr < fShortestDist)
-		{
-			fShortestDist = fDistSqr;
-			pOutputFood = pObject;
-		}
-	}
-
-	return pOutputFood;
+	OhplA4Host h = A4Host();
+	return (cLuxProp_Object*)ohpl_a4_closest_food(&mA4,&h,afMaxDist,afMaxHeightDist);
 }
 
 //-----------------------------------------------------------------------
 
-cVector3f iLuxEnemy::GetPlayerFeetPos()
-{
-	return gpBase->mpPlayer->GetCharacterBody()->GetFeetPosition();
-}
-
 //-----------------------------------------------------------------------
-
-float iLuxEnemy::Dist2D(const cVector3f &avPos)
-{
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		return ohpl_a4_dist_2d(&mA4,&h,&avPos.x);
-	}
-	cVector3f vStart = mpCharBody->GetFeetPosition();
-	cVector3f vEnd = avPos;
-	vStart.y =0;
-	vEnd.y =0;
-
-	return cMath::Vector3Dist(vStart,vEnd);
-}
-
-float iLuxEnemy::DistToChar(iCharacterBody *apBody)
-{
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		cVector3f vFeet = apBody->GetFeetPosition();
-		return ohpl_a4_dist_to_char(&mA4,&h,&vFeet.x);
-	}
-	return cMath::Vector3Dist(mpCharBody->GetFeetPosition(), apBody->GetFeetPosition());
-}
-
-float iLuxEnemy::DistToChar2D(iCharacterBody *apBody)
-{
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		cVector3f vFeet = apBody->GetFeetPosition();
-		return ohpl_a4_dist_to_char_2d(&mA4,&h,&vFeet.x);
-	}
-	cVector3f vStart = mpCharBody->GetFeetPosition();
-	cVector3f vEnd = apBody->GetFeetPosition();
-	vStart.y =0;
-	vEnd.y =0;
-
-	return cMath::Vector3Dist(vStart,vEnd);
-}
-
-float iLuxEnemy::AbsHeightDistToChar(iCharacterBody *apBody)
-{
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		cVector3f vFeet = apBody->GetFeetPosition();
-		return ohpl_a4_abs_height_dist(&mA4,&h,&vFeet.x);
-	}
-	cVector3f vStart = mpCharBody->GetFeetPosition();
-	cVector3f vEnd = apBody->GetFeetPosition();
-
-	return cMath::Abs(vStart.y - vEnd.y);
-}
 
 cVector3f iLuxEnemy::GetDirection2D(const cVector3f &avPos)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		cVector3f vDir;
-		ohpl_a4_direction_2d(&mA4,&h,&avPos.x,&vDir.x);
-		return vDir;
-	}
-	cVector3f vDiff = avPos - mpCharBody->GetPosition();
-	vDiff.y=0; vDiff.Normalize();
-	return vDiff;
+	OhplA4Host h = A4Host();
+	cVector3f vDir;
+	ohpl_a4_direction_2d(&mA4,&h,&avPos.x,&vDir.x);
+	return vDir;
 }
 
 float iLuxEnemy::DistToPlayer()
@@ -1942,76 +1282,32 @@ float iLuxEnemy::DistToPlayer2D(const cVector3f& avPos)
 
 float iLuxEnemy::AbsHeightDistToPlayer()
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		return ohpl_a4_abs_height_dist_to_player(&mA4,&h);
-	}
-	if(gpBase->mpPlayer->IsDead()) return 100000.0f;
-
-	return AbsHeightDistToChar(gpBase->mpPlayer->GetCharacterBody());
-}
-
-cVector3f iLuxEnemy::GetDirection2DToPlayer()
-{
-	return GetDirection2D(gpBase->mpPlayer->GetCharacterBody()->GetPosition());
+	OhplA4Host h = A4Host();
+	return ohpl_a4_abs_height_dist_to_player(&mA4,&h);
 }
 
 //-----------------------------------------------------------------------
 
 bool iLuxEnemy::IsSeenByPlayer()
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		return ohpl_a4_is_seen_by_player(&mA4,&h);
-	}
-	///////////////////////////////
-	// Check frustum
-	cFrustum *pFrustum = gpBase->mpPlayer->GetCamera()->GetFrustum();
-	if(pFrustum->CollideBoundingVolume(mpCharBody->GetCurrentBody()->GetBoundingVolume())==eCollision_Outside)
-	{
-		return false;
-	}
-
-	///////////////////////////////
-	// Line of sight with rays
-	cVector3f vPlayerEyePos = gpBase->mpPlayer->GetCamera()->GetPosition();
-
-	return LineOfSight(mpCharBody->GetPosition(), mpCharBody->GetSize(), false,vPlayerEyePos);
+	OhplA4Host h = A4Host();
+	return ohpl_a4_is_seen_by_player(&mA4,&h);
 }
 
 //-----------------------------------------------------------------------
 
 bool iLuxEnemy::IsInPlayerFovAtFeetPos(const cVector3f& avFeetPos)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		return ohpl_a4_in_player_fov_at_feet(&mA4,&h,&avFeetPos.x);
-	}
-	cBoundingVolume bv;
-	bv = *mpCharBody->GetCurrentBody()->GetBoundingVolume();
-	bv.SetPosition(avFeetPos + cVector3f(0, mpCharBody->GetSize().y/2, 0) );
-
-	cFrustum *pFrustum = gpBase->mpPlayer->GetCamera()->GetFrustum();
-	return pFrustum->CollideBoundingVolume(&bv)!=eCollision_Outside;
+	OhplA4Host h = A4Host();
+	return ohpl_a4_in_player_fov_at_feet(&mA4,&h,&avFeetPos.x);
 }
 
 //-----------------------------------------------------------------------
 
 bool iLuxEnemy::IsVisibleToPlayerAtFeetPos(const cVector3f& avFeetPos)
 {
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		return ohpl_a4_visible_to_player_at_feet(&mA4,&h,&avFeetPos.x);
-	}
-	cVector3f vPlayerEyePos = gpBase->mpPlayer->GetCamera()->GetPosition();
-	cVector3f vCharPos = avFeetPos;
-	vCharPos.y += mpCharBody->GetSize().y/2;
-
-	return LineOfSight(vCharPos, mpCharBody->GetSize(), false, vPlayerEyePos);
+	OhplA4Host h = A4Host();
+	return ohpl_a4_visible_to_player_at_feet(&mA4,&h,&avFeetPos.x);
 }
 
 //-----------------------------------------------------------------------
@@ -2024,66 +1320,14 @@ float iLuxEnemy::GetPlayerMovementTowardEnemyAmount()
 
 //-----------------------------------------------------------------------
 
-bool iLuxEnemy::OutsideStartRadius()
-{
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		return ohpl_a4_outside_start_radius(&mA4,&h);
-	}
-	float fDist = cMath::Vector3Dist(mpCharBody->GetFeetPosition(), mvStartPosition);
-
-	return fDist > mfActivationDistance * 1.2f + 2.0f;
-}
-
 //-----------------------------------------------------------------------
-
-bool iLuxEnemy::InFOV(const cVector3f &avPos)
-{
-	OhplGa3Host host = Ga3Host();
-	return ohpl_ga3_in_fov(&mGa3Ctx, &host, &avPos.x);
-}
-
-bool iLuxEnemy::PlayerInFOV()
-{
-	OhplGa3Host host = Ga3Host();
-	return ohpl_ga3_player_in_fov(&mGa3Ctx, &host);
-}
 
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::OnSetActive(bool abX)
 {	
-	if(OhplBackendRustRequested())
-	{
-		OhplA4Host h = A4Host();
-		ohpl_a4_on_set_active(&mA4,&h,abX);
-		return;
-	}
-	if(mpCharBody)
-	{
-		mpCharBody->SetActive(abX);
-	}
-
-	///////////////////
-	//Mesh entity
-	if(mpMeshEntity)
-	{
-		mpMeshEntity->SetActive(abX);
-		mpMeshEntity->SetVisible(abX);
-	}
-
-	//Remove from attack and search music
-	if(abX==false)
-	{
-		gpBase->mpMusicHandler->RemoveEnemy(eLuxEnemyMusic_Attack,this);
-		gpBase->mpMusicHandler->RemoveEnemy(eLuxEnemyMusic_Search,this);
-		gpBase->mpPlayer->RemoveTerrorEnemy(this);
-
-		ChangeState(eLuxEnemyState_Idle);
-	}
-	
-	OnSetActiveEnemySpecific(abX);
+	OhplA4Host h = A4Host();
+	ohpl_a4_on_set_active(&mA4,&h,abX);
 }
 
 //-----------------------------------------------------------------------
@@ -2250,13 +1494,13 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyToVar(pData, mfHealth);
 	kCopyToVar(pData, mbCausesSanityDecrease);
 
-	kCopyToVar(pData, mbHallucination);
+	(pData->mbHallucination = mA4.hallucination);
 	
 	pData->mlCurrentState = mCurrentState;
 	pData->mlNextState = mNextState;
 	pData->mlPreviousState = mPreviousState;
 
-	pData->mlSoundState = mSoundState;
+	pData->mlSoundState = mA4.soundState;
 
 	kCopyToVar(pData, mfLookForPlayerCount);
 	kCopyToVar(pData, mlPlayerInLOSCount);
@@ -2273,16 +1517,16 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyToVar(pData, mfForwardAcc);
 	kCopyToVar(pData, mfForwardDeacc);
 
-	kCopyToVar(pData, mfDarknessGlowAlpha);
-	kCopyToVar(pData, mfDarknessGlowAlphaGoal);
+	(pData->mfDarknessGlowAlpha = mA4.glowAlpha);
+	(pData->mfDarknessGlowAlphaGoal = mA4.glowGoal);
 
 	kCopyToVar(pData, mlAttackHitCounter);
 
 	kCopyToVar(pData,mfFOVMul);
 
-	kCopyToVar(pData, mbAnimationIsSpeedDependant);
-	kCopyToVar(pData, mfAnimationSpeedMul);
-	kCopyToVar(pData, mbUseMoveAnimWhenCurrentIsOver);
+	(pData->mbAnimationIsSpeedDependant = mA4.animSpeedDependant);
+	(pData->mfAnimationSpeedMul = mA4.animSpeedMul);
+	(pData->mbUseMoveAnimWhenCurrentIsOver = mA4.useMoveAnimWhenOver);
 
 	kCopyToVar(pData, mvStartPosition);
 
@@ -2309,8 +1553,8 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	
 	///////////////////////
 	//Current animation
-	if(mpCurrentAnimation)
-		pData->msCurrentAnimName = mpCurrentAnimation->GetName();
+	if(mA4.curAnim)
+		pData->msCurrentAnimName = mA4.curAnim->GetName();
 	else
 		pData->msCurrentAnimName = "";
 
@@ -2407,7 +1651,7 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyFromVar(pData, mfHealth);
 	kCopyFromVar(pData, mbCausesSanityDecrease);
 
-	kCopyFromVar(pData, mbHallucination);
+	(mA4.hallucination = pData->mbHallucination);
 
 	
 	mCurrentState = (eLuxEnemyState)pData->mlCurrentState;
@@ -2431,16 +1675,16 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyFromVar(pData, mfForwardAcc);
 	kCopyFromVar(pData, mfForwardDeacc);
 
-	kCopyFromVar(pData, mfDarknessGlowAlpha);
-	kCopyFromVar(pData, mfDarknessGlowAlphaGoal);
+	(mA4.glowAlpha = pData->mfDarknessGlowAlpha);
+	(mA4.glowGoal = pData->mfDarknessGlowAlphaGoal);
 
 	kCopyFromVar(pData, mlAttackHitCounter);
 
 	kCopyFromVar(pData,mfFOVMul);
 
-	kCopyFromVar(pData, mbAnimationIsSpeedDependant);
-	kCopyFromVar(pData, mfAnimationSpeedMul);
-	kCopyFromVar(pData, mbUseMoveAnimWhenCurrentIsOver);
+	(mA4.animSpeedDependant = pData->mbAnimationIsSpeedDependant);
+	(mA4.animSpeedMul = pData->mfAnimationSpeedMul);
+	(mA4.useMoveAnimWhenOver = pData->mbUseMoveAnimWhenCurrentIsOver);
 
 	kCopyFromVar(pData, mvStartPosition);
 
@@ -2458,11 +1702,11 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//Current animation
 	if(pData->msCurrentAnimName != "")
 	{
-		mpCurrentAnimation = mpMeshEntity->GetAnimationStateFromName(pData->msCurrentAnimName);
+		mA4.curAnim = mpMeshEntity->GetAnimationStateFromName(pData->msCurrentAnimName);
 	}
 	else
 	{
-		mpCurrentAnimation = NULL;
+		mA4.curAnim = NULL;
 	}
 	
 	///////////////////////
@@ -2612,7 +1856,7 @@ void iLuxEnemy::Ga3MoverParams(OhplGa3MoverParams &aParams)
 	aParams.turnBreakMul = mfTurnBreakMul;
 	aParams.turnSpeedMul = mfTurnSpeedMul;
 	aParams.turnMaxSpeed = mfTurnMaxSpeed;
-	aParams.moveSpeedAnimMul = mfMoveSpeedAnimMul;
+	aParams.moveSpeedAnimMul = mA4.moveSpeedAnimMul;
 	aParams.pose = mCurrentPose;
 	for(int i=0; i<2; ++i)
 	{
@@ -2692,8 +1936,8 @@ int iLuxEnemy::Ga3Call(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 		}
 		return pEnemy->PlayAnimImpl(sName, apIo->i[2] != 0, apIo->f[0], apIo->i[3] != 0, apIo->f[1], apIo->i[4] != 0, apIo->i[6] != 0) ? 1 : 0;
 	}
-	case eOhplGa3Op_AnimExists:		return pEnemy->mpCurrentAnimation ? 1 : 0;
-	case eOhplGa3Op_AnimSetSpeed:	pEnemy->mpCurrentAnimation->SetSpeed(apIo->f[0]); return 0;
+	case eOhplGa3Op_AnimExists:		return pEnemy->mA4.curAnim ? 1 : 0;
+	case eOhplGa3Op_AnimSetSpeed:	pEnemy->mA4.curAnim->SetSpeed(apIo->f[0]); return 0;
 	case eOhplGa3Op_FadeOutAnim:	return pEnemy->FadeOutCurrentAnimImpl(apIo->f[0]) ? 1 : 0;
 
 	case eOhplGa3Op_PlayerDead:		return pPlayer->IsDead() ? 1 : 0;
