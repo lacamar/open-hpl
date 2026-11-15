@@ -1,0 +1,105 @@
+// OHPL_A11A_INVDUMP=<file>: item/type/combine/save-data sequence through the public inventory API
+static void OhplA11aDumpItems(FILE *f, const char *asTag, cLuxInventory *apInv, bool abEquip=true)
+{
+	fprintf(f, "%s n=%d eq=%d dis=%d msg=%d picked=%d\n", asTag, apInv->GetItemNum(), abEquip ? apInv->GetItemIndex(apInv->GetEquippedHandItem()) : -2,
+			apInv->GetDisabled(), apInv->GetMessageActive(), apInv->GetPickedItem()!=NULL);
+	for(int i=0; i<apInv->GetItemNum(); ++i)
+	{
+		cLuxInventory_Item *p = apInv->GetItem(i);
+		fprintf(f, "  [%d] name=%s type=%d sub=%s val=%s extra=%s img=%s cnt=%d amt=%g ne=%s de=%s gfx=%d\n", i, p->GetName().c_str(), (int)p->GetType(),
+				p->GetSubType().c_str(), p->GetStringVal().c_str(), p->GetExtraStringVal().c_str(), p->GetImageName().c_str(), p->GetCount(),
+				p->GetAmount(), p->GetGameNameEntry().c_str(), p->GetGameDescEntry().c_str(), p->GetImage()!=NULL);
+	}
+}
+
+static void OhplA11aInvDump(cLuxInventory *apInv)
+{
+	static bool bDone = false;
+	const char *sPath = getenv("OHPL_A11A_INVDUMP");
+	if(sPath==NULL || bDone) return;
+	bDone = true;
+	FILE *f = fopen(sPath, "w");
+	if(f==NULL) return;
+
+	static const char *vTypes[] = { "Puzzle","coins","NOTE","Diary","Lantern","Health","Sanity","LampOil","Tinderbox","HandObject" };
+	for(size_t i=0; i<sizeof(vTypes)/sizeof(vTypes[0]); ++i)
+	{
+		eLuxItemType t = apInv->GetItemTypeFromString(vTypes[i]);
+		iLuxItemType *pT = apInv->GetItemTypeData(t);
+		fprintf(f, "type %s -> %d name=%s count=%d max=%d pickup=%d hasmax=%d\n", vTypes[i], (int)t, pT->GetName().c_str(), pT->HasCount(), pT->GetMaxCount(),
+				pT->ShowPickUpMessage(), pT->GetHasMaxAmount());
+	}
+
+	apInv->Reset();
+	bool bRemove;
+	struct { const char *name; eLuxItemType type; const char *sub; float amount; const char *val; const char *extra; } vAdd[] = {
+		{ "puz_a", eLuxItemType_Puzzle, "agrippa_head", 0, "", "" },
+		{ "puz_b", eLuxItemType_Puzzle, "bone_saw", 1, "L02_Shipment", "x" },
+		{ "hp_a", eLuxItemType_Health, "health", 25, "", "" },
+		{ "hp_b", eLuxItemType_Health, "health", 25, "", "" },
+		{ "san_a", eLuxItemType_Sanity, "sanity", 30, "", "" },
+		{ "oil_a", eLuxItemType_LampOil, "oil", 20, "", "" },
+		{ "oil_b", eLuxItemType_LampOil, "oil", 20, "", "" },
+		{ "lantern", eLuxItemType_Lantern, "lantern", 0, "", "" },
+		{ "hand_a", eLuxItemType_HandObject, "bucket_of_tar", 0, "", "" },
+		{ "hand_b", eLuxItemType_HandObject, "bone_saw", 0, "", "" },
+		{ "tb_a", eLuxItemType_Tinderbox, "tinderbox", 0, "", "" },
+		{ "coins", eLuxItemType_Coins, "coins_large", 10, "", "" },
+	};
+	for(size_t i=0; i<sizeof(vAdd)/sizeof(vAdd[0]); ++i)
+	{
+		bRemove = false;
+		cLuxInventory_Item *pItem = apInv->AddItem(vAdd[i].name, vAdd[i].type, vAdd[i].sub, "agrippa_head.tga", vAdd[i].amount, vAdd[i].val, vAdd[i].extra, &bRemove);
+		fprintf(f, "add %s -> %d remove=%d idx=%d\n", vAdd[i].name, pItem!=NULL, bRemove, apInv->GetItemIndex(pItem));
+		OhplA11aDumpItems(f, " state", apInv);
+	}
+	for(int i=0; i<100; ++i) apInv->AddItem("hp_x", eLuxItemType_Health, "health", "agrippa_head.tga", 25, "", "", &bRemove);
+	OhplA11aDumpItems(f, "capped", apInv);
+	fprintf(f, "has lantern=%d oil=%d tinder=%d note=%d\n", apInv->HasItemOfType(eLuxItemType_Lantern), apInv->HasItemOfType(eLuxItemType_LampOil),
+			apInv->HasItemOfType(eLuxItemType_Tinderbox), apInv->HasItemOfType(eLuxItemType_Note));
+	fprintf(f, "get puz_b=%d sub bone_saw=%d nothing=%d\n", apInv->GetItemIndex(apInv->GetItem("puz_b")),
+			apInv->GetItemIndex(apInv->GetItemFromSubType("bone_saw")), apInv->GetItem("nothing")!=NULL);
+
+	apInv->SetEquippedHandItem(apInv->GetItem("hand_b"));
+	apInv->AddCombineCallback("cb1", "puz_a", "puz_b", "CombineFn", true);
+	apInv->AddCombineCallback("cb2", "hp_a", "oil_a", "OtherFn", false);
+	apInv->RemoveCombineCallback("cb2");
+	apInv->SetDisabled(true);
+	const char *vPairs[][2] = { {"puz_a","puz_b"}, {"puz_b","puz_a"}, {"hp_a","oil_a"}, {"puz_a","puz_a"} };
+	for(size_t i=0; i<4; ++i)
+	{
+		cLuxCombineItemsCallback *p = apInv->GetCombineCallback(vPairs[i][0], vPairs[i][1]);
+		fprintf(f, "comb %s,%s -> %s\n", vPairs[i][0], vPairs[i][1], p ? (p->msName+","+p->msFunction).c_str() : "none");
+	}
+
+	cLuxInventory_SaveData save;
+	save.FromInventory(apInv);
+	fprintf(f, "save dis=%d eq=%d items=%d cbs=%d\n", save.mbDisabled, save.mlEquippedHandItem, (int)save.mvItems.Size(), (int)save.mvCombineCallbacks.Size());
+	for(size_t i=0; i<save.mvItems.Size(); ++i)
+	{
+		cLuxInventory_Item_SaveData &s = save.mvItems[i];
+		fprintf(f, "  s[%d] %s %d %s %s %s %s %g %d %s %s\n", (int)i, s.msName.c_str(), s.mlType, s.msSubType.c_str(), s.msVal.c_str(), s.msExtraVal.c_str(),
+				s.msImageFile.c_str(), s.mfAmount, s.mlCount, s.msGameNameEntry.c_str(), s.msGameDescEntry.c_str());
+	}
+	for(size_t i=0; i<save.mvCombineCallbacks.Size(); ++i)
+	{
+		cLuxCombineItemsCallback &c = save.mvCombineCallbacks[i];
+		fprintf(f, "  c[%d] %s %s %s %s %d\n", (int)i, c.msName.c_str(), c.msItemA.c_str(), c.msItemB.c_str(), c.msFunction.c_str(), c.mbAutoDestroy);
+	}
+
+	apInv->Reset();
+	OhplA11aDumpItems(f, "reset", apInv);
+	save.ToInventory(NULL, apInv);
+	OhplA11aDumpItems(f, "restored", apInv, false);
+	fprintf(f, "restored comb=%d\n", apInv->GetCombineCallback("puz_b", "puz_a")!=NULL);
+	apInv->RemoveItem(apInv->GetItem("hp_a"));
+	apInv->RemoveItem("puz_a");
+	apInv->RemoveItem("oil_a");
+	apInv->RemoveItem("missing");
+	apInv->RemoveItemOfType(eLuxItemType_Sanity);
+	OhplA11aDumpItems(f, "removed", apInv, false);
+
+	apInv->Reset();
+	apInv->LoadScript();
+	fclose(f);
+}
