@@ -142,9 +142,16 @@ half() {
 	done
 	if has amnesia; then
 		for M in $DUMP_AMNESIA; do
-			rm -f "$OUT/h13-$M-$impl.txt" "$OUT/a7-$M-$impl.txt" "$OUT/a10a-$M-$impl.txt" "$OUT/a11a-$M-$impl.txt" "$OUT/a11b-$M-$impl.txt" "$OUT/a11c-$M-$impl.txt"
-			ENVX="$extra OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A10A_DUMP=$OUT/a10a-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt OHPL_A11B_DUMP=$OUT/a11b-$M-$impl.txt OHPL_A11C_DUMP=$OUT/a11c-$M-$impl.txt" \
+			rm -f "$OUT/h13-$M-$impl.txt" "$OUT/a7-$M-$impl.txt" "$OUT/a10a-$M-$impl.txt" "$OUT/a11a-$M-$impl.txt" "$OUT/a11b-$M-$impl.txt"
+			ENVX="$extra OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A10A_DUMP=$OUT/a10a-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt OHPL_A11B_DUMP=$OUT/a11b-$M-$impl.txt" \
 				sweep "$impl" amnesia "$OUT/dump-$impl-amnesia.json" --map "$M"
+		done
+	fi
+	if has amnesia; then
+		# the journal driver opens the journal container, which stops the default container's modules: own run
+		for M in $DUMP_AMNESIA; do
+			rm -f "$OUT/a11c-$M-$impl.txt"
+			ENVX="$extra OHPL_A11C_DUMP=$OUT/a11c-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a11c-$impl-amnesia.json" --map "$M"
 		done
 	fi
 	if has amnesia; then
@@ -158,7 +165,7 @@ half() {
 		for mode in boot play; do
 			[ "$g$mode" = amfpplay ] && continue
 			rm -f "$OUT/a10b-$mode-$g-$impl.txt"
-			env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-a10b-$impl-$g" OHPL_GAME="$g" \
+			env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-a10b-$impl-$g-$$" OHPL_GAME="$g" \
 				scripts/a10b-scenario.sh "$mode" "$OUT/a10b-$mode-$g-$impl.txt" >> "$OUT/a10b-$impl-$g.log" 2>&1
 		done
 	done
