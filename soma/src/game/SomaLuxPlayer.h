@@ -182,6 +182,7 @@ public:
 	void LoadKeyConfig();
 	// cLuxInputHandler::LoadScript
 	void LoadScript();
+	void DumpState();
 	void LoadUserConfig();
 	// cLuxInputHandler::Update: action edges and analog sums to every updateable, then mouse look
 	void UpdateInput(float afTimeStep, bool abGameInput);

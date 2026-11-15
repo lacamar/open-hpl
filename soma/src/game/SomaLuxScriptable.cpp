@@ -1,9 +1,11 @@
 #include "SomaLuxScriptable.h"
+#include "SomaS5Dump.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <memory>
 
 uint64_t SomaHash64(const tString &asStr) { return ohpl_gs3_hash64((const unsigned char *)asStr.data(), asStr.size()); }
@@ -147,10 +149,41 @@ void cSomaLuxScriptable::UpdateTimers(float afTimeStep)
 		if (sFunc.empty())
 			continue;
 		uint64_t lCallId = lId;
+		if (OhplS5DumpEnabled())
+			OhplS5Log("fire %s %s %llu", msScriptName.c_str(), sFunc.c_str(), (unsigned long long)lCallId);
 		Call("void " + sFunc + "(uint64)", [lCallId](asIScriptContext *c) { c->SetArgQWord(0, lCallId); });
 	}
 
 	ohpl_gs3_faders_update((OhplGs3Fader *)mvFaders.data(), mvFaders.size(), afTimeStep);
+
+	if (OhplS5DumpEnabled())
+	{
+		static std::map<const cSomaLuxScriptable *, tString> smapLast;
+		tString sNow = DescribeTimers();
+		tString &sLast = smapLast[this];
+		if (sNow != sLast)
+		{
+			sLast = sNow;
+			OhplS5Log("ts %s %s", msScriptName.c_str(), sNow.c_str());
+		}
+	}
+}
+
+tString cSomaLuxScriptable::DescribeTimers()
+{
+	char vBuf[160];
+	tString sOut;
+	for (cTimer &t : mvTimers)
+	{
+		snprintf(vBuf, sizeof(vBuf), "t[%llu %08x %d %d %s]", (unsigned long long)t.mlId, OhplS5Bits(t.mfLength), t.mbRepeat, t.mbPaused, t.msFunc.c_str());
+		sOut += vBuf;
+	}
+	for (cFader &f : mvFaders)
+	{
+		snprintf(vBuf, sizeof(vBuf), "f[%llu %08x %d %d]", (unsigned long long)f.mlId, OhplS5Bits(f.mfGoal), f.mbReverseAtEnd, f.mbPaused);
+		sOut += vBuf;
+	}
+	return sOut;
 }
 
 void cSomaLuxScriptable::Timer_Add(uint64_t alId, float afTime, const tString &asFunc, bool abCreateIfExist, bool abRepeat)

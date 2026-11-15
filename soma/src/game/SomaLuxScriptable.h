@@ -54,6 +54,7 @@ public:
 	bool Timer_TimeHasPassed(uint64_t alId, float afLength);
 	float Timer_GetValue(uint64_t alId, float afMin, float afMax, int alEasing, bool abAbs);
 	void Timer_ClearAll() { mvTimers.clear(); }
+	tString DescribeTimers();
 	bool TimersIdle() const { return mvTimers.empty() && mvFaders.empty(); }
 
 	void Fader_FadeTo(uint64_t alId, float afGoal, float afTime, bool abReverseAtEnd, bool abSkipIfExists);

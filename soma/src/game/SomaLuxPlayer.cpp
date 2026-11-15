@@ -1,4 +1,5 @@
 #include "SomaLuxPlayer.h"
+#include "SomaS5Dump.h"
 #include "SomaBase.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
@@ -542,6 +543,54 @@ void cSomaLuxInputHandler::LoadScript()
 	Call("void CreateGamepadProfiles()");
 	Call("void CreateInputLayoutMapping()");
 	LoadKeyConfig();
+	if (OhplS5DumpEnabled())
+		DumpState();
+}
+
+static tString DumpJoin(const tStringVec &avItems)
+{
+	tString s;
+	for (const tString &i : avItems)
+		s += i + ",";
+	return s;
+}
+
+void cSomaLuxInputHandler::DumpState()
+{
+	OhplS5Log("in cfg %d %d %08x %08x %d %08x", mbInvertMouse, mbSmoothMouse, OhplS5Bits(mfMouseSensitivity), OhplS5Bits(mfGamepadSensitivity), mlMaxSmoothMousePos, OhplS5Bits(mfPrevSmoothMousePosMul));
+	for (const cLuxAction &a : mvActions)
+		OhplS5Log("in action %d %s %d %08x %d %d", a.mlId, a.msName.c_str(), a.mlAxis, OhplS5Bits(a.mfMul), a.mlAnalogId, a.mbGamepad);
+	cInput *pInput = gpSomaBase->mpEngine->GetInput();
+	for (int i = 0; i < kMaxActions; ++i)
+		if (cAction *pAction = pInput->GetAction(i))
+		{
+			tString sBinds;
+			for (int k = 0; k < pAction->GetSubActionNum(); ++k)
+				sBinds += pAction->GetSubAction(k)->GetInputType() + "." + pAction->GetSubAction(k)->GetInputName() + ",";
+			OhplS5Log("in engine %d %s [%s] [%s] [%s]", i, pAction->GetName().c_str(), sBinds.c_str(), GetActionName(i, false).c_str(), GetActionName(i, true).c_str());
+		}
+	for (cGamepadProfile &p : mvGamepadProfiles)
+	{
+		tString sDPad;
+		for (unsigned u : p.mvDPad)
+			sDPad += cString::ToString((int)u) + ",";
+		OhplS5Log("in profile %s %s [%s] [%s] [%s]", p.msName.c_str(), p.msPrefix.c_str(), DumpJoin(p.mvButtons).c_str(), DumpJoin(p.mvAxes).c_str(), sDPad.c_str());
+		for (cGamepadPreset &r : p.mvPresets)
+		{
+			tString sActions, sAnalog;
+			for (int a : r.mvActions)
+				sActions += cString::ToString(a) + ",";
+			for (bool b : r.mvAnalog)
+				sAnalog += b ? "1," : "0,";
+			OhplS5Log("in preset %s %s [%s] [%s] [%s]", p.msName.c_str(), r.msName.c_str(), sActions.c_str(), DumpJoin(r.mvBindings).c_str(), sAnalog.c_str());
+			for (const tString &sControl : r.mvBindings)
+			{
+				tString sOut;
+				GetActionsAssociatedToGamepadControl(p.msName, r.msName, sControl, sOut);
+				OhplS5Log("in control %s %s %s -> %s", p.msName.c_str(), r.msName.c_str(), sControl.c_str(), sOut.c_str());
+			}
+		}
+	}
 }
 
 void cSomaLuxInputHandler::LoadKeyConfig()
