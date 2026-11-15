@@ -315,16 +315,26 @@ def same(name, a, b):
             cfg_x, cfg_y = [l for l in x if l.startswith("in ")], [l for l in y if l.startswith("in ")]
             if st_x != st_y or cfg_x != cfg_y:
                 return (False, f"DIFFER (section {i}: self-test or handler state)")
-            # play runs end at different frames: events must agree over the shorter run, ignoring order of fires
-            ev_x = [l for l in x if l.startswith(("act ", "ana "))]
-            ev_y = [l for l in y if l.startswith(("act ", "ana "))]
-            n = min(len(ev_x), len(ev_y))
-            if ev_x[:n] != ev_y[:n] or abs(len(ev_x) - len(ev_y)) > 40:
+            # frame counts vary: mouse samples must agree over the shorter run, key events as runs of equal lines
+            def events(sec):
+                ev = [l for l in sec if l.startswith(("act ", "ana "))]
+                keys = []
+                for l in ev:
+                    if not l.startswith("ana 0 ") and (not keys or keys[-1] != l):
+                        keys.append(l)
+                return [l for l in ev if l.startswith("ana 0 ")], keys
+            (mx, kx), (my, ky) = events(x), events(y)
+            n = min(len(mx), len(my))
+            if mx[:n] != my[:n] or kx != ky or abs(len(mx) - len(my)) > 10:
                 return (False, f"DIFFER (section {i}: input events)")
-            ts_x = sorted(l for l in x if l.startswith(("ts ", "fire ")))
-            ts_y = sorted(l for l in y if l.startswith(("ts ", "fire ")))
-            if ts_x != ts_y:
-                return (False, f"DIFFER (section {i}: timers {len(ts_x)} vs {len(ts_y)} lines)")
+            # script timers repeat as often as the run is long: only the set of distinct lines must agree; the self-test (no script name) exactly
+            def timers(sec):
+                ls = [l for l in sec if l.startswith(("ts ", "fire "))]
+                own = sorted(l for l in ls if l.startswith(("ts  ", "fire  ")))
+                return own, {l for l in ls if l not in own}
+            (ox, sx), (oy, sy) = timers(x), timers(y)
+            if ox != oy or sx != sy:
+                return (False, f"DIFFER (section {i}: timers)")
         return (True, f"equal over {len(sa)} maps")
     if name.startswith("a12a-"):
         # frames past the script depend on when the run shuts down

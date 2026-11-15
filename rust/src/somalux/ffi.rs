@@ -5,15 +5,13 @@ use super::pause::{self, Op, Pause};
 use super::player::{
     self, Automove, CameraRotate, DamageId, Fade, MessageKind, MoveSpeeds, MoveVec, StateChange,
 };
-use super::scriptable::{self, Fader, Timer, TimerAdd};
+use super::scriptable;
 use super::transfer::{self, AfterLoad, Body, Preload, Rel, Restore, Take, Taken};
 use crate::string_ffi::units;
 use crate::types::{Matrixf, Vector3f};
 
 const _: () = {
     use std::mem::{offset_of, size_of};
-    assert!(size_of::<Timer>() == 24 && offset_of!(Timer, repeat) == 16);
-    assert!(size_of::<Fader>() == 32 && offset_of!(Fader, reverse_at_end) == 24);
     assert!(size_of::<Fade>() == 20);
     assert!(size_of::<MoveVec>() == 44 && offset_of!(MoveVec, moving) == 40);
     assert!(size_of::<MoveSpeeds>() == 48);
@@ -62,97 +60,6 @@ pub unsafe extern "C" fn ohpl_gs3_hash64(p: *const u8, n: usize) -> u64 {
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_gs3_easing(kind: i32, t: f32) -> f32 {
     scriptable::easing(kind, t)
-}
-
-/// Steps `n` timers laid out `stride` bytes apart; writes the due indices to `due` and the
-/// keep flags to `keep` (both `n` long) and returns the due count.
-///
-/// # Safety
-/// `base` points to `n` timers `stride` bytes apart, exclusively borrowed; `due` and `keep` are
-/// writable for `n` entries.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs3_timers_update(
-    base: *mut u8,
-    n: usize,
-    stride: usize,
-    dt: f32,
-    due: *mut u32,
-    keep: *mut u8,
-) -> usize {
-    let mut count = 0;
-    for i in 0..n {
-        // SAFETY: caller contract.
-        let t = unsafe { rw(base.add(i * stride).cast::<Timer>()) };
-        let (is_due, kept) = scriptable::step_timer(t, dt);
-        if is_due {
-            // SAFETY: at most `n` entries are written.
-            unsafe { wr(due.add(count), i as u32) };
-            count += 1;
-        }
-        // SAFETY: `keep` has `n` entries.
-        unsafe { wr(keep.add(i), u8::from(kept)) };
-    }
-    count
-}
-
-/// # Safety
-/// `f` points to `n` exclusively borrowed faders.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs3_faders_update(f: *mut Fader, n: usize, dt: f32) {
-    if n > 0 {
-        // SAFETY: caller contract.
-        scriptable::update_faders(unsafe { std::slice::from_raw_parts_mut(f, n) }, dt);
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs3_fade_speed(value: f32, goal: f32, time: f32) -> f32 {
-    scriptable::fade_speed(value, goal, time)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs3_timer_value(
-    found: bool,
-    length: f32,
-    left: f32,
-    min: f32,
-    max: f32,
-    kind: i32,
-    abs: bool,
-) -> f32 {
-    scriptable::timer_value(found.then_some((length, left)), min, max, kind, abs)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs3_timer_has_passed(
-    found: bool,
-    length: f32,
-    left: f32,
-    wanted: f32,
-) -> bool {
-    scriptable::timer_time_has_passed(found.then_some((length, left)), wanted)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs3_fader_value(
-    found: bool,
-    value: f32,
-    min: f32,
-    max: f32,
-    kind: i32,
-    abs: bool,
-) -> f32 {
-    scriptable::fader_value(found.then_some(value), min, max, kind, abs)
-}
-
-/// 0 skip, 1 push a new timer, 2 overwrite the existing one.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs3_timer_add(exists: bool, create_if_exist: bool) -> i32 {
-    match scriptable::timer_add(exists, create_if_exist) {
-        TimerAdd::Skip => 0,
-        TimerAdd::Push => 1,
-        TimerAdd::Overwrite => 2,
-    }
 }
 
 // map change and preload

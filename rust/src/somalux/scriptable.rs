@@ -1,4 +1,4 @@
-//! `SomaLuxScriptable.cpp`: id hashing, easing, timer and fader stepping.
+//! `SomaLuxScriptable`: id hashing, easing, timer and fader stepping.
 
 use crate::math::{cos, sin};
 
@@ -175,7 +175,7 @@ pub fn easing(kind: i32, t: f32) -> f32 {
     }
 }
 
-/// Prefix of `cSomaLuxScriptable::cTimer`; the script function name follows in C++.
+/// One timer; the script function name lives next to it in the table.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Timer {

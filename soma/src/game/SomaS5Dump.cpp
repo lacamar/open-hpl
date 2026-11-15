@@ -1,5 +1,6 @@
 #include "SomaS5Dump.h"
 #include "SomaLuxScriptable.h"
+#include "RustSomaLuxS5.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -53,9 +54,43 @@ unsigned Rnd()
 float RndF() { return Rnd() / 65536.0f; }
 }
 
-void OhplS5SelfTest()
+namespace
+{
+enum { kAdd, kRemove, kExists, kLeft, kPause, kPassed, kTVal, kFade, kFSet, kFPause, kFVal, kClear };
+
+struct TsOps
 {
 	cSomaLuxScriptable s;
+	float Op(unsigned op, uint64_t id, float f0, float f1, int i0, unsigned flags, const char *func = "")
+	{
+		return ohpl_s5_ts_op(&s, op, id, f0, f1, i0, flags, (const unsigned char *)func, strlen(func));
+	}
+	void Timer_Add(uint64_t id, float t, const char *f, bool c, bool r) { Op(kAdd, id, t, 0, 0, (c ? 1 : 0) | (r ? 2 : 0), f); }
+	void Timer_Remove(uint64_t id) { Op(kRemove, id, 0, 0, 0, 0); }
+	bool Timer_Exists(uint64_t id) { return Op(kExists, id, 0, 0, 0, 0) != 0; }
+	float Timer_GetTimeLeft(uint64_t id) { return Op(kLeft, id, 0, 0, 0, 0); }
+	void Timer_SetPaused(uint64_t id, bool b) { Op(kPause, id, 0, 0, 0, b); }
+	bool Timer_TimeHasPassed(uint64_t id, float l) { return Op(kPassed, id, l, 0, 0, 0) != 0; }
+	float Timer_GetValue(uint64_t id, float a, float b, int e, bool abs) { return Op(kTVal, id, a, b, e, abs); }
+	void Fader_FadeTo(uint64_t id, float g, float t, bool r, bool k) { Op(kFade, id, g, t, 0, (r ? 1 : 0) | (k ? 2 : 0)); }
+	void Fader_Set(uint64_t id, float x, bool k) { Op(kFSet, id, x, 0, 0, k); }
+	void Fader_SetPaused(uint64_t id, bool b) { Op(kFPause, id, 0, 0, 0, b); }
+	float Fader_GetValue(uint64_t id, float a, float b, int e, bool abs) { return Op(kFVal, id, a, b, e, abs); }
+	void ClearAll() { Op(kClear, 0, 0, 0, 0, 0); }
+	void UpdateTimers(float dt) { s.UpdateTimers(dt); }
+	bool TimersIdle() { return s.TimersIdle(); }
+	tString DescribeTimers()
+	{
+		tString sOut;
+		ohpl_s5_ts_describe(&s, +[](void *apCtx, const unsigned char *apData, size_t alLen) { ((tString *)apCtx)->assign((const char *)apData, alLen); }, &sOut);
+		return sOut;
+	}
+};
+}
+
+void OhplS5SelfTest()
+{
+	TsOps s;
 	const uint64_t vIds[] = {1, 2, 3, SomaHash64("a"), SomaHash64("bb")};
 	const char *vFuncs[] = {"", "F", "G"};
 	for (int i = 0; i < 600; ++i)
@@ -138,8 +173,7 @@ void OhplS5SelfTest()
 		default:
 			if (Rnd() % 8 == 0)
 			{
-				s.Timer_ClearAll();
-				s.Fader_ClearAll();
+				s.ClearAll();
 				OhplS5Log("st clear");
 			}
 			break;

@@ -436,9 +436,13 @@ class cSomaSaveState
 public:
 	static void GatherTimers(cEntScratch &s, OhplGs4Timers &aOut, cSomaLuxScriptable *p)
 	{
-		for (auto &t : p->mvTimers)
-			s.mTimers.push_back(OhplGs4Timer{s.mPool.Add(t.msFunc), t.mlId, t.mfLength, t.mfTimeLeft, t.mbRepeat, t.mbPaused});
-		for (auto &f : p->mvFaders)
+		OhplS5Timer t;
+		tString sFunc;
+		auto sink = +[](void *apCtx, const unsigned char *apData, size_t alLen) { ((tString *)apCtx)->assign((const char *)apData, alLen); };
+		for (size_t i = 0; ohpl_s5_ts_timer_at(p, i, &t, sink, &sFunc); ++i)
+			s.mTimers.push_back(OhplGs4Timer{s.mPool.Add(sFunc), t.id, t.length, t.time_left, t.repeat, t.paused});
+		OhplGs3Fader f;
+		for (size_t i = 0; ohpl_s5_ts_fader_at(p, i, &f); ++i)
 		{
 			OhplGs4Fader b;
 			static_assert(sizeof(b) == sizeof(f), "cFader size");
@@ -451,26 +455,19 @@ public:
 
 	static void ApplyTimers(cSomaLuxScriptable *p, const OhplGs4Timers *aT)
 	{
-		p->mvTimers.clear();
+		ohpl_s5_ts_clear(p);
 		for (size_t i = 0; i < aT->timers.n; ++i)
 		{
 			const OhplGs4Timer &x = aT->timers.p[i];
-			cSomaLuxScriptable::cTimer t;
-			t.mlId = x.id;
-			t.mfLength = x.length;
-			t.mfTimeLeft = x.time_left;
-			t.msFunc = FromRS(x.func);
-			t.mbRepeat = x.repeat;
-			t.mbPaused = x.paused;
-			p->mvTimers.push_back(t);
+			tString sFunc = FromRS(x.func);
+			ohpl_s5_ts_push_timer(p, x.id, x.length, x.time_left, x.repeat, x.paused, (const unsigned char *)sFunc.data(), sFunc.size());
 		}
-		p->mvFaders.clear();
 		for (size_t i = 0; i < aT->faders.n; ++i)
 		{
-			cSomaLuxScriptable::cFader f;
+			OhplGs3Fader f;
 			static_assert(sizeof(f) == sizeof(OhplGs4Fader), "cFader size");
 			memcpy(&f, &aT->faders.p[i], sizeof(f));
-			p->mvFaders.push_back(f);
+			ohpl_s5_ts_push_fader(p, &f);
 		}
 	}
 
