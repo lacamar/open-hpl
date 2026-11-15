@@ -19,7 +19,23 @@
 
 #include "LuxEffectRenderer.h"
 #include "RustLuxFx.h"
+#include "LuxA12aDump.h"
 #include <cstring>
+
+#define A12Log(...) do { if(OhplA12Enabled() && OhplA12Frame() >= 10) OhplA12Log(__VA_ARGS__); } while(0)
+
+static void A12LogOutline(const OhplGa9bOutline &o)
+{
+	if(OhplA12Enabled() == false || OhplA12Frame() < 10) return;
+	std::string s = "r_outline => " + std::to_string(o.collides) + " " + std::to_string(o.hasAlpha);
+	for(int i=0; i<3; ++i) s += " " + OhplA12F(o.min[i]);
+	for(int i=0; i<3; ++i) s += " " + OhplA12F(o.max[i]);
+	for(int i=0; i<3; ++i) s += " " + OhplA12F(o.localMin[i]);
+	for(int i=0; i<3; ++i) s += " " + OhplA12F(o.localMax[i]);
+	for(int i=0; i<3; ++i) s += " " + OhplA12F(o.localCenter[i]);
+	for(int i=0; i<16; ++i) s += " " + OhplA12F(o.world[i]);
+	OhplA12Log("%s", s.c_str());
+}
 
 
 //-----------------------------------------------------------------------
@@ -161,6 +177,7 @@ void cLuxEffectRenderer::ClearRenderLists()
 
 void cLuxEffectRenderer::Update(float afTimeStep)
 {
+	if(OhplA12Enabled() && OhplA12InTick() == false) return;
 	mFlashOscill.Update(afTimeStep);
 }
 
@@ -182,6 +199,7 @@ void cLuxEffectRenderer::RenderTrans(cRendererCallbackFunctions* apFunctions)
 	
 	/////////////////////////////////////
 	// Only Normal
+	A12Log("r_reflection => %d", apFunctions->GetSettings()->mbIsReflection ? 1 : 0);
 	if(apFunctions->GetSettings()->mbIsReflection==false)
 	{
 		RenderOutline(apFunctions);
@@ -233,6 +251,7 @@ void cLuxEffectRenderer::RenderFlashObjects(cRendererCallbackFunctions* apFuncti
 	{
 		vObjects[i] = mvFlashObjects[i].mpObject;
 		vGlow[i].collides = vObjects[i]->CollidesWithFrustum(pFrustum);
+		A12Log("r_collides => %d", vGlow[i].collides ? 1 : 0);
 		vGlow[i].alpha = mvFlashObjects[i].mfAlpha;
 	}
 	OhplGa9bRPlan *pPlan = ohpl_ga9b_plan_flash(&vGlow[0], vGlow.size(), mFlashOscill.val, true);
@@ -253,6 +272,7 @@ void cLuxEffectRenderer::RenderEnemyGlow(cRendererCallbackFunctions* apFunctions
 	{
 		vObjects[i] = mvEnemyGlowObjects[i].mpObject;
 		vGlow[i].collides = vObjects[i]->CollidesWithFrustum(pFrustum);
+		A12Log("r_collides => %d", vGlow[i].collides ? 1 : 0);
 		vGlow[i].alpha = mvEnemyGlowObjects[i].mfAlpha;
 	}
 	OhplGa9bRPlan *pPlan = ohpl_ga9b_plan_glow(&vGlow[0], vGlow.size(), true);
@@ -277,7 +297,7 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
 		OhplGa9bOutline &out = vOutline[i];
 		memset(&out, 0, sizeof(out));
 		out.collides = pObject->CollidesWithFrustum(pFrustum);
-		if(out.collides == 0) continue;
+		if(out.collides == 0) { A12LogOutline(out); continue; }
 
 		cBoundingVolume *pBV = pObject->GetBoundingVolume();
 		out.hasAlpha = pObject->GetMaterial()->GetTexture(eMaterialTexture_Alpha) != NULL;
@@ -292,6 +312,7 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
 		for(int r=0; r<4; ++r)
 			for(int c=0; c<4; ++c)
 				out.world[r*4+c] = mtxWorld.m[r][c];
+		A12LogOutline(out);
 	}
 
 	uint32_t lProgramsOk = 0;
@@ -310,6 +331,7 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
 	totalBV.SetLocalMinMax(cVector3f(vClipMin[0], vClipMin[1], vClipMin[2]), cVector3f(vClipMax[0], vClipMax[1], vClipMax[2]));
 	cRect2l clipRect;
 	cMath::GetClipRectFromBV(clipRect,totalBV, apFunctions->GetFrustum(), vScreenSize,-1);
+	A12Log("r_clip => %d %d %d %d", clipRect.x, clipRect.y, clipRect.w, clipRect.h);
 
 	Replay(pPlan, apFunctions, mvOutlineObjects, clipRect);
 }
@@ -324,6 +346,12 @@ void cLuxEffectRenderer::Replay(OhplGa9bRPlan *apPlan, cRendererCallbackFunction
 	OhplGa9bROp op;
 	while(ohpl_ga9b_rplan_next(apPlan, &op))
 	{
+		if(OhplA12Enabled() && OhplA12Frame() >= 10)
+		{
+			std::string sOp = "R " + std::to_string(op.kind) + " " + std::to_string(op.i) + " " + std::to_string(op.j);
+			for(int k=0; k<16; ++k) sOp += " " + OhplA12F(op.f[k]);
+			OhplA12Log("%s", sOp.c_str());
+		}
 		switch(op.kind)
 		{
 		case kOhplGa9bRDepthFunc:		apFunctions->SetDepthTestFunc(op.i == kOhplGa9bDepthEqual ? eDepthTestFunc_Equal : eDepthTestFunc_LessOrEqual); break;
