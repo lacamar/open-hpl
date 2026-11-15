@@ -33,11 +33,6 @@ struct OhplGa7aOp
 	int kind, a, b;
 };
 
-struct OhplGa7aDate
-{
-	int seconds, minutes, hours, month_day, month, year;
-};
-
 struct OhplGa7aMode
 {
 	int display, width, height, refresh;
@@ -59,16 +54,6 @@ inline void OhplGa7aWideSink(void *apCtx, const unsigned *apData, size_t alLen)
 
 extern "C"
 {
-// profile
-void ohpl_ga7a_pf_sort(const OhplGa7aDate *apDates, size_t alNum, unsigned *apOut);
-void ohpl_ga7a_pf_trim(const unsigned *apName, size_t alLen, size_t *apStart, size_t *apEnd);
-const unsigned *ohpl_ga7a_pf_illegal(size_t *apLen);
-int ohpl_ga7a_pf_name_max();
-int ohpl_ga7a_pf_select(int alNum, size_t alCount);
-int ohpl_ga7a_pf_delete_plan(int alSelected, int abInUse, int abConfigDiffers, int *apNewSelection);
-int ohpl_ga7a_pf_activate(int alItemNum);
-int ohpl_ga7a_pf_ui_press(int abSecondary, int abListLocked, int abNameVisible);
-
 // key config
 int ohpl_ga7a_kc_key_pos(const OhplGa7aSub *apSubs, size_t alNum, int alKey);
 int ohpl_ga7a_kc_mouse_pos(const OhplGa7aSub *apSubs, size_t alNum, int alButton);

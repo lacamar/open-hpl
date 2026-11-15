@@ -11,6 +11,7 @@
 #   --jobs N           games swept in parallel per backend (default 1; more is faster but adds load-induced hangs)
 #   --baseline         recorded C++ dumps to compare the rust dumps with (default $XDG_CACHE_HOME/open-hpl/gate/baseline)
 #   --record-baseline  record the C++ (OHPL_IMPL=cpp) dumps into DIR and stop; do it before flipping a family
+#   --games "G ..."   only these games (default: all, or those --changed-since selects)
 #   --scratch DIR      scratch root prefix (<DIR>-cpp, <DIR>-rust). Default: --quick keeps a per-checkout scratch under
 #                      $XDG_CACHE_HOME/open-hpl/gate (warm shader/map caches, faster boots); full gates use a fresh one in --out
 # Exit 0 only when every map passes (known failures excepted), every dump agrees and the round trips match.
@@ -18,7 +19,7 @@ set -uo pipefail
 REPO=$(cd "$(dirname "$0")/.." && pwd); cd "$REPO"
 CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/open-hpl/gate
 QUICK=; IMPLS="cpp rust"; BUILD=${OPENHPL_BUILD_DIR:-$REPO/amnesia/src/build}; OUT=; DO_BUILD=1; SAVES=1
-SINCE=; JOBS=1; BASELINE=$CACHE/baseline; RECORD=; SCRATCH=
+SINCE=; ONLY=; JOBS=1; BASELINE=$CACHE/baseline; RECORD=; SCRATCH=
 while [ $# -gt 0 ]; do
 	case $1 in
 	--quick) QUICK=1 ;;
@@ -31,6 +32,7 @@ while [ $# -gt 0 ]; do
 	--jobs) shift; JOBS=$1 ;;
 	--baseline) shift; BASELINE=$1 ;;
 	--record-baseline) shift; RECORD=$1 ;;
+	--games) shift; ONLY=$1 ;;
 	--scratch) shift; SCRATCH=$1 ;;
 	*) echo "unknown option $1" >&2; exit 2 ;;
 	esac; shift
@@ -71,6 +73,7 @@ if [ -n "$SINCE" ]; then
 	fi
 	say "changed since $SINCE: games ${GAMES:-none}"
 fi
+[ -n "$ONLY" ] && GAMES=$ONLY
 has() { [[ " $GAMES " == *" $1 "* ]]; }
 
 if [ -n "$DO_BUILD" ]; then
@@ -90,7 +93,7 @@ done
 # sweep <impl> <game> <out.json> [soma-sweep args...]; extra env via ENVX
 sweep() {
 	local impl=$1 g=$2 json=$3; shift 3
-	env ${ENVX:-} OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_GAME="$g" \
+	env ${ENVX:-} OPENHPL_SCRATCH_ROOT="${SCR:-$SCRATCH-$impl}" OHPL_IMPL="$impl" OHPL_GAME="$g" \
 		bash -c 'eval "$(scripts/soma-init.sh --env-only "$OHPL_GAME")" && exec scripts/soma-sweep.py --out "$0" "$@"' "$json" "$@" \
 		>> "$OUT/sweep-$impl-$g.log" 2>&1
 }
@@ -144,6 +147,12 @@ half() {
 				sweep "$impl" amnesia "$OUT/dump-$impl-amnesia.json" --map "$M"
 		done
 	fi
+	if has amnesia; then
+		# the menu dump lists the profiles on disk, so it gets a scratch no sweep has touched
+		rm -f "$OUT/a9-$impl.txt"; rm -rf "$SCRATCH-a9-$impl"
+		OPENHPL_SCRATCH_ROOT=$SCRATCH-a9-$impl scripts/soma-init.sh amnesia > /dev/null 2> "$OUT/init-a9-$impl.log"
+		SCR=$SCRATCH-a9-$impl ENVX="$extra OHPL_A9_MENUDUMP=$OUT/a9-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a9-$impl.json" --map 00_rainy_hall
+	fi
 	if [ -z "$RECORD" ] && has soma; then
 		# shellcheck disable=SC2046
 		ENVX=$extra sweep "$impl" soma "$OUT/play-$impl-soma.json" --play 10 $(mapargs $PLAY_MAPS)
@@ -153,7 +162,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a9-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -259,7 +268,7 @@ def ok(p):
 if not quick:
     names = [f"h4seq-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
-        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7")]
+        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7")] + ["a9"]
     has_base = os.path.isdir(base)
     if not has_base:
         print(f"no C++ baseline at {base} (record one with --record-baseline before flipping a family)")

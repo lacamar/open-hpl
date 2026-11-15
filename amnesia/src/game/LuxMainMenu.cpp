@@ -30,12 +30,8 @@
 #include "LuxDebugHandler.h"
 #include "LuxLoadScreenHandler.h"
 
-#include "LuxMainMenu_Profile.h"
 #include "LuxMainMenu_Options.h"
 #include "LuxMainMenu_KeyConfig.h"
-#include "LuxMainMenu_StartGame.h"
-#include "LuxMainMenu_LoadGame.h"
-#include "LuxMainMenu_CustomStory.h"
 
 #include "LuxDemoEnd.h"
 #include <sstream>
@@ -134,15 +130,15 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 	// Create Windows
 	mvWindows.resize(eLuxMainMenuWindow_LastEnum, NULL);
 
-	mvWindows[eLuxMainMenuWindow_Profiles] = hplNew(cLuxMainMenu_Profile, (mpGuiSet, mpGuiSkin));
+	mvWindows[eLuxMainMenuWindow_Profiles] = hplNew(cLuxRustMenuWindow, (mpGuiSet, mpGuiSkin, eOhplA9Win_Profile));
 	mvWindows[eLuxMainMenuWindow_Options] = hplNew(cLuxMainMenu_Options, (mpGuiSet, mpGuiSkin));
 	mvWindows[eLuxMainMenuWindow_KeyConfig] = hplNew(cLuxMainMenu_KeyConfig, (mpGuiSet, mpGuiSkin));
-	mvWindows[eLuxMainMenuWindow_LoadGame] = hplNew(cLuxMainMenu_LoadGame, (mpGuiSet, mpGuiSkin));
-	mvWindows[eLuxMainMenuWindow_StartGame] = hplNew(cLuxMainMenu_StartGame, (mpGuiSet, mpGuiSkin));
+	mvWindows[eLuxMainMenuWindow_LoadGame] = hplNew(cLuxRustMenuWindow, (mpGuiSet, mpGuiSkin, eOhplA9Win_LoadGame));
+	mvWindows[eLuxMainMenuWindow_StartGame] = hplNew(cLuxRustMenuWindow, (mpGuiSet, mpGuiSkin, eOhplA9Win_StartGame));
 
 
-	cLuxMainMenu_CustomStory* pCustomStoryWindow = hplNew(cLuxMainMenu_CustomStory,(mpGuiSet, mpGuiSkin));
-	mvWindows[eLuxMainMenuWindow_CustomStoryList] = hplNew(cLuxMainMenu_CustomStoryList, (mpGuiSet, mpGuiSkin, pCustomStoryWindow));
+	cLuxRustMenuWindow* pCustomStoryWindow = hplNew(cLuxRustMenuWindow,(mpGuiSet, mpGuiSkin, eOhplA9Win_CustomStory));
+	mvWindows[eLuxMainMenuWindow_CustomStoryList] = hplNew(cLuxRustMenuWindow, (mpGuiSet, mpGuiSkin, eOhplA9Win_CustomStoryList, pCustomStoryWindow->GetHandle()));
 	mvWindows[eLuxMainMenuWindow_CustomStory] = pCustomStoryWindow;
 
 	///////////////////////
@@ -281,6 +277,12 @@ void cLuxMainMenu::LoadFonts()
 
 void cLuxMainMenu::OnStart()
 {
+	if(const char *sDump = getenv("OHPL_A9_MENUDUMP"))
+	{
+		LoadFonts();
+		CreateGui();
+		DumpA9(sDump);
+	}
 }
 
 //-----------------------------------------------------------------------

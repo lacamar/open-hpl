@@ -24,6 +24,7 @@
 
 #include "LuxBase.h"
 #include "RustLuxMenu2.h"
+#include "RustLuxMenuA9.h"
 
 
 
@@ -89,6 +90,26 @@ protected:
 
 //----------------------------------------------
 
+class cLuxRustMenuWindow : public iLuxMainMenuWindow
+{
+public:
+	cLuxRustMenuWindow(cGuiSet *apGuiSet, cGuiSkin *apGuiSkin, int alKind, uint64_t alStoryWin = 0);
+	~cLuxRustMenuWindow();
+
+	void CreateGui();
+	void ExitPressed();
+
+	void SetWindow(cWidgetWindow *apWindow) { mpWindow = apWindow; }
+	uint64_t GetHandle() { return mlWin; }
+
+private:
+	void OnSetActive(bool abX);
+
+	uint64_t mlWin;
+};
+
+//----------------------------------------------
+
 class cLuxMainMenu : public iLuxUpdateable
 {
 public:	
@@ -143,6 +164,7 @@ private:
 	void SetTopMenuVisible(bool abVisible);
 	
 	void CreateGui();
+	void DumpA9(const char *asFile);
 
 	void CreateTopMenuGui();
 	void SetupTopMenuLabel(cWidgetLabel *apLabel);

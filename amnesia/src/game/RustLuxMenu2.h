@@ -171,25 +171,6 @@ enum eOhplGa7bDemoEndUpdate
 	eOhplGa7bDe_Browser = 2,
 };
 
-enum eOhplGa7bStoryFallback
-{
-	eOhplGa7bFb_Name = 1,
-	eOhplGa7bFb_Author = 2,
-	eOhplGa7bFb_Desc = 4,
-};
-
-enum eOhplGa7bUi
-{
-	eOhplGa7bUi_Primary = 1,
-	eOhplGa7bUi_Secondary = 2,
-};
-
-enum eOhplGa7bFolder
-{
-	eOhplGa7bFolder_Custom = 1,
-	eOhplGa7bFolder_Profile = 2,
-};
-
 extern "C" {
 void ohpl_ga7b_menu_new(OhplGa7bMenu *s);
 void ohpl_ga7b_menu_enter(OhplGa7bMenu *s);
@@ -207,17 +188,6 @@ void ohpl_ga7b_menu_font_fit(const float *lengths, const int *chars, size_t n, f
 bool ohpl_ga7b_menu_subst_hash(const uint32_t *text, size_t n, int64_t num, void (*sink)(void *, const uint32_t *, size_t), void *ctx);
 int ohpl_ga7b_menu_pay_save(int tinderboxes);
 bool ohpl_ga7b_popup_ok(int val);
-
-int ohpl_ga7b_pg_exit_target(bool customStoryActive, bool ok);
-int ohpl_ga7b_pg_ui_switch(int val);
-int ohpl_ga7b_pg_mode_gold(bool hard);
-void ohpl_ga7b_pg_sort_saves(const void *dates, size_t n, uint32_t *out);
-int ohpl_ga7b_pg_load_index(int selected, size_t count);
-int ohpl_ga7b_pg_press_ok(int selected);
-float ohpl_ga7b_pg_button_width(const float *lengths, size_t n);
-void ohpl_ga7b_pg_story_buttons(bool saveExists, float startY, const float *heights, size_t n, bool *active, float *y);
-uint32_t ohpl_ga7b_pg_story_fallbacks(bool nameEmpty, bool authorEmpty, bool descEmpty);
-uint32_t ohpl_ga7b_pg_start_folders(bool customExists, bool profileExists);
 
 void ohpl_ga7b_pm_new(OhplGa7bPre *s);
 void ohpl_ga7b_pm_enter(OhplGa7bPre *s);

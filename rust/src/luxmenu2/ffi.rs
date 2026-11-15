@@ -4,9 +4,7 @@
 use super::credits::{self, Credits, DemoEnd, DrawRow, Row};
 use super::loadscreen::{self, Load};
 use super::menu::{self, Base, Menu, Times};
-use super::pages;
 use super::premenu::{self, Pre, Step};
-use crate::luxsave::names::Date;
 use std::ffi::c_void;
 
 type Ctx = *mut c_void;
@@ -186,90 +184,6 @@ pub extern "C" fn ohpl_ga7b_menu_pay_save(tinderboxes: i32) -> i32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_ga7b_popup_ok(val: i32) -> bool {
     menu::popup_ok(val)
-}
-
-// ---- start game, load game, custom story ------------------------------------------------------
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga7b_pg_exit_target(custom_story_active: bool, ok: bool) -> i32 {
-    pages::exit_target(custom_story_active, ok).unwrap_or(-1)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga7b_pg_ui_switch(val: i32) -> i32 {
-    pages::ui_switch(val)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga7b_pg_mode_gold(hard: bool) -> i32 {
-    let (n, h) = pages::mode_gold(hard);
-    i32::from(n) | (i32::from(h) << 1)
-}
-
-/// `dates` points at `n` `hpl::cDate` (8 ints each); `out` receives the listing order.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga7b_pg_sort_saves(dates: *const [i32; 8], n: usize, out: *mut u32) {
-    let ds: Vec<Date> = slice(dates, n)
-        .iter()
-        .map(|d| Date {
-            seconds: d[0],
-            minutes: d[1],
-            hours: d[2],
-            month_day: d[3],
-            month: d[4],
-            year: d[5],
-        })
-        .collect();
-    for (d, s) in slice_mut(out, n).iter_mut().zip(pages::sort_saves(&ds)) {
-        *d = s as u32;
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga7b_pg_load_index(selected: i32, count: usize) -> i32 {
-    pages::load_index(selected, count).map_or(-1, |i| i as i32)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga7b_pg_press_ok(selected: i32) -> i32 {
-    pages::press_ok(selected)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga7b_pg_button_width(lengths: *const f32, n: usize) -> f32 {
-    pages::button_width(slice(lengths, n))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga7b_pg_story_buttons(
-    save_exists: bool,
-    start_y: f32,
-    heights: *const f32,
-    n: usize,
-    active: *mut bool,
-    y: *mut f32,
-) {
-    pages::story_buttons(
-        save_exists,
-        start_y,
-        slice(heights, n),
-        slice_mut(active, n),
-        slice_mut(y, n),
-    );
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga7b_pg_story_fallbacks(
-    name_empty: bool,
-    author_empty: bool,
-    desc_empty: bool,
-) -> u32 {
-    pages::story_fallbacks(name_empty, author_empty, desc_empty)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga7b_pg_start_folders(custom_exists: bool, profile_exists: bool) -> u32 {
-    pages::start_folders(custom_exists, profile_exists)
 }
 
 // ---- premenu ----------------------------------------------------------------------------------
