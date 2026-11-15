@@ -42,6 +42,11 @@ pub fn set_host(f: HostFn) {
 }
 
 pub fn call(code: i32, a: &mut Args) -> usize {
+    #[cfg(not(test))]
+    if code == op::SET_WINDOW_ACTIVE {
+        super::mainmenu::set_window(a.i[0] as usize);
+        return 0;
+    }
     #[cfg(test)]
     {
         super::fake::call(code, a)
@@ -193,6 +198,7 @@ pub mod msg {
     pub const KEY_PRESS: i32 = 13;
     pub const UI_ARROW: i32 = 14;
     pub const GAMEPAD: i32 = 15;
+    pub const ON_DRAW: i32 = 16;
 }
 
 pub const UP: i32 = 0;
@@ -814,7 +820,7 @@ impl Set {
     }
 
     /// Message box (title, text, ok, cancel) whose result goes to `token`.
-    pub fn msgbox(self, strs: [&[u32]; 4], token: usize) {
+    pub fn msgbox(self, strs: [&[u32]; 4], token: usize) -> usize {
         let mut a = Args::new();
         a.p[0] = self.0;
         a.p[1] = token;
@@ -824,7 +830,7 @@ impl Set {
                 *n = s.len();
             }
         }
-        call(op::MSGBOX, &mut a);
+        call(op::MSGBOX, &mut a)
     }
 
     pub fn restart_warning(self, token: usize) -> bool {

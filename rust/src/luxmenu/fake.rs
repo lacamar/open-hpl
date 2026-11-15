@@ -39,6 +39,7 @@ pub struct Fake {
     pub popup: bool,
     pub lists: [Vec<Vec<u32>>; 6],
     pub action_ids: Vec<(i32, i32)>,
+    pub focused: usize,
 }
 
 thread_local! {
@@ -89,14 +90,14 @@ fn out(f: &mut Fake, a: &mut Args, s: Vec<u32>) {
     a.n[0] = f.out.len();
 }
 
-fn node(f: &mut Fake, id: usize) -> &mut Node {
+pub(crate) fn node(f: &mut Fake, id: usize) -> &mut Node {
     if id == 0 || id >= f.nodes.len() {
         return &mut f.nodes[0];
     }
     &mut f.nodes[id]
 }
 
-fn create(f: &mut Fake, code: i32, a: &Args) -> usize {
+pub(crate) fn create(f: &mut Fake, code: i32, a: &Args) -> usize {
     let mut n = Node {
         kind: code,
         parent: a.p[1],
@@ -310,8 +311,12 @@ fn call_in(f: &mut Fake, code: i32, a: &mut Args) -> usize {
         op::FRAME_OF => usize::from(node(f, w).kind == op::FRAME) * w,
         op::FRAME_SCROLL => 0,
         op::POPUP_ACTIVE => usize::from(f.popup),
+        op::SET_FOCUSED => {
+            f.focused = a.p[1];
+            f.log.push(format!("set {code} {}", a.p[1]));
+            0
+        }
         op::SET_ATTENTION
-        | op::SET_FOCUSED
         | op::SET_DEFAULT_NAV
         | op::PUSH_ATTENTION
         | op::POP_ATTENTION
@@ -438,6 +443,7 @@ fn call_in(f: &mut Fake, code: i32, a: &mut Args) -> usize {
         }
         op::GUI_MOUSE => a.i[0] as usize,
         op::AXIS_RANGE => 0,
+        c if c >= 200 => super::mainmenu::tests::call(f, c, a),
         _ => 0,
     }
 }

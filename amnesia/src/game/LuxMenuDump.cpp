@@ -57,7 +57,10 @@ void cLuxMainMenu::DumpA9(const char *asFile)
 {
 	FILE *f = fopen(asFile, "a");
 	if(f == NULL) return;
-	iWidget *root = mvTopMenuLabels.empty() ? NULL : mvTopMenuLabels[0];
+	OhplA9bState state;
+	ohpl_a9b_state(mlMe, &state);
+	cGuiSet *pSet = (cGuiSet*)state.mpSet;
+	iWidget *root = (iWidget*)state.mpFirstLabel;
 	while(root && root->GetParent()) root = root->GetParent();
 	if(root == NULL) { fclose(f); return; }
 
@@ -91,6 +94,21 @@ void cLuxMainMenu::DumpA9(const char *asFile)
 		{"profconfirm", -1, {kName[0], kName[1]}, eWidgetType_Button, "MainMenu", "Create", 0},
 		{"profdelete", -1, {kProfiles[0], kProfiles[1]}, eWidgetType_Button, "MainMenu", "Delete", 0},
 		{"profno", -1, {"", ""}, eWidgetType_Button, "MainMenu", "No", 0},
+		{"top", eLuxMainMenuWindow_LastEnum, {0, 0}, eWidgetType_Label, 0, 0, 0},
+		{"tick", -6, {0, 0}, eWidgetType_Label, 0, 0, 0},
+		{"press_options", -5, {0, 0}, eWidgetType_Label, "MainMenu", "Options", 0},
+		{"top2", eLuxMainMenuWindow_LastEnum, {0, 0}, eWidgetType_Label, 0, 0, 0},
+		{"press_profile", -5, {0, 0}, eWidgetType_Label, "MainMenu", "Change Profile", 0},
+		{"top3", eLuxMainMenuWindow_LastEnum, {0, 0}, eWidgetType_Label, 0, 0, 0},
+		{"press_custom", -5, {0, 0}, eWidgetType_Label, "MainMenu", "Custom Map", 0},
+		{"top4", eLuxMainMenuWindow_LastEnum, {0, 0}, eWidgetType_Label, 0, 0, 0},
+		{"press_start", -5, {0, 0}, eWidgetType_Label, "MainMenu", "Start Game", 0},
+		{"press_start_no", -1, {"", ""}, eWidgetType_Button, "MainMenu", "No", 0},
+		{"top5", eLuxMainMenuWindow_LastEnum, {0, 0}, eWidgetType_Label, 0, 0, 0},
+		{"press_exit", -5, {0, 0}, eWidgetType_Label, "MainMenu", "Exit", 0},
+		{"exit_tick", -6, {0, 0}, eWidgetType_Label, 0, 0, 0},
+		{"exit_no", -1, {"", ""}, eWidgetType_Button, "MainMenu", "No", 0},
+		{"exit_tick2", -6, {0, 0}, eWidgetType_Label, 0, 0, 0},
 	};
 
 	tWString sStoryDir = cString::AddSlashAtEndW(gpBase->msUserResourceDir + cString::To16Char(gpBase->msCustomStoryPath)) + _W("A9story/");
@@ -117,6 +135,18 @@ void cLuxMainMenu::DumpA9(const char *asFile)
 			}
 		}
 		if(s.window >= 0) SetWindowActive((eLuxMainMenuWindow)s.window);
+		else if(s.window == -6)
+		{
+			for(int t = 0; t < 20; ++t) Update(1.0f / 60.0f);
+		}
+		else if(s.window == -5)
+		{
+			int skip = 0;
+			tWString sText = res->Translate(s.cat, s.key);
+			iWidget *w = Find(root, s.type, &sText, skip);
+			if(w) w->ProcessMessage(eGuiMessage_MouseDown, cGuiMessageData());
+			else fprintf(f, "!! no widget %s\n", s.name);
+		}
 		else if(s.window == -4)
 		{
 			int skip = 0;
@@ -139,15 +169,27 @@ void cLuxMainMenu::DumpA9(const char *asFile)
 		}
 		tIds ids;
 		Number(root, ids);
-		fprintf(f, "== %s win=%d hard=%d focus=%d attn=%d drawfocus=%d popup=%d\n", s.name, mS.mlWindow, (int)gpBase->mbHardMode,
-				Id(ids, mpGuiSet->GetFocusedWidget()), Id(ids, mpGuiSet->GetAttentionWidget()),
-				(int)mpGuiSet->GetDrawFocus(), (int)mpGuiSet->PopUpIsActive());
+		ohpl_a9b_state(mlMe, &state);
+		fprintf(f, "== %s win=%d hard=%d focus=%d attn=%d drawfocus=%d popup=%d topvis=%d ta=%.6f fa=%.6f\n", s.name, state.mlWindow, (int)gpBase->mbHardMode,
+				Id(ids, pSet->GetFocusedWidget()), Id(ids, pSet->GetAttentionWidget()),
+				(int)pSet->GetDrawFocus(), (int)pSet->PopUpIsActive(), state.mlTopVisible, state.mfTopAlpha, state.mfFadeAlpha);
 		Print(f, root, ids, 0);
 	}
 	SetWindowActive(eLuxMainMenuWindow_LastEnum);
+	ohpl_a9b_dump_background(mlMe);
+	ohpl_a9b_state(mlMe, &state);
+	cCamera *pCamera = (cCamera*)state.mpCamera;
+	fprintf(f, "== background world=%d camera=%d\n", (int)(state.mpWorld != 0), (int)(pCamera != NULL));
+	if(pCamera)
+	{
+		cVector3f vPos = pCamera->GetPosition();
+		const cMatrixf &m = pCamera->GetViewMatrix();
+		fprintf(f, "cam fov=%.6f aspect=%.6f pos=%.4f,%.4f,%.4f\n", pCamera->GetFOV(), pCamera->GetAspect(), vPos.x, vPos.y, vPos.z);
+		for(int r = 0; r < 4; ++r) fprintf(f, "view %.4f %.4f %.4f %.4f\n", m.m[r][0], m.m[r][1], m.m[r][2], m.m[r][3]);
+	}
+	fprintf(f, "logo=%d logosize=%.4f,%.4f\n", (int)(state.mpLogo != 0), state.mvLogoSize[0], state.mvLogoSize[1]);
 	std::filesystem::remove_all(cString::To8Char(sStoryDir));
 	cPlatform::RemoveFolder(gpBase->msBaseSavePath + _W("A9dump"), true, true);
-	mpGuiSet->DestroyAllWidgets();
-	mbGuiCreated = false;
+	ohpl_a9b_dump_end(mlMe);
 	fclose(f);
 }

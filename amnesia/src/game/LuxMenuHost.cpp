@@ -4,6 +4,7 @@
 #include "LuxProgressLogHandler.h"
 #include "LuxSaveHandler.h"
 #include "RustLuxMenuA9.h"
+#include "RustMenuHost.h"
 #include <cstring>
 
 static_assert(sizeof(wchar_t) == sizeof(uint32_t), "wchar_t layout");
@@ -42,26 +43,6 @@ namespace
 	cWidgetTextBox *Text(OhplA9W apWidget) { return (cWidgetTextBox*)apWidget; }
 	cColor Color(const float *v) { return cColor(v[0], v[1], v[2], v[3]); }
 }
-
-//-----------------------------------------------------------------------
-
-void OhplA9RegisterHost();
-
-cLuxRustMenuWindow::cLuxRustMenuWindow(cGuiSet *apGuiSet, cGuiSkin *apGuiSkin, int alKind, uint64_t alStoryWin)
-	: iLuxMainMenuWindow(apGuiSet, apGuiSkin)
-{
-	OhplA9RegisterHost();
-	mlWin = ohpl_a9_win_new(alKind, this, apGuiSet, alStoryWin);
-}
-
-cLuxRustMenuWindow::~cLuxRustMenuWindow()
-{
-	ohpl_a9_win_free(mlWin);
-}
-
-void cLuxRustMenuWindow::CreateGui() { ohpl_a9_win_create_gui(mlWin); }
-void cLuxRustMenuWindow::ExitPressed() { ohpl_a9_win_exit_pressed(mlWin); }
-void cLuxRustMenuWindow::OnSetActive(bool abX) { ohpl_a9_win_set_active(mlWin, abX); }
 
 //-----------------------------------------------------------------------
 
@@ -245,11 +226,6 @@ void ohpl_a9h_image_file(OhplA9W apWidget, const uint32_t *apText, size_t alLen)
 	pImage->SetImage(pGfx);
 }
 
-void ohpl_a9h_adapter_window(OhplA9W apAdapter, OhplA9W apWidget)
-{
-	((cLuxRustMenuWindow*)apAdapter)->SetWindow((cWidgetWindow*)apWidget);
-}
-
 size_t ohpl_a9h_lux(int alOp, size_t alArg)
 {
 	switch(alOp)
@@ -271,17 +247,6 @@ size_t ohpl_a9h_lux(int alOp, size_t alArg)
 	case 11: gpBase->InitUserConfig(); break;
 	case 12: gpBase->StartCustomStory(); break;
 	case 13: gpBase->mpEngine->Exit(); break;
-	case 14: gpBase->mpMainMenu->SetWindowActive((eLuxMainMenuWindow)alArg); break;
-	case 15: gpBase->mpMainMenu->ExitMenu((eLuxMainMenuExit)alArg); break;
-	case 16:
-		{
-			uint32_t lBits = (uint32_t)alArg;
-			float fAlpha;
-			memcpy(&fAlpha, &lBits, sizeof(fAlpha));
-			gpBase->mpMainMenu->SetTopMenuAlpha(fAlpha);
-		}
-		break;
-	case 17: gpBase->mpMainMenu->RecreateGui(); break;
 	case 18:
 #ifdef USERDIR_RESOURCES
 		return 1;
@@ -408,7 +373,6 @@ const OhplA9Host gHost = {
 	&ohpl_a9h_w_nav,
 	&ohpl_a9h_text_width,
 	&ohpl_a9h_image_file,
-	&ohpl_a9h_adapter_window,
 	&ohpl_a9h_lux,
 	&ohpl_a9h_lux_str,
 	&ohpl_a9h_lux_with,

@@ -1,0 +1,51 @@
+== created win=7 hard=0 focus=4 attn=-1 drawfocus=0 popup=0 topvis=1 ta=1.000000 fa=0.000000
+ 4 t=4 'Start New Game' p=522.500,195.000,2.000 s=235.000,30.000 v=1 e=1 c=1.000,1.000,1.000,1.000 nav=8,-1,5,-1
+ 5 t=4 'Custom Story' p=544.062,234.000,2.000 s=191.875,30.000 v=1 e=1 c=1.000,1.000,1.000,1.000 nav=4,-1,6,-1
+ 6 t=4 'Options' p=587.812,273.000,2.000 s=104.375,30.000 v=1 e=1 c=1.000,1.000,1.000,1.000 nav=5,-1,7,-1
+ 7 t=4 'Change Profile' p=540.312,312.000,2.000 s=199.375,30.000 v=1 e=1 c=1.000,1.000,1.000,1.000 nav=6,-1,8,-1
+ 8 t=4 'Exit' p=610.938,351.000,2.000 s=58.125,30.000 v=1 e=1 c=1.000,1.000,1.000,1.000 nav=7,-1,4,-1
+== start win=6 hard=0 focus=361 attn=-1 drawfocus=0 popup=0 topvis=0 ta=1.000000 fa=0.000000
+== hard win=6 hard=1 focus=361 attn=-1 drawfocus=0 popup=0 topvis=0 ta=1.000000 fa=0.000000
+== normal win=6 hard=0 focus=361 attn=-1 drawfocus=0 popup=0 topvis=0 ta=1.000000 fa=0.000000
+== startpress win=6 hard=0 focus=367 attn=366 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== startno win=6 hard=0 focus=367 attn=366 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== startcancel win=7 hard=0 focus=4 attn=366 drawfocus=0 popup=1 topvis=1 ta=1.000000 fa=0.000000
+== load win=3 hard=0 focus=334 attn=366 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== loadok win=3 hard=0 focus=371 attn=370 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== loadpopup win=3 hard=0 focus=371 attn=370 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== loadcancel win=7 hard=0 focus=4 attn=370 drawfocus=0 popup=1 topvis=1 ta=1.000000 fa=0.000000
+== stories win=4 hard=0 focus=4 attn=370 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== storyok0 win=4 hard=0 focus=374 attn=373 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== storypopup win=4 hard=0 focus=374 attn=373 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== storysel win=4 hard=0 focus=374 attn=373 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== storyok win=5 hard=0 focus=374 attn=373 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== storyback win=4 hard=0 focus=374 attn=373 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== storycancel win=7 hard=0 focus=4 attn=373 drawfocus=0 popup=1 topvis=1 ta=1.000000 fa=0.000000
+== profiles win=0 hard=0 focus=21 attn=18 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== profcreate win=0 hard=0 focus=21 attn=18 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== profname win=0 hard=0 focus=21 attn=18 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== profconfirm win=0 hard=0 focus=15 attn=18 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== profdelete win=0 hard=0 focus=377 attn=376 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== profno win=0 hard=0 focus=377 attn=376 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== top win=7 hard=0 focus=4 attn=376 drawfocus=0 popup=1 topvis=1 ta=1.000000 fa=0.000000
+== tick win=7 hard=0 focus=4 attn=376 drawfocus=0 popup=1 topvis=1 ta=1.000000 fa=0.000000
+== press_options win=1 hard=0 focus=37 attn=376 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== top2 win=7 hard=0 focus=4 attn=376 drawfocus=0 popup=1 topvis=1 ta=1.000000 fa=0.000000
+== press_profile win=0 hard=0 focus=11 attn=376 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== top3 win=7 hard=0 focus=4 attn=376 drawfocus=0 popup=1 topvis=1 ta=1.000000 fa=0.000000
+== press_custom win=4 hard=0 focus=4 attn=376 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== top4 win=7 hard=0 focus=4 attn=376 drawfocus=0 popup=1 topvis=1 ta=1.000000 fa=0.000000
+== press_start win=6 hard=0 focus=361 attn=376 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== press_start_no win=6 hard=0 focus=361 attn=376 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== top5 win=7 hard=0 focus=4 attn=376 drawfocus=0 popup=1 topvis=1 ta=1.000000 fa=0.000000
+== press_exit win=7 hard=0 focus=381 attn=380 drawfocus=0 popup=1 topvis=0 ta=1.000000 fa=0.000000
+== exit_tick win=7 hard=0 focus=381 attn=380 drawfocus=0 popup=1 topvis=0 ta=0.000000 fa=0.000000
+== exit_no win=7 hard=0 focus=4 attn=380 drawfocus=0 popup=1 topvis=1 ta=0.000000 fa=0.000000
+== exit_tick2 win=7 hard=0 focus=4 attn=380 drawfocus=0 popup=1 topvis=1 ta=0.333333 fa=0.000000
+== background world=1 camera=1
+cam fov=1.221731 aspect=1.333333 pos=1.4000,2.8020,-5.5500
+view -0.9760 -0.0129 -0.2174 0.1961
+view -0.0406 0.9915 0.1232 -2.0376
+view 0.2140 0.1291 -0.9683 -6.0352
+view 0.0000 0.0000 0.0000 1.0000
+logo=1 logosize=327.1200,282.0000
