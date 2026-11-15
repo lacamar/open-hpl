@@ -3,7 +3,7 @@
 HPL2 engine port (aarch64 Linux) running Amnesia TDD, AMFP, SOMA, Rebirth, Bunker data.
 SOMA work follows `SOMA_PLAN.md`.
 Rust port: crate `rust/` (staticlib linked into HPL2, C ABI in `rust/src/ffi.rs`), plan and parity contract in bd epic `open-hpl-smj`; use the port-to-rust and port-from-cpp skills.
-Before merging a Rust port step run `scripts/rust-port-check.sh` (full sweeps; Rebirth 03_06_ghouls_nest fails since 1.3.77).
+Before merging a Rust port step run `scripts/gate.sh` as a systemd unit (full gate; agents run `--quick` on their worktree); Rebirth 03_06_ghouls_nest is a known failure. `scripts/cpp-lines.sh [rev]` measures the C++ left to port.
 
 ## Hard rules
 
@@ -45,6 +45,9 @@ scripts/soma-gen-bindings.py               # regenerate SomaScriptGenBindings.cp
 scripts/soma-re-struct-defaults.py         # recover script struct defaults from the official binary
 scripts/soma-script-check.sh               # compile all game .hps against the recovered API (~2 s)
 scripts/launcher-smoke.sh <game>           # installed open-hpl-<game> reaches the menu; run after every RPM install
+scripts/gate.sh [--quick] [--impl cpp|rust|both] [--build-dir D] [--out D]  # port gate, summary.txt, exit 0 = pass
+scripts/cpp-lines.sh [rev]                 # C/C++ lines left to port (vendored deps excluded)
+just test-release                          # cargo test with the RPM %check flags
 git config core.hooksPath .githooks        # pre-push: build, ctest, script checks
 scripts/soma-re-script-api.py <Soma_NoSteam.bin.x86_64> re.json api.json soma/data/script_api.txt
 ```
@@ -67,5 +70,5 @@ Read it before driving the reference game or a running engine.
 
 - Spec: `packaging/open-hpl.spec`, built with `packaging/build-rpm.sh`; `%check` runs ctest. Copy in `arm64-misc/specfiles/open-hpl` is stale.
 - COPR: lacamar/arm64-misc
-- Release: bump spec `Version`, tag `vX.Y.Z`, `packaging/build-rpm.sh -S --copr lacamar/arm64-misc --copr-wait`
+- Release: `scripts/release.sh X.Y.Z "bullet" ...` in a systemd unit (bumps spec, pushes, builds on COPR, tags only after COPR succeeds)
 - Hooks: `just lint` (pre-commit), `just test` + `just script-check` (pre-push)
