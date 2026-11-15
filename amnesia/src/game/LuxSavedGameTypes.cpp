@@ -879,18 +879,18 @@ kEndSerialize()
 
 void cLuxInventory_Item_SaveData::FromItem(cLuxInventory_Item *apItem)
 {
-	msName = apItem->GetName();
-	msSubType = apItem->GetSubType();
-	mlType = apItem->GetType();
-	msVal = apItem->GetStringVal();
-	msExtraVal = apItem->GetExtraStringVal();
+	msName = OhplInvName(apItem);
+	msSubType = OhplInvSubType(apItem);
+	mlType = OhplInvType(apItem);
+	msVal = OhplInvStringVal(apItem);
+	msExtraVal = OhplInvExtraVal(apItem);
 
-	msImageFile = apItem->GetImageName();
+	msImageFile = OhplInvImageName(apItem);
 
-	mfAmount = apItem->GetAmount();
-	mlCount = apItem->GetCount();
-	msGameNameEntry = apItem->GetGameNameEntry();
-	msGameDescEntry = apItem->GetGameDescEntry();
+	mfAmount = OhplInvAmount(apItem);
+	mlCount = OhplInvCount(apItem);
+	msGameNameEntry = OhplInvNameEntry(apItem);
+	msGameDescEntry = OhplInvDescEntry(apItem);
 }
 
 //-----------------------------------------------------------------------
@@ -935,25 +935,29 @@ void cLuxInventory_SaveData::FromInventory(cLuxInventory *apInventory)
 {
 	///////////////////////////
 	//Variables
-	mbDisabled = apInventory->mbDisabled;
+	mbDisabled = apInventory->GetDisabled();
 	mlEquippedHandItem = apInventory->GetItemIndex(apInventory->GetEquippedHandItem());
 
 	///////////////////////////
 	//Items
-	mvItems.Resize(apInventory->mvItems.size());
+	mvItems.Resize(apInventory->GetItemNum());
 	for(size_t i=0; i<mvItems.Size(); ++i)
 	{
-		mvItems[i].FromItem(apInventory->mvItems[i]);
+		mvItems[i].FromItem(apInventory->GetItem((int)i));
 	}
 
 	///////////////////////////
 	//Combine callbacks
 	{
-		tLuxCombineItemsCallbackListIt it = apInventory->mlstCombineCallbacks.begin();
-		for(; it != apInventory->mlstCombineCallbacks.end(); ++it)
+		for(int i=0; i<ohpl_inv_combine_num(); ++i)
 		{
-			cLuxCombineItemsCallback *pCallback = *it;
-			mvCombineCallbacks.Add(*pCallback);	
+			cLuxCombineItemsCallback callback;
+			ohpl_inv_combine_str(i, 0, OhplA11aStrSink, &callback.msName);
+			ohpl_inv_combine_str(i, 1, OhplA11aStrSink, &callback.msItemA);
+			ohpl_inv_combine_str(i, 2, OhplA11aStrSink, &callback.msItemB);
+			ohpl_inv_combine_str(i, 3, OhplA11aStrSink, &callback.msFunction);
+			callback.mbAutoDestroy = ohpl_inv_combine_auto(i) != 0;
+			mvCombineCallbacks.Add(callback);
 		}
 	}
 }
@@ -978,7 +982,7 @@ int cLuxInventory_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int alB)
 	switch(alOp)
 	{
 	case eOhplGa6Op_InvToDisabled:
-		apInventory->mbDisabled = mbDisabled;
+		apInventory->SetDisabled(mbDisabled);
 		return 0;
 	case eOhplGa6Op_InvEquippedIndex:
 		return mlEquippedHandItem;
@@ -999,9 +1003,8 @@ int cLuxInventory_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int alB)
 
 					cLuxInventory_Item *pItem = apInventory->AddItem(	saveItem.msName, (eLuxItemType)saveItem.mlType, saveItem.msSubType,
 																		saveItem.msImageFile, saveItem.mfAmount, saveItem.msVal, saveItem.msExtraVal);
-					pItem->SetGameNameEntry(saveItem.msGameNameEntry);
-					pItem->SetGameDescEntry(saveItem.msGameDescEntry);
-					pItem->SetCount(saveItem.mlCount);
+					ohpl_inv_item_set_entries((uintptr_t)pItem, OhplA11aS(saveItem.msGameNameEntry), OhplA11aS(saveItem.msGameDescEntry));
+					ohpl_inv_item_set_count((uintptr_t)pItem, saveItem.mlCount);
 				}
 
 				///////////////////////////
@@ -1012,9 +1015,8 @@ int cLuxInventory_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int alB)
 		{
 				for(size_t i=0; i<mvCombineCallbacks.Size(); ++i)
 				{
-					cLuxCombineItemsCallback *pCallback = hplNew(cLuxCombineItemsCallback, ());
-					*pCallback = mvCombineCallbacks[i];
-					apInventory->mlstCombineCallbacks.push_back(pCallback);
+					cLuxCombineItemsCallback &callback = mvCombineCallbacks[i];
+					apInventory->AddCombineCallback(callback.msName, callback.msItemA, callback.msItemB, callback.msFunction, callback.mbAutoDestroy);
 				}
 		}
 		return 0;
