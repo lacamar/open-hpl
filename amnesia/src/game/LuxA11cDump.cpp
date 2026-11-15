@@ -133,64 +133,16 @@ void OhplA11cTick()
 			Snap(f, "restored");
 		}
 		break;
-	case 28: case 98: case 158: case 188: case 228: case 300:
-		if(gpBase->mpEngine->GetUpdater()->GetCurrentContainerName() != "Journal") gpBase->mpEngine->GetUpdater()->SetContainer("Journal");
-		break;
 	case 8:
 		gpBase->mpEngine->GetUpdater()->SetContainer("Journal");
 		break;
-	default:
-		if(gpBase->mpEngine->GetUpdater()->GetCurrentContainerName() != "Journal") break;
-		switch(fr)
-		{
-		case 30: Primary(); break;
-		case 40: Arrow(eUIArrow_Down); break;
-		case 44: Primary(); break;
-		case 60: Primary(); break;
-		case 64: Primary(); break;
-		case 68: Primary(); break;
-		case 72: Secondary(); break;
-		case 76: Secondary(); break;
-		case 80: pJ->ExitPressed(false); break;
-		case 84: pJ->ExitPressed(false); break;
-		case 100: Arrow(eUIArrow_Down); break;
-		case 104: Primary(); break;
-		case 112: Arrow(eUIArrow_Down); break;
-		case 116: Primary(); break;
-		case 130: Primary(); break;
-		case 134: Secondary(); break;
-		case 138: Secondary(); break;
-		case 142: pJ->ExitPressed(false); break;
-		case 146: pJ->ExitPressed(false); break;
-		case 160: Arrow(eUIArrow_Down); break;
-		case 164: Arrow(eUIArrow_Down); break;
-		case 168: Primary(); break;
-		case 180: pJ->ExitPressed(false); break;
-		case 190: pJ->ChangeState(eLuxJournalState_Notes); break;
-		case 200: pJ->OpenNoteIdx(0, false); break;
-		case 210: Arrow(eUIArrow_Right); break;
-		case 214: Arrow(eUIArrow_Left); break;
-		case 218: Arrow(eUIArrow_Down); break;
-		case 230: pJ->OpenDiaryIdx(0, 1, false); break;
-		case 240: Primary(); break;
-		case 250: pJ->ExitPressed(false); break;
-		case 254: pJ->ExitPressed(false); break;
-		case 258: pJ->ExitPressed(false); break;
-		case 262: pJ->ExitPressed(false); break;
-		case 320: Primary(); break;
-		case 324: Primary(); break;
-		case 340: Secondary(); break;
-		case 344: pJ->ExitPressed(false); break;
-		case 348: pJ->ExitPressed(false); break;
-		case 352: pJ->ExitPressed(false); break;
-		case 430: pJ->ExitPressed(true); break;
-		case 500: pJ->ExitPressed(true); break;
-		}
+	case 20: case 70: case 114: case 138: case 206:
+		if(gpBase->mpEngine->GetUpdater()->GetCurrentContainerName() != "Journal") gpBase->mpEngine->GetUpdater()->SetContainer("Journal");
 		break;
-	case 400:
+	case 250:
 		if(gpBase->mpEngine->GetUpdater()->GetCurrentContainerName() != "Journal") pJ->OpenLastReadText();
 		break;
-	case 470:
+	case 270:
 		Snap(f, "final");
 		if(gpBase->mpEngine->GetUpdater()->GetCurrentContainerName() != "Journal")
 		{
@@ -199,11 +151,58 @@ void OhplA11cTick()
 			pJ->OpenNoteIdx(1, false);
 		}
 		break;
-	case 540:
+	case 300:
 		pJ->AddDiary("CH01L03_Daniel", "diary_page.tga", lNum);
 		fprintf(f, "diary idx %d\n", lNum);
 		pJ->AddQuestNote("04FindChemicals", "04FindChemicals");
 		Snap(f, "end");
+		break;
+	default:
+		if(gpBase->mpEngine->GetUpdater()->GetCurrentContainerName() != "Journal") break;
+		switch(fr)
+		{
+		case 24: Primary(); break;
+		case 28: Arrow(eUIArrow_Down); break;
+		case 32: Primary(); break;
+		case 40: Primary(); break;
+		case 44: Primary(); break;
+		case 48: Primary(); break;
+		case 52: Secondary(); break;
+		case 56: Secondary(); break;
+		case 60: pJ->ExitPressed(false); break;
+		case 64: pJ->ExitPressed(false); break;
+		case 74: Arrow(eUIArrow_Down); break;
+		case 78: Primary(); break;
+		case 84: Arrow(eUIArrow_Down); break;
+		case 88: Primary(); break;
+		case 96: Primary(); break;
+		case 100: Secondary(); break;
+		case 104: pJ->ExitPressed(false); break;
+		case 108: pJ->ExitPressed(false); break;
+		case 116: Arrow(eUIArrow_Down); break;
+		case 120: Arrow(eUIArrow_Down); break;
+		case 124: Primary(); break;
+		case 132: pJ->ExitPressed(false); break;
+		case 140: pJ->ChangeState(eLuxJournalState_Notes); break;
+		case 148: pJ->OpenNoteIdx(0, false); break;
+		case 156: Arrow(eUIArrow_Right); break;
+		case 160: Arrow(eUIArrow_Left); break;
+		case 164: Arrow(eUIArrow_Down); break;
+		case 172: pJ->OpenDiaryIdx(0, 1, false); break;
+		case 180: Primary(); break;
+		case 188: pJ->ExitPressed(false); break;
+		case 192: pJ->ExitPressed(false); break;
+		case 196: pJ->ExitPressed(false); break;
+		case 200: pJ->ExitPressed(false); break;
+		case 210: Primary(); break;
+		case 214: Primary(); break;
+		case 222: Secondary(); break;
+		case 226: pJ->ExitPressed(false); break;
+		case 230: pJ->ExitPressed(false); break;
+		case 234: pJ->ExitPressed(false); break;
+		case 262: pJ->ExitPressed(true); break;
+		case 282: pJ->ExitPressed(true); break;
+		}
 		break;
 	}
 }
