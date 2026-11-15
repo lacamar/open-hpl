@@ -22,6 +22,7 @@
 #include "LuxMapHandler.h"
 #include "LuxInputHandler.h"
 #include "LuxHelpFuncs.h"
+#include "LuxA11bDump.h"
 
 //-----------------------------------------------------------------------
 
@@ -167,12 +168,15 @@ void cLuxMessageHandler::RunEvents(const std::vector<OhplGa8Event> &avEvents)
 		switch(e.kind)
 		{
 		case eOhplGa8Msg_QuestSound:
+			OhplA11Log("snd %s", msQuestAddedSound.c_str());
 			gpBase->mpHelpFuncs->PlayGuiSoundData(msQuestAddedSound, eSoundEntryType_Gui);
 			break;
 		case eOhplGa8Msg_SetUpdateActive:
+			OhplA11Log("upd %d", e.a != 0 ? 1 : 0);
 			gpBase->mpMapHandler->SetUpdateActive(e.a != 0);
 			break;
 		case eOhplGa8Msg_Callback:
+			OhplA11Log("callback %d %d", mpCallback ? 1 : 0, e.a != 0 ? 1 : 0);
 			if(mpCallback) mpCallback->OnPress(e.a != 0);
 			break;
 		}
@@ -183,6 +187,7 @@ void cLuxMessageHandler::RunEvents(const std::vector<OhplGa8Event> &avEvents)
 
 void cLuxMessageHandler::OnDraw(float afFrameTime)
 {
+	OhplA11Tick();
 	DrawMessage();
 	DrawPauseMessage();
 	DrawQuestAdded();
@@ -228,9 +233,15 @@ void cLuxMessageHandler::DrawQuestAdded()
 	{
 		const OhplGa8Event &e = vEvents[i];
 		if(e.kind == eOhplGa8Msg_QuestIcon)
+		{
+			OhplA11LogGfx(cVector3f(e.v[0],e.v[1],e.v[2]), -1, cColor(1, e.v[8]), eGuiMaterial_LastEnum);
 			gpBase->mpGameHudSet->DrawGfx(mpQuestAddedIcon, cVector3f(e.v[0],e.v[1],e.v[2]), -1, cColor(1, e.v[8]));
+		}
 		else
+		{
+			OhplA11LogGfx(cVector3f(e.v[0],e.v[1],e.v[2]), -1, cColor(e.v[5], e.v[8]), eGuiMaterial_Additive);
 			gpBase->mpGameHudSet->DrawGfx(mpQuestAddedIcon, cVector3f(e.v[0],e.v[1],e.v[2]), -1, cColor(e.v[5], e.v[8]), eGuiMaterial_Additive);
+		}
 	}
 }
 
@@ -244,6 +255,7 @@ void cLuxMessageHandler::DrawMessage()
 	for(size_t i=0; i<vEvents.size(); ++i)
 	{
 		const OhplGa8Event &e = vEvents[i];
+		OhplA11LogFont(cVector3f(e.v[0],e.v[1],e.v[2]), vFontSize, cColor(1, e.v[8]), eFontAlign_Center, eGuiMaterial_FontNormal, mvMessageRows[e.a]);
 		gpBase->mpGameHudSet->DrawFont(mvMessageRows[e.a], mpFont,cVector3f(e.v[0],e.v[1],e.v[2]),vFontSize, cColor(1, e.v[8]),eFontAlign_Center);
 	}
 }
@@ -262,21 +274,27 @@ void cLuxMessageHandler::DrawPauseMessage()
 		switch(e.kind)
 		{
 		case eOhplGa8Msg_PauseBg:
+			OhplA11LogGfx(vPos,cVector2f(e.v[3],e.v[4]),cColor(1, e.v[8]), eGuiMaterial_LastEnum);
 			gpBase->mpGameHudSet->DrawGfx(mpBlackGfx,vPos,cVector2f(e.v[3],e.v[4]),cColor(1, e.v[8]));
 			break;
 		case eOhplGa8Msg_PauseRow:
+			OhplA11LogFont(vPos, vFontSize, cColor(1, e.v[8]), eFontAlign_Left, eGuiMaterial_FontNormal, mvLines[e.a]);
 			gpBase->mpGameHudSet->DrawFont(mvLines[e.a], mpFont,vPos,vFontSize, cColor(1, e.v[8]));
 			break;
 		case eOhplGa8Msg_Yes:
+			OhplA11LogFont(vPos, vFontSize, cColor(1, e.v[8]), eFontAlign_Left, eGuiMaterial_FontNormal, _W("Yes"));
 			gpBase->mpGameHudSet->DrawFont(mpFont,vPos,vFontSize, cColor(1, e.v[8]),_W("Yes"));
 			break;
 		case eOhplGa8Msg_YesKey:
+			OhplA11LogFont(vPos, cVector2f(e.v[3],e.v[4]), cColor(1, e.v[8]), eFontAlign_Left, eGuiMaterial_FontNormal, _W("(")+gpBase->mpInputHandler->GetInputName("Interact")+_W(")"));
 			gpBase->mpGameHudSet->DrawFont(mpFont,vPos,cVector2f(e.v[3],e.v[4]), cColor(1, e.v[8]),_W("(%ls)"), gpBase->mpInputHandler->GetInputName("Interact").c_str());
 			break;
 		case eOhplGa8Msg_No:
+			OhplA11LogFont(vPos, vFontSize, cColor(1, e.v[8]), eFontAlign_Left, eGuiMaterial_FontNormal, _W("No"));
 			gpBase->mpGameHudSet->DrawFont(mpFont,vPos,vFontSize, cColor(1, e.v[8]),_W("No"));
 			break;
 		case eOhplGa8Msg_NoKey:
+			OhplA11LogFont(vPos, cVector2f(e.v[3],e.v[4]), cColor(1, e.v[8]), eFontAlign_Left, eGuiMaterial_FontNormal, _W("(")+gpBase->mpInputHandler->GetInputName("Attack")+_W(")"));
 			gpBase->mpGameHudSet->DrawFont(mpFont,vPos,cVector2f(e.v[3],e.v[4]), cColor(1, e.v[8]),_W("(%ls)"), gpBase->mpInputHandler->GetInputName("Attack").c_str());
 			break;
 		}

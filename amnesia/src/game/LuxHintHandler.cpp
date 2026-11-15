@@ -20,6 +20,7 @@
 #include "LuxHintHandler.h"
 
 #include "LuxHelpFuncs.h"
+#include "LuxA11bDump.h"
 #include "input/Gamepad.h"
 
 #include <stdarg.h>
@@ -196,6 +197,7 @@ void cLuxHintHandler::DrawHintText(float afFrameTime, cGuiSet *apGuiSet)
 	float vLabel[7];
 	ohpl_ga8_hint_label(&mS, vLabel);
 	cColor hintCol(vLabel[3], vLabel[4], vLabel[5], vLabel[6]);
+	OhplA11LogFont(cVector3f(vLabel[0],vLabel[1],vLabel[2]), vFontSize, hintCol, eFontAlign_Center, eGuiMaterial_FontNormal, _W(" ")+kTranslate("Hints", "HINT:"));
 	apGuiSet->DrawFont(mpFont, cVector3f(vLabel[0],vLabel[1],vLabel[2]),vFontSize,hintCol, eFontAlign_Center, eGuiMaterial_FontNormal,
 		_W(" %ls"), kTranslate("Hints", "HINT:").c_str());
 
@@ -205,6 +207,7 @@ void cLuxHintHandler::DrawHintText(float afFrameTime, cGuiSet *apGuiSet)
 	{
 		float vPos[4];
 		ohpl_ga8_hint_row(&mS, vRows.size(), i, vPos);
+		OhplA11LogFont(cVector3f(vPos[0], vPos[1], vPos[2]), vFontSize, cColor(1,mS.alpha), vPos[3] != 0 ? eFontAlign_Center : eFontAlign_Left, eGuiMaterial_FontNormal, _W(" ")+(vRows.size()==1 ? msCurrentText : vRows[i]));
 		apGuiSet->DrawFont(mpFont, cVector3f(vPos[0], vPos[1], vPos[2]),vFontSize,cColor(1,mS.alpha), vPos[3] != 0 ? eFontAlign_Center : eFontAlign_Left, eGuiMaterial_FontNormal,
 							_W(" %ls"), vRows.size()==1 ? msCurrentText.c_str() : vRows[i].c_str());
 	}
@@ -214,6 +217,7 @@ void cLuxHintHandler::DrawHintText(float afFrameTime, cGuiSet *apGuiSet)
 	// Draw all the icons
 	for(size_t i = 0; i < mvHintIcons.size(); ++i)
 	{
+		OhplA11LogGfx(mvHintIcons[i].mvPosition, mvHintIcons[i].mvSize, cColor(1,mS.alpha), eGuiMaterial_Alpha);
 		apGuiSet->DrawGfx(mvHintIcons[i].mpGuiIcon, mvHintIcons[i].mvPosition, mvHintIcons[i].mvSize, cColor(1,mS.alpha), eGuiMaterial_Alpha);
 	}
 #endif
