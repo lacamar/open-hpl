@@ -1,0 +1,60 @@
+chinese		0
+font_glyph	100	0.578947365|0.789473712|0.526315808
+font_glyph	101	0.526315808|0.631578922|0.473684222
+font_glyph	102	0.473684222|0.789473712|0.315789461
+font_glyph	103	0.578947365|0.789473712|0.526315808
+font_glyph	104	0.578947365|0.789473712|0.526315808
+font_glyph	105	0.263157904|0.736842096|0.210526317
+font_glyph	110	0.578947365|0.631578922|0.526315808
+font_glyph	111	0.578947365|0.631578922|0.526315808
+font_glyph	112	0.578947365|0.789473712|0.526315808
+font_glyph	114	0.473684222|0.631578922|0.368421048
+font_glyph	115	0.526315808|0.631578922|0.473684222
+font_glyph	116	0.473684222|0.736842096|0.368421048
+font_glyph	117	0.578947365|0.631578922|0.526315808
+font_glyph	32	0.157894731|0.105263159|0.315789461
+font_glyph	47	0.526315808|0.894736826|0.368421048
+font_glyph	76	0.578947365|0.736842096|0.473684222
+font_glyph	77	0.684210539|0.736842096|0.631578922
+font_glyph	80	0.578947365|0.736842096|0.473684222
+font_glyph	82	0.631578922|0.736842096|0.578947365
+font_glyph	83	0.631578922|0.736842096|0.578947365
+font_glyph	97	0.526315808|0.631578922|0.473684222
+font_glyph	99	0.526315808|0.631578922|0.421052635
+font_len	15|15| Short LeftMouse /      hint	172.10527
+font_range		0|1169
+gfx_size	gamepad_a.tga|1	64|64
+gfx_size	gamepad_lb.tga|1	64|32
+gfx_size	gamepad_rb.tga|1	64|32
+gfx_size	hud_quest_added.tga|0	50|53
+hud		800|600|-0|-0|0
+input_name	Attack	RightMouse
+input_name	Interact	LeftMouse
+menu_f32	Hints|TextDurationMul|0	1.5
+menu_f32	Hints|YPos|0	40
+menu_str	Messages|QuestAddedIcon|	hud_quest_added.tga
+menu_str	Messages|QuestAddedSound|	ui_add_quest.snt
+menu_vec2	Hints|FontSize|0	15|15
+menu_vec2	Messages|GameMessageFontSize|0	18|18
+parse_string	Duration derived from the string $ButLean	Duration derived from the string 
+parse_string	Game message one that is somewhat long and has to wrap over several rows of the screen	Game message one that is somewhat long and has to wrap over several rows of the screen
+parse_string	Hint one	Hint one
+parse_string	Pause message text that is long enough to wrap around the pause box more than once, really	Pause message text that is long enough to wrap around the pause box more than once, really
+parse_string	Press $ButInteract and $ButAttack and $ButJump to go on with a long line of text that wraps over rows	Press LeftMouse / $GamepadButton.Button RightShoulder$ and RightMouse / $GamepadButton.Button LeftShoulder$ and Space / $GamepadButton.Button A$ to go on with a long line of text that wraps over rows
+parse_string	Second pause	Second pause
+parse_string	Short $ButInteract hint	Short LeftMouse / $GamepadButton.Button RightShoulder$ hint
+parse_string	Third pause	Third pause
+ptest		0
+string_duration	Duration derived from the string 	3.80999994
+translate	Hints|HINT:	HINT:
+user_bool	Game|ShowEffectSubtitles|0	0
+user_bool	Game|ShowHints|1	1
+user_bool	Game|ShowSubtitles|1	1
+wrap_rows	500|20|18|18|Pause message text that is long enough to wrap around the pause box more than once, really	2|Pause message text that is long enough to wrap around the\u0001pause box more than once, really
+wrap_rows	500|20|18|18|Second pause	1|Second pause
+wrap_rows	500|20|18|18|Third pause	1|Third pause
+wrap_rows	680|15|15|15|Duration derived from the string 	1|Duration derived from the string 
+wrap_rows	680|15|15|15|Hint one	1|Hint one
+wrap_rows	680|15|15|15|Press LeftMouse /      and RightMouse /      and Space /      to go on with a long line of text that wraps over rows	2|Press LeftMouse /      and RightMouse /      and Space /      to go on with a long line of text that wraps\u0001over rows
+wrap_rows	680|15|15|15|Short LeftMouse /      hint	1|Short LeftMouse /      hint
+wrap_rows	700|20|18|18|Game message one that is somewhat long and has to wrap over several rows of the screen	2|Game message one that is somewhat long and has to wrap over several rows of the\u0001screen

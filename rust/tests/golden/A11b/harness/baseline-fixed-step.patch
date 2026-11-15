@@ -1,0 +1,51 @@
+--- /home/lm/.cache/open-hpl/a11b-tmp/o1	2026-11-15 19:37:32.190145574 +0100
++++ .a11b-base/amnesia/src/game/LuxMessageHandler.cpp	2026-11-15 19:13:12.519628475 +0100
+@@ -154,6 +154,12 @@
+ 
+ void cLuxMessageHandler::Update(float afTimeStep)
+ {
++	if(OhplA11Enabled()) return;
++	UpdateA11b(afTimeStep);
++}
++
++void cLuxMessageHandler::UpdateA11b(float afTimeStep)
++{
+ 	OhplGa8Buf buf;
+ 	RunEvents(OhplGa8Take(buf.mvRaw, ohpl_ga8_msg_update(&mS, afTimeStep, buf.mvRaw, OHPL_GA8_EVMAX)));
+ }
+@@ -188,6 +194,7 @@
+ void cLuxMessageHandler::OnDraw(float afFrameTime)
+ {
+ 	OhplA11Tick();
++	if(OhplA11Enabled()) UpdateA11b(OhplA11Dt());
+ 	DrawMessage();
+ 	DrawPauseMessage();
+ 	DrawQuestAdded();
+--- /home/lm/.cache/open-hpl/a11b-tmp/o2	2026-11-15 19:37:32.237145842 +0100
++++ .a11b-base/amnesia/src/game/LuxHintHandler.cpp	2026-11-15 19:13:12.519773059 +0100
+@@ -177,6 +177,7 @@
+ 
+ void cLuxHintHandler::Update(float afTimeStep)
+ {
++	if(OhplA11Enabled()) return;
+ 	UpdateHintText(afTimeStep);
+ }
+ 
+@@ -184,6 +185,7 @@
+ 
+ void cLuxHintHandler::OnDraw(float afFrameTime)
+ {
++	if(OhplA11Enabled()) UpdateHintText(OhplA11Dt());
+ 	DrawHintText(afFrameTime, gpBase->mpGameHudSet);
+ }
+ 
+--- /home/lm/.cache/open-hpl/a11b-tmp/o3	2026-11-15 19:37:32.274146052 +0100
++++ .a11b-base/amnesia/src/game/LuxMessageHandler.h	2026-11-15 19:13:12.519673850 +0100
+@@ -38,6 +38,7 @@
+ 	void LoadFonts();
+ 	void OnStart();
+ 	void Update(float afTimeStep);
++	void UpdateA11b(float afTimeStep);
+ 	void Reset();
+ 
+ 	void LoadUserConfig();

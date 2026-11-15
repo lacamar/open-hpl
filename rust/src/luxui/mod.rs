@@ -13,3 +13,12 @@ pub mod keyentry;
 pub mod message;
 #[cfg(test)]
 mod tests;
+
+mod handlers_ffi;
+mod hint_handler;
+pub mod host;
+mod msg_handler;
+#[cfg(test)]
+mod tests_golden;
+#[cfg(test)]
+mod tests_handlers;

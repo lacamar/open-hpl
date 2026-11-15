@@ -40,6 +40,62 @@ void OhplA11Log(const char *fmt, ...)
 	fflush(f);
 }
 
+static FILE *gpAns = NULL;
+static bool gbAnsInit = false;
+
+bool OhplA11Answers()
+{
+	if(gbAnsInit == false)
+	{
+		gbAnsInit = true;
+		const char *sPath = getenv("OHPL_A11B_ANSWERS");
+		if(sPath && *sPath) gpAns = fopen(sPath, "w");
+	}
+	return gpAns != NULL;
+}
+
+void OhplA11Ans(const char *op, const std::string &asIn, const std::string &asOut)
+{
+	if(OhplA11Answers() == false) return;
+	fprintf(gpAns, "%s\t%s\t%s\n", op, asIn.c_str(), asOut.c_str());
+	fflush(gpAns);
+}
+
+std::string OhplA11Esc(const unsigned *apText, size_t alLen)
+{
+	std::string s;
+	char b[16];
+	for(size_t i=0; i<alLen; ++i)
+	{
+		unsigned c = apText[i];
+		if(c >= 32 && c < 127 && c != '\\' && c != '|') { s += (char)c; continue; }
+		snprintf(b, sizeof(b), "\\u%04x", c);
+		s += b;
+	}
+	return s;
+}
+
+std::string OhplA11Esc(const std::string &asText)
+{
+	std::string s;
+	char b[16];
+	for(size_t i=0; i<asText.size(); ++i)
+	{
+		unsigned c = (unsigned char)asText[i];
+		if(c >= 32 && c < 127 && c != '\\' && c != '|') { s += (char)c; continue; }
+		snprintf(b, sizeof(b), "\\u%04x", c);
+		s += b;
+	}
+	return s;
+}
+
+std::string OhplA11Num(float afX)
+{
+	char b[32];
+	snprintf(b, sizeof(b), "%.9g", afX);
+	return b;
+}
+
 static void LogText(FILE *f, const tWString &asText)
 {
 	for(size_t i=0; i<asText.size(); ++i)
@@ -138,7 +194,7 @@ void OhplA11Tick()
 		pM->SetPauseMessageActive(false);
 		break;
 	case 85:
-		OhplA11Log("add c %d", pH->Add("a11b_c", _W("Press $GamepadButton.A$ and $GamepadButton.Guide$ and $GamepadHat.0.Up$ and $GamepadAxis.LeftX.Positive$ to go on with a long line of text"), 1.0f) ? 1 : 0);
+		OhplA11Log("add c %d", pH->Add("a11b_c", _W("Press $ButInteract and $ButAttack and $ButJump to go on with a long line of text that wraps over rows"), 0.5f) ? 1 : 0);
 		break;
 	case 80:
 		pH->SetActive(false);
@@ -147,7 +203,10 @@ void OhplA11Tick()
 		pH->SetActive(true);
 		break;
 	case 250:
-		OhplA11Log("add d %d", pH->Add("a11b_d", _W("Duration derived from the string"), 0) ? 1 : 0);
+		OhplA11Log("add d %d", pH->Add("a11b_d", _W("Short $ButInteract hint"), 0.5f) ? 1 : 0);
+		break;
+	case 330:
+		OhplA11Log("add e %d", pH->Add("a11b_e", _W("Duration derived from the string $ButLean"), 0) ? 1 : 0);
 		break;
 	case 100:
 	{

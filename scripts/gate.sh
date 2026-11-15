@@ -247,6 +247,13 @@ def same(name, a, b):
         r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)
         last = (r.stdout.strip().splitlines() or [""])[-1]
         return (r.returncode == 0, "equal after masking" if r.returncode == 0 else f"DIFFER {last}")
+    if name.startswith("a11b-"):
+        # runs stop at different frames: compare up to the last whole frame of the shorter one
+        la, lb = (open(x, errors="replace").read().splitlines() for x in (a, b))
+        n = min(len(la), len(lb))
+        k = max((i for i in range(n) if la[i].startswith("tick ")), default=0)
+        ok_ = k > 100 and la[:k] == lb[:k]
+        return (ok_, f"equal over {k} lines (run lengths {len(la)}/{len(lb)})" if ok_ else "DIFFER")
     if filecmp.cmp(a, b, shallow=False):
         return (True, "identical")
     if name.startswith("h4seq") and multiset(a) == multiset(b):

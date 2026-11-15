@@ -20,15 +20,12 @@
 #ifndef LUX_HINT_HANDLER_H
 #define LUX_HINT_HANDLER_H
 
-//----------------------------------------------
-
 #include "LuxBase.h"
-#include "RustLuxUi.h"
-
-//---------------------------------------
+#include "LuxA11bDump.h"
+#include "RustLuxUiA11b.h"
 
 #ifdef USE_GAMEPAD
-
+// LuxInventory.cpp still declares one
 class cLuxHintIcon
 {
 public:
@@ -37,71 +34,71 @@ public:
 	cVector2f mvSize;
 	int mlCharacterPosition;
 };
-
 #endif
-
-//----------------------------------------
 
 class cLuxHintHandler : public iLuxUpdateable
 {
-friend class cLuxHintHandler_SaveData;
-public:	
-	cLuxHintHandler();
-	~cLuxHintHandler();
-	
-	void LoadFonts();
-	void OnStart();
-	void Update(float afTimeStep);
-	void LoadUserConfig();
-	void SaveUserConfig();
-	void Reset();
-	void OnDraw(float afFrameTime);
+public:
+	cLuxHintHandler() : iLuxUpdateable("LuxHintHandler")
+	{
+		OhplA11bInitHost();
+		mlH = ohpl_a11b_hint_new();
+	}
+	~cLuxHintHandler() { ohpl_a11b_hint_free(mlH); }
 
-	void DrawHintText(float afFrameTime, cGuiSet *apGuiSet);
-	void UpdateHintText(float afTimeStep);
+	void LoadFonts()
+	{
+		ohpl_a11b_hint_font(mlH, (size_t)LoadFont(gpBase->mpMenuCfg->GetString("Hints","DefaultFont","")));
+	}
+	void OnStart(){}
+	void Update(float afTimeStep)
+	{
+		if(OhplA11Enabled() == false) UpdateHintText(afTimeStep);
+	}
+	void LoadUserConfig() { ohpl_a11b_hint_load_user_config(mlH); }
+	void SaveUserConfig() { ohpl_a11b_hint_save_user_config(mlH); }
+	void Reset() { ohpl_a11b_hint_reset(mlH); }
+	void OnDraw(float afFrameTime)
+	{
+		if(OhplA11Enabled()) UpdateHintText(OhplA11Dt());
+		DrawHintText(afFrameTime, gpBase->mpGameHudSet);
+	}
 
-	void SetActive(bool abX);
-	bool IsActive() { return mS.active != 0; }
+	void DrawHintText(float afFrameTime, cGuiSet *apGuiSet) { ohpl_a11b_hint_draw(mlH, (size_t)apGuiSet); }
+	void UpdateHintText(float afTimeStep) { ohpl_a11b_hint_update(mlH, afTimeStep); }
+
+	void SetActive(bool abX) { ohpl_a11b_hint_set_active(mlH, abX); }
+	bool IsActive() { return ohpl_a11b_hint_is_active(mlH) != 0; }
 
 	/**
 	* if time shown is <=0 then the life time is calculated based on string length.
 	*/
-	bool Add(const tString &asName, const tWString &asMessage, float afTimeShown);
-	bool Remove(const tString &asName);
+	bool Add(const tString &asName, const tWString &asMessage, float afTimeShown)
+	{
+		return ohpl_a11b_hint_add(mlH, asName.data(), asName.size(), OhplA11bW(asMessage), asMessage.size(), afTimeShown) != 0;
+	}
+	bool Remove(const tString &asName) { return ohpl_a11b_hint_remove(mlH, asName.data(), asName.size()) != 0; }
 
-	void Block(const tString &asName);
-	void UnBlock(const tString &asName);
+	void Block(const tString &asName) { ohpl_a11b_hint_block(mlH, asName.data(), asName.size(), 1); }
+	void UnBlock(const tString &asName) { ohpl_a11b_hint_block(mlH, asName.data(), asName.size(), 0); }
+
+	void GetNames(bool abBlocked, tStringVec &avNames)
+	{
+		ohpl_a11b_hint_names(mlH, abBlocked, PushName, &avNames);
+	}
+	void SetNames(bool abBlocked, const tStringVec &avNames)
+	{
+		ohpl_a11b_hint_names_clear(mlH, abBlocked);
+		for(size_t i=0; i<avNames.size(); ++i) ohpl_a11b_hint_names_add(mlH, abBlocked, avNames[i].data(), avNames[i].size());
+	}
 
 private:
-#ifdef USE_GAMEPAD
-	static void IconReplace(void *apCtx, const unsigned *apCmd, size_t alLen, int alPos, OhplGa8Sink32 apSink, void *apSinkCtx);
-	void ParseStringForGamepadIcons();
-	tWString AddGamepadIconAtPosition(const tWString& asCommand, int alPosition);
-#endif
+	static void PushName(void *apCtx, const unsigned char *apName, size_t alLen)
+	{
+		((tStringVec*)apCtx)->push_back(tString((const char*)apName, alLen));
+	}
 
-	//////////////////
-	// Data
-	iFontData *mpFont;
-
-	OhplGa8HintState mS;
-
-	//////////////////
-	// Variables
-	tStringSet m_setHintsGiven;
-	tStringSet m_setHintsBlocked;
-
-	tWString msCurrentText;
-
-#ifdef USE_GAMEPAD
-	cGuiGfxElement* mpGamepadButtonIcon[eGamepadButton_LastEnum];
-	cGuiGfxElement* mpGamepadHatIcon[4];
-	cGuiGfxElement* mpGampadAxisIcon[eGamepadAxis_LastEnum * 2];
-
-	std::vector<cLuxHintIcon> mvHintIcons;
-#endif
+	uint64_t mlH;
 };
-
-//----------------------------------------------
-
 
 #endif // LUX_HINT_HANDLER_H
