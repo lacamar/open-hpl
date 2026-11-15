@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# S5 gate: script-engine declaration dump (sorted) of the deployed binary, per game, recorded from the C++ baseline and compared after the flip.
+# S5 gate: script-engine declaration dump (sorted, property offsets masked: they follow the C++ layout) of the deployed binary, per game, recorded from the C++ baseline and compared after the flip.
 # Usage: OPENHPL_SCRATCH_ROOT=<root> scripts/s5-decl-check.sh record|compare [game...]
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,10 +17,10 @@ for g in "${@:-soma rebirth bunker}"; do
 		sort "$OUT/decl-$g1.txt" > "$OUT/decl-$g1.sorted"
 		if [ "$MODE" = record ]; then
 			cp "$OUT/decl-$g1.sorted" "$BASE/$g1.txt"; echo "$g1: recorded $(wc -l < "$BASE/$g1.txt") lines"
-		elif cmp -s "$BASE/$g1.txt" "$OUT/decl-$g1.sorted"; then
+		elif cmp -s <(sed -E 's/@[0-9]+$/@/' "$BASE/$g1.txt" | sort) <(sed -E 's/@[0-9]+$/@/' "$OUT/decl-$g1.sorted" | sort); then
 			echo "$g1: identical ($(wc -l < "$BASE/$g1.txt") lines)"
 		else
-			echo "$g1: DIFF"; diff "$BASE/$g1.txt" "$OUT/decl-$g1.sorted" | head -10; rc=1
+			echo "$g1: DIFF"; diff <(sed -E 's/@[0-9]+$/@/' "$BASE/$g1.txt" | sort) <(sed -E 's/@[0-9]+$/@/' "$OUT/decl-$g1.sorted" | sort) | head -10; rc=1
 		fi
 	done
 done
