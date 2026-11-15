@@ -322,7 +322,7 @@ impl Str {
 }
 
 #[repr(C)]
-pub struct MainCfgC {
+pub struct MainNums {
     load_debug_menu: bool,
     first_start: bool,
     force_cache: bool,
@@ -358,19 +358,12 @@ pub struct MainCfgC {
     paper_white: f32,
     peak_nits: f32,
     texture_anisotropy: f32,
-    lang_file: Str,
-    screenshot_ext: Str,
-    renderer: Str,
-    color_output: Str,
+    create_compressed: bool,
 }
 
-impl MainCfgC {
-    fn from_rust(m: &config::MainCfg) -> MainCfgC {
-        let none = Str {
-            p: std::ptr::null(),
-            n: 0,
-        };
-        MainCfgC {
+impl MainNums {
+    fn from_rust(m: &config::MainCfg) -> MainNums {
+        MainNums {
             load_debug_menu: m.load_debug_menu,
             first_start: m.first_start,
             force_cache: m.force_cache_loading_and_skip_saving,
@@ -406,19 +399,16 @@ impl MainCfgC {
             paper_white: m.paper_white,
             peak_nits: m.peak_nits,
             texture_anisotropy: m.texture_anisotropy,
-            lang_file: none,
-            screenshot_ext: none,
-            renderer: none,
-            color_output: none,
+            create_compressed: false,
         }
     }
 
-    fn to_rust(&self) -> config::MainCfg {
+    fn to_rust(&self, strings: &[Vec<u8>; 4]) -> config::MainCfg {
         config::MainCfg {
             load_debug_menu: self.load_debug_menu,
             first_start: self.first_start,
-            lang_file: self.lang_file.get().to_vec(),
-            screenshot_ext: self.screenshot_ext.get().to_vec(),
+            lang_file: strings[0].clone(),
+            screenshot_ext: strings[1].clone(),
             force_cache_loading_and_skip_saving: self.force_cache,
             screen_width: self.screen_width,
             screen_height: self.screen_height,
@@ -434,8 +424,8 @@ impl MainCfgC {
             shadow_quality: self.shadow_quality,
             shadow_res: self.shadow_res,
             gui_scale: self.gui_scale,
-            renderer: self.renderer.get().to_vec(),
-            color_output: self.color_output.get().to_vec(),
+            renderer: strings[2].clone(),
+            color_output: strings[3].clone(),
             paper_white: self.paper_white,
             peak_nits: self.peak_nits,
             world_reflection: self.world_reflection,
@@ -458,23 +448,74 @@ impl MainCfgC {
     }
 }
 
-/// Tags of the four strings `ohpl_ga9_load_main_cfg` emits.
-pub const MAIN_LANG: u32 = 1;
-pub const MAIN_EXT: u32 = 2;
-pub const MAIN_RENDERER: u32 = 3;
-pub const MAIN_COLOR: u32 = 4;
+/// `cLuxConfigHandler`: the settings the engine reads on start and writes on exit. The numbers
+/// live in a box so the C++ shell can keep references to them.
+struct ConfigHandler {
+    nums: Box<MainNums>,
+    strings: [Vec<u8>; 4],
+    restart: config::Restart,
+}
 
-/// # Safety
-/// `ctx`/`call` as in the module docs; `out` is writable; `def_lang` is `n` bytes; `emit` accepts `ectx`.
+thread_local! {
+    static CONFIG: std::cell::RefCell<crate::obj::Arena<ConfigHandler>> =
+        std::cell::RefCell::new(crate::obj::Arena::default());
+}
+
+fn config_with<R>(bits: u64, none: R, f: impl FnOnce(&mut ConfigHandler) -> R) -> R {
+    let Some(h) = crate::obj::Handle::from_bits(bits) else {
+        return none;
+    };
+    CONFIG.with(|a| {
+        a.try_borrow_mut()
+            .ok()
+            .and_then(|mut a| a.get_mut(h).map(f))
+            .unwrap_or(none)
+    })
+}
+
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_load_main_cfg(
+pub extern "C" fn ohpl_a12b_cfg_new() -> u64 {
+    let nums = MainNums::from_rust(&config::MainCfg::default());
+    let h = ConfigHandler {
+        nums: Box::new(nums),
+        strings: Default::default(),
+        restart: config::Restart::default(),
+    };
+    CONFIG.with(|a| {
+        a.try_borrow_mut()
+            .ok()
+            .and_then(|mut a| a.insert(h))
+            .map_or(0, crate::obj::Handle::to_bits)
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_a12b_cfg_free(bits: u64) {
+    if let Some(h) = crate::obj::Handle::from_bits(bits) {
+        let old = CONFIG.with(|a| a.try_borrow_mut().ok().and_then(|mut a| a.remove(h)));
+        drop(old);
+    }
+}
+
+/// The numbers stay valid until `ohpl_a12b_cfg_free`.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_a12b_cfg_nums(bits: u64) -> *mut MainNums {
+    config_with(bits, std::ptr::null_mut(), |c| {
+        std::ptr::from_mut::<MainNums>(&mut c.nums)
+    })
+}
+
+/// `LoadMainConfig`.
+///
+/// # Safety
+/// `ctx`/`call` as in the module docs; `def_lang` is `n` bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_a12b_cfg_load(
+    bits: u64,
     ctx: Ctx,
     call: Call,
     def_lang: *const u8,
     n: usize,
-    out: *mut MainCfgC,
-    emit: Emit,
-    ectx: Ctx,
 ) {
     let h = Host { ctx, call };
     let m = config::load_main(
@@ -482,15 +523,83 @@ pub unsafe extern "C" fn ohpl_ga9_load_main_cfg(
         &mut || h.b(op::FIRST_START_FLAG, &[]),
         units(def_lang, n),
     );
-    let o = Out { emit, ctx: ectx };
-    o.bytes(MAIN_LANG, &m.lang_file);
-    o.bytes(MAIN_EXT, &m.screenshot_ext);
-    o.bytes(MAIN_RENDERER, &m.renderer);
-    o.bytes(MAIN_COLOR, &m.color_output);
-    // SAFETY: `out` is writable per the contract.
-    if let Some(out) = unsafe { out.as_mut() } {
-        *out = MainCfgC::from_rust(&m);
+    config_with(bits, (), |c| {
+        let keep = c.nums.create_compressed;
+        *c.nums = MainNums::from_rust(&m);
+        c.nums.create_compressed = keep;
+        c.strings = [m.lang_file, m.screenshot_ext, m.renderer, m.color_output];
+    });
+}
+
+/// `SaveMainConfig`.
+///
+/// # Safety
+/// `ctx`/`call` as in the module docs.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_a12b_cfg_save(bits: u64, ctx: Ctx, call: Call) {
+    let m = config_with(bits, None, |c| Some(c.nums.to_rust(&c.strings)));
+    if let Some(m) = m {
+        config::save_main(&mut SaveHost(cfg(ctx, call)), &m);
     }
+}
+
+/// One of the four strings, passed to `sink` once.
+///
+/// # Safety
+/// `sink` accepts a byte range.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_a12b_cfg_str(
+    bits: u64,
+    which: i32,
+    sink: Option<unsafe extern "C" fn(Ctx, *const u8, usize)>,
+    ctx: Ctx,
+) {
+    let s = config_with(bits, Vec::new(), |c| {
+        usize::try_from(which)
+            .ok()
+            .and_then(|i| c.strings.get(i).cloned())
+            .unwrap_or_default()
+    });
+    if let Some(sink) = sink {
+        // SAFETY: the sink accepts a byte range.
+        unsafe { sink(ctx, s.as_ptr(), s.len()) };
+    }
+}
+
+/// # Safety
+/// `p` holds `n` readable bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_a12b_cfg_set_str(bits: u64, which: i32, p: *const u8, n: usize) {
+    let v = bytes_of(p, n).to_vec();
+    config_with(bits, (), |c| {
+        if let Some(s) = usize::try_from(which)
+            .ok()
+            .and_then(|i| c.strings.get_mut(i))
+        {
+            *s = v;
+        }
+    });
+}
+
+/// `op` 0: `SetGameNeedsRestart`; 1: whether the restart popup is due now.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_a12b_cfg_restart(bits: u64, op: i32) -> i32 {
+    config_with(bits, 0, |c| {
+        if op == 0 {
+            c.restart.set_needed();
+            0
+        } else {
+            i32::from(c.restart.show_due())
+        }
+    })
+}
+
+fn bytes_of<'a>(p: *const u8, n: usize) -> &'a [u8] {
+    if p.is_null() || n == 0 {
+        return &[];
+    }
+    // SAFETY: the caller passes `n` readable bytes.
+    unsafe { std::slice::from_raw_parts(p, n) }
 }
 
 struct SaveHost(CfgHost);
@@ -547,34 +656,6 @@ impl config::SaveEnv for SaveHost {
     fn wait_if_out_of_focus(&mut self) -> bool {
         self.0.h.b(op::WAIT_FOCUS, &[])
     }
-}
-
-/// # Safety
-/// `ctx`/`call` as in the module docs; `m` is readable and its strings live for the call.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_save_main_cfg(ctx: Ctx, call: Call, m: *const MainCfgC) {
-    // SAFETY: `m` is readable per the contract.
-    if let Some(m) = unsafe { m.as_ref() } {
-        config::save_main(&mut SaveHost(cfg(ctx, call)), &m.to_rust());
-    }
-}
-
-/// # Safety
-/// `r` points to an `OhplGa9Restart`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_restart_set(r: *mut config::Restart) {
-    // SAFETY: `r` is writable per the contract.
-    if let Some(r) = unsafe { r.as_mut() } {
-        r.set_needed();
-    }
-}
-
-/// # Safety
-/// `r` points to an `OhplGa9Restart`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_restart_due(r: *mut config::Restart) -> bool {
-    // SAFETY: `r` is writable per the contract.
-    unsafe { r.as_mut() }.is_some_and(config::Restart::show_due)
 }
 
 pub const T_INIT_FILE: u32 = 1;

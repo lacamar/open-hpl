@@ -23,17 +23,15 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
-#include "RustLuxFx.h"
+#include "RustLuxFxA12b.h"
+#include "LuxA12bDump.h"
 
 //----------------------------------------------
 
 class cLuxMusic
 {
-friend class cLuxMusicHandler;
 public:
-	cLuxMusic();
-
-	void Reset();
+	cLuxMusic() : mbLoop(false), mbResume(false), mfVolume(0), mbSpecialEffect(false) {}
 
 	tString msFile;
 	bool mbLoop;
@@ -44,71 +42,87 @@ public:
 
 //----------------------------------------
 
-
 class cLuxMusicHandler : public iLuxUpdateable
 {
-friend class cLuxMusicHandler_SaveData;
 public:	
-	cLuxMusicHandler();
-	~cLuxMusicHandler();
+	cLuxMusicHandler() : iLuxUpdateable("LuxMusicHandler")
+	{
+		OhplA12bInitHost();
+		mlH = ohpl_a12b_music_new();
+	}
+	~cLuxMusicHandler() { ohpl_a12b_music_free(mlH); }
 	
-	void OnStart();
-	void Update(float afTimeStep);
-	void Reset();
+	void OnStart(){}
+	void Update(float afTimeStep) { if(OhplA12bEnabled() == false) UpdateA12(afTimeStep); }
+	void UpdateA12(float afTimeStep) { ohpl_a12b_music_update(mlH, afTimeStep); }
+	void Reset() { ohpl_a12b_music_reset(mlH); }
 
-	float GetVolumeMul(){ return mfVolumeMul;}
+	float GetVolumeMul(){ return State().volumeMul; }
 
-	int GetMaxPrio(){ return mlMaxPrio;}
-	int GetCurrentMaxPrio(){ return mlCurrentMaxPrio;}
+	int GetMaxPrio(){ return State().maxPrio; }
+	int GetCurrentMaxPrio(){ return State().curPrio; }
 
-	cLuxMusic* GetMusic(int alPrio){ return &mvGameMusic[alPrio]; }
+	cLuxMusic GetMusic(int alPrio)
+	{
+		cLuxMusic music;
+		OhplA12bSlot slot;
+		if(ohpl_a12b_music_slot(mlH, alPrio, &slot, PutFile, &music.msFile) == 0) return music;
+		music.mbLoop = slot.loop != 0;
+		music.mbResume = slot.resume != 0;
+		music.mfVolume = slot.volume;
+		music.mbSpecialEffect = slot.special != 0;
+		return music;
+	}
+	void SetMusic(int alPrio, const cLuxMusic &aMusic)
+	{
+		OhplA12bSlot slot = { aMusic.mbLoop, aMusic.mbResume, aMusic.mbSpecialEffect, aMusic.mfVolume };
+		ohpl_a12b_music_set_slot(mlH, alPrio, &slot, aMusic.msFile.data(), aMusic.msFile.size());
+	}
 
-	void OnMapEnter(cLuxMap *apMap);
-	void OnMapLeave(cLuxMap *apMap);
+	void OnMapEnter(cLuxMap *apMap) { ohpl_a12b_music_on_map(mlH); }
+	void OnMapLeave(cLuxMap *apMap)
+	{
+		ohpl_a12b_music_on_map(mlH);
+		for(int i=0; i<60; ++i) Update(0.1f);
+	}
 
-	void Play(const tString &asFile, bool abLoop,float afVolume, float afFadeTime, int alPrio, bool abResume, bool abSpecialEffect);
-	void Stop(float afFadeTime, int alPrio);
+	void Play(const tString &asFile, bool abLoop,float afVolume, float afFadeTime, int alPrio, bool abResume, bool abSpecialEffect)
+	{
+		ohpl_a12b_music_play(mlH, asFile.data(), asFile.size(), abLoop, afVolume, afFadeTime, alPrio, abResume, abSpecialEffect);
+	}
+	void Stop(float afFadeTime, int alPrio) { ohpl_a12b_music_stop(mlH, afFadeTime, alPrio); }
 
-	void AddEnemy(eLuxEnemyMusic aType, iLuxEnemy *apEnemy);
-	void RemoveEnemy(eLuxEnemyMusic aType, iLuxEnemy *apEnemy);
-	bool EnemyExist(eLuxEnemyMusic aType, iLuxEnemy *apEnemy);
-	
-	void AddSearcher(iLuxEnemy *apEnemy);
-	void RemoveSearcher(iLuxEnemy *apEnemy);
-	bool SearcherExist(iLuxEnemy *apEnemy);
- 
+	void AddEnemy(eLuxEnemyMusic aType, iLuxEnemy *apEnemy) { ohpl_a12b_music_enemy(mlH, 0, aType, (size_t)apEnemy); }
+	void RemoveEnemy(eLuxEnemyMusic aType, iLuxEnemy *apEnemy) { ohpl_a12b_music_enemy(mlH, 1, aType, (size_t)apEnemy); }
+	bool EnemyExist(eLuxEnemyMusic aType, iLuxEnemy *apEnemy) { return ohpl_a12b_music_enemy(mlH, 2, aType, (size_t)apEnemy) != 0; }
+
+	// Save game access
+	cMusicHandler *Engine() { return gpBase->mpEngine->GetSound()->GetMusicHandler(); }
+	void SetSaveState(int alCurrentMaxPrio, bool abClosePlaying, bool abAttackPlaying, bool abSearchPlaying)
+	{
+		ohpl_a12b_music_set_state(mlH, alCurrentMaxPrio, abClosePlaying, abAttackPlaying, abSearchPlaying);
+	}
+	bool EnemyPlaying(eLuxEnemyMusic aType) { return State().playing[aType] != 0; }
+	bool EnemyClosePlaying() { return State().closePlaying != 0; }
+	int GetSlotNum() { return State().slotCount; }
+	void GetEnemies(eLuxEnemyMusic aType, std::vector<iLuxEnemy*> &avEnemies)
+	{
+		size_t lNum = ohpl_a12b_music_enemies(mlH, aType, NULL, 0);
+		std::vector<size_t> vRaw(lNum);
+		if(lNum > 0) ohpl_a12b_music_enemies(mlH, aType, &vRaw[0], lNum);
+		for(size_t i=0; i<lNum; ++i) avEnemies.push_back((iLuxEnemy*)vRaw[i]);
+	}
+
 private:
-	void UpdateDangerMusic(float afTimeStep);
-	void UpdateEnemyMusic(float afTimeStep, eLuxEnemyMusic aType);
+	static void PutFile(void *apCtx, const unsigned char *apP, size_t alN) { ((tString*)apCtx)->assign((const char*)apP, alN); }
+	OhplA12bMusicState State()
+	{
+		OhplA12bMusicState state = {};
+		ohpl_a12b_music_state(mlH, &state);
+		return state;
+	}
 
-	void PlayHighestPriority();
-	OhplGa9bEnemyMusic EnemyToRust();
-	void EnemyFromRust(const OhplGa9bEnemyMusic &e);
-
-	//////////////////
-	// Data
-	cMusicHandler *mpMusicHandler;
-	int mlMaxPrio;
-	float mfVolumeMul;
-
-	//////////////////
-	// Variables
-	float mfUpdateDangerCount;
-	float mfUpdateAttackCount;
-
-	std::vector<cLuxMusic> mvGameMusic;
-	
-	int mlCurrentMaxPrio;
-
-	tLuxEnemySet m_setEnemies[eLuxEnemyMusic_LastEnum];
-	
-	bool mbEnemyPlaying[eLuxEnemyMusic_LastEnum];
-	float mfEnemyPlayCount[eLuxEnemyMusic_LastEnum];
-	float mfEnemyStopCount[eLuxEnemyMusic_LastEnum];
-
-	bool mbEnemyClosePlaying;
-	float mfEnemyCloseCount;
-	float mfEnemyGoneCount;
+	uint64_t mlH;
 };
 
 //----------------------------------------------

@@ -17,9 +17,15 @@ mod renderer;
 mod tests;
 mod voice;
 
+mod ffi12;
 mod fxffi;
 mod fxobj;
 pub mod host;
+pub(crate) mod host12;
+mod insanity_h;
+mod music_h;
 mod rend;
+#[cfg(test)]
+mod tests12;
 #[cfg(test)]
 mod tests_a12a;

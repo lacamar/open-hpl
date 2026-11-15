@@ -1,0 +1,2 @@
+music.txt, insanity_bugs.txt: slices of the OHPL_A12B_DUMP written by the C++ originals (hook commit 9df9ce0 plus cMath::Randomize(1234) in LuxA12bDump.cpp) in Amnesia 02_library.
+Run: OHPL_A12B_DUMP=out.txt scripts/soma-sweep.py --map 02_library (Amnesia). tests12.rs replays them against a fake host.

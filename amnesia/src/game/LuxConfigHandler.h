@@ -23,80 +23,87 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
-#include "RustLuxBase.h"
+#include "RustLuxFxA12b.h"
 
 //----------------------------------------------
 
+// The settings live in the Rust config handler; the members are views of its numbers.
 class cLuxConfigHandler
 {
 public:	
 	cLuxConfigHandler();
-	~cLuxConfigHandler();
+	~cLuxConfigHandler() { ohpl_a12b_cfg_free(mlH); }
 
 	void LoadMainConfig();
 	void SaveMainConfig();
 
 	bool ShowRestartWarning(cGuiSet* apSet, void* apObject, tGuiCallbackFunc apCallback);
 
-	void SetGameNeedsRestart() { ohpl_ga9_restart_set(&mRestart); }
+	void SetGameNeedsRestart() { ohpl_a12b_cfg_restart(mlH, 0); }
 
-	// Variables
-	bool mbLoadDebugMenu;
-	bool mbFirstStart;
-	tString msScreenShotExt;
+	tString LangFile(){ return Str(0); }
+	void SetLangFile(const tString &asX){ SetStr(0, asX); }
+	tString ScreenShotExt(){ return Str(1); }
+	tString Renderer(){ return Str(2); }
+	void SetRenderer(const tString &asX){ SetStr(2, asX); }
+	tString ColorOutput(){ return Str(3); }
+	void SetColorOutput(const tString &asX){ SetStr(3, asX); }
 
-	bool mbCreateAndLoadCompressedMaps;
-	bool mbForceCacheLoadingAndSkipSaving;
-
-	tString msLangFile;
-	
-	cVector2l mvScreenSize;
-    int mlDisplay;
-	bool mbFullscreen;
-	bool mbVSync;
-	bool mbAdaptiveVSync;
-	int mlTextureQuality;
-	int mlTextureFilter;
-	float mfTextureAnisotropy;
-	int mlShadowQuality;
-	int mlShadowRes;
-
-	int mlGuiScale;
-
-	tString msRenderer;
-	tString msColorOutput;
-	float mfPaperWhite;
-	float mfPeakNits;
-
-	bool mbSSAOActive;
-	int mlSSAOSamples;
-	int mlSSAOResolution; //0= medium(div2), 1=high (same as screen resolution)
-	
-	int mlParallaxQuality;
-	bool mbParallaxEnabled;
-
-	bool mbOcclusionTestLights;
-	
-	bool mbEdgeSmooth;
-		
-	bool mbWorldReflection;
-	bool mbRefraction;
-	bool mbShadowsActive;
-
-	bool mbForceShaderModel3And4Off;
-
-	bool mbFastPhysicsLoad;
-	bool mbFastStaticLoad;
-	bool mbFastEntityLoad;
-
-	int mlSoundDevID;
-	int mlMaxSoundChannels;
-	int mlSoundStreamBuffers;
-	int mlSoundStreamBufferSize;
-
-	
 private:
-	OhplGa9Restart mRestart;
+	static void PutStr(void *apCtx, const unsigned char *apP, size_t alN) { ((tString*)apCtx)->assign((const char*)apP, alN); }
+	tString Str(int alWhich) { tString s; ohpl_a12b_cfg_str(mlH, alWhich, PutStr, &s); return s; }
+	void SetStr(int alWhich, const tString &asX) { ohpl_a12b_cfg_set_str(mlH, alWhich, asX.data(), asX.size()); }
+
+	uint64_t mlH;
+	OhplA12bMainNums *mpN;
+
+public:
+	bool &mbLoadDebugMenu;
+	bool &mbFirstStart;
+	bool &mbCreateAndLoadCompressedMaps;
+	bool &mbForceCacheLoadingAndSkipSaving;
+
+	cVector2l &mvScreenSize;
+    int &mlDisplay;
+	bool &mbFullscreen;
+	bool &mbVSync;
+	bool &mbAdaptiveVSync;
+	int &mlTextureQuality;
+	int &mlTextureFilter;
+	float &mfTextureAnisotropy;
+	int &mlShadowQuality;
+	int &mlShadowRes;
+
+	int &mlGuiScale;
+
+	float &mfPaperWhite;
+	float &mfPeakNits;
+
+	bool &mbSSAOActive;
+	int &mlSSAOSamples;
+	int &mlSSAOResolution; //0= medium(div2), 1=high (same as screen resolution)
+	
+	int &mlParallaxQuality;
+	bool &mbParallaxEnabled;
+
+	bool &mbOcclusionTestLights;
+	
+	bool &mbEdgeSmooth;
+		
+	bool &mbWorldReflection;
+	bool &mbRefraction;
+	bool &mbShadowsActive;
+
+	bool &mbForceShaderModel3And4Off;
+
+	bool &mbFastPhysicsLoad;
+	bool &mbFastStaticLoad;
+	bool &mbFastEntityLoad;
+
+	int &mlSoundDevID;
+	int &mlMaxSoundChannels;
+	int &mlSoundStreamBuffers;
+	int &mlSoundStreamBufferSize;
 };
 
 //----------------------------------------------

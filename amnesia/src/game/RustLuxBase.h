@@ -172,23 +172,6 @@ enum
 	eOhplGa9Tag_AmfpResources = 1, eOhplGa9Tag_AmfpMaterials = 2, eOhplGa9Tag_AmfpGameName = 3, eOhplGa9Tag_AmfpError = 4,
 };
 
-struct OhplGa9MainCfg
-{
-	bool load_debug_menu, first_start, force_cache, fullscreen, vsync, adaptive_vsync;
-	bool fast_physics, fast_static, fast_entity, occlusion_test_lights, shadows_active;
-	bool world_reflection, refraction, edge_smooth, ssao_active, parallax_enabled, force_sm34_off;
-	int32_t screen_width, screen_height, display, shadow_quality, shadow_res, gui_scale;
-	int32_t ssao_samples, ssao_resolution, parallax_quality, texture_quality, texture_filter;
-	int32_t sound_dev_id, max_sound_channels, sound_stream_buffers, sound_stream_buffer_size;
-	float paper_white, peak_nits, texture_anisotropy;
-	OhplGa9Str lang_file, screenshot_ext, renderer, color_output;
-};
-
-struct OhplGa9Restart
-{
-	bool needed, dialog_shown;
-};
-
 struct OhplGa9StartArgs
 {
 	OhplGa9Str file, folder, pos;
@@ -260,10 +243,6 @@ extern "C"
 	void ohpl_ga9_ret_bytes(OhplGa9Ret *r, const unsigned char *p, size_t n);
 	void ohpl_ga9_ret_wide(OhplGa9Ret *r, const uint32_t *p, size_t n);
 
-	void ohpl_ga9_load_main_cfg(void *ctx, OhplGa9Call call, const unsigned char *def_lang, size_t n, OhplGa9MainCfg *out, OhplGa9Emit emit, void *ectx);
-	void ohpl_ga9_save_main_cfg(void *ctx, OhplGa9Call call, const OhplGa9MainCfg *m);
-	void ohpl_ga9_restart_set(OhplGa9Restart *r);
-	bool ohpl_ga9_restart_due(OhplGa9Restart *r);
 
 	void ohpl_ga9_parse_cmdline(const unsigned char *cmd, size_t n, bool *out, OhplGa9Emit emit, void *ectx);
 	void ohpl_ga9_error_text(const uint32_t *msg, size_t n, OhplGa9Emit emit, void *ectx);
