@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -70,11 +71,37 @@ inline bool OhplXmlLoadFile(OhplXmlDoc* doc, FILE* file)
 	return ohpl_xml_doc_load(doc, buf.data(), length, ok);
 }
 
+inline void OhplXmlDumpBytes(const char* tag, const char* data, size_t n)
+{
+	const char* path = getenv("OHPL_L9_XMLDUMP");
+	if (!path) return;
+	unsigned long long h = 1469598103934665603ull;
+	for (size_t i = 0; i < n; ++i) h = (h ^ (unsigned char)data[i]) * 1099511628211ull;
+	if (FILE* f = fopen(path, "a")) {
+		fprintf(f, "%s %zu %016llx\n", tag, n, h);
+		fclose(f);
+	}
+}
+
+inline void OhplXmlDumpFile(FILE* file)
+{
+	if (!getenv("OHPL_L9_XMLDUMP")) return;
+	fflush(file);
+	long end = ftell(file);
+	if (end < 0) return;
+	std::string buf(end, '\0');
+	fseek(file, 0, SEEK_SET);
+	size_t got = fread(&buf[0], 1, end, file);
+	fseek(file, end, SEEK_SET);
+	OhplXmlDumpBytes("file", buf.data(), got);
+}
+
 inline bool OhplXmlSaveFile(const OhplXmlDoc* doc, FILE* file)
 {
 	std::string out;
 	ohpl_xml_doc_print_file(doc, OhplXmlAssign, &out);
 	fwrite(out.data(), 1, out.size(), file);
+	OhplXmlDumpFile(file);
 	return ferror(file) == 0;
 }
 

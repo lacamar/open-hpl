@@ -33,6 +33,7 @@
 #include "physics/PhysicsBody.h"
 
 #include "impl/tinyXML/tinyxml.h"
+#include "system/RustXml.h"
 
 
 namespace hpl {
@@ -316,6 +317,7 @@ namespace hpl {
 			hplDelete(pXmlDoc);
 			return;
 		}
+		OhplXmlDumpFile(pFile);
 		fclose(pFile);
 		hplDelete(pXmlDoc);
 	}

@@ -1439,7 +1439,7 @@ namespace hpl {
 				cDate dateMapFile = cPlatform::FileModifiedDate(sMapPath);
 				cDate dateAIFile = cPlatform::FileModifiedDate(sAiFileName);
 
-				if(dateAIFile > dateMapFile || cResources::GetForceCacheLoadingAndSkipSaving())
+				if((dateAIFile > dateMapFile && !getenv("OHPL_L9_XMLDUMP")) || cResources::GetForceCacheLoadingAndSkipSaving())
 				{
 					bLoadedFromFile = true;
 					pContainer->LoadFromFile(sAiFileName);

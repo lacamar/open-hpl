@@ -30,6 +30,7 @@
 
 
 #include "impl/tinyXML/tinyxml.h"
+#include "system/RustXml.h"
 
 #include <algorithm>
 
@@ -397,6 +398,7 @@ namespace hpl {
 			hplDelete(pXmlDoc);
 			return;
 		}
+		OhplXmlDumpFile(pFile);
 		fclose(pFile);
 		hplDelete(pXmlDoc);
 	}
