@@ -21,6 +21,7 @@
 
 #include "LuxInputHandler.h"
 #include "RustLuxMenu.h"
+#include "RustMenuHost.h"
 
 static_assert(sizeof(cSubActionWrapper) == sizeof(OhplGa7aSub), "cSubActionWrapper layout");
 static_assert(offsetof(cSubActionWrapper, mType) == offsetof(OhplGa7aSub, kind), "mType");
@@ -617,6 +618,14 @@ cLuxMainMenu_KeyConfig::cLuxMainMenu_KeyConfig(cGuiSet *apGuiSet, cGuiSkin *apGu
 	mpCurrentTipEntry = NULL;
 	mbTipFadeOut = false;
 	mbTipFadeRestore = false;
+
+	if(getenv("OHPL_A10A_DUMP"))
+	{
+		CreateGui();
+		SetActive(true);
+		OhplA10aDumpWindow("keyconfig", mpWindow);
+		SetActive(false);
+	}
 }
 
 //-----------------------------------------------------------------------

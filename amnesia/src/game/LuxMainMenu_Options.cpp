@@ -31,6 +31,7 @@
 #include "LuxPlayer.h"
 #include "LuxHelpFuncs.h"
 #include "RustLuxMenu.h"
+#include "RustMenuHost.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -128,6 +129,14 @@ cLuxMainMenu_Options::cLuxMainMenu_Options(cGuiSet *apGuiSet, cGuiSkin *apGuiSki
 	mbSettingInitialValues = false;
 
 	mbKeyConfigOpen = false;
+
+	if(getenv("OHPL_A10A_DUMP"))
+	{
+		CreateGui();
+		SetActive(true);
+		OhplA10aDumpWindow("options", mpWindow);
+		SetActive(false);
+	}
 }
 
 //-----------------------------------------------------------------------
