@@ -454,7 +454,8 @@ void cLuxMap::SetCheckPoint(const tString& asName, const tString& asStartPos, co
 	msCheckPointMusic = "";
 	for(int i= gpBase->mpMusicHandler->GetMaxPrio();i>=0; --i)
 	{
-		cLuxMusic *pMusic = gpBase->mpMusicHandler->GetMusic(i);
+		cLuxMusic music = gpBase->mpMusicHandler->GetMusic(i);
+		cLuxMusic *pMusic = &music;
 		if(ohpl_ga5_checkpoint_music_pick(pMusic->mbLoop, pMusic->mbSpecialEffect, pMusic->msFile.data(), pMusic->msFile.size()))
 		{
 			msCheckPointMusic = pMusic->msFile;

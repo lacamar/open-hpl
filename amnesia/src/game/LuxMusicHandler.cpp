@@ -19,6 +19,7 @@
 
 #include "LuxMusicHandler.h"
 #include "RustLuxFx.h"
+#include "LuxA12bDump.h"
 
 #include "LuxMap.h"
 #include "LuxMapHandler.h"
@@ -100,6 +101,7 @@ void cLuxMusicHandler::Reset()
 		mfEnemyStopCount[i] = 0;
 	}
 
+	OhplA12Log("m reset_resume");
 	gpBase->mpEngine->GetSound()->GetMusicHandler()->ResetResumeData();
 
 	mbEnemyClosePlaying = false;
@@ -114,6 +116,13 @@ void cLuxMusicHandler::Reset()
 
 void cLuxMusicHandler::Update(float afTimeStep)
 {
+	if(OhplA12Enabled()) return;
+	UpdateA12(afTimeStep);
+}
+
+void cLuxMusicHandler::UpdateA12(float afTimeStep)
+{
+	OhplA12Log("m dead %d", gpBase->mpPlayer->IsDead() ? 1 : 0);
 	if(gpBase->mpPlayer->IsDead()) return;
 
 	///////////////////////////////////
@@ -128,6 +137,7 @@ void cLuxMusicHandler::Update(float afTimeStep)
 	///////////////////////////////////
 	//Check if current song is over
 	bool bNoSong = mlCurrentMaxPrio >= 0 && mpMusicHandler->GetCurrentSong()==NULL;
+	if(mlCurrentMaxPrio >= 0) OhplA12Log("m nosong %d", bNoSong ? 1 : 0);
 	if(ohpl_ga9b_music_song_over(mlCurrentMaxPrio, bNoSong))
 	{
 		mvGameMusic[mlCurrentMaxPrio].msFile = "";
@@ -150,6 +160,7 @@ void cLuxMusicHandler::Play(const tString &asFile, bool abLoop,float afVolume, f
 	//If higher or equal to song playing, start playing
 	if(out.play)
 	{
+		OhplA12Log("m play %s %.9g %.9g %d %d", asFile.c_str(), out.volume, out.fadeSpeed, abLoop ? 1 : 0, abResume ? 1 : 0);
 		mpMusicHandler->Play(asFile,out.volume,out.fadeSpeed,abLoop, abResume);
 	}
 	mlCurrentMaxPrio = out.curPrio;
@@ -176,6 +187,7 @@ void cLuxMusicHandler::Stop(float afFadeTime, int alPrio)
 
 	if(out.stop)
 	{
+		OhplA12Log("m stop %.9g", out.fadeSpeed);
 		mpMusicHandler->Stop(out.fadeSpeed);
 
 		//Play next song in priority if there is any.
@@ -393,6 +405,7 @@ void cLuxMusicHandler::PlayHighestPriority()
 		if(ops.ops[i].kind == kOhplGa9bMusicPlay)
 		{
 			//If looped, play
+			OhplA12Log("m play %s %.9g %.9g %d %d", mvGameMusic[lPrio].msFile.c_str(), mvGameMusic[lPrio].mfVolume, 0.3f, 1, mvGameMusic[lPrio].mbResume ? 1 : 0);
 			mpMusicHandler->Play(	mvGameMusic[lPrio].msFile, mvGameMusic[lPrio].mfVolume,	0.3f,true, mvGameMusic[lPrio].mbResume);
 			mlCurrentMaxPrio = lPrio;
 		}

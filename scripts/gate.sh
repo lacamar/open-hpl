@@ -142,8 +142,8 @@ half() {
 	done
 	if has amnesia; then
 		for M in $DUMP_AMNESIA; do
-			rm -f "$OUT/h13-$M-$impl.txt" "$OUT/a7-$M-$impl.txt" "$OUT/a10a-$M-$impl.txt" "$OUT/a11a-$M-$impl.txt" "$OUT/a11b-$M-$impl.txt"
-			ENVX="$extra OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A10A_DUMP=$OUT/a10a-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt OHPL_A11B_DUMP=$OUT/a11b-$M-$impl.txt" \
+			rm -f "$OUT/h13-$M-$impl.txt" "$OUT/a7-$M-$impl.txt" "$OUT/a10a-$M-$impl.txt" "$OUT/a11a-$M-$impl.txt" "$OUT/a11b-$M-$impl.txt" "$OUT/a12b-$M-$impl.txt"
+			ENVX="$extra OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A10A_DUMP=$OUT/a10a-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt OHPL_A11B_DUMP=$OUT/a11b-$M-$impl.txt OHPL_A12B_DUMP=$OUT/a12b-$M-$impl.txt" \
 				sweep "$impl" amnesia "$OUT/dump-$impl-amnesia.json" --map "$M"
 		done
 	fi
@@ -171,7 +171,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a9-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -304,7 +304,7 @@ def ok(p):
 if not quick:
     names = [f"h4seq-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
-        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b")] + ["a9"]
+        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "a12b")] + ["a9"]
     names += [f"a10b-boot-{g}" for g in ("amnesia", "amfp") if g in games]
     if "amnesia" in games:
         names += ["a10b-play-amnesia"]

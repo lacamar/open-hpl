@@ -54,6 +54,7 @@ public:
 	
 	void OnStart();
 	void Update(float afTimeStep);
+	void UpdateA12(float afTimeStep);
 	void Reset();
 
 	float GetVolumeMul(){ return mfVolumeMul;}
@@ -61,7 +62,7 @@ public:
 	int GetMaxPrio(){ return mlMaxPrio;}
 	int GetCurrentMaxPrio(){ return mlCurrentMaxPrio;}
 
-	cLuxMusic* GetMusic(int alPrio){ return &mvGameMusic[alPrio]; }
+	cLuxMusic GetMusic(int alPrio){ return mvGameMusic[alPrio]; }
 
 	void OnMapEnter(cLuxMap *apMap);
 	void OnMapLeave(cLuxMap *apMap);

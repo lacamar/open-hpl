@@ -40,6 +40,7 @@
 #include "LuxLoadScreenHandler.h"
 
 #include "LuxDebugHandler.h"
+#include "LuxA12bDump.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ACTION LISTS
@@ -126,8 +127,9 @@ cLuxInputHandler::~cLuxInputHandler()
 void cLuxInputHandler::LoadUserConfig()
 {
 	OhplGa9Settings settings;
-	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r)
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t n, OhplGa9Ret *r)
 	{
+		OhplA12LogCall("input", op, a, n);
 		if(op >= eOhplGa9Op_ActionCreate) ActionCall(op, a, r);
 		else if(op >= eOhplGa9Op_Cfg2) OhplGa9CfgCall(gpBase->mpUserKeyConfig, op - eOhplGa9Op_Cfg2, a, r);
 		else OhplGa9CfgCall(gpBase->mpUserConfig, op, a, r);
@@ -180,8 +182,9 @@ void cLuxInputHandler::SaveUserConfig()
 	settings.gamepad_walk_sensitivity = mfGamepadWalkSensitivity;
 	settings.gamepad_look_sensitivity = mfGamepadLookSensitivity;
 
-	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r)
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t n, OhplGa9Ret *r)
 	{
+		OhplA12LogCall("input", op, a, n);
 		if(op >= eOhplGa9Op_ActionCreate) ActionCall(op, a, r);
 		else if(op >= eOhplGa9Op_Cfg2) OhplGa9CfgCall(gpBase->mpUserKeyConfig, op - eOhplGa9Op_Cfg2, a, r);
 		else OhplGa9CfgCall(gpBase->mpUserConfig, op, a, r);
@@ -410,10 +413,11 @@ void cLuxInputHandler::UpdateGlobalInput()
 		tWString sScreenShotDir = cString::AddSlashAtEndW(cPlatform::GetSystemSpecialPath(eSystemPath_XDGPictures)) + _W("OpenHPL");
 		if (cPlatform::FolderExists(sScreenShotDir) == false) cPlatform::CreateFolder(sScreenShotDir);
 
+		tString sShotExt = gpBase->mpConfigHandler->ScreenShotExt();
 		auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r) { r->i = cPlatform::FileExists(OhplGa9GetW(a[0])); };
 		auto emit = [&](uint32_t tag, const void *p, size_t n) { sFileName = OhplGa9EmitW(p, n); };
 		ohpl_ga9_screenshot_name((const uint32_t*)sScreenShotDir.data(), sScreenShotDir.size(),
-								(const unsigned char*)gpBase->mpConfigHandler->msScreenShotExt.data(), gpBase->mpConfigHandler->msScreenShotExt.size(),
+								(const unsigned char*)sShotExt.data(), sShotExt.size(),
 								&call, OhplGa9CallOf<decltype(call)>::Fn(), OhplGa9EmitOf<decltype(emit)>::Fn(), &emit);
 
 		cEngine *pEngine = gpBase->mpEngine;

@@ -1049,7 +1049,7 @@ bool cLuxBase::InitMainConfig()
 			mbShowMenu = true;
 			mbShowPreMenu = true;
 			mpConfigHandler->mbLoadDebugMenu = false;
-			mpConfigHandler->msLangFile = "english.lang";
+			mpConfigHandler->SetLangFile("english.lang");
 		#endif
 	}
 
@@ -1166,8 +1166,8 @@ bool cLuxBase::InitEngine()
 	vars.mGraphics.mlDisplay = mpConfigHandler->mlDisplay;
 	vars.mGraphics.mbFullscreen =  mpConfigHandler->mbFullscreen;
 	vars.mGraphics.msWindowCaption = msGameName + " Loading...";
-	vars.mGraphics.msRenderer = mpConfigHandler->msRenderer;
-	vars.mGraphics.msColorOutput = mpConfigHandler->msColorOutput;
+	vars.mGraphics.msRenderer = mpConfigHandler->Renderer();
+	vars.mGraphics.msColorOutput = mpConfigHandler->ColorOutput();
 	vars.mGraphics.mfPaperWhite = mpConfigHandler->mfPaperWhite;
 	vars.mGraphics.mfPeakNits = mpConfigHandler->mfPeakNits;
 

@@ -101,15 +101,15 @@ static void OptRead(OhplA10aOpts& o)
 	o.showCrosshair = gpBase->mpPlayer->GetShowCrosshair();
 	o.focusIconStyle = gpBase->mpPlayer->GetFocusIconStyle();
 	o.showCommentary = gpBase->mpMapHandler->GetShowCommentary();
-	SetStr(o.lang, pCfg->msLangFile);
+	SetStr(o.lang, pCfg->LangFile());
 	o.resX = pCfg->mvScreenSize.x;
 	o.resY = pCfg->mvScreenSize.y;
 	o.display = pCfg->mlDisplay;
 	o.fullscreen = pCfg->mbFullscreen;
 	o.vsync = pCfg->mbVSync;
 	o.showFps = gpBase->mpDebugHandler->GetShowFPS();
-	SetStr(o.renderer, pCfg->msRenderer);
-	SetStr(o.color, pCfg->msColorOutput);
+	SetStr(o.renderer, pCfg->Renderer());
+	SetStr(o.color, pCfg->ColorOutput());
 	o.paperWhite = pCfg->mfPaperWhite;
 	o.peakNits = pCfg->mfPeakNits;
 	o.guiScale = pCfg->mlGuiScale;
@@ -145,7 +145,7 @@ static void OptRead(OhplA10aOpts& o)
 static void OptApply(const OhplA10aOpts& o, bool abCommentary)
 {
 	cLuxConfigHandler* pCfg = gpBase->mpConfigHandler;
-	pCfg->msLangFile = GetStr(o.lang);
+	pCfg->SetLangFile(GetStr(o.lang));
 	gpBase->mpMessageHandler->SetShowSubtitles(o.showSubtitles);
 	gpBase->mpMessageHandler->SetShowEffectSubtitles(o.showEffectSubtitles);
 	gpBase->mpHintHandler->SetActive(o.showHints);
@@ -163,11 +163,11 @@ static void OptApply(const OhplA10aOpts& o, bool abCommentary)
 	pGfx->GetLowLevel()->SetVsyncActive(pCfg->mbVSync, pCfg->mbAdaptiveVSync);
 	pGfx->GetLowLevel()->SetGammaCorrection(o.gamma);
 	gpBase->mpDebugHandler->SetShowFPS(o.showFps);
-	pCfg->msRenderer = GetStr(o.renderer);
-	pCfg->msColorOutput = GetStr(o.color);
+	pCfg->SetRenderer(GetStr(o.renderer));
+	pCfg->SetColorOutput(GetStr(o.color));
 	pCfg->mfPaperWhite = o.paperWhite;
 	pCfg->mfPeakNits = o.peakNits;
-	pGfx->GetLowLevel()->SetColorOutput(pCfg->msColorOutput, pCfg->mfPaperWhite, pCfg->mfPeakNits);
+	pGfx->GetLowLevel()->SetColorOutput(pCfg->ColorOutput(), pCfg->mfPaperWhite, pCfg->mfPeakNits);
 	pCfg->mlGuiScale = o.guiScale;
 	pCfg->mbParallaxEnabled = o.parallax;
 	pCfg->mlTextureQuality = o.texQuality;

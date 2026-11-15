@@ -40,16 +40,20 @@ public:
 
 	void SetGameNeedsRestart() { ohpl_ga9_restart_set(&mRestart); }
 
+	tString LangFile(){ return msLangFile; }
+	void SetLangFile(const tString &asX){ msLangFile = asX; }
+	tString ScreenShotExt(){ return msScreenShotExt; }
+	tString Renderer(){ return msRenderer; }
+	void SetRenderer(const tString &asX){ msRenderer = asX; }
+	tString ColorOutput(){ return msColorOutput; }
+	void SetColorOutput(const tString &asX){ msColorOutput = asX; }
+
 	// Variables
 	bool mbLoadDebugMenu;
 	bool mbFirstStart;
-	tString msScreenShotExt;
-
 	bool mbCreateAndLoadCompressedMaps;
 	bool mbForceCacheLoadingAndSkipSaving;
 
-	tString msLangFile;
-	
 	cVector2l mvScreenSize;
     int mlDisplay;
 	bool mbFullscreen;
@@ -63,8 +67,6 @@ public:
 
 	int mlGuiScale;
 
-	tString msRenderer;
-	tString msColorOutput;
 	float mfPaperWhite;
 	float mfPeakNits;
 
@@ -96,6 +98,10 @@ public:
 
 	
 private:
+	tString msScreenShotExt;
+	tString msLangFile;
+	tString msRenderer;
+	tString msColorOutput;
 	OhplGa9Restart mRestart;
 };
 

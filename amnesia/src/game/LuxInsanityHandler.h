@@ -253,6 +253,7 @@ public:
 	void OnStart();
 	void Reset();
 	void Update(float afTimeStep);
+	void UpdateA12(float afTimeStep);
 	void OnDraw(float afFrameTime);
 
 	void StartEvent();
@@ -261,7 +262,11 @@ public:
 	void StopCurrentEvent();
 
 	int GetEventNum(){ return (int)mvEvents.size();}
-	iLuxInstanityEvent *GetEvent(int alIdx){ return mvEvents[alIdx]; };
+	tString GetEventName(int alIdx){ return mvEvents[alIdx]->GetName(); }
+	tString GetEventSet(int alIdx){ return mvEvents[alIdx]->GetSet(); }
+	float GetEventMaxSanity(int alIdx){ return mvEvents[alIdx]->GetMaxSanity(); }
+	bool EventIsUsed(int alIdx){ return mvEvents[alIdx]->IsUsed(); }
+	bool EventIsOver(int alIdx){ return mvEvents[alIdx]->IsOver(); }
 
 	void ReloadEvents();
 

@@ -27,6 +27,7 @@
 #include "LuxProgressLogHandler.h"
 #include "LuxEffectHandler.h"
 #include "LuxMessageHandler.h"
+#include "LuxA12bDump.h"
 
 //////////////////////////////////////////////////////////////////////////
 // INSANITY EVENT INTERFACE
@@ -66,6 +67,7 @@ void iLuxInstanityEvent::Start()
 	mbUsed = true;
 	mbOver = false;
 
+	OhplA12Log("i prog Starting Insanity event: '%s' set: '%s'", msName.c_str(), msSet.c_str());
 	gpBase->mpProgressLogHandler->AddLog(eLuxProgressLogLevel_Low, "Starting Insanity event: '"+msName+"'"+ " set: '"+msSet+"'");
 	gpBase->mpDebugHandler->AddMessage(	_W("Starting Insanity event: '")+cString::To16Char(msName)+_W("'")+
 										_W("set: '")+cString::To16Char(msSet)+_W("'") , false);
@@ -97,7 +99,10 @@ void cLuxInstanityEvent_Bugs::OnLoadData(cXmlElement * apVarElem)
 {
 	tString sImage = apVarElem->GetAttributeString("BugImage","");
 	if(sImage != "")
+	{
+		OhplA12Log("i gfx_image %s", sImage.c_str());
 		mpBugImage = gpBase->mpEngine->GetGui()->CreateGfxImage(sImage, eGuiMaterial_Alpha);
+	}
 
 	mlNumOfBugs = apVarElem->GetAttributeInt("NumOfBugs",10);
 
@@ -125,6 +130,7 @@ void cLuxInstanityEvent_Bugs::OnStart()
 	LuxCalcGuiSetScreenOffset(vGuiSetCenterSize, vGuiSetSize, vGuiSetOffset);
 	cVector2f vGuiSetMin = cVector2f(-vGuiSetOffset.x,-vGuiSetOffset.y);
 	cVector2f vGuiSetMax = cVector2f(800.0f+vGuiSetOffset.x, 600.0f+vGuiSetOffset.y);
+	OhplA12Log("i gui_bounds %.9g %.9g %.9g %.9g active %.9g %.9g", vGuiSetMin.x, vGuiSetMin.y, vGuiSetMax.x, vGuiSetMax.y, mpBugImage->GetActiveSize().x, mpBugImage->GetActiveSize().y);
 
 	//////////////////////////////////////////
 	// Create the bugs 
@@ -141,10 +147,13 @@ void cLuxInstanityEvent_Bugs::OnStart()
 	{
 		cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
 
+		OhplA12Log("i stream %s %d %.9g", msLoopSound.c_str(), 1, mfSoundVolume);
 		mpSoundEntry = pSoundHandler->PlayGuiStream(msLoopSound, true, mfSoundVolume);
+		OhplA12Log("i stream result %d", mpSoundEntry ? 1 : 0);
 		if(mpSoundEntry)
 		{
 			mlSoundEntryID = mpSoundEntry->GetId();
+			OhplA12Log("i fadein %.9g %.9g", 1.0f, 1.0f / 2.0f);
 			mpSoundEntry->FadeIn(1, 1.0f / 2.0f);
 		}
 	}
@@ -165,8 +174,10 @@ void cLuxInstanityEvent_Bugs::OnExit()
 	//////////////////////////////////
 	// Destroy Sound
 	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
+	OhplA12Log("i bugs exit valid %d", (mpSoundEntry && pSoundHandler->IsValid(mpSoundEntry, mlSoundEntryID)) ? 1 : 0);
 	if(mpSoundEntry && pSoundHandler->IsValid(mpSoundEntry, mlSoundEntryID))
 	{
+		OhplA12Log("i fadeout %.9g", 1.0f/2.0f);
 		mpSoundEntry->FadeOut(1.0f/2.0f);
 		mpSoundEntry = NULL;
 	}
@@ -199,7 +210,10 @@ void cLuxInstanityEvent_Bugs::OnDraw(float afFrameTime)
 	for(int i=0; i<mlNumOfBugs; ++i)
 	{
 		cLuxInstanityEvent_Bugs_Bug *pBug = &mvBugs[i];
-		
+		{
+			cVector2f vSz = mpBugImage->GetActiveSize()*pBug->mfSizeMul;
+			OhplA12Log("i bug %d pos %.9g %.9g size %.9g %.9g col %.9g angle %.9g", i, pBug->mvPos.x, pBug->mvPos.y, vSz.x, vSz.y, pBug->mfAlpha, pBug->mfAngle);
+		}
 		pSet->DrawGfx(mpBugImage, pBug->mvPos, mpBugImage->GetActiveSize()*pBug->mfSizeMul, cColor(1,pBug->mfAlpha),
 						eGuiMaterial_LastEnum, pBug->mfAngle);
 	}
@@ -251,12 +265,17 @@ void cLuxInstanityEvent_Particles::OnStart()
 	{
 		cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
 
+		OhplA12Log("i stream %s %d %.9g", msSoundFile.c_str(), mbLoopSound ? 1 : 0, mfSoundVolume);
 		mpSoundEntry = pSoundHandler->PlayGuiStream(msSoundFile, mbLoopSound, mfSoundVolume);
+		OhplA12Log("i stream result %d", mpSoundEntry ? 1 : 0);
         if(mpSoundEntry)
 		{
 			mlSoundEntryID = mpSoundEntry->GetId();
 			if(mfSoundFadeInTime>0)
+			{
+				OhplA12Log("i fadein %.9g %.9g", 1.0f, 1.0f / mfSoundFadeInTime);
 				mpSoundEntry->FadeIn(1, 1.0f / mfSoundFadeInTime);
+			}
 		}
 	}
 
@@ -266,8 +285,11 @@ void cLuxInstanityEvent_Particles::OnStart()
 	{
 		cWorld *pWorld = gpBase->mpMapHandler->GetCurrentMap()->GetWorld();
 		mpPS = pWorld->CreateParticleSystem(GetName()+"_PS",msParticleSystem,1);
+		OhplA12Log("i ps create %s %s %d", (GetName()+"_PS").c_str(), msParticleSystem.c_str(), mpPS ? 1 : 0);
 		if(mpPS)
 		{
+			cVector3f vCam = gpBase->mpPlayer->GetCamera()->GetPosition();
+			OhplA12Log("i ps pos %.9g %.9g %.9g", vCam.x, vCam.y, vCam.z);
 			mpPS->SetPosition(gpBase->mpPlayer->GetCamera()->GetPosition());
 			mpPS->SetIsSaved(false);
 		}
@@ -286,8 +308,10 @@ void cLuxInstanityEvent_Particles::OnExit()
 	if (pMap)
 	{
 		cWorld *pWorld = pMap->GetWorld();
+		OhplA12Log("i ps exit exists %d", (mpPS && pWorld->ParticleSystemExists(mpPS)) ? 1 : 0);
 		if(mpPS && pWorld->ParticleSystemExists(mpPS))
 		{
+			OhplA12Log("i ps kill");
 			mpPS->Kill();
 			mpPS = NULL;
 		}
@@ -296,12 +320,19 @@ void cLuxInstanityEvent_Particles::OnExit()
 	//////////////////////////////////
 	// Destroy Sound
 	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
+	OhplA12Log("i particles exit valid %d", (mpSoundEntry && pSoundHandler->IsValid(mpSoundEntry, mlSoundEntryID)) ? 1 : 0);
 	if(mpSoundEntry && pSoundHandler->IsValid(mpSoundEntry, mlSoundEntryID))
 	{
 		if(mfSoundFadeOutTime>0)
+		{
+			OhplA12Log("i fadeout %.9g", 1.0f/mfSoundFadeOutTime);
 			mpSoundEntry->FadeOut(1.0f/mfSoundFadeOutTime);
+		}
 		else
+		{
+			OhplA12Log("i sound stop");
 			mpSoundEntry->Stop();
+		}
 		mpSoundEntry = NULL;
 	}
 }
@@ -313,8 +344,11 @@ void cLuxInstanityEvent_Particles::Update(float afTimeStep)
 	/////////////////////////////////
 	// Particles
 	cWorld *pWorld = gpBase->mpMapHandler->GetCurrentMap()->GetWorld();
+	OhplA12Log("i ps exists %d", (mpPS && pWorld->ParticleSystemExists(mpPS)) ? 1 : 0);
 	if(mpPS && pWorld->ParticleSystemExists(mpPS))
 	{
+		cVector3f vCam = gpBase->mpPlayer->GetCamera()->GetPosition();
+		OhplA12Log("i ps pos %.9g %.9g %.9g", vCam.x, vCam.y, vCam.z);
 		mpPS->SetPosition(gpBase->mpPlayer->GetCamera()->GetPosition());
 	}
 
@@ -341,6 +375,7 @@ void cLuxInstanityEvent_Particles::OnDraw(float afFrameTime)
 
 cLuxInstanityEvent_SoundStream::cLuxInstanityEvent_SoundStream() : iLuxInstanityEvent()
 {
+	OhplA12Log("i gfx_rect white");
     mpWhiteGfx = gpBase->mpEngine->GetGui()->CreateGfxFilledRect(cColor(1), eGuiMaterial_Modulative);
 }
 
@@ -386,15 +421,17 @@ void cLuxInstanityEvent_SoundStream::OnStart()
 	mfSoundCount = mfSoundDelayTime;
 	mfFadeAlpha =0;
 	mfFadeAlphaSpeed = mfFadeInSpeed;
-	if(mbDisablePlayer) gpBase->mpPlayer->SetActive(false);
+	if(mbDisablePlayer) { OhplA12Log("i player active 0"); gpBase->mpPlayer->SetActive(false); }
 
 	if(msSubtitleCat != "" && msSubtitleEntry !="")
 	{
 		gpBase->mpDefaultFont->GetWordWrapRows(600,20,18, kTranslate(msSubtitleCat,msSubtitleEntry), &mvCurrentTextRows);
+		OhplA12Log("i wrap %s %s rows %d", msSubtitleCat.c_str(), msSubtitleEntry.c_str(), (int)mvCurrentTextRows.size());
 	}
 	
 	if(msFadeImageFile != "")
 	{
+		OhplA12Log("i gfx_texture %s", msFadeImageFile.c_str());
 		mpFadeImage = gpBase->mpEngine->GetGui()->CreateGfxTexture(msFadeImageFile, eGuiMaterial_Alpha, eTextureType_Rect);
 	}
 }
@@ -402,10 +439,16 @@ void cLuxInstanityEvent_SoundStream::OnStart()
 void cLuxInstanityEvent_SoundStream::OnExit()
 {
 	if(mpFadeImage) 
+	{
+		OhplA12Log("i gfx_destroy");
 		gpBase->mpEngine->GetGui()->DestroyGfx(mpFadeImage);
+	}
 	
 	if(mbDisablePlayer)
+	{
+		OhplA12Log("i player active 1");
 		gpBase->mpPlayer->SetActive(true);
+	}
 
 	mvCurrentTextRows.clear();
 }
@@ -422,7 +465,9 @@ void cLuxInstanityEvent_SoundStream::Update(float afTimeStep)
 	// Start the sound when the delay is over
 	if(ohpl_ga9b_stream_a(&s, mpSoundEntry==NULL, afTimeStep))
 	{
+		OhplA12Log("i stream %s %d %.9g", msFile.c_str(), 0, mfVolume);
 		mpSoundEntry = pSoundHandler->PlayGuiStream(msFile, false, mfVolume);
+		OhplA12Log("i stream result %d", mpSoundEntry ? 1 : 0);
 		if(mpSoundEntry)
 			mlSoundEntryID = mpSoundEntry->GetId();
 	}
@@ -430,6 +475,7 @@ void cLuxInstanityEvent_SoundStream::Update(float afTimeStep)
 	//////////////////////////////
 	// Fade and check if over
 	bool bGone = mpSoundEntry==NULL || pSoundHandler->IsValid(mpSoundEntry, mlSoundEntryID)==false;
+	OhplA12Log("i gone %d", bGone ? 1 : 0);
 	bool bDone = ohpl_ga9b_stream_b(&s, bGone, afTimeStep);
 
 	mfSoundCount = s.soundCount;
@@ -442,6 +488,7 @@ void cLuxInstanityEvent_SoundStream::Update(float afTimeStep)
 
 void cLuxInstanityEvent_SoundStream::OnDraw(float afFrameTime)
 {
+	OhplA12Log("i subs %d %d", gpBase->mpMessageHandler->ShowEffectSubtitles() ? 1 : 0, gpBase->mpEffectHandler->GetPlayVoice()->IsActive() ? 1 : 0);
 	if(	gpBase->mpMessageHandler->ShowEffectSubtitles() &&
 		mvCurrentTextRows.empty()==false && 
 		gpBase->mpEffectHandler->GetPlayVoice()->IsActive()==false)
@@ -452,12 +499,17 @@ void cLuxInstanityEvent_SoundStream::OnDraw(float afFrameTime)
 		for(size_t i=0; i<lNum; ++i)
 		{
 			const OhplGa9bRow &row = vRows[i];
+			OhplA12Log("i font %d %.9g %.9g %.9g", row.row, row.x, row.y, row.z);
 			gpBase->mpGameHudSet->DrawFont(mvCurrentTextRows[row.row],gpBase->mpDefaultFont, cVector3f(row.x, row.y, row.z), 18,cColor(1,1));
 		}
 	}
 
 	if(mbFadeScreen)
 	{
+		{
+			cColor c = mpFadeImage ? mFadeColor * mfFadeAlpha : mFadeColor*mfFadeAlpha + cColor(1,1)*(1-mfFadeAlpha);
+			OhplA12Log("i fade img=%d col %.9g %.9g %.9g %.9g", mpFadeImage ? 1 : 0, c.r, c.g, c.b, c.a);
+		}
 		if(mpFadeImage)
 			gpBase->mpGameHudSet->DrawGfx(mpFadeImage, gpBase->mvHudVirtualStartPos, gpBase->mvHudVirtualSize, mFadeColor * mfFadeAlpha);
 		else
@@ -540,8 +592,11 @@ void cLuxInstanityEvent_Steps::Update(float afTimeStep)
 	if(bCreate)
 	{
 		cSoundEntity *pSound = pWorld->CreateSoundEntity("insanity_step", msSound, true);
+		OhplA12Log("i step_sound %s %d", msSound.c_str(), pSound ? 1 : 0);
 		if(pSound)
 		{
+			cVector3f vP = gpBase->mpPlayer->GetCharacterBody()->GetPosition() + vOldPosition;
+			OhplA12Log("i step_pos %.9g %.9g %.9g", vP.x, vP.y, vP.z);
 			pSound->SetPosition(gpBase->mpPlayer->GetCharacterBody()->GetPosition() + vOldPosition);
 		}
 	}
@@ -578,6 +633,7 @@ cLuxInsanityHandler::cLuxInsanityHandler() : iLuxUpdateable("LuxInsanityHandler"
 	LoadEvents(sEventFile);
 
 	mlCurrentEvent = -1; //need to set this here because of stuff in reset.
+	OhplA12Log("i load events %d", (int)mvEvents.size());
 }
 
 //-----------------------------------------------------------------------
@@ -615,6 +671,12 @@ void cLuxInsanityHandler::Reset()
 
 void cLuxInsanityHandler::Update(float afTimeStep)
 {
+	if(OhplA12Enabled()) return;
+	UpdateA12(afTimeStep);
+}
+
+void cLuxInsanityHandler::UpdateA12(float afTimeStep)
+{
 	mfNewEventCount = ohpl_ga9b_insanity_count_down(mfNewEventCount, mlCurrentEvent, afTimeStep);
 
 	/////////////////////////
@@ -629,6 +691,7 @@ void cLuxInsanityHandler::Update(float afTimeStep)
 			mlCurrentEvent = -1;
 
 			float fSanity = gpBase->mpPlayer->GetSanity();
+			OhplA12Log("i sanity %.9g", fSanity);
 			OhplGa9bTiming timing = TimingToRust();
 			mfNewEventCount = ohpl_ga9b_insanity_wait_after(&timing, fSanity);
 		}
@@ -645,6 +708,7 @@ OhplGa9bTiming cLuxInsanityHandler::TimingToRust()
 
 void cLuxInsanityHandler::OnDraw(float afFrameTime)
 {
+	OhplA12Tick();
 	if(mlCurrentEvent>=0) mvEvents[mlCurrentEvent]->OnDraw(afFrameTime);
 }
 
@@ -655,6 +719,7 @@ void cLuxInsanityHandler::StartEvent()
 	if(mvEvents.empty()) return;
 
 	float fPlayerSanity = gpBase->mpPlayer->GetSanity();
+	OhplA12Log("i sanity %.9g", fPlayerSanity);
 
 	if(mlCurrentEvent >=0)
 		mvEvents[mlCurrentEvent]->OnExit();
@@ -742,6 +807,7 @@ void cLuxInsanityHandler::StopCurrentEvent()
 bool cLuxInsanityHandler::NewEventIsPossible()
 {
 	OhplGa9bTiming timing = TimingToRust();
+	OhplA12Log("i sanity %.9g", gpBase->mpPlayer->GetSanity());
 	return ohpl_ga9b_insanity_possible(&timing, mfNewEventCount, gpBase->mpPlayer->GetSanity(), mlCurrentEvent);
 }
 

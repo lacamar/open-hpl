@@ -25,6 +25,7 @@
 #include "LuxHintHandler.h"
 #include "LuxHelpFuncs.h"
 #include "RustLuxBase.h"
+#include "LuxA12bDump.h"
 
 // TODO: there is some cleanup to do here
 
@@ -63,8 +64,9 @@ void cLuxConfigHandler::LoadMainConfig()
 	cConfigFile *pCfg = gpBase->mpMainConfig;
 	tString sDefaultLang = gpBase->msDefaultGameLanguage;
 	OhplGa9MainCfg c;
-	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r)
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t n, OhplGa9Ret *r)
 	{
+		OhplA12LogCall("cfg", op, a, n);
 		if(op == eOhplGa9Op_FirstStartFlag) r->i = gpBase->CheckFirstStartFlag();
 		else OhplGa9CfgCall(pCfg, op, a, r);
 	};
@@ -163,8 +165,9 @@ void cLuxConfigHandler::SaveMainConfig()
 	c.renderer = OhplGa9StrOf(msRenderer);
 	c.color_output = OhplGa9StrOf(msColorOutput);
 
-	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r)
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t n, OhplGa9Ret *r)
 	{
+		OhplA12LogCall("cfg", op, a, n);
 		switch(op)
 		{
 		case eOhplGa9Op_RaiseFirstStart: gpBase->RaiseFirstStartFlag(); break;
