@@ -199,6 +199,9 @@ if [ -n "$SAVES" ] && has amnesia; then
 	INVIMPL=${IMPLS##* }
 	env OPENHPL_SCRATCH_ROOT="$SCRATCH-$INVIMPL" OHPL_IMPL="$INVIMPL" OHPL_PLAY_NAME="ohpl-gate-inv-$$" \
 		timeout 900 scripts/a11a-inv-roundtrip.sh "$BUILD/Amnesia.bin.aarch64" "$BUILD/Amnesia.bin.aarch64" "$OUT/inv-rt" > "$OUT/inv-rt.log" 2>&1
+	JRNSAVE=$BUILD/Amnesia.bin.aarch64; [ -x "$BASELINE/Amnesia.cpp.bin.aarch64" ] && JRNSAVE=$BASELINE/Amnesia.cpp.bin.aarch64
+	env OPENHPL_SCRATCH_ROOT="$SCRATCH-$INVIMPL" OHPL_IMPL="$INVIMPL" OHPL_PLAY_NAME="ohpl-gate-jrn-$$" \
+		timeout 900 scripts/a11c-journal-roundtrip.sh "$JRNSAVE" "$BUILD/Amnesia.bin.aarch64" "$OUT/jrn-rt" > "$OUT/jrn-rt.log" 2>&1
 	if [ -d "$BASELINE/gui" ]; then
 		env OPENHPL_SCRATCH_ROOT="$SCRATCH-$INVIMPL" OHPL_IMPL="$INVIMPL" OHPL_PLAY_NAME="ohpl-gate-inv-$$" \
 			timeout 900 scripts/a11a-inv-gui.sh "$BUILD/Amnesia.bin.aarch64" "$OUT/inv-gui" > "$OUT/inv-gui.log" 2>&1
@@ -345,6 +348,7 @@ if saves:
             bad += not m or m.group(1) != "0" or m.group(2) != "0"
     if "amnesia" in games:
         for label, f, rx in (("inventory save round trip", "inv-rt.log", r"A==B: True\s+B==C: True"),
+                             ("journal save round trip (notes, diaries, quests)", "jrn-rt.log", r"A==B: True\s+B==C: True"),
                              ("inventory GUI vs C++ baseline", "inv-gui-cmp.log", r"steps \d+ failed 0")):
             p = os.path.join(out, f)
             if f == "inv-gui-cmp.log" and not os.path.isdir(os.path.join(base, "gui")):

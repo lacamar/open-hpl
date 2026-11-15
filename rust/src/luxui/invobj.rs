@@ -7,6 +7,7 @@ use super::inventory::{self as inv, InvState};
 use super::invgui::{Gui, Layout};
 use super::invhost::{self as host, game, op};
 use super::itemtype::{self, Info};
+use super::jrn;
 use crate::luxscript::types::AlphaFader;
 use crate::obj::{Arena, Handle};
 use std::cell::UnsafeCell;
@@ -286,11 +287,11 @@ fn run_event(e: &Ev, item: Option<ItemRef>, note: usize, diary: usize) {
         it::EV_SET_COINS => host_event(ev::SET_COINS, e, item, note, diary),
         it::EV_HINT => host_event(ev::HINT, e, item, note, diary),
         it::EV_SET_CONTAINER_JOURNAL => host_event(ev::SET_CONTAINER_JOURNAL, e, item, note, diary),
-        it::EV_FORCE_INSTANT_EXIT => host_event(ev::FORCE_INSTANT_EXIT, e, item, note, diary),
-        it::EV_OPEN_NOTE => host_event(ev::OPEN_NOTE, e, item, note, diary),
+        it::EV_FORCE_INSTANT_EXIT => jrn::set_force_instant_exit(e.a != 0),
+        it::EV_OPEN_NOTE => jrn::open_note(note as u64, e.a != 0),
         it::EV_RUN_MAP_SCRIPT => host_event(ev::RUN_MAP_SCRIPT, e, item, note, diary),
-        it::EV_OPEN_DIARY => host_event(ev::OPEN_DIARY, e, item, note, diary),
-        it::EV_DIARY_LAST_READ => host_event(ev::DIARY_LAST_READ, e, item, note, diary),
+        it::EV_OPEN_DIARY => jrn::open_diary(diary as u64, e.a != 0),
+        it::EV_DIARY_LAST_READ => jrn::set_diary_as_last_read(diary as u64),
         it::EV_LANTERN_TOGGLE => host_event(ev::LANTERN_TOGGLE, e, item, note, diary),
         it::EV_SET_HEALTH => host_event(ev::SET_HEALTH, e, item, note, diary),
         it::EV_ADD_SANITY => host_event(ev::ADD_SANITY, e, item, note, diary),
@@ -324,23 +325,14 @@ fn before_add(h: ItemRef, ty: i32) -> bool {
     let mut o = Out::default();
     match ty {
         itemtype::NOTE => {
-            let mut a = host::A::new();
-            a.i[0] = 0;
-            a.s[0] = super::event::Str::of(&s.sval);
-            a.s[1] = super::event::Str::of(&s.image_name);
-            host::call(op::JOURNAL, &mut a);
-            let note = a.r;
+            let note = jrn::add_note(&s.sval, &s.image_name).map_or(0, |h| h.to_bits() as usize);
             itemtype::note_before_add(note == 0, &item_view(&s), &mut o);
             run_events(&o, Some(h), note, 0);
             true
         }
         itemtype::DIARY => {
-            let mut a = host::A::new();
-            a.i[0] = 1;
-            a.s[0] = super::event::Str::of(&s.sval);
-            a.s[1] = super::event::Str::of(&s.image_name);
-            host::call(op::JOURNAL, &mut a);
-            let (diary, idx) = (a.r, a.i[1]);
+            let added = jrn::add_diary(&s.sval, &s.image_name);
+            let (diary, idx) = added.map_or((0, 0), |(h, n)| (h.to_bits() as usize, n));
             if !itemtype::diary_before_add(diary == 0, idx, &item_view(&s), &mut o) {
                 return true;
             }
@@ -803,7 +795,7 @@ pub fn update(dt: f32) {
     let exit = g().map_or(inv::EXIT_NONE, |i| inv::update_alpha(&mut i.st, dt));
     match exit {
         inv::EXIT_TO_JOURNAL => {
-            host::game_i(game::OPENED_FROM_INVENTORY, 1);
+            jrn::set_opened_from_inventory(true);
             host::game_s(game::SET_CONTAINER, b"Journal");
         }
         inv::EXIT_TO_DEFAULT => {
@@ -895,6 +887,12 @@ pub fn on_leave_container() {
 pub fn gamepad_changed() {
     let pad = host::set_query(host::set::GAMEPAD_PRESENT).r != 0;
     host::set_flag(host::set::DRAW_FOCUS, i32::from(pad));
+}
+
+pub fn set_enter_from_journal(on: bool) {
+    if let Some(i) = g() {
+        i.st.enter_from_journal = u8::from(on);
+    }
 }
 
 pub fn drop_all() {

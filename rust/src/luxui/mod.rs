@@ -23,6 +23,10 @@ pub mod invffi;
 pub mod invgui;
 pub mod invhost;
 pub mod invobj;
+pub mod jrn;
+#[cfg(test)]
+mod jrn_tests;
+pub mod jrnffi;
 mod msg_handler;
 #[cfg(test)]
 mod tests_golden;

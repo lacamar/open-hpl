@@ -1,6 +1,8 @@
 // Host of the Rust inventory (rust/src/luxui/invhost.rs): one op entry reaching the engine objects.
 
 #include "LuxInventory.h"
+#include "LuxJournal.h"
+#include "LuxA11cDump.h"
 
 #include "LuxPlayer.h"
 #include "LuxPlayerHelpers.h"
@@ -27,7 +29,7 @@ enum
 	kA11a_Op_SET_OP = 6, kA11a_Op_SET_QUERY = 7, kA11a_Op_GFX_NEW = 8, kA11a_Op_GFX_OP = 9, kA11a_Op_DRAW_GFX = 10,
 	kA11a_Op_DRAW_FONT = 11, kA11a_Op_FONT_LOAD = 12, kA11a_Op_FONT_WRAP = 13, kA11a_Op_FONT_ROW = 14, kA11a_Op_WIDGET_NEW = 15,
 	kA11a_Op_WIDGET_CB = 16, kA11a_Op_WIDGET_GET = 17, kA11a_Op_WIDGET_SET = 18, kA11a_Op_LL = 19, kA11a_Op_SCRIPT = 20,
-	kA11a_Op_GAME = 21, kA11a_Op_ITEM_EVENT = 22, kA11a_Op_JOURNAL = 23, kA11a_Op_LOG = 24
+	kA11a_Op_GAME = 21, kA11a_Op_ITEM_EVENT = 22, kA11a_Op_LOG = 24, kA11a_Op_WIDGET_NEW2 = 25, kA11a_Op_WIDGET_X = 26, kA11a_Op_JGAME = 27
 };
 
 enum
@@ -45,7 +47,7 @@ enum
 
 enum
 {
-	kA11a_Gfx_IMAGE = 0, kA11a_Gfx_RECT = 1, kA11a_Gfx_TEXTURE = 2, kA11a_Gfx_DESTROY = 0, kA11a_Gfx_SIZES = 1, kA11a_Gfx_COLOR = 2,
+	kA11a_Gfx_IMAGE = 0, kA11a_Gfx_RECT = 1, kA11a_Gfx_TEXTURE = 2, kA11a_Gfx_FILE = 3, kA11a_Gfx_DESTROY = 0, kA11a_Gfx_SIZES = 1, kA11a_Gfx_COLOR = 2,
 	kA11a_Gfx_ACTIVE_SIZE = 3
 };
 
@@ -68,7 +70,7 @@ enum
 {
 	kA11a_Game_SANITY = 0, kA11a_Game_HEALTH = 1, kA11a_Game_LAMP_OIL = 2, kA11a_Game_TINDERBOXES = 3, kA11a_Game_COINS = 4,
 	kA11a_Game_STATE_USE_ITEM = 5, kA11a_Game_LANTERN_ACTIVE = 6, kA11a_Game_TRIGGERED = 7, kA11a_Game_GAME_TIME = 8,
-	kA11a_Game_SET_CONTAINER = 9, kA11a_Game_INPUT_STATE = 10, kA11a_Game_OPENED_FROM_INVENTORY = 11, kA11a_Game_HINT_UPDATE = 12,
+	kA11a_Game_SET_CONTAINER = 9, kA11a_Game_INPUT_STATE = 10, kA11a_Game_HINT_UPDATE = 12,
 	kA11a_Game_HINT_DRAW = 13, kA11a_Game_FLASH_UPDATE = 14, kA11a_Game_FLASH_DRAW = 15, kA11a_Game_LEAVE_USE_ITEM = 16,
 	kA11a_Game_RESUME_SOUNDS = 17, kA11a_Game_FADE_LOOPS = 18, kA11a_Game_STOP_TERROR = 19, kA11a_Game_VOICES = 20,
 	kA11a_Game_TINDER_GET = 21, kA11a_Game_TINDER_SET = 22, kA11a_Game_ACHIEVEMENT = 23, kA11a_Game_SET_MESSAGE = 24,
@@ -77,16 +79,46 @@ enum
 
 enum
 {
-	kA11a_Ev_PROG_LOG = 1, kA11a_Ev_SET_COINS = 2, kA11a_Ev_HINT = 3, kA11a_Ev_SET_CONTAINER_JOURNAL = 4, kA11a_Ev_FORCE_INSTANT_EXIT = 5,
-	kA11a_Ev_OPEN_NOTE = 6, kA11a_Ev_RUN_MAP_SCRIPT = 7, kA11a_Ev_OPEN_DIARY = 8, kA11a_Ev_DIARY_LAST_READ = 9, kA11a_Ev_LANTERN_TOGGLE = 10,
+	kA11a_Ev_PROG_LOG = 1, kA11a_Ev_SET_COINS = 2, kA11a_Ev_HINT = 3, kA11a_Ev_SET_CONTAINER_JOURNAL = 4, kA11a_Ev_RUN_MAP_SCRIPT = 7, kA11a_Ev_LANTERN_TOGGLE = 10,
 	kA11a_Ev_SET_HEALTH = 11, kA11a_Ev_ADD_SANITY = 12, kA11a_Ev_SET_LAMP_OIL = 13, kA11a_Ev_SOUND = 14, kA11a_Ev_USE_ITEM_STATE_RESET = 15,
 	kA11a_Ev_USE_ITEM_ENTER = 16, kA11a_Ev_ADD_TINDERBOX = 17, kA11a_Ev_COMPLETION = 18
 };
 
+enum
+{
+	kA11a_Wn_LABEL = 0, kA11a_Wn_IMAGE = 1, kA11a_Wn_DUMMY = 2, kA11a_Wn_FRAME = 3
+};
+
+enum
+{
+	kA11a_Wx_SET_VISIBLE = 0, kA11a_Wx_SET_ENABLED = 1, kA11a_Wx_SETUP_LABEL = 2, kA11a_Wx_IS_VISIBLE = 3, kA11a_Wx_HOVER_OR_FOCUS = 4,
+	kA11a_Wx_GET_TEXT = 5, kA11a_Wx_GET_FONT_SIZE = 6, kA11a_Wx_GET_FONT = 7, kA11a_Wx_GET_ALIGN = 8, kA11a_Wx_DESTROY = 9, kA11a_Wx_FONT_LENGTH = 10
+};
+
+enum
+{
+	kA11a_Jg_VOICE_PLAY = 0, kA11a_Jg_VOICE_VALID = 1, kA11a_Jg_VOICE_FADE = 2, kA11a_Jg_PROG_LOW = 3, kA11a_Jg_HINT_RECENT = 4,
+	kA11a_Jg_MAIN_BOOL_GET = 5, kA11a_Jg_MAIN_BOOL_SAVE = 6, kA11a_Jg_ACH_ARCHIVIST = 7, kA11a_Jg_GAME_NAME = 8, kA11a_Jg_DPAD_DOWN_OK = 9
+};
+
+// Ops numbered 100 + n run op n against the journal's GUI set, effect program, config section and font loader.
+const int kJournalBase = 100;
+
+struct HostCtx
+{
+	cGuiSet *pSet;
+	cViewport *pViewport;
+	iGpuProgram *pProgram;
+};
+
 cLuxInventory *gpInv = NULL;
-cGuiSet *gpSet = NULL;
-cViewport *gpViewport = NULL;
-iGpuProgram *gpEffectProgram = NULL;
+cLuxJournal *gpJrn = NULL;
+HostCtx gInvCtx = { NULL, NULL, NULL };
+HostCtx gJrnCtx = { NULL, NULL, NULL };
+HostCtx *gpCtx = &gInvCtx;
+#define gpSet (gpCtx->pSet)
+#define gpViewport (gpCtx->pViewport)
+#define gpEffectProgram (gpCtx->pProgram)
 std::string gsRet;
 tWString gsRetW;
 tWStringVec gvRows;
@@ -115,7 +147,7 @@ eGuiMessage Msg(int alMsg)
 {
 	static const eGuiMessage vMsg[] = { eGuiMessage_MouseDown, eGuiMessage_MouseUp, eGuiMessage_MouseDoubleClick, eGuiMessage_MouseEnter,
 		eGuiMessage_MouseLeave, eGuiMessage_OnUpdate, eGuiMessage_OnDraw, eGuiMessage_GetUINavFocus, eGuiMessage_LoseUINavFocus,
-		eGuiMessage_UIButtonPress, eGuiMessage_UIButtonDoublePress, eGuiMessage_UIButtonRelease };
+		eGuiMessage_UIButtonPress, eGuiMessage_UIButtonDoublePress, eGuiMessage_UIButtonRelease, eGuiMessage_UIArrowPress };
 	return vMsg[alMsg];
 }
 
@@ -124,19 +156,27 @@ bool Tramp(void *apToken, iWidget *apWidget, const cGuiMessageData &aData)
 	return ohpl_inv_cb((uintptr_t)apToken, (uintptr_t)apWidget, aData.mlVal, aData.mfVal) != 0;
 }
 
+bool TrampJ(void *apToken, iWidget *apWidget, const cGuiMessageData &aData)
+{
+	return ohpl_jrn_cb((uintptr_t)apToken, (uintptr_t)apWidget, aData.mlVal, aData.mfVal) != 0;
+}
+
+bool InJournal(){ return gpCtx == &gJrnCtx; }
+const char *CfgSection(){ return InJournal() ? "Journal" : "Inventory"; }
+
 void OpCfg(OhplA11aArgs *a)
 {
 	cConfigFile *pCfg = gpBase->mpMenuCfg;
 	tString sKey = S(a, 0);
 	switch(a->i[0])
 	{
-	case kA11a_Cfg_FLOAT: a->f[0] = pCfg->GetFloat("Inventory", sKey, a->f[0]); break;
-	case kA11a_Cfg_STRING: RetS(a, pCfg->GetString("Inventory", sKey, S(a, 1))); break;
-	case kA11a_Cfg_V3: { cVector3f v = pCfg->GetVector3f("Inventory", sKey, V3(a)); a->f[0] = v.x; a->f[1] = v.y; a->f[2] = v.z; } break;
-	case kA11a_Cfg_V2: { cVector2f v = pCfg->GetVector2f("Inventory", sKey, V2(a)); a->f[0] = v.x; a->f[1] = v.y; } break;
-	case kA11a_Cfg_COLOR: { cColor c = pCfg->GetColor("Inventory", sKey, Col(a, 0)); a->f[0] = c.r; a->f[1] = c.g; a->f[2] = c.b; a->f[3] = c.a; } break;
-	case kA11a_Cfg_INT: a->i[1] = pCfg->GetInt("Inventory", sKey, a->i[1]); break;
-	case kA11a_Cfg_BOOL: a->i[1] = pCfg->GetBool("Inventory", sKey, a->i[1] != 0); break;
+	case kA11a_Cfg_FLOAT: a->f[0] = pCfg->GetFloat(CfgSection(), sKey, a->f[0]); break;
+	case kA11a_Cfg_STRING: RetS(a, pCfg->GetString(CfgSection(), sKey, S(a, 1))); break;
+	case kA11a_Cfg_V3: { cVector3f v = pCfg->GetVector3f(CfgSection(), sKey, V3(a)); a->f[0] = v.x; a->f[1] = v.y; a->f[2] = v.z; } break;
+	case kA11a_Cfg_V2: { cVector2f v = pCfg->GetVector2f(CfgSection(), sKey, V2(a)); a->f[0] = v.x; a->f[1] = v.y; } break;
+	case kA11a_Cfg_COLOR: { cColor c = pCfg->GetColor(CfgSection(), sKey, Col(a, 0)); a->f[0] = c.r; a->f[1] = c.g; a->f[2] = c.b; a->f[3] = c.a; } break;
+	case kA11a_Cfg_INT: a->i[1] = pCfg->GetInt(CfgSection(), sKey, a->i[1]); break;
+	case kA11a_Cfg_BOOL: a->i[1] = pCfg->GetBool(CfgSection(), sKey, a->i[1] != 0); break;
 	}
 }
 
@@ -145,10 +185,13 @@ void OpGuiInit(OhplA11aArgs *a)
 	cGui *pGui = gpBase->mpEngine->GetGui();
 	cGuiSkin *pSkin = pGui->CreateSkin("gui_main_menu.skin");
 	gpSet = pGui->CreateSet("Inventory", pSkin);
-	gpSet->SetFocusDrawCallback((void*)a->p[0], &Tramp);
+	if(InJournal() == false)
+	{
+		gpSet->SetFocusDrawCallback((void*)a->p[0], &Tramp);
 #ifdef USE_GAMEPAD
-	gpSet->SetDrawFocus(gpBase->mpInputHandler->IsGamepadPresent());
+		gpSet->SetDrawFocus(gpBase->mpInputHandler->IsGamepadPresent());
 #endif
+	}
 	cVector2f vCenterSize(800, 600), vSize, vOffset;
 	LuxCalcGuiSetScreenOffset(vCenterSize, vSize, vOffset);
 	gpSet->SetVirtualSize(vSize, -1000, 1000, vOffset, true);
@@ -209,6 +252,7 @@ void OpGfxNew(OhplA11aArgs *a)
 	case kA11a_Gfx_IMAGE: a->r = (uintptr_t)pGui->CreateGfxImage(S(a, 0), Mat(a->i[1])); break;
 	case kA11a_Gfx_RECT: a->r = (uintptr_t)pGui->CreateGfxFilledRect(Col(a, 0), Mat(a->i[1])); break;
 	case kA11a_Gfx_TEXTURE: a->r = (uintptr_t)pGui->CreateGfxTexture((iTexture*)a->p[0], false, Mat(a->i[1])); break;
+	case kA11a_Gfx_FILE: a->r = (uintptr_t)pGui->CreateGfxTexture(S(a, 0), eGuiMaterial_Alpha, eTextureType_Rect); break;
 	}
 }
 
@@ -321,7 +365,7 @@ void OpScript(OhplA11aArgs *a)
 
 eLuxInputState InputState(int alState)
 {
-	return alState == 0 ? eLuxInputState_Game : (alState == 1 ? eLuxInputState_Null : eLuxInputState_Inventory);
+	return alState == 0 ? eLuxInputState_Game : (alState == 1 ? eLuxInputState_Null : (alState == 3 ? eLuxInputState_Journal : eLuxInputState_Inventory));
 }
 
 void OpGame(OhplA11aArgs *a)
@@ -340,7 +384,6 @@ void OpGame(OhplA11aArgs *a)
 	case kA11a_Game_GAME_TIME: a->d = gpBase->mpEngine->GetGameTime(); break;
 	case kA11a_Game_SET_CONTAINER: gpBase->mpEngine->GetUpdater()->SetContainer(S(a, 0)); break;
 	case kA11a_Game_INPUT_STATE: gpBase->mpInputHandler->ChangeState(InputState(a->i[1])); break;
-	case kA11a_Game_OPENED_FROM_INVENTORY: gpBase->mpJournal->SetOpenedFromInventory(true); break;
 	case kA11a_Game_HINT_UPDATE: gpBase->mpHintHandler->UpdateHintText(a->f[0]); break;
 	case kA11a_Game_HINT_DRAW: gpBase->mpHintHandler->DrawHintText(a->f[0], gpSet); break;
 	case kA11a_Game_FLASH_UPDATE: gpBase->mpEffectHandler->GetSanityGainFlash()->Update(a->f[0]); break;
@@ -404,11 +447,7 @@ void OpItemEvent(OhplA11aArgs *a)
 	case kA11a_Ev_SET_COINS: pPlayer->SetCoins(a->i[1]); break;
 	case kA11a_Ev_HINT: gpBase->mpHintHandler->Add(sS, kTranslate("Hints", sS), 0); break;
 	case kA11a_Ev_SET_CONTAINER_JOURNAL: gpBase->mpEngine->GetUpdater()->SetContainer("Journal"); break;
-	case kA11a_Ev_FORCE_INSTANT_EXIT: gpBase->mpJournal->SetForceInstantExit(a->i[1] != 0); break;
-	case kA11a_Ev_OPEN_NOTE: gpBase->mpJournal->OpenNote((cLuxNote*)a->p[1], a->i[1] != 0); break;
 	case kA11a_Ev_RUN_MAP_SCRIPT: gpBase->mpMapHandler->GetCurrentMap()->RunScript(sS); break;
-	case kA11a_Ev_OPEN_DIARY: gpBase->mpJournal->OpenDiary((cLuxDiary*)a->p[2], a->i[1] != 0); break;
-	case kA11a_Ev_DIARY_LAST_READ: gpBase->mpJournal->SetDiaryAsLastRead((cLuxDiary*)a->p[2]); break;
 	case kA11a_Ev_LANTERN_TOGGLE: pPlayer->GetHelperLantern()->SetActive(a->i[1] != 0, true); break;
 	case kA11a_Ev_SET_HEALTH: pPlayer->SetHealth(a->f[0]); break;
 	case kA11a_Ev_ADD_SANITY: pPlayer->AddSanity(a->f[0]); break;
@@ -423,20 +462,82 @@ void OpItemEvent(OhplA11aArgs *a)
 	}
 }
 
-void OpJournal(OhplA11aArgs *a)
+void OpWidgetNew2(OhplA11aArgs *a)
 {
-	tString sVal = S(a, 0), sImage = S(a, 1);
-	if(a->i[0] == 0)
-		a->r = (uintptr_t)gpBase->mpJournal->AddNote(sVal, sImage);
-	else
+	iWidget *pParent = (iWidget*)a->p[0];
+	switch(a->i[0])
 	{
-		int lIdx = 0;
-		a->r = (uintptr_t)gpBase->mpJournal->AddDiary(sVal, sImage, lIdx);
-		a->i[1] = lIdx;
+	case kA11a_Wn_LABEL: a->r = (uintptr_t)(iWidget*)gpSet->CreateWidgetLabel(V3(a), V2(a, 3), W(a, 0), pParent); break;
+	case kA11a_Wn_IMAGE: a->r = (uintptr_t)(iWidget*)gpSet->CreateWidgetImage(S(a, 0), V3(a), V2(a, 3), eGuiMaterial_Alpha, false, pParent); break;
+	case kA11a_Wn_DUMMY: a->r = (uintptr_t)(iWidget*)gpSet->CreateWidgetDummy(V3(a), pParent); break;
+	case kA11a_Wn_FRAME: a->r = (uintptr_t)(iWidget*)gpSet->CreateWidgetFrame(V3(a), V2(a, 3), false, pParent); break;
 	}
 }
 
-void Host(int alOp, OhplA11aArgs *a)
+void OpWidgetX(OhplA11aArgs *a)
+{
+	iWidget *pW = (iWidget*)a->p[0];
+	switch(a->i[0])
+	{
+	case kA11a_Wx_SET_VISIBLE: pW->SetVisible(a->i[1] != 0); break;
+	case kA11a_Wx_SET_ENABLED: pW->SetEnabled(a->i[1] != 0); break;
+	case kA11a_Wx_SETUP_LABEL:
+		{
+			cWidgetLabel *pLabel = static_cast<cWidgetLabel*>(pW);
+			pLabel->SetDefaultFontColor(Col(a, 0));
+			pLabel->SetDefaultFontSize(V2(a, 4));
+			pLabel->SetTextAlign((eFontAlign)a->i[1]);
+			pLabel->SetDefaultFontType((iFontData*)a->p[1]);
+		}
+		break;
+	case kA11a_Wx_IS_VISIBLE: a->r = pW->IsVisible(); break;
+	case kA11a_Wx_HOVER_OR_FOCUS: a->r = pW->GetMouseIsOver() || pW->HasFocus(); break;
+	case kA11a_Wx_GET_TEXT: RetW(a, pW->GetText()); break;
+	case kA11a_Wx_GET_FONT_SIZE: { cVector2f v = pW->GetDefaultFontSize(); a->f[0] = v.x; a->f[1] = v.y; } break;
+	case kA11a_Wx_GET_FONT: a->r = (uintptr_t)pW->GetDefaultFontType(); break;
+	case kA11a_Wx_GET_ALIGN: a->r = (uintptr_t)static_cast<cWidgetLabel*>(pW)->GetTextAlign(); break;
+	case kA11a_Wx_DESTROY: gpSet->DestroyWidget(pW); break;
+	case kA11a_Wx_FONT_LENGTH: a->f[0] = ((iFontData*)a->p[0])->GetLength(V2(a), W(a, 0).c_str()); break;
+	}
+}
+
+void OpJGame(OhplA11aArgs *a)
+{
+	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
+	switch(a->i[0])
+	{
+	case kA11a_Jg_VOICE_PLAY:
+		{
+			cSoundEntry *pEntry = pSoundHandler->PlayGuiStream(S(a, 0), false, 1.0f);
+			a->r = (uintptr_t)pEntry;
+			if(pEntry) a->i[1] = pEntry->GetId();
+		}
+		break;
+	case kA11a_Jg_VOICE_VALID: a->r = pSoundHandler->IsValid((cSoundEntry*)a->p[0], a->i[1]); break;
+	case kA11a_Jg_VOICE_FADE: ((cSoundEntry*)a->p[0])->FadeOut(3.0f); break;
+	case kA11a_Jg_PROG_LOW: ProgLog(eLuxProgressLogLevel_Low, S(a, 0)); break;
+	case kA11a_Jg_HINT_RECENT: gpBase->mpHintHandler->Add("RecentlyReadText", kTranslate("Hints", "RecentlyReadText"), -1); break;
+	case kA11a_Jg_MAIN_BOOL_GET: a->r = gpBase->mpMainConfig->GetBool("Main", S(a, 0), false); break;
+	case kA11a_Jg_MAIN_BOOL_SAVE:
+		gpBase->mpMainConfig->SetBool("Main", S(a, 0), true);
+		gpBase->mpMainConfig->Save();
+		break;
+	case kA11a_Jg_ACH_ARCHIVIST: gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_MasterArchivist); break;
+	case kA11a_Jg_GAME_NAME: RetS(a, gpBase->msGameName); break;
+	case kA11a_Jg_DPAD_DOWN_OK:
+		a->r = 1;
+#ifdef USE_GAMEPAD
+# if USE_SDL2
+		if(gpBase->mpInputHandler->GetGamepad() && gpBase->mpInputHandler->GetGamepad()->ButtonIsDown(eGamepadButton_DpadDown) == false) a->r = 0;
+# else
+		if(gpBase->mpInputHandler->GetGamepad() && gpBase->mpInputHandler->GetGamepad()->HatIsInState(eGamepadHat_0, eGamepadHatState_Down) == false) a->r = 0;
+# endif
+#endif
+		break;
+	}
+}
+
+void HostOp(int alOp, OhplA11aArgs *a)
 {
 	a->rs.p = NULL; a->rs.n = 0; a->rw.p = NULL; a->rw.n = 0;
 	switch(alOp)
@@ -455,7 +556,10 @@ void Host(int alOp, OhplA11aArgs *a)
 	case kA11a_Op_DRAW_FONT:
 		gpSet->DrawFont(W(a, 0), (iFontData*)a->p[0], V3(a), V2(a, 3), Col(a, 5), (eFontAlign)a->i[0]);
 		break;
-	case kA11a_Op_FONT_LOAD: a->r = (uintptr_t)gpInv->LoadFont(gpBase->mpMenuCfg->GetString("Inventory", S(a, 0), "")); break;
+	case kA11a_Op_FONT_LOAD:
+		if(InJournal()) a->r = (uintptr_t)gpJrn->LoadFont(gpBase->mpMenuCfg->GetString("Journal", S(a, 0), ""));
+		else a->r = (uintptr_t)gpInv->LoadFont(gpBase->mpMenuCfg->GetString("Inventory", S(a, 0), ""));
+		break;
 	case kA11a_Op_FONT_WRAP:
 		gvRows.clear();
 		((iFontData*)a->p[0])->GetWordWrapRows(a->f[0], a->f[1], cVector2f(a->f[2]), W(a, 0), &gvRows);
@@ -463,18 +567,33 @@ void Host(int alOp, OhplA11aArgs *a)
 		break;
 	case kA11a_Op_FONT_ROW: RetW(a, gvRows[a->i[0]]); break;
 	case kA11a_Op_WIDGET_NEW: OpWidgetNew(a); break;
-	case kA11a_Op_WIDGET_CB: ((iWidget*)a->p[0])->AddCallback(Msg(a->i[0]), (void*)a->p[1], &Tramp); break;
+	case kA11a_Op_WIDGET_CB: ((iWidget*)a->p[0])->AddCallback(Msg(a->i[0]), (void*)a->p[1], InJournal() ? &TrampJ : &Tramp); break;
 	case kA11a_Op_WIDGET_GET: OpWidgetGet(a); break;
 	case kA11a_Op_WIDGET_SET: OpWidgetSet(a); break;
 	case kA11a_Op_LL: OpLowLevel(a); break;
 	case kA11a_Op_SCRIPT: OpScript(a); break;
 	case kA11a_Op_GAME: OpGame(a); break;
 	case kA11a_Op_ITEM_EVENT: OpItemEvent(a); break;
-	case kA11a_Op_JOURNAL: OpJournal(a); break;
+	case kA11a_Op_WIDGET_NEW2: OpWidgetNew2(a); break;
+	case kA11a_Op_WIDGET_X: OpWidgetX(a); break;
+	case kA11a_Op_JGAME: OpJGame(a); break;
 	case kA11a_Op_LOG:
 		if(a->i[0] == 0) Error("%s", S(a, 0).c_str()); else Warning("%s", S(a, 0).c_str());
 		break;
 	}
+}
+
+void Host(int alOp, OhplA11aArgs *a)
+{
+	HostCtx *pPrev = gpCtx;
+	if(alOp >= kJournalBase)
+	{
+		gpCtx = &gJrnCtx;
+		alOp -= kJournalBase;
+	}
+	else gpCtx = &gInvCtx;
+	HostOp(alOp, a);
+	gpCtx = pPrev;
 }
 
 }
@@ -600,4 +719,16 @@ cLuxInventory::~cLuxInventory()
 {
 	ohpl_inv_free();
 	gpInv = NULL;
+}
+
+cLuxJournal::cLuxJournal() : iLuxUpdateable("LuxJournal")
+{
+	gpJrn = this;
+	ohpl_jrn_new();
+}
+
+cLuxJournal::~cLuxJournal()
+{
+	ohpl_jrn_free();
+	gpJrn = NULL;
 }

@@ -4,6 +4,7 @@
 //! state is held across [`call`].
 
 use super::event::Str;
+use std::cell::Cell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[repr(C)]
@@ -87,7 +88,28 @@ pub fn set_host(f: Option<OpFn>) {
     HOST.store(f.map_or(0, |f| f as usize), Ordering::Release);
 }
 
+thread_local! {
+    static FLAVOR: Cell<i32> = const { Cell::new(0) };
+}
+
+/// Added to every op while the journal runs: the host then targets the journal's GUI set, config section and fonts.
+pub const JOURNAL_BASE: i32 = 100;
+
+pub struct JournalScope(i32);
+
+/// Routes host ops to the journal until the guard drops; nests with the inventory's own calls.
+pub fn journal_scope() -> JournalScope {
+    JournalScope(FLAVOR.replace(JOURNAL_BASE))
+}
+
+impl Drop for JournalScope {
+    fn drop(&mut self) {
+        FLAVOR.set(self.0);
+    }
+}
+
 pub fn call(op: i32, a: &mut A) {
+    let op = op + FLAVOR.get();
     let h = HOST.load(Ordering::Acquire);
     if h == 0 {
         return;
@@ -130,8 +152,10 @@ consts!(op, {
     SCRIPT = 20,
     GAME = 21,
     ITEM_EVENT = 22,
-    JOURNAL = 23,
     LOG = 24,
+    WIDGET_NEW2 = 25,
+    WIDGET_X = 26,
+    JGAME = 27,
 });
 
 consts!(cfg, {
@@ -168,6 +192,7 @@ consts!(gfx, {
     IMAGE = 0,
     RECT = 1,
     TEXTURE = 2,
+    FILE = 3,
     DESTROY = 0,
     SIZES = 1,
     COLOR = 2,
@@ -225,7 +250,6 @@ consts!(game, {
     GAME_TIME = 8,
     SET_CONTAINER = 9,
     INPUT_STATE = 10,
-    OPENED_FROM_INVENTORY = 11,
     HINT_UPDATE = 12,
     HINT_DRAW = 13,
     FLASH_UPDATE = 14,
@@ -247,11 +271,7 @@ consts!(ev, {
     SET_COINS = 2,
     HINT = 3,
     SET_CONTAINER_JOURNAL = 4,
-    FORCE_INSTANT_EXIT = 5,
-    OPEN_NOTE = 6,
     RUN_MAP_SCRIPT = 7,
-    OPEN_DIARY = 8,
-    DIARY_LAST_READ = 9,
     LANTERN_TOGGLE = 10,
     SET_HEALTH = 11,
     ADD_SANITY = 12,
@@ -261,6 +281,40 @@ consts!(ev, {
     USE_ITEM_ENTER = 16,
     ADD_TINDERBOX = 17,
     COMPLETION = 18,
+});
+
+consts!(wn, {
+    LABEL = 0,
+    IMAGE = 1,
+    DUMMY = 2,
+    FRAME = 3,
+});
+
+consts!(wx, {
+    SET_VISIBLE = 0,
+    SET_ENABLED = 1,
+    SETUP_LABEL = 2,
+    IS_VISIBLE = 3,
+    HOVER_OR_FOCUS = 4,
+    GET_TEXT = 5,
+    GET_FONT_SIZE = 6,
+    GET_FONT = 7,
+    GET_ALIGN = 8,
+    DESTROY = 9,
+    FONT_LENGTH = 10,
+});
+
+consts!(jg, {
+    VOICE_PLAY = 0,
+    VOICE_VALID = 1,
+    VOICE_FADE = 2,
+    PROG_LOW = 3,
+    HINT_RECENT = 4,
+    MAIN_BOOL_GET = 5,
+    MAIN_BOOL_SAVE = 6,
+    ACH_ARCHIVIST = 7,
+    GAME_NAME = 8,
+    DPAD_DOWN_OK = 9,
 });
 
 /// Group name as spelled in `LuxInventoryHost.cpp` (`kA11a_<group>_<name>`) with its constants.
@@ -273,6 +327,9 @@ pub const TABLES: &[(&str, &[(&str, i32)])] = &[
     ("Ll", ll::TABLE),
     ("Game", game::TABLE),
     ("Ev", ev::TABLE),
+    ("Wn", wn::TABLE),
+    ("Wx", wx::TABLE),
+    ("Jg", jg::TABLE),
 ];
 
 fn s(a: &mut A, idx: usize, v: &[u8]) {
@@ -570,4 +627,126 @@ pub fn log(kind: i32, text: &[u8]) {
     a.i[0] = kind;
     s(&mut a, 0, text);
     call(op::LOG, &mut a);
+}
+
+pub fn gfx_file(name: &[u8]) -> usize {
+    let mut a = A::new();
+    a.i[0] = gfx::FILE;
+    s(&mut a, 0, name);
+    call(op::GFX_NEW, &mut a);
+    a.r
+}
+
+fn wnew(
+    kind: i32,
+    pos: [f32; 3],
+    size: [f32; 2],
+    parent: usize,
+    file: &[u8],
+    text: &[u32],
+) -> usize {
+    let mut a = A::new();
+    a.i[0] = kind;
+    a.f[..3].copy_from_slice(&pos);
+    a.f[3..5].copy_from_slice(&size);
+    a.p[0] = parent;
+    s(&mut a, 0, file);
+    a.w[0] = WStr::of(text);
+    call(op::WIDGET_NEW2, &mut a);
+    a.r
+}
+
+pub fn widget_label(pos: [f32; 3], size: [f32; 2], text: &[u32], parent: usize) -> usize {
+    wnew(wn::LABEL, pos, size, parent, b"", text)
+}
+
+pub fn widget_image(file: &[u8], pos: [f32; 3], size: [f32; 2], parent: usize) -> usize {
+    wnew(wn::IMAGE, pos, size, parent, file, &[])
+}
+
+pub fn widget_dummy(pos: [f32; 3], parent: usize) -> usize {
+    wnew(wn::DUMMY, pos, [0.0; 2], parent, b"", &[])
+}
+
+pub fn widget_frame(pos: [f32; 3], size: [f32; 2], parent: usize) -> usize {
+    wnew(wn::FRAME, pos, size, parent, b"", &[])
+}
+
+pub fn wx(sub: i32, w: usize) -> A {
+    let mut a = A::new();
+    a.i[0] = sub;
+    a.p[0] = w;
+    call(op::WIDGET_X, &mut a);
+    a
+}
+
+pub fn widget_visible(w: usize, on: bool) {
+    let mut a = A::new();
+    a.i[0] = wx::SET_VISIBLE;
+    a.i[1] = i32::from(on);
+    a.p[0] = w;
+    call(op::WIDGET_X, &mut a);
+}
+
+pub fn widget_enabled(w: usize, on: bool) {
+    let mut a = A::new();
+    a.i[0] = wx::SET_ENABLED;
+    a.i[1] = i32::from(on);
+    a.p[0] = w;
+    call(op::WIDGET_X, &mut a);
+}
+
+pub fn jgame(sub: i32) -> A {
+    let mut a = A::new();
+    a.i[0] = sub;
+    call(op::JGAME, &mut a);
+    a
+}
+
+/// Renders the scene again without GUI into `bg_tex` through the screen effect and keeps a full copy in `screen_tex`.
+pub fn render_background(screen_tex: usize, bg_tex: usize, size: [f32; 2]) {
+    let step = |sub: i32, f: &dyn Fn(&mut A)| {
+        let mut a = A::new();
+        f(&mut a);
+        ll(sub, &mut a);
+        a.r
+    };
+    let fb = step(ll::FB_NEW, &|a| a.p[0] = bg_tex);
+    step(ll::BG_SCREEN, &|a| a.i[1] = 0);
+    step(ll::BLEND, &|a| a.i[1] = 0);
+    step(ll::DEPTH_TEST, &|a| a.i[1] = 0);
+    step(ll::DEPTH_WRITE, &|a| a.i[1] = 0);
+    step(ll::ORTHO, &|a| a.f[..2].copy_from_slice(&size));
+    step(ll::IDENTITY, &|_| {});
+    step(ll::COPY_SCREEN, &|a| a.p[0] = screen_tex);
+    step(ll::PROGRAM, &|a| a.i[1] = 1);
+    step(ll::SET_FB, &|a| a.p[0] = fb);
+    step(ll::SET_TEXTURE, &|a| a.p[0] = screen_tex);
+    step(ll::DRAW_QUAD, &|a| a.f[..2].copy_from_slice(&size));
+    step(ll::PROGRAM, &|a| a.i[1] = 0);
+    step(ll::SET_FB, &|a| a.p[0] = 0);
+    step(ll::SET_TEXTURE, &|a| a.p[0] = 0);
+    step(ll::BG_SCREEN, &|a| a.i[1] = 1);
+    step(ll::COPY_SCREEN, &|a| a.p[0] = screen_tex);
+    step(ll::SET_TEXTURE, &|a| a.p[0] = 0);
+    step(ll::SET_FB, &|a| a.p[0] = 0);
+    step(ll::DEPTH_TEST, &|a| a.i[1] = 1);
+    step(ll::FLUSH, &|_| {});
+    step(ll::FB_DESTROY, &|a| a.p[0] = fb);
+}
+
+pub fn texture_new(name: &[u8], clamp: bool, w: i32, h: i32) -> usize {
+    let mut t = A::new();
+    t.s[0] = Str::of(name);
+    t.i[1] = i32::from(clamp);
+    t.i[2] = w;
+    t.i[3] = h;
+    ll(ll::TEXTURE_NEW, &mut t);
+    t.r
+}
+
+pub fn texture_destroy(tex: usize) {
+    let mut a = A::new();
+    a.p[0] = tex;
+    ll(ll::TEXTURE_DESTROY, &mut a);
 }

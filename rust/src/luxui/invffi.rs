@@ -283,9 +283,7 @@ pub extern "C" fn ohpl_inv_picked() -> usize {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_inv_set_enter_from_journal(v: i32) {
-    if let Some(i) = g() {
-        i.st.enter_from_journal = u8::from(v != 0);
-    }
+    obj::set_enter_from_journal(v != 0);
 }
 
 #[unsafe(no_mangle)]

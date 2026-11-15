@@ -178,7 +178,6 @@ unsafe extern "C" fn mock(o: i32, a: *mut A) {
                 _ => {}
             },
             op::ITEM_EVENT => m.events.push((a.i[0], a.i[1], bytes_of(a.s[0]))),
-            op::JOURNAL => a.r = 1,
             op::LOG => m.logs.push(bytes_of(a.s[0])),
             _ => {}
         }
@@ -192,10 +191,12 @@ fn setup() -> std::sync::MutexGuard<'static, ()> {
     M.with(|m| *m.borrow_mut() = Mock::default());
     host::set_host(Some(mock));
     ffi::ohpl_inv_new();
+    super::jrn::create();
     g
 }
 
 fn teardown() {
+    super::jrn::destroy();
     ffi::ohpl_inv_free();
     host::set_host(None);
 }

@@ -756,83 +756,90 @@ cLuxJournal_SaveData::~cLuxJournal_SaveData()
 
 //-----------------------------------------------------------------------
 
+static tString JournalField(void (*apFn)(size_t, int, OhplA11aSink, void*), size_t alIdx, int alField)
+{
+	tString s;
+	apFn(alIdx, alField, OhplA11aStrSink, &s);
+	return s;
+}
+
+static tString JournalDiaryField(size_t alCont, size_t alIdx, int alField)
+{
+	tString s;
+	ohpl_jrn_diary_field(alCont, alIdx, alField, OhplA11aStrSink, &s);
+	return s;
+}
+
 void cLuxJournal_SaveData::FromJournal(cLuxJournal *apJournal)
 {
 	/////////////
 	//Vars
-	mlLastReadTextCat = apJournal->mlLastReadTextCat;
-	mlLastReadTextEntry = apJournal->mlLastReadTextEntry;
-	mlLastReadTextType = apJournal->mlLastReadTextType;
+	ohpl_jrn_last_read(&mlLastReadTextCat, &mlLastReadTextEntry, &mlLastReadTextType);
 
 	/////////////
 	//Notes
-    mvNotes.Resize(apJournal->mvNotes.size());
+	mvNotes.Resize(ohpl_jrn_note_count());
 	for(size_t i=0; i<mvNotes.Size(); ++i)
 	{
-		mvNotes[i] = *apJournal->mvNotes[i];
+		mvNotes[i].msNameEntry = JournalField(ohpl_jrn_note_field, i, 0);
+		mvNotes[i].msTextEntry = JournalField(ohpl_jrn_note_field, i, 1);
+		mvNotes[i].msIconFile = JournalField(ohpl_jrn_note_field, i, 2);
+		mvNotes[i].msImageFile = JournalField(ohpl_jrn_note_field, i, 3);
 	}
 
 	/////////////
 	//Diaries
-	mvDiaryConts.Resize(apJournal->mvDiaryContainers.size());
+	mvDiaryConts.Resize(ohpl_jrn_cont_count());
 	for(size_t cont=0; cont<mvDiaryConts.Size(); ++cont)
 	{
-		mvDiaryConts[cont].msType = apJournal->mvDiaryContainers[cont]->msType;
-		mvDiaryConts[cont].mvDiaries.Resize(apJournal->mvDiaryContainers[cont]->mvDiaries.size());
+		ohpl_jrn_cont_type(cont, OhplA11aStrSink, &mvDiaryConts[cont].msType);
+		mvDiaryConts[cont].mvDiaries.Resize(ohpl_jrn_diary_count(cont));
 		for(size_t i=0; i<mvDiaryConts[cont].mvDiaries.Size(); ++i)
 		{
-			mvDiaryConts[cont].mvDiaries[i] = *apJournal->mvDiaryContainers[cont]->mvDiaries[i];
+			cLuxDiary &diary = mvDiaryConts[cont].mvDiaries[i];
+			diary.msNameEntry = JournalDiaryField(cont, i, 0);
+			diary.msTextEntry = JournalDiaryField(cont, i, 1);
+			diary.msIconFile = JournalDiaryField(cont, i, 2);
+			diary.msImageFile = JournalDiaryField(cont, i, 3);
 		}
 	}
 
 	/////////////
 	//Quest notes
-	mvQuestNotes.Resize(apJournal->mvQuestNotes.size());
+	mvQuestNotes.Resize(ohpl_jrn_quest_count());
 	for(size_t i=0; i<mvQuestNotes.Size(); ++i)
 	{
-		mvQuestNotes[i] = *apJournal->mvQuestNotes[i];
+		mvQuestNotes[i].mbActive = ohpl_jrn_quest_active(i) != 0;
+		mvQuestNotes[i].msName = JournalField(ohpl_jrn_quest_field, i, 0);
+		mvQuestNotes[i].msNameEntry = JournalField(ohpl_jrn_quest_field, i, 1);
+		mvQuestNotes[i].msTextEntry = JournalField(ohpl_jrn_quest_field, i, 2);
 	}
 }
 
 void cLuxJournal_SaveData::ToJournal(cLuxMap *apMap, cLuxJournal *apJournal)
 {
-	/////////////
-	//Vars
-	apJournal->mlLastReadTextCat = mlLastReadTextCat;
-	apJournal->mlLastReadTextEntry = mlLastReadTextEntry;
-	apJournal->mlLastReadTextType = mlLastReadTextType;
+	ohpl_jrn_load_begin(mlLastReadTextCat, mlLastReadTextEntry, mlLastReadTextType);
 
-	/////////////
-	//Notes
-	apJournal->mvNotes.resize(mvNotes.Size());
 	for(size_t i=0; i<mvNotes.Size(); ++i)
 	{
-		apJournal->mvNotes[i] = hplNew(cLuxNote, ());
-		*apJournal->mvNotes[i] = mvNotes[i];
+		cLuxNote &n = mvNotes[i];
+		ohpl_jrn_load_note(OhplA11aS(n.msNameEntry), OhplA11aS(n.msTextEntry), OhplA11aS(n.msIconFile), OhplA11aS(n.msImageFile));
 	}
 
-	/////////////
-	//Diaries
-	apJournal->mvDiaryContainers.resize(mvDiaryConts.Size());
 	for(size_t cont=0; cont<mvDiaryConts.Size(); ++cont)
 	{
-		apJournal->mvDiaryContainers[cont] = hplNew(cLuxDiaryContainer, ());
-		apJournal->mvDiaryContainers[cont]->msType = mvDiaryConts[cont].msType;
-		apJournal->mvDiaryContainers[cont]->mvDiaries.resize(mvDiaryConts[cont].mvDiaries.Size());
+		ohpl_jrn_load_container(OhplA11aS(mvDiaryConts[cont].msType));
 		for(size_t i=0; i<mvDiaryConts[cont].mvDiaries.Size(); ++i)
 		{
-			apJournal->mvDiaryContainers[cont]->mvDiaries[i] = hplNew(cLuxDiary, ());
-			*apJournal->mvDiaryContainers[cont]->mvDiaries[i] = mvDiaryConts[cont].mvDiaries[i];
+			cLuxDiary &d = mvDiaryConts[cont].mvDiaries[i];
+			ohpl_jrn_load_diary(OhplA11aS(d.msNameEntry), OhplA11aS(d.msTextEntry), OhplA11aS(d.msIconFile), OhplA11aS(d.msImageFile));
 		}
 	}
 
-	/////////////
-	//QuestNotes
-	apJournal->mvQuestNotes.resize(mvQuestNotes.Size());
 	for(size_t i=0; i<mvQuestNotes.Size(); ++i)
 	{
-		apJournal->mvQuestNotes[i] = hplNew(cLuxQuestNote, ());
-		*apJournal->mvQuestNotes[i] = mvQuestNotes[i];
+		cLuxQuestNote &q = mvQuestNotes[i];
+		ohpl_jrn_load_quest(q.mbActive, OhplA11aS(q.msName), OhplA11aS(q.msNameEntry), OhplA11aS(q.msTextEntry));
 	}
 }
 
