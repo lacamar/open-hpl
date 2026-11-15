@@ -187,28 +187,17 @@ kEndSerialize()
 //-----------------------------------------------------------------------
 void cLuxHintHandler_SaveData::FromHintHandler(cLuxHintHandler *apData)
 {
-	///////////////////////
-	// Hints given
-	tStringSetIt it = apData->m_setHintsGiven.begin();
-	for(; it != apData->m_setHintsGiven.end(); ++it)
+	tStringVec vNames;
+	for(int blocked=0; blocked<2; ++blocked)
 	{
-		cLuxHintHandler_Hint_SaveData hint;
-
-		hint.msName = *it;
-
-		mlstHintsGiven.Add(hint);
-	}
-
-	///////////////////////
-	// Hints blocked
-	it = apData->m_setHintsBlocked.begin();
-	for(; it != apData->m_setHintsBlocked.end(); ++it)
-	{
-		cLuxHintHandler_Hint_SaveData hint;
-
-		hint.msName = *it;
-
-		mlstHintsBlocked.Add(hint);
+		vNames.clear();
+		apData->GetNames(blocked != 0, vNames);
+		for(size_t i=0; i<vNames.size(); ++i)
+		{
+			cLuxHintHandler_Hint_SaveData hint;
+			hint.msName = vNames[i];
+			(blocked ? mlstHintsBlocked : mlstHintsGiven).Add(hint);
+		}
 	}
 }
 
@@ -216,25 +205,15 @@ void cLuxHintHandler_SaveData::FromHintHandler(cLuxHintHandler *apData)
 
 void cLuxHintHandler_SaveData::ToHintHandler(cLuxMap *apMap, cLuxHintHandler *apData)
 {
-	///////////////////////
-	// Hints given
-	apData->m_setHintsGiven.clear();
+	tStringVec vNames;
 	cContainerListIterator<cLuxHintHandler_Hint_SaveData> it = mlstHintsGiven.GetIterator();
-	while(it.HasNext())
-	{
-		cLuxHintHandler_Hint_SaveData &hint = it.Next();
-		apData->m_setHintsGiven.insert(hint.msName);
-	}
+	while(it.HasNext()) vNames.push_back(it.Next().msName);
+	apData->SetNames(false, vNames);
 
-	///////////////////////
-	// Hints blocked
-	apData->m_setHintsBlocked.clear();
+	vNames.clear();
 	it = mlstHintsBlocked.GetIterator();
-	while(it.HasNext())
-	{
-		cLuxHintHandler_Hint_SaveData &hint = it.Next();
-		apData->m_setHintsBlocked.insert(hint.msName);
-	}
+	while(it.HasNext()) vNames.push_back(it.Next().msName);
+	apData->SetNames(true, vNames);
 }
 
 //-----------------------------------------------------------------------

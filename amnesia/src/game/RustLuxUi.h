@@ -67,62 +67,13 @@ inline OhplGa8Str OhplGa8S(const std::string &asX)
 }
 
 typedef void (*OhplGa8Sink)(void*, const unsigned char*, size_t);
-typedef void (*OhplGa8Sink32)(void*, const unsigned*, size_t);
-typedef void (*OhplGa8Replace)(void*, const unsigned*, size_t, int, OhplGa8Sink32, void*);
 
 inline void OhplGa8StrSink(void *apCtx, const unsigned char *apData, size_t alLen)
 {
 	((std::string*)apCtx)->assign((const char*)apData, alLen);
 }
 
-inline void OhplGa8WideSink(void *apCtx, const unsigned *apData, size_t alLen)
-{
-	((std::wstring*)apCtx)->assign((const wchar_t*)apData, alLen);
-}
-
-struct OhplGa8HintState
-{
-	unsigned char active;
-	float alpha, show_count, y_pos;
-	float font_size[2];
-	float duration_mul;
-	float osc[6];
-};
-static_assert(sizeof(OhplGa8HintState) == 52, "OhplGa8HintState layout");
-
-struct OhplGa8MessageState
-{
-	unsigned char show_subtitles, show_effect_subtitles, pause_active, quest_active, yes_no;
-	float pause_alpha, message_alpha, message_time, quest_alpha, quest_time;
-	float font_size[2];
-	float quest_osc[6];
-};
-static_assert(sizeof(OhplGa8MessageState) == 60, "OhplGa8MessageState layout");
-
 struct OhplGa8Pages;
-
-// Message events (ohpl_ga8_msg_*).
-enum
-{
-	eOhplGa8Msg_QuestSound = 1,
-	eOhplGa8Msg_SetUpdateActive,
-	eOhplGa8Msg_Callback,
-	eOhplGa8Msg_Row,
-	eOhplGa8Msg_PauseBg,
-	eOhplGa8Msg_PauseRow,
-	eOhplGa8Msg_Yes,
-	eOhplGa8Msg_YesKey,
-	eOhplGa8Msg_No,
-	eOhplGa8Msg_NoKey,
-	eOhplGa8Msg_QuestIcon,
-	eOhplGa8Msg_QuestGlow,
-};
-
-enum
-{
-	eOhplGa8MsgAction_Interact = 0,
-	eOhplGa8MsgAction_Attack = 1,
-};
 
 enum
 {
@@ -175,28 +126,6 @@ int ohpl_ga8_key_verify(unsigned char c);
 int ohpl_ga8_key_route(int keyboard, int paste, int tab);
 int ohpl_ga8_key_action(int composed, int len, int pos, int mark, unsigned char ascii, int* out_pos, int* out_epos, unsigned char* out_ch);
 size_t ohpl_ga8_key_paste(const unsigned char* p, size_t n, unsigned char* out, size_t cap);
-void ohpl_ga8_hint_init(OhplGa8HintState* s, float y, float fx, float fy, float mul);
-void ohpl_ga8_hint_reset(OhplGa8HintState* s);
-int ohpl_ga8_hint_set_active(OhplGa8HintState* s, int on);
-void ohpl_ga8_hint_update(OhplGa8HintState* s, float dt);
-int ohpl_ga8_hint_can_add(const OhplGa8HintState* s, int blocked, int given);
-void ohpl_ga8_hint_start(OhplGa8HintState* s, float time, float duration);
-int ohpl_ga8_hint_drawable(const OhplGa8HintState* s, int ptest);
-void ohpl_ga8_hint_label(const OhplGa8HintState* s, float* out);
-void ohpl_ga8_hint_row(const OhplGa8HintState* s, size_t rows, size_t i, float* out);
-float ohpl_ga8_hint_wrap_width(void);
-float ohpl_ga8_hint_wrap_line(void);
-void ohpl_ga8_strip_icons(const unsigned* text, size_t n, OhplGa8Replace replace, void* rctx, OhplGa8Sink32 sink, void* sctx);
-void ohpl_ga8_msg_reset(OhplGa8MessageState* s);
-void ohpl_ga8_msg_start_quest(OhplGa8MessageState* s);
-void ohpl_ga8_msg_set_message(OhplGa8MessageState* s, float time, float duration);
-size_t ohpl_ga8_msg_start_pause(OhplGa8MessageState* s, int yes_no, OhplGa8Ev* out, size_t cap);
-size_t ohpl_ga8_msg_set_pause(OhplGa8MessageState* s, int on, OhplGa8Ev* out, size_t cap);
-size_t ohpl_ga8_msg_do_action(OhplGa8MessageState* s, int action, int pressed, int has_callback, OhplGa8Ev* out, size_t cap);
-size_t ohpl_ga8_msg_update(OhplGa8MessageState* s, float dt, OhplGa8Ev* out, size_t cap);
-size_t ohpl_ga8_msg_draw_message(const OhplGa8MessageState* s, size_t rows, OhplGa8Ev* out, size_t cap);
-size_t ohpl_ga8_msg_draw_pause(const OhplGa8MessageState* s, size_t rows, OhplGa8Ev* out, size_t cap);
-size_t ohpl_ga8_msg_draw_quest(const OhplGa8MessageState* s, const float* icon, const float* center, const float* start, OhplGa8Ev* out, size_t cap);
 float ohpl_ga8_comm_spin(float y, int playing, float dt);
 int ohpl_ga8_comm_set_playing(int current, int next);
 void ohpl_ga8_comm_focus_text(const unsigned char* talker, size_t tn, const unsigned char* topic, size_t pn, OhplGa8Sink s, void* c);
@@ -240,8 +169,6 @@ void ohpl_ga8_jrn_hover_effect(float pulse, float color_alpha, float effect_alph
 void ohpl_ga8_jrn_effect_pos(int centered, const float* gpos, float size_x, float x_add, float* out);
 void ohpl_ga8_jrn_effect_size(const float* font, float x_add, float* out);
 float ohpl_ga8_jrn_fade_alpha(float alpha);
-float ohpl_ga8_msg_wrap_width(int pause);
-float ohpl_ga8_msg_line_height(float font_h);
 int ohpl_ga8_jrn_is_open(int state);
 }
 

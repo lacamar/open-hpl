@@ -142,8 +142,8 @@ half() {
 	done
 	if has amnesia; then
 		for M in $DUMP_AMNESIA; do
-			rm -f "$OUT/h13-$M-$impl.txt" "$OUT/a7-$M-$impl.txt" "$OUT/a11a-$M-$impl.txt"
-			ENVX="$extra OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt" \
+			rm -f "$OUT/h13-$M-$impl.txt" "$OUT/a7-$M-$impl.txt" "$OUT/a11a-$M-$impl.txt" "$OUT/a11b-$M-$impl.txt"
+			ENVX="$extra OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt OHPL_A11B_DUMP=$OUT/a11b-$M-$impl.txt" \
 				sweep "$impl" amnesia "$OUT/dump-$impl-amnesia.json" --map "$M"
 		done
 	fi
@@ -162,7 +162,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a9-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -267,6 +267,13 @@ def same(name, a, b):
         r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)
         last = (r.stdout.strip().splitlines() or [""])[-1]
         return (r.returncode == 0, "equal after masking" if r.returncode == 0 else f"DIFFER {last}")
+    if name.startswith("a11b-"):
+        # runs stop at different frames: compare up to the last whole frame of the shorter one
+        la, lb = (open(x, errors="replace").read().splitlines() for x in (a, b))
+        n = min(len(la), len(lb))
+        k = max((i for i in range(n) if la[i].startswith("tick ")), default=0)
+        ok_ = k > 100 and la[:k] == lb[:k]
+        return (ok_, f"equal over {k} lines (run lengths {len(la)}/{len(lb)})" if ok_ else "DIFFER")
     if filecmp.cmp(a, b, shallow=False):
         return (True, "identical")
     if name.startswith("h4seq") and multiset(a) == multiset(b):
@@ -279,7 +286,7 @@ def ok(p):
 if not quick:
     names = [f"h4seq-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
-        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a11a")] + ["a9"]
+        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a11a", "a11b")] + ["a9"]
     has_base = os.path.isdir(base)
     if not has_base:
         print(f"no C++ baseline at {base} (record one with --record-baseline before flipping a family)")

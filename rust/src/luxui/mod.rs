@@ -14,9 +14,17 @@ pub mod message;
 #[cfg(test)]
 mod tests;
 
+mod handlers_ffi;
+mod hint_handler;
+pub mod host;
 #[cfg(test)]
 mod inv_tests;
 pub mod invffi;
 pub mod invgui;
 pub mod invhost;
 pub mod invobj;
+mod msg_handler;
+#[cfg(test)]
+mod tests_golden;
+#[cfg(test)]
+mod tests_handlers;

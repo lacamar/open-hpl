@@ -20,80 +20,73 @@
 #ifndef LUX_MESSAGE_HANDLER_H
 #define LUX_MESSAGE_HANDLER_H
 
-//----------------------------------------------
-
 #include "LuxBase.h"
-#include "RustLuxUi.h"
-
-//----------------------------------------
-
+#include "LuxA11bDump.h"
+#include "RustLuxUiA11b.h"
 
 class cLuxMessageHandler : public iLuxUpdateable
 {
-friend class cLuxMusicHandler_SaveData;
-public:	
-	cLuxMessageHandler();
-	~cLuxMessageHandler();
-	
-	void LoadFonts();
-	void OnStart();
-	void Update(float afTimeStep);
-	void Reset();
+public:
+	cLuxMessageHandler() : iLuxUpdateable("LuxMusicHandler")
+	{
+		OhplA11bInitHost();
+		mlH = ohpl_a11b_msg_new();
+	}
+	~cLuxMessageHandler() { ohpl_a11b_msg_free(mlH); }
 
-	void LoadUserConfig();
-	void SaveUserConfig();
+	void LoadFonts() { ohpl_a11b_msg_font(mlH, (size_t)LoadFont("game_default.fnt")); }
+	void OnStart(){}
+	void Update(float afTimeStep)
+	{
+		if(OhplA11Enabled() == false) ohpl_a11b_msg_update(mlH, afTimeStep);
+	}
+	void Reset() { ohpl_a11b_msg_reset(mlH); }
 
-	void OnMapEnter(cLuxMap *apMap);
-	void OnMapLeave(cLuxMap *apMap);
+	void LoadUserConfig() { ohpl_a11b_msg_load_user_config(mlH); }
+	void SaveUserConfig() { ohpl_a11b_msg_save_user_config(mlH); }
 
-	void StarQuestAddedMessage();
+	void OnMapEnter(cLuxMap *apMap) { Reset(); }
+	void OnMapLeave(cLuxMap *apMap){}
 
-	void StartPauseMessage(const tWString& asText, bool abYesNo, iLuxMessageCallback *apCallback);
-	
+	void StarQuestAddedMessage() { ohpl_a11b_msg_start_quest(mlH); }
+
+	void StartPauseMessage(const tWString& asText, bool abYesNo, iLuxMessageCallback *apCallback)
+	{
+		ohpl_a11b_msg_start_pause(mlH, OhplA11bW(asText), asText.size(), abYesNo, (size_t)apCallback);
+	}
+
 	/**
 	* if time is <=0 then the life time is calculated based on string length.
 	*/
-	void SetMessage(const tWString& asText, float afTime);
-	bool IsMessageActive(){ return mS.message_time>0; }
+	void SetMessage(const tWString& asText, float afTime)
+	{
+		ohpl_a11b_msg_set_message(mlH, OhplA11bW(asText), asText.size(), afTime);
+	}
+	bool IsMessageActive(){ return ohpl_a11b_msg_flag(mlH, 0) != 0; }
 
-	void OnDraw(float afFrameTime);
+	void OnDraw(float afFrameTime)
+	{
+		OhplA11Tick();
+		if(OhplA11Enabled()) ohpl_a11b_msg_update(mlH, OhplA11Dt());
+		ohpl_a11b_msg_draw(mlH);
+	}
 
-	void DoAction(eLuxPlayerAction aAction, bool abPressed);
+	void DoAction(eLuxPlayerAction aAction, bool abPressed)
+	{
+		ohpl_a11b_msg_do_action(mlH, aAction == eLuxPlayerAction_Interact ? 0 : (aAction == eLuxPlayerAction_Attack ? 1 : -1), abPressed);
+	}
 
-	bool IsPauseMessageActive(){ return mS.pause_active != 0; }
-	void SetPauseMessageActive(bool abX);
+	bool IsPauseMessageActive(){ return ohpl_a11b_msg_flag(mlH, 1) != 0; }
+	void SetPauseMessageActive(bool abX) { ohpl_a11b_msg_set_pause(mlH, abX); }
 
-	bool ShowSubtitles(){ return mS.show_subtitles != 0;}
-	void SetShowSubtitles(bool abX){ mS.show_subtitles=abX;}
+	bool ShowSubtitles(){ return ohpl_a11b_msg_flag(mlH, 2) != 0;}
+	void SetShowSubtitles(bool abX){ ohpl_a11b_msg_set_flag(mlH, 2, abX);}
 
-	bool ShowEffectSubtitles(){ return mS.show_effect_subtitles != 0; }
-	void SetShowEffectSubtitles(bool abX){ mS.show_effect_subtitles=abX; }
+	bool ShowEffectSubtitles(){ return ohpl_a11b_msg_flag(mlH, 3) != 0; }
+	void SetShowEffectSubtitles(bool abX){ ohpl_a11b_msg_set_flag(mlH, 3, abX); }
+
 private:
-	void RunEvents(const std::vector<OhplGa8Event> &avEvents);
-	void DrawQuestAdded();
-	void DrawMessage();
-	void DrawPauseMessage();
-	
-	
-	//////////////////
-	// Data
-	cGuiGfxElement *mpBlackGfx;
-	iFontData *mpFont;
-
-	cGuiGfxElement *mpQuestAddedIcon;
-	tString msQuestAddedSound;
-	
-	OhplGa8MessageState mS;
-
-	//////////////////
-	// Variables
-	tWStringVec mvMessageRows;
-
-	tWStringVec mvLines;
-	iLuxMessageCallback* mpCallback;
+	uint64_t mlH;
 };
-
-//----------------------------------------------
-
 
 #endif // LUX_MESSAGE_HANDLER_H
