@@ -21,7 +21,6 @@
 #include "scene/RustParticles.h"
 #include "scene/RustSceneH12.h"
 
-#include "impl/tinyXML/tinyxml.h"
 
 #include "resources/Resources.h"
 #include "resources/MaterialManager.h"

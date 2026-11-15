@@ -29,7 +29,6 @@
 #include "engine/Updateable.h"
 #include "resources/RustResourcesH4.h"
 
-class TiXmlElement;
 
 struct OhplRmLoaders;
 

@@ -12,7 +12,7 @@
 #include "RustSomaAgent.h"
 
 #include "impl/scriptarray.h"
-#include "impl/tinyXML/tinyxml.h"
+#include "impl/XmlDocumentTiny.h"
 
 
 #include <algorithm>
@@ -287,14 +287,19 @@ namespace
 
 		tWString sFile = cString::SetFileExtW(pWorld->GetFilePath(), _W("")) + _W("_") + cString::To16Char(asName) + _W(".nodes");
 		std::map<tString, int> mapIds;
-		TiXmlDocument doc;
+		cXmlDocumentTiny doc("");
 		FILE *pFile = cPlatform::OpenFile(sFile, _W("rb"));
-		bool bHasFile = pFile && doc.LoadFile(pFile);
+		const bool bOpened = pFile != NULL;
 		if (pFile)
 			fclose(pFile);
-		if (bHasFile && doc.RootElement())
-			for (TiXmlElement *p = doc.RootElement()->FirstChildElement("Node"); p; p = p->NextSiblingElement("Node"))
-				mapIds[cString::ToString(p->Attribute("Name"), "")] = cString::ToInt(p->Attribute("ID"), -1);
+		bool bHasFile = bOpened && doc.CreateFromFile(sFile);
+		if (bHasFile)
+			for (cXmlNodeListIterator it = doc.GetChildIterator(); it.HasNext();)
+			{
+				cXmlElement *p = it.Next()->ToElement();
+				if (p->GetValue() == "Node")
+					mapIds[cString::ToString(p->GetAttribute("Name"), "")] = cString::ToInt(p->GetAttribute("ID"), -1);
+			}
 
 		cNodeData &data = gmapContainers[key];
 		data.mpContainer.reset(new cAINodeContainer(asName, "PathNode", pWorld, avSize));
@@ -314,16 +319,19 @@ namespace
 		// official cLuxMap::AddPathNodeGeneratorArea output, cached next to the map
 		if (FILE *pGen = cPlatform::OpenFile(cString::SetFileExtW(pWorld->GetFilePath(), _W("gen_node_cache")), _W("rb")))
 		{
-			TiXmlDocument genDoc;
-			bool bGen = genDoc.LoadFile(pGen);
 			fclose(pGen);
-			if (bGen && genDoc.RootElement())
-				for (TiXmlElement *p = genDoc.RootElement()->FirstChildElement("Node"); p; p = p->NextSiblingElement("Node"))
+			cXmlDocumentTiny genDoc("");
+			bool bGen = genDoc.CreateFromFile(cString::SetFileExtW(pWorld->GetFilePath(), _W("gen_node_cache")));
+			if (bGen)
+				for (cXmlNodeListIterator it = genDoc.GetChildIterator(); it.HasNext();)
 				{
-					tString sName = cString::ToString(p->Attribute("Name"), "");
+					cXmlElement *p = it.Next()->ToElement();
+					if (p->GetValue() != "Node")
+						continue;
+					tString sName = cString::ToString(p->GetAttribute("Name"), "");
 					auto idIt = mapIds.find(sName);
 					if (idIt != mapIds.end())
-						pCont->AddNode(sName, idIt->second, cString::ToVector3f(p->Attribute("Pos"), 0), NULL);
+						pCont->AddNode(sName, idIt->second, cString::ToVector3f(p->GetAttribute("Pos"), 0), NULL);
 				}
 		}
 		if (bHasFile)

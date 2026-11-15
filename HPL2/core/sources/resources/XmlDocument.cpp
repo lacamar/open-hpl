@@ -400,6 +400,7 @@ namespace hpl {
 		OhplXmlDocPtr doc;
 		XmlBuildRust(doc.p, this);
 		ohpl_xml_doc_print_stream(doc.p, OhplXmlAssign, apDestData);
+		OhplXmlDumpBytes("string", apDestData->data(), apDestData->size());
 	}
 
 	bool cXmlDocumentTiny::CreateFromString(const tString& asData)

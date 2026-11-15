@@ -40,7 +40,8 @@
 #define protected public
 #include "graphics/Graphics.h"
 #include "graphics/Renderer.h"
-#include "impl/tinyXML/tinyxml.h"
+#include "impl/XmlDocumentTiny.h"
+#include "system/String.h"
 #include "math/Frustum.h"
 #include "math/Math.h"
 #include "resources/MaterialManager.h"
@@ -367,17 +368,16 @@ void EmitterLine(Line &l, iParticleEmitter *pe)
 
 void PsScene(const std::string &asPath, int alSeed, int alFrames)
 {
-	TiXmlDocument doc;
-	if(!doc.LoadFile(asPath.c_str())) return;
-	TiXmlElement *pRoot = doc.RootElement();
-	if(!pRoot) return;
+	cXmlDocumentTiny doc("");
+	if(!doc.CreateFromFile(cString::To16Char(asPath))) return;
 
 	Rig rig;
-	cXmlElement el(std::string(pRoot->Value()) == "ParticleSystem" ? "ParticleSystem" : "Other", NULL);
-	for(TiXmlElement *e = pRoot->FirstChildElement(); e; e = e->NextSiblingElement())
+	cXmlElement el(doc.GetValue() == "ParticleSystem" ? "ParticleSystem" : "Other", NULL);
+	for(cXmlNodeListIterator it = doc.GetChildIterator(); it.HasNext();)
 	{
-		cXmlElement *c = el.CreateChildElement(e->Value());
-		for(TiXmlAttribute *a = e->FirstAttribute(); a; a = a->Next()) c->SetAttribute(a->Name(), a->Value());
+		cXmlElement *e = it.Next()->ToElement();
+		cXmlElement *c = el.CreateChildElement(e->GetValue());
+		for(auto &a : *e->GetAttributeMap()) c->SetAttribute(a.first, a.second.c_str());
 	}
 
 	srand(alSeed);

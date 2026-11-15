@@ -188,6 +188,7 @@ namespace hpl {
 			// Get the data
 			tString sData;
 			ohpl_xml_doc_print_stream(xmlDoc.p, OhplXmlAssign, &sData);
+			OhplXmlDumpBytes("stream", sData.data(), sData.size());
 
 			/////////////////////////////
 			// Compress the data

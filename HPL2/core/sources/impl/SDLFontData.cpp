@@ -29,7 +29,6 @@
 #include "graphics/FrameSubImage.h"
 #include "graphics/Texture.h"
 
-#include "impl/tinyXML/tinyxml.h"
 
 #include "system/String.h"
 #include "system/Platform.h"

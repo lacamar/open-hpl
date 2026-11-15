@@ -34,7 +34,7 @@
 #include "resources/LowLevelResources.h"
 #include "resources/XmlDocument.h"
 
-#include "impl/tinyXML/tinyxml.h"
+#include "impl/XmlDocumentTiny.h"
 #include "resources/RustResMgr.h"
 
 
@@ -260,30 +260,18 @@ namespace hpl {
 		{
 			FILE *pFile = cPlatform::OpenFile(sPath, _W("rb"));
 			if(pFile==NULL) return "";
-
-			TiXmlDocument *pDoc = hplNew( TiXmlDocument, () );
-			if(!pDoc->LoadFile(pFile))
-			{
-				fclose(pFile);
-				hplDelete(pDoc);
-				return "";
-			}
 			fclose(pFile);
 
-			TiXmlElement *pRoot = pDoc->RootElement();
+			cXmlDocumentTiny doc("");
+			if(!doc.CreateFromFile(sPath)) return "";
 
-			TiXmlElement *pMain = pRoot->FirstChildElement("Main");
+			cXmlElement *pMain = doc.GetFirstElement("Main");
 			if(pMain==NULL){
-				hplDelete(pDoc);
 				Error("Main child not found in '%s'\n",sPath.c_str());
 				return "";
 			}
 
-			tString sPhysicsName = cString::ToString(pMain->Attribute("PhysicsMaterial"),"Default");
-
-			hplDelete(pDoc);
-
-			return sPhysicsName;
+			return cString::ToString(pMain->GetAttribute("PhysicsMaterial"),"Default");
 		}
 
 		if(pMaterial)
@@ -717,27 +705,15 @@ namespace hpl {
 			FILE *pFile = cPlatform::OpenFile(sPath, _W("rb"));
 			if(pFile!=NULL)
 			{
-				TiXmlDocument *pDoc = hplNew( TiXmlDocument, () );
-				if(!pDoc->LoadFile(pFile))
+				fclose(pFile);
+				cXmlDocumentTiny doc("");
+				if(doc.CreateFromFile(sPath))
 				{
-					fclose(pFile);
-					hplDelete(pDoc);
-				}
-				else
-				{
-					fclose(pFile);
-					TiXmlElement *pRoot = pDoc->RootElement();
-					TiXmlElement *pMain = pRoot->FirstChildElement("Main");
+					cXmlElement *pMain = doc.GetFirstElement("Main");
 					if(pMain==NULL)
-					{
-						hplDelete(pDoc);
 						Error("Main child not found in '%s'\n",sPath.c_str());
-					}
 					else
-					{
-						sName = cString::ToString(pMain->Attribute("PhysicsMaterial"),"Default");
-						hplDelete(pDoc);
-					}
+						sName = cString::ToString(pMain->GetAttribute("PhysicsMaterial"),"Default");
 				}
 			}
 		}

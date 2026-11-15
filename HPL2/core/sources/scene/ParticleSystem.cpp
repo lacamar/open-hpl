@@ -22,7 +22,6 @@
 #include <memory>
 #include <vector>
 
-#include "impl/tinyXML/tinyxml.h"
 
 #include "system/String.h"
 
@@ -143,28 +142,6 @@ namespace hpl {
 
 		hplDelete(pXmlDoc);
 		return bRet;
-		/*
-		
-		FILE *pFile = _wfopen(asFile.c_str(),_W("rb"));
-		if(pFile==NULL) return false;
-
-		TiXmlDocument* pXmlDoc = hplNew( TiXmlDocument,() );
-		
-		if(pXmlDoc->LoadFile(pFile)==false)
-		{
-			Warning("Couldn't open XML file %s\n",cString::To8Char(asFile).c_str());
-			fclose(pFile);
-			hplDelete(pXmlDoc);
-			return false;
-		}
-		fclose(pFile);
-		
-		TiXmlElement *pRootElem = pXmlDoc->RootElement();
-
-		bool bRet = LoadFromElement(pRootElem);
-
-        hplDelete(pXmlDoc);
-		return bRet;*/
 	}
 
 	//-----------------------------------------------------------------------

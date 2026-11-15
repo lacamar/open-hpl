@@ -21,7 +21,7 @@
 #include "scene/RustLight.h"
 #include "scene/RustSceneH12.h"
 
-#include "impl/tinyXML/tinyxml.h"
+#include "impl/XmlDocumentTiny.h"
 
 #include "math/Math.h"
 #include "system/String.h"
@@ -247,22 +247,21 @@ namespace hpl {
 		{
 			FILE *pFile = cPlatform::OpenFile(sPath, _W("rb"));
 			if(pFile==NULL) return false;
-			TiXmlDocument *pDoc = hplNew( TiXmlDocument, () );
-			if(pDoc->LoadFile(pFile))
+			fclose(pFile);
+			cXmlDocumentTiny doc("");
+			if(doc.CreateFromFile(sPath))
 			{
-				TiXmlElement *pRootElem = pDoc->RootElement();
-
-				TiXmlElement *pMainElem = pRootElem->FirstChildElement("MAIN");
+				cXmlElement *pMainElem = doc.GetFirstElement("MAIN");
 				if(pMainElem!=NULL)
 				{
-					tString sMaterial = cString::ToString(pMainElem->Attribute("Material"),"");
-					cVector2f vSize = cString::ToVector2f(pMainElem->Attribute("Size"),1);
+					tString sMaterial = cString::ToString(pMainElem->GetAttribute("Material"),"");
+					cVector2f vSize = cString::ToVector2f(pMainElem->GetAttribute("Size"),1);
 					
-					bool bTileHeight = cString::ToBool(pMainElem->Attribute("TileHeight"),true);
-					bool bMultiplyAlphaWithColor = cString::ToBool(pMainElem->Attribute("MultiplyAlphaWithColor"),false);
+					bool bTileHeight = cString::ToBool(pMainElem->GetAttribute("TileHeight"),true);
+					bool bMultiplyAlphaWithColor = cString::ToBool(pMainElem->GetAttribute("MultiplyAlphaWithColor"),false);
 
-					cColor StartColor = cString::ToColor(pMainElem->Attribute("StartColor"),cColor(1,1));
-					cColor EndColor = cString::ToColor(pMainElem->Attribute("EndColor"),cColor(1,1));
+					cColor StartColor = cString::ToColor(pMainElem->GetAttribute("StartColor"),cColor(1,1));
+					cColor EndColor = cString::ToColor(pMainElem->GetAttribute("EndColor"),cColor(1,1));
 					
 
 					SetSize(vSize);
@@ -293,8 +292,6 @@ namespace hpl {
 			{
 				Error("Couldn't load file '%s'\n",sNewFile.c_str());
 			}
-			if(pFile) fclose(pFile);
-			hplDelete(pDoc);
 		}
 		else
 		{

@@ -32,7 +32,9 @@
 #include "physics/PhysicsWorld.h"
 #include "physics/PhysicsBody.h"
 
-#include "impl/tinyXML/tinyxml.h"
+#include "system/RustXml.h"
+#include "impl/XmlDocumentTiny.h"
+#include "system/RustXml.h"
 
 
 namespace hpl {
@@ -291,33 +293,30 @@ namespace hpl {
 		tWString sMapPath = mpWorld->GetFilePath();
 		tWString sSaveFile = cString::SetFileExtW(sMapPath,_W("ainodes"));
 		
-		TiXmlDocument* pXmlDoc = hplNew( TiXmlDocument, () );
-
-		TiXmlElement *pRootElem = static_cast<TiXmlElement*>(pXmlDoc->InsertEndChild(TiXmlElement("AiNodes")));
+		OhplXmlDocPtr xmlDoc;
+		unsigned lRoot = OhplXmlAddElement(xmlDoc.p, 0, "AiNodes");
 		
 		tTempAiNodeListIt nodeIt = mpNodeList->begin();
 		for(; nodeIt != mpNodeList->end(); ++nodeIt)
 		{
 			cTempAiNode &Node = *nodeIt;
-			TiXmlElement *pNodeElem = static_cast<TiXmlElement*>(pRootElem->InsertEndChild(TiXmlElement("Node")));
+			unsigned lNode = OhplXmlAddElement(xmlDoc.p, lRoot, "Node");
 			
 			tString sPos =	cString::ToString(Node.mvPos.x)+" " + 
 							cString::ToString(Node.mvPos.y)+" " +
 							cString::ToString(Node.mvPos.z);
-			pNodeElem->SetAttribute("Pos",sPos.c_str());
-			pNodeElem->SetAttribute("Name", Node.msName.c_str());
-			pNodeElem->SetAttribute("Name", cString::ToString(Node.mlID).c_str());
+			OhplXmlSetAttr(xmlDoc.p, lNode, "Pos", sPos);
+			OhplXmlSetAttr(xmlDoc.p, lNode, "Name", Node.msName);
+			OhplXmlSetAttr(xmlDoc.p, lNode, "Name", cString::ToString(Node.mlID));
 		}
 		
 		FILE *pFile = cPlatform::OpenFile(sSaveFile,_W("w+"));
-		if(pFile==NULL || pXmlDoc->SaveFile(pFile)==false)
+		if(pFile==NULL || OhplXmlSaveFile(xmlDoc.p, pFile)==false)
 		{
 			Error("Couldn't save XML file %s\n",sSaveFile.c_str());
-			hplDelete(pXmlDoc);
 			return;
 		}
 		fclose(pFile);
-		hplDelete(pXmlDoc);
 	}
 
 	//-----------------------------------------------------------------------
@@ -338,29 +337,26 @@ namespace hpl {
 			Warning("Couldn't open XML file %s\n",cString::To8Char(sSaveFile).c_str());
 			return;
 		}
-		TiXmlDocument* pXmlDoc = hplNew( TiXmlDocument, () );
-		if(pXmlDoc->LoadFile(pFile)==false)
+		fclose(pFile);
+		cXmlDocumentTiny xmlDoc("AiNodes");
+		if(xmlDoc.CreateFromFile(sSaveFile)==false)
 		{
 			Warning("Couldn't open XML file %s\n",cString::To8Char(sSaveFile).c_str());
-			fclose(pFile);
-			hplDelete(pXmlDoc);
 			return;
 		}
-		fclose(pFile);
 
-		TiXmlElement *pRootElem = pXmlDoc->RootElement();
-
-		TiXmlElement *pNodeElem = pRootElem->FirstChildElement("Node");
-		for(; pNodeElem != NULL; pNodeElem = pNodeElem->NextSiblingElement("Node"))
+		cXmlNodeListIterator nodeIt = xmlDoc.GetChildIterator();
+		while(nodeIt.HasNext())
 		{
-			cVector3f vPos = cString::ToVector3f(pNodeElem->Attribute("Pos"),0);
-			tString sName = cString::ToString(pNodeElem->Attribute("Name"),"");
-			int alID = cString::ToInt(pNodeElem->Attribute("ID"),-1);
+			cXmlElement *pNodeElem = nodeIt.Next()->ToElement();
+			if(pNodeElem->GetValue()!="Node") continue;
+			cVector3f vPos = cString::ToVector3f(pNodeElem->GetAttribute("Pos"),0);
+			tString sName = cString::ToString(pNodeElem->GetAttribute("Name"),"");
+			int alID = cString::ToInt(pNodeElem->GetAttribute("ID"),-1);
 
 			mpNodeList->push_back(cTempAiNode(vPos,sName,alID));
 		}
 
-		hplDelete(pXmlDoc);
 	}
 	
 	//-----------------------------------------------------------------------

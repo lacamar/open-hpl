@@ -5,6 +5,8 @@
 
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -57,7 +59,7 @@ struct OhplXmlDocPtr
 	~OhplXmlDocPtr() { ohpl_xml_doc_free(p); }
 };
 
-// TiXmlDocument::LoadFile(FILE*): the whole file, size taken from the file position
+// whole-file load: the whole file, size taken from the file position
 inline bool OhplXmlLoadFile(OhplXmlDoc* doc, FILE* file)
 {
 	fseek(file, 0, SEEK_END);
@@ -70,11 +72,47 @@ inline bool OhplXmlLoadFile(OhplXmlDoc* doc, FILE* file)
 	return ohpl_xml_doc_load(doc, buf.data(), length, ok);
 }
 
+inline unsigned OhplXmlAddElement(OhplXmlDoc* doc, unsigned parent, const std::string& name)
+{
+	return ohpl_xml_doc_add_element(doc, parent, name.c_str(), name.size());
+}
+
+inline void OhplXmlSetAttr(OhplXmlDoc* doc, unsigned id, const char* name, const std::string& val)
+{
+	ohpl_xml_doc_set_attr(doc, id, name, strlen(name), val.c_str(), val.size());
+}
+
+inline void OhplXmlDumpBytes(const char* tag, const char* data, size_t n)
+{
+	const char* path = getenv("OHPL_L9_XMLDUMP");
+	if (!path) return;
+	unsigned long long h = 1469598103934665603ull;
+	for (size_t i = 0; i < n; ++i) h = (h ^ (unsigned char)data[i]) * 1099511628211ull;
+	if (FILE* f = fopen(path, "a")) {
+		fprintf(f, "%s %zu %016llx\n", tag, n, h);
+		fclose(f);
+	}
+}
+
+inline void OhplXmlDumpFile(FILE* file)
+{
+	if (!getenv("OHPL_L9_XMLDUMP")) return;
+	fflush(file);
+	long end = ftell(file);
+	if (end < 0) return;
+	std::string buf(end, '\0');
+	fseek(file, 0, SEEK_SET);
+	size_t got = fread(&buf[0], 1, end, file);
+	fseek(file, end, SEEK_SET);
+	OhplXmlDumpBytes("file", buf.data(), got);
+}
+
 inline bool OhplXmlSaveFile(const OhplXmlDoc* doc, FILE* file)
 {
 	std::string out;
 	ohpl_xml_doc_print_file(doc, OhplXmlAssign, &out);
 	fwrite(out.data(), 1, out.size(), file);
+	OhplXmlDumpFile(file);
 	return ferror(file) == 0;
 }
 

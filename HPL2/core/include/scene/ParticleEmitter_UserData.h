@@ -23,7 +23,6 @@
 #include "scene/ParticleEmitter.h"
 #include "physics/PhysicsTypes.h"
 
-class TiXmlElement;
 
 namespace hpl {
 

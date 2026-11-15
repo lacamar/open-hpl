@@ -23,7 +23,6 @@
 #include "scene/Terrain.h"
 #include "scene/World.h"
 
-#include "impl/tinyXML/tinyxml.h"
 
 #include "system/Script.h"
 #include "system/String.h"
@@ -1439,7 +1438,7 @@ namespace hpl {
 				cDate dateMapFile = cPlatform::FileModifiedDate(sMapPath);
 				cDate dateAIFile = cPlatform::FileModifiedDate(sAiFileName);
 
-				if(dateAIFile > dateMapFile || cResources::GetForceCacheLoadingAndSkipSaving())
+				if((dateAIFile > dateMapFile && !getenv("OHPL_L9_XMLDUMP")) || cResources::GetForceCacheLoadingAndSkipSaving())
 				{
 					bLoadedFromFile = true;
 					pContainer->LoadFromFile(sAiFileName);
