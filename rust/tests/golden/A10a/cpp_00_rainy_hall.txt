@@ -1,0 +1,311 @@
+== options
+#0 type=1 name= pos=90,70,20 size=620,460 text="Options" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+  #1 type=2 name= pos=452,425,1 size=80,30 text="OK" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=36,2,-1,-1
+  #2 type=2 name= pos=535,425,1 size=80,30 text="Cancel" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=36,-1,-1,1
+  #3 type=16 name= pos=30,45,1 size=560,355 text="" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+    #4 type=2 name= pos=520,0,1.39999998 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+    #5 type=2 name= pos=540,0,1.39999998 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+    #6 type=14 name= pos=0,0,0.899999976 size=560,355 text="Game" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+      #7 type=4 name= pos=20,-0,0.100000001 size=53.47826,22 text="Game" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,39,-1,-1
+      #8 type=3 name= pos=0,22,0 size=560,333 text="" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #9 type=5 name= pos=542,0,0.699999988 size=18,333 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+          #10 type=2 name= pos=0,0,0.200000003 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #11 type=2 name= pos=0,315,0.200000003 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #12 type=4 name= pos=15,31,0.100000001 size=56,14 text="Language" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #13 type=10 name= pos=76,29,0.100000001 size=150,18 text="English" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,19,-1 combo=2["Português brasileiro","Simplified Chinese","English","Français","Deutsch","Italiano","Russian","Español"]
+          #14 type=6 name= pos=0,0,0 size=150,18 text="English" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #15 type=2 name= pos=132,0,0.300000012 size=18,18 text="" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #16 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+            #17 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #18 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #19 type=7 name= pos=15,64,0.100000001 size=104.826088,14 text="Show subtitles" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=13,21,23,-1 checked=0
+          #20 type=4 name= pos=19,0,0 size=85.826088,14 text="Show subtitles" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #21 type=7 name= pos=134.82608,64,0.100000001 size=141.347839,14 text="Show effect subtitles" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=13,-1,23,19 checked=0
+          #22 type=4 name= pos=19,0,0 size=122.347832,14 text="Show effect subtitles" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #23 type=7 name= pos=15,93,0.100000001 size=84.1304321,14 text="Show hints" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=19,-1,25,-1 checked=0
+          #24 type=4 name= pos=19,0,0 size=65.1304321,14 text="Show hints" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #25 type=7 name= pos=15,122,0.100000001 size=120.652168,14 text="Show death hints" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=23,-1,27,-1 checked=0
+          #26 type=4 name= pos=19,0,0 size=101.652168,14 text="Show death hints" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #27 type=7 name= pos=15,151,0.100000001 size=108.478256,14 text="Show crosshair" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=25,-1,30,-1 checked=1
+          #28 type=4 name= pos=19,0,0 size=89.4782562,14 text="Show crosshair" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #29 type=4 name= pos=15,180,0.100000001 size=93.7391281,14 text="Focus icon style" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #30 type=10 name= pos=113.739128,178,0.100000001 size=150,18 text="Simple" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=27,-1,36,-1 combo=1["Default","Simple"]
+          #31 type=6 name= pos=0,0,0 size=150,18 text="Simple" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #32 type=2 name= pos=132,0,0.300000012 size=18,18 text="" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #33 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+            #34 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #35 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #36 type=7 name= pos=15,209,0.100000001 size=92.6521683,14 text="Commentary" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=30,-1,1,-1 checked=0
+          #37 type=4 name= pos=19,0,0 size=73.6521683,14 text="Commentary" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+    #38 type=14 name= pos=0,0,0 size=560,355 text="Graphics" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+      #39 type=4 name= pos=93.4782562,-0,0.100000001 size=71.1304321,22 text="Graphics" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,190,-1,7
+      #40 type=3 name= pos=0,22,0 size=560,333 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #41 type=5 name= pos=542,0,0.699999988 size=18,333 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+          #42 type=2 name= pos=0,0,0.200000003 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #43 type=2 name= pos=0,315,0.200000003 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #44 type=1 name= pos=10,21,0.100000001 size=530,276 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #45 type=17 name= pos=0,6,0.100000001 size=530,140 text="Screen" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #46 type=4 name= pos=20,-7,0.100000001 size=39.5652161,14 text="Screen" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+            #47 type=4 name= pos=15,15,0.100000001 size=61.4782562,14 text="Resolution" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+            #48 type=10 name= pos=15,34,0.100000001 size=175,18 text="Full Desktop on <display>" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,54,82,-1 combo=0["Full Desktop on <display>","640x480 (<display>)","720x480 (<display>)","800x600 (<display>)","864x486 (<display>)","1024x768 (<display>)","1152x864 (<display>)","1280x720 (<display>)","1280x800 (<display>)","1280x960 (<display>)","1280x1024 (<display>)","1368x768 (<display>)","1400x1050 (<display>)","1440x900 (<display>)","1440x1080 (<display>)","1600x900 (<display>)","1600x1200 (<display>)","1680x1050 (<display>)","1920x1080 (<display>)","1920x1200 (<display>)","1920x1440 (<display>)","2048x1152 (<display>)","2048x1536 (<display>)","2560x1440 (<display>)","2560x1600 (<display>)","2880x1620 (<display>)","3200x1800 (<display>)","3840x2160 (<display>)","Full Desktop on Apple Computer Inc - Color LCD - eDP-1","640x480 (Apple Computer Inc - Color LCD - eDP-1)","720x480 (Apple Computer Inc - Color LCD - eDP-1)","800x600 (Apple Computer Inc - Color LCD - eDP-1)","864x486 (Apple Computer Inc - Color LCD - eDP-1)","1024x768 (Apple Computer Inc - Color LCD - eDP-1)","1152x864 (Apple Computer Inc - Color LCD - eDP-1)","1280x720 (Apple Computer Inc - Color LCD - eDP-1)","1280x800 (Apple Computer Inc - Color LCD - eDP-1)","1280x960 (Apple Computer Inc - Color LCD - eDP-1)","1280x1024 (Apple Computer Inc - Color LCD - eDP-1)","1368x768 (Apple Computer Inc - Color LCD - eDP-1)","1400x1050 (Apple Computer Inc - Color LCD - eDP-1)","1440x900 (Apple Computer Inc - Color LCD - eDP-1)","1440x1080 (Apple Computer Inc - Color LCD - eDP-1)","1600x900 (Apple Computer Inc - Color LCD - eDP-1)","1600x1200 (Apple Computer Inc - Color LCD - eDP-1)","1680x1050 (Apple Computer Inc - Color LCD - eDP-1)","1920x1080 (Apple Computer Inc - Color LCD - eDP-1)","1920x1200 (Apple Computer Inc - Color LCD - eDP-1)","1920x1440 (Apple Computer Inc - Color LCD - eDP-1)","2048x1152 (Apple Computer Inc - Color LCD - eDP-1)","2048x1536 (Apple Computer Inc - Color LCD - eDP-1)","2560x1440 (Apple Computer Inc - Color LCD - eDP-1)","2560x1600 (Apple Computer Inc - Color LCD - eDP-1)","2880x1620 (Apple Computer Inc - Color LCD - eDP-1)","3024x1964 (Apple Computer Inc - Color LCD - eDP-1)"]
+              #49 type=6 name= pos=0,0,0 size=175,18 text="Full Desktop on <display>" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #50 type=2 name= pos=157,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #51 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/43
+                #52 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                #53 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #54 type=7 name= pos=290,17,0.100000001 size=79.8695679,14 text="FullScreen" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,56,48 checked=1
+              #55 type=4 name= pos=19,0,0 size=60.8695641,14 text="FullScreen" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+            #56 type=7 name= pos=290,39,0.100000001 size=95.0869522,14 text="Vertical Sync" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=54,66,59,48 checked=0
+              #57 type=4 name= pos=19,0,0 size=76.0869522,14 text="Vertical Sync" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+            #58 type=4 name= pos=15,68,0.100000001 size=0,14 text="" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+            #59 type=10 name= pos=25,68,0.100000001 size=70,18 text="1x" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=56,66,79,-1 combo=0["1x","2x","3x","4x"]
+              #60 type=6 name= pos=0,0,0 size=70,18 text="1x" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #61 type=2 name= pos=52,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #62 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+                #63 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                #64 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #65 type=4 name= pos=290,68,0.100000001 size=52.3478203,14 text="Renderer" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+            #66 type=10 name= pos=352.347809,68,0.100000001 size=110,18 text="OpenGL" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=56,-1,73,59 combo=0["OpenGL","Vulkan"]
+              #67 type=6 name= pos=0,0,0 size=110,18 text="OpenGL" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #68 type=2 name= pos=92,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #69 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+                #70 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                #71 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #72 type=4 name= pos=290,96,0.100000001 size=73.0434799,14 text="Color output" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+            #73 type=10 name= pos=373.043488,96,0.100000001 size=130,18 text="SDR" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=66,-1,-1,79 combo=0["SDR","HDR10","scRGB HDR","Wide color (P3)"]
+              #74 type=6 name= pos=0,0,0 size=130,18 text="SDR" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #75 type=2 name= pos=112,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #76 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+                #77 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                #78 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #79 type=7 name= pos=15,96,0.100000001 size=76.8260803,14 text="Show FPS" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=59,73,82,-1 checked=0
+              #80 type=4 name= pos=19,0,0 size=57.8260841,14 text="Show FPS" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+          #81 type=4 name= pos=0,161,0.100000001 size=89.4782562,14 text="Texture Quality" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+          #82 type=10 name= pos=0,180,0.100000001 size=100,18 text="High" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=79,-1,90,-1 combo=2["Low","Medium","High"]
+            #83 type=6 name= pos=0,0,0 size=100,18 text="High" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #84 type=2 name= pos=82,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #85 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+              #86 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #87 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #88 type=4 name= pos=140,161,0.100000001 size=44.4347801,14 text="Gamma" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+            #89 type=8 name= pos=0,19,0 size=220,139 text="" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #90 type=5 name= pos=0,163,0 size=220,20 text="" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=82,-1,188,95 slider=14/34
+              #91 type=2 name= pos=0,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #92 type=2 name= pos=202,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #93 type=4 name= pos=110,2,1 size=0,14 text="1" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+          #94 type=4 name= pos=0,213,0.100000001 size=98.0000076,14 text="HDR white (nits)" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+            #95 type=5 name= pos=0,19,0 size=120,20 text="" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=82,90,100,-1 slider=25/64
+              #96 type=2 name= pos=0,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #97 type=2 name= pos=102,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #98 type=4 name= pos=60,2,1 size=0,14 text="205" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+          #99 type=4 name= pos=0,268,0.100000001 size=93.7391357,14 text="HDR peak (nits)" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+            #100 type=5 name= pos=0,19,0 size=120,20 text="" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=95,90,-1,-1 slider=12/32
+              #101 type=2 name= pos=0,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #102 type=2 name= pos=102,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #103 type=4 name= pos=60,2,1 size=0,14 text="1000" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+        #104 type=1 name= pos=10,21,0.100000001 size=550,275 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #105 type=3 name= pos=0,0,1 size=550,275 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #106 type=5 name= pos=532,0,0.699999988 size=18,275 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+              #107 type=2 name= pos=0,0,0.200000003 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #108 type=2 name= pos=0,257,0.200000003 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #109 type=17 name= pos=0,6,0.100000001 size=520,70 text="Material" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #110 type=4 name= pos=20,-7,0.100000001 size=46.2608643,14 text="Material" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #111 type=4 name= pos=15,15,0.100000001 size=77.9130325,14 text="Texture Filter" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+                #112 type=10 name= pos=0,19,0 size=150,18 text="Bilinear" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,119,134,-1 combo=1["Nearest","Bilinear","Trilinear"]
+                  #113 type=6 name= pos=0,0,0 size=150,18 text="Bilinear" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #114 type=2 name= pos=132,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #115 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+                    #116 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                    #117 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #118 type=4 name= pos=195,15,0.100000001 size=62.6956482,14 text="Anisotropy" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+                #119 type=10 name= pos=0,19,0 size=100,18 text="Off" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,126,137,112 combo=0["Off","2X","4X","8X","16X"]
+                  #120 type=6 name= pos=0,0,0 size=100,18 text="Off" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #121 type=2 name= pos=82,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #122 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+                    #123 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                    #124 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #125 type=4 name= pos=375,15,0.100000001 size=51.1304321,14 text="Parallax:" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+                #126 type=10 name= pos=0,19,0 size=100,18 text="On" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,144,119 combo=1["Off","On"]
+                  #127 type=6 name= pos=0,0,0 size=100,18 text="On" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #128 type=2 name= pos=82,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #129 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+                    #130 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                    #131 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #132 type=17 name= pos=0,86,0.100000001 size=520,70 text="Shadows" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #133 type=4 name= pos=20,-7,0.100000001 size=52.3478241,14 text="Shadows" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #134 type=7 name= pos=15,15,0.100000001 size=71.3478241,14 text="Shadows" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=112,137,152,-1 checked=1
+                #135 type=4 name= pos=19,0,0 size=52.3478241,14 text="Shadows" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #136 type=4 name= pos=195,15,0.100000001 size=41.391304,14 text="Quality" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+                #137 type=10 name= pos=0,19,0 size=100,18 text="Medium" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=119,144,156,134 combo=1["Low","Medium","High"]
+                  #138 type=6 name= pos=0,0,0 size=100,18 text="Medium" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #139 type=2 name= pos=82,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #140 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+                    #141 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                    #142 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #143 type=4 name= pos=375,15,0.100000001 size=61.4782562,14 text="Resolution" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+                #144 type=10 name= pos=0,19,0 size=100,18 text="High" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=126,-1,160,137 combo=2["Low","Medium","High"]
+                  #145 type=6 name= pos=0,0,0 size=100,18 text="High" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #146 type=2 name= pos=82,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #147 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+                    #148 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                    #149 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #150 type=17 name= pos=0,166,0.100000001 size=520,70 text="PostEffects" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #151 type=4 name= pos=20,-7,0.100000001 size=63.3043442,14 text="PostEffects" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #152 type=7 name= pos=15,15,0.100000001 size=56.1304321,14 text="Bloom" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=134,156,154,-1 checked=1
+                #153 type=4 name= pos=19,0,0 size=37.1304321,14 text="Bloom" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #154 type=7 name= pos=15,39,0.100000001 size=81.6956482,14 text="ImageTrail" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=152,158,164,-1 checked=1
+                #155 type=4 name= pos=19,0,0 size=62.6956444,14 text="ImageTrail" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #156 type=7 name= pos=195,15,0.100000001 size=51.2608681,14 text="Sepia" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=137,160,158,152 checked=1
+                #157 type=4 name= pos=19,0,0 size=32.2608681,14 text="Sepia" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #158 type=7 name= pos=195,39,0.100000001 size=78.6521683,14 text="RadialBlur" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=156,-1,167,154 checked=1
+                #159 type=4 name= pos=19,0,0 size=59.6521683,14 text="RadialBlur" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #160 type=7 name= pos=375,15,0.100000001 size=65.8695602,14 text="Insanity" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=144,-1,158,156 checked=1
+                #161 type=4 name= pos=19,0,0 size=46.8695602,14 text="Insanity" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+            #162 type=17 name= pos=0,246,0.100000001 size=520,70 text="SSAO" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #163 type=4 name= pos=20,-7,0.100000001 size=32.8695641,14 text="SSAO" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #164 type=7 name= pos=15,15,0.100000001 size=51.8695641,14 text="SSAO" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=154,167,182,-1 checked=1
+                #165 type=4 name= pos=19,0,0 size=32.8695641,14 text="SSAO" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #166 type=4 name= pos=195,15,0.100000001 size=49.3043442,14 text="Samples" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+                #167 type=10 name= pos=0,19,0 size=60,18 text="8" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=158,174,186,164 combo=1["4","8","16","32"]
+                  #168 type=6 name= pos=0,0,0 size=60,18 text="8" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #169 type=2 name= pos=42,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #170 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+                    #171 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                    #172 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #173 type=4 name= pos=375,15,0.100000001 size=61.4782562,14 text="Resolution" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+                #174 type=10 name= pos=0,19,0 size=80,18 text="Medium" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=158,-1,186,167 combo=0["Medium","High"]
+                  #175 type=6 name= pos=0,0,0 size=80,18 text="Medium" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #176 type=2 name= pos=62,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                  #177 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+                    #178 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+                    #179 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #180 type=17 name= pos=0,326,0.100000001 size=520,70 text="Misc" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+              #181 type=4 name= pos=20,-7,0.100000001 size=25.565218,14 text="Misc" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #182 type=7 name= pos=15,15,0.100000001 size=82.3043442,14 text="Smoothing" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=164,186,184,-1 checked=0
+                #183 type=4 name= pos=19,0,0 size=63.3043442,14 text="Smoothing" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #184 type=7 name= pos=15,39,0.100000001 size=78.0434723,14 text="Refraction" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=182,-1,188,-1 checked=1
+                #185 type=4 name= pos=19,0,0 size=59.0434761,14 text="Refraction" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+              #186 type=7 name= pos=195,15,0.100000001 size=165.086945,14 text="World Reflection (Water)" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=167,-1,184,182 checked=1
+                #187 type=4 name= pos=19,0,0 size=146.086945,14 text="World Reflection (Water)" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #188 type=2 name= pos=444.695679,305,2 size=115.304337,25 text="Advanced Options" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=90,-1,1,-1
+    #189 type=14 name= pos=0,0,0 size=560,355 text="Input" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+      #190 type=4 name= pos=184.608688,-0,0.100000001 size=51.0434799,22 text="Input" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,213,-1,39
+      #191 type=3 name= pos=0,22,0 size=560,333 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #192 type=5 name= pos=542,0,0.699999988 size=18,333 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+          #193 type=2 name= pos=0,0,0.200000003 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #194 type=2 name= pos=0,315,0.200000003 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #195 type=7 name= pos=15,31,0.100000001 size=95.0869522,14 text="Invert Mouse" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,197,-1 checked=0
+          #196 type=4 name= pos=19,0,0 size=76.0869522,14 text="Invert Mouse" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #197 type=7 name= pos=15,60,0.100000001 size=105.434776,14 text="Smooth Mouse" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=195,-1,200,-1 checked=0
+          #198 type=4 name= pos=19,0,0 size=86.4347763,14 text="Smooth Mouse" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #199 type=4 name= pos=15,89,0.100000001 size=102.260872,14 text="Mouse Sensitivity" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+          #200 type=5 name= pos=0,19,0 size=100,20 text="" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=197,-1,204,-1 slider=0/48
+            #201 type=2 name= pos=0,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #202 type=2 name= pos=82,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #203 type=4 name= pos=50,2,1 size=0,14 text="0.2" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+        #204 type=7 name= pos=15,143,0.100000001 size=150.478256,14 text="Invert Right Stick look" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=200,-1,207,-1 checked=0
+          #205 type=4 name= pos=19,0,0 size=131.478256,14 text="Invert Right Stick look" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #206 type=4 name= pos=15,172,0.100000001 size=121.130432,14 text="Stick look sensitivity" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+          #207 type=5 name= pos=0,19,0 size=100,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=204,-1,211,-1 slider=0/50
+            #208 type=2 name= pos=0,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #209 type=2 name= pos=82,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #210 type=4 name= pos=50,2,1 size=0,14 text="0.5" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+        #211 type=2 name= pos=15,226,0.100000001 size=83.3043442,25 text="Key Config" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=207,-1,1,-1
+    #212 type=14 name= pos=0,0,0 size=560,355 text="Sound" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+      #213 type=4 name= pos=255.652161,-0,0.100000001 size=57.1304321,22 text="Sound" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,190
+      #214 type=3 name= pos=0,22,0 size=560,333 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #215 type=5 name= pos=542,0,0.699999988 size=18,333 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+          #216 type=2 name= pos=0,0,0.200000003 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #217 type=2 name= pos=0,315,0.200000003 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #218 type=4 name= pos=15,31,0.100000001 size=80.3478241,14 text="Sound Device" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #219 type=10 name= pos=15,50,0.100000001 size=400,18 text="<device>" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,226,-1 combo=0["<device>"]
+          #220 type=6 name= pos=0,0,0 size=400,18 text="MacBook Pro J414 Speakers" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #221 type=2 name= pos=382,0,0.300000012 size=18,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #222 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+            #223 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+            #224 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #225 type=4 name= pos=15,83,0.100000001 size=86.4347687,14 text="Master Volume" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=0
+        #226 type=5 name= pos=15,102,0.100000001 size=100,20 text="" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=219,-1,1,-1 slider=10/10
+          #227 type=2 name= pos=0,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #228 type=2 name= pos=82,0,0.200000003 size=18,20 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+          #229 type=4 name= pos=50,2,1 size=0,14 text="10" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+  #230 type=8 name=LB Tip pos=17,44,1 size=30,20 text="" vis=0 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+  #231 type=8 name=RB Tip pos=570,44,1 size=30,20 text="" vis=0 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+  #232 type=4 name= pos=40,425,1 size=400,30 text="" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=1
+== keyconfig
+#0 type=1 name= pos=90,70,30 size=620,460 text="Key Config" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+  #1 type=1 name= pos=30,85,0.100000001 size=249.67392,18 text="" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+    #2 type=4 name= pos=0,0,0 size=64.673912,17.5 text="Category" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=17.5,17.5 nav=-1,-1,-1,-1 align=0 wrap=0
+    #3 type=10 name= pos=74.673912,0,0 size=175,18 text="Movement" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,13,-1 combo=0["Movement","Actions","Misc"]
+      #4 type=6 name= pos=0,0,0 size=175,18 text="Movement" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+      #5 type=2 name= pos=157,0,0.300000012 size=18,18 text="" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+      #6 type=5 name= pos=0,0,0 size=0,0 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 slider=0/0
+        #7 type=2 name= pos=0,0,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+        #8 type=2 name= pos=0,-18,0.200000003 size=0,18 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+  #9 type=4 name= pos=45,115,0.100000001 size=36.52174,14 text="Action" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=17.5,17.5 nav=-1,-1,-1,-1 align=0 wrap=0
+  #10 type=4 name= pos=285,115,0.100000001 size=140,16 text="Primary" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=17.5,17.5 nav=-1,-1,-1,-1 align=2 wrap=0
+  #11 type=4 name= pos=435,115,0.100000001 size=140,16 text="Secondary" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=17.5,17.5 nav=-1,-1,-1,-1 align=2 wrap=0
+  #12 type=1 name= pos=45,141,0.100000001 size=57.8260841,248 text="" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+    #13 type=4 name= pos=0,0,0.100000001 size=47.47826,14 text="Forward" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=3,-1,16,-1 align=0 wrap=0
+      #14 type=4 name= pos=240,0,0 size=140,16 text="W" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #15 type=4 name= pos=390,0,0 size=140,16 text="LStick Up" vis=1 en=1 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #16 type=4 name= pos=0,26,0.100000001 size=56,14 text="Backward" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=13,-1,19,-1 align=0 wrap=0
+      #17 type=4 name= pos=240,0,0 size=140,16 text="S" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #18 type=4 name= pos=390,0,0 size=140,16 text="LStick Down" vis=1 en=1 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #19 type=4 name= pos=0,52,0.100000001 size=30.434782,14 text="Right" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=16,-1,22,-1 align=0 wrap=0
+      #20 type=4 name= pos=240,0,0 size=140,16 text="D" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #21 type=4 name= pos=390,0,0 size=140,16 text="LStick Right" vis=1 en=1 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #22 type=4 name= pos=0,78,0.100000001 size=21.913044,14 text="Left" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=19,-1,25,-1 align=0 wrap=0
+      #23 type=4 name= pos=240,0,0 size=140,16 text="A" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #24 type=4 name= pos=390,0,0 size=140,16 text="LStick Left" vis=1 en=1 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #25 type=4 name= pos=0,104,0.100000001 size=57.8260841,14 text="LeanRight" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=22,-1,28,-1 align=0 wrap=0
+      #26 type=4 name= pos=240,0,0 size=140,16 text="E" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #27 type=4 name= pos=390,0,0 size=140,16 text="None" vis=1 en=1 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #28 type=4 name= pos=0,130,0.100000001 size=49.3043442,14 text="LeanLeft" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=25,-1,31,-1 align=0 wrap=0
+      #29 type=4 name= pos=240,0,0 size=140,16 text="Q" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #30 type=4 name= pos=390,0,0 size=140,16 text="None" vis=1 en=1 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #31 type=4 name= pos=0,156,0.100000001 size=27.391304,14 text="Lean" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=28,-1,34,-1 align=0 wrap=0
+      #32 type=4 name= pos=240,0,0 size=140,16 text="LeftAlt" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #33 type=4 name= pos=390,0,0 size=140,16 text="Button RT" vis=1 en=1 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #34 type=4 name= pos=0,182,0.100000001 size=22.5217381,14 text="Run" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=31,-1,37,-1 align=0 wrap=0
+      #35 type=4 name= pos=240,0,0 size=140,16 text="LeftShift" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #36 type=4 name= pos=390,0,0 size=140,16 text="Button LT" vis=1 en=1 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #37 type=4 name= pos=0,208,0.100000001 size=40.782608,14 text="Crouch" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=34,-1,40,-1 align=0 wrap=0
+      #38 type=4 name= pos=240,0,0 size=140,16 text="LeftControl" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #39 type=4 name= pos=390,0,0 size=140,16 text="Button B" vis=1 en=1 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #40 type=4 name= pos=0,234,0.100000001 size=31.043478,14 text="Jump" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=37,-1,73,-1 align=0 wrap=0
+      #41 type=4 name= pos=240,0,0 size=140,16 text="Space" vis=1 en=1 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #42 type=4 name= pos=390,0,0 size=140,16 text="Button A" vis=1 en=1 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+  #43 type=1 name= pos=45,141,0.100000001 size=45.0434761,92 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+    #44 type=4 name= pos=0,0,0.100000001 size=36.52174,14 text="Throw" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=3,-1,47,-1 align=0 wrap=0
+      #45 type=4 name= pos=240,0,0 size=140,16 text="RightMouse" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #46 type=4 name= pos=390,0,0 size=140,16 text="Button LB" vis=0 en=0 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #47 type=4 name= pos=0,26,0.100000001 size=45.0434761,14 text="Interact" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=44,-1,50,-1 align=0 wrap=0
+      #48 type=4 name= pos=240,0,0 size=140,16 text="LeftMouse" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #49 type=4 name= pos=390,0,0 size=140,16 text="Button RB" vis=0 en=0 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #50 type=4 name= pos=0,52,0.100000001 size=37.1304321,14 text="Rotate" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=47,-1,53,-1 align=0 wrap=0
+      #51 type=4 name= pos=240,0,0 size=140,16 text="R" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #52 type=4 name= pos=390,0,0 size=140,16 text="Button RStick" vis=0 en=0 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #53 type=4 name= pos=0,78,0.100000001 size=43.826088,14 text="Lantern" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=50,-1,73,-1 align=0 wrap=0
+      #54 type=4 name= pos=240,0,0 size=140,16 text="F" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #55 type=4 name= pos=390,0,0 size=140,16 text="Button X" vis=0 en=0 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+  #56 type=1 name= pos=45,141,0.100000001 size=102.86956,118 text="" vis=0 en=0 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1
+    #57 type=4 name= pos=0,0,0.100000001 size=55.9999962,14 text="Inventory" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=3,-1,60,-1 align=0 wrap=0
+      #58 type=4 name= pos=240,0,0 size=140,16 text="Tab" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #59 type=4 name= pos=390,0,0 size=140,16 text="Back" vis=0 en=0 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #60 type=4 name= pos=0,26,0.100000001 size=42.6086922,14 text="Journal" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=57,-1,63,-1 align=0 wrap=0
+      #61 type=4 name= pos=240,0,0 size=140,16 text="J" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #62 type=4 name= pos=390,0,0 size=140,16 text="Button Y" vis=0 en=0 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #63 type=4 name= pos=0,52,0.100000001 size=59.0434761,14 text="Mementos" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=60,-1,66,-1 align=0 wrap=0
+      #64 type=4 name= pos=240,0,0 size=140,16 text="M" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #65 type=4 name= pos=390,0,0 size=140,16 text="DPad Right" vis=0 en=0 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #66 type=4 name= pos=0,78,0.100000001 size=102.86956,14 text="Open Recent Text" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=63,-1,69,-1 align=0 wrap=0
+      #67 type=4 name= pos=240,0,0 size=140,16 text="N" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #68 type=4 name= pos=390,0,0 size=140,16 text="DPad Left" vis=0 en=0 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+    #69 type=4 name= pos=0,104,0.100000001 size=94.3478088,14 text="CrosshairToggle" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=66,-1,73,-1 align=0 wrap=0
+      #70 type=4 name= pos=240,0,0 size=140,16 text="X" vis=0 en=0 uv=0 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+      #71 type=4 name= pos=390,0,0 size=140,16 text="Button LStick" vis=0 en=0 uv=1 ud=1 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=2 wrap=0
+  #72 type=4 name= pos=40,425,0.100000001 size=400,30 text="" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=-1,-1,-1,-1 align=0 wrap=1
+  #73 type=2 name= pos=40,390,0.100000001 size=113.739113,25 text="Set default keys" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=40,-1,74,-1
+  #74 type=2 name= pos=452,425,0.100000001 size=80,30 text="OK" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=73,75,-1,-1
+  #75 type=2 name= pos=535,425,0.100000001 size=80,30 text="Cancel" vis=1 en=1 uv=0 ud=0 col=1,1,1,1 fs=14,14 nav=73,-1,-1,74
