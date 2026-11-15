@@ -10,7 +10,13 @@ use super::rec::{
 };
 use super::script::{self, Addr, Kind, ScriptHost};
 use super::world::{self, ReadHost, WriteHost};
-use std::ffi::c_void;
+use crate::backend::sdl::fs::{create_folder, folder_exists};
+use crate::platform::{Kind as PathKind, SystemEnv, special_path};
+use crate::resources::config::{Config, Status};
+use crate::string;
+use std::ffi::{OsStr, c_void};
+use std::os::unix::ffi::{OsStrExt, OsStringExt};
+use std::sync::OnceLock;
 
 type Ctx = *mut c_void;
 type Sink8 = unsafe extern "C" fn(Ctx, *const u8, usize);
@@ -40,43 +46,6 @@ fn push8(sink: Sink8, ctx: Ctx, b: &[u8]) {
 fn push32(sink: Sink32, ctx: Ctx, b: &[u32]) {
     // SAFETY: `sink` accepts `ctx`.
     unsafe { sink(ctx, b.as_ptr(), b.len()) }
-}
-
-/// # Safety
-/// `data` is `n` readable bytes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs4_game_id(data: *const u8, n: usize) -> i32 {
-    match base::game_id(bytes(data, n)) {
-        "rebirth" => 1,
-        "bunker" => 2,
-        _ => 0,
-    }
-}
-
-#[repr(C)]
-pub struct OhplGs4CfgHost {
-    pub ctx: Ctx,
-    pub get_float: unsafe extern "C" fn(Ctx, *const u8, usize, *const u8, usize, f32) -> f32,
-    pub get_bool: unsafe extern "C" fn(Ctx, *const u8, usize, *const u8, usize, bool) -> bool,
-    pub get_int: unsafe extern "C" fn(Ctx, *const u8, usize, *const u8, usize, i32) -> i32,
-    pub set_float: unsafe extern "C" fn(Ctx, *const u8, usize, *const u8, usize, f32),
-    pub set_bool: unsafe extern "C" fn(Ctx, *const u8, usize, *const u8, usize, bool),
-    pub set_int: unsafe extern "C" fn(Ctx, *const u8, usize, *const u8, usize, i32),
-}
-
-struct CCfg<'a>(&'a OhplGs4CfgHost);
-
-// SAFETY (all calls): the entry point's caller guarantees the table accepts its `ctx`.
-impl CfgHost for CCfg<'_> {
-    fn get_float(&mut self, l: &str, k: &str, d: f32) -> f32 {
-        unsafe { (self.0.get_float)(self.0.ctx, l.as_ptr(), l.len(), k.as_ptr(), k.len(), d) }
-    }
-    fn get_bool(&mut self, l: &str, k: &str, d: bool) -> bool {
-        unsafe { (self.0.get_bool)(self.0.ctx, l.as_ptr(), l.len(), k.as_ptr(), k.len(), d) }
-    }
-    fn get_int(&mut self, l: &str, k: &str, d: i32) -> i32 {
-        unsafe { (self.0.get_int)(self.0.ctx, l.as_ptr(), l.len(), k.as_ptr(), k.len(), d) }
-    }
 }
 
 #[repr(C)]
@@ -127,43 +96,108 @@ pub extern "C" fn ohpl_gs4_cfg_default() -> OhplGs4Config {
     ConfigVals::default().into()
 }
 
-/// # Safety
-/// `host` and `cfg` are valid; the table accepts its `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs4_cfg_load(host: *const OhplGs4CfgHost, cfg: *mut OhplGs4Config) {
-    // SAFETY: valid pointers per the contract.
-    let (Some(host), Some(cfg)) = (unsafe { host.as_ref() }, unsafe { cfg.as_mut() }) else {
-        return;
-    };
-    let mut v = ConfigVals::from(*cfg);
-    base::load_config(&mut CCfg(host), &mut v);
-    *cfg = v.into();
+struct FileCfg<'a>(&'a Config);
+
+impl FileCfg<'_> {
+    fn raw(&self, l: &str, k: &str) -> Option<&[u8]> {
+        self.0.get(l.as_bytes(), k.as_bytes())
+    }
 }
 
-/// # Safety
-/// `host` and `cfg` are valid; the table accepts its `ctx`.
+impl CfgHost for FileCfg<'_> {
+    fn get_float(&mut self, l: &str, k: &str, d: f32) -> f32 {
+        self.raw(l, k).map_or(d, string::token_to_float)
+    }
+    fn get_bool(&mut self, l: &str, k: &str, d: bool) -> bool {
+        self.raw(l, k).map_or(d, string::to_bool)
+    }
+    fn get_int(&mut self, l: &str, k: &str, d: i32) -> i32 {
+        self.raw(l, k).map_or(d, string::token_to_int)
+    }
+}
+
+fn game_dir_file() -> Vec<u8> {
+    let mut p = std::env::var_os("OPENHPL_SOMA_GAME_DIR")
+        .map(|d| d.into_vec())
+        .unwrap_or_default();
+    if !p.is_empty() {
+        p.push(b'/');
+    }
+    p.extend_from_slice(b"config/main_init.cfg");
+    p
+}
+
+/// 0 soma, 1 rebirth, 2 bunker, read once from the game's `main_init.cfg`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs4_cfg_save(host: *const OhplGs4CfgHost, cfg: *const OhplGs4Config) {
-    // SAFETY: valid pointers per the contract.
-    let (Some(host), Some(cfg)) = (unsafe { host.as_ref() }, unsafe { cfg.as_ref() }) else {
-        return;
+pub extern "C" fn ohpl_gs4_game_index() -> i32 {
+    static IDX: OnceLock<i32> = OnceLock::new();
+    *IDX.get_or_init(|| {
+        let text = std::fs::read(OsStr::from_bytes(&game_dir_file())).unwrap_or_default();
+        match base::game_id(&text) {
+            "rebirth" => 1,
+            "bunker" => 2,
+            _ => 0,
+        }
+    })
+}
+
+fn settings_file() -> Vec<u8> {
+    let root = special_path(&SystemEnv, PathKind::ConfigHome).unwrap_or_default();
+    let id = match ohpl_gs4_game_index() {
+        1 => "rebirth",
+        2 => "bunker",
+        _ => "soma",
     };
-    for (l, k, v) in base::save_config(&ConfigVals::from(*cfg)) {
-        // SAFETY: the table accepts its `ctx`.
-        unsafe {
-            match v {
-                Value::Float(f) => {
-                    (host.set_float)(host.ctx, l.as_ptr(), l.len(), k.as_ptr(), k.len(), f)
-                }
-                Value::Bool(b) => {
-                    (host.set_bool)(host.ctx, l.as_ptr(), l.len(), k.as_ptr(), k.len(), b)
-                }
-                Value::Int(x) => {
-                    (host.set_int)(host.ctx, l.as_ptr(), l.len(), k.as_ptr(), k.len(), x)
-                }
-            }
+    let (dirs, file) = base::config_dirs(&string::utf8_to_wide(&root), id);
+    for d in dirs {
+        let d = string::wide_to_utf8(&d);
+        if !folder_exists(&d) {
+            create_folder(&d);
         }
     }
+    string::wide_to_utf8(&file)
+}
+
+/// `cSomaConfig::Load`: false when there is no settings file yet (`cfg` untouched).
+///
+/// # Safety
+/// `cfg` is valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_gs4_cfg_load(cfg: *mut OhplGs4Config) -> bool {
+    // SAFETY: valid pointer per the contract.
+    let Some(cfg) = (unsafe { cfg.as_mut() }) else {
+        return false;
+    };
+    let mut file = Config::default();
+    if file.load(&settings_file(), false) != Status::Ok {
+        return false;
+    }
+    let mut v = ConfigVals::from(*cfg);
+    base::load_config(&mut FileCfg(&file), &mut v);
+    *cfg = v.into();
+    true
+}
+
+/// `cSomaConfig::Save`: false when the file cannot be written.
+///
+/// # Safety
+/// `cfg` is valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_gs4_cfg_save(cfg: *const OhplGs4Config) -> bool {
+    // SAFETY: valid pointer per the contract.
+    let Some(cfg) = (unsafe { cfg.as_ref() }) else {
+        return false;
+    };
+    let mut file = Config::default();
+    for (l, k, v) in base::save_config(&ConfigVals::from(*cfg)) {
+        let v = match v {
+            Value::Float(f) => format!("{f:.6}"),
+            Value::Bool(b) => b.to_string(),
+            Value::Int(x) => x.to_string(),
+        };
+        file.set(l.as_bytes(), k.as_bytes(), v.as_bytes());
+    }
+    file.save(&settings_file(), false) == Status::Ok
 }
 
 /// Directories to create in order (`is_file` false), then the file path (`is_file` true).
