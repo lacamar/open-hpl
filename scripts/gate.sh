@@ -143,8 +143,10 @@ half() {
 	if has amnesia; then
 		for M in $DUMP_AMNESIA; do
 			rm -f "$OUT/h13-$M-$impl.txt" "$OUT/a7-$M-$impl.txt" "$OUT/a10a-$M-$impl.txt" "$OUT/a11a-$M-$impl.txt" "$OUT/a11b-$M-$impl.txt"
-			ENVX="$extra OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A10A_DUMP=$OUT/a10a-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt OHPL_A11B_DUMP=$OUT/a11b-$M-$impl.txt" \
+			ENVX="$extra OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A10A_DUMP=$OUT/a10a-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt" \
 				sweep "$impl" amnesia "$OUT/dump-$impl-amnesia.json" --map "$M"
+			# the a11b driver gives items and hints: run it alone so it neither sees nor changes other dumps
+			ENVX="$extra OHPL_A11B_DUMP=$OUT/a11b-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a11b-$impl-amnesia.json" --map "$M"
 		done
 	fi
 	if has amnesia; then
