@@ -67,122 +67,133 @@ typedef tLuxInputVec::iterator	tLuxInputVecIt;
 
 //----------------------------------------------
 
-class cLuxPlayer;
+// The action table and the default bindings live in Rust; these copies hand out stable pointers.
+struct cLuxInputTables
+{
+	tLuxActionVec mvActionPtrs;
+	std::vector<cLuxAction> mvActions;
+	std::vector<cLuxInput> mvInputs;
+
+	cLuxInputTables()
+	{
+		tString sName;
+		auto emit = [&](uint32_t tag, const void *p, size_t n) { sName = OhplGa9EmitS(p, n); };
+
+		mvActions.reserve(ohpl_ga9_action_count());
+		OhplGa9Action action;
+		for(size_t i=0; ohpl_ga9_action(i, &action, OhplGa9EmitOf<decltype(emit)>::Fn(), &emit); ++i)
+			mvActions.push_back(cLuxAction(sName, action.id, action.configurable, (eLuxActionCategory)action.cat));
+
+		mvInputs.reserve(ohpl_ga9_input_count());
+		int lValue, lActionId;
+		for(size_t i=0; ohpl_ga9_input(i, &lValue, &lActionId, OhplGa9EmitOf<decltype(emit)>::Fn(), &emit); ++i)
+			mvInputs.push_back(cLuxInput(sName, lValue, lActionId));
+	}
+};
+
+inline cLuxInputTables &LuxInputTables()
+{
+	static cLuxInputTables tables;
+	return tables;
+}
 
 //----------------------------------------------
-
 
 class cLuxInputHandler : public iLuxUpdateable
 {
 public:	
-	cLuxInputHandler();
-	~cLuxInputHandler();
+	cLuxInputHandler() : iLuxUpdateable("LuxInputHandler")
+	{
+		ohpl_in_set_host(OhplInHostCall);
+		mlH = ohpl_in_new();
+	}
+	~cLuxInputHandler() { ohpl_in_free(mlH); }
 
-	void LoadUserConfig();
-	void SaveUserConfig();
+	void LoadUserConfig() { ohpl_in_load_user_config(mlH); }
+	void SaveUserConfig() { ohpl_in_save_user_config(mlH); }
 	
-	void OnStart();
-	void Update(float afTimeStep);
-	void Reset();
-	void OnPostRender(float afFrameTime);
+	void OnStart() {}
+	void Update(float afTimeStep) { if(OhplInDumpEnabled() == false || OhplInScripted()) ohpl_in_update(mlH); }
+	void Reset() {}
+	void OnPostRender(float afFrameTime) { OhplInDumpTick(); ohpl_in_post_render(mlH); }
 
-	tWString GetInputName(const tString& asActionName);
+	tWString GetInputName(const tString& asActionName)
+	{
+		tWString sName;
+		return OhplInInputName(asActionName, sName) ? sName : _W("InvalidAction");
+	}
 
-	void ChangeState(eLuxInputState aState);
-	eLuxInputState GetState(){ return mState; }
+	void ChangeState(eLuxInputState aState) { ohpl_in_change_state(mlH, aState); }
+	eLuxInputState GetState(){ return (eLuxInputState)ohpl_in_state(mlH); }
 
-	bool GetInvertMouse(){ return mbInvertMouse;}
-	void SetInvertMouse(bool abX) { mbInvertMouse = abX; }
+	bool GetInvertMouse(){ return ohpl_in_get(mlH, 0) != 0; }
+	void SetInvertMouse(bool abX) { ohpl_in_set(mlH, 0, abX); }
 
-	bool GetSmoothMouse() { return mbSmoothMouse; }
-	void SetSmoothMouse(bool abX) { mbSmoothMouse = abX; }
+	bool GetSmoothMouse() { return ohpl_in_get(mlH, 1) != 0; }
+	void SetSmoothMouse(bool abX) { ohpl_in_set(mlH, 1, abX); }
 
-	float GetMouseSensitivity() { return mfMouseSensitivity; }
-	void SetMouseSensitivity(float afX);
+	float GetMouseSensitivity() { return ohpl_in_get(mlH, 2); }
+	void SetMouseSensitivity(float afX) { ohpl_in_set(mlH, 2, afX); }
 
 #ifdef USE_GAMEPAD
-	bool GetInvertGamepadLook() { return mbGamepadLookInvert; }
-	void SetInvertGamepadLook(bool abX) { mbGamepadLookInvert = abX; }
+	bool GetInvertGamepadLook() { return ohpl_in_get(mlH, 4) != 0; }
+	void SetInvertGamepadLook(bool abX) { ohpl_in_set(mlH, 4, abX); }
 
-	float GetGamepadLookSensitivity() { return mfGamepadLookSensitivity; }
-	void SetGamepadLookSensitivity(float afX);
+	float GetGamepadLookSensitivity() { return ohpl_in_get(mlH, 3); }
+	void SetGamepadLookSensitivity(float afX) { ohpl_in_set(mlH, 3, afX); }
 
 	iGamepad* GetGamepad() { return OhplInPad(); }
+	bool IsGamepadPresent() { return OhplInPad() != NULL; }
+	void AppDeviceWasPlugged() { OhplInQ(eInQ_PadSetup); }
+	void AppDeviceWasRemoved() { OhplInQ(eInQ_PadSetup); }
 #endif
 
-	cLuxAction*   GetActionByName(const tString& asName);
-	cLuxAction*	  GetActionById(int alId);
-	tLuxActionVec GetActionsByCategory(eLuxActionCategory aCat);
+	cLuxAction* GetActionByName(const tString& asName)
+	{
+		int lIdx = ohpl_ga9_action_by_name((const unsigned char*)asName.data(), asName.size());
+		return lIdx < 0 ? NULL : &LuxInputTables().mvActions[lIdx];
+	}
 
-	tLuxInputVec GetDefaultInputsByActionId(int alId);
+	cLuxAction* GetActionById(int alId)
+	{
+		int lIdx = ohpl_ga9_action_by_id(alId);
+		return lIdx < 0 ? NULL : &LuxInputTables().mvActions[lIdx];
+	}
 
-	void ResetSmoothMousePos();
-	cVector2f GetSmoothMousePos(const cVector2f& avRelPosMouse);
+	tLuxActionVec GetActionsByCategory(eLuxActionCategory aCat)
+	{
+		cLuxInputTables &tables = LuxInputTables();
+		std::vector<int> vIdx(tables.mvActions.size());
+		size_t lNum = ohpl_ga9_actions_by_category(aCat, vIdx.data(), vIdx.size());
 
-#ifdef USE_GAMEPAD
-	bool IsGamepadPresent();
+		tLuxActionVec vActions;
+		for(size_t i=0; i<lNum; ++i)
+			vActions.push_back(&tables.mvActions[vIdx[i]]);
+		return vActions;
+	}
 
-	void AppDeviceWasPlugged();
-	void AppDeviceWasRemoved();
-#endif
+	tLuxInputVec GetDefaultInputsByActionId(int alId)
+	{
+		cLuxInputTables &tables = LuxInputTables();
+		std::vector<int> vIdx(tables.mvInputs.size());
+		size_t lNum = ohpl_ga9_default_inputs(alId, vIdx.data(), vIdx.size());
+
+		tLuxInputVec vInputs;
+		for(size_t i=0; i<lNum; ++i)
+			vInputs.push_back(&tables.mvInputs[vIdx[i]]);
+		return vInputs;
+	}
+
+	void ResetSmoothMousePos() { ohpl_in_smooth_reset(mlH); }
+	cVector2f GetSmoothMousePos(const cVector2f& avRelPosMouse)
+	{
+		float vOut[2];
+		ohpl_in_smooth_push(mlH, avRelPosMouse.x, avRelPosMouse.y, vOut);
+		return cVector2f(vOut[0], vOut[1]);
+	}
 
 private:
-	void UpdateGlobalInput();
-	bool UpdateGamepadUIInput();
-	
-	void UpdateGameInput();
-	void UpdateGamePlayerInput();
-	void UpdateGameMessageInput();
-	void UpdateGameEffectInput();
-	
-	void UpdatePreMenuInput();
-	void UpdateMainMenuInput();
-	void UpdateInventoryInput();
-	void UpdateJournalInput();
-	void UpdateDebugInput();
-	void UpdateCreditsInput();
-	void UpdateDemoEndInput();
-	void UpdateLoadScreenInput();
-
-	bool CurrentStateSendsInputToGui();
-
-	void CreateActions();
-
-	void ActionCall(uint32_t op, const OhplGa9Arg *a, OhplGa9Ret *r);
-
-
-
-	bool ShowMouseOnMouseInput();
-
-#ifdef USE_GAMEPAD
-	void SetUpGamepad();
-#endif
-
-	cGraphics *mpGraphics;
-	cInput *mpInput;
-
-	cLuxPlayer *mpPlayer;
-
-	eLuxInputState mState;
-
-	bool mbSmoothMouse;
-	bool mbInvertMouse;
-
-	OhplGa9MouseAct mMouseAct;
-
-	float mfMouseSensitivity;
-
-	int mlMaxSmoothMousePos;
-	float mfPrevSmoothMousePosMul;
-	OhplGa9Smooth *mpSmooth;
-
-
-#ifdef USE_GAMEPAD
-	float mfGamepadWalkSensitivity;
-	float mfGamepadLookSensitivity;
-	bool mbGamepadLookInvert;
-	bool mbGamepadUIInput;
-#endif
+	uint64_t mlH;
 };
 
 //----------------------------------------------

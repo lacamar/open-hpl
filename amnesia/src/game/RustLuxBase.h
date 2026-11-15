@@ -70,23 +70,6 @@ enum eOhplGa9Op
 	eOhplGa9Op_ActionCount = 63,
 	eOhplGa9Op_ActionType = 64,
 	eOhplGa9Op_ActionInput = 65,
-	eOhplGa9Op_MouseAnyButton = 70,
-	eOhplGa9Op_MouseAbs = 71,
-	eOhplGa9Op_MouseTime = 72,
-	eOhplGa9Op_MousePad = 73,
-	eOhplGa9Op_MouseUiDir = 74,
-	eOhplGa9Op_MouseScreen = 75,
-	eOhplGa9Op_MouseHide = 76,
-	eOhplGa9Op_LookTriggered = 80,
-	eOhplGa9Op_LookAddLean = 81,
-	eOhplGa9Op_LookSetLean = 82,
-	eOhplGa9Op_LookScroll = 83,
-	eOhplGa9Op_LookStop = 84,
-	eOhplGa9Op_LookButton = 85,
-	eOhplGa9Op_LookAxis = 86,
-	eOhplGa9Op_LookDead = 87,
-	eOhplGa9Op_LookFrame = 88,
-	eOhplGa9Op_LookStep = 89,
 	eOhplGa9Op_ReqHas = 100,
 	eOhplGa9Op_ReqStr = 101,
 	eOhplGa9Op_ReqInt = 102,
@@ -198,27 +181,6 @@ struct OhplGa9Action
 	int32_t cat;
 };
 
-struct OhplGa9Settings
-{
-	bool invert_mouse, smooth_mouse, gamepad_look_invert;
-	float mouse_sensitivity, gamepad_walk_sensitivity, gamepad_look_sensitivity;
-};
-
-struct OhplGa9MouseAct
-{
-	int32_t last_x, last_y;
-	double active_at;
-};
-
-struct OhplGa9LookIn
-{
-	int32_t mouse_rel_x, mouse_rel_y;
-	float mouse_sensitivity, screen_height;
-	bool smooth_mouse, invert_mouse, pad_present;
-	float look_sensitivity;
-	bool look_invert;
-};
-
 // First member of a Rust debug handle: the flags the C++ reads and writes directly.
 struct OhplGa9DebugFlags
 {
@@ -235,7 +197,6 @@ struct OhplGa9Toggle
 	float value;
 };
 
-struct OhplGa9Smooth;
 struct OhplGa9Debug;
 
 extern "C"
@@ -264,6 +225,20 @@ extern "C"
 	bool ohpl_ga9_achievement(size_t index, int32_t *id, OhplGa9Emit emit, void *ectx);
 	int32_t ohpl_ga9_axis_from_name(const unsigned char *s, size_t n, bool *ok);
 
+	uint64_t ohpl_in_new();
+	void ohpl_in_free(uint64_t h);
+	void ohpl_in_set_host(OhplGa9Call call);
+	void ohpl_in_update(uint64_t h);
+	void ohpl_in_post_render(uint64_t h);
+	void ohpl_in_change_state(uint64_t h, int32_t state);
+	int32_t ohpl_in_state(uint64_t h);
+	void ohpl_in_load_user_config(uint64_t h);
+	void ohpl_in_save_user_config(uint64_t h);
+	void ohpl_in_smooth_reset(uint64_t h);
+	void ohpl_in_smooth_push(uint64_t h, float x, float y, float *out);
+	float ohpl_in_get(uint64_t h, int32_t which);
+	void ohpl_in_set(uint64_t h, int32_t which, float v);
+
 	size_t ohpl_ga9_action_count();
 	bool ohpl_ga9_action(size_t index, OhplGa9Action *out, OhplGa9Emit emit, void *ectx);
 	size_t ohpl_ga9_input_count();
@@ -272,18 +247,6 @@ extern "C"
 	int32_t ohpl_ga9_action_by_id(int32_t id);
 	size_t ohpl_ga9_actions_by_category(int32_t cat, int32_t *out, size_t cap);
 	size_t ohpl_ga9_default_inputs(int32_t id, int32_t *out, size_t cap);
-	void ohpl_ga9_create_actions(void *ctx, OhplGa9Call call);
-	void ohpl_ga9_load_user_config(void *ctx, OhplGa9Call call, OhplGa9Settings *out);
-	void ohpl_ga9_save_user_config(void *ctx, OhplGa9Call call, const OhplGa9Settings *s);
-	OhplGa9Smooth *ohpl_ga9_smooth_new(int32_t max, float prev_mul);
-	void ohpl_ga9_smooth_free(OhplGa9Smooth *s);
-	void ohpl_ga9_smooth_reset(OhplGa9Smooth *s);
-	void ohpl_ga9_smooth_push(OhplGa9Smooth *s, float x, float y, float *out);
-	bool ohpl_ga9_mouse_step(OhplGa9MouseAct *m, void *ctx, OhplGa9Call call);
-	void ohpl_ga9_look(OhplGa9Smooth *s, const OhplGa9LookIn *i, void *ctx, OhplGa9Call call, float *out);
-	bool ohpl_ga9_state_sends_to_gui(int32_t state, bool inventory_message_active);
-	void ohpl_ga9_screenshot_name(const uint32_t *dir, size_t dir_n, const unsigned char *ext, size_t ext_n, void *ctx, OhplGa9Call call, OhplGa9Emit emit, void *ectx);
-	bool ohpl_ga9_ui_map(int32_t kind, size_t index, int32_t *action, int32_t *id);
 
 	OhplGa9Debug *ohpl_ga9_debug_new();
 	void ohpl_ga9_debug_free(OhplGa9Debug *d);

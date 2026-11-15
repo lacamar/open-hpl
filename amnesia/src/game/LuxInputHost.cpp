@@ -18,6 +18,7 @@
 #include "LuxLoadScreenHandler.h"
 #include "LuxDebugHandler.h"
 #include "LuxInputHandler.h"
+#include "LuxA12bDump.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -339,6 +340,66 @@ bool OhplInInputName(const tString &asAction, tWString &asOut)
 	if(pAction == NULL) return false;
 	asOut = cString::To16Char(pAction->GetSubAction(0)->GetInputName());
 	return true;
+}
+
+//-----------------------------------------------------------------------
+
+enum { eInOp_Trig = 160, eInOp_Val, eInOp_Q, eInOp_Fx, eInOp_ShotDir, eInOp_ShotExt, eInOp_FileExists, eInOp_ShotSave,
+	eInOp_GameInt, eInOp_GameFloat, eInOp_LogCfg };
+
+static bool gbLogCfg = false;
+
+static void ActionCall(uint32_t alOp, const OhplGa9Arg *a, OhplGa9Ret *r)
+{
+	cInput *pInput = gpBase->mpEngine->GetInput();
+	switch(alOp)
+	{
+	case eOhplGa9Op_ActionCreate: pInput->CreateAction(OhplGa9GetS(a[0]), (int)a[1].i); break;
+	case eOhplGa9Op_ActionClear: pInput->GetAction((int)a[0].i)->ClearSubActions(); break;
+	case eOhplGa9Op_ActionAdd:
+		{
+			cAction *pAction = pInput->GetAction((int)a[0].i);
+			int lA = (int)a[2].i, lB = (int)a[3].i;
+			switch(a[1].i)
+			{
+			case 0: pAction->AddKey((eKey)lA); break;
+			case 1: pAction->AddMouseButton((eMouseButton)lA); break;
+			case 2: pAction->AddGamepadButton(0, (eGamepadButton)lA); break;
+			case 3: pAction->AddGamepadHat(0, (eGamepadHat)lA, (eGamepadHatState)lB); break;
+			case 4: pAction->AddGamepadAxis(0, (eGamepadAxis)lA, (eGamepadAxisRange)lB, 0.25f); break;
+			}
+		}
+		break;
+	case eOhplGa9Op_ActionCount: r->i = pInput->GetAction((int)a[0].i)->GetSubActionNum(); break;
+	case eOhplGa9Op_ActionType: OhplGa9RetS(r, pInput->GetAction((int)a[0].i)->GetSubAction((size_t)a[1].i)->GetInputType()); break;
+	case eOhplGa9Op_ActionInput: OhplGa9RetS(r, pInput->GetAction((int)a[0].i)->GetSubAction((size_t)a[1].i)->GetInputName()); break;
+	}
+}
+
+void OhplInHostCall(void *apCtx, uint32_t alOp, const OhplGa9Arg *a, size_t alNum, OhplGa9Ret *r)
+{
+	if(alOp < eInOp_Trig)
+	{
+		if(gbLogCfg) OhplA12bLogCall("input", alOp, a, alNum);
+		if(alOp >= eOhplGa9Op_ActionCreate) ActionCall(alOp, a, r);
+		else if(alOp >= eOhplGa9Op_Cfg2) OhplGa9CfgCall(gpBase->mpUserKeyConfig, alOp - eOhplGa9Op_Cfg2, a, r);
+		else OhplGa9CfgCall(gpBase->mpUserConfig, alOp, a, r);
+		return;
+	}
+	switch(alOp)
+	{
+	case eInOp_Trig: r->i = OhplInTrig((int)a[0].i, (int)a[1].i); break;
+	case eInOp_Val: r->d = OhplInVal((int)a[0].i, (int)a[1].i); break;
+	case eInOp_Q: r->i = OhplInQ((int)a[0].i); break;
+	case eInOp_Fx: OhplInFx((int)a[0].i, (int)a[1].i, (int)a[2].i, a[3].f); break;
+	case eInOp_ShotDir: OhplGa9RetW(r, OhplInShotDir()); break;
+	case eInOp_ShotExt: OhplGa9RetS(r, OhplInShotExt()); break;
+	case eInOp_FileExists: r->i = OhplInFileExists(OhplGa9GetW(a[0])); break;
+	case eInOp_ShotSave: OhplInShotSave(OhplGa9GetW(a[0])); break;
+	case eInOp_GameInt: r->i = gpBase->mpGameCfg->GetInt(OhplGa9GetS(a[0]), OhplGa9GetS(a[1]), (int)a[2].i); break;
+	case eInOp_GameFloat: r->f = gpBase->mpGameCfg->GetFloat(OhplGa9GetS(a[0]), OhplGa9GetS(a[1]), a[2].f); break;
+	case eInOp_LogCfg: gbLogCfg = a[0].i != 0; break;
+	}
 }
 
 //-----------------------------------------------------------------------

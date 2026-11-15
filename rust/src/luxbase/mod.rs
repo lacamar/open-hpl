@@ -11,6 +11,9 @@ pub mod debug;
 mod ffi;
 pub mod headless;
 pub mod input;
+pub mod input_h;
 pub mod look;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_input_h;

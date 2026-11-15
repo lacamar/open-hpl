@@ -5,7 +5,7 @@
 //! through `ohpl_ga9_ret_bytes` / `ohpl_ga9_ret_wide` or through an emit callback `(tag, p, n)`.
 
 use super::cfg::Cfg;
-use super::{amfp, base, config, debug, headless, input, look};
+use super::{amfp, base, config, debug, headless, input};
 use std::ffi::c_void;
 
 type Ctx = *mut c_void;
@@ -28,7 +28,7 @@ pub struct Ret {
     wide: *mut Vec<u32>,
 }
 
-type Call = unsafe extern "C" fn(Ctx, u32, *const Arg, usize, *mut Ret);
+pub(super) type Call = unsafe extern "C" fn(Ctx, u32, *const Arg, usize, *mut Ret);
 type Emit = unsafe extern "C" fn(Ctx, u32, *const c_void, usize);
 
 fn units<'a, T>(p: *const T, n: usize) -> &'a [T] {
@@ -59,7 +59,7 @@ pub unsafe extern "C" fn ohpl_ga9_ret_wide(r: *mut Ret, p: *const u32, n: usize)
     }
 }
 
-fn ai(i: i64) -> Arg {
+pub(super) fn ai(i: i64) -> Arg {
     Arg {
         i,
         f: 0.0,
@@ -68,7 +68,7 @@ fn ai(i: i64) -> Arg {
     }
 }
 
-fn af(f: f32) -> Arg {
+pub(super) fn af(f: f32) -> Arg {
     Arg { f, ..ai(0) }
 }
 
@@ -76,7 +76,7 @@ fn ab(b: bool) -> Arg {
     ai(i64::from(b))
 }
 
-fn astr(s: &[u8]) -> Arg {
+pub(super) fn astr(s: &[u8]) -> Arg {
     Arg {
         p: s.as_ptr(),
         n: s.len(),
@@ -84,7 +84,7 @@ fn astr(s: &[u8]) -> Arg {
     }
 }
 
-fn aw(s: &[u32]) -> Arg {
+pub(super) fn aw(s: &[u32]) -> Arg {
     Arg {
         p: s.as_ptr().cast(),
         n: s.len(),
@@ -93,22 +93,22 @@ fn aw(s: &[u32]) -> Arg {
 }
 
 #[derive(Default)]
-struct Reply {
-    i: i64,
-    f: f32,
-    d: f64,
-    bytes: Vec<u8>,
-    wide: Vec<u32>,
+pub(super) struct Reply {
+    pub(super) i: i64,
+    pub(super) f: f32,
+    pub(super) d: f64,
+    pub(super) bytes: Vec<u8>,
+    pub(super) wide: Vec<u32>,
 }
 
 #[derive(Clone, Copy)]
-struct Host {
-    ctx: Ctx,
-    call: Call,
+pub(super) struct Host {
+    pub(super) ctx: Ctx,
+    pub(super) call: Call,
 }
 
 impl Host {
-    fn go(&self, op: u32, args: &[Arg]) -> Reply {
+    pub(super) fn go(&self, op: u32, args: &[Arg]) -> Reply {
         let mut rep = Reply::default();
         let mut ret = Ret {
             i: 0,
@@ -125,20 +125,20 @@ impl Host {
         rep
     }
 
-    fn i(&self, op: u32, args: &[Arg]) -> i64 {
+    pub(super) fn i(&self, op: u32, args: &[Arg]) -> i64 {
         self.go(op, args).i
     }
 
-    fn b(&self, op: u32, args: &[Arg]) -> bool {
+    pub(super) fn b(&self, op: u32, args: &[Arg]) -> bool {
         self.go(op, args).i != 0
     }
 
-    fn f(&self, op: u32, args: &[Arg]) -> f32 {
+    pub(super) fn f(&self, op: u32, args: &[Arg]) -> f32 {
         self.go(op, args).f
     }
 }
 
-mod op {
+pub(super) mod op {
     pub const C_BOOL: u32 = 0;
     pub const C_INT: u32 = 1;
     pub const C_FLOAT: u32 = 2;
@@ -171,23 +171,6 @@ mod op {
     pub const A_COUNT: u32 = 63;
     pub const A_TYPE: u32 = 64;
     pub const A_INPUT: u32 = 65;
-    pub const M_ANY_BUTTON: u32 = 70;
-    pub const M_ABS: u32 = 71;
-    pub const M_TIME: u32 = 72;
-    pub const M_PAD: u32 = 73;
-    pub const M_UI_DIR: u32 = 74;
-    pub const M_SCREEN: u32 = 75;
-    pub const M_HIDE: u32 = 76;
-    pub const K_TRIGGERED: u32 = 80;
-    pub const K_ADD_LEAN: u32 = 81;
-    pub const K_SET_LEAN: u32 = 82;
-    pub const K_SCROLL: u32 = 83;
-    pub const K_STOP: u32 = 84;
-    pub const K_BUTTON: u32 = 85;
-    pub const K_AXIS: u32 = 86;
-    pub const K_DEAD: u32 = 87;
-    pub const K_FRAME: u32 = 88;
-    pub const K_STEP: u32 = 89;
     pub const Q_HAS: u32 = 100;
     pub const Q_STR: u32 = 101;
     pub const Q_INT: u32 = 102;
@@ -231,9 +214,9 @@ mod op {
     pub const H_SET_YAW: u32 = 150;
 }
 
-struct CfgHost {
-    h: Host,
-    base: u32,
+pub(super) struct CfgHost {
+    pub(super) h: Host,
+    pub(super) base: u32,
 }
 
 impl Cfg for CfgHost {
@@ -1361,7 +1344,7 @@ unsafe fn fill(idx: impl Iterator<Item = usize>, out: *mut i32, cap: usize) -> u
     n
 }
 
-struct ActionHost(Host);
+pub(super) struct ActionHost(pub(super) Host);
 
 impl input::ActionEnv for ActionHost {
     fn create_action(&mut self, name: &[u8], id: i32) {
@@ -1400,321 +1383,8 @@ impl input::ActionEnv for ActionHost {
     }
 }
 
-/// # Safety
-/// `ctx`/`call` as in the module docs.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_create_actions(ctx: Ctx, call: Call) {
-    input::create_actions(&mut ActionHost(Host { ctx, call }));
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct SettingsC {
-    invert_mouse: bool,
-    smooth_mouse: bool,
-    gamepad_look_invert: bool,
-    mouse_sensitivity: f32,
-    gamepad_walk_sensitivity: f32,
-    gamepad_look_sensitivity: f32,
-}
-
-/// # Safety
-/// `ctx`/`call` as in the module docs (cfg 0 is the user config, cfg 1 the key config);
-/// `out` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_load_user_config(ctx: Ctx, call: Call, out: *mut SettingsC) {
-    let h = Host { ctx, call };
-    let s = input::load_user_config(
-        &mut CfgHost { h, base: 0 },
-        &mut CfgHost { h, base: op::CFG2 },
-        &mut ActionHost(h),
-    );
-    // SAFETY: `out` is writable per the contract.
-    if let Some(p) = unsafe { out.as_mut() } {
-        *p = SettingsC {
-            invert_mouse: s.invert_mouse,
-            smooth_mouse: s.smooth_mouse,
-            gamepad_look_invert: s.gamepad_look_invert,
-            mouse_sensitivity: s.mouse_sensitivity,
-            gamepad_walk_sensitivity: s.gamepad_walk_sensitivity,
-            gamepad_look_sensitivity: s.gamepad_look_sensitivity,
-        };
-    }
-}
-
-/// # Safety
-/// `ctx`/`call` as in the module docs (cfg 0 is the user config, cfg 1 the key config);
-/// `s` is readable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_save_user_config(ctx: Ctx, call: Call, s: *const SettingsC) {
-    // SAFETY: `s` is readable per the contract.
-    let Some(s) = (unsafe { s.as_ref() }) else {
-        return;
-    };
-    let h = Host { ctx, call };
-    input::save_user_config(
-        &input::Settings {
-            invert_mouse: s.invert_mouse,
-            smooth_mouse: s.smooth_mouse,
-            mouse_sensitivity: s.mouse_sensitivity,
-            gamepad_walk_sensitivity: s.gamepad_walk_sensitivity,
-            gamepad_look_sensitivity: s.gamepad_look_sensitivity,
-            gamepad_look_invert: s.gamepad_look_invert,
-        },
-        &mut CfgHost { h, base: 0 },
-        &mut CfgHost { h, base: op::CFG2 },
-        &mut ActionHost(h),
-    );
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga9_smooth_new(max: i32, prev_mul: f32) -> *mut input::Smooth {
-    Box::into_raw(Box::new(input::Smooth::new(max, prev_mul)))
-}
-
-/// # Safety
-/// `s` comes from `ohpl_ga9_smooth_new` and is not used afterwards.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_smooth_free(s: *mut input::Smooth) {
-    if !s.is_null() {
-        // SAFETY: per the contract `s` is a live box.
-        drop(unsafe { Box::from_raw(s) });
-    }
-}
-
-/// # Safety
-/// `s` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_smooth_reset(s: *mut input::Smooth) {
-    // SAFETY: `s` is live per the contract.
-    if let Some(s) = unsafe { s.as_mut() } {
-        s.reset();
-    }
-}
-
-/// # Safety
-/// `s` is live; `out` points to 2 writable floats.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_smooth_push(
-    s: *mut input::Smooth,
-    x: f32,
-    y: f32,
-    out: *mut f32,
-) {
-    // SAFETY: `s` is live per the contract.
-    let Some(s) = (unsafe { s.as_mut() }) else {
-        return;
-    };
-    let r = s.push([x, y]);
-    // SAFETY: `out` holds two floats per the contract.
-    unsafe {
-        if let Some(p) = out.as_mut() {
-            *p = r[0];
-        }
-        if let Some(p) = out.add(1).as_mut() {
-            *p = r[1];
-        }
-    }
-}
-
-#[repr(C)]
-pub struct MouseActC {
-    last_x: i32,
-    last_y: i32,
-    active_at: f64,
-}
-
-struct MouseHost(Host);
-
-impl input::MouseEnv for MouseHost {
-    fn any_mouse_button_down(&mut self) -> bool {
-        self.0.b(op::M_ANY_BUTTON, &[])
-    }
-    fn abs_position(&mut self) -> [i32; 2] {
-        unpack(self.0.i(op::M_ABS, &[]))
-    }
-    fn game_time(&mut self) -> f64 {
-        self.0.go(op::M_TIME, &[]).d
-    }
-    fn gamepad_present(&mut self) -> bool {
-        self.0.b(op::M_PAD, &[])
-    }
-    fn ui_direction_triggered(&mut self) -> bool {
-        self.0.b(op::M_UI_DIR, &[])
-    }
-    fn screen_size(&mut self) -> [i32; 2] {
-        unpack(self.0.i(op::M_SCREEN, &[]))
-    }
-    fn hide_mouse_uis(&mut self) {
-        self.0.go(op::M_HIDE, &[]);
-    }
-}
-
 fn unpack(v: i64) -> [i32; 2] {
     [v as i32, (v >> 32) as i32]
-}
-
-/// # Safety
-/// `m` is live; `ctx`/`call` as in the module docs.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_mouse_step(m: *mut MouseActC, ctx: Ctx, call: Call) -> bool {
-    // SAFETY: `m` is live per the contract.
-    let Some(m) = (unsafe { m.as_mut() }) else {
-        return false;
-    };
-    let mut a = input::MouseActivity {
-        last_abs: [m.last_x, m.last_y],
-        active_at: m.active_at,
-    };
-    let r = a.step(&mut MouseHost(Host { ctx, call }));
-    m.last_x = a.last_abs[0];
-    m.last_y = a.last_abs[1];
-    m.active_at = a.active_at;
-    r
-}
-
-#[repr(C)]
-pub struct LookInC {
-    mouse_rel_x: i32,
-    mouse_rel_y: i32,
-    mouse_sensitivity: f32,
-    screen_height: f32,
-    smooth_mouse: bool,
-    invert_mouse: bool,
-    pad_present: bool,
-    look_sensitivity: f32,
-    look_invert: bool,
-}
-
-struct LookHost(Host);
-
-impl look::LookEnv for LookHost {
-    fn is_triggered(&mut self, action: i32) -> bool {
-        self.0.b(op::K_TRIGGERED, &[ai(i64::from(action))])
-    }
-    fn add_lean(&mut self, v: f32) {
-        self.0.go(op::K_ADD_LEAN, &[af(v)]);
-    }
-    fn set_lean(&mut self, v: f32) {
-        self.0.go(op::K_SET_LEAN, &[af(v)]);
-    }
-    fn scroll(&mut self, v: f32) {
-        self.0.go(op::K_SCROLL, &[af(v)]);
-    }
-    fn stop_movement(&mut self) {
-        self.0.go(op::K_STOP, &[]);
-    }
-    fn button_down(&mut self, button: i32) -> bool {
-        self.0.b(op::K_BUTTON, &[ai(i64::from(button))])
-    }
-    fn axis(&mut self, axis: i32) -> f32 {
-        self.0.f(op::K_AXIS, &[ai(i64::from(axis))])
-    }
-    fn dead_zone(&mut self) -> f32 {
-        self.0.f(op::K_DEAD, &[])
-    }
-    fn frame_time(&mut self) -> f32 {
-        self.0.f(op::K_FRAME, &[])
-    }
-    fn step_size(&mut self) -> f32 {
-        self.0.f(op::K_STEP, &[])
-    }
-}
-
-/// # Safety
-/// `s` is live; `i` readable; `ctx`/`call` as in the module docs; `out` holds 2 writable floats.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_look(
-    s: *mut input::Smooth,
-    i: *const LookInC,
-    ctx: Ctx,
-    call: Call,
-    out: *mut f32,
-) {
-    // SAFETY: both are valid per the contract.
-    let (Some(s), Some(i)) = (unsafe { s.as_mut() }, unsafe { i.as_ref() }) else {
-        return;
-    };
-    let r = look::look(
-        s,
-        &look::LookIn {
-            mouse_rel: [i.mouse_rel_x, i.mouse_rel_y],
-            mouse_sensitivity: i.mouse_sensitivity,
-            screen_height: i.screen_height,
-            smooth_mouse: i.smooth_mouse,
-            invert_mouse: i.invert_mouse,
-            pad_present: i.pad_present,
-            look_sensitivity: i.look_sensitivity,
-            look_invert: i.look_invert,
-        },
-        &mut LookHost(Host { ctx, call }),
-    );
-    // SAFETY: `out` holds two floats per the contract.
-    unsafe {
-        if let Some(p) = out.as_mut() {
-            *p = r[0];
-        }
-        if let Some(p) = out.add(1).as_mut() {
-            *p = r[1];
-        }
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga9_state_sends_to_gui(state: i32, inventory_message_active: bool) -> bool {
-    input::state_sends_to_gui(state, inventory_message_active)
-}
-
-/// # Safety
-/// `dir` is `dir_n` wide units, `ext` `ext_n` bytes; `ctx`/`call` as in the module docs (op
-/// `FILE_EXISTS_W`); `emit` accepts `ectx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_screenshot_name(
-    dir: *const u32,
-    dir_n: usize,
-    ext: *const u8,
-    ext_n: usize,
-    ctx: Ctx,
-    call: Call,
-    emit: Emit,
-    ectx: Ctx,
-) {
-    let h = Host { ctx, call };
-    let name = input::screenshot_name(units(dir, dir_n), units(ext, ext_n), &mut |p| {
-        h.b(op::FILE_EXISTS_W, &[aw(p)])
-    });
-    Out { emit, ctx: ectx }.wide(1, &name);
-}
-
-/// The gamepad UI map: kind 0 arrows, 1 buttons; writes (action, ui id).
-///
-/// # Safety
-/// `action` and `id` are writable. Returns false past the end.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_ui_map(
-    kind: i32,
-    index: usize,
-    action: *mut i32,
-    id: *mut i32,
-) -> bool {
-    let e = if kind == 0 {
-        input::UI_ARROWS.get(index)
-    } else {
-        input::UI_BUTTONS.get(index)
-    };
-    let Some(&(a, i)) = e else {
-        return false;
-    };
-    // SAFETY: both are writable per the contract.
-    unsafe {
-        if let Some(p) = action.as_mut() {
-            *p = a;
-        }
-        if let Some(p) = id.as_mut() {
-            *p = i;
-        }
-    }
-    true
 }
 
 #[unsafe(no_mangle)]
