@@ -134,6 +134,8 @@ namespace hpl {
 	typedef std::list<cGuiGlobalShortcut*> tShortcutList;
 	typedef tShortcutList::iterator tShortcutListIt;
 
+	extern void (*gfpOhplGuiTrace)(cGuiSet*, const cGuiGfxElement*, const tWString*, const cVector3f&, const cVector2f&, const cColor&, int);
+
 	//-----------------------------------------------
 	
 	class cGuiSet

@@ -31,6 +31,7 @@
 #include "LuxHintHandler.h"
 
 #include "LuxAchievementHandler.h"
+#include "LuxA11cDump.h"
 
 static_assert(eUIButton_Primary == 1 && eUIButton_Secondary == 2, "ohpl_ga8_jrn button bits");
 static_assert(eUIArrow_Up == 1 && eUIArrow_Right == 2 && eUIArrow_Down == 4 && eUIArrow_Left == 8, "ohpl_ga8_jrn arrow bits");
@@ -418,6 +419,12 @@ void cLuxJournal::OnGameStart()
 
 void cLuxJournal::Update(float afTimeStep)
 {
+	if(OhplA11cOn()) return;
+	UpdateA11c(afTimeStep);
+}
+
+void cLuxJournal::UpdateA11c(float afTimeStep)
+{
 	/////////////////////////
 	// Update alpha
 	switch(ohpl_ga8_jrn_update_alpha(&mfAlpha, mbActive, mbOpenedFromInventory, afTimeStep))
@@ -571,6 +578,8 @@ void cLuxJournal::OnLeaveContainer(const tString& asNewContainer)
 
 void cLuxJournal::OnDraw(float afFrameTime)
 {
+	OhplA11cTick();
+	if(OhplA11cOn()) UpdateA11c(OhplA11cDt());
 	////////////////////////
 	//Draw background
 	if(mpScreenGfx && mfAlpha<1) 

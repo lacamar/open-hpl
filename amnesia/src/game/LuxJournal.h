@@ -146,6 +146,7 @@ public:
 	void OnGameStart();
 
 	void Update(float afTimeStep);
+	void UpdateA11c(float afTimeStep);
 
 	void OnEnterContainer(const tString& asOldContainer);
 	void OnLeaveContainer(const tString& asNewContainer);
@@ -171,6 +172,8 @@ public:
 	void ChangeState(eLuxJournalState aState);
 
 	void OpenNote(cLuxNote *apNote, bool abNarration);
+	void OpenNoteIdx(int alIdx, bool abNarration){ OpenNote(mvNotes[alIdx], abNarration); }
+	void OpenDiaryIdx(int alCat, int alIdx, bool abNarration){ OpenDiary(mvDiaryContainers[alCat]->mvDiaries[alIdx], abNarration); }
 	cLuxNote* GetNote(int alIdx){ return mvNotes[alIdx];}
 
 	void OpenDiary(cLuxDiary *apDiary, bool abNarration);
