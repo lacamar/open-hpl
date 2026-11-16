@@ -2,6 +2,7 @@
 #include "SomaBase.h"
 #include "RustSomaUi.h"
 #include "SomaScriptBind.h"
+#include "SomaS8Host.h"
 
 #include <angelscript.h>
 #include <algorithm>
@@ -35,6 +36,77 @@ namespace
 	std::set<cSomaPostEffect *> gsetEffects;
 	cPostEffectComposite *gpViewportComposite = NULL;
 
+	std::string Hx(float afX) { return OhplS8bHex(afX); }
+	float FrameTime(cPostEffectComposite *c) { return OhplS8cDump() ? 1.0f / 60.0f : c->GetCurrentFrameTime(); }
+	bool gbRnd = false; // the game's scripts draw every video distortion parameter at random
+	void UF(iGpuProgram *p, const char *n, float x)
+	{
+		OhplS8cAdd("%s=%s", n, gbRnd ? "rnd" : Hx(x).c_str());
+		p->SetFloat(p->GetVariableId(n), x);
+	}
+	void U2(iGpuProgram *p, const char *n, float x, float y)
+	{
+		if (gbRnd && strcmp(n, "avScreenSize"))
+			OhplS8cAdd("%s=rnd", n);
+		else
+			OhplS8cAdd("%s=%s,%s", n, Hx(x).c_str(), Hx(y).c_str());
+		p->SetVec2f(p->GetVariableId(n), x, y);
+	}
+	void U3(iGpuProgram *p, const char *n, float x, float y, float z)
+	{
+		OhplS8cAdd("%s=%s,%s,%s", n, Hx(x).c_str(), Hx(y).c_str(), Hx(z).c_str());
+		p->SetVec3f(p->GetVariableId(n), x, y, z);
+	}
+	void U4(iGpuProgram *p, const char *n, float x, float y, float z, float w)
+	{
+		OhplS8cAdd("%s=%s,%s,%s,%s", n, Hx(x).c_str(), Hx(y).c_str(), Hx(z).c_str(), Hx(w).c_str());
+		p->SetVec4f(p->GetVariableId(n), x, y, z, w);
+	}
+	void UArr(iGpuProgram *p, const char *n, const float *v, int lN)
+	{
+		std::string s;
+		for (int i = 0; i < lN; ++i) s += Hx(v[i]) + ",";
+		OhplS8cAdd("%s=%s", n, s.c_str());
+		p->SetFloatArray(p->GetVariableId(n), v, lN);
+	}
+	void UMat(iGpuProgram *p, const char *n, const cMatrixf &m)
+	{
+		std::string s;
+		for (int i = 0; i < 16; ++i) s += Hx(m.v[i]) + ",";
+		OhplS8cAdd("%s=%s", n, s.c_str());
+		p->SetMatrixf(p->GetVariableId(n), m);
+	}
+	void CTex(cPostEffectComposite *c, int i, iTexture *t)
+	{
+		OhplS8cAdd("tex%d=%s:%dx%d", i, t ? t->GetName().c_str() : "-", t ? t->GetWidth() : 0, t ? t->GetHeight() : 0);
+		c->SetTexture(i, t);
+	}
+	void CProg(cPostEffectComposite *c, iGpuProgram *p)
+	{
+		OhplS8cAdd("prog=%s", p ? p->GetName().c_str() : "-");
+		c->SetProgram(p);
+	}
+	void CRange(cPostEffectComposite *c, int n)
+	{
+		OhplS8cAdd("range=%d", n);
+		c->SetTextureRange(NULL, n);
+	}
+	void CBlend(cPostEffectComposite *c, eMaterialBlendMode m)
+	{
+		OhplS8cAdd("blend=%d", (int)m);
+		c->SetBlendMode(m);
+	}
+	void CChan(cPostEffectComposite *c, eMaterialChannelMode m)
+	{
+		OhplS8cAdd("chan=%d", (int)m);
+		c->SetChannelMode(m);
+	}
+	void CFlat(cPostEffectComposite *c)
+	{
+		OhplS8cAdd("flat");
+		c->SetFlatProjection();
+	}
+
 	cSomaPostEffect *Effect(void *apObj)
 	{
 		cSomaPostEffect *pEffect = static_cast<cSomaPostEffect *>(apObj);
@@ -64,11 +136,28 @@ void cSomaPostEffect::Set(std::initializer_list<float> alParams)
 
 iTexture *cSomaPostEffect::RenderEffect(iTexture *apIn, iFrameBuffer *apOut)
 {
+	if (OhplS8cDump())
+	{
+		std::string sP;
+		gbRnd = mlType == eVideoDistortion;
+		for (float f : mfParams) sP += (gbRnd ? std::string("rnd") : Hx(f)) + ",";
+		OhplS8cAdd("fx=%s dt=%s clear=%d p=%s", msType.c_str(), Hx(FrameTime(mpCurrentComposite)).c_str(), mbClear, sP.c_str());
+	}
+	iTexture *pRes = RenderEffectInner(apIn, apOut);
+	gbRnd = false;
+	OhplS8cEnd();
+	return pRes;
+}
+
+iTexture *cSomaPostEffect::RenderEffectInner(iTexture *apIn, iFrameBuffer *apOut)
+{
 	if (mlType == eImageTrail)
 	{
 		// applied next frame by cRendererDeferred::RenderImageTrail, on the HDR buffer
-		float fFrameTime = mpCurrentComposite->GetCurrentFrameTime();
-		cRendererDeferred::SetImageTrailAlpha(ohpl_gs7_pfx_trail_alpha(mfParams[0], fFrameTime, mbClear));
+		float fFrameTime = FrameTime(mpCurrentComposite);
+		float fAlpha = ohpl_gs7_pfx_trail_alpha(mfParams[0], fFrameTime, mbClear);
+		OhplS8cAdd("trail=%s", Hx(fAlpha).c_str());
+		cRendererDeferred::SetImageTrailAlpha(fAlpha);
 		mbClear = false;
 		return apIn;
 	}
@@ -86,19 +175,19 @@ iTexture *cSomaPostEffect::RenderEffect(iTexture *apIn, iFrameBuffer *apOut)
 		return apIn;
 
 	cPostEffectComposite *c = mpCurrentComposite;
-	auto U = [&](const char *n) { return pProg->GetVariableId(n); };
 	const float *p = mfParams;
 	cVector2f vTex = apIn->GetSizeFloat2D();
-	float fFrameTime = c->GetCurrentFrameTime();
+	float fFrameTime = FrameTime(c);
 
-	c->SetFlatProjection();
-	c->SetBlendMode(eMaterialBlendMode_None);
-	c->SetChannelMode(eMaterialChannelMode_RGBA);
-	c->SetTextureRange(NULL, 1);
-	c->SetTexture(0, apIn);
+	CFlat(c);
+	CBlend(c, eMaterialBlendMode_None);
+	CChan(c, eMaterialChannelMode_RGBA);
+	CRange(c, 1);
+	CTex(c, 0, apIn);
 
+	OhplS8cAdd("final");
 	SetFinalFrameBuffer(apOut);
-	c->SetProgram(pProg);
+	CProg(c, pProg);
 	if (mlType != eRadialBlur)
 		apIn->SetFilter(eTextureFilter_Bilinear);
 
@@ -106,43 +195,44 @@ iTexture *cSomaPostEffect::RenderEffect(iTexture *apIn, iFrameBuffer *apOut)
 	{
 		OhplGs7Chromatic ch;
 		ohpl_gs7_pfx_chromatic(p, mpLowLevelGraphics->GetScreenSizeFloat().y, vTex.v, &ch);
-		pProg->SetVec2f(U("avOffsetA"), cVector2f(ch.offset_a[0], ch.offset_a[1]));
-		pProg->SetVec2f(U("avOffsetB"), cVector2f(ch.offset_b[0], ch.offset_b[1]));
-		pProg->SetVec2f(U("avOffsetC"), cVector2f(ch.offset_c[0], ch.offset_c[1]));
-		pProg->SetVec4f(U("avColorA"), ch.color_a[0], ch.color_a[1], ch.color_a[2], ch.color_a[3]);
-		pProg->SetVec4f(U("avColorB"), ch.color_b[0], ch.color_b[1], ch.color_b[2], ch.color_b[3]);
-		pProg->SetVec4f(U("avColorC"), ch.color_c[0], ch.color_c[1], ch.color_c[2], ch.color_c[3]);
+		U2(pProg, "avOffsetA", ch.offset_a[0], ch.offset_a[1]);
+		U2(pProg, "avOffsetB", ch.offset_b[0], ch.offset_b[1]);
+		U2(pProg, "avOffsetC", ch.offset_c[0], ch.offset_c[1]);
+		U4(pProg, "avColorA", ch.color_a[0], ch.color_a[1], ch.color_a[2], ch.color_a[3]);
+		U4(pProg, "avColorB", ch.color_b[0], ch.color_b[1], ch.color_b[2], ch.color_b[3]);
+		U4(pProg, "avColorC", ch.color_c[0], ch.color_c[1], ch.color_c[2], ch.color_c[3]);
 	}
 	else if (mlType == eRadialBlur)
 	{
-		pProg->SetFloat(U("afSize"), p[0]);
-		pProg->SetFloat(U("afBlurStartDist"), p[2]);
-		pProg->SetFloat(U("afAlpha"), p[1]);
+		UF(pProg, "afSize", p[0]);
+		UF(pProg, "afBlurStartDist", p[2]);
+		UF(pProg, "afAlpha", p[1]);
 	}
 	else if (mlType == eImageFade)
 	{
 		mfT += fFrameTime;
-		pProg->SetVec2f(U("avScreenSize"), vTex);
-		pProg->SetFloat(U("afAmount"), p[0]);
-		pProg->SetFloat(U("afT"), mfT);
+		U2(pProg, "avScreenSize", vTex.x, vTex.y);
+		UF(pProg, "afAmount", p[0]);
+		UF(pProg, "afT", mfT);
 		for (int i = 0; i < 3; ++i)
-			c->SetTexture(i + 1, mvTextures[i]);
+			CTex(c, i + 1, mvTextures[i]);
 	}
 	else if (mlType == eVideoDistortion)
 	{
-		pProg->SetVec2f(U("avScreenSize"), vTex);
-		pProg->SetFloat(U("afAmount"), p[0]);
-		pProg->SetFloat(U("afSeed"), p[1]);
-		pProg->SetFloat(U("afLineDensity"), p[2]);
-		pProg->SetFloat(U("afOffsetMul"), p[3]);
-		pProg->SetVec2f(U("avScreenOffset"), cVector2f(p[4], p[5]));
-		pProg->SetVec2f(U("avScreenBendAmount"), cVector2f(p[6], p[7]));
+		U2(pProg, "avScreenSize", vTex.x, vTex.y);
+		UF(pProg, "afAmount", p[0]);
+		UF(pProg, "afSeed", p[1]);
+		UF(pProg, "afLineDensity", p[2]);
+		UF(pProg, "afOffsetMul", p[3]);
+		U2(pProg, "avScreenOffset", p[4], p[5]);
+		U2(pProg, "avScreenBendAmount", p[6], p[7]);
 	}
 
+	OhplS8cAdd("quad");
 	DrawQuad(0, 1, apIn, true);
-	c->SetProgram(NULL);
-	c->SetBlendMode(eMaterialBlendMode_None);
-	c->SetTextureRange(NULL, 0);
+	CProg(c, NULL);
+	CBlend(c, eMaterialBlendMode_None);
+	CRange(c, 0);
 	return apOut->GetColorBuffer(0)->ToTexture();
 }
 
@@ -314,7 +404,7 @@ void main()
 			return gpTentacleProg && gpTentacleMergeProg;
 		}
 
-		iTexture *RenderEffect(iTexture *apIn, iFrameBuffer *apOut) override
+		iTexture *RenderEffectInner(iTexture *apIn, iFrameBuffer *apOut) override
 		{
 			int lMat = ohpl_gs7_pfx_tentacles_material(mpFades);
 			cMaterial *pMatA = lMat < (int)mvMaterials.size() ? mvMaterials[lMat] : NULL;
@@ -322,7 +412,7 @@ void main()
 				return apIn;
 
 			cPostEffectComposite *c = mpCurrentComposite;
-			float fDt = c->GetCurrentFrameTime();
+			float fDt = FrameTime(c);
 			mfTime = ohpl_gs7_pfx_tentacle_time(mfTime, fDt, mvAnims[0].mfSpeed);
 
 			ohpl_gs7_pfx_tentacles_advance(mpFades, fDt);
@@ -363,7 +453,7 @@ void main()
 
 			const float *p = mfParams;
 			iGpuProgram *pProg = gpTentacleProg;
-			auto U = [&](const char *n) { return pProg->GetVariableId(n); };
+			OhplS8cAdd("tentacle target=%dx%d", vSize.x, vSize.y);
 			c->SetFrameBuffer(mpBuffer, false, false);
 			mpLowLevelGraphics->SetClearColor(cColor(1, 1));
 			c->ClearFrameBuffer(eClearFrameBufferFlag_Color, false);
@@ -371,55 +461,57 @@ void main()
 			c->SetDepthTest(false);
 			c->SetDepthWrite(false);
 			c->SetCullActive(false);
-			c->SetBlendMode(eMaterialBlendMode_MulX2);
-			c->SetChannelMode(eMaterialChannelMode_RGBA);
-			c->SetTexture(0, pMatA->GetTexture(eMaterialTexture_Diffuse));
-			c->SetTexture(1, pMatB->GetTexture(eMaterialTexture_Diffuse));
-			c->SetTexture(2, pMatA->GetTexture(eMaterialTexture_NMap));
-			c->SetTexture(3, pMatB->GetTexture(eMaterialTexture_NMap));
-			c->SetTextureRange(NULL, 4);
+			CBlend(c, eMaterialBlendMode_MulX2);
+			CChan(c, eMaterialChannelMode_RGBA);
+			CTex(c, 0, pMatA->GetTexture(eMaterialTexture_Diffuse));
+			CTex(c, 1, pMatB->GetTexture(eMaterialTexture_Diffuse));
+			CTex(c, 2, pMatA->GetTexture(eMaterialTexture_NMap));
+			CTex(c, 3, pMatB->GetTexture(eMaterialTexture_NMap));
+			CRange(c, 4);
 			c->SetMatrix(NULL);
-			c->SetProgram(pProg);
-			pProg->SetFloat(U("afIntensity"), p[0]);
-			pProg->SetFloat(U("afTentacleScale"), p[1]);
-			pProg->SetFloat(U("afAlpha"), p[5]);
-			pProg->SetFloat(U("afTime"), mfTime);
-			pProg->SetFloat(U("afMaterialAlpha"), fMatAlpha);
-			int lModel = U("a_mtxModel"), lPos = U("avPos"), lInstance = U("afInstance");
+			CProg(c, pProg);
+			UF(pProg, "afIntensity", p[0]);
+			UF(pProg, "afTentacleScale", p[1]);
+			UF(pProg, "afAlpha", p[5]);
+			UF(pProg, "afTime", mfTime);
+			UF(pProg, "afMaterialAlpha", fMatAlpha);
 			for (size_t i = 0; i < mvTentacles.size(); ++i)
 			{
 				// ponytail: displaced after CPU skinning, tentacles of a group share a pose; GPU dual-quat instancing if it shows
 				cMatrixf mtxModel;
 				ohpl_gs7_pfx_tentacle_model(vSize.x, vSize.y, mvTentacles[i].mvRot.v, &mtxModel.m[0][0]);
-				pProg->SetMatrixf(lModel, mtxModel);
+				UMat(pProg, "a_mtxModel", mtxModel);
 				cVector3f vPos;
 				ohpl_gs7_pfx_tentacle_pos(mvTentacles[i].mvPos.v, p[2], vPos.v);
-				pProg->SetVec3f(lPos, vPos);
-				pProg->SetFloat(lInstance, (float)i);
+				U3(pProg, "avPos", vPos.x, vPos.y, vPos.z);
+				UF(pProg, "afInstance", (float)i);
 				c->SetVertexBuffer(mvGroups[i % mvGroups.size()]->GetSubMeshEntity(0)->GetVertexBuffer());
+				OhplS8cAdd("draw");
 				c->DrawCurrent();
 			}
 			c->SetVertexBuffer(NULL);
 			c->SetCullActive(true);
 
 			pProg = gpTentacleMergeProg;
-			c->SetFlatProjection();
-			c->SetBlendMode(eMaterialBlendMode_None);
-			c->SetTextureRange(NULL, 2);
-			c->SetTexture(0, apIn);
-			c->SetTexture(1, mpTarget);
+			CFlat(c);
+			CBlend(c, eMaterialBlendMode_None);
+			CRange(c, 2);
+			CTex(c, 0, apIn);
+			CTex(c, 1, mpTarget);
+			OhplS8cAdd("final");
 			SetFinalFrameBuffer(apOut);
-			c->SetProgram(pProg);
-			pProg->SetFloat(U("afIntensity"), p[4]);
-			pProg->SetFloat(U("afAlpha"), p[5]);
-			pProg->SetVec2f(U("avTentacleUvMul"), cVector2f(1, 1));
-			pProg->SetFloat(U("afAspect"), ohpl_gs7_pfx_tentacle_aspect(vSize.x, vSize.y));
-			pProg->SetFloat(U("afCircleRadius"), p[6]);
-			pProg->SetFloat(U("afCircleAlpha"), p[7]);
-			pProg->SetFloat(U("afCircleSoftness"), p[8]);
+			CProg(c, pProg);
+			UF(pProg, "afIntensity", p[4]);
+			UF(pProg, "afAlpha", p[5]);
+			U2(pProg, "avTentacleUvMul", 1, 1);
+			UF(pProg, "afAspect", ohpl_gs7_pfx_tentacle_aspect(vSize.x, vSize.y));
+			UF(pProg, "afCircleRadius", p[6]);
+			UF(pProg, "afCircleAlpha", p[7]);
+			UF(pProg, "afCircleSoftness", p[8]);
+			OhplS8cAdd("quad");
 			DrawQuad(0, 1, apIn, true);
-			c->SetProgram(NULL);
-			c->SetTextureRange(NULL, 0);
+			CProg(c, NULL);
+			CRange(c, 0);
 			return apOut->GetColorBuffer(0)->ToTexture();
 		}
 
@@ -514,14 +606,14 @@ void main()
 		iGpuProgram *Program(int alProg, const OhplGs7BlurWeights *apUniforms, bool abVertical)
 		{
 			iGpuProgram *p = gpBlurProgs[alProg];
-			mpCurrentComposite->SetProgram(p);
+			CProg(mpCurrentComposite, p);
 			if (apUniforms)
 			{
-				p->SetFloatArray(p->GetVariableId("avWeights"), apUniforms->weights, 7);
+				UArr(p, "avWeights", apUniforms->weights, 7);
 				for (int i = 0; i < 7; ++i)
 				{
 					const float *v = abVertical ? apUniforms->off_v[i] : apUniforms->off_h[i];
-					p->SetVec2f(p->GetVariableId("avOffsets[" + std::to_string(i) + "]"), cVector2f(v[0], v[1]));
+					U2(p, ("avOffsets[" + std::to_string(i) + "]").c_str(), v[0], v[1]);
 				}
 			}
 			return p;
@@ -529,13 +621,15 @@ void main()
 
 		void Pass(iFrameBuffer *apFb, iTexture *apTex)
 		{
+			OhplS8cAdd("fb=%dx%d", apTex->GetWidth(), apTex->GetHeight());
 			SetFrameBuffer(apFb);
-			mpCurrentComposite->SetTexture(0, apTex);
+			CTex(mpCurrentComposite, 0, apTex);
+			OhplS8cAdd("quad");
 			DrawQuad(0, 1, apTex, false);
 		}
 
 		// official cPostEffect_Blur::RenderEffect 0x10c72a0
-		iTexture *RenderEffect(iTexture *apIn, iFrameBuffer *apOut) override
+		iTexture *RenderEffectInner(iTexture *apIn, iFrameBuffer *apOut) override
 		{
 			if (mfParams[0] <= 0 || LoadPrograms() == false)
 				return apIn;
@@ -545,10 +639,10 @@ void main()
 
 			cPostEffectComposite *c = mpCurrentComposite;
 			mvLevels[0].pTexA = apIn;
-			c->SetFlatProjection();
-			c->SetBlendMode(eMaterialBlendMode_None);
-			c->SetChannelMode(eMaterialChannelMode_RGBA);
-			c->SetTextureRange(NULL, 1);
+			CFlat(c);
+			CBlend(c, eMaterialBlendMode_None);
+			CChan(c, eMaterialChannelMode_RGBA);
+			CRange(c, 1);
 
 			std::vector<OhplGs7LevelSize> vSizes;
 			for (const cLevel &l : mvLevels)
@@ -574,22 +668,24 @@ void main()
 				{
 					iGpuProgram *p = Program(op.program, op.slot >= 0 ? &plan.weights[op.slot] : NULL, op.vertical);
 					if (op.program == eBlurCombineMip || op.program == eBlurBlurCombine)
-						p->SetFloat(p->GetVariableId("afAlpha"), op.alpha);
+						UF(p, "afAlpha", op.alpha);
 					cLevel &lt = mvLevels[op.tex0_level];
 					iTexture *pTex = op.tex0_b ? lt.pTexB : lt.pTexA;
 					if (op.tex1_level >= 0)
 					{
-						c->SetTextureRange(NULL, 2);
-						c->SetTexture(1, mvLevels[op.tex1_level].pTexA);
+						CRange(c, 2);
+						CTex(c, 1, mvLevels[op.tex1_level].pTexA);
 					}
-					c->SetTexture(0, pTex);
+					CTex(c, 0, pTex);
+					OhplS8cAdd("final");
 					SetFinalFrameBuffer(apOut);
+					OhplS8cAdd("quad");
 					DrawQuad(0, 1, pTex, true);
 					pResult = apOut->GetColorBuffer(0)->ToTexture();
 				}
 			}
-			c->SetProgram(NULL);
-			c->SetTextureRange(NULL, 0);
+			CProg(c, NULL);
+			CRange(c, 0);
 			mvLevels[0].pTexA = NULL;
 			return pResult;
 		}

@@ -27,6 +27,7 @@ protected:
 	void OnSetParams() override {}
 	iPostEffectParams *GetTypeSpecificParams() override { return NULL; }
 	iTexture *RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer) override;
+	virtual iTexture *RenderEffectInner(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
 
 	int mlType;
 	bool mbClear = true;

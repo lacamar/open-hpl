@@ -4,6 +4,7 @@
 #include "system/HeadlessControl.h"
 #include <SDL2/SDL.h>
 #include <cstring>
+#include <map>
 
 static_assert(sizeof(wchar_t) == sizeof(uint32_t), "wchar_t layout");
 static_assert(eKey_Return == 3 && eKey_Escape == 5 && eKey_Space == 6, "gamma screen continue keys");
@@ -46,6 +47,56 @@ void OhplS8bLog(const char *fmt, ...)
 	fputs(sBuf, f);
 	fputc('\n', f);
 	fflush(f);
+}
+
+static FILE *S8cFile()
+{
+	static FILE *spFile = NULL;
+	static bool sbInit = false;
+	if (sbInit == false)
+	{
+		sbInit = true;
+		const char *sPath = getenv("OHPL_S8C_DUMP");
+		if (sPath && *sPath)
+			spFile = fopen(sPath, "a");
+	}
+	return spFile;
+}
+
+bool OhplS8cDump() { return S8cFile() != NULL; }
+
+static std::string gsS8cLine;
+
+void OhplS8cAdd(const char *fmt, ...)
+{
+	if (S8cFile() == NULL)
+		return;
+	char sBuf[2048];
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(sBuf, sizeof(sBuf), fmt, ap);
+	va_end(ap);
+	if (gsS8cLine.empty() == false)
+		gsS8cLine += " | ";
+	gsS8cLine += sBuf;
+}
+
+// One line per rendered effect; a line equal to the effect type's previous one is written once
+void OhplS8cEnd()
+{
+	FILE *f = S8cFile();
+	if (f == NULL)
+		return;
+	static std::map<std::string, std::string> smLast;
+	std::string &sLast = smLast[gsS8cLine.substr(0, gsS8cLine.find(' '))];
+	if (gsS8cLine != sLast)
+	{
+		sLast = gsS8cLine;
+		fputs(gsS8cLine.c_str(), f);
+		fputc('\n', f);
+		fflush(f);
+	}
+	gsS8cLine.clear();
 }
 
 std::string OhplS8bHex(float afX)
