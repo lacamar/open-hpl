@@ -265,6 +265,14 @@ half() {
 		A4B_GAMES="$(has amnesia && echo amnesia) $(has amfp && echo amfp)" OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" \
 			scripts/a4b-all.sh "$OUT" "-$impl" >> "$OUT/a4b-$impl.log" 2>&1
 	fi
+	if has amnesia || has amfp; then
+		# A2c: scripted player inputs in the real update, one state line per update
+		rm -f "$OUT"/a2c-*-"$impl".txt
+		for gm in $(has amnesia && for M in $DUMP_AMNESIA; do echo "amnesia:$M"; done) $(has amfp && echo amfp:06_factory amfp:09_bilge); do
+			OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" \
+				scripts/a2c-scenario.sh "${gm%%:*}" "${gm##*:}.map" "$OUT/a2c-${gm##*:}-$impl.txt" >> "$OUT/a2c-$impl.log" 2>&1
+		done
+	fi
 	if has amnesia; then
 		# A13a: map transfer (change map, change back, load, save at every step)
 		rm -f "$OUT"/a13atr-*-"$impl".*
@@ -280,7 +288,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt "$OUT"/a2c-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -569,13 +577,13 @@ if not quick:
     names += [f"{k}-{g}" for k in ("s8d", "s8dm") for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s5-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
-        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c", "a12d", "a2b", "a1b", "a13a")] + ["a12a-02_library"] + ["a9"]
+        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c", "a12d", "a2b", "a1b", "a13a", "a2c")] + ["a12a-02_library"] + ["a9"]
     names += [f"a10b-boot-{g}" for g in ("amnesia", "amfp") if g in games]
     if "amnesia" in games:
         names += [f"{k}{e}" for k in ("rt-prison-patrol", "rt-prison-hunt") for e in ("", "-A", "-B")] + ["a4b-prison"]
     if "amfp" in games:
         names += [f"a1b-amfp-{m}" for m in ("01_mansion_01", "06_factory", "10_reactor")]
-        names += [f"a13a-{m}" for m in ("01_mansion_01", "06_factory")]
+        names += [f"a13a-{m}" for m in ("01_mansion_01", "06_factory")] + ["a2c-06_factory", "a2c-09_bilge"]
         names += [f"{k}{e}" for k in ("rt-factory", "rt-bilge") for e in ("", "-A", "-B")] + ["a4b-factory", "a4b-bilge"]
     if "amnesia" in games:
         names += ["a10b-play-amnesia", "a13atr-a7", "a13atr-struct"]

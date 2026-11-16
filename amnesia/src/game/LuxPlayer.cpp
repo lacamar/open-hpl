@@ -45,6 +45,7 @@
 
 #include "LuxPlayerHelpers.h"
 #include "LuxA2bDump.h"
+#include "LuxA2cDump.h"
 #include "LuxPlayerHands.h"
 
 #include "LuxAreaNodes.h"
@@ -362,6 +363,7 @@ void cLuxPlayer::OnStart()
 void cLuxPlayer::Update(float afTimeStep)
 {
 	if(OhplA2bTick(this)) return;
+	OhplA2cPre(this, afTimeStep);
 
 	////////////////////////
 	// Update current move state
@@ -398,6 +400,8 @@ void cLuxPlayer::Update(float afTimeStep)
 	UpdateTerror(afTimeStep);
 	UpdateFocusText(afTimeStep);
 	UpdateAvgSpeed(afTimeStep);
+
+	OhplA2cPost(this);
 }
 
 //-----------------------------------------------------------------------
