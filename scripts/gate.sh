@@ -177,6 +177,12 @@ half() {
 		# shellcheck disable=SC2046
 		ENVX="$extra OHPL_S8B_DUMP=$OUT/s8b-$G-$impl.txt" sweep "$impl" "$G" "$OUT/dump-s8b-$impl-$G.json" $(mapargs $S8BM)
 	done
+	for g in soma rebirth bunker; do
+		has "$g" || continue
+		rm -f "$OUT/s8c-$g-$impl.txt"
+		env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-s8c-$impl-$g-$$" OHPL_GAME="$g" \
+			scripts/s8c-scenario.sh "$OUT/s8c-$g-$impl.txt" >> "$OUT/s8c-$impl-$g.log" 2>&1
+	done
 	if has amnesia; then
 		for M in $DUMP_AMNESIA; do
 			rm -f "$OUT/h13-$M-$impl.txt" "$OUT/a7-$M-$impl.txt" "$OUT/a10a-$M-$impl.txt" "$OUT/a11a-$M-$impl.txt" "$OUT/a11b-$M-$impl.txt" "$OUT/l9-$M-$impl.txt" "$OUT/a12a-$M-$impl.txt" "$OUT/a12b-$M-$impl.txt" "$OUT/a12c-$M-$impl.txt" "$OUT/a2b-$M-$impl.txt"
@@ -235,7 +241,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -450,6 +456,20 @@ def same(name, a, b):
         # sound rows and the music line follow what happens to be playing
         mask = lambda p: [re.sub(r"^l lines=\d+ nodes=\d+ objs=(\d+) other=\d+", r"l objs=\1", l) for l in open(p, errors="replace") if not l.startswith("dn ")]
         return (mask(a) == mask(b), "equal (playing-sound rows masked)" if mask(a) == mask(b) else "DIFFER")
+    if name.startswith("s8c-"):
+        # per effect type, up to the shorter run (time-driven effects render a jittering number of frames); the game's
+        # scripts set the tentacle rotations from a per-frame random draw
+        def load(p):
+            d = {}
+            for l in open(p, errors="replace"):
+                d.setdefault(l.split(" ", 1)[0], []).append(re.sub(r"a_mtxModel=[0-9a-f,]*", "a_mtxModel=rnd", l))
+            return d
+        da, db = load(a), load(b)
+        n = sum(min(len(da.get(k, [])), len(db.get(k, []))) for k in da)
+        bad = [k for k in set(da) | set(db) if da.get(k, [])[:len(db.get(k, []))] != db.get(k, [])[:len(da.get(k, []))]
+               or (bool(da.get(k)) != bool(db.get(k)))
+               or (k not in ("fx=ImageFadeFX", "fx=FearTentacles") and len(da.get(k, [])) != len(db.get(k, [])))]
+        return (not bad and n > 50, f"equal ({n} effect passes)" if not bad else "DIFFER in " + ", ".join(sorted(bad)))
     if name.startswith("a12b-"):
         # camera positions follow the player body, which settles with real time
         mask = lambda p: [l for l in open(p, errors="replace") if not l.startswith(("i ps pos", "i step_pos"))]
@@ -481,6 +501,7 @@ if not quick:
     names += ["s7v-soma", "s5bv-soma"] if "soma" in games else []
     names += [f"s8-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s8b-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
+    names += [f"s8c-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s5-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
         names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c", "a12d", "a2b")] + ["a12a-02_library"] + ["a9"]

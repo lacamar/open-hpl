@@ -2,35 +2,29 @@
 #define SOMA_POST_EFFECTS_H
 
 #include "hpl.h"
-#include <array>
-#include <initializer_list>
 
 using namespace hpl;
 
 class asIScriptEngine;
 
+// iPostEffect shell of the Rust post effects (rust/src/somaui/s8c_pfx.rs); `this` is their key
 class cSomaPostEffect : public iPostEffect
 {
 public:
-	cSomaPostEffect(const tString &asType);
-	~cSomaPostEffect();
+	cSomaPostEffect();
 
-	void Reset() override { mbClear = true; }
-	void Set(std::initializer_list<float> alParams);
+	void Reset() override;
 
-	tString msType;
-	float mfParams[9] = {};
-	std::array<iTexture *, 3> mvTextures = {};
+	cPostEffectComposite *Composite() { return mpCurrentComposite; }
+	void Final(iFrameBuffer *apBuffer) { SetFinalFrameBuffer(apBuffer); }
+	void Buffer(iFrameBuffer *apBuffer) { SetFrameBuffer(apBuffer); }
+	void Quad(iTexture *apTexture, bool abFlipY) { DrawQuad(0, 1, apTexture, abFlipY); }
 
 protected:
 	void OnSetActive(bool abX) override { if (abX == false) Reset(); }
 	void OnSetParams() override {}
 	iPostEffectParams *GetTypeSpecificParams() override { return NULL; }
 	iTexture *RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer) override;
-
-	int mlType;
-	bool mbClear = true;
-	float mfT = 0;
 };
 
 namespace cSomaPostEffects

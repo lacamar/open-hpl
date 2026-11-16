@@ -9,16 +9,16 @@ use std::sync::OnceLock;
 
 #[repr(C)]
 pub struct Io {
-    p: [u64; 2],
-    i: [i32; 4],
-    f: [f32; 24],
-    s: *const u8,
-    n: usize,
-    r: u64,
+    pub(super) p: [u64; 2],
+    pub(super) i: [i32; 4],
+    pub(super) f: [f32; 24],
+    pub(super) s: *const u8,
+    pub(super) n: usize,
+    pub(super) r: u64,
 }
 
 impl Io {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             p: [0; 2],
             i: [0; 4],
@@ -29,7 +29,7 @@ impl Io {
         }
     }
 
-    fn text(&self) -> Vec<u8> {
+    pub(super) fn text(&self) -> Vec<u8> {
         if self.s.is_null() {
             return Vec::new();
         }
@@ -50,6 +50,15 @@ unsafe impl Sync for HostTable {}
 unsafe impl Send for HostTable {}
 
 static HOST: OnceLock<&'static HostTable> = OnceLock::new();
+
+pub(super) fn host_call(op: u32, io: &mut Io) -> bool {
+    let Some(h) = HOST.get() else {
+        return false;
+    };
+    // SAFETY: the table was installed by the host and `io` outlives the call.
+    unsafe { (h.call)(h.ctx, op, io) };
+    true
+}
 
 mod op {
     pub const GRADING_TEX: u32 = 1;

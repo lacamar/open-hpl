@@ -7,7 +7,6 @@ pub mod critter;
 mod ffi_critter;
 mod ffi_imgui;
 mod ffi_loaders;
-mod ffi_postfx;
 mod ffi_screens;
 mod hw;
 pub mod imgui;
@@ -28,3 +27,6 @@ mod s8_trace;
 
 mod ffi_s8b;
 pub mod s8b_tone;
+
+mod ffi_s8c;
+pub mod s8c_pfx;
