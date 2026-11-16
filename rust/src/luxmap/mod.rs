@@ -15,6 +15,10 @@ pub mod map;
 #[cfg(test)]
 mod tests;
 
+pub mod mhandler;
+mod mhandler_ffi;
+#[cfg(test)]
+mod mhandler_tests;
 pub mod mhelper;
 mod mhelper_ffi;
 #[cfg(test)]

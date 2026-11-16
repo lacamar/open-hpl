@@ -6,7 +6,6 @@ use super::area::{
     StickyAttachOut,
 };
 use super::handler;
-use super::map;
 use crate::math::Planef;
 use crate::string_ffi::{Sink, emit, units};
 use crate::types::{Matrixf, Vector3f};
@@ -41,19 +40,6 @@ macro_rules! pure {
         $(#[$m])*
         #[unsafe(no_mangle)]
         pub extern "C" fn $name($($a: $at),*) -> $r {
-            $body
-        }
-    };
-}
-
-macro_rules! text {
-    ($name:ident ($($a:ident: $at:ty),*; $($s:ident, $n:ident),+) -> $r:ty => $body:expr) => {
-        /// # Safety
-        /// Each text is valid for its length.
-        #[unsafe(no_mangle)]
-        pub unsafe extern "C" fn $name($($a: $at,)* $($s: *const u8, $n: usize),+) -> $r {
-            // SAFETY: caller contract.
-            $(let $s = unsafe { units($s, $n) };)+
             $body
         }
     };
@@ -173,53 +159,6 @@ pub unsafe extern "C" fn ohpl_ga5_node_up(t: *const Vector3f, out: *mut Vector3f
 sink!(ohpl_ga5_call1(; func, fn_n, name, name_n) => area::call1(func, name));
 sink!(ohpl_ga5_call2(; func, fn_n, a, a_n, b, b_n) => area::call2(func, a, b));
 
-// map
-
-text!(ohpl_ga5_sound_prefix_matches(; type_name, type_n, name, name_n) -> bool => map::sound_prefix_matches(type_name, name));
-
 // handler
 
-text!(ohpl_ga5_is_new_map(; current, current_n, file, file_n) -> bool => handler::is_new_map(current, file));
-text!(ohpl_ga5_pair_events(hard: bool; last, last_n, new, new_n) -> i32 => handler::pair_events(last, new, hard));
 sink!(ohpl_ga5_map_name(; file, file_n) => handler::map_name(file));
-sink!(ohpl_ga5_change_file(; name, name_n) => handler::change_file(name));
-pure!(ohpl_ga5_load_seconds(start_ms: u64, now_ms: u64) -> f32 => handler::load_seconds(start_ms, now_ms));
-pure!(ohpl_ga5_first_time(saved_exists: bool) -> bool => handler::first_time(saved_exists));
-pure!(ohpl_ga5_commentary_stops(show: bool) -> bool => handler::commentary_stops(show));
-
-pure!(ohpl_ga5_change_proceeds(active: bool, fading: bool) -> bool => handler::change_proceeds(active, fading));
-
-/// Writes the call sequence (at most 12 entries) and returns its length.
-///
-/// # Safety
-/// `out` is writable for 12 bytes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga5_set_current_plan(
-    has_current: bool,
-    has_new: bool,
-    same: bool,
-    out: *mut u8,
-) -> usize {
-    let plan = handler::set_current_plan(has_current, has_new, same);
-    for (i, &op) in plan.iter().take(12).enumerate() {
-        // SAFETY: at most 12 entries written.
-        unsafe { wr(out.add(i), op) };
-    }
-    plan.len().min(12)
-}
-
-/// # Safety
-/// `paused` is exclusively borrowed.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga5_pause_sounds(paused: *mut bool) -> bool {
-    // SAFETY: caller contract.
-    handler::pause_sounds(unsafe { &mut *paused })
-}
-
-/// # Safety
-/// `paused` is exclusively borrowed.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga5_resume_sounds(paused: *mut bool) -> bool {
-    // SAFETY: caller contract.
-    handler::resume_sounds(unsafe { &mut *paused })
-}

@@ -148,20 +148,9 @@ extern "C" {
 	void ohpl_ga5_node_up(const OhplGa5Vec3 *t, OhplGa5Vec3 *out);
 
 	// map
-	bool ohpl_ga5_sound_prefix_matches(const char *type_name, size_t type_n, const char *name, size_t name_n);
 
 	// handler
-	bool ohpl_ga5_is_new_map(const char *current, size_t current_n, const char *file, size_t file_n);
-	int ohpl_ga5_pair_events(bool hard, const char *last, size_t last_n, const char *now, size_t now_n);
 	void ohpl_ga5_map_name(const char *file, size_t file_n, OhplGa5Sink8 sink, void *ctx);
-	void ohpl_ga5_change_file(const char *name, size_t name_n, OhplGa5Sink8 sink, void *ctx);
-	float ohpl_ga5_load_seconds(uint64_t start_ms, uint64_t now_ms);
-	bool ohpl_ga5_first_time(bool saved_exists);
-	bool ohpl_ga5_commentary_stops(bool show);
-	bool ohpl_ga5_change_proceeds(bool active, bool fading);
-	size_t ohpl_ga5_set_current_plan(bool has_current, bool has_new, bool same, unsigned char *out);
-	bool ohpl_ga5_pause_sounds(bool *paused);
-	bool ohpl_ga5_resume_sounds(bool *paused);
 
 }
 

@@ -44,6 +44,7 @@ struct OhplA13MapState
 };
 
 struct OhplA7Ctx;
+struct OhplA13H;
 
 extern "C" {
 	void ohpl_a13_set_host(void (*op)(int32_t, OhplA13A *));
@@ -89,6 +90,27 @@ extern "C" {
 	void ohpl_a13_map_set(OhplA7Ctx *c, const OhplA13MapState *s);
 	void ohpl_a13_map_set_quests(OhplA7Ctx *c, int32_t n);
 	int32_t ohpl_a13_map_quests(OhplA7Ctx *c);
+
+	OhplA13H *ohpl_a13_handler_new(uintptr_t cpp);
+	void ohpl_a13_handler_free(OhplA13H *h);
+	OhplA7Ctx *ohpl_a13_handler_maps(OhplA13H *h);
+	void ohpl_a13_handler_teardown(OhplA13H *h);
+	void ohpl_a13_handler_update(OhplA13H *h, float step);
+	void ohpl_a13_handler_render_solid(OhplA13H *h, void *functions);
+	void ohpl_a13_handler_reset(OhplA13H *h);
+	void ohpl_a13_handler_on_quit(OhplA13H *h);
+	void ohpl_a13_handler_set_update_active(OhplA13H *h, bool active);
+	void ohpl_a13_handler_container(OhplA13H *h, bool enter);
+	bool ohpl_a13_handler_show_commentary(OhplA13H *h);
+	void ohpl_a13_handler_set_show_commentary(OhplA13H *h, bool show, bool stop);
+	void ohpl_a13_handler_pause(OhplA13H *h, bool pause);
+	void *ohpl_a13_handler_load_map(OhplA13H *h, const char *file, size_t n, bool entities);
+	void ohpl_a13_handler_destroy_map(OhplA13H *h, void *map, bool loadingSave);
+	void ohpl_a13_handler_set_current(OhplA13H *h, void *map, bool runScript, bool firstTime, const char *pos, size_t n);
+	void ohpl_a13_handler_change_map(OhplA13H *h, const char *map, size_t mapN, const char *pos, size_t posN,
+										const char *startSound, size_t startN, const char *endSound, size_t endN);
+	void ohpl_a13_handler_add_hearable(OhplA13H *h, const char *name, size_t n);
+	void ohpl_a13_handler_sound_started(OhplA13H *h, const char *typeName, size_t n, float maxDist, float volume, const float *pos);
 }
 
 #endif

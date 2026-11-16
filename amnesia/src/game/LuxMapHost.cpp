@@ -20,6 +20,13 @@
 #include "LuxMusicHandler.h"
 #include "LuxProgressLogHandler.h"
 #include "LuxEffectHandler.h"
+#include "LuxEffectRenderer.h"
+#include "LuxHelpFuncs.h"
+#include "LuxSaveHandler.h"
+#include "LuxSavedGame.h"
+#include "LuxLoadScreenHandler.h"
+#include "LuxMainMenu.h"
+#include "LuxAchievementHandler.h"
 
 void OhplA4bTick(cLuxMap *apMap);
 void OhplA13aTick(cLuxMap *apMap);
@@ -36,7 +43,11 @@ enum
 	kOp_LOG, kOp_HARD_MODE, kOp_ENT_KIND, kOp_ENT_CALL, kOp_ENT_DELETE, kOp_ENEMY, kOp_DOOR, kOp_STICKY, kOp_PROP_BODY, kOp_COLLIDER,
 	kOp_BODY_PAIR, kOp_PLAYER, kOp_FADE_IN, kOp_MUSIC, kOp_COMPLETION_SHOW, kOp_QUEST_VALUE, kOp_DISSOLVE_NEW, kOp_DISSOLVE_ALPHA,
 	kOp_LAMP_NEW, kOp_LAMP_ADD, kOp_LAMP_UPDATE, kOp_WORLD_CREATE_ENTITY, kOp_LOADING_MAP, kOp_IS_CURRENT_MAP, kOp_UPDATE_HOOKS,
-	kOp_SHOW_ENTITY_INFO, kOp_SHOW_COMMENTARY
+	kOp_SHOW_ENTITY_INFO, kOp_SHOW_COMMENTARY,
+	kOp_MAP_NEW = 57, kOp_MAP_NAME, kOp_MAP_CTX, kOp_SET_CURRENT, kOp_MODULE_MSG, kOp_VIEW, kOp_PLAY_GUI_SOUND, kOp_FADE, kOp_PLAYER_ACTIVE,
+	kOp_SAVE_PENDING, kOp_CLEANUP_DATA, kOp_LOCK, kOp_LOADSCREEN, kOp_SAVED, kOp_WORLD_SOUNDS_FADE, kOp_ACHIEVEMENT, kOp_PLAYER_SANITY,
+	kOp_TIME, kOp_SOUND_ALL, kOp_WORLD_ACTIVE, kOp_VIEWPORT_ACTIVE, kOp_STOP_COMMENTARY, kOp_FOLDER, kOp_SAVED_RESET, kOp_DATACACHE_DESTROY,
+	kOp_QUIT, kOp_CLEAR_RENDER_LISTS, kOp_MAP_LOAD
 };
 
 enum { kEnt_AFTER_WORLD_LOAD, kEnt_ON_MAP_ENTER, kEnt_UPDATE_LOGIC, kEnt_RENDER_SOLID, kEnt_BEFORE_DESTRUCTION, kEnt_DESTROY_ME, kEnt_SET_ACTIVE,
@@ -593,6 +604,139 @@ void Host(int32_t alOp, OhplA13A *a)
 		break;
 	case kOp_SHOW_COMMENTARY:
 		a->i[0] = gpBase->mpMapHandler->GetShowCommentary();
+		break;
+	case kOp_MAP_NEW:
+		a->r = (uintptr_t)hplNew(cLuxMap, (tString((const char*)a->s[0].p, a->s[0].n)));
+		break;
+	case kOp_MAP_LOAD:
+		((cLuxMap*)a->p[0])->LoadFromFile(tString((const char*)a->s[0].p, a->s[0].n), a->i[0] != 0);
+		break;
+	case kOp_MAP_NAME:
+		a->rs[0] = Str(((cLuxMap*)a->p[0])->GetName());
+		break;
+	case kOp_MAP_CTX:
+		a->r = (uintptr_t)((cLuxMap*)a->p[0])->GetA7();
+		break;
+	case kOp_SET_CURRENT:
+		((cLuxMapHandler*)a->p[5])->HostSetCurrent((cLuxMap*)a->p[0]);
+		break;
+	case kOp_MODULE_MSG:
+	{
+		static const eLuxUpdateableMessage vMsgs[4] = { eLuxUpdateableMessage_DestroyWorldEntities, eLuxUpdateableMessage_OnMapLeave,
+														eLuxUpdateableMessage_CreateWorldEntities, eLuxUpdateableMessage_OnMapEnter };
+		gpBase->RunModuleMessage(vMsgs[a->i[0] & 3], (cLuxMap*)a->p[0]);
+		break;
+	}
+	case kOp_VIEW:
+		if(a->i[0] == 0) ((cLuxMapHandler*)a->p[5])->HostSetView((cWorld*)a->p[0], (iPhysicsWorld*)a->p[1]);
+		else ((cLuxMapHandler*)a->p[5])->HostSetView(NULL, NULL);
+		break;
+	case kOp_PLAY_GUI_SOUND:
+		gpBase->mpHelpFuncs->PlayGuiSoundData(tString((const char*)a->s[0].p, a->s[0].n), eSoundEntryType_Gui);
+		break;
+	case kOp_FADE:
+		if(a->i[0] == 0) gpBase->mpEffectHandler->GetFade()->FadeOut(a->f[0]);
+		else if(a->i[0] == 1) gpBase->mpEffectHandler->GetFade()->FadeIn(a->f[0]);
+		else a->i[0] = gpBase->mpEffectHandler->GetFade()->IsFading();
+		break;
+	case kOp_PLAYER_ACTIVE:
+		gpBase->mpPlayer->SetActive(a->i[0] != 0);
+		break;
+	case kOp_SAVE_PENDING:
+	{
+		cLuxSaveHandlerThreadClass* pThreadClass = gpBase->mpSaveHandler->GetThreadClass();
+		if(pThreadClass->IsRunning()) pThreadClass->ProcessPendingSaves();
+		break;
+	}
+	case kOp_CLEANUP_DATA:
+		gpBase->mpHelpFuncs->CleanupData();
+		break;
+	case kOp_LOCK:
+		if(a->i[0]) ((cLuxMapHandler*)a->p[5])->mpSavedGameMutex->Lock();
+		else ((cLuxMapHandler*)a->p[5])->mpSavedGameMutex->Unlock();
+		break;
+	case kOp_LOADSCREEN:
+		if(a->i[0] == 0) gpBase->mpLoadScreenHandler->DrawGameScreen();
+		else gpBase->mpLoadScreenHandler->GameScreenLoadDone(tString((const char*)a->s[0].p, a->s[0].n), a->f[0]);
+		break;
+	case kOp_SAVED:
+	{
+		cLuxSavedGameMapCollection *pSaved = ((cLuxMapHandler*)a->p[5])->GetSavedMapCollection();
+		if(a->i[0] == 0) pSaved->SaveMap((cLuxMap*)a->p[0]);
+		else if(a->i[0] == 1) pSaved->LoadMap((cLuxMap*)a->p[0]);
+		else a->i[0] = pSaved->MapExists(tString((const char*)a->s[0].p, a->s[0].n));
+		break;
+	}
+	case kOp_WORLD_SOUNDS_FADE:
+		gpBase->mpEngine->GetSound()->GetSoundHandler()->FadeOutAll(eSoundEntryType_World, 0.5f, true);
+		break;
+	case kOp_ACHIEVEMENT:
+		gpBase->mpAchievementHandler->UnlockAchievement(a->i[0] == 0 ? eLuxAchievement_EscapeArtist : eLuxAchievement_Descendant);
+		break;
+	case kOp_PLAYER_SANITY:
+		gpBase->mpPlayer->AddSanity(a->f[0], true);
+		break;
+	case kOp_TIME:
+		a->r = (uintptr_t)cPlatform::GetApplicationTime();
+		break;
+	case kOp_SOUND_ALL:
+	{
+		cSound *pSound = gpBase->mpEngine->GetSound();
+		if(a->i[0] == 0)
+		{
+			pSound->GetSoundHandler()->PauseAll(eSoundEntryType_All);
+			pSound->GetMusicHandler()->Pause();
+		}
+		else if(a->i[0] == 1)
+		{
+			pSound->GetSoundHandler()->ResumeAll(eSoundEntryType_All);
+			pSound->GetMusicHandler()->Resume();
+		}
+		else pSound->GetSoundHandler()->StopAll(eSoundEntryType_All);
+		break;
+	}
+	case kOp_WORLD_ACTIVE:
+		((cWorld*)a->p[0])->SetActive(a->i[0] != 0);
+		break;
+	case kOp_VIEWPORT_ACTIVE:
+		((cLuxMapHandler*)a->p[5])->GetViewport()->SetActive(a->i[0] != 0);
+		((cLuxMapHandler*)a->p[5])->GetViewport()->SetVisible(a->i[0] != 0);
+		break;
+	case kOp_STOP_COMMENTARY:
+		gpBase->mpEffectHandler->GetPlayCommentary()->Stop();
+		break;
+	case kOp_FOLDER:
+		if(a->i[0] == 0) a->rs[0] = Str(((cLuxMapHandler*)a->p[5])->GetMapFolder());
+		else ((cLuxMapHandler*)a->p[5])->SetMapFolder("");
+		break;
+	case kOp_SAVED_RESET:
+		((cLuxMapHandler*)a->p[5])->GetSavedMapCollection()->Reset();
+		break;
+	case kOp_DATACACHE_DESTROY:
+		((cLuxMapHandler*)a->p[5])->DestroyDataCache();
+		break;
+	case kOp_QUIT:
+		switch(a->i[0])
+		{
+		case 0:
+			gpBase->mpEngine->GetUpdater()->SetContainer("MainMenu");
+			gpBase->mpLoadScreenHandler->DrawMenuScreen();
+			break;
+		case 1:
+			gpBase->mpSaveHandler->AutoSave();
+			break;
+		case 2:
+			gpBase->mpEngine->GetUpdater()->BroadcastMessageToAll(eUpdateableMessage_Reset);
+			gpBase->SetCustomStory(NULL);
+			break;
+		default:
+			gpBase->mpMainMenu->OnLeaveContainer("");
+			gpBase->mpMainMenu->OnEnterContainer("");
+			break;
+		}
+		break;
+	case kOp_CLEAR_RENDER_LISTS:
+		gpBase->mpEffectRenderer->ClearRenderLists();
 		break;
 	}
 }

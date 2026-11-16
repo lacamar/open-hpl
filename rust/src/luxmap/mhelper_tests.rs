@@ -6,7 +6,6 @@ use crate::types::Vector3f;
 use std::sync::Mutex;
 
 static LOG: Mutex<Vec<String>> = Mutex::new(Vec::new());
-static LOCK: Mutex<()> = Mutex::new(());
 
 fn log(s: String) {
     LOG.lock().unwrap().push(s);
@@ -127,7 +126,7 @@ fn args() -> DamageArgs {
 
 #[test]
 fn line_of_sight_blocks_on_solid_prop() {
-    let _g = LOCK.lock().unwrap();
+    let _g = mhost::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     mhost::set_host(Some(fake));
     let v = Vector3f::default();
     assert!(!mhelper::check_line_of_sight(v, v, false));
@@ -137,7 +136,7 @@ fn line_of_sight_blocks_on_solid_prop() {
 
 #[test]
 fn shape_damage_pushes_prop_and_skips_unchecked_player() {
-    let _g = LOCK.lock().unwrap();
+    let _g = mhost::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     mhost::set_host(Some(fake));
     LOG.lock().unwrap().clear();
     let (hit, player) = mhelper::shape_damage(&args());
@@ -151,7 +150,7 @@ fn shape_damage_pushes_prop_and_skips_unchecked_player() {
 
 #[test]
 fn light_level_adds_box_lights_in_tree_order() {
-    let _g = LOCK.lock().unwrap();
+    let _g = mhost::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     mhost::set_host(Some(fake));
     let l = mhelper::light_level_at_pos(Vector3f::default(), None, 0.0);
     // static root 0x11: two leaves with one light each; dynamic root 0x12: one light; 0.5 per box light
