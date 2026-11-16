@@ -36,6 +36,7 @@ struct OhplGa2Death;
 
 class cLuxPlayerInsanityCollapse : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 friend class cLuxPlayer_SaveData;
 public:
 	cLuxPlayerInsanityCollapse(cLuxPlayer *apPlayer);
@@ -84,6 +85,7 @@ private:
 
 class cLuxPlayerCamDirEffects : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:
 	cLuxPlayerCamDirEffects(cLuxPlayer *apPlayer);
 	~cLuxPlayerCamDirEffects();
@@ -117,6 +119,7 @@ public:
 
 class cLuxPlayerSpawnPS : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:
 	cLuxPlayerSpawnPS (cLuxPlayer *apPlayer);
 	~cLuxPlayerSpawnPS();
@@ -163,6 +166,7 @@ private:
 
 class cLuxPlayerHurt : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:
 	cLuxPlayerHurt (cLuxPlayer *apPlayer);
 	~cLuxPlayerHurt();
@@ -206,6 +210,7 @@ typedef tLuxFlashbackDataList::iterator tLuxFlashbackDataListIt;
 
 class cLuxPlayerFlashback : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 friend class cLuxPlayer_SaveData;
 public:
 	cLuxPlayerFlashback (cLuxPlayer *apPlayer);
@@ -245,6 +250,7 @@ private:
 
 class cLuxPlayerLookAt : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 friend class cLuxPlayer_SaveData;
 public:
 	cLuxPlayerLookAt(cLuxPlayer *apPlayer);
@@ -283,6 +289,7 @@ private:
 
 class cLuxPlayerSanity : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 friend class cLuxPlayer_SaveData;
 public:
 	cLuxPlayerSanity(cLuxPlayer *apPlayer);
@@ -366,6 +373,7 @@ private:
 
 class cLuxPlayerLantern : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:	
 	cLuxPlayerLantern(cLuxPlayer *apPlayer);
 	~cLuxPlayerLantern();
@@ -413,6 +421,7 @@ private:
 
 class cLuxPlayerDeath : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:
 	cLuxPlayerDeath(cLuxPlayer *apPlayer);
 	~cLuxPlayerDeath();
@@ -511,6 +520,7 @@ private:
 
 class cLuxPlayerLean : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:	
 	cLuxPlayerLean(cLuxPlayer *apPlayer);
 	~cLuxPlayerLean();
@@ -571,6 +581,7 @@ typedef cLuxPlayerHudEffect_SplashList::iterator cLuxPlayerHudEffect_SplashListI
 
 class cLuxPlayerHudEffect : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:
 	cLuxPlayerHudEffect(cLuxPlayer *apPlayer);
 	~cLuxPlayerHudEffect();
@@ -608,6 +619,7 @@ private:
 
 class cLuxPlayerLightLevel : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:	
 	cLuxPlayerLightLevel(cLuxPlayer *apPlayer);
 	~cLuxPlayerLightLevel();
@@ -633,6 +645,7 @@ private:
 
 class cLuxPlayerInDarkness : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 friend class cLuxPlayer_SaveData;
 public:	
 	cLuxPlayerInDarkness(cLuxPlayer *apPlayer);

@@ -44,6 +44,7 @@
 #include "LuxMoveState_ClimbLedge.h"
 
 #include "LuxPlayerHelpers.h"
+#include "LuxA2bDump.h"
 #include "LuxPlayerHands.h"
 
 #include "LuxAreaNodes.h"
@@ -360,6 +361,8 @@ void cLuxPlayer::OnStart()
 
 void cLuxPlayer::Update(float afTimeStep)
 {
+	if(OhplA2bTick(this)) return;
+
 	////////////////////////
 	// Update current move state
 	mvMoveStates[mMoveState]->Update(afTimeStep);
