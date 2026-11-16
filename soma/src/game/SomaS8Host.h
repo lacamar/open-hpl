@@ -3,6 +3,7 @@
 
 #include "hpl.h"
 #include "RustSomaS8.h"
+#include "RustSomaS8b.h"
 
 using namespace hpl;
 
@@ -14,6 +15,7 @@ std::string OhplS8bHex(float afX);
 bool OhplS8cDump();
 void OhplS8cAdd(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void OhplS8cEnd();
+void OhplS8cCall(uint32_t aOp, OhplS8bIo *io);
 
 // Engine side of the splash and gamma screen shells: one `call` entry for every host op.
 class cOhplS8Shell

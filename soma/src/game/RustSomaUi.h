@@ -70,48 +70,6 @@ struct OhplGs7ElementId
 };
 static_assert(sizeof(OhplGs7ElementId) == 12, "OhplGs7ElementId layout");
 
-struct OhplGs7Chromatic
-{
-	float offset_a[2], offset_b[2], offset_c[2], color_a[4], color_b[4], color_c[4];
-};
-static_assert(sizeof(OhplGs7Chromatic) == 72, "OhplGs7Chromatic layout");
-
-struct OhplGs7LevelSize
-{
-	int w, h, div;
-};
-
-struct OhplGs7BlurWeights
-{
-	float weights[7], off_h[7][2], off_v[7][2];
-};
-static_assert(sizeof(OhplGs7BlurWeights) == 140, "OhplGs7BlurWeights layout");
-
-enum { OHPL_GS7_BLUR_DOWNSAMPLE = 0, OHPL_GS7_BLUR_BLUR = 1, OHPL_GS7_BLUR_FINAL = 2 };
-
-struct OhplGs7BlurOp
-{
-	int kind, level;
-	bool vertical;
-	int program, slot;
-	float alpha;
-	int tex0_level;
-	bool tex0_b;
-	int tex1_level;
-};
-static_assert(sizeof(OhplGs7BlurOp) == 36, "OhplGs7BlurOp layout");
-
-struct OhplGs7BlurPlan
-{
-	size_t n_ops;
-	OhplGs7BlurOp ops[104];
-	OhplGs7BlurWeights weights[2];
-	bool passthrough;
-};
-static_assert(sizeof(OhplGs7BlurPlan) == 4040, "OhplGs7BlurPlan layout");
-
-struct OhplGs7TentacleFades;
-
 struct OhplGs7ImState
 {
 	int int_;
@@ -289,24 +247,6 @@ extern "C"
 	void ohpl_gs7_load_color_mul_all(const float *col, const float *mul, float *out);
 	bool ohpl_gs7_load_default_show_mesh(const unsigned char *name, size_t n);
 
-	bool ohpl_gs7_pfx_set_activity(int type, const float *params, bool was_active, bool *clear);
-	void ohpl_gs7_pfx_chromatic(const float *params, float screen_h, const float *tex, OhplGs7Chromatic *out);
-	float ohpl_gs7_pfx_trail_alpha(float amount, float frame_time, bool clear);
-	size_t ohpl_gs7_pfx_blur_levels(int w, int h, OhplGs7LevelSize *out, size_t max);
-	void ohpl_gs7_pfx_blur_plan(float amount, int screen_h, const OhplGs7LevelSize *levels, size_t n, OhplGs7BlurPlan *out);
-	OhplGs7TentacleFades *ohpl_gs7_pfx_tentacles_new();
-	void ohpl_gs7_pfx_tentacles_free(OhplGs7TentacleFades *);
-	void ohpl_gs7_pfx_tentacles_clear(OhplGs7TentacleFades *);
-	void ohpl_gs7_pfx_tentacles_set_material(OhplGs7TentacleFades *, size_t tentacles, size_t materials, int idx, float time);
-	int ohpl_gs7_pfx_tentacles_material(const OhplGs7TentacleFades *);
-	void ohpl_gs7_pfx_tentacles_advance(OhplGs7TentacleFades *, float dt);
-	int ohpl_gs7_pfx_tentacles_blend(const OhplGs7TentacleFades *, float *alpha);
-	float ohpl_gs7_pfx_tentacle_time(float time, float dt, float speed);
-	void ohpl_gs7_pfx_tentacle_speeds(size_t groups, float min, float max, float *out);
-	void ohpl_gs7_pfx_tentacle_target(int w, int h, int *out);
-	void ohpl_gs7_pfx_tentacle_model(int w, int h, const float *rot, float *out);
-	void ohpl_gs7_pfx_tentacle_pos(const float *pos, float spread, float *out);
-	float ohpl_gs7_pfx_tentacle_aspect(int w, int h);
 
 	int ohpl_gs7_im_default_or_current_int(OhplGs7ImState *, int def);
 	float ohpl_gs7_im_default_or_current_float(OhplGs7ImState *, float def);

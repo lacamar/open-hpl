@@ -15,6 +15,7 @@ public:
 
 	static cSomaToneMapping *Get() { return mpInstance; }
 	static void RegisterNatives(asIScriptEngine *apEngine);
+	static void InstallHost();
 	static bool WorldExposure(float *apExposure, float *apWhiteCut);
 	static void FadeExposure(float afExposure, float afWhiteCut, float afTime);
 

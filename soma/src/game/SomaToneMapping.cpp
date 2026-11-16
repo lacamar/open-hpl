@@ -138,6 +138,7 @@ namespace
 						   OhplS8bHex(gDump.mfGamma).c_str(), gDump.msGrading.c_str(), gDump.msTarget.c_str(), OhplS8bHex(gDump.mfBlend).c_str(),
 						   gDump.msLayers.c_str(), gDump.msBloom.c_str(), gDump.mbGrain, OhplS8bHex(gDump.mfGrain).c_str(), io->i[0]);
 			break;
+		default: OhplS8cCall(aOp, io);
 		}
 	}
 
@@ -173,6 +174,8 @@ void cSomaToneMapping::Update(float afTimeStep)
 bool cSomaToneMapping::WorldExposure(float *apExposure, float *apWhiteCut) { return ohpl_s8b_tone_world(apExposure, apWhiteCut); }
 
 void cSomaToneMapping::FadeExposure(float afExposure, float afWhiteCut, float afTime) { ohpl_s8b_tone_fade_exposure(afExposure, afWhiteCut, afTime); }
+
+void cSomaToneMapping::InstallHost() { Install(); }
 
 void cSomaToneMapping::RegisterNatives(asIScriptEngine *e)
 {
