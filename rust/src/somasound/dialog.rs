@@ -3,6 +3,7 @@
 
 use super::dump;
 use super::host::{CallArg, Str, ops};
+use super::voice_handler;
 use crate::somascript::s2_as::{Soma, str_bytes};
 use std::collections::BTreeMap;
 use std::ffi::c_void;
@@ -112,18 +113,13 @@ fn building() -> &'static mut Dialog {
         .get_or_insert_with(|| Dialog::new(b"", Vec::new()))
 }
 
-fn voice_op<R>(default: R, f: impl FnOnce(&super::host::S7Host) -> R) -> R {
-    ops().map_or(default, f)
-}
-
 fn voice_present() -> bool {
-    // SAFETY: plain call.
-    voice_op(false, |h| unsafe { (h.voice_present)() })
+    voice_handler::present()
 }
 
 fn script(decl: &str, args: &[CallArg], want_ret: bool) -> i32 {
     // SAFETY: `decl` and the argument strings are valid for the call.
-    voice_op(-1, |h| unsafe {
+    ops().map_or(-1, |h| unsafe {
         (h.script_call)(
             decl.as_ptr(),
             decl.len(),
@@ -179,7 +175,7 @@ fn with<R>(uid: u64, f: impl FnOnce(&mut Dialog) -> R) -> Option<R> {
     d().active.iter_mut().find(|x| x.uid == uid).map(f)
 }
 
-unsafe extern "C" fn on_done(token: u64) {
+fn on_done(token: u64) {
     with(token, |x| x.waiting = false);
 }
 
@@ -197,10 +193,14 @@ fn start_item(uid: u64) {
     }
     with(uid, |x| x.waiting = true);
     let ok = voice_present()
-        && voice_op(false, |h| {
-            // SAFETY: the subject is valid for the call; `on_done` accepts the token.
-            unsafe { (h.voice_play)(item.subject.as_ptr(), item.subject.len(), uid, on_done) }
-        });
+        && voice_handler::play(
+            &item.subject,
+            -1,
+            b"",
+            100,
+            Some(Box::new(move || on_done(uid))),
+            false,
+        );
     if !ok {
         with(uid, |x| x.waiting = false);
     }
@@ -291,10 +291,7 @@ fn check_event(uid: u64, item: &Item, e: &Event) -> bool {
                 return false;
             };
             let line = if voice_present() {
-                // SAFETY: the subject is valid for the call.
-                voice_op(0, |h| unsafe {
-                    (h.voice_line_count)(item.subject.as_ptr(), item.subject.len())
-                }) - 1
+                voice_handler::subject_line_count(&item.subject) - 1
             } else {
                 -1
             };
@@ -402,11 +399,8 @@ pub fn stop_all() {
     for x in &mut d().active {
         x.done = true;
     }
-    if voice_present()
-        && let Some(h) = ops()
-    {
-        // SAFETY: plain call.
-        unsafe { (h.voice_stop_all)() };
+    if voice_present() {
+        voice_handler::stop_all();
     }
 }
 
@@ -414,24 +408,14 @@ fn character_active(name: &[u8]) -> bool {
     if !voice_present() {
         return false;
     }
-    let Some(h) = ops() else { return false };
-    // SAFETY: `name` is valid for the call.
-    if unsafe { (h.voice_scene_involving)(name.as_ptr(), name.len()) } {
+    if voice_handler::scene_involving_character(name) {
         return true;
     }
     d().active.iter().filter(|x| !x.done).any(|x| {
-        x.branches.iter().flat_map(|b| &b.items).any(|i| {
-            // SAFETY: both strings are valid for the call.
-            !i.subject.is_empty()
-                && unsafe {
-                    (h.voice_subject_involves)(
-                        i.subject.as_ptr(),
-                        i.subject.len(),
-                        name.as_ptr(),
-                        name.len(),
-                    )
-                }
-        })
+        x.branches
+            .iter()
+            .flat_map(|b| &b.items)
+            .any(|i| !i.subject.is_empty() && voice_handler::subject_involves(&i.subject, name))
     })
 }
 

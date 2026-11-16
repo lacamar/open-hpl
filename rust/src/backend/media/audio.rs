@@ -77,7 +77,7 @@ pub fn decode_wav(b: &[u8]) -> Option<Pcm> {
 }
 
 #[repr(C)]
-struct Vorbis {
+pub(crate) struct Vorbis {
     _private: [u8; 0],
 }
 

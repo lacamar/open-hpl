@@ -880,7 +880,7 @@ public:
 			vVisited.push_back(pool.Add(sMap));
 		std::set<tString> setPlayed;
 		if (cSomaLuxVoiceHandler::Get())
-			setPlayed = cSomaLuxVoiceHandler::Get()->msetPlayedLines;
+			setPlayed = cSomaLuxVoiceHandler::Get()->PlayedLines();
 		for (const tString &sLine : setPlayed)
 			vPlayed.push_back(pool.Add(sLine));
 		GatherWorld(c, w);
@@ -1617,7 +1617,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 
 	gbExplorationMode = bExploration;
 	if (cSomaLuxVoiceHandler::Get())
-		cSomaLuxVoiceHandler::Get()->msetPlayedLines = setPlayed;
+		cSomaLuxVoiceHandler::Get()->SetPlayedLines(setPlayed);
 
 	SomaDeserializeGlobalVars(sVars);
 	// The saved state replaces OnStart

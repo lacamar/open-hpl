@@ -9,7 +9,6 @@ pub mod events;
 mod extract;
 mod ffi_fsb;
 mod ffi_game;
-mod ffi_voice;
 pub mod fsb;
 mod game;
 mod glue;
@@ -23,6 +22,7 @@ mod soundscape;
 #[cfg(test)]
 mod tests;
 pub mod voice;
+mod voice_handler;
 mod vorbis_setups;
 
 unsafe extern "C" {
