@@ -9,7 +9,8 @@ use super::itemtype;
 use std::cell::RefCell;
 use std::sync::Mutex;
 
-static LOCK: Mutex<()> = Mutex::new(());
+// shared with jrn_tests: both install the one invhost::HOST
+pub(super) static LOCK: Mutex<()> = Mutex::new(());
 
 type Draw = (usize, [f32; 3], [f32; 2], [f32; 4], i32);
 

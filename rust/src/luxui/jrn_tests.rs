@@ -6,11 +6,8 @@ use super::invhost::{self as host, A, WStr, op};
 use super::jrn;
 use std::cell::RefCell;
 use std::fmt::Write;
-use std::sync::Mutex;
 
 const STATE: &str = include_str!("../../tests/golden/A11c/state.txt");
-
-static LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Default)]
 struct Mock {
@@ -96,7 +93,7 @@ unsafe extern "C" fn mock(code: i32, a: *mut A) {
 }
 
 fn setup() -> std::sync::MutexGuard<'static, ()> {
-    let g = LOCK
+    let g = super::inv_tests::LOCK
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     M.with(|m| *m.borrow_mut() = Mock::default());
