@@ -57,6 +57,7 @@ pub struct Sanity {
     pub sanity_low_limit_max_time: f32,
     pub sanity_low_new_sanity_amount: f32,
     pub check_near_enemy_interval: f32,
+    pub near_enemy_decrease: f32,
 }
 
 /// Start of `Update`: time, flag reset and the low-sanity timer.

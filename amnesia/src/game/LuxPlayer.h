@@ -63,6 +63,7 @@ class cLuxPlayer : public iLuxUpdateable, public iLuxCollideCallbackContainer
 {
 friend class cLuxPlayer_SaveData;
 friend class cLuxHelpFuncs;
+friend struct OhplA2bDump;
 public:	
 	cLuxPlayer();
 	~cLuxPlayer();

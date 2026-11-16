@@ -124,6 +124,96 @@ struct OhplA2bDark
 	uint32_t mbActive;
 };
 
+enum OhplA2cQuery : uint32_t
+{
+	kOhplA2cHardActive = 20,
+	kOhplA2cPerma = 21,
+	kOhplA2cScan = 22,
+	kOhplA2cLeanCollide = 23,
+	kOhplA2cHudImages = 24,
+};
+
+enum OhplA2cFill : uint32_t
+{
+	kOhplA2cFHudImageSize = 20,
+	kOhplA2cFHudCenter = 21,
+};
+
+enum OhplA2cOp : uint32_t
+{
+	kOhplA2cLeanRoll = 320,
+	kOhplA2cLeanHead = 321,
+};
+
+struct OhplA2cLean
+{
+	float mfDir, mfDirAdd, mfMovement, mfRotation, mfMaxMovement, mfMaxRotation;
+	uint32_t mbPressed;
+};
+
+struct OhplA2cSplash
+{
+	uint32_t mlImage;
+	hpl::cVector3f mvPos;
+	float mvSize[2];
+	float mfAlpha, mfAlphaMul;
+	hpl::cVector3f mvPosVel;
+	float mvSizeVel[2];
+	float mfAlphaVel, mfAlphaMoveStart;
+};
+
+enum { kOhplA2cSplashCap = 64 };
+
+struct OhplA2cHud
+{
+	float mfFlashAlphaSpeed, mfFlashAlphaOutSpeed, mfFlashAlpha;
+	uint32_t mbFlashActive, mlCount;
+	OhplA2cSplash mvSplashes[kOhplA2cSplashCap];
+};
+
+struct OhplA2cSpsCfg
+{
+	float mfRadius, mfDensity, mfHeightFromFeet, mfHeightAddMin, mfHeightAddMax;
+};
+
+struct OhplA2cSpsHost
+{
+	void *ctx;
+	size_t (*create)(void *ctx, const hpl::cVector3f *pos);
+	bool (*exists)(void *ctx, size_t ps);
+	void (*kill)(void *ctx, size_t ps);
+	void (*destroy)(void *ctx, size_t ps);
+	float (*rand)(void *ctx, float min, float max);
+	void (*feet)(void *ctx, hpl::cVector3f *out);
+};
+
+struct OhplA2cSps;
+
+extern "C" {
+void ohpl_a2c_sanity_update(OhplGa2Sanity *s, const OhplA2bHost *h, float dt);
+void ohpl_a2c_sanity_reset(OhplGa2Sanity *s);
+void ohpl_a2c_death_update(OhplGa2Death *s, const OhplA2bHost *h, float dt);
+void ohpl_a2c_death_reset(OhplGa2Death *s);
+void ohpl_a2c_death_start(OhplGa2Death *s, bool crouching);
+void ohpl_a2c_lean_update(OhplA2cLean *s, const OhplA2bHost *h, float dt);
+void ohpl_a2c_lean_reset(OhplA2cLean *s);
+void ohpl_a2c_lean_set(OhplA2cLean *s, float mul);
+void ohpl_a2c_lean_add(OhplA2cLean *s, float add);
+void ohpl_a2c_hud_reset(OhplA2cHud *s);
+void ohpl_a2c_hud_flash(OhplA2cHud *s, float inTime, float outTime);
+void ohpl_a2c_hud_update(OhplA2cHud *s, float dt);
+void ohpl_a2c_hud_add_splash(OhplA2cHud *s, const OhplA2bHost *h, int32_t damageType);
+OhplA2cSps *ohpl_a2c_sps_new();
+void ohpl_a2c_sps_free(OhplA2cSps *s);
+void ohpl_a2c_sps_start(OhplA2cSps *s, const OhplA2cSpsHost *h, OhplA2cSpsCfg cfg);
+void ohpl_a2c_sps_reset(OhplA2cSps *s, const OhplA2cSpsHost *h, bool map);
+void ohpl_a2c_sps_respawn(OhplA2cSps *s, const OhplA2cSpsHost *h);
+void ohpl_a2c_sps_update(OhplA2cSps *s, const OhplA2cSpsHost *h);
+void ohpl_a2c_sps_set_active(OhplA2cSps *s, bool active);
+bool ohpl_a2c_sps_active(const OhplA2cSps *s);
+size_t ohpl_a2c_sps_count(const OhplA2cSps *s);
+}
+
 extern "C" {
 void ohpl_a2_vitals(OhplA2Core *c, const OhplA2Host *h, int32_t which, float amount, int32_t ty, uint32_t flags);
 void ohpl_a2_spin_head(OhplA2Core *c, const OhplA2Host *h, float speed);

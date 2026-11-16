@@ -7,7 +7,7 @@ use super::helpers::{
     LookAt,
 };
 use super::ops::{Op, Ops};
-use super::sanity::{self, Sanity};
+use super::sanity::Sanity;
 use super::vitals::{self, Vitals};
 use crate::types::{Vector2f, Vector3f};
 
@@ -24,8 +24,8 @@ const _: () = {
     assert!(size_of::<Flashback>() == 28);
     assert!(size_of::<Lantern>() == 32);
     assert!(size_of::<Darkness>() == 36);
-    assert!(size_of::<Death>() == 56);
-    assert!(size_of::<Sanity>() == 124);
+    assert!(size_of::<Death>() == 64);
+    assert!(size_of::<Sanity>() == 128);
     assert!(size_of::<CamState>() == 128);
 };
 
@@ -394,115 +394,6 @@ pub unsafe extern "C" fn ohpl_ga2_darkness_update(
     let (s, i, o) = unsafe { (rw(s), rd(i), rw(out)) };
     *o = Ops::default();
     helpers::darkness_update(s, i, dt, o);
-}
-
-/// # Safety
-/// `s` exclusively borrowed, `out` writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga2_death_phase1(s: *mut Death, perma: bool, dt: f32, out: *mut Ops) {
-    // SAFETY: caller contract.
-    let (s, o) = unsafe { (rw(s), rw(out)) };
-    *o = Ops::default();
-    helpers::death_phase1(s, perma, dt, o);
-}
-
-/// # Safety
-/// `s` exclusively borrowed, `out` writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga2_death_phase2(
-    s: *mut Death,
-    hard_mode_active: bool,
-    dt: f32,
-    out: *mut Ops,
-) {
-    // SAFETY: caller contract.
-    let (s, o) = unsafe { (rw(s), rw(out)) };
-    *o = Ops::default();
-    helpers::death_phase2(s, hard_mode_active, dt, o);
-}
-
-/// # Safety
-/// `out` writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga2_death_phase3(state: i32, voice_gone: bool, out: *mut Ops) {
-    // SAFETY: caller contract.
-    let o = unsafe { rw(out) };
-    *o = Ops::default();
-    helpers::death_phase3(state, voice_gone, o);
-}
-
-/// # Safety
-/// `s` exclusively borrowed, `out` writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga2_sanity_begin(
-    s: *mut Sanity,
-    sanity: f32,
-    dt: f32,
-    out: *mut Ops,
-) {
-    // SAFETY: caller contract.
-    let (s, o) = unsafe { (rw(s), rw(out)) };
-    *o = Ops::default();
-    sanity::sanity_begin(s, sanity, dt, o);
-}
-
-/// # Safety
-/// `s` exclusively borrowed.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga2_sanity_scan_due(s: *mut Sanity, dt: f32) -> bool {
-    // SAFETY: caller contract.
-    sanity::sanity_scan_due(unsafe { rw(s) }, dt)
-}
-
-/// # Safety
-/// `s` exclusively borrowed, `out` writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga2_sanity_scan_result(
-    s: *mut Sanity,
-    seen_enemy: bool,
-    enemy_decrease: f32,
-    out: *mut Ops,
-) {
-    // SAFETY: caller contract.
-    let (s, o) = unsafe { (rw(s), rw(out)) };
-    *o = Ops::default();
-    sanity::sanity_scan_result(s, seen_enemy, enemy_decrease, o);
-}
-
-/// # Safety
-/// `s` exclusively borrowed, `out` writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga2_sanity_enemy_seen(s: *mut Sanity, dt: f32, out: *mut Ops) {
-    // SAFETY: caller contract.
-    let (s, o) = unsafe { (rw(s), rw(out)) };
-    *o = Ops::default();
-    sanity::sanity_enemy_seen_effect(s, dt, o);
-}
-
-/// # Safety
-/// `s` exclusively borrowed, `out` writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga2_sanity_hit(s: *mut Sanity, dead: bool, dt: f32, out: *mut Ops) {
-    // SAFETY: caller contract.
-    let (s, o) = unsafe { (rw(s), rw(out)) };
-    *o = Ops::default();
-    sanity::sanity_update_hit(s, dead, dt, o);
-}
-
-/// # Safety
-/// `s` exclusively borrowed, `out` writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga2_sanity_effects(
-    s: *mut Sanity,
-    sanity: f32,
-    dead: bool,
-    dt: f32,
-    out: *mut Ops,
-) {
-    // SAFETY: caller contract.
-    let (s, o) = unsafe { (rw(s), rw(out)) };
-    *o = Ops::default();
-    sanity::sanity_insane_effects(s, sanity, dead, dt, o);
 }
 
 /// Writes the new state to `new_state` and returns whether hand objects update afterwards.

@@ -28,14 +28,12 @@
 //----------------------------------------------
 
 class cLuxPlayer;
-struct OhplGa2Ops;
-struct OhplGa2Sanity;
-struct OhplGa2Death;
 
 //----------------------------------------------
 
 class cLuxPlayerInsanityCollapse : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 friend class cLuxPlayer_SaveData;
 public:
 	cLuxPlayerInsanityCollapse(cLuxPlayer *apPlayer);
@@ -84,6 +82,7 @@ private:
 
 class cLuxPlayerCamDirEffects : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:
 	cLuxPlayerCamDirEffects(cLuxPlayer *apPlayer);
 	~cLuxPlayerCamDirEffects();
@@ -107,16 +106,9 @@ private:
 
 //----------------------------------------------
 
-class cLuxPlayerSpawnPS_SpawnPos
-{
-public:
-	cParticleSystem *mpPS;
-	cVector3f mvPos;
-	cVector3f mvLastLocalPos;
-};
-
 class cLuxPlayerSpawnPS : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:
 	cLuxPlayerSpawnPS (cLuxPlayer *apPlayer);
 	~cLuxPlayerSpawnPS();
@@ -128,41 +120,37 @@ public:
 
 	void RespawnAll();
 
-	bool IsActive(){ return mbActive;}
+	bool IsActive(){ return ohpl_a2c_sps_active(mpS);}
 	const tString& GetFileName(){ return msFileName;}
 
 	void Update(float afTimeStep);
 private:
-	void GenerateAllSpawnPos();
-	cParticleSystem* CreatePS(cLuxPlayerSpawnPS_SpawnPos *apSpawnPos);
+	static size_t HostCreate(void *apCtx, const cVector3f *apPos);
+	static bool HostExists(void *apCtx, size_t alPS);
+	static void HostKill(void *apCtx, size_t alPS);
+	static void HostDestroy(void *apCtx, size_t alPS);
+	static float HostRand(void *apCtx, float afMin, float afMax);
+	static void HostFeet(void *apCtx, cVector3f *apOut);
 
-	void DestroyAllSpawnPoints();
+	bool LoadSpawnPSFile(const tString& asFileName, OhplA2cSpsCfg &aCfg);
 
-	bool LoadSpawnPSFile(const tString& asFileName);
-
-	bool mbActive;
+	OhplA2cSps *mpS;
 	tString msFileName;
 	
 	tString msParticleSystem;
-	float mfHeightFromFeet;
-	float mfHeightAddMin;
-	float mfHeightAddMax;
-	float mfDensity;
-	float mfRadius;
 	cColor mPSColor;
 	bool mbFadePS;
 	float mfPSMinFadeStart;
 	float mfPSMinFadeEnd;
 	float mfPSMaxFadeStart;
 	float mfPSMaxFadeEnd;
-
-	std::vector<cLuxPlayerSpawnPS_SpawnPos> mvSpawnPos;
 };
 
 //----------------------------------------------
 
 class cLuxPlayerHurt : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:
 	cLuxPlayerHurt (cLuxPlayer *apPlayer);
 	~cLuxPlayerHurt();
@@ -206,6 +194,7 @@ typedef tLuxFlashbackDataList::iterator tLuxFlashbackDataListIt;
 
 class cLuxPlayerFlashback : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 friend class cLuxPlayer_SaveData;
 public:
 	cLuxPlayerFlashback (cLuxPlayer *apPlayer);
@@ -245,6 +234,7 @@ private:
 
 class cLuxPlayerLookAt : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 friend class cLuxPlayer_SaveData;
 public:
 	cLuxPlayerLookAt(cLuxPlayer *apPlayer);
@@ -283,6 +273,7 @@ private:
 
 class cLuxPlayerSanity : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 friend class cLuxPlayer_SaveData;
 public:
 	cLuxPlayerSanity(cLuxPlayer *apPlayer);
@@ -295,70 +286,15 @@ public:
 
 	void Update(float afTimeStep);
 
-	void OnDraw(float afFrameTime);
-
-	float GetAtLowSanityCount(){ return mfAtLowSanityCount;}
+	float GetAtLowSanityCount(){ return mS.mfAtLowSanityCount;}
 
 private:
-	float GetCurrentSizeMul();
+	static void HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD);
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
+	bool ScanForEnemies();
 
-	void ToRust(OhplGa2Sanity &s);
-	void FromRust(const OhplGa2Sanity &s);
-	void Replay(const OhplGa2Ops &ops);
-	void UpdateInsaneEffects(float afTimeStep);
-	void UpdateCheckEnemySeen(float afTimeStep);
-	void UpdateHit(float afTimeStep);
-	
-	void UpdateEnemySeenEffect(float afTimeStep);
-	
-	float mfHitAlpha;
-	bool mbHitActive;
-	float mfSanityLostCount;
-
-	float mfAtLowSanityCount;
-
-	bool mbHitIsUpdated;
-	bool mbSanityLostIsUpdated;
-
-	float mfPantCount;
-
-	float mfCheckEnemySeenCount;
-
-	bool mbSanityEffectUpdated;
-
-	float mfT;
-	float mfInsaneWaveAlpha;
-
-	float mfSanityDrainCount;
-	float mfSanityDrainVolume;
-	float mfSanityHeartbeatCount;
-
-	float mfSeenEnemyCount;
-	bool mbEnemyIsSeen;
-
-	float mfShowHintTimer;
-
-	//////////////
-	// Data
-	float mfHitZoomInSpeed;
-	float mfHitZoomOutSpeed;
-	float mfHitZoomInFOVMul;
-	float mfHitZoomInAspectMul;
-
-	float mfSanityRegainSpeed;
-	float mfSanityRegainLimit;
-	float mfSanityVeryLowLimit;
-	float mfSanityEffectsStart;
-
-	float mfSanityWaveAlphaMul;
-	float mfSanityWaveSpeedMul;
-
-	float mfSanityLowLimit;
-	float mfSanityLowLimitMaxTime;
-	float mfSanityLowNewSanityAmount;
-
-	float mfCheckNearEnemyInterval;
-	float mfNearEnemyDecrease;
+	OhplGa2Sanity mS;
+	float &mfAtLowSanityCount = mS.mfAtLowSanityCount;
 	float mfNearCritterDecrease;
 };
 
@@ -366,6 +302,7 @@ private:
 
 class cLuxPlayerLantern : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:	
 	cLuxPlayerLantern(cLuxPlayer *apPlayer);
 	~cLuxPlayerLantern();
@@ -413,6 +350,7 @@ private:
 
 class cLuxPlayerDeath : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:
 	cLuxPlayerDeath(cLuxPlayer *apPlayer);
 	~cLuxPlayerDeath();
@@ -433,12 +371,12 @@ public:
 
 	void OnPressButton();
 
-	float GetFadeAlpha(){ return mfFadeAlpha;}
+	float GetFadeAlpha(){ return mS.mfFadeAlpha;}
 
 	void DisableStartSound(){ mbSkipStartSound = true; }
 
-	bool ShowHint(){ return mbShowHint;}
-	void SetShowHint(bool abX){ mbShowHint=abX;}
+	bool ShowHint(){ return mS.mbShowHint != 0;}
+	void SetShowHint(bool abX){ mS.mbShowHint=abX;}
 
 	void SetHint(const tString& asCat, const tString& asEntry);
 	const tString& GetHintCat(){ return msHintCat; }
@@ -447,60 +385,23 @@ public:
 
 
 private:
+	static void HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD);
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
 	void ResetGame();
-	void ToRust(OhplGa2Death &s);
-	void FromRust(const OhplGa2Death &s);
-	void Replay(const OhplGa2Ops &ops);
 
+	OhplGa2Death mS;
 	bool mbToMainMenu;
-	bool mbActive;
-
-	bool mbShowHint;
-
-	int mlState;
+	bool mbSkipStartSound;
 
 	tString msStartSound;
 	tString msAwakenSound;
 
-	bool mbSkipStartSound;
-
-	float mfHeightAddSpeed;
-	float mfRollSpeed;
-
-	float mfHeightAddGoal;
-	float mfHeightAddGoalCrouch;
-	float mfFadeOutTime;
-
-	float mfMaxSanityGain;
-	float mfMaxHealthGain;
-	float mfMaxOilGain;
-	float mfMinSanityGain;
-	float mfMinHealthGain;
-	float mfMinOilGain;
-
-	float mfHeightAdd;
-	float mfRoll;
-
-	float mfT;
-
-	float mfMinHeightAdd;
-
 	tString msHintCat;
 	tString msHintEntry;
-
 	tWString msCurrentHintText;
 
 	cGuiGfxElement *mpWhiteModGfx;
-
 	iFontData *mpFont;
-    	
-	float mfFadeAlpha;
-	float mfTextAlpha1;
-	float mfTextAlpha2;
-	float mfTextOnScreenCount;
-	float mfWhiteCount;
-	
-	cLinearOscillation mFlashOscill;
 
 	cSoundEntry *mpVoiceEntry;
 	int mlVoiceEntryId;
@@ -511,6 +412,7 @@ private:
 
 class cLuxPlayerLean : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:	
 	cLuxPlayerLean(cLuxPlayer *apPlayer);
 	~cLuxPlayerLean();
@@ -525,22 +427,11 @@ public:
 
 	void Reset();
 private:
+	static void HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD);
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
+
 	iCollideShape *mpHeadShape;
-
-	float mfDir;
-	float mfDirAdd;
-	float mfMovement;
-	float mfRotation;
-
-	float mfMaxMovement;
-	float mfMaxRotation;
-	float mfMaxTime;
-
-	float mfMoveSpeed;
-
-	bool mbIntersect;
-
-	bool mbPressed;
+	OhplA2cLean mS;
 };
 
 //----------------------------------------------
@@ -551,26 +442,10 @@ public:
 	std::vector<cGuiGfxElement*> mvImages;
 };
 
-class cLuxPlayerHudEffect_Splash
-{
-public:
-	cGuiGfxElement *mpImage;	
-	cVector3f mvPos;
-	cVector2f mvSize;
-	float mfAlpha;
-	float mfAlphaMul;
-
-	cVector3f mvPosVel;
-	cVector2f mvSizeVel;
-	float mfAlphaVel;
-	float mfAlphaMoveStart;
-};
-
-typedef std::list<cLuxPlayerHudEffect_Splash> cLuxPlayerHudEffect_SplashList;
-typedef cLuxPlayerHudEffect_SplashList::iterator cLuxPlayerHudEffect_SplashListIt;
 
 class cLuxPlayerHudEffect : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:
 	cLuxPlayerHudEffect(cLuxPlayer *apPlayer);
 	~cLuxPlayerHudEffect();
@@ -583,24 +458,19 @@ public:
 	void Reset();
 	
 private:
+	static float HostQuery(void *apCtx, uint32_t alKind, float afA, float afB);
+	static void HostFill(void *apCtx, uint32_t alKind, float *apBuf);
 	void DrawSplashes(float afFrameTime);
-	void UpdateSplashes(float afTimeStep);
-
 	void DrawFlash(float afFrameTime);
-	void UpdateFlash(float afTimeStep);
 
 	void LoadDamageData(cLuxPlayerDamageData *apData, const tString& asName);
 
+	OhplA2cHud mS;
 	std::vector<cLuxPlayerDamageData> mvDamageTypes;
-	cLuxPlayerHudEffect_SplashList mlstSplashes;
 
 	cGuiGfxElement *mpFlashGfx;
 	cColor mFlashColor;
 	eGuiMaterial mFlashMaterial;
-	float mfFlashAlphaSpeed;
-	float mfFlashAlphaOutSpeed;
-	float mfFlashAlpha;
-	bool mbFlashActive;
 };
 
 
@@ -608,6 +478,7 @@ private:
 
 class cLuxPlayerLightLevel : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 public:	
 	cLuxPlayerLightLevel(cLuxPlayer *apPlayer);
 	~cLuxPlayerLightLevel();
@@ -633,6 +504,7 @@ private:
 
 class cLuxPlayerInDarkness : public iLuxPlayerHelper
 {
+friend struct OhplA2bDump;
 friend class cLuxPlayer_SaveData;
 public:	
 	cLuxPlayerInDarkness(cLuxPlayer *apPlayer);
