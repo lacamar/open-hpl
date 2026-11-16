@@ -345,10 +345,12 @@ void cLuxMap::OnLeave(bool abRunScript)
 //-----------------------------------------------------------------------
 
 void OhplA4bTick(cLuxMap *apMap);
+void OhplA13aTick(cLuxMap *apMap);
 
 void cLuxMap::Update(float afTimeStep)
 {
 	OhplA4bTick(this);
+	OhplA13aTick(this);
 	static const char *sDumpFile = getenv("OHPL_A7_MAPDUMP");
 	if(sDumpFile)
 	{
