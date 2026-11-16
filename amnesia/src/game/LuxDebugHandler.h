@@ -67,6 +67,12 @@ public:
 
 	void QuickReloadMap();
 
+	// OHPL_A12D_DUMP drivers
+	iWidget *DumpDebugRoot();
+	iWidget *DumpScriptRoot();
+	tString DumpInspectName();
+	void DumpPick(const tWString& asPath, bool abBatch);
+
 private:
 	void CheckLineObjectIntersection(iRenderable *apObject, const cVector3f& avStart, const cVector3f& avEnd, cBoundingVolume *apBV);
 	void IterateRenderableNode(iRenderableContainerNode *apNode, const cVector3f& avStart, const cVector3f& avEnd, cBoundingVolume *apBV);
