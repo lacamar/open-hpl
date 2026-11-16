@@ -175,6 +175,13 @@ half() {
 		done
 	fi
 	if has amnesia; then
+		# the debug-window driver reloads maps and toggles engine state: own run
+		for M in $DUMP_AMNESIA; do
+			rm -f "$OUT/a12d-$M-$impl.txt" "$OUT/a12d-$M-$impl.txt.batch"
+			ENVX="$extra OHPL_A12D_DUMP=$OUT/a12d-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a12d-$impl-amnesia.json" --map "$M"
+		done
+	fi
+	if has amnesia; then
 		# the journal driver opens the journal container, which stops the default container's modules: own run
 		for M in $DUMP_AMNESIA; do
 			rm -f "$OUT/a11c-$M-$impl.txt"
@@ -205,7 +212,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -396,6 +403,10 @@ def same(name, a, b):
         fa, sa, oa = load(a); fb, sb, ob = load(b)
         bad = [w for w, x, y in (("fsb", fa, fb), ("long-lived events", sa, sb), ("music/voice/dialog lines", oa, ob)) if x != y]
         return (not bad and len(fa) > 0, f"equal ({len(fa)} fsb digests, {len(sa)} long-lived events, {len(oa)} lines)" if not bad else "DIFFER in " + ", ".join(bad))
+    if name.startswith("a12d-"):
+        # sound rows and the music line follow what happens to be playing
+        mask = lambda p: [re.sub(r"^l lines=\d+ nodes=\d+ objs=(\d+) other=\d+", r"l objs=\1", l) for l in open(p, errors="replace") if not l.startswith("dn ")]
+        return (mask(a) == mask(b), "equal (playing-sound rows masked)" if mask(a) == mask(b) else "DIFFER")
     if name.startswith("a12b-"):
         # camera positions follow the player body, which settles with real time
         mask = lambda p: [l for l in open(p, errors="replace") if not l.startswith(("i ps pos", "i step_pos"))]
@@ -427,7 +438,7 @@ if not quick:
     names += [f"s8-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s5-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
-        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c")] + ["a12a-02_library"] + ["a9"]
+        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c", "a12d")] + ["a12a-02_library"] + ["a9"]
     names += [f"a10b-boot-{g}" for g in ("amnesia", "amfp") if g in games]
     if "amnesia" in games:
         names += ["a10b-play-amnesia"]

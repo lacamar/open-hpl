@@ -1,0 +1,36 @@
+window 'Debug Toolbar' pos=540,10,0 uv=0 checked=0 size=250,780
+group 'Debug texts' pos=10,30,0.100000001 uv=0 checked=0 size=230,289
+checkbox 'Show FPS' pos=5,10,0.100000001 uv=0 checked=0
+checkbox 'Show player info' pos=5,32,0.100000001 uv=1 checked=0
+checkbox 'Show entity info' pos=5,54,0.100000001 uv=2 checked=0
+checkbox 'Show sounds playing' pos=5,76,0.100000001 uv=3 checked=0
+checkbox 'Show debug messages' pos=5,98,0.100000001 uv=4 checked=0
+checkbox 'Show errors and warnings' pos=5,120,0.100000001 uv=12 checked=0
+checkbox 'Inspection mode' pos=5,142,0.100000001 uv=5 checked=0
+checkbox 'Occlusion Culling' pos=5,164,0.100000001 uv=6 checked=1
+checkbox 'Draw physics debug' pos=5,186,0.100000001 uv=11 checked=0
+checkbox 'Resource Logging' pos=5,208,0.100000001 uv=7 checked=0
+button 'Print Container Debug Info' pos=5,230,0.100000001 uv=0 checked=0 size=220,18
+button 'Rebuild Dyn Container' pos=5,252,0.100000001 uv=0 checked=0 size=220,18
+group 'Map' pos=10,334,0.100000001 uv=0 checked=0 size=230,245
+button 'Load Map' pos=5,10,0.100000001 uv=0 checked=0 size=220,18
+button 'Recompile Script and Lang' pos=5,32,0.100000001 uv=0 checked=0 size=220,18
+checkbox 'Reload from current pos' pos=5,54,0.100000001 uv=8 checked=1
+checkbox 'Fast Physics Load' pos=5,76,0.100000001 uv=9 checked=0
+button 'Reload Map' pos=5,98,0.100000001 uv=0 checked=0 size=220,18
+button 'Quick Map Reload (F2)' pos=5,120,0.100000001 uv=0 checked=0 size=220,18
+button 'Test Change Map Save' pos=5,142,0.100000001 uv=0 checked=0 size=220,18
+button 'Teleport to start pos' pos=5,164,0.100000001 uv=0 checked=0 size=220,18
+combobox '*' pos=5,186,0.100000001 uv=0 checked=0
+button 'Map Batch' pos=5,208,0.100000001 uv=0 checked=0 size=220,18
+group 'Game' pos=10,594,0.100000001 uv=0 checked=0 size=230,179
+checkbox 'Disable Flashbacks' pos=5,10,0.100000001 uv=10 checked=0
+button 'Reload Insanity Effects' pos=5,32,0.100000001 uv=0 checked=0 size=220,18
+button 'Start Insanity Effect' pos=5,54,0.100000001 uv=0 checked=0 size=220,18
+combobox '*' pos=5,76,0.100000001 uv=0 checked=0
+checkbox 'Fast Forward (F3)' pos=5,98,0.100000001 uv=17 checked=0
+checkbox 'Fly camera' pos=5,120,0.100000001 uv=13 checked=0
+slider '*' pos=5,142,0.100000001 uv=14 checked=0
+window 'Script output' pos=50,50,10 uv=0 checked=0 size=700,550
+frame '' pos=10,30,1 uv=0 checked=0 size=680,470
+button 'Close Window' pos=295,510,1 uv=0 checked=0 size=110,30

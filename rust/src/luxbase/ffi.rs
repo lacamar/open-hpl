@@ -1425,6 +1425,7 @@ pub unsafe extern "C" fn ohpl_ga9_debug_load_user_config(
     if let Some(d) = unsafe { d.as_mut() } {
         d.load_user_config(&mut cfg(ctx, call), ptest);
     }
+    super::debug_ui::after_load_user_config(d);
 }
 
 /// # Safety
@@ -1438,26 +1439,6 @@ pub unsafe extern "C" fn ohpl_ga9_debug_save_user_config(
     // SAFETY: `d` is live per the contract.
     if let Some(d) = unsafe { d.as_ref() } {
         d.save_user_config(&mut cfg(ctx, call));
-    }
-}
-
-/// # Safety
-/// `d` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_debug_reset(d: *mut debug::Debug) {
-    // SAFETY: `d` is live per the contract.
-    if let Some(d) = unsafe { d.as_mut() } {
-        d.reset();
-    }
-}
-
-/// # Safety
-/// `d` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_debug_on_map_enter(d: *mut debug::Debug) {
-    // SAFETY: `d` is live per the contract.
-    if let Some(d) = unsafe { d.as_mut() } {
-        d.on_map_enter();
     }
 }
 
@@ -1483,174 +1464,6 @@ pub unsafe extern "C" fn ohpl_ga9_debug_add_message(
     // SAFETY: `d` is live per the contract.
     if let Some(d) = unsafe { d.as_mut() } {
         d.add_message(units(p, n), check_duplicates);
-    }
-}
-
-/// # Safety
-/// `d` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_debug_update_messages(d: *mut debug::Debug, dt: f32) {
-    // SAFETY: `d` is live per the contract.
-    if let Some(d) = unsafe { d.as_mut() } {
-        d.update_messages(dt);
-    }
-}
-
-/// # Safety
-/// `d` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_debug_message_count(d: *const debug::Debug) -> usize {
-    // SAFETY: `d` is live per the contract.
-    unsafe { d.as_ref() }.map_or(0, |d| d.messages.len())
-}
-
-/// Message `index` (0 is the newest): its text is emitted, its remaining time returned.
-///
-/// # Safety
-/// `d` is live; `emit` accepts `ectx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_debug_message(
-    d: *const debug::Debug,
-    index: usize,
-    emit: Emit,
-    ectx: Ctx,
-) -> f32 {
-    // SAFETY: `d` is live per the contract.
-    let Some(m) = (unsafe { d.as_ref() }).and_then(|d| d.messages.get(index)) else {
-        return 0.0;
-    };
-    Out { emit, ctx: ectx }.wide(1, &m.text);
-    m.count
-}
-
-/// Returns the new speed multiplier, or 0 when nothing changed.
-///
-/// # Safety
-/// `d` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_debug_set_fast_forward(d: *mut debug::Debug, on: bool) -> f32 {
-    // SAFETY: `d` is live per the contract.
-    unsafe { d.as_mut() }
-        .and_then(|d| d.set_fast_forward(on))
-        .unwrap_or(0.0)
-}
-
-/// # Safety
-/// `d` is live; `first` and `due` are writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_debug_update_tick(
-    d: *mut debug::Debug,
-    first: *mut bool,
-    due: *mut bool,
-) {
-    // SAFETY: all valid per the contract.
-    unsafe {
-        let Some(d) = d.as_mut() else {
-            return;
-        };
-        let (f, b) = d.update_tick();
-        if let Some(p) = first.as_mut() {
-            *p = f;
-        }
-        if let Some(p) = due.as_mut() {
-            *p = b;
-        }
-    }
-}
-
-/// # Safety
-/// `d` is live; `emit` accepts `ectx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_debug_batch_pop(d: *mut debug::Debug, emit: Emit, ectx: Ctx) {
-    // SAFETY: `d` is live per the contract.
-    if let Some(d) = unsafe { d.as_mut() } {
-        Out { emit, ctx: ectx }.bytes(1, &d.batch_pop());
-    }
-}
-
-/// # Safety
-/// `d` is live; `p` is `n` bytes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_debug_load_batch(d: *mut debug::Debug, p: *const u8, n: usize) {
-    // SAFETY: `d` is live per the contract.
-    if let Some(d) = unsafe { d.as_mut() } {
-        d.load_batch(units(p, n));
-    }
-}
-
-/// `SetDebugWindowActive`: false when the debug menu is not loaded; else `lock` is true when
-/// the cursor lock changes.
-///
-/// # Safety
-/// `lock` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_debug_window_change(
-    load_debug_menu: bool,
-    active: bool,
-    fullscreen: bool,
-    lock: *mut bool,
-) -> bool {
-    debug::Debug::window_change(load_debug_menu, active, fullscreen).is_some_and(|(_, l)| {
-        // SAFETY: `lock` is writable per the contract.
-        if let Some(p) = unsafe { lock.as_mut() } {
-            *p = l;
-        }
-        true
-    })
-}
-
-#[repr(C)]
-pub struct ToggleC {
-    kind: i32,
-    on: bool,
-    value: f32,
-}
-
-/// `ChangeDebugText`: the effect left for the engine (kind 0 none).
-///
-/// # Safety
-/// `d` is live; `out` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_debug_change_text(
-    d: *mut debug::Debug,
-    num: i32,
-    val: i32,
-    out: *mut ToggleC,
-) {
-    // SAFETY: both valid per the contract.
-    let (Some(d), Some(out)) = (unsafe { d.as_mut() }, unsafe { out.as_mut() }) else {
-        return;
-    };
-    let (kind, on, value) = match d.change_text(num, val) {
-        debug::Toggle::None => (0, false, 0.0),
-        debug::Toggle::OcclusionCulling(b) => (1, b, 0.0),
-        debug::Toggle::LogCreateAndDelete(b) => (2, b, 0.0),
-        debug::Toggle::FastPhysicsLoad(b) => (3, b, 0.0),
-        debug::Toggle::FreeCam(b) => (4, b, 0.0),
-        debug::Toggle::FreeCamSpeed(v) => (5, false, v),
-        debug::Toggle::FastForward(b) => (6, b, 0.0),
-    };
-    *out = ToggleC { kind, on, value };
-}
-
-/// # Safety
-/// `start` and `fwd` hold 3 floats; `out` holds 9 writable floats (end, min, max).
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_inspection_line(
-    start: *const f32,
-    fwd: *const f32,
-    out: *mut f32,
-) {
-    let v3 = |p: *const f32| {
-        let s = units(p, 3);
-        [0, 1, 2].map(|i| s.get(i).copied().unwrap_or(0.0))
-    };
-    let (end, min, max) = debug::inspection_line(v3(start), v3(fwd));
-    for (i, v) in end.into_iter().chain(min).chain(max).enumerate() {
-        // SAFETY: `out` holds nine floats per the contract.
-        if let Some(p) = unsafe { out.add(i).as_mut() } {
-            *p = v;
-        }
     }
 }
 

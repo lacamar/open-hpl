@@ -2,6 +2,7 @@
 //! and the debug window checkbox dispatch.
 
 use super::cfg::Cfg;
+use super::debug_ui::Ui;
 use crate::string;
 use std::collections::VecDeque;
 
@@ -41,6 +42,7 @@ pub struct Debug {
     pub f: Flags,
     pub batch_maps: VecDeque<Vec<u8>>,
     pub messages: VecDeque<Message>,
+    pub ui: Ui,
 }
 
 impl Debug {

@@ -46,6 +46,8 @@ iGamepad *OhplInPad();
 // Host call of the Rust input handler; op numbers are `hop` in rust/src/luxbase/input_h.rs.
 void OhplInHostCall(void *apCtx, uint32_t alOp, const OhplGa9Arg *apArgs, size_t alNum, OhplGa9Ret *apRet);
 
+void OhplDbgHostCall(uint32_t alOp, const OhplGa9Arg *apArgs, OhplGa9Ret *apRet);
+
 bool OhplInScripted();
 void OhplInDumpTick();
 bool OhplInDumpEnabled();

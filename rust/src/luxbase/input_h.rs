@@ -784,7 +784,7 @@ thread_local! {
 
 static HOST_CALL: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
-fn host() -> Option<Host> {
+pub(super) fn host() -> Option<Host> {
     let raw = HOST_CALL.load(std::sync::atomic::Ordering::Acquire);
     if raw == 0 {
         return None;

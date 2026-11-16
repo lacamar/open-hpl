@@ -386,6 +386,11 @@ void OhplInHostCall(void *apCtx, uint32_t alOp, const OhplGa9Arg *a, size_t alNu
 		else OhplGa9CfgCall(gpBase->mpUserConfig, alOp, a, r);
 		return;
 	}
+	if(alOp >= 200)
+	{
+		OhplDbgHostCall(alOp, a, r);
+		return;
+	}
 	switch(alOp)
 	{
 	case eInOp_Trig: r->i = OhplInTrig((int)a[0].i, (int)a[1].i); break;

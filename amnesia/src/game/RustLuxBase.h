@@ -253,20 +253,24 @@ extern "C"
 	OhplGa9DebugFlags *ohpl_ga9_debug_flags(OhplGa9Debug *d);
 	void ohpl_ga9_debug_load_user_config(OhplGa9Debug *d, bool ptest, void *ctx, OhplGa9Call call);
 	void ohpl_ga9_debug_save_user_config(OhplGa9Debug *d, void *ctx, OhplGa9Call call);
-	void ohpl_ga9_debug_reset(OhplGa9Debug *d);
-	void ohpl_ga9_debug_on_map_enter(OhplGa9Debug *d);
 	void ohpl_ga9_debug_add_error(OhplGa9Debug *d, const uint32_t *p, size_t n);
 	void ohpl_ga9_debug_add_message(OhplGa9Debug *d, const uint32_t *p, size_t n, bool check_duplicates);
-	void ohpl_ga9_debug_update_messages(OhplGa9Debug *d, float dt);
-	size_t ohpl_ga9_debug_message_count(const OhplGa9Debug *d);
-	float ohpl_ga9_debug_message(const OhplGa9Debug *d, size_t index, OhplGa9Emit emit, void *ectx);
-	float ohpl_ga9_debug_set_fast_forward(OhplGa9Debug *d, bool on);
-	void ohpl_ga9_debug_update_tick(OhplGa9Debug *d, bool *first, bool *due);
-	void ohpl_ga9_debug_batch_pop(OhplGa9Debug *d, OhplGa9Emit emit, void *ectx);
-	void ohpl_ga9_debug_load_batch(OhplGa9Debug *d, const unsigned char *p, size_t n);
-	bool ohpl_ga9_debug_window_change(bool load_debug_menu, bool active, bool fullscreen, bool *lock);
-	void ohpl_ga9_debug_change_text(OhplGa9Debug *d, int32_t num, int32_t val, OhplGa9Toggle *out);
-	void ohpl_ga9_inspection_line(const float *start, const float *fwd, float *out);
+
+	void ohpl_dbg_init(OhplGa9Debug *d);
+	void ohpl_dbg_shutdown(OhplGa9Debug *d);
+	void ohpl_dbg_on_start(OhplGa9Debug *d);
+	void ohpl_dbg_update(OhplGa9Debug *d, float dt);
+	void ohpl_dbg_reset(OhplGa9Debug *d);
+	void ohpl_dbg_on_map_enter(OhplGa9Debug *d);
+	void ohpl_dbg_on_map_leave(OhplGa9Debug *d);
+	void ohpl_dbg_set_window_active(OhplGa9Debug *d, bool active);
+	void ohpl_dbg_on_draw(OhplGa9Debug *d);
+	void ohpl_dbg_render_solid(OhplGa9Debug *d);
+	void ohpl_dbg_set_fast_forward(OhplGa9Debug *d, bool on);
+	void ohpl_dbg_quick_reload(OhplGa9Debug *d);
+	void ohpl_dbg_event(OhplGa9Debug *d, int32_t id, int32_t uv, int32_t val);
+	int32_t ohpl_dbg_root(OhplGa9Debug *d, int32_t which);
+	uint64_t ohpl_dbg_inspect(OhplGa9Debug *d);
 
 	void ohpl_ga9_headless(uint32_t cmd, void *ctx, OhplGa9Call call);
 	void ohpl_ga9_amfp_init_config_file(const unsigned char *cmd, size_t n, OhplGa9Emit emit, void *ectx);

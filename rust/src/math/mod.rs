@@ -26,7 +26,8 @@ pub(crate) use geom::rect_fit_l;
 pub(crate) use geom::vector3_angle;
 pub(crate) use geom::vector3_reflect;
 pub(crate) use geom::{
-    aabb_inside, aabb_line_intersection, plane_aabb_collision, plane_aabb_sphere_collision,
+    aabb_inside, aabb_intersection, aabb_line_intersection, plane_aabb_collision,
+    plane_aabb_sphere_collision,
 };
 pub(crate) use geom::{point_in_aabb, points_aabb_planes_collision};
 pub(crate) use libm::{acos, asin, cos, sin};
