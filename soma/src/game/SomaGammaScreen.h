@@ -1,62 +1,28 @@
 #ifndef SOMA_GAMMA_SCREEN_H
 #define SOMA_GAMMA_SCREEN_H
 
-#include "hpl.h"
-
-using namespace hpl;
-
-class cSomaBase;
+#include "SomaS8Host.h"
 
 class cSomaGammaScreen : public iUpdateable
 {
 public:
-	cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase);
-	~cSomaGammaScreen();
+	cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("SomaGammaScreen"), mR(apEngine, apBase)
+	{
+		ohpl_s8_gamma_new(&mR.mHost, &mR.mH);
+	}
+	~cSomaGammaScreen() { ohpl_s8_gamma_delete(mR.mH); }
 
-	void Update(float afTimeStep);
-	void OnDraw(float afFrameTime);
+	void Update(float afTimeStep) { ohpl_s8_gamma_update(&mR.mHost, mR.mH); }
+	void OnDraw(float afFrameTime) { ohpl_s8_gamma_draw(&mR.mHost, mR.mH); }
 
-	static bool ShouldShowAndMarkSeen();
+	static bool ShouldShowAndMarkSeen()
+	{
+		cOhplS8Shell shell(NULL, NULL);
+		return ohpl_s8_gamma_should_show(&shell.mHost);
+	}
 
 private:
-	void Finish();
-	bool AnyContinueInputThisFrame();
-
-	static bool GammaSliderMoved_static_gui(void *apObject, iWidget *apWidget, const cGuiMessageData &aData);
-	bool GammaSliderMoved(iWidget *apWidget, const cGuiMessageData &aData);
-
-	static bool ContinuePressed_static_gui(void *apObject, iWidget *apWidget, const cGuiMessageData &aData);
-	bool ContinuePressed(iWidget *apWidget, const cGuiMessageData &aData);
-
-	cEngine *mpEngine;
-	cSomaBase *mpBase;
-
-	cGui *mpGui;
-	cGuiSkin *mpGuiSkin;
-	cGuiSet *mpGuiSet;
-	cViewport *mpViewport;
-
-	cVector2f mvScreenSize;
-
-	cGuiGfxElement *mpBackgroundGfx;
-	cGuiGfxElement *mpCheckerboardGfx;
-	cVector2f mvCheckerboardPos;
-	cVector2f mvCheckerboardSize;
-
-	iFontData *mpInstructionsFont;
-	tWStringVec mvInstructionRows;
-	cVector2f mvInstructionsPos;	// top-left of the wrapped block, in screen pixels
-	float mfInstructionsRowHeight;
-	float mfInstructionsFontHeight;
-
-	cWidgetSlider *mpSlider;
-	cWidgetButton *mpContinueButton;
-
-	float mfGammaMinValue;
-	float mfGammaMaxValue;
-
-	bool mbFinished;
-	bool mbMouseWasDown;
+	cOhplS8Shell mR;
 };
 
 #endif // SOMA_GAMMA_SCREEN_H
