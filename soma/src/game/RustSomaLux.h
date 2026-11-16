@@ -15,25 +15,6 @@ struct OhplGs3Fader
 	bool mbReverseAtEnd, mbPaused;
 };
 
-struct OhplGs3Fade
-{
-	float mfValue = 0, mfGoal = 0, mfSpeed = 0, mfMaxSpeed = 0, mfSpeedMul = 0;
-};
-
-struct OhplGs3MoveVec
-{
-	hpl::cVector3f mvValue = 0;
-	hpl::cVector3f mvGoal = 0;
-	float mfSpeed = 0, mfAcc = 0, mfMaxSpeed = 0, mfSlowdownDist = 0;
-	bool mbMoving = false;
-};
-
-struct OhplGs3MoveSpeeds
-{
-	float mfMaxForwardSpeed, mfMaxBackwardSpeed, mfMaxSidwaySpeed, mfForwardAcc, mfSidewayAcc, mfForwardDeacc, mfSidewayDeacc,
-		mfForwardOppositeDirAccMul, mfSidewayOppositeDirAccMul, mfMaxForwardSpeedMul, mfMaxBackwardSpeedMul, mfMaxSidwaySpeedMul;
-};
-
 struct OhplGs3Pause
 {
 	bool mbMusic, mbSounds, mbAmbience, mbSavingEnabled;
@@ -76,20 +57,6 @@ struct OhplGs3Op
 {
 	int mlCode;
 	uint32_t mlArg;
-};
-
-struct OhplGs3RotateIn
-{
-	float mfSpeed, mfAcc, mfSpeedMul, mfMaxSpeed;
-	bool mbLocal;
-	hpl::cVector3f mvTarget;
-};
-
-struct OhplGs3RotateOut
-{
-	float mfSpeed;
-	bool mbApply;
-	float mfAddYaw, mfAddPitch;
 };
 
 // OhplGs3Op codes
@@ -142,38 +109,10 @@ extern "C" {
 	bool ohpl_gs3_pointer_moved(bool before, int rel_x, int rel_y);
 	int ohpl_gs3_action_edge(int id, int max_actions, bool down, bool prev_down);
 	int ohpl_gs3_analog_fire(int analog_id, int axis, float action_mul, bool triggered, float *mul);
-
-	// player
-	float ohpl_gs3_fade_towards(OhplGs3Fade *x, float dt);
-	float ohpl_gs3_angle_delta(float from, float to);
-	void ohpl_gs3_step_move_vec(OhplGs3MoveVec *m, float dt);
-	float ohpl_gs3_fov_mul(float base, const float *v, size_t n);
-	float ohpl_gs3_visibility_range_mul(const float *v, size_t n);
-	float ohpl_gs3_visibility_max_range(const float *v, size_t n);
-	void ohpl_gs3_step_camera_rotate(const OhplGs3RotateIn *r, const hpl::cVector3f *cam_pos, float body_yaw, float cam_pitch, float dt,
-									 OhplGs3RotateOut *out);
-	bool ohpl_gs3_step_automove(const hpl::cVector3f *target, const hpl::cVector3f *feet, const hpl::cVector3f *forward,
-								const hpl::cVector3f *right_dir, float speed_mul, float *fwd, float *right);
-	void ohpl_gs3_update_average_move(float *speed, hpl::cVector3f *dir, const hpl::cVector3f *vel);
-	void ohpl_gs3_move_speed_settings(const OhplGs3MoveSpeeds *s, float *out);
-	int ohpl_gs3_state_change(bool exists, bool is_current);
-	int ohpl_gs3_message_kind(const unsigned char *p, size_t n);
-	bool ohpl_gs3_drops_state_on_reset(int kind, bool has_state, int state_id);
-	bool ohpl_gs3_clears_camera_adds(bool is_transfer);
-	int ohpl_gs3_place_plan(bool has_body, bool script_handled);
-	bool ohpl_gs3_is_dead(float health, bool can_die);
-	bool ohpl_gs3_set_health(float health, float max, bool can_die, float x, float *out);
-	int ohpl_gs3_damage_id(const int *ids, size_t n, int id);
-	float ohpl_gs3_health_after_damage(float health, float amount, float min_health);
-	float ohpl_gs3_health_after_script_damage(float health, float amount, float min_health);
-	float ohpl_gs3_add_health(float health, float x, float min_health);
-	void ohpl_gs3_mouse_vector(int rel_x, int rel_y, float sensitivity, float height, float *x, float *y);
-	void ohpl_gs3_smooth_mouse(const float (*xy)[2], size_t n, float prev_mul, float *x, float *y);
-	bool ohpl_gs3_pops_oldest_sample(size_t len, int max);
 }
 
-static_assert(sizeof(OhplGs3Fader) == 32 && sizeof(OhplGs3Fade) == 20);
-static_assert(sizeof(OhplGs3MoveVec) == 44 && sizeof(OhplGs3MoveSpeeds) == 48 && sizeof(OhplGs3Pause) == 8);
+static_assert(sizeof(OhplGs3Fader) == 32);
+static_assert(sizeof(OhplGs3Pause) == 8);
 static_assert(sizeof(OhplGs3Preload) == 16 && sizeof(hpl::cMatrixf) == 64 && sizeof(hpl::cVector3f) == 12);
 
 #endif // SOMA_RUST_SOMA_LUX_H

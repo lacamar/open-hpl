@@ -138,6 +138,7 @@ pub const MAX_ARGS: usize = 16;
 
 /// The arguments of one native call as the engine laid them out (`GetAddressOfArg` per slot).
 pub struct Frame {
+    g: *mut c_void,
     pub this: *mut c_void,
     addr: [*mut c_void; MAX_ARGS],
     objs: [*mut c_void; MAX_ARGS],
@@ -151,6 +152,7 @@ impl Frame {
     /// `g` is the `asIScriptGeneric*` of the running call.
     unsafe fn from_generic(g: *mut c_void) -> Self {
         let mut f = Self::mock(std::ptr::null_mut(), std::ptr::null_mut());
+        f.g = g;
         // SAFETY: caller contract; the accessors only read the call frame.
         unsafe {
             f.this = ohpl_as2_g_object(g);
@@ -168,6 +170,7 @@ impl Frame {
 
     pub fn mock(this: *mut c_void, ret: *mut c_void) -> Self {
         Self {
+            g: std::ptr::null_mut(),
             this,
             addr: [std::ptr::null_mut(); MAX_ARGS],
             objs: [std::ptr::null_mut(); MAX_ARGS],
@@ -227,6 +230,24 @@ impl Frame {
     pub fn ptr_arg(&self, i: usize) -> *mut c_void {
         // SAFETY: the slot holds a pointer.
         unsafe { *self.slot(i).cast::<*mut c_void>() }
+    }
+
+    /// An entity handle argument; placeholders returned by unimplemented functions read as null.
+    pub fn handle_arg(&self, i: usize) -> *mut c_void {
+        let p = self.ptr_arg(i);
+        if s2_api::is_dummy(p) {
+            std::ptr::null_mut()
+        } else {
+            p
+        }
+    }
+
+    /// `SomaScriptReleaseHandleArgs`: natives with handle parameters give their references back.
+    pub fn release_handles(&self) {
+        if !self.g.is_null() {
+            // SAFETY: `g` is the generic frame of the running call.
+            unsafe { s2_api::release_handle_args(self.g) }
+        }
     }
 
     pub fn ret_string(&self, b: &[u8]) {
@@ -714,6 +735,21 @@ impl Soma {
 
     pub fn method(&self, ty: &str, decl: &str, f: impl Fn(&Frame) + 'static) {
         let d = s2_api::active_native_decl(Some(ty.as_bytes()), decl.as_bytes());
+        self.0
+            .reg_method(ty.as_bytes(), &d, Kind::Method, Box::new(f));
+    }
+
+    /// `SOMA_METHOD_NEW`: skipped when the declaration is already registered.
+    pub fn method_new(&self, ty: &str, decl: &str, f: impl Fn(&Frame) + 'static) {
+        let d = s2_api::active_native_decl(Some(ty.as_bytes()), decl.as_bytes());
+        #[cfg(not(test))]
+        if self
+            .0
+            .type_by_name(ty.as_bytes())
+            .is_none_or(|t| t.has_method(&d))
+        {
+            return;
+        }
         self.0
             .reg_method(ty.as_bytes(), &d, Kind::Method, Box::new(f));
     }

@@ -19,3 +19,4 @@ pub mod s5_scriptable;
 mod s5_tests;
 
 pub mod s5c_game;
+pub mod s5d_player;

@@ -639,8 +639,8 @@ public:
 			CopyF(w.player.feet, pBody->GetFeetPosition());
 			w.player.yaw = pPlayer->GetCamera() ? pPlayer->GetCamera()->GetYaw() : pBody->GetYaw();
 			w.player.pitch = pPlayer->GetCamera() ? pPlayer->GetCamera()->GetPitch() : 0.0f;
-			w.player.state = pPlayer->GetState() ? pPlayer->GetState()->mlId : -1;
-			w.player.move_state = pPlayer->GetMoveState() ? pPlayer->GetMoveState()->mlId : -1;
+			w.player.state = pPlayer->StateId();
+			w.player.move_state = pPlayer->MoveStateId();
 			// int return read as its low byte: 0/1 crouching
 			w.player.char_crouching = (int)pPlayer->CallBool("int GetCharacterState()", nullptr, false);
 			w.player.gravity_active = (uint8_t)pBody->GetCustomGravityActive();
@@ -764,7 +764,7 @@ public:
 			}
 		w.billboards = Sl(c.mBillboards);
 
-		w.health = pPlayer ? pPlayer->mfHealth : 1.0f;
+		w.health = pPlayer ? pPlayer->Health() : 1.0f;
 		cMatrixf m;
 		for (cSomaLuxEntity *p : pMap->GetEntities())
 			if (SomaAgentGetMatrix(p, m))
@@ -839,9 +839,9 @@ public:
 			w.camera.limits[1] = pCam->GetPitchMaxLimit();
 			w.camera.limits[2] = pCam->GetYawMinLimit();
 			w.camera.limits[3] = pCam->GetYawMaxLimit();
-			static_assert(sizeof(pPlayer->mFOVMul) == sizeof(w.camera.fov_mul), "cFadeValue size");
-			memcpy(&w.camera.fov_mul, &pPlayer->mFOVMul, sizeof(w.camera.fov_mul));
-			memcpy(&w.camera.aspect_mul, &pPlayer->mAspectMul, sizeof(w.camera.aspect_mul));
+			static_assert(sizeof(OhplS5dFade) == sizeof(w.camera.fov_mul), "cFadeValue size");
+			pPlayer->GetFOVMul((OhplS5dFade *)&w.camera.fov_mul);
+			pPlayer->GetAspectMul((OhplS5dFade *)&w.camera.aspect_mul);
 		}
 
 		cLightListIterator ownedIt = wd->GetLightIterator();
@@ -1339,7 +1339,7 @@ public:
 				pPlayer->GetCamera()->SetPitch(x->pitch);
 		}
 	}
-	static void RHealth(void *, float afHealth) { cSomaLuxPlayer::Get()->mfHealth = afHealth; }
+	static void RHealth(void *, float afHealth) { cSomaLuxPlayer::Get()->SetHealthRaw(afHealth); }
 
 	static void RAgent(void *c, const OhplGs4Agent *x)
 	{
@@ -1416,8 +1416,8 @@ public:
 		cCamera *pCam = pPlayer->GetCamera();
 		cVector3f vPos;
 		FromF(vPos, x->pos);
-		memcpy(&pPlayer->mFOVMul, &x->fov_mul, sizeof(x->fov_mul));
-		memcpy(&pPlayer->mAspectMul, &x->aspect_mul, sizeof(x->aspect_mul));
+		pPlayer->SetFOVMul((const OhplS5dFade *)&x->fov_mul);
+		pPlayer->SetAspectMul((const OhplS5dFade *)&x->aspect_mul);
 		pCam->SetPitchLimits(x->limits[0], x->limits[1]);
 		pCam->SetYawLimits(x->limits[2], x->limits[3]);
 		if (x->detached != 0 && pPlayer->GetCharacterBody())
