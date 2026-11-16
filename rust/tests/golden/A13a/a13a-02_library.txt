@@ -1,0 +1,24 @@
+== 02_library frame 3 player=0.0000,0.9326,1.0000
+los 0 0 0 light 0.10000 0.10000 ent 1 2.75331 crude_man_chains_statue_5_Body_1 crude_man_chains_statue_5 chr 1 2.75331 crude_man_chains_statue_5_Body_1 n=-0.7071,0.0000,-0.7071
+los 1 0 0 light 0.10000 0.10000 ent 1 3.00331 crude_man_chains_statue_6_Body_1 crude_man_chains_statue_6 chr 1 3.00331 crude_man_chains_statue_6_Body_1 n=0.7071,0.0000,-0.7071
+los 2 1 1 light 0.58356 0.84105 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 3 0 0 light 0.00000 0.00000 ent 1 1.12500 level_wood_1_Body_1 level_wood_1 chr 1 1.12500 level_wood_1_Body_1 n=0.0000,0.0000,1.0000
+los 4 1 1 light 0.10000 0.10000 ent 0 5.06768 CombinedObjects17 - chr 1 5.06768 CombinedObjects17 n=-0.0001,-1.0000,0.0000
+los 5 0 1 light 0.00000 0.00000 ent 0 0.93265 CombinedObjects10 - chr 1 0.93265 CombinedObjects10 n=0.0000,1.0000,0.0000
+damage 1 0
+== 02_library frame 40 player=0.0000,0.8931,1.0000
+los 0 0 0 light 0.10000 0.10000 ent 0 3.97266 CombinedObjects17 - chr 1 3.97266 CombinedObjects17 n=-0.9921,0.1200,-0.0369
+los 1 0 0 light 0.10000 0.10000 ent 0 3.98444 CombinedObjects17 - chr 1 3.98444 CombinedObjects17 n=0.9995,0.0007,-0.0310
+los 2 1 1 light 0.85206 1.22540 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 3 0 0 light 0.00000 0.00000 ent 1 1.12500 level_wood_1_Body_1 level_wood_1 chr 1 1.12500 level_wood_1_Body_1 n=0.0000,0.0000,1.0000
+los 4 1 1 light 0.10000 0.10000 ent 0 5.10723 CombinedObjects17 - chr 1 5.10723 CombinedObjects17 n=-0.0001,-1.0000,0.0000
+los 5 0 1 light 0.00000 0.00000 ent 0 0.89309 CombinedObjects10 - chr 1 0.89309 CombinedObjects10 n=0.0000,1.0000,0.0000
+damage 1 0
+== 02_library frame 100 player=0.0000,0.8931,1.0000
+los 0 0 0 light 0.10000 0.10000 ent 0 3.97266 CombinedObjects17 - chr 1 3.97266 CombinedObjects17 n=-0.9921,0.1200,-0.0369
+los 1 0 0 light 0.10000 0.10000 ent 0 3.98444 CombinedObjects17 - chr 1 3.98444 CombinedObjects17 n=0.9995,0.0007,-0.0310
+los 2 1 1 light 0.85954 1.23378 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 3 0 0 light 0.00000 0.00000 ent 1 1.12500 level_wood_1_Body_1 level_wood_1 chr 1 1.12500 level_wood_1_Body_1 n=0.0000,0.0000,1.0000
+los 4 1 1 light 0.10142 0.27993 ent 0 5.10723 CombinedObjects17 - chr 1 5.10723 CombinedObjects17 n=-0.0001,-1.0000,0.0000
+los 5 0 1 light 0.00000 0.00000 ent 0 0.89309 CombinedObjects10 - chr 1 0.89309 CombinedObjects10 n=0.0000,1.0000,0.0000
+damage 1 0

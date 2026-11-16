@@ -1,0 +1,24 @@
+== 01_mansion_01 frame 3 player=-44.4200,24.2176,73.6500
+los 0 1 1 light 0.00000 0.00000 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 1 1 1 light 0.00000 0.00000 ent 1 5.38238 factory_pistons_2_Body_1 factory_pistons_2 chr 1 5.38238 factory_pistons_2_Body_1 n=0.7115,-0.4077,0.5723
+los 2 1 1 light 0.00000 0.00000 ent 0 4.69977 CombinedObjects173 - chr 1 4.69977 CombinedObjects173 n=0.0000,0.3418,-0.9398
+los 3 1 1 light 0.00000 0.00000 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 4 1 1 light 0.00000 0.00000 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 5 0 0 light 0.00000 0.00000 ent 0 0.51592 CombinedObjects173 - chr 1 0.51592 CombinedObjects173 n=0.0000,1.0000,0.0000
+damage 1 0
+== 01_mansion_01 frame 40 player=-44.4200,24.1725,73.6500
+los 0 1 1 light 0.00000 0.00000 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 1 1 1 light 0.00000 0.00000 ent 1 5.40823 factory_pistons_2_Body_1 factory_pistons_2 chr 1 5.40823 factory_pistons_2_Body_1 n=0.7115,-0.4077,0.5723
+los 2 1 1 light 0.00000 0.00000 ent 0 4.68336 CombinedObjects173 - chr 1 4.68336 CombinedObjects173 n=0.0000,0.3418,-0.9398
+los 3 1 1 light 0.00000 0.00000 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 4 1 1 light 0.00000 0.00000 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 5 0 0 light 0.00000 0.00000 ent 0 0.47081 CombinedObjects173 - chr 1 0.47081 CombinedObjects173 n=0.0000,1.0000,0.0000
+damage 1 0
+== 01_mansion_01 frame 100 player=-44.4200,24.1725,73.6500
+los 0 1 1 light 0.00000 0.00000 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 1 1 1 light 0.00000 0.00000 ent 1 5.40823 factory_pistons_2_Body_1 factory_pistons_2 chr 1 5.40823 factory_pistons_2_Body_1 n=0.7115,-0.4077,0.5723
+los 2 1 1 light 0.00000 0.00000 ent 0 4.68336 CombinedObjects173 - chr 1 4.68336 CombinedObjects173 n=0.0000,0.3418,-0.9398
+los 3 1 1 light 0.00000 0.00000 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 4 1 1 light 0.00000 0.00000 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 5 0 0 light 0.00000 0.00000 ent 0 0.47081 CombinedObjects173 - chr 1 0.47081 CombinedObjects173 n=0.0000,1.0000,0.0000
+damage 1 0

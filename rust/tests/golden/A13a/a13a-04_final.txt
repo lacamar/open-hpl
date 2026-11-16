@@ -1,0 +1,24 @@
+== 04_final frame 3 player=0.0000,0.9326,53.9792
+los 0 0 0 light 0.00000 0.00000 ent 0 2.25000 CombinedObjects95 - chr 1 2.25000 CombinedObjects95 n=-1.0000,0.0000,0.0000
+los 1 0 0 light 0.00000 0.00000 ent 0 2.25000 CombinedObjects95 - chr 1 2.25000 CombinedObjects95 n=1.0000,0.0000,0.0000
+los 2 0 0 light 0.00000 0.00000 ent 1 0.89560 level_wood_1_Body_1 level_wood_1 chr 1 0.89560 level_wood_1_Body_1 n=0.0000,-0.0000,-1.0000
+los 3 1 1 light 0.07899 0.17529 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 4 0 0 light 0.00000 0.00000 ent 0 3.06687 CombinedObjects95 - chr 1 3.06687 CombinedObjects95 n=-0.0000,-1.0000,0.0000
+los 5 0 1 light 0.00000 0.00000 ent 0 0.93303 CombinedObjects94 - chr 1 0.93303 CombinedObjects94 n=0.0000,1.0000,0.0000
+damage 1 0
+== 04_final frame 40 player=0.0000,0.8931,53.9792
+los 0 0 0 light 0.00000 0.00000 ent 0 2.25000 CombinedObjects95 - chr 1 2.25000 CombinedObjects95 n=-1.0000,0.0000,0.0000
+los 1 0 0 light 0.00000 0.00000 ent 0 2.25000 CombinedObjects95 - chr 1 2.25000 CombinedObjects95 n=1.0000,0.0000,0.0000
+los 2 0 0 light 0.00000 0.00000 ent 1 0.89560 level_wood_1_Body_1 level_wood_1 chr 1 0.89560 level_wood_1_Body_1 n=0.0000,-0.0000,-1.0000
+los 3 1 1 light 1.17485 1.50789 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 4 0 0 light 0.00000 0.00000 ent 0 3.10643 CombinedObjects95 - chr 1 3.10643 CombinedObjects95 n=-0.0000,-1.0000,0.0000
+los 5 0 1 light 0.00000 0.00000 ent 0 0.89348 CombinedObjects94 - chr 1 0.89348 CombinedObjects94 n=0.0000,1.0000,0.0000
+damage 1 0
+== 04_final frame 100 player=0.0000,0.8931,53.9792
+los 0 0 0 light 0.00000 0.00000 ent 0 2.25000 CombinedObjects95 - chr 1 2.25000 CombinedObjects95 n=-1.0000,0.0000,0.0000
+los 1 0 0 light 0.00000 0.00000 ent 0 2.25000 CombinedObjects95 - chr 1 2.25000 CombinedObjects95 n=1.0000,0.0000,0.0000
+los 2 0 0 light 0.00000 0.00000 ent 1 0.89560 level_wood_1_Body_1 level_wood_1 chr 1 0.89560 level_wood_1_Body_1 n=0.0000,-0.0000,-1.0000
+los 3 1 1 light 1.17980 1.51328 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 4 0 0 light 0.00000 0.00000 ent 0 3.10643 CombinedObjects95 - chr 1 3.10643 CombinedObjects95 n=-0.0000,-1.0000,0.0000
+los 5 0 1 light 0.00000 0.00000 ent 0 0.89348 CombinedObjects94 - chr 1 0.89348 CombinedObjects94 n=0.0000,1.0000,0.0000
+damage 1 0
