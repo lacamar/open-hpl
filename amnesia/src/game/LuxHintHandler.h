@@ -58,6 +58,7 @@ public:
 
 	void SetActive(bool abX) { ohpl_a11b_hint_set_active(mlH, abX); }
 	bool IsActive() { return ohpl_a11b_hint_is_active(mlH) != 0; }
+	uint64_t GetHandle(){ return mlH; }
 
 	/**
 	* if time shown is <=0 then the life time is calculated based on string length.

@@ -1,7 +1,7 @@
 #ifndef LUX_RUST_LUX_SCRIPT_A1_H
 #define LUX_RUST_LUX_SCRIPT_A1_H
 
-// C ABI of rust/src/luxscript/a1*.rs: script-function registration and the host op table.
+// C ABI of rust/src/luxscript: script-function registration and the engine host op table.
 
 #include <cstddef>
 #include <cstdint>
@@ -24,15 +24,13 @@ struct OhplA1Arg
 
 inline std::string OhplA1Str(const OhplA1Arg &a) { return std::string((const char *)a.p, a.n); }
 
-enum { kOhplA1OpWarning = 0xFFFF };
-
 typedef void (*OhplA1AddFn)(void *, const char *, const void *);
 typedef void (*OhplA1HostFn)(unsigned, const OhplA1Arg *, size_t, OhplA1Arg *);
 
 extern "C" {
 	size_t ohpl_a1_register(OhplA1AddFn add, void *ctx);
-	void ohpl_a1_set_host(OhplA1HostFn host);
-	void OhplA1HostCall(unsigned op, const OhplA1Arg *args, size_t n, OhplA1Arg *ret);
+	void ohpl_a1b_set_host(OhplA1HostFn host);
+	void OhplA1HostCall2(unsigned op, const OhplA1Arg *args, size_t n, OhplA1Arg *ret);
 }
 
 #endif

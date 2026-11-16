@@ -1,12 +1,9 @@
-//! A1: the Amnesia script API (LuxScriptHandler's registered functions) registered and entered from Rust.
-//! Each function marshals its script arguments into [`Arg`]s and calls the host op table, which is
-//! implemented by the C++ game objects (`LuxScriptA1Ops.inc`) until those are ported.
+//! A1: the Amnesia script API (LuxScriptHandler's registered functions) is registered from Rust;
+//! the bodies are in `fns`. Engine objects still in C++ are reached through one host op table
+//! (`LuxScriptHostA1.cpp`).
 
-use super::a1_gen;
 use std::ffi::{CString, c_char, c_void};
 use std::sync::RwLock;
-
-pub const OP_WARNING: u32 = 0xFFFF;
 
 /// Flat argument or result slot; ints, floats and bools live in the low bits of `u`, strings in `p`/`n`.
 #[repr(C)]
@@ -57,6 +54,13 @@ impl Arg {
         }
     }
 
+    pub fn ptr(p: *const c_void) -> Self {
+        Self {
+            p,
+            ..Self::default()
+        }
+    }
+
     pub fn as_i(&self) -> i32 {
         (self.u as u32).cast_signed()
     }
@@ -70,16 +74,6 @@ impl Arg {
     }
 }
 
-#[cfg_attr(not(test), allow(dead_code))] // read by the golden tests
-pub struct Func {
-    pub decl: &'static str,
-    pub name: &'static str,
-    pub op: u32,
-    pub kinds: &'static str,
-    pub ret: char,
-    pub f: *const c_void,
-}
-
 pub type HostFn = unsafe extern "C" fn(op: u32, args: *const Arg, n: usize, ret: *mut Arg);
 
 static HOST: RwLock<Option<HostFn>> = RwLock::new(None);
@@ -90,10 +84,11 @@ pub fn set_host(h: Option<HostFn>) {
     }
 }
 
-pub fn call(op: u32, args: &[Arg]) -> Arg {
-    let host = HOST.read().ok().and_then(|g| *g);
+/// Engine-object host op (`fns::ops`); not traced, the script function that issued it is.
+pub fn host(op: u32, args: &[Arg]) -> Arg {
+    let h = HOST.read().ok().and_then(|g| *g);
     let mut ret = Arg::default();
-    if let Some(h) = host {
+    if let Some(h) = h {
         // SAFETY: `args` and `ret` outlive the call; the lock is released so the host may call back.
         unsafe { h(op, args.as_ptr(), args.len(), &raw mut ret) };
     }
@@ -127,39 +122,19 @@ pub unsafe fn str_arg(p: *const c_void) -> Arg {
     Arg::bytes(unsafe { raw_bytes(p) })
 }
 
-pub fn nul_cut(b: &[u8]) -> &[u8] {
-    b.split(|&c| c == 0).next().unwrap_or(b)
-}
-
-/// `printf("%f", double(x))`.
-pub fn fmt_f(x: f32) -> String {
-    let d = f64::from(x);
-    if d.is_nan() {
-        return if d.is_sign_negative() { "-nan" } else { "nan" }.into();
-    }
-    if d.is_infinite() {
-        return if d < 0.0 { "-inf" } else { "inf" }.into();
-    }
-    format!("{d:.6}")
-}
-
-pub fn warn(msg: &[u8]) {
-    call(OP_WARNING, &[Arg::bytes(msg)]);
-}
-
 pub type AddFn = unsafe extern "C" fn(ctx: *mut c_void, decl: *const c_char, f: *const c_void);
 
-/// Registers every function in the order of `cLuxScriptHandler::InitScriptFunctions`; returns the count.
+/// Registers every function in the order of the original `InitScriptFunctions`; returns the count.
 ///
 /// # Safety
 /// `add` accepts `ctx` and the NUL-terminated declaration.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_a1_register(add: AddFn, ctx: *mut c_void) -> usize {
-    let t = a1_gen::table();
-    for f in &t {
-        if let Ok(d) = CString::new(f.decl) {
-            // SAFETY: caller contract; `f.f` is an `extern "C"` function matching the declaration.
-            unsafe { add(ctx, d.as_ptr(), f.f) };
+    let t = super::a1_table::table();
+    for &(decl, _, f) in &t {
+        if let Ok(d) = CString::new(decl) {
+            // SAFETY: caller contract; `f` is an `extern "C"` function matching the declaration.
+            unsafe { add(ctx, d.as_ptr(), f) };
         }
     }
     t.len()
@@ -168,6 +143,6 @@ pub unsafe extern "C" fn ohpl_a1_register(add: AddFn, ctx: *mut c_void) -> usize
 /// # Safety
 /// `h` stays valid until replaced.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a1_set_host(h: Option<HostFn>) {
+pub unsafe extern "C" fn ohpl_a1b_set_host(h: Option<HostFn>) {
     set_host(h);
 }

@@ -91,6 +91,7 @@ public:
 		ohpl_a12b_music_play(mlH, asFile.data(), asFile.size(), abLoop, afVolume, afFadeTime, alPrio, abResume, abSpecialEffect);
 	}
 	void Stop(float afFadeTime, int alPrio) { ohpl_a12b_music_stop(mlH, afFadeTime, alPrio); }
+	uint64_t GetHandle(){ return mlH; }
 
 	void AddEnemy(eLuxEnemyMusic aType, iLuxEnemy *apEnemy) { ohpl_a12b_music_enemy(mlH, 0, aType, (size_t)apEnemy); }
 	void RemoveEnemy(eLuxEnemyMusic aType, iLuxEnemy *apEnemy) { ohpl_a12b_music_enemy(mlH, 1, aType, (size_t)apEnemy); }

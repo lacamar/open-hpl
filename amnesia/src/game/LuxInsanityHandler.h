@@ -74,6 +74,7 @@ public:
 	float GetNewEventCount(){ return ohpl_a12b_ins_new_count(mlH); }
 	void SetNewEventCount(float afX){ ohpl_a12b_ins_set_new_count(mlH, afX); }
 	int GetCurrentEvent(){ return ohpl_a12b_ins_current(mlH); }
+	uint64_t GetHandle(){ return mlH; }
 
 private:
 	struct Strings { tString msName, msSet; int mlNum; Strings() : mlNum(0) {} };

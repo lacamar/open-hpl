@@ -3,12 +3,14 @@
 //! Narrow strings are bytes, wide strings `u32` units (Linux `wchar_t`).
 
 mod a1;
-mod a1_gen;
 mod a1_native;
+mod a1_table;
 mod ffi;
+mod fns;
 mod help;
 mod lookup;
 mod tables;
+mod trace;
 pub(crate) mod types;
 mod vars;
 

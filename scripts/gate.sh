@@ -189,6 +189,15 @@ half() {
 			ENVX="$extra OHPL_A12C_DUMP=$OUT/a12c-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a12c-$impl-amnesia.json" --map "$M"
 			# the a2b driver replaces the player update with a scripted 1/60 step: own run, long enough for the death sequence
 			ENVX="$extra OHPL_A2B_DUMP=$OUT/a2b-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a2b-$impl-amnesia.json" --map "$M" --frames 1100
+			# every script-function call with arguments and results (A1b)
+			rm -f "$OUT/a1b-$M-$impl.txt"
+			ENVX="$extra OHPL_A1B_TRACE=$OUT/a1b-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a1b-$impl-amnesia.json" --map "$M"
+		done
+	fi
+	if has amfp; then
+		for M in $AMFP_MAPS; do
+			rm -f "$OUT/a1b-amfp-$M-$impl.txt"
+			ENVX="$extra OHPL_A1B_TRACE=$OUT/a1b-amfp-$M-$impl.txt" sweep "$impl" amfp "$OUT/dump-a1b-$impl-amfp.json" --map "$M"
 		done
 	fi
 	if has amnesia; then
@@ -235,7 +244,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/a1b-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -446,6 +455,19 @@ def same(name, a, b):
         fa, sa, oa = load(a); fb, sb, ob = load(b)
         bad = [w for w, x, y in (("fsb", fa, fb), ("long-lived events", sa, sb), ("music/voice/dialog lines", oa, ob)) if x != y]
         return (not bad and len(fa) > 0, f"equal ({len(fa)} fsb digests, {len(sa)} long-lived events, {len(oa)} lines)" if not bad else "DIFFER in " + ", ".join(bad))
+    if name.startswith("a1b-"):
+        # the engine seeds its random numbers from the clock: draws are masked and a run that branches on one
+        # is compared up to it; AmfpStub_ calls were not traced by the C++-era recording
+        rx = re.compile(r"^(Rand(?:Float|Int)\(.*\))=.*$")
+        load = lambda p: [rx.sub(r"\1=?", l.rstrip("\n")) for l in open(p, errors="replace") if not l.startswith("AmfpStub_")]
+        la, lb = load(a), load(b)
+        if la == lb:
+            return (len(la) > 20, f"identical call trace ({len(la)} calls, random draws masked)")
+        k = next((i for i in range(min(len(la), len(lb))) if la[i] != lb[i]), min(len(la), len(lb)))
+        if k == min(len(la), len(lb)):
+            return (k > 20, f"equal over {k} calls (runs stopped at different times: {len(la)}/{len(lb)})")
+        ok_ = k > 20 and any(l.startswith("Rand") for l in la[:k])
+        return (ok_, f"equal over {k} calls up to a branch on a random draw" if ok_ else f"DIFFER at call {k}")
     if name.startswith("a12d-"):
         # sound rows and the music line follow what happens to be playing
         mask = lambda p: [re.sub(r"^l lines=\d+ nodes=\d+ objs=(\d+) other=\d+", r"l objs=\1", l) for l in open(p, errors="replace") if not l.startswith("dn ")]
@@ -483,11 +505,12 @@ if not quick:
     names += [f"s8b-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s5-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
-        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c", "a12d", "a2b")] + ["a12a-02_library"] + ["a9"]
+        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c", "a12d", "a2b", "a1b")] + ["a12a-02_library"] + ["a9"]
     names += [f"a10b-boot-{g}" for g in ("amnesia", "amfp") if g in games]
     if "amnesia" in games:
         names += [f"{k}{e}" for k in ("rt-prison-patrol", "rt-prison-hunt") for e in ("", "-A", "-B")] + ["a4b-prison"]
     if "amfp" in games:
+        names += [f"a1b-amfp-{m}" for m in ("01_mansion_01", "06_factory", "10_reactor")]
         names += [f"{k}{e}" for k in ("rt-factory", "rt-bilge") for e in ("", "-A", "-B")] + ["a4b-factory", "a4b-bilge"]
     if "amnesia" in games:
         names += ["a10b-play-amnesia"]

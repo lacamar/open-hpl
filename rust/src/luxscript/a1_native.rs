@@ -1,7 +1,7 @@
 //! A1 script functions with no engine object behind them.
 #![allow(non_snake_case)]
 
-use super::a1::raw_bytes;
+use super::a1::{Arg, raw_bytes, str_arg};
 use super::{tables, vars};
 use crate::math;
 use crate::string;
@@ -10,7 +10,12 @@ use std::ffi::c_void;
 macro_rules! scalar {
     ($name:ident, $f:expr; ($($a:ident),*)) => {
         pub(super) unsafe extern "C" fn $name($($a: f32),*) -> f32 {
-            $f($($a),*)
+            let r = $f($($a),*);
+            if super::trace::enabled() {
+                let a = [$(Arg::f($a)),*];
+                super::trace::line(stringify!($name).get(2..).unwrap_or_default(), &"f".repeat(a.len()), &a, 'f', &Arg::f(r));
+            }
+            r
         }
     };
 }
@@ -33,26 +38,58 @@ scalar!(f_ScriptAbs, f32::abs; (x));
 /// `s` is an engine script string.
 pub(super) unsafe extern "C" fn f_ScriptStringToInt(s: *const c_void) -> i32 {
     // SAFETY: caller contract.
-    string::token_to_int(unsafe { raw_bytes(s) })
+    let r = string::token_to_int(unsafe { raw_bytes(s) });
+    super::trace::line(
+        "ScriptStringToInt",
+        "s",
+        &[unsafe { str_arg(s) }],
+        'i',
+        &Arg::i(r),
+    );
+    r
 }
 
 /// # Safety
 /// `s` is an engine script string.
 pub(super) unsafe extern "C" fn f_ScriptStringToFloat(s: *const c_void) -> f32 {
     // SAFETY: caller contract.
-    string::token_to_float(unsafe { raw_bytes(s) })
+    let r = string::token_to_float(unsafe { raw_bytes(s) });
+    super::trace::line(
+        "ScriptStringToFloat",
+        "s",
+        &[unsafe { str_arg(s) }],
+        'f',
+        &Arg::f(r),
+    );
+    r
 }
 
 /// # Safety
 /// `s` is an engine script string.
 pub(super) unsafe extern "C" fn f_ScriptStringToBool(s: *const c_void) -> bool {
     // SAFETY: caller contract.
-    string::to_bool(unsafe { raw_bytes(s) })
+    let r = string::to_bool(unsafe { raw_bytes(s) });
+    super::trace::line(
+        "ScriptStringToBool",
+        "s",
+        &[unsafe { str_arg(s) }],
+        'b',
+        &Arg::b(r),
+    );
+    r
 }
 
 /// # Safety
 /// Arguments are engine script strings.
 pub(super) unsafe extern "C" fn f_StringContains(s: *const c_void, sub: *const c_void) -> bool {
     // SAFETY: caller contract.
-    vars::contains(unsafe { raw_bytes(s) }, unsafe { raw_bytes(sub) })
+    let r = vars::contains(unsafe { raw_bytes(s) }, unsafe { raw_bytes(sub) });
+    super::trace::line(
+        "StringContains",
+        "ss",
+        &[unsafe { str_arg(s) }, unsafe { str_arg(sub) }],
+        'b',
+        &Arg::b(r),
+    );
+    r
 }
