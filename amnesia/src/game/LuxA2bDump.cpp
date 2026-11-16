@@ -86,36 +86,36 @@ struct OhplA2bDump
 
 		cLuxPlayerSanity *s = p->GetHelperSanity();
 		fprintf(mpOut, "san");
-		F("hitA", s->mfHitAlpha); I("hitAct", s->mbHitActive); F("lost", s->mfSanityLostCount); F("low", s->mfAtLowSanityCount);
-		I("hitUp", s->mbHitIsUpdated); I("lostUp", s->mbSanityLostIsUpdated); F("pant", s->mfPantCount);
-		F("chk", s->mfCheckEnemySeenCount); I("effUp", s->mbSanityEffectUpdated); F("t", s->mfT); F("wave", s->mfInsaneWaveAlpha);
-		F("drain", s->mfSanityDrainCount); F("drainV", s->mfSanityDrainVolume); F("beat", s->mfSanityHeartbeatCount);
-		F("seenC", s->mfSeenEnemyCount); I("seen", s->mbEnemyIsSeen); F("hint", s->mfShowHintTimer);
+		F("hitA", s->mS.mfHitAlpha); I("hitAct", s->mS.mbHitActive); F("lost", s->mS.mfSanityLostCount); F("low", s->mS.mfAtLowSanityCount);
+		I("hitUp", s->mS.mbHitIsUpdated); I("lostUp", s->mS.mbSanityLostIsUpdated); F("pant", s->mS.mfPantCount);
+		F("chk", s->mS.mfCheckEnemySeenCount); I("effUp", s->mS.mbSanityEffectUpdated); F("t", s->mS.mfT); F("wave", s->mS.mfInsaneWaveAlpha);
+		F("drain", s->mS.mfSanityDrainCount); F("drainV", s->mS.mfSanityDrainVolume); F("beat", s->mS.mfSanityHeartbeatCount);
+		F("seenC", s->mS.mfSeenEnemyCount); I("seen", s->mS.mbEnemyIsSeen); F("hint", s->mS.mfShowHintTimer);
 		fputc('\n', mpOut);
 
 		cLuxPlayerDeath *d = p->GetHelperDeath();
 		fprintf(mpOut, "death");
-		I("act", d->mbActive); I("state", d->mlState); F("hAdd", d->mfHeightAdd); F("roll", d->mfRoll); F("t", d->mfT);
-		F("minH", d->mfMinHeightAdd); F("fade", d->mfFadeAlpha); F("t1", d->mfTextAlpha1); F("t2", d->mfTextAlpha2);
-		F("onScr", d->mfTextOnScreenCount); F("white", d->mfWhiteCount); I("menu", d->mbToMainMenu);
+		I("act", d->mS.mbActive); I("state", d->mS.mlState); F("hAdd", d->mS.mfHeightAdd); F("roll", d->mS.mfRoll); F("t", d->mS.mfT);
+		F("minH", d->mS.mbActive ? d->mS.mfMinHeightAdd : 0.0f); F("fade", d->mS.mfFadeAlpha); F("t1", d->mS.mfTextAlpha1); F("t2", 0.0f);
+		F("onScr", d->mS.mfTextOnScreenCount); F("white", d->mS.mfWhiteCount); I("menu", d->mbToMainMenu);
 		fputc('\n', mpOut);
 
 		cLuxPlayerLean *l = p->mpLean;
 		fprintf(mpOut, "lean");
-		F("dir", l->mfDir); F("add", l->mfDirAdd); F("mov", l->mfMovement); F("rot", l->mfRotation); I("press", l->mbPressed);
+		F("dir", l->mS.mfDir); F("add", l->mS.mfDirAdd); F("mov", l->mS.mfMovement); F("rot", l->mS.mfRotation); I("press", l->mS.mbPressed);
 		fputc('\n', mpOut);
 
 		cLuxPlayerHudEffect *h = p->GetHelperHudEffect();
 		fprintf(mpOut, "hud");
-		I("splashes", (int)h->mlstSplashes.size());
-		for(cLuxPlayerHudEffect_SplashListIt it = h->mlstSplashes.begin(); it != h->mlstSplashes.end(); ++it)
-			F("a", it->mfAlpha);
-		F("fa", h->mfFlashAlpha); I("fact", h->mbFlashActive); F("fsp", h->mfFlashAlphaSpeed);
+		I("splashes", (int)h->mS.mlCount);
+		for(uint32_t i=0; i<h->mS.mlCount; ++i)
+			F("a", h->mS.mvSplashes[i].mfAlpha);
+		F("fa", h->mS.mfFlashAlpha); I("fact", h->mS.mbFlashActive); F("fsp", h->mS.mfFlashAlphaSpeed);
 		fputc('\n', mpOut);
 
 		cLuxPlayerSpawnPS *sp = p->GetHelperSpawnPS();
 		fprintf(mpOut, "sps");
-		I("act", sp->mbActive); I("n", (int)sp->mvSpawnPos.size());
+		I("act", sp->IsActive()); I("n", (int)ohpl_a2c_sps_count(sp->mpS));
 		fputc('\n', mpOut);
 		fflush(mpOut);
 	}

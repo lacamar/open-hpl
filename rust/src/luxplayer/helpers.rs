@@ -685,6 +685,8 @@ pub struct Death {
     pub text_alpha1: f32,
     pub text_on_screen_count: f32,
     pub white_count: f32,
+    pub height_add_goal: f32,
+    pub height_add_goal_crouch: f32,
 }
 
 /// Fade-out of `Death::Update`: collapse, fade, text and the hand-over to the reset.

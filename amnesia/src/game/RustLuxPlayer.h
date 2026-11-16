@@ -226,7 +226,7 @@ struct OhplGa2Death
 	uint32_t mbActive, mbShowHint;
 	int32_t mlState;
 	float mfHeightAddSpeed, mfRollSpeed, mfFadeOutTime, mfHeightAdd, mfRoll, mfT, mfMinHeightAdd, mfFadeAlpha, mfTextAlpha1,
-		mfTextOnScreenCount, mfWhiteCount;
+		mfTextOnScreenCount, mfWhiteCount, mfHeightAddGoal, mfHeightAddGoalCrouch;
 };
 
 struct OhplGa2Sanity
@@ -242,7 +242,7 @@ struct OhplGa2Sanity
 	float mfShowHintTimer;
 	float mfHitZoomInSpeed, mfHitZoomOutSpeed, mfHitZoomInFOVMul, mfHitZoomInAspectMul, mfSanityRegainSpeed, mfSanityRegainLimit,
 		mfSanityVeryLowLimit, mfSanityEffectsStart, mfSanityWaveAlphaMul, mfSanityWaveSpeedMul, mfSanityLowLimit,
-		mfSanityLowLimitMaxTime, mfSanityLowNewSanityAmount, mfCheckNearEnemyInterval;
+		mfSanityLowLimitMaxTime, mfSanityLowNewSanityAmount, mfCheckNearEnemyInterval, mfNearEnemyDecrease;
 };
 
 struct OhplGa2HandsPos
@@ -276,15 +276,6 @@ void ohpl_ga2_light_positions(const hpl::cVector3f *pos, const hpl::cVector3f *s
 bool ohpl_ga2_light_timer(float *count, float dt);
 void ohpl_ga2_light_combine(bool lantern, const float *ext, const float *normal, float *outExt, float *outNormal);
 void ohpl_ga2_darkness_update(OhplGa2Darkness *s, const OhplGa2DarknessIn *i, float dt, OhplGa2Ops *out);
-void ohpl_ga2_death_phase1(OhplGa2Death *s, bool perma, float dt, OhplGa2Ops *out);
-void ohpl_ga2_death_phase2(OhplGa2Death *s, bool hardModeActive, float dt, OhplGa2Ops *out);
-void ohpl_ga2_death_phase3(int32_t state, bool voiceGone, OhplGa2Ops *out);
-void ohpl_ga2_sanity_begin(OhplGa2Sanity *s, float sanity, float dt, OhplGa2Ops *out);
-bool ohpl_ga2_sanity_scan_due(OhplGa2Sanity *s, float dt);
-void ohpl_ga2_sanity_scan_result(OhplGa2Sanity *s, bool seenEnemy, float enemyDecrease, OhplGa2Ops *out);
-void ohpl_ga2_sanity_enemy_seen(OhplGa2Sanity *s, float dt, OhplGa2Ops *out);
-void ohpl_ga2_sanity_hit(OhplGa2Sanity *s, bool dead, float dt, OhplGa2Ops *out);
-void ohpl_ga2_sanity_effects(OhplGa2Sanity *s, float sanity, bool dead, float dt, OhplGa2Ops *out);
 bool ohpl_ga2_hands_update(int32_t state, bool hasObject, bool animOver, bool objectAnimOver, int32_t *newState, OhplGa2Ops *out);
 bool ohpl_ga2_hands_action_gate(int32_t state, bool hasObject);
 int32_t ohpl_ga2_hands_switch_plan(bool hasCurrent, bool hasNew);

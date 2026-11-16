@@ -1,0 +1,1400 @@
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=00000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3daaaaab fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3e2aaaab fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3e800000 fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3eaaaaab fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3ed55556 fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f000000 fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f155555 fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f2aaaaa fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f3fffff fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f555554 fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f6aaaa9 fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f7ffffe fact=1 fsp=40a00000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f800000 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f777777 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f6eeeee fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f666665 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f5ddddc fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f555553 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f4cccca fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f444441 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f3bbbb8 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f33332f fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f2aaaa6 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f22221d fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f199994 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f11110b fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3f088882 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3efffff3 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3eeeeee2 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3eddddd1 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3eccccc0 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3ebbbbaf fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3eaaaa9e fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3e99998d fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3e88887c fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3e6eeed6 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3e4cccb4 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3e2aaa92 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3e088870 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3dcccc9c fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3d888858 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=3d088827 fact=1 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0000000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f7e4b18 a=3f7e4b18 fa=3f800000 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f7c9630 a=3f7c9630 fa=3f6eeeef fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f7ae148 a=3f7ae148 fa=3f5dddde fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f792c60 a=3f792c60 fa=3f4ccccd fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f777778 a=3f777778 fa=3f3bbbbc fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f75c290 a=3f75c290 fa=3f2aaaab fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f740da8 a=3f740da8 fa=3f19999a fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f7258c0 a=3f7258c0 fa=3f088889 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f70a3d8 a=3f70a3d8 fa=3eeeeef0 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f6eeef0 a=3f6eeef0 fa=3eccccce fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f6d3a08 a=3f6d3a08 fa=3eaaaaac fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f6b8520 a=3f6b8520 fa=3e88888a fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f69d038 a=3f69d038 fa=3e4cccd0 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f681b50 a=3f681b50 fa=3e08888c fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f666668 a=3f666668 fa=3d88888f fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f64b180 a=3f64b180 fa=33400000 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f62fc98 a=3f62fc98 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f6147b0 a=3f6147b0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f5f92c8 a=3f5f92c8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f5ddde0 a=3f5ddde0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f5c28f8 a=3f5c28f8 a=3f7e4b18 a=3f7e4b18 fa=3f800000 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f5a7410 a=3f5a7410 a=3f7c9630 a=3f7c9630 fa=3f6eeeef fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f58bf28 a=3f58bf28 a=3f7ae148 a=3f7ae148 fa=3f5dddde fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f570a40 a=3f570a40 a=3f792c60 a=3f792c60 fa=3f4ccccd fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f555558 a=3f555558 a=3f777778 a=3f777778 fa=3f3bbbbc fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f53a070 a=3f53a070 a=3f75c290 a=3f75c290 fa=3f2aaaab fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f51eb88 a=3f51eb88 a=3f740da8 a=3f740da8 fa=3f19999a fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f5036a0 a=3f5036a0 a=3f7258c0 a=3f7258c0 fa=3f088889 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f4e81b8 a=3f4e81b8 a=3f70a3d8 a=3f70a3d8 fa=3eeeeef0 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f4cccd0 a=3f4cccd0 a=3f6eeef0 a=3f6eeef0 fa=3eccccce fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f4b17e8 a=3f4b17e8 a=3f6d3a08 a=3f6d3a08 fa=3eaaaaac fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f496300 a=3f496300 a=3f6b8520 a=3f6b8520 fa=3e88888a fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f47ae18 a=3f47ae18 a=3f69d038 a=3f69d038 fa=3e4cccd0 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f45f930 a=3f45f930 a=3f681b50 a=3f681b50 fa=3e08888c fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3f444448 a=3f444448 a=3f666668 a=3f666668 fa=3d88888f fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f428f60 a=3f428f60 a=3f64b180 a=3f64b180 a=3f7e4b18 a=3f7e4b18 fa=3f800000 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f40da78 a=3f40da78 a=3f62fc98 a=3f62fc98 a=3f7c9630 a=3f7c9630 fa=3f6eeeef fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f3f2590 a=3f3f2590 a=3f6147b0 a=3f6147b0 a=3f7ae148 a=3f7ae148 fa=3f5dddde fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f3d70a8 a=3f3d70a8 a=3f5f92c8 a=3f5f92c8 a=3f792c60 a=3f792c60 fa=3f4ccccd fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f3bbbc0 a=3f3bbbc0 a=3f5ddde0 a=3f5ddde0 a=3f777778 a=3f777778 fa=3f3bbbbc fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f3a06d8 a=3f3a06d8 a=3f5c28f8 a=3f5c28f8 a=3f75c290 a=3f75c290 fa=3f2aaaab fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f3851f0 a=3f3851f0 a=3f5a7410 a=3f5a7410 a=3f740da8 a=3f740da8 fa=3f19999a fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f369d08 a=3f369d08 a=3f58bf28 a=3f58bf28 a=3f7258c0 a=3f7258c0 fa=3f088889 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f34e820 a=3f34e820 a=3f570a40 a=3f570a40 a=3f70a3d8 a=3f70a3d8 fa=3eeeeef0 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f333338 a=3f333338 a=3f555558 a=3f555558 a=3f6eeef0 a=3f6eeef0 fa=3eccccce fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f317e50 a=3f317e50 a=3f53a070 a=3f53a070 a=3f6d3a08 a=3f6d3a08 fa=3eaaaaac fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f2fc968 a=3f2fc968 a=3f51eb88 a=3f51eb88 a=3f6b8520 a=3f6b8520 fa=3e88888a fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f2e1480 a=3f2e1480 a=3f5036a0 a=3f5036a0 a=3f69d038 a=3f69d038 fa=3e4cccd0 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f2c5f98 a=3f2c5f98 a=3f4e81b8 a=3f4e81b8 a=3f681b50 a=3f681b50 fa=3e08888c fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f2aaab0 a=3f2aaab0 a=3f4cccd0 a=3f4cccd0 a=3f666668 a=3f666668 fa=3d88888f fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f28f5c8 a=3f28f5c8 a=3f4b17e8 a=3f4b17e8 a=3f64b180 a=3f64b180 fa=33400000 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f2740e0 a=3f2740e0 a=3f496300 a=3f496300 a=3f62fc98 a=3f62fc98 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f258bf8 a=3f258bf8 a=3f47ae18 a=3f47ae18 a=3f6147b0 a=3f6147b0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f23d710 a=3f23d710 a=3f45f930 a=3f45f930 a=3f5f92c8 a=3f5f92c8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f222228 a=3f222228 a=3f444448 a=3f444448 a=3f5ddde0 a=3f5ddde0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f206d40 a=3f206d40 a=3f428f60 a=3f428f60 a=3f5c28f8 a=3f5c28f8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f1eb858 a=3f1eb858 a=3f40da78 a=3f40da78 a=3f5a7410 a=3f5a7410 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f1d0370 a=3f1d0370 a=3f3f2590 a=3f3f2590 a=3f58bf28 a=3f58bf28 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f1b4e88 a=3f1b4e88 a=3f3d70a8 a=3f3d70a8 a=3f570a40 a=3f570a40 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3f1999a0 a=3f1999a0 a=3f3bbbc0 a=3f3bbbc0 a=3f555558 a=3f555558 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3cccccce rot=bc0efa36 press=0
+hud splashes=6 a=3f17e4b8 a=3f17e4b8 a=3f3a06d8 a=3f3a06d8 a=3f53a070 a=3f53a070 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3d47ae15 rot=bc8c982c press=0
+hud splashes=6 a=3f162fd0 a=3f162fd0 a=3f3851f0 a=3f3851f0 a=3f51eb88 a=3f51eb88 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3d920c4a rot=bccf658a press=0
+hud splashes=6 a=3f147ae8 a=3f147ae8 a=3f369d08 a=3f369d08 a=3f5036a0 a=3f5036a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3dbdf213 rot=bd07fc6e press=0
+hud splashes=6 a=3f12c600 a=3f12c600 a=3f34e820 a=3f34e820 a=3f4e81b8 a=3f4e81b8 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3de7a5f9 rot=bd273291 press=0
+hud splashes=6 a=3f111118 a=3f111118 a=3f333338 a=3f333338 a=3f4cccd0 a=3f4cccd0 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e07a20a rot=bd455e5e press=0
+hud splashes=6 a=3f0f5c30 a=3f0f5c30 a=3f317e50 a=3f317e50 a=3f4b17e8 a=3f4b17e8 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e1a738a rot=bd6288b5 press=0
+hud splashes=6 a=3f0da748 a=3f0da748 a=3f2fc968 a=3f2fc968 a=3f496300 a=3f496300 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e2c542a rot=bd7eba2b press=0
+hud splashes=6 a=3f0bf260 a=3f0bf260 a=3f2e1480 a=3f2e1480 a=3f47ae18 a=3f47ae18 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e3d4ff5 rot=bd8cfd86 press=0
+hud splashes=6 a=3f0a3d78 a=3f0a3d78 a=3f2c5f98 a=3f2c5f98 a=3f45f930 a=3f45f930 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e4d725c rot=bd9a29af press=0
+hud splashes=6 a=3f088890 a=3f088890 a=3f2aaab0 a=3f2aaab0 a=3f444448 a=3f444448 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e5cc63e rot=bda6e570 press=0
+hud splashes=6 a=3f06d3a8 a=3f06d3a8 a=3f28f5c8 a=3f28f5c8 a=3f428f60 a=3f428f60 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e6b55ee rot=bdb33488 press=0
+hud splashes=6 a=3f051ec0 a=3f051ec0 a=3f2740e0 a=3f2740e0 a=3f40da78 a=3f40da78 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e792b3c rot=bdbf1a97 press=0
+hud splashes=6 a=3f0369d8 a=3f0369d8 a=3f258bf8 a=3f258bf8 a=3f3f2590 a=3f3f2590 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e8327bd rot=bdca9b1d press=0
+hud splashes=6 a=3f01b4f0 a=3f01b4f0 a=3f23d710 a=3f23d710 a=3f3d70a8 a=3f3d70a8 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e8965c0 rot=bdd5b97c press=0
+hud splashes=6 a=3f000008 a=3f000008 a=3f222228 a=3f222228 a=3f3bbbc0 a=3f3bbbc0 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e8f53dd rot=bde078fa press=0
+hud splashes=6 a=3efc9640 a=3efc9640 a=3f206d40 a=3f206d40 a=3f3a06d8 a=3f3a06d8 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e94f612 rot=bdeadcc1 press=0
+hud splashes=6 a=3ef92c70 a=3ef92c70 a=3f1eb858 a=3f1eb858 a=3f3851f0 a=3f3851f0 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e9a502b rot=bdf4e7df press=0
+hud splashes=6 a=3ef5c2a0 a=3ef5c2a0 a=3f1d0370 a=3f1d0370 a=3f369d08 a=3f369d08 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3e9f65c2 rot=bdfe9d49 press=0
+hud splashes=6 a=3ef258d0 a=3ef258d0 a=3f1b4e88 a=3f1b4e88 a=3f34e820 a=3f34e820 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3ea43a45 rot=be03ffed press=0
+hud splashes=6 a=3eeeef00 a=3eeeef00 a=3f1999a0 a=3f1999a0 a=3f333338 a=3f333338 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3ea8d0f5 rot=be08892b press=0
+hud splashes=6 a=3eeb8530 a=3eeb8530 a=3f17e4b8 a=3f17e4b8 a=3f317e50 a=3f317e50 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3ead2ce9 rot=be0cf920 press=0
+hud splashes=6 a=3ee81b60 a=3ee81b60 a=3f162fd0 a=3f162fd0 a=3f2fc968 a=3f2fc968 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3eb15111 rot=be116915 press=0
+hud splashes=6 a=3ee4b190 a=3ee4b190 a=3f147ae8 a=3f147ae8 a=3f2e1480 a=3f2e1480 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3eb54037 rot=be15d90a press=0
+hud splashes=6 a=3ee147c0 a=3ee147c0 a=3f12c600 a=3f12c600 a=3f2c5f98 a=3f2c5f98 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3eb8fd01 rot=be1a48ff press=0
+hud splashes=6 a=3eddddf0 a=3eddddf0 a=3f111118 a=3f111118 a=3f2aaab0 a=3f2aaab0 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3ebc89f4 rot=be1eb8f4 press=0
+hud splashes=6 a=3eda7420 a=3eda7420 a=3f0f5c30 a=3f0f5c30 a=3f28f5c8 a=3f28f5c8 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3ebfe975 rot=be2328e9 press=0
+hud splashes=6 a=3ed70a50 a=3ed70a50 a=3f0da748 a=3f0da748 a=3f2740e0 a=3f2740e0 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3ec31dc9 rot=be2798de press=0
+hud splashes=6 a=3ed3a080 a=3ed3a080 a=3f0bf260 a=3f0bf260 a=3f258bf8 a=3f258bf8 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3ec62919 rot=be2c08d3 press=0
+hud splashes=6 a=3ed036b0 a=3ed036b0 a=3f0a3d78 a=3f0a3d78 a=3f23d710 a=3f23d710 fa=00000000 fact=0 fsp=c0800000
+lean dir=3f800000 add=00000000 mov=3ec90d71 rot=be3078c8 press=0
+hud splashes=6 a=3ecccce0 a=3ecccce0 a=3f088890 a=3f088890 a=3f222228 a=3f222228 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3ec96310 a=3ec96310 a=3f06d3a8 a=3f06d3a8 a=3f206d40 a=3f206d40 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3ec5f940 a=3ec5f940 a=3f051ec0 a=3f051ec0 a=3f1eb858 a=3f1eb858 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3ec28f70 a=3ec28f70 a=3f0369d8 a=3f0369d8 a=3f1d0370 a=3f1d0370 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3ebf25a0 a=3ebf25a0 a=3f01b4f0 a=3f01b4f0 a=3f1b4e88 a=3f1b4e88 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3ebbbbd0 a=3ebbbbd0 a=3f000008 a=3f000008 a=3f1999a0 a=3f1999a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bdcccccd mov=ba031270 rot=39e33104 press=0
+hud splashes=6 a=3eb85200 a=3eb85200 a=3efc9640 a=3efc9640 a=3f17e4b8 a=3f17e4b8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=be4ccccd mov=bac49ba8 rot=3aaa64c3 press=0
+hud splashes=6 a=3eb4e830 a=3eb4e830 a=3ef92c70 a=3ef92c70 a=3f162fd0 a=3f162fd0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=be99999a mov=bc123a2b rot=3b2a64c4 press=0
+hud splashes=6 a=3eb17e60 a=3eb17e60 a=3ef5c2a0 a=3ef5c2a0 a=3f147ae8 a=3f147ae8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=becccccd mov=bc9760c0 rot=3b8dfea3 press=0
+hud splashes=6 a=3eae1490 a=3eae1490 a=3ef258d0 a=3ef258d0 a=3f12c600 a=3f12c600 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bf000000 mov=bcf63583 rot=3bd4fdf4 press=0
+hud splashes=6 a=3eaaaac0 a=3eaaaac0 a=3eeeef00 a=3eeeef00 a=3f111118 a=3f111118 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bf19999a mov=bd3263a9 rot=3c3cbb89 press=0
+hud splashes=6 a=3ea740f0 a=3ea740f0 a=3eeb8530 a=3eeb8530 a=3f0f5c30 a=3f0f5c30 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bf333334 mov=bd71265c rot=3c8d4348 press=0
+hud splashes=6 a=3ea3d720 a=3ea3d720 a=3ee81b60 a=3ee81b60 a=3f0da748 a=3f0da748 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bf4cccce mov=bd9b8195 rot=3cc1beb9 press=0
+hud splashes=6 a=3ea06d50 a=3ea06d50 a=3ee4b190 a=3ee4b190 a=3f0bf260 a=3f0bf260 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bf666668 mov=bdc1cf96 rot=3cfba06e press=0
+hud splashes=6 a=3e9d0380 a=3e9d0380 a=3ee147c0 a=3ee147c0 a=3f0a3d78 a=3f0a3d78 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bf800000 mov=bdeb5202 rot=3d1d5d29 press=0
+hud splashes=6 a=3e9999b0 a=3e9999b0 a=3eddddf0 a=3eddddf0 a=3f088890 a=3f088890 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bf800000 mov=be09608e rot=3d3bdce0 press=0
+hud splashes=6 a=3e962fe0 a=3e962fe0 a=3eda7420 a=3eda7420 a=3f06d3a8 a=3f06d3a8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bf800000 mov=be1c1bba rot=3d595855 press=0
+hud splashes=6 a=3e92c610 a=3e92c610 a=3ed70a50 a=3ed70a50 a=3f051ec0 a=3f051ec0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bf800000 mov=be2de724 rot=3d75d835 press=0
+hud splashes=6 a=3e8f5c40 a=3e8f5c40 a=3ed3a080 a=3ed3a080 a=3f0369d8 a=3f0369d8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bf800000 mov=be3ecec9 rot=3d88b271 press=0
+hud splashes=6 a=3e8bf270 a=3e8bf270 a=3ed036b0 a=3ed036b0 a=3f01b4f0 a=3f01b4f0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=bf800000 mov=be4ede0c rot=3d96033c press=0
+hud splashes=6 a=3e8888a0 a=3e8888a0 a=3ecccce0 a=3ecccce0 a=3f000008 a=3f000008 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e851ed0 a=3e851ed0 a=3ec96310 a=3ec96310 a=3efc9640 a=3efc9640 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e81b500 a=3e81b500 a=3ec5f940 a=3ec5f940 a=3ef92c70 a=3ef92c70 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e7c9660 a=3e7c9660 a=3ec28f70 a=3ec28f70 a=3ef5c2a0 a=3ef5c2a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e75c2c0 a=3e75c2c0 a=3ebf25a0 a=3ebf25a0 a=3ef258d0 a=3ef258d0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e6eef20 a=3e6eef20 a=3ebbbbd0 a=3ebbbbd0 a=3eeeef00 a=3eeeef00 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e681b80 a=3e681b80 a=3eb85200 a=3eb85200 a=3eeb8530 a=3eeb8530 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e6147e0 a=3e6147e0 a=3eb4e830 a=3eb4e830 a=3ee81b60 a=3ee81b60 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e5a7440 a=3e5a7440 a=3eb17e60 a=3eb17e60 a=3ee4b190 a=3ee4b190 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e53a0a0 a=3e53a0a0 a=3eae1490 a=3eae1490 a=3ee147c0 a=3ee147c0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e4ccd00 a=3e4ccd00 a=3eaaaac0 a=3eaaaac0 a=3eddddf0 a=3eddddf0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e45f960 a=3e45f960 a=3ea740f0 a=3ea740f0 a=3eda7420 a=3eda7420 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e3f25c0 a=3e3f25c0 a=3ea3d720 a=3ea3d720 a=3ed70a50 a=3ed70a50 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e385220 a=3e385220 a=3ea06d50 a=3ea06d50 a=3ed3a080 a=3ed3a080 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e317e80 a=3e317e80 a=3e9d0380 a=3e9d0380 a=3ed036b0 a=3ed036b0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e2aaae0 a=3e2aaae0 a=3e9999b0 a=3e9999b0 a=3ecccce0 a=3ecccce0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e23d740 a=3e23d740 a=3e962fe0 a=3e962fe0 a=3ec96310 a=3ec96310 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e1d03a0 a=3e1d03a0 a=3e92c610 a=3e92c610 a=3ec5f940 a=3ec5f940 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e163000 a=3e163000 a=3e8f5c40 a=3e8f5c40 a=3ec28f70 a=3ec28f70 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e0f5c60 a=3e0f5c60 a=3e8bf270 a=3e8bf270 a=3ebf25a0 a=3ebf25a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e0888c0 a=3e0888c0 a=3e8888a0 a=3e8888a0 a=3ebbbbd0 a=3ebbbbd0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3e01b520 a=3e01b520 a=3e851ed0 a=3e851ed0 a=3eb85200 a=3eb85200 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3df5c2ff a=3df5c2ff a=3e81b500 a=3e81b500 a=3eb4e830 a=3eb4e830 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3de81bbe a=3de81bbe a=3e7c9660 a=3e7c9660 a=3eb17e60 a=3eb17e60 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3dda747d a=3dda747d a=3e75c2c0 a=3e75c2c0 a=3eae1490 a=3eae1490 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3dcccd3c a=3dcccd3c a=3e6eef20 a=3e6eef20 a=3eaaaac0 a=3eaaaac0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3dbf25fb a=3dbf25fb a=3e681b80 a=3e681b80 a=3ea740f0 a=3ea740f0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3db17eba a=3db17eba a=3e6147e0 a=3e6147e0 a=3ea3d720 a=3ea3d720 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3da3d779 a=3da3d779 a=3e5a7440 a=3e5a7440 a=3ea06d50 a=3ea06d50 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d963038 a=3d963038 a=3e53a0a0 a=3e53a0a0 a=3e9d0380 a=3e9d0380 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d8888f7 a=3d8888f7 a=3e4ccd00 a=3e4ccd00 a=3e9999b0 a=3e9999b0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d75c36c a=3d75c36c a=3e45f960 a=3e45f960 a=3e962fe0 a=3e962fe0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d5a74ea a=3d5a74ea a=3e3f25c0 a=3e3f25c0 a=3e92c610 a=3e92c610 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d3f2668 a=3d3f2668 a=3e385220 a=3e385220 a=3e8f5c40 a=3e8f5c40 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d23d7e6 a=3d23d7e6 a=3e317e80 a=3e317e80 a=3e8bf270 a=3e8bf270 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d088964 a=3d088964 a=3e2aaae0 a=3e2aaae0 a=3e8888a0 a=3e8888a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3cda75c4 a=3cda75c4 a=3e23d740 a=3e23d740 a=3e851ed0 a=3e851ed0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3ca3d8c0 a=3ca3d8c0 a=3e1d03a0 a=3e1d03a0 a=3e81b500 a=3e81b500 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3c5a7779 a=3c5a7779 a=3e163000 a=3e163000 a=3e7c9660 a=3e7c9660 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3bda7ae3 a=3bda7ae3 a=3e0f5c60 a=3e0f5c60 a=3e75c2c0 a=3e75c2c0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=355a8c60 a=355a8c60 a=3e0888c0 a=3e0888c0 a=3e6eef20 a=3e6eef20 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3e01b520 a=3e01b520 a=3e681b80 a=3e681b80 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3df5c2ff a=3df5c2ff a=3e6147e0 a=3e6147e0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3de81bbe a=3de81bbe a=3e5a7440 a=3e5a7440 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3dda747d a=3dda747d a=3e53a0a0 a=3e53a0a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3dcccd3c a=3dcccd3c a=3e4ccd00 a=3e4ccd00 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3dbf25fb a=3dbf25fb a=3e45f960 a=3e45f960 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3db17eba a=3db17eba a=3e3f25c0 a=3e3f25c0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3da3d779 a=3da3d779 a=3e385220 a=3e385220 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3d963038 a=3d963038 a=3e317e80 a=3e317e80 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3d8888f7 a=3d8888f7 a=3e2aaae0 a=3e2aaae0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d75c36c a=3d75c36c a=3e23d740 a=3e23d740 a=3f7e4b18 a=3f7e4b18 fa=3f800000 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d5a74ea a=3d5a74ea a=3e1d03a0 a=3e1d03a0 a=3f7c9630 a=3f7c9630 fa=3f6eeeef fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d3f2668 a=3d3f2668 a=3e163000 a=3e163000 a=3f7ae148 a=3f7ae148 fa=3f5dddde fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d23d7e6 a=3d23d7e6 a=3e0f5c60 a=3e0f5c60 a=3f792c60 a=3f792c60 fa=3f4ccccd fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3d088964 a=3d088964 a=3e0888c0 a=3e0888c0 a=3f777778 a=3f777778 fa=3f3bbbbc fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3cda75c4 a=3cda75c4 a=3e01b520 a=3e01b520 a=3f75c290 a=3f75c290 fa=3f2aaaab fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3ca3d8c0 a=3ca3d8c0 a=3df5c2ff a=3df5c2ff a=3f740da8 a=3f740da8 fa=3f19999a fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3c5a7779 a=3c5a7779 a=3de81bbe a=3de81bbe a=3f7258c0 a=3f7258c0 fa=3f088889 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=3bda7ae3 a=3bda7ae3 a=3dda747d a=3dda747d a=3f70a3d8 a=3f70a3d8 fa=3eeeeef0 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=6 a=355a8c60 a=355a8c60 a=3dcccd3c a=3dcccd3c a=3f6eeef0 a=3f6eeef0 fa=3eccccce fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3dbf25fb a=3dbf25fb a=3f6d3a08 a=3f6d3a08 fa=3eaaaaac fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3db17eba a=3db17eba a=3f6b8520 a=3f6b8520 fa=3e88888a fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3da3d779 a=3da3d779 a=3f69d038 a=3f69d038 fa=3e4cccd0 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3d963038 a=3d963038 a=3f681b50 a=3f681b50 fa=3e08888c fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3d8888f7 a=3d8888f7 a=3f666668 a=3f666668 fa=3d88888f fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3d75c36c a=3d75c36c a=3f64b180 a=3f64b180 fa=33400000 fact=1 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3d5a74ea a=3d5a74ea a=3f62fc98 a=3f62fc98 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3d3f2668 a=3d3f2668 a=3f6147b0 a=3f6147b0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3d23d7e6 a=3d23d7e6 a=3f5f92c8 a=3f5f92c8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3d088964 a=3d088964 a=3f5ddde0 a=3f5ddde0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3cda75c4 a=3cda75c4 a=3f5c28f8 a=3f5c28f8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3ca3d8c0 a=3ca3d8c0 a=3f5a7410 a=3f5a7410 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3c5a7779 a=3c5a7779 a=3f58bf28 a=3f58bf28 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=3bda7ae3 a=3bda7ae3 a=3f570a40 a=3f570a40 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=4 a=355a8c60 a=355a8c60 a=3f555558 a=3f555558 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f53a070 a=3f53a070 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f51eb88 a=3f51eb88 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f5036a0 a=3f5036a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f4e81b8 a=3f4e81b8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f4cccd0 a=3f4cccd0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f4b17e8 a=3f4b17e8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f496300 a=3f496300 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f47ae18 a=3f47ae18 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f45f930 a=3f45f930 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f444448 a=3f444448 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f428f60 a=3f428f60 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f40da78 a=3f40da78 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f3f2590 a=3f3f2590 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f3d70a8 a=3f3d70a8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f3bbbc0 a=3f3bbbc0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f3a06d8 a=3f3a06d8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f3851f0 a=3f3851f0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f369d08 a=3f369d08 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f34e820 a=3f34e820 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f333338 a=3f333338 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f317e50 a=3f317e50 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f2fc968 a=3f2fc968 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f2e1480 a=3f2e1480 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f2c5f98 a=3f2c5f98 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f2aaab0 a=3f2aaab0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f28f5c8 a=3f28f5c8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f2740e0 a=3f2740e0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f258bf8 a=3f258bf8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f23d710 a=3f23d710 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f222228 a=3f222228 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f206d40 a=3f206d40 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f1eb858 a=3f1eb858 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f1d0370 a=3f1d0370 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f1b4e88 a=3f1b4e88 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f1999a0 a=3f1999a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f17e4b8 a=3f17e4b8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f162fd0 a=3f162fd0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f147ae8 a=3f147ae8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f12c600 a=3f12c600 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f111118 a=3f111118 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f0f5c30 a=3f0f5c30 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f0da748 a=3f0da748 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f0bf260 a=3f0bf260 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f0a3d78 a=3f0a3d78 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f088890 a=3f088890 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f06d3a8 a=3f06d3a8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f051ec0 a=3f051ec0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f0369d8 a=3f0369d8 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f01b4f0 a=3f01b4f0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3f000008 a=3f000008 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3efc9640 a=3efc9640 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ef92c70 a=3ef92c70 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ef5c2a0 a=3ef5c2a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ef258d0 a=3ef258d0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3eeeef00 a=3eeeef00 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3eeb8530 a=3eeb8530 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ee81b60 a=3ee81b60 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ee4b190 a=3ee4b190 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ee147c0 a=3ee147c0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3eddddf0 a=3eddddf0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3eda7420 a=3eda7420 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ed70a50 a=3ed70a50 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ed3a080 a=3ed3a080 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ed036b0 a=3ed036b0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ecccce0 a=3ecccce0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ec96310 a=3ec96310 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ec5f940 a=3ec5f940 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ec28f70 a=3ec28f70 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ebf25a0 a=3ebf25a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ebbbbd0 a=3ebbbbd0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3eb85200 a=3eb85200 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3eb4e830 a=3eb4e830 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3eb17e60 a=3eb17e60 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3eae1490 a=3eae1490 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3eaaaac0 a=3eaaaac0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ea740f0 a=3ea740f0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ea3d720 a=3ea3d720 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ea06d50 a=3ea06d50 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e9d0380 a=3e9d0380 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e9999b0 a=3e9999b0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e962fe0 a=3e962fe0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e92c610 a=3e92c610 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e8f5c40 a=3e8f5c40 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e8bf270 a=3e8bf270 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e8888a0 a=3e8888a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e851ed0 a=3e851ed0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e81b500 a=3e81b500 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e7c9660 a=3e7c9660 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e75c2c0 a=3e75c2c0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e6eef20 a=3e6eef20 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e681b80 a=3e681b80 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e6147e0 a=3e6147e0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e5a7440 a=3e5a7440 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e53a0a0 a=3e53a0a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e4ccd00 a=3e4ccd00 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e45f960 a=3e45f960 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e3f25c0 a=3e3f25c0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e385220 a=3e385220 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e317e80 a=3e317e80 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e2aaae0 a=3e2aaae0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e23d740 a=3e23d740 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e1d03a0 a=3e1d03a0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e163000 a=3e163000 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e0f5c60 a=3e0f5c60 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e0888c0 a=3e0888c0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3e01b520 a=3e01b520 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3df5c2ff a=3df5c2ff fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3de81bbe a=3de81bbe fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3dda747d a=3dda747d fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3dcccd3c a=3dcccd3c fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3dbf25fb a=3dbf25fb fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3db17eba a=3db17eba fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3da3d779 a=3da3d779 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3d963038 a=3d963038 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3d8888f7 a=3d8888f7 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3d75c36c a=3d75c36c fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3d5a74ea a=3d5a74ea fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3d3f2668 a=3d3f2668 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3d23d7e6 a=3d23d7e6 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3d088964 a=3d088964 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3cda75c4 a=3cda75c4 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3ca3d8c0 a=3ca3d8c0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3c5a7779 a=3c5a7779 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=3bda7ae3 a=3bda7ae3 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=2 a=355a8c60 a=355a8c60 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000
+lean dir=00000000 add=00000000 mov=00000000 rot=00000000 press=0
+hud splashes=0 fa=00000000 fact=0 fsp=c0800000

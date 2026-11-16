@@ -65,27 +65,27 @@ pub struct HostB {
 }
 
 impl HostB {
-    fn q(&self, k: u32) -> f32 {
+    pub(super) fn q(&self, k: u32) -> f32 {
         (self.query)(self.ctx, k, 0.0, 0.0)
     }
 
-    fn qb(&self, k: u32) -> bool {
+    pub(super) fn qb(&self, k: u32) -> bool {
         self.q(k) != 0.0
     }
 
-    fn op(&self, o: &Op) {
+    pub(super) fn op(&self, o: &Op) {
         (self.op)(self.ctx, o.kind, o.i, o.a, o.b, o.c, o.d);
     }
 
-    fn hop(&self, kind: u32, a: f32) {
+    pub(super) fn hop(&self, kind: u32, a: f32) {
         (self.op)(self.ctx, kind, 0, a, 0.0, 0.0, 0.0);
     }
 
-    fn fill<const N: usize>(&self, k: u32, buf: &mut [f32; N]) {
+    pub(super) fn fill<const N: usize>(&self, k: u32, buf: &mut [f32; N]) {
         (self.fill)(self.ctx, k, buf.as_mut_ptr());
     }
 
-    fn replay(&self, o: &Ops) {
+    pub(super) fn replay(&self, o: &Ops) {
         for op in o.ops.iter().take(o.n as usize) {
             self.op(op);
         }
