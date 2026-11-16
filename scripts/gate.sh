@@ -311,7 +311,7 @@ def same(name, a, b):
                     life.setdefault((m.group(2), m.group(1)), []).append(m.group(3, 4, 5, 6))
                 elif l.startswith("FSB "):
                     fsb.append(l)
-                else:
+                elif "music_c.ogg" not in l:  # the scenario's dynamic track uses an uninitialised tID
                     other.append(l)
             keep = lambda n: not n.startswith(("physics/", "DW_tunnel/bridge/"))
             sig = {(n, tuple(sorted(set(r)))) for (n, _), r in life.items() if len(r) >= 250 and keep(n)}
