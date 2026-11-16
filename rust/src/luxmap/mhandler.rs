@@ -437,9 +437,9 @@ impl H {
             let now = self.h(hop::TIME, |_| {}).r as u64;
             time_taken = handler::load_seconds(start, now);
             let name = self.name_of(self.st().current);
+            let msg = [b"Entering map ".as_slice(), &name].concat();
             host(super::mhost::op::LOG, |a| {
                 a.i[0] = log::PROGRESS;
-                let msg = [b"Entering map ".as_slice(), &name].concat();
                 a.s[0] = S::of(&msg);
             });
         } else if let Some(m) = self.current_map() {
@@ -476,9 +476,9 @@ impl H {
 }
 
 fn note_error(file: &[u8]) {
+    let msg = [b"Could not load map '".as_slice(), file, b"'!\n"].concat();
     host(super::mhost::op::LOG, |a| {
         a.i[0] = log::ERROR;
-        let msg = [b"Could not load map '".as_slice(), file, b"'!\n"].concat();
         a.s[0] = S::of(&msg);
     });
 }
