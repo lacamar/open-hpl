@@ -14,7 +14,7 @@ pub mod message;
 #[cfg(test)]
 mod tests;
 
-mod handlers_ffi;
+pub(crate) mod handlers_ffi;
 mod hint_handler;
 pub mod host;
 #[cfg(test)]

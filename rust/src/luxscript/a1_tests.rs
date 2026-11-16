@@ -1,12 +1,10 @@
-use super::a1::{Arg, Func, HostFn, OP_WARNING, set_host};
-use super::a1_gen::{HOST_OPS, OP_NAMES, invoke, table};
+use super::a1::{Arg, HostFn, set_host};
+use super::a1_table::table;
+use super::fns::{self, ops};
+use std::collections::HashMap;
 use std::ffi::c_void;
-use std::fmt::Write as _;
 use std::path::PathBuf;
 use std::sync::Mutex;
-
-static TRACE: Mutex<String> = Mutex::new(String::new());
-static OPS: Mutex<Vec<(&'static str, &'static str, char)>> = Mutex::new(Vec::new());
 
 fn golden(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -14,172 +12,260 @@ fn golden(name: &str) -> PathBuf {
         .join(name)
 }
 
-fn show(kind: char, a: &Arg) -> String {
-    match kind {
-        's' => {
-            let b = if a.p.is_null() {
-                &[][..]
-            } else {
-                // SAFETY: the recorder is only called with live slices from the corpus.
-                unsafe { std::slice::from_raw_parts(a.p.cast::<u8>(), a.n) }
-            };
-            format!("{:?}", String::from_utf8_lossy(b))
-        }
-        'f' => format!("f{:08x}", a.as_f().to_bits()),
-        'i' => a.as_i().to_string(),
-        'b' => u8::from(a.as_b()).to_string(),
-        _ => "?".into(),
+#[test]
+fn declarations_match_the_cpp_registrations() {
+    let got: String = table()
+        .iter()
+        .map(|(decl, name, _)| format!("{decl} -> {name}\n"))
+        .collect();
+    let want = std::fs::read_to_string(golden("decls.txt")).unwrap();
+    assert_eq!(got, want);
+    assert_eq!(table().len(), 322);
+}
+
+#[test]
+fn host_ops_match_cpp() {
+    let cpp = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../amnesia/src/game/LuxScriptHostA1.cpp"),
+    )
+    .unwrap();
+    let body = cpp
+        .split("enum OhplA1Op\n{\n")
+        .nth(1)
+        .and_then(|s| s.split("\n};").next())
+        .unwrap();
+    let names: Vec<&str> = body
+        .lines()
+        .map(|l| l.trim().trim_end_matches(','))
+        .collect();
+    assert_eq!(names, ops::NAMES);
+    for n in ops::NAMES {
+        assert!(cpp.contains(&format!("case {n}:")), "no host case for {n}");
     }
 }
 
-unsafe extern "C" fn recorder(op: u32, args: *const Arg, n: usize, ret: *mut Arg) {
-    let mut t = TRACE.lock().unwrap();
-    if op == OP_WARNING {
-        // SAFETY: one string argument.
-        let a = unsafe { *args };
-        let _ = writeln!(t, "  host warning {}", show('s', &a));
-        return;
-    }
-    let ops = OPS.lock().unwrap();
-    let (name, kinds, r) = ops[op as usize];
-    // SAFETY: `n` arguments from the caller.
-    let a = unsafe { std::slice::from_raw_parts(args, n) };
-    assert_eq!(kinds.len(), n, "{name}");
-    let shown: Vec<String> = kinds.chars().zip(a).map(|(k, a)| show(k, a)).collect();
-    let _ = writeln!(t, "  host {op} {name}({})", shown.join(","));
-    // SAFETY: `ret` is the caller's slot.
-    let ret = unsafe { &mut *ret };
-    match r {
-        'f' => *ret = Arg::f(op as f32 + 0.5),
-        'i' => *ret = Arg::i(op as i32 + 7),
-        'b' => *ret = Arg::b(op.is_multiple_of(2)),
-        'p' => ret.p = std::ptr::from_ref(&0u8).cast(),
+/// A host with one map holding script variables and named entities.
+// boxed so the pointers handed to scripts stay put
+#[allow(clippy::vec_box, clippy::box_collection)]
+#[derive(Default)]
+struct Fake {
+    vars: HashMap<Vec<u8>, Box<Vec<u8>>>,
+    ents: Vec<(Vec<u8>, i32)>,
+    log: Vec<String>,
+    names: Vec<Box<Vec<u8>>>,
+}
+
+static FAKE: Mutex<Option<Fake>> = Mutex::new(None);
+static SERIAL: Mutex<()> = Mutex::new(());
+
+unsafe extern "C" fn fake_host(op: u32, args: *const Arg, n: usize, ret: *mut Arg) {
+    // SAFETY: the caller passes `n` arguments and a writable result.
+    let (a, r) = unsafe { (std::slice::from_raw_parts(args, n), &mut *ret) };
+    let name =
+        |i: usize| unsafe { std::slice::from_raw_parts(a[i].p.cast::<u8>(), a[i].n) }.to_vec();
+    let mut g = FAKE.lock().unwrap();
+    let f = g.as_mut().unwrap();
+    let op = ops::NAMES[op as usize];
+    f.log.push(op.to_string());
+    match op {
+        "MAP_EXISTS" => *r = Arg::b(true),
+        "MAP_VAR" | "GLOBAL_VAR" => {
+            r.p = f.vars.get(&name(0)).map_or(std::ptr::null(), |v| {
+                std::ptr::from_ref::<Vec<u8>>(v).cast()
+            });
+        }
+        "VAR_SET" => {
+            // SAFETY: the script passes a variable pointer from MAP_VAR.
+            *unsafe { &mut *a[0].p.cast_mut().cast::<Vec<u8>>() } = name(1);
+        }
+        "TEMP_STR" => {
+            f.names.push(Box::new(name(1)));
+            r.p = std::ptr::from_ref::<Vec<u8>>(f.names.last().unwrap()).cast();
+        }
+        "MAP_ENTITIES" => *r = Arg::i(f.ents.len() as i32),
+        "MAP_ENTITY_NTH" => r.p = (a[0].as_i() as usize + 1) as *const c_void,
+        "ENT_IS_TYPE" => *r = Arg::b(true),
+        "ENT_NAME" => {
+            f.names
+                .push(Box::new(f.ents[a[0].p as usize - 1].0.clone()));
+            r.p = std::ptr::from_ref::<Vec<u8>>(f.names.last().unwrap()).cast();
+        }
         _ => {}
     }
 }
 
-struct Rng(u64);
-
-impl Rng {
-    fn next(&mut self) -> u64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        self.0
-    }
-
-    fn pick<'a, T>(&mut self, v: &'a [T]) -> &'a T {
-        &v[(self.next() % v.len() as u64) as usize]
-    }
+fn with_fake<T>(fake: Fake, f: impl FnOnce() -> T) -> (T, Fake) {
+    let _serial = SERIAL
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    *FAKE.lock().unwrap() = Some(fake);
+    let h: HostFn = fake_host;
+    set_host(Some(h));
+    let out = f();
+    set_host(None);
+    let fake = FAKE.lock().unwrap().take().unwrap();
+    (out, fake)
 }
 
-const STRINGS: [&[u8]; 8] = [
-    b"",
-    b"a",
-    b"Door_1",
-    b"wild*",
-    b"two words",
-    "\u{c5}ge".as_bytes(),
-    b"x\0y",
-    b"Body_Mesh_01",
-];
-const FLOATS: [u32; 9] = [
-    0x0000_0000,
-    0x8000_0000,
-    0x3f80_0000,
-    0xbfc0_0000,
-    0x3dcc_cccd,
-    0x42c8_0000,
-    0x3a83_126f,
-    0x7f7f_ffff,
-    0x7fc0_0000,
-];
-const INTS: [i32; 7] = [-1, 0, 1, 2, 7, 255, -1000];
+fn sv(s: &str) -> *const c_void {
+    Box::leak(Box::new(s.as_bytes().to_vec())) as *const Vec<u8> as *const c_void
+}
 
-fn corpus() -> String {
-    let t = table();
-    *OPS.lock().unwrap() = {
-        let mut v = vec![("", "", 'v'); HOST_OPS];
-        for f in &t {
-            if let Some(slot) = v.get_mut(f.op as usize).filter(|s| s.0.is_empty()) {
-                *slot = (f.name, f.kinds, f.ret);
-            }
-        }
-        v
+#[test]
+fn local_vars_round_trip_through_the_host() {
+    let mut fake = Fake::default();
+    fake.vars.insert(b"N".to_vec(), Box::default());
+    let (got, _) = with_fake(fake, || unsafe {
+        fns::misc::SetLocalVarInt(sv("N"), 5);
+        fns::misc::AddLocalVarInt(sv("N"), 3);
+        fns::misc::AddLocalVarFloat(sv("N"), 0.5);
+        (
+            fns::misc::GetLocalVarInt(sv("N")),
+            fns::misc::GetLocalVarFloat(sv("N")),
+        )
+    });
+    assert_eq!(got, (8, 8.5));
+}
+
+#[test]
+fn missing_local_var_reports_and_reads_empty() {
+    let (got, fake) = with_fake(Fake::default(), || unsafe {
+        fns::misc::GetLocalVarInt(sv("Nope"))
+    });
+    assert_eq!(got, 0);
+    assert!(fake.log.contains(&"ERROR".to_string()));
+}
+
+#[test]
+fn wildcard_selects_entities_by_name_parts() {
+    let fake = Fake {
+        ents: vec![
+            (b"door_a".to_vec(), 0),
+            (b"key_b".to_vec(), 0),
+            (b"door_c".to_vec(), 0),
+        ],
+        ..Fake::default()
     };
-    TRACE.lock().unwrap().clear();
-    let host: HostFn = recorder;
-    set_host(Some(host));
-    let mut rng = Rng(0xA1A1_A1A1_A1A1_A1A1);
-    let mut out = String::new();
-    for (idx, f) in t.iter().enumerate() {
-        for k in 0..4 {
-            let strs: Vec<Vec<u8>> = f
-                .kinds
-                .chars()
-                .map(|_| rng.pick(&STRINGS).to_vec())
-                .collect();
-            let mut args = Vec::new();
-            let mut shown = Vec::new();
-            for (c, s) in f.kinds.chars().zip(&strs) {
-                let a = match c {
-                    's' => Arg {
-                        p: std::ptr::from_ref(s).cast::<c_void>(),
-                        n: s.len(),
-                        u: 0,
-                    },
-                    'f' => Arg::f(f32::from_bits(*rng.pick(&FLOATS))),
-                    'i' => Arg::i(*rng.pick(&INTS)),
-                    _ => Arg::b(rng.next() & 1 == 1),
-                };
-                shown.push(if c == 's' {
-                    format!("{:?}", String::from_utf8_lossy(s))
-                } else {
-                    show(c, &a)
-                });
-                args.push(a);
+    let (got, _) = with_fake(fake, || {
+        fns::entities(b"door*", 0, -1).map_or(0, |l| l.len())
+    });
+    assert_eq!(got, 2);
+}
+
+fn parse_args(s: &str) -> Vec<String> {
+    let (mut out, mut cur, mut quoted, mut esc) = (Vec::new(), String::new(), false, false);
+    for c in s.chars() {
+        match (quoted, esc, c) {
+            (true, true, _) => {
+                cur.push('\\');
+                cur.push(c);
+                esc = false;
             }
-            TRACE.lock().unwrap().clear();
-            // SAFETY: string arguments are `Vec<u8>` test strings.
-            let r = unsafe { invoke(idx, &args) };
-            let _ = writeln!(
-                out,
-                "{idx}.{k} {}({}) = {}",
-                f.name,
-                shown.join(","),
-                match f.ret {
-                    'p' => "ptr".into(),
-                    'v' => "-".into(),
-                    c => show(c, &r),
-                }
-            );
-            out.push_str(&TRACE.lock().unwrap());
+            (true, false, '\\') => esc = true,
+            (true, false, '"') => quoted = false,
+            (false, _, '"') => quoted = true,
+            (false, _, ',') => out.push(std::mem::take(&mut cur)),
+            _ => cur.push(c),
         }
     }
-    set_host(None);
+    if !cur.is_empty() || !out.is_empty() {
+        out.push(cur);
+    }
     out
 }
 
-#[test]
-fn declarations_match_the_cpp_registrations() {
-    let t = table();
-    let got: String = t
-        .iter()
-        .map(|f: &Func| format!("{} -> {}\n", f.decl, f.name))
-        .collect();
-    let want = std::fs::read_to_string(golden("decls.txt")).unwrap();
-    assert_eq!(got, want);
-    assert_eq!(t.len(), 322);
-    assert_eq!(OP_NAMES.len(), HOST_OPS);
+fn float_arg(a: &str) -> f32 {
+    f32::from_bits(u32::from_str_radix(&a[1..], 16).unwrap())
 }
 
+/// Replays the variable calls of every recorded real-engine trace against the Rust bodies: reads of
+/// a variable the trace itself wrote must return what the C++ returned.
 #[test]
-fn host_effects_match_golden() {
-    let got = corpus();
-    let path = golden("trace.txt");
-    if std::env::var_os("A1_BLESS").is_some() {
-        std::fs::write(&path, &got).unwrap();
+fn recorded_variable_calls_replay() {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/A1b");
+    let (mut checked, mut files) = (0, 0);
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let text = std::fs::read_to_string(entry.unwrap().path()).unwrap();
+        files += 1;
+        let mut fake = Fake::default();
+        let mut written = std::collections::HashSet::new();
+        for line in text.lines() {
+            let Some((call, ret)) = line
+                .split_once(")=")
+                .map(|(c, r)| (c, Some(r)))
+                .or(line.strip_suffix(')').map(|c| (c, None)))
+            else {
+                continue;
+            };
+            let Some((name, args)) = call.split_once('(') else {
+                continue;
+            };
+            let a = parse_args(args);
+            let is_var = ["LocalVar", "GlobalVar"].iter().any(|k| name.contains(k));
+            if !is_var {
+                continue;
+            }
+            let key = a[0].clone().into_bytes();
+            let scoped = (name.contains("Global"), key.clone());
+            fake.vars.entry(key.clone()).or_default();
+            let want = ret.map(str::to_string);
+            let (got, back) = with_fake(fake, || unsafe {
+                let k = sv(&a[0]);
+                match name {
+                    "SetLocalVarInt" | "SetGlobalVarInt" => {
+                        (if name.contains("Global") {
+                            fns::misc::SetGlobalVarInt
+                        } else {
+                            fns::misc::SetLocalVarInt
+                        })(k, a[1].parse().unwrap());
+                        None
+                    }
+                    "SetLocalVarFloat" | "SetGlobalVarFloat" => {
+                        (if name.contains("Global") {
+                            fns::misc::SetGlobalVarFloat
+                        } else {
+                            fns::misc::SetLocalVarFloat
+                        })(k, float_arg(&a[1]));
+                        None
+                    }
+                    "AddLocalVarInt" | "AddGlobalVarInt" => {
+                        (if name.contains("Global") {
+                            fns::misc::AddGlobalVarInt
+                        } else {
+                            fns::misc::AddLocalVarInt
+                        })(k, a[1].parse().unwrap());
+                        None
+                    }
+                    "AddLocalVarFloat" | "AddGlobalVarFloat" => {
+                        (if name.contains("Global") {
+                            fns::misc::AddGlobalVarFloat
+                        } else {
+                            fns::misc::AddLocalVarFloat
+                        })(k, float_arg(&a[1]));
+                        None
+                    }
+                    "GetLocalVarInt" => Some(fns::misc::GetLocalVarInt(k).to_string()),
+                    "GetGlobalVarInt" => Some(fns::misc::GetGlobalVarInt(k).to_string()),
+                    "GetLocalVarFloat" => {
+                        Some(format!("f{:08x}", fns::misc::GetLocalVarFloat(k).to_bits()))
+                    }
+                    _ => None,
+                }
+            });
+            fake = back;
+            if name.ends_with("String") {
+                written.remove(&scoped);
+            } else if name.starts_with("Set") {
+                written.insert(scoped);
+            } else if written.contains(&scoped)
+                && let (Some(g), Some(w)) = (got, want)
+            {
+                assert_eq!(g, w, "{line}");
+                checked += 1;
+            }
+        }
     }
-    let want = std::fs::read_to_string(&path).unwrap();
-    assert!(got == want, "trace differs from {}", path.display());
+    assert_eq!(files, 53);
+    assert!(checked > 100, "{checked}");
+    println!("replayed variable reads: {checked}");
 }

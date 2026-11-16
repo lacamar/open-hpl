@@ -17,8 +17,8 @@ mod renderer;
 mod tests;
 mod voice;
 
-mod ffi12;
-mod fxffi;
+pub(crate) mod ffi12;
+pub(crate) mod fxffi;
 mod fxobj;
 pub mod host;
 pub(crate) mod host12;

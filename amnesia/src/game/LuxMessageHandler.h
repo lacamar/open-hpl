@@ -63,6 +63,7 @@ public:
 		ohpl_a11b_msg_set_message(mlH, OhplA11bW(asText), asText.size(), afTime);
 	}
 	bool IsMessageActive(){ return ohpl_a11b_msg_flag(mlH, 0) != 0; }
+	uint64_t GetHandle(){ return mlH; }
 
 	void OnDraw(float afFrameTime)
 	{
