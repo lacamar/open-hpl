@@ -1,0 +1,9 @@
+MP music_a.ogg 3f000000 40000000 3 10 cur=-1
+MP music_a.ogg 3f333333 40000000 5 11 cur=3
+MP music_b.ogg 3ecccccd 00000000 7 00 cur=5
+MS 3f800000 5 cur=7
+MS 3f800000 7 cur=7
+MS 3f800000 3 cur=3
+MS 3f800000 3 cur=-1
+MP music_a.ogg 3f000000 40000000 10 10 cur=-1
+MS 00000000 0 cur=10

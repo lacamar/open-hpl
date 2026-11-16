@@ -5,8 +5,7 @@
 #include "RustSomaSound.h"
 
 #include <angelscript.h>
-#include <map>
-#include <set>
+#include <list>
 
 using namespace hpl;
 
@@ -20,98 +19,87 @@ class cSomaSoundEvents
 	friend class cSomaSoundInstance;
 
 public:
-	static cSomaSoundEvents *Get();
+	static cSomaSoundEvents *Get()
+	{
+		static cSomaSoundEvents events;
+		return &events;
+	}
 
-	cSoundEntityData *Resolve(const tString &asEvent);
-	cSomaSoundInstance *PlayGui(const tString &asEvent, float afVolume, int alEntryType, bool abLoop = false, bool abStream = false);
-	cSomaSoundInstance *Play3D(const tString &asEvent, float afVolume, const cVector3f &avPos, int alEntryType);
-	void PreloadProject(const tString &asProject);
-	void Update(float afTimeStep);
-	void FadeOutAll(tFlag aTypes, float afSpeed);
-
-	cSomaSoundInstance *FindInstance(const tString &asName);
-	bool IsLive(cSomaSoundInstance *apInstance, int alId = -1);
+	cSomaSoundInstance *PlayGui(const tString &asEvent, float afVolume, int alEntryType, bool abLoop = false, bool abStream = false)
+	{
+		return (cSomaSoundInstance *)ohpl_s7_play_gui((const unsigned char *)asEvent.data(), asEvent.size(), afVolume, alEntryType, abLoop, abStream);
+	}
+	void PreloadProject(const tString &asProject) { ohpl_s7_preload((const unsigned char *)asProject.data(), asProject.size()); }
+	void FadeOutAll(tFlag aTypes, float afSpeed) { ohpl_s7_fade_out_all(aTypes, afSpeed); }
+	cSomaSoundInstance *FindInstance(const tString &asName) { return (cSomaSoundInstance *)ohpl_s7_find_instance((const unsigned char *)asName.data(), asName.size()); }
+	bool IsLive(cSomaSoundInstance *apInstance, int alId = -1) { return ohpl_s7_is_live((size_t)apInstance, alId); }
 	const std::list<cSomaSoundInstance *> &GetInstances() { return mlstInstances; }
 
-	static void RegisterNatives(asIScriptEngine *apEngine);
-
-	struct cParam
-	{
-		tString msName;
-		float mfMin = 0, mfMax = 1;
-		float mfVelocity = 0;
-		float mfSeek = 0;
-		float mfSustain = -1;
-		int mlLoopMode = 0;
-		int mlBuiltin = 0;
-	};
-
-	OhplGs5Bank *GetBank() { return mpBank; }
+	static void RegisterNatives(asIScriptEngine *apEngine) { ohpl_s7_register_natives(apEngine); }
 
 private:
-	cSomaSoundEvents();
-	void LoadProject(const tString &asProject);
-	int GetEvent(const tString &asName);
-
-	OhplGs5Bank *mpBank;
 	std::list<cSomaSoundInstance *> mlstInstances;
-	std::map<cSomaSoundInstance *, int> mmapLive;
-	bool mbUpdaterAdded = false;
 };
 
 class cSomaSoundInstance : public iSoundEntityEvent
 {
 public:
-	cSomaSoundInstance(size_t alEvent, const tString &asName, cSoundEntity *apEntity, eSoundEntryType aType);
-	~cSomaSoundInstance();
+	cSomaSoundInstance(size_t alEvent, const tString &asName, cSoundEntity *apEntity, eSoundEntryType aType) : msName(asName)
+	{
+		mlH = ohpl_s7_inst_new((size_t)this, alEvent, (const unsigned char *)asName.data(), asName.size(), (size_t)apEntity, apEntity != NULL, (int)aType);
+		mpS = ohpl_s7_inst_state(mlH);
+		cSomaSoundEvents::Get()->mlstInstances.push_back(this);
+	}
+	~cSomaSoundInstance()
+	{
+		ohpl_s7_inst_destroy(mlH);
+		cSomaSoundEvents::Get()->mlstInstances.remove(this);
+	}
 
-	void Play();
-	void Stop(bool abPlayEnd);
+	void Play() { ohpl_s7_inst_play(mlH); }
+	void Stop(bool abPlayEnd) { ohpl_s7_inst_stop(mlH); }
 	void FadeIn(float afSpeed) { FadeInTo(1, afSpeed); }
-	void FadeOut(float afSpeed);
-	bool IsStopped();
-	void Update(float afTimeStep);
+	void FadeOut(float afSpeed) { ohpl_s7_inst_fade_out(mlH, afSpeed); }
+	bool IsStopped() { return ohpl_s7_inst_is_stopped(mlH); }
+	void Update(float afTimeStep) { ohpl_s7_inst_update(mlH, afTimeStep); }
 
-	void FadeInTo(float afVolumeMul, float afSpeed);
-	void StopNow();
-	void FadeVolumeMulTo(float afDest, float afSpeed);
+	void FadeInTo(float afVolumeMul, float afSpeed) { ohpl_s7_inst_fade_in_to(mlH, afVolumeMul, afSpeed); }
+	void StopNow() { ohpl_s7_inst_stop_now(mlH); }
+	void FadeVolumeMulTo(float afDest, float afSpeed) { ohpl_s7_inst_fade_volume_mul_to(mlH, afDest, afSpeed); }
 	void SetVolumeMul(float afX) { mpS->volume_mul = mpS->volume_mul_dest = afX; }
 	float GetVolumeMul() { return mpS->volume_mul; }
-	void FadeSpeedMulTo(float afDest, float afSpeed);
+	void FadeSpeedMulTo(float afDest, float afSpeed) { ohpl_s7_inst_fade_speed_mul_to(mlH, afDest, afSpeed); }
 	void SetSpeedMul(float afX) { mpS->speed_mul = mpS->speed_mul_dest = afX; }
 	float GetSpeedMul() { return mpS->speed_mul; }
 	void SetVolume(float afX) { mpS->volume = afX; }
 	float GetVolume() { return mpS->volume; }
-	void SetParam(int alIdx, float afValue) override;
+	void SetParam(int alIdx, float afValue) override { ohpl_s7_inst_set_param(mlH, alIdx, afValue); }
 	void SetParam(const tString &asName, float afValue) override { SetParam(ParamIndex(asName), afValue); }
-	int ParamIndex(const tString &asName);
-	float GetParamValue(int alIdx);
-	int GetParamNum();
-	const cSomaSoundEvents::cParam *GetParamDef(int alIdx);
-	void SetPaused(bool abX);
+	int ParamIndex(const tString &asName) { return ohpl_s7_inst_param_index(mlH, (const unsigned char *)asName.data(), asName.size()); }
+	float GetParamValue(int alIdx) { return ohpl_s7_inst_param_value(mlH, alIdx); }
+	int GetParamNum() { return ohpl_s7_inst_param_count(mlH); }
+	void SetPaused(bool abX) { ohpl_s7_inst_set_paused(mlH, abX); }
 	bool GetPaused() { return mpS->paused; }
 	bool IsPlaying() { return mpS->stopped == false; }
-	void SetPosition(const cVector3f &avPos) { mvPos = avPos; mpS->pos[0] = avPos.x; mpS->pos[1] = avPos.y; mpS->pos[2] = avPos.z; }
+	void SetPosition(const cVector3f &avPos) { mvPos = avPos; ohpl_s7_inst_set_position((size_t)this, mlH, &avPos.x); }
 	const cVector3f &GetPosition() { return mvPos; }
 	float GetElapsedTime() { return mpS->time; }
-	float GetTotalTime();
+	float GetTotalTime() { return ohpl_s7_inst_total_time(mlH); }
 	float GetAudibility() { return mpS->audibility; }
-	bool Is3D() { return mEvent.is_3d; }
-	bool IsOneShot() { return mEvent.one_shot; }
-	float GetMinDist() { return mEvent.min_dist; }
-	float GetMaxDist() { return mEvent.max_dist; }
 	eSoundEntryType GetType() { return (eSoundEntryType)mpS->entry_type; }
 	void SetStopDisabled(bool abX) { mpS->stop_disabled = abX; }
 	bool GetStopDisabled() { return mpS->stop_disabled; }
 	bool IsActive() { return mpS->stopped == false; }
 
 	const tString &GetName() { return msName; }
-	int GetId() { return mlId; }
-	tString Describe();
-
-private:
-	friend class cSomaSoundEvents;
-	friend class cSomaSaveState;
+	int GetId() { return mpS->id; }
+	size_t GetHandle() { return mlH; }
+	tString Describe()
+	{
+		tString s;
+		ohpl_s7_inst_describe(mlH, [](void *c, const unsigned char *p, size_t n) { static_cast<tString *>(c)->assign((const char *)p, n); }, &s);
+		return s;
+	}
 
 	// SomaSave reads these two
 	struct cStateFloat
@@ -125,15 +113,17 @@ private:
 	OhplGs5InstState *mpS;
 	cStateFloat mfFadeDest{&mpS, &OhplGs5InstState::fade_dest};
 	cStateFloat mfVolumeMulDest{&mpS, &OhplGs5InstState::volume_mul_dest};
-	OhplGs5EventInfo mEvent;
 	tString msName;
-	int mlId;
-	cSoundEntity *mpEntity;
 	cVector3f mvPos = cVector3f(0, 0, 1);
-	cSomaSoundEvents::cParam mParamCache;
 };
 
-tString SomaSerializeMusic();
-void SomaDeserializeMusic(const tString &asData);
+inline tString SomaSerializeMusic()
+{
+	tString s;
+	ohpl_s7_music_serialize([](void *c, const unsigned char *p, size_t n) { static_cast<tString *>(c)->assign((const char *)p, n); }, &s);
+	return s;
+}
+
+inline void SomaDeserializeMusic(const tString &asData) { ohpl_s7_music_deserialize((const unsigned char *)asData.data(), asData.size()); }
 
 #endif // SOMA_SOUND_H

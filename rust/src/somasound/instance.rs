@@ -743,6 +743,10 @@ impl Inst {
 }
 
 impl Bank {
+    pub fn live(&self) -> impl Iterator<Item = &Inst> {
+        self.order.iter().filter_map(|&h| self.inst(h))
+    }
+
     pub fn inst(&self, h: usize) -> Option<&Inst> {
         self.insts.get(h).and_then(|i| i.as_deref())
     }

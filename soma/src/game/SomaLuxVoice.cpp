@@ -232,7 +232,10 @@ bool cSomaLuxVoiceHandler::Play(const tString &asSubject, int alLine, const tStr
 								bool abPlayWhilePaused)
 {
 	if (ohpl_gs5_voice_play_check(mpV, VHost(), U(asSubject), asSubject.size(), alPrio) <= 0)
+	{
+		OhplS7Text("VP", asSubject + " " + cString::ToString(alLine) + " " + asCallback + " " + cString::ToString(alPrio) + " check-fail");
 		return false;
+	}
 	tString sScene;
 	ohpl_gs5_voice_scene_of(mpV, U(asSubject), asSubject.size(), SinkString, &sScene);
 	StopScene(sScene);
@@ -245,6 +248,7 @@ bool cSomaLuxVoiceHandler::Play(const tString &asSubject, int alLine, const tStr
 	bool bOk = ohpl_gs5_voice_play_start(mpV, VHost(), U(asSubject), asSubject.size(), alLine, U(asCallback), asCallback.size(), alPrio, lToken, abPlayWhilePaused);
 	if (bOk == false && lToken)
 		mmapOnDone.erase(lToken);
+	OhplS7Text("VP", asSubject + " " + cString::ToString(alLine) + " " + asCallback + " " + cString::ToString(alPrio) + " " + (bOk ? "ok" : "fail") + " scene=" + sScene);
 	return bOk;
 }
 
@@ -324,6 +328,7 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 		bool bMore = ohpl_gs5_voice_update_step(mpV, VHost(), +[](void *apCtx, const OhplGs5VoiceEvent *e) {
 			cOne *p = static_cast<cOne *>(apCtx);
 			tString sFunc((const char *)e->func, e->func_len), sScene((const char *)e->scene, e->scene_len), sName((const char *)e->name, e->name_len);
+			OhplS7Text("VE", cString::ToString(e->kind) + " " + sFunc + " " + sScene + " " + sName + " " + cString::ToString(e->line) + " " + (e->start ? "1" : "0"));
 			if (e->kind == 0)
 			{
 				// the script may stop everything; the finished scene's completion still runs
@@ -422,6 +427,17 @@ void cSomaLuxVoiceHandler::OnDraw(float afFrameTime)
 																						const float *apColor, float afY, size_t alRows) {
 		cDraw *d = static_cast<cDraw *>(apCtx);
 		const tWStringVec &vRows = d->mpSelf->mvRowCache[d->mlNext++];
+		{
+			uint32_t uA, uY;
+			memcpy(&uA, &afAlpha, 4);
+			memcpy(&uY, &afY, 4);
+			char sB[40];
+			snprintf(sB, sizeof sB, "%08x %08x %d ", uA, uY, (int)abColor);
+			tString sRows;
+			for (const tWString &r : vRows)
+				sRows += cString::To8Char(r) + "|";
+			OhplS7Text("VS", sB + tString((const char *)t, l) + " => " + sRows);
+		}
 		cColor col = abColor ? cColor(apColor[0], apColor[1], apColor[2], apColor[3]) : cColor(1, afAlpha);
 		for (size_t r = 0; r < vRows.size(); ++r)
 		{
@@ -579,282 +595,6 @@ void cSomaLuxVoiceHandler::ReapplyPauses()
 	ohpl_gs5_voice_reapply_pauses(mpV, VHost());
 }
 
-cSomaLuxDialogHandler *cSomaLuxDialogHandler::Get()
-{
-	static cSomaLuxDialogHandler handler;
-	return &handler;
-}
-
-void cSomaLuxDialogHandler::Begin(const tString &asName)
-{
-	mBuilding = cDialog();
-	mBuilding.msName = asName;
-	mBuilding.msCallback = msPendingCallback;
-	msPendingCallback = "";
-}
-
-void cSomaLuxDialogHandler::AddBranch(const tString &asName, const tString &asNext)
-{
-	cBranch b;
-	b.msName = asName;
-	b.msNext = asNext;
-	mBuilding.mvBranches.push_back(b);
-}
-
-void cSomaLuxDialogHandler::AddSubject(const tString &asSubject, const tString &asCallback)
-{
-	if (mBuilding.mvBranches.empty())
-		AddBranch("", "");
-	mBuilding.mvBranches.back().mvItems.push_back(cItem{asSubject, -1, asCallback});
-}
-
-void cSomaLuxDialogHandler::AddPause(float afTime, const tString &asCallback)
-{
-	if (mBuilding.mvBranches.empty())
-		AddBranch("", "");
-	mBuilding.mvBranches.back().mvItems.push_back(cItem{"", afTime, asCallback});
-}
-
-void cSomaLuxDialogHandler::AddResponseOption(const tString &asEntry, const tString &asBranch, int alId, const tString &asCallback)
-{
-	if (mBuilding.mvBranches.empty() == false)
-		mBuilding.mvBranches.back().mvOptions.push_back(cOption{asEntry, asBranch, alId, asCallback});
-}
-
-// cLuxDialogHandler::AddBranchEvent: attaches to the last added subject
-void cSomaLuxDialogHandler::AddBranchEvent(int alType, float afVar, const tString &asVar, const tString &asNewBranch, bool abOnlyEnd)
-{
-	if (mBuilding.mvBranches.empty() || mBuilding.mvBranches.back().mvItems.empty())
-		return;
-	mBuilding.mvBranches.back().mvItems.back().mvEvents.push_back(cEvent{alType, (int)lroundf(afVar), asVar, asNewBranch, abOnlyEnd});
-}
-
-cSomaLuxDialogHandler::cBranch *cSomaLuxDialogHandler::FindBranch(cDialog &aD, const tString &asName, int *apIdx)
-{
-	for (size_t i = 0; i < aD.mvBranches.size(); ++i)
-		if (aD.mvBranches[i].msName == asName)
-		{
-			*apIdx = (int)i;
-			return &aD.mvBranches[i];
-		}
-	return NULL;
-}
-
-void cSomaLuxDialogHandler::End(const tString &asStartBranch)
-{
-	std::shared_ptr<cDialog> pD(new cDialog(mBuilding));
-	mBuilding = cDialog();
-	if (pD->mvBranches.empty())
-		return;
-	pD->mlBranch = 0;
-	if (asStartBranch != "")
-		FindBranch(*pD, asStartBranch, &pD->mlBranch);
-	pD->mlItem = -1;
-	mvActive.push_back(pD);
-	NextItem(*pD);
-}
-
-static void ItemCallback(const tString &asFunc, const tString &asSubject, bool abStart)
-{
-	if (asFunc == "")
-		return;
-	SomaMapScriptCall("void " + asFunc + "(const tString&in, bool)", [&](asIScriptContext *c) {
-		c->SetArgObject(0, (void *)&asSubject);
-		c->SetArgByte(1, abStart);
-	});
-}
-
-void cSomaLuxDialogHandler::StartItem(cDialog &aD)
-{
-	cItem &item = aD.mvBranches[aD.mlBranch].mvItems[aD.mlItem];
-	ItemCallback(item.msCallback, item.msSubject, true);
-	if (item.mfPause >= 0)
-	{
-		aD.mfPauseLeft = item.mfPause;
-		aD.mbWaiting = false;
-		return;
-	}
-	aD.mbWaiting = true;
-	std::weak_ptr<cDialog> wD;
-	for (auto &p : mvActive)
-		if (p.get() == &aD)
-			wD = p;
-	bool bOk = cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->Play(item.msSubject, -1, "", 100, [this, wD]() {
-		if (auto p = wD.lock())
-			p->mbWaiting = false;
-	});
-	if (bOk == false)
-		aD.mbWaiting = false;
-}
-
-void cSomaLuxDialogHandler::NextItem(cDialog &aD)
-{
-	while (aD.mbDone == false)
-	{
-		cBranch &b = aD.mvBranches[aD.mlBranch];
-		if (aD.mlItem >= 0 && aD.mlItem < (int)b.mvItems.size())
-		{
-			cItem &prev = b.mvItems[aD.mlItem];
-			ItemCallback(prev.msCallback, prev.msSubject, false);
-			if (CheckEndEvents(aD))
-				continue;
-		}
-		++aD.mlItem;
-		if (aD.mlItem < (int)b.mvItems.size())
-		{
-			StartItem(aD);
-			return;
-		}
-		EndBranch(aD);
-		if (aD.mbDone)
-			return;
-	}
-}
-
-void cSomaLuxDialogHandler::EndBranch(cDialog &aD)
-{
-	cBranch &b = aD.mvBranches[aD.mlBranch];
-	tString sNext = b.msNext;
-	if (b.mvOptions.empty() == false)
-	{
-		// No dialog UI yet: take the first option
-		const cOption &opt = b.mvOptions[0];
-		Log("SOMA dialog: auto-selected option '%s'\n", opt.msEntry.c_str());
-		if (opt.msCallback != "")
-			SomaMapScriptCall("void " + opt.msCallback + "(const tString&in, const tString&in, int)", [&](asIScriptContext *c) {
-				c->SetArgObject(0, &b.msName);
-				c->SetArgObject(1, (void *)&opt.msEntry);
-				c->SetArgDWord(2, opt.mlId);
-			});
-		sNext = opt.msBranch;
-	}
-	int lIdx = -1;
-	if (sNext != "" && FindBranch(aD, sNext, &lIdx))
-	{
-		aD.mlBranch = lIdx;
-		aD.mlItem = -1;
-		return;
-	}
-	Finish(aD);
-}
-
-void cSomaLuxDialogHandler::Finish(cDialog &aD)
-{
-	aD.mbDone = true;
-	if (aD.msCallback != "")
-		SomaMapScriptCall("void " + aD.msCallback + "(const tString&in)", [&](asIScriptContext *c) { c->SetArgObject(0, &aD.msName); });
-}
-
-// cLuxDialogInstance::CheckBranchEvent; OutOfRange/PlayerNotLooking are unused by the game scripts
-bool cSomaLuxDialogHandler::CheckEvent(cDialog &aD, const cItem &aItem, const cEvent &aE)
-{
-	int lVar = mmapVars.count(aE.msVar) ? mmapVars[aE.msVar] : 0;
-	switch (aE.mlType)
-	{
-	case 2: mmapVars[aE.msVar] = aE.mlVal; return false;
-	case 3: mmapVars[aE.msVar] += aE.mlVal; return false;
-	case 4: return lVar == aE.mlVal;
-	case 5: return lVar < aE.mlVal;
-	case 6: return lVar > aE.mlVal;
-	case 7:
-	{
-		bool bRet = false;
-		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-		if (aE.msVar == "" || pMap == NULL || pMap->GetScript() == NULL)
-			return false;
-		const tString &sBranch = aD.mvBranches[aD.mlBranch].msName;
-		int lLine = cSomaLuxVoiceHandler::Get() ? cSomaLuxVoiceHandler::Get()->GetSubjectLineNumber(aItem.msSubject) - 1 : -1;
-		cSomaScriptRuntime::Get()->Call(
-			pMap->GetScript(), "bool " + aE.msVar + "(const tString&in, const tString&in, int, const tString&in)",
-			[&](asIScriptContext *c) {
-				c->SetArgObject(0, (void *)&sBranch);
-				c->SetArgObject(1, (void *)&aItem.msSubject);
-				c->SetArgDWord(2, lLine);
-				c->SetArgObject(3, (void *)&aE.msNewBranch);
-			},
-			[&](asIScriptContext *c) { bRet = c->GetReturnByte() != 0; });
-		return bRet;
-	}
-	}
-	return false;
-}
-
-// cLuxDialogInstance::CheckEvents(true): a firing event jumps to its branch, or ends the dialog
-bool cSomaLuxDialogHandler::CheckEndEvents(cDialog &aD)
-{
-	const cItem item = aD.mvBranches[aD.mlBranch].mvItems[aD.mlItem];
-	for (const cEvent &e : item.mvEvents)
-	{
-		if (e.mbOnlyEnd == false || CheckEvent(aD, item, e) == false)
-			continue;
-		int lIdx = -1;
-		if (e.msNewBranch != "" && FindBranch(aD, e.msNewBranch, &lIdx))
-		{
-			aD.mlBranch = lIdx;
-			aD.mlItem = -1;
-		}
-		else
-			Finish(aD);
-		return true;
-	}
-	return false;
-}
-
-void cSomaLuxDialogHandler::Update(float afTimeStep)
-{
-	std::vector<std::shared_ptr<cDialog>> vActive = mvActive;
-	for (auto &p : vActive)
-	{
-		if (p->mbDone)
-			continue;
-		if (p->mfPauseLeft > 0)
-		{
-			p->mfPauseLeft -= afTimeStep;
-			if (p->mfPauseLeft <= 0)
-				NextItem(*p);
-		}
-		else if (p->mbWaiting == false)
-			NextItem(*p);
-	}
-	for (size_t i = 0; i < mvActive.size();)
-		if (mvActive[i]->mbDone)
-			mvActive.erase(mvActive.begin() + i);
-		else
-			++i;
-}
-
-void cSomaLuxDialogHandler::Stop(const tString &asName)
-{
-	for (auto &p : mvActive)
-		if (p->msName == asName)
-			p->mbDone = true;
-}
-
-void cSomaLuxDialogHandler::StopAll()
-{
-	for (auto &p : mvActive)
-		p->mbDone = true;
-	if (cSomaLuxVoiceHandler::Get())
-		cSomaLuxVoiceHandler::Get()->StopAll();
-}
-
-bool cSomaLuxDialogHandler::CharacterIsActive(const tString &asName)
-{
-	cSomaLuxVoiceHandler *pVoice = cSomaLuxVoiceHandler::Get();
-	if (pVoice == NULL)
-		return false;
-	if (pVoice->SceneInvolvingCharacterIsActive(asName))
-		return true;
-	// Pauses between subjects still count
-	for (auto &p : mvActive)
-		if (p->mbDone == false)
-			for (const cBranch &b : p->mvBranches)
-				for (const cItem &item : b.mvItems)
-					if (item.msSubject != "" && pVoice->SubjectInvolvesCharacter(item.msSubject, asName))
-						return true;
-	return false;
-}
-
 // Natives: both handlers are singletons, any non-null pointer identifies them
 
 static int gVoiceTag, gDialogTag;
@@ -936,27 +676,4 @@ void cSomaLuxVoiceHandler::RegisterNatives(asIScriptEngine *e)
 				+[](void *, S c, S ent, float fMin, float fMax, bool b3D, float fRange, float fMinF, float fMaxF, asUINT lFlags) { VH->SetSource(c, ent, fMin, fMax, b3D, fRange, fMinF, fMaxF, (int)lFlags); });
 	SOMA_METHOD(e, T, "bool AnySceneIsActive()", +[](void *) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->AnySceneIsActive(); });
 #undef VH
-}
-
-void cSomaLuxDialogHandler::RegisterNatives(asIScriptEngine *e)
-{
-	typedef const tString &S;
-	typedef cSomaLuxDialogHandler D;
-	const char *T = "cLuxDialogHandler";
-	SOMA_METHOD(e, T, "void Begin(const tString &in asName)", +[](void *, S s) { D::Get()->Begin(s); });
-	SOMA_METHOD(e, T, "void End(const tString&in asStartBranch)", +[](void *, S s) { D::Get()->End(s); });
-	SOMA_METHOD(e, T, "void SetCallbackFunc(const tString&in asFunc)", +[](void *, S s) { D::Get()->SetCallbackFunc(s); });
-	SOMA_METHOD(e, T, "void AddBranch(const tString&in asName, const tString&in asNextBranch)", +[](void *, S n, S next) { D::Get()->AddBranch(n, next); });
-	SOMA_METHOD(e, T, "void AddBranchSubject(const tString&in asSubject, const tString&in asCallback)", +[](void *, S s, S cb) { D::Get()->AddSubject(s, cb); });
-	SOMA_METHOD(e, T, "void AddBranchPause(float afTime, const tString&in asCallback)", +[](void *, float t, S cb) { D::Get()->AddPause(t, cb); });
-	SOMA_METHOD(e, T, "void AddResponseOption(const tString &in asEntry, const tString&in asBranch,int alId, const tString&in asCallback)",
-				+[](void *, S entry, S branch, int id, S cb) { D::Get()->AddResponseOption(entry, branch, id, cb); });
-	SOMA_METHOD(e, T, "void AddBranchEvent(eLuxDialogBranchEvent aType, float afVar, const tString&in asVar, const tString&in asNewBranch, bool abOnlyCheckEndOfSubject)",
-				+[](void *, int t, float f, S var, S branch, bool b) { D::Get()->AddBranchEvent(t, f, var, branch, b); });
-	SOMA_METHOD(e, T, "bool CharacterIsActive(const tString&in asName)", +[](void *, S s) { return D::Get()->CharacterIsActive(s); });
-	SOMA_METHOD(e, T, "void Stop(const tString &in asName)", +[](void *, S s) { D::Get()->Stop(s); });
-	SOMA_METHOD(e, T, "void StopAll()", +[](void *) { D::Get()->StopAll(); });
-	SOMA_METHOD(e, T, "void SetVar(const tString&in asName, int alX)", +[](void *, S s, int x) { D::Get()->mmapVars[s] = x; });
-	SOMA_METHOD(e, T, "void IncVar(const tString&in asName, int alX)", +[](void *, S s, int x) { D::Get()->mmapVars[s] += x; });
-	SOMA_METHOD(e, T, "int GetVar(const tString&in asName)", +[](void *, S s) { return D::Get()->mmapVars[s]; });
 }

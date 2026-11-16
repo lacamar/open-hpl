@@ -90,9 +90,12 @@ for impl in $IMPLS; do
 	done
 done
 
+slot_free() { local L=${XDG_RUNTIME_DIR:-/run/user/$UID}/open-hpl-headless.lock f; for f in "$L" "$L.1" "$L.2" "$L.3"; do { [ ! -e "$f" ] || flock -n "$f" true; } && return 0; done; return 1; }
 # sweep <impl> <game> <out.json> [soma-sweep args...]; extra env via ENVX
 sweep() {
 	local impl=$1 g=$2 json=$3; shift 3
+	# a waiting instance looks hung to the sweep: queue here while another agent's instance holds the lock
+	local t=0; until slot_free || [ $((t += 1)) -gt 360 ]; do sleep 5; done
 	env ${ENVX:-} OPENHPL_SCRATCH_ROOT="${SCR:-$SCRATCH-$impl}" OHPL_IMPL="$impl" OHPL_GAME="$g" \
 		bash -c 'eval "$(scripts/soma-init.sh --env-only "$OHPL_GAME")" && exec scripts/soma-sweep.py --out "$0" "$@"' "$json" "$@" \
 		>> "$OUT/sweep-$impl-$g.log" 2>&1
@@ -137,8 +140,10 @@ half() {
 	for gm in soma:00_01_apartment rebirth:02_02_courtyard bunker:arena; do
 		local G=${gm%%:*} M=${gm#*:}
 		has "$G" || continue
-		rm -f "$OUT/h4seq-$G-$impl.txt" "$OUT/l9-$G-$impl.txt"
+		rm -f "$OUT/h4seq-$G-$impl.txt" "$OUT/l9-$G-$impl.txt" "$OUT/s7sc-$G-$impl.txt" "$OUT/s7-$G-$impl.txt" "$OUT/s7p-$G-$impl.txt"
 		ENVX="$extra OHPL_H4_SEQDUMP=$OUT/h4seq-$G-$impl.txt OHPL_L9_XMLDUMP=$OUT/l9-$G-$impl.txt" sweep "$impl" "$G" "$OUT/dump-$impl-$G.json" --map "$M"
+		ENVX="$extra OHPL_S7_DUMP=$OUT/s7-$G-$impl.txt OHPL_S7_SCENARIO=$REPO/rust/tests/golden/S7/scenario-$G.txt OHPL_S7_SCENARIO_OUT=$OUT/s7sc-$G-$impl.txt" sweep "$impl" "$G" "$OUT/dump-s7-$impl-$G.json" --map "$M"
+		ENVX="$extra OHPL_S7_DUMP=$OUT/s7p-$G-$impl.txt" sweep "$impl" "$G" "$OUT/dump-s7p-$impl-$G.json" --play 10 --map "$M"
 	done
 	if has amnesia; then
 		for M in $DUMP_AMNESIA; do
@@ -183,7 +188,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -307,6 +312,24 @@ def same(name, a, b):
         ha, hb = head(a), head(b)
         ok_ = ha is not None and hb is not None and ha == hb
         return (ok_, f"equal over {len(ha)} lines" if ok_ else "DIFFER")
+    if name.startswith("s7") and not name.startswith("s7sc"):
+        # physics sounds and the bunker bridge follow real time: compare what lives long, the bank digests and the music/voice/dialog lines
+        def load(p):
+            life, fsb, other = {}, [], []
+            for l in open(p, errors="replace").read().splitlines():
+                m = re.match(r"F\d+ p=\d id=(\d+) (.*?) type=(\S+) cat=(\S+) vol=(\S+) vm=\S+ sm=(\S+) ", l)
+                if m:
+                    life.setdefault((m.group(2), m.group(1)), []).append(m.group(3, 4, 5, 6))
+                elif l.startswith("FSB "):
+                    fsb.append(l)
+                elif "music_c.ogg" not in l:  # the scenario's dynamic track uses an uninitialised tID
+                    other.append(l)
+            keep = lambda n: not n.startswith(("physics/", "DW_tunnel/bridge/"))
+            sig = {(n, tuple(sorted(set(r)))) for (n, _), r in life.items() if len(r) >= 250 and keep(n)}
+            return sorted(fsb), sig, other
+        fa, sa, oa = load(a); fb, sb, ob = load(b)
+        bad = [w for w, x, y in (("fsb", fa, fb), ("long-lived events", sa, sb), ("music/voice/dialog lines", oa, ob)) if x != y]
+        return (not bad and len(fa) > 0, f"equal ({len(fa)} fsb digests, {len(sa)} long-lived events, {len(oa)} lines)" if not bad else "DIFFER in " + ", ".join(bad))
     if name.startswith("a12b-"):
         # camera positions follow the player body, which settles with real time
         mask = lambda p: [l for l in open(p, errors="replace") if not l.startswith(("i ps pos", "i step_pos"))]
@@ -334,6 +357,7 @@ def ok(p):
 if not quick:
     names = [f"h4seq-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"l9-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
+    names += [f"{k}-{g}" for k in ("s7", "s7sc", "s7p") for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
         names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c")] + ["a12a-02_library"] + ["a9"]
     names += [f"a10b-boot-{g}" for g in ("amnesia", "amfp") if g in games]

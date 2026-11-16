@@ -109,3 +109,136 @@ impl Events {
         o
     }
 }
+
+mod hook {
+    use super::super::instance::Bank;
+    use std::fs::File;
+    use std::io::Write;
+    use std::sync::Mutex;
+    use std::sync::OnceLock;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static OUT: OnceLock<Option<Mutex<File>>> = OnceLock::new();
+    static FRAME: AtomicU64 = AtomicU64::new(0);
+
+    fn out() -> Option<&'static Mutex<File>> {
+        OUT.get_or_init(|| {
+            let p = std::env::var_os("OHPL_S7_DUMP").filter(|p| !p.is_empty())?;
+            File::create(p).ok().map(Mutex::new)
+        })
+        .as_ref()
+    }
+
+    #[cfg(test)]
+    thread_local! {
+        pub(in super::super) static CAPTURE: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    pub(super) fn write(b: &[u8]) {
+        #[cfg(test)]
+        CAPTURE.with(|c| c.borrow_mut().extend_from_slice(b));
+        if let Some(Ok(mut f)) = out().map(Mutex::lock) {
+            let _ = f.write_all(b);
+        }
+    }
+
+    pub(super) fn fnv(b: &[u8]) -> u64 {
+        b.iter().fold(0xcbf2_9ce4_8422_2325, |h, &c| {
+            (h ^ u64::from(c)).wrapping_mul(0x0100_0000_01b3)
+        })
+    }
+
+    impl Bank {
+        pub fn dump_frame(&self, paused: bool) {
+            if out().is_none() {
+                return;
+            }
+            let n = FRAME.fetch_add(1, Ordering::Relaxed);
+            let mut o: Vec<u8> = Vec::new();
+            for i in self.live() {
+                let s = &i.st;
+                let ev = self.events.list.get(s.event);
+                let _ = write!(o, "F{n} p={} id={} ", u8::from(paused), s.id);
+                if let Some(e) = ev {
+                    let _ = o.write_all(&e.name);
+                }
+                let _ = write!(
+                    o,
+                    " type={} cat={} vol={:08x} vm={:08x} sm={:08x} fade={:08x} paused={} stopped={} started={} t={:08x} aud={:08x} voices={}",
+                    s.entry_type,
+                    ev.map_or(-1, |e| e.category_type),
+                    s.volume.to_bits(),
+                    s.volume_mul.to_bits(),
+                    s.speed_mul.to_bits(),
+                    s.fade.to_bits(),
+                    u8::from(s.paused),
+                    u8::from(s.stopped),
+                    u8::from(s.started),
+                    s.time.to_bits(),
+                    s.audibility.to_bits(),
+                    i.voices.len()
+                );
+                for p in &i.param_value {
+                    let _ = write!(o, " {:08x}", p.to_bits());
+                }
+                for v in &i.voices {
+                    let _ = write!(
+                        o,
+                        " [{} {} {:08x} {:08x} {:08x}]",
+                        v.layer,
+                        v.sound,
+                        v.gain.to_bits(),
+                        v.speed.to_bits(),
+                        v.gain_hf.to_bits()
+                    );
+                }
+                let _ = o.write_all(b"\n");
+            }
+            write(&o);
+        }
+    }
+}
+
+#[cfg(test)]
+pub(super) fn captured() -> String {
+    hook::CAPTURE
+        .with(|c| String::from_utf8_lossy(&std::mem::take(&mut *c.borrow_mut())).into_owned())
+}
+
+pub(super) fn text(tag: &[u8], x: &[u8]) {
+    let mut o = tag.to_vec();
+    o.push(b' ');
+    o.extend_from_slice(x);
+    o.push(b'\n');
+    hook::write(&o);
+}
+
+/// `tag name length fnv1a64` of a produced sample or file.
+pub(super) fn blob(tag: &[u8], name: &[u8], d: &[u8]) {
+    let mut o = tag.to_vec();
+    o.push(b' ');
+    o.extend_from_slice(name);
+    o.extend_from_slice(format!(" {} {:016x}\n", d.len(), hook::fnv(d)).as_bytes());
+    hook::write(&o);
+}
+
+pub(super) fn fsb_digests(out: &std::collections::BTreeMap<Vec<u8>, Vec<u8>>, cache: &[u8]) {
+    for name in out.values() {
+        if let Some(d) = super::extract::read_whole(&[cache, name].concat()) {
+            blob(b"FSB", name, &d);
+        }
+    }
+}
+
+/// # Safety
+/// Both are valid for their lengths.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_s7_dump_text(tag: *const u8, tn: usize, t: *const u8, n: usize) {
+    // SAFETY: caller contract.
+    unsafe {
+        text(
+            std::slice::from_raw_parts(tag, tn),
+            std::slice::from_raw_parts(t, n),
+        )
+    }
+}

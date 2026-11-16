@@ -1,12 +1,13 @@
 #ifndef SOMA_RUST_SOUND_H
 #define SOMA_RUST_SOUND_H
 
-// C ABI of rust/src/somasound/ffi.rs.
+// C ABI of rust/src/somasound (ffi_game.rs, ffi_fsb.rs, ffi_voice.rs, host.rs).
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <string>
 
-struct OhplGs5Bank;
 
 struct OhplGs5PlayReq
 {
@@ -17,23 +18,6 @@ struct OhplGs5PlayReq
 	float pos[3];
 	int entry_type;
 	bool stream;
-};
-
-struct OhplGs5Host
-{
-	void *ctx;
-	bool (*valid)(void *, size_t entry, int id);
-	bool (*play)(void *, const OhplGs5PlayReq *, size_t *entry, int *id);
-	void (*stop)(void *, size_t entry);
-	void (*pause)(void *, size_t entry, bool);
-	double (*total_time)(void *, size_t entry);
-	void (*set_looping)(void *, size_t entry, bool);
-	void (*set_filter)(void *, size_t entry, int which, float gain); // 0 HF, 1 LF, 2 send
-	void (*set_position)(void *, size_t entry, const float *pos);
-	void (*set_default_volume)(void *, size_t entry, float);
-	void (*set_default_speed)(void *, size_t entry, float);
-	void (*listener)(void *, float *out9); // position, forward, up
-	void (*entity)(void *, size_t entity, float *out6); // world position, min, max, volume
 };
 
 struct OhplGs5InstState
@@ -55,77 +39,156 @@ struct OhplGs5InstState
 static_assert(sizeof(OhplGs5InstState) == 104 && offsetof(OhplGs5InstState, fade_dest) == 76 && offsetof(OhplGs5InstState, volume_mul_dest) == 52,
 			  "OhplGs5InstState layout");
 
-struct OhplGs5EventInfo
+struct OhplS7Str
 {
-	bool has_files, has_defs, is_3d, one_shot;
-	float min_dist, max_dist;
-	size_t data;
-	size_t param_count;
+	const unsigned char *p;
+	size_t n;
 };
-
-struct OhplGs5ParamDef
-{
-	float min, max, velocity, seek, sustain;
-	int loop_mode, builtin;
-};
-
-struct OhplGs5FilePair
-{
-	const unsigned char *key;
-	size_t key_len;
-	const unsigned char *file;
-	size_t file_len;
-};
-
-extern "C" {
-	OhplGs5Bank *ohpl_gs5_bank_new();
-	void ohpl_gs5_bank_free(OhplGs5Bank *);
-
-	bool ohpl_gs5_ev_mark_project(OhplGs5Bank *, const unsigned char *key, size_t n);
-	bool ohpl_gs5_ev_load_fdp(OhplGs5Bank *, const unsigned char *data, size_t n, bool read_ok, const unsigned char *project, size_t pn,
-							  void (*name)(void *, const unsigned char *, size_t), void *ctx, int *count);
-	void ohpl_gs5_ev_wanted(OhplGs5Bank *, const unsigned char *key, size_t n,
-							void (*sink)(void *, const unsigned char *, size_t, const unsigned char *, size_t), void *ctx);
-	void ohpl_gs5_ev_assign(OhplGs5Bank *, const unsigned char *key, size_t n, const OhplGs5FilePair *pairs, size_t count);
-	int64_t ohpl_gs5_ev_project_len(const unsigned char *name, size_t n);
-	int64_t ohpl_gs5_ev_find(OhplGs5Bank *, const unsigned char *name, size_t n);
-	size_t ohpl_gs5_ev_file_event(OhplGs5Bank *, const unsigned char *file, size_t n, bool looped, bool stream);
-	bool ohpl_gs5_ev_info(OhplGs5Bank *, size_t idx, OhplGs5EventInfo *out);
-	void ohpl_gs5_ev_files(OhplGs5Bank *, size_t idx, void (*sink)(void *, const unsigned char *, size_t), void *ctx);
-	void ohpl_gs5_ev_set_data(OhplGs5Bank *, size_t idx, size_t data);
-	int64_t ohpl_gs5_ev_of_data(OhplGs5Bank *, size_t data);
-	void ohpl_gs5_ev_name(OhplGs5Bank *, size_t idx, void (*sink)(void *, const unsigned char *, size_t), void *ctx);
-	void ohpl_gs5_ev_dump(OhplGs5Bank *, void (*sink)(void *, const unsigned char *, size_t), void *ctx);
-
-	size_t ohpl_gs5_inst_new(OhplGs5Bank *, size_t event, size_t entity, bool has_entity, int entry_type);
-	OhplGs5InstState *ohpl_gs5_inst_state(OhplGs5Bank *, size_t h);
-	void ohpl_gs5_inst_destroy(OhplGs5Bank *, const OhplGs5Host *, size_t h);
-	void ohpl_gs5_inst_play(OhplGs5Bank *, const OhplGs5Host *, size_t h);
-	void ohpl_gs5_inst_stop(OhplGs5Bank *, const OhplGs5Host *, size_t h);
-	void ohpl_gs5_inst_stop_now(OhplGs5Bank *, const OhplGs5Host *, size_t h);
-	void ohpl_gs5_inst_fade_out(OhplGs5Bank *, const OhplGs5Host *, size_t h, float speed);
-	void ohpl_gs5_inst_fade_in_to(OhplGs5Bank *, const OhplGs5Host *, size_t h, float mul, float speed);
-	void ohpl_gs5_inst_set_paused(OhplGs5Bank *, const OhplGs5Host *, size_t h, bool on);
-	void ohpl_gs5_inst_update(OhplGs5Bank *, const OhplGs5Host *, size_t h, float dt);
-	void ohpl_gs5_inst_fade_volume_mul_to(OhplGs5Bank *, size_t h, float dest, float speed);
-	void ohpl_gs5_inst_fade_speed_mul_to(OhplGs5Bank *, size_t h, float dest, float speed);
-	void ohpl_gs5_inst_set_param(OhplGs5Bank *, size_t h, int idx, float value);
-	int ohpl_gs5_inst_param_index(OhplGs5Bank *, size_t h, const unsigned char *name, size_t n);
-	float ohpl_gs5_inst_param_value(OhplGs5Bank *, size_t h, int idx);
-	int ohpl_gs5_inst_param_count(OhplGs5Bank *, size_t h);
-	bool ohpl_gs5_inst_param_def(OhplGs5Bank *, size_t h, int idx, OhplGs5ParamDef *out, void (*name)(void *, const unsigned char *, size_t), void *ctx);
-	float ohpl_gs5_inst_total_time(OhplGs5Bank *, const OhplGs5Host *, size_t h);
-	int ohpl_gs5_inst_voice(OhplGs5Bank *, size_t h, size_t i, float *out3);
-}
-
-struct OhplGs5Voices;
-struct OhplGs5Scape;
 
 struct OhplGs5Str
 {
 	const unsigned char *p;
 	size_t n;
 };
+
+typedef void (*OhplS7Sink)(void *, const unsigned char *, size_t);
+
+struct OhplS7CallArg
+{
+	uint8_t kind; // 0 string, 1 bool, 2 int
+	int32_t i;
+	OhplGs5Str s;
+};
+
+struct OhplGs5AreaDef;
+
+struct OhplS7Host
+{
+	bool (*valid)(size_t, int);
+	bool (*play)(const OhplGs5PlayReq *, size_t *, int *);
+	void (*stop)(size_t);
+	void (*pause)(size_t, bool);
+	double (*total_time)(size_t);
+	void (*set_looping)(size_t, bool);
+	void (*set_filter)(size_t, int, float);
+	void (*set_position)(size_t, const float *);
+	void (*set_default_volume)(size_t, float);
+	void (*set_default_speed)(size_t, float);
+	void (*listener)(float *);
+	void (*entity)(size_t, float *);
+	int (*set_global_volume)(float, unsigned, int);
+	float (*global_volume_of)(int);
+	int (*fade_global_volume)(float, float, unsigned, int, bool);
+	int (*set_global_speed)(float, unsigned, int);
+	float (*global_speed_of)(int);
+	int (*fade_global_speed)(float, float, unsigned, int, bool);
+	void (*fade_out_all)(unsigned, float);
+	void (*music_play)(const unsigned char *, size_t, float, float, bool, bool);
+	void (*music_stop)(float);
+	bool (*music_has_song)();
+	void (*music_fade_volume_mul)(float, float);
+	float (*music_volume_mul)();
+	bool (*entity_active)(uint8_t, int32_t, int32_t);
+	bool (*find_file)(const unsigned char *, size_t, OhplS7Sink, void *);
+	void (*add_resource_dir)(const unsigned char *, size_t);
+	size_t (*data_new)(const unsigned char *, size_t);
+	void (*data_add_sound)(size_t, const unsigned char *, size_t);
+	void (*data_setup)(size_t, float, float, bool, bool);
+	void (*install_updater)();
+	void (*install_hooks)();
+	void (*install_resolver)();
+	const void *(*shell_string)(size_t, unsigned, const unsigned char *, size_t);
+	const void *(*shell_position_ref)(size_t);
+	size_t (*shell_new)(size_t, size_t, int);
+	void (*shell_delete)(size_t);
+	size_t (*shell_handle)(size_t);
+	void (*shell_set_position)(size_t, const float *);
+	size_t (*world_create_sound)(size_t, const unsigned char *, size_t, const unsigned char *, size_t, bool);
+	size_t (*world_sound_by_creation)(size_t, int);
+	void (*object_id)(size_t, unsigned char *);
+	size_t (*se_event)(size_t);
+	void (*se_fade)(size_t, bool, float);
+	void (*se_main_fade_in)(size_t, float, float);
+	int (*se_data_loop)(size_t);
+	float (*se_prop)(size_t, unsigned, float);
+	void (*se_reset_props)(size_t);
+	void (*log)(const unsigned char *, size_t);
+	void (*warning)(const unsigned char *, size_t);
+	size_t (*scape_world)(size_t);
+	void (*scape_areas)(size_t, void (*)(void *, const OhplGs5AreaDef *), void *);
+	size_t (*world_sound_by_name)(size_t, const unsigned char *, size_t);
+	void (*area_state)(size_t, bool *, float *);
+	bool (*camera_pos)(float *);
+	bool (*body_pos)(float *);
+	void (*apply_reverb)(const float *);
+	void (*ent_name)(size_t, OhplS7Sink, void *);
+	const void *(*prefix_ref)(const unsigned char *, size_t);
+	bool (*voice_present)();
+	bool (*voice_play)(const unsigned char *, size_t, uint64_t, void (*)(uint64_t));
+	int (*voice_line_count)(const unsigned char *, size_t);
+	void (*voice_stop_all)();
+	bool (*voice_scene_involving)(const unsigned char *, size_t);
+	bool (*voice_subject_involves)(const unsigned char *, size_t, const unsigned char *, size_t);
+	int (*script_call)(const unsigned char *, size_t, const OhplS7CallArg *, size_t, bool);
+};
+
+extern "C" {
+	size_t ohpl_s7_inst_new(size_t shell, size_t event, const unsigned char *name, size_t n, size_t entity, bool has_entity, int type);
+	OhplGs5InstState *ohpl_s7_inst_state(size_t h);
+	void ohpl_s7_inst_destroy(size_t h);
+	void ohpl_s7_inst_play(size_t h);
+	void ohpl_s7_inst_stop(size_t h);
+	void ohpl_s7_inst_stop_now(size_t h);
+	void ohpl_s7_inst_fade_out(size_t h, float speed);
+	void ohpl_s7_inst_fade_in_to(size_t h, float mul, float speed);
+	void ohpl_s7_inst_fade_volume_mul_to(size_t h, float dest, float speed);
+	void ohpl_s7_inst_fade_speed_mul_to(size_t h, float dest, float speed);
+	void ohpl_s7_inst_update(size_t h, float dt);
+	void ohpl_s7_inst_set_paused(size_t h, bool on);
+	void ohpl_s7_inst_set_param(size_t h, int idx, float v);
+	float ohpl_s7_inst_param_value(size_t h, int idx);
+	int ohpl_s7_inst_param_count(size_t h);
+	int ohpl_s7_inst_param_index(size_t h, const unsigned char *name, size_t n);
+	float ohpl_s7_inst_total_time(size_t h);
+	bool ohpl_s7_inst_is_stopped(size_t h);
+	void ohpl_s7_inst_set_position(size_t shell, size_t h, const float *pos);
+	void ohpl_s7_inst_describe(size_t h, OhplS7Sink sink, void *ctx);
+	void ohpl_s7_event_name(size_t event, OhplS7Sink sink, void *ctx);
+	int64_t ohpl_s7_event_of_data(size_t data);
+	size_t ohpl_s7_resolve(const unsigned char *name, size_t n);
+	void ohpl_s7_preload(const unsigned char *name, size_t n);
+	size_t ohpl_s7_play_gui(const unsigned char *name, size_t n, float volume, int type, bool looped, bool stream);
+	size_t ohpl_s7_play_3d(const unsigned char *name, size_t n, float volume, const float *pos, int type);
+	size_t ohpl_s7_find_instance(const unsigned char *name, size_t n);
+	bool ohpl_s7_is_live(size_t shell, int id);
+	void ohpl_s7_fade_out_all(unsigned types, float speed);
+	void ohpl_s7_update(float dt, bool paused);
+	void ohpl_s7_pause_update(float dt, bool paused);
+	void ohpl_s7_register_natives(void *engine);
+	void ohpl_s7_music_serialize(OhplS7Sink sink, void *ctx);
+	void ohpl_s7_music_deserialize(const unsigned char *data, size_t n);
+	void ohpl_s7_install_host(const void *ops);
+	void ohpl_s7_dialog_update(float dt);
+	void ohpl_s7_dialog_stop_all();
+	void ohpl_s7_register_dialog(void *engine);
+	void ohpl_s7_scape_update(size_t map, float dt);
+	void ohpl_s7_scape_forget(size_t map);
+	void ohpl_s7_scape_set_paused(bool on);
+	void ohpl_s7_scape_describe(OhplS7Sink sink, void *ctx);
+	void ohpl_s7_register_soundscape(void *engine);
+	void ohpl_s7_cache_dir(const unsigned char *game, size_t gn, const unsigned char *sub, size_t sn, void (*sink)(void *, const unsigned char *, size_t), void *ctx);
+	void ohpl_s7_extract_samples(const unsigned char *bank, size_t bn, const unsigned char *cache, size_t cn, const unsigned char *prefix, size_t pn,
+								 const OhplS7Str *samples, size_t count, void (*sink)(void *, const unsigned char *, size_t, const unsigned char *, size_t), void *ctx);
+	void ohpl_s7_dump_text(const unsigned char *tag, size_t tn, const unsigned char *text, size_t n);
+}
+
+inline void OhplS7Text(const char *tag, const std::string &text)
+{
+	ohpl_s7_dump_text((const unsigned char *)tag, strlen(tag), (const unsigned char *)text.data(), text.size());
+}
+
+struct OhplGs5Voices;
+
 
 struct OhplGs5VoiceHost
 {
@@ -191,32 +254,6 @@ struct OhplGs5AreaDef
 	float reverb_amount, reverb_fade;
 };
 
-struct OhplGs5ScapeHost
-{
-	void *ctx;
-	bool (*bg_live)(void *, size_t, int);
-	void (*bg_fade_out)(void *, size_t, float);
-	void (*bg_fade_volume_mul_to)(void *, size_t, float, float);
-	bool (*bg_play)(void *, const unsigned char *, size_t, size_t *, int *);
-	void (*bg_set_volume_mul)(void *, size_t, float);
-	void (*bg_fade_in)(void *, size_t, float);
-	void (*bg_set_paused)(void *, size_t, bool);
-	bool (*world_present)(void *);
-	void (*entity_fade)(void *, const unsigned char *, size_t, bool fade_in, float speed);
-	void (*area)(void *, size_t ent, bool *active, float *matrix16_size3);
-	bool (*camera_pos)(void *, float *);
-	bool (*body_pos)(void *, float *);
-	void (*apply_reverb)(void *, const float *env16);
-};
-
-struct OhplGs5ScapeInfo
-{
-	int rev_type;
-	float rev_amount, rev_room;
-	size_t rev_area_ent;
-	bool rev_has_area;
-};
-
 extern "C" {
 	OhplGs5Voices *ohpl_gs5_voice_new();
 	void ohpl_gs5_voice_free(OhplGs5Voices *);
@@ -267,16 +304,6 @@ extern "C" {
 	void ohpl_gs5_voice_lip_weights(OhplGs5Voices *, const OhplGs5VoiceHost *, void (*sink)(void *, const unsigned char *, size_t, const float *), void *ctx);
 	void ohpl_gs5_spectrum(const float *pcm, size_t n, int channels, int rate, double elapsed, int num, float *out);
 
-	OhplGs5Scape *ohpl_gs5_scape_new();
-	void ohpl_gs5_scape_free(OhplGs5Scape *);
-	void ohpl_gs5_scape_load(OhplGs5Scape *, const OhplGs5AreaDef *defs, size_t count);
-	void ohpl_gs5_scape_update(OhplGs5Scape *, const OhplGs5ScapeHost *, float dt);
-	void ohpl_gs5_scape_set_default_reverb(OhplGs5Scape *, int preset, float fade);
-	void ohpl_gs5_scape_set_paused(OhplGs5Scape *, const OhplGs5ScapeHost *, bool on);
-	const unsigned char *ohpl_gs5_scape_prefix(OhplGs5Scape *, size_t *len);
-	void ohpl_gs5_scape_info(OhplGs5Scape *, OhplGs5ScapeInfo *out);
-	void ohpl_gs5_scape_level(OhplGs5Scape *, size_t i, size_t *ent, bool *has_area, bool *has_bg, void (*name)(void *, const unsigned char *, size_t), void *ctx);
-	const unsigned char *ohpl_gs5_reverb_name(int i, size_t *len);
 
 	bool ohpl_gs5_fsb_mode_supported(unsigned int mode);
 	unsigned char ohpl_gs5_fsb_cached_state(bool has_ogg, bool has_wav);

@@ -90,7 +90,7 @@ above. License file: `HPL2/dependencies/OALWrapper/LICENSE`.
 ## python-fsb5
 
 `soma/src/game/SomaFsb.cpp` follows python-fsb5's FSB5 layout, and
-`soma/src/game/SomaVorbisSetups.h` holds Vorbis setup packets regenerated from its
+`rust/src/somasound/vorbis_setups.rs` holds Vorbis setup packets regenerated from its
 (quality, channels, rate) lookup table. https://github.com/HearthSim/python-fsb5
 
 MIT License, Copyright (c) 2016 Simon Pinfold

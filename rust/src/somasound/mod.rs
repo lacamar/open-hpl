@@ -3,18 +3,27 @@
 //! (`SomaFsb.cpp`). OpenAL, the sound handler and the script registrations stay C++ and are
 //! reached through the host tables in `ffi`.
 
+mod dialog;
 mod dump;
 pub mod events;
-mod ffi;
-mod ffi_scape;
+mod extract;
+mod ffi_fsb;
+mod ffi_game;
 mod ffi_voice;
 pub mod fsb;
+mod game;
+mod glue;
+mod host;
 pub mod instance;
+pub mod music;
+mod natives;
 mod presets;
 pub mod scape;
+mod soundscape;
 #[cfg(test)]
 mod tests;
 pub mod voice;
+mod vorbis_setups;
 
 unsafe extern "C" {
     #[link_name = "powf"]

@@ -1,0 +1,87 @@
+cSoundEntry@ e = cSound_PlayGui("00_05_apartment2/SFX/bed_awaken", true, 0.5f, cVector3f(1,2,3), eSoundEntryType_Gui);
+if(e is null){ __print("null"); } else {
+ __print(e.GetName()+" type="+e.GetType()+" playing="+e.IsPlaying()+" vol="+e.GetVolume()+" pos="+e.GetPosition().x+","+e.GetPosition().y+" paused="+e.GetPaused()+" oneshot="+e.IsOneShot()+" 3d="+e.Is3D()+" params="+e.GetParamNum()+" min="+e.GetMinDistance()+" max="+e.GetMaxDistance()+" first="+e.IsFirstTime());
+ e.SetVolume(0.25f); e.SetPaused(true); __print("p="+e.GetPaused()+" v="+e.GetVolume());
+ e.SetPaused(false); e.SetSpeed(1.5f); __print("s="+e.GetSpeed()+" sm="+e.GetSpeedMul()+" vm="+e.GetVolumeMul());
+ e.SetVolumeMul(0.5f); e.SetSpeedMul(0.75f); __print("vm="+e.GetVolumeMul()+" sm="+e.GetSpeedMul());
+ e.FadeVolumeMulTo(1.0f, 100.0f); e.FadeSpeedMulTo(1.0f, 100.0f); e.SetPosition(cVector3f(4,5,6)); __print("pos="+e.GetPosition().x+","+e.GetPosition().z);
+ e.SetStopDisabled(true); __print("sd="+e.GetStopDisabled()); e.SetStopDisabled(false);
+ for(int i=0;i<e.GetParamNum();i++){ __print(e.GetParamName(i)+" "+e.GetParamMin(i)+" "+e.GetParamMax(i)+" "+e.GetParamValue(i)); }
+ if(e.GetParamNum()>0){ e.SetParam(0, 0.5f); e.SetParam(e.GetParamName(0), 0.25f); __print("p0="+e.GetParamValue(0)); }
+}
+---
+cSoundEntry@ e = cSound_GetEntry("00_05_apartment2/SFX/bed_awaken");
+if(e is null){ __print("none"); } else { __print("got "+e.GetName()+" valid="+cSound_IsValid(e, e.GetId())+" invalid="+cSound_IsValid(e, e.GetId()+12345)+" virt="+e.IsVirtual()); e.FadeIn(0.8f, 100.0f); e.FadeOut(100.0f); }
+---
+cSoundEntry@ e = cSound_GetEntry("00_05_apartment2/SFX/bed_awaken");
+if(e is null){ __print("gone"); } else { __print("still "+e.GetName()+" "+e.IsPlaying()); e.Stop(false); }
+---
+cSoundEntry@ e = cSound_PlaySoundEvent("00_05_apartment2/SFX/bed_awaken", 0.7f, cVector3f(1,0,0), cVector3f(0,0,0), false);
+if(e is null){ __print("null3d"); } else { __print("3d "+e.GetName()+" type="+e.GetType()+" vol="+e.GetVolume()+" 3d="+e.Is3D()); e.Stop(false); }
+cSoundEntry@ f = cSound_Play3D("00_05_apartment2/SFX/bed_awaken", false, 0.6f, cVector3f(2,0,0), 1.0f, 10.0f, eSoundEntryType_World, false, 0, false, false);
+if(f is null){ __print("null play3d"); } else { __print("p3d "+f.GetName()+" type="+f.GetType()+" vol="+f.GetVolume()); f.Stop(false); }
+cSoundEntry@ g = cSound_PlayGuiStream("00_05_apartment2/SFX/bed_awaken", false, 0.3f, cVector3f(0,0,0), eSoundEntryType_Gui);
+if(g is null){ __print("null stream"); } else { __print("stream "+g.GetName()+" vol="+g.GetVolume()); g.Stop(false); }
+cSoundEntry@ h = cSound_PlaySoundEntityGui("00_05_apartment2/SFX/bed_awaken", false, 0.9f, eSoundEntryType_Gui, cVector3f(0,0,0));
+if(h is null){ __print("null ent gui"); } else { __print("entgui "+h.GetName()+" vol="+h.GetVolume()); h.Stop(false); }
+__print("data " + cLux_PlayGuiSoundData("00_05_apartment2/SFX/bed_awaken", eSoundEntryType_Gui, 0.5f, false));
+__print("missing " + cLux_PlayGuiSoundData("no_such_event/none", eSoundEntryType_Gui, 0.5f, false));
+cSound_PreloadProject("00_05_apartment2", false); cSound_PreloadGroup("00_05_apartment2/x", false, false);
+---
+int id = cSound_SetGlobalVolume(0.5f, 1, -1);
+__print("gv " + cSound_GetGlobalVolumeFromId(id));
+int id2 = cSound_FadeGlobalVolume(0.8f, 100.0f, 1, -1, true);
+__print("fv " + (id2 != id));
+int sid = cSound_SetGlobalSpeed(0.9f, 1, -1);
+__print("gs " + cSound_GetGlobalSpeedFromId(sid));
+cSound_FadeGlobalSpeed(1.0f, 100.0f, 1, sid, true);
+cSound_SetGlobalVolume(1.0f, 1, id);
+cSound_FadeOutAll(2, 100.0f, false);
+__print("ids " + cSound_GetGlobalVolumeFromId(9999) + " " + cSound_GetGlobalSpeedFromId(9999));
+---
+cSound_FadeMusicVolumeMul(0.5f, 100.0f); __print("mvm " + cSound_GetMusicVolumeMul());
+cLuxMusicHandler@ m = cLux_GetMusicHandler();
+m.Play("music_a.ogg", true, 0.5f, 1.0f, 2.0f, 1.0f, 3, false, false);
+m.Play("music_a.ogg", true, 0.7f, 1.0f, 2.0f, 1.0f, 5, true, false);
+m.Play("music_b.ogg", false, 0.4f, 1.0f, 0.0f, 1.0f, 7, false, false);
+m.Stop(1.0f, 5);
+m.Stop(1.0f, 7);
+m.Stop(1.0f, 3);
+m.Stop(1.0f, 3);
+tID tid;
+m.AddDynamicTrack(tid, 2, 4, "music_a.ogg", 0.6f, 1.0f, 2.0f);
+m.AddDynamicTrack(tid, 3, 6, "music_c.ogg", 0.6f, 1.0f, 2.0f);
+__print("music done");
+---
+cLuxMusicHandler@ m = cLux_GetMusicHandler();
+tID tid;
+m.RemoveDynamicTrack(tid);
+m.Play("music_a.ogg", true, 0.5f, 1.0f, 2.0f, 1.0f, 99, false, false);
+m.Stop(0.0f, -4);
+__print("music 2");
+---
+cLuxDialogHandler@ d = cLux_GetDialogHandler();
+d.SetVar("x", 3); d.IncVar("x", 2); __print("var " + d.GetVar("x") + " " + d.GetVar("none"));
+d.SetCallbackFunc("");
+d.Begin("t1");
+d.AddBranch("start", "second");
+d.AddBranchPause(0.2f, "");
+d.AddBranchEvent(eLuxDialogBranchEvent(3), 2.4f, "y", "", true);
+d.AddBranchEvent(eLuxDialogBranchEvent(5), 7.0f, "y", "second", true);
+d.AddBranchPause(0.1f, "");
+d.AddBranch("second", "");
+d.AddBranchPause(0.2f, "");
+d.End("");
+__print("active " + d.CharacterIsActive("nobody"));
+---
+cLuxDialogHandler@ d = cLux_GetDialogHandler();
+__print("y " + d.GetVar("y") + " x " + d.GetVar("x"));
+d.Begin("t2"); d.AddBranch("a", ""); d.AddBranchPause(5.0f, ""); d.End("");
+d.Stop("t2");
+d.Begin("t3"); d.AddBranch("a", ""); d.AddBranchPause(5.0f, ""); d.End("");
+d.StopAll();
+d.Begin("t4"); d.AddBranch("a", ""); d.AddBranchPause(0.05f, ""); d.AddResponseOption("Yes", "", 7, ""); d.End("");
+__print("stopped");
+---
+cLux_SetupDefaultGlobalReverb(eSoundReverbPreset(3), 1.0f);
+__print("prefix [" + cLux_GetSoundscapeHandler().GetCurrentSoundPrefix() + "]");
