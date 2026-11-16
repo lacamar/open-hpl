@@ -796,6 +796,8 @@ void cLuxPlayerLookAt::SetActive(bool abX)
 
 cLuxPlayerSanity::cLuxPlayerSanity(cLuxPlayer *apPlayer) : iLuxPlayerHelper(apPlayer, "LuxPlayerSanity")
 {
+	memset(&mS, 0, sizeof(mS));
+
 	mS.mfHitZoomInSpeed = gpBase->mpGameCfg->GetFloat("Player_Sanity","HitZoomInSpeed",0);
 	mS.mfHitZoomOutSpeed = gpBase->mpGameCfg->GetFloat("Player_Sanity","HitZoomOutSpeed",0);
 	mS.mfHitZoomInFOVMul = gpBase->mpGameCfg->GetFloat("Player_Sanity","HitZoomInFOVMul",0);
@@ -1184,6 +1186,8 @@ void cLuxPlayerLantern::SetDisabled(bool abX)
 
 cLuxPlayerDeath::cLuxPlayerDeath(cLuxPlayer *apPlayer) : iLuxPlayerHelper(apPlayer, "PlayerDeath")
 {
+	memset(&mS, 0, sizeof(mS));
+
 	cGui *pGui = gpBase->mpEngine->GetGui();
 
 	mpWhiteModGfx = pGui->CreateGfxFilledRect(cColor(1,1),eGuiMaterial_Modulative);
@@ -1504,6 +1508,8 @@ void cLuxPlayerDeath::ResetGame()
 
 cLuxPlayerLean::cLuxPlayerLean(cLuxPlayer *apPlayer) : iLuxPlayerHelper(apPlayer, "PlayerLean")
 {
+	memset(&mS, 0, sizeof(mS));
+
 	mS.mfMaxMovement = 0.5f;
 	mS.mfMaxRotation = cMath::ToRad(15);
 
