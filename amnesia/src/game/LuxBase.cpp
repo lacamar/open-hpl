@@ -534,162 +534,163 @@ static void cLuxBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessReque
 
 bool cLuxBase::Init(const tString &asCommandline)
 {
-	/////////////////////////////
-	// Parse the command line
-	OhplA13bLog("init begin");
-	OhplA13bLog("step ParseCommandLine");
-	if(ParseCommandLine(asCommandline)==false) return false;
-
-	/////////////////////////////
-	// Init basic app and engine stuff
-	OhplA13bLog("step InitApp");
-	if(InitApp()==false) return false;
-	OhplA13bLog("app saveFolder=%s userCfg=%s userKeys=%s mainCfg=%s gameCfg=%s menuCfg=%s preMenuCfg=%s demoCfg=%s",
-		cString::To8Char(msMainSaveFolder).c_str(), cString::To8Char(msDefaultUserConfigPath).c_str(), cString::To8Char(msDefaultUserKeyConfigPath).c_str(),
-		cString::To8Char(msDefaultMainConfigPath).c_str(), cString::To8Char(msGameConfigPath).c_str(), cString::To8Char(msMenuConfigPath).c_str(),
-		cString::To8Char(msPreMenuConfigPath).c_str(), cString::To8Char(msDemoConfigPath).c_str());
-	OhplA13bLog("app resources=%s materials=%s baseLang=%s gameLang=%s baseLangFolder=%s gameLangFolder=%s story=%s name=%s hard=%d",
-		msResourceConfigPath.c_str(), msMaterialConfigPath.c_str(), msDefaultBaseLanguage.c_str(), msDefaultGameLanguage.c_str(),
-		msBaseLanguageFolder.c_str(), msGameLanguageFolder.c_str(), msCustomStoryPath.c_str(), msGameName.c_str(), (int)mbAllowHardmode);
-	OhplA13bLog("app start=%s/%s/%s base=%s/%s/%s flags=%s/%s", msStartMapFolder.c_str(), msStartMapFile.c_str(), msStartMapPos.c_str(),
-		cString::To8Char(msBaseSavePath).c_str(), cString::To8Char(msBaseConfigPath).c_str(), cString::To8Char(msBaseStatePath).c_str(),
-		cString::To8Char(msCrashFlagPath).c_str(), cString::To8Char(msFirstStartFlagPath).c_str());
-
-	/////////////////////////////
-	// Load the config files
-	OhplA13bLog("step InitMainConfig");
-	if(InitMainConfig()==false) return false;
-	OhplA13bLog("main saveAtExit=%d exitMenu=%d preMenu=%d menu=%d profile=%s", (int)mbSaveConfigAtExit, (int)mbExitMenuDirectly, (int)mbShowPreMenu, (int)mbShowMenu,
-		cString::To8Char(msDefaultProfileName).c_str());
-
-	Log("Version %d.%d \n",kCurrentVersion_Main, kCurrentVersion_Minor);
-
-	#ifdef COPY_PROTECTION_ENABLED
-	/////////////////////////////
-	// Copy Protection check
-	eSerialInputReturnState serialState = AskForSerial();
-	while(serialState!=eSerialInputReturnState_Validated)
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r)
 	{
-		if(serialState==eSerialInputReturnState_WrongKey)
+		switch(op)
 		{
-			cPlatform::CreateMessageBox(_W("Error!"),_W("Invalid Serial!\n"));
-		}
-		else
-		{
-			msErrorMessage = _W("Serial key needed to run game!\n");
-			return false;
-		}
-
-		serialState = AskForSerial();
-	}
-	
-	//calculate the CRC for the serial key.
-	int lCRCKey = 1337;
-	cCRC serialCRC(lCRCKey);
-	for(size_t i=0; i<gsSerialKey.size(); ++i)
-		serialCRC.PutByte(gsSerialKey[i]);	
-	Log(" - s%X-%X", (int)serialCRC.Done(), lCRCKey);
-
-	#endif
-	Log("\n");
-	
-	/////////////////////////////
-	// Init the engine
-	OhplA13bLog("step InitEngine");
-	if(InitEngine()==false) return false;
-
-	/////////////////////////////
-	// Check so all needed features are supported
-	OhplA13bLog("step CheckFeatureSupport");
-	if(CheckFeatureSupport()==false) return false;
-
-	/////////////////////////////
-	// Init the game data and structures
-	OhplA13bLog("step InitGame");
-	if(InitGame()==false) return false;
-
-	if(mpEngine->GetHeadlessControl())
-	{
-		OhplA13bLog("headless handlers run_script set_debug_gbuffer read_gbuffer_stats state render_stats teleport save_game load_game start_map");
-		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
-		pCtrl->RegisterHandler("run_script", cLuxBase_HeadlessCmd_RunScript, this);
-		pCtrl->RegisterHandler("set_debug_gbuffer", cLuxBase_HeadlessCmd_SetDebugGbuffer, this);
-		pCtrl->RegisterHandler("read_gbuffer_stats", cLuxBase_HeadlessCmd_ReadGbufferStats, this);
-		pCtrl->RegisterHandler("state", cLuxBase_HeadlessCmd_State, this);
-		pCtrl->RegisterHandler("render_stats", cLuxBase_HeadlessCmd_RenderStats, this);
-		pCtrl->RegisterHandler("teleport", cLuxBase_HeadlessCmd_Teleport, this);
-		pCtrl->RegisterHandler("save_game", cLuxBase_HeadlessCmd_SaveGame, this);
-		pCtrl->RegisterHandler("load_game", cLuxBase_HeadlessCmd_LoadGame, this);
-		pCtrl->RegisterHandler("start_map", cLuxBase_HeadlessCmd_StartMap, this);
-	}
-
-
-	int lStartMode = ohpl_ga9_start_mode(mbShowPreMenu, mbShowMenu);
-	OhplA13bLog("startmode %d", lStartMode);
-
-	//////////////////////////
-	// Start premenu
-	if(lStartMode == 0)
-	{
-		mpEngine->GetUpdater()->SetContainer("PreMenu");
-	}
-	//////////////////////////
-	// Start menu
-	else if(lStartMode == 1)
-	{
-		///////////////////////////////////////
-		// Draw loading screen
-		mpLoadScreenHandler->DrawMenuScreen();
-
-		mpEngine->GetUpdater()->SetContainer("MainMenu");
-	}
-	//////////////////////////
-	// Start game directly and create default profile
-	else
-	{
-		//Create (if not existing) and set profile.
-		CreateProfile(msDefaultProfileName);
-		SetProfile(msDefaultProfileName);
-
-		//Load user config
-		if(InitUserConfig()==false) return false;
-		
-		//Unlock input if not in window
-		int lLockInput = ohpl_ga9_direct_start_input(mpDebugHandler->GetDebugWindowActive(), mpConfigHandler->mbFullscreen);
-		if (lLockInput >= 0)
-		{
-			if (lLockInput == 1)
+		case eOhplGa13bOp_InitBegin: OhplA13bLog("init begin"); break;
+		case eOhplGa13bOp_StepParse:
+			OhplA13bLog("step ParseCommandLine");
+			r->i = ParseCommandLine(asCommandline);
+			break;
+		case eOhplGa13bOp_StepApp:
+			OhplA13bLog("step InitApp");
+			r->i = InitApp();
+			if(r->i)
 			{
-				mpEngine->GetInput()->GetLowLevel()->LockInput(true);
+				OhplA13bLog("app saveFolder=%s userCfg=%s userKeys=%s mainCfg=%s gameCfg=%s menuCfg=%s preMenuCfg=%s demoCfg=%s",
+					cString::To8Char(msMainSaveFolder).c_str(), cString::To8Char(msDefaultUserConfigPath).c_str(), cString::To8Char(msDefaultUserKeyConfigPath).c_str(),
+					cString::To8Char(msDefaultMainConfigPath).c_str(), cString::To8Char(msGameConfigPath).c_str(), cString::To8Char(msMenuConfigPath).c_str(),
+					cString::To8Char(msPreMenuConfigPath).c_str(), cString::To8Char(msDemoConfigPath).c_str());
+				OhplA13bLog("app resources=%s materials=%s baseLang=%s gameLang=%s baseLangFolder=%s gameLangFolder=%s story=%s name=%s hard=%d",
+					msResourceConfigPath.c_str(), msMaterialConfigPath.c_str(), msDefaultBaseLanguage.c_str(), msDefaultGameLanguage.c_str(),
+					msBaseLanguageFolder.c_str(), msGameLanguageFolder.c_str(), msCustomStoryPath.c_str(), msGameName.c_str(), (int)mbAllowHardmode);
+				OhplA13bLog("app start=%s/%s/%s base=%s/%s/%s flags=%s/%s", msStartMapFolder.c_str(), msStartMapFile.c_str(), msStartMapPos.c_str(),
+					cString::To8Char(msBaseSavePath).c_str(), cString::To8Char(msBaseConfigPath).c_str(), cString::To8Char(msBaseStatePath).c_str(),
+					cString::To8Char(msCrashFlagPath).c_str(), cString::To8Char(msFirstStartFlagPath).c_str());
 			}
-			mpEngine->GetInput()->GetLowLevel()->RelativeMouse(true);
+			break;
+		case eOhplGa13bOp_StepMainConfig:
+			OhplA13bLog("step InitMainConfig");
+			r->i = InitMainConfig();
+			if(r->i)
+				OhplA13bLog("main saveAtExit=%d exitMenu=%d preMenu=%d menu=%d profile=%s", (int)mbSaveConfigAtExit, (int)mbExitMenuDirectly, (int)mbShowPreMenu,
+					(int)mbShowMenu, cString::To8Char(msDefaultProfileName).c_str());
+			break;
+		case eOhplGa13bOp_LogVersion: Log("Version %d.%d \n",kCurrentVersion_Main, kCurrentVersion_Minor); break;
+		case eOhplGa13bOp_Serial:
+			r->i = true;
+			#ifdef COPY_PROTECTION_ENABLED
+			{
+				eSerialInputReturnState serialState = AskForSerial();
+				while(serialState!=eSerialInputReturnState_Validated)
+				{
+					if(serialState==eSerialInputReturnState_WrongKey)
+					{
+						cPlatform::CreateMessageBox(_W("Error!"),_W("Invalid Serial!\n"));
+					}
+					else
+					{
+						msErrorMessage = _W("Serial key needed to run game!\n");
+						r->i = false;
+						break;
+					}
+
+					serialState = AskForSerial();
+				}
+
+				if(r->i)
+				{
+					int lCRCKey = 1337;
+					cCRC serialCRC(lCRCKey);
+					for(size_t i=0; i<gsSerialKey.size(); ++i)
+						serialCRC.PutByte(gsSerialKey[i]);
+					Log(" - s%X-%X", (int)serialCRC.Done(), lCRCKey);
+				}
+			}
+			#endif
+			break;
+		case eOhplGa13bOp_LogNewline: Log("\n"); break;
+		case eOhplGa13bOp_StepEngine:
+			OhplA13bLog("step InitEngine");
+			r->i = InitEngine();
+			break;
+		case eOhplGa13bOp_StepFeature:
+			OhplA13bLog("step CheckFeatureSupport");
+			r->i = CheckFeatureSupport();
+			break;
+		case eOhplGa13bOp_StepGame:
+			OhplA13bLog("step InitGame");
+			r->i = InitGame();
+			break;
+		case eOhplGa13bOp_Headless:
+			if(mpEngine->GetHeadlessControl())
+			{
+				cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
+				OhplA13bLog("headless handlers run_script set_debug_gbuffer read_gbuffer_stats state render_stats teleport save_game load_game start_map");
+				pCtrl->RegisterHandler("run_script", cLuxBase_HeadlessCmd_RunScript, this);
+				pCtrl->RegisterHandler("set_debug_gbuffer", cLuxBase_HeadlessCmd_SetDebugGbuffer, this);
+				pCtrl->RegisterHandler("read_gbuffer_stats", cLuxBase_HeadlessCmd_ReadGbufferStats, this);
+				pCtrl->RegisterHandler("state", cLuxBase_HeadlessCmd_State, this);
+				pCtrl->RegisterHandler("render_stats", cLuxBase_HeadlessCmd_RenderStats, this);
+				pCtrl->RegisterHandler("teleport", cLuxBase_HeadlessCmd_Teleport, this);
+				pCtrl->RegisterHandler("save_game", cLuxBase_HeadlessCmd_SaveGame, this);
+				pCtrl->RegisterHandler("load_game", cLuxBase_HeadlessCmd_LoadGame, this);
+				pCtrl->RegisterHandler("start_map", cLuxBase_HeadlessCmd_StartMap, this);
+			}
+			break;
+		case eOhplGa13bOp_Flags:
+			r->i = (mbShowPreMenu ? eOhplGa13bFlag_PreMenu : 0) | (mbShowMenu ? eOhplGa13bFlag_Menu : 0) |
+					(mpDebugHandler->GetDebugWindowActive() ? eOhplGa13bFlag_DebugWindow : 0) | (mpConfigHandler->mbFullscreen ? eOhplGa13bFlag_Fullscreen : 0);
+			break;
+		case eOhplGa13bOp_StartPre:
+			OhplA13bLog("startmode 0");
+			mpEngine->GetUpdater()->SetContainer("PreMenu");
+			break;
+		case eOhplGa13bOp_StartMenu:
+			OhplA13bLog("startmode 1");
+			mpLoadScreenHandler->DrawMenuScreen();
+			mpEngine->GetUpdater()->SetContainer("MainMenu");
+			break;
+		case eOhplGa13bOp_StartDirect:
+			OhplA13bLog("startmode 2");
+			CreateProfile(msDefaultProfileName);
+			SetProfile(msDefaultProfileName);
+			break;
+		case eOhplGa13bOp_InitUserCfg: r->i = InitUserConfig(); break;
+		case eOhplGa13bOp_LockInput: mpEngine->GetInput()->GetLowLevel()->LockInput(true); break;
+		case eOhplGa13bOp_RelativeMouse: mpEngine->GetInput()->GetLowLevel()->RelativeMouse(true); break;
+		case eOhplGa13bOp_StartGame: StartGame("","", ""); break;
+		case eOhplGa13bOp_InitOver:
+			OhplA13bLog("step InitOver");
+			InitOver();
+			break;
 		}
-
-		//Load map and start game.
-		//By using "" user config values are used.
-		StartGame("","", "");
-	}
-
-	
-	//////////////////////////
-	//The init is over
-	OhplA13bLog("step InitOver");
-	InitOver();
-		
-	return true;
+	};
+	return ohpl_ga13b_init(&call, OhplGa9CallOf<decltype(call)>::Fn());
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxBase::Exit()
 {
-	OhplA13bLog("exit begin saveAtExit=%d", (int)mbSaveConfigAtExit);
-	if(mbSaveConfigAtExit) SaveConfig();
-	OhplA13bLog("step ExitGame");
-	ExitGame();
-	OhplA13bLog("step ExitConfig");
-	ExitConfig();
-	OhplA13bLog("exit end");
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r)
+	{
+		switch(op)
+		{
+		case eOhplGa13bOp_ExitBegin:
+			OhplA13bLog("exit begin saveAtExit=%d", (int)mbSaveConfigAtExit);
+			r->i = mbSaveConfigAtExit ? eOhplGa13bFlag_SaveAtExit : 0;
+			break;
+		case eOhplGa13bOp_SaveConfig: SaveConfig(); break;
+		case eOhplGa13bOp_ExitGame:
+			OhplA13bLog("step ExitGame");
+			Log(" Deleting game modules.\n");
+			break;
+		case eOhplGa13bOp_ModuleCount: r->i = (int64_t)mvModules.size(); break;
+		case eOhplGa13bOp_DeleteModule:
+			Log("   '%s'\n", mvModules[a[0].i]->GetName().c_str());
+			OhplA13bLog("delete module %s", mvModules[a[0].i]->GetName().c_str());
+			hplDelete( mvModules[a[0].i]);
+			break;
+		case eOhplGa13bOp_ExitConfig:
+			OhplA13bLog("step ExitConfig");
+			ExitConfig();
+			break;
+		case eOhplGa13bOp_ExitEnd: OhplA13bLog("exit end"); break;
+		}
+	};
+	ohpl_ga13b_exit(&call, OhplGa9CallOf<decltype(call)>::Fn());
 }
 
 //-----------------------------------------------------------------------
@@ -1183,137 +1184,120 @@ void cLuxBase::SaveConfig()
 
 bool cLuxBase::InitEngine()
 {
-	//////////////////////////////////////////////////////////////////
-	//Prepare to init, create crash_flag just in case it actually crashes :)
-	// Skip this now that we have a launcher.
-	//RaiseCrashFlag();
-
-	OhplA13bLog("engine vars screen=%dx%d display=%d fullscreen=%d caption='%s' renderer=%s color=%s paperWhite=%.9g peakNits=%.9g",
-		mpConfigHandler->mvScreenSize.x, mpConfigHandler->mvScreenSize.y, mpConfigHandler->mlDisplay, (int)mpConfigHandler->mbFullscreen,
-		(msGameName + " Loading...").c_str(), mpConfigHandler->Renderer().c_str(), mpConfigHandler->ColorOutput().c_str(),
-		mpConfigHandler->mfPaperWhite, mpConfigHandler->mfPeakNits);
-	OhplA13bLog("engine sound dev=%d channels=%d streamBuffers=%d streamBufferSize=%d", mpConfigHandler->mlSoundDevID, mpConfigHandler->mlMaxSoundChannels,
-		mpConfigHandler->mlSoundStreamBuffers, mpConfigHandler->mlSoundStreamBufferSize);
+	// crash_flag stays unraised: the launcher replaced it
 	cEngineInitVars vars;
-	vars.mGraphics.mvScreenSize =  mpConfigHandler->mvScreenSize;
-	vars.mGraphics.mlDisplay = mpConfigHandler->mlDisplay;
-	vars.mGraphics.mbFullscreen =  mpConfigHandler->mbFullscreen;
-	vars.mGraphics.msWindowCaption = msGameName + " Loading...";
-	vars.mGraphics.msRenderer = mpConfigHandler->Renderer();
-	vars.mGraphics.msColorOutput = mpConfigHandler->ColorOutput();
-	vars.mGraphics.mfPaperWhite = mpConfigHandler->mfPaperWhite;
-	vars.mGraphics.mfPeakNits = mpConfigHandler->mfPeakNits;
-
-	vars.mSound.mlSoundDeviceID = mpConfigHandler->mlSoundDevID;
-	vars.mSound.mlMaxChannels = mpConfigHandler->mlMaxSoundChannels;
-	vars.mSound.mlStreamBufferCount = mpConfigHandler->mlSoundStreamBuffers;
-	vars.mSound.mlStreamBufferSize = mpConfigHandler->mlSoundStreamBufferSize;
-
-	// Sound device filter set here (if needed)
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r)
+	{
+		if(op <= eOhplGa9Op_CfgSetStr)
+		{
+			OhplGa9CfgCall(mpMainConfig, op, a, r);
+			return;
+		}
+		switch(op)
+		{
+		case eOhplGa13bOp_QGameName: OhplGa9RetS(r, msGameName); break;
+		case eOhplGa13bOp_QRenderer: OhplGa9RetS(r, mpConfigHandler->Renderer()); break;
+		case eOhplGa13bOp_QColor: OhplGa9RetS(r, mpConfigHandler->ColorOutput()); break;
+		case eOhplGa13bOp_QDefaultLang: OhplGa9RetS(r, msDefaultGameLanguage); break;
+		case eOhplGa13bOp_EVars:
+			OhplA13bLog("engine vars screen=%dx%d display=%d fullscreen=%d caption='%s' renderer=%s color=%s paperWhite=%.9g peakNits=%.9g",
+				(int)a[0].i, (int)a[1].i, (int)a[2].i, (int)a[3].i, (OhplGa9GetS(a[8]) + " Loading...").c_str(), OhplGa9GetS(a[6]).c_str(),
+				OhplGa9GetS(a[7]).c_str(), a[4].f, a[5].f);
+			vars.mGraphics.mvScreenSize = cVector2l((int)a[0].i, (int)a[1].i);
+			vars.mGraphics.mlDisplay = (int)a[2].i;
+			vars.mGraphics.mbFullscreen = a[3].i != 0;
+			vars.mGraphics.msWindowCaption = OhplGa9GetS(a[8]) + " Loading...";
+			vars.mGraphics.msRenderer = OhplGa9GetS(a[6]);
+			vars.mGraphics.msColorOutput = OhplGa9GetS(a[7]);
+			vars.mGraphics.mfPaperWhite = a[4].f;
+			vars.mGraphics.mfPeakNits = a[5].f;
+			break;
+		case eOhplGa13bOp_ESound:
+			OhplA13bLog("engine sound dev=%d channels=%d streamBuffers=%d streamBufferSize=%d", (int)a[0].i, (int)a[1].i, (int)a[2].i, (int)a[3].i);
+			vars.mSound.mlSoundDeviceID = (int)a[0].i;
+			vars.mSound.mlMaxChannels = (int)a[1].i;
+			vars.mSound.mlStreamBufferCount = (int)a[2].i;
+			vars.mSound.mlStreamBufferSize = (int)a[3].i;
+			// Sound device filter set here (if needed)
 #if defined(WIN32)
-	iLowLevelSound::SetSoundDeviceNameFilter("software");
+			iLowLevelSound::SetSoundDeviceNameFilter("software");
 #endif
-	
-	//renderer variables
-	OhplA13bLog("static shadowQuality=%d shadowRes=%d parallaxQuality=%d parallax=%d guiScale=%d refraction=%d", mpConfigHandler->mlShadowQuality,
-		mpConfigHandler->mlShadowRes, mpConfigHandler->mlParallaxQuality, (int)mpConfigHandler->mbParallaxEnabled, mpConfigHandler->mlGuiScale,
-		(int)mpConfigHandler->mbRefraction);
-	iRenderer::SetShadowMapQuality((eShadowMapQuality)mpConfigHandler->mlShadowQuality);
-	iRenderer::SetShadowMapResolution((eShadowMapResolution)mpConfigHandler->mlShadowRes);
-	
-	iRenderer::SetParallaxQuality((eParallaxQuality)mpConfigHandler->mlParallaxQuality);
-	iRenderer::SetParallaxEnabled(mpConfigHandler->mbParallaxEnabled);
-
-	// before any cGuiSet exists; sets bake the scale in
-	cGuiSet::SetGlobalGuiScale((float)mpConfigHandler->mlGuiScale);
-
-	iRenderer::SetRefractionEnabled(mpConfigHandler->mbRefraction);
-
-	cRendererDeferred::SetSSAOBufferSizeDiv(mpConfigHandler->mlSSAOResolution==0? 2 : 1);
-	cRendererDeferred::SetSSAONumOfSamples(mpConfigHandler->mlSSAOSamples);
-	cRendererDeferred::SetSSAOLoaded(mpConfigHandler->mbSSAOActive);
-	OhplA13bLog("static ssaoDiv=%d ssaoSamples=%d ssao=%d", mpConfigHandler->mlSSAOResolution==0? 2 : 1, mpConfigHandler->mlSSAOSamples, (int)mpConfigHandler->mbSSAOActive);
-	cRendererDeferred::SetGBufferType((eDeferredGBuffer)mpMainConfig->GetInt("Graphics","GBufferType", eDeferredGBuffer_32Bit));
-	cRendererDeferred::SetNumOfGBufferTextures(mpMainConfig->GetInt("Graphics","NumOfGBufferTextures", 3));
-	cRendererDeferred::SetEdgeSmoothLoaded(mpConfigHandler->mbEdgeSmooth);
-
-	OhplA13bLog("static edgeSmooth=%d occlusionLights=%d sm34off=%d forceCache=%d compressed=0", (int)mpConfigHandler->mbEdgeSmooth,
-		(int)mpConfigHandler->mbOcclusionTestLights, (int)mpConfigHandler->mbForceShaderModel3And4Off, (int)mpConfigHandler->mbForceCacheLoadingAndSkipSaving);
-	cRendererDeferred::SetOcclusionTestLargeLights(mpConfigHandler->mbOcclusionTestLights);
-
-	iLowLevelGraphics::SetForceShaderModel3And4Off(mpConfigHandler->mbForceShaderModel3And4Off);
-
-	//Other vars
-	cResources::SetForceCacheLoadingAndSkipSaving(mpConfigHandler->mbForceCacheLoadingAndSkipSaving);
-	cResources::SetCreateAndLoadCompressedMaps(false);
-	//cResources::SetCreateAndLoadCompressedMaps(mbPTestActivated || mpConfigHandler->mbCreateAndLoadCompressedMaps);
-    
-	/////////////////////////
-	// Create the engine
-	OhplA13bLog("engine create");
-	mpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
-	
-	/////////////////////////
-	// Set up more properties
-	OhplA13bLog("engine vsync=%d adaptive=%d", (int)mpConfigHandler->mbVSync, (int)mpConfigHandler->mbAdaptiveVSync);
-	mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(mpConfigHandler->mbVSync, mpConfigHandler->mbAdaptiveVSync);
-	
-	float fGamma = mpMainConfig->GetFloat("Graphics","Gamma", 1.0f);
-	mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(fGamma);
-	
-	mpEngine->SetLimitFPS(mpMainConfig->GetBool("Engine","LimitFPS", false));
-	mpEngine->SetWaitIfAppOutOfFocus(mpMainConfig->GetBool("Engine","SleepWhenOutOfFocus", true));
-
-	OhplA13bLog("engine material quality=%d filter=%d anisotropy=%.9g", mpConfigHandler->mlTextureQuality, mpConfigHandler->mlTextureFilter, mpConfigHandler->mfTextureAnisotropy);
-	cMaterialManager* pMatMgr = mpEngine->GetResources()->GetMaterialManager();
-	pMatMgr->SetTextureSizeDownScaleLevel(mpConfigHandler->mlTextureQuality);
-	pMatMgr->SetTextureFilter((eTextureFilter)mpConfigHandler->mlTextureFilter);
-	pMatMgr->SetTextureAnisotropy(mpConfigHandler->mfTextureAnisotropy);
-	
-	cSound *pSound = mpEngine->GetSound();
-	pSound->GetLowLevel()->SetVolume(mpMainConfig->GetFloat("Sound","Volume",1.0f));
-
-	/////////////////////////
-	//Load configurations
+			break;
+		case eOhplGa13bOp_EStaticA:
+			OhplA13bLog("static shadowQuality=%d shadowRes=%d parallaxQuality=%d parallax=%d guiScale=%d refraction=%d", (int)a[0].i, (int)a[1].i, (int)a[2].i,
+				(int)a[3].i, (int)a[4].i, (int)a[5].i);
+			iRenderer::SetShadowMapQuality((eShadowMapQuality)a[0].i);
+			iRenderer::SetShadowMapResolution((eShadowMapResolution)a[1].i);
+			iRenderer::SetParallaxQuality((eParallaxQuality)a[2].i);
+			iRenderer::SetParallaxEnabled(a[3].i != 0);
+			// before any cGuiSet exists; sets bake the scale in
+			cGuiSet::SetGlobalGuiScale((float)a[4].i);
+			iRenderer::SetRefractionEnabled(a[5].i != 0);
+			break;
+		case eOhplGa13bOp_EStaticSsao:
+			OhplA13bLog("static ssaoDiv=%d ssaoSamples=%d ssao=%d", (int)a[0].i, (int)a[1].i, (int)a[2].i);
+			cRendererDeferred::SetSSAOBufferSizeDiv((int)a[0].i);
+			cRendererDeferred::SetSSAONumOfSamples((int)a[1].i);
+			cRendererDeferred::SetSSAOLoaded(a[2].i != 0);
+			break;
+		case eOhplGa13bOp_EGBuffer:
+			cRendererDeferred::SetGBufferType((eDeferredGBuffer)a[0].i);
+			cRendererDeferred::SetNumOfGBufferTextures((int)a[1].i);
+			break;
+		case eOhplGa13bOp_EStaticMisc:
+			OhplA13bLog("static edgeSmooth=%d occlusionLights=%d sm34off=%d forceCache=%d compressed=0", (int)a[0].i, (int)a[1].i, (int)a[2].i, (int)a[3].i);
+			cRendererDeferred::SetEdgeSmoothLoaded(a[0].i != 0);
+			cRendererDeferred::SetOcclusionTestLargeLights(a[1].i != 0);
+			iLowLevelGraphics::SetForceShaderModel3And4Off(a[2].i != 0);
+			cResources::SetForceCacheLoadingAndSkipSaving(a[3].i != 0);
+			cResources::SetCreateAndLoadCompressedMaps(false);
+			break;
+		case eOhplGa13bOp_ECreate:
+			OhplA13bLog("engine create");
+			mpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
+			break;
+		case eOhplGa13bOp_EVsync:
+			OhplA13bLog("engine vsync=%d adaptive=%d", (int)a[0].i, (int)a[1].i);
+			mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(a[0].i != 0, a[1].i != 0);
+			break;
+		case eOhplGa13bOp_EGamma: mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(a[0].f); break;
+		case eOhplGa13bOp_ELimitFps: mpEngine->SetLimitFPS(a[0].i != 0); break;
+		case eOhplGa13bOp_EWaitFocus: mpEngine->SetWaitIfAppOutOfFocus(a[0].i != 0); break;
+		case eOhplGa13bOp_EMaterial:
+		{
+			OhplA13bLog("engine material quality=%d filter=%d anisotropy=%.9g", (int)a[0].i, (int)a[1].i, a[2].f);
+			cMaterialManager* pMatMgr = mpEngine->GetResources()->GetMaterialManager();
+			pMatMgr->SetTextureSizeDownScaleLevel((int)a[0].i);
+			pMatMgr->SetTextureFilter((eTextureFilter)a[1].i);
+			pMatMgr->SetTextureAnisotropy(a[2].f);
+			break;
+		}
+		case eOhplGa13bOp_EVolume: mpEngine->GetSound()->GetLowLevel()->SetVolume(a[0].f); break;
+		case eOhplGa13bOp_EResources:
+			OhplA13bLog("engine resourceDirs %s userdir=%s", msResourceConfigPath.c_str(), cString::To8Char(msUserResourceDir).c_str());
 #ifdef USERDIR_RESOURCES
-	OhplA13bLog("engine resourceDirs %s userdir=%s", msResourceConfigPath.c_str(), cString::To8Char(msUserResourceDir).c_str());
-	mpEngine->GetResources()->LoadResourceDirsFile(msResourceConfigPath, msUserResourceDir);
+			mpEngine->GetResources()->LoadResourceDirsFile(msResourceConfigPath, msUserResourceDir);
 #else
-	mpEngine->GetResources()->LoadResourceDirsFile(msResourceConfigPath);
+			mpEngine->GetResources()->LoadResourceDirsFile(msResourceConfigPath);
 #endif
-
-	OhplA13bLog("engine surfaceData %s", msMaterialConfigPath.c_str());
-	mpEngine->GetPhysics()->LoadSurfaceData(msMaterialConfigPath);
-
-	/////////////////////////
-	//Load the start language
-	//if(mbPTestActivated)
-	//	LoadLanguage("english.lang");
-	//else
-		OhplA13bLog("engine language");
-		LoadLanguage(mpMainConfig->GetString("Main", "StartLanguage",msDefaultGameLanguage));
-
-	/////////////////////////
-	//Add extra paths
-	//TO add...?
-
-	/////////////////////////
-	// Misc set up
-	OhplA13bLog("engine fastload");
-	mpEngine->GetResources()->GetMeshManager()->SetFastloadMaterial("fastload_material.mat");
-
-	////////////////////////////////////////////////
-	// Seems there was no crash, set flag to false
-	// Skip crash flag for now, as there is a launcher
-	//LowerCrashFlag();
-
-	////////////////////////////////////////////////
-	// Check stuff matches after engine creation
-	iSoundDeviceIdentifier* pSndDevice = mpEngine->GetSound()->GetLowLevel()->GetCurrentSoundDevice();
-	mpConfigHandler->mlSoundDevID = pSndDevice->GetID();
-	OhplA13bLog("engine sounddev %d", mpConfigHandler->mlSoundDevID);
-	
-	return true;
+			break;
+		case eOhplGa13bOp_ESurface:
+			OhplA13bLog("engine surfaceData %s", msMaterialConfigPath.c_str());
+			mpEngine->GetPhysics()->LoadSurfaceData(msMaterialConfigPath);
+			break;
+		case eOhplGa13bOp_ELanguageBegin: OhplA13bLog("engine language"); break;
+		case eOhplGa13bOp_ELanguage: LoadLanguage(OhplGa9GetS(a[0])); break;
+		case eOhplGa13bOp_EFastload:
+			OhplA13bLog("engine fastload");
+			mpEngine->GetResources()->GetMeshManager()->SetFastloadMaterial("fastload_material.mat");
+			break;
+		case eOhplGa13bOp_ESoundDevice:
+			mpConfigHandler->mlSoundDevID = mpEngine->GetSound()->GetLowLevel()->GetCurrentSoundDevice()->GetID();
+			OhplA13bLog("engine sounddev %d", mpConfigHandler->mlSoundDevID);
+			break;
+		}
+	};
+	return ohpl_ga13b_init_engine(&call, OhplGa9CallOf<decltype(call)>::Fn(), mpConfigHandler->Nums());
 }
 
 void cLuxBase::ExitEngine()
@@ -1323,234 +1307,186 @@ void cLuxBase::ExitEngine()
 
 //-----------------------------------------------------------------------
 
-//Helper functions to more easily create modules.
-
-#define CreateModule( aClassType, asContainer ) (aClassType*)LogModule(AddModule(hplNew(aClassType, () ), asContainer), asContainer);
-#define CreateGlobalModule( aClassType) (aClassType*)LogModule(AddGlobalModule(hplNew(aClassType, () )), "<global>");
-
-static iLuxUpdateable *LogModule(iLuxUpdateable *apModule, const char *asContainer)
-{
-	OhplA13bLog("module %s container=%s", apModule->GetName().c_str(), asContainer);
-	return apModule;
-}
-
-//-----------------------------------------------------------------------
-
 bool cLuxBase::InitGame()
 {
-	///////////////////////////////////////
-	// Demo output
-	#ifdef LUX_DEMO_VERSION
-		Log("- DEMO VERSION -\n");
-	#endif
-
-	///////////////////////////////////////
-	// Create game data
-	OhplA13bLog("game hud");
-	mvHudVirtualCenterSize = cVector2f(800,600);
-	LuxCalcGuiSetScreenOffset(mvHudVirtualCenterSize, mvHudVirtualSize, mvHudVirtualOffset);
-	mvHudVirtualStartPos = cVector3f(-mvHudVirtualOffset.x,-mvHudVirtualOffset.y,0);
-
-	mpGameHudSet = mpEngine->GetGui()->CreateSet("GameHud",NULL);
-	// fixed 800x600 layout: exempt from GuiScale
-	mpGameHudSet->SetVirtualSize(mvHudVirtualSize,-1000, 1000, mvHudVirtualOffset, true);
-	mpGameDebugSet = mpEngine->GetGui()->CreateSet("GameDebug",NULL);
-	mpGameDebugSet->SetDrawPriority(1);
-	mpGameHudSet->SetDrawPriority(0);
-	
-	/////////////////////////////
-	// Load another font if game is in chinese, 
-	// might want to fix this later since some debug text is tiny now
-
-	if (ohpl_ga9_chinese_font((const unsigned char*)msCurrentLanguage.data(), msCurrentLanguage.size()))
-		mpDefaultFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("game_default.fnt");
-	else
-		mpDefaultFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("font_default.fnt");
-
-	///////////////////////////////////////
-	// Create updater containers
-	OhplA13bLog("containers PreMenu MainMenu Inventory Journal Credits LoadScreen");
-	mpEngine->GetUpdater()->AddContainer("PreMenu");
-	mpEngine->GetUpdater()->AddContainer("MainMenu");	
-	mpEngine->GetUpdater()->AddContainer("Inventory");
-	mpEngine->GetUpdater()->AddContainer("Journal");
-	mpEngine->GetUpdater()->AddContainer("Credits");
-	mpEngine->GetUpdater()->AddContainer("LoadScreen");
-#ifdef LUX_DEMO_VERSION
-	mpEngine->GetUpdater()->AddContainer("DemoEnd");
-#endif
-
-	///////////////////////////////////////
-	// Create Modules
-
-	//Global
-	mpInputHandler = CreateGlobalModule( cLuxInputHandler);
-	mpHelpFuncs = CreateGlobalModule( cLuxHelpFuncs);
-	mpSaveHandler = CreateGlobalModule( cLuxSaveHandler);
-	mpScriptHandler = CreateGlobalModule( cLuxScriptHandler);
-	mpProgressLogHandler = CreateGlobalModule( cLuxProgressLogHandler);
-	
-	//Default
-	mpMapHandler = CreateModule( cLuxMapHandler, "Default");
-	mpMapHelper = CreateModule( cLuxMapHelper, "Default");
-	mpPlayer = CreateModule( cLuxPlayer, "Default");
-	mpInsanityHandler = CreateModule( cLuxInsanityHandler, "Default"); 
-	mpDebugHandler = CreateModule( cLuxDebugHandler, "Default");
-	mpEffectRenderer = CreateModule( cLuxEffectRenderer, "Default");
-	mpMusicHandler = CreateModule( cLuxMusicHandler, "Default");
-	mpMessageHandler = CreateModule( cLuxMessageHandler, "Default");
-	mpEffectHandler = CreateModule( cLuxEffectHandler, "Default");
-	mpCompletionCountHandler = CreateModule( cLuxCompletionCountHandler, "Default"); 
-	mpGlobalDataHandler = CreateModule( cLuxGlobalDataHandler, "Default"); 
-	mpHintHandler = CreateModule( cLuxHintHandler, "Default"); 
-	mpPostEffectHandler = CreateModule( cLuxPostEffectHandler, "Default"); 
-	mpAchievementHandler = CreateModule( iLuxAchievementHandler, "Default");
-
-	OhplA13bLog("achievements");
-	InitAchievements();
-	
-	//PreMenu
-	mpPreMenu = CreateModule( cLuxPreMenu, "PreMenu");
-
-	//Main Menu
-	mpMainMenu = CreateModule( cLuxMainMenu, "MainMenu");
-
-	//Inventory
-	mpInventory = CreateModule( cLuxInventory, "Inventory");
-
-	//Journal
-	mpJournal = CreateModule( cLuxJournal, "Journal");
-
-	//Credits
-#ifndef LUX_DEMO_VERSION
-	mpCredits = CreateModule( cLuxCredits, "Credits");
-#endif
-
-	//Demo End
-	mpDemoEnd = NULL;
-#ifdef LUX_DEMO_VERSION
-	mpDemoEnd = CreateModule( cLuxDemoEnd, "DemoEnd");
-#endif
-
-	//Load screen
-	mpLoadScreenHandler = CreateModule( cLuxLoadScreenHandler, "LoadScreen");
-
-
-	OhplA13bLog("reset all");
-	//Make sure all of the modules are reset!
-	mpEngine->GetUpdater()->BroadcastMessageToAll(eUpdateableMessage_Reset);
-
-	///////////////////////////////////////
-	// Create and Add Loaders
-	OhplA13bLog("loader entity cLuxStaticPropLoader StaticProp");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxStaticPropLoader, ("StaticProp")));
-
-	OhplA13bLog("loader entity cLuxPropLoader_Object Object");
-    mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_Object, ("Object")));
-	OhplA13bLog("loader entity cLuxPropLoader_SwingDoor SwingDoor");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_SwingDoor, ("SwingDoor")));
-	OhplA13bLog("loader entity cLuxPropLoader_Lever Lever");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_Lever, ("Lever")));
-	OhplA13bLog("loader entity cLuxPropLoader_Wheel Wheel");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_Wheel, ("Wheel")));
-	OhplA13bLog("loader entity cLuxPropLoader_Lamp Lamp");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_Lamp, ("Lamp")));
-	OhplA13bLog("loader entity cLuxPropLoader_Photocell Photocell");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_Photocell, ("Photocell")));
-	OhplA13bLog("loader entity cLuxPropLoader_MoveObject MoveObject");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_MoveObject, ("MoveObject")));
-	OhplA13bLog("loader entity cLuxPropLoader_Item Item");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_Item, ("Item")));
-	OhplA13bLog("loader entity cLuxPropLoader_Chest Chest");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_Chest, ("Chest")));
-	OhplA13bLog("loader entity cLuxPropLoader_LevelDoor LevelDoor");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_LevelDoor, ("LevelDoor")));
-	OhplA13bLog("loader entity cLuxPropLoader_Button Button");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_Button, ("Button")));
-	OhplA13bLog("loader entity cLuxPropLoader_OilBarrel OilBarrel");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_OilBarrel, ("OilBarrel")));
-	
-#ifndef LUX_DEMO_VERSION
-	OhplA13bLog("loader entity cLuxPropLoader_EmotionStone EmotionStone");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_EmotionStone, ("EmotionStone")));
-	OhplA13bLog("loader entity cLuxPropLoader_NPC NPC");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_NPC, ("NPC")));
-	OhplA13bLog("loader entity cLuxPropLoader_MultiSlider MultiSlider");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_MultiSlider, ("MultiSlider")));
-#endif
-	
-	OhplA13bLog("loader entity cLuxPropLoader_Critter_Bug CritterBug");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_Critter_Bug, ("CritterBug")));
-	OhplA13bLog("loader entity cLuxPropLoader_Critter_Spider CritterSpider");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxPropLoader_Critter_Spider, ("CritterSpider")));
-
-	OhplA13bLog("loader entity cLuxEnemyLoader_Grunt Enemy_Grunt");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxEnemyLoader_Grunt, ("Enemy_Grunt")));
-	OhplA13bLog("loader entity cLuxEnemyLoader_WaterLurker Enemy_WaterLurker");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxEnemyLoader_WaterLurker, ("Enemy_WaterLurker")));
-	OhplA13bLog("loader entity cLuxEnemyLoader_ManPig Enemy_ManPig");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxEnemyLoader_ManPig, ("Enemy_ManPig")));
-
-#ifndef LUX_DEMO_VERSION
-	OhplA13bLog("loader entity cLuxCommentaryIconLoader CommentaryIcon");
-	mpEngine->GetResources()->AddEntityLoader(hplNew(cLuxCommentaryIconLoader, ("CommentaryIcon")));
-#endif
-
-	OhplA13bLog("loader area cLuxAreaNodeLoader_PlayerStart PlayerStart");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaNodeLoader_PlayerStart, ("PlayerStart")));
-	OhplA13bLog("loader area cLuxAreaNodeLoader_PathNode PathNode");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaNodeLoader_PathNode, ("PathNode")));
-	OhplA13bLog("loader area cLuxAreaNodeLoader_PosNode PosNode");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaNodeLoader_PosNode, ("PosNode")));
-
-	OhplA13bLog("loader area cLuxAreaLoader_Script Script");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaLoader_Script, ("Script")));
-	OhplA13bLog("loader area cLuxAreaLoader_Flashback Flashback");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaLoader_Flashback, ("Flashback")));
-#ifndef LUX_DEMO_VERSION
-	OhplA13bLog("loader area cLuxAreaLoader_Ladder Ladder");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaLoader_Ladder, ("Ladder")));
-#endif
-	OhplA13bLog("loader area cLuxAreaLoader_Liquid Liquid");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaLoader_Liquid, ("Liquid")));
-#ifndef LUX_DEMO_VERSION
-	OhplA13bLog("loader area cLuxAreaLoader_Sticky Sticky");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaLoader_Sticky, ("Sticky")));
-#endif
-	OhplA13bLog("loader area cLuxAreaLoader_Insanity Insanity");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaLoader_Insanity, ("Insanity")));
-	OhplA13bLog("loader area cLuxAreaLoader_Examine Examine");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaLoader_Examine, ("Examine")));
-	OhplA13bLog("loader area cLuxAreaLoader_Sign Sign");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaLoader_Sign, ("Sign")));
-	OhplA13bLog("loader area cLuxAreaLoader_SlimeDamage SlimeDamage");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaLoader_SlimeDamage, ("SlimeDamage")));
-	OhplA13bLog("loader area cLuxAreaRopeLoader Rope");
-	mpEngine->GetResources()->AddAreaLoader(hplNew(cLuxAreaRopeLoader, ("Rope")));
-	
-
-	OhplA13bLog("message LoadFonts");
-	RunModuleMessage(eLuxUpdateableMessage_LoadFonts);
-	///////////////////////////////////////////////////////
-	// Run the LoadMainConfig message for game modules, couldn't be run before
-	OhplA13bLog("message LoadMainConfig");
-	RunModuleMessage(eLuxUpdateableMessage_LoadMainConfig);
-
-	return true;
-}
-
-
-//-----------------------------------------------------------------------
-
-void cLuxBase::ExitGame()
-{
-	Log(" Deleting game modules.\n");
-	for(size_t i=0; i<mvModules.size(); ++i)
+	auto module = [&](iLuxUpdateable *apModule, const tString &asContainer) -> iLuxUpdateable*
 	{
-		Log("   '%s'\n", mvModules[i]->GetName().c_str());
-		OhplA13bLog("delete module %s", mvModules[i]->GetName().c_str());
-		hplDelete( mvModules[i]);
-	}
+		if(asContainer.empty()) AddGlobalModule(apModule);
+		else AddModule(apModule, asContainer);
+		OhplA13bLog("module %s container=%s", apModule->GetName().c_str(), asContainer.empty() ? "<global>" : asContainer.c_str());
+		return apModule;
+	};
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t nargs, OhplGa9Ret *r)
+	{
+		switch(op)
+		{
+		case eOhplGa13bOp_QCurrentLang: OhplGa9RetS(r, msCurrentLanguage); break;
+		case eOhplGa13bOp_GHud:
+#ifdef LUX_DEMO_VERSION
+			Log("- DEMO VERSION -\n");
+#endif
+			OhplA13bLog("game hud");
+			mvHudVirtualCenterSize = cVector2f(800,600);
+			LuxCalcGuiSetScreenOffset(mvHudVirtualCenterSize, mvHudVirtualSize, mvHudVirtualOffset);
+			mvHudVirtualStartPos = cVector3f(-mvHudVirtualOffset.x,-mvHudVirtualOffset.y,0);
+
+			mpGameHudSet = mpEngine->GetGui()->CreateSet("GameHud",NULL);
+			// fixed 800x600 layout: exempt from GuiScale
+			mpGameHudSet->SetVirtualSize(mvHudVirtualSize,-1000, 1000, mvHudVirtualOffset, true);
+			mpGameDebugSet = mpEngine->GetGui()->CreateSet("GameDebug",NULL);
+			mpGameDebugSet->SetDrawPriority(1);
+			mpGameHudSet->SetDrawPriority(0);
+			break;
+		case eOhplGa13bOp_GFont: mpDefaultFont = mpEngine->GetResources()->GetFontManager()->CreateFontData(OhplGa9GetS(a[0])); break;
+		case eOhplGa13bOp_GContainers:
+		{
+			tString sLog = "containers";
+			for(size_t i=0; i<nargs; ++i)
+			{
+				sLog += " " + OhplGa9GetS(a[i]);
+				mpEngine->GetUpdater()->AddContainer(OhplGa9GetS(a[i]));
+			}
+			OhplA13bLog("%s", sLog.c_str());
+#ifdef LUX_DEMO_VERSION
+			mpEngine->GetUpdater()->AddContainer("DemoEnd");
+#endif
+			break;
+		}
+		case eOhplGa13bOp_GModule:
+		{
+			tString sC = OhplGa9GetS(a[1]);
+			switch(a[0].i)
+			{
+			case 0: mpInputHandler = (cLuxInputHandler*)module(hplNew(cLuxInputHandler, ()), sC); break;
+			case 1: mpHelpFuncs = (cLuxHelpFuncs*)module(hplNew(cLuxHelpFuncs, ()), sC); break;
+			case 2: mpSaveHandler = (cLuxSaveHandler*)module(hplNew(cLuxSaveHandler, ()), sC); break;
+			case 3: mpScriptHandler = (cLuxScriptHandler*)module(hplNew(cLuxScriptHandler, ()), sC); break;
+			case 4: mpProgressLogHandler = (cLuxProgressLogHandler*)module(hplNew(cLuxProgressLogHandler, ()), sC); break;
+			case 5: mpMapHandler = (cLuxMapHandler*)module(hplNew(cLuxMapHandler, ()), sC); break;
+			case 6: mpMapHelper = (cLuxMapHelper*)module(hplNew(cLuxMapHelper, ()), sC); break;
+			case 7: mpPlayer = (cLuxPlayer*)module(hplNew(cLuxPlayer, ()), sC); break;
+			case 8: mpInsanityHandler = (cLuxInsanityHandler*)module(hplNew(cLuxInsanityHandler, ()), sC); break;
+			case 9: mpDebugHandler = (cLuxDebugHandler*)module(hplNew(cLuxDebugHandler, ()), sC); break;
+			case 10: mpEffectRenderer = (cLuxEffectRenderer*)module(hplNew(cLuxEffectRenderer, ()), sC); break;
+			case 11: mpMusicHandler = (cLuxMusicHandler*)module(hplNew(cLuxMusicHandler, ()), sC); break;
+			case 12: mpMessageHandler = (cLuxMessageHandler*)module(hplNew(cLuxMessageHandler, ()), sC); break;
+			case 13: mpEffectHandler = (cLuxEffectHandler*)module(hplNew(cLuxEffectHandler, ()), sC); break;
+			case 14: mpCompletionCountHandler = (cLuxCompletionCountHandler*)module(hplNew(cLuxCompletionCountHandler, ()), sC); break;
+			case 15: mpGlobalDataHandler = (cLuxGlobalDataHandler*)module(hplNew(cLuxGlobalDataHandler, ()), sC); break;
+			case 16: mpHintHandler = (cLuxHintHandler*)module(hplNew(cLuxHintHandler, ()), sC); break;
+			case 17: mpPostEffectHandler = (cLuxPostEffectHandler*)module(hplNew(cLuxPostEffectHandler, ()), sC); break;
+			case 18: mpAchievementHandler = (iLuxAchievementHandler*)module(hplNew(iLuxAchievementHandler, ()), sC); break;
+			case 19: mpPreMenu = (cLuxPreMenu*)module(hplNew(cLuxPreMenu, ()), sC); break;
+			case 20: mpMainMenu = (cLuxMainMenu*)module(hplNew(cLuxMainMenu, ()), sC); break;
+			case 21: mpInventory = (cLuxInventory*)module(hplNew(cLuxInventory, ()), sC); break;
+			case 22: mpJournal = (cLuxJournal*)module(hplNew(cLuxJournal, ()), sC); break;
+			case 23:
+#ifndef LUX_DEMO_VERSION
+				mpCredits = (cLuxCredits*)module(hplNew(cLuxCredits, ()), sC);
+#endif
+				break;
+			case 24:
+				mpDemoEnd = NULL;
+#ifdef LUX_DEMO_VERSION
+				mpDemoEnd = (cLuxDemoEnd*)module(hplNew(cLuxDemoEnd, ()), sC);
+#endif
+				break;
+			case 25: mpLoadScreenHandler = (cLuxLoadScreenHandler*)module(hplNew(cLuxLoadScreenHandler, ()), sC); break;
+			}
+			break;
+		}
+		case eOhplGa13bOp_GAchievements:
+			OhplA13bLog("achievements");
+			r->i = mpAchievementHandler != NULL;
+			break;
+		case eOhplGa13bOp_GAchievement: mpAchievementHandler->CreateAchievement((eLuxAchievement)a[0].i, OhplGa9GetS(a[1])); break;
+		case eOhplGa13bOp_GAchievementsEnd: mpAchievementHandler->RegisterAchievements(); break;
+		case eOhplGa13bOp_GReset:
+			OhplA13bLog("reset all");
+			// Make sure all of the modules are reset!
+			mpEngine->GetUpdater()->BroadcastMessageToAll(eUpdateableMessage_Reset);
+			break;
+		case eOhplGa13bOp_GLoader:
+		{
+			tString sKey = OhplGa9GetS(a[2]);
+			cResources *pRes = mpEngine->GetResources();
+#define LUX_ENTITY_LOADER(aClass) { OhplA13bLog("loader entity %s %s", #aClass, sKey.c_str()); pRes->AddEntityLoader(hplNew(aClass, (sKey))); }
+#define LUX_AREA_LOADER(aClass) { OhplA13bLog("loader area %s %s", #aClass, sKey.c_str()); pRes->AddAreaLoader(hplNew(aClass, (sKey))); }
+			if(a[0].i == 0)
+			{
+				switch(a[1].i)
+				{
+				case 0: LUX_ENTITY_LOADER(cLuxStaticPropLoader) break;
+				case 1: LUX_ENTITY_LOADER(cLuxPropLoader_Object) break;
+				case 2: LUX_ENTITY_LOADER(cLuxPropLoader_SwingDoor) break;
+				case 3: LUX_ENTITY_LOADER(cLuxPropLoader_Lever) break;
+				case 4: LUX_ENTITY_LOADER(cLuxPropLoader_Wheel) break;
+				case 5: LUX_ENTITY_LOADER(cLuxPropLoader_Lamp) break;
+				case 6: LUX_ENTITY_LOADER(cLuxPropLoader_Photocell) break;
+				case 7: LUX_ENTITY_LOADER(cLuxPropLoader_MoveObject) break;
+				case 8: LUX_ENTITY_LOADER(cLuxPropLoader_Item) break;
+				case 9: LUX_ENTITY_LOADER(cLuxPropLoader_Chest) break;
+				case 10: LUX_ENTITY_LOADER(cLuxPropLoader_LevelDoor) break;
+				case 11: LUX_ENTITY_LOADER(cLuxPropLoader_Button) break;
+				case 12: LUX_ENTITY_LOADER(cLuxPropLoader_OilBarrel) break;
+#ifndef LUX_DEMO_VERSION
+				case 13: LUX_ENTITY_LOADER(cLuxPropLoader_EmotionStone) break;
+				case 14: LUX_ENTITY_LOADER(cLuxPropLoader_NPC) break;
+				case 15: LUX_ENTITY_LOADER(cLuxPropLoader_MultiSlider) break;
+#endif
+				case 16: LUX_ENTITY_LOADER(cLuxPropLoader_Critter_Bug) break;
+				case 17: LUX_ENTITY_LOADER(cLuxPropLoader_Critter_Spider) break;
+				case 18: LUX_ENTITY_LOADER(cLuxEnemyLoader_Grunt) break;
+				case 19: LUX_ENTITY_LOADER(cLuxEnemyLoader_WaterLurker) break;
+				case 20: LUX_ENTITY_LOADER(cLuxEnemyLoader_ManPig) break;
+#ifndef LUX_DEMO_VERSION
+				case 21: LUX_ENTITY_LOADER(cLuxCommentaryIconLoader) break;
+#endif
+				}
+			}
+			else
+			{
+				switch(a[1].i)
+				{
+				case 0: LUX_AREA_LOADER(cLuxAreaNodeLoader_PlayerStart) break;
+				case 1: LUX_AREA_LOADER(cLuxAreaNodeLoader_PathNode) break;
+				case 2: LUX_AREA_LOADER(cLuxAreaNodeLoader_PosNode) break;
+				case 3: LUX_AREA_LOADER(cLuxAreaLoader_Script) break;
+				case 4: LUX_AREA_LOADER(cLuxAreaLoader_Flashback) break;
+#ifndef LUX_DEMO_VERSION
+				case 5: LUX_AREA_LOADER(cLuxAreaLoader_Ladder) break;
+#endif
+				case 6: LUX_AREA_LOADER(cLuxAreaLoader_Liquid) break;
+#ifndef LUX_DEMO_VERSION
+				case 7: LUX_AREA_LOADER(cLuxAreaLoader_Sticky) break;
+#endif
+				case 8: LUX_AREA_LOADER(cLuxAreaLoader_Insanity) break;
+				case 9: LUX_AREA_LOADER(cLuxAreaLoader_Examine) break;
+				case 10: LUX_AREA_LOADER(cLuxAreaLoader_Sign) break;
+				case 11: LUX_AREA_LOADER(cLuxAreaLoader_SlimeDamage) break;
+				case 12: LUX_AREA_LOADER(cLuxAreaRopeLoader) break;
+				}
+			}
+#undef LUX_ENTITY_LOADER
+#undef LUX_AREA_LOADER
+			break;
+		}
+		case eOhplGa13bOp_GMessage:
+			if(a[0].i == 0)
+			{
+				OhplA13bLog("message LoadFonts");
+				RunModuleMessage(eLuxUpdateableMessage_LoadFonts);
+			}
+			else
+			{
+				// LoadMainConfig for game modules, couldn't be run before
+				OhplA13bLog("message LoadMainConfig");
+				RunModuleMessage(eLuxUpdateableMessage_LoadMainConfig);
+			}
+			break;
+		}
+	};
+	return ohpl_ga13b_init_game(&call, OhplGa9CallOf<decltype(call)>::Fn());
 }
 
 //-----------------------------------------------------------------------
@@ -1767,19 +1703,4 @@ void cLuxBase::LowerFirstStartFlag()
 bool cLuxBase::CheckFirstStartFlag()
 {
 	return cPlatform::FileExists(msFirstStartFlagPath);
-}
-
-void cLuxBase::InitAchievements()
-{
-	if(mpAchievementHandler == NULL) return;
-
-	int lId = 0;
-	tString sName;
-	auto emit = [&](uint32_t tag, const void *p, size_t n) { sName = OhplGa9EmitS(p, n); };
-	for(size_t i=0; ohpl_ga9_achievement(i, &lId, OhplGa9EmitOf<decltype(emit)>::Fn(), &emit); ++i)
-	{
-		mpAchievementHandler->CreateAchievement((eLuxAchievement)lId, sName);
-	}
-
-	mpAchievementHandler->RegisterAchievements();
 }

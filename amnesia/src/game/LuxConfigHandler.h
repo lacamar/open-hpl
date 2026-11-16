@@ -39,6 +39,8 @@ public:
 
 	bool ShowRestartWarning(cGuiSet* apSet, void* apObject, tGuiCallbackFunc apCallback);
 
+	const OhplA12bMainNums *Nums() const { return mpN; }
+
 	void SetGameNeedsRestart() { ohpl_a12b_cfg_restart(mlH, 0); }
 
 	tString LangFile(){ return Str(0); }

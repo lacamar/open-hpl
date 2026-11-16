@@ -306,42 +306,42 @@ impl Str {
 
 #[repr(C)]
 pub struct MainNums {
-    load_debug_menu: bool,
-    first_start: bool,
-    force_cache: bool,
-    fullscreen: bool,
-    vsync: bool,
-    adaptive_vsync: bool,
-    fast_physics: bool,
-    fast_static: bool,
-    fast_entity: bool,
-    occlusion_test_lights: bool,
-    shadows_active: bool,
-    world_reflection: bool,
-    refraction: bool,
-    edge_smooth: bool,
-    ssao_active: bool,
-    parallax_enabled: bool,
-    force_sm34_off: bool,
-    screen_width: i32,
-    screen_height: i32,
-    display: i32,
-    shadow_quality: i32,
-    shadow_res: i32,
-    gui_scale: i32,
-    ssao_samples: i32,
-    ssao_resolution: i32,
-    parallax_quality: i32,
-    texture_quality: i32,
-    texture_filter: i32,
-    sound_dev_id: i32,
-    max_sound_channels: i32,
-    sound_stream_buffers: i32,
-    sound_stream_buffer_size: i32,
-    paper_white: f32,
-    peak_nits: f32,
-    texture_anisotropy: f32,
-    create_compressed: bool,
+    pub(super) load_debug_menu: bool,
+    pub(super) first_start: bool,
+    pub(super) force_cache: bool,
+    pub(super) fullscreen: bool,
+    pub(super) vsync: bool,
+    pub(super) adaptive_vsync: bool,
+    pub(super) fast_physics: bool,
+    pub(super) fast_static: bool,
+    pub(super) fast_entity: bool,
+    pub(super) occlusion_test_lights: bool,
+    pub(super) shadows_active: bool,
+    pub(super) world_reflection: bool,
+    pub(super) refraction: bool,
+    pub(super) edge_smooth: bool,
+    pub(super) ssao_active: bool,
+    pub(super) parallax_enabled: bool,
+    pub(super) force_sm34_off: bool,
+    pub(super) screen_width: i32,
+    pub(super) screen_height: i32,
+    pub(super) display: i32,
+    pub(super) shadow_quality: i32,
+    pub(super) shadow_res: i32,
+    pub(super) gui_scale: i32,
+    pub(super) ssao_samples: i32,
+    pub(super) ssao_resolution: i32,
+    pub(super) parallax_quality: i32,
+    pub(super) texture_quality: i32,
+    pub(super) texture_filter: i32,
+    pub(super) sound_dev_id: i32,
+    pub(super) max_sound_channels: i32,
+    pub(super) sound_stream_buffers: i32,
+    pub(super) sound_stream_buffer_size: i32,
+    pub(super) paper_white: f32,
+    pub(super) peak_nits: f32,
+    pub(super) texture_anisotropy: f32,
+    pub(super) create_compressed: bool,
 }
 
 impl MainNums {
@@ -1174,26 +1174,6 @@ pub unsafe extern "C" fn ohpl_ga9_calc_gui_set_offset(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga9_chinese_font(cur: *const u8, n: usize) -> bool {
     base::default_font(units(cur, n)) == "game_default.fnt"
-}
-
-/// # Safety
-/// `id` is writable; `emit` accepts `ectx`. Returns false past the end.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_achievement(
-    index: usize,
-    id: *mut i32,
-    emit: Emit,
-    ectx: Ctx,
-) -> bool {
-    let Some(&(i, name)) = base::ACHIEVEMENTS.get(index) else {
-        return false;
-    };
-    // SAFETY: `id` is writable per the contract.
-    if let Some(p) = unsafe { id.as_mut() } {
-        *p = i;
-    }
-    Out { emit, ctx: ectx }.bytes(1, name.as_bytes());
-    true
 }
 
 /// # Safety

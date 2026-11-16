@@ -171,7 +171,6 @@ public:
 	void ExitEngine();
 
 	bool InitGame();
-	void ExitGame();
 
 	void InitOver();
 
@@ -190,7 +189,6 @@ public:
 	void LowerFirstStartFlag();
 	bool CheckFirstStartFlag();
 
-	void InitAchievements();
 
 	/////////////////////////
 	// Public variables
