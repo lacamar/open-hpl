@@ -28,8 +28,8 @@ mod ffi_s8b;
 pub mod s8b_tone;
 
 mod ffi_s8c;
-pub mod s8c_pfx;
 mod ffi_s8d;
+pub mod s8c_pfx;
 pub mod s8d;
 mod s8d_defaults;
 mod s8d_hud;
