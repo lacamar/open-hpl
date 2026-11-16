@@ -505,11 +505,14 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
+	void (*gfpOhplGuiTrace)(cGuiSet*, const cGuiGfxElement*, const tWString*, const cVector3f&, const cVector2f&, const cColor&, int) = NULL;
+
 	void cGuiSet::DrawGfx(	cGuiGfxElement* apGfx, const cVector3f &avPos, const cVector2f &avSize,
 							const cColor& aColor,eGuiMaterial aMaterial,
 							float afRotationAngle, 
 							bool abUseCustomPivot, const cVector3f& avCustomPivot)
 	{
+		if(gfpOhplGuiTrace) gfpOhplGuiTrace(this, apGfx, NULL, avPos, avSize, aColor, (int)aMaterial);
 		OhplGuiHost host = { this, HostGfxInfo, HostGfxFlush, HostMaterial };
 		OhplGuiFrame frame = { mpCurrentClipRegion, mpCurrentClipRegion ? mpCurrentClipRegion->mRect : cRect2f(), mvDrawOffset };
 
@@ -524,6 +527,7 @@ namespace hpl {
 							const cVector2f &avSize, const cColor& aColor,
 							eFontAlign aAlign, eGuiMaterial aMaterial)
 	{
+		if(gfpOhplGuiTrace) gfpOhplGuiTrace(this, NULL, &asText, avPos, avSize, aColor, (int)aAlign);
 		DrawTextFromCharArry(asText.c_str(), apFont,avSize,avPos,aColor,aMaterial,aAlign);		
 	}
 

@@ -109,6 +109,44 @@ void ohpl_inv_type_name(int type, OhplA11aSink sink, void *ctx);
 void ohpl_inv_set_show_journal(int v);
 int ohpl_inv_cb(uintptr_t token, uintptr_t widget, int lval, float fval);
 
+void ohpl_jrn_new();
+void ohpl_jrn_free();
+void ohpl_jrn_load_fonts();
+void ohpl_jrn_reset();
+void ohpl_jrn_update(float dt);
+void ohpl_jrn_on_enter();
+void ohpl_jrn_on_leave();
+void ohpl_jrn_on_draw(float frame_time);
+uintptr_t ohpl_jrn_get_set();
+void ohpl_jrn_exit_pressed(int instant);
+void ohpl_jrn_exit();
+void ohpl_jrn_set_force_instant_exit(int on);
+void ohpl_jrn_change_state(int state);
+void ohpl_jrn_open_last_read();
+void ohpl_jrn_open_note_idx(int idx, int narration);
+void ohpl_jrn_open_diary_idx(int cat, int idx, int narration);
+void ohpl_jrn_add_note(OhplA11aStr entry, OhplA11aStr image);
+int ohpl_jrn_add_diary(OhplA11aStr entry, OhplA11aStr image);
+int ohpl_jrn_add_quest(OhplA11aStr name, OhplA11aStr entry);
+int ohpl_jrn_disable_quest(OhplA11aStr name);
+int ohpl_jrn_quest_state(OhplA11aStr name);
+int ohpl_jrn_cb(uintptr_t token, uintptr_t widget, int lval, float fval);
+void ohpl_jrn_last_read(int *cat, int *entry, int *type);
+size_t ohpl_jrn_note_count();
+void ohpl_jrn_note_field(size_t n, int field, OhplA11aSink sink, void *ctx);
+size_t ohpl_jrn_cont_count();
+void ohpl_jrn_cont_type(size_t n, OhplA11aSink sink, void *ctx);
+size_t ohpl_jrn_diary_count(size_t cont);
+void ohpl_jrn_diary_field(size_t cont, size_t n, int field, OhplA11aSink sink, void *ctx);
+size_t ohpl_jrn_quest_count();
+void ohpl_jrn_quest_field(size_t n, int field, OhplA11aSink sink, void *ctx);
+int ohpl_jrn_quest_active(size_t n);
+void ohpl_jrn_load_begin(int cat, int entry, int type);
+void ohpl_jrn_load_note(OhplA11aStr name, OhplA11aStr text, OhplA11aStr icon, OhplA11aStr image);
+void ohpl_jrn_load_container(OhplA11aStr type);
+void ohpl_jrn_load_diary(OhplA11aStr name, OhplA11aStr text, OhplA11aStr icon, OhplA11aStr image);
+void ohpl_jrn_load_quest(int active, OhplA11aStr name, OhplA11aStr nameEntry, OhplA11aStr textEntry);
+
 }
 
 inline std::string OhplInvStr(cLuxInventory_Item *apItem, int alWhich)

@@ -1,0 +1,60 @@
+diary idx 2
+diary idx 1
+quest add 1
+quest again 0
+quest add 1
+quest add 1
+quest off 1
+quest off again 0
+added last=0,-1,-1 notes=3 conts=2 quests=3
+  n[0] Note_CH01L03_VillageTales_Name Note_CH01L03_VillageTales_Text papernote_icon.tga papernote_large.tga
+  n[1] Note_CH01L11_AccountOfHowling_Name Note_CH01L11_AccountOfHowling_Text letter_icon.tga letter_large.tga
+  n[2] Note_CH01L03_WineCellar_Name Note_CH01L03_WineCellar_Text old_note_icon.tga old_note_large.tga
+  c[0] CH01L03_Daniel 2
+    d[0] Diary_CH01L03_Daniel_Name1 Diary_CH01L03_Daniel_Text1 diary_page_icon.tga diary_page_large.tga
+    d[1] Diary_CH01L03_Daniel_Name2 Diary_CH01L03_Daniel_Text2 diary_page_icon.tga diary_page_large.tga
+  c[1] CH01L06_Daniel02 1
+    d[0] Diary_CH01L06_Daniel02_Name1 Diary_CH01L06_Daniel02_Text1 diary_page_icon.tga diary_page_large.tga
+  q[0] 1 00Trail Quest_00Trail_Name Quest_00Trail_Text
+  q[1] 0 02Web Quest_02Web_Name Quest_02Web_Text
+  q[2] 1 03Books Quest_03Books_Name Quest_03Books_Text
+reset last=0,-1,-1 notes=0 conts=0 quests=0
+restored last=0,-1,-1 notes=3 conts=2 quests=3
+  n[0] Note_CH01L03_VillageTales_Name Note_CH01L03_VillageTales_Text papernote_icon.tga papernote_large.tga
+  n[1] Note_CH01L11_AccountOfHowling_Name Note_CH01L11_AccountOfHowling_Text letter_icon.tga letter_large.tga
+  n[2] Note_CH01L03_WineCellar_Name Note_CH01L03_WineCellar_Text old_note_icon.tga old_note_large.tga
+  c[0] CH01L03_Daniel 2
+    d[0] Diary_CH01L03_Daniel_Name1 Diary_CH01L03_Daniel_Text1 diary_page_icon.tga diary_page_large.tga
+    d[1] Diary_CH01L03_Daniel_Name2 Diary_CH01L03_Daniel_Text2 diary_page_icon.tga diary_page_large.tga
+  c[1] CH01L06_Daniel02 1
+    d[0] Diary_CH01L06_Daniel02_Name1 Diary_CH01L06_Daniel02_Text1 diary_page_icon.tga diary_page_large.tga
+  q[0] 1 00Trail Quest_00Trail_Name Quest_00Trail_Text
+  q[1] 0 02Web Quest_02Web_Name Quest_02Web_Text
+  q[2] 1 03Books Quest_03Books_Name Quest_03Books_Text
+final last=0,1,1 notes=3 conts=2 quests=3
+  n[0] Note_CH01L03_VillageTales_Name Note_CH01L03_VillageTales_Text papernote_icon.tga papernote_large.tga
+  n[1] Note_CH01L11_AccountOfHowling_Name Note_CH01L11_AccountOfHowling_Text letter_icon.tga letter_large.tga
+  n[2] Note_CH01L03_WineCellar_Name Note_CH01L03_WineCellar_Text old_note_icon.tga old_note_large.tga
+  c[0] CH01L03_Daniel 2
+    d[0] Diary_CH01L03_Daniel_Name1 Diary_CH01L03_Daniel_Text1 diary_page_icon.tga diary_page_large.tga
+    d[1] Diary_CH01L03_Daniel_Name2 Diary_CH01L03_Daniel_Text2 diary_page_icon.tga diary_page_large.tga
+  c[1] CH01L06_Daniel02 1
+    d[0] Diary_CH01L06_Daniel02_Name1 Diary_CH01L06_Daniel02_Text1 diary_page_icon.tga diary_page_large.tga
+  q[0] 1 00Trail Quest_00Trail_Name Quest_00Trail_Text
+  q[1] 0 02Web Quest_02Web_Name Quest_02Web_Text
+  q[2] 1 03Books Quest_03Books_Name Quest_03Books_Text
+diary idx 3
+end last=-1,1,0 notes=3 conts=2 quests=4
+  n[0] Note_CH01L03_VillageTales_Name Note_CH01L03_VillageTales_Text papernote_icon.tga papernote_large.tga
+  n[1] Note_CH01L11_AccountOfHowling_Name Note_CH01L11_AccountOfHowling_Text letter_icon.tga letter_large.tga
+  n[2] Note_CH01L03_WineCellar_Name Note_CH01L03_WineCellar_Text old_note_icon.tga old_note_large.tga
+  c[0] CH01L03_Daniel 3
+    d[0] Diary_CH01L03_Daniel_Name1 Diary_CH01L03_Daniel_Text1 diary_page_icon.tga diary_page_large.tga
+    d[1] Diary_CH01L03_Daniel_Name2 Diary_CH01L03_Daniel_Text2 diary_page_icon.tga diary_page_large.tga
+    d[2] Diary_CH01L03_Daniel_Name3 Diary_CH01L03_Daniel_Text3 diary_page_icon.tga diary_page_large.tga
+  c[1] CH01L06_Daniel02 1
+    d[0] Diary_CH01L06_Daniel02_Name1 Diary_CH01L06_Daniel02_Text1 diary_page_icon.tga diary_page_large.tga
+  q[0] 1 00Trail Quest_00Trail_Name Quest_00Trail_Text
+  q[1] 0 02Web Quest_02Web_Name Quest_02Web_Text
+  q[2] 1 03Books Quest_03Books_Name Quest_03Books_Text
+  q[3] 1 04FindChemicals Quest_04FindChemicals_Name Quest_04FindChemicals_Text

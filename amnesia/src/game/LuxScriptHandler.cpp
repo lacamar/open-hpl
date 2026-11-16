@@ -2126,17 +2126,12 @@ void __stdcall cLuxScriptHandler::CompleteQuest(string& asName, string& asNameAn
 
 bool __stdcall cLuxScriptHandler::QuestIsCompleted(string& asName)
 {
-	cLuxQuestNote *pQuest = gpBase->mpJournal->GetQuestNote(asName);
-	if(pQuest==NULL) return false;
-
-	return pQuest->mbActive==false;
+	return gpBase->mpJournal->QuestState(asName) == 0;
 }
 
 bool __stdcall cLuxScriptHandler::QuestIsAdded(string& asName)
 {
-	cLuxQuestNote *pQuest = gpBase->mpJournal->GetQuestNote(asName);
-	if(pQuest==NULL) return false;
-	return true;
+	return gpBase->mpJournal->QuestState(asName) >= 0;
 }
 
 void __stdcall cLuxScriptHandler::SetNumberOfQuestsInMap(int alNumberOfQuests)

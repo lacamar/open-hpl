@@ -1,4 +1,5 @@
 #include "LuxA11bDump.h"
+#include "LuxA11cDump.h"
 
 #include "LuxHintHandler.h"
 #include "LuxMessageHandler.h"
@@ -141,6 +142,7 @@ static void LogState(int alFrame)
 
 void OhplA11Tick()
 {
+	OhplA11cTick();
 	if(OhplA11Enabled() == false) return;
 	if(gpBase->mpMapHandler == NULL || gpBase->mpMapHandler->GetCurrentMap() == NULL) { glFrame = 0; return; }
 

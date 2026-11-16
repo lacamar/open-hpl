@@ -152,6 +152,13 @@ half() {
 		done
 	fi
 	if has amnesia; then
+		# the journal driver opens the journal container, which stops the default container's modules: own run
+		for M in $DUMP_AMNESIA; do
+			rm -f "$OUT/a11c-$M-$impl.txt"
+			ENVX="$extra OHPL_A11C_DUMP=$OUT/a11c-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a11c-$impl-amnesia.json" --map "$M"
+		done
+	fi
+	if has amnesia; then
 		# the menu dump lists the profiles on disk, so it gets a scratch no sweep has touched
 		rm -f "$OUT/a9-$impl.txt"; rm -rf "$SCRATCH-a9-$impl"
 		OPENHPL_SCRATCH_ROOT=$SCRATCH-a9-$impl scripts/soma-init.sh amnesia > /dev/null 2> "$OUT/init-a9-$impl.log"
@@ -175,7 +182,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -203,6 +210,9 @@ if [ -n "$SAVES" ] && has amnesia; then
 	INVIMPL=${IMPLS##* }
 	env OPENHPL_SCRATCH_ROOT="$SCRATCH-$INVIMPL" OHPL_IMPL="$INVIMPL" OHPL_PLAY_NAME="ohpl-gate-inv-$$" \
 		timeout 900 scripts/a11a-inv-roundtrip.sh "$BUILD/Amnesia.bin.aarch64" "$BUILD/Amnesia.bin.aarch64" "$OUT/inv-rt" > "$OUT/inv-rt.log" 2>&1
+	JRNSAVE=$BUILD/Amnesia.bin.aarch64; [ -x "$BASELINE/Amnesia.cpp.bin.aarch64" ] && JRNSAVE=$BASELINE/Amnesia.cpp.bin.aarch64
+	env OPENHPL_SCRATCH_ROOT="$SCRATCH-$INVIMPL" OHPL_IMPL="$INVIMPL" OHPL_PLAY_NAME="ohpl-gate-jrn-$$" \
+		timeout 900 scripts/a11c-journal-roundtrip.sh "$JRNSAVE" "$BUILD/Amnesia.bin.aarch64" "$OUT/jrn-rt" > "$OUT/jrn-rt.log" 2>&1
 	if [ -d "$BASELINE/gui" ]; then
 		env OPENHPL_SCRATCH_ROOT="$SCRATCH-$INVIMPL" OHPL_IMPL="$INVIMPL" OHPL_PLAY_NAME="ohpl-gate-inv-$$" \
 			timeout 900 scripts/a11a-inv-gui.sh "$BUILD/Amnesia.bin.aarch64" "$OUT/inv-gui" > "$OUT/inv-gui.log" 2>&1
@@ -300,7 +310,7 @@ def same(name, a, b):
         # camera positions follow the player body, which settles with real time
         mask = lambda p: [l for l in open(p, errors="replace") if not l.startswith(("i ps pos", "i step_pos"))]
         return (mask(a) == mask(b), "equal (camera positions masked)" if mask(a) == mask(b) else "DIFFER")
-    if name.startswith("a11b-"):
+    if name.startswith(("a11b-", "a11c-")):
         # runs stop at different frames: compare up to the last whole frame of the shorter one
         la, lb = (open(x, errors="replace").read().splitlines() for x in (a, b))
         n = min(len(la), len(lb))
@@ -324,7 +334,7 @@ if not quick:
     names = [f"h4seq-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"l9-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
-        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b")] + ["a12a-02_library"] + ["a9"]
+        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c")] + ["a12a-02_library"] + ["a9"]
     names += [f"a10b-boot-{g}" for g in ("amnesia", "amfp") if g in games]
     if "amnesia" in games:
         names += ["a10b-play-amnesia"]
@@ -365,6 +375,7 @@ if saves:
             bad += not m or m.group(1) != "0" or m.group(2) != "0"
     if "amnesia" in games:
         for label, f, rx in (("inventory save round trip", "inv-rt.log", r"A==B: True\s+B==C: True"),
+                             ("journal save round trip (notes, diaries, quests)", "jrn-rt.log", r"A==B: True\s+B==C: True"),
                              ("inventory GUI vs C++ baseline", "inv-gui-cmp.log", r"steps \d+ failed 0")):
             p = os.path.join(out, f)
             if f == "inv-gui-cmp.log" and not os.path.isdir(os.path.join(base, "gui")):
