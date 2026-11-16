@@ -470,9 +470,12 @@ int32_t InputHostCall(void *, uint32_t alOp, OhplS5Io *io)
 	case kOhplS5In_BROADCAST_ACTION: cSomaLuxGame::Get()->BroadcastAction(io->i[0], io->i[1] != 0); return 0;
 	case kOhplS5In_BROADCAST_ANALOG: cSomaLuxGame::Get()->BroadcastAnalog(io->i[0], cVector3f(io->f[0], io->f[1], io->f[2])); return 0;
 	case kOhplS5In_MOUSE_REL:
-		io->i[0] = cSomaLuxGame::Get()->mvMouseRel.x;
-		io->i[1] = cSomaLuxGame::Get()->mvMouseRel.y;
+	{
+		cVector2l vRel = cSomaLuxGame::Get()->MouseRel();
+		io->i[0] = vRel.x;
+		io->i[1] = vRel.y;
 		return 0;
+	}
 	case kOhplS5In_SCREEN_HEIGHT: io->f[0] = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat().y; return 0;
 	case kOhplS5In_USER_CONFIG:
 	{

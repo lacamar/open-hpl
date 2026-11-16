@@ -34,6 +34,8 @@ unsafe extern "C" {
     pub fn ohpl_as2_g_arg_addr(g: *mut c_void, i: u32) -> *mut c_void;
     pub fn ohpl_as2_g_ret_loc(g: *mut c_void) -> *mut c_void;
     pub fn ohpl_as2_g_set_ret_addr(g: *mut c_void, p: *mut c_void);
+    pub fn ohpl_as2_g_set_ret_object(g: *mut c_void, p: *mut c_void);
+    fn ohpl_as2_type_has_method_name(t: *mut c_void, name: *const c_char) -> c_int;
     pub fn ohpl_as2_g_arg_count(g: *mut c_void) -> u32;
     pub fn ohpl_as2_g_arg_type_id(g: *mut c_void, i: u32) -> c_int;
     pub fn ohpl_as2_g_aux(g: *mut c_void) -> *mut c_void;
@@ -141,6 +143,7 @@ pub struct Frame {
     objs: [*mut c_void; MAX_ARGS],
     pub ret: *mut c_void,
     pub ret_addr: std::cell::Cell<Option<*mut c_void>>,
+    pub ret_obj: std::cell::Cell<Option<*mut c_void>>,
 }
 
 impl Frame {
@@ -170,6 +173,7 @@ impl Frame {
             objs: [std::ptr::null_mut(); MAX_ARGS],
             ret,
             ret_addr: std::cell::Cell::new(None),
+            ret_obj: std::cell::Cell::new(None),
         }
     }
 
@@ -244,6 +248,11 @@ impl Frame {
     pub fn ret_ref<T>(&self, p: *mut T) {
         self.ret_addr.set(Some(p.cast()));
     }
+
+    /// `SetReturnObject`: a handle return that takes its own reference.
+    pub fn ret_object(&self, p: *mut c_void) {
+        self.ret_obj.set(Some(p));
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -274,6 +283,9 @@ unsafe extern "C" fn tramp(g: *mut c_void) {
         (n.f)(&fr);
         if let Some(p) = fr.ret_addr.get() {
             ohpl_as2_g_set_ret_addr(g, p);
+        }
+        if let Some(p) = fr.ret_obj.get() {
+            ohpl_as2_g_set_ret_object(g, p);
         }
     }
 }
@@ -571,6 +583,12 @@ impl Type {
                 })
                 .collect()
         }
+    }
+
+    pub fn has_method_name(self, name: &[u8]) -> bool {
+        let n = cs(name);
+        // SAFETY: string outlives the call.
+        unsafe { ohpl_as2_type_has_method_name(self.0, n.as_ptr()) != 0 }
     }
 
     pub fn has_method(self, decl: &[u8]) -> bool {

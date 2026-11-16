@@ -16,6 +16,7 @@ void* ohpl_as2_g_arg_object(void* g, unsigned i);
 void* ohpl_as2_g_arg_addr(void* g, unsigned i);
 void* ohpl_as2_g_ret_loc(void* g);
 void ohpl_as2_g_set_ret_addr(void* g, void* p);
+void ohpl_as2_g_set_ret_object(void* g, void* p);
 unsigned ohpl_as2_g_arg_count(void* g);
 int ohpl_as2_g_arg_type_id(void* g, unsigned i);
 void* ohpl_as2_g_aux(void* g);
@@ -46,6 +47,7 @@ const char* ohpl_as2_type_name(void* t);
 unsigned ohpl_as2_type_prop_count(void* t);
 int ohpl_as2_type_prop(void* t, unsigned i, const char** name, int* type_id, int* offset);
 void* ohpl_as2_type_method_by_decl(void* t, const char* decl);
+int ohpl_as2_type_has_method_name(void* t, const char* name);
 
 /* functions */
 const char* ohpl_as2_func_name(void* f);

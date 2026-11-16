@@ -7,15 +7,15 @@ use std::sync::OnceLock;
 
 #[repr(C)]
 pub struct Io {
-    p: [*mut c_void; 2],
-    i: [i32; 4],
-    f: [f32; 4],
-    s: *const u8,
-    n: usize,
+    pub(super) p: [*mut c_void; 2],
+    pub(super) i: [i32; 4],
+    pub(super) f: [f32; 4],
+    pub(super) s: *const u8,
+    pub(super) n: usize,
 }
 
 impl Io {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             p: [std::ptr::null_mut(); 2],
             i: [0; 4],
@@ -25,7 +25,7 @@ impl Io {
         }
     }
 
-    fn text(&self) -> Vec<u8> {
+    pub(super) fn text(&self) -> Vec<u8> {
         if self.s.is_null() {
             return Vec::new();
         }
@@ -36,8 +36,8 @@ impl Io {
 
 #[repr(C)]
 pub struct Host {
-    ctx: *mut c_void,
-    call: unsafe extern "C" fn(*mut c_void, u32, *mut Io) -> i32,
+    pub(super) ctx: *mut c_void,
+    pub(super) call: unsafe extern "C" fn(*mut c_void, u32, *mut Io) -> i32,
 }
 
 // SAFETY: the table is installed once, lives for the process and is only used on the main thread.
