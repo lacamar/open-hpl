@@ -29,8 +29,6 @@
 
 //----------------------------------------------
 
-class cLuxEnemyPathfinder;
-class cLuxEnemyMover;
 class cLuxProp_Object;
 	  
 //----------------------------------------------
@@ -68,8 +66,8 @@ class cLuxEnemyMover_SaveData : public iSerializable
 {
 	kSerializableClassInit(cLuxEnemyMover_SaveData)
 public:
-	void FromMover(cLuxEnemyMover *apMover);
-	void ToMover(cLuxEnemyMover *apMover);
+	void FromMover(uint64_t alNav);
+	void ToMover(uint64_t alNav);
 
 	bool mbTurning;
 	float mfTurnGoalAngle;
@@ -88,9 +86,9 @@ class cLuxEnemyPathfinder_SaveData : public iSerializable
 {
 	kSerializableClassInit(cLuxEnemyPathfinder_SaveData)
 public:
-	void FromPathfinder(cLuxEnemyPathfinder *apPathfinder);
-	void ToPathfinder(cLuxEnemyPathfinder *apPathfinder);
-	void SetupPathfinder(cLuxEnemyPathfinder *apPathfinder);
+	void FromPathfinder(uint64_t alNav);
+	void ToPathfinder(uint64_t alNav);
+	void SetupPathfinder(uint64_t alNav);
 	
 	bool mbMoving;
 	cVector3f mvMoveGoalPos;
@@ -256,6 +254,18 @@ enum eLuxEnemyStateEvent
 
 //----------------------------------------------
 
+enum eLuxEnemyMoveState
+{
+	eLuxEnemyMoveState_Backward,
+	eLuxEnemyMoveState_Stopped,
+	eLuxEnemyMoveState_Walking,
+	eLuxEnemyMoveState_Running,
+
+	eLuxEnemyMoveState_LastEnum
+};
+
+//----------------------------------------------
+
 enum eLuxEnemyMoveSpeed
 {
 	eLuxEnemyMoveSpeed_Walk,
@@ -368,8 +378,6 @@ class iLuxEnemy : public iLuxEntity
 typedef iLuxEntity super_class;
 friend class iLuxEnemyLoader;
 friend class cLuxEnemy_WorldCollisionCallback;
-friend class cLuxEnemyMover;
-friend class cLuxEnemyPathfinder;
 public:	
 	iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyType aEnemyType);
 	virtual ~iLuxEnemy();
@@ -411,6 +419,7 @@ public:
 	static bool Ga3StateCb(void *apEnemy, int alState, int alEvent, const OhplGa3Msg *apMessage);
 	static bool Ga3DetectedCb(void *apEnemy);
 	OhplA4Host A4Host();
+	void A4bDump();
 	static int A4Call(void *apEnemy, unsigned alOp, OhplA4Io *apIo);
 	cLuxEnemyPatrolNode* Ga3PatrolNode(int alIdx){ return (alIdx >= 0 && alIdx < (int)mvPatrolNodes.size()) ? &mvPatrolNodes[alIdx] : NULL;}
 
@@ -524,8 +533,9 @@ public:
 
 	iCollideShape* GetAttackShape(int alIdx){ return mvAttackShapes[alIdx];}
 
-	cLuxEnemyPathfinder* GetPathFinder(){ return mpPathfinder;}
-	cLuxEnemyMover* GetMover(){ return mpMover;}
+	bool HasNav(){ return mNav != 0;}
+	cAINodeContainer* GetNodeContainer(){ return (cAINodeContainer*)ohpl_a4b_nav_nc(mNav);}
+	cAINode* GetPathFront(){ return (cAINode*)ohpl_a4b_nav_path_front(mNav);}
 	
 	//////////////////////
 	// Debug
@@ -663,7 +673,6 @@ protected:
 
 	cVector3f mvStartPosition;
 
-	cAINode *mpLastSearchNode;
 
 	cVector3f mvLastKnownPlayerPos;
 	float mfLastPlayerPosCount;
@@ -772,8 +781,12 @@ protected:
 	std::vector<cBillboard*> mvBillboards;
 	std::vector<cBeam*> mvBeams;
 	
-	cLuxEnemyPathfinder *mpPathfinder;
-	cLuxEnemyMover *mpMover;
+	uint64_t mNav;
+	std::vector<cAINode*> mvNavScratch;
+	cRendererCallbackFunctions *mpNavDraw;
+	void UpdateMoveAnimation();
+	bool WaterStepCheck();
+	void WaterStepFx();
 
 	std::vector<iCollideShape*> mvAttackShapes;
 

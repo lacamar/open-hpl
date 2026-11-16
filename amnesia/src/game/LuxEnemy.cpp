@@ -21,9 +21,6 @@
 
 #include <cstring>
 
-#include "LuxEnemyMover.h"
-#include "LuxEnemyPathfinder.h"
-
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
 #include "LuxMapHandler.h"
@@ -478,7 +475,8 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mA4.animSpeedMul = 1;
 	mA4.useMoveAnimWhenOver = true;
 
-	mpLastSearchNode = NULL;
+	mNav = 0;
+	mpNavDraw = NULL;
 
 	mfDamageCount =0;
 
@@ -629,8 +627,10 @@ iLuxEnemy::~iLuxEnemy()
 	////////////////////
 	// Destroy Helpers
 	ohpl_ga3_queue_free(mpGa3Queue);
-	hplDelete(mpPathfinder);
-	hplDelete(mpMover);
+	if(uintptr_t lAStar = ohpl_a4b_nav_free(mNav))
+	{
+		pWorld->DestroyAStarHandler((cAStarHandler*)lAStar);
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -645,17 +645,8 @@ void iLuxEnemy::SetupAfterLoad(cWorld *apWorld)
 {
 	///////////////////////
 	// Create helpers
-	mpMover = hplNew(cLuxEnemyMover, (this,mpCharBody));
-	mpPathfinder = hplNew(cLuxEnemyPathfinder, (this,mpMover));
-	mGa3Ctx.mover = &mpMover->mS;
-	mGa3Ctx.pfMoving = &mpPathfinder->mbMoving;
-	mGa3Ctx.pfGoal = &mpPathfinder->mvMoveGoalPos.x;
-	mGa3Ctx.pfWin = &mpPathfinder->mWin;
-	
-	///////////////////////
-	// Setup implemented 
-	mpPathfinder->SetupAfterLoad(apWorld);
-	mpMover->SetupAfterLoad(apWorld);
+	mNav = ohpl_a4b_nav_new();
+	ohpl_a4b_nav_fill_ctx(mNav, &mGa3Ctx);
 
 	///////////////////////
 	// Setup implemented 
@@ -670,7 +661,12 @@ void iLuxEnemy::SetupAfterLoad(cWorld *apWorld)
 
 void iLuxEnemy::AfterWorldLoad()
 {
-	mpPathfinder->AfterWorldLoad();
+	cWorld *pWorld = mpMap->GetWorld();
+	tString sType = cString::SetFileExt(cString::GetFileName(msFileName),"");
+	cAINodeContainer *pNodeContainer = pWorld->CreateAINodeContainer( sType, "Default", mpCharBody->GetSize(), false, 2 , 6 , 5.0f,0.41f);
+	if(pNodeContainer==NULL)
+		Error("No node container found for enemy '%s'\n", GetName().c_str());
+	ohpl_a4b_nav_set_nodes(mNav, (uintptr_t)pNodeContainer, pNodeContainer ? (uintptr_t)pWorld->CreateAStarHandler(pNodeContainer) : 0);
 
 	OnAfterWorldLoad();
 }
@@ -688,6 +684,7 @@ void iLuxEnemy::OnUpdate(float afTimeStep)
 {
 	OhplA4Host h = A4Host();
 	ohpl_a4_on_update(&mA4,&h,afTimeStep);
+	A4bDump();
 }
 
 //-----------------------------------------------------------------------
@@ -699,7 +696,10 @@ void iLuxEnemy::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 
 	//pPhysicsWorld->RenderShapeDebugGeometry(mpCharBody->GetCurrentShape(), mpCharBody->GetMoveMatrix(), apFunctions->GetLowLevelGfx(),cColor(1,1));
 
-	mpPathfinder->OnRenderSolid(apFunctions);
+	OhplGa3Host host = Ga3Host();
+	mpNavDraw = apFunctions;
+	cVector3f vBodyPos = mpCharBody->GetPosition();
+	ohpl_a4b_nav_render(mNav, &host, &vBodyPos.x);
 
 	apFunctions->GetLowLevelGfx()->DrawSphere(mvLastKnownPlayerPos, 0.3f, cColor(1,0,0));
 
@@ -960,7 +960,7 @@ void iLuxEnemy::SetDisabled(bool abX)
 
 	if(mbDisabled)
 	{
-		mpPathfinder->Stop();
+		ohpl_a4b_nav_stop(mNav);
 	}
 }
 
@@ -986,6 +986,10 @@ float iLuxEnemy::DrawDebug(cGuiSet *apSet,iFontData *apFont,float afStartY)
 {
 	if(mbDisabled) return afStartY;
 
+	OhplGa3Host host = Ga3Host();
+	OhplGa3MoverParams params;
+	Ga3MoverParams(params);
+
     apSet->DrawFont(apFont, cVector3f(5,afStartY,10),13,cColor(1,1), _W("Name: '%ls'"),cString::To16Char(msName).c_str());
 	afStartY += 14;
 
@@ -998,12 +1002,12 @@ float iLuxEnemy::DrawDebug(cGuiSet *apSet,iFontData *apFont,float afStartY)
 
 	apSet->DrawFont(apFont, cVector3f(5,afStartY,10),13,cColor(1,1), 
 		_W("  Health: %f FOVMul: %f DistFromStart: %f StuckCounter: %f Speed: %f SpeedPercent: %f Vel: %f"),
-		mfHealth, mfFOVMul, cMath::Vector3Dist(mpCharBody->GetFeetPosition(), mvStartPosition), mpMover->GetStuckCounter(),mpMover->GetMoveSpeed(), mpMover->GetWantedSpeedAmount());
+		mfHealth, mfFOVMul, cMath::Vector3Dist(mpCharBody->GetFeetPosition(), mvStartPosition), ohpl_a4b_mover_stuck(mNav), ohpl_ga3_mover_move_speed(&host), ohpl_ga3_mover_wanted_speed_amount(&host));
 	afStartY += 14;
 
 	apSet->DrawFont(apFont, cVector3f(5,afStartY,10),13,cColor(1,1), 
 		_W("  DistToPlayer: %f PlayerDirAmount: %f CurrentPatrolNode: %d MoverSpeedMul: %f"), DistToPlayer(), GetPlayerMovementTowardEnemyAmount(), 
-						mlCurrentPatrolNode, mpMover->CalculateSpeedMul(1.0f/60.0f));
+						mlCurrentPatrolNode, ohpl_ga3_mover_speed_mul(mNav, &params, &host));
 	afStartY += 14;
 
 	//apSet->DrawFont(apFont, cVector3f(5,afStartY,10),13,cColor(1,1), 
@@ -1164,7 +1168,7 @@ cAINode *iLuxEnemy::GetSearchForPlayerNode(int alMaxIterations, float afMaxAngle
 	OhplGa3Host host = Ga3Host();
 	const float vParams[4] = {mfPlayerSearchMaxAngle, mfPlayerSearchMinDistMul, mfPlayerSearchMaxDistMul, 0};
 	int lIdx = ohpl_ga3_search_for_player_node(&mGa3Ctx, &host, alMaxIterations, afMaxAngleMul, afMinDistMul, afMaxDistMul, &vParams);
-	return lIdx < 0 ? NULL : mpPathfinder->mvGa3Nodes[lIdx];
+	return lIdx < 0 ? NULL : (cAINode*)ohpl_a4b_nav_cand(mNav, lIdx);
 }
 
 //-----------------------------------------------------------------------
@@ -1174,7 +1178,7 @@ cAINode *iLuxEnemy::GetPatrolAroundPlayerNode(int alMaxIterations, float afMaxAn
 	OhplGa3Host host = Ga3Host();
 	const float vParams[3] = {mfPlayerPatrolMaxAngle, mfPlayerPatrolMinDist, mfPlayerPatrolMaxDist};
 	int lIdx = ohpl_ga3_patrol_around_player_node(&mGa3Ctx, &host, alMaxIterations, afMaxAngleMul, afMinDistMul, afMaxDistMul, &vParams, &mvStartPosition.x);
-	return lIdx < 0 ? NULL : mpPathfinder->mvGa3Nodes[lIdx];
+	return lIdx < 0 ? NULL : (cAINode*)ohpl_a4b_nav_cand(mNav, lIdx);
 }
 
 //-----------------------------------------------------------------------
@@ -1443,6 +1447,87 @@ kEndSerialize()
 
 //-----------------------------------------------------------------------
 
+kBeginSerializeBase(cLuxEnemyMover_SaveData)
+
+kSerializeVar(mbTurning, eSerializeType_Bool)
+kSerializeVar(mfTurnGoalAngle, eSerializeType_Float32)
+kSerializeVar(mfTurnSpeed, eSerializeType_Float32)
+kSerializeVar(mfTurnBreakAcc, eSerializeType_Float32)
+
+kSerializeVar(mfStuckCounter, eSerializeType_Float32)
+
+kSerializeVar(mlMoveState, eSerializeType_Int32)
+kSerializeVar(mbOverideMoveState, eSerializeType_Bool)
+
+kEndSerialize()
+
+void cLuxEnemyMover_SaveData::FromMover(uint64_t alNav)
+{
+	OhplA4bMoverSave s;
+	ohpl_a4b_mover_get(alNav, &s);
+	mbTurning = s.turning;
+	mfTurnGoalAngle = s.turnGoalAngle;
+	mfTurnSpeed = s.turnSpeed;
+	mfTurnBreakAcc = s.turnBreakAcc;
+	mfStuckCounter = s.stuckCounter;
+	mlMoveState = s.moveState;
+	mbOverideMoveState = s.overrideMoveState;
+}
+
+void cLuxEnemyMover_SaveData::ToMover(uint64_t alNav)
+{
+	OhplA4bMoverSave s;
+	s.turning = mbTurning;
+	s.turnGoalAngle = mfTurnGoalAngle;
+	s.turnSpeed = mfTurnSpeed;
+	s.turnBreakAcc = mfTurnBreakAcc;
+	s.stuckCounter = mfStuckCounter;
+	s.moveState = mlMoveState;
+	s.overrideMoveState = mbOverideMoveState;
+	ohpl_a4b_mover_set(alNav, &s);
+}
+
+//-----------------------------------------------------------------------
+
+kBeginSerializeBase(cLuxEnemyPathfinder_SaveData)
+
+kSerializeVar(mbMoving, eSerializeType_Bool)
+kSerializeVar(mvMoveGoalPos, eSerializeType_Vector3f)
+
+kSerializeVarContainer(mvPathNodeIds, eSerializeType_Int32)
+
+kEndSerialize()
+
+void cLuxEnemyPathfinder_SaveData::FromPathfinder(uint64_t alNav)
+{
+	mbMoving = ohpl_a4b_nav_moving(alNav);
+	ohpl_a4b_nav_goal(alNav, &mvMoveGoalPos.x);
+
+	for(size_t i=0, lN = ohpl_a4b_nav_path_len(alNav); i<lN; ++i)
+	{
+		mvPathNodeIds.Add(((cAINode*)ohpl_a4b_nav_path_at(alNav, i))->GetID());
+	}
+}
+
+void cLuxEnemyPathfinder_SaveData::ToPathfinder(uint64_t alNav)
+{
+	ohpl_a4b_nav_set_goal(alNav, mbMoving, &mvMoveGoalPos.x);
+}
+
+void cLuxEnemyPathfinder_SaveData::SetupPathfinder(uint64_t alNav)
+{
+	cAINodeContainer *pNodeContainer = (cAINodeContainer*)ohpl_a4b_nav_nc(alNav);
+	if(pNodeContainer==NULL) return;
+
+	for(size_t i=0; i<mvPathNodeIds.Size(); ++i)
+	{
+		cAINode *pNode = pNodeContainer->GetNodeFromID(mvPathNodeIds[i]);
+		if(pNode) ohpl_a4b_nav_path_push(alNav, (uintptr_t)pNode);
+	}
+}
+
+//-----------------------------------------------------------------------
+
 iLuxEnemy_SaveData::~iLuxEnemy_SaveData()
 {
 }
@@ -1615,8 +1700,8 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	///////////////////////
 	//Helpers
-	pData->mMover.FromMover(mpMover);
-	pData->mPathfinder.FromPathfinder(mpPathfinder);
+	pData->mMover.FromMover(mNav);
+	pData->mPathfinder.FromPathfinder(mNav);
 
 	///////////////////////
 	//Character body
@@ -1628,8 +1713,11 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 //-----------------------------------------------------------------------
 
+void OhplA4bOnLoad();
+
 void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 {
+	OhplA4bOnLoad();
 	///////////////////////
 	// Init
 	super_class::LoadFromSaveData(apSaveData);
@@ -1782,8 +1870,8 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 
 	///////////////////////
 	//Helpers
-	pData->mMover.ToMover(mpMover);
-	pData->mPathfinder.ToPathfinder(mpPathfinder);
+	pData->mMover.ToMover(mNav);
+	pData->mPathfinder.ToPathfinder(mNav);
 
 	///////////////////////
 	//Character body
@@ -1800,7 +1888,7 @@ void iLuxEnemy::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 	super_class::SetupSaveData(apSaveData);
 	iLuxEnemy_SaveData *pData = static_cast<iLuxEnemy_SaveData*>(apSaveData);
 
-	cAINodeContainer *pNodeContainer =  mpPathfinder->GetNodeContainer();
+	cAINodeContainer *pNodeContainer =  GetNodeContainer();
 
 	///////////////////////
 	//Patrol nodes
@@ -1828,7 +1916,7 @@ void iLuxEnemy::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 
 	///////////////////////
 	//Helpers
-	pData->mPathfinder.SetupPathfinder(mpPathfinder);
+	pData->mPathfinder.SetupPathfinder(mNav);
 }
 
 //-----------------------------------------------------------------------
@@ -1842,11 +1930,62 @@ void iLuxEnemy::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 
 //-----------------------------------------------------------------------
 
+bool iLuxEnemy::WaterStepCheck()
+{
+	if(IsInWater()==false || GetWaterSurfaceData()==NULL) return false;
+
+	cAnimationState *pAnim = GetCurrentAnimation();
+	if(pAnim==NULL) return false;
+
+	for(int i=0; i<pAnim->GetEventNum(); ++i)
+	{
+		cAnimationEvent *pEvent = pAnim->GetEvent(i);
+		if(pEvent->mType != eAnimationEventType_Step) continue;
+
+		if(	pEvent->mfTime >= pAnim->GetPreviousTimePosition() &&
+			pEvent->mfTime < pAnim->GetTimePosition())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void iLuxEnemy::WaterStepFx()
+{
+	cSurfaceImpactData *pImpact = GetWaterSurfaceData()->GetImpactDataFromSpeed(3.0f);
+	cVector3f vEffectPos = mpCharBody->GetPosition();
+	vEffectPos.y = GetWaterSurfaceY()+0.01f;
+
+	cWorld *pWorld = GetMap()->GetWorld();
+
+	if(pImpact->GetPSName() != "")
+	{
+		cParticleSystem *pPS = pWorld->CreateParticleSystem("Splash", pImpact->GetPSName(),1);
+		if(pPS) pPS->SetPosition(vEffectPos);
+	}
+
+	if(pImpact->GetSoundName() != "")
+	{
+		cSoundEntity *pSound = pWorld->CreateSoundEntity("Splash",pImpact->GetSoundName(),true);
+		if(pSound) pSound->SetPosition(vEffectPos);
+	}
+}
+
+void iLuxEnemy::UpdateMoveAnimation()
+{
+	OhplGa3Host host = Ga3Host();
+	OhplGa3MoverParams params;
+	Ga3MoverParams(params);
+	ohpl_ga3_mover_update_move_animation(mNav, &params, &host);
+}
+
 OhplGa3Host iLuxEnemy::Ga3Host()
 {
 	OhplGa3Host host;
 	host.ctx = this;
 	host.call = &iLuxEnemy::Ga3Call;
+	host.nav = mNav;
 	return host;
 }
 
@@ -1880,6 +2019,17 @@ bool iLuxEnemy::Ga3DetectedCb(void *apEnemy)
 static void Ga3Put(float *apDest, const cVector3f &avV)
 {
 	apDest[0] = avV.x; apDest[1] = avV.y; apDest[2] = avV.z;
+}
+
+static void *Ga3Ptr(const OhplGa3Io *apIo, int alSlot)
+{
+	return (void*)(((uintptr_t)(uint32_t)apIo->i[alSlot + 1] << 32) | (uint32_t)apIo->i[alSlot]);
+}
+
+static void Ga3SetPtr(OhplGa3Io *apIo, int alSlot, const void *apPtr)
+{
+	apIo->i[alSlot] = (int)(uint32_t)(uintptr_t)apPtr;
+	apIo->i[alSlot + 1] = (int)(uint32_t)((uintptr_t)apPtr >> 32);
 }
 
 static cVector3f Ga3Get(const float *apSrc)
@@ -1995,39 +2145,48 @@ int iLuxEnemy::Ga3Call(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 	case eOhplGa3Op_ActivateSoundAllowed:	return gpBase->mpGlobalDataHandler->GetEnemyActivateSoundAllowed() ? 1 : 0;
 	case eOhplGa3Op_SetActivateSoundMade:	gpBase->mpGlobalDataHandler->SetEnemyActivateSoundMade(); return 0;
 
-	case eOhplGa3Op_PfMoveTo:		return pEnemy->mpPathfinder->MoveTo(Ga3Get(apIo->v[0])) ? 1 : 0;
-	case eOhplGa3Op_PfStop:			pEnemy->mpPathfinder->Stop(); return 0;
-	case eOhplGa3Op_PfPathLen:		return (int)pEnemy->mpPathfinder->mlstPathNodes.size();
-	case eOhplGa3Op_PfPathBack:		Ga3Put(apIo->v[0], pEnemy->mpPathfinder->mlstPathNodes.back()->GetPosition()); return 0;
-	case eOhplGa3Op_PfPathPop:		pEnemy->mpPathfinder->mlstPathNodes.pop_back(); return 0;
-	case eOhplGa3Op_PfPathClear:	pEnemy->mpPathfinder->mlstPathNodes.clear(); return 0;
-
-	case eOhplGa3Op_NcPresent:		return pEnemy->mpPathfinder->mpNodeContainer ? 1 : 0;
-	case eOhplGa3Op_NcCount:		return pEnemy->mpPathfinder->mpNodeContainer->GetNodeNum();
-	case eOhplGa3Op_NcIterBegin:
+	case eOhplGa3Op_AStarPath:
 	{
-		cLuxEnemyPathfinder *pPf = pEnemy->mpPathfinder;
-		pPf->mlGa3SkipMode = apIo->i[0];
-		pPf->mvGa3Nodes.clear();
-		cAINodeIterator it = pPf->mpNodeContainer->GetNodeIterator(Ga3Get(apIo->v[0]), apIo->f[0]);
-		while(it.HasNext()) pPf->mvGa3Nodes.push_back(it.Next());
-		return (int)pPf->mvGa3Nodes.size();
+		pEnemy->mvNavScratch.clear();
+		tAINodeList lstNodes;
+		bool bRet = static_cast<cAStarHandler*>(Ga3Ptr(apIo, 0))->GetPath(Ga3Get(apIo->v[0]), Ga3Get(apIo->v[1]), &lstNodes);
+		pEnemy->mvNavScratch.assign(lstNodes.begin(), lstNodes.end());
+		apIo->i[2] = (int)pEnemy->mvNavScratch.size();
+		return bRet ? 1 : 0;
 	}
-	case eOhplGa3Op_NcIterNode:
+	case eOhplGa3Op_ScratchAt:		Ga3SetPtr(apIo, 0, pEnemy->mvNavScratch[apIo->i[0]]); return 0;
+	case eOhplGa3Op_NodePos:		Ga3Put(apIo->v[0], static_cast<cAINode*>(Ga3Ptr(apIo, 0))->GetPosition()); return 0;
+	case eOhplGa3Op_NcAtCenter:		return static_cast<cAINodeContainer*>(Ga3Ptr(apIo, 0))->GetNodeIsAtCenter() ? 1 : 0;
+	case eOhplGa3Op_NcNodeCount:	return static_cast<cAINodeContainer*>(Ga3Ptr(apIo, 0))->GetNodeNum();
+	case eOhplGa3Op_NcNodeAt:		Ga3SetPtr(apIo, 0, static_cast<cAINodeContainer*>(Ga3Ptr(apIo, 0))->GetNode(apIo->i[2])); return 0;
+	case eOhplGa3Op_NcCollideY:		apIo->f[0] = static_cast<cAINodeContainer*>(Ga3Ptr(apIo, 0))->GetCollideSize().y; return 0;
+	case eOhplGa3Op_NodeEdgeNum:	return static_cast<cAINode*>(Ga3Ptr(apIo, 0))->GetEdgeNum();
+	case eOhplGa3Op_NodeEdgeNode:	Ga3SetPtr(apIo, 0, static_cast<cAINode*>(Ga3Ptr(apIo, 0))->GetEdge(apIo->i[2])->mpNode); return 0;
+	case eOhplGa3Op_NcIter:
 	{
-		cLuxEnemyPathfinder *pPf = pEnemy->mpPathfinder;
-		cAINode *pNode = pPf->mvGa3Nodes[apIo->i[0]];
-		cAINode *pSkip = NULL;
-		if(pPf->mlGa3SkipMode == 1)			pSkip = pEnemy->mpLastSearchNode;
-		else if(pPf->mlGa3SkipMode == 2)	pSkip = pPf->mpGa3ExplicitSkip;
-		if(pNode == pSkip) return 0;
-		if(apIo->i[1] && pEnemy->mpMap->AINodeIsUsedAsGoal(pNode)) return 0;
-		Ga3Put(apIo->v[0], pNode->GetPosition());
-		return 1;
+		pEnemy->mvNavScratch.clear();
+		cAINodeIterator it = static_cast<cAINodeContainer*>(Ga3Ptr(apIo, 0))->GetNodeIterator(Ga3Get(apIo->v[0]), apIo->f[0]);
+		while(it.HasNext()) pEnemy->mvNavScratch.push_back(it.Next());
+		return (int)pEnemy->mvNavScratch.size();
 	}
-	case eOhplGa3Op_NcFreePath:
-		return pEnemy->mpPathfinder->mpNodeContainer->FreePath(Ga3Get(apIo->v[0]), Ga3Get(apIo->v[1]), apIo->i[0], apIo->i[1]) ? 1 : 0;
-	case eOhplGa3Op_NcCommitLast:	pEnemy->mpLastSearchNode = pEnemy->mpPathfinder->mvGa3Nodes[apIo->i[0]]; return 0;
+	case eOhplGa3Op_NodeUsedAsGoal:	return pEnemy->mpMap->AINodeIsUsedAsGoal(static_cast<cAINode*>(Ga3Ptr(apIo, 0))) ? 1 : 0;
+	case eOhplGa3Op_NcFreePathAt:
+		return static_cast<cAINodeContainer*>(Ga3Ptr(apIo, 2))->FreePath(Ga3Get(apIo->v[0]), Ga3Get(apIo->v[1]), apIo->i[0], apIo->i[1]) ? 1 : 0;
+	case eOhplGa3Op_WaterStepCheck:	return pEnemy->WaterStepCheck() ? 1 : 0;
+	case eOhplGa3Op_WaterStepFx:	pEnemy->WaterStepFx(); return 0;
+	case eOhplGa3Op_Draw:
+	{
+		static const cColor cGrey(0.4f,1), cGreyLine(0.4f,0.4f,0.4f,1), cMagenta(1,0,1);
+		iLowLevelGraphics *pGfx = pEnemy->mpNavDraw->GetLowLevelGfx();
+		switch(apIo->i[0])
+		{
+		case 0:		pGfx->DrawSphere(Ga3Get(apIo->v[0]), apIo->f[0], cGrey); break;
+		case 1:		pGfx->DrawLine(Ga3Get(apIo->v[0]), Ga3Get(apIo->v[1]), cGreyLine); break;
+		case 2:		pGfx->DrawSphere(Ga3Get(apIo->v[0]), apIo->f[0], cMagenta); break;
+		case 3:		pGfx->DrawLine(Ga3Get(apIo->v[0]), Ga3Get(apIo->v[1]), cMagenta); break;
+		}
+		return 0;
+	}
 	case eOhplGa3Op_BvContains:
 	{
 		cBoundingVolume tempBV;

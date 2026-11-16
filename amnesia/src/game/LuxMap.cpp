@@ -36,7 +36,6 @@
 #include "LuxMapHandler.h"
 
 #include "LuxEnemy.h"
-#include "LuxEnemyPathfinder.h"
 
 #include "LuxProp_SwingDoor.h"
 #include "LuxProp_Item.h"
@@ -345,8 +344,11 @@ void cLuxMap::OnLeave(bool abRunScript)
 
 //-----------------------------------------------------------------------
 
+void OhplA4bTick(cLuxMap *apMap);
+
 void cLuxMap::Update(float afTimeStep)
 {
+	OhplA4bTick(this);
 	static const char *sDumpFile = getenv("OHPL_A7_MAPDUMP");
 	if(sDumpFile)
 	{
@@ -682,10 +684,10 @@ bool cLuxMap::AINodeIsUsedAsGoal(cAINode *apNode)
 	{
 		iLuxEnemy *pEnemy = it.Next();
 
-		tAINodeList *pNodeList = pEnemy->GetPathFinder()->GetNodeList();
-		if(pNodeList->empty()) continue;
+		cAINode *pFront = pEnemy->GetPathFront();
+		if(pFront == NULL) continue;
 
-		if(pNodeList->front() == apNode) return true;
+		if(pFront == apNode) return true;
 	}
 	return false;
 }

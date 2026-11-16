@@ -19,6 +19,10 @@ mod host;
 mod machine;
 mod manpig;
 mod mover;
+mod nav;
+mod nav_ffi;
+#[cfg(test)]
+mod nav_tests;
 mod pathfinder;
 mod senses;
 #[cfg(test)]

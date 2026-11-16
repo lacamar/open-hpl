@@ -22,5 +22,5 @@ OPENHPL_HEADLESS_SOCKET="$SOCK" \
 OPENHPL_SOMA_FREECAM="${OPENHPL_SOMA_FREECAM-1}" \
 XDG_CONFIG_HOME="$SCRATCH/.xdg/config" XDG_CACHE_HOME="$SCRATCH/.xdg/cache" \
 XDG_DATA_HOME="$SCRATCH/.xdg/data" XDG_STATE_HOME="$SCRATCH/.xdg/state" \
-	env "${BOOT[@]}" setsid nohup "./$BIN" >run.out 2>&1 </dev/null &
+	env "${BOOT[@]}" setsid nohup ${OHPL_RUN_PREFIX:-} "./$BIN" >run.out 2>&1 </dev/null &
 echo "$! $SOCK"

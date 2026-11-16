@@ -6,7 +6,8 @@ use super::grunt::{self, GruntHandler};
 use super::host::{Host, Io, v_of};
 use super::machine::{Handler, Msg, Queue, update_state_machine};
 use super::mover::{MoverParams, MoverState};
-use super::pathfinder::{self, NodeQuery, PfWin};
+use super::nav;
+use super::pathfinder::{self, PfWin};
 use crate::math::Vector3f;
 use std::ffi::c_void;
 
@@ -23,14 +24,24 @@ const _: () = {
 pub struct OhplGa3Host {
     pub ctx: *mut c_void,
     pub call: unsafe extern "C" fn(*mut c_void, u32, *mut Io) -> i32,
+    pub nav: u64,
 }
 
-struct CHost<'a>(&'a OhplGa3Host);
+pub(super) struct CHost<'a>(pub(super) &'a OhplGa3Host);
 
 impl Host for CHost<'_> {
     fn call(&mut self, op: u32, io: &mut Io) -> i32 {
+        let h = self.0;
         // SAFETY: the caller of the entry point guarantees the table accepts its `ctx`.
-        unsafe { (self.0.call)(self.0.ctx, op, io) }
+        let mut inner = |op: u32, io: &mut Io| unsafe { (h.call)(h.ctx, op, io) };
+        let nav = nav::ptr(h.nav);
+        if !nav.is_null() {
+            // SAFETY: `nav` is live (resolved just now) and the engine ops cannot destroy it.
+            if let Some(r) = unsafe { nav::intercept(nav, &mut inner, op, io) } {
+                return r;
+            }
+        }
+        inner(op, io)
     }
 }
 
@@ -67,15 +78,6 @@ macro_rules! env {
 unsafe fn v3p(p: *const f32) -> Vector3f {
     // SAFETY: `p` points at three floats.
     unsafe { v_of([*p, *p.add(1), *p.add(2)]) }
-}
-
-unsafe fn put3(p: *mut f32, v: Vector3f) {
-    // SAFETY: `p` points at three writable floats.
-    unsafe {
-        *p = v.x;
-        *p.add(1) = v.y;
-        *p.add(2) = v.z;
-    }
 }
 
 #[unsafe(no_mangle)]
@@ -207,79 +209,61 @@ pub extern "C" fn ohpl_ga3_grunt_damage_mul(cur: i32) -> f32 {
     grunt::damage_mul(cur)
 }
 
+fn mover(nav: u64) -> *mut MoverState {
+    let n = nav::ptr(nav);
+    // SAFETY: a live nav pointer; only a field address is taken.
+    if n.is_null() {
+        std::ptr::null_mut()
+    } else {
+        unsafe { &raw mut (*n).mover }
+    }
+}
+
 /// # Safety
-/// `m`, `p`, `h` are live.
+/// `p`, `h` are live; `nav` is a live handle.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga3_mover_update(
-    m: *mut MoverState,
+    nav: u64,
     p: *const MoverParams,
     dt: f32,
     h: *const OhplGa3Host,
 ) {
+    let m = mover(nav);
+    if m.is_null() {
+        return;
+    }
     // SAFETY: caller contract.
     unsafe { (*m).on_update(&*p, dt, host!(h)) };
+    nav::step_effects(host!(h));
 }
 
 /// # Safety
-/// `m`, `p`, `h` are live.
+/// `p`, `h` are live; `nav` is a live handle.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga3_mover_update_move_animation(
-    m: *mut MoverState,
+    nav: u64,
     p: *const MoverParams,
     h: *const OhplGa3Host,
 ) {
-    // SAFETY: caller contract.
-    unsafe { (*m).update_move_animation(&*p, host!(h)) };
+    let m = mover(nav);
+    if !m.is_null() {
+        // SAFETY: caller contract.
+        unsafe { (*m).update_move_animation(&*p, host!(h)) };
+    }
 }
 
 /// # Safety
-/// `m`, `h` are live; `feet` is three floats.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga3_mover_turn_to_pos(
-    m: *mut MoverState,
-    feet: *const f32,
-    h: *const OhplGa3Host,
-) {
-    // SAFETY: caller contract.
-    unsafe { (*m).turn_to_pos(v3p(feet), host!(h)) };
-}
-
-/// # Safety
-/// `m`, `h` are live; `feet` is three floats.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga3_mover_move_to_pos(
-    m: *mut MoverState,
-    feet: *const f32,
-    h: *const OhplGa3Host,
-) {
-    // SAFETY: caller contract.
-    unsafe { (*m).move_to_pos(v3p(feet), host!(h)) };
-}
-
-/// # Safety
-/// `m` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga3_mover_turn_to_angle(m: *mut MoverState, a: f32) {
-    // SAFETY: caller contract.
-    unsafe { (*m).turn_to_angle(a) };
-}
-
-/// # Safety
-/// `m` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga3_mover_use_move_state_animations(m: *mut MoverState) {
-    // SAFETY: caller contract.
-    unsafe { (*m).use_move_state_animations() };
-}
-
-/// # Safety
-/// `m`, `p`, `h` are live.
+/// `p`, `h` are live; `nav` is a live handle.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga3_mover_speed_mul(
-    m: *const MoverState,
+    nav: u64,
     p: *const MoverParams,
     h: *const OhplGa3Host,
 ) -> f32 {
+    let m = mover(nav);
+    if m.is_null() {
+        return 1.0;
+    }
     // SAFETY: caller contract.
     unsafe { (*m).calculate_speed_mul(&*p, host!(h)) }
 }
@@ -351,48 +335,6 @@ pub unsafe extern "C" fn ohpl_ga3_update_char_body(
 pub unsafe extern "C" fn ohpl_ga3_update_moving(c: *const Ctx, h: *const OhplGa3Host) {
     env!(e, c, h);
     pathfinder::update_moving(e);
-}
-
-/// # Safety
-/// `c`, `h` are live; `pos` is three floats; `out_pos` writable three floats.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga3_node_at_pos(
-    h: *const OhplGa3Host,
-    pos: *const f32,
-    min_dist: f32,
-    max_dist: f32,
-    get_closest: bool,
-    pos_free: bool,
-    enemy_free: bool,
-    skip: i32,
-    ray_num: i32,
-    skip_used: bool,
-    out_pos: *mut f32,
-) -> i32 {
-    let mut q = NodeQuery::new(min_dist, max_dist, get_closest, pos_free, enemy_free, skip);
-    q.ray_num = ray_num;
-    q.skip_used = skip_used;
-    // SAFETY: caller contract.
-    match pathfinder::node_at_pos(host!(h), unsafe { v3p(pos) }, &q) {
-        Some((i, p)) => {
-            // SAFETY: caller contract.
-            unsafe { put3(out_pos, p) };
-            i
-        }
-        None => -1,
-    }
-}
-
-/// # Safety
-/// `h`, `goal`, `out` are live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga3_next_goal_pos(
-    h: *const OhplGa3Host,
-    goal: *const f32,
-    out: *mut f32,
-) {
-    // SAFETY: caller contract.
-    unsafe { put3(out, pathfinder::next_goal_pos(host!(h), v3p(goal))) };
 }
 
 /// Index of the picked node in the host's last iteration, or -1.

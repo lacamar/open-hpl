@@ -19,8 +19,6 @@
 
 #include "LuxEnemy_ManPig.h"
 
-#include "LuxEnemyMover.h"
-#include "LuxEnemyPathfinder.h"
 
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
@@ -282,15 +280,15 @@ void cLuxEnemy_ManPig::ChangePose(eLuxEnemyPoseType aPose, bool abSendMessage)
 	//Make sure the enemy is still and stays so for 0.5 seconds, and animation is updated for that.
 	mpCharBody->StopMovement();
 	mpCharBody->SetMoveDelay(0.5);
-	mpMover->UpdateMoveAnimation(0.001f);
+	UpdateMoveAnimation();
 
 	//Set new pose state
 	eLuxEnemyPoseType prevPose = mCurrentPose;
 	mCurrentPose = aPose;
 		
 	//Make sure that the correct animation is set.
-	mpMover->mMoveState = eLuxEnemyMoveState_LastEnum;
-	mpMover->UpdateMoveAnimation(0.001f);
+	ohpl_a4b_mover_set_move_state(mNav, eLuxEnemyMoveState_LastEnum);
+	UpdateMoveAnimation();
 
 	if(abSendMessage)
 		SendMessage(eLuxEnemyMessage_ChangePose, 0, false, 0,0, aPose);
@@ -304,8 +302,8 @@ void cLuxEnemy_ManPig::ChangeMoveType(eLuxEnemyMoveType aMoveType)
 
 	mCurrentMoveType = aMoveType;
 
-	mpMover->mMoveState = eLuxEnemyMoveState_LastEnum;
-	mpMover->UpdateMoveAnimation(0.001f);
+	ohpl_a4b_mover_set_move_state(mNav, eLuxEnemyMoveState_LastEnum);
+	UpdateMoveAnimation();
 }
 
 //-----------------------------------------------------------------------
@@ -321,6 +319,7 @@ OhplGa3Host cLuxEnemy_ManPig::Ga3PigHost()
 	OhplGa3Host host;
 	host.ctx = this;
 	host.call = &cLuxEnemy_ManPig::Ga3PigCall;
+	host.nav = mNav;
 	return host;
 }
 

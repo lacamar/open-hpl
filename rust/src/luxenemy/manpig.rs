@@ -99,14 +99,7 @@ pub struct PigCtx {
     pub disable_triggers: P<bool>,
 }
 
-pub(super) struct PHost<'a>(pub &'a OhplGa3Host);
-
-impl Host for PHost<'_> {
-    fn call(&mut self, op: u32, io: &mut Io) -> i32 {
-        // SAFETY: the caller of the entry point guarantees the table accepts its `ctx`.
-        unsafe { (self.0.call)(self.0.ctx, op, io) }
-    }
-}
+pub(super) use super::ffi::CHost as PHost;
 
 pub(super) fn call(h: &mut dyn Host, op: u32, io: &mut Io) -> i32 {
     h.call(op, io)

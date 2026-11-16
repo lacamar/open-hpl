@@ -19,8 +19,6 @@
 
 #include "LuxEnemy_Grunt.h"
 
-#include "LuxEnemyMover.h"
-#include "LuxEnemyPathfinder.h"
 
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
