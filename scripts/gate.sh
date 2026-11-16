@@ -180,8 +180,10 @@ half() {
 	if has amnesia; then
 		for M in $DUMP_AMNESIA; do
 			rm -f "$OUT/h13-$M-$impl.txt" "$OUT/a7-$M-$impl.txt" "$OUT/a10a-$M-$impl.txt" "$OUT/a11a-$M-$impl.txt" "$OUT/a11b-$M-$impl.txt" "$OUT/l9-$M-$impl.txt" "$OUT/a12a-$M-$impl.txt" "$OUT/a12b-$M-$impl.txt" "$OUT/a12c-$M-$impl.txt" "$OUT/a2b-$M-$impl.txt"
-			ENVX="$extra OHPL_L9_XMLDUMP=$OUT/l9-$M-$impl.txt OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A10A_DUMP=$OUT/a10a-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt" \
+			ENVX="$extra OHPL_L9_XMLDUMP=$OUT/l9-$M-$impl.txt OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt" \
 				sweep "$impl" amnesia "$OUT/dump-$impl-amnesia.json" --map "$M"
+			# the options menu shows cLuxPlayer's crosshair settings, uninitialised until the profile loads: pin the heap
+			ENVX="$extra MALLOC_PERTURB_=85 OHPL_A10A_DUMP=$OUT/a10a-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a10a-$impl-amnesia.json" --map "$M"
 			# the a11b driver gives items and hints: run it alone so it neither sees nor changes other dumps
 			ENVX="$extra OHPL_A11B_DUMP=$OUT/a11b-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a11b-$impl-amnesia.json" --map "$M"
 			ENVX="$extra OHPL_A12A_DUMP=$OUT/a12a-$M-$impl.txt OHPL_A12A_SCRIPT=$REPO/rust/tests/golden/A12a/script.txt" sweep "$impl" amnesia "$OUT/dump-a12a-$impl-amnesia.json" --map "$M"
@@ -221,7 +223,7 @@ half() {
 		# the menu dump lists the profiles on disk, so it gets a scratch no sweep has touched
 		rm -f "$OUT/a9-$impl.txt"; rm -rf "$SCRATCH-a9-$impl"
 		OPENHPL_SCRATCH_ROOT=$SCRATCH-a9-$impl scripts/soma-init.sh amnesia > /dev/null 2> "$OUT/init-a9-$impl.log"
-		SCR=$SCRATCH-a9-$impl ENVX="$extra OHPL_A9_MENUDUMP=$OUT/a9-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a9-$impl.json" --map 00_rainy_hall
+		SCR=$SCRATCH-a9-$impl ENVX="$extra MALLOC_PERTURB_=85 OHPL_A9_MENUDUMP=$OUT/a9-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a9-$impl.json" --map 00_rainy_hall
 	fi
 	for g in amnesia amfp; do
 		has "$g" || continue
