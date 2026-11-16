@@ -313,17 +313,6 @@ struct OhplGs4Config
 	bool vsync, fullscreen, anti_aliasing, show_subtitles;
 };
 
-struct OhplGs4CfgHost
-{
-	void *ctx;
-	float (*get_float)(void *, const char *, size_t, const char *, size_t, float);
-	bool (*get_bool)(void *, const char *, size_t, const char *, size_t, bool);
-	int32_t (*get_int)(void *, const char *, size_t, const char *, size_t, int32_t);
-	void (*set_float)(void *, const char *, size_t, const char *, size_t, float);
-	void (*set_bool)(void *, const char *, size_t, const char *, size_t, bool);
-	void (*set_int)(void *, const char *, size_t, const char *, size_t, int32_t);
-};
-
 struct OhplGs4EnginePlan
 {
 	int32_t linear_depth_texture_idx, gbuffer_textures;
@@ -454,10 +443,10 @@ struct OhplGs4ReadHost
 };
 
 extern "C" {
-	int32_t ohpl_gs4_game_id(const unsigned char *data, size_t n);
+	int32_t ohpl_gs4_game_index();
 	OhplGs4Config ohpl_gs4_cfg_default();
-	void ohpl_gs4_cfg_load(const OhplGs4CfgHost *, OhplGs4Config *);
-	void ohpl_gs4_cfg_save(const OhplGs4CfgHost *, const OhplGs4Config *);
+	bool ohpl_gs4_cfg_load(OhplGs4Config *);
+	bool ohpl_gs4_cfg_save(const OhplGs4Config *);
 	void ohpl_gs4_paths(int32_t kind, const uint32_t *root, size_t root_n, const unsigned char *id, size_t id_n, bool headless, int32_t pid,
 						void (*sink)(void *, const uint32_t *, size_t, bool), void *ctx);
 	void ohpl_gs4_init_config_file(const unsigned char *cmd, size_t n, void (*sink)(void *, const uint32_t *, size_t), void *ctx);

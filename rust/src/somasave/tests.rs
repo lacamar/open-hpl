@@ -918,3 +918,30 @@ fn layout_sizes() {
     assert_eq!(size_of::<World>(), 448);
     assert_eq!(size_of::<ImStatePair>(), 64);
 }
+
+#[test]
+fn settings_file_round_trip() {
+    use super::ffi::{OhplGs4Config, ohpl_gs4_cfg_default, ohpl_gs4_cfg_load, ohpl_gs4_cfg_save};
+    let dir = std::env::temp_dir().join(format!("ohpl-s6-{}", std::process::id()));
+    // SAFETY: no other test reads XDG_CONFIG_HOME.
+    unsafe { std::env::set_var("XDG_CONFIG_HOME", &dir) };
+    let mut c: OhplGs4Config = ohpl_gs4_cfg_default();
+    // SAFETY: `c` is valid.
+    assert!(!unsafe { ohpl_gs4_cfg_load(&mut c) });
+    c.master_volume = 0.5;
+    c.screen_width = 1920;
+    c.vsync = true;
+    // SAFETY: `c` is valid.
+    assert!(unsafe { ohpl_gs4_cfg_save(&c) });
+    let text = std::fs::read_to_string(dir.join("open-hpl/soma/main_settings.cfg")).unwrap();
+    assert!(text.contains("<Sound Volume=\"0.500000\""));
+    assert!(text.contains("<Screen Vsync=\"true\""));
+    let mut d = ohpl_gs4_cfg_default();
+    // SAFETY: `d` is valid.
+    assert!(unsafe { ohpl_gs4_cfg_load(&mut d) });
+    assert_eq!(
+        (d.master_volume, d.screen_width, d.vsync),
+        (0.5, 1920, true)
+    );
+    let _ = std::fs::remove_dir_all(dir);
+}
