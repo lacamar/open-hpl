@@ -8,16 +8,6 @@
 #include <cstddef>
 #include <cstdint>
 
-// Prefix of cSomaLuxScriptable::cTimer; fields keep the Lux names
-struct OhplGs3Timer
-{
-	uint64_t mlId;
-	float mfLength;
-	float mfTimeLeft;
-	bool mbRepeat;
-	bool mbPaused;
-};
-
 struct OhplGs3Fader
 {
 	uint64_t mlId;
@@ -114,13 +104,6 @@ extern "C" {
 	// scriptable
 	uint64_t ohpl_gs3_hash64(const unsigned char *s, size_t n);
 	float ohpl_gs3_easing(int kind, float t);
-	size_t ohpl_gs3_timers_update(void *base, size_t n, size_t stride, float dt, uint32_t *due, uint8_t *keep);
-	void ohpl_gs3_faders_update(OhplGs3Fader *f, size_t n, float dt);
-	float ohpl_gs3_fade_speed(float value, float goal, float time);
-	float ohpl_gs3_timer_value(bool found, float length, float left, float min, float max, int kind, bool abs);
-	bool ohpl_gs3_timer_has_passed(bool found, float length, float left, float wanted);
-	float ohpl_gs3_fader_value(bool found, float value, float min, float max, int kind, bool abs);
-	int ohpl_gs3_timer_add(bool exists, bool create_if_exist);
 
 	// map change and preload
 	bool ohpl_gs3_same_map(const unsigned char *a, size_t an, const unsigned char *b, size_t bn);
@@ -189,7 +172,7 @@ extern "C" {
 	bool ohpl_gs3_pops_oldest_sample(size_t len, int max);
 }
 
-static_assert(sizeof(OhplGs3Timer) == 24 && sizeof(OhplGs3Fader) == 32 && sizeof(OhplGs3Fade) == 20);
+static_assert(sizeof(OhplGs3Fader) == 32 && sizeof(OhplGs3Fade) == 20);
 static_assert(sizeof(OhplGs3MoveVec) == 44 && sizeof(OhplGs3MoveSpeeds) == 48 && sizeof(OhplGs3Pause) == 8);
 static_assert(sizeof(OhplGs3Preload) == 16 && sizeof(hpl::cMatrixf) == 64 && sizeof(hpl::cVector3f) == 12);
 

@@ -11,3 +11,9 @@ pub mod scriptable;
 #[cfg(test)]
 mod tests;
 pub mod transfer;
+
+pub mod s5_input;
+mod s5_input_ffi;
+pub mod s5_scriptable;
+#[cfg(test)]
+mod s5_tests;

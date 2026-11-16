@@ -151,6 +151,17 @@ half() {
 		env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-s8-$impl-$g-$$" OHPL_GAME="$g" S8_WAIT=1500 \
 			scripts/s8-scenario.sh "$OUT/s8-$g-$impl.txt" >> "$OUT/s8-$impl-$g.log" 2>&1
 	done
+	for G in soma rebirth bunker; do
+		has "$G" || continue
+		case $G in
+		soma) S5M="00_01_apartment 01_02_upsilon_inside 02_05_theta_inside 03_01_omicron_outside 04_03_tau_escape" ;;
+		rebirth) S5M="02_02_courtyard" ;;
+		*) S5M="arena" ;;
+		esac
+		rm -f "$OUT/s5-$G-$impl.txt"
+		# shellcheck disable=SC2046
+		ENVX="$extra OHPL_S5_DUMP=$OUT/s5-$G-$impl.txt" sweep "$impl" "$G" "$OUT/dump-s5-$impl-$G.json" --play 10 $(mapargs $S5M)
+	done
 	if has amnesia; then
 		for M in $DUMP_AMNESIA; do
 			rm -f "$OUT/h13-$M-$impl.txt" "$OUT/a7-$M-$impl.txt" "$OUT/a10a-$M-$impl.txt" "$OUT/a11a-$M-$impl.txt" "$OUT/a11b-$M-$impl.txt" "$OUT/l9-$M-$impl.txt" "$OUT/a12a-$M-$impl.txt" "$OUT/a12b-$M-$impl.txt" "$OUT/a12c-$M-$impl.txt" "$OUT/a12c-$M-$impl.txt"
@@ -194,7 +205,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -307,6 +318,46 @@ def same(name, a, b):
         r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)
         last = (r.stdout.strip().splitlines() or [""])[-1]
         return (r.returncode == 0, "equal after masking" if r.returncode == 0 else f"DIFFER {last}")
+    if name.startswith("s5-"):
+        # one section per map process; timer lengths and fire order follow script random draws, play length varies
+        def sections(p):
+            out, cur = [], None
+            for l in open(p, errors="replace").read().splitlines():
+                if l == "begin":
+                    cur = []
+                    out.append(cur)
+                elif cur is not None:
+                    cur.append(re.sub(r"t\[(\d+) [0-9a-f]{8} ", r"t[\1 X ", l))
+            return out
+        sa, sb = sections(a), sections(b)
+        if len(sa) != len(sb):
+            return (False, f"DIFFER ({len(sa)} vs {len(sb)} map sections)")
+        for i, (x, y) in enumerate(zip(sa, sb)):
+            st_x, st_y = [l for l in x if l.startswith("st ")], [l for l in y if l.startswith("st ")]
+            cfg_x, cfg_y = [l for l in x if l.startswith("in ")], [l for l in y if l.startswith("in ")]
+            if st_x != st_y or cfg_x != cfg_y:
+                return (False, f"DIFFER (section {i}: self-test or handler state)")
+            # frame counts vary: mouse samples must agree over the shorter run, key events as runs of equal lines
+            def events(sec):
+                ev = [l for l in sec if l.startswith(("act ", "ana "))]
+                keys = []
+                for l in ev:
+                    if not l.startswith("ana 0 ") and (not keys or keys[-1] != l):
+                        keys.append(l)
+                return [l for l in ev if l.startswith("ana 0 ")], keys
+            (mx, kx), (my, ky) = events(x), events(y)
+            n = min(len(mx), len(my))
+            if mx[:n] != my[:n] or kx != ky or abs(len(mx) - len(my)) > 10:
+                return (False, f"DIFFER (section {i}: input events)")
+            # script timers repeat as often as the run is long: only the set of distinct lines must agree; the self-test (no script name) exactly
+            def timers(sec):
+                ls = [l for l in sec if l.startswith(("ts ", "fire "))]
+                own = sorted(l for l in ls if l.startswith(("ts  ", "fire  ")))
+                return own, {l for l in ls if l not in own}
+            (ox, sx), (oy, sy) = timers(x), timers(y)
+            if ox != oy or sx != sy:
+                return (False, f"DIFFER (section {i}: timers)")
+        return (True, f"equal over {len(sa)} maps")
     if name.startswith("a12a-"):
         # frames past the script depend on when the run shuts down
         def head(p):
@@ -365,6 +416,7 @@ if not quick:
     names += [f"l9-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"{k}-{g}" for k in ("s7", "s7sc", "s7p") for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s8-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
+    names += [f"s5-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
         names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c")] + ["a12a-02_library"] + ["a9"]
     names += [f"a10b-boot-{g}" for g in ("amnesia", "amfp") if g in games]

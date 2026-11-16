@@ -173,6 +173,11 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
                     hpl.send({"cmd": "wait_frames", "n": 30, "max_ms": 8000})
             open(os.environ["OHPL_S7_SCENARIO_OUT"], "w").write("\n".join(lines) + "\n")
         if play:
+            if os.environ.get("OHPL_S5_DUMP"):  # input events for the OHPL_S5_DUMP compare
+                for key in ("W", "Space", "E", "R"):
+                    for act, frames in (("down", 20), ("up", 10)):
+                        hpl.send({"cmd": "input", "type": "key", "key": key, "action": act})
+                        hpl.send({"cmd": "wait_frames", "n": frames, "max_ms": 4000})
             hpl.send({"cmd": "wait_frames", "n": int(play * 60), "max_ms": int(play * 4000)})
             result["stubs"] = {k: v for k, v in hpl.send({"cmd": "stub_report", "n": 40}).items() if k != "ok"}
             result["player"] = {k: v for k, v in hpl.send({"cmd": "player_state"}).items() if k != "ok"}

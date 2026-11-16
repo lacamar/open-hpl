@@ -1,7 +1,9 @@
 #ifndef SOMA_LUX_PLAYER_H
 #define SOMA_LUX_PLAYER_H
 
+#include "RustSomaLuxS5.h"
 #include "SomaLuxGame.h"
+#include "SomaS5Dump.h"
 
 #include <deque>
 #include <map>
@@ -178,79 +180,21 @@ public:
 
 	static cSomaLuxInputHandler *Get() { return mpInstance; }
 
-	// cLuxInputHandler::LoadKeyConfig: script CreateActions(), then LoadKeyConfig(cfg) binds them
-	void LoadKeyConfig();
-	// cLuxInputHandler::LoadScript
-	void LoadScript();
-	void LoadUserConfig();
-	// cLuxInputHandler::Update: action edges and analog sums to every updateable, then mouse look
-	void UpdateInput(float afTimeStep, bool abGameInput);
-
-	static void RegisterNatives(asIScriptEngine *apEngine);
-
-	struct cLuxAction
+	void LoadKeyConfig() { ohpl_s5_in_load_key_config(); }
+	void LoadScript()
 	{
-		tString msName;
-		int mlId;
-		int mlAxis = -1;
-		float mfMul = 0;
-		int mlAnalogId = -1;
-		bool mbGamepad = false;
-	};
-	std::vector<cLuxAction> mvActions;
+		ohpl_s5_in_load_script();
+		if (OhplS5DumpEnabled())
+			ohpl_s5_in_dump();
+	}
+	void LoadUserConfig() { ohpl_s5_in_load_user_config(); }
+	void UpdateInput(float afTimeStep, bool abGameInput) { ohpl_s5_in_update(abGameInput); }
+	void LatchActions() { ohpl_s5_in_latch(); }
+	void ClearGuiInput() { ohpl_s5_in_clear_gui(); }
 
-	void CreateAction(const cLuxAction &aAction);
-	void CreateActionInput(const tString &asInput, int alActionId);
-	tString GetActionName(int alId, bool abGamepad = false);
-
-	struct cGamepadPreset
-	{
-		tString msName;
-		std::vector<int> mvActions;
-		tStringVec mvBindings;
-		std::vector<bool> mvAnalog;
-	};
-	struct cGamepadProfile
-	{
-		tString msName, msPrefix;
-		tStringVec mvButtons, mvAxes;
-		std::vector<unsigned> mvDPad;
-		std::vector<cGamepadPreset> mvPresets;
-	};
-	std::vector<cGamepadProfile> mvGamepadProfiles;
-	tString msGamepadProfile, msGamepadPreset;
-	cGamepadProfile *GetGamepadProfile(const tString &asName);
-	cGamepadPreset *GetGamepadPreset();
-	void GetActionsAssociatedToGamepadControl(const tString &asProfile, const tString &asPreset, const tString &asControl, tString &asActions);
-	bool FetchGamepadInputLayoutString(const tString &asInput, tString &asPrefix, tString &asLayout);
-
-	// Per-frame action edges; HPL2's cAction::BecameTriggerd consumes the edge on the first call
-	void LatchActions();
-	void ClearGuiInput();
-	bool IsDown(int alId) { return alId >= 0 && alId < kMaxActions && mvDown[alId]; }
-	bool BecameDown(int alId) { return ActionEdge(alId) == 1; }
-	bool BecameUp(int alId) { return ActionEdge(alId) == 2; }
-
-	bool mbInvertMouse = false;
-	bool mbSmoothMouse = true;
-	float mfMouseSensitivity = 1;
-	float mfGamepadSensitivity = 2;
-	int mlMaxSmoothMousePos = 7;
-	float mfPrevSmoothMousePosMul = 0.7f;
-	std::deque<cVector2f> mlstSmoothMousePos;
-	tString msLatestKey;
+	static void RegisterNatives(asIScriptEngine *apEngine) { ohpl_s5_register_input_natives(apEngine); }
 
 private:
-	static const int kMaxActions = 256;
-	int ActionEdge(int alId)
-	{
-		bool bInRange = alId >= 0 && alId < kMaxActions;
-		return ohpl_gs3_action_edge(alId, kMaxActions, bInRange && mvDown[alId], bInRange && mvPrevDown[alId]);
-	}
-	bool mvDown[kMaxActions] = {};
-	bool mvPrevDown[kMaxActions] = {};
-	bool mvPrevKeys[eKey_LastEnum] = {};
-	bool mvPrevButtons[eMouseButton_LastEnum] = {};
 	static cSomaLuxInputHandler *mpInstance;
 };
 

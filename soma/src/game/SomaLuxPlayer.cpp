@@ -1,4 +1,5 @@
 #include "SomaLuxPlayer.h"
+#include "SomaS5Dump.h"
 #include "SomaBase.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
@@ -397,243 +398,126 @@ void cSomaLuxPlayer::UpdateCamera(float afTimeStep)
 	}
 }
 
+namespace
+{
+int32_t InputHostCall(void *, uint32_t alOp, OhplS5Io *io)
+{
+	cInput *pInput = gpSomaBase->mpEngine->GetInput();
+	cSomaLuxInputHandler *pSelf = cSomaLuxInputHandler::Get();
+	static tString sOut;
+	tString sIn(io->s ? (const char *)io->s : "", io->s ? io->n : 0);
+	switch (alOp)
+	{
+	case kOhplS5In_EXISTS_ID: return pInput->GetAction(io->i[0]) != NULL;
+	case kOhplS5In_EXISTS_NAME: return pInput->GetAction(sIn) != NULL;
+	case kOhplS5In_DESTROY_ID:
+		if (cAction *pAction = pInput->GetAction(io->i[0]))
+			pInput->DestroyAction(pAction);
+		return 0;
+	case kOhplS5In_DESTROY_NAME:
+		if (cAction *pAction = pInput->GetAction(sIn))
+			pInput->DestroyAction(pAction);
+		return 0;
+	case kOhplS5In_CREATE: pInput->CreateAction(sIn, io->i[0]); return 0;
+	case kOhplS5In_CREATE_MOUSE: pInput->CreateAction(sIn, io->i[0])->AddMouseButton((eMouseButton)io->i[1]); return 0;
+	case kOhplS5In_ID_OF:
+	{
+		cAction *pAction = pInput->GetAction(sIn);
+		if (pAction)
+			io->i[0] = pAction->GetId();
+		return pAction != NULL;
+	}
+	case kOhplS5In_TRIGGERED: return pInput->IsTriggerd(io->i[0]);
+	case kOhplS5In_ADD_KEY:
+	{
+		eKey key = pInput->GetKeyboard()->StringToKey(sIn);
+		if (key != eKey_LastEnum)
+			pInput->GetAction(io->i[0])->AddKey(key);
+		return 0;
+	}
+	case kOhplS5In_ADD_BUTTON:
+	{
+		eMouseButton button = pInput->GetMouse()->StringToButton(sIn);
+		if (button != eMouseButton_LastEnum)
+			pInput->GetAction(io->i[0])->AddMouseButton(button);
+		return 0;
+	}
+	case kOhplS5In_KEY_DOWN: return pInput->GetKeyboard()->KeyIsDown((eKey)io->i[0]);
+	case kOhplS5In_KEY_NAME:
+		sOut = pInput->GetKeyboard()->KeyToString((eKey)io->i[0]);
+		io->s = (const unsigned char *)sOut.data();
+		io->n = sOut.size();
+		return 0;
+	case kOhplS5In_BUTTON_DOWN: return pInput->GetMouse()->ButtonIsDown((eMouseButton)io->i[0]);
+	case kOhplS5In_BUTTON_NAME:
+		sOut = pInput->GetMouse()->ButtonToString((eMouseButton)io->i[0]);
+		io->s = (const unsigned char *)sOut.data();
+		io->n = sOut.size();
+		return 0;
+	case kOhplS5In_WARN: Warning("%s", sIn.c_str()); return 0;
+	case kOhplS5In_LOG_ACTIONS: Log("SOMA script: %d input actions\n", io->i[0]); return 0;
+	case kOhplS5In_CALL: pSelf->Call(sIn); return 0;
+	case kOhplS5In_CALL_KEY_CONFIG: pSelf->CallWithObject("void LoadKeyConfig(cConfigFile@ apKeyConfig)", SomaKeyConfig()); return 0;
+	case kOhplS5In_BROADCAST_ACTION: cSomaLuxGame::Get()->BroadcastAction(io->i[0], io->i[1] != 0); return 0;
+	case kOhplS5In_BROADCAST_ANALOG: cSomaLuxGame::Get()->BroadcastAnalog(io->i[0], cVector3f(io->f[0], io->f[1], io->f[2])); return 0;
+	case kOhplS5In_MOUSE_REL:
+		io->i[0] = cSomaLuxGame::Get()->mvMouseRel.x;
+		io->i[1] = cSomaLuxGame::Get()->mvMouseRel.y;
+		return 0;
+	case kOhplS5In_SCREEN_HEIGHT: io->f[0] = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat().y; return 0;
+	case kOhplS5In_USER_CONFIG:
+	{
+		cConfigFile *pCfg = SomaUserConfig();
+		if (pCfg == NULL)
+			return 0;
+		io->i[0] = pCfg->GetBool("Input", "InvertMouse", false);
+		io->i[1] = pCfg->GetBool("Input", "SmoothMouse", true);
+		io->f[0] = pCfg->GetFloat("Input", "MouseSensitivity", 1.0f);
+		io->f[1] = pCfg->GetFloat("Input", "GamepadSensitivity", 2.0f);
+		return 1;
+	}
+	case kOhplS5In_ARR_SIZE: return (int32_t)((CScriptArray *)io->p[0])->GetSize();
+	case kOhplS5In_ARR_AT: io->p[1] = ((CScriptArray *)io->p[0])->At(io->i[0]); return 0;
+	case kOhplS5In_STR_REF:
+	{
+		static tString sRef;
+		sRef = sIn;
+		io->p[1] = &sRef;
+		return 0;
+	}
+	case kOhplS5In_ENGINE_ACTION_NAME:
+	{
+		cAction *pAction = pInput->GetAction(io->i[0]);
+		if (pAction == NULL)
+			return 0;
+		sOut = pAction->GetName();
+		io->s = (const unsigned char *)sOut.data();
+		io->n = sOut.size();
+		return 1;
+	}
+	case kOhplS5In_ENGINE_ACTION_BINDS:
+	{
+		cAction *pAction = pInput->GetAction(io->i[0]);
+		sOut.clear();
+		for (int k = 0; pAction && k < pAction->GetSubActionNum(); ++k)
+			sOut += pAction->GetSubAction(k)->GetInputType() + "." + pAction->GetSubAction(k)->GetInputName() + ",";
+		io->s = (const unsigned char *)sOut.data();
+		io->n = sOut.size();
+		return 0;
+	}
+	case kOhplS5In_DUMP: OhplS5Log("%s", sIn.c_str()); return 0;
+	}
+	return 0;
+}
+const OhplS5Host gInputHost = {NULL, InputHostCall};
+}
+
 cSomaLuxInputHandler::cSomaLuxInputHandler()
 {
 	mpInstance = this;
-	mlMaxSmoothMousePos = SomaGameConfig()->GetInt("Input", "MaxSmoothMousePos", 7);
-	mfPrevSmoothMousePosMul = SomaGameConfig()->GetFloat("Input", "PrevSmoothMousePosMul", 0.7f);
-	// HPL3 engine actions; hints use "$Input{ScrollUp}"
-	cInput *pInput = gpSomaBase->mpEngine->GetInput();
-	const char *vMouse[] = {"LeftClick", "MiddleClick", "RightClick", "ScrollUp", "ScrollDown"};
-	for (int i = 0; i < 5; ++i)
-		if (pInput->GetAction(vMouse[i]) == NULL)
-			pInput->CreateAction(vMouse[i], 199004 + i)->AddMouseButton((eMouseButton)i);
-}
-
-void cSomaLuxInputHandler::CreateAction(const cLuxAction &aAction)
-{
-	cInput *pInput = gpSomaBase->mpEngine->GetInput();
-	if (cAction *pOld = pInput->GetAction(aAction.mlId))
-		pInput->DestroyAction(pOld);
-	if (cAction *pOld = pInput->GetAction(aAction.msName))
-		pInput->DestroyAction(pOld);
-	for (size_t i = 0; i < mvActions.size(); ++i)
-		if (mvActions[i].mlId == aAction.mlId)
-		{
-			mvActions.erase(mvActions.begin() + i);
-			break;
-		}
-	pInput->CreateAction(aAction.msName, aAction.mlId);
-	mvActions.push_back(aAction);
-}
-
-void cSomaLuxInputHandler::CreateActionInput(const tString &asInput, int alActionId)
-{
-	cInput *pInput = gpSomaBase->mpEngine->GetInput();
-	cAction *pAction = pInput->GetAction(alActionId);
-	if (pAction == NULL)
-	{
-		Warning("Could not add input %s for action %d. Action does not exist!\n", asInput.c_str(), alActionId);
-		return;
-	}
-	tString sSep = ".";
-	tStringVec vParts;
-	cString::GetStringVec(asInput, vParts, &sSep);
-	if (vParts.size() < 2)
-		return;
-	if (vParts[0] == "Keyboard")
-	{
-		eKey key = pInput->GetKeyboard()->StringToKey(vParts[1]);
-		if (key != eKey_LastEnum)
-			pAction->AddKey(key);
-	}
-	else if (vParts[0] == "MouseButton")
-	{
-		eMouseButton button = pInput->GetMouse()->StringToButton(vParts[1]);
-		if (button != eMouseButton_LastEnum)
-			pAction->AddMouseButton(button);
-	}
-}
-
-tString cSomaLuxInputHandler::GetActionName(int alId, bool abGamepad)
-{
-	const cLuxAction *pAny = NULL;
-	for (const cLuxAction &a : mvActions)
-		if (a.mlId == alId)
-		{
-			if (a.mbGamepad == abGamepad)
-				return a.msName;
-			pAny = &a;
-		}
-	return pAny ? pAny->msName : "";
-}
-
-cSomaLuxInputHandler::cGamepadProfile *cSomaLuxInputHandler::GetGamepadProfile(const tString &asName)
-{
-	for (cGamepadProfile &p : mvGamepadProfiles)
-		if (p.msName == asName)
-			return &p;
-	return NULL;
-}
-
-cSomaLuxInputHandler::cGamepadPreset *cSomaLuxInputHandler::GetGamepadPreset()
-{
-	cGamepadProfile *pProfile = GetGamepadProfile(msGamepadProfile);
-	if (pProfile == NULL)
-		return NULL;
-	cGamepadPreset *pLast = NULL;
-	for (cGamepadPreset &p : pProfile->mvPresets)
-		if (p.msName == msGamepadPreset)
-			pLast = &p;
-	return pLast;
-}
-
-void cSomaLuxInputHandler::GetActionsAssociatedToGamepadControl(const tString &asProfile, const tString &asPreset, const tString &asControl, tString &asActions)
-{
-	cGamepadProfile *pProfile = GetGamepadProfile(asProfile);
-	if (pProfile == NULL)
-		return;
-	for (const cGamepadPreset &p : pProfile->mvPresets)
-	{
-		if (p.msName != asPreset)
-			continue;
-		for (size_t i = 0; i < p.mvActions.size(); ++i)
-			if (i < p.mvBindings.size() && p.mvBindings[i] == asControl)
-				asActions += GetActionName(p.mvActions[i], i < p.mvAnalog.size() && p.mvAnalog[i]) + "/";
-		if (asActions.empty() == false)
-			asActions.pop_back();
-	}
-}
-
-bool cSomaLuxInputHandler::FetchGamepadInputLayoutString(const tString &asInput, tString &asPrefix, tString &asLayout)
-{
-	tString sSep = ".";
-	tStringVec vParts;
-	cString::GetStringVec(cString::ToLowerCase(asInput), vParts, &sSep);
-	asPrefix.clear();
-	asLayout.clear();
-	cGamepadProfile *pProfile = vParts.size() >= 4 && vParts[0] == "gamepad" ? GetGamepadProfile(msGamepadProfile) : NULL;
-	if (pProfile == NULL)
-		return false;
-	asPrefix = pProfile->msPrefix;
-	int lIdx = cString::ToInt(vParts[3].c_str(), 0);
-	const tStringVec *pVec = vParts[2] == "button" ? &pProfile->mvButtons : vParts[2] == "axis" ? &pProfile->mvAxes : NULL;
-	if (pVec && lIdx >= 0 && lIdx < (int)pVec->size())
-		asLayout = (*pVec)[lIdx];
-	else
-		asPrefix.clear();
-	return true;
-}
-
-void cSomaLuxInputHandler::LoadUserConfig()
-{
-	cConfigFile *pCfg = SomaUserConfig();
-	if (pCfg == NULL)
-		return;
-	mbInvertMouse = pCfg->GetBool("Input", "InvertMouse", false);
-	mbSmoothMouse = pCfg->GetBool("Input", "SmoothMouse", true);
-	mfMouseSensitivity = pCfg->GetFloat("Input", "MouseSensitivity", 1.0f);
-	mfGamepadSensitivity = pCfg->GetFloat("Input", "GamepadSensitivity", 2.0f);
-}
-
-void cSomaLuxInputHandler::LoadScript()
-{
-	mvGamepadProfiles.clear();
-	Call("void CreateGamepadProfiles()");
-	Call("void CreateInputLayoutMapping()");
-	LoadKeyConfig();
-}
-
-void cSomaLuxInputHandler::LoadKeyConfig()
-{
-	cInput *pInput = gpSomaBase->mpEngine->GetInput();
-	for (const cLuxAction &a : mvActions)
-		if (cAction *p = pInput->GetAction(a.mlId))
-			pInput->DestroyAction(p);
-	mvActions.clear();
-	Call("void CreateActions()");
-	CallWithObject("void LoadKeyConfig(cConfigFile@ apKeyConfig)", SomaKeyConfig());
-	Log("SOMA script: %d input actions\n", (int)mvActions.size());
-}
-
-void cSomaLuxInputHandler::LatchActions()
-{
-	cInput *pInput = gpSomaBase->mpEngine->GetInput();
-	for (int i = 0; i < kMaxActions; ++i)
-	{
-		mvPrevDown[i] = mvDown[i];
-		mvDown[i] = pInput->GetAction(i) && pInput->IsTriggerd(i);
-	}
-	msLatestKey = "";
-	iKeyboard *pKeyboard = pInput->GetKeyboard();
-	for (int i = 0; i < eKey_LastEnum; ++i)
-	{
-		bool bDown = pKeyboard->KeyIsDown((eKey)i);
-		if (bDown && mvPrevKeys[i] == false && msLatestKey.empty())
-			msLatestKey = "Keyboard." + pKeyboard->KeyToString((eKey)i);
-		mvPrevKeys[i] = bDown;
-	}
-	iMouse *pMouse = pInput->GetMouse();
-	for (int i = 0; i < eMouseButton_LastEnum; ++i)
-	{
-		bool bDown = pMouse->ButtonIsDown((eMouseButton)i);
-		if (bDown && mvPrevButtons[i] == false && msLatestKey.empty())
-			msLatestKey = "MouseButton." + pMouse->ButtonToString((eMouseButton)i);
-		mvPrevButtons[i] = bDown;
-	}
-}
-
-// cLuxInputHandler::ClearGuiInput: consumes the menu action edges
-void cSomaLuxInputHandler::ClearGuiInput()
-{
-	for (const cLuxAction &a : mvActions)
-		if (a.mlId >= 0 && a.mlId < kMaxActions && a.msName.compare(0, 4, "Menu") == 0)
-			mvPrevDown[a.mlId] = mvDown[a.mlId];
-}
-
-void cSomaLuxInputHandler::UpdateInput(float afTimeStep, bool abGameInput)
-{
-	if (abGameInput == false)
-		return;
-	cInput *pInput = gpSomaBase->mpEngine->GetInput();
-	cSomaLuxGame *pGame = cSomaLuxGame::Get();
-	for (size_t i = 0; i < mvActions.size(); ++i)
-	{
-		cLuxAction a = mvActions[i];
-		if (a.mbGamepad)
-			continue;
-		if (BecameDown(a.mlId))
-			pGame->BroadcastAction(a.mlId, true);
-		else if (BecameUp(a.mlId))
-			pGame->BroadcastAction(a.mlId, false);
-		bool bTriggered = a.mlAnalogId >= 0 && a.mlAxis >= 0 && a.mlAxis < 3 && pInput->IsTriggerd(a.mlId);
-		float fMul;
-		int lAxis = ohpl_gs3_analog_fire(a.mlAnalogId, a.mlAxis, a.mfMul, bTriggered, &fMul);
-		if (lAxis >= 0)
-		{
-			cVector3f v(0);
-			v.v[lAxis] = fMul;
-			pGame->BroadcastAnalog(a.mlAnalogId, v);
-		}
-	}
-
-	float fHeight = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat().y;
-	cVector2f v;
-	ohpl_gs3_mouse_vector(pGame->mvMouseRel.x, pGame->mvMouseRel.y, mfMouseSensitivity, fHeight, &v.x, &v.y);
-	if (mbSmoothMouse)
-	{
-		mlstSmoothMousePos.push_front(v);
-		if (ohpl_gs3_pops_oldest_sample(mlstSmoothMousePos.size(), mlMaxSmoothMousePos))
-			mlstSmoothMousePos.pop_back();
-		std::vector<std::array<float, 2>> vSamples;
-		for (const cVector2f &p : mlstSmoothMousePos)
-			vSamples.push_back({p.x, p.y});
-		ohpl_gs3_smooth_mouse((const float(*)[2])vSamples.data(), vSamples.size(), mfPrevSmoothMousePosMul, &v.x, &v.y);
-	}
-	if (mbInvertMouse)
-		v.y = -v.y;
-	if (v.x != 0 || v.y != 0)
-		pGame->BroadcastAnalog(0, cVector3f(v.x, v.y, 0));
+	ohpl_s5_in_install_host(&gInputHost);
+	ohpl_s5_in_new(SomaGameConfig()->GetInt("Input", "MaxSmoothMousePos", 7), SomaGameConfig()->GetFloat("Input", "PrevSmoothMousePosMul", 0.7f), eKey_LastEnum,
+				   eMouseButton_LastEnum);
 }
 
 static std::vector<cSomaLuxEntity *> UsedLiquidAreas()
@@ -884,111 +768,4 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 
 	cSomaLuxScriptable::RegisterTimerNatives(e, "cLuxPlayerState");
 	cSomaLuxScriptable::RegisterTimerNatives(e, "cLuxMoveState");
-}
-
-void cSomaLuxInputHandler::RegisterNatives(asIScriptEngine *e)
-{
-	SOMA_FUNC(e, "bool cInput_BecameTriggered(int alId)", +[](int id) { return mpInstance && mpInstance->BecameDown(id); });
-	SOMA_FUNC(e, "bool cInput_WasTriggered(int alId)", +[](int id) { return mpInstance && mpInstance->BecameUp(id); });
-	SOMA_FUNC(e, "bool cInput_BecameTriggered(const tString&in asName)", +[](const tString &n) {
-		cAction *pAction = gpSomaBase->mpEngine->GetInput()->GetAction(n);
-		return mpInstance && pAction && mpInstance->BecameDown(pAction->GetId());
-	});
-	SOMA_FUNC(e, "bool cInput_WasTriggered(const tString&in asName)", +[](const tString &n) {
-		cAction *pAction = gpSomaBase->mpEngine->GetInput()->GetAction(n);
-		return mpInstance && pAction && mpInstance->BecameUp(pAction->GetId());
-	});
-	typedef cSomaLuxInputHandler I;
-	typedef const tString &S;
-	const char *T = "cLuxInputHandler";
-	SOMA_METHOD(e, T, "void CreateAction(const tString&in asName, int alId, bool abConfigurable, const tString&in asCat)",
-				+[](I *p, S n, int id, bool, S) { p->CreateAction(cLuxAction{n, id}); });
-	SOMA_METHOD(e, T, "void CreateDebugAction(const tString&in asName, int alId)", +[](I *p, S n, int id) { p->CreateAction(cLuxAction{n, id}); });
-	SOMA_METHOD(e, T, "void CreateAnalogAction(const tString&in asName, int alId, bool abConfigurable, const tString&in asCat, int alAxis, float afMul, int alAnalogId)",
-				+[](I *p, S n, int id, bool, S, int axis, float mul, int analog) { p->CreateAction(cLuxAction{n, id, axis, mul, analog}); });
-	SOMA_METHOD(e, T, "void CreateAnalogGamepadAction(const tString&in asName, int alId, const tString&in asCat, int alAnalogId, float afSmoothness, int alDirectionLimit)",
-				+[](I *p, S n, int id, S, int analog, float, int) { p->CreateAction(cLuxAction{n, id, -1, 0, analog, true}); });
-	SOMA_METHOD(e, T, "void CreateActionInput(const tString&in asInputType, int alActionId)", +[](I *p, S s, int id) { p->CreateActionInput(s, id); });
-	SOMA_METHOD(e, T, "void CreateAnalogGamepadActionInput(const tString&in asInputType, int alActionId)", +[](I *, S, int) {});
-	SOMA_METHOD(e, T, "bool IsGamepadConnected()", +[](I *) { return false; });
-	SOMA_METHOD(e, T, "void LoadKeyConfig()", +[](I *p) { p->LoadKeyConfig(); });
-	SOMA_METHOD(e, T, "float GetTimeSinceGamepadWasUsed(int alID)", +[](I *, int) { return 100000.0f; });
-	SOMA_METHOD(e, T, "int GetLastUsedGamepadIndex(float afTimeLimit=-1.0f)", +[](I *, float) { return -1; });
-	SOMA_METHOD(e, T, "bool GetGamepadWasLastDeviceUsed()", +[](I *) { return false; });
-	SOMA_METHOD(e, T, "const tString& GetLatestKeyPressed()", +[](I *p) -> const tString & { return p->msLatestKey; });
-	SOMA_METHOD(e, T, "bool IsYAxisInverted()", +[](I *p) { return p->mbInvertMouse; });
-	SOMA_METHOD(e, T, "bool WasAnalogueInputFromPad()", +[](I *) { return false; });
-	SOMA_METHOD(e, T, "bool GetSmoothMouse()", +[](I *p) { return p->mbSmoothMouse; });
-	SOMA_METHOD(e, T, "void SetSmoothMouse(bool abX)", +[](I *p, bool b) { p->mbSmoothMouse = b; });
-	SOMA_METHOD(e, T, "float GetMouseSensitivity()", +[](I *p) { return p->mfMouseSensitivity; });
-	SOMA_METHOD(e, T, "void SetMouseSensitivity(float afX)", +[](I *p, float x) { p->mfMouseSensitivity = x; });
-	SOMA_METHOD(e, T, "float GetGamepadSensitivity()", +[](I *p) { return p->mfGamepadSensitivity; });
-	SOMA_METHOD(e, T, "void SetGamepadSensitivity(float afX)", +[](I *p, float x) { p->mfGamepadSensitivity = x; });
-	SOMA_METHOD(e, T, "void SetRumble(int alDevice, float afStrength, float afDuration)", +[](I *, int, float, float) {});
-	SOMA_METHOD(e, T, "void ResetSmoothMousePos()", +[](I *p) { p->mlstSmoothMousePos.clear(); });
-	SOMA_METHOD(e, T, "void SetMaxSmoothMousePos(int alX)", +[](I *p, int x) { p->mlMaxSmoothMousePos = x; });
-	SOMA_METHOD(e, T, "void SetPrevSmoothMousePosMul(float afX)", +[](I *p, float x) { p->mfPrevSmoothMousePosMul = x; });
-	SOMA_METHOD(e, T, "tString GetActionName(int alId, bool abAnalog)", +[](I *p, int id, bool a) { return p->GetActionName(id, a); });
-	SOMA_METHOD(e, T, "void CreateGamepadProfile(const tString&in asName, const tString&in asPrefix, array<tString> &in avButtons, array<tString> &in avAxes, array<uint> &in avDPad)",
-				+[](I *p, S n, S pre, CScriptArray &b, CScriptArray &a, CScriptArray &d) {
-					cGamepadProfile *pProfile = p->GetGamepadProfile(n);
-					if (pProfile == NULL)
-					{
-						p->mvGamepadProfiles.emplace_back();
-						pProfile = &p->mvGamepadProfiles.back();
-					}
-					pProfile->msName = n;
-					pProfile->msPrefix = pre;
-					pProfile->mvButtons.clear();
-					pProfile->mvAxes.clear();
-					pProfile->mvDPad.clear();
-					for (asUINT i = 0; i < b.GetSize(); ++i)
-						pProfile->mvButtons.push_back(*(tString *)b.At(i));
-					for (asUINT i = 0; i < a.GetSize(); ++i)
-						pProfile->mvAxes.push_back(*(tString *)a.At(i));
-					for (asUINT i = 0; i < d.GetSize(); ++i)
-						pProfile->mvDPad.push_back(*(unsigned *)d.At(i));
-				});
-	SOMA_METHOD(e, T, "void AddPresetToProfile(const tString&in asProfile, const tString&in asPreset, array<int> &in avActions, array<tString> &in avBindings, array<bool> &in avAnalog)",
-				+[](I *p, S n, S preset, CScriptArray &ac, CScriptArray &b, CScriptArray &an) {
-					cGamepadProfile *pProfile = p->GetGamepadProfile(n);
-					if (pProfile == NULL)
-						return;
-					pProfile->mvPresets.emplace_back();
-					cGamepadPreset &P = pProfile->mvPresets.back();
-					P.msName = preset;
-					for (asUINT i = 0; i < ac.GetSize(); ++i)
-						P.mvActions.push_back(*(int *)ac.At(i));
-					for (asUINT i = 0; i < b.GetSize(); ++i)
-						P.mvBindings.push_back(*(tString *)b.At(i));
-					for (asUINT i = 0; i < an.GetSize(); ++i)
-						P.mvAnalog.push_back(*(bool *)an.At(i));
-				});
-	SOMA_METHOD(e, T, "void SetGamepadMapping(const tString&in asProfile, const tString&in asPreset)", +[](I *p, S a, S b) {
-		p->msGamepadProfile = a;
-		p->msGamepadPreset = b;
-	});
-	SOMA_METHOD(e, T, "int GetGamepadMappingActionNum()", +[](I *p) {
-		cGamepadPreset *pPreset = p->GetGamepadPreset();
-		return pPreset ? (int)pPreset->mvActions.size() : 0;
-	});
-	SOMA_METHOD(e, T, "bool GetGamepadMappingAction(int alId, int&out alAction, tString&out asPrimary, bool&out abAnalog)",
-				+[](I *p, int id, int &action, tString &prim, bool &analog) {
-					cGamepadPreset *pPreset = p->GetGamepadPreset();
-					if (pPreset == NULL)
-					{
-						action = -1;
-						return false;
-					}
-					if (id < 0 || id >= (int)pPreset->mvActions.size() || id >= (int)pPreset->mvBindings.size() || id >= (int)pPreset->mvAnalog.size())
-						return false;
-					action = pPreset->mvActions[id];
-					prim = pPreset->mvBindings[id];
-					analog = pPreset->mvAnalog[id];
-					return true;
-				});
-	SOMA_METHOD(e, T, "void GetActionsAssociatedToGamepadControl(const tString &in asProfile, const tString &in asPreset, const tString &in asControl, tString &out asActions)",
-				+[](I *p, S a, S b, S c, tString &out) { p->GetActionsAssociatedToGamepadControl(a, b, c, out); });
-	SOMA_METHOD(e, T, "void FetchGamepadInputLayoutString(const tString &in asInputName, tString &out asPrefixName, tString &out asLayoutString)",
-				+[](I *p, S n, tString &a, tString &b) { p->FetchGamepadInputLayoutString(n, a, b); });
 }

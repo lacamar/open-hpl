@@ -1,4 +1,5 @@
 #include "SomaLuxGame.h"
+#include "SomaS5Dump.h"
 #include "SomaBase.h"
 #include "SomaLux.h"
 #include "SomaLuxPlayer.h"
@@ -16,6 +17,11 @@ cSomaLuxGame *cSomaLuxGame::mpInstance = NULL;
 cSomaLuxGame::cSomaLuxGame(cSomaScriptRuntime *apRuntime) : mpRuntime(apRuntime)
 {
 	mpInstance = this;
+	if (OhplS5DumpEnabled())
+	{
+		OhplS5Log("begin");
+		OhplS5SelfTest();
+	}
 }
 
 cSomaLuxGame::~cSomaLuxGame()
@@ -358,6 +364,13 @@ void cSomaLuxGame::Update(float afTimeStep, bool abPaused)
 {
 	// Read once: iMouse::GetRelPosition resets the motion
 	mvMouseRel = gpSomaBase->mpEngine->GetInput()->GetMouse()->GetRelPosition();
+	if (OhplS5DumpEnabled())
+	{
+		static int slFrame = 0;
+		++slFrame;
+		if (slFrame >= 200 && slFrame < 260)
+			mvMouseRel = cVector2l(slFrame % 7 == 0 ? 0 : (slFrame * 5) % 23 - 11, slFrame % 5 == 0 ? 0 : (slFrame * 3) % 17 - 8);
+	}
 	if (cSomaLuxInputHandler::Get())
 		cSomaLuxInputHandler::Get()->LatchActions();
 	if (cSomaLuxInputHandler::Get())
@@ -424,6 +437,8 @@ void cSomaLuxGame::UpdateGui(float afTimeStep)
 
 void cSomaLuxGame::BroadcastAction(int alAction, bool abPressed)
 {
+	if (OhplS5DumpEnabled())
+		OhplS5Log("act %d %d", alAction, abPressed);
 	// Paused: only modules (the menu) hear input
 	if (ohpl_gs3_route_action(gpSomaBase->mbScriptGamePaused))
 	{
@@ -438,6 +453,8 @@ void cSomaLuxGame::BroadcastAction(int alAction, bool abPressed)
 
 void cSomaLuxGame::BroadcastAnalog(int alAnalogId, const cVector3f &avAmount)
 {
+	if (OhplS5DumpEnabled())
+		OhplS5Log("ana %d %.9g %.9g %.9g", alAnalogId, avAmount.x, avAmount.y, avAmount.z);
 	if (ohpl_gs3_analog_allowed(gpSomaBase->mbScriptGamePaused) == false)
 		return;
 	ForEach([&](cSomaLuxScriptable *p) { p->OnAnalogInput(alAnalogId, avAmount); }, true);

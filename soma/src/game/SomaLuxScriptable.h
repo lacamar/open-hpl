@@ -3,6 +3,7 @@
 
 #include "hpl.h"
 #include "RustSomaLux.h"
+#include "RustSomaLuxS5.h"
 
 #include <angelscript.h>
 #include <functional>
@@ -11,8 +12,8 @@ using namespace hpl;
 
 class cSomaScriptRuntime;
 
-float SomaEasing(int alType, float afT);
-uint64_t SomaHash64(const tString &asStr);
+inline float SomaEasing(int alType, float afT) { return ohpl_gs3_easing(alType, afT); }
+inline uint64_t SomaHash64(const tString &asStr) { return ohpl_gs3_hash64((const unsigned char *)asStr.data(), asStr.size()); }
 
 class cSomaLuxScriptable
 {
@@ -45,53 +46,16 @@ public:
 	virtual void OnAnalogInput(int alAnalogId, const cVector3f &avAmount);
 
 	void UpdateTimers(float afTimeStep);
+	bool TimersIdle() const { return ohpl_s5_ts_idle((void *)this); }
 
-	void Timer_Add(uint64_t alId, float afTime, const tString &asFunc, bool abCreateIfExist, bool abRepeat);
-	void Timer_Remove(uint64_t alId);
-	bool Timer_Exists(uint64_t alId);
-	float Timer_GetTimeLeft(uint64_t alId);
-	void Timer_SetPaused(uint64_t alId, bool abX);
-	bool Timer_TimeHasPassed(uint64_t alId, float afLength);
-	float Timer_GetValue(uint64_t alId, float afMin, float afMax, int alEasing, bool abAbs);
-	void Timer_ClearAll() { mvTimers.clear(); }
-	bool TimersIdle() const { return mvTimers.empty() && mvFaders.empty(); }
-
-	void Fader_FadeTo(uint64_t alId, float afGoal, float afTime, bool abReverseAtEnd, bool abSkipIfExists);
-	void Fader_Set(uint64_t alId, float afX, bool abSkipIfExists);
-	void Fader_SetPaused(uint64_t alId, bool abPaused);
-	float Fader_GetValue(uint64_t alId, float afMin, float afMax, int alEasing, bool abAbs);
-	void Fader_ClearAll() { mvFaders.clear(); }
-
-	static void RegisterTimerNatives(asIScriptEngine *apEngine, const char *apType);
+	static void RegisterTimerNatives(asIScriptEngine *apEngine, const char *apType) { ohpl_s5_register_timer_natives(apEngine, apType); }
 
 protected:
-	friend class cSomaSaveState;
-	struct cTimer : OhplGs3Timer
-	{
-		tString msFunc;
-	};
-	struct cFader
-	{
-		uint64_t mlId;
-		float mfValue;
-		float mfStart;
-		float mfGoal;
-		float mfSpeed;
-		bool mbReverseAtEnd;
-		bool mbPaused;
-	};
-	static_assert(sizeof(cFader) == sizeof(OhplGs3Fader) && offsetof(cFader, mbReverseAtEnd) == offsetof(OhplGs3Fader, mbReverseAtEnd));
-	cTimer *FindTimer(uint64_t alId);
-	cFader *FindFader(uint64_t alId);
-	cFader *GetOrAddFader(uint64_t alId, bool abSkipIfExists);
-
 	static std::vector<cSomaLuxScriptable *> mvAll;
 	static uint64_t mlAllVersion;
 
 	cSomaScriptRuntime *mpRuntime;
 	asIScriptObject *mpScript;
-	std::vector<cTimer> mvTimers;
-	std::vector<cFader> mvFaders;
 };
 
 #endif // SOMA_LUX_SCRIPTABLE_H
