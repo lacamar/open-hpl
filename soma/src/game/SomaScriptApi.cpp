@@ -1,7 +1,6 @@
 #include "SomaScriptApi.h"
 #include "RustSomaScript.h"
 #include "RustSomaScriptS2.h"
-#include "SomaImGuiDefaults.h"
 #include "SomaImGui.h"
 #include "SomaScriptNatives.h"
 
@@ -29,26 +28,6 @@ std::map<std::string, int> &cSomaScriptApi::GetStubCallCounts()
 	mapRust.clear();
 	ohpl_s2_stub_counts(+[](void *c, const unsigned char *p, size_t n, int l) { (*(std::map<std::string, int> *)c)[std::string((const char *)p, n)] = l; }, &mapRust);
 	return mapRust;
-}
-
-// Native code and the recovered defaults use SOMA's layout for these structs in every game
-int SomaNativeOffset(const std::string &asType, const std::string &asDecl, int alOffset)
-{
-	static const struct { const char *mpType, *mpName; int mlOffset; } vLayout[] = {
-#include "SomaImGuiLayout.inc"
-		{"cImGuiGfx", "mvAlphaLimit", 160}, // Rebirth only, spare bytes of the SOMA struct
-	};
-	std::string sName = asDecl.substr(asDecl.find_last_of(' ') + 1);
-	bool bType = false;
-	for (auto &e : vLayout)
-	{
-		if (asType != e.mpType)
-			continue;
-		if (sName == e.mpName)
-			return e.mlOffset;
-		bType = true;
-	}
-	return bType ? -1 : alOffset;
 }
 
 // native code uses SOMA's enum values; later games insert names in the middle
@@ -93,14 +72,6 @@ const tString *SomaIntern(const tString &asStr)
 {
 	static std::set<tString> setStrings;
 	return &*setStrings.insert(asStr).first;
-}
-
-const cSomaStructDefaults *FindStructDefaults(const char *apType)
-{
-	for (int i = 0; i < glSomaStructDefaultsNum; ++i)
-		if (strcmp(gvSomaStructDefaults[i].mpType, apType) == 0)
-			return &gvSomaStructDefaults[i];
-	return NULL;
 }
 
 void *SomaNewScriptStruct(const char *apType)

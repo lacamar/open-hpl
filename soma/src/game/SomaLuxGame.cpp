@@ -357,8 +357,6 @@ void cSomaLuxGame::ResetScriptables()
 	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void Reset()"); });
 }
 
-void SomaUpdateCameraTextures();
-void SomaDestroyCameraTextures();
 
 void cSomaLuxGame::Update(float afTimeStep, bool abPaused)
 {
@@ -392,7 +390,6 @@ void cSomaLuxGame::PostUpdate(float afTimeStep)
 	SomaUpdateCameraTextures();
 }
 
-cSomaImGui *SomaHudImGui();
 
 void cSomaLuxGame::Draw(float afFrameTime)
 {
@@ -576,10 +573,10 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cLuxEventDatabaseHandler@ cLux_GetEventDatabaseHandler()", +[]() { return (void *)HandlerByName<1>(); });
 	SOMA_FUNC(e, "cLuxGuiHandler@ cLux_GetGuiHandler()", +[]() { return (void *)HandlerByName<2>(); });
 	SOMA_METHOD(e, "cLuxGuiHandler", "void SetGameHudInputFocus(bool abX)", +[](void *, bool b) {
-		cSomaImGui::mbGameHudFocus = b;
-		SomaHudImGui()->mbShowMouse = b;
+		cSomaImGui::SetGameHudFocus(b);
+		SomaHudImGui()->SetShowMouse(b);
 	});
-	SOMA_METHOD(e, "cLuxGuiHandler", "bool GetGameHudInputFocus()", +[](void *) { return cSomaImGui::mbGameHudFocus; });
+	SOMA_METHOD(e, "cLuxGuiHandler", "bool GetGameHudInputFocus()", +[](void *) { return cSomaImGui::GameHudFocus(); });
 	SOMA_FUNC(e, "iLuxAchievementHandler@ cLux_GetAchievementHandler()", +[]() { return (void *)HandlerByName<3>(); });
 	// Unlocked set is filled by the platform backend; empty without Steam
 	SOMA_METHOD(e, "iLuxAchievementHandler", "bool GetAchievementUnlocked(int alID)", +[](void *, int) { return false; });

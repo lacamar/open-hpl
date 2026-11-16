@@ -1,6 +1,5 @@
 #include "RustSomaScriptS2.h"
 #include "SomaImGui.h"
-#include "SomaImGuiDefaults.h"
 #include "SomaLux.h"
 #include "SomaLuxScriptable.h"
 #include "SomaScriptNatives.h"
@@ -20,32 +19,13 @@
 
 #include <string>
 
-const cSomaStructDefaults *FindStructDefaults(const char *apType);
 extern std::string gsSomaExecOutput;
-int SomaNativeOffset(const std::string &asType, const std::string &asDecl, int alOffset);
 
 namespace
 {
 	std::string S(const unsigned char *p, size_t n) { return std::string((const char *)p, n); }
 
-	int StructDefaults(const unsigned char *apType, size_t alLen, OhplS2Defaults *apOut)
-	{
-		const cSomaStructDefaults *d = FindStructDefaults(S(apType, alLen).c_str());
-		if (d == NULL)
-			return 0;
-		apOut->size = d->mlSize;
-		apOut->bytes = (const unsigned char *)d->mpBytes;
-		apOut->nstr = d->mvStringOffsets.size();
-		apOut->str_offsets = d->mvStringOffsets.data();
-		return 1;
-	}
-
 	const void *InternEmpty() { return SomaIntern(""); }
-
-	int NativeOffset(const unsigned char *apType, size_t alType, const unsigned char *apDecl, size_t alDecl, int alOffset)
-	{
-		return SomaNativeOffset(S(apType, alType), S(apDecl, alDecl), alOffset);
-	}
 
 	void RegisterStep(void *apEngine, unsigned alStep)
 	{
@@ -59,7 +39,8 @@ namespace
 			SomaRegisterGlobalEngineBlock(e);
 			break;
 		default:
-			cSomaImGui::RegisterNatives(e);
+			SomaInstallImGuiHost();
+			ohpl_s8d_register(e);
 			cSomaLuxEntity::RegisterNatives(e);
 			cSomaLuxGame::RegisterNatives(e);
 			cSomaSoundEvents::RegisterNatives(e);
@@ -151,7 +132,7 @@ namespace
 		}
 	}
 
-	const OhplS2HostOps gHost = {StructDefaults, InternEmpty, NativeOffset, RegisterStep, SetReset, SetAssign, SetAdd, SetErase, SetCount, SetSize, SetToArray,
+	const OhplS2HostOps gHost = {InternEmpty, RegisterStep, SetReset, SetAssign, SetAdd, SetErase, SetCount, SetSize, SetToArray,
 								 ArrInsertLast, ArrInsertAt, ArrRemoveLast, ArrRemoveAt, ArrSize, ArrResize, RunGlobalFunc, SomaScriptGenBindingCount,
 								 GenOp, GlobalFuncs, SomaEasing, Misc, GameId, RegisterArray};
 }

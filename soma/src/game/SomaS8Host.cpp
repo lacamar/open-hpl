@@ -57,8 +57,6 @@ std::string OhplS8bHex(float afX)
 	return s;
 }
 
-cSomaImGui *SomaHudImGui();
-void SomaRenderImGuis();
 
 namespace
 {
@@ -162,7 +160,7 @@ namespace
 			s->mpBase->LoadScriptMainMenu();
 			iResourceManager::mpLoadTickCallback = NULL;
 			break;
-		case kS8_HudImGui: SomaHudImGui(); break;
+		case kS8_HudImGui: SomaInstallImGuiHost(); SomaHudImGui(); break;
 		case kS8_BaseSplashDone: s->mpBase->OnSplashFinished(); break;
 		case kS8_BaseGammaDone: s->mpBase->OnGammaScreenFinished(); break;
 		case kS8_SaveGamma:

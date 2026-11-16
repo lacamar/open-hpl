@@ -5,7 +5,6 @@
 
 pub mod critter;
 mod ffi_critter;
-mod ffi_imgui;
 mod ffi_loaders;
 mod ffi_postfx;
 mod ffi_screens;
@@ -28,3 +27,15 @@ mod s8_trace;
 
 mod ffi_s8b;
 pub mod s8b_tone;
+
+mod ffi_s8d;
+pub mod s8d;
+mod s8d_defaults;
+mod s8d_hud;
+mod s8d_layout;
+mod s8d_natives;
+mod s8d_sd;
+pub mod s8d_structs;
+#[cfg(test)]
+mod s8d_tests;
+mod s8d_text;

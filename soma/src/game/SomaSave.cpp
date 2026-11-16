@@ -550,20 +550,19 @@ public:
 		t.on_gui = s.mPool.Add(p->msOnGuiFunc);
 		if (p->mpImGui)
 		{
-			for (auto &tm : p->mpImGui->mvTimers)
+			for (size_t i = 0; i < p->mpImGui->TimerCount(); ++i)
 			{
 				OhplGs4ImTimer b;
-				static_assert(sizeof(b) == sizeof(tm), "imgui timer size");
-				memcpy(&b, &tm, sizeof(tm));
+				static_assert(sizeof(b) == sizeof(cSomaImGui::cTimer), "imgui timer size");
+				memcpy(&b, p->mpImGui->TimerAt(i), sizeof(b));
 				s.mImTimers.push_back(b);
 			}
-			for (auto &st : p->mpImGui->mmapStates)
+			for (size_t i = 0; i < p->mpImGui->StateCount(); ++i)
 			{
 				OhplGs4ImStatePair b;
-				static_assert(sizeof(b.state) == sizeof(st.second), "imgui state size");
+				static_assert(sizeof(b.state) == sizeof(cSomaImGui::cState), "imgui state size");
 				memset(&b, 0, sizeof(b));
-				b.id = st.first;
-				memcpy(&b.state, &st.second, sizeof(st.second));
+				memcpy(&b.state, p->mpImGui->StateAt(i, &b.id), sizeof(b.state));
 				s.mImStates.push_back(b);
 			}
 		}
@@ -1094,16 +1093,14 @@ public:
 				static_assert(sizeof(tm) == sizeof(OhplGs4ImTimer), "imgui timer size");
 				memcpy(&tm, &x->imgui_timers.p[i], sizeof(tm));
 				if (t->mpImGui)
-					t->mpImGui->mvTimers.push_back(tm);
+					t->mpImGui->PushTimer(tm);
 			}
 		}
 		for (size_t i = 0; i < x->imgui_states.n; ++i)
 		{
-			cSomaImGui::cState st;
-			static_assert(sizeof(st) == sizeof(OhplGs4ImState), "imgui state size");
-			memcpy(&st, &x->imgui_states.p[i].state, sizeof(st));
+			static_assert(sizeof(cSomaImGui::cState) == sizeof(OhplGs4ImState), "imgui state size");
 			if (t->mpImGui)
-				t->mpImGui->mmapStates[x->imgui_states.p[i].id] = st;
+				memcpy(t->mpImGui->State(x->imgui_states.p[i].id), &x->imgui_states.p[i].state, sizeof(OhplGs4ImState));
 		}
 		for (size_t i = 0; i < x->anims.n; ++i)
 		{

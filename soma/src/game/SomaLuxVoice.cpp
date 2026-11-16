@@ -14,7 +14,6 @@
 #include <vorbis/vorbisfile.h>
 #include <sstream>
 
-cSomaImGui *SomaHudImGui();
 
 cSomaLuxVoiceHandler *cSomaLuxVoiceHandler::mpInstance = NULL;
 

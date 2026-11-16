@@ -10,22 +10,12 @@
 
 struct OhplS2Api;
 
-struct OhplS2Defaults
-{
-	size_t size;
-	const unsigned char *bytes;
-	size_t nstr;
-	const int *str_offsets;
-};
-
 typedef void (*OhplS2CountSink)(void *, const unsigned char *, size_t, int);
 
 // What Rust calls back into: C++-only containers and the natives of the other classes
 struct OhplS2HostOps
 {
-	int (*struct_defaults)(const unsigned char *, size_t, OhplS2Defaults *);
 	const void *(*intern_empty)();
-	int (*native_offset)(const unsigned char *, size_t, const unsigned char *, size_t, int);
 	void (*register_step)(void *, unsigned);
 	void (*sset_reset)(void *);
 	void (*sset_assign)(void *, void *);
