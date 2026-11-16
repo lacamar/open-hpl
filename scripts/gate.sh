@@ -405,7 +405,7 @@ def same(name, a, b):
         return (not bad and len(fa) > 0, f"equal ({len(fa)} fsb digests, {len(sa)} long-lived events, {len(oa)} lines)" if not bad else "DIFFER in " + ", ".join(bad))
     if name.startswith("a12d-"):
         # sound rows and the music line follow what happens to be playing
-        mask = lambda p: [l for l in open(p, errors="replace") if not l.startswith("dn ")]
+        mask = lambda p: [re.sub(r"^l lines=\d+ nodes=\d+ objs=(\d+) other=\d+", r"l objs=\1", l) for l in open(p, errors="replace") if not l.startswith("dn ")]
         return (mask(a) == mask(b), "equal (playing-sound rows masked)" if mask(a) == mask(b) else "DIFFER")
     if name.startswith("a12b-"):
         # camera positions follow the player body, which settles with real time

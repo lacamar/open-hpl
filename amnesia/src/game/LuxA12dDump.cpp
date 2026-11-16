@@ -100,7 +100,8 @@ static void FlushLog()
 		}
 	}
 	std::sort(vObj.begin(), vObj.end());
-	OhplA12dLog("l lines=%d nodes=%d objs=%d other=%d", (int)gvLog.size(), lNodes, lObjs, lOther);
+	OhplA12dLog("dn l lines=%d nodes=%d other=%d", (int)gvLog.size(), lNodes, lOther);
+	OhplA12dLog("l objs=%d", lObjs);
 	for(size_t i = 0; i < vObj.size(); ++i) OhplA12dLog("l o %s", vObj[i].c_str());
 	gvLog.clear();
 }

@@ -8,6 +8,7 @@ pub mod base;
 pub mod cfg;
 pub mod config;
 pub mod debug;
+mod debug_ui;
 mod ffi;
 pub mod headless;
 pub mod input;
