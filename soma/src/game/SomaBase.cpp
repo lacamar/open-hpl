@@ -118,7 +118,7 @@ static void cSomaBase_HeadlessCmd_PlayerState(void *apUserData, const cHeadlessR
 	aResp.Set("active", pPlayer->IsActive());
 	aResp.Set("state", pPlayer->GetState() ? pPlayer->GetState()->msName : tString(""));
 	aResp.Set("move_state", pPlayer->GetMoveState() ? pPlayer->GetMoveState()->msName : tString(""));
-	aResp.Set("health", pPlayer->mfHealth);
+	aResp.Set("health", pPlayer->Health());
 	if (iCharacterBody *pBody = pPlayer->GetCharacterBody())
 	{
 		cVector3f v = pBody->GetFeetPosition();

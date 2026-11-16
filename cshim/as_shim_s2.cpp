@@ -367,6 +367,7 @@ void* ohpl_as2_g_arg_object(void* g, unsigned i) { return G(g)->GetArgObject(i);
 void* ohpl_as2_g_arg_addr(void* g, unsigned i) { return G(g)->GetAddressOfArg(i); }
 void* ohpl_as2_g_ret_loc(void* g) { return G(g)->GetAddressOfReturnLocation(); }
 void ohpl_as2_g_set_ret_addr(void* g, void* p) { G(g)->SetReturnAddress(p); }
+void ohpl_as2_g_set_ret_object(void* g, void* p) { G(g)->SetReturnObject(p); }
 unsigned ohpl_as2_g_arg_count(void* g) { return G(g)->GetArgCount(); }
 int ohpl_as2_g_arg_type_id(void* g, unsigned i) { return G(g)->GetArgTypeId(i); }
 void* ohpl_as2_g_aux(void* g) { return G(g)->GetAuxiliary(); }
@@ -416,6 +417,7 @@ int ohpl_as2_type_prop(void* t, unsigned i, const char** name, int* type_id, int
 	return T(t)->GetProperty(i, name, type_id, nullptr, nullptr, offset);
 }
 void* ohpl_as2_type_method_by_decl(void* t, const char* decl) { return T(t)->GetMethodByDecl(decl); }
+int ohpl_as2_type_has_method_name(void* t, const char* name) { return T(t)->GetMethodByName(name) != NULL; }
 
 const char* ohpl_as2_func_name(void* f) { return F(f)->GetName(); }
 const char* ohpl_as2_func_decl(void* f, int obj, int ns, int names) { return F(f)->GetDeclaration(obj != 0, ns != 0, names != 0); }

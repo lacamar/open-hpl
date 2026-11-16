@@ -2,11 +2,11 @@
 #define SOMA_LUX_PLAYER_H
 
 #include "RustSomaLuxS5.h"
+#include "RustSomaLuxS5d.h"
 #include "SomaLuxGame.h"
 #include "SomaS5Dump.h"
 
-#include <deque>
-#include <map>
+#include <cstring>
 
 class cSomaLuxPlayer;
 class cSomaLuxEntity;
@@ -16,35 +16,17 @@ class cSomaLuxPlayerState : public cSomaLuxScriptable
 {
 public:
 	tString msName;
-	int mlId = -1;
-	cSomaLuxPlayer *mpPlayer = NULL;
+	OhplS5dStateBlock mB = {-1, NULL};
 };
 
 class cSomaLuxMoveState : public cSomaLuxScriptable
 {
 public:
 	tString msName;
-	int mlId = -1;
-	cSomaLuxPlayer *mpPlayer = NULL;
-	bool mbAutoUpdateSpeedSettings = true;
-
-	float mfMaxForwardSpeed = 0;
-	float mfMaxBackwardSpeed = 0;
-	float mfMaxSidwaySpeed = 0;
-	float mfForwardAcc = 0;
-	float mfSidewayAcc = 0;
-	float mfForwardDeacc = 0;
-	float mfSidewayDeacc = 0;
-	float mfForwardOppositeDirAccMul = 1;
-	float mfSidewayOppositeDirAccMul = 1;
-	float mfMaxForwardSpeedMul = 1;
-	float mfMaxBackwardSpeedMul = 1;
-	float mfMaxSidwaySpeedMul = 1;
-
-	// cLuxMoveState::Update
-	void OnUpdate(float afTimeStep) override;
+	OhplS5dMoveBlock mB = {-1, NULL};
 };
 
+// Rust owns the player (rust/src/somalux/s5d_player.rs); this is the shell the scripts and the engine hold
 class cSomaLuxPlayer : public cSomaLuxHandler
 {
 public:
@@ -53,124 +35,72 @@ public:
 
 	static cSomaLuxPlayer *Get() { return mpInstance; }
 
-	void SetCamera(cCamera *apCamera);
-	cCamera *GetCamera() { return mpCamera; }
-	iCharacterBody *GetCharacterBody() { return mpCharBody; }
-	void SetCharacterBody(iCharacterBody *apBody);
+	void SetCamera(cCamera *apCamera) { ohpl_s5d_set_camera(apCamera); }
+	cCamera *GetCamera() { return (cCamera *)ohpl_s5d_camera(); }
+	iCharacterBody *GetCharacterBody() { return (iCharacterBody *)ohpl_s5d_body(); }
+	void SetCharacterBody(iCharacterBody *apBody) { ohpl_s5d_set_body(apBody); }
 
-	bool IsActive() { return mbActive; }
-	void SetActive(bool abX) { mbActive = abX; }
+	bool IsActive() { return ohpl_s5d_active(); }
+	void SetActive(bool abX) { ohpl_s5d_set_active(abX); }
 
-	void AddState(const tString &asName, int alId, const tString &asFile, const tString &asClass);
-	void AddMoveState(const tString &asName, int alId, const tString &asFile, const tString &asClass);
-	void ChangeState(int alId);
-	void ChangeMoveState(int alId);
-	cSomaLuxPlayerState *GetState() { return mpState; }
-	cSomaLuxMoveState *GetMoveState() { return mpMoveState; }
+	void AddState(const tString &asName, int alId, const tString &asFile, const tString &asClass)
+	{
+		ohpl_s5d_add_state((const unsigned char *)asName.data(), asName.size(), alId, (const unsigned char *)asFile.data(), asFile.size(),
+						   (const unsigned char *)asClass.data(), asClass.size(), false);
+	}
+	void AddMoveState(const tString &asName, int alId, const tString &asFile, const tString &asClass)
+	{
+		ohpl_s5d_add_state((const unsigned char *)asName.data(), asName.size(), alId, (const unsigned char *)asFile.data(), asFile.size(),
+						   (const unsigned char *)asClass.data(), asClass.size(), true);
+	}
+	void ChangeState(int alId) { ohpl_s5d_change_state(alId, false); }
+	void ChangeMoveState(int alId) { ohpl_s5d_change_state(alId, true); }
+	cSomaLuxPlayerState *GetState() { return static_cast<cSomaLuxPlayerState *>((cSomaLuxScriptable *)ohpl_s5d_state(false)); }
+	cSomaLuxMoveState *GetMoveState() { return static_cast<cSomaLuxMoveState *>((cSomaLuxScriptable *)ohpl_s5d_state(true)); }
+	int StateId() { return ohpl_s5d_state_id(false); }
+	int MoveStateId() { return ohpl_s5d_state_id(true); }
 
 	// cLuxMapHandler::SetCurrentMap: after CreateWorldEntities/OnMapEnter
-	void PlaceAtStart(const cVector3f &avFeetPos, float afYaw, bool abCrouching = false);
+	void PlaceAtStart(const cVector3f &avFeetPos, float afYaw, bool abCrouching = false)
+	{
+		ohpl_s5d_place_at_start(&avFeetPos.x, afYaw, abCrouching);
+	}
 
-	void OnMessage(const char *apDecl) override;
-	void OnUpdate(float afTimeStep) override;
-	void OnPostUpdate(float afTimeStep) override;
-	void OnVariableUpdate(float afTimeStep) override;
-	void OnGui(float afTimeStep) override;
-	void OnMapMessage(const char *apDecl, void *apMap) override;
-	void OnAction(int alAction, bool abPressed) override;
-	void OnAnalogInput(int alAnalogId, const cVector3f &avAmount) override;
+	void OnMessage(const char *apDecl) override { ohpl_s5d_message((const unsigned char *)apDecl, strlen(apDecl)); }
+	void OnUpdate(float afTimeStep) override { ohpl_s5d_update(afTimeStep); }
+	void OnPostUpdate(float afTimeStep) override { ohpl_s5d_post_update(afTimeStep); }
+	void OnVariableUpdate(float afTimeStep) override { ohpl_s5d_variable_update(afTimeStep); }
+	void OnGui(float afTimeStep) override { ohpl_s5d_gui(afTimeStep); }
+	void OnMapMessage(const char *apDecl, void *apMap) override { ohpl_s5d_map_message((const unsigned char *)apDecl, strlen(apDecl), apMap); }
+	void OnAction(int alAction, bool abPressed) override { ohpl_s5d_action(alAction, abPressed); }
+	void OnAnalogInput(int alAnalogId, const cVector3f &avAmount) override { ohpl_s5d_analog(alAnalogId, &avAmount.x); }
 
-	float GetDefaultFOV() { return mfDefaultFOV; }
+	float Health() { return ohpl_s5d_health(); }
+	void SetHealthRaw(float afX) { ohpl_s5d_set_health_raw(afX); }
+	void SetHealth(float afX) { ohpl_s5d_set_health(afX); }
+	bool IsDead() { return ohpl_s5d_is_dead(); }
+	bool GiveDamage(float afAmount, int alType, float afMinHealth, const cSomaID &aSource, int alDamageID)
+	{
+		return ohpl_s5d_give_damage(afAmount, alType, afMinHealth, &aSource, alDamageID);
+	}
+	float GetVisibilityRangeMul() { return ohpl_s5d_visibility_range_mul(); }
+	float GetVisibilityMaxRange() { return ohpl_s5d_visibility_max_range(); }
+	void GetFOVMul(OhplS5dFade *apOut) { ohpl_s5d_fov_mul(apOut, false); }
+	void SetFOVMul(const OhplS5dFade *apIn) { ohpl_s5d_set_fov_mul(apIn, false); }
+	void GetAspectMul(OhplS5dFade *apOut) { ohpl_s5d_fov_mul(apOut, true); }
+	void SetAspectMul(const OhplS5dFade *apIn) { ohpl_s5d_set_fov_mul(apIn, true); }
 
 	static void RegisterNatives(asIScriptEngine *apEngine);
-
-	struct cMoveVector : OhplGs3MoveVec {};
-	struct cFadeValue : OhplGs3Fade {};
-
-	cVector3f mvBaseCameraPosAdd = 0;
-	std::map<int, cMoveVector> mmapCameraPosAdd;
-	std::map<int, cFadeValue> mmapCameraRoll;
-	std::map<int, cFadeValue> mmapFOVMul;
-	cFadeValue &FOVMul(int alId)
-	{
-		auto it = mmapFOVMul.find(alId);
-		if (it == mmapFOVMul.end())
-		{
-			it = mmapFOVMul.emplace(alId, cFadeValue()).first;
-			it->second.mfValue = it->second.mfGoal = 1;
-		}
-		return it->second;
-	}
-	float GetFOVMul()
-	{
-		std::vector<float> v;
-		for (auto &it : mmapFOVMul)
-			v.push_back(it.second.mfValue);
-		return ohpl_gs3_fov_mul(mFOVMul.mfValue, v.data(), v.size());
-	}
-	cFadeValue mFOVMul, mAspectMul, mFOV;
-
-	void SetHealth(float afX);
-	bool GiveDamage(float afAmount, int alType, float afMinHealth, const cSomaID &aSource, int alDamageID);
-	std::vector<int> mvDamageIDs;
-	bool IsDead() const { return ohpl_gs3_is_dead(mfHealth, mbCanDie); }
-	float mfHealth = 1;
-	bool mbCanDie = true;
-	float mfMaxHealth = 1;
-
-	bool mbCameraRotateActive = false;
-	cVector3f mvCameraRotateTarget = 0;
-	bool mbCameraRotateLocal = false;
-	float mfCameraRotateSpeed = 0, mfCameraRotateAcc = 0, mfCameraRotateSpeedMul = 0, mfCameraRotateMaxSpeed = 0;
-
-	bool mbAutomoveActive = false;
-	cVector3f mvAutomoveTarget = 0;
-	float mfAutomoveSpeedMul = 0;
-
-	std::map<int, float> mmapVisibilityRangeMul;
-	std::map<int, float> mmapVisibilityMaxRange;
-	float GetVisibilityRangeMul()
-	{
-		std::vector<float> v;
-		for (auto &it : mmapVisibilityRangeMul)
-			v.push_back(it.second);
-		return ohpl_gs3_visibility_range_mul(v.data(), v.size());
-	}
-	float GetVisibilityMaxRange()
-	{
-		std::vector<float> v;
-		for (auto &it : mmapVisibilityMaxRange)
-			v.push_back(it.second);
-		return ohpl_gs3_visibility_max_range(v.data(), v.size());
-	}
-
-	float mfTimeSincePhysicsInteraction = 0;
-	float mfAverageMoveSpeed = 0;
-	float mfSmoothingRotAmount = 0;
-	cVector3f mvAverageMoveDirection = 0;
-	cVector2f mvCameraTrackingAvg = 0;
+	static int32_t HostCall(void *, uint32_t alOp, OhplS5Io *apIo);
 
 private:
-	void UpdateCamera(float afTimeStep);
-
 	struct cCharBodyCallback : public iCharacterBodyCallback
 	{
-		cSomaLuxPlayer *mpPlayer = NULL;
 		void OnGravityCollide(iCharacterBody *, iPhysicsBody *, cCollideData *) override {}
-		void OnHitGround(iCharacterBody *apBody, const cVector3f &avVel) override;
+		void OnHitGround(iCharacterBody *apBody, const cVector3f &avVel) override { ohpl_s5d_hit_ground(apBody, &avVel.x); }
 	} mCharBodyCallback;
 
 	static cSomaLuxPlayer *mpInstance;
-
-	cCamera *mpCamera = NULL;
-	iCharacterBody *mpCharBody = NULL;
-	bool mbActive = true;
-	float mfDefaultFOV = 70;
-
-	std::map<int, cSomaLuxPlayerState *> mmapStates;
-	std::map<int, cSomaLuxMoveState *> mmapMoveStates;
-	cSomaLuxPlayerState *mpState = NULL;
-	cSomaLuxMoveState *mpMoveState = NULL;
 };
 
 class cSomaLuxInputHandler : public cSomaLuxHandler

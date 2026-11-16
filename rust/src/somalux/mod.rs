@@ -17,3 +17,6 @@ mod s5_input_ffi;
 pub mod s5_scriptable;
 #[cfg(test)]
 mod s5_tests;
+
+pub mod s5c_game;
+pub mod s5d_player;

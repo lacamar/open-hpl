@@ -7,6 +7,7 @@
 
 #include "shims.h"
 #include "as_shim.h"
+#include "../soma/src/game/RustSomaLuxS5d.h"
 #include <angelscript.h>
 
 #include <sys/mount.h>
@@ -872,3 +873,9 @@ static_assert(asOBJ_REF == 1 && asOBJ_VALUE == 2 && asOBJ_POD == 8 && asOBJ_NOHA
 static_assert(asMSGTYPE_ERROR == 0 && asMSGTYPE_WARNING == 1 && asMSGTYPE_INFORMATION == 2, "asEMsgType");
 static_assert(asGM_ALWAYS_CREATE == 2 && asEXECUTION_FINISHED == 0 && asINVALID_ARG == -5, "AngelScript codes");
 static_assert(ANGELSCRIPT_VERSION == 23800, "AngelScript version");
+
+// rust/src/somalux/s5d_player.rs (S5d): script-visible player-state blocks
+static_assert(sizeof(OhplS5dStateBlock) == 16 && offsetof(OhplS5dStateBlock, mlId) == 0 && offsetof(OhplS5dStateBlock, mpPlayer) == 8, "OhplS5dStateBlock");
+static_assert(sizeof(OhplS5dMoveBlock) == 64 && offsetof(OhplS5dMoveBlock, mpPlayer) == 8 && offsetof(OhplS5dMoveBlock, mfMaxForwardSpeed) == 16
+	&& offsetof(OhplS5dMoveBlock, mfMaxSidwaySpeedMul) == 60, "OhplS5dMoveBlock");
+static_assert(sizeof(OhplS5dFade) == 20 && sizeof(OhplS5dArg) == 24 && offsetof(OhplS5dArg, p) == 16, "OhplS5dArg");

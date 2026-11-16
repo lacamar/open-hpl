@@ -14,39 +14,6 @@
 
 cSomaLuxGame *cSomaLuxGame::mpInstance = NULL;
 
-cSomaLuxGame::cSomaLuxGame(cSomaScriptRuntime *apRuntime) : mpRuntime(apRuntime)
-{
-	mpInstance = this;
-	if (OhplS5DumpEnabled())
-	{
-		OhplS5Log("begin");
-		OhplS5SelfTest();
-	}
-}
-
-cSomaLuxGame::~cSomaLuxGame()
-{
-	for (cSomaLuxScriptable *p : mvModules)
-		delete p;
-	for (cSomaLuxScriptable *p : mvEffects)
-		delete p;
-	for (cSomaLuxScriptable *p : mvHandlers)
-		delete p;
-	mpInstance = NULL;
-}
-
-template <class F> void cSomaLuxGame::ForEach(F aFunc, bool abActiveEffectsOnly)
-{
-	for (cSomaLuxHandler *p : mvHandlers)
-		aFunc(p);
-	// cLuxEffectHandler is a built-in global module, registered before user modules
-	for (cSomaLuxEffect *p : mvEffects)
-		if (ohpl_gs3_visits_effect(p->mbActive, abActiveEffectsOnly))
-			aFunc(p);
-	for (cSomaLuxModule *p : mvModules)
-		aFunc(p);
-}
-
 // Config files: user settings and keys live under $XDG_CONFIG_HOME/open-hpl/soma, seeded from the game's defaults
 
 static cConfigFile *OpenConfig(const tWString &asUserFile, const tWString &asDefaultFile)
@@ -230,394 +197,275 @@ static std::vector<cXmlElement *> ChildElements(iXmlNode *apNode)
 	return v;
 }
 
-void cSomaLuxGame::Load()
-{
-	LoadConfigs();
-
-	LoadLanguage();
-	gpSomaBase->mpEngine->GetUpdater()->AddGlobalUpdate(new cSomaLuxVoiceHandler(gpSomaBase->mpEngine));
-
-	cResources *pRes = gpSomaBase->mpEngine->GetResources();
-
-	// game.cfg: <ScriptFiles Player=... InputHandler=...>
-	struct cHandlerDef { const char *mpAttr; const char *mpClass; const char *mpBase; };
-	static const cHandlerDef vHandlers[] = {
-		{"InputHandler", "cScrInputHandler", "cLuxInputHandler"},
-		{"EventDatabaseHandler", "cScrEventDatabaseHandler", "cLuxEventDatabaseHandler"},
-		{"GuiHandler", "cScrGuiHandler", "cLuxGuiHandler"},
-		{"AchievementHandler", "cScrAchievementHandler", "iLuxAchievementHandler"},
-		{"HeroStatsHandler", "cScrHeroStatsHandler", "iLuxHeroStatsHandler"},
-		{"RichPresenceHandler", "cScrRichPresenceHandler", "iLuxRichPresenceHandler"},
-		{"Player", "cScrPlayer", "cLuxPlayer"},
-	};
-	cConfigFile *pGame = gpGameConfig;
-	for (const cHandlerDef &def : vHandlers)
-	{
-		tString sFile = pGame->GetString("ScriptFiles", def.mpAttr, "");
-		if (sFile.empty())
-			continue;
-		cSomaLuxHandler *pHandler = strcmp(def.mpAttr, "Player") == 0		   ? new cSomaLuxPlayer()
-									: strcmp(def.mpAttr, "InputHandler") == 0 ? new cSomaLuxInputHandler()
-																			   : new cSomaLuxHandler();
-		pHandler->msName = def.mpAttr;
-		pHandler->msScriptName = strcmp(def.mpAttr, "Player") == 0 ? "LuxPlayer" : def.mpAttr;
-		// Rebirth's player Init reads the camera
-		if (strcmp(def.mpAttr, "Player") == 0)
-			static_cast<cSomaLuxPlayer *>(pHandler)->SetCamera(gpSomaBase->mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly));
-		if (pHandler->LoadScript(mpRuntime, sFile, pGame->GetString("ScriptFiles", tString(def.mpAttr) + "Class", def.mpClass), def.mpBase))
-			mvHandlers.push_back(pHandler);
-		else
-			delete pHandler;
-	}
-	// SOMA's player script adds its states itself
-	if (cSomaLuxPlayer::Get() && pRes->GetFileSearcher()->GetFilePath("config/PlayerStates.cfg") != _W(""))
-	{
-		iXmlDocument *pStates = pRes->LoadXmlDocument("config/PlayerStates.cfg");
-		for (cXmlElement *pGroup : ChildElements(pStates))
-			for (cXmlElement *pElem : ChildElements(pGroup))
-			{
-				tString sName = pElem->GetAttributeString("Name", ""), sFile = pElem->GetAttributeString("ScriptFile", ""), sClass = pElem->GetAttributeString("ScriptClass", "");
-				if (pGroup->GetValue() == "MoveStates")
-					cSomaLuxPlayer::Get()->AddMoveState(sName, pElem->GetAttributeInt("ID", -1), sFile, sClass);
-				else
-					cSomaLuxPlayer::Get()->AddState(sName, pElem->GetAttributeInt("ID", -1), sFile, sClass);
-			}
-		if (pStates)
-			pRes->DestroyXmlDocument(pStates);
-	}
-	mfPropInteractDistance = pGame->GetFloat("Prop", "DefaultMaxInteractDistance", 2);
-	mfCritterInteractDistance = pGame->GetFloat("Critter", "DefaultMaxInteractDistance", 2);
-
-	iXmlDocument *pEffects = pRes->LoadXmlDocument("config/Effects.cfg");
-	std::vector<cXmlElement *> vEffectElems = ChildElements(pEffects);
-	for (cXmlElement *pElem : vEffectElems)
-	{
-		cSomaLuxEffect *pEffect = new cSomaLuxEffect();
-		pEffect->msName = pElem->GetAttributeString("Name", "");
-		pEffect->msScriptName = pEffect->msName;
-		pEffect->mlId = pElem->GetAttributeInt("ID", -1);
-		if (pEffect->LoadScript(mpRuntime, pElem->GetAttributeString("ScriptFile", ""), pElem->GetAttributeString("ScriptClass", ""), "cLuxEffect"))
-			mvEffects.push_back(pEffect);
-		else
-			delete pEffect;
-	}
-	if (pEffects)
-		pRes->DestroyXmlDocument(pEffects);
-
-	iXmlDocument *pModules = pRes->LoadXmlDocument("config/Modules.cfg");
-	std::vector<cXmlElement *> vModuleElems = ChildElements(pModules);
-	for (cXmlElement *pElem : vModuleElems)
-	{
-		if (pElem->GetValue() != "Module")
-			continue;
-		cSomaLuxModule *pModule = new cSomaLuxModule();
-		pModule->msName = pElem->GetAttributeString("Name", "");
-		pModule->msScriptName = pModule->msName;
-		pModule->mlId = pElem->GetAttributeInt("ID", -1);
-		if (pModule->LoadScript(mpRuntime, pElem->GetAttributeString("ScriptFile", ""), pElem->GetAttributeString("ScriptClass", ""), "cLuxUserModule"))
-			mvModules.push_back(pModule);
-		else
-			delete pModule;
-	}
-	if (pModules)
-		pRes->DestroyXmlDocument(pModules);
-
-	iXmlDocument *pTypes = pRes->LoadXmlDocument("config/EntityTypes.cfg");
-	for (cXmlElement *pGroup : ChildElements(pTypes))
-		for (cXmlElement *pType : ChildElements(pGroup))
-		{
-			cEntityScript es;
-			es.msFile = pType->GetAttributeString("ScriptFile", "");
-			es.msClass = pType->GetAttributeString("ScriptClass", "");
-			mmapEntityScripts[pGroup->GetValue() + ":" + pType->GetAttributeString("Name", "")] = es;
-		}
-	if (pTypes)
-		pRes->DestroyXmlDocument(pTypes);
-
-	Log("SOMA script: %d handlers, %d user modules, %d effects\n", (int)mvHandlers.size(), (int)mvModules.size(), (int)mvEffects.size());
-
-	if (cSomaLuxInputHandler::Get())
-	{
-		cSomaLuxInputHandler::Get()->LoadUserConfig();
-		cSomaLuxInputHandler::Get()->LoadScript();
-	}
-	ReloadUserConfig();
-	if (OhplS5DumpEnabled())
-	{
-		for (cSomaLuxHandler *p : mvHandlers)
-			OhplS5Log("gh %s", p->msName.c_str());
-		for (cSomaLuxEffect *p : mvEffects)
-			OhplS5Log("ge %d %s", p->mlId, p->msName.c_str());
-		for (cSomaLuxModule *p : mvModules)
-			OhplS5Log("gm %d %s", p->mlId, p->msName.c_str());
-		for (auto &it : mmapEntityScripts)
-			OhplS5Log("gs %s %s %s", it.first.c_str(), it.second.msFile.c_str(), it.second.msClass.c_str());
-	}
-	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void OnStart()"); });
-	// cLuxBase::Reset before a new game
-	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void Reset()"); });
-}
-
-void cSomaLuxGame::ReloadUserConfig()
-{
-	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void LoadUserConfig()"); });
-}
-
-void cSomaLuxGame::ResetScriptables()
-{
-	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void Reset()"); });
-}
-
 void SomaUpdateCameraTextures();
 void SomaDestroyCameraTextures();
-
-void cSomaLuxGame::Update(float afTimeStep, bool abPaused)
-{
-	// Read once: iMouse::GetRelPosition resets the motion
-	mvMouseRel = gpSomaBase->mpEngine->GetInput()->GetMouse()->GetRelPosition();
-	if (OhplS5DumpEnabled())
-	{
-		static int slFrame = 0;
-		++slFrame;
-		if (slFrame >= 200 && slFrame < 260)
-			mvMouseRel = cVector2l(slFrame % 7 == 0 ? 0 : (slFrame * 5) % 23 - 11, slFrame % 5 == 0 ? 0 : (slFrame * 3) % 17 - 8);
-	}
-	if (cSomaLuxInputHandler::Get())
-		cSomaLuxInputHandler::Get()->LatchActions();
-	if (cSomaLuxInputHandler::Get())
-		cSomaLuxInputHandler::Get()->UpdateInput(afTimeStep, mbGameInput);
-	if (abPaused == false)
-		ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnUpdate(afTimeStep); }, true);
-	// cLuxVoiceSceneInstance::Update gates itself: PlayWhilePaused scenes run while paused
-	if (cSomaLuxVoiceHandler::Get())
-		cSomaLuxVoiceHandler::Get()->UpdateVoices(afTimeStep);
-	if (abPaused == false)
-		cSomaLuxDialogHandler::Get()->Update(afTimeStep);
-	UpdateGui(afTimeStep);
-}
-
-void cSomaLuxGame::PostUpdate(float afTimeStep)
-{
-	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnPostUpdate(afTimeStep); }, true);
-	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnVariableUpdate(afTimeStep); }, true);
-	SomaUpdateCameraTextures();
-}
-
 cSomaImGui *SomaHudImGui();
 
-void cSomaLuxGame::Draw(float afFrameTime)
+namespace
 {
-	ForEach([afFrameTime](cSomaLuxScriptable *p) { p->CallWithFloat("void OnDraw(float afFrameTime)", afFrameTime); }, true);
+cSomaScriptRuntime *gpRuntime = NULL;
+tString gsOut;
+
+std::vector<tString> Parts(const OhplS5Io *io)
+{
+	std::vector<tString> v(1);
+	for (size_t i = 0; io->s && i < io->n; ++i)
+		if (io->s[i] == 0)
+			v.emplace_back();
+		else
+			v.back() += (char)io->s[i];
+	return v;
 }
 
-// cLuxGuiHandler::Update: default input to the focused ImGui, then the HUD's OnGui pass
-void cSomaLuxGame::UpdateGui(float afTimeStep)
+tString Str(const OhplS5Io *io) { return io->s ? tString((const char *)io->s, io->n) : tString(); }
+
+void Out(OhplS5Io *io, const tString &asText)
 {
-	cSomaImGui::UpdateFocusHistory();
-	// cLuxGuiHandler::SetImGuiInputFocus: absolute pointer only while a 2D ImGui has input; in-world screens move their own cursor
-	static int lRelative = -1;
-	cSomaImGui *pInputFocus = cSomaImGui::GetInputFocus();
-	int lMode = ohpl_gs3_pointer_mode(lRelative, pInputFocus != NULL, pInputFocus && pInputFocus->GetSet()->Is3D());
-	if (lMode >= 0)
+	gsOut = asText;
+	io->s = (const unsigned char *)gsOut.data();
+	io->n = gsOut.size();
+}
+
+void DumpElement(tString &asOut, cXmlElement *apElem, int alDepth)
+{
+	asOut += (char)('0' + alDepth);
+	asOut += '\x1f';
+	asOut += apElem->GetValue();
+	for (auto &it : *apElem->GetAttributeMap())
 	{
-		lRelative = lMode;
-		gpSomaBase->mpEngine->GetInput()->GetLowLevel()->RelativeMouse(lRelative);
+		asOut += '\x1f';
+		asOut += it.first;
+		asOut += '\x1f';
+		asOut += it.second;
+	}
+	asOut += '\x1e';
+}
+
+int32_t GameHostCall(void *, uint32_t alOp, OhplS5Io *io)
+{
+	cSomaLuxScriptable *pSelf = (cSomaLuxScriptable *)io->p[0];
+	switch (alOp)
+	{
+	case kOhplS5c_DUMP_ENABLED: return OhplS5DumpEnabled();
+	case kOhplS5c_DUMP_LOG: OhplS5Log("%s", Str(io).c_str()); return 0;
+	case kOhplS5c_SELF_TEST: OhplS5SelfTest(); return 0;
+	case kOhplS5c_NEW:
+	{
+		cSomaLuxScriptable *pNew = NULL;
+		switch (io->i[0])
+		{
+		case 1: pNew = new cSomaLuxPlayer(); break;
+		case 2: pNew = new cSomaLuxInputHandler(); break;
+		case 3: pNew = new cSomaLuxEffect(); break;
+		case 4: pNew = new cSomaLuxModule(); break;
+		default: pNew = new cSomaLuxHandler(); break;
+		}
+		if (io->i[0] == 3)
+		{
+			static_cast<cSomaLuxEffect *>(pNew)->msName = Str(io);
+			static_cast<cSomaLuxEffect *>(pNew)->mlId = io->i[1];
+		}
+		else if (io->i[0] == 4)
+		{
+			static_cast<cSomaLuxModule *>(pNew)->msName = Str(io);
+			static_cast<cSomaLuxModule *>(pNew)->mlId = io->i[1];
+		}
+		else
+			static_cast<cSomaLuxHandler *>(pNew)->msName = Str(io);
+		io->p[0] = pNew;
+		return 0;
+	}
+	case kOhplS5c_SET_SCRIPT_NAME: pSelf->msScriptName = Str(io); return 0;
+	case kOhplS5c_SET_SAVED: pSelf->mbSaved = io->i[0] != 0; return 0;
+	case kOhplS5c_PLAYER_CAMERA:
+		static_cast<cSomaLuxPlayer *>(pSelf)->SetCamera(gpSomaBase->mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly));
+		return 0;
+	case kOhplS5c_LOAD_SCRIPT:
+	{
+		std::vector<tString> v = Parts(io);
+		return pSelf->LoadScript(gpRuntime, v[0], v[1], v[2]);
+	}
+	case kOhplS5c_DELETE: delete pSelf; return 0;
+	case kOhplS5c_SC:
+	{
+		tString sDecl = Str(io);
+		switch (io->i[0])
+		{
+		case kOhplS5cSc_UPDATE: pSelf->OnUpdate(io->f[0]); break;
+		case kOhplS5cSc_POST_UPDATE: pSelf->OnPostUpdate(io->f[0]); break;
+		case kOhplS5cSc_VARIABLE_UPDATE: pSelf->OnVariableUpdate(io->f[0]); break;
+		case kOhplS5cSc_GUI: pSelf->OnGui(io->f[0]); break;
+		case kOhplS5cSc_DRAW: pSelf->CallWithFloat("void OnDraw(float afFrameTime)", io->f[0]); break;
+		case kOhplS5cSc_ACTION: pSelf->OnAction(io->i[1], io->i[2] != 0); break;
+		case kOhplS5cSc_ANALOG: pSelf->OnAnalogInput(io->i[1], cVector3f(io->f[0], io->f[1], io->f[2])); break;
+		case kOhplS5cSc_MAP_MESSAGE: pSelf->OnMapMessage(sDecl.c_str(), io->p[1]); break;
+		case kOhplS5cSc_MESSAGE: pSelf->OnMessage(sDecl.c_str()); break;
+		case kOhplS5cSc_CALL_OBJECT: pSelf->CallWithObject(sDecl, io->p[1]); break;
+		}
+		return 0;
+	}
+	case kOhplS5c_SCRIPT_OBJECT: io->p[1] = pSelf->GetScript(); return 0;
+	case kOhplS5c_CFG_STRING:
+	{
+		std::vector<tString> v = Parts(io);
+		Out(io, SomaGameConfig()->GetString(v[0], v[1], v[2]));
+		return 0;
+	}
+	case kOhplS5c_CFG_FLOAT:
+	{
+		std::vector<tString> v = Parts(io);
+		io->f[0] = SomaGameConfig()->GetFloat(v[0], v[1], io->f[0]);
+		return 0;
+	}
+	case kOhplS5c_LOAD_CONFIGS: LoadConfigs(); return 0;
+	case kOhplS5c_LOAD_LANGUAGE: LoadLanguage(); return 0;
+	case kOhplS5c_ADD_VOICE: gpSomaBase->mpEngine->GetUpdater()->AddGlobalUpdate(new cSomaLuxVoiceHandler(gpSomaBase->mpEngine)); return 0;
+	case kOhplS5c_PLAYER_EXISTS: return cSomaLuxPlayer::Get() != NULL;
+	case kOhplS5c_INPUT_EXISTS: return cSomaLuxInputHandler::Get() != NULL;
+	case kOhplS5c_XML_FLAT:
+	{
+		tString sPath = Str(io);
+		cResources *pRes = gpSomaBase->mpEngine->GetResources();
+		if (io->i[0] && pRes->GetFileSearcher()->GetFilePath(sPath) == _W(""))
+			return -1;
+		iXmlDocument *pDoc = pRes->LoadXmlDocument(sPath);
+		if (pDoc == NULL)
+			return 0;
+		tString sDump;
+		for (cXmlElement *pTop : ChildElements(pDoc))
+		{
+			DumpElement(sDump, pTop, 0);
+			for (cXmlElement *pChild : ChildElements(pTop))
+				DumpElement(sDump, pChild, 1);
+		}
+		pRes->DestroyXmlDocument(pDoc);
+		Out(io, sDump);
+		return 1;
+	}
+	case kOhplS5c_PLAYER_ADD_STATE:
+	{
+		std::vector<tString> v = Parts(io);
+		if (io->i[1])
+			cSomaLuxPlayer::Get()->AddMoveState(v[0], io->i[0], v[1], v[2]);
+		else
+			cSomaLuxPlayer::Get()->AddState(v[0], io->i[0], v[1], v[2]);
+		return 0;
+	}
+	case kOhplS5c_MOUSE_REL:
+	{
+		cVector2l vRel = gpSomaBase->mpEngine->GetInput()->GetMouse()->GetRelPosition();
+		io->i[0] = vRel.x;
+		io->i[1] = vRel.y;
+		return 0;
+	}
+	case kOhplS5c_DIALOG_UPDATE: cSomaLuxDialogHandler::Get()->Update(io->f[0]); return 0;
+	case kOhplS5c_VOICE_UPDATE:
+		if (cSomaLuxVoiceHandler::Get())
+			cSomaLuxVoiceHandler::Get()->UpdateVoices(io->f[0]);
+		return 0;
+	case kOhplS5c_PAUSED: return gpSomaBase->mbScriptGamePaused;
+	case kOhplS5c_MAP_ACTION:
+		if (cSomaLuxMap::GetCurrent())
+			cSomaLuxMap::GetCurrent()->OnAction(io->i[0], io->i[1] != 0);
+		return 0;
+	case kOhplS5c_UPDATE_CAMERA_TEXTURES: SomaUpdateCameraTextures(); return 0;
+	case kOhplS5c_LEAVE_MAP:
+		cSomaLuxDialogHandler::Get()->StopAll();
+		SomaDestroyCameraTextures();
+		// its Reset() keeps the entity id, so every later datamine fails
+		SomaRunGlobalFunc("DatamineHandler", "", "_Global_StopDatamining");
+		return 0;
+	case kOhplS5c_GUI_FOCUS_HISTORY: cSomaImGui::UpdateFocusHistory(); return 0;
+	case kOhplS5c_GUI_FOCUS:
+	{
+		cSomaImGui *pFocus = cSomaImGui::GetInputFocus();
+		io->p[0] = pFocus;
+		io->i[0] = pFocus != NULL;
+		io->i[1] = pFocus && pFocus->GetSet()->Is3D();
+		return 0;
+	}
+	case kOhplS5c_GUI_POINTER_MODE:
+		gpSomaBase->mpEngine->GetInput()->GetLowLevel()->RelativeMouse(io->i[0]);
 		gpSomaBase->mpEngine->GetInput()->GetLowLevel()->LockInput(true);
-	}
-	if (cSomaImGui *pFocus = cSomaImGui::GetInputFocus())
+		return 0;
+	case kOhplS5c_GUI_SEND_MOUSE:
 	{
-		if (cSomaLuxHandler *pGui = GetHandler("GuiHandler"))
-			pGui->CallWithObject("void UpdateDefaultInput(cImGui @apImGui)", pFocus);
 		iMouse *pMouse = gpSomaBase->mpEngine->GetInput()->GetMouse();
-		// Pointer starts centred until the OS reports motion, as in the official game
-		static bool bMouseMoved = false;
-		bMouseMoved = ohpl_gs3_pointer_moved(bMouseMoved, mvMouseRel.x, mvMouseRel.y);
-		cVector2l vPos = bMouseMoved ? pMouse->GetAbsPosition() : gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt() / 2;
-		pFocus->SendMousePosition(vPos, mvMouseRel);
+		cVector2l vPos = io->i[0] ? pMouse->GetAbsPosition() : gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt() / 2;
+		((cSomaImGui *)io->p[0])->SendMousePosition(vPos, cVector2l(io->i[1], io->i[2]));
+		return 0;
 	}
-	cSomaImGui *pHud = SomaHudImGui();
-	cSomaImGui::SetCurrent(pHud);
-	pHud->Begin(afTimeStep);
-	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnGui(afTimeStep); }, true);
-	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
-		if (pMap->GetScript())
-			cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void OnGui(float afTimeStep)", [=](asIScriptContext *c) { c->SetArgFloat(0, afTimeStep); });
-	pHud->End();
-	cSomaImGui::SetCurrent(NULL);
-}
-
-void cSomaLuxGame::BroadcastAction(int alAction, bool abPressed)
-{
-	if (OhplS5DumpEnabled())
-		OhplS5Log("act %d %d", alAction, abPressed);
-	// Paused: only modules (the menu) hear input
-	if (ohpl_gs3_route_action(gpSomaBase->mbScriptGamePaused))
+	case kOhplS5c_GUI_HUD_BEGIN:
 	{
-		for (cSomaLuxModule *p : mvModules)
-			p->OnAction(alAction, abPressed);
-		return;
+		cSomaImGui *pHud = SomaHudImGui();
+		cSomaImGui::SetCurrent(pHud);
+		pHud->Begin(io->f[0]);
+		return 0;
 	}
-	ForEach([=](cSomaLuxScriptable *p) { p->OnAction(alAction, abPressed); }, true);
-	if (cSomaLuxMap::GetCurrent())
-		cSomaLuxMap::GetCurrent()->OnAction(alAction, abPressed);
+	case kOhplS5c_GUI_MAP_ON_GUI:
+		if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
+			if (pMap->GetScript())
+			{
+				float fTime = io->f[0];
+				cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void OnGui(float afTimeStep)", [=](asIScriptContext *c) { c->SetArgFloat(0, fTime); });
+			}
+		return 0;
+	case kOhplS5c_GUI_HUD_END:
+		SomaHudImGui()->End();
+		cSomaImGui::SetCurrent(NULL);
+		return 0;
+	case kOhplS5c_HUD_FOCUS_SET:
+		cSomaImGui::mbGameHudFocus = io->i[0] != 0;
+		SomaHudImGui()->mbShowMouse = io->i[0] != 0;
+		return 0;
+	case kOhplS5c_HUD_FOCUS_GET: return cSomaImGui::mbGameHudFocus;
+	case kOhplS5c_LOG: Log("%s", Str(io).c_str()); return 0;
+	case kOhplS5c_DUMP_ANALOG: OhplS5Log("ana %d %.9g %.9g %.9g", io->i[0], io->f[0], io->f[1], io->f[2]); return 0;
+	}
+	return 0;
+}
+const OhplS5Host gGameHost = {NULL, GameHostCall};
 }
 
-void cSomaLuxGame::BroadcastAnalog(int alAnalogId, const cVector3f &avAmount)
+cSomaLuxGame::cSomaLuxGame(cSomaScriptRuntime *apRuntime)
 {
-	if (OhplS5DumpEnabled())
-		OhplS5Log("ana %d %.9g %.9g %.9g", alAnalogId, avAmount.x, avAmount.y, avAmount.z);
-	if (ohpl_gs3_analog_allowed(gpSomaBase->mbScriptGamePaused) == false)
-		return;
-	ForEach([&](cSomaLuxScriptable *p) { p->OnAnalogInput(alAnalogId, avAmount); }, true);
+	mpInstance = this;
+	gpRuntime = apRuntime;
+	ohpl_s5c_game_install_host(&gGameHost);
+	ohpl_s5c_game_new();
 }
 
-void cSomaLuxGame::PreloadData(cSomaLuxMap *apMap)
+cSomaLuxGame::~cSomaLuxGame()
 {
-	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void PreloadData(cLuxMap @apMap)", apMap); });
-}
-
-void cSomaLuxGame::EnterMap(cSomaLuxMap *apMap)
-{
-	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void CreateWorldEntities(cLuxMap @apMap)", apMap); });
-	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void OnMapEnter(cLuxMap @apMap)", apMap); });
-}
-
-// Saved module state (e.g. an open pause menu) must not outlive the load
-void cSomaLuxGame::ModulesMapEnter(cSomaLuxMap *apMap)
-{
-	for (cSomaLuxModule *p : mvModules)
-		p->OnMapMessage("void OnMapEnter(cLuxMap @apMap)", apMap);
-}
-
-void cSomaLuxGame::LeaveMap(cSomaLuxMap *apMap)
-{
-	cSomaLuxDialogHandler::Get()->StopAll();
-	SomaDestroyCameraTextures();
-	// its Reset() keeps the entity id, so every later datamine fails
-	SomaRunGlobalFunc("DatamineHandler", "", "_Global_StopDatamining");
-	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void OnMapLeave(cLuxMap @apMap)", apMap); });
-	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void DestroyWorldEntities(cLuxMap @apMap)", apMap); });
+	ohpl_s5c_game_free();
+	mpInstance = NULL;
 }
 
 const cSomaLuxGame::cEntityScript *cSomaLuxGame::GetEntityScript(const tString &asGroup, const tString &asType)
 {
-	std::map<tString, cEntityScript>::iterator it = mmapEntityScripts.find(asGroup + ":" + asType);
-	return it == mmapEntityScripts.end() ? NULL : &it->second;
-}
-
-cSomaLuxModule *cSomaLuxGame::GetModule(int alId)
-{
-	for (cSomaLuxModule *p : mvModules)
-		if (p->mlId == alId)
-			return p;
-	return NULL;
-}
-
-cSomaLuxModule *cSomaLuxGame::GetModule(const tString &asName)
-{
-	for (cSomaLuxModule *p : mvModules)
-		if (p->msName == asName)
-			return p;
-	return NULL;
-}
-
-cSomaLuxEffect *cSomaLuxGame::GetEffect(int alId)
-{
-	for (cSomaLuxEffect *p : mvEffects)
-		if (p->mlId == alId)
-			return p;
-	return NULL;
-}
-
-cSomaLuxHandler *cSomaLuxGame::GetHandler(const tString &asName)
-{
-	for (cSomaLuxHandler *p : mvHandlers)
-		if (p->msName == asName)
-			return p;
-	return NULL;
-}
-
-// Script objects returned as interface handles need a reference for the caller
-static void ReturnScript(asIScriptGeneric *g, cSomaLuxScriptable *apObj)
-{
-	g->SetReturnObject(apObj ? apObj->GetScript() : NULL);
-}
-
-static void GetUserModuleFromID(asIScriptGeneric *g)
-{
-	ReturnScript(g, cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetModule(*(int *)g->GetAddressOfArg(0)) : NULL);
-}
-
-static void GetUserModuleFromName(asIScriptGeneric *g)
-{
-	ReturnScript(g, cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetModule(*(tString *)g->GetArgObject(0)) : NULL);
-}
-
-static void EffectHandlerGetEffect(asIScriptGeneric *g)
-{
-	ReturnScript(g, cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetEffect(*(int *)g->GetAddressOfArg(0)) : NULL);
-}
-
-// cLuxEffectHandler has no state of its own yet; any non-null pointer identifies it
-static int gEffectHandlerTag;
-
-template <int N> static cSomaLuxScriptable *HandlerByName()
-{
-	static const char *vNames[] = {"InputHandler", "EventDatabaseHandler", "GuiHandler", "AchievementHandler",
-								   "HeroStatsHandler", "RichPresenceHandler", "Player"};
-	return cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetHandler(vNames[N]) : NULL;
+	static cEntityScript sScript;
+	bool bFound = ohpl_s5c_game_entity_script(
+		(const unsigned char *)asGroup.data(), asGroup.size(), (const unsigned char *)asType.data(), asType.size(),
+		+[](void *apCtx, const unsigned char *apFile, size_t alFile, const unsigned char *apClass, size_t alClass) {
+			cEntityScript *pOut = (cEntityScript *)apCtx;
+			pOut->msFile.assign((const char *)apFile, alFile);
+			pOut->msClass.assign((const char *)apClass, alClass);
+		},
+		&sScript);
+	return bFound ? &sScript : NULL;
 }
 
 void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 {
-	int r;
-	r = e->RegisterGlobalFunction(cSomaScriptApi::NativeDecl(NULL, "iScrUserModule_Interface@ cLux_GetUserModuleFromID(int alID)").c_str(), asFUNCTION(GetUserModuleFromID), asCALL_GENERIC); assert(r >= 0);
-	r = e->RegisterGlobalFunction(cSomaScriptApi::NativeDecl(NULL, "iScrUserModule_Interface@ cLux_GetUserModuleFromName(const tString&in asName)").c_str(), asFUNCTION(GetUserModuleFromName), asCALL_GENERIC); assert(r >= 0);
-	r = e->RegisterObjectMethod("cLuxEffectHandler", cSomaScriptApi::NativeDecl("cLuxEffectHandler", "iScrEffect_Interface@ GetEffect(int alId)").c_str(), asFUNCTION(EffectHandlerGetEffect), asCALL_GENERIC); assert(r >= 0);
-	(void)r;
-	SOMA_FUNC(e, "void cLux_GetTextCatAndEntryFromString(const tString&in asData, tString &out asOutCat, tString &out asOutEntry)",
-			  +[](const tString &d, tString &c, tString &n) {
-				  tStringVec v;
-				  cString::GetStringVec(d, v);
-				  c = v.size() > 0 ? v[0] : "";
-				  n = v.size() > 1 ? v[1] : "";
-			  });
-	SOMA_FUNC(e, "cLuxEffectHandler@ cLux_GetEffectHandler()", +[]() { return (void *)&gEffectHandlerTag; });
-	SOMA_FUNC(e, "cLuxInputHandler@ cLux_GetInputHandler()", +[]() { return (void *)HandlerByName<0>(); });
-	SOMA_FUNC(e, "cLuxEventDatabaseHandler@ cLux_GetEventDatabaseHandler()", +[]() { return (void *)HandlerByName<1>(); });
-	SOMA_FUNC(e, "cLuxGuiHandler@ cLux_GetGuiHandler()", +[]() { return (void *)HandlerByName<2>(); });
-	SOMA_METHOD(e, "cLuxGuiHandler", "void SetGameHudInputFocus(bool abX)", +[](void *, bool b) {
-		cSomaImGui::mbGameHudFocus = b;
-		SomaHudImGui()->mbShowMouse = b;
-	});
-	SOMA_METHOD(e, "cLuxGuiHandler", "bool GetGameHudInputFocus()", +[](void *) { return cSomaImGui::mbGameHudFocus; });
-	SOMA_FUNC(e, "iLuxAchievementHandler@ cLux_GetAchievementHandler()", +[]() { return (void *)HandlerByName<3>(); });
-	// Unlocked set is filled by the platform backend; empty without Steam
-	SOMA_METHOD(e, "iLuxAchievementHandler", "bool GetAchievementUnlocked(int alID)", +[](void *, int) { return false; });
-	SOMA_FUNC(e, "iLuxHeroStatsHandler@ cLux_GetHeroStatsHandler()", +[]() { return (void *)HandlerByName<4>(); });
-	SOMA_FUNC(e, "iLuxRichPresenceHandler@ cLux_GetRichPresenceHandler()", +[]() { return (void *)HandlerByName<5>(); });
-	SOMA_FUNC(e, "cLuxPlayer@ cLux_GetPlayer()", +[]() { return (void *)HandlerByName<6>(); });
+	ohpl_s5c_game_register1(e);
 	cSomaLuxPlayer::RegisterNatives(e);
 	cSomaLuxVoiceHandler::RegisterNatives(e);
 	cSomaLuxDialogHandler::RegisterNatives(e);
 	cSomaLuxInputHandler::RegisterNatives(e);
 
-	const char *vTimerTypes[] = {"cLuxUserModule", "cLuxEffect", "cLuxPlayer", "cLuxInputHandler", "cLuxGuiHandler",
-								 "cLuxEventDatabaseHandler"};
-	for (const char *pType : vTimerTypes)
-	{
-		asITypeInfo *pInfo = e->GetTypeInfoByName(pType);
-		if (pInfo && pInfo->GetMethodByName("Timer_Add"))
-			continue;
-		if (pInfo)
-			cSomaLuxScriptable::RegisterTimerNatives(e, pType);
-	}
-
 	cSomaLuxModule module;
-	e->RegisterObjectProperty("cLuxUserModule", "int mlId", (int)((char *)&module.mlId - (char *)(cSomaLuxScriptable *)&module));
-	SOMA_METHOD(e, "cLuxUserModule", "void SetScriptableIsSaved(bool abX)", +[](cSomaLuxScriptable *s, bool b) { s->mbSaved = b; });
 	cSomaLuxEffect effect;
-	e->RegisterObjectProperty("cLuxEffect", "int mlId", (int)((char *)&effect.mlId - (char *)(cSomaLuxScriptable *)&effect));
+	ohpl_s5c_game_register2(e, (int)((char *)&module.mlId - (char *)(cSomaLuxScriptable *)&module), (int)((char *)&effect.mlId - (char *)(cSomaLuxScriptable *)&effect));
 
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetUserConfig()", +[]() { return gpUserConfig; });
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetStatsConfig()", +[]() { return gpStatsConfig; });
@@ -662,7 +510,5 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, C, "cVector3f GetVector3f(const tString&in asLevel, const tString&in asName, const cVector3f&in avDefault)", +[](cConfigFile *c, S l, S n, const cVector3f &d) { return c->GetVector3f(l, n, d); });
 	SOMA_METHOD(e, C, "cVector2l GetVector2l(const tString&in asLevel, const tString&in asName, const cVector2l&in avDefault)", +[](cConfigFile *c, S l, S n, const cVector2l &d) { return c->GetVector2l(l, n, d); });
 	SOMA_METHOD(e, C, "cColor GetColor(const tString&in asLevel, const tString&in asName, const cColor&in aDefault)", +[](cConfigFile *c, S l, S n, const cColor &d) { return c->GetColor(l, n, d); });
-
-	SOMA_METHOD(e, "cLuxEffect", "void SetActive(bool abX)", +[](cSomaLuxEffect *p, bool b) { p->mbActive = b; });
-	SOMA_METHOD(e, "cLuxEffect", "bool IsActive()", +[](cSomaLuxEffect *p) { return p->mbActive; });
+	ohpl_s5c_game_register3(e);
 }

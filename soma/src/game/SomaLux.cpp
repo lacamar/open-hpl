@@ -954,7 +954,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 	PreloadUpdate();
 	if (cSomaLuxGame::Get())
 	{
-		cSomaLuxGame::Get()->mbGameInput = bMap && gpSomaBase->UsesRealPlayer();
+		cSomaLuxGame::Get()->SetGameInput(bMap && gpSomaBase->UsesRealPlayer());
 		cSomaLuxGame::Get()->Update(afTimeStep, gpSomaBase->mbScriptGamePaused);
 	}
 	uint32_t lFrame = ohpl_gs3_frame_plan(cSomaLuxGame::Get() != NULL, cSomaLuxMap::GetCurrent() != NULL,

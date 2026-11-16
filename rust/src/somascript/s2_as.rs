@@ -34,6 +34,8 @@ unsafe extern "C" {
     pub fn ohpl_as2_g_arg_addr(g: *mut c_void, i: u32) -> *mut c_void;
     pub fn ohpl_as2_g_ret_loc(g: *mut c_void) -> *mut c_void;
     pub fn ohpl_as2_g_set_ret_addr(g: *mut c_void, p: *mut c_void);
+    pub fn ohpl_as2_g_set_ret_object(g: *mut c_void, p: *mut c_void);
+    fn ohpl_as2_type_has_method_name(t: *mut c_void, name: *const c_char) -> c_int;
     pub fn ohpl_as2_g_arg_count(g: *mut c_void) -> u32;
     pub fn ohpl_as2_g_arg_type_id(g: *mut c_void, i: u32) -> c_int;
     pub fn ohpl_as2_g_aux(g: *mut c_void) -> *mut c_void;
@@ -136,11 +138,13 @@ pub const MAX_ARGS: usize = 16;
 
 /// The arguments of one native call as the engine laid them out (`GetAddressOfArg` per slot).
 pub struct Frame {
+    g: *mut c_void,
     pub this: *mut c_void,
     addr: [*mut c_void; MAX_ARGS],
     objs: [*mut c_void; MAX_ARGS],
     pub ret: *mut c_void,
     pub ret_addr: std::cell::Cell<Option<*mut c_void>>,
+    pub ret_obj: std::cell::Cell<Option<*mut c_void>>,
 }
 
 impl Frame {
@@ -148,6 +152,7 @@ impl Frame {
     /// `g` is the `asIScriptGeneric*` of the running call.
     unsafe fn from_generic(g: *mut c_void) -> Self {
         let mut f = Self::mock(std::ptr::null_mut(), std::ptr::null_mut());
+        f.g = g;
         // SAFETY: caller contract; the accessors only read the call frame.
         unsafe {
             f.this = ohpl_as2_g_object(g);
@@ -165,11 +170,13 @@ impl Frame {
 
     pub fn mock(this: *mut c_void, ret: *mut c_void) -> Self {
         Self {
+            g: std::ptr::null_mut(),
             this,
             addr: [std::ptr::null_mut(); MAX_ARGS],
             objs: [std::ptr::null_mut(); MAX_ARGS],
             ret,
             ret_addr: std::cell::Cell::new(None),
+            ret_obj: std::cell::Cell::new(None),
         }
     }
 
@@ -225,6 +232,24 @@ impl Frame {
         unsafe { *self.slot(i).cast::<*mut c_void>() }
     }
 
+    /// An entity handle argument; placeholders returned by unimplemented functions read as null.
+    pub fn handle_arg(&self, i: usize) -> *mut c_void {
+        let p = self.ptr_arg(i);
+        if s2_api::is_dummy(p) {
+            std::ptr::null_mut()
+        } else {
+            p
+        }
+    }
+
+    /// `SomaScriptReleaseHandleArgs`: natives with handle parameters give their references back.
+    pub fn release_handles(&self) {
+        if !self.g.is_null() {
+            // SAFETY: `g` is the generic frame of the running call.
+            unsafe { s2_api::release_handle_args(self.g) }
+        }
+    }
+
     pub fn ret_string(&self, b: &[u8]) {
         // SAFETY: the return location is uninitialised storage for a `tString`.
         unsafe { ohpl_as2_str_ctor(self.ret, b.as_ptr(), b.len()) }
@@ -243,6 +268,11 @@ impl Frame {
 
     pub fn ret_ref<T>(&self, p: *mut T) {
         self.ret_addr.set(Some(p.cast()));
+    }
+
+    /// `SetReturnObject`: a handle return that takes its own reference.
+    pub fn ret_object(&self, p: *mut c_void) {
+        self.ret_obj.set(Some(p));
     }
 }
 
@@ -274,6 +304,9 @@ unsafe extern "C" fn tramp(g: *mut c_void) {
         (n.f)(&fr);
         if let Some(p) = fr.ret_addr.get() {
             ohpl_as2_g_set_ret_addr(g, p);
+        }
+        if let Some(p) = fr.ret_obj.get() {
+            ohpl_as2_g_set_ret_object(g, p);
         }
     }
 }
@@ -573,6 +606,12 @@ impl Type {
         }
     }
 
+    pub fn has_method_name(self, name: &[u8]) -> bool {
+        let n = cs(name);
+        // SAFETY: string outlives the call.
+        unsafe { ohpl_as2_type_has_method_name(self.0, n.as_ptr()) != 0 }
+    }
+
     pub fn has_method(self, decl: &[u8]) -> bool {
         let d = cs(decl);
         // SAFETY: string outlives the call.
@@ -696,6 +735,21 @@ impl Soma {
 
     pub fn method(&self, ty: &str, decl: &str, f: impl Fn(&Frame) + 'static) {
         let d = s2_api::active_native_decl(Some(ty.as_bytes()), decl.as_bytes());
+        self.0
+            .reg_method(ty.as_bytes(), &d, Kind::Method, Box::new(f));
+    }
+
+    /// `SOMA_METHOD_NEW`: skipped when the declaration is already registered.
+    pub fn method_new(&self, ty: &str, decl: &str, f: impl Fn(&Frame) + 'static) {
+        let d = s2_api::active_native_decl(Some(ty.as_bytes()), decl.as_bytes());
+        #[cfg(not(test))]
+        if self
+            .0
+            .type_by_name(ty.as_bytes())
+            .is_none_or(|t| t.has_method(&d))
+        {
+            return;
+        }
         self.0
             .reg_method(ty.as_bytes(), &d, Kind::Method, Box::new(f));
     }
