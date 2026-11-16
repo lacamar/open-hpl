@@ -85,17 +85,19 @@ int cLuxSavedMap::Ga6FromCall(void *apCtx, unsigned alOp, int alA, int alB)
 		d.msFileName = apMap->GetFileName();
 		d.msDisplayNameEntry = apMap->GetDisplayNameEntry();
 		d.msLanternLitCallback = apMap->msLanternLitCallback;
-		d.mlNumberOfQuests = apMap->mlNumberOfQuests;
-		d.mlTotalCompletionAmount = apMap->mlTotalCompletionAmount;
-		d.mlCurrentCompletionAmount = apMap->mlCurrentCompletionAmount;
-		d.msCheckPointName = apMap->msCheckPointName;
-		d.msCheckPointStartPos = apMap->msCheckPointStartPos;
-		d.msCheckPointCallback = apMap->msCheckPointCallback;
-		d.mlCheckPointCount = apMap->mlCheckPointCount;
-		d.msCheckPointMusic = apMap->msCheckPointMusic;
-		d.mlCheckPointMusicPrio = apMap->mlCheckPointMusicPrio;
-		d.mbCheckPointMusicResume = apMap->mbCheckPointMusicResume;
-		d.mfCheckPointMusicVolume = apMap->mfCheckPointMusicVolume;
+		OhplA13MapState st;
+		apMap->GetState(st);
+		d.mlNumberOfQuests = st.quests;
+		d.mlTotalCompletionAmount = st.total;
+		d.mlCurrentCompletionAmount = st.current;
+		d.msCheckPointName.assign((const char*)st.cpName.p, st.cpName.n);
+		d.msCheckPointStartPos.assign((const char*)st.cpStart.p, st.cpStart.n);
+		d.msCheckPointCallback.assign((const char*)st.cpCallback.p, st.cpCallback.n);
+		d.mlCheckPointCount = st.cpCount;
+		d.msCheckPointMusic.assign((const char*)st.cpMusic.p, st.cpMusic.n);
+		d.mlCheckPointMusicPrio = st.cpPrio;
+		d.mbCheckPointMusicResume = st.cpResume;
+		d.mfCheckPointMusicVolume = st.cpVolume;
 		d.mbSkyBoxActive = pWorld->GetSkyBoxActive();
 		d.msSkyboxTexture = pWorld->GetSkyBoxTexture() ? pWorld->GetSkyBoxTexture()->GetName() : "";
 		d.mSkyBoxColor = pWorld->GetSkyBoxColor();
@@ -255,17 +257,15 @@ int cLuxSavedMap::Ga6ToCall(void *apCtx, unsigned alOp, int alA, int alB)
 	case eOhplGa6Op_MapToHead:
 		apMap->SetDisplayNameEntry(d.msDisplayNameEntry);
 		apMap->msLanternLitCallback = d.msLanternLitCallback;
-		apMap->mlNumberOfQuests = d.mlNumberOfQuests;
-		apMap->mlTotalCompletionAmount = d.mlTotalCompletionAmount;
-		apMap->mlCurrentCompletionAmount = d.mlCurrentCompletionAmount;
-		apMap->msCheckPointName = d.msCheckPointName;
-		apMap->msCheckPointStartPos = d.msCheckPointStartPos;
-		apMap->msCheckPointCallback = d.msCheckPointCallback;
-		apMap->mlCheckPointCount = d.mlCheckPointCount;
-		apMap->msCheckPointMusic = d.msCheckPointMusic;
-		apMap->mlCheckPointMusicPrio = d.mlCheckPointMusicPrio;
-		apMap->mbCheckPointMusicResume = d.mbCheckPointMusicResume;
-		apMap->mfCheckPointMusicVolume = d.mfCheckPointMusicVolume;
+		{
+		OhplA13MapState st = { d.mlNumberOfQuests, d.mlTotalCompletionAmount, d.mlCurrentCompletionAmount, d.mlCheckPointCount,
+								d.mlCheckPointMusicPrio, d.mbCheckPointMusicResume, d.mfCheckPointMusicVolume,
+								{ (const unsigned char*)d.msCheckPointName.data(), d.msCheckPointName.size() },
+								{ (const unsigned char*)d.msCheckPointStartPos.data(), d.msCheckPointStartPos.size() },
+								{ (const unsigned char*)d.msCheckPointCallback.data(), d.msCheckPointCallback.size() },
+								{ (const unsigned char*)d.msCheckPointMusic.data(), d.msCheckPointMusic.size() } };
+		apMap->SetState(st);
+		}
 		pWorld->SetSkyBoxActive(d.mbSkyBoxActive);
 		return 0;
 	case eOhplGa6Op_MapSkyIsNone:

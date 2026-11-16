@@ -196,8 +196,10 @@ half() {
 	if has amnesia; then
 		for M in $DUMP_AMNESIA; do
 			rm -f "$OUT/h13-$M-$impl.txt" "$OUT/a7-$M-$impl.txt" "$OUT/a10a-$M-$impl.txt" "$OUT/a11a-$M-$impl.txt" "$OUT/a11b-$M-$impl.txt" "$OUT/l9-$M-$impl.txt" "$OUT/a12a-$M-$impl.txt" "$OUT/a12b-$M-$impl.txt" "$OUT/a12c-$M-$impl.txt" "$OUT/a2b-$M-$impl.txt"
-			ENVX="$extra OHPL_L9_XMLDUMP=$OUT/l9-$M-$impl.txt OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A10A_DUMP=$OUT/a10a-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt" \
+			ENVX="$extra OHPL_L9_XMLDUMP=$OUT/l9-$M-$impl.txt OHPL_H13_MAPDUMP=$OUT/h13-$M-$impl.txt OHPL_A7_MAPDUMP=$OUT/a7-$M-$impl.txt OHPL_A11A_INVDUMP=$OUT/a11a-$M-$impl.txt" \
 				sweep "$impl" amnesia "$OUT/dump-$impl-amnesia.json" --map "$M"
+			# the options menu shows cLuxPlayer's crosshair settings, uninitialised until the profile loads: pin the heap
+			ENVX="$extra MALLOC_PERTURB_=85 OHPL_A10A_DUMP=$OUT/a10a-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a10a-$impl-amnesia.json" --map "$M"
 			# the a11b driver gives items and hints: run it alone so it neither sees nor changes other dumps
 			ENVX="$extra OHPL_A11B_DUMP=$OUT/a11b-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a11b-$impl-amnesia.json" --map "$M"
 			ENVX="$extra OHPL_A12A_DUMP=$OUT/a12a-$M-$impl.txt OHPL_A12A_SCRIPT=$REPO/rust/tests/golden/A12a/script.txt" sweep "$impl" amnesia "$OUT/dump-a12a-$impl-amnesia.json" --map "$M"
@@ -214,6 +216,18 @@ half() {
 		for M in $AMFP_MAPS; do
 			rm -f "$OUT/a1b-amfp-$M-$impl.txt"
 			ENVX="$extra OHPL_A1B_TRACE=$OUT/a1b-amfp-$M-$impl.txt" sweep "$impl" amfp "$OUT/dump-a1b-$impl-amfp.json" --map "$M"
+		done
+	fi
+	if has amnesia; then
+		for M in $DUMP_AMNESIA; do
+			rm -f "$OUT/a13a-$M-$impl.txt"
+			ENVX="$extra OHPL_A13A_DUMP=$OUT/a13a-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a13a-$impl-amnesia.json" --map "$M"
+		done
+	fi
+	if has amfp; then
+		for M in 01_mansion_01 06_factory; do
+			rm -f "$OUT/a13a-$M-$impl.txt"
+			ENVX="$extra OHPL_A13A_DUMP=$OUT/a13a-$M-$impl.txt" sweep "$impl" amfp "$OUT/dump-a13a-$impl-amfp.json" --map "$M"
 		done
 	fi
 	if has amnesia; then
@@ -234,7 +248,7 @@ half() {
 		# the menu dump lists the profiles on disk, so it gets a scratch no sweep has touched
 		rm -f "$OUT/a9-$impl.txt"; rm -rf "$SCRATCH-a9-$impl"
 		OPENHPL_SCRATCH_ROOT=$SCRATCH-a9-$impl scripts/soma-init.sh amnesia > /dev/null 2> "$OUT/init-a9-$impl.log"
-		SCR=$SCRATCH-a9-$impl ENVX="$extra OHPL_A9_MENUDUMP=$OUT/a9-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a9-$impl.json" --map 00_rainy_hall
+		SCR=$SCRATCH-a9-$impl ENVX="$extra MALLOC_PERTURB_=85 OHPL_A9_MENUDUMP=$OUT/a9-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a9-$impl.json" --map 00_rainy_hall
 	fi
 	for g in amnesia amfp; do
 		has "$g" || continue
@@ -251,6 +265,12 @@ half() {
 		A4B_GAMES="$(has amnesia && echo amnesia) $(has amfp && echo amfp)" OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" \
 			scripts/a4b-all.sh "$OUT" "-$impl" >> "$OUT/a4b-$impl.log" 2>&1
 	fi
+	if has amnesia; then
+		# A13a: map transfer (change map, change back, load, save at every step)
+		rm -f "$OUT"/a13atr-*-"$impl".*
+		A13A_SUFFIX="-$impl" OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" \
+			scripts/a13a-transfer.sh amnesia 02_library.map 03_dungeon.map "$OUT/a13atr" >> "$OUT/a13atr-$impl.log" 2>&1
+	fi
 	if [ -z "$RECORD" ] && has soma; then
 		# shellcheck disable=SC2046
 		ENVX=$extra sweep "$impl" soma "$OUT/play-$impl-soma.json" --play 10 $(mapargs $PLAY_MAPS)
@@ -260,7 +280,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -368,7 +388,12 @@ def same(name, a, b):
         r = subprocess.run([sys.executable, tool, name.split("-")[1], a, b], capture_output=True, text=True)
         last = (r.stdout.strip().splitlines() or [""])[0]
         return (r.returncode == 0, last if r.returncode == 0 else f"DIFFER {last}")
-    if name.startswith("a7-"):
+    if name.startswith("a13a-"):
+        tool = os.path.join(repo, "rust/tests/golden/A13a/dump-diff.py")
+        r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)
+        last = (r.stdout.strip().splitlines() or [""])[-1]
+        return (r.returncode == 0, last if r.returncode == 0 else f"DIFFER {last}")
+    if name.startswith(("a7-", "a13atr-a7")):
         tool = os.path.join(repo, "rust/tests/golden/A7/mapdump-diff.py")
         r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)
         last = (r.stdout.strip().splitlines() or [""])[-1]
@@ -544,15 +569,16 @@ if not quick:
     names += [f"{k}-{g}" for k in ("s8d", "s8dm") for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s5-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
-        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c", "a12d", "a2b", "a1b")] + ["a12a-02_library"] + ["a9"]
+        names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c", "a12d", "a2b", "a1b", "a13a")] + ["a12a-02_library"] + ["a9"]
     names += [f"a10b-boot-{g}" for g in ("amnesia", "amfp") if g in games]
     if "amnesia" in games:
         names += [f"{k}{e}" for k in ("rt-prison-patrol", "rt-prison-hunt") for e in ("", "-A", "-B")] + ["a4b-prison"]
     if "amfp" in games:
         names += [f"a1b-amfp-{m}" for m in ("01_mansion_01", "06_factory", "10_reactor")]
+        names += [f"a13a-{m}" for m in ("01_mansion_01", "06_factory")]
         names += [f"{k}{e}" for k in ("rt-factory", "rt-bilge") for e in ("", "-A", "-B")] + ["a4b-factory", "a4b-bilge"]
     if "amnesia" in games:
-        names += ["a10b-play-amnesia"]
+        names += ["a10b-play-amnesia", "a13atr-a7", "a13atr-struct"]
     has_base = os.path.isdir(base)
     if not has_base:
         print(f"no C++ baseline at {base} (record one with --record-baseline before flipping a family)")

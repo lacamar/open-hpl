@@ -1,0 +1,24 @@
+== 06_factory frame 3 player=0.0017,-10.0204,40.5826
+los 0 0 0 light 0.10000 0.10000 ent 0 3.90026 CombinedObjects372 - chr 1 3.43940 block_box_all_11_Body_1 n=-0.5848,0.8112,0.0000
+los 1 1 1 light 0.10000 0.10000 ent 0 9999999.00000 - - chr 1 5.43421 block_box_6_Body_1 n=1.0000,0.0000,0.0000
+los 2 0 0 light 0.10000 0.10000 ent 0 1.87634 CombinedObjects360 - chr 1 1.87634 CombinedObjects360 n=-0.0000,-0.0000,-1.0000
+los 3 1 1 light 1.24341 1.68047 ent 0 9999999.00000 - - chr 1 7.65583 block_box_66_Body_1 n=0.0008,-0.0000,1.0000
+los 4 0 0 light 0.10000 0.10000 ent 1 2.12710 tube_lamp_factory_railing_23_Body_1 tube_lamp_factory_railing_23 chr 1 2.12710 tube_lamp_factory_railing_23_Body_1 n=-0.0000,-1.0000,-0.0000
+los 5 0 0 light 0.10000 0.10000 ent 0 1.23009 CombinedObjects372 - chr 1 1.10465 block_box_all_49_Body_1 n=0.0000,1.0000,0.0000
+damage 1 0
+== 06_factory frame 40 player=0.0017,-10.1328,40.5826
+los 0 0 0 light 0.54115 0.78393 ent 0 3.29683 CombinedObjects372 - chr 1 3.28345 block_box_all_11_Body_1 n=-0.5848,0.8112,0.0000
+los 1 1 1 light 1.38120 1.79171 ent 0 9999999.00000 - - chr 1 5.43421 block_box_6_Body_1 n=1.0000,0.0000,0.0000
+los 2 0 0 light 0.66277 0.88230 ent 0 1.87634 CombinedObjects360 - chr 1 1.87634 CombinedObjects360 n=-0.0000,-0.0000,-1.0000
+los 3 1 1 light 1.22418 1.66495 ent 0 9999999.00000 - - chr 1 7.65583 block_box_66_Body_1 n=0.0008,-0.0000,1.0000
+los 4 0 0 light 1.13875 1.26644 ent 1 2.23954 tube_lamp_factory_railing_23_Body_1 tube_lamp_factory_railing_23 chr 1 2.23954 tube_lamp_factory_railing_23_Body_1 n=-0.0000,-1.0000,-0.0000
+los 5 0 0 light 0.36703 0.47820 ent 0 1.11765 CombinedObjects372 - chr 1 0.99220 block_box_all_49_Body_1 n=0.0000,1.0000,0.0000
+damage 1 0
+== 06_factory frame 100 player=0.0017,-10.1328,40.5826
+los 0 0 0 light 0.54115 0.78393 ent 0 3.29683 CombinedObjects372 - chr 1 3.28345 block_box_all_11_Body_1 n=-0.5848,0.8112,0.0000
+los 1 1 1 light 1.38120 1.79171 ent 0 9999999.00000 - - chr 1 5.43421 block_box_6_Body_1 n=1.0000,0.0000,0.0000
+los 2 0 0 light 0.66277 0.88230 ent 0 1.87634 CombinedObjects360 - chr 1 1.87634 CombinedObjects360 n=-0.0000,-0.0000,-1.0000
+los 3 1 1 light 1.22418 1.66495 ent 0 9999999.00000 - - chr 1 7.65583 block_box_66_Body_1 n=0.0008,-0.0000,1.0000
+los 4 0 0 light 1.13875 1.26644 ent 1 2.23954 tube_lamp_factory_railing_23_Body_1 tube_lamp_factory_railing_23 chr 1 2.23954 tube_lamp_factory_railing_23_Body_1 n=-0.0000,-1.0000,-0.0000
+los 5 0 0 light 0.36703 0.47820 ent 0 1.11765 CombinedObjects372 - chr 1 0.99220 block_box_all_49_Body_1 n=0.0000,1.0000,0.0000
+damage 1 0

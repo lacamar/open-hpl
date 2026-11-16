@@ -1,0 +1,24 @@
+== 00_rainy_hall frame 3 player=46.0927,4.9599,-33.8005
+los 0 1 1 light 0.81168 1.12554 ent 0 7.37785 ShapeBody - chr 1 7.12902 ShapeBody n=-0.9063,0.0000,0.4226
+los 1 1 1 light 0.34440 0.64627 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 2 0 0 light 0.10756 0.13795 ent 0 2.03248 ShapeBody - chr 1 1.75052 ShapeBody n=0.0000,0.0000,-1.0000
+los 3 0 0 light 0.09979 0.13140 ent 0 1.93148 ShapeBody - chr 1 1.64951 ShapeBody n=0.0000,0.0000,1.0000
+los 4 1 1 light 0.14703 0.17118 ent 0 4.95585 CombinedObjects41 - chr 1 4.95585 CombinedObjects41 n=0.0000,-0.5139,0.8578
+los 5 0 0 light 0.06824 0.10483 ent 0 0.94987 CombinedObjects43 - chr 1 0.94987 CombinedObjects43 n=0.0000,1.0000,0.0000
+damage 1 0
+== 00_rainy_hall frame 40 player=46.0927,4.9036,-33.8005
+los 0 1 1 light 0.76221 1.08245 ent 0 7.37785 ShapeBody - chr 1 7.12902 ShapeBody n=-0.9063,0.0000,0.4226
+los 1 1 1 light 0.31523 0.62268 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 2 0 0 light 0.10700 0.13747 ent 0 2.03248 ShapeBody - chr 1 1.75052 ShapeBody n=0.0000,0.0000,-1.0000
+los 3 0 0 light 0.09925 0.13095 ent 0 1.93148 ShapeBody - chr 1 1.64951 ShapeBody n=0.0000,0.0000,1.0000
+los 4 1 1 light 0.14839 0.17233 ent 0 5.01207 CombinedObjects41 - chr 1 5.01207 CombinedObjects41 n=0.0000,-0.5139,0.8578
+los 5 0 0 light 0.06641 0.10329 ent 0 0.89364 CombinedObjects43 - chr 1 0.89364 CombinedObjects43 n=0.0000,1.0000,0.0000
+damage 1 0
+== 00_rainy_hall frame 100 player=46.0927,4.9036,-33.8005
+los 0 1 1 light 0.74985 1.07030 ent 0 7.37785 ShapeBody - chr 1 7.12902 ShapeBody n=-0.9063,0.0000,0.4226
+los 1 1 1 light 0.29867 0.60628 ent 0 9999999.00000 - - chr 0 9999999.00000 - n=0.0000,0.0000,0.0000
+los 2 0 0 light 0.10700 0.13747 ent 0 2.03248 ShapeBody - chr 1 1.75052 ShapeBody n=0.0000,0.0000,-1.0000
+los 3 0 0 light 0.09925 0.13095 ent 0 1.93148 ShapeBody - chr 1 1.64951 ShapeBody n=0.0000,0.0000,1.0000
+los 4 1 1 light 0.14839 0.17233 ent 0 5.01207 CombinedObjects41 - chr 1 5.01207 CombinedObjects41 n=0.0000,-0.5139,0.8578
+los 5 0 0 light 0.06641 0.10329 ent 0 0.89364 CombinedObjects43 - chr 1 0.89364 CombinedObjects43 n=0.0000,1.0000,0.0000
+damage 1 0

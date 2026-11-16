@@ -395,9 +395,13 @@ int cLuxSavedGameMap::Ga6FromCall(void *apCtx, unsigned alOp, int alA, int alB)
 	case eOhplGa6Op_GmFromHead:
 		d.msName = apMap->GetName();
 		d.msDisplayNameEntry = apMap->GetDisplayNameEntry();
-		d.mlNumberOfQuests = apMap->mlNumberOfQuests;
-		d.mlTotalCompletionAmount = apMap->mlTotalCompletionAmount;
-		d.mlCurrentCompletionAmount = apMap->mlCurrentCompletionAmount;
+		{
+			OhplA13MapState st;
+			apMap->GetState(st);
+			d.mlNumberOfQuests = st.quests;
+			d.mlTotalCompletionAmount = st.total;
+			d.mlCurrentCompletionAmount = st.current;
+		}
 		d.mbSkyBoxActive = pWorld->GetSkyBoxActive();
 		d.msSkyboxTexture = pWorld->GetSkyBoxTexture() ? pWorld->GetSkyBoxTexture()->GetName() : "";
 		d.mSkyBoxColor = pWorld->GetSkyBoxColor();
@@ -656,9 +660,14 @@ int cLuxSavedGameMap::Ga6ToCall(void *apCtx, unsigned alOp, int alA, int alB)
 	{
 	case eOhplGa6Op_GmToHead:
 		apMap->SetDisplayNameEntry(d.msDisplayNameEntry);
-		apMap->mlNumberOfQuests = d.mlNumberOfQuests;
-		apMap->mlTotalCompletionAmount = d.mlTotalCompletionAmount;
-		apMap->mlCurrentCompletionAmount = d.mlCurrentCompletionAmount;
+		{
+			OhplA13MapState st;
+			apMap->GetState(st);
+			st.quests = d.mlNumberOfQuests;
+			st.total = d.mlTotalCompletionAmount;
+			st.current = d.mlCurrentCompletionAmount;
+			apMap->SetState(st);
+		}
 		pWorld->SetSkyBoxActive(d.mbSkyBoxActive);
 		return 0;
 	case eOhplGa6Op_MapSkyIsNone:

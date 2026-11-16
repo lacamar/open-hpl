@@ -14,3 +14,15 @@ pub mod helper;
 pub mod map;
 #[cfg(test)]
 mod tests;
+
+pub mod mhandler;
+mod mhandler_ffi;
+#[cfg(test)]
+mod mhandler_tests;
+pub mod mhelper;
+mod mhelper_ffi;
+#[cfg(test)]
+mod mhelper_tests;
+pub mod mhost;
+pub mod mmap;
+mod mmap_ffi;

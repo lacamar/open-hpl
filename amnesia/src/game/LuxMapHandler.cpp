@@ -1,50 +1,34 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "LuxMapHandler.h"
-#include "RustLuxMap.h"
-
 #include "LuxMap.h"
+
 #include "LuxPlayer.h"
 #include "LuxEffectRenderer.h"
-#include "LuxEffectHandler.h"
 #include "LuxDebugHandler.h"
-#include "LuxHelpFuncs.h"
 #include "LuxSavedGame.h"
-#include "LuxSaveHandler.h"
+#include "LuxHelpFuncs.h"
 #include "LuxConfigHandler.h"
-#include "LuxLoadScreenHandler.h"
-#include "LuxMainMenu.h"
 
-#include "LuxEnemy.h"
-#include "LuxAchievementHandler.h"
-
-//////////////////////////////////////////////////////////////////////////
-// SOUND ENTITY CALLBACK
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
-cMapHandlerSoundCallback::cMapHandlerSoundCallback()
+cMapHandlerSoundCallback::cMapHandlerSoundCallback(OhplA13H *apHandler) : mpHandler(apHandler)
 {
-	///////////////////////
-	//Load document
 	tString sFile = "sounds/EnemySounds.dat";
 	iXmlDocument* pXmlDoc = gpBase->mpEngine->GetResources()->LoadXmlDocument(sFile);
 	if(pXmlDoc ==NULL)
@@ -53,67 +37,27 @@ cMapHandlerSoundCallback::cMapHandlerSoundCallback()
 		return;
 	}
 
-	//////////////////////
-	// Load data
 	cXmlNodeListIterator it = pXmlDoc->GetChildIterator();
 	while(it.HasNext())
 	{
 		cXmlElement *pChildElem = it.Next()->ToElement();
-
 		tString sName = pChildElem->GetAttributeString("name");
-		mvEnemyHearableSounds.push_back(sName);
+		ohpl_a13_handler_add_hearable(mpHandler, sName.data(), sName.size());
 	}
 
 	gpBase->mpEngine->GetResources()->DestroyXmlDocument( pXmlDoc );
 }
 
-//-----------------------------------------------------------------------
-
 void cMapHandlerSoundCallback::OnStart(cSoundEntity *apSoundEntity)
 {
-	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
-	if(pMap==NULL) return;
-	
-	///////////////////////////
-	//Check if the sound is something to worry bout
 	tString sTypeName = apSoundEntity->GetData()->GetName();
-
-	bool bUsed=false;
-	for(size_t i=0; i< mvEnemyHearableSounds.size(); ++i)
-	{
-		tString &sName = mvEnemyHearableSounds[i];
-		if(ohpl_ga5_sound_prefix_matches(sTypeName.data(), sTypeName.size(), sName.data(), sName.size()))
-		{
-			bUsed = true;
-			break;
-		}
-	}
-	if(bUsed == false) return;
-	
-	///////////////////////////
-	//Iterate enemies and send sound message to those close enough
-	float fMaxDist = apSoundEntity->GetMaxDistance();
-	float fMinDist = apSoundEntity->GetMaxDistance();
-	float fVolume = apSoundEntity->GetVolume();
 	cVector3f vPos = apSoundEntity->GetWorldPosition();
-	
-	pMap->BroadcastEnemySoundMessage(vPos, fVolume, fMinDist, fMaxDist);
-}	
-
-//-----------------------------------------------------------------------
-
-
-//////////////////////////////////////////////////////////////////////////
-// RENDER CALLBACK
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
+	ohpl_a13_handler_sound_started(mpHandler, sTypeName.data(), sTypeName.size(), apSoundEntity->GetMaxDistance(), apSoundEntity->GetVolume(), &vPos.x);
+}
 
 cLuxDebugRenderCallback::cLuxDebugRenderCallback()
 {
 }
-
-//-----------------------------------------------------------------------
 
 void cLuxDebugRenderCallback::OnPostSolidDraw(cRendererCallbackFunctions* apFunctions)
 {
@@ -123,11 +67,9 @@ void cLuxDebugRenderCallback::OnPostSolidDraw(cRendererCallbackFunctions* apFunc
 		apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
 		apFunctions->SetTextureRange(NULL,0);
 		apFunctions->SetProgram(NULL);
-		
+
 		apFunctions->SetDepthTest(true);
 		apFunctions->SetDepthWrite(false);
-
-		//mpPhysicsWorld->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(1,1,1,1));
 	}
 
 	gpBase->mpDebugHandler->RenderSolid(apFunctions);
@@ -136,29 +78,19 @@ void cLuxDebugRenderCallback::OnPostSolidDraw(cRendererCallbackFunctions* apFunc
 	gpBase->mpEffectRenderer->RenderSolid(apFunctions);
 }
 
-//-----------------------------------------------------------------------
-
 void cLuxDebugRenderCallback::OnPostTranslucentDraw(cRendererCallbackFunctions* apFunctions)
 {
 	gpBase->mpPlayer->RenderTrans(apFunctions);
 	gpBase->mpEffectRenderer->RenderTrans(apFunctions);
 }
 
-//-----------------------------------------------------------------------
-
-
-//////////////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
 static void A7DropMap(void *p){ hplDelete(static_cast<cLuxMap*>(p)); }
 
 cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 {
-	mpA7Maps = ohpl_a7_new();
-	ohpl_a7_set_drop(mpA7Maps, kOhplA7Entity, A7DropMap);
+	mpCurrentMap = NULL;
+	mpR = ohpl_a13_handler_new((uintptr_t)this);
+	ohpl_a7_set_drop(ohpl_a13_handler_maps(mpR), kOhplA7Entity, A7DropMap);
 
 	//////////////////////////
 	//Create and setup view port
@@ -170,14 +102,14 @@ cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 	cGraphics *pGraphics = gpBase->mpEngine->GetGraphics();
 	cPostEffectComposite *pPostEffectComp = pGraphics->CreatePostEffectComposite();
 	mpViewport->SetPostEffectComposite(pPostEffectComp);
-	
+
 	//Bloom
 	cPostEffectParams_Bloom bloomParams;
 	bloomParams.mfBlurSize = 1.0f;
 	bloomParams.mvRgbToIntensity = bloomParams.mvRgbToIntensity * 1.0f;
 	mpPostEffect_Bloom = pGraphics->CreatePostEffect(&bloomParams);
 	pPostEffectComp->AddPostEffect(mpPostEffect_Bloom, 100);
-	
+
 	//Image trail
 	cPostEffectParams_ImageTrail imageTrailParams;
 	mpPostEffect_ImageTrail = pGraphics->CreatePostEffect(&imageTrailParams);
@@ -198,15 +130,14 @@ cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 	mpPostEffect_Sepia = pGraphics->CreatePostEffect(&sepiaParams);
 	pPostEffectComp->AddPostEffect(mpPostEffect_Sepia, 4);
 	mpPostEffect_Sepia->SetActive(false);
-	
+
 	//////////////////////////
 	//Saving
 	mpSavedGame = hplNew( cLuxSavedGameMapCollection, () );
 
-	
 	//////////////////////////
 	//Callbacks
-	mpSoundCallback = hplNew( cMapHandlerSoundCallback, () );
+	mpSoundCallback = hplNew( cMapHandlerSoundCallback, (mpR) );
 	cSoundEntity::AddGlobalCallback(mpSoundCallback);
 
 	//////////////////////////
@@ -215,139 +146,55 @@ cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 
 	//////////////////////////
 	//Variables
-	mbPausedSoundsAndMusic = false;
 	mpDataCache =NULL;
 
 	Reset();
 }
-
-//-----------------------------------------------------------------------
 
 cLuxMapHandler::~cLuxMapHandler()
 {
 	hplDelete(mpSavedGame);
 	hplDelete(mpSavedGameMutex);
 	hplDelete(mpSoundCallback);
-	ohpl_a7_destroy_entities(mpA7Maps);
-	ohpl_a7_free(mpA7Maps);
+
+	ohpl_a13_handler_teardown(mpR);
+	ohpl_a13_handler_free(mpR);
 }
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 void cLuxMapHandler::OnStart()
 {
 	//////////////////////
-	//Set up viewport 	
+	//Set up viewport
 	mpViewport->SetCamera(gpBase->mpPlayer->GetCamera());
-
 	mpViewport->AddGuiSet(gpBase->mpGameDebugSet);
 	mpViewport->AddGuiSet(gpBase->mpGameHudSet);
-
-    
 	mpViewport->AddRendererCallback(&mRenderCallback);
+
 	UpdateViewportRenderProperties();
 }
-
-//-----------------------------------------------------------------------
 
 void cLuxMapHandler::UpdateViewportRenderProperties()
 {
 	cRenderSettings *pRenderSettings = mpViewport->GetRenderSettings();
+
 	pRenderSettings->mbRenderWorldReflection = gpBase->mpConfigHandler->mbWorldReflection;
 	pRenderSettings->mbRenderShadows = gpBase->mpConfigHandler->mbShadowsActive;
 }
 
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::Update(float afTimeStep)
-{
-	//TODO: Bad placement! Moooove!
-	gpBase->mpEffectRenderer->ClearRenderLists();
-
-	CheckMapChange(afTimeStep);
-
-	if(mpCurrentMap && mMapChangeData.mbActive==false)
-		mpCurrentMap->Update(afTimeStep);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::Reset()
-{
-	// Stop all sounds (deleting maps will stop world entries, but will let GUI ones live)
-	cSound *pSound = gpBase->mpEngine->GetSound();
-	pSound->GetSoundHandler()->StopAll(eSoundEntryType_All);
-
-	ohpl_a7_destroy_entities(mpA7Maps);
-	mpCurrentMap = NULL;
-
-	ResumeSoundsAndMusic(); //Make sure that all sounds and music are resumed!
-
-	msMapFolder = "";
-
-	mbUpdateActive = true;
-
-	mMapChangeData.mbActive = false;
-
-	mpSavedGame->Reset();
-
-	gpBase->mpHelpFuncs->CleanupData();
-
-	DestroyDataCache();
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::OnQuit()
-{
-    gpBase->mpEngine->GetUpdater()->SetContainer("MainMenu");
-
-    gpBase->mpLoadScreenHandler->DrawMenuScreen();
-    
-    //Destroy map
-    cLuxMapHandler *mpMapHandler = gpBase->mpMapHandler;
-    if(mpMapHandler->GetCurrentMap())
-    {
-        //Save
-        gpBase->mpSaveHandler->AutoSave();
-        
-        mpMapHandler->DestroyMap(mpMapHandler->GetCurrentMap(),false);
-
-        //Reset game
-        gpBase->mpEngine->GetUpdater()->BroadcastMessageToAll(eUpdateableMessage_Reset);
-        gpBase->SetCustomStory(NULL);
-    }
-
-    //Start up menu again
-    gpBase->mpMainMenu->OnLeaveContainer("");
-    gpBase->mpMainMenu->OnEnterContainer("");
-}
-
-
-//-----------------------------------------------------------------------
-
 void cLuxMapHandler::LoadUserConfig()
 {
-	mbShowCommentary = gpBase->mpUserConfig->GetBool("Game","ShowCommentary", false);
+	ohpl_a13_handler_set_show_commentary(mpR, gpBase->mpUserConfig->GetBool("Game","ShowCommentary", false), false);
 }
 
 void cLuxMapHandler::SaveUserConfig()
 {
-	gpBase->mpUserConfig->SetBool("Game","ShowCommentary", mbShowCommentary);
+	gpBase->mpUserConfig->SetBool("Game","ShowCommentary", GetShowCommentary());
 }
-
-//-----------------------------------------------------------------------
 
 void cLuxMapHandler::CreateDataCache()
 {
 	if(mpDataCache) DestroyDataCache();
-	
+
 	mpDataCache = hplNew(cLuxModelCache, () );
 	mpDataCache->Create();
 }
@@ -355,170 +202,10 @@ void cLuxMapHandler::CreateDataCache()
 void cLuxMapHandler::DestroyDataCache()
 {
 	if(mpDataCache==NULL) return;
+
 	hplDelete(mpDataCache);
 	mpDataCache = NULL;
 }
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::SetUpdateActive(bool abX)
-{
-	mbUpdateActive = abX;
-	
-	if(mpCurrentMap) mpCurrentMap->GetWorld()->SetActive(mbUpdateActive);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::RenderSolid(cRendererCallbackFunctions* apFunctions)
-{
-	//mpViewport->GetRenderSettings()->mbLog = false;
-	if(mpCurrentMap) mpCurrentMap->OnRenderSolid(apFunctions);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::OnEnterContainer(const tString& asOldContainer)
-{
-	mpViewport->SetActive(true);
-	mpViewport->SetVisible(true);
-
-	if(mpCurrentMap) mpCurrentMap->GetWorld()->SetActive(true);
-
-	ResumeSoundsAndMusic();
-}
-
-void cLuxMapHandler::OnLeaveContainer(const tString& asNewContainer)
-{
-	mpViewport->SetActive(false);
-	mpViewport->SetVisible(false);
-
-	if(mpCurrentMap) mpCurrentMap->GetWorld()->SetActive(false);
-}
-
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::ChangeMap(const tString& asMapName, const tString& asStartPos, const tString& asStartSound, const tString& asEndSound)
-{
-	mMapChangeData.mbActive = true;
-	ohpl_ga5_change_file(asMapName.data(), asMapName.size(), ohpl_ga5::Collect, &mMapChangeData.msMapFile);
-	mMapChangeData.msStartPos = asStartPos;
-    mMapChangeData.msSound = asEndSound;
-
-    gpBase->mpHelpFuncs->PlayGuiSoundData(asStartSound, eSoundEntryType_Gui);
-
-	gpBase->mpEffectHandler->GetFade()->FadeOut(1.5f);
-
-	gpBase->mpPlayer->SetActive(false);
-}
-
-//-----------------------------------------------------------------------
-
-cLuxMap* cLuxMapHandler::LoadMap(const tString& asFileName, bool abLoadEntities)
-{
-	cLuxMap *pMap = hplNew( cLuxMap, ( FileToMapName(asFileName)) );
-	
-	pMap->LoadFromFile(msMapFolder+asFileName, abLoadEntities);
-
-	ohpl_a7_list_add(mpA7Maps, pMap);
-
-	return pMap;
-}
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::DestroyMap(cLuxMap* apMap, bool abLoadingSaveGame)
-{
-	////////////////////////////////
-	//If the map do me destroyed is current, make sure it is not current
-	if(mpCurrentMap == apMap) SetCurrentMap(NULL, abLoadingSaveGame, false,"");
-
-	ohpl_a7_list_destroy(mpA7Maps, apMap);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::SetCurrentMap(cLuxMap* apMap, bool abRunScript, bool abFirstTime, const tString& asPlayerPos)
-{
-	unsigned char vPlan[12];
-	size_t lPlanSize = ohpl_ga5_set_current_plan(mpCurrentMap!=NULL, apMap!=NULL, mpCurrentMap == apMap, vPlan);
-
-	for(size_t i=0; i<lPlanSize; ++i)
-	{
-		switch(vPlan[i])
-		{
-		//////////////////////////////////
-		//Unload stuff from previous map
-		case kOhplGa5SetLeave:
-			mpCurrentMap->OnLeave(abRunScript);
-			break;
-		//Leave callback for modules
-		case kOhplGa5SetDestroyWorldEntities:
-			gpBase->RunModuleMessage(eLuxUpdateableMessage_DestroyWorldEntities, mpCurrentMap);
-			break;
-		case kOhplGa5SetMapLeave:
-			gpBase->RunModuleMessage(eLuxUpdateableMessage_OnMapLeave, mpCurrentMap);
-			break;
-		case kOhplGa5SetAssign:
-			mpCurrentMap = apMap;
-			break;
-		//////////////////////////////////
-		//Setup stuff for previous map
-		//Enter callback for modules
-		case kOhplGa5SetCreateWorldEntities:
-			gpBase->RunModuleMessage(eLuxUpdateableMessage_CreateWorldEntities, mpCurrentMap);
-			break;
-		case kOhplGa5SetMapEnter:
-			gpBase->RunModuleMessage(eLuxUpdateableMessage_OnMapEnter, mpCurrentMap);
-			break;
-		//Set the player position
-		case kOhplGa5SetPlacePlayer:
-			mpCurrentMap->PlacePlayerAtStartPos(asPlayerPos);
-			break;
-		//Create an automatic checkpoint
-		case kOhplGa5SetAutoCheckpoint:
-			mpCurrentMap->SetCheckPoint("_auto", asPlayerPos, "");
-			break;
-		//Map enter callback
-		case kOhplGa5SetEnter:
-			mpCurrentMap->OnEnter(abRunScript, abFirstTime);
-			break;
-		//Set this as world in viewport
-		case kOhplGa5SetViewWorld:
-			mpViewport->SetWorld(mpCurrentMap->GetWorld());
-			mRenderCallback.mpPhysicsWorld = mpCurrentMap->GetPhysicsWorld();
-			mRenderCallback.mpLowLevelGfx = gpBase->mpEngine->GetGraphics()->GetLowLevel();
-			break;
-		//If no map, set NULL as world
-		case kOhplGa5SetViewNoWorld:
-			mpViewport->SetWorld(NULL);
-			break;
-		}
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::PauseSoundsAndMusic()
-{
-	if(ohpl_ga5_pause_sounds(&mbPausedSoundsAndMusic)==false) return;
-
-	cSound *pSound = gpBase->mpEngine->GetSound();
-	pSound->GetSoundHandler()->PauseAll(eSoundEntryType_All);
-	pSound->GetMusicHandler()->Pause();
-}
-
-void cLuxMapHandler::ResumeSoundsAndMusic()
-{
-	if(ohpl_ga5_resume_sounds(&mbPausedSoundsAndMusic))
-	{
-		cSound *pSound = gpBase->mpEngine->GetSound();
-		pSound->GetSoundHandler()->ResumeAll(eSoundEntryType_All);
-		pSound->GetMusicHandler()->Resume();
-	}
-}
-
-//-----------------------------------------------------------------------
 
 void cLuxMapHandler::ClearSaveMapCollection()
 {
@@ -527,40 +214,15 @@ void cLuxMapHandler::ClearSaveMapCollection()
 	mpSavedGameMutex->Unlock();
 }
 
-//-----------------------------------------------------------------------
-
 void cLuxMapHandler::SetSavedMapCollection(cLuxSavedGameMapCollection *apMaps)
 {
 	mpSavedGameMutex->Lock();
 	{
 		hplDelete(mpSavedGame);
-
 		mpSavedGame = apMaps;
 	}
 	mpSavedGameMutex->Unlock();
 }
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::AppLostInputFocus()
-{
-	PauseSoundsAndMusic();
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::AppGotInputFocus()
-{
-	ResumeSoundsAndMusic();
-}
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// PRIVATE METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 void cLuxMapHandler::LoadMainConfig()
 {
@@ -581,158 +243,12 @@ void cLuxMapHandler::SaveMainConfig()
 	gpBase->mpMainConfig->SetBool("Graphics", "PostEffectRadialBlur", mpPostEffect_RadialBlur->IsDisabled()==false);
 }
 
-//-----------------------------------------------------------------------
-
-tString cLuxMapHandler::FileToMapName(const tString& asFile)
+void cLuxMapHandler::HostSetView(cWorld *apWorld, iPhysicsWorld *apPhysicsWorld)
 {
-	tString sName;
-	ohpl_ga5_map_name(asFile.data(), asFile.size(), ohpl_ga5::Collect, &sName);
-	return sName;
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::SetShowCommentary(bool abX)
-{
-	mbShowCommentary = abX;
-
-	if(ohpl_ga5_commentary_stops(mbShowCommentary))
+	mpViewport->SetWorld(apWorld);
+	if(apWorld)
 	{
-		gpBase->mpEffectHandler->GetPlayCommentary()->Stop();
+		mRenderCallback.mpPhysicsWorld = apPhysicsWorld;
+		mRenderCallback.mpLowLevelGfx = gpBase->mpEngine->GetGraphics()->GetLowLevel();
 	}
 }
-
-//-----------------------------------------------------------------------
-
-void cLuxMapHandler::CheckMapChange(float afTimeStep)
-{
-	if(ohpl_ga5_change_proceeds(	mMapChangeData.mbActive,
-									mMapChangeData.mbActive && gpBase->mpEffectHandler->GetFade()->IsFading())==false) return;
-
-	///////////////////////////////////////
-	// Setup variables
-    float fTimeTaken =0;
-
-	///////////////////////////////////////
-	// Fade out and disable player
-	mMapChangeData.mbActive = false;
-	gpBase->mpEffectHandler->GetFade()->FadeIn(2.0f);
-	gpBase->mpPlayer->SetActive(true);
-
-	///////////////////////////////////////
-	// Write pending savegame queries
-	cLuxSaveHandlerThreadClass* pThreadClass = gpBase->mpSaveHandler->GetThreadClass();
-	if(pThreadClass->IsRunning())
-		pThreadClass->ProcessPendingSaves();
-
-	//////////////////////////////////
-	//Clean up
-	// Must do this before OnEnter!
-	gpBase->mpHelpFuncs->CleanupData();
-
-	///////////////////////
-	// Load map
-	tString sNewMapName = FileToMapName(mMapChangeData.msMapFile);
-	if(ohpl_ga5_is_new_map(mpCurrentMap->GetName().data(), mpCurrentMap->GetName().size(), mMapChangeData.msMapFile.data(), mMapChangeData.msMapFile.size()))
-	{
-		mpSavedGameMutex->Lock();
-
-		//////////////////////
-		// Run onleave before saving!
-		mpCurrentMap->RunScript("OnLeave()");//since script is not run in SetCurrenMap
-
-		///////////////////////////////////////
-		// Draw loading screen
-		unsigned long lLoadStartTime = cPlatform::GetApplicationTime();
-		gpBase->mpLoadScreenHandler->DrawGameScreen();
-
-		//////////////////////
-		// Save old map
-		mpSavedGame->SaveMap(mpCurrentMap);
-
-		//////////////////////
-		// Fadeout sounds and disable stop (meaning they will fade even when sound entities are destroyed)
-		gpBase->mpEngine->GetSound()->GetSoundHandler()->FadeOutAll(eSoundEntryType_World, 0.5f, true);
-		
-		//////////////////////
-		// Load new map
-		cLuxMap *pLastMap = mpCurrentMap;
-		cLuxMap *pMap = LoadMap(mMapChangeData.msMapFile,true);
-		if(pMap == NULL)
-		{
-			Error("Could not load map '%s'!\n", mMapChangeData.msMapFile.c_str());
-			return;
-		}
-		
-		if(pLastMap)
-		{
-			int lEvents = ohpl_ga5_pair_events(	gpBase->mbHardMode, pLastMap->GetName().data(), pLastMap->GetName().size(),
-												pMap->GetName().data(), pMap->GetName().size());
-			if (lEvents & kOhplGa5EventEscapeArtist)
-			{
-				gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_EscapeArtist);
-			}
-
-			if (lEvents & kOhplGa5EventDescendant)
-			{
-				gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Descendant);
-			}
-
-			//////////////
-			// HARDMODE
-			if (lEvents & kOhplGa5EventSanity)
-			{
-				gpBase->mpPlayer->AddSanity(100.f, true);
-			}
-		}
-
-		//////////////////////
-		// Set new and destroy old
-		bool bFirstTime = ohpl_ga5_first_time(mpSavedGame->MapExists(sNewMapName));
-		
-		SetCurrentMap(pMap, false, bFirstTime, mMapChangeData.msStartPos);
-		DestroyMap(pLastMap, false);
-
-		//////////////////////
-		// Load new map data
-		mpSavedGame->LoadMap(mpCurrentMap);
-
-		//////////////////////
-		// Run enter script! (otherwise a save in oneter will not be correct!)
-		if(bFirstTime) mpCurrentMap->RunScript("OnStart()");
-		mpCurrentMap->RunScript("OnEnter()");
-
-
-		mpSavedGameMutex->Unlock();
-
-		//////////////////////////////////
-		//Check if any more load time needed
-		fTimeTaken = ohpl_ga5_load_seconds(lLoadStartTime, cPlatform::GetApplicationTime());
-		
-		ProgLog(eLuxProgressLogLevel_High, "Entering map "+ mpCurrentMap->GetName());
-	}
-	///////////////////////
-	// Map already loaded.
-	else
-	{
-		mpCurrentMap->PlacePlayerAtStartPos(mMapChangeData.msStartPos);
-	}
-
-	//////////////////////////////////
-	// Check if text should be left on a bit longer
-	if(fTimeTaken>0)
-	{
-		gpBase->mpLoadScreenHandler->GameScreenLoadDone(mMapChangeData.msSound, fTimeTaken);
-	}
-	else
-	{
-		//Play finished sound
-		gpBase->mpHelpFuncs->PlayGuiSoundData(mMapChangeData.msSound, eSoundEntryType_Gui);
-
-	}
-}
-
-//-----------------------------------------------------------------------
-
-
-
