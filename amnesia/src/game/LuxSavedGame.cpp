@@ -24,7 +24,6 @@
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
 #include "LuxEnemy.h"
-#include "LuxEnemyPathfinder.h"
 #include "LuxProp_SwingDoor.h"
 #include "LuxProp_LevelDoor.h"
 #include "LuxProp_Item.h"
@@ -219,11 +218,11 @@ int cLuxSavedGameEnemy::Ga6ToCall(void *apCtx, unsigned alOp, int alA, int alB)
 		apEnemy->ClearPatrolNodes();
 		return 0;
 	case eOhplGa6Op_GenHasPathFinder:
-		return apEnemy->GetPathFinder() != NULL;
+		return apEnemy->HasNav();
 	case eOhplGa6Op_GenSavedNodeN:
 		return (int)d.mvPatrolNodes.Size();
 	case eOhplGa6Op_GenFindNode:
-		e.mpNode = apEnemy->GetPathFinder()->GetNodeContainer()->GetNodeFromID(d.mvPatrolNodes[alA].mlNodeId);
+		e.mpNode = apEnemy->GetNodeContainer()->GetNodeFromID(d.mvPatrolNodes[alA].mlNodeId);
 		return e.mpNode != NULL;
 	case eOhplGa6Op_GenAddNode:
 		apEnemy->AddPatrolNode(e.mpNode, d.mvPatrolNodes[alA].mfWaitTime, d.mvPatrolNodes[alA].msAnimation);

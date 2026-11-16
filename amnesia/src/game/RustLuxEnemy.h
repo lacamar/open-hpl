@@ -31,18 +31,17 @@ struct OhplGa3Host
 {
 	void *ctx;
 	int (*call)(void *ctx, unsigned op, OhplGa3Io *io);
+	uint64_t nav;
 };
 
-struct OhplGa3Mover
+struct OhplA4bMoverSave
 {
 	bool turning;
-	bool overideMoveState;
+	bool overrideMoveState;
 	float turnGoalAngle;
 	float turnSpeed;
 	float turnBreakAcc;
 	float stuckCounter;
-	float stuckLimit;
-	float maxStuckCounter;
 	int moveState;
 };
 
@@ -60,12 +59,6 @@ struct OhplGa3MoverParams
 	float runToWalk[2];
 };
 
-struct OhplGa3PfWin
-{
-	int len;
-	float v[152];
-};
-
 struct OhplGa3Ctx
 {
 	OhplGa3Queue *queue;
@@ -73,10 +66,10 @@ struct OhplGa3Ctx
 	int *next;
 	int *prev;
 	bool *disabled;
-	OhplGa3Mover *mover;
+	void *mover;
 	bool *pfMoving;
 	float *pfGoal;
-	OhplGa3PfWin *pfWin;
+	void *pfWin;
 	float *lookCount;
 	int *losCount;
 	bool *canSee;
@@ -206,6 +199,21 @@ enum
 	eOhplGa3Op_RunCallback = 101,
 	eOhplGa3Op_BroadcastHelp = 102,
 	eOhplGa3Op_Attack = 103,
+	eOhplGa3Op_AStarPath = 110,
+	eOhplGa3Op_ScratchAt = 111,
+	eOhplGa3Op_NodePos = 112,
+	eOhplGa3Op_NcAtCenter = 113,
+	eOhplGa3Op_NcIter = 114,
+	eOhplGa3Op_NodeUsedAsGoal = 115,
+	eOhplGa3Op_NcFreePathAt = 116,
+	eOhplGa3Op_NcNodeCount = 117,
+	eOhplGa3Op_WaterStepCheck = 118,
+	eOhplGa3Op_WaterStepFx = 119,
+	eOhplGa3Op_NcNodeAt = 120,
+	eOhplGa3Op_NodeEdgeNum = 121,
+	eOhplGa3Op_NodeEdgeNode = 122,
+	eOhplGa3Op_NcCollideY = 123,
+	eOhplGa3Op_Draw = 124,
 };
 
 // Animation kinds in OhplGa3Io for eOhplGa3Op_PlayAnim.
@@ -241,13 +249,9 @@ bool ohpl_ga3_grunt_event(const OhplGa3Ctx *c, const OhplGa3Host *h, int state, 
 bool ohpl_ga3_grunt_player_is_detected(const OhplGa3Ctx *c, const OhplGa3Host *h);
 float ohpl_ga3_grunt_damage_mul(int cur);
 
-void ohpl_ga3_mover_update(OhplGa3Mover *m, const OhplGa3MoverParams *p, float dt, const OhplGa3Host *h);
-void ohpl_ga3_mover_update_move_animation(OhplGa3Mover *m, const OhplGa3MoverParams *p, const OhplGa3Host *h);
-void ohpl_ga3_mover_turn_to_pos(OhplGa3Mover *m, const float *feet, const OhplGa3Host *h);
-void ohpl_ga3_mover_move_to_pos(OhplGa3Mover *m, const float *feet, const OhplGa3Host *h);
-void ohpl_ga3_mover_turn_to_angle(OhplGa3Mover *m, float a);
-void ohpl_ga3_mover_use_move_state_animations(OhplGa3Mover *m);
-float ohpl_ga3_mover_speed_mul(const OhplGa3Mover *m, const OhplGa3MoverParams *p, const OhplGa3Host *h);
+void ohpl_ga3_mover_update(uint64_t nav, const OhplGa3MoverParams *p, float dt, const OhplGa3Host *h);
+void ohpl_ga3_mover_update_move_animation(uint64_t nav, const OhplGa3MoverParams *p, const OhplGa3Host *h);
+float ohpl_ga3_mover_speed_mul(uint64_t nav, const OhplGa3MoverParams *p, const OhplGa3Host *h);
 float ohpl_ga3_mover_move_speed(const OhplGa3Host *h);
 float ohpl_ga3_mover_wanted_speed_amount(const OhplGa3Host *h);
 
@@ -260,9 +264,6 @@ void ohpl_ga3_update_player_detected(const OhplGa3Ctx *c, const OhplGa3Host *h, 
 void ohpl_ga3_update_char_body(const OhplGa3Ctx *c, const OhplGa3Host *h, const OhplGa3MoverParams *p);
 void ohpl_ga3_update_moving(const OhplGa3Ctx *c, const OhplGa3Host *h);
 
-int ohpl_ga3_node_at_pos(const OhplGa3Host *h, const float *pos, float minDist, float maxDist, bool getClosest, bool posFree,
-						 bool enemyFree, int skip, int rayNum, bool skipUsed, float *outPos);
-void ohpl_ga3_next_goal_pos(const OhplGa3Host *h, const float *goal, float *out);
 int ohpl_ga3_search_for_player_node(const OhplGa3Ctx *c, const OhplGa3Host *h, int iters, float a, float b, float d, const float (*p)[4]);
 int ohpl_ga3_patrol_around_player_node(const OhplGa3Ctx *c, const OhplGa3Host *h, int iters, float a, float b, float d, const float (*p)[3],
 									   const float *start);
@@ -274,6 +275,30 @@ float ohpl_ga3_dist_to_player_2d(const OhplGa3Ctx *c, const OhplGa3Host *h);
 float ohpl_ga3_player_movement_toward_enemy(const OhplGa3Ctx *c, const OhplGa3Host *h);
 bool ohpl_ga3_patrol_is_at_last(int cur, int size);
 void ohpl_ga3_patrol_inc(int *cur, int size, bool loopAtEnd);
+}
+
+// Mover and pathfinder state per enemy (rust/src/luxenemy/nav.rs): handle bits, 0 = none.
+extern "C" {
+uint64_t ohpl_a4b_nav_new();
+uintptr_t ohpl_a4b_nav_free(uint64_t nav);
+void ohpl_a4b_nav_fill_ctx(uint64_t nav, OhplGa3Ctx *c);
+void ohpl_a4b_nav_set_nodes(uint64_t nav, uintptr_t nc, uintptr_t astar);
+uintptr_t ohpl_a4b_nav_nc(uint64_t nav);
+uintptr_t ohpl_a4b_nav_cand(uint64_t nav, int idx);
+uintptr_t ohpl_a4b_nav_path_front(uint64_t nav);
+size_t ohpl_a4b_nav_path_len(uint64_t nav);
+uintptr_t ohpl_a4b_nav_path_at(uint64_t nav, size_t i);
+void ohpl_a4b_nav_path_push(uint64_t nav, uintptr_t node);
+void ohpl_a4b_nav_stop(uint64_t nav);
+bool ohpl_a4b_nav_moving(uint64_t nav);
+void ohpl_a4b_nav_goal(uint64_t nav, float *out3);
+void ohpl_a4b_nav_set_goal(uint64_t nav, bool moving, const float *goal);
+int ohpl_a4b_nav_win_len(uint64_t nav);
+void ohpl_a4b_mover_get(uint64_t nav, OhplA4bMoverSave *out);
+void ohpl_a4b_mover_set(uint64_t nav, const OhplA4bMoverSave *s);
+void ohpl_a4b_mover_set_move_state(uint64_t nav, int s);
+float ohpl_a4b_mover_stuck(uint64_t nav);
+void ohpl_a4b_nav_render(uint64_t nav, const OhplGa3Host *h, const float *bodyPos);
 }
 
 // GA3b: ManPig and WaterLurker handlers (rust/src/luxenemy/manpig.rs, waterlurker.rs).

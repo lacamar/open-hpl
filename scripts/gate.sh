@@ -66,7 +66,7 @@ if [ -n "$SINCE" ]; then
 	changed=$( { git diff --name-only "$SINCE"...HEAD; git diff --name-only HEAD; } | sort -u)
 	if [ -z "$changed" ]; then
 		GAMES=
-	elif ! grep -qvE '^(amnesia/src/game/|amfp/|rust/src/lux|rust/tests/golden/A[0-9]|scripts/(a10b-scenario|gate).sh)' <<<"$changed"; then
+	elif ! grep -qvE '^(amnesia/src/game/|amfp/|rust/src/lux|rust/tests/golden/A[0-9]|scripts/(a10b-scenario|a4b-[a-z]+|gate).sh)' <<<"$changed"; then
 		GAMES="amnesia amfp"
 	elif ! grep -qvE '^(soma/|rust/src/soma|rust/tests/golden/S[0-9]|scripts/(s8-[a-z]+|gate).sh)' <<<"$changed"; then
 		GAMES="soma rebirth bunker"
@@ -196,6 +196,12 @@ half() {
 				scripts/a10b-scenario.sh "$mode" "$OUT/a10b-$mode-$g-$impl.txt" >> "$OUT/a10b-$impl-$g.log" 2>&1
 		done
 	done
+	if has amnesia || has amfp; then
+		# A4b: scripted enemy runs and save round trips, one dump line per enemy update
+		rm -f "$OUT"/a4b-*-"$impl".txt "$OUT"/rt-*-"$impl".txt
+		A4B_GAMES="$(has amnesia && echo amnesia) $(has amfp && echo amfp)" OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" \
+			scripts/a4b-all.sh "$OUT" "-$impl" >> "$OUT/a4b-$impl.log" 2>&1
+	fi
 	if [ -z "$RECORD" ] && has soma; then
 		# shellcheck disable=SC2046
 		ENVX=$extra sweep "$impl" soma "$OUT/play-$impl-soma.json" --play 10 $(mapargs $PLAY_MAPS)
@@ -205,7 +211,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -429,6 +435,10 @@ if not quick:
     if "amnesia" in games:
         names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c")] + ["a12a-02_library"] + ["a9"]
     names += [f"a10b-boot-{g}" for g in ("amnesia", "amfp") if g in games]
+    if "amnesia" in games:
+        names += [f"{k}{e}" for k in ("rt-prison-patrol", "rt-prison-hunt") for e in ("", "-A", "-B")] + ["a4b-prison"]
+    if "amfp" in games:
+        names += [f"{k}{e}" for k in ("rt-factory", "rt-bilge") for e in ("", "-A", "-B")] + ["a4b-factory", "a4b-bilge"]
     if "amnesia" in games:
         names += ["a10b-play-amnesia"]
     has_base = os.path.isdir(base)

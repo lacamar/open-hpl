@@ -19,8 +19,6 @@
 
 #include "LuxEnemy_WaterLurker.h"
 
-#include "LuxEnemyMover.h"
-#include "LuxEnemyPathfinder.h"
 
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
@@ -157,6 +155,7 @@ OhplGa3Host cLuxEnemy_WaterLurker::Ga3WlHost()
 	OhplGa3Host host;
 	host.ctx = this;
 	host.call = &cLuxEnemy_WaterLurker::Ga3WlCall;
+	host.nav = mNav;
 	return host;
 }
 

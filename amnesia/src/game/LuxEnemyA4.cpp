@@ -1,8 +1,5 @@
 #include "LuxEnemy.h"
 
-#include "LuxEnemyMover.h"
-#include "LuxEnemyPathfinder.h"
-
 #include "LuxMap.h"
 #include "LuxMapHelper.h"
 #include "LuxMapHandler.h"
@@ -49,8 +46,20 @@ int iLuxEnemy::A4Call(void *apEnemy, unsigned alOp, OhplA4Io *apIo)
 	case kOhplA4Op_UPDATE_STEP:
 		switch(apIo->i[0])
 		{
-		case 0:		pEnemy->mpPathfinder->OnUpdate(f[0]); break;
-		case 1:		pEnemy->mpMover->OnUpdate(f[0]); break;
+		case 0:
+		{
+			OhplGa3Host host = pEnemy->Ga3Host();
+			ohpl_ga3_update_moving(&pEnemy->mGa3Ctx, &host);
+			break;
+		}
+		case 1:
+		{
+			OhplGa3Host host = pEnemy->Ga3Host();
+			OhplGa3MoverParams params;
+			pEnemy->Ga3MoverParams(params);
+			ohpl_ga3_mover_update(pEnemy->mNav, &params, f[0], &host);
+			break;
+		}
 		case 2:		pEnemy->UpdateCanSeePlayer(f[0]); break;
 		case 3:		pEnemy->UpdatePlayerDetected(f[0]); break;
 		case 4:		pEnemy->UpdatePlayerInRange(f[0]); break;

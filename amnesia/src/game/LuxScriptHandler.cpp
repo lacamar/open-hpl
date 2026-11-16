@@ -60,7 +60,6 @@
 #include "LuxArea_Sticky.h"
 
 #include "LuxEnemy.h"
-#include "LuxEnemyPathfinder.h"
 #include "LuxInventory.h"
 
 #include "LuxInteractConnections.h"
@@ -3377,7 +3376,7 @@ void __stdcall cLuxScriptHandler::AddEnemyPatrolNode(string& asName, string& asN
 	BEGIN_SET_PROPERTY(eLuxEntityType_Enemy,-1)
 		
 		iLuxEnemy *pEnemy = ToEnemy(pEntity);
-		cAINodeContainer *pAINodeCont = pEnemy->GetPathFinder()->GetNodeContainer();
+		cAINodeContainer *pAINodeCont = pEnemy->GetNodeContainer();
 		if(pAINodeCont==NULL)
 		{
 			Error("There is no node container in enemy '%s'! (probably no nodes in map!)\n", pEnemy->GetName().c_str());
@@ -3427,7 +3426,7 @@ void __stdcall cLuxScriptHandler::TeleportEnemyToNode(string & asName, string & 
 	BEGIN_SET_PROPERTY(eLuxEntityType_Enemy,-1)
 
 		iLuxEnemy *pEnemy = ToEnemy(pEntity);
-		cAINode *pNode = pEnemy->GetPathFinder()->GetNodeContainer()->GetNodeFromName(asNodeName);
+		cAINode *pNode = pEnemy->GetNodeContainer()->GetNodeFromName(asNodeName);
 		if(pNode==NULL){
 			Error("Could not find node '%s' for enemy '%s'\n", asNodeName.c_str(), pEnemy->GetName().c_str());
 			continue;
