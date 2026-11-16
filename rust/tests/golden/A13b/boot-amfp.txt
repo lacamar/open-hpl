@@ -1,0 +1,569 @@
+init begin
+step ParseCommandLine
+step InitApp
+cfg main_init.cfg Directories.MainSaveFolder = Pig
+cfg main_init.cfg ConfigFiles.DefaultUserSettings = config/default_user_settings.cfg
+cfg main_init.cfg ConfigFiles.DefaultUserKeysSDL2 = config/default_user_keys_sdl2.cfg
+cfg main_init.cfg ConfigFiles.DefaultMainSettingsSDL2 = config/default_main_settings_sdl2.cfg
+cfg main_init.cfg ConfigFiles.Game = config/game.cfg
+cfg main_init.cfg ConfigFiles.Menu = config/menu.cfg
+cfg main_init.cfg ConfigFiles.PreMenu = config/pre_menu.cfg
+cfg main_init.cfg ConfigFiles.Demo = config/demo.cfg
+cfg main_init.cfg ConfigFiles.Resources = resources.cfg
+cfg main_init.cfg ConfigFiles.Materials = materials.cfg
+cfg main_init.cfg ConfigFiles.DefaultBaseLanguage = base_english.lang
+cfg main_init.cfg ConfigFiles.DefaultGameLanguage = english.lang
+cfg main_init.cfg Directories.BaseLanguageFolder = config/
+cfg main_init.cfg Directories.GameLanguageFolder = config/lang_main/
+cfg main_init.cfg Directories.CustomStoryPath = custom_stories
+cfg main_init.cfg Variables.GameName = Amnesia - A Machine For Pigs
+cfg main_init.cfg Variables.AllowHardMode = <none>
+cfg main_init.cfg StartMap.File = 01_mansion_01.map
+cfg main_init.cfg StartMap.Folder = maps/main/
+cfg main_init.cfg StartMap.Pos = InitStart
+app saveFolder=Pig userCfg=config/default_user_settings.cfg userKeys=config/default_user_keys_sdl2.cfg mainCfg=config/default_main_settings_sdl2.cfg gameCfg=config/game.cfg menuCfg=config/menu.cfg preMenuCfg=config/pre_menu.cfg demoCfg=config/demo.cfg
+app resources=resources.cfg materials=materials.cfg baseLang=base_english.lang gameLang=english.lang baseLangFolder=config/ gameLangFolder=config/lang_main/ story=custom_stories name=Amnesia - A Machine For Pigs hard=0
+app start=maps/main//01_mansion_01.map/InitStart base=$XDG_DATA_HOME/open-hpl/Amnesia/Pig//$XDG_CONFIG_HOME/open-hpl/Amnesia/Pig//$XDG_STATE_HOME/open-hpl/Amnesia/Pig/ flags=$XDG_STATE_HOME/open-hpl/Amnesia/Pig/crash_flag/$XDG_STATE_HOME/open-hpl/Amnesia/Pig/first_start_flag
+step InitMainConfig
+cfg main_settings.cfg Main.SaveConfig = true
+cfg main_settings.cfg Main.ExitMenuDirectly = false
+cfg main_settings.cfg Main.DefaultProfileName = dev_user
+cfg main_settings.cfg Main.ShowPreMenu = true
+cfg main_settings.cfg Main.ShowMenu = true
+cfg main_settings.cfg Main.UpdateLogActive = false
+cfg main_settings.cfg Main.LoadDebugMenu = false
+cfg main_settings.cfg Main.StartLanguage = english.lang
+cfg main_settings.cfg Main.ScreenShotExt = jpg
+cfg main_settings.cfg Main.ForceCacheLoadingAndSkipSaving = true
+cfg main_settings.cfg Screen.Width = 0
+cfg main_settings.cfg Screen.Height = 0
+cfg main_settings.cfg Screen.Display = 0
+cfg main_settings.cfg Screen.FullScreen = true
+cfg main_settings.cfg Screen.Vsync = true
+cfg main_settings.cfg Screen.AdaptiveVsync = true
+cfg main_settings.cfg MapLoad.FastPhysicsLoad = false
+cfg main_settings.cfg MapLoad.FastStaticLoad = false
+cfg main_settings.cfg MapLoad.FastEntityLoad = false
+cfg main_settings.cfg Graphics.OcclusionTestLights = true
+cfg main_settings.cfg Graphics.ShadowsActive = true
+cfg main_settings.cfg Graphics.ShadowQuality = 1
+cfg main_settings.cfg Graphics.ShadowResolution = 2
+cfg main_settings.cfg Graphics.GuiScale = 1
+cfg main_settings.cfg Graphics.Renderer = OpenGL
+cfg main_settings.cfg Graphics.ColorOutput = SDR
+cfg main_settings.cfg Graphics.HdrPaperWhite = 203.000000
+cfg main_settings.cfg Graphics.HdrPeak = 1000.000000
+cfg main_settings.cfg Graphics.WorldReflection = true
+cfg main_settings.cfg Graphics.Refraction = true
+cfg main_settings.cfg Graphics.EdgeSmooth = false
+cfg main_settings.cfg Graphics.SSAOActive = true
+cfg main_settings.cfg Graphics.SSAOSamples = 8
+cfg main_settings.cfg Graphics.SSAOResolution = 0
+cfg main_settings.cfg Graphics.ParallaxEnabled = true
+cfg main_settings.cfg Graphics.ParallaxQuality = 0
+cfg main_settings.cfg Graphics.TextureQuality = 0
+cfg main_settings.cfg Graphics.TextureFilter = 1
+cfg main_settings.cfg Graphics.TextureAnisotropy = 0.000000
+cfg main_settings.cfg Graphics.ForceShaderModel3And4Off = false
+cfg main_settings.cfg Sound.Device = 0
+cfg main_settings.cfg Sound.MaxChannels = 48
+cfg main_settings.cfg Sound.StreamBuffers = 4
+cfg main_settings.cfg Sound.StreamBufferSize = 32768
+main saveAtExit=1 exitMenu=0 preMenu=1 menu=1 profile=dev_user
+step InitEngine
+engine vars screen=0x0 display=0 fullscreen=1 caption='Amnesia - A Machine For Pigs Loading...' renderer=OpenGL color=SDR paperWhite=203 peakNits=1000
+engine sound dev=0 channels=48 streamBuffers=4 streamBufferSize=32768
+static shadowQuality=1 shadowRes=2 parallaxQuality=0 parallax=1 guiScale=1 refraction=1
+static ssaoDiv=2 ssaoSamples=8 ssao=1
+cfg main_settings.cfg Graphics.GBufferType = 0
+cfg main_settings.cfg Graphics.NumOfGBufferTextures = 3
+static edgeSmooth=0 occlusionLights=1 sm34off=0 forceCache=1 compressed=0
+engine create
+engine vsync=1 adaptive=1
+cfg main_settings.cfg Graphics.Gamma = 1.000000
+cfg main_settings.cfg Engine.LimitFPS = true
+cfg main_settings.cfg Engine.SleepWhenOutOfFocus = false
+engine material quality=0 filter=1 anisotropy=0
+cfg main_settings.cfg Sound.Volume = 1.000000
+engine resourceDirs resources.cfg userdir=$XDG_DATA_HOME/open-hpl/Amnesia/local_resources/
+engine surfaceData materials.cfg
+engine language
+cfg main_settings.cfg Main.StartLanguage = english.lang
+engine fastload
+engine sounddev 0
+step CheckFeatureSupport
+step InitGame
+game hud
+containers PreMenu MainMenu Inventory Journal Credits LoadScreen
+cfg game.cfg Input.MaxSmoothMousePos = 7
+cfg game.cfg Input.PrevSmoothMousePosMul = 0.7
+module LuxInputHandler container=<global>
+cfg menu.cfg General.TextDuration_StartTime = 1.5
+cfg menu.cfg General.TextDuration_MinTime = 2.5
+cfg menu.cfg General.TextDuration_CharTime = 0.07
+module LuxHelpFuncs container=<global>
+cfg game.cfg Saving.MaxAutoSaves = 20
+module LuxSaveHandler container=<global>
+module LuxScriptHandler container=<global>
+module LuxProgressLogHandler container=<global>
+module LuxMapHandler container=Default
+module LuxMapHelper container=Default
+cfg game.cfg Player_General.FOV = 70
+cfg game.cfg Player_General.FarClipPlane = 1000
+cfg game.cfg Player_General.NearClipPlane = 0.01
+cfg game.cfg Player_General.HeadSpinDamageSpeed = 8
+cfg game.cfg Player_General.HeadSpinDeacc = 40
+cfg game.cfg Player_General.TerrorSound = ui_terror_meter.ogg
+cfg game.cfg Player_General.TerrorIncSpeed = 0.33
+cfg game.cfg Player_General.TerrorDecSpeed = 0.2
+cfg game.cfg Player_General.MaxPrevSpeedsSaved = 60
+cfg game.cfg Player_General.AutoKillYPos = -500
+cfg game.cfg Player_Body.Size = 0.8 2.0 0.8
+cfg game.cfg Player_Body.CrouchSize = 0.8 0.95 0.8
+cfg game.cfg Player_Body.CameraPosAdd = 0 0 0
+cfg game.cfg Player_Body.Mass = 70
+cfg game.cfg Player_Interaction.MinUseItemDistance = 3
+cfg game.cfg Player_Interaction.GrabMaxForce = 10000
+cfg game.cfg Player_Interaction.GrabMaxTorque = 10000
+cfg game.cfg Player_Interaction.GrabMaxAngularSpeed = 6
+cfg game.cfg Player_Interaction.GrabMaxLeaveAngularSpeed = 8
+cfg game.cfg Player_Interaction.GrabMaxLeaveLinearSpeed = 8
+cfg game.cfg Player_Interaction.GrabMinSlowPlayerMass = 10
+cfg game.cfg Player_Interaction.GrabMaxSlowPlayerMass = 25
+cfg game.cfg Player_Interaction.GrabMinSlowPlayerMul = 0.3
+cfg game.cfg Player_Interaction.PushMaxSpeedWalk = 2
+cfg game.cfg Player_Interaction.PushForceWalk = 100
+cfg game.cfg Player_Interaction.PushMaxSpeedRun = 3
+cfg game.cfg Player_Interaction.PushForceRun = 150
+cfg game.cfg Player_Interaction.PushMaxSpeedCrouch = 1.5
+cfg game.cfg Player_Interaction.PushForceCrouch = 100
+cfg game.cfg Player_Interaction.PushYawRange = 20
+cfg game.cfg Player_Interaction.PushPitchMinRange = 20
+cfg game.cfg Player_Interaction.PushPitchMaxRange = 20
+cfg game.cfg Player_Interaction.PushMaxForce = 10000
+cfg game.cfg Player_Interaction.MoveToMouseAddFactor = 0.01
+cfg game.cfg Player_Interaction.SlideMaxForce = 10000
+cfg game.cfg Player_Interaction.MoveToMouseAddFactor = 0.01
+cfg game.cfg Player_Interaction.MoveMaxForce = 10000
+cfg game.cfg Player_Interaction.MoveToMouseAddFactor = 0.01
+cfg game.cfg Player_Interaction.MoveMaxForce = 10000
+cfg game.cfg Player_Interaction.MoveToMouseAddFactor = 0.01
+cfg game.cfg Player_Interaction.MoveMaxForce = 10000
+cfg game.cfg Player_Ladder.UpSpeed = 0.8
+cfg game.cfg Player_Ladder.DownSpeed = 0.9
+cfg game.cfg Player_Ladder.StepLength = 0.5
+cfg game.cfg Player_Movement_Default.ForwardAcc = 8.0
+cfg game.cfg Player_Movement_Default.SidewayAcc = 8.0
+cfg game.cfg Player_Movement_Default.ForwardDeacc = 11.0
+cfg game.cfg Player_Movement_Default.SidewayDeacc = 11.0
+cfg game.cfg Player_Movement_Default.ForwardOppositeDirAccMul = 9.0
+cfg game.cfg Player_Movement_Default.SidewayOppositeDirAccMul = 9.0
+cfg game.cfg Player_Movement_Normal.JumpSound = player_jump
+cfg game.cfg Player_Movement_Normal.CrouchSound = player_crouch
+cfg game.cfg Player_Movement_Normal.StandSound = player_stand
+cfg game.cfg Player_Movement_Normal.MaxForwardSpeed = 2.5
+cfg game.cfg Player_Movement_Normal.MaxBackwardSpeed = 2.0
+cfg game.cfg Player_Movement_Normal.MaxSidwaySpeed = 2.25
+cfg game.cfg Player_Movement_Normal.RunForwardMul = 1.7
+cfg game.cfg Player_Movement_Normal.RunBackwardMul = 1.7
+cfg game.cfg Player_Movement_Normal.RunSidewayMul = 1.7
+cfg game.cfg Player_Movement_Normal.CrouchForwardMul = 0.65
+cfg game.cfg Player_Movement_Normal.CrouchBackwardMul = 0.65
+cfg game.cfg Player_Movement_Normal.CrouchSidewayMul = 0.65
+cfg game.cfg Player_Movement_Normal.InAirForwardMul = 0.75
+cfg game.cfg Player_Movement_Normal.InAirBackwardMul = 0.75
+cfg game.cfg Player_Movement_Normal.InAirSidewayMul = 0.75
+cfg game.cfg Player_Movement_Normal.MaxJumpCount = 0.22
+cfg game.cfg Player_Movement_Normal.JumpStartForce = 280
+cfg game.cfg Player_Movement_Normal.JumpCrouchStartForce = 200
+cfg game.cfg Player_Movement_Normal.CrouchBobMax = 0.04 0.06
+cfg game.cfg Player_Movement_Normal.WalkBobMax = 0.04 0.06
+cfg game.cfg Player_Movement_Normal.RunBobMax = 0.04 0.06
+cfg game.cfg Player_Movement_Normal.CrouchMinBobSpeed = 0.2
+cfg game.cfg Player_Movement_Normal.CrouchMaxBobSpeed = 1.2
+cfg game.cfg Player_Movement_Normal.WalkMinBobSpeed = 0.4
+cfg game.cfg Player_Movement_Normal.WalkMaxBobSpeed = 1.8
+cfg game.cfg Player_Movement_Normal.RunMinBobSpeed = 0.5
+cfg game.cfg Player_Movement_Normal.RunMaxBobSpeed = 2.5
+cfg game.cfg Player_Movement_Normal.GroundBounceSize = 0.08
+cfg game.cfg Player_Movement_Normal.GroundBounceSpeed = 2.8
+cfg game.cfg Player_Movement_Normal.MinHitGroundBounceSpeed = 5.0
+cfg game.cfg Player_Movement_ClimbLedge.CheckUpdatesPerSecond = 30
+cfg game.cfg Player_Movement_ClimbLedge.ClimbLedgeCheckDistForward = 0.2
+cfg game.cfg Player_Movement_ClimbLedge.ClimbLedgeCheckDistFromTop = 0.2
+cfg game.cfg Player_Movement_ClimbLedge.ClimbLedgeCheckDistTopToEnd = 0.5
+cfg game.cfg Player_Movement_ClimbLedge.CheckMaxPushDist = 0.5
+cfg game.cfg Player_General.FallDamageBounceSizeMul = 3.5
+cfg game.cfg Player_General.FallDamageBounceSpeedMul = 0.6
+cfg game.cfg Player_General.FallDamageSpeed_Min = 12
+cfg game.cfg Player_General.FallDamage_Min = 10
+cfg game.cfg Player_General.FallDamageSound_Min = player_falldamage_min
+cfg game.cfg Player_General.FallDamageSpeed_Med = 14
+cfg game.cfg Player_General.FallDamage_Med = 40
+cfg game.cfg Player_General.FallDamageSound_Med = player_falldamage_med
+cfg game.cfg Player_General.FallSpeed_Max = 20
+cfg game.cfg Player_General.FallDamage_Max = 100
+cfg game.cfg Player_General.FallDamageSound_Max = player_falldamage_max
+cfg game.cfg Player_Movement_Default.ForwardAcc = 8.0
+cfg game.cfg Player_Movement_Default.SidewayAcc = 8.0
+cfg game.cfg Player_Movement_Default.ForwardDeacc = 11.0
+cfg game.cfg Player_Movement_Default.SidewayDeacc = 11.0
+cfg game.cfg Player_Movement_Default.ForwardOppositeDirAccMul = 9.0
+cfg game.cfg Player_Movement_Default.SidewayOppositeDirAccMul = 9.0
+cfg game.cfg Player_Movement_ClimbLedge.HeadMoveSpeed = 0.8
+cfg game.cfg Player_Movement_ClimbLedge.HeadMoveSlowdownDist = 0.1
+cfg game.cfg Player_Movement_ClimbLedge.GivePlayerControlDist = 0.1
+cfg game.cfg Player_Movement_ClimbLedge.MovePitchFactor = 4
+cfg game.cfg Player_Movement_ClimbLedge.MaxMovePitchSpeed = 5
+cfg game.cfg Player_Darkness.RadiusAdd = 3
+cfg game.cfg Player_Darkness.MinLightLevel = 0.15
+cfg game.cfg Player_Darkness.AmbientLightMinLightLevel = 0.2
+cfg game.cfg Player_Darkness.AmbientLightRadius = 6.5
+cfg game.cfg Player_Darkness.AmbientLightIntensity = 0.32
+cfg game.cfg Player_Darkness.AmbientLightFadeInTime = 2.8
+cfg game.cfg Player_Darkness.AmbientLightFadeOutTime = 2.3
+cfg game.cfg Player_Darkness.AmbientLightColor = 0.5 0.5 1 0
+cfg game.cfg Player_Darkness.LoopSoundFile = player_darkness.ogg
+cfg game.cfg Player_Darkness.LoopSoundVolume = 0.2
+cfg game.cfg Player_Darkness.LoopSoundStartupTime = 1.0
+cfg game.cfg Player_Darkness.LoopSoundFadeInSpeed = 0.05
+cfg game.cfg Player_Darkness.LoopSoundFadeOutSpeed = 0.4
+cfg game.cfg Player_Darkness.SanityLossPerSecond = <none>
+cfg game.cfg Player_General.Death_HeightAdd = -1.3
+cfg game.cfg Player_General.Death_HeightAddCrouch = -0.7
+cfg game.cfg Player_General.Death_FadeTime = 3
+cfg game.cfg Player_General.Death_HeightAddSpeed = 1.2
+cfg game.cfg Player_General.Death_RollSpeed = 55
+cfg game.cfg Player_General.Death_StartSound = afx_gameplay_hightone_10sec
+cfg game.cfg Player_General.Death_AwakenSound =
+cfg game.cfg Player_General.HandsRotationSmoothNum = 13
+cfg game.cfg Player_General.HandsPosAddMul = 0.12
+cfg game.cfg Player_Lantern.Color = 0.88 0.82 0.40 0.8
+cfg game.cfg Player_Lantern.Radius = 0.0001
+cfg game.cfg Player_Lantern.Gobo =
+cfg game.cfg Player_Lantern.LocalOffset = 0.3 -0.3 -0.1
+cfg game.cfg Player_Lantern.CastShadows = false
+cfg game.cfg Player_Lantern.LowerOilSpeed = <none>
+cfg game.cfg Player_Lantern.FadeLightOilAmount = <none>
+cfg game.cfg Player_Lantern.OutOfOilSound = <none>
+cfg game.cfg Player_Lantern.DisabledSound =
+cfg game.cfg Player_Lantern.TurnOnSound = ui_lantern_on
+cfg game.cfg Player_Lantern.TurnOffSound = ui_lantern_off
+cfg game.cfg Player_Sanity.HitZoomInSpeed = <none>
+cfg game.cfg Player_Sanity.HitZoomOutSpeed = <none>
+cfg game.cfg Player_Sanity.HitZoomInFOVMul = <none>
+cfg game.cfg Player_Sanity.HitZoomInAspectMul = <none>
+cfg game.cfg Player_Sanity.SanityRegainSpeed = <none>
+cfg game.cfg Player_Sanity.SanityRegainLimit = <none>
+cfg game.cfg Player_Sanity.SanityVeryLowLimit = <none>
+cfg game.cfg Player_Sanity.SanityEffectsStart = <none>
+cfg game.cfg Player_Sanity.SanityWaveAlphaMul = <none>
+cfg game.cfg Player_Sanity.SanityWaveSpeedMul = <none>
+cfg game.cfg Player_Sanity.SanityLowLimit = <none>
+cfg game.cfg Player_Sanity.SanityLowLimitMaxTime = <none>
+cfg game.cfg Player_Sanity.SanityLowNewSanityAmount = <none>
+cfg game.cfg Player_Sanity.CheckNearEnemyInterval = <none>
+cfg game.cfg Player_Sanity.NearEnemyDecrease = <none>
+cfg game.cfg Player_Sanity.NearCritterDecrease = <none>
+cfg game.cfg Player_General.FlashbackRadialBlurSize = 0.09
+cfg game.cfg Player_General.FlashbackRadialBlurStartDist = 0.3
+cfg game.cfg Player_General.FlashbackWorldSoundVolume = 0.3
+cfg game.cfg Player_General.FlashbackMoveSpeedMul = 0.6
+cfg game.cfg Player_General.FlashbackRunSpeedMul = 0.6
+cfg game.cfg Player_General.Hurt_EffectStartHealth = 50
+cfg game.cfg Player_General.Hurt_MinSpeedMul = 0.75
+cfg game.cfg Player_General.Hurt_MaxPantCount = 15.0
+cfg game.cfg Player_General.Hurt_PantSpeed = 0.37
+cfg game.cfg Player_General.Hurt_PantSize = 0.01f
+cfg game.cfg Player_General.HealthRegainSpeed = 0.8
+cfg game.cfg Player_General.HealthRegainLimit = 52
+cfg game.cfg Player_General.Hurt_NoiseAlpha = 0.5
+cfg game.cfg Player_General.Hurt_NoiseFreq = 10
+cfg game.cfg Player_General.Hurt_NoiseColor = 0.4 0 0 1
+cfg game.cfg Player_Sanity.StartSwayMaxSanity = <none>
+cfg game.cfg Player_Sanity.SwayMaxSavedPositions = <none>
+cfg game.cfg Player_General.InsanityCollapse_HeightAddGoal = <none>
+cfg game.cfg Player_General.InsanityCollapse_HeightAddCollapseSpeed = <none>
+cfg game.cfg Player_General.InsanityCollapse_HeightAddAwakeSpeed = <none>
+cfg game.cfg Player_General.InsanityCollapse_RollCollapseSpeed = <none>
+cfg game.cfg Player_General.InsanityCollapse_RollAwakeSpeed = <none>
+cfg game.cfg Player_General.InsanityCollapse_SleepTime = <none>
+cfg game.cfg Player_General.InsanityCollapse_SleepSpeedMul = <none>
+cfg game.cfg Player_General.InsanityCollapse_WakeUpSpeedMul = <none>
+cfg game.cfg Player_General.InsanityCollapse_StartSound = <none>
+cfg game.cfg Player_General.InsanityCollapse_AwakenSound = <none>
+cfg game.cfg Player_General.InsanityCollapse_SleepLoopSound = <none>
+cfg game.cfg Player_General.InsanityCollapse_SleepLoopSoundVolume = <none>
+cfg game.cfg Player_General.InsanityCollapse_SleepRandomSound = <none>
+cfg game.cfg Player_General.InsanityCollapse_SleepRandomMinTime = <none>
+cfg game.cfg Player_General.InsanityCollapse_SleepRandomMaxTime = <none>
+cfg game.cfg Player_General.InsanityCollapse_AwakenSanity = <none>
+module LuxPlayer container=Default
+cfg game.cfg Insanity.MaxSanity_LongWait = <none>
+cfg game.cfg Insanity.MaxSanity_MedWait = <none>
+cfg game.cfg Insanity.MaxSanity_ShortWait = <none>
+cfg game.cfg Insanity.TimeBetween_LongWait = <none>
+cfg game.cfg Insanity.TimeBetween_MedWait = <none>
+cfg game.cfg Insanity.TimeBetween_ShortWait = <none>
+cfg game.cfg Insanity.EventsFile = <none>
+module LuxInsanityHandler container=Default
+module LuxDebugHandler container=Default
+module LuxEffectRenderer container=Default
+cfg game.cfg Sound.InGameMusicVolume = 0.85
+module LuxMusicHandler container=Default
+cfg menu.cfg Messages.QuestAddedSound = ui_add_quest.snt
+cfg menu.cfg Messages.QuestAddedIcon = hud_quest_added.tga
+cfg menu.cfg Messages.GameMessageFontSize = 18 18
+module LuxMusicHandler container=Default
+cfg game.cfg Player_General.SanityGain_Color = 0.3 0.3 0.5 1
+cfg game.cfg Player_General.SanityGain_Sound = ui_sanity_gain
+cfg game.cfg Player_General.SanityGain_FadeInTime = 0.25
+cfg game.cfg Player_General.SanityGain_FadeOutTime = 1.25
+cfg game.cfg Effects.VoiceTextFontSize = 18 18
+cfg game.cfg Effects.VoiceTextRowWidth = 600
+module LuxEffectHandler container=Default
+cfg game.cfg Quest.QuestCompletionValue = 30
+cfg game.cfg Quest.ItemCompletionValue = 5
+cfg game.cfg Quest.NoteCompletionValue = 10
+cfg game.cfg Quest.DiaryCompletionValue = 10
+cfg game.cfg Quest.FlashbackCompletionValue = 10
+cfg game.cfg Quest.ChestCompletionValue = 20
+module LuxCompletionCountHandler container=Default
+cfg game.cfg Player_Sanity.LightLampMinSanityIncrease = <none>
+cfg game.cfg Player_Sanity.LightLampMaxSanityIncrease = <none>
+module LuxGlobalDataHandler container=Default
+cfg menu.cfg Hints.FontSize = 15 15
+cfg menu.cfg Hints.YPos = 40
+cfg menu.cfg Hints.TextDurationMul = 1.5
+module LuxHintHandler container=Default
+module LuxPostEffectHandler container=Default
+module AchievementHandler container=Default
+achievements
+module LuxPreMenu container=PreMenu
+cfg menu.cfg Profiles.WindowSize = 500 360
+cfg menu.cfg Profiles.InformationWidth = 0
+cfg menu.cfg Profiles.ListFontSize = 18 18
+cfg menu.cfg Profiles.EnterNameWindowSize = 250, 150
+cfg menu.cfg Profiles.EnterNameButtonLength = 80
+cfg menu.cfg Options.ShowCommentary = true
+cfg menu.cfg Main.MainFadeInTime = 1
+cfg menu.cfg Main.MainFadeOutTimeFast = 0.3
+cfg menu.cfg Main.MainFadeOutTimeSlow = 3
+cfg menu.cfg Main.TopMenuFadeInTime = 1
+cfg menu.cfg Main.TopMenuFadeOutTime = 0.3
+cfg menu.cfg Main.TopMenuStartRelativePos = 0.8 0.3
+cfg menu.cfg Main.TopMenuFontRelativeSize = 0.05 0.045
+cfg menu.cfg Main.TopMenuStartRelativePosInGame = 0.5 0.5
+cfg menu.cfg Main.MainMenuLogoStartRelativePos = 0.0525 0.26
+cfg menu.cfg Main.MainMenuLogoRelativeSize = 0.45 0.45
+cfg menu.cfg Main.Music = game_menu.ogg
+cfg menu.cfg Main.ZoomSound = ui_zoom.ogg
+cfg menu.cfg Main.BGCamera_FOV = 70
+cfg menu.cfg Main.BGCamera_ZoomedFOV = 40
+module LuxDebugHandler container=MainMenu
+cfg menu.cfg Inventory.FadeInTime = 1
+cfg menu.cfg Inventory.FadeOutTime = 0.3
+cfg menu.cfg Inventory.PopUpMessageCenter = 400 200 5
+cfg menu.cfg Inventory.JournalCenter = 720 472 1
+cfg menu.cfg Inventory.JournalFrameSize = 100 -1
+cfg menu.cfg Inventory.JournalFrameHPadding = 0 0
+cfg menu.cfg Inventory.JournalFrameVPadding = 0 0
+cfg menu.cfg Inventory.JournalFrameOffset = -5 0 0
+cfg menu.cfg Inventory.SlotImage =
+cfg menu.cfg Inventory.SlotSize = 74 99
+cfg menu.cfg Inventory.SlotColor = 0 0 0 0
+cfg menu.cfg Inventory.SlotMouseOverImage =
+cfg menu.cfg Inventory.SlotMouseOverColor = 0.1 0.1 0.1 0.2
+cfg menu.cfg Inventory.SlotPulsatingMin = 0.5
+cfg menu.cfg Inventory.SlotPulsatingAmp = 1
+cfg menu.cfg Inventory.SlotPulsatingFreq = 4
+cfg menu.cfg Inventory.SlotsRows = 3
+cfg menu.cfg Inventory.SlotsColumns = 6
+cfg menu.cfg Inventory.SlotsGridColor = 0.4 0.4 0.4 0.25
+cfg menu.cfg Inventory.SlotsStart = 172 62 2
+cfg menu.cfg Inventory.SlotsSeparation = 2 2 0
+cfg menu.cfg Inventory.SlotsFrameSize = -1 -1
+cfg menu.cfg Inventory.SlotsFrameHPadding = 0 0
+cfg menu.cfg Inventory.SlotsFrameVPadding = 0 0
+cfg menu.cfg Inventory.SlotsFrameOffset = 0 0 0
+cfg menu.cfg Inventory.SlotsDrawGrid = true
+cfg menu.cfg Inventory.SlotsDrawFrame = true
+cfg menu.cfg Inventory.SlotsGridHExtension = 12 12
+cfg menu.cfg Inventory.SlotsGridVExtension = 12 12
+cfg menu.cfg Inventory.SlotsGridOffset = 0 0 -0.5f
+cfg menu.cfg Inventory.HealthCenter = 75 168 1
+cfg menu.cfg Inventory.HealthFrameSize = 110 -1
+cfg menu.cfg Inventory.HealthFrameHPadding = 0 0
+cfg menu.cfg Inventory.HealthFrameVPadding = 0 0
+cfg menu.cfg Inventory.HealthFrameOffset = 18 0 0
+cfg menu.cfg Inventory.SanityCenter = 75 418 1
+cfg menu.cfg Inventory.SanityFrameSize = 100 -1
+cfg menu.cfg Inventory.SanityFrameHPadding = 0 0
+cfg menu.cfg Inventory.SanityFrameVPadding = 0 0
+cfg menu.cfg Inventory.SanityFrameOffset = 7 0 0
+cfg menu.cfg Inventory.TinderboxesCenter = 720 127 1
+cfg menu.cfg Inventory.TinderboxesFrameSize = 100 90
+cfg menu.cfg Inventory.TinderboxesFrameHPadding = 0 0
+cfg menu.cfg Inventory.TinderboxesFrameVPadding = 0 0
+cfg menu.cfg Inventory.TinderboxesFrameOffset = -28 -15 1
+cfg menu.cfg Inventory.OilCenter = 720 293 0
+cfg menu.cfg Inventory.OilFrameSize = 100 100
+cfg menu.cfg Inventory.OilFrameHPadding = 0 0
+cfg menu.cfg Inventory.OilFrameVPadding = 10 15
+cfg menu.cfg Inventory.OilFrameOffset = -32 -5 1
+cfg menu.cfg Inventory.ItemHeaderCenter = 400 420 1
+cfg menu.cfg Inventory.ItemDescCenter = 400 440 1
+cfg menu.cfg Inventory.ItemTextFrameSize = -1 -1
+cfg menu.cfg Inventory.ItemTextFrameHPadding = 0 0
+cfg menu.cfg Inventory.ItemTextFrameVPadding = 0 0
+cfg menu.cfg Inventory.ItemTextFrameOffset = 0 0 0
+cfg menu.cfg Inventory.ItemDescTextWidth = 456
+cfg menu.cfg Inventory.ItemCountOffset = -18 10 0.2
+cfg menu.cfg Inventory.FontSize_ItemCount = 17 17
+cfg menu.cfg Inventory.FontSize_Label = 20 20
+cfg menu.cfg Inventory.FontSize_Header = 24 24
+cfg menu.cfg Inventory.FontSize_Description = 18 18
+cfg menu.cfg Inventory.FontSize_Message = 22 22
+module LuxInventory container=Inventory
+cfg menu.cfg Journal.NoteTextWidth = 450
+cfg menu.cfg Journal.NoteMaxPageRows = 18
+cfg menu.cfg Journal.NoteFontSize = 24 24
+cfg menu.cfg Journal.NoteRowDist = 22
+cfg menu.cfg Journal.NoteHeaderFontSize = 30 30
+cfg menu.cfg Journal.NoteHeaderStartY = 60
+cfg menu.cfg Journal.NoteTextStartY = 105
+module LuxJournal container=Journal
+cfg menu.cfg Credits.NormalFontSize = 17 17
+cfg menu.cfg Credits.HeaderFontSize = 25 25
+cfg menu.cfg Credits.TheEndFontSize = 35 35
+cfg menu.cfg Credits.ScrollSpeed = 30
+cfg menu.cfg Credits.FadeSpeed = 0.5
+module LuxCredits container=Credits
+cfg menu.cfg LoadScreen.LoadingFontSize = 20 20
+cfg menu.cfg LoadScreen.TextFontSize = 30 30
+cfg menu.cfg LoadScreen.LoadingY = 550
+cfg menu.cfg LoadScreen.TextWithImageY = 375
+cfg menu.cfg LoadScreen.TextAloneY = 250
+cfg menu.cfg LoadScreen.ImageY = 0
+cfg menu.cfg LoadScreen.TextMaxWidth = 550
+cfg menu.cfg LoadScreen.FadeOutTime = 0.5
+cfg menu.cfg LoadScreen.TextDurationMul = 1.1
+module LuxLoadScreenHandler container=LoadScreen
+reset all
+loader entity cLuxStaticPropLoader StaticProp
+loader entity cLuxPropLoader_Object Object
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+cfg game.cfg Player_Interaction.Grab_DefaultMaxFocusDist = 2.0
+cfg game.cfg Player_Interaction.Push_DefaultMaxFocusDist = 2.0
+cfg game.cfg Player_Interaction.Slide_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_SwingDoor SwingDoor
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+cfg game.cfg Player_Interaction.SwingDoor_DefaultMaxFocusDist = 3.0
+loader entity cLuxPropLoader_Lever Lever
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+cfg game.cfg Player_Interaction.Lever_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_Wheel Wheel
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+cfg game.cfg Player_Interaction.Wheel_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_Lamp Lamp
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_Photocell Photocell
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_MoveObject MoveObject
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_Item Item
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+cfg game.cfg Player_Interaction.Item_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_Chest Chest
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_LevelDoor LevelDoor
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+cfg game.cfg Player_Interaction.LevelDoor_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_Button Button
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_OilBarrel OilBarrel
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_EmotionStone EmotionStone
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_NPC NPC
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_MultiSlider MultiSlider
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+cfg game.cfg Player_Interaction.MultiSlider_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_Critter_Bug CritterBug
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxPropLoader_Critter_Spider CritterSpider
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxEnemyLoader_Grunt Enemy_Grunt
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxEnemyLoader_WaterLurker Enemy_WaterLurker
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxEnemyLoader_ManPig Enemy_ManPig
+cfg game.cfg Player_Interaction.Default_DefaultMaxFocusDist = 2.0
+loader entity cLuxCommentaryIconLoader CommentaryIcon
+cfg game.cfg Player_Interaction.Commentary_MaxFocusDist = 3
+loader area cLuxAreaNodeLoader_PlayerStart PlayerStart
+loader area cLuxAreaNodeLoader_PathNode PathNode
+loader area cLuxAreaNodeLoader_PosNode PosNode
+loader area cLuxAreaLoader_Script Script
+loader area cLuxAreaLoader_Flashback Flashback
+loader area cLuxAreaLoader_Ladder Ladder
+loader area cLuxAreaLoader_Liquid Liquid
+loader area cLuxAreaLoader_Sticky Sticky
+loader area cLuxAreaLoader_Insanity Insanity
+loader area cLuxAreaLoader_Examine Examine
+loader area cLuxAreaLoader_Sign Sign
+loader area cLuxAreaLoader_SlimeDamage SlimeDamage
+loader area cLuxAreaRopeLoader Rope
+message LoadFonts
+cfg game.cfg Player_General.FocusTextFont = menu.fnt
+cfg menu.cfg CompletionCounter.DefaultFont = game_header.fnt
+cfg menu.cfg Hints.DefaultFont = game_hints.fnt
+cfg menu.cfg Main.TopMenuFont = menu.fnt
+cfg menu.cfg Inventory.DefaultFont = game_default.fnt
+cfg menu.cfg Inventory.HeaderFont = game_header.fnt
+cfg menu.cfg Journal.DefaultFont = menu.fnt
+cfg menu.cfg Journal.MenuFont = menu.fnt
+cfg menu.cfg Credits.NormalFont = game_default.fnt
+cfg menu.cfg Credits.HeaderFont = menu.fnt
+cfg menu.cfg LoadScreen.DefaultFont = menu.fnt
+message LoadMainConfig
+cfg main_settings.cfg Graphics.PostEffectBloom = true
+cfg main_settings.cfg Graphics.PostEffectImageTrail = true
+cfg main_settings.cfg Graphics.PostEffectSepia = true
+cfg main_settings.cfg Graphics.PostEffectRadialBlur = true
+cfg main_settings.cfg Graphics.PostEffectInsanity = true
+headless handlers run_script set_debug_gbuffer read_gbuffer_stats state render_stats teleport save_game load_game start_map
+startmode 0
+step InitOver
+cfg menu.cfg Main.MenuLogo = <none>
+cfg menu.cfg Main.BGScene = menu_bg.map
+exit begin saveAtExit=1
+step ExitGame
+delete module LuxInputHandler
+delete module LuxHelpFuncs
+delete module LuxSaveHandler
+delete module LuxScriptHandler
+delete module LuxProgressLogHandler
+delete module LuxMapHandler
+delete module LuxMapHelper
+delete module LuxPlayer
+delete module LuxInsanityHandler
+delete module LuxDebugHandler
+delete module LuxEffectRenderer
+delete module LuxMusicHandler
+delete module LuxMusicHandler
+delete module LuxEffectHandler
+delete module LuxCompletionCountHandler
+delete module LuxGlobalDataHandler
+delete module LuxHintHandler
+delete module LuxPostEffectHandler
+delete module AchievementHandler
+delete module LuxPreMenu
+delete module LuxDebugHandler
+delete module LuxInventory
+delete module LuxJournal
+delete module LuxCredits
+delete module LuxLoadScreenHandler
+step ExitConfig
+exit end

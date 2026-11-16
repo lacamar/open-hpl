@@ -30,6 +30,8 @@
 
 namespace hpl {
 
+	tConfigReadHook gpConfigReadHook = NULL;
+
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
@@ -230,6 +232,7 @@ namespace hpl {
 	const char* cConfigFile::GetCharArray(tString asLevel, tString asName)
 	{
 		bool bFound = ohpl_h2_cfg_get(mpRs, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), OhplXmlAssign, &msTempValue);
+		if(gpConfigReadHook) gpConfigReadHook(msFile, asLevel, asName, bFound ? msTempValue.c_str() : NULL);
 		return bFound ? msTempValue.c_str() : NULL;
 	}
 

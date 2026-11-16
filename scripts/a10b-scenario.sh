@@ -15,6 +15,8 @@ C() { scripts/hpl_control.py --socket "$SOCK" --timeout 240 "$@"; }
 rm -f "$OUT"
 touch "$OUT.start"
 export OHPL_A10B_DUMP=$OUT
+export OHPL_A13B_DUMP=$(dirname "$OUT")/a13b-${OUT##*/a10b-}
+rm -f "$OHPL_A13B_DUMP"
 read -r PID _ < <(scripts/soma-run.sh 02_library.map "$SOCK")
 for _ in $(seq 60); do C state > /dev/null 2>&1 && break; sleep 2; done
 if [ "$MODE" = boot ]; then
