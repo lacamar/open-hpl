@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.97
+Version:        1.3.98
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,12 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Nov 16 2026 lacamar <lchlnm@pm.me> - 1.3.98-1
+- Journal, effects, music, insanity, input in Rust
+- Main menu in Rust
+- Drop tinyxml
+- SOMA sound, config, timers, input, splash, gamma in Rust
+
 * Sun Nov 15 2026 lacamar <lchlnm@pm.me> - 1.3.97-1
 - Main menu windows, options, key config in Rust
 - Pre-menu, credits, load screen, progress log in Rust
