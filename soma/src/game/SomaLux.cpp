@@ -21,6 +21,9 @@
 #include "SomaScriptNatives.h"
 #include "SomaScriptRuntime.h"
 #include "SomaSave.h"
+#include "SomaS9Dump.h"
+#include "RustSomaLuxS9.h"
+#include "RustSomaLuxS5.h"
 #include "SomaSound.h"
 #include "SomaSoundscape.h"
 #include "resources/WorldLoaderHpm.h"
@@ -28,16 +31,10 @@
 #include <sys/mman.h>
 #include <ucontext.h>
 
-static tString gsPendingMap, gsPendingStart, gsPendingTransfer, gsPreloadMap;
-bool gbMapChangeIsTransfer = false;
-static float gfPendingFadeIn = -1;
-static OhplGs3Preload gPreloadState = [] { OhplGs3Preload p; ohpl_gs3_preload_init(&p); return p; }();
-static OhplGs3Pause gPauseState = [] { OhplGs3Pause p; ohpl_gs3_pause_init(&p); return p; }();
+static OhplGs3Preload &gPreloadState = *ohpl_s9_preload_state();
+static OhplGs3Pause &gPauseState = *ohpl_s9_pause_state();
 #define glPreloadPrio gPreloadState.mlPrio
-#define gbSavingEnabled gPauseState.mbSavingEnabled
 static const unsigned char *U(const tString &s) { return (const unsigned char *)s.data(); }
-
-static bool gbPendingNewGame = false;
 
 // HPL3 streams the next map on worker threads; here LoadWorld runs on a main-thread fiber in per-frame slices
 static struct
@@ -142,13 +139,14 @@ static bool PreloadReady(const tString &asMap)
 
 static void PreloadUpdate()
 {
+	tString sWant = SomaPreloadMap();
 	OhplGs3Tick tick;
-	ohpl_gs3_preload_tick(&gPreloadState, U(gsPreloadMap), gsPreloadMap.size(), U(gPreload.msMap), gPreload.msMap.size(), gPreload.mbRunning,
+	ohpl_gs3_preload_tick(&gPreloadState, U(sWant), sWant.size(), U(gPreload.msMap), gPreload.msMap.size(), gPreload.mbRunning,
 						  cEngineDiagnostics::GetRenderedFrameCount(), &tick);
 	if (tick.mbDropOld)
 		SomaTakePreloadedWorld("");
 	if (tick.mbStart)
-		PreloadStart(gsPreloadMap);
+		PreloadStart(sWant);
 	if (tick.mbStep == false)
 		return;
 	unsigned long lStart = cPlatform::GetApplicationTime();
@@ -186,6 +184,7 @@ cSomaLuxMap::cSomaLuxMap(cWorld *apWorld, const tString &asFileName)
 
 cSomaLuxMap::~cSomaLuxMap()
 {
+	ohpl_s9_map_free((size_t)this);
 	SomaClearObjectIDs();
 	cSomaSoundscape::Get()->Forget(this);
 	for (cSomaLuxEntity *pEnt : mvDestroyed)
@@ -468,6 +467,8 @@ void cSomaLuxMap::Update(float afTimeStep)
 {
 	if (mpScript == NULL)
 		return;
+	if (ohpl_s9_map_stamp((size_t)this) == 0)
+		OhplS9DumpEnter(this);
 	for (size_t i = 0; i < mvDissolves.size();)
 	{
 		cDissolve &d = mvDissolves[i];
@@ -482,26 +483,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 		mvDissolves.erase(mvDissolves.begin() + i);
 	}
 
-	for (cSomaLuxTimer &t : mvTimers)
-		if (t.mbPaused == false)
-			t.mfTime -= afTimeStep;
-	mfTime += afTimeStep;
-	++mlTimeStamp;
-	mbUpdatingTimers = true;
-	for (auto it = mvTimers.begin(); it != mvTimers.end();)
-	{
-		if (it->mbPaused || it->mfTime > 0 || it->mbRemoved)
-		{
-			++it;
-			continue;
-		}
-		mpFiringTimer = &*it;
-		mpRuntime->CallByName(mpScript, it->msFunction, it->msName);
-		mpFiringTimer = NULL;
-		it = it->mfTime <= 0 ? mvTimers.erase(it) : std::next(it);
-	}
-	mbUpdatingTimers = false;
-	std::erase_if(mvTimers, [](const cSomaLuxTimer &t) { return t.mbRemoved; });
+	ohpl_s9_timers_update((size_t)this, afTimeStep);
 
 	float fStep = afTimeStep;
 	mpRuntime->Call(mpScript, "void Update(float afTimeStep)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
@@ -726,50 +708,55 @@ void cSomaLuxMap::UpdateCollideCallbacks()
 	msetColliding.swap(setNow);
 }
 
-void cSomaLuxMap::AddTimer(const tString &asName, float afTime, const tString &asFunction)
+int32_t OhplS9HostCall(uint32_t alOp, OhplS5Io *io)
 {
-	cSomaLuxTimer timer;
-	timer.msName = asName;
-	timer.msFunction = asFunction;
-	timer.mfTime = afTime > 0 ? afTime : 0.001f;
-	timer.mbPaused = false;
-	timer.mfUserFloat = 0;
-	timer.mlUserInt = 0;
-	timer.mfLength = timer.mfTime;
-	mvTimers.push_front(timer);
+	static tString sOut;
+	tString sIn = io->s ? tString((const char *)io->s, io->n) : tString();
+	size_t lSplit = sIn.find('\0');
+	tString sA = sIn.substr(0, lSplit), sB = lSplit == tString::npos ? tString() : sIn.substr(lSplit + 1);
+	switch (alOp)
+	{
+	case kOhplS9_FIRE: ((cSomaLuxMap *)io->p[0])->FireTimer(sA, sB); return 0;
+	case kOhplS9_STR_REF:
+		sOut = sIn;
+		io->p[1] = &sOut;
+		return 0;
+	case kOhplS9_INIT_CONFIG:
+		sOut = gpSomaBase->GetInitConfigString(sA, sB);
+		io->s = (const unsigned char *)sOut.data();
+		io->n = sOut.size();
+		return 0;
+	case kOhplS9_EXIT: gpSomaBase->mpEngine->Exit(); return 0;
+	case kOhplS9_SCRIPT_PAUSED: return gpSomaBase->mbScriptGamePaused;
+	case kOhplS9_SET_PAUSED:
+		if (io->f[0] != 0)
+			SomaSetGamePaused(io->i[0] != 0, io->i[1] != 0, io->i[2] != 0, io->i[3] != 0, (tFlag)(size_t)io->p[1]);
+		else
+			SomaSetGamePaused(io->i[0] != 0, io->i[1] != 0, io->i[2] != 0, io->i[3] != 0);
+		return 0;
+	case kOhplS9_PRELOAD_READY: return PreloadReady(sIn);
+	case kOhplS9_HIDE_CROSSHAIR: return SomaUserConfig() && SomaUserConfig()->GetBool("Debug", "HideCrosshair", false);
+	case kOhplS9_UPDATES_PER_SEC: return gpSomaBase->mpEngine->GetUpdatesPerSec();
+	case kOhplS9_ARR_RESIZE: ((CScriptArray *)io->p[0])->Resize((asUINT)io->i[0]); return 0;
+	case kOhplS9_ARR_SET: ((CScriptArray *)io->p[0])->SetValue((asUINT)io->i[0], io->p[1]); return 0;
+	case kOhplS9_APP_TIME: return (int32_t)(unsigned int)cPlatform::GetApplicationTime();
+	case kOhplS9_SLEEP: cPlatform::Sleep((unsigned int)io->i[0]); return 0;
+	case kOhplS9_GAME_TIME:
+	{
+		double fTime = gpSomaBase->mfGameStartTime < 0 ? 0.0 : gpSomaBase->mpEngine->GetGameTime() - gpSomaBase->mfGameStartTime;
+		memcpy(io->i, &fTime, sizeof(fTime));
+		return 0;
+	}
+	case kOhplS9_ARR_PUSH_STR: ((CScriptArray *)io->p[0])->InsertLast(&sIn); return 0;
+	}
+	return 0;
 }
 
-void cSomaLuxMap::RestartCurrentTimer(float afTime)
-{
-	if (mpFiringTimer)
-		mpFiringTimer->mfTime = afTime < 0 ? mpFiringTimer->mfLength : afTime;
-}
+void cSomaLuxMap::FireTimer(const tString &asName, const tString &asFunction) { mpRuntime->CallByName(mpScript, asFunction, asName); }
 
-void cSomaLuxMap::RemoveTimer(const tString &asName)
-{
-	for (cSomaLuxTimer &t : mvTimers)
-		if (t.msName == asName)
-			t.mbRemoved = true;
-	if (mbUpdatingTimers == false)
-		std::erase_if(mvTimers, [](const cSomaLuxTimer &t) { return t.mbRemoved; });
-}
+double cSomaLuxMap::GetTime() { return ohpl_s9_map_time((size_t)this); }
 
-void cSomaLuxMap::SetTimerPaused(const tString &asName, bool abX)
-{
-	for (cSomaLuxTimer &t : mvTimers)
-		if (t.msName == asName)
-			t.mbPaused = abX;
-}
-
-cSomaLuxTimer *cSomaLuxMap::GetTimer(const tString &asName)
-{
-	for (cSomaLuxTimer &t : mvTimers)
-		if (t.msName == asName)
-			return &t;
-	return NULL;
-}
-
-bool SomaTakePendingMapChange(tString &asMap, tString &asStart);
+int cSomaLuxMap::GetTimeStamp() { return ohpl_s9_map_stamp((size_t)this); }
 
 void cSomaLuxUpdater::OnDraw(float afFrameTime)
 {
@@ -786,7 +773,6 @@ static void PauseSoundInstances(tFlag alTypes, bool abX)
 }
 
 // cLuxMap::PauseSoundsAndMusic 0xb19280 / ResumeSoundsAndMusic 0xb147a0 (Rebirth)
-static std::set<cMeshEntity *> gsetUpdateWhenPaused;
 
 void SomaSetGamePaused(bool abX, bool abMusic, bool abSounds, bool abAmbience, tFlag alTypes)
 {
@@ -801,7 +787,7 @@ void SomaSetGamePaused(bool abX, bool abMusic, bool abSounds, bool abAmbience, t
 			gpSomaBase->mbScriptGamePaused = vOps[i].mlArg != 0;
 			break;
 		case kOhplGs3OpClearUpdateWhenPaused:
-			gsetUpdateWhenPaused.clear();
+			ohpl_s9_uwp_clear();
 			break;
 		case kOhplGs3OpWorldActive:
 			if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
@@ -848,13 +834,16 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 	if (gpSomaBase->ScriptsHeld())
 		return;
 	bool bMap = cSomaLuxMap::GetCurrent() != NULL;
-	tString sMap, sStart, sError;
+	tString sMap, sStart, sError, sPendingTransfer;
 	cSomaSaveHandler::RunDelayedAutoSave();
-	if (SomaTakePendingMapChange(sMap, sStart))
+	OhplS9Pending pending;
+	if (ohpl_s9_take_pending(&pending))
 	{
-		if (gbPendingNewGame)
+		sMap.assign((const char *)pending.map, pending.map_n);
+		sStart.assign((const char *)pending.start, pending.start_n);
+		sPendingTransfer.assign((const char *)pending.transfer, pending.transfer_n);
+		if (ohpl_s9_take_new_game())
 		{
-			gbPendingNewGame = false;
 			SomaSetGamePaused(false);
 			gpSomaBase->GetVisitedMaps().clear();
 			SomaDeserializeGlobalVars("");
@@ -869,11 +858,13 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 				if (tString(pObj->GetPropertyName(i)) == "mbHasSaveFiles")
 					*(bool *)pObj->GetAddressOfProperty(i) = false;
 		}
+		OhplS9Log("chg %s '%s' '%s'", sMap.c_str(), sStart.c_str(), sPendingTransfer.c_str());
 		OhplGs3Begin begin;
-		ohpl_gs3_map_begin(sStart.empty(), gsPendingTransfer.empty(), bMap, U(gsPreloadMap), gsPreloadMap.size(), U(sMap), sMap.size(), &begin);
+		tString sPreload = SomaPreloadMap();
+		ohpl_gs3_map_begin(sStart.empty(), sPendingTransfer.empty(), bMap, U(sPreload), sPreload.size(), U(sMap), sMap.size(), &begin);
 		// open-hpl-dbi: a start position drops the transfer area
-		tString sTransfer = begin.mbUseTransfer ? gsPendingTransfer : "";
-		gbMapChangeIsTransfer = sTransfer != "";
+		tString sTransfer = begin.mbUseTransfer ? sPendingTransfer : "";
+		ohpl_s9_set_transfer(sTransfer != "");
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
 		// cLuxMapHandler::PerformMapChange: MapTransferData runs only for the preloaded map; otherwise the player gets the start area
 		cSomaLuxEntity *pArea = begin.mbLookupArea ? cSomaLuxMap::GetCurrent()->GetEntity(sTransfer) : NULL;
@@ -901,7 +892,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 				vCarried.emplace_back(p->msName, vMtx);
 			}
 		}
-		gsPreloadMap.clear();
+		SomaSetPreloadMap("");
 		glPreloadPrio = 2;
 		if (PreloadReady(sMap) == false)
 		{
@@ -914,9 +905,9 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		if (gpSomaBase->GetSplash())
 			gpSomaBase->GetSplash()->SetLoadBar(0, 0);
 		// cLuxMapHandler::SetCurrentMap
-		if (gfPendingFadeIn >= 0 && cSomaLuxVoiceHandler::Get())
-			cSomaLuxVoiceHandler::Get()->FadeTo(0, gfPendingFadeIn);
-		gfPendingFadeIn = -1;
+		float fFadeIn = ohpl_s9_take_fade();
+		if (fFadeIn >= 0 && cSomaLuxVoiceHandler::Get())
+			cSomaLuxVoiceHandler::Get()->FadeTo(0, fFadeIn);
 		int lAfter = ohpl_gs3_after_load(bLoaded, bCaptured, cSomaLuxMap::GetCurrent() != NULL);
 		if (lAfter == 0)
 			Error("SOMA script: %s\n", sError.c_str());
@@ -963,8 +954,12 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		cSomaLuxMap::GetCurrent()->Update(afTimeStep);
 	ohpl_gs3_tick_saving(&gPauseState, afTimeStep);
 	if (lFrame & 16)
-		for (cMeshEntity *pMesh : gsetUpdateWhenPaused)
-			pMesh->UpdateLogic(afTimeStep);
+	{
+			size_t vMeshes[4096];
+			size_t lNum = ohpl_s9_uwp_list(vMeshes, 4096);
+			for (size_t i = 0; i < lNum; ++i)
+				((cMeshEntity *)vMeshes[i])->UpdateLogic(afTimeStep);
+		}
 	mbUpdated = true;
 }
 
@@ -1197,62 +1192,10 @@ void RegisterSomaScriptCallNatives(asIScriptEngine *e, const char *apType)
 }
 
 
-// Bunker StartMap attributes are "Tag:value, Tag:value"; an untagged entry matches any tag
-static tString SomaStartMapValue(const tString &asName, const tString &asTag)
-{
-	auto trim = [](const tString &s) {
-		size_t a = s.find_first_not_of(" \t\r\n"), b = s.find_last_not_of(" \t\r\n");
-		return a == tString::npos ? tString() : s.substr(a, b - a + 1);
-	};
-	tStringVec vEntries;
-	tString sSep = ",";
-	cString::GetStringVec(gpSomaBase->GetInitConfigString("StartMap", asName), vEntries, &sSep);
-	for (const tString &sEntry : vEntries)
-	{
-		size_t lColon = sEntry.find(':');
-		tString sTag = lColon == tString::npos ? "" : trim(sEntry.substr(0, lColon));
-		if (asTag.empty() || sTag.empty() || sTag == asTag)
-			return trim(lColon == tString::npos ? sEntry : sEntry.substr(lColon + 1));
-	}
-	return "";
-}
-
-void SomaRequestNewGame(const tString &asMap, const tString &asStart)
-{
-	SomaRequestMapChange(asMap, asStart);
-	gbPendingNewGame = true;
-}
-
-// Collide groups ("+a -b"): membership bits low, collide-with mask high
-
-static bool CollideFlagsMatch(tFlag alA, tFlag alB)
-{
-	return (alA & (alB >> 16) & 0xFFFF) && (alB & (alA >> 16) & 0xFFFF);
-}
-
 unsigned int SomaCollideFlag(const tString &asGroups)
 {
-	static std::map<tString, int> mapGroups;
-	iPhysicsBody::mpCollideFlagsMatch = CollideFlagsMatch;
-	unsigned int lMember = 0, lExclude = 0;
-	tStringVec vTokens;
-	cString::GetStringVec(asGroups, vTokens, NULL);
-	for (const tString &sTok : vTokens)
-	{
-		if (sTok.size() < 2 || (sTok[0] != '+' && sTok[0] != '-'))
-			continue;
-		auto it = mapGroups.find(sTok.substr(1));
-		if (it == mapGroups.end())
-		{
-			if (mapGroups.size() >= 16)
-				continue;
-			it = mapGroups.insert(std::make_pair(sTok.substr(1), (int)mapGroups.size())).first;
-		}
-		(sTok[0] == '+' ? lMember : lExclude) |= 1u << it->second;
-	}
-	if (lMember == 0 && lExclude == 0)
-		return 0;
-	return (lMember ? lMember : 0xFFFF) | ((0xFFFF & ~lExclude) << 16);
+	iPhysicsBody::mpCollideFlagsMatch = ohpl_s9_collide_match;
+	return ohpl_s9_collide_flag(U(asGroups), asGroups.size());
 }
 
 // Unwrapped, in (-2pi, 0]: yaw limits set by map scripts clamp against it
@@ -1261,24 +1204,18 @@ float SomaStartYaw(const cMatrixf &a_mtxArea)
 	return -cMath::GetAngleFromPoints2D(0, cVector2f(a_mtxArea.m[0][2], a_mtxArea.m[2][2]));
 }
 
-tString &SomaPreloadMap() { return gsPreloadMap; }
-
-void SomaRequestMapChange(const tString &asMap, const tString &asStart)
+tString SomaPreloadMap()
 {
-	gsPendingMap = cString::SetFileExt(cString::GetFileName(asMap), "hpm");
-	gsPendingStart = asStart;
-	gsPendingTransfer.clear();
+	size_t lLen;
+	const unsigned char *p = ohpl_s9_preload_map(&lLen);
+	return tString((const char *)p, lLen);
 }
 
-bool SomaTakePendingMapChange(tString &asMap, tString &asStart)
-{
-	if (gsPendingMap.empty())
-		return false;
-	asMap = gsPendingMap;
-	asStart = gsPendingStart;
-	gsPendingMap.clear();
-	return true;
-}
+void SomaSetPreloadMap(const tString &asMap) { ohpl_s9_set_preload_map(U(asMap), asMap.size()); }
+
+void SomaRequestMapChange(const tString &asMap, const tString &asStart) { ohpl_s9_request_map_change(U(asMap), asMap.size(), U(asStart), asStart.size(), false); }
+
+void SomaRequestNewGame(const tString &asMap, const tString &asStart) { ohpl_s9_request_map_change(U(asMap), asMap.size(), U(asStart), asStart.size(), true); }
 
 // Script iterators are NOCOUNT handles; a recycled pool bounds the leak
 template <class It>
@@ -1438,60 +1375,8 @@ float SomaLightLevelAtPos(const cVector3f &p, iLight *pSkip, float fAdd)
 void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 {
 	RegisterSomaScriptIterators(e);
+	ohpl_s9_register_natives(e);
 	typedef const tString &S;
-	SOMA_FUNC(e, "void cLux_ChangeMap(const tString&in asMapName, const tString&in asStartPos, const tString&in asTransferArea, const tString&in asStartSound, const tString&in asEndSound)",
-			  +[](S map, S start, S transfer, S, S) {
-				  SomaRequestMapChange(map, start);
-				  gsPendingTransfer = transfer;
-				  Log("SOMA script: change map to %s (%s)\n", gsPendingMap.c_str(), start.c_str());
-			  });
-	SOMA_FUNC(e, "void cLux_ChangeMap(const tString&in asMapName, const tString&in asStartPos, const tString&in asTransferArea, const tString&in asStartSound, const tString&in asEndSound, bool abShowLoadingScreen, float afFadeInTime=-1.0f)",
-			  +[](S map, S start, S transfer, S, S, bool, float fFadeIn) {
-				  SomaRequestMapChange(map, start);
-				  gsPendingTransfer = transfer;
-				  gfPendingFadeIn = fFadeIn;
-				  Log("SOMA script: change map to %s (%s)\n", gsPendingMap.c_str(), start.c_str());
-			  });
-	if (SomaGameId() == "bunker")
-	{
-		SOMA_FUNC(e, "void cLux_StartNewGame(const tString&in asMapName=\"\", const tString&in asStartPos=\"\")", +[](S map, S pos) {
-			SomaRequestNewGame(map.empty() ? SomaStartMapValue("File", "") : map, pos.empty() ? SomaStartMapValue("Pos", "") : pos);
-		});
-		SOMA_FUNC(e, "const tString& cLux_GetStartMapFile(const tString &in asTag=\"\")", +[](S tag) -> const tString & {
-			static tString s;
-			return s = SomaStartMapValue("File", tag);
-		});
-		SOMA_FUNC(e, "const tString& cLux_GetStartMapFolder(const tString &in asTag=\"\")", +[](S tag) -> const tString & {
-			static tString s;
-			return s = SomaStartMapValue("Folder", tag);
-		});
-		SOMA_FUNC(e, "const tString& cLux_GetStartMapPos(const tString &in asTag=\"\")", +[](S tag) -> const tString & {
-			static tString s;
-			return s = SomaStartMapValue("Pos", tag);
-		});
-	}
-	else
-		SOMA_FUNC(e, "void cLux_StartNewGame()", +[]() { SomaRequestNewGame(SomaStartMapValue("File", ""), SomaStartMapValue("Pos", "")); });
-	SOMA_FUNC(e, "void cLux_StartMap(const tString&in asMapName)", +[](S map) { SomaRequestNewGame(map, ""); });
-	SOMA_FUNC(e, "const tString &cLux_GetMainMenuFile()", +[]() -> const tString & {
-		static tString sFile;
-		sFile = gpSomaBase->GetInitConfigString("MainMenu", "File");
-		return sFile;
-	});
-	SOMA_FUNC(e, "void cLux_Exit()", +[]() { gpSomaBase->mpEngine->Exit(); });
-	if (SomaGameId() == "bunker")
-		SOMA_FUNC(e, "void cLux_SetGamePaused(bool abX, bool abPauseMusic, bool abPauseSounds, bool abPauseAmbience, eSoundEntryType aPauseSoundTypes = eSoundEntryType_All)",
-				  +[](bool b, bool m, bool s, bool a, int t) { SomaSetGamePaused(b, m, s, a, t); });
-	else if (SomaGameId() == "rebirth")
-		SOMA_FUNC(e, "void cLux_SetGamePaused(bool abX, bool abPauseMusic, bool abPauseSounds, bool abPauseAmbience)",
-				  +[](bool b, bool m, bool s, bool a) { SomaSetGamePaused(b, m, s, a); });
-	else
-		SOMA_FUNC(e, "void cLux_SetGamePaused(bool abX)", +[](bool b) { SomaSetGamePaused(b); });
-	SOMA_FUNC(e, "void cLux_AddUpdateWhenPausedEntity(cMeshEntity@ apMeshEntity)", +[](cMeshEntity *m) { if (m) gsetUpdateWhenPaused.insert(m); });
-	SOMA_FUNC(e, "void cLux_RemoveUpdateWhenPausedEntity(cMeshEntity@ apMeshEntity)", +[](cMeshEntity *m) { gsetUpdateWhenPaused.erase(m); });
-	SOMA_FUNC(e, "void cLux_DisableSaving(float afDuration)", +[](float d) { ohpl_gs3_disable_saving(&gPauseState, d); });
-	SOMA_FUNC(e, "void cLux_EnableSaving()", +[]() { gbSavingEnabled = true; });
-	SOMA_FUNC(e, "bool cLux_GetSavingEnabled()", +[]() { return gbSavingEnabled; });
 	SOMA_METHOD(e, "cWorld", "void SetSkyboxRotation(const cVector3f&in avX)", +[](cWorld *w, const cVector3f &v) { w->SetSkyBoxRotation(v); });
 	// official binds cSoundEntity::SetReverbAmount to SetVolume
 	SOMA_METHOD(e, "cSoundEntity", "void SetReverbAmount(float afX)", +[](cSoundEntity *o, float f) { o->SetVolume(f); });
@@ -1501,59 +1386,24 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFile3D(bool abX)", +[](cSoundEntity *o, bool b) { if (o->GetData()) o->GetData()->SetUse3D(b); });
 	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFileStream(bool abX)", +[](cSoundEntity *o, bool b) { if (o->GetData()) o->GetData()->SetStream(b); });
 	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFilePriority(int alX)", +[](cSoundEntity *o, int p) { if (o->GetData()) o->GetData()->SetPriority(p); });
-	for (const char *pType : {"cMeshEntity", "cSubMeshEntity", "cLuxProp"})
-		SOMA_METHOD_NEW(e, pType, "void SetRenderLayer(int alX)", +[](void *, int) {});
 	SOMA_METHOD_NEW(e, "cAnimationState", "void FadeSpeed(float afDest, float afTime)", +[](cAnimationState *o, float d, float t) { o->FadeSpeed(d, t); });
-	SOMA_FUNC(e, "bool cLux_GetFootageModeActive()", +[]() { return false; });
-	SOMA_FUNC(e, "void cSound_PreloadSoundEvent(const tString&in asInternalPath)", +[](const tString &) {});
 	if (SomaGameId() != "soma")
 	{
-		for (const char *pType : {"cLuxFootPlacement", "cLuxHandPlacement"})
-			SOMA_METHOD_NEW(e, pType, "void LoadFromVariables(cResourceVarsObject@ apVars)", +[](void *, void *) {});
-		SOMA_METHOD_NEW(e, "cMeshEntity", "void SetUpdateBonesWhenCulled(bool abX)", +[](void *, bool) {});
-		SOMA_METHOD_NEW(e, "cMeshEntity", "void SetDisableSleep(bool abX)", +[](void *, bool) {});
-		SOMA_METHOD_NEW(e, "cLuxProp", "void DisableSubMeshMerge(tString asX)", +[](void *, tString) {});
-		SOMA_METHOD_NEW(e, "cLuxPathfinder", "void SetClimbWalls(bool abX)", +[](void *, bool) {});
-		SOMA_METHOD_NEW(e, "cLuxCharMover", "void SetDynamicObjectPlayerAvoidanceActive(bool abX)", +[](void *, bool) {});
-		SOMA_METHOD_NEW(e, "iLuxAchievementHandler", "void UnlockAchievement(int alID)", +[](void *, int) {});
-		SOMA_METHOD_NEW(e, "iLuxAchievementHandler", "bool GetAllAchievementsUnlocked()", +[](void *) { return false; });
-		SOMA_METHOD_NEW(e, "iLuxAchievementHandler", "tString GetAchievementName(int alID)", +[](void *, int) { return tString(); });
 		SOMA_METHOD_NEW(e, "cLuxAgent", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
-		SOMA_METHOD_NEW(e, "cLuxAgent", "bool GetRagdollActive()", +[](void *) { return false; });
 		for (const char *pType : {"iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"})
 			SOMA_METHOD_NEW(e, pType, "cMatrixf GetBaseMatrix()", +[](cSomaLuxEntity *p) { return p->GetMatrix(); });
-		SOMA_METHOD_NEW(e, "cLuxPathfinder", "void AddPathBlockerBody(tID alBodyID)", +[](void *, cSomaID) {});
-		SOMA_METHOD_NEW(e, "cLuxPathfinder", "void RemovePathBlockerBody(tID alBodyID)", +[](void *, cSomaID) {});
-		SOMA_METHOD_NEW(e, "cLuxPathfinder", "void SetMaxGoalsPerIsland(int alX)", +[](void *, int) {});
-		SOMA_METHOD_NEW(e, "cLuxPathfinder", "void SetDirectPathMaxDistanceMul(float afX)", +[](void *, float) {});
-		SOMA_METHOD_NEW(e, "iCharacterBody", "void SetSeparateMoveAndForceCollision(bool abX)", +[](void *, bool) {});
-		SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxCollisionPoints(int alX)", +[](void *, int) {});
 	}
-	SOMA_FUNC(e, "void cLux_SetComputeAverageFrameColor(bool abX)", +[](bool) {});
-	SOMA_FUNC(e, "void cLux_LoadScreenSetForceBackground(bool abX)", +[](bool) {});
-	SOMA_METHOD(e, "cLuxInputHandler", "void SetGamepadColor(int alId, const cColor&in aColor)", +[](void *, int, const cColor &) {});
-	SOMA_FUNC(e, "void cSystem_ProfileStart(const tString&in asName)", +[](const tString &) {});
-	SOMA_FUNC(e, "void cSystem_ProfileEnd(const tString&in asName)", +[](const tString &) {});
 	SOMA_METHOD(e, "iCharacterBody", "void SetupSafePositions(float afSafePositionSaveInterval, float afSafePositionBufferTime)", +[](iCharacterBody *c, float i, float b) { c->SetupSafePositions(i, b); });
 	SOMA_METHOD(e, "iCharacterBody", "void TeleportToSafePosition(float afElapsedTime, bool abSmooth = false)", +[](iCharacterBody *c, float t, bool s) { c->TeleportToSafePosition(t, s); });
 	SOMA_METHOD(e, "iCharacterBody", "cVector3f GetLastVelocity()", +[](iCharacterBody *c) { return c->GetVelocity(gpSomaBase->mpEngine->GetStepSize()); });
-	SOMA_FUNC(e, "bool cLux_GetGamePaused()", +[]() { return gpSomaBase->mbScriptGamePaused; });
-	SOMA_FUNC(e, "bool cLux_GetHideCrosshair()", +[]() { return SomaUserConfig() && SomaUserConfig()->GetBool("Debug", "HideCrosshair", false); });
-	SOMA_FUNC(e, "bool cLux_IsChangingMap()", +[]() { return gsPendingMap.empty() == false; });
-	SOMA_FUNC(e, "bool cLux_MapChangeIsTransfer()", +[]() { return gbMapChangeIsTransfer; });
-	SOMA_FUNC(e, "bool cLux_IsReadyToChangeMap()", +[]() { return gsPreloadMap.empty() || PreloadReady(gsPreloadMap); });
-	SOMA_FUNC(e, "bool cLux_IsPlayGoReady(int&out alETA)", +[](int &l) { l = 0; return true; });
-	// Bunker's binding is a constant false (0x14004d810)
-	SOMA_FUNC(e, "bool cLux_IsStreamingMap()", +[]() { return gsPreloadMap.empty() == false && SomaGameId() != "bunker"; });
-	SOMA_FUNC(e, "void cLux_PreloadMap(const tString&in asMapName, eWorldStreamPriority aPrio = eWorldStreamPriority_Normal)", +[](S map, int prio) { gsPreloadMap = map; glPreloadPrio = prio; });
 	SOMA_FUNC(e, "void cLux_DeloadMap(const tString&in asTransferArea)", +[](S area) { SomaDeloadMap(area); });
-	SOMA_FUNC(e, "void cLux_SetMapPreloadPriority(eWorldStreamPriority aPrio)", +[](int prio) { glPreloadPrio = prio; });
 	// No streaming: the next map's settings aren't loaded yet, so the copy fades to the current ones
 	SOMA_FUNC(e, "cLuxMap@ cLux_GetPreloadMap()", +[]() -> cSomaLuxMap * {
-		if (gsPreloadMap.empty())
+		tString sPreload = SomaPreloadMap();
+		if (sPreload.empty())
 			return NULL;
 		static cSomaLuxMap *pProxy = new cSomaLuxMap(NULL);
-		pProxy->SetWorld(PreloadReady(gsPreloadMap) ? gPreload.mpWorld : NULL);
+		pProxy->SetWorld(PreloadReady(sPreload) ? gPreload.mpWorld : NULL);
 		return pProxy;
 	});
 
@@ -1611,31 +1461,6 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, M, "const tString& GetFileName()", +[](cSomaLuxMap &m) -> const tString & { return m.GetFileName(); });
 	SOMA_METHOD(e, M, "void SetDisplayNameEntry(const tString&in asEntry)", +[](cSomaLuxMap &m, const tString &s) { m.msDisplayNameEntry = s; });
 	SOMA_METHOD(e, M, "const tString& GetDisplayNameEntry()", +[](cSomaLuxMap &m) -> const tString & { return m.msDisplayNameEntry; });
-	SOMA_METHOD(e, M, "void AddTimer(const tString&in asName, float afTime, const tString&in asFunction)",
-				+[](cSomaLuxMap &m, const tString &n, float t, const tString &f) { m.AddTimer(n, t, f); });
-	SOMA_METHOD(e, M, "void RemoveTimer(const tString&in asName)", +[](cSomaLuxMap &m, const tString &n) { m.RemoveTimer(n); });
-	SOMA_METHOD(e, M, "void RestartCurrentTimer(float afTime = -1)", +[](cSomaLuxMap &m, float t) { m.RestartCurrentTimer(t); });
-	SOMA_METHOD(e, M, "const tString& GetTimerUserVarString(const tString&in asName)", +[](cSomaLuxMap &m, S n) -> const tString & {
-		static tString sEmpty;
-		cSomaLuxTimer *t = m.GetTimer(n);
-		return t ? t->msUserString : sEmpty;
-	});
-	SOMA_METHOD(e, M, "int IncTimerUserVarInt(const tString&in asName, int alX)",
-				+[](cSomaLuxMap &m, S n, int x) { cSomaLuxTimer *t = m.GetTimer(n); return t ? (t->mlUserInt += x) : 0; });
-	SOMA_METHOD(e, M, "float IncTimerUserVarFloat(const tString&in asName, float afX)",
-				+[](cSomaLuxMap &m, S n, float x) { cSomaLuxTimer *t = m.GetTimer(n); return t ? (t->mfUserFloat += x) : 0.0f; });
-	SOMA_METHOD(e, M, "bool GetTimersNamed(const tString&in asName, array<tString>&inout avNames)", +[](cSomaLuxMap &m, S n, CScriptArray &a) {
-		bool bAny = false;
-		for (cSomaLuxTimer &t : m.GetTimers())
-			if (cString::MatchesWildcard(n, t.msName))
-			{
-				a.InsertLast(&t.msName);
-				bAny = true;
-			}
-		return bAny;
-	});
-	SOMA_METHOD(e, M, "int GetTimeStamp()", +[](cSomaLuxMap &m) { return m.GetTimeStamp(); });
-	SOMA_METHOD(e, M, "float GetElapsedTime(int alTimeStamp)", +[](cSomaLuxMap &m, int st) { return float(m.GetTimeStamp() - st) / gpSomaBase->mpEngine->GetUpdatesPerSec(); });
 	SOMA_METHOD(e, M, "bool GetEntityArray(const tString&in asName, eLuxEntityType aType, const tString&in asClassName, array<iLuxEntity@>&inout avEntities)",
 				+[](cSomaLuxMap &m, S n, int t, S c, CScriptArray &a) {
 					bool bAny = false;
@@ -1800,51 +1625,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cLux_GetLightLeveAtPosWithoutIgnoredLights(const cVector3f&in avPos, float afRadiusAdd)",
 			  +[](const cVector3f &p, float fAdd) { return SomaLightLevelAtPos(p, NULL, fAdd); });
 	cEnvironmentParticles::mpLightLevelFunc = +[](const cVector3f &p) { return SomaLightLevelAtPos(p, NULL, 0); };
-	SOMA_FUNC(e, "const tString& cSystem_GetPlatformName()", +[]() -> const tString & { static tString s = "Linux"; return s; });
-	SOMA_FUNC_NEW(e, "ePlatform cSystem_GetPlatform()", +[]() -> int { return ePlatform_Linux; });
-	SOMA_FUNC(e, "uint cSystem_GetApplicationTime()", +[]() { return (unsigned int)cPlatform::GetApplicationTime(); });
-	SOMA_FUNC(e, "void cSystem_Sleep(uint alMilliSecs)", +[](unsigned int ms) { cPlatform::Sleep(ms); });
 	SOMA_FUNC(e, "void cSystem_CopyTextToClipboard(const tWString &in asText)", +[](const tWString &s) { cPlatform::CopyTextToClipboard(s); });
-	SOMA_FUNC(e, "void cSystem_GetAvailableVideoModes(array<cVector2l> &inout avScreenSizes, array<int> &inout avBpps, array<int> &inout avMinRefreshRates, int alMinBpp, int alMinRefreshRate, bool abRemoveDuplicates)",
-			  +[](CScriptArray &sizes, CScriptArray &bpps, CScriptArray &rates, int minBpp, int minRate, bool unique) {
-				  std::vector<std::pair<cVector2l, int>> vModes;
-				  std::vector<int> vRates;
-				  for (int d = 0; d < SDL_GetNumVideoDisplays(); ++d)
-					  for (int m = 0; m < SDL_GetNumDisplayModes(d); ++m)
-					  {
-						  SDL_DisplayMode mode;
-						  if (SDL_GetDisplayMode(d, m, &mode) != 0)
-							  continue;
-						  int bpp = SDL_BYTESPERPIXEL(mode.format) * 8;
-						  if (bpp < minBpp || (mode.refresh_rate && mode.refresh_rate < minRate))
-							  continue;
-						  vModes.push_back({cVector2l(mode.w, mode.h), bpp});
-						  if (mode.refresh_rate && std::find(vRates.begin(), vRates.end(), mode.refresh_rate) == vRates.end())
-							  vRates.push_back(mode.refresh_rate);
-					  }
-				  std::sort(vModes.begin(), vModes.end(), [](const std::pair<cVector2l, int> &a, const std::pair<cVector2l, int> &b) {
-					  return a.first.x != b.first.x ? a.first.x < b.first.x : a.first.y < b.first.y;
-				  });
-				  if (unique)
-					  vModes.erase(std::unique(vModes.begin(), vModes.end(), [](const std::pair<cVector2l, int> &a, const std::pair<cVector2l, int> &b) { return a.first == b.first; }),
-								   vModes.end());
-				  std::sort(vRates.begin(), vRates.end());
-				  if (vRates.empty())
-					  vRates.push_back(60);
-				  sizes.Resize((asUINT)vModes.size());
-				  bpps.Resize((asUINT)vModes.size());
-				  for (size_t i = 0; i < vModes.size(); ++i)
-				  {
-					  sizes.SetValue((asUINT)i, &vModes[i].first);
-					  bpps.SetValue((asUINT)i, &vModes[i].second);
-				  }
-				  rates.Resize((asUINT)vRates.size());
-				  for (size_t i = 0; i < vRates.size(); ++i)
-					  rates.SetValue((asUINT)i, &vRates[i]);
-			  });
-	SOMA_FUNC(e, "double cLux_GetGameTime()", +[]() -> double {
-		return gpSomaBase->mfGameStartTime < 0 ? 0.0 : gpSomaBase->mpEngine->GetGameTime() - gpSomaBase->mfGameStartTime;
-	});
 	struct cCameraExtra
 	{
 		cMatrixf mtxWorld;
@@ -2071,18 +1852,4 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 												 SomaStartYaw(pStart->GetWorldMatrix()),
 												 pStart->mbCrouching);
 	});
-	SOMA_METHOD(e, M, "float GetTimerTime(const tString&in asName)",
-				+[](cSomaLuxMap &m, const tString &n) { cSomaLuxTimer *t = m.GetTimer(n); return t ? t->mfTime : 0.0f; });
-	SOMA_METHOD(e, M, "void SetTimerPaused(const tString&in asName, bool abX)",
-				+[](cSomaLuxMap &m, const tString &n, bool b) { m.SetTimerPaused(n, b); });
-	SOMA_METHOD(e, M, "void SetTimerUserVarFloat(const tString&in asName, float afX)",
-				+[](cSomaLuxMap &m, const tString &n, float f) { if (cSomaLuxTimer *t = m.GetTimer(n)) t->mfUserFloat = f; });
-	SOMA_METHOD(e, M, "void SetTimerUserVarInt(const tString&in asName, int alX)",
-				+[](cSomaLuxMap &m, const tString &n, int l) { if (cSomaLuxTimer *t = m.GetTimer(n)) t->mlUserInt = l; });
-	SOMA_METHOD(e, M, "void SetTimerUserVarString(const tString&in asName, const tString&in asX)",
-				+[](cSomaLuxMap &m, const tString &n, const tString &s) { if (cSomaLuxTimer *t = m.GetTimer(n)) t->msUserString = s; });
-	SOMA_METHOD(e, M, "float GetTimerUserVarFloat(const tString&in asName)",
-				+[](cSomaLuxMap &m, const tString &n) { cSomaLuxTimer *t = m.GetTimer(n); return t ? t->mfUserFloat : 0.0f; });
-	SOMA_METHOD(e, M, "int GetTimerUserVarInt(const tString&in asName)",
-				+[](cSomaLuxMap &m, const tString &n) { cSomaLuxTimer *t = m.GetTimer(n); return t ? t->mlUserInt : 0; });
 }

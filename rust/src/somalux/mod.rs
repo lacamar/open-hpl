@@ -20,3 +20,5 @@ mod s5_tests;
 
 pub mod s5c_game;
 pub mod s5d_player;
+
+pub mod s9_map;

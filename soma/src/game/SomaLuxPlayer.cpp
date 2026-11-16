@@ -1,4 +1,5 @@
 #include "SomaLuxPlayer.h"
+#include "RustSomaLuxS9.h"
 #include "SomaS5Dump.h"
 #include "SomaBase.h"
 #include "SomaLux.h"
@@ -16,7 +17,6 @@
 cSomaLuxPlayer *cSomaLuxPlayer::mpInstance = NULL;
 cSomaLuxInputHandler *cSomaLuxInputHandler::mpInstance = NULL;
 
-extern bool gbMapChangeIsTransfer;
 
 namespace
 {
@@ -154,7 +154,7 @@ int32_t cSomaLuxPlayer::HostCall(void *, uint32_t alOp, OhplS5Io *io)
 	}
 	// cLuxPlayer::Update/PostUpdate/VariableUpdate skip without an active map (game over)
 	case kOhplS5d_MAP_ACTIVE: return cSomaLuxMap::GetCurrent() && cSomaLuxMap::GetCurrent()->mbActive;
-	case kOhplS5d_TRANSFER: return gbMapChangeIsTransfer;
+	case kOhplS5d_TRANSFER: return ohpl_s9_is_transfer();
 	case kOhplS5d_CAM_GET:
 		switch (io->i[0])
 		{
