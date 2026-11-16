@@ -1,0 +1,14 @@
+3 wake CubeShadow
+20 player 3.750 4.547 23.750
+30 msg CubeShadow 4
+40 state CubeShadow 1
+55 state CubeShadow 2
+70 state CubeShadow 3
+85 player -4.750 4.547 29.750
+100 msg CubeShadow 8
+110 state CubeShadow 0
+125 dumpsave
+126 save s4brt.sav
+160 load s4brt.sav
+240 dumpsave
+280 END

@@ -1,0 +1,23 @@
+3 wake Goya
+3 wake Kate
+20 player 7.861 130.000 43.102
+30 msg Goya 4
+40 state Goya 1
+55 state Goya 2
+70 state Goya 3
+85 player -0.639 130.000 49.102
+100 msg Goya 8
+110 state Goya 0
+120 player 39.615 130.955 -54.364
+130 msg Kate 4
+140 state Kate 1
+155 state Kate 2
+170 state Kate 3
+185 player 31.115 130.955 -48.364
+200 msg Kate 8
+210 state Kate 0
+225 dumpsave
+226 save s4brt.sav
+260 load s4brt.sav
+340 dumpsave
+380 END

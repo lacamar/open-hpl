@@ -265,6 +265,13 @@ half() {
 		A4B_GAMES="$(has amnesia && echo amnesia) $(has amfp && echo amfp)" OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" \
 			scripts/a4b-all.sh "$OUT" "-$impl" >> "$OUT/a4b-$impl.log" 2>&1
 	fi
+	# S4b: scripted SOMA agent runs, one dump line per agent update
+	rm -f "$OUT"/s4b-*-"$impl".txt
+	for g in soma rebirth bunker; do
+		has "$g" || continue
+		S4B_SUFFIX="-$impl" OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" \
+			scripts/s4b-all.sh "$g" "$REPO/rust/tests/golden/S4b/scenarios" "$OUT" >> "$OUT/s4b-$impl.log" 2>&1
+	done
 	if has amnesia; then
 		# A13a: map transfer (change map, change back, load, save at every step)
 		rm -f "$OUT"/a13atr-*-"$impl".*
@@ -280,7 +287,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt "$OUT"/s4b-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -579,6 +586,10 @@ if not quick:
         names += [f"{k}{e}" for k in ("rt-factory", "rt-bilge") for e in ("", "-A", "-B")] + ["a4b-factory", "a4b-bilge"]
     if "amnesia" in games:
         names += ["a10b-play-amnesia", "a13atr-a7", "a13atr-struct"]
+    for g in ("soma", "rebirth", "bunker"):
+        if g in games:
+            sc = os.path.join(repo, "rust/tests/golden/S4b/scenarios")
+            names += sorted("s4b-" + f[:-7] for f in (os.listdir(sc) if os.path.isdir(sc) else []) if f.startswith(g + "-") and f.endswith(".script"))
     has_base = os.path.isdir(base)
     if not has_base:
         print(f"no C++ baseline at {base} (record one with --record-baseline before flipping a family)")

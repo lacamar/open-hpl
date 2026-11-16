@@ -5,7 +5,6 @@
 
 mod agent;
 mod charmover;
-mod ffi;
 mod host;
 mod misc;
 mod pathfinder;
@@ -65,3 +64,5 @@ pub(crate) fn normalized(mut v: Vector3f) -> Vector3f {
     crate::math::normalize3(&mut v);
     v
 }
+
+pub mod s4b;

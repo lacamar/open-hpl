@@ -1,0 +1,32 @@
+3 wake subway_bum_1
+3 wake subway_businessman_1
+3 wake subway_girl_2
+20 player -0.750 -0.000 -1.000
+30 msg subway_bum_1 4
+40 state subway_bum_1 1
+55 state subway_bum_1 2
+70 state subway_bum_1 3
+85 player -9.250 -0.000 5.000
+100 msg subway_bum_1 8
+110 state subway_bum_1 0
+120 player 0.975 0.045 0.883
+130 msg subway_businessman_1 4
+140 state subway_businessman_1 1
+155 state subway_businessman_1 2
+170 state subway_businessman_1 3
+185 player -7.525 0.045 6.883
+200 msg subway_businessman_1 8
+210 state subway_businessman_1 0
+220 player 1.750 -0.115 1.000
+230 msg subway_girl_2 4
+240 state subway_girl_2 1
+255 state subway_girl_2 2
+270 state subway_girl_2 3
+285 player -6.750 -0.115 7.000
+300 msg subway_girl_2 8
+310 state subway_girl_2 0
+325 dumpsave
+326 save s4brt.sav
+360 load s4brt.sav
+440 dumpsave
+480 END

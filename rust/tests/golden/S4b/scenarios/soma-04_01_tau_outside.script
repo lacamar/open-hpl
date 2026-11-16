@@ -1,0 +1,14 @@
+3 wake LightBot
+20 player -89.906 241.227 -2.966
+30 msg LightBot 4
+40 state LightBot 1
+55 state LightBot 2
+70 state LightBot 3
+85 player -98.406 241.227 3.034
+100 msg LightBot 8
+110 state LightBot 0
+125 dumpsave
+126 save s4brt.sav
+160 load s4brt.sav
+240 dumpsave
+280 END

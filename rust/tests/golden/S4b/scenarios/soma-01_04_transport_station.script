@@ -1,0 +1,14 @@
+3 wake amy_setpiece
+20 player 14.387 0.600 74.591
+30 msg amy_setpiece 4
+40 state amy_setpiece 1
+55 state amy_setpiece 2
+70 state amy_setpiece 3
+85 player 5.887 0.600 80.591
+100 msg amy_setpiece 8
+110 state amy_setpiece 0
+125 dumpsave
+126 save s4brt.sav
+160 load s4brt.sav
+240 dumpsave
+280 END

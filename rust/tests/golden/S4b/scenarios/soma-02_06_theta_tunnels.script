@@ -1,0 +1,32 @@
+3 wake puppet_victim_1
+3 wake puppet_victim_2
+3 wake puppet_victim_masters
+20 player 18.091 2.975 -102.157
+30 msg puppet_victim_1 4
+40 state puppet_victim_1 1
+55 state puppet_victim_1 2
+70 state puppet_victim_1 3
+85 player 9.591 2.975 -96.157
+100 msg puppet_victim_1 8
+110 state puppet_victim_1 0
+120 player 20.097 2.963 -100.060
+130 msg puppet_victim_2 4
+140 state puppet_victim_2 1
+155 state puppet_victim_2 2
+170 state puppet_victim_2 3
+185 player 11.597 2.963 -94.060
+200 msg puppet_victim_2 8
+210 state puppet_victim_2 0
+220 player 22.874 3.017 -113.029
+230 msg puppet_victim_masters 4
+240 state puppet_victim_masters 1
+255 state puppet_victim_masters 2
+270 state puppet_victim_masters 3
+285 player 14.374 3.017 -107.029
+300 msg puppet_victim_masters 8
+310 state puppet_victim_masters 0
+325 dumpsave
+326 save s4brt.sav
+360 load s4brt.sav
+440 dumpsave
+480 END
