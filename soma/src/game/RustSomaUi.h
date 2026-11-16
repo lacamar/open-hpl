@@ -51,26 +51,6 @@ struct OhplGs7CritterStep
 	int play_anim; // 0 none, 1 move, 2 idle
 };
 
-struct OhplGs7ToneFade
-{
-	float goal, speed;
-};
-
-struct OhplGs7ToneState
-{
-	float world_exposure, world_white_cut, world_fade_time, exposure, white_cut, transition_time, grading_blend, grading_fade_time;
-	OhplGs7ToneFade exposure_fade, white_cut_fade;
-};
-static_assert(sizeof(OhplGs7ToneState) == 48, "OhplGs7ToneState layout");
-
-struct OhplGs7ExposureArea
-{
-	float inv_transform[16];
-	float half_size[3];
-	float exposure, white_cut, transition_time;
-};
-static_assert(sizeof(OhplGs7ExposureArea) == 88, "OhplGs7ExposureArea layout");
-
 struct OhplGs7GammaLayout
 {
 	float checker_pos[2], instructions_pos[2], slider_pos[3], slider_size[2], button_pos[3], button_size[2];
@@ -273,14 +253,6 @@ extern "C"
 											 float dt, bool far_exceeded, float *out);
 	void ohpl_gs7_critter_wall_avoid_add(OhplGs7CritterState *, OhplGs7CritterProps *, const OhplGs7CritterHost *, const float *pos, float distance_forward, float dt,
 										 bool far_exceeded, float *out);
-
-	void ohpl_gs7_tone_state_default(OhplGs7ToneState *);
-	int ohpl_gs7_tone_area_at(const OhplGs7ExposureArea *areas, size_t n, const float *pos);
-	void ohpl_gs7_tone_map_loaded(OhplGs7ToneState *, float exposure, float white_cut, const OhplGs7ExposureArea *area);
-	void ohpl_gs7_tone_update_exposure(OhplGs7ToneState *, bool world_current, const OhplGs7ExposureArea *area, float dt);
-	bool ohpl_gs7_tone_update_grading(OhplGs7ToneState *, bool has_target, bool has_texture, float dt);
-	size_t ohpl_gs7_tone_layer_insert_index(const int *prios, size_t n, int prio);
-	float ohpl_gs7_tone_exposure_scale(float exposure);
 
 	float ohpl_gs7_gamma_wrap_width(float screen_w);
 	void ohpl_gs7_gamma_layout(const float *screen, const float *checker, float wrap_w, size_t rows, OhplGs7GammaLayout *out);

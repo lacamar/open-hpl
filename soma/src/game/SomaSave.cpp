@@ -858,13 +858,7 @@ public:
 			}
 		w.owned_lights = Sl(c.mOwnedLights);
 
-		cSomaToneMapping *pTone = cSomaToneMapping::Get();
-		w.has_tone = pTone != NULL;
-		if (pTone)
-		{
-			w.tone.exposure = pTone->mfWorldExposure;
-			w.tone.white_cut = pTone->mfWorldWhiteCut;
-		}
+		w.has_tone = cSomaToneMapping::Get() != NULL && cSomaToneMapping::WorldExposure(&w.tone.exposure, &w.tone.white_cut);
 	}
 
 	// The whole save file; the music state is taken after the world, like the original stream
@@ -1439,8 +1433,8 @@ public:
 	}
 	static void RTone(void *, const OhplGs4Tone *x)
 	{
-		if (cSomaToneMapping *pTone = cSomaToneMapping::Get())
-			pTone->FadeExposure(x->exposure, x->white_cut, 0);
+		if (cSomaToneMapping::Get())
+			cSomaToneMapping::FadeExposure(x->exposure, x->white_cut, 0);
 	}
 
 	static void ReadWorld(OhplGs4In *apIn)

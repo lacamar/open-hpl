@@ -8,6 +8,55 @@
 static_assert(sizeof(wchar_t) == sizeof(uint32_t), "wchar_t layout");
 static_assert(eKey_Return == 3 && eKey_Escape == 5 && eKey_Space == 6, "gamma screen continue keys");
 
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+
+static FILE *S8bFile()
+{
+	static FILE *spFile = NULL;
+	static bool sbInit = false;
+	if (sbInit == false)
+	{
+		sbInit = true;
+		const char *sPath = getenv("OHPL_S8B_DUMP");
+		if (sPath && *sPath)
+			spFile = fopen(sPath, "a");
+	}
+	return spFile;
+}
+
+bool OhplS8bDump() { return S8bFile() != NULL; }
+
+// Consecutive identical lines are written once so frame-count jitter does not show
+void OhplS8bLog(const char *fmt, ...)
+{
+	FILE *f = S8bFile();
+	if (f == NULL)
+		return;
+	static std::string ssLast;
+	char sBuf[2048];
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(sBuf, sizeof(sBuf), fmt, ap);
+	va_end(ap);
+	if (ssLast == sBuf)
+		return;
+	ssLast = sBuf;
+	fputs(sBuf, f);
+	fputc('\n', f);
+	fflush(f);
+}
+
+std::string OhplS8bHex(float afX)
+{
+	uint32_t l;
+	memcpy(&l, &afX, 4);
+	char s[16];
+	snprintf(s, sizeof(s), "%08x", l);
+	return s;
+}
+
 cSomaImGui *SomaHudImGui();
 void SomaRenderImGuis();
 

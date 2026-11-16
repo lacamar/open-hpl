@@ -9,7 +9,6 @@ mod ffi_imgui;
 mod ffi_loaders;
 mod ffi_postfx;
 mod ffi_screens;
-mod ffi_tonemap;
 mod hw;
 pub mod imgui;
 pub mod imgui_widgets;
@@ -26,3 +25,6 @@ pub mod s8;
 #[cfg(test)]
 mod s8_tests;
 mod s8_trace;
+
+mod ffi_s8b;
+pub mod s8b_tone;
