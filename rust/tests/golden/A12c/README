@@ -1,0 +1,4 @@
+input_slice.txt: slice of the OHPL_A12C_DUMP of the C++ input handler (commit 0658f9c, Amnesia 02_library).
+Scripted engine boundary: answers are hashes of the step, effects are logged and skipped. First 1000 Game steps, 60 of every other state.
+Settings at record time came from the a12b pass (invert on, smooth on, sensitivity 2.5); gate order a12b then a12c keeps them.
+Produced with slice.py <dump> <out> 1000 60: drop "map", keep "s"/"c" lines, cut trailing calls.
