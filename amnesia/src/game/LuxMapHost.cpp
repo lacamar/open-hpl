@@ -30,6 +30,7 @@
 
 void OhplA4bTick(cLuxMap *apMap);
 void OhplA13aTick(cLuxMap *apMap);
+void OhplA7bTick(cLuxMap *apMap);
 
 namespace
 {
@@ -590,6 +591,7 @@ void Host(int32_t alOp, OhplA13A *a)
 		cLuxMap *pMap = (cLuxMap*)a->p[0];
 		OhplA4bTick(pMap);
 		OhplA13aTick(pMap);
+		OhplA7bTick(pMap);
 		static const char *sDumpFile = getenv("OHPL_A7_MAPDUMP");
 		if(sDumpFile)
 		{

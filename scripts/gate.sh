@@ -59,6 +59,8 @@ AMNESIA_MAPS="00_rainy_hall 01_cells 02_library 03_dungeon 04_final"
 AMFP_MAPS="01_mansion_01 06_factory 10_reactor"
 PLAY_MAPS="00_01_apartment 01_02_upsilon_inside 02_05_theta_inside"
 DUMP_AMNESIA="00_rainy_hall 02_library 04_final"
+A7B_AMNESIA="05_wine_cellar 11_study 19_morgue 20_sewer"
+A7B_AMFP="03_cellar 06_factory"
 KNOWN='rebirth:03_06_ghouls_nest.hpm:lum_mean'   # game:map:failure-prefix, space separated
 
 GAMES="soma rebirth bunker amnesia amfp"
@@ -231,6 +233,18 @@ half() {
 		done
 	fi
 	if has amnesia; then
+		for M in $A7B_AMNESIA; do
+			rm -f "$OUT/a7b-$M-$impl.txt"
+			ENVX="$extra OHPL_A7B_DUMP=$OUT/a7b-$M-$impl.txt" sweep "$impl" amnesia "$OUT/dump-a7b-$impl-amnesia.json" --map "$M"
+		done
+	fi
+	if has amfp; then
+		for M in $A7B_AMFP; do
+			rm -f "$OUT/a7b-amfp-$M-$impl.txt"
+			ENVX="$extra OHPL_A7B_DUMP=$OUT/a7b-amfp-$M-$impl.txt" sweep "$impl" amfp "$OUT/dump-a7b-$impl-amfp.json" --map "$M"
+		done
+	fi
+	if has amnesia; then
 		# the debug-window driver reloads maps and toggles engine state: own run
 		for M in $DUMP_AMNESIA; do
 			rm -f "$OUT/a12d-$M-$impl.txt" "$OUT/a12d-$M-$impl.txt.batch"
@@ -280,7 +294,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt "$OUT"/a7b-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -387,6 +401,11 @@ def same(name, a, b):
         tool = os.path.join(repo, "rust/tests/golden/A10b/dump-diff.py")
         r = subprocess.run([sys.executable, tool, name.split("-")[1], a, b], capture_output=True, text=True)
         last = (r.stdout.strip().splitlines() or [""])[0]
+        return (r.returncode == 0, last if r.returncode == 0 else f"DIFFER {last}")
+    if name.startswith("a7b-"):
+        tool = os.path.join(repo, "rust/tests/golden/A7b/dump-diff.py")
+        r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)
+        last = (r.stdout.strip().splitlines() or [""])[-1]
         return (r.returncode == 0, last if r.returncode == 0 else f"DIFFER {last}")
     if name.startswith("a13a-"):
         tool = os.path.join(repo, "rust/tests/golden/A13a/dump-diff.py")
@@ -570,12 +589,15 @@ if not quick:
     names += [f"s5-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
         names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c", "a12d", "a2b", "a1b", "a13a")] + ["a12a-02_library"] + ["a9"]
+    if "amnesia" in games:
+        names += [f"a7b-{m}" for m in ("05_wine_cellar", "11_study", "19_morgue", "20_sewer")]
     names += [f"a10b-boot-{g}" for g in ("amnesia", "amfp") if g in games]
     if "amnesia" in games:
         names += [f"{k}{e}" for k in ("rt-prison-patrol", "rt-prison-hunt") for e in ("", "-A", "-B")] + ["a4b-prison"]
     if "amfp" in games:
         names += [f"a1b-amfp-{m}" for m in ("01_mansion_01", "06_factory", "10_reactor")]
         names += [f"a13a-{m}" for m in ("01_mansion_01", "06_factory")]
+        names += [f"a7b-amfp-{m}" for m in ("03_cellar", "06_factory")]
         names += [f"{k}{e}" for k in ("rt-factory", "rt-bilge") for e in ("", "-A", "-B")] + ["a4b-factory", "a4b-bilge"]
     if "amnesia" in games:
         names += ["a10b-play-amnesia", "a13atr-a7", "a13atr-struct"]
