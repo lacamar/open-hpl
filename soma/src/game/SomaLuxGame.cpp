@@ -415,10 +415,10 @@ int32_t GameHostCall(void *, uint32_t alOp, OhplS5Io *io)
 		cSomaImGui::SetCurrent(NULL);
 		return 0;
 	case kOhplS5c_HUD_FOCUS_SET:
-		cSomaImGui::mbGameHudFocus = io->i[0] != 0;
-		SomaHudImGui()->mbShowMouse = io->i[0] != 0;
+		cSomaImGui::SetGameHudFocus(io->i[0] != 0);
+		SomaHudImGui()->SetShowMouse(io->i[0] != 0);
 		return 0;
-	case kOhplS5c_HUD_FOCUS_GET: return cSomaImGui::mbGameHudFocus;
+	case kOhplS5c_HUD_FOCUS_GET: return cSomaImGui::GameHudFocus();
 	case kOhplS5c_LOG: Log("%s", Str(io).c_str()); return 0;
 	case kOhplS5c_DUMP_ANALOG: OhplS5Log("ana %d %.9g %.9g %.9g", io->i[0], io->f[0], io->f[1], io->f[2]); return 0;
 	}

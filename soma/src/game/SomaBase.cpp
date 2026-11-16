@@ -182,7 +182,6 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 }
 
 extern std::string gsSomaExecOutput;
-cSomaImGui *SomaHudImGui();
 
 class cSomaJointFrameFilter : public iPhysicsBodyCallback
 {
@@ -206,8 +205,9 @@ static void cSomaBase_HeadlessCmd_ImGuiStats(void *apUserData, const cHeadlessRe
 	aResp.Set("focus", pFocus ? pFocus->GetName() : tString(""));
 	if (pFocus)
 	{
-		aResp.Set("mouse_x", pFocus->GetMousePosition().x);
-		aResp.Set("mouse_y", pFocus->GetMousePosition().y);
+		cVector2f vMouse = pFocus->GetMousePosition();
+		aResp.Set("mouse_x", vMouse.x);
+		aResp.Set("mouse_y", vMouse.y);
 		aResp.Set("virtual_w", pFocus->GetSet()->GetVirtualSize().x);
 		aResp.Set("virtual_h", pFocus->GetSet()->GetVirtualSize().y);
 	}
@@ -255,8 +255,8 @@ static void cSomaBase_HeadlessCmd_ImGuiCursor(void *apUserData, const cHeadlessR
 		aResp.Set("screen_y", (int)(v.y * vScreen.y / vVirtual.y));
 		return;
 	}
-	cVector2f vRel = vPos - pGui->mvCursor3D;
-	pGui->mvCursor3D = vPos;
+	cVector2f vRel = vPos - pGui->GetCursor3D();
+	pGui->SetCursor3D(vPos);
 	pGui->SendMouseVirtualPosition(vPos, vRel);
 }
 

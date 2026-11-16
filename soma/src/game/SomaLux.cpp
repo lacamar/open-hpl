@@ -770,7 +770,6 @@ cSomaLuxTimer *cSomaLuxMap::GetTimer(const tString &asName)
 }
 
 bool SomaTakePendingMapChange(tString &asMap, tString &asStart);
-void SomaDrawImGuis();
 
 void cSomaLuxUpdater::OnDraw(float afFrameTime)
 {

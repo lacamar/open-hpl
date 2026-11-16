@@ -2,10 +2,7 @@
 #define SOMA_IMGUI_H
 
 #include "hpl.h"
-#include "RustSomaUi.h"
-
-#include <angelscript.h>
-#include <map>
+#include "RustSomaS8d.h"
 
 using namespace hpl;
 
@@ -21,261 +18,95 @@ struct cSomaCameraTextureState
 std::vector<cSomaCameraTextureState> SomaGetCameraTextures();
 iTexture *SomaGetCameraTexture(const tString &asName);
 void SomaRestoreCameraTexture(const cSomaCameraTextureState &aState);
-void SomaPreloadGuiGfx(const tString &asFile, int alType);
+void SomaUpdateCameraTextures();
+void SomaDestroyCameraTextures();
+void SomaInstallImGuiHost();
 
+enum { kSomaImInt, kSomaImFloat, kSomaImVec, kSomaImCol };
+
+// The ImGui of the Rust port; a pointer to one of these is the Rust object itself.
 class cSomaImGui
 {
 public:
-	cSomaImGui(const tString &asName, cGuiSet *apSet);
-	~cSomaImGui();
+	cSomaImGui() = delete;
+	static cSomaImGui *Create(const tString &asName, cGuiSet *apSet) { return R(ohpl_s8d_new((const unsigned char *)asName.data(), asName.size(), (size_t)apSet)); }
+	static cSomaImGui *GetCurrent() { return R(ohpl_s8d_current()); }
+	static void SetCurrent(cSomaImGui *apImGui) { ohpl_s8d_set_current((OhplS8dIm *)apImGui); }
+	static cSomaImGui *GetInputFocus() { return R(ohpl_s8d_input_focus()); }
+	static cSomaImGui *GetScriptInputFocus() { return R(ohpl_s8d_script_input_focus()); }
+	static cSomaImGui *GetPrevInputFocus() { return R(ohpl_s8d_prev_input_focus()); }
+	static void SetInputFocus(cSomaImGui *apImGui, bool abShowMouse) { ohpl_s8d_set_input_focus(apImGui ? apImGui->Raw() : NULL, abShowMouse); }
+	static void UpdateFocusHistory() { ohpl_s8d_update_focus_history(); }
+	static bool GameHudFocus() { return ohpl_s8d_game_hud_focus(); }
+	static void SetGameHudFocus(bool abX) { ohpl_s8d_set_game_hud_focus(abX); }
 
-	static cSomaImGui *GetCurrent() { return mpCurrent; }
-	static void SetCurrent(cSomaImGui *apImGui) { mpCurrent = apImGui; }
-	static cSomaImGui *GetInputFocus();
-	static cSomaImGui *GetScriptInputFocus() { return mpInputFocus; }
-	static bool mbGameHudFocus;
-	static cSomaImGui *GetPrevInputFocus() { return mpPrevInputFocus; }
-	static void SetInputFocus(cSomaImGui *apImGui, bool abShowMouse);
-	static void UpdateFocusHistory() { mpPrevInputFocus = mpInputFocus; }
-
-	void Begin(float afTimeStep);
-	void End();
-	void DrawAll();
-	void ClearStates();
-	tString DebugOps(size_t alMax);
-
-	cGuiSet *GetSet() { return mpSet; }
-	const tString &GetName() { return msName; }
-	bool IsFirstRun() { return mbFirstRun; }
-	float GetTimeStep() { return mfTimeStep; }
-	float GetTimeCount() { return mfTimeCount; }
-
-	void SendAction(int alAction, bool abDown, bool abTriggered);
-	bool ActionTriggered(int alAction, bool abCheckIfUsed = false) { return UseAction(alAction, abCheckIfUsed) && mvActionTriggered[alAction]; }
-	bool ActionIsDown(int alAction, bool abCheckIfUsed = false) { return UseAction(alAction, abCheckIfUsed) && mvActionDown[alAction]; }
-	bool UseAction(int alAction, bool abCheckIfUsed)
+	void Begin(float afTimeStep) { ohpl_s8d_begin(Raw(), afTimeStep); }
+	void End() { ohpl_s8d_end(Raw()); }
+	void DrawAll() { ohpl_s8d_draw_all(Raw()); }
+	tString DebugOps(size_t alMax)
 	{
-		if (alAction < 0 || alAction >= 10 || (abCheckIfUsed && mvActionUsed[alAction]))
-			return false;
-		mvActionUsed[alAction] = true;
-		return true;
+		tString s;
+		ohpl_s8d_debug_ops(Raw(), alMax, +[](void *c, const unsigned char *p, size_t n) { ((tString *)c)->append((const char *)p, n); }, &s);
+		return s;
 	}
-	void SendMouseVirtualPosition(const cVector2f &avPos, const cVector2f &avRel);
-	void SendMousePosition(const cVector2l &avPos, const cVector2l &avRel);
-	const cVector2f &GetMousePosition() { return mvMousePos; }
-	const cVector2f &GetMouseRel() { return mvMouseRel; }
-	bool mbShowMouse = false;
-	cColor mScreenClear = cColor(0, 0);
-	cColor mScreenOfflineClear = cColor(0, 0);
-	cVector2f mvCursor3D = 0;
-	bool mbShowMouseAutomatically = true;
 
+	cGuiSet *GetSet() { return (cGuiSet *)ohpl_s8d_set(Raw()); }
+	const tString &GetName() { return *(const tString *)ohpl_s8d_name(Raw()); }
+	int GetDrawnOpNum() { return (int)ohpl_s8d_drawn(Raw()); }
+	void SendMousePosition(const cVector2l &avPos, const cVector2l &avRel) { ohpl_s8d_send_mouse(Raw(), avPos.x, avPos.y, avRel.x, avRel.y); }
+	void SendMouseVirtualPosition(const cVector2f &avPos, const cVector2f &avRel) { ohpl_s8d_send_mouse_virtual(Raw(), avPos.v, avRel.v); }
+	cVector2f GetMousePosition() { float *p = ohpl_s8d_mouse_pos(Raw()); return cVector2f(p[0], p[1]); }
+	cVector2f GetCursor3D() { float *p = ohpl_s8d_cursor_3d(Raw()); return cVector2f(p[0], p[1]); }
+	void SetCursor3D(const cVector2f &avPos) { float *p = ohpl_s8d_cursor_3d(Raw()); p[0] = avPos.x, p[1] = avPos.y; }
+	void SetScreenClear(const cColor &aClear, const cColor &aOffline)
+	{
+		memcpy(ohpl_s8d_screen_clear(Raw(), false), aClear.v, 16);
+		memcpy(ohpl_s8d_screen_clear(Raw(), true), aOffline.v, 16);
+	}
+	cColor GetScreenClear(bool abOffline) { float *p = ohpl_s8d_screen_clear(Raw(), abOffline); return cColor(p[0], p[1], p[2], p[3]); }
+	bool GetShowMouse() { return ohpl_s8d_show_mouse(Raw()); }
+	void SetShowMouse(bool abX) { ohpl_s8d_set_show_mouse(Raw(), abX); }
+
+	// Same layout as the Rust State; SomaSave writes and reads these
 	struct cState
 	{
-		int mlInt = 0;
-		float mfFloat = 0;
-		cVector3f mvVec = 0;
-		cColor mCol = cColor(1, 1);
-		bool mbSetInt = false, mbSetFloat = false, mbSetVec = false, mbSetCol = false;
-		bool mbInFocus = false;
-		int mlDefInt = 0;
-		float mfDefFloat = 0;
-		bool mbDefInt = false, mbDefFloat = false;
+		int mlInt;
+		float mfFloat;
+		cVector3f mvVec;
+		cColor mCol;
+		bool mbSetInt, mbSetFloat, mbSetVec, mbSetCol, mbInFocus;
+		int mlDefInt;
+		float mfDefFloat;
+		bool mbDefInt, mbDefFloat;
 	};
-	// cImGui::GetDefaultOrCurrent*: a widget's default re-applies whenever the caller changes it
-	static int DefaultOrCurrent(cState &s, int alDef) { return ohpl_gs7_im_default_or_current_int((OhplGs7ImState *)&s, alDef); }
-	static float DefaultOrCurrent(cState &s, float afDef) { return ohpl_gs7_im_default_or_current_float((OhplGs7ImState *)&s, afDef); }
-	std::map<uint64_t, cState> mmapStates;
-	cState &State(uint64_t alId) { return mmapStates[alId]; }
-	template <class F> F GetOrSetState(uint64_t alId, F cState::*apField, bool cState::*apSet, const F &aDefault)
+	typedef OhplS8dTimer cTimer;
+	cState *State(uint64_t alId) { return (cState *)ohpl_s8d_state(Raw(), alId); }
+	size_t StateCount() { return ohpl_s8d_state_count(Raw()); }
+	cState *StateAt(size_t alIdx, uint64_t *apId) { return (cState *)ohpl_s8d_state_at(Raw(), alIdx, apId); }
+	size_t TimerCount() { return ohpl_s8d_timer_count(Raw()); }
+	const cTimer *TimerAt(size_t alIdx) { return ohpl_s8d_timer_at(Raw(), alIdx); }
+	void PushTimer(const cTimer &aTimer) { ohpl_s8d_timer_push(Raw(), &aTimer); }
+	template <class F> F GetState(uint64_t alId, int alKind, const F &aDefault)
 	{
-		cState &s = State(alId);
-		if(!(s.mbSetInt || s.mbSetFloat || s.mbSetVec || s.mbSetCol)) {
-			s.*apField = aDefault;
-			s.*apSet = true;
-		}
-		return s.*apSet ? s.*apField : aDefault;
+		F out;
+		ohpl_s8d_state_op(Raw(), alId, 0, alKind, &aDefault, &out);
+		return out;
 	}
-
-	struct cFade
-	{
-		int mlType; // 0 float, 1 vector, 2 color
-		float mvStart[4];
-		float mvGoal[4];
-		float mfTime;
-		float mfCount;
-		int mlEasing;
-	};
-	std::map<uint64_t, cFade> mmapFades;
-	void Fade(uint64_t alId, int alType, const float *apGoal, float afTime, int alEasing, bool abReplace);
-	struct cTimer
-	{
-		uint64_t mlId;
-		float mfTime;
-		bool mbRepeat, mbTouched;
-	};
-	std::vector<cTimer> mvTimers;
-	cTimer *FindTimer(uint64_t alId)
-	{
-		for (cTimer &t : mvTimers)
-			if (t.mlId == alId)
-				return &t;
-		return nullptr;
-	}
-
-	struct cModifiers
-	{
-		cColor mColorMul = cColor(1, 1);
-		cColor mTextColorMul = cColor(1, 1);
-		bool mbUseInput = true;
-		bool mbUseUIPos = true;
-		cVector2f mvExpHori = 0, mvExpVert = 0;
-		float mfRotateAngle = 0;
-		bool mbRotateCustomPivot = false;
-		cVector2f mvRotatePivot = 0;
-	};
-	cModifiers mMods;
-	std::vector<cModifiers> mvModStack;
-	std::vector<cVector2f> mvLineStrip;
-	int mlAlign = 0;
-
-	struct cGroup
-	{
-		cVector3f mvPos;
-		cVector2f mvSize;
-		bool mbClip = false;
-	};
-	std::vector<cGroup> mvGroups;
-	void PushGroup(const cGroup &aGroup)
-	{
-		mvGroups.push_back(aGroup);
-		if (aGroup.mbClip)
-			Record({NULL, NULL, L"", aGroup.mvPos, aGroup.mvSize, cColor(1, 1), 0, kClipBegin, 0});
-	}
-	void PopGroup()
-	{
-		if (mvGroups.empty())
-			return;
-		if (mvGroups.back().mbClip)
-			Record({NULL, NULL, L"", 0, 0, cColor(1, 1), 0, kClipEnd, 0});
-		mvGroups.pop_back();
-	}
-	struct cLayout
-	{
-		int mlType;
-		cVector3f mvStart;
-		cVector3f mvCursor;
-		cVector2f mvSize;
-		cVector2f mvSpacing;
-		float mfLineMax;
-	};
-	std::vector<cLayout> mvLayouts;
-	cVector3f GroupPos() { return mvGroups.empty() ? cVector3f(0) : mvGroups.back().mvPos; }
-	cVector2f GroupSize() { return mvGroups.empty() ? mpSet->GetVirtualSize() : mvGroups.back().mvSize; }
-
-	struct cPrev
-	{
-		bool mbPressed = false, mbBecamePressed = false, mbInFocus = false, mbBecameInFocus = false;
-		bool mbWasInFocus = false, mbMouseOver = false, mbUpdated = false;
-		cVector3f mvPos = 0;
-		cVector2f mvSize = 0;
-	};
-	cPrev mPrev;
-
-	// Keyboard/gamepad focus: widgets register a nav rect per frame, End() moves focus along it
-	struct cNavEntry
-	{
-		uint64_t mlId;
-		cVector2l mvPos, mvSize;
-		int mlWrap, mlGroup;
-	};
-	std::vector<cNavEntry> mvNav;
-	uint64_t mlFocus = 0, mlPrevFocus = 0;
-	cVector2l mvLastDir = 0;
-	int mlLastCount = 0;
-	bool mbFoundFocus = false;
-	int mlWrapMode = 3, mlGroupFlags = 1;
-	int mlMouseLock = 0;
-	void SetFocus(const tString &asName);
-	bool WidgetBase(uint64_t alId, const cVector3f &avPos, const cVector2f &avSize, cState &aState);
-	bool BecamePressed(bool abKeys, bool abMouse);
-	OhplGs7ImActions Actions();
-	void UpdateUIMovement();
-
-	std::vector<tWString> mvItems;
-
-	std::map<tString, void *> mmapDefaults;
-	void *GetDefault(const char *apType);
-	void SetDefault(const char *apType, const void *apData);
-
-	void Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &avDefaultSize, bool abAlign = true);
-	cVector3f Align(const cVector3f &avPos, const cVector2f &avSize, int alAlign);
-	void Advance(const cVector3f &avPos, const cVector2f &avSize, bool abUpdated = false);
-	bool MouseOver(const cVector3f &avPos, const cVector2f &avSize);
-	void DrawWidgetBase(const void *apData, const cVector3f &avPos, const cVector2f &avSize, bool abInFocus, bool abTriggered, int alInFocusGfx,
-						int alTriggeredGfx);
-	void DrawText(const tWString &asText, const void *apFont, const cColor &aColor, int alAlign, const cVector3f &avPos, const cVector2f &avSize,
-				  float afSizeMul);
-	bool DoButton(const tString &asName, const tWString &asText, const void *apData, cVector3f avPos, cVector2f avSize, int alMode); // 1 toggle, 2 repeat, 3/4 multi-toggle item on/off
-	void DoLabel(const tWString &asText, const void *apData, cVector3f avPos, cVector2f avSize, float afSizeMul);
-	void DoImage(const void *apGfx, cVector3f avPos, cVector2f avSize);
-	float DoTextFrame(const tWString &asText, const cVector2f &avEdge, float afRowSpace, float afStartRow, const void *apData, cVector3f avPos,
-					  cVector2f avSize);
-	void DoFrame(const void *apData, cVector3f avPos, cVector2f avSize);
-	float DoSlider(const tString &asName, float afDefault, float afMin, float afMax, float afStep, const void *apData, cVector3f avPos,
-				   cVector2f avSize, bool abVertical);
-	bool DoCheckBox(const tString &asName, const tWString &asText, bool abDefault, const void *apData, cVector3f avPos, cVector2f avSize);
-	int DoMultiSelect(const tString &asName, int alDefault, const void *apData, cVector3f avPos, cVector2f avSize);
-	void DoGauge(const void *apData, float afFill, cVector3f avPos, cVector2f avSize);
-	void DoWindowStart(const tWString &asCaption, const void *apData, cVector3f avPos, cVector2f avSize, bool abClip);
-	void DoWindowEnd();
-	void DoMouse(const void *apGfx, const cVector3f &avOffset, cVector2f avSize);
-
-	void DrawGfx(const void *apGfx, const cVector3f &avPos, cVector2f avSize, const cColor &aColor);
-	void DrawFrame(const void *apFrame, const cVector3f &avPos, const cVector2f &avSize, const cColor &aColor);
-	void DrawFont(const tWString &asText, const void *apFont, const cVector3f &avPos, int alAlign, const cVector2f &avSizeMul, const cColor &aColor);
-	cVector2f GetGfxSize(const void *apGfx);
-	iFontData *GetFont(const void *apFont);
-	cVector2f FontSize(const void *apFont, float afMul);
-	float GetFontLength(const void *apFont, float afMul, const tWString &asText);
-
-	static void RegisterNatives(asIScriptEngine *apEngine);
-	int GetDrawnOpNum() { return (int)mvDrawn.size(); }
+	template <class F> void SetState(uint64_t alId, int alKind, const F &aValue) { ohpl_s8d_state_op(Raw(), alId, 1, alKind, &aValue, NULL); }
+	template <class F> void IncState(uint64_t alId, int alKind, const F &aValue) { ohpl_s8d_state_op(Raw(), alId, 2, alKind, &aValue, NULL); }
+	void Fade(uint64_t alId, int alType, const float *apGoal, float afTime, int alEasing, bool abReplace) { ohpl_s8d_fade(Raw(), alId, alType, apGoal, afTime, alEasing, abReplace); }
+	void StopFade(uint64_t alId) { ohpl_s8d_stop_fade(Raw(), alId); }
 
 private:
-	struct cOp
-	{
-		cGuiGfxElement *mpGfx;
-		iFontData *mpFont;
-		tWString msText;
-		cVector3f mvPos;
-		cVector2f mvSize;
-		cColor mColor;
-		int mlMaterial;
-		int mlAlign;
-		float mfAngle;
-	};
-	static const int kClipBegin = 1, kClipEnd = 2;
-	void Record(const cOp &aOp) { mvBuilding.push_back(aOp); }
-
-	static cSomaImGui *mpCurrent;
-	static cSomaImGui *mpInputFocus;
-	static cSomaImGui *mpPrevInputFocus;
-
-	tString msName;
-	cGuiSet *mpSet;
-	bool mbFirstRun = true;
-	float mfTimeStep = 0;
-	float mfTimeCount = 0;
-	bool mvActionDown[10] = {};
-	bool mvActionTriggered[10] = {};
-	bool mvActionUsed[10] = {};
-	cVector2f mvMousePos = 0;
-	cVector2f mvMouseRel = 0;
-	std::vector<cOp> mvBuilding;
-	std::vector<cOp> mvDrawn;
+	static cSomaImGui *R(OhplS8dIm *p) { return (cSomaImGui *)p; }
+	OhplS8dIm *Raw() { return (OhplS8dIm *)this; }
 };
 
+inline cSomaImGui *SomaHudImGui() { return (cSomaImGui *)ohpl_s8d_hud(); }
+inline void SomaDrawImGuis() { ohpl_s8d_draw_imguis(); }
+inline void SomaRenderImGuis() { ohpl_s8d_render_imguis(); }
+inline void SomaPreloadGuiGfx(const tString &asFile, int alType) { ohpl_s8d_preload_gfx((const unsigned char *)asFile.data(), asFile.size(), alType); }
+tWString SomaParseString(const tWString &asText);
 void *SomaNewScriptStruct(const char *apType);
 void *SomaNewOwnedScriptStruct(const char *apType);
 const tString *SomaIntern(const tString &asStr);

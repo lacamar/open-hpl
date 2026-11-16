@@ -6,18 +6,8 @@ use std::ffi::c_void;
 use std::sync::OnceLock;
 
 #[repr(C)]
-pub struct OhplS2Defaults {
-    pub size: usize,
-    pub bytes: *const u8,
-    pub nstr: usize,
-    pub str_offsets: *const i32,
-}
-
-#[repr(C)]
 pub struct OhplS2HostOps {
-    pub struct_defaults: unsafe extern "C" fn(*const u8, usize, *mut OhplS2Defaults) -> i32,
     pub intern_empty: unsafe extern "C" fn() -> *const c_void,
-    pub native_offset: unsafe extern "C" fn(*const u8, usize, *const u8, usize, i32) -> i32,
     pub register_step: unsafe extern "C" fn(*mut c_void, u32),
     pub sset_reset: unsafe extern "C" fn(*mut c_void),
     pub sset_assign: unsafe extern "C" fn(*mut c_void, *mut c_void),
@@ -67,33 +57,12 @@ pub struct Defaults {
 }
 
 pub fn struct_defaults(ty: &[u8]) -> Option<Defaults> {
-    let h = ops()?;
-    let mut d = OhplS2Defaults {
-        size: 0,
-        bytes: std::ptr::null(),
-        nstr: 0,
-        str_offsets: std::ptr::null(),
-    };
-    // SAFETY: `ty` is valid for the call; the table the host returns is static.
-    unsafe {
-        if (h.struct_defaults)(ty.as_ptr(), ty.len(), &mut d) == 0 {
-            return None;
-        }
-        let len = d.size.saturating_sub(16);
-        Some(Defaults {
-            size: d.size,
-            bytes: if len == 0 {
-                &[]
-            } else {
-                std::slice::from_raw_parts(d.bytes, len)
-            },
-            string_offsets: if d.nstr == 0 {
-                &[]
-            } else {
-                std::slice::from_raw_parts(d.str_offsets, d.nstr)
-            },
-        })
-    }
+    let d = crate::somaui::s8d_structs::find_defaults(ty)?;
+    Some(Defaults {
+        size: d.size,
+        bytes: d.bytes,
+        string_offsets: d.strings,
+    })
 }
 
 pub fn intern_empty() -> *const c_void {
@@ -102,10 +71,7 @@ pub fn intern_empty() -> *const c_void {
 }
 
 pub fn native_offset(ty: &[u8], decl: &[u8], offset: i32) -> i32 {
-    // SAFETY: strings are valid for the call.
-    ops().map_or(offset, |h| unsafe {
-        (h.native_offset)(ty.as_ptr(), ty.len(), decl.as_ptr(), decl.len(), offset)
-    })
+    crate::somaui::s8d_structs::native_offset(ty, decl, offset)
 }
 
 /// Types whose constructors all come from natives (the API's recorded ones are skipped).

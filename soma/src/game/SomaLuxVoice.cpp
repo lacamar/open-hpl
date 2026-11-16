@@ -9,7 +9,6 @@
 #include "impl/scriptarray.h"
 #include <fstream>
 
-cSomaImGui *SomaHudImGui();
 
 cSomaLuxVoiceHandler *cSomaLuxVoiceHandler::mpInstance = NULL;
 

@@ -155,6 +155,16 @@ half() {
 		env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-s8-$impl-$g-$$" OHPL_GAME="$g" S8_WAIT=1500 \
 			scripts/s8-scenario.sh "$OUT/s8-$g-$impl.txt" >> "$OUT/s8-$impl-$g.log" 2>&1
 	done
+	for g in soma rebirth bunker; do
+		has "$g" || continue
+		# the draw lists vary with timing: the C++ baseline is two runs, compared as a union
+		for n in "" 2; do
+			[ -n "$n" ] && [ -z "$RECORD" ] && continue
+			rm -f "$OUT/s8d$n-$g-$impl.txt"
+			env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-s8d$n-$impl-$g-$$" OHPL_GAME="$g" S8_WAIT=1500 \
+				scripts/s8d-scenario.sh "$OUT/s8d$n-$g-$impl.txt" >> "$OUT/s8d-$impl-$g.log" 2>&1
+		done
+	done
 	for G in soma rebirth bunker; do
 		has "$G" || continue
 		case $G in
@@ -173,9 +183,9 @@ half() {
 		rebirth) S8BM="02_02_courtyard 01_01_plane_wreckage" ;;
 		*) S8BM="arena" ;;
 		esac
-		rm -f "$OUT/s8b-$G-$impl.txt"
+		rm -f "$OUT/s8b-$G-$impl.txt" "$OUT/s8dm-$G-$impl.txt"
 		# shellcheck disable=SC2046
-		ENVX="$extra OHPL_S8B_DUMP=$OUT/s8b-$G-$impl.txt" sweep "$impl" "$G" "$OUT/dump-s8b-$impl-$G.json" $(mapargs $S8BM)
+		ENVX="$extra OHPL_S8D_DUMP=$OUT/s8dm-$G-$impl.txt OHPL_S8B_DUMP=$OUT/s8b-$G-$impl.txt" sweep "$impl" "$G" "$OUT/dump-s8b-$impl-$G.json" $(mapargs $S8BM)
 	done
 	for g in soma rebirth bunker; do
 		has "$g" || continue
@@ -241,7 +251,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -481,6 +491,13 @@ def same(name, a, b):
         k = max((i for i in range(n) if la[i].startswith(("tick ", "f "))), default=0)
         ok_ = k > 100 and la[:k] == lb[:k]
         return (ok_, f"equal over {k} lines (run lengths {len(la)}/{len(lb)})" if ok_ else "DIFFER")
+    if name.startswith(("s8d-", "s8dm-")):
+        # ImGui draw lists run on the frame clock: every frame of b must be one a C++ run drew
+        stem = os.path.basename(a).replace("-cpp", "")
+        extra = [a.replace("/s8d-", "/s8d2-")] + [os.path.join(base, stem), os.path.join(base, stem.replace("s8d-", "s8d2-"))]
+        refs = [a] + [r for r in extra if r != a and os.path.exists(r)]
+        r = subprocess.run([sys.executable, os.path.join(repo, "scripts/s8d-compare.py"), b] + refs, capture_output=True, text=True)
+        return (r.returncode == 0, (r.stdout.splitlines() or ["no output"])[0])
     if filecmp.cmp(a, b, shallow=False):
         return (True, "identical")
     if name.startswith("a10a-"):
@@ -502,6 +519,7 @@ if not quick:
     names += [f"s8-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s8b-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s8c-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
+    names += [f"{k}-{g}" for k in ("s8d", "s8dm") for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s5-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     if "amnesia" in games:
         names += [f"{k}-{m}" for m in ("00_rainy_hall", "02_library", "04_final") for k in ("h13", "a7", "a10a", "a11a", "a11b", "l9", "a12b", "a11c", "a12c", "a12d", "a2b")] + ["a12a-02_library"] + ["a9"]
