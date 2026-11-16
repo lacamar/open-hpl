@@ -371,9 +371,18 @@ def same(name, a, b):
         return (ok_, f"equal over {len(ha)} lines" if ok_ else "DIFFER")
     if name.startswith("s7") and not name.startswith("s7sc"):
         # physics sounds and the bunker bridge follow real time: compare what lives long, the bank digests and the music/voice/dialog lines
+        def frames(p):
+            return [int(m.group(1)) for m in re.finditer(r"^F(\d+) ", open(p, errors="replace").read(), re.M)]
+        # runs last as long as the wall clock allows: compare up to the shorter run's last frame
+        last = min(max(frames(a), default=0), max(frames(b), default=0))
         def load(p):
             life, fsb, other = {}, [], []
             for l in open(p, errors="replace").read().splitlines():
+                fm = re.match(r"F(\d+) ", l)
+                if fm and int(fm.group(1)) > last:
+                    break
+                if l.startswith("MS ") and l.split()[2] == "6":
+                    continue  # the scenario's music_c.ogg dynamic track (priority 6) uses an uninitialised tID
                 m = re.match(r"F\d+ p=\d id=(\d+) (.*?) type=(\S+) cat=(\S+) vol=(\S+) vm=\S+ sm=(\S+) ", l)
                 if m:
                     life.setdefault((m.group(2), m.group(1)), []).append(m.group(3, 4, 5, 6))
