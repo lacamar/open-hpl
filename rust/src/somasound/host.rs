@@ -85,12 +85,6 @@ pub struct S7Host {
     pub apply_reverb: unsafe extern "C" fn(*const f32),
     pub ent_name: unsafe extern "C" fn(usize, Sink, *mut c_void),
     pub prefix_ref: unsafe extern "C" fn(*const u8, usize) -> *const c_void,
-    pub voice_present: unsafe extern "C" fn() -> bool,
-    pub voice_play: unsafe extern "C" fn(*const u8, usize, u64, unsafe extern "C" fn(u64)) -> bool,
-    pub voice_line_count: unsafe extern "C" fn(*const u8, usize) -> i32,
-    pub voice_stop_all: unsafe extern "C" fn(),
-    pub voice_scene_involving: unsafe extern "C" fn(*const u8, usize) -> bool,
-    pub voice_subject_involves: unsafe extern "C" fn(*const u8, usize, *const u8, usize) -> bool,
     pub script_call: unsafe extern "C" fn(*const u8, usize, *const CallArg, usize, bool) -> i32,
 }
 

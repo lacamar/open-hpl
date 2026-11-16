@@ -3,10 +3,32 @@
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
 #include "SomaLuxPlayer.h"
-#include "SomaLuxVoice.h"
 #include "SomaScriptRuntime.h"
 
 #include "impl/OpenALSoundEnvironment.h"
+
+int OhplMapScriptCall(const unsigned char *d, size_t dn, const OhplS7CallArg *a, size_t n, bool abRet, int lRet)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap == NULL || pMap->GetScript() == NULL || cSomaScriptRuntime::Get() == NULL)
+		return -1;
+	std::vector<tString> vStr(n);
+	for (size_t i = 0; i < n; ++i)
+		if (a[i].kind == 0)
+			vStr[i] = tString((const char *)a[i].s.p, a[i].s.n);
+	cSomaScriptRuntime::Get()->Call(pMap->GetScript(), tString((const char *)d, dn), [&](asIScriptContext *c) {
+		for (size_t i = 0; i < n; ++i)
+		{
+			if (a[i].kind == 0)
+				c->SetArgObject((asUINT)i, &vStr[i]);
+			else if (a[i].kind == 1)
+				c->SetArgByte((asUINT)i, a[i].i != 0);
+			else
+				c->SetArgDWord((asUINT)i, a[i].i);
+		}
+	}, [&](asIScriptContext *c) { lRet = c->GetReturnByte() != 0; });
+	return abRet ? lRet : 0;
+}
 
 namespace
 {
@@ -293,34 +315,7 @@ const void *PrefixRef(const unsigned char *p, size_t n)
 	return &sPrefix;
 }
 
-int ScriptCall(const unsigned char *d, size_t dn, const OhplS7CallArg *a, size_t n, bool abRet)
-{
-	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-	if (pMap == NULL || pMap->GetScript() == NULL || cSomaScriptRuntime::Get() == NULL)
-		return -1;
-	std::vector<tString> vStr(n);
-	for (size_t i = 0; i < n; ++i)
-		if (a[i].kind == 0)
-			vStr[i] = Str(a[i].s.p, a[i].s.n);
-	int lRet = 0;
-	cSomaScriptRuntime::Get()->Call(pMap->GetScript(), Str(d, dn), [&](asIScriptContext *c) {
-		for (size_t i = 0; i < n; ++i)
-		{
-			if (a[i].kind == 0)
-				c->SetArgObject((asUINT)i, &vStr[i]);
-			else if (a[i].kind == 1)
-				c->SetArgByte((asUINT)i, a[i].i != 0);
-			else
-				c->SetArgDWord((asUINT)i, a[i].i);
-		}
-	}, [&](asIScriptContext *c) { lRet = c->GetReturnByte() != 0; });
-	return abRet ? lRet : 0;
-}
-
-bool VoicePlay(const unsigned char *s, size_t n, uint64_t token, void (*done)(uint64_t))
-{
-	return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->Play(Str(s, n), -1, "", 100, [token, done]() { done(token); });
-}
+int ScriptCall(const unsigned char *d, size_t dn, const OhplS7CallArg *a, size_t n, bool abRet) { return OhplMapScriptCall(d, dn, a, n, abRet, 0); }
 
 const OhplS7Host kHost = {
 	Valid,
@@ -412,12 +407,6 @@ const OhplS7Host kHost = {
 	ApplyReverb,
 	[](size_t e, OhplS7Sink sink, void *ctx) { sink(ctx, (const unsigned char *)((cSomaLuxEntity *)e)->msName.data(), ((cSomaLuxEntity *)e)->msName.size()); },
 	PrefixRef,
-	[]() { return cSomaLuxVoiceHandler::Get() != NULL; },
-	VoicePlay,
-	[](const unsigned char *s, size_t n) { return cSomaLuxVoiceHandler::Get()->GetSubjectLineNumber(Str(s, n)); },
-	[]() { cSomaLuxVoiceHandler::Get()->StopAll(); },
-	[](const unsigned char *s, size_t n) { return cSomaLuxVoiceHandler::Get()->SceneInvolvingCharacterIsActive(Str(s, n)); },
-	[](const unsigned char *s, size_t n, const unsigned char *c, size_t cn) { return cSomaLuxVoiceHandler::Get()->SubjectInvolvesCharacter(Str(s, n), Str(c, cn)); },
 	ScriptCall,
 };
 

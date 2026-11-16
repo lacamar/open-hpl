@@ -229,6 +229,15 @@ void cSomaLuxPlayer::OnUpdate(float afTimeStep)
 		ohpl_gs3_update_average_move(&mfAverageMoveSpeed, &mvAverageMoveDirection, &vVel);
 	}
 	UpdateCamera(afTimeStep);
+	if (OhplS5DumpEnabled() && mpCharBody)
+	{
+		static unsigned slTick = 0;
+		cVector3f f = mpCharBody->GetFeetPosition(), v = mpCharBody->GetForceVelocity();
+		OhplS5Log("pl %u %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %d %d %08x", slTick++, OhplS5Bits(afTimeStep), OhplS5Bits(f.x),
+				  OhplS5Bits(f.y), OhplS5Bits(f.z), OhplS5Bits(v.x), OhplS5Bits(v.y), OhplS5Bits(v.z), OhplS5Bits(mpCharBody->GetYaw()),
+				  OhplS5Bits(mpCamera ? mpCamera->GetPitch() : 0), OhplS5Bits(mpCamera ? mpCamera->GetFOV() : 0), OhplS5Bits(mfAverageMoveSpeed),
+				  mpState ? mpState->mlId : -1, mpMoveState ? mpMoveState->mlId : -1, OhplS5Bits(mfHealth));
+	}
 }
 
 void cSomaLuxPlayer::OnPostUpdate(float afTimeStep)

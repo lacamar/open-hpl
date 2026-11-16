@@ -145,6 +145,10 @@ half() {
 		ENVX="$extra OHPL_S7_DUMP=$OUT/s7-$G-$impl.txt OHPL_S7_SCENARIO=$REPO/rust/tests/golden/S7/scenario-$G.txt OHPL_S7_SCENARIO_OUT=$OUT/s7sc-$G-$impl.txt" sweep "$impl" "$G" "$OUT/dump-s7-$impl-$G.json" --map "$M"
 		ENVX="$extra OHPL_S7_DUMP=$OUT/s7p-$G-$impl.txt" sweep "$impl" "$G" "$OUT/dump-s7p-$impl-$G.json" --play 10 --map "$M"
 	done
+	if has soma; then
+		rm -f "$OUT/s7v-soma-$impl.txt" "$OUT/s5bv-soma-$impl.txt"
+		ENVX="$extra OHPL_S7_DUMP=$OUT/s7v-soma-$impl.txt OHPL_S7_SCENARIO=$REPO/rust/tests/golden/S5b/voice-soma.txt OHPL_S7_SCENARIO_OUT=$OUT/s5bv-soma-$impl.txt" sweep "$impl" soma "$OUT/dump-s7v-$impl-soma.json" --map 00_01_apartment
+	fi
 	for g in soma rebirth bunker; do
 		has "$g" || continue
 		rm -f "$OUT/s8-$g-$impl.txt"
@@ -225,7 +229,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -264,7 +268,7 @@ if [ -n "$SAVES" ] && has amnesia; then
 fi
 
 python3 - "$OUT" "$KNOWN" "$IMPLS" "${QUICK:-0}" "${SAVES:-0}" "$BASELINE" "$CACHE/flaky.tsv" "$GAMES" "$REPO" <<'EOF' | tee -a "$SUM"
-import datetime, filecmp, json, os, re, subprocess, sys
+import datetime, filecmp, json, os, re, struct, subprocess, sys
 out, known, impls, quick, saves, base, flaky, games, repo = sys.argv[1:]
 known, impls, quick, saves, games = known.split(), impls.split(), quick == "1", saves == "1", games.split()
 bad = 0
@@ -374,6 +378,25 @@ def same(name, a, b):
                 ls = [l for l in sec if l.startswith(("ts ", "fire "))]
                 own = sorted(l for l in ls if l.startswith(("ts  ", "fire  ")))
                 return own, {l for l in ls if l not in own}
+            # player: key timing and physics settling differ between runs, so velocities are not compared; step, camera, health and
+            # state transitions must agree, positions within 3 m, over the shorter run; handler/module/effect lists exactly
+            def ticks(sec):
+                return [l.split()[2:] for l in sec if l.startswith("pl ")]
+            def tol(u, v):
+                return all(p == q or (j in (1, 2, 3, 4, 5, 6, 10) and (j > 3 or abs(struct.unpack(">f", bytes.fromhex(p))[0] - struct.unpack(">f", bytes.fromhex(q))[0]) <= 3.0))
+                           for j, (p, q) in enumerate(zip(u, v)))
+            def trans(tk):
+                o = []
+                for t in tk:
+                    if not o or o[-1] != (t[11], t[12]):
+                        o.append((t[11], t[12]))
+                return o
+            plx, ply = ticks(x), ticks(y)
+            k = min(len(plx), len(ply))
+            tx, ty = trans(plx[:k]), trans(ply[:k])
+            if (not all(tol(u, v) for u, v in zip(plx, ply)) or tx != ty or abs(len(plx) - len(ply)) > 400
+                    or [l for l in x if re.match(r"g[hems] ", l)] != [l for l in y if re.match(r"g[hems] ", l)]):
+                return (False, f"DIFFER (section {i}: player ticks or game lists)")
             (ox, sx), (oy, sy) = timers(x), timers(y)
             if ox != oy or sx != sy:
                 return (False, f"DIFFER (section {i}: timers)")
@@ -409,7 +432,8 @@ def same(name, a, b):
                 elif l.startswith("FSB "):
                     fsb.append(l)
                 elif "music_c.ogg" not in l:  # the scenario's dynamic track uses an uninitialised tID
-                    other.append(l)
+                    if not (name.startswith("s7v") and other and other[-1] == l):  # subtitles repeat per frame
+                        other.append(l)
             keep = lambda n: not n.startswith(("physics/", "DW_tunnel/bridge/"))
             sig = {(n, tuple(sorted(set(r)))) for (n, _), r in life.items() if len(r) >= 250 and keep(n)}
             return sorted(fsb), sig, other
@@ -448,6 +472,7 @@ if not quick:
     names = [f"h4seq-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"l9-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"{k}-{g}" for k in ("s7", "s7sc", "s7p") for g in ("soma", "rebirth", "bunker") if g in games]
+    names += ["s7v-soma", "s5bv-soma"] if "soma" in games else []
     names += [f"s8-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s8b-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s5-{g}" for g in ("soma", "rebirth", "bunker") if g in games]

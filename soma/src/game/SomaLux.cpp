@@ -417,7 +417,7 @@ void cSomaLuxMap::Setup()
 	if (mpScript == NULL)
 		return;
 	if (cSomaLuxVoiceHandler::Get())
-		cSomaLuxVoiceHandler::Get()->LoadMapFile(msFileName, msName);
+		cSomaLuxVoiceHandler::Get()->LoadMapFile(msName);
 	mpRuntime->Call(mpScript, "void Setup()");
 }
 
@@ -860,7 +860,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 			gpSomaBase->GetVisitedMaps().clear();
 			SomaDeserializeGlobalVars("");
 			if (cSomaLuxVoiceHandler::Get())
-				cSomaLuxVoiceHandler::Get()->msetPlayedLines.clear();
+				cSomaLuxVoiceHandler::Get()->ClearPlayedLines();
 			// official cLuxBase::Reset destroys the map before scriptables reset
 			gpSomaBase->mbResetOnMapLeave = true;
 			// ponytail: only the save-list cache; full non-global module reset if more stale menu state shows up

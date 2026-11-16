@@ -1,0 +1,40 @@
+cLux_GetUserConfig().SetBool("Sound", "ShowSubtitles", true);
+__print("apply " + cLux_ApplyUserConfig());
+---
+cLuxVoiceHandler@ v = cLux_GetVoiceHandler();
+cLuxMap@ m = cLux_GetCurrentMap();
+v.StopAll();
+m.SetVoiceSource("David", "", 1.0f, 8.0f, false, -1.0f);
+m.SetVoiceSource("Simon", "Player", 1.0f, 8.0f, true, 5.0f, 100.0f, 5000.0f, 1);
+v.AddCharacterSpeakingCallback("Player", "NoSuchCallback");
+tString sc = v.GetSubjectSceneName("7_BrokenShower");
+__print("sub " + v.SubjectExists("7_BrokenShower") + " " + v.SubjectExists("none") + " lines=" + v.GetSubjectLineNumber("7_BrokenShower") + " scene=" + sc + " none=" + v.GetSubjectLineNumber("none"));
+__print("idle " + v.AnySceneIsActive() + " " + v.SceneIsActive(sc) + " " + v.SubjectIsPlaying("7_BrokenShower") + " " + v.CharacterIsSpeaking("Player") + " " + v.SceneInvolvingCharacterIsActive("Player") + " left=" + (v.GetTimeLeftOnLastLineOfPlayingSubject("7_BrokenShower") > 0));
+__print("play " + v.Play("7_BrokenShower", -1, "", 200));
+__print("busy " + v.Play("7_BrokenShower", -1, "", 10));
+__print("play2 " + v.Play("10_AnswerMachine", 0, "", 150, true));
+---
+cLuxVoiceHandler@ v = cLux_GetVoiceHandler();
+tString sc = v.GetSubjectSceneName("7_BrokenShower");
+__print("act " + v.AnySceneIsActive() + " " + v.SceneIsActive(sc) + " " + v.SubjectIsPlaying("7_BrokenShower") + " " + v.CharacterIsSpeaking("Player") + " " + v.SceneInvolvingCharacterIsActive("Player") + " left=" + (v.GetTimeLeftOnLastLineOfPlayingSubject("7_BrokenShower") > 0));
+array<float> sp; v.GetSpectrumFromScene(sc, sp, 8); __print("spec " + sp.length());
+array<float> sp2; v.GetSpectrumFromSpeakingCharacter("Player", sp2, 4); __print("spec2 " + sp2.length());
+v.FadeSceneVolumeTo(sc, 0.5f, 1.0f);
+v.SetPaused(sc, true);
+---
+cLuxVoiceHandler@ v = cLux_GetVoiceHandler();
+tString sc = v.GetSubjectSceneName("7_BrokenShower");
+v.SetPaused(sc, false);
+v.SetPausedAll(true); v.SetPausedAll(false);
+v.SkipCurrentLine(sc);
+v.SetFocusScene(sc);
+cLux_GetEffectHandler().FadeOut(0.5f);
+__print("fading " + cLux_GetEffectHandler().IsFading());
+---
+cLuxVoiceHandler@ v = cLux_GetVoiceHandler();
+tString sc = v.GetSubjectSceneName("7_BrokenShower");
+v.Stop(sc);
+__print("stopped " + v.AnySceneIsActive());
+v.StopAll();
+cLux_GetEffectHandler().FadeIn(0.5f);
+v.RemoveCharacterSpeakingCallback("Player");

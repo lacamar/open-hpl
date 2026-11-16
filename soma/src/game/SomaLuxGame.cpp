@@ -342,6 +342,17 @@ void cSomaLuxGame::Load()
 		cSomaLuxInputHandler::Get()->LoadScript();
 	}
 	ReloadUserConfig();
+	if (OhplS5DumpEnabled())
+	{
+		for (cSomaLuxHandler *p : mvHandlers)
+			OhplS5Log("gh %s", p->msName.c_str());
+		for (cSomaLuxEffect *p : mvEffects)
+			OhplS5Log("ge %d %s", p->mlId, p->msName.c_str());
+		for (cSomaLuxModule *p : mvModules)
+			OhplS5Log("gm %d %s", p->mlId, p->msName.c_str());
+		for (auto &it : mmapEntityScripts)
+			OhplS5Log("gs %s %s %s", it.first.c_str(), it.second.msFile.c_str(), it.second.msClass.c_str());
+	}
 	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void OnStart()"); });
 	// cLuxBase::Reset before a new game
 	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void Reset()"); });
