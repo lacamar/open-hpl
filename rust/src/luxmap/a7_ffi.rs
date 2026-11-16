@@ -17,6 +17,7 @@ use std::ffi::c_void;
 pub struct Ctx {
     pub map: A7Map,
     pub areas: AreaArena,
+    pub props: super::mmap::Props,
 }
 
 type DropFn = unsafe extern "C" fn(*mut c_void);

@@ -355,6 +355,11 @@ def same(name, a, b):
         r = subprocess.run([sys.executable, tool, name.split("-")[1], a, b], capture_output=True, text=True)
         last = (r.stdout.strip().splitlines() or [""])[0]
         return (r.returncode == 0, last if r.returncode == 0 else f"DIFFER {last}")
+    if name.startswith("a13a-"):
+        tool = os.path.join(repo, "rust/tests/golden/A13a/dump-diff.py")
+        r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)
+        last = (r.stdout.strip().splitlines() or [""])[-1]
+        return (r.returncode == 0, last if r.returncode == 0 else f"DIFFER {last}")
     if name.startswith("a7-"):
         tool = os.path.join(repo, "rust/tests/golden/A7/mapdump-diff.py")
         r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)

@@ -7,8 +7,15 @@
 #include "LuxPlayer.h"
 #include "LuxBase.h"
 
+#include "LuxEntity.h"
+#include "LuxEnemy.h"
+#include "LuxAreaNodes.h"
+#include "LuxArea.h"
+#include "LuxProp.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <fstream>
 
 static void Pos(FILE *f, const char *asKey, const cVector3f &v)
 {
@@ -63,4 +70,58 @@ void OhplA13aTick(cLuxMap *apMap)
 	fprintf(f, "damage %d %d\n", bHit, bHitPlayer);
 	pPhysics->DestroyShape(pShape);
 	fclose(f);
+}
+
+// OHPL_A7_MAPDUMP: every entity in list order with its save data, plus the lookups the map answers.
+void cLuxMap::DumpA7(const char *asFile, const char *asLabel)
+{
+	std::ofstream os(asFile, std::ios::app);
+	tString sTmp = tString(asFile) + ".tmp";
+	os << "== map " << msName << " " << asLabel << "\n";
+	Log("A7 map dump '%s' %s\n", msName.c_str(), asLabel);
+
+	int lIdx = 0;
+	cLuxEntityIterator it = GetEntityIterator();
+	while(it.HasNext())
+	{
+		iLuxEntity *pEntity = it.Next();
+		os << lIdx++ << "|" << (int)pEntity->GetEntityType() << "|" << pEntity->GetName() << "|" << pEntity->GetID()
+			<< "|" << pEntity->IsActive() << "|" << pEntity->GetDestroyMe()
+			<< "|" << (GetEntityByName(pEntity->GetName()) == pEntity) << "|" << (GetEntityByID(pEntity->GetID()) == pEntity);
+		if(pEntity->GetEntityType() == eLuxEntityType_Area) os << "|area" << (int)static_cast<iLuxArea*>(pEntity)->GetAreaType();
+		if(pEntity->GetEntityType() == eLuxEntityType_Prop) os << "|prop" << (int)static_cast<iLuxProp*>(pEntity)->GetPropType();
+		os << "|";
+		iLuxEntity_SaveData *pData = pEntity->GetEntityType() == eLuxEntityType_Area ? pEntity->CreateSaveData() : NULL;
+		if(pData)
+		{
+			pEntity->SaveToSaveData(pData);
+			cSerializeClass::SaveToFile(pData, cString::To16Char(sTmp), "D");
+			std::ifstream in(sTmp.c_str());
+			std::string sLine;
+			while(std::getline(in, sLine))
+			{
+				size_t lPos = sLine.find_first_not_of(" \t\r");
+				if(lPos != std::string::npos) os << sLine.substr(lPos);
+			}
+			hplDelete(pData);
+		}
+		os << "\n";
+	}
+
+	os << "enemies:";
+	cLuxEnemyIterator enemyIt = GetEnemyIterator();
+	while(enemyIt.HasNext()) os << " " << enemyIt.Next()->GetName();
+	os << "\nfreeid " << ohpl_a7_ent_free_id(mpA7) << " latest " << (GetLatestEntity() ? GetLatestEntity()->GetName() : tString("-")) << "\n";
+
+	std::vector<cLuxEventTimer> vTimers;
+	CopyTimers(vTimers);
+	for(size_t i=0; i<vTimers.size(); ++i) os << "timer " << vTimers[i].msName << " " << vTimers[i].msFunction << " " << vTimers[i].mfCount << " " << vTimers[i].mbDestroyMe << "\n";
+	std::vector<cLuxUseItemCallback> vCallbacks;
+	CopyUseItemCallbacks(vCallbacks);
+	for(size_t i=0; i<vCallbacks.size(); ++i) os << "useitem " << vCallbacks[i].msName << " " << vCallbacks[i].msItem << " " << vCallbacks[i].msEntity << " " << vCallbacks[i].msFunction << "\n";
+	for(int i=0; i<GetPlayerStartNodeNum(); ++i) os << "start " << GetPlayerStartNode(i)->GetName() << " " << GetPlayerStartNode(i)->GetPosition().x << "\n";
+	cLuxNode_PlayerStart *pFirst = GetFirstPlayerStart();
+	os << "firststart " << (pFirst ? pFirst->GetName() : tString("-")) << "\n";
+	for(tLuxScriptVarMapIt vit = m_mapVars.begin(); vit != m_mapVars.end(); ++vit) os << "var " << vit->first << "=" << vit->second.msVal << "\n";
+	os << "doomed 0 deleting " << IsDeletingAllWorldEntities() << "\n";
 }
