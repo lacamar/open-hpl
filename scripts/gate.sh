@@ -238,6 +238,12 @@ half() {
 		A4B_GAMES="$(has amnesia && echo amnesia) $(has amfp && echo amfp)" OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" \
 			scripts/a4b-all.sh "$OUT" "-$impl" >> "$OUT/a4b-$impl.log" 2>&1
 	fi
+	if has amnesia; then
+		# A13a: map transfer (change map, change back, load, save at every step)
+		rm -f "$OUT"/a13atr-*-"$impl".*
+		A13A_SUFFIX="-$impl" OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" \
+			scripts/a13a-transfer.sh amnesia 02_library.map 03_dungeon.map "$OUT/a13atr" >> "$OUT/a13atr-$impl.log" 2>&1
+	fi
 	if [ -z "$RECORD" ] && has soma; then
 		# shellcheck disable=SC2046
 		ENVX=$extra sweep "$impl" soma "$OUT/play-$impl-soma.json" --play 10 $(mapargs $PLAY_MAPS)
@@ -247,7 +253,7 @@ for impl in $IMPLS; do half "$impl" & done; wait
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/rt-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt "$OUT"/rt-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -360,7 +366,7 @@ def same(name, a, b):
         r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)
         last = (r.stdout.strip().splitlines() or [""])[-1]
         return (r.returncode == 0, last if r.returncode == 0 else f"DIFFER {last}")
-    if name.startswith("a7-"):
+    if name.startswith(("a7-", "a13atr-a7")):
         tool = os.path.join(repo, "rust/tests/golden/A7/mapdump-diff.py")
         r = subprocess.run([sys.executable, tool, a, b], capture_output=True, text=True)
         last = (r.stdout.strip().splitlines() or [""])[-1]
@@ -508,7 +514,7 @@ if not quick:
         names += [f"a13a-{m}" for m in ("01_mansion_01", "06_factory")]
         names += [f"{k}{e}" for k in ("rt-factory", "rt-bilge") for e in ("", "-A", "-B")] + ["a4b-factory", "a4b-bilge"]
     if "amnesia" in games:
-        names += ["a10b-play-amnesia"]
+        names += ["a10b-play-amnesia", "a13atr-a7", "a13atr-struct"]
     has_base = os.path.isdir(base)
     if not has_base:
         print(f"no C++ baseline at {base} (record one with --record-baseline before flipping a family)")
