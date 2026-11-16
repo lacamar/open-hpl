@@ -8,6 +8,10 @@ using namespace hpl;
 
 class cSomaBase;
 
+bool OhplS8bDump();
+void OhplS8bLog(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+std::string OhplS8bHex(float afX);
+
 // Engine side of the splash and gamma screen shells: one `call` entry for every host op.
 class cOhplS8Shell
 {

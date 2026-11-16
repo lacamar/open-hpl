@@ -1,0 +1,2 @@
+tex+ textures/colorgrading/bunker_prototype_01.dds 1
+upd key=3f000000 scale=3f800000 cut=40600000 gamma=400ccccd gt=textures/colorgrading/bunker_prototype_01.dds gtg=- blend=00000000 layers= bloom=1 3f400000 43000000 3f800000,3f800000,3f800000,3f800000 grain=1 3f800000 srgb=0
