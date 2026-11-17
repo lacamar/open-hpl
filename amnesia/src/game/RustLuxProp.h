@@ -616,6 +616,13 @@ extern "C"
 {
 	uint64_t ohpl_a5e_new(OhplA5eState **out);
 	void ohpl_a5e_free(uint64_t h);
+	void ohpl_a5e_load_base(uint64_t h, const OhplGa4Vars *v, OhplGa4BaseParams *out);
+	void ohpl_a5e_effects_env(uint64_t h, bool active, bool fade, int n_ps, int n_sounds, OhplGa4EffectsIn *out);
+	void ohpl_a5e_effects_set_active(uint64_t h, bool active, bool fade, int n_ps, int n_sounds, const OhplGa4LightData *lights, int n_lights, const OhplGa4Sink *sink);
+	void ohpl_a5e_effects_update(uint64_t h, float dt, const OhplGa4LightData *lights, int n_lights, bool has_mesh, const OhplGa4Sink *sink);
+	void ohpl_a5e_update_moving(uint64_t h, float dt, const float *body, bool loop_present, bool loop_alive, const OhplGa4Host *host, const OhplGa4Sink *sink);
+	void ohpl_a5e_anim_update(uint64_t h, bool over, const OhplGa4Sink *sink);
+	float ohpl_a5e_give_damage(uint64_t h, float amount, int strength, float *out_amount);
 	const char *ohpl_a5e_str_get(uint64_t h, size_t slot, size_t *len);
 	void ohpl_a5e_str_set(uint64_t h, size_t slot, const unsigned char *p, size_t len);
 

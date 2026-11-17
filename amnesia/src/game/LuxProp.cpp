@@ -93,35 +93,11 @@ void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTra
 	// Load base properties
 	OhplGa4BaseParams bp;
 	{
-		tString sMainBody, sOn, sOff, sStart, sStop, sLoop;
 		OhplGa4VarsAdapter vars(this);
-		vars.Slot(kOhplGa4Slot_MainBody, sMainBody)
-			.Slot(kOhplGa4Slot_EffectsOnSound, sOn)
-			.Slot(kOhplGa4Slot_EffectsOffSound, sOff)
-			.Slot(kOhplGa4Slot_MoveStartSound, sStart)
-			.Slot(kOhplGa4Slot_MoveStopSound, sStop)
-			.Slot(kOhplGa4Slot_MoveLoopSound, sLoop);
-		ohpl_ga4_base_load(vars.Vars(), &bp);
-		pProp->Str(kOhplA5eStr_MainBodyName) = sMainBody;
-		pProp->Str(kOhplA5eStr_EffectsOnSound) = sOn;
-		pProp->Str(kOhplA5eStr_EffectsOffSound) = sOff;
-		pProp->Str(kOhplA5eStr_MoveStartSound) = sStart;
-		pProp->Str(kOhplA5eStr_MoveStopSound) = sStop;
-		pProp->Str(kOhplA5eStr_MoveLoopSound) = sLoop;
+		ohpl_a5e_load_base(pProp->mhState, vars.Vars(), &bp);
 	}
-	pProp->S().health = bp.health;
-	pProp->S().toughness = bp.toughness;
 	pProp->mfMaxFocusDistance = bp.max_focus_distance;
-	pProp->S().dissolve_on_destruction = bp.dissolve_on_destruction;
-	pProp->S().dissolve_time = bp.dissolve_time;
-	pProp->S().show_mesh = bp.show_mesh;
 	if(mpEntity) mpEntity->SetVisible(pProp->S().show_mesh);
-	pProp->S().show_hints = bp.show_hints;
-	pProp->S().effects_on_time = bp.effects_on_time;
-	pProp->S().effects_off_time = bp.effects_off_time;
-	pProp->EffectsOffLightColor() = cColor(bp.effects_off_light_color[0], bp.effects_off_light_color[1], bp.effects_off_light_color[2], bp.effects_off_light_color[3]);
-	pProp->S().effects_off_light_radius = bp.effects_off_light_radius;
-	pProp->S().move_check_collision = bp.move_check_collision;
 
 	gpBase->PreloadSound(tString(pProp->Str(kOhplA5eStr_MoveStartSound)));
 	gpBase->PreloadSound(tString(pProp->Str(kOhplA5eStr_MoveStopSound)));
@@ -483,23 +459,14 @@ void iLuxProp::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 OhplGa4EffectsIn iLuxProp::Ga4EffectsEnv(bool abActive, bool abFade)
 {
 	OhplGa4EffectsIn env;
-	env.active = abActive;
-	env.fade = abFade;
-	env.n_ps = (int)mvParticleSystems.size();
-	env.n_sounds = (int)mvSoundEntities.size();
-	env.on_time = S().effects_on_time;
-	env.off_time = S().effects_off_time;
-	env.off_radius = S().effects_off_light_radius;
-	env.on_sound = Str(kOhplA5eStr_EffectsOnSound) != "";
-	env.off_sound = Str(kOhplA5eStr_EffectsOffSound) != "";
+	ohpl_a5e_effects_env(mhState, abActive, abFade, (int)mvParticleSystems.size(), (int)mvSoundEntities.size(), &env);
 	return env;
 }
 
 void iLuxProp::SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)
 {
-	OhplGa4EffectsIn env = Ga4EffectsEnv(abActive, abFadeAndPlaySounds);
 	OhplGa4Run run(this);
-	ohpl_ga4_effects_set_active(&Base(), &env, Ga4Lights(), Ga4LightNum(), run.Sink());
+	ohpl_a5e_effects_set_active(mhState, abActive, abFadeAndPlaySounds, (int)mvParticleSystems.size(), (int)mvSoundEntities.size(), Ga4Lights(), Ga4LightNum(), run.Sink());
 	run.Finish();
 }
 
@@ -508,7 +475,7 @@ void iLuxProp::SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)
 void iLuxProp::GiveDamage(float afAmount, int alStrength)
 {
 	float fAmount;
-	float fHealth = ohpl_ga4_give_damage(S().health, S().toughness, afAmount, alStrength, &fAmount);
+	float fHealth = ohpl_a5e_give_damage(mhState, afAmount, alStrength, &fAmount);
 
 	SetHealth(fHealth);
 
@@ -1077,7 +1044,7 @@ bool iLuxProp::BillboardConnectedToLight(cBillboard *apBB)
 void iLuxProp::UpdateEffectFading(float afTimeStep)
 {
 	OhplGa4Run run(this);
-	ohpl_ga4_effects_update(&Base(), afTimeStep, S().effects_on_time, S().effects_off_time, Ga4Lights(), Ga4LightNum(), mpMeshEntity!=NULL, run.Sink());
+	ohpl_a5e_effects_update(mhState, afTimeStep, Ga4Lights(), Ga4LightNum(), mpMeshEntity!=NULL, run.Sink());
 	run.Finish();
 }
 
@@ -1125,7 +1092,7 @@ void iLuxProp::UpdateAnimation(float afTimeStep)
 	}
 
 	OhplGa4Run run(this);
-	ohpl_ga4_anim_update(&S().anim_index, bOver, Str(kOhplA5eStr_AnimCallback) != "", run.Sink());
+	ohpl_a5e_anim_update(mhState, bOver, run.Sink());
 	run.Finish();
 }
 
@@ -1143,17 +1110,10 @@ void iLuxProp::UpdateMoveSoundVolume()
 
 void iLuxProp::UpdateMoving(float afTimeStep)
 {
-	OhplGa4MoveIn in;
-	memset(&in, 0, sizeof(in));
-	in.dt = afTimeStep;
-	if(Base().moving) memcpy(in.body, GetMainBody()->GetLocalMatrix().v, sizeof(in.body));
-	in.check_collision = S().move_check_collision;
-	in.loop_present = mpMoveLoopSound != NULL;
-	in.loop_alive = mpMoveLoopSound && mpMap->GetWorld()->SoundEntityExists(mpMoveLoopSound, S().move_loop_sound_id);
-	in.loop_sound = Str(kOhplA5eStr_MoveLoopSound) != "";
+	bool bLoopAlive = mpMoveLoopSound && mpMap->GetWorld()->SoundEntityExists(mpMoveLoopSound, S().move_loop_sound_id);
 
 	OhplGa4Run run(this);
-	ohpl_ga4_update_moving(&Base(), &in, run.Host(), run.Sink());
+	ohpl_a5e_update_moving(mhState, afTimeStep, Base().moving ? GetMainBody()->GetLocalMatrix().v : NULL, mpMoveLoopSound != NULL, bLoopAlive, run.Host(), run.Sink());
 	run.Finish();
 }
 
