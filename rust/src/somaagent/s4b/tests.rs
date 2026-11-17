@@ -158,3 +158,24 @@ fn sound_broadcast_reaches_each_listener() {
         core::destroy_agent(ent);
     }
 }
+
+#[test]
+fn cpp_recorded_path_blobs_replay_byte_for_byte() {
+    setup(&[]);
+    let blobs = include_str!("../../../tests/golden/S4b/saveagent_paths.txt");
+    for (i, line) in blobs.lines().enumerate() {
+        let mut blob: Vec<u8> = (0..line.len() / 2)
+            .map(|k| u8::from_str_radix(&line[2 * k..2 * k + 2], 16).unwrap())
+            .collect();
+        if blob[0] == 0 {
+            // a stopped agent's goal is not restored by the loader
+            blob[1..13].fill(0);
+        }
+        let ent = 0x6000 + i;
+        add_comp(ent, Comp::new(ent, COMP_CHAR_MOVER, K::Cm(Cm::new(0))));
+        add_comp(ent, Comp::new(ent, COMP_PATHFINDER, K::Pf(Pf::new())));
+        api::load_path(ent, &blob);
+        assert_eq!(api::save_path(ent), blob, "blob {i}");
+        core::destroy_agent(ent);
+    }
+}

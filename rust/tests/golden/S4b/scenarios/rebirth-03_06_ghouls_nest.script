@@ -1,0 +1,14 @@
+3 wake Ghoul_Blocker_2
+20 player -21.163 0.225 30.226
+30 msg Ghoul_Blocker_2 4
+40 state Ghoul_Blocker_2 1
+55 state Ghoul_Blocker_2 2
+70 state Ghoul_Blocker_2 3
+85 player -29.663 0.225 36.226
+100 msg Ghoul_Blocker_2 8
+110 state Ghoul_Blocker_2 0
+125 dumpsave
+126 save s4brt.sav
+160 load s4brt.sav
+240 dumpsave
+280 END
