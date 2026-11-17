@@ -20,7 +20,7 @@ pub struct PlayParams {
     pub silent: bool,
 }
 
-fn dist(a: Vector3f, b: Vector3f) -> f32 {
+pub(super) fn dist(a: Vector3f, b: Vector3f) -> f32 {
     let dx = b.x - a.x;
     let dy = b.y - a.y;
     let dz = b.z - a.z;

@@ -5,15 +5,12 @@
 //! are valid for the stated count. Vectors and colours cross as pointers.
 
 use super::scenemgr::{self, ViewportIn};
-use super::soundentity::{self, PlayResult, SoundCfg, SoundHost, SoundState};
 use super::world::{self, FieldIn};
 use crate::types::{Color, Vector3f};
 use std::ffi::c_void;
 
 const _: () = {
-    use std::mem::{offset_of, size_of};
-    assert!(size_of::<SoundCfg>() == 12 && offset_of!(SoundCfg, looping) == 8);
-    assert!(size_of::<SoundState>() == 16 && offset_of!(SoundState, stopped) == 8);
+    use std::mem::size_of;
     assert!(size_of::<FieldIn>() == 28 && size_of::<ViewportIn>() == 6);
     assert!(size_of::<Str>() == 16);
 };
@@ -44,177 +41,6 @@ unsafe fn bytes<'a>(s: Str) -> &'a [u8] {
     }
     // SAFETY: caller contract.
     unsafe { std::slice::from_raw_parts(s.ptr, s.len) }
-}
-
-/// Callback table into `cSoundEntity`; every entry is non-null and valid for the call.
-#[repr(C)]
-pub struct SoundVt {
-    ctx: *mut c_void,
-    silent: unsafe extern "C" fn(*mut c_void) -> bool,
-    has_entry: unsafe extern "C" fn(*mut c_void, i32) -> bool,
-    is_valid: unsafe extern "C" fn(*mut c_void, i32) -> bool,
-    clear_entry: unsafe extern "C" fn(*mut c_void, i32),
-    stop_entry: unsafe extern "C" fn(*mut c_void, i32),
-    fade_in: unsafe extern "C" fn(*mut c_void, i32, f32),
-    fade_out: unsafe extern "C" fn(*mut c_void, i32, f32),
-    update_position: unsafe extern "C" fn(*mut c_void, i32),
-    play_sound: unsafe extern "C" fn(*mut c_void, i32, bool) -> i32,
-    on_start: unsafe extern "C" fn(*mut c_void),
-    emitter: unsafe extern "C" fn(*mut c_void) -> bool,
-    listener_sqr_dist: unsafe extern "C" fn(*mut c_void) -> f32,
-}
-
-impl SoundHost for SoundVt {
-    fn silent(&mut self) -> bool {
-        // SAFETY: table contract.
-        unsafe { (self.silent)(self.ctx) }
-    }
-    fn has_entry(&mut self, t: i32) -> bool {
-        // SAFETY: table contract.
-        unsafe { (self.has_entry)(self.ctx, t) }
-    }
-    fn is_valid(&mut self, t: i32) -> bool {
-        // SAFETY: table contract.
-        unsafe { (self.is_valid)(self.ctx, t) }
-    }
-    fn clear_entry(&mut self, t: i32) {
-        // SAFETY: table contract.
-        unsafe { (self.clear_entry)(self.ctx, t) }
-    }
-    fn stop_entry(&mut self, t: i32) {
-        // SAFETY: table contract.
-        unsafe { (self.stop_entry)(self.ctx, t) }
-    }
-    fn fade_in(&mut self, t: i32, speed: f32) {
-        // SAFETY: table contract.
-        unsafe { (self.fade_in)(self.ctx, t, speed) }
-    }
-    fn fade_out(&mut self, t: i32, speed: f32) {
-        // SAFETY: table contract.
-        unsafe { (self.fade_out)(self.ctx, t, speed) }
-    }
-    fn update_position(&mut self, t: i32) {
-        // SAFETY: table contract.
-        unsafe { (self.update_position)(self.ctx, t) }
-    }
-    fn play_sound(&mut self, t: i32, looping: bool) -> PlayResult {
-        // SAFETY: table contract.
-        match unsafe { (self.play_sound)(self.ctx, t, looping) } {
-            0 => PlayResult::Played,
-            1 => PlayResult::NoName,
-            2 => PlayResult::Failed {
-                not_enough_channels: false,
-            },
-            _ => PlayResult::Failed {
-                not_enough_channels: true,
-            },
-        }
-    }
-    fn on_start(&mut self) {
-        // SAFETY: table contract.
-        unsafe { (self.on_start)(self.ctx) }
-    }
-    fn emitter(&mut self) -> bool {
-        // SAFETY: table contract.
-        unsafe { (self.emitter)(self.ctx) }
-    }
-    fn listener_sqr_dist(&mut self) -> f32 {
-        // SAFETY: table contract.
-        unsafe { (self.listener_sqr_dist)(self.ctx) }
-    }
-}
-
-/// # Safety
-/// `cfg` and `out` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_snd_init(
-    cfg: *const SoundCfg,
-    remove_when_over: bool,
-    silent: bool,
-    out: *mut SoundState,
-) {
-    // SAFETY: caller contract.
-    unsafe { *out = soundentity::init(&*cfg, remove_when_over, silent) }
-}
-
-/// # Safety
-/// `s` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_snd_priority_release(s: *mut SoundState) {
-    // SAFETY: caller contract.
-    soundentity::priority_release(unsafe { &mut *s })
-}
-
-/// # Safety
-/// `s` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_snd_is_stopped(
-    s: *const SoundState,
-    stop_entry_present: bool,
-) -> bool {
-    // SAFETY: caller contract.
-    soundentity::is_stopped(unsafe { &*s }, stop_entry_present)
-}
-
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_snd_play(
-    s: *mut SoundState,
-    vt: *mut SoundVt,
-    cfg: *const SoundCfg,
-    play_start: bool,
-) {
-    // SAFETY: caller contract.
-    unsafe { soundentity::play(&mut *s, &mut *vt, &*cfg, play_start) }
-}
-
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_snd_stop(
-    s: *mut SoundState,
-    vt: *mut SoundVt,
-    cfg: *const SoundCfg,
-    play_end: bool,
-) {
-    // SAFETY: caller contract.
-    unsafe { soundentity::stop(&mut *s, &mut *vt, &*cfg, play_end) }
-}
-
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_snd_fade_in(
-    s: *mut SoundState,
-    vt: *mut SoundVt,
-    cfg: *const SoundCfg,
-    speed: f32,
-) {
-    // SAFETY: caller contract.
-    unsafe { soundentity::fade_in(&mut *s, &mut *vt, &*cfg, speed) }
-}
-
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_snd_fade_out(s: *mut SoundState, vt: *mut SoundVt, speed: f32) {
-    // SAFETY: caller contract.
-    unsafe { soundentity::fade_out(&mut *s, &mut *vt, speed) }
-}
-
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_snd_update(
-    s: *mut SoundState,
-    vt: *mut SoundVt,
-    cfg: *const SoundCfg,
-    dt: f32,
-    max_distance: f32,
-) {
-    // SAFETY: caller contract.
-    unsafe { soundentity::update(&mut *s, &mut *vt, &*cfg, dt, max_distance) }
 }
 
 /// # Safety

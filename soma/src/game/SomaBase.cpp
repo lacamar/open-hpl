@@ -263,15 +263,18 @@ static void cSomaBase_HeadlessCmd_ImGuiCursor(void *apUserData, const cHeadlessR
 static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	std::map<tString, int> mapCount;
-	tSoundEntryList *pList = gpSomaBase->mpEngine->GetSound()->GetSoundHandler()->GetEntryList();
-	for (cSoundEntry *pEntry : *pList)
+	cSoundHandler *pSoundHandler = gpSomaBase->mpEngine->GetSound()->GetSoundHandler();
+	std::vector<cSoundEntry *> vEntries;
+	for (size_t i = 0; i < pSoundHandler->GetEntryNum(); ++i)
+		vEntries.push_back(pSoundHandler->GetEntryAt(i));
+	for (cSoundEntry *pEntry : vEntries)
 		mapCount[pEntry->GetName() + (pEntry->GetChannel()->GetLooping() ? " (loop)" : "")]++;
 	tString sEntries;
 	for (auto &it : mapCount)
 		sEntries += cString::ToString(it.second) + " " + it.first + "\n";
 	cVector3f vListener = gpSomaBase->mpEngine->GetSound()->GetLowLevel()->GetListenerPosition();
 	tString sDetail;
-	for (cSoundEntry *pEntry : *pList)
+	for (cSoundEntry *pEntry : vEntries)
 	{
 		iSoundChannel *pCh = pEntry->GetChannel();
 		float fDist = pCh->Get3D() ? cMath::Vector3Dist(pCh->GetPositionIsRelative() ? vListener + pCh->GetRelPosition() : pCh->GetPosition(), vListener) : 0;
@@ -281,12 +284,12 @@ static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRe
 				   cString::ToString(pCh->GetMaxDistance()) + "|" + cString::ToString((float)pCh->GetElapsedTime()) + "|" +
 				   cString::ToString((float)pCh->GetTotalTime()) + "|" + (pCh->GetPaused() ? "1" : "0") + "\n";
 	}
-	aResp.Set("count", (int)pList->size());
+	aResp.Set("count", (int)vEntries.size());
 	aResp.Set("entries", sEntries);
 	aResp.Set("detail", sDetail);
 	tString sRecent;
-	for (const tString &sLine : gpSomaBase->mpEngine->GetSound()->GetSoundHandler()->GetRecentStarts())
-		sRecent += sLine + "\n";
+	for (size_t i = 0; i < pSoundHandler->GetRecentStartNum(); ++i)
+		sRecent += pSoundHandler->GetRecentStart(i) + "\n";
 	aResp.Set("recent", sRecent);
 	if (cWorld *pWorld = gpSomaBase->GetCurrentWorld())
 	{

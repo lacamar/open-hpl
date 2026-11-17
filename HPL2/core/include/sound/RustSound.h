@@ -1,7 +1,8 @@
 #ifndef HPL_RUST_SOUND_H
 #define HPL_RUST_SOUND_H
 
-// C ABI of rust/src/sound/ffi.rs (layouts: rust/src/sound/{channel,entry,music,play}.rs).
+// C ABI of rust/src/sound/own_ffi.rs. The handler, entries, entity data, sound entities and the
+// music handler are Rust objects; the C++ classes are inline facades over these calls.
 
 #include <cstddef>
 #include <cstdint>
@@ -42,74 +43,49 @@ struct OhplSoundChannelOps
 	double (*elapsed_time)(void*);
 	double (*total_time)(void*);
 	void (*set_elapsed_time)(void*, double);
+	void (*set_blockable)(void*, bool);
+	void (*set_block_volume_mul)(void*, float);
+	void (*set_filter)(void*, int, float);
 };
 
-struct OhplSoundHostOps
+struct OhplSndEventOps
 {
-	float (*global_speed)(void*, uint32_t);
-	float (*global_volume)(void*, uint32_t);
-	bool (*silent)(void*);
-	bool (*is_blocked)(void*, const hpl::cVector3f*);
-	void (*listener_position)(void*, hpl::cVector3f*);
-	void (*listener_matrix)(void*, hpl::cMatrixf*);
+	void (*play)(void*);
+	void (*stop)(void*, bool);
+	void (*fade_in)(void*, float);
+	void (*fade_out)(void*, float);
+	bool (*is_stopped)(void*);
+	void (*update)(void*, float);
+	void (*destroy)(void*);
 };
 
-struct OhplSoundEntryState
+struct OhplSndHost
 {
-	float normal_volume;
-	float volume_mul;
-	float volume_fade_dest;
-	float volume_fade_speed;
-	float normal_speed;
-	float speed_mul;
-	float speed_fade_dest;
-	float speed_fade_speed;
-	float block_mul;
-	float block_fade_dest;
-	float block_fade_speed;
-	uint32_t entry_type;
-	bool stop_after_fade_out;
-	bool first_time;
-	bool stop_disabled;
-	bool is_3d;
-	bool stream;
+	const OhplSoundChannelOps* channel;
+	const OhplSndEventOps* event;
+	void* (*create_channel)(void* res, const unsigned char* name, size_t len, int priority, bool stream, bool* notEnough);
+	void (*delete_channel)(void*);
+	bool (*is_blocked)(void* world, void* lowLevel, const hpl::cVector3f*);
+	void (*listener_position)(void* lowLevel, hpl::cVector3f*);
+	void (*listener_matrix)(void* lowLevel, hpl::cMatrixf*);
+	void (*listener_axes)(void* lowLevel, float* forwardUp);
+	uint64_t (*app_time)();
+	void (*log)(int level, const unsigned char*, size_t);
+	void (*preload)(void* res, const unsigned char*, size_t);
+	void (*entity_pos)(void* entity, hpl::cVector3f*);
+	const unsigned char* (*entity_name)(void* entity, size_t* len);
+	bool (*world_is_emitter)(void* world);
+	void (*data_release)(void* dataShell);
+	void (*on_start)(void* entity);
+	void* (*create_stream)(void* res, const unsigned char*, size_t, bool loop);
+	void (*set_lock)(void* lock, const unsigned char*, size_t, float, bool);
 };
 
-struct OhplSoundPlayParams
-{
-	hpl::cVector3f pos;
-	float min_dist;
-	float max_dist;
-	int priority_modifier;
-	uint32_t entry_type;
-	bool looping;
-	bool relative;
-	bool is_3d;
-	bool silent;
-};
-
-struct OhplSoundProps
-{
-	float volume;
-	float max_distance;
-	float min_distance;
-	float block_volume_mul;
-	float random;
-	float interval;
-	int priority;
-	bool use_3d;
-	bool looping;
-	bool stream;
-	bool blockable;
-	bool fade_start;
-	bool fade_stop;
-};
-
-struct OhplSntSink
-{
-	void* ctx;
-	void (*add_name)(void*, uint32_t, const unsigned char*, size_t);
-};
+struct OhplSndHandler;
+struct OhplSndRec;
+struct OhplSndData;
+struct OhplSndEnt;
+struct OhplMusic;
 
 struct OhplMusicSong
 {
@@ -120,76 +96,90 @@ struct OhplMusicSong
 	bool mbLoop;
 };
 
-struct OhplMusicHostOps
-{
-	const OhplSoundChannelOps* channel;
-	OhplMusicSong* (*new_song)(void*);
-	void (*delete_song)(void*, OhplMusicSong*);
-	void* (*create_stream)(void*, const unsigned char*, size_t, bool);
-	void (*set_song_name)(void*, OhplMusicSong*, const unsigned char*, size_t);
-	void (*set_lock)(void*, void*, const unsigned char*, size_t, float, bool);
-};
+struct OhplSndGsEntry;
 
-struct OhplMusic;
-struct OhplH16SndHandler;
-
-struct OhplH16ShellOps
-{
-	bool (*update)(void*, void*, float);
-	void (*destroy)(void*, void*);
-};
-
-static_assert(sizeof(OhplSoundEntryState) == 56 && offsetof(OhplSoundEntryState, entry_type) == 44, "OhplSoundEntryState layout");
-static_assert(sizeof(OhplSoundPlayParams) == 32 && offsetof(OhplSoundPlayParams, entry_type) == 24, "OhplSoundPlayParams layout");
-static_assert(sizeof(OhplSoundProps) == 36 && offsetof(OhplSoundProps, priority) == 24, "OhplSoundProps layout");
 static_assert(sizeof(OhplMusicSong) == 24 && offsetof(OhplMusicSong, mfMaxVolume) == 8, "OhplMusicSong layout");
 
+namespace hpl { const OhplSndHost* OhplSndHostTable(); }
+
 extern "C" {
-	int ohpl_snt_load(const OhplXmlDoc* doc, bool loaded, const OhplSntSink* sink, OhplSoundProps* props);
-	int ohpl_snd_random_index(int size, int* previous, bool skipPrevious);
-	int ohpl_snd_name_index(int size, int idx);
+	OhplSndHandler* ohpl_sndh_new(const OhplSndHost* host, void* lowLevel, void* resources);
+	void ohpl_sndh_free(OhplSndHandler*);
+	void ohpl_sndh_set_world(OhplSndHandler*, void* world);
+	void* ohpl_sndh_lowlevel(OhplSndHandler*);
+	void ohpl_sndh_set_silent(OhplSndHandler*, bool);
+	bool ohpl_sndh_silent(OhplSndHandler*);
+	float ohpl_sndh_global_volume(OhplSndHandler*, uint32_t type);
+	float ohpl_sndh_global_speed(OhplSndHandler*, uint32_t type);
+	void ohpl_sndh_update(OhplSndHandler*, float dt);
+	OhplSndRec* ohpl_sndh_play(OhplSndHandler*, const unsigned char* name, size_t len, bool looping, float volume, const hpl::cVector3f* pos,
+							   float minDist, float maxDist, uint32_t entryType, bool relative, bool is3d, int priorityModifier, bool stream, bool* notEnough);
+	bool ohpl_sndh_stop(OhplSndHandler*, const unsigned char* name, size_t len);
+	bool ohpl_sndh_is_playing(OhplSndHandler*, const unsigned char* name, size_t len);
+	void ohpl_sndh_each(OhplSndHandler*, uint32_t mask, int op, float speed, bool disableStop);
+	bool ohpl_sndh_is_valid(OhplSndHandler*, const OhplSndRec*, int id);
+	size_t ohpl_sndh_count(OhplSndHandler*);
+	OhplSndRec* ohpl_sndh_entry_at(OhplSndHandler*, size_t i);
+	const unsigned char* ohpl_sndh_recent(OhplSndHandler*, size_t i, size_t* len);
+	size_t ohpl_sndh_recent_count(OhplSndHandler*);
+	OhplSndGsEntry* ohpl_sndh_gs_entry(OhplSndHandler*, size_t kind, int id, bool force);
+	int ohpl_sndh_gs_create(OhplSndHandler*, size_t kind);
+	bool ohpl_sndh_gs_exists(OhplSndHandler*, size_t kind, int id);
+	void ohpl_sndh_gs_destroy(OhplSndHandler*, size_t kind, int id);
+	float ohpl_sndh_gs_calc(OhplSndHandler*, size_t kind, uint32_t types, int calc, float def);
+	int ohpl_sndh_gs_set(OhplSndHandler*, size_t kind, float val, uint32_t types, int id);
+	int ohpl_sndh_gs_fade(OhplSndHandler*, size_t kind, float dest, float speed, uint32_t types, int id, bool destroy);
 
-	void ohpl_snd_entry_init(OhplSoundEntryState* state, float volume, uint32_t type, bool is3d, bool stream);
-	int ohpl_snd_entry_update(OhplSoundEntryState* state, float dt, const OhplSoundChannelOps* chOps, void* ch, const OhplSoundHostOps* hostOps, void* handler);
-	void ohpl_snd_entry_stop(OhplSoundEntryState* state, const OhplSoundChannelOps* chOps, void* ch);
-	void ohpl_snd_entry_fade_volume(OhplSoundEntryState* state, float dest, float speed);
-	void ohpl_snd_entry_fade_speed(OhplSoundEntryState* state, float dest, float speed);
-	void ohpl_snd_entry_fade_out(OhplSoundEntryState* state, float speed);
-	void ohpl_snd_entry_fade_in(OhplSoundEntryState* state, float volumeMul, float speed);
+	const unsigned char* ohpl_sndent_name(OhplSndRec*, size_t* len);
+	int ohpl_sndent_id(OhplSndRec*);
+	void* ohpl_sndent_channel(OhplSndRec*);
+	void ohpl_sndent_set(OhplSndRec*, int what, float v);
+	float ohpl_sndent_get(OhplSndRec*, int what);
+	uint32_t ohpl_sndent_type(OhplSndRec*);
+	void ohpl_sndent_stop(OhplSndRec*);
+	void ohpl_sndent_set_paused(OhplSndRec*, bool);
+	void ohpl_sndent_fade(OhplSndRec*, int what, float dest, float speed);
 
-	int ohpl_snd_play_priority(const hpl::cVector3f* pos, const hpl::cVector3f* listener, float minDist, float maxDist, bool is3d, bool relative);
-	void ohpl_snd_play_setup(const OhplSoundPlayParams* params, int distPriority, const hpl::cMatrixf* listener, const OhplSoundChannelOps* chOps, void* ch);
+	OhplSndData* ohpl_sndd_new(void* shell);
+	void ohpl_sndd_free(OhplSndData*);
+	void ohpl_sndd_set_lazy(bool);
+	float ohpl_sndd_get(OhplSndData*, int what);
+	void ohpl_sndd_set(OhplSndData*, int what, float v);
+	size_t ohpl_sndd_num(OhplSndData*, size_t type);
+	const unsigned char* ohpl_sndd_name(OhplSndData*, size_t type, int idx, bool random, bool skipPrevious, size_t* len);
+	void ohpl_sndd_put_name(OhplSndData*, size_t type, int idx, const unsigned char* name, size_t len);
+	int ohpl_sndd_load(OhplSndData*, const OhplXmlDoc* doc, bool loaded);
+	void ohpl_sndd_preload(OhplSndData*, const OhplSndHost* host, void* resources);
 
-	OhplH16SndHandler* ohpl_sndh_new();
-	void ohpl_sndh_free(OhplH16SndHandler* h);
-	void ohpl_sndh_set_silent(OhplH16SndHandler* h, bool silent);
-	bool ohpl_sndh_silent(const OhplH16SndHandler* h);
-	void ohpl_sndh_set_globals(OhplH16SndHandler* h, const float* volume, const float* speed);
-	float ohpl_sndh_global_volume(const OhplH16SndHandler* h, uint32_t type);
-	float ohpl_sndh_global_speed(const OhplH16SndHandler* h, uint32_t type);
-	uint64_t ohpl_sndh_entry_new(OhplH16SndHandler* h, void* shell, const unsigned char* name, size_t len, float volume, uint32_t type, bool is3d, bool stream, OhplSoundEntryState** state);
-	int ohpl_sndh_entry_id(const OhplH16SndHandler* h, uint64_t entry);
-	void ohpl_sndh_push_back(OhplH16SndHandler* h, uint64_t entry);
-	void ohpl_sndh_entry_free(OhplH16SndHandler* h, uint64_t entry);
-	size_t ohpl_sndh_count(const OhplH16SndHandler* h);
-	void* ohpl_sndh_shell_at(const OhplH16SndHandler* h, size_t i);
-	void* ohpl_sndh_find(const OhplH16SndHandler* h, const unsigned char* name, size_t len);
-	bool ohpl_sndh_is_valid(const OhplH16SndHandler* h, void* shell, int id);
-	void ohpl_sndh_update(OhplH16SndHandler* h, float dt, const OhplH16ShellOps* ops, void* ctx);
-	void ohpl_sndh_for_each(OhplH16SndHandler* h, uint32_t mask, void (*f)(void*, void*), void* ctx);
+	OhplSndEnt* ohpl_sndse_new(OhplSndHandler*, OhplSndData*, void* dataShell, void* shell, void* world, bool removeWhenOver, int creationId);
+	void ohpl_sndse_free(OhplSndEnt*);
+	void ohpl_sndse_play(OhplSndEnt*, bool playStart);
+	void ohpl_sndse_stop(OhplSndEnt*, bool playEnd);
+	void ohpl_sndse_fade_in(OhplSndEnt*, float speed);
+	void ohpl_sndse_fade_out(OhplSndEnt*, float speed);
+	void ohpl_sndse_update(OhplSndEnt*, float dt);
+	bool ohpl_sndse_is_stopped(OhplSndEnt*);
+	int ohpl_sndse_flag(OhplSndEnt*, int what);
+	void ohpl_sndse_set_force_gui(OhplSndEnt*, bool);
+	float ohpl_sndse_get(OhplSndEnt*, int what);
+	void ohpl_sndse_set(OhplSndEnt*, int what, float v);
+	OhplSndRec* ohpl_sndse_entry(OhplSndEnt*, size_t type, bool check);
+	void ohpl_sndse_set_event(OhplSndEnt*, void* event);
+	void* ohpl_sndse_event(OhplSndEnt*);
 
-	OhplMusic* ohpl_music_new();
-	void ohpl_music_free(OhplMusic* m, const OhplMusicHostOps* ops, void* ctx);
-	bool ohpl_music_play(OhplMusic* m, const OhplMusicHostOps* ops, void* ctx, const unsigned char* name, size_t len, float volume, float fadeStep, bool loop, bool resume);
-	void ohpl_music_stop(OhplMusic* m, const OhplMusicHostOps* ops, void* ctx, float fadeStep);
-	void ohpl_music_set_paused(OhplMusic* m, const OhplMusicHostOps* ops, void* ctx, bool paused);
-	void ohpl_music_lock(OhplMusic* m, void* lock);
-	void ohpl_music_fade_volume_mul(OhplMusic* m, float dest, float speed);
-	void ohpl_music_set_volume_mul(OhplMusic* m, float mul);
-	float ohpl_music_volume_mul(const OhplMusic* m);
-	OhplMusicSong* ohpl_music_main_song(const OhplMusic* m);
-	void ohpl_music_reset_resume(OhplMusic* m);
-	void ohpl_music_update(OhplMusic* m, const OhplMusicHostOps* ops, void* ctx, float dt);
+	OhplMusic* ohpl_music_new(const OhplSndHost* host, void* resources);
+	void ohpl_music_free(OhplMusic*);
+	bool ohpl_music_play(OhplMusic*, const unsigned char* name, size_t len, float volume, float fadeStep, bool loop, bool resume);
+	void ohpl_music_stop(OhplMusic*, float fadeStep);
+	void ohpl_music_set_paused(OhplMusic*, bool);
+	void ohpl_music_lock(OhplMusic*, void* lock);
+	void ohpl_music_fade_volume_mul(OhplMusic*, float dest, float speed);
+	void ohpl_music_set_volume_mul(OhplMusic*, float mul);
+	float ohpl_music_volume_mul(OhplMusic*);
+	OhplMusicSong* ohpl_music_main_song(OhplMusic*);
+	const unsigned char* ohpl_music_song_name(OhplMusicSong*, size_t* len);
+	void ohpl_music_reset_resume(OhplMusic*);
+	void ohpl_music_update(OhplMusic*, float dt);
 }
 
 #endif

@@ -297,7 +297,7 @@ void cLuxEffectHandler_SoundMul_SaveData::FromEntry(cMultipleSettingsHandler::cG
 	}
 }
 
-void cLuxEffectHandler_SoundMul_SaveData::ToEntry(int alIdx, cMultipleSettingsHandler *apHandler)
+void cLuxEffectHandler_SoundMul_SaveData::ToEntry(int alIdx, cSoundSettings *apHandler)
 {
 	if(mbActive)
 	{
@@ -336,7 +336,7 @@ int cLuxEffectHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int a
 	cLuxMap *apMap = e.mpMap;
 	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
 	cContainerVec<cLuxEffectHandler_SoundMul_SaveData> &vMul = alA == eOhplGa6Kind_Volume ? mvGlobalSoundVolumeMul : mvGlobalSoundSpeedMul;
-	cMultipleSettingsHandler *pMulHandler = alA == eOhplGa6Kind_Volume ? pSoundHandler->GetGlobalVolumeSettingsHandler() : pSoundHandler->GetGlobalSpeedSettingsHandler();
+	cSoundSettings *pMulHandler = alA == eOhplGa6Kind_Volume ? pSoundHandler->GetGlobalVolumeSettingsHandler() : pSoundHandler->GetGlobalSpeedSettingsHandler();
 	switch(alOp)
 	{
 	case eOhplGa6Op_EffectFromBase:
@@ -576,7 +576,7 @@ int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int al
 		return e.mpEntry != NULL;
 	case eOhplGa6Op_MusicFromSong:
 		{
-					msCurrentMusic = pMusicEntry->msFileName;
+					msCurrentMusic = pMusicEntry->GetFileName();
 					mfCurrentMusicMaxVolume = pMusicEntry->mfMaxVolume;
 					mfCurrentMusicVolume = pMusicEntry->mfVolume;
 					mfCurrentMusicVolumeAdd = pMusicEntry->mfVolumeAdd;

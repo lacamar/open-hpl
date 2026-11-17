@@ -3,54 +3,19 @@
 //! (`soma/src/game/SomaSoundHost.cpp`).
 
 use super::instance::{EntityInfo, Filter, Host, Listener, PlayReq};
+use crate::sound::own::{PlayArgs, Rec, entity_of, handler};
+use crate::types::Vector3f;
 use std::ffi::c_void;
 use std::sync::OnceLock;
-
-#[repr(C)]
-pub struct PlayReqC {
-    pub kind: u8,
-    pub file: *const u8,
-    pub file_len: usize,
-    pub looped: bool,
-    pub pos: [f32; 3],
-    pub entry_type: i32,
-    pub stream: bool,
-}
 
 pub type Sink = unsafe extern "C" fn(*mut c_void, *const u8, usize);
 
 #[repr(C)]
 pub struct S7Host {
-    pub valid: unsafe extern "C" fn(usize, i32) -> bool,
-    pub play: unsafe extern "C" fn(*const PlayReqC, *mut usize, *mut i32) -> bool,
-    pub stop: unsafe extern "C" fn(usize),
-    pub pause: unsafe extern "C" fn(usize, bool),
-    pub total_time: unsafe extern "C" fn(usize) -> f64,
-    pub set_looping: unsafe extern "C" fn(usize, bool),
-    pub set_filter: unsafe extern "C" fn(usize, i32, f32),
-    pub set_position: unsafe extern "C" fn(usize, *const f32),
-    pub set_default_volume: unsafe extern "C" fn(usize, f32),
-    pub set_default_speed: unsafe extern "C" fn(usize, f32),
-    pub listener: unsafe extern "C" fn(*mut f32),
-    pub entity: unsafe extern "C" fn(usize, *mut f32),
-    pub set_global_volume: unsafe extern "C" fn(f32, u32, i32) -> i32,
-    pub global_volume_of: unsafe extern "C" fn(i32) -> f32,
-    pub fade_global_volume: unsafe extern "C" fn(f32, f32, u32, i32, bool) -> i32,
-    pub set_global_speed: unsafe extern "C" fn(f32, u32, i32) -> i32,
-    pub global_speed_of: unsafe extern "C" fn(i32) -> f32,
-    pub fade_global_speed: unsafe extern "C" fn(f32, f32, u32, i32, bool) -> i32,
-    pub fade_out_all: unsafe extern "C" fn(u32, f32),
-    pub music_play: unsafe extern "C" fn(*const u8, usize, f32, f32, bool, bool),
-    pub music_stop: unsafe extern "C" fn(f32),
-    pub music_has_song: unsafe extern "C" fn() -> bool,
-    pub music_fade_volume_mul: unsafe extern "C" fn(f32, f32),
-    pub music_volume_mul: unsafe extern "C" fn() -> f32,
     pub entity_active: unsafe extern "C" fn(u8, i32, i32) -> bool,
     pub find_file: unsafe extern "C" fn(*const u8, usize, Sink, *mut c_void) -> bool,
     pub add_resource_dir: unsafe extern "C" fn(*const u8, usize),
     pub data_new: unsafe extern "C" fn(*const u8, usize) -> usize,
-    pub data_add_sound: unsafe extern "C" fn(usize, *const u8, usize),
-    pub data_setup: unsafe extern "C" fn(usize, f32, f32, bool, bool),
     pub install_updater: unsafe extern "C" fn(),
     pub install_hooks: unsafe extern "C" fn(),
     pub install_resolver: unsafe extern "C" fn(),
@@ -64,12 +29,6 @@ pub struct S7Host {
         unsafe extern "C" fn(usize, *const u8, usize, *const u8, usize, bool) -> usize,
     pub world_sound_by_creation: unsafe extern "C" fn(usize, i32) -> usize,
     pub object_id: unsafe extern "C" fn(usize, *mut u8),
-    pub se_event: unsafe extern "C" fn(usize) -> usize,
-    pub se_fade: unsafe extern "C" fn(usize, bool, f32),
-    pub se_main_fade_in: unsafe extern "C" fn(usize, f32, f32),
-    pub se_data_loop: unsafe extern "C" fn(usize) -> i32,
-    pub se_prop: unsafe extern "C" fn(usize, u32, f32) -> f32,
-    pub se_reset_props: unsafe extern "C" fn(usize),
     pub log: unsafe extern "C" fn(*const u8, usize),
     pub warning: unsafe extern "C" fn(*const u8, usize),
     pub scape_world: unsafe extern "C" fn(usize) -> usize,
@@ -175,98 +134,114 @@ pub fn find_file(name: &[u8]) -> Option<Vec<u8>> {
     .filter(|v| !v.is_empty())
 }
 
-/// The sound handler as the instance code sees it.
+/// The sound handler as the instance code sees it: the owned handler, called directly.
 pub struct Engine;
 
-// SAFETY (all calls below): the installed table's thunks accept any entry value the handler gave out.
+fn rec<'a>(entry: usize) -> Option<&'a mut Rec> {
+    // SAFETY: `entry` is a `cSoundEntry*` the handler gave out (a `Rec` address) and checked with `valid`.
+    unsafe { (entry as *mut Rec).as_mut() }
+}
+
 impl Host for Engine {
     fn valid(&mut self, entry: usize, id: i32) -> bool {
-        ops().is_some_and(|h| unsafe { (h.valid)(entry, id) })
+        handler().is_some_and(|h| h.is_valid(entry as *const Rec, id))
     }
 
     fn play(&mut self, req: &PlayReq) -> Option<(usize, i32)> {
-        let h = ops()?;
-        let r = PlayReqC {
-            kind: req.kind,
-            file: req.file.as_ptr(),
-            file_len: req.file.len(),
-            looped: req.looped,
-            pos: req.pos,
-            entry_type: req.entry_type,
-            stream: req.stream,
+        let h = handler()?;
+        // kind 0 plays in the world, 1 a GUI stream, otherwise a GUI sound
+        let (relative, is_3d, min_dist, max_dist, stream) = match req.kind {
+            0 => (false, true, 1e5, 2e5, req.stream),
+            1 => (true, false, 1.0, 1000.0, true),
+            _ => (true, false, 1.0, 1000.0, false),
         };
-        let (mut entry, mut id) = (0usize, 0i32);
-        unsafe { (h.play)(&r, &mut entry, &mut id) }.then_some((entry, id))
+        let args = PlayArgs {
+            name: req.file,
+            looping: req.looped,
+            volume: 0.0,
+            pos: Vector3f {
+                x: req.pos[0],
+                y: req.pos[1],
+                z: req.pos[2],
+            },
+            min_dist,
+            max_dist,
+            entry_type: req.entry_type as u32,
+            relative,
+            is_3d,
+            priority_modifier: 0,
+            stream,
+        };
+        let p = h.play(&args, &mut false);
+        rec(p as usize).map(|r| (p as usize, r.id))
     }
 
     fn stop(&mut self, entry: usize) {
-        if let Some(h) = ops() {
-            unsafe { (h.stop)(entry) }
+        if let (Some(h), Some(r)) = (handler(), rec(entry)) {
+            h.stop_rec(r);
         }
     }
 
     fn pause(&mut self, entry: usize, on: bool) {
-        if let Some(h) = ops() {
-            unsafe { (h.pause)(entry, on) }
+        if let Some(r) = rec(entry) {
+            r.set_paused(on);
         }
     }
 
     fn total_time(&mut self, entry: usize) -> f64 {
-        ops().map_or(0.0, |h| unsafe { (h.total_time)(entry) })
+        rec(entry).map_or(0.0, |r| r.total_time())
     }
 
     fn set_looping(&mut self, entry: usize, on: bool) {
-        if let Some(h) = ops() {
-            unsafe { (h.set_looping)(entry, on) }
+        if let Some(r) = rec(entry) {
+            r.set_looping(on);
         }
     }
 
     fn set_filter(&mut self, entry: usize, which: Filter, gain: f32) {
-        if let Some(h) = ops() {
-            unsafe { (h.set_filter)(entry, which as i32, gain) }
+        if let Some(r) = rec(entry) {
+            r.set_filter(which as i32, gain);
         }
     }
 
     fn set_position(&mut self, entry: usize, pos: [f32; 3]) {
-        if let Some(h) = ops() {
-            unsafe { (h.set_position)(entry, pos.as_ptr()) }
+        if let Some(r) = rec(entry) {
+            r.set_position(Vector3f {
+                x: pos[0],
+                y: pos[1],
+                z: pos[2],
+            });
         }
     }
 
     fn set_default_volume(&mut self, entry: usize, vol: f32) {
-        if let Some(h) = ops() {
-            unsafe { (h.set_default_volume)(entry, vol) }
+        if let Some(r) = rec(entry) {
+            r.state.normal_volume = vol;
         }
     }
 
     fn set_default_speed(&mut self, entry: usize, speed: f32) {
-        if let Some(h) = ops() {
-            unsafe { (h.set_default_speed)(entry, speed) }
+        if let Some(r) = rec(entry) {
+            r.state.normal_speed = speed;
         }
     }
 
     fn listener(&mut self) -> Listener {
-        let mut b = [0.0f32; 9];
-        if let Some(h) = ops() {
-            unsafe { (h.listener)(b.as_mut_ptr()) };
-        }
-        Listener {
-            pos: [b[0], b[1], b[2]],
-            fwd: [b[3], b[4], b[5]],
-            up: [b[6], b[7], b[8]],
-        }
+        let (pos, fwd, up) = handler().map_or_else(Default::default, |h| h.listener());
+        Listener { pos, fwd, up }
     }
 
     fn entity(&mut self, entity: usize) -> EntityInfo {
-        let mut b = [0.0f32; 6];
-        if let Some(h) = ops() {
-            unsafe { (h.entity)(entity, b.as_mut_ptr()) };
-        }
+        // SAFETY: `entity` is a live `cSoundEntity*` registered with the sound layer.
+        let Some(e) = (unsafe { entity_of(entity).as_ref() }) else {
+            return EntityInfo::default();
+        };
+        let p = e.world_position();
         EntityInfo {
-            world_pos: [b[0], b[1], b[2]],
-            min_dist: b[3],
-            max_dist: b[4],
-            volume: b[5],
+            world_pos: [p.x, p.y, p.z],
+            min_dist: e.min_distance,
+            max_dist: e.max_distance,
+            volume: e.volume,
         }
     }
 }

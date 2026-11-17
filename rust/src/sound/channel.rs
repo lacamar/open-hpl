@@ -35,6 +35,9 @@ pub(super) trait Channel {
     fn elapsed_time(&self) -> f64;
     fn total_time(&self) -> f64;
     fn set_elapsed_time(&mut self, time: f64);
+    fn set_blockable(&mut self, _blockable: bool) {}
+    fn set_block_volume_mul(&mut self, _mul: f32) {}
+    fn set_filter(&mut self, _which: i32, _gain: f32) {}
 }
 
 pub(super) trait EntryHost {
@@ -82,17 +85,9 @@ pub struct ChannelOps {
     pub elapsed_time: Fn0<f64>,
     pub total_time: Fn0<f64>,
     pub set_elapsed_time: Fn1<f64>,
-}
-
-/// Calls on the owning `cSoundHandler`; every entry takes the handler pointer first.
-#[repr(C)]
-pub struct HostOps {
-    pub global_speed: Fn1<u32, f32>,
-    pub global_volume: Fn1<u32, f32>,
-    pub silent: Fn0<bool>,
-    pub is_blocked: Fn1<*const Vector3f, bool>,
-    pub listener_position: Fn1<*mut Vector3f>,
-    pub listener_matrix: Fn1<*mut Matrixf>,
+    pub set_blockable: Fn1<bool>,
+    pub set_block_volume_mul: Fn1<f32>,
+    pub set_filter: unsafe extern "C" fn(*mut c_void, i32, f32),
 }
 
 /// A live `iSoundChannel` and its function table.
@@ -213,50 +208,13 @@ impl Channel for CChannel<'_> {
     fn set_elapsed_time(&mut self, time: f64) {
         call!(self, set_elapsed_time, time)
     }
-}
-
-/// A live `cSoundHandler` and its function table.
-pub(super) struct CHost<'a> {
-    ops: &'a HostOps,
-    handler: *mut c_void,
-}
-
-impl<'a> CHost<'a> {
-    /// # Safety
-    /// `handler` stays a valid handler for `ops` for the lifetime of the value.
-    pub(super) unsafe fn new(ops: &'a HostOps, handler: *mut c_void) -> Self {
-        Self { ops, handler }
+    fn set_blockable(&mut self, blockable: bool) {
+        call!(self, set_blockable, blockable)
     }
-}
-
-macro_rules! host_call {
-    ($s:expr, $f:ident $(, $a:expr)*) => {
-        // SAFETY: `CHost::new` contract: `handler` is valid for the table that was paired with it.
-        unsafe { ($s.ops.$f)($s.handler $(, $a)*) }
-    };
-}
-
-impl EntryHost for CHost<'_> {
-    fn global_speed(&self, entry_type: u32) -> f32 {
-        host_call!(self, global_speed, entry_type)
+    fn set_block_volume_mul(&mut self, mul: f32) {
+        call!(self, set_block_volume_mul, mul)
     }
-    fn global_volume(&self, entry_type: u32) -> f32 {
-        host_call!(self, global_volume, entry_type)
-    }
-    fn silent(&self) -> bool {
-        host_call!(self, silent)
-    }
-    fn is_blocked(&mut self, pos: Vector3f) -> bool {
-        host_call!(self, is_blocked, &raw const pos)
-    }
-    fn listener_position(&self) -> Vector3f {
-        let mut v = Vector3f::default();
-        host_call!(self, listener_position, &raw mut v);
-        v
-    }
-    fn listener_matrix(&self) -> Matrixf {
-        let mut m = Matrixf::default();
-        host_call!(self, listener_matrix, &raw mut m);
-        m
+    fn set_filter(&mut self, which: i32, gain: f32) {
+        call!(self, set_filter, which, gain)
     }
 }

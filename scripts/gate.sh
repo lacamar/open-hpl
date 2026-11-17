@@ -151,6 +151,11 @@ half() {
 		ENVX="$extra OHPL_S7_DUMP=$OUT/s7-$G-$impl.txt OHPL_S7_SCENARIO=$REPO/rust/tests/golden/S7/scenario-$G.txt OHPL_S7_SCENARIO_OUT=$OUT/s7sc-$G-$impl.txt" sweep "$impl" "$G" "$OUT/dump-s7-$impl-$G.json" --map "$M"
 		ENVX="$extra OHPL_S7_DUMP=$OUT/s7p-$G-$impl.txt" sweep "$impl" "$G" "$OUT/dump-s7p-$impl-$G.json" --play 10 --map "$M"
 	done
+	for gm in soma:00_01_apartment rebirth:02_02_courtyard bunker:arena amnesia:00_rainy_hall amfp:06_factory; do
+		has "${gm%%:*}" || continue
+		rm -f "$OUT/esnd-${gm%%:*}-$impl.txt"
+		ENVX="$extra OHPL_ESND_DUMP=$OUT/esnd-${gm%%:*}-$impl.txt" sweep "$impl" "${gm%%:*}" "$OUT/dump-esnd-$impl-${gm%%:*}.json" --map "${gm#*:}"
+	done
 	if has soma; then
 		rm -f "$OUT/s7v-soma-$impl.txt" "$OUT/s5bv-soma-$impl.txt"
 		ENVX="$extra OHPL_S7_DUMP=$OUT/s7v-soma-$impl.txt OHPL_S7_SCENARIO=$REPO/rust/tests/golden/S5b/voice-soma.txt OHPL_S7_SCENARIO_OUT=$OUT/s5bv-soma-$impl.txt" sweep "$impl" soma "$OUT/dump-s7v-$impl-soma.json" --map 00_01_apartment
@@ -329,7 +334,7 @@ fi
 
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt "$OUT"/a13b-*-cpp.txt "$OUT"/a7b-*-cpp.txt "$OUT"/a5-*-cpp.txt "$OUT"/a2c-*-cpp.txt "$OUT"/s4b-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt "$OUT"/a13b-*-cpp.txt "$OUT"/a7b-*-cpp.txt "$OUT"/a5-*-cpp.txt "$OUT"/a2c-*-cpp.txt "$OUT"/s4b-*-cpp.txt "$OUT"/esnd-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -598,6 +603,24 @@ def same(name, a, b):
         # camera positions follow the player body, which settles with real time
         mask = lambda p: [l for l in open(p, errors="replace") if not l.startswith(("i ps pos", "i step_pos"))]
         return (mask(a) == mask(b), "equal (camera positions masked)" if mask(a) == mask(b) else "DIFFER")
+    if name.startswith("esnd-"):
+        # sound handler entries per frame. One-shot sounds follow physics timing, so compare the looping and GUI
+        # entries; ids, NaN volumes and the random file variant are masked, the arena bridge sequence follows script
+        # timing (two C++ runs differ too), and runs start at different frames: align at the first non-empty frame
+        def frames(p):
+            fr = []
+            for l in open(p, errors="replace"):
+                if l.startswith("f "):
+                    fr.append([])
+                elif fr and (" loop=1 " in l or " t=2 " in l) and "nan" not in l and "bridge" not in l:
+                    l = re.sub(r" id=\d+", "", l)
+                    fr[-1].append(re.sub(r"^(e \S*?)\d+(\S*) ", r"\1N\2 ", l))
+            fr = fr[:-1]
+            return fr[next((i for i, f in enumerate(fr) if f), len(fr)):]
+        fa, fb = frames(a), frames(b)
+        k = min(len(fa), len(fb))
+        ok_ = k > 100 and fa[:k] == fb[:k] and sum(1 for f in fa[:k] if f) > 50
+        return (ok_, f"equal over {k} frames (run lengths {len(fa)}/{len(fb)})" if ok_ else "DIFFER")
     if name.startswith(("a11b-", "a11c-", "a2b-")):
         # runs stop at different frames: compare up to the last whole frame of the shorter one
         la, lb = (open(x, errors="replace").read().splitlines() for x in (a, b))
@@ -631,6 +654,7 @@ if not quick:
     names += [f"{k}-{g}" for k in ("s7", "s7sc", "s7p") for g in ("soma", "rebirth", "bunker") if g in games]
     names += ["s7v-soma", "s5bv-soma"] if "soma" in games else []
     names += [f"s8-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
+    names += [f"esnd-{g}" for g in ("soma", "rebirth", "bunker", "amnesia", "amfp") if g in games]
     names += [f"s8b-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"s8c-{g}" for g in ("soma", "rebirth", "bunker") if g in games]
     names += [f"{k}-{g}" for k in ("s8d", "s8dm") for g in ("soma", "rebirth", "bunker") if g in games]

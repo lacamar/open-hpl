@@ -8,6 +8,7 @@ use super::invhost::{self as host, A, WStr, game, jg, op, set, wd, wx};
 use super::invobj;
 use super::journal as j;
 use crate::obj::{Arena, Handle};
+use crate::sound::own::{Rec, handler};
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 
@@ -414,19 +415,21 @@ pub fn update(dt: f32) {
 }
 
 fn voice_valid(entry: usize, id: i32) -> bool {
-    let mut a = A::new();
-    a.i[0] = jg::VOICE_VALID;
-    a.i[1] = id;
-    a.p[0] = entry;
-    host::call(op::JGAME, &mut a);
-    a.r != 0
+    handler().is_some_and(|h| h.is_valid(entry as *const Rec, id))
 }
 
 fn voice_fade(entry: usize) {
-    let mut a = A::new();
-    a.i[0] = jg::VOICE_FADE;
-    a.p[0] = entry;
-    host::call(op::JGAME, &mut a);
+    // SAFETY: `entry` is a `cSoundEntry*` the handler gave out, checked with `voice_valid`.
+    if let Some(r) = unsafe { (entry as *mut Rec).as_mut() } {
+        r.state.fade_out(3.0);
+    }
+}
+
+/// Plays a narration stream; the entry and its id, or (0, 0).
+fn voice_play(file: &[u8]) -> (usize, i32) {
+    let p = handler().map_or(std::ptr::null_mut(), |h| h.play_gui(file, false, 1.0, true));
+    // SAFETY: a returned entry is a live record of the handler.
+    unsafe { p.as_ref() }.map_or((0, 0), |r| (p as usize, r.id))
 }
 
 fn update_state(n: i32, dt: f32) {
@@ -1059,14 +1062,11 @@ fn set_note_page(page: i32) {
             if voice != 0 && voice_valid(voice, id) {
                 voice_fade(voice);
             }
-            let mut a = A::new();
-            a.i[0] = jg::VOICE_PLAY;
-            s(&mut a, 0, &file);
-            host::call(op::JGAME, &mut a);
+            let (entry, id) = voice_play(&file);
             if let Some(i) = g() {
-                i.voice = a.r;
-                if a.r != 0 {
-                    i.voice_id = a.i[1];
+                i.voice = entry;
+                if entry != 0 {
+                    i.voice_id = id;
                 }
             }
         }

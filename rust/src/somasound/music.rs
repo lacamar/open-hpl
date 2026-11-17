@@ -3,6 +3,7 @@
 use super::dump;
 use super::host::ops;
 use crate::somascript::s2_as::{Frame, Soma, str_bytes};
+use crate::sound::own_ffi::music;
 use std::ffi::{c_char, c_int, c_void};
 
 const MAX_PRIO: usize = 10;
@@ -91,9 +92,8 @@ impl Music {
     }
 
     fn engine_play(file: &[u8], volume: f32, speed: f32, looped: bool, resume: bool) {
-        if let Some(h) = ops() {
-            // SAFETY: `file` is valid for the call.
-            unsafe { (h.music_play)(file.as_ptr(), file.len(), volume, speed, looped, resume) };
+        if let Some(m) = music() {
+            m.play(file, volume, speed, looped, resume);
         }
     }
 
@@ -171,9 +171,8 @@ impl Music {
             return;
         }
         let speed = fade_speed(m.volume, fade);
-        if let Some(h) = ops() {
-            // SAFETY: plain call.
-            unsafe { (h.music_stop)(speed) };
+        if let Some(m) = music() {
+            m.stop(speed);
         }
         self.current = -1;
         self.play_highest();
@@ -211,8 +210,7 @@ impl Music {
 
     pub fn update(&mut self) {
         self.update_dynamic();
-        // SAFETY: plain call.
-        if self.current < 0 || ops().is_some_and(|h| unsafe { (h.music_has_song)() }) {
+        if self.current < 0 || music().is_some_and(|m| m.has_song()) {
             return;
         }
         if let Some(m) = self.slots.get_mut(slot_index(self.current)) {
@@ -268,9 +266,8 @@ impl Music {
                 _ => {}
             }
         }
-        if let Some(h) = ops() {
-            // SAFETY: plain call.
-            unsafe { (h.music_stop)(100.0) };
+        if let Some(m) = music() {
+            m.stop(100.0);
         }
         self.current = -1;
         self.play_highest();

@@ -46,7 +46,7 @@ pub(super) fn correct_sign_of_speed(current: f32, dest: f32, speed: f32) -> f32 
 }
 
 /// `cMath::Vector3DistSqr(start, end)` as gcc contracts it.
-fn dist_sqr(start: Vector3f, end: Vector3f) -> f32 {
+pub(super) fn dist_sqr(start: Vector3f, end: Vector3f) -> f32 {
     let dx = end.x - start.x;
     let dy = end.y - start.y;
     let dz = end.z - start.z;

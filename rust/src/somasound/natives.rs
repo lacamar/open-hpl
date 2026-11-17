@@ -6,6 +6,8 @@ use super::host::{Engine, ops};
 use super::{glue, music};
 use crate::somascript::s2_api::{active_native_decl, is_dummy, release_handle_args};
 use crate::somascript::s2_as::{self, Frame, Soma, str_bytes};
+use crate::sound::own::{ent_fade_in, ent_fade_out, entity_of, fade_main_in, handler};
+use crate::sound::own_ffi::music;
 use std::ffi::c_void;
 
 const ENTRY_WORLD: i32 = 1;
@@ -74,10 +76,8 @@ fn entity_event(o: usize) -> usize {
     if o == 0 {
         return 0;
     }
-    ops().map_or(0, |h| {
-        // SAFETY: `o` is a live sound entity handed out by the script engine.
-        unsafe { (h.se_event)(o) }
-    })
+    // SAFETY: `o` is a live sound entity handed out by the script engine.
+    unsafe { entity_of(o).as_ref() }.map_or(0, |e| e.event() as usize)
 }
 
 fn fade_in_to(h: usize, mul: f32, speed: f32) {
@@ -390,11 +390,14 @@ fn entity_ops(s: &Soma) {
     let t = "cSoundEntity";
     s.method(t, "void FadeIn(float afSpeed, float afTargetVol)", |fr| {
         let (o, speed, vol) = (fr.this as usize, fr.arg::<f32>(0), fr.arg::<f32>(1));
-        let Some(h) = ops() else { return };
+        let e = entity_of(o);
+        if e.is_null() {
+            return;
+        }
         let shell = entity_event(o);
         if shell != 0 {
-            // SAFETY: `o` is a live sound entity.
-            unsafe { (h.se_fade)(o, true, speed) };
+            // SAFETY: `e` is the live record of the sound entity.
+            unsafe { ent_fade_in(e, speed) };
             let Some(ih) = live(shell) else { return };
             fade_in_to(ih, 1.0, speed);
             if speed > 0.0 {
@@ -405,14 +408,15 @@ fn entity_ops(s: &Soma) {
             }
             return;
         }
-        // SAFETY: `o` is a live sound entity.
-        unsafe { (h.se_main_fade_in)(o, vol, speed) };
+        // SAFETY: `e` is the live record of the sound entity.
+        unsafe { fade_main_in(e, vol, speed) };
     });
     s.method(t, "void FadeOut(float afSpeed)", |fr| {
         let (o, speed) = (fr.this as usize, fr.arg::<f32>(0));
-        if let Some(h) = ops() {
-            // SAFETY: `o` is a live sound entity.
-            unsafe { (h.se_fade)(o, false, speed) };
+        let e = entity_of(o);
+        if !e.is_null() {
+            // SAFETY: `e` is the live record of the sound entity.
+            unsafe { ent_fade_out(e, speed) };
         }
     });
     s.method(t, "bool IsOneShot()", |fr| {
@@ -420,11 +424,8 @@ fn entity_ops(s: &Soma) {
         let shell = entity_event(o);
         let r = match live(shell) {
             Some(h) => event_info(h, false, |e| e.one_shot),
-            None => ops().is_none_or(|h| {
-                // SAFETY: `o` is a live sound entity.
-                let looped = unsafe { (h.se_data_loop)(o) };
-                looped != 1
-            }),
+            // SAFETY: `o` is a live sound entity.
+            None => unsafe { entity_of(o).as_ref() }.is_none_or(|e| !e.data().looping),
         };
         fr.ret::<bool>(r);
     });
@@ -486,9 +487,13 @@ fn entity_ops(s: &Soma) {
     ] {
         s.method(t, decl, move |fr| {
             let (o, x) = (fr.this as usize, fr.arg::<f32>(0));
-            if let Some(h) = ops() {
-                // SAFETY: `o` is a live sound entity.
-                unsafe { (h.se_prop)(o, op, x) };
+            // SAFETY: `o` is a live sound entity.
+            if let Some(e) = unsafe { entity_of(o).as_mut() } {
+                if op == 0 {
+                    e.min_distance = x;
+                } else {
+                    e.max_distance = x;
+                }
             }
         });
     }
@@ -498,17 +503,21 @@ fn entity_ops(s: &Soma) {
     ] {
         s.method(t, decl, move |fr| {
             let o = fr.this as usize;
-            fr.ret::<f32>(ops().map_or(0.0, |h| {
-                // SAFETY: `o` is a live sound entity.
-                unsafe { (h.se_prop)(o, op, 0.0) }
+            // SAFETY: `o` is a live sound entity.
+            fr.ret::<f32>(unsafe { entity_of(o).as_ref() }.map_or(0.0, |e| {
+                if op == 2 {
+                    e.min_distance
+                } else {
+                    e.max_distance
+                }
             }));
         });
     }
     s.method(t, "void SetUseCustomProperties(bool abX)", |fr| {
         let (o, x) = (fr.this as usize, fr.arg::<bool>(0));
-        if let (false, Some(h)) = (x, ops()) {
-            // SAFETY: `o` is a live sound entity.
-            unsafe { (h.se_reset_props)(o) };
+        // SAFETY: `o` is a live sound entity.
+        if let (false, Some(e)) = (x, unsafe { entity_of(o).as_mut() }) {
+            e.reset_props();
         }
     });
 }
@@ -582,17 +591,13 @@ fn global_ops(s: &Soma) {
         "void cSound_FadeMusicVolumeMul(float afDest, float afSpeed)",
         |fr| {
             let (d, sp) = (fr.arg::<f32>(0), fr.arg::<f32>(1));
-            if let Some(h) = ops() {
-                // SAFETY: plain call.
-                unsafe { (h.music_fade_volume_mul)(d, sp) };
+            if let Some(m) = music() {
+                m.fade_volume_mul(d, sp);
             }
         },
     );
     s.func("float cSound_GetMusicVolumeMul()", |fr| {
-        fr.ret::<f32>(ops().map_or(1.0, |h| {
-            // SAFETY: plain call.
-            unsafe { (h.music_volume_mul)() }
-        }));
+        fr.ret::<f32>(music().map_or(1.0, |m| m.volume_mul()));
     });
 }
 
@@ -635,49 +640,31 @@ fn volume_ops(s: &Soma) {
         "int cSound_SetGlobalVolume(float afVolume, uint aAffectedTypes, int alId)",
         |fr| {
             let (v, t, id) = (fr.arg::<f32>(0), fr.arg::<u32>(1), fr.arg::<i32>(2));
-            fr.ret::<i32>(ops().map_or(0, |h| {
-                // SAFETY: plain call.
-                unsafe { (h.set_global_volume)(v, t, id) }
-            }));
+            fr.ret::<i32>(handler().map_or(0, |h| h.set_global(0, v, t, id)));
         },
     );
     s.func("float cSound_GetGlobalVolumeFromId(int alId)", |fr| {
         let id = fr.arg::<i32>(0);
-        fr.ret::<f32>(ops().map_or(1.0, |h| {
-            // SAFETY: plain call.
-            unsafe { (h.global_volume_of)(id) }
-        }));
+        fr.ret::<f32>(handler().map_or(1.0, |h| h.setting_val(0, id)));
     });
     s.func("int cSound_FadeGlobalVolume(float afDestVolume, float afSpeed, uint aAffectedTypes, int alId, bool abDestroyIdAtDest)", |fr| {
         let (v, sp, t, id, d) = (fr.arg::<f32>(0), fr.arg::<f32>(1), fr.arg::<u32>(2), fr.arg::<i32>(3), fr.arg::<bool>(4));
-        fr.ret::<i32>(ops().map_or(0, |h| {
-            // SAFETY: plain call.
-            unsafe { (h.fade_global_volume)(v, sp, t, id, d) }
-        }));
+        fr.ret::<i32>(handler().map_or(0, |h| h.fade_global(0, v, sp, t, id, d)));
     });
     s.func(
         "int cSound_SetGlobalSpeed(float afSpeed, uint aAffectedTypes, int alId)",
         |fr| {
             let (v, t, id) = (fr.arg::<f32>(0), fr.arg::<u32>(1), fr.arg::<i32>(2));
-            fr.ret::<i32>(ops().map_or(0, |h| {
-                // SAFETY: plain call.
-                unsafe { (h.set_global_speed)(v, t, id) }
-            }));
+            fr.ret::<i32>(handler().map_or(0, |h| h.set_global(1, v, t, id)));
         },
     );
     s.func("float cSound_GetGlobalSpeedFromId(int alId)", |fr| {
         let id = fr.arg::<i32>(0);
-        fr.ret::<f32>(ops().map_or(1.0, |h| {
-            // SAFETY: plain call.
-            unsafe { (h.global_speed_of)(id) }
-        }));
+        fr.ret::<f32>(handler().map_or(1.0, |h| h.setting_val(1, id)));
     });
     s.func("int cSound_FadeGlobalSpeed(float afDestSpeed, float afSpeed, uint aAffectedTypes, int alId, bool abDestroyIdAtDest)", |fr| {
         let (v, sp, t, id, d) = (fr.arg::<f32>(0), fr.arg::<f32>(1), fr.arg::<u32>(2), fr.arg::<i32>(3), fr.arg::<bool>(4));
-        fr.ret::<i32>(ops().map_or(0, |h| {
-            // SAFETY: plain call.
-            unsafe { (h.fade_global_speed)(v, sp, t, id, d) }
-        }));
+        fr.ret::<i32>(handler().map_or(0, |h| h.fade_global(1, v, sp, t, id, d)));
     });
     s.func(
         "void cSound_FadeOutAll(uint aTypes, float afFadeSpeed, bool abDisableStop)",
@@ -686,9 +673,8 @@ fn volume_ops(s: &Soma) {
             for h in super::game::fade_out_all(t) {
                 game().bank.fade_out(&mut Engine, h, sp);
             }
-            if let Some(h) = ops() {
-                // SAFETY: plain call.
-                unsafe { (h.fade_out_all)(t, sp) };
+            if let Some(h) = handler() {
+                h.fade_out_all(t, sp, false);
             }
         },
     );

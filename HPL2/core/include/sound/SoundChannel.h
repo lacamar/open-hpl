@@ -21,6 +21,7 @@
 #define HPL_SOUND_CHANNEL_H
 
 #include <list>
+#include "sound/SoundData.h"
 #include "math/MathTypes.h"
 
 
@@ -33,8 +34,18 @@ namespace hpl {
 	class iSoundChannel
 	{
 	public:
-		iSoundChannel(iSoundData* apData,cSoundManager* apSoundManger);
-		virtual ~iSoundChannel();
+		iSoundChannel(iSoundData* apData,cSoundManager* apSoundManger) :
+			mbLooping(false), mbPaused(true), mbPositionRelative(false),
+			mfSpeed(1), mfVolume(1), mfMaxDistance(0), mfMinDistance(0),
+			mvVelocity(0,0,0), mvPosition(0,0,0), mvRelPosition(0,0,0),
+			mbBlockable(false), mfBlockVolumeMul(1), mbAffectedByEnv(false),
+			mlPriorityModifier(0), mbStopUsed(false)
+		{
+			mpData = apData;
+			mpData->IncUserCount();
+			mpSoundManger = apSoundManger;
+		}
+		virtual ~iSoundChannel(){}
 
 		virtual void Play()=0;
 		virtual void Stop()=0;

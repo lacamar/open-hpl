@@ -99,7 +99,6 @@ enum OhplA1Op
 	ACHIEVEMENT,
 	HARD_MODE,
 	GUI_SOUND_DATA,
-	GUI_SOUND,
 	HANDLE,
 	TRANSLATE,
 	ENT_BODY_NUM,
@@ -310,8 +309,6 @@ enum OhplA1Op
 	LIGHT_DIFFUSE,
 	LIGHT_RADIUS,
 	LIGHT_FADE,
-	SOUND_GLOBAL_VALUE,
-	SOUND_GLOBAL_FADE,
 	WORLD_SKYBOX_ACTIVE,
 	WORLD_SKYBOX_TEXTURE,
 	WORLD_SKYBOX_COLOR,
@@ -381,7 +378,6 @@ extern "C" void OhplA1HostCall2(unsigned op, const OhplA1Arg *a, size_t n, OhplA
 	case ACHIEVEMENT: gpBase->mpAchievementHandler->UnlockAchievement(gvA1Achievements[a[0].I()]); break;
 	case HARD_MODE: r->SetB(gpBase->mbHardMode); break;
 	case GUI_SOUND_DATA: gpBase->mpHelpFuncs->PlayGuiSoundData(OhplA1Str(a[0]), eSoundEntryType_Gui, a[1].F()); break;
-	case GUI_SOUND: gpBase->mpEngine->GetSound()->GetSoundHandler()->PlayGui(OhplA1Str(a[0]), false, a[1].F()); break;
 	case MAP_ENTITY_TYPED: r->p = CurMap()->GetEntityByName(OhplA1Str(a[0]), (eLuxEntityType)a[1].I(), a[2].I()); break;
 	case MAP_ENTITY: r->p = CurMap()->GetEntityByName(OhplA1Str(a[0])); break;
 	case MAP_ENTITIES:
@@ -719,20 +715,6 @@ extern "C" void OhplA1HostCall2(unsigned op, const OhplA1Arg *a, size_t n, OhplA
 	}
 	case LIGHT_RADIUS: r->SetF(Light(a[0])->GetRadius()); break;
 	case LIGHT_FADE: Light(a[0])->FadeTo(Col(a + 1), a[5].F(), a[6].F()); break;
-	case SOUND_GLOBAL_VALUE:
-	{
-		cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
-		cMultipleSettingsHandler *pHandler = a[0].I() == 0 ? pSoundHandler->GetGlobalVolumeSettingsHandler() : pSoundHandler->GetGlobalSpeedSettingsHandler();
-		r->SetF(pHandler->GetEntry(eLuxGlobalVolumeType_Script, true)->GetVal());
-		break;
-	}
-	case SOUND_GLOBAL_FADE:
-	{
-		cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
-		if(a[0].I() == 0) pSoundHandler->FadeGlobalVolume(a[1].F(), a[2].F(), eSoundEntryType_World, eLuxGlobalVolumeType_Script, a[3].B());
-		else pSoundHandler->FadeGlobalSpeed(a[1].F(), a[2].F(), eSoundEntryType_World, eLuxGlobalVolumeType_Script, a[3].B());
-		break;
-	}
 	case WORLD_SKYBOX_ACTIVE: CurMap()->GetWorld()->SetSkyBoxActive(a[0].B()); break;
 	case WORLD_SKYBOX_TEXTURE:
 	{

@@ -29,7 +29,7 @@ mod h11;
 mod h11b_ffi;
 mod h11b_mesh;
 mod h12_psload;
-mod h12b_ent;
+pub(crate) mod h12b_ent;
 mod h12b_psys;
 mod h13_world;
 mod lensflare;
@@ -40,7 +40,7 @@ mod particles;
 mod rope;
 mod scenemgr;
 mod skinning;
-mod soundentity;
+pub(crate) mod soundentity;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

@@ -24,6 +24,8 @@
 #include "math/MathTypes.h"
 
 #include "system/LowLevelSystem.h"
+#include "system/String.h"
+#include "sound/SoundEnvironment.h"
 
 namespace hpl {
 
@@ -55,8 +57,12 @@ namespace hpl {
 	class iLowLevelSound
 	{
 	public:
-		iLowLevelSound();
-		virtual ~iLowLevelSound();
+		iLowLevelSound() : mfVolume(1), mfEnvVolume(0), mbListenerAttenuation(true), mbHardwareAcc(false), mbEnvAudioEnabled(false) {}
+		virtual ~iLowLevelSound()
+		{
+			STLDeleteAll(mvSoundDevices);
+			STLDeleteAll(mlstSoundEnv);
+		}
 		
 		/**
 		 * Get the formats supported
@@ -105,7 +111,16 @@ namespace hpl {
 		virtual void SetSoundEnvironment ( iSoundEnvironment* apSoundEnv )=0;
 		virtual void FadeSoundEnvironment( iSoundEnvironment* apSourceSoundEnv, iSoundEnvironment* apDestSoundEnv, float afT )=0;
 
-		iSoundEnvironment* GetSoundEnvironmentFromFileName (const tString& asName);
+		iSoundEnvironment* GetSoundEnvironmentFromFileName (const tString& asName)
+		{
+			tString sLowName = cString::ToLowerCase(asName);
+			for (tSoundEnvListIt SEIt = mlstSoundEnv.begin(); SEIt != mlstSoundEnv.end(); ++SEIt)
+			{
+				iSoundEnvironment* pSoundEnv = *SEIt;
+				if(sLowName == pSoundEnv->GetFileName()) return pSoundEnv;
+			}
+			return NULL;
+		}
 		//void DestroySoundEnvironment( iSoundEnvironment* apSoundEnv);
 
 		virtual iSoundDeviceIdentifier* GetCurrentSoundDevice()=0;
@@ -113,8 +128,30 @@ namespace hpl {
 		//static tStringVec GetAvailableSoundDevices();
 		static void SetSoundDeviceNameFilter(const tString& asFilter) { mbSoundDeviceNameFilterChanged = true; msSoundDeviceNameFilter = asFilter; }
 		static void PopulateAvailableSoundDevices(tSoundDeviceVec& avSoundDeviceVec);
-		static const tSoundDeviceVec& GetAvailableSoundDevices();
-		static const tSoundDeviceVec& GetFilteredSoundDevices();
+		static const tSoundDeviceVec& GetAvailableSoundDevices()
+		{
+			if(mvSoundDevices.empty()) PopulateAvailableSoundDevices(mvSoundDevices);
+			return mvSoundDevices;
+		}
+		static const tSoundDeviceVec& GetFilteredSoundDevices()
+		{
+			if(mbSoundDeviceNameFilterChanged)
+			{
+				mbSoundDeviceNameFilterChanged = false;
+				mvFilteredSoundDevices.clear();
+
+				GetAvailableSoundDevices();
+
+				tString sLowCaseFilter = cString::ToLowerCase(msSoundDeviceNameFilter);
+				for(int i=0;i<(int)mvSoundDevices.size();++i)
+				{
+					iSoundDeviceIdentifier* pSndDev = mvSoundDevices[i];
+					tString sLowCaseName = cString::ToLowerCase(pSndDev->GetName());
+					if(cString::GetFirstStringPos(sLowCaseName, sLowCaseFilter)!=-1) mvFilteredSoundDevices.push_back(pSndDev);
+				}
+			}
+			return mvFilteredSoundDevices;
+		}
 
 	protected:
 		float mfVolume;
@@ -132,10 +169,10 @@ namespace hpl {
 
 		cMatrixf m_mtxListener;
 
-		static tSoundDeviceVec mvSoundDevices;
-		static tString msSoundDeviceNameFilter;
-		static bool mbSoundDeviceNameFilterChanged;
-		static tSoundDeviceVec mvFilteredSoundDevices;
+		static inline tSoundDeviceVec mvSoundDevices;
+		static inline tString msSoundDeviceNameFilter = "";
+		static inline bool mbSoundDeviceNameFilterChanged = true;
+		static inline tSoundDeviceVec mvFilteredSoundDevices;
 
 		tSoundEnvList mlstSoundEnv;
 	};

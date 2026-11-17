@@ -21,6 +21,10 @@
 #define HPL_SOUND_H
 
 #include "engine/Updateable.h"
+#include "system/LowLevelSystem.h"
+#include "sound/LowLevelSound.h"
+#include "sound/SoundHandler.h"
+#include "sound/MusicHandler.h"
 
 namespace hpl {
 	
@@ -32,18 +36,66 @@ namespace hpl {
 	class cSound : public iUpdateable
 	{
 	public:
-		cSound(iLowLevelSound *apLowLevelSound);
-		~cSound();
+		cSound(iLowLevelSound *apLowLevelSound) : iUpdateable("HPL_Sound"), mpLowLevelSound(apLowLevelSound), mbMutedByFocusLoss(false), mfPreFocusMuteVolume(1.0f) {}
+		~cSound()
+		{
+			Log("Exiting Sound Module\n");
+			Log("--------------------------------------------------------\n");
+
+			hplDelete(mpSoundHandler);
+			hplDelete(mpMusicHandler);
+
+			Log("--------------------------------------------------------\n\n");
+		}
 
 		void Init(	cResources *apResources, int alSoundDeviceID, bool abUseEnvAudio, int alMaxChannels, 
 						int alStreamUpdateFreq, bool abUseThreading, bool abUseVoiceManagement,
 						int alMaxMonoSourceHint, int alMaxStereoSourceHint,
-						int alStreamingBufferSize, int alStreamingBufferCount, bool abEnableLowLevelLog);
+						int alStreamingBufferSize, int alStreamingBufferCount, bool abEnableLowLevelLog)
+		{
+			mpResources = apResources;
 
-		void Update(float afTimeStep);
+			Log("Initializing Sound Module\n");
+			Log("--------------------------------------------------------\n");
 
-		void AppLostInputFocus();
-		void AppGotInputFocus();
+			mpLowLevelSound->Init(	alSoundDeviceID, abUseEnvAudio, alMaxChannels, alStreamUpdateFreq, abUseThreading,
+									abUseVoiceManagement, alMaxMonoSourceHint, alMaxStereoSourceHint,
+									alStreamingBufferSize, alStreamingBufferCount, abEnableLowLevelLog);
+
+			mpSoundHandler = hplNew( cSoundHandler, (mpLowLevelSound, mpResources) );
+			mpMusicHandler = hplNew( cMusicHandler, (mpLowLevelSound, mpResources) );
+
+			Log("--------------------------------------------------------\n\n");
+		}
+
+		void Update(float afTimeStep)
+		{
+			mpSoundHandler->Update(afTimeStep);
+			mpMusicHandler->Update(afTimeStep);
+
+			mpLowLevelSound->UpdateSound(afTimeStep);
+		}
+
+		void AppLostInputFocus()
+		{
+			if(mbMutedByFocusLoss) return;
+
+			mfPreFocusMuteVolume = mpLowLevelSound->GetVolume();
+			mpLowLevelSound->SetVolume(0);
+			mbMutedByFocusLoss = true;
+
+			Log("Sound: window lost focus, muting audio device\n");
+		}
+
+		void AppGotInputFocus()
+		{
+			if(mbMutedByFocusLoss == false) return;
+
+			mpLowLevelSound->SetVolume(mfPreFocusMuteVolume);
+			mbMutedByFocusLoss = false;
+
+			Log("Sound: window regained focus, restoring audio volume\n");
+		}
 
 		iLowLevelSound* GetLowLevel(){ return mpLowLevelSound;}
 		cSoundHandler* GetSoundHandler(){ return mpSoundHandler; }

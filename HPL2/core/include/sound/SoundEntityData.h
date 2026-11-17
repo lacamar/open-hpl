@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -23,98 +23,82 @@
 #include "system/SystemTypes.h"
 #include "resources/ResourceBase.h"
 #include "sound/SoundTypes.h"
+#include "sound/RustSound.h"
 
 namespace hpl {
 
 	class cResources;
-	class cXmlElement;
 	class cSound;
 
+	/** A .snt sound entity file; the record is a Rust object, the class is the resource shell. */
 	class cSoundEntityData : public iResourceBase
 	{
-	friend class cSoundEntity;
 	public:
-		cSoundEntityData(const tString& asName, cResources *apResources, cSound *apSound);
-		~cSoundEntityData();
+		cSoundEntityData(const tString& asName, cResources *apResources, cSound *apSound) : iResourceBase(asName, _W(""),0), mpResources(apResources), mpRs(ohpl_sndd_new(this)) {}
+		~cSoundEntityData(){ ohpl_sndd_free(mpRs); }
 
-		const tString& GetSoundName(eSoundEntityType aType, int alIdx);
-		const tString& GetRandomSoundName(eSoundEntityType aType, bool abSkipPrevious);
-		int GetSoundNum(eSoundEntityType aType);
-		void SetSoundName(const tString& asName, eSoundEntityType aType, int alIdx);
-		void AddSoundName(const tString& asName, eSoundEntityType aType);
-		inline bool HasSound(eSoundEntityType aType){ return mvSoundNameVecs[aType].empty()==false;}
-		
-		void PreloadSounds();
+		OhplSndData* Rs(){ return mpRs; }
+
+		tString GetSoundName(eSoundEntityType aType, int alIdx){ return Name(aType, alIdx, false, false); }
+		tString GetRandomSoundName(eSoundEntityType aType, bool abSkipPrevious){ return Name(aType, 0, true, abSkipPrevious); }
+		int GetSoundNum(eSoundEntityType aType){ return (int)ohpl_sndd_num(mpRs, aType); }
+		void SetSoundName(const tString& asName, eSoundEntityType aType, int alIdx){ if(alIdx >= 0) ohpl_sndd_put_name(mpRs, aType, alIdx, (const unsigned char*)asName.data(), asName.size()); }
+		void AddSoundName(const tString& asName, eSoundEntityType aType){ ohpl_sndd_put_name(mpRs, aType, -1, (const unsigned char*)asName.data(), asName.size()); }
+		bool HasSound(eSoundEntityType aType){ return ohpl_sndd_num(mpRs, aType) > 0; }
+
+		void PreloadSounds(){ ohpl_sndd_preload(mpRs, OhplSndHostTable(), mpResources); }
 
 		bool CreateFromFile(const tWString &asFile);
 
-		void SetFadeStart(bool abX){mbFadeStart = abX;}
-		bool GetFadeStart(){return mbFadeStart;}
-		void SetFadeStop(bool abX){mbFadeStop = abX;}
-		bool GetFadeStop(){return mbFadeStop;}
+		void SetFadeStart(bool abX){ ohpl_sndd_set(mpRs, 7, abX); }
+		bool GetFadeStart(){ return ohpl_sndd_get(mpRs, 7) != 0; }
+		void SetFadeStop(bool abX){ ohpl_sndd_set(mpRs, 8, abX); }
+		bool GetFadeStop(){ return ohpl_sndd_get(mpRs, 8) != 0; }
 
-		void SetVolume(float afX){mfVolume = afX;}
-		float GetVolume(){return mfVolume;}
-		void SetMaxDistance(float afX){mfMaxDistance =afX;}
-		float GetMaxDistance(){return mfMaxDistance;}
-		void SetMinDistance(float afX){mfMinDistance = afX;}
-		float GetMinDistance(){return mfMinDistance;}
+		void SetVolume(float afX){ ohpl_sndd_set(mpRs, 0, afX); }
+		float GetVolume(){ return ohpl_sndd_get(mpRs, 0); }
+		void SetMaxDistance(float afX){ ohpl_sndd_set(mpRs, 1, afX); }
+		float GetMaxDistance(){ return ohpl_sndd_get(mpRs, 1); }
+		void SetMinDistance(float afX){ ohpl_sndd_set(mpRs, 2, afX); }
+		float GetMinDistance(){ return ohpl_sndd_get(mpRs, 2); }
 
-		void SetStream(bool abX){mbStream = abX;}
-		bool GetStream(){return mbStream;}
+		void SetStream(bool abX){ ohpl_sndd_set(mpRs, 9, abX); }
+		bool GetStream(){ return ohpl_sndd_get(mpRs, 9) != 0; }
 
-		static void SetLazyLoad(bool abX){ mbLazyLoad = abX;}
-		void SetLoop(bool abX){mbLoop = abX;}
-		bool GetLoop(){return mbLoop;}
-		void SetUse3D(bool abX){ mbUse3D = abX;}
-		bool GetUse3D(){ return mbUse3D;}
+		static void SetLazyLoad(bool abX){ ohpl_sndd_set_lazy(abX); }
+		void SetLoop(bool abX){ ohpl_sndd_set(mpRs, 10, abX); }
+		bool GetLoop(){ return ohpl_sndd_get(mpRs, 10) != 0; }
+		void SetUse3D(bool abX){ ohpl_sndd_set(mpRs, 11, abX); }
+		bool GetUse3D(){ return ohpl_sndd_get(mpRs, 11) != 0; }
 
-		void SetBlockable(bool abX){ mbBlockable = abX;}
-		bool GetBlockable(){ return mbBlockable;}
-		void SetBlockVolumeMul(float afX){ mfBlockVolumeMul = afX;}
-		float GetBlockVolumeMul(){ return mfBlockVolumeMul;}
+		void SetBlockable(bool abX){ ohpl_sndd_set(mpRs, 12, abX); }
+		bool GetBlockable(){ return ohpl_sndd_get(mpRs, 12) != 0; }
+		void SetBlockVolumeMul(float afX){ ohpl_sndd_set(mpRs, 3, afX); }
+		float GetBlockVolumeMul(){ return ohpl_sndd_get(mpRs, 3); }
 
-		void SetRandom(float afX){mfRandom = afX;}
-		float GetRandom(){return mfRandom;}
-		void SetInterval(float afX){mfInterval = afX;}
-		float GetInterval(){return mfInterval;}
+		void SetRandom(float afX){ ohpl_sndd_set(mpRs, 4, afX); }
+		float GetRandom(){ return ohpl_sndd_get(mpRs, 4); }
+		void SetInterval(float afX){ ohpl_sndd_set(mpRs, 5, afX); }
+		float GetInterval(){ return ohpl_sndd_get(mpRs, 5); }
 
-		void SetPriority(int alX){ mlPriority = alX;}
-		int GetPriority(){ return mlPriority;}
-		
+		void SetPriority(int alX){ ohpl_sndd_set(mpRs, 6, (float)alX); }
+		int GetPriority(){ return (int)ohpl_sndd_get(mpRs, 6); }
+
 		//Resource implementation
 		bool Reload(){ return false;}
 		void Unload(){}
 		void Destroy(){}
-	
-	protected:
-		void PreloadSoundsOfType(eSoundEntityType aType);
+
+	private:
+		tString Name(eSoundEntityType aType, int alIdx, bool abRandom, bool abSkipPrevious)
+		{
+			size_t n;
+			const unsigned char *p = ohpl_sndd_name(mpRs, aType, alIdx, abRandom, abSkipPrevious, &n);
+			return tString((const char*)p, n);
+		}
 
 		cResources *mpResources;
-		cSound *mpSound;
-
-		tStringVec mvSoundNameVecs[eSoundEntityType_LastEnum];
-		int mlPrevious[eSoundEntityType_LastEnum];
-
-		bool mbFadeStart;
-		bool mbFadeStop;
-        
-		float mfVolume;
-		float mfMaxDistance;
-		float mfMinDistance;
-		
-		bool mbStream;
-		static bool mbLazyLoad;
-		bool mbLoop;
-		bool mbUse3D;
-		
-		bool mbBlockable;
-		float mfBlockVolumeMul;
-
-		float mfRandom;
-		float mfInterval;
-
-		int mlPriority;
+		OhplSndData *mpRs;
 	};
 };
 #endif // HPL_SOUND_DATA_H
