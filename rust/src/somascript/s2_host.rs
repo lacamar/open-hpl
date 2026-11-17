@@ -16,12 +16,6 @@ pub struct OhplS2HostOps {
     pub sset_count: unsafe extern "C" fn(*mut c_void, *const c_void) -> i32,
     pub sset_size: unsafe extern "C" fn(*mut c_void) -> i32,
     pub sset_to_array: unsafe extern "C" fn(*mut c_void, *mut c_void),
-    pub arr_insert_last: unsafe extern "C" fn(*mut c_void, *mut c_void),
-    pub arr_insert_at: unsafe extern "C" fn(*mut c_void, u32, *mut c_void),
-    pub arr_remove_last: unsafe extern "C" fn(*mut c_void),
-    pub arr_remove_at: unsafe extern "C" fn(*mut c_void, u32),
-    pub arr_size: unsafe extern "C" fn(*const c_void) -> u32,
-    pub arr_resize: unsafe extern "C" fn(*mut c_void, u32),
     pub run_global_func:
         unsafe extern "C" fn(*const u8, usize, *const u8, usize, *const u8, usize) -> bool,
     pub gen_count: unsafe extern "C" fn() -> usize,
@@ -31,7 +25,6 @@ pub struct OhplS2HostOps {
     pub easing: unsafe extern "C" fn(i32, f32) -> f32,
     pub misc: unsafe extern "C" fn(u32, i32, *const u8, usize) -> i32,
     pub game_id: unsafe extern "C" fn(Sink<u8>, *mut c_void),
-    pub register_array: unsafe extern "C" fn(*mut c_void),
 }
 
 static HOST: OnceLock<&'static OhplS2HostOps> = OnceLock::new();
@@ -165,11 +158,4 @@ pub fn game_id() -> Vec<u8> {
         unsafe { (h.game_id)(sink, std::ptr::from_mut(&mut v).cast()) };
     }
     v
-}
-
-pub fn register_array(engine: *mut c_void) {
-    // SAFETY: plain call into the host.
-    if let Some(h) = ops() {
-        unsafe { (h.register_array)(engine) };
-    }
 }

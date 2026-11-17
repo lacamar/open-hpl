@@ -25,6 +25,8 @@ scripts/soma-audio.py identify X.wav --bank 'Player*'  # which extracted event s
 scripts/soma-save-roundtrip.py MAP [TIMER_FUNC] [--gaps]  # script state changes -> autosave -> reload -> diff entity/light/PS/var/player dumps; --gaps: sound, music, tone mapping, hands, flashlight, spawned entity
 scripts/soma-audio.py playing                     # ours: live sound entries, FMOD events, recent starts
 OPENHPL_SOMA_SCRIPT_CHECK_FILE=f.hps scripts/soma-script-check.sh   # compile one file, print errors
+scripts/e-as-suite.py amnesia <Soma.bin> | soma   # array/string add-on script suites; output equals rust/tests/golden/E-as/suite-*.out (recorded from the C++ add-ons)
+scripts/a1-script-check.sh   # compile Amnesia TDD/AMFP .hps against the A1 decls in the built Soma binary
 ```
 
 Extracted event samples:

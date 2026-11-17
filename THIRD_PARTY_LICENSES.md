@@ -41,14 +41,10 @@ http://www.gzip.org/zlib/zlib_license.html
 
 ## AngelScript SDK addons
 
-`HPL2/core/include/impl/{scriptarray.h,aswrappedcall.h}` and
-`HPL2/core/{include,sources}/impl/{scriptarray.cpp,scripthelper.{h,cpp}}` are
-vendored, lightly modified copies of the official AngelScript SDK addon
-sources (`scriptarray`, `scripthelper`), matched to the AngelScript 2.38 API
-this port builds against (the AngelScript *library* itself is a system
-dependency — `angelscript-devel` — not vendored; only these addon-layer
-source files, which AngelScript distributes as source for applications to
-compile directly, are). Individual addon files don't carry their own
+`rust/src/script/addons/{array,helper}.rs` are Rust ports of the official
+AngelScript SDK addon sources (`scriptarray`, `scripthelper`), matched to the
+AngelScript 2.38 API this port builds against (the AngelScript *library*
+itself is a system dependency — `angelscript-devel` — not vendored). Individual addon files don't carry their own
 per-file header upstream either; the license is declared once for the whole
 SDK:
 
@@ -77,9 +73,9 @@ misrepresented as being the original software.
 (Source: `angelscript-devel`'s own packaged documentation,
 `doc_license.html`.)
 
-`HPL2/core/sources/impl/scriptstring.cpp` and `scriptstring_utils.cpp` are
-Frictional Games' own custom string-handle addon (GPLv3, part of the main
-codebase, not the AngelScript SDK's `scriptstdstring`).
+`rust/src/script/addons/string.rs` is a port of Frictional Games' own custom
+string-handle addon (GPLv3, part of the main codebase, not the AngelScript
+SDK's `scriptstdstring`).
 
 ## OALWrapper
 

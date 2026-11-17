@@ -1,1 +1,2 @@
 rust/tests/golden/S7/*.txt -whitespace
+rust/tests/golden/E-as/*.out -whitespace

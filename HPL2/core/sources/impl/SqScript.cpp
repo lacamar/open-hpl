@@ -23,13 +23,9 @@
 #include "system/Platform.h"
 #include "math/Math.h"
 #include <stdio.h>
-#include "impl/scripthelper.h"
 #include "resources/BinaryBuffer.h"
 #include "resources/Resources.h"
 #include "impl/RustL7.h"
-#include "impl/scriptarray.h"
-#include "impl/scriptstring.h"
-#include "../../../../cshim/as_shim.h"
 
 namespace hpl {
 
@@ -239,27 +235,4 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-}
-
-// AngelScript add-ons reached from the Rust side through the shim (cshim/as_shim.h)
-static void AddonsRegister(void* e)
-{
-	asIScriptEngine* pEngine = static_cast<asIScriptEngine*>(e);
-	RegisterScriptString(pEngine);
-	RegisterScriptArray(pEngine, true);
-}
-
-static int AddonsExecuteString(void* e, const char* code, void* module)
-{
-	return ExecuteString(static_cast<asIScriptEngine*>(e), code, static_cast<asIScriptModule*>(module));
-}
-
-static void* AddonsStrNew(const char* p, size_t n) { return new CScriptString(p, (unsigned)n); }
-static unsigned AddonsArraySize(const void* a) { return static_cast<const CScriptArray*>(a)->GetSize(); }
-static void* AddonsArrayAt(void* a, unsigned i) { return static_cast<CScriptArray*>(a)->At(i); }
-
-void OhplL7InstallAddons()
-{
-	static const OhplAsAddons kAddons = {AddonsRegister, AddonsExecuteString, AddonsStrNew, AddonsArraySize, AddonsArrayAt};
-	ohpl_as_set_addons(&kAddons);
 }

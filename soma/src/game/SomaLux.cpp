@@ -9,7 +9,7 @@
 #include <map>
 #include "SomaBase.h"
 #include "SomaLuxGame.h"
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 #include <SDL2/SDL.h>
 #include <algorithm>
 #include "SomaLuxPlayer.h"
@@ -737,8 +737,8 @@ int32_t OhplS9HostCall(uint32_t alOp, OhplS5Io *io)
 	case kOhplS9_PRELOAD_READY: return PreloadReady(sIn);
 	case kOhplS9_HIDE_CROSSHAIR: return SomaUserConfig() && SomaUserConfig()->GetBool("Debug", "HideCrosshair", false);
 	case kOhplS9_UPDATES_PER_SEC: return gpSomaBase->mpEngine->GetUpdatesPerSec();
-	case kOhplS9_ARR_RESIZE: ((CScriptArray *)io->p[0])->Resize((asUINT)io->i[0]); return 0;
-	case kOhplS9_ARR_SET: ((CScriptArray *)io->p[0])->SetValue((asUINT)io->i[0], io->p[1]); return 0;
+	case kOhplS9_ARR_RESIZE: ((OhplEasArray *)io->p[0])->Resize((asUINT)io->i[0]); return 0;
+	case kOhplS9_ARR_SET: ((OhplEasArray *)io->p[0])->SetValue((asUINT)io->i[0], io->p[1]); return 0;
 	case kOhplS9_APP_TIME: return (int32_t)(unsigned int)cPlatform::GetApplicationTime();
 	case kOhplS9_SLEEP: cPlatform::Sleep((unsigned int)io->i[0]); return 0;
 	case kOhplS9_GAME_TIME:
@@ -747,7 +747,7 @@ int32_t OhplS9HostCall(uint32_t alOp, OhplS5Io *io)
 		memcpy(io->i, &fTime, sizeof(fTime));
 		return 0;
 	}
-	case kOhplS9_ARR_PUSH_STR: ((CScriptArray *)io->p[0])->InsertLast(&sIn); return 0;
+	case kOhplS9_ARR_PUSH_STR: ((OhplEasArray *)io->p[0])->InsertLast(&sIn); return 0;
 	}
 	return 0;
 }
@@ -1462,7 +1462,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, M, "void SetDisplayNameEntry(const tString&in asEntry)", +[](cSomaLuxMap &m, const tString &s) { m.msDisplayNameEntry = s; });
 	SOMA_METHOD(e, M, "const tString& GetDisplayNameEntry()", +[](cSomaLuxMap &m) -> const tString & { return m.msDisplayNameEntry; });
 	SOMA_METHOD(e, M, "bool GetEntityArray(const tString&in asName, eLuxEntityType aType, const tString&in asClassName, array<iLuxEntity@>&inout avEntities)",
-				+[](cSomaLuxMap &m, S n, int t, S c, CScriptArray &a) {
+				+[](cSomaLuxMap &m, S n, int t, S c, OhplEasArray &a) {
 					bool bAny = false;
 					for (cSomaLuxEntity *p : m.GetEntities())
 						if ((t >= eSomaLuxEntityType_LastEnum || p->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
@@ -1479,7 +1479,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, M, "void ResetLatestEntity()", +[](cSomaLuxMap &m) { m.mpLatestEntity = NULL; });
 	SOMA_METHOD(e, M, "iLuxEntity@ GetPlayerEntity()", +[](cSomaLuxMap &m) { return m.GetEntity(tString("Player")); });
 	SOMA_METHOD(e, M, "bool GetEntityArrayID(const tString&in asName, eLuxEntityType aType, const tString&in asClassName, array<tID> &inout avOutEntities)",
-				+[](cSomaLuxMap &m, S n, int t, S c, CScriptArray &a) {
+				+[](cSomaLuxMap &m, S n, int t, S c, OhplEasArray &a) {
 					bool bAny = false;
 					for (cSomaLuxEntity *p : m.GetEntities())
 						if ((t >= eSomaLuxEntityType_LastEnum || p->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
@@ -1575,7 +1575,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 			});
 		});
 		SOMA_FUNC(e, "bool ParticleSystem_Exists(const tString &in asPSName)", +[](S n) { bool b = false; ForPS(n, [&b](cParticleSystem *) { b = true; }); return b; });
-		SOMA_FUNC(e, "bool Map_GetParticleSystemArray(const tString &in asName, array<cParticleSystem@> &inout avOutParticles)", +[](S n, CScriptArray &a) {
+		SOMA_FUNC(e, "bool Map_GetParticleSystemArray(const tString &in asName, array<cParticleSystem@> &inout avOutParticles)", +[](S n, OhplEasArray &a) {
 			a.Resize(0);
 			ForPS(n, [&a](cParticleSystem *p) { a.InsertLast(&p); });
 			return a.GetSize() > 0;
@@ -1595,7 +1595,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		SOMA_METHOD(e, "cLuxMap", "void PreloadGuiGfx(const tString&in asFile, eImGuiGfx aType)", +[](cSomaLuxMap *, S f, int t) { SomaPreloadGuiGfx(f, t); });
 		SOMA_METHOD(e, "cLuxMap", "void AddDissolveEntity(cMeshEntity @apMeshEntity, float afTime)", +[](cSomaLuxMap *m, cMeshEntity *p, float t) { m->AddDissolveEntity(p, t); });
 	}
-	SOMA_FUNC(e, "bool Map_GetLightArray(const tString &in asName, array<iLight@> &inout avOutLights)", +[](S n, CScriptArray &a) {
+	SOMA_FUNC(e, "bool Map_GetLightArray(const tString &in asName, array<iLight@> &inout avOutLights)", +[](S n, OhplEasArray &a) {
 		a.Resize(0);
 		if (cSomaLuxMap::GetCurrent() == NULL) return false;
 		cLightListIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetLightIterator();
@@ -1606,7 +1606,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		}
 		return a.GetSize() > 0;
 	});
-	SOMA_FUNC_NEW(e, "bool Map_GetBillboardArray(const tString &in asName, array<cBillboard@> &inout avOutBillboards)", +[](S n, CScriptArray &a) {
+	SOMA_FUNC_NEW(e, "bool Map_GetBillboardArray(const tString &in asName, array<cBillboard@> &inout avOutBillboards)", +[](S n, OhplEasArray &a) {
 		a.Resize(0);
 		if (cSomaLuxMap::GetCurrent() == NULL) return false;
 		cBillboardIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetBillboardIterator();
@@ -1737,7 +1737,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 					return c->CheckCharacterFits(p, bFeet, lSize < c->GetShapeNum() ? lSize : -1, &push);
 				});
 	SOMA_METHOD(e, "iPhysicsWorld", "void GetBodiesInAABB(const cVector3f&in avMin, const cVector3f&in avMax, array<iPhysicsBody@> &inout apBodyVec)",
-				+[](iPhysicsWorld *w, const cVector3f &vMin, const cVector3f &vMax, CScriptArray &a) {
+				+[](iPhysicsWorld *w, const cVector3f &vMin, const cVector3f &vMax, OhplEasArray &a) {
 					cBoundingVolume bv;
 					bv.SetLocalMinMax(vMin, vMax);
 					std::vector<iPhysicsBody *> vBodies;
@@ -1745,7 +1745,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 					for (iPhysicsBody *pBody : vBodies) a.InsertLast(&pBody);
 				});
 	SOMA_METHOD(e, "iPhysicsWorld", "void GetBodiesInAABB(const cVector3f&in avMin, const cVector3f&in avMax, bool abSkipStatic, bool abSkipDynamic, array<iPhysicsBody@> &inout apBodyVec)",
-				+[](iPhysicsWorld *w, const cVector3f &vMin, const cVector3f &vMax, bool bSkipStatic, bool bSkipDynamic, CScriptArray &a) {
+				+[](iPhysicsWorld *w, const cVector3f &vMin, const cVector3f &vMax, bool bSkipStatic, bool bSkipDynamic, OhplEasArray &a) {
 					cBoundingVolume bv;
 					bv.SetLocalMinMax(vMin, vMax);
 					std::vector<iPhysicsBody *> vBodies;

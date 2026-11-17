@@ -15,7 +15,7 @@
 #include "SomaLuxVoice.h"
 #include "SomaToneMapping.h"
 
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 
 #include <algorithm>
 #include <cstring>
@@ -304,10 +304,10 @@ namespace
 			*apLen = w.size();
 		}
 		static void WStringSet(void *, size_t a, const uint32_t *ap, size_t alLen) { *(tWString *)a = tWString((const wchar_t *)ap, alLen); }
-		static uint32_t ArrayLen(void *, size_t a) { return ((CScriptArray *)a)->GetSize(); }
-		static int ArrayElemType(void *, size_t a) { return ((CScriptArray *)a)->GetElementTypeId(); }
-		static size_t ArrayAt(void *, size_t a, uint32_t i) { return (size_t)((CScriptArray *)a)->At(i); }
-		static void ArrayResize(void *, size_t a, uint32_t n) { ((CScriptArray *)a)->Resize(n); }
+		static uint32_t ArrayLen(void *, size_t a) { return ((OhplEasArray *)a)->GetSize(); }
+		static int ArrayElemType(void *, size_t a) { return ((OhplEasArray *)a)->GetElementTypeId(); }
+		static size_t ArrayAt(void *, size_t a, uint32_t i) { return (size_t)((OhplEasArray *)a)->At(i); }
+		static void ArrayResize(void *, size_t a, uint32_t n) { ((OhplEasArray *)a)->Resize(n); }
 
 		static size_t SetItems(void *c, size_t a)
 		{
@@ -1733,8 +1733,8 @@ void cSomaSaveHandler::RegisterNatives(asIScriptEngine *e)
 		RunLoadCallback();
 	});
 	SOMA_METHOD(e, T, "bool GetSaveFiles(array<tWString> &inout avNames, array<tString> &inout avDates, array<tWString> &inout avFiles, array<tWString> &inout avSuffixes)",
-				+[](void *, CScriptArray &names, CScriptArray &dates, CScriptArray &files, CScriptArray &suffixes) {
-					for (CScriptArray *a : {&names, &dates, &files, &suffixes})
+				+[](void *, OhplEasArray &names, OhplEasArray &dates, OhplEasArray &files, OhplEasArray &suffixes) {
+					for (OhplEasArray *a : {&names, &dates, &files, &suffixes})
 						a->Resize(0);
 					for (cSaveInfo &i : ListSaves())
 					{
@@ -1746,8 +1746,8 @@ void cSomaSaveHandler::RegisterNatives(asIScriptEngine *e)
 					return true;
 				});
 	SOMA_METHOD(e, T, "bool GetSaveFiles(array<tWString> &inout avNames, array<tString> &inout avDates, array<tWString> &inout avFiles)",
-				+[](void *, CScriptArray &names, CScriptArray &dates, CScriptArray &files) {
-					for (CScriptArray *a : {&names, &dates, &files})
+				+[](void *, OhplEasArray &names, OhplEasArray &dates, OhplEasArray &files) {
+					for (OhplEasArray *a : {&names, &dates, &files})
 						a->Resize(0);
 					for (cSaveInfo &i : ListSaves())
 					{

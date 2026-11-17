@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 # Compile every Amnesia TDD and AMFP .hps against the A1 registrations (golden decls, byte-equal to the Rust table by cargo test).
+# Runs in the built Soma binary, whose script engine carries the Rust array/string add-ons.
 set -euo pipefail
 D="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-O="${XDG_CACHE_HOME:-$HOME/.cache}/open-hpl/a1-script-check"
 S="${STEAM_COMMON:-$HOME/.local/share/Steam/steamapps/common}"
-mkdir -p "$O"
-g++ -std=c++17 -O1 -I"$D/HPL2/core/include" -o "$O/check" "$D/scripts/a1_script_check.cpp" \
-	"$D/HPL2/core/sources/impl/scriptstring.cpp" "$D/HPL2/core/sources/impl/scriptarray.cpp" -langelscript -lpthread -ldl
-"$O/check" "$D/rust/tests/golden/A1/decls.txt" "$S/Amnesia The Dark Descent/maps" "$S/Machine for Pigs/maps"
+BIN="${OPENHPL_BUILD_DIR:-$D/amnesia/src/build}/Soma.bin.aarch64"
+OPENHPL_A1_CHECK="$D/rust/tests/golden/A1/decls.txt" OPENHPL_A1_DIRS="$S/Amnesia The Dark Descent/maps:$S/Machine for Pigs/maps" "$BIN"

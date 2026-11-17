@@ -6,7 +6,7 @@
 #include "SomaSound.h"
 #include "SomaScriptRuntime.h"
 
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 #include <fstream>
 
 
@@ -153,9 +153,9 @@ const OhplS5bVoiceHost kHost = {
 	[](const unsigned char *d, size_t dn, const OhplS7CallArg *a, size_t n, int lDefault) {
 		return OhplMapScriptCall(d, dn, a, n, lDefault >= 0, lDefault < 0 ? 0 : lDefault);
 	},
-	[](const void *a) { return (unsigned)((const CScriptArray *)a)->GetSize(); },
-	[](const void *a, unsigned i) { return ((CScriptArray *)a)->At(i); },
-	[](void *a, unsigned n) { ((CScriptArray *)a)->Resize(n); },
+	[](const void *a) { return (unsigned)((const OhplEasArray *)a)->GetSize(); },
+	[](const void *a, unsigned i) { return ((OhplEasArray *)a)->At(i); },
+	[](void *a, unsigned n) { ((OhplEasArray *)a)->Resize(n); },
 	[](const unsigned char *p, size_t n) -> const void * {
 		static tString sRef;
 		sRef.assign((const char *)p, n);

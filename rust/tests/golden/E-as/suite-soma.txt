@@ -1,0 +1,138 @@
+### ints
+array<int> a = {5, 3, 9, 1, 3};
+tString s;
+a.insertLast(7); a.insertAt(0, 10); a.insertAt(3, 11); a.removeAt(1); a.removeLast(); a.removeRange(1, 2);
+for (uint i = 0; i < a.length(); i++) s += " " + a[i];
+__print("a" + s);
+a.resize(6); a.sortDesc(); s = "";
+for (uint i = 0; i < a.length(); i++) s += " " + a[i];
+__print("b" + s);
+a.sortAsc(1, 3); a.reverse(); s = "";
+for (uint i = 0; i < a.length(); i++) s += " " + a[i];
+__print("c" + s + " find " + a.find(10) + " " + a.find(77) + " " + a.find(2, 0) + " empty " + a.isEmpty());
+array<int> b(4, 8); array<int> c = b; c[1] = 2;
+__print((b == c) + " " + (b == b) + " " + b.length() + " " + c[1]);
+b.insertAt(2, c); b.insertAt(0, b);
+__print(b.length() + " " + b[0] + " " + b[5] + " " + b[11]);
+### floats
+array<float> f = {3.5f, -1.0f, 2.25f, 0.0f, 0.001f};
+f.sortAsc(); tString s;
+for (uint i = 0; i < f.length(); i++) s += " " + f[i];
+__print(s + " find " + f.find(2.25f) + " " + f.find(9.0f));
+f.sortDesc(1, 3); s = "";
+for (uint i = 0; i < f.length(); i++) s += " " + f[i];
+__print(s);
+array<double> d = {2.5, -3.5, 0.125}; d.sortAsc();
+__print(d[0] + " " + d[1] + " " + d[2]);
+array<uint8> u = {200, 3, 255, 0}; u.sortAsc();
+__print(u[0] + " " + u[1] + " " + u[2] + " " + u[3]);
+array<bool> bo = {true, false, true}; bo.sortAsc();
+__print(bo[0] + " " + bo[1] + " " + bo[2] + " " + bo.find(true));
+### strings
+array<tString> a = {"pear", "apple", "fig", "banana", "apple"};
+tString s;
+for (uint i = 0; i < a.length(); i++) s += a[i] + "|";
+__print(s);
+a.sortAsc(); s = "";
+for (uint i = 0; i < a.length(); i++) s += a[i] + "|";
+__print(s);
+a.sortDesc(); s = "";
+for (uint i = 0; i < a.length(); i++) s += a[i] + "|";
+__print(s + " find " + a.find("fig") + " " + a.find("zzz") + " " + a.find(2, "apple"));
+a.insertLast("kiwi"); a.insertAt(1, "lime"); a.removeAt(0); a.resize(9); a.removeLast(); s = "";
+for (uint i = 0; i < a.length(); i++) s += a[i] + "|";
+__print(s);
+array<tString> b = a; b[0] = "changed"; b.reverse();
+__print(a[0] + " " + b[0] + " " + b[b.length() - 1] + " " + (a == b) + " " + (a == a));
+array<tString> c(3, "x"); a.insertAt(1, c);
+__print(a.length() + " " + a[1] + a[2] + a[3] + a[4]);
+a.removeRange(1, 3); a.sortAsc(1, 3);
+__print(a.length() + " " + a[1] + " " + a[2]);
+### extras
+array<tString> a; a.push_back("b"); a.push_back("c"); a.push_front("a"); a.insertBack("d"); a.insert(1, "z");
+tString s;
+for (uint i = 0; i < a.size(); i++) s += a[i];
+__print(s + " " + a.size() + " " + a.empty());
+a.pop_back(); a.pop_front(); a.erase(0); s = "";
+for (uint i = 0; i < a.size(); i++) s += a[i];
+__print(s + " " + a.size());
+a.pop_back(); a.pop_back(); a.pop_back(); a.pop_front();
+__print(a.size() + " " + a.empty());
+array<int> n; n.push_back(5); n.push_front(4); n.insert(1, 9);
+__print(n[0] + " " + n[1] + " " + n[2] + " " + n.size());
+array<float> fl; cString_GetFloatVec("1.5 2 x 3", fl, " ");
+__print(fl.length() + " " + fl[0] + " " + fl[2] + " " + fl[3]);
+array<int> il; cString_GetIntVec("4,5,,7", il, ",");
+__print(il.length() + " " + il[0] + " " + il[2]);
+array<tString> sv; cString_GetStringVec("a;b;c", sv, ";");
+__print(sv.length() + " " + sv[0] + sv[1] + sv[2]);
+### values
+array<cVector3f> v = {cVector3f(1, 2, 3), cVector3f(4, 5, 6), cVector3f(1, 2, 3)};
+__print(v.length() + " " + v.find(cVector3f(4, 5, 6)) + " " + v.find(1, cVector3f(1, 2, 3)) + " " + v.find(cVector3f(9, 9, 9)));
+v.insertLast(cVector3f(7, 8, 9)); v.removeAt(0); v.reverse();
+__print(v.length() + " " + v[0].x + " " + v[2].z + " " + (v == v));
+array<cVector3f> w = v; w[0].x = 100;
+__print(v[0].x + " " + w[0].x);
+array<cVector3f> z(2); z[1] = cVector3f(1, 1, 1); z.resize(4);
+__print(z.length() + " " + z[1].y + " " + z[3].y);
+array<cColor> c = {cColor(1, 0, 0, 1), cColor(0, 1, 0, 1)};
+__print(c.length() + " " + c.find(cColor(0, 1, 0, 1)) + " " + c.find(cColor(0, 0, 1, 1)));
+### callbacks
+array<int> a = {5, 3, 9, 1, 3, 8, 2, 7};
+a.sort(function(a, b) { return a < b; });
+tString s;
+for (uint i = 0; i < a.length(); i++) s += " " + a[i];
+__print(s);
+a.sort(function(a, b) { return a > b; }, 2, 4); s = "";
+for (uint i = 0; i < a.length(); i++) s += " " + a[i];
+__print(s);
+array<tString> t = {"pear", "fig", "apple", "kiwi"};
+t.sort(function(a, b) { return a.length() < b.length(); }); s = "";
+for (uint i = 0; i < t.length(); i++) s += t[i] + "|";
+__print(s);
+array<float> f = {2.5f, -1.0f, 9.0f};
+f.sort(function(a, b) { return a > b; });
+__print(f[0] + " " + f[1] + " " + f[2]);
+### nested
+array<array<tString>> m = {{"a", "b"}, {"c"}, {}};
+m[2].insertLast("z"); m.insertLast({"q", "r", "s"});
+tString s;
+for (uint i = 0; i < m.length(); i++) { for (uint j = 0; j < m[i].length(); j++) s += m[i][j]; s += "/"; }
+__print(s + " " + m.length());
+array<array<tString>> n = m; n[0][0] = "X"; n.removeAt(1);
+__print(m[0][0] + " " + n[0][0] + " " + m.length() + " " + n.length());
+array<array<int>> g(2); g[0].insertLast(1); g[1].resize(3);
+__print(g[0].length() + " " + g[1].length());
+array<int> fe = {4, 5, 6}; tString r;
+foreach (auto v, auto i : fe) r += i + "=" + v + " ";
+__print(r);
+### err-index
+array<int> a = {1, 2, 3};
+__print("before");
+int x = a[3];
+__print("after");
+### err-remove
+array<tString> a = {"x"};
+a.removeAt(1);
+### err-insert
+array<int> a = {1};
+a.insertAt(2, 5);
+### err-sort-range
+array<int> a = {1, 2, 3};
+a.sortAsc(2, 5);
+### err-resize
+array<int> a = {1};
+a.resize(0xFFFFFFF0);
+### err-nocmp
+array<cVector3f> a = {cVector3f(1, 2, 3), cVector3f(0, 0, 0)};
+a.sortAsc();
+### err-nofind
+array<cMatrixf> a(2);
+__print(a.find(cMatrixf_Identity) + "");
+### err-callback-range
+array<int> a = {1, 2};
+a.sort(function(a, b) { return a < b; }, 5, 2);
+### err-str-index
+array<tString> a = {"x"};
+__print(a[0]);
+a.removeLast(); a.removeLast();

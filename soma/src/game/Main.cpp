@@ -4,6 +4,11 @@
 
 int hplMain(const tString &asCommandline)
 {
+	if (const char *pDecls = getenv("OPENHPL_A1_CHECK"))
+		return RunA1Check(pDecls, getenv("OPENHPL_A1_DIRS") ? getenv("OPENHPL_A1_DIRS") : "");
+	if (const char *pSuite = getenv("OPENHPL_AS_SUITE"))
+		return RunAddonSuite(pSuite);
+
 	// OPENHPL_SOMA_SCRIPT_CHECK=<report.json>: compile all game scripts against the recovered API, no engine
 	std::vector<std::string> vCheck;
 	if (ohpl_gs4_main_plan(getenv("OPENHPL_SOMA_SCRIPT_CHECK"), getenv("OPENHPL_SOMA_GAME_DIR"), getenv("OPENHPL_SOMA_SCRIPT_API"),

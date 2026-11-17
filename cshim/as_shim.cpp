@@ -7,8 +7,6 @@ namespace {
 
 constexpr asPWORD kCbUserData = 0x4F4C37;
 
-const OhplAsAddons* gAddons = nullptr;
-
 struct Cb {
 	OhplAsMsgFn fn;
 	void* ctx;
@@ -114,13 +112,7 @@ const char* ohpl_as_ctx_exception_string(void* c) { return C(c)->GetExceptionStr
 int ohpl_as_ctx_exception_line(void* c, int* col, const char** section) { return C(c)->GetExceptionLineNumber(col, section); }
 
 
-void ohpl_as_set_addons(const OhplAsAddons* t) { gAddons = t; }
-void ohpl_as_register_addons(void* e) { if (gAddons) gAddons->register_addons(e); }
-int ohpl_as_execute_string(void* e, const char* code, void* module) { return gAddons ? gAddons->execute_string(e, code, module) : asERROR; }
 const char* ohpl_as_str_data(const void* s) { return static_cast<const std::string*>(s)->data(); }
 size_t ohpl_as_str_len(const void* s) { return static_cast<const std::string*>(s)->size(); }
-void* ohpl_as_str_new(const char* p, size_t n) { return gAddons ? gAddons->str_new(p, n) : nullptr; }
-unsigned ohpl_as_array_size(const void* a) { return gAddons ? gAddons->array_size(a) : 0; }
-void* ohpl_as_array_at(void* a, unsigned i) { return gAddons ? gAddons->array_at(a, i) : nullptr; }
 
 }

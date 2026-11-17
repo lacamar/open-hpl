@@ -10,7 +10,7 @@
 #include "SomaLuxVoice.h"
 #include "SomaScriptRuntime.h"
 
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 #include "impl/XmlDocumentTiny.h"
 
 #include <algorithm>

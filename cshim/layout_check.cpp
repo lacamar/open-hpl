@@ -7,6 +7,7 @@
 
 #include "shims.h"
 #include "as_shim.h"
+#include "as_shim_addon.h"
 #include "../soma/src/game/RustSomaLuxS5d.h"
 #include <angelscript.h>
 
@@ -868,6 +869,17 @@ static_assert(sizeof(OhplAsMsg) == 32 && offsetof(OhplAsMsg, row) == 8 && offset
 static_assert(asCALL_CDECL == 0 && asCALL_STDCALL == 1 && asCALL_CDECL_OBJLAST == 4 && asCALL_CDECL_OBJFIRST == 5, "asECallConvTypes");
 static_assert(asBEHAVE_CONSTRUCT == 0 && asBEHAVE_DESTRUCT == 2 && asBEHAVE_FACTORY == 3 && asBEHAVE_ADDREF == 5
 	&& asBEHAVE_RELEASE == 6, "asEBehaviours");
+static_assert(asBEHAVE_LIST_FACTORY == 4 && asBEHAVE_TEMPLATE_CALLBACK == 8 && asBEHAVE_GETREFCOUNT == 9 && asBEHAVE_SETGCFLAG == 10
+	&& asBEHAVE_GETGCFLAG == 11 && asBEHAVE_ENUMREFS == 12 && asBEHAVE_RELEASEREFS == 13, "asEBehaviours (array add-on)");
+static_assert(asOBJ_GC == (1 << 2) && asOBJ_TEMPLATE == (1 << 6) && asOBJ_ASHANDLE == (1 << 7) && asOBJ_SCRIPT_OBJECT == (1 << 21)
+	&& asOBJ_NOINHERIT == (1 << 23), "asEObjTypeFlags (array add-on)");
+static_assert(asTYPEID_VOID == 0 && asTYPEID_BOOL == 1 && asTYPEID_INT8 == 2 && asTYPEID_INT16 == 3 && asTYPEID_INT32 == 4
+	&& asTYPEID_INT64 == 5 && asTYPEID_UINT8 == 6 && asTYPEID_UINT16 == 7 && asTYPEID_UINT32 == 8 && asTYPEID_UINT64 == 9
+	&& asTYPEID_FLOAT == 10 && asTYPEID_DOUBLE == 11 && asTYPEID_OBJHANDLE == 0x40000000 && asTYPEID_HANDLETOCONST == 0x20000000
+	&& asTYPEID_MASK_OBJECT == 0x1C000000 && asTYPEID_MASK_SEQNBR == 0x03FFFFFF, "asETypeIdFlags");
+static_assert(asTM_INREF == 1 && asTM_CONST == 4 && asMSGTYPE_ERROR == 0 && asEXECUTION_FINISHED == 0 && asEXECUTION_ABORTED == 2
+	&& asGM_ALWAYS_CREATE == 2 && asEP_DISALLOW_VALUE_ASSIGN_FOR_REF_TYPE == 20 && asMULTIPLE_FUNCTIONS == -14 && asNO_FUNCTION == -6,
+	"array add-on constants");
 static_assert(asOBJ_REF == 1 && asOBJ_VALUE == 2 && asOBJ_POD == 8 && asOBJ_NOHANDLE == 16 && asOBJ_APP_CLASS == 256
 	&& asOBJ_APP_CLASS_ALLINTS == (1 << 16) && asOBJ_APP_CLASS_ALLFLOATS == (1 << 17), "asEObjTypeFlags");
 static_assert(asMSGTYPE_ERROR == 0 && asMSGTYPE_WARNING == 1 && asMSGTYPE_INFORMATION == 2, "asEMsgType");

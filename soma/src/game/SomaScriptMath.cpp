@@ -7,7 +7,7 @@
 #include "math/Math.h"
 #include "math/MathTypes.h"
 #include "math/Quaternion.h"
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 
 #include <cmath>
 #include <cstring>
@@ -485,7 +485,7 @@ static void RegisterStringSet(asIScriptEngine *e)
 	SOMA_METHOD(e, "cScriptStringSet", "int Count(const tString &in asStr)", +[](void *p, S s) { return (int)gmapStringSets[p].count(s); });
 	SOMA_METHOD(e, "cScriptStringSet", "void Clear()", +[](void *p) { gmapStringSets[p].clear(); });
 	SOMA_METHOD(e, "cScriptStringSet", "int Size()", +[](void *p) { return (int)gmapStringSets[p].size(); });
-	SOMA_METHOD(e, "cScriptStringSet", "void ElementsToArray(array<tString> &out avOutElements)", +[](void *p, CScriptArray &a) {
+	SOMA_METHOD(e, "cScriptStringSet", "void ElementsToArray(array<tString> &out avOutElements)", +[](void *p, OhplEasArray &a) {
 		a.Resize(0);
 		for (const tString &s : gmapStringSets[p])
 			a.InsertLast((void *)&s);

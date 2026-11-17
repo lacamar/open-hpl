@@ -8,7 +8,7 @@
 #include "SomaImGui.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 
 #include <SDL2/SDL.h>
 #include <cstring>
@@ -481,7 +481,7 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cGuiSet", "void DrawFontEx(const tWString &in asText, iFontData @apFont, const cVector3f &in avPos,const cVector2f &in avSize, const cColor&in aColor, eFontAlign aAlign, eGuiMaterial aMaterial)",
 				+[](cGuiSet *g, const tWString &t, iFontData *f, const cVector3f &p, const cVector2f &v, const cColor &c, eFontAlign al, eGuiMaterial m) { g->DrawFont(t, f, p, v, c, al, m); });
 	SOMA_METHOD(e, "iFontData", "void GetWordWrapRows(float afLength,const cVector2f&in avSize,const tWString&in asString, array<tWString> &inout avRows)",
-				+[](iFontData *f, float l, const cVector2f &v, const tWString &t, CScriptArray &rows) {
+				+[](iFontData *f, float l, const cVector2f &v, const tWString &t, OhplEasArray &rows) {
 					tWStringVec vRows;
 					f->GetWordWrapRows(l, v.y, v, t, &vRows);
 					rows.Resize(0);

@@ -74,23 +74,8 @@ void* ohpl_as_ctx_ret_object(void* c);
 const char* ohpl_as_ctx_exception_string(void* c);
 int ohpl_as_ctx_exception_line(void* c, int* col, const char** section);
 
-/* Add-ons (string, array, scripthelper) are compiled into HPL2; it installs this table before first use. */
-typedef struct OhplAsAddons {
-	void (*register_addons)(void* engine);
-	int (*execute_string)(void* engine, const char* code, void* module);
-	void* (*str_new)(const char* p, size_t n);
-	unsigned (*array_size)(const void* a);
-	void* (*array_at)(void* a, unsigned i);
-} OhplAsAddons;
-
-void ohpl_as_set_addons(const OhplAsAddons* t);
-void ohpl_as_register_addons(void* e);
-int ohpl_as_execute_string(void* e, const char* code, void* module);
 const char* ohpl_as_str_data(const void* s);
 size_t ohpl_as_str_len(const void* s);
-void* ohpl_as_str_new(const char* p, size_t n);
-unsigned ohpl_as_array_size(const void* a);
-void* ohpl_as_array_at(void* a, unsigned i);
 
 #ifdef __cplusplus
 }

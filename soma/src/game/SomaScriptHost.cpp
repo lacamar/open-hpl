@@ -15,7 +15,7 @@
 #include "SomaGlobalFuncsTable.h"
 #include "SomaConfig.h"
 
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 
 #include <string>
 
@@ -64,19 +64,11 @@ namespace
 	int SetSize(void *apSet) { return (int)Set(apSet).size(); }
 	void SetToArray(void *apSet, void *apArr)
 	{
-		CScriptArray &a = *(CScriptArray *)apArr;
+		OhplEasArray &a = *(OhplEasArray *)apArr;
 		a.Resize(0);
 		for (const std::string &s : Set(apSet))
 			a.InsertLast((void *)&s);
 	}
-
-	CScriptArray &Arr(void *apArr) { return *(CScriptArray *)apArr; }
-	void ArrInsertLast(void *apArr, void *apValue) { Arr(apArr).InsertLast(apValue); }
-	void ArrInsertAt(void *apArr, unsigned alIdx, void *apValue) { Arr(apArr).InsertAt(alIdx, apValue); }
-	void ArrRemoveLast(void *apArr) { Arr(apArr).RemoveLast(); }
-	void ArrRemoveAt(void *apArr, unsigned alIdx) { Arr(apArr).RemoveAt(alIdx); }
-	unsigned ArrSize(const void *apArr) { return ((const CScriptArray *)apArr)->GetSize(); }
-	void ArrResize(void *apArr, unsigned alSize) { Arr(apArr).Resize(alSize); }
 
 	bool RunGlobalFunc(const unsigned char *apObj, size_t alObj, const unsigned char *apClass, size_t alClass, const unsigned char *apFunc, size_t alFunc)
 	{
@@ -88,8 +80,6 @@ namespace
 		const std::string &s = SomaGameId();
 		aSink(apCtx, (const unsigned char *)s.data(), s.size());
 	}
-
-	void RegisterArray(void *apEngine) { RegisterScriptArray((asIScriptEngine *)apEngine, true); }
 
 	const void *GenOp(size_t alIdx) { return (const void *)SomaScriptGenBindingFunc(alIdx); }
 
@@ -133,8 +123,7 @@ namespace
 	}
 
 	const OhplS2HostOps gHost = {InternEmpty, RegisterStep, SetReset, SetAssign, SetAdd, SetErase, SetCount, SetSize, SetToArray,
-								 ArrInsertLast, ArrInsertAt, ArrRemoveLast, ArrRemoveAt, ArrSize, ArrResize, RunGlobalFunc, SomaScriptGenBindingCount,
-								 GenOp, GlobalFuncs, SomaEasing, Misc, GameId, RegisterArray};
+								 RunGlobalFunc, SomaScriptGenBindingCount, GenOp, GlobalFuncs, SomaEasing, Misc, GameId};
 }
 
 void OhplS2InstallHost()

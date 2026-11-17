@@ -369,7 +369,6 @@ namespace hpl {
 
 	cLowLevelSystemSDL::cLowLevelSystemSDL()
 	{
-		OhplL7InstallAddons();
 		mpRustEngine = ohpl_l7_engine_new();
 		if(ohpl_l7_engine_raw(mpRustEngine)==NULL)
 		{
