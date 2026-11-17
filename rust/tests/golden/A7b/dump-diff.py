@@ -7,6 +7,8 @@ import re
 import sys
 
 COMB = re.compile(r"Combined(Objects|Mesh)\d+")
+# critters (LuxCritter_Bug/Spider, rats) walk by rand draws: their bodies enter and leave areas at random frames
+CRITTER = re.compile(r"(cockroach|spider|rat)_\d+_Body_\d+:")
 
 
 NUM = re.compile(r"-?\d+\.\d+")
@@ -33,7 +35,7 @@ def norm(line):
         pod = pod[:16] + "xxxxxxxx" + pod[24:]
     if t == "8":
         pod = pod[:24] + "xxxxxxxx" + pod[32:]
-    items = sorted(i for i in ov.split(",") if i and not COMB.match(i))
+    items = sorted(i for i in ov.split(",") if i and not COMB.match(i) and not CRITTER.match(i))
     return f"{fr} {name} t={t} act={act} pod={pod} ov={','.join(items)} {rest}"
 
 

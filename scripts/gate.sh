@@ -482,7 +482,7 @@ def same(name, a, b):
                 own = sorted(l for l in ls if l.startswith(("ts  ", "fire  ")))
                 return own, {l for l in ls if l not in own}
             # player: key timing and physics settling differ between runs, so velocities are not compared; step, camera, health and
-            # state transitions must agree, positions within 3 m, over the shorter run (at least 70% of the longer: run length follows load);
+            # state transitions must agree, positions within 3 m, over the shorter run (at least 600 ticks; run length follows load, crashes show in the sweep status);
             # handler/module/effect lists exactly
             def ticks(sec):
                 return [l.split()[2:] for l in sec if l.startswith("pl ")]
@@ -498,14 +498,18 @@ def same(name, a, b):
             plx, ply = ticks(x), ticks(y)
             k = min(len(plx), len(ply))
             tx, ty = trans(plx[:k]), trans(ply[:k])
-            if (not all(tol(u, v) for u, v in zip(plx, ply)) or tx != ty or min(len(plx), len(ply)) < 0.7 * max(len(plx), len(ply))
+            if (not all(tol(u, v) for u, v in zip(plx, ply)) or tx != ty or min(len(plx), len(ply)) < 600
                     or [l for l in x if re.match(r"g[hems] ", l)] != [l for l in y if re.match(r"g[hems] ", l)]):
                 return (False, f"DIFFER (section {i}: player ticks or game lists)")
             (ox, sx), (oy, sy) = timers(x), timers(y)
             if ox != oy or sx != sy:
                 return (False, f"DIFFER (section {i}: timers)")
-            # map load / timer / collide-flag / light-level lines (S9): the set of distinct lines must agree
-            if {l for l in x if l.startswith("s9 ")} != {l for l in y if l.startswith("s9 ")}:
+            # map load / timer / collide-flag / light-level lines (S9): distinct lines, order follows timer draws; the shorter run's set
+            # must be contained in the longer run's (late timer events follow run length)
+            # entity and dynamic mesh counts follow the scratch's history (steps of 4 between runs of one binary in one scratch)
+            s9n = lambda l: re.sub(r"( ents| dmesh) \d+", r"\1 N", l)
+            s9x, s9y = {s9n(l) for l in x if l.startswith("s9 ")}, {s9n(l) for l in y if l.startswith("s9 ")}
+            if not s9x or not s9y or not (s9x <= s9y if len(plx) <= len(ply) else s9y <= s9x):
                 return (False, f"DIFFER (section {i}: s9 map lines)")
         return (True, f"equal over {len(sa)} maps")
     if name.startswith("a12a-"):
