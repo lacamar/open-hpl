@@ -93,9 +93,7 @@ cLuxPlayer::cLuxPlayer() : iLuxUpdateable("LuxPlayer"), iLuxCollideCallbackConta
 	mCore.mfTerrorIncSpeed = gpBase->mpGameCfg->GetFloat("Player_General","TerrorIncSpeed",0);
 	mCore.mfTerrorDecSpeed = gpBase->mpGameCfg->GetFloat("Player_General","TerrorDecSpeed",0);
 
-	mlMaxPrevSpeeds = gpBase->mpGameCfg->GetInt("Player_General","MaxPrevSpeedsSaved",0);
-
-	mfAutoKillYPos = gpBase->mpGameCfg->GetFloat("Player_General","AutoKillYPos",0);
+	ohpl_a2d_init(&mD, gpBase->mpGameCfg->GetInt("Player_General","MaxPrevSpeedsSaved",0), gpBase->mpGameCfg->GetFloat("Player_General","AutoKillYPos",0));
 
 	//////////////////////////////////
 	// Init body properties
@@ -198,6 +196,8 @@ cLuxPlayer::~cLuxPlayer()
 	STLDeleteAll(mvHelpers);
 	STLDeleteAll(mvStates);
 	STLDeleteAll(mvMoveStates);
+
+	ohpl_a2d_free(&mD);
 }
 
 //-----------------------------------------------------------------------
@@ -220,108 +220,22 @@ void cLuxPlayer::LoadFonts()
 
 void cLuxPlayer::Reset()
 {
-	////////////////////////
-	// Reset variables
-	mbActive = true;
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_reset(&mCore, &mD, &dh);
 
-	mMoveState = eLuxMoveState_Normal;
-	mvMoveStates[mMoveState]->OnEnterState(eLuxMoveState_LastEnum);
-	
-	mState = eLuxPlayerState_Normal;
-	mvStates[mState]->OnEnterState(eLuxPlayerState_LastEnum);
-	
-	mbPressedMove = false;
-	mbPressingRun = false;
-	mbPressingJump = false;
-
-	mbJumpDisabled = false;
-	mbCrouchDisabled = false;
-	mbSanityDrainDisabled = false;
-
-	mbIsInWater = false;
 	msWaterStepSound = "";
-	mfWaterSpeedMul = 1.0f;
-
 	mvHeadSpeed =0;
-	mvHeadSpinSpeed =0;
-
-	mfInteractionMoveSpeedMul = 1.0f;
-
-	mfLookSpeedMul = 1.0f;
-
-	mfEventMoveSpeedMul = 1.0f;
-	mfEventRunSpeedMul = 1.0f;
-
-	mfScriptMoveSpeedMul = 1.0f;
-	mfScriptRunSpeedMul = 1.0f;
-
-	mfHurtMoveSpeedMul = 1.0f;
-
-	mfInsanityCollapseSpeedMul = 1.0f;
-
-	mfScriptJumpForceMul = 1.0f;
-
-	mfCurrentFocusDistance = 0;
 	mpEntityInFocus = NULL;
 	mpBodyInFocus = NULL;
-
 	mpCharBody = NULL;
-
 	msCurrentPermaDeathSound = "";
-
-	mfHealth = 100;
-	mfSanity = 100;
-	mfLampOil = 100;
-	mlTinderboxes =0;
-
-	mvHeadPosAddSum =0;
-
-	mfTerror =0;
-
-	mlCoins =0;
-
-	mfAvgSpeed =0;
-	mlstPrevSpeeds.clear();
-
 	msFocusText = _W("");
 	msLastFocusText = _W("");
-	mCore.mfFocusTextAlpha =0;
 
 	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
 	if(mpTerrorSound && pSoundHandler->IsValid(mpTerrorSound, mlTerrorSoundID)) mpTerrorSound->Stop();
 	mpTerrorSound = NULL;
 	mlTerrorSoundID = -1;
-
-	mfAspectMul = 1.0f;
-	mfFOVMul = 1.0f;
-	mfAspectMulGoal = 1.0f;
-	mfFOVMulGoal = 1.0f;
-	mfAspectMulSpeed = 0.0f;
-	mfFOVMulSpeed = 0.0f;
-	mfRoll=0;
-	mfRollGoal=0;
-	mfRollSpeedMul=0;
-	mfRollMaxSpeed=0;
-
-	mCore.cam.mfLeanRoll=0;
-	mCore.cam.mfLeanRollGoal=0;
-	mCore.cam.mfLeanRollSpeedMul=0;
-	mCore.cam.mfLeanRollMaxSpeed=0;
-
-	mvCamAnimPos =0;
-	mvCamAnimPosGoal=0;
-	mfRollSpeedMul=0;
-	mfRollMaxSpeed=0;
-
-	mbFadingPitch = false;
-	mfPitchGoal=0;
-	mfPitchSpeedMul=0;
-	mfPitchMaxSpeed=0;
-	mbUsesDragFootsteps = false;
-
-	mbNoFallDamage = false;
-
-	mbScriptShowFocusIconAndCrossHair = true;
 
 	for(size_t i=0; i<mvHeadPosAdds.size(); ++i)
 	{
@@ -333,21 +247,12 @@ void cLuxPlayer::Reset()
 
 	m_setTerrorEnemies.clear();
 
-	////////////////////////
-	//Reset camera
 	mpCamera->SetRoll(0.0f);
 	mpCamera->SetPitch(0.0f);
 	mpCamera->SetYaw(0.0f);
 	mpCamera->SetFOV(mfFOV*mfFOVMul);
 	mpCamera->SetAspect(mfAspect*mfAspectMul);
 
-	///////////////
-	// Free camera
-	mbFreeCameraActive = false;
-	mfFreeCameraSpeed = 0.1f;
-
-	////////////////////////
-	// Reset Helpers
 	RunHelperMessage(eUpdateableMessage_Reset,0);
 }
 
@@ -365,41 +270,9 @@ void cLuxPlayer::Update(float afTimeStep)
 	if(OhplA2bTick(this)) return;
 	OhplA2cPre(this, afTimeStep);
 
-	////////////////////////
-	// Update current move state
-	mvMoveStates[mMoveState]->Update(afTimeStep);
-
-	////////////////////////
-	// Update current state
-	mvStates[mState]->Update(afTimeStep);
-
-	////////////////////////
-	// Update head
-	UpdateHeadPosAdd(afTimeStep);
-	UpdateHeadSpin(afTimeStep);
-
-	//mpCamera->AddYaw(afTimeStep * kPif);
-	//mpCharBody->AddYaw(afTimeStep * kPif * 0.5f);
-
-	////////////////////////
-	// Run Helper message
-	RunHelperMessage(eUpdateableMessage_Update,afTimeStep);
-
-	////////////////////////
-	//Clear some variables
-	mbPressedMove = false;
-
-	////////////////////////
-	//Check if too far down
-	if(mpCharBody->GetPosition().y < mfAutoKillYPos) SetHealth(0);
-			
-	////////////////////////
-	// Update misc
-	CheckCollisionCallback("Player", gpBase->mpMapHandler->GetCurrentMap());
-	UpdateCamera(afTimeStep);
-	UpdateTerror(afTimeStep);
-	UpdateFocusText(afTimeStep);
-	UpdateAvgSpeed(afTimeStep);
+	OhplA2Host h = {this, A2HostOp, A2HostQuery};
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_update(&mCore, &mD, &h, &dh, afTimeStep);
 
 	OhplA2cPost(this);
 }
@@ -408,34 +281,16 @@ void cLuxPlayer::Update(float afTimeStep)
 
 void cLuxPlayer::PostUpdate(float afTimeStep)
 {
-	////////////////////////
-	// Run Helper message
-	RunHelperMessage(eUpdateableMessage_PostUpdate,afTimeStep);
-
-	////////////////////////
-	// Post Update current state
-	mvStates[mState]->PostUpdate(afTimeStep);
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_post_update(&mD, &dh, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::OnDraw(float afFrameTime)
 {
-	////////////////////////
-	// Draw with current move state
-	mvMoveStates[mMoveState]->OnDraw(afFrameTime);
-
-	////////////////////////
-	// Draw with current state
-	mvStates[mState]->OnDraw(gpBase->mpGameHudSet, afFrameTime);
-
-	////////////////////////
-	// Run Helper message
-	RunHelperMessage(eUpdateableMessage_OnDraw,afFrameTime);
-
-	////////////////////////
-	// Draw player HUD
-	DrawHud(afFrameTime);
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_on_draw(&mCore, &mD, &dh, afFrameTime);
 }
 
 //-----------------------------------------------------------------------
@@ -460,79 +315,16 @@ void cLuxPlayer::SaveUserConfig()
 
 void cLuxPlayer::OnMapEnter(cLuxMap *apMap)
 {
-	////////////////////////////////
-	//Init all move states 
-	for(int i=0; i<eLuxMoveState_LastEnum; ++i) mvMoveStates[i]->OnMapEnter();
-	
-
-	////////////////////////////////
-	//Init current move state
-	mvMoveStates[mMoveState]->OnEnterState(mMoveState);
-
-	////////////////////////////////
-	//Call current state
-	mvStates[mState]->OnMapEnter(apMap);
-
-	////////////////////////
-	// Run Helper message
-	RunHelperLuxMessage(eLuxUpdateableMessage_OnMapEnter, apMap);
-	
-	////////////////////////////////
-	//Reset focus text
-	msFocusText = _W("");
-	msLastFocusText = _W("");
-	mCore.mfFocusTextAlpha =0;
-
-	////////////////////////////////
-	//Reset variables
-	mbIsInWater = false;
-	mpEntityInFocus = NULL;
-	mpBodyInFocus = NULL;
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_map_enter(&mCore, &mD, &dh, apMap);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::OnMapLeave(cLuxMap *apMap)
 {
-	////////////////////////
-	// Set default state
-	ChangeState(eLuxPlayerState_Normal);
-	
-	////////////////////////////////
-	//Call current state
-	mvStates[mState]->OnMapLeave(apMap);
-
-	////////////////////////
-	// Clear collide callbacks
-	DestroyCollideCallbacks();
-
-	////////////////////////
-	// Run Helper message
-	RunHelperLuxMessage(eLuxUpdateableMessage_OnMapLeave, apMap);
-
-	/////////////////////
-	// Reset stuff
-	m_setTerrorEnemies.clear();
-	
-	mfAspectMulGoal = 1.0f;
-	mfAspectMul = 1.0f;
-	mfFOVMulGoal = 1.0f;
-	mfFOVMul = 1.0f;
-	mfRollGoal=0;
-	mfRoll=0;
-	mbFadingPitch = false;
-	mfPitchGoal=0;
-	mfPitchSpeedMul=0;
-	mfPitchMaxSpeed=0;
-
-	mCore.cam.mfLeanRoll=0;
-	mCore.cam.mfLeanRollGoal=0;
-	mCore.cam.mfLeanRollSpeedMul=0;
-	mCore.cam.mfLeanRollMaxSpeed=0;
-
-	mpCamera->SetRoll(0.0f);
-	mpCamera->SetFOV(mfFOV*mfFOVMul);
-	mpCamera->SetAspect(mfAspect*mfAspectMul);
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_map_leave(&mCore, &mD, &dh, apMap);
 }
 
 //-----------------------------------------------------------------------
@@ -571,33 +363,22 @@ void cLuxPlayer::OnEnterContainer(const tString& asOldContainer)
 
 void cLuxPlayer::OnLeaveContainer(const tString& asNewContainer)
 {
-	//Reset some variables
-	mbPressingRun = false;
-	mbPressingJump = false;
-
-	//Do not be in an interaction mode 
-	if(	mState == eLuxPlayerState_InteractGrab || 
-		mState == eLuxPlayerState_InteractSlide ||
-		mState == eLuxPlayerState_InteractPush ||
-		mState == eLuxPlayerState_InteractWheel ||
-		mState == eLuxPlayerState_InteractLever)
-	{
-		ChangeState(eLuxPlayerState_Normal);
-	}
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_on_leave_container(&mD, &dh);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::RenderSolid(cRendererCallbackFunctions* apFunctions)
 {
-	mvStates[mState]->RenderSolid(apFunctions);
+	GetCurrentStateData()->RenderSolid(apFunctions);
 
 	for(size_t i=0; i<mvHelpers.size(); ++i) mvHelpers[i]->RenderSolid(apFunctions);
 }
 
 void cLuxPlayer::RenderTrans(cRendererCallbackFunctions* apFunctions)
 {
-	mvStates[mState]->RenderTrans(apFunctions);
+	GetCurrentStateData()->RenderTrans(apFunctions);
 }
 
 
@@ -628,71 +409,23 @@ void cLuxPlayer::LowerSanity(float afAmount, bool abUseEffect)
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::Move(eCharDir aDir, float afMul)
-{	
-	if (mbFreeCameraActive)
-	{
-		if (aDir == eCharDir_Forward)
-		{
-			mpCamera->MoveForward(mfFreeCameraSpeed * afMul);
-		}
-		else if (aDir == eCharDir_Right)
-		{
-			mpCamera->MoveRight(mfFreeCameraSpeed * afMul);
-		}
-
-		return;
-	}
-
-	mbPressedMove = true;
-	if(mvStates[mState]->OnMove(aDir, afMul))
-	{
-		if(mvMoveStates[mMoveState]->OnMove(aDir, afMul))
-		{
-			mpCharBody->Move(aDir, afMul);
-		}
-	}
+{
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_move(&mD, &dh, (int)aDir, afMul);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::AddYaw(float afAmount)
 {
-	if (mbFreeCameraActive)
-	{
-		mpCamera->AddYaw(mpCamDirEffects->AddAndGetPitchAdd(afAmount * 2.0f));
-		return;
-	}
-
-	afAmount = afAmount * mfLookSpeedMul;
-
-	if(mvStates[mState]->OnAddYaw(afAmount))
-	{
-		if(mvMoveStates[mMoveState]->OnAddYaw(afAmount))
-		{
-			//must do like this or else limits will fail!
-			mpCamera->AddYaw( mpCamDirEffects->AddAndGetYawAdd(afAmount * 2.0f) );
-			mpCharBody->SetYaw(mpCamera->GetYaw());
-		}
-	}
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_add_yaw(&mD, &dh, afAmount);
 }
 
 void cLuxPlayer::AddPitch(float afAmount)
 {
-	if (mbFreeCameraActive)
-	{
-		mpCamera->AddPitch(mpCamDirEffects->AddAndGetPitchAdd(afAmount * 2.0f));
-		return;
-	}
-
-	afAmount = afAmount * mfLookSpeedMul;
-
-	if(mvStates[mState]->OnAddPitch(afAmount))
-	{
-		if(mvMoveStates[mMoveState]->OnAddPitch(afAmount))
-		{
-			mpCamera->AddPitch( mpCamDirEffects->AddAndGetPitchAdd(afAmount * 2.0f) );
-		}
-	}
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_add_pitch(&mD, &dh, afAmount);
 }
 
 //-----------------------------------------------------------------------
@@ -711,7 +444,8 @@ void cLuxPlayer::AddLean(float afAdd)
 
 void cLuxPlayer::Scroll(float afAmount)
 {
-	mvStates[mState]->OnScroll(afAmount);
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_scroll(&mD, &dh, afAmount);
 }
 
 //-----------------------------------------------------------------------
@@ -719,14 +453,8 @@ void cLuxPlayer::Scroll(float afAmount)
 
 void cLuxPlayer::DoAction(eLuxPlayerAction aAction, bool abPressed)
 {
-	if(mvStates[mState]->OnDoAction(aAction, abPressed))
-	{
-		if(aAction== eLuxPlayerAction_Lantern && abPressed)
-		{
-			mpLantern->SetActive(!mpLantern->IsActive(), true);
-		}
-
-	}
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_do_action(&mD, &dh, (int)aAction, abPressed);
 }
 
 //-----------------------------------------------------------------------
@@ -734,61 +462,36 @@ void cLuxPlayer::DoAction(eLuxPlayerAction aAction, bool abPressed)
 
 void cLuxPlayer::Run(bool abPressed)
 {
-	mbPressingRun = abPressed;
-	if(mvStates[mState]->OnRun(abPressed))
-	{
-		mvMoveStates[mMoveState]->OnRun(abPressed);
-	}
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_run(&mD, &dh, abPressed);
 }
 
 void cLuxPlayer::Jump(bool abPressed)
 {
-	if(abPressed && (mbJumpDisabled || mpInsanityCollapse->IsActive()) ) return;
-
-	mbPressingJump = abPressed;
-	if(mvStates[mState]->OnJump(abPressed))
-	{
-		mvMoveStates[mMoveState]->OnJump(abPressed);
-	}
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_jump(&mD, &dh, abPressed);
 }
 
 void cLuxPlayer::Crouch(bool abPressed)
 {
-	if(abPressed && (mbCrouchDisabled || mpInsanityCollapse->IsActive()) ) return;
-
-	if(mvStates[mState]->OnCrouch(abPressed))
-	{
-		mvMoveStates[mMoveState]->OnCrouch(abPressed);
-	}
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_crouch(&mD, &dh, abPressed);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::ChangeState(eLuxPlayerState aState)
 {
-	if(mState == aState) return;
-
-	mvStates[mState]->OnLeaveState(aState);
-
-	eLuxPlayerState prevState = mState;
-	mState = aState;
-
-	mvStates[mState]->SetPreviousState(prevState);
-	mvStates[mState]->OnEnterState(prevState);
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_change_state(&mD, &dh, (int)aState);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::ChangeMoveState(eLuxMoveState aState)
 {
-	if(mMoveState == aState) return;
-
-	mvMoveStates[mMoveState]->OnLeaveState(aState);
-
-	eLuxMoveState prevState = mMoveState;
-	mMoveState = aState;
-
-	mvMoveStates[mMoveState]->OnEnterState(prevState);
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_change_move_state(&mD, &dh, (int)aState);
 }
 
 //-----------------------------------------------------------------------
@@ -1023,16 +726,8 @@ tString cLuxPlayer::FocusIconStyleToString(eLuxFocusIconStyle aX)
 
 void cLuxPlayer::SetFreeCamActive(bool abX)
 {
-	mbFreeCameraActive = abX;
-
-	if (abX)
-	{
-		mpCharBody->SetCamera(NULL);
-	}
-	else
-	{
-		mpCharBody->SetCamera(mpCamera);
-	}
+	OhplA2dHost dh = DispHost();
+	ohpl_a2d_set_free_cam(&mD, &dh, abX);
 }
 
 //-----------------------------------------------------------------------
@@ -1047,75 +742,6 @@ void cLuxPlayer::SetFreeCamSpeed(float afSpeed)
 //////////////////////////////////////////////////////////////////////////
 // PRIVATE METHODS
 //////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
-bool cLuxPlayer::CanDrawCrossHair()
-{
-	if(gpBase->mpMessageHandler->IsPauseMessageActive()) return false;
-	if(mbScriptShowFocusIconAndCrossHair==false) return false;
-	if(mbShowCrossHair==false && mState != eLuxPlayerState_UseItem)
-	{
-		if(mpEntityInFocus)
-		{
-			if(mpEntityInFocus->CanInteract(mpBodyInFocus) && mfCurrentFocusDistance <= mpEntityInFocus->GetMaxFocusDistance()) 
-				return true;
-			else
-				return false;
-		}
-		else
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPlayer::DrawHud(float afFrameTime)
-{
-	cVector2f vSetSize = gpBase->mvHudVirtualCenterSize;
-
-	/////////////////////////////////////////
-	// Cross hair
-	if(CanDrawCrossHair())
-	{
-        cGuiGfxElement *pCrossGfx = mvStates[mState]->GetCrosshair();
-		if(pCrossGfx)
-		{
-			cVector2f vGfxSize = pCrossGfx->GetImageSize();
-			cVector2f vPos = (vSetSize - vGfxSize)/2.0f;
-			cVector3f vFinalPos = cVector3f(vPos.x, vPos.y,1);
-
-			if(mvStates[mState]->OnDrawCrossHair(pCrossGfx,vFinalPos, vGfxSize))
-			{
-				//Log("Drawcrosshair: %p\n", pCrossGfx);
-				gpBase->mpGameHudSet->DrawGfx(pCrossGfx,vFinalPos,vGfxSize,cColor(1,1));
-			}
-		}
-	}
-	
-	/////////////////////////////////////////
-	// Focus text
-	float fFocusTextY = 450;
-	if(msFocusText != _W(""))
-	{
-		tWStringVec vRows;
-		mpFocusFont->GetWordWrapRows(500, 22, 22, msFocusText,&vRows);
-        
-		for(size_t i=0; i<vRows.size(); ++i)
-			gpBase->mpGameHudSet->DrawFont(vRows[i],mpFocusFont,cVector3f(400, fFocusTextY+i*24,1),22,cColor(1,mCore.mfFocusTextAlpha),	eFontAlign_Center);
-	}
-	else if(mCore.mfFocusTextAlpha >0)
-	{
-		tWStringVec vRows;
-		mpFocusFont->GetWordWrapRows(500, 22, 22, msLastFocusText,&vRows);
-
-		for(size_t i=0; i<vRows.size(); ++i)
-			gpBase->mpGameHudSet->DrawFont(vRows[i],mpFocusFont,cVector3f(400, fFocusTextY+i*24,1),22,cColor(1,mCore.mfFocusTextAlpha),	eFontAlign_Center);
-	}
-}
 
 //-----------------------------------------------------------------------
 
@@ -1166,20 +792,6 @@ void cLuxPlayer::UpdateHeadPosAdd(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayer::UpdateCamera(float afTimeStep)
-{
-	OhplA2Host h = {this, A2HostOp, A2HostQuery};
-	ohpl_a2_update_camera(&mCore, &h, afTimeStep);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPlayer::UpdateTerror(float afTimeStep)
-{
-	OhplA2Host h = {this, A2HostOp, A2HostQuery};
-	ohpl_a2_update_terror(&mCore, &h, afTimeStep);
-}
-
 void cLuxPlayer::UpdateTerrorSound()
 {
 	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
@@ -1208,6 +820,101 @@ void cLuxPlayer::UpdateTerrorSound()
 }
 
 //-----------------------------------------------------------------------
+
+float cLuxPlayer::DispCall(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, void *apP)
+{
+	cLuxPlayer *p = (cLuxPlayer*)apCtx;
+	switch(alKind)
+	{
+	case kOhplA2dMsEnter: p->mvMoveStates[alI]->OnEnterState((eLuxMoveState)(int)afA); break;
+	case kOhplA2dMsLeave: p->mvMoveStates[alI]->OnLeaveState((eLuxMoveState)(int)afA); break;
+	case kOhplA2dMsUpdate: p->mvMoveStates[alI]->Update(afA); break;
+	case kOhplA2dMsOnMove: return p->mvMoveStates[alI]->OnMove((eCharDir)(int)afA, afB);
+	case kOhplA2dMsOnYaw: return p->mvMoveStates[alI]->OnAddYaw(afA);
+	case kOhplA2dMsOnPitch: return p->mvMoveStates[alI]->OnAddPitch(afA);
+	case kOhplA2dMsOnRun: p->mvMoveStates[alI]->OnRun(afA != 0); break;
+	case kOhplA2dMsOnJump: p->mvMoveStates[alI]->OnJump(afA != 0); break;
+	case kOhplA2dMsOnCrouch: p->mvMoveStates[alI]->OnCrouch(afA != 0); break;
+	case kOhplA2dMsMapEnter: p->mvMoveStates[alI]->OnMapEnter(); break;
+	case kOhplA2dMsOnDraw: p->mvMoveStates[alI]->OnDraw(afA); break;
+	case kOhplA2dStEnter: p->mvStates[alI]->OnEnterState((eLuxPlayerState)(int)afA); break;
+	case kOhplA2dStLeave: p->mvStates[alI]->OnLeaveState((eLuxPlayerState)(int)afA); break;
+	case kOhplA2dStSetPrev: p->mvStates[alI]->SetPreviousState((eLuxPlayerState)(int)afA); break;
+	case kOhplA2dStUpdate: p->mvStates[alI]->Update(afA); break;
+	case kOhplA2dStPostUpdate: p->mvStates[alI]->PostUpdate(afA); break;
+	case kOhplA2dStOnMove: return p->mvStates[alI]->OnMove((eCharDir)(int)afA, afB);
+	case kOhplA2dStOnYaw: return p->mvStates[alI]->OnAddYaw(afA);
+	case kOhplA2dStOnPitch: return p->mvStates[alI]->OnAddPitch(afA);
+	case kOhplA2dStOnScroll: p->mvStates[alI]->OnScroll(afA); break;
+	case kOhplA2dStOnAction: return p->mvStates[alI]->OnDoAction((eLuxPlayerAction)(int)afA, afB != 0);
+	case kOhplA2dStOnRun: return p->mvStates[alI]->OnRun(afA != 0);
+	case kOhplA2dStOnJump: return p->mvStates[alI]->OnJump(afA != 0);
+	case kOhplA2dStOnCrouch: return p->mvStates[alI]->OnCrouch(afA != 0);
+	case kOhplA2dStMapEnter: p->mvStates[alI]->OnMapEnter((cLuxMap*)apP); break;
+	case kOhplA2dStMapLeave: p->mvStates[alI]->OnMapLeave((cLuxMap*)apP); break;
+	case kOhplA2dStOnDraw: p->mvStates[alI]->OnDraw(gpBase->mpGameHudSet, afA); break;
+	case kOhplA2dFreeMove:
+		if(alI == eCharDir_Forward) p->mpCamera->MoveForward(afA);
+		else if(alI == eCharDir_Right) p->mpCamera->MoveRight(afA);
+		break;
+	case kOhplA2dBodyMove: p->mpCharBody->Move((eCharDir)alI, afA); break;
+	case kOhplA2dFreeYaw: p->mpCamera->AddYaw(p->mpCamDirEffects->AddAndGetPitchAdd(afA * 2.0f)); break; //sic: the pitch accumulator
+	case kOhplA2dFreePitch: p->mpCamera->AddPitch(p->mpCamDirEffects->AddAndGetPitchAdd(afA * 2.0f)); break;
+	case kOhplA2dYaw:
+		p->mpCamera->AddYaw(p->mpCamDirEffects->AddAndGetYawAdd(afA * 2.0f));
+		p->mpCharBody->SetYaw(p->mpCamera->GetYaw());
+		break;
+	case kOhplA2dPitch: p->mpCamera->AddPitch(p->mpCamDirEffects->AddAndGetPitchAdd(afA * 2.0f)); break;
+	case kOhplA2dLanternToggle: p->mpLantern->SetActive(!p->mpLantern->IsActive(), true); break;
+	case kOhplA2dCollapseActive: return p->mpInsanityCollapse->IsActive();
+	case kOhplA2dHeadPosAdd: p->UpdateHeadPosAdd(afA); break;
+	case kOhplA2dHelpersUpdate: p->RunHelperMessage(eUpdateableMessage_Update, afA); break;
+	case kOhplA2dHelpersPost: p->RunHelperMessage(eUpdateableMessage_PostUpdate, afA); break;
+	case kOhplA2dHelpersDraw: p->RunHelperMessage(eUpdateableMessage_OnDraw, afA); break;
+	case kOhplA2dHelpersLuxMsg: p->RunHelperLuxMessage(alI == 0 ? eLuxUpdateableMessage_OnMapEnter : eLuxUpdateableMessage_OnMapLeave, apP); break;
+	case kOhplA2dCollisionCb: p->CheckCollisionCallback("Player", gpBase->mpMapHandler->GetCurrentMap()); break;
+	case kOhplA2dBodyY: return p->mpCharBody->GetPosition().y;
+	case kOhplA2dBodySpeed: return p->mpCharBody->GetVelocity(afA).Length();
+	case kOhplA2dClearFocusText: p->msFocusText = _W(""); p->msLastFocusText = _W(""); break;
+	case kOhplA2dNullFocus: p->mpEntityInFocus = NULL; p->mpBodyInFocus = NULL; break;
+	case kOhplA2dDestroyCb: p->DestroyCollideCallbacks(); break;
+	case kOhplA2dClearTerror: p->m_setTerrorEnemies.clear(); break;
+	case kOhplA2dCamMapLeave:
+		p->mpCamera->SetRoll(0.0f);
+		p->mpCamera->SetFOV(p->mfFOV*p->mfFOVMul);
+		p->mpCamera->SetAspect(p->mfAspect*p->mfAspectMul);
+		break;
+	case kOhplA2dPauseActive: return gpBase->mpMessageHandler->IsPauseMessageActive();
+	case kOhplA2dFocusCanInteract:
+		return p->mpEntityInFocus && p->mpEntityInFocus->CanInteract(p->mpBodyInFocus) &&
+			p->mfCurrentFocusDistance <= p->mpEntityInFocus->GetMaxFocusDistance();
+	case kOhplA2dDrawCrosshair:
+	{
+		cGuiGfxElement *pCrossGfx = p->mvStates[p->mD.mlState]->GetCrosshair();
+		if(pCrossGfx)
+		{
+			cVector2f vGfxSize = pCrossGfx->GetImageSize();
+			cVector2f vPos = (gpBase->mvHudVirtualCenterSize - vGfxSize)/2.0f;
+			cVector3f vFinalPos = cVector3f(vPos.x, vPos.y,1);
+			if(p->mvStates[p->mD.mlState]->OnDrawCrossHair(pCrossGfx,vFinalPos, vGfxSize))
+				gpBase->mpGameHudSet->DrawGfx(pCrossGfx,vFinalPos,vGfxSize,cColor(1,1));
+		}
+		break;
+	}
+	case kOhplA2dFocusTextState: return p->msFocusText != _W("");
+	case kOhplA2dDrawFocusText:
+	{
+		tWStringVec vRows;
+		p->mpFocusFont->GetWordWrapRows(500, 22, 22, alI ? p->msLastFocusText : p->msFocusText, &vRows);
+		for(size_t i=0; i<vRows.size(); ++i)
+			gpBase->mpGameHudSet->DrawFont(vRows[i],p->mpFocusFont,cVector3f(400, 450+i*24,1),22,cColor(1,afA), eFontAlign_Center);
+		break;
+	}
+	case kOhplA2dFreecamCamera: p->mpCharBody->SetCamera(alI ? NULL : p->mpCamera); break;
+	case kOhplA2dShowCrosshair: return p->mbShowCrossHair;
+	}
+	return 0;
+}
 
 void cLuxPlayer::A2HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD)
 {
@@ -1257,33 +964,6 @@ void cLuxPlayer::SpinHead(float afSpeed)
 {
 	OhplA2Host h = {this, A2HostOp, A2HostQuery};
 	ohpl_a2_spin_head(&mCore, &h, afSpeed);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPlayer::UpdateHeadSpin(float afTimeStep)
-{
-	OhplA2Host h = {this, A2HostOp, A2HostQuery};
-	ohpl_a2_update_head_spin(&mCore, &h, afTimeStep);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPlayer::UpdateFocusText(float afTimeStep)
-{
-	OhplA2Host h = {this, A2HostOp, A2HostQuery};
-	ohpl_a2_update_focus_alpha(&mCore, &h, afTimeStep);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPlayer::UpdateAvgSpeed(float afTimeStep)
-{
-	float fSpeed = mpCharBody->GetVelocity(afTimeStep).Length();
-	mlstPrevSpeeds.push_back(fSpeed);
-	if(ohpl_ga2_prev_speeds_pop(mlstPrevSpeeds.size(), mlMaxPrevSpeeds)) mlstPrevSpeeds.pop_front();
-	std::vector<float> vSpeeds(mlstPrevSpeeds.begin(), mlstPrevSpeeds.end());
-	mfAvgSpeed = ohpl_ga2_avg_speed(vSpeeds.data(), vSpeeds.size());
 }
 
 //-----------------------------------------------------------------------
