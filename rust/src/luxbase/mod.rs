@@ -18,3 +18,7 @@ pub mod look;
 mod tests;
 #[cfg(test)]
 mod tests_input_h;
+
+pub mod boot;
+#[cfg(test)]
+mod tests_boot;

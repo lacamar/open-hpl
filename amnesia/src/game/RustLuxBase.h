@@ -199,6 +199,40 @@ struct OhplGa9Toggle
 
 struct OhplGa9Debug;
 
+// Boot order (rust/src/luxbase/boot.rs): Rust calls these ops in the order of cLuxBase init / exit.
+enum eOhplGa13bOp
+{
+	eOhplGa13bOp_InitBegin = 200, eOhplGa13bOp_StepParse, eOhplGa13bOp_StepApp, eOhplGa13bOp_StepMainConfig, eOhplGa13bOp_LogVersion,
+	eOhplGa13bOp_Serial, eOhplGa13bOp_LogNewline, eOhplGa13bOp_StepEngine, eOhplGa13bOp_StepFeature, eOhplGa13bOp_StepGame,
+	eOhplGa13bOp_Headless, eOhplGa13bOp_Flags, eOhplGa13bOp_StartPre, eOhplGa13bOp_StartMenu, eOhplGa13bOp_StartDirect,
+	eOhplGa13bOp_InitUserCfg, eOhplGa13bOp_LockInput, eOhplGa13bOp_RelativeMouse, eOhplGa13bOp_StartGame, eOhplGa13bOp_InitOver,
+	eOhplGa13bOp_ExitBegin, eOhplGa13bOp_SaveConfig, eOhplGa13bOp_ExitGame, eOhplGa13bOp_ModuleCount, eOhplGa13bOp_DeleteModule,
+	eOhplGa13bOp_ExitConfig, eOhplGa13bOp_ExitEnd,
+	eOhplGa13bOp_EVars = 240, eOhplGa13bOp_ESound, eOhplGa13bOp_EStaticA, eOhplGa13bOp_EStaticSsao, eOhplGa13bOp_EGBuffer,
+	eOhplGa13bOp_EStaticMisc, eOhplGa13bOp_ECreate, eOhplGa13bOp_EVsync, eOhplGa13bOp_EGamma, eOhplGa13bOp_ELimitFps,
+	eOhplGa13bOp_EWaitFocus, eOhplGa13bOp_EMaterial, eOhplGa13bOp_EVolume, eOhplGa13bOp_EResources, eOhplGa13bOp_ESurface,
+	eOhplGa13bOp_ELanguageBegin, eOhplGa13bOp_ELanguage, eOhplGa13bOp_EFastload, eOhplGa13bOp_ESoundDevice,
+	eOhplGa13bOp_QDefaultLang, eOhplGa13bOp_QGameName, eOhplGa13bOp_QCurrentLang, eOhplGa13bOp_QRenderer, eOhplGa13bOp_QColor,
+	eOhplGa13bOp_GHud = 270, eOhplGa13bOp_GFont, eOhplGa13bOp_GContainers, eOhplGa13bOp_GModule, eOhplGa13bOp_GAchievements,
+	eOhplGa13bOp_GAchievement, eOhplGa13bOp_GAchievementsEnd, eOhplGa13bOp_GReset, eOhplGa13bOp_GLoader, eOhplGa13bOp_GMessage,
+};
+
+enum eOhplGa13bFlag
+{
+	eOhplGa13bFlag_PreMenu = 1, eOhplGa13bFlag_Menu = 2, eOhplGa13bFlag_DebugWindow = 4, eOhplGa13bFlag_Fullscreen = 8,
+	eOhplGa13bFlag_SaveAtExit = 16,
+};
+
+struct OhplA12bMainNums;
+
+extern "C"
+{
+	bool ohpl_ga13b_init(void *ctx, OhplGa9Call call);
+	bool ohpl_ga13b_init_engine(void *ctx, OhplGa9Call call, const OhplA12bMainNums *nums);
+	bool ohpl_ga13b_init_game(void *ctx, OhplGa9Call call);
+	void ohpl_ga13b_exit(void *ctx, OhplGa9Call call);
+}
+
 extern "C"
 {
 	void ohpl_ga9_ret_bytes(OhplGa9Ret *r, const unsigned char *p, size_t n);
@@ -222,7 +256,6 @@ extern "C"
 	bool ohpl_ga9_profile_folder(OhplGa9Str base_save, OhplGa9Str name, bool exists, OhplGa9Emit emit, void *ectx);
 	void ohpl_ga9_calc_gui_set_offset(float vx, float vy, float sx, float sy, float *out);
 	bool ohpl_ga9_chinese_font(const unsigned char *cur, size_t n);
-	bool ohpl_ga9_achievement(size_t index, int32_t *id, OhplGa9Emit emit, void *ectx);
 	int32_t ohpl_ga9_axis_from_name(const unsigned char *s, size_t n, bool *ok);
 
 	uint64_t ohpl_in_new();

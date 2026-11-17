@@ -30,6 +30,10 @@ struct OhplH2Config;
 namespace hpl {
 	class cFileSearcher;
 
+	// dump hook: file, level, name, value (NULL when absent)
+	typedef void (*tConfigReadHook)(const tWString& asFile, const tString& asLevel, const tString& asName, const char *asVal);
+	extern tConfigReadHook gpConfigReadHook;
+
 	class cConfigFile
 	{
 	public:
