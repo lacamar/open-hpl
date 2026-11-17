@@ -75,11 +75,8 @@ public:
 	virtual void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
-	void DoBuoyancyOnBody(iPhysicsBody *apBody, float afSurfaceY, bool abInsideWater);
-	void DoBuoyancyOnCharBody(iCharacterBody *apCharBody, float afSurfaceY, bool abInsideWater);
-	
-	void SplashEffect(iPhysicsBody *apBody, float afSurfaceY);
-	
+	friend struct OhplAreaHost;
+
 	/////////////////////////
 	// Data
 	float &mfDensity;

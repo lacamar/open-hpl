@@ -71,6 +71,7 @@ class cLuxRope : public iLuxEntity
 {
 typedef iLuxEntity super_class;
 friend class cLuxAreaRopeLoader;
+friend struct OhplA7bDump;
 public:
 	cLuxRope(const tString& asName, int alID, cLuxMap *apMap);
 	~cLuxRope();

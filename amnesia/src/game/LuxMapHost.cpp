@@ -30,6 +30,8 @@
 
 void OhplA4bTick(cLuxMap *apMap);
 void OhplA13aTick(cLuxMap *apMap);
+void OhplA7bTick(cLuxMap *apMap);
+void OhplAreaHostOp(int32_t alOp, OhplA13A *a);
 
 namespace
 {
@@ -497,7 +499,7 @@ void Host(int32_t alOp, OhplA13A *a)
 		cCollideData data;
 		data.SetMaxSize(1);
 		iPhysicsBody *pBody1 = (iPhysicsBody*)a->p[1], *pBody2 = (iPhysicsBody*)a->p[2];
-		a->i[0] = cMath::CheckBVIntersection(*pBody1->GetBoundingVolume(), *pBody2->GetBoundingVolume()) &&
+		a->i[0] = (a->i[1] || cMath::CheckBVIntersection(*pBody1->GetBoundingVolume(), *pBody2->GetBoundingVolume())) &&
 					((iPhysicsWorld*)a->p[0])->CheckShapeCollision(pBody1->GetShape(), pBody1->GetLocalMatrix(), pBody2->GetShape(), pBody2->GetLocalMatrix(), data, 1, false);
 		break;
 	}
@@ -590,6 +592,7 @@ void Host(int32_t alOp, OhplA13A *a)
 		cLuxMap *pMap = (cLuxMap*)a->p[0];
 		OhplA4bTick(pMap);
 		OhplA13aTick(pMap);
+		OhplA7bTick(pMap);
 		static const char *sDumpFile = getenv("OHPL_A7_MAPDUMP");
 		if(sDumpFile)
 		{
@@ -737,6 +740,9 @@ void Host(int32_t alOp, OhplA13A *a)
 		break;
 	case kOp_CLEAR_RENDER_LISTS:
 		gpBase->mpEffectRenderer->ClearRenderLists();
+		break;
+	default:
+		OhplAreaHostOp(alOp, a);
 		break;
 	}
 }

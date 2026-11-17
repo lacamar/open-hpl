@@ -81,7 +81,7 @@ public:
 
 	//////////////////////
 	//Properties
-	static void SetAllowAttachment(bool abX){ mbAllowAttachment = abX;}
+	static void SetAllowAttachment(bool abX){ ohpl_a7_sticky_allow(true, abX);}
 
 	iPhysicsBody *GetAttachedBody(){ return mpAttachedBody;}
 	bool CanDetach(){ return ohpl_a7_area_sticky_can_detach(mpA7Area);}
@@ -98,12 +98,8 @@ public:
 	virtual void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
-	void UpdateAttachBody(float afTimeStep);
-	void UpdateCollision(float afTimeStep);
+	friend struct OhplAreaHost;
 
-	
-	tString GetCallbackFunc(const tString &asFunc,iPhysicsBody *apBody);
-	
 	/////////////////////////
 	// Data
 	tString msAttachFunction;
@@ -133,13 +129,11 @@ private:
 
 	bool &mbAttachedEntityFullGameSaved;
 
-	iPhysicsBody *mpAttachedBody;
-	iPhysicsBody *mpLastAttachedBody;
-
 	float &mfSetMtxTime;
 	cMatrixf &mtxAttachedStart;
 
-	static bool mbAllowAttachment;
+	iPhysicsBody *&mpAttachedBody;
+	iPhysicsBody *&mpLastAttachedBody;
 };
 
 //----------------------------------------------

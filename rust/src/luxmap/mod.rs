@@ -26,3 +26,9 @@ mod mhelper_tests;
 pub mod mhost;
 pub mod mmap;
 mod mmap_ffi;
+
+pub mod aupd;
+mod aupd_ffi;
+
+#[cfg(test)]
+mod aupd_tests;

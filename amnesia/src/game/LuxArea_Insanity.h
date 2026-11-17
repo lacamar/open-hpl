@@ -60,6 +60,7 @@ public:
 	virtual void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
 	virtual void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 private:
+	friend struct OhplAreaHost;
 
 	/////////////////////////
 	// Data

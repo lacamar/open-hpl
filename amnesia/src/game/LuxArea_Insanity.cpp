@@ -20,7 +20,7 @@
 #include "LuxArea_Insanity.h"
 #include "RustLuxMap.h"
 
-#include "LuxInsanityHandler.h"
+#include "LuxMap.h"
 
 
 
@@ -98,20 +98,7 @@ cLuxArea_Insanity::~cLuxArea_Insanity()
 
 void cLuxArea_Insanity::OnUpdate(float afTimeStep)
 {
-	//////////////////////////
-	// Check update count
-	if(ohpl_a7_area_tick(mpA7Area, afTimeStep, 0)==false) return;
-
-	//////////////////////////
-	// Check collision
-	if(CollidesWithPlayer())
-	{
-		if(gpBase->mpInsanityHandler->NewEventIsPossible())
-		{
-			if(mbAutoDisable) SetActive(false);
-			gpBase->mpInsanityHandler->StartEvent();
-		}
-	}
+	ohpl_a7_area_update(mpA7Area, this, mpMap->GetA7(), afTimeStep);
 }
 
 //-----------------------------------------------------------------------

@@ -75,7 +75,8 @@ public:
 protected:
 
 private:
-	
+	friend struct OhplAreaHost;
+
 	/////////////////////////
 	// Data
 	int &mlSlimeType;

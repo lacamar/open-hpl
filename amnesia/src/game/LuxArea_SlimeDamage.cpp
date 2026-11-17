@@ -118,52 +118,7 @@ cLuxArea_SlimeDamage::~cLuxArea_SlimeDamage()
 
 void cLuxArea_SlimeDamage::OnUpdate(float afTimeStep)
 {
-	//////////////////////////
-	// Check update count
-	if(ohpl_a7_area_tick(mpA7Area, afTimeStep, 0)==false) return;
-
-	//////////////////////////
-	// Check collision
-	if(CollidesWithPlayer())
-	{
-		/////////////////////////
-		//Damage player
-		float fDamage = cMath::RandRectf(mfMinAttackDamage, mfMaxAttackDamage);
-		gpBase->mpPlayer->GiveDamage(fDamage,1,eLuxDamageType_BloodSplat, true, false);
-
-		/////////////////////////
-		//Sound
-		PlaySound("SlimeAttack", msAttackSound, true, false);
-
-		/////////////////////////
-		//Particle
-		if(msAttackPS != "")
-		{
-			cParticleSystem *pPS = mpMap->GetWorld()->CreateParticleSystem("SlimeAttack", msAttackPS,1);
-			if(pPS)
-			{
-				pPS->SetPosition(mpBody->GetLocalPosition());
-			}
-		}
-		
-		/////////////////////////
-		//ScreenShake
-		gpBase->mpEffectHandler->GetScreenShake()->Start(mfScreenShakeAmount, 0.5, 0.1,0.3f);
-
-		/////////////////////////
-		//Run Callback
-		if(msCallback != "")
-		{
-			mpMap->RunScript(ohpl_ga5::Call1(msCallback, msName));
-		}
-
-		/////////////////////////
-		//Check if area should be disabled
-		if(mbDisableAfterAttack)
-		{
-			SetActive(false);
-		}
-	}
+	ohpl_a7_area_update(mpA7Area, this, mpMap->GetA7(), afTimeStep);
 }
 
 //-----------------------------------------------------------------------
