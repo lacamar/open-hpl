@@ -809,8 +809,8 @@ namespace
 		case 142: io->i[0] = ((cResourceVarsObject *)io->p[0])->GetVarInt(Str(io, 0), io->i[0]); break;
 		case 143: io->i[0] = ((cResourceVarsObject *)io->p[0])->GetVarBool(Str(io, 0), io->i[0] != 0); break;
 		case 144: Put(io->f, ((cResourceVarsObject *)io->p[0])->GetVarVector3f(Str(io, 0), Get(io->f))); break;
-		case 146: io->i[0] = (int)((CScriptArray *)io->p[0])->GetSize(); break;
-		case 147: Out(io, *(const tString *)((CScriptArray *)io->p[0])->At(io->i[0])); break;
+		case 146: io->i[0] = (int)((OhplEasArray *)io->p[0])->GetSize(); break;
+		case 147: Out(io, *(const tString *)((OhplEasArray *)io->p[0])->At(io->i[0])); break;
 
 		case 150:
 		{

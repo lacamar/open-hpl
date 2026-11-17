@@ -648,6 +648,10 @@ def same(name, a, b):
         mask = lambda p: [re.sub(r"combo=-?\d+\[.*\]|text=\"[^\"]*\"", "", l) if "size=400,18" in l else l for l in open(p, errors="replace")]
         if mask(a) == mask(b):
             return (True, "identical (sound device names masked)")
+    if name == "a9":
+        mask = lambda p: [re.sub(r"'Full Desktop on [^']*'", "''", l) for l in open(p, errors="replace")]
+        if mask(a) == mask(b):
+            return (True, "identical (monitor names masked)")
     if name.startswith("h4seq") and multiset(a) == multiset(b):
         return (True, "same multiset (combine order is pointer-ordered in C++)")
     return (False, "DIFFER")
