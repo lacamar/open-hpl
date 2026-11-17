@@ -284,6 +284,25 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+
+	static void EsndDump(cSoundHandler *apHandler, int alFrame)
+	{
+		static FILE *pFile = getenv("OHPL_ESND_DUMP") ? fopen(getenv("OHPL_ESND_DUMP"), "w") : NULL;
+		if(pFile == NULL) return;
+		tSoundEntryList *pList = apHandler->GetEntryList();
+		fprintf(pFile, "f %d n=%d\n", alFrame, (int)pList->size());
+		for(tSoundEntryListIt it = pList->begin(); it != pList->end(); ++it)
+		{
+			cSoundEntry *e = *it;
+			iSoundChannel *c = e->GetChannel();
+			cVector3f p = c->GetPosition();
+			fprintf(pFile, "e %s t=%u id=%d ch=%d vol=%.4f paused=%d loop=%d stop=%d mul=%.4f spd=%.4f 3d=%d pos=%.3f,%.3f,%.3f\n",
+					e->GetName().c_str(), (unsigned)e->GetType(), e->GetId(), c->IsPlaying() ? 1 : 0, c->GetVolume(), c->GetPaused() ? 1 : 0,
+					c->GetLooping() ? 1 : 0, e->GetStopDisabled() ? 1 : 0, e->GetVolumeMul(), c->GetSpeed(), c->Get3D() ? 1 : 0, p.x, p.y, p.z);
+		}
+		fflush(pFile);
+	}
+
 	void cSoundHandler::Update(float afTimeStep)
 	{
 		///////////////////////////////////////////////
@@ -307,6 +326,7 @@ namespace hpl {
 			};
 			ohpl_sndh_update(mpRs, afTimeStep, &ShellOps, this);
 			mlCount++;
+			EsndDump(this, mlCount);
 			return;
 		}
 
@@ -330,6 +350,7 @@ namespace hpl {
 		}
 
 		mlCount++;
+		EsndDump(this, mlCount);
 	}
 	
 	//-----------------------------------------------------------------------
