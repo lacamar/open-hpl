@@ -115,7 +115,7 @@ void cLuxCritter_Spider::OnKillCritter()
 float cLuxCritter_Spider::DrawDebug(cGuiSet *apSet,iFontData *apFont,float afStartY)
 {
 	return afStartY;
-	apSet->DrawFont(apFont, cVector3f(5,afStartY,1),12,cColor(1,1),_W("OnGround: %d Colliding: %d Health: %f"), mSS.on_ground, mC.colliding, mfHealth);
+	apSet->DrawFont(apFont, cVector3f(5,afStartY,1),12,cColor(1,1),_W("OnGround: %d Colliding: %d Health: %f"), mSS.on_ground, mC.colliding, S().health);
 	afStartY += 13;
 	apSet->DrawFont(apFont, cVector3f(5,afStartY,1),12,cColor(1,1),_W("State: %d"), mSS.state);
 	afStartY += 13;

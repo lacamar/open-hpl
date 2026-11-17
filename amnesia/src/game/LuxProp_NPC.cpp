@@ -316,7 +316,7 @@ private:
 void cLuxProp_NPC::UpdateWakeState(float afTimeStep)
 {
 	OhplGa4Run run(this);
-	ohpl_ga4c_npc_update_wake(&mS, mlCurrentNonLoopAnimIndex, run.Sink());
+	ohpl_ga4c_npc_update_wake(&mS, S().anim_index, run.Sink());
 	run.Finish();
 }
 

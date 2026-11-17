@@ -129,7 +129,7 @@ bool cLuxProp_Lever::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 	}
 
 	OhplGa4Run run(this);
-	bool bHint = ohpl_ga4_lever_on_interact(&mS, &mP, mbShowHints, run.Sink());
+	bool bHint = ohpl_ga4_lever_on_interact(&mS, &mP, S().show_hints, run.Sink());
 	run.Finish();
 
 	if(bHint)

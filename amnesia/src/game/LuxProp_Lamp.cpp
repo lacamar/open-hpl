@@ -81,7 +81,7 @@ void cLuxPropLoader_Lamp::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsO
 	OhplGa4EffectsIn env = pLamp->Ga4EffectsEnv(true, false);
 
 	OhplGa4Run run(pLamp);
-	ohpl_ga4_lamp_load_instance(vars.Vars(), &pLamp->mS, &pLamp->mBase, &env, pLamp->Ga4Lights(), pLamp->Ga4LightNum(), run.Sink());
+	ohpl_ga4_lamp_load_instance(vars.Vars(), &pLamp->mS, &pLamp->Base(), &env, pLamp->Ga4Lights(), pLamp->Ga4LightNum(), run.Sink());
 	run.Finish();
 }
 //-----------------------------------------------------------------------
@@ -334,7 +334,7 @@ void cLuxProp_Lamp::SetLit(bool abX, bool abUseEffects)
 {
 	OhplGa4EffectsIn env = Ga4EffectsEnv(abX, abUseEffects);
 	OhplGa4Run run(this);
-	ohpl_ga4_lamp_set_lit(&mS, &mBase, &env, Ga4Lights(), Ga4LightNum(), abX, abUseEffects, run.Sink());
+	ohpl_ga4_lamp_set_lit(&mS, &Base(), &env, Ga4Lights(), Ga4LightNum(), abX, abUseEffects, run.Sink());
 	run.Finish();
 }
 
@@ -344,7 +344,7 @@ void cLuxProp_Lamp::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
 {
 	OhplGa4EffectsIn env = Ga4EffectsEnv(true, true);
 	OhplGa4Run run(this);
-	ohpl_ga4_lamp_on_connection_state(&mS, &mBase, &env, Ga4Lights(), Ga4LightNum(), alState, run.Sink());
+	ohpl_ga4_lamp_on_connection_state(&mS, &Base(), &env, Ga4Lights(), Ga4LightNum(), alState, run.Sink());
 	run.Finish();
 }
 

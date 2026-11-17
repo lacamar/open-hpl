@@ -254,6 +254,42 @@ struct OhplGa4Base
 	float fade_in_speed;
 };
 
+struct OhplA5eState
+{
+	OhplGa4Base base;
+	float health;
+	int toughness;
+	int anim_index;
+	int move_loop_sound_id;
+	float dissolve_time;
+	float effects_on_time;
+	float effects_off_time;
+	float effects_off_light_radius;
+	float body_mass_backup;
+	float effects_off_light_color[4];
+	float on_load_scale[3];
+	float on_load_transform[16];
+	float parent_bone_offset[16];
+	float body_matrix_backup[16];
+	bool interacted_with;
+	bool static_physics;
+	bool has_flickering;
+	bool dissolve_on_destruction;
+	bool show_mesh;
+	bool move_check_collision;
+	bool show_hints;
+	bool body_collide_backup;
+	bool body_collide_character_backup;
+	bool body_active_backup;
+};
+
+enum eOhplA5eStr
+{
+	kOhplA5eStr_AnimCallback, kOhplA5eStr_MainBodyName, kOhplA5eStr_MoveStartSound, kOhplA5eStr_MoveStopSound,
+	kOhplA5eStr_MoveLoopSound, kOhplA5eStr_EffectsOnSound, kOhplA5eStr_EffectsOffSound, kOhplA5eStr_FileName,
+	kOhplA5eStr_ParentEntityName, kOhplA5eStr_ParentBoneName
+};
+
 struct OhplGa4EffectsIn
 {
 	bool active;
@@ -545,6 +581,7 @@ static_assert(sizeof(OhplGa4LightData) == 24, "OhplGa4LightData layout");
 static_assert(sizeof(OhplGa4Linear) == 28, "OhplGa4Linear layout");
 static_assert(sizeof(OhplGa4Angular) == 124, "OhplGa4Angular layout");
 static_assert(sizeof(OhplGa4Base) == 244, "OhplGa4Base layout");
+static_assert(sizeof(OhplA5eState) == 512, "OhplA5eState layout");
 static_assert(sizeof(OhplGa4EffectsIn) == 28, "OhplGa4EffectsIn layout");
 static_assert(sizeof(OhplGa4MoveIn) == 72, "OhplGa4MoveIn layout");
 static_assert(sizeof(OhplGa4OutsideBody) == 28, "OhplGa4OutsideBody layout");
@@ -577,6 +614,18 @@ static_assert(sizeof(OhplGa4Op) == 104, "OhplGa4Op layout");
 
 extern "C"
 {
+	uint64_t ohpl_a5e_new(OhplA5eState **out);
+	void ohpl_a5e_free(uint64_t h);
+	void ohpl_a5e_load_base(uint64_t h, const OhplGa4Vars *v, OhplGa4BaseParams *out);
+	void ohpl_a5e_effects_env(uint64_t h, bool active, bool fade, int n_ps, int n_sounds, OhplGa4EffectsIn *out);
+	void ohpl_a5e_effects_set_active(uint64_t h, bool active, bool fade, int n_ps, int n_sounds, const OhplGa4LightData *lights, int n_lights, const OhplGa4Sink *sink);
+	void ohpl_a5e_effects_update(uint64_t h, float dt, const OhplGa4LightData *lights, int n_lights, bool has_mesh, const OhplGa4Sink *sink);
+	void ohpl_a5e_update_moving(uint64_t h, float dt, const float *body, bool loop_present, bool loop_alive, const OhplGa4Host *host, const OhplGa4Sink *sink);
+	void ohpl_a5e_anim_update(uint64_t h, bool over, const OhplGa4Sink *sink);
+	float ohpl_a5e_give_damage(uint64_t h, float amount, int strength, float *out_amount);
+	const char *ohpl_a5e_str_get(uint64_t h, size_t slot, size_t *len);
+	void ohpl_a5e_str_set(uint64_t h, size_t slot, const unsigned char *p, size_t len);
+
 	void ohpl_ga4_base_init(OhplGa4Base *s);
 	void ohpl_ga4_base_load(const OhplGa4Vars *v, OhplGa4BaseParams *out);
 	void ohpl_ga4_base_load_instance(const OhplGa4Vars *v, bool force_full_game_save, OhplGa4BaseInstance *out);

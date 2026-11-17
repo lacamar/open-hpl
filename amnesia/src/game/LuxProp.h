@@ -26,6 +26,7 @@
 #include "LuxSavedEngineTypes.h"
 #include "RustLuxProp.h"
 #include <map>
+#include <type_traits>
 
 
 //----------------------------------------------
@@ -294,6 +295,32 @@ public:
 
 //----------------------------------------------
 
+class OhplA5eStr
+{
+public:
+	OhplA5eStr(uint64_t ahState, int alSlot) : mhState(ahState), mlSlot(alSlot) {}
+	operator tString() const { size_t n = 0; const char *p = ohpl_a5e_str_get(mhState, mlSlot, &n); return tString(p, n);}
+	OhplA5eStr &operator=(const tString &asX){ ohpl_a5e_str_set(mhState, mlSlot, (const unsigned char*)asX.data(), asX.size()); return *this;}
+	OhplA5eStr &operator=(const OhplA5eStr &aX){ return *this = (tString)aX;}
+	const char *c_str() const { size_t n = 0; return ohpl_a5e_str_get(mhState, mlSlot, &n);}
+	bool empty() const { size_t n = 0; ohpl_a5e_str_get(mhState, mlSlot, &n); return n==0;}
+	bool operator==(const char *apX) const { return tString(*this)==apX;}
+	bool operator!=(const char *apX) const { return tString(*this)!=apX;}
+
+private:
+	uint64_t mhState;
+	int mlSlot;
+};
+
+inline tString operator+(const char *apX, const OhplA5eStr &aY){ return apX + (tString)aY;}
+inline tString operator+(const tString &asX, const OhplA5eStr &aY){ return asX + (tString)aY;}
+inline tString operator+(const OhplA5eStr &aX, const char *apY){ return (tString)aX + apY;}
+inline tString operator+(const OhplA5eStr &aX, const tString &asY){ return (tString)aX + asY;}
+
+static_assert(std::is_standard_layout<cMatrixf>::value && sizeof(cMatrixf)==64 && sizeof(cVector3f)==12 && sizeof(cColor)==16, "state mirror types");
+
+//----------------------------------------------
+
 class iLuxProp : public iLuxEntity
 {
 typedef iLuxEntity super_class;
@@ -305,6 +332,17 @@ friend struct OhplA5Dump;
 public:
 	iLuxProp(const tString &asName, int alID, cLuxMap *apMap, eLuxPropType aPropType);
 	virtual ~iLuxProp();
+
+	//////////////////////
+	//Base state (Rust arena entry)
+	OhplA5eState &S(){ return *mpState;}
+	OhplGa4Base &Base(){ return mpState->base;}
+	OhplA5eStr Str(eOhplA5eStr aSlot){ return OhplA5eStr(mhState, aSlot);}
+	cMatrixf &OnLoadTransformRef(){ return *(cMatrixf*)mpState->on_load_transform;}
+	cVector3f &OnLoadScaleRef(){ return *(cVector3f*)mpState->on_load_scale;}
+	cMatrixf &ParentBoneOffsetMatrix(){ return *(cMatrixf*)mpState->parent_bone_offset;}
+	cMatrixf &BodyMatrixBackup(){ return *(cMatrixf*)mpState->body_matrix_backup;}
+	cColor &EffectsOffLightColor(){ return *(cColor*)mpState->effects_off_light_color;}
 
 	//////////////////////
 	//General
@@ -352,16 +390,16 @@ public:
 	eLuxPropType GetPropType(){ return mPropType;}
 	
 	void SetHealth(float afX);
-	float GetHealth(){ return mfHealth;}
+	float GetHealth(){ return S().health;}
 
 	void SetEffectsActive(bool abActive, bool abFadeAndPlaySounds);
 
-	float GetEffectsAlpha(){ return mBase.effects_alpha;}
+	float GetEffectsAlpha(){ return S().base.effects_alpha;}
 
-	void SetIsInteractedWith(bool abX){  mbIsInteractedWith = abX;}
-	bool IsInteractedWith(){  return mbIsInteractedWith;}
+	void SetIsInteractedWith(bool abX){  S().interacted_with = abX;}
+	bool IsInteractedWith(){  return S().interacted_with;}
 
-	bool IsMoving(){ return mBase.moving; }
+	bool IsMoving(){ return S().base.moving; }
 	
 	virtual cLuxInteractData_Grab* GetGrabData(){ return NULL;}
 	virtual cLuxInteractData_Push* GetPushData(){ return NULL;}
@@ -372,9 +410,9 @@ public:
 
 	virtual bool ShowOutlinesOnConnectedBodies(){ return true;}
 	
-	const cMatrixf& GetOnLoadTransform(){ return m_mtxOnLoadTransform; }
+	const cMatrixf& GetOnLoadTransform(){ return OnLoadTransformRef(); }
 
-	bool GetStaticPhysics(bool abX){ return mbStaticPhysics;}
+	bool GetStaticPhysics(bool abX){ return S().static_physics;}
 	void SetStaticPhysics(bool abX);
 
 	//////////////////////
@@ -470,40 +508,7 @@ protected:
 
 	//////////////
 	//Variables
-	float mfHealth;
-
-    cBoneState * mpParentBone;
-    cMatrixf mpParentBoneOffsetMatrix;
-    tString msParentEntityName;
-	tString msParentBoneName;
-
-    float mfBodyMassBackup;
-    bool mbBodyCollideBackup;
-    bool mbBodyCollideCharacterBackup;
-    bool mbBodyActiveBackup;
-    cMatrixf mBodyMatrixBackup;
-
-
-	bool mbIsInteractedWith;
-	OhplGa4Base mBase;
-
-
-    bool mbStaticPhysics;
-	
-	bool mbHasFlickering;
-
-	
-
-
-
-
-
-	int mlCurrentNonLoopAnimIndex;
-	tString msAnimCallback;
-
-	bool mbDissolveOnDestruction;
-	float mfDissolveTime;
-
+	cBoneState * mpParentBone;
 
 	iLuxProp *mpAttachmentParent;
 	tLuxProp_AttachedPropList mlstAttachedProps;
@@ -512,10 +517,6 @@ protected:
 
 	//////////////
 	//Data
-	int mlToughness;
-
-	bool mbShowMesh;
-	
 	cWorld *mpWorld;
 	std::vector<iPhysicsBody*> mvBodies;
 	std::vector<iPhysicsJoint*> mvJoints;
@@ -539,31 +540,12 @@ protected:
 
 	cMeshEntity *mpMeshEntity;
 
-	tString msMainBodyName;
 	iPhysicsBody *mpMainBody;
 
-	bool mbMoveCheckCollision;
-	tString msMoveStartSound;
-	tString msMoveStopSound;
-	tString msMoveLoopSound;
-
 	cSoundEntity* mpMoveLoopSound;
-	int mlMoveLoopSoundID;
 
-	tString msEffectsOnSound;
-	tString msEffectsOffSound;
-	float mfEffectsOnTime;
-	float mfEffectsOffTime;
-	cColor mEffectsOffLightColor;
-	float mfEffectsOffLightRadius;
-
-	bool mbShowHints;
-
-	//////////////
-	//Save specific
-	tString msFileName;
-	cMatrixf m_mtxOnLoadTransform;
-	cVector3f mvOnLoadScale;
+	uint64_t mhState;
+	OhplA5eState *mpState;
 	
 private:
 	eLuxPropType mPropType;

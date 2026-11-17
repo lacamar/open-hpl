@@ -157,7 +157,7 @@ bool cLuxProp_SwingDoor::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos
 
 	std::vector<OhplGa4DoorJoint> vJoints = Ga4DoorJoints();
 	OhplGa4Run run(this);
-	bool bHint = ohpl_ga4_door_on_interact(&mS, vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(), (int)mvJoints.size(), mbShowHints, run.Sink());
+	bool bHint = ohpl_ga4_door_on_interact(&mS, vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(), (int)mvJoints.size(), S().show_hints, run.Sink());
 	run.Finish();
 
 	if(bHint)
@@ -229,7 +229,7 @@ void cLuxProp_SwingDoor::OnSetupAfterLoad(cWorld *apWorld)
 		cMesh *pMesh = pMeshManager->CreateMesh(msDamageMesh[i]);
 		if(pMesh==NULL)
 		{
-			Error("Could not load damage mesh '%s' for '%s'\n", msDamageMesh[i].c_str(), msFileName.c_str());
+			Error("Could not load damage mesh '%s' for '%s'\n", msDamageMesh[i].c_str(), Str(kOhplA5eStr_FileName).c_str());
 			continue;
 		}
 
@@ -246,7 +246,7 @@ void cLuxProp_SwingDoor::OnSetupAfterLoad(cWorld *apWorld)
 				//This is not ideal but should be good enough.
 				if(pDynBody)
 				{
-					cMatrixf mtxWorld = cMath::MatrixMul(m_mtxOnLoadTransform, pDamSubEnt->GetLocalMatrix());
+					cMatrixf mtxWorld = cMath::MatrixMul(OnLoadTransformRef(), pDamSubEnt->GetLocalMatrix());
 					pDamSubEnt->SetMatrix(cMath::MatrixMul(mtxInvDynBody, mtxWorld));
 
 					pDynBody->AddChild(pDamSubEnt);
@@ -359,7 +359,7 @@ void cLuxProp_SwingDoor::OnHealthChange()
 	}
 
 	OhplGa4Run run(this);
-	ohpl_ga4_door_on_health_change(&mS, &mP, mfHealth, bHasMain, run.Sink());
+	ohpl_ga4_door_on_health_change(&mS, &mP, S().health, bHasMain, run.Sink());
 	run.Finish();
 }
 
@@ -601,7 +601,7 @@ void cLuxProp_SwingDoor::Ga4ApplyOp(const OhplGa4Op &aOp)
 				cMatrixf mtxEntity = cMath::MatrixMul(pMainBody->GetLocalMatrix(), mtxInvLocalBody);
 
 				mpMap->ResetLatestEntity();
-				mpMap->CreateEntity(msName + "_broken", msBrokenEntity, mtxEntity, mvOnLoadScale);
+				mpMap->CreateEntity(msName + "_broken", msBrokenEntity, mtxEntity, OnLoadScaleRef());
 
 				////////////////////////
 				//Add impulse and velocity
