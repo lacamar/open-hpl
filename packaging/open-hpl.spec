@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.4.0
+Version:        1.4.1
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,11 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Tue Nov 17 2026 lacamar <lchlnm@pm.me> - 1.4.1-1
+- Player core, areas, SOMA map timers in Rust
+- LuxBase boot sequence in Rust
+- Prop dump and shared map cache in the gate
+
 * Tue Nov 17 2026 lacamar <lchlnm@pm.me> - 1.4.0-1
 - Amnesia script functions in Rust
 - Map, map handler, map helper in Rust
