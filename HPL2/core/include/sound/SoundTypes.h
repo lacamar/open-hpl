@@ -35,12 +35,6 @@ namespace hpl {
 
 	//---------------------------------------
 	
-	class iSoundEntryCallback
-	{
-	public:
-		virtual void OnPriorityRelease()=0;
-	};
-
 	//---------------------------------------
 };
 

@@ -10,35 +10,6 @@
 #include <vector>
 
 namespace hpl {
-	struct OhplSoundCfg
-	{
-		float interval, random;
-		bool looping, use_3d, has_start;
-	};
-
-	struct OhplSoundState
-	{
-		float interval_count, sleep_count;
-		bool stopped, started, skip_start_end, prio_remove, fading_out, out_of_range, remove_when_over;
-	};
-
-	struct OhplSoundVt
-	{
-		void* ctx;
-		bool (*silent)(void*);
-		bool (*has_entry)(void*, int32_t);
-		bool (*is_valid)(void*, int32_t);
-		void (*clear_entry)(void*, int32_t);
-		void (*stop_entry)(void*, int32_t);
-		void (*fade_in)(void*, int32_t, float);
-		void (*fade_out)(void*, int32_t, float);
-		void (*update_position)(void*, int32_t);
-		int32_t (*play_sound)(void*, int32_t, bool);
-		void (*on_start)(void*);
-		bool (*emitter)(void*);
-		float (*listener_sqr_dist)(void*);
-	};
-
 	struct OhplName
 	{
 		const char* ptr;
@@ -56,8 +27,6 @@ namespace hpl {
 		bool visible, has_composite, has_renderer, has_world, has_frustum, post_effects_active;
 	};
 
-	static_assert(sizeof(OhplSoundCfg) == 12 && offsetof(OhplSoundCfg, looping) == 8, "OhplSoundCfg layout");
-	static_assert(sizeof(OhplSoundState) == 16 && offsetof(OhplSoundState, stopped) == 8, "OhplSoundState layout");
 	static_assert(sizeof(OhplName) == 16 && sizeof(OhplFieldIn) == 28 && sizeof(OhplViewportIn) == 6, "world layouts");
 
 	enum
@@ -76,15 +45,6 @@ namespace hpl {
 	};
 
 	extern "C" {
-	void ohpl_snd_init(const OhplSoundCfg*, bool, bool, OhplSoundState*);
-	void ohpl_snd_priority_release(OhplSoundState*);
-	bool ohpl_snd_is_stopped(const OhplSoundState*, bool);
-	void ohpl_snd_play(OhplSoundState*, OhplSoundVt*, const OhplSoundCfg*, bool);
-	void ohpl_snd_stop(OhplSoundState*, OhplSoundVt*, const OhplSoundCfg*, bool);
-	void ohpl_snd_fade_in(OhplSoundState*, OhplSoundVt*, const OhplSoundCfg*, float);
-	void ohpl_snd_fade_out(OhplSoundState*, OhplSoundVt*, float);
-	void ohpl_snd_update(OhplSoundState*, OhplSoundVt*, const OhplSoundCfg*, float, float);
-
 	int32_t ohpl_world_find_name(const OhplName*, int32_t, OhplName);
 	int32_t ohpl_world_find_last_name(const OhplName*, int32_t, OhplName);
 	int32_t ohpl_world_first_by_name(const OhplName*, int32_t);

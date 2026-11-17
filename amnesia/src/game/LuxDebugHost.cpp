@@ -250,8 +250,8 @@ static void SoundOp(int alOp, const OhplGa9Arg *a, OhplGa9Ret *r)
 	case eDbgOp_SndSnap:
 	{
 		gvSounds.clear();
-		tSoundEntryList *pList = gpBase->mpEngine->GetSound()->GetSoundHandler()->GetEntryList();
-		for(tSoundEntryListIt it = pList->begin(); it != pList->end(); ++it) gvSounds.push_back(*it);
+		cSoundHandler *pHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
+		for(size_t i=0; i<pHandler->GetEntryNum(); ++i) gvSounds.push_back(pHandler->GetEntryAt(i));
 		r->i = (int64_t)gvSounds.size();
 		break;
 	}

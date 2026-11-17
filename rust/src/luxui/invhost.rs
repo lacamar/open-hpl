@@ -305,9 +305,6 @@ consts!(wx, {
 });
 
 consts!(jg, {
-    VOICE_PLAY = 0,
-    VOICE_VALID = 1,
-    VOICE_FADE = 2,
     PROG_LOW = 3,
     HINT_RECENT = 4,
     MAIN_BOOL_GET = 5,

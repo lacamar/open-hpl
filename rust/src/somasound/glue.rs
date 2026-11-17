@@ -3,6 +3,7 @@
 use super::extract;
 use super::game::{game, warn};
 use super::host::{self, Engine, ops};
+use crate::sound::own::data_of;
 use crate::string::{file_ext, to_lower};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -118,12 +119,13 @@ pub fn resolve(event: &[u8]) -> usize {
     let lower = to_lower(event);
     // SAFETY: plain calls; the strings are valid for each call.
     let data = unsafe { (o.data_new)(lower.as_ptr(), lower.len()) };
-    for f in ev.files() {
-        // SAFETY: as above.
-        unsafe { (o.data_add_sound)(data, f.as_ptr(), f.len()) };
+    // SAFETY: `data` is the `cSoundEntityData*` just created; its record is registered.
+    if let Some(d) = unsafe { data_of(data).as_mut() } {
+        for f in ev.files() {
+            d.add_name(0, f);
+        }
+        d.setup(ev.min_dist, ev.max_dist, !ev.one_shot, ev.is_3d);
     }
-    // SAFETY: as above.
-    unsafe { (o.data_setup)(data, ev.min_dist, ev.max_dist, !ev.one_shot, ev.is_3d) };
     game().bank.events.set_data(idx, data);
     let g = game();
     if !std::mem::replace(&mut g.factory, true) {

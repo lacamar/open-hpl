@@ -3,6 +3,7 @@
 use super::super::{a1::Arg, tables};
 use super::entity::lossy;
 use super::{S, TYPE_ANY, call, entity, error, map_exists, ops, s, sf};
+use crate::sound::own::handler;
 
 sf!(PreloadParticleSystem(file: S) {
     call(ops::PRELOAD_PS, &[s(file.0)]);
@@ -206,19 +207,40 @@ sf!(SetLightFlickerActive(name: S, on: bool) {
     }
 });
 
+/// `eSoundEntryType_World` and `eLuxGlobalVolumeType_Script`.
+const WORLD_TYPE: u32 = 1;
+const SCRIPT_ID: i32 = 0;
+
+/// The script's slot of the global volume (0) or speed (1) table; created when absent.
+fn script_global_value(kind: i32) -> f32 {
+    handler().map_or(0.0, |h| {
+        // SAFETY: a forced slot is live until the table changes.
+        unsafe {
+            h.setting_entry(usize::try_from(kind).unwrap_or(0), SCRIPT_ID, true)
+                .as_ref()
+        }
+        .map_or(0.0, |e| e.val)
+    })
+}
+
 fn fade_global(kind: i32, dest: f32, time: f32) {
     let destroy = dest == 1.0;
     let mut speed = 1000.0f32;
     if time > 0.0 {
-        let cur = call(ops::SOUND_GLOBAL_VALUE, &[Arg::i(kind)]).as_f();
-        speed = (dest - cur).abs() / time;
+        speed = (dest - script_global_value(kind)).abs() / time;
     } else {
-        call(ops::SOUND_GLOBAL_VALUE, &[Arg::i(kind)]);
+        script_global_value(kind);
     }
-    call(
-        ops::SOUND_GLOBAL_FADE,
-        &[Arg::i(kind), Arg::f(dest), Arg::f(speed), Arg::b(destroy)],
-    );
+    if let Some(h) = handler() {
+        h.fade_global(
+            usize::try_from(kind).unwrap_or(0),
+            dest,
+            speed,
+            WORLD_TYPE,
+            SCRIPT_ID,
+            destroy,
+        );
+    }
 }
 
 sf!(FadeGlobalSoundVolume(dest: f32, time: f32) {

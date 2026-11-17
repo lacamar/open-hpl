@@ -97,7 +97,7 @@ enum
 
 enum
 {
-	kA11a_Jg_VOICE_PLAY = 0, kA11a_Jg_VOICE_VALID = 1, kA11a_Jg_VOICE_FADE = 2, kA11a_Jg_PROG_LOW = 3, kA11a_Jg_HINT_RECENT = 4,
+	kA11a_Jg_PROG_LOW = 3, kA11a_Jg_HINT_RECENT = 4,
 	kA11a_Jg_MAIN_BOOL_GET = 5, kA11a_Jg_MAIN_BOOL_SAVE = 6, kA11a_Jg_ACH_ARCHIVIST = 7, kA11a_Jg_GAME_NAME = 8, kA11a_Jg_DPAD_DOWN_OK = 9
 };
 
@@ -503,18 +503,8 @@ void OpWidgetX(OhplA11aArgs *a)
 
 void OpJGame(OhplA11aArgs *a)
 {
-	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
 	switch(a->i[0])
 	{
-	case kA11a_Jg_VOICE_PLAY:
-		{
-			cSoundEntry *pEntry = pSoundHandler->PlayGuiStream(S(a, 0), false, 1.0f);
-			a->r = (uintptr_t)pEntry;
-			if(pEntry) a->i[1] = pEntry->GetId();
-		}
-		break;
-	case kA11a_Jg_VOICE_VALID: a->r = pSoundHandler->IsValid((cSoundEntry*)a->p[0], a->i[1]); break;
-	case kA11a_Jg_VOICE_FADE: ((cSoundEntry*)a->p[0])->FadeOut(3.0f); break;
 	case kA11a_Jg_PROG_LOW: ProgLog(eLuxProgressLogLevel_Low, S(a, 0)); break;
 	case kA11a_Jg_HINT_RECENT: gpBase->mpHintHandler->Add("RecentlyReadText", kTranslate("Hints", "RecentlyReadText"), -1); break;
 	case kA11a_Jg_MAIN_BOOL_GET: a->r = gpBase->mpMainConfig->GetBool("Main", S(a, 0), false); break;

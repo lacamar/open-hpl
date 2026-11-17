@@ -3,6 +3,7 @@
 use super::super::a1::{Arg, raw_bytes};
 use super::super::{tables, vars};
 use super::{GLOBAL_TEMP, LOCAL_NULL, NULL_STR, RStr, S, call, error, ops, s, sf, temp};
+use crate::sound::own::handler;
 use crate::{math, string};
 
 fn map_var(name: &[u8]) -> Option<*const std::ffi::c_void> {
@@ -309,6 +310,9 @@ sf!(UnlockAchievement(name: S) {
 });
 
 sf!(PlayGuiSound(file: S, volume: f32) {
-    let op = if tables::sound_is_entity(file.0) { ops::GUI_SOUND_DATA } else { ops::GUI_SOUND };
-    call(op, &[s(file.0), Arg::f(volume)]);
+    if tables::sound_is_entity(file.0) {
+        call(ops::GUI_SOUND_DATA, &[s(file.0), Arg::f(volume)]);
+    } else if let Some(h) = handler() {
+        h.play_gui(file.0, false, volume, false);
+    }
 });

@@ -6,6 +6,7 @@ use super::glue;
 use super::host::{AreaDefC, Engine, Str, ops};
 use super::scape::{AreaDef, AreaState, ReverbEnv, Scape, ScapeHost};
 use crate::somascript::s2_as::{Frame, Soma};
+use crate::sound::own::{ent_fade_in, ent_fade_out, entity_of};
 use std::ffi::c_void;
 
 const ENTRY_WORLD: i32 = 1;
@@ -77,8 +78,17 @@ impl ScapeHost for Host {
         // SAFETY: `w` is the current map's world; `name` is valid for the call.
         let ent = unsafe { (o.world_sound_by_name)(w, name.as_ptr(), name.len()) };
         if ent != 0 {
-            // SAFETY: `ent` is a live sound entity of that world.
-            unsafe { (o.se_fade)(ent, fade_in, speed) };
+            let e = entity_of(ent);
+            // SAFETY: `e` is the record of a live sound entity of that world.
+            if !e.is_null() {
+                unsafe {
+                    if fade_in {
+                        ent_fade_in(e, speed);
+                    } else {
+                        ent_fade_out(e, speed);
+                    }
+                }
+            }
         }
     }
 

@@ -46,54 +46,6 @@ public:
 	void OnPauseUpdate(float afTimeStep) { ohpl_s7_pause_update(afTimeStep, gpSomaBase->mbScriptGamePaused); }
 };
 
-bool Valid(size_t e, int id) { return Handler()->IsValid((cSoundEntry *)e, id); }
-
-bool Play(const OhplGs5PlayReq *r, size_t *pEntry, int *pId)
-{
-	tString sFile((const char *)r->file, r->file_len);
-	cVector3f vPos(r->pos[0], r->pos[1], r->pos[2]);
-	cSoundEntry *p;
-	if (r->kind == 0)
-		p = Handler()->Play(sFile, r->looped, 0, vPos, 1e5f, 2e5f, (eSoundEntryType)r->entry_type, false, true, 0, r->stream);
-	else if (r->kind == 1)
-		p = Handler()->PlayGuiStream(sFile, r->looped, 0, vPos, (eSoundEntryType)r->entry_type);
-	else
-		p = Handler()->PlayGui(sFile, r->looped, 0, vPos, (eSoundEntryType)r->entry_type);
-	if (p == NULL)
-		return false;
-	*pEntry = (size_t)p;
-	*pId = p->GetId();
-	return true;
-}
-
-void SetFilter(size_t e, int which, float f)
-{
-	iSoundChannel *pCh = ((cSoundEntry *)e)->GetChannel();
-	if (which == 0)
-		pCh->SetFilterGainHF(f);
-	else if (which == 1)
-		pCh->SetFilterGainLF(f);
-	else
-		pCh->SetEnvSendGain(f);
-}
-
-void Listener(float *o)
-{
-	iLowLevelSound *pLow = gpSomaBase->mpEngine->GetSound()->GetLowLevel();
-	cVector3f p = pLow->GetListenerPosition(), f = pLow->GetListenerForward(), u = pLow->GetListenerUp();
-	o[0] = p.x; o[1] = p.y; o[2] = p.z; o[3] = f.x; o[4] = f.y; o[5] = f.z; o[6] = u.x; o[7] = u.y; o[8] = u.z;
-}
-
-void EntityInfo(size_t e, float *o)
-{
-	cSoundEntity *p = Ent(e);
-	cVector3f v = p->GetWorldPosition();
-	o[0] = v.x; o[1] = v.y; o[2] = v.z;
-	o[3] = p->GetMinDistance();
-	o[4] = p->GetMaxDistance();
-	o[5] = p->GetVolume();
-}
-
 bool FindFile(const unsigned char *n, size_t l, void (*sink)(void *, const unsigned char *, size_t), void *ctx)
 {
 	tString s = cString::To8Char(gpSomaBase->mpEngine->GetResources()->GetFileSearcher()->GetFilePath(Str(n, l)));
@@ -105,19 +57,6 @@ size_t DataNew(const unsigned char *n, size_t l)
 {
 	cResources *pRes = gpSomaBase->mpEngine->GetResources();
 	return (size_t)hplNew(cSoundEntityData, (Str(n, l), pRes, gpSomaBase->mpEngine->GetSound()));
-}
-
-void DataSetup(size_t d, float afMin, float afMax, bool abLoop, bool ab3D)
-{
-	cSoundEntityData *p = (cSoundEntityData *)d;
-	p->SetVolume(1);
-	p->SetMinDistance(afMin);
-	p->SetMaxDistance(afMax);
-	p->SetLoop(abLoop);
-	p->SetUse3D(ab3D);
-	p->SetStream(false);
-	p->SetFadeStart(false);
-	p->SetFadeStop(false);
 }
 
 size_t ShellNew(size_t alEvent, size_t alEntity, int alType)
@@ -170,43 +109,6 @@ void ObjectId(size_t p, unsigned char *o)
 {
 	cSomaID id = SomaObjectID((void *)p, "cSoundEntity");
 	memcpy(o, &id, sizeof(id));
-}
-
-void SeFadeMain(size_t e, float afVol, float afSpeed)
-{
-	cSoundEntity *o = Ent(e);
-	o->Play(false);
-	if (cSoundEntry *pEntry = o->GetSoundEntry(eSoundEntityType_Main, false))
-	{
-		if (afSpeed > 0)
-			pEntry->FadeIn(afVol, afSpeed);
-		else
-			pEntry->SetVolumeMul(afVol);
-	}
-}
-
-float SeProp(size_t e, unsigned op, float f)
-{
-	cSoundEntity *o = Ent(e);
-	switch (op)
-	{
-	case 0: o->SetMinDistance(f); break;
-	case 1: o->SetMaxDistance(f); break;
-	case 2: return o->GetMinDistance();
-	case 3: return o->GetMaxDistance();
-	}
-	return 0;
-}
-
-void SeResetProps(size_t e)
-{
-	cSoundEntity *o = Ent(e);
-	if (o->GetData())
-	{
-		o->SetMinDistance(o->GetData()->GetMinDistance());
-		o->SetMaxDistance(o->GetData()->GetMaxDistance());
-		o->SetVolume(o->GetData()->GetVolume());
-	}
 }
 
 size_t ScapeWorld(size_t m) { return (size_t)((cSomaLuxMap *)m)->GetWorld(); }
@@ -318,36 +220,6 @@ const void *PrefixRef(const unsigned char *p, size_t n)
 int ScriptCall(const unsigned char *d, size_t dn, const OhplS7CallArg *a, size_t n, bool abRet) { return OhplMapScriptCall(d, dn, a, n, abRet, 0); }
 
 const OhplS7Host kHost = {
-	Valid,
-	Play,
-	[](size_t e) { ((cSoundEntry *)e)->Stop(); },
-	[](size_t e, bool b) { ((cSoundEntry *)e)->SetPaused(b); },
-	[](size_t e) { return (double)((cSoundEntry *)e)->GetChannel()->GetTotalTime(); },
-	[](size_t e, bool b) { ((cSoundEntry *)e)->GetChannel()->SetLooping(b); },
-	SetFilter,
-	[](size_t e, const float *v) { ((cSoundEntry *)e)->GetChannel()->SetPosition(cVector3f(v[0], v[1], v[2])); },
-	[](size_t e, float f) { ((cSoundEntry *)e)->SetDefaultVolume(f); },
-	[](size_t e, float f) { ((cSoundEntry *)e)->SetDefaultSpeed(f); },
-	Listener,
-	EntityInfo,
-	[](float v, unsigned types, int id) { return Handler()->SetGlobalVolume(v, types, id); },
-	[](int id) {
-		cMultipleSettingsHandler::cGSEntry *p = Handler()->GetGlobalVolumeSettingsHandler()->GetEntry(id, false);
-		return p ? p->GetVal() : 1.0f;
-	},
-	[](float v, float speed, unsigned types, int id, bool destroy) { return Handler()->FadeGlobalVolume(v, speed, types, id, destroy); },
-	[](float v, unsigned types, int id) { return Handler()->SetGlobalSpeed(v, types, id); },
-	[](int id) {
-		cMultipleSettingsHandler::cGSEntry *p = Handler()->GetGlobalSpeedSettingsHandler()->GetEntry(id, false);
-		return p ? p->GetVal() : 1.0f;
-	},
-	[](float v, float speed, unsigned types, int id, bool destroy) { return Handler()->FadeGlobalSpeed(v, speed, types, id, destroy); },
-	[](unsigned types, float speed) { Handler()->FadeOutAll(types, speed, false); },
-	[](const unsigned char *f, size_t n, float vol, float speed, bool loop, bool resume) { Music()->Play(Str(f, n), vol, speed, loop, resume); },
-	[](float speed) { Music()->Stop(speed); },
-	[]() { return Music()->GetCurrentSong() != NULL; },
-	[](float d, float s) { Music()->FadeVolumeMul(d, s); },
-	[]() { return Music()->GetVolumeMul(); },
 	[](uint8_t a, int32_t b, int32_t c) {
 		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
 		cSomaID id;
@@ -360,8 +232,6 @@ const OhplS7Host kHost = {
 	FindFile,
 	[](const unsigned char *p, size_t n) { gpSomaBase->mpEngine->GetResources()->AddResourceDir(cString::To16Char(Str(p, n)), false); },
 	DataNew,
-	[](size_t d, const unsigned char *f, size_t n) { ((cSoundEntityData *)d)->AddSoundName(Str(f, n), eSoundEntityType_Main); },
-	DataSetup,
 	[]() { gpSomaBase->mpEngine->GetUpdater()->AddGlobalUpdate(hplNew(cSomaSoundUpdater, ())); },
 	[]() {
 		cSoundEntity::SetEventFactory(+[](cSoundEntity *apEntity) -> iSoundEntityEvent * {
@@ -385,17 +255,6 @@ const OhplS7Host kHost = {
 	WorldCreateSound,
 	WorldSoundByCreation,
 	ObjectId,
-	[](size_t e) { return (size_t)Ent(e)->GetEvent(); },
-	[](size_t e, bool in, float speed) {
-		if (in)
-			Ent(e)->FadeIn(speed);
-		else
-			Ent(e)->FadeOut(speed);
-	},
-	SeFadeMain,
-	[](size_t e) { return Ent(e)->GetData() ? (int)Ent(e)->GetData()->GetLoop() : -1; },
-	SeProp,
-	SeResetProps,
 	[](const unsigned char *p, size_t n) { Log("%s", Str(p, n).c_str()); },
 	[](const unsigned char *p, size_t n) { Warning("%s", Str(p, n).c_str()); },
 	ScapeWorld,

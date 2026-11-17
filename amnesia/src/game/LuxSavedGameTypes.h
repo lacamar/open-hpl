@@ -135,7 +135,7 @@ class cLuxEffectHandler_SoundMul_SaveData : public iSerializable
 	kSerializableClassInit(cLuxEffectHandler_SoundMul_SaveData)
 public:
 	void FromEntry(cMultipleSettingsHandler::cGSEntry* apEntry);
-	void ToEntry(int alIdx, cMultipleSettingsHandler *apHandler);
+	void ToEntry(int alIdx, cSoundSettings *apHandler);
 	
 	bool mbActive;
 	float mfVal;
