@@ -10,7 +10,6 @@
 #include "SomaToneMapping.h"
 #include "SomaLoaders.h"
 #include "SomaFsb.h"
-#include "impl/scriptstring.h"
 #include "SomaSplash.h"
 #include "SomaLuxPlayer.h"
 #include "SomaImGui.h"
@@ -21,7 +20,7 @@
 #include <tuple>
 #include "SomaLuxEntity.h"
 #include "SomaLux.h"
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 #include "SomaScriptRuntime.h"
 #include "SomaLuxScriptable.h"
 #include "SomaAgent.h"
@@ -723,7 +722,7 @@ static std::string ScriptValueString(asIScriptEngine *apEngine, int alTypeId, vo
 		return sBuf;
 	}
 	if (sName == "array")
-		return "array[" + std::to_string(((CScriptArray *)apAddr)->GetSize()) + "]";
+		return "array[" + std::to_string(((OhplEasArray *)apAddr)->GetSize()) + "]";
 	return sName;
 }
 
@@ -1303,8 +1302,6 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cTextureManager::SetHardwareSRGB(plan.hardware_srgb);
 	cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
 	cGpuShaderManager::AddGlobalDefine("LinearColorSpaceCorrectionType_Standard");
-
-	gsScriptStringFloatFormat = "%f";
 
 	// occlusion queries wrongly hide near lights on this driver (near-black render)
 	cRendererDeferred::SetOcclusionTestLargeLights(false);

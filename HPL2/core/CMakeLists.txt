@@ -73,10 +73,6 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
 
     # scripting
     sources/impl/SqScript.cpp
-    sources/impl/scriptarray.cpp
-    sources/impl/scripthelper.cpp
-    sources/impl/scriptstring.cpp
-    sources/impl/scriptstring_utils.cpp
     # Image loading
     sources/impl/BitmapLoader*
     # theora video

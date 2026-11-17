@@ -5,7 +5,7 @@
 #include "RustSomaScript.h"
 #include "RustSomaScriptS2.h"
 
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 
 #include <cassert>
 #include <cstdio>
@@ -206,7 +206,6 @@ void RegisterSomaScriptStrings(asIScriptEngine *apEngine)
 
 // SOMA's array<T> also has STL-style names
 
-static asUINT ArrSize(const CScriptArray *apArr) { return apArr->GetSize(); }
 void RegisterSomaScriptArrayExtras(asIScriptEngine *apEngine)
 {
 	ohpl_s2_register_array_extras(apEngine);

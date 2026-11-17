@@ -2,7 +2,6 @@
 //! `tWString`, the concatenation operators, the `array<T>` STL names and the `cString_*` globals.
 
 use super::s2_as::{self, Engine, Frame, Soma, str_bytes, wstr_units};
-use super::s2_host;
 use super::strings as st;
 use crate::string as cstr;
 use std::ffi::{c_char, c_void};
@@ -369,15 +368,12 @@ pub fn concats(s: &Soma) {
 }
 
 fn array_extras(s: &Soma) {
-    let Some(h) = s2_host::ops() else { return };
-    let (ins, ins_at, pop, pop_at, size) = (
-        h.arr_insert_last,
-        h.arr_insert_at,
-        h.arr_remove_last,
-        h.arr_remove_at,
-        h.arr_size,
-    );
-    // SAFETY (all closures): the host ops take the live `CScriptArray` and the element pointer the engine passes.
+    use crate::script::addons::shim::c_api::{
+        ohpl_asx_arr_insert_at as ins_at, ohpl_asx_arr_insert_last as ins,
+        ohpl_asx_arr_remove_at as pop_at, ohpl_asx_arr_remove_last as pop,
+        ohpl_asx_arr_size as size,
+    };
+    // SAFETY (all closures): the array is the live `array<T>` of the call and the element pointer the engine passes.
     s.plain("array<T>", "void push_back(const T&in)", move |fr| unsafe {
         ins(fr.this, fr.ptr_arg(0))
     });
@@ -480,7 +476,6 @@ fn with_wstring<R>(u: &[u32], f: impl FnOnce(*mut c_void) -> R) -> R {
 pub fn register_natives(e: Engine) {
     let s = Soma(e);
     concats(&s);
-    let h = s2_host::ops();
     s.func(
         "tString cString_ToString(float afX, int alNumOfDecimals=-1, bool abRemoveZeros=false)",
         |fr| {
@@ -673,8 +668,7 @@ pub fn register_natives(e: Engine) {
             fr.ret(st::numeric_suffix_int_wide(units(fr.ptr_arg(0)), fr.arg(1)));
         },
     );
-    let Some(h) = h else { return };
-    let ins = h.arr_insert_last;
+    let ins = crate::script::addons::shim::c_api::ohpl_asx_arr_insert_last;
     s.func("void cString_GetStringVecW(const tWString&in asData, array<tWString> &inout avOutStrings, const tWString&in asSepp)", move |fr| {
         let arr = fr.ptr_arg(1);
         for part in st::split(units(fr.ptr_arg(0)), units(fr.ptr_arg(2))) {

@@ -124,7 +124,8 @@ fn setup_engine(e: Engine, api: &mut Api, api_text: &[u8]) {
     // SAFETY: `e` is the engine created by `run`.
     unsafe { s2_entry::ohpl_s2_configure_engine(e.0) };
     s2_strings::register_types(e);
-    s2_host::register_array(e.0);
+    // SAFETY: `e` is the engine created by `run`.
+    unsafe { crate::script::addons::shim::register_array(e.0, true) };
     s2_strings::register_array_extras(e);
     api.load(api_text);
     api.register_types(e);

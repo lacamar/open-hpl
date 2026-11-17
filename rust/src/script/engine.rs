@@ -1,11 +1,13 @@
 //! AngelScript engine setup and the registration API.
 //!
 //! Rust `extern "C"` functions register directly as `Cdecl` (globals) or `CdeclObjFirst`/`CdeclObjLast`
-//! (methods, behaviours); the L7 probe in `cshim/probe` verifies every convention. Rules it found:
+//! (methods, behaviours); `selftest` verifies every convention. Rules it found:
 //! - value types passed or returned by value must not carry the constructor/assignment/copy flags;
 //! - a handle parameter transfers one reference to the callee, which must release it;
 //! - a handle return transfers one reference to the engine.
 
+use super::addons;
+use super::addons::string::ScriptString;
 use super::sys;
 use crate::sdlsys::{SCRIPT_MSG_ERROR, SCRIPT_MSG_INFO, SCRIPT_MSG_WARNING, script_message};
 use std::cell::RefCell;
@@ -185,20 +187,13 @@ impl EngineRef {
 /// # Safety
 /// `s` is the pointer the engine passed for a `string` parameter and stays valid for `'a`.
 pub unsafe fn script_str<'a>(s: *const c_void) -> &'a [u8] {
-    // SAFETY: caller contract; the accessor reads the `std::string` at offset 0 of the script string.
-    unsafe {
-        let n = sys::ohpl_as_str_len(s);
-        if n == 0 {
-            return &[];
-        }
-        std::slice::from_raw_parts(sys::ohpl_as_str_data(s).cast::<u8>(), n)
-    }
+    // SAFETY: caller contract; script strings are `ScriptString` objects.
+    unsafe { s.cast::<ScriptString>().as_ref() }.map_or(&[], ScriptString::bytes)
 }
 
 /// Returns a new script string for a registered function declared `string@`.
 pub fn new_script_str(b: &[u8]) -> *mut c_void {
-    // SAFETY: the slice is valid for the call; the shim copies it.
-    unsafe { sys::ohpl_as_str_new(b.as_ptr().cast(), b.len()) }
+    ScriptString::new_raw(b).cast()
 }
 
 /// `cScriptOutput`: engine messages formatted as the C++ class does, until a build reads them.
@@ -281,7 +276,8 @@ impl ScriptEngine {
                 on_message,
                 std::ptr::from_ref::<Output>(&output).cast_mut().cast(),
             );
-            sys::ohpl_as_register_addons(raw.as_raw());
+            addons::shim::register_string(raw.as_raw());
+            addons::shim::register_array(raw.as_raw(), true);
         }
         Some(Self { raw, output })
     }

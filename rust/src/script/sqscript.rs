@@ -1,5 +1,6 @@
 //! `cSqScript`: one compiled module plus a context. File loading stays with the C++ shell.
 
+use super::addons;
 use super::engine::{EngineRef, Output};
 use super::sys;
 use crate::sdlsys::script_chunks;
@@ -105,9 +106,9 @@ impl Script {
 
     /// Like the original, the execution result is ignored.
     pub fn run_line(&mut self, line: &str) -> bool {
-        if let Ok(l) = CString::new(line) {
-            // SAFETY: plain call; a null module is allowed by `ExecuteString`.
-            unsafe { sys::ohpl_as_execute_string(self.engine.as_raw(), l.as_ptr(), self.module) };
+        // SAFETY: the engine and module are alive; a null module is allowed by `ExecuteString`.
+        unsafe {
+            addons::helper::execute_string(self.engine.as_raw(), line.as_bytes(), self.module);
         }
         true
     }

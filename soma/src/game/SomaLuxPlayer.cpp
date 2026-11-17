@@ -9,7 +9,7 @@
 #include "SomaLuxVoice.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 
 #include <cmath>
 #include <cstring>
@@ -382,8 +382,8 @@ int32_t InputHostCall(void *, uint32_t alOp, OhplS5Io *io)
 		io->f[1] = pCfg->GetFloat("Input", "GamepadSensitivity", 2.0f);
 		return 1;
 	}
-	case kOhplS5In_ARR_SIZE: return (int32_t)((CScriptArray *)io->p[0])->GetSize();
-	case kOhplS5In_ARR_AT: io->p[1] = ((CScriptArray *)io->p[0])->At(io->i[0]); return 0;
+	case kOhplS5In_ARR_SIZE: return (int32_t)((OhplEasArray *)io->p[0])->GetSize();
+	case kOhplS5In_ARR_AT: io->p[1] = ((OhplEasArray *)io->p[0])->At(io->i[0]); return 0;
 	case kOhplS5In_STR_REF:
 	{
 		static tString sRef;

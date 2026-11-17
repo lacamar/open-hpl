@@ -1,6 +1,6 @@
 //! Bindings to `cshim/as_shim.h`; constants are asserted against `angelscript.h` in `cshim/layout_check.cpp`.
 
-use std::ffi::{c_char, c_int, c_uint, c_void};
+use std::ffi::{c_char, c_int, c_void};
 
 #[repr(C)]
 pub struct AsMsg {
@@ -110,15 +110,4 @@ unsafe extern "C" {
     pub fn ohpl_as_ctx_release(c: *mut c_void) -> c_int;
     pub fn ohpl_as_ctx_prepare(c: *mut c_void, func: *mut c_void) -> c_int;
     pub fn ohpl_as_ctx_execute(c: *mut c_void) -> c_int;
-    pub fn ohpl_as_register_addons(e: *mut c_void);
-    pub fn ohpl_as_execute_string(
-        e: *mut c_void,
-        code: *const c_char,
-        module: *mut c_void,
-    ) -> c_int;
-    pub fn ohpl_as_str_data(s: *const c_void) -> *const c_char;
-    pub fn ohpl_as_str_len(s: *const c_void) -> usize;
-    pub fn ohpl_as_str_new(p: *const c_char, n: usize) -> *mut c_void;
-    pub fn ohpl_as_array_size(a: *const c_void) -> c_uint;
-    pub fn ohpl_as_array_at(a: *mut c_void, i: c_uint) -> *mut c_void;
 }

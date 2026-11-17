@@ -7,7 +7,7 @@
 #include "SomaScriptNatives.h"
 #include "SomaScriptRuntime.h"
 #include "RustSomaScript.h"
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 
 #include <map>
 #include <unordered_map>
@@ -314,7 +314,7 @@ void SomaRegisterGlobalEngineBlock(asIScriptEngine *e)
 		return -1;
 	});
 	SOMA_METHOD(e, "cWorld", "void GetSubMeshEntityInArea(array<cSubMeshEntity@> &inout avObjects, const cVector3f&in avMin, const cVector3f&in avMax)",
-				+[](cWorld *w, CScriptArray &a, const cVector3f &vMin, const cVector3f &vMax) {
+				+[](cWorld *w, OhplEasArray &a, const cVector3f &vMin, const cVector3f &vMax) {
 					for (cMeshEntityIterator it : {w->GetStaticMeshEntityIterator(), w->GetDynamicMeshEntityIterator()})
 						while (it.HasNext())
 						{

@@ -32,7 +32,4 @@ unsigned ohpl_l7_selftest();
 
 }
 
-// installs the string/array/scripthelper add-ons into the shim; call before ohpl_l7_engine_new
-void OhplL7InstallAddons();
-
 #endif

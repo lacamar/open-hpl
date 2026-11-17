@@ -7,7 +7,7 @@
 #include "SomaScriptNatives.h"
 #include "SomaScriptStrings.h"
 
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 #include "system/LowLevelSystem.h"
 
 #include <algorithm>
@@ -74,7 +74,7 @@ bool cSomaScriptRuntime::Init(const std::string &asGameDir)
 	mpEngine->SetMessageCallback(asFUNCTION(MessageCallback), NULL, asCALL_CDECL);
 	ConfigureSomaScriptEngine(mpEngine);
 	RegisterSomaScriptStrings(mpEngine);
-	RegisterScriptArray(mpEngine, true);
+	ohpl_asx_register_array(mpEngine, 1);
 	RegisterSomaScriptArrayExtras(mpEngine);
 
 	cSomaScriptApi api;

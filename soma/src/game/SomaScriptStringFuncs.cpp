@@ -3,7 +3,7 @@
 #include "SomaScriptBind.h"
 #include "RustSomaScript.h"
 
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 #include "math/MathTypes.h"
 #include "resources/LanguageFile.h"
 #include "system/String.h"
@@ -76,26 +76,26 @@ void RegisterSomaScriptStringNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "int cString_GetNumericSuffixIntW(const tWString&in aString, int alDefault=0)",
 			  +[](const tWString &s, int d) { return ohpl_gs6_numeric_suffix_int_w(W(s), s.size(), d); });
 	SOMA_FUNC(e, "void cString_GetStringVecW(const tWString&in asData, array<tWString> &inout avOutStrings, const tWString&in asSepp)",
-			  +[](const tWString &asData, CScriptArray &aOut, const tWString &asSep) {
+			  +[](const tWString &asData, OhplEasArray &aOut, const tWString &asSep) {
 				  std::vector<tWString> v;
 				  ohpl_gs6_split_w(W(asData), asData.size(), W(asSep), asSep.size(), AppendWString, &v);
 				  for (tWString &s : v)
 					  aOut.InsertLast(&s);
 			  });
 	SOMA_FUNC(e, "void cString_GetStringVec(const tString&in asData, array<tString> &inout avOutStrings, const tString&in asSepp)",
-			  +[](const tString &asData, CScriptArray &aOut, const tString &asSep) {
+			  +[](const tString &asData, OhplEasArray &aOut, const tString &asSep) {
 				  std::vector<tString> v;
 				  ohpl_gs6_split(U(asData), asData.size(), U(asSep), asSep.size(), AppendString, &v);
 				  for (tString &s : v)
 					  aOut.InsertLast(&s);
 			  });
 	SOMA_FUNC(e, "void cString_GetFloatVec(const tString&in asData, array<float> &inout avOutFloats, const tString&in asSepp)",
-			  +[](const tString &asData, CScriptArray &aOut, const tString &asSep) {
-				  ohpl_gs6_float_vec(U(asData), asData.size(), U(asSep), asSep.size(), +[](void *c, float f) { ((CScriptArray *)c)->InsertLast(&f); }, &aOut);
+			  +[](const tString &asData, OhplEasArray &aOut, const tString &asSep) {
+				  ohpl_gs6_float_vec(U(asData), asData.size(), U(asSep), asSep.size(), +[](void *c, float f) { ((OhplEasArray *)c)->InsertLast(&f); }, &aOut);
 			  });
 	SOMA_FUNC(e, "void cString_GetIntVec(const tString&in asData, array<int> &inout avOutInts, const tString&in asSepp)",
-			  +[](const tString &asData, CScriptArray &aOut, const tString &asSep) {
-				  ohpl_gs6_int_vec(U(asData), asData.size(), U(asSep), asSep.size(), +[](void *c, int l) { ((CScriptArray *)c)->InsertLast(&l); }, &aOut);
+			  +[](const tString &asData, OhplEasArray &aOut, const tString &asSep) {
+				  ohpl_gs6_int_vec(U(asData), asData.size(), U(asSep), asSep.size(), +[](void *c, int l) { ((OhplEasArray *)c)->InsertLast(&l); }, &aOut);
 			  });
 	SOMA_FUNC(e, "tString String_SecondsToClockDisplay(float afSeconds, bool abShowHours, bool abShowMinutes, bool abShowSeconds, bool abShowHundredths)",
 			  +[](float s, bool bH, bool bM, bool bS, bool bC) {

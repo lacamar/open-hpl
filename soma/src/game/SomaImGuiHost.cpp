@@ -6,7 +6,7 @@
 #include "SomaLuxEntity.h"
 #include "SomaLuxGame.h"
 
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 #include "input/ActionKeyboard.h"
 #include "input/ActionMouseButton.h"
 
@@ -336,7 +336,7 @@ namespace
 		Set(set)->ClearRenderObjects();
 	}
 	void HostWstr(size_t p, OhplS8dWords f, void *c) { Words(f, c, *(const tWString *)p); }
-	CScriptArray *Arr(size_t a) { return (CScriptArray *)a; }
+	OhplEasArray *Arr(size_t a) { return (OhplEasArray *)a; }
 	size_t HostArraySize(size_t a) { return Arr(a)->GetSize(); }
 	size_t HostArrayAt(size_t a, size_t i) { return (size_t)Arr(a)->At((asUINT)i); }
 	void HostArrayResize(size_t a, size_t n) { Arr(a)->Resize((asUINT)n); }

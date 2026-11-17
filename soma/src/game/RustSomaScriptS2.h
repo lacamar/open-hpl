@@ -24,12 +24,6 @@ struct OhplS2HostOps
 	int (*sset_count)(void *, const void *);
 	int (*sset_size)(void *);
 	void (*sset_to_array)(void *, void *);
-	void (*arr_insert_last)(void *, void *);
-	void (*arr_insert_at)(void *, unsigned, void *);
-	void (*arr_remove_last)(void *);
-	void (*arr_remove_at)(void *, unsigned);
-	unsigned (*arr_size)(const void *);
-	void (*arr_resize)(void *, unsigned);
 	bool (*run_global_func)(const unsigned char *, size_t, const unsigned char *, size_t, const unsigned char *, size_t);
 	size_t (*gen_count)();
 	const void *(*gen_op)(size_t);
@@ -37,7 +31,6 @@ struct OhplS2HostOps
 	float (*easing)(int, float);
 	int (*misc)(unsigned, int, const unsigned char *, size_t);
 	void (*game_id)(OhplGs6Sink8, void *);
-	void (*register_array)(void *);
 };
 
 enum { kOhplS2StepLux, kOhplS2StepGlobalEngine, kOhplS2StepClasses };

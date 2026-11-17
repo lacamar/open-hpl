@@ -11,7 +11,7 @@
 #include "SomaScriptRuntime.h"
 #include "RustSomaAgent.h"
 
-#include "impl/scriptarray.h"
+#include "impl/RustEasArray.h"
 #include "impl/XmlDocumentTiny.h"
 
 
@@ -2173,7 +2173,7 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 
 	T = "cLuxBackboneTail";
 	typedef cAgentBackboneTail BT;
-	SOMA_METHOD(e, T, "void Setup(array<tString> &in avBoneNames)", +[](BT *b, const CScriptArray &a) {
+	SOMA_METHOD(e, T, "void Setup(array<tString> &in avBoneNames)", +[](BT *b, const OhplEasArray &a) {
 		tStringVec vNames;
 		for (asUINT i = 0; i < a.GetSize(); ++i)
 			vNames.push_back(*(const tString *)a.At(i));
