@@ -1,0 +1,20 @@
+# wheels, levers, move objects
+1 @WATCH control_room_piston_lever_1 control_room_piston_lever_2 p_lever_1 p_lever_2 crank_iron_1 valve_iron_rusty_1 valve_iron_rusty_2 Wheel_Chain01_End_Left Wheel_Chain02_End_Left control_room_piston_piston_1 piston safety_normal_vert_valve_1 crank_wood potion_oil_3 tinderbox_2 candle_floor_1 chandelier_simple_1 cellar_wood01_1
+20 AddPropImpulse("crank_iron_1", 30, 0, 10, "world");
+20 AddPropImpulse("valve_iron_rusty_1", 0, 0, 40, "world");
+30 SetLeverStuckState("control_room_piston_lever_1", 1, true);
+50 SetLeverStuckState("p_lever_1", 1, true);
+70 SetLeverStuckState("control_room_piston_lever_1", -1, true);
+80 RotatePropToSpeed("valve_iron_rusty_2", 5, 2, 0, 1, 0, true, "");
+100 @INTERACT crank_wood
+110 @INTERACT potion_oil_3
+120 SetLampLit("candle_floor_1", false, true);
+150 SetLampLit("candle_floor_1", true, true);
+160 AddPropImpulse("tinderbox_2", 4, 12, -3, "world");
+180 SetSwingDoorOpenAmount("cellar_wood01_1", 0.5, 1.0, true);
+220 SetSwingDoorClosed("cellar_wood01_1", true, true);
+250 SetLeverStuckState("p_lever_2", 1, true);
+L10 SetLeverStuckState("p_lever_2", -1, true);
+L30 AddPropImpulse("crank_iron_1", -20, 0, 5, "world");
+L60 SetLampLit("candle_floor_1", false, true);
+L80 SetSwingDoorOpenAmount("cellar_wood01_1", 0.4, 1.0, true);

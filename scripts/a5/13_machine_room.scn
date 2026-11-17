@@ -1,0 +1,24 @@
+# levers, items, oil barrel, lamps, doors, thrown objects
+1 @WATCH machine_lever_1 machine_lever_2 start_lever coal_lever treasure_chest_1 tinderbox_1 tinderbox_2 diary_paper01_1 oil_barrel_1 level_engine_1 13_burner candlestick02_1 hanging_lantern_ceiling_10 barrel01_1 barrel01_2 chair_wood_1 cogwheel01_dyn cellar_wood01_1 elevator_machine_hatch_1 coal_1
+20 AddPropImpulse("barrel01_1", 20, 40, 5, "world");
+20 AddPropImpulse("chair_wood_1", -10, 30, 20, "world");
+25 AddPropImpulse("coal_1", 3, 8, 3, "world");
+40 SetLeverStuckState("machine_lever_1", 1, true);
+60 SetLeverStuckState("machine_lever_1", -1, true);
+70 SetLeverStuckState("start_lever", 1, true);
+75 SetLeverStuckState("coal_lever", 1, false);
+80 @INTERACT tinderbox_1
+90 @INTERACT diary_paper01_1
+100 SetLampLit("13_burner", false, true);
+130 SetLampLit("13_burner", true, true);
+140 SetPropEffectActive("hanging_lantern_ceiling_10", false, true);
+170 SetPropEffectActive("hanging_lantern_ceiling_10", true, true);
+150 SetSwingDoorOpenAmount("cellar_wood01_1", 0.7, 1.5, true);
+200 SetSwingDoorClosed("cellar_wood01_1", true, true);
+210 AddPropImpulse("barrel01_2", -15, 25, -10, "world");
+230 SetPropHealth("oil_barrel_1", 10);
+250 AddPropImpulse("oil_barrel_1", 5, 20, 5, "world");
+L10 SetLeverStuckState("machine_lever_2", 1, true);
+L30 AddPropImpulse("barrel01_1", -5, 10, 5, "world");
+L60 SetLampLit("13_burner", false, true);
+L80 SetSwingDoorOpenAmount("cellar_wood01_1", 0.4, 1.0, true);

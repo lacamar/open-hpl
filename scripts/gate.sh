@@ -68,7 +68,7 @@ if [ -n "$SINCE" ]; then
 	changed=$( { git diff --name-only "$SINCE"...HEAD; git diff --name-only HEAD; } | sort -u)
 	if [ -z "$changed" ]; then
 		GAMES=
-	elif ! grep -qvE '^(amnesia/src/game/|amfp/|rust/src/lux|rust/tests/golden/A[0-9]|scripts/(a10b-scenario|a4b-[a-z]+|gate).sh)' <<<"$changed"; then
+	elif ! grep -qvE '^(amnesia/src/game/|amfp/|rust/src/lux|rust/tests/golden/A[0-9]|scripts/(a10b-scenario|a4b-[a-z]+|a5-[a-z-]+|gate).sh|scripts/a5/)' <<<"$changed"; then
 		GAMES="amnesia amfp"
 	elif ! grep -qvE '^(soma/|rust/src/soma|rust/tests/golden/S[0-9]|scripts/(s8-[a-z]+|gate).sh)' <<<"$changed"; then
 		GAMES="soma rebirth bunker"
@@ -292,9 +292,25 @@ half() {
 }
 for impl in $IMPLS; do half "$impl" & done; wait
 
+if [ -z "$QUICK" ] && { has amnesia || has amfp; }; then
+	# A5: scripted prop scenarios (grab/throw, doors, levers, wheels, lamps, items) with a save/load in the middle. Newton's contact
+	# order follows the scratch path, so both paths and the recorded baseline run in one fixed scratch dir, one at a time
+	A5SCR=$CACHE/a5-scratch; mkdir -p "$CACHE"
+	for impl in $IMPLS; do
+		rm -f "$OUT"/a5-*-"$impl".txt
+		(
+			flock 9
+			for g in amnesia amfp; do has "$g" && OPENHPL_SCRATCH_ROOT=$A5SCR scripts/soma-init.sh "$g" > /dev/null 2>> "$OUT/a5-$impl.log"; done
+			A5_GAMES="$(has amnesia && echo amnesia) $(has amfp && echo amfp)" OPENHPL_SCRATCH_ROOT=$A5SCR OHPL_IMPL="$impl" \
+				scripts/a5-all.sh "$OUT" "-$impl" >> "$OUT/a5-$impl.log" 2>&1
+		) 9> "$CACHE/a5.lock"
+	done
+fi
+
+
 if [ -n "$RECORD" ]; then
 	mkdir -p "$RECORD"
-	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt "$OUT"/a13b-*-cpp.txt "$OUT"/a7b-*-cpp.txt; do
+	for f in "$OUT"/h4seq-*-cpp.txt "$OUT"/h13-*-cpp.txt "$OUT"/a7-*-cpp.txt "$OUT"/a10a-*-cpp.txt "$OUT"/a10b-*-cpp.txt "$OUT"/a11a-*-cpp.txt "$OUT"/a11b-*-cpp.txt "$OUT"/a9-cpp.txt "$OUT"/l9-*-cpp.txt "$OUT"/a12a-*-cpp.txt "$OUT"/a12b-*-cpp.txt "$OUT"/a11c-*-cpp.txt "$OUT"/a12c-*-cpp.txt "$OUT"/a12d-*-cpp.txt "$OUT"/s7-*-cpp.txt "$OUT"/s7sc-*-cpp.txt "$OUT"/s7p-*-cpp.txt "$OUT"/s8-*-cpp.txt "$OUT"/s5-*-cpp.txt "$OUT"/a2b-*-cpp.txt "$OUT"/s8b-*-cpp.txt "$OUT"/s7v-*-cpp.txt "$OUT"/s5bv-*-cpp.txt "$OUT"/a4b-*-cpp.txt "$OUT"/rt-*-cpp.txt "$OUT"/s8c-*-cpp.txt "$OUT"/s8d-*-cpp.txt "$OUT"/s8d2-*-cpp.txt "$OUT"/s8dm-*-cpp.txt "$OUT"/a1b-*-cpp.txt "$OUT"/a13a-*-cpp.txt "$OUT"/a13atr-*-cpp.txt "$OUT"/a13b-*-cpp.txt "$OUT"/a7b-*-cpp.txt "$OUT"/a5-*-cpp.txt; do
 		[ -s "$f" ] && cp "$f" "$RECORD/$(basename "$f" | sed 's/-cpp\.txt$/.txt/')"
 	done
 	{ echo "commit $(git rev-parse HEAD)"; echo "recorded $(date -Iseconds)"; ls "$RECORD"; } > "$RECORD/BASELINE"
@@ -599,11 +615,13 @@ if not quick:
     names += [f"a13b-boot-{g}" for g in ("amnesia", "amfp") if g in games]
     if "amnesia" in games:
         names += [f"{k}{e}" for k in ("rt-prison-patrol", "rt-prison-hunt") for e in ("", "-A", "-B")] + ["a4b-prison"]
+        names += [f"a5-{m}" for m in ("13_machine_room", "17_control_room", "05_wine_cellar", "19_morgue", "29_orb_chamber")]
     if "amfp" in games:
         names += [f"a1b-amfp-{m}" for m in ("01_mansion_01", "06_factory", "10_reactor")]
         names += [f"a13a-{m}" for m in ("01_mansion_01", "06_factory")]
         names += [f"a7b-amfp-{m}" for m in ("03_cellar", "06_factory")]
         names += [f"{k}{e}" for k in ("rt-factory", "rt-bilge") for e in ("", "-A", "-B")] + ["a4b-factory", "a4b-bilge"]
+        names += [f"a5-amfp-{m}" for m in ("03_cellar", "05_church", "11_engine_room")]
     if "amnesia" in games:
         names += ["a10b-play-amnesia", "a13atr-a7", "a13atr-struct"]
         names += ["a10b-play-amnesia", "a13b-play-amnesia"]

@@ -98,6 +98,7 @@ public:
 
 //----------------------------------------------
 class iLuxProp;
+struct OhplA5Dump;
 
 //----------------------------------------------
 
@@ -300,7 +301,8 @@ friend class cLuxSavedGameEntity;
 friend class iLuxPropLoader;
 friend class cLuxProp_WorldCollisionCallback;
 friend class OhplGa4Run;
-public:	
+friend struct OhplA5Dump;
+public:
 	iLuxProp(const tString &asName, int alID, cLuxMap *apMap, eLuxPropType aPropType);
 	virtual ~iLuxProp();
 

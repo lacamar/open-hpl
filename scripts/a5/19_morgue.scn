@@ -1,0 +1,17 @@
+# critters (rats, cockroaches), emotion stone, items, doors
+1 @WATCH rat_1 rat_2 cockroach_1 cockroach_2 cockroach_3 emotion_stone_1 copper_tube_1 potion_health_1 potion_health_2 tinderbox_1 tinderbox_2 level_dungeon_1 cellar_wood01_2 cellar_wood01_3 work_desk_door_worn_1
+20 AddPropImpulse("copper_tube_1", 8, 12, 4, "world");
+25 AddPropImpulse("potion_health_1", -4, 10, 6, "world");
+40 SetSwingDoorOpenAmount("cellar_wood01_2", 0.8, 1.0, true);
+60 @INTERACT potion_health_2
+70 @INTERACT tinderbox_1
+90 SetSwingDoorClosed("cellar_wood01_2", true, true);
+100 SetSwingDoorLocked("cellar_wood01_3", true, true);
+120 SetSwingDoorLocked("cellar_wood01_3", false, true);
+140 SetPropHealth("rat_1", 5);
+150 SetEntityActive("cockroach_2", false);
+170 SetEntityActive("cockroach_2", true);
+200 AddPropImpulse("tinderbox_2", 3, 9, -3, "world");
+L10 SetSwingDoorOpenAmount("cellar_wood01_4", 0.5, 1.0, true);
+L30 AddPropImpulse("copper_tube_1", -6, 10, 2, "world");
+L60 SetPropHealth("rat_2", 5);

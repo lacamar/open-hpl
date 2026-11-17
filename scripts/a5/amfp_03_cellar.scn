@@ -1,0 +1,20 @@
+# wheels, levers, move objects, button, lamps
+1 @WATCH BarrelRoomSwitch CatwalkSwitch spraylock_power_switch CrankWheel Gate6Valve spraylock_valve_inside_1 Gate1 Gate2 CrankPulley BarrelRamp slope_wheel_1 Phonautograph1 Lantern_3 Lantern_2 cellar01_lamp_12 CatwalkLamp_Green cellar_wood01_10 cabinet_simple_1 spraylock_door_1
+20 AddPropImpulse("CrankWheel", 30, 0, 10, "world");
+20 AddPropImpulse("Lantern_2", 2, 10, 2, "world");
+30 SetLeverStuckState("BarrelRoomSwitch", 1, true);
+60 SetLeverStuckState("BarrelRoomSwitch", -1, true);
+70 SetLeverStuckState("CatwalkSwitch", 1, true);
+80 RotatePropToSpeed("Gate6Valve", 5, 2, 0, 1, 0, true, "");
+90 SetButtonSwitchedOn("Phonautograph1", true, true);
+120 SetButtonSwitchedOn("Phonautograph1", false, true);
+130 @INTERACT Lantern_3
+140 SetLampLit("cellar01_lamp_12", false, true);
+170 SetLampLit("cellar01_lamp_12", true, true);
+180 SetSwingDoorOpenAmount("cellar_wood01_10", 0.7, 1.0, true);
+220 SetSwingDoorClosed("cellar_wood01_10", true, true);
+230 SetPropEffectActive("CatwalkLamp_Green", false, true);
+L10 SetLeverStuckState("CatwalkSwitch", -1, true);
+L30 AddPropImpulse("CrankWheel", -20, 0, 5, "world");
+L60 SetLampLit("cellar01_lamp_12", false, true);
+L80 SetSwingDoorOpenAmount("cellar_wood01_10", 0.4, 1.0, true);

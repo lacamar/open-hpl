@@ -1,0 +1,15 @@
+# NPC, level door, lever, doors, items
+1 @WATCH alexander_1 level_orb_room_door_1 treasure_chest_2 castle_1 cellar_wood01_1 cellar_wood01_4 potion_oil_1 tinderbox_1 tinderbox_5
+20 SetSwingDoorOpenAmount("cellar_wood01_1", 0.8, 1.0, true);
+30 AddPropImpulse("potion_oil_1", 4, 12, 4, "world");
+40 SetLeverStuckState("treasure_chest_2", 1, true);
+60 @INTERACT tinderbox_1
+80 SetSwingDoorClosed("cellar_wood01_1", true, true);
+100 SetLeverStuckState("treasure_chest_2", -1, true);
+120 SetSwingDoorLocked("cellar_wood01_4", true, true);
+140 SetSwingDoorLocked("cellar_wood01_4", false, true);
+160 SetLevelDoorLocked("level_orb_room_door_1", true);
+200 SetPropHealth("alexander_1", 50);
+L10 SetLeverStuckState("treasure_chest_2", 1, true);
+L30 AddPropImpulse("potion_oil_1", -4, 10, 2, "world");
+L60 SetSwingDoorOpenAmount("cellar_wood01_6", 0.5, 1.0, true);

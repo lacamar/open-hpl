@@ -1,0 +1,20 @@
+# chest, items, doors, lamps, oil barrel
+1 @WATCH chest_small_1 cabinet_simple_1 cellar_wood01_1 cellar_wood01_3 stove_metal_1 Chemical_1 Chemical_2 potion_health_2 tinderbox_3 tinderbox_5 note_generic_1 oil_barrel_1 level_celler_1 candlestick01_2 torch_static01_3 barrel01_1
+20 SetSwingDoorOpenAmount("cellar_wood01_1", 0.8, 1.0, true);
+30 AddPropImpulse("Chemical_1", 5, 15, 5, "world");
+40 @INTERACT chest_small_1
+60 @INTERACT potion_health_2
+70 @INTERACT tinderbox_3
+90 SetSwingDoorClosed("cellar_wood01_1", true, true);
+100 SetSwingDoorLocked("cellar_wood01_3", true, true);
+120 SetSwingDoorLocked("cellar_wood01_3", false, true);
+130 SetSwingDoorOpenAmount("cabinet_simple_1", 0.6, 1.0, true);
+140 SetLampLit("candlestick01_2", false, true);
+170 SetLampLit("candlestick01_2", true, true);
+180 SetPropEffectActive("torch_static01_3", false, true);
+200 AddPropImpulse("oil_barrel_1", 10, 20, 0, "world");
+220 SetPropHealth("stove_metal_1", 50);
+L10 SetSwingDoorOpenAmount("cellar_wood01_1", 0.5, 1.0, true);
+L30 AddPropImpulse("Chemical_2", -5, 10, 5, "world");
+L60 SetLampLit("candlestick01_2", false, true);
+L80 @INTERACT tinderbox_5
