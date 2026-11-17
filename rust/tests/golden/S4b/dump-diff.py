@@ -12,6 +12,7 @@ import sys
 # Masked fields hold unseeded RNG draws taken outside agent updates (frame-count dependent): the same C++
 # build differs between two runs. Positions of physics-settled bodies differ in the last float digit.
 MASKS = {
+    "soma-00_02_subway": [r"anim=\S*"],
     "soma-00_03_laboratory": [r"(?<= )(?:pos|vel)=\S+", r"anim=\S*"],
     "rebirth-03_06_ghouls_nest": [r"idle_extra=\S+"],
 }
