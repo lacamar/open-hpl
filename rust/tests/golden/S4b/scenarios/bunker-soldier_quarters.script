@@ -1,0 +1,77 @@
+3 wake Rat_10
+3 wake Rat_2
+3 wake Rat_3
+3 wake Rat_4
+3 wake Rat_5
+3 wake Rat_6
+3 wake Rat_7
+3 wake Rat_8
+20 player -57.026 -7.245 -4.191
+30 msg Rat_10 4
+40 state Rat_10 1
+55 state Rat_10 2
+70 state Rat_10 3
+85 player -65.526 -7.245 1.809
+100 msg Rat_10 8
+110 state Rat_10 0
+120 player -76.973 -7.245 18.889
+130 msg Rat_2 4
+140 state Rat_2 1
+155 state Rat_2 2
+170 state Rat_2 3
+185 player -85.473 -7.245 24.889
+200 msg Rat_2 8
+210 state Rat_2 0
+220 player -77.733 -7.245 19.299
+230 msg Rat_3 4
+240 state Rat_3 1
+255 state Rat_3 2
+270 state Rat_3 3
+285 player -86.233 -7.245 25.299
+300 msg Rat_3 8
+310 state Rat_3 0
+320 player -77.156 -7.245 19.761
+330 msg Rat_4 4
+340 state Rat_4 1
+355 state Rat_4 2
+370 state Rat_4 3
+385 player -85.656 -7.245 25.761
+400 msg Rat_4 8
+410 state Rat_4 0
+420 player -77.604 -7.245 20.002
+430 msg Rat_5 4
+440 state Rat_5 1
+455 state Rat_5 2
+470 state Rat_5 3
+485 player -86.104 -7.245 26.002
+500 msg Rat_5 8
+510 state Rat_5 0
+520 player -78.215 -7.245 19.701
+530 msg Rat_6 4
+540 state Rat_6 1
+555 state Rat_6 2
+570 state Rat_6 3
+585 player -86.715 -7.245 25.701
+600 msg Rat_6 8
+610 state Rat_6 0
+620 player -58.626 -7.245 -4.721
+630 msg Rat_7 4
+640 state Rat_7 1
+655 state Rat_7 2
+670 state Rat_7 3
+685 player -67.126 -7.245 1.279
+700 msg Rat_7 8
+710 state Rat_7 0
+720 player -57.655 -7.245 -3.816
+730 msg Rat_8 4
+740 state Rat_8 1
+755 state Rat_8 2
+770 state Rat_8 3
+785 player -66.155 -7.245 2.184
+800 msg Rat_8 8
+810 state Rat_8 0
+825 dumpsave
+826 save s4brt.sav
+860 load s4brt.sav
+940 dumpsave
+980 END

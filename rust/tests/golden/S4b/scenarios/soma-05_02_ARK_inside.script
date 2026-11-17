@@ -1,0 +1,14 @@
+3 wake catherine_1
+20 player 47.231 23.745 -12.434
+30 msg catherine_1 4
+40 state catherine_1 1
+55 state catherine_1 2
+70 state catherine_1 3
+85 player 38.731 23.745 -6.434
+100 msg catherine_1 8
+110 state catherine_1 0
+125 dumpsave
+126 save s4brt.sav
+160 load s4brt.sav
+240 dumpsave
+280 END

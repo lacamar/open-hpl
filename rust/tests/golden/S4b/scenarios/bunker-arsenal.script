@@ -1,0 +1,50 @@
+3 wake dark_world_rat_1
+3 wake dark_world_rat_2
+3 wake dark_world_rat_3
+3 wake dark_world_rat_4
+3 wake dark_world_rat_5
+20 player -45.141 1.529 106.362
+30 msg dark_world_rat_1 4
+40 state dark_world_rat_1 1
+55 state dark_world_rat_1 2
+70 state dark_world_rat_1 3
+85 player -53.641 1.529 112.362
+100 msg dark_world_rat_1 8
+110 state dark_world_rat_1 0
+120 player -45.494 1.529 106.716
+130 msg dark_world_rat_2 4
+140 state dark_world_rat_2 1
+155 state dark_world_rat_2 2
+170 state dark_world_rat_2 3
+185 player -53.994 1.529 112.716
+200 msg dark_world_rat_2 8
+210 state dark_world_rat_2 0
+220 player -44.596 1.529 106.907
+230 msg dark_world_rat_3 4
+240 state dark_world_rat_3 1
+255 state dark_world_rat_3 2
+270 state dark_world_rat_3 3
+285 player -53.096 1.529 112.907
+300 msg dark_world_rat_3 8
+310 state dark_world_rat_3 0
+320 player -45.140 1.529 107.070
+330 msg dark_world_rat_4 4
+340 state dark_world_rat_4 1
+355 state dark_world_rat_4 2
+370 state dark_world_rat_4 3
+385 player -53.640 1.529 113.070
+400 msg dark_world_rat_4 8
+410 state dark_world_rat_4 0
+420 player -44.768 1.529 107.442
+430 msg dark_world_rat_5 4
+440 state dark_world_rat_5 1
+455 state dark_world_rat_5 2
+470 state dark_world_rat_5 3
+485 player -53.268 1.529 113.442
+500 msg dark_world_rat_5 8
+510 state dark_world_rat_5 0
+525 dumpsave
+526 save s4brt.sav
+560 load s4brt.sav
+640 dumpsave
+680 END

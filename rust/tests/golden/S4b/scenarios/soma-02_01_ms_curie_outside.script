@@ -1,0 +1,14 @@
+3 wake catherine_worker_lambda_1
+20 player 37.031 5.607 254.658
+30 msg catherine_worker_lambda_1 4
+40 state catherine_worker_lambda_1 1
+55 state catherine_worker_lambda_1 2
+70 state catherine_worker_lambda_1 3
+85 player 28.531 5.607 260.658
+100 msg catherine_worker_lambda_1 8
+110 state catherine_worker_lambda_1 0
+125 dumpsave
+126 save s4brt.sav
+160 load s4brt.sav
+240 dumpsave
+280 END

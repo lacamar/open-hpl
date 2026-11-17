@@ -1,0 +1,77 @@
+3 wake Ashley
+3 wake VictimFrost
+3 wake VictimGoya
+3 wake VictimStrohmeier
+3 wake dreamer_2
+3 wake mind_coral_victim01_23
+3 wake mind_coral_victim_alive_1
+3 wake mvictim_stading_01
+20 player -7.537 -0.286 175.922
+30 msg Ashley 4
+40 state Ashley 1
+55 state Ashley 2
+70 state Ashley 3
+85 player -16.037 -0.286 181.922
+100 msg Ashley 8
+110 state Ashley 0
+120 player -15.055 -0.533 18.354
+130 msg VictimFrost 4
+140 state VictimFrost 1
+155 state VictimFrost 2
+170 state VictimFrost 3
+185 player -23.555 -0.533 24.354
+200 msg VictimFrost 8
+210 state VictimFrost 0
+220 player -11.750 0.124 40.046
+230 msg VictimGoya 4
+240 state VictimGoya 1
+255 state VictimGoya 2
+270 state VictimGoya 3
+285 player -20.250 0.124 46.046
+300 msg VictimGoya 8
+310 state VictimGoya 0
+320 player 22.396 -0.525 79.662
+330 msg VictimStrohmeier 4
+340 state VictimStrohmeier 1
+355 state VictimStrohmeier 2
+370 state VictimStrohmeier 3
+385 player 13.896 -0.525 85.662
+400 msg VictimStrohmeier 8
+410 state VictimStrohmeier 0
+420 player 23.750 -0.517 93.349
+430 msg dreamer_2 4
+440 state dreamer_2 1
+455 state dreamer_2 2
+470 state dreamer_2 3
+485 player 15.250 -0.517 99.349
+500 msg dreamer_2 8
+510 state dreamer_2 0
+520 player -35.702 -0.203 1.513
+530 msg mind_coral_victim01_23 4
+540 state mind_coral_victim01_23 1
+555 state mind_coral_victim01_23 2
+570 state mind_coral_victim01_23 3
+585 player -44.202 -0.203 7.513
+600 msg mind_coral_victim01_23 8
+610 state mind_coral_victim01_23 0
+620 player 26.548 -0.516 107.632
+630 msg mind_coral_victim_alive_1 4
+640 state mind_coral_victim_alive_1 1
+655 state mind_coral_victim_alive_1 2
+670 state mind_coral_victim_alive_1 3
+685 player 18.048 -0.516 113.632
+700 msg mind_coral_victim_alive_1 8
+710 state mind_coral_victim_alive_1 0
+720 player 34.355 -0.457 75.826
+730 msg mvictim_stading_01 4
+740 state mvictim_stading_01 1
+755 state mvictim_stading_01 2
+770 state mvictim_stading_01 3
+785 player 25.855 -0.457 81.826
+800 msg mvictim_stading_01 8
+810 state mvictim_stading_01 0
+825 dumpsave
+826 save s4brt.sav
+860 load s4brt.sav
+940 dumpsave
+980 END

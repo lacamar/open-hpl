@@ -1,0 +1,14 @@
+3 wake GermanPrisoner
+20 player -111.145 0.200 -34.114
+30 msg GermanPrisoner 4
+40 state GermanPrisoner 1
+55 state GermanPrisoner 2
+70 state GermanPrisoner 3
+85 player -119.645 0.200 -28.114
+100 msg GermanPrisoner 8
+110 state GermanPrisoner 0
+125 dumpsave
+126 save s4brt.sav
+160 load s4brt.sav
+240 dumpsave
+280 END

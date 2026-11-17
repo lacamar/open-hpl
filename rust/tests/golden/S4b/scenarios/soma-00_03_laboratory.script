@@ -1,0 +1,59 @@
+3 wake David
+3 wake subway_businessman_1
+3 wake subway_businessman_3
+3 wake subway_girl_1
+3 wake subway_girl_2
+3 wake subway_girl_3
+20 player 2.500 0.307 -0.003
+30 msg David 4
+40 state David 1
+55 state David 2
+70 state David 3
+85 player -6.000 0.307 5.997
+100 msg David 8
+110 state David 0
+120 player 65.746 -15.248 -30.347
+130 msg subway_businessman_1 4
+140 state subway_businessman_1 1
+155 state subway_businessman_1 2
+170 state subway_businessman_1 3
+185 player 57.246 -15.248 -24.347
+200 msg subway_businessman_1 8
+210 state subway_businessman_1 0
+220 player 6.496 -15.248 -28.750
+230 msg subway_businessman_3 4
+240 state subway_businessman_3 1
+255 state subway_businessman_3 2
+270 state subway_businessman_3 3
+285 player -2.004 -15.248 -22.750
+300 msg subway_businessman_3 8
+310 state subway_businessman_3 0
+320 player 56.250 -13.814 -62.250
+330 msg subway_girl_1 4
+340 state subway_girl_1 1
+355 state subway_girl_1 2
+370 state subway_girl_1 3
+385 player 47.750 -13.814 -56.250
+400 msg subway_girl_1 8
+410 state subway_girl_1 0
+420 player 75.750 -13.833 -26.500
+430 msg subway_girl_2 4
+440 state subway_girl_2 1
+455 state subway_girl_2 2
+470 state subway_girl_2 3
+485 player 67.250 -13.833 -20.500
+500 msg subway_girl_2 8
+510 state subway_girl_2 0
+520 player 45.496 -15.250 -79.854
+530 msg subway_girl_3 4
+540 state subway_girl_3 1
+555 state subway_girl_3 2
+570 state subway_girl_3 3
+585 player 36.996 -15.250 -73.854
+600 msg subway_girl_3 8
+610 state subway_girl_3 0
+625 dumpsave
+626 save s4brt.sav
+660 load s4brt.sav
+740 dumpsave
+780 END

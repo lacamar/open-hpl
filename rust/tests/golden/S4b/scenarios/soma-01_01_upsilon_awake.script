@@ -1,0 +1,23 @@
+3 wake camera_surveillance_headtrack_1
+3 wake camera_surveillance_headtrack_2
+20 player 0.779 4.799 75.639
+30 msg camera_surveillance_headtrack_1 4
+40 state camera_surveillance_headtrack_1 1
+55 state camera_surveillance_headtrack_1 2
+70 state camera_surveillance_headtrack_1 3
+85 player -7.721 4.799 81.639
+100 msg camera_surveillance_headtrack_1 8
+110 state camera_surveillance_headtrack_1 0
+120 player -7.161 4.853 73.337
+130 msg camera_surveillance_headtrack_2 4
+140 state camera_surveillance_headtrack_2 1
+155 state camera_surveillance_headtrack_2 2
+170 state camera_surveillance_headtrack_2 3
+185 player -15.661 4.853 79.337
+200 msg camera_surveillance_headtrack_2 8
+210 state camera_surveillance_headtrack_2 0
+225 dumpsave
+226 save s4brt.sav
+260 load s4brt.sav
+340 dumpsave
+380 END

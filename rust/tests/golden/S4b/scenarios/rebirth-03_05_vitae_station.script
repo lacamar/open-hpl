@@ -1,0 +1,14 @@
+3 wake Fairchild
+20 player -30.330 -8.075 -11.581
+30 msg Fairchild 4
+40 state Fairchild 1
+55 state Fairchild 2
+70 state Fairchild 3
+85 player -38.830 -8.075 -5.581
+100 msg Fairchild 8
+110 state Fairchild 0
+125 dumpsave
+126 save s4brt.sav
+160 load s4brt.sav
+240 dumpsave
+280 END

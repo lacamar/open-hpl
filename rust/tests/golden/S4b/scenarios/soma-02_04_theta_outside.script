@@ -1,0 +1,23 @@
+3 wake BassRobot_1
+3 wake camera_surveillance_theta_1
+20 player -66.974 239.180 -448.415
+30 msg BassRobot_1 4
+40 state BassRobot_1 1
+55 state BassRobot_1 2
+70 state BassRobot_1 3
+85 player -75.474 239.180 -442.415
+100 msg BassRobot_1 8
+110 state BassRobot_1 0
+120 player -52.904 243.893 -484.578
+130 msg camera_surveillance_theta_1 4
+140 state camera_surveillance_theta_1 1
+155 state camera_surveillance_theta_1 2
+170 state camera_surveillance_theta_1 3
+185 player -61.404 243.893 -478.578
+200 msg camera_surveillance_theta_1 8
+210 state camera_surveillance_theta_1 0
+225 dumpsave
+226 save s4brt.sav
+260 load s4brt.sav
+340 dumpsave
+380 END
