@@ -38,43 +38,18 @@ struct OhplRmOut
 };
 
 extern "C" {
-	void ohpl_rm_find_with_formats(const OhplRmEnv*, const uint8_t* name, size_t n, const OhplRmBytes* exts, size_t ne, OhplRmOut*);
-	void ohpl_rm_find_sample(const OhplRmEnv*, const uint8_t* name, size_t n, const OhplRmBytes* formats, size_t nf, OhplRmOut*);
-	void ohpl_rm_find_stream_path(const OhplRmEnv*, const uint8_t* name, size_t n, const OhplRmBytes* formats, size_t nf, OhplRmOut*);
-	int32_t ohpl_rm_resolve_model(const OhplRmEnv*, const uint8_t* name, size_t n, const OhplRmBytes* exts, size_t ne, OhplRmOut*);
-	int32_t ohpl_rm_resolve_simple(const OhplRmEnv*, int32_t kind, const uint8_t* name, size_t n, OhplRmOut*);
-	int32_t ohpl_rm_font_kind(const uint8_t* name, size_t n);
 
 	OhplRmCustom* ohpl_rm_custom_new();
 	void ohpl_rm_custom_free(OhplRmCustom*);
-	void* ohpl_rm_custom_get(const OhplRmCustom*, const uint8_t* name, size_t n, bool* found);
-	void ohpl_rm_custom_set(OhplRmCustom*, const uint8_t* name, size_t n, void* data);
-	bool ohpl_rm_snd_needs_resolver(const OhplRmEnv*, const uint8_t* name, size_t n, bool has_resolver);
 
 	void ohpl_rm_particle_by_file(const OhplRmEnv*, const uint8_t* type, size_t n, OhplRmOut*);
 	void* ohpl_rm_particle_by_data(const OhplRmEnv*, const uint8_t* name, size_t n);
 
-	bool ohpl_rm_destroy_standard(OhplResMeta*);
 	void ohpl_rm_destroy_particle(OhplResMeta*);
-	bool ohpl_rm_destroy_sound(OhplResMeta*, bool is_stream);
-	uint32_t ohpl_rm_destroy_image_frame(bool frame_empty, bool frame_custom, bool has_bitmap_frame);
-	void ohpl_rm_image_frame_size(int32_t fw, int32_t fh, int32_t bw, int32_t bh, int32_t* w, int32_t* h);
 
-	void ohpl_rm_anim_first_frame(const OhplRmEnv*, const uint8_t* name, size_t n, const OhplRmBytes* exts, size_t ne, OhplRmOut*);
-	int32_t ohpl_rm_anim_plan(const OhplRmEnv*, const uint8_t* first, size_t n, OhplRmOut*);
-	int32_t ohpl_rm_cube_pre(const OhplRmEnv*, const uint8_t* path, size_t n, OhplRmOut*);
-	int32_t ohpl_rm_cube_faces(const OhplRmEnv*, const uint8_t* name, size_t n, const OhplRmBytes* exts, size_t ne, OhplRmOut*);
 
-	int32_t ohpl_rm_mat_texture_type(const uint8_t*, size_t);
-	int32_t ohpl_rm_mat_wrap(const uint8_t*, size_t);
 	int32_t ohpl_rm_mat_anim_mode(const uint8_t*, size_t);
-	int32_t ohpl_rm_mat_blend_mode(const uint8_t*, size_t, bool* warn);
-	int32_t ohpl_rm_mat_uv_anim_type(const uint8_t*, size_t, bool* err);
-	int32_t ohpl_rm_mat_anim_axis(const uint8_t*, size_t, bool* err);
-	void ohpl_rm_mat_texture_string(int32_t type, void (*sink)(void*, const uint8_t*, size_t), void* ctx);
 	bool ohpl_rm_mat_texture_is_srgb(int32_t type);
-	int32_t ohpl_rm_mat_create_kind(int32_t anim_mode, int32_t type);
-	void ohpl_rm_mat_texture_file(const uint8_t* file, size_t n, const uint32_t* mat_path, size_t pn, void (*sink)(void*, const uint8_t*, size_t), void* ctx);
 	bool ohpl_rm_mat_anisotropy_accepted(float x, int32_t caps, int32_t max, float current);
 
 	int32_t ohpl_rm_world_billboard_type(const uint8_t*, size_t);
@@ -87,14 +62,8 @@ extern "C" {
 	uint32_t ohpl_rm_world_light_mask_id(const uint8_t*, size_t);
 	bool ohpl_rm_world_decal_vertices(const float* const* arrays, const size_t* lens, size_t verts, float* out);
 
-	OhplRmLoaders* ohpl_rm_loaders_new();
-	void ohpl_rm_loaders_free(OhplRmLoaders*);
-	void ohpl_rm_loaders_add(OhplRmLoaders*, const uint8_t* name, size_t n, void* loader, bool set_default);
-	void* ohpl_rm_loaders_get(const OhplRmLoaders*, const uint8_t* name, size_t n, bool* missing);
-	void ohpl_rm_loaders_each(const OhplRmLoaders*, void (*f)(void*, void*), void* ctx);
 
 	void ohpl_rm_cache_file(const uint32_t* home, size_t hn, const uint32_t* file, size_t fn, const uint32_t* ext, size_t en, OhplRmOut*);
-	void ohpl_rm_resource_dirs(const uint8_t* path, size_t n, const uint32_t* alt, size_t an, OhplRmOut*);
 }
 
 #ifndef RM_STR

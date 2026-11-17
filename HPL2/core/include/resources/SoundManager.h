@@ -53,10 +53,7 @@ namespace hpl {
 
 		tStringList mlstFileFormats;
 
-		tSoundDataList mlstStreamData;
 
-		iSoundData *FindSampleData(const tString &asName, tWString &asFilePath);
-		void FindStreamPath(const tString &asName, tWString &asFilePath);
 
 	};
 

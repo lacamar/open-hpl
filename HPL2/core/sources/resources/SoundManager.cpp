@@ -47,9 +47,7 @@ namespace hpl {
 
 	cSoundManager::~cSoundManager()
 	{
-		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_SOUND); return; }
-		DestroyAll();
-		Log(" Done with sounds\n");
+		ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_SOUND);
 	}
 
 	//-----------------------------------------------------------------------
@@ -62,54 +60,8 @@ namespace hpl {
 
 	iSoundData* cSoundManager::CreateSoundData(const tString& asName, bool abStream,bool abLoopStream)
 	{
-		if(mpRs)
-		{
-			cRmExts formats(mlstFileFormats);
-			return H3Res<iSoundData>(ohpl_h3f_sound(mpRs, H3Ops(), RM_STR(asName), abStream, abLoopStream, formats.h3(), formats.size()));
-		}
-		tWString sPath;
-		iSoundData* pSound=NULL;
-
-		BeginLoad(asName);
-
-		///////////////////////////
-		// Load Stream
-		if(abStream)
-		{
-			FindStreamPath(asName, sPath);
-			if(sPath!=_W(""))
-			{
-				pSound = mpSound->GetLowLevel()->LoadSoundData(	asName,sPath,"",abStream, abLoopStream);
-				if(pSound)
-				{
-					AddResource(pSound, true, false);
-					mlstStreamData.push_back(pSound);
-					pSound->SetSoundManager(mpResources->GetSoundManager());
-				}
-			}
-		}
-		///////////////////////////
-		// Load Normal Sample
-		else
-		{
-			pSound = FindSampleData(asName, sPath);
-		
-			if(pSound==NULL && sPath!=_W(""))
-			{
-				pSound = mpSound->GetLowLevel()->LoadSoundData(	asName,sPath,"",abStream, abLoopStream);
-				if(pSound)
-				{
-					AddResource(pSound);
-					pSound->SetSoundManager(mpResources->GetSoundManager());
-				}
-			}
-		}
-				
-		//Do _not_ increase user count here since that is used when creating channel
-
-		//if(!pSound) Error("Couldn't load sound data '%s'\n",asName.c_str());
-		EndLoad();
-		return pSound;
+		cRmExts formats(mlstFileFormats);
+		return H3Res<iSoundData>(ohpl_h3f_sound(mpRs, H3Ops(), RM_STR(asName), abStream, abLoopStream, formats.h3(), formats.size()));
 	}
 
 	//-----------------------------------------------------------------------
@@ -122,42 +74,14 @@ namespace hpl {
 
 	void cSoundManager::Destroy(iResourceBase* apResource)
 	{
-		if(mpRs) { ohpl_h3f_sound_destroy(mpRs, H3Ops(), apResource); return; }
-		iSoundData *pData = static_cast<iSoundData *>(apResource);
-		if(ohpl_rm_destroy_sound(apResource->GetMeta(), pData->IsStream()))
-		{
-			STLFindAndDelete(mlstStreamData, pData);
-		}
+		ohpl_h3f_sound_destroy(mpRs, H3Ops(), apResource);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cSoundManager::DestroyAll()
 	{
-		if(mpRs) { ohpl_h3f_sound_destroy_all(mpRs, H3Ops()); return; }
-		/////////////////////
-		// Streams
-		for(tSoundDataListIt streamIt=mlstStreamData.begin(); streamIt != mlstStreamData.end(); ++streamIt)
-		{
-			iSoundData *pStream = *streamIt;
-			
-			Log("  destroying %p\n",pStream);
-			Log("   file '%s'\n", cString::To8Char(pStream->GetFullPath()).c_str());
-
-			hplDelete(pStream);
-		}
-		mlstStreamData.clear();
-		
-		/////////////////////
-		// Normal samples
-		tResourceBaseMapIt it = m_mapResources.begin();
-		while(it != m_mapResources.end())
-		{
-			iResourceBase* pData = it->second;
-			RemoveResource(pData);
-			hplDelete(pData);
-			it= m_mapResources.begin();
-		}
+		ohpl_h3f_sound_destroy_all(mpRs, H3Ops());
 	}
 	
 	//-----------------------------------------------------------------------
@@ -168,26 +92,9 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
-	iSoundData *cSoundManager::FindSampleData(const tString &asName, tWString &asFilePath)
-	{
-		cRmEnv env(mpFileSearcher, this);
-		cRmExts formats(mlstFileFormats);
-		cRmOut out;
-		ohpl_rm_find_sample(env.raw(), RM_STR(asName), formats.data(), formats.size(), out.raw());
-		asFilePath = out.msPath;
-		return static_cast<iSoundData*>(out.Res());
-	}
 
 	//-----------------------------------------------------------------------
 
-	void cSoundManager::FindStreamPath(const tString &asName, tWString &asFilePath)
-	{
-		cRmEnv env(mpFileSearcher, this);
-		cRmExts formats(mlstFileFormats);
-		cRmOut out;
-		ohpl_rm_find_stream_path(env.raw(), RM_STR(asName), formats.data(), formats.size(), out.raw());
-		asFilePath = out.msPath;
-	}
 
 
 	void* cSoundManager::H3Create(OhplH3Create &aCreate)

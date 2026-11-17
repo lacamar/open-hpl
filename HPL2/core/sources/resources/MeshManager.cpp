@@ -51,10 +51,7 @@ namespace hpl {
 
 	cMeshManager::~cMeshManager()
 	{
-		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_MESH); return; }
-		DestroyAll();
-
-		Log(" Done with meshes\n");
+		ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_MESH);
 	}
 
 	//-----------------------------------------------------------------------
@@ -67,45 +64,8 @@ namespace hpl {
 
 	cMesh* cMeshManager::CreateMesh(const tString& asName, tMeshLoadFlag aFlag)
 	{
-		if(mpRs)
-		{
-			cRmExts exts(*mpResources->GetMeshLoaderHandler()->GetSupportedTypes());
-			return H3Res<cMesh>(ohpl_h3f_model(mpRs, H3Ops(), true, RM_STR(asName), exts.h3(), exts.size(), (int32_t)aFlag));
-		}
-		cMesh* pMesh;
-
-		BeginLoad(asName);
-
-		cRmEnv env(mpFileSearcher, this);
 		cRmExts exts(*mpResources->GetMeshLoaderHandler()->GetSupportedTypes());
-		cRmOut out;
-		if(ohpl_rm_resolve_model(env.raw(), RM_STR(asName), exts.data(), exts.size(), out.raw())==0)
-		{
-			Error("Couldn't find mesh file '%s' in any supported format!\n",asName.c_str());
-			EndLoad();
-			return NULL;
-		}
-		const tString& asNewName = out.msName;
-		const tWString& sPath = out.msPath;
-
-		pMesh = static_cast<cMesh*>(out.Res());
-
-		if(pMesh==NULL && sPath!=_W(""))
-		{
-			pMesh = mpResources->GetMeshLoaderHandler()->LoadMesh(sPath,aFlag);
-			if(pMesh == NULL)
-			{
-				EndLoad();
-				return NULL;
-			}
-			AddResource(pMesh);
-		}
-
-		if(pMesh)pMesh->IncUserCount();
-		else Error("Couldn't load mesh '%s'\n",asNewName.c_str());
-
-		EndLoad();
-		return pMesh;
+		return H3Res<cMesh>(ohpl_h3f_model(mpRs, H3Ops(), true, RM_STR(asName), exts.h3(), exts.size(), (int32_t)aFlag));
 	}
 
 	//-----------------------------------------------------------------------
@@ -132,11 +92,7 @@ namespace hpl {
 
 	void cMeshManager::Destroy(iResourceBase* apResource)
 	{
-		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
-		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
-			RemoveResource(apResource);
-			hplDelete(apResource);
-		}
+		ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource);
 	}
 
 	//-----------------------------------------------------------------------

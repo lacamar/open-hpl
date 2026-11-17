@@ -56,30 +56,7 @@ namespace hpl {
 
 	iVideoStream* cVideoManager::CreateVideo(const tString& asName)
 	{
-		if(mpRs) return H3Res<iVideoStream>(ohpl_h3f_video(mpRs, H3Ops(), RM_STR(asName)));
-		BeginLoad(asName);
-
-		tWString sPath = mpFileSearcher->GetFilePath(asName);
-		if(sPath == _W("")) 
-		{
-			EndLoad();
-			Error("Video file '%s' could not be found!\n",asName.c_str());
-			return NULL;
-		}
-
-		iVideoStream *pVideo = mpResources->GetVideoLoaderHandler()->LoadVideo(sPath);
-		if(pVideo == NULL)
-		{
-			EndLoad();
-			Error("Could not load video '%s'\n",asName.c_str());
-			return NULL;
-		}
-		pVideo->SetFullPath(sPath);
-
-		AddResource(pVideo);
-
-		EndLoad();
-		return pVideo;
+		return H3Res<iVideoStream>(ohpl_h3f_video(mpRs, H3Ops(), RM_STR(asName)));
 	}
 
 	//-----------------------------------------------------------------------
@@ -92,28 +69,14 @@ namespace hpl {
 
 	void cVideoManager::Destroy(iResourceBase* apResource)
 	{
-		if(mpRs) { ohpl_h3f_video_destroy(mpRs, H3Ops(), apResource); return; }
-		if(apResource)
-		{
-			RemoveResource(apResource);
-			hplDelete(apResource);
-		}
+		ohpl_h3f_video_destroy(mpRs, H3Ops(), apResource);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cVideoManager::Update(float afTimeStep)
 	{
-		if(mpRs) { ohpl_h3f_video_update(mpRs, H3Ops(), H3Bits(afTimeStep)); return; }
-		tResourceBaseMapIt it = m_mapResources.begin();
-		for(; it != m_mapResources.end(); ++it)
-		{
-			iResourceBase *pBase = it->second;
-			iVideoStream *pVideo = static_cast<iVideoStream*>(pBase);
-
-			pVideo->Update(afTimeStep);
-		}
-
+		ohpl_h3f_video_update(mpRs, H3Ops(), H3Bits(afTimeStep));
 	}
 	
 	//-----------------------------------------------------------------------

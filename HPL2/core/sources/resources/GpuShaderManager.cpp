@@ -116,12 +116,8 @@ namespace hpl {
 
 	cGpuShaderManager::~cGpuShaderManager()
 	{
-		if(mpRs) { hplDelete(mpPreprocessParser); ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_GPU_SHADER); return; }
 		hplDelete(mpPreprocessParser);
-
-		DestroyAll();
-
-		Log(" Done with Gpu programs\n");
+		ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_GPU_SHADER);
 	}
 
 	//-----------------------------------------------------------------------
@@ -171,197 +167,13 @@ namespace hpl {
 	iGpuShader* cGpuShaderManager::CreateShader(const tString& asName, eGpuShaderType aType,
 												cParserVarContainer *apVarContainer)
 	{
-		if(mpRs) return H3Res<iGpuShader>(ohpl_h3f_gpu_shader(mpRs, H3Ops(), RM_STR(asName), (int32_t)aType, apVarContainer, mpHpslTranspileCallback != NULL, aType == eGpuShaderType_Fragment));
-		iGpuShader* pShader;
-
-		BeginLoad(asName);
-
-		/////////////////////////////////////////
-        // If we have a variable container do NOT add the shader as a resource!
-		if(apVarContainer)
-		{
-			tString sFileData;
-			tString sParsedOutput;
-
-			/////////////////////////////////
-			//Get file from file searcher
-			bool bIsHpslFallback = false;
-			tString sHpslName;
-			tWString sPath = mpFileSearcher->GetFilePath(asName);
-			if(sPath==_W("") && mpHpslTranspileCallback)
-			{
-				sHpslName = GetHpslFallbackName(asName);
-				tWString sHpslPath = mpFileSearcher->GetFilePath(sHpslName);
-				if(sHpslPath != _W(""))
-				{
-					sPath = sHpslPath;
-					bIsHpslFallback = true;
-				}
-			}
-			if(sPath==_W("")){
-				Error("Couldn't find file '%s' in resources\n",asName.c_str());
-				EndLoad();
-				return NULL;
-			}
-
-			/////////////////////////////////
-			//Load data
-			unsigned int lFileSize = cPlatform::GetFileSize(sPath);
-
-			sFileData.resize(lFileSize);
-			cPlatform::CopyFileToBuffer(sPath,&sFileData[0],lFileSize);
-
-			/////////////////////////////////
-			//Parse file
-			if(bIsHpslFallback)
-			{
-				if(apVarContainer->Get("UseDepth") != NULL)
-					apVarContainer->Add("UseLinearDepth");
-
-				apVarContainer->Add("UseExtendedArgs");
-				PatchHpslSource(sHpslName, sFileData);
-			}
-			mpPreprocessParser->Parse(&sFileData, &sParsedOutput,apVarContainer,cString::GetFilePathW(sPath));
-
-			tString sHpslPreTranspile;
-			if(bIsHpslFallback)
-			{
-				tString sGlsl, sTranspileError;
-				// Rebirth reads BC5 as RG; cSDLTexture swizzles it to SOMA's LATC2 layout
-				size_t lBC5 = sParsedOutput.find("avNormalValue.yxx");
-				if(lBC5 != tString::npos) sParsedOutput.replace(lBC5, 17, "avNormalValue.wyx");
-				sHpslPreTranspile = sParsedOutput;
-				if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError)==false)
-				{
-					Error("Couldn't transpile HPSL shader '%s' (from '%s'): %s\n",
-						  asName.c_str(), sHpslName.c_str(), sTranspileError.c_str());
-					EndLoad();
-					return NULL;
-				}
-				sParsedOutput = sGlsl;
-				DumpTranspiledShaderIfRequested(asName, sGlsl);
-			}
-
-			/////////////////////////////////
-			//Compile
-			pShader = mpLowLevelGraphics->CreateGpuShader(asName, aType);
-			pShader->SetFullPath(sPath);
-
-			if(pShader->CreateFromString(sParsedOutput.c_str())==false)
-			{
-				Error("Couldn't create program '%s'\n",asName.c_str());
-				hplDelete(pShader);
-				EndLoad();
-				return NULL;
-			}
-
-			/////////////////////////////////
-			//Sampler to texture units setup, if needed
-			if(bIsHpslFallback && pShader->SamplerNeedsTextureUnitSetup()) ApplyHpslTextureBindings(pShader, sHpslPreTranspile);
-			if(aType == eGpuShaderType_Fragment && pShader->SamplerNeedsTextureUnitSetup())
-			{
-				std::vector<ohpl_shader_kv> vVars;
-				for(auto& kv : *mpPreprocessParser->GetParsingVarContainer()->GetMapPtr())
-				{
-					ohpl_shader_kv e = { kv.first.data(), kv.first.size(), kv.second.data(), kv.second.size() };
-					vVars.push_back(e);
-				}
-				ohpl_shader_sampler_units(vVars.data(), vVars.size(), SamplerCallback, pShader);
-			}
-		}
-		/////////////////////////////////////////
-		// Normal resource load
-		else
-		{
-			tWString sPath;
-			pShader = static_cast<iGpuShader*>(FindLoadedResource(asName,sPath));
-
-			if(pShader==NULL && sPath!=_W(""))
-			{
-				pShader = mpLowLevelGraphics->CreateGpuShader(asName, aType);
-
-				if(pShader->CreateFromFile(sPath)==false)
-				{
-					Error("Couldn't create program '%s'\n",asName.c_str());
-					hplDelete(pShader);
-					EndLoad();
-					return NULL;
-				}
-
-				AddResource(pShader);
-			}
-			else if(pShader==NULL && sPath==_W("") && mpHpslTranspileCallback)
-			{
-				tString sHpslName = GetHpslFallbackName(asName);
-				tWString sHpslPath = mpFileSearcher->GetFilePath(sHpslName);
-				if(sHpslPath != _W(""))
-				{
-					tString sFileData;
-					unsigned int lFileSize = cPlatform::GetFileSize(sHpslPath);
-					sFileData.resize(lFileSize);
-					cPlatform::CopyFileToBuffer(sHpslPath,&sFileData[0],lFileSize);
-
-					cParserVarContainer emptyVars;
-					tString sParsedOutput;
-					mpPreprocessParser->Parse(&sFileData, &sParsedOutput, &emptyVars, cString::GetFilePathW(sHpslPath));
-
-					tString sGlsl, sTranspileError;
-					if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError))
-					{
-						DumpTranspiledShaderIfRequested(asName, sGlsl);
-
-						pShader = mpLowLevelGraphics->CreateGpuShader(asName, aType);
-						pShader->SetFullPath(sHpslPath);
-
-						if(pShader->CreateFromString(sGlsl.c_str())==false)
-						{
-							Error("Couldn't create program '%s' (from transpiled HPSL '%s')\n",
-								  asName.c_str(), sHpslName.c_str());
-							hplDelete(pShader);
-							pShader = NULL;
-						}
-						else
-						{
-							if(pShader->SamplerNeedsTextureUnitSetup())
-								ApplyHpslTextureBindings(pShader, sParsedOutput);
-
-							AddResource(pShader);
-						}
-					}
-					else
-					{
-						Error("Couldn't transpile HPSL shader '%s' (from '%s'): %s\n",
-							  asName.c_str(), sHpslName.c_str(), sTranspileError.c_str());
-					}
-				}
-			}
-
-			if(pShader)pShader->IncUserCount();
-			else Error("Couldn't load program '%s'\n",asName.c_str());
-		}
-		
-		
-		EndLoad();
-		return pShader;
-     }
-
-	//-----------------------------------------------------------------------
-
-	void cGpuShaderManager::Unload(iResourceBase* apResource)
-	{
-
+		return H3Res<iGpuShader>(ohpl_h3f_gpu_shader(mpRs, H3Ops(), RM_STR(asName), (int32_t)aType, apVarContainer, mpHpslTranspileCallback != NULL, aType == eGpuShaderType_Fragment));
 	}
 	//-----------------------------------------------------------------------
 
 	void cGpuShaderManager::Destroy(iResourceBase* apResource)
 	{
-		if(mpRs) { ohpl_h3f_gpu_destroy(mpRs, H3Ops(), apResource); return; }
-		apResource->DecUserCount();
-
-		if(apResource->HasUsers()==false){
-			RemoveResource(apResource);
-			hplDelete(apResource);
-		}
+		ohpl_h3f_gpu_destroy(mpRs, H3Ops(), apResource);
 	}
 
 	//-----------------------------------------------------------------------

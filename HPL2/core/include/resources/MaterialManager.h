@@ -59,33 +59,21 @@ namespace hpl {
 
 		cMaterial* CreateCustomMaterial(const tString& asName, iMaterialType *apMaterialType);
 
-		tString GetTextureString(eMaterialTexture aType);
+		void SetDisableRenderDataLoading(bool abX){ mbDisableRenderDataLoading = abX; ohpl_h3f_material_blank(mpRs, &mOps, abX); }
 
-		void SetDisableRenderDataLoading(bool abX){ mbDisableRenderDataLoading = abX; if(mpRs) ohpl_h3f_material_blank(mpRs, &mOps, abX); }
 
-		// Useful stuff if public
-		eTextureType GetType(const tString& asType);
-		eTextureWrap GetWrap(const tString& asType);
-		eTextureAnimMode GetAnimMode(const tString& asType);
-		eMaterialBlendMode GetBlendMode(const tString& asType);
-
-		eMaterialUvAnimation GetUvAnimType(const char* apString);
-		eMaterialAnimationAxis GetAnimAxis(const char* apString);
 
 	protected:
 		void* H3Create(OhplH3Create &aCreate) override;
 		int64_t H3Call(int alWhat, void *apObj, int64_t alArg) override;
 		void H3Text(int alWhat, void *apObj, const OhplH3WStr &aPath, void (*apSink)(void*, const uint8_t*, size_t), void *apCtx) override;
 	private:
-		cMaterial* LoadFromFile(const tString& asName,const tWString& asPath);
 
 		unsigned int mlTextureSizeDownScaleLevel;
 		eTextureFilter mTextureFilter;
 		float mfTextureAnisotropy;
 
-		tStringList mlstFileFormats;
 
-		tStringVec mvCubeSideSuffixes;
 
 		cGraphics* mpGraphics;
 		cResources* mpResources;
@@ -93,7 +81,6 @@ namespace hpl {
 		bool mbDisableRenderDataLoading;
 		cResourceVarsObject mUserVars;
 
-		int mlIdCounter;
 	};
 
 };

@@ -47,10 +47,7 @@ namespace hpl {
 
 	cAnimationManager::~cAnimationManager()
 	{
-		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_ANIMATION); return; }
-		DestroyAll();
-
-		Log(" Done with animations\n");
+		ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_ANIMATION);
 	}
 
 	//-----------------------------------------------------------------------
@@ -63,42 +60,8 @@ namespace hpl {
 
 	cAnimation* cAnimationManager::CreateAnimation(const tString& asName)
 	{
-		if(mpRs)
-		{
-			cRmExts exts(*mpResources->GetMeshLoaderHandler()->GetSupportedTypes());
-			return H3Res<cAnimation>(ohpl_h3f_model(mpRs, H3Ops(), false, RM_STR(asName), exts.h3(), exts.size(), 0));
-		}
-		cAnimation *pAnimation=NULL;
-
-		BeginLoad(asName);
-
-		cRmEnv env(mpFileSearcher, this);
 		cRmExts exts(*mpResources->GetMeshLoaderHandler()->GetSupportedTypes());
-		cRmOut out;
-		if(ohpl_rm_resolve_model(env.raw(), RM_STR(asName), exts.data(), exts.size(), out.raw())==0)
-		{
-			Error("Couldn't find animation file '%s' in any supported format!\n",asName.c_str());
-			EndLoad();
-			return NULL;
-		}
-		const tString& asNewName = out.msName;
-		const tWString& sPath = out.msPath;
-
-		pAnimation = static_cast<cAnimation*>(out.Res());
-
-		if(pAnimation==NULL && sPath!=_W(""))
-		{
-			cMeshLoaderHandler *pMeshLoadHandler = mpResources->GetMeshLoaderHandler();
-
-			pAnimation = pMeshLoadHandler->LoadAnimation(sPath);
-			if(pAnimation) AddResource(pAnimation);
-		}
-
-		if(pAnimation) pAnimation->IncUserCount();
-		else Error("Couldn't create animation '%s'\n",asNewName.c_str());
-
-		EndLoad();
-		return pAnimation;
+		return H3Res<cAnimation>(ohpl_h3f_model(mpRs, H3Ops(), false, RM_STR(asName), exts.h3(), exts.size(), 0));
 	}
 
 	//-----------------------------------------------------------------------
@@ -111,11 +74,7 @@ namespace hpl {
 
 	void cAnimationManager::Destroy(iResourceBase* apResource)
 	{
-		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
-		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
-			RemoveResource(apResource);
-			hplDelete(apResource);
-		}
+		ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource);
 	}
 
 	//-----------------------------------------------------------------------
