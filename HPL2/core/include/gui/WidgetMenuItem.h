@@ -59,7 +59,7 @@ namespace hpl {
 
 		bool IsMenuOpen();
 
-		bool IsSeparator() { return (msText==_W(""));}
+		bool IsSeparator() { return (GetText()==_W(""));}
 
 		cGuiGlobalShortcut* AddShortcut(int alKeyModifiers, eKey aKey, eGuiMessage aMsg=eGuiMessage_ButtonPressed, 
 						 bool abBypassVisibility=true, bool abBypassEnabled=true);

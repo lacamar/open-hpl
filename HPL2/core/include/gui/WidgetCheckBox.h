@@ -21,64 +21,24 @@
 #define HPL_WIDGET_CHECK_BOX_H
 
 #include "gui/Widget.h"
+#include "gui/RustGuiGw.h"
 
 namespace hpl {
 
 	class cGuiSkinFont;
-	class cWidgetLabel;
 
+	// Rust kind (rust/src/gui/gw_kinds.rs)
 	class cWidgetCheckBox : public iWidget
 	{
 	public:
-		cWidgetCheckBox(cGuiSet *apSet, cGuiSkin *apSkin);
-		virtual ~cWidgetCheckBox();
+		cWidgetCheckBox(cGuiSet *apSet, cGuiSkin *apSkin) : iWidget(eWidgetType_CheckBox, apSet, apSkin) { ohpl_gw_set_kind((uintptr_t)this, kOhplGwCheck, 0, 0); }
 
-		void SetChecked(bool abX, bool abGenCallback=true);
-		bool IsChecked(){return mbChecked;}
+		void SetChecked(bool abX, bool abGenCallback=true){ ohpl_gw_check_set_checked((uintptr_t)this, abX, abGenCallback); }
+		bool IsChecked(){return ohpl_gw_check_checked((uintptr_t)this);}
 
-		void SetDefaultFontType(iFontData *apFont);
-		void SetDefaultFontColor(const cColor& aColor);
-		void SetDefaultFontSize(const cVector2f& avSize);
-	
-	protected:
-		/////////////////////////
-		// Own functions
-		bool Label_MouseDown(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Label_MouseDown);
-		bool Label_MouseUp(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(Label_MouseUp);
-        
-		void UpdateLabel();
-
-		/////////////////////////
-		// Implemented functions
-		void OnInit();
-		void OnLoadGraphics();
-		void OnChangeSize();
-		void OnChangeText();
-		
-		void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion);
-
-		bool OnMouseMove(const cGuiMessageData& aData);
-		bool OnMouseDown(const cGuiMessageData& aData);
-		bool OnMouseUp(const cGuiMessageData& aData);
-		bool OnMouseEnter(const cGuiMessageData& aData);
-		bool OnMouseLeave(const cGuiMessageData& aData);
-
-		bool OnUIButtonPress(const cGuiMessageData& aData);
-		bool OnUIButtonRelease(const cGuiMessageData& aData);
-
-		/////////////////////////
-		// Data
-		bool mbChecked;
-		bool mbPressed;
-
-		cGuiGfxElement *mvGfxBox[2][2];
-
-		cVector2f mvBoxSize;
-
-		cWidgetLabel	*mpLabel;
-		
+		void SetDefaultFontType(iFontData *apFont){ ohpl_gw_set_font_type((uintptr_t)this, apFont); }
+		void SetDefaultFontColor(const cColor& aColor){ ohpl_gw_set_font_color((uintptr_t)this, &aColor); }
+		void SetDefaultFontSize(const cVector2f& avSize){ ohpl_gw_set_font_size((uintptr_t)this, avSize.x, avSize.y); }
 	};
 
 };

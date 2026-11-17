@@ -86,42 +86,6 @@ static_assert(offsetof(OhplG1SetPub, virtualSize) == 80 && offsetof(OhplG1SetPub
 			  offsetof(OhplG1SetPub, mtx3D) == 120 && offsetof(OhplG1SetPub, mouseZ) == 184 && offsetof(OhplG1SetPub, programs) == 192 &&
 			  offsetof(OhplG1SetPub, active) == 208 && offsetof(OhplG1SetPub, sortWidgets) == 216, "OhplG1SetPub layout");
 
-struct OhplG1Ops {
-	bool (*isVisible)(uintptr_t);
-	bool (*isEnabled)(uintptr_t);
-	bool (*isConnectedTo)(uintptr_t, uintptr_t);
-	bool (*pointIsInside)(uintptr_t, float, float);
-	bool (*mouseIsOver)(uintptr_t);
-	void (*setMouseIsOver)(uintptr_t, bool);
-	bool (*processMessage)(uintptr_t, int, const cGuiMessageData*, bool, bool);
-	bool (*getFocus)(uintptr_t, const cGuiMessageData*);
-	bool (*tooltipEnabled)(uintptr_t);
-	bool (*hasFocusNav)(uintptr_t);
-	uintptr_t (*parent)(uintptr_t);
-	uintptr_t (*widgetSet)(uintptr_t);
-	uintptr_t (*pointerGfx)(uintptr_t);
-	uintptr_t (*focusNav)(uintptr_t, int);
-	bool (*globalKeyListener)(uintptr_t);
-	bool (*globalUIListener)(uintptr_t);
-	bool (*gotTabFocus)(uintptr_t, const cGuiMessageData*);
-	void (*globalPos)(uintptr_t, float*);
-	void (*setGlobalPos)(uintptr_t, const float*);
-	void (*update)(uintptr_t, float);
-	void (*draw)(uintptr_t, float, void*);
-	void (*destroy)(uintptr_t);
-	void (*attachChild)(uintptr_t, uintptr_t);
-	void (*init)(uintptr_t);
-	uintptr_t (*firstChild)(uintptr_t);
-	void (*clearChildren)(uintptr_t);
-	void (*size)(uintptr_t, float*);
-	bool (*nameEq)(uintptr_t, const char*, size_t);
-	uintptr_t (*rootNew)(void*);
-	void (*tooltipCreate)(void*, uintptr_t*);
-	void (*tooltipMeasure)(uintptr_t, uintptr_t, float, float*, int*);
-	void (*tooltipApply)(uintptr_t, uintptr_t, uintptr_t, uintptr_t, const float*);
-	void (*hide)(uintptr_t);
-	void (*keyName)(void*, bool, int, void*, void (*)(void*, const char*, size_t));
-};
 
 enum { kOhplG1MaterialDiffuse = 0, kOhplG1MaterialAlpha, kOhplG1MaterialFontNormal, kOhplG1MaterialAdditive,
 	   kOhplG1MaterialModulative, kOhplG1MaterialPremulAlpha };
@@ -208,7 +172,6 @@ int ohpl_gui_mouse_to_mouse(int);
 int ohpl_gui_mouse_to_gui(int);
 
 
-void ohpl_g1_set_ops(OhplG1Ops* ops);
 void ohpl_g1_set_update(cGuiSet*, float);
 void ohpl_g1_set_draw_all(cGuiSet*, float);
 bool ohpl_g1_set_send_message(cGuiSet*, int, const cGuiMessageData*);

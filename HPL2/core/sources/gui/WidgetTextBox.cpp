@@ -58,7 +58,7 @@ namespace hpl {
 		memset(&mState, 0, sizeof(mState));
 		LoadGraphics();
 
-		mpPointerGfx = mpSkin->GetGfx(eGuiSkinGfx_PointerText);
+		SetPointerGfx(mpSkin->GetGfx(eGuiSkinGfx_PointerText));
 		mpPrevAttention = NULL;
 
 		mState = ohpl_w2_tb_init(aType==eWidgetTextBoxInputType_Numeric);

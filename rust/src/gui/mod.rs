@@ -10,7 +10,7 @@ mod ffi_widget2;
 mod ffi_widget3;
 pub mod gfx;
 pub mod guicore;
-mod h19_ffi;
+
 pub mod h19_widget;
 pub mod h20_combo;
 mod h20_ffi;
@@ -38,7 +38,7 @@ pub mod widgets_text;
 pub mod g1_gfx;
 pub mod g1_gui;
 pub mod g1_host;
-pub mod g1_ops;
+
 pub mod g1_set;
 pub mod g1_skin;
 pub mod g2_popup;
@@ -61,3 +61,7 @@ mod tests_widget;
 mod tests_widget2;
 #[cfg(test)]
 mod tests_widget3;
+
+pub mod gw;
+pub mod gw_host;
+pub mod gw_kinds;

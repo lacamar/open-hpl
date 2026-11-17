@@ -21,87 +21,43 @@
 #define HPL_WIDGET_LABEL_H
 
 #include "gui/Widget.h"
+#include "gui/RustGuiGw.h"
 
 namespace hpl {
 
 	class cGuiSkinFont;
 
+	// Rust kind (rust/src/gui/gw_kinds.rs)
 	class cWidgetLabel : public iWidget
 	{
 	public:
-		cWidgetLabel(cGuiSet *apSet, cGuiSkin *apSkin);
-		virtual ~cWidgetLabel();
+		cWidgetLabel(cGuiSet *apSet, cGuiSkin *apSkin) : iWidget(eWidgetType_Label, apSet, apSkin) { ohpl_gw_set_kind((uintptr_t)this, kOhplGwLabel, 0, 0); }
 
-		void SetTextAlign(eFontAlign aType){mTextAlign = aType;}
-		eFontAlign GetTextAlign(){ return mTextAlign;}
+		void SetTextAlign(eFontAlign aType){ ohpl_gw_label_set_align((uintptr_t)this, aType); }
+		eFontAlign GetTextAlign(){ return (eFontAlign)ohpl_gw_label_align((uintptr_t)this); }
 
-		bool GetWordWrap(){ return mbWordWrap;}
-		void SetWordWrap(bool abX){ mbWordWrap = abX;}
+		bool GetWordWrap(){ return ohpl_gw_label_word_wrap((uintptr_t)this); }
+		void SetWordWrap(bool abX){ ohpl_gw_label_set_word_wrap((uintptr_t)this, abX); }
 
-		void SetMaxTextLength(int alLength);
-		int GetMaxTextLength(){return mlMaxCharacters;}
+		void SetMaxTextLength(int alLength){ ohpl_gw_label_set_max_length((uintptr_t)this, alLength); }
+		int GetMaxTextLength(){ return ohpl_gw_label_max_length((uintptr_t)this); }
 
-		void SetAutogenerateSize(bool abX);
-		bool GetAutogenerateSize(){ return mbAutogenerateSize;}
+		void SetAutogenerateSize(bool abX){ ohpl_gw_label_set_autogen((uintptr_t)this, abX); }
+		bool GetAutogenerateSize(){ return ohpl_gw_label_autogen((uintptr_t)this); }
 
-		void SetDefaultFontSize(const cVector2f& avSize);
+		void SetDefaultFontSize(const cVector2f& avSize){ ohpl_gw_set_font_size((uintptr_t)this, avSize.x, avSize.y); }
 
-		void SetDrawBackGround(bool abX) { mbDrawBackGround = abX; }
-		bool GetDrawBackGround() { return mbDrawBackGround; }
+		void SetDrawBackGround(bool abX) { ohpl_gw_label_set_draw_bg((uintptr_t)this, abX); }
+		bool GetDrawBackGround() { return ohpl_gw_label_draw_bg((uintptr_t)this); }
 
-		void SetBackGroundColor(const cColor &aColor){ mBackGroundColor = aColor;}
-		const cColor& GetBackGroundColor(){ return mBackGroundColor;}
+		void SetBackGroundColor(const cColor &aColor){ ohpl_gw_label_set_bg_color((uintptr_t)this, &aColor); }
+		const cColor& GetBackGroundColor(){ return *ohpl_gw_label_bg_color((uintptr_t)this); }
 
-		void SetScrollWaitTime(float afX) { mfWaitToScrollTime = afX; }
-		float GetScrollWaitTime() { return mfWaitToScrollTime; }
-
-		void SetScrollOffset(float afX) { mfWordWrapOffset = afX; }
-
-		void SetScrollSpeedMul(float afX) { mfScrollSpeedMul = afX; }
-		float GetScrollSpeedMul() { return mfScrollSpeedMul; }
-
-	protected:
-		/////////////////////////
-		// Own Funcs
-		void DrawText(float afTimeStep, cGuiClipRegion *apClipRegion);
-
-		/////////////////////////
-		// Implemented functions
-		void OnLoadGraphics();
-
-		void OnUpdate(float afTimeStep);
-
-		void OnChangeText();
-		
-		void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion);
-		void OnDrawAfterClip(float afTimeStep, cGuiClipRegion *apClipRegion);
-
-		bool OnMouseMove(const cGuiMessageData& aData);
-		bool OnMouseDown(const cGuiMessageData& aData);
-		bool OnMouseUp(const cGuiMessageData& aData);
-		bool OnMouseEnter(const cGuiMessageData& aData);
-		bool OnMouseLeave(const cGuiMessageData& aData);
-
-		/////////////////////////
-		// Data
-		eFontAlign mTextAlign;
-		bool mbWordWrap;
-		float mfWordWrapRowsHeight;
-		float mfWordWrapOffset;
-		float mfScrollSpeedMul;
-		float mfScrollTimer;
-		float mfWaitToScrollTime;
-		bool mbScrollingDown;
-
-		float mfBackgroundZ;
-		cGuiGfxElement *mpGfxBackground;
-
-		bool mbDrawBackGround;
-		cColor mBackGroundColor;
-
-		int mlMaxCharacters;
-
-        bool mbAutogenerateSize;
+		void SetScrollWaitTime(float afX) { ohpl_gw_label_set_scroll_wait((uintptr_t)this, afX); }
+		float GetScrollWaitTime() { return ohpl_gw_label_scroll_wait((uintptr_t)this); }
+		void SetScrollOffset(float afX) { ohpl_gw_label_set_scroll_offset((uintptr_t)this, afX); }
+		void SetScrollSpeedMul(float afX) { ohpl_gw_label_set_scroll_speed((uintptr_t)this, afX); }
+		float GetScrollSpeedMul() { return ohpl_gw_label_scroll_speed((uintptr_t)this); }
 	};
 
 };

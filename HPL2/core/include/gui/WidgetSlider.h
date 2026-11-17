@@ -21,85 +21,36 @@
 #define HPL_WIDGET_SLIDER_H
 
 #include "gui/Widget.h"
-#include "gui/RustWidget2.h"
+#include "gui/RustGuiGw.h"
 
 namespace hpl {
 
 	class cGuiSkinFont;
-
 	class cWidgetButton;
 
-	//---------------------------------------------
-
+	// Rust kind (rust/src/gui/gw_kinds.rs)
 	class cWidgetSlider : public iWidget
 	{
 	public:
-		cWidgetSlider(cGuiSet *apSet, cGuiSkin *apSkin, eWidgetSliderOrientation aOrientation);
-		virtual ~cWidgetSlider();
+		cWidgetSlider(cGuiSet *apSet, cGuiSkin *apSkin, eWidgetSliderOrientation aOrientation)
+			: iWidget(eWidgetType_Slider, apSet, apSkin) { ohpl_gw_set_kind((uintptr_t)this, kOhplGwSlider, aOrientation, 0); }
 
-		int GetValue(){ return mSlider.value;}
-		void SetValue(int alValue, bool abGenCallback=true);
-		
-		int GetMaxValue(){ return mSlider.max_value;}
-		void SetMaxValue(int alMax);
-		
-		int GetButtonValueAdd(){ return mSlider.button_add; }
-		void SetButtonValueAdd(int alAdd);
+		int GetValue(){ return ohpl_gw_slider_value((uintptr_t)this); }
+		void SetValue(int alValue, bool abGenCallback=true){ ohpl_gw_slider_set_value((uintptr_t)this, alValue, abGenCallback); }
 
-		int GetBarClickValueAdd() { return mSlider.click_add; }
-		void SetBarClickValueAdd(int alAdd);
+		int GetMaxValue(){ return ohpl_gw_slider_max((uintptr_t)this); }
+		void SetMaxValue(int alMax){ ohpl_gw_slider_set_max((uintptr_t)this, alMax); }
 
-		int GetBarValueSize(){ return mSlider.bar_value_size;}
-		void SetBarValueSize(int alSize);
+		int GetButtonValueAdd(){ return ohpl_gw_slider_button_add((uintptr_t)this); }
+		void SetButtonValueAdd(int alAdd){ ohpl_gw_slider_set_button_add((uintptr_t)this, alAdd); }
 
-		float GetButtonSize() const{return mSlider.button_size;}
+		int GetBarClickValueAdd() { return ohpl_gw_slider_click_add((uintptr_t)this); }
+		void SetBarClickValueAdd(int alAdd){ ohpl_gw_slider_set_click_add((uintptr_t)this, alAdd); }
 
-	protected:
-		/////////////////////////
-		// Own functions
-		void UpdateBarProperties();
+		int GetBarValueSize(){ return ohpl_gw_slider_bar_size((uintptr_t)this); }
+		void SetBarValueSize(int alSize){ ohpl_gw_slider_set_bar_size((uintptr_t)this, alSize); }
 
-		bool ArrowButtonDown(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(ArrowButtonDown);		
-
-		/////////////////////////
-		// Implemented functions
-		void OnInit();
-		void OnLoadGraphics();
-		void OnChangeSize();
-		void OnChangePosition();
-
-		
-		void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion);
-
-		bool OnMouseMove(const cGuiMessageData& aData);
-		bool OnMouseDown(const cGuiMessageData& aData);
-		bool OnMouseUp(const cGuiMessageData& aData);
-		bool OnMouseEnter(const cGuiMessageData& aData);
-		bool OnMouseLeave(const cGuiMessageData& aData);
-
-		bool OnMouseDoubleClick(const cGuiMessageData& aData);
-
-		bool OnLostFocus(const cGuiMessageData& aData);
-
-		bool OnUIArrowPress(const cGuiMessageData& aData);
-		bool OnUIArrowRelease(const cGuiMessageData& aData);
-
-		bool OnUIButtonPress(const cGuiMessageData& aData);
-		bool OnUIButtonRelease(const cGuiMessageData& aData);
-
-		/////////////////////////
-		// Data
-		OhplW2Slider mSlider;
-
-		cWidgetButton* mvButtons[2];
-
-		cGuiGfxElement *mpGfxButtonBackground;
-		cGuiGfxElement *mvGfxBorders[4];
-		cGuiGfxElement *mvGfxCorners[4];
-
-		cGuiGfxElement *mvGfxArrow[2];
-		cGuiGfxElement *mpGfxBackground;
+		float GetButtonSize() const{ return ohpl_gw_slider_button_size((uintptr_t)this); }
 	};
 
 };

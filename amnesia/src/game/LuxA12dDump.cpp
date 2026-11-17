@@ -128,14 +128,14 @@ static void WalkWidget(iWidget *apW, int alDepth)
 	}
 	OhplA12dLog("w %*s%s '%s' pos=%.9g,%.9g,%.9g size=%.9g,%.9g font=%.9g,%.9g en=%d vis=%d uv=%d%s", alDepth * 2, "", lType >= 0 && lType < 19 ? vType[lType] : "?",
 		cString::To8Char(apW->GetText()).c_str(), vP.x, vP.y, vP.z, vS.x, vS.y, vF.x, vF.y, apW->IsEnabled() ? 1 : 0, apW->IsVisible() ? 1 : 0, apW->GetUserValue(), sExtra);
-	tWidgetList &l = apW->GetChildren();
+	tWidgetList l = apW->GetChildren();
 	for(tWidgetListIt it = l.begin(); it != l.end(); ++it) WalkWidget(*it, alDepth + 1);
 }
 
 static void Collect(iWidget *apW, int alType, std::vector<iWidget*> &avOut)
 {
 	if((int)apW->GetType() == alType) avOut.push_back(apW);
-	tWidgetList &l = apW->GetChildren();
+	tWidgetList l = apW->GetChildren();
 	for(tWidgetListIt it = l.begin(); it != l.end(); ++it) Collect(*it, alType, avOut);
 }
 

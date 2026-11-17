@@ -86,7 +86,7 @@ namespace hpl {
 
 	cVector3f cWidgetMultiPropertyListBox::GetItemStartPos()
 	{
-		return GetGlobalPosition() + cVector3f(0, mList.num_blank_rows * (mvDefaultFontSize.y+2), mfBackgroundZ+0.02f);
+		return GetGlobalPosition() + cVector3f(0, mList.num_blank_rows * (GetDefaultFontSize().y+2), mfBackgroundZ+0.02f);
 	}
 
 	//-------------------------------------------------------------------------------

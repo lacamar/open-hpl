@@ -24,6 +24,7 @@
 #include "gui/GuiTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "gui/RustGuiG1.h"
+#include "gui/RustGuiGw.h"
 #include "gui/GuiPopUpMessageBox.h"
 #include "gui/GuiPopUpFilePicker.h"
 #include "gui/GuiPopUpColorPicker.h"
@@ -172,7 +173,10 @@ namespace hpl {
 											const cVector2f &avSize=0,
 											const tWString &asText=_W(""),
 											iWidget *apParent=NULL,
-											const tString& asName = "" );
+											const tString& asName = "" )
+		{
+			return (cWidgetWindow*)ohpl_gw_create(this, kOhplGwWindow, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), alFlags, 0, 0, NULL);
+		}
 
 		cWidgetFrame* CreateWidgetFrame(	const cVector3f &avLocalPos=0,
 											const cVector2f &avSize=0,
@@ -180,27 +184,39 @@ namespace hpl {
 											iWidget *apParent=NULL,
 											bool abHScrollBar=false,
 											bool abVScrollBar=false,
-											const tString& asName = "" );
+											const tString& asName = "" )
+		{
+			return (cWidgetFrame*)ohpl_gw_create(this, kOhplGwFrame, &avLocalPos, &avSize, NULL, 0, (uintptr_t)apParent, asName.data(), asName.size(), abHScrollBar, abVScrollBar, abDrawFrame, NULL);
+		}
 
 		cWidgetButton* CreateWidgetButton(	const cVector3f &avLocalPos=0,
 											const cVector2f &avSize=0,
 											const tWString &asText=_W(""),
 											iWidget *apParent=NULL,
 											bool abToggleable=false,
-											const tString& asName = "");
+											const tString& asName = "")
+		{
+			return (cWidgetButton*)ohpl_gw_create(this, kOhplGwButton, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), abToggleable, 0, 0, NULL);
+		}
 
 		cWidgetLabel* CreateWidgetLabel(	const cVector3f &avLocalPos=0,
 											const cVector2f &avSize=0,
 											const tWString &asText=_W(""),
 											iWidget *apParent=NULL,
-											const tString& asName = "" );
+											const tString& asName = "" )
+		{
+			return (cWidgetLabel*)ohpl_gw_create(this, kOhplGwLabel, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0, NULL);
+		}
 
 		cWidgetSlider* CreateWidgetSlider(	eWidgetSliderOrientation aOrientation,
 											const cVector3f &avLocalPos=0,
 											const cVector2f &avSize=0,
 											int alMaxValue=10,
 											iWidget *apParent=NULL,
-											const tString& asName = "" );
+											const tString& asName = "" )
+		{
+			return (cWidgetSlider*)ohpl_gw_create(this, kOhplGwSlider, &avLocalPos, &avSize, NULL, 0, (uintptr_t)apParent, asName.data(), asName.size(), aOrientation, 0, alMaxValue, NULL);
+		}
 
 		cWidgetTextBox* CreateWidgetTextBox(const cVector3f &avLocalPos=0,
 											const cVector2f &avSize=0,
@@ -215,7 +231,10 @@ namespace hpl {
 											const cVector2f &avSize=0,
 											const tWString &asText=_W(""),
 											iWidget *apParent=NULL,
-											const tString& asName = "" );
+											const tString& asName = "" )
+		{
+			return (cWidgetCheckBox*)ohpl_gw_create(this, kOhplGwCheck, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0, NULL);
+		}
 
 		cWidgetImage* CreateWidgetImage(const tString &asFile="",
 										const cVector3f &avLocalPos=0,
@@ -280,11 +299,17 @@ namespace hpl {
 												const cVector2f &avSize=0,
 												const tWString &asText=_W(""),
 												iWidget *apParent=NULL,
-												const tString& asName = "");
+												const tString& asName = "")
+		{
+			return (cWidgetGroup*)ohpl_gw_create(this, kOhplGwGroup, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0, NULL);
+		}
 
 		cWidgetDummy* CreateWidgetDummy(const cVector3f &avLocalPos=0,
 												iWidget *apParent=NULL,
-												const tString& asName = "");
+												const tString& asName = "")
+		{
+			return (cWidgetDummy*)ohpl_gw_create(this, kOhplGwDummy, &avLocalPos, NULL, NULL, 0, (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0, NULL);
+		}
 
 
 		iWidget *GetWidgetFromName(const tString& asName){ return (iWidget*)ohpl_g1_set_widget_from_name(this, asName.data(), asName.size()); }
@@ -439,10 +464,6 @@ namespace hpl {
 		void SetFocusDrawCallback(void* apObject, tGuiCallbackFunc apCallback)	{ ohpl_g1_set_set_focus_draw_callback(this, apObject, apCallback); }
 		bool GetDrawFocus() { return P().drawFocus; }
 
-		// iWidget members cGuiSet is a friend of; used by the widget ops in RustGuiG1.cpp
-		static void WidgetSetMouseIsOver(iWidget* apWidget, bool abX);
-		static bool WidgetGetFocus(iWidget* apWidget, const cGuiMessageData& aData);
-		static bool WidgetOnGotTabFocus(iWidget* apWidget, const cGuiMessageData& aData);
 	private:
 		OhplG1SetPub& P(){ return *(OhplG1SetPub*)this; }
 		cGuiSet();

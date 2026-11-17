@@ -144,119 +144,6 @@ namespace hpl {
 
 
 	//////////////////////////////////////////////////////////////////////////
-	// Widget operations for the Rust-owned gui set
-	//////////////////////////////////////////////////////////////////////////
-
-	void cGuiSet::WidgetSetMouseIsOver(iWidget* apWidget, bool abX) { apWidget->SetMouseIsOver(abX); }
-	bool cGuiSet::WidgetGetFocus(iWidget* apWidget, const cGuiMessageData& aData) { return apWidget->GetFocus(aData); }
-	bool cGuiSet::WidgetOnGotTabFocus(iWidget* apWidget, const cGuiMessageData& aData) { return apWidget->OnGotTabFocus(aData); }
-
-	static iWidget* Wd(uintptr_t aW) { return (iWidget*)aW; }
-
-	static void OpGlobalPos(uintptr_t w, float *p) { cVector3f v = Wd(w)->GetGlobalPosition(); p[0] = v.x; p[1] = v.y; p[2] = v.z; }
-
-	static uintptr_t OpRootNew(void *apSet)
-	{
-		iWidget *pRoot = hplNew( iWidget, (eWidgetType_Root, (cGuiSet*)apSet, (cGuiSkin*)NULL) );
-		pRoot->AddCallback(eGuiMessage_OnDraw, apSet, &ohpl_g1_set_draw_mouse);
-		pRoot->AddCallback(eGuiMessage_OnDraw, apSet, &ohpl_g1_set_draw_focus);
-		return (uintptr_t)pRoot;
-	}
-
-	static void OpTooltipCreate(void *apSet, uintptr_t *apOut)
-	{
-		cGuiSet *pSet = (cGuiSet*)apSet;
-		cWidgetFrame *pFrame = pSet->CreateWidgetFrame(0,0,false);
-		pFrame->SetBackGroundColor(cColor(0,1));
-		pFrame->SetDrawBackground(true);
-		pFrame->SetEnabled(false);
-		pFrame->SetVisible(false);
-
-		cWidgetFrame *pBackground = pSet->CreateWidgetFrame(cVector3f(1,1,0.1f),0,false,pFrame);
-		pBackground->SetBackGroundColor(cColor(1,1,0.882f,1));
-		pBackground->SetDrawBackground(true);
-
-		cWidgetLabel *pLabel = pSet->CreateWidgetLabel(cVector3f(3,2,0.1f),0,_W(""), pFrame);
-		pLabel->SetDefaultFontSize(12);
-		pLabel->SetWordWrap(true);
-
-		apOut[0] = (uintptr_t)pFrame;
-		apOut[1] = (uintptr_t)pBackground;
-		apOut[2] = (uintptr_t)pLabel;
-	}
-
-	static void OpTooltipMeasure(uintptr_t aLabel, uintptr_t aTip, float afMaxLength, float *apInfo, int *apRows)
-	{
-		const tWString& sTipText = Wd(aTip)->GetToolTip().c_str();
-		cWidgetLabel *pLabel = (cWidgetLabel*)aLabel;
-		const cVector2f& vFontSize = pLabel->GetDefaultFontSize();
-		iFontData *pFont = pLabel->GetDefaultFontType();
-		apInfo[0] = pFont->GetLength(vFontSize, sTipText.c_str());
-		apInfo[1] = vFontSize.y;
-		tWStringVec vRows;
-		pFont->GetWordWrapRows(afMaxLength, vFontSize.y+2, vFontSize, sTipText, &vRows);
-		*apRows = (int)vRows.size();
-	}
-
-	static void OpTooltipApply(uintptr_t aLabel, uintptr_t aFrame, uintptr_t aBackground, uintptr_t aTip, const float *apArgs)
-	{
-		const tWString& sTipText = Wd(aTip)->GetToolTip().c_str();
-		cWidgetLabel *pLabel = (cWidgetLabel*)aLabel;
-		cWidgetFrame *pFrame = (cWidgetFrame*)aFrame;
-		pLabel->SetText(sTipText);
-		pLabel->SetSize(cVector2f(apArgs[3], apArgs[4]));
-		pFrame->SetGlobalPosition(cVector3f(apArgs[0], apArgs[1], apArgs[2]));
-		pFrame->SetSize(cVector2f(apArgs[3], apArgs[4]));
-		Wd(aBackground)->SetSize(cVector2f(apArgs[5], apArgs[6]));
-		pFrame->SetEnabled(true);
-		pFrame->SetVisible(true);
-	}
-
-	static void OpKeyName(void *apInput, bool abModifier, int alKey, void *apCtx, void (*apSink)(void*, const char*, size_t))
-	{
-		iKeyboard *pKB = ((cInput*)apInput)->GetKeyboard();
-		tString sName = abModifier ? pKB->ModifierKeyToString((eKeyModifier)alKey) : pKB->KeyToString((eKey)alKey);
-		apSink(apCtx, sName.data(), sName.size());
-	}
-
-	static OhplG1Ops gG1Ops = {
-		[](uintptr_t w) { return Wd(w)->IsVisible(); },
-		[](uintptr_t w) { return Wd(w)->IsEnabled(); },
-		[](uintptr_t w, uintptr_t o) { return Wd(w)->IsConnectedTo(Wd(o)); },
-		[](uintptr_t w, float x, float y) { return Wd(w)->PointIsInside(cVector2f(x, y), false); },
-		[](uintptr_t w) { return Wd(w)->GetMouseIsOver(); },
-		[](uintptr_t w, bool b) { cGuiSet::WidgetSetMouseIsOver(Wd(w), b); },
-		[](uintptr_t w, int m, const cGuiMessageData *d, bool v, bool e) { return Wd(w)->ProcessMessage((eGuiMessage)m, *d, v, e); },
-		[](uintptr_t w, const cGuiMessageData *d) { return cGuiSet::WidgetGetFocus(Wd(w), *d); },
-		[](uintptr_t w) { return Wd(w)->IsToolTipEnabled(); },
-		[](uintptr_t w) { return Wd(w)->HasFocusNavigation(); },
-		[](uintptr_t w) { return (uintptr_t)Wd(w)->GetParent(); },
-		[](uintptr_t w) { return (uintptr_t)Wd(w)->GetSet(); },
-		[](uintptr_t w) { return (uintptr_t)Wd(w)->GetPointerGfx(); },
-		[](uintptr_t w, int d) { return (uintptr_t)Wd(w)->GetFocusNavigation((eUIArrow)d); },
-		[](uintptr_t w) { return Wd(w)->IsGlobalKeyPressListener(); },
-		[](uintptr_t w) { return Wd(w)->IsGlobalUIInputListener(); },
-		[](uintptr_t w, const cGuiMessageData *d) { return cGuiSet::WidgetOnGotTabFocus(Wd(w), *d); },
-		OpGlobalPos,
-		[](uintptr_t w, const float *p) { Wd(w)->SetGlobalPosition(cVector3f(p[0], p[1], p[2])); },
-		[](uintptr_t w, float dt) { Wd(w)->Update(dt); },
-		[](uintptr_t w, float dt, void *c) { Wd(w)->Draw(dt, (cGuiClipRegion*)c); },
-		[](uintptr_t w) { iWidget *p = Wd(w); hplDelete(p); },
-		[](uintptr_t p, uintptr_t w) { Wd(p)->AttachChild(Wd(w)); },
-		[](uintptr_t w) { Wd(w)->Init(); },
-		[](uintptr_t w) { tWidgetList &l = Wd(w)->GetChildren(); return l.empty() ? (uintptr_t)0 : (uintptr_t)l.front(); },
-		[](uintptr_t w) { Wd(w)->GetChildren().clear(); },
-		[](uintptr_t w, float *s) { s[0] = Wd(w)->GetSize().x; s[1] = Wd(w)->GetSize().y; },
-		[](uintptr_t w, const char *p, size_t n) { return Wd(w)->GetName() == tString(p, n); },
-		OpRootNew,
-		OpTooltipCreate,
-		OpTooltipMeasure,
-		OpTooltipApply,
-		[](uintptr_t f) { Wd(f)->SetEnabled(false); Wd(f)->SetVisible(false); },
-		OpKeyName,
-	};
-
-	//////////////////////////////////////////////////////////////////////////
 	// cGuiSet: text drawing, rendering and the trace hook
 	//////////////////////////////////////////////////////////////////////////
 
@@ -458,5 +345,6 @@ namespace hpl {
 	}
 
 	void OhplG2RegisterPopupOps();
-	static struct OhplG1Register { OhplG1Register() { ohpl_g1_set_engine(&gG1Engine); ohpl_g1_set_host(&gG1Host); ohpl_g1_set_ops(&gG1Ops); OhplG2RegisterPopupOps(); ohpl_g1_set_trace_fn(TraceDraw); } } gG1Register;
+	void OhplGwRegisterHost();
+	static struct OhplG1Register { OhplG1Register() { ohpl_g1_set_engine(&gG1Engine); ohpl_g1_set_host(&gG1Host); OhplG2RegisterPopupOps(); OhplGwRegisterHost(); ohpl_g1_set_trace_fn(TraceDraw); } } gG1Register;
 }

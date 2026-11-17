@@ -21,22 +21,19 @@
 #define HPL_WIDGET_DUMMY_H
 
 #include "gui/Widget.h"
+#include "gui/RustGuiGw.h"
 
 namespace hpl {
 
+	// Rust kind (rust/src/gui/gw_kinds.rs); it reports eWidgetType_Window like the original
 	class cWidgetDummy : public iWidget
 	{
 	public:
-		cWidgetDummy(cGuiSet *apSet, cGuiSkin *apSkin);
-		virtual ~cWidgetDummy();
+		cWidgetDummy(cGuiSet *apSet, cGuiSkin *apSkin) : iWidget(eWidgetType_Window, apSet, apSkin) { ohpl_gw_set_kind((uintptr_t)this, kOhplGwDummy, 0, 0); }
 
-		void SetEncloseChildren(bool abX);
-
-		void OnChildUpdate(iWidget* apChild);
-
-	protected:
-		bool mbEncloseChildren;
+		void SetEncloseChildren(bool abX){ ohpl_gw_dummy_set_enclose((uintptr_t)this, abX); }
+		void OnChildUpdate(iWidget* apChild){}
 	};
 
 };
-#endif // HPL_WIDGET_H
+#endif // HPL_WIDGET_DUMMY_H

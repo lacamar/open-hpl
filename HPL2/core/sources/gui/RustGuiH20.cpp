@@ -32,15 +32,15 @@ namespace hpl {
 		static tText Text() { return (tText)&OhplH20Access::DrawDefaultText; }
 		typedef void (iWidget::*tTextCol)(const tWString&, const cVector3f&, eFontAlign, const cColor&);
 		static tTextCol TextCol() { return (tTextCol)&OhplH20Access::DrawDefaultText; }
-		static cColor FontColor(iWidget* apW) { return apW->*(&OhplH20Access::mDefaultFontColor); }
+		static cColor FontColor(iWidget* apW) { return apW->GetDefaultFontColor(); }
 		static tText Highlight() { return &OhplH20Access::DrawDefaultTextHighlight; }
-		static cGuiSet* Set(iWidget* apW) { return apW->*(&OhplH20Access::mpSet); }
-		static cGuiSkin* Skin(iWidget* apW) { return apW->*(&OhplH20Access::mpSkin); }
-		static cVector2f FontSize(iWidget* apW) { return apW->*(&OhplH20Access::mvDefaultFontSize); }
-		static iFontData* Font(iWidget* apW) { return apW->*(&OhplH20Access::mpDefaultFontType); }
-		static void SetPointer(iWidget* apW, cGuiGfxElement* apGfx) { apW->*(&OhplH20Access::mpPointerGfx) = apGfx; }
-		static cColor HighlightColor(iWidget* apW) { return apW->*(&OhplH20Access::mDefaultFontHighlightColor); }
-		static cGuiSkinFont* SkinFont(iWidget* apW) { return apW->*(&OhplH20Access::mpDefaultFont); }
+		static cGuiSet* Set(iWidget* apW) { return apW->mpSet; }
+		static cGuiSkin* Skin(iWidget* apW) { return apW->mpSkin; }
+		static cVector2f FontSize(iWidget* apW) { return apW->GetDefaultFontSize(); }
+		static iFontData* Font(iWidget* apW) { return apW->GetDefaultFontType(); }
+		static void SetPointer(iWidget* apW, cGuiGfxElement* apGfx) { apW->SetPointerGfx(apGfx); }
+		static cColor HighlightColor(iWidget* apW) { return apW->GetDefaultFontHighlightColor(); }
+		static cGuiSkinFont* SkinFont(iWidget* apW) { return apW->GetDefaultSkinFont(); }
 		static void* State(iWidget* apW, int alKind)
 		{
 			if(alKind==0) return &((cWidgetTabLabel*)apW)->mH;

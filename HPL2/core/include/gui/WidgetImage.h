@@ -21,37 +21,20 @@
 #define HPL_WIDGET_IMAGE_H
 
 #include "gui/Widget.h"
+#include "gui/RustGuiGw.h"
 
 namespace hpl {
 
 	class cGuiSkinFont;
 
+	// Rust kind (rust/src/gui/gw_kinds.rs)
 	class cWidgetImage : public iWidget
 	{
 	public:
-		cWidgetImage(cGuiSet *apSet, cGuiSkin *apSkin);
-		virtual ~cWidgetImage();
+		cWidgetImage(cGuiSet *apSet, cGuiSkin *apSkin) : iWidget(eWidgetType_Image, apSet, apSkin) { ohpl_gw_set_kind((uintptr_t)this, kOhplGwImage, 0, 0); }
 
-		void SetImage(cGuiGfxElement *apGfx);
-		cGuiGfxElement* GetImage(){ return mpGfxImage;}
-
-	protected:
-		/////////////////////////
-		// Implemented functions
-		void OnLoadGraphics();
-		void OnChangeSize();
-		
-		void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion);
-
-		bool OnMouseMove(const cGuiMessageData& aData);
-		bool OnMouseDown(const cGuiMessageData& aData);
-		bool OnMouseUp(const cGuiMessageData& aData);
-		bool OnMouseEnter(const cGuiMessageData& aData);
-		bool OnMouseLeave(const cGuiMessageData& aData);
-
-		/////////////////////////
-		// Data
-		cGuiGfxElement *mpGfxImage;
+		void SetImage(cGuiGfxElement *apGfx){ ohpl_gw_image_set((uintptr_t)this, apGfx); }
+		cGuiGfxElement* GetImage(){ return ohpl_gw_image((uintptr_t)this); }
 	};
 
 };

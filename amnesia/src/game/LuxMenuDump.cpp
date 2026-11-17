@@ -13,7 +13,7 @@ namespace
 	{
 		int n = (int)ids.size();
 		ids[w] = n;
-		for(tWidgetListIt it = w->GetChildren().begin(); it != w->GetChildren().end(); ++it) Number(*it, ids);
+		{ tWidgetList l = w->GetChildren(); for(tWidgetListIt it = l.begin(); it != l.end(); ++it) Number(*it, ids); }
 	}
 
 	int Id(const tIds &ids, iWidget *w)
@@ -41,13 +41,14 @@ namespace
 		if(w->GetType() == eWidgetType_Image)
 			fprintf(f, " gfx=%d", (int)(static_cast<cWidgetImage*>(w)->GetImage() != NULL));
 		fprintf(f, "\n");
-		for(tWidgetListIt it = w->GetChildren().begin(); it != w->GetChildren().end(); ++it) Print(f, *it, ids, depth + 1);
+		{ tWidgetList l = w->GetChildren(); for(tWidgetListIt it = l.begin(); it != l.end(); ++it) Print(f, *it, ids, depth + 1); }
 	}
 
 	iWidget *Find(iWidget *w, eWidgetType type, const tWString *text, int &skip)
 	{
 		if(w->GetType() == type && (text == NULL || w->GetText() == *text) && skip-- == 0) return w;
-		for(tWidgetListIt it = w->GetChildren().begin(); it != w->GetChildren().end(); ++it)
+		tWidgetList l = w->GetChildren();
+		for(tWidgetListIt it = l.begin(); it != l.end(); ++it)
 			if(iWidget *r = Find(*it, type, text, skip)) return r;
 		return NULL;
 	}

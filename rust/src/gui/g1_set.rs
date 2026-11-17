@@ -1,9 +1,9 @@
 //! `cGuiSet`, `cGuiClipRegion` and `cGuiGlobalShortcut`, owned here. C++ holds only the set
 //! pointer (opaque class; plain fields live in [`Pub`] and are read by inline accessors).
-//! Widgets, popups, fonts and the graphics device stay C++ objects reached through [`Ops`].
+//! Widgets are the `gw` objects; popups, fonts and the graphics device stay C++ objects.
 //!
 //! Re-entrancy: widget code calls back into the set, so no `&mut Set` lives across a call to
-//! [`Ops`]; every access is a short raw-pointer scope.
+//! widgets; every access is a short raw-pointer scope.
 
 use std::ffi::c_void;
 use std::ptr;
@@ -13,10 +13,12 @@ use super::draw::{self, Frame, Host as DrawHost, Text};
 use super::g1_gfx::{self, Element};
 use super::g1_gui::{self, Gui};
 use super::g1_host::{self, Sink};
-use super::g1_ops::{Ops, W, ops};
 use super::g1_skin::Skin;
+use super::gw;
+use super::gw_kinds;
 use super::layout::{self, TooltipInput};
 use super::list::RenderList;
+use super::set::W;
 use super::set::{self, Core, Host, Msg, SetState};
 use crate::math::{Rect2f, Vector2f, Vector3f};
 use crate::types::{Color, Vector2l};
@@ -108,7 +110,7 @@ fn global_scale() -> f32 {
 }
 
 /// # Safety
-/// `s` is null or a live set; the borrow must end before any call into [`Ops`].
+/// `s` is null or a live set; the borrow must end before any call into a widget.
 unsafe fn st<'a>(s: *mut Set) -> Option<&'a mut Set> {
     // SAFETY: caller contract.
     unsafe { s.as_mut() }
@@ -130,80 +132,57 @@ fn with_or<R>(s: *mut Set, default: R, f: impl FnOnce(&mut Set) -> R) -> R {
 
 pub struct SetHost(*mut Set);
 
-fn o() -> Option<&'static Ops> {
-    ops()
-}
-
 impl Host for SetHost {
     fn is_visible(&mut self, w: W) -> bool {
-        // SAFETY: Ops contract; `w` is a live widget.
-        o().is_some_and(|o| unsafe { (o.is_visible)(w) })
+        gw::is_visible(w)
     }
     fn is_enabled(&mut self, w: W) -> bool {
-        // SAFETY: as above.
-        o().is_some_and(|o| unsafe { (o.is_enabled)(w) })
+        gw::is_enabled(w)
     }
     fn is_connected_to(&mut self, w: W, other: W) -> bool {
-        // SAFETY: as above.
-        o().is_some_and(|o| unsafe { (o.is_connected_to)(w, other) })
+        gw::is_connected_to(w, other, true)
     }
     fn point_is_inside(&mut self, w: W, p: [f32; 2]) -> bool {
-        // SAFETY: as above.
-        o().is_some_and(|o| unsafe { (o.point_is_inside)(w, p[0], p[1]) })
+        gw::point_is_inside(w, Vector2f { x: p[0], y: p[1] }, false)
     }
     fn mouse_is_over(&mut self, w: W) -> bool {
-        // SAFETY: as above.
-        o().is_some_and(|o| unsafe { (o.mouse_is_over)(w) })
+        gw::read(w, |g| g.base.mouse_over)
     }
     fn set_mouse_is_over(&mut self, w: W, v: bool) {
-        if let Some(o) = o() {
-            // SAFETY: as above.
-            unsafe { (o.set_mouse_is_over)(w, v) }
-        }
+        gw::with(w, |g| g.base.mouse_over = v);
     }
     fn process_message(&mut self, w: W, msg: i32, d: &Msg, skip_vis: bool, skip_en: bool) -> bool {
-        // SAFETY: as above.
-        o().is_some_and(|o| unsafe { (o.process_message)(w, msg, d, skip_vis, skip_en) })
+        gw::process_message(w, msg, d, skip_vis, skip_en)
     }
     fn get_focus(&mut self, w: W, d: &Msg) -> bool {
-        // SAFETY: as above.
-        o().is_some_and(|o| unsafe { (o.get_focus)(w, d) })
+        gw::get_focus(w, d)
     }
     fn tooltip_enabled(&mut self, w: W) -> bool {
-        // SAFETY: as above.
-        o().is_some_and(|o| unsafe { (o.tooltip_enabled)(w) })
+        gw::read(w, |g| g.tooltip_enabled)
     }
     fn has_focus_nav(&mut self, w: W) -> bool {
-        // SAFETY: as above.
-        o().is_some_and(|o| unsafe { (o.has_focus_nav)(w) })
+        gw::has_focus_navigation(w)
     }
     fn parent(&mut self, w: W) -> W {
-        // SAFETY: as above.
-        o().map_or(0, |o| unsafe { (o.parent)(w) })
+        gw::parent(w)
     }
     fn widget_set(&mut self, w: W) -> usize {
-        // SAFETY: as above.
-        o().map_or(0, |o| unsafe { (o.widget_set)(w) })
+        gw::set_of(w) as usize
     }
     fn pointer_gfx(&mut self, w: W) -> usize {
-        // SAFETY: as above.
-        o().map_or(0, |o| unsafe { (o.pointer_gfx)(w) })
+        gw::read(w, |g| g.pointer_gfx as usize)
     }
     fn focus_nav(&mut self, w: W, dir: i32) -> W {
-        // SAFETY: as above.
-        o().map_or(0, |o| unsafe { (o.focus_nav)(w, dir) })
+        gw::focus_navigation(w, dir)
     }
     fn global_key_listener(&mut self, w: W) -> bool {
-        // SAFETY: as above.
-        o().is_some_and(|o| unsafe { (o.global_key_listener)(w) })
+        gw::read(w, |g| g.global_key_listener)
     }
     fn global_ui_listener(&mut self, w: W) -> bool {
-        // SAFETY: as above.
-        o().is_some_and(|o| unsafe { (o.global_ui_listener)(w) })
+        gw::read(w, |g| g.global_ui_listener)
     }
     fn got_tab_focus(&mut self, w: W, d: &Msg) -> bool {
-        // SAFETY: as above.
-        o().is_some_and(|o| unsafe { (o.got_tab_focus)(w, d) })
+        gw::got_tab_focus(w, d)
     }
     fn is_valid(&mut self, w: W) -> bool {
         w == 0 || with(self.0, |s| s.widgets.contains(&w))
@@ -268,18 +247,18 @@ impl Host for SetHost {
         exec_shortcut(self.0, d)
     }
     fn global_pos(&mut self, w: W) -> [f32; 3] {
-        let mut p = [0.0; 3];
-        if let Some(o) = o() {
-            // SAFETY: as above.
-            unsafe { (o.global_pos)(w, p.as_mut_ptr()) };
-        }
-        p
+        let v = gw::global_position(w);
+        [v.x, v.y, v.z]
     }
     fn set_global_pos(&mut self, w: W, p: [f32; 3]) {
-        if let Some(o) = o() {
-            // SAFETY: as above.
-            unsafe { (o.set_global_pos)(w, p.as_ptr()) };
-        }
+        gw::set_global_position(
+            w,
+            Vector3f {
+                x: p[0],
+                y: p[1],
+                z: p[2],
+            },
+        );
     }
 }
 
@@ -320,11 +299,7 @@ fn exec_shortcut(set: *mut Set, d: &Msg) -> bool {
 }
 
 fn exec(w: W, msg: i32, bypass_visibility: bool, bypass_enabled: bool) -> bool {
-    w != 0
-        && o().is_some_and(|o| {
-            // SAFETY: Ops contract.
-            unsafe { (o.process_message)(w, msg, &Msg::zero(), bypass_visibility, bypass_enabled) }
-        })
+    w != 0 && gw::process_message(w, msg, &Msg::zero(), bypass_visibility, bypass_enabled)
 }
 
 fn new_clip() -> Box<Clip> {
@@ -464,18 +439,11 @@ pub unsafe fn create(
         false,
     );
     let p = Box::into_raw(set);
-    if let Some(o) = o() {
-        // SAFETY: Ops contract; the constructor reads the finished set through the facade.
-        let root = unsafe { (o.root_new)(p.cast()) };
-        with(p, |s| s.root = root);
-    }
+    let root = gw_kinds::root_new(p);
+    with(p, |s| s.root = root);
     with(p, |s| set_skin(s, skin));
-    if !skin.is_null()
-        && let Some(o) = o()
-    {
-        let mut t = [0; 3];
-        // SAFETY: Ops contract.
-        unsafe { (o.tooltip_create)(p.cast(), &mut t) };
+    if !skin.is_null() {
+        let t = gw_kinds::tooltip_create(p);
         with(p, |s| {
             s.tip_frame = t[0];
             s.tip_background = t[1];
@@ -509,18 +477,12 @@ pub unsafe fn free(s: *mut Set) {
             .collect()
     });
     for w in widgets {
-        if let Some(o) = o() {
-            // SAFETY: Ops contract; the set owned the widget.
-            unsafe { (o.delete)(w) };
-        }
+        gw_kinds::delete(w);
     }
     with(s, |s| s.widgets.clear());
     let root = with(s, |s| s.root);
-    if root != 0
-        && let Some(o) = o()
-    {
-        // SAFETY: as above.
-        unsafe { (o.delete)(root) };
+    if root != 0 {
+        gw_kinds::delete(root);
     }
     with(s, |s| s.p.destroying = false);
     clear_shortcuts(s);
@@ -566,10 +528,7 @@ pub(crate) fn update(s: *mut Set, dt: f32) {
     let mut it = host.list_begin();
     while !host.list_end(it) {
         let w = host.list_get(it);
-        if let Some(o) = o() {
-            // SAFETY: Ops contract.
-            unsafe { (o.update)(w, dt) };
-        }
+        gw::update(w, dt);
         it = host.list_next(it);
     }
     update_tooltip(s, dt);
@@ -586,19 +545,13 @@ pub(crate) fn draw_all(s: *mut Set, dt: f32) {
         return;
     }
     with(s, |s| s.current_clip = base);
-    if let Some(o) = o() {
-        // SAFETY: Ops contract; `base` stays pinned in the set.
-        unsafe { (o.draw)(root, dt, base.cast()) };
-    }
+    gw::draw(root, dt, base as usize);
     with(s, |s| s.current_clip = base);
 }
 
 fn tooltip_hide_if_visible(frame: W) {
-    if let Some(o) = o() {
-        // SAFETY: Ops contract.
-        if unsafe { (o.is_visible)(frame) } {
-            unsafe { (o.hide)(frame) };
-        }
+    if gw::is_visible(frame) {
+        gw_kinds::hide(frame);
     }
 }
 
@@ -614,17 +567,15 @@ fn update_tooltip(s: *mut Set, dt: f32) {
     }) else {
         return;
     };
-    let Some(o) = o() else { return };
     if skin.is_null() || frame == 0 {
         return;
     }
-    // SAFETY (all Ops calls below): Ops contract; widgets are live.
-    if tip == 0 || !unsafe { (o.is_visible)(tip) } {
+    if tip == 0 || !gw::is_visible(tip) {
         tooltip_hide_if_visible(frame);
         return;
     }
     if timer >= time_to_pop {
-        if unsafe { (o.is_visible)(frame) } {
+        if gw::is_visible(frame) {
             return;
         }
         let Some((label, bg, vsize, mouse, mouse_z, pointer)) = with(s, |s| {
@@ -639,9 +590,7 @@ fn update_tooltip(s: *mut Set, dt: f32) {
         }) else {
             return;
         };
-        let mut info = [0.0f32; 2];
-        let mut rows = 0i32;
-        unsafe { (o.tooltip_measure)(label, tip, vsize.x * 0.4, &mut info, &mut rows) };
+        let (info, rows) = gw_kinds::tooltip_measure(label, tip, vsize.x * 0.4);
         let mut pointer_size = Vector2f::default();
         // SAFETY: a set's pointer gfx is live.
         unsafe { g1_gfx::ohpl_g1_gfx_image_size(pointer, &mut pointer_size) };
@@ -666,7 +615,7 @@ fn update_tooltip(s: *mut Set, dt: f32) {
             t.background_size.x,
             t.background_size.y,
         ];
-        unsafe { (o.tooltip_apply)(label, frame, bg, tip, &args) };
+        gw_kinds::tooltip_apply(label, frame, bg, tip, &args);
     } else {
         with(s, |s| s.p.state.tooltip_timer += dt);
         tooltip_hide_if_visible(frame);
@@ -790,9 +739,7 @@ pub(crate) fn destroy_widget(s: *mut Set, w: W, destroy_children: bool) {
     if let Some(c) = core(s) {
         c.destroy_widget_prelude(w);
     }
-    let Some(o) = o() else { return };
-    // SAFETY (Ops calls): Ops contract; `w` is a live widget.
-    let has_children = unsafe { (o.first_child)(w) } != 0;
+    let has_children = gw_kinds::first_child(w) != 0;
     if destroy_children && has_children {
         with(s, |s| {
             if s.topmost_destroying == 0 {
@@ -802,7 +749,7 @@ pub(crate) fn destroy_widget(s: *mut Set, w: W, destroy_children: bool) {
             }
         });
         loop {
-            let child = unsafe { (o.first_child)(w) };
+            let child = gw_kinds::first_child(w);
             if child == 0 {
                 break;
             }
@@ -816,7 +763,7 @@ pub(crate) fn destroy_widget(s: *mut Set, w: W, destroy_children: bool) {
             *slot = 0;
         }
     });
-    unsafe { (o.delete)(w) };
+    gw_kinds::delete(w);
     with(s, |s| {
         if s.topmost_destroying == w {
             s.topmost_destroying = 0;
@@ -838,15 +785,11 @@ pub(crate) fn destroy_all_widgets(s: *mut Set) {
             .filter(|w| *w != 0)
             .collect()
     });
-    if let Some(o) = o() {
-        for w in widgets {
-            // SAFETY: Ops contract; the set owned the widget.
-            unsafe { (o.delete)(w) };
-        }
-        let root = with(s, |s| s.root);
-        // SAFETY: as above.
-        unsafe { (o.clear_children)(root) };
+    for w in widgets {
+        gw_kinds::delete(w);
     }
+    let root = with(s, |s| s.root);
+    gw_kinds::clear_children(root);
     with(s, |s| {
         s.widgets.clear();
         s.p.state.focused = 0;
@@ -854,10 +797,8 @@ pub(crate) fn destroy_all_widgets(s: *mut Set) {
         s.p.destroying = false;
         s.p.state.tooltip_widget = 0;
     });
-    if let Some(o) = o() {
-        let mut t = [0; 3];
-        // SAFETY: Ops contract.
-        unsafe { (o.tooltip_create)(s.cast(), &mut t) };
+    {
+        let t = gw_kinds::tooltip_create(s);
         with(s, |s| {
             s.tip_frame = t[0];
             s.tip_background = t[1];
@@ -994,13 +935,8 @@ pub unsafe extern "C" fn ohpl_g1_set_add_widget(s: *mut Set, w: W, parent: W) {
         s.widgets.push(w);
         s.root
     });
-    if let Some(o) = o() {
-        // SAFETY: Ops contract.
-        unsafe {
-            (o.attach_child)(if parent != 0 { parent } else { root }, w);
-            (o.init)(w);
-        }
-    }
+    gw::attach_child(if parent != 0 { parent } else { root }, w);
+    gw::init(w);
 }
 
 /// # Safety
@@ -1021,11 +957,9 @@ pub unsafe extern "C" fn ohpl_g1_set_widget_from_name(
             .filter(|w| *w != 0)
             .collect()
     });
-    let Some(o) = o() else { return 0 };
     widgets
         .into_iter()
-        // SAFETY: Ops contract.
-        .find(|&w| unsafe { (o.name_eq)(w, name.as_ptr(), name.len()) })
+        .find(|&w| gw_kinds::name_eq(w, name))
         .unwrap_or(0)
 }
 
@@ -1271,24 +1205,20 @@ pub unsafe extern "C" fn ohpl_g1_set_draw_focus(obj: *mut c_void, _w: W, d: *con
     }) else {
         return true;
     };
-    let Some(o) = o() else { return true };
-    // SAFETY (Ops calls): Ops contract; the focused widget is live.
     if !(has
         && focused != 0
         && draw_focus
-        && (focused == default_nav || unsafe { (o.has_focus_nav)(focused) }))
+        && (focused == default_nav || gw::has_focus_navigation(focused)))
     {
         return true;
     }
     if let (false, Some(cb)) = (cb_obj.is_null(), cb) {
         unsafe { cb(cb_obj, focused, d) };
     } else {
-        let mut p = [0.0f32; 3];
-        let mut size = [0.0f32; 2];
-        unsafe {
-            (o.global_pos)(focused, p.as_mut_ptr());
-            (o.size)(focused, size.as_mut_ptr());
-        }
+        let g = gw::global_position(focused);
+        let sz = gw::size(focused);
+        let p = [g.x, g.y, g.z];
+        let size = [sz.x, sz.y];
         let pos = Vector3f {
             x: p[0],
             y: p[1],
@@ -1483,12 +1413,13 @@ pub unsafe extern "C" fn ohpl_g1_shortcut_to_string(
     let Some(c) = (unsafe { c.as_ref() }) else {
         return;
     };
-    let Some(o) = o() else { return };
+    let Some(h) = super::gw_host::host() else {
+        return;
+    };
     if c.widget == 0 {
         return;
     }
-    // SAFETY: Ops contract.
-    let set = unsafe { (o.widget_set)(c.widget) } as *mut Set;
+    let set = gw::set_of(c.widget);
     // SAFETY: the widget's set is live.
     let input = with_or(set, ptr::null_mut(), |s| unsafe {
         g1_gui::ohpl_g1_gui_input(s.gui)
@@ -1501,8 +1432,8 @@ pub unsafe extern "C" fn ohpl_g1_shortcut_to_string(
     }
     let name = |modifier: bool, k: i32| -> Vec<u8> {
         let mut out: Vec<u8> = Vec::new();
-        // SAFETY: Ops contract.
-        unsafe { (o.key_name)(input, modifier, k, ptr::from_mut(&mut out).cast(), push) };
+        // SAFETY: host contract.
+        unsafe { (h.key_name)(input, modifier, k, ptr::from_mut(&mut out).cast(), push) };
         out
     };
     let mut text: Vec<u8> = Vec::new();
@@ -1682,4 +1613,36 @@ pub(crate) fn draw_gfx_default(
 pub(crate) fn set_info(s: *mut Set) -> ([f32; 2], [f32; 2], bool) {
     let r = virtual_rect(s);
     ([r[0], r[1]], [r[2], r[3]], with(s, |s| s.p.is_3d))
+}
+
+pub(crate) fn set_widgets_need_sorting(s: *mut Set) {
+    with(s, |s| s.p.sort_widgets = true);
+}
+
+pub(crate) fn set_gui_rust(s: *mut Set) -> *mut Gui {
+    with_or(s, ptr::null_mut(), |s| s.gui)
+}
+
+pub(crate) fn is_destroying(s: *mut Set) -> bool {
+    with(s, |s| s.p.destroying)
+}
+
+pub(crate) fn tooltip_widget(s: *mut Set) -> W {
+    with(s, |s| s.p.state.tooltip_widget)
+}
+
+pub(crate) fn set_tooltip_widget(s: *mut Set, w: W) {
+    with(s, |s| s.p.state.tooltip_widget = w);
+}
+
+pub(crate) fn focused_widget(s: *mut Set) -> W {
+    with(s, |s| s.p.state.focused)
+}
+
+pub(crate) fn attention_widget(s: *mut Set) -> W {
+    with(s, |s| s.p.state.attention)
+}
+
+pub(crate) fn set_draw_offset(s: *mut Set, p: Vector3f) {
+    with(s, |s| s.p.draw_offset = p);
 }

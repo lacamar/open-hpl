@@ -117,7 +117,7 @@ namespace hpl {
 	{
 		cGuiGlobalShortcut* pShortcut = iWidget::AddShortcut(alKeyModifiers, aKey, eGuiMessage_ButtonPressed, true, false);
 
-		tWString sAdd = cString::To16Char(mvShortcuts.back()->ToString());
+		tWString sAdd = cString::To16Char(pShortcut->ToString());
 		tWString sCur = msShortcutText;
 		size_t lLen = ohpl_w3_join_shortcut(sCur.data(), sCur.size(), sAdd.data(), sAdd.size(), NULL, 0);
 		msShortcutText.assign(lLen, _W('\0'));
@@ -132,9 +132,9 @@ namespace hpl {
 
 	float cWidgetMenuItem::GetTextLength()
 	{
-		const cVector2f& vFontSize = mpDefaultFont->mvSize;
-		return mpDefaultFontType->GetLength(vFontSize, msText.c_str()) + 
-			mpDefaultFontType->GetLength(vFontSize, msShortcutText.c_str());
+		const cVector2f& vFontSize = GetDefaultSkinFont()->mvSize;
+		return GetDefaultFontType()->GetLength(vFontSize, GetText().c_str()) +
+			GetDefaultFontType()->GetLength(vFontSize, msShortcutText.c_str());
 	}
 
 	//----------------------------------------------------------------

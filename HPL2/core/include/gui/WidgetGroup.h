@@ -21,49 +21,24 @@
 #define HPL_WIDGET_GROUP_H
 
 #include "gui/Widget.h"
-
+#include "gui/RustGuiGw.h"
 
 namespace hpl {
 
 	class cWidgetLabel;
 	class cGuiGfxElement;
 
+	// Rust kind (rust/src/gui/gw_kinds.rs)
 	class cWidgetGroup : public iWidget
 	{
 	public:
-		cWidgetGroup(cGuiSet* apSet, cGuiSkin* apSkin);
-		~cWidgetGroup();
+		cWidgetGroup(cGuiSet* apSet, cGuiSkin *apSkin) : iWidget(eWidgetType_Group, apSet, apSkin) { ohpl_gw_set_kind((uintptr_t)this, kOhplGwGroup, 0, 0); }
 
-		void SetHeaderText(const tWString& asText);
-		const tWString& GetHeaderText();
+		void SetHeaderText(const tWString& asText){ SetText(asText); }
+		tWString GetHeaderText(){ size_t n; const uint32_t* p = ohpl_gw_group_header((uintptr_t)this, &n); return tWString((const wchar_t*)p, n); }
 
-		void SetDefaultFontSize(const cVector2f& avSize);
-	protected:
-		/////////////////////////////
-		// Implemented functions
-		void OnInit();
-		void OnLoadGraphics();
-
-		void OnChangeText();
-
-		void OnDraw(float afTimeStep, cGuiClipRegion* apClipRegion);
-		void OnDrawAfterClip(float afTimeStep, cGuiClipRegion *apClipRegion);
-
-		/////////////////////////////
-		// Data
-
-		cWidgetLabel *mpHeader;
-		cVector2f mvHeaderSize;
-
-		cGuiGfxElement *mpGfxBackground;
-		
-		cGuiGfxElement *mvGfxBorders[4];
-		cGuiGfxElement *mvGfxCorners[4];
-
-		float mfHeaderOffset;
-		bool mbHeaderBreaksUpperBorder;
+		void SetDefaultFontSize(const cVector2f& avSize){ ohpl_gw_set_font_size((uintptr_t)this, avSize.x, avSize.y); }
 	};
+
 };
-
-
 #endif // HPL_WIDGET_GROUP_H

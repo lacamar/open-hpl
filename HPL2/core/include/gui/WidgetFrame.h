@@ -21,84 +21,33 @@
 #define HPL_WIDGET_FRAME_H
 
 #include "gui/Widget.h"
+#include "gui/RustGuiGw.h"
 
 namespace hpl {
 
 	class cWidgetSlider;
 	class cGuiSkinFont;
 
+	// Rust kind (rust/src/gui/gw_kinds.rs)
 	class cWidgetFrame : public iWidget
 	{
 	public:
-		cWidgetFrame(cGuiSet *apSet, cGuiSkin *apSkin, bool abHScrollBar=false, bool abVScrollBar=false);
-		virtual ~cWidgetFrame();
+		cWidgetFrame(cGuiSet *apSet, cGuiSkin *apSkin, bool abHScrollBar=false, bool abVScrollBar=false)
+			: iWidget(eWidgetType_Frame, apSet, apSkin) { ohpl_gw_set_kind((uintptr_t)this, kOhplGwFrame, abHScrollBar, abVScrollBar); }
 
-		void SetDrawFrame(bool abX){ mbDrawFrame = abX;}
-		bool GetDrawFrame(){ return mbDrawFrame;}
-		
-		void SetDrawBackground(bool abX){mbDrawBackground = abX;}
-		bool GetDrawBackground(){ return mbDrawBackground;}
-		
-		void SetBackgroundZ(float afZ){mfBackgroundZ = afZ;}
-		float GetBackgroundZ(){ return mfBackgroundZ;}
+		void SetDrawFrame(bool abX){ ohpl_gw_frame_set_draw_frame((uintptr_t)this, abX); }
+		bool GetDrawFrame(){ return ohpl_gw_frame_draw_frame((uintptr_t)this); }
 
-		void SetBackGroundColor(const cColor &aColor){ mBackGroundColor = aColor;}
-		const cColor& GetBackGroundColor(){ return mBackGroundColor;}
+		void SetDrawBackground(bool abX){ ohpl_gw_frame_set_draw_bg((uintptr_t)this, abX); }
+		bool GetDrawBackground(){ return ohpl_gw_frame_draw_bg((uintptr_t)this); }
 
-		void OnAttachChild(iWidget* apChild);
-		void OnRemoveChild(iWidget* apChild);
+		void SetBackgroundZ(float afZ){ ohpl_gw_frame_set_bg_z((uintptr_t)this, afZ); }
+		float GetBackgroundZ(){ return ohpl_gw_frame_bg_z((uintptr_t)this); }
 
-		void ScrollToPosition(const cVector2f& avPos);
-		
-	protected:
-		/////////////////////////
-		// Own functions
-		bool OnSliderMove(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(OnSliderMove);
+		void SetBackGroundColor(const cColor &aColor){ ohpl_gw_frame_set_bg_color((uintptr_t)this, &aColor); }
+		const cColor& GetBackGroundColor(){ return *ohpl_gw_frame_bg_color((uintptr_t)this); }
 
-		/////////////////////////
-		// Implemented functions
-		void OnLoadGraphics();
-
-		void OnInit();
-		void OnChangeSize();
-
-		void OnChildUpdate(iWidget* apChild);
-		void OnUpdate(float afTimeStep);
-		
-		void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion);
-		void OnDrawAfterClip(float afTimeStep, cGuiClipRegion *apClipRegion);
-
-		bool OnMouseMove(const cGuiMessageData& aData);
-		bool OnMouseDown(const cGuiMessageData& aData);
-		bool OnMouseUp(const cGuiMessageData& aData);
-		bool OnMouseEnter(const cGuiMessageData& aData);
-		bool OnMouseLeave(const cGuiMessageData& aData);
-
-		/////////////////////////
-		// Data
-		bool mbAutoScroll;
-		bool mbHScrollBar, mbVScrollBar;
-		bool mbDrawFrame;
-		bool mbDrawBackground;
-		float mfBackgroundZ;
-		cColor mBackGroundColor;
-
-		cGuiGfxElement *mpGfxBackground;
-		
-		cGuiGfxElement *mvGfxBorders[4];
-		cGuiGfxElement *mvGfxCorners[4];
-
-		cVector3f mvMinWidgetCoord;
-		cVector3f mvMaxWidgetCoord;
-
-		cWidgetSlider* mpHSlider;
-		cWidgetSlider* mpVSlider;
-		
-		bool mbScrollBarsNeedUpdate;
-		bool mbScrollUpdated;
-
-		cVector2f mvAutoScrollMargin;
+		void ScrollToPosition(const cVector2f& avPos){ ohpl_gw_frame_scroll_to((uintptr_t)this, avPos.x, avPos.y); }
 	};
 
 };

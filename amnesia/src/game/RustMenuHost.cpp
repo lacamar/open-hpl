@@ -683,7 +683,7 @@ static void DumpWidget(FILE* apOut, iWidget* apWidget, int alDepth, std::map<iWi
 		fprintf(apOut, " align=%d wrap=%d", (int)pLabel->GetTextAlign(), pLabel->GetWordWrap());
 	fprintf(apOut, "\n");
 
-	tWidgetList& lstChildren = apWidget->GetChildren();
+	tWidgetList lstChildren = apWidget->GetChildren();
 	for(tWidgetListIt it = lstChildren.begin(); it != lstChildren.end(); ++it)
 		DumpWidget(apOut, *it, alDepth+1, amIds);
 }
@@ -692,7 +692,7 @@ static void NumberWidgets(iWidget* apWidget, std::map<iWidget*,int>& amIds)
 {
 	int lId = (int)amIds.size();
 	amIds[apWidget] = lId;
-	tWidgetList& lstChildren = apWidget->GetChildren();
+	tWidgetList lstChildren = apWidget->GetChildren();
 	for(tWidgetListIt it = lstChildren.begin(); it != lstChildren.end(); ++it)
 		NumberWidgets(*it, amIds);
 }

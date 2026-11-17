@@ -51,96 +51,6 @@ namespace hpl {
 
 	// Construction of C++ widgets and popups; the set itself is Rust-owned (rust/src/gui/g1_set.rs).
 
-	cWidgetWindow* cGuiSet::CreateWidgetWindow(	tWidgetWindowButtonFlag alFlags,
-												const cVector3f &avLocalPos,
-												const cVector2f &avSize,
-												const tWString &asText,
-												iWidget *apParent,
-												const tString& asName)
-	{
-		cWidgetWindow *pWindow = hplNew( cWidgetWindow, (this,GetSkin(), alFlags) );
-		pWindow->SetPosition(avLocalPos);
-		pWindow->SetSize(avSize);
-		pWindow->SetText(asText);
-		pWindow->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pWindow, (uintptr_t)apParent);
-
-		ohpl_g1_set_add_window(this, (uintptr_t)pWindow);
-
-		return pWindow;
-	}
-
-	cWidgetFrame* cGuiSet::CreateWidgetFrame(	const cVector3f &avLocalPos,
-												const cVector2f &avSize,
-												bool abDrawFrame,
-												iWidget *apParent,
-												bool abHScrollBar, bool abVScrollBar,
-												const tString& asName)
-	{
-		cWidgetFrame *pFrame = hplNew( cWidgetFrame, (this,GetSkin(), abHScrollBar, abVScrollBar) );
-		pFrame->SetPosition(avLocalPos);
-		pFrame->SetSize(avSize);
-		pFrame->SetDrawFrame(abDrawFrame);
-		pFrame->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pFrame, (uintptr_t)apParent);
-		return pFrame;
-	}
-
-	cWidgetButton* cGuiSet::CreateWidgetButton(	const cVector3f &avLocalPos,
-												const cVector2f &avSize,
-												const tWString &asText,
-												iWidget *apParent,
-												bool abToggleable,
-												const tString& asName)
-	{
-		cWidgetButton *pButton = hplNew( cWidgetButton, (this,GetSkin()) );
-		pButton->SetPosition(avLocalPos);
-		pButton->SetSize(avSize);
-		pButton->SetText(asText);
-		pButton->SetName(asName);
-		pButton->SetToggleable(abToggleable);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pButton, (uintptr_t)apParent);
-		return pButton;
-	}
-
-	cWidgetLabel* cGuiSet::CreateWidgetLabel(	const cVector3f &avLocalPos,
-												const cVector2f &avSize,
-												const tWString &asText,
-												iWidget *apParent,
-												const tString& asName)
-	{
-		cWidgetLabel *pLabel = hplNew( cWidgetLabel, (this,GetSkin()) );
-		pLabel->SetPosition(avLocalPos);
-		pLabel->SetSize(avSize);
-		pLabel->SetText(asText);
-		pLabel->SetName(asName);
-
-		if(avSize == -1)
-		{
-			pLabel->SetAutogenerateSize(true);
-			pLabel->SetAutogenerateSize(false);
-		}
-
-		ohpl_g1_set_add_widget(this, (uintptr_t)pLabel, (uintptr_t)apParent);
-		return pLabel;
-	}
-
-	cWidgetSlider* cGuiSet::CreateWidgetSlider(	eWidgetSliderOrientation aOrientation,
-												const cVector3f &avLocalPos,
-												const cVector2f &avSize,
-												int alMaxValue,
-                                                iWidget *apParent,
-												const tString& asName)
-	{
-		cWidgetSlider *pSlider = hplNew( cWidgetSlider, (this,GetSkin(),aOrientation) );
-		pSlider->SetPosition(avLocalPos);
-		pSlider->SetSize(avSize);
-		pSlider->SetMaxValue(alMaxValue);
-		pSlider->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pSlider, (uintptr_t)apParent);
-		return pSlider;
-	}
-
 	cWidgetTextBox* cGuiSet::CreateWidgetTextBox( const cVector3f &avLocalPos,
 												  const cVector2f &avSize,
 												  const tWString &asText,
@@ -161,21 +71,6 @@ namespace hpl {
 		return pTextBox;
 	}
 
-	cWidgetCheckBox* cGuiSet::CreateWidgetCheckBox(	const cVector3f &avLocalPos,
-													const cVector2f &avSize,
-													const tWString &asText,
-													iWidget *apParent,
-													const tString& asName)
-	{
-		cWidgetCheckBox *pCheckBox = hplNew( cWidgetCheckBox, (this,GetSkin()) );
-		pCheckBox->SetPosition(avLocalPos);
-		pCheckBox->SetSize(avSize);
-		pCheckBox->SetText(asText);
-		pCheckBox->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pCheckBox, (uintptr_t)apParent);
-		return pCheckBox;
-	}
-
 	cWidgetImage* cGuiSet::CreateWidgetImage(const tString &asFile,
 											const cVector3f &avLocalPos,
 											const cVector2f &avSize,
@@ -184,36 +79,20 @@ namespace hpl {
 											iWidget *apParent,
 											const tString& asName)
 	{
-		cWidgetImage *pImage = hplNew( cWidgetImage, (this,GetSkin()) );
 		cGuiGfxElement *pGfx = NULL;
 		if(asFile != "")
 		{
 			if(abAnimate)
-			{
 				pGfx = GetGui()->CreateGfxImageBuffer(asFile,aMaterial,true);
-			}
 			else
-			{
 				pGfx = GetGui()->CreateGfxImage(asFile,aMaterial);
-			}
 		}
-		pImage->SetPosition(avLocalPos);
 
+		cVector2f vSize = avSize;
 		if(pGfx && avSize.x <0)
-		{
-			pImage->SetSize(pGfx->GetImageSize());
-		}
-		else
-		{
-			pImage->SetSize(avSize);
-		}
+			vSize = pGfx->GetImageSize();
 
-		pImage->SetImage(pGfx);
-
-		pImage->SetName(asName);
-
-		ohpl_g1_set_add_widget(this, (uintptr_t)pImage, (uintptr_t)apParent);
-		return pImage;
+		return (cWidgetImage*)ohpl_gw_create(this, kOhplGwImage, &avLocalPos, &vSize, NULL, 0, (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0, pGfx);
 	}
 
 	cWidgetListBox* cGuiSet::CreateWidgetListBox(const cVector3f &avLocalPos,
@@ -344,32 +223,6 @@ namespace hpl {
 		pFrame->SetVerticalScrollEnabled(abAllowVScroll);
 		ohpl_g1_set_add_widget(this, (uintptr_t)pFrame, (uintptr_t)apParent);
 		return pFrame;
-	}
-
-	cWidgetGroup* cGuiSet::CreateWidgetGroup(const cVector3f &avLocalPos,
-												const cVector2f &avSize,
-												const tWString &asText,
-												iWidget *apParent,
-												const tString& asName)
-	{
-		cWidgetGroup* pGroup = hplNew( cWidgetGroup, (this,GetSkin()) );
-		pGroup->SetPosition(avLocalPos);
-		pGroup->SetSize(avSize);
-		pGroup->SetText(asText);
-		pGroup->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pGroup, (uintptr_t)apParent);
-		return pGroup;
-	}
-
-	cWidgetDummy* cGuiSet::CreateWidgetDummy(const cVector3f &avLocalPos,
-												iWidget* apParent,
-												const tString &asName)
-	{
-		cWidgetDummy* pDummy = hplNew( cWidgetDummy, (this,GetSkin()) );
-		pDummy->SetPosition(avLocalPos);
-		pDummy->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pDummy, (uintptr_t)apParent);
-		return pDummy;
 	}
 
 	//-----------------------------------------------------------------------
