@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.4.2
+Version:        1.4.3
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,11 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Tue Nov 17 2026 lacamar <lchlnm@pm.me> - 1.4.3-1
+- GUI core and popups in Rust
+- Sound in Rust
+- AngelScript add-ons in Rust
+
 * Tue Nov 17 2026 lacamar <lchlnm@pm.me> - 1.4.2-1
 - Prop state and logic in Rust
 - SOMA agent in Rust
