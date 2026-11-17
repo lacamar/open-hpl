@@ -127,5 +127,24 @@ fn suite_replays_through_the_engine() {
         .output()
         .expect("run the suite");
     let want = fs::read_to_string(golden().join("suite-amnesia.out")).unwrap_or_default();
-    assert_eq!(String::from_utf8_lossy(&out.stdout), want);
+    // live counts follow when the GC destroys objects, which depends on heap addresses
+    let got: String = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(|l| match l.find("live ") {
+            Some(i) => {
+                let head = &l[..i + 5];
+                let rest = l[i + 5..].trim_start_matches("after ");
+                let tail = rest
+                    .trim_start_matches(['-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+                let after = if rest.len() != l[i + 5..].len() {
+                    "after "
+                } else {
+                    ""
+                };
+                format!("{head}{after}N{tail}\n")
+            }
+            None => format!("{l}\n"),
+        })
+        .collect();
+    assert_eq!(got, want);
 }

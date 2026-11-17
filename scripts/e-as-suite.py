@@ -4,6 +4,7 @@
   e-as-suite.py soma                         suite-soma.txt snippets through soma-play exec (needs OHPL_GAME=soma and soma-init)
 Compare with suite-amnesia.out / suite-soma.out next to the suites."""
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -14,7 +15,8 @@ GOLD = HERE.parent / "rust/tests/golden/E-as"
 
 def amnesia(binary):
     r = subprocess.run([binary], env=dict(os.environ, OPENHPL_AS_SUITE=str(GOLD / "suite-amnesia.as")), capture_output=True, text=True, timeout=120)
-    sys.stdout.write(r.stdout)
+    # live counts follow when the GC destroys objects, which depends on heap addresses
+    sys.stdout.write(re.sub(r"live (after )?-?\d+", r"live \1N", r.stdout))
     if r.returncode:
         sys.stdout.write(f"rc={r.returncode}\n{r.stderr[-400:]}")
 

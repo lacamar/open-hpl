@@ -7,8 +7,14 @@ unsafe extern "C" {
     fn snprintf(buf: *mut c_char, n: usize, fmt: *const c_char, ...) -> c_int;
 }
 
-/// What the engine and the natives hold as `string@`.
+/// What the engine and the natives hold as `string@`. The first two words are the data pointer and the
+/// length, the head of a libstdc++ `std::string`: the host also passes its own `std::string`s as
+/// `string &`, and every reader takes the bytes from those two words.
+#[repr(C)]
 pub struct ScriptString {
+    ptr: Cell<*const u8>,
+    len: Cell<usize>,
+    _local: [u64; 2],
     rc: Cell<i32>,
     buf: UnsafeCell<Vec<u8>>,
 }
@@ -16,25 +22,42 @@ pub struct ScriptString {
 impl ScriptString {
     /// A new string with one reference, owned by the caller.
     pub fn new_raw(b: &[u8]) -> *mut ScriptString {
-        Box::into_raw(Box::new(ScriptString {
+        let s = Box::new(ScriptString {
+            ptr: Cell::new(std::ptr::null()),
+            len: Cell::new(0),
+            _local: [0; 2],
             rc: Cell::new(1),
             buf: UnsafeCell::new(b.to_vec()),
-        }))
+        });
+        s.sync();
+        Box::into_raw(s)
     }
 
     pub fn add_ref(&self) {
         self.rc.set(self.rc.get().wrapping_add(1));
     }
 
+    fn sync(&self) {
+        // SAFETY: no other reference into the buffer is live while a mutation finishes.
+        let v = unsafe { &*self.buf.get() };
+        self.ptr.set(v.as_ptr());
+        self.len.set(v.len());
+    }
+
     pub fn bytes(&self) -> &[u8] {
-        // SAFETY: the buffer is only touched through `with`, which runs no script code, so no
-        // mutable access is live while a native reads.
-        unsafe { (*self.buf.get()).as_slice() }
+        let n = self.len.get();
+        if n == 0 {
+            return &[];
+        }
+        // SAFETY: `ptr`/`len` mirror the buffer (or a host `std::string`'s data and size).
+        unsafe { std::slice::from_raw_parts(self.ptr.get(), n) }
     }
 
     fn with<R>(&self, f: impl FnOnce(&mut Vec<u8>) -> R) -> R {
-        // SAFETY: as `bytes`; `f` is plain buffer code.
-        f(unsafe { &mut *self.buf.get() })
+        // SAFETY: the buffer is only touched here, `f` is plain buffer code.
+        let r = f(unsafe { &mut *self.buf.get() });
+        self.sync();
+        r
     }
 
     pub fn assign(&self, b: &[u8]) {
