@@ -60,6 +60,10 @@ static void Script(cLuxPlayer *p, int f)
 	if(f >= 190 && f < 215) p->SetLean(1.0f);
 	if(f >= 215 && f < 240) p->SetLean(-1.0f);
 	if(f == 240) p->SetLean(0.0f);
+	if(f == 241) p->GetHelperLantern()->SetDisabled(false);
+	if(f == 243) p->GetHands()->SetActiveHandObject("lantern");
+	if(f == 332) p->GetHands()->SetActiveHandObject("");
+	if(f == 420) p->GetHands()->SetActiveHandObject("lantern");
 	if(f == 242) p->GetHelperLantern()->SetActive(true, true, true, true);
 	if(f == 245) p->DoAction(eLuxPlayerAction_Lantern, true);
 	if(f == 262) p->DoAction(eLuxPlayerAction_Lantern, true);
