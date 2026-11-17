@@ -96,7 +96,7 @@ impl<'a> E<'a> {
         if let Some(t) = before {
             t.call(op, a, &Res::default());
         }
-        let r = self.h.call(op, a);
+        let r = super::s8_direct::call(op, a).unwrap_or_else(|| self.h.call(op, a));
         if let (Some(t), None) = (self.tr, before) {
             t.call(op, a, &r);
         }

@@ -262,11 +262,6 @@ namespace
 	void HostString(size_t p, OhplS8dBytes f, void *c) { Bytes(f, c, *(const tString *)p); }
 	size_t HostIntern(const unsigned char *p, size_t n) { return (size_t)SomaIntern(Str(p, n)); }
 	size_t HostGfxElement(const OhplS8dGfx *g) { return (size_t)HostGfx(g); }
-	void HostGfxImageSize(size_t g, float *o)
-	{
-		cVector2f v = ((cGuiGfxElement *)g)->GetImageSize();
-		o[0] = v.x, o[1] = v.y;
-	}
 	void HostGfxName(size_t g, OhplS8dBytes f, void *c)
 	{
 		auto it = gmapGfxNames.find((cGuiGfxElement *)g);
@@ -297,22 +292,9 @@ namespace
 		for (const tWString &s : vRows)
 			Words(fn, c, s);
 	}
-	void HostDrawGfx(size_t set, size_t gfx, const OhplS8dDraw *d)
-	{
-		Set(set)->DrawGfx((cGuiGfxElement *)gfx, V3(d->pos), V2(d->size), Col(d->color), (eGuiMaterial)d->material, d->angle);
-	}
 	void HostDrawFont(size_t set, size_t font, const OhplS8dDraw *d)
 	{
 		Set(set)->DrawFont(WStr(d->text, d->text_n), (iFontData *)font, V3(d->pos), V2(d->size), Col(d->color), (eFontAlign)d->align);
-	}
-	size_t HostClipCurrent(size_t set) { return (size_t)Set(set)->GetCurrentClipRegion(); }
-	size_t HostClipChild(size_t parent, const float *pos, const float *size) { return (size_t)Clip(parent)->CreateChild(V3(pos), V2(size)); }
-	void HostClipSet(size_t set, size_t clip) { Set(set)->SetCurrentClipRegion(Clip(clip)); }
-	void HostSetInfo(size_t set, float *size, float *offset, bool *is3D)
-	{
-		cVector2f v = Set(set)->GetVirtualSize(), o = Set(set)->GetVirtualSizeOffset();
-		size[0] = v.x, size[1] = v.y, offset[0] = o.x, offset[1] = o.y;
-		*is3D = Set(set)->Is3D();
 	}
 	void HostScreenSize(float *f, int *i)
 	{
@@ -405,8 +387,8 @@ namespace
 		it->second->mbAttached = true;
 	}
 
-	const OhplS8dHost gHost = {HostString, HostIntern, HostGfxElement, HostGfxImageSize, HostGfxName, HostWhite, HostFont, HostFontName, HostFontLength, HostFontWrap,
-							   HostDrawGfx, HostDrawFont, HostClipCurrent, HostClipChild, HostClipSet, HostSetInfo, HostScreenSize, HostCreateSet, HostSetHudVirtual,
+	const OhplS8dHost gHost = {HostString, HostIntern, HostGfxElement, HostGfxName, HostWhite, HostFont, HostFontName, HostFontLength, HostFontWrap,
+							   HostDrawFont, HostScreenSize, HostCreateSet, HostSetHudVirtual,
 							   HostSetRender, HostWstr, HostArraySize, HostArrayAt, HostArrayResize, HostArrayPushWstring, HostArrayPushBool, HostArrayPushI32,
 							   HostActionSubs, HostTranslateButton, HostKeyName, HostStringDuration, HostCamTexCreate, HostCamTexDestroy, HostCamTexSettings,
 							   HostCamTexMatrix, HostCamTexAttach};

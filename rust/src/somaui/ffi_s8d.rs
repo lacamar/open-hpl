@@ -6,7 +6,11 @@ use super::imgui::State;
 use super::s8d::{self, GfxDesc, Host, ImGui, Op, Ptr, Timer};
 use super::s8d_hud;
 use super::s8d_text::{SubAction, parse_string};
+use crate::gui::g1_gfx::{self, Element};
+use crate::gui::g1_set::{self, Clip, Set};
+use crate::math::{Vector2f, Vector3f};
 use crate::somascript::s2_as::Engine;
+use crate::types::Color;
 use std::ffi::c_void;
 use std::sync::OnceLock;
 
@@ -42,7 +46,6 @@ pub struct OhplS8dHost {
     string: unsafe extern "C" fn(usize, Bytes, *mut c_void),
     intern: unsafe extern "C" fn(*const u8, usize) -> usize,
     gfx_element: unsafe extern "C" fn(*const OhplS8dGfx) -> usize,
-    gfx_image_size: unsafe extern "C" fn(usize, *mut f32),
     gfx_name: unsafe extern "C" fn(usize, Bytes, *mut c_void),
     white: unsafe extern "C" fn() -> usize,
     font: unsafe extern "C" fn(*const u8, usize) -> usize,
@@ -50,12 +53,7 @@ pub struct OhplS8dHost {
     font_length: unsafe extern "C" fn(usize, *const f32, *const u32, usize) -> f32,
     font_wrap:
         unsafe extern "C" fn(usize, f32, f32, *const f32, *const u32, usize, Words, *mut c_void),
-    draw_gfx: unsafe extern "C" fn(usize, usize, *const OhplS8dDraw),
     draw_font: unsafe extern "C" fn(usize, usize, *const OhplS8dDraw),
-    clip_current: unsafe extern "C" fn(usize) -> usize,
-    clip_child: unsafe extern "C" fn(usize, *const f32, *const f32) -> usize,
-    clip_set: unsafe extern "C" fn(usize, usize),
-    set_info: unsafe extern "C" fn(usize, *mut f32, *mut f32, *mut bool),
     screen_size: unsafe extern "C" fn(*mut f32, *mut i32),
     create_set: unsafe extern "C" fn(*const u8, usize) -> usize,
     set_hud_virtual: unsafe extern "C" fn(usize, *const f32, *const f32),
@@ -175,10 +173,10 @@ impl Host for CHost {
         unsafe { (t().gfx_element)(&raw const g) }
     }
     fn gfx_image_size(&self, gfx: Ptr) -> [f32; 2] {
-        let mut o = [0.0f32; 2];
-        // SAFETY: `o` holds two floats.
-        unsafe { (t().gfx_image_size)(gfx, o.as_mut_ptr()) };
-        o
+        let mut v = Vector2f::default();
+        // SAFETY: the script passes a live element.
+        unsafe { g1_gfx::ohpl_g1_gfx_image_size(gfx as *mut Element, &mut v) };
+        [v.x, v.y]
     }
     fn gfx_name(&self, gfx: Ptr) -> Vec<u8> {
         let mut v = Vec::new();
@@ -229,9 +227,27 @@ impl Host for CHost {
         rows
     }
     fn draw_gfx(&self, set: Ptr, gfx: Ptr, o: &Op) {
-        let d = draw_of(o);
-        // SAFETY: `d` is valid for the call.
-        unsafe { (t().draw_gfx)(set, gfx, &raw const d) }
+        g1_set::draw_gfx_traced(
+            set as *mut Set,
+            gfx as *mut Element,
+            Vector3f {
+                x: o.pos[0],
+                y: o.pos[1],
+                z: o.pos[2],
+            },
+            Vector2f {
+                x: o.size[0],
+                y: o.size[1],
+            },
+            Color {
+                r: o.color[0],
+                g: o.color[1],
+                b: o.color[2],
+                a: o.color[3],
+            },
+            o.material,
+            o.angle,
+        );
     }
     fn draw_font(&self, set: Ptr, font: Ptr, o: &Op) {
         let d = draw_of(o);
@@ -239,22 +255,28 @@ impl Host for CHost {
         unsafe { (t().draw_font)(set, font, &raw const d) }
     }
     fn clip_current(&self, set: Ptr) -> Ptr {
-        // SAFETY: plain host call.
-        unsafe { (t().clip_current)(set) }
+        g1_set::current_clip(set as *mut Set) as Ptr
     }
     fn clip_child(&self, parent: Ptr, pos: [f32; 3], size: [f32; 2]) -> Ptr {
-        // SAFETY: arrays are valid for the call.
-        unsafe { (t().clip_child)(parent, pos.as_ptr(), size.as_ptr()) }
+        let (pos, size) = (
+            Vector3f {
+                x: pos[0],
+                y: pos[1],
+                z: pos[2],
+            },
+            Vector2f {
+                x: size[0],
+                y: size[1],
+            },
+        );
+        // SAFETY: `parent` is a live clip region.
+        unsafe { g1_set::ohpl_g1_clip_create_child(parent as *mut Clip, &pos, &size) as Ptr }
     }
     fn clip_set(&self, set: Ptr, clip: Ptr) {
-        // SAFETY: plain host call.
-        unsafe { (t().clip_set)(set, clip) }
+        g1_set::set_current_clip(set as *mut Set, clip as *mut Clip);
     }
     fn set_info(&self, set: Ptr) -> ([f32; 2], [f32; 2], bool) {
-        let (mut s, mut o, mut b) = ([0.0f32; 2], [0.0f32; 2], false);
-        // SAFETY: out parameters are live.
-        unsafe { (t().set_info)(set, s.as_mut_ptr(), o.as_mut_ptr(), &raw mut b) };
-        (s, o, b)
+        g1_set::set_info(set as *mut Set)
     }
     fn screen_size(&self) -> ([f32; 2], [i32; 2]) {
         let (mut f, mut i) = ([0.0f32; 2], [0i32; 2]);

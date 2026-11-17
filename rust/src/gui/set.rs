@@ -99,6 +99,29 @@ impl Msg {
         self.put(28, modifier.to_ne_bytes());
     }
 
+    pub fn set_rel(&mut self, r: [f32; 2]) {
+        self.put(8, r[0].to_ne_bytes());
+        self.put(12, r[1].to_ne_bytes());
+    }
+
+    pub fn set_modifier(&mut self, m: i32) {
+        self.put(28, m.to_ne_bytes());
+    }
+
+    /// A whole `cKeyPress` (12 bytes) at `mKeyPress`.
+    pub fn set_key_press(&mut self, k: &[u8]) {
+        if let Some(d) = self.0.get_mut(20..20 + k.len()) {
+            d.copy_from_slice(k);
+        }
+    }
+
+    /// A whole `cGamepadInputData` (16 bytes) at `mGamepadInputData`.
+    pub fn set_gamepad(&mut self, g: &[u8]) {
+        if let Some(d) = self.0.get_mut(32..32 + g.len()) {
+            d.copy_from_slice(g);
+        }
+    }
+
     pub fn val(&self) -> i32 {
         i32::from_ne_bytes(self.word(16))
     }

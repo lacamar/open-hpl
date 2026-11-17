@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -23,8 +23,7 @@
 #include <list>
 #include "gui/GuiTypes.h"
 #include "graphics/GraphicsTypes.h"
-#include "gui/RustGuiH18.h"
-
+#include "gui/RustGuiG1.h"
 
 namespace hpl {
 
@@ -38,14 +37,14 @@ namespace hpl {
 
 	class cFrustum;
 	class iFontData;
-	
+
 	class cGui;
 	class cGuiSkin;
 	class iGuiMaterial;
 	class iGpuProgram;
 	class iGuiPopUp;
 	class iWidget;
-	
+
 	class cWidgetWindow;
 	class cWidgetFrame;
 	class cWidgetButton;
@@ -68,126 +67,90 @@ namespace hpl {
 
 	class cGuiPopUpMessageBox;
 	class cGuiPopUpFilePicker;
-	class cGuiPopUpColorPicker;	
+	class cGuiPopUpColorPicker;
 	class cGuiPopUpUIKeyboard;
 
 	//---------------------------------------------
-	
-	typedef std::list<iGuiPopUp*> tGuiPopUpList;
-	typedef tGuiPopUpList::iterator tGuiPopUpListIt;
-    
-	//---------------------------------------------
-	
+
 	struct OhplGuiGfxInfo;
+	class cGuiGfxElement;
 
-	class cGuiClipRegion;
-
-	//-----------------------------------------------
-		
-	typedef std::list<cGuiClipRegion*> tGuiClipRegionList;
-	typedef tGuiClipRegionList::iterator tGuiClipRegionListIt;
-	
+	// Rust-owned (rust/src/gui/g1_set.rs); `this` is the Rust allocation.
 	class cGuiClipRegion
 	{
 	public:
-		cGuiClipRegion() : mRect(0,0,-1,-1){}
-		~cGuiClipRegion();
-
-		void Clear();
-		cGuiClipRegion* CreateChild(const cVector3f &avPos, const cVector2f &avSize);
-
-		//tGuiRenderObjectSet m_setObjects;
-		cRect2f mRect;
-		
-		tGuiClipRegionList mlstChildren;
+		cGuiClipRegion* CreateChild(const cVector3f &avPos, const cVector2f &avSize){ return ohpl_g1_clip_create_child(this, &avPos, &avSize); }
+	private:
+		cGuiClipRegion();
 	};
 
-	//-----------------------------------------------
-
+	// Rust-owned, created by cGuiSet::AddGlobalShortcut.
 	class cGuiGlobalShortcut
 	{
 	public:
-		cGuiGlobalShortcut(int alKeyModifiers, eKey aKey, iWidget* apWidget, eGuiMessage aMessage, bool abBypassVisiblity, bool abBypassEnabled);
+		const cKeyPress& GetKey() { return *ohpl_g1_shortcut_key(this); }
+		bool IsEnabled() { return ohpl_g1_shortcut_enabled(this); }
+		void SetEnabled(bool abX) { ohpl_g1_shortcut_set_enabled(this, abX); }
 
-		const cKeyPress& GetKey() { return mKey; }
-
-		bool IsEnabled() { return mbEnabled; }
-		void SetEnabled(bool abX) { mbEnabled = abX; }
-
-		bool ProcessKeyPress(const cKeyPress& aKey);
-		bool Exec();
-
-		tString ToString();
-	protected:
-		bool mbEnabled;
-		bool mbBypassVisibility;
-		bool mbBypassEnabled;
-
-		cKeyPress mKey;
-		iWidget* mpWidget;
-		eGuiMessage mMessage;
+		bool ProcessKeyPress(const cKeyPress& aKey) { return ohpl_g1_shortcut_process_key_press(this, &aKey); }
+		bool Exec() { return ohpl_g1_shortcut_exec(this); }
+		tString ToString()
+		{
+			tString sText;
+			ohpl_g1_shortcut_to_string(this, [](void* c, const char* p, size_t n){ static_cast<tString*>(c)->assign(p, n); }, &sText);
+			return sText;
+		}
+	private:
+		cGuiGlobalShortcut();
 	};
-
-	typedef std::vector<cGuiGlobalShortcut*> tShortcutVec;
-	typedef tShortcutVec::iterator tShortcutVecIt;
-
-	typedef std::list<cGuiGlobalShortcut*> tShortcutList;
-	typedef tShortcutList::iterator tShortcutListIt;
 
 	extern void (*gfpOhplGuiTrace)(cGuiSet*, const cGuiGfxElement*, const tWString*, const cVector3f&, const cVector2f&, const cColor&, int);
 
-	//-----------------------------------------------
-	
+	// Rust-owned (rust/src/gui/g1_set.rs): plain fields are read through P(), the rest through
+	// the ohpl_g1_set_* ABI. Widget, popup and tooltip construction and rendering stay C++
+	// (GuiSetWidgets.cpp, RustGuiG1.cpp).
 	class cGuiSet
 	{
 	friend class iGuiPopUp;
 	public:
-		cGuiSet(const tString &asName, cGui *apGui,cGuiSkin *apSkin,
-				cResources *apResources, cGraphics* apGraphics,
-				cSound *apSound, cScene *apScene);
-		~cGuiSet();
+		void Update(float afTimeStep){ ohpl_g1_set_update(this, afTimeStep); }
+		void DrawAll(float afTimeStep){ ohpl_g1_set_draw_all(this, afTimeStep); }
 
-		////////////////////////////////////
-		// General
+		bool SendMessage(eGuiMessage aMessage, const cGuiMessageData& aData){ return ohpl_g1_set_send_message(this, aMessage, &aData); }
 
-		void Update(float afTimeStep);
+		cGuiGlobalShortcut* AddGlobalShortcut(int alKeyModifiers, eKey aKey,  iWidget* apWidget, eGuiMessage aMessage, bool abBypassVisibility=true, bool abBypassEnabled=true)
+		{ return ohpl_g1_set_add_global_shortcut(this, alKeyModifiers, aKey, (uintptr_t)apWidget, aMessage, abBypassVisibility, abBypassEnabled); }
+		void RemoveGlobalShortcut(cGuiGlobalShortcut* apShortcut){ ohpl_g1_set_remove_global_shortcut(this, apShortcut); }
+		void ClearGlobalShortcuts(){ ohpl_g1_set_clear_global_shortcuts(this); }
 
-		void DrawAll(float afTimeStep);
+		void DestroyAllWidgets(){ ohpl_g1_set_destroy_all_widgets(this); }
+		void ResetMouseOver(){ ohpl_g1_set_reset_mouse_over(this); }
 
-		bool SendMessage(eGuiMessage aMessage, const cGuiMessageData& aData);
-
-		cGuiGlobalShortcut* AddGlobalShortcut(int alKeyModifiers, eKey aKey,  iWidget* apWidget, eGuiMessage aMessage, bool abBypassVisibility=true, bool abBypassEnabled=true);
-		void RemoveGlobalShortcut(cGuiGlobalShortcut* apShortcut);
-
-		void ClearGlobalShortcuts();
-
-		void DestroyAllWidgets();
-
-		void ResetMouseOver();
-
-		////////////////////////////////////
-		// Rendering
 		void Render(cFrustum *apFrustum);
+		void ClearRenderObjects(){ ohpl_g1_set_clear_render_objects(this); }
 
-		void ClearRenderObjects();
+		void SetDrawOffset(const cVector3f& avOffset){ P().drawOffset = avOffset;}
 
-		void SetDrawOffset(const cVector3f& avOffset){ mvDrawOffset = avOffset;}
-		void SetCurrentClipRegion(cGuiClipRegion *apRegion){ mpCurrentClipRegion = apRegion;}
-		cGuiClipRegion* GetCurrentClipRegion(){ return mpCurrentClipRegion;}
-		cGuiClipRegion* GetBaseClipRegion(){ return &mBaseClipRegion;}
-		
-		void DrawGfx(	cGuiGfxElement* apGfx, 
-						const cVector3f &avPos, 
+		void SetCurrentClipRegion(cGuiClipRegion *apRegion){ ohpl_g1_set_set_current_clip(this, apRegion);}
+		cGuiClipRegion* GetCurrentClipRegion(){ return ohpl_g1_set_current_clip(this);}
+		cGuiClipRegion* GetBaseClipRegion(){ return ohpl_g1_set_base_clip(this);}
+
+		void DrawGfx(	cGuiGfxElement* apGfx,
+						const cVector3f &avPos,
 						const cVector2f &avSize=-1,
 						const cColor& aColor=cColor(1,1),
 						eGuiMaterial aMaterial = eGuiMaterial_LastEnum,
-						float afRotationAngle=0, 
-						bool abUseCustomPivot=false, const cVector3f& avCustomPivot=0);
-		
-		void DrawFont (	const tWString &asText, 
+						float afRotationAngle=0,
+						bool abUseCustomPivot=false, const cVector3f& avCustomPivot=0)
+		{
+			if(gfpOhplGuiTrace) gfpOhplGuiTrace(this, apGfx, NULL, avPos, avSize, aColor, (int)aMaterial);
+			ohpl_g1_set_draw_gfx(this, apGfx, &avPos, &avSize, &aColor, aMaterial, afRotationAngle, abUseCustomPivot ? &avCustomPivot : NULL);
+		}
+
+		void DrawFont (	const tWString &asText,
 						iFontData *apFont, const cVector3f &avPos,
 						const cVector2f &avSize, const cColor& aColor,
-						eFontAlign aAlign = eFontAlign_Left, 
+						eFontAlign aAlign = eFontAlign_Left,
 						eGuiMaterial aMaterial = eGuiMaterial_FontNormal);
 
 		void DrawFont (	iFontData *apFont, const cVector3f &avPos,
@@ -198,9 +161,7 @@ namespace hpl {
 		void DrawFont (	iFontData *apFont, const cVector3f &avPos,
 						const cVector2f &avSize, const cColor& aColor,
 						const wchar_t* fmt,...);
-		
-		////////////////////////////////////
-		// Widget Creation
+
 		cWidgetWindow* CreateWidgetWindow(	tWidgetWindowButtonFlag alFlags=eWidgetWindowButtonFlag_None,
 											const cVector3f &avLocalPos=0,
 											const cVector2f &avSize=0,
@@ -295,7 +256,7 @@ namespace hpl {
 												const tWString &asText=_W(""),
 												iWidget *apParent=NULL,
 												const tString& asName = "");
-		
+
 		cWidgetTab* CreateWidgetTab(const cVector3f &avLocalPos=0,
 												const cVector2f &avSize=0,
 												const tWString &asText=_W(""),
@@ -321,24 +282,20 @@ namespace hpl {
 												const tString& asName = "");
 
 
-		iWidget *GetWidgetFromName(const tString& asName);
+		iWidget *GetWidgetFromName(const tString& asName){ return (iWidget*)ohpl_g1_set_widget_from_name(this, asName.data(), asName.size()); }
+		void DestroyWidget(iWidget *apWidget, bool abDestroyChildren=false){ ohpl_g1_set_destroy_widget(this, (uintptr_t)apWidget, abDestroyChildren); }
+		bool IsValidWidget(iWidget *apWidget){ return ohpl_g1_set_is_valid_widget(this, (uintptr_t)apWidget); }
 
-		void DestroyWidget(iWidget *apWidget, bool abDestroyChildren=false);
-
-		bool IsValidWidget(iWidget *apWidget);
-
-		////////////////////////////////////
-		// Popup
 		cGuiPopUpMessageBox* CreatePopUpMessageBox(	const tWString& asLabel, const tWString& asText,
 													const tWString& asButton1, const tWString& asButton2,
 													void *apCallbackObject, tGuiCallbackFunc apCallback);
 
-		cGuiPopUpFilePicker* CreatePopUpSaveFilePicker( tWString &asFileName, const tWString &asCategory, 
+		cGuiPopUpFilePicker* CreatePopUpSaveFilePicker( tWString &asFileName, const tWString &asCategory,
 															 const tWString &asFilter, const tWString &asStartPath, bool abShowHidden,
 															void *apCallbackObject, tGuiCallbackFunc apCallback, const tWString& asStartFilename=_W(""));
 
-		cGuiPopUpFilePicker* CreatePopUpLoadFilePicker( tWStringVec &avFileList, bool abAddAllFilesFilter, 
-															 const tWString &asStartPath, bool abShowHidden, 
+		cGuiPopUpFilePicker* CreatePopUpLoadFilePicker( tWStringVec &avFileList, bool abAddAllFilesFilter,
+															 const tWString &asStartPath, bool abShowHidden,
 															 void *apCallbackObject, tGuiCallbackFunc apCallback);
 
 		cGuiPopUpColorPicker* CreatePopUpColorPicker(cColor* apDestColor, const cVector3f& avPos, void *apCallbackObject, tGuiCallbackFunc apCallback);
@@ -346,226 +303,120 @@ namespace hpl {
 		cGuiPopUpUIKeyboard* CreatePopUpUIKeyboard(cWidgetTextBox* apTarget);
 
 
-		void DestroyPopUp(iGuiPopUp *apPopUp);
+		void DestroyPopUp(iGuiPopUp *apPopUp){ ohpl_g1_set_destroy_popup(this, (uintptr_t)apPopUp); }
+		bool PopUpIsActive(){ return ohpl_g1_set_popup_is_active(this); }
+		void AddPopUpCount(int alX){ ohpl_g1_set_add_popup_count(this, alX); }
 
-		bool PopUpIsActive();
-
-		////////////////////////////////////
-		// Context Menu
 		void ShowContextMenu( cWidgetContextMenu* apMenu, const cVector3f& avPosition );
 
-		////////////////////////////////////
-		// Windows
-		void RemoveWindow(cWidgetWindow* apWin);
-		void SetLastWindowZ(float afX);
-		void SetWindowOnTop(cWidgetWindow* apWin);
+		void RemoveWindow(cWidgetWindow* apWin){ ohpl_g1_set_remove_window(this, (uintptr_t)apWin); }
+		void SetLastWindowZ(float afX){ ohpl_g1_set_set_last_window_z(this, afX); }
+		void SetWindowOnTop(cWidgetWindow* apWin){ ohpl_g1_set_set_window_on_top(this, (uintptr_t)apWin); }
 
-		////////////////////////////////////
-		// Properties
-		void SetActive(bool abX);
-		bool IsActive(){return mbActive;}
+		void SetActive(bool abX){ P().active = abX; }
+		bool IsActive(){return P().active;}
 
-		const tString& GetName() { return msName;}
+		tString GetName() { size_t n; const char* p = ohpl_g1_set_name(this, &n); return tString(p, n);}
 
-		cGui* GetGui(){ return mpGui;}
+		cGui* GetGui(){ return (cGui*)ohpl_g1_set_gui(this);}
 
-		void SetDrawMouse(bool abX);
-		bool GetDrawMouse(){ return mbDrawMouse;}
+		void SetDrawMouse(bool abX){ P().drawMouse = abX; }
+		bool GetDrawMouse(){ return P().drawMouse;}
+		void SetMouseZ(float afZ){ P().mouseZ = afZ;}
+		float GetMouseZ(){ return P().mouseZ;}
 
-		void SetMouseZ(float afZ){mfMouseZ = afZ;}
-		float GetMouseZ(){ return mfMouseZ;}
+		void SetMouseMovementEnabled(bool abX) { P().state.mouseMovement = abX; }
+		bool GetMouseMovementEnabled() { return P().state.mouseMovement; }
 
-		void SetMouseMovementEnabled(bool abX) { mS.mouseMovement = abX; }
-		bool GetMouseMovementEnabled() { return mS.mouseMovement; }
-
-		const cVector2f& GetMousePos(){ return mS.mousePos;}
+		const cVector2f& GetMousePos(){ return P().state.mousePos;}
 
 		void SetRootWidgetClips(bool abX);
 		bool GetRootWidgetClips();
 
-		void SetVirtualSize(const cVector2f& avSize, float afMinZ, float afMaxZ, const cVector2f& avOffset=0, bool abIgnoreGlobalScale=false);
-		const cVector2f& GetVirtualSize(){return mvVirtualSize;}
-		const cVector2f& GetVirtualSizeOffset(){return mvVirtualSizeOffset;}
+		void SetVirtualSize(const cVector2f& avSize, float afMinZ, float afMaxZ, const cVector2f& avOffset=0, bool abIgnoreGlobalScale=false)
+		{ ohpl_g1_set_set_virtual_size(this, &avSize, afMinZ, afMaxZ, &avOffset, abIgnoreGlobalScale); }
+		const cVector2f& GetVirtualSize(){return P().virtualSize;}
+		const cVector2f& GetVirtualSizeOffset(){return P().virtualOffset;}
 
-		static void SetGlobalGuiScale(float afScale){ mfGlobalGuiScale = afScale>0 ? afScale : 1.0f; }
-		static float GetGlobalGuiScale(){ return mfGlobalGuiScale; }
+		static void SetGlobalGuiScale(float afScale){ ohpl_g1_set_set_global_scale(afScale); }
+		static float GetGlobalGuiScale(){ return ohpl_g1_set_global_scale(); }
 
-		void SetFocusedWidget(iWidget* apWidget, bool abCheckForValidity=false);
-		iWidget* GetFocusedWidget(){return mS.focused;}
+		void SetFocusedWidget(iWidget* apWidget, bool abCheckForValidity=false){ ohpl_g1_set_set_focused(this, (uintptr_t)apWidget, abCheckForValidity); }
+		iWidget* GetFocusedWidget(){return P().state.focused;}
+		void PushFocusedWidget(){ ohpl_g1_set_push_focused(this); }
+		void PopFocusedWidget(){ ohpl_g1_set_pop_focused(this); }
 
-		void PushFocusedWidget();
-		void PopFocusedWidget();
+		void SetAttentionWidget(iWidget *apWidget, bool abClearFocus = true, bool abCheckForValidity = false){ ohpl_g1_set_set_attention(this, (uintptr_t)apWidget, abClearFocus, abCheckForValidity); }
+		iWidget* GetAttentionWidget(){ return P().state.attention;}
+		void PushAttentionWidget(){ ohpl_g1_set_push_attention(this); }
+		void PopAttentionWidget(bool abClearFocus=true){ ohpl_g1_set_pop_attention(this, abClearFocus); }
 
-		void SetAttentionWidget(iWidget *apWidget, bool abClearFocus = true, bool abCheckForValidity = false);
-		iWidget* GetAttentionWidget(){ return mS.attention;}
+		void SetIs3D(bool abX){ P().is3D = abX; }
+		bool Is3D(){ return P().is3D;}
 
-		void PushAttentionWidget();
-		void PopAttentionWidget(bool abClearFocus=true);
-		
-		void SetIs3D(bool abX);
-		bool Is3D(){ return mbIs3D;}
+		void SetRendersBeforePostEffects(bool abX){ P().rendersBeforePost = abX; }
+		bool RendersBeforePostEffects() { return P().rendersBeforePost; }
 
-		void SetRendersBeforePostEffects(bool abX);
-		bool RendersBeforePostEffects() { return mbRendersBeforePostEffects; }
+		int GetDrawPriority(){ return P().drawPrio;}
+		void SetDrawPriority(int alPrio){ P().drawPrio = alPrio;}
 
-		int GetDrawPriority(){ return mlDrawPrio;}
-		void SetDrawPriority(int alPrio){ mlDrawPrio = alPrio;}
+		void SetCurrentPointer(cGuiGfxElement *apGfx){ ohpl_g1_set_set_pointer(this, apGfx); }
+		cGuiGfxElement* GetCurrentPointer(){ return ohpl_g1_set_pointer(this);}
 
-		void SetCurrentPointer(cGuiGfxElement *apGfx);
-		cGuiGfxElement* GetCurrentPointer(){ return mpGfxCurrentPointer;}
+		void Set3DSize(const cVector3f& avSize){ P().size3D = avSize; }
+		const cVector3f& Get3DSize(){return P().size3D;}
 
-		void Set3DSize(const cVector3f& avSize);
-		const cVector3f& Get3DSize(){return mv3DSize;}
+		void SetCullBackface(bool abX){ P().cullBackface = abX;}
+		bool GetCullBackface(){ return P().cullBackface;}
 
-		void SetCullBackface(bool abX){ mbCullBackface = abX;}
-		bool GetCullBackface(){ return mbCullBackface;}
+		void SetFlipScreenY(bool abX){ P().flipY = abX;}
 
-		void SetFlipScreenY(bool abX){ mbFlipScreenY = abX;}
-		void SetPrograms(iGpuProgram *apTextured, iGpuProgram *apFlat){ mpPrograms[0] = apTextured; mpPrograms[1] = apFlat;}
+		void SetPrograms(iGpuProgram *apTextured, iGpuProgram *apFlat){ P().programs[0] = (uintptr_t)apTextured; P().programs[1] = (uintptr_t)apFlat;}
 
-		void Set3DTransform(const cMatrixf& a_mtxTransform);
-		const cMatrixf& Get3DTransform(){ return m_mtx3DTransform;}
+		void Set3DTransform(const cMatrixf& a_mtxTransform){ ohpl_g1_set_set_3d_transform(this, (const float*)&a_mtxTransform); }
+		const cMatrixf& Get3DTransform(){ return *(const cMatrixf*)P().mtx3D;}
 
 		bool HasFocus();
 
 		void PositionWidgetInsideBounds(iWidget* apWidget);
 
+		void SetSkin(cGuiSkin* apSkin){ ohpl_g1_set_set_skin(this, apSkin); }
+		cGuiSkin* GetSkin(){ return ohpl_g1_set_skin(this);}
 
-		void SetSkin(cGuiSkin* apSkin);
-		cGuiSkin* GetSkin(){ return mpSkin;}
+		cResources* GetResources(){ return (cResources*)ohpl_g1_set_resources(this);}
 
-		cResources* GetResources(){ return mpResources;}
+		bool IsDestroyingSet(){ return P().destroying;}
 
-		bool IsDestroyingSet(){ return mbDestroyingSet;}
+		void IncContextMenuZ() { ohpl_g1_set_add_context_menu_z(this, 5); }
+		void DecContextMenuZ() { ohpl_g1_set_add_context_menu_z(this, -5); }
 
-		void IncContextMenuZ() { mfContextMenuZ+=5; }
-		void DecContextMenuZ() { mfContextMenuZ-=5; }
+		float GetPopUpZ() { return ohpl_g1_set_popup_z(this); }
+		void IncPopUpZ(){ ohpl_g1_set_inc_popup_z(this, 0); }
 
-		float GetPopUpZ() { return mfLastPopUpZ; }
-		void IncPopUpZ();
+		void AddToTabOrder(iWidget* apWidget){ ohpl_g1_set_add_to_tab_order(this, (uintptr_t)apWidget); }
+		void ClearTabOrder(){ ohpl_g1_set_clear_tab_order(this); }
 
-		void AddToTabOrder(iWidget* apWidget);
-		void ClearTabOrder();
+		iWidget* GetToolTipWidget() { return P().state.tooltipWidget; }
+		void SetToolTipWidget(iWidget* apWidget) { P().state.tooltipWidget = apWidget; }
 
-		iWidget* GetToolTipWidget() { return mS.tooltipWidget; }
-		void SetToolTipWidget(iWidget* apWidget) { mS.tooltipWidget = apWidget; }
+		void SetWidgetsNeedSorting() { P().sortWidgets = true; }
 
-		void SetWidgetsNeedSorting() { mbSortWidgets = true; }
+		void SetDefaultFocusNavWidget(iWidget* apWidget, bool abCheckForValidity=false){ ohpl_g1_set_set_default_nav(this, (uintptr_t)apWidget, abCheckForValidity); }
+		iWidget* GetDefaultFocusNavWidget() { return P().state.defaultNav; }
+		void PushDefaultFocusNavWidget(){ ohpl_g1_set_push_default_nav(this); }
+		void PopDefaultFocusNavWidget(){ ohpl_g1_set_pop_default_nav(this); }
 
-		void SetDefaultFocusNavWidget(iWidget* apWidget, bool abCheckForValidity=false);
-		iWidget* GetDefaultFocusNavWidget() { return mS.defaultNav; }
+		void SetDrawFocus(bool abX)												{ P().drawFocus = abX; }
+		void SetFocusDrawCallback(void* apObject, tGuiCallbackFunc apCallback)	{ ohpl_g1_set_set_focus_draw_callback(this, apObject, apCallback); }
+		bool GetDrawFocus() { return P().drawFocus; }
 
-		void PushDefaultFocusNavWidget();
-		void PopDefaultFocusNavWidget();
-
-		void SetDrawFocus(bool abX)												{ mbDrawFocus = abX; }
-		void SetFocusDrawCallback(void* apObject, tGuiCallbackFunc apCallback)	{ mpFocusDrawObject = apObject; mpFocusDrawCallback = apCallback; }
-		
-		bool GetDrawFocus() { return mbDrawFocus; }
-
+		// iWidget members cGuiSet is a friend of; used by the widget ops in RustGuiG1.cpp
+		static void WidgetSetMouseIsOver(iWidget* apWidget, bool abX);
+		static bool WidgetGetFocus(iWidget* apWidget, const cGuiMessageData& aData);
+		static bool WidgetOnGotTabFocus(iWidget* apWidget, const cGuiMessageData& aData);
 	private:
-		void DrawTextFromCharArry(	const wchar_t* apString, iFontData *apFont,
-									const cVector2f& avSize, const cVector3f& avPosition,
-									const cColor& aColor, eGuiMaterial aMaterial,
-									eFontAlign aAlign);
-								
-
-		static void HostGfxInfo(void *apCtx, void *apGfx, OhplGuiGfxInfo *apOut);
-		static void HostGfxFlush(void *apCtx, void *apGfx);
-		static void* HostMaterial(void *apCtx, int alMaterial);
-		void RenderClipRegion();
-		void SetClipArea(iLowLevelGraphics *apLowLevel, cGuiClipRegion *apRegion);
-
-		void AddWidget(iWidget *apWidget,iWidget *apParent);
-
-		void FillRustHost(OhplH18Host& aHost);
-
-		bool DrawMouse(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(DrawMouse);
-
-		bool DrawFocus(iWidget* apWidget, const cGuiMessageData& aData);
-		kGuiCallbackDeclarationEnd(DrawFocus);
-
-		bool ExecShortcut(const cKeyPress& aKeyPress);
-
-		void UpdateToolTip(float afTimeStep);
-
-		void CreateToolTipWidgets();
-
-		OhplH18SetState mS;
-
-		cGui *mpGui;
-		cGuiSkin *mpSkin;
-
-		tString msName;
-
-		cResources *mpResources;
-		cGraphics* mpGraphics;
-		cSound *mpSound;
-		cScene *mpScene;
-
-		iWidget* mpWidgetRoot;
-		tWidgetList mlstWidgets;
-
-		void *mpRustRenderList;
-
-		int mlPopupCount;
-		float mfLastPopUpZ;
-
-
-		float mfContextMenuZ;
-
-		static float mfGlobalGuiScale;
-
-		cVector2f mvVirtualSize;
-		cVector2f mvVirtualSizeOffset;
-		float mfVirtualMinZ;
-		float mfVirtualMaxZ;
-
-		cVector3f mvDrawOffset;
-
-		bool mbCullBackface;
-		bool mbFlipScreenY = false;
-		iGpuProgram *mpPrograms[2] = {NULL, NULL};
-		bool mbIs3D;
-		bool mbRendersBeforePostEffects;
-		cVector3f mv3DSize;
-		cMatrixf m_mtx3DTransform;
-		int mlDrawPrio;
-		
-		bool mbActive;
-		bool mbDrawMouse;
-		float mfMouseZ;
-		cGuiGfxElement *mpGfxCurrentPointer;
-				
-
-		tGuiPopUpList mlstPopUps;
-
-		cGuiClipRegion mBaseClipRegion;
-		cGuiClipRegion* mpCurrentClipRegion;
-
-		tShortcutList mlstShortcuts;
-
-		bool mbSortWidgets;
-
-		///////////////////////////////////
-		// Tool tips
-		float mfToolTipTimeToPopUp;
-		bool mbToolTipUpdated;
-
-		cWidgetFrame* mpFrameToolTip;
-		cWidgetFrame* mpFrameBGToolTip;
-		cWidgetLabel* mpLabelToolTip;
-
-		bool mbDestroyingSet;
-
-		bool mbOldDestroyingSet;
-		iWidget* mpTopMostDestroyingWidget;
-
-		bool				mbDrawFocus;
-		void*				mpFocusDrawObject;
-		tGuiCallbackFunc	mpFocusDrawCallback;
+		OhplG1SetPub& P(){ return *(OhplG1SetPub*)this; }
+		cGuiSet();
 	};
-
 };
 #endif // HPL_GUI_SET_H
