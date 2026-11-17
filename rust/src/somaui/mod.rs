@@ -20,6 +20,7 @@ pub mod tonemap;
 
 mod ffi_s8;
 pub mod s8;
+mod s8_direct;
 #[cfg(test)]
 mod s8_tests;
 mod s8_trace;

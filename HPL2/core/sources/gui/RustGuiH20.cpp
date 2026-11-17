@@ -252,7 +252,7 @@ namespace hpl {
 			return 0;
 		}
 		case kOhplH20Op_GFX_RECT:
-			return (uintptr_t)cGui::mpGfxRect;
+			return (uintptr_t)cGui::GetGfxRect();
 		case kOhplH20Op_CREATE_LABEL:
 		{
 			iWidget* pParent = W(a->w);

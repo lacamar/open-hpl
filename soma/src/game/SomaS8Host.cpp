@@ -137,26 +137,11 @@ namespace
 		switch (c->op)
 		{
 		case kS8_SetNew: c->u[0] = (uint64_t)pGui->CreateSet(Str(a[0]), pGui->CreateSkin("gui_default.skin")); break;
-		case kS8_SetDrawMouse: Ptr<cGuiSet>(a[0])->SetDrawMouse(a[1].v != 0); break;
-		case kS8_SetActive: Ptr<cGuiSet>(a[0])->SetActive(a[1].v != 0); break;
-		case kS8_GuiFocus: pGui->SetFocus(Ptr<cGuiSet>(a[0])); break;
-		case kS8_GuiFocusedIs: c->u[0] = pGui->GetFocusedSet() == Ptr<cGuiSet>(a[0]); break;
 		case kS8_ViewportNew: c->u[0] = (uint64_t)s->mpEngine->GetScene()->CreateViewport(NULL, NULL, a[0].v != 0); break;
 		case kS8_ViewportAddSet: Ptr<cViewport>(a[0])->AddGuiSet(Ptr<cGuiSet>(a[1])); break;
 		case kS8_ViewportActive: Ptr<cViewport>(a[0])->SetActive(a[1].v != 0); break;
 		case kS8_GfxRect: c->u[0] = (uint64_t)pGui->CreateGfxFilledRect(cColor(F(a[0]), F(a[1]), F(a[2]), F(a[3])), (eGuiMaterial)I(a[4])); break;
 		case kS8_GfxTex: c->u[0] = (uint64_t)pGui->CreateGfxTexture(Str(a[0]), (eGuiMaterial)I(a[1]), eTextureType_2D); break;
-		case kS8_GfxSize:
-		{
-			cVector2f vSize = Ptr<cGuiGfxElement>(a[0])->GetImageSize();
-			SetF(c, 0, vSize.x);
-			SetF(c, 1, vSize.y);
-			break;
-		}
-		case kS8_GfxDestroy: pGui->DestroyGfx(Ptr<cGuiGfxElement>(a[0])); break;
-		case kS8_DrawGfx:
-			Ptr<cGuiSet>(a[0])->DrawGfx(Ptr<cGuiGfxElement>(a[1]), V3(a + 2), V2(a + 5), cColor(F(a[7]), F(a[8]), F(a[9]), F(a[10])));
-			break;
 		case kS8_DrawFont:
 			Ptr<cGuiSet>(a[0])->DrawFont(WStr(a[10]), Ptr<iFontData>(a[1]), V3(a + 2), cVector2f(F(a[5]), F(a[5])),
 										 cColor(F(a[6]), F(a[7]), F(a[8]), F(a[9])), eFontAlign_Left);
@@ -170,11 +155,6 @@ namespace
 				c->sink(c->sinkCtx, (const uint32_t*)sRow.data(), sRow.size());
 			break;
 		}
-		case kS8_ClipNew: c->u[0] = (uint64_t)hplNew(cGuiClipRegion, ()); break;
-		case kS8_ClipRect: Ptr<cGuiClipRegion>(a[0])->mRect = cRect2f(F(a[1]), F(a[2]), F(a[3]), F(a[4])); break;
-		case kS8_ClipGet: c->u[0] = (uint64_t)Ptr<cGuiSet>(a[0])->GetCurrentClipRegion(); break;
-		case kS8_ClipSet: Ptr<cGuiSet>(a[0])->SetCurrentClipRegion(Ptr<cGuiClipRegion>(a[1])); break;
-		case kS8_ClipDelete: hplDelete(Ptr<cGuiClipRegion>(a[0])); break;
 		case kS8_SliderNew:
 		{
 			cWidgetSlider *pSlider = Ptr<cGuiSet>(a[0])->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal, V3(a + 1), V2(a + 4), I(a[6]), NULL);
@@ -194,8 +174,6 @@ namespace
 			c->u[0] = Ptr<cWidgetSlider>(a[0])->GetValue();
 			c->u[1] = Ptr<cWidgetSlider>(a[0])->GetMaxValue();
 			break;
-		case kS8_DefaultFocusNav: Ptr<cGuiSet>(a[0])->SetDefaultFocusNavWidget(Ptr<iWidget>(a[1])); break;
-		case kS8_FocusedWidget: Ptr<cGuiSet>(a[0])->SetFocusedWidget(Ptr<iWidget>(a[1])); break;
 		case kS8_Music: s->mpEngine->GetSound()->GetMusicHandler()->Play(Str(a[0]), F(a[1]), F(a[2]), a[3].v != 0, a[4].v != 0); break;
 		case kS8_Now: c->u[0] = cPlatform::GetApplicationTime(); break;
 		case kS8_Screen:

@@ -4,7 +4,6 @@
 
 pub mod draw;
 mod ffi;
-mod ffi_set;
 mod ffi_skin;
 mod ffi_widget;
 mod ffi_widget2;
@@ -35,6 +34,13 @@ pub mod widgets_list;
 pub mod widgets_menu;
 pub mod widgets_slider;
 pub mod widgets_text;
+
+pub mod g1_gfx;
+pub mod g1_gui;
+pub mod g1_host;
+pub mod g1_ops;
+pub mod g1_set;
+pub mod g1_skin;
 
 #[cfg(test)]
 mod h19_tests;

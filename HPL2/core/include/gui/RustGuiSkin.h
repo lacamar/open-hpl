@@ -63,7 +63,6 @@ struct OhplSkinView {
 	size_t gfxCount;
 };
 
-static_assert(sizeof(OhplGuiAnimState) == 12 && sizeof(OhplGuiAnimInput) == 40, "anim ABI");
 static_assert(sizeof(OhplSkinAttribute) == 24 && sizeof(OhplSkinFont) == 40 && sizeof(OhplSkinGfx) == 88 && sizeof(OhplSkinView) == 48, "skin ABI");
 static_assert(eBlendFunc_Zero == 0 && eBlendFunc_One == 1 && eBlendFunc_DestColor == 4 && eBlendFunc_SrcAlpha == 6 &&
 			  eBlendFunc_OneMinusSrcAlpha == 7, "blend values");
@@ -80,13 +79,6 @@ bool ohpl_gui_material_blend(uint32_t type, int* src, int* dst);
 int ohpl_gui_mouse_to_mouse(int button);
 int ohpl_gui_mouse_to_gui(int button);
 
-int64_t ohpl_gui_gfx_update(OhplGuiAnimState* state, const OhplGuiAnimInput* input);
-void ohpl_gui_gfx_restart(OhplGuiAnimState* state);
-float ohpl_gui_gfx_animation_time(float time, bool hasLength, float length);
-void ohpl_gui_gfx_texture_uv(float* tex, float sizeX, float sizeY, bool rect, float startX, float startY, float endX,
-							 float endY, float* imageSize);
-void ohpl_gui_gfx_flip_uv(float* tex, bool flip, int source, const float* image);
-bool ohpl_gui_gfx_flush_changed(int* last, int count);
 
 void* ohpl_gui_skin_parse(const char* data, size_t len, bool readOk, int* status);
 const OhplSkinView* ohpl_gui_skin_view(const void* handle);

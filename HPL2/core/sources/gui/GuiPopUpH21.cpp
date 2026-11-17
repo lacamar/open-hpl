@@ -82,7 +82,7 @@ namespace hpl {
 		case kOhplH21VirtualSize: { cVector2f s = set->GetVirtualSize(); r.f[0] = s.x; r.f[1] = s.y; break; }
 		case kOhplH21PopupZ: r.f[0] = set->GetPopUpZ(); break;
 		case kOhplH21IncPopupZ: set->IncPopUpZ(); break;
-		case kOhplH21PopupCount: set->mlPopupCount += c.i[0]; break;
+		case kOhplH21PopupCount: set->AddPopUpCount(c.i[0]); break;
 		case kOhplH21GetAttention: r.w = (uintptr_t)set->GetAttentionWidget(); break;
 		case kOhplH21GetFocused: r.w = (uintptr_t)set->GetFocusedWidget(); break;
 		case kOhplH21GetDefaultFocus: r.w = (uintptr_t)set->GetDefaultFocusNavWidget(); break;
