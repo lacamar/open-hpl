@@ -117,6 +117,17 @@ void OhplA2cPost(cLuxPlayer *p)
 	fprintf(gpOut, " hands=%d/%s coins=%d avg=", (int)pH->GetState(), pH->GetCurrentAnimation().c_str(), p->GetCoins());
 	F("", p->GetAvgSpeed());
 	fputc('\n', gpOut);
+	static const char *sBody = getenv("OHPL_A2C_BODY");
+	if(sBody && *sBody)
+	{
+		iPhysicsBody *pB = gpBase->mpMapHandler->GetCurrentMap()->GetPhysicsWorld()->GetBody(sBody);
+		if(pB)
+		{
+			fprintf(gpOut, "body");
+			V3("pos", pB->GetWorldPosition()); V3("vel", pB->GetLinearVelocity()); V3("omega", pB->GetAngularVelocity());
+			fprintf(gpOut, " en=%d\n", pB->GetEnabled() ? 1 : 0);
+		}
+	}
 	fflush(gpOut);
 	if(glTick == 450) { fprintf(gpOut, "END\n"); fflush(gpOut); }
 }
