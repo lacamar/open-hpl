@@ -435,7 +435,8 @@ def same(name, a, b):
                 own = sorted(l for l in ls if l.startswith(("ts  ", "fire  ")))
                 return own, {l for l in ls if l not in own}
             # player: key timing and physics settling differ between runs, so velocities are not compared; step, camera, health and
-            # state transitions must agree, positions within 3 m, over the shorter run; handler/module/effect lists exactly
+            # state transitions must agree, positions within 3 m, over the shorter run (at least 70% of the longer: run length follows load);
+            # handler/module/effect lists exactly
             def ticks(sec):
                 return [l.split()[2:] for l in sec if l.startswith("pl ")]
             def tol(u, v):
@@ -450,7 +451,7 @@ def same(name, a, b):
             plx, ply = ticks(x), ticks(y)
             k = min(len(plx), len(ply))
             tx, ty = trans(plx[:k]), trans(ply[:k])
-            if (not all(tol(u, v) for u, v in zip(plx, ply)) or tx != ty or abs(len(plx) - len(ply)) > 400
+            if (not all(tol(u, v) for u, v in zip(plx, ply)) or tx != ty or min(len(plx), len(ply)) < 0.7 * max(len(plx), len(ply))
                     or [l for l in x if re.match(r"g[hems] ", l)] != [l for l in y if re.match(r"g[hems] ", l)]):
                 return (False, f"DIFFER (section {i}: player ticks or game lists)")
             (ox, sx), (oy, sy) = timers(x), timers(y)

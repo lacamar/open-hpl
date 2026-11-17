@@ -39,7 +39,8 @@ def main():
     print(f"{len(a)} frames vs {len(b)}: {len(extra)} not in the reference, reference covered {covered:.3f}")
     for f in sorted(extra)[:2]:
         print(f[:600])
-    return 0 if len(extra) <= 0.02 * len(a) and covered >= cover and a else 1
+    # one stray frame is allowed in short dumps (menus: a handful of frames with random frame art)
+    return 0 if len(extra) <= max(1, 0.02 * len(a)) and covered >= cover and a else 1
 
 
 sys.exit(main())
