@@ -457,5 +457,6 @@ namespace hpl {
 		}
 	}
 
-	static struct OhplG1Register { OhplG1Register() { ohpl_g1_set_engine(&gG1Engine); ohpl_g1_set_host(&gG1Host); ohpl_g1_set_ops(&gG1Ops); ohpl_g1_set_trace_fn(TraceDraw); } } gG1Register;
+	void OhplG2RegisterPopupOps();
+	static struct OhplG1Register { OhplG1Register() { ohpl_g1_set_engine(&gG1Engine); ohpl_g1_set_host(&gG1Host); ohpl_g1_set_ops(&gG1Ops); OhplG2RegisterPopupOps(); ohpl_g1_set_trace_fn(TraceDraw); } } gG1Register;
 }

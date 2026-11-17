@@ -346,6 +346,6 @@ namespace hpl {
 		},
 	};
 
-	static struct OhplG2PopupRegister { OhplG2PopupRegister() { ohpl_g2_popup_ops(&gG2PopupOps); } } gG2PopupRegister;
+	void OhplG2RegisterPopupOps() { ohpl_g2_popup_ops(&gG2PopupOps); }
 
 }
