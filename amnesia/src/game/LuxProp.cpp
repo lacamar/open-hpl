@@ -23,6 +23,11 @@
 #include "LuxPlayer.h"
 #include "LuxInteractConnections.h"
 
+void OhplA5PropDump(iLuxProp *apProp);
+void OhplA5OnLoad();
+void OhplA5Freeze(iLuxProp *apProp);
+void OhplA5Seed(const std::string &asName);
+
 #include <cstring>
 
 
@@ -184,6 +189,7 @@ void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTra
 
 iLuxProp::iLuxProp(const tString &asName, int alID, cLuxMap *apMap, eLuxPropType aPropType) : iLuxEntity(asName,alID,apMap, eLuxEntityType_Prop)
 {
+	OhplA5Seed(asName);
 	mPropType = aPropType;
 
 	mpAttachmentParent = NULL;
@@ -315,6 +321,7 @@ iLuxProp::~iLuxProp()
 
 //-----------------------------------------------------------------------
 
+
 void iLuxProp::SetupAfterLoad(cWorld *apWorld)
 {
 	//////////////////////
@@ -352,6 +359,8 @@ void iLuxProp::SetupAfterLoad(cWorld *apWorld)
 	///////////////////////
 	// Setup implemented 
 	OnSetupAfterLoad(apWorld);
+
+	OhplA5Freeze(this);
 }
 
 //-----------------------------------------------------------------------
@@ -417,6 +426,7 @@ void iLuxProp::UpdateParentBone(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
+
 void iLuxProp::OnUpdate(float afTimeStep)
 {
 	UpdateParentBone(afTimeStep);
@@ -441,6 +451,8 @@ void iLuxProp::OnUpdate(float afTimeStep)
 	//////////////////////
 	// Specific update
 	UpdatePropSpecific(afTimeStep);
+
+	OhplA5PropDump(this);
 
 	//if(mvLights.size() > 0)
 	//	Log("End Color: %s\n", mvLights[0]->GetDiffuseColor().ToString().c_str());
@@ -1672,6 +1684,7 @@ void iLuxProp::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 {
 	///////////////////////
 	// Init
+	OhplA5OnLoad();
 	super_class::LoadFromSaveData(apSaveData);
 	iLuxProp_SaveData *pData = static_cast<iLuxProp_SaveData*>(apSaveData);
 
@@ -1824,6 +1837,8 @@ void iLuxProp::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	{
 		pData->mvBillboards[i].ToBillboard(mvBillboards[i]);
 	}
+
+	OhplA5Freeze(this);
 }
 
 //-----------------------------------------------------------------------

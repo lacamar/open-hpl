@@ -1,0 +1,16 @@
+# multislider, wheels, lever, move objects, doors
+1 @WATCH ElevatorSwitch FuseBoxLever valve_10 valve_11 valve_1 fake_valve Bank9_3xw elevator_door_left_1 elevator_pod_1 PipeGate PostCotGate FuseBoxGlass FreakyDoor VanishingDoor PipePiece factory_corridor_01_door_8
+20 AddPropImpulse("valve_10", 0, 0, 40, "world");
+20 AddPropImpulse("valve_11", 0, 0, -40, "world");
+30 SetMultiSliderStuckState("ElevatorSwitch", 1, true);
+60 SetMultiSliderStuckState("ElevatorSwitch", -1, true);
+70 SetLeverStuckState("FuseBoxLever", 1, true);
+80 RotatePropToSpeed("valve_1", 5, 2, 0, 1, 0, true, "");
+100 SetSwingDoorOpenAmount("factory_corridor_01_door_8", 0.7, 1.0, true);
+140 SetSwingDoorClosed("factory_corridor_01_door_8", true, true);
+150 SetSwingDoorLocked("FreakyDoor", true, true);
+170 SetSwingDoorLocked("FreakyDoor", false, true);
+200 SetLeverStuckState("FuseBoxLever", -1, true);
+L10 SetMultiSliderStuckState("ElevatorSwitch", 1, true);
+L30 AddPropImpulse("valve_10", 0, 0, 30, "world");
+L60 SetSwingDoorOpenAmount("factory_corridor_01_door_8", 0.4, 1.0, true);

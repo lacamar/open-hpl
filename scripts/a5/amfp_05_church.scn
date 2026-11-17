@@ -1,0 +1,18 @@
+# chests, altar lever, doors, button, candles
+1 @WATCH AltarLever chest_small_1 chest_small_3 treasure_chest_2 altar_blockbox Phonautograph1 note_letter_1 paper02_1 cabinet_simple_1 NC_door_1 NC_door_2 NC_door_large_1 RightAltarCandle candle_floor_100 candle_floor_10 work_desk_door_worn_1
+20 SetSwingDoorOpenAmount("NC_door_1", 0.8, 1.0, true);
+30 AddPropImpulse("note_letter_1", 3, 10, 3, "world");
+40 @INTERACT chest_small_1
+50 @INTERACT treasure_chest_2
+60 SetLeverStuckState("AltarLever", 1, true);
+90 SetSwingDoorClosed("NC_door_1", true, true);
+100 SetSwingDoorLocked("NC_door_2", true, true);
+120 SetSwingDoorLocked("NC_door_2", false, true);
+130 SetLampLit("candle_floor_100", false, true);
+160 SetLampLit("candle_floor_100", true, true);
+170 SetButtonSwitchedOn("Phonautograph1", true, true);
+190 SetPropEffectActive("RightAltarCandle", false, true);
+L10 SetLeverStuckState("AltarLever", -1, true);
+L30 AddPropImpulse("paper02_1", -2, 8, 2, "world");
+L60 SetLampLit("candle_floor_100", false, true);
+L80 SetSwingDoorOpenAmount("NC_door_2", 0.4, 1.0, true);
