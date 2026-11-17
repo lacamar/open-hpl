@@ -26,6 +26,7 @@
 #include <functional>
 #include "scene/RustLight.h"
 #include "scene/RustSceneH11.h"
+#include "scene/RustSL.h"
 
 
 namespace hpl {
@@ -72,12 +73,6 @@ namespace hpl {
 
 	//------------------------------------------
 
-	class cLightBillboardConnection
-	{
-	public:
-		cBillboard *mpBillboard;
-		cColor mBaseColor;
-	};
 
 	//------------------------------------------
 
@@ -87,20 +82,20 @@ namespace hpl {
 		typedef iRenderable __super;
 	#endif
 	public:
-		iLight(tString asName, cResources *apResources);
+		iLight(tString asName, cResources *apResources, eLightType aType);
 		virtual ~iLight();
 
 		void UpdateLogic(float afTimeStep);
 
-		bool CheckObjectIntersection(iRenderable *apObject);
+		bool CheckObjectIntersection(iRenderable *apObject){ return CollidesWithBV(apObject->GetBoundingVolume());}
 		
-		eLightType GetLightType(){ return mLightType;}
+		eLightType GetLightType(){ return (eLightType)mpS->lightType;}
 
-		iTexture *GetFalloffMap();
+		iTexture *GetFalloffMap(){ return (iTexture*)mpS->falloffMap;}
 		void SetFalloffMap(iTexture* apTexture);
 		
 		void SetGoboTexture(iTexture *apTexture);
-		iTexture* GetGoboTexture();
+		iTexture* GetGoboTexture(){ return (iTexture*)mpS->gobo;}
 
 		///////////////////////////////
 		//iEntity implementation
@@ -108,7 +103,7 @@ namespace hpl {
 
 		virtual bool IsVisible();
 		void OnChangeVisible();
-		static void SetHpl3Visibility(bool abX){ mbHpl3Visibility = abX;}
+		static void SetHpl3Visibility(bool abX){ ohpl_sl_set_hpl3_visibility(abX);}
 		
 		///////////////////////////////
 		//Renderable implementation:
@@ -121,7 +116,7 @@ namespace hpl {
 
 		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
 
-		cMatrixf* GetModelMatrix(cFrustum* apFrustum);
+		cMatrixf* GetModelMatrix(cFrustum* apFrustum){ return &GetWorldMatrix();}
 
 		inline void RenderShadow(iRenderable *apObject,cRenderSettings *apRenderSettings,iLowLevelGraphics *apLowLevelGraphics);
 
@@ -129,31 +124,31 @@ namespace hpl {
 
 		void AttachBillboard(cBillboard *apBillboard, const cColor &aBaseColor);
 		void RemoveBillboard(cBillboard *apBillboard);
-		std::vector<cLightBillboardConnection>* GetBillboardVec(){ return &mvBillboards;}
-		void AttachParticleSystem(cParticleSystem *apPS);
+		bool HasBillboard(cBillboard *apBillboard){ return ohpl_sl_light_has_billboard(mpS, (uintptr_t)apBillboard);}
+				void AttachParticleSystem(cParticleSystem *apPS);
 		void RemoveParticleSystem(cParticleSystem *apPS);
 
 		//////////////////////////
 		//Shadow caster cache
-		void AddShadowCaster(iRenderable *apObject);
-		bool ShadowCasterIsValid(iRenderable *apObject);
+		void AddShadowCaster(iRenderable *apObject){ ohpl_sl_light_cache_add(mpS, (uintptr_t)apObject, apObject->GetTransformUpdateCount());}
+		bool ShadowCasterIsValid(iRenderable *apObject){ return ohpl_sl_light_cache_valid(mpS, (uintptr_t)apObject, apObject->GetTransformUpdateCount());}
 		bool ShadowCastersAreUnchanged(const tRenderableVec &avObjects);
 		void SetShadowCasterCacheFromVec(const tRenderableVec &avObjects);
-		void ClearShadowCasterCache();
+		void ClearShadowCasterCache(){ ohpl_sl_light_cache_clear(mpS);}
 
         //////////////////////////
 		//Fading
 		void FadeTo(const cColor& aCol, float afRadius, float afTime);
-		void StopFading();
-		bool IsFading();
-		cColor GetDestColor(){ return mAnim.dest_col;}
-		float GetDestRadius(){ return mAnim.dest_radius;}
+		void StopFading(){ mpS->anim.fade_time = 0;}
+		bool IsFading(){ return mpS->anim.fade_time != 0;}
+		cColor GetDestColor(){ return mpS->anim.dest_col;}
+		float GetDestRadius(){ return mpS->anim.dest_radius;}
 
 
 		//////////////////////////
 		//FLickering
-		void SetFlickerActive(bool abX);
-		bool GetFlickerActive(){return mAnim.flickering;}
+		void SetFlickerActive(bool abX){ mpS->anim.flickering = abX;}
+		bool GetFlickerActive(){return mpS->anim.flickering;}
 
 		void SetFlicker(const cColor& aOffCol, float afOffRadius,
 			float afOnMinLength, float afOnMaxLength,const tString &asOnSound,const tString &asOnPS,
@@ -161,161 +156,116 @@ namespace hpl {
 			bool abFade,	float afOnFadeMinLength, float afOnFadeMaxLength, 
 							float afOffFadeMinLength, float afOffFadeMaxLength);
 
-		tString GetFlickerOffSound(){ return msFlickerOffSound;}
-		tString GetFlickerOnSound(){ return msFlickerOnSound;}
-		tString GetFlickerOffPS(){ return msFlickerOffPS;}
-		tString GetFlickerOnPS(){ return msFlickerOnPS;}
-		float GetFlickerOnMinLength(){ return mAnim.flicker_on_min_length;}
-		float GetFlickerOffMinLength(){ return mAnim.flicker_off_min_length;}
-		float GetFlickerOnMaxLength(){ return mAnim.flicker_on_max_length;}
-		float GetFlickerOffMaxLength(){ return mAnim.flicker_off_max_length;}
-		cColor GetFlickerOffColor(){ return mAnim.flicker_off_color;}
-		float GetFlickerOffRadius(){ return mAnim.flicker_off_radius;}
-		bool GetFlickerFade(){ return mAnim.flicker_fade;}
-		float GetFlickerOnFadeMinLength(){ return mAnim.flicker_on_fade_min_length;}
-		float GetFlickerOnFadeMaxLength(){ return mAnim.flicker_on_fade_max_length;}
-		float GetFlickerOffFadeMinLength(){ return mAnim.flicker_off_fade_min_length;}
-		float GetFlickerOffFadeMaxLength(){ return mAnim.flicker_on_fade_max_length;}
+		tString GetFlickerOffSound(){ return FlickerString(2);}
+		tString GetFlickerOnSound(){ return FlickerString(0);}
+		tString GetFlickerOffPS(){ return FlickerString(3);}
+		tString GetFlickerOnPS(){ return FlickerString(1);}
+		float GetFlickerOnMinLength(){ return mpS->anim.flicker_on_min_length;}
+		float GetFlickerOffMinLength(){ return mpS->anim.flicker_off_min_length;}
+		float GetFlickerOnMaxLength(){ return mpS->anim.flicker_on_max_length;}
+		float GetFlickerOffMaxLength(){ return mpS->anim.flicker_off_max_length;}
+		cColor GetFlickerOffColor(){ return mpS->anim.flicker_off_color;}
+		float GetFlickerOffRadius(){ return mpS->anim.flicker_off_radius;}
+		bool GetFlickerFade(){ return mpS->anim.flicker_fade;}
+		float GetFlickerOnFadeMinLength(){ return mpS->anim.flicker_on_fade_min_length;}
+		float GetFlickerOnFadeMaxLength(){ return mpS->anim.flicker_on_fade_max_length;}
+		float GetFlickerOffFadeMinLength(){ return mpS->anim.flicker_off_fade_min_length;}
+		float GetFlickerOffFadeMaxLength(){ return mpS->anim.flicker_on_fade_max_length;}
 
-		cColor GetFlickerOnColor(){ return mAnim.flicker_on_color;}
-		float GetFlickerOnRadius(){ return mAnim.flicker_on_radius;}
+		cColor GetFlickerOnColor(){ return mpS->anim.flicker_on_color;}
+		float GetFlickerOnRadius(){ return mpS->anim.flicker_on_radius;}
 
 		//////////////////////////
 		//Properties
-		const cColor& GetDiffuseColor(){ return mDiffuseColor; }
+		const cColor& GetDiffuseColor(){ return mpS->diffuse; }
 		void SetDiffuseColor(cColor aColor);
 		
-		const cColor&  GetDefaultDiffuseColor(){ return mDefaultDiffuseColor;}
-		void SetDefaultDiffuseColor(const cColor& aColor) { mDefaultDiffuseColor = aColor; }
+		const cColor&  GetDefaultDiffuseColor(){ return mpS->defaultDiffuse;}
+		void SetDefaultDiffuseColor(const cColor& aColor) { mpS->defaultDiffuse = aColor; }
 		
-		const cColor& GetSpecularColor(){ return mSpecularColor; }
-		void SetSpecularColor(cColor aColor){ mSpecularColor = aColor; }
+		const cColor& GetSpecularColor(){ return mpS->specular; }
+		void SetSpecularColor(cColor aColor){ mpS->specular = aColor; }
 
-		bool GetCastShadows(){ return mbCastShadows;}
-		void SetCastShadows(bool afX){ mbCastShadows = afX;}
+		bool GetCastShadows(){ return mpS->castShadows;}
+		void SetCastShadows(bool afX){ mpS->castShadows = afX;}
 
-		tObjectVariabilityFlag GetShadowCastersAffected(){ return mlShadowCastersAffected;}
-		void SetShadowCastersAffected(tObjectVariabilityFlag alX){ mlShadowCastersAffected = alX;}
+		tObjectVariabilityFlag GetShadowCastersAffected(){ return mpS->shadowCastersAffected;}
+		void SetShadowCastersAffected(tObjectVariabilityFlag alX){ mpS->shadowCastersAffected = alX;}
 
-		inline eShadowMapResolution GetShadowMapResolution() const{ return mShadowMapResolution;}
-		inline void SetShadowMapResolution(eShadowMapResolution aQuality){ mShadowMapResolution  = aQuality;}
+		inline eShadowMapResolution GetShadowMapResolution() const{ return (eShadowMapResolution)mpS->shadowRes;}
+		inline void SetShadowMapResolution(eShadowMapResolution aQuality){ mpS->shadowRes = aQuality;}
 
-		inline float GetShadowMapBlurAmount() const{ return mfShadowMapBlurAmount;}
-		inline void SetShadowMapBlurAmount(float afX){ mfShadowMapBlurAmount  = afX;}
+		inline float GetShadowMapBlurAmount() const{ return mpS->shadowBlur;}
+		inline void SetShadowMapBlurAmount(float afX){ mpS->shadowBlur  = afX;}
 
-		inline bool GetOcclusionCullShadowCasters() const{ return mbOcclusionCullShadowCasters;}
-		inline void SetOcclusionCullShadowCasters(bool abX){ mbOcclusionCullShadowCasters  = abX;}
+		inline bool GetOcclusionCullShadowCasters() const{ return mpS->occlusionCull;}
+		inline void SetOcclusionCullShadowCasters(bool abX){ mpS->occlusionCull  = abX;}
 
-		inline cVisibleRCNodeTracker * GetVisibleNodeTracker(){ return mpVisibleNodeTracker;}
+		inline cVisibleRCNodeTracker * GetVisibleNodeTracker(){ return (cVisibleRCNodeTracker*)mpS->tracker;}
 
-		float GetShadowMapBiasMul(){ return mfShadowMapBiasMul;}
-		float GetShadowMapSlopeScaleBiasMul(){ return mfShadowMapSlopeScaleBiasMul;}
-		void SetShadowMapBiasMul(float afX){ mfShadowMapBiasMul = afX;}
-		float GetShadowDistance(){ return mfShadowDistance;}
-		void SetShadowDistance(float afX){ mfShadowDistance = afX;}
-		void SetShadowMapSlopeScaleBiasMul(float afX){ mfShadowMapSlopeScaleBiasMul = afX;}
+		float GetShadowMapBiasMul(){ return mpS->shadowBiasMul;}
+		float GetShadowMapSlopeScaleBiasMul(){ return mpS->shadowSlopeBiasMul;}
+		void SetShadowMapBiasMul(float afX){ mpS->shadowBiasMul = afX;}
+		float GetShadowDistance(){ return mpS->shadowDistance;}
+		void SetShadowDistance(float afX){ mpS->shadowDistance = afX;}
+		void SetShadowMapSlopeScaleBiasMul(float afX){ mpS->shadowSlopeBiasMul = afX;}
 		
 		virtual void SetRadius(float afX);
-		float GetRadius(){return mfRadius;}
+		float GetRadius(){return mpS->radius;}
 
-		void SetFalloffPow(float afX){ mfFalloffPow = afX;}
-		float GetFalloffPow(){ return mfFalloffPow;}
-		void SetSpotFalloffPow(float afX){ mfSpotFalloffPow = afX;}
-		float GetSpotFalloffPow(){ return mfSpotFalloffPow;}
-		void SetTranslucency(float afX){ mfTranslucency = afX;}
-		float GetTranslucency(){ return mfTranslucency;}
+		void SetFalloffPow(float afX){ mpS->falloffPow = afX;}
+		float GetFalloffPow(){ return mpS->falloffPow;}
+		void SetSpotFalloffPow(float afX){ mpS->spotFalloffPow = afX;}
+		float GetSpotFalloffPow(){ return mpS->spotFalloffPow;}
+		void SetTranslucency(float afX){ mpS->translucency = afX;}
+		float GetTranslucency(){ return mpS->translucency;}
 		void SetBrightness(float afX);
-		float GetBrightness(){ return mfBrightness;}
-		void SetDefaultBrightness(float afX){ mfDefaultBrightness = afX;}
-		float GetDefaultBrightness(){ return mfDefaultBrightness;}
+		float GetBrightness(){ return mpS->brightness;}
+		void SetDefaultBrightness(float afX){ mpS->defaultBrightness = afX;}
+		float GetDefaultBrightness(){ return mpS->defaultBrightness;}
 		void FadeBrightnessTo(float afBrightness, float afTime, std::function<float(float)> aEasing = nullptr);
-		void SetMaskID(unsigned int alX){ mlMaskID = alX;}
-		void SetGoboSpecular(bool abX){ mbGoboSpecular = abX;}
-		bool GetGoboSpecular(){ return mbGoboSpecular;}
-		void SetCastDiffuseLight(bool abX){ mbCastDiffuseLight = abX;}
-		bool GetCastDiffuseLight(){ return mbCastDiffuseLight;}
-		void SetCastSpecularLight(bool abX){ mbCastSpecularLight = abX;}
-		bool GetCastSpecularLight(){ return mbCastSpecularLight;}
-		unsigned int GetMaskID(){ return mlMaskID;}
-		void SetMaskBox(bool abActive, const cVector3f& avCenter=0, const cVector3f& avSize=0){ mbMaskBox = abActive; mvMaskCenter = avCenter; mvMaskSize = avSize; mbUpdateBoundingVolume = true; SetTransformUpdated();}
-		bool HasMaskBox(){ return mbMaskBox;}
-		const cVector3f& GetMaskCenter(){ return mvMaskCenter;}
-		const cVector3f& GetMaskSize(){ return mvMaskSize;}
+		void SetMaskID(unsigned int alX){ mpS->maskId = alX;}
+		void SetGoboSpecular(bool abX){ mpS->goboSpecular = abX;}
+		bool GetGoboSpecular(){ return mpS->goboSpecular;}
+		void SetCastDiffuseLight(bool abX){ mpS->castDiffuse = abX;}
+		bool GetCastDiffuseLight(){ return mpS->castDiffuse;}
+		void SetCastSpecularLight(bool abX){ mpS->castSpecular = abX;}
+		bool GetCastSpecularLight(){ return mpS->castSpecular;}
+		unsigned int GetMaskID(){ return mpS->maskId;}
+		void SetMaskBox(bool abActive, const cVector3f& avCenter=0, const cVector3f& avSize=0){ mpS->maskBox = abActive; mpS->maskCenter = avCenter; mpS->maskSize = avSize; mbUpdateBoundingVolume = true; SetTransformUpdated();}
+		bool HasMaskBox(){ return mpS->maskBox;}
+		const cVector3f& GetMaskCenter(){ return mpS->maskCenter;}
+		const cVector3f& GetMaskSize(){ return mpS->maskSize;}
 
 
-		float GetSourceRadius(){ return mfSourceRadius;}
-		void SetSourceRadius(float afX){ mfSourceRadius = afX;}
+		float GetSourceRadius(){ return mpS->sourceRadius;}
+		void SetSourceRadius(float afX){ mpS->sourceRadius = afX;}
 
 		void UpdateLight(float afTimeStep);
 
-		void SetWorld(cWorld *apWorld){ mpWorld = apWorld;}
+		void SetWorld(cWorld *apWorld){ mpS->world = (uintptr_t)apWorld;}
 
 
 	protected:
 		void OnFlickerOff();
 		void OnFlickerOn();
 		void OnSetDiffuse();
-		OhplLightLive LiveState() const;
+		tString FlickerString(int alWhich)
+		{
+			size_t lLen; const char *pStr = ohpl_sl_light_string(mpS, alWhich, &lLen);
+			return tString(pStr, lLen);
+		}
 
         virtual void ExtraXMLProperties(cXmlElement *apMainElem){}
 		virtual void UpdateBoundingVolume()=0;
-		
-		eLightType mLightType;
 
-		cTextureManager *mpTextureManager;
-		cFileSearcher *mpFileSearcher;
-		cWorld *mpWorld;
+		bool IsLit(){ return ohpl_sl_light_is_lit(mpS);}
 
-		iTexture *mpFalloffMap;
-		
-		iTexture *mpGoboTexture;
+		cTextureManager *TextureManager(){ return (cTextureManager*)mpS->texMgr;}
+		cWorld *World(){ return (cWorld*)mpS->world;}
 
-		eShadowMapResolution mShadowMapResolution;
-		float mfShadowMapBlurAmount;
-		bool mbOcclusionCullShadowCasters;
-
-		cVisibleRCNodeTracker *mpVisibleNodeTracker;
-
-		std::vector<cLightBillboardConnection> mvBillboards;
-		std::vector<cParticleSystem*> mvParticleSystems;
-
-		cColor mDiffuseColor;
-		cColor mDefaultDiffuseColor;
-
-		cColor mSpecularColor;
-		float mfSourceRadius;
-		float mfRadius;
-		float mfFalloffPow;
-		float mfSpotFalloffPow;
-		float mfTranslucency = 1;
-		float mfBrightness;
-		float mfDefaultBrightness = 1;
 		std::function<float(float)> mBrightFadeEasing;
-		static bool mbHpl3Visibility;
-		bool IsLit();
-		unsigned int mlMaskID;
-		bool mbGoboSpecular;
-		bool mbCastDiffuseLight = true;
-		bool mbCastSpecularLight = true;
-		bool mbMaskBox;
-		cVector3f mvMaskCenter;
-		cVector3f mvMaskSize;
-
-		bool mbCastShadows;
-		tObjectVariabilityFlag mlShadowCastersAffected;
-
-		OhplH11ShadowCache *mpH11ShadowCache = NULL;
-
-		float mfShadowMapBiasMul;
-		float mfShadowDistance;
-		float mfShadowMapSlopeScaleBiasMul;
-
-		OhplLightAnim mAnim;
-
-		tString msFlickerOffSound;
-		tString msFlickerOnSound;
-		tString msFlickerOffPS;
-		tString msFlickerOnPS;
+		OhplSLLight *mpS;
 	};
 
 	typedef std::list<iLight*> tLightList;

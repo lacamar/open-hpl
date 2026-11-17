@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -25,6 +25,7 @@
 #include "system/SystemTypes.h"
 #include "scene/Entity3D.h"
 #include "graphics/Renderable.h"
+#include "scene/RustSL.h"
 
 namespace hpl {
 
@@ -35,31 +36,32 @@ namespace hpl {
 	class iLowLevelGraphics;
 	class cMaterial;
 	class iVertexBuffer;
-	
+
 	//------------------------------------------
-	
+
 	class cBeam;
+
 	class cBeamEnd : public iEntity3D
 	{
 	friend class cBeam;
 	friend class cBeamEnd_UpdateCallback;
 	public:
-		cBeamEnd(const tString asName, cBeam *apBeam) : iEntity3D(asName), 
-						mColor(1,1),mpBeam(apBeam) {}
+		cBeamEnd(const tString asName, cBeam *apBeam) : iEntity3D(asName), mpS(ohpl_sl_beam_end_new((uintptr_t)apBeam)) {}
+		~cBeamEnd(){ ohpl_sl_beam_end_free(mpS); }
 
 		void SetColor(const cColor &aColor);
-		const cColor& GetColor(){ return mColor;}
+		const cColor& GetColor(){ return mpS->color;}
 
 		/////////////////////////////////
 		//Entity implementation
 		tString GetEntityType(){ return "BeamEnd";}
+
 	private:
-		cColor mColor;
-		cBeam *mpBeam;
+		OhplSLBeamEnd *mpS;
 	};
 
 	//------------------------------------------
-	
+
 	class cBeamEnd_UpdateCallback : public iEntityCallback
 	{
 	public:
@@ -78,42 +80,37 @@ namespace hpl {
 		cBeam(const tString asName, cResources *apResources,cGraphics *apGraphics);
 		~cBeam();
 
-		void SetMaterial(cMaterial * apMaterial);
-		
-		const tString& GetFileName(){return msFileName;}
+		void SetMaterial(cMaterial * apMaterial){ mpS->material = (uintptr_t)apMaterial; }
 
-		/**
-		 * Set the size. X= the thickness of the line, width of texture used. Y = the length that one texture height takes.
-		 * \param avSize 
-		 */
+		tString GetFileName();
+
 		void SetSize(const cVector2f& avSize);
-		cVector2f GetSize(){ return mvSize;}
-		
+		cVector2f GetSize(){ return mpS->size;}
+
 		void SetColor(const cColor &aColor);
-		const cColor& GetColor(){ return mColor;}
+		const cColor& GetColor(){ return mpS->color;}
 
 		void SetTileHeight(bool abX);
-		bool GetTileHeight(){ return mbTileHeight;}
+		bool GetTileHeight(){ return mpS->tileHeight;}
 
-		void SetMultiplyAlphaWithColor(bool abX);
-		bool GetMultiplyAlphaWithColor(){ return mbMultiplyAlphaWithColor;}
+		void SetMultiplyAlphaWithColor(bool abX){ mpS->multiplyAlpha = abX;}
+		bool GetMultiplyAlphaWithColor(){ return mpS->multiplyAlpha;}
 
-		cBeamEnd* GetEnd(){ return mpEnd;}
+		cBeamEnd* GetEnd(){ return (cBeamEnd*)mpS->end;}
 
 		bool LoadXMLProperties(const tString asFile);
 
-		cVector3f GetAxis(){ return mvAxis;}
-		cVector3f GetMidPosition(){ return mvMidPosition;}
+		cVector3f GetAxis(){ return mpS->axis;}
+		cVector3f GetMidPosition(){ return mpS->mid;}
 
 		/////////////////////////////////
 		//Entity implementation
 		tString GetEntityType(){ return "Beam";}
-
 		bool IsVisible();
-		
+
 		//Renderable implementations
-		cMaterial *GetMaterial(){ return mpMaterial;}
-		iVertexBuffer* GetVertexBuffer(){return mpVtxBuffer;}
+		cMaterial *GetMaterial(){ return (cMaterial*)mpS->material;}
+		iVertexBuffer* GetVertexBuffer(){return (iVertexBuffer*)mpS->vtx;}
 
 		void UpdateGraphicsForFrame(float afFrameTime);
 
@@ -121,40 +118,13 @@ namespace hpl {
 
 		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
 
-		int GetMatrixUpdateCount();
-
+		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
 
 		eRenderableType GetRenderType(){ return eRenderableType_Beam;}
+
 	private:
-		cMaterialManager* mpMaterialManager;
-		cFileSearcher *mpFileSearcher;
-		iLowLevelGraphics* mpLowLevelGraphics;
-		
-		cMaterial *mpMaterial;
-		iVertexBuffer* mpVtxBuffer;
-
-		cBeamEnd *mpEnd;
-
-		tString msFileName;
-
-		int mlStartTransformCount;
-		int mlEndTransformCount;
-
-		cMatrixf m_mtxTempTransform;
-		
-		int mlLastRenderCount;
-
 		cBeamEnd_UpdateCallback mEndCallback;
-
-		cVector2f mvSize;
-		
-		cVector3f mvAxis;
-		cVector3f mvMidPosition;
-
-		bool mbTileHeight;
-		bool mbMultiplyAlphaWithColor;
-
-		cColor mColor;
+		OhplSLBeam *mpS;
 	};
 
 };

@@ -40,6 +40,7 @@ mod particles;
 mod rope;
 mod scenemgr;
 mod skinning;
+mod sl;
 pub(crate) mod soundentity;
 #[cfg(test)]
 mod tests;
