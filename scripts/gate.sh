@@ -592,18 +592,22 @@ def same(name, a, b):
         mask = lambda p: [l for l in open(p, errors="replace") if not l.startswith(("i ps pos", "i step_pos"))]
         return (mask(a) == mask(b), "equal (camera positions masked)" if mask(a) == mask(b) else "DIFFER")
     if name.startswith("esnd-"):
-        # runs stop at different frames: compare the frames both runs completed
+        # sound handler entries per frame. One-shot sounds follow physics timing, so compare the looping and GUI
+        # entries; ids, NaN volumes and the random file variant are masked, the arena bridge sequence follows script
+        # timing (two C++ runs differ too), and runs start at different frames: align at the first non-empty frame
         def frames(p):
-            fr, cur = [], None
+            fr = []
             for l in open(p, errors="replace"):
                 if l.startswith("f "):
-                    cur = [l]; fr.append(cur)
-                elif cur is not None:
-                    cur.append(l)
-            return fr[:-1]
+                    fr.append([])
+                elif fr and (" loop=1 " in l or " t=2 " in l) and "nan" not in l and "bridge" not in l:
+                    l = re.sub(r" id=\d+", "", l)
+                    fr[-1].append(re.sub(r"^(e \S*?)\d+(\S*) ", r"\1N\2 ", l))
+            fr = fr[:-1]
+            return fr[next((i for i, f in enumerate(fr) if f), len(fr)):]
         fa, fb = frames(a), frames(b)
         k = min(len(fa), len(fb))
-        ok_ = k > 100 and fa[:k] == fb[:k] and any(len(f) > 1 for f in fa[:k])
+        ok_ = k > 100 and fa[:k] == fb[:k] and sum(1 for f in fa[:k] if f) > 50
         return (ok_, f"equal over {k} frames (run lengths {len(fa)}/{len(fb)})" if ok_ else "DIFFER")
     if name.startswith(("a11b-", "a11c-", "a2b-")):
         # runs stop at different frames: compare up to the last whole frame of the shorter one

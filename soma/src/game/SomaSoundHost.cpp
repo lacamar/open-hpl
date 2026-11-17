@@ -32,9 +32,6 @@ int OhplMapScriptCall(const unsigned char *d, size_t dn, const OhplS7CallArg *a,
 
 namespace
 {
-cSoundHandler *Handler() { return gpSomaBase->mpEngine->GetSound()->GetSoundHandler(); }
-cMusicHandler *Music() { return gpSomaBase->mpEngine->GetSound()->GetMusicHandler(); }
-cSoundEntity *Ent(size_t e) { return (cSoundEntity *)e; }
 cSomaSoundInstance *Shell(size_t e) { return (cSomaSoundInstance *)e; }
 tString Str(const unsigned char *p, size_t n) { return tString((const char *)p, n); }
 
