@@ -439,7 +439,7 @@ void cLuxProp_Object::BeforePropDestruction()
 			cMatrixf mtxEntity = cMath::MatrixMul(pBaseBody->GetLocalMatrix(), mtxInvLocalBody);
 
 			mpMap->ResetLatestEntity();
-			mpMap->CreateEntity(msName + "_broken", mBreakData.msEntity, mtxEntity, mvOnLoadScale);		
+			mpMap->CreateEntity(msName + "_broken", mBreakData.msEntity, mtxEntity, OnLoadScaleRef());
 			
 			////////////////////////
 			//Add impulse and velocity
@@ -585,7 +585,7 @@ void cLuxProp_Object::Break()
 void cLuxProp_Object::OnHealthChange()
 {
 	OhplGa4Run run(this);
-	ohpl_ga4_object_on_health_change(&mP, mfHealth, run.Sink());
+	ohpl_ga4_object_on_health_change(&mP, S().health, run.Sink());
 	run.Finish();
 }
 
@@ -643,7 +643,7 @@ void cLuxProp_Object::SetInsanityVisionVisability(bool abX)
 
 	///////////////////
 	//Mesh entity
-	if(mpMeshEntity && mbShowMesh)
+	if(mpMeshEntity && S().show_mesh)
 	{
 		mpMeshEntity->SetActive(abX);
 		mpMeshEntity->SetVisible(abX);

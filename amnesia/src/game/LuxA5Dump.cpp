@@ -78,7 +78,7 @@ struct OhplA5Dump
 
 void OhplA5Dump::Base(std::string &s, iLuxProp *p)
 {
-	const OhplGa4Base &b = p->mBase;
+	const OhplGa4Base &b = p->Base();
 	Fd(s, "type", p->GetPropType());
 	Fd(s, "id", p->mlID);
 	Fd(s, "act", p->mbActive);
@@ -88,10 +88,10 @@ void OhplA5Dump::Base(std::string &s, iLuxProp *p)
 	Fd(s, "destroy", p->mbDestroyMe);
 	Fd(s, "look", p->IsLookedAtByPlayer());
 	Fd(s, "outl", p->ShowOutlinesOnConnectedBodies());
-	Fd(s, "inter", p->mbIsInteractedWith);
-	Fd(s, "sph", p->mbStaticPhysics);
-	Fd(s, "showmesh", p->mbShowMesh);
-	Ff(s, "hp", p->mfHealth);
+	Fd(s, "inter", p->S().interacted_with);
+	Fd(s, "sph", p->S().static_physics);
+	Fd(s, "showmesh", p->S().show_mesh);
+	Ff(s, "hp", p->S().health);
 	Fd(s, "fx", b.effects_active); Fd(s, "fxfade", b.effects_fading); Ff(s, "fxa", b.effects_alpha);
 	Fd(s, "outpl", b.check_outside_player);
 	Fd(s, "mv", b.moving); Fd(s, "mvl", b.moving_linear); Fd(s, "mva", b.moving_angular);
@@ -110,13 +110,13 @@ void OhplA5Dump::Base(std::string &s, iLuxProp *p)
 	}
 	Fa(s, "lbm", b.last_body_matrix, 16);
 	Ff(s, "fia", b.fade_in_alpha); Ff(s, "fis", b.fade_in_speed);
-	Fd(s, "anim", p->mlCurrentNonLoopAnimIndex);
-	s += " animcb=" + p->msAnimCallback;
+	Fd(s, "anim", p->S().anim_index);
+	s += " animcb=" + p->Str(kOhplA5eStr_AnimCallback);
 	s += " parent=" + (p->mpAttachmentParent ? p->mpAttachmentParent->GetName() : std::string("-"));
-	s += " pent=" + p->msParentEntityName + "/" + p->msParentBoneName;
+	s += " pent=" + p->Str(kOhplA5eStr_ParentEntityName) + "/" + p->Str(kOhplA5eStr_ParentBoneName);
 	Fd(s, "pbone", p->mpParentBone != NULL);
 	s += " mbk=? mbkc=? mbka=?";  // never initialised by the ctor (bd open-hpl-smj.22.45.1)
-	Ff(s, "mbkm", p->mfBodyMassBackup);
+	Ff(s, "mbkm", p->S().body_mass_backup);
 	s += " att=";
 	for(tLuxProp_AttachedPropListIt it = p->mlstAttachedProps.begin(); it != p->mlstAttachedProps.end(); ++it)
 	{

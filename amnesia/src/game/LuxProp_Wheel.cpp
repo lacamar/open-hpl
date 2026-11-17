@@ -124,7 +124,7 @@ bool cLuxProp_Wheel::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 	}
 
 	OhplGa4Run run(this);
-	bool bHint = ohpl_ga4_wheel_on_interact(&mS, &mP, mbShowHints, run.Host(), run.Sink());
+	bool bHint = ohpl_ga4_wheel_on_interact(&mS, &mP, S().show_hints, run.Host(), run.Sink());
 	run.Finish();
 
 	if(bHint)

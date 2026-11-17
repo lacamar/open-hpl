@@ -27,6 +27,7 @@ mod opc;
 mod ops;
 mod propsc;
 mod smallprops;
+pub mod state;
 mod swingdoor;
 #[cfg(test)]
 mod tests;

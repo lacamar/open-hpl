@@ -187,14 +187,14 @@ eLuxFocusCrosshair cLuxProp_MoveObject::GetFocusCrosshair(iPhysicsBody *apBody, 
 void cLuxProp_MoveObject::MoveToState(float afState, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed)
 {
 	OhplGa4Run run(this);
-	ohpl_ga4_move_to_state(&mS, &mP, &mBase, afState, afAcc, afMaxSpeed, afSlowdownDist, abResetSpeed, run.Sink());
+	ohpl_ga4_move_to_state(&mS, &mP, &Base(), afState, afAcc, afMaxSpeed, afSlowdownDist, abResetSpeed, run.Sink());
 	run.Finish();
 }
 
 void cLuxProp_MoveObject::MoveToState(float afState)
 {
 	OhplGa4Run run(this);
-	ohpl_ga4_move_to_state_auto(&mS, &mP, &mBase, GetMainBody()->GetLocalMatrix().v, afState, run.Sink());
+	ohpl_ga4_move_to_state_auto(&mS, &mP, &Base(), GetMainBody()->GetLocalMatrix().v, afState, run.Sink());
 	run.Finish();
 }
 
@@ -217,7 +217,7 @@ float cLuxProp_MoveObject::GetMoveState()
 void cLuxProp_MoveObject::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
 {
 	OhplGa4Run run(this);
-	ohpl_ga4_move_on_connection_state(&mS, &mP, &mBase, GetMainBody()->GetLocalMatrix().v, alState, run.Sink());
+	ohpl_ga4_move_on_connection_state(&mS, &mP, &Base(), GetMainBody()->GetLocalMatrix().v, alState, run.Sink());
 	run.Finish();
 }
 
@@ -232,10 +232,10 @@ void cLuxProp_MoveObject::OnConnectionStateChange(iLuxEntity *apEntity, int alSt
 
 void cLuxProp_MoveObject::UpdateAutoMove(float afTimeStep)
 {
-	if(mP.auto_move==false || mBase.moving || mS.auto_move_reached_goal) return;
+	if(mP.auto_move==false || Base().moving || mS.auto_move_reached_goal) return;
 
 	OhplGa4Run run(this);
-	ohpl_ga4_move_update_auto_move(&mS, &mP, &mBase, GetMainBody()->GetLocalMatrix().v, run.Sink());
+	ohpl_ga4_move_update_auto_move(&mS, &mP, &Base(), GetMainBody()->GetLocalMatrix().v, run.Sink());
 	run.Finish();
 }
 

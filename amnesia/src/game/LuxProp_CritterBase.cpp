@@ -250,7 +250,7 @@ void iLuxProp_CritterBase::OnHealthChange()
 {
 	///////////////
 	// Death
-	if(mfHealth <=0) 
+	if(S().health <=0)
 	{
 		cWorld *pWorld = mpMap->GetWorld();
 
