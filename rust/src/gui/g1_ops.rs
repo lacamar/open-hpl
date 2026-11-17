@@ -40,7 +40,6 @@ pub struct Ops {
     pub name_eq: unsafe extern "C" fn(W, *const u8, usize) -> bool,
     /// `iWidget(eWidgetType_Root, set, NULL)` with the set's draw callbacks attached.
     pub root_new: unsafe extern "C" fn(*mut c_void) -> W,
-    pub popup_delete: unsafe extern "C" fn(usize),
     /// Tooltip frame, background frame and label, created as the original did.
     pub tooltip_create: unsafe extern "C" fn(*mut c_void, *mut [W; 3]),
     /// Text length, font height and row count of the tip text under the label's font.

@@ -17,61 +17,27 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+
 #ifndef HPL_GUI_POP_UP_FILE_PICKER_H
 #define HPL_GUI_POP_UP_FILE_PICKER_H
 
-#include "gui/WidgetBaseClasses.h"
 #include "gui/GuiPopUp.h"
 
 namespace hpl {
 
-	class cGuiSet;
-	class cGuiSkin;
-
-	class cWidgetWindow;
-	class cWidgetMultiPropertyListBox;
-	class cWidgetButton;
-	class cWidgetTextBox;
-	class cWidgetComboBox;
-
-	//---------------------------------------------------------------
-
-	//---------------------------------------------------------------
-
-	class cGuiPopUpFilePicker : public iGuiPopUp, public iFileBrowser
+	// Rust-owned, see GuiPopUp.h; the browser state is an iFileBrowser object kept by the host (RustGuiH21Host.cpp).
+	class cGuiPopUpFilePicker : public iGuiPopUp
 	{
 	public:
-		cGuiPopUpFilePicker(cGuiSet* apSet, cGuiSkin* apSkin, eFilePickerType aeType, const tWString &asStartPath, bool abShowHiddenFiles,
-							void *apCallbackObject, tGuiCallbackFunc apCallback, const tWString& asStartFilename=_W(""));
-		virtual ~cGuiPopUpFilePicker();
+		void SetSaveFileDest( tWString &asFileName ){ ohpl_g2_popup_fp_save_dest(this, &asFileName, (const uint32_t*)asFileName.data(), asFileName.size()); }
+		void SetLoadFileListDest( tWStringVec &asFileList ){ ohpl_g2_popup_fp_load_dest(this, &asFileList); }
 
-		void Init();
-
-		void SetSaveFileDest( tWString &asFileName );
-		void SetLoadFileListDest( tWStringVec &asFileList );
-
-	protected:
-		void OnAddFilter();
-		void OnNavigate();
-		bool H21Ext(const OhplH21Cmd &aCmd, OhplH21Ret &aRet);
-
-
-
-
-		//////////////////////////////
-		// Data
-		tWString msStartFilename;
-
-		tWString* mpSaveFileDest;
-		tWStringVec* mpLoadFileListDest;
-
-		eFilePickerType mPickerType;
-
-		cGuiGfxElement* mvGfxFileTypeIcons[6];
-		cGuiGfxElement* mpGfxUpButton;
-
-		std::vector<tWString> mvH21Files;
+		int AddCategory(const tWString& asCategory, const tWString& asFilter=_W(""))
+		{ return ohpl_g2_popup_fp_add_category(this, (const uint32_t*)asCategory.data(), asCategory.size(), (const uint32_t*)asFilter.data(), asFilter.size()); }
+		void AddFilter(int alCategoryId, const tWString& asFilter){ ohpl_g2_popup_fp_add_filter(this, alCategoryId, (const uint32_t*)asFilter.data(), asFilter.size()); }
+	private:
+		cGuiPopUpFilePicker();
 	};
-};
 
+};
 #endif // HPL_GUI_POP_UP_FILE_PICKER_H

@@ -249,7 +249,6 @@ namespace hpl {
 		[](uintptr_t w, float *s) { s[0] = Wd(w)->GetSize().x; s[1] = Wd(w)->GetSize().y; },
 		[](uintptr_t w, const char *p, size_t n) { return Wd(w)->GetName() == tString(p, n); },
 		OpRootNew,
-		[](uintptr_t p) { iGuiPopUp *pPop = (iGuiPopUp*)p; hplDelete(pPop); },
 		OpTooltipCreate,
 		OpTooltipMeasure,
 		OpTooltipApply,
@@ -458,5 +457,6 @@ namespace hpl {
 		}
 	}
 
-	static struct OhplG1Register { OhplG1Register() { ohpl_g1_set_engine(&gG1Engine); ohpl_g1_set_host(&gG1Host); ohpl_g1_set_ops(&gG1Ops); ohpl_g1_set_trace_fn(TraceDraw); } } gG1Register;
+	void OhplG2RegisterPopupOps();
+	static struct OhplG1Register { OhplG1Register() { ohpl_g1_set_engine(&gG1Engine); ohpl_g1_set_host(&gG1Host); ohpl_g1_set_ops(&gG1Ops); OhplG2RegisterPopupOps(); ohpl_g1_set_trace_fn(TraceDraw); } } gG1Register;
 }

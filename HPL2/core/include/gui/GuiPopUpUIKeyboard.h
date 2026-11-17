@@ -17,6 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+
 #ifndef HPL_GUI_POP_UP_UI_KEYBOARD_H
 #define HPL_GUI_POP_UP_UI_KEYBOARD_H
 
@@ -24,27 +25,12 @@
 
 namespace hpl {
 
-	class cGuiSet;
-	class cGuiSkin;
-
-	class cWidgetWindow;
-	class cWidgetButton;
-	class cWidgetTextBox;
-	class cWidgetFrame;
-	class cWidgetSlider;
-	class cWidgetLabel;
-
-	//---------------------------------------------------------------
-
+	// Rust-owned, see GuiPopUp.h.
 	class cGuiPopUpUIKeyboard : public iGuiPopUp
 	{
-	public:
-		cGuiPopUpUIKeyboard(cWidgetTextBox* apTargetTextBox, void *apCallbackObject, tGuiCallbackFunc apCallback);
-		virtual ~cGuiPopUpUIKeyboard();		
-
-	protected:
-		bool H21Ext(const OhplH21Cmd &aCmd, OhplH21Ret &aRet);
+	private:
+		cGuiPopUpUIKeyboard();
 	};
-};
 
+};
 #endif // HPL_GUI_POP_UP_UI_KEYBOARD_H

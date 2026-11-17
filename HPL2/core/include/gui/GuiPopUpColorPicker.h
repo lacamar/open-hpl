@@ -17,6 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+
 #ifndef HPL_GUI_POP_UP_COLOR_PICKER_H
 #define HPL_GUI_POP_UP_COLOR_PICKER_H
 
@@ -24,26 +25,12 @@
 
 namespace hpl {
 
-	class cGuiSet;
-	class cGuiSkin;
-
-	class cWidgetWindow;
-	class cWidgetButton;
-	class cWidgetTextBox;
-	class cWidgetFrame;
-	class cWidgetSlider;
-	class cWidgetLabel;
-
-	//---------------------------------------------------------------
-
-	//---------------------------------------------------------------
-
+	// Rust-owned, see GuiPopUp.h.
 	class cGuiPopUpColorPicker : public iGuiPopUp
 	{
-	public:
-		cGuiPopUpColorPicker(cGuiSet* apSet, cGuiSkin* apSkin,const cVector3f& avPos,cColor* apDestColor, void *apCallbackObject, tGuiCallbackFunc apCallback);
-		virtual ~cGuiPopUpColorPicker();
+	private:
+		cGuiPopUpColorPicker();
 	};
-};
 
+};
 #endif // HPL_GUI_POP_UP_COLOR_PICKER_H

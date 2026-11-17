@@ -374,64 +374,10 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cGuiPopUpMessageBox* cGuiSet::CreatePopUpMessageBox(	const tWString& asLabel, const tWString& asText,
-								const tWString& asButton1, const tWString& asButton2,
-								void *apCallbackObject, tGuiCallbackFunc apCallback)
-	{
-		cGuiPopUpMessageBox* pMessageBox = hplNew( cGuiPopUpMessageBox, (this, asLabel,asText,
-																asButton1,asButton2,
-																apCallbackObject,apCallback) );
-
-		return pMessageBox;
-	}
-
-	//-----------------------------------------------------------------------
-
-	cGuiPopUpFilePicker* cGuiSet::CreatePopUpSaveFilePicker( tWString &asFileName, const tWString &asCategory,
-															 const tWString &asFilter, const tWString &asStartPath, bool abShowHidden,
-															void *apCallbackObject, tGuiCallbackFunc apCallback, const tWString& asStartFilename)
-	{
-		cGuiPopUpFilePicker* pPicker = hplNew( cGuiPopUpFilePicker, (this, GetSkin(), eFilePickerType_Save, asStartPath, abShowHidden, apCallbackObject, apCallback, asStartFilename) );
-		pPicker->Init();
-		pPicker->SetSaveFileDest( asFileName );
-
-		pPicker->AddCategory( asCategory, asFilter );
-
-		return pPicker;
-	}
-
-	//-----------------------------------------------------------------------
-
-	cGuiPopUpFilePicker* cGuiSet::CreatePopUpLoadFilePicker( tWStringVec &avFileList, bool abAddAllFilesFilter,
-															 const tWString &asStartPath, bool abShowHidden,
-															 void *apCallbackObject, tGuiCallbackFunc apCallback)
-	{
-		cGuiPopUpFilePicker* pPicker = hplNew( cGuiPopUpFilePicker, (this, GetSkin(), eFilePickerType_Load, asStartPath, abShowHidden, apCallbackObject, apCallback) );
-		pPicker->Init();
-		pPicker->SetLoadFileListDest( avFileList );
-
-		if(abAddAllFilesFilter)
-			pPicker->AddCategory(_W("All files"), _W("*.*"));
-
-		return pPicker;
-	}
-
-	//-----------------------------------------------------------------------
-
-	cGuiPopUpColorPicker* cGuiSet::CreatePopUpColorPicker( cColor* apDestColor, const cVector3f& avPos,  void *apCallbackObject, tGuiCallbackFunc apCallback)
-	{
-		cGuiPopUpColorPicker* pPicker = hplNew( cGuiPopUpColorPicker,(this, GetSkin(), avPos, apDestColor, apCallbackObject, apCallback));
-
-		return pPicker;
-	}
-
-	//-----------------------------------------------------------------------
-
 	cGuiPopUpUIKeyboard* cGuiSet::CreatePopUpUIKeyboard(cWidgetTextBox* apTarget)
 	{
-		cGuiPopUpUIKeyboard* pKB = hplNew(cGuiPopUpUIKeyboard,(apTarget, NULL, NULL));
-
-		return pKB;
+		cGuiSet *pSet = apTarget->GetSet();
+		return static_cast<cGuiPopUpUIKeyboard*>(ohpl_g2_popup_kb(pSet, pSet->GetSkin(), (uintptr_t)apTarget));
 	}
 
 	//-----------------------------------------------------------------------
