@@ -7,6 +7,9 @@ R=$(cd "$(dirname "$0")/.." && pwd); cd "$R"
 GAME=${1:?game}; MAP=${2:?map}; OUT=${3:?dump}
 eval "$(scripts/soma-init.sh --env-only "$GAME" 2> /dev/null)"
 export OPENHPL_HEADLESS_SLOTS=${OPENHPL_HEADLESS_SLOTS:-4}
+# map caches (static body combining sorts by pointer, so a cache made by another run gives other contact order): one shared set
+SHARED=${A2C_MAP_CACHE:-$HOME/.cache/open-hpl/gate/map-cache-shared}/$GAME
+if [ -d "$SHARED" ]; then mkdir -p "$XDG_CACHE_HOME/open-hpl" && cp -a "$SHARED/." "$XDG_CACHE_HOME/open-hpl/"; fi
 SOCK=$XDG_RUNTIME_DIR/ohpl-a2c-$$.sock
 C() { scripts/hpl_control.py --socket "$SOCK" --timeout 240 "$@"; }
 rm -f "$OUT"
@@ -20,4 +23,5 @@ for _ in $(seq 30); do kill -0 "$PID" 2> /dev/null && sleep 1 || break; done
 kill -9 "$PID" 2> /dev/null
 grep -q "^END" "$OUT" || echo "scenario did not reach END" >&2
 sed -i "/^END/q" "$OUT"
+[ -d "$SHARED" ] || { mkdir -p "$SHARED" && cp -a "$XDG_CACHE_HOME/open-hpl/." "$SHARED/"; }
 wc -l "$OUT"
