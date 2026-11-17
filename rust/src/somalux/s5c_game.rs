@@ -95,7 +95,7 @@ thread_local! {
     pub(super) static TEST_OPS: RefCell<Option<std::rc::Rc<dyn Ops>>> = const { RefCell::new(None) };
 }
 
-fn with_ops<R>(f: impl FnOnce(&dyn Ops) -> R) -> Option<R> {
+pub(super) fn with_ops<R>(f: impl FnOnce(&dyn Ops) -> R) -> Option<R> {
     #[cfg(test)]
     if let Some(h) = TEST_OPS.with(|t| t.borrow().clone()) {
         return Some(f(&*h));

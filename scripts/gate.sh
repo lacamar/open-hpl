@@ -476,6 +476,9 @@ def same(name, a, b):
             (ox, sx), (oy, sy) = timers(x), timers(y)
             if ox != oy or sx != sy:
                 return (False, f"DIFFER (section {i}: timers)")
+            # map load / timer / collide-flag / light-level lines (S9): the set of distinct lines must agree
+            if {l for l in x if l.startswith("s9 ")} != {l for l in y if l.startswith("s9 ")}:
+                return (False, f"DIFFER (section {i}: s9 map lines)")
         return (True, f"equal over {len(sa)} maps")
     if name.startswith("a12a-"):
         # frames past the script depend on when the run shuts down

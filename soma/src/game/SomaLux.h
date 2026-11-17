@@ -14,19 +14,6 @@ using namespace hpl;
 class cSomaScriptRuntime;
 class cSomaLuxEntity;
 
-struct cSomaLuxTimer
-{
-	tString msName;
-	tString msFunction;
-	float mfTime;
-	bool mbPaused;
-	float mfUserFloat;
-	int mlUserInt;
-	tString msUserString;
-	float mfLength = 0;
-	bool mbRemoved = false;
-};
-
 class cSomaLuxMap
 {
 public:
@@ -45,16 +32,9 @@ public:
 	void PostUpdate(float afTimeStep);
 	void OnAction(int alAction, bool abPressed);
 
-	void AddTimer(const tString &asName, float afTime, const tString &asFunction);
-	// cLuxMap::RestartCurrentTimer, only valid inside a timer callback
-	void RestartCurrentTimer(float afTime);
-	std::list<cSomaLuxTimer> &GetTimers() { return mvTimers; }
-	bool IsTimerLive(const cSomaLuxTimer &t) const { return t.mbRemoved == false && (&t != mpFiringTimer || t.mfTime > 0); }
-	double GetTime() { return mfTime; }
-	int GetTimeStamp() { return mlTimeStamp; }
-	void RemoveTimer(const tString &asName);
-	cSomaLuxTimer *GetTimer(const tString &asName);
-	void SetTimerPaused(const tString &asName, bool abX);
+	void FireTimer(const tString &asName, const tString &asFunction);
+	double GetTime();
+	int GetTimeStamp();
 	void AddDissolveEntity(cMeshEntity *apMeshEntity, float afTime);
 	// cLuxPreloadCache: held until the map goes
 	void PreloadEntity(const tString &asFile);
@@ -89,8 +69,6 @@ private:
 	tString msFileName;
 	cSomaScriptRuntime *mpRuntime;
 	asIScriptObject *mpScript;
-	// newest first, like cLuxMap: a re-added timer shadows the one firing
-	std::list<cSomaLuxTimer> mvTimers;
 	std::vector<cSomaLuxEntity *> mvEntities;
 	std::map<tString, cSomaLuxEntity *> mmapEntities;
 	std::map<tString, std::vector<cSomaLuxEntity *>> mmapWildcardCache;
@@ -108,10 +86,6 @@ public:
 	std::vector<cPendingCollision> mvPendingCollisions;
 	std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> msetColliding;
 private:
-	bool mbUpdatingTimers = false;
-	cSomaLuxTimer *mpFiringTimer = NULL;
-	double mfTime = 0;
-	int mlTimeStamp = 0;
 	struct cDissolve { cMeshEntity *mpEntity; float mfAlpha, mfSpeed; };
 	std::vector<cDissolve> mvDissolves;
 	std::set<tString> msetPreloaded;
@@ -136,7 +110,8 @@ private:
 };
 
 void SomaRequestMapChange(const tString &asMap, const tString &asStart);
-tString &SomaPreloadMap();
+tString SomaPreloadMap();
+void SomaSetPreloadMap(const tString &asMap);
 cWorld *SomaTakePreloadedWorld(const tString &asMap, tString *apLoadReport = NULL);
 void SomaSetGamePaused(bool abX, bool abMusic = true, bool abSounds = true, bool abAmbience = true, tFlag alTypes = eSoundEntryType_All);
 bool SomaRunGlobalFunc(const tString &asObject, const tString &asClass, const tString &asFunc);
@@ -144,6 +119,7 @@ float SomaStartYaw(const cMatrixf &a_mtxArea);
 float SomaLightLevelAtPos(const cVector3f &p, iLight *pSkip, float fAdd);
 void SomaUpdateLightConnections();
 unsigned int SomaCollideFlag(const tString &asGroups);
+int32_t OhplS9HostCall(uint32_t alOp, struct OhplS5Io *io);
 void SomaRequestNewGame(const tString &asMap, const tString &asStart);
 
 #endif // SOMA_LUX_H

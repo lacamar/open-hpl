@@ -1,0 +1,400 @@
+-s  +c  |fffe0002
+xm +  |0
++player\t|ffff0004
+xp , |0
+-dd , +a,-j\t|ffd70010
+xl  +g , +h,xi |ffff00c0
+-player,+b\t+  |fffb0100
++o,|ffff0200
+xo\t|0
+-r\t-f +k |f3ff1000
++g\t+  +j  |ffff0060
++dd  +i,+g , |ffff2048
++g,|ffff0040
+-j , |ffdfffff
++g +j,+c\t|ffff0062
++p\t-player -a , |ffeb4000
+xe1 +l , +j , xe1 |ffff8020
++m , +e1 , |0
+|0
+|0
+-n +  xm,|0
++g\t|ffff0040
++,|0
++b,xi , |ffff0100
++e1\t|0
+|0
+|0
++player,+,+dd,|ffff000c
++r , +k  -p +r\t|bfff1400
+-i  + +a,|dfff0010
+-g,xj\t+dd,+o  |ffbf0208
+-s\t+e1 +player +i\t|fffe2004
+|0
++r\t|ffff0400
+-c  -m , |fffdffff
+-c  +p,+p |fffd4000
++h , +o,+dd , -f\t|f7ff0288
+xplayer,-r,+c,-b\t|faff0002
+-c,-m -g\t+p,|ffbd4000
++  |0
+|0
+-q  +p -l\txplayer,|7fff4000
++l , xa,+r  |ffff8400
+|0
+|0
+-g + , |ffbfffff
+-k\t|efffffff
+-e1,+c , +h xplayer , |ffff0082
++\t-s , |fffeffff
++\t+\t|0
++n,|0
++q\t+b,-f , |f7ff0100
++n +o,-c , |fffd0200
+|0
+-k , +l +f xdd,|efff8800
++o,+\t+e1 , |ffff0200
++e1 , xp , +f +q |ffff0800
++,+h,+dd +f,|ffff0888
+-o  +n  -k,|edffffff
+-g  +i\t+i,+q,|ffbf2000
++\t|0
+|0
+-s +i,xdd  |fffe2000
++dd\t|ffff0008
++g  xq , -r  |fbff0040
+|0
++c , -c , |fffd0002
++j +q |ffff0020
++  +g,xc  + |ffff0040
++n , +i  -l,|7fff2000
+-l , +n  |7fffffff
++q,+m,+b,|ffff0100
+-m  +player  xc +b |ffff0104
++ |0
+|0
+-dd\t+player |fff70004
+|0
++,|0
++l\t+q,+\t+a\t|ffff8010
+|0
+|0
++l -b,|feff8000
+-p,+\t|bfffffff
+-dd,+j  -f\t+ , |f7f70020
++a , +f\t+j , |ffff0830
++k  +s -m +i , |ffff3001
+|0
+-j |ffdfffff
++i\txb,|ffff2000
++ xc , +h\t-dd , |fff70080
++,+player , |ffff0004
+xb,+dd , +f,|ffff0808
+-f,|f7ffffff
++l |ffff8000
++ -j +g\t|ffdf0040
++m\t+p  |ffff4000
+|0
++e1  -s,-f , |f7feffff
+xs,+j\t|ffff0020
++o,+h  +n -j\t|ffdf0280
+xe1  -f  +,+h , |f7ff0080
+-q , -b +q , +q  |feffffff
++a,+p\t+m |ffff4010
+|0
+-p  +dd  -c -dd , |bff50008
+|0
+|0
+-o +j , -l , |7dff0020
+-b xq , xn\t+j  |feff0020
++a  +player\t|ffff0014
+-r +e1 |fbffffff
++o\t|ffff0200
+|0
++player\t+b\t-j,|ffdf0104
+-k,|efffffff
++j  + , +  +h  |ffff00a0
+|0
+|0
+xplayer\t+o |ffff0200
+xq\t-s +,|fffeffff
+xh xk\t-b  |feffffff
++\t|0
+-player\t-o\t+c\t|fdfb0002
+xp |0
+-r  + , |fbffffff
+-a\t-r  |fbefffff
++s  |ffff0001
+|0
++k,-dd,|fff71000
+-r , +p\t|fbff4000
+|0
++f\t+g,-q,+h , |ffff08c0
+-j |ffdfffff
++,+q |0
+-m , +i,|ffff2000
++dd , |ffff0008
+xg\txdd  +dd +o,|ffff0208
+-player,+r,+g,+m , |fffb0440
++player,|ffff0004
++\t|0
+xr , -o +g |fdff0040
+-i + , +j,|dfff0020
++o  +p\t-n  |ffff4200
+|0
++l,-player,|fffb8000
++g , -n |ffff0040
+-j , -i , +  +j\t|dfdf0020
+-s , -a xm,|ffeeffff
+|0
+|0
+-g |ffbfffff
++e1 , +g  -h |ff7f0040
++e1\t|0
++k,+l -l |7fff9000
++g , +g  +l,|ffff8040
++p , +e1  -j,|ffdf4000
+xo , -j  |ffdfffff
+-j , +o  +j\t-f  |f7df0220
++r\t-dd |fff70400
++player\t|ffff0004
+xdd |0
++h\t-s , +f\t+,|fffe0880
+-c  -i , +s , |dffd0001
++r , +f,xq  +e1,|ffff0c00
+|0
++\t+s  +h -i |dfff0081
++\t|0
+|0
+|0
++o , +a  |ffff0210
+-q  +f,+r,|ffff0c00
+|0
++g , +n  +b,-q,|ffff0140
++dd,-e1\t-p,|bfff0008
+|0
+-s  -k , -f\txm |e7feffff
+-l\t|7fffffff
++b , +r  +c  +k |ffff1502
++s,+j  xk , |ffff0021
++\t+n  xs,|0
++  -s , |fffeffff
++o +f\t+,-q\t|ffff0a00
+-k\t+,+r\t|efff0400
+-q,+r xi -o,|fdff0400
++ +o +,+e1,|ffff0200
++o |ffff0200
++h,+e1  +o , |ffff0280
++f , +\t|ffff0800
+|0
+|0
+-l\t|7fffffff
+|0
++e1\t|0
++m  |0
+|0
++ +  +g\txdd  |ffff0040
+xl,+i +a\t|ffff2010
+|0
+|0
++h , -n +m\t|ffff0080
++s  +dd\t|ffff0009
+|0
+|0
+xi  -s\t|fffeffff
++k  +s  +j\t-j,|ffdf1021
++g +m\t|ffff0040
+|0
++g +p\t+g  |ffff4040
+|0
++l  +r  |ffff8400
+|0
+xg +b,+h,|ffff0180
+|0
+|0
++q\t|0
++dd,|ffff0008
++h +l , -b |feff8080
+|0
+|0
++e1 , +o , +i , |ffff2200
++dd\t|ffff0008
++s |ffff0001
++q\txk +i,|ffff2000
++n,-l  |7fffffff
+|0
+-a  -q , |ffefffff
++b  +n , -c |fffd0100
++o  +o +i,xa\t|ffff2200
+xr , |0
++h -j,xdd\t-c  |ffdd0080
++a , + , +  +\t|ffff0010
++n\txg  +  |0
+-k , +\t+h\t|efff0080
++i |ffff2000
++p , +h,+a |ffff4090
+|0
++,+l\t|ffff8000
++n\t+q\t|0
++p,|ffff4000
++s , |ffff0001
++k\t|ffff1000
+|0
+-h  -h,+n  |ff7fffff
+-i |dfffffff
+|0
+-p  +dd\t+b,|bfff0108
++n , -b,-j\t|fedfffff
+|0
+-c +b,+n , |fffd0100
+|0
+xk +k\t-j  + , |ffdf1000
+xr xi |0
+-o\t+k,|fdff1000
+-f\t-k\t+\t|e7ffffff
+|0
++h , xk -c , -o |fdfd0080
+xa,xr |0
++c -m\t|ffff0002
+|0
++o\t+o , +f , +a |ffff0a10
+-e1,-g  -e1  |ffbfffff
++ , |0
++g |ffff0040
++c\t+o , -i,|dfff0202
++s , xh , +g\t|ffff0041
++j  -l xq , |7fff0020
+|0
+|0
++\t+p , +r,+o\t|ffff4600
++p , -o,|fdff4000
++\t-j,|ffdfffff
+|0
+|0
++\t+l , +p,+k,|ffffd000
+-l\t-g  +  |7fbfffff
+xm,|0
+|0
+-n -c\t-a |ffedffff
++m , |0
++c , +p,+c\t+b , |ffff4102
+-h,|ff7fffff
+-m\t|0
+-g , |ffbfffff
+|0
++f\t+l , +a -m |ffff8810
+-a -j\t-q  |ffcfffff
++s |ffff0001
++s,|ffff0001
++ +j\t-l , |7fff0020
++player,+h  |ffff0084
+xa  -j , +l\t|ffdf8000
++b,|ffff0100
++e1  |0
+|0
+-i  +k\t|dfff1000
+-a , |ffefffff
+|0
++a,+k  +o  +s |ffff1211
++l , +b,+l\t-c,|fffd8100
+|0
+-b , +f,+b +p  |feff4900
++o\t+m |ffff0200
++j , xb , |ffff0020
+|0
++e1,+g\t|ffff0040
++p xh  |ffff4000
++s +n\t|ffff0001
+|0
++b  |ffff0100
++e1,+c\t+e1  |ffff0002
++p,+\t-player -p  |bffb4000
+xj , -c  + + , |fffdffff
+|0
+xc , |0
+xb , +j  |ffff0020
++a,+\t|ffff0010
+-j\t|ffdfffff
++f,+q , +c,-n,|ffff0802
++r  |ffff0400
++p , + |ffff4000
+|0
++f , |ffff0800
++q  +c  |ffff0002
++,+p , |ffff4000
+xq |0
++k  + , -n,+o |ffff1200
++h,|ffff0080
++  -q , +o\t-f  |f7ff0200
++a |ffff0010
+|0
++c  +r\t-m -j\t|ffdf0402
++o +dd  -k , |efff0208
+-b\t+p  |feff4000
+xg , |0
+xq  +\t+player |ffff0004
++  +k  |ffff1000
++f -m +n , -q |ffff0800
++i , |ffff2000
+-h , +b -i\t|df7f0100
++dd  +j\t-j\t|ffdf0028
++dd , +  +b,|ffff0108
++  +a |ffff0010
++g,+player +  |ffff0044
++f,+p,+a,-l\t|7fff4810
++m  -a , +  |ffefffff
++p,+\t+b,|ffff4100
+xo\t+l -e1,-q\t|ffff8000
++p +q |ffff4000
++e1 +l  +g  |ffff8040
++r  |ffff0400
++j +o , +l,-o |fdff8220
+|0
+|0
++m,-m,+,+i |ffff2000
+-e1 , +player  |ffff0004
++b +  -player , xg , |fffb0100
+-q , +c  |ffff0002
+|0
+xs , -p , |bfffffff
+xf +dd,+o |ffff0208
+-dd,-h  |ff77ffff
+-o +s |fdff0001
+|0
++p\t+b,+i , +m\t|ffff6100
++\t-a\t+h\t-g  |ffaf0080
++dd xk  -s +b , |fffe0108
++\t+ , +q,+,|0
++j,-s  + |fffe0020
+-k,-s  -p\t+e1 , |affeffff
+xr +g\t+e1\t+ |ffff0040
++ , +e1 , |0
+|0
++q,+h\t-m  |ffff0080
+xl  |0
++l +g + |ffff8040
+|0
++k |ffff1000
++ +e1 +q xr  |0
++p  xn  +s , |ffff4001
++l , |ffff8000
++h  -s , +  -c , |fffc0080
++s,-player  +a\t+,|fffb0011
++h , +player +p |ffff4084
++dd\t-g\t|ffbf0008
+-l  -a,|7fefffff
++e1  -h +k\t|ff7f1000
+-k,+g |efff0040
++n\t+b\t-a,+s\t|ffef0101
+|0
+|0
+xa , -l |7fffffff
++dd +h,|ffff0088
+-n\t+n |0
+-b +j , |feff0020
++a\t|ffff0010
+|0
+-e1,+q , xj |0
+-g,+g,-l  -g  |7fbf0040
+-c,+dd -s,+f\t|fffc0808
+-k  +player +s  xdd,|efff0005

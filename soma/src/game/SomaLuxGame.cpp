@@ -1,4 +1,5 @@
 #include "SomaLuxGame.h"
+#include "RustSomaLuxS9.h"
 #include "SomaS5Dump.h"
 #include "SomaBase.h"
 #include "SomaLux.h"
@@ -422,6 +423,8 @@ int32_t GameHostCall(void *, uint32_t alOp, OhplS5Io *io)
 	case kOhplS5c_LOG: Log("%s", Str(io).c_str()); return 0;
 	case kOhplS5c_DUMP_ANALOG: OhplS5Log("ana %d %.9g %.9g %.9g", io->i[0], io->f[0], io->f[1], io->f[2]); return 0;
 	}
+	if (alOp >= kOhplS9_FIRE)
+		return OhplS9HostCall(alOp, io);
 	return 0;
 }
 const OhplS5Host gGameHost = {NULL, GameHostCall};

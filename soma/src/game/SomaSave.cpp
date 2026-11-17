@@ -1,4 +1,5 @@
 #include "SomaSave.h"
+#include "RustSomaLuxS9.h"
 #include "RustSomaSave.h"
 #include "SomaAgent.h"
 #include "SomaBase.h"
@@ -647,12 +648,13 @@ public:
 		}
 
 		// a save from inside a timer callback must not keep that expired timer
-		for (const cSomaLuxTimer &t : pMap->GetTimers())
+		OhplS9Timer t;
+		for (size_t i = 0; ohpl_s9_timer_get((size_t)pMap, i, &t); ++i)
 		{
-			if (pMap->IsTimerLive(t) == false)
+			if (t.live == false)
 				continue;
-			c.mMapTimers.push_back(OhplGs4MapTimer{c.mPool.Add(t.msName), c.mPool.Add(t.msFunction), c.mPool.Add(t.msUserString), t.mfTime,
-												   t.mfUserFloat, t.mfLength, t.mlUserInt, t.mbPaused});
+			c.mMapTimers.push_back(OhplGs4MapTimer{c.mPool.Add(tString((const char *)t.name, t.name_n)), c.mPool.Add(tString((const char *)t.func, t.func_n)),
+												   c.mPool.Add(tString((const char *)t.user, t.user_n)), t.time, t.user_float, t.length, t.user_int, t.paused});
 		}
 		w.map_timers = Sl(c.mMapTimers);
 
@@ -894,19 +896,23 @@ public:
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
 		return pPlayer && pPlayer->GetCamera();
 	}
-	static void RMapTimersBegin(void *c) { R(c)->mpMap->GetTimers().clear(); }
+	static void RMapTimersBegin(void *c) { ohpl_s9_timers_clear((size_t)R(c)->mpMap); }
 	static void RMapTimer(void *c, const OhplGs4MapTimer *x)
 	{
-		cSomaLuxTimer t;
-		t.msName = FromRS(x->name);
-		t.msFunction = FromRS(x->func);
-		t.mfTime = x->time;
-		t.mbPaused = x->paused;
-		t.mfUserFloat = x->user_float;
-		t.mlUserInt = x->user_int;
-		t.msUserString = FromRS(x->user_str);
-		t.mfLength = x->length;
-		R(c)->mpMap->GetTimers().push_back(t);
+		tString sName = FromRS(x->name), sFunc = FromRS(x->func), sUser = FromRS(x->user_str);
+		OhplS9Timer t = {};
+		t.name = (const unsigned char *)sName.data();
+		t.name_n = sName.size();
+		t.func = (const unsigned char *)sFunc.data();
+		t.func_n = sFunc.size();
+		t.user = (const unsigned char *)sUser.data();
+		t.user_n = sUser.size();
+		t.time = x->time;
+		t.paused = x->paused;
+		t.user_float = x->user_float;
+		t.user_int = x->user_int;
+		t.length = x->length;
+		ohpl_s9_timer_push_back((size_t)R(c)->mpMap, &t);
 	}
 	static size_t RObj(cReadCtx *r, asIScriptObject *apObj)
 	{
@@ -1640,7 +1646,7 @@ bool cSomaSaveHandler::ApplyPendingState()
 	std::string sState;
 	sState.swap(gsPendingState);
 	OhplGs4In *pIn = ohpl_gs4_in_new((const unsigned char *)sState.data(), sState.size());
-	SomaPreloadMap() = gsPendingPreload;
+	SomaSetPreloadMap(gsPendingPreload);
 	gnSavedUnderwater = -1;
 	glSavedGravityActive = -1;
 	cSomaSaveState::ReadWorld(pIn);
