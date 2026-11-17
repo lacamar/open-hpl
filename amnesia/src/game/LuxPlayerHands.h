@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxPlayerA2.h"
 
 //----------------------------------------------
 
@@ -100,28 +101,29 @@ public:
 	iLuxHandObject* GetCurrentHandObject(){ return mpCurrentHandObject;}
 
 	void SetState(eLuxHandsState aState);
-	eLuxHandsState GetState(){ return mHandState; }
+	eLuxHandsState GetState(){ return (eLuxHandsState)mHandState; }
 
 	const tString& GetCurrentAnimation(){ return msCurrentAnim; }
 	cMeshEntity *GetHandsEntity(){ return mpHandsEntity;}
 
     
 public://Only used by hand object
-	float mfHandObjectChargeCount;
-	int mlHandObjectState;
-	bool mbHandObjectAttackDown;
-	bool mbHandObjectInteractDown;
-	float mfHandObjectAlpha;
+	OhplA2dHands mD{};
+	float &mfHandObjectChargeCount = mD.mfCharge;
+	int &mlHandObjectState = mD.mlObjectState;
+	bool &mbHandObjectAttackDown = mD.mbAttackDown;
+	bool &mbHandObjectInteractDown = mD.mbInteractDown;
+	float &mfHandObjectAlpha = mD.mfAlpha;
 
 private:
-	void ResetHandObjectVars();
 
 	void CreateHandEntity(cLuxMap *apMap);
 	void DestroyHandEntity(cLuxMap *apMap);
 	void CreateAndAttachHandObject(cLuxMap *apMap, iLuxHandObject *apHandObject);
 	void HideAllHandObjects();
 	
-	void UpdatePlayerHandsPos(float afTimeStep);
+	static float HostCall(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, void *apP);
+	OhplA2dHost HandsHost(){ OhplA2dHost h = {this, HostCall}; return h; }
 
 	iLuxHandObject* LoadHandObject(const tString& asName);
 	iLuxHandObject* CreateObjectFromType(const tString& asName, eLuxHandObjectType aType);
@@ -136,12 +138,7 @@ private:
 
 	cLuxHandObjectLoader *mpHandObjectLoader;
 
-	float mfPosAddMul;
-
-	int mlMaxCamRotations;
-	tVector3fList mlstCamRotations;
-
-	eLuxHandsState mHandState;
+	int &mHandState = mD.mlState;
 	tString msCurrentAnim;
 };
 

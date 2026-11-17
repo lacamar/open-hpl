@@ -114,14 +114,14 @@ public:
 	void Crouch(bool abPressed);
 	
 	void ChangeState(eLuxPlayerState aState);
-	eLuxPlayerState GetCurrentState(){ return mState;}
+	eLuxPlayerState GetCurrentState(){ return (eLuxPlayerState)mD.mlState;}
 	iLuxPlayerState* GetStateData(eLuxPlayerState aState){ return mvStates[aState];}
-	iLuxPlayerState* GetCurrentStateData(){ return mvStates[mState];}
+	iLuxPlayerState* GetCurrentStateData(){ return mvStates[mD.mlState];}
 
 	void ChangeMoveState(eLuxMoveState aState);
-	eLuxMoveState GetCurrentMoveState(){ return mMoveState;}
+	eLuxMoveState GetCurrentMoveState(){ return (eLuxMoveState)mD.mlMoveState;}
 	iLuxMoveState* GetMoveStateData(eLuxMoveState aState){ return mvMoveStates[aState];}
-	iLuxMoveState* GetCurrentMoveStateData(){ return mvMoveStates[mMoveState];}
+	iLuxMoveState* GetCurrentMoveStateData(){ return mvMoveStates[mD.mlMoveState];}
 	
 	void MoveHeadPosAdd(eLuxHeadPosAdd aType, const cVector3f& avGoal, float afSpeed, float afSlowdownDist);
 
@@ -300,22 +300,18 @@ public:
 	
 private:
 	OhplA2Core mCore;
+	OhplA2dDisp mD{};
+	static float DispCall(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, void *apP);
+	OhplA2dHost DispHost(){ OhplA2dHost h = {this, DispCall}; return h; }
 	static void A2HostOp(void *apCtx, uint32_t alKind, int32_t alI, float afA, float afB, float afC, float afD);
 	static float A2HostQuery(void *apCtx, uint32_t alKind);
 	void UpdateTerrorSound();
 	void RunVitals(int alWhich, float afAmount, int alType, unsigned int alFlags);
-	bool CanDrawCrossHair();
-	void DrawHud(float afFrameTime);
 
 	void UpdateHeadPosAdd(float afTimeStep);
-	void UpdateCamera(float afTimeStep);
-	void UpdateTerror(float afTimeStep);
 	void UpdateLean(float afTimeStep);
-	void UpdateFocusText(float afTimeStep);
-	void UpdateAvgSpeed(float afTimeStep);
 	
 	void SpinHead(float afSpeed);
-	void UpdateHeadSpin(float afTimeStep);
 
 	void CreateCharacterBody(iPhysicsWorld *apPhysicsWorld);
 
@@ -324,57 +320,55 @@ private:
 
 	///////////////////////////////
 	// Variables
-	bool mbActive;
+	bool &mbActive = mD.mbActive;
 
 	bool mbUsePermaDeath;
 	tString msCurrentPermaDeathSound;
 
-	bool mbNoFallDamage;
-	bool mbUsesDragFootsteps;
+	bool &mbNoFallDamage = mD.mbNoFallDamage;
+	bool &mbUsesDragFootsteps = mD.mbUsesDragFootsteps;
 
-	eLuxPlayerState mState;
-	eLuxMoveState mMoveState;
 
 	float &mfHealth = mCore.mfHealth;
 	float &mfSanity = mCore.mfSanity;
 	float &mfLampOil = mCore.mfLampOil;
 	float &mfTerror = mCore.mfTerror;
-	int mlCoins;
-	int mlTinderboxes;
+	int &mlCoins = mD.mlCoins;
+	int &mlTinderboxes = mD.mlTinderboxes;
 
-	bool mbPressedMove;
-	bool mbPressingRun;
-	bool mbPressingJump;
+	bool &mbPressedMove = mD.mbPressedMove;
+	bool &mbPressingRun = mD.mbPressingRun;
+	bool &mbPressingJump = mD.mbPressingJump;
 
-	bool mbIsInWater;
+	bool &mbIsInWater = mD.mbIsInWater;
 	tString msWaterStepSound;
-	float mfWaterSpeedMul;
+	float &mfWaterSpeedMul = mD.mfWaterSpeedMul;
 
-	float mfInteractionMoveSpeedMul;
+	float &mfInteractionMoveSpeedMul = mD.mfInteractionMoveSpeedMul;
 
-	float mfLookSpeedMul;
+	float &mfLookSpeedMul = mD.mfLookSpeedMul;
 
-	bool mbJumpDisabled;
-	bool mbCrouchDisabled;
-	bool mbSanityDrainDisabled;
+	bool &mbJumpDisabled = mD.mbJumpDisabled;
+	bool &mbCrouchDisabled = mD.mbCrouchDisabled;
+	bool &mbSanityDrainDisabled = mD.mbSanityDrainDisabled;
 
-	float mfEventMoveSpeedMul;
-	float mfEventRunSpeedMul;
+	float &mfEventMoveSpeedMul = mD.mfEventMoveSpeedMul;
+	float &mfEventRunSpeedMul = mD.mfEventRunSpeedMul;
 
-	float mfScriptMoveSpeedMul;
-	float mfScriptRunSpeedMul;
+	float &mfScriptMoveSpeedMul = mD.mfScriptMoveSpeedMul;
+	float &mfScriptRunSpeedMul = mD.mfScriptRunSpeedMul;
 
-	float mfHurtMoveSpeedMul;
+	float &mfHurtMoveSpeedMul = mD.mfHurtMoveSpeedMul;
 
-	float mfInsanityCollapseSpeedMul;
+	float &mfInsanityCollapseSpeedMul = mD.mfInsanityCollapseSpeedMul;
 
-	float mfScriptJumpForceMul;
+	float &mfScriptJumpForceMul = mD.mfScriptJumpForceMul;
 
 	cVector2f &mvHeadSpinSpeed = mCore.mvHeadSpinSpeed;
 
-	cVector3f mvHeadPosAddSum;
+	cVector3f &mvHeadPosAddSum = mD.mvHeadPosAddSum;
 	
-	float mfCurrentFocusDistance;
+	float &mfCurrentFocusDistance = mD.mfCurrentFocusDistance;
 	iLuxEntity *mpEntityInFocus;
 	iPhysicsBody* mpBodyInFocus;
 
@@ -410,13 +404,11 @@ private:
 	tWString msLastFocusText;
 
 	bool mbShowCrossHair;
-	bool mbScriptShowFocusIconAndCrossHair;
+	bool &mbScriptShowFocusIconAndCrossHair = mD.mbScriptShowFocusIconAndCrossHair;
 
 	eLuxFocusIconStyle mFocusIconStyle;
 
-	std::list<float> mlstPrevSpeeds;
-	int mlMaxPrevSpeeds;
-	float mfAvgSpeed;
+	float &mfAvgSpeed = mD.mfAvgSpeed;
 
 	///////////////////////////////
 	// Data
@@ -431,7 +423,6 @@ private:
 	float &mfFOV = mCore.cam.mfFOV;
 
 
-	float mfAutoKillYPos;
 
 	cVector2f mvHeadSpeed;
 
@@ -465,8 +456,8 @@ private:
 
 	//////////////////////
 	// Free camera
-	bool mbFreeCameraActive;
-	float mfFreeCameraSpeed;
+	bool &mbFreeCameraActive = mD.mbFreeCameraActive;
+	float &mfFreeCameraSpeed = mD.mfFreeCameraSpeed;
 };
 
 //----------------------------------------------

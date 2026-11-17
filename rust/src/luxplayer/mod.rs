@@ -17,6 +17,11 @@ mod a2b_tests;
 mod a2c_helpers;
 #[cfg(test)]
 mod a2c_tests;
+mod a2d_disp;
+mod a2d_hands;
+mod a2d_input;
+#[cfg(test)]
+mod a2d_tests;
 mod a3_debug;
 mod a3_default;
 mod a3_ffi;

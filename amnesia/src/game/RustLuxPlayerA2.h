@@ -248,4 +248,149 @@ void ohpl_a2b_lantern_set_disabled(OhplA2bLantern *s, const OhplA2bHost *h, bool
 void ohpl_a2b_lantern_reset(OhplA2bLantern *s);
 }
 
+// A2c: player dispatch (rust/src/luxplayer/a2d_*.rs)
+struct OhplA2dDisp
+{
+	void *mpRing;
+	int32_t mlState, mlMoveState, mlCoins, mlTinderboxes, mlMaxPrevSpeeds;
+	float mfWaterSpeedMul, mfInteractionMoveSpeedMul, mfLookSpeedMul, mfEventMoveSpeedMul, mfEventRunSpeedMul,
+		mfScriptMoveSpeedMul, mfScriptRunSpeedMul, mfHurtMoveSpeedMul, mfInsanityCollapseSpeedMul, mfScriptJumpForceMul,
+		mfCurrentFocusDistance, mfFreeCameraSpeed, mfAvgSpeed, mfAutoKillYPos;
+	hpl::cVector3f mvHeadPosAddSum;
+	bool mbActive, mbNoFallDamage, mbUsesDragFootsteps, mbPressedMove, mbPressingRun, mbPressingJump, mbIsInWater,
+		mbJumpDisabled, mbCrouchDisabled, mbSanityDrainDisabled, mbFreeCameraActive, mbScriptShowFocusIconAndCrossHair;
+};
+static_assert(sizeof(OhplA2dDisp) == 112, "OhplA2dDisp layout");
+
+struct OhplA2dHost
+{
+	void *ctx;
+	float (*call)(void *ctx, uint32_t kind, int32_t i, float a, float b, void *p);
+};
+
+enum OhplA2dKind : uint32_t
+{
+	kOhplA2dMsEnter = 1,
+	kOhplA2dMsLeave = 2,
+	kOhplA2dMsUpdate = 3,
+	kOhplA2dMsOnMove = 4,
+	kOhplA2dMsOnYaw = 5,
+	kOhplA2dMsOnPitch = 6,
+	kOhplA2dMsOnRun = 7,
+	kOhplA2dMsOnJump = 8,
+	kOhplA2dMsOnCrouch = 9,
+	kOhplA2dMsMapEnter = 10,
+	kOhplA2dMsOnDraw = 11,
+	kOhplA2dStEnter = 20,
+	kOhplA2dStLeave = 21,
+	kOhplA2dStSetPrev = 22,
+	kOhplA2dStUpdate = 23,
+	kOhplA2dStPostUpdate = 24,
+	kOhplA2dStOnMove = 25,
+	kOhplA2dStOnYaw = 26,
+	kOhplA2dStOnPitch = 27,
+	kOhplA2dStOnScroll = 28,
+	kOhplA2dStOnAction = 29,
+	kOhplA2dStOnRun = 30,
+	kOhplA2dStOnJump = 31,
+	kOhplA2dStOnCrouch = 32,
+	kOhplA2dStMapEnter = 33,
+	kOhplA2dStMapLeave = 34,
+	kOhplA2dStOnDraw = 35,
+	kOhplA2dFreeMove = 40,
+	kOhplA2dBodyMove = 41,
+	kOhplA2dFreeYaw = 42,
+	kOhplA2dFreePitch = 43,
+	kOhplA2dYaw = 44,
+	kOhplA2dPitch = 45,
+	kOhplA2dLanternToggle = 46,
+	kOhplA2dCollapseActive = 47,
+	kOhplA2dHeadPosAdd = 48,
+	kOhplA2dHelpersUpdate = 49,
+	kOhplA2dHelpersPost = 50,
+	kOhplA2dHelpersDraw = 51,
+	kOhplA2dHelpersLuxMsg = 52,
+	kOhplA2dCollisionCb = 53,
+	kOhplA2dBodyY = 54,
+	kOhplA2dBodySpeed = 55,
+	kOhplA2dClearFocusText = 56,
+	kOhplA2dNullFocus = 57,
+	kOhplA2dDestroyCb = 58,
+	kOhplA2dClearTerror = 59,
+	kOhplA2dCamMapLeave = 60,
+	kOhplA2dPauseActive = 61,
+	kOhplA2dFocusCanInteract = 62,
+	kOhplA2dDrawCrosshair = 63,
+	kOhplA2dFocusTextState = 64,
+	kOhplA2dDrawFocusText = 65,
+	kOhplA2dFreecamCamera = 66,
+	kOhplA2dShowCrosshair = 67,
+};
+
+extern "C" {
+void ohpl_a2d_init(OhplA2dDisp *d, int32_t maxPrevSpeeds, float autoKillY);
+void ohpl_a2d_free(OhplA2dDisp *d);
+void ohpl_a2d_reset(OhplA2Core *c, OhplA2dDisp *d, const OhplA2dHost *dh);
+void ohpl_a2d_update(OhplA2Core *c, OhplA2dDisp *d, const OhplA2Host *h, const OhplA2dHost *dh, float dt);
+void ohpl_a2d_post_update(OhplA2dDisp *d, const OhplA2dHost *dh, float dt);
+void ohpl_a2d_on_draw(OhplA2Core *c, OhplA2dDisp *d, const OhplA2dHost *dh, float dt);
+void ohpl_a2d_move(OhplA2dDisp *d, const OhplA2dHost *dh, int32_t dir, float mul);
+void ohpl_a2d_add_yaw(OhplA2dDisp *d, const OhplA2dHost *dh, float amount);
+void ohpl_a2d_add_pitch(OhplA2dDisp *d, const OhplA2dHost *dh, float amount);
+void ohpl_a2d_scroll(OhplA2dDisp *d, const OhplA2dHost *dh, float amount);
+void ohpl_a2d_do_action(OhplA2dDisp *d, const OhplA2dHost *dh, int32_t action, bool pressed);
+void ohpl_a2d_run(OhplA2dDisp *d, const OhplA2dHost *dh, bool pressed);
+void ohpl_a2d_jump(OhplA2dDisp *d, const OhplA2dHost *dh, bool pressed);
+void ohpl_a2d_crouch(OhplA2dDisp *d, const OhplA2dHost *dh, bool pressed);
+void ohpl_a2d_change_state(OhplA2dDisp *d, const OhplA2dHost *dh, int32_t state);
+void ohpl_a2d_change_move_state(OhplA2dDisp *d, const OhplA2dHost *dh, int32_t state);
+void ohpl_a2d_on_leave_container(OhplA2dDisp *d, const OhplA2dHost *dh);
+void ohpl_a2d_set_free_cam(OhplA2dDisp *d, const OhplA2dHost *dh, bool active);
+void ohpl_a2d_map_enter(OhplA2Core *c, OhplA2dDisp *d, const OhplA2dHost *dh, void *map);
+void ohpl_a2d_map_leave(OhplA2Core *c, OhplA2dDisp *d, const OhplA2dHost *dh, void *map);
+}
+
+struct OhplA2dHands
+{
+	void *mpRing;
+	int32_t mlState, mlMaxRotations;
+	float mfPosAddMul, mfCharge;
+	int32_t mlObjectState;
+	float mfAlpha;
+	bool mbAttackDown, mbInteractDown;
+};
+static_assert(sizeof(OhplA2dHands) == 40, "OhplA2dHands layout");
+
+enum OhplA2dHandsKind : uint32_t
+{
+	kOhplA2dHHasObject = 1,
+	kOhplA2dHAnimOver = 2,
+	kOhplA2dHObjAnimOver = 3,
+	kOhplA2dHAttachDraw = 4,
+	kOhplA2dHDisable = 5,
+	kOhplA2dHIdle = 6,
+	kOhplA2dHUpdateObjects = 7,
+	kOhplA2dHObjDoAction = 8,
+	kOhplA2dHSameObject = 9,
+	kOhplA2dHHolster = 10,
+	kOhplA2dHDrawNew = 11,
+	kOhplA2dHSetCurrent = 12,
+	kOhplA2dHResetPtrs = 13,
+	kOhplA2dHHasEntity = 14,
+	kOhplA2dHFillRot = 15,
+	kOhplA2dHFillPos = 16,
+	kOhplA2dHSetMatrix = 17,
+};
+
+extern "C" {
+void ohpl_a2d_hands_init(OhplA2dHands *d, int32_t maxRotations, float posAddMul);
+void ohpl_a2d_hands_free(OhplA2dHands *d);
+void ohpl_a2d_hands_reset(OhplA2dHands *d, const OhplA2dHost *dh);
+void ohpl_a2d_hands_clear_rotations(OhplA2dHands *d);
+void ohpl_a2d_hands_update(OhplA2dHands *d, const OhplA2dHost *dh, float dt);
+void ohpl_a2d_hands_do_action(OhplA2dHands *d, const OhplA2dHost *dh, int32_t action, bool pressed);
+void ohpl_a2d_hands_set_object(OhplA2dHands *d, const OhplA2dHost *dh, void *obj);
+void ohpl_a2d_hands_post_update(OhplA2dHands *d, const OhplA2dHost *dh);
+}
+
 #endif
