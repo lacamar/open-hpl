@@ -60,7 +60,9 @@ static void Script(cLuxPlayer *p, int f)
 	if(f >= 190 && f < 215) p->SetLean(1.0f);
 	if(f >= 215 && f < 240) p->SetLean(-1.0f);
 	if(f == 240) p->SetLean(0.0f);
+	if(f == 242) p->GetHelperLantern()->SetActive(true, true, true, true);
 	if(f == 245) p->DoAction(eLuxPlayerAction_Lantern, true);
+	if(f == 262) p->DoAction(eLuxPlayerAction_Lantern, true);
 	if(f == 246) p->DoAction(eLuxPlayerAction_Lantern, false);
 	if(f == 300) { bool bRemove = false; gpBase->mpInventory->AddItem("a2c_potion", eLuxItemType_Health, "health", "agrippa_head.tga", 25, "", "", &bRemove); p->AddCoins(3); }
 	if(f == 310) p->GiveDamage(12, 1, eLuxDamageType_Claws, true, false);
