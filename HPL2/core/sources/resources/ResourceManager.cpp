@@ -33,6 +33,11 @@
 
 #include <algorithm>
 #include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <typeinfo>
+#include <vector>
 
 namespace hpl {
 
@@ -125,8 +130,26 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
+	void iResourceManager::DumpState(const char *apWhen)
+	{
+		const char *pPath = getenv("OHPL_RS_MGRDUMP");
+		if(pPath == NULL) return;
+		std::vector<std::string> vLines;
+		for(tResourceBaseMapIt it = m_mapResources.begin(); it != m_mapResources.end(); ++it)
+			vLines.push_back(it->second->GetName() + "\t" + std::to_string(it->second->GetUserCount()));
+		std::sort(vLines.begin(), vLines.end());
+		FILE *pFile = fopen(pPath, "a");
+		if(pFile == NULL) return;
+		fprintf(pFile, "%s %s %zu\n", apWhen, typeid(*this).name(), vLines.size());
+		for(const std::string &sLine : vLines) fprintf(pFile, "  %s\n", sLine.c_str());
+		fclose(pFile);
+	}
+
+	//-----------------------------------------------------------------------
+
 	void iResourceManager::DestroyUnused(int alMaxToKeep)
 	{
+		DumpState("unused");
 		ohpl_h3f_destroy_unused(mpRs, &mOps, alMaxToKeep);
 	}
 
@@ -134,6 +157,7 @@ namespace hpl {
 
 	void iResourceManager::DestroyAll()
 	{
+		DumpState("all");
 		ohpl_h3f_destroy_all(mpRs, &mOps);
 	}
 

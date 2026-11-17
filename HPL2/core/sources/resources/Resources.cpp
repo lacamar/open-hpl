@@ -99,6 +99,8 @@ namespace hpl {
 
 	cResources::~cResources()
 	{
+		iResourceManager *vMgrs[] = {mpTextureManager, mpMaterialManager, mpMeshManager, mpAnimationManager, mpSoundManager, mpSoundEntityManager, mpFontManager, mpImageManager, mpGpuShaderManager, mpScriptManager, mpVideoManager, mpEntFileManager, mpParticleManager};
+		for(iResourceManager *pMgr : vMgrs) if(pMgr) pMgr->DumpState("end");
 		ohpl_h4_res_shutdown(mpRs);
 		ohpl_h4_res_free(mpRs);
 		mpRs = NULL;

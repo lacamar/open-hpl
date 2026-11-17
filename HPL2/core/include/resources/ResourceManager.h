@@ -56,6 +56,7 @@ namespace hpl {
 		cResourceBaseIterator GetResourceBaseIterator();
 
 		void DestroyUnused(int alMaxToKeep);
+		void DumpState(const char *apWhen);
 
 		virtual void Destroy(iResourceBase* apResource)=0;
 		virtual void DestroyAll();
