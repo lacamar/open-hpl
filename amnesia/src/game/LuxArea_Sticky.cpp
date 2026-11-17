@@ -97,10 +97,6 @@ void cLuxAreaLoader_Sticky::SetupArea(iLuxArea *apArea, cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-bool cLuxArea_Sticky::mbAllowAttachment = false;
-
-//-----------------------------------------------------------------------
-
 cLuxArea_Sticky::cLuxArea_Sticky(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Sticky),
 	mbMoveBody(Pod<OhplA7Sticky>().moveBody),
 	mbRotateBody(Pod<OhplA7Sticky>().rotateBody),
@@ -111,7 +107,9 @@ cLuxArea_Sticky::cLuxArea_Sticky(const tString &asName, int alID, cLuxMap *apMap
 	mfAttachedBodyMass(Pod<OhplA7Sticky>().attachedBodyMass),
 	mbAttachedEntityFullGameSaved(Pod<OhplA7Sticky>().attachedEntityFullGameSaved),
 	mfSetMtxTime(Pod<OhplA7Sticky>().setMtxTime),
-	mtxAttachedStart(*reinterpret_cast<cMatrixf*>(&Pod<OhplA7Sticky>().attachedStart))
+	mtxAttachedStart(*reinterpret_cast<cMatrixf*>(&Pod<OhplA7Sticky>().attachedStart)),
+	mpAttachedBody(reinterpret_cast<iPhysicsBody*&>(Pod<OhplA7Sticky>().attachedBody)),
+	mpLastAttachedBody(reinterpret_cast<iPhysicsBody*&>(Pod<OhplA7Sticky>().lastAttached))
 {
 	mpAttachedBody = NULL;
 	mpLastAttachedBody = NULL;
@@ -165,210 +163,21 @@ void cLuxArea_Sticky::SetupAfterLoad(cWorld *apWorld)
 
 void cLuxArea_Sticky::OnUpdate(float afTimeStep)
 {
-	UpdateAttachBody(afTimeStep);
-	UpdateCollision(afTimeStep);
+	ohpl_a7_area_update(mpA7Area, this, mpMap->GetA7(), afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxArea_Sticky::AttachBody(iPhysicsBody *apBody)
 {
-	if(mpAttachedBody) return;
-
-	//Log("Attaching body %s\n", pAttachBody->GetName().c_str());
-
-	/////////////////////////
-	//If in an interact state, set the previous state		
-	gpBase->mpPlayer->GetCurrentStateData()->OnAttachBodyToStickyArea(apBody);
-
-	cMatrixf mtxStart = apBody->GetLocalMatrix();
-	bool bGravity = apBody->GetGravity();
-	float fMass = apBody->GetMass();
-	iLuxEntity *pAttachEntity = (iLuxEntity*)apBody->GetUserData();
-	ohpl_a7_area_sticky_attach(mpA7Area, reinterpret_cast<const OhplGa5Mtx*>(&mtxStart), bGravity, fMass, pAttachEntity ? (int)pAttachEntity->GetFullGameSave() : -1);
-	apBody->SetLinearVelocity(0);
-	apBody->SetAngularVelocity(0);
-	apBody->SetGravity(false);
-	apBody->SetMass(0);
-	if(pAttachEntity) pAttachEntity->SetFullGameSave(true);
-	mpAttachedBody = apBody;
-	mpLastAttachedBody = mpAttachedBody;
+	ohpl_a7_area_sticky_attach_body(mpA7Area, apBody);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxArea_Sticky::DetachBody()
 {
-	if(mpAttachedBody==NULL) return;
-
-	cWorld *pWorld = mpMap->GetWorld();
-
-	//Callback function
-	if(msDetachFunction!="")
-	{
-		mpMap->RunScript(GetCallbackFunc(msDetachFunction,mpAttachedBody));
-	}
-
-	//Sound
-	if(msDetachSound!="")
-	{
-		cSoundEntity *pSound = pWorld->CreateSoundEntity("DetachSound",msDetachSound,true);
-		if(pSound) pSound->SetPosition(mpBody->GetWorldPosition());
-	}
-
-	//Particle System
-	if(msDetachPS!="")
-	{
-		cParticleSystem *pPS = pWorld->CreateParticleSystem("DetachPS",msDetachPS,1);
-		if(pPS) pPS->SetMatrix(mpBody->GetWorldMatrix());
-	}
-
-	mpAttachedBody->SetGravity(mbAttachedBodyGravity);
-	mpAttachedBody->SetMass(mfAttachedBodyMass);
-	mpAttachedBody->Enable();
-
-	iLuxEntity *pEntity = (iLuxEntity*)mpAttachedBody->GetUserData();
-	if(pEntity) pEntity->SetFullGameSave(mbAttachedEntityFullGameSaved);
-
-	mpAttachedBody = NULL;
-}
-
-
-//-----------------------------------------------------------------------
-
-
-//////////////////////////////////////////////////////////////////////////
-// PRIVATE METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
-void cLuxArea_Sticky::UpdateAttachBody(float afTimeStep)
-{
-	if(mpAttachedBody==NULL || mfSetMtxTime >= 1) return;
-
-	OhplGa5StickyOut attachOut;
-	cMatrixf mtxArea = mpBody->GetWorldMatrix();
-	cVector3f vAreaPos = mpBody->GetWorldPosition();
-	cVector3f vMassCentre = mpAttachedBody->GetMassCentre();
-	cVector3f vAttachedPos = mpAttachedBody->GetWorldPosition();
-	if(ohpl_a7_area_sticky_step(mpA7Area, reinterpret_cast<const OhplGa5Mtx*>(&mtxArea), reinterpret_cast<const OhplGa5Vec3*>(&vAreaPos),
-								reinterpret_cast<const OhplGa5Vec3*>(&vMassCentre), reinterpret_cast<const OhplGa5Vec3*>(&vAttachedPos),
-								afTimeStep, &attachOut)==false) return;
-	if(attachOut.mode == kOhplGa5AttachSetMatrix)
-	{
-		cMatrixf mtxNew;
-		memcpy(&mtxNew, &attachOut.mtx, sizeof(attachOut.mtx));
-		mpAttachedBody->SetMatrix(mtxNew);
-	}
-	else if(attachOut.mode == kOhplGa5AttachSetPosition)
-	{
-		cVector3f vNew;
-		memcpy(&vNew, &attachOut.pos, sizeof(attachOut.pos));
-		mpAttachedBody->SetPosition(vNew);
-	}
-
-	//////////////////////////////////
-	// If attached body in place, do effects
-	if(attachOut.done)
-	{
-		cWorld *pWorld = mpMap->GetWorld();
-
-		//Sound
-		if(msAttachSound!="")
-		{
-			cSoundEntity *pSound = pWorld->CreateSoundEntity("AttachSound",msAttachSound,true);
-			if(pSound) pSound->SetPosition(mpBody->GetWorldPosition());
-		}
-
-		//Particle System
-		if(msAttachPS!="")
-		{
-			cParticleSystem *pPS = pWorld->CreateParticleSystem("AttachPS",msAttachPS,1);
-			if(pPS) pPS->SetMatrix(mpBody->GetWorldMatrix());
-		}
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxArea_Sticky::UpdateCollision(float afTimeStep)
-{
-	if(mpAttachedBody) return;
-
-	///////////////////////////
-	// Get data
-	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
-	iPhysicsBody *pAreaBody = mpBody;
-
-	cCollideData collideData;
-	collideData.SetMaxSize(1);
-
-	///////////////////////////
-	// Iterate bodies
-	std::vector<iPhysicsBody*> vBodies;
-	pPhysicsWorld->GetBodiesInBV(mpBody->GetBoundingVolume(),&vBodies);
-
-	for(size_t i=0; i<vBodies.size(); ++i)
-	{
-		iPhysicsBody *pBody = vBodies[i];
-
-		if(ohpl_ga5_body_skipped(pBody->GetCollide(), pBody->IsActive(), pBody->GetMass(), pBody->IsCharacter())) continue;
-
-		/////////////////////////
-		//Bounding volume check
-		bool bInsideBV = false;
-		if(mbCheckCenterInArea)
-		{
-			cVector3f vPos = cMath::MatrixMul(pBody->GetLocalMatrix(),pBody->GetMassCentre());
-			bInsideBV = cMath::CheckPointInBVIntersection(vPos,*pAreaBody->GetBoundingVolume());
-		}
-		else
-		{
-			bInsideBV = cMath::CheckBVIntersection(*pBody->GetBoundingVolume(),*pAreaBody->GetBoundingVolume());
-		}
-
-		//////////////////////////
-		//If not inside then skip this body, if the previously attached body is still inside, then skip it.
-		//If the last attached body has moved out it does not need to be rejected any more.
-		int lInside = ohpl_ga5_sticky_inside(bInsideBV, pBody == mpLastAttachedBody);
-		if(lInside == kOhplGa5InsideForgetLast) mpLastAttachedBody = NULL;
-		if(lInside != kOhplGa5InsideProceed) continue;
-
-		///////////////////////////
-		// See if body is right for attaching
-		mbAllowAttachment = false;
-		if(ohpl_ga5_sticky_name(msAttachableBodyName.data(), msAttachableBodyName.size(),
-								pBody->GetName().data(), pBody->GetName().size(), &mbAllowAttachment)) continue;
-
-		///////////////////////////////
-		//Check for collision
-        if(pPhysicsWorld->CheckShapeCollision(	pBody->GetShape(),pBody->GetLocalMatrix(), pAreaBody->GetShape(), pAreaBody->GetLocalMatrix(),
-												collideData,1, false)==false)
-		{
-			continue;
-		}
-
-		///////////////////////////
-		// Call callback and see if it should be attached.
-		if(msAttachFunction!="")
-		{
-			mpMap->RunScript(GetCallbackFunc(msAttachFunction,pBody));
-			if(ohpl_ga5_sticky_after_callback(true, mbAllowAttachment)) continue;
-		}
-
-		///////////////////////////
-		// Attach
-		AttachBody(pBody);
-	}
-}
-
-
-//-----------------------------------------------------------------------
-
-tString cLuxArea_Sticky::GetCallbackFunc(const tString &asFunc,iPhysicsBody *apBody)
-{
-	return ohpl_ga5::Call2(asFunc, msName, apBody->GetName());
+	ohpl_a7_area_sticky_detach(mpA7Area, this, mpMap->GetA7());
 }
 
 //-----------------------------------------------------------------------

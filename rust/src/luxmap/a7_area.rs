@@ -98,6 +98,8 @@ pub struct StickyS {
     pub can_detach: bool,
     pub attached_body_gravity: bool,
     pub attached_entity_full_game_saved: bool,
+    pub attached_body: usize,
+    pub last_attached: usize,
 }
 
 #[repr(C)]

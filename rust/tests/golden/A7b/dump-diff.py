@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Compare two OHPL_A7B_DUMP files. Masked: Combined* counters in body names (allocation order, ov lists re-sorted) and
-the slime area check counter (pod bytes 12..16, a loader/attack random draw). Everything else is exact.
-Exit 0 when equal after masking; prints a summary line."""
+the sticky pod past byte 84 (attached/last body pointers) and the slime area check counter (pod bytes 12..16, a loader/attack random draw). Everything else is exact.
+Exit 0 when equal after masking; prints a summary line.
+`--digest FILE...` prints sha256 of the masked dump (digests.txt holds the C++ baseline's)."""
 import re
 import sys
 
@@ -13,6 +14,8 @@ def norm(line):
     if not m:
         return COMB.sub("Combined", line)
     fr, name, t, act, pod, ov, rest = m.groups()
+    if t == "4":
+        pod = pod[:168]
     if t == "8":
         pod = pod[:24] + "xxxxxxxx" + pod[32:]
     items = sorted(COMB.sub("Combined", i) for i in ov.split(",") if i)
@@ -24,6 +27,12 @@ def load(p):
         return [norm(l) for l in f.read().split("\n")]
 
 
+if sys.argv[1] == "--digest":
+    import hashlib
+    for f in sys.argv[2:]:
+        n = load(f)
+        print(hashlib.sha256("\n".join(n).encode()).hexdigest(), len(n), f.rsplit("/", 1)[-1])
+    sys.exit(0)
 a, b = load(sys.argv[1]), load(sys.argv[2])
 bad = [i for i in range(min(len(a), len(b))) if a[i] != b[i]]
 if len(a) != len(b) or bad:

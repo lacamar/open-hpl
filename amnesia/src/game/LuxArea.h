@@ -59,6 +59,7 @@ typedef iLuxEntity super_class;
 friend class iLuxAreaLoader;
 friend class iLuxArea_SaveData;
 friend struct OhplA7bDump;
+friend struct OhplAreaHost;
 public:	
 	iLuxArea(const tString &asName, int alID, cLuxMap *apMap, eLuxAreaType aAreaType);
 	virtual ~iLuxArea();

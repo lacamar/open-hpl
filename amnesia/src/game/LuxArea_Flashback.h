@@ -63,7 +63,7 @@ public:
 protected:
 
 private:
-	
+	friend struct OhplAreaHost;
 
 	/////////////////////////
 	// Data

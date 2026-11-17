@@ -96,16 +96,7 @@ cLuxArea_Flashback::~cLuxArea_Flashback()
 
 void cLuxArea_Flashback::OnUpdate(float afTimeStep)
 {
-	if(ohpl_a7_area_tick(mpA7Area, afTimeStep, gpBase->mpEngine->GetStepSize())==false) return;
-
-	//////////////////////////
-	// Check collision
-	if(CollidesWithPlayer())
-	{
-		SetActive(false);
-
-		gpBase->mpPlayer->GetHelperFlashback()->Start(msFlashbackFile, msCallback);
-	}
+	ohpl_a7_area_update(mpA7Area, this, mpMap->GetA7(), afTimeStep);
 }
 
 //-----------------------------------------------------------------------

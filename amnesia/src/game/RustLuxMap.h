@@ -24,16 +24,6 @@ struct OhplGa5Mtx
 	float m[4][4];
 };
 
-struct OhplGa5BuoyIn
-{
-	bool inside, allowed, active, hasWaves;
-};
-
-struct OhplGa5BuoyOut
-{
-	bool deactivate, setup, waves;
-};
-
 struct OhplGa5StickyIn
 {
 	OhplGa5Mtx start, areaWorld;
@@ -79,8 +69,6 @@ struct OhplGa5SubMesh
 };
 
 enum { kOhplGa5AttachNone, kOhplGa5AttachSetMatrix, kOhplGa5AttachSetPosition };
-enum { kOhplGa5CharNone, kOhplGa5CharEnter, kOhplGa5CharLeave };
-enum { kOhplGa5InsideProceed, kOhplGa5InsideSkip, kOhplGa5InsideForgetLast };
 enum { kOhplGa5RopeReturn, kOhplGa5RopeRelink, kOhplGa5RopeCreate };
 enum { kOhplGa5ScriptNone, kOhplGa5ScriptPlain, kOhplGa5ScriptCompressed };
 enum { kOhplGa5EnterStart = 1, kOhplGa5EnterCompletion = 2, kOhplGa5EnterEnter = 4 };
@@ -132,17 +120,8 @@ inline std::string Call2(const std::string &asFunc, const std::string &asA, cons
 
 extern "C" {
 	// area
-	bool ohpl_ga5_body_skipped(bool collide, bool active, float mass, bool is_char);
-	float ohpl_ga5_liquid_surface_y(float pos_y, float size_y);
-	float ohpl_ga5_wave_surface_y(float time, float freq, float px, float pz, float amp, float surface_y);
-	int ohpl_ga5_liquid_char(bool is_player, bool has_enemy, bool inside, bool in_water);
-	int ohpl_ga5_sticky_inside(bool inside, bool is_last);
-	bool ohpl_ga5_sticky_after_callback(bool has_callback, bool allow);
 	int ohpl_ga5_rope_after_world(bool created, bool nothing_linked);
 	int ohpl_ga5_rope_max_segments(float max_len, float segment);
-	void ohpl_ga5_wave_plane(float surface_y, OhplGa5Plane *out);
-	void ohpl_ga5_liquid_body(const OhplGa5BuoyIn *i, float dist_sqr, float max_dist_sqr, OhplGa5BuoyOut *out);
-	bool ohpl_ga5_sticky_name(const char *attach, size_t attach_n, const char *body, size_t body_n, bool *allow);
 	bool ohpl_ga5_ladder_find_start(OhplGa5Vec3 *start, float max_y, OhplGa5FitsFn fits, void *ctx);
 	void ohpl_ga5_player_start(const OhplGa5Mtx *m, OhplGa5PlayerStart *out);
 	void ohpl_ga5_node_up(const OhplGa5Vec3 *t, OhplGa5Vec3 *out);

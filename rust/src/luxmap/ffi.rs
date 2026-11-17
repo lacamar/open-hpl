@@ -6,7 +6,6 @@ use super::area::{
     StickyAttachOut,
 };
 use super::handler;
-use crate::math::Planef;
 use crate::string_ffi::{Sink, emit, units};
 use crate::types::{Matrixf, Vector3f};
 use std::ffi::c_void;
@@ -62,56 +61,8 @@ macro_rules! sink {
 
 // area
 
-pure!(ohpl_ga5_body_skipped(collide: bool, active: bool, mass: f32, is_char: bool) -> bool => area::body_skipped(collide, active, mass, is_char));
-pure!(ohpl_ga5_liquid_surface_y(pos_y: f32, size_y: f32) -> f32 => area::liquid_surface_y(pos_y, size_y));
-pure!(ohpl_ga5_wave_surface_y(time: f32, freq: f32, px: f32, pz: f32, amp: f32, surface_y: f32) -> f32 => area::wave_surface_y(time, freq, px, pz, amp, surface_y));
-pure!(ohpl_ga5_liquid_char(is_player: bool, has_enemy: bool, inside: bool, in_water: bool) -> i32 => area::liquid_char(is_player, has_enemy, inside, in_water));
-pure!(ohpl_ga5_sticky_inside(inside: bool, is_last: bool) -> i32 => area::sticky_inside(inside, is_last));
-pure!(ohpl_ga5_sticky_after_callback(has_callback: bool, allow: bool) -> bool => area::sticky_after_callback(has_callback, allow));
 pure!(ohpl_ga5_rope_after_world(created: bool, nothing_linked: bool) -> i32 => area::rope_after_world(created, nothing_linked));
 pure!(ohpl_ga5_rope_max_segments(max_len: f32, segment: f32) -> i32 => area::rope_max_segments(max_len, segment));
-
-/// # Safety
-/// `out` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga5_wave_plane(surface_y: f32, out: *mut Planef) {
-    // SAFETY: caller contract.
-    unsafe { wr(out, area::wave_plane(surface_y)) }
-}
-
-/// # Safety
-/// `i` is readable, `out` writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga5_liquid_body(
-    i: *const BuoyIn,
-    dist_sqr: f32,
-    max_dist_sqr: f32,
-    out: *mut BuoyOut,
-) {
-    // SAFETY: caller contract.
-    unsafe { wr(out, area::liquid_body(rd(i), dist_sqr, max_dist_sqr)) }
-}
-
-/// Returns skip; `allow` receives the new `mbAllowAttachment`.
-///
-/// # Safety
-/// Texts valid for their length, `allow` writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga5_sticky_name(
-    attach: *const u8,
-    attach_n: usize,
-    body: *const u8,
-    body_n: usize,
-    allow: *mut bool,
-) -> bool {
-    // SAFETY: caller contract.
-    let (skip, a) = area::sticky_name(unsafe { units(attach, attach_n) }, unsafe {
-        units(body, body_n)
-    });
-    // SAFETY: caller contract.
-    unsafe { wr(allow, a) };
-    skip
-}
 
 pub type FitsFn = unsafe extern "C" fn(*mut c_void, *const Vector3f) -> bool;
 

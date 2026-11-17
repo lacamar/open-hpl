@@ -37,6 +37,7 @@ struct OhplA7Sticky
 	float poseTime, attachedBodyMass, setMtxTime;
 	OhplGa5Mtx attachedStart;
 	bool moveBody, rotateBody, checkCenterInArea, canDetach, attachedBodyGravity, attachedEntityFullGameSaved;
+	void *attachedBody, *lastAttached;
 };
 struct OhplA7Slime
 {
@@ -48,7 +49,7 @@ struct OhplA7Slime
 static_assert(sizeof(OhplA7Base) == 96, "OhplA7Base");
 static_assert(sizeof(OhplA7Script) == 1 && sizeof(OhplA7Examine) == 8 && sizeof(OhplA7Insanity) == 16, "pods");
 static_assert(sizeof(OhplA7Flashback) == 4 && sizeof(OhplA7Sign) == 1 && sizeof(OhplA7Ladder) == 20, "pods");
-static_assert(sizeof(OhplA7Liquid) == 52 && sizeof(OhplA7Sticky) == 84 && sizeof(OhplA7Slime) == 32, "pods");
+static_assert(sizeof(OhplA7Liquid) == 52 && sizeof(OhplA7Sticky) == 104 && sizeof(OhplA7Slime) == 32, "pods");
 
 enum
 {
@@ -136,6 +137,10 @@ extern "C" {
 	void ohpl_a7_area_ladder_setup(OhplA7Area *a, const OhplGa5Mtx *world, float pos_y, float size_y);
 	void ohpl_a7_area_ladder_start(OhplA7Area *a, const OhplGa5Vec3 *area_pos, const OhplGa5Vec3 *char_size, float char_y, OhplGa5Vec3 *out);
 	void ohpl_a7_area_liquid_setup(OhplA7Area *a, float pos_y, float size_y);
+	void ohpl_a7_area_update(OhplA7Area *a, void *shell, OhplA7Ctx *ctx, float step);
+	void ohpl_a7_area_sticky_attach_body(OhplA7Area *a, void *body);
+	void ohpl_a7_area_sticky_detach(OhplA7Area *a, void *shell, OhplA7Ctx *ctx);
+	bool ohpl_a7_sticky_allow(bool set, bool value);
 	bool ohpl_a7_area_sticky_can_detach(OhplA7Area *a);
 	void ohpl_a7_area_sticky_attach(OhplA7Area *a, const OhplGa5Mtx *start, bool gravity, float mass, int entity_saved);
 	bool ohpl_a7_area_sticky_step(OhplA7Area *a, const OhplGa5Mtx *area_world, const OhplGa5Vec3 *area_pos, const OhplGa5Vec3 *mass_centre,
