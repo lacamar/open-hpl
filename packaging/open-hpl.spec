@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.99
+Version:        1.4.0
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,11 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Tue Nov 17 2026 lacamar <lchlnm@pm.me> - 1.4.0-1
+- Amnesia script functions in Rust
+- Map, map handler, map helper in Rust
+- SOMA game, player, post effects, ImGui in Rust
+
 * Mon Nov 16 2026 lacamar <lchlnm@pm.me> - 1.3.99-1
 - Debug handler in Rust
 - Enemy mover, pathfinder in Rust
