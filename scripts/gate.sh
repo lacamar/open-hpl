@@ -87,6 +87,10 @@ for impl in $IMPLS; do
 	for g in $GAMES; do
 		OPENHPL_SCRATCH_ROOT=$SCRATCH-$impl scripts/soma-init.sh "$g" > /dev/null 2> "$OUT/init-$impl-$g.log" \
 			|| { say "init $impl $g failed (see init-$impl-$g.log)"; exit 1; }
+		# static body combining sorts by pointer: a map cache made by another run changes contact order, so every scratch starts from one cache set
+		if [ -d "$CACHE/map-cache-shared/$g" ]; then
+			mkdir -p "$SCRATCH-$impl/$g-scratch/.xdg/cache/open-hpl" && cp -a "$CACHE/map-cache-shared/$g/." "$SCRATCH-$impl/$g-scratch/.xdg/cache/open-hpl/"
+		fi
 	done
 done
 
