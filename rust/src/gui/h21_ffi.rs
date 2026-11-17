@@ -11,8 +11,8 @@ use std::ffi::{CStr, c_char, c_void};
 
 #[repr(C)]
 pub struct HostVt {
-    ctx: *mut c_void,
-    exec: extern "C" fn(*mut c_void, *const Cmd, *mut Ret),
+    pub(super) ctx: *mut c_void,
+    pub(super) exec: extern "C" fn(*mut c_void, *const Cmd, *mut Ret),
 }
 
 struct Recorder {

@@ -17,58 +17,32 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+
 #ifndef HPL_GUI_POP_UP_H
 #define HPL_GUI_POP_UP_H
 
-#include "gui/RustGuiH21.h"
+#include "gui/RustGuiG2.h"
 #include "gui/GuiTypes.h"
-#include <list>
 
 namespace hpl {
 
 	class cGuiSet;
-	class cGuiSkin;
 
-	class cWidgetWindow;
-	class iGuiPopUp;
-
-	struct OhplH21Binding { iGuiPopUp *popup; int tag; };
-
-	class iGuiPopUp 
+	// Rust-owned (rust/src/gui/g2_popup.rs): `this` is the Rust allocation, created by cGuiSet::CreatePopUp*.
+	class iGuiPopUp
 	{
 	public:
-		iGuiPopUp(cGuiSet *apSet, bool abAddCloseButton, const cVector2f& avPopUpSize);
-		virtual ~iGuiPopUp();
+		void AddOnDestroyCallback(void *apCallbackObject, tGuiCallbackFunc apCallback){ ohpl_g2_popup_add_destroy_cb(this, (uintptr_t)apCallbackObject, reinterpret_cast<uintptr_t>(apCallback)); }
 
-		void AddOnDestroyCallback(void *apCallbackObject, tGuiCallbackFunc apCallback);
+		void SetKillOnEscapeKey(bool abX){ ohpl_g2_popup_set_kill_on_escape(this, abX); }
+		bool GetKillOnEscapeKey(){ return ohpl_g2_popup_kill_on_escape(this); }
 
-		void SetKillOnEscapeKey(bool abX);
-		bool GetKillOnEscapeKey();
+		void SetNextFocusWidget(iWidget *apNewFocused){ ohpl_g2_popup_set_next_focus(this, (uintptr_t)apNewFocused); }
 
-		void SetNextFocusWidget(iWidget *apNewFocused)  { ohpl_h21_set_next_focus(mR, (uintptr_t)apNewFocused); }
-		cGuiSet* GetGuiSet() { return mpSet; }
-
-	protected:
-		void SelfDestruct();
-
-		cGuiSet *mpSet;
-		cGuiSkin *mpSkin;
-
-		cWidgetWindow* mpWindow;
-
-		OhplH21Popup *mR;
-		bool mbDestroyQueued;
-		std::list<OhplH21Binding> mBindings;
-		tWString mH21Str[3];
-
-		OhplH21Host H21Host();
-		void H21Bind(iWidget *apWidget, int alMsg, int alTag);
-		static void H21Exec(void *apCtx, const OhplH21Cmd *apCmd, OhplH21Ret *apRet);
-		static bool H21Dispatch(void *apObj, iWidget *apWidget, const cGuiMessageData &aData);
-		virtual bool H21Ext(const OhplH21Cmd &aCmd, OhplH21Ret &aRet) { return false; }
-		void H21Str(OhplH21Ret &aRet, int alIdx, const tWString &asStr);
+		cGuiSet* GetGuiSet(){ return ohpl_g2_popup_set(this); }
+	private:
+		iGuiPopUp();
 	};
 
 };
 #endif // HPL_GUI_POP_UP_H
-

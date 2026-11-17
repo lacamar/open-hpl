@@ -29,11 +29,11 @@ namespace hpl {
 	class cGuiSkinFont;
 	
 	class cWidgetButton;
-	class cGuiPopUpUIKeyboard;
+	struct OhplG2PopupHost;
 
 	class cWidgetTextBox : public iWidget
 	{
-		friend class cGuiPopUpUIKeyboard;
+		friend struct OhplG2PopupHost;
 		friend struct OhplH20Access;
 	public:
 		cWidgetTextBox(cGuiSet *apSet, cGuiSkin *apSkin, eWidgetTextBoxInputType aType);

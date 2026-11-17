@@ -20,6 +20,8 @@
 #include "gui/WidgetTextBox.h"
 #include "gui/WidgetWindow.h"
 #include "gui/GuiPopUpMessageBox.h"
+#include "gui/GuiPopUpFilePicker.h"
+#include "system/Platform.h"
 
 namespace hpl {
 
@@ -36,39 +38,47 @@ namespace hpl {
 		return apStr ? tWString(reinterpret_cast<const wchar_t*>(apStr), alLen) : tWString();
 	}
 
-	OhplH21Host iGuiPopUp::H21Host()
+	// Reaches cWidgetTextBox's protected keyboard hooks.
+	struct OhplG2PopupHost
 	{
-		OhplH21Host host = { this, &iGuiPopUp::H21Exec };
-		return host;
+		static void KbOpen(iWidget *w) { static_cast<cWidgetTextBox*>(w)->OnUIKeyboardOpen(); }
+		static void KbClose(iWidget *w) { static_cast<cWidgetTextBox*>(w)->OnUIKeyboardClose(); }
+	};
+
+	// The file picker's iFileBrowser, owned by the Rust popup; its virtuals report back to Rust.
+	struct OhplG2Browser : public iFileBrowser
+	{
+		OhplG2Browser(iGuiPopUp *apPopup, const tWString &asStartPath, bool abHidden)
+			: iFileBrowser(asStartPath, abHidden), mpPopup(apPopup), mpSaveFileDest(NULL), mpLoadFileListDest(NULL), mpGfxUpButton(NULL)
+		{
+			for(int i=0; i<6; ++i) mvGfxFileTypeIcons[i] = NULL;
+		}
+
+		void OnAddFilter() { ohpl_g2_popup_on_add_filter(mpPopup); }
+		void OnNavigate() { ohpl_g2_popup_on_navigate(mpPopup); }
+
+		iGuiPopUp *mpPopup;
+		tWString* mpSaveFileDest;
+		tWStringVec* mpLoadFileListDest;
+		cGuiGfxElement* mvGfxFileTypeIcons[6];
+		cGuiGfxElement* mpGfxUpButton;
+		std::vector<tWString> mvH21Files;
+	};
+
+	static OhplG2Browser* Fb(iGuiPopUp *apPopup) { return (OhplG2Browser*)ohpl_g2_popup_fb(apPopup); }
+
+	static void H21Str(iGuiPopUp *self, OhplH21Ret &aRet, int alIdx, const tWString &asStr)
+	{
+		ohpl_g2_popup_str(self, alIdx, reinterpret_cast<const uint32_t*>(asStr.data()), asStr.size(), &aRet);
 	}
 
-	void iGuiPopUp::H21Bind(iWidget *apWidget, int alMsg, int alTag)
-	{
-		OhplH21Binding b = { this, alTag };
-		mBindings.push_back(b);
-		apWidget->AddCallback((eGuiMessage)alMsg, &mBindings.back(), &iGuiPopUp::H21Dispatch);
-	}
-
-	bool iGuiPopUp::H21Dispatch(void *apObj, iWidget *apWidget, const cGuiMessageData &aData)
-	{
-		OhplH21Binding *b = static_cast<OhplH21Binding*>(apObj);
-		OhplH21Host host = b->popup->H21Host();
-		return ohpl_h21_event(&host, b->popup->mR, b->tag, (uintptr_t)apWidget, &aData);
-	}
-
-	void iGuiPopUp::H21Str(OhplH21Ret &aRet, int alIdx, const tWString &asStr)
-	{
-		mH21Str[alIdx] = asStr;
-		aRet.s[alIdx] = reinterpret_cast<const uint32_t*>(mH21Str[alIdx].data());
-		aRet.n[alIdx] = mH21Str[alIdx].size();
-	}
-
-	void iGuiPopUp::H21Exec(void *apCtx, const OhplH21Cmd *apCmd, OhplH21Ret *apRet)
+	static void H21Exec(void *apCtx, const OhplH21Cmd *apCmd, OhplH21Ret *apRet)
 	{
 		iGuiPopUp *self = static_cast<iGuiPopUp*>(apCtx);
+		OhplG2Browser *fb = Fb(self);
 		const OhplH21Cmd &c = *apCmd;
 		OhplH21Ret &r = *apRet;
-		cGuiSet *set = self->mpSet;
+		cGuiSet *set = ohpl_g2_popup_set(self);
 		iWidget *w = (iWidget*)c.w[0];
 		iWidget *w2 = (iWidget*)c.w[1];
 		cVector3f v3(c.f[0], c.f[1], c.f[2]);
@@ -122,12 +132,12 @@ namespace hpl {
 			break;
 		case kOhplH21MessageBox:
 		{
-			void *obj = c.i[0] >= 0 ? (self->mBindings.push_back(OhplH21Binding{self, c.i[0]}), (void*)&self->mBindings.back()) : NULL;
+			void *obj = c.i[0] >= 0 ? ohpl_g2_popup_binding(self, c.i[0]) : NULL;
 			set->CreatePopUpMessageBox(H21Ws(c.s[0], c.n[0]), H21Ws(c.s[1], c.n[1]), H21Ws(c.s[2], c.n[2]), H21Ws(c.s[3], c.n[3]),
-									   obj, c.i[0] >= 0 ? &iGuiPopUp::H21Dispatch : NULL);
+									   obj, c.i[0] >= 0 ? reinterpret_cast<tGuiCallbackFunc>(&ohpl_g2_popup_dispatch) : NULL);
 			break;
 		}
-		case kOhplH21DestroyPopup: self->SelfDestruct(); break;
+		case kOhplH21DestroyPopup: ohpl_g2_popup_self_destruct(self); break;
 		case kOhplH21AddResourceDir: set->GetResources()->AddResourceDir(H21Ws(c.s[0], c.n[0]), false); break;
 		case kOhplH21RunCallback:
 		{
@@ -143,9 +153,9 @@ namespace hpl {
 			f((void*)c.p[0], NULL, cGuiMessageData());
 			break;
 		}
-		case kOhplH21AddCallback: self->H21Bind(w, c.i[0], c.i[1]); break;
+		case kOhplH21AddCallback: w->AddCallback((eGuiMessage)c.i[0], ohpl_g2_popup_binding(self, c.i[1]), reinterpret_cast<tGuiCallbackFunc>(&ohpl_g2_popup_dispatch)); break;
 		case kOhplH21SetText: w->SetText(H21Ws(c.s[0], c.n[0])); break;
-		case kOhplH21GetText: self->H21Str(r, 0, w->GetText()); break;
+		case kOhplH21GetText: H21Str(self, r, 0, w->GetText()); break;
 		case kOhplH21SetPosition: w->SetPosition(v3); break;
 		case kOhplH21SetSize: w->SetSize(v2); break;
 		case kOhplH21SetGlobalPosition: w->SetGlobalPosition(v3); break;
@@ -185,7 +195,7 @@ namespace hpl {
 		case kOhplH21CbCanEdit: static_cast<cWidgetComboBox*>(w)->SetCanEdit(bTrue); break;
 		case kOhplH21CbItemNum: r.i = static_cast<cWidgetComboBox*>(w)->GetItemNum(); break;
 		case kOhplH21CbSelected: r.i = static_cast<cWidgetComboBox*>(w)->GetSelectedItem(); break;
-		case kOhplH21CbItemText: self->H21Str(r, 0, static_cast<cWidgetComboBox*>(w)->GetItemText(c.i[0])); break;
+		case kOhplH21CbItemText: H21Str(self, r, 0, static_cast<cWidgetComboBox*>(w)->GetItemText(c.i[0])); break;
 		case kOhplH21CbAddItem: static_cast<cWidgetComboBox*>(w)->AddItem(H21Ws(c.s[0], c.n[0])); break;
 		case kOhplH21CbClear: static_cast<cWidgetComboBox*>(w)->ClearItems(); break;
 		case kOhplH21CbSetSelected: static_cast<cWidgetComboBox*>(w)->SetSelectedItem(c.i[0]); break;
@@ -208,21 +218,21 @@ namespace hpl {
 			else
 			{
 				r.i = 2;
-				self->H21Str(r, 0, pItem->GetProperty(1)->GetText());
+				H21Str(self, r, 0, pItem->GetProperty(1)->GetText());
 			}
 			break;
 		}
 		case kOhplH21MlClear: static_cast<cWidgetMultiPropertyListBox*>(w)->ClearItems(); break;
 		case kOhplH21TextLen:
 		{
-			cGuiSkinFont *pFont = self->mpSkin->GetFont(eGuiSkinFont_Default);
+			cGuiSkinFont *pFont = ohpl_g2_popup_skin(self)->GetFont(eGuiSkinFont_Default);
 			tWString sText = H21Ws(c.s[0], c.n[0]);
 			r.f[0] = pFont->mpFont->GetLength(pFont->mvSize, sText.c_str());
 			break;
 		}
 		case kOhplH21FontSize:
 		{
-			cGuiSkinFont *pFont = self->mpSkin->GetFont(eGuiSkinFont_Default);
+			cGuiSkinFont *pFont = ohpl_g2_popup_skin(self)->GetFont(eGuiSkinFont_Default);
 			r.f[0] = pFont->mvSize.x;
 			r.f[1] = pFont->mvSize.y;
 			break;
@@ -234,10 +244,108 @@ namespace hpl {
 			break;
 		}
 		case kOhplH21ColorWrite: *(cColor*)c.p[0] = cColor(c.f[0], c.f[1], c.f[2], c.f[3]); break;
+		case kOhplH21TbKbOpen: OhplG2PopupHost::KbOpen(w); break;
+		case kOhplH21TbKbClose: OhplG2PopupHost::KbClose(w); break;
+		case kOhplH21FpLoadGfx:
+		{
+			cGuiSkin *pSkin = ohpl_g2_popup_skin(self);
+			fb->mpGfxUpButton = pSkin->GetGfx(eGuiSkinGfx_FilePickerUpButton);
+			for(int i=0; i<6; ++i)
+				fb->mvGfxFileTypeIcons[i] = pSkin->GetGfx((eGuiSkinGfx) (i + eGuiSkinGfx_FilePickerUpButton+1));
+			break;
+		}
+		case kOhplH21BtnUpImage:
+			if(fb->mpGfxUpButton) static_cast<cWidgetButton*>(w)->SetImage(fb->mpGfxUpButton, false);
+			break;
+		case kOhplH21MlAddRow:
+		{
+			cWidgetMultiPropertyListBox *pList = static_cast<cWidgetMultiPropertyListBox*>(w);
+			cWidgetItem *pItem = pList->AddItem();
+			if(c.i[0] == 0)
+			{
+				pItem->AddProperty((const cGuiGfxElement*)NULL);
+				pItem->AddProperty(tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0]));
+				pItem->AddProperty(_W(""));
+				pItem->AddProperty(_W(""));
+			}
+			else
+			{
+				pItem->AddProperty(fb->mvGfxFileTypeIcons[c.i[1]]);
+				for(int i=0; i<3; ++i) pItem->AddProperty(tWString(reinterpret_cast<const wchar_t*>(c.s[i]), c.n[i]));
+			}
+			break;
+		}
+		case kOhplH21FbNavUp: fb->NavigateUp(); break;
+		case kOhplH21FbNavTo: r.i = fb->NavigateTo(tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0])); break;
+		case kOhplH21FbFullPath: H21Str(self, r, 0, fb->GetCurrentFullPath()); break;
+		case kOhplH21FbPathCount: r.i = (int)fb->mvCurrentDirFullPath.size(); break;
+		case kOhplH21FbPathPop:
+			for(int i=0; i<c.i[0] && !fb->mvCurrentDirFullPath.empty(); ++i) fb->mvCurrentDirFullPath.pop_back();
+			break;
+		case kOhplH21FbPathClear: fb->mvCurrentDirFullPath.clear(); break;
+		case kOhplH21FbPathEntry: H21Str(self, r, 0, fb->mvCurrentDirFullPath[c.i[0]]); break;
+		case kOhplH21FbDirs: r.i = (iFileBrowser::msPersonalDir.length()!=0 ? 1 : 0) | (iFileBrowser::msGameDir.length()!=0 ? 2 : 0); break;
+		case kOhplH21FbCatCount: r.i = (int)fb->mvCategories.size(); break;
+		case kOhplH21FbCatName: H21Str(self, r, 0, fb->mvCategories[c.i[0]]->msName); break;
+		case kOhplH21FbCatFilterCount: r.i = (int)fb->mvCategories[c.i[0]]->mvFilters.size(); break;
+		case kOhplH21FbCatFilter: H21Str(self, r, 0, fb->mvCategories[c.i[0]]->mvFilters[c.i[1]]); break;
+		case kOhplH21FbInit: fb->InitBrowser(); break;
+		case kOhplH21FbRootCount: r.i = (int)fb->mvSystemRootFolders.size(); break;
+		case kOhplH21FbRoot: H21Str(self, r, 0, fb->mvSystemRootFolders[c.i[0]]); break;
+		case kOhplH21FbList:
+		{
+			tWStringList lst;
+			fb->GetFilesAndFoldersInCurrentPath(c.i[0], lst);
+			fb->mvH21Files.assign(lst.begin(), lst.end());
+			r.i = (int)fb->mvH21Files.size();
+			break;
+		}
+		case kOhplH21FbRow:
+		{
+			tWString sFilename = fb->mvH21Files[c.i[0]];
+			tWString sFull = fb->GetCurrentFullPath();
+			r.i = (int)fb->GetFileTypeByName(sFilename);
+			H21Str(self, r, 0, sFilename);
+			H21Str(self, r, 1, fb->GetHumanReadableSize(cPlatform::GetFileSize(sFull + sFilename)));
+			H21Str(self, r, 2, cString::To16Char(cPlatform::FileModifiedDate(sFull + sFilename).ToString()));
+			break;
+		}
+		case kOhplH21FileExists: r.i = cPlatform::FileExists(tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0])); break;
+		case kOhplH21FolderExists: r.i = cPlatform::FolderExists(tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0])); break;
+		case kOhplH21SaveDest:
+			if(fb && fb->mpSaveFileDest) *fb->mpSaveFileDest = tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0]);
+			break;
+		case kOhplH21LoadDest:
+			if(fb && fb->mpLoadFileListDest)
+			{
+				fb->mpLoadFileListDest->clear();
+				fb->mpLoadFileListDest->push_back(tWString(reinterpret_cast<const wchar_t*>(c.s[0]), c.n[0]));
+			}
+			break;
 		default:
-			self->H21Ext(c, r);
 			break;
 		}
 	}
+
+	static OhplG2PopupOps gG2PopupOps = {
+		H21Exec,
+		[](iGuiPopUp *apPopup, const uint32_t *apPath, size_t alLen, bool abHidden) -> uintptr_t
+		{
+			return (uintptr_t)hplNew( OhplG2Browser, (apPopup, tWString(reinterpret_cast<const wchar_t*>(apPath), alLen), abHidden) );
+		},
+		[](uintptr_t aFb) { OhplG2Browser *pFb = (OhplG2Browser*)aFb; hplDelete(pFb); },
+		[](uintptr_t aFb, void *apDest) { ((OhplG2Browser*)aFb)->mpSaveFileDest = (tWString*)apDest; },
+		[](uintptr_t aFb, void *apDest) { ((OhplG2Browser*)aFb)->mpLoadFileListDest = (tWStringVec*)apDest; },
+		[](uintptr_t aFb, const uint32_t *apCat, size_t alCat, const uint32_t *apFilter, size_t alFilter) -> int
+		{
+			return ((OhplG2Browser*)aFb)->AddCategory(tWString(reinterpret_cast<const wchar_t*>(apCat), alCat), tWString(reinterpret_cast<const wchar_t*>(apFilter), alFilter));
+		},
+		[](uintptr_t aFb, int alCat, const uint32_t *apFilter, size_t alFilter)
+		{
+			((OhplG2Browser*)aFb)->AddFilter(alCat, tWString(reinterpret_cast<const wchar_t*>(apFilter), alFilter));
+		},
+	};
+
+	static struct OhplG2PopupRegister { OhplG2PopupRegister() { ohpl_g2_popup_ops(&gG2PopupOps); } } gG2PopupRegister;
 
 }

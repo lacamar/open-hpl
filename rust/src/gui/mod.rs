@@ -41,6 +41,7 @@ pub mod g1_host;
 pub mod g1_ops;
 pub mod g1_set;
 pub mod g1_skin;
+pub mod g2_popup;
 
 #[cfg(test)]
 mod h19_tests;

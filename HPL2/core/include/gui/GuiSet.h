@@ -24,6 +24,10 @@
 #include "gui/GuiTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "gui/RustGuiG1.h"
+#include "gui/GuiPopUpMessageBox.h"
+#include "gui/GuiPopUpFilePicker.h"
+#include "gui/GuiPopUpColorPicker.h"
+#include "gui/GuiPopUpUIKeyboard.h"
 
 namespace hpl {
 
@@ -112,6 +116,7 @@ namespace hpl {
 	class cGuiSet
 	{
 	friend class iGuiPopUp;
+	static const uint32_t* U(const tWString &asStr) { return reinterpret_cast<const uint32_t*>(asStr.data()); }
 	public:
 		void Update(float afTimeStep){ ohpl_g1_set_update(this, afTimeStep); }
 		void DrawAll(float afTimeStep){ ohpl_g1_set_draw_all(this, afTimeStep); }
@@ -288,17 +293,41 @@ namespace hpl {
 
 		cGuiPopUpMessageBox* CreatePopUpMessageBox(	const tWString& asLabel, const tWString& asText,
 													const tWString& asButton1, const tWString& asButton2,
-													void *apCallbackObject, tGuiCallbackFunc apCallback);
+													void *apCallbackObject, tGuiCallbackFunc apCallback)
+		{
+			return static_cast<cGuiPopUpMessageBox*>(ohpl_g2_popup_msgbox(this, GetSkin(), U(asLabel), asLabel.size(), U(asText), asText.size(),
+				U(asButton1), asButton1.size(), U(asButton2), asButton2.size(), (uintptr_t)apCallbackObject, reinterpret_cast<uintptr_t>(apCallback)));
+		}
 
 		cGuiPopUpFilePicker* CreatePopUpSaveFilePicker( tWString &asFileName, const tWString &asCategory,
 															 const tWString &asFilter, const tWString &asStartPath, bool abShowHidden,
-															void *apCallbackObject, tGuiCallbackFunc apCallback, const tWString& asStartFilename=_W(""));
+															void *apCallbackObject, tGuiCallbackFunc apCallback, const tWString& asStartFilename=_W(""))
+		{
+			cGuiPopUpFilePicker* pPicker = static_cast<cGuiPopUpFilePicker*>(ohpl_g2_popup_filepicker(this, GetSkin(), eFilePickerType_Save,
+				U(asStartPath), asStartPath.size(), U(asStartFilename), asStartFilename.size(), abShowHidden, (uintptr_t)apCallbackObject, reinterpret_cast<uintptr_t>(apCallback)));
+			ohpl_g2_popup_fp_init(pPicker);
+			pPicker->SetSaveFileDest( asFileName );
+			pPicker->AddCategory( asCategory, asFilter );
+			return pPicker;
+		}
 
 		cGuiPopUpFilePicker* CreatePopUpLoadFilePicker( tWStringVec &avFileList, bool abAddAllFilesFilter,
 															 const tWString &asStartPath, bool abShowHidden,
-															 void *apCallbackObject, tGuiCallbackFunc apCallback);
+															 void *apCallbackObject, tGuiCallbackFunc apCallback)
+		{
+			cGuiPopUpFilePicker* pPicker = static_cast<cGuiPopUpFilePicker*>(ohpl_g2_popup_filepicker(this, GetSkin(), eFilePickerType_Load,
+				U(asStartPath), asStartPath.size(), NULL, 0, abShowHidden, (uintptr_t)apCallbackObject, reinterpret_cast<uintptr_t>(apCallback)));
+			ohpl_g2_popup_fp_init(pPicker);
+			pPicker->SetLoadFileListDest( avFileList );
+			if(abAddAllFilesFilter)
+				pPicker->AddCategory(_W("All files"), _W("*.*"));
+			return pPicker;
+		}
 
-		cGuiPopUpColorPicker* CreatePopUpColorPicker(cColor* apDestColor, const cVector3f& avPos, void *apCallbackObject, tGuiCallbackFunc apCallback);
+		cGuiPopUpColorPicker* CreatePopUpColorPicker(cColor* apDestColor, const cVector3f& avPos, void *apCallbackObject, tGuiCallbackFunc apCallback)
+		{
+			return static_cast<cGuiPopUpColorPicker*>(ohpl_g2_popup_color(this, GetSkin(), (uintptr_t)apDestColor, (uintptr_t)apCallbackObject, reinterpret_cast<uintptr_t>(apCallback)));
+		}
 
 		cGuiPopUpUIKeyboard* CreatePopUpUIKeyboard(cWidgetTextBox* apTarget);
 

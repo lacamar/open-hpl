@@ -533,10 +533,8 @@ pub unsafe fn free(s: *mut Set) {
 
 fn delete_popups(popups: Vec<usize>) {
     for p in popups {
-        if let Some(o) = o() {
-            // SAFETY: Ops contract; the set owned the popup.
-            unsafe { (o.popup_delete)(p) };
-        }
+        // SAFETY: the set owned the popup.
+        unsafe { super::g2_popup::ohpl_g2_popup_free(p as *mut _) };
     }
 }
 

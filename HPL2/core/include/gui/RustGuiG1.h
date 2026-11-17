@@ -116,7 +116,6 @@ struct OhplG1Ops {
 	void (*size)(uintptr_t, float*);
 	bool (*nameEq)(uintptr_t, const char*, size_t);
 	uintptr_t (*rootNew)(void*);
-	void (*popupDelete)(uintptr_t);
 	void (*tooltipCreate)(void*, uintptr_t*);
 	void (*tooltipMeasure)(uintptr_t, uintptr_t, float, float*, int*);
 	void (*tooltipApply)(uintptr_t, uintptr_t, uintptr_t, uintptr_t, const float*);
