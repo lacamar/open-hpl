@@ -47,6 +47,10 @@ pub fn call(code: i32, a: &mut Args) -> usize {
         super::mainmenu::set_window(a.i[0] as usize);
         return 0;
     }
+    #[cfg(not(test))]
+    if let Some(r) = super::host_direct::call(code, a) {
+        return r;
+    }
     #[cfg(test)]
     {
         super::fake::call(code, a)
