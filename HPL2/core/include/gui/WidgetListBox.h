@@ -26,15 +26,10 @@
 
 namespace hpl {
 
-	class cGuiSkinFont;
-
-	class cWidgetSlider;
-
 	class cWidgetListBox : public iWidgetListBoxBase
 	{
 	public:
-		cWidgetListBox(cGuiSet *apSet, cGuiSkin *apSkin);
-		virtual ~cWidgetListBox();
+		cWidgetListBox(cGuiSet *apSet, cGuiSkin *apSkin) : iWidgetListBoxBase(apSet, apSkin) {}
 	};
 
 };

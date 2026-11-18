@@ -17,100 +17,31 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_WIDGET_MENU_ITEM
-#define HPL_WIDGET_MENU_ITEM
+#ifndef HPL_WIDGET_MENU_ITEM_H
+#define HPL_WIDGET_MENU_ITEM_H
 
 #include "gui/Widget.h"
-
-#include "input/InputTypes.h"
-#include "gui/RustGuiH20.h"
+#include "gui/RustGuiGw.h"
+#include "gui/GuiSet.h"
 
 namespace hpl {
 
-
 	class iWidgetMenu;
-
 	class cGuiSet;
 	class cGuiSkin;
 
-
-
-	//----------------------------
-
+	// Rust kind (rust/src/gui/gw_menu.rs)
 	class cWidgetMenuItem : public iWidget
 	{
-		friend struct OhplH20Access;
 	public:
-		cWidgetMenuItem(iWidgetMenu* apParent);
-		virtual ~cWidgetMenuItem();
+		cWidgetMenuItem(iWidgetMenu* apParent) : iWidget(eWidgetType_MenuItem, ((iWidget*)apParent)->GetSet(), ((iWidget*)apParent)->GetSet()->GetSkin())
+		{ ohpl_gw_set_kind_ctr((uintptr_t)this, kOhplGwMenuItem, 0, (uintptr_t)apParent); }
 
-		cWidgetMenuItem* AddMenuItem(const tWString &asText, const tWString &asIconFilename = _W(""));
-		void AddSeparator();
-		void ClearMenuItems();
-
-		bool IsParent() { return (mpChildMenu != NULL); }
-		bool IsChecked()	{ return mbChecked; }
-		void SetChecked(bool abX) { mbChecked = abX; }
-		bool IsDefault()	{ return mbDefault; }
-		void SetDefault(bool abX) { mbDefault = abX; }
-		
-		iWidgetMenu*	GetParentMenu()	{ return (iWidgetMenu*)mpParent; }
-		iWidgetMenu*	GetChildMenu() { return mpChildMenu; }
-
-		bool IsMenuOpen();
-
-		bool IsSeparator() { return (GetText()==_W(""));}
-
-		cGuiGlobalShortcut* AddShortcut(int alKeyModifiers, eKey aKey, eGuiMessage aMsg=eGuiMessage_ButtonPressed, 
-						 bool abBypassVisibility=true, bool abBypassEnabled=true);
-
-		const tWString& GetShortcutText() { return msShortcutText; }
-
-		float GetTextLength();
-
-	protected:
-
-		/////////////////////////
-		// Implemented functions
-		void OnInit();
-		void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion);
-		void OnUpdate(float afTimeStep);
-		
-		void OnChangeSize();
-
-
-		bool OnMouseDown(const cGuiMessageData& aData);
-		bool OnMouseUp(const cGuiMessageData& aData);
-		bool OnMouseEnter(const cGuiMessageData& aData);
-		bool OnMouseLeave(const cGuiMessageData& aData);
-
-		bool OnMouseMove(const cGuiMessageData& aData);
-
-		bool OnKeyPress(const cGuiMessageData& aData);
-
-		bool OnLostFocus(const cGuiMessageData& aData);
-		bool OnGotFocus(const cGuiMessageData& aData);
-
-		void OnLoadGraphics();
-
-
-		//////////////////////////
-		// Data
-		eWidgetType mItemType;
-
-		OhplH20MenuItem mH;
-		bool&	mbChecked;
-		bool&	mbDefault;
-
-		float&	mfTimer;
-		float&	mfOpenMenuTime;
-
-		iWidgetMenu*&	mpChildMenu;
-
-		tWString msShortcutText;
+		cWidgetMenuItem* AddMenuItem(const tWString &asText, const tWString &asIconFilename = _W("")){ return (cWidgetMenuItem*)ohpl_gw_menu_add_item((uintptr_t)this, (const uint32_t*)asText.data(), asText.size()); }
+		void AddSeparator(){ ohpl_gw_menu_add_separator((uintptr_t)this); }
+		void ClearMenuItems(){ ohpl_gw_menu_clear((uintptr_t)this); }
+		bool IsSeparator() { return (GetText()==_W("")); }
 	};
 
-	
 };
-
-#endif	// HPL_WIDGET_MENU_ITEM
+#endif // HPL_WIDGET_MENU_ITEM_H

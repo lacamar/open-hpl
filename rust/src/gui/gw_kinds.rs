@@ -1,6 +1,6 @@
 //! Widget kinds written in Rust (button, check box, label, image, dummy, group, slider, frame,
 //! window) on top of the `Gw` base, using the kernels in `widgets_base` / `widgets_slider` /
-//! `widget`. Everything else is [`Kind::Foreign`]: the virtuals are called on the C++ shell.
+//! `widget`, and the complex kinds of `gw_h20` / `gw_menu`.
 
 #![allow(clippy::indexing_slicing, clippy::too_many_arguments)] // fixed-size tables and op counts bounded by their buffers
 
@@ -188,7 +188,6 @@ pub struct Window {
 }
 
 pub enum Kind {
-    Foreign,
     Plain,
     Button(Button),
     Check(Check),
@@ -199,11 +198,19 @@ pub enum Kind {
     Slider(Slider),
     Frame(Frame),
     Window(Window),
+    Text(Box<super::h20_text::TextBox>),
+    List(Box<super::h20_list::ListBase>),
+    Combo(Box<super::h20_combo::Combo>),
+    TabFrame(Box<super::h20_tab::Frame>),
+    Tab(Box<super::h20_tab::Tab>),
+    TabLabel(Box<super::h20_tab::Label>),
+    Ctx(Box<super::gw_menu::CtxK>),
+    Main(Box<super::gw_menu::MainK>),
+    Item(Box<super::gw_menu::ItemK>),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Tag {
-    Foreign,
     Plain,
     Button,
     Check,
@@ -214,11 +221,11 @@ enum Tag {
     Slider,
     Frame,
     Window,
+    H20,
 }
 
 fn tag(w: W) -> Tag {
     with(w, |g| match g.kind {
-        Kind::Foreign => Tag::Foreign,
         Kind::Plain => Tag::Plain,
         Kind::Button(_) => Tag::Button,
         Kind::Check(_) => Tag::Check,
@@ -229,6 +236,15 @@ fn tag(w: W) -> Tag {
         Kind::Slider(_) => Tag::Slider,
         Kind::Frame(_) => Tag::Frame,
         Kind::Window(_) => Tag::Window,
+        Kind::Text(_)
+        | Kind::List(_)
+        | Kind::Combo(_)
+        | Kind::TabFrame(_)
+        | Kind::Tab(_)
+        | Kind::TabLabel(_)
+        | Kind::Ctx(_)
+        | Kind::Main(_)
+        | Kind::Item(_) => Tag::H20,
     })
     .unwrap_or(Tag::Plain)
 }
@@ -255,11 +271,13 @@ fn v3(x: f32, y: f32, z: f32) -> Vector3f {
 
 pub(crate) fn call(w: W, op: Op, other: W, d: &Msg, f: f32) -> bool {
     let t = tag(w);
-    if t == Tag::Foreign {
-        return host().is_some_and(|h| {
-            // SAFETY: `w` is a live shell; `d` a message.
-            unsafe { (h.foreign_call)(w, op as i32, other, d, f) }
-        });
+    if t == Tag::H20 {
+        if let Some(r) = super::gw_h20::call(w, op, other, d, f) {
+            return r;
+        }
+        if let Some(r) = super::gw_menu::call(w, op, other, d, f) {
+            return r;
+        }
     }
     match op {
         Op::OnMessage => false,
@@ -394,20 +412,17 @@ fn virtual_msg(t: Tag, w: W, msg: i32, d: &Msg) -> bool {
 
 /// `AttachChild` virtual: no Rust kind overrides it.
 pub(crate) fn attach_child(w: W, child: W) {
-    if tag(w) == Tag::Foreign {
-        if let Some(h) = host() {
-            // SAFETY: `w` is a live shell.
-            unsafe { (h.foreign_call)(w, 16, child, &Msg::zero(), 0.0) };
-        }
-    } else {
-        gw::attach_child_base(w, child);
+    if super::gw_h20::attach_child(w, child) {
+        return;
     }
+    gw::attach_child_base(w, child);
 }
 
 pub(crate) fn set_default_font_size(w: W, s: Vector2f) {
     match tag(w) {
-        Tag::Foreign => {
+        Tag::H20 => {
             with(w, |g| g.p.font_size = s);
+            super::gw_h20::font_size_changed(w);
         }
         t => {
             with(w, |g| g.p.font_size = s);
@@ -446,6 +461,9 @@ pub(crate) fn set_default_font_color(w: W, c: Color) {
 }
 
 pub(crate) fn on_load_graphics(w: W) {
+    if super::gw_h20::on_load_graphics(w) || super::gw_menu::on_load_graphics(w) {
+        return;
+    }
     let skin = gw::skin_of(w);
     match tag(w) {
         Tag::Button => {
@@ -527,28 +545,20 @@ pub(crate) fn on_load_graphics(w: W) {
                 k.borders_outside = out;
             });
         }
-        Tag::Foreign => {
-            if let Some(h) = host() {
-                // SAFETY: `w` is a live shell.
-                unsafe { (h.foreign_call)(w, 19, 0, &Msg::zero(), 0.0) };
-            }
-        }
         _ => {}
     }
 }
 
 pub(crate) fn on_init(w: W) {
     match tag(w) {
+        Tag::H20 => {
+            super::gw_h20::on_init(w);
+            super::gw_menu::on_init(w);
+        }
         Tag::Check => check_init(w),
         Tag::Group => group_init(w),
         Tag::Slider => slider_init(w),
         Tag::Window => window_init(w),
-        Tag::Foreign => {
-            if let Some(h) = host() {
-                // SAFETY: `w` is a live shell.
-                unsafe { (h.foreign_call)(w, 18, 0, &Msg::zero(), 0.0) };
-            }
-        }
         _ => {}
     }
 }
@@ -557,6 +567,8 @@ pub(crate) fn on_init(w: W) {
 pub(crate) fn teardown(w: W) {
     let set = gw::set_of(w);
     let destroying = g1_set::is_destroying(set);
+    super::gw_h20::teardown(w);
+    super::gw_menu::teardown(w);
     let kill = |c: W| {
         if c != 0 && !destroying {
             g1_set::destroy_widget(set, c, false);
@@ -594,6 +606,14 @@ pub(crate) fn teardown(w: W) {
 // ---------------------------------------------------------------- creation
 
 pub(crate) fn set_kind(w: W, id: i32, a: i32, b: i32) {
+    if id >= super::gw_menu::KIND_ITEM {
+        super::gw_menu::set_kind(w, id, b as usize);
+        return;
+    }
+    if id >= super::gw_h20::KIND_TEXTBOX {
+        super::gw_h20::set_kind(w, id, a, b as usize);
+        return;
+    }
     let skin = gw::skin_of(w);
     let kind = match id {
         KIND_PLAIN => Kind::Plain,
@@ -682,7 +702,7 @@ pub(crate) fn set_kind(w: W, id: i32, a: i32, b: i32) {
             button_size: 0.0,
             borders_outside: false,
         }),
-        _ => Kind::Foreign,
+        _ => Kind::Plain,
     };
     with(w, |g| g.kind = kind);
     match id {
@@ -722,7 +742,7 @@ fn add_callback(w: W, msg: i32, ctx: W, f: extern "C" fn(*mut c_void, W, *const 
     gw::add_callback(w, msg, ctx as *mut c_void, f);
 }
 
-fn shell(kind: i32, set: *mut super::g1_set::Set, a: i32, b: i32) -> W {
+pub(crate) fn shell(kind: i32, set: *mut super::g1_set::Set, a: i32, b: usize) -> W {
     host().map_or(0, |h| {
         // SAFETY: the host constructs a shell whose constructor calls `ohpl_gw_new`.
         unsafe {
@@ -737,9 +757,29 @@ fn shell(kind: i32, set: *mut super::g1_set::Set, a: i32, b: i32) -> W {
     })
 }
 
-fn add_widget(set: *mut super::g1_set::Set, w: W, parent: W) {
+pub(crate) fn add_widget(set: *mut super::g1_set::Set, w: W, parent: W) {
     // SAFETY: live set and widgets.
     unsafe { g1_set::ohpl_g1_set_add_widget(set, w, parent) };
+}
+
+pub(crate) fn create_menu_item(set: *mut super::g1_set::Set, text: &[u32], parent: W) -> W {
+    let w = shell(gw_host::SHELL_MENUITEM, set, 0, parent);
+    gw::set_position(w, v3(0.0, 0.0, 0.0));
+    gw::set_size(w, v2(0.0, 0.0));
+    gw::set_text(w, text);
+    set_name(w, b"");
+    add_widget(set, w, parent);
+    w
+}
+
+pub(crate) fn create_context_menu(set: *mut super::g1_set::Set, parent: W) -> W {
+    let w = shell(gw_host::SHELL_CTXMENU, set, 0, 0);
+    gw::set_position(w, v3(0.0, 0.0, 0.0));
+    gw::set_size(w, v2(0.0, 0.0));
+    gw::set_text(w, &[]);
+    set_name(w, b"");
+    add_widget(set, w, parent);
+    w
 }
 
 pub(crate) fn create_label(
@@ -750,7 +790,7 @@ pub(crate) fn create_label(
     parent: W,
     name: &[u8],
 ) -> W {
-    let w = shell(gw_host::SHELL_LABEL, set, 0, 0);
+    let w = shell(gw_host::SHELL_LABEL, set, 0, 0usize);
     gw::set_position(w, pos);
     gw::set_size(w, size);
     gw::set_text(w, text);
@@ -810,7 +850,7 @@ pub(crate) fn create_frame(
     v: bool,
     name: &[u8],
 ) -> W {
-    let w = shell(gw_host::SHELL_FRAME, set, i32::from(h), i32::from(v));
+    let w = shell(gw_host::SHELL_FRAME, set, i32::from(h), usize::from(v));
     gw::set_position(w, pos);
     gw::set_size(w, size);
     kind!(w, Frame, |k| k.draw_frame = draw_frame);
@@ -819,7 +859,7 @@ pub(crate) fn create_frame(
     w
 }
 
-fn set_name(w: W, n: &[u8]) {
+pub(crate) fn set_name(w: W, n: &[u8]) {
     with(w, |g| g.name = n.to_vec());
 }
 

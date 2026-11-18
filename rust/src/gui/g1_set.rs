@@ -1399,6 +1399,19 @@ pub unsafe extern "C" fn ohpl_g1_shortcut_exec(c: *mut Shortcut) -> bool {
 const KEY_NONE: i32 = 0;
 const MODIFIER_COUNT: i32 = 4;
 
+/// `ToString` of a shortcut as wide characters.
+pub(crate) fn shortcut_text(c: *mut Shortcut) -> Vec<u32> {
+    extern "C" fn collect(ctx: *mut c_void, p: *const u8, n: usize) {
+        // SAFETY: `ctx` is the `String` below, `p` readable for `n` bytes.
+        let (out, b) = unsafe { (&mut *ctx.cast::<String>(), std::slice::from_raw_parts(p, n)) };
+        *out = String::from_utf8_lossy(b).into_owned();
+    }
+    let mut s = String::new();
+    // SAFETY: `c` is a live shortcut of the set; the sink fills `s`.
+    unsafe { ohpl_g1_shortcut_to_string(c, collect, (&raw mut s).cast()) };
+    s.chars().map(u32::from).collect()
+}
+
 /// `cGuiGlobalShortcut::ToString`.
 ///
 /// # Safety

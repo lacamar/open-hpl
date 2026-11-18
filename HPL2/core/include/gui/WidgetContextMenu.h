@@ -17,72 +17,22 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_WIDGET_CONTEXT_MENU
-#define HPL_WIDGET_CONTEXT_MENU
+#ifndef HPL_WIDGET_CONTEXT_MENU_H
+#define HPL_WIDGET_CONTEXT_MENU_H
 
 #include "gui/WidgetMenu.h"
 
-#include "gui/GuiSkin.h"
-#include "gui/RustGuiH20.h"
-
 namespace hpl {
 
+	// Rust kind (rust/src/gui/gw_menu.rs)
 	class cWidgetContextMenu : public iWidgetMenu
 	{
 	public:
-		cWidgetContextMenu(cGuiSet *apSet, cGuiSkin *apSkin);
-		~cWidgetContextMenu();
+		cWidgetContextMenu(cGuiSet *apSet, cGuiSkin *apSkin) : iWidgetMenu(eWidgetType_ContextMenu, apSet, apSkin)
+		{ ohpl_gw_set_kind((uintptr_t)this, kOhplGwCtxMenu, 0, 0); }
 
-		////////////////////////////////////
-		// iWidgetMenu implemented functions
-		void AddSeparator();
-		void Hide();
-
-		void SavePrevAttentionWidget();
-
-		float GetMenuItemWidth();
-
-	protected:
-
-		////////////////////////////////////
-		// iWidgetMenu implemented functions
-
-		void UpdateMenuItemsPos(cWidgetMenuItem* apNewItem);
-		void UpdateMenuItemsSize(cWidgetMenuItem* apNewItem);
-		void UpdateMenuWidth(float afWidth);
-
-		void OnChildMenuHide();
-
-		////////////////////////////////////
-		// iWidget implemented functions
-
-		void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion);
-
-		void OnUpdate(float afTimeStep);
-
-		void OnInit();
-
-		bool OnMouseDown(const cGuiMessageData& aData) {return true;}
-		bool OnMouseUp(const cGuiMessageData& aData) {return true;}
-
-		bool OnMouseEnter(const cGuiMessageData& aData);
-		bool OnMouseLeave(const cGuiMessageData& aData);
-
-		bool OnKeyPress(const cGuiMessageData& aData);
-
-		bool OnLostFocus(const cGuiMessageData& aData);
-		bool OnGotFocus(const cGuiMessageData& aData);
-
-		void OnLoadGraphics();
-
-		/////////////////////////
-		// Data
-		OhplH20CtxMenu mH;
-		float& mfTimer;
-		float& mfHideTime;
+		void SavePrevAttentionWidget(){ ohpl_gw_ctx_save_prev_attention((uintptr_t)this); }
 	};
+
 };
-
-#endif // HPL_WIDGET_CONTEXT_MENU
-
-
+#endif // HPL_WIDGET_CONTEXT_MENU_H

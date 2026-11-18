@@ -22,6 +22,7 @@
 
 #include "gui/Widget.h"
 #include "gui/WidgetBaseClasses.h"
+#include "gui/RustGuiGw.h"
 #include "gui/RustWidget2.h"
 #include "gui/RustGuiH20.h"
 
@@ -40,83 +41,48 @@ namespace hpl {
 	};
 
 	//-----------------------------------------------------------------------
-	//-----------------------------------------------------------------------
 
-	class iWidgetListBoxBase : public iWidget, public iWidgetItemContainer
+	// Rust kind (rust/src/gui/gw_h20.rs, logic in h20_list.rs)
+	class iWidgetListBoxBase : public iWidget
 	{
 	public:
-		iWidgetListBoxBase(cGuiSet *apSet, cGuiSkin *apSkin, int alKind=0);
-		virtual ~iWidgetListBoxBase();
+		iWidgetListBoxBase(cGuiSet *apSet, cGuiSkin *apSkin, int alKind=0)
+			: iWidget(eWidgetType_ListBox, apSet, apSkin)
+		{ ohpl_gw_set_kind_ctr((uintptr_t)this, kOhplGwList + alKind, 0, 0); }
+		virtual ~iWidgetListBoxBase() {}
 
-		void SetBackgroundZ(float afZ){mfBackgroundZ = afZ;}
-		float GetBackgroundZ(){ return mfBackgroundZ;}
+		void SetBackgroundZ(float afZ){ H().bgZ = afZ; }
+		float GetBackgroundZ(){ return H().bgZ; }
 
-		void SetSelectedItem(int alX,bool abMoveList=false, 
+		void SetSelectedItem(int alX,bool abMoveList=false,
 							 bool abGenerateCallback=true,
 							 eListBoxSelectType aType=eListBoxSelectType_Toggle,
-							 bool abClearPrevious=true);
-		int GetSelectedItem();
+							 bool abClearPrevious=true)
+		{ ohpl_h20_lb_set_selected_item(&gH20Host, &H(), alX, abMoveList, abGenerateCallback, aType, abClearPrevious); }
+		int GetSelectedItem(){ return ohpl_h20_lb_selected_item(&gH20Host, &H()); }
 
-		int GetMultiSelectionNum();
-		int GetMultiSelection(int alIdx);
+		int GetMultiSelectionNum(){ return ohpl_h20_lb_multi_selection_num(&gH20Host, &H()); }
+		int GetMultiSelection(int alIdx){ return ohpl_h20_lb_multi_selection(&gH20Host, &H(), alIdx); }
 
-		void SetAllowMultiSelection(bool abX) { mList.allow_multi = abX; }
-		bool GetAllowMultiSelection() { return mList.allow_multi; }
+		void SetAllowMultiSelection(bool abX) { H().list.allow_multi = abX; }
+		bool GetAllowMultiSelection() { return H().list.allow_multi; }
 
-		void ClearSelection();
+		void ClearSelection(){ ohpl_h20_lb_clear_selection(&gH20Host, &H()); }
 
-		virtual cVector3f GetItemStartPos();
+		cVector3f GetItemStartPos(){ cVector3f vPos; ohpl_h20_lb_item_start_pos(&gH20Host, &H(), &vPos); return vPos; }
 
-		void SetCursorPos(int alPos, bool abMoveList, bool abClamp);
-		int GetCursorPos() { return mList.cursor_pos; }
-		
-		void SetAnchorPos(int alX) { mList.anchor_pos = alX; }
+		void SetCursorPos(int alPos, bool abMoveList, bool abClamp){ ohpl_h20_lb_set_cursor_pos(&gH20Host, &H(), alPos, abMoveList, abClamp); }
+		int GetCursorPos() { return H().list.cursor_pos; }
 
-		bool GetIsLocked() { return mList.locked; }
-		void SetIsLocked(bool abX) { mList.locked = abX; }
-        		
+		void SetAnchorPos(int alX) { H().list.anchor_pos = alX; }
+
+		bool GetIsLocked() { return H().list.locked; }
+		void SetIsLocked(bool abX) { H().list.locked = abX; }
+
+		OHPL_ITEM_CONTAINER_API
+
 	protected:
-		/////////////////////////
-		// Own functions
-		virtual void DrawItems(float afTimeStep, cGuiClipRegion* apClipRegion){}
-
-		void UpdateProperties();
-
-		void AddItemToSelection(cWidgetItem* apItem);
-		void RemoveItemFromSelection(cWidgetItem* apItem);
-
-		/////////////////////////
-		// Implemented functions
-		void OnChangeSize();
-		void OnLoadGraphics();
-		void OnInit();
-
-
-		void OnDraw(float afTimeStep, cGuiClipRegion* apClipRegion);
-		void OnDrawAfterClip(float afTimeStep, cGuiClipRegion* apClipRegion);
-
-
-		bool OnMouseMove(const cGuiMessageData& aData);
-		bool OnMouseDown(const cGuiMessageData& aData);
-		bool OnMouseDoubleClick(const cGuiMessageData& aData);
-		bool OnMouseUp(const cGuiMessageData& aData);
-		bool OnMouseEnter(const cGuiMessageData& aData);
-		bool OnMouseLeave(const cGuiMessageData& aData);
-
-		bool OnKeyPress(const cGuiMessageData& aData);
-
-		bool OnUIArrowPress(const cGuiMessageData& aData);
-		bool OnUIArrowRelease(const cGuiMessageData& aData);
-		bool OnUIButtonPress(const cGuiMessageData& aData);
-		bool OnUIButtonRelease(const cGuiMessageData& aData);
-		bool OnUIButtonDoublePress(const cGuiMessageData& aData);
-		
-		/////////////////////////
-		// Data
-		OhplH20ListBase mH;
-		float& mfBackgroundZ;
-		float& mfSliderWidth;
-		OhplW2List& mList;
+		OhplH20ListBase& H(){ return *(OhplH20ListBase*)ohpl_gw_state((uintptr_t)this); }
 	};
 
 };

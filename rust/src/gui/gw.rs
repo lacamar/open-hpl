@@ -2,7 +2,7 @@
 //! (`gui/Widget.h`). A widget is a `Gw` owned here; the C++ object (`iWidget` and its subclasses)
 //! is a shell holding the `Gw` pointer right after its vptr, and `W` is the shell's address.
 //! Widget kinds written in Rust live in `gw_kinds`; widgets still written in C++ are
-//! [`Kind::Foreign`] and receive their virtuals through the host table.
+//!
 //!
 //! Re-entrancy: widget code calls back into widgets, so no `&mut Gw` lives across a call that can
 //! reach another widget; every access is a short scope in [`with`].
@@ -73,6 +73,7 @@ pub struct Gw {
     pub user_data: *mut c_void,
     pub user_value: i32,
     pub children: Vec<W>,
+    pub items: Vec<*mut super::gw_items::Item>,
     pub kind: Kind,
 }
 
@@ -235,7 +236,8 @@ pub(crate) fn new_gw(shell: W, ty: i32, set: *mut Set, skin: *mut Skin) -> *mut 
         user_data: ptr::null_mut(),
         user_value: 0,
         children: Vec::new(),
-        kind: Kind::Foreign,
+        items: Vec::new(),
+        kind: Kind::Plain,
     }))
 }
 
@@ -520,11 +522,20 @@ pub(crate) fn add_shortcut(
     bypass_en: bool,
 ) -> usize {
     let set = set_of(w);
+    let item = super::gw_menu::is_item(w);
+    let (msg, bypass_vis, bypass_en) = if item {
+        (super::gw_menu::MSG_BUTTON_PRESSED, true, false)
+    } else {
+        (msg, bypass_vis, bypass_en)
+    };
     // SAFETY: the widget's set is live.
     let c = unsafe {
         g1_set::ohpl_g1_set_add_global_shortcut(set, modifiers, key, w, msg, bypass_vis, bypass_en)
     };
     with(w, |g| g.shortcuts.push(c as usize));
+    if item {
+        super::gw_menu::item_shortcut_added(w, &g1_set::shortcut_text(c as *mut _));
+    }
     c as usize
 }
 

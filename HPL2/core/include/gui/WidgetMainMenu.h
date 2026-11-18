@@ -17,53 +17,20 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_WIDGET_MAIN_MENU
-#define HPL_WIDGET_MAIN_MENU
+#ifndef HPL_WIDGET_MAIN_MENU_H
+#define HPL_WIDGET_MAIN_MENU_H
 
 #include "gui/WidgetMenu.h"
 
-#include "gui/GuiSkin.h"
-#include "gui/RustGuiH20.h"
-
 namespace hpl {
 
+	// Rust kind (rust/src/gui/gw_menu.rs)
 	class cWidgetMainMenu : public iWidgetMenu
 	{
 	public:
-		cWidgetMainMenu(cGuiSet *apSet, cGuiSkin *apSkin);
-		~cWidgetMainMenu();
-
-		//////////////////////////////
-		// Implemented iWidgetMenu functions
-		void Hide();
-
-	protected:
-
-		//////////////////////////////
-		// Implemented iWidgetMenu functions
-
-		void UpdateMenuItemsPos(cWidgetMenuItem* apNewItem);
-		void UpdateMenuItemsSize(cWidgetMenuItem* apNewItem);
-
-		void OnChildMenuHide();
-
-		//////////////////////////////
-		// Implemented iWidget functions
-		void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion);
-
-		void OnUpdate(float afTimeStep);
-
-		void OnInit();
-
-		void OnLoadGraphics();
-
-		/////////////////////////////
-		// Data
-
-		OhplH20MainMenu mH;
+		cWidgetMainMenu(cGuiSet *apSet, cGuiSkin *apSkin) : iWidgetMenu(eWidgetType_MainMenu, apSet, apSkin)
+		{ ohpl_gw_set_kind((uintptr_t)this, kOhplGwMainMenu, 0, 0); }
 	};
+
 };
-
-#endif // HPL_WIDGET_MAIN_MENU
-
-
+#endif // HPL_WIDGET_MAIN_MENU_H

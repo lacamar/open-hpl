@@ -21,25 +21,24 @@
 #define HPL_WIDGET_MULTI_PROPERTY_LIST_BOX_H
 
 #include "gui/WidgetListBoxBase.h"
+#include "system/String.h"
 
 namespace hpl {
 
 	class cWidgetLabel;
 
-	//-------------------------------------------------------------------
-
 	class cWidgetMultiPropertyListBox : public iWidgetListBoxBase
 	{
 	public:
-		cWidgetMultiPropertyListBox(cGuiSet* apSet, cGuiSkin* apSkin);
-		virtual ~cWidgetMultiPropertyListBox();
+		cWidgetMultiPropertyListBox(cGuiSet* apSet, cGuiSkin* apSkin) : iWidgetListBoxBase(apSet, apSkin, 1) {}
 
-		void AddColumn(const tString& asName, const int alIndex, eFontAlign aAlign=eFontAlign_Left );
-
-		void SetColumnWidth(const int alIdx, float afWidth);
-
-		cVector3f GetItemStartPos();
+		void AddColumn(const tString& asName, const int alIndex, eFontAlign aAlign=eFontAlign_Left )
+		{
+			tWString sName = cString::To16Char(asName);
+			ohpl_h20_lb_add_column(&gH20Host, &H(), sName.data(), sName.size(), alIndex, aAlign);
+		}
+		void SetColumnWidth(const int alIdx, float afWidth){ ohpl_h20_lb_set_column_width(&gH20Host, &H(), alIdx, afWidth); }
 	};
-};
 
+};
 #endif // HPL_WIDGET_MULTI_PROPERTY_LIST_BOX_H

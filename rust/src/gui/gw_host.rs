@@ -5,7 +5,7 @@
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicPtr, Ordering};
 
-use super::set::{Msg, W};
+use super::set::W;
 use crate::types::{Color, Vector2f, Vector3f};
 
 pub const SHELL_PLAIN: i32 = 0;
@@ -18,16 +18,17 @@ pub const SHELL_CHECK: i32 = 6;
 pub const SHELL_GROUP: i32 = 7;
 pub const SHELL_IMAGE: i32 = 8;
 pub const SHELL_DUMMY: i32 = 9;
+pub const SHELL_MENUITEM: i32 = 10;
+pub const SHELL_CTXMENU: i32 = 11;
+pub const SHELL_MAINMENU: i32 = 12;
 
 pub type RowSink = unsafe extern "C" fn(*mut c_void, *const u32, usize);
 
 #[repr(C)]
 pub struct GwHost {
     /// `new` of the C++ shell for a widget kind; its constructor calls `ohpl_gw_new`.
-    pub shell_new: unsafe extern "C" fn(i32, *mut c_void, *mut c_void, i32, i32) -> W,
+    pub shell_new: unsafe extern "C" fn(i32, *mut c_void, *mut c_void, i32, usize) -> W,
     pub shell_delete: unsafe extern "C" fn(W),
-    /// The virtual `op` of a widget still written in C++ (`h19_widget::Op` numbering).
-    pub foreign_call: unsafe extern "C" fn(W, i32, W, *const Msg, f32) -> bool,
     pub draw_font: unsafe extern "C" fn(
         *mut c_void,
         usize,

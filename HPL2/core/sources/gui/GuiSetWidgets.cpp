@@ -239,30 +239,7 @@ namespace hpl {
 
 	void cGuiSet::ShowContextMenu( cWidgetContextMenu* apMenu, const cVector3f& avPosition )
 	{
-		if(apMenu==NULL) return;
-
-		cVector3f vPos = avPosition;
-		if(avPosition.x + apMenu->GetSize().x > GetVirtualSize().x)
-			vPos.x = GetVirtualSize().x - apMenu->GetSize().x;
-		if(avPosition.y + apMenu->GetSize().y > GetVirtualSize().y)
-			vPos.y = GetVirtualSize().y - apMenu->GetSize().y;
-
-		apMenu->SetVisible(true);
-		apMenu->SetEnabled(true);
-		apMenu->SetHighlightedItem(NULL);
-
-		if(	apMenu->GetParentItem()==NULL ||
-			apMenu->GetParentMenu()->GetType()==eWidgetType_MainMenu)
-		{
-			vPos.z = ohpl_g1_set_context_menu_z(this);
-			IncContextMenuZ();
-		}
-		else
-			vPos.z = apMenu->GetParentMenu()->GetGlobalPosition().z;
-
-		SetAttentionWidget(apMenu->GetTopMostMenu());
-		apMenu->SetGlobalPosition(vPos);
-		SetFocusedWidget(apMenu);
+		ohpl_gw_show_context_menu(this, (uintptr_t)apMenu, avPosition.x, avPosition.y, avPosition.z);
 	}
 
 	void cGuiSet::SetRootWidgetClips(bool abX)

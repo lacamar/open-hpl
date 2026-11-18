@@ -45,7 +45,6 @@ namespace hpl {
 		void SetAutogenerateSize(bool abX){ ohpl_gw_label_set_autogen((uintptr_t)this, abX); }
 		bool GetAutogenerateSize(){ return ohpl_gw_label_autogen((uintptr_t)this); }
 
-		void SetDefaultFontSize(const cVector2f& avSize){ ohpl_gw_set_font_size((uintptr_t)this, avSize.x, avSize.y); }
 
 		void SetDrawBackGround(bool abX) { ohpl_gw_label_set_draw_bg((uintptr_t)this, abX); }
 		bool GetDrawBackGround() { return ohpl_gw_label_draw_bg((uintptr_t)this); }

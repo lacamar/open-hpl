@@ -21,6 +21,7 @@
 #define HPL_WIDGET_TAB_FRAME
 
 #include "gui/Widget.h"
+#include "gui/RustGuiGw.h"
 #include "gui/RustWidget2.h"
 #include "gui/RustGuiH20.h"
 
@@ -30,10 +31,9 @@ namespace hpl
 {
 	class cGuiSet;
 	class cGuiSkin;
-
 	class cWidgetFrame;
 	class cWidgetButton;
-	
+
 	class cWidgetTab;
 	class cWidgetTabLabel;
 	class cWidgetTabFrame;
@@ -43,157 +43,84 @@ namespace hpl
 	typedef vector<cWidgetTab*>			tWidgetTabVector;
 	typedef tWidgetTabVector::iterator	tWidgetTabVectorIt;
 
-
-	//////////////////////////////////////////////////////////////////
-	// Tab Label
-	//////////////////////////////////////////////////////////////////
-
+	// Rust kinds (rust/src/gui/gw_h20.rs, logic in h20_tab.rs)
 	class cWidgetTabLabel : public iWidget
 	{
-	friend class cWidgetTab;
-	friend class cWidgetTabFrame;
-	friend struct OhplH20Access;
 	public:
-		cWidgetTabLabel(cGuiSet* apSet, cGuiSkin* apSkin);
-		virtual ~cWidgetTabLabel();
+		cWidgetTabLabel(cGuiSet* apSet, cGuiSkin* apSkin) : iWidget(eWidgetType_Label, apSet, apSkin)
+		{ ohpl_gw_set_kind((uintptr_t)this, kOhplGwTabLabel, 0, 0); }
 
-		cGuiGfxElement* GetIcon() { return mpGfxIcon; }
-	protected:
-		///////////////////////////
-		// Implemented functions
-		bool OnMouseDown(const cGuiMessageData& aData);
+		cGuiGfxElement* GetIcon() { return H().icon; }
 
-		void OnChangeText();
-
-		bool OnGetUINavFocus(const cGuiMessageData& aData);
-
-		void OnDraw(float afTimeStep, cGuiClipRegion* apClipRegion);
-		void OnLoadGraphics();
-
-		///////////////////////////
-		// Data
-		OhplH20TabLabel mH;
-		cGuiGfxElement*& mpGfxIcon;
+	private:
+		OhplH20TabLabel& H(){ return *(OhplH20TabLabel*)ohpl_gw_state((uintptr_t)this); }
 	};
-
-	//////////////////////////////////////////////////////////////////
-	// Tab
-	//////////////////////////////////////////////////////////////////
 
 	class cWidgetTab : public iWidget
 	{
-    friend class cWidgetTabFrame;
-	friend class cWidgetTabLabel;
-	friend struct OhplH20Access;
 	public:
-		cWidgetTab(cWidgetTabFrame* apParent);
-		virtual ~cWidgetTab();
+		cWidgetTab(cWidgetTabFrame* apParent) : iWidget(eWidgetType_Tab, ((iWidget*)apParent)->GetSet(), ((iWidget*)apParent)->GetSet()->GetSkin())
+		{ ohpl_gw_set_kind_ctr((uintptr_t)this, kOhplGwTab, 0, (uintptr_t)apParent); }
 
-		int GetIndex() { return mlIndex; }
+		int GetIndex() { return H().index; }
 
-		void AttachChild(iWidget* apChild);
-		void RemoveChild(iWidget* apChild);
+		void SetLabelPosX(float afPosX)
+		{
+			iWidget* pLabel = (iWidget*)H().label;
+			cVector3f vNewPos = pLabel->GetLocalPosition();
+			vNewPos.x = afPosX;
+			pLabel->SetPosition(vNewPos);
+		}
 
-		void SetLabelPosX(float afPosX);
+		void SetIcon(cGuiGfxElement* apIcon){ ohpl_h20_tab_set_icon(&gH20Host, &H(), (uintptr_t)apIcon); }
 
-		void SetIcon(cGuiGfxElement* apIcon);
+		cWidgetTabFrame* GetParentTabFrame() { return H().frame; }
+		cWidgetTabLabel* GetTabLabel() { return H().label; }
 
-		cWidgetTabFrame* GetParentTabFrame() { return mpParentTabFrame; }
-		cWidgetTabLabel* GetTabLabel() { return mpTabLabel; }
+		void SetOnTop(bool abX){ ohpl_h20_tab_set_on_top(&gH20Host, &H(), abX); }
+		bool IsOnTop() { return H().onTop; }
 
-		void SetOnTop(bool abX);
-		bool IsOnTop() { return mbOnTop; }
-
-        bool PointIsInside(const cVector2f& avPoint, bool abOnlyClipped);
-
-	protected:
-		////////////////////////////
-		// Implemented functions
-        void OnChangeText();
-		void OnChangeSize();
-
-		void OnInit();
-
-		void OnDraw(float afTimeStep, cGuiClipRegion* apClipRegion);
-
-		void OnLoadGraphics();
-
-		////////////////////////////
-		// Data
-		OhplH20Tab mH;
-		int& mlIndex;
-
-		bool& mbOnTop;
-
-		cWidgetTabFrame*& mpParentTabFrame;
-
-		cWidgetTabLabel*& mpTabLabel;
-		cWidgetFrame*& mpFrame;
+	private:
+		OhplH20Tab& H(){ return *(OhplH20Tab*)ohpl_gw_state((uintptr_t)this); }
 	};
-
-	//////////////////////////////////////////////////////////////////
-	// Tab Frame
-	//////////////////////////////////////////////////////////////////
 
 	class cWidgetTabFrame : public iWidget
 	{
-	friend class cWidgetTab;
-	friend class cWidgetTabLabel;
-	friend struct OhplH20Access;
 	public:
-		cWidgetTabFrame(cGuiSet* apSet, cGuiSkin* apSkin);
-		virtual ~cWidgetTabFrame();
+		cWidgetTabFrame(cGuiSet* apSet, cGuiSkin* apSkin) : iWidget(eWidgetType_TabFrame, apSet, apSkin)
+		{ ohpl_gw_set_kind((uintptr_t)this, kOhplGwTabFrame, 0, 0); }
 
-		cWidgetTab* AddTab(const tWString& asTabCaption);
-		void ClearTabs();
+		cWidgetTab* AddTab(const tWString& asTabCaption){ return (cWidgetTab*)ohpl_h20_tf_add_tab(&gH20Host, &H(), asTabCaption.data(), asTabCaption.size()); }
+		void ClearTabs(){ ohpl_h20_tf_clear_tabs(&gH20Host, &H()); }
 
-		int GetTabNum();
-		cWidgetTab* GetTab(int alIdx);
-		cWidgetTab* GetTab(const tWString& asTabCaption);
+		int GetTabNum(){ return ohpl_h20_tf_tab_num(&gH20Host, &H()); }
+		cWidgetTab* GetTab(int alIdx){ return (cWidgetTab*)ohpl_h20_tf_tab(&gH20Host, &H(), alIdx); }
+		cWidgetTab* GetTab(const tWString& asTabCaption)
+		{
+			for(int i=0;i<GetTabNum(); ++i)
+			{
+				cWidgetTab* pTab = GetTab(i);
+				if(pTab->GetText()==asTabCaption)
+					return pTab;
+			}
+			return NULL;
+		}
+		cWidgetTab* GetTabOnTop() { return H().top; }
 
-		cWidgetTab* GetTabOnTop() { return mpTopTab; }
+		void SetBackgroundZ(float afZ) { H().bgZ = afZ; }
+		float GetBackgroundZ() { return H().bgZ; }
+		void SetForegroundZ(float afZ) { H().fgZ = afZ; }
+		float GetForegroundZ() { return H().fgZ; }
 
-		void SetBackgroundZ(float afZ) { mfBackgroundZ = afZ; }
-		float GetBackgroundZ() { return mfBackgroundZ; }
+		int GetTabOnTopIndex(){ return ohpl_h20_tf_tab_on_top_index(&gH20Host, &H()); }
+		void SetTabOnTop(cWidgetTab* apTab){ ohpl_h20_tf_set_tab_on_top(&gH20Host, &H(), (uintptr_t)apTab); }
+		void SetTabOnTopByIndex(int alIdx){ ohpl_h20_tf_set_tab_on_top_by_index(&gH20Host, &H(), alIdx); }
 
-		void SetForegroundZ(float afZ) { mfForegroundZ = afZ; }
-		float GetForegroundZ() { return mfForegroundZ; }
+		void SetHorizontalScrollEnabled(bool abX){ ohpl_h20_tf_set_hori_scroll(&gH20Host, &H(), abX); }
+		void SetVerticalScrollEnabled(bool abX){ ohpl_h20_tf_set_vert_scroll(&gH20Host, &H(), abX); }
 
-		int GetTabOnTopIndex();
-		void SetTabOnTop(cWidgetTab* apTab);
-		void SetTabOnTopByIndex(int alIdx);
-
-		void SetHorizontalScrollEnabled(bool abX);
-		void SetVerticalScrollEnabled(bool abX);
-
-	protected:
-		bool OnUIButtonPress(const cGuiMessageData& aData);
-
-		/////////////////////////////
-		// Own fuctions
-		void SetScrollButtonsHidden(bool abX);
-		void UpdateTabVisibility();
-
-		/////////////////////////////
-		// Implemented functions
-		void OnInit();
-		void OnChangeSize();
-
-		void OnLoadGraphics();
-		
-		/////////////////////////////
-		// Data
-		OhplH20TabFrame mH;
-		cWidgetTab*& mpTopTab;
-
-		float& mfBackgroundZ;
-		float& mfForegroundZ;
-
-		OhplW2TabState& mState;
-
-		bool& mbHoriScrollEnabled;
-		bool& mbVertScrollEnabled;
+	private:
+		OhplH20TabFrame& H(){ return *(OhplH20TabFrame*)ohpl_gw_state((uintptr_t)this); }
 	};
 };
-
 #endif	// HPL_WIDGET_TAB_FRAME

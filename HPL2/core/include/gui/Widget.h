@@ -41,7 +41,6 @@ namespace hpl {
 	class iFontData;
 
 	struct OhplGw;
-	struct OhplGwForeign;
 	struct OhplH20Access;
 	struct OhplG2PopupHost;
 
@@ -107,6 +106,12 @@ namespace hpl {
 	bool ohpl_gw_focus_message(uintptr_t, int, int, const cGuiMessageData*);
 	void ohpl_gw_forward_to_parent(uintptr_t, int, uintptr_t, const cGuiMessageData*);
 	bool ohpl_gw_point_is_inside_base(uintptr_t, float, float, bool);
+	bool ohpl_gw_point_is_inside(uintptr_t, float, float, bool);
+	void ohpl_gw_attach_child(uintptr_t, uintptr_t);
+	void ohpl_gw_remove_child(uintptr_t, uintptr_t);
+	void ohpl_gw_attach_child(uintptr_t, uintptr_t);
+	void ohpl_gw_remove_child(uintptr_t, uintptr_t);
+	bool ohpl_gw_point_is_inside(uintptr_t, float, float, bool);
 	void ohpl_gw_set_text(uintptr_t, const uint32_t*, size_t);
 	const uint32_t* ohpl_gw_text(uintptr_t, size_t*);
 	void ohpl_gw_set_tooltip(uintptr_t, const uint32_t*, size_t);
@@ -122,12 +127,10 @@ namespace hpl {
 	//--------------------------------
 
 	// Facade over the Rust-owned widget (rust/src/gui/gw.rs): state and logic live there. This object is
-	// the shell holding the Rust pointer right after the vptr (Rust reads it at that offset). Subclasses
-	// still written in C++ override the protected virtuals; the Rust kinds never reach them.
+	// the shell holding the Rust pointer right after the vptr (Rust reads it at that offset).
 	class iWidget
 	{
 	friend class cGuiSet;
-	friend struct OhplGwForeign;
 	friend struct OhplH20Access;
 	friend struct OhplG2PopupHost;
 	public:
@@ -153,7 +156,7 @@ namespace hpl {
 
 		void Init(){ ohpl_gw_init(W()); }
 
-		virtual cGuiGlobalShortcut* AddShortcut(int alKeyModifiers, eKey aKey, eGuiMessage aMsg=eGuiMessage_ButtonPressed, bool abBypassVisibility=true, bool abBypassEnabled=true)
+		cGuiGlobalShortcut* AddShortcut(int alKeyModifiers, eKey aKey, eGuiMessage aMsg=eGuiMessage_ButtonPressed, bool abBypassVisibility=true, bool abBypassEnabled=true)
 		{ return (cGuiGlobalShortcut*)ohpl_gw_add_shortcut(W(), alKeyModifiers, aKey, aMsg, abBypassVisibility, abBypassEnabled); }
 
 		/////////////////////////
@@ -165,12 +168,12 @@ namespace hpl {
 
         /////////////////////////
 		// Public Helper functions
-		virtual bool PointIsInside(const cVector2f& avPoint, bool abOnlyClipped){ return ohpl_gw_point_is_inside_base(W(), avPoint.x, avPoint.y, abOnlyClipped); }
+		bool PointIsInside(const cVector2f& avPoint, bool abOnlyClipped){ return ohpl_gw_point_is_inside(W(), avPoint.x, avPoint.y, abOnlyClipped); }
 
 		/////////////////////////
 		//Hierarchy
-		virtual void AttachChild(iWidget *apChild){ ohpl_gw_attach_child_base(W(), (uintptr_t)apChild); }
-		virtual void RemoveChild(iWidget *apChild){ ohpl_gw_remove_child_base(W(), (uintptr_t)apChild); }
+		void AttachChild(iWidget *apChild){ ohpl_gw_attach_child(W(), (uintptr_t)apChild); }
+		void RemoveChild(iWidget *apChild){ ohpl_gw_remove_child(W(), (uintptr_t)apChild); }
 		tWidgetList GetChildren()
 		{
 			tWidgetList lst;
@@ -179,8 +182,6 @@ namespace hpl {
 			return lst;
 		}
 
-		virtual void OnAttachChild(iWidget* apChild){}
-		virtual void OnRemoveChild(iWidget* apChild){}
 
 		/////////////////////////
 		//Properties
@@ -203,16 +204,16 @@ namespace hpl {
 		tWString GetText(){ size_t n; const uint32_t* p = ohpl_gw_text(W(), &n); return tWString((const wchar_t*)p, n); }
 
 		iFontData *GetDefaultFontType(){ return ohpl_gw_font_type(W());}
-		virtual void SetDefaultFontType(iFontData *apFont){ ohpl_gw_set_font_type_base(W(), apFont);}
+		void SetDefaultFontType(iFontData *apFont){ ohpl_gw_set_font_type(W(), apFont);}
 
 		const cColor& GetDefaultFontColor(){ return ohpl_gw_pub(W())->fontColor;}
-		virtual void SetDefaultFontColor(const cColor& aColor){ ohpl_gw_set_font_color_base(W(), &aColor);}
+		void SetDefaultFontColor(const cColor& aColor){ ohpl_gw_set_font_color(W(), &aColor);}
 
 		const cColor& GetDefaultFontHighlightColor(){ return ohpl_gw_pub(W())->fontHighlight;}
 		cGuiSkinFont* GetDefaultSkinFont(){ return ohpl_gw_skin_font(W());}
 
 		const cVector2f& GetDefaultFontSize(){ return ohpl_gw_pub(W())->fontSize;}
-		virtual void SetDefaultFontSize(const cVector2f& avSize){ ohpl_gw_set_font_size_base(W(), avSize.x, avSize.y);}
+		void SetDefaultFontSize(const cVector2f& avSize){ ohpl_gw_set_font_size(W(), avSize.x, avSize.y);}
 
 		void SetClipActive(bool abX){ ohpl_gw_set_clip_active(W(), abX);}
 		bool GetClipActive(){ return mB.clips;}
@@ -273,53 +274,22 @@ namespace hpl {
 	protected:
 		/////////////////////////
 		// Upper Widget functions
-		virtual void OnLoadGraphics(){}
 
-		virtual void OnChangeSize(){}
-		virtual void OnChangePosition(){}
-		virtual void OnChangeText(){}
 
-		virtual void OnChildUpdate(iWidget* apChild){}
 
-		virtual void OnInit(){}
 
-		virtual void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion){}
-		virtual void OnDrawAfterClip(float afTimeStep, cGuiClipRegion *apClipRegion){}
 
-		virtual void OnUpdate(float afTimeStep){}
 
-		virtual bool OnMessage(eGuiMessage aMessage, const cGuiMessageData& aData){return false;}
-		virtual bool OnMouseMove(const cGuiMessageData& aData){return false;}
-		virtual bool OnMouseDown(const cGuiMessageData& aData){return false;}
-		virtual bool OnMouseUp(const cGuiMessageData& aData){return false;}
-		virtual bool OnMouseDoubleClick(const cGuiMessageData& aData){return false;}
-		virtual bool OnMouseEnter(const cGuiMessageData& aData){return false;}
-		virtual bool OnMouseLeave(const cGuiMessageData& aData){return false;}
 
-		virtual bool GetFocus(const cGuiMessageData& aData){ return ohpl_gw_focus_message(W(), eGuiMessage_GotFocus, kOhplH19ChildGotFocus, &aData); }
-		virtual bool OnGotFocus(const cGuiMessageData& aData){ return mB.enabled; }
-		virtual void OnChildGotFocus(iWidget* apChild, const cGuiMessageData& aData){ ohpl_gw_forward_to_parent(W(), kOhplH19ChildGotFocus, (uintptr_t)apChild, &aData); }
+		bool GetFocus(const cGuiMessageData& aData){ return ohpl_gw_focus_message(W(), eGuiMessage_GotFocus, kOhplH19ChildGotFocus, &aData); }
 
-		virtual bool GetTabFocus(const cGuiMessageData& aData){ return ohpl_gw_focus_message(W(), eGuiMessage_GotTabFocus, kOhplH19ChildGotTabFocus, &aData); }
-		virtual bool OnGotTabFocus(const cGuiMessageData& aData){ return mB.enabled; }
-		virtual void OnChildGotTabFocus(iWidget* apChild, const cGuiMessageData& aData){ ohpl_gw_forward_to_parent(W(), kOhplH19ChildGotTabFocus, (uintptr_t)apChild, &aData); }
+		bool GetTabFocus(const cGuiMessageData& aData){ return ohpl_gw_focus_message(W(), eGuiMessage_GotTabFocus, kOhplH19ChildGotTabFocus, &aData); }
 
-		virtual bool LoseFocus(const cGuiMessageData& aData){ return ohpl_gw_focus_message(W(), eGuiMessage_LostFocus, kOhplH19ChildLostFocus, &aData); }
-		virtual bool OnLostFocus(const cGuiMessageData& aData){return false;}
-		virtual void OnChildLostFocus(iWidget* apChild, const cGuiMessageData& aData){ ohpl_gw_forward_to_parent(W(), kOhplH19ChildLostFocus, (uintptr_t)apChild, &aData); }
+		bool LoseFocus(const cGuiMessageData& aData){ return ohpl_gw_focus_message(W(), eGuiMessage_LostFocus, kOhplH19ChildLostFocus, &aData); }
 
-		virtual bool OnKeyPress(const cGuiMessageData& aData){return false;}
 
-		virtual bool OnGamepadButtonPress(const cGuiMessageData& aData){return false;}
 
-		virtual bool OnUIArrowPress(const cGuiMessageData& aData){return false;}
-		virtual bool OnUIArrowRelease(const cGuiMessageData& aData){return false;}
-		virtual bool OnUIButtonPress(const cGuiMessageData& aData){return false;}
-		virtual bool OnUIButtonRelease(const cGuiMessageData& aData){return false;}
-		virtual bool OnUIButtonDoublePress(const cGuiMessageData& aData){return false;}
 
-		virtual bool OnGetUINavFocus(const cGuiMessageData& aData){return false;}
-		virtual bool OnLoseUINavFocus(const cGuiMessageData& aData){return false;}
 
 
 		/////////////////////////

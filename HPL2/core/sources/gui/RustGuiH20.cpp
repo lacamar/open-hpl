@@ -43,50 +43,15 @@ namespace hpl {
 		static cGuiSkinFont* SkinFont(iWidget* apW) { return apW->GetDefaultSkinFont(); }
 		static void* State(iWidget* apW, int alKind)
 		{
-			if(alKind==0) return &((cWidgetTabLabel*)apW)->mH;
-			if(alKind==1) return &((cWidgetTab*)apW)->mH;
-			if(alKind==3) return &((cWidgetMenuItem*)apW)->mH;
-			return &((cWidgetTabFrame*)apW)->mH;
+			return ohpl_gw_state((uintptr_t)apW);
 		}
 		static bool CheckClip(iWidget* apW, const cVector2f& avPoint) { return (apW->*(&OhplH20Access::CheckPointInsideClippingParent))(avPoint); }
-		static uintptr_t MenuCall(OhplH20Args* a)
-		{
-			iWidgetMenu* pMenu = (iWidgetMenu*)(iWidget*)a->w;
-			switch(a->i[0])
-			{
-			case 0: return (uintptr_t)(iWidget*)pMenu->GetHightlightedItem();
-			case 1: pMenu->SetHighlightedItem((cWidgetMenuItem*)(iWidget*)a->p[0]); return 0;
-			case 2: pMenu->Hide(); return 0;
-			case 3: { cVector3f v = pMenu->GetArrowOffset(); a->rf[0] = v.x; a->rf[1] = v.y; a->rf[2] = v.z; return 0; }
-			case 4: { cVector3f v = pMenu->GetCheckOffset(); a->rf[0] = v.x; a->rf[1] = v.y; a->rf[2] = v.z; return 0; }
-			case 5: { cVector3f v = pMenu->GetTextOffset(); a->rf[0] = v.x; a->rf[1] = v.y; a->rf[2] = v.z; return 0; }
-			case 6: a->rf[0] = pMenu->GetMenuItemWidth(); return 0;
-			case 8: return pMenu->IsSubmenuOpen();
-			case 9: return (uintptr_t)(iWidget*)pMenu->GetTopMostMenu();
-			case 10: return (uintptr_t)(iWidget*)pMenu->GetParentMenu();
-			case 11: pMenu->OnChildMenuHide(); return 0;
-			case 12: pMenu->SetMustHide(a->i[1]!=0); return 0;
-			case 13: return pMenu->mbMustHide;
-			case 14: return (uintptr_t)(iWidget*)pMenu->GetParentItem();
-			case 15: return (uintptr_t)pMenu->mpPrevAttention;
-			case 16: return pMenu->mvMenuItems.size();
-			case 17: return (uintptr_t)(iWidget*)pMenu->mvMenuItems[a->i[1]];
-			case 18:
-				if(a->i[1] & 1) pMenu->SetArrowPos(cVector3f(a->f[0], a->f[1], a->f[2]));
-				if(a->i[1] & 2) pMenu->SetTextPos(cVector3f(a->f[3], a->f[4], a->f[5]));
-				if(a->i[1] & 4) pMenu->SetCheckPos(cVector3f(a->f[6], a->f[7], a->f[8]));
-				return 0;
-			case 19: return (uintptr_t)(iWidget*)((cWidgetMenuItem*)(iWidget*)a->w)->GetParentMenu();
-			}
-			return 0;
-		}
 		static cVector3f ToLocal(iWidget* apW, const cVector3f& avPos) { return (apW->*(&OhplH20Access::WorldToLocalPosition))(avPos); }
 	};
 
 	static iWidget* W(uintptr_t a) { return (iWidget*)a; }
 	static cWidgetItem* Item(uintptr_t a) { return (cWidgetItem*)a; }
 	static cWidgetSlider* Slider(uintptr_t a) { return (cWidgetSlider*)a; }
-	static iWidgetItemContainer* Cont(uintptr_t a) { return (iWidgetItemContainer*)a; }
 
 	// Argument use per op: w target widget; p/i/f inputs; text/textLen text; rp/ri/rf results.
 	static uintptr_t H20Op(void*, int aOp, OhplH20Args* a)
@@ -129,25 +94,26 @@ namespace hpl {
 			return 0;
 		}
 		case kOhplH20Op_ITEM_NUM:
-			a->ri[0] = Cont(a->p[0])->GetItemNum();
+			a->ri[0] = (int32_t)ohpl_gwi_num(a->p[0]);
 			return 0;
 		case kOhplH20Op_ITEM_GET:
-			return (uintptr_t)Cont(a->p[0])->GetItem(a->i[0]);
+			return (uintptr_t)ohpl_gwi_get(a->p[0], a->i[0]);
 		case kOhplH20Op_ITEM_IS_SELECTED:
-			return Item(a->p[0])->IsSelected();
+			return ohpl_gwi_selected(Item(a->p[0]));
 		case kOhplH20Op_ITEM_SET_SELECTED:
-			Item(a->p[0])->SetSelected(a->i[0]!=0);
+			ohpl_gwi_set_selected(Item(a->p[0]), a->i[0]!=0);
 			return 0;
 		case kOhplH20Op_ITEM_IS_SELECTABLE:
-			return Item(a->p[0])->IsSelectable();
+			return ohpl_gwi_selectable(Item(a->p[0]));
 		case kOhplH20Op_ITEM_INDEX:
-			a->ri[0] = Item(a->p[0])->GetIndex();
+			a->ri[0] = ohpl_gwi_index(Item(a->p[0]));
 			return 0;
 		case kOhplH20Op_ITEM_TEXT:
 		{
-			const tWString& sText = Item(a->p[0])->GetText();
-			a->ri[0] = (int32_t)sText.size();
-			return (uintptr_t)sText.data();
+			size_t n;
+			const uint32_t* p = ohpl_gwi_text(Item(a->p[0]), &n);
+			a->ri[0] = (int32_t)n;
+			return (uintptr_t)p;
 		}
 		case kOhplH20Op_PROCESS_MESSAGE:
 			if(a->p[0])
@@ -265,17 +231,18 @@ namespace hpl {
 			a->rf[0] = OhplH20Access::Font(W(a->w))->GetLength(OhplH20Access::FontSize(W(a->w)), W(a->p[0])->GetText().c_str());
 			return 0;
 		case kOhplH20Op_ITEM_PROP_GET:
-			return (uintptr_t)Item(a->p[0])->GetProperty(a->i[0]);
+			return (uintptr_t)ohpl_gwi_prop(Item(a->p[0]), a->i[0]);
 		case kOhplH20Op_PROP_TYPE:
-			return ((cWidgetItemProperty*)a->p[0])->GetType();
+			return ohpl_gwi_prop_type((cWidgetItemProperty*)a->p[0]);
 		case kOhplH20Op_PROP_TEXT:
 		{
-			const tWString& sText = ((cWidgetItemProperty*)a->p[0])->GetText();
-			a->ri[0] = (int32_t)sText.size();
-			return (uintptr_t)sText.data();
+			size_t n;
+			const uint32_t* p = ohpl_gwi_prop_text((cWidgetItemProperty*)a->p[0], &n);
+			a->ri[0] = (int32_t)n;
+			return (uintptr_t)p;
 		}
 		case kOhplH20Op_PROP_GFX:
-			return (uintptr_t)((cWidgetItemProperty*)a->p[0])->GetGfx();
+			return ohpl_gwi_prop_gfx((cWidgetItemProperty*)a->p[0]);
 		case kOhplH20Op_DESTROY_WIDGET:
 			OhplH20Access::Set(W(a->w))->DestroyWidget(W(a->p[0]));
 			return 0;
@@ -369,12 +336,12 @@ namespace hpl {
 			W(a->w)->SetClipActive(a->i[0]!=0);
 			return 0;
 		case kOhplH20Op_ATTACH_CHILD:
-			if(a->i[0]) W(a->w)->AttachChild(W(a->p[0]));
-			else		W(a->w)->iWidget::AttachChild(W(a->p[0]));
+			if(a->i[0]) ohpl_gw_attach_child(a->w, a->p[0]);
+			else		ohpl_gw_attach_child_base(a->w, a->p[0]);
 			return 0;
 		case kOhplH20Op_REMOVE_CHILD:
-			if(a->i[0]) W(a->w)->RemoveChild(W(a->p[0]));
-			else		W(a->w)->iWidget::RemoveChild(W(a->p[0]));
+			if(a->i[0]) ohpl_gw_remove_child(a->w, a->p[0]);
+			else		ohpl_gw_remove_child_base(a->w, a->p[0]);
 			return 0;
 		case kOhplH20Op_SKIN_FONT_SIZE:
 		{
@@ -461,18 +428,11 @@ namespace hpl {
 		case kOhplH20Op_IS_CONNECTED:
 			return a->i[0] ? W(a->w)->IsConnectedTo(W(a->p[0]), false) : W(a->w)->IsConnectedTo(W(a->p[0]));
 		case kOhplH20Op_ITEM_TEXT_LENGTH:
-			a->rf[0] = ((cWidgetMenuItem*)W(a->w))->GetTextLength();
-			return 0;
 		case kOhplH20Op_ITEM_IS_SEPARATOR:
-			return ((cWidgetMenuItem*)W(a->w))->IsSeparator();
 		case kOhplH20Op_WIDGET_SHORTCUT_TEXT:
-		{
-			const tWString& sText = ((cWidgetMenuItem*)W(a->w))->GetShortcutText();
-			a->ri[0] = (int32_t)sText.size();
-			return (uintptr_t)sText.data();
-		}
+			return ohpl_gw_item_op(aOp, a);
 		case kOhplH20Op_MENU_CALL:
-			return OhplH20Access::MenuCall(a);
+			return ohpl_gw_menu_call(a);
 		default:
 			return 0;
 		}

@@ -14,9 +14,19 @@ class cGuiGfxElement;
 class cGuiSet;
 
 enum { kOhplGwButton = 1, kOhplGwCheck = 2, kOhplGwLabel = 3, kOhplGwImage = 4, kOhplGwDummy = 5, kOhplGwGroup = 6,
-	   kOhplGwSlider = 7, kOhplGwFrame = 8, kOhplGwWindow = 9 };
+	   kOhplGwSlider = 7, kOhplGwFrame = 8, kOhplGwWindow = 9, kOhplGwTextBox = 11, kOhplGwList = 12, kOhplGwCombo = 14, kOhplGwTabFrame = 15, kOhplGwTab = 16, kOhplGwTabLabel = 17, kOhplGwMenuItem = 18, kOhplGwCtxMenu = 19, kOhplGwMainMenu = 20 };
 
 extern "C" {
+void* ohpl_gw_state(uintptr_t);
+uintptr_t ohpl_gw_menu_add_item(uintptr_t, const uint32_t*, size_t);
+void ohpl_gw_menu_add_separator(uintptr_t);
+void ohpl_gw_menu_clear(uintptr_t);
+void ohpl_gw_menu_set_highlight(uintptr_t, uintptr_t);
+void ohpl_gw_ctx_save_prev_attention(uintptr_t);
+void ohpl_gw_show_context_menu(cGuiSet*, uintptr_t, float, float, float);
+uintptr_t ohpl_gw_menu_call(void*);
+uintptr_t ohpl_gw_item_op(int, void*);
+void ohpl_gw_set_kind_ctr(uintptr_t, int, int, uintptr_t);
 uintptr_t ohpl_gw_create(cGuiSet*, int kind, const cVector3f* pos, const cVector2f* size, const uint32_t* text, size_t textLen,
 						 uintptr_t parent, const char* name, size_t nameLen, int a, int b, int c, cGuiGfxElement* img);
 
