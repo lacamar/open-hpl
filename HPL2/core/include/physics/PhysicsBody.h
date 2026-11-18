@@ -48,11 +48,14 @@ namespace hpl {
 	class iPhysicsMaterial;
 	class iCharacterBody;
 	class cSoundEntity;
+	class cPhysicsBodyNewtonCallback;
 
 	// Scalar and pointer state of iPhysicsBody, owned by rust/src/physics/shell.rs; the members are references into it.
 	struct OhplBodyState
 	{
-		uint64_t shell;
+		uint64_t shell, rust, book;
+		NewtonBody *newtonBody;
+		cPhysicsBodyNewtonCallback *callback;
 		iPhysicsWorld *world;
 		iCollideShape *shape;
 		iPhysicsMaterial *material;
@@ -62,15 +65,17 @@ namespace hpl {
 		cSoundEntity *rollSound;
 		void *userData;
 		cMatrixf prevScrape;
-		int32_t scrapeSoundId, rollSoundId, impactCount;
+		cVector3f totalStaticLinear, totalStaticAngular;
+		int32_t slideCount, scrapeSoundId, rollSoundId, impactCount;
 		tFlag collideFlags;
 		float buoyancyDensityMul, massMulApplied;
 		int32_t pushStrength, freezeCount;
 		eVelocityAxes gravityAxes;
 		bool inUpdateList, pushedByCharGravity, blocksSound, blocksLight, isCharacter, collideCharacter, isRagDoll, collideRagDoll,
-			isVolatile, useSurfaceEffects, gravityCanAttach, gravityAttachRotation, gravityAttachVelocity, collide, destroying;
+			isVolatile, useSurfaceEffects, gravityCanAttach, gravityAttachRotation, gravityAttachVelocity, collide, destroying,
+			noGravityUnderwater, isUnderwater;
 	};
-	static_assert(sizeof(OhplBodyState) == 192, "body state layout");
+	static_assert(sizeof(OhplBodyState) == 256, "body state layout");
 
 	class iPhysicsBodyCallback
 	{
@@ -105,9 +110,9 @@ namespace hpl {
 		void Destroy();
 
 		void SetMaterial(iPhysicsMaterial* apMaterial);
-		iPhysicsMaterial* GetMaterial() { return mpMaterial; }
+		iPhysicsMaterial* GetMaterial() { return mS->material; }
 
-		iCollideShape* GetShape() { return mpShape; }
+		iCollideShape* GetShape() { return mS->shape; }
 
 		void AddJoint(iPhysicsJoint *apJoint);
 		iPhysicsJoint* GetJoint(int alIndex);
@@ -145,13 +150,13 @@ namespace hpl {
 
 		void Enable();
 		void Sleep();
-		void Freeze(){ mlFreezeCount = 3;}
+		void Freeze(){ mS->freezeCount = 3;}
 		static void SetHpl3Buoyancy(bool abX){ mbHpl3Buoyancy = abX;}
-		bool GetFrozen(){ return mlFreezeCount > 0;}
-		void SetNoGravityWhenUnderwater(bool abX){ mbNoGravityWhenUnderwater = abX;}
-		bool GetNoGravityWhenUnderwater(){ return mbNoGravityWhenUnderwater;}
-		void SetIsUnderwater(bool abX){ mbIsUnderwater = abX;}
-		bool GetIsUnderwater(){ return mbIsUnderwater;}
+		bool GetFrozen(){ return mS->freezeCount > 0;}
+		void SetNoGravityWhenUnderwater(bool abX){ mS->noGravityUnderwater = abX;}
+		bool GetNoGravityWhenUnderwater(){ return mS->noGravityUnderwater;}
+		void SetIsUnderwater(bool abX){ mS->isUnderwater = abX;}
+		bool GetIsUnderwater(){ return mS->isUnderwater;}
 		bool GetEnabled() const;
 		void SetAutoDisable(bool abEnabled);
 		bool GetAutoDisable() const;
@@ -175,38 +180,38 @@ namespace hpl {
 		void StaticLinearMove(const cVector3f& avVelocity);
 		void StaticAngularMove(const cVector3f& avVelocity);
 
-		void SetBlocksSound(bool abX){ mbBlocksSound = abX;}
-		bool GetBlocksSound(){ return mbBlocksSound;}
+		void SetBlocksSound(bool abX){ mS->blocksSound = abX;}
+		bool GetBlocksSound(){ return mS->blocksSound;}
 
-		void SetBlocksLight(bool abX){ mbBlocksLight = abX;}
-		bool GetBlocksLight(){ return mbBlocksLight;}
+		void SetBlocksLight(bool abX){ mS->blocksLight = abX;}
+		bool GetBlocksLight(){ return mS->blocksLight;}
 
 		/**
 		 * Must be true with both bodies in a collision if any effect is to be played.
 		 */
-		void SetUseSurfaceEffects(bool abX){ mbUseSurfaceEffects = abX;}
-		bool GetUseSurfaceEffects(){ return mbUseSurfaceEffects;}
+		void SetUseSurfaceEffects(bool abX){ mS->useSurfaceEffects = abX;}
+		bool GetUseSurfaceEffects(){ return mS->useSurfaceEffects;}
 
 		void SetScrapeSoundEntity(cSoundEntity *apEntity);
-		cSoundEntity* GetScrapeSoundEntity(){ return mpScrapeSoundEntity;}
-		void SetScrapeSoundEntityID(int alID){ mlScrapeSoundEntityID = alID;}
-		int GetScrapeSoundEntityID(){ return mlScrapeSoundEntityID;}
-		void SetScrapeBody(iPhysicsBody *apBody){ mpScrapeBody =apBody;}
-		iPhysicsBody * GetScrapeBody(){ return mpScrapeBody;}
-		const cMatrixf& GetPreveScrapeMatrix(){ return m_mtxPrevScrapeMatrix;}
-		void SetPreveScrapeMatrix(const cMatrixf& a_mtxMtx){ m_mtxPrevScrapeMatrix = a_mtxMtx;}
+		cSoundEntity* GetScrapeSoundEntity(){ return mS->scrapeSound;}
+		void SetScrapeSoundEntityID(int alID){ mS->scrapeSoundId = alID;}
+		int GetScrapeSoundEntityID(){ return mS->scrapeSoundId;}
+		void SetScrapeBody(iPhysicsBody *apBody){ mS->scrapeBody =apBody;}
+		iPhysicsBody * GetScrapeBody(){ return mS->scrapeBody;}
+		const cMatrixf& GetPreveScrapeMatrix(){ return mS->prevScrape;}
+		void SetPreveScrapeMatrix(const cMatrixf& a_mtxMtx){ mS->prevScrape = a_mtxMtx;}
 
 		void SetRollSoundEntity(cSoundEntity *apEntity);
-		cSoundEntity* GetRollSoundEntity(){ return mpRollSoundEntity;}
-		int GetRollSoundEntityID(){ return mlRollSoundEntityID;}
+		cSoundEntity* GetRollSoundEntity(){ return mS->rollSound;}
+		int GetRollSoundEntityID(){ return mS->rollSoundId;}
 
-		void SetHasSlide(bool abX){ ohpl_h15_body_flag_set(mRsBook, OhplH15_HasSlide, abX);}
-		bool HasSlide(){ return ohpl_h15_body_flag_get(mRsBook, OhplH15_HasSlide);}
+		void SetHasSlide(bool abX){ ohpl_h15_body_flag_set(mS->book, OhplH15_HasSlide, abX);}
+		bool HasSlide(){ return ohpl_h15_body_flag_get(mS->book, OhplH15_HasSlide);}
 
-		bool HasCollision(){ return ohpl_h15_body_flag_get(mRsBook, OhplH15_HasCollision);}
+		bool HasCollision(){ return ohpl_h15_body_flag_get(mS->book, OhplH15_HasCollision);}
 
-		void SetUserData(void* apUserData){ mpUserData = apUserData;}
-		void* GetUserData(){ return mpUserData;}
+		void SetUserData(void* apUserData){ mS->userData = apUserData;}
+		void* GetUserData(){ return mS->userData;}
 
 		void AddBodyCallback(iPhysicsBodyCallback *apCallback);
 		void RemoveBodyCallback(iPhysicsBodyCallback *apCallback);
@@ -214,43 +219,43 @@ namespace hpl {
 		bool OnAABBCollision(iPhysicsBody *apBody);
 		void OnCollide(iPhysicsBody *apBody,cPhysicsContactData* apContactData);
 
-		void SetCollide(bool abX){mbCollide = abX;}
-		bool GetCollide(){ return mbCollide;}
+		void SetCollide(bool abX){mS->collide = abX;}
+		bool GetCollide(){ return mS->collide;}
 
-		void SetIsCharacter(bool abX){ mbIsCharacter = abX;}
-		bool IsCharacter(){ return mbIsCharacter;}
+		void SetIsCharacter(bool abX){ mS->isCharacter = abX;}
+		bool IsCharacter(){ return mS->isCharacter;}
 
-		void SetCollideCharacter(bool abX){ mbCollideCharacter = abX;}
-		bool GetCollideCharacter(){ return mbCollideCharacter;}
+		void SetCollideCharacter(bool abX){ mS->collideCharacter = abX;}
+		bool GetCollideCharacter(){ return mS->collideCharacter;}
 
-		void SetCharacterBody(iCharacterBody *apCharBody){ mpCharacterBody = apCharBody;}
-		iCharacterBody* GetCharacterBody(){ return mpCharacterBody;}
+		void SetCharacterBody(iCharacterBody *apCharBody){ mS->charBody = apCharBody;}
+		iCharacterBody* GetCharacterBody(){ return mS->charBody;}
 
-		void SetPushStrength(int alX){ mlPushStrength = alX;}
-		int GetPushStrength(){ return mlPushStrength;}
+		void SetPushStrength(int alX){ mS->pushStrength = alX;}
+		int GetPushStrength(){ return mS->pushStrength;}
 
-		void SetCollideFlags(tFlag alX) { mlCollideFlags = alX;}
-		inline tFlag GetCollideFlags() const { return mlCollideFlags;}
+		void SetCollideFlags(tFlag alX) { mS->collideFlags = alX;}
+		inline tFlag GetCollideFlags() const { return mS->collideFlags;}
 		static bool (*mpCollideFlagsMatch)(tFlag alA, tFlag alB);
 		static bool CollideFlagsMatch(tFlag alA, tFlag alB) { return mpCollideFlagsMatch ? mpCollideFlagsMatch(alA, alB) : (alA & alB) != 0; }
 
-		void SetIsRagDoll(bool abX){ mbIsRagDoll = abX;}
-		bool IsRagDoll(){ return mbIsRagDoll;}
+		void SetIsRagDoll(bool abX){ mS->isRagDoll = abX;}
+		bool IsRagDoll(){ return mS->isRagDoll;}
 
-		void SetCollideRagDoll(bool abX){ mbCollideRagDoll = abX;}
-		bool GetCollideRagDoll(){ return mbCollideRagDoll;}
+		void SetCollideRagDoll(bool abX){ mS->collideRagDoll = abX;}
+		bool GetCollideRagDoll(){ return mS->collideRagDoll;}
 
-		void SetVolatile(bool abX){ mbVolatile = abX;}
-		bool IsVolatile(){ return mbVolatile;}
+		void SetVolatile(bool abX){ mS->isVolatile = abX;}
+		bool IsVolatile(){ return mS->isVolatile;}
 
-		void SetPushedByCharacterGravity(bool abX){ mbPushedByCharacterGravity = abX;}
-		bool GetPushedByCharacterGravity(){ return mbPushedByCharacterGravity;}
+		void SetPushedByCharacterGravity(bool abX){ mS->pushedByCharGravity = abX;}
+		bool GetPushedByCharacterGravity(){ return mS->pushedByCharGravity;}
 
-		void SetBuoyancyActive(bool abX){ ohpl_ntb_set_buoy_active(mhRust, abX);}
-		void SetBuoyancyDensity(float afX){ ohpl_ntb_set_buoy_density(mhRust, afX);}
-		void SetBuoyancyLinearViscosity(float afX){ ohpl_ntb_set_buoy_linear_viscosity(mhRust, afX);}
-		void SetBuoyancyAngularViscosity(float afX){ ohpl_ntb_set_buoy_angular_viscosity(mhRust, afX);}
-		void SetBuoyancySurface(const cPlanef &aP){ ohpl_ntb_set_buoy_surface(mhRust, &aP);}
+		void SetBuoyancyActive(bool abX){ ohpl_ntb_set_buoy_active(mS->rust, abX);}
+		void SetBuoyancyDensity(float afX){ ohpl_ntb_set_buoy_density(mS->rust, afX);}
+		void SetBuoyancyLinearViscosity(float afX){ ohpl_ntb_set_buoy_linear_viscosity(mS->rust, afX);}
+		void SetBuoyancyAngularViscosity(float afX){ ohpl_ntb_set_buoy_angular_viscosity(mS->rust, afX);}
+		void SetBuoyancySurface(const cPlanef &aP){ ohpl_ntb_set_buoy_surface(mS->rust, &aP);}
 
 		bool GetBuoyancyActive(){ return BuoyState().active;}
 		float GetBuoyancyDensity(){ return BuoyState().density;}
@@ -258,104 +263,51 @@ namespace hpl {
 		float GetBuoyancyAngularViscosity(){ return BuoyState().angularViscosity;}
 		cPlanef SetBuoyancySurface(){ return BuoyState().surface;}
 
-		float GetBuoyancyDensityMul(){ return mfBuoyancyDensityMul;}
-		void SetBuoyancyDensityMul(float afX){ mfBuoyancyDensityMul = afX;}
-		float GetMassMulApplied(){ return mfMassMulApplied;}
-		void SetMassMulApplied(float afX){ mfMassMulApplied = afX;}
+		float GetBuoyancyDensityMul(){ return mS->buoyancyDensityMul;}
+		void SetBuoyancyDensityMul(float afX){ mS->buoyancyDensityMul = afX;}
+		float GetMassMulApplied(){ return mS->massMulApplied;}
+		void SetMassMulApplied(float afX){ mS->massMulApplied = afX;}
 
-		void SetGravityCanAttachCharacter(bool abX){ mbGravityCanAttachCharacter = abX;}
-		void SetGravityAttachmentRotation(bool abX){ mbGravityAttachmentRotation = abX;}
-		void SetGravityAttachmentVelocity(bool abX){ mbGravityAttachmentVelocity = abX;}
-		void SetGravityAttachmentVelocityAxes(eVelocityAxes aAxes){ mGravityAttachmentVelocityAxes = aAxes;}
+		void SetGravityCanAttachCharacter(bool abX){ mS->gravityCanAttach = abX;}
+		void SetGravityAttachmentRotation(bool abX){ mS->gravityAttachRotation = abX;}
+		void SetGravityAttachmentVelocity(bool abX){ mS->gravityAttachVelocity = abX;}
+		void SetGravityAttachmentVelocityAxes(eVelocityAxes aAxes){ mS->gravityAxes = aAxes;}
 
-		bool GetGravityCanAttachCharacter(){ return mbGravityCanAttachCharacter;}
-		bool GetGravityAttachmentRotation(){ return mbGravityAttachmentRotation;}
-		bool GetGravityAttachmentVelocity(){ return mbGravityAttachmentVelocity;}
-		eVelocityAxes GetGravityAttachmentVelocityAxes(){ return mGravityAttachmentVelocityAxes;}
+		bool GetGravityCanAttachCharacter(){ return mS->gravityCanAttach;}
+		bool GetGravityAttachmentRotation(){ return mS->gravityAttachRotation;}
+		bool GetGravityAttachmentVelocity(){ return mS->gravityAttachVelocity;}
+		eVelocityAxes GetGravityAttachmentVelocityAxes(){ return mS->gravityAxes;}
 
 		void AddConnectedCharacter(iCharacterBody *apCharBody);
 		void RemoveConnectedCharacter(iCharacterBody *apCharBody);
 
-		bool IsInUpdateList(){ return mbInUpdateList;}
-		void SetInUpdateList(bool abX){ mbInUpdateList = abX;}
+		bool IsInUpdateList(){ return mS->inUpdateList;}
+		void SetInUpdateList(bool abX){ mS->inUpdateList = abX;}
 
 		void AddAttachedVerletContainer(iVerletParticleContainer *apContainer);
 		void RemoveAttachedVerletContainer(iVerletParticleContainer *apContainer);
 
-		iPhysicsWorld *GetWorld(){ return mpWorld;}
+		iPhysicsWorld *GetWorld(){ return mS->world;}
 
-		void DisableAfterSimulation(){ ohpl_h15_body_flag_set(mRsBook, OhplH15_DisableAfterSim, true);}
+		void DisableAfterSimulation(){ ohpl_h15_body_flag_set(mS->book, OhplH15_DisableAfterSim, true);}
 
 		//Entity implementation
 		tString GetEntityType(){ return "Body";}
 
-		NewtonBody *GetNewtonBody(){ return mpNewtonBody;}
+		NewtonBody *GetNewtonBody(){ return mS->newtonBody;}
 
 		void DeleteLowLevel();
 
 		static void SetUseCallback(bool abX){ mbUseCallback = abX;}
 	protected:
 		bool CalcHpl3Buoyancy(const cVector3f &avGravity, float afTimeStep, cVector3f *apForce, cVector3f *apTorque);
-		OhplL4Buoy BuoyState() const { OhplL4Buoy b; ohpl_ntb_buoy(mhRust, &b); return b;}
+		OhplL4Buoy BuoyState() const { OhplL4Buoy b; ohpl_ntb_buoy(mS->rust, &b); return b;}
 
-		NewtonBody *mpNewtonBody;
-		uint64_t mhRust = 0;
-		cPhysicsBodyNewtonCallback *mpCallback;
 		static bool mbUseCallback;
 
-		OhplBodyState mS = OhplBodyState();
-        iPhysicsWorld *&mpWorld = mS.world;
-		iCollideShape *&mpShape = mS.shape;
-		iPhysicsMaterial *&mpMaterial = mS.material;
-
-		iCharacterBody *&mpCharacterBody = mS.charBody;
-
-		iPhysicsBody *&mpScrapeBody = mS.scrapeBody;
-		cSoundEntity *&mpScrapeSoundEntity = mS.scrapeSound;
-		int &mlScrapeSoundEntityID = mS.scrapeSoundId;
-		cSoundEntity *&mpRollSoundEntity = mS.rollSound;
-		int &mlRollSoundEntityID = mS.rollSoundId;
-		cMatrixf &m_mtxPrevScrapeMatrix = mS.prevScrape;
-		uint64_t mRsBook;
+		OhplBodyState *mS;
 		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
-		int mlSlideCount;
-		bool &mbInUpdateList = mS.inUpdateList;
-
-		float &mfBuoyancyDensityMul = mS.buoyancyDensityMul;
-		float &mfMassMulApplied = mS.massMulApplied;
-
-		cVector3f mvTotalStaticLinearVel;
-		cVector3f mvTotalStaticAngularVel;
-
-		tFlag &mlCollideFlags = mS.collideFlags;
-
-		bool &mbPushedByCharacterGravity = mS.pushedByCharGravity;
-
-		bool &mbBlocksSound = mS.blocksSound;
-		bool &mbBlocksLight = mS.blocksLight;
-		bool &mbIsCharacter = mS.isCharacter;
-		bool &mbCollideCharacter = mS.collideCharacter;
-		bool &mbIsRagDoll = mS.isRagDoll;
-		bool &mbCollideRagDoll = mS.collideRagDoll;
-		bool &mbVolatile = mS.isVolatile;
-		bool &mbUseSurfaceEffects = mS.useSurfaceEffects;
-
-		bool &mbGravityCanAttachCharacter = mS.gravityCanAttach;
-		bool &mbGravityAttachmentRotation = mS.gravityAttachRotation;
-		bool &mbGravityAttachmentVelocity = mS.gravityAttachVelocity;
-		eVelocityAxes &mGravityAttachmentVelocityAxes = mS.gravityAxes;
-
-		int &mlPushStrength = mS.pushStrength;
-
-
-		int &mlFreezeCount = mS.freezeCount;
 		static bool mbHpl3Buoyancy;
-		bool mbNoGravityWhenUnderwater = false;
-		bool mbIsUnderwater = false;
-
-		void *&mpUserData = mS.userData;
-
-		bool &mbCollide = mS.collide;
 	};
 };
 #endif // HPL_PHYSICS_BODY_H

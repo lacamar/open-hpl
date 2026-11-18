@@ -52,9 +52,9 @@ namespace hpl {
 		case 301:
 		{
 			iPhysicsBody *pB = reinterpret_cast<iPhysicsBody*>(a->p[0]);
-			pB->mpShape->IncUserCount();
-			pB->mBoundingVolume.SetLocalMinMax(pB->mpShape->GetBoundingVolume().GetMin(), pB->mpShape->GetBoundingVolume().GetMax());
-			pB->mpMaterial = pB->mpWorld->GetMaterialFromName("Default");
+			pB->mS->shape->IncUserCount();
+			pB->mBoundingVolume.SetLocalMinMax(pB->mS->shape->GetBoundingVolume().GetMin(), pB->mS->shape->GetBoundingVolume().GetMax());
+			pB->mS->material = pB->mS->world->GetMaterialFromName("Default");
 			return 0;
 		}
 		case 302: reinterpret_cast<iPhysicsWorld*>(a->p[1])->DestroyShape(reinterpret_cast<iCollideShape*>(a->p[2])); return 0;
@@ -66,9 +66,9 @@ namespace hpl {
 		case 308:
 		{
 			iPhysicsBody *pB = reinterpret_cast<iPhysicsBody*>(a->p[0]);
-			cSoundEntity *pEnt = a->p[1] == 0 ? pB->mpScrapeSoundEntity : pB->mpRollSoundEntity;
-			int lId = a->p[1] == 0 ? pB->mlScrapeSoundEntityID : pB->mlRollSoundEntityID;
-			if(pEnt && pB->mpWorld->GetWorld()->SoundEntityExists(pEnt, lId)) pB->mpWorld->GetWorld()->DestroySoundEntity(pEnt);
+			cSoundEntity *pEnt = a->p[1] == 0 ? pB->mS->scrapeSound : pB->mS->rollSound;
+			int lId = a->p[1] == 0 ? pB->mS->scrapeSoundId : pB->mS->rollSoundId;
+			if(pEnt && pB->mS->world->GetWorld()->SoundEntityExists(pEnt, lId)) pB->mS->world->GetWorld()->DestroySoundEntity(pEnt);
 			return 0;
 		}
 		case 309: reinterpret_cast<iPhysicsBody*>(a->p[0])->DeleteLowLevel(); return 0;
@@ -81,31 +81,31 @@ namespace hpl {
 	iPhysicsBody::iPhysicsBody(const tString &asName,iPhysicsWorld *apWorld,iCollideShape *apShape)
 		: iEntity3D(asName)
 	{
-		mRsBook = ohpl_h15_body_new();
 		ohpl_h15b_new(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(apWorld), reinterpret_cast<size_t>(apShape));
+		mS->book = ohpl_h15_body_new();
 
 		iPhysicsWorld *pWorldNewton = static_cast<iPhysicsWorld*>(apWorld);
 		iCollideShape *pShapeNewton = static_cast<iCollideShape*>(apShape);
 
 		cMatrixf mtxIdentity = cMatrixf::Identity;
-		mhRust = ohpl_ntb_create(pWorldNewton->RustHandle(), pShapeNewton->GetNewtonCollision(), (size_t)this, &mpNewtonBody);
+		mS->rust = ohpl_ntb_create(pWorldNewton->RustHandle(), pShapeNewton->GetNewtonCollision(), (size_t)this, &mS->newtonBody);
 
-		mpCallback = hplNew( cPhysicsBodyNewtonCallback, () );
+		mS->callback = hplNew( cPhysicsBodyNewtonCallback, () );
 
-		AddCallback(mpCallback);
+		AddCallback(mS->callback);
 
 		//Log("Creating newton body '%s' %d\n",msName.c_str(),(size_t)this);
 	}
 
 	iPhysicsBody::~iPhysicsBody()
 	{
-		ohpl_h15_body_free(mRsBook);
-		ohpl_h15b_free(mS.shell);
+		ohpl_h15_body_free(mS->book);
+		ohpl_h15b_free(mS->shell);
 	}
 
 	void iPhysicsBody::Destroy()
 	{
-		ohpl_h15b_destroy(mS.shell, reinterpret_cast<size_t>(this));
+		ohpl_h15b_destroy(mS->shell, reinterpret_cast<size_t>(this));
 	}
 
 	// PUBLIC METHODS
@@ -126,102 +126,102 @@ namespace hpl {
 
 	void iPhysicsBody::AddJoint(iPhysicsJoint *apJoint)
 	{
-		ohpl_h15b_add_joint(mS.shell, reinterpret_cast<size_t>(apJoint));
+		ohpl_h15b_add_joint(mS->shell, reinterpret_cast<size_t>(apJoint));
 	}
 
 	iPhysicsJoint* iPhysicsBody::GetJoint(int alIndex)
 	{
-		return reinterpret_cast<iPhysicsJoint*>(ohpl_h15b_joint_at(mS.shell, alIndex));
+		return reinterpret_cast<iPhysicsJoint*>(ohpl_h15b_joint_at(mS->shell, alIndex));
 	}
 
 	int iPhysicsBody::GetJointNum()
 	{
-		return ohpl_h15b_joint_num(mS.shell);
+		return ohpl_h15b_joint_num(mS->shell);
 	}
 
 	void iPhysicsBody::RemoveJoint(iPhysicsJoint *apJoint)
 	{
-		ohpl_h15b_remove_joint(mS.shell, reinterpret_cast<size_t>(apJoint));
+		ohpl_h15b_remove_joint(mS->shell, reinterpret_cast<size_t>(apJoint));
 	}
 
 	bool iPhysicsBody::UpdateBeforeSimulate(float afTimeStep)
 	{
-		return ohpl_phys_body_update_before(OhplPhysHost(), reinterpret_cast<size_t>(this), mRsBook);
+		return ohpl_phys_body_update_before(OhplPhysHost(), reinterpret_cast<size_t>(this), mS->book);
 	}
 
 	void iPhysicsBody::UpdateAfterSimulate(float afTimeStep)
 	{
-		ohpl_phys_body_update_after(OhplPhysHost(), reinterpret_cast<size_t>(this), afTimeStep, mRsBook);
+		ohpl_phys_body_update_after(OhplPhysHost(), reinterpret_cast<size_t>(this), afTimeStep, mS->book);
 	}
 
 	void iPhysicsBody::StaticLinearMove(const cVector3f& avVelocity)
 	{
-		ohpl_phys_body_static_linear_move(OhplPhysHost(), reinterpret_cast<size_t>(this), &avVelocity, mRsBook);
+		ohpl_phys_body_static_linear_move(OhplPhysHost(), reinterpret_cast<size_t>(this), &avVelocity, mS->book);
 	}
 
 	void iPhysicsBody::StaticAngularMove(const cVector3f& avVelocity)
 	{
-		ohpl_phys_body_static_angular_move(OhplPhysHost(), reinterpret_cast<size_t>(this), &avVelocity, mRsBook);
+		ohpl_phys_body_static_angular_move(OhplPhysHost(), reinterpret_cast<size_t>(this), &avVelocity, mS->book);
 	}
 
 	void iPhysicsBody::AddBodyCallback(iPhysicsBodyCallback *apCallback)
 	{
-		ohpl_h15b_add_callback(mS.shell, reinterpret_cast<size_t>(apCallback));
+		ohpl_h15b_add_callback(mS->shell, reinterpret_cast<size_t>(apCallback));
 	}
 
 	void iPhysicsBody::RemoveBodyCallback(iPhysicsBodyCallback *apCallback)
 	{
-		ohpl_h15b_remove_callback(mS.shell, reinterpret_cast<size_t>(apCallback));
+		ohpl_h15b_remove_callback(mS->shell, reinterpret_cast<size_t>(apCallback));
 	}
 
 	void iPhysicsBody::SetScrapeSoundEntity(cSoundEntity *apEntity)
 	{
-		mpScrapeSoundEntity = apEntity;
+		mS->scrapeSound = apEntity;
 		if(apEntity)
-			mlScrapeSoundEntityID = apEntity->GetCreationID();
+			mS->scrapeSoundId = apEntity->GetCreationID();
 		else
-			mlScrapeSoundEntityID = -1;
+			mS->scrapeSoundId = -1;
 	}
 
 	void iPhysicsBody::SetRollSoundEntity(cSoundEntity *apEntity)
 	{
-		mpRollSoundEntity = apEntity;
+		mS->rollSound = apEntity;
 		if(apEntity)
-			mlRollSoundEntityID = apEntity->GetCreationID();
+			mS->rollSoundId = apEntity->GetCreationID();
 		else
-			mlRollSoundEntityID = -1;
+			mS->rollSoundId = -1;
 	}
 
 	bool iPhysicsBody::OnAABBCollision(iPhysicsBody *apBody)
 	{
-		return ohpl_h15b_on_aabb(mS.shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apBody));
+		return ohpl_h15b_on_aabb(mS->shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apBody));
 	}
 
 	void iPhysicsBody::OnCollide(iPhysicsBody *apBody, cPhysicsContactData* apContactData)
 	{
-		ohpl_h15_body_flag_set(mRsBook, OhplH15_HasCollision, true);
+		ohpl_h15_body_flag_set(mS->book, OhplH15_HasCollision, true);
 
-		ohpl_h15b_on_collide(mS.shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apContactData));
+		ohpl_h15b_on_collide(mS->shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apContactData));
 	}
 
 	void iPhysicsBody::AddConnectedCharacter(iCharacterBody *apCharBody)
 	{
-		ohpl_h15b_add_char(mS.shell, reinterpret_cast<size_t>(apCharBody));
+		ohpl_h15b_add_char(mS->shell, reinterpret_cast<size_t>(apCharBody));
 	}
 
 	void iPhysicsBody::RemoveConnectedCharacter(iCharacterBody *apCharBody)
 	{
-		ohpl_h15b_remove_char(mS.shell, reinterpret_cast<size_t>(apCharBody));
+		ohpl_h15b_remove_char(mS->shell, reinterpret_cast<size_t>(apCharBody));
 	}
 
 	void iPhysicsBody::AddAttachedVerletContainer(iVerletParticleContainer *apContainer)
 	{
-		ohpl_h15b_add_verlet(mS.shell, reinterpret_cast<size_t>(apContainer));
+		ohpl_h15b_add_verlet(mS->shell, reinterpret_cast<size_t>(apContainer));
 	}
 
 	void iPhysicsBody::RemoveAttachedVerletContainer(iVerletParticleContainer *apContainer)
 	{
-		ohpl_h15b_remove_verlet(mS.shell, reinterpret_cast<size_t>(apContainer));
+		ohpl_h15b_remove_verlet(mS->shell, reinterpret_cast<size_t>(apContainer));
 	}
 
 }

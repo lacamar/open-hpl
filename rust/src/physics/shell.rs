@@ -44,6 +44,10 @@ pub const JO_DELETE_CALLBACK: i32 = 414;
 #[derive(Clone, Copy)]
 pub struct BodyState {
     pub shell: u64,
+    pub rust: u64,
+    pub book: u64,
+    pub newton_body: H,
+    pub callback: H,
     pub world: H,
     pub shape: H,
     pub material: H,
@@ -53,6 +57,9 @@ pub struct BodyState {
     pub roll_sound: H,
     pub user_data: H,
     pub prev_scrape: Matrixf,
+    pub total_static_linear: Vector3f,
+    pub total_static_angular: Vector3f,
+    pub slide_count: i32,
     pub scrape_sound_id: i32,
     pub roll_sound_id: i32,
     pub impact_count: i32,
@@ -77,6 +84,8 @@ pub struct BodyState {
     pub gravity_attach_velocity: bool,
     pub collide: bool,
     pub destroying: bool,
+    pub no_gravity_underwater: bool,
+    pub is_underwater: bool,
 }
 
 const AXES_XYZ: i32 = 2;
@@ -85,6 +94,10 @@ impl BodyState {
     fn new(shell: u64, world: H, shape: H) -> Self {
         Self {
             shell,
+            rust: 0,
+            book: 0,
+            newton_body: 0,
+            callback: 0,
             world,
             shape,
             material: 0,
@@ -94,6 +107,9 @@ impl BodyState {
             roll_sound: 0,
             user_data: 0,
             prev_scrape: IDENTITY,
+            total_static_linear: Vector3f::default(),
+            total_static_angular: Vector3f::default(),
+            slide_count: 0,
             scrape_sound_id: -1,
             roll_sound_id: -1,
             impact_count: 0,
@@ -118,6 +134,8 @@ impl BodyState {
             gravity_attach_velocity: true,
             collide: true,
             destroying: false,
+            no_gravity_underwater: false,
+            is_underwater: false,
         }
     }
 }
@@ -237,11 +255,19 @@ unsafe fn bstate<'a>(sh: &BodyShell) -> Option<&'a mut BodyState> {
 
 // ---------------------------------------------------------------- body
 
-/// Fills the defaults, registers the shell, then lets the host run the shape/material setup.
+/// Allocates the state (written to `out` before the setup op runs, which reads it), registers the
+/// shell, then lets the host run the shape/material setup. Freed by `body_free`.
 ///
 /// # Safety
-/// `state` is writable and embedded in the body `me`.
-pub unsafe fn body_new(op: WorldOp, me: usize, state: *mut BodyState, world: H, shape: H) -> u64 {
+/// `out` is writable.
+pub unsafe fn body_new(
+    op: WorldOp,
+    me: usize,
+    out: *mut *mut BodyState,
+    world: H,
+    shape: H,
+) -> u64 {
+    let state = Box::into_raw(Box::new(BodyState::new(0, world, shape)));
     let bits = shells()
         .and_then(|mut s| {
             s.bodies.insert(BodyShell {
@@ -251,17 +277,25 @@ pub unsafe fn body_new(op: WorldOp, me: usize, state: *mut BodyState, world: H, 
             })
         })
         .map_or(0, Handle::to_bits);
-    // SAFETY: caller contract.
-    if let Some(s) = unsafe { state.as_mut() } {
-        *s = BodyState::new(bits, world, shape);
+    // SAFETY: just allocated; caller contract for `out`.
+    unsafe {
+        (*state).shell = bits;
+        if let Some(o) = out.as_mut() {
+            *o = state;
+        }
     }
     call(Some(op), BO_SETUP, [me, 0, 0, 0, 0, 0], 0.0, 0);
     bits
 }
 
 pub fn body_free(bits: u64) {
+    let state = body(bits, |b| b.state);
     if let (Some(h), Some(mut s)) = (Handle::from_bits(bits), shells()) {
         s.bodies.remove(h);
+    }
+    if let Some(p) = state.filter(|&p| p != 0) {
+        // SAFETY: allocated by `body_new`; the C++ body is being destroyed.
+        drop(unsafe { Box::from_raw(p as *mut BodyState) });
     }
 }
 

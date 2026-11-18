@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace hpl { struct OhplJointShellState; }
+namespace hpl { struct OhplJointShellState; struct OhplBodyState; }
 
 extern "C" {
 uint64_t ohpl_h15_body_new();
@@ -105,7 +105,7 @@ void ohpl_h15w_fadeout_all_loop_sounds(uint64_t, float);
 void ohpl_h15w_render_contacts(uint64_t, size_t, size_t);
 bool ohpl_h15w_shape_world_collision(uint64_t, void*, size_t, const void*, const hpl::OhplH15Query*, size_t);
 
-uint64_t ohpl_h15b_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t, void*, size_t, size_t);
+uint64_t ohpl_h15b_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t, hpl::OhplBodyState**, size_t, size_t);
 void ohpl_h15b_free(uint64_t);
 void ohpl_h15b_add_joint(uint64_t, size_t);
 size_t ohpl_h15b_joint_at(uint64_t, int32_t);

@@ -109,9 +109,9 @@ fn destroy_all_runs_in_the_c_plus_plus_order() {
 
 #[test]
 fn body_shell_lists_and_destroy_sequence() {
-    let mut st = std::mem::MaybeUninit::<BodyState>::uninit();
-    // SAFETY: `st` is writable and outlives the shell.
-    let b = unsafe { shell::body_new(op, 100, st.as_mut_ptr(), 200, 300) };
+    let mut st: *mut BodyState = std::ptr::null_mut();
+    // SAFETY: `st` is writable; the state is freed by `body_free`.
+    let b = unsafe { shell::body_new(op, 100, &mut st, 200, 300) };
     take();
     shell::body_add_callback(b, 1);
     shell::body_add_callback(b, 2);

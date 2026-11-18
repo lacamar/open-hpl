@@ -6,17 +6,17 @@ use super::wreg::WorldOp;
 use crate::types::Vector3f;
 
 /// # Safety
-/// `state` is writable and embedded in the body `me`.
+/// `out` is writable; the state it receives is freed by `ohpl_h15b_free`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h15b_new(
     op: WorldOp,
     me: usize,
-    state: *mut BodyState,
+    out: *mut *mut BodyState,
     world: usize,
     shape: usize,
 ) -> u64 {
     // SAFETY: caller contract.
-    unsafe { shell::body_new(op, me, state, world, shape) }
+    unsafe { shell::body_new(op, me, out, world, shape) }
 }
 
 #[unsafe(no_mangle)]
