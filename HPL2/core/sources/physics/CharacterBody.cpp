@@ -45,7 +45,7 @@ namespace hpl {
 
 	void cCharacterBodyCollideGravity::OnCollision(iPhysicsBody *apBody, cCollideData *apCollideData)
 	{
-		ohpl_h14_collide_gravity(iCharacterBody::HostOp, reinterpret_cast<size_t>(mpCharBody), &mpCharBody->mE, &mpCharBody->mS,
+		ohpl_h14_collide_gravity(iCharacterBody::HostOp, reinterpret_cast<size_t>(mpCharBody), mpCharBody->mE, mpCharBody->mS,
 			reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apCollideData));
 	}
 
@@ -58,7 +58,7 @@ namespace hpl {
 
 	void cCharacterBodyCollidePush::OnCollision(iPhysicsBody *apBody, cCollideData *apCollideData)
 	{
-		ohpl_h14_collide_push(iCharacterBody::HostOp, reinterpret_cast<size_t>(mpCharBody), &mpCharBody->mE, &mpCharBody->mS, reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apCollideData));
+		ohpl_h14_collide_push(iCharacterBody::HostOp, reinterpret_cast<size_t>(mpCharBody), mpCharBody->mE, mpCharBody->mS, reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apCollideData));
 	}
 
 	// RAY CAST
@@ -116,10 +116,10 @@ namespace hpl {
 		case 514:
 		{
 			iCharacterBody *pChar = reinterpret_cast<iCharacterBody*>(a->p[0]);
-			if(pChar->mpCallback) pChar->mpCallback->OnGravityCollide(pChar, reinterpret_cast<iPhysicsBody*>(a->p[1]), reinterpret_cast<cCollideData*>(a->p[2]));
+			if(pChar->mE->callback) pChar->mE->callback->OnGravityCollide(pChar, reinterpret_cast<iPhysicsBody*>(a->p[1]), reinterpret_cast<cCollideData*>(a->p[2]));
 			return 0;
 		}
-		case 515: a->rf = reinterpret_cast<iCharacterBody*>(a->p[0])->mpWorld->GetGravity().y; return 0;
+		case 515: a->rf = reinterpret_cast<iCharacterBody*>(a->p[0])->mE->world->GetGravity().y; return 0;
 		case 516:
 		{
 			const float *pF = reinterpret_cast<const float*>(a->p[1]); const float *pP = reinterpret_cast<const float*>(a->p[2]);
@@ -138,8 +138,7 @@ namespace hpl {
 		//Set up main properties
 		msName = asName;
 
-		mS.size = avSize;
-		ohpl_h14_char_init(&mE, &mS, reinterpret_cast<size_t>(apWorld), cos(cMath::ToRad(45.0f)));
+		ohpl_h14_char_new(&mE, &mS, reinterpret_cast<size_t>(apWorld), OhplV3{avSize.x, avSize.y, avSize.z}, cos(cMath::ToRad(45.0f)));
 
 		// Create Shape
 		float fRadius = cMath::Max(avSize.x, avSize.z)*0.5f;
@@ -149,19 +148,19 @@ namespace hpl {
 		float fForceAdd = 0.2f;
 		if(fabs(fRadius*2.0f - avSize.y)<0.01)
 		{
-			mpCurrentShape = mpWorld->CreateSphereShape(fRadius,NULL);
+			mpCurrentShape = mE->world->CreateSphereShape(fRadius,NULL);
 		}
 		else
 		{
-			mpCurrentShape = mpWorld->CreateCylinderShape(fRadius, avSize.y,&mtxOffset);
+			mpCurrentShape = mE->world->CreateCylinderShape(fRadius, avSize.y,&mtxOffset);
 		}
-		mpCurrentBody = mpWorld->CreateBody(asName, mpCurrentShape);
+		mpCurrentBody = mE->world->CreateBody(asName, mpCurrentShape);
 
 		mpCurrentBody->SetMass(0);
 		mpCurrentBody->SetGravity(false);
 		mpCurrentBody->SetIsCharacter(true);
 		mpCurrentBody->SetCharacterBody(this);
-		mpCurrentBody->SetCollideFlags(mS.collideFlags);
+		mpCurrentBody->SetCollideFlags(mS->collideFlags);
 		mpCurrentBody->SetCollideCharacter(true);
 
 		mvShapes.push_back(mpCurrentShape);
@@ -173,17 +172,18 @@ namespace hpl {
 		mpRayCallback = hplNew( cCharacterBodyRay, () );
 	}
 
-	void iCharacterBody::UpdateBodyActive() { mpCurrentBody->SetActive(mS.active && mS.testCollision && mbPhysicsBodyActive); }
+	void iCharacterBody::UpdateBodyActive() { mpCurrentBody->SetActive(mS->active && mS->testCollision && mE->physicsBodyActive); }
 
-	void iCharacterBody::UpdateBody() { mpCurrentBody->SetPosition(mS.position); }
+	void iCharacterBody::UpdateBody() { mpCurrentBody->SetPosition(mS->position); }
 
 	iCharacterBody::~iCharacterBody()
 	{
 		DisconnectBody();
 
-		for(size_t i=0; i< mvBodies.size(); i++) mpWorld->DestroyBody(mvBodies[i]);
+		for(size_t i=0; i< mvBodies.size(); i++) mE->world->DestroyBody(mvBodies[i]);
 
 		ohpl_h14_aux_free(mpAux);
+		ohpl_h14_char_free(mE, mS);
 
 		hplDelete(mpCollideGravityCallback);
 		hplDelete(mpCollidePushCallback);
@@ -194,29 +194,29 @@ namespace hpl {
 
 	void iCharacterBody::SetMass(float afMass)
 	{
-		mS.mass = afMass;
+		mS->mass = afMass;
 	}
 
 	void iCharacterBody::SetActive(bool abX)
 	{
-		if(mS.active == abX) return;
+		if(mS->active == abX) return;
 
-		mS.active = abX;
+		mS->active = abX;
 		UpdateBodyActive();
 	}
 
 	void iCharacterBody::SetCollideCharacter(bool abX)
 	{
-		if(abX == mbCollideCharacter) return;
+		if(abX == mE->collideCharacter) return;
 
-		mbCollideCharacter = abX;
+		mE->collideCharacter = abX;
 	}
 
 	void iCharacterBody::SetTestCollision(bool abX)
 	{
-		if(mS.testCollision == abX) return;
+		if(mS->testCollision == abX) return;
 
-		mS.testCollision = abX;
+		mS->testCollision = abX;
 		UpdateBodyActive();
 	}
 
@@ -224,15 +224,15 @@ namespace hpl {
 	{
 		float fRadius = cMath::Max(avSize.x, avSize.z)*0.5f;
 		cMatrixf mtxOffset = cMath::MatrixRotateZ(kPi2f);
-		iCollideShape *pCollider = mpWorld->CreateCylinderShape(fRadius, avSize.y,&mtxOffset);
-		iPhysicsBody *pBody = mpWorld->CreateBody(msName, pCollider);
+		iCollideShape *pCollider = mE->world->CreateCylinderShape(fRadius, avSize.y,&mtxOffset);
+		iPhysicsBody *pBody = mE->world->CreateBody(msName, pCollider);
 
 		pBody->SetMass(0);
 		pBody->SetGravity(false);
 		pBody->SetIsCharacter(true);
 		pBody->SetCharacterBody(this);
 		pBody->SetActive(false);
-		pBody->SetCollideFlags(mS.collideFlags);
+		pBody->SetCollideFlags(mS->collideFlags);
 		pBody->SetCollideCharacter(true);
 
 		mvBodies.push_back(pBody);
@@ -243,12 +243,12 @@ namespace hpl {
 
 	void iCharacterBody::SetActiveSize(int alNum)
 	{
-		if(alNum == mS.currentShapeIdx || alNum < 0 || alNum >= (int)mvShapes.size()) return;
+		if(alNum == mS->currentShapeIdx || alNum < 0 || alNum >= (int)mvShapes.size()) return;
 
 		cVector3f vFeetPosition = GetFeetPosition();
 		mpCurrentBody->SetActive(false);
 
-		mS.currentShapeIdx = alNum;
+		mS->currentShapeIdx = alNum;
 
 		mpCurrentShape = mvShapes[alNum];
 		mpCurrentBody = mvBodies[alNum];
@@ -258,46 +258,46 @@ namespace hpl {
 		UpdateBodyActive();
 
 		//Set size of the new shape
-		mS.size.y = mpCurrentShape->GetHeight();
-		mS.size.x = mpCurrentShape->GetRadius() * 2;
-		mS.size.z = mpCurrentShape->GetRadius() * 2;
+		mS->size.y = mpCurrentShape->GetHeight();
+		mS->size.x = mpCurrentShape->GetRadius() * 2;
+		mS->size.z = mpCurrentShape->GetRadius() * 2;
 	}
 
 	float iCharacterBody::GetMaxPositiveMoveSpeed(eCharDir aDir)
 	{
-		return mS.maxPosMoveSpeed[aDir];
+		return mS->maxPosMoveSpeed[aDir];
 	}
 	float iCharacterBody::GetMaxNegativeMoveSpeed(eCharDir aDir)
 	{
-		return mS.maxNegMoveSpeed[aDir];
+		return mS->maxNegMoveSpeed[aDir];
 	}
 
 	float iCharacterBody::GetMoveSpeed(eCharDir aDir)
 	{
-		return mS.moveSpeed[aDir];
+		return mS->moveSpeed[aDir];
 	}
 
 	float iCharacterBody::GetMoveAcc(eCharDir aDir)
 	{
-		return mS.moveAcc[aDir];
+		return mS->moveAcc[aDir];
 	}
 
 	float iCharacterBody::GetMoveDeacc(eCharDir aDir)
 	{
-		return mS.moveDeacc[aDir];
+		return mS->moveDeacc[aDir];
 	}
 
 	cVector3f iCharacterBody::GetVelocity(float afFrameTime)
 	{
 		if(afFrameTime <=0) return 0;
 
-        return (mS.position - mS.lastPosition) / afFrameTime;
+        return (mS->position - mS->lastPosition) / afFrameTime;
 	}
 
 	// iCharacterBody::PostUpdate 0x14b4a20, iCharacterBody::TeleportToSafePosition 0xe787c0 (Rebirth)
 	void iCharacterBody::UpdateSafePositions(float afTimeStep)
 	{
-		ohpl_h14_update_safe_positions(mpAux, afTimeStep, OhplV3{mS.position.x, mS.position.y, mS.position.z});
+		ohpl_h14_update_safe_positions(mpAux, afTimeStep, OhplV3{mS->position.x, mS->position.y, mS->position.z});
 	}
 
 	void iCharacterBody::TeleportToSafePosition(float afElapsedTime, bool abSmooth)
@@ -305,15 +305,15 @@ namespace hpl {
 		cVector3f vSafe;
 		if(!ohpl_h14_safe_position(mpAux, afElapsedTime, reinterpret_cast<OhplV3*>(&vSafe))) return;
 		SetPosition(vSafe, abSmooth);
-		mS.velocity = cVector3f(0, 0.1f, 0);
+		mS->velocity = cVector3f(0, 0.1f, 0);
 	}
 
 	void iCharacterBody::SetPosition(const cVector3f& avPos, bool abSmooth)
 	{
-		//mS.force =0;
-		//mS.velocity =0;
-		mS.lastPosition = avPos;
-		mS.position = avPos;
+		//mS->force =0;
+		//mS->velocity =0;
+		mS->lastPosition = avPos;
+		mS->position = avPos;
 
 		mpCurrentBody->SetPosition(avPos);
 
@@ -323,55 +323,55 @@ namespace hpl {
 	}
 	const cVector3f& iCharacterBody::GetPosition()
 	{
-		return mS.position;
+		return mS->position;
 	}
 
 	void iCharacterBody::SetYaw(float afX)
 	{
 		//Do not set rotation, if character is being aligned.
-		if(mpConnectedBody && mbConnectionAlignCharacterRotation) return;
+		if(mE->connectedBody && mE->connAlignCharRotation) return;
 
-		mS.yaw = afX;
+		mS->yaw = afX;
 	}
 
 	void iCharacterBody::SetPitch(float afX)
 	{
 		//Do not set rotation, if character is being aligned.
-		if(mpConnectedBody && mbConnectionAlignCharacterRotation) return;
+		if(mE->connectedBody && mE->connAlignCharRotation) return;
 
-		mS.pitch = afX;
+		mS->pitch = afX;
 	}
 
 	const cVector3f& iCharacterBody::GetRight()
 	{
-		return mS.right;
+		return mS->right;
 	}
 
 	float iCharacterBody::GetMaxGravitySpeed()
 	{
-		return mS.maxGravitySpeed;
+		return mS->maxGravitySpeed;
 	}
 
 	void iCharacterBody::SetCollideFlags(tFlag alX)
 	{
-		if(mS.collideFlags == alX) return;
+		if(mS->collideFlags == alX) return;
 
-		mS.collideFlags = alX;
+		mS->collideFlags = alX;
 
 		for(size_t i=0; i<mvBodies.size(); ++i)
 		{
 			iPhysicsBody *pBody = mvBodies[i];
-			pBody->SetCollideFlags(mS.collideFlags);
+			pBody->SetCollideFlags(mS->collideFlags);
 		}
 	}
 
 	void iCharacterBody::Move(eCharDir aDir, float afMul)
 	{
-		if(mS.moveDelayCount>0) return; //Just skip any movement.
+		if(mS->moveDelayCount>0) return; //Just skip any movement.
 
-		mS.currentMoveAcc[aDir] += afMul;
+		mS->currentMoveAcc[aDir] += afMul;
 
-		mS.moving[aDir] = true;
+		mS->moving[aDir] = true;
 	}
 
 	void iCharacterBody::StopMovement()
@@ -380,10 +380,10 @@ namespace hpl {
 
 		for(int i=0; i<2; ++i)
 		{
-			mS.currentMoveAcc[i] = 0;
-			mS.moving[i] = false;
-			mS.moveAcc[i] =0;
-			mS.moveSpeed[i]=0;
+			mS->currentMoveAcc[i] = 0;
+			mS->moving[i] = false;
+			mS->moveAcc[i] =0;
+			mS->moveSpeed[i]=0;
 		}
 	}
 
@@ -391,21 +391,21 @@ namespace hpl {
 										tPhysicsConnectionFlag alFlags)
 	{
 		if(apBody == NULL) return;
-		ohpl_h14_connect_to_body(HostOp, reinterpret_cast<size_t>(this), &mE, &mS, reinterpret_cast<size_t>(apBody),
+		ohpl_h14_connect_to_body(HostOp, reinterpret_cast<size_t>(this), mE, mS, reinterpret_cast<size_t>(apBody),
 			OhplV3{avConnectionPos.x, avConnectionPos.y, avConnectionPos.z}, alFlags);
 		ohpl_h14_reset_pids(mpAux);
 	}
 
 	cVector3f iCharacterBody::GetCameraPosAdd()
 	{
-		return mvCameraPosAdd;
+		return mE->cameraPosAdd;
 	}
 
 	bool iCharacterBody::CheckRayIntersection(const cVector3f &avStart, const cVector3f &avEnd, float *apDistance, cVector3f *apNormalVec)
 	{
 		mpRayCallback->Clear();
-		mpRayCallback->mlCollideFlags = mS.collideFlags;
-		mpWorld->CastRay(mpRayCallback,avStart,avEnd,apDistance!=NULL,apNormalVec!=NULL,false);
+		mpRayCallback->mlCollideFlags = mS->collideFlags;
+		mE->world->CastRay(mpRayCallback,avStart,avEnd,apDistance!=NULL,apNormalVec!=NULL,false);
 		bool bCollide = mpRayCallback->mbCollide;
 		if(bCollide)
 		{
@@ -417,16 +417,16 @@ namespace hpl {
 
 	iEntity3D* iCharacterBody::GetEntity()
 	{
-		return mpEntity;
+		return mE->entity;
 	}
 	const cMatrixf& iCharacterBody::GetEntityOffset()
 	{
-		return m_mtxEntityOffset;
+		return mE->entityOffset;
 	}
 
 	const cMatrixf& iCharacterBody::GetEntityPostOffset()
 	{
-		return m_mtxEntityPostOffset;
+		return mE->entityPostOffset;
 	}
 
 	cVector3f iCharacterBody::GetBodyConnectionPos()
@@ -441,7 +441,7 @@ namespace hpl {
 	{
 		OhplH14Conn conn = MakeConn();
 		cVector3f vPos;
-		ohpl_h14_char_connection_pos(&mS, &conn, reinterpret_cast<OhplV3*>(&vPos));
+		ohpl_h14_char_connection_pos(mS, &conn, reinterpret_cast<OhplV3*>(&vPos));
 		return vPos;
 	}
 
@@ -449,42 +449,42 @@ namespace hpl {
 
 	void iCharacterBody::PreUpdateConnection(float afTimeStep)
 	{
-		if(mpConnectedBody == NULL) return;
+		if(mE->connectedBody == NULL) return;
 
-		if(mbConnectionCollision==false)
+		if(mE->connCollision==false)
 		{
-			mbConnectedBodyIsActive = mpConnectedBody->IsActive();
-			if(mbConnectedBodyIsActive) mpConnectedBody->SetActive(false);
+			mE->connectedBodyIsActive = mE->connectedBody->IsActive();
+			if(mE->connectedBodyIsActive) mE->connectedBody->SetActive(false);
 		}
 	}
 
 	void iCharacterBody::PostUpdateConnection(float afTimeStep)
 	{
-		if(mpConnectedBody == NULL) return;
+		if(mE->connectedBody == NULL) return;
 
-		if(mbConnectionCollision==false)
+		if(mE->connCollision==false)
 		{
-			if(mbConnectedBodyIsActive) mpConnectedBody->SetActive(true);
+			if(mE->connectedBodyIsActive) mE->connectedBody->SetActive(true);
 		}
 	}
 
 	void iCharacterBody::UpdateBodyConnection(float afTimeStep)
 	{
 		//No connected body = nothing to do
-		if(mpConnectedBody == NULL) return;
+		if(mE->connectedBody == NULL) return;
 
 		OhplH14Conn conn = MakeConn();
-		ohpl_h14_update_body_connection(mpAux, BodyVt(), &mS, &conn, IsOnGround(), afTimeStep);
+		ohpl_h14_update_body_connection(mpAux, BodyVt(), mS, &conn, IsOnGround(), afTimeStep);
 	}
 
 	void iCharacterBody::UpdateCharacterConnection(float afTimeStep)
 	{
 		//If no connection, do nothing
-		if(mpConnectedBody == NULL) return;
+		if(mE->connectedBody == NULL) return;
 
 		OhplH14Conn conn = MakeConn();
 		cVector3f vForce;
-		if(ohpl_h14_update_character_connection(mpAux, BodyVt(), &mS, &conn, afTimeStep, reinterpret_cast<OhplV3*>(&vForce)))
+		if(ohpl_h14_update_character_connection(mpAux, BodyVt(), mS, &conn, afTimeStep, reinterpret_cast<OhplV3*>(&vForce)))
 			AddForce(vForce);
 	}
 
@@ -518,11 +518,11 @@ namespace hpl {
 	OhplH14Conn iCharacterBody::MakeConn()
 	{
 		OhplH14Conn conn = {
-			reinterpret_cast<size_t>(mpConnectedBody), mfMaxConnectionForce, mfMaxConnectionTorque, mfConnectionDistanceToBody,
-			mvConnectionPosLocalToBody, mvConnectionPosLocalToChar, mvConnectionNormalLocalToBody, mvConnectionLocalUpBody,
-			mvConnectionBodyStartRotation, mvConnectionCharLocalForward, mpWorld->GetGravity(),
-			mbConnectionDependOnBodyRotation, mbConnectionAlignCenter, mbConnectionAlignRotation, mbConnectionAffectChar,
-			mbConnectionDependOnCharRotation, mbConnectionAlignCharacterRotation
+			reinterpret_cast<size_t>(mE->connectedBody), mE->maxConnectionForce, mE->maxConnectionTorque, mE->connDistanceToBody,
+			mE->connPosLocalToBody, mE->connPosLocalToChar, mE->connNormalLocalToBody, mE->connLocalUpBody,
+			mE->connBodyStartRotation, mE->connCharLocalForward, mE->world->GetGravity(),
+			mE->connDependOnBodyRotation, mE->connAlignCenter, mE->connAlignRotation, mE->connAffectChar,
+			mE->connDependOnCharRotation, mE->connAlignCharRotation
 		};
 		return conn;
 	}
@@ -531,7 +531,7 @@ namespace hpl {
 	{
 		OhplCharVt vt = {
 			this,
-			[](void *c) { cVector3f g = static_cast<iCharacterBody*>(c)->mpWorld->GetGravity(); return OhplV3{g.x, g.y, g.z}; },
+			[](void *c) { cVector3f g = static_cast<iCharacterBody*>(c)->mE->world->GetGravity(); return OhplV3{g.x, g.y, g.z}; },
 			[](void *c) { return static_cast<iCharacterBody*>(c)->mpCurrentShape->GetRadius(); },
 			[](void *c, int32_t i) { return static_cast<iCharacterBody*>(c)->mvShapes[i]->GetSize().y; },
 			[](void *c, OhplV3 *apPush, OhplV3 aPos, int32_t alCallback, int32_t alIdx)
@@ -546,7 +546,7 @@ namespace hpl {
 				return static_cast<iCharacterBody*>(c)->CheckRayIntersection(cVector3f(aStart.x, aStart.y, aStart.z),
 					cVector3f(aEnd.x, aEnd.y, aEnd.z), apDist, reinterpret_cast<cVector3f*>(apNormal));
 			},
-			[](void *c) { iCharacterBody *p = static_cast<iCharacterBody*>(c); if(p->mpCallback) p->mpCallback->OnHitGround(p, p->mS.velocity); },
+			[](void *c) { iCharacterBody *p = static_cast<iCharacterBody*>(c); if(p->mE->callback) p->mE->callback->OnHitGround(p, p->mS->velocity); },
 			[](void *c, float dt) { static_cast<iCharacterBody*>(c)->PreUpdateConnection(dt); },
 			[](void *c) { static_cast<iCharacterBody*>(c)->ClearGravityAttachment(); },
 			[](void *c) { static_cast<iCharacterBody*>(c)->UpdateGravityAttachment(); },
@@ -563,7 +563,7 @@ namespace hpl {
 
 	bool iCharacterBody::CheckCharacterFits(const cVector3f &avPosition, bool abFeetPosition, int alSizeIdx, cVector3f *apPushBackVec, float afEpsilon)
 	{
-		if(alSizeIdx <0) alSizeIdx = mS.currentShapeIdx;
+		if(alSizeIdx <0) alSizeIdx = mS->currentShapeIdx;
 
 		OhplCharVt vt = MakeVt();
 		cVector3f vPushBack(0);
@@ -577,56 +577,56 @@ namespace hpl {
 
 	void iCharacterBody::UpdateCamera()
 	{
-		if(mpCamera==NULL) return;
+		if(mE->camera==NULL) return;
 		OhplH14CamIn in = {
-			mS.position, mS.right, mS.forward, mvCameraPosAdd,
-			mvShapes[0]->GetSize().y, mS.size.y, mS.yaw, mlCameraSmoothPosNum, mbCameraUpdateActive, mbCameraUseSmoothing
+			mS->position, mS->right, mS->forward, mE->cameraPosAdd,
+			mvShapes[0]->GetSize().y, mS->size.y, mS->yaw, mE->cameraSmoothPosNum, mE->cameraUpdateActive, mE->cameraUseSmoothing
 		};
 		OhplH14CamOut out;
 		ohpl_h14_update_camera(mpAux, &in, &out);
 		if(out.set)
 		{
-			mpCamera->SetPosition(out.position);
-			mpCamera->SetYaw(out.yaw);
+			mE->camera->SetPosition(out.position);
+			mE->camera->SetYaw(out.yaw);
 		}
 	}
 
 	void iCharacterBody::UpdateEntity()
 	{
-		if(mpEntity==NULL) return;
+		if(mE->entity==NULL) return;
 		OhplH14EntIn in = {
-			mS.position, mS.mtxMove, m_mtxEntityOffset, m_mtxEntityPostOffset,
-			mS.yaw, mlEntitySmoothPosNum, mlEntitySmoothYPosNum, mbEntitySmoothYPos
+			mS->position, mS->mtxMove, mE->entityOffset, mE->entityPostOffset,
+			mS->yaw, mE->entitySmoothPosNum, mE->entitySmoothYPosNum, mE->entitySmoothYPos
 		};
 		cMatrixf mtxEntity;
 		ohpl_h14_update_entity(mpAux, &in, &mtxEntity);
-		mpEntity->SetMatrix(mtxEntity);
+		mE->entity->SetMatrix(mtxEntity);
 	}
 
 	void iCharacterBody::UpdateGravityAttachment()
 	{
 		OhplH14Grav grav = {
-			reinterpret_cast<size_t>(mpGravityAttachedBody), reinterpret_cast<size_t>(mpGravityLastAttachedBody),
-			m_mtxGravityAttachedPrevMatrix, mvGravityAttachmentBodyVelocity, mbRotateYawWhenGravityAttached
+			reinterpret_cast<size_t>(mE->gravityAttachedBody), reinterpret_cast<size_t>(mE->gravityLastAttachedBody),
+			mE->gravityAttachedPrevMatrix, mE->gravityAttachBodyVelocity, mE->rotateYawWhenGravityAttached
 		};
-		ohpl_h14_update_gravity_attachment(BodyVt(), &mS, &grav);
-		if(mpGravityAttachedBody)
+		ohpl_h14_update_gravity_attachment(BodyVt(), mS, &grav);
+		if(mE->gravityAttachedBody)
 		{
-			mvGravityAttachmentBodyVelocity = grav.bodyVelocity;
-			m_mtxGravityAttachedPrevMatrix = grav.prevMatrix;
+			mE->gravityAttachBodyVelocity = grav.bodyVelocity;
+			mE->gravityAttachedPrevMatrix = grav.prevMatrix;
 		}
 	}
 
 	bool iCharacterBody::CheckCollision(cVector3f *apPushBackVector, const cVector3f& avPos, iPhysicsWorldCollisionCallback *apCallback,
 										int alShapeIdx)
 	{
-		if(alShapeIdx <0) alShapeIdx = mS.currentShapeIdx;
+		if(alShapeIdx <0) alShapeIdx = mS->currentShapeIdx;
 		iCollideShape *pShape = mvShapes[alShapeIdx];
 
-		return mpWorld->CheckShapeWorldCollision(apPushBackVector, pShape, cMath::MatrixTranslate(avPos),
+		return mE->world->CheckShapeWorldCollision(apPushBackVector, pShape, cMath::MatrixTranslate(avPos),
 												mpCurrentBody, false, true,
-												apCallback, true,mlMinBodyPushStrength,
-												mS.collideFlags, false);
+												apCallback, true,mE->minBodyPushStrength,
+												mS->collideFlags, false);
 	}
 
 }
