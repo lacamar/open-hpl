@@ -73,7 +73,6 @@ namespace hpl {
 
 	class cParticleEmitterData_UserData : public iParticleEmitterData, public iPhysicsRayCallback
 	{
-	friend class cParticleEmitter_UserData;
 	public:
     	cParticleEmitterData_UserData(const tString &asName,cResources* apResources,cGraphics *apGraphics);
 		~cParticleEmitterData_UserData(){ ohpl_h12_ps_free(mpDesc); }
@@ -102,26 +101,6 @@ namespace hpl {
 	};
 	
 	//----------------------------------------------------------
-
-	class cParticleEmitter_UserData : public iParticleEmitter
-	{
-	public:
-		cParticleEmitter_UserData(	tString asName,tMaterialVec* avMaterials,
-										cVector3f avSize, cGraphics* apGraphics,cResources *apResources,
-										cParticleEmitterData_UserData *apData
-										);
-		~cParticleEmitter_UserData(void);
-
-		bool CheckCollision(const cVector3f &avStart, const cVector3f &avEnd, cVector3f *apNormal, cVector3f *apPoint);
-
-	private:
-		void UpdateMotion(float afTimeStep);
-
-
-		cParticleEmitterData_UserData *mpData;
-
-	};
-	
 
 };
 

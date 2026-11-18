@@ -21,13 +21,6 @@ struct OhplRmBytes
 	size_t n;
 };
 
-struct OhplRmEnv
-{
-	void* ctx;
-	const uint32_t* (*file_path)(void*, const uint8_t*, size_t, int32_t*, size_t*);
-	void* (*get_resource)(void*, const uint32_t*, size_t);
-};
-
 struct OhplRmOut
 {
 	void* ctx;
@@ -41,12 +34,6 @@ extern "C" {
 
 	OhplRmCustom* ohpl_rm_custom_new();
 	void ohpl_rm_custom_free(OhplRmCustom*);
-
-	void ohpl_rm_particle_by_file(const OhplRmEnv*, const uint8_t* type, size_t n, OhplRmOut*);
-	void* ohpl_rm_particle_by_data(const OhplRmEnv*, const uint8_t* name, size_t n);
-
-	void ohpl_rm_destroy_particle(OhplResMeta*);
-
 
 	int32_t ohpl_rm_mat_anim_mode(const uint8_t*, size_t);
 	bool ohpl_rm_mat_texture_is_srgb(int32_t type);
@@ -111,38 +98,6 @@ namespace hpl {
 		std::vector<tWString> mvItems;
 	private:
 		OhplRmOut mRaw;
-	};
-
-	// Lets Rust ask the file searcher and the manager's resource map.
-	class cRmEnv
-	{
-	public:
-		cRmEnv(cFileSearcher* apFileSearcher, iResourceManager* apManager) : mpFileSearcher(apFileSearcher), mpManager(apManager)
-		{
-			mRaw.ctx = this;
-			mRaw.file_path = [](void* c, const uint8_t* p, size_t n, int32_t* apCount, size_t* apLen) -> const uint32_t*
-			{
-				cRmEnv* pThis = static_cast<cRmEnv*>(c);
-				int lCount = 0;
-				const tWString& sPath = pThis->mpFileSearcher->GetFilePath(tString(reinterpret_cast<const char*>(p), n), apCount ? &lCount : NULL);
-				if(apCount) *apCount = lCount;
-				*apLen = sPath.size();
-				return reinterpret_cast<const uint32_t*>(sPath.data());
-			};
-			mRaw.get_resource = [](void* c, const uint32_t* p, size_t n) -> void*
-			{
-				return static_cast<cRmEnv*>(c)->mpManager->GetResource(tWString(reinterpret_cast<const wchar_t*>(p), n));
-			};
-		}
-		cRmEnv(const cRmEnv&) = delete;
-		cRmEnv& operator=(const cRmEnv&) = delete;
-
-		const OhplRmEnv* raw() const { return &mRaw; }
-
-	private:
-		cFileSearcher* mpFileSearcher;
-		iResourceManager* mpManager;
-		OhplRmEnv mRaw;
 	};
 }
 

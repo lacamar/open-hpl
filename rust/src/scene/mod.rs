@@ -42,6 +42,7 @@ mod scenemgr;
 mod skinning;
 mod sl;
 pub(crate) mod soundentity;
+mod sp_emit;
 mod sp_sys;
 #[cfg(test)]
 mod tests;

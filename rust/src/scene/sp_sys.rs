@@ -1,6 +1,9 @@
 //! SP: state of `cParticleSystem` and `cParticleSystemData`. The C++ classes are shells holding one
-//! pointer; the emitters and emitter data stay C++ objects, tracked here as opaque pointers.
+//! pointer. Emitters are `Pe` boxes (sp_emit.rs) paired with their C++ shell; emitter data stay
+//! C++ objects, tracked here as opaque pointers.
 
+use super::h12b_psys::{PsHost, apply_all, set_visible, update_logic};
+use super::sp_emit::{Pe, apply};
 use crate::types::{Color, Vector3f};
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -31,12 +34,17 @@ pub struct SpPub {
 #[repr(C)]
 pub struct Sys {
     p: SpPub,
-    emitters: Vec<*mut c_void>,
+    emitters: Vec<*mut Pe>,
     data_name: Vec<u8>,
+    shell: *mut c_void,
 }
 
 impl Sys {
-    fn new(data: *mut c_void) -> Self {
+    pub fn pubs(&self) -> &SpPub {
+        &self.p
+    }
+
+    fn new(data: *mut c_void, shell: *mut c_void) -> Self {
         let white = Color {
             r: 1.0,
             g: 1.0,
@@ -64,13 +72,18 @@ impl Sys {
             },
             emitters: Vec::new(),
             data_name: Vec::new(),
+            shell,
         }
     }
 }
 
+pub fn hpl3_color() -> bool {
+    HPL3_COLOR.load(Ordering::Relaxed)
+}
+
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_sp_new(data: *mut c_void) -> *mut Sys {
-    Box::into_raw(Box::new(Sys::new(data)))
+pub extern "C" fn ohpl_sp_new(data: *mut c_void, shell: *mut c_void) -> *mut Sys {
+    Box::into_raw(Box::new(Sys::new(data, shell)))
 }
 
 /// # Safety
@@ -84,11 +97,14 @@ pub unsafe extern "C" fn ohpl_sp_free(s: *mut Sys) {
 }
 
 /// # Safety
-/// `s` valid.
+/// `s` valid, `e` from `ohpl_spe_new` and owned by its C++ shell.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sp_add_emitter(s: *mut Sys, e: *mut c_void) {
+pub unsafe extern "C" fn ohpl_sp_add_emitter(s: *mut Sys, e: *mut Pe) {
     // SAFETY: caller contract.
-    unsafe { &mut *s }.emitters.push(e);
+    let s = unsafe { &mut *s };
+    // SAFETY: caller contract.
+    unsafe { &mut *e }.attach(s, s.shell);
+    s.emitters.push(e);
 }
 
 /// # Safety
@@ -110,8 +126,8 @@ pub unsafe extern "C" fn ohpl_sp_emitter(s: *const Sys, i: i32) -> *mut c_void {
     usize::try_from(i)
         .ok()
         .and_then(|i| v.get(i))
-        .copied()
-        .unwrap_or(std::ptr::null_mut())
+        // SAFETY: emitters stay live until their shells are deleted with the system.
+        .map_or(std::ptr::null_mut(), |&e| unsafe { &*e }.ctx())
 }
 
 /// # Safety
@@ -139,7 +155,97 @@ pub extern "C" fn ohpl_sp_set_hpl3_color(on: bool) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_sp_hpl3_color() -> bool {
-    HPL3_COLOR.load(Ordering::Relaxed)
+    hpl3_color()
+}
+
+fn pe_at(c: *mut c_void, i: i32) -> *mut Pe {
+    // SAFETY: `c` is the `Sys` of the `PsHost` built below; indices come from its own count.
+    unsafe { &*c.cast::<Sys>() }
+        .emitters
+        .get(usize::try_from(i).unwrap_or(usize::MAX))
+        .copied()
+        .unwrap_or(std::ptr::null_mut())
+}
+
+unsafe extern "C" fn h_count(c: *mut c_void) -> i32 {
+    // SAFETY: see `pe_at`.
+    unsafe { &*c.cast::<Sys>() }.emitters.len() as i32
+}
+
+unsafe extern "C" fn h_warm_time(c: *mut c_void, i: i32) -> f32 {
+    // SAFETY: see `pe_at`.
+    unsafe { &*pe_at(c, i) }.warm_time()
+}
+
+unsafe extern "C" fn h_warm_steps(c: *mut c_void, i: i32) -> f32 {
+    // SAFETY: see `pe_at`.
+    unsafe { &*pe_at(c, i) }.warm_steps()
+}
+
+unsafe extern "C" fn h_update(c: *mut c_void, i: i32, dt: f32) {
+    // SAFETY: see `pe_at`.
+    unsafe { super::sp_emit::ohpl_spe_update_logic(pe_at(c, i), dt) };
+}
+
+unsafe extern "C" fn h_apply(c: *mut c_void, i: i32, op: i32, arg: bool) {
+    // SAFETY: see `pe_at`.
+    unsafe { apply(pe_at(c, i), op, arg) };
+}
+
+unsafe extern "C" fn h_query(c: *mut c_void, i: i32, q: i32) -> bool {
+    // SAFETY: see `pe_at`.
+    let pe = unsafe { &*pe_at(c, i) };
+    if q == 0 { pe.is_dead() } else { pe.is_dying() }
+}
+
+fn ps_host(s: *mut Sys) -> PsHost {
+    PsHost {
+        ctx: s.cast(),
+        emitter_count: h_count,
+        warm_up_time: h_warm_time,
+        warm_up_steps: h_warm_steps,
+        update: h_update,
+        apply: h_apply,
+        query: h_query,
+    }
+}
+
+/// `cParticleSystem::UpdateLogic`.
+///
+/// # Safety
+/// `s` valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_sp_update_logic(s: *mut Sys, active: bool, dt: f32) {
+    // SAFETY: caller contract; `first` is copied out so host calls never see a live reference.
+    let mut first = unsafe { (*s).p.first_update };
+    update_logic(&ps_host(s), &mut first, active, dt);
+    // SAFETY: caller contract.
+    unsafe { (*s).p.first_update = first };
+}
+
+/// # Safety
+/// `s` valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_sp_set_visible(s: *mut Sys, visible: bool) {
+    // SAFETY: as `ohpl_sp_update_logic`.
+    let mut v = unsafe { (*s).p.is_visible };
+    set_visible(&ps_host(s), &mut v, visible);
+    // SAFETY: caller contract.
+    unsafe { (*s).p.is_visible = v };
+}
+
+/// # Safety
+/// `s` valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_sp_apply_all(s: *mut Sys, op: i32, arg: bool) {
+    apply_all(&ps_host(s), op, arg);
+}
+
+/// # Safety
+/// `s` valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_sp_all(s: *mut Sys, query: i32) -> bool {
+    ps_host(s).all(query)
 }
 
 pub struct SpData {
@@ -200,15 +306,13 @@ mod tests {
 
     #[test]
     fn defaults_and_emitters() {
-        let s = ohpl_sp_new(std::ptr::null_mut());
+        let s = ohpl_sp_new(std::ptr::null_mut(), std::ptr::null_mut());
         // SAFETY: `s` is fresh.
         unsafe {
             assert!((*s).p.remove_when_dead && (*s).p.is_visible && (*s).p.first_update);
             assert_eq!((*s).p.max_fade_end, 110.0);
             assert!(ohpl_sp_emitter(s, 0).is_null());
-            ohpl_sp_add_emitter(s, 8 as *mut c_void);
-            assert_eq!(ohpl_sp_emitter_count(s), 1);
-            assert_eq!(ohpl_sp_emitter(s, 0) as usize, 8);
+            assert_eq!(ohpl_sp_emitter_count(s), 0);
             assert!(ohpl_sp_emitter(s, -1).is_null());
             ohpl_sp_set_data_name(s, b"fire".as_ptr(), 4);
             let mut n = 0;

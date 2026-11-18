@@ -362,8 +362,8 @@ void CollectPs(const std::string &dir, std::vector<std::string> &out)
 
 void EmitterLine(Line &l, iParticleEmitter *pe)
 {
-	l.I(pe->GetParticleNum()); l.I(pe->IsDead()); l.I(pe->IsDying()); l.I(pe->mCtl.sleep_count);
-	l.I(pe->mCtl.update_bv); l.I(pe->IsVisible());
+	l.I(pe->GetParticleNum()); l.I(pe->IsDead()); l.I(pe->IsDying()); OhplH12PeCtl ctl; ohpl_spe_ctl(pe->mpPe, &ctl); l.I(ctl.sleep_count);
+	l.I(ctl.update_bv); l.I(pe->IsVisible());
 }
 
 void PsScene(const std::string &asPath, int alSeed, int alFrames)
