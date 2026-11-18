@@ -60,12 +60,7 @@ OhplA9W ohpl_a9h_new(OhplA9W apSet, int alKind, OhplA9W apParent, const float *a
 
 	switch(alKind)
 	{
-	case 0: return pSet->CreateWidgetWindow(alFlags ? eWidgetWindowButtonFlag_ButtonClose : eWidgetWindowButtonFlag_None, vPos, vSize, sText);
-	case 1: return pSet->CreateWidgetButton(vPos, vSize, sText, pParent);
-	case 2: return pSet->CreateWidgetLabel(vPos, vSize, sText, pParent);
 	case 3: return pSet->CreateWidgetListBox(vPos, vSize, pParent);
-	case 4: return pSet->CreateWidgetImage("", vPos, vSize, eGuiMaterial_Alpha, false, pParent);
-	case 5: return pSet->CreateWidgetFrame(vPos, vSize, false, pParent, false, true);
 	case 6: return pSet->CreateWidgetTextBox(vPos, vSize, sText, pParent);
 	}
 	return NULL;
@@ -82,45 +77,11 @@ OhplA9W ohpl_a9h_popup(OhplA9W apSet, const OhplA9Str *apStr, size_t alObj, int 
 	return pPopUp;
 }
 
-size_t ohpl_a9h_set(OhplA9W apSet, int alOp, OhplA9W apWidget, size_t alArg)
-{
-	cGuiSet *pSet = (cGuiSet*)apSet;
-	switch(alOp)
-	{
-	case 0: pSet->SetDrawFocus(alArg != 0); break;
-	case 1: return pSet->GetDrawFocus();
-	case 2: pSet->SetFocusedWidget(Wd(apWidget)); break;
-	case 3: pSet->SetDefaultFocusNavWidget(Wd(apWidget)); break;
-	case 4: return pSet->PopUpIsActive();
-	case 5: pSet->PushAttentionWidget(); break;
-	case 6: pSet->PushDefaultFocusNavWidget(); break;
-	case 7: pSet->PushFocusedWidget(); break;
-	case 8: pSet->PopAttentionWidget(); break;
-	case 9: pSet->PopDefaultFocusNavWidget(); break;
-	case 10: pSet->PopFocusedWidget(); break;
-	case 11: pSet->SetAttentionWidget(Wd(apWidget)); break;
-	case 12: return (size_t)pSet->GetAttentionWidget();
-	}
-	return 0;
-}
-
 size_t ohpl_a9h_w(OhplA9W apWidget, int alOp, size_t alArg)
 {
 	iWidget *pWidget = Wd(apWidget);
 	switch(alOp)
 	{
-	case 0: pWidget->SetEnabled(alArg != 0); break;
-	case 1: pWidget->SetVisible(alArg != 0); break;
-	case 2: return pWidget->IsVisible();
-	case 3: ((cWidgetWindow*)pWidget)->SetStatic(alArg != 0); break;
-	case 4: pWidget->CenterGlobalPositionInSet(); break;
-	case 5: pWidget->SetGlobalUIInputListener(alArg != 0); break;
-	case 6: pWidget->SetUserData((void*)alArg); break;
-	case 7: ((cWidgetWindow*)pWidget)->SetCloseButtonDisablesWindow(alArg != 0); break;
-	case 8: Label(pWidget)->SetWordWrap(alArg != 0); break;
-	case 9: pWidget->SetClipActive(alArg != 0); break;
-	case 10: Label(pWidget)->SetDrawBackGround(alArg != 0); break;
-	case 11: Label(pWidget)->SetAutogenerateSize(alArg != 0); break;
 	case 12: Text(pWidget)->SetForceCallBackOnEnter(alArg != 0); break;
 	case 13: Text(pWidget)->SetCallbackOnLostFocus(alArg != 0); break;
 	case 14: Text(pWidget)->SetMaxTextLength((int)alArg); break;
@@ -131,7 +92,6 @@ size_t ohpl_a9h_w(OhplA9W apWidget, int alOp, size_t alArg)
 	case 19: List(pWidget)->SetSelectedItem((int)alArg); break;
 	case 20: List(pWidget)->SetIsLocked(alArg != 0); break;
 	case 21: return List(pWidget)->GetIsLocked();
-	case 22: Label(pWidget)->SetTextAlign(eFontAlign_Center); break;
 	case 23: return (size_t)List(pWidget)->GetItem((int)alArg)->GetUserData();
 	}
 	return 0;
@@ -139,32 +99,7 @@ size_t ohpl_a9h_w(OhplA9W apWidget, int alOp, size_t alArg)
 
 void ohpl_a9h_w_set_f(OhplA9W apWidget, int alOp, const float *apVal)
 {
-	iWidget *pWidget = Wd(apWidget);
-	switch(alOp)
-	{
-	case 0: pWidget->SetPosition(cVector3f(apVal[0], apVal[1], apVal[2])); break;
-	case 1: pWidget->SetSize(cVector2f(apVal[0], apVal[1])); break;
-	case 2: pWidget->SetDefaultFontColor(Color(apVal)); break;
-	case 3: pWidget->SetColorMul(Color(apVal)); break;
-	case 4: Label(pWidget)->SetBackGroundColor(Color(apVal)); break;
-	case 5: Label(pWidget)->SetScrollSpeedMul(apVal[0]); break;
-	case 6: pWidget->SetDefaultFontSize(cVector2f(apVal[0], apVal[1])); break;
-	}
-}
-
-void ohpl_a9h_w_get_f(OhplA9W apWidget, int alOp, float *apOut)
-{
-	iWidget *pWidget = Wd(apWidget);
-	if(alOp == 0)
-	{
-		cVector3f v = pWidget->GetLocalPosition();
-		apOut[0] = v.x; apOut[1] = v.y; apOut[2] = v.z;
-	}
-	else
-	{
-		cVector2f v = pWidget->GetSize();
-		apOut[0] = v.x; apOut[1] = v.y;
-	}
+	if(alOp == 6) Wd(apWidget)->SetDefaultFontSize(cVector2f(apVal[0], apVal[1]));
 }
 
 size_t ohpl_a9h_w_str(OhplA9W apWidget, int alOp, const uint32_t *apText, size_t alLen, size_t alArg)
@@ -172,7 +107,6 @@ size_t ohpl_a9h_w_str(OhplA9W apWidget, int alOp, const uint32_t *apText, size_t
 	iWidget *pWidget = Wd(apWidget);
 	switch(alOp)
 	{
-	case 0: pWidget->SetText(W(apText, alLen)); break;
 	case 1: Text(pWidget)->SetIllegalChars(W(apText, alLen)); break;
 	case 2:
 		{
@@ -186,18 +120,12 @@ size_t ohpl_a9h_w_str(OhplA9W apWidget, int alOp, const uint32_t *apText, size_t
 
 void ohpl_a9h_w_get_str(OhplA9W apWidget, int alOp, int alIdx, OhplA9Sink apSink, void *apCtx)
 {
-	if(alOp == 0) Emit(apSink, apCtx, Wd(apWidget)->GetText());
-	else Emit(apSink, apCtx, List(apWidget)->GetItem(alIdx)->GetText());
+	if(alOp != 0) Emit(apSink, apCtx, List(apWidget)->GetItem(alIdx)->GetText());
 }
 
 void ohpl_a9h_w_cb(OhplA9W apWidget, int alMsg, size_t alObj)
 {
 	Wd(apWidget)->AddCallback(kMsg[alMsg], (void*)alObj, &Tramp);
-}
-
-void ohpl_a9h_w_nav(OhplA9W apWidget, int alDir, OhplA9W apTarget)
-{
-	Wd(apWidget)->SetFocusNavigation(kArrow[alDir], Wd(apTarget));
 }
 
 float ohpl_a9h_text_width(OhplA9W apWidget, const uint32_t *apText, size_t alLen)
@@ -363,14 +291,11 @@ void ohpl_a9h_story_free(OhplA9W apStory) { hplDelete((cLuxCustomStorySettings*)
 const OhplA9Host gHost = {
 	&ohpl_a9h_new,
 	&ohpl_a9h_popup,
-	&ohpl_a9h_set,
 	&ohpl_a9h_w,
 	&ohpl_a9h_w_set_f,
-	&ohpl_a9h_w_get_f,
 	&ohpl_a9h_w_str,
 	&ohpl_a9h_w_get_str,
 	&ohpl_a9h_w_cb,
-	&ohpl_a9h_w_nav,
 	&ohpl_a9h_text_width,
 	&ohpl_a9h_image_file,
 	&ohpl_a9h_lux,

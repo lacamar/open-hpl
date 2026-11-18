@@ -10,7 +10,8 @@ use super::g1_set::{self, Set};
 use super::g1_skin::Skin;
 use super::gw::{self, read};
 use super::gw_kinds::{
-    self, KIND_BUTTON, KIND_DUMMY, KIND_FRAME, KIND_IMAGE, KIND_LABEL, KIND_SLIDER,
+    self, KIND_BUTTON, KIND_CHECK, KIND_DUMMY, KIND_FRAME, KIND_GROUP, KIND_IMAGE, KIND_LABEL,
+    KIND_SLIDER, KIND_WINDOW,
 };
 use crate::types::{Color, Vector2f, Vector3f};
 
@@ -191,6 +192,7 @@ fn create(
     text: &[u32],
     parent: usize,
     a: i32,
+    b: i32,
     c: i32,
     img: usize,
 ) -> usize {
@@ -208,7 +210,7 @@ fn create(
             ptr::null(),
             0,
             a,
-            0,
+            b,
             c,
             img as *mut Element,
         )
@@ -222,7 +224,7 @@ pub(crate) fn widget_label(
     text: &[u32],
     parent: usize,
 ) -> usize {
-    create(s, KIND_LABEL, pos, Some(size), text, parent, 0, 0, 0)
+    create(s, KIND_LABEL, pos, Some(size), text, parent, 0, 0, 0, 0)
 }
 
 pub(crate) fn widget_button(
@@ -232,11 +234,11 @@ pub(crate) fn widget_button(
     text: &[u32],
     parent: usize,
 ) -> usize {
-    create(s, KIND_BUTTON, pos, Some(size), text, parent, 0, 0, 0)
+    create(s, KIND_BUTTON, pos, Some(size), text, parent, 0, 0, 0, 0)
 }
 
 pub(crate) fn widget_dummy(s: usize, pos: [f32; 3], parent: usize) -> usize {
-    create(s, KIND_DUMMY, pos, None, &[], parent, 0, 0, 0)
+    create(s, KIND_DUMMY, pos, None, &[], parent, 0, 0, 0, 0)
 }
 
 /// `cGuiSet::CreateWidgetImage`.
@@ -261,7 +263,7 @@ pub(crate) fn widget_image(
     if gfx != 0 && size[0] < 0.0 {
         size = gfx_image_size(gfx);
     }
-    create(s, KIND_IMAGE, pos, Some(size), &[], parent, 0, 0, gfx)
+    create(s, KIND_IMAGE, pos, Some(size), &[], parent, 0, 0, 0, gfx)
 }
 
 pub(crate) fn widget_slider(
@@ -280,6 +282,7 @@ pub(crate) fn widget_slider(
         &[],
         parent,
         orientation,
+        0,
         max,
         0,
     )
@@ -375,5 +378,68 @@ pub(crate) fn hud_set() -> usize {
 }
 
 pub(crate) fn widget_frame(s: usize, pos: [f32; 3], size: [f32; 2], parent: usize) -> usize {
-    create(s, KIND_FRAME, pos, Some(size), &[], parent, 0, 0, 0)
+    widget_frame_scroll(s, pos, size, parent, false, false)
+}
+
+pub(crate) fn widget_frame_scroll(
+    s: usize,
+    pos: [f32; 3],
+    size: [f32; 2],
+    parent: usize,
+    hscroll: bool,
+    vscroll: bool,
+) -> usize {
+    create(
+        s,
+        KIND_FRAME,
+        pos,
+        Some(size),
+        &[],
+        parent,
+        i32::from(hscroll),
+        i32::from(vscroll),
+        0,
+        0,
+    )
+}
+
+pub(crate) fn widget_window(
+    s: usize,
+    close: bool,
+    pos: [f32; 3],
+    size: [f32; 2],
+    text: &[u32],
+) -> usize {
+    create(
+        s,
+        KIND_WINDOW,
+        pos,
+        Some(size),
+        text,
+        0,
+        i32::from(close),
+        0,
+        0,
+        0,
+    )
+}
+
+pub(crate) fn widget_checkbox(
+    s: usize,
+    pos: [f32; 3],
+    size: [f32; 2],
+    text: &[u32],
+    parent: usize,
+) -> usize {
+    create(s, KIND_CHECK, pos, Some(size), text, parent, 0, 0, 0, 0)
+}
+
+pub(crate) fn widget_group(
+    s: usize,
+    pos: [f32; 3],
+    size: [f32; 2],
+    text: &[u32],
+    parent: usize,
+) -> usize {
+    create(s, KIND_GROUP, pos, Some(size), text, parent, 0, 0, 0, 0)
 }

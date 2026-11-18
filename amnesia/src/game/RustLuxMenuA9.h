@@ -24,14 +24,11 @@ struct OhplA9Host
 {
 	OhplA9W (*ohpl_a9h_new)(OhplA9W apSet, int alKind, OhplA9W apParent, const float *apPos, const float *apSize, int alFlags, const uint32_t *apText, size_t alLen);
 	OhplA9W (*ohpl_a9h_popup)(OhplA9W apSet, const OhplA9Str *apStr, size_t alObj, int alKillOnEscape, bool abCopyFocus);
-	size_t (*ohpl_a9h_set)(OhplA9W apSet, int alOp, OhplA9W apWidget, size_t alArg);
 	size_t (*ohpl_a9h_w)(OhplA9W apWidget, int alOp, size_t alArg);
 	void (*ohpl_a9h_w_set_f)(OhplA9W apWidget, int alOp, const float *apVal);
-	void (*ohpl_a9h_w_get_f)(OhplA9W apWidget, int alOp, float *apOut);
 	size_t (*ohpl_a9h_w_str)(OhplA9W apWidget, int alOp, const uint32_t *apText, size_t alLen, size_t alArg);
 	void (*ohpl_a9h_w_get_str)(OhplA9W apWidget, int alOp, int alIdx, OhplA9Sink apSink, void *apCtx);
 	void (*ohpl_a9h_w_cb)(OhplA9W apWidget, int alMsg, size_t alObj);
-	void (*ohpl_a9h_w_nav)(OhplA9W apWidget, int alDir, OhplA9W apTarget);
 	float (*ohpl_a9h_text_width)(OhplA9W apWidget, const uint32_t *apText, size_t alLen);
 	void (*ohpl_a9h_image_file)(OhplA9W apWidget, const uint32_t *apText, size_t alLen);
 	size_t (*ohpl_a9h_lux)(int alOp, size_t alArg);

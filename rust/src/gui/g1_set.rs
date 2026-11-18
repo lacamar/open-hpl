@@ -1662,3 +1662,8 @@ pub(crate) fn mouse_pos(s: *mut Set) -> [f32; 2] {
 pub(crate) fn mouse_z(s: *mut Set) -> f32 {
     with_or(s, 0.0, |s| s.p.mouse_z)
 }
+
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) fn draw_focus(s: *mut Set) -> bool {
+    with_or(s, false, |s| s.p.draw_focus)
+}
