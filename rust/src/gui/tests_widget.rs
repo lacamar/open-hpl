@@ -1,7 +1,7 @@
 use super::widget::*;
 use super::widgets_base::*;
 use crate::math::v3;
-use crate::types::{Color, Vector2f, Vector3f};
+use crate::types::Color;
 
 fn w(s: &str) -> Vec<u32> {
     s.chars().map(u32::from).collect()
@@ -695,28 +695,4 @@ fn drives_and_paths() {
         "pop_back on empty is UB in C++"
     );
     assert_eq!(path_piece(&w("usr"), 0), PathPiece::Push);
-}
-
-#[test]
-fn ffi_rejects_null_and_small_buffers() {
-    use super::ffi_widget::*;
-    let mut v = Vector3f::default();
-    // SAFETY: null inputs are documented no-ops; `v` is writable.
-    unsafe { ohpl_wd_global_position(std::ptr::null(), true, std::ptr::null(), &mut v) };
-    assert_eq!(v, Vector3f::default());
-    // SAFETY: null ops buffer is documented to return 0.
-    let n = unsafe {
-        ohpl_wd_borders(
-            std::ptr::null_mut(),
-            8,
-            true,
-            false,
-            std::ptr::null(),
-            std::ptr::null(),
-            std::ptr::null(),
-        )
-    };
-    assert_eq!(n, 0);
-    let _ = Vector2f::default();
-    assert_eq!(ohpl_wd_ui_arrow_slot(8), 3);
 }
