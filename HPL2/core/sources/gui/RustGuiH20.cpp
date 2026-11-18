@@ -291,9 +291,10 @@ namespace hpl {
 			return W(a->w)->IsVisible();
 		case kOhplH20Op_WIDGET_GET_TEXT:
 		{
-			const tWString& sText = W(a->w)->GetText();
-			a->ri[0] = (int32_t)sText.size();
-			return (uintptr_t)sText.data();
+			size_t lLen;
+			const uint32_t* pText = ohpl_gw_text(a->w, &lLen);
+			a->ri[0] = (int32_t)lLen;
+			return (uintptr_t)pText;
 		}
 		case kOhplH20Op_WIDGET_SET_TEXT:
 			W(a->w)->SetText(a->text ? tWString(a->text, a->textLen) : tWString());

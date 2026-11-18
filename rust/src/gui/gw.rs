@@ -25,6 +25,14 @@ use crate::types::{Color, Vector2f, Vector3f};
 pub const MSG_MOUSE_DOWN: i32 = 1;
 pub const MSG_MOUSE_UP: i32 = 2;
 
+/// `cColor()`: what a skin-less widget (the root) keeps as its font colors.
+const BLACK: Color = Color {
+    r: 0.0,
+    g: 0.0,
+    b: 0.0,
+    a: 1.0,
+};
+
 const WHITE: Color = Color {
     r: 1.0,
     g: 1.0,
@@ -215,8 +223,8 @@ pub(crate) fn new_gw(shell: W, ty: i32, set: *mut Set, skin: *mut Skin) -> *mut 
         font: ptr::null_mut(),
         font_type: 0,
         p: Pubf {
-            font_color: WHITE,
-            font_highlight: WHITE,
+            font_color: BLACK,
+            font_highlight: BLACK,
             font_size: Vector2f::default(),
             color_mul: WHITE,
         },
