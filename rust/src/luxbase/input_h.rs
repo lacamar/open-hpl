@@ -14,6 +14,7 @@ use super::look::{self, LookEnv, LookIn};
 use crate::obj::{Arena, Handle};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub mod q {
     pub const DEBUG_MENU: i32 = 0;
@@ -705,6 +706,44 @@ pub mod hop {
     pub const LOG_CFG: u32 = 170;
 }
 
+/// Set while the C++ dump tick scripts the handler: gui sends are only logged then.
+static SCRIPTED: AtomicBool = AtomicBool::new(false);
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_in_set_scripted(on: bool) {
+    SCRIPTED.store(on, Ordering::Relaxed);
+}
+
+const MSG_MOUSE_DOWN: i32 = 1;
+const MSG_UI_ARROW_PRESS: i32 = 17;
+
+/// The gui sends of `fx`; false for every other op.
+fn gui_fx(op: i32, a: i32, b: i32) -> bool {
+    match op {
+        fx::GUI_CLICK => {
+            let msg = match a {
+                0 => MSG_MOUSE_DOWN,
+                1 => MSG_MOUSE_DOWN + 1,
+                _ => MSG_MOUSE_DOWN + 2,
+            };
+            crate::gui::direct::send_mouse_button(msg, b);
+            true
+        }
+        fx::UI_SEND => {
+            let msg = match a {
+                UI_ARROW_PRESS | UI_ARROW_RELEASE => MSG_UI_ARROW_PRESS + a - UI_ARROW_PRESS,
+                UI_BUTTON_PRESS | UI_BUTTON_RELEASE | UI_BUTTON_DOUBLE => {
+                    MSG_UI_ARROW_PRESS + 2 + a - UI_BUTTON_PRESS
+                }
+                _ => return true,
+            };
+            crate::gui::direct::send_value(msg, b);
+            true
+        }
+        _ => false,
+    }
+}
+
 /// The C host behind `InEnv`.
 struct CEnv(Host);
 
@@ -722,6 +761,9 @@ impl InEnv for CEnv {
         self.0.b(hop::Q, &[ai(i64::from(q))])
     }
     fn fx(&self, op: i32, a: i32, b: i32, f: f32) {
+        if !SCRIPTED.load(Ordering::Relaxed) && gui_fx(op, a, b) {
+            return;
+        }
         self.0.go(
             hop::FX,
             &[ai(i64::from(op)), ai(i64::from(a)), ai(i64::from(b)), af(f)],
