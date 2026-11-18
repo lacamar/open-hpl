@@ -656,6 +656,7 @@ def same(name, a, b):
                 t = l.rstrip("\n").split(" ")
                 if t[0] == "billboard" and "halo" in t:
                     t[t.index("halo") - 1] = "H"
+                    t[-6:] = ["BV"] * 6  # props carry billboards, their bounds follow the physics step
                 out.append(" ".join(t))
             return out
         if mask(a) == mask(b):
