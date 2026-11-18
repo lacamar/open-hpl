@@ -156,7 +156,7 @@ namespace hpl {
 
 		uint64_t ohpl_ntj_create_ball(uint64_t w, const cVector3f* pivot, NewtonBody* child, NewtonBody* parent, NewtonJoint** outJoint);
 		uint64_t ohpl_ntj_create_hinge(uint64_t w, NewtonBody* child, NewtonBody* parent, size_t cpp, const OhplL4JointOps* ops,
-								const cMatrixf* local0, const cMatrixf* local1, NewtonJoint** outJoint);
+								const cVector3f* pivot, const cVector3f* pin, NewtonJoint** outJoint);
 		uint64_t ohpl_ntj_create_slider(uint64_t w, const cVector3f* pivot, const cVector3f* pin, NewtonBody* child, NewtonBody* parent,
 								size_t cpp, const OhplL4JointOps* ops, NewtonJoint** outJoint);
 		uint64_t ohpl_ntj_create_screw(uint64_t w, const cVector3f* pivot, const cVector3f* pin, NewtonBody* child, NewtonBody* parent,
@@ -173,7 +173,9 @@ namespace hpl {
 		void ohpl_ntj_ball_cone_limits(uint64_t j, const cVector3f* pin, float cone, float twist);
 		float ohpl_ntj_ball_cone(uint64_t j);
 		float ohpl_ntj_ball_twist(uint64_t j);
-		void ohpl_ntj_locals(uint64_t j, cMatrixf* m0, cMatrixf* m1);
+		float ohpl_ntj_hinge_angle(uint64_t j);
+		void ohpl_ntj_hinge_reset_matrix(uint64_t j, cMatrixf* out);
+		void ohpl_ntj_pin_velocity(uint64_t j, cVector3f* out);
 		void ohpl_ntj_ball_angles(uint64_t j, cVector3f* out);
 		void ohpl_ntj_ball_omega(uint64_t j, cVector3f* out);
 		void ohpl_ntj_ball_force(uint64_t j, cVector3f* out);

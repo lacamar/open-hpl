@@ -9,7 +9,6 @@
 #include "system/SystemTypes.h"
 #include "physics/RustPhysBook.h"
 
-struct OhplPid;
 struct OhplImpactCounts;
 
 namespace hpl {
@@ -111,15 +110,6 @@ struct OhplPhysVt
 	void (*body_set_matrix)(size_t, const cMatrixf*);
 };
 
-struct OhplCtrlParams
-{
-	size_t self, body, joint;
-	bool active, paused, log, mulMass;
-	int32_t kind, input, inputAxis, output, outputAxis, end;
-	float a, b, c, dest, maxOutput;
-	OhplStr next;
-};
-
 struct OhplSurfaceParams
 {
 	size_t self, physics;
@@ -182,18 +172,12 @@ struct OhplBodyFilter
 	int32_t minPushStrength;
 };
 
-static_assert(sizeof(OhplCtrlParams) == 88 && sizeof(OhplSurfaceParams) == 112, "param layout");
+static_assert(sizeof(OhplSurfaceParams) == 112, "param layout");
 static_assert(sizeof(OhplJointState) == 216 && sizeof(OhplMoveParams) == 56 && sizeof(OhplLimitEffect) == 24, "state layout");
 static_assert(sizeof(OhplBodyFilter) == 24, "filter layout");
 
 extern "C" {
 void ohpl_h15s_params(const OhplSurfaceState*, size_t, size_t, OhplStr, OhplStr, OhplSurfaceParams*);
-
-OhplPid* ohpl_phys_pid_new();
-void ohpl_phys_pid_free(OhplPid*);
-void ohpl_phys_pid_set_error_num(OhplPid*, int32_t);
-void ohpl_phys_pid_reset(OhplPid*);
-void ohpl_phys_ctrl_update(const OhplPhysVt*, const OhplCtrlParams*, OhplPid*, float);
 
 void ohpl_phys_surface_on_impact(const OhplPhysVt*, const OhplSurfaceParams*, float, const cVector3f*, size_t);
 void ohpl_phys_surface_on_slide(const OhplPhysVt*, const OhplSurfaceParams*, float, const cVector3f*, int32_t, size_t, size_t);

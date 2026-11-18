@@ -3,7 +3,10 @@
 
 use super::host::JointOps;
 use super::reg::{self, JointKind, JointRec, reg};
-use crate::math::{IDENTITY, atan2, cross3, dot3, fma, matrix_mul, sub3, to_rad, transpose, v3};
+use crate::math::{
+    IDENTITY, atan2, cross3, dot3, fma, matrix_inverse, matrix_mul, normalize3, sub3, to_rad,
+    transpose, v3,
+};
 use crate::obj::Handle;
 use crate::sys::newton::{
     NewtonBallGetJointAngle, NewtonBallGetJointForce, NewtonBallGetJointOmega,
@@ -51,6 +54,11 @@ fn offset(a: Vector3f, dir: Vector3f, s: f32) -> Vector3f {
     v3(fma(dir.x, s, a.x), fma(dir.y, s, a.y), fma(dir.z, s, a.z))
 }
 
+fn vec_of(p: *const Vector3f) -> Vector3f {
+    // SAFETY: the creators' contract makes `p` a valid vector.
+    unsafe { p.as_ref() }.copied().unwrap_or_default()
+}
+
 fn insert(rec: JointRec) -> u64 {
     let Some(mut r) = reg() else { return 0 };
     r.joints.insert(rec).map_or(0, Handle::to_bits)
@@ -64,6 +72,7 @@ fn blank(nj: *mut NewtonJoint, cpp: usize, ops: *const JointOps, kind: JointKind
         kind,
         local0: IDENTITY,
         local1: IDENTITY,
+        pin: Vector3f::default(),
         min: 0.0,
         max: 0.0,
         previous: 0.0,
@@ -98,8 +107,51 @@ pub unsafe extern "C" fn ohpl_ntj_create_ball(
 
 unsafe extern "C" fn get_info(_j: *const NewtonJoint, _info: *mut NewtonJointRecord) {}
 
+/// `iPhysicsJoint::GetMatrixFromPinAndPivot`.
+fn pin_pivot_matrix(pin: Vector3f, pivot: Vector3f) -> Matrixf {
+    let mut up = pin;
+    normalize3(&mut up);
+    let mut temp = v3(1.0 - up.x, 1.0 - up.y, 1.0 - up.z);
+    normalize3(&mut temp);
+    if temp == up {
+        temp = v3(temp.x * 1.5, temp.y * 0.5, temp.z * 2.0);
+        normalize3(&mut temp);
+    }
+    let mut right = cross3(up, temp);
+    normalize3(&mut right);
+    let mut forward = cross3(up, right);
+    normalize3(&mut forward);
+    let m = Matrixf {
+        m: [
+            [right.x, right.y, right.z, 0.0],
+            [up.x, up.y, up.z, 0.0],
+            [forward.x, forward.y, forward.z, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ],
+    };
+    let mut t = transpose(&m);
+    t.m[0][3] = pivot.x;
+    t.m[1][3] = pivot.y;
+    t.m[2][3] = pivot.z;
+    t
+}
+
+/// The body matrices of a joint through its host table.
+///
 /// # Safety
-/// `ops` outlives the joint; `local0`/`local1` are valid matrices.
+/// `ops` outlives the joint; `cpp` is the live joint.
+unsafe fn body_matrices(ops: *const JointOps, cpp: usize) -> (Matrixf, Matrixf) {
+    let (mut child, mut parent) = (IDENTITY, IDENTITY);
+    // SAFETY: caller contract.
+    if let Some(o) = unsafe { ops.as_ref() } {
+        // SAFETY: host callback with valid out-pointers.
+        unsafe { (o.matrices)(cpp, &mut child, &mut parent) };
+    }
+    (child, parent)
+}
+
+/// # Safety
+/// `ops` outlives the joint; `pivot`/`pin` are valid; the joint `cpp` already knows its bodies.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ntj_create_hinge(
     w: u64,
@@ -107,8 +159,8 @@ pub unsafe extern "C" fn ohpl_ntj_create_hinge(
     parent: *mut NewtonBody,
     cpp: usize,
     ops: *const JointOps,
-    local0: *const Matrixf,
-    local1: *const Matrixf,
+    pivot: *const Vector3f,
+    pin: *const Vector3f,
     out_nj: *mut *mut NewtonJoint,
 ) -> u64 {
     let Some(nw) = nw_of(w) else { return 0 };
@@ -119,8 +171,13 @@ pub unsafe extern "C" fn ohpl_ntj_create_hinge(
     let mut rec = blank(nj, cpp, ops, JointKind::Hinge);
     // SAFETY: caller contract.
     unsafe {
-        rec.local0 = local0.as_ref().copied().unwrap_or(IDENTITY);
-        rec.local1 = local1.as_ref().copied().unwrap_or(IDENTITY);
+        let (cm, pm) = body_matrices(ops, cpp);
+        let frame = pin_pivot_matrix(
+            pin.as_ref().copied().unwrap_or_default(),
+            pivot.as_ref().copied().unwrap_or_default(),
+        );
+        rec.local0 = matrix_mul(&matrix_inverse(&cm), &frame);
+        rec.local1 = matrix_mul(&matrix_inverse(&pm), &frame);
         if let Some(o) = out_nj.as_mut() {
             *o = nj;
         }
@@ -136,13 +193,19 @@ fn create_limited(
     nj: *mut NewtonJoint,
     cpp: usize,
     ops: *const JointOps,
+    pin: Vector3f,
     out_nj: *mut *mut NewtonJoint,
 ) -> u64 {
     // SAFETY: caller contract of the public creators.
     if let Some(o) = unsafe { out_nj.as_mut() } {
         *o = nj;
     }
-    let bits = insert(blank(nj, cpp, ops, kind));
+    let mut rec = blank(nj, cpp, ops, kind);
+    rec.pin = pin;
+    if kind == JointKind::Screw {
+        normalize3(&mut rec.pin);
+    }
+    let bits = insert(rec);
     // SAFETY: the user data is the arena handle, never an address.
     unsafe { NewtonJointSetUserData(nj, bits as usize as *mut c_void) };
     bits
@@ -164,7 +227,7 @@ pub unsafe extern "C" fn ohpl_ntj_create_slider(
     let Some(nw) = nw_of(w) else { return 0 };
     // SAFETY: caller contract.
     let nj = unsafe { NewtonConstraintCreateSlider(nw, pivot.cast(), pin.cast(), child, parent) };
-    let bits = create_limited(JointKind::Slider, nj, cpp, ops, out_nj);
+    let bits = create_limited(JointKind::Slider, nj, cpp, ops, vec_of(pin), out_nj);
     // SAFETY: `nj` is live.
     unsafe { NewtonSliderSetUserCallback(nj, Some(slider_limit)) };
     bits
@@ -187,7 +250,7 @@ pub unsafe extern "C" fn ohpl_ntj_create_screw(
     // SAFETY: caller contract.
     let nj =
         unsafe { NewtonConstraintCreateCorkscrew(nw, pivot.cast(), pin.cast(), child, parent) };
-    let bits = create_limited(JointKind::Screw, nj, cpp, ops, out_nj);
+    let bits = create_limited(JointKind::Screw, nj, cpp, ops, vec_of(pin), out_nj);
     // SAFETY: `nj` is live.
     unsafe { NewtonCorkscrewSetUserCallback(nj, Some(screw_limit)) };
     bits
@@ -286,20 +349,44 @@ pub extern "C" fn ohpl_ntj_ball_twist(j: u64) -> f32 {
     reg::joint(j).map_or(0.0, |(_, r)| r.twist)
 }
 
-/// # Safety
-/// Both matrices are valid.
+/// `iPhysicsJointHinge::GetAngle`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntj_locals(j: u64, m0: *mut Matrixf, m1: *mut Matrixf) {
-    if let Some((_, r)) = reg::joint(j) {
-        // SAFETY: caller contract.
-        unsafe {
-            if let Some(m) = m0.as_mut() {
-                *m = r.local0;
-            }
-            if let Some(m) = m1.as_mut() {
-                *m = r.local1;
-            }
-        }
+pub extern "C" fn ohpl_ntj_hinge_angle(j: u64) -> f32 {
+    let Some((_, r)) = reg::joint(j) else {
+        return 0.0;
+    };
+    // SAFETY: `ops` outlives the joint.
+    let (child, parent) = unsafe { body_matrices(r.ops, r.cpp) };
+    hinge_geometry(&child, &parent, &r.local0, &r.local1).angle
+}
+
+/// `iPhysicsJointHinge::ResetPosition`: the child matrix that restores the hinge frame.
+///
+/// # Safety
+/// `out` is writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ntj_hinge_reset_matrix(j: u64, out: *mut Matrixf) {
+    let Some((_, r)) = reg::joint(j) else { return };
+    // SAFETY: `ops` outlives the joint.
+    let (_, parent) = unsafe { body_matrices(r.ops, r.cpp) };
+    let m = matrix_mul(&matrix_mul(&parent, &r.local1), &matrix_inverse(&r.local0));
+    // SAFETY: caller contract.
+    if let Some(o) = unsafe { out.as_mut() } {
+        *o = m;
+    }
+}
+
+/// Slider and screw velocity along the pin.
+///
+/// # Safety
+/// `out` is a valid vector.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ntj_pin_velocity(j: u64, out: *mut Vector3f) {
+    let Some((_, r)) = reg::joint(j) else { return };
+    let speed = ohpl_ntj_axis(j, 1);
+    // SAFETY: caller contract.
+    if let Some(o) = unsafe { out.as_mut() } {
+        *o = v3(r.pin.x * speed, r.pin.y * speed, r.pin.z * speed);
     }
 }
 

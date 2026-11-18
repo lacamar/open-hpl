@@ -89,23 +89,20 @@ pub extern "C" fn ohpl_h15b_destroy(b: u64, me: usize) {
     shell::body_destroy(b, me);
 }
 
-/// # Safety
-/// `state` is writable and embedded in the joint `me`; `vt` is the static physics host table.
+/// Returns the Rust-owned joint state (freed by `ohpl_h15j_drop`); `vt` is the static physics host table.
 #[unsafe(no_mangle)]
 #[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ohpl_h15j_new(
+pub extern "C" fn ohpl_h15j_new(
     op: WorldOp,
     me: usize,
-    state: *mut JointStateC,
     vt: usize,
     parent: usize,
     child: usize,
     world: usize,
     pivot: Vector3f,
     pin: Vector3f,
-) -> u64 {
-    // SAFETY: caller contract.
-    unsafe { shell::joint_new(op, me, state, vt, parent, child, world, pivot, pin) }
+) -> *mut JointStateC {
+    shell::joint_new(op, me, vt, parent, child, world, pivot, pin)
 }
 
 #[unsafe(no_mangle)]
@@ -184,23 +181,75 @@ pub unsafe extern "C" fn ohpl_h15j_check_breakage(j: u64, me: usize) -> bool {
     unsafe { shell::joint_check_breakage(j, me) }
 }
 
-/// Controller construction: zeroes the embedded state, sets `self`, and creates its PID (error window 10).
-///
-/// # Safety
-/// `state` is writable, `size_of::<CtrlParams>()` bytes, embedded in the controller `me`.
+/// Rust-owned controller: `params` first so the `CtrlParams` pointer is the box pointer.
+#[repr(C)]
+pub struct CtrlBox {
+    params: super::controller::CtrlParams,
+    pid: super::pid::Pid,
+}
+
+/// `me` is the C++ controller.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h15c_init(
-    state: *mut super::controller::CtrlParams,
-    me: usize,
-) -> *mut super::pid::Pid {
+pub extern "C" fn ohpl_h15c_new(me: usize) -> *mut super::controller::CtrlParams {
+    let mut pid = super::pid::Pid::new();
+    pid.set_error_num(10);
+    Box::into_raw(Box::new(CtrlBox {
+        params: super::controller::CtrlParams::new(me),
+        pid,
+    }))
+    .cast()
+}
+
+/// # Safety
+/// `c` comes from `ohpl_h15c_new` and is not used afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h15c_free(c: *mut super::controller::CtrlParams) {
+    if !c.is_null() {
+        // SAFETY: caller contract; `CtrlBox` is repr(C) with params first.
+        drop(unsafe { Box::from_raw(c.cast::<CtrlBox>()) });
+    }
+}
+
+/// # Safety
+/// `c` is live; `vt` is the static physics host table. The params are copied so host callbacks may write them.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h15c_update(
+    vt: *const super::host::Vt,
+    c: *mut super::controller::CtrlParams,
+    time_step: f32,
+) {
     // SAFETY: caller contract.
-    if let Some(s) = unsafe { state.as_mut() } {
-        *s = super::controller::CtrlParams::new(me);
+    let (Some(vt), Some(p)) = (unsafe { vt.as_ref() }, unsafe { c.as_ref() }) else {
+        return;
+    };
+    let p = *p;
+    // SAFETY: `c` is a `CtrlBox`; only the pid field is addressed, no reference is held across the host calls.
+    let pid = unsafe { &raw mut (*c.cast::<CtrlBox>()).pid };
+    // SAFETY: pid is live and not borrowed elsewhere.
+    unsafe { super::controller::update(&vt, &p, pid, time_step) };
+}
+
+/// # Safety
+/// `c` is live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h15c_set_active(c: *mut super::controller::CtrlParams, active: bool) {
+    // SAFETY: caller contract.
+    if let Some(p) = unsafe { c.as_mut() } {
+        if p.active == active {
+            return;
+        }
+        p.active = active;
+        // SAFETY: `c` is a `CtrlBox`.
+        unsafe { (*c.cast::<CtrlBox>()).pid.reset() };
     }
-    let pid = Box::into_raw(Box::new(super::pid::Pid::new()));
-    // SAFETY: `pid` was just allocated.
-    if let Some(p) = unsafe { pid.as_mut() } {
-        p.set_error_num(10);
+}
+
+/// # Safety
+/// `c` is live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h15c_set_error_num(c: *mut super::controller::CtrlParams, n: i32) {
+    // SAFETY: caller contract; `c` is a `CtrlBox`.
+    if let Some(b) = unsafe { c.cast::<CtrlBox>().as_mut() } {
+        b.pid.set_error_num(n);
     }
-    pid
 }

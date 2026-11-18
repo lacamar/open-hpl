@@ -422,27 +422,23 @@ fn matrix_of(op: Option<WorldOp>, body: H) -> Matrixf {
     m
 }
 
-/// `iPhysicsJoint` constructor: bodies learn about the joint, setup matrices and local pivot are derived.
-///
-/// # Safety
-/// `state` is writable and embedded in the joint `me`.
+/// `iPhysicsJoint` constructor: bodies learn about the joint, setup matrices and local pivot are
+/// derived. Returns the Rust-owned state, freed by `joint_drop`.
 #[allow(clippy::too_many_arguments)]
-pub unsafe fn joint_new(
+pub fn joint_new(
     op: WorldOp,
     me: usize,
-    state: *mut JointStateC,
     vt: usize,
     parent: H,
     child: H,
     world: H,
     pivot: Vector3f,
     pin: Vector3f,
-) -> u64 {
+) -> *mut JointStateC {
     let bits = shells()
         .and_then(|mut s| {
             s.joints.insert(JointShell {
                 op: Some(op),
-                state: state as usize,
                 vt,
                 ..JointShell::default()
             })
@@ -507,11 +503,9 @@ pub unsafe fn joint_new(
         has_collided: false,
         auto_delete_callback: false,
     };
-    // SAFETY: caller contract.
-    if let Some(d) = unsafe { state.as_mut() } {
-        *d = s;
-    }
-    bits
+    let state = Box::into_raw(Box::new(s));
+    jnt(bits, |j| j.state = state as usize);
+    state
 }
 
 /// Destructor body after the callback is released: controllers, body links, sound.
@@ -547,6 +541,8 @@ pub fn joint_drop(bits: u64, me: usize) {
     if let (Some(h), Some(mut sh)) = (Handle::from_bits(bits), shells()) {
         sh.joints.remove(h);
     }
+    // SAFETY: the state was `Box::into_raw`ed by `joint_new`; the shell is gone, the C++ joint is being destroyed.
+    drop(unsafe { Box::from_raw(state as *mut JointStateC) });
 }
 
 pub fn joint_add_controller(bits: u64, me: usize, ctrl: usize) {

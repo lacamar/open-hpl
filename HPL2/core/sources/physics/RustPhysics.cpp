@@ -39,7 +39,7 @@ namespace hpl {
 			vt.can_play_impact = [](size_t p) { return reinterpret_cast<cPhysics*>(p)->CanPlayImpact(); };
 			vt.add_impact = [](size_t p) { reinterpret_cast<cPhysics*>(p)->AddImpact(); };
 			vt.pworld_world = [](size_t pw) { return H(PW(pw)->GetWorld()); };
-			vt.joint_world_world = [](size_t j) { return H(J(j)->mpWorld->GetWorld()); };
+			vt.joint_world_world = [](size_t j) { return H(J(j)->mS->world->GetWorld()); };
 			vt.body_world_world = [](size_t b) { return H(B(b)->GetWorld()->GetWorld()); };
 			vt.world_silent = [](size_t w) { return W(w)->GetSound()->GetSoundHandler()->GetSilent(); };
 			vt.world_sound_exists = [](size_t w, size_t e, int32_t id) { return W(w)->SoundEntityExists(E(e), id); };
@@ -128,10 +128,10 @@ namespace hpl {
 			vt.joint_distance = [](size_t j) { return J(j)->GetDistance(); };
 			vt.joint_parent = [](size_t j) { return H(J(j)->GetParentBody()); };
 			vt.joint_child = [](size_t j) { return H(J(j)->GetChildBody()); };
-			vt.joint_has_collided = [](size_t j) { return J(j)->mbHasCollided; };
-			vt.joint_set_has_collided = [](size_t j, bool v) { J(j)->mbHasCollided = v; };
-			vt.joint_callback_max = [](size_t j) { if(J(j)->mpCallback) J(j)->mpCallback->OnMaxLimit(J(j)); };
-			vt.joint_callback_min = [](size_t j) { if(J(j)->mpCallback) J(j)->mpCallback->OnMinLimit(J(j)); };
+			vt.joint_has_collided = [](size_t j) { return J(j)->mS->hasCollided; };
+			vt.joint_set_has_collided = [](size_t j, bool v) { J(j)->mS->hasCollided = v; };
+			vt.joint_callback_max = [](size_t j) { if(J(j)->mS->callback) J(j)->mS->callback->OnMaxLimit(J(j)); };
+			vt.joint_callback_min = [](size_t j) { if(J(j)->mS->callback) J(j)->mS->callback->OnMinLimit(J(j)); };
 			vt.joint_get_controller = [](size_t j, OhplStr name) { return H(J(j)->GetController(T(name))); };
 			vt.joint_controller_count = [](size_t j) { return (int32_t)J(j)->ControllerCount(); };
 			vt.joint_controller_at = [](size_t j, int32_t i) {
@@ -144,7 +144,7 @@ namespace hpl {
 
 			vt.ctrl_is_active = [](size_t c) { return C(c)->IsActive(); };
 			vt.ctrl_set_active = [](size_t c, bool v) { C(c)->SetActive(v); };
-			vt.ctrl_deactivate = [](size_t c) { C(c)->mbActive = false; };
+			vt.ctrl_deactivate = [](size_t c) { C(c)->mS->active = false; };
 			vt.ctrl_end_type = [](size_t c) { return (int32_t)C(c)->GetEndType(); };
 			vt.ctrl_next_name = [](size_t c) { return S_(C(c)->GetNextController()); };
 			vt.ctrl_log = [](size_t c, float value, float dest, float error, float output) {

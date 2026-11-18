@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <cstdint>
 
+namespace hpl { struct OhplJointShellState; }
+
 extern "C" {
 uint64_t ohpl_h15_body_new();
 void ohpl_h15_body_free(uint64_t);
@@ -103,7 +105,6 @@ void ohpl_h15w_fadeout_all_loop_sounds(uint64_t, float);
 void ohpl_h15w_render_contacts(uint64_t, size_t, size_t);
 bool ohpl_h15w_shape_world_collision(uint64_t, void*, size_t, const void*, const hpl::OhplH15Query*, size_t);
 
-OhplPid* ohpl_h15c_init(void*, size_t);
 uint64_t ohpl_h15b_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t, void*, size_t, size_t);
 void ohpl_h15b_free(uint64_t);
 void ohpl_h15b_add_joint(uint64_t, size_t);
@@ -119,7 +120,7 @@ void ohpl_h15b_remove_char(uint64_t, size_t);
 void ohpl_h15b_add_verlet(uint64_t, size_t);
 void ohpl_h15b_remove_verlet(uint64_t, size_t);
 void ohpl_h15b_destroy(uint64_t, size_t);
-uint64_t ohpl_h15j_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t, void*, size_t, size_t, size_t, size_t, hpl::OhplV3Pod, hpl::OhplV3Pod);
+hpl::OhplJointShellState* ohpl_h15j_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t, size_t, size_t, size_t, size_t, hpl::OhplV3Pod, hpl::OhplV3Pod);
 void ohpl_h15j_drop(uint64_t, size_t);
 void ohpl_h15j_add_controller(uint64_t, size_t, size_t);
 size_t ohpl_h15j_get_controller(uint64_t, const char*, size_t);

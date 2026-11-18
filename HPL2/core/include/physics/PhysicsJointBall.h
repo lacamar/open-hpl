@@ -26,9 +26,6 @@ namespace hpl {
 
 	class iPhysicsJointBall : public iPhysicsJoint
 	{
-	#ifdef __GNUC__
-		typedef iPhysicsJoint __super;
-	#endif
 	public:
 		iPhysicsJointBall(const tString &asName, iPhysicsBody *apParentBody, iPhysicsBody *apChildBody,
 			iPhysicsWorld *apWorld,const cVector3f &avPivotPoint,const cVector3f &avPinDir);
@@ -36,16 +33,16 @@ namespace hpl {
 
 		float GetMaxConeAngle(){ return ohpl_ntj_ball_cone(mhRust);}
 		float GetMaxTwistAngle(){ return ohpl_ntj_ball_twist(mhRust);}
+		void SetConeLimits(float afMaxConeAngle, float afMaxTwistAngle){ ohpl_ntj_ball_cone_limits(mhRust, &mS->startPinDir, afMaxConeAngle, afMaxTwistAngle);}
 
-        void SetConeLimits(float afMaxConeAngle, float afMaxTwistAngle);
-		cVector3f GetAngles();
+		cVector3f GetAngles(){ cVector3f vAngles; ohpl_ntj_ball_angles(mhRust, &vAngles); return vAngles;}
 
-		cVector3f GetVelocity();
-		cVector3f GetAngularVelocity();
-		float GetForceSize();
+		cVector3f GetVelocity(){ return cVector3f(0,0,0);}
+		cVector3f GetAngularVelocity(){ cVector3f vVel; ohpl_ntj_ball_omega(mhRust, &vVel); return vVel;}
+		float GetForceSize(){ cVector3f vForce; ohpl_ntj_ball_force(mhRust, &vForce); return vForce.Length();}
 
-		float GetDistance();
-		float GetAngle();
+		float GetDistance(){ return 0;}
+		float GetAngle(){ return 0;}
 
 		ePhysicsJointType GetType(){ return ePhysicsJointType_Ball;}
 	};
