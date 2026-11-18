@@ -1,13 +1,15 @@
-//! `iEntity3D`, `cNode3D` and `cCamera` state logic. The C++ classes keep their vtables, lists and
-//! callbacks and answer the `Host` queries; transforms, dirty flags and traversal order live here.
+//! `iEntity3D`, `cNode3D` and `cCamera` state. The entity and node pods are box-pinned and owned
+//! here (the C++ classes keep a pointer, their vtables, strings and callback lists); transforms,
+//! dirty flags, parent links and child lists live here.
 //!
-//! No reference to C++ state is held across a host call: every access is a short raw-pointer scope,
+//! No reference into a pod is held across a host call: every access is a short raw-pointer scope,
 //! because host calls reach virtual methods that call back into these functions.
 
 use super::node::{add_rotation, ohpl_math_quaternion_mul, update_matrix, world_to_local};
 use crate::math::{IDENTITY, fma, matrix_mul as mul_raw, sub3};
 use crate::types::{Matrixf, Quaternion, Vector2f, Vector3f};
 use std::hint::black_box;
+use std::ptr::null_mut;
 
 // Opaque operands keep LLVM from folding constant entries, which changes the NaN payload an fma
 // propagates.
@@ -23,22 +25,35 @@ fn translation_of(m: &Matrixf) -> Vector3f {
     }
 }
 
-/// Raw views of one `iEntity3D`; null parents are 0.
+/// C++-visible part of an `iEntity3D` pod (`OhplEntPod`).
 #[repr(C)]
-pub struct EntView {
-    pub local: *mut Matrixf,
-    pub world: *mut Matrixf,
-    pub transform_updated: *mut bool,
-    pub update_bv: *mut bool,
-    pub apply_bv: *mut bool,
-    pub count: *mut i32,
-    pub parent_node: usize,
-    pub parent_entity: usize,
+pub struct EntPub {
+    pub local: Matrixf,
+    pub world: Matrixf,
+    pub owner: usize,
+    pub parent_node: *mut NodeBox,
+    pub parent_entity: *mut EntBox,
+    pub count: i32,
+    pub unique_id: i32,
+    pub iterator_count: i32,
+    pub transform_updated: bool,
+    pub update_bv: bool,
+    pub apply_bv: bool,
+    pub active: bool,
+    pub saved: bool,
 }
 
-/// State of one `cNode3D`.
+/// An `iEntity3D` pod; `s` is first so the box address is the `EntPub` address.
 #[repr(C)]
-pub struct NodeState {
+pub struct EntBox {
+    pub s: EntPub,
+    pub kids: Vec<*mut EntBox>,
+    pub nodes: Vec<*mut NodeBox>,
+}
+
+/// C++-visible part of a `cNode3D` pod (`OhplNodePod`).
+#[repr(C)]
+pub struct NodePub {
     pub local: Matrixf,
     pub world: Matrixf,
     pub pre: Matrixf,
@@ -46,308 +61,31 @@ pub struct NodeState {
     pub rotation: Quaternion,
     pub scale: Vector3f,
     pub translation: Vector3f,
-    pub parent: usize,
-    pub entity_parent: usize,
+    pub owner: usize,
+    pub parent: *mut NodeBox,
+    pub entity_parent: *mut EntBox,
+    pub custom_flags: i32,
     pub transform_updated: bool,
     pub use_pre: bool,
     pub use_post: bool,
+    pub active: bool,
+    pub auto_delete: bool,
 }
 
-type ListFn = unsafe extern "C" fn(usize, *mut usize, usize) -> usize;
+/// A `cNode3D` pod.
+#[repr(C)]
+pub struct NodeBox {
+    pub s: NodePub,
+    pub kids: Vec<*mut NodeBox>,
+    pub ents: Vec<*mut EntBox>,
+}
 
-/// C++ answers. Objects are `iEntity3D*` / `cNode3D*` as `usize`; list functions return the item
-/// count and fill up to `cap` entries.
+/// C++ virtuals: objects are `iEntity3D*` / `cNode3D*` as `usize`.
 #[repr(C)]
 pub struct Host {
-    pub ent_view: unsafe extern "C" fn(usize, *mut EntView),
-    pub ent_children: ListFn,
-    pub ent_node_children: ListFn,
     pub ent_on_updated: unsafe extern "C" fn(usize),
     pub ent_callbacks: unsafe extern "C" fn(usize),
-    pub node_state: unsafe extern "C" fn(usize) -> *mut NodeState,
-    pub node_children: ListFn,
-    pub node_entities: ListFn,
-}
-
-/// A list snapshot, so the C++ list may change during the traversal that follows.
-fn snapshot(f: ListFn, obj: usize) -> Vec<usize> {
-    // SAFETY: host contract: `f` fills at most `cap` entries.
-    let n = unsafe { f(obj, std::ptr::null_mut(), 0) };
-    if n == 0 {
-        return Vec::new();
-    }
-    let mut v = vec![0usize; n];
-    // SAFETY: `v` holds `n` entries.
-    unsafe { f(obj, v.as_mut_ptr(), n) };
-    v
-}
-
-fn view(h: &Host, e: usize) -> EntView {
-    let mut v = EntView {
-        local: std::ptr::null_mut(),
-        world: std::ptr::null_mut(),
-        transform_updated: std::ptr::null_mut(),
-        update_bv: std::ptr::null_mut(),
-        apply_bv: std::ptr::null_mut(),
-        count: std::ptr::null_mut(),
-        parent_node: 0,
-        parent_entity: 0,
-    };
-    // SAFETY: host contract.
-    unsafe { (h.ent_view)(e, &mut v) };
-    v
-}
-
-/// # Safety
-/// `h` and `e` valid; the host views point at live C++ members.
-pub unsafe fn ent_update_world(h: &Host, e: usize) {
-    let v = view(h, e);
-    // SAFETY: view pointers are live members of the entity.
-    unsafe {
-        if !*v.transform_updated {
-            return;
-        }
-        *v.transform_updated = false;
-        if v.parent_node != 0 {
-            node_update_world(h, v.parent_node);
-            let pw = (*(h.node_state)(v.parent_node)).world;
-            let local = *v.local;
-            *v.world = mm(&pw, &local);
-        } else if v.parent_entity != 0 {
-            ent_update_world(h, v.parent_entity);
-            let pw = *view(h, v.parent_entity).world;
-            let local = *v.local;
-            *v.world = mm(&pw, &local);
-        } else {
-            *v.world = *v.local;
-        }
-    }
-}
-
-/// `iEntity3D::SetTransformUpdated`.
-///
-/// # Safety
-/// As `ent_update_world`.
-pub unsafe fn ent_set_transform_updated(h: &Host, e: usize, callbacks: bool) {
-    let v = view(h, e);
-    // SAFETY: view pointers are live members of the entity.
-    unsafe {
-        *v.transform_updated = true;
-        *v.count = (*v.count).wrapping_add(1);
-        *v.update_bv = true;
-        (h.ent_on_updated)(e);
-        for c in snapshot(h.ent_children, e) {
-            ent_set_transform_updated(h, c, true);
-        }
-        for n in snapshot(h.ent_node_children, e) {
-            node_set_world_transform_updated(h, n);
-        }
-        if callbacks {
-            (h.ent_callbacks)(e);
-        }
-    }
-}
-
-/// # Safety
-/// As `ent_update_world`.
-pub unsafe fn ent_set_matrix(h: &Host, e: usize, m: &Matrixf) {
-    let v = view(h, e);
-    // SAFETY: live member.
-    unsafe { *v.local = *m };
-    // SAFETY: as above.
-    unsafe { ent_set_transform_updated(h, e, true) };
-}
-
-/// # Safety
-/// As `ent_update_world`.
-pub unsafe fn ent_set_position(h: &Host, e: usize, p: Vector3f) {
-    let v = view(h, e);
-    // SAFETY: live member.
-    unsafe {
-        (*v.local).m[0][3] = p.x;
-        (*v.local).m[1][3] = p.y;
-        (*v.local).m[2][3] = p.z;
-        ent_set_transform_updated(h, e, true);
-    }
-}
-
-/// # Safety
-/// As `ent_update_world`.
-pub unsafe fn ent_set_world_position(h: &Host, e: usize, p: Vector3f) {
-    let v = view(h, e);
-    if v.parent_entity == 0 {
-        // SAFETY: as above.
-        unsafe { ent_set_position(h, e, p) };
-        return;
-    }
-    // SAFETY: as above.
-    unsafe {
-        ent_update_world(h, v.parent_entity);
-        let pw = translation_of(&*view(h, v.parent_entity).world);
-        ent_set_position(h, e, sub3(p, pw));
-    }
-}
-
-/// # Safety
-/// As `ent_update_world`.
-pub unsafe fn ent_set_world_matrix(h: &Host, e: usize, m: &Matrixf) {
-    let v = view(h, e);
-    if v.parent_entity == 0 {
-        // SAFETY: as above.
-        unsafe { ent_set_matrix(h, e, m) };
-        return;
-    }
-    // SAFETY: as above.
-    unsafe {
-        ent_update_world(h, v.parent_entity);
-        let pw = *view(h, v.parent_entity).world;
-        ent_set_matrix(h, e, &world_to_local(&pw, m));
-    }
-}
-
-/// `iEntity3D::GetBoundingVolume` flag step: true when the C++ side must apply the world matrix
-/// to its bounding volume.
-///
-/// # Safety
-/// As `ent_update_world`.
-pub unsafe fn ent_bv_dirty(h: &Host, e: usize) -> bool {
-    let v = view(h, e);
-    // SAFETY: live members.
-    unsafe {
-        if *v.apply_bv && *v.update_bv {
-            ent_update_world(h, e);
-            *v.update_bv = false;
-            return true;
-        }
-    }
-    false
-}
-
-fn nst(h: &Host, n: usize) -> *mut NodeState {
-    // SAFETY: host contract.
-    unsafe { (h.node_state)(n) }
-}
-
-/// # Safety
-/// `h` and `n` valid.
-pub unsafe fn node_update_world(h: &Host, n: usize) {
-    let s = nst(h, n);
-    // SAFETY: `s` is the live state of the node; copies end before each recursion.
-    unsafe {
-        if !(*s).transform_updated {
-            return;
-        }
-        (*s).transform_updated = false;
-        let (parent, eparent) = ((*s).parent, (*s).entity_parent);
-        if parent != 0 {
-            node_update_world(h, parent);
-            let pw = (*nst(h, parent)).world;
-            let local = (*s).local;
-            (*s).world = mm(&pw, &local);
-        } else if eparent != 0 {
-            ent_update_world(h, eparent);
-            let pw = *view(h, eparent).world;
-            let local = (*s).local;
-            (*s).world = mm(&pw, &local);
-        } else {
-            (*s).world = (*s).local;
-        }
-    }
-}
-
-/// `cNode3D::SetWorldTransformUpdated`.
-///
-/// # Safety
-/// As `node_update_world`.
-pub unsafe fn node_set_world_transform_updated(h: &Host, n: usize) {
-    // SAFETY: live state.
-    unsafe { (*nst(h, n)).transform_updated = true };
-    for e in snapshot(h.node_entities, n) {
-        // SAFETY: as above.
-        unsafe { ent_set_transform_updated(h, e, true) };
-    }
-    for c in snapshot(h.node_children, n) {
-        // SAFETY: as above.
-        unsafe { node_set_world_transform_updated(h, c) };
-    }
-}
-
-/// # Safety
-/// As `node_update_world`.
-pub unsafe fn node_set_matrix(h: &Host, n: usize, m: &Matrixf, children: bool) {
-    // SAFETY: live state.
-    unsafe {
-        (*nst(h, n)).local = *m;
-        if children {
-            node_set_world_transform_updated(h, n);
-        } else {
-            (*nst(h, n)).transform_updated = true;
-        }
-    }
-}
-
-/// # Safety
-/// As `node_update_world`.
-pub unsafe fn node_set_position(h: &Host, n: usize, p: Vector3f) {
-    // SAFETY: live state.
-    unsafe {
-        let s = nst(h, n);
-        (*s).local.m[0][3] = p.x;
-        (*s).local.m[1][3] = p.y;
-        (*s).local.m[2][3] = p.z;
-        node_set_world_transform_updated(h, n);
-    }
-}
-
-/// # Safety
-/// As `node_update_world`.
-pub unsafe fn node_set_world_position(h: &Host, n: usize, p: Vector3f) {
-    // SAFETY: live state.
-    unsafe {
-        let parent = (*nst(h, n)).parent;
-        if parent == 0 {
-            node_set_position(h, n, p);
-            return;
-        }
-        node_update_world(h, parent);
-        let pw = translation_of(&(*nst(h, parent)).world);
-        node_set_position(h, n, sub3(p, pw));
-    }
-}
-
-/// # Safety
-/// As `node_update_world`.
-pub unsafe fn node_set_world_matrix(h: &Host, n: usize, m: &Matrixf) {
-    // SAFETY: live state.
-    unsafe {
-        let parent = (*nst(h, n)).parent;
-        if parent == 0 {
-            node_set_matrix(h, n, m, true);
-            return;
-        }
-        node_update_world(h, parent);
-        let pw = (*nst(h, parent)).world;
-        node_set_matrix(h, n, &world_to_local(&pw, m), true);
-    }
-}
-
-/// # Safety
-/// `s` valid.
-pub unsafe fn node_add_rotation_euler(s: *mut NodeState, euler: Vector3f, order: i32) {
-    // SAFETY: caller contract.
-    unsafe { (*s).rotation = add_rotation(euler, order, &(*s).rotation) };
-}
-
-/// # Safety
-/// `s` valid.
-pub unsafe fn node_add_rotation(s: *mut NodeState, q: &Quaternion) {
-    let mut out = Quaternion::default();
-    // SAFETY: caller contract.
-    unsafe {
-        let cur = (*s).rotation;
-        ohpl_math_quaternion_mul(q, &cur, &mut out);
-        (*s).rotation = out;
-    }
+    pub node_delete: unsafe extern "C" fn(usize),
 }
 
 const ONE: Vector3f = Vector3f {
@@ -355,28 +93,6 @@ const ONE: Vector3f = Vector3f {
     y: 1.0,
     z: 1.0,
 };
-
-/// # Safety
-/// `s` valid.
-pub unsafe fn node_add_scale(s: *mut NodeState, v: Vector3f) {
-    // SAFETY: caller contract.
-    unsafe {
-        (*s).scale.x *= v.x;
-        (*s).scale.y *= v.y;
-        (*s).scale.z *= v.z;
-    }
-}
-
-/// # Safety
-/// `s` valid.
-pub unsafe fn node_add_translation(s: *mut NodeState, v: Vector3f) {
-    // SAFETY: caller contract.
-    unsafe {
-        (*s).translation.x += v.x;
-        (*s).translation.y += v.y;
-        (*s).translation.z += v.z;
-    }
-}
 
 const IDENTITY_Q: Quaternion = Quaternion {
     v: Vector3f {
@@ -387,20 +103,529 @@ const IDENTITY_Q: Quaternion = Quaternion {
     w: 1.0,
 };
 
+pub fn ent_new(owner: usize) -> *mut EntBox {
+    Box::into_raw(Box::new(EntBox {
+        s: EntPub {
+            local: IDENTITY,
+            world: IDENTITY,
+            owner,
+            parent_node: null_mut(),
+            parent_entity: null_mut(),
+            count: 0,
+            unique_id: -1,
+            iterator_count: -1,
+            transform_updated: true,
+            update_bv: true,
+            apply_bv: true,
+            active: true,
+            saved: true,
+        },
+        kids: Vec::new(),
+        nodes: Vec::new(),
+    }))
+}
+
+pub fn node_new(owner: usize, auto_delete: bool) -> *mut NodeBox {
+    Box::into_raw(Box::new(NodeBox {
+        s: NodePub {
+            local: IDENTITY,
+            world: IDENTITY,
+            pre: IDENTITY,
+            post: IDENTITY,
+            rotation: IDENTITY_Q,
+            scale: ONE,
+            translation: Vector3f::default(),
+            owner,
+            parent: null_mut(),
+            entity_parent: null_mut(),
+            custom_flags: 0,
+            transform_updated: true,
+            use_pre: false,
+            use_post: false,
+            active: true,
+            auto_delete,
+        },
+        kids: Vec::new(),
+        ents: Vec::new(),
+    }))
+}
+
+/// `iEntity3D::~iEntity3D`: unlink from the parent, orphan children, free the pod.
+///
+/// # Safety
+/// `e` from `ent_new`, freed once; linked pods live.
+pub unsafe fn ent_free(e: *mut EntBox) {
+    // SAFETY: caller contract; every linked pod is live until its own free unlinks it.
+    unsafe {
+        if !(*e).s.parent_node.is_null() {
+            node_remove_entity((*e).s.parent_node, e);
+        } else if !(*e).s.parent_entity.is_null() {
+            ent_remove_child((*e).s.parent_entity, e);
+        }
+        for &c in &(*e).kids {
+            (*c).s.parent_entity = null_mut();
+        }
+        for &n in &(*e).nodes {
+            (*n).s.entity_parent = null_mut();
+        }
+        drop(Box::from_raw(e));
+    }
+}
+
+/// `cNode3D::~cNode3D`: unlink from the parents, orphan entities and children, delete the
+/// children when auto-deleting, free the pod.
+///
+/// # Safety
+/// `n` from `node_new`, freed once; linked pods live.
+pub unsafe fn node_free(h: &Host, n: *mut NodeBox) {
+    // SAFETY: as `ent_free`.
+    unsafe {
+        if !(*n).s.entity_parent.is_null() {
+            ent_remove_node_child((*n).s.entity_parent, n);
+        } else if !(*n).s.parent.is_null() {
+            node_remove_child((*n).s.parent, n);
+        }
+        for &e in &(*n).ents {
+            (*e).s.parent_node = null_mut();
+        }
+        let kids = (*n).kids.clone();
+        for &c in &kids {
+            (*c).s.parent = null_mut();
+        }
+        if (*n).s.auto_delete {
+            for &c in &kids {
+                (h.node_delete)((*c).s.owner);
+            }
+        }
+        drop(Box::from_raw(n));
+    }
+}
+
+/// # Safety
+/// `e` and its parents live.
+pub unsafe fn ent_update_world(h: &Host, e: *mut EntBox) {
+    // SAFETY: caller contract; copies end before each recursion.
+    unsafe {
+        let s = &mut (*e).s;
+        if !s.transform_updated {
+            return;
+        }
+        s.transform_updated = false;
+        let (pn, pe) = (s.parent_node, s.parent_entity);
+        if !pn.is_null() {
+            node_update_world(h, pn);
+            let pw = (*pn).s.world;
+            let local = (*e).s.local;
+            (*e).s.world = mm(&pw, &local);
+        } else if !pe.is_null() {
+            ent_update_world(h, pe);
+            let pw = (*pe).s.world;
+            let local = (*e).s.local;
+            (*e).s.world = mm(&pw, &local);
+        } else {
+            (*e).s.world = (*e).s.local;
+        }
+    }
+}
+
+/// `iEntity3D::SetTransformUpdated`.
+///
+/// # Safety
+/// As `ent_update_world`.
+pub unsafe fn ent_set_transform_updated(h: &Host, e: *mut EntBox, callbacks: bool) {
+    // SAFETY: caller contract.
+    unsafe {
+        let s = &mut (*e).s;
+        s.transform_updated = true;
+        s.count = s.count.wrapping_add(1);
+        s.update_bv = true;
+        let owner = s.owner;
+        (h.ent_on_updated)(owner);
+        for c in (*e).kids.clone() {
+            ent_set_transform_updated(h, c, true);
+        }
+        for n in (*e).nodes.clone() {
+            node_set_world_transform_updated(h, n);
+        }
+        if callbacks {
+            (h.ent_callbacks)(owner);
+        }
+    }
+}
+
+/// # Safety
+/// As `ent_update_world`.
+pub unsafe fn ent_set_matrix(h: &Host, e: *mut EntBox, m: &Matrixf) {
+    // SAFETY: caller contract.
+    unsafe {
+        (*e).s.local = *m;
+        ent_set_transform_updated(h, e, true);
+    }
+}
+
+/// # Safety
+/// As `ent_update_world`.
+pub unsafe fn ent_set_position(h: &Host, e: *mut EntBox, p: Vector3f) {
+    // SAFETY: caller contract.
+    unsafe {
+        let l = &mut (*e).s.local;
+        l.m[0][3] = p.x;
+        l.m[1][3] = p.y;
+        l.m[2][3] = p.z;
+        ent_set_transform_updated(h, e, true);
+    }
+}
+
+/// # Safety
+/// As `ent_update_world`.
+pub unsafe fn ent_set_world_position(h: &Host, e: *mut EntBox, p: Vector3f) {
+    // SAFETY: caller contract.
+    unsafe {
+        let pe = (*e).s.parent_entity;
+        if pe.is_null() {
+            ent_set_position(h, e, p);
+            return;
+        }
+        ent_update_world(h, pe);
+        let pw = translation_of(&(*pe).s.world);
+        ent_set_position(h, e, sub3(p, pw));
+    }
+}
+
+/// # Safety
+/// As `ent_update_world`.
+pub unsafe fn ent_set_world_matrix(h: &Host, e: *mut EntBox, m: &Matrixf) {
+    // SAFETY: caller contract.
+    unsafe {
+        let pe = (*e).s.parent_entity;
+        if pe.is_null() {
+            ent_set_matrix(h, e, m);
+            return;
+        }
+        ent_update_world(h, pe);
+        let pw = (*pe).s.world;
+        ent_set_matrix(h, e, &world_to_local(&pw, m));
+    }
+}
+
+/// `iEntity3D::GetBoundingVolume` flag step: true when the C++ side must apply the world matrix
+/// to its bounding volume.
+///
+/// # Safety
+/// As `ent_update_world`.
+pub unsafe fn ent_bv_dirty(h: &Host, e: *mut EntBox) -> bool {
+    // SAFETY: caller contract.
+    unsafe {
+        if (*e).s.apply_bv && (*e).s.update_bv {
+            ent_update_world(h, e);
+            (*e).s.update_bv = false;
+            return true;
+        }
+    }
+    false
+}
+
+/// `iEntity3D::AddChild`.
+///
+/// # Safety
+/// As `ent_update_world`; `c` may be null.
+pub unsafe fn ent_add_child(h: &Host, e: *mut EntBox, c: *mut EntBox) {
+    if c.is_null() {
+        return;
+    }
+    // SAFETY: caller contract.
+    unsafe {
+        if !(*c).s.parent_entity.is_null() {
+            ent_remove_child((*c).s.parent_entity, c);
+        }
+        (*e).kids.push(c);
+        (*c).s.parent_entity = e;
+        ent_set_transform_updated(h, c, true);
+    }
+}
+
+/// `iEntity3D::RemoveChild`: drops every occurrence.
+///
+/// # Safety
+/// `e` live; `c` is compared only.
+pub unsafe fn ent_remove_child(e: *mut EntBox, c: *mut EntBox) {
+    // SAFETY: caller contract.
+    unsafe {
+        (*e).kids.retain(|&k| {
+            if k == c {
+                (*k).s.parent_entity = null_mut();
+                false
+            } else {
+                true
+            }
+        });
+    }
+}
+
+/// `iEntity3D::AddNodeChild`.
+///
+/// # Safety
+/// As `ent_update_world`.
+pub unsafe fn ent_add_node_child(h: &Host, e: *mut EntBox, n: *mut NodeBox) {
+    // SAFETY: caller contract.
+    unsafe {
+        if !(*n).s.entity_parent.is_null() {
+            ent_remove_node_child((*n).s.entity_parent, n);
+        }
+        (*e).nodes.push(n);
+        (*n).s.entity_parent = e;
+        node_set_world_transform_updated(h, n);
+    }
+}
+
+/// `iEntity3D::RemoveNodeChild`: drops every occurrence.
+///
+/// # Safety
+/// `e` live; `n` is compared only.
+pub unsafe fn ent_remove_node_child(e: *mut EntBox, n: *mut NodeBox) {
+    // SAFETY: caller contract.
+    unsafe {
+        (*e).nodes.retain(|&k| {
+            if k == n {
+                (*k).s.entity_parent = null_mut();
+                false
+            } else {
+                true
+            }
+        });
+    }
+}
+
+/// `cNode3D::AddEntity`.
+///
+/// # Safety
+/// `n` and `e` live.
+pub unsafe fn node_add_entity(n: *mut NodeBox, e: *mut EntBox) -> bool {
+    // SAFETY: caller contract.
+    unsafe {
+        if !(*e).s.parent_node.is_null() {
+            return false;
+        }
+        (*n).ents.push(e);
+        (*e).s.parent_node = n;
+    }
+    true
+}
+
+/// `cNode3D::RemoveEntity`.
+///
+/// # Safety
+/// `n` and `e` live.
+pub unsafe fn node_remove_entity(n: *mut NodeBox, e: *mut EntBox) -> bool {
+    // SAFETY: caller contract.
+    unsafe {
+        let Some(i) = (*n).ents.iter().position(|&x| x == e) else {
+            return false;
+        };
+        (*e).s.parent_node = null_mut();
+        (*n).ents.remove(i);
+    }
+    true
+}
+
+/// `cNode3D::SetParent`: links `n` below `p` (child list push when `p` is set).
+///
+/// # Safety
+/// `n` live; `p` null or live.
+pub unsafe fn node_set_parent(n: *mut NodeBox, p: *mut NodeBox) {
+    // SAFETY: caller contract.
+    unsafe {
+        (*n).s.parent = p;
+        if !p.is_null() {
+            (*p).kids.push(n);
+        }
+    }
+}
+
+/// `cNode3D::RemoveChild`: erases the first occurrence only.
+///
+/// # Safety
+/// `p` live.
+pub unsafe fn node_remove_child(p: *mut NodeBox, c: *mut NodeBox) {
+    // SAFETY: caller contract.
+    unsafe {
+        if let Some(i) = (*p).kids.iter().position(|&x| x == c) {
+            (*p).kids.remove(i);
+        }
+    }
+}
+
+/// `cNode3D::UpdateEntityChildren`.
+///
+/// # Safety
+/// As `ent_update_world`.
+pub unsafe fn node_update_entity_children(h: &Host, n: *mut NodeBox) {
+    // SAFETY: caller contract.
+    unsafe {
+        for e in (*n).ents.clone() {
+            ent_set_transform_updated(h, e, true);
+        }
+    }
+}
+
+/// # Safety
+/// `h` and `n` valid.
+pub unsafe fn node_update_world(h: &Host, n: *mut NodeBox) {
+    // SAFETY: caller contract; copies end before each recursion.
+    unsafe {
+        let s = &mut (*n).s;
+        if !s.transform_updated {
+            return;
+        }
+        s.transform_updated = false;
+        let (parent, eparent) = (s.parent, s.entity_parent);
+        if !parent.is_null() {
+            node_update_world(h, parent);
+            let pw = (*parent).s.world;
+            let local = (*n).s.local;
+            (*n).s.world = mm(&pw, &local);
+        } else if !eparent.is_null() {
+            ent_update_world(h, eparent);
+            let pw = (*eparent).s.world;
+            let local = (*n).s.local;
+            (*n).s.world = mm(&pw, &local);
+        } else {
+            (*n).s.world = (*n).s.local;
+        }
+    }
+}
+
+/// `cNode3D::SetWorldTransformUpdated`.
+///
+/// # Safety
+/// As `node_update_world`.
+pub unsafe fn node_set_world_transform_updated(h: &Host, n: *mut NodeBox) {
+    // SAFETY: caller contract.
+    unsafe {
+        (*n).s.transform_updated = true;
+        for e in (*n).ents.clone() {
+            ent_set_transform_updated(h, e, true);
+        }
+        for c in (*n).kids.clone() {
+            node_set_world_transform_updated(h, c);
+        }
+    }
+}
+
+/// # Safety
+/// As `node_update_world`.
+pub unsafe fn node_set_matrix(h: &Host, n: *mut NodeBox, m: &Matrixf, children: bool) {
+    // SAFETY: caller contract.
+    unsafe {
+        (*n).s.local = *m;
+        if children {
+            node_set_world_transform_updated(h, n);
+        } else {
+            (*n).s.transform_updated = true;
+        }
+    }
+}
+
+/// # Safety
+/// As `node_update_world`.
+pub unsafe fn node_set_position(h: &Host, n: *mut NodeBox, p: Vector3f) {
+    // SAFETY: caller contract.
+    unsafe {
+        let l = &mut (*n).s.local;
+        l.m[0][3] = p.x;
+        l.m[1][3] = p.y;
+        l.m[2][3] = p.z;
+        node_set_world_transform_updated(h, n);
+    }
+}
+
+/// # Safety
+/// As `node_update_world`.
+pub unsafe fn node_set_world_position(h: &Host, n: *mut NodeBox, p: Vector3f) {
+    // SAFETY: caller contract.
+    unsafe {
+        let parent = (*n).s.parent;
+        if parent.is_null() {
+            node_set_position(h, n, p);
+            return;
+        }
+        node_update_world(h, parent);
+        let pw = translation_of(&(*parent).s.world);
+        node_set_position(h, n, sub3(p, pw));
+    }
+}
+
+/// # Safety
+/// As `node_update_world`.
+pub unsafe fn node_set_world_matrix(h: &Host, n: *mut NodeBox, m: &Matrixf) {
+    // SAFETY: caller contract.
+    unsafe {
+        let parent = (*n).s.parent;
+        if parent.is_null() {
+            node_set_matrix(h, n, m, true);
+            return;
+        }
+        node_update_world(h, parent);
+        let pw = (*parent).s.world;
+        node_set_matrix(h, n, &world_to_local(&pw, m), true);
+    }
+}
+
+/// # Safety
+/// `s` valid.
+pub unsafe fn node_add_rotation_euler(s: *mut NodePub, euler: Vector3f, order: i32) {
+    // SAFETY: caller contract.
+    unsafe { (*s).rotation = add_rotation(euler, order, &(*s).rotation) };
+}
+
+/// # Safety
+/// `s` valid.
+pub unsafe fn node_add_rotation(s: *mut NodePub, q: &Quaternion) {
+    let mut out = Quaternion::default();
+    // SAFETY: caller contract.
+    unsafe {
+        let cur = (*s).rotation;
+        ohpl_math_quaternion_mul(q, &cur, &mut out);
+        (*s).rotation = out;
+    }
+}
+
+/// # Safety
+/// `s` valid.
+pub unsafe fn node_add_scale(s: *mut NodePub, v: Vector3f) {
+    // SAFETY: caller contract.
+    unsafe {
+        (*s).scale.x *= v.x;
+        (*s).scale.y *= v.y;
+        (*s).scale.z *= v.z;
+    }
+}
+
+/// # Safety
+/// `s` valid.
+pub unsafe fn node_add_translation(s: *mut NodePub, v: Vector3f) {
+    // SAFETY: caller contract.
+    unsafe {
+        (*s).translation.x += v.x;
+        (*s).translation.y += v.y;
+        (*s).translation.z += v.z;
+    }
+}
+
 /// `cNode3D::UpdateMatrix`.
 ///
 /// # Safety
 /// As `node_update_world`.
-pub unsafe fn node_update_matrix(h: &Host, n: usize, children: bool) {
-    // SAFETY: live state.
+pub unsafe fn node_update_matrix(h: &Host, n: *mut NodeBox, children: bool) {
+    // SAFETY: caller contract.
     unsafe {
-        let s = nst(h, n);
-        let m = update_matrix(&(*s).local, &(*s).rotation, (*s).translation);
+        let s = &(*n).s;
+        let m = update_matrix(&s.local, &s.rotation, s.translation);
         node_set_matrix(h, n, &m, children);
-        let s = nst(h, n);
-        (*s).rotation = IDENTITY_Q;
-        (*s).scale = ONE;
-        (*s).translation = Vector3f::default();
+        let s = &mut (*n).s;
+        s.rotation = IDENTITY_Q;
+        s.scale = ONE;
+        s.translation = Vector3f::default();
     }
 }
 
@@ -408,14 +633,14 @@ pub unsafe fn node_update_matrix(h: &Host, n: usize, children: bool) {
 ///
 /// # Safety
 /// As `node_update_world`.
-pub unsafe fn node_apply_anim(h: &Host, n: usize, post: bool, children: bool) {
-    // SAFETY: live state.
+pub unsafe fn node_apply_anim(h: &Host, n: *mut NodeBox, post: bool, children: bool) {
+    // SAFETY: caller contract.
     unsafe {
-        let s = nst(h, n);
+        let s = &(*n).s;
         let (on, local, t) = if post {
-            ((*s).use_post, (*s).local, (*s).post)
+            (s.use_post, s.local, s.post)
         } else {
-            ((*s).use_pre, (*s).local, (*s).pre)
+            (s.use_pre, s.local, s.pre)
         };
         if !on {
             return;

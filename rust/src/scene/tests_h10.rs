@@ -33,171 +33,82 @@ fn vwords(v: Vector3f) -> String {
     )
 }
 
-struct MEnt {
+struct Side {
     id: i32,
-    local: Matrixf,
-    world: Matrixf,
-    tu: bool,
-    ubv: bool,
-    apply: bool,
-    count: i32,
-    parent_node: usize,
-    parent_entity: usize,
-    children: Vec<usize>,
-    node_children: Vec<usize>,
+    pod: usize,
     has_cb: bool,
     read: bool,
     bvt: Matrixf,
 }
 
-struct MNode {
-    st: NodeState,
-    children: Vec<usize>,
-    entities: Vec<usize>,
+thread_local! {
+    static SIDE: RefCell<Vec<Side>> = const { RefCell::new(Vec::new()) };
 }
 
-fn ent(p: usize) -> *mut MEnt {
-    p as *mut MEnt
+fn side<R>(owner: usize, f: impl FnOnce(&mut Side) -> R) -> R {
+    SIDE.with(|s| f(&mut s.borrow_mut()[owner - 1]))
 }
 
-fn node(p: usize) -> *mut MNode {
-    p as *mut MNode
+fn ent(p: usize) -> *mut EntBox {
+    p as *mut EntBox
 }
 
-fn fill(list: &[usize], out: *mut usize, cap: usize) -> usize {
-    for (i, &x) in list.iter().enumerate().take(cap) {
-        // SAFETY: the host contract gives `cap` writable entries.
-        unsafe { *out.add(i) = x };
-    }
-    list.len()
+fn node(p: usize) -> *mut NodeBox {
+    p as *mut NodeBox
 }
 
-unsafe extern "C" fn h_ent_view(e: usize, v: *mut EntView) {
-    let p = ent(e);
-    // SAFETY: `e` is a live boxed `MEnt`; `v` is valid.
-    unsafe {
-        *v = EntView {
-            local: addr_of_mut!((*p).local),
-            world: addr_of_mut!((*p).world),
-            transform_updated: addr_of_mut!((*p).tu),
-            update_bv: addr_of_mut!((*p).ubv),
-            apply_bv: addr_of_mut!((*p).apply),
-            count: addr_of_mut!((*p).count),
-            parent_node: (*p).parent_node,
-            parent_entity: (*p).parent_entity,
-        };
-    }
-}
-
-unsafe extern "C" fn h_ent_children(e: usize, out: *mut usize, cap: usize) -> usize {
-    // SAFETY: live `MEnt`.
-    unsafe { fill(&(*ent(e)).children, out, cap) }
-}
-
-unsafe extern "C" fn h_ent_node_children(e: usize, out: *mut usize, cap: usize) -> usize {
-    // SAFETY: live `MEnt`.
-    unsafe { fill(&(*ent(e)).node_children, out, cap) }
+fn sd(p: usize) -> usize {
+    // SAFETY: `p` is a live pod of this scene.
+    unsafe { (*ent(p)).s.owner }
 }
 
 unsafe extern "C" fn h_ent_on_updated(e: usize) {
-    // SAFETY: live `MEnt`.
-    let (id, read) = unsafe { ((*ent(e)).id, (*ent(e)).read) };
+    let (id, read, pod) = side(e, |s| (s.id, s.read, s.pod));
     log(format!("e u {id}"));
     if read {
-        // SAFETY: as above.
+        // SAFETY: live pod.
         let w = unsafe {
-            ent_update_world(&HOST, e);
-            (*ent(e)).world
+            ent_update_world(&HOST, ent(pod));
+            (*ent(pod)).s.world
         };
         log(format!("= r{}", words(&w)));
     }
 }
 
 unsafe extern "C" fn h_ent_callbacks(e: usize) {
-    // SAFETY: live `MEnt`.
-    let (id, cb) = unsafe { ((*ent(e)).id, (*ent(e)).has_cb) };
+    let (id, cb) = side(e, |s| (s.id, s.has_cb));
     if cb {
         log(format!("e c {id}"));
     }
 }
 
-unsafe extern "C" fn h_node_state(n: usize) -> *mut NodeState {
-    // SAFETY: live `MNode`.
-    unsafe { addr_of_mut!((*node(n)).st) }
-}
-
-unsafe extern "C" fn h_node_children(n: usize, out: *mut usize, cap: usize) -> usize {
-    // SAFETY: live `MNode`.
-    unsafe { fill(&(*node(n)).children, out, cap) }
-}
-
-unsafe extern "C" fn h_node_entities(n: usize, out: *mut usize, cap: usize) -> usize {
-    // SAFETY: live `MNode`.
-    unsafe { fill(&(*node(n)).entities, out, cap) }
-}
+unsafe extern "C" fn h_node_delete(_: usize) {}
 
 static HOST: Host = Host {
-    ent_view: h_ent_view,
-    ent_children: h_ent_children,
-    ent_node_children: h_ent_node_children,
     ent_on_updated: h_ent_on_updated,
     ent_callbacks: h_ent_callbacks,
-    node_state: h_node_state,
-    node_children: h_node_children,
-    node_entities: h_node_entities,
-};
-
-const IDENTITY_Q: Quaternion = Quaternion {
-    v: Vector3f {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
-    },
-    w: 1.0,
+    node_delete: h_node_delete,
 };
 
 fn new_ent(id: i32) -> usize {
-    Box::into_raw(Box::new(MEnt {
-        id,
-        local: IDENTITY,
-        world: IDENTITY,
-        tu: true,
-        ubv: true,
-        apply: true,
-        count: 0,
-        parent_node: 0,
-        parent_entity: 0,
-        children: Vec::new(),
-        node_children: Vec::new(),
-        has_cb: false,
-        read: false,
-        bvt: IDENTITY,
-    })) as usize
+    let owner = SIDE.with(|s| {
+        let mut s = s.borrow_mut();
+        s.push(Side {
+            id,
+            pod: 0,
+            has_cb: false,
+            read: false,
+            bvt: IDENTITY,
+        });
+        s.len()
+    });
+    let p = ent_new(owner);
+    side(owner, |s| s.pod = p as usize);
+    p as usize
 }
 
 fn new_node() -> usize {
-    Box::into_raw(Box::new(MNode {
-        st: NodeState {
-            local: IDENTITY,
-            world: IDENTITY,
-            pre: IDENTITY,
-            post: IDENTITY,
-            rotation: IDENTITY_Q,
-            scale: Vector3f {
-                x: 1.0,
-                y: 1.0,
-                z: 1.0,
-            },
-            translation: Vector3f::default(),
-            parent: 0,
-            entity_parent: 0,
-            transform_updated: true,
-            use_pre: false,
-            use_post: false,
-        },
-        children: Vec::new(),
-        entities: Vec::new(),
-    })) as usize
+    node_new(0, false) as usize
 }
 
 struct Fnv(u64);
@@ -263,22 +174,6 @@ struct EntityScene {
 }
 
 impl EntityScene {
-    fn erase_ent_child(&mut self, parent: usize, child: usize) {
-        // SAFETY: live objects of this scene.
-        unsafe {
-            (*ent(parent)).children.retain(|&c| c != child);
-            (*ent(child)).parent_entity = 0;
-        }
-    }
-
-    fn erase_node_child(&mut self, parent: usize, child: usize) {
-        // SAFETY: live objects of this scene.
-        unsafe {
-            (*ent(parent)).node_children.retain(|&c| c != child);
-            (*node(child)).st.entity_parent = 0;
-        }
-    }
-
     fn op(&mut self, name: &str, a: &mut Args) {
         let n = |s: &Self, i: usize| s.nodes.get(i).copied().unwrap();
         let e = |s: &Self, i: usize| s.ents.get(i).copied().unwrap();
@@ -286,81 +181,44 @@ impl EntityScene {
             "nsp" => {
                 let (c, p) = (n(self, a.u()), n(self, a.u()));
                 // SAFETY: live objects.
-                unsafe {
-                    (*node(c)).st.parent = p;
-                    (*node(p)).children.push(c);
-                }
+                unsafe { node_set_parent(node(c), node(p)) };
             }
             "nae" => {
                 let (nn, ee) = (n(self, a.u()), e(self, a.u()));
                 // SAFETY: live objects.
-                unsafe {
-                    if (*ent(ee)).parent_node != 0 {
-                        log("= b 0".into());
-                    } else {
-                        (*node(nn)).entities.push(ee);
-                        (*ent(ee)).parent_node = nn;
-                        log("= b 1".into());
-                    }
-                }
+                let ok = unsafe { node_add_entity(node(nn), ent(ee)) };
+                log(format!("= b {}", i32::from(ok)));
             }
             "eac" => {
                 let (p, c) = (e(self, a.u()), e(self, a.u()));
                 // SAFETY: live objects.
-                unsafe {
-                    let old = (*ent(c)).parent_entity;
-                    if old != 0 {
-                        self.erase_ent_child(old, c);
-                    }
-                    (*ent(p)).children.push(c);
-                    (*ent(c)).parent_entity = p;
-                    ent_set_transform_updated(&HOST, c, true);
-                }
+                unsafe { ent_add_child(&HOST, ent(p), ent(c)) };
             }
             "enc" => {
                 let (ee, nn) = (e(self, a.u()), n(self, a.u()));
                 // SAFETY: live objects.
-                unsafe {
-                    let old = (*node(nn)).st.entity_parent;
-                    if old != 0 {
-                        self.erase_node_child(old, nn);
-                    }
-                    (*ent(ee)).node_children.push(nn);
-                    (*node(nn)).st.entity_parent = ee;
-                    node_set_world_transform_updated(&HOST, nn);
-                }
+                unsafe { ent_add_node_child(&HOST, ent(ee), node(nn)) };
             }
             "nre" => {
                 let (nn, ee) = (n(self, a.u()), e(self, a.u()));
                 // SAFETY: live objects.
-                unsafe {
-                    let list = &mut (*node(nn)).entities;
-                    if let Some(i) = list.iter().position(|&x| x == ee) {
-                        (*ent(ee)).parent_node = 0;
-                        list.remove(i);
-                        log("= b 1".into());
-                    } else {
-                        log("= b 0".into());
-                    }
-                }
+                let ok = unsafe { node_remove_entity(node(nn), ent(ee)) };
+                log(format!("= b {}", i32::from(ok)));
             }
             "erc" => {
                 let (p, c) = (e(self, a.u()), e(self, a.u()));
-                self.erase_ent_child(p, c);
+                // SAFETY: live objects.
+                unsafe { ent_remove_child(ent(p), ent(c)) };
             }
             "ern" => {
                 let (ee, nn) = (e(self, a.u()), n(self, a.u()));
-                self.erase_node_child(ee, nn);
+                // SAFETY: live objects.
+                unsafe { ent_remove_node_child(ent(ee), node(nn)) };
             }
             "nrc" => {
                 let (p, c) = (n(self, a.u()), n(self, a.u()));
                 // SAFETY: live objects.
-                unsafe {
-                    let list = &mut (*node(p)).children;
-                    if let Some(i) = list.iter().position(|&x| x == c) {
-                        list.remove(i);
-                    }
-                }
+                unsafe { node_remove_child(node(p), node(c)) };
             }
             "ep" | "ewp" => {
                 let ee = e(self, a.u());
@@ -368,9 +226,9 @@ impl EntityScene {
                 // SAFETY: live object.
                 unsafe {
                     if name == "ep" {
-                        ent_set_position(&HOST, ee, v);
+                        ent_set_position(&HOST, ent(ee), v);
                     } else {
-                        ent_set_world_position(&HOST, ee, v);
+                        ent_set_world_position(&HOST, ent(ee), v);
                     }
                 }
             }
@@ -380,9 +238,9 @@ impl EntityScene {
                 // SAFETY: live object.
                 unsafe {
                     if name == "em" {
-                        ent_set_matrix(&HOST, ee, &m);
+                        ent_set_matrix(&HOST, ent(ee), &m);
                     } else {
-                        ent_set_world_matrix(&HOST, ee, &m);
+                        ent_set_world_matrix(&HOST, ent(ee), &m);
                     }
                 }
             }
@@ -392,9 +250,9 @@ impl EntityScene {
                 // SAFETY: live object.
                 unsafe {
                     if name == "np" {
-                        node_set_position(&HOST, nn, v);
+                        node_set_position(&HOST, node(nn), v);
                     } else {
-                        node_set_world_position(&HOST, nn, v);
+                        node_set_world_position(&HOST, node(nn), v);
                     }
                 }
             }
@@ -403,26 +261,26 @@ impl EntityScene {
                 let f = a.i() != 0;
                 let m = a.m();
                 // SAFETY: live object.
-                unsafe { node_set_matrix(&HOST, nn, &m, f) };
+                unsafe { node_set_matrix(&HOST, node(nn), &m, f) };
             }
             "nwm" => {
                 let nn = n(self, a.u());
                 let m = a.m();
                 // SAFETY: live object.
-                unsafe { node_set_world_matrix(&HOST, nn, &m) };
+                unsafe { node_set_world_matrix(&HOST, node(nn), &m) };
             }
             "nar" => {
                 let nn = n(self, a.u());
                 let v = a.v();
                 let o = a.i();
                 // SAFETY: live object.
-                unsafe { node_add_rotation_euler(h_node_state(nn), v, o) };
+                unsafe { node_add_rotation_euler(addr_of_mut!((*node(nn)).s), v, o) };
             }
             "naq" => {
                 let nn = n(self, a.u());
                 let q = Quaternion { v: a.v(), w: a.f() };
                 // SAFETY: live object.
-                unsafe { node_add_rotation(h_node_state(nn), &q) };
+                unsafe { node_add_rotation(addr_of_mut!((*node(nn)).s), &q) };
             }
             "nas" | "nat" => {
                 let nn = n(self, a.u());
@@ -430,9 +288,9 @@ impl EntityScene {
                 // SAFETY: live object.
                 unsafe {
                     if name == "nas" {
-                        node_add_scale(h_node_state(nn), v);
+                        node_add_scale(addr_of_mut!((*node(nn)).s), v);
                     } else {
-                        node_add_translation(h_node_state(nn), v);
+                        node_add_translation(addr_of_mut!((*node(nn)).s), v);
                     }
                 }
             }
@@ -440,7 +298,7 @@ impl EntityScene {
                 let nn = n(self, a.u());
                 let f = a.i() != 0;
                 // SAFETY: live object.
-                unsafe { node_update_matrix(&HOST, nn, f) };
+                unsafe { node_update_matrix(&HOST, node(nn), f) };
             }
             "npt" => {
                 let nn = n(self, a.u());
@@ -448,7 +306,7 @@ impl EntityScene {
                 let m = a.m();
                 // SAFETY: live object.
                 unsafe {
-                    let st = &mut (*node(nn)).st;
+                    let st = &mut (*node(nn)).s;
                     if post {
                         st.post = m;
                         st.use_post = on;
@@ -462,49 +320,47 @@ impl EntityScene {
                 let nn = n(self, a.u());
                 let (post, f) = (a.i() != 0, a.i() != 0);
                 // SAFETY: live object.
-                unsafe { node_apply_anim(&HOST, nn, post, f) };
+                unsafe { node_apply_anim(&HOST, node(nn), post, f) };
             }
             "eca" | "ecr" => {
                 let ee = e(self, a.u());
                 // SAFETY: live object.
-                unsafe { (*ent(ee)).has_cb = name == "eca" };
+                side(sd(ee), |s| s.has_cb = name == "eca");
             }
             "ebv" => {}
             "eap" | "ere" => {
                 let ee = e(self, a.u());
                 let f = a.i() != 0;
-                // SAFETY: live object.
-                unsafe {
-                    if name == "eap" {
-                        (*ent(ee)).apply = f;
-                    } else {
-                        (*ent(ee)).read = f;
-                    }
+                if name == "eap" {
+                    // SAFETY: live object.
+                    unsafe { (*ent(ee)).s.apply_bv = f };
+                } else {
+                    side(sd(ee), |s| s.read = f);
                 }
             }
             "etu" => {
                 let ee = e(self, a.u());
                 let f = a.i() != 0;
                 // SAFETY: live object.
-                unsafe { ent_set_transform_updated(&HOST, ee, f) };
+                unsafe { ent_set_transform_updated(&HOST, ent(ee), f) };
             }
             "qew" | "qewp" | "qel" => {
                 let ee = e(self, a.u());
                 // SAFETY: live object.
                 unsafe {
                     if name != "qel" {
-                        ent_update_world(&HOST, ee);
+                        ent_update_world(&HOST, ent(ee));
                     }
                     let p = ent(ee);
                     match name {
-                        "qew" => log(format!("= w{}", words(&(*p).world))),
-                        "qel" => log(format!("= l{}", words(&(*p).local))),
+                        "qew" => log(format!("= w{}", words(&(*p).s.world))),
+                        "qel" => log(format!("= l{}", words(&(*p).s.local))),
                         _ => log(format!(
                             "= p{}",
                             vwords(Vector3f {
-                                x: (*p).world.m[0][3],
-                                y: (*p).world.m[1][3],
-                                z: (*p).world.m[2][3]
+                                x: (*p).s.world.m[0][3],
+                                y: (*p).s.world.m[1][3],
+                                z: (*p).s.world.m[2][3]
                             })
                         )),
                     }
@@ -514,8 +370,8 @@ impl EntityScene {
                 let nn = n(self, a.u());
                 // SAFETY: live object.
                 unsafe {
-                    node_update_world(&HOST, nn);
-                    let w = (*node(nn)).st.world;
+                    node_update_world(&HOST, node(nn));
+                    let w = (*node(nn)).s.world;
                     if name == "qnw" {
                         log(format!("= w{}", words(&w)));
                     } else {
@@ -534,10 +390,12 @@ impl EntityScene {
                 let ee = e(self, a.u());
                 // SAFETY: live object.
                 unsafe {
-                    if ent_bv_dirty(&HOST, ee) {
-                        (*ent(ee)).bvt = (*ent(ee)).world;
+                    if ent_bv_dirty(&HOST, ent(ee)) {
+                        let w = (*ent(ee)).s.world;
+                        side(sd(ee), |s| s.bvt = w);
                     }
-                    log(format!("= bvt{}", words(&(*ent(ee)).bvt)));
+                    let bvt = side(sd(ee), |s| s.bvt);
+                    log(format!("= bvt{}", words(&bvt)));
                 }
             }
             "qs" => {
@@ -546,8 +404,8 @@ impl EntityScene {
                 unsafe {
                     log(format!(
                         "= s {} {}",
-                        i32::from((*ent(ee)).tu),
-                        (*ent(ee)).count
+                        i32::from((*ent(ee)).s.transform_updated),
+                        (*ent(ee)).s.count
                     ));
                 }
             }
@@ -557,31 +415,32 @@ impl EntityScene {
                 unsafe {
                     for (i, &nn) in self.nodes.iter().enumerate() {
                         let mut o = Fnv::new();
-                        o.m(&(*node(nn)).st.local);
-                        node_update_world(&HOST, nn);
-                        o.m(&(*node(nn)).st.world);
+                        o.m(&(*node(nn)).s.local);
+                        node_update_world(&HOST, node(nn));
+                        o.m(&(*node(nn)).s.world);
                         log(format!("h n {i} {:016x}", o.0));
-                        h.m(&(*node(nn)).st.local);
-                        h.m(&(*node(nn)).st.world);
+                        h.m(&(*node(nn)).s.local);
+                        h.m(&(*node(nn)).s.world);
                     }
                     for (i, &ee) in self.ents.iter().enumerate() {
-                        if ent_bv_dirty(&HOST, ee) {
-                            (*ent(ee)).bvt = (*ent(ee)).world;
+                        if ent_bv_dirty(&HOST, ent(ee)) {
+                            let w = (*ent(ee)).s.world;
+                            side(sd(ee), |s| s.bvt = w);
                         }
                         let p = ent(ee);
                         let mut o = Fnv::new();
                         for h in [&mut h, &mut o] {
-                            h.m(&(*p).local);
-                            h.m(&(*p).world);
-                            h.u32(u32::from((*p).tu));
-                            h.u32((*p).count as u32);
-                            h.u32(u32::from((*p).ubv));
+                            h.m(&(*p).s.local);
+                            h.m(&(*p).s.world);
+                            h.u32(u32::from((*p).s.transform_updated));
+                            h.u32((*p).s.count as u32);
+                            h.u32(u32::from((*p).s.update_bv));
                         }
                         log(format!(
                             "h e {i} {:016x} {} {}",
                             o.0,
-                            i32::from((*p).tu),
-                            (*p).count
+                            i32::from((*p).s.transform_updated),
+                            (*p).s.count
                         ));
                     }
                 }
@@ -597,10 +456,10 @@ impl Drop for EntityScene {
         // SAFETY: every handle came from `Box::into_raw` and is freed once.
         unsafe {
             for &e in &self.ents {
-                drop(Box::from_raw(ent(e)));
+                ent_free(ent(e));
             }
             for &n in &self.nodes {
-                drop(Box::from_raw(node(n)));
+                node_free(&HOST, node(n));
             }
         }
     }
@@ -805,6 +664,8 @@ fn replay_golden() {
                 if tag == "scene" {
                     let f: Vec<usize> = rest.split(' ').map(|x| x.parse().unwrap()).collect();
                     scenes += 1;
+                    drop(scene.take());
+                    SIDE.with(|s| s.borrow_mut().clear());
                     scene = Some(EntityScene {
                         nodes: (0..f[1]).map(|_| new_node()).collect(),
                         ents: (0..f[2]).map(|i| new_ent(i as i32)).collect(),

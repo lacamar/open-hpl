@@ -232,7 +232,7 @@ namespace hpl {
 		void SetCastSpecularLight(bool abX){ mpS->castSpecular = abX;}
 		bool GetCastSpecularLight(){ return mpS->castSpecular;}
 		unsigned int GetMaskID(){ return mpS->maskId;}
-		void SetMaskBox(bool abActive, const cVector3f& avCenter=0, const cVector3f& avSize=0){ mpS->maskBox = abActive; mpS->maskCenter = avCenter; mpS->maskSize = avSize; mbUpdateBoundingVolume = true; SetTransformUpdated();}
+		void SetMaskBox(bool abActive, const cVector3f& avCenter=0, const cVector3f& avSize=0){ mpS->maskBox = abActive; mpS->maskCenter = avCenter; mpS->maskSize = avSize; mpE->updateBV = true; SetTransformUpdated();}
 		bool HasMaskBox(){ return mpS->maskBox;}
 		const cVector3f& GetMaskCenter(){ return mpS->maskCenter;}
 		const cVector3f& GetMaskSize(){ return mpS->maskSize;}

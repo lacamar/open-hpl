@@ -33,7 +33,7 @@ namespace hpl {
 
 	cDummyRenderable::cDummyRenderable(tString asName) : iRenderable(asName)
 	{
-		mbApplyTransformToBV = true;
+		mpE->applyBV = true;
 
 		mBoundingVolume.SetSize(0);
 	}

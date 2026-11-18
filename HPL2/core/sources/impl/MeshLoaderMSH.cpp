@@ -139,9 +139,9 @@ namespace hpl {
 		// Nodes
 		{
 			cNode3D *pRootNode = apMesh->GetRootNode();
-			binBuff.AddInt32((int)pRootNode->GetChildList()->size());
+			binBuff.AddInt32((int)pRootNode->GetChildCount());
 
-			if(gbLogMSHLoad) Log("Nodes num: %d\n", pRootNode->GetChildList()->size());
+			if(gbLogMSHLoad) Log("Nodes num: %d\n", pRootNode->GetChildCount());
 
 			//Iterate child nodes
 			cNode3DIterator nodeIt = pRootNode->GetChildIterator();
@@ -381,10 +381,10 @@ namespace hpl {
 		apBuffer->AddMatrixf(apNode->GetLocalMatrix());
 		apBuffer->AddInt32(apNode->GetCustomFlags());
 		
-		apBuffer->AddInt32((int)apNode->GetChildList()->size());
+		apBuffer->AddInt32((int)apNode->GetChildCount());
 		
 		if(gbLogMSHLoad) Log("%s Node '%s' %d %d (%s)\n",	GetLevelSpaces(alLevel), apNode->GetName().c_str(),apNode->GetCustomFlags(), 
-															apNode->GetChildList()->size(), apNode->GetLocalMatrix().ToString().c_str());
+															apNode->GetChildCount(), apNode->GetLocalMatrix().ToString().c_str());
 
 		cNode3DIterator nodeIt = apNode->GetChildIterator();
 		while(nodeIt.HasNext())

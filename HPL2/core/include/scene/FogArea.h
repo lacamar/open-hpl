@@ -40,7 +40,7 @@ namespace hpl {
 	public:
 		cFogArea(tString asName, cResources *apResources) : iRenderable(asName), mpS(ohpl_sl_fog_new())
 		{
-			mbApplyTransformToBV = true;
+			mpE->applyBV = true;
 			mBoundingVolume.SetSize(1);
 		}
 		virtual ~cFogArea(){ ohpl_sl_fog_free(mpS); }

@@ -55,7 +55,7 @@ namespace hpl {
 		mpS->texMgr = (uintptr_t)pTextureManager;
 		mpS->fileSearcher = (uintptr_t)apResources->GetFileSearcher();
 
-		mbApplyTransformToBV = false;
+		mpE->applyBV = false;
 
 		static bool bFalloffMissing = ohpl_sl_hpl3_visibility();
 		iTexture *pFalloffMap = bFalloffMissing ? NULL : pTextureManager->Create1D("core_falloff_linear",false);
@@ -177,7 +177,7 @@ namespace hpl {
 	{
 		if(mpS->radius == afX) return;
 		mpS->radius = afX;
-		mbUpdateBoundingVolume = true;
+		mpE->updateBV = true;
 		SetTransformUpdated();
 	}
 
@@ -187,13 +187,13 @@ namespace hpl {
 		UpdateLight(afTimeStep);
 		if(mpS->anim.fade_time>0 || mpS->anim.flickering)
 		{
-			mbUpdateBoundingVolume = true;
+			mpE->updateBV = true;
 		}
 	}
 
 	cBoundingVolume* iLight::GetBoundingVolume()
 	{
-		if(mbUpdateBoundingVolume)
+		if(mpE->updateBV)
 		{
 			UpdateBoundingVolume();
 			if(mpS->maskBox)
@@ -203,7 +203,7 @@ namespace hpl {
 				mBoundingVolume.SetLocalMinMax(vMin, vMax);
 				mBoundingVolume.SetTransform(cMatrixf::Identity);
 			}
-			mbUpdateBoundingVolume = false;
+			mpE->updateBV = false;
 		}
 		return &mBoundingVolume;
 	}
@@ -792,7 +792,7 @@ namespace hpl {
 		pEnd->AddCallback(&mEndCallback);
 
 		mBoundingVolume.SetSize(cVector3f(vSize.x, vSize.y, vSize.x));
-		mbApplyTransformToBV = false;
+		mpE->applyBV = false;
 	}
 
 	cBeam::~cBeam()
@@ -833,14 +833,14 @@ namespace hpl {
 
 	cBoundingVolume* cBeam::GetBoundingVolume()
 	{
-		if(mbUpdateBoundingVolume)
+		if(mpE->updateBV)
 		{
 			cVector3f vStart = GetWorldPosition();
 			cVector3f vEnd = GetEnd()->GetWorldPosition();
 			cVector3f vMin, vMax;
 			ohpl_sl_beam_bounds(mpS, &vStart, &vEnd, &vMin, &vMax);
 			mBoundingVolume.SetLocalMinMax(vMin,vMax);
-			mbUpdateBoundingVolume = false;
+			mpE->updateBV = false;
 		}
 		return &mBoundingVolume;
 	}

@@ -175,20 +175,26 @@ namespace hpl
 	//------------------------------------------
 	
 	class iEntity3D;
-
-	typedef std::list<iEntity3D*> tEntity3DList;
-	typedef tEntity3DList::iterator tEntity3DListIt;
-
-	typedef cSTLIterator<iEntity3D*,tEntity3DList,tEntity3DListIt> cEntity3DIterator;
-
-	//------------------------------------------
-
 	class cNode3D;
 
-	typedef std::list<cNode3D*> tNode3DList;
-	typedef tNode3DList::iterator tNode3DListIt;
+	// Walks a snapshot of a Rust-owned pointer list.
+	template <class T>
+	class cSnapIterator
+	{
+	public:
+		cSnapIterator(){}
+		explicit cSnapIterator(std::vector<T> avItems) : mvItems(std::move(avItems)) {}
 
-	typedef cSTLIterator<cNode3D*,tNode3DList,tNode3DListIt> cNode3DIterator;
+		bool HasNext(){ return mlPos < mvItems.size();}
+		T Next(){ return mlPos < mvItems.size() ? mvItems[mlPos++] : NULL;}
+		T PeekNext(){ return mlPos < mvItems.size() ? mvItems[mlPos] : NULL;}
+	private:
+		std::vector<T> mvItems;
+		size_t mlPos = 0;
+	};
+
+	typedef cSnapIterator<iEntity3D*> cEntity3DIterator;
+	typedef cSnapIterator<cNode3D*> cNode3DIterator;
 
 	
 	//------------------------------------------
