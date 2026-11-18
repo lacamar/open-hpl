@@ -169,6 +169,10 @@ namespace hpl {
 	{
 		return H3Res<iGpuShader>(ohpl_h3f_gpu_shader(mpRs, H3Ops(), RM_STR(asName), (int32_t)aType, apVarContainer, mpHpslTranspileCallback != NULL, aType == eGpuShaderType_Fragment));
 	}
+
+	void cGpuShaderManager::Unload(iResourceBase* apResource)
+	{
+	}
 	//-----------------------------------------------------------------------
 
 	void cGpuShaderManager::Destroy(iResourceBase* apResource)
