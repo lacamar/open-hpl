@@ -67,6 +67,8 @@ fn blank(nj: *mut NewtonJoint, cpp: usize, ops: *const JointOps, kind: JointKind
         min: 0.0,
         max: 0.0,
         previous: 0.0,
+        cone: 0.0,
+        twist: 0.0,
     }
 }
 
@@ -264,9 +266,40 @@ pub unsafe extern "C" fn ohpl_ntj_ball_cone_limits(
     cone: f32,
     twist: f32,
 ) {
-    if let Some((_, r)) = reg::joint(j) {
+    if let Some((h, r)) = reg::joint(j) {
         // SAFETY: live joint, caller contract.
         unsafe { NewtonBallSetConeLimits(r.nj, pin.cast(), cone, twist) };
+        reg::update_joint(h, |r| {
+            r.cone = cone;
+            r.twist = twist;
+        });
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntj_ball_cone(j: u64) -> f32 {
+    reg::joint(j).map_or(0.0, |(_, r)| r.cone)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntj_ball_twist(j: u64) -> f32 {
+    reg::joint(j).map_or(0.0, |(_, r)| r.twist)
+}
+
+/// # Safety
+/// Both matrices are valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ntj_locals(j: u64, m0: *mut Matrixf, m1: *mut Matrixf) {
+    if let Some((_, r)) = reg::joint(j) {
+        // SAFETY: caller contract.
+        unsafe {
+            if let Some(m) = m0.as_mut() {
+                *m = r.local0;
+            }
+            if let Some(m) = m1.as_mut() {
+                *m = r.local1;
+            }
+        }
     }
 }
 

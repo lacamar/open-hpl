@@ -56,10 +56,6 @@ namespace hpl {
 		ePhysicsJointType GetType(){ return ePhysicsJointType_Screw;}
 
 	protected:
-		float mfPreviousDist;
-
-		float mfMaxDistance;
-		float mfMinDistance;
 
 		cVector3f mvPin;
 	};

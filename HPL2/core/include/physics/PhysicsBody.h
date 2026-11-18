@@ -24,6 +24,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "physics/PhysicsTypes.h"
 #include "physics/RustPhysBook.h"
+#include "impl/RustNewtonBackend.h"
 
 class NewtonBody;
 class NewtonWorld;
@@ -80,25 +81,6 @@ namespace hpl {
 
 	typedef std::list<iPhysicsBodyCallback*> tPhysicsBodyCallbackList;
 	typedef tPhysicsBodyCallbackList::iterator tPhysicsBodyCallbackListIt;
-
-	struct cPhysicsBody_Buoyancy
-	{
-		cPhysicsBody_Buoyancy() : mbActive(false), mfDensity(1),
-								mfLinearViscosity(1), mfAngularViscosity(1){}
-
-		bool mbActive;
-
-		float mfDensity;
-		float mfLinearViscosity;
-		float mfAngularViscosity;
-
-		cPlanef mSurface;
-
-		cVector3f mvPrevLinearVel = 0;
-		cVector3f mvPrevAngularVel = 0;
-		float mfDragDensityMul = 1;
-		bool mbNoPrevVel = true;
-	};
 
 	class cPhysicsBodyNewtonCallback : public iEntityCallback
 	{
@@ -264,25 +246,17 @@ namespace hpl {
 		void SetPushedByCharacterGravity(bool abX){ mbPushedByCharacterGravity = abX;}
 		bool GetPushedByCharacterGravity(){ return mbPushedByCharacterGravity;}
 
-		void SetBuoyancyActive(bool abX)
-		{
-			if(abX != mBuoyancy.mbActive)
-			{
-				mBuoyancy.mvPrevLinearVel = mBuoyancy.mvPrevAngularVel = 0;
-				mBuoyancy.mbNoPrevVel = true;
-			}
-			mBuoyancy.mbActive = abX;
-		}
-		void SetBuoyancyDensity(float afX){ mBuoyancy.mfDensity = afX;}
-		void SetBuoyancyLinearViscosity(float afX){ mBuoyancy.mfLinearViscosity = afX;}
-		void SetBuoyancyAngularViscosity(float afX){ mBuoyancy.mfAngularViscosity = afX;}
-		void SetBuoyancySurface(const cPlanef &aP){ mBuoyancy.mSurface = aP;}
+		void SetBuoyancyActive(bool abX){ ohpl_ntb_set_buoy_active(mhRust, abX);}
+		void SetBuoyancyDensity(float afX){ ohpl_ntb_set_buoy_density(mhRust, afX);}
+		void SetBuoyancyLinearViscosity(float afX){ ohpl_ntb_set_buoy_linear_viscosity(mhRust, afX);}
+		void SetBuoyancyAngularViscosity(float afX){ ohpl_ntb_set_buoy_angular_viscosity(mhRust, afX);}
+		void SetBuoyancySurface(const cPlanef &aP){ ohpl_ntb_set_buoy_surface(mhRust, &aP);}
 
-		bool GetBuoyancyActive(){ return mBuoyancy.mbActive;}
-		float GetBuoyancyDensity(){ return mBuoyancy.mfDensity;}
-		float GetBuoyancyLinearViscosity(){ return mBuoyancy.mfLinearViscosity;}
-		float GetBuoyancyAngularViscosity(){ return mBuoyancy.mfAngularViscosity;}
-		cPlanef SetBuoyancySurface(){ return mBuoyancy.mSurface;}
+		bool GetBuoyancyActive(){ return BuoyState().active;}
+		float GetBuoyancyDensity(){ return BuoyState().density;}
+		float GetBuoyancyLinearViscosity(){ return BuoyState().linearViscosity;}
+		float GetBuoyancyAngularViscosity(){ return BuoyState().angularViscosity;}
+		cPlanef SetBuoyancySurface(){ return BuoyState().surface;}
 
 		float GetBuoyancyDensityMul(){ return mfBuoyancyDensityMul;}
 		void SetBuoyancyDensityMul(float afX){ mfBuoyancyDensityMul = afX;}
@@ -321,22 +295,13 @@ namespace hpl {
 
 		static void SetUseCallback(bool abX){ mbUseCallback = abX;}
 	protected:
-		bool CalcHpl3Buoyancy(const cVector3f &avGravity, float afTimeStep);
+		bool CalcHpl3Buoyancy(const cVector3f &avGravity, float afTimeStep, cVector3f *apForce, cVector3f *apTorque);
+		OhplL4Buoy BuoyState() const { OhplL4Buoy b; ohpl_ntb_buoy(mhRust, &b); return b;}
 
 		NewtonBody *mpNewtonBody;
-		NewtonWorld *mpNewtonWorld;
 		uint64_t mhRust = 0;
 		cPhysicsBodyNewtonCallback *mpCallback;
 		static bool mbUseCallback;
-		bool mbGravity;
-		float mfMaxLinearSpeed;
-		float mfMaxAngularSpeed;
-		float mfMass;
-		float mfAutoDisableLinearThreshold;
-		float mfAutoDisableAngularThreshold;
-		int mlAutoDisableNumSteps;
-		cVector3f mvBuoyancyForce = 0;
-		cVector3f mvBuoyancyTorque = 0;
 
 		OhplBodyState mS = OhplBodyState();
         iPhysicsWorld *&mpWorld = mS.world;
@@ -382,7 +347,6 @@ namespace hpl {
 
 		int &mlPushStrength = mS.pushStrength;
 
-		cPhysicsBody_Buoyancy mBuoyancy;
 
 		int &mlFreezeCount = mS.freezeCount;
 		static bool mbHpl3Buoyancy;

@@ -34,8 +34,8 @@ namespace hpl {
 			iPhysicsWorld *apWorld,const cVector3f &avPivotPoint,const cVector3f &avPinDir);
 		~iPhysicsJointBall();
 
-		float GetMaxConeAngle(){ return mfMaxConeAngle;}
-		float GetMaxTwistAngle(){ return mfMaxTwistAngle;}
+		float GetMaxConeAngle(){ return ohpl_ntj_ball_cone(mhRust);}
+		float GetMaxTwistAngle(){ return ohpl_ntj_ball_twist(mhRust);}
 
         void SetConeLimits(float afMaxConeAngle, float afMaxTwistAngle);
 		cVector3f GetAngles();
@@ -48,11 +48,6 @@ namespace hpl {
 		float GetAngle();
 
 		ePhysicsJointType GetType(){ return ePhysicsJointType_Ball;}
-
-	protected:
-
-		float mfMaxConeAngle;
-		float mfMaxTwistAngle;
 	};
 };
 #endif // HPL_PHYSICS_JOINT_BALL_H

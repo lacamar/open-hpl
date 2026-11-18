@@ -101,7 +101,6 @@ namespace hpl {
 
 	void iPhysicsBody::SetMaxLinearSpeed(float afSpeed)
 	{
-		mfMaxLinearSpeed = afSpeed;
 		ohpl_ntb_set_max_linear(mhRust, afSpeed);
 	}
 	float iPhysicsBody::GetMaxLinearSpeed() const
@@ -111,7 +110,6 @@ namespace hpl {
 
 	void iPhysicsBody::SetMaxAngularSpeed(float afDamping)
 	{
-		mfMaxAngularSpeed = afDamping;
 		ohpl_ntb_set_max_angular(mhRust, afDamping);
 	}
 	float iPhysicsBody::GetMaxAngularSpeed() const
@@ -141,7 +139,6 @@ namespace hpl {
 	void  iPhysicsBody::SetMass(float afMass)
 	{
 		ohpl_ntb_set_mass(mhRust, static_cast<iCollideShape*>(mpShape)->GetNewtonCollision(), afMass);
-		mfMass = afMass;
 	}
 	float iPhysicsBody::GetMass() const
 	{
@@ -213,36 +210,30 @@ namespace hpl {
 
 	void iPhysicsBody::SetAutoDisableLinearThreshold(float afThresold)
 	{
-		mfAutoDisableLinearThreshold = afThresold;
-		/*NewtonBodySetFreezeTreshold(mpNewtonBody, mfAutoDisableLinearThreshold,
-			mfAutoDisableAngularThreshold, mlAutoDisableNumSteps);*/
+		ohpl_ntb_set_auto_linear(mhRust, afThresold);
 	}
 	float iPhysicsBody::GetAutoDisableLinearThreshold() const
 	{
-		return mfAutoDisableLinearThreshold;
+		return ohpl_ntb_auto_linear(mhRust);
 	}
 
 	void iPhysicsBody::SetAutoDisableAngularThreshold(float afThresold)
 	{
-		mfAutoDisableAngularThreshold = afThresold;
-		/*NewtonBodySetFreezeTreshold(mpNewtonBody, mfAutoDisableLinearThreshold,
-			mfAutoDisableAngularThreshold, mlAutoDisableNumSteps);*/
+		ohpl_ntb_set_auto_angular(mhRust, afThresold);
 	}
 	float iPhysicsBody::GetAutoDisableAngularThreshold() const
 	{
-		return mfAutoDisableAngularThreshold;
+		return ohpl_ntb_auto_angular(mhRust);
 	}
 
 	void iPhysicsBody::SetAutoDisableNumSteps(int anNum)
 	{
-		mlAutoDisableNumSteps = anNum;
-		/*NewtonBodySetFreezeTreshold(mpNewtonBody, mfAutoDisableLinearThreshold,
-			mfAutoDisableAngularThreshold, mlAutoDisableNumSteps);*/
+		ohpl_ntb_set_auto_steps(mhRust, anNum);
 	}
 
 	int iPhysicsBody::GetAutoDisableNumSteps() const
 	{
-		return mlAutoDisableNumSteps;
+		return ohpl_ntb_auto_steps(mhRust);
 	}
 
 	void iPhysicsBody::SetContinuousCollision(bool abOn)
@@ -257,7 +248,6 @@ namespace hpl {
 
 	void iPhysicsBody::SetGravity(bool abEnabled)
 	{
-		mbGravity = abEnabled;
 		ohpl_ntb_set_gravity(mhRust, abEnabled);
 	}
 	bool iPhysicsBody::GetGravity() const
@@ -271,11 +261,12 @@ namespace hpl {
 	}
 
 	// HPL3 iCollideShape::CalculateBouyancyForces: lift from spheres packed in the shape, then drag
-	bool iPhysicsBody::CalcHpl3Buoyancy(const cVector3f &avGravity, float afTimeStep)
+	bool iPhysicsBody::CalcHpl3Buoyancy(const cVector3f &avGravity, float afTimeStep, cVector3f *apForce, cVector3f *apTorque)
 	{
 		iCollideShape *pShape = static_cast<iCollideShape*>(mpShape);
-		cPhysicsBody_Buoyancy &b = mBuoyancy;
-		if (mfMass == 0 || b.mfDensity * mfBuoyancyDensityMul <= 0)
+		OhplL4Buoy b = BuoyState();
+		float fMass = ohpl_ntb_mass(mhRust);
+		if (fMass == 0 || b.density * mfBuoyancyDensityMul <= 0)
 			return false;
 
 		const cMatrixf &mtx = GetLocalMatrix();
@@ -297,18 +288,18 @@ namespace hpl {
 		}
 
 		OhplNewtonBuoyIn in;
-		in.mass = mfMass;
-		in.density = b.mfDensity;
+		in.mass = fMass;
+		in.density = b.density;
 		in.densityMul = mfBuoyancyDensityMul;
-		in.dragDensityMul = b.mfDragDensityMul;
-		in.linearViscosity = b.mfLinearViscosity;
-		in.angularViscosity = b.mfAngularViscosity;
-		in.maxLinearSpeed = mfMaxLinearSpeed;
-		in.maxAngularSpeed = mfMaxAngularSpeed;
+		in.dragDensityMul = b.dragDensityMul;
+		in.linearViscosity = b.linearViscosity;
+		in.angularViscosity = b.angularViscosity;
+		in.maxLinearSpeed = GetMaxLinearSpeed();
+		in.maxAngularSpeed = GetMaxAngularSpeed();
 		in.shapeVolume = pShape->GetVolume();
 		in.timeStep = afTimeStep;
-		in.noPrevVel = b.mbNoPrevVel;
-		in.surface = b.mSurface;
+		in.noPrevVel = b.noPrevVel;
+		in.surface = b.surface;
 		in.matrix = mtx;
 		in.inverse = cMath::MatrixInverse(mtx);
 		in.inertia = GetInertiaMatrix();
@@ -316,8 +307,8 @@ namespace hpl {
 		in.gravity = avGravity;
 		in.linearVelocity = GetLinearVelocity();
 		in.angularVelocity = GetAngularVelocity();
-		in.prevLinearVel = b.mvPrevLinearVel;
-		in.prevAngularVel = b.mvPrevAngularVel;
+		in.prevLinearVel = b.prevLinearVel;
+		in.prevAngularVel = b.prevAngularVel;
 
 		OhplNewtonBuoyOut out;
 		if (ohpl_newton_buoyancy(&in, pSubs, lSubNum, &out) == false)
@@ -325,13 +316,10 @@ namespace hpl {
 
 		if (out.dragUpdated)
 		{
-			b.mvPrevLinearVel = out.prevLinearVel;
-			b.mvPrevAngularVel = out.prevAngularVel;
-			b.mbNoPrevVel = out.noPrevVel;
-			b.mfDragDensityMul = out.dragDensityMul;
+			ohpl_ntb_set_buoy_drag(mhRust, &out.prevLinearVel, &out.prevAngularVel, out.noPrevVel, out.dragDensityMul);
 		}
-		mvBuoyancyForce = out.force;
-		mvBuoyancyTorque = out.torque;
+		*apForce = out.force;
+		*apTorque = out.torque;
 		return true;
 	}
 

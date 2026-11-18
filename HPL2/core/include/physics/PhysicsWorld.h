@@ -30,6 +30,7 @@
 #include "physics/CollideData.h"
 
 #include "engine/SaveGame.h"
+#include "impl/RustNewtonBackend.h"
 
 class NewtonWorld;
 
@@ -205,8 +206,8 @@ namespace hpl {
 		//! \name Tools
 		//! @{
 
-		void SetLogDebug(bool abX){ mbLogDebug = abX;}
-		bool GetLogDebug(){ return mbLogDebug;}
+		void SetLogDebug(bool abX){ ohpl_ntw_set_log_debug(mhRust, abX);}
+		bool GetLogDebug(){ return ohpl_ntw_log_debug(mhRust);}
 
 		iPhysicsController *CreateController(const tString &asName);
 		void DestroyController(iPhysicsController *apController);
@@ -214,8 +215,8 @@ namespace hpl {
 		void FadeoutAllLoopSounds(float afFadeSpeed);
 
 		tCollidePointVec* GetContactPoints(){ return &mvContactPoints;}
-		void SetSaveContactPoints(bool abX){ mbSaveContactPoints = abX;}
-		bool GetSaveContactPoints(){ return mbSaveContactPoints;}
+		void SetSaveContactPoints(bool abX){ ohpl_ntw_set_save_contacts(mhRust, abX);}
+		bool GetSaveContactPoints(){ return ohpl_ntw_save_contacts(mhRust);}
 		void RenderContactPoints(iLowLevelGraphics *apLowLevel, const cColor& aPointColor, const cColor& aLineColor);
 
 		void CastRay(iPhysicsRayCallback *apCallback,
@@ -276,17 +277,9 @@ namespace hpl {
 
 		std::vector<iPhysicsBody*> mvTempBodies;
 
-		bool mbLogDebug;
-
 		tCollidePointVec mvContactPoints;
-		bool mbSaveContactPoints;
 		NewtonWorld *mpNewtonWorld;
 		uint64_t mhRust = 0;
-		cVector3f mvWorldSizeMin;
-		cVector3f mvWorldSizeMax;
-		cVector3f mvGravity;
-		float mfMaxTimeStep;
-		ePhysicsAccuracy mAccuracy;
 	};
 };
 #endif // HPL_PHYSICS_WORLD_H

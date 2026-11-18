@@ -33,11 +33,7 @@ namespace hpl {
 		iPhysicsWorld *apWorld,const cVector3f &avPivotPoint, const cVector3f &avPinDir)
 		: iPhysicsJoint(asName,apParentBody,apChildBody,apWorld,avPivotPoint, avPinDir)
 	{
-		mfMaxAngle = 0;
-		mfMinAngle = 0;
-
-		mfPreviousAngle =0;
-
+		cMatrixf m_mtxLocalPinPivot0, m_mtxLocalPinPivot1;
 		cMatrixf mtxPinAndPivot = GetMatrixFromPinAndPivot(mvPinDir, mvPivotPoint);
 		CalculateLocalMatrix (mtxPinAndPivot, m_mtxLocalPinPivot0, m_mtxLocalPinPivot1);
 		mhRust = ohpl_ntj_create_hinge(mhRustWorld, mpNewtonChildBody, mpNewtonParentBody, (size_t)static_cast<iPhysicsJoint*>(this), RustOps(),
@@ -53,12 +49,10 @@ namespace hpl {
 
 	void iPhysicsJointHinge::SetMaxAngle(float afAngle)
 	{
-		mfMaxAngle = afAngle;
 		ohpl_ntj_set_max(mhRust, afAngle);
 	}
 	void iPhysicsJointHinge::SetMinAngle(float afAngle)
 	{
-		mfMinAngle = afAngle;
 		ohpl_ntj_set_min(mhRust, afAngle);
 	}
 	float iPhysicsJointHinge::GetMaxAngle()
@@ -101,6 +95,8 @@ namespace hpl {
 	}
 	float iPhysicsJointHinge::GetAngle()
 	{
+		cMatrixf m_mtxLocalPinPivot0, m_mtxLocalPinPivot1;
+		ohpl_ntj_locals(mhRust, &m_mtxLocalPinPivot0, &m_mtxLocalPinPivot1);
 		cMatrixf mtxPinPivot0;
 		cMatrixf mtxPinPivot1;
 
@@ -119,6 +115,8 @@ namespace hpl {
 
 	void iPhysicsJointHinge::ResetPosition()
 	{
+		cMatrixf m_mtxLocalPinPivot0, m_mtxLocalPinPivot1;
+		ohpl_ntj_locals(mhRust, &m_mtxLocalPinPivot0, &m_mtxLocalPinPivot1);
 		cMatrixf mtxParent = mpParentBody ? mpParentBody->GetLocalMatrix() : cMatrixf::Identity;
 		mpChildBody->SetMatrix(cMath::MatrixMul(cMath::MatrixMul(mtxParent, m_mtxLocalPinPivot1), cMath::MatrixInverse(m_mtxLocalPinPivot0)));
 		mpChildBody->SetLinearVelocity(0);

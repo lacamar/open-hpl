@@ -13,12 +13,19 @@ namespace hpl {
 
 	struct OhplL4BodyState
 	{
-		bool active, inUpdateList, buoyancyActive, hpl3;
+		bool active, inUpdateList, hpl3;
 		int32_t freezeCount;
-		float densityMul, density, linearViscosity, angularViscosity;
-		float surface[4];
-		cVector3f gravity;
+		float densityMul;
 	};
+
+	struct OhplL4Buoy
+	{
+		bool active, noPrevVel;
+		float density, linearViscosity, angularViscosity, dragDensityMul;
+		cPlanef surface;
+		cVector3f prevLinearVel, prevAngularVel;
+	};
+	static_assert(sizeof(OhplL4Buoy) == 60, "Rust layout");
 
 	struct OhplL4JointOps
 	{
@@ -65,6 +72,14 @@ namespace hpl {
 		void ohpl_ntw_simulate(uint64_t w, float timeStep);
 		void ohpl_ntw_set_max_step(uint64_t w, float step);
 		float ohpl_ntw_max_step(uint64_t w);
+		void ohpl_ntw_size(uint64_t w, bool max, cVector3f* out);
+		void ohpl_ntw_set_gravity(uint64_t w, const cVector3f* g);
+		void ohpl_ntw_gravity(uint64_t w, cVector3f* out);
+		int32_t ohpl_ntw_accuracy(uint64_t w);
+		void ohpl_ntw_set_log_debug(uint64_t w, bool on);
+		bool ohpl_ntw_log_debug(uint64_t w);
+		void ohpl_ntw_set_save_contacts(uint64_t w, bool on);
+		bool ohpl_ntw_save_contacts(uint64_t w);
 		void ohpl_ntw_set_size(uint64_t w, const float* minV, const float* maxV);
 		void ohpl_ntw_set_accuracy(uint64_t w, int32_t accuracy);
 		void ohpl_ntw_set_threads(uint64_t w, int32_t n);
@@ -90,6 +105,19 @@ namespace hpl {
 
 		uint64_t ohpl_ntb_create(uint64_t world, NewtonCollision* coll, size_t cpp, NewtonBody** outBody);
 		void ohpl_ntb_destroy(uint64_t b);
+		void ohpl_ntb_set_buoy_active(uint64_t b, bool on);
+		void ohpl_ntb_set_buoy_density(uint64_t b, float v);
+		void ohpl_ntb_set_buoy_linear_viscosity(uint64_t b, float v);
+		void ohpl_ntb_set_buoy_angular_viscosity(uint64_t b, float v);
+		void ohpl_ntb_set_buoy_surface(uint64_t b, const cPlanef* p);
+		void ohpl_ntb_buoy(uint64_t b, hpl::OhplL4Buoy* out);
+		void ohpl_ntb_set_buoy_drag(uint64_t b, const cVector3f* prevLinear, const cVector3f* prevAngular, bool noPrevVel, float dragDensityMul);
+		void ohpl_ntb_set_auto_linear(uint64_t b, float v);
+		float ohpl_ntb_auto_linear(uint64_t b);
+		void ohpl_ntb_set_auto_angular(uint64_t b, float v);
+		float ohpl_ntb_auto_angular(uint64_t b);
+		void ohpl_ntb_set_auto_steps(uint64_t b, int32_t v);
+		int32_t ohpl_ntb_auto_steps(uint64_t b);
 		void ohpl_ntb_set_matrix(uint64_t b, const cMatrixf* m);
 		void ohpl_ntb_set_material(uint64_t b, int32_t id);
 		void ohpl_ntb_set_velocity(uint64_t b, const cVector3f* v);
@@ -143,6 +171,9 @@ namespace hpl {
 		float ohpl_ntj_min(uint64_t j);
 		float ohpl_ntj_max(uint64_t j);
 		void ohpl_ntj_ball_cone_limits(uint64_t j, const cVector3f* pin, float cone, float twist);
+		float ohpl_ntj_ball_cone(uint64_t j);
+		float ohpl_ntj_ball_twist(uint64_t j);
+		void ohpl_ntj_locals(uint64_t j, cMatrixf* m0, cMatrixf* m1);
 		void ohpl_ntj_ball_angles(uint64_t j, cVector3f* out);
 		void ohpl_ntj_ball_omega(uint64_t j, cVector3f* out);
 		void ohpl_ntj_ball_force(uint64_t j, cVector3f* out);

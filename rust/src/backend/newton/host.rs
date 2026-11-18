@@ -12,15 +12,9 @@ use std::sync::atomic::{AtomicPtr, Ordering};
 pub struct BodyState {
     pub active: bool,
     pub in_update_list: bool,
-    pub buoyancy_active: bool,
     pub hpl3: bool,
     pub freeze_count: i32,
     pub density_mul: f32,
-    pub density: f32,
-    pub linear_viscosity: f32,
-    pub angular_viscosity: f32,
-    pub surface: [f32; 4],
-    pub gravity: Vector3f,
 }
 
 /// Per-joint-class operations on the C++ joint (`j` is the C++ joint address).

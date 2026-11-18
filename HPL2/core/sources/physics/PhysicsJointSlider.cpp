@@ -34,10 +34,6 @@ namespace hpl {
 		mhRust = ohpl_ntj_create_slider(mhRustWorld, &avPivotPoint, &avPinDir, mpNewtonChildBody, mpNewtonParentBody,
 									(size_t)static_cast<iPhysicsJoint*>(this), RustOps(), &mpNewtonJoint);
 
-		mfMaxDistance =0;
-		mfMinDistance =0;
-
-		mfPreviousDist =0;
 	}
 
 	iPhysicsJointSlider::~iPhysicsJointSlider()
@@ -49,12 +45,10 @@ namespace hpl {
 
 	void iPhysicsJointSlider::SetMaxDistance(float afX)
 	{
-		mfMaxDistance = afX;
 		ohpl_ntj_set_max(mhRust, afX);
 	}
 	void iPhysicsJointSlider::SetMinDistance(float afX)
 	{
-		mfMinDistance = afX;
 		ohpl_ntj_set_min(mhRust, afX);
 	}
 	float iPhysicsJointSlider::GetMaxDistance()

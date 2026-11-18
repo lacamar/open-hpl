@@ -464,14 +464,6 @@ namespace hpl {
 		bool &mbConnectionAlignCharacterRotation = mE.connAlignCharRotation;
 		cVector3f &mvConnectionCharLocalForward = mE.connCharLocalForward;
 
-		cPidControllerVec3 mBodyConnectionPointPid;
-		cPidControllerVec3 mBodyCenterPid;
-		cPidControllerf mBodyOneAxisAngularPid;
-		cPidControllerVec3 mBodyAngularPid;
-
-		cPidControllerVec3 mCharConnectionPointPid;
-		cPidControllerVec3 mCharRotatePid;
-
 		bool &mbRotateYawWhenGravityAttached = mE.rotateYawWhenGravityAttached;
 		iPhysicsBody *&mpGravityAttachedBody = mE.gravityAttachedBody;
 		iPhysicsBody *&mpGravityLastAttachedBody = mE.gravityLastAttachedBody;
@@ -494,7 +486,6 @@ namespace hpl {
 		std::vector<iCollideShape*> mvShapes;
 		std::vector<iPhysicsBody*> mvBodies;
 
-		static std::vector<iPhysicsBody*> mvTempBodies;
 	};
 };
 #endif // HPL_CHARACTER_BODY_H
