@@ -5,8 +5,10 @@
 
 use super::postfx::Op as PostOp;
 use super::renderer::{Op as RendOp, Outline};
-use crate::types::Vector3f;
+use crate::gui::direct;
+use crate::types::{Color, Vector3f};
 use std::ffi::c_void;
+use std::sync::OnceLock;
 use std::sync::atomic::{AtomicPtr, Ordering};
 
 pub type Ctx = *mut c_void;
@@ -62,9 +64,7 @@ pub struct HostTable {
     pub wrap: unsafe extern "C" fn(usize, f32, f32, *const f32, *const u32, usize, Sink32, Ctx),
     pub font_load: unsafe extern "C" fn() -> usize,
     pub font_destroy: unsafe extern "C" fn(usize),
-    pub gfx_rect: unsafe extern "C" fn(i32) -> usize,
     pub hud: unsafe extern "C" fn(*mut f32),
-    pub draw_gfx: unsafe extern "C" fn(usize, usize, *const f32, *const f32, *const f32),
     pub draw_font:
         unsafe extern "C" fn(usize, *const f32, *const f32, *const f32, i32, *const u32, usize),
     pub cfg_f32: unsafe extern "C" fn(Bytes, Bytes, f32) -> f32,
@@ -83,6 +83,7 @@ pub struct HostTable {
     pub r_replay:
         unsafe extern "C" fn(usize, *const usize, usize, *const RendOp, usize, *const i32),
     pub p_replay: unsafe extern "C" fn(usize, usize, usize, *const PostOp, usize),
+    pub log: unsafe extern "C" fn(Bytes),
 }
 
 static HOST: AtomicPtr<HostTable> = AtomicPtr::new(std::ptr::null_mut());
@@ -201,6 +202,29 @@ unsafe extern "C" fn push_row(ctx: Ctx, p: *const u32, n: usize) {
 
 // SAFETY (all blocks below): every pointer passed is to a live local or slice for the duration
 // of the call, and the table's functions accept them.
+const MAT_ADDITIVE: i32 = 3;
+const MAT_MODULATIVE: i32 = 4;
+
+/// `OhplA12F` of each value, space separated.
+fn hex_floats(v: &[f32]) -> String {
+    v.iter()
+        .map(|f| format!("{:08x}", f.to_bits()))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+impl HostFx {
+    /// One dump line, when `OHPL_A12A_DUMP` is set.
+    fn log(&self, line: impl FnOnce() -> String) {
+        static ON: OnceLock<bool> = OnceLock::new();
+        if *ON.get_or_init(|| std::env::var_os("OHPL_A12A_DUMP").is_some_and(|v| !v.is_empty())) {
+            let line = line();
+            // SAFETY: the table's function reads the line for the call.
+            unsafe { (self.0.log)(bytes(line.as_bytes())) };
+        }
+    }
+}
+
 impl Fx for HostFx {
     fn snd_valid(&self, entry: usize, id: i32) -> bool {
         unsafe { (self.0.snd_valid)(entry, id) != 0 }
@@ -300,7 +324,17 @@ impl Fx for HostFx {
     }
 
     fn gfx_rect(&self, additive: bool) -> usize {
-        unsafe { (self.0.gfx_rect)(i32::from(additive)) }
+        let g = direct::gfx_rect(
+            direct::WHITE,
+            if additive {
+                MAT_ADDITIVE
+            } else {
+                MAT_MODULATIVE
+            },
+            true,
+        );
+        self.log(|| format!("gfx_rect {} => 1", if additive { "add" } else { "mod" }));
+        g
     }
 
     fn hud(&self) -> Hud {
@@ -313,7 +347,22 @@ impl Fx for HostFx {
     }
 
     fn draw_gfx(&self, set: usize, gfx: usize, pos: [f32; 3], size: [f32; 2], col: [f32; 4]) {
-        unsafe { (self.0.draw_gfx)(set, gfx, pos.as_ptr(), size.as_ptr(), col.as_ptr()) }
+        self.log(|| {
+            format!(
+                "draw_gfx 1 {} {} {}",
+                hex_floats(&pos),
+                hex_floats(&size),
+                hex_floats(&col)
+            )
+        });
+        let set = if set == 0 { direct::hud_set() } else { set };
+        let c = Color {
+            r: col[0],
+            g: col[1],
+            b: col[2],
+            a: col[3],
+        };
+        direct::draw_gfx(set, gfx, pos, size, c, direct::MAT_LAST, 0.0);
     }
 
     fn draw_font(

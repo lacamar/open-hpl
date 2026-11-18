@@ -36,9 +36,7 @@ struct OhplA12aHost
 	void (*wrap)(size_t, float, float, const float*, const unsigned*, size_t, OhplA12aSink32, void*);
 	size_t (*font_load)();
 	void (*font_destroy)(size_t);
-	size_t (*gfx_rect)(int);
 	void (*hud)(float*);
-	void (*draw_gfx)(size_t, size_t, const float*, const float*, const float*);
 	void (*draw_font)(size_t, const float*, const float*, const float*, int, const unsigned*, size_t);
 	float (*cfg_f32)(OhplA12aBytes, OhplA12aBytes, float);
 	void (*cfg_vec2)(OhplA12aBytes, OhplA12aBytes, float, float*);
@@ -55,6 +53,7 @@ struct OhplA12aHost
 	void (*r_clip)(size_t, const float*, const float*, int*);
 	void (*r_replay)(size_t, const size_t*, size_t, const OhplGa9bROp*, size_t, const int*);
 	void (*p_replay)(size_t, size_t, size_t, const OhplGa9bPOp*, size_t);
+	void (*log)(OhplA12aBytes);
 };
 
 struct OhplA12aFxState
