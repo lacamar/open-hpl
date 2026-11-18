@@ -48,11 +48,8 @@ namespace hpl {
 
 	cSoundEntityManager::~cSoundEntityManager()
 	{
-		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_SOUND_ENTITY); ohpl_rm_custom_free(mpCustom); return; }
-        DestroyAll();
-
+		ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_SOUND_ENTITY);
 		ohpl_rm_custom_free(mpCustom);
-		Log(" Done with sound entities\n");
 	}
 
 	//-----------------------------------------------------------------------
@@ -65,80 +62,19 @@ namespace hpl {
 
 	void cSoundEntityManager::Preload(const tString& asFile)
 	{
-		if(mpRs) { ohpl_h3f_sound_entity_preload(mpRs, H3Ops(), RM_STR(asFile), mpCustomResolver != NULL); return; }
-		cSoundEntityData *pData = CreateSoundEntity(asFile);
-		if(pData == NULL) {
-			Warning("Couldn't preload sound entity '%s'\n",asFile.c_str());
-			return;
-		}
-
-		pData->PreloadSounds();
+		ohpl_h3f_sound_entity_preload(mpRs, H3Ops(), RM_STR(asFile), mpCustomResolver != NULL);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cSoundEntityManager::AddCustomSoundEntity(const tString& asName, cSoundEntityData *apData)
 	{
-		if(mpRs) { ohpl_h3f_sound_entity_add_custom(mpRs, H3Ops(), RM_STR(asName), static_cast<iResourceBase*>(apData)); return; }
-		apData->IncUserCount();
-		ohpl_rm_custom_set(mpCustom, RM_STR(asName), apData);
+		ohpl_h3f_sound_entity_add_custom(mpRs, H3Ops(), RM_STR(asName), static_cast<iResourceBase*>(apData));
 	}
 
 	cSoundEntityData* cSoundEntityManager::CreateSoundEntity(const tString& asName)
 	{
-		if(mpRs) return H3Res<cSoundEntityData>(ohpl_h3f_sound_entity(mpRs, H3Ops(), RM_STR(asName), mpCustomResolver != NULL));
-		bool bCustom = false;
-		cSoundEntityData *pStored = static_cast<cSoundEntityData*>(ohpl_rm_custom_get(mpCustom, RM_STR(asName), &bCustom));
-		if(bCustom)
-		{
-			if(pStored) pStored->IncUserCount();
-			return pStored;
-		}
-
-		cSoundEntityData* pSoundEntity;
-
-		cRmEnv env(mpFileSearcher, this);
-		if(ohpl_rm_snd_needs_resolver(env.raw(), RM_STR(asName), mpCustomResolver != NULL))
-		{
-			cSoundEntityData *pCustom = mpCustomResolver(asName);
-			ohpl_rm_custom_set(mpCustom, RM_STR(asName), pCustom);
-			if(pCustom)
-			{
-				pCustom->IncUserCount();
-				pCustom->IncUserCount();
-			}
-			return pCustom;
-		}
-
-		BeginLoad(asName);
-
-		cRmOut out;
-		ohpl_rm_resolve_simple(env.raw(), 3, RM_STR(asName), out.raw());
-		const tString& asNewName = out.msName;
-		const tWString& sPath = out.msPath;
-
-		pSoundEntity = static_cast<cSoundEntityData*>(out.Res());
-
-		if(pSoundEntity==NULL && sPath!=_W(""))
-		{
-			pSoundEntity = hplNew( cSoundEntityData, (asNewName, mpResources,mpSound) );
-
-			if(pSoundEntity->CreateFromFile(sPath))
-			{
-				AddResource(pSoundEntity);
-			}
-			else
-			{
-				hplDelete(pSoundEntity);
-				pSoundEntity =NULL;
-			}
-		}
-
-		if(pSoundEntity)pSoundEntity->IncUserCount();
-		else Error("Couldn't create SoundEntity '%s'\n",asNewName.c_str());
-
-		EndLoad();
-		return pSoundEntity;
+		return H3Res<cSoundEntityData>(ohpl_h3f_sound_entity(mpRs, H3Ops(), RM_STR(asName), mpCustomResolver != NULL));
 	}
 
 	//-----------------------------------------------------------------------
@@ -151,11 +87,7 @@ namespace hpl {
 
 	void cSoundEntityManager::Destroy(iResourceBase* apResource)
 	{
-		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
-		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
-			RemoveResource(apResource);
-			hplDelete(apResource);
-		}
+		ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource);
 	}
 
 	void* cSoundEntityManager::H3Create(OhplH3Create &aCreate)

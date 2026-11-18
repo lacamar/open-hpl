@@ -102,15 +102,11 @@ namespace hpl {
 
 		mbDisableRenderDataLoading = false;
 
-		mlIdCounter =0;
 	}
 
 	cMaterialManager::~cMaterialManager()
 	{
-		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_MATERIAL); return; }
-        DestroyAll();
-
-		Log(" Done with materials\n");
+		ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_MATERIAL);
 	}
 
 	//-----------------------------------------------------------------------
@@ -123,37 +119,7 @@ namespace hpl {
 
 	cMaterial* cMaterialManager::CreateMaterial(const tString& asName)
 	{
-		if(mpRs) return H3Res<cMaterial>(ohpl_h3f_material(mpRs, H3Ops(), RM_STR(asName)));
-		cMaterial* pMaterial;
-
-		cRmEnv env(mpFileSearcher, this);
-		cRmOut out;
-		if(ohpl_rm_resolve_simple(env.raw(), 4, RM_STR(asName), out.raw())==0)
-			return NULL;
-		const tString& asNewName = out.msName;
-		const tWString& sPath = out.msPath;
-
-		BeginLoad(asName);
-
-		pMaterial = static_cast<cMaterial*>(out.Res());
-
-		if(pMaterial==NULL && sPath!=_W(""))
-		{
-			pMaterial = LoadFromFile(asNewName,sPath);
-			if(pMaterial==NULL){
-				Error("Couldn't load material '%s'\n",asNewName.c_str());
-				EndLoad();
-				return NULL;
-			}
-
-			AddResource(pMaterial);
-		}
-
-		if(pMaterial)pMaterial->IncUserCount();
-		else Error("Couldn't create material '%s'\n",asNewName.c_str());
-
-		EndLoad();
-		return pMaterial;
+		return H3Res<cMaterial>(ohpl_h3f_material(mpRs, H3Ops(), RM_STR(asName)));
 	}
 
 	//-----------------------------------------------------------------------
@@ -173,24 +139,14 @@ namespace hpl {
 
 	void cMaterialManager::Destroy(iResourceBase* apResource)
 	{
-		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
-		if(ohpl_rm_destroy_standard(apResource->GetMeta()))
-		{
-			RemoveResource(apResource);
-			hplDelete(apResource);
-		}
+		ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cMaterialManager::CompileTextureLookups()
 	{
-		if(mpRs) { ohpl_h3f_for_each(mpRs, H3Ops(), OHPL_H3C_MAT_COMPILE_LOOKUP, 0); return; }
-		for(tResourceBaseMapIt it = m_mapResources.begin(); it != m_mapResources.end(); ++it)
-		{
-			cMaterial *pMat = static_cast<cMaterial*>(it->second);
-			if(pMat->GetType()) pMat->CompileTextureLookup();
-		}
+		ohpl_h3f_for_each(mpRs, H3Ops(), OHPL_H3C_MAT_COMPILE_LOOKUP, 0);
 	}
 
 	//-----------------------------------------------------------------------
@@ -199,19 +155,7 @@ namespace hpl {
 	{
 		if(aFilter == mTextureFilter) return;
 		mTextureFilter = aFilter;
-		if(mpRs) { ohpl_h3f_for_each(mpRs, H3Ops(), OHPL_H3C_MAT_SET_FILTER, (int64_t)aFilter); return; }
-		
-		tResourceBaseMapIt it = m_mapResources.begin();
-		for(; it != m_mapResources.end(); ++it)
-		{
-			cMaterial *pMat = static_cast<cMaterial*>(it->second);
-
-            for(int i=0; i<eMaterialTexture_LastEnum; ++i)
-			{
-				iTexture *pTex = pMat->GetTexture((eMaterialTexture)i);
-				if(pTex)pTex->SetFilter(aFilter);
-			}
-		}
+		ohpl_h3f_for_each(mpRs, H3Ops(), OHPL_H3C_MAT_SET_FILTER, (int64_t)aFilter);
 	}
 
 	//-----------------------------------------------------------------------
@@ -222,78 +166,25 @@ namespace hpl {
 											mpGraphics->GetLowLevel()->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), mfTextureAnisotropy))
 			return;
 		mfTextureAnisotropy = afX;
-		if(mpRs) { ohpl_h3f_for_each(mpRs, H3Ops(), OHPL_H3C_MAT_SET_ANISO, H3Bits(afX)); return; }
-
-		tResourceBaseMapIt it = m_mapResources.begin();
-		for(; it != m_mapResources.end(); ++it)
-		{
-			cMaterial *pMat = static_cast<cMaterial*>(it->second);
-
-			for(int i=0; i<eMaterialTexture_LastEnum; ++i)
-			{
-				iTexture *pTex = pMat->GetTexture((eMaterialTexture)i);
-				if(pTex)pTex->SetAnisotropyDegree(mfTextureAnisotropy);
-			}
-		}
+		ohpl_h3f_for_each(mpRs, H3Ops(), OHPL_H3C_MAT_SET_ANISO, H3Bits(afX));
 	}
 
 	//-----------------------------------------------------------------------
 
 	tString cMaterialManager::GetPhysicsMaterialName(const tString& asName)
 	{
-		if(mpRs)
-		{
-			tString sRsName;
-			ohpl_h3f_material_physics_name(mpRs, H3Ops(), RM_STR(asName), [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sRsName);
-			return sRsName;
-		}
-		cMaterial* pMaterial;
-
-		cRmEnv env(mpFileSearcher, this);
-		cRmOut out;
-		ohpl_rm_resolve_simple(env.raw(), 5, RM_STR(asName), out.raw());
-		const tWString& sPath = out.msPath;
-
-		pMaterial = static_cast<cMaterial*>(out.Res());
-
-		if(pMaterial==NULL && sPath!=_W(""))
-		{
-			FILE *pFile = cPlatform::OpenFile(sPath, _W("rb"));
-			if(pFile==NULL) return "";
-			fclose(pFile);
-
-			cXmlDocumentTiny doc("");
-			if(!doc.CreateFromFile(sPath)) return "";
-
-			cXmlElement *pMain = doc.GetFirstElement("Main");
-			if(pMain==NULL){
-				Error("Main child not found in '%s'\n",sPath.c_str());
-				return "";
-			}
-
-			return cString::ToString(pMain->GetAttribute("PhysicsMaterial"),"Default");
-		}
-
-		if(pMaterial)
-			return pMaterial->GetPhysicsMaterial();
-		else
-			return "";
+		tString sRsName;
+		ohpl_h3f_material_physics_name(mpRs, H3Ops(), RM_STR(asName), [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sRsName);
+		return sRsName;
 	}
 
 	//-----------------------------------------------------------------------
 
 	cMaterial* cMaterialManager::CreateCustomMaterial(const tString& asName, iMaterialType *apMaterialType)
 	{
-		if(mpRs)
-		{
-			cMaterial* pCustom = hplNew( cMaterial, (asName, cString::To16Char(asName), mpGraphics, mpResources, apMaterialType) );
-			ohpl_h3f_material_custom(mpRs, H3Ops(), static_cast<iResourceBase*>(pCustom));
-			return pCustom;
-		}
-		cMaterial* pMat = hplNew( cMaterial, (asName, cString::To16Char(asName), mpGraphics, mpResources, apMaterialType) );
-		pMat->IncUserCount();
-		AddResource(pMat);
-		return pMat;
+		cMaterial* pCustom = hplNew( cMaterial, (asName, cString::To16Char(asName), mpGraphics, mpResources, apMaterialType) );
+		ohpl_h3f_material_custom(mpRs, H3Ops(), static_cast<iResourceBase*>(pCustom));
+		return pCustom;
 	}
 
 	//-----------------------------------------------------------------------
@@ -303,282 +194,30 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
-	static bool TextureTypeIsSRGB(eMaterialTexture aType)
-	{
-		return ohpl_rm_mat_texture_is_srgb((int)aType);
-	}
 
 	//-----------------------------------------------------------------------
 
-	cMaterial* cMaterialManager::LoadFromFile(const tString& asName,const tWString& asPath)
-	{
-		//Log("Load material: %s\n", asName.c_str());
-
-		iXmlDocument* pDoc = mpResources->GetLowLevel()->CreateXmlDocument();
-		if(pDoc->CreateFromFile(asPath)==false)
-		{
-			mpResources->DestroyXmlDocument(pDoc);
-			return NULL;
-		}
-
-		cXmlElement* pMain = pDoc->GetFirstElement("Main");
-		if(pMain==NULL)
-		{
-			mpResources->DestroyXmlDocument(pDoc);
-			Error("Main child not found.\n");
-			return NULL;
-		}
-
-		tString sType = pMain->GetAttributeString("Type");
-		if(sType=="")
-		{
-			mpResources->DestroyXmlDocument(pDoc);
-			Error("Type not found.\n");
-			return NULL;
-		}
-        
-		/////////////////////////////
-		// Get General Propertries
-		bool bDepthTest = pMain->GetAttributeBool("DepthTest", true);
-		float fValue = pMain->GetAttributeFloat("Value", 1);
-		tString sPhysicsMatName = pMain->GetAttributeString("PhysicsMaterial", "Default");
-		tString sBlendMode = pMain->GetAttributeString("BlendMode", "Add");
-
-		/////////////////////////////
-		// Make a "fake" material, with a blank type
-		if(mbDisableRenderDataLoading)
-		{
-			cMaterial* pMat = hplNew( cMaterial, (asName, asPath, mpGraphics, mpResources, &gBlankMaterialType) );
-			pMat->SetPhysicsMaterial(sPhysicsMatName);
-			
-			mpResources->DestroyXmlDocument(pDoc);
-			return pMat;
-		}
-
-		/////////////////////////////
-		// CreateType
-		iMaterialType *pMatType = mpGraphics->GetMaterialType(sType);
-		if(pMatType ==NULL)
-		{
-			mpResources->DestroyXmlDocument(pDoc);
-			Error("Invalid material type '%s'!\n",sType.c_str());
-			return NULL;
-		}
-		cMaterial* pMat = hplNew( cMaterial, (asName, asPath, mpGraphics, mpResources, pMatType) );
-		
-		pMat->SetDepthTest(bDepthTest);
-		pMat->SetForceFullScaleTextures(pMain->GetAttributeBool("ForceFullScaleTextures", false));
-		pMat->SetPhysicsMaterial(sPhysicsMatName);
-		cVector2f vSubDivs = pMain->GetAttributeVector2f("UVSubDivs", 1);
-		pMat->SetUVSubDivisions(cVector2l((int)vSubDivs.x, (int)vSubDivs.y));
-        if(pMatType->IsTranslucent())
-			pMat->SetBlendMode(GetBlendMode(sBlendMode));
-
-		///////////////////////////
-		//Textures
-		cXmlElement* pTexRoot = pDoc->GetFirstElement("TextureUnits");
-		if(pTexRoot==NULL){
-			mpResources->DestroyXmlDocument(pDoc);
-			Error("TextureUnits child not found.\n");
-			return NULL;
-		}
-
-		//Log("Material %s\n",asName.c_str());
-		
-		for(int i=0; i< pMatType->GetUsedTextureNum(); ++i)
-		{
-			cMaterialUsedTexture* pUsedTexture = pMatType->GetUsedTexture(i);
-			iTexture *pTex = NULL;
-
-			tString sTextureType = GetTextureString(pUsedTexture->mType);
-			//Log("Trying to load type: %s\n",sTextureType.c_str());
-			
-			cXmlElement* pTexChild = pTexRoot->GetFirstElement(sTextureType.c_str());
-			if(pTexChild==NULL) pTexChild = pTexRoot->GetFirstElement((sTextureType + "Side").c_str());
-			if(pTexChild==NULL){
-				//Log(" Texture unit element missing!\n");
-				/*hplDelete(pMat);
-				return NULL;*/
-				continue;
-			}
-
-			eTextureType type = GetType(pTexChild->GetAttributeString("Type", ""));
-			tString sFile = pTexChild->GetAttributeString("File", "");
-			bool bMipMaps = pTexChild->GetAttributeBool("MipMaps", true);
-			bool bCompress = pTexChild->GetAttributeBool("Compress", false);
-			eTextureWrap wrap = GetWrap(pTexChild->GetAttributeString("Wrap", ""));
-			
-			eTextureAnimMode animMode = GetAnimMode(pTexChild->GetAttributeString("AnimMode", "None"));
-			float fFrameTime = pTexChild->GetAttributeFloat("AnimFrameTime", 1.0f);
-			
-			if(sFile=="") continue;
-			
-			{
-				tString sNewFile;
-				ohpl_rm_mat_texture_file(RM_STR(sFile), reinterpret_cast<const uint32_t*>(asPath.data()), asPath.size(),
-					[](void* c, const uint8_t* p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sNewFile);
-				sFile = sNewFile;
-			}
-			//Log("Texture: '%s'\n",sFile.c_str());
-			//Log(" Loading!\n");
-
-			mpResources->GetTextureManager()->SetSRGB(TextureTypeIsSRGB(pUsedTexture->mType));
-			switch(ohpl_rm_mat_create_kind((int)animMode, (int)type))
-			{
-			case 0:
-				pTex = mpResources->GetTextureManager()->CreateAnim(sFile,bMipMaps,type,eTextureUsage_Normal,mlTextureSizeDownScaleLevel);
-				break;
-			case 1:
-				pTex = mpResources->GetTextureManager()->Create1D(sFile,bMipMaps,
-																		eTextureUsage_Normal,
-																		mlTextureSizeDownScaleLevel);
-				break;
-			case 2:
-				pTex = mpResources->GetTextureManager()->Create2D(sFile,bMipMaps, eTextureType_2D,
-																	eTextureUsage_Normal,
-																	mlTextureSizeDownScaleLevel);
-				break;
-			case 3:
-				pTex = mpResources->GetTextureManager()->Create3D(sFile,bMipMaps,
-																	eTextureUsage_Normal,
-																	mlTextureSizeDownScaleLevel);
-				break;
-			case 4:
-				//Check for DDS ending and load cubemap as file.
-				pTex = mpResources->GetTextureManager()->CreateCubeMap(sFile,bMipMaps,
-																		eTextureUsage_Normal,
-																		mlTextureSizeDownScaleLevel);
-				break;
-			}
-
-			mpResources->GetTextureManager()->SetSRGB(false);
-
-			if(pTex==NULL)
-			{
-				//Rebirth ships materials naming absent illumination maps
-				if(pUsedTexture->mType == eMaterialTexture_Illumination) continue;
-				mpResources->DestroyXmlDocument(pDoc);
-				hplDelete(pMat);
-				return NULL;
-			}
-
-			pTex->SetFrameTime(fFrameTime);
-			pTex->SetAnimMode(animMode);
-
-			pTex->SetWrapSTR(wrap);
-			
-			pTex->SetFilter(mTextureFilter);
-			pTex->SetAnisotropyDegree(mfTextureAnisotropy);
-
-			pMat->SetTexture(pUsedTexture->mType, pTex);
-		}
-
-		///////////////////////////
-		//Animations
-		cXmlElement* pUvAnimRoot = pDoc->GetFirstElement("UvAnimations");
-		if(pUvAnimRoot)
-		{
-			cXmlNodeListIterator it = pUvAnimRoot->GetChildIterator();
-			while(it.HasNext())
-			{
-				cXmlElement* pAnimElem = it.Next()->ToElement();
-
-				eMaterialUvAnimation animType = GetUvAnimType(pAnimElem->GetAttributeString("Type").c_str());	
-				eMaterialAnimationAxis animAxis = GetAnimAxis(pAnimElem->GetAttributeString("Axis").c_str());	
-				float fSpeed = pAnimElem->GetAttributeFloat("Speed",0);
-				float fAmp = pAnimElem->GetAttributeFloat("Amplitude",0);
-
-				pMat->AddUvAnimation(animType,fSpeed,fAmp, animAxis);
-			}
-		}
-
-
-		///////////////////////////
-		//Variables
-		cXmlElement* pUserVarsRoot = pDoc->GetFirstElement("SpecificVariables");
-		cResourceVarsObject userVars;
-		if(pUserVarsRoot) userVars.LoadVariables(pUserVarsRoot);
-		
-		pMatType->LoadVariables(pMat, &userVars);
-		
-		
-		///////////////////////////
-		//End
-		
-		mpResources->DestroyXmlDocument(pDoc);
-			
-		pMat->Compile();
-		
-		return pMat;
-	}
 
 	//-----------------------------------------------------------------------
 
-	eTextureType cMaterialManager::GetType(const tString& asType)
-	{
-		return (eTextureType)ohpl_rm_mat_texture_type(RM_STR(asType));
-	}
 
 	//-----------------------------------------------------------------------
 
-	tString cMaterialManager::GetTextureString(eMaterialTexture aType)
-	{
-		tString sOut;
-		ohpl_rm_mat_texture_string((int)aType, [](void* c, const uint8_t* p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sOut);
-		return sOut;
-	}
 
 	//-----------------------------------------------------------------------
 
-	eTextureWrap cMaterialManager::GetWrap(const tString& asType)
-	{
-		return (eTextureWrap)ohpl_rm_mat_wrap(RM_STR(asType));
-	}
 
 	//-----------------------------------------------------------------------
 
-	eTextureAnimMode cMaterialManager::GetAnimMode(const tString& asType)
-	{
-		return (eTextureAnimMode)ohpl_rm_mat_anim_mode(RM_STR(asType));
-	}
 
 	//-----------------------------------------------------------------------
 
-	eMaterialBlendMode cMaterialManager::GetBlendMode(const tString& asType)
-	{
-		bool bWarn = false;
-		eMaterialBlendMode mode = (eMaterialBlendMode)ohpl_rm_mat_blend_mode(RM_STR(asType), &bWarn);
-		if(bWarn) Warning("Material BlendMode '%s' does not exist!\n",asType.c_str());
-		return mode;
-	}
 
 	//-----------------------------------------------------------------------
 
-	eMaterialUvAnimation cMaterialManager::GetUvAnimType(const char* apString)
-	{
-		bool bErr = false;
-		eMaterialUvAnimation type = (eMaterialUvAnimation)ohpl_rm_mat_uv_anim_type(reinterpret_cast<const uint8_t*>(apString), apString ? strlen(apString) : 0, &bErr);
-		if(bErr)
-		{
-			if(apString==NULL) Error("Uv animation attribute Type does not exist!\n");
-			else Error("Invalid uv animation type %s\n",apString);
-		}
-		return type;
-	}
 
 	//-----------------------------------------------------------------------
 
-	eMaterialAnimationAxis cMaterialManager::GetAnimAxis(const char* apString)
-	{
-		bool bErr = false;
-		eMaterialAnimationAxis axis = (eMaterialAnimationAxis)ohpl_rm_mat_anim_axis(reinterpret_cast<const uint8_t*>(apString), apString ? strlen(apString) : 0, &bErr);
-		if(bErr)
-		{
-			if(apString==NULL) Error("Uv animation attribute Axis does not exist!\n");
-			else Error("Invalid animation axis %s\n",apString);
-		}
-		return axis;
-	}
 
 
 	void* cMaterialManager::H3Create(OhplH3Create &aCreate)

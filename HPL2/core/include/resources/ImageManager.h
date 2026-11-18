@@ -82,15 +82,9 @@ namespace hpl {
 		iLowLevelGraphics *mpLowLevelGraphics;
 		cBitmapLoaderHandler *mpBitmapLoaderHandler;
 		
-		tFrameBitmapList mlstBitmapFrames;
-		tFrameTextureMap m_mapTextureFrames;
 		
 		cVector2l mvFrameSize;
-		int mlFrameHandle;
 
-		cFrameSubImage *FindImage(const tString &asName, tWString &asFilePath);
-		cFrameSubImage *AddToFrame(cBitmap *apBmp, const tWString& asFullPath, int alFrameHandle);
-		cFrameBitmap *CreateBitmapFrame(cVector2l avSize);
 
 	};
 

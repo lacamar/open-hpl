@@ -48,9 +48,7 @@ namespace hpl {
 
 	cFontManager::~cFontManager()
 	{
-		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_FONT); return; }
-		DestroyAll();
-		Log(" Done with fonts\n");
+		ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_FONT);
 	}
 
 	//-----------------------------------------------------------------------
@@ -64,60 +62,7 @@ namespace hpl {
 	iFontData* cFontManager::CreateFontData(const tString& asName, int alSize,unsigned short alFirstChar,
 											unsigned short alLastChar)
 	{
-		if(mpRs) return H3Res<iFontData>(ohpl_h3f_font(mpRs, H3Ops(), RM_STR(asName), alSize, alFirstChar, alLastChar));
-		iFontData* pFont;
-
-		BeginLoad(asName);
-
-		cRmEnv env(mpFileSearcher, this);
-		cRmOut out;
-		ohpl_rm_resolve_simple(env.raw(), 1, RM_STR(asName), out.raw());
-		const tString& asNewName = out.msName;
-		const tWString& sPath = out.msPath;
-
-		pFont = static_cast<iFontData*>(out.Res());
-
-		if(pFont==NULL && sPath!=_W(""))
-		{
-			pFont = mpGraphics->GetLowLevel()->CreateFontData(asNewName);
-			pFont->SetUp(mpResources,mpGui);
-
-			int lKind = ohpl_rm_font_kind(RM_STR(asName));
-
-			//True Type Font
-			if(lKind == 1)
-			{
-				if(pFont->CreateFromFontFile(sPath,alSize,alFirstChar,alLastChar)==false){
-					hplDelete(pFont);
-					EndLoad();
-					return NULL;
-				}
-			}
-			//Angel code font type
-			else if(lKind == 2)
-			{
-				if(pFont->CreateFromBitmapFile(sPath)==false){
-					hplDelete(pFont);
-					EndLoad();
-					return NULL;
-				}
-			}
-			else
-			{
-				Error("Font '%s' has an unkown extension!\n",asName.c_str());
-				hplDelete(pFont);
-				EndLoad();
-				return NULL;
-			}
-
-			AddResource(pFont);
-		}
-
-		if(pFont)pFont->IncUserCount();
-		else Error("Couldn't create font '%s'\n",asNewName.c_str());
-
-		EndLoad();
-		return pFont;
+		return H3Res<iFontData>(ohpl_h3f_font(mpRs, H3Ops(), RM_STR(asName), alSize, alFirstChar, alLastChar));
 	}
 
 	//-----------------------------------------------------------------------
@@ -130,11 +75,7 @@ namespace hpl {
 
 	void cFontManager::Destroy(iResourceBase* apResource)
 	{
-		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
-		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
-			RemoveResource(apResource);
-			hplDelete(apResource);
-		}
+		ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource);
 	}
 
 	//-----------------------------------------------------------------------

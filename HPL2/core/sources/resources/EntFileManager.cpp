@@ -66,9 +66,7 @@ namespace hpl {
 
 	cEntFileManager::~cEntFileManager()
 	{
-		if(mpRs) { ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_ENT_FILE); return; }
-		DestroyAll();
-		Log(" Done with ent files\n");
+		ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_ENT_FILE);
 	}
 
 	//-----------------------------------------------------------------------
@@ -81,41 +79,7 @@ namespace hpl {
 
 	cEntFile* cEntFileManager::CreateEntFile(const tString& asName)
 	{
-		if(mpRs) return H3Res<cEntFile>(ohpl_h3f_ent_file(mpRs, H3Ops(), RM_STR(asName)));
-		cEntFile* pEntFile;
-
-		BeginLoad(asName);
-
-		cRmEnv env(mpFileSearcher, this);
-		cRmOut out;
-		ohpl_rm_resolve_simple(env.raw(), 0, RM_STR(asName), out.raw());
-		const tString& asNewName = out.msName;
-		const tWString& sPath = out.msPath;
-
-		pEntFile = static_cast<cEntFile*>(out.Res());
-
-		if(pEntFile==NULL && sPath!=_W(""))
-		{
-			pEntFile = hplNew(cEntFile, (asNewName, sPath.c_str(), mpResources));
-
-			if(pEntFile->CreateFromFile()==false)
-			{
-				Error("Couldn't load entity file '%s'!\n",cString::To8Char(sPath).c_str());
-				hplDelete(pEntFile);
-				EndLoad();
-				return NULL;
-			}
-
-			AddResource(pEntFile);
-		}
-
-		if(pEntFile)
-			pEntFile->IncUserCount();
-		else
-			Error("Couldn't create ent file '%s'\n",asNewName.c_str());
-
-		EndLoad();
-		return pEntFile;
+		return H3Res<cEntFile>(ohpl_h3f_ent_file(mpRs, H3Ops(), RM_STR(asName)));
 	}
 
 	//-----------------------------------------------------------------------
@@ -128,11 +92,7 @@ namespace hpl {
 
 	void cEntFileManager::Destroy(iResourceBase* apResource)
 	{
-		if(mpRs) { ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource); return; }
-		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
-			RemoveResource(apResource);
-			hplDelete(apResource);
-		}
+		ohpl_h3f_destroy_standard(mpRs, H3Ops(), apResource);
 	}
 
 	//-----------------------------------------------------------------------

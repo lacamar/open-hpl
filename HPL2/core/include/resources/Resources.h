@@ -187,6 +187,7 @@ namespace hpl {
 		void Init(cGraphics* apGraphics,cSystem *apSystem, cSound* apSound, cScene *apScene, cGui *apGui, cPhysics *apPhysics);
 
 		void Update(float afTimeStep);
+		void DumpManagers(const char *apWhen);
 
 		iLowLevelResources* GetLowLevel();
 		cFileSearcher* GetFileSearcher();

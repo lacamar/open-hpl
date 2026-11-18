@@ -69,7 +69,7 @@ namespace hpl {
 
 		void Update(float afTimeStep);
 
-		int GetMemoryUsage(){ return mpRs ? ohpl_h3f_mem_usage(mpRs, &mOps) : mlMemoryUsage;}
+		int GetMemoryUsage(){ return ohpl_h3f_mem_usage(mpRs, &mOps);}
 
 		void SetSRGB(bool abX){ mbSRGB = abX && mbHardwareSRGB; }
 		static void SetHardwareSRGB(bool abX){ mbHardwareSRGB = abX; }
@@ -83,17 +83,13 @@ namespace hpl {
 									eTextureUsage aUsage, eTextureType aType, 
 									unsigned int alTextureSizeLevel);
 
-		iTexture* FindTexture2D(const tString &asName, tWString &asFilePath);
 
 		bool mbSRGB = false;
 		static bool mbHardwareSRGB;
 
 		tTextureAttenuationMap m_mapAttenuationTextures;
-		std::set<iTexture*> m_setAnimTextures;
 		
-		tStringVec mvCubeSideSuffixes;
 
-		int mlMemoryUsage;
 
 		cGraphics* mpGraphics;
 		cResources* mpResources;
