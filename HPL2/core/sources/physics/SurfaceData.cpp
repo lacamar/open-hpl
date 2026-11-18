@@ -86,19 +86,19 @@ namespace hpl {
 		mpPhysics = apPhysics;
 		mpResources = apResources;
 
-		ohpl_h15s_new(HostOp, reinterpret_cast<size_t>(this), &mS);
+		mS = ohpl_h15s_new(HostOp, reinterpret_cast<size_t>(this));
 	}
 
 	cSurfaceData::~cSurfaceData()
 	{
-		ohpl_h15s_free(mS.rs);
+		ohpl_h15s_free(mS);
 	}
 
 	// PUBLIC METHODS
 
 	void cSurfaceData::RustParams(OhplSurfaceParams &aParams) const
 	{
-		ohpl_h15s_params(&mS, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(mpPhysics), OhplS(msScrapeSoundName), OhplS(msRollSoundName), &aParams);
+		ohpl_h15s_params(mS, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(mpPhysics), OhplS(msScrapeSoundName), OhplS(msRollSoundName), &aParams);
 	}
 
 	void cSurfaceData::OnImpact(float afSpeed,const cVector3f &avPos,int alContacts, iPhysicsBody *apBody)
@@ -135,112 +135,112 @@ namespace hpl {
 
 	void cSurfaceData::SetElasticity(float afElasticity)
 	{
-		ohpl_h15s_set_f32(&mS, 0, afElasticity);
+		ohpl_h15s_set_f32(mS, 0, afElasticity);
 	}
 
 	float cSurfaceData::GetElasticity() const
 	{
-		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(&mS), 0);
+		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(mS), 0);
 	}
 
 	void cSurfaceData::SetStaticFriction(float afElasticity)
 	{
-		ohpl_h15s_set_f32(&mS, 1, afElasticity);
+		ohpl_h15s_set_f32(mS, 1, afElasticity);
 	}
 
 	float cSurfaceData::GetStaticFriction() const
 	{
-		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(&mS), 1);
+		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(mS), 1);
 	}
 
 	void cSurfaceData::SetKineticFriction(float afElasticity)
 	{
-		ohpl_h15s_set_f32(&mS, 2, afElasticity);
+		ohpl_h15s_set_f32(mS, 2, afElasticity);
 	}
 
 	float cSurfaceData::GetKineticFriction() const
 	{
-		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(&mS), 2);
+		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(mS), 2);
 	}
 
 	void cSurfaceData::SetPriority(int alPriority)
 	{
-		ohpl_h15s_set_i32(&mS, 0, alPriority);
+		ohpl_h15s_set_i32(mS, 0, alPriority);
 	}
 
 	int cSurfaceData::GetPriority() const
 	{
-		return ohpl_h15s_get_i32(&mS, 0);
+		return ohpl_h15s_get_i32(mS, 0);
 	}
 
 	void cSurfaceData::SetFrictionCombMode(ePhysicsMaterialCombMode aMode)
 	{
-		ohpl_h15s_set_i32(&mS, 1, aMode);
+		ohpl_h15s_set_i32(mS, 1, aMode);
 	}
 
 	ePhysicsMaterialCombMode cSurfaceData::GetFrictionCombMode() const
 	{
-		return (ePhysicsMaterialCombMode)ohpl_h15s_get_i32(&mS, 1);
+		return (ePhysicsMaterialCombMode)ohpl_h15s_get_i32(mS, 1);
 	}
 
 	void cSurfaceData::SetElasticityCombMode(ePhysicsMaterialCombMode aMode)
 	{
-		ohpl_h15s_set_i32(&mS, 2, aMode);
+		ohpl_h15s_set_i32(mS, 2, aMode);
 	}
 
 	ePhysicsMaterialCombMode cSurfaceData::GetElasticityCombMode() const
 	{
-		return (ePhysicsMaterialCombMode)ohpl_h15s_get_i32(&mS, 2);
+		return (ePhysicsMaterialCombMode)ohpl_h15s_get_i32(mS, 2);
 	}
 
 	void cSurfaceData::PreloadData()
 	{
-		ohpl_h15s_preload(mS.rs);
+		ohpl_h15s_preload(mS->rs);
 	}
 
 	iPhysicsMaterial* cSurfaceData::ToMaterial(iPhysicsWorld *apWorld)
 	{
-		return reinterpret_cast<iPhysicsMaterial*>(ohpl_h15s_to_material(mS.rs, &mS, msName.c_str(), msName.size(), reinterpret_cast<size_t>(apWorld)));
+		return reinterpret_cast<iPhysicsMaterial*>(ohpl_h15s_to_material(mS->rs, mS, msName.c_str(), msName.size(), reinterpret_cast<size_t>(apWorld)));
 	}
 
 	cSurfaceImpactData* cSurfaceData::CreateImpactData(float afMinSpeed)
 	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_create_impact(mS.rs, afMinSpeed, false));
+		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_create_impact(mS->rs, afMinSpeed, false));
 	}
 
 	cSurfaceImpactData* cSurfaceData::GetImpactData(int alIdx)
 	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_at(mS.rs, false, alIdx));
+		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_at(mS->rs, false, alIdx));
 	}
 
 	int cSurfaceData::GetImpactDataNum()
 	{
-		return ohpl_h15s_impact_num(mS.rs, false);
+		return ohpl_h15s_impact_num(mS->rs, false);
 	}
 
 	cSurfaceImpactData* cSurfaceData::GetImpactDataFromSpeed(float afSpeed)
 	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_from_speed(mS.rs, false, afSpeed));
+		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_from_speed(mS->rs, false, afSpeed));
 	}
 
 	cSurfaceImpactData* cSurfaceData::CreateHitData(float afMinSpeed)
 	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_create_impact(mS.rs, afMinSpeed, true));
+		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_create_impact(mS->rs, afMinSpeed, true));
 	}
 
 	cSurfaceImpactData* cSurfaceData::GetHitData(int alIdx)
 	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_at(mS.rs, true, alIdx));
+		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_at(mS->rs, true, alIdx));
 	}
 
 	int cSurfaceData::GetHitDataNum()
 	{
-		return ohpl_h15s_impact_num(mS.rs, true);
+		return ohpl_h15s_impact_num(mS->rs, true);
 	}
 
 	cSurfaceImpactData* cSurfaceData::GetHitDataFromSpeed(float afSpeed)
 	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_from_speed(mS.rs, true, afSpeed));
+		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_from_speed(mS->rs, true, afSpeed));
 	}
 
 	// PRIVATE METHODS

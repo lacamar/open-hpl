@@ -105,6 +105,8 @@ void ohpl_h14_counts(uint64_t*);
 void ohpl_h14_rope_plan(float, float, OhplH14RopePlan*);
 OhplV3 ohpl_h14_rope_particle_pos(OhplV3, OhplV3, float);
 void ohpl_h14_aux_free(OhplH14Aux*);
+OhplRopeState* ohpl_h14_rope_alloc();
+void ohpl_h14_rope_release(OhplRopeState*);
 void ohpl_h14_reset_pids(OhplH14Aux*);
 void ohpl_h14_clear_smoothing(OhplH14Aux*);
 void ohpl_h14_clear_camera(OhplH14Aux*);

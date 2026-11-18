@@ -14,14 +14,15 @@ unsafe fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
 }
 
 /// # Safety
-/// `state` is writable.
+/// `state` is writable; the state it receives lives until `ohpl_h15p_free`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h15p_new(op: WorldOp, me: usize, state: *mut PhysState) -> u64 {
+pub unsafe extern "C" fn ohpl_h15p_new(op: WorldOp, me: usize, state: *mut *mut PhysState) -> u64 {
+    let (book, s) = preg::new(op, me);
     // SAFETY: caller contract.
-    if let Some(s) = unsafe { state.as_mut() } {
-        *s = PhysState::default();
+    if let Some(o) = unsafe { state.as_mut() } {
+        *o = s;
     }
-    preg::new(op, me)
+    book
 }
 
 #[unsafe(no_mangle)]
@@ -112,19 +113,20 @@ pub unsafe extern "C" fn ohpl_h15p_load_surface(book: u64, path: *const u8, n: u
     preg::load_surface(book, unsafe { bytes(path, n) })
 }
 
-/// # Safety
-/// `state` is writable and embedded in the surface that owns the returned record.
+/// Returns the surface state, owned by its record and valid until `ohpl_h15s_free`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h15s_new(op: WorldOp, me: usize, state: *mut SurfaceState) {
-    // SAFETY: caller contract.
-    if let Some(s) = unsafe { state.as_mut() } {
-        *s = surf::new(op, me);
-    }
+pub extern "C" fn ohpl_h15s_new(op: WorldOp, me: usize) -> *mut SurfaceState {
+    surf::new(op, me)
 }
 
+/// # Safety
+/// `state` comes from `ohpl_h15s_new` and is not used afterwards.
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15s_free(rs: u64) {
-    surf::free(rs);
+pub unsafe extern "C" fn ohpl_h15s_free(state: *const SurfaceState) {
+    // SAFETY: caller contract.
+    if let Some(s) = unsafe { state.as_ref() } {
+        surf::free(s.rs);
+    }
 }
 
 /// # Safety

@@ -39,6 +39,7 @@ impl Default for PhysState {
 
 #[derive(Default)]
 struct PhysBook {
+    state: Box<PhysState>,
     op: Option<WorldOp>,
     me: usize,
     worlds: Vec<usize>,
@@ -77,16 +78,20 @@ fn op(book: u64, code: i32, mut p: [usize; 6], i0: i32) -> usize {
     unsafe { op(code, &mut a) }
 }
 
-pub fn new(op: WorldOp, me: usize) -> u64 {
-    phys()
+/// Returns the book token and the state (owned by the book, valid until `free`).
+pub fn new(op: WorldOp, me: usize) -> (u64, *mut PhysState) {
+    let book = phys()
         .and_then(|mut s| {
             s.insert(PhysBook {
                 op: Some(op),
                 me,
+                state: Box::default(),
                 ..PhysBook::default()
             })
         })
-        .map_or(0, Handle::to_bits)
+        .map_or(0, Handle::to_bits);
+    let state = with(book, |b| &raw mut *b.state).unwrap_or(std::ptr::null_mut());
+    (book, state)
 }
 
 /// Worlds are deleted before the surface data, like the destructor.

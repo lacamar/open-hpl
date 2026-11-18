@@ -55,21 +55,21 @@ namespace hpl {
 		void RemoveAttachedBody(iPhysicsBody *apBody, bool abRemoveContainerFromBody=true);
 
 		// Motor
-		void SetPhysicsActive(bool abX){ mS.physicsActive = abX; }
-		bool GetPhysicsActive(){ return mS.physicsActive; }
+		void SetPhysicsActive(bool abX){ mS->physicsActive = abX; }
+		bool GetPhysicsActive(){ return mS->physicsActive; }
 
         void SetMotorActive(bool abX);
-		bool GetMotorActive(){ return mS.motorActive; }
+		bool GetMotorActive(){ return mS->motorActive; }
 
-		void SetMotorWantedLength(float afX){ mS.motorWantedLength = afX; }
-		void SetMotorSpeedMul(float afX){ mS.motorSpeedMul = afX; }
-		void SetMotorMaxSpeed(float afX){ mS.motorMaxSpeed = afX; }
-		void SetMotorMinSpeed(float afX){ mS.motorMinSpeed = afX; }
+		void SetMotorWantedLength(float afX){ mS->motorWantedLength = afX; }
+		void SetMotorSpeedMul(float afX){ mS->motorSpeedMul = afX; }
+		void SetMotorMaxSpeed(float afX){ mS->motorMaxSpeed = afX; }
+		void SetMotorMinSpeed(float afX){ mS->motorMinSpeed = afX; }
 
-		float GetMotorWantedLength(){ return mS.motorWantedLength;}
-		float GetMotorSpeedMul(){ return mS.motorSpeedMul;}
-		float GetMotorMaxSpeed(){ return mS.motorMaxSpeed;}
-		float GetMotorMinSpeed(){ return mS.motorMinSpeed;}
+		float GetMotorWantedLength(){ return mS->motorWantedLength;}
+		float GetMotorSpeedMul(){ return mS->motorSpeedMul;}
+		float GetMotorMaxSpeed(){ return mS->motorMaxSpeed;}
+		float GetMotorMinSpeed(){ return mS->motorMinSpeed;}
 
 		void SetMotorSound(const tString& asSound) { msMotorSound = asSound; }
 		void SetMotorSoundStartSpeed(float afX) { mfMotorSoundStartSpeed = afX; }
@@ -81,14 +81,14 @@ namespace hpl {
 
 		// Auto Move
 		void SetAutoMoveActive(bool abX);
-		void SetAutoMoveAcc(float afX){ mS.autoMoveAcc = afX;}
-		void SetAutoMoveMaxSpeed(float afX){ mS.autoMoveMaxSpeed = afX;}
-		void SetAutoMoveSpeed(float afX){ mS.autoMoveSpeed = afX;}
+		void SetAutoMoveAcc(float afX){ mS->autoMoveAcc = afX;}
+		void SetAutoMoveMaxSpeed(float afX){ mS->autoMoveMaxSpeed = afX;}
+		void SetAutoMoveSpeed(float afX){ mS->autoMoveSpeed = afX;}
 
-		bool GetAutoMoveActive() { return mS.autoMoveActive; }
-		float GetAutoMoveAcc(){ return mS.autoMoveAcc;}
-		float GetAutoMoveMaxSpeed(){ return mS.autoMoveMaxSpeed;}
-		float GetAutoMoveSpeed(){ return mS.autoMoveSpeed;}
+		bool GetAutoMoveActive() { return mS->autoMoveActive; }
+		float GetAutoMoveAcc(){ return mS->autoMoveAcc;}
+		float GetAutoMoveMaxSpeed(){ return mS->autoMoveMaxSpeed;}
+		float GetAutoMoveSpeed(){ return mS->autoMoveSpeed;}
 
 		// Properties
 		cVerletParticle* GetStartParticle(){ return mlstParticles.front();}
@@ -97,34 +97,34 @@ namespace hpl {
 		void SetAttachedStartBody(iPhysicsBody *apBody) { SetAttachedBody(0, GetStartParticle(), apBody); }
 		void SetAttachedEndBody(iPhysicsBody *apBody) { SetAttachedBody(1, GetEndParticle(), apBody); }
 
-		iPhysicsBody* GetAttachedStartBody(){ return mS.attached[0].mpBody;}
-		iPhysicsBody* GetAttachedEndBody(){ return mS.attached[1].mpBody;}
+		iPhysicsBody* GetAttachedStartBody(){ return mS->attached[0].mpBody;}
+		iPhysicsBody* GetAttachedEndBody(){ return mS->attached[1].mpBody;}
 
-		cPhysicsRopeAttachment* GetAttachment(int alIdx){ return &mS.attached[alIdx]; }
+		cPhysicsRopeAttachment* GetAttachment(int alIdx){ return &mS->attached[alIdx]; }
 
 		void SetTotalLength(float afX);
-		float GetTotalLength(){ return mS.totalLength;}
+		float GetTotalLength(){ return mS->totalLength;}
 
-		void SetMinTotalLength(float afX) { mS.minTotalLength = afX; }
-		void SetMaxTotalLength(float afX) { mS.maxTotalLength = afX; }
-		float GetMinTotalLength(){ return mS.minTotalLength;}
-		float GetMaxTotalLength(){ return mS.maxTotalLength;}
+		void SetMinTotalLength(float afX) { mS->minTotalLength = afX; }
+		void SetMaxTotalLength(float afX) { mS->maxTotalLength = afX; }
+		float GetMinTotalLength(){ return mS->minTotalLength;}
+		float GetMaxTotalLength(){ return mS->maxTotalLength;}
 
 		void SetSegmentLength(float afX);
-		float GetSegmentLength(){ return mS.segmentLength;}
-		float GetFirstSegmentLength(){ return mS.firstSegmentLength;}
+		float GetSegmentLength(){ return mS->segmentLength;}
+		float GetFirstSegmentLength(){ return mS->firstSegmentLength;}
 
-		void SetMaxIterations(int alX){ mS.maxIterations = alX;}
-		int GetMaxIterations(){ return mS.maxIterations;}
+		void SetMaxIterations(int alX){ mS->maxIterations = alX;}
+		int GetMaxIterations(){ return mS->maxIterations;}
 
-		void SetStrength(float afX){ mS.strength  = afX;}
-		float GetStrength(){ return mS.strength;}
+		void SetStrength(float afX){ mS->strength  = afX;}
+		float GetStrength(){ return mS->strength;}
 
-		void SetStiffness(float afX){ mS.stiffness  = afX;}
-		float GetStiffness(){ return mS.stiffness;}
+		void SetStiffness(float afX){ mS->stiffness  = afX;}
+		float GetStiffness(){ return mS->stiffness;}
 
-		void SetCollideAttachments(bool abX){ mS.collideAttachments  = abX;}
-		bool GetCollideAttachments(){ return mS.collideAttachments;}
+		void SetCollideAttachments(bool abX){ mS->collideAttachments  = abX;}
+		bool GetCollideAttachments(){ return mS->collideAttachments;}
 
 		// Debug
 		void UpdateConstraints();

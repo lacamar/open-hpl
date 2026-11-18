@@ -132,6 +132,7 @@ impl SurfaceState {
 
 #[derive(Default)]
 struct SurfBook {
+    state: Box<SurfaceState>,
     op: Option<WorldOp>,
     me: usize,
     impacts: Vec<(usize, f32)>,
@@ -167,8 +168,8 @@ fn op(rs: u64, code: i32, p: [usize; 6], f0: f32, i0: i32) -> Option<Wa> {
     Some(a)
 }
 
-/// Starts a surface: allocates its list record and returns the initial state.
-pub fn new(op: WorldOp, me: usize) -> SurfaceState {
+/// Starts a surface: allocates its list record and its state, which lives as long as the record.
+pub fn new(op: WorldOp, me: usize) -> *mut SurfaceState {
     let rs = surf()
         .and_then(|mut s| {
             s.insert(SurfBook {
@@ -178,7 +179,11 @@ pub fn new(op: WorldOp, me: usize) -> SurfaceState {
             })
         })
         .map_or(0, Handle::to_bits);
-    SurfaceState::with_defaults(rs)
+    with(rs, |b| {
+        *b.state = SurfaceState::with_defaults(rs);
+        &raw mut *b.state
+    })
+    .unwrap_or(std::ptr::null_mut())
 }
 
 /// Deletes the impact and hit data (impacts first), then the record.

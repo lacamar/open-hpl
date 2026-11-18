@@ -131,7 +131,7 @@ bool ohpl_h15j_controller_at(uint64_t, size_t, void*, size_t*);
 bool ohpl_h15j_update(uint64_t, size_t);
 bool ohpl_h15j_check_breakage(uint64_t, size_t);
 
-uint64_t ohpl_h15p_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t, hpl::OhplPhysState*);
+uint64_t ohpl_h15p_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t, hpl::OhplPhysState**);
 void ohpl_h15p_free(uint64_t);
 size_t ohpl_h15p_create_world(uint64_t, bool);
 void ohpl_h15p_destroy_world(uint64_t, size_t);
@@ -145,8 +145,8 @@ size_t ohpl_h15p_impact_count(uint64_t);
 void ohpl_h15p_update_impacts(uint64_t, float, float);
 bool ohpl_h15p_load_surface(uint64_t, const char*, size_t);
 
-void ohpl_h15s_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t, hpl::OhplSurfaceState*);
-void ohpl_h15s_free(uint64_t);
+hpl::OhplSurfaceState* ohpl_h15s_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t);
+void ohpl_h15s_free(const hpl::OhplSurfaceState*);
 void ohpl_h15s_set_f32(hpl::OhplSurfaceState*, int32_t, float);
 float ohpl_h15s_get_f32(hpl::OhplSurfaceState*, int32_t);
 void ohpl_h15s_set_i32(hpl::OhplSurfaceState*, int32_t, int32_t);

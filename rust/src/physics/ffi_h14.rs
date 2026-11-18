@@ -397,8 +397,25 @@ pub unsafe extern "C" fn ohpl_h14_collide_push(
     unsafe { super::char_collide::collide_push(op, ext, st, body, cd) };
 }
 
+/// A default rope state, replaced in place by `ohpl_h14_rope_init`; released by `ohpl_h14_rope_release`.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h14_rope_alloc() -> *mut super::rope::RopeState {
+    let zero = crate::types::Vector3f::default();
+    Box::into_raw(Box::new(super::rope::RopeState::initial(zero, zero, zero)))
+}
+
 /// # Safety
-/// `st` is writable and embedded in the rope.
+/// `st` comes from `ohpl_h14_rope_alloc` and is not used afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_rope_release(st: *mut super::rope::RopeState) {
+    if !st.is_null() {
+        // SAFETY: caller contract.
+        drop(unsafe { Box::from_raw(st) });
+    }
+}
+
+/// # Safety
+/// `st` is writable.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h14_rope_init(
     st: *mut super::rope::RopeState,

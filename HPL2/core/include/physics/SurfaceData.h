@@ -95,28 +95,28 @@ namespace hpl {
 		const tString& GetStepType(){ return msStepType;}
 		void GetStepType(const tString& asX){ msStepType = asX;}
 
-		void SetMinScrapeSpeed(float afX){mfMinScrapeSpeed = afX;}
-		void SetMinScrapeFreq(float afX){mfMinScrapeFreq = afX;}
-		void SetMinScrapeFreqSpeed(float afX){mfMinScrapeFreqSpeed = afX;}
-		void SetMaxScrapeFreq(float afX){mfMaxScrapeFreq = afX;}
-		void SetMaxScrapeFreqSpeed(float afX){mfMaxScrapeFreqSpeed = afX;}
-		void SetMiddleScrapeSpeed(float afX){mfMiddleScrapeSpeed = afX;}
-		void SetMinScrapeContacts(int alX){mlMinScrapeContacts = alX;}
+		void SetMinScrapeSpeed(float afX){mS->minScrapeSpeed = afX;}
+		void SetMinScrapeFreq(float afX){mS->minScrapeFreq = afX;}
+		void SetMinScrapeFreqSpeed(float afX){mS->minScrapeFreqSpeed = afX;}
+		void SetMaxScrapeFreq(float afX){mS->maxScrapeFreq = afX;}
+		void SetMaxScrapeFreqSpeed(float afX){mS->maxScrapeFreqSpeed = afX;}
+		void SetMiddleScrapeSpeed(float afX){mS->middleScrapeSpeed = afX;}
+		void SetMinScrapeContacts(int alX){mS->minScrapeContacts = alX;}
 		void SetScrapeSoundName(const tString &asName){msScrapeSoundName = asName;}
 
-		void SetMinRollSpeed(float afX){mfMinRollSpeed = afX;}
-		void SetMinRollFreq(float afX){mfMinRollFreq = afX;}
-		void SetMinRollVolume(float afX){mfMinRollVolume = afX;}
-		void SetMinRollFreqSpeed(float afX){mfMinRollFreqSpeed = afX;}
-		void SetMaxRollFreq(float afX){mfMaxRollFreq = afX;}
-		void SetMaxRollVolume(float afX){mfMaxRollVolume = afX;}
-		void SetMaxRollFreqSpeed(float afX){mfMaxRollFreqSpeed = afX;}
-		void SetMiddleRollSpeed(float afX){mfMiddleRollSpeed = afX;}
+		void SetMinRollSpeed(float afX){mS->minRollSpeed = afX;}
+		void SetMinRollFreq(float afX){mS->minRollFreq = afX;}
+		void SetMinRollVolume(float afX){mS->minRollVolume = afX;}
+		void SetMinRollFreqSpeed(float afX){mS->minRollFreqSpeed = afX;}
+		void SetMaxRollFreq(float afX){mS->maxRollFreq = afX;}
+		void SetMaxRollVolume(float afX){mS->maxRollVolume = afX;}
+		void SetMaxRollFreqSpeed(float afX){mS->maxRollFreqSpeed = afX;}
+		void SetMiddleRollSpeed(float afX){mS->middleRollSpeed = afX;}
 		void SetRollSoundName(const tString &asName){msRollSoundName = asName;}
-		void SetRollAxisFlags(tFlag aAxisFlags){mRollAxisFlags = aAxisFlags;}
+		void SetRollAxisFlags(tFlag aAxisFlags){mS->rollAxisFlags = aAxisFlags;}
 
         void PreloadData();
-        OhplSurfaceState* RustState(){ return &mS;}
+        OhplSurfaceState* RustState(){ return mS;}
         static size_t HostOp(int32_t alOp, OhplH15Wa *a);
 
 		iPhysicsMaterial *ToMaterial(iPhysicsWorld *apWorld);
@@ -156,28 +156,11 @@ namespace hpl {
 		tString msName;
 		tString msUserVar;
 
-		OhplSurfaceState mS = OhplSurfaceState();
+		OhplSurfaceState *mS;
 
 		//Properties (references into mS, owned by rust/src/physics/surf.rs)
-		float &mfMinScrapeSpeed = mS.minScrapeSpeed;
-		float &mfMinScrapeFreq = mS.minScrapeFreq;
-		float &mfMinScrapeFreqSpeed = mS.minScrapeFreqSpeed;
-		float &mfMaxScrapeFreq = mS.maxScrapeFreq;
-		float &mfMaxScrapeFreqSpeed = mS.maxScrapeFreqSpeed;
-		float &mfMiddleScrapeSpeed = mS.middleScrapeSpeed;
-		int &mlMinScrapeContacts = mS.minScrapeContacts;
 		tString msScrapeSoundName;
-
-		float &mfMinRollSpeed = mS.minRollSpeed;
-		float &mfMinRollFreq = mS.minRollFreq;
-		float &mfMinRollVolume = mS.minRollVolume;
-		float &mfMinRollFreqSpeed = mS.minRollFreqSpeed;
-		float &mfMaxRollFreq = mS.maxRollFreq;
-		float &mfMaxRollVolume = mS.maxRollVolume;
-		float &mfMaxRollFreqSpeed = mS.maxRollFreqSpeed;
-		float &mfMiddleRollSpeed = mS.middleRollSpeed;
 		tString msRollSoundName;
-		tFlag &mRollAxisFlags = mS.rollAxisFlags;
 
         tString msStepType;
 	};
