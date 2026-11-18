@@ -468,8 +468,8 @@ void BillboardScene()
 		bb->SetPosition(cVector3f(1, 2, 3));
 		cMatrixf *m = bb->GetModelMatrix(&rig.frustum);
 		for(int i = 0; i < 4; ++i) for(int j = 0; j < 4; ++j) l.F(m->m[i][j]);
-		Vb(l, bb->mpVtxBuffer, eVertexBufferElement_Color0, 16);
-		Vb(l, bb->mpVtxBuffer, eVertexBufferElement_Position, 16);
+		Vb(l, bb->GetVertexBuffer(), eVertexBufferElement_Color0, 16);
+		Vb(l, bb->GetVertexBuffer(), eVertexBufferElement_Position, 16);
 		Emit(l);
 		delete bb;
 		rig.Trace("bb");
@@ -490,9 +490,9 @@ void BeamScene()
 	for(int f = 0; f < 3; ++f)
 	{
 		b->UpdateGraphicsForFrame(0.03f);
-		Vb(l, b->mpVtxBuffer, eVertexBufferElement_Position, 16);
-		Vb(l, b->mpVtxBuffer, eVertexBufferElement_Texture0, 12);
-		Vb(l, b->mpVtxBuffer, eVertexBufferElement_Color0, 16);
+		Vb(l, b->GetVertexBuffer(), eVertexBufferElement_Position, 16);
+		Vb(l, b->GetVertexBuffer(), eVertexBufferElement_Texture0, 12);
+		Vb(l, b->GetVertexBuffer(), eVertexBufferElement_Color0, 16);
 		l.V3(b->GetBoundingVolume()->GetMax());
 		if(f == 1) b->GetEnd()->SetPosition(cVector3f(-1, 2, 0));
 	}
@@ -509,26 +509,26 @@ void FlareScene()
 	Rig rig;
 	srand(5);
 	cLensFlare *f = new cLensFlare("flare", &rig.res, &rig.gfx);
-	Line l; l.S("flare"); l.I(f->mlMultiIrisSeed); l.I(f->IsVisible()); l.I(f->GetFirstActiveType()); l.I(f->IsAnyTypeActive());
+	Line l; l.S("flare"); l.I(f->mpS->seed); l.I(f->IsVisible()); l.I(f->GetFirstActiveType()); l.I(f->IsAnyTypeActive());
 	cMaterial *pFake = reinterpret_cast<cMaterial*>(0x1000);
 	for(int mask = 0; mask < 8; ++mask)
 	{
-		for(int i = 0; i < 3; ++i) { f->mpMaterial[i] = NULL; f->mbActive[i] = false; }
-		for(int i = 0; i < 3; ++i) if((mask >> i) & 1) { f->mpMaterial[i] = pFake; f->mbActive[i] = true; }
+		for(int i = 0; i < 3; ++i) { f->mpS->material[i] = (uintptr_t)NULL; f->mpS->active[i] = false; }
+		for(int i = 0; i < 3; ++i) if((mask >> i) & 1) { f->mpS->material[i] = (uintptr_t)pFake; f->mpS->active[i] = true; }
 		for(float fade : {1.0f, 0.0f})
 		{
-			f->mfFade = fade;
+			f->mpS->fade = fade;
 			l.I(f->GetFirstActiveType()); l.I(f->IsAnyTypeActive()); l.I(f->IsVisible());
 			iVertexBuffer *vb = f->PrepareMultiIrisVertexBuffer(&rig.frustum, 0.75f);
 			l.I(vb != NULL);
 			if(vb) { Vb(l, vb, eVertexBufferElement_Position, 24); Vb(l, vb, eVertexBufferElement_Color0, 24); }
 		}
-		f->mlMultiIrisCount = mask % 2 ? 4 : 16;
-		f->mfFade = 1;
+		f->mpS->count = mask % 2 ? 4 : 16;
+		f->mpS->fade = 1;
 		f->UpdateLogic(0.25f);
-		l.F(f->mfFade);
+		l.F(f->mpS->fade);
 	}
-	for(int i = 0; i < 3; ++i) f->mpMaterial[i] = NULL;
+	for(int i = 0; i < 3; ++i) f->mpS->material[i] = (uintptr_t)NULL;
 	Emit(l);
 	delete f;
 	rig.Trace("flare");

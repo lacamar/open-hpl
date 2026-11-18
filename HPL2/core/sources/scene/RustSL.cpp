@@ -1009,7 +1009,7 @@ namespace hpl {
 	}
 
 	cLensFlare::cLensFlare(const tString& asName, cResources *apResources, cGraphics *apGraphics) : iRenderable(asName),
-		mpS(ohpl_sl_flare_new(rand()))
+		mpS(ohpl_sl_flare_new(0))
 	{
 		mpS->matMgr = (uintptr_t)apResources->GetMaterialManager();
 		iLowLevelGraphics *pLowLevelGraphics = apGraphics->GetLowLevel();
@@ -1019,6 +1019,7 @@ namespace hpl {
 		{
 			mpS->types[i] = (uintptr_t)hplNew(cLensFlareType, (this, (eLensFlareType)i));
 		}
+		mpS->seed = rand(); // after the types: their iRenderable ctors draw first (C++ order)
 
 		iVertexBuffer *pVtxBuffer = pLowLevelGraphics->CreateVertexBuffer(eVertexBufferType_Hardware,eVertexBufferDrawType_Tri, eVertexBufferUsageType_Static,4,6);
 		mpS->vtx = (uintptr_t)pVtxBuffer;
