@@ -32,57 +32,40 @@ namespace hpl {
 	public:
 		cLightBox(tString asName, cResources *apResources);
 
-		void SetSize(const cVector3f& avSize);
-		inline const cVector3f& GetSize(){ return mvSize;}
+		void SetSize(const cVector3f& avSize){ Box()->size = avSize; mbUpdateBoundingVolume = true; SetTransformUpdated();}
+		inline const cVector3f& GetSize(){ return Box()->size;}
 
-		void SetBlendFunc(eLightBoxBlendFunc aFunc){ mBlendFunc = aFunc; }
-		eLightBoxBlendFunc GetBlendFunc(){ return mBlendFunc; }
+		void SetBlendFunc(eLightBoxBlendFunc aFunc){ Box()->blend = aFunc; }
+		eLightBoxBlendFunc GetBlendFunc(){ return (eLightBoxBlendFunc)Box()->blend; }
 
-		bool IsVisible();
+		bool IsVisible(){ return IsLit() && mbIsVisible;}
 
-		void SetBoxLightPrio(int alX){ mlBoxLightPrio = alX;}
-		inline int GetBoxLightPrio()const{ return mlBoxLightPrio;}
+		void SetBoxLightPrio(int alX){ Box()->prio = alX;}
+		inline int GetBoxLightPrio()const{ return Box()->prio;}
 
-		void SetAmbientColorSky(const cColor& aX){ mAmbientColorSky = aX;}
-		void SetAmbientColorGround(const cColor& aX){ mAmbientColorGround = aX;}
-		const cColor& GetAmbientColorSky(){ return mAmbientColorSky;}
-		const cColor& GetAmbientColorGround(){ return mAmbientColorGround;}
-		void SetWeight(float afX){ mfWeight = afX;}
-		float GetWeight(){ return mfWeight;}
-		void SetBevel(float afX){ mfBevel = afX;}
-		float GetBevel(){ return mfBevel;}
-		void SetFalloffPow(float afX){ mfFalloffPow = afX;}
-		float GetFalloffPow(){ return mfFalloffPow;}
-		void SetUseSphericalHarmonics(bool abX){ mbUseSphericalHarmonics = abX;}
-		bool GetUseSphericalHarmonics(){ return mbUseSphericalHarmonics;}
-		void SetProbeOffset(const cVector3f& avX){ mvProbeOffset = avX;}
-		const cVector3f& GetProbeOffset(){ return mvProbeOffset;}
+		void SetAmbientColorSky(const cColor& aX){ Box()->ambientSky = aX;}
+		void SetAmbientColorGround(const cColor& aX){ Box()->ambientGround = aX;}
+		const cColor& GetAmbientColorSky(){ return Box()->ambientSky;}
+		const cColor& GetAmbientColorGround(){ return Box()->ambientGround;}
+		void SetWeight(float afX){ Box()->weight = afX;}
+		float GetWeight(){ return Box()->weight;}
+		void SetBevel(float afX){ Box()->bevel = afX;}
+		float GetBevel(){ return Box()->bevel;}
+		void SetFalloffPow(float afX){ Box()->falloffPow = afX;}
+		float GetFalloffPow(){ return Box()->falloffPow;}
+		void SetUseSphericalHarmonics(bool abX){ Box()->useSh = abX;}
+		bool GetUseSphericalHarmonics(){ return Box()->useSh;}
+		void SetProbeOffset(const cVector3f& avX){ Box()->probeOffset = avX;}
+		const cVector3f& GetProbeOffset(){ return Box()->probeOffset;}
 
 		void AddIrradianceSet(const tString& asName, const std::vector<cVector3f>& avBands);
 		void FadeIrradianceSet(const tString& asName, float afTime);
-		const cVector3f* GetIrradianceBands(){ return mvBands;}
+		const cVector3f* GetIrradianceBands(){ return Box()->bands;}
 		void UpdateLogic(float afTimeStep);
 
 	private:
+		OhplSLBox* Box() const { return (OhplSLBox*)mpS; }
 		void UpdateBoundingVolume();
-
-		cVector3f mvSize;
-		eLightBoxBlendFunc mBlendFunc;
-		int mlBoxLightPrio;
-
-		cColor mAmbientColorSky;
-		cColor mAmbientColorGround;
-		float mfWeight;
-		float mfBevel;
-		float mfFalloffPow;
-		bool mbUseSphericalHarmonics;
-		cVector3f mvProbeOffset;
-		std::map<tString, std::vector<cVector3f> > m_mapIrradianceSets;
-		cVector3f mvBands[9];
-		cVector3f mvFadeFrom[9];
-		const std::vector<cVector3f> *mpFadeTarget;
-		float mfFadeT;
-		float mfFadeSpeed;
 	};
 
 };

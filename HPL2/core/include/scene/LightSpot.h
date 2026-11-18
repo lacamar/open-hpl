@@ -44,54 +44,34 @@ namespace hpl {
 		const cMatrixf& GetViewProjMatrix();
 
 		void SetFOV(float afAngle);
-		inline float GetFOV() const { return mfFOV;}
+		inline float GetFOV() const { return Spot()->fov;}
 		
-		inline float GetTanHalfFOV() const{return mfTanHalfFOV; }
-		inline float GetCosHalfFOV() const{return mfCosHalfFOV;}
+		inline float GetTanHalfFOV() const{return Spot()->tanHalfFov; }
+		inline float GetCosHalfFOV() const{return Spot()->cosHalfFov;}
 
-		void SetAspect(float afAngle) { mfAspect = afAngle; mSpot.projection_updated = true;}
-		float GetAspect() { return mfAspect;}
+		void SetAspect(float afAngle) { Spot()->aspect = afAngle; Spot()->ctl.projection_updated = true;}
+		float GetAspect() { return Spot()->aspect;}
 
-		void SetNearClipPlane(float afX) { mfNearClipPlane = afX; mSpot.projection_updated = true;}
-		float GetNearClipPlane() { return mfNearClipPlane;}
+		void SetNearClipPlane(float afX) { Spot()->nearClip = afX; Spot()->ctl.projection_updated = true;}
+		float GetNearClipPlane() { return Spot()->nearClip;}
 
-		static void SetShadowNearClip(float afX){ mfShadowNearClip = afX; }
-		static float GetShadowNearClip(){ return mfShadowNearClip; }
+		static void SetShadowNearClip(float afX){ ohpl_sl_spot_set_shadow_near(afX); }
+		static float GetShadowNearClip(){ return ohpl_sl_spot_shadow_near(); }
 
 		void SetRadius(float afX);
 		
 		cFrustum* GetFrustum();
 
-		iTexture *GetSpotFalloffMap();
+		iTexture *GetSpotFalloffMap(){ return (iTexture*)Spot()->spotFalloffMap; }
 		void SetSpotFalloffMap(iTexture* apTexture);
 
 		bool CollidesWithBV(cBoundingVolume *apBV);
 		bool CollidesWithFrustum(cFrustum *apFrustum);
 
 	private:
+		OhplSLSpot* Spot() const { return (OhplSLSpot*)mpS; }
 		void ExtraXMLProperties(cXmlElement *apMainElem);
 		void UpdateBoundingVolume();
-		
-
-        cMatrixf m_mtxProjection;
-		cMatrixf m_mtxViewProj;
-		cMatrixf m_mtxView;
-
-		cFrustum *mpFrustum;
-
-		iTexture *mpSpotFalloffMap;
-
-		float mfFOV;
-		float mfAspect;
-		float mfNearClipPlane;
-		static float mfShadowNearClip;
-
-		bool mbFovUpdated;
-		float mfTanHalfFOV;
-		float mfCosHalfFOV;
-		
-
-		OhplH11SpotCtl mSpot;
 	};
 
 };

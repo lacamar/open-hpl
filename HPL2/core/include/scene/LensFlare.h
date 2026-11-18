@@ -5,6 +5,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "scene/SceneTypes.h"
 #include "graphics/Renderable.h"
+#include "scene/RustSL.h"
 #include "scene/RustLight.h"
 #include "math/Math.h"
 
@@ -24,6 +25,7 @@ namespace hpl {
 	{
 	public:
 		cLensFlareType(cLensFlare *apParent, eLensFlareType aType);
+		~cLensFlareType(){ ohpl_sl_flare_type_free(mpS); }
 
 		cMaterial *GetMaterial();
 		iVertexBuffer* GetVertexBuffer();
@@ -35,9 +37,7 @@ namespace hpl {
 		tString GetEntityType(){ return "LensFlareType";}
 
 	private:
-		cLensFlare *mpParent;
-		eLensFlareType mType;
-		cMatrixf m_mtxModel;
+		OhplSLFlareType *mpS;
 	};
 
 	//------------------------------------------
@@ -52,73 +52,73 @@ namespace hpl {
 		cLensFlare(const tString& asName, cResources *apResources, cGraphics *apGraphics);
 		~cLensFlare();
 
-		void FadeIn(float afTime){ mfFadeRate = (1 - mfFade) / (afTime + 1e-4f);}
-		void FadeOut(float afTime){ mfFadeRate = -mfFade / (afTime + 1e-4f);}
+		void FadeIn(float afTime){ ohpl_sl_flare_fade(mpS, true, afTime);}
+		void FadeOut(float afTime){ ohpl_sl_flare_fade(mpS, false, afTime);}
 
 		void SetFlareSourceSize(cVector3f avSize);
-		cVector3f GetFlareSourceSize(){ return mvSourceSize;}
-		void SetOuterFieldOfView(float afAngle);
-		float GetOuterFieldOfView(){ return mfOuterFov;}
-		void SetInnerFieldOfView(float afAngle);
-		float GetInnerFieldOfView(){ return mfInnerFov;}
-		void SetMultiIrisTextureAtlasGrid(cVector2l avGrid){ mvAtlasGrid = avGrid;}
-		cVector2l GetMultiIrisTextureAtlasGrid(){ return mvAtlasGrid;}
-		void SetMultiIrisSeed(int alSeed){ mlMultiIrisSeed = alSeed;}
-		int GetMultiIrisSeed(){ return mlMultiIrisSeed;}
-		void SetMultiIrisCount(int alCount){ mlMultiIrisCount = alCount;}
-		int GetMultiIrisCount(){ return mlMultiIrisCount;}
-		void SetRangeMax(float afStart, float afEnd){ mvRangeMax = cVector2f(afStart, afEnd);}
-		void DisableRangeMax(){ mvRangeMax = -1;}
-		float GetRangeMaxStart(){ return mvRangeMax.x;}
-		float GetRangeMaxEnd(){ return mvRangeMax.y;}
-		void SetRangeMin(float afStart, float afEnd){ mvRangeMin = cVector2f(afStart, afEnd);}
-		void DisableRangeMin(){ mvRangeMin = -1;}
-		float GetRangeMinStart(){ return mvRangeMin.x;}
-		float GetRangeMinEnd(){ return mvRangeMin.y;}
-		void SetGlareBrightness(float afX){ mfGlareBrightness = afX;}
-		float GetGlareBrightness(){ return mfGlareBrightness;}
-		void SetGlareFieldOfView(float afAngle);
-		float GetGlareFieldOfView(){ return mfGlareFov;}
-		void SetGlareStareAt(float afX){ mfGlareStareAt = afX;}
-		void SetGlareRange(float afStart, float afEnd){ mvGlareRange = cVector2f(afStart, afEnd);}
-		float GetGlareRangeMaxStart(){ return mvGlareRange.x;}
-		float GetGlareRangeMaxEnd(){ return mvGlareRange.y;}
-		void SetSizeChangeBasedOnDistance(float afX);
-		float GetSizeChangeBasedOnDistance(){ return mfSizeByDist;}
+		cVector3f GetFlareSourceSize(){ return mpS->sourceSize;}
+		void SetOuterFieldOfView(float afAngle){ ohpl_sl_flare_set_outer_fov(mpS, afAngle);}
+		float GetOuterFieldOfView(){ return mpS->outerFov;}
+		void SetInnerFieldOfView(float afAngle){ ohpl_sl_flare_set_inner_fov(mpS, afAngle);}
+		float GetInnerFieldOfView(){ return mpS->innerFov;}
+		void SetMultiIrisTextureAtlasGrid(cVector2l avGrid){ mpS->atlasGrid = avGrid;}
+		cVector2l GetMultiIrisTextureAtlasGrid(){ return mpS->atlasGrid;}
+		void SetMultiIrisSeed(int alSeed){ mpS->seed = alSeed;}
+		int GetMultiIrisSeed(){ return mpS->seed;}
+		void SetMultiIrisCount(int alCount){ mpS->count = alCount;}
+		int GetMultiIrisCount(){ return mpS->count;}
+		void SetRangeMax(float afStart, float afEnd){ mpS->rangeMax = cVector2f(afStart, afEnd);}
+		void DisableRangeMax(){ mpS->rangeMax = -1;}
+		float GetRangeMaxStart(){ return mpS->rangeMax.x;}
+		float GetRangeMaxEnd(){ return mpS->rangeMax.y;}
+		void SetRangeMin(float afStart, float afEnd){ mpS->rangeMin = cVector2f(afStart, afEnd);}
+		void DisableRangeMin(){ mpS->rangeMin = -1;}
+		float GetRangeMinStart(){ return mpS->rangeMin.x;}
+		float GetRangeMinEnd(){ return mpS->rangeMin.y;}
+		void SetGlareBrightness(float afX){ mpS->glareBrightness = afX;}
+		float GetGlareBrightness(){ return mpS->glareBrightness;}
+		void SetGlareFieldOfView(float afAngle){ ohpl_sl_flare_set_glare_fov(mpS, afAngle);}
+		float GetGlareFieldOfView(){ return mpS->glareFov;}
+		void SetGlareStareAt(float afX){ mpS->glareStareAt = afX;}
+		void SetGlareRange(float afStart, float afEnd){ mpS->glareRange = cVector2f(afStart, afEnd);}
+		float GetGlareRangeMaxStart(){ return mpS->glareRange.x;}
+		float GetGlareRangeMaxEnd(){ return mpS->glareRange.y;}
+		void SetSizeChangeBasedOnDistance(float afX){ ohpl_sl_flare_set_size_by_dist(mpS, afX);}
+		float GetSizeChangeBasedOnDistance(){ return mpS->sizeByDist;}
 		void SetFlareSize(eLensFlareType aType, cVector2f avSize);
-		cVector2f GetFlareSize(eLensFlareType aType){ return mvSize[aType];}
-		void SetFlareColor(eLensFlareType aType, cColor aColor){ mColor[aType] = aColor;}
-		cColor GetFlareColor(eLensFlareType aType){ return mColor[aType];}
+		cVector2f GetFlareSize(eLensFlareType aType){ return mpS->size[aType];}
+		void SetFlareColor(eLensFlareType aType, cColor aColor){ mpS->color[aType] = aColor;}
+		cColor GetFlareColor(eLensFlareType aType){ return mpS->color[aType];}
 		void SetFlareActive(eLensFlareType aType, bool abX);
-		bool IsFlareActive(eLensFlareType aType){ return mbActive[aType] && mpMaterial[aType];}
-		bool GetFlareActive(eLensFlareType aType){ return mbActive[aType];}
-		void SetUseParentMeshForOcclusion(bool abX){ mbUseParentMeshForOcclusion = abX;}
-		bool GetUseParentMeshForOcclusion(){ return mbUseParentMeshForOcclusion;}
-		void SetShrinkWhenOccluded(bool abX){ mbShrinkWhenOccluded = abX;}
-		bool GetShrinkWhenOccluded(){ return mbShrinkWhenOccluded;}
-		void SetMultiplyGlareWithMultiIris(bool abX){ mbMulMultiIrisWithGlare = abX;}
-		bool GetMultiplyGlareWithMultiIris(){ return mbMulMultiIrisWithGlare;}
-		void SetBrightness(float afX){ mfBrightness = afX;}
-		float GetBrightness(){ return mfBrightness;}
-		eLensFlareType GetFirstActiveType();
+		bool IsFlareActive(eLensFlareType aType){ return mpS->active[aType] && mpS->material[aType];}
+		bool GetFlareActive(eLensFlareType aType){ return mpS->active[aType];}
+		void SetUseParentMeshForOcclusion(bool abX){ mpS->useParentMesh = abX;}
+		bool GetUseParentMeshForOcclusion(){ return mpS->useParentMesh;}
+		void SetShrinkWhenOccluded(bool abX){ mpS->shrinkWhenOccluded = abX;}
+		bool GetShrinkWhenOccluded(){ return mpS->shrinkWhenOccluded;}
+		void SetMultiplyGlareWithMultiIris(bool abX){ mpS->mulMultiIris = abX;}
+		bool GetMultiplyGlareWithMultiIris(){ return mpS->mulMultiIris;}
+		void SetBrightness(float afX){ mpS->brightness = afX;}
+		float GetBrightness(){ return mpS->brightness;}
+		eLensFlareType GetFirstActiveType(){ return (eLensFlareType)ohpl_sl_flare_first_active(mpS);}
 		void SetMaterial(eLensFlareType aType, cMaterial *apMaterial);
-		cMaterial* GetTypeMaterial(eLensFlareType aType){ return mpMaterial[aType];}
-		cLensFlareType* GetTypeRenderable(eLensFlareType aType){ return mpTypes[aType];}
+		cMaterial* GetTypeMaterial(eLensFlareType aType){ return ((cMaterial*)mpS->material[aType]);}
+		cLensFlareType* GetTypeRenderable(eLensFlareType aType){ return ((cLensFlareType*)mpS->types[aType]);}
 
-		bool IsAnyTypeActive();
-		float GetVisibility(){ return mVis.vis;}
-		void UpdateVisibility(float afTimeStep, int alFrame);
+		bool IsAnyTypeActive(){ return ohpl_sl_flare_any_active(mpS);}
+		float GetVisibility(){ return mpS->vis.vis;}
+		void UpdateVisibility(float afTimeStep, int alFrame){ ohpl_sl_flare_update_visibility(mpS, afTimeStep, alFrame);}
 
 		cColor GetFlareColorAndBrightness(eLensFlareType aType, cFrustum *apFrustum, float afVis);
 		cColor GetGlare(cFrustum *apFrustum, cVector3f &avScreenPos, float afScale);
 		iVertexBuffer* PrepareMultiIrisVertexBuffer(cFrustum *apFrustum, float afVis);
 
-		void UpdateLogic(float afTimeStep);
+		void UpdateLogic(float afTimeStep){ ohpl_sl_flare_update(mpS, afTimeStep);}
 		tString GetEntityType(){ return "LensFlare";}
-		bool IsVisible();
+		bool IsVisible(){ return mbIsVisible && IsAnyTypeActive();}
 
-		cMaterial *GetMaterial();
-		iVertexBuffer* GetVertexBuffer(){ return mpVtxBuffer;}
+		cMaterial *GetMaterial(){ return (cMaterial*)mpS->material[GetFirstActiveType()];}
+		iVertexBuffer* GetVertexBuffer(){ return (iVertexBuffer*)mpS->vtx;}
 		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
 		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
 		eRenderableType GetRenderType(){ return eRenderableType_LensFlare;}
@@ -130,45 +130,9 @@ namespace hpl {
 
 	private:
 		cMatrixf* GetSizeAndRotation(eLensFlareType aType, cFrustum *apFrustum, float afVis);
-		OhplFlareIn MakeIn();
 		void UpdateBV();
 
-		cMaterialManager* mpMaterialManager;
-		iLowLevelGraphics* mpLowLevelGraphics;
-		iVertexBuffer* mpVtxBuffer;
-		iVertexBuffer* mpMultiIrisVtxBuffer;
-		cLensFlareType* mpTypes[eLensFlareType_LastEnum];
-
-		bool mbActive[eLensFlareType_LastEnum];
-		cColor mColor[eLensFlareType_LastEnum];
-		cVector2f mvSize[eLensFlareType_LastEnum];
-		cMaterial* mpMaterial[eLensFlareType_LastEnum];
-		cMatrixf m_mtxSizeRot[eLensFlareType_LastEnum];
-
-		cVector2l mvAtlasGrid;
-		int mlMultiIrisSeed;
-		int mlMultiIrisCount;
-		float mfSizeByDist;
-		bool mbUseParentMeshForOcclusion;
-		bool mbShrinkWhenOccluded;
-		bool mbMulMultiIrisWithGlare;
-		cVector2f mvRangeMax;
-		cVector2f mvRangeMin;
-		float mfOuterFov, mfInnerFov, mfGlareFov;
-		float mfOuterCos, mfInnerCos, mfGlareCos;
-		float mfGlareBrightness;
-		float mfGlareStareAt;
-		cVector2f mvGlareRange;
-		float mfFade;
-		float mfFadeRate;
-		float mfBrightness;
-		cVector3f mvSourceSize;
-
-		OhplFlareVis mVis;
-
-		cBoundingVolume mOcclusionBV;
-		cMatrixf m_mtxOccluder;
-		cMatrixf m_mtxBillboard;
+		OhplSLFlare *mpS;
 	};
 
 };

@@ -8,7 +8,7 @@ namespace hpl {
 	class cLightDirectional : public iLight
 	{
 	public:
-		cLightDirectional(tString asName, cResources *apResources) : iLight(asName, apResources) { mLightType = eLightType_Directional; }
+		cLightDirectional(tString asName, cResources *apResources) : iLight(asName, apResources, eLightType_Directional) {}
 
 		void SetDirection(const cVector3f& avDir){ mvDirection = avDir; }
 		const cVector3f& GetDirection(){ return mvDirection; }

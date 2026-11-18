@@ -22,6 +22,7 @@
 
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Renderable.h"
+#include "scene/RustSL.h"
 
 namespace hpl {
 	
@@ -37,53 +38,63 @@ namespace hpl {
 	class cFogArea : public iRenderable
 	{
 	public:
-		cFogArea(tString asName, cResources *apResources);
-		virtual ~cFogArea();
+		cFogArea(tString asName, cResources *apResources) : iRenderable(asName), mpS(ohpl_sl_fog_new())
+		{
+			mbApplyTransformToBV = true;
+			mBoundingVolume.SetSize(1);
+		}
+		virtual ~cFogArea(){ ohpl_sl_fog_free(mpS); }
 
 		//////////////////////////////
 		//Properties
-		const cColor& GetColor(){ return mColor; }
-		void SetColor(const cColor& aCol){ mColor = aCol; }
-		float GetBrightness(){ return mfBrightness; }
-		void SetBrightness(float afX){ mfBrightness = afX; }
+		const cColor& GetColor(){ return mpS->color; }
+		void SetColor(const cColor& aCol){ mpS->color = aCol; }
+		float GetBrightness(){ return mpS->brightness; }
+		void SetBrightness(float afX){ mpS->brightness = afX; }
 		
-		const cVector3f& GetSize(){ return mvSize;}
-		void SetSize(const cVector3f& avSize);
+		const cVector3f& GetSize(){ return mpS->size;}
+		void SetSize(const cVector3f& avSize)
+		{
+			cVector3f vBvSize;
+			ohpl_sl_fog_set_size(mpS, &avSize, &vBvSize);
+			mBoundingVolume.SetSize(vBvSize);
+			SetTransformUpdated();
+		}
 
-		void SetStart(float afX){ mfStart = afX;}
-		void SetEnd(float afX){ mfEnd = afX;}
+		void SetStart(float afX){ mpS->start = afX;}
+		void SetEnd(float afX){ mpS->end = afX;}
 
-		float GetStart(){ return mfStart;}
-		float GetEnd(){ return mfEnd;}
+		float GetStart(){ return mpS->start;}
+		float GetEnd(){ return mpS->end;}
 
-		void SetFalloffExp(float afX){ mfFalloffExp = afX;}
-		float GetFalloffExp(){ return mfFalloffExp;}
+		void SetFalloffExp(float afX){ mpS->falloffExp = afX;}
+		float GetFalloffExp(){ return mpS->falloffExp;}
 
-		void SetShowBacksideWhenOutside(bool abX){ mbShowBacksideWhenOutside=abX; }
-		void SetShowBacksideWhenInside(bool abX){ mbShowBacksideWhenInside=abX; }
-		bool GetShowBacksideWhenOutside(){ return mbShowBacksideWhenOutside; }
-		bool GetShowBacksideWhenInside(){ return mbShowBacksideWhenInside; }
+		void SetShowBacksideWhenOutside(bool abX){ mpS->backsideOutside=abX; }
+		void SetShowBacksideWhenInside(bool abX){ mpS->backsideInside=abX; }
+		bool GetShowBacksideWhenOutside(){ return mpS->backsideOutside; }
+		bool GetShowBacksideWhenInside(){ return mpS->backsideInside; }
 
-		void SetUnderwater(bool abX){ mbUnderwater = abX; }
-		bool GetUnderwater(){ return mbUnderwater; }
-		void SetSkybox(bool abX){ mbSkybox = abX; }
-		bool GetSkybox(){ return mbSkybox; }
-		void SetNoise(float afStrength, float afSize, const cVector3f& avTurbulence){ mfNoiseStrength = afStrength; mfNoiseSize = afSize; mvNoiseTurbulence = avTurbulence; }
-		float GetNoiseStrength(){ return mfNoiseStrength; }
-		float GetNoiseSize(){ return mfNoiseSize; }
-		const cVector3f& GetNoiseTurbulence(){ return mvNoiseTurbulence; }
-		void SetLighten(bool abX){ mbLighten = abX; }
-		bool GetLighten(){ return mbLighten; }
-		void SetHeightBased(bool abX){ mbHeightBased = abX; }
-		bool GetHeightBased(){ return mbHeightBased; }
-		void SetExponential(bool abX){ mbExponential = abX; }
-		bool GetExponential(){ return mbExponential; }
-		void SetDensity(float afX){ mfDensity = afX; }
-		float GetDensity(){ return mfDensity; }
-		void SetHeightDensity(float afX){ mfHeightDensity = afX; }
-		float GetHeightDensity(){ return mfHeightDensity; }
-		void SetHeightHorizon(float afX){ mfHeightHorizon = afX; }
-		float GetHeightHorizon(){ return mfHeightHorizon; }
+		void SetUnderwater(bool abX){ mpS->underwater = abX; }
+		bool GetUnderwater(){ return mpS->underwater; }
+		void SetSkybox(bool abX){ mpS->skybox = abX; }
+		bool GetSkybox(){ return mpS->skybox; }
+		void SetNoise(float afStrength, float afSize, const cVector3f& avTurbulence){ mpS->noiseStrength = afStrength; mpS->noiseSize = afSize; mpS->noiseTurbulence = avTurbulence; }
+		float GetNoiseStrength(){ return mpS->noiseStrength; }
+		float GetNoiseSize(){ return mpS->noiseSize; }
+		const cVector3f& GetNoiseTurbulence(){ return mpS->noiseTurbulence; }
+		void SetLighten(bool abX){ mpS->lighten = abX; }
+		bool GetLighten(){ return mpS->lighten; }
+		void SetHeightBased(bool abX){ mpS->heightBased = abX; }
+		bool GetHeightBased(){ return mpS->heightBased; }
+		void SetExponential(bool abX){ mpS->exponential = abX; }
+		bool GetExponential(){ return mpS->exponential; }
+		void SetDensity(float afX){ mpS->density = afX; }
+		float GetDensity(){ return mpS->density; }
+		void SetHeightDensity(float afX){ mpS->heightDensity = afX; }
+		float GetHeightDensity(){ return mpS->heightDensity; }
+		void SetHeightHorizon(float afX){ mpS->heightHorizon = afX; }
+		float GetHeightHorizon(){ return mpS->heightHorizon; }
 
 		//////////////////////////////
 		//iEntity implementation
@@ -97,32 +108,10 @@ namespace hpl {
 		eRenderableType GetRenderType(){ return eRenderableType_FogArea;}
 
 		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
-		cMatrixf* GetModelMatrix(cFrustum* apFrustum);
+		cMatrixf* GetModelMatrix(cFrustum* apFrustum){ return const_cast<cMatrixf*>(ohpl_sl_fog_model(mpS, &GetWorldMatrix())); }
 		
 	private:
-		cColor mColor;
-		float mfBrightness = 1;
-		cVector3f mvSize;
-		float mfStart;
-		float mfEnd;
-		float mfFalloffExp;
-
-		bool mbShowBacksideWhenOutside;
-		bool mbShowBacksideWhenInside;
-		bool mbUnderwater = false;
-		bool mbSkybox = false;
-		float mfNoiseStrength = 0;
-		float mfNoiseSize = 1;
-		cVector3f mvNoiseTurbulence = 0;
-		bool mbLighten = false;
-		bool mbHeightBased = false;
-		bool mbExponential = false;
-		float mfDensity = 0.25f;
-		float mfHeightDensity = 0.25f;
-		float mfHeightHorizon = 1;
-
-		cMatrixf m_mtxModelOutput;
+		OhplSLFog *mpS;
 	};
-
 };
 #endif // HPL_FOG_AREA_H

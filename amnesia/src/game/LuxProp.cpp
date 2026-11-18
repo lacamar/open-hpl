@@ -1028,13 +1028,7 @@ bool iLuxProp::BillboardConnectedToLight(cBillboard *apBB)
 	for(size_t light=0; light<mvLights.size(); ++light)
 	{
 		iLight *pLight = mvLights[light];
-		std::vector<cLightBillboardConnection> *pBBVEc = pLight->GetBillboardVec();
-		if(pBBVEc->empty()) continue;
-        
-		for(size_t i=0; i<pBBVEc->size(); ++i)
-		{
-			if( (*pBBVEc)[i].mpBillboard == apBB) return true;
-		}
+		if(pLight->HasBillboard(apBB)) return true;
 	}
 	return false;
 }
