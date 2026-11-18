@@ -21,18 +21,9 @@ namespace hpl {
 			iPhysicsBody* b = Body(cpp);
 			out->active = b->IsActive();
 			out->inUpdateList = b->IsInUpdateList();
-			out->buoyancyActive = b->mBuoyancy.mbActive;
 			out->hpl3 = iPhysicsBody::mbHpl3Buoyancy;
 			out->freezeCount = b->mlFreezeCount;
 			out->densityMul = b->mfBuoyancyDensityMul;
-			out->density = b->mBuoyancy.mfDensity;
-			out->linearViscosity = b->mBuoyancy.mfLinearViscosity;
-			out->angularViscosity = b->mBuoyancy.mfAngularViscosity;
-			out->surface[0] = b->mBuoyancy.mSurface.a;
-			out->surface[1] = b->mBuoyancy.mSurface.b;
-			out->surface[2] = b->mBuoyancy.mSurface.c;
-			out->surface[3] = b->mBuoyancy.mSurface.d;
-			out->gravity = b->mpWorld->GetGravity();
 		}
 
 		static void BodyAddToUpdateList(size_t cpp)
@@ -46,10 +37,7 @@ namespace hpl {
 		static bool BodyHpl3Buoyancy(size_t cpp, const cVector3f* gravity, float timeStep, cVector3f* force, cVector3f* torque)
 		{
 			iPhysicsBody* b = Body(cpp);
-			if(b->CalcHpl3Buoyancy(*gravity, timeStep) == false) return false;
-			*force = b->mvBuoyancyForce;
-			*torque = b->mvBuoyancyTorque;
-			return true;
+			return b->CalcHpl3Buoyancy(*gravity, timeStep, force, torque);
 		}
 
 		static void BodySetTransform(size_t cpp, const float* m)

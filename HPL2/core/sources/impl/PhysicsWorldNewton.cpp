@@ -52,53 +52,47 @@ namespace hpl {
 
 	void iPhysicsWorld::SetMaxTimeStep(float afTimeStep)
 	{
-		mfMaxTimeStep = afTimeStep;
 		ohpl_ntw_set_max_step(mhRust, afTimeStep);
 	}
 
 	float iPhysicsWorld::GetMaxTimeStep()
 	{
-		return mfMaxTimeStep;
+		return ohpl_ntw_max_step(mhRust);
 	}
 
 	void iPhysicsWorld::SetWorldSize(const cVector3f &avMin,const cVector3f &avMax)
 	{
-		mvWorldSizeMin = avMin;
-		mvWorldSizeMax = avMax;
-
 		ohpl_ntw_set_size(mhRust, avMin.v, avMax.v);
 	}
 
 	cVector3f iPhysicsWorld::GetWorldSizeMin()
 	{
-		return mvWorldSizeMin;
+		cVector3f v; ohpl_ntw_size(mhRust, false, &v); return v;
 	}
 
 	cVector3f iPhysicsWorld::GetWorldSizeMax()
 	{
-		return mvWorldSizeMax;
+		cVector3f v; ohpl_ntw_size(mhRust, true, &v); return v;
 	}
 
 	void iPhysicsWorld::SetGravity(const cVector3f& avGravity)
 	{
-		mvGravity = avGravity;
+		ohpl_ntw_set_gravity(mhRust, &avGravity);
 	}
 
 	cVector3f iPhysicsWorld::GetGravity()
 	{
-		return mvGravity;
+		cVector3f v; ohpl_ntw_gravity(mhRust, &v); return v;
 	}
 
 	void iPhysicsWorld::SetAccuracyLevel(ePhysicsAccuracy aAccuracy)
 	{
-		mAccuracy = aAccuracy;
-
 		ohpl_ntw_set_accuracy(mhRust, (int32_t)aAccuracy);
 	}
 
 	ePhysicsAccuracy iPhysicsWorld::GetAccuracyLevel()
 	{
-		return mAccuracy;
+		return (ePhysicsAccuracy)ohpl_ntw_accuracy(mhRust);
 	}
 
 	void iPhysicsWorld::SetNumberOfThreads(int alThreads)

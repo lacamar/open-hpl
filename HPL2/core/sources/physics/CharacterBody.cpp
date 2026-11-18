@@ -36,8 +36,6 @@ namespace hpl {
 
 	static const OhplH14BodyVt* BodyVt();
 
-	std::vector<iPhysicsBody*> iCharacterBody::mvTempBodies;
-
 	// COLLIDE GRAVITY
 
 	cCharacterBodyCollideGravity::cCharacterBodyCollideGravity(iCharacterBody *apCharBody)

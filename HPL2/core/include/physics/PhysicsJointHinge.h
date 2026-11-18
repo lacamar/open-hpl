@@ -49,15 +49,7 @@ namespace hpl {
 		ePhysicsJointType GetType(){ return ePhysicsJointType_Hinge;}
 
 	protected:
-		cMatrixf m_mtxLocalPinPivot0;
-		cMatrixf m_mtxLocalPinPivot1;
-
-		float mfPreviousAngle;
-
 		void ResetPosition();
-
-		float mfMaxAngle;
-		float mfMinAngle;
 	};
 };
 #endif // HPL_PHYSICS_JOINT_HINGE_H

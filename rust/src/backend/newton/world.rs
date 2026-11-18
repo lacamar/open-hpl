@@ -42,6 +42,12 @@ pub unsafe extern "C" fn ohpl_ntw_create(out_nw: *mut *mut NewtonWorld) -> u64 {
         .insert(WorldRec {
             nw,
             max_step: 1.0 / 60.0,
+            size_min: v3(0.0, 0.0, 0.0),
+            size_max: v3(0.0, 0.0, 0.0),
+            gravity: v3(0.0, -9.81, 0.0),
+            accuracy: 0,
+            log_debug: false,
+            save_contacts: false,
         })
         .map_or(0, Handle::to_bits)
 }
@@ -113,15 +119,81 @@ pub extern "C" fn ohpl_ntw_max_step(w: u64) -> f32 {
 /// `min` and `max` point to three floats.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ntw_set_size(w: u64, min: *const f32, max: *const f32) {
-    if let Some((_, r)) = reg::world(w) {
+    if let Some((h, r)) = reg::world(w) {
         // SAFETY: caller contract.
         unsafe { NewtonSetWorldSize(r.nw, min, max) };
+        // SAFETY: caller contract, three floats each.
+        let (lo, hi) = unsafe { (min.cast::<Vector3f>().read(), max.cast::<Vector3f>().read()) };
+        reg::update_world(h, |r| {
+            r.size_min = lo;
+            r.size_max = hi;
+        });
+    }
+}
+
+/// # Safety
+/// `out` is a valid vector.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ntw_size(w: u64, max: bool, out: *mut Vector3f) {
+    if let (Some((_, r)), Some(o)) = (reg::world(w), unsafe { out.as_mut() }) {
+        *o = if max { r.size_max } else { r.size_min };
+    }
+}
+
+/// # Safety
+/// `g` is a valid vector.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ntw_set_gravity(w: u64, g: *const Vector3f) {
+    // SAFETY: caller contract.
+    if let (Some((h, _)), Some(g)) = (reg::world(w), unsafe { g.as_ref() }) {
+        let g = *g;
+        reg::update_world(h, |r| r.gravity = g);
+    }
+}
+
+/// # Safety
+/// `out` is a valid vector.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ntw_gravity(w: u64, out: *mut Vector3f) {
+    // SAFETY: caller contract.
+    if let (Some((_, r)), Some(o)) = (reg::world(w), unsafe { out.as_mut() }) {
+        *o = r.gravity;
     }
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntw_accuracy(w: u64) -> i32 {
+    reg::world(w).map_or(0, |(_, r)| r.accuracy)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntw_set_log_debug(w: u64, on: bool) {
+    if let Some((h, _)) = reg::world(w) {
+        reg::update_world(h, |r| r.log_debug = on);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntw_log_debug(w: u64) -> bool {
+    reg::world(w).is_some_and(|(_, r)| r.log_debug)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntw_set_save_contacts(w: u64, on: bool) {
+    if let Some((h, _)) = reg::world(w) {
+        reg::update_world(h, |r| r.save_contacts = on);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntw_save_contacts(w: u64) -> bool {
+    reg::world(w).is_some_and(|(_, r)| r.save_contacts)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn ohpl_ntw_set_accuracy(w: u64, accuracy: i32) {
-    let Some((_, r)) = reg::world(w) else { return };
+    let Some((h, r)) = reg::world(w) else { return };
+    reg::update_world(h, |r| r.accuracy = accuracy);
     let (solver, friction) = match accuracy {
         ACCURACY_LOW => (1, 1),
         ACCURACY_MEDIUM => (2, 1),

@@ -30,9 +30,6 @@ namespace hpl {
 	: iPhysicsJoint(asName,apParentBody,apChildBody,apWorld,avPivotPoint,avPinDir)
 	{
 		mhRust = ohpl_ntj_create_ball(mhRustWorld, &avPivotPoint, mpNewtonChildBody, mpNewtonParentBody, &mpNewtonJoint);
-
-		mfMaxConeAngle =0;
-		mfMaxTwistAngle = 0;
 	}
 
 	iPhysicsJointBall::~iPhysicsJointBall()
@@ -44,8 +41,6 @@ namespace hpl {
 	void iPhysicsJointBall::SetConeLimits(float afMaxConeAngle, float afMaxTwistAngle)
 	{
 		ohpl_ntj_ball_cone_limits(mhRust, &mvStartPinDir, afMaxConeAngle, afMaxTwistAngle);
-		mfMaxConeAngle = afMaxConeAngle;
-		mfMaxTwistAngle = afMaxTwistAngle;
 	}
 
 	cVector3f iPhysicsJointBall::GetAngles()

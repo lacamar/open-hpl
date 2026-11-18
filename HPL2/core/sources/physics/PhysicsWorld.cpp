@@ -151,7 +151,6 @@ namespace hpl {
 
 	iPhysicsWorld::iPhysicsWorld()
 	{
-		mbLogDebug = false;
 		mpWorld = NULL;
 		mRsBook = ohpl_h15w_new(WorldOp, reinterpret_cast<size_t>(this));
 
@@ -163,11 +162,6 @@ namespace hpl {
 		}
 
         //Set default values to properties
-		mvWorldSizeMin = cVector3f(0,0,0);
-		mvWorldSizeMax = cVector3f(0,0,0);
-
-		mvGravity = cVector3f(0,-9.81f,0);
-		mfMaxTimeStep = 1.0f/60.0f;
 
 		//Create default material.
 		int lDefaultMatId = 0;//NewtonMaterialGetDefaultGroupID(mpNewtonWorld);

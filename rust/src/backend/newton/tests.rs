@@ -1,4 +1,5 @@
 use super::joint::hinge_geometry;
+use super::reg::AutoDisable;
 use super::transposed;
 use crate::types::{Matrixf, Vector3f};
 
@@ -105,11 +106,23 @@ fn forces_accumulate_once_per_world_pass() {
             .insert(WorldRec {
                 nw: ptr::null_mut(),
                 max_step: 0.0,
+                size_min: zero,
+                size_max: zero,
+                gravity: zero,
+                accuracy: 0,
+                log_debug: false,
+                save_contacts: false,
             })
             .expect("world");
         let b = r
             .bodies
             .insert(BodyRec {
+                buoy: Default::default(),
+                auto_disable: AutoDisable {
+                    linear: 0.01,
+                    angular: 0.01,
+                    steps: 10,
+                },
                 nb: ptr::null_mut(),
                 nw: ptr::null_mut(),
                 cpp: 0,

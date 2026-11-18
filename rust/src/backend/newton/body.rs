@@ -1,7 +1,7 @@
 //! `cPhysicsBodyNewton`: Newton body lifetime, accessors and the force/torque and transform callbacks.
 
 use super::host::{BodyState, host};
-use super::reg::{self, BodyRec, reg};
+use super::reg::{self, AutoDisable, BodyRec, Buoy, reg};
 use super::transposed;
 use crate::math::{cross3, matrix_mul_vec, sub3, v3};
 use crate::obj::Handle;
@@ -80,21 +80,23 @@ unsafe extern "C" fn on_update(nb: *mut NewtonBody, time_step: f32, _thread: i32
             unsafe { (host.body_set_freeze_count)(rec.cpp, freeze) };
         }
     }
+    let grav = reg()
+        .and_then(|r| r.worlds.get(rec.world).map(|w| w.gravity))
+        .unwrap_or(ZERO);
     if rec.gravity && freeze <= 0 {
-        let g = st.gravity;
+        let g = grav;
         let f = v3(rec.mass * g.x, rec.mass * g.y, rec.mass * g.z);
         // SAFETY: Newton body, valid vector.
         unsafe { NewtonBodyAddForce(nb, fp(&f)) };
     }
-    if st.buoyancy_active && st.density_mul > 0.0 && freeze <= 0 {
+    if rec.buoy.active && st.density_mul > 0.0 && freeze <= 0 {
         if st.hpl3 {
             let (mut f, mut t) = (rec.buoyancy_force, rec.buoyancy_torque);
             let mut calc = false;
             if is_enabled(nb) {
                 // SAFETY: host callback with valid out-pointers.
-                calc = unsafe {
-                    (host.body_hpl3_buoyancy)(rec.cpp, &st.gravity, time_step, &mut f, &mut t)
-                };
+                calc =
+                    unsafe { (host.body_hpl3_buoyancy)(rec.cpp, &grav, time_step, &mut f, &mut t) };
                 if calc {
                     reg::update_body(h, |b| {
                         b.buoyancy_force = f;
@@ -110,15 +112,20 @@ unsafe extern "C" fn on_update(nb: *mut NewtonBody, time_step: f32, _thread: i32
                 }
             }
         } else {
-            let mut plane = st.surface;
+            let mut plane = [
+                rec.buoy.surface.a,
+                rec.buoy.surface.b,
+                rec.buoy.surface.c,
+                rec.buoy.surface.d,
+            ];
             // SAFETY: `plane` outlives the synchronous call.
             unsafe {
                 NewtonBodyAddBuoyancyForce(
                     nb,
-                    st.density * st.density_mul,
-                    st.linear_viscosity,
-                    st.angular_viscosity,
-                    fp(&st.gravity),
+                    rec.buoy.density * st.density_mul,
+                    rec.buoy.linear_viscosity,
+                    rec.buoy.angular_viscosity,
+                    fp(&grav),
                     Some(buoyancy_plane),
                     plane.as_mut_ptr().cast(),
                 );
@@ -176,6 +183,12 @@ pub unsafe extern "C" fn ohpl_ntb_create(
         let Some(mut r) = reg() else { return 0 };
         r.bodies
             .insert(BodyRec {
+                buoy: Default::default(),
+                auto_disable: AutoDisable {
+                    linear: 0.01,
+                    angular: 0.01,
+                    steps: 10,
+                },
                 nb,
                 nw: w.nw,
                 cpp,
@@ -563,4 +576,115 @@ pub extern "C" fn ohpl_ntb_set_continuous(b: u64, on: bool) {
 pub extern "C" fn ohpl_ntb_continuous(b: u64) -> bool {
     // SAFETY: Newton body.
     reg::body(b).is_some_and(|(_, r)| unsafe { NewtonBodyGetContinuousCollisionMode(r.nb) } == 1)
+}
+
+fn with_rec_mut(b: u64, f: impl FnOnce(&mut BodyRec)) {
+    if let Some((h, _)) = reg::body(b) {
+        reg::update_body(h, f);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntb_set_buoy_active(b: u64, on: bool) {
+    with_rec_mut(b, |r| {
+        if on != r.buoy.active {
+            r.buoy.prev_linear_vel = ZERO;
+            r.buoy.prev_angular_vel = ZERO;
+            r.buoy.no_prev_vel = true;
+        }
+        r.buoy.active = on;
+    });
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntb_set_buoy_density(b: u64, v: f32) {
+    with_rec_mut(b, |r| r.buoy.density = v);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntb_set_buoy_linear_viscosity(b: u64, v: f32) {
+    with_rec_mut(b, |r| r.buoy.linear_viscosity = v);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntb_set_buoy_angular_viscosity(b: u64, v: f32) {
+    with_rec_mut(b, |r| r.buoy.angular_viscosity = v);
+}
+
+/// # Safety
+/// `p` is a valid plane.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ntb_set_buoy_surface(b: u64, p: *const crate::math::Planef) {
+    // SAFETY: caller contract.
+    if let Some(p) = unsafe { p.as_ref() } {
+        let p = *p;
+        with_rec_mut(b, |r| r.buoy.surface = p);
+    }
+}
+
+/// # Safety
+/// `out` is a valid `Buoy`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ntb_buoy(b: u64, out: *mut Buoy) {
+    // SAFETY: caller contract.
+    if let (Some(o), Some((_, r))) = (unsafe { out.as_mut() }, reg::body(b)) {
+        *o = r.buoy;
+    }
+}
+
+/// Drag state written back by the HPL3 buoyancy pass.
+///
+/// # Safety
+/// Both vectors are valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ntb_set_buoy_drag(
+    b: u64,
+    prev_linear: *const Vector3f,
+    prev_angular: *const Vector3f,
+    no_prev_vel: bool,
+    drag_density_mul: f32,
+) {
+    // SAFETY: caller contract.
+    let (Some(l), Some(a)) = (unsafe { prev_linear.as_ref() }, unsafe {
+        prev_angular.as_ref()
+    }) else {
+        return;
+    };
+    let (l, a) = (*l, *a);
+    with_rec_mut(b, |r| {
+        r.buoy.prev_linear_vel = l;
+        r.buoy.prev_angular_vel = a;
+        r.buoy.no_prev_vel = no_prev_vel;
+        r.buoy.drag_density_mul = drag_density_mul;
+    });
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntb_set_auto_linear(b: u64, v: f32) {
+    with_rec_mut(b, |r| r.auto_disable.linear = v);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntb_auto_linear(b: u64) -> f32 {
+    reg::body(b).map_or(0.0, |(_, r)| r.auto_disable.linear)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntb_set_auto_angular(b: u64, v: f32) {
+    with_rec_mut(b, |r| r.auto_disable.angular = v);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntb_auto_angular(b: u64) -> f32 {
+    reg::body(b).map_or(0.0, |(_, r)| r.auto_disable.angular)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntb_set_auto_steps(b: u64, v: i32) {
+    with_rec_mut(b, |r| r.auto_disable.steps = v);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ntb_auto_steps(b: u64) -> i32 {
+    reg::body(b).map_or(0, |(_, r)| r.auto_disable.steps)
 }
