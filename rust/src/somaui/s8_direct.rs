@@ -2,6 +2,7 @@
 //! the Rust-owned objects, bypassing the C++ host (the trace still records them).
 
 use super::s8::op;
+use crate::gui::direct;
 use crate::gui::g1_gfx::{self, Element};
 use crate::gui::g1_gui;
 use crate::gui::g1_set::{self, Clip, Set};
@@ -14,6 +15,25 @@ fn p(a: &[Arg], i: usize) -> usize {
         Some(Arg::P(v)) => *v,
         Some(Arg::I(v)) => *v as usize,
         _ => 0,
+    }
+}
+
+const TEXTURE_2D: i32 = 1;
+const MSG_MOUSE_DOWN: i32 = 1;
+const MSG_MOUSE_UP: i32 = 2;
+const MOUSE_LEFT: i32 = 1;
+
+fn n(a: &[Arg], i: usize) -> i32 {
+    match a.get(i) {
+        Some(Arg::I(v)) => *v as i32,
+        _ => 0,
+    }
+}
+
+fn s<'a>(a: &[Arg<'a>], i: usize) -> &'a [u8] {
+    match a.get(i) {
+        Some(Arg::S(v)) => v,
+        _ => &[],
     }
 }
 
@@ -43,6 +63,46 @@ pub(super) fn call(op: i32, a: &[Arg]) -> Option<Res> {
     let set = p(a, 0) as *mut Set;
     let gui = g1_gui::current();
     Some(match op {
+        op::SET_NEW => {
+            let skin = direct::create_skin(b"gui_default.skin");
+            res(direct::create_set(s(a, 0), skin) as u64)
+        }
+        op::GFX_RECT => {
+            let c = Color {
+                r: f(a, 0),
+                g: f(a, 1),
+                b: f(a, 2),
+                a: f(a, 3),
+            };
+            res(direct::gfx_rect(c, n(a, 4), true) as u64)
+        }
+        op::GFX_TEX => res(direct::gfx_texture_file(s(a, 0), n(a, 1), TEXTURE_2D) as u64),
+        op::SLIDER_SET => {
+            direct::slider_set(p(a, 0), n(a, 1), false);
+            Res::default()
+        }
+        op::SLIDER_GET => {
+            let mut r = Res::default();
+            r.u[0] = direct::slider_get(p(a, 0)) as u64;
+            r.u[1] = direct::slider_get_max(p(a, 0)) as u64;
+            r
+        }
+        op::GUI_MOUSE_POS => {
+            // SAFETY: the gui is live.
+            unsafe {
+                g1_gui::ohpl_g1_gui_send_mouse_pos(gui, n(a, 0), n(a, 1), n(a, 2), n(a, 3));
+            }
+            Res::default()
+        }
+        op::CLICK => {
+            let msg = if b(a, 0) {
+                MSG_MOUSE_DOWN
+            } else {
+                MSG_MOUSE_UP
+            };
+            direct::send_mouse_button(msg, MOUSE_LEFT);
+            Res::default()
+        }
         op::SET_DRAW_MOUSE => {
             g1_set::set_draw_mouse(set, b(a, 1));
             Res::default()
