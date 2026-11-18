@@ -99,8 +99,7 @@ namespace hpl {
 
 	cResources::~cResources()
 	{
-		iResourceManager *vMgrs[] = {mpTextureManager, mpMaterialManager, mpMeshManager, mpAnimationManager, mpSoundManager, mpSoundEntityManager, mpFontManager, mpImageManager, mpGpuShaderManager, mpScriptManager, mpVideoManager, mpEntFileManager, mpParticleManager};
-		for(iResourceManager *pMgr : vMgrs) if(pMgr) pMgr->DumpState("end");
+		DumpManagers("end");
 		ohpl_h4_res_shutdown(mpRs);
 		ohpl_h4_res_free(mpRs);
 		mpRs = NULL;
@@ -270,8 +269,16 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
+	void cResources::DumpManagers(const char *apWhen)
+	{
+		iResourceManager *vMgrs[] = {mpTextureManager, mpMaterialManager, mpMeshManager, mpAnimationManager, mpSoundManager, mpSoundEntityManager, mpFontManager, mpImageManager, mpGpuShaderManager, mpScriptManager, mpVideoManager, mpEntFileManager, mpParticleManager};
+		for(iResourceManager *pMgr : vMgrs) if(pMgr) pMgr->DumpState(apWhen);
+	}
+
 	void cResources::Update(float afTimeStep)
 	{
+		static int slFrames = 0;
+		if(++slFrames == 600) DumpManagers("frame600");
 		int32_t lBits;
 		memcpy(&lBits, &afTimeStep, sizeof(lBits));
 		ohpl_h4_res_update(mpRs, lBits);
