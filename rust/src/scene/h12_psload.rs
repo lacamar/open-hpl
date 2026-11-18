@@ -296,6 +296,35 @@ pub unsafe extern "C" fn ohpl_h12_ps_desc(b: *const PsBox) -> *const PsDesc {
 }
 
 /// # Safety
+/// `b` comes from `ohpl_h12_ps_parse`, or is null; no other reference to the box is live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h12_ps_desc_mut(b: *mut PsBox) -> *mut PsDesc {
+    // SAFETY: caller contract.
+    unsafe { b.as_mut() }.map_or(std::ptr::null_mut(), |b| &raw mut b.desc)
+}
+
+/// After the materials are known: the frame animation constants and, when the file gave no
+/// `SubDiv`, the first material's UV subdivisions (`first_sub_div` is null without materials).
+///
+/// # Safety
+/// `b` comes from `ohpl_h12_ps_parse`; `first_sub_div` is null or readable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h12_ps_finish(
+    b: *mut PsBox,
+    materials: u32,
+    first_sub_div: *const Vector2l,
+) {
+    // SAFETY: caller contract.
+    let d = &mut unsafe { &mut *b }.desc;
+    if !d.has_sub_div && !first_sub_div.is_null() {
+        // SAFETY: checked non-null above.
+        d.sub_div = unsafe { *first_sub_div };
+    }
+    d.params.frame_step = frame_step(d.animation_length, materials as usize);
+    d.params.max_frame_time = max_frame_time(materials as usize);
+}
+
+/// # Safety
 /// `b` comes from `ohpl_h12_ps_parse` and is freed once.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h12_ps_free(b: *mut PsBox) {
@@ -319,4 +348,22 @@ pub extern "C" fn ohpl_h12_ps_max_frame_time(materials: u32) -> f32 {
 #[test]
 fn desc_layout_matches_header() {
     assert_eq!(std::mem::size_of::<PsDesc>(), 544);
+}
+
+#[cfg(test)]
+#[test]
+fn finish_sets_frames_and_inherits_sub_div() {
+    unsafe extern "C" fn none(_: *mut c_void, _: *const c_char) -> *const c_char {
+        null()
+    }
+    // SAFETY: `none` returns NULL for every attribute; the box is freed once.
+    unsafe {
+        let b = ohpl_h12_ps_parse(none, std::ptr::null_mut());
+        let sd = Vector2l { x: 4, y: 2 };
+        ohpl_h12_ps_finish(b, 2, &sd);
+        let d = &*ohpl_h12_ps_desc(b);
+        assert_eq!((d.sub_div.x, d.sub_div.y), (4, 2));
+        assert_eq!(d.params.max_frame_time, max_frame_time(2));
+        ohpl_h12_ps_free(b);
+    }
 }

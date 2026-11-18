@@ -76,6 +76,7 @@ namespace hpl {
 	friend class cParticleEmitter_UserData;
 	public:
     	cParticleEmitterData_UserData(const tString &asName,cResources* apResources,cGraphics *apGraphics);
+		~cParticleEmitterData_UserData(){ ohpl_h12_ps_free(mpDesc); }
 
 		iParticleEmitter* Create(tString asName, cVector3f avSize);
 
@@ -88,167 +89,16 @@ namespace hpl {
 
 	private:
 		friend struct OhplH12PsProbe;
-		void BuildRustParams();
-		OhplPeParams mRustParams;
+		bool OnIntersect(iPhysicsBody *pBody,cPhysicsRayParams *apParams);
 
-        bool OnIntersect(iPhysicsBody *pBody,cPhysicsRayParams *apParams);
+		const OhplH12PsDesc& D() const { return *ohpl_h12_ps_desc(mpDesc); }
+
+		OhplH12PsBox *mpDesc;
+
 		float mfShortestDist;
 		bool mbIntersected;
 		cVector3f *mpIntersectNormal;
 		cVector3f *mpIntersectPos;
-
-		///////// GENERAL /////////////
-
-		// NEW
-		ePEType	mPEType;
-		// ---
-
-		int mlMaxParticleNum;
-		
-		bool mbRespawn;
-		
-		float mfParticlesPerSecond;
-		float mfStartTimeOffset;
-
-		float mfMinPauseLength;
-		float mfMaxPauseLength;
-
-		float mfMinPauseInterval;
-		float mfMaxPauseInterval;
-		
-		cVector3f mvPosOffset;
-		cVector3f mvAngleOffset;
-
-		float mfFrameStep;
-		float mfMaxFrameTime;
-
-		///////// MATERIAL //////////
-
-		cVector2l mvSubDiv;
-		ePESubDivType mSubDivType;
-
-		///////// START POS //////////
-		ePEStartPosType mStartPosType;
-		
-		cVector3f mvMinStartPos;
-		cVector3f mvMaxStartPos;
-		
-		cVector2f mvMinStartAngles;
-		cVector2f mvMaxStartAngles;
-
-		float mfMinStartRadius;
-		float mfMaxStartRadius;
-
-		/////////// MOVEMENT ////////
-		ePEStartPosType mStartVelType;
-
-		cVector3f mvMinStartVel;
-		cVector3f mvMaxStartVel;
-
-		cVector2f mvMinStartVelAngles;
-		cVector2f mvMaxStartVelAngles;
-		
-		float mfMinStartVelSpeed;
-		float mfMaxStartVelSpeed;
-
-		float mfMinSpeedMultiply;
-		float mfMaxSpeedMultiply;
-		
-		cVector3f mvMinStartAcc;
-		cVector3f mvMaxStartAcc;
-		
-		float mfMinVelMaximum;
-		float mfMaxVelMaximum;
-				
-		bool mbUsesDirection;
-		ePEGravityType mGravityType;
-		
-		cVector3f mvGravityAcc;
-
-		eParticleEmitterCoordSystem mCoordSystem;
-
-		// NEW
-		
-		bool	mbUsePartSpin;
-		ePEPartSpinType mPartSpinType;
-		float	mfMinSpinRange;
-		float	mfMaxSpinRange;
-
-		bool	mbUseRevolution;
-		cVector3f	mvMinRevVel;
-		cVector3f	mvMaxRevVel;
-	
-//		iVertexBuffer *mVBMeshData;
-//		float *mpfMeshVtxData;
-	
-		// ---
-		
-		/////////// LIFESPAN ////////
-		float mfMinLifeSpan;
-		float mfMaxLifeSpan;
-
-		ePEDeathType mDeathType;
-
-        tString msDeathPS;
-
-		/////////// RENDERING ////////
-		eParticleEmitterType mDrawType;
-				
-		cVector2f mvMinStartSize;
-		cVector2f mvMaxStartSize;
-
-		float mfStartRelSize;
-		float mfMiddleRelSize;
-		float mfMiddleRelSizeTime;
-		float mfMiddleRelSizeLength;
-		float mfEndRelSize;
-
-		bool mbMultiplyRGBWithAlpha;
-	
-		/////////// COLOR  ////////  
-
-		cColor mMinStartColor;
-		cColor mMaxStartColor;
-
-		cColor mStartRelColor;
-		cColor mMiddleRelColor;
-		float mfMiddleRelColorTime;
-		float mfMiddleRelColorLength;
-		cColor mEndRelColor;
-
-		/////////// COLLISION  ////////  
-		bool mbCollides;
-		
-		float mfMinBounceAmount;
-		float mfMaxBounceAmount;
-		
-		int  mlMinCollisionMax;
-		int  mlMaxCollisionMax;
-
-		int  mlCollisionUpdateRate;
-
-		// NEW
-		/////// BEAM SPECIFIC ///////
-
-		bool mbUseBeamNoise;
-
-		int mlLowFreqPoints;
-		std::vector<unsigned int> mvLFIndices;
-		cVector3f mvMinLowFreqNoise;
-		cVector3f mvMaxLowFreqNoise;
-		        
-		int mlHighFreqPoints;
-		cVector3f mvMinHighFreqNoise;
-		cVector3f mvMaxHighFreqNoise;
-
-		std::vector<tBeamNoisePoint> mvBeamNoisePoints;
-		
-		
-		// ---
-
-
-
-		
 	};
 	
 	//----------------------------------------------------------

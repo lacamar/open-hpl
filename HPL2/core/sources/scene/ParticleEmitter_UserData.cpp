@@ -50,9 +50,11 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
+	static const char* H12NoAttr(void*, const char*){ return NULL; }
+
 	cParticleEmitterData_UserData::cParticleEmitterData_UserData(
 		const tString &asName,cResources* apResources,cGraphics *apGraphics)
-		: iParticleEmitterData(asName,apResources,apGraphics)
+		: iParticleEmitterData(asName,apResources,apGraphics), mpDesc(ohpl_h12_ps_parse(H12NoAttr, NULL))
 	{
 	}
 
@@ -63,8 +65,9 @@ namespace hpl {
 		iParticleEmitter *pPE = hplNew( cParticleEmitter_UserData, (asName,&mvMaterials,avSize, 
 																mpGraphics,mpResources,this) );
 		
-		cMatrixf mtxOffset = cMath::MatrixRotate(mvAngleOffset,eEulerRotationOrder_XYZ);
-		mtxOffset.SetTranslation(mvPosOffset);
+		const OhplH12PsDesc &d = D();
+		cMatrixf mtxOffset = cMath::MatrixRotate(d.mvAngleOffset,eEulerRotationOrder_XYZ);
+		mtxOffset.SetTranslation(d.mvPosOffset);
 		pPE->SetMatrix(mtxOffset);
 
 		return pPE;
@@ -79,27 +82,13 @@ namespace hpl {
 
 	void cParticleEmitterData_UserData::LoadFromElement(cXmlElement *apElement, bool abLoadMaterials)
 	{
-		OhplH12PsBox *pBox = ohpl_h12_ps_parse(H12Attr, apElement);
-		const OhplH12PsDesc &d = *ohpl_h12_ps_desc(pBox);
-		const OhplPeParams &p = d.mParams;
+		ohpl_h12_ps_free(mpDesc);
+		mpDesc = ohpl_h12_ps_parse(H12Attr, apElement);
+		const OhplH12PsDesc &d = D();
 
 		msName = d.msName;
-		mPEType = (ePEType)p.mlPEType;
-		mlMaxParticleNum = d.mlMaxParticleNum;
-		mbRespawn = d.mbRespawn;
-		mfParticlesPerSecond = p.mfParticlesPerSecond;
-		mfStartTimeOffset = p.mfStartTimeOffset;
 		mfWarmUpTime = d.mfWarmUpTime;
 		mfWarmUpStepsPerSec = d.mfWarmUpStepsPerSec;
-		mfMinPauseLength = p.mfMinPauseLength;
-		mfMaxPauseLength = p.mfMaxPauseLength;
-		mfMinPauseInterval = p.mfMinPauseInterval;
-		mfMaxPauseInterval = p.mfMaxPauseInterval;
-		mvPosOffset = d.mvPosOffset;
-		mvAngleOffset = d.mvAngleOffset;
-
-		mvSubDiv = d.mvSubDiv;
-		mSubDivType = (ePESubDivType)p.mlSubDivType;
 
 		if(abLoadMaterials)
 		{
@@ -126,156 +115,8 @@ namespace hpl {
 			}
 		}
 
-		if(d.mbHasSubDiv==false && mvMaterials.empty()==false)
-			mvSubDiv = mvMaterials[0]->GetUVSubDivisions();
-
-		mfFrameStep = ohpl_h12_ps_frame_step(d.mfAnimationLength, (uint32_t)mvMaterials.size());
-		mfMaxFrameTime = ohpl_h12_ps_max_frame_time((uint32_t)mvMaterials.size());
-
-		mStartPosType = (ePEStartPosType)p.mlStartPosType;
-		mvMinStartPos = p.mvMinStartPos;
-		mvMaxStartPos = p.mvMaxStartPos;
-		mvMinStartAngles = p.mvMinStartAngles;
-		mvMaxStartAngles = p.mvMaxStartAngles;
-		mfMinStartRadius = p.mfMinStartRadius;
-		mfMaxStartRadius = p.mfMaxStartRadius;
-
-		mStartVelType = (ePEStartPosType)p.mlStartVelType;
-		mvMinStartVel = p.mvMinStartVel;
-		mvMaxStartVel = p.mvMaxStartVel;
-		mvMinStartVelAngles = p.mvMinStartVelAngles;
-		mvMaxStartVelAngles = p.mvMaxStartVelAngles;
-		mfMinStartVelSpeed = p.mfMinStartVelSpeed;
-		mfMaxStartVelSpeed = p.mfMaxStartVelSpeed;
-		mfMinSpeedMultiply = p.mfMinSpeedMultiply;
-		mfMaxSpeedMultiply = p.mfMaxSpeedMultiply;
-		mvMinStartAcc = p.mvMinStartAcc;
-		mvMaxStartAcc = p.mvMaxStartAcc;
-		mfMinVelMaximum = p.mfMinVelMaximum;
-		mfMaxVelMaximum = p.mfMaxVelMaximum;
-		mbUsesDirection = p.mbUsesDirection;
-		mGravityType = (ePEGravityType)p.mlGravityType;
-		mvGravityAcc = p.mvGravityAcc;
-		mCoordSystem = (eParticleEmitterCoordSystem)p.mlCoordSystem;
-
-		mbUsePartSpin = p.mbUsePartSpin;
-		mPartSpinType = (ePEPartSpinType)p.mlPartSpinType;
-		mfMinSpinRange = p.mfMinSpinRange;
-		mfMaxSpinRange = p.mfMaxSpinRange;
-		mbUseRevolution = p.mbUseRevolution;
-		mvMinRevVel = p.mvMinRevVel;
-		mvMaxRevVel = p.mvMaxRevVel;
-
-		mfMinLifeSpan = p.mfMinLifeSpan;
-		mfMaxLifeSpan = p.mfMaxLifeSpan;
-		mDeathType = ePEDeathType_Age;
-		msDeathPS = d.msDeathPS;
-
-		mDrawType = (eParticleEmitterType)p.mlDrawType;
-		mvMinStartSize = p.mvMinStartSize;
-		mvMaxStartSize = p.mvMaxStartSize;
-		mfStartRelSize = p.mfStartRelSize;
-		mfMiddleRelSize = p.mfMiddleRelSize;
-		mfMiddleRelSizeTime = p.mfMiddleRelSizeTime;
-		mfMiddleRelSizeLength = p.mfMiddleRelSizeLength;
-		mfEndRelSize = p.mfEndRelSize;
-		mbMultiplyRGBWithAlpha = p.mbMultiplyRGBWithAlpha;
-
-		mMinStartColor = p.mMinStartColor;
-		mMaxStartColor = p.mMaxStartColor;
-		mStartRelColor = p.mStartRelColor;
-		mMiddleRelColor = p.mMiddleRelColor;
-		mfMiddleRelColorTime = p.mfMiddleRelColorTime;
-		mfMiddleRelColorLength = p.mfMiddleRelColorLength;
-		mEndRelColor = p.mEndRelColor;
-
-		mbCollides = p.mbCollides;
-		mfMinBounceAmount = p.mfMinBounceAmount;
-		mfMaxBounceAmount = p.mfMaxBounceAmount;
-		mlMinCollisionMax = p.mlMinCollisionMax;
-		mlMaxCollisionMax = p.mlMaxCollisionMax;
-		mlCollisionUpdateRate = p.mlCollisionUpdateRate;
-
-		mbUseBeamNoise = d.mbUseBeamNoise;
-		mlLowFreqPoints = d.mlLowFreqPoints;
-		mlHighFreqPoints = d.mlHighFreqPoints;
-		mvMinLowFreqNoise = d.mvMinLowFreqNoise;
-		mvMaxLowFreqNoise = d.mvMaxLowFreqNoise;
-		mvMinHighFreqNoise = d.mvMinHighFreqNoise;
-		mvMaxHighFreqNoise = d.mvMaxHighFreqNoise;
-
-		ohpl_h12_ps_free(pBox);
-		BuildRustParams();
-	}
-
-	void cParticleEmitterData_UserData::BuildRustParams()
-	{
-		OhplPeParams &p = mRustParams;
-		p.mlPEType = mPEType;
-		p.mlDrawType = mDrawType;
-		p.mlCoordSystem = mCoordSystem;
-		p.mlSubDivType = mSubDivType;
-		p.mlStartPosType = mStartPosType;
-		p.mlStartVelType = mStartVelType;
-		p.mlGravityType = mGravityType;
-		p.mlPartSpinType = mPartSpinType;
-		p.mlMinCollisionMax = mlMinCollisionMax;
-		p.mlMaxCollisionMax = mlMaxCollisionMax;
-		p.mlCollisionUpdateRate = mlCollisionUpdateRate;
-		p.mbUsesDirection = mbUsesDirection;
-		p.mbUsePartSpin = mbUsePartSpin;
-		p.mbUseRevolution = mbUseRevolution;
-		p.mbMultiplyRGBWithAlpha = mbMultiplyRGBWithAlpha;
-		p.mbCollides = mbCollides;
-		p.mfParticlesPerSecond = mfParticlesPerSecond;
-		p.mfStartTimeOffset = mfStartTimeOffset;
-		p.mfMinPauseLength = mfMinPauseLength;
-		p.mfMaxPauseLength = mfMaxPauseLength;
-		p.mfMinPauseInterval = mfMinPauseInterval;
-		p.mfMaxPauseInterval = mfMaxPauseInterval;
-		p.mvMinStartPos = mvMinStartPos;
-		p.mvMaxStartPos = mvMaxStartPos;
-		p.mvMinStartAngles = mvMinStartAngles;
-		p.mvMaxStartAngles = mvMaxStartAngles;
-		p.mfMinStartRadius = mfMinStartRadius;
-		p.mfMaxStartRadius = mfMaxStartRadius;
-		p.mvMinStartVel = mvMinStartVel;
-		p.mvMaxStartVel = mvMaxStartVel;
-		p.mvMinStartVelAngles = mvMinStartVelAngles;
-		p.mvMaxStartVelAngles = mvMaxStartVelAngles;
-		p.mfMinStartVelSpeed = mfMinStartVelSpeed;
-		p.mfMaxStartVelSpeed = mfMaxStartVelSpeed;
-		p.mfMinSpeedMultiply = mfMinSpeedMultiply;
-		p.mfMaxSpeedMultiply = mfMaxSpeedMultiply;
-		p.mvMinStartAcc = mvMinStartAcc;
-		p.mvMaxStartAcc = mvMaxStartAcc;
-		p.mfMinVelMaximum = mfMinVelMaximum;
-		p.mfMaxVelMaximum = mfMaxVelMaximum;
-		p.mvGravityAcc = mvGravityAcc;
-		p.mfMinSpinRange = mfMinSpinRange;
-		p.mfMaxSpinRange = mfMaxSpinRange;
-		p.mvMinRevVel = mvMinRevVel;
-		p.mvMaxRevVel = mvMaxRevVel;
-		p.mfMinLifeSpan = mfMinLifeSpan;
-		p.mfMaxLifeSpan = mfMaxLifeSpan;
-		p.mvMinStartSize = mvMinStartSize;
-		p.mvMaxStartSize = mvMaxStartSize;
-		p.mfStartRelSize = mfStartRelSize;
-		p.mfMiddleRelSize = mfMiddleRelSize;
-		p.mfMiddleRelSizeTime = mfMiddleRelSizeTime;
-		p.mfMiddleRelSizeLength = mfMiddleRelSizeLength;
-		p.mfEndRelSize = mfEndRelSize;
-		p.mMinStartColor = mMinStartColor;
-		p.mMaxStartColor = mMaxStartColor;
-		p.mStartRelColor = mStartRelColor;
-		p.mMiddleRelColor = mMiddleRelColor;
-		p.mfMiddleRelColorTime = mfMiddleRelColorTime;
-		p.mfMiddleRelColorLength = mfMiddleRelColorLength;
-		p.mEndRelColor = mEndRelColor;
-		p.mfMinBounceAmount = mfMinBounceAmount;
-		p.mfMaxBounceAmount = mfMaxBounceAmount;
-		p.mfFrameStep = mfFrameStep;
-		p.mfMaxFrameTime = mfMaxFrameTime;
+		const cVector2l vFirstSubDiv = mvMaterials.empty() ? cVector2l(0) : mvMaterials[0]->GetUVSubDivisions();
+		ohpl_h12_ps_finish(mpDesc, (uint32_t)mvMaterials.size(), mvMaterials.empty() ? NULL : &vFirstSubDiv);
 	}
 
 	//-----------------------------------------------------------------------
@@ -328,165 +169,32 @@ namespace hpl {
 									tString asName,tMaterialVec* apMaterials,
 									cVector3f avSize, cGraphics* apGraphics,cResources *apResources,
 									cParticleEmitterData_UserData *apData)
-					: iParticleEmitter(	asName,apMaterials,apData->mlMaxParticleNum,
+					: iParticleEmitter(	asName,apMaterials,apData->D().mlMaxParticleNum,
 											avSize,apGraphics,apResources)
 	{
 		mpData = apData;
 
+		const OhplH12PsDesc &d = apData->D();
+		const OhplPeParams &p = d.mParams;
+
 		mvDrawSize = 1;
 
-		mCoordSystem = apData->mCoordSystem;
-		
-		mbMultiplyRGBWithAlpha =  apData->mbMultiplyRGBWithAlpha;
+		mCoordSystem = (eParticleEmitterCoordSystem)p.mlCoordSystem;
+		mbMultiplyRGBWithAlpha = p.mbMultiplyRGBWithAlpha;
+		mDrawType = (eParticleEmitterType)p.mlDrawType;
+		mbUsesDirection = p.mbUsesDirection;
 
-		mDrawType = apData->mDrawType;
+		mpRust = ohpl_pe_new(&p, d.mlMaxParticleNum, d.mbRespawn, &d.mvSubDiv, (uint32_t)mvMaterials->size());
 
-		mbUsesDirection = apData->mbUsesDirection;
-
-		mpRust = ohpl_pe_new(&mpData->mRustParams, mpData->mlMaxParticleNum, apData->mbRespawn,
-							&mpData->mvSubDiv, (uint32_t)mvMaterials->size());
-
-		// NEW
-		mbUsePartSpin = apData->mbUsePartSpin;
-		mbUseRevolution = apData->mbUseRevolution;
-		
-		mPEType = apData->mPEType;
-
+		mbUsePartSpin = p.mbUsePartSpin;
+		mbUseRevolution = p.mbUseRevolution;
+		mPEType = (ePEType)p.mlPEType;
 
 		//Calculate max size of particles.
-		float fSizeMul = apData->mfStartRelSize;
-		if(fSizeMul < apData->mfMiddleRelSize) fSizeMul = apData->mfMiddleRelSize;
-		if(fSizeMul < apData->mfEndRelSize) fSizeMul = apData->mfEndRelSize;
-		mvMaxDrawSize = apData->mvMaxStartSize * fSizeMul;
-
-
-
-/*		int i = 0;										
-		int j = 0;
-		int k = 0;
-		switch ( mPEType )
-		{
-			case ePEType_Beam:
-				hplDelete(mpVtxBuffer);								// Destroy the current Vertex Buffer, as it's filled with quads we don't need now :)
-
-                if ( apData->mbUseBeamNoise )
-				{
-                    // Calculate the Frequency Points Lookup Table, this is needed to create the Vertex Buffer.It is also needed by every beam particle created,
-					// as it needs to know the type and index of each when updating.
-					while ( (i < apData->mlLowFreqPoints)  && (j < apData->mlHighFreqPoints) )
-					{
-						float fLowRelPos = (float) i / (apData->mlLowFreqPoints -1 );
-						float fHighRelPos = (float) j / (apData->mlHighFreqPoints -1 );
-						float fLastLowRelPos = 0.0f;	
-
-						tBeamNoisePoint tempBNP;
-					
-			//			tempBNP.lLowFreqNoiseIdx = i;
-			//			tempBNP.lHighFreqNoiseIdx = j;
-						tempBNP.fRelToBendPos = (fHighRelPos-fLastLowRelPos)/(fLowRelPos-fLastLowRelPos);
-							
-						if ( fLowRelPos <= fHighRelPos )
-						{
-							if ( fLowRelPos == fHighRelPos )
-							{
-								tempBNP.noiseType = ePENoiseType_Both;
-								++i;
-								++j;
-							}
-							else
-							{
-								tempBNP.noiseType = ePENoiseType_LowFreq;
-								++i;
-							}
-							
-							tempBNP.fRelToBeamPos = fLowRelPos;
-							apData->mvLFIndices.push_back (k);
-							
-						}
-						else
-						{
-							tempBNP.fRelToBeamPos = fHighRelPos;
-							tempBNP.noiseType = ePENoiseType_HighFreq;
-							++j;
-						}		
-
-						fLastLowRelPos = fLowRelPos;
-
-
-						mpData->mvBeamNoisePoints.push_back(tempBNP);
-						++k;
-					}
-				}
-				else
-				{
-                    tBeamNoisePoint tempBNP;
-
-					tempBNP.fRelToBeamPos = 0.0f;
-					tempBNP.fRelToBendPos = 0.0f;
-					tempBNP.noiseType = ePENoiseType_None;
-
-					mpData->mvBeamNoisePoints.push_back(tempBNP);
-
-					tempBNP.fRelToBeamPos = 1.0f;
-					tempBNP.fRelToBendPos = 1.0f;
-					tempBNP.noiseType = ePENoiseType_None;
-
-					mpData->mvBeamNoisePoints.push_back(tempBNP);
-				}
-
-				mpVtxBuffer = apGraphics->GetLowLevel()->CreateVertexBuffer ( eVertexElementFlag_Position,		// Now that we know how many points we have, we create the Vertex Buffer
-						eVertexBufferDrawType_Tri, eVertexBufferUsageType_Stream,
-						mlMaxParticles*mpData->mvBeamNoisePoints.size()*2, mlMaxParticles*(mpData->mvBeamNoisePoints.size()-1)*6);
-
-				for ( int i = 0; i < (int) mlMaxParticles; ++i )
-				{
-					for ( int j = 0; j < (int) mpData->mvBeamNoisePoints.size()-1; ++j )
-					{
-						int lStart = j*2;
-						mpVtxBuffer->AddIndex(lStart);		// Half quad ( tri )
-						mpVtxBuffer->AddIndex(lStart+1);
-						mpVtxBuffer->AddIndex(lStart+3);
-							
-						mpVtxBuffer->AddIndex(lStart+3);	// The other half
-						mpVtxBuffer->AddIndex(lStart+2);
-						mpVtxBuffer->AddIndex(lStart);
-					}
-
-				}
-
-				for ( int i = 0; i < (int) mlMaxParticles; ++i )
-				{
-					for (int j = 0; j < (int) mpData->mvBeamNoisePoints.size(); ++j )
-					{
-						mpVtxBuffer->AddVertex(eVertexElementFlag_Texture0, cVector2f(mpData->mvBeamNoisePoints[j].fRelToBeamPos,1));
-						mpVtxBuffer->AddVertex(eVertexElementFlag_Texture0, cVector2f(mpData->mvBeamNoisePoints[j].fRelToBeamPos,0));
-					}
-				}		
-
-				for ( int i = 0; i < (int) mlMaxParticles; ++i )
-				{
-					for (int j = 0; j < (int) mpData->mvBeamNoisePoints.size()*2; ++j )
-					{
-                        mpVtxBuffer->AddVertex(eVertexElementFlag_Position, 0);
-						mpVtxBuffer->AddColor(eVertexElementFlag_Color0, cColor(1,1));
-					}
-				}
-
-				mpVtxBuffer->Compile(0);
-
-				
-				
-				
-				
-				break;
-			case ePEType_Normal:
-				break;
-			default:
-				break;
-			}
-*/		
-		// ---
-
+		float fSizeMul = p.mfStartRelSize;
+		if(fSizeMul < p.mfMiddleRelSize) fSizeMul = p.mfMiddleRelSize;
+		if(fSizeMul < p.mfEndRelSize) fSizeMul = p.mfEndRelSize;
+		mvMaxDrawSize = p.mvMaxStartSize * fSizeMul;
 	}
 
 	//-----------------------------------------------------------------------
@@ -519,9 +227,10 @@ namespace hpl {
 
 	void cParticleEmitter_UserData::UpdateMotion(float afTimeStep)
 	{
-		const cMatrixf &mtxStart = mpData->mCoordSystem == eParticleEmitterCoordSystem_World ?
+		const OhplPeParams &p = mpData->D().mParams;
+		const cMatrixf &mtxStart = p.mlCoordSystem == eParticleEmitterCoordSystem_World ?
 									GetWorldMatrix() : GetLocalMatrix();
-		ohpl_pe_update_motion(mpRust, afTimeStep, &mtxStart, mpData->mbCollides ? CollideThunk : NULL, this);
+		ohpl_pe_update_motion(mpRust, afTimeStep, &mtxStart, p.mbCollides ? CollideThunk : NULL, this);
 	}
 
 	//-----------------------------------------------------------------------

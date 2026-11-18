@@ -50,44 +50,47 @@ struct Out
 
 }
 
-void hpl::OhplH12PsProbe::Dump(FILE *f, cParticleEmitterData_UserData &d)
+void hpl::OhplH12PsProbe::Dump(FILE *f, cParticleEmitterData_UserData &data)
 {
 	Out o = {f};
-	fprintf(f, "d %s", d.msName.c_str());
-	o.I(d.mPEType); o.I(d.mlMaxParticleNum); o.I(d.mbRespawn);
-	o.F(d.mfParticlesPerSecond); o.F(d.mfStartTimeOffset); o.F(d.mfWarmUpTime); o.F(d.mfWarmUpStepsPerSec);
-	o.F(d.mfMinPauseLength); o.F(d.mfMaxPauseLength); o.F(d.mfMinPauseInterval); o.F(d.mfMaxPauseInterval);
+	const OhplH12PsDesc &d = data.D();
+	const OhplPeParams &p = d.mParams;
+	fprintf(f, "d %s", data.msName.c_str());
+	o.I(p.mlPEType); o.I(d.mlMaxParticleNum); o.I(d.mbRespawn);
+	o.F(p.mfParticlesPerSecond); o.F(p.mfStartTimeOffset); o.F(d.mfWarmUpTime); o.F(d.mfWarmUpStepsPerSec);
+	o.F(p.mfMinPauseLength); o.F(p.mfMaxPauseLength); o.F(p.mfMinPauseInterval); o.F(p.mfMaxPauseInterval);
 	o.V3(d.mvPosOffset); o.V3(d.mvAngleOffset);
-	o.I(d.mvSubDiv.x); o.I(d.mvSubDiv.y); o.I(d.mSubDivType);
-	o.F(d.mfFrameStep); o.F(d.mfMaxFrameTime);
-	o.I(d.mStartPosType); o.V3(d.mvMinStartPos); o.V3(d.mvMaxStartPos);
-	o.V2(d.mvMinStartAngles); o.V2(d.mvMaxStartAngles); o.F(d.mfMinStartRadius); o.F(d.mfMaxStartRadius);
-	o.I(d.mStartVelType); o.V3(d.mvMinStartVel); o.V3(d.mvMaxStartVel);
-	o.V2(d.mvMinStartVelAngles); o.V2(d.mvMaxStartVelAngles);
-	o.F(d.mfMinStartVelSpeed); o.F(d.mfMaxStartVelSpeed); o.F(d.mfMinSpeedMultiply); o.F(d.mfMaxSpeedMultiply);
-	o.V3(d.mvMinStartAcc); o.V3(d.mvMaxStartAcc); o.F(d.mfMinVelMaximum); o.F(d.mfMaxVelMaximum);
-	o.I(d.mbUsesDirection); o.I(d.mGravityType); o.V3(d.mvGravityAcc); o.I(d.mCoordSystem);
-	o.I(d.mbUsePartSpin); o.I(d.mPartSpinType); o.F(d.mfMinSpinRange); o.F(d.mfMaxSpinRange);
-	o.I(d.mbUseRevolution); o.V3(d.mvMinRevVel); o.V3(d.mvMaxRevVel);
-	o.F(d.mfMinLifeSpan); o.F(d.mfMaxLifeSpan); o.I(d.mDeathType);
-	fprintf(f, " %s", d.msDeathPS.c_str());
-	o.I(d.mDrawType); o.V2(d.mvMinStartSize); o.V2(d.mvMaxStartSize);
-	o.F(d.mfStartRelSize); o.F(d.mfMiddleRelSize); o.F(d.mfMiddleRelSizeTime); o.F(d.mfMiddleRelSizeLength);
-	o.F(d.mfEndRelSize); o.I(d.mbMultiplyRGBWithAlpha);
-	o.C(d.mMinStartColor); o.C(d.mMaxStartColor); o.C(d.mStartRelColor); o.C(d.mMiddleRelColor);
-	o.F(d.mfMiddleRelColorTime); o.F(d.mfMiddleRelColorLength); o.C(d.mEndRelColor);
-	o.I(d.mbCollides); o.F(d.mfMinBounceAmount); o.F(d.mfMaxBounceAmount);
-	o.I(d.mlMinCollisionMax); o.I(d.mlMaxCollisionMax); o.I(d.mlCollisionUpdateRate);
+	o.I(d.mvSubDiv.x); o.I(d.mvSubDiv.y); o.I(p.mlSubDivType);
+	o.F(p.mfFrameStep); o.F(p.mfMaxFrameTime);
+	o.I(p.mlStartPosType); o.V3(p.mvMinStartPos); o.V3(p.mvMaxStartPos);
+	o.V2(p.mvMinStartAngles); o.V2(p.mvMaxStartAngles); o.F(p.mfMinStartRadius); o.F(p.mfMaxStartRadius);
+	o.I(p.mlStartVelType); o.V3(p.mvMinStartVel); o.V3(p.mvMaxStartVel);
+	o.V2(p.mvMinStartVelAngles); o.V2(p.mvMaxStartVelAngles);
+	o.F(p.mfMinStartVelSpeed); o.F(p.mfMaxStartVelSpeed); o.F(p.mfMinSpeedMultiply); o.F(p.mfMaxSpeedMultiply);
+	o.V3(p.mvMinStartAcc); o.V3(p.mvMaxStartAcc); o.F(p.mfMinVelMaximum); o.F(p.mfMaxVelMaximum);
+	o.I(p.mbUsesDirection); o.I(p.mlGravityType); o.V3(p.mvGravityAcc); o.I(p.mlCoordSystem);
+	o.I(p.mbUsePartSpin); o.I(p.mlPartSpinType); o.F(p.mfMinSpinRange); o.F(p.mfMaxSpinRange);
+	o.I(p.mbUseRevolution); o.V3(p.mvMinRevVel); o.V3(p.mvMaxRevVel);
+	o.F(p.mfMinLifeSpan); o.F(p.mfMaxLifeSpan); o.I(ePEDeathType_Age);
+	fprintf(f, " %s", d.msDeathPS);
+	o.I(p.mlDrawType); o.V2(p.mvMinStartSize); o.V2(p.mvMaxStartSize);
+	o.F(p.mfStartRelSize); o.F(p.mfMiddleRelSize); o.F(p.mfMiddleRelSizeTime); o.F(p.mfMiddleRelSizeLength);
+	o.F(p.mfEndRelSize); o.I(p.mbMultiplyRGBWithAlpha);
+	o.C(p.mMinStartColor); o.C(p.mMaxStartColor); o.C(p.mStartRelColor); o.C(p.mMiddleRelColor);
+	o.F(p.mfMiddleRelColorTime); o.F(p.mfMiddleRelColorLength); o.C(p.mEndRelColor);
+	o.I(p.mbCollides); o.F(p.mfMinBounceAmount); o.F(p.mfMaxBounceAmount);
+	o.I(p.mlMinCollisionMax); o.I(p.mlMaxCollisionMax); o.I(p.mlCollisionUpdateRate);
 	o.I(d.mbUseBeamNoise); o.I(d.mlLowFreqPoints); o.I(d.mlHighFreqPoints);
 	o.V3(d.mvMinLowFreqNoise); o.V3(d.mvMaxLowFreqNoise); o.V3(d.mvMinHighFreqNoise); o.V3(d.mvMaxHighFreqNoise);
 	fprintf(f, "\n");
 }
 
-void hpl::OhplH12PsProbe::Sim(FILE *f, cParticleEmitterData_UserData &d, int alSeed, int alFrames)
+void hpl::OhplH12PsProbe::Sim(FILE *f, cParticleEmitterData_UserData &data, int alSeed, int alFrames)
 {
 	Out o = {f};
+	const OhplH12PsDesc &d = data.D();
 	srand(alSeed);
-	OhplEmitter *pe = ohpl_pe_new(&d.mRustParams, d.mlMaxParticleNum, d.mbRespawn, &d.mvSubDiv, 1);
+	OhplEmitter *pe = ohpl_pe_new(&d.mParams, d.mlMaxParticleNum, d.mbRespawn, &d.mvSubDiv, 1);
 	cMatrixf mtx = cMatrixf::Identity;
 	fprintf(f, "sim %d\n", alSeed);
 	for(int fr = 0; fr < alFrames; ++fr)

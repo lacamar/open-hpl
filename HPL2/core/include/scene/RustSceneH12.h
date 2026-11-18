@@ -62,6 +62,8 @@ typedef const char* (*OhplH12AttrFn)(void *apCtx, const char *asName);
 
 OhplH12PsBox* ohpl_h12_ps_parse(OhplH12AttrFn, void *apCtx);
 const OhplH12PsDesc* ohpl_h12_ps_desc(const OhplH12PsBox*);
+OhplH12PsDesc* ohpl_h12_ps_desc_mut(OhplH12PsBox*);
+void ohpl_h12_ps_finish(OhplH12PsBox*, uint32_t alMaterials, const cVector2l *apFirstSubDiv);
 void ohpl_h12_ps_free(OhplH12PsBox*);
 float ohpl_h12_ps_frame_step(float afAnimationLength, uint32_t alMaterials);
 float ohpl_h12_ps_max_frame_time(uint32_t alMaterials);

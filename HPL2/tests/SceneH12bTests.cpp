@@ -387,7 +387,7 @@ void PsScene(const std::string &asPath, int alSeed, int alFrames)
 	Emit(h);
 	if(!bLoad) { rig.Trace("ps"); return; }
 	// Collision needs a physics world.
-	for(size_t i = 0; i < ohpl_spd_count(data.mpRust); ++i) static_cast<cParticleEmitterData_UserData*>(data.GetEmitterData((int)i))->mbCollides = false;
+	for(size_t i = 0; i < ohpl_spd_count(data.mpRust); ++i) ohpl_h12_ps_desc_mut(static_cast<cParticleEmitterData_UserData*>(data.GetEmitterData((int)i))->mpDesc)->mParams.mbCollides = false;
 
 	cParticleSystem *ps = data.Create("ps", cVector3f(1, 1, 1));
 	if(!ps) { fprintf(gOut, "ps null\n"); return; }
