@@ -3,8 +3,13 @@
 //! (`amnesia/src/game/RustLuxUiA11b.h`); tests use a recording fake. No host call may be made
 //! while a handler borrow is held, since a callback can re-enter the handler.
 
+use crate::gui::direct;
+use crate::somascript::cfmt::fmt_g9;
+use crate::types::Color;
+use std::collections::BTreeMap;
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::{Mutex, OnceLock};
 
 pub type Ctx = *mut c_void;
 type Sink = unsafe extern "C" fn(Ctx, *const u8, usize);
@@ -40,10 +45,6 @@ pub struct HostTable {
     pub menu_vec2: unsafe extern "C" fn(Bytes, Bytes, f32, *mut f32),
     pub user_bool: unsafe extern "C" fn(Bytes, Bytes, i32) -> i32,
     pub set_user_bool: unsafe extern "C" fn(Bytes, Bytes, i32),
-    pub gfx_rect: unsafe extern "C" fn(*const f32) -> usize,
-    pub gfx_image: unsafe extern "C" fn(Bytes) -> usize,
-    pub gfx_texture: unsafe extern "C" fn(Bytes) -> usize,
-    pub gfx_size: unsafe extern "C" fn(usize, i32, *mut f32),
     pub wrap_rows:
         unsafe extern "C" fn(usize, f32, f32, *const f32, *const u32, usize, Sink32, Ctx),
     pub font_len: unsafe extern "C" fn(usize, *const f32, *const u32, usize) -> f32,
@@ -56,7 +57,6 @@ pub struct HostTable {
     pub input_name: unsafe extern "C" fn(Bytes, Sink32, Ctx),
     pub hud: unsafe extern "C" fn(*mut f32),
     pub ptest: unsafe extern "C" fn() -> i32,
-    pub draw_gfx: unsafe extern "C" fn(usize, usize, *const f32, *const f32, *const f32, i32),
     pub draw_font: unsafe extern "C" fn(
         usize,
         usize,
@@ -72,6 +72,8 @@ pub struct HostTable {
     pub translate: unsafe extern "C" fn(Bytes, Bytes, Sink32, Ctx),
     pub chinese: unsafe extern "C" fn() -> i32,
     pub callback: unsafe extern "C" fn(usize, i32),
+    pub log_gfx: unsafe extern "C" fn(*const f32, *const f32, *const f32, i32),
+    pub ans: unsafe extern "C" fn(Bytes, Bytes, Bytes),
 }
 
 static HOST: AtomicPtr<HostTable> = AtomicPtr::new(std::ptr::null_mut());
@@ -194,6 +196,52 @@ fn units_out(f: impl FnOnce(Sink32, Ctx)) -> Vec<u32> {
     v
 }
 
+const TEXTURE_2D: i32 = 1;
+
+/// Gfx element to file name, for the recorded answers (`OHPL_A11B_ANSWERS`).
+static NAMES: Mutex<BTreeMap<usize, Vec<u8>>> = Mutex::new(BTreeMap::new());
+
+fn answers() -> bool {
+    static ON: OnceLock<bool> = OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("OHPL_A11B_ANSWERS").is_some_and(|v| !v.is_empty()))
+}
+
+/// `OhplA11Esc`.
+fn esc(s: &[u8]) -> String {
+    s.iter()
+        .map(|&c| match c {
+            32..=126 if c != b'\\' && c != b'|' => char::from(c).to_string(),
+            _ => format!("\\u{c:04x}"),
+        })
+        .collect()
+}
+
+/// `OhplA11Num`.
+fn num(v: f32) -> String {
+    String::from_utf8_lossy(&fmt_g9(v)).into_owned()
+}
+
+impl HostUi {
+    fn name(&self, gfx: usize, name: &[u8]) {
+        if answers()
+            && let Ok(mut n) = NAMES.lock()
+        {
+            n.insert(gfx, name.to_vec());
+        }
+    }
+
+    fn answer(&self, op: &str, input: &str, out: &str) {
+        // SAFETY: the table's function reads the three strings for the call.
+        unsafe {
+            (self.0.ans)(
+                bytes(op.as_bytes()),
+                bytes(input.as_bytes()),
+                bytes(out.as_bytes()),
+            )
+        };
+    }
+}
+
 // SAFETY (all blocks below): every pointer passed is to a live local or slice for the duration
 // of the call, and the table's functions accept them.
 impl Ui for HostUi {
@@ -220,21 +268,48 @@ impl Ui for HostUi {
     }
 
     fn gfx_rect(&self, color: [f32; 4]) -> usize {
-        unsafe { (self.0.gfx_rect)(color.as_ptr()) }
+        let c = Color {
+            r: color[0],
+            g: color[1],
+            b: color[2],
+            a: color[3],
+        };
+        let g = direct::gfx_rect(c, MAT_ALPHA, true);
+        self.name(g, b"rect");
+        g
     }
 
     fn gfx_image(&self, file: &[u8]) -> usize {
-        unsafe { (self.0.gfx_image)(bytes(file)) }
+        let g = direct::gfx_image(file, MAT_ALPHA);
+        self.name(g, file);
+        g
     }
 
     fn gfx_texture(&self, file: &[u8]) -> usize {
-        unsafe { (self.0.gfx_texture)(bytes(file)) }
+        let g = direct::gfx_texture_file(file, MAT_ALPHA, TEXTURE_2D);
+        self.name(g, file);
+        g
     }
 
     fn gfx_size(&self, gfx: usize, which: i32) -> [f32; 2] {
-        let mut o = [0.0; 2];
-        unsafe { (self.0.gfx_size)(gfx, which, o.as_mut_ptr()) };
-        o
+        let v = if which == GFX_ACTIVE_SIZE {
+            direct::gfx_active_size(gfx)
+        } else {
+            direct::gfx_image_size(gfx)
+        };
+        if answers() {
+            let name = NAMES
+                .lock()
+                .ok()
+                .and_then(|n| n.get(&gfx).cloned())
+                .unwrap_or_default();
+            self.answer(
+                "gfx_size",
+                &format!("{}|{}", esc(&name), i32::from(which != 0)),
+                &format!("{}|{}", num(v[0]), num(v[1])),
+            );
+        }
+        v
     }
 
     fn wrap_rows(
@@ -319,8 +394,17 @@ impl Ui for HostUi {
         col: [f32; 4],
         mat: i32,
     ) {
-        let sp = size.as_ref().map_or(std::ptr::null(), |s| s.as_ptr());
-        unsafe { (self.0.draw_gfx)(set, gfx, pos.as_ptr(), sp, col.as_ptr(), mat) }
+        let size = size.unwrap_or([-1.0, -1.0]);
+        // SAFETY: the table's function reads the arrays for the call.
+        unsafe { (self.0.log_gfx)(pos.as_ptr(), size.as_ptr(), col.as_ptr(), mat) };
+        let set = if set == 0 { direct::hud_set() } else { set };
+        let c = Color {
+            r: col[0],
+            g: col[1],
+            b: col[2],
+            a: col[3],
+        };
+        direct::draw_gfx(set, gfx, pos, size, c, mat, 0.0);
     }
 
     fn draw_font(

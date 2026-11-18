@@ -25,10 +25,6 @@ struct OhplA11bHost
 	void (*menu_vec2)(OhplA11bBytes, OhplA11bBytes, float, float*);
 	int (*user_bool)(OhplA11bBytes, OhplA11bBytes, int);
 	void (*set_user_bool)(OhplA11bBytes, OhplA11bBytes, int);
-	size_t (*gfx_rect)(const float*);
-	size_t (*gfx_image)(OhplA11bBytes);
-	size_t (*gfx_texture)(OhplA11bBytes);
-	void (*gfx_size)(size_t, int, float*);
 	void (*wrap_rows)(size_t, float, float, const float*, const unsigned*, size_t, OhplA11bSink32, void*);
 	float (*font_len)(size_t, const float*, const unsigned*, size_t);
 	void (*font_range)(size_t, unsigned*);
@@ -40,11 +36,12 @@ struct OhplA11bHost
 	void (*input_name)(OhplA11bBytes, OhplA11bSink32, void*);
 	void (*hud)(float*);
 	int (*ptest)();
-	void (*draw_gfx)(size_t, size_t, const float*, const float*, const float*, int);
 	void (*draw_font)(size_t, size_t, const float*, const float*, const float*, int, int, const unsigned*, size_t, int);
 	void (*translate)(OhplA11bBytes, OhplA11bBytes, OhplA11bSink32, void*);
 	int (*chinese)();
 	void (*callback)(size_t, int);
+	void (*log_gfx)(const float*, const float*, const float*, int);
+	void (*ans)(OhplA11bBytes, OhplA11bBytes, OhplA11bBytes);
 };
 
 extern "C"
