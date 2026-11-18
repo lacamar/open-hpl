@@ -1646,3 +1646,19 @@ pub(crate) fn attention_widget(s: *mut Set) -> W {
 pub(crate) fn set_draw_offset(s: *mut Set, p: Vector3f) {
     with(s, |s| s.p.draw_offset = p);
 }
+
+pub(crate) fn set_mouse_movement(s: *mut Set, v: bool) {
+    with(s, |s| s.p.state.mouse_movement = v);
+}
+
+pub(crate) fn set_draw_focus(s: *mut Set, v: bool) {
+    with(s, |s| s.p.draw_focus = v);
+}
+
+pub(crate) fn mouse_pos(s: *mut Set) -> [f32; 2] {
+    with_or(s, [0.0; 2], |s| s.p.state.mouse_pos)
+}
+
+pub(crate) fn mouse_z(s: *mut Set) -> f32 {
+    with_or(s, 0.0, |s| s.p.mouse_z)
+}

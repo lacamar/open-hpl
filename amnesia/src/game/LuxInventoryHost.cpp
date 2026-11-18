@@ -131,18 +131,6 @@ cColor Col(OhplA11aArgs *a, int i){ return cColor(a->f[i], a->f[i+1], a->f[i+2],
 void RetS(OhplA11aArgs *a, const tString &asX){ gsRet = asX; a->rs = OhplA11aS(gsRet); }
 void RetW(OhplA11aArgs *a, const tWString &asX){ gsRetW = asX; a->rw.p = (const unsigned int*)gsRetW.data(); a->rw.n = gsRetW.size(); }
 
-eGuiMaterial Mat(int alMat)
-{
-	switch(alMat)
-	{
-	case 0: return eGuiMaterial_Alpha;
-	case 1: return eGuiMaterial_Additive;
-	case 2: return eGuiMaterial_Diffuse;
-	case 3: return eGuiMaterial_Modulative;
-	}
-	return eGuiMaterial_LastEnum;
-}
-
 eGuiMessage Msg(int alMsg)
 {
 	static const eGuiMessage vMsg[] = { eGuiMessage_MouseDown, eGuiMessage_MouseUp, eGuiMessage_MouseDoubleClick, eGuiMessage_MouseEnter,
@@ -208,100 +196,10 @@ void OpGuiInit(OhplA11aArgs *a)
 
 void OpSet(OhplA11aArgs *a)
 {
-	cGui *pGui = gpBase->mpEngine->GetGui();
 	switch(a->i[0])
 	{
-	case kA11a_Set_ACTIVE: gpSet->SetActive(a->i[1] != 0); break;
-	case kA11a_Set_DRAW_MOUSE: gpSet->SetDrawMouse(a->i[1] != 0); break;
-	case kA11a_Set_MOUSE_MOVEMENT: gpSet->SetMouseMovementEnabled(a->i[1] != 0); break;
-	case kA11a_Set_DRAW_FOCUS: gpSet->SetDrawFocus(a->i[1] != 0); break;
-	case kA11a_Set_RESET_MOUSE_OVER: gpSet->ResetMouseOver(); break;
-	case kA11a_Set_GUI_FOCUS: pGui->SetFocus(a->i[1] ? gpSet : NULL); break;
-	case kA11a_Set_FOCUSED_WIDGET: gpSet->SetFocusedWidget((iWidget*)a->p[0]); break;
-	case kA11a_Set_DEFAULT_NAV: gpSet->SetDefaultFocusNavWidget((iWidget*)a->p[0]); break;
 	case kA11a_Set_VIEWPORT: gpViewport->SetActive(a->i[1] != 0); gpViewport->SetVisible(a->i[1] != 0); break;
 	case kA11a_Set_GAMEPAD_PRESENT: a->r = gpBase->mpInputHandler->IsGamepadPresent(); break;
-	case kA11a_Set_MOUSE_POS: { cVector2f v = gpSet->GetMousePos(); a->f[0] = v.x; a->f[1] = v.y; } break;
-	case kA11a_Set_MOUSE_Z: a->f[0] = gpSet->GetMouseZ(); break;
-	case kA11a_Set_GET_FOCUSED: a->r = (uintptr_t)gpSet->GetFocusedWidget(); break;
-	case kA11a_Set_POINTER_GFX: a->r = (uintptr_t)gpSet->GetCurrentPointer(); break;
-	case kA11a_Set_CLIP_CURRENT: a->r = (uintptr_t)gpSet->GetCurrentClipRegion(); break;
-	case kA11a_Set_CLIP_SET: gpSet->SetCurrentClipRegion((cGuiClipRegion*)a->p[0]); break;
-	case kA11a_Set_CLIP_CHILD: a->r = (uintptr_t)((cGuiClipRegion*)a->p[0])->CreateChild(V3(a), V2(a, 3)); break;
-	}
-}
-
-void OpGfx(OhplA11aArgs *a)
-{
-	cGui *pGui = gpBase->mpEngine->GetGui();
-	cGuiGfxElement *pGfx = (cGuiGfxElement*)a->p[0];
-	switch(a->i[0])
-	{
-	case kA11a_Gfx_DESTROY: if(pGfx) pGui->DestroyGfx(pGfx); break;
-	case kA11a_Gfx_SIZES: { cVector2f v = pGfx->GetActiveSize(), u = pGfx->GetImageSize(); a->f[0] = v.x; a->f[1] = v.y; a->f[2] = u.x; a->f[3] = u.y; } break;
-	case kA11a_Gfx_COLOR: pGfx->SetColor(Col(a, 0)); break;
-	case kA11a_Gfx_ACTIVE_SIZE: pGfx->SetActiveSize(V2(a)); break;
-	}
-}
-
-void OpGfxNew(OhplA11aArgs *a)
-{
-	cGui *pGui = gpBase->mpEngine->GetGui();
-	switch(a->i[0])
-	{
-	case kA11a_Gfx_IMAGE: a->r = (uintptr_t)pGui->CreateGfxImage(S(a, 0), Mat(a->i[1])); break;
-	case kA11a_Gfx_RECT: a->r = (uintptr_t)pGui->CreateGfxFilledRect(Col(a, 0), Mat(a->i[1])); break;
-	case kA11a_Gfx_TEXTURE: a->r = (uintptr_t)pGui->CreateGfxTexture((iTexture*)a->p[0], false, Mat(a->i[1])); break;
-	case kA11a_Gfx_FILE: a->r = (uintptr_t)pGui->CreateGfxTexture(S(a, 0), eGuiMaterial_Alpha, eTextureType_Rect); break;
-	}
-}
-
-void OpWidgetNew(OhplA11aArgs *a)
-{
-	iWidget *pParent = (iWidget*)a->p[0];
-	if(a->i[0] == kA11a_Wd_IMAGE)
-		a->r = (uintptr_t)(iWidget*)gpSet->CreateWidgetImage(S(a, 0), V3(a), cVector2f(-1), eGuiMaterial_Alpha, false, pParent);
-	else
-		a->r = (uintptr_t)(iWidget*)gpSet->CreateWidgetDummy(V3(a));
-}
-
-eUIArrow Arrow(int alArrow)
-{
-	switch(alArrow)
-	{
-	case 0: return eUIArrow_Up;
-	case 1: return eUIArrow_Right;
-	case 2: return eUIArrow_Down;
-	}
-	return eUIArrow_Left;
-}
-
-void OpWidgetGet(OhplA11aArgs *a)
-{
-	iWidget *pW = (iWidget*)a->p[0];
-	switch(a->i[0])
-	{
-	case kA11a_Wd_GET_SIZE: { cVector2f v = pW->GetSize(); a->f[0] = v.x; a->f[1] = v.y; } break;
-	case kA11a_Wd_GET_GLOBAL: { cVector3f v = pW->GetGlobalPosition(); a->f[0] = v.x; a->f[1] = v.y; a->f[2] = v.z; } break;
-	case kA11a_Wd_GET_USER_VALUE: a->r = (uintptr_t)(intptr_t)pW->GetUserValue(); break;
-	case kA11a_Wd_GET_COLOR_MUL: { cColor c = pW->GetColorMul(); a->f[0] = c.r; a->f[1] = c.g; a->f[2] = c.b; a->f[3] = c.a; } break;
-	case kA11a_Wd_GET_IMAGE: a->r = (uintptr_t)((cWidgetImage*)pW)->GetImage(); break;
-	}
-}
-
-void OpWidgetSet(OhplA11aArgs *a)
-{
-	iWidget *pW = (iWidget*)a->p[0];
-	switch(a->i[0])
-	{
-	case kA11a_Wd_SET_POSITION: pW->SetPosition(V3(a)); break;
-	case kA11a_Wd_SET_SIZE: pW->SetSize(V2(a)); break;
-	case kA11a_Wd_SET_IMAGE: ((cWidgetImage*)pW)->SetImage((cGuiGfxElement*)a->p[1]); break;
-	case kA11a_Wd_SET_USER_VALUE: pW->SetUserValue(a->i[1]); break;
-	case kA11a_Wd_SET_COLOR_MUL: pW->SetColorMul(Col(a, 0)); break;
-	case kA11a_Wd_SET_GLOBAL_UI: pW->SetGlobalUIInputListener(a->i[1] != 0); break;
-	case kA11a_Wd_SET_NAV: pW->SetFocusNavigation(Arrow(a->i[1]), (iWidget*)a->p[1]); break;
-	case kA11a_Wd_NAV_FOCUS: pW->ProcessMessage(eGuiMessage_GetUINavFocus, cGuiMessageData()); break;
 	}
 }
 
@@ -462,43 +360,9 @@ void OpItemEvent(OhplA11aArgs *a)
 	}
 }
 
-void OpWidgetNew2(OhplA11aArgs *a)
-{
-	iWidget *pParent = (iWidget*)a->p[0];
-	switch(a->i[0])
-	{
-	case kA11a_Wn_LABEL: a->r = (uintptr_t)(iWidget*)gpSet->CreateWidgetLabel(V3(a), V2(a, 3), W(a, 0), pParent); break;
-	case kA11a_Wn_IMAGE: a->r = (uintptr_t)(iWidget*)gpSet->CreateWidgetImage(S(a, 0), V3(a), V2(a, 3), eGuiMaterial_Alpha, false, pParent); break;
-	case kA11a_Wn_DUMMY: a->r = (uintptr_t)(iWidget*)gpSet->CreateWidgetDummy(V3(a), pParent); break;
-	case kA11a_Wn_FRAME: a->r = (uintptr_t)(iWidget*)gpSet->CreateWidgetFrame(V3(a), V2(a, 3), false, pParent); break;
-	}
-}
-
 void OpWidgetX(OhplA11aArgs *a)
 {
-	iWidget *pW = (iWidget*)a->p[0];
-	switch(a->i[0])
-	{
-	case kA11a_Wx_SET_VISIBLE: pW->SetVisible(a->i[1] != 0); break;
-	case kA11a_Wx_SET_ENABLED: pW->SetEnabled(a->i[1] != 0); break;
-	case kA11a_Wx_SETUP_LABEL:
-		{
-			cWidgetLabel *pLabel = static_cast<cWidgetLabel*>(pW);
-			pLabel->SetDefaultFontColor(Col(a, 0));
-			pLabel->SetDefaultFontSize(V2(a, 4));
-			pLabel->SetTextAlign((eFontAlign)a->i[1]);
-			pLabel->SetDefaultFontType((iFontData*)a->p[1]);
-		}
-		break;
-	case kA11a_Wx_IS_VISIBLE: a->r = pW->IsVisible(); break;
-	case kA11a_Wx_HOVER_OR_FOCUS: a->r = pW->GetMouseIsOver() || pW->HasFocus(); break;
-	case kA11a_Wx_GET_TEXT: RetW(a, pW->GetText()); break;
-	case kA11a_Wx_GET_FONT_SIZE: { cVector2f v = pW->GetDefaultFontSize(); a->f[0] = v.x; a->f[1] = v.y; } break;
-	case kA11a_Wx_GET_FONT: a->r = (uintptr_t)pW->GetDefaultFontType(); break;
-	case kA11a_Wx_GET_ALIGN: a->r = (uintptr_t)static_cast<cWidgetLabel*>(pW)->GetTextAlign(); break;
-	case kA11a_Wx_DESTROY: gpSet->DestroyWidget(pW); break;
-	case kA11a_Wx_FONT_LENGTH: a->f[0] = ((iFontData*)a->p[0])->GetLength(V2(a), W(a, 0).c_str()); break;
-	}
+	if(a->i[0] == kA11a_Wx_FONT_LENGTH) a->f[0] = ((iFontData*)a->p[0])->GetLength(V2(a), W(a, 0).c_str());
 }
 
 void OpJGame(OhplA11aArgs *a)
@@ -538,11 +402,6 @@ void HostOp(int alOp, OhplA11aArgs *a)
 	case kA11a_Op_STRING_DURATION: a->f[0] = gpBase->mpHelpFuncs->GetStringDuration(W(a, 0)); break;
 	case kA11a_Op_GUI_INIT: OpGuiInit(a); break;
 	case kA11a_Op_SET_OP: OpSet(a); break;
-	case kA11a_Op_GFX_NEW: OpGfxNew(a); break;
-	case kA11a_Op_GFX_OP: OpGfx(a); break;
-	case kA11a_Op_DRAW_GFX:
-		gpSet->DrawGfx((cGuiGfxElement*)a->p[0], V3(a), V2(a, 3), Col(a, 5), Mat(a->i[0]));
-		break;
 	case kA11a_Op_DRAW_FONT:
 		gpSet->DrawFont(W(a, 0), (iFontData*)a->p[0], V3(a), V2(a, 3), Col(a, 5), (eFontAlign)a->i[0]);
 		break;
@@ -556,15 +415,11 @@ void HostOp(int alOp, OhplA11aArgs *a)
 		a->i[0] = (int)gvRows.size();
 		break;
 	case kA11a_Op_FONT_ROW: RetW(a, gvRows[a->i[0]]); break;
-	case kA11a_Op_WIDGET_NEW: OpWidgetNew(a); break;
 	case kA11a_Op_WIDGET_CB: ((iWidget*)a->p[0])->AddCallback(Msg(a->i[0]), (void*)a->p[1], InJournal() ? &TrampJ : &Tramp); break;
-	case kA11a_Op_WIDGET_GET: OpWidgetGet(a); break;
-	case kA11a_Op_WIDGET_SET: OpWidgetSet(a); break;
 	case kA11a_Op_LL: OpLowLevel(a); break;
 	case kA11a_Op_SCRIPT: OpScript(a); break;
 	case kA11a_Op_GAME: OpGame(a); break;
 	case kA11a_Op_ITEM_EVENT: OpItemEvent(a); break;
-	case kA11a_Op_WIDGET_NEW2: OpWidgetNew2(a); break;
 	case kA11a_Op_WIDGET_X: OpWidgetX(a); break;
 	case kA11a_Op_JGAME: OpJGame(a); break;
 	case kA11a_Op_LOG:
