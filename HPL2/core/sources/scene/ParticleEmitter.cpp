@@ -233,21 +233,21 @@ namespace hpl {
 
 	bool iParticleEmitter::UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime)
 	{
-		const bool bLinear = cParticleSystem::mbHpl3Color;
+		const bool bLinear = cParticleSystem::GetHpl3Color();
 		OhplPeGfxIn in;
 		in.mbHpl3Color = bLinear;
 		in.mbAddBlend = false;
 		in.mbInvertsCull = apFrustum->GetInvertsCullMode();
-		in.mPsColor = mpParentSystem->mColor;
-		in.mfBrightness = mpParentSystem->mfBrightness;
-		in.mLightColor = mpParentSystem->mLightColor;
-		in.mfLightBrightness = mpParentSystem->mfLightBrightness;
-		in.mbFadeAtDistance = mpParentSystem->mbFadeAtDistance;
+		in.mPsColor = mpParentSystem->Pub().mColor;
+		in.mfBrightness = mpParentSystem->Pub().mfBrightness;
+		in.mLightColor = mpParentSystem->Pub().mLightColor;
+		in.mfLightBrightness = mpParentSystem->Pub().mfLightBrightness;
+		in.mbFadeAtDistance = mpParentSystem->Pub().mbFadeAtDistance;
 		in.mvOrigin = apFrustum->GetOrigin();
-		in.mfMinFadeStart = mpParentSystem->mfMinFadeDistanceStart;
-		in.mfMinFadeEnd = mpParentSystem->mfMinFadeDistanceEnd;
-		in.mfMaxFadeStart = mpParentSystem->mfMaxFadeDistanceStart;
-		in.mfMaxFadeEnd = mpParentSystem->mfMaxFadeDistanceEnd;
+		in.mfMinFadeStart = mpParentSystem->Pub().mfMinFadeDistanceStart;
+		in.mfMinFadeEnd = mpParentSystem->Pub().mfMinFadeDistanceEnd;
+		in.mfMaxFadeStart = mpParentSystem->Pub().mfMaxFadeDistanceStart;
+		in.mfMaxFadeEnd = mpParentSystem->Pub().mfMaxFadeDistanceEnd;
 		in.mvDrawSize = mvDrawSize;
 		in.m_mtxView = apFrustum->GetViewMatrix();
 		in.mlPosStride = mpVtxBuffer->GetElementNum(eVertexBufferElement_Position);

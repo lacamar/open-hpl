@@ -22,9 +22,9 @@
 #include <memory>
 #include <vector>
 
-
 #include "system/String.h"
 
+#include "scene/ParticleEmitter.h"
 #include "scene/ParticleEmitter_UserData.h"
 
 #include "resources/Resources.h"
@@ -46,8 +46,8 @@ namespace hpl {
 	{
 		static cParticleSystem* S(void *c){ return static_cast<cParticleSystem*>(c); }
 		static int32_t Count(void *c){ return S(c)->GetEmitterNum(); }
-		static float WarmTime(void *c, int32_t i){ return S(c)->mpData->GetEmitterData((int)i)->GetWarmUpTime(); }
-		static float WarmSteps(void *c, int32_t i){ return S(c)->mpData->GetEmitterData((int)i)->GetWarmUpStepsPerSec(); }
+		static float WarmTime(void *c, int32_t i){ return S(c)->GetData()->GetEmitterData((int)i)->GetWarmUpTime(); }
+		static float WarmSteps(void *c, int32_t i){ return S(c)->GetData()->GetEmitterData((int)i)->GetWarmUpStepsPerSec(); }
 		static void Update(void *c, int32_t i, float afStep){ S(c)->GetEmitter((int)i)->UpdateLogic(afStep); }
 		static void Apply(void *c, int32_t i, int32_t alOp, bool abArg)
 		{
@@ -73,59 +73,30 @@ namespace hpl {
 		}
 	};
 
-	//////////////////////////////////////////////////////////////////////////
-	// CREATOR
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cParticleSystemData::cParticleSystemData(const tString &asName,
-												cResources* apResources,cGraphics *apGraphics)
-												: iResourceBase(asName, _W(""),0)
-	{
-		mpResources = apResources;
-		mpGraphics = apGraphics;
-	}
-	
-	//-----------------------------------------------------------------------
-
 	cParticleSystemData::~cParticleSystemData()
 	{
-		STLDeleteAll(mvEmitterData);
+		for(unsigned i=0; i<ohpl_spd_count(mpRust); ++i) hplDelete(GetEmitterData((int)i));
+		ohpl_spd_free(mpRust);
 	}
-
-	//-----------------------------------------------------------------------
-
-	void cParticleSystemData::AddEmitterData(iParticleEmitterData *apData)
-	{
-		mvEmitterData.push_back(apData);
-	}
-
-	//-----------------------------------------------------------------------
 
 	cParticleSystem* cParticleSystemData::Create(tString asName, cVector3f avSize)
 	{
-		if(!ohpl_h12b_psdata_can_create((uint32_t)mvEmitterData.size()))
+		const int lNum = (int)ohpl_spd_count(mpRust);
+		if(!ohpl_h12b_psdata_can_create((uint32_t)lNum))
 		{
 			Warning("Particle system '%s' has no emitters.\n",msName.c_str());
 			return NULL;
 		}
 
 		cParticleSystem *pPS = hplNew( cParticleSystem, (asName,this,mpResources,mpGraphics) );
-		
-		for(size_t i=0; i<mvEmitterData.size(); ++i)
+		for(int i=0; i<lNum; ++i)
 		{
-			///////////////////////////
-			// Create and add
-			iParticleEmitter *pPE = static_cast<iParticleEmitter*>(mvEmitterData[i]->Create(asName, avSize));
+			iParticleEmitter *pPE = static_cast<iParticleEmitter*>(GetEmitterData(i)->Create(asName, avSize));
 			pPS->AddEmitter(pPE);
 			pPE->SetSystem(pPS);
 		}
-
 		return pPS;
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool cParticleSystemData::LoadFromFile(const tWString &asFile)
 	{
@@ -144,12 +115,11 @@ namespace hpl {
 		return bRet;
 	}
 
-	//-----------------------------------------------------------------------
-
 	bool cParticleSystemData::LoadFromElement(cXmlElement* apElement)
 	{
+		const uint32_t lExisting = ohpl_spd_count(mpRust);
 		if(apElement->GetValue()!="ParticleSystem")
-			return ohpl_h12b_psdata_plan(false, NULL, 0, (uint32_t)mvEmitterData.size(), NULL);
+			return ohpl_h12b_psdata_plan(false, NULL, 0, lExisting, NULL);
 
 		std::vector<tString> vValues;
 		cXmlNodeListIterator itV = apElement->GetChildIterator();
@@ -159,7 +129,7 @@ namespace hpl {
 		for(size_t i=0; i<vValues.size(); ++i) vIsEmitter[i] = vValues[i]=="ParticleEmitter";
 
 		const bool bRet = ohpl_h12b_psdata_plan(apElement->GetValue()=="ParticleSystem", vIsEmitter.get(), (uint32_t)vValues.size(),
-												(uint32_t)mvEmitterData.size(), vLoad.get());
+												lExisting, vLoad.get());
 
 		cXmlNodeListIterator itL = apElement->GetChildIterator();
 		for(size_t i=0; itL.HasNext(); ++i)
@@ -169,74 +139,23 @@ namespace hpl {
 
 			cParticleEmitterData_UserData *pPE = hplNew( cParticleEmitterData_UserData,("",	mpResources,mpGraphics) );
 			pPE->LoadFromElement(pElem);
-			mvEmitterData.push_back(pPE);
+			AddEmitterData(pPE);
 		}
 		return bRet;
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cParticleSystem::cParticleSystem(const tString asName, 
-										cParticleSystemData *apData,
-										cResources *apResources, cGraphics *apGraphics)
-		: iEntity3D(asName)
-	{
-		mpResources = apResources;
-		mpGraphics = apGraphics;
-		mpParticleManager = NULL;
-		mpData = apData;
-
-		mbRemoveWhenDead = true;
-
-		mbIsVisible = true;
-
-		mbFirstUpdate = true;
-
-		mColor = cColor(1,1);
-		mfBrightness = 1;
-		mLightColor = cColor(1,1);
-		mfLightBrightness = 1;
-		mpLight = NULL;
-		mbFadeAtDistance = false;
-		mfMinFadeDistanceStart = 2;
-		mfMinFadeDistanceEnd = 1;
-		mfMaxFadeDistanceStart = 100;
-		mfMaxFadeDistanceEnd = 110;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cParticleSystem::mbHpl3Color = false;
-
 	cParticleSystem::~cParticleSystem()
 	{
-		if(mpLight) mpLight->RemoveParticleSystem(this);
-		for(size_t i=0; i< mvEmitters.size(); ++i)
-		{
-			hplDelete(mvEmitters[i]);
-		}
-		if(mpParticleManager) mpParticleManager->Destroy(mpData);
+		if(iLight *pLight = GetLight()) pLight->RemoveParticleSystem(this);
+		for(int i=0; i<GetEmitterNum(); ++i) hplDelete(GetEmitter(i));
+		if(mpS->mpManager) static_cast<cParticleManager*>(mpS->mpManager)->Destroy(GetData());
+		ohpl_sp_free(mpRust);
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-	
-	//-----------------------------------------------------------------------
 
 	void cParticleSystem::SetVisible(bool abVisible)
 	{
 		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
-		ohpl_h12b_ps_set_visible(&h, &mbIsVisible, abVisible);
+		ohpl_h12b_ps_set_visible(&h, &mpS->mbIsVisible, abVisible);
 	}
 
 	void cParticleSystem::SetCulledByDistance(bool abX)
@@ -250,8 +169,6 @@ namespace hpl {
 		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
 		ohpl_h12b_ps_apply_all(&h, kOhplH12OpCullFog, abX);
 	}
-	
-	//-----------------------------------------------------------------------
 
 	bool cParticleSystem::IsDead()
 	{
@@ -265,15 +182,11 @@ namespace hpl {
 		return ohpl_h12b_ps_all(&h, kOhplH12QueryDying);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cParticleSystem::Kill()
 	{
 		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
 		ohpl_h12b_ps_apply_all(&h, kOhplH12OpKill, false);
 	}
-	
-	//-----------------------------------------------------------------------
 
 	void cParticleSystem::KillInstantly()
 	{
@@ -281,44 +194,15 @@ namespace hpl {
 		ohpl_h12b_ps_apply_all(&h, kOhplH12OpKillInstantly, false);
 	}
 
-	//-----------------------------------------------------------------------
-	
 	void cParticleSystem::UpdateLogic(float afTimeStep)
 	{
 		const OhplH12PsHost h = OhplH12PsHostImpl::Make(this);
-		ohpl_h12b_ps_update_logic(&h, &mbFirstUpdate, IsActive(), afTimeStep);
+		ohpl_h12b_ps_update_logic(&h, &mpS->mbFirstUpdate, IsActive(), afTimeStep);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cParticleSystem::AddEmitter(iParticleEmitter* apEmitter)
 	{
-		mvEmitters.push_back(apEmitter);
-
+		ohpl_sp_add_emitter(mpRust, apEmitter);
 		AddChild(apEmitter);
 	}
-	
-	//-----------------------------------------------------------------------
-
-	iParticleEmitter* cParticleSystem::GetEmitter(int alIdx)
-	{
-		return mvEmitters[alIdx];
-	}
-	
-	//-----------------------------------------------------------------------
-
-	int cParticleSystem::GetEmitterNum()
-	{
-		return (int)mvEmitters.size();
-	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-	
-	//-----------------------------------------------------------------------
 }

@@ -41,6 +41,7 @@ mod rope;
 mod scenemgr;
 mod skinning;
 pub(crate) mod soundentity;
+mod sp_sys;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

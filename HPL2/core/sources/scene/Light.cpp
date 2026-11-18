@@ -119,7 +119,7 @@ namespace hpl {
 
 	iLight::~iLight()
 	{
-		for(size_t i=0; i<mvParticleSystems.size(); ++i) mvParticleSystems[i]->mpLight = NULL;
+		for(size_t i=0; i<mvParticleSystems.size(); ++i) mvParticleSystems[i]->SetLight(NULL);
 		if(mpVisibleNodeTracker) hplDelete(mpVisibleNodeTracker);
 		if(mpH11ShadowCache) ohpl_h11_shadow_cache_free(mpH11ShadowCache);
 		if(mpFalloffMap) mpTextureManager->Destroy(mpFalloffMap);
@@ -177,7 +177,7 @@ namespace hpl {
 	{
 		bool bWasVisble = IsLit();
 		mfBrightness = afX;
-		for(size_t i=0; i<mvParticleSystems.size(); ++i) mvParticleSystems[i]->mfLightBrightness = afX;
+		for(size_t i=0; i<mvParticleSystems.size(); ++i) mvParticleSystems[i]->SetLightBrightness(afX);
 		if(mbIsVisible && IsLit() != bWasVisble && mpRenderCallback)
 			mpRenderCallback->OnVisibleChange(this);
 	}
@@ -504,11 +504,11 @@ namespace hpl {
 
 	void iLight::AttachParticleSystem(cParticleSystem *apPS)
 	{
-		apPS->mLightColor = cColor(mDiffuseColor.r,mDiffuseColor.g,mDiffuseColor.b,1);
-		apPS->mfLightBrightness = mfBrightness;
+		apPS->SetLightColor(cColor(mDiffuseColor.r,mDiffuseColor.g,mDiffuseColor.b,1));
+		apPS->SetLightBrightness(mfBrightness);
 		apPS->SetVisible(mbIsVisible);
-		if(apPS->mpLight) apPS->mpLight->RemoveParticleSystem(apPS);
-		apPS->mpLight = this;
+		if(apPS->GetLight()) apPS->GetLight()->RemoveParticleSystem(apPS);
+		apPS->SetLight(this);
 		mvParticleSystems.push_back(apPS);
 	}
 
@@ -517,7 +517,7 @@ namespace hpl {
 		std::vector<cParticleSystem*>::iterator it = std::find(mvParticleSystems.begin(), mvParticleSystems.end(), apPS);
 		if(it == mvParticleSystems.end()) return;
 		mvParticleSystems.erase(it);
-		apPS->mpLight = NULL;
+		apPS->SetLight(NULL);
 	}
 
 	//-----------------------------------------------------------------------
@@ -585,7 +585,7 @@ namespace hpl {
 			mvBillboards[i].mpBillboard->SetColor( mvBillboards[i].mBaseColor * cColor(mDiffuseColor.r,mDiffuseColor.g,mDiffuseColor.b,1));
 		}
 		for(size_t i=0; i<mvParticleSystems.size(); ++i)
-			mvParticleSystems[i]->mLightColor = cColor(mDiffuseColor.r,mDiffuseColor.g,mDiffuseColor.b,1);
+			mvParticleSystems[i]->SetLightColor(cColor(mDiffuseColor.r,mDiffuseColor.g,mDiffuseColor.b,1));
 	}
 
 	

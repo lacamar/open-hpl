@@ -21,51 +21,64 @@
 #define HPL_PARTICLE_SYSTEM_MANAGER_H
 
 #include "resources/ResourceManager.h"
+#include "resources/Resources.h"
+#include "resources/RustResMgr.h"
+#include "scene/ParticleSystem.h"
 
 #include "math/MathTypes.h"
-
 
 namespace hpl {
 
 	class cGraphics;
-	class cResources;
-	class cParticleSystem;
-	class cParticleSystemData;
 	class cXmlElement;
-
-	//----------------------------------------------------
-	
-	typedef std::map<tString, cParticleSystemData*> tParticleSystemData3DMap;
-	typedef tParticleSystemData3DMap::iterator tParticleSystemData3DMapIt;
-
-
-	//----------------------------------------------------
 
 	class cParticleManager : public iResourceManager
 	{
 	public:
-		cParticleManager(cGraphics* apGraphics,cResources *apResources);
-		~cParticleManager();
-		
-		cParticleSystem* CreatePS(const tString& asName,const tString& asType, cVector3f avSize);
+		cParticleManager(cGraphics* apGraphics,cResources *apResources)
+			: iResourceManager(apResources->GetFileSearcher(), apResources->GetLowLevel(), apResources->GetLowLevelSystem()),
+			  mpGraphics(apGraphics), mpResources(apResources) {}
+		~cParticleManager(){ ohpl_h3f_shutdown(mpRs, H3Ops(), OHPL_H3S_PARTICLE); }
 
-		/////////////////////////////////////////////////
-		// This method is a hack, just so everyone knows
-		cParticleSystem* CreatePS(const tString& asName, const tString& asDataName, cXmlElement* apElement,cVector3f avSize);
+		cParticleSystem* CreatePS(const tString& asName,const tString& asType, cVector3f avSize)
+		{
+			return static_cast<cParticleSystem*>(ohpl_h3f_particle_by_type(mpRs, H3Ops(), RM_STR(asName), RM_STR(asType), avSize.x, avSize.y, avSize.z));
+		}
 
-		void AddData(cParticleSystemData *apData);
+		cParticleSystem* CreatePS(const tString& asName, const tString& asDataName, cXmlElement* apElement, cVector3f avSize)
+		{
+			return static_cast<cParticleSystem*>(ohpl_h3f_particle_by_element(mpRs, H3Ops(), RM_STR(asName), RM_STR(asDataName), apElement, avSize.x, avSize.y, avSize.z));
+		}
 
-		void Preload(const tString& asFile);
-		
-		void Destroy(iResourceBase* apResource);
-		void Unload(iResourceBase* apResource);
+		void AddData(cParticleSystemData *apData){ ohpl_h3f_particle_add_data(mpRs, H3Ops(), static_cast<iResourceBase*>(apData)); }
+		void Preload(const tString& asFile){ ohpl_h3f_particle_preload(mpRs, H3Ops(), RM_STR(asFile)); }
+		void Destroy(iResourceBase* apResource){ ohpl_h3f_particle_destroy(mpRs, H3Ops(), apResource); }
+		void Unload(iResourceBase* apResource){}
 	protected:
-		void* H3Create(OhplH3Create &aCreate) override;
+		void* H3Create(OhplH3Create &aCreate) override
+		{
+			if(aCreate.kind == OHPL_H3_PS_CREATE)
+			{
+				cVector3f vSize(aCreate.f[0], aCreate.f[1], aCreate.f[2]);
+				cParticleSystemData *pData = H3Res<cParticleSystemData>(aCreate.ptr);
+				cParticleSystem *pPS = pData->Create(H3Name(aCreate.name), vSize);
+				pPS->SetDataName(H3Name(aCreate.name2));
+				pPS->SetDataSize(vSize);
+				pPS->SetParticleManager(this);
+				return pPS;
+			}
+			cParticleSystemData *pPSData = hplNew( cParticleSystemData, (H3Name(aCreate.name), mpResources, mpGraphics) );
+			bool bOk = aCreate.kind == OHPL_H3_PS_DATA_FILE ? pPSData->LoadFromFile(H3Wide(aCreate.path)) : pPSData->LoadFromElement(static_cast<cXmlElement*>(aCreate.ptr));
+			if(bOk==false)
+			{
+				hplDelete(pPSData);
+				return NULL;
+			}
+			return static_cast<iResourceBase*>(pPSData);
+		}
 	private:
 		cGraphics* mpGraphics;
 		cResources *mpResources;
-
-		std::list<cParticleSystem*> mlstSystems;
 	};
 
 };
