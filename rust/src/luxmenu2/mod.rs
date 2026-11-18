@@ -14,6 +14,7 @@ mod tests;
 
 mod a10b;
 mod a10b_cr;
+mod a10b_direct;
 mod a10b_ffi;
 mod a10b_log;
 mod a10b_ls;

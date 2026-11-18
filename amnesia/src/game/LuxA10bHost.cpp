@@ -98,20 +98,10 @@ static bool GuiCallback(void *apCtx, iWidget *apWidget, const cGuiMessageData &a
 static void HostOp(cOhplA10bShell *s, OhplA10bCall *c)
 {
 	const OhplA10bArg *a = c->a;
-	cGui *pGui = gpBase->mpEngine->GetGui();
 	cResources *pRes = gpBase->mpEngine->GetResources();
 
 	switch(c->op)
 	{
-	case kOhplA10b_GUI_CREATE_SET: SetP(c, pGui->CreateSet(AS(a[0]), (cGuiSkin*)AP(a[1]))); break;
-	case kOhplA10b_GUI_CREATE_SKIN: SetP(c, pGui->CreateSkin(AS(a[0]))); break;
-	case kOhplA10b_SET_VIRTUAL_SIZE:
-		((cGuiSet*)AP(a[0]))->SetVirtualSize(V2(a,1), AF(a[3]), AF(a[4]), V2(a,5), AB(a[7]));
-		break;
-	case kOhplA10b_SET_ACTIVE: ((cGuiSet*)AP(a[0]))->SetActive(AB(a[1])); break;
-	case kOhplA10b_SET_DRAW_MOUSE: ((cGuiSet*)AP(a[0]))->SetDrawMouse(AB(a[1])); break;
-	case kOhplA10b_SET_SKIN: ((cGuiSet*)AP(a[0]))->SetSkin((cGuiSkin*)AP(a[1])); break;
-	case kOhplA10b_GUI_SET_FOCUS: pGui->SetFocus((cGuiSet*)AP(a[0])); break;
 	case kOhplA10b_CALC_OFFSET:
 	{
 		cVector2f vSize, vOffset;
@@ -123,23 +113,7 @@ static void HostOp(cOhplA10bShell *s, OhplA10bCall *c)
 	case kOhplA10b_VIEWPORT_ACTIVE: ((cViewport*)AP(a[0]))->SetActive(AB(a[1])); break;
 	case kOhplA10b_VIEWPORT_VISIBLE: ((cViewport*)AP(a[0]))->SetVisible(AB(a[1])); break;
 	case kOhplA10b_VIEWPORT_ADD_SET: ((cViewport*)AP(a[0]))->AddGuiSet((cGuiSet*)AP(a[1])); break;
-	case kOhplA10b_GFX_RECT: SetP(c, pGui->CreateGfxFilledRect(C4(a,0), eGuiMaterial_Alpha, AB(a[4]))); break;
-	case kOhplA10b_GFX_TEX_FILE: SetP(c, pGui->CreateGfxTexture(AS(a[0]), eGuiMaterial_Alpha, eTextureType_Rect)); break;
 	case kOhplA10b_TEX_2D: SetP(c, pRes->GetTextureManager()->Create2D(AS(a[0]), false, eTextureType_Rect)); break;
-	case kOhplA10b_GFX_FROM_TEX: SetP(c, pGui->CreateGfxTexture((iTexture*)AP(a[0]), true, eGuiMaterial_Alpha)); break;
-	case kOhplA10b_GFX_DESTROY: pGui->DestroyGfx((cGuiGfxElement*)AP(a[0])); break;
-	case kOhplA10b_GFX_SIZE:
-	{
-		cVector2f vSize = ((cGuiGfxElement*)AP(a[0]))->GetImageSize();
-		SetF(c,0,vSize.x); SetF(c,1,vSize.y);
-		break;
-	}
-	case kOhplA10b_DRAW_GFX:
-		((cGuiSet*)AP(a[0]))->DrawGfx((cGuiGfxElement*)AP(a[1]), V3(a,2), V2(a,5), C4(a,7));
-		break;
-	case kOhplA10b_DRAW_GFX_POS:
-		((cGuiSet*)AP(a[0]))->DrawGfx((cGuiGfxElement*)AP(a[1]), V3(a,2));
-		break;
 	case kOhplA10b_DRAW_FONT:
 		((cGuiSet*)AP(a[0]))->DrawFont(AW(a[1]), (iFontData*)AP(a[2]), V3(a,3), V2(a,6), C4(a,8), (eFontAlign)AI(a[12]));
 		break;
@@ -170,47 +144,6 @@ static void HostOp(cOhplA10bShell *s, OhplA10bCall *c)
 	}
 	case kOhplA10b_CFG_BOOL: c->u[0] = Cfg(AI(a[0]))->GetBool(AS(a[1]), AS(a[2]), AB(a[3])); break;
 	case kOhplA10b_CFG_SET_BOOL: Cfg(AI(a[0]))->SetBool(AS(a[1]), AS(a[2]), AB(a[3])); break;
-	case kOhplA10b_WIDGET_LABEL:
-		SetP(c, ((cGuiSet*)AP(a[0]))->CreateWidgetLabel(V3(a,1), V2(a,4), AW(a[6]), (iWidget*)AP(a[7])));
-		break;
-	case kOhplA10b_WIDGET_BUTTON:
-		SetP(c, ((cGuiSet*)AP(a[0]))->CreateWidgetButton(V3(a,1), V2(a,4), AW(a[6]), (iWidget*)AP(a[7])));
-		break;
-	case kOhplA10b_WIDGET_DUMMY:
-		SetP(c, ((cGuiSet*)AP(a[0]))->CreateWidgetDummy(V3(a,1), (iWidget*)AP(a[4])));
-		break;
-	case kOhplA10b_WIDGET_IMAGE:
-		SetP(c, ((cGuiSet*)AP(a[0]))->CreateWidgetImage(AS(a[1]), V3(a,2), V2(a,5), (eGuiMaterial)AI(a[7]), AB(a[8]), (iWidget*)AP(a[9])));
-		break;
-	case kOhplA10b_WIDGET_SLIDER:
-		SetP(c, ((cGuiSet*)AP(a[0]))->CreateWidgetSlider((eWidgetSliderOrientation)AI(a[1]), V3(a,2), V2(a,5), AI(a[7]), (iWidget*)AP(a[8])));
-		break;
-	case kOhplA10b_WIDGET_DESTROY: ((cGuiSet*)AP(a[0]))->DestroyWidget((iWidget*)AP(a[1])); break;
-	case kOhplA10b_WIDGET_POS: ((iWidget*)AP(a[0]))->SetPosition(V3(a,1)); break;
-	case kOhplA10b_WIDGET_SIZE: ((iWidget*)AP(a[0]))->SetSize(V2(a,1)); break;
-	case kOhplA10b_WIDGET_GET_SIZE:
-	{
-		cVector2f v = ((iWidget*)AP(a[0]))->GetSize();
-		SetF(c,0,v.x); SetF(c,1,v.y);
-		break;
-	}
-	case kOhplA10b_WIDGET_GET_LOCAL_POS:
-	{
-		cVector3f v = ((iWidget*)AP(a[0]))->GetLocalPosition();
-		SetF(c,0,v.x); SetF(c,1,v.y); SetF(c,2,v.z);
-		break;
-	}
-	case kOhplA10b_WIDGET_VISIBLE: ((iWidget*)AP(a[0]))->SetVisible(AB(a[1])); break;
-	case kOhplA10b_WIDGET_ENABLED: ((iWidget*)AP(a[0]))->SetEnabled(AB(a[1])); break;
-	case kOhplA10b_WIDGET_IS_VISIBLE: c->u[0] = ((iWidget*)AP(a[0]))->IsVisible(); break;
-	case kOhplA10b_WIDGET_TEXT: ((iWidget*)AP(a[0]))->SetText(AW(a[1])); break;
-	case kOhplA10b_WIDGET_FONT_COLOR: ((iWidget*)AP(a[0]))->SetDefaultFontColor(C4(a,1)); break;
-	case kOhplA10b_WIDGET_FONT_SIZE: static_cast<cWidgetLabel*>((iWidget*)AP(a[0]))->SetDefaultFontSize(V2(a,1)); break;
-	case kOhplA10b_WIDGET_ALIGN: static_cast<cWidgetLabel*>((iWidget*)AP(a[0]))->SetTextAlign((eFontAlign)AI(a[1])); break;
-	case kOhplA10b_WIDGET_WRAP: static_cast<cWidgetLabel*>((iWidget*)AP(a[0]))->SetWordWrap(AB(a[1])); break;
-	case kOhplA10b_WIDGET_FONT_TYPE: ((iWidget*)AP(a[0]))->SetDefaultFontType((iFontData*)AP(a[1])); break;
-	case kOhplA10b_WIDGET_AUTOSIZE: static_cast<cWidgetLabel*>((iWidget*)AP(a[0]))->SetAutogenerateSize(AB(a[1])); break;
-	case kOhplA10b_WIDGET_DEFAULT_FONT: SetP(c, ((iWidget*)AP(a[0]))->GetDefaultFontType()); break;
 	case kOhplA10b_WIDGET_CALLBACK:
 	{
 		s->mCbs.push_back(cOhplA10bShell::Cb());
@@ -220,14 +153,6 @@ static void HostOp(cOhplA10bShell *s, OhplA10bCall *c)
 		((iWidget*)AP(a[0]))->AddCallback(ToMsg(AI(a[1])), &cb, &GuiCallback);
 		break;
 	}
-	case kOhplA10b_WIDGET_GLOBAL_UI: ((iWidget*)AP(a[0]))->SetGlobalUIInputListener(AB(a[1])); break;
-	case kOhplA10b_SLIDER_MAX: ((cWidgetSlider*)AP(a[0]))->SetMaxValue(AI(a[1])); break;
-	case kOhplA10b_SLIDER_BAR: ((cWidgetSlider*)AP(a[0]))->SetBarValueSize(AI(a[1])); break;
-	case kOhplA10b_SLIDER_SET: ((cWidgetSlider*)AP(a[0]))->SetValue(AI(a[1]), AB(a[2])); break;
-	case kOhplA10b_SLIDER_GET: c->u[0] = (uint64_t)(int64_t)((cWidgetSlider*)AP(a[0]))->GetValue(); break;
-	case kOhplA10b_SLIDER_GET_MAX: c->u[0] = (uint64_t)(int64_t)((cWidgetSlider*)AP(a[0]))->GetMaxValue(); break;
-	case kOhplA10b_SET_DEFAULT_FOCUS_NAV: ((cGuiSet*)AP(a[0]))->SetDefaultFocusNavWidget((iWidget*)AP(a[1])); break;
-	case kOhplA10b_SET_FOCUSED: ((cGuiSet*)AP(a[0]))->SetFocusedWidget((iWidget*)AP(a[1])); break;
 	case kOhplA10b_MUSIC_PLAY:
 		gpBase->mpEngine->GetSound()->GetMusicHandler()->Play(AS(a[0]), AF(a[1]), AF(a[2]), AB(a[3]), AB(a[4]));
 		break;
