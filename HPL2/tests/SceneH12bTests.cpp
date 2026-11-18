@@ -383,11 +383,11 @@ void PsScene(const std::string &asPath, int alSeed, int alFrames)
 	srand(alSeed);
 	cParticleSystemData data("data", &rig.res, &rig.gfx);
 	const bool bLoad = data.LoadFromElement(&el);
-	Line h; h.S("ps"); h.S(asPath.substr(asPath.rfind('/') + 1)); h.I(bLoad); h.I(data.mvEmitterData.size());
+	Line h; h.S("ps"); h.S(asPath.substr(asPath.rfind('/') + 1)); h.I(bLoad); h.I(ohpl_spd_count(data.mpRust));
 	Emit(h);
 	if(!bLoad) { rig.Trace("ps"); return; }
 	// Collision needs a physics world.
-	for(size_t i = 0; i < data.mvEmitterData.size(); ++i) static_cast<cParticleEmitterData_UserData*>(data.mvEmitterData[i])->mbCollides = false;
+	for(size_t i = 0; i < ohpl_spd_count(data.mpRust); ++i) ohpl_h12_ps_desc_mut(static_cast<cParticleEmitterData_UserData*>(data.GetEmitterData((int)i))->mpDesc)->mParams.mbCollides = false;
 
 	cParticleSystem *ps = data.Create("ps", cVector3f(1, 1, 1));
 	if(!ps) { fprintf(gOut, "ps null\n"); return; }
@@ -401,7 +401,7 @@ void PsScene(const std::string &asPath, int alSeed, int alFrames)
 		if(f == alFrames - 6) ps->Kill();
 		if(f == alFrames - 2) ps->KillInstantly();
 		ps->UpdateLogic(1.0f / 30.0f);
-		Line l; l.S("f"); l.I(f); l.I(ps->IsDead()); l.I(ps->IsDying()); l.I(ps->mbFirstUpdate); l.I(ps->mbIsVisible);
+		Line l; l.S("f"); l.I(f); l.I(ps->IsDead()); l.I(ps->IsDying()); l.I(ps->FirstUpdate()); l.I(ps->IsVisible());
 		for(int i = 0; i < ps->GetEmitterNum(); ++i)
 		{
 			iParticleEmitter *pe = ps->GetEmitter(i);
@@ -430,13 +430,13 @@ void SynthPs(const char *asName, std::vector<std::pair<const char*, const char*>
 	srand(77);
 	cParticleSystemData data("d", &rig.res, &rig.gfx);
 	const bool bLoad = data.LoadFromElement(&el);
-	Line h; h.S("synth"); h.S(asName); h.I(bLoad); h.I(data.mvEmitterData.size()); Emit(h);
+	Line h; h.S("synth"); h.S(asName); h.I(bLoad); h.I(ohpl_spd_count(data.mpRust)); Emit(h);
 	cParticleSystem *ps = data.Create("ps", cVector3f(1, 1, 1));
 	if(!ps) return;
 	for(int f = 0; f < alFrames; ++f)
 	{
 		ps->UpdateLogic(1.0f / 30.0f);
-		Line l; l.S("f"); l.I(f); l.I(ps->IsDead()); l.I(ps->IsDying()); l.I(ps->mbFirstUpdate);
+		Line l; l.S("f"); l.I(f); l.I(ps->IsDead()); l.I(ps->IsDying()); l.I(ps->FirstUpdate());
 		ps->GetEmitter(0)->GetBoundingVolume();
 		EmitterLine(l, ps->GetEmitter(0));
 		Emit(l);

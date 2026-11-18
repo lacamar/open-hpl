@@ -71,7 +71,7 @@ namespace hpl {
 
 	iLight::~iLight()
 	{
-		for(size_t i=0; i<ohpl_sl_light_ps_count(mpS); ++i) ((cParticleSystem*)ohpl_sl_light_ps_at(mpS, i))->mpLight = NULL;
+		for(size_t i=0; i<ohpl_sl_light_ps_count(mpS); ++i) ((cParticleSystem*)ohpl_sl_light_ps_at(mpS, i))->SetLight(NULL);
 		if(mpS->tracker) hplDelete((cVisibleRCNodeTracker*)mpS->tracker);
 		if(mpS->falloffMap) TextureManager()->Destroy((iTexture*)mpS->falloffMap);
 		if(mpS->gobo) TextureManager()->Destroy((iTexture*)mpS->gobo);
@@ -106,7 +106,7 @@ namespace hpl {
 	void iLight::SetBrightness(float afX)
 	{
 		bool bLitChanged = ohpl_sl_light_set_brightness(mpS, afX);
-		for(size_t i=0, n=ohpl_sl_light_ps_count(mpS); i<n; ++i) ((cParticleSystem*)ohpl_sl_light_ps_at(mpS, i))->mfLightBrightness = afX;
+		for(size_t i=0, n=ohpl_sl_light_ps_count(mpS); i<n; ++i) ((cParticleSystem*)ohpl_sl_light_ps_at(mpS, i))->SetLightBrightness(afX);
 		if(mbIsVisible && bLitChanged && mpRenderCallback)
 			mpRenderCallback->OnVisibleChange(this);
 	}
@@ -298,19 +298,19 @@ namespace hpl {
 
 	void iLight::AttachParticleSystem(cParticleSystem *apPS)
 	{
-		apPS->mLightColor = cColor(mpS->diffuse.r,mpS->diffuse.g,mpS->diffuse.b,1);
-		apPS->mfLightBrightness = mpS->brightness;
+		apPS->SetLightColor(cColor(mpS->diffuse.r,mpS->diffuse.g,mpS->diffuse.b,1));
+		apPS->SetLightBrightness(mpS->brightness);
 		apPS->SetVisible(mbIsVisible);
 
-		if(apPS->mpLight) apPS->mpLight->RemoveParticleSystem(apPS);
-		apPS->mpLight = this;
+		if(apPS->GetLight()) apPS->GetLight()->RemoveParticleSystem(apPS);
+		apPS->SetLight(this);
 		ohpl_sl_light_attach_ps(mpS, (uintptr_t)apPS);
 	}
 
 	void iLight::RemoveParticleSystem(cParticleSystem *apPS)
 	{
 		if(ohpl_sl_light_remove_ps(mpS, (uintptr_t)apPS) == false) return;
-		apPS->mpLight = NULL;
+		apPS->SetLight(NULL);
 	}
 
 	void iLight::RemoveBillboard(cBillboard *apBillboard)
@@ -350,7 +350,7 @@ namespace hpl {
 			pBillboard->SetColor( base * cColor(mpS->diffuse.r,mpS->diffuse.g,mpS->diffuse.b,1));
 		}
 		for(size_t i=0, n=ohpl_sl_light_ps_count(mpS); i<n; ++i)
-			((cParticleSystem*)ohpl_sl_light_ps_at(mpS, i))->mLightColor = cColor(mpS->diffuse.r,mpS->diffuse.g,mpS->diffuse.b,1);
+			((cParticleSystem*)ohpl_sl_light_ps_at(mpS, i))->SetLightColor(cColor(mpS->diffuse.r,mpS->diffuse.g,mpS->diffuse.b,1));
 	}
 
 	//////////////////////////////////////////////////////////////////////////
