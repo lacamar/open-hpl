@@ -144,6 +144,9 @@ pub struct CHost;
 
 impl Host for CHost {
     fn call(&self, code: i32, a: &mut Args) -> usize {
+        if let Some(r) = super::host12_direct::call(self, code, a) {
+            return r;
+        }
         let raw = HOST.load(Ordering::Acquire);
         if raw == 0 {
             return 0;

@@ -3,7 +3,7 @@
 
 mod api;
 mod builder;
-mod cfmt;
+pub(crate) mod cfmt;
 mod check;
 mod ffi_api;
 mod ffi_builder;
