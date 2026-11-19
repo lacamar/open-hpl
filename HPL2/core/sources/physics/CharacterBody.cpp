@@ -126,7 +126,7 @@ namespace hpl {
 			pBody->AddForceAtPosition(cVector3f(pF[0], pF[1], pF[2]), cVector3f(pP[0], pP[1], pP[2]));
 			return 0;
 		}
-		case 519: return reinterpret_cast<size_t>(&pBody->GetCharacterBody()->mS);
+		case 519: return reinterpret_cast<size_t>(pBody->GetCharacterBody()->mS);
 		}
 		return 0;
 	}
