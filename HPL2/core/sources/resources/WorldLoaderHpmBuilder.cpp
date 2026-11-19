@@ -15,6 +15,7 @@
 #include "resources/EngineFileLoading.h"
 #include "resources/EntityLoader_Object.h"
 #include "resources/RustWorldH4.h"
+#include "resources/RustLdTerrain.h"
 #include "resources/FileSearcher.h"
 #include "physics/PhysicsMaterial.h"
 
@@ -262,47 +263,6 @@ namespace hpl {
 		const int lCombinedSubs = (int)plan.combinedSubs;
 		mpCurrentWorld->DestroyStaticMeshEntities(setDestroy);
 		::hpl::Log("  SOMA hpm combined %d static submeshes into %d meshes\n", lCombinedSubs, mlCombinedMeshes);
-	}
-
-	namespace
-	{
-		struct cUndergrowthMat
-		{
-			cMaterial* mpMat;
-			std::vector<cVector3f> mvPos, mvUv;
-			std::vector<unsigned int> mvIdx;
-			cVector2f mvSubDiv;
-			cColor mMinColor, mMaxColor;
-			float mfDensity, mfAlign;
-			cVector3f mvBaseSize, mvMinSizeMul, mvMaxSizeMul;
-		};
-
-		struct cUndergrowthArea
-		{
-			int mlMat;
-			bool mbSub;
-			float mfMaxInfluence, mfFadeBorder, mfRadius = 0;
-			cVector2f mvCenter, mvMin, mvMax;
-			std::vector<cVector3f> mvPlanes;
-
-			float Influence(const cVector2f& avP) const
-			{
-				float e = 1e8f;
-				if (mvPlanes.empty())
-				{
-					float d2 = (avP - mvCenter).SqrLength();
-					if (d2 > mfRadius * mfRadius) return 0;
-					e = mfRadius - sqrtf(d2);
-				}
-				else for (const cVector3f& vPlane : mvPlanes)
-				{
-					float d = vPlane.x * avP.x + vPlane.y * avP.y + vPlane.z;
-					if (d < 0) return 0;
-					e = std::min(e, d);
-				}
-				return e > mfFadeBorder ? mfMaxInfluence : e / mfFadeBorder * mfMaxInfluence;
-			}
-		};
 	}
 
 	// HPL3 iHplMapLoader::CreateStaticMeshEntity: a sibling .ent's bodies replace the mesh collider
@@ -960,33 +920,20 @@ namespace hpl {
 
 		tWString sPath = asBaseFile + _W("_Terrain_heightmap.dds");
 		std::vector<unsigned char> vData(cPlatform::GetFileSize(sPath));
-		if (vData.size() < 128 + (size_t)lSize * lSize * 3 || !cPlatform::CopyFileToBuffer(sPath, vData.data(), vData.size()))
+		OhplLdTerrain* pTerrain = NULL;
+		if (vData.size() >= 128 + (size_t)lSize * lSize * 3 && cPlatform::CopyFileToBuffer(sPath, vData.data(), vData.size()))
+			pTerrain = ohpl_ld_terrain_new(vData.data(), vData.size(), lSize, fUnit, fMaxHeight);
+		if (pTerrain == NULL)
 		{
 			Warning("SOMA hpm: bad terrain heightmap '%s'\n", cString::To8Char(sPath).c_str());
 			return;
 		}
 
-		std::vector<float> vHeight((size_t)lSize * lSize);
-		std::vector<unsigned short> vElev((size_t)(lSize + 1) * (lSize + 1));
-		for (size_t i = 0; i < vHeight.size(); ++i)
-		{
-			const unsigned char* p = &vData[128 + i * 3];
-			unsigned int lVal = p[0] | (p[1] << 8) | (p[2] << 16);
-			vHeight[i] = lVal ? lVal * (fMaxHeight / 16777215.0f) : NAN;
-			vElev[i / lSize * (lSize + 1) + i % lSize] = (unsigned short)lroundf(lVal / 16777215.0f * 65535.0f);
-		}
-		for (int i = 0; i < lSize; ++i) vElev[(size_t)i * (lSize + 1) + lSize] = vElev[(size_t)i * (lSize + 1) + lSize - 1];
-		std::copy_n(&vElev[(size_t)(lSize - 1) * (lSize + 1)], lSize + 1, &vElev[(size_t)lSize * (lSize + 1)]);
-		auto Height = [&](int x, int z) { return vHeight[(size_t)cMath::Clamp(z, 0, lSize - 1) * lSize + cMath::Clamp(x, 0, lSize - 1)]; };
-		auto Solid = [&](int x, int z, float fFallback) { float h = Height(x, z); return std::isnan(h) ? fFallback : h; };
-
 		cMaterialManager* pMatMgr = mpResources->GetMaterialManager();
 		std::vector<cMaterial*> vBlend = CreateTerrainBlendMaterials(aTerrain, asBaseFile, lSize * fUnit);
 
 		// Rebirth: the blend channel painted with terrain_hole.mat is a hole mask
-		std::vector<unsigned char> vHole;
-		int lHoleScale = 0, lHoleChannel = 0;
-		for (size_t lLayer = 0; lLayer < aTerrain.numLayers && vHole.empty(); ++lLayer)
+		for (size_t lLayer = 0; lLayer < aTerrain.numLayers && !ohpl_ld_terrain_has_hole(pTerrain); ++lLayer)
 		{
 			const OhplHpmTerrainLayer& layer = aTerrain.layers[lLayer];
 			for (int i = 0; i < layer.numMats; ++i)
@@ -994,27 +941,11 @@ namespace hpl {
 				if (cString::ToLowerCase(cString::GetFileName(layer.mats[i].file)) != "terrain_hole.mat") continue;
 				tWString sHole = asBaseFile + _W("_Terrain_blendlayer_") + cString::To16Char(layer.id) + _W(".dds");
 				std::vector<unsigned char> vFile(cPlatform::GetFileSize(sHole));
-				if (vFile.size() < 128 || !cPlatform::CopyFileToBuffer(sHole, vFile.data(), vFile.size())) break;
-				const int lW = vFile[16] | (vFile[17] << 8) | (vFile[18] << 16);
-				const bool bRaw32 = vFile[84] == 0 && vFile[88] == 32 && vFile[92] == 0xFF;
-				if (!bRaw32 || lW < lSize || vFile.size() < 128 + (size_t)lW * lW * 4) break;
-				lHoleScale = lW / lSize;
-				lHoleChannel = i;
-				vHole = std::move(vFile);
+				if (vFile.size() >= 128 && cPlatform::CopyFileToBuffer(sHole, vFile.data(), vFile.size()))
+					ohpl_ld_terrain_set_hole(pTerrain, vFile.data(), vFile.size(), i);
 				break;
 			}
 		}
-		// ponytail: holes cut per cell (official discards per pixel); move to the shader if edges show
-		auto Hole = [&](int x, int z)
-		{
-			if (vHole.empty()) return false;
-			const int lW = lHoleScale * lSize;
-			int lSum = 0;
-			for (int tz = z * lHoleScale; tz < (z + 1) * lHoleScale; ++tz)
-			for (int tx = x * lHoleScale; tx < (x + 1) * lHoleScale; ++tx)
-				lSum += vHole[128 + ((size_t)tz * lW + tx) * 4 + lHoleChannel];
-			return lSum * 2 > 255 * lHoleScale * lHoleScale;
-		};
 
 		std::vector<cSubMeshEntity*> vPatches;
 		const float fOffset = lSize * fUnit * 0.5f;
@@ -1023,6 +954,9 @@ namespace hpl {
 		{
 			const int lW = std::min(lPatch, lSize - 1 - x0) + 1;
 			const int lH = std::min(lPatch, lSize - 1 - z0) + 1;
+			OhplLdPatch patch;
+			ohpl_ld_terrain_patch(pTerrain, x0, z0, lW, lH, fTile, &patch);
+			if (patch.numIdx == 0) continue;
 
 			iVertexBuffer* pVtx = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
 																				 eVertexBufferUsageType_Static, lW * lH, (lW - 1) * (lH - 1) * 6);
@@ -1037,40 +971,22 @@ namespace hpl {
 				vBlendVtx.back()->CreateElementArray(eVertexBufferElement_Position, eVertexBufferElementFormat_Float, 4);
 				vBlendVtx.back()->CreateElementArray(eVertexBufferElement_Texture0, eVertexBufferElementFormat_Float, 3);
 			}
-
-			for (int z = z0; z < z0 + lH; ++z)
-			for (int x = x0; x < x0 + lW; ++x)
+			for (uint32_t v = 0; v < patch.numVerts; ++v)
 			{
-				float h = Solid(x, z, 0);
-				cVector3f vPos(x * fUnit - fOffset, h, z * fUnit - fOffset);
-				cVector3f vNormal(Solid(x - 1, z, h) - Solid(x + 1, z, h), 2 * fUnit, Solid(x, z - 1, h) - Solid(x, z + 1, h));
+				const cVector3f vPos(patch.pos[v * 3], patch.pos[v * 3 + 1], patch.pos[v * 3 + 2]);
 				pVtx->AddVertexVec3f(eVertexBufferElement_Position, vPos);
-				pVtx->AddVertexVec3f(eVertexBufferElement_Normal, cMath::Vector3Normalize(vNormal));
-				pVtx->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(vPos.x, vPos.z, 0) * fTile);
+				pVtx->AddVertexVec3f(eVertexBufferElement_Normal, cVector3f(patch.normal[v * 3], patch.normal[v * 3 + 1], patch.normal[v * 3 + 2]));
+				pVtx->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(patch.uv0[v * 3], patch.uv0[v * 3 + 1], patch.uv0[v * 3 + 2]));
 				for (iVertexBuffer* pBlendVtx : vBlendVtx)
 				{
 					pBlendVtx->AddVertexVec3f(eVertexBufferElement_Position, vPos);
-					pBlendVtx->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f((float)x, (float)z, 0) / (float)lSize);
+					pBlendVtx->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(patch.blendUv[v * 3], patch.blendUv[v * 3 + 1], patch.blendUv[v * 3 + 2]));
 				}
 			}
-
-			for (int z = 0; z < lH - 1; ++z)
-			for (int x = 0; x < lW - 1; ++x)
+			for (uint32_t k = 0; k < patch.numIdx; ++k)
 			{
-				if (std::isnan(Height(x0 + x, z0 + z)) || std::isnan(Height(x0 + x + 1, z0 + z)) ||
-					std::isnan(Height(x0 + x, z0 + z + 1)) || std::isnan(Height(x0 + x + 1, z0 + z + 1)) || Hole(x0 + x, z0 + z)) continue;
-				int i = z * lW + x;
-				for (int lIdx : {i, i + 1, i + lW, i + 1, i + lW + 1, i + lW})
-				{
-					pVtx->AddIndex(lIdx);
-					for (iVertexBuffer* pBlendVtx : vBlendVtx) pBlendVtx->AddIndex(lIdx);
-				}
-			}
-			if (pVtx->GetIndexNum() == 0)
-			{
-				hplDelete(pVtx);
-				for (iVertexBuffer* pBlendVtx : vBlendVtx) hplDelete(pBlendVtx);
-				continue;
+				pVtx->AddIndex(patch.idx[k]);
+				for (iVertexBuffer* pBlendVtx : vBlendVtx) pBlendVtx->AddIndex(patch.idx[k]);
 			}
 			pVtx->Compile(eVertexCompileFlag_CreateTangents);
 
@@ -1092,34 +1008,37 @@ namespace hpl {
 			pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, true);
 			vPatches.push_back(pEntity->GetSubMeshEntity(0));
 		}
-		// ponytail: Newton heightfields have no holes, so sink vertices inside one; holes under 2 cells wide stay solid
-		if (!vHole.empty())
-			for (int z = 1; z < lSize; ++z)
-			for (int x = 1; x < lSize; ++x)
-				if (Hole(x - 1, z - 1) && Hole(x, z - 1) && Hole(x - 1, z) && Hole(x, z)) vElev[(size_t)z * (lSize + 1) + x] = 0;
-		iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody("Terrain", mpCurrentPhysicsWorld->CreateHeightFieldShape(lSize + 1, vElev.data(), fUnit, fMaxHeight / 65535.0f));
+		ohpl_ld_terrain_sink_holes(pTerrain);
+		iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody("Terrain", mpCurrentPhysicsWorld->CreateHeightFieldShape(lSize + 1, const_cast<unsigned short*>(ohpl_ld_terrain_elev(pTerrain)), fUnit, fMaxHeight / 65535.0f));
 		pBody->SetMass(0);
 		pBody->SetMatrix(cMath::MatrixTranslate(cVector3f(-fOffset, 0, -fOffset)));
 		for (cMaterial* pMat : vBlend) pMatMgr->Destroy(pMat);
 		CreateTerrainDecals(aTerrain, vPatches);
-		CreateTerrainUndergrowth(aTerrain, vHeight, lSize, fUnit);
+		CreateTerrainUndergrowth(aTerrain, pTerrain, lSize, fUnit);
+		std::vector<float> vHeight(ohpl_ld_terrain_heights(pTerrain), ohpl_ld_terrain_heights(pTerrain) + (size_t)lSize * lSize);
 		for (float& h : vHeight) if (std::isnan(h)) h = 0;
+		ohpl_ld_terrain_free(pTerrain);
 		mpCurrentWorld->SetTerrain(hplNew(cTerrain, (lSize, fUnit, std::move(vHeight))));
 	}
 
 	// Rebirth's cTerrainUndergrowth, baked once: each plant's seeds depend only on its cell and grid index.
-	void cHpmWorldBuilder::CreateTerrainUndergrowth(const OhplHpmTerrain& aTerrain, const std::vector<float>& avHeight, int alSize, float afUnit)
+	void cHpmWorldBuilder::CreateTerrainUndergrowth(const OhplHpmTerrain& aTerrain, const OhplLdTerrain* apTerrain, int alSize, float afUnit)
 	{
 		if (aTerrain.hasSections == false) return;
 		const float fGrid = aTerrain.undergrowthGridSize;
 		const float fFadeStart = aTerrain.undergrowthFadeStart;
 		const float fFadeEnd = aTerrain.undergrowthFadeEnd;
-		const float fW = alSize * afUnit;
-		const int lCells = (int)(fW / fGrid + 1);
 		cMaterialManager* pMatMgr = mpResources->GetMaterialManager();
 
+		struct cMatData
+		{
+			cMaterial* mpMat;
+			std::vector<float> mvPos, mvUv;
+			std::vector<uint32_t> mvIdx;
+			OhplLdUgMat mRaw;
+		};
 		std::map<tString, int> mapMatIdx;
-		std::vector<cUndergrowthMat> vMats;
+		std::vector<cMatData> vMats;
 		auto LoadMat = [&](const tString& asFile) -> int
 		{
 			auto it = mapMatIdx.find(asFile);
@@ -1139,18 +1058,20 @@ namespace hpl {
 				hplDelete(pDoc);
 				return -1;
 			}
-			cUndergrowthMat mat;
+			cMatData mat;
 			for (int i = 0; i < pMesh->GetSubMeshNum(); ++i)
 			{
 				iVertexBuffer* pVtx = pMesh->GetSubMesh(i)->GetVertexBuffer();
 				const float* pPos = pVtx->GetFloatArray(eVertexBufferElement_Position);
 				const float* pUv = pVtx->GetFloatArray(eVertexBufferElement_Texture0);
 				const int lPosStride = pVtx->GetElementNum(eVertexBufferElement_Position), lUvStride = pVtx->GetElementNum(eVertexBufferElement_Texture0);
-				const unsigned int lBase = (unsigned int)mat.mvPos.size();
+				const unsigned int lBase = (unsigned int)(mat.mvPos.size() / 3);
 				for (int v = 0; v < pVtx->GetVertexNum(); ++v)
 				{
-					mat.mvPos.push_back(cVector3f(pPos[v * lPosStride], pPos[v * lPosStride + 1], pPos[v * lPosStride + 2]));
-					mat.mvUv.push_back(pUv ? cVector3f(pUv[v * lUvStride], pUv[v * lUvStride + 1], 0) : cVector3f(0));
+					for (int c = 0; c < 3; ++c) mat.mvPos.push_back(pPos[v * lPosStride + c]);
+					mat.mvUv.push_back(pUv ? pUv[v * lUvStride] : 0.0f);
+					mat.mvUv.push_back(pUv ? pUv[v * lUvStride + 1] : 0.0f);
+					mat.mvUv.push_back(0.0f);
 				}
 				for (int k = 0; k < pVtx->GetIndexNum(); ++k) mat.mvIdx.push_back(lBase + pVtx->GetIndices()[k]);
 			}
@@ -1169,167 +1090,85 @@ namespace hpl {
 			pVars->mfForceFieldMul = pDoc->GetAttributeFloat("ForceFieldForceMul", 0);
 			pVars->mfMaxForceFieldForce = pDoc->GetAttributeFloat("MaxForceFieldForce", 0);
 			mat.mpMat->Compile();
-			mat.mvSubDiv = pDoc->GetAttributeVector2f("TextureSubDivisions", 1);
-			mat.mMinColor = pDoc->GetAttributeColor("MinColor", cColor(1, 1));
-			mat.mMaxColor = pDoc->GetAttributeColor("MaxColor", cColor(1, 1));
-			mat.mfDensity = pDoc->GetAttributeFloat("MaxDensity", 1);
-			mat.mfAlign = pDoc->GetAttributeFloat("AlignToSlopeAmount", 0);
-			mat.mvBaseSize = pDoc->GetAttributeVector3f("BaseSize", 1);
-			mat.mvMinSizeMul = pDoc->GetAttributeVector3f("MinSizeMul", 1);
-			mat.mvMaxSizeMul = pDoc->GetAttributeVector3f("MaxSizeMul", 1);
+			const cVector2f vSubDiv = pDoc->GetAttributeVector2f("TextureSubDivisions", 1);
+			const cColor minCol = pDoc->GetAttributeColor("MinColor", cColor(1, 1)), maxCol = pDoc->GetAttributeColor("MaxColor", cColor(1, 1));
+			const cVector3f vBase = pDoc->GetAttributeVector3f("BaseSize", 1), vMin = pDoc->GetAttributeVector3f("MinSizeMul", 1), vMax = pDoc->GetAttributeVector3f("MaxSizeMul", 1);
+			OhplLdUgMat& raw = mat.mRaw;
+			raw = {};
+			raw.subDiv[0] = vSubDiv.x; raw.subDiv[1] = vSubDiv.y;
+			raw.minColor[0] = minCol.r; raw.minColor[1] = minCol.g; raw.minColor[2] = minCol.b; raw.minColor[3] = minCol.a;
+			raw.maxColor[0] = maxCol.r; raw.maxColor[1] = maxCol.g; raw.maxColor[2] = maxCol.b; raw.maxColor[3] = maxCol.a;
+			raw.density = pDoc->GetAttributeFloat("MaxDensity", 1);
+			raw.align = pDoc->GetAttributeFloat("AlignToSlopeAmount", 0);
+			raw.baseSize[0] = vBase.x; raw.baseSize[1] = vBase.y; raw.baseSize[2] = vBase.z;
+			raw.minSizeMul[0] = vMin.x; raw.minSizeMul[1] = vMin.y; raw.minSizeMul[2] = vMin.z;
+			raw.maxSizeMul[0] = vMax.x; raw.maxSizeMul[1] = vMax.y; raw.maxSizeMul[2] = vMax.z;
 			hplDelete(pDoc);
-			vMats.push_back(mat);
+			vMats.push_back(std::move(mat));
 			return lIdx = (int)vMats.size() - 1;
 		};
 
-		std::vector<cUndergrowthArea> vAreas;
+		std::vector<OhplLdUgArea> vAreas;
 		for (size_t lArea = 0; lArea < aTerrain.numAreas; ++lArea)
 		{
 			const OhplHpmUndergrowthArea& src = aTerrain.areas[lArea];
-			cUndergrowthArea area;
-			if ((area.mlMat = LoadMat(src.file)) < 0) continue;
-			area.mbSub = src.sub;
-			area.mfMaxInfluence = src.maxInfluence;
-			area.mfFadeBorder = src.fadeBorder;
-			if (src.circle)
-			{
-				area.mvCenter = cVector2f(src.center[0], src.center[1]);
-				area.mfRadius = src.radius;
-				area.mvMin = area.mvCenter - area.mfRadius;
-				area.mvMax = area.mvCenter + area.mfRadius;
-			}
-			else
-			{
-				std::vector<cVector2f> vPts;
-				for (size_t i = 0; i < src.numPoints; ++i) vPts.push_back(cVector2f(src.points[i * 2], src.points[i * 2 + 1]));
-				if (vPts.size() < 3) continue;
-				cVector2f vCentroid = 0;
-				area.mvMin = area.mvMax = vPts[0];
-				for (const cVector2f& v : vPts)
-				{
-					vCentroid += v / (float)vPts.size();
-					area.mvMin = cVector2f(std::min(area.mvMin.x, v.x), std::min(area.mvMin.y, v.y));
-					area.mvMax = cVector2f(std::max(area.mvMax.x, v.x), std::max(area.mvMax.y, v.y));
-				}
-				for (size_t i = 0; i < vPts.size(); ++i)
-				{
-					const cVector2f &a = vPts[i], &b = vPts[(i + 1) % vPts.size()];
-					cVector2f n(b.y - a.y, a.x - b.x);
-					n.Normalize();
-					if (n.x * (vCentroid.x - a.x) + n.y * (vCentroid.y - a.y) < 0) n = n * -1;
-					area.mvPlanes.push_back(cVector3f(n.x, n.y, -(n.x * a.x + n.y * a.y)));
-				}
-			}
+			OhplLdUgArea area = {};
+			if ((area.mat = LoadMat(src.file)) < 0) continue;
+			area.sub = src.sub;
+			area.maxInfluence = src.maxInfluence;
+			area.fadeBorder = src.fadeBorder;
+			area.circle = src.circle;
+			area.center[0] = src.center[0]; area.center[1] = src.center[1];
+			area.radius = src.radius;
+			area.points = src.points;
+			area.numPoints = src.numPoints;
 			vAreas.push_back(area);
 		}
-		if (vAreas.empty()) return;
-
-		std::map<int, std::vector<int>> mapCellAreas;
-		for (size_t a = 0; a < vAreas.size(); ++a)
+		for (cMatData& m : vMats)
 		{
-			auto Cell = [&](float f) { return cMath::Clamp((int)((f + fW * 0.5f) / fGrid), 0, lCells - 1); };
-			for (int cy = Cell(vAreas[a].mvMin.y); cy <= Cell(vAreas[a].mvMax.y); ++cy)
-			for (int cx = Cell(vAreas[a].mvMin.x); cx <= Cell(vAreas[a].mvMax.x); ++cx)
-				mapCellAreas[(cy * lCells + cx) * (int)vMats.size() + vAreas[a].mlMat].push_back((int)a);
+			m.mRaw.pos = m.mvPos.data();
+			m.mRaw.uv = m.mvUv.data();
+			m.mRaw.numVerts = (uint32_t)(m.mvPos.size() / 3);
+			m.mRaw.idx = m.mvIdx.data();
+			m.mRaw.numIdx = (uint32_t)m.mvIdx.size();
 		}
-
-		auto Height = [&](int x, int z) { return avHeight[(size_t)cMath::Clamp(z, 0, alSize - 1) * alSize + cMath::Clamp(x, 0, alSize - 1)]; };
-		auto Solid = [&](int x, int z, float fFallback) { float h = Height(x, z); return std::isnan(h) ? fFallback : h; };
+		std::vector<OhplLdUgMat> vRaw;
+		for (const cMatData& m : vMats) vRaw.push_back(m.mRaw);
+		OhplLdUg* pUg = vAreas.empty() ? NULL : ohpl_ld_ug_build(apTerrain, fGrid, vRaw.size(), vRaw.data(), vAreas.size(), vAreas.data());
 		std::map<int, cMesh*> mapCellMesh;
-		for (auto& cellAreas : mapCellAreas)
+		for (size_t g = 0, n = pUg ? ohpl_ld_ug_num(pUg) : 0; g < n; ++g)
 		{
-			const int lMat = cellAreas.first % (int)vMats.size(), lCell = cellAreas.first / (int)vMats.size();
-			const int cx = lCell % lCells, cy = lCell / lCells;
-			const cUndergrowthMat& mat = vMats[lMat];
-			const int lRes = std::max(1, (int)(fGrid * mat.mfDensity + 0.5f));
-			const cVector2f vCacheMin(cx * fGrid - fW * 0.5f, cy * fGrid - fW * 0.5f);
-
-			std::vector<float> vGrid((size_t)lRes * lRes, 0.0f);
-			for (int a : cellAreas.second)
+			OhplLdUgGroup grp;
+			ohpl_ld_ug_group(pUg, g, &grp);
+			iVertexBuffer* pVtx = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri, eVertexBufferUsageType_Static, 0, 0);
+			pVtx->CreateElementArray(eVertexBufferElement_Position, eVertexBufferElementFormat_Float, 4);
+			pVtx->CreateElementArray(eVertexBufferElement_Normal, eVertexBufferElementFormat_Float, 3);
+			pVtx->CreateElementArray(eVertexBufferElement_Color0, eVertexBufferElementFormat_Float, 4);
+			pVtx->CreateElementArray(eVertexBufferElement_Texture0, eVertexBufferElementFormat_Float, 3);
+			pVtx->CreateElementArray(eVertexBufferElement_Texture1, eVertexBufferElementFormat_Float, 3);
+			for (uint32_t v = 0; v < grp.numVerts; ++v)
 			{
-				const cUndergrowthArea& area = vAreas[a];
-				auto Index = [&](float f) { return (int)(cMath::Clamp(f, 0.0f, fGrid) / fGrid * (lRes - 1) + 0.5f); };
-				for (int y = Index(area.mvMin.y - vCacheMin.y); y <= Index(area.mvMax.y - vCacheMin.y); ++y)
-				for (int x = Index(area.mvMin.x - vCacheMin.x); x <= Index(area.mvMax.x - vCacheMin.x); ++x)
-				{
-					float fInfl = area.Influence(vCacheMin + cVector2f((float)x, (float)y) / (float)lRes * fGrid);
-					vGrid[y * lRes + x] += area.mbSub ? -fInfl : fInfl;
-				}
+				pVtx->AddVertexVec3f(eVertexBufferElement_Position, cVector3f(grp.pos[v * 3], grp.pos[v * 3 + 1], grp.pos[v * 3 + 2]));
+				pVtx->AddVertexVec3f(eVertexBufferElement_Normal, cVector3f(grp.normal[v * 3], grp.normal[v * 3 + 1], grp.normal[v * 3 + 2]));
+				pVtx->AddVertexColor(eVertexBufferElement_Color0, cColor(grp.color[v * 4], grp.color[v * 4 + 1], grp.color[v * 4 + 2], grp.color[v * 4 + 3]));
+				pVtx->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(grp.uv0[v * 3], grp.uv0[v * 3 + 1], grp.uv0[v * 3 + 2]));
+				pVtx->AddVertexVec3f(eVertexBufferElement_Texture1, cVector3f(grp.uv1[v * 3], grp.uv1[v * 3 + 1], grp.uv1[v * 3 + 2]));
 			}
-
-			const float fStep = fGrid / lRes;
-			const cVector2f vSubMul = cVector2f(1) / mat.mvSubDiv;
-			const int lSubX = std::max(1, (int)mat.mvSubDiv.x), lSubNum = lSubX * std::max(1, (int)mat.mvSubDiv.y);
-			std::vector<float> vVtxData;
-			iVertexBuffer* pVtx = NULL;
-			for (int i = 0; i < lRes * lRes; ++i)
-			{
-				float v = cMath::Clamp(vGrid[i], 0.0f, 1.0f);
-				if (v < 1 && !(v > cMath::Abs(cMath::FastRandomFloat(cx + cy + i)))) continue;
-				float fJitter = cMath::FastRandomFloat(cx * 13 + cy + i) * fStep * 0.5f;
-				cVector3f vPos(vCacheMin.x + (i % lRes) * fStep + fJitter, 0, vCacheMin.y + (i / lRes) * fStep + fJitter);
-				float u = (vPos.x + fW * 0.5f) / afUnit, w = (vPos.z + fW * 0.5f) / afUnit;
-				if (u < 0 || w < 0 || u > alSize - 1 || w > alSize - 1) continue;
-				int x0 = std::min((int)u, alSize - 2), z0 = std::min((int)w, alSize - 2);
-				float fu = u - x0, fw = w - z0;
-				vPos.y = (Height(x0, z0) * (1 - fu) + Height(x0 + 1, z0) * fu) * (1 - fw) + (Height(x0, z0 + 1) * (1 - fu) + Height(x0 + 1, z0 + 1) * fu) * fw;
-				if (std::isnan(vPos.y)) continue;
-
-				int nx = (int)(u + 0.5f), nz = (int)(w + 0.5f);
-				float h = Solid(nx, nz, vPos.y);
-				cVector3f vNormal = cMath::Vector3Normalize(cVector3f(Solid(nx - 1, nz, h) - Solid(nx + 1, nz, h), 2 * afUnit, Solid(nx, nz - 1, h) - Solid(nx, nz + 1, h)));
-				cMatrixf mtxRot = cMath::MatrixRotateY(cMath::FastRandomFloat(cx * 17 + cy + i) * kPif);
-				if (mat.mfAlign > 0)
-				{
-					cVector3f n = mat.mfAlign >= 1 ? vNormal : cMath::Vector3Normalize(cVector3f(0, 1, 0) * (1 - mat.mfAlign) + vNormal * mat.mfAlign);
-					cVector3f vTan = cMath::Vector3Normalize(cMath::Vector3Cross(n, cVector3f(0, 0, 1)));
-					mtxRot = cMath::MatrixMul(cMath::MatrixUnitVectors(vTan * -1, n, cMath::Vector3Cross(n, vTan), 0), mtxRot);
-				}
-				float fSizeT = cMath::Abs(cMath::FastRandomFloat(cx * 23 + cy + i));
-				cVector3f vSize = mat.mvBaseSize * (mat.mvMinSizeMul * (1 - fSizeT) + mat.mvMaxSizeMul * fSizeT);
-				float fColorT = cMath::Abs(cMath::FastRandomFloat(cx * 31 + cy + i));
-				cColor col = mat.mMinColor * (1 - fColorT) + mat.mMaxColor * fColorT;
-				int lTex = (i * 13) % lSubNum;
-				cVector3f vUvAdd = cVector3f((float)(lTex % lSubX), (float)(lTex / lSubX), 0) * cVector3f(vSubMul.x, vSubMul.y, 1);
-
-				if (pVtx == NULL)
-				{
-					pVtx = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri, eVertexBufferUsageType_Static, 0, 0);
-					pVtx->CreateElementArray(eVertexBufferElement_Position, eVertexBufferElementFormat_Float, 4);
-					pVtx->CreateElementArray(eVertexBufferElement_Normal, eVertexBufferElementFormat_Float, 3);
-					pVtx->CreateElementArray(eVertexBufferElement_Color0, eVertexBufferElementFormat_Float, 4);
-					pVtx->CreateElementArray(eVertexBufferElement_Texture0, eVertexBufferElementFormat_Float, 3);
-					pVtx->CreateElementArray(eVertexBufferElement_Texture1, eVertexBufferElementFormat_Float, 3);
-				}
-				const unsigned int lBase = (unsigned int)pVtx->GetVertexNum();
-				const float fRand = cMath::RandRectf(0, 1);
-				for (size_t k = 0; k < mat.mvPos.size(); ++k)
-				{
-					pVtx->AddVertexVec3f(eVertexBufferElement_Position, cMath::MatrixMul3x3(mtxRot, mat.mvPos[k]) * vSize + vPos);
-					pVtx->AddVertexVec3f(eVertexBufferElement_Normal, vNormal);
-					pVtx->AddVertexColor(eVertexBufferElement_Color0, col);
-					pVtx->AddVertexVec3f(eVertexBufferElement_Texture0, mat.mvUv[k] * cVector3f(vSubMul.x, vSubMul.y, 1) + vUvAdd);
-					pVtx->AddVertexVec3f(eVertexBufferElement_Texture1, cVector3f(mat.mvPos[k].y, fRand, 0));
-				}
-				// Rebirth draws undergrowth with culling off; ours is global, so add the back faces.
-				for (size_t k = 0; k < mat.mvIdx.size(); ++k) pVtx->AddIndex(lBase + mat.mvIdx[k]);
-				for (size_t k = 0; k + 2 < mat.mvIdx.size(); k += 3)
-					for (int j : {0, 2, 1}) pVtx->AddIndex(lBase + mat.mvIdx[k + j]);
-			}
-			if (pVtx == NULL) continue;
+			for (uint32_t k = 0; k < grp.numIdx; ++k) pVtx->AddIndex(grp.idx[k]);
 			pVtx->Compile(0);
 
-			cMesh*& pMesh = mapCellMesh[lCell];
-			if (pMesh == NULL) pMesh = hplNew(cMesh, ("Undergrowth_" + cString::ToString(lCell), _W(""), pMatMgr, mpResources->GetAnimationManager()));
-			cSubMesh* pSubMesh = pMesh->CreateSubMesh("Mat" + cString::ToString(lMat));
+			cMesh*& pMesh = mapCellMesh[grp.cell];
+			if (pMesh == NULL) pMesh = hplNew(cMesh, ("Undergrowth_" + cString::ToString(grp.cell), _W(""), pMatMgr, mpResources->GetAnimationManager()));
+			cSubMesh* pSubMesh = pMesh->CreateSubMesh("Mat" + cString::ToString(grp.mat));
 			pSubMesh->SetVertexBuffer(pVtx);
-			mat.mpMat->IncUserCount();
-			pSubMesh->SetMaterial(mat.mpMat);
+			vMats[grp.mat].mpMat->IncUserCount();
+			pSubMesh->SetMaterial(vMats[grp.mat].mpMat);
 		}
+		ohpl_ld_ug_free(pUg);
 		// ponytail: every cell is drawn and only the shader dissolve hides far plants; cull cells by distance if it costs fps.
 		for (auto& cellMesh : mapCellMesh)
 			mpCurrentWorld->CreateMeshEntity(cellMesh.second->GetName(), cellMesh.second, true)->SetRenderFlagBit(eRenderableFlag_ShadowCaster, false);
-		for (cUndergrowthMat& mat : vMats) pMatMgr->Destroy(mat.mpMat);
+		for (cMatData& mat : vMats) pMatMgr->Destroy(mat.mpMat);
 	}
 
 	void cHpmWorldBuilder::CreateTerrainDecals(const OhplHpmTerrain& aTerrain, const std::vector<cSubMeshEntity*>& avPatches)

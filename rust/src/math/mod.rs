@@ -36,7 +36,7 @@ pub(crate) use libm::{atan2, tan};
 pub(crate) use libm::{c_rand, c_srand};
 pub(crate) use matrix::{
     IDENTITY, matrix_inverse, matrix_mul, matrix_mul_3x3, matrix_mul_vec, matrix_rotate,
-    matrix_scale, rotate_z,
+    matrix_scale, rotate_y, rotate_z,
 };
 pub(crate) use matrix::{matrix_euler_angle_distance, matrix_slerp};
 pub(crate) use matrix::{matrix_mul_divide_w, perspective_projection};
