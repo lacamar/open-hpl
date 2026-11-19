@@ -193,54 +193,6 @@ pub fn model_kind(has_frustum: bool, is_axis: bool) -> u32 {
 }
 
 /// # Safety
-/// `host` is valid for the call, `first` is valid for reads and writes. Host calls may re-enter
-/// the system, so `first` is copied out and back.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h12b_ps_update_logic(
-    host: *const PsHost,
-    first: *mut bool,
-    active: bool,
-    dt: f32,
-) {
-    // SAFETY: caller contract.
-    let (h, mut f) = unsafe { (&*host, *first) };
-    update_logic(h, &mut f, active, dt);
-    // SAFETY: caller contract.
-    unsafe { *first = f };
-}
-
-/// # Safety
-/// As `ohpl_h12b_ps_update_logic`, for `visible`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h12b_ps_set_visible(
-    host: *const PsHost,
-    visible: *mut bool,
-    new: bool,
-) {
-    // SAFETY: caller contract.
-    let (h, mut v) = unsafe { (&*host, *visible) };
-    set_visible(h, &mut v, new);
-    // SAFETY: caller contract.
-    unsafe { *visible = v };
-}
-
-/// # Safety
-/// `host` is valid for the call.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h12b_ps_apply_all(host: *const PsHost, op: i32, arg: bool) {
-    // SAFETY: caller contract.
-    apply_all(unsafe { &*host }, op, arg);
-}
-
-/// # Safety
-/// `host` is valid for the call.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h12b_ps_all(host: *const PsHost, query: i32) -> bool {
-    // SAFETY: caller contract.
-    unsafe { &*host }.all(query)
-}
-
-/// # Safety
 /// `child_is_emitter` and `load` hold `n` bools each, or are null with `n == 0`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h12b_psdata_plan(

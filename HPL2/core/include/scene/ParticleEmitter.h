@@ -25,8 +25,7 @@
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include "graphics/GraphicsTypes.h"
-#include "scene/RustParticles.h"
-#include "scene/RustSceneH12.h"
+#include "scene/RustSP.h"
 
 namespace hpl {
 
@@ -111,92 +110,45 @@ namespace hpl {
 
 	class iParticleEmitter :public iRenderable
 	{
+		friend struct OhplSPEHostImpl;
+		friend class cParticleSystem;
 	public:
-		iParticleEmitter(	tString asName,tMaterialVec* avMaterials,unsigned int alMaxParticles, 
-							cVector3f avSize, cGraphics* apGraphics,cResources *apResources);
+		iParticleEmitter(	tString asName,tMaterialVec* avMaterials, cGraphics* apGraphics,
+							void *apData, const OhplH12PsDesc *apDesc, float afWarmUpTime, float afWarmUpStepsPerSec);
 		virtual ~iParticleEmitter();
 
-		void UpdateLogic(float afTimeStep);
+		void UpdateLogic(float afTimeStep){ ohpl_spe_update_logic(mpPe, afTimeStep);}
 
 		void Render(){}
 
-		void SetWorld(cWorld *apWorld) { mpWorld = apWorld;}
+		void SetWorld(cWorld *apWorld) { ohpl_spe_set_world(mpPe, apWorld);}
 
-		void SetSystem(cParticleSystem *apSystem){ mpParentSystem = apSystem;}
+		virtual bool IsDead(){ return ohpl_spe_is_dead(mpPe);}
+		virtual bool IsDying(){ return ohpl_spe_is_dying(mpPe);}
+		virtual void Kill(){ ohpl_spe_kill(mpPe);}
+		void KillInstantly(){ ohpl_spe_kill_instantly(mpPe);}
 
-		virtual bool IsDead(){ return ohpl_pe_is_dead(mpRust);}
-		virtual bool IsDying(){ return ohpl_pe_is_dying(mpRust);}
-		virtual void Kill(){ ohpl_pe_kill(mpRust);}
-		void KillInstantly(){ ohpl_pe_kill_instantly(mpRust);}
-
-		void SetDataName(const tString &asName){msDataName = asName;}
-		void SetDataSize(const cVector3f &avSize){mvDataSize = avSize;}
-
-		int GetParticleNum(){ return (int)ohpl_pe_num_particles(mpRust);}
+		int GetParticleNum(){ return (int)ohpl_spe_num_particles(mpPe);}
 
 		//Entity implementation
 		tString GetEntityType(){ return "ParticleEmitter"; }
-		bool IsVisible();
+		bool IsVisible(){ return IsActive() && mbIsVisible;}
 		
 		//Renderable implementation
-		bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime);
+		bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime){ return ohpl_spe_update_gfx(mpPe, apFrustum);}
 
-		cMaterial *GetMaterial();
-		iVertexBuffer* GetVertexBuffer();
+		cMaterial *GetMaterial(){ return static_cast<cMaterial*>(ohpl_spe_material(mpPe));}
+		iVertexBuffer* GetVertexBuffer(){ return static_cast<iVertexBuffer*>(ohpl_spe_vertex_buffer(mpPe));}
 
-		cBoundingVolume* GetBoundingVolume();
+		cBoundingVolume* GetBoundingVolume(){ ohpl_spe_update_bv(mpPe); return &mBoundingVolume;}
 
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
+		cMatrixf* GetModelMatrix(cFrustum *apFrustum){ return const_cast<cMatrixf*>(ohpl_spe_model_matrix(mpPe, apFrustum));}
 
 		int GetMatrixUpdateCount(){return GetTransformUpdateCount();}
 		eRenderableType GetRenderType(){ return eRenderableType_ParticleEmitter;}
 
-	protected:
-		virtual void UpdateMotion(float afTimeStep)=0;
-		
-		cGraphics *mpGraphics;
-		cResources *mpResources;
-
-		tString msDataName;
-		cVector3f mvDataSize;
-
-		OhplEmitter *mpRust;
-		unsigned int mlPoolSize;
-
-		cMatrixf m_mtxTemp;
-
-		tMaterialVec* mvMaterials;
-
-		//Sleep count, update flags and counters, see h12b_psys.rs.
-		OhplH12PeCtl mCtl;
-
-		iVertexBuffer *mpVtxBuffer;
-
-		cVector3f mvDirection;
-
-		cVector3f mvRight;
-		cVector3f mvForward;
-
-		cParticleSystem *mpParentSystem;
-
-		//Set by the particle system implementation.
-		cVector2f mvDrawSize;
-		cVector2f mvMaxDrawSize;
-
-		eParticleEmitterType mDrawType;
-
-		eParticleEmitterCoordSystem mCoordSystem;
-
-		bool mbMultiplyRGBWithAlpha;
-
-		cWorld *mpWorld;
-
-		bool mbUsesDirection;
-
-		bool mbUsePartSpin;
-		bool mbUseRevolution;
-
-		ePEType mPEType;
+	private:
+		OhplSPE *mpPe;
 	};
 
 	//-----------------------------------------------------------------

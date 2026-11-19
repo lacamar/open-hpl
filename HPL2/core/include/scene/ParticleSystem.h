@@ -66,27 +66,25 @@ namespace hpl {
 
 	class cParticleSystem : public iEntity3D
 	{
-	friend class iParticleEmitter;
-	friend struct OhplH12PsHostImpl;
 	public:
 		cParticleSystem(const tString asName,cParticleSystemData *apData, cResources *apResources, cGraphics *apGraphics)
-			: iEntity3D(asName), mpRust(ohpl_sp_new(apData)), mpS(reinterpret_cast<OhplSPPub*>(mpRust)) {}
+			: iEntity3D(asName), mpRust(ohpl_sp_new(apData, this)), mpS(reinterpret_cast<OhplSPPub*>(mpRust)) {}
 		~cParticleSystem();
 
 		bool IsVisible(){ return mpS->mbIsVisible;}
-		void SetVisible(bool abVisible);
-		void SetCulledByDistance(bool abX);
-		void SetCulledByFog(bool abX);
+		void SetVisible(bool abVisible){ ohpl_sp_set_visible(mpRust, abVisible);}
+		void SetCulledByDistance(bool abX){ ohpl_sp_apply_all(mpRust, kOhplH12OpCullDistance, abX);}
+		void SetCulledByFog(bool abX){ ohpl_sp_apply_all(mpRust, kOhplH12OpCullFog, abX);}
 
-		void UpdateLogic(float afTimeStep);
+		void UpdateLogic(float afTimeStep){ ohpl_sp_update_logic(mpRust, IsActive(), afTimeStep);}
 
-		bool IsDead();
-		bool IsDying();
+		bool IsDead(){ return ohpl_sp_all(mpRust, kOhplH12QueryDead);}
+		bool IsDying(){ return ohpl_sp_all(mpRust, kOhplH12QueryDying);}
 		bool GetRemoveWhenDead() { return mpS->mbRemoveWhenDead; }
 		void SetRemoveWhenDead(bool abX) { mpS->mbRemoveWhenDead = abX; }
 
-		void Kill();
-		void KillInstantly();
+		void Kill(){ ohpl_sp_apply_all(mpRust, kOhplH12OpKill, false);}
+		void KillInstantly(){ ohpl_sp_apply_all(mpRust, kOhplH12OpKillInstantly, false);}
 
 		void AddEmitter(iParticleEmitter* apEmitter);
 		iParticleEmitter* GetEmitter(int alIdx){ return static_cast<iParticleEmitter*>(ohpl_sp_emitter(mpRust, alIdx)); }
@@ -128,7 +126,6 @@ namespace hpl {
 
 		cParticleSystemData *GetData(){ return static_cast<cParticleSystemData*>(mpS->mpData);}
 
-		const OhplSPPub& Pub() const { return *mpS;}
 		bool FirstUpdate() const { return mpS->mbFirstUpdate;}
 
 	private:
