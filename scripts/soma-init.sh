@@ -17,7 +17,8 @@ if [ -n "$ENV_ONLY" ]; then
 	[ -x "$SCRATCH/$BIN" ] || { echo "no scratch dir $SCRATCH - run soma-init.sh without --env-only" >&2; exit 1; }
 else
 	make -C "$BUILD_DIR" -j"$(nproc)" "${BIN%.bin.aarch64}" >&2
-	if [ ! -d "$SCRATCH" ]; then
+	# a partial dir (e.g. only .xdg from a seeded cache or a concurrent run) has no game data: repair it
+	if [ ! -e "$SCRATCH/config/main_init.cfg" ]; then
 		"$REPO/scripts/setup-test-scratch.sh" "$ROOT" "$SCRATCH" >/dev/null
 	fi
 	"$REPO/scripts/deploy-test-binary.sh" "$BUILD_DIR/$BIN" "$SCRATCH" >&2
