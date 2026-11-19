@@ -1628,6 +1628,10 @@ pub(crate) fn set_info(s: *mut Set) -> ([f32; 2], [f32; 2], bool) {
     ([r[0], r[1]], [r[2], r[3]], with(s, |s| s.p.is_3d))
 }
 
+pub(crate) fn draw_mouse(s: *mut Set) -> bool {
+    with_or(s, false, |s| s.p.draw_mouse)
+}
+
 pub(crate) fn set_widgets_need_sorting(s: *mut Set) {
     with(s, |s| s.p.sort_widgets = true);
 }

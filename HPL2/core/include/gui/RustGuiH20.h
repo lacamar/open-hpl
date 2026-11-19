@@ -3,7 +3,7 @@
 
 // C ABI of rust/src/gui/h20_*.rs: text box, list boxes, combo box, tab frame and menus (OHPL_IMPL=rust).
 // Widget state structs are embedded in the C++ widgets and mutated only by Rust; OhplH20Host::op reaches
-// back for items, sliders, skin and drawing (RustGuiH20.cpp). Op argument use is documented there.
+// back for items, sliders, skin and drawing (rust/src/gui/gw_ops.rs).
 
 #include <cstddef>
 #include <cstdint>
@@ -11,98 +11,6 @@
 #include "gui/RustWidget2.h"
 
 namespace hpl {
-
-enum OhplH20Op {
-	kOhplH20Op_SLIDER_SET_VALUE = 1,
-	kOhplH20Op_SLIDER_GET_VALUE = 2,
-	kOhplH20Op_SLIDER_SET_BAR_VALUE_SIZE = 3,
-	kOhplH20Op_SLIDER_SET_MAX_VALUE = 4,
-	kOhplH20Op_SLIDER_SET_BUTTON_VALUE_ADD = 5,
-	kOhplH20Op_SLIDER_SET_BAR_CLICK_VALUE_ADD = 6,
-	kOhplH20Op_SLIDER_GET_BUTTON_VALUE_ADD = 7,
-	kOhplH20Op_WIDGET_SET_SIZE = 8,
-	kOhplH20Op_WIDGET_SET_POSITION = 9,
-	kOhplH20Op_WIDGET_GET_SIZE = 10,
-	kOhplH20Op_ITEM_NUM = 11,
-	kOhplH20Op_ITEM_GET = 12,
-	kOhplH20Op_ITEM_IS_SELECTED = 13,
-	kOhplH20Op_ITEM_SET_SELECTED = 14,
-	kOhplH20Op_ITEM_IS_SELECTABLE = 15,
-	kOhplH20Op_ITEM_INDEX = 16,
-	kOhplH20Op_ITEM_TEXT = 17,
-	kOhplH20Op_PROCESS_MESSAGE = 18,
-	kOhplH20Op_WORLD_TO_LOCAL = 19,
-	kOhplH20Op_GET_GLOBAL = 20,
-	kOhplH20Op_GET_FONT_SIZE = 21,
-	kOhplH20Op_HAS_FOCUS = 22,
-	kOhplH20Op_CREATE_SLIDER = 23,
-	kOhplH20Op_ADD_CALLBACK = 24,
-	kOhplH20Op_DRAW_GFX = 25,
-	kOhplH20Op_DRAW_BORDERS = 26,
-	kOhplH20Op_SKIN_GFX = 27,
-	kOhplH20Op_SKIN_ATTRIBUTE = 28,
-	kOhplH20Op_GFX_ACTIVE_SIZE = 29,
-	kOhplH20Op_GFX_IMAGE_SIZE = 30,
-	kOhplH20Op_CLIP_CREATE_CHILD = 31,
-	kOhplH20Op_SET_CLIP = 32,
-	kOhplH20Op_DRAW_TEXT = 33,
-	kOhplH20Op_GFX_RECT = 34,
-	kOhplH20Op_CREATE_LABEL = 35,
-	kOhplH20Op_LABEL_SET_COLOR = 36,
-	kOhplH20Op_LABEL_SET_FONT_SIZE = 37,
-	kOhplH20Op_TEXT_LENGTH = 38,
-	kOhplH20Op_ITEM_PROP_GET = 39,
-	kOhplH20Op_PROP_TYPE = 40,
-	kOhplH20Op_PROP_TEXT = 41,
-	kOhplH20Op_PROP_GFX = 42,
-	kOhplH20Op_WIDGET_GET_TEXT = 43,
-	kOhplH20Op_DESTROY_WIDGET = 44,
-	kOhplH20Op_SET_DESTROYING = 45,
-	kOhplH20Op_WIDGET_SET_VISIBLE = 46,
-	kOhplH20Op_WIDGET_SET_ENABLED = 47,
-	kOhplH20Op_WIDGET_IS_ENABLED = 48,
-	kOhplH20Op_CLIP_GET_CURRENT = 49,
-	kOhplH20Op_SET_CALL = 50,
-	kOhplH20Op_WIDGET_SET_TEXT = 51,
-	kOhplH20Op_WIDGET_SET_FONT_SIZE = 52,
-	kOhplH20Op_TEXTBOX_SET_CAN_EDIT = 53,
-	kOhplH20Op_TEXTBOX_GET_CAN_EDIT = 54,
-	kOhplH20Op_TEXTBOX_BG_SIZE = 55,
-	kOhplH20Op_CREATE_TEXTBOX = 56,
-	kOhplH20Op_CREATE_BUTTON = 57,
-	kOhplH20Op_BUTTON_SET_IMAGE = 58,
-	kOhplH20Op_CHECK_POINT_CLIP = 59,
-	kOhplH20Op_WIDGET_GET_POSITION = 60,
-	kOhplH20Op_WIDGET_IS_VISIBLE = 61,
-	kOhplH20Op_STATE_PTR = 62,
-	kOhplH20Op_CREATE_TAB = 63,
-	kOhplH20Op_CREATE_TAB_LABEL = 64,
-	kOhplH20Op_CREATE_FRAME = 65,
-	kOhplH20Op_WIDGET_SET_CLIP_ACTIVE = 66,
-	kOhplH20Op_ATTACH_CHILD = 67,
-	kOhplH20Op_REMOVE_CHILD = 68,
-	kOhplH20Op_SKIN_FONT_SIZE = 69,
-	kOhplH20Op_TEXT_LENGTH_SKIN = 70,
-	kOhplH20Op_CREATE_BUTTON_AT = 71,
-	kOhplH20Op_FONT_RANGE = 72,
-	kOhplH20Op_GLYPH = 73,
-	kOhplH20Op_FONT_LENGTH = 74,
-	kOhplH20Op_CLIPBOARD = 75,
-	kOhplH20Op_COPY = 76,
-	kOhplH20Op_TO_FLOAT = 77,
-	kOhplH20Op_FLOAT_TEXT = 78,
-	kOhplH20Op_SET_POINTER_GFX = 79,
-	kOhplH20Op_GFX_ANIM_RESET = 80,
-	kOhplH20Op_CREATE_POPUP_KEYBOARD = 81,
-	kOhplH20Op_BUTTON_SETUP = 82,
-	kOhplH20Op_MENU_CALL = 84,
-	kOhplH20Op_WIDGET_TYPE = 85,
-	kOhplH20Op_WIDGET_SET_CHILDREN_OFFSET = 86,
-	kOhplH20Op_IS_CONNECTED = 87,
-	kOhplH20Op_ITEM_TEXT_LENGTH = 88,
-	kOhplH20Op_ITEM_IS_SEPARATOR = 89,
-	kOhplH20Op_WIDGET_SHORTCUT_TEXT = 90,
-};
 
 struct OhplH20Args {
 	uintptr_t w;
@@ -123,7 +31,8 @@ struct OhplH20Host {
 	uintptr_t (*op)(void*, int, OhplH20Args*);
 };
 
-extern const OhplH20Host gH20Host;
+extern "C" const OhplH20Host* ohpl_gw_h20_vt();
+#define gH20Host (*ohpl_gw_h20_vt())
 
 struct OhplH20ListBase {
 	OhplW2List list;

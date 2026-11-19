@@ -762,6 +762,10 @@ pub(crate) fn add_widget(set: *mut super::g1_set::Set, w: W, parent: W) {
     unsafe { g1_set::ohpl_g1_set_add_widget(set, w, parent) };
 }
 
+pub(crate) fn label_set_bg_color(w: W, c: Color) {
+    kind!(w, Label, |k| k.bg_color = c);
+}
+
 pub(crate) fn create_menu_item(set: *mut super::g1_set::Set, text: &[u32], parent: W) -> W {
     let w = shell(gw_host::SHELL_MENUITEM, set, 0, parent);
     gw::set_position(w, v3(0.0, 0.0, 0.0));

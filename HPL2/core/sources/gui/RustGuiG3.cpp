@@ -1,7 +1,9 @@
 #include "gui/RustGuiGw.h"
-#include "gui/RustGuiH20.h"
 
 #include "graphics/FontData.h"
+#include "math/Math.h"
+#include "system/Platform.h"
+#include "system/String.h"
 #include "gui/Gui.h"
 #include "gui/GuiSet.h"
 #include "gui/GuiSkin.h"
@@ -18,6 +20,11 @@
 #include "gui/WidgetMenuItem.h"
 #include "gui/WidgetContextMenu.h"
 #include "gui/WidgetMainMenu.h"
+#include "gui/WidgetTextBox.h"
+#include "gui/WidgetListBox.h"
+#include "gui/WidgetMultiPropertyListBox.h"
+#include "gui/WidgetComboBox.h"
+#include "gui/WidgetTabFrame.h"
 #include "input/Input.h"
 #include "input/Keyboard.h"
 
@@ -26,16 +33,22 @@ namespace hpl {
 	extern "C" {
 	typedef void (*OhplGwRowSink)(void*, const uint32_t*, size_t);
 	typedef void (*OhplGwSink)(void*, const char*, size_t);
+	typedef void (*OhplGwWideSink)(void*, const uint32_t*, size_t);
 	struct OhplGwHost {
 		uintptr_t (*shellNew)(int, void*, void*, int, uintptr_t);
 		void (*shellDelete)(uintptr_t);
 		void (*drawFont)(void*, uintptr_t, const uint32_t*, size_t, const cVector2f*, const cVector3f*, const cColor*, int);
 		float (*fontLength)(uintptr_t, const cVector2f*, const uint32_t*, size_t);
 		void (*fontRows)(uintptr_t, float, float, const cVector2f*, const uint32_t*, size_t, OhplGwRowSink, void*);
+		void (*fontRange)(uintptr_t, int*, int*);
+		bool (*glyphAdvance)(uintptr_t, int, float*);
+		void (*clipboardLoad)(void*, OhplGwWideSink);
+		void (*clipboardSave)(const uint32_t*, size_t);
+		float (*toFloat)(const uint32_t*, size_t, int);
+		void (*floatText)(float, int, void*, OhplGwWideSink);
 		void (*keyName)(void*, bool, int, void*, OhplGwSink);
 	};
 	void ohpl_gw_set_host(OhplGwHost*);
-	void ohpl_gw_set_h20_vt(void*);
 	}
 
 	static uintptr_t ShellNew(int alKind, void *apSet, void *apSkin, int alA, uintptr_t alB)
@@ -58,6 +71,13 @@ namespace hpl {
 		case 10: pWidget = hplNew( cWidgetMenuItem, ((iWidgetMenu*)alB) ); break;
 		case 11: pWidget = hplNew( cWidgetContextMenu, (pSet, pSkin) ); break;
 		case 12: pWidget = hplNew( cWidgetMainMenu, (pSet, pSkin) ); break;
+		case 13: pWidget = hplNew( cWidgetTextBox, (pSet, pSkin, (eWidgetTextBoxInputType)alA) ); break;
+		case 14: pWidget = hplNew( cWidgetListBox, (pSet, pSkin) ); break;
+		case 15: pWidget = hplNew( cWidgetMultiPropertyListBox, (pSet, pSkin) ); break;
+		case 16: pWidget = hplNew( cWidgetComboBox, (pSet, pSkin) ); break;
+		case 17: pWidget = hplNew( cWidgetTabFrame, (pSet, pSkin) ); break;
+		case 18: pWidget = hplNew( cWidgetTab, ((cWidgetTabFrame*)alB) ); break;
+		case 19: pWidget = hplNew( cWidgetTabLabel, (pSet, pSkin) ); break;
 		}
 		return (uintptr_t)pWidget;
 	}
@@ -83,6 +103,41 @@ namespace hpl {
 		for(size_t i=0; i<vRows.size(); ++i) apSink(apCtx, (const uint32_t*)vRows[i].data(), vRows[i].size());
 	}
 
+	static void FontRange(uintptr_t aFont, int *apFirst, int *apLast)
+	{
+		iFontData *pFont = (iFontData*)aFont;
+		*apFirst = pFont->GetFirstChar();
+		*apLast = pFont->GetLastChar();
+	}
+
+	static bool GlyphAdvance(uintptr_t aFont, int alChar, float *apAdvance)
+	{
+		cGlyph *pGlyph = ((iFontData*)aFont)->GetGlyph(alChar);
+		if(pGlyph==NULL) return false;
+		*apAdvance = pGlyph->mfAdvance;
+		return true;
+	}
+
+	static void ClipboardLoad(void *apCtx, OhplGwWideSink apSink)
+	{
+		tWString sText = cPlatform::LoadTextFromClipboard();
+		apSink(apCtx, (const uint32_t*)sText.data(), sText.size());
+	}
+
+	static void ClipboardSave(const uint32_t *apText, size_t alLen) { cPlatform::CopyTextToClipboard(tWString((const wchar_t*)apText, alLen)); }
+
+	static float ToFloat(const uint32_t *apText, size_t alLen, int alDecimals)
+	{
+		float fValue = cString::ToFloat(cString::To8Char(tWString((const wchar_t*)apText, alLen)).c_str(), 0);
+		return cMath::RoundFloatToDecimals(fValue, alDecimals);
+	}
+
+	static void FloatText(float afValue, int alDecimals, void *apCtx, OhplGwWideSink apSink)
+	{
+		tWString sText = cString::ToStringW(afValue, alDecimals, true);
+		apSink(apCtx, (const uint32_t*)sText.data(), sText.size());
+	}
+
 	static void KeyName(void *apInput, bool abModifier, int alKey, void *apCtx, OhplGwSink apSink)
 	{
 		iKeyboard *pKB = ((cInput*)apInput)->GetKeyboard();
@@ -90,9 +145,9 @@ namespace hpl {
 		apSink(apCtx, sName.data(), sName.size());
 	}
 
-	static OhplGwHost gGwHost = { ShellNew, ShellDelete, DrawFontOp, FontLength, FontRows, KeyName };
+	static OhplGwHost gGwHost = { ShellNew, ShellDelete, DrawFontOp, FontLength, FontRows, FontRange, GlyphAdvance, ClipboardLoad, ClipboardSave, ToFloat, FloatText, KeyName };
 
-	void OhplGwRegisterHost() { ohpl_gw_set_host(&gGwHost); ohpl_gw_set_h20_vt((void*)&gH20Host); }
+	void OhplGwRegisterHost() { ohpl_gw_set_host(&gGwHost); }
 
 	//////////////////////////////////////////////////////////////////////////
 	// iWidget text helpers for the widgets still written in C++

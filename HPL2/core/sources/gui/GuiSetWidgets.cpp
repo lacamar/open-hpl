@@ -51,26 +51,6 @@ namespace hpl {
 
 	// Construction of C++ widgets and popups; the set itself is Rust-owned (rust/src/gui/g1_set.rs).
 
-	cWidgetTextBox* cGuiSet::CreateWidgetTextBox( const cVector3f &avLocalPos,
-												  const cVector2f &avSize,
-												  const tWString &asText,
-												  iWidget *apParent,
-												  eWidgetTextBoxInputType aType,
-												  float afNumericAdd,
-												  bool abShowButtons,
-												  const tString& asName)
-	{
-		cWidgetTextBox *pTextBox = hplNew( cWidgetTextBox, (this,GetSkin(),aType) );
-		pTextBox->SetPosition(avLocalPos);
-		pTextBox->SetSize(avSize);
-		pTextBox->SetShowButtons(abShowButtons);
-		pTextBox->SetNumericAdd(afNumericAdd);
-		pTextBox->SetText(asText);
-		pTextBox->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pTextBox, (uintptr_t)apParent);
-		return pTextBox;
-	}
-
 	cWidgetImage* cGuiSet::CreateWidgetImage(const tString &asFile,
 											const cVector3f &avLocalPos,
 											const cVector2f &avSize,
@@ -95,138 +75,6 @@ namespace hpl {
 		return (cWidgetImage*)ohpl_gw_create(this, kOhplGwImage, &avLocalPos, &vSize, NULL, 0, (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0, pGfx);
 	}
 
-	cWidgetListBox* cGuiSet::CreateWidgetListBox(const cVector3f &avLocalPos,
-												const cVector2f &avSize,
-												iWidget *apParent,
-												const tString& asName)
-	{
-		cWidgetListBox *pListBox = hplNew( cWidgetListBox,(this,GetSkin()) );
-		pListBox->SetPosition(avLocalPos);
-		pListBox->SetSize(avSize);
-		pListBox->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pListBox, (uintptr_t)apParent);
-		return pListBox;
-	}
-
-	cWidgetMultiPropertyListBox* cGuiSet::CreateWidgetMultiPropertyListBox(	const cVector3f& avLocalPos,
-																		const cVector2f& avSize,
-																		iWidget* apParent,
-																		const tString& asName)
-	{
-		cWidgetMultiPropertyListBox* pListBox = hplNew( cWidgetMultiPropertyListBox, (this,GetSkin()));
-		pListBox->SetPosition(avLocalPos);
-		pListBox->SetSize(avSize);
-		pListBox->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pListBox, (uintptr_t)apParent);
-		return pListBox;
-	}
-
-	cWidgetComboBox* cGuiSet::CreateWidgetComboBox(	const cVector3f &avLocalPos,
-													const cVector2f &avSize,
-													const tWString &asText,
-													iWidget *apParent,
-													const tString& asName)
-	{
-		cWidgetComboBox *pComboBox = hplNew( cWidgetComboBox, (this,GetSkin()) );
-		pComboBox->SetPosition(avLocalPos);
-		pComboBox->SetSize(avSize);
-		pComboBox->SetText(asText);
-		pComboBox->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pComboBox, (uintptr_t)apParent);
-		return pComboBox;
-	}
-
-	cWidgetMenuItem* cGuiSet::CreateWidgetMenuItem(	const cVector3f &avLocalPos,
-													const cVector2f &avSize,
-													const tWString &asText,
-													iWidget *apParent,
-													const tString& asName)
-	{
-		cWidgetMenuItem *pItem = hplNew( cWidgetMenuItem, ((iWidgetMenu*)apParent) );
-		pItem->SetPosition(avLocalPos);
-		pItem->SetSize(avSize);
-		pItem->SetText(asText);
-		pItem->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pItem, (uintptr_t)apParent);
-		return pItem;
-	}
-
-	cWidgetContextMenu* cGuiSet::CreateWidgetContextMenu(	const cVector3f &avLocalPos,
-													const cVector2f &avSize,
-													const tWString &asText,
-													iWidget *apParent,
-													const tString& asName)
-	{
-		cWidgetContextMenu *pMenu = hplNew( cWidgetContextMenu, (this,GetSkin()) );
-		pMenu->SetPosition(avLocalPos);
-		pMenu->SetSize(avSize);
-		pMenu->SetText(asText);
-		pMenu->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pMenu, (uintptr_t)apParent);
-		return pMenu;
-	}
-
-	cWidgetMainMenu* cGuiSet::CreateWidgetMainMenu(iWidget *apParent,
-													const tString& asName)
-	{
-		cWidgetMainMenu *pMenu = hplNew( cWidgetMainMenu, (this,GetSkin()) );
-		pMenu->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pMenu, (uintptr_t)apParent);
-		return pMenu;
-	}
-
-	cWidgetTabLabel* cGuiSet::CreateWidgetTabLabel(	const cVector3f &avLocalPos,
-													const cVector2f &avSize,
-													const tWString &asText,
-													iWidget *apParent,
-													const tString& asName)
-	{
-		cWidgetTabLabel *pLabel = hplNew( cWidgetTabLabel, (this,GetSkin()) );
-		pLabel->SetPosition(avLocalPos);
-		pLabel->SetSize(avSize);
-		pLabel->SetText(asText);
-		pLabel->SetName(asName);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pLabel, (uintptr_t)apParent);
-		return pLabel;
-	}
-
-	cWidgetTab* cGuiSet::CreateWidgetTab(	const cVector3f &avLocalPos,
-													const cVector2f &avSize,
-													const tWString &asText,
-													iWidget *apParent,
-													const tString& asName)
-	{
-		cWidgetTab *pTab = hplNew( cWidgetTab, ((cWidgetTabFrame*)apParent) );
-        pTab->SetPosition(avLocalPos);
-		pTab->SetSize(avSize);
-		pTab->SetText(asText);
-		pTab->SetName(asName);
-
-		ohpl_g1_set_add_widget(this, (uintptr_t)pTab, (uintptr_t)apParent);
-		return pTab;
-	}
-
-	cWidgetTabFrame* cGuiSet::CreateWidgetTabFrame(	const cVector3f &avLocalPos,
-													const cVector2f &avSize,
-													const tWString &asText,
-													iWidget *apParent,
-													bool abAllowHScroll,
-													bool abAllowVScroll,
-													const tString& asName)
-	{
-		cWidgetTabFrame *pFrame = hplNew( cWidgetTabFrame, (this,GetSkin()) );
-        pFrame->SetPosition(avLocalPos);
-		pFrame->SetSize(avSize);
-		pFrame->SetText(asText);
-		pFrame->SetName(asName);
-		pFrame->SetHorizontalScrollEnabled(abAllowHScroll);
-		pFrame->SetVerticalScrollEnabled(abAllowVScroll);
-		ohpl_g1_set_add_widget(this, (uintptr_t)pFrame, (uintptr_t)apParent);
-		return pFrame;
-	}
-
-	//-----------------------------------------------------------------------
-
 	cGuiPopUpUIKeyboard* cGuiSet::CreatePopUpUIKeyboard(cWidgetTextBox* apTarget)
 	{
 		cGuiSet *pSet = apTarget->GetSet();
@@ -236,11 +84,6 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-
-	void cGuiSet::ShowContextMenu( cWidgetContextMenu* apMenu, const cVector3f& avPosition )
-	{
-		ohpl_gw_show_context_menu(this, (uintptr_t)apMenu, avPosition.x, avPosition.y, avPosition.z);
-	}
 
 	void cGuiSet::SetRootWidgetClips(bool abX)
 	{

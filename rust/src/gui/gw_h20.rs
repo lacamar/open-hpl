@@ -3,7 +3,6 @@
 //! keep only forwarders.
 
 use std::ffi::c_void;
-use std::sync::atomic::{AtomicPtr, Ordering};
 
 use super::gw::{self, with};
 use super::gw_kinds::Kind;
@@ -41,17 +40,8 @@ const MSG_UI_BUTTON_RELEASE: i32 = 20;
 const MSG_UI_BUTTON_DBL: i32 = 21;
 const MSG_GET_UI_NAV_FOCUS: i32 = 22;
 
-static VT: AtomicPtr<HostVt> = AtomicPtr::new(std::ptr::null_mut());
-
-/// # Safety
-/// `vt` is a static table valid for the rest of the run.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gw_set_h20_vt(vt: *mut HostVt) {
-    VT.store(vt, Ordering::Release);
-}
-
 pub(crate) fn vt() -> *const HostVt {
-    VT.load(Ordering::Acquire)
+    &raw const super::gw_ops::VT
 }
 
 /// The state pointer of a complex widget (boxed, stable while the widget lives).
@@ -392,4 +382,118 @@ pub(crate) fn update_properties(w: W) {
             _ => {}
         }
     }
+}
+
+// ---------------------------------------------------------------- creation
+
+/// The `cGuiSet::CreateWidget*` of the complex kinds: shell, position, size, text, name, then the set.
+///
+/// # Safety
+/// `set` is a live set; `text` and `name` are readable for their lengths.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_gw_create_c(
+    set: *mut std::ffi::c_void,
+    kind: i32,
+    pos: *const crate::types::Vector3f,
+    size: *const crate::types::Vector2f,
+    text: *const u32,
+    tl: usize,
+    parent: W,
+    name: *const u8,
+    nl: usize,
+    a: i32,
+    b: i32,
+    num_add: f32,
+) -> W {
+    use super::gw_host as gh;
+    use super::gw_kinds::{add_widget, set_name, shell};
+    let set: *mut super::g1_set::Set = set.cast();
+    // SAFETY: caller contract.
+    let (pos, size, text, name) = unsafe {
+        (
+            pos.as_ref().copied().unwrap_or_default(),
+            size.as_ref().copied().unwrap_or_default(),
+            if text.is_null() {
+                &[][..]
+            } else {
+                std::slice::from_raw_parts(text, tl)
+            },
+            if name.is_null() {
+                &[][..]
+            } else {
+                std::slice::from_raw_parts(name, nl)
+            },
+        )
+    };
+    let sh = match kind {
+        KIND_TEXTBOX => gh::SHELL_TEXTBOX,
+        KIND_LIST => gh::SHELL_LIST,
+        KIND_MPLIST => gh::SHELL_MPLIST,
+        KIND_COMBO => gh::SHELL_COMBO,
+        KIND_TABFRAME => gh::SHELL_TABFRAME,
+        KIND_TAB => gh::SHELL_TAB,
+        KIND_TABLABEL => gh::SHELL_TABLABEL,
+        super::gw_menu::KIND_ITEM => gh::SHELL_MENUITEM,
+        super::gw_menu::KIND_CTX => gh::SHELL_CTXMENU,
+        super::gw_menu::KIND_MAIN => gh::SHELL_MAINMENU,
+        _ => return 0,
+    };
+    let arg = if kind == KIND_TEXTBOX { a } else { 0 };
+    let w = shell(
+        sh,
+        set,
+        arg,
+        if kind == KIND_TAB || kind == super::gw_menu::KIND_ITEM {
+            parent
+        } else {
+            0
+        },
+    );
+    match kind {
+        KIND_TEXTBOX => {
+            gw::set_position(w, pos);
+            gw::set_size(w, size);
+            if let Some(P::Text(t)) = ptr(w) {
+                // SAFETY: the state is live.
+                unsafe {
+                    (*t).show_buttons = b != 0;
+                    (*t).st.numeric_add = num_add;
+                }
+            }
+            gw::set_text(w, text);
+        }
+        super::gw_menu::KIND_MAIN => {}
+        _ => {
+            gw::set_position(w, pos);
+            gw::set_size(w, size);
+            if matches!(
+                kind,
+                KIND_COMBO
+                    | KIND_TABFRAME
+                    | KIND_TAB
+                    | KIND_TABLABEL
+                    | super::gw_menu::KIND_ITEM
+                    | super::gw_menu::KIND_CTX
+            ) {
+                gw::set_text(w, text);
+            }
+            if kind == KIND_TABFRAME
+                && let Some(P::TabFrame(f)) = ptr(w)
+            {
+                // SAFETY: as in `call`.
+                unsafe {
+                    f::ohpl_h20_tf_set_hori_scroll(vt(), f, a != 0);
+                    f::ohpl_h20_tf_set_vert_scroll(vt(), f, b != 0);
+                }
+            }
+        }
+    }
+    set_name(w, name);
+    add_widget(set, w, parent);
+    w
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_gw_h20_vt() -> *const HostVt {
+    vt()
 }

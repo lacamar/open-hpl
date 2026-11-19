@@ -602,22 +602,6 @@ pub(crate) fn clear_menu_items(w: W) {
 }
 
 /// # Safety
-/// `a` is a live argument block.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gw_menu_call(a: *mut Args) -> usize {
-    // SAFETY: caller contract.
-    unsafe { a.as_mut() }.map_or(0, menu_call)
-}
-
-/// # Safety
-/// `a` is a live argument block.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gw_item_op(code: i32, a: *mut Args) -> usize {
-    // SAFETY: caller contract.
-    unsafe { a.as_mut() }.map_or(0, |a| item_op(code, a))
-}
-
-/// # Safety
 /// `p` is readable for `n` wide characters.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_gw_menu_add_item(w: W, p: *const u32, n: usize) -> W {

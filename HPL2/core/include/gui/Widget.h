@@ -41,7 +41,6 @@ namespace hpl {
 	class iFontData;
 
 	struct OhplGw;
-	struct OhplH20Access;
 	struct OhplG2PopupHost;
 
 	struct OhplGwPub { cColor fontColor, fontHighlight; cVector2f fontSize; cColor colorMul; };
@@ -131,7 +130,6 @@ namespace hpl {
 	class iWidget
 	{
 	friend class cGuiSet;
-	friend struct OhplH20Access;
 	friend struct OhplG2PopupHost;
 	public:
 		iWidget(eWidgetType aType,cGuiSet *apSet, cGuiSkin *apSkin)

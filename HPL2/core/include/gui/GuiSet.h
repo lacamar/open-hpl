@@ -225,7 +225,10 @@ namespace hpl {
 											eWidgetTextBoxInputType aType = eWidgetTextBoxInputType_Normal,
 											float afNumericAdd=1.0f,
 											bool abShowButtons=true,
-											const tString& asName = "" );
+											const tString& asName = "" )
+		{
+			return (cWidgetTextBox*)ohpl_gw_create_c(this, kOhplGwTextBox, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), (int)aType, abShowButtons, afNumericAdd);
+		}
 
 		cWidgetCheckBox* CreateWidgetCheckBox(const cVector3f &avLocalPos=0,
 											const cVector2f &avSize=0,
@@ -247,45 +250,69 @@ namespace hpl {
 		cWidgetListBox* CreateWidgetListBox(const cVector3f &avLocalPos=0,
 											const cVector2f &avSize=0,
 											iWidget *apParent=NULL,
-											const tString& asName = "" );
+											const tString& asName = "" )
+		{
+			tWString asText; return (cWidgetListBox*)ohpl_gw_create_c(this, kOhplGwList, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0);
+		}
 
 		cWidgetMultiPropertyListBox* CreateWidgetMultiPropertyListBox(	const cVector3f& avLocalPos=0,
 																		const cVector2f& avSize=0,
 																		iWidget* apParent=NULL,
-																		const tString& asName = "");
+																		const tString& asName = "")
+		{
+			tWString asText; return (cWidgetMultiPropertyListBox*)ohpl_gw_create_c(this, kOhplGwMpList, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0);
+		}
 
 		cWidgetComboBox* CreateWidgetComboBox(const cVector3f &avLocalPos=0,
 												const cVector2f &avSize=0,
 												const tWString &asText=_W(""),
 												iWidget *apParent=NULL,
-												const tString& asName = "");
+												const tString& asName = "")
+		{
+			return (cWidgetComboBox*)ohpl_gw_create_c(this, kOhplGwCombo, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0);
+		}
 
 		cWidgetMenuItem* CreateWidgetMenuItem(const cVector3f &avLocalPos=0,
 												const cVector2f &avSize=0,
 												const tWString &asText=_W(""),
 												iWidget *apParent=NULL,
-												const tString& asName = "");
+												const tString& asName = "")
+		{
+			return (cWidgetMenuItem*)ohpl_gw_create_c(this, kOhplGwMenuItem, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0);
+		}
 
 		cWidgetContextMenu* CreateWidgetContextMenu(const cVector3f &avLocalPos=0,
 												const cVector2f &avSize=0,
 												const tWString &asText=_W(""),
 												iWidget *apParent=NULL,
-												const tString& asName = "");
+												const tString& asName = "")
+		{
+			return (cWidgetContextMenu*)ohpl_gw_create_c(this, kOhplGwCtxMenu, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0);
+		}
 
 		cWidgetMainMenu* CreateWidgetMainMenu(iWidget *apParent=NULL,
-												const tString& asName = "");
+												const tString& asName = "")
+		{
+			cVector3f avLocalPos; cVector2f avSize; tWString asText; return (cWidgetMainMenu*)ohpl_gw_create_c(this, kOhplGwMainMenu, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0);
+		}
 
 		cWidgetTabLabel* CreateWidgetTabLabel(const cVector3f &avLocalPos=0,
 												const cVector2f &avSize=0,
 												const tWString &asText=_W(""),
 												iWidget *apParent=NULL,
-												const tString& asName = "");
+												const tString& asName = "")
+		{
+			return (cWidgetTabLabel*)ohpl_gw_create_c(this, kOhplGwTabLabel, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0);
+		}
 
 		cWidgetTab* CreateWidgetTab(const cVector3f &avLocalPos=0,
 												const cVector2f &avSize=0,
 												const tWString &asText=_W(""),
 												iWidget *apParent=NULL,
-												const tString& asName = "");
+												const tString& asName = "")
+		{
+			return (cWidgetTab*)ohpl_gw_create_c(this, kOhplGwTab, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), 0, 0, 0);
+		}
 
 		cWidgetTabFrame* CreateWidgetTabFrame(const cVector3f &avLocalPos=0,
 												const cVector2f &avSize=0,
@@ -293,7 +320,10 @@ namespace hpl {
 												iWidget *apParent=NULL,
 												bool abAllowHScroll = true,
 												bool abAllowVScroll = true,
-												const tString& asName = "");
+												const tString& asName = "")
+		{
+			return (cWidgetTabFrame*)ohpl_gw_create_c(this, kOhplGwTabFrame, &avLocalPos, &avSize, U(asText), asText.size(), (uintptr_t)apParent, asName.data(), asName.size(), abAllowHScroll, abAllowVScroll, 0);
+		}
 
 		cWidgetGroup* CreateWidgetGroup(const cVector3f &avLocalPos=0,
 												const cVector2f &avSize=0,
@@ -361,7 +391,7 @@ namespace hpl {
 		bool PopUpIsActive(){ return ohpl_g1_set_popup_is_active(this); }
 		void AddPopUpCount(int alX){ ohpl_g1_set_add_popup_count(this, alX); }
 
-		void ShowContextMenu( cWidgetContextMenu* apMenu, const cVector3f& avPosition );
+		void ShowContextMenu( cWidgetContextMenu* apMenu, const cVector3f& avPosition ){ ohpl_gw_show_context_menu(this, (uintptr_t)apMenu, avPosition.x, avPosition.y, avPosition.z); }
 
 		void RemoveWindow(cWidgetWindow* apWin){ ohpl_g1_set_remove_window(this, (uintptr_t)apWin); }
 		void SetLastWindowZ(float afX){ ohpl_g1_set_set_last_window_z(this, afX); }
