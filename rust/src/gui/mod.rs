@@ -65,3 +65,5 @@ mod tests_widget3;
 pub mod gw;
 pub mod gw_host;
 pub mod gw_kinds;
+
+pub(crate) mod direct;

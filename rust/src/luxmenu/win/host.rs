@@ -94,14 +94,11 @@ mod ffi {
             kill_escape: i32,
             copy_focus: bool,
         ) -> W;
-        ohpl_a9h_set(set: W, op: i32, w: W, arg: usize) -> usize;
         ohpl_a9h_w(w: W, op: i32, arg: usize) -> usize;
         ohpl_a9h_w_set_f(w: W, op: i32, v: *const f32);
-        ohpl_a9h_w_get_f(w: W, op: i32, out: *mut f32);
         ohpl_a9h_w_str(w: W, op: i32, t: *const u32, n: usize, arg: usize) -> usize;
         ohpl_a9h_w_get_str(w: W, op: i32, idx: i32, sink: Sink, ctx: *mut c_void);
         ohpl_a9h_w_cb(w: W, msg: i32, obj: usize);
-        ohpl_a9h_w_nav(w: W, dir: i32, target: W);
         ohpl_a9h_text_width(w: W, t: *const u32, n: usize) -> f32;
         ohpl_a9h_image_file(w: W, t: *const u32, n: usize);
         ohpl_a9h_lux(op: i32, arg: usize) -> usize;
@@ -227,7 +224,7 @@ pub mod set_op {
     pub const GET_ATTENTION: i32 = 12;
 }
 
-mod wop {
+pub(super) mod wop {
     pub const ENABLED: i32 = 0;
     pub const VISIBLE: i32 = 1;
     pub const IS_VISIBLE: i32 = 2;
@@ -265,6 +262,7 @@ pub mod f {
 }
 
 mod wstr {
+    #[cfg(test)]
     pub const TEXT: i32 = 0;
     pub const ILLEGAL: i32 = 1;
     pub const LIST_ADD: i32 = 2;
@@ -290,7 +288,25 @@ pub enum Arrow {
     Left = 3,
 }
 
+/// Runs the Rust-owned path first; the tests replay against the fake host.
+#[cfg(not(test))]
+macro_rules! direct {
+    ($e:expr) => {
+        if let Some(r) = $e {
+            return r;
+        }
+    };
+}
+
+#[cfg(test)]
+macro_rules! direct {
+    ($e:expr) => {};
+}
+
 pub fn create(set: W, kind: Kind, parent: W, pos: [f32; 3], size: [f32; 2], text: &[u32]) -> W {
+    direct!(super::direct::create(
+        set, kind, parent, pos, size, false, text
+    ));
     host!(ffi::ohpl_a9h_new(
         set,
         kind as i32,
@@ -304,6 +320,15 @@ pub fn create(set: W, kind: Kind, parent: W, pos: [f32; 3], size: [f32; 2], text
 }
 
 pub fn create_window(set: W, close: bool, pos: [f32; 3], size: [f32; 2], text: &[u32]) -> W {
+    direct!(super::direct::create(
+        set,
+        Kind::Window,
+        W::NULL,
+        pos,
+        size,
+        close,
+        text
+    ));
     host!(ffi::ohpl_a9h_new(
         set,
         Kind::Window as i32,
@@ -363,6 +388,11 @@ pub fn popup(
 
 impl W {
     pub fn set_op(self, op: i32, w: W, arg: usize) -> usize {
+        #[cfg(not(test))]
+        {
+            super::direct::set(self, op, w, arg).unwrap_or_default()
+        }
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_set(self, op, w, arg))
     }
 
@@ -383,6 +413,7 @@ impl W {
     }
 
     fn op(self, op: i32, arg: usize) -> usize {
+        direct!(super::direct::op(self, op, arg));
         host!(ffi::ohpl_a9h_w(self, op, arg))
     }
 
@@ -493,6 +524,9 @@ impl W {
     }
 
     pub fn set_text(self, text: &[u32]) {
+        #[cfg(not(test))]
+        super::direct::set_text(self, text);
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_w_str(
             self,
             wstr::TEXT,
@@ -513,6 +547,11 @@ impl W {
     }
 
     pub fn text(self) -> WStr {
+        #[cfg(not(test))]
+        {
+            super::direct::text(self)
+        }
+        #[cfg(test)]
         collect(|s, c| host!(ffi::ohpl_a9h_w_get_str(self, wstr::TEXT, 0, s, c)))
     }
 
@@ -521,6 +560,7 @@ impl W {
     }
 
     pub fn set_f(self, op: i32, v: &[f32]) {
+        direct!(super::direct::set_f(self, op, v).then_some(()));
         host!(ffi::ohpl_a9h_w_set_f(self, op, v.as_ptr()));
     }
 
@@ -538,12 +578,18 @@ impl W {
 
     pub fn size(self) -> [f32; 2] {
         let mut o = [0.0f32; 2];
+        #[cfg(not(test))]
+        o.copy_from_slice(&super::direct::get_f(self, f::SIZE));
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_w_get_f(self, f::SIZE, o.as_mut_ptr()));
         o
     }
 
     pub fn local_position(self) -> [f32; 3] {
         let mut o = [0.0f32; 3];
+        #[cfg(not(test))]
+        o.copy_from_slice(&super::direct::get_f(self, f::POS));
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_w_get_f(self, f::POS, o.as_mut_ptr()));
         o
     }
@@ -553,6 +599,9 @@ impl W {
     }
 
     pub fn nav(self, dir: Arrow, target: W) {
+        #[cfg(not(test))]
+        super::direct::nav(self, dir as i32, target);
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_w_nav(self, dir as i32, target));
     }
 

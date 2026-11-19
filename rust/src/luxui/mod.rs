@@ -17,6 +17,7 @@ mod tests;
 pub(crate) mod handlers_ffi;
 mod hint_handler;
 pub mod host;
+mod inv_direct;
 #[cfg(test)]
 mod inv_tests;
 pub mod invffi;

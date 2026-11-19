@@ -66,6 +66,11 @@ size_t SndPlay3d(OhplA12aBytes aFile, const float *apPos, float afMin, float afM
 	return (size_t)e;
 }
 
+void Log(OhplA12aBytes aLine)
+{
+	OhplA12Log("%s", Str(aLine).c_str());
+}
+
 void SndFadeOut(size_t aE, float afSpeed)
 {
 	OhplA12Log("snd_fade_out 1 %s", OhplA12F(afSpeed).c_str());
@@ -174,25 +179,11 @@ void FontDestroy(size_t aFont)
 	gpBase->mpEngine->GetResources()->GetFontManager()->Destroy((iFontData*)aFont);
 }
 
-size_t GfxRect(int alAdditive)
-{
-	size_t p = (size_t)gpBase->mpEngine->GetGui()->CreateGfxFilledRect(cColor(1,1), alAdditive ? eGuiMaterial_Additive : eGuiMaterial_Modulative);
-	OhplA12Log("gfx_rect %s => 1", alAdditive ? "add" : "mod");
-	return p;
-}
-
 void Hud(float *apOut)
 {
 	apOut[0] = gpBase->mvHudVirtualStartPos.x; apOut[1] = gpBase->mvHudVirtualStartPos.y; apOut[2] = gpBase->mvHudVirtualStartPos.z;
 	apOut[3] = gpBase->mvHudVirtualSize.x; apOut[4] = gpBase->mvHudVirtualSize.y;
 	OhplA12Log("hud => %s", Floats(apOut, 5).c_str());
-}
-
-void DrawGfx(size_t aSet, size_t aGfx, const float *apPos, const float *apSize, const float *apCol)
-{
-	OhplA12Log("draw_gfx 1 %s %s %s", Floats(apPos, 3).c_str(), Floats(apSize, 2).c_str(), Floats(apCol, 4).c_str());
-	cGuiSet *pSet = aSet ? (cGuiSet*)aSet : gpBase->mpGameHudSet;
-	pSet->DrawGfx((cGuiGfxElement*)aGfx, cVector3f(apPos[0], apPos[1], apPos[2]), cVector2f(apSize[0], apSize[1]), cColor(apCol[0], apCol[1], apCol[2], apCol[3]));
 }
 
 void DrawFont(size_t aFont, const float *apPos, const float *apSize, const float *apCol, int alCenter, const unsigned *apText, size_t alLen)
@@ -390,9 +381,9 @@ void PReplay(size_t aEffect, size_t aInput, size_t aFb, const OhplGa9bPOp *apOps
 const OhplA12aHost gHost =
 {
 	SndValid, SndPlayGui, SndPlay3d, SndFadeOut, SndStop, SndPause, SndVolMul, SndElapsed, SndSetElapsed, SndCommentary, SndResetWorld,
-	GuiSound, Translate, Wrap, FontLoad, FontDestroy, GfxRect, Hud, DrawGfx, DrawFont,
+	GuiSound, Translate, Wrap, FontLoad, FontDestroy, Hud, DrawFont,
 	CfgF32, CfgVec2, CfgStr, CfgColor, Subtitles, GameTime, Player, Map, Post,
-	RReflection, RCollides, ROutline, RClip, RReplay, PReplay,
+	RReflection, RCollides, ROutline, RClip, RReplay, PReplay, Log,
 };
 
 }

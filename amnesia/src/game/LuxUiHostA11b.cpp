@@ -26,8 +26,6 @@ static void Put(OhplA11bSink32 apSink, void *apCtx, const tWString &asX)
 	apSink(apCtx, (const unsigned*)asX.data(), asX.size());
 }
 
-static std::map<size_t, tString> gGfxNames;
-
 static cGuiSet *Set(size_t alSet)
 {
 	return alSet ? (cGuiSet*)alSet : gpBase->mpGameHudSet;
@@ -65,36 +63,6 @@ static int UserBool(OhplA11bBytes aSec, OhplA11bBytes aKey, int alDef)
 static void SetUserBool(OhplA11bBytes aSec, OhplA11bBytes aKey, int alX)
 {
 	gpBase->mpUserConfig->SetBool(Str(aSec), Str(aKey), alX != 0);
-}
-
-static size_t GfxRect(const float *apCol)
-{
-	size_t l = (size_t)gpBase->mpEngine->GetGui()->CreateGfxFilledRect(cColor(apCol[0], apCol[1], apCol[2], apCol[3]), eGuiMaterial_Alpha);
-	gGfxNames[l] = "rect";
-	return l;
-}
-
-static size_t GfxImage(OhplA11bBytes aFile)
-{
-	size_t l = (size_t)gpBase->mpEngine->GetGui()->CreateGfxImage(Str(aFile), eGuiMaterial_Alpha);
-	gGfxNames[l] = Str(aFile);
-	return l;
-}
-
-static size_t GfxTexture(OhplA11bBytes aFile)
-{
-	size_t l = (size_t)gpBase->mpEngine->GetGui()->CreateGfxTexture(Str(aFile), eGuiMaterial_Alpha, eTextureType_2D, cColor(1,1), false);
-	gGfxNames[l] = Str(aFile);
-	return l;
-}
-
-static void GfxSize(size_t alGfx, int alWhich, float *apOut)
-{
-	cGuiGfxElement *pGfx = (cGuiGfxElement*)alGfx;
-	cVector2f v = alWhich == 0 ? pGfx->GetActiveSize() : pGfx->GetImageSize();
-	apOut[0] = v.x;
-	apOut[1] = v.y;
-	OhplA11Ans("gfx_size", OhplA11Esc(gGfxNames[alGfx])+"|"+(alWhich ? "1" : "0"), OhplA11Num(v.x)+"|"+OhplA11Num(v.y));
 }
 
 static void WrapRows(size_t alFont, float afWidth, float afLine, const float *apSize, const unsigned *apText, size_t alN,
@@ -187,15 +155,6 @@ static int PTest()
 	return gpBase->mbPTestActivated ? 1 : 0;
 }
 
-static void DrawGfx(size_t alSet, size_t alGfx, const float *apPos, const float *apSize, const float *apCol, int alMat)
-{
-	cVector3f vPos(apPos[0], apPos[1], apPos[2]);
-	cVector2f vSize = apSize ? cVector2f(apSize[0], apSize[1]) : cVector2f(-1);
-	cColor col(apCol[0], apCol[1], apCol[2], apCol[3]);
-	OhplA11LogGfx(vPos, vSize, col, alMat);
-	Set(alSet)->DrawGfx((cGuiGfxElement*)alGfx, vPos, vSize, col, (eGuiMaterial)alMat);
-}
-
 static void DrawFont(size_t alSet, size_t alFont, const float *apPos, const float *apSize, const float *apCol, int alAlign,
 					int alMat, const unsigned *apText, size_t alN, int alPrefix)
 {
@@ -229,12 +188,22 @@ static void Callback(size_t alCb, int alYes)
 	if(alCb) ((iLuxMessageCallback*)alCb)->OnPress(alYes != 0);
 }
 
+static void LogGfx(const float *apPos, const float *apSize, const float *apCol, int alMat)
+{
+	OhplA11LogGfx(cVector3f(apPos[0], apPos[1], apPos[2]), cVector2f(apSize[0], apSize[1]), cColor(apCol[0], apCol[1], apCol[2], apCol[3]), alMat);
+}
+
+static void Answer(OhplA11bBytes aOp, OhplA11bBytes aIn, OhplA11bBytes aOut)
+{
+	OhplA11Ans(Str(aOp).c_str(), Str(aIn), Str(aOut));
+}
+
 void OhplA11bInitHost()
 {
 	static const OhplA11bHost host = {
-		MenuStr, MenuF32, MenuVec2, UserBool, SetUserBool, GfxRect, GfxImage, GfxTexture, GfxSize, WrapRows, FontLen,
-		FontRange, FontGlyph, ParseString, StringDuration, GuiSound, SetUpdateActive, InputName, Hud, PTest, DrawGfx,
-		DrawFont, Translate, Chinese, Callback
+		MenuStr, MenuF32, MenuVec2, UserBool, SetUserBool, WrapRows, FontLen,
+		FontRange, FontGlyph, ParseString, StringDuration, GuiSound, SetUpdateActive, InputName, Hud, PTest,
+		DrawFont, Translate, Chinese, Callback, LogGfx, Answer
 	};
 	ohpl_a11b_set_host(&host);
 }

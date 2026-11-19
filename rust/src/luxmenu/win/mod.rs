@@ -2,6 +2,8 @@
 //! the window objects and the main menu (`mainmenu`) drives them; every widget call goes through
 //! `host`.
 
+#[cfg(not(test))]
+mod direct;
 #[cfg(test)]
 pub(crate) mod fake;
 pub mod host;

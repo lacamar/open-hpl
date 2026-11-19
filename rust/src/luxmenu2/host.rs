@@ -239,6 +239,9 @@ unsafe extern "C" fn collect(ctx: *mut c_void, p: *const u32, n: usize) {
 
 impl Host for HostVt {
     fn call(&self, op: i32, args: &[Arg]) -> Res {
+        if let Some(r) = super::a10b_direct::call(op, args) {
+            return r;
+        }
         let raw: Vec<RawArg> = args
             .iter()
             .map(|a| match *a {

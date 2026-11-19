@@ -261,6 +261,7 @@ extern "C"
 	uint64_t ohpl_in_new();
 	void ohpl_in_free(uint64_t h);
 	void ohpl_in_set_host(OhplGa9Call call);
+	void ohpl_in_set_scripted(bool on);
 	void ohpl_in_update(uint64_t h);
 	void ohpl_in_post_render(uint64_t h);
 	void ohpl_in_change_state(uint64_t h, int32_t state);

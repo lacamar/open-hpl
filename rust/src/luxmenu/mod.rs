@@ -12,6 +12,8 @@ mod tests;
 mod fake;
 mod ffi_win;
 pub mod host;
+#[cfg(not(test))]
+mod host_direct;
 pub mod keyconfig_win;
 pub mod options_win;
 pub mod store;

@@ -22,6 +22,7 @@ pub(crate) mod fxffi;
 mod fxobj;
 pub mod host;
 pub(crate) mod host12;
+mod host12_direct;
 mod insanity_h;
 mod music_h;
 mod rend;

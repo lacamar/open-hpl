@@ -132,16 +132,12 @@ namespace
 	{
 		cOhplS8Shell *s = (cOhplS8Shell*)apCtx;
 		const OhplS8Arg *a = c->a;
-		cGui *pGui = s->mpEngine ? s->mpEngine->GetGui() : NULL;
 		iLowLevelGraphics *pLow = s->mpEngine ? s->mpEngine->GetGraphics()->GetLowLevel() : NULL;
 		switch (c->op)
 		{
-		case kS8_SetNew: c->u[0] = (uint64_t)pGui->CreateSet(Str(a[0]), pGui->CreateSkin("gui_default.skin")); break;
 		case kS8_ViewportNew: c->u[0] = (uint64_t)s->mpEngine->GetScene()->CreateViewport(NULL, NULL, a[0].v != 0); break;
 		case kS8_ViewportAddSet: Ptr<cViewport>(a[0])->AddGuiSet(Ptr<cGuiSet>(a[1])); break;
 		case kS8_ViewportActive: Ptr<cViewport>(a[0])->SetActive(a[1].v != 0); break;
-		case kS8_GfxRect: c->u[0] = (uint64_t)pGui->CreateGfxFilledRect(cColor(F(a[0]), F(a[1]), F(a[2]), F(a[3])), (eGuiMaterial)I(a[4])); break;
-		case kS8_GfxTex: c->u[0] = (uint64_t)pGui->CreateGfxTexture(Str(a[0]), (eGuiMaterial)I(a[1]), eTextureType_2D); break;
 		case kS8_DrawFont:
 			Ptr<cGuiSet>(a[0])->DrawFont(WStr(a[10]), Ptr<iFontData>(a[1]), V3(a + 2), cVector2f(F(a[5]), F(a[5])),
 										 cColor(F(a[6]), F(a[7]), F(a[8]), F(a[9])), eFontAlign_Left);
@@ -169,11 +165,6 @@ namespace
 			c->u[0] = (uint64_t)pButton;
 			break;
 		}
-		case kS8_SliderSet: Ptr<cWidgetSlider>(a[0])->SetValue(I(a[1]), false); break;
-		case kS8_SliderGet:
-			c->u[0] = Ptr<cWidgetSlider>(a[0])->GetValue();
-			c->u[1] = Ptr<cWidgetSlider>(a[0])->GetMaxValue();
-			break;
 		case kS8_Music: s->mpEngine->GetSound()->GetMusicHandler()->Play(Str(a[0]), F(a[1]), F(a[2]), a[3].v != 0, a[4].v != 0); break;
 		case kS8_Now: c->u[0] = cPlatform::GetApplicationTime(); break;
 		case kS8_Screen:
@@ -231,13 +222,6 @@ namespace
 				c->u[4] = pMouse->GetRelPosition().y;
 				c->u[5] = pMouse->ButtonIsDown(eMouseButton_Left);
 			}
-			break;
-		case kS8_GuiMousePos: pGui->SendMousePos(cVector2l(I(a[0]), I(a[1])), cVector2l(I(a[2]), I(a[3]))); break;
-		case kS8_Click:
-			if (a[0].v)
-				pGui->SendMouseClickDown(eGuiMouseButton_Left);
-			else
-				pGui->SendMouseClickUp(eGuiMouseButton_Left);
 			break;
 		case kS8_KeyPoll:
 		{

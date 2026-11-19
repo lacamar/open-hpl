@@ -230,69 +230,22 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 	iWidget* pW = (iWidget*)a.p[0];
 	cGuiSet* pSet = (cGuiSet*)a.p[0];
 	iWidget* pParent = (iWidget*)a.p[1];
-	cColor col(a.f[0], a.f[1], a.f[2], a.f[3]);
 	switch(alOp)
 	{
-	case eWindow: return (size_t)pSet->CreateWidgetWindow(eWidgetWindowButtonFlag_None, Pos(a), Size(a), Wide(a, 0));
-	case eButton: return (size_t)pSet->CreateWidgetButton(Pos(a), Size(a), Wide(a, 0), pParent);
-	case eLabel: return (size_t)pSet->CreateWidgetLabel(Pos(a), Size(a), Wide(a, 0), pParent);
 	case eLabelNamed: return (size_t)pSet->CreateWidgetLabel(Pos(a), 0, Wide(a, 0), NULL, Narrow(a, 1));
-	case eCheckBox: return (size_t)pSet->CreateWidgetCheckBox(Pos(a), Size(a), Wide(a, 0), pParent);
 	case eCombo: return (size_t)pSet->CreateWidgetComboBox(Pos(a), Size(a), _W(""), pParent);
-	case eSlider: return (size_t)pSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal, Pos(a), Size(a), 0, pParent);
 	case eTabFrame: return (size_t)pSet->CreateWidgetTabFrame(Pos(a), Size(a), _W(""), pParent, false, true);
 	case eImage:
-		if(a.n[1] == 0)
-			return (size_t)pSet->CreateWidgetImage(Narrow(a, 0), Pos(a), Size(a), eGuiMaterial_Alpha, false, pParent);
 		return (size_t)pSet->CreateWidgetImage(Narrow(a, 0), Pos(a), Size(a), eGuiMaterial_Alpha, false, pParent, Narrow(a, 1));
-	case eGroup: return (size_t)pSet->CreateWidgetGroup(Pos(a), Size(a), Wide(a, 0), pParent);
-	case eDummy: return (size_t)pSet->CreateWidgetDummy(Pos(a), pParent);
-	case eFrame: return (size_t)pSet->CreateWidgetFrame(Pos(a), Size(a), false, pParent, false, true);
 
-	case eSize: a.f[0] = pW->GetSize().x; a.f[1] = pW->GetSize().y; return 0;
-	case eLocalPos: { const cVector3f& v = pW->GetLocalPosition(); a.f[0] = v.x; a.f[1] = v.y; a.f[2] = v.z; return 0; }
-	case eGlobalPos: { const cVector3f& v = pW->GetGlobalPosition(); a.f[0] = v.x; a.f[1] = v.y; a.f[2] = v.z; return 0; }
-	case eSetSize: pW->SetSize(cVector2f(a.f[0], a.f[1])); return 0;
-	case eSetPos: pW->SetPosition(Pos(a)); return 0;
-	case eSetText: pW->SetText(Wide(a, 0)); return 0;
-	case eGetText: Out(a, pW->GetText()); return 0;
-	case eSetVisible: pW->SetVisible(a.i[0] != 0); return 0;
-	case eSetEnabled: pW->SetEnabled(a.i[0] != 0); return 0;
-	case eIsVisible: return pW->IsVisible();
-	case eSetUserData: pW->SetUserData((void*)a.p[1]); return 0;
-	case eGetUserData: return (size_t)pW->GetUserData();
-	case eSetUserValue: pW->SetUserValue(a.i[0]); return 0;
-	case eGetUserValue: return (size_t)(unsigned)pW->GetUserValue();
-	case eSetNav: pW->SetFocusNavigation(kArrows[a.i[0] & 3], pParent); return 0;
-	case eSetGlobalUi: pW->SetGlobalUIInputListener(a.i[0] != 0); return 0;
-	case eSetStatic: static_cast<cWidgetWindow*>(pW)->SetStatic(a.i[0] != 0); return 0;
-	case eFontColor: { const cColor& c = pW->GetDefaultFontColor(); a.f[0] = c.r; a.f[1] = c.g; a.f[2] = c.b; a.f[3] = c.a; return 0; }
-	case eSetFontColor: pW->SetDefaultFontColor(col); return 0;
-	case eFontSize: a.f[0] = pW->GetDefaultFontSize().x; a.f[1] = pW->GetDefaultFontSize().y; return 0;
 	case eSetFontSize: pW->SetDefaultFontSize(cVector2f(a.f[0], a.f[1])); return 0;
 	case eTextLength: a.f[0] = pW->GetDefaultFontType()->GetLength(pW->GetDefaultFontSize(), pW->GetText().c_str()); return 0;
-	case eSetWordWrap: static_cast<cWidgetLabel*>(pW)->SetWordWrap(a.i[0] != 0); return 0;
-	case eSetClip: pW->SetClipActive(a.i[0] != 0); return 0;
-	case eSetScrollSpeed: static_cast<cWidgetLabel*>(pW)->SetScrollSpeedMul(a.f[0]); return 0;
-	case eSetDrawBg: static_cast<cWidgetLabel*>(pW)->SetDrawBackGround(a.i[0] != 0); return 0;
-	case eSetBgColor: static_cast<cWidgetLabel*>(pW)->SetBackGroundColor(col); return 0;
-	case eSetAlign: static_cast<cWidgetLabel*>(pW)->SetTextAlign(eFontAlign_Center); return 0;
-	case eSetAutosize: static_cast<cWidgetLabel*>(pW)->SetAutogenerateSize(a.i[0] != 0); return 0;
-	case eSetScrollOffset: static_cast<cWidgetLabel*>(pW)->SetScrollOffset(a.f[0]); return 0;
-	case eParent: return (size_t)pW->GetParent();
 	case eAddCallback: pW->AddCallback(kMsgs[a.i[0]], (void*)a.p[1], &Trampoline); return 0;
-	case eSetChecked: static_cast<cWidgetCheckBox*>(pW)->SetChecked(a.i[0] != 0, a.i[1] != 0); return 0;
-	case eIsChecked: return static_cast<cWidgetCheckBox*>(pW)->IsChecked();
 	case eComboAdd: static_cast<cWidgetComboBox*>(pW)->AddItem(Wide(a, 0)); return 0;
 	case eComboClear: static_cast<cWidgetComboBox*>(pW)->ClearItems(); return 0;
 	case eComboSelect: static_cast<cWidgetComboBox*>(pW)->SetSelectedItem(a.i[0], a.i[1] != 0, a.i[2] != 0); return 0;
 	case eComboSelected: return (size_t)(unsigned)static_cast<cWidgetComboBox*>(pW)->GetSelectedItem();
 	case eComboNum: return (size_t)(unsigned)static_cast<cWidgetComboBox*>(pW)->GetItemNum();
-	case eSliderMax: static_cast<cWidgetSlider*>(pW)->SetMaxValue(a.i[0]); return 0;
-	case eSliderBar: static_cast<cWidgetSlider*>(pW)->SetBarValueSize(a.i[0]); return 0;
-	case eSliderSet: static_cast<cWidgetSlider*>(pW)->SetValue(a.i[0], a.i[1] != 0); return 0;
-	case eSliderGet: return (size_t)(unsigned)static_cast<cWidgetSlider*>(pW)->GetValue();
-	case eSliderGetMax: return (size_t)(unsigned)static_cast<cWidgetSlider*>(pW)->GetMaxValue();
 	case eTabAdd: return (size_t)static_cast<cWidgetTabFrame*>(pW)->AddTab(Wide(a, 0));
 	case eTabNum: return (size_t)(unsigned)static_cast<cWidgetTabFrame*>(pW)->GetTabNum();
 	case eTabGet: return (size_t)static_cast<cWidgetTabFrame*>(pW)->GetTab(a.i[0]);
@@ -301,21 +254,7 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 	case eTabFrameOf: return (size_t)static_cast<cWidgetTab*>(pW)->GetParentTabFrame();
 	case eFrameOf: return (size_t)dynamic_cast<cWidgetFrame*>(pW);
 	case eFrameScrollTo: static_cast<cWidgetFrame*>(pW)->ScrollToPosition(cVector2f(a.f[0], a.f[1])); return 0;
-	case eFrameScroll: { const cVector3f& v = pW->GetScrollAmount(); a.f[0] = v.x; a.f[1] = v.y; a.f[2] = v.z; return 0; }
-	case eFrameDrawBg: static_cast<cWidgetFrame*>(pW)->SetDrawBackground(a.i[0] != 0); return 0;
-	case eMouseOver: return pW->GetMouseIsOver();
 
-	case ePopupActive: return pSet->PopUpIsActive();
-	case eSetDefaultNav: pSet->SetDefaultFocusNavWidget(pParent); return 0;
-	case eSetFocused: pSet->SetFocusedWidget(pParent); return 0;
-	case ePushAttention: pSet->PushAttentionWidget(); return 0;
-	case ePopAttention: pSet->PopAttentionWidget(); return 0;
-	case ePushFocused: pSet->PushFocusedWidget(); return 0;
-	case ePopFocused: pSet->PopFocusedWidget(); return 0;
-	case ePushDefaultNav: pSet->PushDefaultFocusNavWidget(); return 0;
-	case eSetAttention: pSet->SetAttentionWidget(pParent); return 0;
-	case eSetMouseMove: pSet->SetMouseMovementEnabled(a.i[0] != 0); return 0;
-	case eSetDrawMouse: pSet->SetDrawMouse(a.i[0] != 0); return 0;
 	case eMsgBox: return (size_t)pSet->CreatePopUpMessageBox(Wide(a, 0), Wide(a, 1), Wide(a, 2), Wide(a, 3), (void*)a.p[1], &Trampoline);
 
 	case eTranslate: Out(a, kTranslate(Narrow(a, 0), Narrow(a, 1))); return 0;
@@ -402,8 +341,6 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 	}
 	case eActionName: Out(a, Widen(gpBase->mpEngine->GetInput()->GetAction(a.i[0])->GetName())); return 0;
 
-	case eSkinNew: return (size_t)Gui()->CreateSkin(Narrow(a, 0));
-	case eSetNew: return (size_t)Gui()->CreateSet(Narrow(a, 0), (cGuiSkin*)a.p[0]);
 	case eIsChinese: return gpBase->msCurrentLanguage == "chinese.lang";
 	case eSkinFontMul:
 		{
@@ -412,7 +349,6 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 			pSkin->GetFont(eGuiSkinFont_Disabled)->mvSize *= a.f[0];
 			return 0;
 		}
-	case eSetActive: pSet->SetActive(a.i[0] != 0); return 0;
 	case eVpNew: return (size_t)gpBase->mpEngine->GetScene()->CreateViewport();
 	case eVpActive: ((cViewport*)a.p[0])->SetActive(a.i[0] != 0); return 0;
 	case eVpVisible: ((cViewport*)a.p[0])->SetVisible(a.i[0] != 0); return 0;
@@ -430,21 +366,6 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 			}
 			return 0;
 		}
-	case eGfxRect: return (size_t)Gui()->CreateGfxFilledRect(col, eGuiMaterial_Alpha);
-	case eGfxImage: return (size_t)Gui()->CreateGfxImage(Narrow(a, 0), eGuiMaterial_Alpha);
-	case eGfxSize: { cVector2f v = ((cGuiGfxElement*)a.p[0])->GetActiveSize(); a.f[0] = v.x; a.f[1] = v.y; return 0; }
-	case eGfxTex: return (size_t)Gui()->CreateGfxTexture((iTexture*)a.p[0], false, a.i[0] ? eGuiMaterial_Alpha : eGuiMaterial_Diffuse);
-	case eGfxDestroy: Gui()->DestroyGfx((cGuiGfxElement*)a.p[0]); return 0;
-	case eDrawGfx:
-		if(a.i[0]) pSet->DrawGfx((cGuiGfxElement*)a.p[1], Pos(a), Size(a), cColor(1, a.f[5]));
-		else pSet->DrawGfx((cGuiGfxElement*)a.p[1], Pos(a), Size(a));
-		return 0;
-	case eSetVSize: { cVector2f v = pSet->GetVirtualSize(); a.f[0] = v.x; a.f[1] = v.y; return 0; }
-	case eWidgetDestroy: pSet->DestroyWidget(pParent); return 0;
-	case eSetDestroyAll: pSet->DestroyAllWidgets(); return 0;
-	case eWidgetName: Out(a, Widen(pW->GetName())); return 0;
-	case eHasFocus: return pW->HasFocus();
-	case eIsEnabled: return pW->IsEnabled();
 	case eNavGet: return (size_t)pW->GetFocusNavigation(kArrows[a.i[0] & 3]);
 	case eFontType: pW->SetDefaultFontType((iFontData*)a.p[1]); return 0;
 	case eFontLen:
@@ -454,9 +375,6 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 			return 0;
 		}
 	case eFontLoad: return (size_t)gpBase->mpMainMenu->LoadFont(Narrow(a, 0));
-	case eSetDrawFocus: pSet->SetDrawFocus(a.i[0] != 0); return 0;
-	case eGetDrawFocus: return pSet->GetDrawFocus();
-	case eGetFocused: return (size_t)pSet->GetFocusedWidget();
 	case ePopupOpts:
 		{
 			cGuiPopUpMessageBox* pPopUp = (cGuiPopUpMessageBox*)a.p[0];
@@ -548,9 +466,6 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 			return 0;
 		}
 	case eGfxFlush: LowGfx()->FlushRendering(); LowGfx()->WaitAndFinishRendering(); return 0;
-	case eSetGlobalPos: pW->SetGlobalPosition(Pos(a)); return 0;
-	case eGuiFocus: Gui()->SetFocus((cGuiSet*)a.p[0]); return 0;
-	case eCenter: pW->CenterGlobalPositionInSet(); return 0;
 
 	case eMapLoaded: return gpBase->mpMapHandler->MapIsLoaded();
 	case eMusic:

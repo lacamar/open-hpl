@@ -154,23 +154,9 @@ static size_t Xml(int alCode, OhplA12bArgs &a)
 
 static size_t Gui(int alCode, OhplA12bArgs &a)
 {
-	cGui *pGui = gpBase->mpEngine->GetGui();
 	cGuiSet *pSet = gpBase->mpGameHudSet;
 	switch(alCode)
 	{
-	case kGImage:
-		OhplA12bLog("i gfx_image %s", Str(a, 0).c_str());
-		return (size_t)pGui->CreateGfxImage(Str(a, 0), eGuiMaterial_Alpha);
-	case kGRectWhite:
-		OhplA12bLog("i gfx_rect white");
-		return (size_t)pGui->CreateGfxFilledRect(cColor(1), eGuiMaterial_Modulative);
-	case kGTexture:
-		OhplA12bLog("i gfx_texture %s", Str(a, 0).c_str());
-		return (size_t)pGui->CreateGfxTexture(Str(a, 0), eGuiMaterial_Alpha, eTextureType_Rect);
-	case kGDestroy:
-		OhplA12bLog("i gfx_destroy");
-		pGui->DestroyGfx((cGuiGfxElement*)a.p[0]);
-		return 0;
 	case kGBounds:
 		{
 			cVector2f vGuiSetCenterSize = cVector2f(800, 600);
@@ -182,15 +168,6 @@ static size_t Gui(int alCode, OhplA12bArgs &a)
 			cVector2f vActive = pImage ? pImage->GetActiveSize() : cVector2f(0);
 			OhplA12bLog("i gui_bounds %.9g %.9g %.9g %.9g active %.9g %.9g", vGuiSetMin.x, vGuiSetMin.y, vGuiSetMax.x, vGuiSetMax.y, vActive.x, vActive.y);
 			a.out[0] = vGuiSetMin.x; a.out[1] = vGuiSetMin.y; a.out[2] = vGuiSetMax.x; a.out[3] = vGuiSetMax.y;
-			return 0;
-		}
-	case kDBug:
-		{
-			cGuiGfxElement *pImage = (cGuiGfxElement*)a.p[0];
-			cVector2f vPos(a.f[0], a.f[1]);
-			cVector2f vSize = pImage->GetActiveSize()*a.f[2];
-			OhplA12bLog("i bug %d pos %.9g %.9g size %.9g %.9g col %.9g angle %.9g", a.i[0], vPos.x, vPos.y, vSize.x, vSize.y, a.f[3], a.f[4]);
-			pSet->DrawGfx(pImage, vPos, vSize, cColor(1,a.f[3]), eGuiMaterial_LastEnum, a.f[4]);
 			return 0;
 		}
 	case kDFade:

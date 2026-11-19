@@ -114,10 +114,14 @@ pub fn call(op: i32, a: &mut A) {
     if h == 0 {
         return;
     }
+    if super::inv_direct::call(op, a) {
+        return;
+    }
     // SAFETY: `h` is the function pointer stored by `set_host`.
     let f = unsafe { std::mem::transmute::<usize, OpFn>(h) };
     // SAFETY: `a` is a live argument block.
-    unsafe { f(op, a) }
+    unsafe { f(op, a) };
+    super::inv_direct::after(op, a);
 }
 
 macro_rules! consts {

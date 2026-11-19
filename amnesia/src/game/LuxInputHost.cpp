@@ -217,24 +217,9 @@ void OhplInFx(int alOp, int alA, int alB, float afF)
 	{
 	case eInFx_RenderLog: gpBase->mpMapHandler->GetViewport()->GetRenderSettings()->mbLog = alA != 0; break;
 	case eInFx_GuiMouse: pGui->SendMousePos(pInput->GetMouse()->GetAbsPosition(), pInput->GetMouse()->GetRelPosition()); break;
-	case eInFx_GuiClick:
-		if(alA == 0) pGui->SendMouseClickDown((eGuiMouseButton)alB);
-		else if(alA == 1) pGui->SendMouseClickUp((eGuiMouseButton)alB);
-		else pGui->SendMouseDoubleClick((eGuiMouseButton)alB);
-		break;
 	case eInFx_PreMenuButton: gpBase->mpPreMenu->ButtonPressed(); break;
 	case eInFx_PadDrain:
 		while(gpPad->HasInputUpdates()) pGui->SendGamepadInput(gpPad->GetInputUpdate());
-		break;
-	case eInFx_UiSend:
-		switch(alA)
-		{
-		case 0: pGui->SendUIArrowPress((eUIArrow)alB); break;
-		case 1: pGui->SendUIArrowRelease((eUIArrow)alB); break;
-		case 4: pGui->SendUIButtonPress((eUIButton)alB); break;
-		case 5: pGui->SendUIButtonRelease((eUIButton)alB); break;
-		case 6: pGui->SendUIButtonDoublePress((eUIButton)alB); break;
-		}
 		break;
 	case eInFx_DebugWindow: gpBase->mpDebugHandler->SetDebugWindowActive(alA != 0); break;
 	case eInFx_DebugReload: gpBase->mpDebugHandler->QuickReloadMap(); break;
@@ -425,6 +410,7 @@ void OhplInDumpTick()
 	OhplInLog("map %s", gpBase->mpMapHandler->GetCurrentMap()->GetName().c_str());
 
 	gbScript = true;
+	ohpl_in_set_scripted(true);
 	uint32_t lSeq = 0;
 	for(size_t s = 0; s < sizeof(gvStates) / sizeof(gvStates[0]); ++s)
 	{
@@ -448,6 +434,7 @@ void OhplInDumpTick()
 	pH->ChangeState(eLuxInputState_Game);
 	OhplInLog("s end");
 	gbScript = false;
+	ohpl_in_set_scripted(false);
 
 	const char *vNames[] = { "Forward", "Jump", "NoSuchAction" };
 	for(int i = 0; i < 3; ++i)
