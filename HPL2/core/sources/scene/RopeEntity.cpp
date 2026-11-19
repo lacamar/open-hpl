@@ -91,7 +91,7 @@ namespace hpl {
 
 		mpVtxBuffer->Compile(eVertexCompileFlag_CreateTangents);
 
-		mbApplyTransformToBV = false;
+		mpE->applyBV = false;
 
 		mlLastUpdateCount = -1;
 		mbMultiplyAlphaWithColor = false;

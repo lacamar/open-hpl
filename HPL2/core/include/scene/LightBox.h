@@ -32,7 +32,7 @@ namespace hpl {
 	public:
 		cLightBox(tString asName, cResources *apResources);
 
-		void SetSize(const cVector3f& avSize){ Box()->size = avSize; mbUpdateBoundingVolume = true; SetTransformUpdated();}
+		void SetSize(const cVector3f& avSize){ Box()->size = avSize; mpE->updateBV = true; SetTransformUpdated();}
 		inline const cVector3f& GetSize(){ return Box()->size;}
 
 		void SetBlendFunc(eLightBoxBlendFunc aFunc){ Box()->blend = aFunc; }

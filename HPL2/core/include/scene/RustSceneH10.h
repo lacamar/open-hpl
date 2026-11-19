@@ -11,19 +11,26 @@ namespace hpl {
 	class cNode3D;
 	class iEntity3D;
 
-	struct OhplH10EntView
+	struct OhplNodePod;
+
+	struct OhplEntPod
 	{
-		cMatrixf *mpLocal;
-		cMatrixf *mpWorld;
-		bool *mpTransformUpdated;
-		bool *mpUpdateBV;
-		bool *mpApplyBV;
-		int *mpCount;
-		uintptr_t mlParentNode;
-		uintptr_t mlParentEntity;
+		cMatrixf local;
+		cMatrixf world;
+		uintptr_t owner;
+		OhplNodePod *parentNode;
+		OhplEntPod *parentEntity;
+		int count;
+		int uniqueId;
+		int iteratorCount;
+		bool transformUpdated;
+		bool updateBV;
+		bool applyBV;
+		bool active;
+		bool saved;
 	};
 
-	struct OhplH10Node
+	struct OhplNodePod
 	{
 		cMatrixf m_mtxLocal;
 		cMatrixf m_mtxWorld;
@@ -32,11 +39,15 @@ namespace hpl {
 		cQuaternion mqRotation;
 		cVector3f mvScale;
 		cVector3f mvTranslation;
-		cNode3D *mpParent;
-		iEntity3D *mpEntityParent;
+		uintptr_t owner;
+		OhplNodePod *mpParent;
+		OhplEntPod *mpEntityParent;
+		int customFlags;
 		bool mbTransformUpdated;
 		bool mbUsePre;
 		bool mbUsePost;
+		bool active;
+		bool autoDelete;
 	};
 
 	struct OhplH10Cam
@@ -72,44 +83,64 @@ namespace hpl {
 
 	struct OhplH10Host
 	{
-		void (*ent_view)(uintptr_t, OhplH10EntView*);
-		size_t (*ent_children)(uintptr_t, uintptr_t*, size_t);
-		size_t (*ent_node_children)(uintptr_t, uintptr_t*, size_t);
 		void (*ent_on_updated)(uintptr_t);
 		void (*ent_callbacks)(uintptr_t);
-		OhplH10Node* (*node_state)(uintptr_t);
-		size_t (*node_children)(uintptr_t, uintptr_t*, size_t);
-		size_t (*node_entities)(uintptr_t, uintptr_t*, size_t);
+		void (*node_delete)(uintptr_t);
 	};
 
-	static_assert(sizeof(OhplH10EntView) == 64 && offsetof(OhplH10EntView, mlParentNode) == 48, "H10 entity view layout");
-	static_assert(sizeof(OhplH10Node) == 320 && offsetof(OhplH10Node, mpParent) == 296, "H10 node layout");
+	static_assert(sizeof(OhplEntPod) == 176 && offsetof(OhplEntPod, owner) == 128 && offsetof(OhplEntPod, count) == 152 && offsetof(OhplEntPod, transformUpdated) == 164, "H10 entity pod layout");
+	static_assert(sizeof(OhplNodePod) == 336 && offsetof(OhplNodePod, owner) == 296 && offsetof(OhplNodePod, customFlags) == 320 && offsetof(OhplNodePod, mbTransformUpdated) == 324, "H10 node pod layout");
 	static_assert(sizeof(OhplH10Cam) == 468 && offsetof(OhplH10Cam, mlRotateMode) == 68, "H10 camera layout");
 
 const OhplH10Host* OhplH10GetHost();
 
 extern "C" {
 
-void ohpl_h10_ent_update_world(const OhplH10Host*, uintptr_t);
-void ohpl_h10_ent_set_transform_updated(const OhplH10Host*, uintptr_t, bool);
-void ohpl_h10_ent_set_matrix(const OhplH10Host*, uintptr_t, const cMatrixf*);
-void ohpl_h10_ent_set_world_matrix(const OhplH10Host*, uintptr_t, const cMatrixf*);
-void ohpl_h10_ent_set_position(const OhplH10Host*, uintptr_t, const cVector3f*);
-void ohpl_h10_ent_set_world_position(const OhplH10Host*, uintptr_t, const cVector3f*);
-bool ohpl_h10_ent_bv_dirty(const OhplH10Host*, uintptr_t);
+OhplEntPod* ohpl_ent_new(uintptr_t);
+void ohpl_ent_free(OhplEntPod*);
+void ohpl_h10_ent_update_world(const OhplH10Host*, OhplEntPod*);
+void ohpl_h10_ent_set_transform_updated(const OhplH10Host*, OhplEntPod*, bool);
+void ohpl_h10_ent_set_matrix(const OhplH10Host*, OhplEntPod*, const cMatrixf*);
+void ohpl_h10_ent_set_world_matrix(const OhplH10Host*, OhplEntPod*, const cMatrixf*);
+void ohpl_h10_ent_set_position(const OhplH10Host*, OhplEntPod*, const cVector3f*);
+void ohpl_h10_ent_set_world_position(const OhplH10Host*, OhplEntPod*, const cVector3f*);
+bool ohpl_h10_ent_bv_dirty(const OhplH10Host*, OhplEntPod*);
+void ohpl_ent_add_child(const OhplH10Host*, OhplEntPod*, OhplEntPod*);
+void ohpl_ent_remove_child(OhplEntPod*, OhplEntPod*);
+bool ohpl_ent_is_child(const OhplEntPod*, const OhplEntPod*);
+size_t ohpl_ent_child_count(const OhplEntPod*);
+uintptr_t ohpl_ent_child_at(const OhplEntPod*, size_t);
+void ohpl_ent_add_node_child(const OhplH10Host*, OhplEntPod*, OhplNodePod*);
+void ohpl_ent_remove_node_child(OhplEntPod*, OhplNodePod*);
+bool ohpl_ent_is_node_child(const OhplEntPod*, const OhplNodePod*);
+size_t ohpl_ent_node_child_count(const OhplEntPod*);
+uintptr_t ohpl_ent_node_child_at(const OhplEntPod*, size_t);
 
-void ohpl_h10_node_update_world(const OhplH10Host*, uintptr_t);
-void ohpl_h10_node_set_world_transform_updated(const OhplH10Host*, uintptr_t);
-void ohpl_h10_node_set_matrix(const OhplH10Host*, uintptr_t, const cMatrixf*, bool);
-void ohpl_h10_node_set_world_matrix(const OhplH10Host*, uintptr_t, const cMatrixf*);
-void ohpl_h10_node_set_position(const OhplH10Host*, uintptr_t, const cVector3f*);
-void ohpl_h10_node_set_world_position(const OhplH10Host*, uintptr_t, const cVector3f*);
-void ohpl_h10_node_add_rotation_euler(OhplH10Node*, const cVector3f*, int);
-void ohpl_h10_node_add_rotation(OhplH10Node*, const cQuaternion*);
-void ohpl_h10_node_add_scale(OhplH10Node*, const cVector3f*);
-void ohpl_h10_node_add_translation(OhplH10Node*, const cVector3f*);
-void ohpl_h10_node_update_matrix(const OhplH10Host*, uintptr_t, bool);
-void ohpl_h10_node_apply_anim(const OhplH10Host*, uintptr_t, bool, bool);
+OhplNodePod* ohpl_node_new(uintptr_t, bool);
+void ohpl_node_free(const OhplH10Host*, OhplNodePod*);
+bool ohpl_node_add_entity(OhplNodePod*, OhplEntPod*);
+bool ohpl_node_remove_entity(OhplNodePod*, OhplEntPod*);
+void ohpl_node_clear_entities(OhplNodePod*);
+void ohpl_node_set_parent(OhplNodePod*, OhplNodePod*);
+void ohpl_node_add_child(OhplNodePod*, OhplNodePod*);
+void ohpl_node_remove_child(OhplNodePod*, OhplNodePod*);
+size_t ohpl_node_child_count(const OhplNodePod*);
+uintptr_t ohpl_node_child_at(const OhplNodePod*, size_t);
+size_t ohpl_node_entity_count(const OhplNodePod*);
+uintptr_t ohpl_node_entity_at(const OhplNodePod*, size_t);
+void ohpl_node_update_entity_children(const OhplH10Host*, OhplNodePod*);
+void ohpl_h10_node_update_world(const OhplH10Host*, OhplNodePod*);
+void ohpl_h10_node_set_world_transform_updated(const OhplH10Host*, OhplNodePod*);
+void ohpl_h10_node_set_matrix(const OhplH10Host*, OhplNodePod*, const cMatrixf*, bool);
+void ohpl_h10_node_set_world_matrix(const OhplH10Host*, OhplNodePod*, const cMatrixf*);
+void ohpl_h10_node_set_position(const OhplH10Host*, OhplNodePod*, const cVector3f*);
+void ohpl_h10_node_set_world_position(const OhplH10Host*, OhplNodePod*, const cVector3f*);
+void ohpl_h10_node_add_rotation_euler(OhplNodePod*, const cVector3f*, int);
+void ohpl_h10_node_add_rotation(OhplNodePod*, const cQuaternion*);
+void ohpl_h10_node_add_scale(OhplNodePod*, const cVector3f*);
+void ohpl_h10_node_add_translation(OhplNodePod*, const cVector3f*);
+void ohpl_h10_node_update_matrix(const OhplH10Host*, OhplNodePod*, bool);
+void ohpl_h10_node_apply_anim(const OhplH10Host*, OhplNodePod*, bool, bool);
 
 void ohpl_h10_cam_set_position(OhplH10Cam*, const cVector3f*);
 void ohpl_h10_cam_set_pitch(OhplH10Cam*, float);

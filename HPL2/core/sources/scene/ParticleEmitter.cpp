@@ -148,7 +148,7 @@ namespace hpl {
 
 		mvMaxDrawSize =0;
 
-		mbApplyTransformToBV = false; 
+		mpE->applyBV = false;
 
 		mBoundingVolume.SetSize(0);
 		mBoundingVolume.SetPosition(0);

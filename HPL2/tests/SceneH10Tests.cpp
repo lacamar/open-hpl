@@ -75,12 +75,12 @@ public:
 	cH10Ent(int alId) : iEntity3D("h10ent"), mlId(alId), mbRead(false) {}
 	tString GetEntityType() { return "H10"; }
 	cBoundingVolume& Bv() { return mBoundingVolume; }
-	void SetApply(bool abX) { mbApplyTransformToBV = abX; }
+	void SetApply(bool abX) { mpE->applyBV = abX; }
 	void Mix(::Hash& h)
 	{
-		h.M(m_mtxLocalTransform);
-		h.M(m_mtxWorldTransform);
-		h.U32(mbTransformUpdated); h.U32(mlCount); h.U32(mbUpdateBoundingVolume);
+		h.M(mpE->local);
+		h.M(mpE->world);
+		h.U32(mpE->transformUpdated); h.U32(mpE->count); h.U32(mpE->updateBV);
 	}
 	int mlId;
 	bool mbRead;

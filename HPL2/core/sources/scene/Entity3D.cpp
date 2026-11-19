@@ -27,41 +27,10 @@
 
 namespace hpl {
 
-
-	//////////////////////////////////////////////////////////////////////////
-	// RUST HOST
-	//////////////////////////////////////////////////////////////////////////
-
 	struct OhplH10Hooks
 	{
 		static iEntity3D* E(uintptr_t alEnt){ return (iEntity3D*)alEnt;}
-		static cNode3D* N(uintptr_t alNode){ return (cNode3D*)alNode;}
 
-		template<class T> static size_t Items(const std::list<T*> &alstItems, uintptr_t *apOut, size_t alCap)
-		{
-			size_t lCount =0;
-			for(T *pItem : alstItems)
-			{
-				if(lCount < alCap) apOut[lCount] = (uintptr_t)pItem;
-				++lCount;
-			}
-			return lCount;
-		}
-
-		static void EntView(uintptr_t alEnt, OhplH10EntView *apOut)
-		{
-			iEntity3D *pEnt = E(alEnt);
-			apOut->mpLocal = &pEnt->m_mtxLocalTransform;
-			apOut->mpWorld = &pEnt->m_mtxWorldTransform;
-			apOut->mpTransformUpdated = &pEnt->mbTransformUpdated;
-			apOut->mpUpdateBV = &pEnt->mbUpdateBoundingVolume;
-			apOut->mpApplyBV = &pEnt->mbApplyTransformToBV;
-			apOut->mpCount = &pEnt->mlCount;
-			apOut->mlParentNode = (uintptr_t)pEnt->mpParentNode;
-			apOut->mlParentEntity = (uintptr_t)pEnt->mpParent;
-		}
-		static size_t EntChildren(uintptr_t alEnt, uintptr_t *apOut, size_t alCap){ return Items(E(alEnt)->mlstChildren, apOut, alCap);}
-		static size_t EntNodeChildren(uintptr_t alEnt, uintptr_t *apOut, size_t alCap){ return Items(E(alEnt)->mlstNodeChildren, apOut, alCap);}
 		static void EntOnUpdated(uintptr_t alEnt){ E(alEnt)->OnTransformUpdated();}
 		static void EntCallbacks(uintptr_t alEnt)
 		{
@@ -72,286 +41,54 @@ namespace hpl {
 				(*it)->OnTransformUpdate(pEnt);
 			}
 		}
-		static OhplH10Node* NodeState(uintptr_t alNode){ return &N(alNode)->mS;}
-		static size_t NodeChildren(uintptr_t alNode, uintptr_t *apOut, size_t alCap){ return Items(N(alNode)->mlstNode, apOut, alCap);}
-		static size_t NodeEntities(uintptr_t alNode, uintptr_t *apOut, size_t alCap){ return Items(N(alNode)->mlstEntity, apOut, alCap);}
+		static void NodeDelete(uintptr_t alNode){ hplDelete((cNode3D*)alNode);}
 	};
 
 	const OhplH10Host* OhplH10GetHost()
 	{
-		static const OhplH10Host host = {
-			OhplH10Hooks::EntView, OhplH10Hooks::EntChildren, OhplH10Hooks::EntNodeChildren, OhplH10Hooks::EntOnUpdated,
-			OhplH10Hooks::EntCallbacks, OhplH10Hooks::NodeState, OhplH10Hooks::NodeChildren, OhplH10Hooks::NodeEntities};
+		static const OhplH10Host host = {OhplH10Hooks::EntOnUpdated, OhplH10Hooks::EntCallbacks, OhplH10Hooks::NodeDelete};
 		return &host;
 	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
 	iEntity3D::iEntity3D(tString asName)
 	{
 		msName = asName;
-		mbIsActive = true;
-		
-		mpParentNode = NULL;
-
-		m_mtxLocalTransform = cMatrixf::Identity;
-		m_mtxWorldTransform = cMatrixf::Identity;
-
-		mbTransformUpdated = true;
-
-		mlCount = 0;
-
+		mpE = ohpl_ent_new((uintptr_t)this);
 		msSourceFile = "";
-
-		mbApplyTransformToBV = true;
-		mbUpdateBoundingVolume = true;
-
-		mpParent = NULL;
-
-		mlIteratorCount =-1;
-
-		mbIsSaved = true;
-		mlUniqueID = -1;
 	}
 
 	iEntity3D::~iEntity3D()
 	{
-		if(mpParentNode)
-			mpParentNode->RemoveEntity(this);
-		else if(mpParent) 
-			mpParent->RemoveChild(this);
-
-		for(tEntity3DListIt it = mlstChildren.begin(); it != mlstChildren.end();++it)
-		{
-			iEntity3D *pChild = *it;
-			pChild->mpParent = NULL;
-		}
-
-		for(tNode3DListIt it = mlstNodeChildren.begin(); it != mlstNodeChildren.end();++it)
-		{
-			cNode3D *pNode = *it;
-			pNode->mS.mpEntityParent = NULL;
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-	
-	cVector3f iEntity3D::GetLocalPosition()
-	{
-		return m_mtxLocalTransform.GetTranslation();
-	}
-
-	//-----------------------------------------------------------------------
-
-	cMatrixf& iEntity3D::GetLocalMatrix()
-	{
-		return m_mtxLocalTransform;
-	}
-
-	//-----------------------------------------------------------------------
-
-	cVector3f iEntity3D::GetWorldPosition()
-	{
-		UpdateWorldTransform();
-
-		return m_mtxWorldTransform.GetTranslation();
-	}
-	
-	//-----------------------------------------------------------------------
-
-	cMatrixf& iEntity3D::GetWorldMatrix()
-	{
-		UpdateWorldTransform();
-		
-		return m_mtxWorldTransform;
-	}
-	
-	//-----------------------------------------------------------------------
-
-	void iEntity3D::SetPosition(const cVector3f& avPos)
-	{
-		ohpl_h10_ent_set_position(OhplH10GetHost(), (uintptr_t)this, &avPos);
-	}
-	
-	//-----------------------------------------------------------------------
-
-	void iEntity3D::SetMatrix(const cMatrixf& a_mtxTransform)
-	{
-		ohpl_h10_ent_set_matrix(OhplH10GetHost(), (uintptr_t)this, &a_mtxTransform);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iEntity3D::SetWorldPosition(const cVector3f& avWorldPos)
-	{
-		ohpl_h10_ent_set_world_position(OhplH10GetHost(), (uintptr_t)this, &avWorldPos);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iEntity3D::SetWorldMatrix(const cMatrixf& a_mtxWorldTransform)
-	{
-		ohpl_h10_ent_set_world_matrix(OhplH10GetHost(), (uintptr_t)this, &a_mtxWorldTransform);
-	}
-	
-	//-----------------------------------------------------------------------
-	
-	void iEntity3D::SetTransformUpdated(bool abUpdateCallbacks)
-	{
-		ohpl_h10_ent_set_transform_updated(OhplH10GetHost(), (uintptr_t)this, abUpdateCallbacks);
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool iEntity3D::GetTransformUpdated()
-	{
-		return mbTransformUpdated;
-	}
-	
-	//-----------------------------------------------------------------------
-	
-	int iEntity3D::GetTransformUpdateCount()
-	{
-		return mlCount;
+		ohpl_ent_free(mpE);
 	}
 
 	//-----------------------------------------------------------------------
 
 	cBoundingVolume* iEntity3D::GetBoundingVolume()
 	{
-		if(ohpl_h10_ent_bv_dirty(OhplH10GetHost(), (uintptr_t)this)) mBoundingVolume.SetTransform(m_mtxWorldTransform);
+		if(ohpl_h10_ent_bv_dirty(OhplH10GetHost(), mpE)) mBoundingVolume.SetTransform(mpE->world);
 		return &mBoundingVolume;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iEntity3D::AddCallback(iEntityCallback *apCallback)
 	{
 		mlstCallbacks.push_back(apCallback);
 	}
-	
-	//-----------------------------------------------------------------------
 
 	void iEntity3D::RemoveCallback(iEntityCallback *apCallback)
 	{
 		STLFindAndRemove(mlstCallbacks, apCallback);
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iEntity3D::AddChild(iEntity3D *apEntity)
-	{
-		if(apEntity==NULL)return;
-		if(apEntity->mpParent != NULL)
-		{
-			apEntity->mpParent->RemoveChild(apEntity);
-		}
-
-	    mlstChildren.push_back(apEntity);
-		apEntity->mpParent = this;
-
-		apEntity->SetTransformUpdated(true);
-	}
-	
-	void iEntity3D::RemoveChild(iEntity3D *apEntity)
-	{
-		for(tEntity3DListIt it = mlstChildren.begin(); it != mlstChildren.end();)
-		{
-			iEntity3D *pChild = *it;
-			if(pChild == apEntity)
-			{
-				pChild->mpParent = NULL;
-				it = mlstChildren.erase(it);
-			}
-			else
-			{
-				++it;
-			}
-		}
-	}
-
-	bool iEntity3D::IsChild(iEntity3D *apEntity)
-	{
-		for(tEntity3DListIt it = mlstChildren.begin(); it != mlstChildren.end();++it)
-		{
-			iEntity3D *pChild = *it;
-			if(pChild == apEntity) return true;
-		}
-		return false;
-	}
-
-	iEntity3D * iEntity3D::GetEntityParent()
-	{
-		return mpParent;
-	}
-
 	cEntity3DIterator iEntity3D::GetChildIterator()
 	{
-		return cEntity3DIterator(&mlstChildren);
+		std::vector<iEntity3D*> vItems;
+		for(size_t i=0, lCount = ohpl_ent_child_count(mpE); i<lCount; ++i) vItems.push_back((iEntity3D*)ohpl_ent_child_at(mpE, i));
+		return cEntity3DIterator(vItems);
 	}
-	
-	//-----------------------------------------------------------------------
 
-	void iEntity3D::AddNodeChild(cNode3D *apNode)
-	{
-		if(apNode->mS.mpEntityParent != NULL)
-		{
-			apNode->mS.mpEntityParent->RemoveNodeChild(apNode);
-		}
-
-		mlstNodeChildren.push_back(apNode);
-		apNode->mS.mpEntityParent = this;
-
-		apNode->SetWorldTransformUpdated();
-	}
-	
-	void iEntity3D::RemoveNodeChild(cNode3D *apNode)
-	{
-		for(tNode3DListIt it = mlstNodeChildren.begin(); it != mlstNodeChildren.end();)
-		{
-			cNode3D *pNode = *it;
-			if(pNode == apNode)
-			{
-				pNode->mS.mpEntityParent = NULL;
-				it = mlstNodeChildren.erase(it);
-			}
-			else
-			{
-				++it;
-			}
-		}
-	}
-	
-	bool iEntity3D::IsNodeChild(cNode3D *apNode)
-	{
-		for(tNode3DListIt it = mlstNodeChildren.begin(); it != mlstNodeChildren.end();++it)
-		{
-			cNode3D *pNode = *it;
-			if(pNode == apNode) return true;
-		}
-		return false;
-	}
-	
-	//-----------------------------------------------------------------------
-	
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-	void iEntity3D::UpdateWorldTransform()
-	{
-		ohpl_h10_ent_update_world(OhplH10GetHost(), (uintptr_t)this);
-	}
-	
-	//-----------------------------------------------------------------------
+	void iEntity3D::AddNodeChild(cNode3D *apNode){ ohpl_ent_add_node_child(OhplH10GetHost(), mpE, apNode->mpN);}
+	void iEntity3D::RemoveNodeChild(cNode3D *apNode){ ohpl_ent_remove_node_child(mpE, apNode->mpN);}
+	bool iEntity3D::IsNodeChild(cNode3D *apNode){ return ohpl_ent_is_node_child(mpE, apNode->mpN);}
 }

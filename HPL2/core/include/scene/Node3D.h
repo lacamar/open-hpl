@@ -40,93 +40,84 @@ namespace hpl {
 		// Hierarchy
 		bool AddEntity(iEntity3D* apEntity);
 		bool RemoveEntity(iEntity3D* apEntity);
-		void ClearEntities();
+		void ClearEntities(){ ohpl_node_clear_entities(mpN);}
 		
-		cNode3D* GetParent();
+		cNode3D* GetParent(){ return mpN->mpParent ? (cNode3D*)mpN->mpParent->owner : NULL;}
 		
 		cNode3DIterator GetChildIterator();
-		tNode3DList* GetChildList(){ return &mlstNode;}
+
+		size_t GetChildCount(){ return ohpl_node_child_count(mpN);}
+		cNode3D* GetChildAt(size_t alIdx){ return (cNode3D*)ohpl_node_child_at(mpN, alIdx);}
 
 		cEntity3DIterator GetEntityIterator();
 
 		cNode3D* CreateChild(const tString &asName="", bool abAutoDeleteChildren = true);
-		void RemoveChild(cNode3D* apNode);
+		void RemoveChild(cNode3D* apNode){ ohpl_node_remove_child(mpN, apNode->mpN);}
 
 
 		//Extra stuff that shouldn't be used externally
-		void SetParent(cNode3D* apNode);
-		void AddChild(cNode3D* apChild);
+		void SetParent(cNode3D* apNode){ ohpl_node_set_parent(mpN, apNode ? apNode->mpN : NULL);}
+		void AddChild(cNode3D* apChild){ ohpl_node_add_child(mpN, apChild->mpN);}
 		
 		///////////////////////
 		//Properties
-		const tString& GetName();
+		const tString& GetName(){ return msName;}
 
-		void SetActive(bool abX){mbActive = abX;}
-		bool IsActive(){return mbActive;}
+		void SetActive(bool abX){mpN->active = abX;}
+		bool IsActive(){return mpN->active;}
 
-		int SetVisible(bool abX, bool abCascade);
+		int SetVisible(bool abX, bool abCascade){ return 0;}
 		
-		cVector3f GetLocalPosition();
-		cMatrixf& GetLocalMatrix();
+		cVector3f GetLocalPosition(){ return mpN->m_mtxLocal.GetTranslation();}
+		cMatrixf& GetLocalMatrix(){ return mpN->m_mtxLocal;}
 
-		cVector3f GetWorldPosition();
-		cMatrixf& GetWorldMatrix();
+		cVector3f GetWorldPosition(){ UpdateWorldTransform(); return mpN->m_mtxWorld.GetTranslation();}
+		cMatrixf& GetWorldMatrix(){ UpdateWorldTransform(); return mpN->m_mtxWorld;}
 
-		void SetPosition(const cVector3f& avPos);
-		void SetMatrix(const cMatrixf& a_mtxTransform, bool abSetChildrenUpdated=true);
+		void SetPosition(const cVector3f& avPos){ ohpl_h10_node_set_position(OhplH10GetHost(), mpN, &avPos);}
+		void SetMatrix(const cMatrixf& a_mtxTransform, bool abSetChildrenUpdated=true){ ohpl_h10_node_set_matrix(OhplH10GetHost(), mpN, &a_mtxTransform, abSetChildrenUpdated);}
 
-		void SetWorldPosition(const cVector3f& avWorldPos);
-		void SetWorldMatrix(const cMatrixf& a_mtxWorldTransform);
+		void SetWorldPosition(const cVector3f& avWorldPos){ ohpl_h10_node_set_world_position(OhplH10GetHost(), mpN, &avWorldPos);}
+		void SetWorldMatrix(const cMatrixf& a_mtxWorldTransform){ ohpl_h10_node_set_world_matrix(OhplH10GetHost(), mpN, &a_mtxWorldTransform);}
 
-		void AddRotation(const cVector3f& avRot, eEulerRotationOrder aOrder);
-		void AddRotation(const cQuaternion& aqRotation);
+		void AddRotation(const cVector3f& avRot, eEulerRotationOrder aOrder){ ohpl_h10_node_add_rotation_euler(mpN, &avRot, (int)aOrder);}
+		void AddRotation(const cQuaternion& aqRotation){ ohpl_h10_node_add_rotation(mpN, &aqRotation);}
 
-		void AddScale(const cVector3f& avScale);
+		void AddScale(const cVector3f& avScale){ ohpl_h10_node_add_scale(mpN, &avScale);}
 
-		void AddTranslation(const cVector3f& avTrans);
+		void AddTranslation(const cVector3f& avTrans){ ohpl_h10_node_add_translation(mpN, &avTrans);}
 
-		bool GetUsePreAnimTransform(){ return mS.mbUsePost;}
-		bool GetUsePostAnimTransform(){ return mS.mbUsePost;}
-		const cMatrixf& GetPreAnimTransform(){ return mS.m_mtxPost;}
-		const cMatrixf& GetPostAnimTransform(){ return mS.m_mtxPost;}
+		bool GetUsePreAnimTransform(){ return mpN->mbUsePost;}
+		bool GetUsePostAnimTransform(){ return mpN->mbUsePost;}
+		const cMatrixf& GetPreAnimTransform(){ return mpN->m_mtxPost;}
+		const cMatrixf& GetPostAnimTransform(){ return mpN->m_mtxPost;}
 		
-		void SetUsePreTransform(bool abX){ mS.mbUsePre = abX;}
-		void SetUsePostTransform(bool abX){ mS.mbUsePost = abX;}
-		void SetPreTransform(const cMatrixf& a_mtxTransform){ mS.m_mtxPre = a_mtxTransform;}
-		void SetPostTransform(const cMatrixf& a_mtxTransform){ mS.m_mtxPost = a_mtxTransform;}
+		void SetUsePreTransform(bool abX){ mpN->mbUsePre = abX;}
+		void SetUsePostTransform(bool abX){ mpN->mbUsePost = abX;}
+		void SetPreTransform(const cMatrixf& a_mtxTransform){ mpN->m_mtxPre = a_mtxTransform;}
+		void SetPostTransform(const cMatrixf& a_mtxTransform){ mpN->m_mtxPost = a_mtxTransform;}
 		
 		/**
 		 * Applies the pre and post transforms to current matrix
 		 */
-		void ApplyPreAnimTransform(bool abSetChildrenUpdated);
-		void ApplyPostAnimTransform(bool abSetChildrenUpdated);
+		void ApplyPreAnimTransform(bool abSetChildrenUpdated){ ohpl_h10_node_apply_anim(OhplH10GetHost(), mpN, false, abSetChildrenUpdated);}
+		void ApplyPostAnimTransform(bool abSetChildrenUpdated){ ohpl_h10_node_apply_anim(OhplH10GetHost(), mpN, true, abSetChildrenUpdated);}
 
-		void SetCustomFlags(int alX){ mlCustomFlags = alX;}
-		int GetCustomFlags(){ return mlCustomFlags;}
+		void SetCustomFlags(int alX){ mpN->customFlags = alX;}
+		int GetCustomFlags(){ return mpN->customFlags;}
 		
 		/**
 		 * Updates the matrix with the added scales, translations and rotation. It also resets these values.
 		 */
-		void UpdateMatrix(bool abSetChildrenUpdated);
+		void UpdateMatrix(bool abSetChildrenUpdated){ ohpl_h10_node_update_matrix(OhplH10GetHost(), mpN, abSetChildrenUpdated);}
 
-		void UpdateWorldTransform();
-		void SetWorldTransformUpdated();
+		void UpdateWorldTransform(){ ohpl_h10_node_update_world(OhplH10GetHost(), mpN);}
+		void SetWorldTransformUpdated(){ ohpl_h10_node_set_world_transform_updated(OhplH10GetHost(), mpN);}
 
-		void UpdateEntityChildren();
+		void UpdateEntityChildren(){ ohpl_node_update_entity_children(OhplH10GetHost(), mpN);}
 	private:
 		tString msName;
-		bool mbActive;
-		
-		int mlCustomFlags;
-
-		bool mbAutoDeleteChildren;
-
-		OhplH10Node mS;
-
-		cVector3f mvWorldPosition;
-
-		tEntity3DList mlstEntity;
-		tNode3DList mlstNode;
+		OhplNodePod *mpN;
 	};
 
 };

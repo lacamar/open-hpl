@@ -27,6 +27,7 @@
 #include "system/Container.h"
 
 #include "math/BoundingVolume.h"
+#include "scene/RustSceneH10.h"
 
 namespace hpl {
 
@@ -52,6 +53,7 @@ namespace hpl {
 	class iEntity3D
 	{
 	friend struct OhplH10Hooks;
+	friend class cNode3D;
 	public:
 		iEntity3D(tString asName);
 		virtual ~iEntity3D();
@@ -63,29 +65,28 @@ namespace hpl {
 		tString& GetName(){return msName;}
 		void SetName(const tString& asName){msName = asName;}
 
-		cNode3D* GetParent(){ return mpParentNode;}
-		void SetParent(cNode3D* apNode){ mpParentNode = apNode;}
-		bool HasParent(){ return mpParentNode!=NULL;}
+		cNode3D* GetParent(){ return mpE->parentNode ? (cNode3D*)mpE->parentNode->owner : NULL;}
+		bool HasParent(){ return mpE->parentNode!=NULL;}
 
-		bool IsActive(){ return mbIsActive; }
-		void SetActive(bool abActive){ mbIsActive = abActive; }
+		bool IsActive(){ return mpE->active; }
+		void SetActive(bool abActive){ mpE->active = abActive; }
 
-		cVector3f GetLocalPosition();
-		cMatrixf& GetLocalMatrix();
+		cVector3f GetLocalPosition(){ return mpE->local.GetTranslation();}
+		cMatrixf& GetLocalMatrix(){ return mpE->local;}
 
-		cVector3f GetWorldPosition();
-		cMatrixf& GetWorldMatrix();
+		cVector3f GetWorldPosition(){ UpdateWorldTransform(); return mpE->world.GetTranslation();}
+		cMatrixf& GetWorldMatrix(){ UpdateWorldTransform(); return mpE->world;}
 
-		void SetPosition(const cVector3f& avPos);
-		void SetMatrix(const cMatrixf& a_mtxTransform);
+		void SetPosition(const cVector3f& avPos){ ohpl_h10_ent_set_position(OhplH10GetHost(), mpE, &avPos);}
+		void SetMatrix(const cMatrixf& a_mtxTransform){ ohpl_h10_ent_set_matrix(OhplH10GetHost(), mpE, &a_mtxTransform);}
 
-		void SetWorldPosition(const cVector3f& avWorldPos);
-		void SetWorldMatrix(const cMatrixf& a_mtxWorldTransform);
+		void SetWorldPosition(const cVector3f& avWorldPos){ ohpl_h10_ent_set_world_position(OhplH10GetHost(), mpE, &avWorldPos);}
+		void SetWorldMatrix(const cMatrixf& a_mtxWorldTransform){ ohpl_h10_ent_set_world_matrix(OhplH10GetHost(), mpE, &a_mtxWorldTransform);}
 
-		void SetTransformUpdated(bool abUpdateCallbacks = true);
-		bool GetTransformUpdated();
+		void SetTransformUpdated(bool abUpdateCallbacks = true){ ohpl_h10_ent_set_transform_updated(OhplH10GetHost(), mpE, abUpdateCallbacks);}
+		bool GetTransformUpdated(){ return mpE->transformUpdated;}
 
-		int GetTransformUpdateCount();
+		int GetTransformUpdateCount(){ return mpE->count;}
 
 		void AddCallback(iEntityCallback *apCallback);
 		void RemoveCallback(iEntityCallback *apCallback);
@@ -95,19 +96,19 @@ namespace hpl {
 
 		virtual cBoundingVolume* GetBoundingVolume();
 
-		bool IsSaved(){ return mbIsSaved; }
-		void SetIsSaved(bool abX){ mbIsSaved = abX; }
+		bool IsSaved(){ return mpE->saved; }
+		void SetIsSaved(bool abX){ mpE->saved = abX; }
 
-		void SetUniqueID(int alX){ mlUniqueID = alX;}
-		int GetUniqueID(){ return mlUniqueID;}
+		void SetUniqueID(int alX){ mpE->uniqueId = alX;}
+		int GetUniqueID(){ return mpE->uniqueId;}
 
         /**
 		 * The entity3d child hierarchy will only work if the child has no node parent.
 		 **/
-		void AddChild(iEntity3D *apEntity);
-		void RemoveChild(iEntity3D *apEntity);
-		bool IsChild(iEntity3D *apEntity);
-		iEntity3D *GetEntityParent();
+		void AddChild(iEntity3D *apEntity){ ohpl_ent_add_child(OhplH10GetHost(), mpE, apEntity ? apEntity->mpE : NULL);}
+		void RemoveChild(iEntity3D *apEntity){ ohpl_ent_remove_child(mpE, apEntity ? apEntity->mpE : NULL);}
+		bool IsChild(iEntity3D *apEntity){ return ohpl_ent_is_child(mpE, apEntity ? apEntity->mpE : NULL);}
+		iEntity3D *GetEntityParent(){ return mpE->parentEntity ? (iEntity3D*)mpE->parentEntity->owner : NULL;}
 		cEntity3DIterator GetChildIterator();
 		
 		/**
@@ -117,43 +118,29 @@ namespace hpl {
 		void RemoveNodeChild(cNode3D *apNode);
 		bool IsNodeChild(cNode3D *apNode);
 
-		inline int GetIteratorCount(){ return mlIteratorCount;}
-		inline void SetIteratorCount(const int alX){ mlIteratorCount = alX;}
+		inline int GetIteratorCount(){ return mpE->iteratorCount;}
+		inline void SetIteratorCount(const int alX){ mpE->iteratorCount = alX;}
+
+		size_t GetNodeChildCount(){ return ohpl_ent_node_child_count(mpE);}
+		cNode3D *GetNodeChildAt(size_t alIdx){ return (cNode3D*)ohpl_ent_node_child_at(mpE, alIdx);}
+
+		void SetApplyTransformToBV(bool abX){ mpE->applyBV = abX;}
+		bool GetUpdateBoundingVolume(){ return mpE->updateBV;}
+		void SetUpdateBoundingVolume(bool abX){ mpE->updateBV = abX;}
 
 	protected:
 		virtual void OnTransformUpdated(){}
-		
-		cNode3D* mpParentNode;
+
+		OhplEntPod *mpE;
 
 		tString msName;
-		bool mbIsActive;
-
-		bool mbIsSaved;
-		int mlUniqueID;
-
-		cMatrixf m_mtxLocalTransform;
-		cMatrixf m_mtxWorldTransform;
-
 		cBoundingVolume mBoundingVolume;
-		bool mbUpdateBoundingVolume;
-		bool mbApplyTransformToBV;
-
-		bool mbTransformUpdated;
-		
-		int mlCount;
 
 		tString msSourceFile;
 
 		tEntityCallbackList mlstCallbacks;
-
-		tEntity3DList mlstChildren;
-		iEntity3D *mpParent;
-
-		tNode3DList mlstNodeChildren;
-		
-		int mlIteratorCount;
 	private:
-		void UpdateWorldTransform();
+		void UpdateWorldTransform(){ ohpl_h10_ent_update_world(OhplH10GetHost(), mpE);}
 	};
 
 };

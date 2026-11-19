@@ -43,7 +43,7 @@ namespace hpl {
 		static void BodySetTransform(size_t cpp, const float* m)
 		{
 			iPhysicsBody* b = Body(cpp);
-			b->m_mtxLocalTransform.FromTranspose(m);
+			b->GetLocalMatrix().FromTranspose(m);
 			iPhysicsBody::mbUseCallback = false;
 			b->SetTransformUpdated(true);
 			iPhysicsBody::mbUseCallback = true;

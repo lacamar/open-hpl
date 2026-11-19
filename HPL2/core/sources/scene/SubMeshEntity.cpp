@@ -230,10 +230,10 @@ namespace hpl {
 		}	
 		else
 		{
-			if(mbUpdateBoundingVolume)
+			if(mpE->updateBV)
 			{
 				mBoundingVolume.SetTransform(GetWorldMatrix());
-				mbUpdateBoundingVolume = false;
+				mpE->updateBV = false;
 			}
 
 			return &mBoundingVolume;
@@ -350,7 +350,7 @@ namespace hpl {
 
 	void cSubMeshEntity::OnTransformUpdated()
 	{
-		mpMeshEntity->mbUpdateBoundingVolume = true;
+		mpMeshEntity->SetUpdateBoundingVolume(true);
 	}
 
 	//-----------------------------------------------------------------------

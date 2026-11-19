@@ -237,7 +237,7 @@ namespace hpl {
 			case 3: { cBone *pParent = e->mpMesh->GetSkeleton()->GetBoneByIndex(i)->GetParent(); return pParent ? &pParent->GetName() : NULL; }
 			case 4: return &e->mpMesh->GetNode(i)->GetName();
 			case 5: { cNode3D *pParent = e->mpMesh->GetNode(i)->GetParent(); return pParent ? &pParent->GetName() : NULL; }
-			case 6: return &(*std::next(e->mpMesh->GetNode(i)->GetChildList()->begin(), j))->GetName();
+			case 6: return &e->mpMesh->GetNode(i)->GetChildAt(j)->GetName();
 			}
 			return NULL;
 		}
@@ -250,8 +250,8 @@ namespace hpl {
 			case OhplH11Op_NodeActive: return N(a)->IsActive();
 			case OhplH11Op_NodeUpdateMatrix: N(a)->UpdateMatrix(false); return 0;
 			case OhplH11Op_NodeAnimXform: N(a)->ApplyPreAnimTransform(false); N(a)->ApplyPostAnimTransform(false); return 0;
-			case OhplH11Op_NodeChildCount: return N(a)->GetChildList()->size();
-			case OhplH11Op_NodeChild: return P(*std::next(N(a)->GetChildList()->begin(), i));
+			case OhplH11Op_NodeChildCount: return N(a)->GetChildCount();
+			case OhplH11Op_NodeChild: return P(N(a)->GetChildAt(i));
 			case OhplH11Op_NodeWorld: return P(&N(a)->GetWorldMatrix());
 			case OhplH11Op_NodeUpdateWorld: N(a)->UpdateWorldTransform(); return 0;
 			case OhplH11Op_NodeSetMatrix: N(a)->SetMatrix(*reinterpret_cast<const cMatrixf*>(b), false); return 0;
@@ -296,8 +296,8 @@ namespace hpl {
 			case OhplH11Op_SubIllumColor: e->mvSubMeshes[i]->SetIlluminationColor(*reinterpret_cast<const cColor*>(a)); return 0;
 			case OhplH11Op_SubBvMin: return P(&e->mvSubMeshes[i]->GetBoundingVolume()->GetMin());
 			case OhplH11Op_SubBvMax: return P(&e->mvSubMeshes[i]->GetBoundingVolume()->GetMax());
-			case OhplH11Op_BvFlag: return e->mbUpdateBoundingVolume;
-			case OhplH11Op_BvClearFlag: e->mbUpdateBoundingVolume = false; return 0;
+			case OhplH11Op_BvFlag: return e->mpE->updateBV;
+			case OhplH11Op_BvClearFlag: e->mpE->updateBV = false; return 0;
 			case OhplH11Op_BvFromVertices:
 			{
 				for(int s=0;s<e->GetSubMeshEntityNum();s++)
@@ -405,7 +405,7 @@ namespace hpl {
 			case OhplH11Op_StrPtr: { const tString *s = Str(e, a, b, i); return s ? P(s->data()) : 0; }
 			case OhplH11Op_StrLen: { const tString *s = Str(e, a, b, i); return s ? s->size() : 0; }
 			case OhplH11Op_SubSetLocalNode: e->mvSubMeshes[i]->SetLocalNode(e->mvNodeStates[a]); return 0;
-			case OhplH11Op_MeshNodeChildCount: return e->mpMesh->GetNode(a)->GetChildList()->size();
+			case OhplH11Op_MeshNodeChildCount: return e->mpMesh->GetNode(a)->GetChildCount();
 			case OhplH11Op_SubDestroy:
 			{
 				cSubMeshEntity *pSub = e->mvSubMeshes[i];
@@ -422,8 +422,8 @@ namespace hpl {
 				else if(a == 2) STLDeleteAll(e->mvTempBoneStates);
 				else STLDeleteAll(e->mvAnimationStates);
 				return 0;
-			case OhplH11Op_ListCount: return e->mlstNodeChildren.size();
-			case OhplH11Op_ListAt: return P(*std::next(e->mlstNodeChildren.begin(), i));
+			case OhplH11Op_ListCount: return e->GetNodeChildCount();
+			case OhplH11Op_ListAt: return P(e->GetNodeChildAt(i));
 			}
 			return 0;
 		}
@@ -487,7 +487,7 @@ namespace hpl {
 		
 		mpBody=NULL;
 
-		mbApplyTransformToBV = false;
+		mpE->applyBV = false;
 
 		mbIsVisible = true;
 		mfIlluminationAmount = 1.0f;
