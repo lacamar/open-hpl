@@ -80,22 +80,14 @@ public:
 	//////////////////////
 
 	cLuxSaveGame_SaveData *CreateSaveGameData();
-	void LoadSaveGameData(cLuxSaveGame_SaveData *apSave);
 
 	tWString GetProperSaveName(const tWString& asFile);
 
 	cLuxSaveHandlerThreadClass* GetThreadClass() { return &mSaveHandlerThreadClass; }
 private:
-	tWString GetSaveName(const tWString &asPrefix);
-	void DeleteOldestSaveFiles(const tWString &asFolder, int alMax);
-	tWString GetNewestSaveFile(const tWString &asFolder);
+	bool Run(unsigned alWhat);
 
-	bool mbInitialized;
-	bool mbStartThread;
-
-	cDate mLatestSaveDate;
-	int mlMaxAutoSaves;
-	int mlSaveNameCount;
+	struct OhplGa6Handler *mpRust;
 
 	cLuxSaveHandlerThreadClass mSaveHandlerThreadClass;
 };

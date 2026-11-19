@@ -15,6 +15,7 @@ pub mod env;
 mod ffi;
 pub mod game;
 pub mod gamemap;
+pub mod handler;
 pub mod map;
 pub mod names;
 #[cfg(test)]

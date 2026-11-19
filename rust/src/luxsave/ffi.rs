@@ -1,6 +1,7 @@
 //! C ABI of the Amnesia save layer, mirrored in `amnesia/src/game/RustLuxSave.h`.
 
 use super::env::{Env, Op};
+use super::handler::{HOp, Handler, Host};
 use super::names::{self, Date, NameState};
 use super::{engine, game, gamemap, map};
 use std::ffi::c_void;
@@ -8,6 +9,7 @@ use std::ffi::c_void;
 type Ctx = *mut c_void;
 type Call = unsafe extern "C" fn(Ctx, u32, i32, i32) -> i32;
 type Sink32 = unsafe extern "C" fn(Ctx, *const u32, usize);
+type HostCall = unsafe extern "C" fn(Ctx, u32, i64, *mut u32, usize) -> i64;
 type Translate = unsafe extern "C" fn(Ctx, *const u32, usize, Sink32, Ctx);
 
 struct CEnv {
@@ -218,4 +220,89 @@ pub unsafe extern "C" fn ohpl_ga6_find_map(
     gamemap::find_map(&v, bytes(name, name_n))
         .and_then(|i| i32::try_from(i).ok())
         .unwrap_or(-1)
+}
+
+struct CHost {
+    ctx: Ctx,
+    call: HostCall,
+}
+
+impl Host for CHost {
+    fn call(&mut self, op: HOp, a: i64, buf: &mut [u32]) -> i64 {
+        // SAFETY: the entry point's caller guarantees `call` accepts `ctx` and `buf`.
+        unsafe { (self.call)(self.ctx, op as u32, a, buf.as_mut_ptr(), buf.len()) }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_ga6h_new(max_auto: i32) -> *mut Handler {
+    Box::into_raw(Box::new(Handler::new(max_auto)))
+}
+
+/// # Safety
+/// `h` comes from `ohpl_ga6h_new` and is not used afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ga6h_free(h: *mut Handler) {
+    if !h.is_null() {
+        // SAFETY: per the contract.
+        drop(unsafe { Box::from_raw(h) });
+    }
+}
+
+/// # Safety
+/// `h` is live; `call` accepts `ctx`; `file` is `n` readable units.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ga6h_save_to_file(
+    h: *mut Handler,
+    ctx: Ctx,
+    call: HostCall,
+    file: *const u32,
+    n: usize,
+    snapshot: bool,
+) {
+    // SAFETY: valid `h` per the contract.
+    if let Some(h) = unsafe { h.as_mut() } {
+        h.save_to_file(&mut CHost { ctx, call }, units(file, n), snapshot);
+    }
+}
+
+/// # Safety
+/// `h` is live; `call` accepts `ctx`; `file` is `n` readable units.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ga6h_load_from_file(
+    h: *mut Handler,
+    ctx: Ctx,
+    call: HostCall,
+    file: *const u32,
+    n: usize,
+) {
+    // SAFETY: valid `h` per the contract.
+    if let Some(h) = unsafe { h.as_mut() } {
+        h.load_from_file(&mut CHost { ctx, call }, units(file, n));
+    }
+}
+
+/// `what`: 0 autosave, 1 hard-mode save, 2 autoload (reset logger), 3 autoload, 4 file exists.
+///
+/// # Safety
+/// `h` is live; `call` accepts `ctx`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ga6h_run(
+    h: *mut Handler,
+    ctx: Ctx,
+    call: HostCall,
+    what: u32,
+) -> bool {
+    // SAFETY: valid `h` per the contract.
+    let Some(h) = (unsafe { h.as_mut() }) else {
+        return false;
+    };
+    let host = &mut CHost { ctx, call };
+    match what {
+        0 => h.auto_save(host),
+        1 => h.hardmode_save(host),
+        2 => h.auto_load(host, true),
+        3 => h.auto_load(host, false),
+        _ => h.save_file_exists(host),
+    }
 }
