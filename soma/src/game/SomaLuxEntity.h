@@ -290,7 +290,6 @@ public:
 	cSoundEntity *mpStaticMoveLoop = NULL;
 	int &mlStaticMoveLoopID = mpCore->mlStaticMoveLoopID;
 	bool &mbStaticMoveSound = mpCore->mbStaticMoveSound;
-	void UpdateRotate(float afTimeStep);
 	void UpdateCheckCollision(float afTimeStep);
 	void UpdateLiquid(float afTimeStep);
 	void CreateLiquidGraphics(cWorld *apWorld);

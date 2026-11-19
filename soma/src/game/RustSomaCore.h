@@ -119,8 +119,30 @@ struct OhplSeCore
 
 static_assert(sizeof(OhplSeCore) == 664, "OhplSeCore layout");
 
+struct OhplSeHost
+{
+	void (*get_matrix)(void *, cMatrixf *);
+	void (*set_matrix_main)(void *, const cMatrixf *);
+	void (*run_callback)(void *, int which); // 0 move, 1 rotate
+	bool (*has_mesh)(void *);
+	void (*mesh_coverage)(void *, float);
+	void (*mesh_liquid)(void *, float);
+	void (*capture_effect_defaults)(void *);
+	void (*apply_effects_alpha)(void *);
+};
+
 extern "C"
 {
+	void ohpl_se_stop_move(OhplSeCore *);
+	void ohpl_se_update_move(OhplSeCore *, void *ent, const OhplSeHost *, float dt);
+	void ohpl_se_set_liquid(OhplSeCore *, void *ent, const OhplSeHost *, float x);
+	void ohpl_se_fade_liquid(OhplSeCore *, void *ent, const OhplSeHost *, float target, float time);
+	void ohpl_se_update_liquid(OhplSeCore *, void *ent, const OhplSeHost *, float dt);
+	void ohpl_se_set_effect_color(OhplSeCore *, void *ent, const OhplSeHost *, const cColor *);
+	void ohpl_se_fade_effect_color(OhplSeCore *, void *ent, const OhplSeHost *, const cColor *, float time);
+	void ohpl_se_update_effect_color(OhplSeCore *, void *ent, const OhplSeHost *, float dt);
+	void ohpl_se_register_entity(void *engine, const char *type, size_t core_offset);
+	void ohpl_se_register_props(void *engine, size_t core_offset);
 	OhplSeCore *ohpl_se_core_new();
 	void ohpl_se_core_free(OhplSeCore *);
 }
