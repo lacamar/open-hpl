@@ -88,6 +88,9 @@ pub struct BodyState {
     pub is_underwater: bool,
 }
 
+const _: () =
+    assert!(std::mem::size_of::<BodyState>() == 256 && std::mem::size_of::<JointStateC>() == 464);
+
 const AXES_XYZ: i32 = 2;
 
 impl BodyState {
