@@ -4,6 +4,7 @@
 //! the ops and plans returned here.
 
 pub mod effects;
+pub mod ent_core;
 mod ffi;
 pub mod geom;
 pub mod logic;

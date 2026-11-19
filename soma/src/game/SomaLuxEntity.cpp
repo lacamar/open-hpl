@@ -2703,6 +2703,7 @@ cSomaLuxEntity::~cSomaLuxEntity()
 	SomaForgetCritter(this);
 	SomaDestroyAgent(this);
 	SomaFreePropBlock("cLuxCritter", mpCritterProps);
+	ohpl_se_core_free(mpCore);
 }
 
 void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
