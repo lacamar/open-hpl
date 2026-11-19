@@ -40,6 +40,8 @@ done
 [ -n "$RECORD" ] && { IMPLS=cpp; QUICK=; SAVES=; }
 OUT=${OUT:-$CACHE/$(basename "$REPO")-$(date +%Y%m%d-%H%M%S)}
 mkdir -p "$OUT"; OUT=$(realpath "$OUT")
+exec 9>"$OUT/.gate.lock"
+flock -n 9 || { echo "another gate run uses $OUT" >&2; exit 2; }
 if [ -z "$SCRATCH" ]; then
 	[ -n "$QUICK" ] && SCRATCH=$CACHE/scratch-$(basename "$REPO") || SCRATCH=$OUT/scratch
 fi
