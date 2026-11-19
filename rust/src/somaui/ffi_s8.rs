@@ -3,14 +3,15 @@
 //! callbacks.
 
 use super::s8::{self, E};
-use crate::luxmenu2::host::HostVt;
+use crate::luxmenu2::host::{HostVt, Raw};
 
 macro_rules! eng {
     ($vt:expr, $e:ident, $d:expr, $body:block) => {{
         // SAFETY: the shell passes its host table, live for the call.
         match unsafe { $vt.as_ref() } {
             Some(vt) => {
-                let $e = E::new(vt);
+                let raw = Raw(vt);
+                let $e = E::new(&raw);
                 $body
             }
             None => $d,

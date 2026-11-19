@@ -239,9 +239,21 @@ unsafe extern "C" fn collect(ctx: *mut c_void, p: *const u32, n: usize) {
 
 impl Host for HostVt {
     fn call(&self, op: i32, args: &[Arg]) -> Res {
-        if let Some(r) = super::a10b_direct::call(op, args) {
-            return r;
-        }
+        super::a10b_direct::call(op, args).unwrap_or_else(|| self.call_raw(op, args))
+    }
+}
+
+/// A `HostVt` with another op numbering (SOMA's S8 host): no A10b direct ops.
+pub struct Raw<'a>(pub &'a HostVt);
+
+impl Host for Raw<'_> {
+    fn call(&self, op: i32, args: &[Arg]) -> Res {
+        self.0.call_raw(op, args)
+    }
+}
+
+impl HostVt {
+    pub fn call_raw(&self, op: i32, args: &[Arg]) -> Res {
         let raw: Vec<RawArg> = args
             .iter()
             .map(|a| match *a {
