@@ -168,3 +168,5 @@ pub unsafe fn update<Ho: Host>(h: &Ho, p: &CtrlParams, pid: *mut Pid, time_step:
         }
     }
 }
+
+const _: () = assert!(std::mem::size_of::<CtrlParams>() == 88);

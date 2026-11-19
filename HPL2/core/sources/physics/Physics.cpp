@@ -80,7 +80,7 @@ namespace hpl {
 
 	void cPhysics::Update(float afTimeStep)
 	{
-		ohpl_h15p_update_impacts(mRs, afTimeStep, mfImpactDuration);
+		ohpl_h15p_update_impacts(mRs, afTimeStep, mS->impactDuration);
 	}
 
 	iPhysicsWorld* cPhysics::CreateWorld(bool abAddSurfaceData)
@@ -95,7 +95,7 @@ namespace hpl {
 
 	bool cPhysics::CanPlayImpact()
 	{
-		return ohpl_h15p_can_play(mRs, mlMaxImpacts);
+		return ohpl_h15p_can_play(mRs, mS->maxImpacts);
 	}
 
 	void cPhysics::AddImpact()

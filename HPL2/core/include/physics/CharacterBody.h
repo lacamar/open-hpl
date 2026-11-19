@@ -126,21 +126,21 @@ namespace hpl {
 		const tString& GetName(){ return msName;}
 
 		//Actions
-		void SetForce(const cVector3f &avForce) { mS.force = avForce; }
-		void AddForce(const cVector3f &avForce) { mS.force += avForce; }
-		cVector3f GetForce() { return mS.force; }
+		void SetForce(const cVector3f &avForce) { mS->force = avForce; }
+		void AddForce(const cVector3f &avForce) { mS->force += avForce; }
+		cVector3f GetForce() { return mS->force; }
 
 		void Move(eCharDir aDir, float afMul);
 		void StopMovement();
 
 		void ConnectToBody(	iPhysicsBody *apBody, const cVector3f& avConnectionPos, tPhysicsConnectionFlag alFlags);
-		void DisconnectBody() { ohpl_h14_disconnect_body(HostOp, reinterpret_cast<size_t>(this), &mE); }
+		void DisconnectBody() { ohpl_h14_disconnect_body(HostOp, reinterpret_cast<size_t>(this), mE); }
 
 		int AddExtraSize(const cVector3f& avSize);
 		void SetActiveSize(int alNum);
-		int GetActiveSize(){ return mS.currentShapeIdx; }
+		int GetActiveSize(){ return mS->currentShapeIdx; }
 
-		void Update(float afTimeStep) { OhplCharVt vt = MakeVt(); ohpl_char_update(&vt, &mS, afTimeStep, mbHpl3); }
+		void Update(float afTimeStep) { OhplCharVt vt = MakeVt(); ohpl_char_update(&vt, mS, afTimeStep, mbHpl3); }
 
 		static void SetHpl3(bool abX){ mbHpl3 = abX; }
 
@@ -152,14 +152,14 @@ namespace hpl {
 		// General Properties
 
 		void SetActive(bool abX);
-		bool IsActive(){ return mS.active;}
+		bool IsActive(){ return mS->active;}
 
 		// Physical Properties
 
-		float GetMass() { return mS.mass; }
+		float GetMass() { return mS->mass; }
 		void SetMass(float afMass);
 
-		cVector3f GetSize() { return mS.size; }
+		cVector3f GetSize() { return mS->size; }
 
 		iCollideShape *GetCurrentShape() { return mpCurrentShape; }
 		iCollideShape *GetShape(int alIdx) { return mvShapes[alIdx]; }
@@ -167,32 +167,32 @@ namespace hpl {
 		iPhysicsBody* GetCurrentBody() { return mpCurrentBody; }
 
 		void SetCollideCharacter(bool abX);
-		bool GetCollideCharacter(){ return mbCollideCharacter;}
+		bool GetCollideCharacter(){ return mE->collideCharacter;}
 
 		void SetTestCollision(bool abX);
-		void SetPhysicsBodyActive(bool abX) { mbPhysicsBodyActive = abX; UpdateBodyActive(); }
-		bool GetPhysicsBodyActive(){ return mbPhysicsBodyActive;}
-		bool GetTestCollision(){return mS.testCollision;}
+		void SetPhysicsBodyActive(bool abX) { mE->physicsBodyActive = abX; UpdateBodyActive(); }
+		bool GetPhysicsBodyActive(){ return mE->physicsBodyActive;}
+		bool GetTestCollision(){return mS->testCollision;}
 
-		void SetMaxPositiveMoveSpeed(eCharDir aDir, float afX) { mS.maxPosMoveSpeed[aDir] = afX; }
+		void SetMaxPositiveMoveSpeed(eCharDir aDir, float afX) { mS->maxPosMoveSpeed[aDir] = afX; }
 		float GetMaxPositiveMoveSpeed(eCharDir aDir);
-		void SetMaxNegativeMoveSpeed(eCharDir aDir, float afX) { mS.maxNegMoveSpeed[aDir] = afX; }
+		void SetMaxNegativeMoveSpeed(eCharDir aDir, float afX) { mS->maxNegMoveSpeed[aDir] = afX; }
 		float GetMaxNegativeMoveSpeed(eCharDir aDir);
 
-		void SetMoveSpeed(eCharDir aDir, float afX) { mS.moveSpeed[aDir] = afX; }
+		void SetMoveSpeed(eCharDir aDir, float afX) { mS->moveSpeed[aDir] = afX; }
 		float GetMoveSpeed(eCharDir aDir);
-		void SetMoveSpeedMul(eCharDir aDir, float afX){ mS.moveSpeedMul[aDir] = afX;}
-		float GetMoveSpeedMul(eCharDir aDir){ return mS.moveSpeedMul[aDir];}
-		void SetMoveAcc(eCharDir aDir, float afX) { mS.moveAcc[aDir] = afX; }
+		void SetMoveSpeedMul(eCharDir aDir, float afX){ mS->moveSpeedMul[aDir] = afX;}
+		float GetMoveSpeedMul(eCharDir aDir){ return mS->moveSpeedMul[aDir];}
+		void SetMoveAcc(eCharDir aDir, float afX) { mS->moveAcc[aDir] = afX; }
 		float GetMoveAcc(eCharDir aDir);
-		void SetMoveDeacc(eCharDir aDir, float afX) { mS.moveDeacc[aDir] = afX; }
+		void SetMoveDeacc(eCharDir aDir, float afX) { mS->moveDeacc[aDir] = afX; }
 		float GetMoveDeacc(eCharDir aDir);
 
-		void SetMoveOppositeDirAccMul(eCharDir aDir, float afX){mS.moveOppositeDirAccMul[aDir] = afX;}
-		float GetMoveOppositeDirAccMul(eCharDir aDir){ return mS.moveOppositeDirAccMul[aDir];}
+		void SetMoveOppositeDirAccMul(eCharDir aDir, float afX){mS->moveOppositeDirAccMul[aDir] = afX;}
+		float GetMoveOppositeDirAccMul(eCharDir aDir){ return mS->moveOppositeDirAccMul[aDir];}
 
-		void SetDeaccelerateMoveSpeedInAir(bool abX){ mS.deaccelerateMoveSpeedInAir = abX;}
-		bool GetDeaccelerateMoveSpeedInAir(){ return mS.deaccelerateMoveSpeedInAir;}
+		void SetDeaccelerateMoveSpeedInAir(bool abX){ mS->deaccelerateMoveSpeedInAir = abX;}
+		bool GetDeaccelerateMoveSpeedInAir(){ return mS->deaccelerateMoveSpeedInAir;}
 
 		cVector3f GetVelocity(float afFrameTime);
 
@@ -200,183 +200,183 @@ namespace hpl {
 		void SetupSafePositions(float afSaveInterval, float afBufferTime) { ohpl_h14_setup_safe_positions(mpAux, afSaveInterval, afBufferTime); }
 		void TeleportToSafePosition(float afElapsedTime, bool abSmooth=false);
 		const cVector3f& GetPosition();
-		const cVector3f& GetLastPosition() { return mS.lastPosition; }
-		void SetFeetPosition(const cVector3f& avPos, bool abSmooth=false) { SetPosition(avPos + cVector3f(0,mS.size.y/2,0),abSmooth); }
-		cVector3f GetFeetPosition() { return mS.position - cVector3f(0,mS.size.y/2,0); }
+		const cVector3f& GetLastPosition() { return mS->lastPosition; }
+		void SetFeetPosition(const cVector3f& avPos, bool abSmooth=false) { SetPosition(avPos + cVector3f(0,mS->size.y/2,0),abSmooth); }
+		cVector3f GetFeetPosition() { return mS->position - cVector3f(0,mS->size.y/2,0); }
 
 		void SetYaw(float afX);
-		void AddYaw(float afX) { mS.yaw += afX; }
-		float GetYaw() { return mS.yaw; }
+		void AddYaw(float afX) { mS->yaw += afX; }
+		float GetYaw() { return mS->yaw; }
 		void SetPitch(float afX);
-		void AddPitch(float afX) { mS.pitch += afX; }
-		float GetPitch() { return mS.pitch; }
+		void AddPitch(float afX) { mS->pitch += afX; }
+		float GetPitch() { return mS->pitch; }
 
-		const cVector3f& GetForward() { return mS.forward; }
+		const cVector3f& GetForward() { return mS->forward; }
 		const cVector3f& GetRight();
-		const cVector3f& GetUp() { return mS.up; }
+		const cVector3f& GetUp() { return mS->up; }
 
-		const cMatrixf& GetMoveMatrix(){ return mS.mtxMove;}
+		const cMatrixf& GetMoveMatrix(){ return mS->mtxMove;}
 
-		void SetGravityActive(bool abX) { mS.gravityActive = abX; }
-		bool GravityIsActive() { return mS.gravityActive; }
-		void SetMaxGravitySpeed(float afX) { mS.maxGravitySpeed = afX; }
+		void SetGravityActive(bool abX) { mS->gravityActive = abX; }
+		bool GravityIsActive() { return mS->gravityActive; }
+		void SetMaxGravitySpeed(float afX) { mS->maxGravitySpeed = afX; }
 		float GetMaxGravitySpeed();
 
-		bool GetCustomGravityActive() { return mS.customGravityActive; }
-		void SetCustomGravityActive(bool abX) { mS.customGravityActive = abX; }
-		void SetCustomGravity(const cVector3f& avCustomGravity) { mS.customGravity = avCustomGravity; }
-		cVector3f GetCustomGravity() { return mS.customGravity; }
+		bool GetCustomGravityActive() { return mS->customGravityActive; }
+		void SetCustomGravityActive(bool abX) { mS->customGravityActive = abX; }
+		void SetCustomGravity(const cVector3f& avCustomGravity) { mS->customGravity = avCustomGravity; }
+		cVector3f GetCustomGravity() { return mS->customGravity; }
 
-		void AddForceVelocity(const cVector3f& avVel){ mS.velocity += avVel;}
-		void SetForceVelocity(const cVector3f& avVel){ mS.velocity = avVel;}
-		cVector3f GetForceVelocity(){ return mS.velocity;}
+		void AddForceVelocity(const cVector3f& avVel){ mS->velocity += avVel;}
+		void SetForceVelocity(const cVector3f& avVel){ mS->velocity = avVel;}
+		cVector3f GetForceVelocity(){ return mS->velocity;}
 
-		bool IsOnGround() { return mS.onGroundCount >0; }
-		void SetMaxOnGroundCount(int alX) { mS.maxOnGroundCount = alX;}
-		int GetMaxOnGroundCount() { return mS.maxOnGroundCount;}
+		bool IsOnGround() { return mS->onGroundCount >0; }
+		void SetMaxOnGroundCount(int alX) { mS->maxOnGroundCount = alX;}
+		int GetMaxOnGroundCount() { return mS->maxOnGroundCount;}
 
 		void SetCollideFlags(tFlag alX);
-		inline tFlag GetCollideFlags() const { return mS.collideFlags;}
+		inline tFlag GetCollideFlags() const { return mS->collideFlags;}
 
-		void SetGroundFriction(float afX){ mS.groundFriction = afX;}
-		float GetGroundFriction(){ return mS.groundFriction;}
+		void SetGroundFriction(float afX){ mS->groundFriction = afX;}
+		float GetGroundFriction(){ return mS->groundFriction;}
 
-		void SetAirFriction(float afX){ mS.airFriction = afX;}
-		float GetAirFriction(){ return mS.airFriction;}
+		void SetAirFriction(float afX){ mS->airFriction = afX;}
+		float GetAirFriction(){ return mS->airFriction;}
 
-		void SetDisableDiagSpeedBoost(bool abX){ mS.disableDiagSpeedBoost = abX;}
-		bool GetDisableDiagSpeedBoost(){ return mS.disableDiagSpeedBoost;}
+		void SetDisableDiagSpeedBoost(bool abX){ mS->disableDiagSpeedBoost = abX;}
+		bool GetDisableDiagSpeedBoost(){ return mS->disableDiagSpeedBoost;}
 
-		void SetMoveDelay(float afX){mS.moveDelayCount=afX;}
-		float GetMoveDelay(){ return mS.moveDelayCount;}
+		void SetMoveDelay(float afX){mS->moveDelayCount=afX;}
+		float GetMoveDelay(){ return mS->moveDelayCount;}
 
 		// Interaction Properties
 
-		bool GetMovedLastUpdate(){ return mS.active && mS.movedLastUpdate;}
+		bool GetMovedLastUpdate(){ return mS->active && mS->movedLastUpdate;}
 
-		void SetMaxPushMass(float afX){ mfMaxPushMass = afX;}
-		void SetPushForce(float afX){ mfPushForce = afX;}
-		float GetMaxPushMass(){ return mfMaxPushMass;}
-		float GetPushForce(){ return mfPushForce;}
-		void SetPushImpulse(float afX){ mfPushImpulse = afX;}
-		float GetPushImpulse(){ return mfPushImpulse;}
-		bool GetPushIn2D(){ return mbPushIn2D;}
-		void SetPushIn2D(bool abX){ mbPushIn2D = abX;}
+		void SetMaxPushMass(float afX){ mE->maxPushMass = afX;}
+		void SetPushForce(float afX){ mE->pushForce = afX;}
+		float GetMaxPushMass(){ return mE->maxPushMass;}
+		float GetPushForce(){ return mE->pushForce;}
+		void SetPushImpulse(float afX){ mE->pushImpulse = afX;}
+		float GetPushImpulse(){ return mE->pushImpulse;}
+		bool GetPushIn2D(){ return mE->pushIn2D;}
+		void SetPushIn2D(bool abX){ mE->pushIn2D = abX;}
 
-		void SetCharacterMaxPushMass(float afX){ mfCharacterMaxPushMass = afX;}
-		void SetCharacterPushForce(float afX){ mfCharacterPushForce = afX;}
-		float GetCharacterMaxPushMass(){ return mfCharacterMaxPushMass;}
-		float GetCharacterPushForce(){ return mfCharacterPushForce;}
-		bool GetCharacterPushIn2D(){ return mbCharacterPushIn2D;}
-		void SetCharacterPushIn2D(bool abX){ mbCharacterPushIn2D = abX;}
+		void SetCharacterMaxPushMass(float afX){ mE->charMaxPushMass = afX;}
+		void SetCharacterPushForce(float afX){ mE->charPushForce = afX;}
+		float GetCharacterMaxPushMass(){ return mE->charMaxPushMass;}
+		float GetCharacterPushForce(){ return mE->charPushForce;}
+		bool GetCharacterPushIn2D(){ return mE->charPushIn2D;}
+		void SetCharacterPushIn2D(bool abX){ mE->charPushIn2D = abX;}
 
-		void SetConstantContactForceMul(float afX){ mfConstantContactForceMul = afX;}
-		float GetConstantContactForceMul(){ return mfConstantContactForceMul;}
-		void SetVelocityContactForceMul(float afX){ mfVelocityContactForceMul = afX;}
-		float GetVelocityContactForceMul(){ return mfVelocityContactForceMul;}
-		void SetMaxContactForcePerMassUnit(float afX){ mfMaxContactForcePerMassUnit = afX;}
-		float GetMaxContactForcePerMassUnit(){ return mfMaxContactForcePerMassUnit;}
+		void SetConstantContactForceMul(float afX){ mE->constantContactForceMul = afX;}
+		float GetConstantContactForceMul(){ return mE->constantContactForceMul;}
+		void SetVelocityContactForceMul(float afX){ mE->velocityContactForceMul = afX;}
+		float GetVelocityContactForceMul(){ return mE->velocityContactForceMul;}
+		void SetMaxContactForcePerMassUnit(float afX){ mE->maxContactForcePerMassUnit = afX;}
+		float GetMaxContactForcePerMassUnit(){ return mE->maxContactForcePerMassUnit;}
 
-		void SetMaxNoSlideSlopeAngle(float afAngle) { mS.maxNoSlideSlopeCos = cos(afAngle); }
-		float GetMaxNoSlideSlopeAngle() { return acos(mS.maxNoSlideSlopeCos); }
-		void SetGroundAngleMin(float afAngle){ mS.groundAngleMinCos = cos(afAngle); }
-		float GetGroundAngleMin(){ return acos(mS.groundAngleMinCos); }
+		void SetMaxNoSlideSlopeAngle(float afAngle) { mS->maxNoSlideSlopeCos = cos(afAngle); }
+		float GetMaxNoSlideSlopeAngle() { return acos(mS->maxNoSlideSlopeCos); }
+		void SetGroundAngleMin(float afAngle){ mS->groundAngleMinCos = cos(afAngle); }
+		float GetGroundAngleMin(){ return acos(mS->groundAngleMinCos); }
 
-		void SetStickToSlope(bool abX){ mbStickToSlope = abX;}
-		bool GetStickToSlope(){ return mbStickToSlope;}
+		void SetStickToSlope(bool abX){ mE->stickToSlope = abX;}
+		bool GetStickToSlope(){ return mE->stickToSlope;}
 
-		float GetMaxStepSize(){ return mS.maxStepHeight;}
-		void SetMaxStepSize(float afSize){ mS.maxStepHeight = afSize;}
+		float GetMaxStepSize(){ return mS->maxStepHeight;}
+		void SetMaxStepSize(float afSize){ mS->maxStepHeight = afSize;}
 
-		float GetMaxStepSizeInAir(){ return mS.maxStepHeightInAir;}
-		void SetMaxStepSizeInAir(float afSize){ mS.maxStepHeightInAir = afSize;}
+		float GetMaxStepSizeInAir(){ return mS->maxStepHeightInAir;}
+		void SetMaxStepSizeInAir(float afSize){ mS->maxStepHeightInAir = afSize;}
 
-		void SetStepClimbSpeed(float afX){ mS.stepClimbSpeed = afX;}
-		float GetStepClimbSpeed(){ return mS.stepClimbSpeed;}
+		void SetStepClimbSpeed(float afX){ mS->stepClimbSpeed = afX;}
+		float GetStepClimbSpeed(){ return mS->stepClimbSpeed;}
 
-		void SetAccurateClimbing(bool abX){ mS.accurateClimbing = abX;}
-		bool GetAccurateClimbing(){ return mS.accurateClimbing;}
+		void SetAccurateClimbing(bool abX){ mS->accurateClimbing = abX;}
+		bool GetAccurateClimbing(){ return mS->accurateClimbing;}
 
-		void SetClimbForwardMul(float afX){ mS.climbForwardMul= afX;}
-		float GetClimbForwardMul(){ return mS.climbForwardMul;}
+		void SetClimbForwardMul(float afX){ mS->climbForwardMul= afX;}
+		float GetClimbForwardMul(){ return mS->climbForwardMul;}
 
-		void SetClimbHeightAdd(float afX){ mS.climbHeightAdd = afX;}
-		float GetClimbHeightAdd(){ return mS.climbHeightAdd;}
+		void SetClimbHeightAdd(float afX){ mS->climbHeightAdd = afX;}
+		float GetClimbHeightAdd(){ return mS->climbHeightAdd;}
 
-		bool IsClimbing(){ return mS.climbing;}
-		void ResetClimbing() { mS.climbing = false; }
+		bool IsClimbing(){ return mS->climbing;}
+		void ResetClimbing() { mS->climbing = false; }
 
-		const cVector3f& GetLastGroundNormal(){ return mS.lastGroundNormal;}
+		const cVector3f& GetLastGroundNormal(){ return mS->lastGroundNormal;}
 
-		void SetRotateYawWhenGravityAttached(bool abX){ mbRotateYawWhenGravityAttached = abX;}
-		bool GetRotateYawWhenGravityAttached(){ return mbRotateYawWhenGravityAttached;}
+		void SetRotateYawWhenGravityAttached(bool abX){ mE->rotateYawWhenGravityAttached = abX;}
+		bool GetRotateYawWhenGravityAttached(){ return mE->rotateYawWhenGravityAttached;}
 
-		void SetGravityAttachedBody(iPhysicsBody* apBody){ mpGravityAttachedBody = apBody;}
-		iPhysicsBody* GetGravityAttachedBody(){ return mpGravityAttachedBody;}
+		void SetGravityAttachedBody(iPhysicsBody* apBody){ mE->gravityAttachedBody = apBody;}
+		iPhysicsBody* GetGravityAttachedBody(){ return mE->gravityAttachedBody;}
 
-		iPhysicsMaterial * GetGravityCollideMaterial(){ return mpGravityCollideMaterial;}
+		iPhysicsMaterial * GetGravityCollideMaterial(){ return mE->gravityCollideMaterial;}
 
 		// Connection Properties
 
-		iPhysicsBody * GetConnectedBody() { return mpConnectedBody; }
+		iPhysicsBody * GetConnectedBody() { return mE->connectedBody; }
 		cVector3f GetBodyConnectionPos();
 		cVector3f GetCharConnectionPos();
 
-		const cVector3f& GetConnectionPosLocalToBody(){ return mvConnectionPosLocalToBody; }
-		const cVector3f& GetConnectionPosLocalToChar(){ return mvConnectionPosLocalToChar; }
-		void SetConnectionPosLocalToBody(const cVector3f& avPos){ mvConnectionPosLocalToBody = avPos; }
-		void SetConnectionPosLocalToChar(const cVector3f& avPos){ mvConnectionPosLocalToChar = avPos; }
+		const cVector3f& GetConnectionPosLocalToBody(){ return mE->connPosLocalToBody; }
+		const cVector3f& GetConnectionPosLocalToChar(){ return mE->connPosLocalToChar; }
+		void SetConnectionPosLocalToBody(const cVector3f& avPos){ mE->connPosLocalToBody = avPos; }
+		void SetConnectionPosLocalToChar(const cVector3f& avPos){ mE->connPosLocalToChar = avPos; }
 
-		const cVector3f& GetConnectionLocalUpBody(){ return mvConnectionLocalUpBody;}
-		void SetConnectionLocalUpBody(const cVector3f& avVec){ mvConnectionLocalUpBody = avVec;}
+		const cVector3f& GetConnectionLocalUpBody(){ return mE->connLocalUpBody;}
+		void SetConnectionLocalUpBody(const cVector3f& avVec){ mE->connLocalUpBody = avVec;}
 
-		void SetMaxConnectionForce(float afX){ mfMaxConnectionForce = afX; }
-		void SetMaxConnectionTorque(float afX){ mfMaxConnectionTorque = afX; }
-		float GetMaxConnectionForce(){ return mfMaxConnectionForce; }
-		float GetMaxConnectionTorque(){ return mfMaxConnectionTorque; }
+		void SetMaxConnectionForce(float afX){ mE->maxConnectionForce = afX; }
+		void SetMaxConnectionTorque(float afX){ mE->maxConnectionTorque = afX; }
+		float GetMaxConnectionForce(){ return mE->maxConnectionForce; }
+		float GetMaxConnectionTorque(){ return mE->maxConnectionTorque; }
 
 		// User Properties
 
-		void SetCamera(cCamera *apCam) { mpCamera = apCam; }
-        cCamera* GetCamera() { return mpCamera; }
-		void SetCameraPosAdd(const cVector3f &avAdd) { mvCameraPosAdd = avAdd; }
+		void SetCamera(cCamera *apCam) { mE->camera = apCam; }
+        cCamera* GetCamera() { return mE->camera; }
+		void SetCameraPosAdd(const cVector3f &avAdd) { mE->cameraPosAdd = avAdd; }
 		cVector3f GetCameraPosAdd();
-		void SetCameraSmoothPosNum(int alNum){ mlCameraSmoothPosNum = alNum;}
-		int GetCameraSmoothPosNum(){ return mlCameraSmoothPosNum;}
-		void SetCameraUseSmoothing(bool abX){ mbCameraUseSmoothing = abX; ohpl_h14_clear_camera(mpAux); UpdateCamera(); }
-		bool GetCameraUseSmoothing(){ return mbCameraUseSmoothing;}
-		void SetCameraUpdateActive(bool abX){ mbCameraUpdateActive = abX;}
-		bool GetCameraUpdateActive(){ return mbCameraUpdateActive;}
+		void SetCameraSmoothPosNum(int alNum){ mE->cameraSmoothPosNum = alNum;}
+		int GetCameraSmoothPosNum(){ return mE->cameraSmoothPosNum;}
+		void SetCameraUseSmoothing(bool abX){ mE->cameraUseSmoothing = abX; ohpl_h14_clear_camera(mpAux); UpdateCamera(); }
+		bool GetCameraUseSmoothing(){ return mE->cameraUseSmoothing;}
+		void SetCameraUpdateActive(bool abX){ mE->cameraUpdateActive = abX;}
+		bool GetCameraUpdateActive(){ return mE->cameraUpdateActive;}
 
-		void SetEntity(iEntity3D *apEntity) { mpEntity = apEntity; }
+		void SetEntity(iEntity3D *apEntity) { mE->entity = apEntity; }
 		iEntity3D* GetEntity();
 
-		void SetEntityOffset(const cMatrixf &a_mtxOffset) { m_mtxEntityOffset = a_mtxOffset; }
+		void SetEntityOffset(const cMatrixf &a_mtxOffset) { mE->entityOffset = a_mtxOffset; }
 		const cMatrixf & GetEntityOffset();
 
-		void SetEntityPostOffset(const cMatrixf &a_mtxOffset) { m_mtxEntityPostOffset = a_mtxOffset; }
+		void SetEntityPostOffset(const cMatrixf &a_mtxOffset) { mE->entityPostOffset = a_mtxOffset; }
 		const cMatrixf & GetEntityPostOffset();
 
-		void SetEntitySmoothPosNum(int alNum){ mlEntitySmoothPosNum = alNum;}
-		int GetEntitySmoothPosNum(){ return mlEntitySmoothPosNum;}
+		void SetEntitySmoothPosNum(int alNum){ mE->entitySmoothPosNum = alNum;}
+		int GetEntitySmoothPosNum(){ return mE->entitySmoothPosNum;}
 
-		void SetUseEntitySmoothYPos(bool abX){ mbEntitySmoothYPos = abX;}
-		void SetEntitySmoothYPosNum(int alX){ mlEntitySmoothYPosNum = alX;}
-		bool GetUseEntitySmoothYPos(){ return mbEntitySmoothYPos;}
-		void SetEntityPitchAmount(float afX){ mfEntityPitchAmount = afX;}
-		float GetEntityPitchAmount(){ return mfEntityPitchAmount;}
-		int GetEntitySmoothYPosNum(){ return mlEntitySmoothYPosNum;}
+		void SetUseEntitySmoothYPos(bool abX){ mE->entitySmoothYPos = abX;}
+		void SetEntitySmoothYPosNum(int alX){ mE->entitySmoothYPosNum = alX;}
+		bool GetUseEntitySmoothYPos(){ return mE->entitySmoothYPos;}
+		void SetEntityPitchAmount(float afX){ mE->entityPitchAmount = afX;}
+		float GetEntityPitchAmount(){ return mE->entityPitchAmount;}
+		int GetEntitySmoothYPosNum(){ return mE->entitySmoothYPosNum;}
 
-		void SetUserData(void* apUserData){ mpUserData = apUserData;}
-		void* GetUserData(){ return mpUserData;}
+		void SetUserData(void* apUserData){ mE->userData = apUserData;}
+		void* GetUserData(){ return mE->userData;}
 
-		void SetCallback(iCharacterBodyCallback *apCallback){ mpCallback = apCallback;}
+		void SetCallback(iCharacterBodyCallback *apCallback){ mE->callback = apCallback;}
 
 		//Debug:
-		const cVector3f& GetLastMovePosAdd(){ return mS.lastMovePosAdd;}
+		const cVector3f& GetLastMovePosAdd(){ return mS->lastMovePosAdd;}
 
 	protected:
-		void UpdateMoveMatrix() { ohpl_char_update_move_matrix(&mS); }
+		void UpdateMoveMatrix() { ohpl_char_update_move_matrix(mS); }
 
 		void PreUpdateConnection(float afTimeStep);
 		void PostUpdateConnection(float afTimeStep);
@@ -393,93 +393,22 @@ namespace hpl {
 
 		void UpdateBody();
 
-		void ClearGravityAttachment() { mpGravityLastAttachedBody = mpGravityAttachedBody; mpGravityAttachedBody = NULL; mlGravityAttachmentContacts = 0; }
+		void ClearGravityAttachment() { mE->gravityLastAttachedBody = mE->gravityAttachedBody; mE->gravityAttachedBody = NULL; mE->gravityAttachmentContacts = 0; }
 		void UpdateGravityAttachment();
 
 		bool CheckCollision(cVector3f *apPushBackVector, const cVector3f& avPos, iPhysicsWorldCollisionCallback *apCallback,int alShapeIdx=-1);
 
-		OhplCharState mS;
-		OhplCharExt mE = OhplCharExt();
+		OhplCharState *mS;
+		OhplCharExt *mE;
 		OhplH14Aux *mpAux;
 		OhplH14Conn MakeConn();
 		OhplCharVt MakeVt();
 
 		tString msName;
 
-		bool &mbCollideCharacter = mE.collideCharacter;
-
-		bool &mbPhysicsBodyActive = mE.physicsBodyActive;
-
-		bool &mbStickToSlope = mE.stickToSlope;
-
-		float &mfMaxPushMass = mE.maxPushMass;
-		float &mfPushForce = mE.pushForce;
-		float &mfPushImpulse = mE.pushImpulse;
-		bool &mbPushIn2D = mE.pushIn2D;
-
-		float &mfCharacterMaxPushMass = mE.charMaxPushMass;
-		float &mfCharacterPushForce = mE.charPushForce;
-		bool &mbCharacterPushIn2D = mE.charPushIn2D;
-
-		int &mlMinBodyPushStrength = mE.minBodyPushStrength;
-
-		float &mfConstantContactForceMul = mE.constantContactForceMul;
-		float &mfVelocityContactForceMul = mE.velocityContactForceMul;
-		float &mfMaxContactForcePerMassUnit = mE.maxContactForcePerMassUnit;
-
-		cCamera *&mpCamera = mE.camera;
-		cVector3f &mvCameraPosAdd = mE.cameraPosAdd;
-		int &mlCameraSmoothPosNum = mE.cameraSmoothPosNum;
-		bool &mbCameraUseSmoothing = mE.cameraUseSmoothing;
-		bool &mbCameraUpdateActive = mE.cameraUpdateActive;
-
-		iEntity3D *&mpEntity = mE.entity;
-		cMatrixf &m_mtxEntityOffset = mE.entityOffset;
-		cMatrixf &m_mtxEntityPostOffset = mE.entityPostOffset;
-		int &mlEntitySmoothPosNum = mE.entitySmoothPosNum;
-
-		bool &mbEntitySmoothYPos = mE.entitySmoothYPos;
-		float &mfEntityPitchAmount = mE.entityPitchAmount;
-		int &mlEntitySmoothYPosNum = mE.entitySmoothYPosNum;
-
-		void *&mpUserData = mE.userData;
-
-		float &mfMaxConnectionTorque = mE.maxConnectionTorque;
-		float &mfMaxConnectionForce = mE.maxConnectionForce;
-		iPhysicsBody *&mpConnectedBody = mE.connectedBody;
-		bool &mbConnectionDependOnBodyRotation = mE.connDependOnBodyRotation;
-		cVector3f &mvConnectionPosLocalToBody = mE.connPosLocalToBody;
-		cVector3f &mvConnectionPosLocalToChar = mE.connPosLocalToChar;
-		cVector3f &mvConnectionNormalLocalToBody = mE.connNormalLocalToBody;
-		cVector3f &mvConnectionLocalUpBody = mE.connLocalUpBody;
-		cVector3f &mvConnectionBodyStartRotation = mE.connBodyStartRotation;
-		float &mfConnectionDistanceToBody = mE.connDistanceToBody;
-		bool &mbConnectionAlignCenter = mE.connAlignCenter;
-		bool &mbConnectionAlignRotation = mE.connAlignRotation;
-		bool &mbConnectionCollision = mE.connCollision;
-		bool &mbConnectedBodyIsActive = mE.connectedBodyIsActive;
-
-		bool &mbConnectionAffectChar = mE.connAffectChar;
-		bool &mbConnectionDependOnCharRotation = mE.connDependOnCharRotation;
-		bool &mbConnectionAlignCharacterRotation = mE.connAlignCharRotation;
-		cVector3f &mvConnectionCharLocalForward = mE.connCharLocalForward;
-
-		bool &mbRotateYawWhenGravityAttached = mE.rotateYawWhenGravityAttached;
-		iPhysicsBody *&mpGravityAttachedBody = mE.gravityAttachedBody;
-		iPhysicsBody *&mpGravityLastAttachedBody = mE.gravityLastAttachedBody;
-		cMatrixf &m_mtxGravityAttachedPrevMatrix = mE.gravityAttachedPrevMatrix;
-		int &mlGravityAttachmentContacts = mE.gravityAttachmentContacts;
-		cVector3f &mvGravityAttachmentBodyVelocity = mE.gravityAttachBodyVelocity;
-
-		iCharacterBodyCallback *&mpCallback = mE.callback;
-
-		iPhysicsWorld *&mpWorld = mE.world;
-
 		cCharacterBodyCollideGravity *mpCollideGravityCallback;
 		cCharacterBodyCollidePush *mpCollidePushCallback;
 		cCharacterBodyRay *mpRayCallback;
-
-		iPhysicsMaterial *&mpGravityCollideMaterial = mE.gravityCollideMaterial;
 
 		iCollideShape *mpCurrentShape;
 		iPhysicsBody *mpCurrentBody;

@@ -69,92 +69,6 @@ namespace hpl {
 		return 0;
 	}
 
-	iPhysicsJoint::iPhysicsJoint(const tString &asName, iPhysicsBody *apParentBody, iPhysicsBody *apChildBody,
-		iPhysicsWorld *apWorld,const cVector3f &avPivotPoint, const cVector3f &avPinDir)
-		: msName(asName)
-	{
-		ohpl_h15j_new(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(OhplPhysHost()), reinterpret_cast<size_t>(apParentBody),
-			reinterpret_cast<size_t>(apChildBody), reinterpret_cast<size_t>(apWorld), OhplV3Pod{avPivotPoint.x, avPivotPoint.y, avPivotPoint.z},
-			OhplV3Pod{avPinDir.x, avPinDir.y, avPinDir.z});
-
-		iPhysicsWorld *pNWorld = apWorld;
-		mpNewtonWorld = pNWorld->GetNewtonWorld();
-		if(apParentBody==NULL)
-			mpNewtonParentBody = NULL;
-		else
-			mpNewtonParentBody = apParentBody->GetNewtonBody();
-		mpNewtonChildBody = apChildBody->GetNewtonBody();
-		mhRustWorld = pNWorld->RustHandle();
-	}
-
-	iPhysicsJoint::~iPhysicsJoint()
-	{
-		if(mpChildBody || mpParentBody)
-		{
-			ohpl_ntj_destroy(mhRustWorld, mhRust);
-		}
-		ohpl_h15j_drop(mS.shell, reinterpret_cast<size_t>(this));
-	}
-
-void iPhysicsJoint::SetCollideBodies(bool abX)
-		{
-			ohpl_ntj_set_collide(mhRust, abX);
-		}
-
-bool iPhysicsJoint::GetCollideBodies()
-		{
-			return ohpl_ntj_collide(mhRust);
-		}
-
-void iPhysicsJoint::SetStiffness(float afX)
-		{
-			ohpl_ntj_set_stiffness(mhRust, afX);
-		}
-
-float iPhysicsJoint::GetStiffness()
-		{
-			return ohpl_ntj_stiffness(mhRust);
-		}
-
-cMatrixf iPhysicsJoint::GetMatrixFromPinAndPivot(const cVector3f& avPinDir,const cVector3f& avPivot)
-		{
-			cMatrixf mtxPinAndPivot = cMatrixf::Identity;
-			cVector3f vUp = cMath::Vector3Normalize(avPinDir);
-			cVector3f vTemp = cMath::Vector3Normalize(cVector3f(1) - vUp);
-			if(vTemp == vUp) vTemp = cMath::Vector3Normalize(vTemp * cVector3f(1.5f, 0.5f, 2.0f)); //Make sure all does not become wierd in the special case.
-
-			cVector3f vRight = cMath::Vector3Normalize( cMath::Vector3Cross(vUp, vTemp ));
-			cVector3f vForward = cMath::Vector3Normalize(cMath::Vector3Cross(vUp, vRight));
-
-			mtxPinAndPivot.SetUp(vUp);
-			mtxPinAndPivot.SetRight(vRight);
-			mtxPinAndPivot.SetForward(vForward);
-			mtxPinAndPivot = mtxPinAndPivot.GetTranspose();
-
-			mtxPinAndPivot.SetTranslation(avPivot);
-
-			return mtxPinAndPivot;
-		}
-
-void iPhysicsJoint::CalculateGlobalMatrix(const cMatrixf& a_mtxLocalMatrix0, const cMatrixf& a_mtxLocalMatrix1, cMatrixf& a_mtxMatrix0, cMatrixf& a_mtxMatrix1)
-		{
-			cMatrixf mtxMatrix0 = mpChildBody->GetLocalMatrix();
-			cMatrixf mtxMatrix1 = mpParentBody ? mpParentBody->GetLocalMatrix() : cMatrixf::Identity;
-
-			a_mtxMatrix0 = cMath::MatrixMul(mtxMatrix0, a_mtxLocalMatrix0);
-			a_mtxMatrix1 = cMath::MatrixMul(mtxMatrix1, a_mtxLocalMatrix1);
-		}
-
-void iPhysicsJoint::CalculateLocalMatrix(const cMatrixf& a_mtxPinsAndPivotFrame, cMatrixf& a_mtxLocalMatrix0, cMatrixf& a_mtxLocalMatrix1)
-		{
-			cMatrixf mtxMatrix0 = mpChildBody->GetLocalMatrix();
-			cMatrixf mtxMatrix1 = mpParentBody ? mpParentBody->GetLocalMatrix() : cMatrixf::Identity;
-
-			// calculate the relative matrix of the pin and pivot on each body
-			a_mtxLocalMatrix0 = cMath::MatrixMul( cMath::MatrixInverse(mtxMatrix0), a_mtxPinsAndPivotFrame);
-			a_mtxLocalMatrix1 = cMath::MatrixMul( cMath::MatrixInverse(mtxMatrix1), a_mtxPinsAndPivotFrame);
-		}
-
 const OhplL4JointOps* iPhysicsJoint::RustOps()
 		{
 			static const OhplL4JointOps ops = { RustLimitEvent, RustCheckAutoSleep, RustNoLimit, RustMatrices, RustPositionCheck };
@@ -171,19 +85,23 @@ void iPhysicsJoint::RustLimitEvent(size_t j, int32_t kind)
 
 void iPhysicsJoint::RustCheckAutoSleep(size_t j, float afMin, float afMax, float afValue)
 		{
-			CheckLimitAutoSleep(Self(j), afMin, afMax, afValue);
+			iPhysicsJoint* p = Self(j);
+			if(ohpl_phys_joint_limit_auto_sleep(p->mS->limitAutoSleep, p->mS->limitAutoSleepDist,
+												p->mS->limitAutoSleepNumSteps, &p->mS->limitStepCount,
+												afMin, afMax, afValue))
+				p->mS->child->DisableAfterSimulation();
 		}
 
 void iPhysicsJoint::RustNoLimit(size_t j, float afPrev, float afMin, float afMax, bool abSkip)
 		{
 			iPhysicsJoint* p = Self(j);
-			if(p->mpParentBody==NULL || p->mpParentBody->GetMass()==0)
+			if(p->mS->parent==NULL || p->mS->parent->GetMass()==0)
 			{
 				if( abSkip==false &&
-					( (p->mbStickyMaxLimit && afPrev > afMax) || (p->mbStickyMinLimit && afPrev < afMin) ) )
+					( (p->mS->stickyMax && afPrev > afMax) || (p->mS->stickyMin && afPrev < afMin) ) )
 				{
-					p->mpChildBody->SetAngularVelocity(0);
-					p->mpChildBody->SetLinearVelocity(0);
+					p->mS->child->SetAngularVelocity(0);
+					p->mS->child->SetLinearVelocity(0);
 				}
 			}
 			p->OnNoLimit();
@@ -192,73 +110,37 @@ void iPhysicsJoint::RustNoLimit(size_t j, float afPrev, float afMin, float afMax
 void iPhysicsJoint::RustMatrices(size_t j, cMatrixf* apChild, cMatrixf* apParent)
 		{
 			iPhysicsJoint* p = Self(j);
-			*apChild = p->mpChildBody->GetLocalMatrix();
-			*apParent = p->mpParentBody ? p->mpParentBody->GetLocalMatrix() : cMatrixf::Identity;
+			*apChild = p->mS->child->GetLocalMatrix();
+			*apParent = p->mS->parent ? p->mS->parent->GetLocalMatrix() : cMatrixf::Identity;
 		}
 
 void iPhysicsJoint::RustPositionCheck(size_t j, float afDistSqr)
 		{
 			iPhysicsJoint* p = Self(j);
-			if(p->mbAllowPositionReset && p->mpChildBody->IsActive())
+			if(p->mS->allowPositionReset && p->mS->child->IsActive())
 			{
 				if(!(afDistSqr <= 0.0025f))
 				{
-					Error("Body %s jumped more than 0.05 units (%f)- restoring!\n", p->mpChildBody->GetName().c_str(), sqrtf(afDistSqr));
-					p->mbPositionResetPending = true;
+					Error("Body %s jumped more than 0.05 units (%f)- restoring!\n", p->mS->child->GetName().c_str(), sqrtf(afDistSqr));
+					p->mS->positionResetPending = true;
 				}
 			}
 		}
 
-	// PUBLIC METHODS
-
-	/**
-	 * This should only be used by PhysicsBody.
-	 */
-	void iPhysicsJoint::RemoveBody(iPhysicsBody *apBody)
-	{
-		if(mpParentBody == apBody) mpParentBody = NULL;
-		if(mpChildBody == apBody) mpChildBody = NULL;
-	}
-
-	void iPhysicsJoint::AddController(iPhysicsController *apController)
-	{
-		ohpl_h15j_add_controller(mS.shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apController));
-	}
-
-	iPhysicsController* iPhysicsJoint::GetController(const tString &asName)
-	{
-		return reinterpret_cast<iPhysicsController*>(ohpl_h15j_get_controller(mS.shell, asName.c_str(), asName.size()));
-	}
-
-	bool iPhysicsJoint::ChangeController(const tString &asName)
-	{
-		return ohpl_h15j_change_controller(mS.shell, asName.c_str(), asName.size());
-	}
-
-	void iPhysicsJoint::SetAllControllersPaused(bool abX)
-	{
-		ohpl_h15j_set_all_paused(mS.shell, abX);
-	}
-
-	int iPhysicsJoint::ControllerCount()
-	{
-		return (int)ohpl_h15j_controller_len(mS.shell);
-	}
-
 	iPhysicsController* iPhysicsJoint::ControllerAt(int alIdx)
 	{
 		OhplStr name; size_t obj = 0;
-		ohpl_h15j_controller_at(mS.shell, alIdx, &name, &obj);
+		ohpl_h15j_controller_at(mS->shell, alIdx, &name, &obj);
 		return reinterpret_cast<iPhysicsController*>(obj);
 	}
 
 	cPhysicsControllerIterator iPhysicsJoint::GetControllerIterator()
 	{
 		m_mapControllers.clear();
-		for(size_t i=0, n=ohpl_h15j_controller_len(mS.shell); i<n; ++i)
+		for(size_t i=0, n=ohpl_h15j_controller_len(mS->shell); i<n; ++i)
 		{
 			OhplStr name; size_t obj;
-			if(ohpl_h15j_controller_at(mS.shell, i, &name, &obj)) m_mapControllers[tString(name.p, name.n)] = reinterpret_cast<iPhysicsController*>(obj);
+			if(ohpl_h15j_controller_at(mS->shell, i, &name, &obj)) m_mapControllers[tString(name.p, name.n)] = reinterpret_cast<iPhysicsController*>(obj);
 		}
 		return cPhysicsControllerIterator(&m_mapControllers);
 	}
@@ -277,36 +159,13 @@ void iPhysicsJoint::RustPositionCheck(size_t j, float afDistSqr)
 		ohpl_phys_joint_on_limit(OhplPhysHost(), reinterpret_cast<size_t>(this), false, &effect);
 	}
 
-	bool iPhysicsJoint::OnPhysicsUpdate()
-	{
-		return ohpl_h15j_update(mS.shell, reinterpret_cast<size_t>(this));
-	}
-
 	void iPhysicsJoint::SetSound(cSoundEntity *apSound)
 	{
-		mpSound = apSound;
+		mS->sound = apSound;
         if(apSound)
-			mlSoundID = apSound->GetCreationID();
+			mS->soundId = apSound->GetCreationID();
 		else
-			mlSoundID = -1;
-	}
-
-	bool iPhysicsJoint::CheckBreakage()
-	{
-		return ohpl_h15j_check_breakage(mS.shell, reinterpret_cast<size_t>(this));
-	}
-
-	void iPhysicsJoint::CheckLimitAutoSleep(iPhysicsJoint *apJoint,
-											const float afMin, const float afMax,
-											const float afDist)
-	{
-		const bool bSleep = ohpl_phys_joint_limit_auto_sleep(apJoint->mbLimitAutoSleep, apJoint->mfLimitAutoSleepDist,
-											apJoint->mlLimitAutoSleepNumSteps, &apJoint->mlLimitStepCount,
-											afMin, afMax, afDist);
-		if(bSleep)
-		{
-			apJoint->mpChildBody->DisableAfterSimulation();
-		}
+			mS->soundId = -1;
 	}
 
 }

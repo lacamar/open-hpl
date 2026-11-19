@@ -26,38 +26,24 @@ namespace hpl {
 
 	class iPhysicsJointScrew : public iPhysicsJoint
 	{
-	#ifdef __GNUC__
-		typedef iPhysicsJoint __super;
-	#endif
 	public:
 		iPhysicsJointScrew(const tString &asName, iPhysicsBody *apParentBody, iPhysicsBody *apChildBody,
 			iPhysicsWorld *apWorld,const cVector3f &avPivotPoint,const cVector3f &avPinDir);
 		~iPhysicsJointScrew();
 
-		/**
-		* Set the maximum distance the bodies can be from each other, relative to the start dist between them
-		* This is true if pin points towards the child.
-		* In other words, distance increases as the distance between start pivot and current pivot
-		* increases in the opposite direction of the pin.
-		*/
+		void SetMaxDistance(float afX){ ohpl_ntj_set_max(mhRust, afX);}
+		void SetMinDistance(float afX){ ohpl_ntj_set_min(mhRust, afX);}
+		float GetMaxDistance(){ return ohpl_ntj_max(mhRust);}
+		float GetMinDistance(){ return ohpl_ntj_min(mhRust);}
 
-        void SetMaxDistance(float afX);
-		void SetMinDistance(float afX);
-		float GetMaxDistance();
-		float GetMinDistance();
+		cVector3f GetVelocity(){ cVector3f vVel; ohpl_ntj_pin_velocity(mhRust, &vVel); return vVel;}
+		cVector3f GetAngularVelocity(){ return cVector3f(0,0,0);}
+		float GetForceSize(){ cVector3f vForce; ohpl_ntj_force(mhRust, &vForce); return vForce.Length();}
 
-		cVector3f GetVelocity();
-		cVector3f GetAngularVelocity();
-		float GetForceSize();
-
-		float GetDistance();
-		float GetAngle();
+		float GetDistance(){ return ohpl_ntj_axis(mhRust, 0);}
+		float GetAngle(){ return ohpl_ntj_axis(mhRust, 2);}
 
 		ePhysicsJointType GetType(){ return ePhysicsJointType_Screw;}
-
-	protected:
-
-		cVector3f mvPin;
 	};
 };
 #endif // HPL_PHYSICS_JOINT_SCREW_H

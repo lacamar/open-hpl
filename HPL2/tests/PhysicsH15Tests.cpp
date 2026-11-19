@@ -54,11 +54,11 @@ struct Peek : cSurfaceData
 		h.S(p.msName); h.S(p.msUserVar); h.S(p.msStepType); h.S(p.msScrapeSoundName); h.S(p.msRollSoundName);
 		h.F(p.GetElasticity()); h.F(p.GetKineticFriction()); h.F(p.GetStaticFriction());
 		h.U32(p.GetPriority()); h.U32(p.GetElasticityCombMode()); h.U32(p.GetFrictionCombMode());
-		h.F(p.mfMinScrapeSpeed); h.F(p.mfMinScrapeFreq); h.F(p.mfMinScrapeFreqSpeed); h.F(p.mfMiddleScrapeSpeed);
-		h.F(p.mfMaxScrapeFreqSpeed); h.F(p.mfMaxScrapeFreq); h.U32(p.mlMinScrapeContacts);
-		h.F(p.mfMinRollSpeed); h.F(p.mfMinRollFreq); h.F(p.mfMinRollVolume); h.F(p.mfMinRollFreqSpeed);
-		h.F(p.mfMiddleRollSpeed); h.F(p.mfMaxRollFreqSpeed); h.F(p.mfMaxRollFreq); h.F(p.mfMaxRollVolume);
-		h.U32(p.mRollAxisFlags);
+		h.F(p.mS->minScrapeSpeed); h.F(p.mS->minScrapeFreq); h.F(p.mS->minScrapeFreqSpeed); h.F(p.mS->middleScrapeSpeed);
+		h.F(p.mS->maxScrapeFreqSpeed); h.F(p.mS->maxScrapeFreq); h.U32(p.mS->minScrapeContacts);
+		h.F(p.mS->minRollSpeed); h.F(p.mS->minRollFreq); h.F(p.mS->minRollVolume); h.F(p.mS->minRollFreqSpeed);
+		h.F(p.mS->middleRollSpeed); h.F(p.mS->maxRollFreqSpeed); h.F(p.mS->maxRollFreq); h.F(p.mS->maxRollVolume);
+		h.U32(p.mS->rollAxisFlags);
 		for (int l = 0; l < 2; ++l)
 		{
 			int n = l == 0 ? d.GetImpactDataNum() : d.GetHitDataNum();

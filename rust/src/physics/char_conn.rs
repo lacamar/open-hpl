@@ -214,21 +214,28 @@ impl CharState {
     }
 }
 
-/// Sets every default; `st.size` and the shapes are already in place on the C++ side.
-///
-/// # Safety
-/// `ext` and `st` are writable and embedded in the character.
-pub unsafe fn char_init(
-    ext: *mut CharExt,
-    st: *mut CharState,
+/// The Rust-owned extension and state of a fresh character of `size`; freed by `char_free`.
+pub fn char_new(
     world: H,
+    size: Vector3f,
     max_no_slide_slope_cos: f32,
-) {
+) -> (*mut CharExt, *mut CharState) {
+    (
+        Box::into_raw(Box::new(CharExt::initial(world))),
+        Box::into_raw(Box::new(CharState::initial(size, max_no_slide_slope_cos))),
+    )
+}
+
+/// # Safety
+/// Both come from `char_new` and are not used afterwards.
+pub unsafe fn char_free(ext: *mut CharExt, st: *mut CharState) {
     // SAFETY: caller contract.
     unsafe {
-        if let (Some(e), Some(s)) = (ext.as_mut(), st.as_mut()) {
-            *e = CharExt::initial(world);
-            *s = CharState::initial(s.size, max_no_slide_slope_cos);
+        if !ext.is_null() {
+            drop(Box::from_raw(ext));
+        }
+        if !st.is_null() {
+            drop(Box::from_raw(st));
         }
     }
 }

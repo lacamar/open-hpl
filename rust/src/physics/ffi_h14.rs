@@ -307,16 +307,36 @@ pub extern "C" fn ohpl_h14_rope_particle_pos(
 }
 
 /// # Safety
-/// `ext` and `st` are writable and embedded in the character; `st.size` is set.
+/// `ext` and `st` are writable; both results are released by `ohpl_h14_char_free`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h14_char_init(
-    ext: *mut super::char_conn::CharExt,
-    st: *mut super::character::CharState,
+pub unsafe extern "C" fn ohpl_h14_char_new(
+    ext: *mut *mut super::char_conn::CharExt,
+    st: *mut *mut super::character::CharState,
     world: usize,
+    size: crate::types::Vector3f,
     max_no_slide_slope_cos: f32,
 ) {
+    let (e, s) = super::char_conn::char_new(world, size, max_no_slide_slope_cos);
     // SAFETY: caller contract.
-    unsafe { super::char_conn::char_init(ext, st, world, max_no_slide_slope_cos) };
+    unsafe {
+        if let Some(o) = ext.as_mut() {
+            *o = e;
+        }
+        if let Some(o) = st.as_mut() {
+            *o = s;
+        }
+    }
+}
+
+/// # Safety
+/// Both come from `ohpl_h14_char_new` and are not used afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_char_free(
+    ext: *mut super::char_conn::CharExt,
+    st: *mut super::character::CharState,
+) {
+    // SAFETY: caller contract.
+    unsafe { super::char_conn::char_free(ext, st) };
 }
 
 /// # Safety
@@ -377,8 +397,25 @@ pub unsafe extern "C" fn ohpl_h14_collide_push(
     unsafe { super::char_collide::collide_push(op, ext, st, body, cd) };
 }
 
+/// A default rope state, replaced in place by `ohpl_h14_rope_init`; released by `ohpl_h14_rope_release`.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h14_rope_alloc() -> *mut super::rope::RopeState {
+    let zero = crate::types::Vector3f::default();
+    Box::into_raw(Box::new(super::rope::RopeState::initial(zero, zero, zero)))
+}
+
 /// # Safety
-/// `st` is writable and embedded in the rope.
+/// `st` comes from `ohpl_h14_rope_alloc` and is not used afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h14_rope_release(st: *mut super::rope::RopeState) {
+    if !st.is_null() {
+        // SAFETY: caller contract.
+        drop(unsafe { Box::from_raw(st) });
+    }
+}
+
+/// # Safety
+/// `st` is writable.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h14_rope_init(
     st: *mut super::rope::RopeState,

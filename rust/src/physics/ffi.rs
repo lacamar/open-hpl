@@ -3,10 +3,9 @@
 
 use super::body;
 use super::book;
-use super::controller::{self, CtrlParams};
+use super::controller::CtrlParams;
 use super::host::{H, Str, Vt};
 use super::joint::{self, JointState, LimitEffect, MoveParams};
-use super::pid::Pid;
 use super::surface::{self, SurfaceParams};
 use super::surface_xml::{self, SurfaceDef};
 use super::world::{self, BodyFilter, ImpactCounts};
@@ -25,57 +24,6 @@ unsafe fn get<'a, T>(p: *const T) -> Option<&'a T> {
 unsafe fn vec3(p: *const Vector3f) -> Vector3f {
     // SAFETY: caller contract.
     unsafe { get(p) }.copied().unwrap_or_default()
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_phys_pid_new() -> *mut Pid {
-    Box::into_raw(Box::new(Pid::new()))
-}
-
-/// # Safety
-/// `p` comes from `ohpl_phys_pid_new` and is not used afterwards.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_pid_free(p: *mut Pid) {
-    if !p.is_null() {
-        // SAFETY: caller contract.
-        drop(unsafe { Box::from_raw(p) });
-    }
-}
-
-/// # Safety
-/// `p` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_pid_set_error_num(p: *mut Pid, n: i32) {
-    // SAFETY: caller contract.
-    if let Some(p) = unsafe { p.as_mut() } {
-        p.set_error_num(n);
-    }
-}
-
-/// # Safety
-/// `p` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_pid_reset(p: *mut Pid) {
-    // SAFETY: caller contract.
-    if let Some(p) = unsafe { p.as_mut() } {
-        p.reset();
-    }
-}
-
-/// # Safety
-/// `vt`, `params` valid; `pid` live and not borrowed elsewhere.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_ctrl_update(
-    vt: *const Vt,
-    params: *const CtrlParams,
-    pid: *mut Pid,
-    time_step: f32,
-) {
-    // SAFETY: caller contract.
-    if let (Some(vt), Some(p)) = unsafe { (get(vt), get(params)) } {
-        // SAFETY: caller contract.
-        unsafe { controller::update(&vt, p, pid, time_step) };
-    }
 }
 
 /// # Safety

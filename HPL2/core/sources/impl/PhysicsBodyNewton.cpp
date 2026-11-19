@@ -37,8 +37,8 @@ namespace hpl {
 
 	void iPhysicsBody::DeleteLowLevel()
 	{
-		ohpl_ntb_destroy(mhRust);
-		hplDelete(mpCallback);
+		ohpl_ntb_destroy(mS->rust);
+		hplDelete(mS->callback);
 	}
 
 	// CALLBACK METHODS
@@ -47,80 +47,80 @@ namespace hpl {
 	{
 		if(iPhysicsBody::mbUseCallback==false) return;
 		iPhysicsBody *pBody = static_cast<iPhysicsBody*>(apEntity);
-		ohpl_ntb_set_matrix(pBody->mhRust, &apEntity->GetLocalMatrix());
+		ohpl_ntb_set_matrix(pBody->mS->rust, &apEntity->GetLocalMatrix());
 	}
 
 	// PUBLIC METHODS
 
 	void iPhysicsBody::SetMaterial(iPhysicsMaterial* apMaterial)
 	{
-		mpMaterial = apMaterial;
+		mS->material = apMaterial;
 		if(apMaterial == NULL) return;
-		ohpl_ntb_set_material(mhRust, static_cast<iPhysicsMaterial*>(mpMaterial)->GetId());
+		ohpl_ntb_set_material(mS->rust, static_cast<iPhysicsMaterial*>(mS->material)->GetId());
 	}
 
 	void iPhysicsBody::SetLinearVelocity(const cVector3f &avVel)
 	{
-		ohpl_ntb_set_velocity(mhRust, &avVel);
+		ohpl_ntb_set_velocity(mS->rust, &avVel);
 	}
 	cVector3f iPhysicsBody::GetLinearVelocity() const
 	{
 		cVector3f vVel;
-		ohpl_ntb_velocity(mhRust, &vVel);
+		ohpl_ntb_velocity(mS->rust, &vVel);
 		return vVel;
 	}
 
 	void iPhysicsBody::SetAngularVelocity(const cVector3f &avVel)
 	{
-		ohpl_ntb_set_omega(mhRust, &avVel);
+		ohpl_ntb_set_omega(mS->rust, &avVel);
 	}
 	cVector3f iPhysicsBody::GetAngularVelocity() const
 	{
 		cVector3f vVel;
-		ohpl_ntb_omega(mhRust, &vVel);
+		ohpl_ntb_omega(mS->rust, &vVel);
 		return vVel;
 	}
 
 	void iPhysicsBody::SetLinearDamping(float afDamping)
 	{
-		ohpl_ntb_set_linear_damping(mhRust, afDamping);
+		ohpl_ntb_set_linear_damping(mS->rust, afDamping);
 	}
 	float iPhysicsBody::GetLinearDamping() const
 	{
-		return ohpl_ntb_linear_damping(mhRust);
+		return ohpl_ntb_linear_damping(mS->rust);
 	}
 
 	void iPhysicsBody::SetAngularDamping(float afDamping)
 	{
-		ohpl_ntb_set_angular_damping(mhRust, afDamping);
+		ohpl_ntb_set_angular_damping(mS->rust, afDamping);
 	}
 	float iPhysicsBody::GetAngularDamping() const
 	{
-		return ohpl_ntb_angular_damping(mhRust);
+		return ohpl_ntb_angular_damping(mS->rust);
 	}
 
 	void iPhysicsBody::SetMaxLinearSpeed(float afSpeed)
 	{
-		ohpl_ntb_set_max_linear(mhRust, afSpeed);
+		ohpl_ntb_set_max_linear(mS->rust, afSpeed);
 	}
 	float iPhysicsBody::GetMaxLinearSpeed() const
 	{
-		return ohpl_ntb_max_linear(mhRust);
+		return ohpl_ntb_max_linear(mS->rust);
 	}
 
 	void iPhysicsBody::SetMaxAngularSpeed(float afDamping)
 	{
-		ohpl_ntb_set_max_angular(mhRust, afDamping);
+		ohpl_ntb_set_max_angular(mS->rust, afDamping);
 	}
 	float iPhysicsBody::GetMaxAngularSpeed() const
 	{
-		return ohpl_ntb_max_angular(mhRust);
+		return ohpl_ntb_max_angular(mS->rust);
 	}
 
 	cVector3f iPhysicsBody::GetInertiaVector()
 	{
 		cVector3f vInertia;
-		ohpl_ntb_inertia(mhRust, &vInertia);
+		ohpl_ntb_inertia(mS->rust, &vInertia);
 		return vInertia;
 	}
 
@@ -138,135 +138,135 @@ namespace hpl {
 
 	void  iPhysicsBody::SetMass(float afMass)
 	{
-		ohpl_ntb_set_mass(mhRust, static_cast<iCollideShape*>(mpShape)->GetNewtonCollision(), afMass);
+		ohpl_ntb_set_mass(mS->rust, static_cast<iCollideShape*>(mS->shape)->GetNewtonCollision(), afMass);
 	}
 	float iPhysicsBody::GetMass() const
 	{
-		return ohpl_ntb_mass(mhRust);
+		return ohpl_ntb_mass(mS->rust);
 	}
 
 	void  iPhysicsBody::SetMassCentre(const cVector3f& avCentre)
 	{
-		ohpl_ntb_set_mass_centre(mhRust, &avCentre);
+		ohpl_ntb_set_mass_centre(mS->rust, &avCentre);
 	}
 
 	cVector3f iPhysicsBody::GetMassCentre() const
 	{
 		cVector3f vCentre;
-		ohpl_ntb_mass_centre(mhRust, &vCentre);
+		ohpl_ntb_mass_centre(mS->rust, &vCentre);
 		return vCentre;
 	}
 
 	void iPhysicsBody::AddForce(const cVector3f &avForce)
 	{
-		ohpl_ntb_add_force(mhRust, &avForce);
+		ohpl_ntb_add_force(mS->rust, &avForce);
 		Enable();
 	}
 
 	void iPhysicsBody::AddForceAtPosition(const cVector3f &avForce, const cVector3f &avPos)
 	{
-		ohpl_ntb_add_force_at_position(mhRust, &avForce, &avPos, &GetLocalMatrix());
+		ohpl_ntb_add_force_at_position(mS->rust, &avForce, &avPos, &GetLocalMatrix());
 		Enable();
 	}
 
 	void iPhysicsBody::AddTorque(const cVector3f &avTorque)
 	{
-		ohpl_ntb_add_torque(mhRust, &avTorque);
+		ohpl_ntb_add_torque(mS->rust, &avTorque);
 		Enable();
 	}
 
 	void iPhysicsBody::AddImpulse(const cVector3f &avImpulse)
 	{
-		ohpl_ntb_add_impulse(mhRust, &avImpulse, &GetWorldMatrix());
+		ohpl_ntb_add_impulse(mS->rust, &avImpulse, &GetWorldMatrix());
 	}
 	void iPhysicsBody::AddImpulseAtPosition(const cVector3f &avImpulse, const cVector3f &avPos)
 	{
-		ohpl_ntb_add_impulse_at(mhRust, &avImpulse, &avPos);
+		ohpl_ntb_add_impulse_at(mS->rust, &avImpulse, &avPos);
 	}
 
 	void iPhysicsBody::Sleep()
 	{
-		ohpl_ntb_set_freeze(mhRust, 1);
+		ohpl_ntb_set_freeze(mS->rust, 1);
 	}
 
 	void iPhysicsBody::Enable()
 	{
-		mlFreezeCount = 0;
-		ohpl_ntb_set_freeze(mhRust, 0);
+		mS->freezeCount = 0;
+		ohpl_ntb_set_freeze(mS->rust, 0);
 	}
 	bool iPhysicsBody::GetEnabled() const
 	{
-		return ohpl_ntb_enabled(mhRust);
+		return ohpl_ntb_enabled(mS->rust);
 	}
 
 	void iPhysicsBody::SetAutoDisable(bool abEnabled)
 	{
-		ohpl_ntb_set_auto_sleep(mhRust, abEnabled);
+		ohpl_ntb_set_auto_sleep(mS->rust, abEnabled);
 	}
 	bool iPhysicsBody::GetAutoDisable() const
 	{
-		return ohpl_ntb_auto_sleep(mhRust);
+		return ohpl_ntb_auto_sleep(mS->rust);
 	}
 
 	void iPhysicsBody::SetAutoDisableLinearThreshold(float afThresold)
 	{
-		ohpl_ntb_set_auto_linear(mhRust, afThresold);
+		ohpl_ntb_set_auto_linear(mS->rust, afThresold);
 	}
 	float iPhysicsBody::GetAutoDisableLinearThreshold() const
 	{
-		return ohpl_ntb_auto_linear(mhRust);
+		return ohpl_ntb_auto_linear(mS->rust);
 	}
 
 	void iPhysicsBody::SetAutoDisableAngularThreshold(float afThresold)
 	{
-		ohpl_ntb_set_auto_angular(mhRust, afThresold);
+		ohpl_ntb_set_auto_angular(mS->rust, afThresold);
 	}
 	float iPhysicsBody::GetAutoDisableAngularThreshold() const
 	{
-		return ohpl_ntb_auto_angular(mhRust);
+		return ohpl_ntb_auto_angular(mS->rust);
 	}
 
 	void iPhysicsBody::SetAutoDisableNumSteps(int anNum)
 	{
-		ohpl_ntb_set_auto_steps(mhRust, anNum);
+		ohpl_ntb_set_auto_steps(mS->rust, anNum);
 	}
 
 	int iPhysicsBody::GetAutoDisableNumSteps() const
 	{
-		return ohpl_ntb_auto_steps(mhRust);
+		return ohpl_ntb_auto_steps(mS->rust);
 	}
 
 	void iPhysicsBody::SetContinuousCollision(bool abOn)
 	{
-		ohpl_ntb_set_continuous(mhRust, abOn);
+		ohpl_ntb_set_continuous(mS->rust, abOn);
 	}
 
 	bool iPhysicsBody::GetContinuousCollision()
 	{
-		return ohpl_ntb_continuous(mhRust);
+		return ohpl_ntb_continuous(mS->rust);
 	}
 
 	void iPhysicsBody::SetGravity(bool abEnabled)
 	{
-		ohpl_ntb_set_gravity(mhRust, abEnabled);
+		ohpl_ntb_set_gravity(mS->rust, abEnabled);
 	}
 	bool iPhysicsBody::GetGravity() const
 	{
-		return ohpl_ntb_gravity(mhRust);
+		return ohpl_ntb_gravity(mS->rust);
 	}
 
 	void iPhysicsBody::RenderDebugGeometry(iLowLevelGraphics *apLowLevel,const cColor &aColor)
 	{
-		mpWorld->RenderShapeDebugGeometry(mpShape,GetLocalMatrix(),apLowLevel, aColor);
+		mS->world->RenderShapeDebugGeometry(mS->shape,GetLocalMatrix(),apLowLevel, aColor);
 	}
 
 	// HPL3 iCollideShape::CalculateBouyancyForces: lift from spheres packed in the shape, then drag
 	bool iPhysicsBody::CalcHpl3Buoyancy(const cVector3f &avGravity, float afTimeStep, cVector3f *apForce, cVector3f *apTorque)
 	{
-		iCollideShape *pShape = static_cast<iCollideShape*>(mpShape);
+		iCollideShape *pShape = static_cast<iCollideShape*>(mS->shape);
 		OhplL4Buoy b = BuoyState();
-		float fMass = ohpl_ntb_mass(mhRust);
-		if (fMass == 0 || b.density * mfBuoyancyDensityMul <= 0)
+		float fMass = ohpl_ntb_mass(mS->rust);
+		if (fMass == 0 || b.density * mS->buoyancyDensityMul <= 0)
 			return false;
 
 		const cMatrixf &mtx = GetLocalMatrix();
@@ -290,7 +290,7 @@ namespace hpl {
 		OhplNewtonBuoyIn in;
 		in.mass = fMass;
 		in.density = b.density;
-		in.densityMul = mfBuoyancyDensityMul;
+		in.densityMul = mS->buoyancyDensityMul;
 		in.dragDensityMul = b.dragDensityMul;
 		in.linearViscosity = b.linearViscosity;
 		in.angularViscosity = b.angularViscosity;
@@ -316,7 +316,7 @@ namespace hpl {
 
 		if (out.dragUpdated)
 		{
-			ohpl_ntb_set_buoy_drag(mhRust, &out.prevLinearVel, &out.prevAngularVel, out.noPrevVel, out.dragDensityMul);
+			ohpl_ntb_set_buoy_drag(mS->rust, &out.prevLinearVel, &out.prevAngularVel, out.noPrevVel, out.dragDensityMul);
 		}
 		*apForce = out.force;
 		*apTorque = out.torque;

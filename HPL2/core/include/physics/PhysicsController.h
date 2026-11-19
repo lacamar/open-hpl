@@ -25,8 +25,7 @@
 #include "math/Spring.h"
 
 #include "engine/SaveGame.h"
-
-struct OhplPid;
+#include "physics/RustPhysics.h"
 
 namespace hpl {
 
@@ -77,7 +76,7 @@ namespace hpl {
 	class iPhysicsController;
 	class iPhysicsJoint;
 	class iPhysicsBody;
-	// Controller state, owned by rust/src/physics/controller.rs (layout of OhplCtrlParams); the members are references into it.
+	// Controller state, owned by rust/src/physics/controller.rs.
 	struct OhplCtrlState
 	{
 		iPhysicsController *self;
@@ -95,6 +94,17 @@ namespace hpl {
 		size_t nextN;
 	};
 	static_assert(sizeof(OhplCtrlState) == 88, "controller state layout");
+}
+
+extern "C" {
+hpl::OhplCtrlState* ohpl_h15c_new(size_t);
+void ohpl_h15c_free(hpl::OhplCtrlState*);
+void ohpl_h15c_update(const hpl::OhplPhysVt*, hpl::OhplCtrlState*, float);
+void ohpl_h15c_set_active(hpl::OhplCtrlState*, bool);
+void ohpl_h15c_set_error_num(hpl::OhplCtrlState*, int);
+}
+
+namespace hpl {
 
 	class iPhysicsController
 	{
@@ -103,81 +113,61 @@ namespace hpl {
 		iPhysicsController(const tString &asName, iPhysicsWorld *apWorld);
 		virtual ~iPhysicsController();
 
-		void Update(float afTimeStep);
+		void Update(float afTimeStep){ ohpl_h15c_update(OhplPhysHost(), mS, afTimeStep);}
 
 		const tString& GetName(){ return msName;}
 
-		void SetJoint(iPhysicsJoint *apJoint){ mpJoint = apJoint;}
-		iPhysicsJoint* GetJoint(){ return mpJoint;}
-		void SetBody(iPhysicsBody *apBody){ mpBody = apBody;}
-		iPhysicsBody* GetBody(){ return mpBody;}
+		void SetJoint(iPhysicsJoint *apJoint){ mS->joint = apJoint;}
+		iPhysicsJoint* GetJoint(){ return mS->joint;}
+		void SetBody(iPhysicsBody *apBody){ mS->body = apBody;}
+		iPhysicsBody* GetBody(){ return mS->body;}
 
-		bool IsActive(){ return mbActive;}
-		void SetActive(bool abX);
+		bool IsActive(){ return mS->active;}
+		void SetActive(bool abX){ ohpl_h15c_set_active(mS, abX);}
 
 		/*
 		 * p in Pid and k in springs
 		 */
-		void SetA(float afA){ mfA = afA;}
+		void SetA(float afA){ mS->a = afA;}
 		/*
 		* i in Pid and b in springs
 		*/
-		void SetB(float afB){ mfB = afB;}
+		void SetB(float afB){ mS->b = afB;}
 		/*
 		* d in Pid and not used in springs
 		*/
-		void SetC(float afC){ mfC = afC;}
+		void SetC(float afC){ mS->c = afC;}
 
-		void SetPidIntegralSize(int alSize);
+		void SetPidIntegralSize(int alSize){ ohpl_h15c_set_error_num(mS, alSize);}
 
-		void SetType(ePhysicsControllerType aType){ mType = aType;}
+		void SetType(ePhysicsControllerType aType){ mS->kind = aType;}
 
-		void SetDestValue(float afX){ mfDestValue = afX;}
-		float GetDestValue(){ return mfDestValue;}
+		void SetDestValue(float afX){ mS->dest = afX;}
+		float GetDestValue(){ return mS->dest;}
 
-		void SetMaxOutput(float afX){ mfMaxOutput = afX;}
+		void SetMaxOutput(float afX){ mS->maxOutput = afX;}
 
 		void SetInputType(ePhysicsControllerInput aInput, ePhysicsControllerAxis aAxis){
-			mInputType = aInput; mInputAxis = aAxis;}
+			mS->input = aInput; mS->inputAxis = aAxis;}
 
 		void SetOutputType(ePhysicsControllerOutput aOutput, ePhysicsControllerAxis aAxis){
-			mOutputType = aOutput; mOutputAxis = aAxis;}
-		void SetMulMassWithOutput(bool abX){ mbMulMassWithOutput = abX;}
+			mS->output = aOutput; mS->outputAxis = aAxis;}
+		void SetMulMassWithOutput(bool abX){ mS->mulMass = abX;}
 
-		void SetEndType(ePhysicsControllerEnd aEnd){ mEndType = aEnd;}
-		ePhysicsControllerEnd GetEndType(){ return mEndType;}
+		void SetEndType(ePhysicsControllerEnd aEnd){ mS->end = aEnd;}
+		ePhysicsControllerEnd GetEndType(){ return mS->end;}
 
-		void SetNextController(const tString &asName){ msNextController = asName; mS.nextP = msNextController.c_str(); mS.nextN = msNextController.size();}
+		void SetNextController(const tString &asName){ msNextController = asName; mS->nextP = msNextController.c_str(); mS->nextN = msNextController.size();}
 		const tString& GetNextController(){ return msNextController;}
 
-		void SetLogInfo(bool abX){mbLogInfo = abX;}
+		void SetLogInfo(bool abX){mS->log = abX;}
 
-		void SetPaused(bool abX){mbPaused = abX;}
+		void SetPaused(bool abX){mS->paused = abX;}
 
 	protected:
-		OhplCtrlState mS = OhplCtrlState();
-		iPhysicsWorld *mpWorld;
+		OhplCtrlState *mS;
 		tString msName;
-		iPhysicsBody *&mpBody = mS.body;
-		iPhysicsJoint *&mpJoint = mS.joint;
-		float &mfA = mS.a;
-		float &mfB = mS.b;
-		float &mfC = mS.c;
-		float &mfDestValue = mS.dest;
-		float &mfMaxOutput = mS.maxOutput;
-		bool &mbMulMassWithOutput = mS.mulMass;
-		ePhysicsControllerType &mType = mS.kind;
-		ePhysicsControllerInput &mInputType = mS.input;
-		ePhysicsControllerAxis &mInputAxis = mS.inputAxis;
-		ePhysicsControllerOutput &mOutputType = mS.output;
-		ePhysicsControllerAxis &mOutputAxis = mS.outputAxis;
-		ePhysicsControllerEnd &mEndType = mS.end;
 		tString msNextController;
-		OhplPid *mpPid;
-
-		bool &mbActive = mS.active;
-		bool &mbPaused = mS.paused;
-		bool &mbLogInfo = mS.log;
 	};
 };
 #endif // HPL_PHYSICS_CONTROLLER_H

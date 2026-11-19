@@ -110,25 +110,25 @@ namespace hpl {
 
 		virtual void RemoveAttachedBody(iPhysicsBody *apBody, bool abRemoveContainerFromBody=true)=0;
 
-		void SetGravityForce(const cVector3f& avX){ mS.gravityForce = avX;}
-		const cVector3f& GetGravityForce(){ return mS.gravityForce;}
+		void SetGravityForce(const cVector3f& avX){ mS->gravityForce = avX;}
+		const cVector3f& GetGravityForce(){ return mS->gravityForce;}
 
 		void SetDamping(float afX);
 		float GetDamping(){ return mfDamping;}
 
 		void SetParticleRadius(float afX);
-		float GetParticleRadius(){ return mS.particleRadius;}
+		float GetParticleRadius(){ return mS->particleRadius;}
 
-		void SetSlideAmount(float afX){ mS.slideAmount = afX; }
-		float GetSlideAmount(){ return mS.slideAmount;}
+		void SetSlideAmount(float afX){ mS->slideAmount = afX; }
+		float GetSlideAmount(){ return mS->slideAmount;}
 
-		void SetCollide(bool abX){ mS.collide  = abX;}
-		bool GetCollide(){ return mS.collide;}
+		void SetCollide(bool abX){ mS->collide  = abX;}
+		bool GetCollide(){ return mS->collide;}
 
 		void SetSleeping(bool abX);
 
-		inline int GetUpdateCount() const { return mS.updateCount; }
-		void IncUpdateCount(){ ++mS.updateCount; }
+		inline int GetUpdateCount() const { return mS->updateCount; }
+		void IncUpdateCount(){ ++mS->updateCount; }
 
 		void SetActive(bool abX){ mbActive = abX; }
 		bool GetActive(){ return mbActive; }
@@ -149,7 +149,7 @@ namespace hpl {
 		virtual bool CheckSpecificDataAwake()=0;		//Tested when container IS sleeping
 		virtual void SetSpecificDataSleeping(bool abSleeping)=0;
 
-		OhplRopeState mS;
+		OhplRopeState *mS;
 		std::vector<cVerletParticle*> mvParticleCache;
 		void RefreshParticleCache(){ mvParticleCache.assign(mlstParticles.begin(), mlstParticles.end()); }
 		bool CastParticleRay(const cVector3f &avStart, const cVector3f &avEnd, cVector3f *apPos, cVector3f *apNormal);

@@ -57,11 +57,11 @@ namespace hpl {
 
 		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
 
-		void SetImpactDuration(float afX){ mfImpactDuration = afX;}
-		float GetImpactDuration(){ return mfImpactDuration;}
+		void SetImpactDuration(float afX){ mS->impactDuration = afX;}
+		float GetImpactDuration(){ return mS->impactDuration;}
 
-		void SetMaxImpacts(int alX){ mlMaxImpacts = alX;}
-		int GetMaxImpacts(){ return mlMaxImpacts;}
+		void SetMaxImpacts(int alX){ mS->maxImpacts = alX;}
+		int GetMaxImpacts(){ return mS->maxImpacts;}
 		int GetNumOfImpacts();
 
 		bool CanPlayImpact();
@@ -69,8 +69,8 @@ namespace hpl {
 
 		cSurfaceDataIterator GetSurfaceDataIterator();
 
-		void SetDebugLog(bool abX){ mbLog = abX;}
-		bool GetDebugLog(){ return mbLog;}
+		void SetDebugLog(bool abX){ mS->log = abX;}
+		bool GetDebugLog(){ return mS->log;}
 
 	private:
 		cResources *mpResources;
@@ -78,10 +78,7 @@ namespace hpl {
 		tSurfaceDataMap m_mapSurfaceData;
 
 		uint64_t mRs;
-		OhplPhysState mS;
-		float &mfImpactDuration = mS.impactDuration;
-		int &mlMaxImpacts = mS.maxImpacts;
-		bool &mbLog = mS.log;
+		OhplPhysState *mS;
 	};
 
 };

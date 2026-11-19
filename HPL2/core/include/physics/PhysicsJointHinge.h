@@ -26,25 +26,22 @@ namespace hpl {
 
 	class iPhysicsJointHinge : public iPhysicsJoint
 	{
-	#ifdef __GNUC__
-		typedef iPhysicsJoint __super;
-	#endif
 	public:
 		iPhysicsJointHinge(const tString &asName, iPhysicsBody *apParentBody, iPhysicsBody *apChildBody,
 			iPhysicsWorld *apWorld,const cVector3f &avPivotPoint,const cVector3f &avPinDir);
 		~iPhysicsJointHinge();
 
-        void SetMaxAngle(float afAngle);
-		void SetMinAngle(float afAngle);
-		float GetMaxAngle();
-		float GetMinAngle();
+		void SetMaxAngle(float afAngle){ ohpl_ntj_set_max(mhRust, afAngle);}
+		void SetMinAngle(float afAngle){ ohpl_ntj_set_min(mhRust, afAngle);}
+		float GetMaxAngle(){ return ohpl_ntj_max(mhRust);}
+		float GetMinAngle(){ return ohpl_ntj_min(mhRust);}
 
-		cVector3f GetVelocity();
+		cVector3f GetVelocity(){ return cVector3f(0,0,0);}
 		cVector3f GetAngularVelocity();
-		float GetForceSize();
+		float GetForceSize(){ return ohpl_ntj_hinge_force_size(mhRust);}
 
-		float GetDistance();
-		float GetAngle();
+		float GetDistance(){ return 0;}
+		float GetAngle(){ return ohpl_ntj_hinge_angle(mhRust);}
 
 		ePhysicsJointType GetType(){ return ePhysicsJointType_Hinge;}
 

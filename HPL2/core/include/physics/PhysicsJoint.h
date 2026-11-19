@@ -30,10 +30,6 @@
 #include "physics/RustPhysBook.h"
 #include "impl/RustNewtonBackend.h"
 
-class NewtonJoint;
-class NewtonWorld;
-class NewtonBody;
-
 namespace hpl {
 
 	class iPhysicsBody;
@@ -122,24 +118,24 @@ namespace hpl {
 
 		const tString& GetName(){ return msName;}
 
-		void SetUniqueID(int alID){mlUniqueID = alID;}
-		int GetUniqueID(){return mlUniqueID;}
+		void SetUniqueID(int alID){mS->uniqueId = alID;}
+		int GetUniqueID(){return mS->uniqueId;}
 
-		iPhysicsBody * GetParentBody(){ return mpParentBody;}
-		iPhysicsBody * GetChildBody(){ return mpChildBody;}
+		iPhysicsBody * GetParentBody(){ return mS->parent;}
+		iPhysicsBody * GetChildBody(){ return mS->child;}
 
-		void RemoveBody(iPhysicsBody *apBody);
+		void RemoveBody(iPhysicsBody *apBody){ if(mS->parent == apBody) mS->parent = NULL; if(mS->child == apBody) mS->child = NULL;}
 
-		const cVector3f& GetPivotPoint(){ return mvPivotPoint;}
-		const cVector3f& GetPinDir(){ return mvPinDir;}
+		const cVector3f& GetPivotPoint(){ return mS->pivot;}
+		const cVector3f& GetPinDir(){ return mS->pinDir;}
 
 		virtual ePhysicsJointType GetType()=0;
 
-		void SetCollideBodies(bool abX);
-		bool GetCollideBodies();
+		void SetCollideBodies(bool abX){ ohpl_ntj_set_collide(mhRust, abX);}
+		bool GetCollideBodies(){ return ohpl_ntj_collide(mhRust);}
 
-		void SetStiffness(float afX);
-		float GetStiffness();
+		void SetStiffness(float afX){ ohpl_ntj_set_stiffness(mhRust, afX);}
+		float GetStiffness(){ return ohpl_ntj_stiffness(mhRust);}
 
 		virtual cVector3f GetVelocity()=0;
 		virtual cVector3f GetAngularVelocity()=0;
@@ -153,138 +149,90 @@ namespace hpl {
 
 		void SetMoveSound(tString &asName) {msMoveSound = asName;}
 
-		void SetMoveSpeedType(ePhysicsJointSpeed aType){ mMoveSpeedType = aType;}
-		void SetMinMoveSpeed(float afX){mfMinMoveSpeed = afX;}
-		void SetMinMoveFreq(float afX){mfMinMoveFreq = afX; }
-		void SetMinMoveFreqSpeed(float afX){mfMinMoveFreqSpeed = afX; }
-		void SetMinMoveVolume(float afX){mfMinMoveVolume = afX; }
-		void SetMaxMoveFreq(float afX){mfMaxMoveFreq = afX; }
-		void SetMaxMoveVolume(float afX){mfMaxMoveVolume = afX; }
-		void SetMaxMoveFreqSpeed(float afX){mfMaxMoveFreqSpeed = afX; }
-		void SetMiddleMoveSpeed(float afX){mfMiddleMoveSpeed = afX; }
-		void SetMiddleMoveVolume(float afX){mfMiddleMoveVolume = afX; }
+		void SetMoveSpeedType(ePhysicsJointSpeed aType){ mS->moveSpeedType = aType;}
+		void SetMinMoveSpeed(float afX){mS->minMoveSpeed = afX;}
+		void SetMinMoveFreq(float afX){mS->minMoveFreq = afX; }
+		void SetMinMoveFreqSpeed(float afX){mS->minMoveFreqSpeed = afX; }
+		void SetMinMoveVolume(float afX){mS->minMoveVolume = afX; }
+		void SetMaxMoveFreq(float afX){mS->maxMoveFreq = afX; }
+		void SetMaxMoveVolume(float afX){mS->maxMoveVolume = afX; }
+		void SetMaxMoveFreqSpeed(float afX){mS->maxMoveFreqSpeed = afX; }
+		void SetMiddleMoveSpeed(float afX){mS->middleMoveSpeed = afX; }
+		void SetMiddleMoveVolume(float afX){mS->middleMoveVolume = afX; }
 
 		void SetCallback(iPhysicsJointCallback *apCallback, bool abAutoDelete){
-						mpCallback = apCallback;
-						mbAutoDeleteCallback = abAutoDelete;
+						mS->callback = apCallback;
+						mS->autoDeleteCallback = abAutoDelete;
 		}
 
-		iPhysicsJointCallback* GetCallback(){return mpCallback; }
+		iPhysicsJointCallback* GetCallback(){return mS->callback; }
 
-		bool CheckBreakage();
+		bool CheckBreakage(){ return ohpl_h15j_check_breakage(mS->shell, reinterpret_cast<size_t>(this));}
 
-		void SetBreakable(bool abX){ mbBreakable = abX;}
-		bool IsBreakable(){ return mbBreakable;}
-		void SetBreakForce(float afForce){ mfBreakForce = afForce;}
-		float GetBreakForce(){ return mfBreakForce;}
+		void SetBreakable(bool abX){ mS->breakable = abX;}
+		bool IsBreakable(){ return mS->breakable;}
+		void SetBreakForce(float afForce){ mS->breakForce = afForce;}
+		float GetBreakForce(){ return mS->breakForce;}
 		void SetBreakSound(const tString &asSound){ msBreakSound = asSound;}
 
-		void SetLimitAutoSleep(bool abX){ mbLimitAutoSleep = abX;}
-		void SetLimitAutoSleepDist(float afX){ mfLimitAutoSleepDist = afX;}
-		void SetLimitAutoSleepNumSteps(int alX){ mlLimitAutoSleepNumSteps = alX;}
+		void SetLimitAutoSleep(bool abX){ mS->limitAutoSleep = abX;}
+		void SetLimitAutoSleepDist(float afX){ mS->limitAutoSleepDist = afX;}
+		void SetLimitAutoSleepNumSteps(int alX){ mS->limitAutoSleepNumSteps = alX;}
 
-		bool GetLimitAutoSleep(){ return mbLimitAutoSleep;}
-		float GetLimitAutoSleepDist(){ return mfLimitAutoSleepDist;}
-		int GetLimitAutoSleepNumSteps(){ return mlLimitAutoSleepNumSteps;}
+		bool GetLimitAutoSleep(){ return mS->limitAutoSleep;}
+		float GetLimitAutoSleepDist(){ return mS->limitAutoSleepDist;}
+		int GetLimitAutoSleepNumSteps(){ return mS->limitAutoSleepNumSteps;}
 
-		void SetStickyMinLimit(bool abX){ mbStickyMinLimit = abX;}
-		void SetStickyMaxLimit(bool abX){ mbStickyMaxLimit = abX;}
-		bool GetStickyMinLimit(){ return mbStickyMinLimit;}
-		bool GetStickyMaxLimit(){ return mbStickyMaxLimit;}
+		void SetStickyMinLimit(bool abX){ mS->stickyMin = abX;}
+		void SetStickyMaxLimit(bool abX){ mS->stickyMax = abX;}
+		bool GetStickyMinLimit(){ return mS->stickyMin;}
+		bool GetStickyMaxLimit(){ return mS->stickyMax;}
 
-		void SetAllowPositionReset(bool abX){ mbAllowPositionReset = abX;}
-		bool GetAllowPositionReset(){ return mbAllowPositionReset;}
+		void SetAllowPositionReset(bool abX){ mS->allowPositionReset = abX;}
+		bool GetAllowPositionReset(){ return mS->allowPositionReset;}
 		virtual void ResetPosition(){}
 
-		void Break() { mbBroken = true; mbBreakable = true; }
+		void Break() { mS->broken = true; mS->breakable = true; }
 
-		bool IsBroken(){ return mbBroken;}
+		bool IsBroken(){ return mS->broken;}
 
-		void SetUserData(void *apUserData){ mpUserData = apUserData;}
+		void SetUserData(void *apUserData){ mS->userData = apUserData;}
 
-		void AddController(iPhysicsController *apController);
-		iPhysicsController* GetController(const tString &asName);
-		bool ChangeController(const tString &asName);
+		void AddController(iPhysicsController *apController){ ohpl_h15j_add_controller(mS->shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apController));}
+		iPhysicsController* GetController(const tString &asName){ return reinterpret_cast<iPhysicsController*>(ohpl_h15j_get_controller(mS->shell, asName.c_str(), asName.size()));}
+		bool ChangeController(const tString &asName){ return ohpl_h15j_change_controller(mS->shell, asName.c_str(), asName.size());}
 		cPhysicsControllerIterator GetControllerIterator();
-		int ControllerCount();
+		int ControllerCount(){ return (int)ohpl_h15j_controller_len(mS->shell);}
 		iPhysicsController* ControllerAt(int alIdx);
 
-		void SetAllControllersPaused(bool abX);
+		void SetAllControllersPaused(bool abX){ ohpl_h15j_set_all_paused(mS->shell, abX);}
 
-		bool OnPhysicsUpdate();
+		bool OnPhysicsUpdate(){ return ohpl_h15j_update(mS->shell, reinterpret_cast<size_t>(this));}
 
 		void SetSound(cSoundEntity *apSound);
-		cSoundEntity* GetSound(){ return mpSound;}
-		int GetSoundID(){ return mlSoundID;}
+		cSoundEntity* GetSound(){ return mS->sound;}
+		int GetSoundID(){ return mS->soundId;}
 
 	protected:
-		OhplJointShellState mS = OhplJointShellState();
+		OhplJointShellState *mS;
 		tString msName;
-		int &mlUniqueID = mS.uniqueId;
-
-		iPhysicsBody *&mpParentBody = mS.parent;
-		iPhysicsBody *&mpChildBody = mS.child;
-		iPhysicsWorld *&mpWorld = mS.world;
-
-		cVector3f &mvPinDir = mS.pinDir;
-		cVector3f &mvPivotPoint = mS.pivot;
-
-		cVector3f &mvStartPinDir = mS.startPinDir;
-
-		bool &mbStickyMinLimit = mS.stickyMin;
-		bool &mbStickyMaxLimit = mS.stickyMax;
-		bool &mbAllowPositionReset = mS.allowPositionReset;
-		bool &mbPositionResetPending = mS.positionResetPending;
-
 		tPhysicsControllerMap m_mapControllers;
 
 		cJointLimitEffect mMaxLimit;
 		cJointLimitEffect mMinLimit;
 
 		tString msMoveSound;
-
-		float &mfMinMoveSpeed = mS.minMoveSpeed;
-		float &mfMinMoveFreq = mS.minMoveFreq;
-		float &mfMinMoveFreqSpeed = mS.minMoveFreqSpeed;
-		float &mfMinMoveVolume = mS.minMoveVolume;
-		float &mfMaxMoveFreq = mS.maxMoveFreq;
-		float &mfMaxMoveFreqSpeed = mS.maxMoveFreqSpeed;
-		float &mfMaxMoveVolume = mS.maxMoveVolume;
-		float &mfMiddleMoveSpeed = mS.middleMoveSpeed;
-		float &mfMiddleMoveVolume = mS.middleMoveVolume;
-		ePhysicsJointSpeed &mMoveSpeedType = reinterpret_cast<ePhysicsJointSpeed&>(mS.moveSpeedType);
-
-		bool &mbBreakable = mS.breakable;
-		float &mfBreakForce = mS.breakForce;
 		tString msBreakSound;
-		bool &mbBroken = mS.broken;
 
-		bool &mbLimitAutoSleep = mS.limitAutoSleep;
-		float &mfLimitAutoSleepDist = mS.limitAutoSleepDist;
-		int &mlLimitAutoSleepNumSteps = mS.limitAutoSleepNumSteps;
+		uint64_t mhRust = 0;
+		uint64_t mhRustWorld = 0;
 
-		cSoundEntity *&mpSound = mS.sound;
-		int &mlSoundID = mS.soundId;
-		bool &mbHasCollided = mS.hasCollided;
-
-		iPhysicsJointCallback *&mpCallback = mS.callback;
-		bool &mbAutoDeleteCallback = mS.autoDeleteCallback;
-
-		int &mlLimitStepCount = mS.limitStepCount;
 		static size_t HostOp(int32_t alOp, OhplH15Wa *a);
-
-		void *&mpUserData = mS.userData;
-
-		static void CheckLimitAutoSleep(iPhysicsJoint *apJoint, const float afMin, const float afMax,
-										const float afDist);
 
 		void OnMaxLimit();
 		void OnMinLimit();
-		void OnNoLimit() { mbHasCollided = false; }
+		void OnNoLimit() { mS->hasCollided = false; }
 
-		cMatrixf GetMatrixFromPinAndPivot(const cVector3f& avPinDir,const cVector3f& avPivot);
-		void CalculateGlobalMatrix (const cMatrixf& a_mtxLocalMatrix0, const cMatrixf& a_mtxLocalMatrix1, cMatrixf& a_mtxMatrix0, cMatrixf& a_mtxMatrix1);
-		void CalculateLocalMatrix (const cMatrixf& a_mtxPinsAndPivotFrame, cMatrixf& a_mtxLocalMatrix0, cMatrixf& a_mtxLocalMatrix1);
 		static const OhplL4JointOps* RustOps();
 		static iPhysicsJoint* Self(size_t j){ return reinterpret_cast<iPhysicsJoint*>(j);}
 		static void RustLimitEvent(size_t j, int32_t kind);
@@ -292,14 +240,6 @@ namespace hpl {
 		static void RustNoLimit(size_t j, float afPrev, float afMin, float afMax, bool abSkip);
 		static void RustMatrices(size_t j, cMatrixf* apChild, cMatrixf* apParent);
 		static void RustPositionCheck(size_t j, float afDistSqr);
-
-		NewtonJoint* mpNewtonJoint;
-		NewtonWorld* mpNewtonWorld;
-		uint64_t mhRust = 0;
-		uint64_t mhRustWorld = 0;
-		NewtonBody* mpNewtonParentBody;
-		NewtonBody* mpNewtonChildBody;
-
 	};
 };
 #endif // HPL_PHYSICS_JOINT_H

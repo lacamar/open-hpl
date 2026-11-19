@@ -99,6 +99,8 @@ pub struct JointRec {
     pub kind: JointKind,
     pub local0: Matrixf,
     pub local1: Matrixf,
+    /// Slider/screw pin; unit length for screws.
+    pub pin: Vector3f,
     pub min: f32,
     pub max: f32,
     pub previous: f32,

@@ -22,8 +22,8 @@ namespace hpl {
 			out->active = b->IsActive();
 			out->inUpdateList = b->IsInUpdateList();
 			out->hpl3 = iPhysicsBody::mbHpl3Buoyancy;
-			out->freezeCount = b->mlFreezeCount;
-			out->densityMul = b->mfBuoyancyDensityMul;
+			out->freezeCount = b->mS->freezeCount;
+			out->densityMul = b->mS->buoyancyDensityMul;
 		}
 
 		static void BodyAddToUpdateList(size_t cpp)
@@ -32,7 +32,7 @@ namespace hpl {
 			b->GetWorld()->AddBodyToUpdateList(b);
 		}
 
-		static void BodySetFreezeCount(size_t cpp, int32_t n) { Body(cpp)->mlFreezeCount = n; }
+		static void BodySetFreezeCount(size_t cpp, int32_t n) { Body(cpp)->mS->freezeCount = n; }
 
 		static bool BodyHpl3Buoyancy(size_t cpp, const cVector3f* gravity, float timeStep, cVector3f* force, cVector3f* torque)
 		{

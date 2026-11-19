@@ -12,6 +12,7 @@
 namespace hpl {
 
 struct OhplH14Aux;
+struct OhplCharExt;
 
 struct OhplH14BodyVt
 {
@@ -95,7 +96,8 @@ void ohpl_h14_rope_set_motor(size_t (*)(int32_t, OhplH15Wa*), size_t, OhplRopeSt
 void ohpl_h14_rope_set_auto_move(size_t (*)(int32_t, OhplH15Wa*), size_t, OhplRopeState*, bool);
 void ohpl_h14_rope_remove_attached(size_t (*)(int32_t, OhplH15Wa*), size_t, OhplRopeState*, size_t, bool);
 void ohpl_h14_rope_set_attached(size_t (*)(int32_t, OhplH15Wa*), size_t, OhplRopeState*, size_t, size_t, size_t);
-void ohpl_h14_char_init(void*, OhplCharState*, size_t, float);
+void ohpl_h14_char_new(OhplCharExt**, OhplCharState**, size_t, OhplV3, float);
+void ohpl_h14_char_free(OhplCharExt*, OhplCharState*);
 void ohpl_h14_connect_to_body(size_t (*)(int32_t, OhplH15Wa*), size_t, void*, OhplCharState*, size_t, OhplV3, uint32_t);
 void ohpl_h14_disconnect_body(size_t (*)(int32_t, OhplH15Wa*), size_t, void*);
 OhplH14Aux* ohpl_h14_aux_new();
@@ -103,6 +105,8 @@ void ohpl_h14_counts(uint64_t*);
 void ohpl_h14_rope_plan(float, float, OhplH14RopePlan*);
 OhplV3 ohpl_h14_rope_particle_pos(OhplV3, OhplV3, float);
 void ohpl_h14_aux_free(OhplH14Aux*);
+OhplRopeState* ohpl_h14_rope_alloc();
+void ohpl_h14_rope_release(OhplRopeState*);
 void ohpl_h14_reset_pids(OhplH14Aux*);
 void ohpl_h14_clear_smoothing(OhplH14Aux*);
 void ohpl_h14_clear_camera(OhplH14Aux*);

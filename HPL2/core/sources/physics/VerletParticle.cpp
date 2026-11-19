@@ -19,6 +19,7 @@
 
 #include <cstddef>
 #include "physics/VerletParticle.h"
+#include "physics/RustPhysicsH14.h"
 
 #include "physics/PhysicsWorld.h"
 #include "physics/PhysicsBody.h"
@@ -101,6 +102,7 @@ namespace hpl {
 
 	iVerletParticleContainer::iVerletParticleContainer(const tString &asName, iPhysicsWorld *apWorld)
 	{
+		mS = ohpl_h14_rope_alloc();
 		msName = asName;
 
 		mpWorld = apWorld;
@@ -110,6 +112,7 @@ namespace hpl {
 
 	iVerletParticleContainer::~iVerletParticleContainer()
 	{
+		ohpl_h14_rope_release(mS);
 
 	}
 
@@ -118,32 +121,32 @@ namespace hpl {
 		afX = cMath::Clamp(afX,0,1);
 
 		mfDamping = afX;
-		mS.dampingMul = 1 - mfDamping;
+		mS->dampingMul = 1 - mfDamping;
 	}
 
 	void iVerletParticleContainer::SetParticleRadius(float afX)
 	{
-		if(mS.particleRadius == afX) return;
+		if(mS->particleRadius == afX) return;
 
-		mS.particleRadius = afX;
+		mS->particleRadius = afX;
 
 		SetSleeping(false);
 	}
 
 	void iVerletParticleContainer::SetSleeping(bool abX)
 	{
-		if(mS.sleeping == abX) return;
+		if(mS->sleeping == abX) return;
 
-		mS.sleeping = abX;
-		mS.sleepCount = 0;
-        mS.sleepCheckCount = 0;
+		mS->sleeping = abX;
+		mS->sleepCount = 0;
+        mS->sleepCheckCount = 0;
 
 		SetSpecificDataSleeping(abX);
 	}
 
 	void cVerletParticle::UpdateMovement(float afTimeStep)
 	{
-		ohpl_verlet_update_movement(this, mpContainer->mS.dampingMul, OhplV3{mpContainer->mS.gravityForce.x, mpContainer->mS.gravityForce.y, mpContainer->mS.gravityForce.z}, afTimeStep);
+		ohpl_verlet_update_movement(this, mpContainer->mS->dampingMul, OhplV3{mpContainer->mS->gravityForce.x, mpContainer->mS->gravityForce.y, mpContainer->mS->gravityForce.z}, afTimeStep);
 	}
 
 	void iVerletParticleContainer::UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness)
@@ -178,7 +181,7 @@ namespace hpl {
 				return static_cast<iVerletParticleContainer*>(c)->CastParticleRay(cVector3f(aStart.x, aStart.y, aStart.z), cVector3f(aEnd.x, aEnd.y, aEnd.z),
 					reinterpret_cast<cVector3f*>(apPos), reinterpret_cast<cVector3f*>(apNormal));
 			},
-			this, &mS, apPart, OhplV3{avPrevPos.x, avPrevPos.y, avPrevPos.z}, afRadius);
+			this, mS, apPart, OhplV3{avPrevPos.x, avPrevPos.y, avPrevPos.z}, afRadius);
 	}
 
 	cVerletParticle* iVerletParticleContainer::GetParticle(int alIdx)
