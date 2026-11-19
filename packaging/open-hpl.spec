@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.4.4
+Version:        1.4.5
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,12 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Thu Nov 19 2026 lacamar <lchlnm@pm.me> - 1.4.5-1
+- Complex GUI widgets in Rust
+- Physics, particle emitters, Entity3D/Node3D in Rust
+- GUI host tables call Rust directly
+- Gate: one run per output dir
+
 * Wed Nov 18 2026 lacamar <lchlnm@pm.me> - 1.4.4-1
 - GUI widget base and simple widgets in Rust
 - Scene lights, billboards, beams, lens flares, fog in Rust
