@@ -17,105 +17,30 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_WIDGET_MENU
-#define HPL_WIDGET_MENU
+#ifndef HPL_WIDGET_MENU_H
+#define HPL_WIDGET_MENU_H
 
 #include "gui/Widget.h"
-
-#include "system/SystemTypes.h"
-
-using namespace std;
+#include "gui/RustGuiGw.h"
 
 namespace hpl {
 
 	class cGuiSet;
 	class cGuiSkin;
 	class cWidgetMenuItem;
-	struct OhplH20Access;
 
-	typedef vector<cWidgetMenuItem*>		tWidgetMenuItemVector;
-	typedef tWidgetMenuItemVector::iterator	tWidgetMenuItemVectorIt;
-
-	
+	// Rust kinds (rust/src/gui/gw_menu.rs); the context and main menus share this base
 	class iWidgetMenu : public iWidget
 	{
-		friend class cWidgetMenuItem;
-		friend struct OhplH20Access;
 	public:
-		iWidgetMenu(eWidgetType aeMenuType,cGuiSet *apSet, cGuiSkin *apSkin);
-		virtual ~iWidgetMenu();
+		iWidgetMenu(eWidgetType aeMenuType,cGuiSet *apSet, cGuiSkin *apSkin) : iWidget(aeMenuType, apSet, apSkin) {}
+		virtual ~iWidgetMenu() {}
 
-		virtual cWidgetMenuItem* AddMenuItem(const tWString &asText);
-		virtual void AddSeparator() {}
-		virtual void ClearMenuItems();
-
-		
-
-		void SetParentItem( cWidgetMenuItem* apParentItem );
-		cWidgetMenuItem* GetParentItem() { return mpParentItem; }
-		iWidgetMenu* GetParentMenu();
-
-		void SetPrevAttention(iWidget* apWidget) { mpPrevAttention = apWidget; }
-
-		void SetHighlightedItem( cWidgetMenuItem* apItem ) { if(apItem!=mpHighlightedItem) mpHighlightedItem = apItem; }
-		cWidgetMenuItem* GetHightlightedItem () { return mpHighlightedItem; }
-
-		/**
-		 * Hide() : Hides current menu and submenues
-		 */
-		virtual void Hide(){}
-
-		virtual void SetMustHide(bool abX);
-
-		bool IsSubmenuOpen();
-
-		iWidgetMenu* GetTopMostMenu();
-
-		virtual void OnChildMenuHide() {};
-
-		void SetTextPos(const cVector3f& avPos) { mvTextPos = avPos; }
-		void SetArrowPos(const cVector3f& avPos) { mvArrowPos = avPos; }
-		void SetCheckPos(const cVector3f& avPos) { mvCheckPos = avPos; }
-
-		const cVector3f& GetTextOffset() { return mvTextPos; }
-		const cVector3f& GetArrowOffset() { return mvArrowPos; }
-		const cVector3f& GetCheckOffset() { return mvCheckPos; }
-
-		virtual float GetMenuItemWidth() { return 0; }
-
-	protected:
-
-		/**
-		* void UpdateMenuItemsPos(cWidgetMenuItem* apNewItem) : update item positions after adding apNewItem
-		*/ 
-
-		virtual void UpdateMenuItemsPos(cWidgetMenuItem* apNewItem) {};
-
-		/**
-		* void UpdateMenuItemsSize(cWidgetMenuItem* apNewItem) : update item sizes after adding apNewItem
-		*/ 
-		virtual void UpdateMenuItemsSize(cWidgetMenuItem* apNewItem) {};
-
-		virtual void UpdateMenuWidth(float afWidth) {};
-
-
-
-		////////////////////////////
-		// Data
-        tWidgetMenuItemVector mvMenuItems;
-		cWidgetMenuItem* mpHighlightedItem;
-
-		cVector3f mvTextPos;
-		cVector3f mvArrowPos;
-		cVector3f mvCheckPos;
-
-		cWidgetMenuItem* mpParentItem;
-
-		iWidget* mpPrevAttention;
-
-		bool mbMustHide;
+		cWidgetMenuItem* AddMenuItem(const tWString &asText){ return (cWidgetMenuItem*)ohpl_gw_menu_add_item((uintptr_t)this, (const uint32_t*)asText.data(), asText.size()); }
+		void AddSeparator(){ ohpl_gw_menu_add_separator((uintptr_t)this); }
+		void ClearMenuItems(){ ohpl_gw_menu_clear((uintptr_t)this); }
+		void SetHighlightedItem(cWidgetMenuItem* apItem){ ohpl_gw_menu_set_highlight((uintptr_t)this, (uintptr_t)apItem); }
 	};
 
 };
-
-#endif	// HPL_WIDGET_MENU
+#endif // HPL_WIDGET_MENU_H

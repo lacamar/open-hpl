@@ -21,127 +21,82 @@
 #define HPL_WIDGET_TEXT_BOX_H
 
 #include "gui/Widget.h"
+#include "gui/RustGuiGw.h"
 #include "gui/RustWidget2.h"
 #include "gui/RustGuiH20.h"
 
 namespace hpl {
 
-	class cGuiSkinFont;
-	
-	class cWidgetButton;
-	struct OhplG2PopupHost;
+	extern "C" {
+	int ohpl_h20_tb_default_decimals();
+	void ohpl_gw_tb_kb_open(uintptr_t);
+	void ohpl_gw_tb_kb_close(uintptr_t);
+	}
 
+	// Rust kind (rust/src/gui/gw_h20.rs, logic in h20_text.rs)
 	class cWidgetTextBox : public iWidget
 	{
-		friend struct OhplG2PopupHost;
-		friend struct OhplH20Access;
 	public:
-		cWidgetTextBox(cGuiSet *apSet, cGuiSkin *apSkin, eWidgetTextBoxInputType aType);
-		virtual ~cWidgetTextBox();
+		cWidgetTextBox(cGuiSet *apSet, cGuiSkin *apSkin, eWidgetTextBoxInputType aType)
+			: iWidget(eWidgetType_TextBox, apSet, apSkin) { ohpl_gw_set_kind((uintptr_t)this, kOhplGwTextBox, aType==eWidgetTextBoxInputType_Numeric, 0); }
 
-		void SetDefaultFontSize(const cVector2f& avSize);
 
-		void SetCallbackOnLostFocus(bool abX) { mState.enter_on_lost_focus = abX; }
-		bool GetCallbackOnLostFocus() { return mState.enter_on_lost_focus; }
+		void SetCallbackOnLostFocus(bool abX) { St().enter_on_lost_focus = abX; }
+		bool GetCallbackOnLostFocus() { return St().enter_on_lost_focus; }
 
-		void SetForceCallBackOnEnter(bool abX) { mState.force_enter=abX; }
-		bool GetForceCallBackOnEnter() { return mState.force_enter; }
-		
-		void SetMaxTextLength(int alLength);
-		int GetMaxTextLength(){return mState.max_chars;}
+		void SetForceCallBackOnEnter(bool abX) { St().force_enter=abX; }
+		bool GetForceCallBackOnEnter() { return St().force_enter; }
 
-		void SetSelectedText(int alStart=0, int alCount=-1);
+		void SetMaxTextLength(int alLength){ ohpl_h20_tb_set_max_text_length(&gH20Host, &H(), alLength); }
+		int GetMaxTextLength(){return St().max_chars;}
 
-		cVector2f GetBackgroundSize();
+		void SetSelectedText(int alStart=0, int alCount=-1){ ohpl_h20_tb_set_selected_text(&gH20Host, &H(), alStart, alCount); }
 
-		void SetMaxTextSizeNeg(float afX);
+		cVector2f GetBackgroundSize(){ cVector2f vSize; ohpl_h20_tb_background_size(&gH20Host, &H(), &vSize); return vSize; }
 
-		void SetCanEdit(bool abX);
-		bool GetCanEdit(){return mState.can_edit;}
+		void SetMaxTextSizeNeg(float afX){ St().max_size_neg = afX; ohpl_h20_tb_on_change_size(&gH20Host, &H()); }
 
-		void SetShowButtons(bool abX) { mbShowButtons = abX; }
+		void SetCanEdit(bool abX){ ohpl_h20_tb_set_can_edit(&gH20Host, &H(), abX); }
+		bool GetCanEdit(){return St().can_edit;}
 
-		void SetNumericAdd(float afX) { mState.numeric_add = afX; }
-		float GetNumericAdd() { return mState.numeric_add; }
+		void SetShowButtons(bool abX) { H().showButtons = abX; }
 
-		void SetNumericValue(float afX);
-		float GetNumericValue();
+		void SetNumericAdd(float afX) { St().numeric_add = afX; }
+		float GetNumericAdd() { return St().numeric_add; }
 
-		void SetLowerBound(bool abX, float afValue=0);
-		float GetLowerBound() { return mState.lower; }
-		void SetUpperBound(bool abX, float afValue=0);
-		float GetUpperBound() { return mState.upper; }
+		void SetNumericValue(float afX){ ohpl_h20_tb_set_numeric_value(&gH20Host, &H(), afX); }
+		float GetNumericValue(){ return ohpl_h20_tb_numeric_value(&gH20Host, &H()); }
 
-		void SetDecimals(int alX) { mState.decimals = alX; }
-		int GetDecimals();
+		void SetLowerBound(bool abX, float afValue=0){ St().has_lower = abX; St().lower = afValue; }
+		float GetLowerBound() { return St().lower; }
+		void SetUpperBound(bool abX, float afValue=0){ St().has_upper = abX; St().upper = afValue; }
+		float GetUpperBound() { return St().upper; }
 
-		static void SetDefaultDecimals(int alX) { mlDefaultDecimals = alX; ohpl_h20_tb_set_default_decimals(alX); }
+		void SetDecimals(int alX) { St().decimals = alX; }
+		int GetDecimals(){ return St().decimals<0 ? ohpl_h20_tb_default_decimals() : St().decimals; }
 
-		void SetIllegalChars(const tWString &asIllegalChars);
-		const tWString& GetIllegalChars();
+		static void SetDefaultDecimals(int alX) { ohpl_h20_tb_set_default_decimals(alX); }
 
-		void SetLegalCharCodeLimitEnabled(bool abX);
-		
+		void SetIllegalChars(const tWString &asIllegalChars){ ohpl_h20_tb_set_illegal_chars(&gH20Host, &H(), asIllegalChars.data(), asIllegalChars.size()); }
+
+		void SetLegalCharCodeLimitEnabled(bool abX){ St().limit_enabled = abX; }
+
 		/**
 		* A character that is lower (NOT equal) to this is considered illegal
 		*/
-		void SetLegalCharCodeMinLimit(wchar_t alX);
+		void SetLegalCharCodeMinLimit(wchar_t alX){ St().limit_min = alX; }
 		/**
 		* A character that is higher (NOT equal) to this is considered illegal
 		*/
-		void SetLegalCharCodeMaxLimit(wchar_t alX);
+		void SetLegalCharCodeMaxLimit(wchar_t alX){ St().limit_max = alX; }
 
-		bool GetLegalCharCodeLimitEnabled(){ return mState.limit_enabled;}
-		wchar_t GetLegalCharCodeMinLimit(){ return mState.limit_min;}
-		wchar_t GetLegalCharCodeMaxLimit(){ return mState.limit_max;}
-		
-	protected:
-		/////////////////////////
-		// Implemented functions
-		void OnInit();
-		void OnLoadGraphics();
-		void OnChangeSize();
-		void OnChangeText();
-		
-		void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion);
+		bool GetLegalCharCodeLimitEnabled(){ return St().limit_enabled;}
+		wchar_t GetLegalCharCodeMinLimit(){ return St().limit_min;}
+		wchar_t GetLegalCharCodeMaxLimit(){ return St().limit_max;}
 
-		bool OnMouseMove(const cGuiMessageData& aData);
-		bool OnMouseDown(const cGuiMessageData& aData);
-		bool OnMouseDoubleClick(const cGuiMessageData& aData);
-		bool OnMouseUp(const cGuiMessageData& aData);
-		bool OnMouseEnter(const cGuiMessageData& aData);
-		bool OnMouseLeave(const cGuiMessageData& aData);
-
-		bool OnGotFocus(const cGuiMessageData& aData);
-		bool OnGotTabFocus(const cGuiMessageData& aData);
-		bool OnLostFocus(const cGuiMessageData& aData);
-
-		bool OnKeyPress(const cGuiMessageData& aData);
-
-		bool OnUIButtonPress(const cGuiMessageData& aData);
-
-		bool OnEnter(const cGuiMessageData& aData);
-
-
-		////////////////////////////
-		// Interface for UI keyboard
-		void OnUIKeyboardOpen();
-		void OnUIKeyboardClose();
-
-		/////////////////////////
-		// Data
-		OhplH20TextBox mH;
-		iWidget*& mpPrevAttention;
-		OhplW2Text& mState;
-
-		eWidgetTextBoxInputType mInputType;
-		bool& mbShowButtons;
-
-		static int mlDefaultDecimals;
-
-		tWString msIllegalChars;
-
-		bool mbUIKeyboardOpen;
+	private:
+		OhplH20TextBox& H(){ return *(OhplH20TextBox*)ohpl_gw_state((uintptr_t)this); }
+		OhplW2Text& St(){ return H().st; }
 	};
 
 };

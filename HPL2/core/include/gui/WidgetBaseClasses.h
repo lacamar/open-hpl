@@ -21,16 +21,13 @@
 #define HPL_WIDGET_BASE_CLASSES_H
 
 #include "gui/GuiTypes.h"
+#include "system/String.h"
 
 namespace hpl {
 
 	class cWidgetMultiPropertyItem;
 	class cWidgetItemProperty;
 	class cWidgetItem;
-
-	class iWidgetItemContainer;
-
-	//--------------------------------------
 
 	typedef std::vector<cWidgetItem*> tWidgetItemVec;
 	typedef tWidgetItemVec::iterator tWidgetItemVecIt;
@@ -53,122 +50,103 @@ namespace hpl {
 		eItemSelectType_Deselect,
 	};
 
-	//--------------------------------------
+	extern "C" {
+	// rust/src/gui/gw_items.rs: items are owned by the list box or combo box (the container is its widget address).
+	size_t ohpl_gwi_num(uintptr_t);
+	cWidgetItem* ohpl_gwi_get(uintptr_t, int);
+	cWidgetItem* ohpl_gwi_add(uintptr_t, const uint32_t*, size_t);
+	void ohpl_gwi_remove_at(uintptr_t, int);
+	void ohpl_gwi_remove_text(uintptr_t, const uint32_t*, size_t);
+	void ohpl_gwi_clear(uintptr_t);
+	bool ohpl_gwi_has(uintptr_t, const uint32_t*, size_t);
+	void ohpl_gwi_set_text_at(uintptr_t, int, const uint32_t*, size_t);
+	const uint32_t* ohpl_gwi_text(cWidgetItem*, size_t*);
+	void ohpl_gwi_set_text(cWidgetItem*, const uint32_t*, size_t);
+	int ohpl_gwi_index(cWidgetItem*);
+	void ohpl_gwi_set_index(cWidgetItem*, int);
+	bool ohpl_gwi_selectable(cWidgetItem*);
+	void ohpl_gwi_set_selectable(cWidgetItem*, bool);
+	bool ohpl_gwi_selected(cWidgetItem*);
+	void ohpl_gwi_set_selected(cWidgetItem*, bool);
+	void* ohpl_gwi_user_data(cWidgetItem*);
+	void ohpl_gwi_set_user_data(cWidgetItem*, void*);
+	int ohpl_gwi_user_value(cWidgetItem*);
+	void ohpl_gwi_set_user_value(cWidgetItem*, int);
+	int ohpl_gwi_prop_num(cWidgetItem*);
+	cWidgetItemProperty* ohpl_gwi_prop(cWidgetItem*, int);
+	void ohpl_gwi_add_prop_text(cWidgetItem*, const uint32_t*, size_t);
+	void ohpl_gwi_add_prop_gfx(cWidgetItem*, uintptr_t);
+	int ohpl_gwi_prop_type(cWidgetItemProperty*);
+	uintptr_t ohpl_gwi_prop_gfx(cWidgetItemProperty*);
+	const uint32_t* ohpl_gwi_prop_text(cWidgetItemProperty*, size_t*);
+	}
 
 	/////////////////////////////////////////////////////////////
-	// ITEM PROPERTY CLASS
+	// ITEM PROPERTY CLASS (an opaque Rust object)
 	/////////////////////////////////////////////////////////////
-
-	//--------------------------------------
 
 	class cWidgetItemProperty
 	{
 	public:
-		cWidgetItemProperty(const tWString& asText);
-		cWidgetItemProperty(const cGuiGfxElement* apGfx);
+		tWString GetText() { size_t n; const uint32_t* p = ohpl_gwi_prop_text(this, &n); return tWString((const wchar_t*)p, n); }
+		cGuiGfxElement* GetGfx() { return (cGuiGfxElement*)ohpl_gwi_prop_gfx(this); }
 
-		tWString& GetText() { return msText; }
-		cGuiGfxElement* GetGfx() { return mpGfx; }
-
-		eItemPropertyType GetType() { return mType; }
-
-	protected:
-		tWString msText;
-		cGuiGfxElement* mpGfx;
-
-		eItemPropertyType mType;
+		eItemPropertyType GetType() { return (eItemPropertyType)ohpl_gwi_prop_type(this); }
+	private:
+		cWidgetItemProperty();
 	};
 
-	//--------------------------------------
-
 	/////////////////////////////////////////////////////////////
-	// ITEM CLASS
+	// ITEM CLASS (an opaque Rust object)
 	/////////////////////////////////////////////////////////////
-
-	//--------------------------------------
 
 	class cWidgetItem
 	{
 	public:
-		cWidgetItem(iWidgetItemContainer* apCont);
-        ~cWidgetItem();
+		void SetIndex(int alIdx) { ohpl_gwi_set_index(this, alIdx); }
+		int GetIndex() { return ohpl_gwi_index(this); }
 
-		void SetIndex(int alIdx) { mlIndex = alIdx; }
-		int GetIndex() { return mlIndex; }
+		tWString GetText()const { size_t n; const uint32_t* p = ohpl_gwi_text((cWidgetItem*)this, &n); return tWString((const wchar_t*)p, n); }
+		cWidgetItemProperty* GetProperty(int alIdx) const { return ohpl_gwi_prop((cWidgetItem*)this, alIdx); }
 
-		const tWString& GetText()const { return msText; }
-        cWidgetItemProperty* GetProperty(int alIdx) const;
+		void AddProperty(const tWString& asText) { ohpl_gwi_add_prop_text(this, (const uint32_t*)asText.data(), asText.size()); }
+		void AddProperty(const cGuiGfxElement* apGfx) { ohpl_gwi_add_prop_gfx(this, (uintptr_t)apGfx); }
 
-		void AddProperty(const tWString& asText);
-        void AddProperty(const cGuiGfxElement* apGfx);
-		
-		int GetPropertyNum();
+		int GetPropertyNum() { return ohpl_gwi_prop_num(this); }
 
-		bool IsSelectable() { return mbSelectable; }
-		void SetSelectable(bool abX) { mbSelectable = abX; }
-		bool IsSelected() { return mbSelectable && mbSelected; }
-		void SetSelected(bool abX);
+		bool IsSelectable() { return ohpl_gwi_selectable(this); }
+		void SetSelectable(bool abX) { ohpl_gwi_set_selectable(this, abX); }
+		bool IsSelected() { return ohpl_gwi_selected(this); }
+		void SetSelected(bool abX) { ohpl_gwi_set_selected(this, abX); }
 
-		void SetText(const tWString& asText);
+		void SetText(const tWString& asText) { ohpl_gwi_set_text(this, (const uint32_t*)asText.data(), asText.size()); }
 
-		void SetUserData(void* apData) { mpUserData = apData; }
-		void* GetUserData() { return mpUserData; }
+		void SetUserData(void* apData) { ohpl_gwi_set_user_data(this, apData); }
+		void* GetUserData() { return ohpl_gwi_user_data(this); }
 
-		void SetUserValue(int alValue) { mlUserValue = alValue; }
-		int GetUserValue() { return mlUserValue; }
-
-	protected:
-		iWidgetItemContainer* mpCont;
-		int mlIndex;
-		bool mbSelectable;
-		bool mbSelected;
-
-		tWString msText;
-		tWidgetItemPropertyVec mvProperties;
-
-		void* mpUserData;
-		int mlUserValue;
+		void SetUserValue(int alValue) { ohpl_gwi_set_user_value(this, alValue); }
+		int GetUserValue() { return ohpl_gwi_user_value(this); }
+	private:
+		cWidgetItem();
 	};
 
-	//--------------------------------------
-	
-	/////////////////////////////////////////////////////////////
-	// ITEM CONTAINER CLASS
-	/////////////////////////////////////////////////////////////
+	// The container API of the list box and combo box shells (`this` is the widget).
+#define OHPL_ITEM_CONTAINER_API \
+	cWidgetItem* AddItem(const tString& asItem){ return AddItem(cString::To16Char(asItem)); } \
+	cWidgetItem* AddItem(const tWString &asItem){ return ohpl_gwi_add((uintptr_t)this, (const uint32_t*)asItem.data(), asItem.size()); } \
+	cWidgetItem* AddItem(){ return AddItem(_W("")); } \
+	void RemoveItem(int alX){ ohpl_gwi_remove_at((uintptr_t)this, alX); } \
+	void RemoveItem(const tWString &asItem){ ohpl_gwi_remove_text((uintptr_t)this, (const uint32_t*)asItem.data(), asItem.size()); } \
+	void ClearItems(){ ohpl_gwi_clear((uintptr_t)this); } \
+	cWidgetItem* GetItem(int alX) const { return ohpl_gwi_get((uintptr_t)this, alX); } \
+	tWString GetItemText(int alX) const { cWidgetItem* p = GetItem(alX); return p ? p->GetText() : tWString(); } \
+	void SetItemText(int alX, const tWString& asText){ ohpl_gwi_set_text_at((uintptr_t)this, alX, (const uint32_t*)asText.data(), asText.size()); } \
+	int GetItemNum() const { return (int)ohpl_gwi_num((uintptr_t)this); } \
+	bool HasItem(const tWString &asItem){ return ohpl_gwi_has((uintptr_t)this, (const uint32_t*)asItem.data(), asItem.size()); } \
+	bool HasItem(const tString &asItem){ return HasItem(cString::To16Char(asItem)); }
 
 	//--------------------------------------
-	
-	class iWidgetItemContainer
-	{
-	public:
-		~iWidgetItemContainer();
 
-		cWidgetItem* AddItem(const tString& asItem);
-		cWidgetItem* AddItem(const tWString &asItem);
-		cWidgetItem* AddItem();
-		void RemoveItem(int alX);
-		void RemoveItem(const tWString &asItem);
-
-		void ClearItems();
-
-		cWidgetItem* GetItem(int alX) const;
-		const tWString& GetItemText(int alX) const;
-		void SetItemText(int alX, const tWString& asText);
-		int GetItemNum() const;
-		bool HasItem(const tWString &asItem);
-		bool HasItem(const tString &asItem);
-
-		virtual void AddItemToSelection(cWidgetItem* apItem) {}
-		virtual void RemoveItemFromSelection(cWidgetItem* apItem) {}
-
-	protected:
-		virtual void UpdateProperties()=0;
-
-		tWidgetItemVec mvItems;
-	};
-
-	//--------------------------------------
-	
 	/////////////////////////////////////////////////////////////
 	// FILE BROWSING COMPONENT CLASS
 	/////////////////////////////////////////////////////////////

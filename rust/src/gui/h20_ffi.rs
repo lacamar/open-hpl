@@ -502,6 +502,11 @@ pub unsafe extern "C" fn ohpl_h20_tb_free(t: *mut TextBox) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn ohpl_h20_tb_default_decimals() -> i32 {
+    tx::default_decimals()
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn ohpl_h20_tb_set_default_decimals(v: i32) {
     tx::set_default_decimals(v);
 }

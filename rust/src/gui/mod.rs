@@ -63,7 +63,11 @@ mod tests_widget2;
 mod tests_widget3;
 
 pub mod gw;
+pub mod gw_h20;
 pub mod gw_host;
+pub mod gw_items;
 pub mod gw_kinds;
 
 pub(crate) mod direct;
+pub mod gw_menu;
+pub mod gw_ops;

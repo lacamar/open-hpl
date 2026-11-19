@@ -37,7 +37,6 @@ namespace hpl {
 		void SetHeaderText(const tWString& asText){ SetText(asText); }
 		tWString GetHeaderText(){ size_t n; const uint32_t* p = ohpl_gw_group_header((uintptr_t)this, &n); return tWString((const wchar_t*)p, n); }
 
-		void SetDefaultFontSize(const cVector2f& avSize){ ohpl_gw_set_font_size((uintptr_t)this, avSize.x, avSize.y); }
 	};
 
 };

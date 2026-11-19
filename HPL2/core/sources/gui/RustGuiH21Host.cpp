@@ -41,8 +41,8 @@ namespace hpl {
 	// Reaches cWidgetTextBox's protected keyboard hooks.
 	struct OhplG2PopupHost
 	{
-		static void KbOpen(iWidget *w) { static_cast<cWidgetTextBox*>(w)->OnUIKeyboardOpen(); }
-		static void KbClose(iWidget *w) { static_cast<cWidgetTextBox*>(w)->OnUIKeyboardClose(); }
+		static void KbOpen(iWidget *w) { ohpl_gw_tb_kb_open((uintptr_t)w); }
+		static void KbClose(iWidget *w) { ohpl_gw_tb_kb_close((uintptr_t)w); }
 	};
 
 	// The file picker's iFileBrowser, owned by the Rust popup; its virtuals report back to Rust.

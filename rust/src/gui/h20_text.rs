@@ -26,6 +26,10 @@ const COLOR_FONT: i32 = 1;
 
 static DEFAULT_DECIMALS: AtomicI32 = AtomicI32::new(3);
 
+pub fn default_decimals() -> i32 {
+    DEFAULT_DECIMALS.load(Ordering::Relaxed)
+}
+
 pub fn set_default_decimals(v: i32) {
     DEFAULT_DECIMALS.store(v, Ordering::Relaxed);
 }

@@ -11,8 +11,6 @@ use std::ffi::c_void;
 macro_rules! ops {
     ($($name:ident = $v:expr),* $(,)?) => {
         $(pub const $name: i32 = $v;)*
-        #[cfg(test)]
-        pub const OP_TABLE: &[(&str, i32)] = &[$((stringify!($name), $v)),*];
     };
 }
 

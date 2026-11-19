@@ -36,9 +36,6 @@ namespace hpl {
 		void SetChecked(bool abX, bool abGenCallback=true){ ohpl_gw_check_set_checked((uintptr_t)this, abX, abGenCallback); }
 		bool IsChecked(){return ohpl_gw_check_checked((uintptr_t)this);}
 
-		void SetDefaultFontType(iFontData *apFont){ ohpl_gw_set_font_type((uintptr_t)this, apFont); }
-		void SetDefaultFontColor(const cColor& aColor){ ohpl_gw_set_font_color((uintptr_t)this, &aColor); }
-		void SetDefaultFontSize(const cVector2f& avSize){ ohpl_gw_set_font_size((uintptr_t)this, avSize.x, avSize.y); }
 	};
 
 };

@@ -23,73 +23,40 @@
 #include "gui/Widget.h"
 #include "gui/WidgetSlider.h"
 #include "gui/WidgetBaseClasses.h"
+#include "gui/RustGuiGw.h"
 #include "gui/RustWidget2.h"
 #include "gui/RustGuiH20.h"
-
 
 namespace hpl {
 
 	class cGuiSkinFont;
-	
+
 	class cWidgetTextBox;
 	class cWidgetButton;
 	class cWidgetSlider;
 
-	class cWidgetComboBox : public iWidget, public iWidgetItemContainer
+	// Rust kind (rust/src/gui/gw_h20.rs, logic in h20_combo.rs)
+	class cWidgetComboBox : public iWidget
 	{
 	public:
-		cWidgetComboBox(cGuiSet *apSet, cGuiSkin *apSkin);
-		virtual ~cWidgetComboBox();
+		cWidgetComboBox(cGuiSet *apSet, cGuiSkin *apSkin) : iWidget(eWidgetType_ComboBox, apSet, apSkin)
+		{ ohpl_gw_set_kind_ctr((uintptr_t)this, kOhplGwCombo, 0, 0); }
+		virtual ~cWidgetComboBox() {}
 
-		void SetSelectedItem(int alX,bool abMoveList=false, bool abGenCallback=true);
-		int GetSelectedItem(){ return mCombo.selected;}
+		void SetSelectedItem(int alX,bool abMoveList=false, bool abGenCallback=true){ ohpl_h20_cb_set_selected_item(&gH20Host, &H(), alX, abMoveList, abGenCallback); }
+		int GetSelectedItem(){ return H().combo.selected;}
 
-		void SetCanEdit(bool abX);
-		bool GetCanEdit();
+		void SetCanEdit(bool abX){ ohpl_h20_cb_set_can_edit(&gH20Host, &H(), abX); }
+		bool GetCanEdit(){ return ohpl_h20_cb_can_edit(&gH20Host, &H()); }
 
-		void SetMaxShownItems(int alX);
-		int GetMaxShownItems(){ return mCombo.max_items;}
+		void SetMaxShownItems(int alX){ ohpl_h20_cb_set_max_shown_items(&gH20Host, &H(), alX); }
+		int GetMaxShownItems(){ return H().combo.max_items;}
 
-		void SetDefaultFontSize(const cVector2f& avSize);
-		
+
+		OHPL_ITEM_CONTAINER_API
+
 	protected:
-		/////////////////////////
-		// Own functions
-		void UpdateProperties();
-
-		/////////////////////////
-		// Implemented functions
-		void OnLoadGraphics();
-		void OnChangeSize();
-		void OnChangeText();
-		void OnInit();
-		
-		void OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion);
-
-		bool OnMouseMove(const cGuiMessageData& aData);
-		bool OnMouseDown(const cGuiMessageData& aData);
-		bool OnMouseUp(const cGuiMessageData& aData);
-		bool OnMouseEnter(const cGuiMessageData& aData);
-		bool OnMouseLeave(const cGuiMessageData& aData);
-
-		bool OnUIArrowPress(const cGuiMessageData& aData);
-
-		bool OnUIButtonPress(const cGuiMessageData& aData);
-		bool OnUIButtonRelease(const cGuiMessageData& aData);
-		
-		bool OnLostFocus(const cGuiMessageData& aData);
-
-		bool PointIsInside(const cVector2f& avPoint, bool abOnlyClipped);
-
-		/////////////////////////
-		// Data
-		
-		OhplH20Combo mH;
-		OhplW2Combo& mCombo;
-
-		float& mfButtonWidth;
-		float& mfSliderWidth;
-
+		OhplH20Combo& H(){ return *(OhplH20Combo*)ohpl_gw_state((uintptr_t)this); }
 	};
 
 };
