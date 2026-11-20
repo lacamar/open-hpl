@@ -26,6 +26,7 @@ open(p, "w").write(s)
 EOF
 git add "$spec"
 git commit -q -m "Release $ver" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+rel=$(git rev-parse HEAD)
 git checkout -q master
 git merge -q --ff-only "$branch"
 git checkout -q "$branch"
@@ -39,7 +40,7 @@ if ! packaging/build-rpm.sh -S --copr lacamar/arm64-misc --copr-wait >> "$log" 2
 	grep -E 'succeeded|failed|Summary' "$log" | tail -5 >&2
 	exit 1
 fi
-git tag "v$ver"
+git tag "v$ver" "$rel"
 git push origin "v$ver" >> "$log" 2>&1
 grep -E 'succeeded|Summary' "$log" | tail -4
 echo "released v$ver; install with: pkexec dnf upgrade -y --refresh open-hpl, then scripts/launcher-smoke.sh <game>"
