@@ -23,6 +23,7 @@
 #pragma warning( disable : 4996 ) //disable unsafe warning!
 
 #include <list>
+#include "system/RustPtrList.h"
 #include <vector>
 #include "graphics/Color.h"
 #include "math/MathTypes.h"
@@ -783,7 +784,7 @@ namespace hpl {
 	typedef std::vector<iRenderable*> tRenderableVec;
 	typedef tRenderableVec::iterator tRenderableVecIt;
 
-	typedef std::list<iRenderable*> tRenderableList;
+	typedef cOhplPtrList<iRenderable> tRenderableList;
 	typedef tRenderableList::iterator tRenderableListIt;
 
 	typedef std::set<iRenderable*> tRenderableSet;

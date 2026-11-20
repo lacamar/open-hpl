@@ -74,7 +74,7 @@ namespace hpl {
 	friend class iRenderableContainer;
 	public:
 		iRenderableContainerNode();
-		virtual ~iRenderableContainerNode(){}
+		virtual ~iRenderableContainerNode();
 
 		virtual void UpdateBeforeUse(){}
 

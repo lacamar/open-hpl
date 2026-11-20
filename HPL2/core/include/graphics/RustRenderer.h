@@ -6,6 +6,7 @@
 
 #include "math/RustTypes.h"
 #include "math/MathTypes.h"
+#include "system/RustPtrList.h"
 #include <cstddef>
 #include <cstdint>
 
@@ -28,6 +29,8 @@ namespace hpl {
 		bool mbInsideView;
 		int32_t mPrevFrustumCollision;
 		uintptr_t mpParent;
+		OhplPtrVec *mpChildren;
+		OhplPtrVec *mpObjects;
 	};
 
 	struct OhplBtDynState
@@ -150,7 +153,7 @@ namespace hpl {
 	};
 
 	static_assert(sizeof(OhplRnShadowSlot) == 16 && sizeof(OhplRnShadowCache) == 32 && sizeof(OhplRnLightKey) == 32, "OhplRnShadow layout");
-	static_assert(sizeof(OhplRcNodeBase) == 72 && offsetof(OhplRcNodeBase, mpParent) == 64 && offsetof(OhplRcNodeBase, mPrevFrustumCollision) == 56, "OhplRcNodeBase layout");
+	static_assert(sizeof(OhplRcNodeBase) == 88 && offsetof(OhplRcNodeBase, mpParent) == 64 && offsetof(OhplRcNodeBase, mpChildren) == 72 && offsetof(OhplRcNodeBase, mPrevFrustumCollision) == 56, "OhplRcNodeBase layout");
 	static_assert(sizeof(OhplBtDynState) == 24 && sizeof(OhplBtTree) == 24, "OhplBt layout");
 	static_assert(sizeof(OhplRcBv) == 52 && sizeof(OhplRnObjCheck) == 36 && sizeof(OhplRnMatView) == 24, "OhplRn view layout");
 	static_assert(sizeof(cPlanef) == 16 && sizeof(OhplRnFrustumData) == 120, "OhplRnFrustumData layout");
@@ -161,19 +164,7 @@ namespace hpl {
 	{
 		OhplRcNodeBase* (*base)(void*, uintptr_t);
 		OhplBtDynState* (*dyn_state)(void*, uintptr_t);
-		size_t (*child_count)(void*, uintptr_t);
-		size_t (*children)(void*, uintptr_t, uintptr_t*, size_t);
-		size_t (*object_count)(void*, uintptr_t);
-		size_t (*objects)(void*, uintptr_t, uintptr_t*, size_t);
-		void (*push_object)(void*, uintptr_t, uintptr_t);
-		void (*clear_objects)(void*, uintptr_t);
-		void (*remove_first_object)(void*, uintptr_t, uintptr_t);
-		void (*remove_all_objects)(void*, uintptr_t, uintptr_t);
 		uintptr_t (*new_child)(void*, uintptr_t);
-		void (*delete_children)(void*, uintptr_t);
-		void (*delete_child)(void*, uintptr_t, uintptr_t);
-		void (*clear_children)(void*, uintptr_t);
-		void (*push_child)(void*, uintptr_t, uintptr_t);
 		void (*delete_node)(void*, uintptr_t);
 		uintptr_t (*object_node)(void*, uintptr_t);
 		void (*set_object_node)(void*, uintptr_t, uintptr_t);
@@ -240,6 +231,7 @@ bool ohpl_rn_shadow_cache_valid(const OhplRnShadowCache*, const OhplRnLightKey*)
 size_t ohpl_rn_simple_ops(const bool*, size_t, size_t, size_t, size_t, bool, bool, OhplRnOp*, size_t);
 
 void ohpl_bt_node_base_init(OhplRcNodeBase*, bool);
+void ohpl_rc_node_release(OhplRcNodeBase*, void (*)(uintptr_t));
 void ohpl_bt_node_dyn_init(OhplBtDynState*);
 void ohpl_bt_tree_init(OhplBtTree*);
 void ohpl_bt_update_before_rendering(const OhplRnHostVt*, void*, uintptr_t);
