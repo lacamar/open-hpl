@@ -647,9 +647,18 @@ def same(name, a, b):
     if filecmp.cmp(a, b, shallow=False):
         return (True, "identical")
     if name.startswith("a10a-"):
-        mask = lambda p: [re.sub(r"combo=-?\d+\[.*\]|text=\"[^\"]*\"", "", l) if "size=400,18" in l else l for l in open(p, errors="replace")]
+        # sound devices (size=400,18) and monitors ('Full Desktop on', its dropdown slider) follow the machine
+        def mask(p):
+            out = []
+            for l in open(p, errors="replace"):
+                if "size=400,18" in l or "Full Desktop on" in l:
+                    l = re.sub(r"combo=-?\d+\[.*\]|text=\"[^\"]*\"", "", l)
+                elif "type=5" in l and "size=0,0" in l:
+                    l = re.sub(r"slider=\d+/\d+", "slider", l)
+                out.append(l)
+            return out
         if mask(a) == mask(b):
-            return (True, "identical (sound device names masked)")
+            return (True, "identical (device and monitor names masked)")
     if name.startswith("sl-"):
         # halo alpha follows the occlusion query results, which vary with timing
         def mask(p):
