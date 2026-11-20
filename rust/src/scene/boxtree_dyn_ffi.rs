@@ -8,7 +8,7 @@
 use std::ffi::c_void;
 
 use super::boxtree_dyn::{
-    Bv, DynTree, Handle, Host, NodeBase, NodeDyn, boxtree_remove, boxtree_remove_set,
+    Bv, DynTree, Handle, Host, NodeBase, NodeDyn, PtrVec, boxtree_remove, boxtree_remove_set,
     calculate_min_max_from_objects, dyn_add, dyn_remove, dyn_specific_update, get_add_node,
     object_properties_changed, push_up_need_aabb_update, update_before_rendering,
     update_before_use,
@@ -25,19 +25,7 @@ type Fn3<A, B, C, R = ()> = Option<unsafe extern "C" fn(*mut c_void, A, B, C) ->
 pub struct HostVt {
     pub base: Fn1<Handle, *mut NodeBase>,
     pub dyn_state: Fn1<Handle, *mut NodeDyn>,
-    pub child_count: Fn1<Handle, usize>,
-    pub children: Fn3<Handle, *mut Handle, usize, usize>,
-    pub object_count: Fn1<Handle, usize>,
-    pub objects: Fn3<Handle, *mut Handle, usize, usize>,
-    pub push_object: Fn2<Handle, Handle>,
-    pub clear_objects: Fn1<Handle>,
-    pub remove_first_object: Fn2<Handle, Handle>,
-    pub remove_all_objects: Fn2<Handle, Handle>,
     pub new_child: Fn1<Handle, Handle>,
-    pub delete_children: Fn1<Handle>,
-    pub delete_child: Fn2<Handle, Handle>,
-    pub clear_children: Fn1<Handle>,
-    pub push_child: Fn2<Handle, Handle>,
     pub delete_node: Fn1<Handle>,
     pub object_node: Fn1<Handle, Handle>,
     pub set_object_node: Fn2<Handle, Handle>,
@@ -70,6 +58,7 @@ pub struct FfiHost<'a> {
     ctx: *mut c_void,
     scratch_base: NodeBase,
     scratch_dyn: NodeDyn,
+    scratch_vec: Vec<Handle>,
 }
 
 impl<'a> FfiHost<'a> {
@@ -84,6 +73,7 @@ impl<'a> FfiHost<'a> {
             ctx,
             scratch_base: NodeBase::new(false),
             scratch_dyn: NodeDyn::new(),
+            scratch_vec: Vec::new(),
         })
     }
 }
@@ -98,15 +88,24 @@ macro_rules! call {
     };
 }
 
-fn fill(out: &mut Vec<Handle>, mut fetch: impl FnMut(*mut Handle, usize) -> usize) {
-    out.clear();
-    out.resize(8, 0);
-    let n = fetch(out.as_mut_ptr(), out.len());
-    if n > out.len() {
-        out.resize(n, 0);
-        fetch(out.as_mut_ptr(), out.len());
+impl FfiHost<'_> {
+    fn kids(&mut self, node: Handle) -> &mut Vec<Handle> {
+        let p = self.base(node).children;
+        // SAFETY: the pointer is the node's Rust-owned list (see `NodeBase::children`), live while the node lives; no other reference to it exists while this one does.
+        match unsafe { p.as_mut() } {
+            Some(v) => &mut v.0,
+            None => &mut self.scratch_vec,
+        }
     }
-    out.truncate(n);
+
+    fn objs(&mut self, node: Handle) -> &mut Vec<Handle> {
+        let p = self.base(node).objects;
+        // SAFETY: as in `kids`.
+        match unsafe { p.as_mut() } {
+            Some(v) => &mut v.0,
+            None => &mut self.scratch_vec,
+        }
+    }
 }
 
 impl Host for FfiHost<'_> {
@@ -138,47 +137,38 @@ impl Host for FfiHost<'_> {
     }
 
     fn child_count(&mut self, node: Handle) -> usize {
-        call!(self, child_count, node)
+        self.kids(node).len()
     }
 
     fn children(&mut self, node: Handle, out: &mut Vec<Handle>) {
-        let Some(f) = self.vt.children else {
-            out.clear();
-            return;
-        };
-        let ctx = self.ctx;
-        // SAFETY: the callback writes at most `cap` handles to `ptr`.
-        fill(out, |ptr, cap| unsafe { f(ctx, node, ptr, cap) });
+        out.clone_from(self.kids(node));
     }
 
     fn object_count(&mut self, node: Handle) -> usize {
-        call!(self, object_count, node)
+        self.objs(node).len()
     }
 
     fn objects(&mut self, node: Handle, out: &mut Vec<Handle>) {
-        let Some(f) = self.vt.objects else {
-            out.clear();
-            return;
-        };
-        let ctx = self.ctx;
-        // SAFETY: the callback writes at most `cap` handles to `ptr`.
-        fill(out, |ptr, cap| unsafe { f(ctx, node, ptr, cap) });
+        out.clone_from(self.objs(node));
     }
 
     fn push_object(&mut self, node: Handle, obj: Handle) {
-        call!(self, push_object, node, obj)
+        self.objs(node).push(obj);
     }
 
     fn clear_objects(&mut self, node: Handle) {
-        call!(self, clear_objects, node)
+        self.objs(node).clear();
     }
 
     fn remove_first_object(&mut self, node: Handle, obj: Handle) {
-        call!(self, remove_first_object, node, obj)
+        let v = self.objs(node);
+        if let Some(i) = v.iter().position(|&o| o == obj) {
+            v.remove(i);
+        }
     }
 
     fn remove_all_objects(&mut self, node: Handle, obj: Handle) {
-        call!(self, remove_all_objects, node, obj)
+        self.objs(node).retain(|&o| o != obj);
     }
 
     fn new_child(&mut self, parent: Handle) -> Handle {
@@ -186,19 +176,26 @@ impl Host for FfiHost<'_> {
     }
 
     fn delete_children(&mut self, node: Handle) {
-        call!(self, delete_children, node)
+        let kids = std::mem::take(self.kids(node));
+        for k in kids {
+            self.delete_node(k);
+        }
     }
 
     fn delete_child(&mut self, parent: Handle, child: Handle) {
-        call!(self, delete_child, parent, child)
+        let v = self.kids(parent);
+        if let Some(i) = v.iter().position(|&o| o == child) {
+            v.remove(i);
+        }
+        self.delete_node(child);
     }
 
     fn clear_children(&mut self, node: Handle) {
-        call!(self, clear_children, node)
+        self.kids(node).clear();
     }
 
     fn push_child(&mut self, node: Handle, child: Handle) {
-        call!(self, push_child, node, child)
+        self.kids(node).push(child);
     }
 
     fn delete_node(&mut self, node: Handle) {
@@ -317,6 +314,95 @@ pub extern "C" fn ohpl_bt_node_base_init(out: *mut NodeBase, uses_flags_and_visi
     // SAFETY: `out` is null or valid for writes.
     if let Some(o) = unsafe { out.as_mut() } {
         *o = NodeBase::new(uses_flags_and_visibility);
+        o.children = PtrVec::alloc();
+        o.objects = PtrVec::alloc();
+    }
+}
+
+/// Deletes the children through `del` (the node's C++ destructor) and frees both lists.
+///
+/// # Safety
+/// `b` is a node initialised by `ohpl_bt_node_base_init` and not released yet; `del` deletes a child node.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_rc_node_release(b: *mut NodeBase, del: unsafe extern "C" fn(Handle)) {
+    // SAFETY: caller contract.
+    let Some(b) = (unsafe { b.as_mut() }) else {
+        return;
+    };
+    let (kids, objs) = (
+        std::mem::take(&mut b.children),
+        std::mem::take(&mut b.objects),
+    );
+    if !kids.is_null() {
+        // SAFETY: allocated by `PtrVec::alloc`, released once (the pointer was cleared above).
+        let kids = unsafe { Box::from_raw(kids) };
+        for &k in &kids.0 {
+            // SAFETY: caller contract.
+            unsafe { del(k) };
+        }
+    }
+    if !objs.is_null() {
+        // SAFETY: as above.
+        drop(unsafe { Box::from_raw(objs) });
+    }
+}
+
+/// Standalone list for `cOhplPtrList`.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_pv_new() -> *mut PtrVec {
+    PtrVec::alloc()
+}
+
+/// # Safety
+/// `p` came from `ohpl_pv_new` and is freed once.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_pv_free(p: *mut PtrVec) {
+    if !p.is_null() {
+        // SAFETY: caller contract.
+        drop(unsafe { Box::from_raw(p) });
+    }
+}
+
+fn pv<'a>(p: *mut PtrVec) -> Option<&'a mut Vec<Handle>> {
+    // SAFETY: C++ passes a live list and holds no view into it across a mutation.
+    unsafe { p.as_mut() }.map(|v| &mut v.0)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_pv_data(p: *mut PtrVec) -> *const Handle {
+    pv(p).map_or(std::ptr::null(), |v| v.as_ptr())
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_pv_len(p: *mut PtrVec) -> usize {
+    pv(p).map_or(0, |v| v.len())
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_pv_push(p: *mut PtrVec, x: Handle) {
+    if let Some(v) = pv(p) {
+        v.push(x);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_pv_clear(p: *mut PtrVec) {
+    if let Some(v) = pv(p) {
+        v.clear();
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_pv_erase(p: *mut PtrVec, i: usize) {
+    if let Some(v) = pv(p).filter(|v| i < v.len()) {
+        v.remove(i);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_pv_remove_all(p: *mut PtrVec, x: Handle) {
+    if let Some(v) = pv(p) {
+        v.retain(|&o| o != x);
     }
 }
 
@@ -526,7 +612,11 @@ pub unsafe extern "C" fn ohpl_bt_dyn_get_add_node(
 
 const _: () = {
     use std::mem::{offset_of, size_of};
-    assert!(size_of::<NodeBase>() == 72 && offset_of!(NodeBase, parent) == 64);
+    assert!(
+        size_of::<NodeBase>() == 88
+            && offset_of!(NodeBase, parent) == 64
+            && offset_of!(NodeBase, children) == 72
+    );
     assert!(offset_of!(NodeBase, prev_collision) == 56);
     assert!(size_of::<NodeDyn>() == 24 && size_of::<DynTree>() == 24 && size_of::<Bv>() == 52);
 };

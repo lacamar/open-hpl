@@ -107,7 +107,6 @@ namespace hpl {
 
 	cRCNode_DynBoxTree::~cRCNode_DynBoxTree()
 	{
-		STLDeleteAll(mlstChildNodes);
 	}
 
 	//-----------------------------------------------------------------------

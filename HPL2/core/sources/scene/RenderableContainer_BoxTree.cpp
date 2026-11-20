@@ -44,7 +44,6 @@ namespace hpl {
 
 	cRCNode_BoxTree::~cRCNode_BoxTree()
 	{
-		STLDeleteAll(mlstChildNodes);
 	}
 
 	//-----------------------------------------------------------------------

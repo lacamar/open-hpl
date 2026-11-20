@@ -22,6 +22,7 @@
 
 #include <list>
 #include <vector>
+#include "system/RustPtrList.h"
 
 namespace hpl 
 {
@@ -169,7 +170,7 @@ namespace hpl
 	typedef std::set<iRenderableContainerNode*> tRenderableContainerNodeSet;
 	typedef tRenderableContainerNodeSet::iterator tRenderableContainerNodeSetIt;
 
-	typedef std::list<iRenderableContainerNode*> tRenderableContainerNodeList;
+	typedef cOhplPtrList<iRenderableContainerNode> tRenderableContainerNodeList;
 	typedef tRenderableContainerNodeList::iterator tRenderableContainerNodeListIt;
 
 	//------------------------------------------

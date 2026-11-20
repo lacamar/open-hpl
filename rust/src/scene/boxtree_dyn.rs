@@ -33,6 +33,19 @@ pub struct NodeBase {
     pub inside_view: bool,
     pub prev_collision: i32,
     pub parent: Handle,
+    /// Rust-owned child and object lists (`Box<PtrVec>` raw); null in plain-Rust tests.
+    pub children: *mut PtrVec,
+    pub objects: *mut PtrVec,
+}
+
+/// Pointer list the C++ side views (`cOhplPtrList`): order of a `std::list`, stable data between mutations.
+#[derive(Debug, Default, PartialEq)]
+pub struct PtrVec(pub Vec<Handle>);
+
+impl PtrVec {
+    pub fn alloc() -> *mut PtrVec {
+        Box::into_raw(Box::default())
+    }
 }
 
 impl NodeBase {
@@ -53,6 +66,8 @@ impl NodeBase {
             inside_view: false,
             prev_collision: COLLISION_OUTSIDE,
             parent: 0,
+            children: std::ptr::null_mut(),
+            objects: std::ptr::null_mut(),
         }
     }
 }

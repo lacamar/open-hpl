@@ -117,41 +117,6 @@ namespace hpl {
 
 	static OhplRcNodeBase* HBase(void*, uintptr_t alNode){ return &HNode(alNode)->State();}
 
-	static size_t HChildCount(void*, uintptr_t alNode){ return HNode(alNode)->GetChildNodeList()->size();}
-
-	static size_t HChildren(void*, uintptr_t alNode, uintptr_t *apOut, size_t alCap)
-	{
-		size_t lCount =0;
-		for(iRenderableContainerNode *pChild : *HNode(alNode)->GetChildNodeList())
-		{
-			if(lCount < alCap) apOut[lCount] = (uintptr_t)pChild;
-			++lCount;
-		}
-		return lCount;
-	}
-
-	static size_t HObjectCount(void*, uintptr_t alNode){ return HNode(alNode)->GetObjectList()->size();}
-
-	static size_t HObjects(void*, uintptr_t alNode, uintptr_t *apOut, size_t alCap)
-	{
-		size_t lCount =0;
-		for(iRenderable *pObject : *HNode(alNode)->GetObjectList())
-		{
-			if(lCount < alCap) apOut[lCount] = (uintptr_t)pObject;
-			++lCount;
-		}
-		return lCount;
-	}
-
-	static void HPushObject(void*, uintptr_t alNode, uintptr_t alObj){ HNode(alNode)->GetObjectList()->push_back(HObj(alObj));}
-	static void HClearObjects(void*, uintptr_t alNode){ HNode(alNode)->GetObjectList()->clear();}
-	static void HRemoveFirstObject(void*, uintptr_t alNode, uintptr_t alObj){ STLFindAndRemove(*HNode(alNode)->GetObjectList(), HObj(alObj));}
-	static void HRemoveAllObjects(void*, uintptr_t alNode, uintptr_t alObj){ HNode(alNode)->GetObjectList()->remove(HObj(alObj));}
-
-	static void HDeleteChildren(void*, uintptr_t alNode){ STLDeleteAll(*HNode(alNode)->GetChildNodeList());}
-	static void HDeleteChild(void*, uintptr_t alParent, uintptr_t alChild){ STLFindAndDelete(*HNode(alParent)->GetChildNodeList(), HNode(alChild));}
-	static void HClearChildren(void*, uintptr_t alNode){ HNode(alNode)->GetChildNodeList()->clear();}
-	static void HPushChild(void*, uintptr_t alNode, uintptr_t alChild){ HNode(alNode)->GetChildNodeList()->push_back(HNode(alChild));}
 	static void HDeleteNode(void*, uintptr_t alNode){ hplDelete(HNode(alNode));}
 
 	static uintptr_t HObjectNode(void*, uintptr_t alObj){ return (uintptr_t)HObj(alObj)->GetRenderContainerNode();}
@@ -173,18 +138,6 @@ namespace hpl {
 	void OhplFillContainerHost(OhplRnHostVt &avVt)
 	{
 		avVt.base = HBase;
-		avVt.child_count = HChildCount;
-		avVt.children = HChildren;
-		avVt.object_count = HObjectCount;
-		avVt.objects = HObjects;
-		avVt.push_object = HPushObject;
-		avVt.clear_objects = HClearObjects;
-		avVt.remove_first_object = HRemoveFirstObject;
-		avVt.remove_all_objects = HRemoveAllObjects;
-		avVt.delete_children = HDeleteChildren;
-		avVt.delete_child = HDeleteChild;
-		avVt.clear_children = HClearChildren;
-		avVt.push_child = HPushChild;
 		avVt.delete_node = HDeleteNode;
 		avVt.object_node = HObjectNode;
 		avVt.set_object_node = HSetObjectNode;
@@ -205,9 +158,19 @@ namespace hpl {
 	// RENDERABLE CONTAINER NODE
 	//////////////////////////////////////////////////////////////////////////
 
-	iRenderableContainerNode::iRenderableContainerNode()
+	static OhplPtrVec* HInitBase(OhplRcNodeBase &aS)
 	{
-		ohpl_bt_node_base_init(&mS, false);
+		ohpl_bt_node_base_init(&aS, false);
+		return aS.mpChildren;
+	}
+
+	iRenderableContainerNode::iRenderableContainerNode() : mlstChildNodes(HInitBase(mS)), mlstObjects(mS.mpObjects)
+	{
+	}
+
+	iRenderableContainerNode::~iRenderableContainerNode()
+	{
+		ohpl_rc_node_release(&mS, [](uintptr_t alNode){ hplDelete(HNode(alNode));});
 	}
 
 	//-----------------------------------------------------------------------
