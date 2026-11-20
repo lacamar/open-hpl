@@ -549,9 +549,13 @@ int ohpl_as2_dump_decls(void* e, const char* path)
 		fprintf(f, "enum %s\n", t->GetName());
 		for (asUINT j = 0; j < t->GetEnumValueCount(); ++j)
 		{
+#if ANGELSCRIPT_VERSION >= 23900
+			asINT64 v;
+#else
 			int v;
+#endif
 			const char* n = t->GetEnumValueByIndex(j, &v);
-			fprintf(f, "  %s = %d\n", n, v);
+			fprintf(f, "  %s = %lld\n", n, static_cast<long long>(v));
 		}
 	}
 	for (asUINT i = 0; i < en->GetObjectTypeCount(); ++i)
