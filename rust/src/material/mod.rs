@@ -12,7 +12,7 @@ mod anim;
 mod common;
 mod decal;
 mod ffi;
-mod h7;
+pub(crate) mod h7;
 mod h7_ffi;
 mod mm;
 mod mm_ffi;

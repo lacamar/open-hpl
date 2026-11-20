@@ -205,6 +205,9 @@ namespace hpl {
 
 	private:
 		OhplH7Mat *mpRs;
+	public:
+		OhplH7Mat* Rs() const { return mpRs; }
+	private:
 		tString msPhysicsMaterial;
 	public:
 		tFlag &mlCompiledWorldFog;
