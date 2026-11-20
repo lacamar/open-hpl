@@ -68,6 +68,7 @@ mod tests_node;
 mod tests_particles;
 #[cfg(test)]
 mod tests_world;
+mod wm2_sub;
 mod world;
 
 const BIG: f32 = 100_000.0;

@@ -29,6 +29,7 @@
 #include "scene/Entity3D.h"
 #include "graphics/Renderable.h"
 #include "math/MeshTypes.h"
+#include "scene/RustWm2.h"
 
 namespace hpl {
 
@@ -49,15 +50,6 @@ namespace hpl {
 
 	
 	
-
-	//-----------------------------------------------------------------------
-
-	class cSubMeshEntityBodyUpdate : public iEntityCallback
-	{
-	public:
-		virtual ~cSubMeshEntityBodyUpdate(){}
-		void OnTransformUpdate(iEntity3D * apEntity);
-	};
 
 	//-----------------------------------------------------------------------
 
@@ -88,49 +80,30 @@ namespace hpl {
 		cSubMesh* GetSubMesh() const { return mpSubMesh;}
 
 		void SetLocalNode(cNode3D *apNode);
-		cNode3D* GetLocalNode();
+		cNode3D* GetLocalNode(){ return static_cast<cNode3D*>(mpS->local_node);}
 
-		void* GetUserData(){ return mpUserData;}
-		void SetUserData(void *apData){ mpUserData = apData;}
+		void* GetUserData(){ return mpS->user_data;}
+		void SetUserData(void *apData){ mpS->user_data = apData;}
 
 		//Entity implementation
 		tString GetEntityType(){ return "SubMesh";}
 		
-		void UpdateLogic(float afTimeStep);
+		void UpdateLogic(float afTimeStep){}
 
-		cTriangleData& GetTriangle(int alIndex);
-		int GetTriangleNum();
-		tTriangleDataVec* GetTriangleVecPtr();
-
-		void SetUpdateBody(bool abX);
-		bool GetUpdateBody();
+		void SetUpdateBody(bool abX){ mpS->update_body = abX;}
+		bool GetUpdateBody(){ return mpS->update_body;}
 
 		void SetCustomMaterial(cMaterial *apMaterial, bool abDestroyOldCustom=true);
-		cMaterial* GetCustomMaterial(){ return mpMaterial;}
+		cMaterial* GetCustomMaterial(){ return static_cast<cMaterial*>(mpS->material);}
 
 	private:
 		void OnTransformUpdated();
+		OhplWm2SubHost Wm2Host();
 
 		cSubMesh *mpSubMesh;
 		cMeshEntity *mpMeshEntity;
-
-		cMaterial *mpMaterial;
-
-		cNode3D *mpLocalNode;
-
 		cMaterialManager* mpMaterialManager;
-
-		iVertexBuffer* mpDynVtxBuffer;
-		tTriangleDataVec mvDynTriangles;
-
-		cSubMeshEntityBodyUpdate* mpEntityCallback;
-		bool mbUpdateBody;
-
-		bool mbGraphicsUpdated;
-		int mlSkinnedBoneMatricesVersion;
-
-		int mlStaticNullMatrixCount;
-		void *mpUserData;
+		OhplWm2Sub *mpS;
 	};
 
 	typedef std::vector<cSubMeshEntity*> tSubMeshEntityVec;

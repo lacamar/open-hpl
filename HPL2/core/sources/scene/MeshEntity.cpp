@@ -804,7 +804,7 @@ namespace hpl {
 	{
 		for(size_t i=0; i< mvSubMeshes.size(); ++i)
 		{
-			mvSubMeshes[i]->mbGraphicsUpdated = false;
+			mvSubMeshes[i]->mpS->graphics_updated = false;
 		}
 		mCtl.updated_bones = false;
 	}
