@@ -468,8 +468,7 @@ void cSomaLuxEntity::RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector
 
 void cSomaLuxEntity::StopMove()
 {
-	ohpl_gs1_move_stop(&mMove);
-	ohpl_gs1_rotate_stop(&mRotate);
+	ohpl_se_stop_move(mpCore);
 }
 
 static void RunMoveCallback(cSomaLuxEntity *apEnt, tString &asCallback)
@@ -481,17 +480,19 @@ static void RunMoveCallback(cSomaLuxEntity *apEnt, tString &asCallback)
 		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &apEnt->msName); });
 }
 
-void cSomaLuxEntity::UpdateRotate(float afTimeStep)
-{
-	cMatrixf m = GetMatrix(), mtxNew;
-	int lResult = ohpl_gs1_rotate_step(&mRotate, afTimeStep, &m, &mtxNew);
-	if (lResult == 0)
-		return;
-	// HPL3 movers only move the main body
-	SetMatrix(mtxNew, true);
-	if (lResult == 2)
-		RunMoveCallback(this, msRotateCallback);
-}
+static const OhplSeHost gSeHost = {
+	+[](void *c, cMatrixf *m) { *m = ((cSomaLuxEntity *)c)->GetMatrix(); },
+	+[](void *c, const cMatrixf *m) { ((cSomaLuxEntity *)c)->SetMatrix(*m, true); },
+	+[](void *c, int w) {
+		cSomaLuxEntity *p = (cSomaLuxEntity *)c;
+		RunMoveCallback(p, w ? p->msRotateCallback : p->msMoveCallback);
+	},
+	+[](void *c) { return ((cSomaLuxEntity *)c)->mpMesh != NULL; },
+	+[](void *c, float a) { ((cSomaLuxEntity *)c)->mpMesh->SetCoverageAmount(a); },
+	+[](void *c, float a) { ((cSomaLuxEntity *)c)->mpMesh->SetLiquidAmount(a); },
+	+[](void *c) { ((cSomaLuxEntity *)c)->CaptureEffectDefaults(); },
+	+[](void *c) { ((cSomaLuxEntity *)c)->ApplyEffectsAlpha(); },
+};
 
 void cSomaLuxEntity::UpdateStaticMoveSound()
 {
@@ -600,17 +601,7 @@ void cSomaLuxEntity::UpdateCharCollision()
 void cSomaLuxEntity::UpdateMove(float afTimeStep)
 {
 	UpdateStaticMoveSound();
-	if (mRotate.mode)
-		UpdateRotate(afTimeStep);
-	if (mMove.moving == false)
-		return;
-	cMatrixf m = GetMatrix();
-	cVector3f vPos = m.GetTranslation(), vNew;
-	int lResult = ohpl_gs1_move_step(&mMove, afTimeStep, &vPos, &vNew);
-	m.SetTranslation(vNew);
-	SetMatrix(m, true);
-	if (lResult == 2)
-		RunMoveCallback(this, msMoveCallback);
+	ohpl_se_update_move(mpCore, this, &gSeHost, afTimeStep);
 }
 
 namespace
@@ -1014,59 +1005,19 @@ bool cSomaLuxEntity::CanInteract(int alType, iPhysicsBody *apBody)
 	}, false);
 }
 
-void cSomaLuxEntity::SetEffectBaseColor(const cColor &aCol)
-{
-	CaptureEffectDefaults();
-	mEffectBaseColor = aCol;
-	ApplyEffectsAlpha();
-}
+void cSomaLuxEntity::SetEffectBaseColor(const cColor &aCol) { ohpl_se_set_effect_color(mpCore, this, &gSeHost, &aCol); }
 
-void cSomaLuxEntity::FadeEffectBaseColor(const cColor &aCol, float afTime)
-{
-	if (ohpl_gs1_color_fade_begin(afTime, &mfEffectColorTime, &mfEffectColorT))
-	{
-		SetEffectBaseColor(aCol);
-		return;
-	}
-	mEffectColorFrom = mEffectBaseColor;
-	mEffectColorTo = aCol;
-}
+void cSomaLuxEntity::FadeEffectBaseColor(const cColor &aCol, float afTime) { ohpl_se_fade_effect_color(mpCore, this, &gSeHost, &aCol, afTime); }
 
-void cSomaLuxEntity::UpdateEffectColor(float afTimeStep)
-{
-	unsigned lFlags = ohpl_gs1_effects_update_fades(&mfMeshFadeAlpha, mfMeshFadeSpeed, mpMesh != NULL, &mfEffectsAlpha, &mfEffectsFadeSpeed, mfEffectsOffAlpha, afTimeStep);
-	if (lFlags & kOhplGs1EffectsUpdateMesh)
-		mpMesh->SetCoverageAmount(mfMeshFadeAlpha);
-	if (lFlags & kOhplGs1EffectsUpdateEffects)
-		ApplyEffectsAlpha();
-	cColor col;
-	if (ohpl_gs1_color_fade_step(&mEffectColorFrom, &mEffectColorTo, &mfEffectColorTime, &mfEffectColorT, afTimeStep, &col))
-		SetEffectBaseColor(col);
-}
+void cSomaLuxEntity::UpdateEffectColor(float afTimeStep) { ohpl_se_update_effect_color(mpCore, this, &gSeHost, afTimeStep); }
 
 // Negative length plays backwards from wherever the animation is
 // official cLuxProp::SetLiquidAmount 0xc766d0, FadeLiquidAmountTo 0xc76700, UpdateLiquidAmount 0xc8ade0
-void cSomaLuxEntity::SetLiquidAmount(float afX)
-{
-	mfLiquidAmount = mfLiquidTarget = afX;
-	mfLiquidSpeed = 0;
-	if (mpMesh) mpMesh->SetLiquidAmount(afX);
-}
+void cSomaLuxEntity::SetLiquidAmount(float afX) { ohpl_se_set_liquid(mpCore, this, &gSeHost, afX); }
 
-void cSomaLuxEntity::FadeLiquidAmountTo(float afTarget, float afTime)
-{
-	if (ohpl_gs1_liquid_fade(afTarget, afTime, mfLiquidAmount, &mfLiquidTarget, &mfLiquidSpeed))
-		SetLiquidAmount(afTarget);
-}
+void cSomaLuxEntity::FadeLiquidAmountTo(float afTarget, float afTime) { ohpl_se_fade_liquid(mpCore, this, &gSeHost, afTarget, afTime); }
 
-void cSomaLuxEntity::UpdateLiquidAmount(float afTimeStep)
-{
-	int lResult = ohpl_gs1_liquid_update(afTimeStep, &mfLiquidAmount, mfLiquidTarget, mfLiquidSpeed);
-	if (lResult == kOhplGs1LiquidSnap)
-		SetLiquidAmount(mfLiquidTarget);
-	else if (lResult == kOhplGs1LiquidMoved && mpMesh)
-		mpMesh->SetLiquidAmount(mfLiquidAmount);
-}
+void cSomaLuxEntity::UpdateLiquidAmount(float afTimeStep) { ohpl_se_update_liquid(mpCore, this, &gSeHost, afTimeStep); }
 
 void cSomaLuxEntity::PlayProcAnimation(const tString &asName, float afLength, bool abLoop, float afAmountFadeTime, float afSpeedFadeTime)
 {
@@ -2200,8 +2151,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void GetClosestBody(const tString&in asCallbackFunc, const cVector3f&in avStart,const cVector3f&in avDir, float afRayLength)",
 					+[](E *p, S f, const cVector3f &st, const cVector3f &dir, float len) { SomaClosestBodyCallback(p->GetScript(), f, st, dir, len); });
 	SOMA_METHOD_NEW(e, T, "const tString& GetName()", +[](E *p) -> const tString & { return p->msName; });
-	SOMA_METHOD_NEW(e, T, "const tID& GetID()", +[](E *p) -> const cSomaID & { return p->mID; });
-	SOMA_METHOD_NEW(e, T, "eLuxEntityType GetEntityType()", +[](E *p) { return p->meType; });
+	ohpl_se_register_entity(e, T, offsetof(cSomaLuxEntity, mpCore));
 	SOMA_METHOD_NEW(e, T, "const tString& GetClassName()", +[](E *p) -> const tString & {
 		if (p->GetScript() == NULL)
 			return p->msClassName;
@@ -2210,16 +2160,12 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	});
 	SOMA_METHOD_NEW(e, T, "const tString& GetFileName()", +[](E *p) -> const tString & { return p->msFileName; });
 	SOMA_METHOD_NEW(e, T, "void SetActive(bool abX)", +[](E *p, bool b) { p->SetActive(b); });
-	SOMA_METHOD_NEW(e, T, "bool IsActive()", +[](E *p) { return p->mbActive; });
 	SOMA_METHOD_NEW(e, T, "cLuxMap@ GetMap()", +[](E *p) { return p->mpMap; });
 	SOMA_METHOD_NEW(e, T, "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](E *p, const cMatrixf &m) { p->SetMatrix(m); });
 	SOMA_METHOD_NEW(e, T, "void SetPosition(const cVector3f&in avPos)", +[](E *p, const cVector3f &v) { cMatrixf m = p->GetMatrix(); m.SetTranslation(v); p->SetMatrix(m); });
 	SOMA_METHOD_NEW(e, T, "cMatrixf GetMatrix()", +[](E *p) { return p->GetMatrix(); });
 	SOMA_METHOD_NEW(e, T, "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](E *p, const cMatrixf &m) { p->SetMatrix(m); });
 	SOMA_METHOD_NEW(e, T, "cVector3f GetPosition()", +[](E *p) { return p->GetPosition(); });
-	SOMA_METHOD_NEW(e, T, "const cMatrixf& GetOnLoadTransform()", +[](E *p) -> const cMatrixf & { return p->m_mtxOnLoad; });
-	SOMA_METHOD_NEW(e, T, "const cVector3f& GetOnLoadScale()", +[](E *p) -> const cVector3f & { return p->mvScale; });
-	SOMA_METHOD_NEW(e, T, "cVector3f GetMeshScaleMul()", +[](E *p) { return p->mvMeshScaleMul; });
 	SOMA_METHOD_NEW(e, T, "void SetMeshScaleMul(const cVector3f&in avScale)", +[](E *p, const cVector3f &v) {
 		if (v == p->mvMeshScaleMul || p->mpMesh == NULL)
 			return;
@@ -2265,8 +2211,6 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 		p->mParentID = id;
 		p->msParentName = n;
 	});
-	SOMA_METHOD_NEW(e, T, "int GetParentType()", +[](E *p) { return p->mlParentType; });
-	SOMA_METHOD_NEW(e, T, "tID GetParentId()", +[](E *p) { return p->mParentID; });
 	SOMA_METHOD_NEW(e, T, "const tString& GetParentName()", +[](E *p) -> const tString & { return p->msParentName; });
 	SOMA_METHOD_NEW(e, T, "float GetEffectsOnTime()", +[](E *p) { return p->mVars.GetVarFloat("EffectsOnTime", 1); });
 	SOMA_METHOD_NEW(e, T, "float GetEffectsOffTime()", +[](E *p) { return p->mVars.GetVarFloat("EffectsOffTime", 1); });
@@ -2274,9 +2218,6 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "iPhysicsJoint@ GetJoint(int alIdx)", +[](E *p, int i) {
 		return i >= 0 && i < (int)p->Joints().size() ? p->Joints()[i] : (iPhysicsJoint *)NULL; });
 	SOMA_METHOD_NEW(e, T, "void WakeUp()", +[](E *p) { p->WakeUp(); });
-	SOMA_METHOD_NEW(e, T, "void Sleep()", +[](E *p) { p->mbSleeping = true; });
-	SOMA_METHOD_NEW(e, T, "bool IsSleeping()", +[](E *p) { return p->mbSleeping; });
-	SOMA_METHOD_NEW(e, T, "bool GetAutoSleep()", +[](E *p) { return p->mbAutoSleep; });
 	for (const char *pJ : {"iPhysicsJoint", "iPhysicsJointBall", "iPhysicsJointHinge", "iPhysicsJointSlider"})
 	{
 		SOMA_METHOD_NEW(e, pJ, "void SetMinLimitSound(const tString&in asSound, float afMinSpeed)", +[](iPhysicsJoint *j, const tString &s, float m) { SetLimitSound(j->GetMinLimit(), s, m); });
@@ -2295,9 +2236,6 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void SetIgnoreDynamicAvoidance(bool abX)", +[](E *, bool) {});
 	if (strcmp(T, "cLuxProp") == 0)
 	{
-		SOMA_METHOD_NEW(e, T, "void SetIsBreakable(bool abX)", +[](E *p, bool x) { p->mbBreakable = x; });
-		SOMA_METHOD_NEW(e, T, "bool GetIsBreakable()", +[](E *p) { return p->mbBreakable; });
-		SOMA_METHOD_NEW(e, T, "void SetDisableBreakable(bool abX)", +[](E *p, bool x) { if (x) p->mbBreakable = false; });
 		SOMA_METHOD_NEW(e, T, "void SetUseCustomBreakBehaviour(bool abX)", +[](E *, bool) {});
 	}
 	SOMA_METHOD_NEW(e, T, "void EnableBodyCollisionCallback()", +[](E *) {});
@@ -2339,7 +2277,6 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	});
 	SOMA_METHOD_NEW(e, T, "void StopAnimation(int alIdx, float afFadeTime)", +[](E *p, int i, float f) { p->StopAnimation(i, f); });
 	SOMA_METHOD_NEW(e, T, "void SetNormalizeAnimationWeights(bool abX)", +[](E *p, bool b) { if (p->mpMesh) p->mpMesh->SetNormalizeAnimationWeights(b); });
-	SOMA_METHOD_NEW(e, T, "int GetCurrentAnimationIndex()", +[](E *p) { return p->mlCurrentAnim; });
 	SOMA_METHOD_NEW(e, T, "cAnimationState@ GetCurrentAnimationState()",
 					+[](E *p) { return p->mpMesh && p->mlCurrentAnim >= 0 ? p->mpMesh->GetAnimationState(p->mlCurrentAnim) : (cAnimationState *)NULL; });
 	SOMA_METHOD_NEW(e, T, "void SetCurrentAnimationPaused(bool abX)", +[](E *p, bool b) {
@@ -2368,13 +2305,6 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 					});
 	SOMA_METHOD_NEW(e, T, "void SetOnGuiFunction(const tString&in asFunction)", +[](E *p, S f) { p->msOnGuiFunc = f; p->mbGuiDirty = true; });
 	SOMA_METHOD_NEW(e, T, "void SetGuiActive(bool abX, float afFadeTime=0.0f)", +[](E *p, bool b, float f) { p->SetGuiActive(b, f); });
-	SOMA_METHOD_NEW(e, T, "void SetGuiVariableFPS(float afX)", +[](E *p, float f) { p->mfGuiFPS = f; });
-	SOMA_METHOD_NEW(e, T, "void SetGuiSetUseInput(bool)", +[](E *p, bool b) { p->mbGuiSetUseInput = b; });
-	SOMA_METHOD_NEW(e, T, "bool GetGuiSetUseInput()", +[](E *p) { return p->mbGuiSetUseInput; });
-	SOMA_METHOD_NEW(e, T, "void SetGuiUpdateWhenOutOfView(bool abX)", +[](E *p, bool b) { p->mbGuiUpdateWhenOutOfView = b; });
-	SOMA_METHOD_NEW(e, T, "void ForceGuiCacheUpdate()", +[](E *p) { p->mbGuiDirty = p->mbGuiCacheForced = true; });
-	SOMA_METHOD_NEW(e, T, "void SetGuiCacheAtScreenSize(float afX)", +[](E *p, float f) { p->mfGuiCacheAtScreenSize = f; });
-	SOMA_METHOD_NEW(e, T, "bool IsGuiActive()", +[](E *p) { return p->mbGuiActive; });
 	SOMA_METHOD_NEW(e, T, "bool HasActiveGui()", +[](E *p) { return p->mpImGui != NULL; });
 	SOMA_METHOD_NEW(e, T, "bool SetGuiIsFocused(bool abX, bool abShowMouse=true)", +[](E *p, bool b, bool mouse) {
 		if (p->mpImGui == NULL)
@@ -2390,13 +2320,6 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 		return true;
 	});
 	SOMA_METHOD_NEW(e, T, "bool IsGuiFocused()", +[](E *p) { return p->mpImGui && cSomaImGui::GetScriptInputFocus() == p->mpImGui; });
-	SOMA_METHOD_NEW(e, T, "void SetIsInteractedWith(bool abX)", +[](E *p, bool b) { p->mbInteractedWith = b; });
-	SOMA_METHOD_NEW(e, T, "bool IsInteractedWith()", +[](E *p) { return p->mbInteractedWith; });
-	SOMA_METHOD_NEW(e, T, "void SetMaxInteractDistance(float afX)", +[](E *p, float f) { p->mfMaxInteractDistance = f; });
-	SOMA_METHOD_NEW(e, T, "void SetVariableUpdateRate(float afX)", +[](E *p, float f) { p->mfVariableUpdateRate = f; });
-	SOMA_METHOD_NEW(e, T, "float GetVariableUpdateRate()", +[](E *p) { return p->mfVariableUpdateRate; });
-	SOMA_METHOD_NEW(e, T, "void SetInteractionDisabled(bool abX)", +[](E *p, bool b) { p->mbInteractionDisabled = b; });
-	SOMA_METHOD_NEW(e, T, "bool GetInteractionDisabled()", +[](E *p) { return p->mbInteractionDisabled; });
 	SOMA_METHOD_NEW(e, T, "void SetPlayerInteractCallback(const tString &in asCallbackFunc, bool abRemoveWhenInteracted)",
 					+[](E *p, S f, bool r) { p->msInteractCallback = f; p->mbInteractCallbackAutoRemove = r; });
 	SOMA_METHOD_NEW(e, T, "void SetPlayerLookAtCallback(const tString &in asCallbackFunc, bool abRemoveWhenLookedAt, bool abCheckCenterOfScreen, bool abCheckRayIntersection, float afMaxDistance, float afCallbackDelay)",
@@ -2412,11 +2335,6 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 					+[](E *p, S n) { std::erase_if(p->mvConnections, [&](const E::cConnection &c) { return c.msName == n; }); });
 	SOMA_METHOD_NEW(e, T, "void RemoveAllConnections()", +[](E *p) { p->mvConnections.clear(); });
 	SOMA_METHOD_NEW(e, T, "bool HasPlayerLookAtCallback()", +[](E *p) { return p->msLookAtCallback != ""; });
-	SOMA_METHOD_NEW(e, T, "void SetForceLookAtCheck(bool abX)", +[](E *p, bool b) { p->mbForceLookAtCheck = b; });
-	SOMA_METHOD_NEW(e, T, "void SetLookAtCheckCenterOfScreen(bool abX)", +[](E *p, bool b) { p->mbLookAtCheckCenter = b; });
-	SOMA_METHOD_NEW(e, T, "void SetLookAtCheckRayIntersection(bool abX)", +[](E *p, bool b) { p->mbLookAtCheckRay = b; });
-	SOMA_METHOD_NEW(e, T, "void SetLookAtMaxDistance(float afX)", +[](E *p, float f) { p->mfLookAtMaxDistance = f; });
-	SOMA_METHOD_NEW(e, T, "bool IsLookedAtByPlayer()", +[](E *p) { return p->mbLookedAt; });
 	SOMA_METHOD_NEW(e, T, "cSoundEntity@ PlaySound(const tString&in asName, const tString&in asFile, bool abRemoveWhenDone, bool abAttach)",
 					+[](E *p, S n, S file, bool remove, bool attach) -> cSoundEntity * {
 						cSomaLuxMap *pMap = p->mpMap ? p->mpMap : cSomaLuxMap::GetCurrent();
@@ -2431,12 +2349,8 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 						return pSound;
 					});
 	SOMA_METHOD_NEW(e, T, "void SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)", +[](E *p, bool b, bool f) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive, f); });
-	SOMA_METHOD_NEW(e, T, "bool GetEffectsActive()", +[](E *p) { return p->mbEffectsActive; });
-	SOMA_METHOD_NEW(e, T, "float GetEffectsAlpha()", +[](E *p) { return p->mfEffectsAlpha; });
-	SOMA_METHOD_NEW(e, T, "bool IsEffectsFading()", +[](E *p) { return p->mfEffectsFadeSpeed != 0; });
 	SOMA_METHOD_NEW(e, T, "int GetBillboardNum()", +[](E *p) { return (int)p->mvBillboards.size(); });
 	SOMA_METHOD_NEW(e, T, "cBillboard@ GetBillboard(int alIdx)", +[](E *p, int i) { return i >= 0 && i < (int)p->mvBillboards.size() ? p->mvBillboards[i] : (cBillboard *)NULL; });
-	SOMA_METHOD_NEW(e, T, "void SetCustomEffectsOffAlpha(float afAlpha)", +[](E *p, float a) { p->mfEffectsOffAlpha = a; });
 	SOMA_METHOD_NEW(e, T, "void SetIlluminationBaseColor(const cColor&in aColor)", +[](E *p, const cColor &c) { p->mIllumBaseColor = c; p->mbIllumBaseSet = true; p->ApplyEffectsAlpha(); });
 	SOMA_METHOD_NEW(e, T, "bool HasCollideCallbacks()", +[](E *p) { return !p->mvCollideCallbacks.empty(); });
 	SOMA_METHOD_NEW(e, T, "void AddCollideCallback(iLuxEntity @apEntity, const tString&in asCallbackFunc)",
@@ -2703,6 +2617,7 @@ cSomaLuxEntity::~cSomaLuxEntity()
 	SomaForgetCritter(this);
 	SomaDestroyAgent(this);
 	SomaFreePropBlock("cLuxCritter", mpCritterProps);
+	ohpl_se_core_free(mpCore);
 }
 
 void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
@@ -2749,8 +2664,6 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		SOMA_METHOD(e, pType, "void MoveLinearTo(const cVector3f&in avGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const tString&in asCallback=\"\")",
 					+[](cSomaLuxEntity *p, const cVector3f &g, float a, float m, float d, bool r, const tString &cb) { p->MoveLinearTo(g, a, m, d, r, cb); });
 		SOMA_METHOD(e, pType, "void StopMove()", +[](cSomaLuxEntity *p) { p->StopMove(); });
-		SOMA_METHOD(e, pType, "void SetCheckCollision(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->mbCheckCollision = b; });
-		SOMA_METHOD(e, pType, "bool GetCheckCollision()", +[](cSomaLuxEntity *p) { return p->mbCheckCollision; });
 		SOMA_METHOD(e, pType, "void SetupCheckCollision(bool abCheckIfCenterInSide, bool abCheckDynamic, bool abCheckStatic, bool abCheckCharacters)",
 					+[](cSomaLuxEntity *p, bool c, bool d, bool st, bool ch) {
 						p->mbCheckCenterInArea = c;
@@ -2850,9 +2763,8 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 						if (pMat || asMat == "") pSub->SetCustomMaterial(pMat, true);
 					}
 				});
-	SOMA_METHOD(e, "cLuxProp", "bool IsMoving()", +[](cSomaLuxEntity *p) { return p->mMove.moving; });
+	ohpl_se_register_props(e, offsetof(cSomaLuxEntity, mpCore));
 	SOMA_METHOD(e, "cLuxProp", "void SetHealth(float afX)", +[](cSomaLuxEntity *p, float x) { p->SetHealth(x); });
-	SOMA_METHOD(e, "cLuxProp", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
 	SOMA_METHOD(e, "cLuxProp", "void Break()", +[](cSomaLuxEntity *p) { p->Break(); });
 	SOMA_METHOD(e, "cLuxProp", "void SetLiquidAmount(float afAmount)", +[](cSomaLuxEntity *p, float x) { p->SetLiquidAmount(x); });
 	SOMA_METHOD(e, "cLuxProp", "void FadeLiquidAmountTo(float afTargetAmount, float afTime)", +[](cSomaLuxEntity *p, float x, float t) { p->FadeLiquidAmountTo(x, t); });
@@ -2862,7 +2774,6 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	if (e->GetTypeInfoByName("cLuxArea"))
 	{
 		SOMA_METHOD(e, "cLuxArea", "iPhysicsBody@ GetAreaBody()", +[](cSomaLuxEntity *p) { return p->GetMainBody(); });
-		SOMA_METHOD(e, "cLuxArea", "const cVector3f& GetSize()", +[](cSomaLuxEntity *p) -> const cVector3f & { return p->mvSize; });
 	}
 	if (e->GetTypeInfoByName("cLuxProp"))
 	{
@@ -2876,12 +2787,8 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		});
 		SOMA_METHOD(e, "cLuxProp", "void RemoveAllInteractConnections()", +[](cSomaLuxEntity *p) { p->mvInteractConnections.clear(); });
 		SOMA_METHOD(e, "cLuxProp", "void UpdateInteractConnectionLeader()", +[](cSomaLuxEntity *p) { p->UpdateInteractConnectionLeader(); });
-		SOMA_METHOD(e, "cLuxProp", "float GetLastInteractConnectionState()", +[](cSomaLuxEntity *p) { return p->mfInteractConnectionState; });
 		SOMA_METHOD(e, "cLuxProp", "void ChangeInteractConnectionState(float afT)", +[](cSomaLuxEntity *p, float t) { p->ChangeInteractConnectionState(t); });
 		SOMA_METHOD(e, "cLuxProp", "void SetStaticPhysics(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->SetStaticPhysics(b); });
-		SOMA_METHOD(e, "cLuxProp", "void SetAllowMapTransfer(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->mbAllowMapTransfer = b; });
-		SOMA_METHOD(e, "cLuxProp", "bool GetAllowMapTransfer()", +[](cSomaLuxEntity *p) { return p->mbAllowMapTransfer; });
-		SOMA_METHOD(e, "cLuxProp", "bool GetStaticPhysics()", +[](cSomaLuxEntity *p) { return p->mbStaticPhysics; });
 		SOMA_METHOD(e, "cLuxProp", "void SetDisableCollisionUntilOutSidePlayer(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->SetDisableCollisionUntilOutSidePlayer(b); });
 		SOMA_METHOD(e, "cLuxProp", "void FadeInMeshEntity(float afTime)", +[](cSomaLuxEntity *p, float t) {
 			p->mfMeshFadeAlpha = 0;
@@ -2889,7 +2796,6 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 			if (p->mpMesh)
 				p->mpMesh->SetCoverageAmount(0);
 		});
-		SOMA_METHOD(e, "cLuxProp", "void EnableCharCollisionUntilStopped()", +[](cSomaLuxEntity *p) { p->mbCharCollisionUntilStopped = true; p->mbCharCollisionUntilStoppedStarted = false; });
 	}
 	SOMA_FUNC(e, "void Prop_DisableCollisionUntilOutsidePlayer(const tString &in asPropName)",
 			  +[](const tString &n) { ForMatching(n, [](cSomaLuxEntity *p) { p->SetDisableCollisionUntilOutSidePlayer(true); }); });
