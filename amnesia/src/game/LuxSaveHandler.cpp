@@ -178,183 +178,258 @@ void cLuxSaveHandlerThreadClass::UpdateThread()
 
 //-----------------------------------------------------------------------
 
-cLuxSaveHandler::cLuxSaveHandler() : iLuxUpdateable("LuxSaveHandler")
+namespace
 {
-	mbInitialized = false;
-	mbStartThread = false;
 
-	mlMaxAutoSaves =  gpBase->mpGameCfg->GetInt("Saving","MaxAutoSaves",20);
-	mlSaveNameCount =0;
+struct SaveHost
+{
+	cLuxSaveHandler *mpHandler;
+	cLuxSaveGame_SaveData *mpData = NULL;
+	tWString msResult;
+	tWStringVec mvFiles;
+	tWString msFolder;
+	bool mbModified = false;
+	cLuxMap *mpOldMap = NULL;
+	tString msOldMapFolder;
+	cLuxModelCache mCache;
+};
+
+void CopyUnits(unsigned *apBuf, size_t alSize, const tWString &asStr)
+{
+	for(size_t i=0; i<alSize && i<asStr.size(); ++i) apBuf[i] = (unsigned)asStr[i];
 }
 
-//-----------------------------------------------------------------------
+void PutDate(unsigned *apBuf, const cDate &aDate)
+{
+	OhplGa6Date d = Ga6Date(aDate);
+	const int v[6] = { d.seconds, d.minutes, d.hours, d.month_day, d.month, d.year };
+	for(int i=0; i<6; ++i) apBuf[i] = (unsigned)v[i];
+}
+
+void SaveNow(cLuxSaveGame_SaveData *apData, const tWString &asFile)
+{
+	apData->mpSavedMaps = gpBase->mpMapHandler->GetSavedMapCollection();
+	cSerializeClass::SaveToFile(apData,asFile,"SaveGame");
+	hplDelete(apData);
+}
+
+long long LoadStep(SaveHost *h, long long alStep)
+{
+	cLuxMap *pCurrentMap = gpBase->mpMapHandler->GetCurrentMap();
+	switch(alStep)
+	{
+	case eOhplGa6HStep_DrawMenuScreen: gpBase->mpLoadScreenHandler->DrawMenuScreen(); break;
+	case eOhplGa6HStep_DestroyDataCache: gpBase->mpMapHandler->DestroyDataCache(); break;
+	case eOhplGa6HStep_HasCurrentMap:
+		h->mpOldMap = pCurrentMap;
+		return pCurrentMap!=NULL;
+	case eOhplGa6HStep_DestroyWorldEntities:
+		gpBase->RunModuleMessage(eLuxUpdateableMessage_DestroyWorldEntities, pCurrentMap);
+		break;
+	case eOhplGa6HStep_ResetModules:
+		gpBase->mpPlayer->Reset();
+		gpBase->mpInventory->Reset();
+		gpBase->mpJournal->Reset();
+		gpBase->mpMusicHandler->Reset();
+		gpBase->mpMessageHandler->Reset();
+		gpBase->mpEffectHandler->Reset();
+		gpBase->mpGlobalDataHandler->Reset();
+		gpBase->mpHintHandler->Reset();
+		gpBase->mpInsanityHandler->Reset();
+		gpBase->mpLoadScreenHandler->Reset();
+		gpBase->mpMapHandler->GetSavedMapCollection()->Reset();
+		break;
+	case eOhplGa6HStep_StopSounds:
+		gpBase->mpEngine->GetSound()->GetSoundHandler()->StopAll(eSoundEntryType_World | eSoundEntryType_Gui);
+		gpBase->mpEngine->GetSound()->GetMusicHandler()->Stop(100.0f);
+		break;
+	case eOhplGa6HStep_CacheCreate: h->mCache.Create(); break;
+	case eOhplGa6HStep_SetMapFolder:
+		h->msOldMapFolder = gpBase->mpMapHandler->GetMapFolder();
+		gpBase->mpMapHandler->SetMapFolder(h->mpData->msMapFolder);
+		break;
+	case eOhplGa6HStep_LoadScripts:
+		gpBase->mpInventory->LoadScript();
+		gpBase->mpGlobalDataHandler->LoadScript();
+		break;
+	case eOhplGa6HStep_NeedsNewMap:
+		return	h->mpOldMap==NULL ||
+				h->msOldMapFolder != gpBase->mpMapHandler->GetMapFolder() ||
+				h->mpOldMap->GetFileName() != h->mpData->mMap.msFileName;
+	case eOhplGa6HStep_LoadNewMap:
+	{
+		cLuxMap *pNewMap = gpBase->mpMapHandler->LoadMap(h->mpData->mMap.msFileName, false);
+		if(pNewMap==NULL) FatalError("Could not load quicksave map '%s'\n", h->mpData->mMap.msFileName.c_str());
+		if(h->mpOldMap) gpBase->mpMapHandler->DestroyMap(h->mpOldMap, false);
+		gpBase->mpMapHandler->SetCurrentMap(pNewMap, false, false,"");
+		break;
+	}
+	case eOhplGa6HStep_ClearWorldDynamics:
+		pCurrentMap->GetWorld()->DestroyAllSoundEntities();
+		pCurrentMap->GetWorld()->DestroyAllParticleSystems();
+		break;
+	case eOhplGa6HStep_DestroyEntities: pCurrentMap->DestroyAllEntities(); break;
+	case eOhplGa6HStep_KillDyingParticles:
+	{
+		cParticleSystemIterator partIt = pCurrentMap->GetWorld()->GetParticleSystemIterator();
+		while(partIt.HasNext())
+		{
+			cParticleSystem *pPS = partIt.Next();
+			if(pPS->IsDying()) pPS->KillInstantly();
+		}
+		break;
+	}
+	case eOhplGa6HStep_CreateWorldEntities:
+		gpBase->RunModuleMessage(eLuxUpdateableMessage_CreateWorldEntities, pCurrentMap);
+		break;
+	case eOhplGa6HStep_ApplySave:
+	{
+		cLuxSaveGame_SaveData *apSave = h->mpData;
+		apSave->mMap.ToMap(pCurrentMap);
+		apSave->mHintHandler.ToHintHandler(pCurrentMap, gpBase->mpHintHandler);
+		apSave->mPlayer.ToPlayer(pCurrentMap, gpBase->mpPlayer);
+		apSave->mInventory.ToInventory(pCurrentMap, gpBase->mpInventory);
+		apSave->mJournal.ToJournal(pCurrentMap, gpBase->mpJournal);
+		apSave->mMusicHandler.ToMusicHandler(pCurrentMap, gpBase->mpMusicHandler);
+		apSave->mEffectHandler.ToEffectHandler(pCurrentMap, gpBase->mpEffectHandler);
+		apSave->mGlobalDataHandler.ToGlobalDataHandler(pCurrentMap, gpBase->mpGlobalDataHandler);
+		apSave->mInsanityHandler.ToInsanityHandler(pCurrentMap, gpBase->mpInsanityHandler);
+		apSave->mLoadScreenHandler.ToLoadScreenHandler(pCurrentMap, gpBase->mpLoadScreenHandler);
+		break;
+	}
+	case eOhplGa6HStep_SavedMaps: gpBase->mpMapHandler->SetSavedMapCollection(h->mpData->mpSavedMaps); break;
+	case eOhplGa6HStep_HardMode: gpBase->mbHardMode = h->mpData->mbHardmode; break;
+	case eOhplGa6HStep_Cleanup: gpBase->mpHelpFuncs->CleanupData(); break;
+	case eOhplGa6HStep_CacheDestroy: h->mCache.Destroy(); break;
+	}
+	return 0;
+}
+
+long long SaveHostCall(void *apCtx, unsigned alOp, long long alA, unsigned *apBuf, size_t alN)
+{
+	SaveHost *h = (SaveHost*)apCtx;
+	switch(alOp)
+	{
+	case eOhplGa6H_Log:
+	{
+		tString s = cString::To8Char(tWString((const wchar_t*)apBuf, alN));
+		switch(alA)
+		{
+		case eOhplGa6HLog_BeginSave: Log("-------- BEGIN SAVE TO: %s ---------\n", s.c_str()); break;
+		case eOhplGa6HLog_EndSave: Log("-------- END SAVE ---------\n"); break;
+		case eOhplGa6HLog_BeginLoad: Log("-------- BEGIN LOAD FROM %s ---------\n", s.c_str()); break;
+		case eOhplGa6HLog_EndLoad: Log("-------- END LOAD ---------\n"); break;
+		case eOhplGa6HLog_Loading: Log("LOADING SAVE GAME!\n"); break;
+		case eOhplGa6HLog_NoSaveFile: Error("Could not find a save file in '%s'!\n", s.c_str()); break;
+		case eOhplGa6HLog_NoHardmodeFile: Error("Could not find a hard mode save file in '%s'!\n", s.c_str()); break;
+		}
+		return 0;
+	}
+	case eOhplGa6H_HardMode: return gpBase->mbHardMode;
+	case eOhplGa6H_MapDisplayName:
+		h->msResult = cString::To16Char(gpBase->mpMapHandler->GetCurrentMap()->GetDisplayNameEntry());
+		return (long long)h->msResult.size();
+	case eOhplGa6H_CopyResult: CopyUnits(apBuf, alN, h->msResult); return 0;
+	case eOhplGa6H_NowDate: PutDate(apBuf, cPlatform::GetDate()); return 0;
+	case eOhplGa6H_ProfilePath:
+		h->msResult = gpBase->msProfileSavePath;
+		return (long long)h->msResult.size();
+	case eOhplGa6H_ScanSaves:
+	{
+		tWStringList lstFiles;
+		h->msFolder = gpBase->msProfileSavePath;
+		cPlatform::FindFilesInDir(lstFiles, h->msFolder, _W("*.sav"));
+		h->mvFiles.assign(lstFiles.begin(), lstFiles.end());
+		h->mbModified = alA != 0;
+		return (long long)h->mvFiles.size();
+	}
+	case eOhplGa6H_ScanName:
+		h->msResult = h->mvFiles[alA];
+		return (long long)h->msResult.size();
+	case eOhplGa6H_ScanDate:
+		PutDate(apBuf, h->mbModified ? cPlatform::FileModifiedDate(h->msFolder + h->mvFiles[alA])
+									: cPlatform::FileCreationDate(h->msFolder + h->mvFiles[alA]));
+		return 0;
+	case eOhplGa6H_RemoveScanned: cPlatform::RemoveFile(h->msFolder + h->mvFiles[alA]); return 0;
+	case eOhplGa6H_CreateData: return (long long)(intptr_t)h->mpHandler->CreateSaveGameData();
+	case eOhplGa6H_ThreadRunning: return h->mpHandler->GetThreadClass()->IsRunning();
+	case eOhplGa6H_ThreadSave:
+		h->mpHandler->GetThreadClass()->Save((cLuxSaveGame_SaveData*)(intptr_t)alA, tWString((const wchar_t*)apBuf, alN));
+		return 0;
+	case eOhplGa6H_SaveNow: SaveNow((cLuxSaveGame_SaveData*)(intptr_t)alA, tWString((const wchar_t*)apBuf, alN)); return 0;
+	case eOhplGa6H_Snapshot:
+	{
+		tWString sFile((const wchar_t*)apBuf, alN);
+		tWString sFileExt = cString::GetFileExtW(sFile);
+		tWString sFileName = cString::SubW(sFile,0, sFile.size()-(sFileExt.size()+1)) +  _W(".jpg");
+
+		cEngine *pEngine = gpBase->mpEngine;
+
+		cBitmap *pBmp = pEngine->GetGraphics()->GetLowLevel()->CopyFrameBufferToBitmap();
+		pEngine->GetResources()->GetBitmapLoaderHandler()->SaveBitmap(pBmp,sFileName,0);
+		hplDelete(pBmp);
+		return 0;
+	}
+	case eOhplGa6H_NewData:
+		h->mpData = hplNew(cLuxSaveGame_SaveData, ());
+		return (long long)(intptr_t)h->mpData;
+	case eOhplGa6H_LoadFile:
+		cSerializeClass::LoadFromFile((cLuxSaveGame_SaveData*)(intptr_t)alA, tWString((const wchar_t*)apBuf, alN));
+		return 0;
+	case eOhplGa6H_FreeData: hplDelete((cLuxSaveGame_SaveData*)(intptr_t)alA); h->mpData = NULL; return 0;
+	case eOhplGa6H_ThreadProcess: h->mpHandler->GetThreadClass()->ProcessPendingSaves(); return 0;
+	case eOhplGa6H_ResetProgressLog: gpBase->mpProgressLogHandler->CreateAndResetLogFile(); return 0;
+	case eOhplGa6H_Step: return LoadStep(h, alA);
+	}
+	return 0;
+}
+
+}
+
+cLuxSaveHandler::cLuxSaveHandler() : iLuxUpdateable("LuxSaveHandler")
+{
+	mpRust = ohpl_ga6h_new(gpBase->mpGameCfg->GetInt("Saving","MaxAutoSaves",20));
+}
 
 cLuxSaveHandler::~cLuxSaveHandler()
 {
+	ohpl_ga6h_free(mpRust);
 }
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 void cLuxSaveHandler::OnStart()
 {
-
 }
-
-//-----------------------------------------------------------------------
 
 void cLuxSaveHandler::Update(float afTimeStep)
 {
 }
 
-//-----------------------------------------------------------------------
-
 void cLuxSaveHandler::Reset()
 {
-	if(mbInitialized==false)
-	{
-		mbInitialized = true;
-		if(mbStartThread) mSaveHandlerThreadClass.SetUpThread();
-	}
 }
-
-//-----------------------------------------------------------------------
 
 void cLuxSaveHandler::SaveGameToFile(const tWString& asFile, bool abSaveSnapshot)
 {
-	Log("-------- BEGIN SAVE TO: %s ---------\n", cString::To8Char(asFile).c_str());
-
-	cLuxSaveGame_SaveData* pData = CreateSaveGameData();
-
-	if(mSaveHandlerThreadClass.IsRunning())
-		mSaveHandlerThreadClass.Save(pData, asFile);
-	else
-	{
-		pData->mpSavedMaps = gpBase->mpMapHandler->GetSavedMapCollection();
-		cSerializeClass::SaveToFile(pData,asFile,"SaveGame");
-		hplDelete(pData);
-	}
-
-
-	// Save snapshot?
-	if(abSaveSnapshot)
-	{
-		tWString sFileExt = cString::GetFileExtW(asFile);
-		tWString sFileName = cString::SubW(asFile,0, asFile.size()-(sFileExt.size()+1)) +  _W(".jpg");
-		
-		cEngine *pEngine = gpBase->mpEngine;
-		
-		cBitmap *pBmp = pEngine->GetGraphics()->GetLowLevel()->CopyFrameBufferToBitmap();
-		pEngine->GetResources()->GetBitmapLoaderHandler()->SaveBitmap(pBmp,sFileName,0);
-		hplDelete(pBmp);
-	}
-
-	Log("-------- END SAVE ---------\n");
-
+	SaveHost host = { this };
+	ohpl_ga6h_save_to_file(mpRust, &host, SaveHostCall, (const unsigned*)asFile.data(), asFile.size(), abSaveSnapshot);
 }
-
-//-----------------------------------------------------------------------
 
 void cLuxSaveHandler::LoadGameFromFile(const tWString& asFile)
 {
-	Log("-------- BEGIN LOAD FROM %s ---------\n", cString::To8Char(asFile).c_str());
-
-	cLuxSaveGame_SaveData * pSaveGame = hplNew(cLuxSaveGame_SaveData, ());
-
-	//cSerializeClass::SetLog(true);
-	cSerializeClass::LoadFromFile(pSaveGame,asFile);
-	//cSerializeClass::SetLog(false);
-	
-	LoadSaveGameData(pSaveGame);
-
-	hplDelete(pSaveGame);
-
-	Log("-------- END LOAD ---------\n");
+	SaveHost host = { this };
+	ohpl_ga6h_load_from_file(mpRust, &host, SaveHostCall, (const unsigned*)asFile.data(), asFile.size());
 }
 
-//-----------------------------------------------------------------------
+bool cLuxSaveHandler::AutoSave() { return Run(eOhplGa6HRun_AutoSave); }
+bool cLuxSaveHandler::AutoLoad(bool abResetProgressLogger) { return Run(abResetProgressLogger ? eOhplGa6HRun_AutoLoadReset : eOhplGa6HRun_AutoLoad); }
+bool cLuxSaveHandler::SaveFileExists() { return Run(eOhplGa6HRun_FileExists); }
+bool cLuxSaveHandler::HardModeSave() { return Run(eOhplGa6HRun_HardModeSave); }
 
-bool cLuxSaveHandler::AutoSave()
+bool cLuxSaveHandler::Run(unsigned alWhat)
 {
-	//////////////////////
-	// HARDMODE
-	if (gpBase->mbHardMode)
-		return true;
-
-
-	DeleteOldestSaveFiles(gpBase->msProfileSavePath, mlMaxAutoSaves);
-	
-	SaveGameToFile(gpBase->msProfileSavePath+GetSaveName(_W("AutoSave")));
-
-	return true;
+	SaveHost host = { this };
+	return ohpl_ga6h_run(mpRust, &host, SaveHostCall, alWhat);
 }
-
-
-//-----------------------------------------------------------------------
-
-bool cLuxSaveHandler::AutoLoad(bool abResetProgressLogger)
-{
-	// Wait until any pending save is done.
-	if(mSaveHandlerThreadClass.IsRunning())
-		mSaveHandlerThreadClass.ProcessPendingSaves();
-	
-	//Get newest file (if any!)
-	tWString sFile = GetNewestSaveFile(gpBase->msProfileSavePath);
-	if(sFile == _W(""))
-	{
-		Error("Could not find a save file in '%s'!\n", cString::To8Char(gpBase->msProfileSavePath).c_str());
-		return false;
-	}
-	
-	////////////////////////////////
-	// HARDMODE
-	if (gpBase->mbHardMode)
-	{
-		if (!ohpl_ga6_hardmode_file_ok((const unsigned*)sFile.data(), sFile.size()))
-		{
-			Error("Could not find a hard mode save file in '%s'!\n", cString::To8Char(gpBase->msProfileSavePath).c_str());
-			return false;
-		}
-	}
-
-
-	//Reset the progress logger.
-	if(abResetProgressLogger)
-	{
-		gpBase->mpProgressLogHandler->CreateAndResetLogFile();
-	}
-
-
-	LoadGameFromFile(gpBase->msProfileSavePath+sFile);
-		
-	return true;
-}
-
-//-----------------------------------------------------------------------
-
-bool cLuxSaveHandler::SaveFileExists()
-{
-	if(gpBase->msProfileSavePath==_W("")) return false;
-
-	return GetNewestSaveFile(gpBase->msProfileSavePath)!=_W("");
-}
-
-//-----------------------------------------------------------------------
-
-//////////////////////
-// HARDMODE
-bool cLuxSaveHandler::HardModeSave()
-{
-	SaveGameToFile(gpBase->msProfileSavePath + GetSaveName(_W("HardMode")));
-	return true;
-}
-
-//-----------------------------------------------------------------------
 
 cLuxSaveGame_SaveData *cLuxSaveHandler::CreateSaveGameData()
 {
@@ -385,134 +460,6 @@ cLuxSaveGame_SaveData *cLuxSaveHandler::CreateSaveGameData()
 
 //-----------------------------------------------------------------------
 
-void cLuxSaveHandler::LoadSaveGameData(cLuxSaveGame_SaveData *apSave)
-{
-	Log("LOADING SAVE GAME!\n");
-
-	cLuxMap *pOldMap = NULL;
-	cLuxMap *pCurrentMap = gpBase->mpMapHandler->GetCurrentMap();
-
-	//////////////////////////////////////
-	// Draw loading screen
-	gpBase->mpLoadScreenHandler->DrawMenuScreen();
-
-	//////////////////////////////////////
-	// Destroy cache data
-	gpBase->mpMapHandler->DestroyDataCache();
-
-	///////////////////
-	// Reset stuff (A better way to do this? Some weak reset that can be broadcasted?)
-	if(pCurrentMap)
-	{
-		gpBase->RunModuleMessage(eLuxUpdateableMessage_DestroyWorldEntities, pCurrentMap);
-
-		gpBase->mpPlayer->Reset();
-		gpBase->mpInventory->Reset();
-		gpBase->mpJournal->Reset();
-		gpBase->mpMusicHandler->Reset();
-		gpBase->mpMessageHandler->Reset();
-		gpBase->mpEffectHandler->Reset();
-		gpBase->mpGlobalDataHandler->Reset();
-		gpBase->mpHintHandler->Reset();
-		gpBase->mpInsanityHandler->Reset();
-		gpBase->mpLoadScreenHandler->Reset();
-		gpBase->mpMapHandler->GetSavedMapCollection()->Reset();
-
-		gpBase->mpEngine->GetSound()->GetSoundHandler()->StopAll(eSoundEntryType_World | eSoundEntryType_Gui);
-		gpBase->mpEngine->GetSound()->GetMusicHandler()->Stop(100.0f);
-	}
-
-
-	///////////////////
-	// Save cache
-	cLuxModelCache cache;
-	cache.Create();
-
-	///////////////////
-	// Setup variables
-	tString msOldMapFolder = gpBase->mpMapHandler->GetMapFolder();
-    gpBase->mpMapHandler->SetMapFolder(apSave->msMapFolder);
-
-	///////////////////
-	// Load script files
-
-	gpBase->mpInventory->LoadScript();
-	gpBase->mpGlobalDataHandler->LoadScript();
-	
-	///////////////////
-	// Load new map
-	if(	pCurrentMap==NULL || 
-		msOldMapFolder != gpBase->mpMapHandler->GetMapFolder() || 
-		pCurrentMap->GetFileName() != apSave->mMap.msFileName)
-	{
-		cLuxMap *pNewMap = gpBase->mpMapHandler->LoadMap(apSave->mMap.msFileName, false);
-		if(pNewMap==NULL) FatalError("Could not load quicksave map '%s'\n", apSave->mMap.msFileName.c_str());
-	
-		// Destroy old and set new
-		if(pCurrentMap) gpBase->mpMapHandler->DestroyMap(pCurrentMap, false);
-		gpBase->mpMapHandler->SetCurrentMap(pNewMap, false, false,"");
-
-		pCurrentMap = pNewMap;
-
-		pCurrentMap->GetWorld()->DestroyAllSoundEntities();
-		pCurrentMap->GetWorld()->DestroyAllParticleSystems();
-	}
-	/////////////////////
-	//Clear current
-	else
-	{
-		pCurrentMap->GetWorld()->DestroyAllSoundEntities();
-		pCurrentMap->GetWorld()->DestroyAllParticleSystems();
-
-		pCurrentMap->DestroyAllEntities();
-		
-		//Destroy all to be destroyed particle systems
-		cParticleSystemIterator partIt = pCurrentMap->GetWorld()->GetParticleSystemIterator();
-		while(partIt.HasNext())
-		{
-			cParticleSystem *pPS = partIt.Next();
-            if(pPS->IsDying()) pPS->KillInstantly();		
-		}
-
-		//TODO: Destroy all special in player (???)
-		
-		// Create map data
-		gpBase->RunModuleMessage(eLuxUpdateableMessage_CreateWorldEntities, pCurrentMap);
-	}
-	
-	///////////////////
-	// Load save data
-	apSave->mMap.ToMap(pCurrentMap);
-	apSave->mHintHandler.ToHintHandler(pCurrentMap, gpBase->mpHintHandler);
-	apSave->mPlayer.ToPlayer(pCurrentMap, gpBase->mpPlayer);
-	apSave->mInventory.ToInventory(pCurrentMap, gpBase->mpInventory);
-	apSave->mJournal.ToJournal(pCurrentMap, gpBase->mpJournal);
-	apSave->mMusicHandler.ToMusicHandler(pCurrentMap, gpBase->mpMusicHandler);
-	apSave->mEffectHandler.ToEffectHandler(pCurrentMap, gpBase->mpEffectHandler);
-	apSave->mGlobalDataHandler.ToGlobalDataHandler(pCurrentMap, gpBase->mpGlobalDataHandler);
-	apSave->mInsanityHandler.ToInsanityHandler(pCurrentMap, gpBase->mpInsanityHandler);
-	apSave->mLoadScreenHandler.ToLoadScreenHandler(pCurrentMap, gpBase->mpLoadScreenHandler);
-							 
-	///////////////////
-	// Load saved maps
-	gpBase->mpMapHandler->SetSavedMapCollection(apSave->mpSavedMaps);
-	
-	///////////////////
-	//Hardmode
-	gpBase->mbHardMode = apSave->mbHardmode;
-
-	//////////////////////////////////
-	//Clean up
-	gpBase->mpHelpFuncs->CleanupData();
-	
-	///////////////////
-	// Destroy cache
-	cache.Destroy();
-
-}
-
-//-----------------------------------------------------------------------
-
 tWString cLuxSaveHandler::GetProperSaveName(const tWString &asFile)
 {
 	tWString sProperName;
@@ -521,66 +468,4 @@ tWString cLuxSaveHandler::GetProperSaveName(const tWString &asFile)
 }
 
 //-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// PRIVATE METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
-tWString cLuxSaveHandler::GetSaveName(const tWString &asPrefix)
-{
-	cLuxMap *pCurrentMap = gpBase->mpMapHandler->GetCurrentMap();
-	tString sMapName = pCurrentMap->GetDisplayNameEntry();
-	cDate currentDate = cPlatform::GetDate();
-
-	tWString sMap = cString::To16Char(sMapName);
-	OhplGa6NameState state = { mlSaveNameCount, Ga6Date(mLatestSaveDate) };
-	OhplGa6Date date = Ga6Date(currentDate);
-	tWString sFileName;
-	ohpl_ga6_save_name(&state, (const unsigned*)asPrefix.data(), asPrefix.size(), (const unsigned*)sMap.data(), sMap.size(), &date, Ga6Sink, &sFileName);
-
-	mlSaveNameCount = state.count;
-	mLatestSaveDate = currentDate;
-
-	return sFileName;
-}
-
-void cLuxSaveHandler::DeleteOldestSaveFiles(const tWString &asFolder, int alMax)
-{
-	tWStringList lstFiles;
-	cPlatform::FindFilesInDir(lstFiles, asFolder, _W("*.sav"));
-
-	std::vector<tWString> vFiles(lstFiles.begin(), lstFiles.end());
-	std::vector<OhplGa6Date> vDates;
-	for(size_t i=0; i<vFiles.size(); ++i)
-	{
-		vDates.push_back(Ga6Date(cPlatform::FileCreationDate(asFolder + vFiles[i])));
-	}
-
-	std::vector<int> vVictims(vFiles.size() + 1);
-	size_t lCount = ohpl_ga6_rotation_victims(vDates.data(), vDates.size(), alMax, vVictims.data());
-	for(size_t i=0; i<lCount; ++i)
-	{
-		cPlatform::RemoveFile(asFolder + vFiles[vVictims[i]]);
-	}
-}
-
-tWString cLuxSaveHandler::GetNewestSaveFile(const tWString &asFolder)
-{
-	tWStringList lstFiles;
-	cPlatform::FindFilesInDir(lstFiles, asFolder, _W("*.sav"));
-
-	if(lstFiles.empty()) return _W("");
-
-	std::vector<tWString> vFiles(lstFiles.begin(), lstFiles.end());
-	std::vector<OhplGa6Date> vDates;
-	for(size_t i=0; i<vFiles.size(); ++i)
-	{
-		vDates.push_back(Ga6Date(cPlatform::FileModifiedDate(asFolder + vFiles[i])));
-	}
-
-	int lNewest = ohpl_ga6_newest(vDates.data(), vDates.size());
-	return lNewest < 0 ? _W("") : vFiles[lNewest];
-}
 

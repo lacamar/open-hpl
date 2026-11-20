@@ -380,6 +380,66 @@ typedef int (*OhplGa6Call)(void *ctx, unsigned op, int a, int b);
 typedef void (*OhplGa6Sink32)(void *ctx, const unsigned *p, size_t n);
 typedef void (*OhplGa6Translate)(void *ctx, const unsigned *p, size_t n, OhplGa6Sink32 sink, void *sctx);
 
+enum eOhplGa6HOp
+{
+	eOhplGa6H_Log = 0,
+	eOhplGa6H_HardMode = 1,
+	eOhplGa6H_MapDisplayName = 2,
+	eOhplGa6H_CopyResult = 3,
+	eOhplGa6H_NowDate = 4,
+	eOhplGa6H_ProfilePath = 5,
+	eOhplGa6H_ScanSaves = 6,
+	eOhplGa6H_ScanName = 7,
+	eOhplGa6H_ScanDate = 8,
+	eOhplGa6H_RemoveScanned = 9,
+	eOhplGa6H_CreateData = 10,
+	eOhplGa6H_ThreadRunning = 11,
+	eOhplGa6H_ThreadSave = 12,
+	eOhplGa6H_SaveNow = 13,
+	eOhplGa6H_Snapshot = 14,
+	eOhplGa6H_NewData = 15,
+	eOhplGa6H_LoadFile = 16,
+	eOhplGa6H_FreeData = 17,
+	eOhplGa6H_ThreadProcess = 18,
+	eOhplGa6H_ResetProgressLog = 19,
+	eOhplGa6H_Step = 20,
+};
+
+enum eOhplGa6HStep
+{
+	eOhplGa6HStep_DrawMenuScreen = 0,
+	eOhplGa6HStep_DestroyDataCache = 1,
+	eOhplGa6HStep_HasCurrentMap = 2,
+	eOhplGa6HStep_DestroyWorldEntities = 3,
+	eOhplGa6HStep_ResetModules = 4,
+	eOhplGa6HStep_StopSounds = 5,
+	eOhplGa6HStep_CacheCreate = 6,
+	eOhplGa6HStep_SetMapFolder = 7,
+	eOhplGa6HStep_LoadScripts = 8,
+	eOhplGa6HStep_NeedsNewMap = 9,
+	eOhplGa6HStep_LoadNewMap = 10,
+	eOhplGa6HStep_ClearWorldDynamics = 11,
+	eOhplGa6HStep_DestroyEntities = 12,
+	eOhplGa6HStep_KillDyingParticles = 13,
+	eOhplGa6HStep_CreateWorldEntities = 14,
+	eOhplGa6HStep_ApplySave = 15,
+	eOhplGa6HStep_SavedMaps = 16,
+	eOhplGa6HStep_HardMode = 17,
+	eOhplGa6HStep_Cleanup = 18,
+	eOhplGa6HStep_CacheDestroy = 19,
+};
+
+enum
+{
+	eOhplGa6HLog_BeginSave, eOhplGa6HLog_EndSave, eOhplGa6HLog_BeginLoad, eOhplGa6HLog_EndLoad,
+	eOhplGa6HLog_Loading, eOhplGa6HLog_NoSaveFile, eOhplGa6HLog_NoHardmodeFile,
+};
+
+enum { eOhplGa6HRun_AutoSave, eOhplGa6HRun_HardModeSave, eOhplGa6HRun_AutoLoadReset, eOhplGa6HRun_AutoLoad, eOhplGa6HRun_FileExists };
+
+struct OhplGa6Handler;
+typedef long long (*OhplGa6HostCall)(void *ctx, unsigned op, long long a, unsigned *buf, size_t n);
+
 extern "C"
 {
 void ohpl_ga6_light_from(void *ctx, OhplGa6Call call);
@@ -416,6 +476,11 @@ void ohpl_ga6_proper_name(const unsigned *file, size_t n, OhplGa6Translate trans
 int ohpl_ga6_newest(const OhplGa6Date *dates, size_t n);
 size_t ohpl_ga6_rotation_victims(const OhplGa6Date *dates, size_t n, int max, int *out);
 bool ohpl_ga6_hardmode_file_ok(const unsigned *file, size_t n);
+OhplGa6Handler *ohpl_ga6h_new(int max_auto);
+void ohpl_ga6h_free(OhplGa6Handler *h);
+void ohpl_ga6h_save_to_file(OhplGa6Handler *h, void *ctx, OhplGa6HostCall call, const unsigned *file, size_t n, bool snapshot);
+void ohpl_ga6h_load_from_file(OhplGa6Handler *h, void *ctx, OhplGa6HostCall call, const unsigned *file, size_t n);
+bool ohpl_ga6h_run(OhplGa6Handler *h, void *ctx, OhplGa6HostCall call, unsigned what);
 int ohpl_ga6_find_map(const OhplGa6Str *names, size_t n, const unsigned char *name, size_t name_n);
 }
 
