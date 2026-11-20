@@ -24,6 +24,7 @@ pub struct Vb {
     elems: Vec<Elem>,
     flags: Vec<u32>,
     element_handle: u32,
+    pub(super) store: super::vbdata::Store,
 }
 
 impl Vb {
@@ -33,7 +34,12 @@ impl Vb {
             elems: Vec::new(),
             flags: Vec::new(),
             element_handle: 0,
+            store: super::vbdata::Store::default(),
         }
+    }
+
+    pub(super) fn is_vbo(&self) -> bool {
+        self.vbo
     }
 
     pub fn add_element(&mut self, kind: i32, format: i32, element_num: i32, flag: u32) {

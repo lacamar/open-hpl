@@ -157,6 +157,12 @@ namespace hpl {
 		void CompileSpecific();
 		iVertexBufferOpenGL* CreateDataCopy(tVertexElementFlag aFlags, eVertexBufferDrawType aDrawType, eVertexBufferUsageType aUsageType,
 											int alReserveVtxSize, int alReserveIdxSize);
+		std::vector<OhplVbArr> Arrays()
+		{
+			std::vector<OhplVbArr> v(ohpl_vb_array_count(mlRs));
+			for(size_t i=0; i<v.size(); ++i) ohpl_vb_array_at(mlRs, i, &v[i]);
+			return v;
+		}
 		void Upload();
 		void DrawRange(const unsigned int *apIndices, int alCount, eVertexBufferDrawType aDrawType);
 

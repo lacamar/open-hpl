@@ -27,6 +27,8 @@ pub mod h5b_ops;
 pub mod h5b_scn;
 pub mod h5b_trace;
 pub mod meshgen;
+pub mod mm;
+mod mm_ffi;
 pub mod packer;
 pub mod scatter;
 pub mod skel;

@@ -620,15 +620,17 @@ namespace hpl {
 	void cVulkanVertexBuffer::Upload()
 	{
 		size_t lSize = 0;
-		for(cVtxBufferGLElementArray *pEl : mvElementArrays)
+		std::vector<OhplVbArr> vEls = Arrays();
+		for(const OhplVbArr &el : vEls)
 		{
 			lSize = (lSize + 15) & ~(size_t)15;
-			mvElementOffset[pEl->mType] = lSize;
-			lSize += pEl->Size() * GetVertexFormatByteSize(pEl->mFormat);
+			mvElementOffset[el.kind] = lSize;
+			lSize += el.size * GetVertexFormatByteSize((eVertexBufferElementFormat)el.format);
 		}
 		lSize = (lSize + 15) & ~(size_t)15;
 		mlIndexOffset = lSize;
-		lSize += mvIndexArray.size() * sizeof(unsigned int);
+		const size_t lIndexNum = (size_t)GetIndexNum();
+		lSize += lIndexNum * sizeof(unsigned int);
 
 		// A buffer the GPU may still read gets replaced instead of overwritten
 		if(mBuffer && (lSize > mlBufferSize || mlLastUseSerial > mpGfx->mlCompletedSerial))
@@ -645,9 +647,9 @@ namespace hpl {
 			mpGfx->CreateBuffer(lSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, true, mBuffer, mpAlloc, &mpMapped);
 		}
 		unsigned char *pDst = (unsigned char*)mpMapped;
-		for(cVtxBufferGLElementArray *pEl : mvElementArrays)
-			memcpy(pDst + mvElementOffset[pEl->mType], pEl->GetArrayPtr(), pEl->Size() * GetVertexFormatByteSize(pEl->mFormat));
-		if(!mvIndexArray.empty()) memcpy(pDst + mlIndexOffset, mvIndexArray.data(), mvIndexArray.size() * sizeof(unsigned int));
+		for(const OhplVbArr &el : vEls)
+			memcpy(pDst + mvElementOffset[el.kind], el.ptr, el.size * GetVertexFormatByteSize((eVertexBufferElementFormat)el.format));
+		if(lIndexNum) memcpy(pDst + mlIndexOffset, GetIndices(), lIndexNum * sizeof(unsigned int));
 		mbDirty = false;
 	}
 
@@ -659,13 +661,13 @@ namespace hpl {
 		cEngineDiagnostics::CountDrawCall();
 
 		cLowLevelGraphicsVulkan::cAttribStream vStreams[eGlslVkAttrib_LastEnum] = {};
-		for(cVtxBufferGLElementArray *pEl : mvElementArrays)
+		for(const OhplVbArr &el : Arrays())
 		{
-			int lLoc = ElementLocation(pEl->mType);
+			int lLoc = ElementLocation((eVertexBufferElement)el.kind);
 			if(lLoc < 0) continue;
-			bool bColor = pEl->mType == eVertexBufferElement_Color0 || pEl->mType == eVertexBufferElement_Color1;
-			vStreams[lLoc] = { mBuffer, mvElementOffset[pEl->mType], (uint32_t)(pEl->mlElementNum * GetVertexFormatByteSize(pEl->mFormat)),
-							   ElementFormat(pEl->mFormat, pEl->mlElementNum, bColor) };
+			bool bColor = el.kind == eVertexBufferElement_Color0 || el.kind == eVertexBufferElement_Color1;
+			vStreams[lLoc] = { mBuffer, mvElementOffset[el.kind], (uint32_t)(el.elementNum * GetVertexFormatByteSize((eVertexBufferElementFormat)el.format)),
+							   ElementFormat((eVertexBufferElementFormat)el.format, el.elementNum, bColor) };
 		}
 
 		// Primitives Vulkan lacks become triangle/line lists
@@ -683,7 +685,7 @@ namespace hpl {
 
 		VkBuffer ib = mBuffer;
 		VkDeviceSize ibOffset = mlIndexOffset;
-		if(pIdx != mvIndexArray.data())
+		if(pIdx != GetIndices())
 			memcpy(mpGfx->AllocTransient(lCount * 4, ib, ibOffset, 4), pIdx, lCount * 4);
 		mpGfx->Draw(vStreams, prim, lCount, ib, ibOffset);
 	}
@@ -692,7 +694,7 @@ namespace hpl {
 	{
 		eVertexBufferDrawType drawType = aDrawType == eVertexBufferDrawType_LastEnum ? mDrawType : aDrawType;
 		int lSize = mlElementNum < 0 ? GetIndexNum() : mlElementNum;
-		DrawRange(mvIndexArray.data(), lSize, drawType);
+		DrawRange(GetIndices(), lSize, drawType);
 	}
 
 	void cVulkanVertexBuffer::DrawIndices(unsigned int *apIndices, int alCount, eVertexBufferDrawType aDrawType)

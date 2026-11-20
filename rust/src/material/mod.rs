@@ -14,6 +14,8 @@ mod decal;
 mod ffi;
 mod h7;
 mod h7_ffi;
+mod mm;
+mod mm_ffi;
 mod probe;
 mod setup;
 mod solid;

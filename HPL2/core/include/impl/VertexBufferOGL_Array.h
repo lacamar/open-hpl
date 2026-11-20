@@ -29,26 +29,8 @@ namespace hpl {
 	public:
 		cVertexBufferOGL_Array(	iLowLevelGraphics* apLowLevelGraphics,
 								eVertexBufferDrawType aDrawType,eVertexBufferUsageType aUsageType,
-								int alReserveVtxSize,int alReserveIdxSize);
-		~cVertexBufferOGL_Array();
-
-		void UpdateData(tVertexElementFlag aTypes, bool abIndices);
-
-		void Draw(eVertexBufferDrawType aDrawType);
-		void DrawIndices(unsigned int *apIndices, int alCount,
-						eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum);
-
-		void Bind();
-		void UnBind();
-		
-		
-	private:
-		void CompileSpecific();
-		iVertexBufferOpenGL* CreateDataCopy(tVertexElementFlag aFlags, eVertexBufferDrawType aDrawType,
-											eVertexBufferUsageType aUsageType,
-											int alReserveVtxSize,int alReserveIdxSize);
-
-		void SetVertexStates();
+								int alReserveVtxSize,int alReserveIdxSize) :
+		iVertexBufferOpenGL(apLowLevelGraphics,eVertexBufferType_Software, aDrawType,aUsageType, alReserveVtxSize, alReserveIdxSize, false) {}
 	};
 
 };

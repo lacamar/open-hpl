@@ -29,7 +29,9 @@
 #include "resources/ResourceBase.h"
 
 #include "scene/Light.h"
-#include "graphics/RustGraphicsH6.h"
+#include "graphics/RustMeshMm.h"
+#include "graphics/SubMesh.h"
+#include "graphics/Animation.h"
 
 namespace hpl {
 
@@ -74,44 +76,54 @@ namespace hpl {
 	friend class cSubMesh;
 	friend class cMeshEntity;
 	public:
-		cMesh(const tString& asName, const tWString& asFullPath, cMaterialManager* apMaterialManager, cAnimationManager * apAnimationManager);
+		cMesh(const tString& asName, const tWString& asFullPath, cMaterialManager* apMaterialManager, cAnimationManager * apAnimationManager) :
+			iResourceBase(asName, asFullPath,0),
+			mpRs(ohpl_mm_mesh_new(OhplMmHostGet(), this, apMaterialManager)),
+			mpMaterialManager(apMaterialManager), mpAnimationManager(apAnimationManager) {}
 		~cMesh();
 
-		bool CreateFromFile(const tString asFile);
+		bool CreateFromFile(const tString asFile){ return false; }
 
-		cSubMesh* CreateSubMesh(const tString &asName);
+		cSubMesh* CreateSubMesh(const tString &asName)
+		{
+			cSubMesh* pSubMesh = hplNew( cSubMesh, (asName,mpMaterialManager) );
+			ohpl_mm_mesh_add_sub(mpRs, pSubMesh, pSubMesh->mpS, asName.data(), asName.size());
+			return pSubMesh;
+		}
+		cSubMesh* GetSubMesh(unsigned int alIdx){ return static_cast<cSubMesh*>(ohpl_mm_mesh_sub(mpRs, alIdx)); }
+		int GetSubMeshIndex(const tString &asName){ return ohpl_mm_mesh_sub_index(mpRs, asName.data(), asName.size()); }
+		cSubMesh* GetSubMeshName(const tString &asName){ return static_cast<cSubMesh*>(ohpl_mm_mesh_sub_by_name(mpRs, asName.data(), asName.size())); }
+		int GetSubMeshNum(){ return ohpl_mm_mesh_sub_num(mpRs); }
 
-		cSubMesh* GetSubMesh(unsigned int alIdx);
-		int GetSubMeshIndex(const tString &asName);
-		cSubMesh* GetSubMeshName(const tString &asName);
-		int GetSubMeshNum();
+		int GetTriangleCount(){ return ohpl_mm_mesh_triangle_count(mpRs); }
 
-		int GetTriangleCount();
+		void SetSkeleton(cSkeleton* apSkeleton){ ohpl_mm_mesh_set_skeleton(mpRs, apSkeleton); }
+		cSkeleton* GetSkeleton(){ return static_cast<cSkeleton*>(ohpl_mm_mesh_skeleton(mpRs)); }
 
-		void SetSkeleton(cSkeleton* apSkeleton);
-		cSkeleton* GetSkeleton();
+		void AddAnimation(cAnimation *apAnimation)
+		{
+			const tString sAnimName = apAnimation->GetName();
+			ohpl_mm_mesh_add_animation(mpRs, apAnimation, sAnimName.data(), sAnimName.size());
+		}
+		cAnimation* GetAnimation(int alIndex){ return static_cast<cAnimation*>(ohpl_mm_mesh_animation(mpRs, alIndex)); }
+		cAnimation* GetAnimationFromName(const tString& asName)
+		{
+			int lIdx = GetAnimationIndex(asName);
+			return lIdx >= 0 ? GetAnimation(lIdx) : NULL;
+		}
+		int GetAnimationIndex(const tString& asName){ return ohpl_mm_mesh_animation_index(mpRs, asName.data(), asName.size()); }
+		void ClearAnimations(bool abDeleteAll){ ohpl_mm_mesh_clear_animations(mpRs, abDeleteAll); }
+		int GetAnimationNum(){ return ohpl_mm_mesh_animation_num(mpRs); }
 
-		void AddAnimation(cAnimation *apAnimation);
-
-		cAnimation* GetAnimation(int alIndex);
-		cAnimation* GetAnimationFromName(const tString& asName);
-        int GetAnimationIndex(const tString& asName);
-
-		void ClearAnimations(bool abDeleteAll);
-
-		int GetAnimationNum();
-
-		void CompileBonesAndSubMeshes();
-
-		float GetBoneBoundingRadius(int alIdx){ return mvBoneBoundingRadii[alIdx];}
+		void CompileBonesAndSubMeshes(){ ohpl_mm_mesh_compile_bones(mpRs); }
+		float GetBoneBoundingRadius(int alIdx){ return ohpl_mm_mesh_radius(mpRs, alIdx);}
 
 		//Node
-		cNode3D* GetRootNode();
-		void AddNode(cNode3D* apNode);
-		int GetNodeNum();
-		cNode3D* GetNode(int alIdx);
-		cNode3D* GetNodeByName(const tString &asName);
-
+		cNode3D* GetRootNode(){ return static_cast<cNode3D*>(ohpl_mm_mesh_root(mpRs)); }
+		void AddNode(cNode3D* apNode){ ohpl_mm_mesh_add_node(mpRs, apNode); }
+		int GetNodeNum(){ return ohpl_mm_mesh_node_num(mpRs); }
+		cNode3D* GetNode(int alIdx){ return static_cast<cNode3D*>(ohpl_mm_mesh_node(mpRs, alIdx)); }
+		cNode3D* GetNodeByName(const tString &asName){ return static_cast<cNode3D*>(ohpl_mm_mesh_node_by_name(mpRs, asName.data(), asName.size())); }
 
 		//Resources implementation
 		bool Reload(){ return false;}
@@ -119,20 +131,9 @@ namespace hpl {
 		void Destroy(){}
 
 	private:
+		OhplMmMesh* mpRs;
 		cMaterialManager* mpMaterialManager;
 		cAnimationManager * mpAnimationManager;
-
-		OhplH6Mesh* mpRs;
-		tSubMeshVec mvSubMeshes;
-
-		cSkeleton *mpSkeleton;
-
-		tAnimationVec mvAnimations;
-
-		tFloatVec mvBoneBoundingRadii;
-
-		cNode3D *mpRootNode;
-        tNode3DVec mvNodes;
 	};
 
 };

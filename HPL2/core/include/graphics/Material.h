@@ -25,6 +25,8 @@
 #include "graphics/GraphicsTypes.h"
 #include "resources/ResourceBase.h"
 #include "graphics/RustMaterialH7.h"
+#include "graphics/RustMeshMm.h"
+#include <cstddef>
 
 namespace hpl {
 
@@ -63,163 +65,149 @@ namespace hpl {
 
 	//---------------------------------------------------
 	
+	// Plain cMaterial state, owned and laid out by rust/src/material/h7.rs (MatState); read in place.
+	struct OhplH7Mat
+	{
+		iMaterialType *mpType;
+		iMaterialVars *mpVars;
+		cResources *mpResources;
+		iGpuProgram *mvPrograms[2][eMaterialRenderMode_LastEnum];
+		iTexture *mvTextures[eMaterialTexture_LastEnum];
+		iTexture *mvTextureInUnit[eMaterialRenderMode_LastEnum][kMaxTextureUnits];
+		const cMaterialUvAnimation *mpUvAnimations;
+		cMatrixf m_mtxUV;
+		cVector2l mvUVSubDivisions;
+		float mfMaxReflectionDistance;
+		int mlDecalSortOrder;
+		int mlRenderFrameCount;
+		tFlag mlCompiledWorldFog;
+		int mBlendMode;
+		int mAlphaMode;
+		int mlUvAnimationNum;
+		bool mbHasSpecificSettings[eMaterialRenderMode_LastEnum];
+		bool mbHasObjectSpecificsSettings[eMaterialRenderMode_LastEnum];
+		bool mbDepthTest, mbHasUvAnimation, mbAutoDestroyTextures, mbForceFullScaleTextures;
+		bool mbHasRefraction, mbUseRefractionEdgeCheck, mbHasWorldReflection, mbWorldReflectionOcclusionTest;
+		bool mbHasTranslucentIllumination, mbLargeTransperantSurface, mbAffectedByDepthOfField, mbAffectedByFog;
+		bool mbUseAlphaDissolveFilter;
+	};
+
+	static_assert(offsetof(OhplH7Mat, m_mtxUV) == 1320 && offsetof(OhplH7Mat, mlUvAnimationNum) == 1416 && offsetof(OhplH7Mat, mbUseAlphaDissolveFilter) == 1446, "OhplH7Mat layout");
+
+	//---------------------------------------------------
+
 	class cMaterial : public iResourceBase 
 	{
 	friend class iMaterialType;
 	public:
-		cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType);
+		cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType) :
+			iResourceBase(asName, asFullPath, 0),
+			mpRs(ohpl_mm_mat_new(OhplMmHostGet(), this, apType, apResources)),
+			mlCompiledWorldFog(mpRs->mlCompiledWorldFog) {}
 		virtual ~cMaterial();
 
-		void SetType(iMaterialType* apType);
-		iMaterialType * GetType(){ return mpType; }
+		void SetType(iMaterialType* apType){ ohpl_mm_mat_set_type(mpRs, apType); }
+		iMaterialType * GetType(){ return mpRs->mpType; }
 
-		void Compile();
-		void CompileTextureLookup();
+		void Compile(){ ohpl_mm_mat_compile(mpRs); }
+		void CompileTextureLookup(){ ohpl_mm_mat_compile_texture_lookup(mpRs); }
 
-		void SetTexture(eMaterialTexture aType, iTexture *apTexture);
-		iTexture *GetTexture(eMaterialTexture aType);
+		void SetTexture(eMaterialTexture aType, iTexture *apTexture){ mpRs->mvTextures[aType] = apTexture; }
+		iTexture *GetTexture(eMaterialTexture aType){ return mpRs->mvTextures[aType]; }
 
-		void SetVars(iMaterialVars *apVars){ mpVars = apVars;}
-		iMaterialVars* GetVars(){ return mpVars;}
-		cResourceVarsObject* GetVarsObject();
-		void LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject);
+		void SetVars(iMaterialVars *apVars){ mpRs->mpVars = apVars;}
+		iMaterialVars* GetVars(){ return mpRs->mpVars;}
+		cResourceVarsObject* GetVarsObject(){ return (cResourceVarsObject*)ohpl_mm_mat_vars_object(mpRs); }
+		void LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject){ ohpl_mm_mat_load_vars(mpRs, apVarsObject); }
 
-		void SetAutoDestroyTextures(bool abX){ mbAutoDestroyTextures = abX;}
+		void SetAutoDestroyTextures(bool abX){ mpRs->mbAutoDestroyTextures = abX;}
 
-		void SetBlendMode(eMaterialBlendMode aBlendMode);
-		void SetAlphaMode(eMaterialAlphaMode aAlphaMode);
-		void SetDepthTest(bool abDepthTest);
+		void SetBlendMode(eMaterialBlendMode aBlendMode){ ohpl_h7_mat_set_blend(mpRs, aBlendMode); }
+		void SetAlphaMode(eMaterialAlphaMode aAlphaMode){ ohpl_h7_mat_set_alpha(mpRs, aAlphaMode); }
+		void SetDepthTest(bool abDepthTest){ ohpl_h7_mat_set_depth_test(mpRs, abDepthTest); }
 
-		bool HasRefraction(){ return mbHasRefraction; }
-		bool UseRefractionEdgeCheck(){ return mbUseRefractionEdgeCheck;}
-		void SetHasRefraction(bool abX){ mbHasRefraction = abX; }
-		void SetUseRefractionEdgeCheck(bool abX){ mbUseRefractionEdgeCheck = abX;}
-		
-		bool HasWorldReflection(){ return mbHasWorldReflection; }
-		void SetHasWorldReflection(bool abX){ mbHasWorldReflection = abX; }
-		void  SetWorldReflectionOcclusionTest(bool abX){ mbWorldReflectionOcclusionTest=abX;}
-		void SetMaxReflectionDistance(float afX){ mfMaxReflectionDistance = afX;}
-		bool  GetWorldReflectionOcclusionTest(){ return mbWorldReflectionOcclusionTest;}
-		float GetMaxReflectionDistance(){ return mfMaxReflectionDistance;}
+		bool HasRefraction(){ return mpRs->mbHasRefraction; }
+		bool UseRefractionEdgeCheck(){ return mpRs->mbUseRefractionEdgeCheck;}
+		void SetHasRefraction(bool abX){ mpRs->mbHasRefraction = abX; }
+		void SetUseRefractionEdgeCheck(bool abX){ mpRs->mbUseRefractionEdgeCheck = abX;}
 
-		void SetHasTranslucentIllumination(bool abX){ mbHasTranslucentIllumination = abX;}
-		bool HasTranslucentIllumination(){ return mbHasTranslucentIllumination;}
+		bool HasWorldReflection(){ return mpRs->mbHasWorldReflection; }
+		void SetHasWorldReflection(bool abX){ mpRs->mbHasWorldReflection = abX; }
+		void SetWorldReflectionOcclusionTest(bool abX){ mpRs->mbWorldReflectionOcclusionTest=abX;}
+		void SetMaxReflectionDistance(float afX){ mpRs->mfMaxReflectionDistance = afX;}
+		bool GetWorldReflectionOcclusionTest(){ return mpRs->mbWorldReflectionOcclusionTest;}
+		float GetMaxReflectionDistance(){ return mpRs->mfMaxReflectionDistance;}
 
-		void SetLargeTransperantSurface(bool abX){ mbLargeTransperantSurface = abX;}
-		bool GetLargeTransperantSurface(){ return mbLargeTransperantSurface;}
-		void SetAffectedByDepthOfField(bool abX){ mbAffectedByDepthOfField = abX;}
-		bool GetAffectedByDepthOfField(){ return mbAffectedByDepthOfField;}
+		void SetHasTranslucentIllumination(bool abX){ mpRs->mbHasTranslucentIllumination = abX;}
+		bool HasTranslucentIllumination(){ return mpRs->mbHasTranslucentIllumination;}
 
-		bool GetUseAlphaDissolveFilter(){ return mbUseAlphaDissolveFilter;}
-		void SetUseAlphaDissolveFilter(bool abX){ mbUseAlphaDissolveFilter = abX;}
+		void SetLargeTransperantSurface(bool abX){ mpRs->mbLargeTransperantSurface = abX;}
+		bool GetLargeTransperantSurface(){ return mpRs->mbLargeTransperantSurface;}
 
-		void SetAffectedByFog(bool abX){ mbAffectedByFog = abX;}
-		bool GetAffectedByFog(){ return mbAffectedByFog;}
+		void SetAffectedByDepthOfField(bool abX){ mpRs->mbAffectedByDepthOfField = abX;}
+		bool GetAffectedByDepthOfField(){ return mpRs->mbAffectedByDepthOfField;}
 
-		void SetDecalSortOrder(int alX){ mlDecalSortOrder = alX;}
-		int GetDecalSortOrder(){ return mlDecalSortOrder;}
-		void SetUVSubDivisions(const cVector2l& avX){ mvUVSubDivisions = avX;}
-		const cVector2l& GetUVSubDivisions(){ return mvUVSubDivisions;}
-		
-		inline iTexture* GetTextureInUnit(eMaterialRenderMode aRenderMode, int alUnit) const { return mvTextureInUnit[aRenderMode][alUnit];}
-		inline iGpuProgram* GetProgram(char alSkeleton,eMaterialRenderMode aRenderMode) const { return mvPrograms[alSkeleton][aRenderMode];}
-		void SetProgram(char alSkeleton,eMaterialRenderMode aRenderMode, iGpuProgram *apProgram){ mvPrograms[alSkeleton][aRenderMode] = apProgram;}
+		bool GetUseAlphaDissolveFilter(){ return mpRs->mbUseAlphaDissolveFilter;}
+		void SetUseAlphaDissolveFilter(bool abX){ mpRs->mbUseAlphaDissolveFilter = abX;}
 
-		tFlag mlCompiledWorldFog = 0;
-		inline eMaterialBlendMode GetBlendMode() const { return mBlendMode; }
-		inline eMaterialAlphaMode GetAlphaMode() const { return mAlphaMode; }
-		inline bool GetDepthTest() const { return mbDepthTest; }
-		void SetForceFullScaleTextures(bool abX) { mbForceFullScaleTextures = abX; }
-		bool GetForceFullScaleTextures() const { return mbForceFullScaleTextures; }
+		void SetAffectedByFog(bool abX){ mpRs->mbAffectedByFog = abX;}
+		bool GetAffectedByFog(){ return mpRs->mbAffectedByFog;}
+
+		void SetDecalSortOrder(int alX){ mpRs->mlDecalSortOrder = alX;}
+		int GetDecalSortOrder(){ return mpRs->mlDecalSortOrder;}
+
+		void SetUVSubDivisions(const cVector2l& avX){ mpRs->mvUVSubDivisions = avX;}
+		const cVector2l& GetUVSubDivisions(){ return mpRs->mvUVSubDivisions;}
+
+		inline iTexture* GetTextureInUnit(eMaterialRenderMode aRenderMode, int alUnit) const { return mpRs->mvTextureInUnit[aRenderMode][alUnit];}
+		inline iGpuProgram* GetProgram(char alSkeleton,eMaterialRenderMode aRenderMode) const { return mpRs->mvPrograms[(int)alSkeleton][aRenderMode];}
+		void SetProgram(char alSkeleton,eMaterialRenderMode aRenderMode, iGpuProgram *apProgram){ mpRs->mvPrograms[(int)alSkeleton][aRenderMode] = apProgram;}
+
+		inline eMaterialBlendMode GetBlendMode() const { return (eMaterialBlendMode)mpRs->mBlendMode; }
+		inline eMaterialAlphaMode GetAlphaMode() const { return (eMaterialAlphaMode)mpRs->mAlphaMode; }
+		inline bool GetDepthTest() const { return mpRs->mbDepthTest; }
+
+		void SetForceFullScaleTextures(bool abX) { mpRs->mbForceFullScaleTextures = abX; }
+		bool GetForceFullScaleTextures() const { return mpRs->mbForceFullScaleTextures; }
 
 		void SetPhysicsMaterial(const tString & asPhysicsMaterial){ msPhysicsMaterial = asPhysicsMaterial;}
 		const tString& GetPhysicsMaterial(){ return msPhysicsMaterial;}
 
-		void UpdateBeforeRendering(float afTimeStep);
+		void UpdateBeforeRendering(float afTimeStep){ if(mpRs->mbHasUvAnimation) ohpl_h7_mat_update(mpRs, afTimeStep, NULL); }
 
-		inline int GetRenderFrameCount() const { return mlRenderFrameCount;}
-		inline void SetRenderFrameCount(const int alCount) { mlRenderFrameCount = alCount;}
+		inline int GetRenderFrameCount() const { return mpRs->mlRenderFrameCount;}
+		inline void SetRenderFrameCount(const int alCount) { mpRs->mlRenderFrameCount = alCount;}
 
-		inline bool GetHasSpecificSettings(eMaterialRenderMode aMode) const{ return mbHasSpecificSettings[aMode];}
-		void SetHasSpecificSettings(eMaterialRenderMode aMode,bool abX){ mbHasSpecificSettings[aMode] = abX;}
-
-		inline bool HasObjectSpecificsSettings(eMaterialRenderMode aMode)const { return  mbHasObjectSpecificsSettings[aMode];}
-		void SetHasObjectSpecificsSettings(eMaterialRenderMode aMode,bool abX){ mbHasObjectSpecificsSettings[aMode] = abX;}
+		inline bool GetHasSpecificSettings(eMaterialRenderMode aMode) const{ return mpRs->mbHasSpecificSettings[aMode];}
+		void SetHasSpecificSettings(eMaterialRenderMode aMode,bool abX){ mpRs->mbHasSpecificSettings[aMode] = abX;}
+		inline bool HasObjectSpecificsSettings(eMaterialRenderMode aMode)const { return mpRs->mbHasObjectSpecificsSettings[aMode];}
+		void SetHasObjectSpecificsSettings(eMaterialRenderMode aMode,bool abX){ mpRs->mbHasObjectSpecificsSettings[aMode] = abX;}
 
 		//Animation
-		void AddUvAnimation(eMaterialUvAnimation aType, float afSpeed, float afAmp, eMaterialAnimationAxis aAxis);
-		int GetUvAnimationNum(){ return (int)mvUvAnimations.size();}
-		cMaterialUvAnimation *GetUvAnimation(int alIdx){ return &mvUvAnimations[alIdx]; }
-		inline bool HasUvAnimation()const { return mbHasUvAnimation; }
-		inline const cMatrixf& GetUvMatrix() const { return m_mtxUV;}
-		void ClearUvAnimations();
+		void AddUvAnimation(eMaterialUvAnimation aType, float afSpeed, float afAmp, eMaterialAnimationAxis aAxis){ ohpl_h7_mat_add_uv_anim(mpRs, aType, afSpeed, afAmp, aAxis); }
+		int GetUvAnimationNum(){ return mpRs->mlUvAnimationNum;}
+		cMaterialUvAnimation *GetUvAnimation(int alIdx){ return const_cast<cMaterialUvAnimation*>(&mpRs->mpUvAnimations[alIdx]); }
+		inline bool HasUvAnimation()const { return mpRs->mbHasUvAnimation; }
+		inline const cMatrixf& GetUvMatrix() const { return mpRs->m_mtxUV;}
+		void ClearUvAnimations(){ ohpl_h7_mat_clear_uv_anims(mpRs, NULL); }
 
 		/**
 		 * This is used so that materials do not call type specific things after types have been destroyed!
 		 * Shall only be set by graphics!
 		 */
-		static void SetDestroyTypeSpecifics(bool abX){ mbDestroyTypeSpecifics = abX; }
-		static bool GetDestroyTypeSpecifics(){ return mbDestroyTypeSpecifics; }
+		static void SetDestroyTypeSpecifics(bool abX){ ohpl_mm_mat_set_destroy_type_specifics(abX); }
+		static bool GetDestroyTypeSpecifics(){ return ohpl_mm_mat_destroy_type_specifics(); }
 
 		//resources stuff.
 		bool Reload(){ return false;}
 		void Unload(){}
 		void Destroy(){}
-		
+
 	private:
-
-		cGraphics *mpGraphics;
-		cResources *mpResources;
-
-		iMaterialType *mpType;
-
 		OhplH7Mat *mpRs;
-
-		iMaterialVars *mpVars;
-
-		bool mbAutoDestroyTextures;
-
-		bool mbHasSpecificSettings[eMaterialRenderMode_LastEnum];
-		bool mbHasObjectSpecificsSettings[eMaterialRenderMode_LastEnum];
-
-		eMaterialBlendMode mBlendMode;
-		eMaterialAlphaMode mAlphaMode;
-		bool mbDepthTest;
-		bool mbForceFullScaleTextures = false;
-
-		bool mbHasRefraction;
-		int mlRefractionTextureUnit;
-		bool mbUseRefractionEdgeCheck;
-
-		bool mbHasWorldReflection;
-		int mlWorldReflectionTextureUnit;
-		bool mbWorldReflectionOcclusionTest;
-		float mfMaxReflectionDistance;
-
-		bool mbHasTranslucentIllumination;
-
-		bool mbLargeTransperantSurface;
-		bool mbAffectedByDepthOfField = true;
-
-		bool mbAffectedByFog;
-		int mlDecalSortOrder = 0;
-		cVector2l mvUVSubDivisions = cVector2l(1,1);
-
-		bool mbUseAlphaDissolveFilter;
-
-		iGpuProgram *mvPrograms[2][eMaterialRenderMode_LastEnum]; //[2] == If it has skeleton or not.
-		iTexture* mvTextures[eMaterialTexture_LastEnum];
-		iTexture* mvTextureInUnit[eMaterialRenderMode_LastEnum][kMaxTextureUnits];
-
-		std::vector<cMaterialUvAnimation> mvUvAnimations;
-		bool mbHasUvAnimation;
-		cMatrixf m_mtxUV;
-		
-		int mlRenderFrameCount;
-	
 		tString msPhysicsMaterial;
-
-		static bool mbDestroyTypeSpecifics;
+	public:
+		tFlag &mlCompiledWorldFog;
 	};
 
 	//---------------------------------------------------

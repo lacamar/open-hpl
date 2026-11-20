@@ -8,7 +8,9 @@ use core::ffi::{c_char, c_void};
 use super::fbo::{DSBS, Dsb, FBS, Fb};
 use super::prog::{self, PROGRAMS, Prog, SHADERS, Shader};
 use super::tex::{Face, Io, Res, TEXS, Tex};
-use super::vb::{self, Data, VBS, Vb};
+use super::vb::{self, Data};
+#[cfg(test)]
+use super::vb::{VBS, Vb};
 use crate::gl::fbo::Attach;
 use crate::types::{Vector2l, Vector3l};
 
@@ -231,27 +233,32 @@ pub unsafe extern "C" fn ohpl_gltex_props_end(h: u64, io: *const Io) {
     TEXS.with(h, |t| t.props_end(unsafe { &*io }));
 }
 
+#[cfg(test)]
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_glvb_new(vbo: bool) -> u64 {
     VBS.insert(Vb::new(vbo))
 }
 
+#[cfg(test)]
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_glvb_free(h: u64) {
     drop(VBS.remove(h));
 }
 
+#[cfg(test)]
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_glvb_add_element(h: u64, kind: i32, format: i32, num: i32, flag: u32) {
     VBS.with(h, |v| v.add_element(kind, format, num, flag));
 }
 
+#[cfg(test)]
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_glvb_needs_compile(h: u64, index_count: usize) -> bool {
     VBS.with(h, |v| v.needs_compile(index_count))
         .unwrap_or(false)
 }
 
+#[cfg(test)]
 /// # Safety
 /// `data` holds one entry per element, `indices` `index_count` entries.
 #[unsafe(no_mangle)]
@@ -268,6 +275,7 @@ pub unsafe extern "C" fn ohpl_glvb_compile(
     });
 }
 
+#[cfg(test)]
 /// # Safety
 /// As for `ohpl_glvb_compile`.
 #[unsafe(no_mangle)]
@@ -286,6 +294,7 @@ pub unsafe extern "C" fn ohpl_glvb_update(
     });
 }
 
+#[cfg(test)]
 /// # Safety
 /// `ptrs` is null or holds one array pointer per element.
 #[unsafe(no_mangle)]
@@ -294,11 +303,13 @@ pub unsafe extern "C" fn ohpl_glvb_bind(h: u64, ptrs: *const *const c_void) {
     VBS.with(h, |v| unsafe { v.bind(ptrs) });
 }
 
+#[cfg(test)]
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_glvb_unbind(h: u64) {
     VBS.with(h, |v| v.unbind());
 }
 
+#[cfg(test)]
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_glvb_draw(
     h: u64,

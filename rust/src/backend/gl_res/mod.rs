@@ -36,6 +36,8 @@ pub mod prog;
 mod tests;
 pub mod tex;
 pub mod vb;
+mod vbdata;
+pub mod vbdata_ffi;
 
 #[cfg(not(test))]
 static CAPS: core::sync::atomic::AtomicU8 = core::sync::atomic::AtomicU8::new(0);

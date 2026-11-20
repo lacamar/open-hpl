@@ -17,7 +17,7 @@ mod geom;
 mod libm;
 mod matrix;
 mod scalar;
-mod tangents;
+pub(crate) mod tangents;
 
 pub use crate::types::{Matrixf, Quaternion, Vector2f, Vector2l, Vector3f};
 pub(crate) use geom::expand_aabb;

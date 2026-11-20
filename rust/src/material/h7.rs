@@ -5,32 +5,104 @@
 use super::anim::{UvAnim, uv_matrix};
 use super::types::{Kind, alpha_mode, blend};
 use super::{VarDef, type_flags, used_textures, user_vars};
+use crate::graphics::mm::Host;
 use crate::math::IDENTITY;
 use crate::types::Matrixf;
 
-/// The part of `cMaterial` that is plain state.
+pub const MODES: usize = 7;
+pub const TEXTURES: usize = 35;
+pub const UNITS: usize = 16;
+
+type P = *mut core::ffi::c_void;
+
+/// `cMaterial` state. The leading fields are read in place by C++ (`OhplMmMat` in
+/// `graphics/RustMaterialH7.h`); the rest is private.
+#[repr(C)]
 pub struct MatState {
-    translucent: bool,
+    pub type_: P,
+    pub vars: P,
+    pub resources: P,
+    pub programs: [[P; MODES]; 2],
+    pub textures: [P; TEXTURES],
+    pub in_unit: [[P; UNITS]; MODES],
+    pub anim_ptr: *const UvAnim,
+    pub uv: Matrixf,
+    pub uv_sub: [i32; 2],
+    pub max_reflection_distance: f32,
+    pub decal_sort_order: i32,
+    pub render_frame_count: i32,
+    pub compiled_world_fog: u32,
     pub blend: i32,
     pub alpha: i32,
+    pub anim_num: i32,
+    pub has_specific: [bool; MODES],
+    pub has_object_specific: [bool; MODES],
     pub depth_test: bool,
-    anims: Vec<UvAnim>,
     pub has_uv: bool,
-    pub uv: Matrixf,
+    pub auto_destroy_textures: bool,
+    pub force_full_scale_textures: bool,
+    pub has_refraction: bool,
+    pub use_refraction_edge_check: bool,
+    pub has_world_reflection: bool,
+    pub world_reflection_occlusion_test: bool,
+    pub has_translucent_illumination: bool,
+    pub large_transperant_surface: bool,
+    pub affected_by_depth_of_field: bool,
+    pub affected_by_fog: bool,
+    pub use_alpha_dissolve_filter: bool,
+    translucent: bool,
+    anims: Vec<UvAnim>,
     time: f32,
+    pub(super) host: Option<&'static Host>,
+    pub(super) owner: P,
 }
+
+const _: () = {
+    assert!(core::mem::offset_of!(MatState, uv) == 1320);
+    assert!(core::mem::offset_of!(MatState, anim_num) == 1416);
+    assert!(core::mem::offset_of!(MatState, use_alpha_dissolve_filter) == 1446);
+};
 
 impl MatState {
     pub fn new(translucent: bool) -> Self {
+        let null = core::ptr::null_mut();
         Self {
-            translucent,
+            type_: null,
+            vars: null,
+            resources: null,
+            programs: [[null; MODES]; 2],
+            textures: [null; TEXTURES],
+            in_unit: [[null; UNITS]; MODES],
+            anim_ptr: core::ptr::null(),
+            uv: IDENTITY,
+            uv_sub: [1, 1],
+            max_reflection_distance: 0.0,
+            decal_sort_order: 0,
+            render_frame_count: -1,
+            compiled_world_fog: 0,
             blend: if translucent { blend::ADD } else { blend::NONE },
             alpha: alpha_mode::SOLID,
+            anim_num: 0,
+            has_specific: [false; MODES],
+            has_object_specific: [false; MODES],
             depth_test: true,
-            anims: Vec::new(),
             has_uv: false,
-            uv: IDENTITY,
+            auto_destroy_textures: true,
+            force_full_scale_textures: false,
+            has_refraction: false,
+            use_refraction_edge_check: false,
+            has_world_reflection: false,
+            world_reflection_occlusion_test: true,
+            has_translucent_illumination: false,
+            large_transperant_surface: false,
+            affected_by_depth_of_field: true,
+            affected_by_fog: true,
+            use_alpha_dissolve_filter: false,
+            translucent,
+            anims: Vec::new(),
             time: 0.0,
+            host: None,
+            owner: null,
         }
     }
 
@@ -58,11 +130,22 @@ impl MatState {
     pub fn add_anim(&mut self, a: UvAnim) {
         self.anims.push(a);
         self.has_uv = true;
+        self.sync_anims();
+    }
+
+    fn sync_anims(&mut self) {
+        self.anim_ptr = if self.anims.is_empty() {
+            core::ptr::null()
+        } else {
+            self.anims.as_ptr()
+        };
+        self.anim_num = i32::try_from(self.anims.len()).unwrap_or(i32::MAX);
     }
 
     /// The animation time is not reset.
     pub fn clear_anims(&mut self) {
         self.anims.clear();
+        self.sync_anims();
         self.has_uv = false;
         self.uv = IDENTITY;
     }
