@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.4.7
+Version:        1.4.8
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,11 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Fri Nov 20 2026 lacamar <lchlnm@pm.me> - 1.4.8-1
+- Material, mesh, submesh and vertex buffers Rust-owned
+- Bounding volume and frustum logic in Rust
+- Drop Node3D and list container C++
+
 * Fri Nov 20 2026 lacamar <lchlnm@pm.me> - 1.4.7-1
 - Build with AngelScript 2.39
 
