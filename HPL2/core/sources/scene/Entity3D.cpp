@@ -91,4 +91,39 @@ namespace hpl {
 	void iEntity3D::AddNodeChild(cNode3D *apNode){ ohpl_ent_add_node_child(OhplH10GetHost(), mpE, apNode->mpN);}
 	void iEntity3D::RemoveNodeChild(cNode3D *apNode){ ohpl_ent_remove_node_child(mpE, apNode->mpN);}
 	bool iEntity3D::IsNodeChild(cNode3D *apNode){ return ohpl_ent_is_node_child(mpE, apNode->mpN);}
+
+	cNode3D::cNode3D(const tString &asName, bool abAutoDeleteChildren)
+	{
+		msName = asName;
+		mpN = ohpl_node_new((uintptr_t)this, abAutoDeleteChildren);
+	}
+
+	cNode3D::~cNode3D()
+	{
+		ohpl_node_free(OhplH10GetHost(), mpN);
+	}
+
+	bool cNode3D::AddEntity(iEntity3D* apEntity){ return ohpl_node_add_entity(mpN, apEntity->mpE);}
+	bool cNode3D::RemoveEntity(iEntity3D* apEntity){ return ohpl_node_remove_entity(mpN, apEntity->mpE);}
+
+	cNode3DIterator cNode3D::GetChildIterator()
+	{
+		std::vector<cNode3D*> vItems;
+		for(size_t i=0, lCount = ohpl_node_child_count(mpN); i<lCount; ++i) vItems.push_back((cNode3D*)ohpl_node_child_at(mpN, i));
+		return cNode3DIterator(vItems);
+	}
+
+	cEntity3DIterator cNode3D::GetEntityIterator()
+	{
+		std::vector<iEntity3D*> vItems;
+		for(size_t i=0, lCount = ohpl_node_entity_count(mpN); i<lCount; ++i) vItems.push_back((iEntity3D*)ohpl_node_entity_at(mpN, i));
+		return cEntity3DIterator(vItems);
+	}
+
+	cNode3D* cNode3D::CreateChild(const tString &asName, bool abAutoDeleteChildren)
+	{
+		cNode3D *pNode = hplNew( cNode3D, (asName,abAutoDeleteChildren) );
+		ohpl_node_set_parent(pNode->mpN, mpN);
+		return pNode;
+	}
 }
