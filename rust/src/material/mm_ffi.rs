@@ -4,18 +4,18 @@ use core::sync::atomic::Ordering;
 
 use super::h7::MatState;
 use super::mm::DESTROY_TYPE_SPECIFICS;
+use super::mt::Mt;
 use crate::graphics::mm::Host;
 
 type P = *mut core::ffi::c_void;
 
-/// `host` stays valid for the process; `type_` is null or a live iMaterialType.
+/// `host` stays valid for the process; `type_` is null or a live `Mt`.
 ///
 /// # Safety
 /// `host` is a valid table.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_mm_mat_new(
     host: *const Host,
-    owner: P,
     type_: P,
     resources: P,
 ) -> *mut MatState {
@@ -24,10 +24,9 @@ pub unsafe extern "C" fn ohpl_mm_mat_new(
         return core::ptr::null_mut();
     };
     // SAFETY: `type_` is null or live.
-    let translucent = !type_.is_null() && unsafe { (host.type_translucent)(type_) };
+    let translucent = unsafe { type_.cast::<Mt>().as_ref() }.is_some_and(Mt::is_translucent);
     let mut m = MatState::new(translucent);
     m.host = Some(host);
-    m.owner = owner;
     m.resources = resources;
     m.set_type(type_);
     Box::into_raw(Box::new(m))
@@ -84,9 +83,9 @@ pub unsafe extern "C" fn ohpl_mm_mat_vars_object(m: *const MatState) -> P {
 /// # Safety
 /// `m` is live.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mm_mat_load_vars(m: *const MatState, obj: P) {
+pub unsafe extern "C" fn ohpl_mm_mat_load_vars(m: *mut MatState, obj: P) {
     // SAFETY: caller contract.
-    if let Some(m) = unsafe { m.as_ref() } {
+    if let Some(m) = unsafe { m.as_mut() } {
         m.load_vars(obj);
     }
 }

@@ -20,7 +20,7 @@
 #include "graphics/RendererDeferred.h"
 #include "graphics/RustRendererDeferred.h"
 #include "graphics/RustRendererH9.h"
-#include "graphics/MaterialType_BasicTranslucent.h"
+#include "graphics/MaterialType.h"
 
 #include "math/Math.h"
 

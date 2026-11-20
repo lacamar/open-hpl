@@ -30,7 +30,7 @@
 #include "graphics/RendererDeferred.h"
 #include "graphics/Graphics.h"
 #include "graphics/GraphicsTypes.h"
-#include "graphics/MaterialType_BasicTranslucent.h"
+#include "graphics/MaterialType.h"
 #include "graphics/Texture.h"
 #include "system/EngineDiagnostics.h"
 #include "impl/MeshLoaderCollada.h"

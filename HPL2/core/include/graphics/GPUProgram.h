@@ -33,15 +33,18 @@ namespace hpl {
 
 	//---------------------------------------------------
 
+	void OhplDestroyGpuShader(cResources *apResources, iGpuShader *apShader);
+
 	class iGpuProgram
 	{
 	public:
-		iGpuProgram(const tString& asName,eGpuProgramFormat aProgramFormat);
-		virtual ~iGpuProgram();
+		iGpuProgram(const tString& asName,eGpuProgramFormat aProgramFormat) :
+			msName(asName), mpResources(NULL), mlUserId(0), mProgramFormat(aProgramFormat), mbAutoDestroyShaders(true) { mpShader[0] = mpShader[1] = NULL; }
+		virtual ~iGpuProgram(){ if(mbAutoDestroyShaders && mpResources) { OhplDestroyGpuShader(mpResources, mpShader[0]); OhplDestroyGpuShader(mpResources, mpShader[1]); } }
 
 		const tString& GetName(){ return msName;}
 
-		void SetShader(eGpuShaderType aType, iGpuShader *apShader);
+		void SetShader(eGpuShaderType aType, iGpuShader *apShader){ mpShader[aType] = apShader; }
 		iGpuShader* GetShader(eGpuShaderType aType) { return mpShader[aType];}
 
 		void SetAutoDestroyShaders(bool abX){ mbAutoDestroyShaders = abX;}

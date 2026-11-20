@@ -1,9 +1,6 @@
 #include "graphics/Material.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
-#include "graphics/MaterialType.h"
-#include "graphics/MaterialType_BasicTranslucent.h"
-#include "graphics/GPUProgram.h"
 #include "graphics/Skeleton.h"
 #include "graphics/Bone.h"
 #include "graphics/Animation.h"
@@ -26,22 +23,12 @@ namespace hpl {
 
 	namespace {
 
-	iMaterialType *T(void *p){ return static_cast<iMaterialType*>(p); }
 	cMaterial *M(void *p){ return static_cast<cMaterial*>(p); }
 	iPhysicsWorld *W(void *p){ return static_cast<iPhysicsWorld*>(p); }
 
 	const OhplMmHost gHost = {
-		[](void *t){ return T(t)->IsTranslucent(); },
-		[](void *t) -> void* { return T(t)->CreateSpecificVariables(); },
 		[](void *v){ hplDelete(static_cast<iMaterialVars*>(v)); },
-		[](void *t, void *m, int mode, int skel) -> void* { return T(t)->GetGpuProgram(M(m), (eMaterialRenderMode)mode, (char)skel); },
-		[](void *t, void *m, int mode, void *prog, int skel){ T(t)->DestroyProgram(M(m), (eMaterialRenderMode)mode, static_cast<iGpuProgram*>(prog), (char)skel); },
-		[](void *t, void *m, int mode, int unit) -> void* { return T(t)->GetTextureForUnit(M(m), (eMaterialRenderMode)mode, unit); },
-		[](void *t, void *m){ T(t)->CompileMaterialSpecifics(M(m)); },
-		[]() -> unsigned { return cMaterialType_Translucent::GetWorldFog(); },
 		[](void *r, void *tex){ static_cast<cResources*>(r)->GetTextureManager()->Destroy(static_cast<iTexture*>(tex)); },
-		[](void *t, void *m) -> void* { cResourceVarsObject *o = hplNew(cResourceVarsObject,()); T(t)->GetVariableValues(M(m), o); return o; },
-		[](void *t, void *m, void *o){ T(t)->LoadVariables(M(m), static_cast<cResourceVarsObject*>(o)); },
 		[](void *mgr, void *m){ static_cast<cMaterialManager*>(mgr)->Destroy(M(m)); },
 		[](void *vb){ hplDelete(static_cast<iVertexBuffer*>(vb)); },
 		[](void *p, OhplMmVbView *o)

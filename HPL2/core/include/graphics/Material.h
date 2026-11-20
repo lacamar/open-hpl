@@ -102,7 +102,7 @@ namespace hpl {
 	public:
 		cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType) :
 			iResourceBase(asName, asFullPath, 0),
-			mpRs(ohpl_mm_mat_new(OhplMmHostGet(), this, apType, apResources)),
+			mpRs(ohpl_mm_mat_new(OhplMmHostGet(), apType, apResources)),
 			mlCompiledWorldFog(mpRs->mlCompiledWorldFog) {}
 		virtual ~cMaterial();
 

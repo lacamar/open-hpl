@@ -1,9 +1,9 @@
 //! Replays the C++ recordings under `tests/golden/H7` (no C++, no game data).
 
 use super::anim::UvAnim;
-use super::ffi::{ohpl_mat_compile, ohpl_mat_program, ohpl_mat_texture_unit};
+use super::ffi::vars_of;
 use super::h7::{MatState, PeState, material_type, material_types, post_effect_type};
-use super::types::{CompileOut, Globals, MatView, ProgSel, TexSel};
+use super::types::{Globals, MatView};
 use super::vars::VarDefault;
 use crate::math::IDENTITY;
 use crate::types::{Color, Vector2l};
@@ -281,26 +281,23 @@ fn census_setups_match_cpp() {
                 vars.as_ptr().cast()
             };
             let g = g.expect("G line first");
+            let k = super::Kind::from_i32(kind).expect("kind");
+            // SAFETY: `pod` is null or addresses the vars struct of `k` in `vars`.
+            let v = unsafe { vars_of(k, pod) };
             let mut out = String::new();
             for sk in 0..2 {
                 for m in 0..MODES as i32 {
-                    let mut s = ProgSel::NONE;
-                    // SAFETY: every pointer is valid for the call.
-                    unsafe { ohpl_mat_program(kind, &view, pod, &g, m, sk, &mut s) };
+                    let s = super::program(k, &view, v, &g, m, sk != 0);
                     let _ = writeln!(out, "prog {sk} {m}: {} {} {:x}", s.manager, s.mode, s.flags);
                 }
             }
             for m in 0..MODES as i32 {
                 for u in 0..16 {
-                    let mut s = TexSel::NONE;
-                    // SAFETY: every pointer is valid for the call.
-                    unsafe { ohpl_mat_texture_unit(kind, &view, pod, &g, m, u, &mut s) };
+                    let s = super::texture_unit(k, &view, v, &g, m, u);
                     let _ = writeln!(out, "tu {m} {u}: {} {}", s.kind, s.slot);
                 }
             }
-            let mut c = CompileOut::NONE;
-            // SAFETY: every pointer is valid for the call.
-            unsafe { ohpl_mat_compile(kind, &view, pod, &g, &mut c) };
+            let c = super::compile(k, &view, v, &g);
             let _ = writeln!(
                 out,
                 "compile {:x} {:x} {:x} {:x} {} {} {} {} {} {} {}",
