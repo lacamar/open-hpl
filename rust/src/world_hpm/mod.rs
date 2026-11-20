@@ -5,6 +5,8 @@ pub mod el;
 mod ffi;
 mod h4_ffi;
 pub mod h4_plan;
+mod ld_ffi;
+mod ld_terrain;
 pub mod parse;
 
 #[cfg(test)]

@@ -2,6 +2,7 @@
 #define HPL_WORLD_LOADER_HPM_BUILDER_H
 
 #include "resources/HpmBuilder.h"
+#include "resources/RustLdTerrain.h"
 
 #include "resources/ResourcesTypes.h"
 #include "resources/EngineFileLoading.h"
@@ -83,7 +84,7 @@ namespace hpl {
 
 	private:
 		void CreateTerrainDecals(const OhplHpmTerrain& aTerrain, const std::vector<cSubMeshEntity*>& avPatches);
-		void CreateTerrainUndergrowth(const OhplHpmTerrain& aTerrain, const std::vector<float>& avHeight, int alSize, float afUnit);
+		void CreateTerrainUndergrowth(const OhplHpmTerrain& aTerrain, const OhplLdTerrain* apTerrain, int alSize, float afUnit);
 		std::vector<cMaterial*> CreateTerrainBlendMaterials(const OhplHpmTerrain& aTerrain, const tWString& asBaseFile, float afSize);
 
 		void CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const cMatrixf& a_mtxTransform, const cVector3f& avScale);
