@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.4.5
+Version:        1.4.6
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,13 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Fri Nov 20 2026 lacamar <lchlnm@pm.me> - 1.4.6-1
+- Rust-own SubMeshEntity state
+- Rust-own renderable container lists
+- SOMA entity core, natives and drivers in Rust
+- SOMA terrain baking in Rust
+- Save handler flow in Rust
+
 * Thu Nov 19 2026 lacamar <lchlnm@pm.me> - 1.4.5-1
 - Complex GUI widgets in Rust
 - Physics, particle emitters, Entity3D/Node3D in Rust
