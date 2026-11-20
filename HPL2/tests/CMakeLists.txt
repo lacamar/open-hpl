@@ -112,3 +112,8 @@ target_link_options(PhysicsH15Tests PRIVATE
     "LINKER:--wrap=ohpl_phys_surface_create_impact_effect"
     "LINKER:--wrap=ohpl_phys_surface_update_roll_effect"
 )
+
+# BV/frustum differential (cBoundingVolume, cFrustum): rust/tests/golden/BV replayed by math::tests_bv.
+AddTestTarget(BvFrustumTests
+    BvFrustumTests.cpp
+)
