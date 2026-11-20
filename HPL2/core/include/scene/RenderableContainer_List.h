@@ -30,7 +30,7 @@ namespace hpl {
 	{
 	friend class cRenderableContainer_List;
 	public:
-		cRCNode_List();
+		cRCNode_List(){}
 		~cRCNode_List();
 
 	private:
@@ -41,17 +41,17 @@ namespace hpl {
 	class cRenderableContainer_List : public iRenderableContainer
 	{
 	public:
-		cRenderableContainer_List();
+		cRenderableContainer_List(){ mRoot.SetParent(NULL);}
 		~cRenderableContainer_List();
 
-		void Add(iRenderable *apRenderable);
-		void Remove(iRenderable *apRenderable);
+		void Add(iRenderable *apRenderable){ mRoot.mlstObjects.push_back(apRenderable);}
+		void Remove(iRenderable *apRenderable){ mRoot.mlstObjects.remove(apRenderable);}
 
-		iRenderableContainerNode* GetRoot();
+		iRenderableContainerNode* GetRoot(){ return &mRoot;}
 
-        void Compile();	
+		void Compile(){}
 
-		void RenderDebug(cRendererCallbackFunctions *apFunctions);
+		void RenderDebug(cRendererCallbackFunctions *apFunctions){}
 
 	private:
 		cRCNode_List mRoot;

@@ -22,6 +22,7 @@
 #include "system/LowLevelSystem.h"
 
 #include "graphics/Renderable.h"
+#include "scene/RenderableContainer_List.h"
 #include "graphics/OcclusionQuery.h"
 #include "math/Math.h"
 #include "math/BoundingVolume.h"
@@ -186,6 +187,9 @@ namespace hpl {
 	{
 		ohpl_bt_calculate_min_max(OhplContainerHost(), NULL, (uintptr_t)this);
 	}
+
+	cRCNode_List::~cRCNode_List(){}
+	cRenderableContainer_List::~cRenderableContainer_List(){}
 
 	//////////////////////////////////////////////////////////////////////////
 	// RENDERABLE CONTAINER
