@@ -30,6 +30,8 @@ git checkout -q master
 git merge -q --ff-only "$branch"
 git checkout -q "$branch"
 echo "pushing master and $branch" | tee "$log"
+# the pre-push hook runs longer than GitHub keeps an idle SSH connection
+export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh} -o ServerAliveInterval=30 -o ServerAliveCountMax=10"
 git push origin master "$branch" >> "$log" 2>&1
 echo "building on COPR" | tee -a "$log"
 if ! packaging/build-rpm.sh -S --copr lacamar/arm64-misc --copr-wait >> "$log" 2>&1; then
