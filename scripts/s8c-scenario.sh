@@ -22,7 +22,7 @@ LOG="$OUT.exec"
 rm -f "$LOG"
 cleanup() { $P stop > /dev/null 2>&1; }
 trap cleanup EXIT
-$P start --map "$MAP" > /dev/null 2>&1 || { echo "start failed" >&2; exit 1; }
+$P start --map "$MAP" > "$OUT.start" 2>&1 || { echo "start failed:" >&2; tail -5 "$OUT.start" >&2; exit 1; }
 # game helpers (map module) own the effects; raw natives only for FXAA, which the game never touches
 X() { $P exec --module "$MAP" "$1" >> "$LOG" 2>&1; }
 W() { $P wait "$1" > /dev/null 2>&1; }
