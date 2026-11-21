@@ -99,6 +99,7 @@ namespace hpl {
 		//////////////////////////////
 		//iEntity implementation
 		tString GetEntityType(){ return "cFogArea";}
+		OhplSLFog* Pod(){ return mpS;}
 
 		///////////////////////////////
 		//Renderable implementation:

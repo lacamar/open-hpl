@@ -210,7 +210,7 @@ fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
     v3(a.x + b.x, a.y + b.y, a.z + b.z)
 }
 
-fn rand_v3(min: Vector3f, max: Vector3f) -> Vector3f {
+pub(super) fn rand_v3(min: Vector3f, max: Vector3f) -> Vector3f {
     let x = rand_rectf(min.x, max.x);
     let y = rand_rectf(min.y, max.y);
     let z = rand_rectf(min.z, max.z);
