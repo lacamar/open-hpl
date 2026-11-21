@@ -86,6 +86,7 @@ namespace hpl {
 		mpPhysics = apPhysics;
 		mpResources = apResources;
 
+		static_assert(offsetof(cSurfaceData, mS) == 80, "rust/src/physics/cxx_surface.rs MS_OFFSET");
 		mS = ohpl_h15s_new(HostOp, reinterpret_cast<size_t>(this));
 	}
 
@@ -133,114 +134,9 @@ namespace hpl {
 		ohpl_phys_surface_update_roll_effect(OhplPhysHost(), &params, reinterpret_cast<size_t>(apBody));
 	}
 
-	void cSurfaceData::SetElasticity(float afElasticity)
-	{
-		ohpl_h15s_set_f32(mS, 0, afElasticity);
-	}
-
-	float cSurfaceData::GetElasticity() const
-	{
-		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(mS), 0);
-	}
-
-	void cSurfaceData::SetStaticFriction(float afElasticity)
-	{
-		ohpl_h15s_set_f32(mS, 1, afElasticity);
-	}
-
-	float cSurfaceData::GetStaticFriction() const
-	{
-		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(mS), 1);
-	}
-
-	void cSurfaceData::SetKineticFriction(float afElasticity)
-	{
-		ohpl_h15s_set_f32(mS, 2, afElasticity);
-	}
-
-	float cSurfaceData::GetKineticFriction() const
-	{
-		return ohpl_h15s_get_f32(const_cast<OhplSurfaceState*>(mS), 2);
-	}
-
-	void cSurfaceData::SetPriority(int alPriority)
-	{
-		ohpl_h15s_set_i32(mS, 0, alPriority);
-	}
-
-	int cSurfaceData::GetPriority() const
-	{
-		return ohpl_h15s_get_i32(mS, 0);
-	}
-
-	void cSurfaceData::SetFrictionCombMode(ePhysicsMaterialCombMode aMode)
-	{
-		ohpl_h15s_set_i32(mS, 1, aMode);
-	}
-
-	ePhysicsMaterialCombMode cSurfaceData::GetFrictionCombMode() const
-	{
-		return (ePhysicsMaterialCombMode)ohpl_h15s_get_i32(mS, 1);
-	}
-
-	void cSurfaceData::SetElasticityCombMode(ePhysicsMaterialCombMode aMode)
-	{
-		ohpl_h15s_set_i32(mS, 2, aMode);
-	}
-
-	ePhysicsMaterialCombMode cSurfaceData::GetElasticityCombMode() const
-	{
-		return (ePhysicsMaterialCombMode)ohpl_h15s_get_i32(mS, 2);
-	}
-
-	void cSurfaceData::PreloadData()
-	{
-		ohpl_h15s_preload(mS->rs);
-	}
-
 	iPhysicsMaterial* cSurfaceData::ToMaterial(iPhysicsWorld *apWorld)
 	{
 		return reinterpret_cast<iPhysicsMaterial*>(ohpl_h15s_to_material(mS->rs, mS, msName.c_str(), msName.size(), reinterpret_cast<size_t>(apWorld)));
-	}
-
-	cSurfaceImpactData* cSurfaceData::CreateImpactData(float afMinSpeed)
-	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_create_impact(mS->rs, afMinSpeed, false));
-	}
-
-	cSurfaceImpactData* cSurfaceData::GetImpactData(int alIdx)
-	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_at(mS->rs, false, alIdx));
-	}
-
-	int cSurfaceData::GetImpactDataNum()
-	{
-		return ohpl_h15s_impact_num(mS->rs, false);
-	}
-
-	cSurfaceImpactData* cSurfaceData::GetImpactDataFromSpeed(float afSpeed)
-	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_from_speed(mS->rs, false, afSpeed));
-	}
-
-	cSurfaceImpactData* cSurfaceData::CreateHitData(float afMinSpeed)
-	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_create_impact(mS->rs, afMinSpeed, true));
-	}
-
-	cSurfaceImpactData* cSurfaceData::GetHitData(int alIdx)
-	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_at(mS->rs, true, alIdx));
-	}
-
-	int cSurfaceData::GetHitDataNum()
-	{
-		return ohpl_h15s_impact_num(mS->rs, true);
-	}
-
-	cSurfaceImpactData* cSurfaceData::GetHitDataFromSpeed(float afSpeed)
-	{
-		return reinterpret_cast<cSurfaceImpactData*>(ohpl_h15s_impact_from_speed(mS->rs, true, afSpeed));
 	}
 
 	// PRIVATE METHODS

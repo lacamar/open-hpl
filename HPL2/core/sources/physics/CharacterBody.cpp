@@ -133,6 +133,7 @@ namespace hpl {
 
 	iCharacterBody::iCharacterBody(const tString &asName, iPhysicsWorld *apWorld, const cVector3f avSize)
 	{
+		static_assert(offsetof(iCharacterBody, mS) == 8 && offsetof(iCharacterBody, mE) == 16, "rust/src/physics/cxx_char.rs offsets");
 		mpAux = ohpl_h14_aux_new();
 
 		//Set up main properties
@@ -191,11 +192,6 @@ namespace hpl {
 	}
 
 	// PUBLIC METHODS
-
-	void iCharacterBody::SetMass(float afMass)
-	{
-		mS->mass = afMass;
-	}
 
 	void iCharacterBody::SetActive(bool abX)
 	{
@@ -263,30 +259,6 @@ namespace hpl {
 		mS->size.z = mpCurrentShape->GetRadius() * 2;
 	}
 
-	float iCharacterBody::GetMaxPositiveMoveSpeed(eCharDir aDir)
-	{
-		return mS->maxPosMoveSpeed[aDir];
-	}
-	float iCharacterBody::GetMaxNegativeMoveSpeed(eCharDir aDir)
-	{
-		return mS->maxNegMoveSpeed[aDir];
-	}
-
-	float iCharacterBody::GetMoveSpeed(eCharDir aDir)
-	{
-		return mS->moveSpeed[aDir];
-	}
-
-	float iCharacterBody::GetMoveAcc(eCharDir aDir)
-	{
-		return mS->moveAcc[aDir];
-	}
-
-	float iCharacterBody::GetMoveDeacc(eCharDir aDir)
-	{
-		return mS->moveDeacc[aDir];
-	}
-
 	cVector3f iCharacterBody::GetVelocity(float afFrameTime)
 	{
 		if(afFrameTime <=0) return 0;
@@ -321,11 +293,6 @@ namespace hpl {
 			ohpl_h14_clear_smoothing(mpAux);
 		}
 	}
-	const cVector3f& iCharacterBody::GetPosition()
-	{
-		return mS->position;
-	}
-
 	void iCharacterBody::SetYaw(float afX)
 	{
 		//Do not set rotation, if character is being aligned.
@@ -340,16 +307,6 @@ namespace hpl {
 		if(mE->connectedBody && mE->connAlignCharRotation) return;
 
 		mS->pitch = afX;
-	}
-
-	const cVector3f& iCharacterBody::GetRight()
-	{
-		return mS->right;
-	}
-
-	float iCharacterBody::GetMaxGravitySpeed()
-	{
-		return mS->maxGravitySpeed;
 	}
 
 	void iCharacterBody::SetCollideFlags(tFlag alX)
@@ -413,20 +370,6 @@ namespace hpl {
 			if(apNormalVec) *apNormalVec = mpRayCallback->mvNormal;
 		}
 		return bCollide;
-	}
-
-	iEntity3D* iCharacterBody::GetEntity()
-	{
-		return mE->entity;
-	}
-	const cMatrixf& iCharacterBody::GetEntityOffset()
-	{
-		return mE->entityOffset;
-	}
-
-	const cMatrixf& iCharacterBody::GetEntityPostOffset()
-	{
-		return mE->entityPostOffset;
 	}
 
 	cVector3f iCharacterBody::GetBodyConnectionPos()

@@ -45,26 +45,6 @@ namespace hpl {
 
 	// PUBLIC METHODS
 
-	void iPhysicsWorld::Simulate(float afTimeStep)
-	{
-		ohpl_ntw_simulate(mhRust, afTimeStep);
-	}
-
-	void iPhysicsWorld::SetMaxTimeStep(float afTimeStep)
-	{
-		ohpl_ntw_set_max_step(mhRust, afTimeStep);
-	}
-
-	float iPhysicsWorld::GetMaxTimeStep()
-	{
-		return ohpl_ntw_max_step(mhRust);
-	}
-
-	void iPhysicsWorld::SetWorldSize(const cVector3f &avMin,const cVector3f &avMax)
-	{
-		ohpl_ntw_set_size(mhRust, avMin.v, avMax.v);
-	}
-
 	cVector3f iPhysicsWorld::GetWorldSizeMin()
 	{
 		cVector3f v; ohpl_ntw_size(mhRust, false, &v); return v;
@@ -75,34 +55,9 @@ namespace hpl {
 		cVector3f v; ohpl_ntw_size(mhRust, true, &v); return v;
 	}
 
-	void iPhysicsWorld::SetGravity(const cVector3f& avGravity)
-	{
-		ohpl_ntw_set_gravity(mhRust, &avGravity);
-	}
-
 	cVector3f iPhysicsWorld::GetGravity()
 	{
 		cVector3f v; ohpl_ntw_gravity(mhRust, &v); return v;
-	}
-
-	void iPhysicsWorld::SetAccuracyLevel(ePhysicsAccuracy aAccuracy)
-	{
-		ohpl_ntw_set_accuracy(mhRust, (int32_t)aAccuracy);
-	}
-
-	ePhysicsAccuracy iPhysicsWorld::GetAccuracyLevel()
-	{
-		return (ePhysicsAccuracy)ohpl_ntw_accuracy(mhRust);
-	}
-
-	void iPhysicsWorld::SetNumberOfThreads(int alThreads)
-	{
-		ohpl_ntw_set_threads(mhRust, alThreads);
-	}
-
-	int iPhysicsWorld::GetNumberOfThreads()
-	{
-		return ohpl_ntw_threads(mhRust);
 	}
 
 	iCollideShape* iPhysicsWorld::CreateNullShape()
