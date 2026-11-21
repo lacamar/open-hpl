@@ -1107,101 +1107,25 @@ cLuxSavedGameMap* cLuxSavedGameMapCollection::GetSavedMap(const tString& asName,
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxSavedGameEntity)
-
-kSerializeVar(mlID, eSerializeType_Int32)
-
-kSerializeClassContainer(mvAttachedProps, cLuxProp_AttachedProp, eSerializeType_Class)
-kSerializeClassContainer(mvInteractConnections, iLuxInteractConnection_SaveData, eSerializeType_ClassPointer)
-kSerializeClassContainer(mvConnections, cLuxEntityConnection_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mlstCollideCallbacks, cLuxCollideCallback_SaveData, eSerializeType_Class)
-
-kEndSerialize()
+kSerializeRustClass(cLuxSavedGameEntity)
 
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxSavedGameEnemy)
-
-kSerializeVar(mlID, eSerializeType_Int32)
-kSerializeVar(mbActive, eSerializeType_Bool)
-
-kSerializeClassContainer(mvPatrolNodes, cLuxEnemyPatrolNode_SaveData, eSerializeType_Class)
-
-kEndSerialize()
+kSerializeRustClass(cLuxSavedGameEnemy)
 
 
-kBeginSerializeBase(cLuxSavedGameEntityFunc)
-
-kSerializeVar(mlID, eSerializeType_Int32)
-kSerializeVar(msFunc, eSerializeType_String)
-kSerializeVar(mbAutoRemove, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClass(cLuxSavedGameEntityFunc)
 
 //-----------------------------------------------------------------------
 
 
 
-kBeginSerializeBase(cLuxSavedGameMap)
-
-kSerializeVar(msName, eSerializeType_String)
-kSerializeVar(msDisplayNameEntry, eSerializeType_String)
-
-kSerializeVar(mlNumberOfQuests, eSerializeType_Int32)
-kSerializeVar(mlTotalCompletionAmount, eSerializeType_Int32)
-kSerializeVar(mlCurrentCompletionAmount, eSerializeType_Int32)
-
-kSerializeVar(mbSkyBoxActive, eSerializeType_Bool)
-kSerializeVar(msSkyboxTexture, eSerializeType_String)
-kSerializeVar(mSkyBoxColor, eSerializeType_Color)
-
-kSerializeVar(mbFogActive, eSerializeType_Bool)
-kSerializeVar(mbFogCulling, eSerializeType_Bool)
-kSerializeVar(mfFogStart, eSerializeType_Float32)
-kSerializeVar(mfFogEnd, eSerializeType_Float32)
-kSerializeVar(mfFogFalloffExp, eSerializeType_Float32)
-kSerializeVar(mFogColor, eSerializeType_Color)
-
-kSerializeClassContainer(mlstFullEntities, iLuxEntity_SaveData, eSerializeType_ClassPointer)
-
-kSerializeClassContainer(mlstCollideAndConnectEntities, cLuxSavedGameEntity, eSerializeType_ClassPointer)
-kSerializeClassContainer(mlstEnemies, cLuxSavedGameEnemy, eSerializeType_ClassPointer)
-
-kSerializeClassContainer(mlstTimers, cLuxEventTimer, eSerializeType_Class)
-
-kSerializeClassContainer(mlstVars, cLuxScriptVar, eSerializeType_Class)
-kSerializeClassContainer(mvUseItemCallbacks, cLuxUseItemCallback, eSerializeType_Class)
-
-kSerializeClassContainer(mlstPlayerCollideCallbacks, cLuxCollideCallback_SaveData, eSerializeType_Class)
-
-kSerializeClassContainer(mlstLights, cEngineLight_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mlstSounds, cEngineSound_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mlstPS, cEnginePS_SaveData, eSerializeType_Class)
-
-kSerializeClassContainer(mlstEntityFunc_Look, cLuxSavedGameEntityFunc, eSerializeType_Class)
-kSerializeClassContainer(mlstEntityFunc_Interact, cLuxSavedGameEntityFunc, eSerializeType_Class)
-kSerializeClassContainer(mlstEntityFunc_Callback, cLuxSavedGameEntityFunc, eSerializeType_Class)
-kSerializeClassContainer(mlstEntityFunc_StateChange, cLuxSavedGameEntityFunc, eSerializeType_Class)
-
-kSerializeVarContainer(mlstDisabledEntities, eSerializeType_Int32)
-kSerializeVarContainer(mlstLockedDoors, eSerializeType_Int32)
-kSerializeVarContainer(mlstLockedLevelDoors, eSerializeType_Int32)
-kSerializeVarContainer(mlstActiveItems, eSerializeType_Int32)
-kSerializeVarContainer(mlstOpenChests, eSerializeType_Int32)
-kSerializeVarContainer(mlstUnbrokenItemContainers, eSerializeType_Int32)
-kSerializeVarContainer(mlstBrokenContainersWithActiveItem, eSerializeType_Int32)
-kSerializeVarContainer(mlstUnlitLamps, eSerializeType_Int32)
-
-kEndSerialize()
+kSerializeRustClass(cLuxSavedGameMap)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxSavedGameMapCollection)
-
-kSerializeClassContainer(mlstMaps,cLuxSavedGameMap, eSerializeType_ClassPointer)
-
-kEndSerialize()
+kSerializeRustClass(cLuxSavedGameMapCollection)
 
 
 //-----------------------------------------------------------------------
