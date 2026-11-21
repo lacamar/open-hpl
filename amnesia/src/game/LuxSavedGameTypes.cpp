@@ -77,15 +77,7 @@ void cLuxLoadScreenHandler_SaveData::ToLoadScreenHandler(cLuxMap *apMap, cLuxLoa
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxLoadScreenHandler_SaveData)
-
-kSerializeVar(msLoadTextCat, eSerializeType_String)
-kSerializeVar(msLoadTextEntry, eSerializeType_String)
-kSerializeVar(msLoadTextImage, eSerializeType_String)
-kSerializeVar(mlTextRandomNum, eSerializeType_Int32)
-kSerializeVar(mlPrevTextNumBitFlags, eSerializeType_Int32)
-
-kEndSerialize()
+kSerializeRustClass(cLuxLoadScreenHandler_SaveData)
 
 //-----------------------------------------------------------------------
 
@@ -162,25 +154,11 @@ void cLuxInsanityHandler_SaveData::ToInsanityHandler(cLuxMap *apMap, cLuxInsanit
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxInsanityHandler_Event_SaveData)
+kSerializeRustClass(cLuxInsanityHandler_Event_SaveData)
 
-kSerializeVar(mbUsed, eSerializeType_Bool)
+kSerializeRustClass(cLuxInsanityHandler_Set_SaveData)
 
-kEndSerialize()
-
-kBeginSerializeBase(cLuxInsanityHandler_Set_SaveData)
-
-kSerializeVar(msName, eSerializeType_String)
-
-kEndSerialize()
-
-kBeginSerializeBase(cLuxInsanityHandler_SaveData)
-
-kSerializeVar(mfNewEventCount, eSerializeType_Float32)
-kSerializeClassContainer(mvEvents, cLuxInsanityHandler_Event_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvDisabledSets, cLuxInsanityHandler_Set_SaveData, eSerializeType_Class)
-
-kEndSerialize()
+kSerializeRustClass(cLuxInsanityHandler_SaveData)
 
 //////////////////////////////////////////////////////////////////////////
 // HINT HANDLER
@@ -220,18 +198,9 @@ void cLuxHintHandler_SaveData::ToHintHandler(cLuxMap *apMap, cLuxHintHandler *ap
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxHintHandler_Hint_SaveData)
+kSerializeRustClass(cLuxHintHandler_Hint_SaveData)
 
-kSerializeVar(msName, eSerializeType_String)
-
-kEndSerialize()
-
-kBeginSerializeBase(cLuxHintHandler_SaveData)
-
-kSerializeClassContainer(mlstHintsGiven, cLuxHintHandler_Hint_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mlstHintsBlocked, cLuxHintHandler_Hint_SaveData, eSerializeType_Class)
-
-kEndSerialize()
+kSerializeRustClass(cLuxHintHandler_SaveData)
 
 //-----------------------------------------------------------------------
 
@@ -266,11 +235,7 @@ void cLuxGlobalDataHandler_SaveData::ToGlobalDataHandler(cLuxMap *apMap, cLuxGlo
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxGlobalDataHandler_SaveData)
-
-kSerializeClassContainer(mlstVars, cLuxScriptVar,  eSerializeType_Class)
-
-kEndSerialize()
+kSerializeRustClass(cLuxGlobalDataHandler_SaveData)
 
 //-----------------------------------------------------------------------
 
@@ -498,46 +463,10 @@ void cLuxEffectHandler_SaveData::ToEffectHandler(cLuxMap *apMap, cLuxEffectHandl
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxEffectHandler_SoundMul_SaveData)
-kSerializeVar(mbActive, eSerializeType_Bool)
-kSerializeVar(mfVal, eSerializeType_Float32)
-kSerializeVar(mfDest, eSerializeType_Float32)
-kSerializeVar(mfSpeed, eSerializeType_Float32)
-kSerializeVar(mTypes, eSerializeType_Int32)
-kSerializeVar(mbDestroyAtDest, eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClass(cLuxEffectHandler_SoundMul_SaveData)
 
 
-kBeginSerializeBase(cLuxEffectHandler_SaveData)
-kSerializeVar(mbFade_Active, eSerializeType_Bool)
-kSerializeVar(mfFade_GoalAlpha, eSerializeType_Float32)
-kSerializeVar(mfFade_Alpha, eSerializeType_Float32)
-kSerializeVar(mfFade_FadeSpeed, eSerializeType_Float32)
-
-kSerializeVar(mbImageTrail_Active, eSerializeType_Bool)
-kSerializeVar(mfImageTrail_Amount, eSerializeType_Float32)
-kSerializeVar(mfImageTrail_AmountGoal, eSerializeType_Float32)
-kSerializeVar(mfImageTrail_FadeSpeed, eSerializeType_Float32)
-
-kSerializeVar(mbSepiaColor_Active, eSerializeType_Bool)
-kSerializeVar(mfSepiaColor_Amount, eSerializeType_Float32)
-kSerializeVar(mfSepiaColor_AmountGoal, eSerializeType_Float32)
-kSerializeVar(mfSepiaColor_FadeSpeed, eSerializeType_Float32)
-
-kSerializeVar(mbRadialBlur_Active, eSerializeType_Bool)
-kSerializeVar(mfRadialBlur_Size, eSerializeType_Float32)
-kSerializeVar(mfRadialBlur_BlurStartDist, eSerializeType_Float32)
-kSerializeVar(mfRadialBlur_SizeGoal, eSerializeType_Float32)
-kSerializeVar(mfRadialBlur_FadeSpeed, eSerializeType_Float32)
-
-kSerializeVar(msVoiceOverCallback, eSerializeType_String)
-kSerializeVar(mbVoiceActive, eSerializeType_Bool)
-kSerializeClassContainer(mvVoiceData, cLuxVoiceData, eSerializeType_Class)
-
-kSerializeClassContainer(mvGlobalSoundVolumeMul, cLuxEffectHandler_SoundMul_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvGlobalSoundSpeedMul, cLuxEffectHandler_SoundMul_SaveData, eSerializeType_Class)
-
-kEndSerialize()
+kSerializeRustClass(cLuxEffectHandler_SaveData)
 //-----------------------------------------------------------------------
 
 
@@ -704,33 +633,11 @@ void cLuxMusicHandler_SaveData::ToMusicHandler(cLuxMap *apMap, cLuxMusicHandler 
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxMusicHandler_Music_SaveData)
-kSerializeVar(msFile, eSerializeType_String)
-kSerializeVar(mfVolume, eSerializeType_Float32)
-kSerializeVar(mbLoop, eSerializeType_Bool)
-kSerializeVar(mbResume, eSerializeType_Bool)
-kSerializeVar(mbSpecialEffect, eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClass(cLuxMusicHandler_Music_SaveData)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxMusicHandler_SaveData)
-kSerializeVar(msCurrentMusic, eSerializeType_String)
-kSerializeVar(mfCurrentMusicVolume, eSerializeType_Float32)
-kSerializeVar(mfCurrentMusicVolumeAdd, eSerializeType_Float32)
-kSerializeVar(mfCurrentMusicMaxVolume, eSerializeType_Float32)
-kSerializeVar(mfCurrentMusicTime, eSerializeType_Float32)
-kSerializeVar(mbCurrentMusicLoop, eSerializeType_Bool)
-
-kSerializeVar(mlCurrentMaxPrio, eSerializeType_Int32)
-kSerializeVar(mbEnemyClosePlaying, eSerializeType_Bool)
-kSerializeVar(mbAttackPlaying, eSerializeType_Bool)
-kSerializeVar(mbSearchPlaying, eSerializeType_Bool)
-
-kSerializeClassContainer(mvMusic,  cLuxMusicHandler_Music_SaveData, eSerializeType_Class)
-kSerializeVarContainer(mvAttackerIDs,eSerializeType_Int32)
-kSerializeVarContainer(mvSearcherIDs,eSerializeType_Int32)
-kEndSerialize()
+kSerializeRustClass(cLuxMusicHandler_SaveData)
 
 //-----------------------------------------------------------------------
 
@@ -740,10 +647,7 @@ kEndSerialize()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxJournal_DiaryCont_SaveData)
-kSerializeVar(msType, eSerializeType_String)
-kSerializeClassContainer(mvDiaries, cLuxDiary, eSerializeType_Class)
-kEndSerialize()
+kSerializeRustClass(cLuxJournal_DiaryCont_SaveData)
 
 
 //-----------------------------------------------------------------------
@@ -857,14 +761,7 @@ void cLuxJournal_SaveData::ToJournal(cLuxMap *apMap, cLuxJournal *apJournal)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxJournal_SaveData)
-kSerializeVar(mlLastReadTextCat, eSerializeType_Int32)
-kSerializeVar(mlLastReadTextEntry, eSerializeType_Int32)
-kSerializeVar(mlLastReadTextType, eSerializeType_Int32)
-kSerializeClassContainer(mvNotes, cLuxNote, eSerializeType_Class)
-kSerializeClassContainer(mvDiaryConts, cLuxJournal_DiaryCont_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvQuestNotes, cLuxQuestNote, eSerializeType_Class)
-kEndSerialize()
+kSerializeRustClass(cLuxJournal_SaveData)
 
 //-----------------------------------------------------------------------
 
@@ -893,20 +790,7 @@ void cLuxInventory_Item_SaveData::FromItem(cLuxInventory_Item *apItem)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxInventory_Item_SaveData)
-kSerializeVar(msName, eSerializeType_String)
-kSerializeVar(mlType, eSerializeType_Int32)
-kSerializeVar(msSubType, eSerializeType_String)
-kSerializeVar(msVal, eSerializeType_String)
-kSerializeVar(msExtraVal, eSerializeType_String)
-
-kSerializeVar(msImageFile, eSerializeType_String)
-
-kSerializeVar(mfAmount, eSerializeType_Float32)
-kSerializeVar(mlCount, eSerializeType_Int32)
-kSerializeVar(msGameNameEntry, eSerializeType_String)
-kSerializeVar(msGameDescEntry, eSerializeType_String)
-kEndSerialize()
+kSerializeRustClass(cLuxInventory_Item_SaveData)
 
 //-----------------------------------------------------------------------
 
@@ -1030,12 +914,7 @@ void cLuxInventory_SaveData::ToInventory(cLuxMap *apMap, cLuxInventory *apInvent
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxInventory_SaveData)
-kSerializeVar(mbDisabled, eSerializeType_Bool)
-kSerializeVar(mlEquippedHandItem, eSerializeType_Int32)
-kSerializeClassContainer(mvItems, cLuxInventory_Item_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvCombineCallbacks, cLuxCombineItemsCallback, eSerializeType_Class)
-kEndSerialize()
+kSerializeRustClass(cLuxInventory_SaveData)
 
 //-----------------------------------------------------------------------
 
@@ -1138,18 +1017,7 @@ void cLuxPlayerHands_SaveData::ToPlayerHands(cLuxMap *apMap, cLuxPlayerHands *ap
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxPlayerHands_SaveData)
-kSerializeVar(mlState, eSerializeType_Int32)
-kSerializeVar(msCurrentHandObject, eSerializeType_String)
-kSerializeVar(msCurrentAnim, eSerializeType_String)
-kSerializeVar(mMesh, eSerializeType_Class)
-
-kSerializeVar(mfHandObjectChargeCount, eSerializeType_Float32)
-kSerializeVar(mlHandObjectState, eSerializeType_Int32)
-kSerializeVar(mbHandObjectAttackDown, eSerializeType_Bool)
-kSerializeVar(mbHandObjectInteractDown, eSerializeType_Bool)
-kSerializeVar(mfHandObjectAlpha, eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClass(cLuxPlayerHands_SaveData)
 
 //-----------------------------------------------------------------------
 
@@ -1599,134 +1467,10 @@ void cLuxPlayer_SaveData::ToPlayer(cLuxMap *apMap,cLuxPlayer *apPlayer)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxFlashbackData_SaveData)
-
-kSerializeVar(msFile,		eSerializeType_String)
-kSerializeVar(msCallback,	eSerializeType_String)
-
-kEndSerialize()
+kSerializeRustClass(cLuxFlashbackData_SaveData)
 
 
-kBeginSerializeBase(cLuxPlayer_SaveData)
-
-kSerializeVar(mlState, eSerializeType_Int32)
-kSerializeVar(mpStateData, eSerializeType_ClassPointer)
-
-kSerializeVar(mbActive, eSerializeType_Bool)
-
-kSerializeVar( mbUsesDragFootsteps, eSerializeType_Bool )
-
-kSerializeVar(mfHealth, eSerializeType_Float32)
-kSerializeVar(mfSanity, eSerializeType_Float32)
-kSerializeVar(mfLampOil, eSerializeType_Float32)
-kSerializeVar(mfTerror, eSerializeType_Float32)
-kSerializeVar(mlCoins, eSerializeType_Int32)
-kSerializeVar(mlTinderboxes, eSerializeType_Int32)
-
-kSerializeVar(mbIsInWater, eSerializeType_Bool)
-kSerializeVar(msWaterStepSound, eSerializeType_String)
-kSerializeVar(mfWaterSpeedMul, eSerializeType_Float32)
-
-kSerializeVar(mbJumpDisabled, eSerializeType_Bool)
-kSerializeVar(mbCrouchDisabled, eSerializeType_Bool)
-kSerializeVar(mbSanityDrainDisabled, eSerializeType_Bool)
-
-kSerializeVar(mbCrouching, eSerializeType_Bool)
-
-kSerializeVar(mfInteractionMoveSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfEventMoveSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfEventRunSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfScriptMoveSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfScriptRunSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfLookSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfHurtMoveSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfInsanityCollapseSpeedMul, eSerializeType_Float32)
-
-kSerializeVar(mfScriptJumpForceMul, eSerializeType_Float32)
-
-kSerializeVar(mfAspectMul, eSerializeType_Float32)
-kSerializeVar(mfFOVMul, eSerializeType_Float32)
-kSerializeVar(mfAspectMulGoal, eSerializeType_Float32)
-kSerializeVar(mfFOVMulGoal, eSerializeType_Float32)
-kSerializeVar(mfAspectMulSpeed, eSerializeType_Float32)
-kSerializeVar(mfFOVMulSpeed, eSerializeType_Float32)
-
-kSerializeVar(mfRoll, eSerializeType_Float32)
-kSerializeVar(mfRollGoal, eSerializeType_Float32)
-kSerializeVar(mfRollSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfRollMaxSpeed, eSerializeType_Float32)
-
-kSerializeVar(mbFadingPitch, eSerializeType_Bool )
-kSerializeVar(mfPitchGoal, eSerializeType_Float32 )
-kSerializeVar(mfPitchSpeedMul, eSerializeType_Float32 )
-kSerializeVar(mfPitchMaxSpeed, eSerializeType_Float32 )
-
-kSerializeVar(mvCamAnimPos, eSerializeType_Vector3f)
-kSerializeVar(mvCamAnimPosGoal, eSerializeType_Vector3f)
-kSerializeVar(mfCamAnimPosSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfCamAnimPosMaxSpeed, eSerializeType_Float32)
-
-kSerializeVar(mvHeadSpinSpeed, eSerializeType_Vector2f)
-
-kSerializeVar(mbNoFallDamage, eSerializeType_Bool)
-
-kSerializeVar(mbScriptShowFocusIconAndCrossHair, eSerializeType_Bool)
-
-kSerializeVar(mbLanternOn, eSerializeType_Bool)
-kSerializeVar(mbLanternDisabled, eSerializeType_Bool)
-
-kSerializeVar(msDeathHintCat, eSerializeType_String)
-kSerializeVar(msDeathHintEntry, eSerializeType_String)
-
-kSerializeVar(mbSpawnPSActive, eSerializeType_Bool)
-kSerializeVar(mbSpawnPSFile, eSerializeType_String)
-
-kSerializeVar(mbFlashbackActive, eSerializeType_Bool)
-kSerializeVar(mfFlashbackStartCount, eSerializeType_Float32)
-kSerializeVar(mfFlashDelay, eSerializeType_Float32)
-kSerializeVar(msFlashbackFile, eSerializeType_String)
-kSerializeVar(msFlashbackCallback, eSerializeType_String)
-kSerializeClassContainer(mlstFlashbackQueue,cLuxFlashbackData_SaveData, eSerializeType_Class)
-
-kSerializeVar(mbInsanityCollapse_Active, eSerializeType_Bool)
-kSerializeVar(mlInsanityCollapse_State, eSerializeType_Int32)
-kSerializeVar(mfInsanityCollapse_HeightAdd, eSerializeType_Float32)
-kSerializeVar(mfInsanityCollapse_Roll, eSerializeType_Float32)
-kSerializeVar(mfInsanityCollapse_T, eSerializeType_Float32)
-
-kSerializeVar(mfSanity_AtLowSanityCount, eSerializeType_Float32)
-
-kSerializeVar(mbLookAt_Active, eSerializeType_Bool)
-kSerializeVar(mvLookAt_TargetPos, eSerializeType_Vector3f)
-kSerializeVar(mvLookAt_CurrentSpeed, eSerializeType_Vector3f)
-kSerializeVar(mfLookAt_SpeedMul, eSerializeType_Float32)
-kSerializeVar(mfLookAt_MaxSpeed, eSerializeType_Float32)
-kSerializeVar(msLookAt_AtTargetCallback, eSerializeType_String)
-kSerializeVar(mfLookAt_DestFovMul, eSerializeType_Float32)
-kSerializeVar(mfLookAt_Fov, eSerializeType_Float32)
-kSerializeVar(mfLookAt_FovSpeed, eSerializeType_Float32)
-kSerializeVar(mfLookAt_FovMaxSpeed, eSerializeType_Float32)
-	
-kSerializeVar(mfDarkness_Active, eSerializeType_Bool)
-
-kSerializeVar(mCharBody, eSerializeType_Class)
-
-kSerializeVar(mvCameraAngles, eSerializeType_Vector3f)
-
-kSerializeVar(mfPitchMaxLimit, eSerializeType_Float32)
-kSerializeVar(mfPitchMinLimit, eSerializeType_Float32)
-kSerializeVar(mfYawMaxLimit, eSerializeType_Float32)
-kSerializeVar(mfYawMinLimit, eSerializeType_Float32)
-
-kSerializeClassContainer(mvHeadPosAdds, cLuxHeadPosAdd, eSerializeType_Class)
-
-kSerializeVarContainer(mvTerrorEnemyIDs, eSerializeType_Int32)
-
-kSerializeVar(mPlayerHands, eSerializeType_Class)
-
-kSerializeClassContainer(mlstCollideCallbacks, cLuxCollideCallback_SaveData, eSerializeType_Class)
-
-kEndSerialize()
+kSerializeRustClass(cLuxPlayer_SaveData)
 
 //-----------------------------------------------------------------------
 
@@ -1744,31 +1488,7 @@ cLuxSaveGame_SaveData::cLuxSaveGame_SaveData()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxSaveGame_SaveData)
-
-////////////////////////
-// HARDMODE
-
-kSerializeVar(mbHardmode, eSerializeType_Bool)
-
-////////////////////////
-
-kSerializeVar(msMapFolder, eSerializeType_String)
-kSerializeVar(mMap, eSerializeType_Class)
-kSerializeVar(mInventory, eSerializeType_Class)
-kSerializeVar(mJournal, eSerializeType_Class)
-kSerializeVar(mPlayer, eSerializeType_Class)
-kSerializeVar(mMusicHandler, eSerializeType_Class)
-kSerializeVar(mEffectHandler, eSerializeType_Class)
-kSerializeVar(mGlobalDataHandler, eSerializeType_Class)
-kSerializeVar(mHintHandler, eSerializeType_Class)
-kSerializeVar(mInsanityHandler, eSerializeType_Class)
-kSerializeVar(mLoadScreenHandler, eSerializeType_Class)
-
-kSerializeVar(mpSavedMaps, eSerializeType_ClassPointer)
-
-
-kEndSerialize()
+kSerializeRustClass(cLuxSaveGame_SaveData)
 
 //-----------------------------------------------------------------------
 

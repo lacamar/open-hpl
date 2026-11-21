@@ -69,6 +69,32 @@ pub unsafe extern "C" fn ohpl_h1_ser_defer(
 pub extern "C" fn ohpl_h1_ser_flush() {
     let pending = std::mem::take(&mut *PENDING.lock().unwrap_or_else(PoisonError::into_inner));
     for p in pending {
+        if p.fields == 0 {
+            let name = p.name as *const c_char;
+            // SAFETY: `ohpl_h1_ser_defer` contract: `name` is NUL-terminated.
+            let bytes = unsafe { std::ffi::CStr::from_ptr(name) }.to_bytes();
+            let table = crate::luxsave::a8_table::layout_table(bytes);
+            let size = crate::luxsave::layout::size(bytes);
+            let (Some(table), true) = (table, size == Some(p.size)) else {
+                eprintln!(
+                    "SV: class {} has no matching Rust layout",
+                    String::from_utf8_lossy(bytes)
+                );
+                continue;
+            };
+            // SAFETY: as below; the table ends in T_NULL and its strings are 'static.
+            unsafe {
+                ohpl_ser_register(
+                    name,
+                    p.parent as *const c_char,
+                    table.as_ptr(),
+                    table.len(),
+                    p.size,
+                    p.create,
+                );
+            }
+            continue;
+        }
         let mut table = Vec::new();
         let mut f = p.fields as *const CppMemberField;
         loop {

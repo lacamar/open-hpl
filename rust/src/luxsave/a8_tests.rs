@@ -101,3 +101,12 @@ fn ladder_leave_at_top_count_is_not_serialized() {
             .all(|f| f.name.to_bytes() != b"mfLeaveAtTopCount")
     );
 }
+
+#[test]
+fn every_mirrored_class_has_a_layout_table() {
+    for c in super::layout::CLASSES {
+        let t = super::a8_table::layout_table(c.as_bytes());
+        assert!(t.is_some(), "{c}");
+        assert!(super::layout::size(c.as_bytes()).is_some());
+    }
+}

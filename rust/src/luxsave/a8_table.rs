@@ -119,6 +119,38 @@ fn dump(text: &str) {
     }
 }
 
+/// Table of a class whose C++ side registers no member list: Rust field table plus the mirrored
+/// layout. `None` when the class or one of its fields has no mirror.
+pub fn layout_table(name: &[u8]) -> Option<Vec<OhplSerField>> {
+    let c = find(name)?;
+    let mut out = c
+        .fields
+        .iter()
+        .map(|f| {
+            let (offset, size) = super::layout::field(name, f.name.to_bytes())?;
+            Some(OhplSerField {
+                name: f.name.as_ptr(),
+                class_name: f.class.as_ptr(),
+                offset,
+                size,
+                ty: f.ty,
+                main: f.main,
+                array_size: f.array,
+            })
+        })
+        .collect::<Option<Vec<_>>>()?;
+    out.push(OhplSerField {
+        name: std::ptr::null(),
+        class_name: std::ptr::null(),
+        offset: 0,
+        size: 0,
+        ty: T_NULL,
+        main: 0,
+        array_size: 0,
+    });
+    Some(out)
+}
+
 /// Builds the registered table of `name` from the Rust table, taking offsets and sizes from the C++
 /// table. Classes without a Rust table, or whose C++ table disagrees, keep the C++ table.
 ///
