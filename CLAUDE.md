@@ -21,6 +21,7 @@ Before merging a Rust port step run `scripts/gate.sh` as a systemd unit (full ga
   never add to `allowlist.json` without a reason taken from the data.
 - Shared `HPL2/core` changes must keep `ctest` green and Amnesia building.
 - Never run the official binary with its install directory writable.
+- A full gate run costs ~14 GiB: after each merge remove merged worktrees and finished gate runs (dev-cruft skill; daily timer `dev-cruft-prune`).
 
 ## Build / test
 
