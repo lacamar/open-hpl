@@ -501,5 +501,6 @@ pub(crate) mod rnd;
 
 mod ls_bb;
 mod ls_env;
+mod ls_flare;
 mod ls_host;
 mod ls_rope;

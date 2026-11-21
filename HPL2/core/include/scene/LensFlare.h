@@ -6,6 +6,7 @@
 #include "scene/SceneTypes.h"
 #include "graphics/Renderable.h"
 #include "scene/RustSL.h"
+#include "scene/RustLs.h"
 #include "scene/RustLight.h"
 #include "math/Math.h"
 
@@ -24,15 +25,16 @@ namespace hpl {
 	class cLensFlareType : public iRenderable
 	{
 	public:
-		cLensFlareType(cLensFlare *apParent, eLensFlareType aType);
-		~cLensFlareType(){ ohpl_sl_flare_type_free(mpS); }
+		cLensFlareType(cLensFlare *apParent, const tString &asName, eLensFlareType aType, OhplSLFlare *apFlare) : iRenderable(asName),
+			mpS(ohpl_ls_ft_new((uintptr_t)apParent, Rs(), apFlare, aType)){}
+		~cLensFlareType(){ ohpl_ls_ft_free(mpS); }
 
-		cMaterial *GetMaterial();
-		iVertexBuffer* GetVertexBuffer();
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
-		int GetMatrixUpdateCount();
+		cMaterial *GetMaterial(){ return (cMaterial*)ohpl_ls_ft_material(mpS);}
+		iVertexBuffer* GetVertexBuffer(){ return (iVertexBuffer*)ohpl_ls_ft_vertex_buffer(mpS);}
+		cMatrixf* GetModelMatrix(cFrustum *apFrustum){ return ohpl_ls_ft_model(mpS, OhplLsFrustum(apFrustum));}
+		int GetMatrixUpdateCount(){ return ohpl_ls_ft_update_count(mpS);}
 		eRenderableType GetRenderType(){ return eRenderableType_LensFlareType;}
-		bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime);
+		bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime){ return ohpl_ls_ft_update_viewport(mpS, OhplLsFrustum(apFrustum));}
 		cBoundingVolume* GetBoundingVolume();
 		tString GetEntityType(){ return "LensFlareType";}
 
@@ -49,13 +51,14 @@ namespace hpl {
 	#endif
 		friend class cLensFlareType;
 	public:
-		cLensFlare(const tString& asName, cResources *apResources, cGraphics *apGraphics);
+		cLensFlare(const tString& asName, cResources *apResources, cGraphics *apGraphics) : iRenderable(asName),
+			mpS(ohpl_ls_flare_new(this, mpE, mBoundingVolume.Rs(), (uintptr_t)apResources, (uintptr_t)apGraphics)){}
 		~cLensFlare();
 
 		void FadeIn(float afTime){ ohpl_sl_flare_fade(mpS, true, afTime);}
 		void FadeOut(float afTime){ ohpl_sl_flare_fade(mpS, false, afTime);}
 
-		void SetFlareSourceSize(cVector3f avSize);
+		void SetFlareSourceSize(cVector3f avSize){ ohpl_ls_flare_set_source_size(mpS, &avSize);}
 		cVector3f GetFlareSourceSize(){ return mpS->sourceSize;}
 		void SetOuterFieldOfView(float afAngle){ ohpl_sl_flare_set_outer_fov(mpS, afAngle);}
 		float GetOuterFieldOfView(){ return mpS->outerFov;}
@@ -85,11 +88,11 @@ namespace hpl {
 		float GetGlareRangeMaxEnd(){ return mpS->glareRange.y;}
 		void SetSizeChangeBasedOnDistance(float afX){ ohpl_sl_flare_set_size_by_dist(mpS, afX);}
 		float GetSizeChangeBasedOnDistance(){ return mpS->sizeByDist;}
-		void SetFlareSize(eLensFlareType aType, cVector2f avSize);
+		void SetFlareSize(eLensFlareType aType, cVector2f avSize){ ohpl_ls_flare_set_size(mpS, aType, &avSize);}
 		cVector2f GetFlareSize(eLensFlareType aType){ return mpS->size[aType];}
 		void SetFlareColor(eLensFlareType aType, cColor aColor){ mpS->color[aType] = aColor;}
 		cColor GetFlareColor(eLensFlareType aType){ return mpS->color[aType];}
-		void SetFlareActive(eLensFlareType aType, bool abX);
+		void SetFlareActive(eLensFlareType aType, bool abX){ ohpl_ls_flare_set_active(mpS, aType, abX);}
 		bool IsFlareActive(eLensFlareType aType){ return mpS->active[aType] && mpS->material[aType];}
 		bool GetFlareActive(eLensFlareType aType){ return mpS->active[aType];}
 		void SetUseParentMeshForOcclusion(bool abX){ mpS->useParentMesh = abX;}
@@ -101,7 +104,7 @@ namespace hpl {
 		void SetBrightness(float afX){ mpS->brightness = afX;}
 		float GetBrightness(){ return mpS->brightness;}
 		eLensFlareType GetFirstActiveType(){ return (eLensFlareType)ohpl_sl_flare_first_active(mpS);}
-		void SetMaterial(eLensFlareType aType, cMaterial *apMaterial);
+		void SetMaterial(eLensFlareType aType, cMaterial *apMaterial){ ohpl_ls_flare_set_material(mpS, aType, (uintptr_t)apMaterial);}
 		cMaterial* GetTypeMaterial(eLensFlareType aType){ return ((cMaterial*)mpS->material[aType]);}
 		cLensFlareType* GetTypeRenderable(eLensFlareType aType){ return ((cLensFlareType*)mpS->types[aType]);}
 
@@ -109,9 +112,22 @@ namespace hpl {
 		float GetVisibility(){ return mpS->vis.vis;}
 		void UpdateVisibility(float afTimeStep, int alFrame){ ohpl_sl_flare_update_visibility(mpS, afTimeStep, alFrame);}
 
-		cColor GetFlareColorAndBrightness(eLensFlareType aType, cFrustum *apFrustum, float afVis);
-		cColor GetGlare(cFrustum *apFrustum, cVector3f &avScreenPos, float afScale);
-		iVertexBuffer* PrepareMultiIrisVertexBuffer(cFrustum *apFrustum, float afVis);
+		cColor GetFlareColorAndBrightness(eLensFlareType aType, cFrustum *apFrustum, float afVis)
+		{
+			cColor col;
+			ohpl_ls_flare_color(mpS, OhplLsFrustum(apFrustum), aType, afVis, &col);
+			return col;
+		}
+		cColor GetGlare(cFrustum *apFrustum, cVector3f &avScreenPos, float afScale)
+		{
+			cColor col;
+			ohpl_ls_flare_glare(mpS, OhplLsFrustum(apFrustum), &avScreenPos, afScale, &col);
+			return col;
+		}
+		iVertexBuffer* PrepareMultiIrisVertexBuffer(cFrustum *apFrustum, float afVis)
+		{
+			return (iVertexBuffer*)ohpl_ls_flare_multi_iris(mpS, OhplLsFrustum(apFrustum), afVis);
+		}
 
 		void UpdateLogic(float afTimeStep){ ohpl_sl_flare_update(mpS, afTimeStep);}
 		tString GetEntityType(){ return "LensFlare";}
@@ -119,21 +135,20 @@ namespace hpl {
 
 		cMaterial *GetMaterial(){ return (cMaterial*)mpS->material[GetFirstActiveType()];}
 		iVertexBuffer* GetVertexBuffer(){ return (iVertexBuffer*)mpS->vtx;}
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
+		cMatrixf* GetModelMatrix(cFrustum *apFrustum){ return ohpl_ls_flare_model(mpS, OhplLsFrustum(apFrustum));}
 		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
 		eRenderableType GetRenderType(){ return eRenderableType_LensFlare;}
-		bool CollidesWithFrustum(cFrustum *apFrustum);
+		bool CollidesWithFrustum(cFrustum *apFrustum){ return ohpl_ls_flare_collides(mpS, OhplLsFrustum(apFrustum));}
 
 		bool UsesOcclusionQuery(){ return true;}
-		void AssignOcclusionQuery(iRenderer *apRenderer);
-		bool RetrieveOcculsionQuery(iRenderer *apRenderer);
+		void AssignOcclusionQuery(iRenderer *apRenderer){ ohpl_ls_flare_assign_occlusion(mpS, apRenderer);}
+		bool RetrieveOcculsionQuery(iRenderer *apRenderer){ return ohpl_ls_flare_retrieve_occlusion(mpS, apRenderer);}
 
 	private:
-		cMatrixf* GetSizeAndRotation(eLensFlareType aType, cFrustum *apFrustum, float afVis);
-		void UpdateBV();
-
 		OhplSLFlare *mpS;
 	};
+
+	inline cBoundingVolume* cLensFlareType::GetBoundingVolume(){ return ((cLensFlare*)mpS->parent)->GetBoundingVolume();}
 
 };
 #endif // HPL_LENS_FLARE_H

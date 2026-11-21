@@ -135,10 +135,6 @@ namespace hpl {
 	};
 
 extern "C" {
-OhplSLFlareType* ohpl_sl_flare_type_new(uintptr_t, int);
-void ohpl_sl_flare_type_free(OhplSLFlareType*);
-OhplSLFlare* ohpl_sl_flare_new(int);
-void ohpl_sl_flare_free(OhplSLFlare*);
 void ohpl_sl_flare_fade(OhplSLFlare*, bool, float);
 void ohpl_sl_flare_update(OhplSLFlare*, float);
 void ohpl_sl_flare_update_visibility(OhplSLFlare*, float, int);
@@ -146,18 +142,8 @@ void ohpl_sl_flare_set_outer_fov(OhplSLFlare*, float);
 void ohpl_sl_flare_set_inner_fov(OhplSLFlare*, float);
 void ohpl_sl_flare_set_glare_fov(OhplSLFlare*, float);
 void ohpl_sl_flare_set_size_by_dist(OhplSLFlare*, float);
-float ohpl_sl_flare_bv_radius(const OhplSLFlare*);
 int ohpl_sl_flare_first_active(const OhplSLFlare*);
 bool ohpl_sl_flare_any_active(const OhplSLFlare*);
-void ohpl_sl_flare_color(const OhplSLFlare*, const OhplFlareEnt*, const OhplFlareView*, int, float, cColor*);
-void ohpl_sl_flare_glare(const OhplSLFlare*, const OhplFlareEnt*, const OhplFlareView*, float, cColor*, cVector3f*);
-cMatrixf* ohpl_sl_flare_size_rotation(OhplSLFlare*, const OhplFlareEnt*, const OhplFlareView*, int, float);
-cMatrixf* ohpl_sl_flare_billboard(OhplSLFlare*, const OhplFlareEnt*, const OhplFlareView*);
-bool ohpl_sl_flare_type_color(const OhplSLFlare*, const OhplFlareEnt*, const OhplFlareView*, int, float, cColor*);
-bool ohpl_sl_flare_collide_box(const OhplSLFlare*, const OhplFlareView*, const cVector3f*, const cVector3f*, const cVector3f*,
-							   const cVector3f*, cVector3f*, cVector3f*);
-void ohpl_sl_flare_set_target(OhplSLFlare*, float, float, const cVector3f*, const cVector3f*);
-int ohpl_sl_flare_multi_iris(const OhplSLFlare*, const OhplFlareEnt*, const OhplFlareView*, float, float*, float*, float*, int);
 
 OhplSLFog* ohpl_sl_fog_new();
 void ohpl_sl_fog_free(OhplSLFog*);

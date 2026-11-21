@@ -4,6 +4,7 @@
 
 use crate::math::bv::{Bv, Frustum};
 use crate::scene::h10::EntPub;
+use crate::scene::sl::FlarePod;
 use crate::types::{Color, Matrixf, Vector3f};
 use std::ffi::{c_char, c_void};
 use std::sync::atomic::{AtomicPtr, Ordering};
@@ -60,6 +61,7 @@ pub struct Host {
         renderer: *mut c_void,
         ctx: *mut c_void,
         idx: i32,
+        vb: *mut c_void,
         m: *const Matrixf,
         flag: bool,
     ),
@@ -77,6 +79,16 @@ pub struct Host {
     pub xml_close: unsafe extern "C" fn(doc: *mut c_void),
     pub mat_create:
         unsafe extern "C" fn(res: *mut c_void, name: *const u8, len: usize) -> *mut c_void,
+    pub ent_bv: unsafe extern "C" fn(ctx: *mut c_void) -> *mut Bv,
+    pub flare_type_new:
+        unsafe extern "C" fn(ctx: *mut c_void, flare: *mut FlarePod, kind: i32) -> *mut c_void,
+    pub flare_type_delete: unsafe extern "C" fn(ty: *mut c_void),
+    pub flare_parent_mesh: unsafe extern "C" fn(
+        ctx: *mut c_void,
+        vb: *mut *mut c_void,
+        mtx: *mut *const Matrixf,
+    ) -> bool,
+    pub vb_vertex_num: unsafe extern "C" fn(vb: *mut c_void) -> i32,
 }
 
 /// A preprocessor variable of a GPU program; `has_value` picks the integer overload.

@@ -10,6 +10,7 @@
 namespace hpl {
 	class cFrustum;
 	struct OhplEntPod;
+	struct OhplRnd;
 	inline const OhplFrustum* OhplLsFrustum(cFrustum *apFrustum){ return reinterpret_cast<const OhplFrustum*>(apFrustum);}
 
 	struct OhplLsRope
@@ -88,7 +89,7 @@ namespace hpl {
 		bool (*light_level)(const cVector3f *apPos, float *apOut);
 		bool (*hdr)();
 		void (*ent_pos)(void *apCtx, cVector3f *apOut);
-		void (*occ_assign)(void *apRenderer, void *apCtx, int32_t alIdx, const cMatrixf *a_mtx, bool abFlag);
+		void (*occ_assign)(void *apRenderer, void *apCtx, int32_t alIdx, void *apVb, const cMatrixf *a_mtx, bool abFlag);
 		int32_t (*occ_samples)(void *apRenderer, void *apCtx, int32_t alIdx);
 		const OhplFrustum* (*renderer_frustum)(void *apRenderer);
 		void (*log)(bool abError, const char *asMsg, size_t alLen);
@@ -96,6 +97,11 @@ namespace hpl {
 		const char* (*xml_attr)(void *apDoc, const char *asName, size_t alLen);
 		void (*xml_close)(void *apDoc);
 		void* (*mat_create)(void *apRes, const char *asName, size_t alLen);
+		OhplBv* (*ent_bv)(void *apCtx);
+		void* (*flare_type_new)(void *apCtx, OhplSLFlare *apFlare, int32_t alKind);
+		void (*flare_type_delete)(void *apType);
+		bool (*flare_parent_mesh)(void *apCtx, void **apVb, const cMatrixf **apMtx);
+		int32_t (*vb_vertex_num)(void *apVb);
 	};
 
 extern "C" {
@@ -129,6 +135,27 @@ void ohpl_ls_beam_bounds(OhplSLBeam*);
 void ohpl_ls_beam_update_frame(OhplSLBeam*);
 cMatrixf* ohpl_ls_beam_model(OhplSLBeam*, const OhplFrustum*);
 bool ohpl_ls_beam_load(OhplSLBeam*, const char*, size_t);
+
+OhplSLFlare* ohpl_ls_flare_new(void*, OhplEntPod*, OhplBv*, uintptr_t, uintptr_t);
+void ohpl_ls_flare_free(OhplSLFlare*);
+void ohpl_ls_flare_set_source_size(OhplSLFlare*, const cVector3f*);
+void ohpl_ls_flare_set_size(OhplSLFlare*, int32_t, const cVector2f*);
+void ohpl_ls_flare_set_active(OhplSLFlare*, int32_t, bool);
+void ohpl_ls_flare_set_material(OhplSLFlare*, int32_t, uintptr_t);
+void ohpl_ls_flare_color(OhplSLFlare*, const OhplFrustum*, int32_t, float, cColor*);
+void ohpl_ls_flare_glare(OhplSLFlare*, const OhplFrustum*, cVector3f*, float, cColor*);
+cMatrixf* ohpl_ls_flare_model(OhplSLFlare*, const OhplFrustum*);
+bool ohpl_ls_flare_collides(OhplSLFlare*, const OhplFrustum*);
+void ohpl_ls_flare_assign_occlusion(OhplSLFlare*, void*);
+bool ohpl_ls_flare_retrieve_occlusion(OhplSLFlare*, void*);
+void* ohpl_ls_flare_multi_iris(OhplSLFlare*, const OhplFrustum*, float);
+OhplSLFlareType* ohpl_ls_ft_new(uintptr_t, OhplRnd*, OhplSLFlare*, int32_t);
+void ohpl_ls_ft_free(OhplSLFlareType*);
+cMatrixf* ohpl_ls_ft_model(OhplSLFlareType*, const OhplFrustum*);
+bool ohpl_ls_ft_update_viewport(OhplSLFlareType*, const OhplFrustum*);
+uintptr_t ohpl_ls_ft_material(const OhplSLFlareType*);
+uintptr_t ohpl_ls_ft_vertex_buffer(const OhplSLFlareType*);
+int32_t ohpl_ls_ft_update_count(const OhplSLFlareType*);
 
 OhplLsEnv* ohpl_ls_env_new(uintptr_t, uintptr_t);
 void ohpl_ls_env_free(OhplLsEnv*);

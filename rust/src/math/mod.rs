@@ -14,7 +14,7 @@
 
 mod ffi;
 pub(crate) mod geom;
-mod libm;
+pub(crate) mod libm;
 mod matrix;
 mod scalar;
 pub(crate) mod tangents;

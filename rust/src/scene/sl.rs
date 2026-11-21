@@ -1508,7 +1508,7 @@ pub unsafe extern "C" fn ohpl_sl_flare_free(p: *mut FlarePod) {
 }
 
 impl FlarePod {
-    fn is_active(&self, i: usize) -> bool {
+    pub(super) fn is_active(&self, i: usize) -> bool {
         self.active.get(i).copied().unwrap_or(false)
             && self.material.get(i).is_some_and(|m| *m != 0)
     }

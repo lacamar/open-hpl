@@ -275,8 +275,22 @@ pub unsafe extern "C" fn ohpl_ls_bb_assign_occlusion(p: *mut BbPod, renderer: *m
     if let Some(h) = lh::host() {
         // SAFETY: table contract.
         unsafe {
-            (h.occ_assign)(renderer, b.ent.ctx, 0, &b.pod.halo_occlusion, true);
-            (h.occ_assign)(renderer, b.ent.ctx, 1, &b.pod.halo_occlusion, false);
+            (h.occ_assign)(
+                renderer,
+                b.ent.ctx,
+                0,
+                std::ptr::null_mut(),
+                &b.pod.halo_occlusion,
+                true,
+            );
+            (h.occ_assign)(
+                renderer,
+                b.ent.ctx,
+                1,
+                std::ptr::null_mut(),
+                &b.pod.halo_occlusion,
+                false,
+            );
         }
     }
 }

@@ -5,6 +5,8 @@
 #include "scene/RopeEntity.h"
 #include "scene/BillBoard.h"
 #include "scene/Beam.h"
+#include "scene/LensFlare.h"
+#include "scene/SubMeshEntity.h"
 #include "graphics/Renderer.h"
 #include "graphics/RendererDeferred.h"
 #include "graphics/Material.h"
@@ -123,10 +125,11 @@ namespace hpl {
 
 		bool Hdr(){ return cRendererDeferred::GetHdr();}
 		void EntPos(void *p, cVector3f *apOut){ *apOut = static_cast<iEntity3D*>(p)->GetWorldPosition();}
-		void OccAssign(void *r, void *c, int32_t i, const cMatrixf *m, bool b)
+		void OccAssign(void *r, void *c, int32_t i, void *v, const cMatrixf *m, bool b)
 		{
 			iRenderer *pR = static_cast<iRenderer*>(r);
-			pR->AssignOcclusionObject(static_cast<iRenderable*>(c), i, pR->GetShapeBoxVertexBuffer(), const_cast<cMatrixf*>(m), b);
+			pR->AssignOcclusionObject(static_cast<iRenderable*>(c), i, v ? static_cast<iVertexBuffer*>(v) : pR->GetShapeBoxVertexBuffer(),
+									  const_cast<cMatrixf*>(m), b);
 		}
 		int32_t OccSamples(void *r, void *c, int32_t i){ return static_cast<iRenderer*>(r)->RetrieveOcclusionObjectSamples(static_cast<iRenderable*>(c), i);}
 		const OhplFrustum* RendererFrustum(void *r){ return OhplLsFrustum(static_cast<iRenderer*>(r)->GetCurrentFrustum());}
@@ -160,6 +163,20 @@ namespace hpl {
 		void XmlClose(void *d){ hplDelete(static_cast<cXml*>(d));}
 		void* MatCreate(void *r, const char *s, size_t l){ return static_cast<cResources*>(r)->GetMaterialManager()->CreateMaterial(tString(s, l));}
 
+		OhplBv* EntBv(void *c){ return static_cast<iEntity3D*>(c)->GetBoundingVolume()->Rs();}
+		void* FlareTypeNew(void *c, OhplSLFlare *apFlare, int32_t k){ return hplNew(cLensFlareType, (static_cast<cLensFlare*>(c), static_cast<cLensFlare*>(c)->GetName(), (eLensFlareType)k, apFlare));}
+		void FlareTypeDelete(void *t){ hplDelete(static_cast<cLensFlareType*>(t));}
+		bool FlareParentMesh(void *c, void **apVb, const cMatrixf **apMtx)
+		{
+			iEntity3D *pParent = static_cast<iEntity3D*>(c)->GetEntityParent();
+			if(pParent == NULL || pParent->GetEntityType() != "SubMesh") return false;
+			cSubMeshEntity *pSubMesh = static_cast<cSubMeshEntity*>(pParent);
+			*apVb = pSubMesh->GetVertexBuffer();
+			*apMtx = pSubMesh->GetModelMatrix(NULL);
+			return true;
+		}
+		int32_t VbVertexNum(void *p){ return V(p)->GetVertexNum();}
+
 		struct cRegister
 		{
 			cRegister()
@@ -167,7 +184,8 @@ namespace hpl {
 				static const OhplLsHost h = { VbCreate, VbElem, VbAdd, VbIndex, VbCompile, VbArray, VbUpdate, VbCount, VbFree,
 											  MatDestroy, RopeInfo, RopePoints, EntWorld, EntUpdated,
 											  TexDestroy, ProgCreate, ProgDestroy, ProgVar, ProgSet, EntClip, SpotInfo, LightLevel,
-											  Hdr, EntPos, OccAssign, OccSamples, RendererFrustum, Log, XmlOpen, XmlAttr, XmlClose, MatCreate };
+											  Hdr, EntPos, OccAssign, OccSamples, RendererFrustum, Log, XmlOpen, XmlAttr, XmlClose, MatCreate,
+											  EntBv, FlareTypeNew, FlareTypeDelete, FlareParentMesh, VbVertexNum };
 				ohpl_ls_set_host(&h);
 			}
 		} gRegister;
@@ -176,5 +194,6 @@ namespace hpl {
 	cRopeEntity::~cRopeEntity(){ ohpl_ls_rope_free(mpL);}
 	cEnvironmentParticles::~cEnvironmentParticles(){ ohpl_ls_env_free(mpL);}
 	cBillboard::~cBillboard(){ ohpl_ls_bb_free(mpS);}
+	cLensFlare::~cLensFlare(){ ohpl_ls_flare_free(mpS);}
 	cBeam::~cBeam(){ hplDelete(GetEnd()); ohpl_ls_beam_free(mpS);}
 }
