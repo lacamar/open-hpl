@@ -69,11 +69,11 @@ pub struct Ctl(*mut MeshCtl);
 
 macro_rules! ctl_field {
     ($($get:ident, $set:ident: $f:ident: $t:ty;)*) => {$(
-        fn $get(self) -> $t {
+        pub(super) fn $get(self) -> $t {
             // SAFETY: `Ctl::new` contract: valid for the whole call; no reference is formed.
             unsafe { (*self.0).$f }
         }
-        fn $set(self, v: $t) {
+        pub(super) fn $set(self, v: $t) {
             // SAFETY: as above.
             unsafe { (*self.0).$f = v }
         }
@@ -85,6 +85,16 @@ impl Ctl {
     /// `p` is valid and aligned for reads and writes for as long as the `Ctl` is used.
     pub unsafe fn new(p: *mut MeshCtl) -> Self {
         Self(p)
+    }
+
+    pub(super) fn set_colliders(self, v: bool) {
+        // SAFETY: `Ctl::new` contract.
+        unsafe { (*self.0).colliders = v }
+    }
+
+    pub(super) fn add_version(self, n: i32) {
+        // SAFETY: as above.
+        unsafe { (*self.0).bone_matrices_version += n }
     }
 
     ctl_field! {
@@ -100,12 +110,12 @@ impl Ctl {
         need_update, set_need_update: matrices_need_update: bool;
     }
 
-    fn colliders(self) -> bool {
+    pub(super) fn colliders(self) -> bool {
         // SAFETY: `Ctl::new` contract.
         unsafe { (*self.0).colliders }
     }
 
-    fn normalize(self) -> bool {
+    pub(super) fn normalize(self) -> bool {
         // SAFETY: `Ctl::new` contract.
         unsafe { (*self.0).normalize }
     }

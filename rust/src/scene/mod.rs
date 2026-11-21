@@ -24,10 +24,8 @@ mod ffi_meshentity;
 mod ffi_node;
 mod ffi_particles;
 mod ffi_world;
-mod h10;
+pub(crate) mod h10;
 mod h11;
-mod h11b_ffi;
-mod h11b_mesh;
 mod h12_psload;
 pub(crate) mod h12b_ent;
 mod h12b_psys;
@@ -51,7 +49,6 @@ mod tests_h10;
 #[cfg(test)]
 mod tests_h11;
 #[cfg(test)]
-mod tests_h11b;
 #[cfg(test)]
 mod tests_h12;
 #[cfg(test)]
@@ -498,3 +495,12 @@ pub fn compile(objs: &[Object], params: &Params) -> Tree {
 }
 
 pub(crate) mod rnd;
+
+mod ls_bb;
+mod ls_dump;
+mod ls_env;
+mod ls_flare;
+mod ls_host;
+mod ls_light;
+mod ls_rope;
+mod meshent;

@@ -59,10 +59,6 @@ namespace hpl {
 		ohpl_ntb_set_material(mS->rust, static_cast<iPhysicsMaterial*>(mS->material)->GetId());
 	}
 
-	void iPhysicsBody::SetLinearVelocity(const cVector3f &avVel)
-	{
-		ohpl_ntb_set_velocity(mS->rust, &avVel);
-	}
 	cVector3f iPhysicsBody::GetLinearVelocity() const
 	{
 		cVector3f vVel;
@@ -70,51 +66,11 @@ namespace hpl {
 		return vVel;
 	}
 
-	void iPhysicsBody::SetAngularVelocity(const cVector3f &avVel)
-	{
-		ohpl_ntb_set_omega(mS->rust, &avVel);
-	}
 	cVector3f iPhysicsBody::GetAngularVelocity() const
 	{
 		cVector3f vVel;
 		ohpl_ntb_omega(mS->rust, &vVel);
 		return vVel;
-	}
-
-	void iPhysicsBody::SetLinearDamping(float afDamping)
-	{
-		ohpl_ntb_set_linear_damping(mS->rust, afDamping);
-	}
-	float iPhysicsBody::GetLinearDamping() const
-	{
-		return ohpl_ntb_linear_damping(mS->rust);
-	}
-
-	void iPhysicsBody::SetAngularDamping(float afDamping)
-	{
-		ohpl_ntb_set_angular_damping(mS->rust, afDamping);
-	}
-	float iPhysicsBody::GetAngularDamping() const
-	{
-		return ohpl_ntb_angular_damping(mS->rust);
-	}
-
-	void iPhysicsBody::SetMaxLinearSpeed(float afSpeed)
-	{
-		ohpl_ntb_set_max_linear(mS->rust, afSpeed);
-	}
-	float iPhysicsBody::GetMaxLinearSpeed() const
-	{
-		return ohpl_ntb_max_linear(mS->rust);
-	}
-
-	void iPhysicsBody::SetMaxAngularSpeed(float afDamping)
-	{
-		ohpl_ntb_set_max_angular(mS->rust, afDamping);
-	}
-	float iPhysicsBody::GetMaxAngularSpeed() const
-	{
-		return ohpl_ntb_max_angular(mS->rust);
 	}
 
 	cVector3f iPhysicsBody::GetInertiaVector()
@@ -140,27 +96,11 @@ namespace hpl {
 	{
 		ohpl_ntb_set_mass(mS->rust, static_cast<iCollideShape*>(mS->shape)->GetNewtonCollision(), afMass);
 	}
-	float iPhysicsBody::GetMass() const
-	{
-		return ohpl_ntb_mass(mS->rust);
-	}
-
-	void  iPhysicsBody::SetMassCentre(const cVector3f& avCentre)
-	{
-		ohpl_ntb_set_mass_centre(mS->rust, &avCentre);
-	}
-
 	cVector3f iPhysicsBody::GetMassCentre() const
 	{
 		cVector3f vCentre;
 		ohpl_ntb_mass_centre(mS->rust, &vCentre);
 		return vCentre;
-	}
-
-	void iPhysicsBody::AddForce(const cVector3f &avForce)
-	{
-		ohpl_ntb_add_force(mS->rust, &avForce);
-		Enable();
 	}
 
 	void iPhysicsBody::AddForceAtPosition(const cVector3f &avForce, const cVector3f &avPos)
@@ -169,92 +109,10 @@ namespace hpl {
 		Enable();
 	}
 
-	void iPhysicsBody::AddTorque(const cVector3f &avTorque)
-	{
-		ohpl_ntb_add_torque(mS->rust, &avTorque);
-		Enable();
-	}
-
 	void iPhysicsBody::AddImpulse(const cVector3f &avImpulse)
 	{
 		ohpl_ntb_add_impulse(mS->rust, &avImpulse, &GetWorldMatrix());
 	}
-	void iPhysicsBody::AddImpulseAtPosition(const cVector3f &avImpulse, const cVector3f &avPos)
-	{
-		ohpl_ntb_add_impulse_at(mS->rust, &avImpulse, &avPos);
-	}
-
-	void iPhysicsBody::Sleep()
-	{
-		ohpl_ntb_set_freeze(mS->rust, 1);
-	}
-
-	void iPhysicsBody::Enable()
-	{
-		mS->freezeCount = 0;
-		ohpl_ntb_set_freeze(mS->rust, 0);
-	}
-	bool iPhysicsBody::GetEnabled() const
-	{
-		return ohpl_ntb_enabled(mS->rust);
-	}
-
-	void iPhysicsBody::SetAutoDisable(bool abEnabled)
-	{
-		ohpl_ntb_set_auto_sleep(mS->rust, abEnabled);
-	}
-	bool iPhysicsBody::GetAutoDisable() const
-	{
-		return ohpl_ntb_auto_sleep(mS->rust);
-	}
-
-	void iPhysicsBody::SetAutoDisableLinearThreshold(float afThresold)
-	{
-		ohpl_ntb_set_auto_linear(mS->rust, afThresold);
-	}
-	float iPhysicsBody::GetAutoDisableLinearThreshold() const
-	{
-		return ohpl_ntb_auto_linear(mS->rust);
-	}
-
-	void iPhysicsBody::SetAutoDisableAngularThreshold(float afThresold)
-	{
-		ohpl_ntb_set_auto_angular(mS->rust, afThresold);
-	}
-	float iPhysicsBody::GetAutoDisableAngularThreshold() const
-	{
-		return ohpl_ntb_auto_angular(mS->rust);
-	}
-
-	void iPhysicsBody::SetAutoDisableNumSteps(int anNum)
-	{
-		ohpl_ntb_set_auto_steps(mS->rust, anNum);
-	}
-
-	int iPhysicsBody::GetAutoDisableNumSteps() const
-	{
-		return ohpl_ntb_auto_steps(mS->rust);
-	}
-
-	void iPhysicsBody::SetContinuousCollision(bool abOn)
-	{
-		ohpl_ntb_set_continuous(mS->rust, abOn);
-	}
-
-	bool iPhysicsBody::GetContinuousCollision()
-	{
-		return ohpl_ntb_continuous(mS->rust);
-	}
-
-	void iPhysicsBody::SetGravity(bool abEnabled)
-	{
-		ohpl_ntb_set_gravity(mS->rust, abEnabled);
-	}
-	bool iPhysicsBody::GetGravity() const
-	{
-		return ohpl_ntb_gravity(mS->rust);
-	}
-
 	void iPhysicsBody::RenderDebugGeometry(iLowLevelGraphics *apLowLevel,const cColor &aColor)
 	{
 		mS->world->RenderShapeDebugGeometry(mS->shape,GetLocalMatrix(),apLowLevel, aColor);

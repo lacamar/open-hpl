@@ -25,37 +25,49 @@
 #include "system/SystemTypes.h"
 #include "resources/ResourceBase.h"
 #include "graphics/RustGraphicsH6.h"
+#include "graphics/AnimationTrack.h"
 
 namespace hpl {
 
-	class cAnimationTrack;
-	
 	typedef std::vector<cAnimationTrack*> tAnimationTrackVec;
 	typedef tAnimationTrackVec::iterator tAnimationTrackVecIt;
 
 	class cAnimation : public iResourceBase
 	{
 	public:
-		cAnimation(const tString &asName, const tWString &asFullPath, const tString &asFile);
-		~cAnimation();
+		cAnimation(const tString &asName, const tWString &asFullPath, const tString &asFile)
+			: iResourceBase(asName, asFullPath,0), msFileName(asFile), mpRs(ohpl_h6_anim_new()){}
+		~cAnimation(){ STLDeleteAll(mvTracks); ohpl_h6_anim_free(mpRs);}
 
-		float GetLength();
-		void SetLength(float afTime);
+		float GetLength(){ return mfLength;}
+		void SetLength(float afTime){ mfLength = afTime;}
 
-		cAnimationTrack* CreateTrack(const tString &asName, tAnimTransformFlag aFlags);
-		cAnimationTrack* GetTrack(int alIndex);
-		cAnimationTrack* GetTrackByName(const tString &asName);
-		void ReserveTrackNum(int alNum);
-		int GetTrackNum();
+		cAnimationTrack* CreateTrack(const tString &asName, tAnimTransformFlag aFlags)
+		{
+			cAnimationTrack *pTrack = hplNew(cAnimationTrack,(asName, aFlags, &mfLength));
+			mvTracks.push_back(pTrack);
+			ohpl_h6_anim_add_track(mpRs, asName.data(), asName.size());
+			return pTrack;
+		}
+		cAnimationTrack* GetTrack(int alIndex){ return mvTracks[alIndex];}
+		cAnimationTrack* GetTrackByName(const tString &asName)
+		{
+			int lIdx = ohpl_h6_anim_track_by_name(mpRs, asName.data(), asName.size());
+			return lIdx < 0 ? NULL : mvTracks[lIdx];
+		}
+		void ReserveTrackNum(int alNum){ mvTracks.reserve(alNum);}
+		int GetTrackNum(){ return (int)mvTracks.size();}
 
-		void SmoothAllTracks(float afAmount, float afPow, int alSamples,bool abTranslation, bool abRotation);
+		void SmoothAllTracks(float afAmount, float afPow, int alSamples,bool abTranslation, bool abRotation)
+		{
+			for(cAnimationTrack *pTrack : mvTracks) pTrack->Smooth(afAmount, afPow, alSamples, abTranslation, abRotation);
+		}
 
 		const char* GetAnimationName(){ return msAnimName.c_str();}
 		void SetAnimationName(const tString &asName){ msAnimName =asName;}
-		
+
 		tString& GetFileName(){ return msFileName;}
 
-		//Resources implementation
 		bool Reload(){ return false;}
 		void Unload(){}
 		void Destroy(){}
@@ -63,12 +75,9 @@ namespace hpl {
 	private:
 		tString msAnimName;
 		tString msFileName;
-
-		float mfLength;
-		
+		float mfLength = 0;
 		tAnimationTrackVec mvTracks;
-		OhplH6Anim* mpRs;
+		OhplH6Anim *mpRs;
 	};
-
 };
 #endif // HPL_ANIMATION_H

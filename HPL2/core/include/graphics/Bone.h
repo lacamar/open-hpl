@@ -25,76 +25,80 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
+#include "system/MemoryManager.h"
+#include "graphics/RustGraphicsH6.h"
 
 namespace hpl {
-	
+
 	class cSkeleton;
 	class cBone;
-	struct OhplH6Skel;
 
 	typedef std::list<cBone*> tBoneList;
 	typedef tBoneList::iterator tBoneListIt;
 
 	typedef cSTLIterator<cBone*,tBoneList,tBoneListIt> cBoneIterator;
-    
+
 	class cBone
 	{
 	friend class cSkeleton;
 	public:
-		cBone(const tString &asName,const tString &asSid, cSkeleton* apSkeleton);
-		~cBone();
+		cBone(const tString &asName,const tString &asSid, OhplH6Skel *apRs, cBone *apParent) : msName(asName), msSid(asSid), mpRs(apRs), mpParent(apParent)
+		{
+			mlRsId = apParent ? ohpl_h6_skel_create_child(apRs, apParent->mlRsId, asName.data(), asName.size(), asSid.data(), asSid.size()) : 0;
+			ohpl_h6_bone_set_owner(apRs, mlRsId, this);
+		}
+		~cBone(){ for(cBone *pBone : mlstChildren) hplDelete(pBone); }
 
-		cBone* CreateChildBone(const tString &asName,const tString &asId);
+		cBone* CreateChildBone(const tString &asName,const tString &asId)
+		{
+			cBone *pBone = hplNew(cBone,(asName,asId, mpRs, this));
+			mlstChildren.push_back(pBone);
+			return pBone;
+		}
 
-		void SetTransform(const cMatrixf &a_mtxTransform);
-		const cMatrixf& GetLocalTransform();
-		const cMatrixf& GetWorldTransform();
-		const cMatrixf& GetInvWorldTransform();
+		void SetTransform(const cMatrixf &a_mtxTransform){ ohpl_h6_bone_set_transform(mpRs, mlRsId, &a_mtxTransform);}
+		const cMatrixf& GetLocalTransform(){ return *ohpl_h6_bone_local(mpRs, mlRsId);}
+		const cMatrixf& GetWorldTransform(){ return *ohpl_h6_bone_world(mpRs, mlRsId);}
+		const cMatrixf& GetInvWorldTransform(){ return *ohpl_h6_bone_inv_world(mpRs, mlRsId);}
 
-		void SetInvBindTransform(const cMatrixf &a_mtxInvBind);
-		const cMatrixf& GetInvBindTransform();
+		void SetInvBindTransform(const cMatrixf &a_mtxInvBind){ ohpl_h6_bone_set_inv_bind(mpRs, mlRsId, &a_mtxInvBind);}
+		const cMatrixf& GetInvBindTransform(){ return *ohpl_h6_bone_inv_bind(mpRs, mlRsId);}
+
 		void SetLocalUnitScale(float afX){ mfLocalUnitScale = afX; }
 		float GetLocalUnitScale(){ return mfLocalUnitScale; }
 
-		//// -- <UNSCALED> -- ///
-		void SetTransformUnscaled(const cMatrixf &a_mtxTransform);
-		const cMatrixf& GetWorldTransformUnscaled();
-		const cMatrixf& GetLocalTransformUnscaled();
-		void NeedsUpdateUnscaled();
-		//// -- </UNSCALED> -- ///
+		void SetTransformUnscaled(const cMatrixf &a_mtxTransform){ ohpl_h6_bone_set_unscaled(mpRs, mlRsId, &a_mtxTransform);}
+		const cMatrixf& GetWorldTransformUnscaled(){ return *ohpl_h6_bone_world_unscaled(mpRs, mlRsId);}
+		const cMatrixf& GetLocalTransformUnscaled(){ return *ohpl_h6_bone_local_unscaled(mpRs, mlRsId);}
+		void NeedsUpdateUnscaled(){ ohpl_h6_bone_needs_update_unscaled(mpRs, mlRsId);}
 
 		const tString& GetName(){ return msName;}
 		const tString& GetSid(){ return msSid;}
 
-		cBoneIterator GetChildIterator();
+		cBoneIterator GetChildIterator(){ return cBoneIterator(&mlstChildren);}
 		tBoneList* GetChildList(){ return &mlstChildren; }
 
-		void Detach();
+		void Detach()
+		{
+			if(mpParent == NULL) return;
+			mpParent->mlstChildren.remove(this);
+			ohpl_h6_bone_detach(mpRs, mlRsId);
+		}
 
 		cBone* GetParent(){ return mpParent;}
-		
-		//Needed for some loading stuff..
+
 		int GetValue(){ return mlValue;}
 		void SetValue(int alVal){ mlValue = alVal;}
-		
+
 	private:
-		OhplH6Skel* Rs() const;
 		tString msName;
 		tString msSid;
-
-		float mfLocalUnitScale;
-		
-		//// -- <UNSCALED> -- ///
-		//// -- </UNSCALED> -- ///
-
-		cBone* mpParent;
+		float mfLocalUnitScale = 1;
+		OhplH6Skel *mpRs;
+		cBone *mpParent;
 		tBoneList mlstChildren;
-
-		cSkeleton* mpSkeleton;
-
-		int mlValue;
+		int mlValue = 0;
 		int mlRsId;
 	};
-
 };
 #endif // HPL_BONE_H

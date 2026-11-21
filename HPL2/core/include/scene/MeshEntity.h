@@ -28,11 +28,11 @@
 #include "system/SystemTypes.h"
 #include "scene/Entity3D.h"
 #include "math/MeshTypes.h"
-
 #include "scene/SubMeshEntity.h"
-
 #include "scene/AnimationState.h"
-#include "scene/RustSceneH11.h"
+#include "scene/RustMeshEnt.h"
+#include "scene/Node3D.h"
+#include "graphics/BoneState.h"
 
 namespace hpl {
 
@@ -40,13 +40,8 @@ namespace hpl {
 	class cMeshManager;
 	class cAnimationManager;
 	class cMesh;
-	class cSubMesh;
 	class cMeshEntity;
 	class cAnimation;
-	class cAnimationState;
-	class cNodeState;
-	class cBone;
-	class cNode3D;
 	class iCollideShape;
 	class iPhysicsBody;
 	class iPhysicsWorld;
@@ -57,7 +52,6 @@ namespace hpl {
 	class cMeshEntityRootNodeUpdate : public iEntityCallback
 	{
 	public:
-
 		void OnTransformUpdate(iEntity3D * apEntity);
 	};
 
@@ -80,12 +74,12 @@ namespace hpl {
 	friend class cSubMeshEntity;
 	friend class cMeshEntityRootNodeUpdate;
 	friend class cMesh;
-	friend struct OhplH11MeshHostImpl;
+	friend struct OhplMeFxImpl;
 	public:
 		cMeshEntity(const tString asName,cMesh* apMesh, cMaterialManager* apMaterialManager,
 					cMeshManager* apMeshManager, cAnimationManager *apAnimationManager);
 		~cMeshEntity();
-	
+
 		void SetWorld(cWorld *apWorld){ mpWorld = apWorld;}
 		cWorld* GetWorld(){ return mpWorld;}
 
@@ -94,68 +88,73 @@ namespace hpl {
 		void SetCallback(cMeshEntityCallback *apCallback){mpCallback = apCallback;}
 
 		//Sub mesh entities
-		cSubMeshEntity* GetSubMeshEntity(unsigned int alIdx);
-		cSubMeshEntity* GetSubMeshEntityName(const tString &asName);
-		int GetSubMeshEntityNum();
+		cSubMeshEntity* GetSubMeshEntity(unsigned int alIdx){ return static_cast<cSubMeshEntity*>(ohpl_me_sub(mpM, alIdx));}
+		cSubMeshEntity* GetSubMeshEntityName(const tString &asName){ return GetSubMeshEntity(ohpl_me_sub_index(mpM, asName.data(), asName.size()));}
+		int GetSubMeshEntityNum(){ return ohpl_me_sub_num(mpM);}
 
 		//Animation states
-		cAnimationState* AddAnimation(cAnimation *apAnimation,const tString &asName, float afBaseSpeed);
-		void ClearAnimations();
-
-		cAnimationState* GetAnimationState(int alIndex);
-		int GetAnimationStateIndex(const tString &asName);
-		cAnimationState* GetAnimationStateFromName(const tString &asName);
-		int GetAnimationStateNum();
+		cAnimationState* AddAnimation(cAnimation *apAnimation,const tString &asName, float afBaseSpeed)
+		{
+			return static_cast<cAnimationState*>(ohpl_me_add_animation(mpM, apAnimation, asName.data(), asName.size(), afBaseSpeed));
+		}
+		void ClearAnimations(){ ohpl_me_clear_animations(mpM);}
+		cAnimationState* GetAnimationState(int alIndex){ return static_cast<cAnimationState*>(ohpl_me_anim_state(mpM, alIndex));}
+		int GetAnimationStateIndex(const tString &asName){ return ohpl_me_anim_index(mpM, asName.data(), asName.size());}
+		cAnimationState* GetAnimationStateFromName(const tString &asName){ return GetAnimationState(GetAnimationStateIndex(asName));}
+		int GetAnimationStateNum(){ return ohpl_me_anim_num(mpM);}
 
 		//Animation controller
-		void Play(int alIndex,bool abLoop, bool bStopPrev);
-		void PlayName(const tString &asName,bool abLoop, bool bStopPrev);
-		void Stop();
-
-		void PlayFadeTo(int alIndex,bool abLoop, float afTime);
-		void PlayFadeToName(const tString &asName,bool abLoop, float afTime);
-
-		bool AnimationIsOver(const tString &asName);
+		void Play(int alIndex,bool abLoop, bool bStopPrev){ ohpl_me_play(mpM, alIndex, abLoop, bStopPrev);}
+		void PlayName(const tString &asName,bool abLoop, bool bStopPrev){ ohpl_me_play_name(mpM, asName.data(), asName.size(), abLoop, 0, false, bStopPrev);}
+		void Stop(){ ohpl_me_stop(mpM);}
+		void PlayFadeTo(int alIndex,bool abLoop, float afTime){ ohpl_me_play_fade_to(mpM, alIndex, abLoop, afTime);}
+		void PlayFadeToName(const tString &asName,bool abLoop, float afTime){ ohpl_me_play_name(mpM, asName.data(), asName.size(), abLoop, afTime, true, false);}
+		bool AnimationIsOver(const tString &asName){ return ohpl_me_anim_is_over(mpM, asName.data(), asName.size());}
 
 		void SetNormalizeAnimationWeights(bool abX){ mCtl.normalize = abX;}
 		bool GetNormalizeAnimationWeights(){  return mCtl.normalize;}
 
 		//Bone states
-		cNode3D* GetBoneStateRoot(){ return mpBoneStateRoot;}
-		
-		cBoneState* GetBoneState(int alIndex);
-		int GetBoneStateIndex(const tString &asName);
-		int GetBoneStateIndexFromPtr(cBoneState* apBoneState);
-		cBoneState* GetBoneStateFromName(const tString &asName);
-		int GetBoneStateNum();
-		void SetBoneRestPose(const std::vector<cMatrixf> &avLocal);
+		cNode3D* GetBoneStateRoot(){ return static_cast<cNode3D*>(ohpl_me_root(mpM));}
+		cBoneState* GetBoneState(int alIndex){ return static_cast<cBoneState*>(static_cast<cNode3D*>(ohpl_me_bone(mpM, alIndex)));}
+		int GetBoneStateIndex(const tString &asName){ return ohpl_me_bone_index(mpM, asName.data(), asName.size());}
+		int GetBoneStateIndexFromPtr(cBoneState* apBoneState){ return ohpl_me_bone_index_of(mpM, static_cast<cNode3D*>(apBoneState));}
+		cBoneState* GetBoneStateFromName(const tString &asName){ return GetBoneState(GetBoneStateIndex(asName));}
+		int GetBoneStateNum(){ return ohpl_me_bone_num(mpM);}
+
+		void SetBoneRestPose(const std::vector<cMatrixf> &avLocal){ ohpl_me_set_rest_pose(mpM, avLocal.data(), avLocal.size());}
 		bool SetBoneRestPoseFromMapValues(const tFloatVec &avVals);
 
 		//Skeleton physics
-		void SetSkeletonPhysicsActive(bool abX);
-		bool GetSkeletonPhysicsActive();
-
+		void SetSkeletonPhysicsActive(bool abX){ ohpl_me_physics_active(mpM, abX);}
+		bool GetSkeletonPhysicsActive(){ return mCtl.physics;}
 		void SetSkeletonPhysicsCanSleep(bool abX){mCtl.can_sleep = abX;}
 		bool GetSkeletonPhysicsCanSleep(){ return mCtl.can_sleep;}
+		float GetSkeletonPhysicsWeight(){ return mCtl.physics_weight;}
+		void SetSkeletonPhysicsWeight(float afX){ mCtl.physics_weight = afX;}
+		void FadeSkeletonPhysicsWeight(float afTime){ ohpl_me_physics_fade(mpM, afTime);}
 
-		float GetSkeletonPhysicsWeight();
-		void SetSkeletonPhysicsWeight(float afX);
+		void SetSkeletonCollidersActive(bool abX){ ohpl_me_colliders_active(mpM, abX);}
+		bool GetSkeletonCollidersActive(){ return mCtl.colliders;}
 
-		void FadeSkeletonPhysicsWeight(float afTime);
-		
-		void SetSkeletonCollidersActive(bool abX);
-		bool GetSkeletonCollidersActive();
+		void AlignBodiesToSkeleton(bool abCalculateSpeed){ ohpl_me_align_bodies(mpM);}
 
-		void AlignBodiesToSkeleton(bool abCalculateSpeed);
-
-		
 		/**
 		 * Calculates the transform (and angles and postion if wanted) of a mesh based on the postion of the root bone.
 		 * This is useful when going from rag doll to mesh.
 		 * \param *apPostion Can be NULL, the postion
 		 * \param *apAngles Can be NULL, the angles.
 		 */
-		cMatrixf CalculateTransformFromSkeleton(cVector3f *apPostion,cVector3f *apAngles);
+		cMatrixf CalculateTransformFromSkeleton(cVector3f *apPostion,cVector3f *apAngles)
+		{
+			cMatrixf mtxOut = cMatrixf::Identity;
+			cVector3f vPos(0);
+			float fYAngle = 0;
+			ohpl_me_transform_from_skeleton(mpM, &mtxOut, &vPos, &fYAngle);
+			if(apPostion) *apPostion = vPos;
+			if(apAngles) *apAngles = cVector3f(0,fYAngle,0);
+			return mtxOut;
+		}
 
 		/**
 		 * Checks collision with the skeletons collider boides
@@ -169,45 +168,71 @@ namespace hpl {
 										iCollideShape *apShape, const cMatrixf &a_mtxShape,
 										tVector3fList *apPosList, tIntList *apNumList);
 
-		void ResetGraphicsUpdated();
+		void ResetGraphicsUpdated(){ ohpl_me_reset_graphics(mpM);}
 
 		//Node states
-		cNode3D* GetNodeState(int alIndex);
-		int GetNodeStateIndex(const tString &asName);
-		cNode3D* GetNodeStateFromName(const tString &asName);
-		int GetNodeStateNum();
-		
+		cNode3D* GetNodeState(int alIndex){ return static_cast<cNode3D*>(ohpl_me_node(mpM, alIndex));}
+		int GetNodeStateIndex(const tString &asName){ return ohpl_me_node_index(mpM, asName.data(), asName.size());}
+		cNode3D* GetNodeStateFromName(const tString &asName){ return GetNodeState(GetNodeStateIndex(asName));}
+		int GetNodeStateNum(){ return ohpl_me_node_num(mpM);}
+
 		//Entity implementation
 		tString GetEntityType(){ return "MeshEntity";}
+
 		bool IsVisible(){ return mbIsVisible; }
-		void SetVisible(bool abVisible);
-		void SetCulledByDistance(bool abX){ for(size_t i=0; i<mvSubMeshes.size(); ++i) mvSubMeshes[i]->SetCulledByDistance(abX); }
-		void SetCulledByFog(bool abX){ for(size_t i=0; i<mvSubMeshes.size(); ++i) mvSubMeshes[i]->SetCulledByFog(abX); }
+		void SetVisible(bool abVisible)
+		{
+			if(abVisible == mbIsVisible) return;
+			mbIsVisible = abVisible;
+			ohpl_me_fan_visible(mpM, abVisible);
+		}
+		void SetCulledByDistance(bool abX){ for(int i=0; i<GetSubMeshEntityNum(); ++i) GetSubMeshEntity(i)->SetCulledByDistance(abX); }
+		void SetCulledByFog(bool abX){ for(int i=0; i<GetSubMeshEntityNum(); ++i) GetSubMeshEntity(i)->SetCulledByFog(abX); }
 
-		cBoundingVolume* GetBoundingVolume();
+		cBoundingVolume* GetBoundingVolume(){ ohpl_me_bounding_volume(mpM); return &mBoundingVolume;}
 
-		void SetStatic(bool abX);
+		void SetStatic(bool abX)
+		{
+			if(abX == mbStatic) return;
+			mbStatic = abX;
+			ohpl_me_fan_static(mpM, abX);
+		}
 		bool IsStatic(){ return mbStatic;}
 
-		void SetRenderFlagBit(tRenderableFlag alFlagBit, bool abSet);
-		//bool GetRenderFlagBit(tRenderableFlag alFlagBit){ return (mlRenderFlags & alFlagBit)!=0;} 
-		//inline tRenderableFlag GetRenderFlags() const { return mlRenderFlags;}
+		void SetRenderFlagBit(tRenderableFlag alFlagBit, bool abSet){ ohpl_me_fan_render_flag(mpM, alFlagBit, abSet);}
 
-		void SetIlluminationAmount(float afX);
-		void SetIlluminationColor(const cColor& aX);
-		void SetColorMul(const cColor& aX);
+		void SetIlluminationAmount(float afX)
+		{
+			if(mfIlluminationAmount == afX) return;
+			mfIlluminationAmount = afX;
+			ohpl_me_fan_illum(mpM, afX);
+		}
+		void SetIlluminationColor(const cColor& aX){ ohpl_me_fan_illum_color(mpM, &aX);}
+		void SetColorMul(const cColor& aX){ ohpl_me_fan_color_mul(mpM, &aX);}
 		float GetIlluminationAmount(){ return mfIlluminationAmount; }
 
-		void SetCoverageAmount(float afX);
+		void SetCoverageAmount(float afX)
+		{
+			if(mfCoverageAmount == afX) return;
+			mfCoverageAmount = afX;
+			ohpl_me_fan_coverage(mpM, afX);
+		}
 		float GetCoverageAmount(){ return mfCoverageAmount;}
 
-		void SetLiquidAmount(float afX);
-		void UseAutomaticLiquidAmount();
+		void SetLiquidAmount(float afX)
+		{
+			mfMeshLiquidAmount = afX > 0 ? afX : 0;
+			ohpl_me_fan_liquid(mpM, mfMeshLiquidAmount);
+		}
+		void UseAutomaticLiquidAmount()
+		{
+			mfMeshLiquidAmount = -1;
+			ohpl_me_fan_auto_liquid(mpM);
+		}
 		float GetLiquidAmount(){ return mfMeshLiquidAmount;}
 
-		void UpdateLogic(float afTimeStep);
-
-		void UpdateGraphicsForFrame(float afFrameTime);
+		void UpdateLogic(float afTimeStep){ ohpl_me_update_logic(mpM, mbStatic, afTimeStep);}
+		void UpdateGraphicsForFrame(float afFrameTime){ ohpl_me_update_graphics(mpM);}
 
 		void SetBody(iPhysicsBody* apBody){ mpBody = apBody;}
 		iPhysicsBody* GetBody(){ return mpBody;}
@@ -216,64 +241,30 @@ namespace hpl {
 		void* GetUserData() { return mpUserData; }
 
 	private:
-		void NameAdd(int alKind, const tString &asName, int alIdx){ ohpl_h11b_names_insert(mpNames, alKind, asName.data(), asName.size(), alIdx); }
-		int NameFind(int alKind, const tString &asName){ return ohpl_h11b_names_find(mpNames, alKind, asName.data(), asName.size()); }
 		void InitSubBounds(cSubMeshEntity *apSub, iVertexBuffer *apVtxBuffer);
-		void SyncAnimCores();
-
-		void CreateNodes();
-
-		void HandleAnimationEvent(cAnimationEvent *apEvent);
-
-
 
 		cMaterialManager* mpMaterialManager;
 		cMeshManager* mpMeshManager;
 		cAnimationManager *mpAnimationManager;
 
-		cWorld *mpWorld;
+		cWorld *mpWorld = NULL;
 
-		bool mbIsVisible;
-		float mfIlluminationAmount;
-		float mfCoverageAmount;
+		bool mbIsVisible = true;
+		float mfIlluminationAmount = 1.0f;
+		float mfCoverageAmount = 1.0f;
 		float mfMeshLiquidAmount = -1;
-		tRenderableFlag mlRenderFlags;
-		
+
 		OhplH11MeshCtl mCtl;
-		OhplH11Names *mpNames;
-
-		cMatrixf m_mtxInvWorldMatrix;
-
-		bool mbStatic;
-
-		tSubMeshEntityVec mvSubMeshes;
-
-		tAnimationStateVec mvAnimationStates;
-
-		cNode3D *mpBoneStateRoot;
-
-		tNodeStateVec mvBoneStates;
-		tNodeStateVec mvTempBoneStates;
-		std::vector<cMatrixf> mvBoneRestPose;
-
-		std::vector<cMatrixf> mvBoneMatrices;
-		std::vector<OhplAnimCore*> mvAnimCores;
-		std::vector<const cMatrixf*> mvScratchWorld, mvScratchInvBind;
-
-
-		tNodeStateVec mvNodeStates;
+		bool mbStatic = false;
 
 		cMesh* mpMesh;
-		
-		cMeshEntityCallback *mpCallback;
-
-		iPhysicsBody *mpBody;
-
-		void* mpUserData;
+		cMeshEntityCallback *mpCallback = NULL;
+		iPhysicsBody *mpBody = NULL;
+		void* mpUserData = NULL;
+		OhplMeshEnt *mpM;
 	};
 
 	//-----------------------------------------------------------------------
-
 
 };
 #endif // HPL_MESH_ENTITY_H

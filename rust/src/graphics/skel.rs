@@ -16,6 +16,7 @@ const IDENT: Matrixf = Matrixf {
 pub struct Bone {
     pub unit_scale: f32,
     pub value: i32,
+    owner: usize,
     local: Matrixf,
     world: Matrixf,
     inv_world: Matrixf,
@@ -63,6 +64,7 @@ impl Skeleton {
         self.bones.push(Box::new(Bone {
             unit_scale: 1.0,
             value: 0,
+            owner: 0,
             local: Matrixf::default(),
             world: Matrixf::default(),
             inv_world: Matrixf::default(),
@@ -99,6 +101,28 @@ impl Skeleton {
 
     pub fn bone_mut(&mut self, id: usize) -> Option<&mut Bone> {
         self.bones.get_mut(id).map(|b| &mut **b)
+    }
+
+    pub fn name(&self, id: usize) -> &[u8] {
+        self.bones.get(id).map_or(&[], |b| &b.name)
+    }
+
+    pub fn first_child(&self, id: usize) -> Option<usize> {
+        self.bones.get(id)?.children.first().copied()
+    }
+
+    pub fn set_owner(&mut self, id: usize, owner: usize) {
+        if let Some(b) = self.bones.get_mut(id) {
+            b.owner = owner;
+        }
+    }
+
+    pub fn owner(&self, id: usize) -> usize {
+        self.bones.get(id).map_or(0, |b| b.owner)
+    }
+
+    pub fn owner_at(&self, idx: i32) -> usize {
+        self.by_index(idx).map_or(0, |id| self.owner(id))
     }
 
     pub fn parent(&self, id: usize) -> Option<usize> {

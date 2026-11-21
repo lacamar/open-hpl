@@ -1984,14 +1984,14 @@ namespace hpl {
 					{
 						iGpuProgram *pProg = pEnv->GetProgram(op.c != 0);
 						apProgs[0] = pProg;
-						apTexs[0] = pEnv->mpTexture;
+						apTexs[0] = pEnv->GetTexture();
 						vAnswer[0] = 1; vAnswer[1] = pProg != NULL ? 1.0f : 0.0f; vAnswer[2] = (float)pEnv->GetIterationNumInt();
 					}
 					ohpl_dr_plan_feed_vec3(apPlan, vAnswer[0], vAnswer[1], vAnswer[2]);
 					break;
 				}
 				case eOhplDr4X_EnvSetupBase:		mpCurrentWorld->GetEnvironmentParticles(op.b)->SetupProgramBase(apProgs[0], mpCurrentFrustum, op.f); break;
-				case eOhplDr4X_EnvVertexBuffer:		SetVertexBuffer(mpCurrentWorld->GetEnvironmentParticles(op.b)->mpVtxBuffer); break;
+				case eOhplDr4X_EnvVertexBuffer:		SetVertexBuffer(mpCurrentWorld->GetEnvironmentParticles(op.b)->GetVertexBuffer()); break;
 				case eOhplDr4X_EnvIteration:		mpCurrentWorld->GetEnvironmentParticles(op.b)->SetupProgramIteration(apProgs[0], op.c); break;
 				case eOhplDr4X_FlareRetrieve:		mpCurrentRenderList->GetLensFlares()[op.b]->RetrieveOcculsionQuery(this); break;
 				case eOhplDr4X_FlareUpdate:			mpCurrentRenderList->GetLensFlares()[op.b]->UpdateVisibility(op.f[0], op.c); break;

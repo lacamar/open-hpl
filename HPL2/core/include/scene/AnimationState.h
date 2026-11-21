@@ -26,6 +26,9 @@
 
 #include "engine/SaveGame.h"
 #include "scene/RustMeshEntity.h"
+#include "graphics/Animation.h"
+#include "resources/AnimationManager.h"
+#include "system/MemoryManager.h"
 
 namespace hpl {
 
@@ -50,12 +53,19 @@ namespace hpl {
 	{
 	public:
 		cAnimationState(cAnimation* apAnimation,const tString &asName,
-						cAnimationManager *apAnimationManager);
-		~cAnimationState();
+						cAnimationManager *apAnimationManager) : msName(asName), mpAnimationManager(apAnimationManager), mpAnimation(apAnimation)
+		{
+			ohpl_anim_core_init(&mCore, apAnimation->GetLength());
+		}
+		~cAnimationState()
+		{
+			STLDeleteAll(mvEvents);
+			if(mpAnimationManager) mpAnimationManager->Destroy(mpAnimation);
+		}
 
         const tString& GetName(){ return msName;}
 
-		void Update(float afTimeStep);
+		void Update(float afTimeStep){ ohpl_anim_update(&mCore, afTimeStep);}
 
 		bool DataIsInMeshFile(){return mpAnimationManager==NULL;}
 
@@ -64,10 +74,10 @@ namespace hpl {
 		/**
 		 * If the animation has reached the end.
 		 */
-		bool IsOver();
+		bool IsOver(){ return ohpl_anim_is_over(&mCore);}
 
-		void FadeIn(float afTime);
-		void FadeOut(float afTime);
+		void FadeIn(float afTime){ ohpl_anim_fade_in(&mCore, afTime);}
+		void FadeOut(float afTime){ ohpl_anim_fade_out(&mCore, afTime);}
 
 		void SetLength(float afLength){ mCore.length = afLength;}
 		float GetLength(){ return mCore.length;}
@@ -76,13 +86,13 @@ namespace hpl {
 		float GetWeight(){ return mCore.weight;}
 
         void SetSpeed(float afSpeed){ mCore.speed = afSpeed; mCore.speed_dest = afSpeed;}
-		void FadeSpeed(float afDest, float afTime);
+		void FadeSpeed(float afDest, float afTime){ ohpl_anim_fade_speed(&mCore, afDest, afTime);}
 		float GetSpeed(){ return mCore.speed;}
 
 		void SetBaseSpeed(float afSpeed){ mCore.base_speed = afSpeed;}
 		float GetBaseSpeed(){ return mCore.base_speed;}
 
-		void SetTimePosition(float afPosition);
+		void SetTimePosition(float afPosition){ ohpl_anim_set_time(&mCore, afPosition);}
         float GetTimePosition(){ return mCore.time_pos;}
 		float GetPreviousTimePosition(){ return mCore.prev_time_pos;}
 
@@ -90,15 +100,15 @@ namespace hpl {
 		 * Set the relative postion. 0 = start, 1 = end
 		 * \param afPosition
 		 */
-		void SetRelativeTimePosition(float afPosition);
+		void SetRelativeTimePosition(float afPosition){ ohpl_anim_set_relative_time(&mCore, afPosition);}
 
 		/**
 		* Get the relative postion. 0 = start, 1 = end
 		*/
-		float GetRelativeTimePosition();
+		float GetRelativeTimePosition(){ return ohpl_anim_relative_time(&mCore);}
 
 		bool IsActive(){ return mCore.active;}
-		void SetActive(bool abActive);
+		void SetActive(bool abActive){ ohpl_anim_set_active(&mCore, abActive);}
 
 		bool IsLooping(){ return mCore.looping;}
 		void SetLoop(bool abLoop){ mCore.looping = abLoop;}
@@ -111,13 +121,20 @@ namespace hpl {
 		bool IsAfterSpecialEvent(){ return mCore.time_pos > mCore.special_event_time;}
 		bool IsBeforeSpecialEvent(){ return mCore.time_pos < mCore.special_event_time;}
 
-		void AddTimePosition(float afAdd);
+		void AddTimePosition(float afAdd){ ohpl_anim_add_time(&mCore, afAdd);}
 
-		cAnimation* GetAnimation();
+		cAnimation* GetAnimation(){ return mpAnimation;}
 
-		cAnimationEvent *CreateEvent();
-		cAnimationEvent *GetEvent(int alIdx);
-		int GetEventNum();
+		cAnimationEvent *CreateEvent()
+		{
+			cAnimationEvent *pEvent = hplNew(cAnimationEvent,());
+			pEvent->mfTime = 0;
+			pEvent->mType = eAnimationEventType_LastEnum;
+			mvEvents.push_back(pEvent);
+			return pEvent;
+		}
+		cAnimationEvent *GetEvent(int alIdx){ return mvEvents[alIdx];}
+		int GetEventNum(){ return (int)mvEvents.size();}
 
 		float GetFadeStep(){ return mCore.fade_step;}
 		void SetFadeStep(float afX){ mCore.fade_step = afX;}

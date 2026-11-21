@@ -25,46 +25,45 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
+#include "graphics/Bone.h"
 
 namespace hpl {
 
-	class cBone;
-	struct OhplH6Skel;
-
 	typedef std::vector<cBone*> tBoneVec;
 	typedef tBoneVec::iterator tBoneVecIt;
-	
+
 	typedef std::map<tString,int> tBoneIdxNameMap;
 	typedef tBoneIdxNameMap::iterator tBoneIdxNameMapIt;
 
-class cSkeleton
+	class cSkeleton
 	{
-	friend class cBone;
 	public:
-		cSkeleton();
-		~cSkeleton();
+		cSkeleton() : mpRs(ohpl_h6_skel_new()), mpRootBone(hplNew(cBone,("__root_bone","",mpRs,(cBone*)NULL)))
+		{
+			mpRootBone->SetTransform(cMatrixf::Identity);
+			mpRootBone->SetTransformUnscaled(cMatrixf::Identity);
+		}
+		~cSkeleton(){ hplDelete(mpRootBone); ohpl_h6_skel_free(mpRs);}
 
-		void RemoveBone(cBone* apBone);
+		void RemoveBone(cBone* apBone){ ohpl_h6_bone_detach(mpRs, apBone->mlRsId);}
 
-		cBone* GetRootBone();
-		
-        cBone* GetBoneByIndex(int alIndex);
-		cBone* GetBoneByName(const tString &asName);
-		cBone* GetBoneBySid(const tString &asSid);
-		int GetBoneIndexBySid(const tString &asName);
-		int GetBoneIndexByName(const tString &asName);
-		int GetBoneNum();
+		cBone* GetRootBone(){ return mpRootBone;}
+		cBone* GetBoneByIndex(int alIndex){ return (cBone*)ohpl_h6_skel_owner_at(mpRs, alIndex);}
+		cBone* GetBoneByName(const tString &asName){ return GetBoneByIndex(GetBoneIndexByName(asName));}
+		cBone* GetBoneBySid(const tString &asSid){ return GetBoneByIndex(GetBoneIndexBySid(asSid));}
+
+		int GetBoneIndexBySid(const tString &asSid){ return ohpl_h6_skel_index_by_sid(mpRs, asSid.data(), asSid.size());}
+		int GetBoneIndexByName(const tString &asName){ return ohpl_h6_skel_index_by_name(mpRs, asName.data(), asName.size());}
+
+		int GetBoneNum(){ return ohpl_h6_skel_num(mpRs);}
+
+		OhplH6Skel* Rs(){ return mpRs;}
 
 		bool mbFileUnits = false;
-	
+
 	private:
-		void RsRegister(cBone* apBone);
-
-		OhplH6Skel* mpRs;
-		tBoneVec mvRsById;
-		cBone* mpRootBone;
-
+		OhplH6Skel *mpRs;
+		cBone *mpRootBone;
 	};
-
 };
 #endif // HPL_SKELETON_H

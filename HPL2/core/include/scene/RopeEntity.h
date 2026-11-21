@@ -25,97 +25,81 @@
 #include "system/SystemTypes.h"
 
 #include "graphics/Renderable.h"
+#include "scene/RustLs.h"
+#include "scene/RustSceneH12.h"
 
 namespace hpl {
 
-	class cMaterialManager;
 	class cGraphics;
 	class cResources;
-	class iLowLevelGraphics;
 	class cMaterial;
 	class iVertexBuffer;
 	class iPhysicsRope;
-	
+
 	//------------------------------------------
 
 	class cRopeEntity : public iRenderable
 	{
 	public:
-		cRopeEntity(const tString& asName, cResources *apResources,cGraphics *apGraphics, iPhysicsRope *apRope, int alMaxSegments);
+		cRopeEntity(const tString& asName, cResources *apResources,cGraphics *apGraphics,
+					iPhysicsRope *apRope, int alMaxSegments) : iRenderable(asName),
+			mpL(ohpl_ls_rope_new((uintptr_t)apResources, (uintptr_t)apGraphics, (uintptr_t)apRope, alMaxSegments))
+		{
+			mpE->applyBV = false;
+		}
 		~cRopeEntity();
 
 		const tString& GetName(){return msName;}
 
-		iPhysicsRope *GetPhysicsRope(){ return mpRope;}
+		iPhysicsRope *GetPhysicsRope(){ return (iPhysicsRope*)mpL->rope;}
 
-		void SetMaterial(cMaterial * apMaterial);
-		
-		void SetColor(const cColor &aColor);
-		const cColor& GetColor(){ return mColor;}
+		void SetMaterial(cMaterial * apMaterial){ mpL->material = (uintptr_t)apMaterial;}
 
-		void SetMultiplyAlphaWithColor(bool abX);
-		bool GetMultiplyAlphaWithColor(){ return mbMultiplyAlphaWithColor;}
+		void SetColor(const cColor &aColor){ ohpl_ls_rope_set_color(mpL, &aColor);}
+		const cColor& GetColor(){ return mpL->color;}
 
-		void SetRadius(float afX){ mfRadius = afX;}
-		float GetRadius(){ return mfRadius;}
-		
-		int GetMaxSegments(){ return mlMaxSegments;}
+		void SetMultiplyAlphaWithColor(bool abX){ mpL->multiplyAlpha = abX;}
+		bool GetMultiplyAlphaWithColor(){ return mpL->multiplyAlpha;}
+
+		void SetRadius(float afX){ mpL->radius = afX;}
+		float GetRadius(){ return mpL->radius;}
+
+		int GetMaxSegments(){ return mpL->maxSegments;}
 
 		/**
 		 * Only used when segment size > 0
 		 */
-		void SetLengthTileAmount(float afX){ mfLengthTileAmount = afX;}
-		float GetLengthTileAmount(){ return mfLengthTileAmount;}
+		void SetLengthTileAmount(float afX){ mpL->tileAmount = afX;}
+		float GetLengthTileAmount(){ return mpL->tileAmount;}
 
 		/**
 		* Only used when segment size = 0
 		*/
-		void SetLengthTileSize(float afX){ mfLengthTileSize = afX;}
-		float GetLengthTileSize(){ return mfLengthTileSize;}
+		void SetLengthTileSize(float afX){ mpL->tileSize = afX;}
+		float GetLengthTileSize(){ return mpL->tileSize;}
 
-		
 		/////////////////////////////////
 		//Entity implementation
 		tString GetEntityType(){ return "RopeEntity";}
 
-		bool IsVisible();
-		
+		bool IsVisible(){ return ohpl_h12b_is_visible(&mpL->color, mbIsVisible);}
+
 		/////////////////////////////////
 		//Renderable implementations
-		cMaterial *GetMaterial(){ return mpMaterial;}
-		iVertexBuffer* GetVertexBuffer(){return mpVtxBuffer;}
+		cMaterial *GetMaterial(){ return (cMaterial*)mpL->material;}
+		iVertexBuffer* GetVertexBuffer(){return (iVertexBuffer*)mpL->vtx;}
 
-        void UpdateGraphicsForFrame(float afFrameTime);
-		bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime);
+		bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime){ return ohpl_ls_rope_viewport(mpL, OhplLsFrustum(apFrustum));}
 
-		cBoundingVolume* GetBoundingVolume();
+		cBoundingVolume* GetBoundingVolume(){ ohpl_ls_rope_bounds(mpL, mBoundingVolume.Rs()); return &mBoundingVolume;}
 
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
+		cMatrixf* GetModelMatrix(cFrustum *apFrustum){ return apFrustum==NULL ? &GetWorldMatrix() : NULL;}
 
-		int GetMatrixUpdateCount();
-
+		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
 
 		eRenderableType GetRenderType(){ return eRenderableType_Rope;}
 	private:
-		cMaterialManager* mpMaterialManager;
-		iLowLevelGraphics* mpLowLevelGraphics;
-
-		iPhysicsRope *mpRope;
-		
-		cMaterial *mpMaterial;
-		iVertexBuffer* mpVtxBuffer;
-
-		int mlMaxSegments;
-
-		float mfRadius;
-		float mfLengthTileAmount;
-		float mfLengthTileSize;
-		
-		cColor mColor;
-		bool mbMultiplyAlphaWithColor;
-
-		int mlLastUpdateCount;
-		std::vector<cVector3f> mvPoints;
+		OhplLsRope *mpL;
 	};
 
 };

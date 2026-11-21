@@ -61,6 +61,7 @@ namespace hpl {
 	cPhysics::cPhysics()  : iUpdateable("HPL_Physics")
 	{
 
+		static_assert(offsetof(cPhysics, mRs) == 96 && offsetof(cPhysics, mS) == 104, "rust/src/physics/cxx_physics.rs offsets");
 		mRs = ohpl_h15p_new(HostOp, reinterpret_cast<size_t>(this), &mS);
 	}
 
@@ -78,36 +79,6 @@ namespace hpl {
 		mpResources = apResources;
 	}
 
-	void cPhysics::Update(float afTimeStep)
-	{
-		ohpl_h15p_update_impacts(mRs, afTimeStep, mS->impactDuration);
-	}
-
-	iPhysicsWorld* cPhysics::CreateWorld(bool abAddSurfaceData)
-	{
-		return reinterpret_cast<iPhysicsWorld*>(ohpl_h15p_create_world(mRs, abAddSurfaceData));
-	}
-
-	void cPhysics::DestroyWorld(iPhysicsWorld* apWorld)
-	{
-		ohpl_h15p_destroy_world(mRs, reinterpret_cast<size_t>(apWorld));
-	}
-
-	bool cPhysics::CanPlayImpact()
-	{
-		return ohpl_h15p_can_play(mRs, mS->maxImpacts);
-	}
-
-	void cPhysics::AddImpact()
-	{
-		ohpl_h15p_add_impact(mRs);
-	}
-
-	int cPhysics::GetNumOfImpacts()
-	{
-		return (int)ohpl_h15p_impact_count(mRs);
-	}
-
 	cSurfaceDataIterator cPhysics::GetSurfaceDataIterator()
 	{
 		m_mapSurfaceData.clear();
@@ -117,21 +88,6 @@ namespace hpl {
 			if(ohpl_h15p_surface_at(mRs, i, &name, &obj)) m_mapSurfaceData[tString(name.p, name.n)] = reinterpret_cast<cSurfaceData*>(obj);
 		}
 		return cSurfaceDataIterator(&m_mapSurfaceData);
-	}
-
-	cSurfaceData *cPhysics::CreateSurfaceData(const tString& asName)
-	{
-		return reinterpret_cast<cSurfaceData*>(ohpl_h15p_create_surface(mRs, asName.c_str(), asName.size()));
-	}
-
-	cSurfaceData *cPhysics::GetSurfaceData(const tString& asName)
-	{
-		return reinterpret_cast<cSurfaceData*>(ohpl_h15p_get_surface(mRs, asName.c_str(), asName.size()));
-	}
-
-	bool cPhysics::LoadSurfaceData(const tString& asFile)
-	{
-		return ohpl_h15p_load_surface(mRs, asFile.c_str(), asFile.size());
 	}
 
 }

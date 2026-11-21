@@ -21,6 +21,7 @@
 #define HPL_BONE_STATE_H
 
 #include "scene/Node3D.h"
+#include "math/Math.h"
 
 namespace hpl {
 
@@ -29,25 +30,23 @@ namespace hpl {
 	class cBoneState : public cNode3D
 	{
 	public:
-		cBoneState(const tString &asName, bool abAutoDeleteChildren);
-		
-		void SetBody(iPhysicsBody *apBody);
-		iPhysicsBody* GetBody();
+		cBoneState(const tString &asName, bool abAutoDeleteChildren) : cNode3D(asName,abAutoDeleteChildren){}
 
-		void SetColliderBody(iPhysicsBody *apBody);
-		iPhysicsBody* GetColliderBody();
+		void SetBody(iPhysicsBody *apBody){ mpBody = apBody;}
+		iPhysicsBody* GetBody(){ return mpBody;}
 
-		void SetBodyMatrix(const cMatrixf &a_mtxBody);
-		const cMatrixf& GetBodyMatrix();
-		const cMatrixf& GetInvBodyMatrix();
+		void SetColliderBody(iPhysicsBody *apBody){ mpColliderBody = apBody;}
+		iPhysicsBody* GetColliderBody(){ return mpColliderBody;}
+
+		void SetBodyMatrix(const cMatrixf &a_mtxBody){ m_mtxBody = a_mtxBody; m_mtxInvBody = cMath::MatrixInverse(a_mtxBody);}
+		const cMatrixf& GetBodyMatrix(){ return m_mtxBody;}
+		const cMatrixf& GetInvBodyMatrix(){ return m_mtxInvBody;}
 
 	private:
-		iPhysicsBody *mpBody;
+		iPhysicsBody *mpBody = NULL;
 		cMatrixf m_mtxBody;
 		cMatrixf m_mtxInvBody;
-
-		iPhysicsBody *mpColliderBody;
+		iPhysicsBody *mpColliderBody = NULL;
 	};
-
 };
 #endif // HPL_BONE_STATE_H

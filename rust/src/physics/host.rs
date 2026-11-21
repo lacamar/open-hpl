@@ -1,6 +1,7 @@
 //! Callbacks into the C++ engine objects (bodies, joints, worlds, sound entities).
 //! Handles are the C++ object addresses; 0 is null. Strings cross as (pointer, length).
 
+use crate::backend::newton::body as nb;
 use crate::types::{Matrixf, Vector3f};
 
 pub type H = usize;
@@ -37,10 +38,30 @@ impl Str {
     }
 }
 
+const FLAG_HAS_SLIDE: i32 = 0;
+const FLAG_HAS_COLLISION: i32 = 1;
+const FLAG_STATIC_MOVEMENT: i32 = 2;
+const FLAG_DISABLE_AFTER_SIM: i32 = 3;
+
+/// The `BodyState` embedded in the C++ `iPhysicsBody` at `b`; handles are live body addresses.
+fn body<'a>(b: H) -> &'a mut super::shell::BodyState {
+    // SAFETY: Rust and the C++ shell only pass addresses of live bodies.
+    unsafe { super::cxx_body::state(b as *const u8) }
+}
+
+fn flag_get(b: H, id: i32) -> bool {
+    super::ffi::ohpl_h15_body_flag_get(body(b).book, id)
+}
+
+fn flag_set(b: H, id: i32, v: bool) {
+    super::ffi::ohpl_h15_body_flag_set(body(b).book, id, v)
+}
+
 macro_rules! host {
-    ($( $name:ident ( $($a:ident : $t:ty),* ) $(-> $r:ty)? ;)*) => {
+    ($( $name:ident ( $($a:ident : $t:ty),* ) $(-> $r:ty)? ;)* ; direct { $( $dname:ident ( $($da:ident : $dt:ty),* ) $(-> $dr:ty)? $dbody:block )* }) => {
         pub trait Host {
             $( fn $name(&self, $($a: $t),*) $(-> $r)?; )*
+            $( fn $dname(&self, $($da: $dt),*) $(-> $dr)?; )*
             fn body_local_matrix(&self, b: H) -> Matrixf;
             fn body_prev_scrape_matrix(&self, b: H) -> Matrixf;
             fn body_set_prev_scrape_matrix(&self, b: H, m: &Matrixf);
@@ -59,6 +80,7 @@ macro_rules! host {
         impl Host for &Vt {
             // SAFETY (every forwarder): the C++ side fills `Vt` with live function pointers.
             $( fn $name(&self, $($a: $t),*) $(-> $r)? { unsafe { (self.$name)($($a),*) } } )*
+            $( fn $dname(&self, $($da: $dt),*) $(-> $dr)? $dbody )*
             fn body_local_matrix(&self, b: H) -> Matrixf {
                 let mut m = Matrixf::default();
                 // SAFETY: `m` is a valid out-pointer.
@@ -86,6 +108,10 @@ macro_rules! host {
             $( fn $name(&self, $($a: $t),*) $(-> $r)? {
                 self.log.borrow_mut().push(format!("{} {:?}", stringify!($name), ($(&$a,)*)));
                 $( let r: $r = self.ret(stringify!($name)); r )?
+            } )*
+            $( fn $dname(&self, $($da: $dt),*) $(-> $dr)? {
+                self.log.borrow_mut().push(format!("{} {:?}", stringify!($dname), ($(&$da,)*)));
+                $( let r: $dr = self.ret(stringify!($dname)); r )?
             } )*
             fn body_local_matrix(&self, _b: H) -> Matrixf {
                 self.local.get()
@@ -136,43 +162,12 @@ host! {
     surf_impact_ps(s: H, i: i32) -> Str;
     surf_impact_ps_prio(s: H, i: i32) -> i32;
 
-    body_mass(b: H) -> f32;
-    body_enabled(b: H) -> bool;
-    body_linear_velocity(b: H) -> Vector3f;
-    body_angular_velocity(b: H) -> Vector3f;
-    body_set_linear_velocity(b: H, v: Vector3f);
-    body_set_angular_velocity(b: H, v: Vector3f);
     body_world_position(b: H) -> Vector3f;
     body_local_position(b: H) -> Vector3f;
-    body_mass_centre(b: H) -> Vector3f;
     body_set_position(b: H, p: Vector3f);
-    body_add_force(b: H, v: Vector3f);
-    body_add_torque(b: H, v: Vector3f);
-    body_use_surface_effects(b: H) -> bool;
-    body_scrape_body(b: H) -> H;
-    body_set_scrape_body(b: H, other: H);
-    body_scrape_entity(b: H) -> H;
-    body_scrape_entity_id(b: H) -> i32;
     body_set_scrape_entity(b: H, e: H);
-    body_roll_entity(b: H) -> H;
-    body_roll_entity_id(b: H) -> i32;
     body_set_roll_entity(b: H, e: H);
-    body_has_slide(b: H) -> bool;
-    body_set_has_slide(b: H, v: bool);
-    body_has_collision(b: H) -> bool;
-    body_set_has_collision(b: H, v: bool);
-    body_in_update_list(b: H) -> bool;
     body_add_to_update_list(b: H);
-    body_static_movement(b: H) -> bool;
-    body_set_static_movement(b: H, v: bool);
-    body_total_static_linear(b: H) -> Vector3f;
-    body_total_static_angular(b: H) -> Vector3f;
-    body_set_total_static_linear(b: H, v: Vector3f);
-    body_set_total_static_angular(b: H, v: Vector3f);
-    body_slide_count(b: H) -> i32;
-    body_set_slide_count(b: H, v: i32);
-    body_disable_after_simulation(b: H) -> bool;
-    body_set_disable_after_simulation(b: H, v: bool);
     body_enable_bodies_around(b: H);
     body_update_roll_effect(b: H);
 
@@ -197,6 +192,71 @@ host! {
     ctrl_end_type(c: H) -> i32;
     ctrl_next_name(c: H) -> Str;
     ctrl_log(c: H, value: f32, dest: f32, error: f32, output: f32);
+
+    ; direct {
+        body_mass(b: H) -> f32 { nb::ohpl_ntb_mass(body(b).rust) }
+        body_enabled(b: H) -> bool { nb::ohpl_ntb_enabled(body(b).rust) }
+        body_linear_velocity(b: H) -> Vector3f {
+            let mut v = Vector3f::default();
+            // SAFETY: `v` is a valid out-pointer.
+            unsafe { nb::ohpl_ntb_velocity(body(b).rust, &mut v) };
+            v
+        }
+        body_angular_velocity(b: H) -> Vector3f {
+            let mut v = Vector3f::default();
+            // SAFETY: `v` is a valid out-pointer.
+            unsafe { nb::ohpl_ntb_omega(body(b).rust, &mut v) };
+            v
+        }
+        body_set_linear_velocity(b: H, v: Vector3f) {
+            // SAFETY: `v` is a valid in-pointer.
+            unsafe { nb::ohpl_ntb_set_velocity(body(b).rust, &v) }
+        }
+        body_set_angular_velocity(b: H, v: Vector3f) {
+            // SAFETY: `v` is a valid in-pointer.
+            unsafe { nb::ohpl_ntb_set_omega(body(b).rust, &v) }
+        }
+        body_mass_centre(b: H) -> Vector3f {
+            let mut v = Vector3f::default();
+            // SAFETY: `v` is a valid out-pointer.
+            unsafe { nb::ohpl_ntb_mass_centre(body(b).rust, &mut v) };
+            v
+        }
+        body_add_force(b: H, v: Vector3f) {
+            let s = body(b);
+            // SAFETY: `v` is a valid in-pointer.
+            unsafe { nb::ohpl_ntb_add_force(s.rust, &v) };
+            super::cxx_body::enable(s);
+        }
+        body_add_torque(b: H, v: Vector3f) {
+            let s = body(b);
+            // SAFETY: `v` is a valid in-pointer.
+            unsafe { nb::ohpl_ntb_add_torque(s.rust, &v) };
+            super::cxx_body::enable(s);
+        }
+        body_use_surface_effects(b: H) -> bool { body(b).use_surface_effects }
+        body_scrape_body(b: H) -> H { body(b).scrape_body }
+        body_set_scrape_body(b: H, other: H) { body(b).scrape_body = other }
+        body_scrape_entity(b: H) -> H { body(b).scrape_sound }
+        body_scrape_entity_id(b: H) -> i32 { body(b).scrape_sound_id }
+        body_roll_entity(b: H) -> H { body(b).roll_sound }
+        body_roll_entity_id(b: H) -> i32 { body(b).roll_sound_id }
+        body_has_slide(b: H) -> bool { flag_get(b, FLAG_HAS_SLIDE) }
+        body_set_has_slide(b: H, v: bool) { flag_set(b, FLAG_HAS_SLIDE, v) }
+        body_has_collision(b: H) -> bool { flag_get(b, FLAG_HAS_COLLISION) }
+        body_set_has_collision(b: H, v: bool) { flag_set(b, FLAG_HAS_COLLISION, v) }
+        body_in_update_list(b: H) -> bool { body(b).in_update_list }
+        body_static_movement(b: H) -> bool { flag_get(b, FLAG_STATIC_MOVEMENT) }
+        body_set_static_movement(b: H, v: bool) { flag_set(b, FLAG_STATIC_MOVEMENT, v) }
+        body_total_static_linear(b: H) -> Vector3f { body(b).total_static_linear }
+        body_total_static_angular(b: H) -> Vector3f { body(b).total_static_angular }
+        body_set_total_static_linear(b: H, v: Vector3f) { body(b).total_static_linear = v }
+        body_set_total_static_angular(b: H, v: Vector3f) { body(b).total_static_angular = v }
+        body_slide_count(b: H) -> i32 { body(b).slide_count }
+        body_set_slide_count(b: H, v: i32) { body(b).slide_count = v }
+        body_disable_after_simulation(b: H) -> bool { flag_get(b, FLAG_DISABLE_AFTER_SIM) }
+        body_set_disable_after_simulation(b: H, v: bool) { flag_set(b, FLAG_DISABLE_AFTER_SIM, v) }
+    }
 }
 
 #[cfg(test)]
