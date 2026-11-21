@@ -127,6 +127,7 @@ pub struct Pod {
     pub dof_active: bool,
 }
 
+#[repr(C)]
 pub struct World {
     pub pod: Pod,
     name: Vec<u8>,
