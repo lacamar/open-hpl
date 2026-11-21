@@ -7,6 +7,9 @@
 #include "scene/Beam.h"
 #include "scene/LensFlare.h"
 #include "scene/Light.h"
+#include "scene/LightPoint.h"
+#include "scene/LightSpot.h"
+#include "scene/LightBox.h"
 #include "scene/FogArea.h"
 #include "scene/World.h"
 #include "scene/ParticleSystem.h"
@@ -313,6 +316,14 @@ namespace hpl {
 	cEnvironmentParticles::~cEnvironmentParticles(){ ohpl_ls_env_free(mpL);}
 	cBillboard::~cBillboard(){ ohpl_ls_bb_free(mpS);}
 	iLight::~iLight(){ ohpl_ls_light_free(mpS);}
+	cLightPoint::~cLightPoint(){}
+	cLightSpot::~cLightSpot(){}
+	cLightBox::~cLightBox(){}
+	cLensFlareType::~cLensFlareType(){ ohpl_ls_ft_free(mpS);}
+	void cBeamEnd_UpdateCallback::OnTransformUpdate(iEntity3D *apEntity)
+	{
+		((cBeam*)static_cast<cBeamEnd*>(apEntity)->mpS->beam)->SetTransformUpdated(true);
+	}
 	cLensFlare::~cLensFlare(){ ohpl_ls_flare_free(mpS);}
 	cBeam::~cBeam(){ hplDelete(GetEnd()); ohpl_ls_beam_free(mpS);}
 }

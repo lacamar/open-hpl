@@ -33,6 +33,7 @@ namespace hpl {
 	#endif
 	public:
 		cLightPoint(tString asName, cResources *apResources) : iLight(asName,apResources,eLightType_Point){}
+		~cLightPoint();
 	};
 
 };

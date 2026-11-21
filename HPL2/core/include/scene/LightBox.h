@@ -31,6 +31,7 @@ namespace hpl {
 	{
 	public:
 		cLightBox(tString asName, cResources *apResources) : iLight(asName,apResources,eLightType_Box){}
+		~cLightBox();
 
 		void SetSize(const cVector3f& avSize){ Box()->size = avSize; mpE->updateBV = true; SetTransformUpdated();}
 		inline const cVector3f& GetSize(){ return Box()->size;}

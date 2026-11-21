@@ -139,10 +139,6 @@ namespace hpl {
 	};
 
 	inline void cBeamEnd::SetColor(const cColor &aColor){ ohpl_ls_beam_set_end_color(((cBeam*)mpS->beam)->mpS, &aColor);}
-	inline void cBeamEnd_UpdateCallback::OnTransformUpdate(iEntity3D * apEntity)
-	{
-		((cBeam*)static_cast<cBeamEnd*>(apEntity)->mpS->beam)->SetTransformUpdated(true);
-	}
 
 };
 #endif // HPL_BEAM_H

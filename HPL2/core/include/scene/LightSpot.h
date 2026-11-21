@@ -37,6 +37,7 @@ namespace hpl {
 	#endif
 	public:
 		cLightSpot(tString asName, cResources *apResources) : iLight(asName,apResources,eLightType_Spot){}
+		~cLightSpot();
 
 		const cMatrixf& GetViewMatrix(){ return *ohpl_ls_spot_view(mpS);}
 		const cMatrixf& GetProjectionMatrix(){ return *ohpl_ls_spot_projection(mpS);}

@@ -27,7 +27,7 @@ namespace hpl {
 	public:
 		cLensFlareType(cLensFlare *apParent, const tString &asName, eLensFlareType aType, OhplSLFlare *apFlare) : iRenderable(asName),
 			mpS(ohpl_ls_ft_new((uintptr_t)apParent, Rs(), apFlare, aType)){}
-		~cLensFlareType(){ ohpl_ls_ft_free(mpS); }
+		~cLensFlareType();
 
 		cMaterial *GetMaterial(){ return (cMaterial*)ohpl_ls_ft_material(mpS);}
 		iVertexBuffer* GetVertexBuffer(){ return (iVertexBuffer*)ohpl_ls_ft_vertex_buffer(mpS);}
