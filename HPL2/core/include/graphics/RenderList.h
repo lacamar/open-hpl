@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -24,6 +24,7 @@
 #include "graphics/RustRender.h"
 #include "graphics/RustRenderH8.h"
 #include "math/MathTypes.h"
+#include "system/RustPtrList.h"
 #include "system/SystemTypes.h"
 
 namespace hpl {
@@ -35,13 +36,25 @@ namespace hpl {
 	class cFrustum;
 	class cFogArea;
 	class cLensFlare;
+	struct OhplRl;
+
+	extern "C" {
+	OhplRl* ohpl_rl_new();
+	void ohpl_rl_free(OhplRl*);
+	void ohpl_rl_setup(OhplRl*, float, cFrustum*);
+	void ohpl_rl_clear(OhplRl*);
+	void ohpl_rl_add(OhplRl*, const void*, iRenderable*);
+	void ohpl_rl_compile(OhplRl*, const void*, unsigned);
+	OhplPtrVec* ohpl_rl_list(OhplRl*, size_t);
+	}
+
+	typedef cOhplPtrList<iRenderable> tRenderableView;
+	typedef cSTLIterator<iRenderable*, tRenderableView, tRenderableView::iterator> cRenderableVecIterator;
 
 	//---------------------------------------------
 
-	typedef cSTLIterator<iRenderable*, tRenderableVec, tRenderableVecIt> cRenderableVecIterator;
-
-	//---------------------------------------------
-	
+	// Lists, sorting and the update gates live in rust/src/render/rl.rs; the lists hold iRenderable
+	// addresses (iLight, cFogArea and cLensFlare have iRenderable as their first base).
 	class cRenderList
 	{
 	public:
@@ -53,13 +66,13 @@ namespace hpl {
 		void AddObject(iRenderable *apObject);
 
 		void Compile(tRenderListCompileFlag aFlags);
-		
-		bool ArrayHasObjects(eRenderListType aType);
-		cRenderableVecIterator GetArrayIterator(eRenderListType aType);
 
-		cRenderableVecIterator GetOcclusionQueryObjectIterator();
+		bool ArrayHasObjects(eRenderListType aType){ return mvSorted[aType].empty()==false;}
+		cRenderableVecIterator GetArrayIterator(eRenderListType aType){ return cRenderableVecIterator(&mvSorted[aType]);}
 
-		void Clear();
+		cRenderableVecIterator GetOcclusionQueryObjectIterator(){ return cRenderableVecIterator(&mvOcclusion);}
+
+		void Clear(){ ohpl_rl_clear(mpRs);}
 
 		iLight* GetLight(int alIdx){ return mvLights[alIdx];}
 		int GetLightNum(){ return(int)mvLights.size();}
@@ -67,42 +80,25 @@ namespace hpl {
 		cFogArea* GetFogArea(int alIdx){ return mvFogAreas[alIdx];}
 		int GetFogAreaNum(){ return(int)mvFogAreas.size();}
 
-		const std::vector<cLensFlare*>& GetLensFlares(){ return mvLensFlares;}
-		const std::vector<cLensFlare*>& GetMultiIrisFlares(){ return mvMultiIrisFlares;}
+		const cOhplPtrList<cLensFlare>& GetLensFlares(){ return mvLensFlares;}
+		const cOhplPtrList<cLensFlare>& GetMultiIrisFlares(){ return mvMultiIrisFlares;}
 
 		void PrintAllObjects();
-		
-		//Temp:
-		int GetSolidObjectNum(){ return (int)mvSolidObjects.size();}
-		iRenderable* GetSolidObject(int alIdx){ return mvSolidObjects[alIdx];}
 
-		int GetTransObjectNum(){ return (int)mvTransObjects.size();}
-		iRenderable* GetTransObject(int alIdx){ return mvTransObjects[alIdx];}
+		//Temp:
+		int GetSolidObjectNum(){ return (int)mvSolid.size();}
+		iRenderable* GetSolidObject(int alIdx){ return mvSolid[alIdx];}
+
+		int GetTransObjectNum(){ return (int)mvTrans.size();}
+		iRenderable* GetTransObject(int alIdx){ return mvTrans[alIdx];}
 
 	private:
-		void ApplyOrder(eRenderListType aType, const tRenderableVec& avSource);
-		void AddObjectRust(iRenderable *apObject, eRenderableType aRenderType);
+		OhplRl *mpRs;
 
-		float mfFrameTime;
-		cFrustum *mpFrustum;
-
-		tRenderableVec mvOcclusionQueryObjects;
-		tRenderableVec mvSolidObjects;
-		tRenderableVec mvTransObjects;
-		tRenderableVec mvDecalObjects;
-		tRenderableVec mvIllumObjects;
-		std::vector<iLight*> mvLights;
-		std::vector<cFogArea*> mvFogAreas;
-		std::vector<cLensFlare*> mvLensFlares;
-		std::vector<cLensFlare*> mvMultiIrisFlares;
-
-		tRenderableVec mvSortedArrays[eRenderListType_LastEnum];
-
-		std::vector<OhplSolidKey> mvSolidKeys;
-		std::vector<OhplTransKey> mvTransKeys;
-		std::vector<OhplDecalKey> mvDecalKeys;
-		std::vector<OhplIllumKey> mvIllumKeys;
-		std::vector<unsigned> mvOrder[eRenderListType_LastEnum];
+		tRenderableView mvOcclusion, mvSolid, mvTrans, mvDecal, mvIllum, mvSorted[eRenderListType_LastEnum];
+		cOhplPtrList<iLight> mvLights;
+		cOhplPtrList<cFogArea> mvFogAreas;
+		cOhplPtrList<cLensFlare> mvLensFlares, mvMultiIrisFlares;
 	};
 
 	//---------------------------------------------

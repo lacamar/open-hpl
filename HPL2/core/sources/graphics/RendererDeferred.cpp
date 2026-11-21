@@ -2998,7 +2998,7 @@ namespace hpl {
 	{
 		OhplDr4GlareIn in;
 		memset(&in, 0, sizeof(in));
-		const std::vector<cLensFlare*> &vFlares = mpCurrentRenderList->GetLensFlares();
+		const auto &vFlares = mpCurrentRenderList->GetLensFlares();
 		in.irisOk = mpLensFlareIrisProgram != NULL;
 		in.glareOk = mpLensFlareGlareProgram != NULL;
 		in.flareCount = (int)vFlares.size();
@@ -3022,7 +3022,7 @@ namespace hpl {
 				vGlare[i].vis = vFlares[i]->GetVisibility();
 				vGlare[i].anyActive = !(vGlare[i].vis <= 0) && vFlares[i]->IsAnyTypeActive();
 			}
-			const std::vector<cLensFlare*> &vMulti = mpCurrentRenderList->GetMultiIrisFlares();
+			const auto &vMulti = mpCurrentRenderList->GetMultiIrisFlares();
 			in.multiCount = (int)vMulti.size();
 			vIris.resize(vMulti.size());
 			for(size_t i=0; i<vMulti.size(); ++i)
