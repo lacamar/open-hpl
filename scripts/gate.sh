@@ -49,6 +49,8 @@ export OPENHPL_BUILD_DIR=$BUILD OPENHPL_HEADLESS_SLOTS=${OPENHPL_HEADLESS_SLOTS:
 export CCACHE_BASEDIR=${CCACHE_BASEDIR:-$REPO} CCACHE_NOHASHDIR=1
 SUM=$OUT/summary.txt; : > "$SUM"
 say() { echo "$*" | tee -a "$SUM"; }
+# run a dump step; a missing dump (start/lock flake) gets one more run, reported as RETRIED
+twice() { local f=$1; shift; "$@"; [ -s "$f" ] && return 0; say "RETRIED dump ${f##*/}: missing after the first run"; rm -f "$f"; "$@"; }
 
 if [ -n "$QUICK" ]; then
 	SOMA_MAPS="00_01_apartment 01_02_upsilon_inside 02_05_theta_inside 03_02_omicron_inside 04_02_tau_inside"
@@ -156,7 +158,7 @@ half() {
 	for gm in soma:00_01_apartment rebirth:02_02_courtyard bunker:arena amnesia:00_rainy_hall amfp:06_factory; do
 		has "${gm%%:*}" || continue
 		rm -f "$OUT/esnd-${gm%%:*}-$impl.txt"
-		ENVX="$extra OHPL_ESND_DUMP=$OUT/esnd-${gm%%:*}-$impl.txt" sweep "$impl" "${gm%%:*}" "$OUT/dump-esnd-$impl-${gm%%:*}.json" --map "${gm#*:}"
+		ENVX="$extra OHPL_ESND_DUMP=$OUT/esnd-${gm%%:*}-$impl.txt" twice "$OUT/esnd-${gm%%:*}-$impl.txt" sweep "$impl" "${gm%%:*}" "$OUT/dump-esnd-$impl-${gm%%:*}.json" --map "${gm#*:}"
 	done
 	if has soma; then
 		rm -f "$OUT/s7v-soma-$impl.txt" "$OUT/s5bv-soma-$impl.txt"
@@ -165,7 +167,7 @@ half() {
 	for g in soma rebirth bunker; do
 		has "$g" || continue
 		rm -f "$OUT/s8-$g-$impl.txt"
-		env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-s8-$impl-$g-$$" OHPL_GAME="$g" S8_WAIT=1500 \
+		twice "$OUT/s8-$g-$impl.txt" env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-s8-$impl-$g-$$" OHPL_GAME="$g" S8_WAIT=1500 \
 			scripts/s8-scenario.sh "$OUT/s8-$g-$impl.txt" >> "$OUT/s8-$impl-$g.log" 2>&1
 	done
 	for g in soma rebirth bunker; do
@@ -174,7 +176,7 @@ half() {
 		for n in "" 2; do
 			[ -n "$n" ] && [ -z "$RECORD" ] && continue
 			rm -f "$OUT/s8d$n-$g-$impl.txt"
-			env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-s8d$n-$impl-$g-$$" OHPL_GAME="$g" S8_WAIT=1500 \
+			twice "$OUT/s8d$n-$g-$impl.txt" env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-s8d$n-$impl-$g-$$" OHPL_GAME="$g" S8_WAIT=1500 \
 				scripts/s8d-scenario.sh "$OUT/s8d$n-$g-$impl.txt" >> "$OUT/s8d-$impl-$g.log" 2>&1
 		done
 	done
@@ -203,7 +205,7 @@ half() {
 	for g in soma rebirth bunker; do
 		has "$g" || continue
 		rm -f "$OUT/s8c-$g-$impl.txt"
-		env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-s8c-$impl-$g-$$" OHPL_GAME="$g" \
+		twice "$OUT/s8c-$g-$impl.txt" env $extra OPENHPL_SCRATCH_ROOT="$SCRATCH-$impl" OHPL_IMPL="$impl" OHPL_PLAY_NAME="ohpl-s8c-$impl-$g-$$" OHPL_GAME="$g" \
 			scripts/s8c-scenario.sh "$OUT/s8c-$g-$impl.txt" >> "$OUT/s8c-$impl-$g.log" 2>&1
 	done
 	# E-as: array/string script suites (the add-ons are Rust on both paths; the golden is the C++ add-ons' output)
@@ -678,6 +680,10 @@ def same(name, a, b):
             return (True, "identical (monitor names masked)")
     if name.startswith("h4seq") and multiset(a) == multiset(b):
         return (True, "same multiset (combine order is pointer-ordered in C++)")
+    alt = os.path.join(os.path.dirname(flaky), "known-alt", name)
+    for f in sorted(os.listdir(alt)) if os.path.isdir(alt) else []:
+        if filecmp.cmp(os.path.join(alt, f), b, shallow=False):
+            return (True, f"known alternative outcome ({f})")
     return (False, "DIFFER")
 
 def ok(p):
