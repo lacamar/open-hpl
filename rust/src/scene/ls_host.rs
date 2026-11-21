@@ -89,6 +89,65 @@ pub struct Host {
         mtx: *mut *const Matrixf,
     ) -> bool,
     pub vb_vertex_num: unsafe extern "C" fn(vb: *mut c_void) -> i32,
+    pub tex_create: unsafe extern "C" fn(
+        res: *mut c_void,
+        kind: i32,
+        name: *const u8,
+        len: usize,
+    ) -> *mut c_void,
+    pub tex_clamp: unsafe extern "C" fn(tex: *mut c_void, str_axis: bool),
+    pub tex_anim: unsafe extern "C" fn(tex: *mut c_void, mode: i32, frame_time: f32),
+    pub tracker_new: unsafe extern "C" fn() -> *mut c_void,
+    pub tracker_delete: unsafe extern "C" fn(tracker: *mut c_void),
+    pub frustum_new: unsafe extern "C" fn() -> *mut Frustum,
+    pub frustum_delete: unsafe extern "C" fn(frustum: *mut Frustum),
+    pub bb_visible: unsafe extern "C" fn(bb: *mut c_void, visible: bool),
+    pub bb_color: unsafe extern "C" fn(bb: *mut c_void, color: *const Color),
+    pub ps_visible: unsafe extern "C" fn(ps: *mut c_void, visible: bool),
+    pub ps_set_light: unsafe extern "C" fn(ps: *mut c_void, light: *mut c_void),
+    pub ps_leave_light: unsafe extern "C" fn(ps: *mut c_void),
+    pub ps_light_color: unsafe extern "C" fn(ps: *mut c_void, color: *const Color),
+    pub ps_light_brightness: unsafe extern "C" fn(ps: *mut c_void, brightness: f32),
+    pub visible_change: unsafe extern "C" fn(callback: *mut c_void, ctx: *mut c_void),
+    pub ease: unsafe extern "C" fn(ctx: *mut c_void, t: f32) -> f32,
+    pub world_sound: unsafe extern "C" fn(
+        world: *mut c_void,
+        ctx: *mut c_void,
+        on: bool,
+        file: *const u8,
+        len: usize,
+    ),
+    pub world_particle:
+        unsafe extern "C" fn(world: *mut c_void, ctx: *mut c_void, ps: *const u8, len: usize),
+    pub renderable_info:
+        unsafe extern "C" fn(obj: *mut c_void, count: *mut i32, is_static: *mut bool),
+    pub obj_name: unsafe extern "C" fn(kind: i32, obj: *mut c_void, len: *mut usize) -> *const u8,
+    pub dump_info: unsafe extern "C" fn(kind: i32, obj: *mut c_void, out: *mut DumpInfo),
+    pub obj_bv: unsafe extern "C" fn(kind: i32, obj: *mut c_void) -> *mut Bv,
+    pub dump_list:
+        unsafe extern "C" fn(world: *mut c_void, kind: i32, out: *mut usize, cap: usize) -> usize,
+}
+
+/// What the `OHPL_SL_DUMP` hook reads from an entity that its pod does not hold.
+#[repr(C)]
+pub struct DumpInfo {
+    pub name: *const u8,
+    pub name_len: usize,
+    pub pod: usize,
+    pub uid: i32,
+    pub visible: bool,
+}
+
+impl Default for DumpInfo {
+    fn default() -> Self {
+        Self {
+            name: std::ptr::null(),
+            name_len: 0,
+            pod: 0,
+            uid: 0,
+            visible: false,
+        }
+    }
 }
 
 /// A preprocessor variable of a GPU program; `has_value` picks the integer overload.
@@ -336,6 +395,23 @@ impl Xml {
         unsafe { std::ffi::CStr::from_ptr(p) }.to_bytes().to_vec()
     }
 
+    pub fn string_or(&self, name: &str, default: &str) -> Vec<u8> {
+        if self.attr(name).is_null() {
+            default.as_bytes().to_vec()
+        } else {
+            self.string(name)
+        }
+    }
+
+    pub fn float(&self, name: &str, default: f32) -> f32 {
+        let p = self.attr(name);
+        if p.is_null() {
+            return default;
+        }
+        // SAFETY: as `string`.
+        unsafe { crate::string::to_float(p) }
+    }
+
     pub fn boolean(&self, name: &str, default: bool) -> bool {
         let p = self.attr(name);
         if p.is_null() {
@@ -371,5 +447,33 @@ pub fn mat_create(res: usize, name: &[u8]) -> usize {
     // SAFETY: table contract.
     host().map_or(0, |h| unsafe {
         (h.mat_create)(res as *mut c_void, name.as_ptr(), name.len()) as usize
+    })
+}
+
+pub fn tex_create(res: usize, kind: i32, name: &[u8]) -> usize {
+    // SAFETY: table contract.
+    host().map_or(0, |h| unsafe {
+        (h.tex_create)(res as *mut c_void, kind, name.as_ptr(), name.len()) as usize
+    })
+}
+
+pub fn tex_destroy(res: usize, tex: usize) {
+    if let (Some(h), true) = (host(), tex != 0) {
+        // SAFETY: table contract.
+        unsafe { (h.tex_destroy)(res as *mut c_void, tex as *mut c_void) }
+    }
+}
+
+pub fn tex_clamp(tex: usize, str_axis: bool) {
+    if let (Some(h), true) = (host(), tex != 0) {
+        // SAFETY: table contract.
+        unsafe { (h.tex_clamp)(tex as *mut c_void, str_axis) }
+    }
+}
+
+pub fn ent_world_of(ctx: usize) -> Matrixf {
+    // SAFETY: table contract; the matrix is copied at once.
+    host().map_or_else(Matrixf::default, |h| unsafe {
+        *(h.ent_world)(ctx as *mut c_void)
     })
 }

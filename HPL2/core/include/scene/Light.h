@@ -27,6 +27,7 @@
 #include "scene/RustLight.h"
 #include "scene/RustSceneH11.h"
 #include "scene/RustSL.h"
+#include "scene/RustLs.h"
 
 
 namespace hpl {
@@ -82,27 +83,29 @@ namespace hpl {
 		typedef iRenderable __super;
 	#endif
 	public:
-		iLight(tString asName, cResources *apResources, eLightType aType);
+		iLight(tString asName, cResources *apResources, eLightType aType) : iRenderable(asName),
+			mpS(ohpl_ls_light_new(aType, this, mpE, mBoundingVolume.Rs(), Rs(), (uintptr_t)apResources)){}
 		virtual ~iLight();
 
-		void UpdateLogic(float afTimeStep);
+		void UpdateLogic(float afTimeStep){ ohpl_ls_light_update_logic(mpS, afTimeStep);}
 
 		bool CheckObjectIntersection(iRenderable *apObject){ return CollidesWithBV(apObject->GetBoundingVolume());}
 		
 		eLightType GetLightType(){ return (eLightType)mpS->lightType;}
+		OhplSLLight* Pod(){ return mpS;}
 
 		iTexture *GetFalloffMap(){ return (iTexture*)mpS->falloffMap;}
-		void SetFalloffMap(iTexture* apTexture);
+		void SetFalloffMap(iTexture* apTexture){ ohpl_ls_light_set_falloff_map(mpS, (uintptr_t)apTexture);}
 		
-		void SetGoboTexture(iTexture *apTexture);
+		void SetGoboTexture(iTexture *apTexture){ ohpl_ls_light_set_gobo(mpS, (uintptr_t)apTexture);}
 		iTexture* GetGoboTexture(){ return (iTexture*)mpS->gobo;}
 
 		///////////////////////////////
 		//iEntity implementation
 		tString GetEntityType(){ return "iLight";}
 
-		virtual bool IsVisible();
-		void OnChangeVisible();
+		virtual bool IsVisible(){ return ohpl_sl_light_is_visible(mpS, mbIsVisible);}
+		void OnChangeVisible(){ ohpl_ls_light_on_change_visible(mpS);}
 		static void SetHpl3Visibility(bool abX){ ohpl_sl_set_hpl3_visibility(abX);}
 		
 		///////////////////////////////
@@ -112,33 +115,33 @@ namespace hpl {
 
 		eRenderableType GetRenderType(){ return eRenderableType_Light;}
 
-		cBoundingVolume* GetBoundingVolume();
+		cBoundingVolume* GetBoundingVolume(){ ohpl_ls_light_bounds(mpS); return &mBoundingVolume;}
 
 		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
 
 		cMatrixf* GetModelMatrix(cFrustum* apFrustum){ return &GetWorldMatrix();}
 
-		inline void RenderShadow(iRenderable *apObject,cRenderSettings *apRenderSettings,iLowLevelGraphics *apLowLevelGraphics);
+		inline void RenderShadow(iRenderable *apObject,cRenderSettings *apRenderSettings,iLowLevelGraphics *apLowLevelGraphics){}
 
-		void LoadXMLProperties(const tString asFile);
+		void LoadXMLProperties(const tString asFile){ ohpl_ls_light_load(mpS, asFile.data(), asFile.size());}
 
-		void AttachBillboard(cBillboard *apBillboard, const cColor &aBaseColor);
-		void RemoveBillboard(cBillboard *apBillboard);
+		void AttachBillboard(cBillboard *apBillboard, const cColor &aBaseColor){ ohpl_ls_light_attach_billboard(mpS, (uintptr_t)apBillboard, &aBaseColor);}
+		void RemoveBillboard(cBillboard *apBillboard){ ohpl_sl_light_remove_billboard(mpS, (uintptr_t)apBillboard);}
 		bool HasBillboard(cBillboard *apBillboard){ return ohpl_sl_light_has_billboard(mpS, (uintptr_t)apBillboard);}
-				void AttachParticleSystem(cParticleSystem *apPS);
-		void RemoveParticleSystem(cParticleSystem *apPS);
+		void AttachParticleSystem(cParticleSystem *apPS){ ohpl_ls_light_attach_ps(mpS, (uintptr_t)apPS);}
+		void RemoveParticleSystem(cParticleSystem *apPS){ ohpl_ls_light_remove_ps(mpS, (uintptr_t)apPS);}
 
 		//////////////////////////
 		//Shadow caster cache
 		void AddShadowCaster(iRenderable *apObject){ ohpl_sl_light_cache_add(mpS, (uintptr_t)apObject, apObject->GetTransformUpdateCount());}
 		bool ShadowCasterIsValid(iRenderable *apObject){ return ohpl_sl_light_cache_valid(mpS, (uintptr_t)apObject, apObject->GetTransformUpdateCount());}
-		bool ShadowCastersAreUnchanged(const tRenderableVec &avObjects);
-		void SetShadowCasterCacheFromVec(const tRenderableVec &avObjects);
+		bool ShadowCastersAreUnchanged(const tRenderableVec &avObjects){ return ohpl_ls_light_casters_unchanged(mpS, (const uintptr_t*)avObjects.data(), (int32_t)avObjects.size());}
+		void SetShadowCasterCacheFromVec(const tRenderableVec &avObjects){ ohpl_ls_light_casters_set(mpS, (const uintptr_t*)avObjects.data(), (int32_t)avObjects.size());}
 		void ClearShadowCasterCache(){ ohpl_sl_light_cache_clear(mpS);}
 
         //////////////////////////
 		//Fading
-		void FadeTo(const cColor& aCol, float afRadius, float afTime);
+		void FadeTo(const cColor& aCol, float afRadius, float afTime){ ohpl_sl_light_fade_to(mpS, &aCol, afRadius, afTime);}
 		void StopFading(){ mpS->anim.fade_time = 0;}
 		bool IsFading(){ return mpS->anim.fade_time != 0;}
 		cColor GetDestColor(){ return mpS->anim.dest_col;}
@@ -153,8 +156,14 @@ namespace hpl {
 		void SetFlicker(const cColor& aOffCol, float afOffRadius,
 			float afOnMinLength, float afOnMaxLength,const tString &asOnSound,const tString &asOnPS,
 			float afOffMinLength, float afOffMaxLength,const tString &asOffSound,const tString &asOffPS,
-			bool abFade,	float afOnFadeMinLength, float afOnFadeMaxLength, 
-							float afOffFadeMinLength, float afOffFadeMaxLength);
+			bool abFade,	float afOnFadeMinLength, float afOnFadeMaxLength,
+							float afOffFadeMinLength, float afOffFadeMaxLength)
+		{
+			const char *vStrings[4] = { asOnSound.c_str(), asOnPS.c_str(), asOffSound.c_str(), asOffPS.c_str() };
+			const size_t vLens[4] = { asOnSound.size(), asOnPS.size(), asOffSound.size(), asOffPS.size() };
+			ohpl_ls_light_set_flicker(mpS, &aOffCol, afOffRadius, afOnMinLength, afOnMaxLength, afOffMinLength, afOffMaxLength, abFade,
+									  afOnFadeMinLength, afOnFadeMaxLength, afOffFadeMinLength, afOffFadeMaxLength, &vStrings, &vLens);
+		}
 
 		tString GetFlickerOffSound(){ return FlickerString(2);}
 		tString GetFlickerOnSound(){ return FlickerString(0);}
@@ -178,7 +187,7 @@ namespace hpl {
 		//////////////////////////
 		//Properties
 		const cColor& GetDiffuseColor(){ return mpS->diffuse; }
-		void SetDiffuseColor(cColor aColor);
+		void SetDiffuseColor(cColor aColor){ ohpl_ls_light_set_diffuse(mpS, &aColor);}
 		
 		const cColor&  GetDefaultDiffuseColor(){ return mpS->defaultDiffuse;}
 		void SetDefaultDiffuseColor(const cColor& aColor) { mpS->defaultDiffuse = aColor; }
@@ -210,7 +219,7 @@ namespace hpl {
 		void SetShadowDistance(float afX){ mpS->shadowDistance = afX;}
 		void SetShadowMapSlopeScaleBiasMul(float afX){ mpS->shadowSlopeBiasMul = afX;}
 		
-		virtual void SetRadius(float afX);
+		virtual void SetRadius(float afX){ ohpl_ls_light_set_radius(mpS, afX);}
 		float GetRadius(){return mpS->radius;}
 
 		void SetFalloffPow(float afX){ mpS->falloffPow = afX;}
@@ -219,11 +228,16 @@ namespace hpl {
 		float GetSpotFalloffPow(){ return mpS->spotFalloffPow;}
 		void SetTranslucency(float afX){ mpS->translucency = afX;}
 		float GetTranslucency(){ return mpS->translucency;}
-		void SetBrightness(float afX);
+		void SetBrightness(float afX){ ohpl_ls_light_set_brightness(mpS, afX);}
 		float GetBrightness(){ return mpS->brightness;}
 		void SetDefaultBrightness(float afX){ mpS->defaultBrightness = afX;}
 		float GetDefaultBrightness(){ return mpS->defaultBrightness;}
-		void FadeBrightnessTo(float afBrightness, float afTime, std::function<float(float)> aEasing = nullptr);
+		void FadeBrightnessTo(float afBrightness, float afTime, std::function<float(float)> aEasing = nullptr)
+		{
+			ohpl_sl_light_fade_brightness_to(mpS, afBrightness, afTime);
+			mBrightFadeEasing = aEasing;
+		}
+		float Ease(float afT){ return mBrightFadeEasing ? mBrightFadeEasing(afT) : afT;}
 		void SetMaskID(unsigned int alX){ mpS->maskId = alX;}
 		void SetGoboSpecular(bool abX){ mpS->goboSpecular = abX;}
 		bool GetGoboSpecular(){ return mpS->goboSpecular;}
@@ -241,27 +255,20 @@ namespace hpl {
 		float GetSourceRadius(){ return mpS->sourceRadius;}
 		void SetSourceRadius(float afX){ mpS->sourceRadius = afX;}
 
-		void UpdateLight(float afTimeStep);
+		void UpdateLight(float afTimeStep){ ohpl_ls_light_update_light(mpS, afTimeStep);}
 
 		void SetWorld(cWorld *apWorld){ mpS->world = (uintptr_t)apWorld;}
 
 
 	protected:
-		void OnFlickerOff();
-		void OnFlickerOn();
-		void OnSetDiffuse();
 		tString FlickerString(int alWhich)
 		{
 			size_t lLen; const char *pStr = ohpl_sl_light_string(mpS, alWhich, &lLen);
 			return tString(pStr, lLen);
 		}
 
-        virtual void ExtraXMLProperties(cXmlElement *apMainElem){}
-		virtual void UpdateBoundingVolume()=0;
-
 		bool IsLit(){ return ohpl_sl_light_is_lit(mpS);}
 
-		cTextureManager *TextureManager(){ return (cTextureManager*)mpS->texMgr;}
 		cWorld *World(){ return (cWorld*)mpS->world;}
 
 		std::function<float(float)> mBrightFadeEasing;

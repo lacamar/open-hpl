@@ -32,10 +32,7 @@ namespace hpl {
 		typedef iLight __super;
 	#endif
 	public:
-		cLightPoint(tString asName, cResources *apResources);
-
-	private:
-		void UpdateBoundingVolume();
+		cLightPoint(tString asName, cResources *apResources) : iLight(asName,apResources,eLightType_Point){}
 	};
 
 };

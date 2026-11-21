@@ -36,14 +36,13 @@ namespace hpl {
 		typedef iLight __super;
 	#endif
 	public:
-		cLightSpot(tString asName, cResources *apResources);
-		~cLightSpot();
+		cLightSpot(tString asName, cResources *apResources) : iLight(asName,apResources,eLightType_Spot){}
 
-		const cMatrixf& GetViewMatrix();
-		const cMatrixf& GetProjectionMatrix();
-		const cMatrixf& GetViewProjMatrix();
+		const cMatrixf& GetViewMatrix(){ return *ohpl_ls_spot_view(mpS);}
+		const cMatrixf& GetProjectionMatrix(){ return *ohpl_ls_spot_projection(mpS);}
+		const cMatrixf& GetViewProjMatrix(){ return *ohpl_ls_spot_view_proj(mpS);}
 
-		void SetFOV(float afAngle);
+		void SetFOV(float afAngle){ ohpl_ls_spot_set_fov(mpS, afAngle);}
 		inline float GetFOV() const { return Spot()->fov;}
 		
 		inline float GetTanHalfFOV() const{return Spot()->tanHalfFov; }
@@ -58,20 +57,16 @@ namespace hpl {
 		static void SetShadowNearClip(float afX){ ohpl_sl_spot_set_shadow_near(afX); }
 		static float GetShadowNearClip(){ return ohpl_sl_spot_shadow_near(); }
 
-		void SetRadius(float afX);
-		
-		cFrustum* GetFrustum();
+		cFrustum* GetFrustum(){ return (cFrustum*)ohpl_ls_spot_frustum(mpS);}
 
 		iTexture *GetSpotFalloffMap(){ return (iTexture*)Spot()->spotFalloffMap; }
-		void SetSpotFalloffMap(iTexture* apTexture);
+		void SetSpotFalloffMap(iTexture* apTexture){ ohpl_ls_spot_set_falloff_map(mpS, (uintptr_t)apTexture);}
 
-		bool CollidesWithBV(cBoundingVolume *apBV);
-		bool CollidesWithFrustum(cFrustum *apFrustum);
+		bool CollidesWithBV(cBoundingVolume *apBV){ return ohpl_ls_spot_collides_bv(mpS, apBV->Rs());}
+		bool CollidesWithFrustum(cFrustum *apFrustum){ return ohpl_ls_spot_collides_frustum(mpS, OhplLsFrustum(apFrustum));}
 
 	private:
 		OhplSLSpot* Spot() const { return (OhplSLSpot*)mpS; }
-		void ExtraXMLProperties(cXmlElement *apMainElem);
-		void UpdateBoundingVolume();
 	};
 
 };

@@ -20,8 +20,8 @@ const _: () = {
     assert!(
         size_of::<FogPod>() == 148 && size_of::<BbPod>() == 240 && size_of::<BeamEndPod>() == 24
     );
-    assert!(size_of::<BeamPod>() == 168 && size_of::<LightPod>() == 336);
-    assert!(size_of::<SpotPod>() == 584 && size_of::<BoxPod>() == 640);
+    assert!(size_of::<BeamPod>() == 168 && size_of::<LightPod>() == 360);
+    assert!(size_of::<SpotPod>() == 608 && size_of::<BoxPod>() == 664);
     assert!(size_of::<FlarePod>() == 608 && size_of::<FlareTypePod>() == 80);
 };
 
@@ -573,8 +573,11 @@ pub unsafe extern "C" fn ohpl_sl_beam_model(
 #[repr(C)]
 pub struct LightPod {
     pub world: usize,
-    pub tex_mgr: usize,
-    pub file_searcher: usize,
+    pub res: usize,
+    pub ctx: usize,
+    pub ent: usize,
+    pub bv: usize,
+    pub rnd: usize,
     pub falloff_map: usize,
     pub gobo: usize,
     pub tracker: usize,
@@ -607,11 +610,11 @@ pub struct LightPod {
     pub cast_shadows: bool,
 }
 
-struct LightRest {
-    billboards: Vec<(usize, Color)>,
-    particle_systems: Vec<usize>,
+pub(super) struct LightRest {
+    pub(super) billboards: Vec<(usize, Color)>,
+    pub(super) particle_systems: Vec<usize>,
     shadow_cache: Option<Box<ShadowCache>>,
-    strings: [Vec<u8>; 4],
+    pub(super) strings: [Vec<u8>; 4],
 }
 
 #[repr(C)]
@@ -675,9 +678,9 @@ struct BoxObj {
     box_rest: BoxRest,
 }
 
-const KIND_POINT: i32 = 0;
-const KIND_SPOT: i32 = 1;
-const KIND_BOX: i32 = 2;
+pub(super) const KIND_POINT: i32 = 0;
+pub(super) const KIND_SPOT: i32 = 1;
+pub(super) const KIND_BOX: i32 = 2;
 
 fn black() -> Color {
     Color {
@@ -701,8 +704,11 @@ impl LightPod {
     fn new() -> Self {
         Self {
             world: 0,
-            tex_mgr: 0,
-            file_searcher: 0,
+            res: 0,
+            ctx: 0,
+            ent: 0,
+            bv: 0,
+            rnd: 0,
             falloff_map: 0,
             gobo: 0,
             tracker: 0,
@@ -736,7 +742,7 @@ impl LightPod {
         }
     }
 
-    fn live(&self) -> LightLive {
+    pub(super) fn live(&self) -> LightLive {
         LightLive {
             diffuse: self.diffuse,
             radius: self.radius,
@@ -744,7 +750,7 @@ impl LightPod {
         }
     }
 
-    fn is_lit(&self) -> bool {
+    pub(super) fn is_lit(&self) -> bool {
         let c = self.diffuse;
         h11::light_is_lit(
             c.r,
@@ -859,7 +865,7 @@ pub unsafe extern "C" fn ohpl_sl_light_free(p: *mut LightPod) {
 
 /// # Safety
 /// `p` from `ohpl_sl_light_new`.
-unsafe fn rest<'a>(p: *mut LightPod) -> &'a mut LightRest {
+pub(super) unsafe fn rest<'a>(p: *mut LightPod) -> &'a mut LightRest {
     // SAFETY: caller contract; `rest` follows the pod at the same offset class per kind.
     unsafe {
         match (*p).light_type {

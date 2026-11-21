@@ -30,7 +30,7 @@ namespace hpl {
 	class cLightBox : public iLight
 	{
 	public:
-		cLightBox(tString asName, cResources *apResources);
+		cLightBox(tString asName, cResources *apResources) : iLight(asName,apResources,eLightType_Box){}
 
 		void SetSize(const cVector3f& avSize){ Box()->size = avSize; mpE->updateBV = true; SetTransformUpdated();}
 		inline const cVector3f& GetSize(){ return Box()->size;}
@@ -58,14 +58,13 @@ namespace hpl {
 		void SetProbeOffset(const cVector3f& avX){ Box()->probeOffset = avX;}
 		const cVector3f& GetProbeOffset(){ return Box()->probeOffset;}
 
-		void AddIrradianceSet(const tString& asName, const std::vector<cVector3f>& avBands);
-		void FadeIrradianceSet(const tString& asName, float afTime);
+		void AddIrradianceSet(const tString& asName, const std::vector<cVector3f>& avBands){ ohpl_sl_box_add_set(Box(), asName.data(), asName.size(), avBands.data(), avBands.size());}
+		void FadeIrradianceSet(const tString& asName, float afTime){ ohpl_ls_box_fade_set(mpS, asName.data(), asName.size(), afTime);}
 		const cVector3f* GetIrradianceBands(){ return Box()->bands;}
-		void UpdateLogic(float afTimeStep);
+		void UpdateLogic(float afTimeStep){ ohpl_ls_light_update_logic(mpS, afTimeStep);}
 
 	private:
 		OhplSLBox* Box() const { return (OhplSLBox*)mpS; }
-		void UpdateBoundingVolume();
 	};
 
 };

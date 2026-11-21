@@ -63,6 +63,15 @@ namespace hpl {
 		cMatrixf viewProj;
 	};
 
+	struct OhplLsDumpInfo
+	{
+		const char *name;
+		size_t nameLen;
+		uintptr_t pod;
+		int32_t uid;
+		bool visible;
+	};
+
 	struct OhplLsHost
 	{
 		void* (*vb_create)(void *apGfx, int32_t alUsage, int32_t alVerts, int32_t alIdx);
@@ -102,6 +111,29 @@ namespace hpl {
 		void (*flare_type_delete)(void *apType);
 		bool (*flare_parent_mesh)(void *apCtx, void **apVb, const cMatrixf **apMtx);
 		int32_t (*vb_vertex_num)(void *apVb);
+		void* (*tex_create)(void *apRes, int32_t alKind, const char *asName, size_t alLen);
+		void (*tex_clamp)(void *apTex, bool abStr);
+		void (*tex_anim)(void *apTex, int32_t alMode, float afFrameTime);
+		void* (*tracker_new)();
+		void (*tracker_delete)(void *apTracker);
+		OhplFrustum* (*frustum_new)();
+		void (*frustum_delete)(OhplFrustum *apFrustum);
+		void (*bb_visible)(void *apBb, bool abVisible);
+		void (*bb_color)(void *apBb, const cColor *apColor);
+		void (*ps_visible)(void *apPs, bool abVisible);
+		void (*ps_set_light)(void *apPs, void *apLight);
+		void (*ps_leave_light)(void *apPs);
+		void (*ps_light_color)(void *apPs, const cColor *apColor);
+		void (*ps_light_brightness)(void *apPs, float afBrightness);
+		void (*visible_change)(void *apCallback, void *apCtx);
+		float (*ease)(void *apCtx, float afT);
+		void (*world_sound)(void *apWorld, void *apCtx, bool abOn, const char *asFile, size_t alLen);
+		void (*world_particle)(void *apWorld, void *apCtx, const char *asPs, size_t alLen);
+		void (*renderable_info)(void *apObj, int32_t *apCount, bool *apStatic);
+		const char* (*obj_name)(int32_t alKind, void *apObj, size_t *apLen);
+		void (*dump_info)(int32_t alKind, void *apObj, OhplLsDumpInfo *apOut);
+		OhplBv* (*obj_bv)(int32_t alKind, void *apObj);
+		size_t (*dump_list)(void *apWorld, int32_t alKind, uintptr_t *apOut, size_t alCap);
 	};
 
 extern "C" {
@@ -135,6 +167,35 @@ void ohpl_ls_beam_bounds(OhplSLBeam*);
 void ohpl_ls_beam_update_frame(OhplSLBeam*);
 cMatrixf* ohpl_ls_beam_model(OhplSLBeam*, const OhplFrustum*);
 bool ohpl_ls_beam_load(OhplSLBeam*, const char*, size_t);
+
+OhplSLLight* ohpl_ls_light_new(int32_t, void*, OhplEntPod*, OhplBv*, OhplRnd*, uintptr_t);
+void ohpl_ls_light_free(OhplSLLight*);
+void ohpl_ls_light_on_change_visible(OhplSLLight*);
+void ohpl_ls_light_set_diffuse(OhplSLLight*, const cColor*);
+void ohpl_ls_light_set_brightness(OhplSLLight*, float);
+void ohpl_ls_light_set_radius(OhplSLLight*, float);
+void ohpl_ls_light_update_light(OhplSLLight*, float);
+void ohpl_ls_light_update_logic(OhplSLLight*, float);
+void ohpl_ls_light_bounds(OhplSLLight*);
+void ohpl_ls_light_set_falloff_map(OhplSLLight*, uintptr_t);
+void ohpl_ls_light_set_gobo(OhplSLLight*, uintptr_t);
+bool ohpl_ls_light_casters_unchanged(OhplSLLight*, const uintptr_t*, int32_t);
+void ohpl_ls_light_casters_set(OhplSLLight*, const uintptr_t*, int32_t);
+void ohpl_ls_light_set_flicker(OhplSLLight*, const cColor*, float, float, float, float, float, bool, float, float, float, float,
+							   const char *const (*)[4], const size_t (*)[4]);
+void ohpl_ls_light_attach_billboard(OhplSLLight*, uintptr_t, const cColor*);
+void ohpl_ls_light_attach_ps(OhplSLLight*, uintptr_t);
+void ohpl_ls_light_remove_ps(OhplSLLight*, uintptr_t);
+void ohpl_ls_light_load(OhplSLLight*, const char*, size_t);
+void ohpl_ls_box_fade_set(OhplSLLight*, const char*, size_t, float);
+const cMatrixf* ohpl_ls_spot_view(OhplSLLight*);
+const cMatrixf* ohpl_ls_spot_projection(OhplSLLight*);
+const cMatrixf* ohpl_ls_spot_view_proj(OhplSLLight*);
+OhplFrustum* ohpl_ls_spot_frustum(OhplSLLight*);
+void ohpl_ls_spot_set_fov(OhplSLLight*, float);
+void ohpl_ls_spot_set_falloff_map(OhplSLLight*, uintptr_t);
+bool ohpl_ls_spot_collides_bv(OhplSLLight*, OhplBv*);
+bool ohpl_ls_spot_collides_frustum(OhplSLLight*, const OhplFrustum*);
 
 OhplSLFlare* ohpl_ls_flare_new(void*, OhplEntPod*, OhplBv*, uintptr_t, uintptr_t);
 void ohpl_ls_flare_free(OhplSLFlare*);

@@ -628,3 +628,13 @@ pub unsafe extern "C" fn ohpl_ls_beam_load(p: *mut BeamPod, file: *const u8, len
     b.obj.pod.material = mat;
     true
 }
+
+pub(super) fn beam_end_color(p: *mut BeamPod) -> Color {
+    let b = beam(p);
+    if b.end.is_null() {
+        Color::default()
+    } else {
+        // SAFETY: the end pod is registered by `ohpl_ls_beam_set_end` and lives with the beam.
+        unsafe { (*b.end).color }
+    }
+}

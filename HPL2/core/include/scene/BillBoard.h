@@ -58,6 +58,7 @@ namespace hpl {
 		cVector2f GetSize(){ return mpS->size;}
 
 		eBillboardType GetType(){ return (eBillboardType)mpS->kind;}
+		OhplSLBb* Pod(){ return mpS;}
 
 		void SetAxis(const cVector3f& avAxis){ ohpl_ls_bb_set_axis(mpS, &avAxis);}
 		cVector3f GetAxis(){ return mpS->axis;}

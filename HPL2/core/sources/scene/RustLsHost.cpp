@@ -6,6 +6,14 @@
 #include "scene/BillBoard.h"
 #include "scene/Beam.h"
 #include "scene/LensFlare.h"
+#include "scene/Light.h"
+#include "scene/FogArea.h"
+#include "scene/World.h"
+#include "scene/ParticleSystem.h"
+#include "scene/SoundEntity.h"
+#include "scene/RenderableContainer.h"
+#include "resources/TextureManager.h"
+#include "graphics/Texture.h"
 #include "scene/SubMeshEntity.h"
 #include "graphics/Renderer.h"
 #include "graphics/RendererDeferred.h"
@@ -177,6 +185,113 @@ namespace hpl {
 		}
 		int32_t VbVertexNum(void *p){ return V(p)->GetVertexNum();}
 
+		void* TexCreate(void *r, int32_t k, const char *n, size_t l)
+		{
+			cTextureManager *pMgr = static_cast<cResources*>(r)->GetTextureManager();
+			const tString sName(n, l);
+			if(k == 0) return pMgr->Create1D(sName, false);
+			if(k == 1) return pMgr->Create2D(sName, true);
+			return pMgr->CreateAnim(sName, true, eTextureType_2D);
+		}
+		void TexClamp(void *t, bool abStr)
+		{
+			iTexture *pTex = static_cast<iTexture*>(t);
+			if(abStr) pTex->SetWrapSTR(eTextureWrap_ClampToEdge);
+			else { pTex->SetWrapS(eTextureWrap_ClampToEdge); pTex->SetWrapT(eTextureWrap_ClampToEdge); }
+		}
+		void TexAnim(void *t, int32_t alMode, float afFrameTime)
+		{
+			iTexture *pTex = static_cast<iTexture*>(t);
+			pTex->SetAnimMode((eTextureAnimMode)alMode);
+			pTex->SetFrameTime(afFrameTime);
+		}
+		void* TrackerNew(){ return hplNew(cVisibleRCNodeTracker, ());}
+		void TrackerDelete(void *t){ hplDelete(static_cast<cVisibleRCNodeTracker*>(t));}
+		OhplFrustum* FrustumNew(){ return const_cast<OhplFrustum*>(OhplLsFrustum(hplNew(cFrustum, ())));}
+		void FrustumDelete(OhplFrustum *f){ hplDelete(reinterpret_cast<cFrustum*>(f));}
+		void BbVisible(void *b, bool v){ static_cast<cBillboard*>(b)->SetVisible(v);}
+		void BbColor(void *b, const cColor *c){ static_cast<cBillboard*>(b)->SetColor(*c);}
+		void PsVisible(void *p, bool v){ static_cast<cParticleSystem*>(p)->SetVisible(v);}
+		void PsSetLight(void *p, void *l){ static_cast<cParticleSystem*>(p)->SetLight(static_cast<iLight*>(l));}
+		void PsLeaveLight(void *p)
+		{
+			cParticleSystem *pPS = static_cast<cParticleSystem*>(p);
+			if(pPS->GetLight()) pPS->GetLight()->RemoveParticleSystem(pPS);
+		}
+		void PsLightColor(void *p, const cColor *c){ static_cast<cParticleSystem*>(p)->SetLightColor(*c);}
+		void PsLightBrightness(void *p, float f){ static_cast<cParticleSystem*>(p)->SetLightBrightness(f);}
+		void VisibleChange(void *cb, void *c){ static_cast<iRenderableCallback*>(cb)->OnVisibleChange(static_cast<iRenderable*>(c));}
+		float Ease(void *c, float t){ return static_cast<iLight*>(c)->Ease(t);}
+		void WorldSound(void *w, void *c, bool abOn, const char *s, size_t l)
+		{
+			cSoundEntity *pSound = static_cast<cWorld*>(w)->CreateSoundEntity(abOn ? "FlickerOn" : "FlickerOff", tString(s, l), true);
+			if(pSound)
+			{
+				pSound->SetIsSaved(false);
+				pSound->SetPosition(static_cast<iLight*>(c)->GetWorldPosition());
+			}
+		}
+		void WorldParticle(void *w, void *c, const char *s, size_t l)
+		{
+			iLight *pLight = static_cast<iLight*>(c);
+			cParticleSystem *pPS = static_cast<cWorld*>(w)->CreateParticleSystem(pLight->GetName() + "_PS", tString(s, l), cVector3f(1,1,1));
+			if(pPS) pPS->SetMatrix(pLight->GetWorldMatrix());
+		}
+		void RenderableInfo(void *o, int32_t *apCount, bool *apStatic)
+		{
+			iRenderable *pObj = static_cast<iRenderable*>(o);
+			*apCount = pObj->GetTransformUpdateCount();
+			*apStatic = pObj->IsStatic();
+		}
+
+		const char* ObjName(int32_t k, void *o, size_t *apLen)
+		{
+			const tString *psName = NULL;
+			if(k == 0) psName = &static_cast<iTexture*>(o)->GetName();
+			else if(k == 1) psName = &static_cast<cMaterial*>(o)->GetName();
+			else { static tString sWorld; sWorld = static_cast<cWorld*>(o)->GetName(); psName = &sWorld; }
+			*apLen = psName->size();
+			return psName->data();
+		}
+		template<class T> void FillInfo(T *p, OhplLsDumpInfo *apOut)
+		{
+			apOut->name = p->GetName().data();
+			apOut->nameLen = p->GetName().size();
+			apOut->uid = p->GetUniqueID();
+			apOut->visible = p->IsVisible();
+			apOut->pod = (uintptr_t)p->Pod();
+		}
+		void DumpInfo(int32_t k, void *o, OhplLsDumpInfo *apOut)
+		{
+			switch(k)
+			{
+			case 0: FillInfo(static_cast<iLight*>(o), apOut); break;
+			case 1: FillInfo(static_cast<cBillboard*>(o), apOut); break;
+			case 2: FillInfo(static_cast<cBeam*>(o), apOut); break;
+			case 3: FillInfo(static_cast<cFogArea*>(o), apOut); break;
+			default: FillInfo(static_cast<cLensFlare*>(o), apOut); break;
+			}
+		}
+		OhplBv* ObjBv(int32_t k, void *o){ return static_cast<iRenderable*>(o)->GetBoundingVolume()->Rs();}
+		template<class It, class T> size_t Collect(It it, uintptr_t *apOut, size_t alCap)
+		{
+			size_t lNum = 0;
+			while(it.HasNext() && lNum < alCap) apOut[lNum++] = (uintptr_t)static_cast<T*>(it.Next());
+			return lNum;
+		}
+		size_t DumpList(void *w, int32_t k, uintptr_t *apOut, size_t alCap)
+		{
+			cWorld *pWorld = static_cast<cWorld*>(w);
+			switch(k)
+			{
+			case 0: return Collect<cLightListIterator, iLight>(pWorld->GetLightIterator(), apOut, alCap);
+			case 1: return Collect<cBillboardIterator, cBillboard>(pWorld->GetBillboardIterator(), apOut, alCap);
+			case 2: return Collect<cBeamIterator, cBeam>(pWorld->GetBeamIterator(), apOut, alCap);
+			case 3: return Collect<cFogAreaIterator, cFogArea>(pWorld->GetFogAreaIterator(), apOut, alCap);
+			default: return Collect<cLensFlareIterator, cLensFlare>(pWorld->GetLensFlareIterator(), apOut, alCap);
+			}
+		}
+
 		struct cRegister
 		{
 			cRegister()
@@ -185,7 +300,10 @@ namespace hpl {
 											  MatDestroy, RopeInfo, RopePoints, EntWorld, EntUpdated,
 											  TexDestroy, ProgCreate, ProgDestroy, ProgVar, ProgSet, EntClip, SpotInfo, LightLevel,
 											  Hdr, EntPos, OccAssign, OccSamples, RendererFrustum, Log, XmlOpen, XmlAttr, XmlClose, MatCreate,
-											  EntBv, FlareTypeNew, FlareTypeDelete, FlareParentMesh, VbVertexNum };
+											  EntBv, FlareTypeNew, FlareTypeDelete, FlareParentMesh, VbVertexNum,
+											  TexCreate, TexClamp, TexAnim, TrackerNew, TrackerDelete, FrustumNew, FrustumDelete, BbVisible, BbColor,
+											  PsVisible, PsSetLight, PsLeaveLight, PsLightColor, PsLightBrightness, VisibleChange, Ease, WorldSound,
+											  WorldParticle, RenderableInfo, ObjName, DumpInfo, ObjBv, DumpList };
 				ohpl_ls_set_host(&h);
 			}
 		} gRegister;
@@ -194,6 +312,7 @@ namespace hpl {
 	cRopeEntity::~cRopeEntity(){ ohpl_ls_rope_free(mpL);}
 	cEnvironmentParticles::~cEnvironmentParticles(){ ohpl_ls_env_free(mpL);}
 	cBillboard::~cBillboard(){ ohpl_ls_bb_free(mpS);}
+	iLight::~iLight(){ ohpl_ls_light_free(mpS);}
 	cLensFlare::~cLensFlare(){ ohpl_ls_flare_free(mpS);}
 	cBeam::~cBeam(){ hplDelete(GetEnd()); ohpl_ls_beam_free(mpS);}
 }

@@ -116,6 +116,7 @@ namespace hpl {
 		/////////////////////////////////
 		//Entity implementation
 		tString GetEntityType(){ return "Beam";}
+		OhplSLBeam* Pod(){ return mpS;}
 		bool IsVisible(){ return ohpl_h12b_is_visible(&mpS->color, mbIsVisible);}
 
 		//Renderable implementations

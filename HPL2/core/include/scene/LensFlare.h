@@ -131,6 +131,7 @@ namespace hpl {
 
 		void UpdateLogic(float afTimeStep){ ohpl_sl_flare_update(mpS, afTimeStep);}
 		tString GetEntityType(){ return "LensFlare";}
+		OhplSLFlare* Pod(){ return mpS;}
 		bool IsVisible(){ return mbIsVisible && IsAnyTypeActive();}
 
 		cMaterial *GetMaterial(){ return (cMaterial*)mpS->material[GetFirstActiveType()];}
