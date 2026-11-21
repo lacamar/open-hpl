@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.4.9
+Version:        1.4.10
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,11 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Sat Nov 21 2026 lacamar <lchlnm@pm.me> - 1.4.10-1
+- Animation and mesh entity Rust-owned
+- Light, billboard, beam, flare, fog, rope and environment particle shells in Rust
+- Physics body, world and character members in Rust
+
 * Sat Nov 21 2026 lacamar <lchlnm@pm.me> - 1.4.9-1
 - RenderList and renderable state Rust-owned
 - Material types and program combo manager in Rust
