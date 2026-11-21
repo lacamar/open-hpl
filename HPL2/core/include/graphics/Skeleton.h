@@ -57,6 +57,8 @@ namespace hpl {
 
 		int GetBoneNum(){ return ohpl_h6_skel_num(mpRs);}
 
+		OhplH6Skel* Rs(){ return mpRs;}
+
 		bool mbFileUnits = false;
 
 	private:

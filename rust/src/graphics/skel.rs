@@ -103,6 +103,14 @@ impl Skeleton {
         self.bones.get_mut(id).map(|b| &mut **b)
     }
 
+    pub fn name(&self, id: usize) -> &[u8] {
+        self.bones.get(id).map_or(&[], |b| &b.name)
+    }
+
+    pub fn first_child(&self, id: usize) -> Option<usize> {
+        self.bones.get(id)?.children.first().copied()
+    }
+
     pub fn set_owner(&mut self, id: usize, owner: usize) {
         if let Some(b) = self.bones.get_mut(id) {
             b.owner = owner;

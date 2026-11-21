@@ -30,6 +30,7 @@
 #include "graphics/Renderable.h"
 #include "math/MeshTypes.h"
 #include "scene/RustWm2.h"
+#include "scene/Node3D.h"
 
 namespace hpl {
 
@@ -59,27 +60,25 @@ namespace hpl {
 		typedef iRenderable __super;
 	#endif
 		friend class cMeshEntity;
+		friend struct OhplMeFxImpl;
 	public:
 		cSubMeshEntity(const tString &asName,cMeshEntity *apMeshEntity, cSubMesh * apSubMesh,cMaterialManager* apMaterialManager);
 		~cSubMeshEntity();
 
 		cMaterial *GetMaterial();
 
-		void UpdateGraphicsForFrame(float afFrameTime);
+		void UpdateGraphicsForFrame(float afFrameTime){ OhplWm2SubHost h = Wm2Host(); ohpl_wm2_sub_update_gfx(mpS, &h, afFrameTime);}
 
 		iVertexBuffer* GetVertexBuffer();
-
 		cBoundingVolume* GetBoundingVolume();
-
 		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
-
-		int GetMatrixUpdateCount();
+		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
 
 		eRenderableType GetRenderType(){ return eRenderableType_SubMesh;}
 
 		cSubMesh* GetSubMesh() const { return mpSubMesh;}
 
-		void SetLocalNode(cNode3D *apNode);
+		void SetLocalNode(cNode3D *apNode){ mpS->local_node = apNode; apNode->AddEntity(this);}
 		cNode3D* GetLocalNode(){ return static_cast<cNode3D*>(mpS->local_node);}
 
 		void* GetUserData(){ return mpS->user_data;}
@@ -87,17 +86,18 @@ namespace hpl {
 
 		//Entity implementation
 		tString GetEntityType(){ return "SubMesh";}
-		
+
 		void UpdateLogic(float afTimeStep){}
 
 		void SetUpdateBody(bool abX){ mpS->update_body = abX;}
 		bool GetUpdateBody(){ return mpS->update_body;}
 
-		void SetCustomMaterial(cMaterial *apMaterial, bool abDestroyOldCustom=true);
+		void SetCustomMaterial(cMaterial *apMaterial, bool abDestroyOldCustom=true){ OhplWm2SubHost h = Wm2Host(); ohpl_wm2_sub_set_material(mpS, &h, apMaterial, abDestroyOldCustom);}
 		cMaterial* GetCustomMaterial(){ return static_cast<cMaterial*>(mpS->material);}
 
 	private:
 		void OnTransformUpdated();
+
 		OhplWm2SubHost Wm2Host();
 
 		cSubMesh *mpSubMesh;

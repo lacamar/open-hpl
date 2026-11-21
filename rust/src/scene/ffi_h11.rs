@@ -1,12 +1,8 @@
 //! C ABI for `h11.rs`, declared in `HPL2/core/include/scene/RustSceneH11.h`.
 //!
-//! Pointers are non-null, valid and aligned for the call. `MeshHost` callbacks may re-enter the
-//! engine; nothing here is borrowed across one (see `h11.rs`).
+//! Pointers are non-null, valid and aligned for the call.
 
-use std::ffi::c_void;
-
-use super::animstate::AnimCore;
-use super::h11::{self, Caster, Ctl, MeshCtl, MeshHost, ShadowCache, SpotCtl};
+use super::h11::{self, Caster, Ctl, MeshCtl, ShadowCache, SpotCtl};
 use crate::types::{Color, Matrixf, Vector3f};
 
 const _: () = {
@@ -16,130 +12,8 @@ const _: () = {
     assert!(size_of::<Caster>() == 16 && offset_of!(Caster, is_static) == 12);
 };
 
-/// Callback table of the C++ entity (`OhplH11MeshHost`).
-#[repr(C)]
-pub struct HostVt {
-    ctx: *mut c_void,
-    cores: unsafe extern "C" fn(*mut c_void, *mut i32) -> *const *mut AnimCore,
-    state_count: unsafe extern "C" fn(*mut c_void) -> i32,
-    bone_count: unsafe extern "C" fn(*mut c_void) -> i32,
-    has_skeleton: unsafe extern "C" fn(*mut c_void) -> bool,
-    has_rest_pose: unsafe extern "C" fn(*mut c_void) -> bool,
-    bone_reset: unsafe extern "C" fn(*mut c_void, i32, bool, bool),
-    physics_from_bodies: unsafe extern "C" fn(*mut c_void),
-    physics_mix: unsafe extern "C" fn(*mut c_void, i32, f32),
-    physics_deactivate: unsafe extern "C" fn(*mut c_void),
-    skeleton_apply: unsafe extern "C" fn(*mut c_void, i32, f32),
-    node_apply: unsafe extern "C" fn(*mut c_void, i32, f32),
-    bone_nodes_update: unsafe extern "C" fn(*mut c_void),
-    bone_entity_children: unsafe extern "C" fn(*mut c_void),
-    colliders_update: unsafe extern "C" fn(*mut c_void),
-    sub_transform_updated: unsafe extern "C" fn(*mut c_void),
-    node_reset: unsafe extern "C" fn(*mut c_void),
-    node_update: unsafe extern "C" fn(*mut c_void),
-    node_restore: unsafe extern "C" fn(*mut c_void),
-    after_anim: unsafe extern "C" fn(*mut c_void, f32),
-    sub_update_logic: unsafe extern "C" fn(*mut c_void, f32),
-    event_count: unsafe extern "C" fn(*mut c_void, i32) -> i32,
-    event_time: unsafe extern "C" fn(*mut c_void, i32, i32) -> f32,
-    handle_event: unsafe extern "C" fn(*mut c_void, i32, i32),
-}
-
-fn idx(i: usize) -> i32 {
-    i32::try_from(i).unwrap_or(i32::MAX)
-}
-
 fn count(n: i32) -> usize {
     usize::try_from(n).unwrap_or(0)
-}
-
-/// `MeshHost` over the C table. Holds the table only; each call re-reads the C++ state.
-struct CHost<'a>(&'a HostVt);
-
-macro_rules! call {
-    ($s:ident . $f:ident ($($a:expr),*)) => {
-        // SAFETY: the table is valid for the call (ffi contract); the C++ side owns what it touches.
-        unsafe { ($s.0.$f)($s.0.ctx $(, $a)*) }
-    };
-}
-
-impl MeshHost for CHost<'_> {
-    fn cores(&mut self) -> &[*mut AnimCore] {
-        let mut n = 0;
-        let p = call!(self.cores(&mut n));
-        if p.is_null() || n <= 0 {
-            return &[];
-        }
-        // SAFETY: the host returns `n` valid pointers, live until the next host call; the
-        // returned borrow of `self` prevents one.
-        unsafe { std::slice::from_raw_parts(p, count(n)) }
-    }
-    fn state_count(&mut self) -> usize {
-        count(call!(self.state_count()))
-    }
-    fn bone_count(&mut self) -> usize {
-        count(call!(self.bone_count()))
-    }
-    fn has_skeleton(&mut self) -> bool {
-        call!(self.has_skeleton())
-    }
-    fn has_rest_pose(&mut self) -> bool {
-        call!(self.has_rest_pose())
-    }
-    fn bone_reset(&mut self, bone: usize, map_pose: bool, reset_temp: bool) {
-        call!(self.bone_reset(idx(bone), map_pose, reset_temp))
-    }
-    fn physics_from_bodies(&mut self) {
-        call!(self.physics_from_bodies())
-    }
-    fn physics_mix(&mut self, bone: usize, weight: f32) {
-        call!(self.physics_mix(idx(bone), weight))
-    }
-    fn physics_deactivate(&mut self) {
-        call!(self.physics_deactivate())
-    }
-    fn skeleton_apply(&mut self, state: usize, weight: f32) {
-        call!(self.skeleton_apply(idx(state), weight))
-    }
-    fn node_apply(&mut self, state: usize, weight: f32) {
-        call!(self.node_apply(idx(state), weight))
-    }
-    fn bone_nodes_update(&mut self) {
-        call!(self.bone_nodes_update())
-    }
-    fn bone_entity_children(&mut self) {
-        call!(self.bone_entity_children())
-    }
-    fn colliders_update(&mut self) {
-        call!(self.colliders_update())
-    }
-    fn sub_transform_updated(&mut self) {
-        call!(self.sub_transform_updated())
-    }
-    fn node_reset(&mut self) {
-        call!(self.node_reset())
-    }
-    fn node_update(&mut self) {
-        call!(self.node_update())
-    }
-    fn node_restore(&mut self) {
-        call!(self.node_restore())
-    }
-    fn after_anim(&mut self, dt: f32) {
-        call!(self.after_anim(dt))
-    }
-    fn sub_update_logic(&mut self, dt: f32) {
-        call!(self.sub_update_logic(dt))
-    }
-    fn event_count(&mut self, state: usize) -> usize {
-        count(call!(self.event_count(idx(state))))
-    }
-    fn event_time(&mut self, state: usize, event: usize) -> f32 {
-        call!(self.event_time(idx(state), idx(event)))
-    }
-    fn handle_event(&mut self, state: usize, event: usize) {
-        call!(self.handle_event(idx(state), idx(event)))
-    }
 }
 
 /// # Safety
@@ -153,63 +27,11 @@ unsafe fn slice<'a, T>(p: *const T, n: i32) -> &'a [T] {
 }
 
 /// # Safety
-/// `ctl` is the entity's `MeshCtl`; the table is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h11_mesh_update_logic(
-    vt: *const HostVt,
-    ctl: *mut MeshCtl,
-    is_static: bool,
-    dt: f32,
-) {
-    // SAFETY: caller contract.
-    let (Some(vt), c) = (unsafe { vt.as_ref() }, unsafe { Ctl::new(ctl) }) else {
-        return;
-    };
-    h11::update_logic(&mut CHost(vt), c, is_static, dt);
-}
-
-/// # Safety
 /// `ctl` valid for a write.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h11_mesh_ctl_init(ctl: *mut MeshCtl) {
     // SAFETY: caller contract.
     unsafe { ctl.write(MeshCtl::new()) }
-}
-
-/// # Safety
-/// `cores` holds `n` valid, distinct `AnimCore` pointers.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h11_mesh_stop(cores: *const *mut AnimCore, n: i32) {
-    // SAFETY: caller contract.
-    unsafe { h11::stop(slice(cores, n)) }
-}
-
-/// # Safety
-/// As `ohpl_h11_mesh_stop`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h11_mesh_play(
-    cores: *const *mut AnimCore,
-    n: i32,
-    index: i32,
-    looping: bool,
-    stop_prev: bool,
-) {
-    // SAFETY: caller contract.
-    unsafe { h11::play(slice(cores, n), index, looping, stop_prev) }
-}
-
-/// # Safety
-/// As `ohpl_h11_mesh_stop`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h11_mesh_play_fade_to(
-    cores: *const *mut AnimCore,
-    n: i32,
-    index: i32,
-    looping: bool,
-    time: f32,
-) {
-    // SAFETY: caller contract.
-    unsafe { h11::play_fade_to(slice(cores, n), index, looping, time) }
 }
 
 /// # Safety
