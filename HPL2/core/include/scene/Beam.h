@@ -26,6 +26,8 @@
 #include "scene/Entity3D.h"
 #include "graphics/Renderable.h"
 #include "scene/RustSL.h"
+#include "scene/RustLs.h"
+#include "scene/RustSceneH12.h"
 
 namespace hpl {
 
@@ -77,20 +79,28 @@ namespace hpl {
 	#endif
 	friend class cBeamEnd;
 	public:
-		cBeam(const tString asName, cResources *apResources,cGraphics *apGraphics);
+		cBeam(const tString asName, cResources *apResources,cGraphics *apGraphics) : iRenderable(asName),
+			mpS(ohpl_ls_beam_new(this, mpE, mBoundingVolume.Rs(), (uintptr_t)apResources, (uintptr_t)apGraphics))
+		{
+			cBeamEnd *pEnd = hplNew( cBeamEnd, (asName + "_end",this));
+			mpS->end = (uintptr_t)pEnd;
+			ohpl_ls_beam_set_end(mpS, (uintptr_t)pEnd, pEnd->mpS);
+			pEnd->AddCallback(&mEndCallback);
+			mpE->applyBV = false;
+		}
 		~cBeam();
 
 		void SetMaterial(cMaterial * apMaterial){ mpS->material = (uintptr_t)apMaterial; }
 
-		tString GetFileName();
+		tString GetFileName(){ size_t lLen; const char *pStr = ohpl_sl_beam_file(mpS, &lLen); return tString(pStr, lLen);}
 
-		void SetSize(const cVector2f& avSize);
+		void SetSize(const cVector2f& avSize){ ohpl_ls_beam_set_size(mpS, &avSize);}
 		cVector2f GetSize(){ return mpS->size;}
 
-		void SetColor(const cColor &aColor);
+		void SetColor(const cColor &aColor){ ohpl_ls_beam_set_color(mpS, &aColor);}
 		const cColor& GetColor(){ return mpS->color;}
 
-		void SetTileHeight(bool abX);
+		void SetTileHeight(bool abX){ ohpl_ls_beam_set_tile_height(mpS, abX);}
 		bool GetTileHeight(){ return mpS->tileHeight;}
 
 		void SetMultiplyAlphaWithColor(bool abX){ mpS->multiplyAlpha = abX;}
@@ -98,7 +108,7 @@ namespace hpl {
 
 		cBeamEnd* GetEnd(){ return (cBeamEnd*)mpS->end;}
 
-		bool LoadXMLProperties(const tString asFile);
+		bool LoadXMLProperties(const tString asFile){ return ohpl_ls_beam_load(mpS, asFile.data(), asFile.size());}
 
 		cVector3f GetAxis(){ return mpS->axis;}
 		cVector3f GetMidPosition(){ return mpS->mid;}
@@ -106,17 +116,17 @@ namespace hpl {
 		/////////////////////////////////
 		//Entity implementation
 		tString GetEntityType(){ return "Beam";}
-		bool IsVisible();
+		bool IsVisible(){ return ohpl_h12b_is_visible(&mpS->color, mbIsVisible);}
 
 		//Renderable implementations
 		cMaterial *GetMaterial(){ return (cMaterial*)mpS->material;}
 		iVertexBuffer* GetVertexBuffer(){return (iVertexBuffer*)mpS->vtx;}
 
-		void UpdateGraphicsForFrame(float afFrameTime);
+		void UpdateGraphicsForFrame(float afFrameTime){ ohpl_ls_beam_update_frame(mpS);}
 
-		cBoundingVolume* GetBoundingVolume();
+		cBoundingVolume* GetBoundingVolume(){ ohpl_ls_beam_bounds(mpS); return &mBoundingVolume;}
 
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
+		cMatrixf* GetModelMatrix(cFrustum *apFrustum){ return ohpl_ls_beam_model(mpS, OhplLsFrustum(apFrustum));}
 
 		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
 
@@ -126,6 +136,12 @@ namespace hpl {
 		cBeamEnd_UpdateCallback mEndCallback;
 		OhplSLBeam *mpS;
 	};
+
+	inline void cBeamEnd::SetColor(const cColor &aColor){ ohpl_ls_beam_set_end_color(((cBeam*)mpS->beam)->mpS, &aColor);}
+	inline void cBeamEnd_UpdateCallback::OnTransformUpdate(iEntity3D * apEntity)
+	{
+		((cBeam*)static_cast<cBeamEnd*>(apEntity)->mpS->beam)->SetTransformUpdated(true);
+	}
 
 };
 #endif // HPL_BEAM_H

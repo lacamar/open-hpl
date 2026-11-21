@@ -3,6 +3,15 @@
 
 #include "scene/RustLs.h"
 #include "scene/RopeEntity.h"
+#include "scene/BillBoard.h"
+#include "scene/Beam.h"
+#include "graphics/Renderer.h"
+#include "graphics/RendererDeferred.h"
+#include "graphics/Material.h"
+#include "system/LowLevelSystem.h"
+#include "impl/XmlDocumentTiny.h"
+#include "resources/FileSearcher.h"
+#include "system/Platform.h"
 #include "scene/EnvironmentParticles.h"
 #include "scene/LightSpot.h"
 #include "resources/TextureManager.h"
@@ -63,7 +72,7 @@ namespace hpl {
 			return lCount;
 		}
 		const cMatrixf* EntWorld(void *p){ return &static_cast<iEntity3D*>(p)->GetWorldMatrix();}
-		void EntUpdated(void *p){ static_cast<iEntity3D*>(p)->SetTransformUpdated();}
+		void EntUpdated(void *p, bool abCallbacks){ static_cast<iEntity3D*>(p)->SetTransformUpdated(abCallbacks);}
 
 		void TexDestroy(void *r, void *t){ static_cast<cResources*>(r)->GetTextureManager()->Destroy(static_cast<iTexture*>(t));}
 		void* ProgCreate(void *g, const char *n, size_t l, const OhplLsVar *v, size_t c)
@@ -112,13 +121,53 @@ namespace hpl {
 			return true;
 		}
 
+		bool Hdr(){ return cRendererDeferred::GetHdr();}
+		void EntPos(void *p, cVector3f *apOut){ *apOut = static_cast<iEntity3D*>(p)->GetWorldPosition();}
+		void OccAssign(void *r, void *c, int32_t i, const cMatrixf *m, bool b)
+		{
+			iRenderer *pR = static_cast<iRenderer*>(r);
+			pR->AssignOcclusionObject(static_cast<iRenderable*>(c), i, pR->GetShapeBoxVertexBuffer(), const_cast<cMatrixf*>(m), b);
+		}
+		int32_t OccSamples(void *r, void *c, int32_t i){ return static_cast<iRenderer*>(r)->RetrieveOcclusionObjectSamples(static_cast<iRenderable*>(c), i);}
+		const OhplFrustum* RendererFrustum(void *r){ return OhplLsFrustum(static_cast<iRenderer*>(r)->GetCurrentFrustum());}
+		void Log(bool abError, const char *s, size_t l)
+		{
+			if(abError) Error("%.*s", (int)l, s);
+			else Warning("%.*s", (int)l, s);
+		}
+
+		struct cXml
+		{
+			cXmlDocumentTiny doc;
+			cXmlElement *main;
+			cXml() : doc(""), main(NULL){}
+		};
+		void* XmlOpen(void *r, const char *s, size_t l, int32_t *apStatus)
+		{
+			tWString sPath = static_cast<cResources*>(r)->GetFileSearcher()->GetFilePath(tString(s, l));
+			if(sPath == _W("")){ *apStatus = 1; return NULL;}
+			FILE *pFile = cPlatform::OpenFile(sPath, _W("rb"));
+			if(pFile == NULL){ *apStatus = 2; return NULL;}
+			fclose(pFile);
+			cXml *pXml = hplNew(cXml, ());
+			if(pXml->doc.CreateFromFile(sPath) == false){ *apStatus = 3; hplDelete(pXml); return NULL;}
+			pXml->main = pXml->doc.GetFirstElement("MAIN");
+			if(pXml->main == NULL){ *apStatus = 4; hplDelete(pXml); return NULL;}
+			*apStatus = 0;
+			return pXml;
+		}
+		const char* XmlAttr(void *d, const char *s, size_t l){ return static_cast<cXml*>(d)->main->GetAttribute(tString(s, l));}
+		void XmlClose(void *d){ hplDelete(static_cast<cXml*>(d));}
+		void* MatCreate(void *r, const char *s, size_t l){ return static_cast<cResources*>(r)->GetMaterialManager()->CreateMaterial(tString(s, l));}
+
 		struct cRegister
 		{
 			cRegister()
 			{
 				static const OhplLsHost h = { VbCreate, VbElem, VbAdd, VbIndex, VbCompile, VbArray, VbUpdate, VbCount, VbFree,
 											  MatDestroy, RopeInfo, RopePoints, EntWorld, EntUpdated,
-											  TexDestroy, ProgCreate, ProgDestroy, ProgVar, ProgSet, EntClip, SpotInfo, LightLevel };
+											  TexDestroy, ProgCreate, ProgDestroy, ProgVar, ProgSet, EntClip, SpotInfo, LightLevel,
+											  Hdr, EntPos, OccAssign, OccSamples, RendererFrustum, Log, XmlOpen, XmlAttr, XmlClose, MatCreate };
 				ohpl_ls_set_host(&h);
 			}
 		} gRegister;
@@ -126,4 +175,6 @@ namespace hpl {
 
 	cRopeEntity::~cRopeEntity(){ ohpl_ls_rope_free(mpL);}
 	cEnvironmentParticles::~cEnvironmentParticles(){ ohpl_ls_env_free(mpL);}
+	cBillboard::~cBillboard(){ ohpl_ls_bb_free(mpS);}
+	cBeam::~cBeam(){ hplDelete(GetEnd()); ohpl_ls_beam_free(mpS);}
 }

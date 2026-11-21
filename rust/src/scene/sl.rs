@@ -388,7 +388,7 @@ pub struct BeamPod {
 #[repr(C)]
 pub struct BeamObj {
     pub pod: BeamPod,
-    file: Vec<u8>,
+    pub(super) file: Vec<u8>,
 }
 
 #[unsafe(no_mangle)]

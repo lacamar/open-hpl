@@ -13,7 +13,7 @@
 )]
 
 mod ffi;
-mod geom;
+pub(crate) mod geom;
 mod libm;
 mod matrix;
 mod scalar;

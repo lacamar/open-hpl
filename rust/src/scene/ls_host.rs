@@ -2,9 +2,10 @@
 //! environment-particle shells. One table, registered once by `RustLsHost.cpp`; every entry takes the
 //! C++ object it works on and never holds a Rust reference across the call.
 
-use crate::math::bv::Bv;
+use crate::math::bv::{Bv, Frustum};
+use crate::scene::h10::EntPub;
 use crate::types::{Color, Matrixf, Vector3f};
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 use std::sync::atomic::{AtomicPtr, Ordering};
 
 pub const E_NORMAL: i32 = 0;
@@ -38,7 +39,7 @@ pub struct Host {
     pub rope_points:
         unsafe extern "C" fn(rope: *mut c_void, out: *mut Vector3f, take: i32, smooth: bool) -> i32,
     pub ent_world: unsafe extern "C" fn(ctx: *mut c_void) -> *const Matrixf,
-    pub ent_updated: unsafe extern "C" fn(ctx: *mut c_void),
+    pub ent_updated: unsafe extern "C" fn(ctx: *mut c_void, callbacks: bool),
     pub tex_destroy: unsafe extern "C" fn(res: *mut c_void, tex: *mut c_void),
     pub prog_create: unsafe extern "C" fn(
         gfx: *mut c_void,
@@ -53,6 +54,29 @@ pub struct Host {
     pub ent_clip: unsafe extern "C" fn(ent: *mut c_void, out: *mut ClipInfo),
     pub spot_info: unsafe extern "C" fn(spot: *mut c_void, out: *mut SpotInfo),
     pub light_level: unsafe extern "C" fn(pos: *const Vector3f, out: *mut f32) -> bool,
+    pub hdr: unsafe extern "C" fn() -> bool,
+    pub ent_pos: unsafe extern "C" fn(ctx: *mut c_void, out: *mut Vector3f),
+    pub occ_assign: unsafe extern "C" fn(
+        renderer: *mut c_void,
+        ctx: *mut c_void,
+        idx: i32,
+        m: *const Matrixf,
+        flag: bool,
+    ),
+    pub occ_samples: unsafe extern "C" fn(renderer: *mut c_void, ctx: *mut c_void, idx: i32) -> i32,
+    pub renderer_frustum: unsafe extern "C" fn(renderer: *mut c_void) -> *mut Frustum,
+    pub log: unsafe extern "C" fn(error: bool, msg: *const u8, len: usize),
+    pub xml_open: unsafe extern "C" fn(
+        res: *mut c_void,
+        file: *const u8,
+        len: usize,
+        status: *mut i32,
+    ) -> *mut c_void,
+    pub xml_attr:
+        unsafe extern "C" fn(doc: *mut c_void, name: *const u8, len: usize) -> *const c_char,
+    pub xml_close: unsafe extern "C" fn(doc: *mut c_void),
+    pub mat_create:
+        unsafe extern "C" fn(res: *mut c_void, name: *const u8, len: usize) -> *mut c_void,
 }
 
 /// A preprocessor variable of a GPU program; `has_value` picks the integer overload.
@@ -198,4 +222,142 @@ pub fn mat_destroy(res: usize, mat: usize) {
         // SAFETY: table contract.
         unsafe { (h.mat_destroy)(res as *mut c_void, mat as *mut c_void) }
     }
+}
+
+/// The entity half of a shell: the C++ object, its `OhplEntPod` and its bounding volume.
+#[derive(Clone, Copy)]
+pub struct Ent {
+    pub ctx: *mut c_void,
+    pub e: *mut EntPub,
+    pub bv: *mut Bv,
+}
+
+impl Ent {
+    pub fn world(&self) -> *const Matrixf {
+        // SAFETY: table contract.
+        host().map_or(std::ptr::null(), |h| unsafe { (h.ent_world)(self.ctx) })
+    }
+
+    pub fn pos(&self) -> Vector3f {
+        pos_of(self.ctx)
+    }
+
+    pub fn updated(&self) {
+        if let Some(h) = host() {
+            // SAFETY: table contract.
+            unsafe { (h.ent_updated)(self.ctx, true) }
+        }
+    }
+
+    pub fn count(&self) -> i32 {
+        // SAFETY: the pod outlives the shell.
+        unsafe { (*self.e).count }
+    }
+
+    pub fn bv<'a>(self) -> &'a mut Bv {
+        // SAFETY: the bounding volume is a member of the shell's base class.
+        unsafe { &mut *self.bv }
+    }
+}
+
+pub fn pos_of(ctx: *mut c_void) -> Vector3f {
+    let mut out = Vector3f::default();
+    if let Some(h) = host() {
+        // SAFETY: table contract.
+        unsafe { (h.ent_pos)(ctx, &mut out) }
+    }
+    out
+}
+
+pub fn hdr() -> bool {
+    // SAFETY: table contract.
+    host().is_some_and(|h| unsafe { (h.hdr)() })
+}
+
+pub fn log(error: bool, msg: &str) {
+    if let Some(h) = host() {
+        // SAFETY: table contract.
+        unsafe { (h.log)(error, msg.as_ptr(), msg.len()) }
+    }
+}
+
+/// The `MAIN` element of an XML file found through `cFileSearcher`.
+pub struct Xml(*mut c_void);
+
+pub enum XmlError {
+    NotFound,
+    Unreadable,
+    Load,
+    NoMain,
+}
+
+impl Xml {
+    pub fn open(res: usize, file: &[u8]) -> Result<Xml, XmlError> {
+        let mut status = 0;
+        let doc = host().map_or(std::ptr::null_mut(), |h| {
+            // SAFETY: table contract.
+            unsafe { (h.xml_open)(res as *mut c_void, file.as_ptr(), file.len(), &mut status) }
+        });
+        match status {
+            0 if !doc.is_null() => Ok(Xml(doc)),
+            1 => Err(XmlError::NotFound),
+            2 => Err(XmlError::Unreadable),
+            4 => Err(XmlError::NoMain),
+            _ => Err(XmlError::Load),
+        }
+    }
+
+    /// The attribute as a NUL-terminated string, or null.
+    pub fn attr(&self, name: &str) -> *const c_char {
+        // SAFETY: table contract.
+        host().map_or(std::ptr::null(), |h| unsafe {
+            (h.xml_attr)(self.0, name.as_ptr(), name.len())
+        })
+    }
+
+    pub fn string(&self, name: &str) -> Vec<u8> {
+        let p = self.attr(name);
+        if p.is_null() {
+            return Vec::new();
+        }
+        // SAFETY: the host returns a NUL-terminated string that lives until `drop`.
+        unsafe { std::ffi::CStr::from_ptr(p) }.to_bytes().to_vec()
+    }
+
+    pub fn boolean(&self, name: &str, default: bool) -> bool {
+        let p = self.attr(name);
+        if p.is_null() {
+            return default;
+        }
+        // SAFETY: as `string`.
+        crate::string::to_bool(unsafe { std::ffi::CStr::from_ptr(p) }.to_bytes())
+    }
+
+    pub fn floats<const N: usize>(&self, name: &str, default: [f32; N]) -> [f32; N] {
+        let p = self.attr(name);
+        let mut v = [0.0; N];
+        // SAFETY: as `string`.
+        let ok = !p.is_null()
+            && crate::string::floats_exact(
+                unsafe { std::ffi::CStr::from_ptr(p) }.to_bytes(),
+                &mut v,
+            );
+        if ok { v } else { default }
+    }
+}
+
+impl Drop for Xml {
+    fn drop(&mut self) {
+        if let Some(h) = host() {
+            // SAFETY: table contract.
+            unsafe { (h.xml_close)(self.0) }
+        }
+    }
+}
+
+pub fn mat_create(res: usize, name: &[u8]) -> usize {
+    // SAFETY: table contract.
+    host().map_or(0, |h| unsafe {
+        (h.mat_create)(res as *mut c_void, name.as_ptr(), name.len()) as usize
+    })
 }

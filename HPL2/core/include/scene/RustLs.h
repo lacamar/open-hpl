@@ -4,10 +4,12 @@
 // Layouts are asserted here and in Rust.
 #include "math/RustTypes.h"
 #include "math/RustBv.h"
+#include "scene/RustSL.h"
 #include <cstdint>
 
 namespace hpl {
 	class cFrustum;
+	struct OhplEntPod;
 	inline const OhplFrustum* OhplLsFrustum(cFrustum *apFrustum){ return reinterpret_cast<const OhplFrustum*>(apFrustum);}
 
 	struct OhplLsRope
@@ -75,7 +77,7 @@ namespace hpl {
 		void (*rope_info)(void *apRope, int32_t *apOut);
 		int32_t (*rope_points)(void *apRope, cVector3f *apOut, int32_t alTake, bool abSmooth);
 		const cMatrixf* (*ent_world)(void *apCtx);
-		void (*ent_updated)(void *apCtx);
+		void (*ent_updated)(void *apCtx, bool abCallbacks);
 		void (*tex_destroy)(void *apRes, void *apTex);
 		void* (*prog_create)(void *apGfx, const char *asName, size_t alLen, const OhplLsVar *apVars, size_t alNum);
 		void (*prog_destroy)(void *apGfx, void *apProg);
@@ -84,6 +86,16 @@ namespace hpl {
 		void (*ent_clip)(void *apEnt, OhplLsClip *apOut);
 		void (*spot_info)(void *apSpot, OhplLsSpot *apOut);
 		bool (*light_level)(const cVector3f *apPos, float *apOut);
+		bool (*hdr)();
+		void (*ent_pos)(void *apCtx, cVector3f *apOut);
+		void (*occ_assign)(void *apRenderer, void *apCtx, int32_t alIdx, const cMatrixf *a_mtx, bool abFlag);
+		int32_t (*occ_samples)(void *apRenderer, void *apCtx, int32_t alIdx);
+		const OhplFrustum* (*renderer_frustum)(void *apRenderer);
+		void (*log)(bool abError, const char *asMsg, size_t alLen);
+		void* (*xml_open)(void *apRes, const char *asFile, size_t alLen, int32_t *apStatus);
+		const char* (*xml_attr)(void *apDoc, const char *asName, size_t alLen);
+		void (*xml_close)(void *apDoc);
+		void* (*mat_create)(void *apRes, const char *asName, size_t alLen);
 	};
 
 extern "C" {
@@ -93,6 +105,30 @@ void ohpl_ls_rope_free(OhplLsRope*);
 void ohpl_ls_rope_set_color(OhplLsRope*, const cColor*);
 void ohpl_ls_rope_bounds(OhplLsRope*, OhplBv*);
 bool ohpl_ls_rope_viewport(OhplLsRope*, const OhplFrustum*);
+
+OhplSLBb* ohpl_ls_bb_new(void*, OhplEntPod*, OhplBv*, uintptr_t, uintptr_t, int32_t, const cVector2f*);
+void ohpl_ls_bb_free(OhplSLBb*);
+void ohpl_ls_bb_set_size(OhplSLBb*, const cVector2f*);
+void ohpl_ls_bb_set_axis(OhplSLBb*, const cVector3f*);
+void ohpl_ls_bb_set_color(OhplSLBb*, const cColor*);
+void ohpl_ls_bb_set_halo_alpha(OhplSLBb*, float);
+void ohpl_ls_bb_set_brightness(OhplSLBb*, float);
+cMatrixf* ohpl_ls_bb_model(OhplSLBb*, const OhplFrustum*);
+void ohpl_ls_bb_set_is_halo(OhplSLBb*, bool);
+void ohpl_ls_bb_assign_occlusion(OhplSLBb*, void*);
+bool ohpl_ls_bb_retrieve_occlusion(OhplSLBb*, void*);
+
+OhplSLBeam* ohpl_ls_beam_new(void*, OhplEntPod*, OhplBv*, uintptr_t, uintptr_t);
+void ohpl_ls_beam_set_end(OhplSLBeam*, uintptr_t, OhplSLBeamEnd*);
+void ohpl_ls_beam_free(OhplSLBeam*);
+void ohpl_ls_beam_set_size(OhplSLBeam*, const cVector2f*);
+void ohpl_ls_beam_set_tile_height(OhplSLBeam*, bool);
+void ohpl_ls_beam_set_color(OhplSLBeam*, const cColor*);
+void ohpl_ls_beam_set_end_color(OhplSLBeam*, const cColor*);
+void ohpl_ls_beam_bounds(OhplSLBeam*);
+void ohpl_ls_beam_update_frame(OhplSLBeam*);
+cMatrixf* ohpl_ls_beam_model(OhplSLBeam*, const OhplFrustum*);
+bool ohpl_ls_beam_load(OhplSLBeam*, const char*, size_t);
 
 OhplLsEnv* ohpl_ls_env_new(uintptr_t, uintptr_t);
 void ohpl_ls_env_free(OhplLsEnv*);

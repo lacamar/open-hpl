@@ -24,7 +24,7 @@ mod ffi_meshentity;
 mod ffi_node;
 mod ffi_particles;
 mod ffi_world;
-mod h10;
+pub(crate) mod h10;
 mod h11;
 mod h11b_ffi;
 mod h11b_mesh;
@@ -499,6 +499,7 @@ pub fn compile(objs: &[Object], params: &Params) -> Tree {
 
 pub(crate) mod rnd;
 
+mod ls_bb;
 mod ls_env;
 mod ls_host;
 mod ls_rope;

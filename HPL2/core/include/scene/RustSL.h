@@ -164,27 +164,10 @@ void ohpl_sl_fog_free(OhplSLFog*);
 void ohpl_sl_fog_set_size(OhplSLFog*, const cVector3f*, cVector3f*);
 const cMatrixf* ohpl_sl_fog_model(OhplSLFog*, const cMatrixf*);
 
-OhplSLBb* ohpl_sl_bb_new(int, const cVector2f*);
-void ohpl_sl_bb_free(OhplSLBb*);
-bool ohpl_sl_bb_set_color(OhplSLBb*, const cColor*);
-bool ohpl_sl_bb_set_halo_alpha(OhplSLBb*, float);
-bool ohpl_sl_bb_set_brightness(OhplSLBb*, float);
-bool ohpl_sl_bb_set_axis(OhplSLBb*, const cVector3f*, float*);
-uint32_t ohpl_sl_bb_halo_gates(OhplSLBb*, int);
-const cMatrixf* ohpl_sl_bb_model(OhplSLBb*, const cMatrixf*, const cVector3f*, const cVector3f*, bool*);
-void ohpl_sl_bb_colors(const OhplSLBb*, bool, float*);
 
 OhplSLBeamEnd* ohpl_sl_beam_end_new(uintptr_t);
 void ohpl_sl_beam_end_free(OhplSLBeamEnd*);
-OhplSLBeam* ohpl_sl_beam_new();
-void ohpl_sl_beam_free(OhplSLBeam*);
-void ohpl_sl_beam_set_file(OhplSLBeam*, const char*, size_t);
 const char* ohpl_sl_beam_file(const OhplSLBeam*, size_t*);
-bool ohpl_sl_beam_set_color(OhplSLBeam*, const cColor*, float*);
-bool ohpl_sl_beam_set_end_color(OhplSLBeam*, OhplSLBeamEnd*, const cColor*, float*);
-void ohpl_sl_beam_bounds(const OhplSLBeam*, const cVector3f*, const cVector3f*, cVector3f*, cVector3f*);
-bool ohpl_sl_beam_geometry(OhplSLBeam*, int, const cVector3f*, const cVector3f*, float*, float*);
-const cMatrixf* ohpl_sl_beam_model(OhplSLBeam*, const cMatrixf*, const cVector3f*, const cVector3f*);
 
 OhplSLLight* ohpl_sl_light_new(int);
 void ohpl_sl_light_free(OhplSLLight*);

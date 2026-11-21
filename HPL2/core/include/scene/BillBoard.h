@@ -27,6 +27,8 @@
 #include "scene/Entity3D.h"
 #include "graphics/Renderable.h"
 #include "scene/RustSL.h"
+#include "scene/RustLs.h"
+#include "scene/RustSceneH12.h"
 
 namespace hpl {
 
@@ -45,61 +47,61 @@ namespace hpl {
 		typedef iRenderable __super;
 	#endif
 	public:
-		cBillboard(const tString asName,const cVector2f& avSize,eBillboardType aType, cResources *apResources,cGraphics *apGraphics);
+		cBillboard(const tString asName,const cVector2f& avSize,eBillboardType aType, cResources *apResources,cGraphics *apGraphics) :
+			iRenderable(asName),
+			mpS(ohpl_ls_bb_new(this, mpE, mBoundingVolume.Rs(), (uintptr_t)apResources, (uintptr_t)apGraphics, aType, &avSize)){}
 		~cBillboard();
 
 		void SetMaterial(cMaterial * apMaterial){ mpS->material = (uintptr_t)apMaterial; }
 
-		void SetSize(const cVector2f& avSize);
+		void SetSize(const cVector2f& avSize){ ohpl_ls_bb_set_size(mpS, &avSize);}
 		cVector2f GetSize(){ return mpS->size;}
 
 		eBillboardType GetType(){ return (eBillboardType)mpS->kind;}
 
-		void SetAxis(const cVector3f& avAxis);
+		void SetAxis(const cVector3f& avAxis){ ohpl_ls_bb_set_axis(mpS, &avAxis);}
 		cVector3f GetAxis(){ return mpS->axis;}
 
 		void SetForwardOffset(float afOffset){ mpS->forwardOffset = afOffset;}
 		float GetForwardOffset(){ return mpS->forwardOffset;}
 
-		void SetColor(const cColor &aColor);
+		void SetColor(const cColor &aColor){ ohpl_ls_bb_set_color(mpS, &aColor);}
 		const cColor& GetColor(){ return mpS->color;}
 
-		void SetBrightness(float afX);
+		void SetBrightness(float afX){ ohpl_ls_bb_set_brightness(mpS, afX);}
 		float GetBrightness(){ return mpS->brightness;}
 
-		void SetHaloAlpha(float afX);
+		void SetHaloAlpha(float afX){ ohpl_ls_bb_set_halo_alpha(mpS, afX);}
 		float GetHaloAlpha(){ return mpS->haloAlpha;}
 
 		/////////////////////////////////
 		//Halo stuff
-		void SetIsHalo(bool abX);
+		void SetIsHalo(bool abX){ ohpl_ls_bb_set_is_halo(mpS, abX);}
 		bool IsHalo(){ return mpS->isHalo;}
 
 		void SetHaloSourceSize(const cVector3f &avSize){ mpS->haloSourceSize = avSize; mpS->haloSizeUpdated = true;}
 		cVector3f GetHaloSourceSize(){return mpS->haloSourceSize;}
 
 		bool UsesOcclusionQuery(){ return mpS->isHalo;}
-		void AssignOcclusionQuery(iRenderer *apRenderer);
-		bool RetrieveOcculsionQuery(iRenderer *apRenderer);
+		void AssignOcclusionQuery(iRenderer *apRenderer){ ohpl_ls_bb_assign_occlusion(mpS, apRenderer);}
+		bool RetrieveOcculsionQuery(iRenderer *apRenderer){ return ohpl_ls_bb_retrieve_occlusion(mpS, apRenderer);}
 
 		/////////////////////////////////
 		//Entity implementation
 		tString GetEntityType(){ return "Billboard";}
-		bool IsVisible();
+		bool IsVisible(){ return ohpl_h12b_is_visible(&mpS->color, mbIsVisible);}
 
 		//Renderable implementations
 		cMaterial *GetMaterial(){ return (cMaterial*)mpS->material;}
 		iVertexBuffer* GetVertexBuffer(){return (iVertexBuffer*)mpS->vtx;}
 
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
+		cMatrixf* GetModelMatrix(cFrustum *apFrustum){ return ohpl_ls_bb_model(mpS, OhplLsFrustum(apFrustum));}
 
 		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
 
 		eRenderableType GetRenderType(){ return eRenderableType_Billboard;}
 
 	private:
-		void UpdateVertexColors();
-
 		OhplSLBb *mpS;
 	};
 
