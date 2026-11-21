@@ -43,10 +43,7 @@
 #include "resources/MaterialManager.h"
 #include "resources/FileSearcher.h"
 
-#include "graphics/MaterialType_BasicSolid.h"
-#include "graphics/MaterialType_BasicTranslucent.h"
-#include "graphics/MaterialType_Water.h"
-#include "graphics/MaterialType_Decal.h"
+#include "graphics/MaterialType.h"
 
 #include "graphics/PostEffect_Bloom.h"
 #include "graphics/PostEffect_ColorConvTex.h"
@@ -90,7 +87,8 @@ namespace hpl {
 			iMaterialType *pType = it->second;
 			pType->DestroyData();
 		}
-		STLMapDeleteAll(m_mapMaterialTypes);
+		for(it = m_mapMaterialTypes.begin(); it != m_mapMaterialTypes.end(); ++it) it->second->Destroy();
+		m_mapMaterialTypes.clear();
 		cMaterial::SetDestroyTypeSpecifics(false); //Material types are destroyed! Remaining materials may not call!
 
 		STLDeleteAll(mvPostEffectTypes);
@@ -206,16 +204,16 @@ namespace hpl {
 			//Add all the materials.
 			Log(" Adding engine materials\n");
 
-			AddMaterialType(hplNew( cMaterialType_SolidDiffuse, (this, apResources) ), "soliddiffuse");
-			AddMaterialType(hplNew( cMaterialType_Translucent, (this, apResources) ), "translucent");
-			AddMaterialType(hplNew( cMaterialType_Water, (this, apResources) ), "water");
-			AddMaterialType(hplNew( cMaterialType_Decal, (this, apResources) ), "decal");
-			AddMaterialType(hplNew( cMaterialType_TerrainBlend, (this, apResources) ), "terrainblend");
-			AddMaterialType(hplNew( cMaterialType_TerrainDecal, (this, apResources) ), "terraindecal");
-			AddMaterialType(hplNew( cMaterialType_Undergrowth, (this, apResources) ), "undergrowth");
-			AddMaterialType(hplNew( cMaterialType_ProjectedUV, (this, apResources) ), "projecteduv");
-			AddMaterialType(hplNew( cMaterialType_VertexBlend, (this, apResources) ), "vertexblend");
-			AddMaterialType(hplNew( cMaterialType_SolidDiffuse, (this, apResources) ), "terrain");
+			AddMaterialType(iMaterialType::Create(eOhplMatKind_SolidDiffuse, this, apResources), "soliddiffuse");
+			AddMaterialType(iMaterialType::Create(eOhplMatKind_Translucent, this, apResources), "translucent");
+			AddMaterialType(iMaterialType::Create(eOhplMatKind_Water, this, apResources), "water");
+			AddMaterialType(iMaterialType::Create(eOhplMatKind_Decal, this, apResources), "decal");
+			AddMaterialType(iMaterialType::Create(eOhplMatKind_TerrainBlend, this, apResources), "terrainblend");
+			AddMaterialType(iMaterialType::Create(eOhplMtCode_TerrainDecal, this, apResources), "terraindecal");
+			AddMaterialType(iMaterialType::Create(eOhplMatKind_Undergrowth, this, apResources), "undergrowth");
+			AddMaterialType(iMaterialType::Create(eOhplMatKind_ProjectedUv, this, apResources), "projecteduv");
+			AddMaterialType(iMaterialType::Create(eOhplMatKind_VertexBlend, this, apResources), "vertexblend");
+			AddMaterialType(iMaterialType::Create(eOhplMatKind_SolidDiffuse, this, apResources), "terrain");
 
 
 			////////////////////////////////////////////////

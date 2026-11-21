@@ -3,7 +3,7 @@
 #include "SomaScriptApi.h"
 #include "scene/GuiSetEntity.h"
 #include <cstring>
-#include "graphics/MaterialType_BasicTranslucent.h"
+#include "graphics/MaterialType.h"
 #include "SomaLuxPlayer.h"
 #include "SomaImGui.h"
 #include "SomaBase.h"
@@ -753,7 +753,7 @@ void cSomaLuxEntity::UpdateGuiScreen()
 	bool bVisible = mbGuiActive && mpMesh->IsVisible();
 	if (mpGuiSubMesh->GetVisibleVar() != bVisible)
 		mpGuiSubMesh->SetVisible(bVisible);
-	if (cMaterial *pMat = mpGuiSubMesh->GetCustomMaterial(); pMat && dynamic_cast<cMaterialType_Translucent *>(pMat->GetType()))
+	if (cMaterial *pMat = mpGuiSubMesh->GetCustomMaterial(); pMat && pMat->GetType() && pMat->GetType()->GetCode() == eOhplMatKind_Translucent)
 		((cMaterialType_Translucent_Vars *)pMat->GetVars())->mFadeColor.a = 1 - mfGuiFade * mfGuiFade;
 	cGuiSet *pSet = mpImGui->GetSet();
 	cMatrixf mtx = mpGuiSubMesh->GetWorldMatrix();
@@ -818,7 +818,7 @@ static void SetScreenMaterial(cSubMeshEntity *apSub, iTexture *apTexture, const 
 		pMat->LoadVariablesFromVarsObject(pVars);
 		hplDelete(pVars);
 		// cGuiSetEntity renders with UseFadeColor
-		if (dynamic_cast<cMaterialType_Translucent *>(pMat->GetType()))
+		if (pMat->GetType() && pMat->GetType()->GetCode() == eOhplMatKind_Translucent)
 			((cMaterialType_Translucent_Vars *)pMat->GetVars())->mbFadeColor = true;
 		pMat->IncUserCount();
 		// a .ent override stays alive: the copy shares its textures

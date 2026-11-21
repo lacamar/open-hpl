@@ -47,6 +47,7 @@ namespace hpl {
 		iGpuShader(const tString& asName, const tWString& asFullPath, eGpuShaderType aType,eGpuProgramFormat aProgramFormat) : iResourceBase(asName, asFullPath,0){
 			mProgramFormat = aProgramFormat; 
 			mShaderType = aType;
+			mlUserId = 0;
 		}
 		virtual ~iGpuShader(){}
 
@@ -66,7 +67,7 @@ namespace hpl {
 		eGpuProgramFormat GetFormat(){ return mProgramFormat;}
 		eGpuShaderType GetType() { return mShaderType;}
 
-		void AddSamplerUnit(const tString& asSamplerName, int alUnit);
+		void AddSamplerUnit(const tString& asSamplerName, int alUnit){ cGpuShader_SamplerUnit u = { asSamplerName, alUnit }; mvSamplerUnits.push_back(u); }
 		int GetSamplerUnitNum(){ return (int)mvSamplerUnits.size(); }
 		cGpuShader_SamplerUnit* GetSamplerUnit(int alIdx){ return &mvSamplerUnits[alIdx];}
 
@@ -80,7 +81,7 @@ namespace hpl {
 
 		std::vector<cGpuShader_SamplerUnit> mvSamplerUnits;
 
-		static bool mbDebugInfo;
+		static inline bool mbDebugInfo = false;
 	};
 };
 #endif // HPL_GPU_SHADER_H

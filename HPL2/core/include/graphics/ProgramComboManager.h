@@ -23,115 +23,62 @@
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
-#include "graphics/RustRender.h"
+#include "graphics/RustMt.h"
 
 namespace hpl {
 
-	//---------------------------------------------------
-
 	class cGraphics;
 	class cResources;
-	class iTexture;
 	class iGpuProgram;
 	class iGpuShader;
 	class cParserVarContainer;
 
-	//---------------------------------------------------
-
 	#define kPC_VertexBit		eFlagBit_0
 	#define kPC_FragmentBit		eFlagBit_1
 
-
-	//---------------------------------------------------
-
-	class cProgramComboVariable
-	{
-	public:
-		cProgramComboVariable(const tString& asVarName, int alId) : msVarName(asVarName), mlId(alId){}
-
-		tString msVarName;
-		int mlId;
-	};
-
-	typedef std::list<cProgramComboVariable> tProgramComboVariableList;
-	typedef tProgramComboVariableList::iterator tProgramComboVariableListIt;
-
-	//---------------------------------------------------
-
+	// Generated programs and shaders by feature flags; the state lives in Rust (rust/src/material/pcm.rs).
 	class cProgramComboManager
 	{
 	public:
-		cProgramComboManager(const tString& asName, cGraphics *apGraphics, cResources *apResources, int alNumOfMainModes);
-		~cProgramComboManager();
+		cProgramComboManager(const tString& asName, cGraphics *apGraphics, cResources *apResources, int alNumOfMainModes) :
+			mpRs(ohpl_pcm_new(OhplMtHostGet(), (const unsigned char*)asName.data(), asName.size(), apGraphics, apResources, alNumOfMainModes > 0 ? alNumOfMainModes : 0)){}
+		~cProgramComboManager(){ ohpl_pcm_free(mpRs); }
 
-		void SetName( const tString& asName);
+		void SetName(const tString& asName){ ohpl_pcm_set_name(mpRs, (const unsigned char*)asName.data(), asName.size()); }
 
-		iGpuProgram* GenerateProgram(int alMainMode, int alFlags);
-		int GetGenerateCombinationNum(int alMainMode){ return mvCombinationNum[alMainMode]; }
+		iGpuProgram* GenerateProgram(int alMainMode, int alFlags){ return static_cast<iGpuProgram*>(ohpl_pcm_generate_program(mpRs, alMainMode, alFlags)); }
+		int GetGenerateCombinationNum(int alMainMode){ return ohpl_pcm_combination_num(mpRs, alMainMode); }
 
-		void SetupGenerateProgramData(int alMainMode, const tString &asModeName, 
+		void SetupGenerateProgramData(int alMainMode, const tString &asModeName,
 								const tString &asVtxShaderName, const tString &asFragShaderName,
-								cProgramComboFeature *apFeatures, int alFeatureNum, 
+								cProgramComboFeature *apFeatures, int alFeatureNum,
 								cParserVarContainer &avDefaultVars);
 
-		void AddGenerateProgramVariableId(const tString& asVarName, int alId, int alMainMode);
+		void AddGenerateProgramVariableId(const tString& asVarName, int alId, int alMainMode){ ohpl_pcm_add_variable_id(mpRs, (const unsigned char*)asVarName.data(), asVarName.size(), alId, alMainMode); }
 
-		void DestroyGeneratedProgram(int alMainMode, iGpuProgram* apProgram);
-		void DestroyGeneratedShader(int alMainMode, iGpuShader* apShader, eGpuShaderType aType);
-		
+		void DestroyGeneratedProgram(int alMainMode, iGpuProgram* apProgram){ ohpl_pcm_destroy_generated_program(mpRs, alMainMode, apProgram); }
+		void DestroyGeneratedShader(int alMainMode, iGpuShader* apShader, eGpuShaderType aType){ ohpl_pcm_destroy_generated_shader(mpRs, alMainMode, apShader, aType); }
+
 		iGpuShader *CreateShader(const tString& asName, eGpuShaderType aType, cParserVarContainer *apVars, bool abAddtoList);
-		iGpuProgram *CreateProgram(const tString& asName, bool abAddtoList);
-		
+		iGpuProgram *CreateProgram(const tString& asName, bool abAddtoList){ return static_cast<iGpuProgram*>(ohpl_pcm_create_program(mpRs, (const unsigned char*)asName.data(), asName.size(), abAddtoList)); }
+
 		/**
 		 * Do NOT use these to destroy program create with SetupProgramModeData
 		 */
-		void DestroyShader(iGpuShader * apShader);
-		void DestroyProgram(iGpuProgram * apProgram);
-		
+		void DestroyShader(iGpuShader * apShader){ ohpl_pcm_destroy_shader(mpRs, apShader); }
+		void DestroyProgram(iGpuProgram * apProgram){ ohpl_pcm_destroy_program(mpRs, apProgram); }
+
 		iGpuProgram* CreateProgramFromShaders(	const tString &asProgramName,
 												const tString &asVtxShaderName, const tString &asFragShaderName,
 												cParserVarContainer *apVars,bool abAddtoList);
-		iGpuProgram* CreateProgramFromShaders(	const tString &asProgramName, iGpuShader *apVtxShader,iGpuShader *apFragShader, 
-												bool abAddtoList);
+		iGpuProgram* CreateProgramFromShaders(	const tString &asProgramName, iGpuShader *apVtxShader,iGpuShader *apFragShader,
+												bool abAddtoList){ return static_cast<iGpuProgram*>(ohpl_pcm_program_from_shaders(mpRs, (const unsigned char*)asProgramName.data(), asProgramName.size(), apVtxShader, apFragShader, abAddtoList)); }
 
-		void DestroyShadersAndPrograms();
+		void DestroyShadersAndPrograms(){ ohpl_pcm_destroy_all(mpRs); }
 
 	private:
-		tString GenerateProgramName(int alMainMode, int alBitFlags);
-
-		iGpuShader* GetShaderForCombo(int alMainMode, int alBitFlags, const tString& asShaderName, tFlag aShaderType);
-		iGpuShader* CreateShaderFromRustVars(const tString& asShaderFile, int alMainMode, tFlag aShaderType, int alBitFlags);
-
-
-		/*void CreateValidShaderCombos(	const tString& asFile, tFlag aShaderType, iGpuShader **apShaderVec,
-										cProgramComboFeature *apFeatures, int alCombinations, int alFeatureNum,
-										cParserVarContainer &avDefaultVars);
-		void CreateProgramCombos(	int alMode,
-									cProgramComboProgram *apProgramDataVec,
-									iGpuShader **apVtxShaderVec,iGpuShader **apFragShaderVec,
-									cProgramComboFeature *apFeatures, int alCombinations, int alFeatureNum);
-		iGpuShader* GetShaderWithCombo(	iGpuShader **apShaderVec, tFlag aShaderType, int alBitFlag,
-										cProgramComboFeature *apFeatures, int alFeatureNum);*/
-
-
-		cGraphics *mpGraphics;
-		cResources *mpResources;
-
-		tString msName;
-
-		std::vector< tProgramComboVariableList > mvVarLists;
-
-		int mlNumOfMainModes;
-		std::vector<int> mvCombinationNum;
-
-		OhplComboHandle *mpCombo;
-		void *mpSettings;
-
-		tGpuShaderList mlstExtraShaders;
-		tGpuProgramList mlstExtraPrograms;
+		void *mpRs;
 	};
-
-	//---------------------------------------------------
 
 };
 #endif // HPL_PROGRAM_COMBO_MANAGER_H

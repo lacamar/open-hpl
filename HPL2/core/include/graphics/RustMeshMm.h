@@ -18,20 +18,11 @@ struct OhplMmPair { unsigned vtx, bone; float weight; };
 struct OhplMmVbView { size_t indexNum; const unsigned *indices; size_t vertexNum; const float *positions; int stride; };
 
 // Thunks over engine classes still in C++; field order mirrors rust/src/graphics/mm.rs `Host`.
-// Deleted with iMaterialType, iGpuProgram, cMaterialManager, cSkeleton, cAnimation, cNode3D, iVertexBuffer users.
+// Deleted with cMaterialManager, cSkeleton, cAnimation, cNode3D, iVertexBuffer users.
 struct OhplMmHost
 {
-	bool (*typeTranslucent)(void*);
-	void *(*typeCreateVars)(void*);
 	void (*varsDelete)(void*);
-	void *(*typeProgram)(void*, void*, int, int);
-	void (*typeDestroyProgram)(void*, void*, int, void*, int);
-	void *(*typeTextureForUnit)(void*, void*, int, int);
-	void (*typeCompileSpecifics)(void*, void*);
-	unsigned (*worldFog)();
 	void (*textureDestroy)(void*, void*);
-	void *(*typeVarsObject)(void*, void*);
-	void (*typeLoadVars)(void*, void*, void*);
 	void (*materialDestroy)(void*, void*);
 	void (*vbDelete)(void*);
 	void (*vbView)(void*, OhplMmVbView*);
@@ -56,7 +47,7 @@ const OhplMmHost *OhplMmHostGet();
 
 extern "C" {
 
-OhplH7Mat *ohpl_mm_mat_new(const OhplMmHost*, void *owner, void *type, void *resources);
+OhplH7Mat *ohpl_mm_mat_new(const OhplMmHost*, void *type, void *resources);
 void ohpl_mm_mat_free(OhplH7Mat*);
 void ohpl_mm_mat_set_type(OhplH7Mat*, void *type);
 void ohpl_mm_mat_compile(OhplH7Mat*);

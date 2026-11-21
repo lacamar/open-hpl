@@ -24,142 +24,109 @@
 #include "engine/EngineTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/Material.h"
+#include "graphics/RustMt.h"
 
 namespace hpl {
 
-	//---------------------------------------------------
-	
 	class cGraphics;
 	class cResources;
-	class iTexture;
 	class iGpuProgram;
-	class iGpuShader;
-	class cMaterial;
 	class iRenderable;
-	class cParserVarContainer;
 	class iRenderer;
-	class cProgramComboManager;
 	class cResourceVarsObject;
-	class iMaterialVars;
-	class cForceField;
 
-	//---------------------------------------------------
-
-	#define kPC_VertexBit		eFlagBit_0
-	#define kPC_FragmentBit		eFlagBit_1
-
-	//---------------------------------------------------
-	
-	class cMaterialUsedTexture
-	{
-	public:
-		eMaterialTexture mType;
-	};
-	
-	typedef std::vector<cMaterialUsedTexture> tMaterialUsedTextureVec;
-	typedef tMaterialUsedTextureVec::iterator tMaterialUsedTextureVecIt;
-
-	//---------------------------------------------------
-
-	class cMaterialUserVariable
-	{
-	public:
-		tString msName;
-		eVariableType mType;
-        tString msValue;
-		tString msDescription;
-		tStringVec mvEnumValues;
-	};
-
-	typedef std::vector<cMaterialUserVariable> tMaterialUserVariableVec;
-	typedef tMaterialUserVariableVec::iterator tMaterialUserVariableVecIt;
-
-	//---------------------------------------------------
-
+	// Opaque: `this` is the Rust material type (rust/src/material/mt.rs); Rust owns the program managers and the type logic.
 	class iMaterialType
 	{
 	public:
-		iMaterialType(cGraphics *apGraphics, cResources *apResources);
-		virtual ~iMaterialType();
+		static iMaterialType* Create(int alCode, cGraphics *apGraphics, cResources *apResources){ return static_cast<iMaterialType*>(ohpl_mt_new(OhplMtHostGet(), alCode, apGraphics, apResources)); }
+		static iMaterialType* Blank(){ static iMaterialType *pBlank = Create(eOhplMtCode_Blank, NULL, NULL); return pBlank; }
+		void Destroy(){ ohpl_mt_free(this); }
 
-		virtual void DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)=0;
+		void SetName(const tString& asName){ ohpl_mt_set_name(this, (const unsigned char*)asName.data(), asName.size()); }
+		tString GetName(){ const unsigned char *p; size_t n; ohpl_mt_name(this, &p, &n); return tString((const char*)p, n); }
 
-		void SetName(const tString& asName);
-		const tString& GetName(){ return msName;}
+		bool IsTranslucent(){ return ohpl_mt_is_translucent(this); }
+		bool IsDecal(){ return ohpl_mt_is_decal(this); }
+		bool HasTypeSpecifics(eMaterialRenderMode aMode){ return ohpl_mt_has_type_specifics(this, aMode); }
+		int GetCode(){ return ohpl_mt_code(this); }
+		int GetUsedTextureNum(){ return ohpl_mt_used_texture_num(this); }
+		int GetUsedTexture(int alIdx){ return ohpl_mt_used_texture(this, alIdx); }
 
-		bool IsTranslucent(){ return mbIsTranslucent; }
-		bool IsDecal(){ return mbIsDecal;}
+		void LoadData(){ ohpl_mt_load_data(this); }
+		void DestroyData(){ ohpl_mt_destroy_data(this); }
+		void Reload(){ ohpl_mt_reload(this); }
 
-		virtual bool SupportsHWSkinning()=0;
+		iGpuProgram* GetRenderProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iRenderer *apRenderer){ return static_cast<iGpuProgram*>(ohpl_mt_render_program(this, apMaterial->mpRs, aRenderMode, apRenderer)); }
+		void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer){ ohpl_mt_setup_type(this, aRenderMode, apProgram, apRenderer); }
+		void SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial, iRenderer *apRenderer){ ohpl_mt_setup_material(this, aRenderMode, apProgram, apMaterial->mpRs, apRenderer); }
+		void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject, iRenderer *apRenderer){ ohpl_mt_setup_object(this, aRenderMode, apProgram, apObject, apRenderer); }
+		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars){ ohpl_mt_load_variables(this, apMaterial->mpRs, apVars); }
 
-		virtual iTexture* GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)=0;
-		virtual iGpuProgram* GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)=0;
-		
-		virtual void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer)=0;
-		virtual void SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial, 
-												iRenderer *apRenderer)=0;
-		virtual void SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
-												iRenderer *apRenderer)=0;
+		static OhplH7Mat* State(cMaterial *apMaterial){ return apMaterial->mpRs; }
 
-		int GetUsedTextureNum(){ return (int)mvUsedTextures.size(); }
-		cMaterialUsedTexture* GetUsedTexture(int alIdx){ return &mvUsedTextures[alIdx]; }
+	private:
+		iMaterialType() = delete;
+	};
 
-
-		int GetUserVariableNum() { return (int)mvUserVariables.size(); }
-		cMaterialUserVariable* GetUserVariable(int alIdx);
-		cMaterialUserVariable* GetUserVariable(const tString& asName);
-
-		void Reload();
-
-		virtual void LoadData()=0;
-		virtual void DestroyData()=0;
-
-		virtual iMaterialVars* CreateSpecificVariables()=0;
-		virtual void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars)=0;
-		virtual void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars)=0;
-
-		virtual void CompileMaterialSpecifics(cMaterial *apMaterial)=0;
-
-		inline bool HasTypeSpecifics(eMaterialRenderMode aMode) const { return mbHasTypeSpecifics[aMode];}
-
-		virtual iGpuProgram* GetRenderProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iRenderer *apRenderer);
-
-	protected:
-
-		/// Translucent/decal flags, type-specific passes, used textures and user variables of Rust material kind alKind.
-		void InitFromRust(int alKind);
-
-		void AddUsedTexture(eMaterialTexture aType);
-
-		void AddVar(const tString& asName, eVariableType aType, const tString& asDefaultValue, const tString& asDesc="", const tStringVec& avEnumValues = tStringVec());
-
-		void AddVarBool(const tString& asName, bool abDefaultValue, const tString& asDesc="");
-		void AddVarInt(const tString& asName, int alDefaultValue, const tString& asDesc="");
-		void AddVarFloat(const tString& asName, float afDefaultValue, const tString& asDesc="");
-		void AddVarVec2(const tString& asName, const cVector2f& avDefaultValue, const tString& asDesc="");
-		void AddVarVec3(const tString& asName, const cVector3f& avDefaultValue, const tString& asDesc="");
-		void AddVarString(const tString& asName, const tString& asDefaultValue, const tString& asDesc="");
-		void AddVarColor(const tString& asName, const cColor& aDefaultValue, const tString& asDesc="");
-		void AddVarEnum(const tString& asName, const tString& asDefaultValue, const tStringVec& avEnumValues, const tString& asDesc="");
-		
-		cGraphics *mpGraphics;
-		cResources *mpResources;
-
-		tString msName;
-
-		bool mbIsTranslucent;
-		bool mbIsDecal;
-		
-		bool mbHasTypeSpecifics[eMaterialRenderMode_LastEnum];
-		
-		tMaterialUsedTextureVec mvUsedTextures;
-		
-		tMaterialUserVariableVec mvUserVariables;
-
-		cProgramComboManager *mpProgramManager;
+	// Settings of the translucent type the renderers write and the other types read; the state lives in Rust.
+	class cMaterialType_Translucent
+	{
+	public:
+		static void SetLightProbes(bool abX){ ohpl_mt_set_light_probes(abX); }
+		static void SetWorldFog(bool abUnderwater, bool abSecondary){ ohpl_mt_set_world_fog(abUnderwater, abSecondary); }
+		static tFlag GetWorldFog(){ return ohpl_mt_get_world_fog(); }
+		static void SetDepthOfField(bool abX, const cColor &avParams = cColor(0,0)){ ohpl_mt_set_depth_of_field(abX, avParams.r, avParams.g, avParams.b, avParams.a); }
+		static bool GetLightProbes(){ return ohpl_mt_get_light_probes(); }
+		static bool GetDepthOfField(){ return ohpl_mt_get_depth_of_field(); }
 	};
 
 	//---------------------------------------------------
+	// Material variables: the Ohpl*Vars bases are laid out and defaulted by Rust
+	//---------------------------------------------------
+
+	class cMaterialType_SolidDiffuse_Vars : public iMaterialVars, public OhplSolidDiffuseVars
+	{
+	public:
+		cMaterialType_SolidDiffuse_Vars(){ ohpl_mat_default_vars(eOhplMatKind_SolidDiffuse, static_cast<OhplSolidDiffuseVars*>(this)); }
+	};
+
+	class cMaterialType_ProjectedUV_Vars : public iMaterialVars, public OhplProjectedUvVars
+	{
+	public:
+		cMaterialType_ProjectedUV_Vars(){ ohpl_mat_default_vars(eOhplMatKind_ProjectedUv, static_cast<OhplProjectedUvVars*>(this)); }
+	};
+
+	class cMaterialType_VertexBlend_Vars : public iMaterialVars, public OhplVertexBlendVars
+	{
+	public:
+		cMaterialType_VertexBlend_Vars(){ ohpl_mat_default_vars(eOhplMatKind_VertexBlend, static_cast<OhplVertexBlendVars*>(this)); }
+	};
+
+	class cMaterialType_Translucent_Vars : public iMaterialVars, public OhplTranslucentVars
+	{
+	public:
+		cMaterialType_Translucent_Vars(){ ohpl_mat_default_vars(eOhplMatKind_Translucent, static_cast<OhplTranslucentVars*>(this)); }
+	};
+
+	class cMaterialType_Water_Vars : public iMaterialVars, public OhplWaterVars
+	{
+	public:
+		cMaterialType_Water_Vars(){ ohpl_mat_default_vars(eOhplMatKind_Water, static_cast<OhplWaterVars*>(this)); }
+	};
+
+	class cMaterialType_TerrainBlend_Vars : public iMaterialVars, public OhplTerrainBlendVars
+	{
+	public:
+		cMaterialType_TerrainBlend_Vars(){ ohpl_mat_default_vars(eOhplMatKind_TerrainBlend, static_cast<OhplTerrainBlendVars*>(this)); }
+	};
+
+	class cMaterialType_Undergrowth_Vars : public iMaterialVars, public OhplUndergrowthVars
+	{
+	public:
+		cMaterialType_Undergrowth_Vars(){ ohpl_mat_default_vars(eOhplMatKind_Undergrowth, static_cast<OhplUndergrowthVars*>(this)); }
+	};
 
 };
-#endif // HPL_MATERIAL_H
+#endif // HPL_MATERIAL_TYPE_H

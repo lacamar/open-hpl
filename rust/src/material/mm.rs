@@ -1,10 +1,10 @@
-//! `cMaterial` lifecycle over the engine's `iMaterialType` (stage MM): construction, `SetType`,
-//! `Compile`, destruction and the type hooks, through `Host` thunks until the material types
-//! and GPU programs are Rust.
+//! `cMaterial` lifecycle over the material types (stage MM, types from stage MT): construction,
+//! `SetType`, `Compile` and destruction.
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
 use super::h7::{MODES, MatState, UNITS};
+use super::mt::Mt;
 use crate::graphics::mm::Host;
 
 type P = *mut core::ffi::c_void;
@@ -14,6 +14,13 @@ pub static DESTROY_TYPE_SPECIFICS: AtomicBool = AtomicBool::new(true);
 
 fn idx(i: usize) -> i32 {
     i32::try_from(i).unwrap_or(0)
+}
+
+/// # Safety
+/// `t` is null or a live `Mt`.
+unsafe fn ty<'a>(t: P) -> Option<&'a Mt> {
+    // SAFETY: caller contract.
+    unsafe { t.cast::<Mt>().as_ref() }
 }
 
 impl MatState {
@@ -30,31 +37,30 @@ impl MatState {
             return;
         }
         self.type_ = t;
-        if !t.is_null() {
-            // SAFETY: `t` is a live iMaterialType.
-            self.set_translucent(unsafe { (h.type_translucent)(t) });
+        // SAFETY: `t` is null or a live type.
+        let ty = unsafe { ty(t) };
+        if let Some(ty) = ty {
+            self.set_translucent(ty.is_translucent());
         }
         if !self.vars.is_null() {
             // SAFETY: the material owns its vars.
             unsafe { (h.vars_delete)(self.vars) };
             self.vars = core::ptr::null_mut();
         }
-        if !t.is_null() {
-            // SAFETY: `t` is a live iMaterialType.
-            self.vars = unsafe { (h.type_create_vars)(t) };
+        if let Some(ty) = ty {
+            self.vars = ty.create_vars();
         }
     }
 
     /// `cMaterial::CompileTextureLookup`
     pub fn compile_texture_lookup(&mut self) {
-        let Some(h) = self.host() else {
+        // SAFETY: the type is live while the material is.
+        let Some(ty) = (unsafe { ty(self.type_) }) else {
             return;
         };
         for i in 0..MODES {
             for j in 0..UNITS {
-                // SAFETY: type and owner are live engine objects.
-                let t =
-                    unsafe { (h.type_texture_for_unit)(self.type_, self.owner, idx(i), idx(j)) };
+                let t = ty.texture_for_unit(self, idx(i), idx(j));
                 if let Some(slot) = self.in_unit.get_mut(i).and_then(|r| r.get_mut(j)) {
                     *slot = t;
                 }
@@ -64,43 +70,38 @@ impl MatState {
 
     /// `cMaterial::Compile`
     pub fn compile(&mut self) {
-        let Some(h) = self.host() else {
+        // SAFETY: the type is live while the material is.
+        let Some(ty) = (unsafe { ty(self.type_) }) else {
             return;
         };
         self.has_specific = [false; MODES];
         self.has_object_specific = [false; MODES];
-        // SAFETY: plain static read.
-        self.compiled_world_fog = unsafe { (h.world_fog)() };
+        self.compiled_world_fog = super::mt::world_fog();
         for i in 0..MODES {
             for j in 0..2 {
                 let prev = self.programs.get(j).and_then(|r| r.get(i)).copied();
-                // SAFETY: type and owner are live engine objects.
-                let prog = unsafe { (h.type_program)(self.type_, self.owner, idx(i), idx(j)) };
+                let prog = ty.gpu_program(self, idx(i), idx(j));
                 if let Some(slot) = self.programs.get_mut(j).and_then(|r| r.get_mut(i)) {
                     *slot = prog;
                 }
                 if let Some(p) = prev.filter(|p| !p.is_null()) {
-                    // SAFETY: as above; `p` came from `type_program`.
-                    unsafe { (h.type_destroy_program)(self.type_, self.owner, idx(i), p, idx(j)) };
+                    ty.destroy_program(self.blend, idx(i), p);
                 }
             }
         }
         self.compile_texture_lookup();
-        // SAFETY: as above.
-        unsafe { (h.type_compile_specifics)(self.type_, self.owner) };
+        ty.compile_specifics(self);
     }
 
     pub fn vars_object(&self) -> P {
-        // SAFETY: as above.
-        self.host().map_or(core::ptr::null_mut(), |h| unsafe {
-            (h.type_vars_object)(self.type_, self.owner)
-        })
+        // SAFETY: the type is live while the material is.
+        unsafe { ty(self.type_) }.map_or(core::ptr::null_mut(), |t| t.var_values(self))
     }
 
-    pub(crate) fn load_vars(&self, obj: P) {
-        if let Some(h) = self.host() {
-            // SAFETY: as above.
-            unsafe { (h.type_load_vars)(self.type_, self.owner, obj) };
+    pub(crate) fn load_vars(&mut self, obj: P) {
+        // SAFETY: the type is live while the material is.
+        if let Some(t) = unsafe { ty(self.type_) } {
+            t.load_variables(self, obj);
         }
     }
 }
@@ -114,7 +115,10 @@ impl Drop for MatState {
             // SAFETY: the material owns its vars.
             unsafe { (h.vars_delete)(self.vars) };
         }
-        if DESTROY_TYPE_SPECIFICS.load(Ordering::Relaxed) && !self.type_.is_null() {
+        // SAFETY: types outlive materials unless destroy-type-specifics is off.
+        if let Some(ty) = unsafe { ty(self.type_) }
+            && DESTROY_TYPE_SPECIFICS.load(Ordering::Relaxed)
+        {
             for i in 0..MODES {
                 for j in 0..2 {
                     let p = self
@@ -124,10 +128,7 @@ impl Drop for MatState {
                         .copied()
                         .unwrap_or(core::ptr::null_mut());
                     if !p.is_null() {
-                        // SAFETY: type and owner are live while the material is destroyed.
-                        unsafe {
-                            (h.type_destroy_program)(self.type_, self.owner, idx(i), p, idx(j));
-                        }
+                        ty.destroy_program(self.blend, idx(i), p);
                     }
                 }
             }

@@ -54,7 +54,6 @@ pub struct MatState {
     anims: Vec<UvAnim>,
     time: f32,
     pub(super) host: Option<&'static Host>,
-    pub(super) owner: P,
 }
 
 const _: () = {
@@ -102,7 +101,6 @@ impl MatState {
             anims: Vec::new(),
             time: 0.0,
             host: None,
-            owner: null,
         }
     }
 
