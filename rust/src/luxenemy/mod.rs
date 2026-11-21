@@ -16,6 +16,7 @@ mod ctx;
 mod ffi;
 mod grunt;
 mod host;
+mod loader;
 mod machine;
 mod manpig;
 mod mover;

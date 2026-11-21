@@ -627,6 +627,7 @@ protected:
 	//////////////
 	//Variables
 	OhplA4Base mA4 = {};
+	OhplAeCfg mCfg = {};
 	bool mbDisabled;
 
 	bool mbDisableTriggers;
@@ -635,7 +636,7 @@ protected:
 	bool mbDeaf;
 
 
-	float mfHealth;
+	float &mfHealth = mCfg.health;
 	bool &mbCausesSanityDecrease = mA4.causesSanity;
 	bool &mbCausesSanityDecreaseAsDefault = mA4.causesSanityDefault;
 
@@ -708,57 +709,57 @@ protected:
 
 	bool &mbAlignEntityWithGroundRay = mA4.alignGroundRay;
 
-	bool mbAutoRemoveAtPathEnd;
+	bool &mbAutoRemoveAtPathEnd = mCfg.autoRemoveAtPathEnd;
 
-	float mfSightRange;
-	float mfDarknessSightRange;
-	float mfHearVolume;
-    float mfFOV;
-	float mfFOVXMul;
-	float mfActivationDistance;
+	float &mfSightRange = mCfg.sightRange;
+	float &mfDarknessSightRange = mCfg.darknessSightRange;
+	float &mfHearVolume = mCfg.hearVolume;
+    float &mfFOV = mCfg.fov;
+	float &mfFOVXMul = mCfg.fovXMul;
+	float &mfActivationDistance = mCfg.activationDistance;
 	bool mbSkipVisibilityRangeHandicaps;
 
-	float mfMaxRegenHealth;
-	float mfRegenHealthSpeed;
+	float &mfMaxRegenHealth = mCfg.maxRegenHealth;
+	float &mfRegenHealthSpeed = mCfg.regenHealthSpeed;
 
 
 	float mfPlayerInDarknessLightLevel;
 	float mfCrouchVisibleRangeMul;
 
 	tString msDangerMusic;
-	int mlDangerMusicPrio;
+	int32_t &mlDangerMusicPrio = mCfg.dangerMusicPrio;
 
 	tString msMusic[eLuxEnemyMusic_LastEnum];
-	int mlMusicPrio[eLuxEnemyMusic_LastEnum];
+	int32_t (&mlMusicPrio)[eLuxEnemyMusic_LastEnum] = mCfg.musicPrio;
 
-	float mfPlayerSearchMaxAngle;
-	float mfPlayerSearchMinDistMul;
-	float mfPlayerSearchMaxDistMul;
-	float mfPlayerSearchTime;
+	float &mfPlayerSearchMaxAngle = mCfg.searchMaxAngle;
+	float &mfPlayerSearchMinDistMul = mCfg.searchMinDistMul;
+	float &mfPlayerSearchMaxDistMul = mCfg.searchMaxDistMul;
+	float &mfPlayerSearchTime = mCfg.searchTime;
 
-	float mfPlayerPatrolMaxAngle;
-	float mfPlayerPatrolMinDist;
-	float mfPlayerPatrolMaxDist;
+	float &mfPlayerPatrolMaxAngle = mCfg.patrolMaxAngle;
+	float &mfPlayerPatrolMinDist = mCfg.patrolMinDist;
+	float &mfPlayerPatrolMaxDist = mCfg.patrolMaxDist;
 
-	float mfTurnSpeedMul;
-	float mfTurnMaxSpeed;
-	float mfTurnMinBreakAngle;
-	float mfTurnBreakMul;
+	float &mfTurnSpeedMul = mCfg.turnSpeedMul;
+	float &mfTurnMaxSpeed = mCfg.turnMaxSpeed;
+	float &mfTurnMinBreakAngle = mCfg.turnMinBreakAngle;
+	float &mfTurnBreakMul = mCfg.turnBreakMul;
 
 
-	float mfStoppedToWalkSpeed[eLuxEnemyPoseType_LastEnum];
-	float mfWalkToStoppedSpeed[eLuxEnemyPoseType_LastEnum];
-	float mfWalkToRunSpeed[eLuxEnemyPoseType_LastEnum];
-	float mfRunToWalkSpeed[eLuxEnemyPoseType_LastEnum];
+	float (&mfStoppedToWalkSpeed)[eLuxEnemyPoseType_LastEnum] = mCfg.stoppedToWalk;
+	float (&mfWalkToStoppedSpeed)[eLuxEnemyPoseType_LastEnum] = mCfg.walkToStopped;
+	float (&mfWalkToRunSpeed)[eLuxEnemyPoseType_LastEnum] = mCfg.walkToRun;
+	float (&mfRunToWalkSpeed)[eLuxEnemyPoseType_LastEnum] = mCfg.runToWalk;
 
-	float mfDefaultForwardSpeed[eLuxEnemyPoseType_LastEnum][eLuxEnemyMoveSpeed_LastEnum];
-	float mfDefaultBackwardSpeed[eLuxEnemyPoseType_LastEnum][eLuxEnemyMoveSpeed_LastEnum];
-	float mfDefaultForwardAcc[eLuxEnemyPoseType_LastEnum][eLuxEnemyMoveSpeed_LastEnum];
-	float mfDefaultForwardDeacc[eLuxEnemyPoseType_LastEnum][eLuxEnemyMoveSpeed_LastEnum];
+	float (&mfDefaultForwardSpeed)[eLuxEnemyPoseType_LastEnum][eLuxEnemyMoveSpeed_LastEnum] = mCfg.defForwardSpeed;
+	float (&mfDefaultBackwardSpeed)[eLuxEnemyPoseType_LastEnum][eLuxEnemyMoveSpeed_LastEnum] = mCfg.defBackwardSpeed;
+	float (&mfDefaultForwardAcc)[eLuxEnemyPoseType_LastEnum][eLuxEnemyMoveSpeed_LastEnum] = mCfg.defForwardAcc;
+	float (&mfDefaultForwardDeacc)[eLuxEnemyPoseType_LastEnum][eLuxEnemyMoveSpeed_LastEnum] = mCfg.defForwardDeacc;
 
-	float mfWaterStepSpeedWalk;
-	float mfWaterStepSpeedRun;
-	float mfWaterStepSpeedMisc;
+	float &mfWaterStepSpeedWalk = mCfg.waterStepWalk;
+	float &mfWaterStepSpeedRun = mCfg.waterStepRun;
+	float &mfWaterStepSpeedMisc = mCfg.waterStepMisc;
 
 	tString msHitPS[eLuxWeaponHitType_LastEnum];
 	tString msHitSound[eLuxWeaponHitType_LastEnum];
@@ -767,7 +768,7 @@ protected:
 	float (&mfAmbientSoundMinTime)[eLuxEnemySoundState_LastEnum] = mA4.ambientMin;
 	float (&mfAmbientSoundMaxTime)[eLuxEnemySoundState_LastEnum] = mA4.ambientMax;
 
-	float mfNormalAttackDistance;
+	float &mfNormalAttackDistance = mCfg.normalAttackDistance;
 	cEnemyAttackDamageData mNormalAttackDamage;
 	cEnemyAttackDamageData mBreakDoorAttackDamage;
 	cEnemyAttackSizeData mNormalAttackSize;
@@ -825,9 +826,6 @@ public:
 	virtual void LoadInstanceVariables(iLuxEnemy *apEnemy, cResourceVarsObject *apInstanceVars)=0;
 
 protected:
-	eLuxDamageType ToDamageType(const tString& asType);
-	void LoadAttackDamageData(const tString &asPrefix, cEnemyAttackDamageData *apData);
-	void LoadAttackSizeData(const tString &asPrefix, cEnemyAttackSizeData *apData, iLuxEnemy *apEnemy, cWorld *apWorld);
 
 	float mfDefaultMaxFocusDistance;
 };

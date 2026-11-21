@@ -58,20 +58,7 @@ void cLuxEnemyLoader_Grunt::LoadVariables(iLuxEnemy *apEnemy, cXmlElement *apRoo
 	gpBase->PreloadSound(pGrunt->msNoticeSound);
 	gpBase->PreloadSound(pGrunt->msEnabledSound);
 
-	pGrunt->mfGroggyDamageCount = GetVarFloat("GroggyDamageCount", 0);
-	pGrunt->mfAlertToHuntDistance = GetVarFloat("AlertToHuntDistance", 0);
-	pGrunt->mfAlertToInstantHuntDistance = GetVarFloat("AlertToInstantHuntDistance", 0);
-	pGrunt->mfHuntPauseMinTime = GetVarFloat("HuntPauseMinTime", 0);
-	pGrunt->mfHuntPauseMaxTime = GetVarFloat("HuntPauseMaxTime", 0);
-	pGrunt->mfIncreaseAlertSpeedDistance = GetVarFloat("IncreaseAlertSpeedDistance", 0);
-	pGrunt->mfIncreasedAlertSpeedMul = GetVarFloat("IncreasedAlertSpeedMul", 0);
-	
-	pGrunt->mfAlertRunTowardsToHuntLimit = GetVarFloat("AlertRunTowardsToHuntLimit", 0);
-	pGrunt->mfAlertRunTowardsCheckDistance = GetVarFloat("AlertRunTowardsCheckDistance", 0);
-
-	pGrunt->mfIdleExtraTimeMin = GetVarFloat("IdleExtraTimeMin", 2);
-	pGrunt->mfIdleExtraTimeMax = GetVarFloat("IdleExtraTimeMax", 6);
-	pGrunt->mlIdleExtraNum = GetVarInt("IdleExtraNum", 3);
+	ohpl_ae_load_pig(mpVarsRs, false, &pGrunt->mCfg, &pGrunt->mPig);
 }
 
 //-----------------------------------------------------------------------
