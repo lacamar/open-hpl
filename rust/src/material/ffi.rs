@@ -6,18 +6,13 @@
 //! with the neutral value.
 
 use super::Vars;
-use super::anim::{UvAnim, uv_matrix};
-use super::setup::{Feature, SetupSink};
-use super::types::{
-    Bv, CompileOut, ForceFieldInfo, Globals, Host, Kind, LightInfo, MatView, ObjView, ProgSel,
-    RenderView, TexSel, Uniform, Uniforms, WorldInfo,
-};
+use super::types::{Bv, ForceFieldInfo, Host, Kind, LightInfo, WorldInfo};
 use super::vars::{
     LoadOut, ProjectedUvVars, SolidVars, TerrainBlendVars, TranslucentVars, UndergrowthVars,
-    VarDefault, VarSink, VarSource, VertexBlendVars, WaterVars,
+    VarSink, VarSource, VertexBlendVars, WaterVars,
 };
-use crate::types::{Color, Matrixf, Vector2f, Vector3f};
-use std::ffi::{c_char, c_void};
+use crate::types::{Color, Vector2f, Vector3f};
+use std::ffi::c_void;
 
 const _: () = {
     use std::mem::size_of;
@@ -40,7 +35,7 @@ unsafe fn read<'a, T>(p: *const T) -> Option<&'a T> {
 
 /// # Safety
 /// `p` is null or points to a valid, initialised vars struct of `kind`.
-unsafe fn vars_of<'a>(kind: Kind, p: *const c_void) -> Vars<'a> {
+pub(super) unsafe fn vars_of<'a>(kind: Kind, p: *const c_void) -> Vars<'a> {
     // SAFETY: caller contract; the pointee type is the one the kind names.
     unsafe {
         match kind {
@@ -92,6 +87,22 @@ pub struct VarsVt {
     >,
     add_bool: Option<unsafe extern "C" fn(*mut c_void, *const u8, usize, bool)>,
     add_float: Option<unsafe extern "C" fn(*mut c_void, *const u8, usize, f32)>,
+}
+
+impl VarsVt {
+    pub(super) fn empty() -> Self {
+        Self {
+            ctx: core::ptr::null_mut(),
+            get_bool: None,
+            get_float: None,
+            get_vec2: None,
+            get_vec3: None,
+            get_color: None,
+            get_string: None,
+            add_bool: None,
+            add_float: None,
+        }
+    }
 }
 
 impl VarSource for VarsVt {
@@ -175,105 +186,6 @@ impl VarSink for VarsVt {
     }
 }
 
-/// `cProgramComboFeature` as the shim reads it.
-#[repr(C)]
-pub struct FeatureC {
-    name: *const c_char,
-    stage: u32,
-    required: u32,
-}
-
-/// `cParserVarContainer` / `cProgramComboManager` calls of a `LoadData`.
-#[repr(C)]
-pub struct SetupVt {
-    ctx: *mut c_void,
-    clear_defines: Option<unsafe extern "C" fn(*mut c_void)>,
-    define: Option<unsafe extern "C" fn(*mut c_void, *const u8, usize)>,
-    define_value: Option<unsafe extern "C" fn(*mut c_void, *const u8, usize, f32)>,
-    setup_program: Option<
-        unsafe extern "C" fn(
-            *mut c_void,
-            i32,
-            i32,
-            *const u8,
-            usize,
-            *const u8,
-            usize,
-            *const u8,
-            usize,
-            *const FeatureC,
-            usize,
-        ),
-    >,
-    var_id: Option<unsafe extern "C" fn(*mut c_void, i32, *const u8, usize, i32, i32)>,
-}
-
-impl SetupSink for SetupVt {
-    fn clear_defines(&mut self) {
-        if let Some(f) = self.clear_defines {
-            // SAFETY: table contract.
-            unsafe { f(self.ctx) };
-        }
-    }
-
-    fn define(&mut self, name: &str) {
-        if let Some(f) = self.define {
-            // SAFETY: table contract.
-            unsafe { f(self.ctx, name.as_ptr(), name.len()) };
-        }
-    }
-
-    fn define_value(&mut self, name: &str, value: f32) {
-        if let Some(f) = self.define_value {
-            // SAFETY: table contract.
-            unsafe { f(self.ctx, name.as_ptr(), name.len(), value) };
-        }
-    }
-
-    fn setup_program(
-        &mut self,
-        manager: i32,
-        mode: i32,
-        name: &str,
-        vtx: &str,
-        frag: &str,
-        features: &[Feature],
-    ) {
-        let Some(f) = self.setup_program else { return };
-        let feats: Vec<FeatureC> = features
-            .iter()
-            .map(|x| FeatureC {
-                name: x.name.as_ptr(),
-                stage: x.stage,
-                required: x.required,
-            })
-            .collect();
-        // SAFETY: table contract; `feats` and the strings outlive the call.
-        unsafe {
-            f(
-                self.ctx,
-                manager,
-                mode,
-                name.as_ptr(),
-                name.len(),
-                vtx.as_ptr(),
-                vtx.len(),
-                frag.as_ptr(),
-                frag.len(),
-                feats.as_ptr(),
-                feats.len(),
-            );
-        }
-    }
-
-    fn var_id(&mut self, manager: i32, name: &str, id: i32, mode: i32) {
-        if let Some(f) = self.var_id {
-            // SAFETY: table contract.
-            unsafe { f(self.ctx, manager, name.as_ptr(), name.len(), id, mode) };
-        }
-    }
-}
-
 /// Lazy queries into the engine.
 #[repr(C)]
 pub struct HostVt {
@@ -290,6 +202,23 @@ pub struct HostVt {
     light_intersects: Option<unsafe extern "C" fn(*mut c_void, i32) -> bool>,
     /// writes min then max to the two vectors at `out`
     spot_clip: Option<unsafe extern "C" fn(*mut c_void, i32, *mut Vector3f) -> bool>,
+}
+
+impl HostVt {
+    pub(super) fn empty() -> Self {
+        Self {
+            ctx: core::ptr::null_mut(),
+            coverage: None,
+            force_fields: None,
+            fields_in_box: None,
+            world: None,
+            object_bv: None,
+            light_count: None,
+            light: None,
+            light_intersects: None,
+            spot_clip: None,
+        }
+    }
 }
 
 impl Host for HostVt {
@@ -364,28 +293,6 @@ impl Host for HostVt {
     }
 }
 
-/// `AddVar*` entry as the shim reads it.
-#[repr(C)]
-pub struct VarDefC {
-    name: *const u8,
-    name_len: usize,
-    desc: *const u8,
-    desc_len: usize,
-    is_float: bool,
-    bool_value: bool,
-    float_value: f32,
-}
-
-/// # Safety
-/// `out` is null or valid for `cap` writes.
-unsafe fn out_slice<'a, T>(out: *mut T, cap: usize) -> &'a mut [T] {
-    if out.is_null() {
-        return &mut [];
-    }
-    // SAFETY: caller contract.
-    unsafe { std::slice::from_raw_parts_mut(out, cap) }
-}
-
 /// # Safety
 /// `p` is null or valid for one write.
 unsafe fn write<T>(p: *mut T, v: T) {
@@ -393,63 +300,6 @@ unsafe fn write<T>(p: *mut T, v: T) {
         // SAFETY: caller contract.
         unsafe { p.write(v) };
     }
-}
-
-/// `mbIsTranslucent` (bit 0), `mbIsDecal` (bit 1) and `mbHasTypeSpecifics[mode]` (bit `8 + mode`).
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_mat_type_flags(kind: i32) -> u32 {
-    Kind::from_i32(kind).map_or(0, super::type_flags)
-}
-
-/// Writes the `AddUsedTexture` list into `out` (up to `cap`) and returns its length.
-///
-/// # Safety
-/// `out` is valid for `cap` writes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_used_textures(kind: i32, out: *mut i32, cap: usize) -> usize {
-    let list = Kind::from_i32(kind)
-        .map(super::used_textures)
-        .unwrap_or_default();
-    // SAFETY: caller contract.
-    let out = unsafe { out_slice(out, cap) };
-    for (d, s) in out.iter_mut().zip(&list) {
-        *d = i32::try_from(*s).unwrap_or(0);
-    }
-    list.len()
-}
-
-/// The `i`th `AddVar*` call of the type; false past the end.
-///
-/// # Safety
-/// `out` is valid for one write.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_user_var(kind: i32, i: usize, out: *mut VarDefC) -> bool {
-    let Some(def) = Kind::from_i32(kind)
-        .map(super::user_vars)
-        .and_then(|v| v.get(i))
-    else {
-        return false;
-    };
-    let (is_float, b, f) = match def.default {
-        VarDefault::Bool(b) => (false, b, 0.0),
-        VarDefault::Float(f) => (true, false, f),
-    };
-    // SAFETY: caller contract.
-    unsafe {
-        write(
-            out,
-            VarDefC {
-                name: def.name.as_ptr(),
-                name_len: def.name.len(),
-                desc: def.desc.as_ptr(),
-                desc_len: def.desc.len(),
-                is_float,
-                bool_value: b,
-                float_value: f,
-            },
-        );
-    }
-    true
 }
 
 /// Writes the constructor defaults of the type's vars into `vars`.
@@ -474,347 +324,4 @@ pub unsafe extern "C" fn ohpl_mat_default_vars(kind: i32, vars: *mut c_void) {
             Kind::Decal => {}
         }
     }
-}
-
-/// `LoadVariables`: reads the `.mat` variables into `vars` (created by the shim) and reports the
-/// `cMaterial` settings some types take.
-///
-/// # Safety
-/// `vars` is valid for reads and writes of the vars struct of `kind`; `api` and `out` are valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_load_vars(
-    kind: i32,
-    vars: *mut c_void,
-    api: *mut VarsVt,
-    out: *mut LoadOut,
-) {
-    let (Some(kind), false, false) = (Kind::from_i32(kind), vars.is_null(), api.is_null()) else {
-        return;
-    };
-    let mut lo = LoadOut::NONE;
-    // SAFETY: caller contract.
-    unsafe {
-        let api = &mut *api;
-        match kind {
-            Kind::SolidDiffuse => super::load_solid(&mut *vars.cast(), api),
-            Kind::ProjectedUv => super::load_projected_uv(&mut *vars.cast(), api),
-            Kind::VertexBlend => super::load_vertex_blend(&mut *vars.cast(), api),
-            Kind::Translucent => super::load_translucent(&mut *vars.cast(), api, &mut lo),
-            Kind::Water => super::load_water(&mut *vars.cast(), api, &mut lo),
-            Kind::Decal | Kind::TerrainBlend | Kind::Undergrowth => {}
-        }
-        write(out, lo);
-    }
-}
-
-/// `GetVariableValues`; the two flags are the material's (`cMaterial`) values of water.
-///
-/// # Safety
-/// `vars` is null or valid; `api` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_var_values(
-    kind: i32,
-    vars: *const c_void,
-    affected_by_dof: bool,
-    occlusion_test: bool,
-    large_surface: bool,
-    api: *mut VarsVt,
-) {
-    let Some(kind) = Kind::from_i32(kind) else {
-        return;
-    };
-    // SAFETY: caller contract.
-    unsafe {
-        let Some(api) = api.as_mut() else { return };
-        match vars_of(kind, vars) {
-            Vars::Solid(v) => super::solid_values(v, api),
-            Vars::Translucent(v) => super::translucent_values(v, affected_by_dof, api),
-            Vars::Water(v) => super::water_values(v, occlusion_test, large_surface, api),
-            _ => {}
-        }
-    }
-}
-
-/// `LoadData`'s program manager setup (`global`: the solid types' shared Z programs).
-///
-/// # Safety
-/// `g` and `sink` are valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_setup_programs(
-    kind: i32,
-    global: bool,
-    g: *const Globals,
-    sink: *mut SetupVt,
-) {
-    // SAFETY: caller contract.
-    let (Some(kind), Some(g), Some(sink)) = (Kind::from_i32(kind), unsafe { read(g) }, unsafe {
-        sink.as_mut()
-    }) else {
-        return;
-    };
-    super::setup_programs(kind, global, g, sink);
-}
-
-/// # Safety
-/// `view`, `g` and `out` are valid; `vars` is null or valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_texture_unit(
-    kind: i32,
-    view: *const MatView,
-    vars: *const c_void,
-    g: *const Globals,
-    render_mode: i32,
-    unit: i32,
-    out: *mut TexSel,
-) {
-    // SAFETY: caller contract.
-    unsafe {
-        let (Some(kind), Some(view), Some(g)) = (Kind::from_i32(kind), read(view), read(g)) else {
-            return write(out, TexSel::NONE);
-        };
-        write(
-            out,
-            super::texture_unit(kind, view, vars_of(kind, vars), g, render_mode, unit),
-        );
-    }
-}
-
-/// # Safety
-/// `view`, `g` and `out` are valid; `vars` is null or valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_program(
-    kind: i32,
-    view: *const MatView,
-    vars: *const c_void,
-    g: *const Globals,
-    render_mode: i32,
-    skeleton: i32,
-    out: *mut ProgSel,
-) {
-    // SAFETY: caller contract.
-    unsafe {
-        let (Some(kind), Some(view), Some(g)) = (Kind::from_i32(kind), read(view), read(g)) else {
-            return write(out, ProgSel::NONE);
-        };
-        write(
-            out,
-            super::program(
-                kind,
-                view,
-                vars_of(kind, vars),
-                g,
-                render_mode,
-                skeleton != 0,
-            ),
-        );
-    }
-}
-
-/// # Safety
-/// `out` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_destroy_target(
-    kind: i32,
-    render_mode: i32,
-    blend_mode: i32,
-    out: *mut ProgSel,
-) {
-    let sel = Kind::from_i32(kind).map_or(ProgSel::NONE, |k| {
-        super::destroy_target(k, render_mode, blend_mode)
-    });
-    // SAFETY: caller contract.
-    unsafe { write(out, sel) };
-}
-
-/// # Safety
-/// `g` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_render_program_slot(
-    kind: i32,
-    render_mode: i32,
-    g: *const Globals,
-) -> i32 {
-    // SAFETY: caller contract.
-    match (Kind::from_i32(kind), unsafe { read(g) }) {
-        (Some(k), Some(g)) => super::render_program_slot(k, render_mode, g),
-        _ => 0,
-    }
-}
-
-/// Undergrowth's `GetRenderProgram`; `fields` receives the number of force fields in range.
-///
-/// # Safety
-/// `vars`, `r`, `host`, `out` and `fields` are valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_undergrowth_render_program(
-    vars: *const UndergrowthVars,
-    render_mode: i32,
-    r: *const RenderView,
-    host: *mut HostVt,
-    out: *mut ProgSel,
-    fields: *mut usize,
-) {
-    // SAFETY: caller contract.
-    unsafe {
-        let (Some(vars), Some(r), Some(host)) = (read(vars), read(r), host.as_mut()) else {
-            write(out, ProgSel::NONE);
-            return write(fields, 0);
-        };
-        let (sel, n) = super::undergrowth_render_program(vars, render_mode, r, host);
-        write(out, sel);
-        write(fields, n);
-    }
-}
-
-/// # Safety
-/// `view`, `g` and `out` are valid; `vars` is null or valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_compile(
-    kind: i32,
-    view: *const MatView,
-    vars: *const c_void,
-    g: *const Globals,
-    out: *mut CompileOut,
-) {
-    // SAFETY: caller contract.
-    unsafe {
-        let (Some(kind), Some(view), Some(g)) = (Kind::from_i32(kind), read(view), read(g)) else {
-            return write(out, CompileOut::NONE);
-        };
-        write(out, super::compile(kind, view, vars_of(kind, vars), g));
-    }
-}
-
-/// # Safety
-/// `r` is valid; `out` is valid for `cap` writes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_setup_type(
-    kind: i32,
-    render_mode: i32,
-    r: *const RenderView,
-    out: *mut Uniform,
-    cap: usize,
-) -> usize {
-    // SAFETY: caller contract.
-    let (Some(kind), Some(r), buf) = (Kind::from_i32(kind), unsafe { read(r) }, unsafe {
-        out_slice(out, cap)
-    }) else {
-        return 0;
-    };
-    let mut u = Uniforms::new(buf);
-    super::setup_type(kind, render_mode, r, &mut u);
-    u.len()
-}
-
-/// # Safety
-/// `view`, `g`, `r` and `host` are valid; `vars` is null or valid; `out` is valid for `cap`
-/// writes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_setup_material(
-    kind: i32,
-    render_mode: i32,
-    view: *const MatView,
-    vars: *const c_void,
-    g: *const Globals,
-    r: *const RenderView,
-    field_num: usize,
-    host: *mut HostVt,
-    out: *mut Uniform,
-    cap: usize,
-) -> usize {
-    // SAFETY: caller contract.
-    unsafe {
-        let (Some(kind), Some(view), Some(g), Some(r), Some(host)) = (
-            Kind::from_i32(kind),
-            read(view),
-            read(g),
-            read(r),
-            host.as_mut(),
-        ) else {
-            return 0;
-        };
-        let mut u = Uniforms::new(out_slice(out, cap));
-        super::setup_material(
-            kind,
-            render_mode,
-            view,
-            vars_of(kind, vars),
-            g,
-            r,
-            field_num,
-            host,
-            &mut u,
-        );
-        u.len()
-    }
-}
-
-/// # Safety
-/// `view`, `g`, `r`, `obj` and `host` are valid; `vars` is null or valid; `out` is valid for
-/// `cap` writes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_setup_object(
-    kind: i32,
-    render_mode: i32,
-    view: *const MatView,
-    vars: *const c_void,
-    g: *const Globals,
-    r: *const RenderView,
-    obj: *const ObjView,
-    host: *mut HostVt,
-    out: *mut Uniform,
-    cap: usize,
-) -> usize {
-    // SAFETY: caller contract.
-    unsafe {
-        let (Some(kind), Some(view), Some(g), Some(r), Some(obj), Some(host)) = (
-            Kind::from_i32(kind),
-            read(view),
-            read(g),
-            read(r),
-            read(obj),
-            host.as_mut(),
-        ) else {
-            return 0;
-        };
-        let mut u = Uniforms::new(out_slice(out, cap));
-        super::setup_object(
-            kind,
-            render_mode,
-            view,
-            vars_of(kind, vars),
-            g,
-            r,
-            obj,
-            host,
-            &mut u,
-        );
-        u.len()
-    }
-}
-
-/// The UV matrix of `n` animations at `time`.
-///
-/// # Safety
-/// `anims` is valid for `n` reads when `n > 0`; `out` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_mat_uv_matrix(
-    anims: *const UvAnim,
-    n: usize,
-    time: f32,
-    out: *mut Matrixf,
-) {
-    let list: &[UvAnim] = if anims.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: caller contract.
-        unsafe { std::slice::from_raw_parts(anims, n) }
-    };
-    // SAFETY: caller contract.
-    unsafe { write(out, uv_matrix(list, time)) };
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_mat_world_fog_flags(underwater: bool, secondary: bool) -> u32 {
-    super::world_fog_flags(underwater, secondary)
 }

@@ -39,8 +39,7 @@
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/VertexBuffer.h"
 #include "graphics/Material.h"
-#include "graphics/MaterialType_Decal.h"
-#include "graphics/MaterialType_BasicSolid.h"
+#include "graphics/MaterialType.h"
 #include "graphics/Texture.h"
 #include "graphics/DecalCreator.h"
 #include "scene/SubMeshEntity.h"
@@ -109,7 +108,7 @@ namespace hpl {
 				cMaterial* pMat = pSub->GetMaterial();
 				iVertexBuffer* pVtx = pSub->GetVertexBuffer();
 				if (pMat == NULL || pVtx == NULL || pSub->IsVisible() == false || pMat->HasWorldReflection()) continue;
-				if (dynamic_cast<cMaterialType_SolidDiffuse*>(pMat->GetType()) == NULL) continue;
+				if (pMat->GetType() == NULL || pMat->GetType()->GetCode() != eOhplMatKind_SolidDiffuse) continue;
 				if (pMat->GetVars() && static_cast<cMaterialType_SolidDiffuse_Vars*>(pMat->GetVars())->mbSwayActive) continue;
 				if (pVtx->GetVertexNum() == 0 || pVtx->GetIndexNum() == 0) continue;
 				const cMatrixf& m = pSub->GetWorldMatrix();

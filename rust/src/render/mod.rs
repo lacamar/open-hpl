@@ -46,6 +46,9 @@ mod renderer_ffi;
 pub mod renderer_simple;
 #[cfg(test)]
 mod renderer_tests;
+pub(crate) mod rl;
+#[cfg(test)]
+mod rl_tests;
 
 #[cfg(test)]
 mod tests;

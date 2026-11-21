@@ -149,7 +149,7 @@ pub(crate) fn plane_dist(p: &Planef, v: Vector3f) -> f32 {
 #[cfg(test)]
 mod tests;
 
-mod bv;
+pub(crate) mod bv;
 mod ffi_bv;
 #[cfg(test)]
 mod tests_bv;

@@ -12,10 +12,13 @@ mod anim;
 mod common;
 mod decal;
 mod ffi;
-mod h7;
+pub(crate) mod h7;
 mod h7_ffi;
 mod mm;
 mod mm_ffi;
+mod mt;
+mod mt_host;
+mod pcm;
 mod probe;
 mod setup;
 mod solid;
@@ -26,6 +29,8 @@ mod water;
 
 #[cfg(test)]
 mod h7_tests;
+#[cfg(test)]
+mod pcm_tests;
 #[cfg(test)]
 mod tests;
 

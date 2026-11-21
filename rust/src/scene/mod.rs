@@ -496,3 +496,5 @@ pub fn compile(objs: &[Object], params: &Params) -> Tree {
     c.build(&root, NO_PARENT, &mut tree);
     tree
 }
+
+pub(crate) mod rnd;

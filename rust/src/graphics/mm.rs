@@ -25,17 +25,8 @@ pub struct VbView {
 /// Thunks over C++ objects. Field order is mirrored by `OhplMmHost` in `RustMeshMm.h`.
 #[repr(C)]
 pub struct Host {
-    pub type_translucent: unsafe extern "C" fn(P) -> bool,
-    pub type_create_vars: unsafe extern "C" fn(P) -> P,
     pub vars_delete: unsafe extern "C" fn(P),
-    pub type_program: unsafe extern "C" fn(P, P, i32, i32) -> P,
-    pub type_destroy_program: unsafe extern "C" fn(P, P, i32, P, i32),
-    pub type_texture_for_unit: unsafe extern "C" fn(P, P, i32, i32) -> P,
-    pub type_compile_specifics: unsafe extern "C" fn(P, P),
-    pub world_fog: unsafe extern "C" fn() -> u32,
     pub texture_destroy: unsafe extern "C" fn(P, P),
-    pub type_vars_object: unsafe extern "C" fn(P, P) -> P,
-    pub type_load_vars: unsafe extern "C" fn(P, P, P),
     pub material_destroy: unsafe extern "C" fn(P, P),
     pub vb_delete: unsafe extern "C" fn(P),
     pub vb_view: unsafe extern "C" fn(P, *mut VbView),

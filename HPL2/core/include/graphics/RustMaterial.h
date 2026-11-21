@@ -157,16 +157,6 @@ namespace hpl {
 		float dofParams[4];
 	};
 
-	struct OhplMatView
-	{
-		uint64_t texMask;
-		float uvMatrix[16];
-		int liquidSize[2];
-		int blendMode;
-		bool hasUvAnim;
-		bool diffuseSrgb;
-	};
-
 	struct OhplRenderView
 	{
 		float view[16];
@@ -228,46 +218,13 @@ namespace hpl {
 		float v[16];
 	};
 
-	struct OhplProgSel { int manager; int mode; uint32_t flags; };
-	struct OhplTexSel { int kind; int slot; };
-
-	struct OhplMatCompileOut
-	{
-		uint32_t specSet, specVal, objSet, objVal;
-		int alphaMode, dissolveFilter, blendMode, hasRefraction, refractionEdge, worldReflection, translucentIllum;
-	};
-
-	struct OhplLoadOut
-	{
-		int affectedByDof, worldReflectionOcclusionTest;
-		float maxReflectionDistance;
-		int largeTransparentSurface;
-		bool hasMaxReflectionDistance;
-	};
-
-	struct OhplUvAnim { int type; float speed, amp; int axis; };
-
-	struct OhplVarDef
-	{
-		const char* name; size_t nameLen;
-		const char* desc; size_t descLen;
-		bool isFloat, boolValue;
-		float floatValue;
-	};
-
-	struct OhplFeature { const char* name; uint32_t stage; uint32_t required; };
-
 	static_assert(sizeof(OhplGlobals) == 40 && offsetof(OhplGlobals, worldFog) == 12 && offsetof(OhplGlobals, dofParams) == 24, "OhplGlobals layout");
-	static_assert(sizeof(OhplMatView) == 88 && offsetof(OhplMatView, uvMatrix) == 8 && offsetof(OhplMatView, blendMode) == 80 &&
-				  offsetof(OhplMatView, hasUvAnim) == 84, "OhplMatView layout");
 	static_assert(sizeof(OhplRenderView) == 116 && offsetof(OhplRenderView, rtSize) == 92, "OhplRenderView layout");
 	static_assert(sizeof(OhplObjView) == 108 && offsetof(OhplObjView, hasModel) == 104, "OhplObjView layout");
 	static_assert(sizeof(OhplForceField) == 28 && sizeof(OhplBv) == 36, "OhplForceField layout");
 	static_assert(sizeof(OhplWorld) == 80 && offsetof(OhplWorld, fogActive) == 76, "OhplWorld layout");
 	static_assert(sizeof(OhplLight) == 136 && offsetof(OhplLight, bands) == 84, "OhplLight layout");
 	static_assert(sizeof(OhplUniform) == 80 && offsetof(OhplUniform, v) == 16, "OhplUniform layout");
-	static_assert(sizeof(OhplProgSel) == 12 && sizeof(OhplTexSel) == 8 && sizeof(OhplMatCompileOut) == 44 && sizeof(OhplLoadOut) == 20, "result layouts");
-	static_assert(sizeof(OhplUvAnim) == 16, "OhplUvAnim layout");
 
 	//--------------------------------------------------------------------
 	// Callback tables
@@ -286,17 +243,6 @@ namespace hpl {
 		void (*addFloat)(void*, const char*, size_t, float);
 	};
 
-	struct OhplSetupVt
-	{
-		void* ctx;
-		void (*clearDefines)(void*);
-		void (*define)(void*, const char*, size_t);
-		void (*defineValue)(void*, const char*, size_t, float);
-		void (*setupProgram)(void*, int manager, int mode, const char* name, size_t nameLen, const char* vtx, size_t vtxLen,
-							 const char* frag, size_t fragLen, const OhplFeature* features, size_t featureNum);
-		void (*varId)(void*, int manager, const char* name, size_t nameLen, int id, int mode);
-	};
-
 	struct OhplHostVt
 	{
 		void* ctx;
@@ -313,26 +259,7 @@ namespace hpl {
 
 	extern "C" {
 
-	uint32_t ohpl_mat_type_flags(int kind);
-	size_t ohpl_mat_used_textures(int kind, int* out, size_t cap);
-	bool ohpl_mat_user_var(int kind, size_t i, OhplVarDef* out);
 	void ohpl_mat_default_vars(int kind, void* vars);
-	void ohpl_mat_load_vars(int kind, void* vars, OhplVarsVt* api, OhplLoadOut* out);
-	void ohpl_mat_var_values(int kind, const void* vars, bool affectedByDof, bool occlusionTest, bool largeSurface, OhplVarsVt* api);
-	void ohpl_mat_setup_programs(int kind, bool global, const OhplGlobals* g, OhplSetupVt* sink);
-	void ohpl_mat_texture_unit(int kind, const OhplMatView* view, const void* vars, const OhplGlobals* g, int mode, int unit, OhplTexSel* out);
-	void ohpl_mat_program(int kind, const OhplMatView* view, const void* vars, const OhplGlobals* g, int mode, int skeleton, OhplProgSel* out);
-	void ohpl_mat_destroy_target(int kind, int mode, int blendMode, OhplProgSel* out);
-	int ohpl_mat_render_program_slot(int kind, int mode, const OhplGlobals* g);
-	void ohpl_mat_undergrowth_render_program(const OhplUndergrowthVars* vars, int mode, const OhplRenderView* r, OhplHostVt* host, OhplProgSel* out, size_t* fields);
-	void ohpl_mat_compile(int kind, const OhplMatView* view, const void* vars, const OhplGlobals* g, OhplMatCompileOut* out);
-	size_t ohpl_mat_setup_type(int kind, int mode, const OhplRenderView* r, OhplUniform* out, size_t cap);
-	size_t ohpl_mat_setup_material(int kind, int mode, const OhplMatView* view, const void* vars, const OhplGlobals* g, const OhplRenderView* r,
-								   size_t fieldNum, OhplHostVt* host, OhplUniform* out, size_t cap);
-	size_t ohpl_mat_setup_object(int kind, int mode, const OhplMatView* view, const void* vars, const OhplGlobals* g, const OhplRenderView* r,
-								 const OhplObjView* obj, OhplHostVt* host, OhplUniform* out, size_t cap);
-	void ohpl_mat_uv_matrix(const OhplUvAnim* anims, size_t n, float time, cMatrixf* out);
-	uint32_t ohpl_mat_world_fog_flags(bool underwater, bool secondary);
 
 	}
 }

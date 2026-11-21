@@ -32,44 +32,8 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
-	iRenderable::iRenderable(const tString &asName) : iEntity3D(asName)
-	{
-		mlLastMatrixCount = -1;
+	iRenderable::~iRenderable(){ ohpl_rnd_free(mpR);}
 
-		mbStatic = false;
-
-		mlRenderFlags =eRenderableFlag_VisibleInReflection | eRenderableFlag_VisibleInNonReflection;
-		
-		mfIlluminationAmount = 1.0f;
-		mColorMul = cColor(1,1);
-		mfCoverageAmount = 1.0f;
-		mfLiquidAmount = -cMath::RandRectf(1.1f, 300.0f);
-
-		mlRenderFrameCount = -1;
-		
-		mlCalcScaleMatrixCount = -1;
-		mvCalcScale = cVector3f(1,1,1);
-
-		mbForceShadow = false;
-
-		mbIsOneSided = false;
-		mvOneSidedNormal =0;
-
-		mpModelMatrix = NULL;
-
-		mfViewSpaceZ = 0;
-
-		mbIsVisible = true;
-
-		mlLargePlaneSurfacePlacement = 0;
-
-		mpRenderCallback = NULL;
-
-		mpRenderContainerNode = NULL;
-
-		mpRenderableUserData = NULL;
-	}
-	
 	//-----------------------------------------------------------------------
 
 	//////////////////////////////////////////////////////////////////////////
@@ -80,8 +44,8 @@ namespace hpl {
 
 	void iRenderable::SetRenderFlagBit(tRenderableFlag alFlagBit, bool abSet)
 	{
-		if(abSet)	mlRenderFlags |= alFlagBit;
-		else		mlRenderFlags &= (~alFlagBit); 
+		if(abSet)	mpR->mlRenderFlags |= alFlagBit;
+		else		mpR->mlRenderFlags &= (~alFlagBit);
 
 		if(mpRenderCallback) mpRenderCallback->OnRenderFlagsChange(this);
 	}
@@ -90,7 +54,7 @@ namespace hpl {
 
 	void iRenderable::SetVisible(bool abVisible)
 	{
-		mbIsVisible = abVisible;
+		mpR->mbIsVisible = abVisible;
 
 		OnChangeVisible();
 
@@ -104,23 +68,23 @@ namespace hpl {
 		cMatrixf *pModelMatrix = GetModelMatrix(NULL);
 		if(pModelMatrix==NULL) return NULL;
 
-		if(mlLastMatrixCount != GetMatrixUpdateCount())
+		if(mpR->mlLastMatrixCount != GetMatrixUpdateCount())
 		{
-			mlLastMatrixCount = GetMatrixUpdateCount();
+			mpR->mlLastMatrixCount = GetMatrixUpdateCount();
 						
-			ohpl_scene_inverse(pModelMatrix, &m_mtxInvModel);
+			ohpl_scene_inverse(pModelMatrix, &mpR->m_mtxInvModel);
 		}
 		
-		return &m_mtxInvModel;
+		return &mpR->m_mtxInvModel;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iRenderable::SetCoverageAmount(float afX)
 	{
-		if(mfCoverageAmount == afX) return;
+		if(mpR->mfCoverageAmount == afX) return;
 
-		mfCoverageAmount = afX;
+		mpR->mfCoverageAmount = afX;
 
         //A little hack so that shadows are updated
 		SetTransformUpdated(false);
@@ -132,13 +96,13 @@ namespace hpl {
 	{
 		cMatrixf *pModelMatrix = GetModelMatrix(NULL);
 		
-		if(pModelMatrix != NULL && mlCalcScaleMatrixCount != GetMatrixUpdateCount())
+		if(pModelMatrix != NULL && mpR->mlCalcScaleMatrixCount != GetMatrixUpdateCount())
 		{
-			mlCalcScaleMatrixCount = GetMatrixUpdateCount();
-			ohpl_scene_calc_scale(pModelMatrix, &mvCalcScale);
+			mpR->mlCalcScaleMatrixCount = GetMatrixUpdateCount();
+			ohpl_scene_calc_scale(pModelMatrix, &mpR->mvCalcScale);
 		}
 
-		return mvCalcScale;
+		return mpR->mvCalcScale;
 	}
 	
 	//-----------------------------------------------------------------------

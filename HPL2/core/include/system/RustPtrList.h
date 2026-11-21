@@ -42,6 +42,8 @@ namespace hpl {
 		bool empty() const { return size()==0;}
 		T* front() const { return *begin();}
 		T* back() const { return *(end()-1);}
+		T* operator[](size_t alIdx) const { return begin()[alIdx];}
+		void Rebind(OhplPtrVec *apVec){ if(mbOwner) ohpl_pv_free(mpVec); mpVec = apVec; mbOwner = false;}
 
 		void push_back(T *apX){ ohpl_pv_push(mpVec, (uintptr_t)apX);}
 		void clear(){ ohpl_pv_clear(mpVec);}
