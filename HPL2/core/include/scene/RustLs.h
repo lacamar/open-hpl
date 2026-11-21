@@ -134,6 +134,7 @@ namespace hpl {
 		void (*dump_info)(int32_t alKind, void *apObj, OhplLsDumpInfo *apOut);
 		OhplBv* (*obj_bv)(int32_t alKind, void *apObj);
 		size_t (*dump_list)(void *apWorld, int32_t alKind, uintptr_t *apOut, size_t alCap);
+		void (*clear_ease)(void *apCtx);
 	};
 
 extern "C" {

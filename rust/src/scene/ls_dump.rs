@@ -320,6 +320,10 @@ fn drive_light(out: &mut Out, p: *mut LightPod, obj: usize) {
     }
     // SAFETY: as above.
     unsafe { sl::ohpl_sl_light_fade_brightness_to(p, 0.25, 0.5) };
+    if let Some(h) = lh::host() {
+        // SAFETY: table contract; `FadeBrightnessTo` without an easing clears it.
+        unsafe { (h.clear_ease)(obj as *mut c_void) }
+    }
     for i in 1..=6 {
         // SAFETY: as above.
         unsafe { ls_light::ohpl_ls_light_update_light(p, 0.1) };

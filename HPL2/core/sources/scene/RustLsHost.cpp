@@ -282,6 +282,7 @@ namespace hpl {
 			while(it.HasNext() && lNum < alCap) apOut[lNum++] = (uintptr_t)static_cast<T*>(it.Next());
 			return lNum;
 		}
+		void ClearEase(void *c){ static_cast<iLight*>(c)->ClearEasing();}
 		size_t DumpList(void *w, int32_t k, uintptr_t *apOut, size_t alCap)
 		{
 			cWorld *pWorld = static_cast<cWorld*>(w);
@@ -306,7 +307,7 @@ namespace hpl {
 											  EntBv, FlareTypeNew, FlareTypeDelete, FlareParentMesh, VbVertexNum,
 											  TexCreate, TexClamp, TexAnim, TrackerNew, TrackerDelete, FrustumNew, FrustumDelete, BbVisible, BbColor,
 											  PsVisible, PsSetLight, PsLeaveLight, PsLightColor, PsLightBrightness, VisibleChange, Ease, WorldSound,
-											  WorldParticle, RenderableInfo, ObjName, DumpInfo, ObjBv, DumpList };
+											  WorldParticle, RenderableInfo, ObjName, DumpInfo, ObjBv, DumpList, ClearEase };
 				ohpl_ls_set_host(&h);
 			}
 		} gRegister;

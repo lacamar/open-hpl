@@ -126,6 +126,7 @@ pub struct Host {
     pub obj_bv: unsafe extern "C" fn(kind: i32, obj: *mut c_void) -> *mut Bv,
     pub dump_list:
         unsafe extern "C" fn(world: *mut c_void, kind: i32, out: *mut usize, cap: usize) -> usize,
+    pub clear_ease: unsafe extern "C" fn(ctx: *mut c_void),
 }
 
 /// What the `OHPL_SL_DUMP` hook reads from an entity that its pod does not hold.

@@ -238,6 +238,7 @@ namespace hpl {
 			mBrightFadeEasing = aEasing;
 		}
 		float Ease(float afT){ return mBrightFadeEasing ? mBrightFadeEasing(afT) : afT;}
+		void ClearEasing(){ mBrightFadeEasing = nullptr;}
 		void SetMaskID(unsigned int alX){ mpS->maskId = alX;}
 		void SetGoboSpecular(bool abX){ mpS->goboSpecular = abX;}
 		bool GetGoboSpecular(){ return mpS->goboSpecular;}
