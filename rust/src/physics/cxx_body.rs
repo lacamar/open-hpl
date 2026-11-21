@@ -8,7 +8,7 @@ use crate::types::Vector3f;
 
 /// # Safety
 /// `this` is a live object whose constructor has run.
-unsafe fn state<'a>(this: *const u8) -> &'a mut BodyState {
+pub(super) unsafe fn state<'a>(this: *const u8) -> &'a mut BodyState {
     // SAFETY: caller contract.
     unsafe { super::cxx::ptr_member(this, MS_OFFSET) }
 }
@@ -16,7 +16,7 @@ unsafe fn state<'a>(this: *const u8) -> &'a mut BodyState {
 const MS_OFFSET: usize = 304;
 const FLAG_HAS_COLLISION: i32 = 1;
 
-fn enable(s: &mut BodyState) {
+pub(super) fn enable(s: &mut BodyState) {
     s.freeze_count = 0;
     nb::ohpl_ntb_set_freeze(s.rust, 0);
 }
