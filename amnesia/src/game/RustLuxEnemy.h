@@ -371,4 +371,52 @@ bool ohpl_ga3b_wl_event(const OhplGa3Ctx *c, const OhplGa3bWlCtx *w, const OhplG
 bool ohpl_ga3b_wl_player_is_detected(const OhplGa3Ctx *c, const OhplGa3bWlCtx *w, const OhplGa3Host *h);
 }
 
+struct OhplAeAttack
+{
+	float minDamage, maxDamage, force, maxImpulse;
+	int32_t strength;
+	float size[3], offset[3];
+};
+
+struct OhplAeBody
+{
+	float size[3];
+	float mass;
+	bool accurateClimbing;
+	float maxNoSlideSlope, maxPushMass, pushForce, charMaxPushMass, charPushForce, maxStepSize, stepClimbSpeed;
+	float offsetRot[3], offsetTrans[3];
+};
+
+struct OhplAeCfg
+{
+	float health, sightRange, darknessSightRange, hearVolume, fov, fovXMul, maxRegenHealth, regenHealthSpeed, activationDistance;
+	int32_t dangerMusicPrio, musicPrio[2], toughness;
+	bool autoRemoveAtPathEnd;
+	float searchMaxAngle, searchMinDistMul, searchMaxDistMul, searchTime, patrolMaxAngle, patrolMinDist, patrolMaxDist;
+	float defForwardSpeed[2][2], defBackwardSpeed[2][2], defForwardAcc[2][2], defForwardDeacc[2][2];
+	float turnSpeedMul, turnMaxSpeed, turnMinBreakAngle, turnBreakMul, moveSpeedAnimMul;
+	float stoppedToWalk[2], walkToStopped[2], walkToRun[2], runToWalk[2];
+	float waterStepWalk, waterStepRun, waterStepMisc, normalAttackDistance;
+	float ambientMin[4], ambientMax[4];
+	OhplAeBody body;
+	OhplAeAttack normal, breakDoor;
+};
+
+static_assert(sizeof(OhplAeCfg) == 408, "AeCfg layout");
+
+struct OhplAePig
+{
+	float groggyDamageCount, alertToHuntDistance, alertToInstantHuntDistance, huntPauseMinTime, huntPauseMaxTime;
+	float increaseAlertSpeedDistance, increasedAlertSpeedMul, alertRunTowardsToHuntLimit, alertRunTowardsCheckDistance;
+	float idleExtraTimeMin, idleExtraTimeMax;
+	int32_t idleExtraNum;
+	bool isTesla;
+};
+
+static_assert(sizeof(OhplAePig) == 52, "AePig layout");
+
+extern "C" void ohpl_ae_load_pig(const void *vars, bool manpig, OhplAeCfg *cfg, OhplAePig *out);
+
+extern "C" void ohpl_ae_load_base(const void *vars, bool hardMode, OhplAeCfg *out, void (*put)(void *, int, const unsigned char *, size_t), void *ctx);
+
 #endif
