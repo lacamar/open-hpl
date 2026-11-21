@@ -8,7 +8,7 @@ SOCK="${2:-${XDG_RUNTIME_DIR:-/tmp}/ohpl-run.sock}"
 eval "$("$(dirname "${BASH_SOURCE[0]}")/ohpl_game.py")"
 [ -x "$SCRATCH/$BIN" ] || { echo "no scratch dir - run: eval \"\$(scripts/soma-init.sh $GAME)\"" >&2; exit 1; }
 
-pactl list short sinks | grep -q $'\tohpl-ours\t' ||
+grep -q $'\tohpl-ours\t' <<<"$(pactl list short sinks)" ||
 	pactl load-module module-null-sink sink_name=ohpl-ours sink_properties=device.description=ohpl-ours >/dev/null
 python3 -c 'import socket,sys; socket.socket(socket.AF_UNIX).connect(sys.argv[1])' "$SOCK" 2>/dev/null &&
 	{ echo "$SOCK is in use by a live instance" >&2; exit 1; }

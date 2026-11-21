@@ -76,7 +76,10 @@ def cmd_start(a):
     env = dict(os.environ, OPENHPL_SOMA_FREECAM="0")
     if a.pos:
         env["OPENHPL_SOMA_MAP_STARTPOS"] = a.pos
-    out = subprocess.run([str(HERE / "soma-run.sh"), m, str(SOCK)], env=env, capture_output=True, text=True, check=True).stdout.split()
+    r = subprocess.run([str(HERE / "soma-run.sh"), m, str(SOCK)], env=env, capture_output=True, text=True)
+    if r.returncode:
+        raise SystemExit(f"soma-run.sh failed ({r.returncode}): {r.stderr.strip()}")
+    out = r.stdout.split()
     PIDFILE.write_text(out[0])
     LOGPOS.write_text("0")
     t = time.time()
