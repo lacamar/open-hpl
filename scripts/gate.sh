@@ -773,5 +773,7 @@ print("GATE " + ("PASS" if bad == 0 else f"FAIL ({bad})"))
 sys.exit(1 if bad else 0)
 EOF
 status=${PIPESTATUS[0]}
+# a passed full gate needs no reruns: drop its game scratch (~13 GiB)
+[ "$status" = 0 ] && [ -z "$QUICK" ] && [ "$SCRATCH" = "$OUT/scratch" ] && command rm -rf --one-file-system "${OUT:?}"/scratch-*
 echo "summary: $SUM"
 exit "$status"
