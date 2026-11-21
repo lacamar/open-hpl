@@ -10,6 +10,8 @@ pub mod character;
 pub mod controller;
 mod cxx;
 mod cxx_body;
+mod cxx_char;
+mod cxx_physics;
 mod cxx_surface;
 mod cxx_world;
 mod ffi;
