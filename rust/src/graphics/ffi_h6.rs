@@ -4,6 +4,7 @@ use super::anim::KeyFrame;
 use super::animdata::{AnimInfo, MeshInfo, Track};
 use super::skel::Skeleton;
 use crate::types::Matrixf;
+use std::ffi::c_void;
 use std::slice;
 
 fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
@@ -160,6 +161,36 @@ pub unsafe extern "C" fn ohpl_h6_bone_detach(s: *mut Skeleton, b: i32) {
     if let Some(s) = unsafe { s.as_mut() } {
         s.detach(id(b));
     }
+}
+
+/// # Safety
+/// `s` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h6_bone_set_owner(s: *mut Skeleton, b: i32, owner: *mut c_void) {
+    // SAFETY: caller contract.
+    if let Some(s) = unsafe { s.as_mut() } {
+        s.set_owner(id(b), owner as usize);
+    }
+}
+
+/// C++ object of bone `b`, null when unset.
+///
+/// # Safety
+/// `s` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h6_bone_owner(s: *const Skeleton, b: i32) -> *mut c_void {
+    // SAFETY: caller contract.
+    unsafe { s.as_ref() }.map_or(0, |s| s.owner(id(b))) as *mut c_void
+}
+
+/// C++ object of the bone at order position `idx`, null when out of range.
+///
+/// # Safety
+/// `s` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h6_skel_owner_at(s: *const Skeleton, idx: i32) -> *mut c_void {
+    // SAFETY: caller contract.
+    unsafe { s.as_ref() }.map_or(0, |s| s.owner_at(idx)) as *mut c_void
 }
 
 macro_rules! bone_getter {

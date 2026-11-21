@@ -24,76 +24,69 @@
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
 #include "graphics/RustGraphicsH6.h"
+#include "scene/Node3D.h"
+#include "math/Math.h"
 
 namespace hpl {
-
-	class cAnimation;
-	class cNode3D;
 
 	class cAnimationTrack
 	{
 	public:
-		cAnimationTrack(const tString &asName, tAnimTransformFlag aTransformFlags, cAnimation *apParent);
-		~cAnimationTrack();
+		cAnimationTrack(const tString &asName, tAnimTransformFlag aTransformFlags, const float *apLength)
+			: msName(asName), mTransformFlags(aTransformFlags), mpLength(apLength), mpRs(ohpl_h6_track_new()){}
+		~cAnimationTrack(){ ohpl_h6_track_free(mpRs);}
 
-		void ResizeKeyFrames(int alSize);
+		void ResizeKeyFrames(int alSize){ ohpl_h6_track_reserve(mpRs, alSize);}
+		cKeyFrame* CreateKeyFrame(float afTime){ return ohpl_h6_track_create(mpRs, afTime);}
+		void ClearKeyFrames(){ ohpl_h6_track_clear(mpRs);}
 
-		/**
-		 * Creates a new key frame. These should be added in sequential order.
-		 * \param afTime the time for the key frame.
-		 */
-		cKeyFrame* CreateKeyFrame(float afTime);
-		void ClearKeyFrames();
-		
-inline cKeyFrame* GetKeyFrame(int alIndex){ return ohpl_h6_track_frame(mpRs, alIndex);}
-inline int GetKeyFrameNum(){ return ohpl_h6_track_num(mpRs);}
+		cKeyFrame* GetKeyFrame(int alIndex){ return ohpl_h6_track_frame(mpRs, alIndex);}
+		int GetKeyFrameNum(){ return ohpl_h6_track_num(mpRs);}
 
-		inline tAnimTransformFlag GetTransformFlags(){ return mTransformFlags;}
-		inline float GetUnitScale(){ return mfUnitScale;}
-		inline void SetUnitScale(float afX){ mfUnitScale = afX;}
-		
-		/**
-		 * Apply the animation to a node. The method uses Node->AddXXX() so Update matrix must be called
-		 * for the transformation to be applied.
-		 * \param apNode The node with it's base pose
-		 * \param afTime The time at which to apply the animation
-		 * \param afWeight The weight of the animation, a value from 0 to 1.
-		 */
-		void ApplyToNode(cNode3D* apNode, float afTime, float afWeight,bool bLoop=true, float afTransScale=1.0f);
+		tAnimTransformFlag GetTransformFlags(){ return mTransformFlags;}
 
-		/**
-		 * Get a KeyFrame that contains an interpolated value.
-		 * \param afTime The time from which to create the key frame.
-		 */
-		cKeyFrame GetInterpolatedKeyFrame(float afTime,bool bLoop=true);
+		float GetUnitScale(){ return mfUnitScale;}
+		void SetUnitScale(float afX){ mfUnitScale = afX;}
 
-        /**
-         * Gets key frames between for a specific time.
-         * \param afTime The time
-         * \param &apKeyFrameA The frame that is equal to or before time
-         * \param &apKeyFrameB The frame that is after time. 
-         * \return Weight of the different frames. 0 = 100% A, 1 = 100% B 0.5 = 50% A and 50% B
-         */
-        float GetKeyFramesAtTime(float afTime, cKeyFrame** apKeyFrameA,cKeyFrame** apKeyFrameB,bool bLoop=true);
+		void ApplyToNode(cNode3D* apNode, float afTime, float afWeight,bool bLoop=true, float afTransScale=1.0f)
+		{
+			if(GetKeyFrameNum() == 0) return;
+			cKeyFrame Frame = GetInterpolatedKeyFrame(afTime);
+			apNode->AddRotation(cMath::QuaternionSlerp(afWeight, cQuaternion::Identity, Frame.rotation, true));
+			apNode->AddTranslation(Frame.trans * (afWeight * afTransScale));
+		}
 
-		void Smooth(float afAmount, float afPow, int alSamples,bool abTranslation, bool abRotation);
-		
+		cKeyFrame GetInterpolatedKeyFrame(float afTime,bool bLoop=true)
+		{
+			cKeyFrame ResultKeyFrame;
+			ohpl_h6_track_interpolate(mpRs, *mpLength, afTime, &ResultKeyFrame);
+			return ResultKeyFrame;
+		}
+
+		float GetKeyFramesAtTime(float afTime, cKeyFrame** apKeyFrameA,cKeyFrame** apKeyFrameB,bool bLoop=true)
+		{
+			size_t lIdxA = 0, lIdxB = 0;
+			float fW = ohpl_h6_track_frames_at_time(mpRs, *mpLength, afTime, &lIdxA, &lIdxB);
+			const bool bEmpty = GetKeyFrameNum() == 0;
+			*apKeyFrameA = bEmpty ? NULL : GetKeyFrame((int)lIdxA);
+			*apKeyFrameB = bEmpty ? NULL : GetKeyFrame((int)lIdxB);
+			return fW;
+		}
+
+		void Smooth(float afAmount, float afPow, int alSamples,bool abTranslation, bool abRotation){}
+
 		const tString& GetName(){ return msName;}
-		
+
 		void SetNodeIndex(int alIndex){ mlNodeIdx = alIndex;}
 		int GetNodeIndex(){ return mlNodeIdx;}
 
 	private:
 		tString msName;
-
-		int mlNodeIdx;
-
+		int mlNodeIdx = -1;
 		tAnimTransformFlag mTransformFlags;
 		float mfUnitScale = 1.0f;
-
-		cAnimation* mpParent;
-		OhplH6Track* mpRs;
+		const float *mpLength;
+		OhplH6Track *mpRs;
 	};
-
 };
 #endif // HPL_ANIMATION_TRACK_H
