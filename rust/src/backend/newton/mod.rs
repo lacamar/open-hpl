@@ -5,7 +5,7 @@
 //! arena handle (never a C++ address). Callbacks copy a record out of the registry, drop the lock,
 //! and only then call Newton or the host, so no registry borrow lives across a call that can re-enter.
 
-mod body;
+pub(crate) mod body;
 mod host;
 mod joint;
 mod material;

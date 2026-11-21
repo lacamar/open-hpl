@@ -81,6 +81,7 @@ namespace hpl {
 	iPhysicsBody::iPhysicsBody(const tString &asName,iPhysicsWorld *apWorld,iCollideShape *apShape)
 		: iEntity3D(asName)
 	{
+		static_assert(offsetof(iPhysicsBody, mS) == 304, "rust/src/physics/cxx_body.rs MS_OFFSET");
 		ohpl_h15b_new(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(apWorld), reinterpret_cast<size_t>(apShape));
 		mS->book = ohpl_h15_body_new();
 
@@ -103,11 +104,6 @@ namespace hpl {
 		ohpl_h15b_free(mS->shell);
 	}
 
-	void iPhysicsBody::Destroy()
-	{
-		ohpl_h15b_destroy(mS->shell, reinterpret_cast<size_t>(this));
-	}
-
 	// PUBLIC METHODS
 
 	cVector3f iPhysicsBody::GetVelocityAtPosition(const cVector3f& avPos)
@@ -122,26 +118,6 @@ namespace hpl {
 		cVector3f vTorque;
 		ohpl_phys_body_torque_from_force(OhplPhysHost(), reinterpret_cast<size_t>(this), &avForce, &avPos, &vTorque);
 		return vTorque;
-	}
-
-	void iPhysicsBody::AddJoint(iPhysicsJoint *apJoint)
-	{
-		ohpl_h15b_add_joint(mS->shell, reinterpret_cast<size_t>(apJoint));
-	}
-
-	iPhysicsJoint* iPhysicsBody::GetJoint(int alIndex)
-	{
-		return reinterpret_cast<iPhysicsJoint*>(ohpl_h15b_joint_at(mS->shell, alIndex));
-	}
-
-	int iPhysicsBody::GetJointNum()
-	{
-		return ohpl_h15b_joint_num(mS->shell);
-	}
-
-	void iPhysicsBody::RemoveJoint(iPhysicsJoint *apJoint)
-	{
-		ohpl_h15b_remove_joint(mS->shell, reinterpret_cast<size_t>(apJoint));
 	}
 
 	bool iPhysicsBody::UpdateBeforeSimulate(float afTimeStep)
@@ -164,16 +140,6 @@ namespace hpl {
 		ohpl_phys_body_static_angular_move(OhplPhysHost(), reinterpret_cast<size_t>(this), &avVelocity, mS->book);
 	}
 
-	void iPhysicsBody::AddBodyCallback(iPhysicsBodyCallback *apCallback)
-	{
-		ohpl_h15b_add_callback(mS->shell, reinterpret_cast<size_t>(apCallback));
-	}
-
-	void iPhysicsBody::RemoveBodyCallback(iPhysicsBodyCallback *apCallback)
-	{
-		ohpl_h15b_remove_callback(mS->shell, reinterpret_cast<size_t>(apCallback));
-	}
-
 	void iPhysicsBody::SetScrapeSoundEntity(cSoundEntity *apEntity)
 	{
 		mS->scrapeSound = apEntity;
@@ -190,38 +156,6 @@ namespace hpl {
 			mS->rollSoundId = apEntity->GetCreationID();
 		else
 			mS->rollSoundId = -1;
-	}
-
-	bool iPhysicsBody::OnAABBCollision(iPhysicsBody *apBody)
-	{
-		return ohpl_h15b_on_aabb(mS->shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apBody));
-	}
-
-	void iPhysicsBody::OnCollide(iPhysicsBody *apBody, cPhysicsContactData* apContactData)
-	{
-		ohpl_h15_body_flag_set(mS->book, OhplH15_HasCollision, true);
-
-		ohpl_h15b_on_collide(mS->shell, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(apBody), reinterpret_cast<size_t>(apContactData));
-	}
-
-	void iPhysicsBody::AddConnectedCharacter(iCharacterBody *apCharBody)
-	{
-		ohpl_h15b_add_char(mS->shell, reinterpret_cast<size_t>(apCharBody));
-	}
-
-	void iPhysicsBody::RemoveConnectedCharacter(iCharacterBody *apCharBody)
-	{
-		ohpl_h15b_remove_char(mS->shell, reinterpret_cast<size_t>(apCharBody));
-	}
-
-	void iPhysicsBody::AddAttachedVerletContainer(iVerletParticleContainer *apContainer)
-	{
-		ohpl_h15b_add_verlet(mS->shell, reinterpret_cast<size_t>(apContainer));
-	}
-
-	void iPhysicsBody::RemoveAttachedVerletContainer(iVerletParticleContainer *apContainer)
-	{
-		ohpl_h15b_remove_verlet(mS->shell, reinterpret_cast<size_t>(apContainer));
 	}
 
 }

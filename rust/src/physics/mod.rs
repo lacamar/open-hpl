@@ -8,6 +8,7 @@ mod char_collide;
 mod char_conn;
 pub mod character;
 pub mod controller;
+mod cxx_body;
 mod ffi;
 mod ffi_character;
 mod ffi_h14;
