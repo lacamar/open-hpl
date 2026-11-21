@@ -498,3 +498,7 @@ pub fn compile(objs: &[Object], params: &Params) -> Tree {
 }
 
 pub(crate) mod rnd;
+
+mod ls_env;
+mod ls_host;
+mod ls_rope;
