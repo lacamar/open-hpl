@@ -11,7 +11,7 @@ mod joint;
 mod material;
 mod reg;
 mod shape;
-mod world;
+pub(crate) mod world;
 
 #[cfg(test)]
 mod tests;

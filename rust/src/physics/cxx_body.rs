@@ -6,35 +6,23 @@ use super::shell::BodyState;
 use crate::backend::newton::body as nb;
 use crate::types::Vector3f;
 
+/// # Safety
+/// `this` is a live object whose constructor has run.
+unsafe fn state<'a>(this: *const u8) -> &'a mut BodyState {
+    // SAFETY: caller contract.
+    unsafe { super::cxx::ptr_member(this, MS_OFFSET) }
+}
+
 const MS_OFFSET: usize = 304;
 const FLAG_HAS_COLLISION: i32 = 1;
-
-/// # Safety
-/// `this` is a live `iPhysicsBody` whose constructor has run.
-unsafe fn st<'a>(this: *const u8) -> &'a mut BodyState {
-    // SAFETY: caller contract.
-    unsafe { &mut **this.add(MS_OFFSET).cast::<*mut BodyState>() }
-}
 
 fn enable(s: &mut BodyState) {
     s.freeze_count = 0;
     nb::ohpl_ntb_set_freeze(s.rust, 0);
 }
 
-macro_rules! cxx {
-    ($($sym:literal $name:ident[$this:ident, $s:ident]($($a:ident: $t:ty),*) $(-> $r:ty)? => $e:expr;)*) => {$(
-        #[unsafe(export_name = $sym)]
-        unsafe extern "C" fn $name($this: *const u8 $(, $a: $t)*) $(-> $r)? {
-            // SAFETY: C++ calls with a live iPhysicsBody.
-            #[allow(unused_variables, unused_mut)]
-            let $s = unsafe { st($this) };
-            #[allow(unused_unsafe)]
-            unsafe { $e }
-        }
-    )*};
-}
-
-cxx! {
+super::cxx::cxx! {
+    state;
     "_ZN3hpl12iPhysicsBody17SetLinearVelocityERKNS_8cVector3IfEE" set_linear_velocity[this, s](v: *const Vector3f) => nb::ohpl_ntb_set_velocity(s.rust, v);
     "_ZN3hpl12iPhysicsBody18SetAngularVelocityERKNS_8cVector3IfEE" set_angular_velocity[this, s](v: *const Vector3f) => nb::ohpl_ntb_set_omega(s.rust, v);
     "_ZN3hpl12iPhysicsBody16SetLinearDampingEf" set_linear_damping[this, s](v: f32) => nb::ohpl_ntb_set_linear_damping(s.rust, v);

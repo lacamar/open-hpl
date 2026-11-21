@@ -152,6 +152,7 @@ namespace hpl {
 	iPhysicsWorld::iPhysicsWorld()
 	{
 		mpWorld = NULL;
+		static_assert(offsetof(iPhysicsWorld, mRsBook) == 32 && offsetof(iPhysicsWorld, mhRust) == 176 && sizeof(tString) == 32, "rust/src/physics/cxx_world.rs offsets");
 		mRsBook = ohpl_h15w_new(WorldOp, reinterpret_cast<size_t>(this));
 
 		OhplL4InstallHost();
@@ -177,38 +178,7 @@ namespace hpl {
 		ohpl_h15_world_free(mRsBook);
 	}
 
-	void iPhysicsWorld::RegisterShape(iCollideShape *apShape){ ohpl_h15w_add(mRsBook, OhplKind_Shape, reinterpret_cast<size_t>(apShape)); }
-	void iPhysicsWorld::RegisterBody(iPhysicsBody *apBody){ ohpl_h15w_add(mRsBook, OhplKind_Body, reinterpret_cast<size_t>(apBody)); }
-	void iPhysicsWorld::RegisterCharBody(iCharacterBody *apBody){ ohpl_h15w_add(mRsBook, OhplKind_Char, reinterpret_cast<size_t>(apBody)); }
-	void iPhysicsWorld::RegisterJoint(iPhysicsJoint *apJoint){ ohpl_h15w_add(mRsBook, OhplKind_Joint, reinterpret_cast<size_t>(apJoint)); }
-	void iPhysicsWorld::RegisterController(iPhysicsController *apController){ ohpl_h15w_add(mRsBook, OhplKind_Ctrl, reinterpret_cast<size_t>(apController)); }
-	void iPhysicsWorld::RegisterRope(iPhysicsRope *apRope){ ohpl_h15w_add(mRsBook, OhplKind_Rope, reinterpret_cast<size_t>(apRope)); }
-	void iPhysicsWorld::RegisterMaterial(const tString &asName, iPhysicsMaterial *apMaterial)
-	{
-		ohpl_h15w_add_material(mRsBook, asName.c_str(), asName.size(), reinterpret_cast<size_t>(apMaterial));
-	}
-
 	// PUBLIC METHODS
-
-	void iPhysicsWorld::Update(float afTimeStep)
-	{
-		ohpl_h15w_update(mRsBook, afTimeStep);
-	}
-
-	void iPhysicsWorld::DestroyShape(iCollideShape *apShape)
-	{
-		ohpl_h15w_destroy_shape(mRsBook, reinterpret_cast<size_t>(apShape));
-	}
-
-	void iPhysicsWorld::DestroyBody(iPhysicsBody* apBody)
-	{
-		ohpl_h15w_destroy_body(mRsBook, reinterpret_cast<size_t>(apBody));
-	}
-
-	iPhysicsBody *iPhysicsWorld::GetBody(const tString &asName)
-	{
-		return reinterpret_cast<iPhysicsBody*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Body, asName.c_str(), asName.size()));
-	}
 
 	tPhysicsBodyList& iPhysicsWorld::BodyList()
 	{
@@ -217,58 +187,13 @@ namespace hpl {
 		return mlstBodies;
 	}
 
-	void iPhysicsWorld::EnableBodiesInBV(cBoundingVolume *apBV, bool abEnabled)
-	{
-		ohpl_h15w_enable_bodies_in_bv(mRsBook, reinterpret_cast<size_t>(apBV));
-	}
-
-	void iPhysicsWorld::AddBodyToUpdateList(iPhysicsBody *apBody)
-	{
-		ohpl_h15w_update_add(mRsBook, reinterpret_cast<size_t>(apBody));
-	}
-
 	//NOTE: Skipping removing dynamic bodies for now since they will need to be checked if enabled
 	//		Still want to remove when destroying though.
-	void iPhysicsWorld::RemoveBodyFromUpdateList(iPhysicsBody *apBody, bool abDestroyingBody)
-	{
-		ohpl_h15w_update_remove(mRsBook, reinterpret_cast<size_t>(apBody));
-	}
-
-	void iPhysicsWorld::DestroyJoint(iPhysicsJoint* apJoint)
-	{
-		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Joint, reinterpret_cast<size_t>(apJoint));
-	}
-
-	iPhysicsJoint *iPhysicsWorld::GetJoint(const tString &asName)
-	{
-		return reinterpret_cast<iPhysicsJoint*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Joint, asName.c_str(), asName.size()));
-	}
-
-	bool iPhysicsWorld::JointExists(iPhysicsJoint* apJoint)
-	{
-		return ohpl_h15w_contains(mRsBook, OhplKind_Joint, reinterpret_cast<size_t>(apJoint));
-	}
-
 	cPhysicsJointIterator iPhysicsWorld::GetJointIterator()
 	{
 		mlstJoints.clear();
 		for(size_t i=0, n=ohpl_h15w_len(mRsBook, OhplKind_Joint); i<n; ++i) mlstJoints.push_back(reinterpret_cast<iPhysicsJoint*>(ohpl_h15w_at(mRsBook, OhplKind_Joint, i)));
 		return cPhysicsJointIterator(&mlstJoints);
-	}
-
-	void iPhysicsWorld::DestroyCharacterBody(iCharacterBody* apBody)
-	{
-		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Char, reinterpret_cast<size_t>(apBody));
-	}
-
-	iPhysicsBody *iPhysicsWorld::GetCharacterBody(const tString &asName)
-	{
-		return reinterpret_cast<iPhysicsBody*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Char, asName.c_str(), asName.size()));
-	}
-
-	iPhysicsMaterial* iPhysicsWorld::GetMaterialFromName(const tString &asName)
-	{
-		return reinterpret_cast<iPhysicsMaterial*>(ohpl_h15w_get_material(mRsBook, asName.c_str(), asName.size()));
 	}
 
 	cPhysicsMaterialIterator iPhysicsWorld::GetMaterialIterator()
@@ -280,31 +205,6 @@ namespace hpl {
 			if(ohpl_h15w_material_at(mRsBook, i, &name, &obj)) m_mapMaterials[tString(name.p, name.n)] = reinterpret_cast<iPhysicsMaterial*>(obj);
 		}
 		return cPhysicsMaterialIterator(&m_mapMaterials);
-	}
-
-	iPhysicsRope* iPhysicsWorld::GetRope(const tString &asName)
-	{
-		return reinterpret_cast<iPhysicsRope*>(ohpl_h15w_find_by_name(mRsBook, OhplKind_Rope, asName.c_str(), asName.size()));
-	}
-
-	iPhysicsRope* iPhysicsWorld::GetRopeFromUniqueID(int alID)
-	{
-		return reinterpret_cast<iPhysicsRope*>(ohpl_h15w_rope_from_unique_id(mRsBook, alID));
-	}
-
-	void iPhysicsWorld::DestroyRope(iPhysicsRope* apRope)
-	{
-		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Rope, reinterpret_cast<size_t>(apRope));
-	}
-
-	void iPhysicsWorld::DestroyAll()
-	{
-		ohpl_h15w_destroy_all(mRsBook);
-	}
-
-	void iPhysicsWorld::DestroyController(iPhysicsController *apController)
-	{
-		ohpl_h15w_find_and_delete(mRsBook, OhplKind_Ctrl, reinterpret_cast<size_t>(apController));
 	}
 
 	void iPhysicsWorld::FadeoutBodySounds(iPhysicsBody *pBody, float afFadeSpeed)
@@ -323,11 +223,6 @@ namespace hpl {
 		cSoundEntity *pLoopSound = pJoint->GetSound();
 		if(pLoopSound && mpWorld->SoundEntityExists(pLoopSound, pJoint->GetSoundID())) pLoopSound->FadeOut(afFadeSpeed);
 		pJoint->SetSound(NULL);
-	}
-
-	void iPhysicsWorld::FadeoutAllLoopSounds(float afFadeSpeed)
-	{
-		ohpl_h15w_fadeout_all_loop_sounds(mRsBook, afFadeSpeed);
 	}
 
 	void iPhysicsWorld::RenderContactPoint(iLowLevelGraphics *apLowLevel, size_t i, const cColor& aPointColor, const cColor& aLineColor)
