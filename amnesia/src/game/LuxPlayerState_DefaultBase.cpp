@@ -267,7 +267,6 @@ void iLuxPlayerState_DefaultBase::GetAttachedBodies(iPhysicsBody *apBody, tPhysi
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeVirtual(iLuxPlayerState_DefaultBase_SaveData, iLuxPlayerState_SaveData)
-kEndSerialize()
+kSerializeRustClassV(iLuxPlayerState_DefaultBase_SaveData, iLuxPlayerState_SaveData)
 
 //-----------------------------------------------------------------------

@@ -10,6 +10,7 @@ mod ffi;
 pub mod geom;
 pub mod logic;
 pub mod motion;
+pub mod names;
 pub mod natives;
 pub mod procanim;
 pub mod props;

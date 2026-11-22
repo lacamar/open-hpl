@@ -11,26 +11,9 @@
 typedef void *OhplA9W;
 typedef void (*OhplA9Sink)(void *apCtx, const uint32_t *apText, size_t alLen);
 
-struct OhplA9Str
-{
-	const uint32_t *mpText;
-	size_t mlLen;
-};
-
-static_assert(sizeof(OhplA9Str) == 2 * sizeof(size_t), "OhplA9Str layout");
-
 // Host ops handed to Rust once (same order as rust/src/luxmenu/win/host.rs `table!`).
 struct OhplA9Host
 {
-	OhplA9W (*ohpl_a9h_new)(OhplA9W apSet, int alKind, OhplA9W apParent, const float *apPos, const float *apSize, int alFlags, const uint32_t *apText, size_t alLen);
-	OhplA9W (*ohpl_a9h_popup)(OhplA9W apSet, const OhplA9Str *apStr, size_t alObj, int alKillOnEscape, bool abCopyFocus);
-	size_t (*ohpl_a9h_w)(OhplA9W apWidget, int alOp, size_t alArg);
-	void (*ohpl_a9h_w_set_f)(OhplA9W apWidget, int alOp, const float *apVal);
-	size_t (*ohpl_a9h_w_str)(OhplA9W apWidget, int alOp, const uint32_t *apText, size_t alLen, size_t alArg);
-	void (*ohpl_a9h_w_get_str)(OhplA9W apWidget, int alOp, int alIdx, OhplA9Sink apSink, void *apCtx);
-	void (*ohpl_a9h_w_cb)(OhplA9W apWidget, int alMsg, size_t alObj);
-	float (*ohpl_a9h_text_width)(OhplA9W apWidget, const uint32_t *apText, size_t alLen);
-	void (*ohpl_a9h_image_file)(OhplA9W apWidget, const uint32_t *apText, size_t alLen);
 	size_t (*ohpl_a9h_lux)(int alOp, size_t alArg);
 	void (*ohpl_a9h_lux_str)(int alOp, OhplA9Sink apSink, void *apCtx);
 	size_t (*ohpl_a9h_lux_with)(int alOp, const uint32_t *apText, size_t alLen);
@@ -48,8 +31,6 @@ struct OhplA9Host
 
 extern "C"
 {
-	// C++ -> Rust
-	bool ohpl_a9_cb(size_t alObj, OhplA9W apWidget, int alVal);
 	void ohpl_a9_set_host(const OhplA9Host *apHost);
 }
 

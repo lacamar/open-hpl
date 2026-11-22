@@ -18,7 +18,6 @@
  */
 
 #include "LuxCritter_Spider.h"
-#include "RustLuxSerialize.h"
 
 #include "LuxPlayer.h"
 #include "LuxPlayerHelpers.h"

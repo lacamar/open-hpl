@@ -579,19 +579,11 @@ namespace hpl {
 
 	//-------------------------------------------------------------------
 
-	kBeginSerializeBase(cAreaEntity)
-	kSerializeVar(msName, eSerializeType_String)
-	kSerializeVar(msType, eSerializeType_String)
-	kSerializeVar(m_mtxTransform, eSerializeType_Matrixf)
-	kSerializeVar(mvSize, eSerializeType_Vector3f)
-	kEndSerialize()
+	kSerializeRustClass(cAreaEntity)
 
 	//-------------------------------------------------------------------
 
-	kBeginSerializeBase(cStartPosEntity)
-	kSerializeVar(msName, eSerializeType_String)
-	kSerializeVar(m_mtxTransform, eSerializeType_Matrixf)
-	kEndSerialize()
+	kSerializeRustClass(cStartPosEntity)
 
 
 	//-----------------------------------------------------------------------

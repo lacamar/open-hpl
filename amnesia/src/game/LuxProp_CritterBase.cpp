@@ -239,7 +239,7 @@ void iLuxProp_CritterBase::OnHealthChange()
 	// Death
 	if(S().health <=0)
 	{
-		cWorld *pWorld = mpMap->GetWorld();
+		cWorld *pWorld = GetMap()->GetWorld();
 
 		if(msDeathSound != "")
 			PlaySound("CritterDeath",msDeathSound, true, true);
@@ -255,12 +255,12 @@ void iLuxProp_CritterBase::OnHealthChange()
 
 		if(msDeathEntity != "")
 		{
-			pWorld->CreateEntity(msName+"_Dead", mpMeshEntity->GetWorldMatrix(), msDeathEntity);
+			pWorld->CreateEntity(GetName()+"_Dead", mpMeshEntity->GetWorldMatrix(), msDeathEntity);
 		}
 
 		OnKillCritter();
 
-		mpMap->DestroyEntity(this);
+		GetMap()->DestroyEntity(this);
 	}
 }
 
@@ -478,15 +478,7 @@ void cLuxCritterQuery::Ask(void *apCtx, int alCode, const float *apA, const floa
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(iLuxProp_CritterBase_SaveData, iLuxProp_SaveData)
-kSerializeVar(mvVel, eSerializeType_Vector3f)
-kSerializeVar(mvGravityVel, eSerializeType_Vector3f)
-kSerializeVar(mvSwarmPoint, eSerializeType_Vector3f)
-kSerializeVar(mlAnimState, eSerializeType_Int32)
-kSerializeVar(mvGroundNormal, eSerializeType_Vector3f)
-kSerializeVar(mbColliding, eSerializeType_Bool)
-kSerializeVar(mbUpdateAnimation, eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClassP(iLuxProp_CritterBase_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

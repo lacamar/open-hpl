@@ -18,7 +18,6 @@
  */
 
 #include "LuxArea_Insanity.h"
-#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -99,7 +98,7 @@ cLuxArea_Insanity::~cLuxArea_Insanity()
 
 void cLuxArea_Insanity::OnUpdate(float afTimeStep)
 {
-	ohpl_a7_area_update(mpA7Area, this, mpMap->GetA7(), afTimeStep);
+	ohpl_a7_area_update(mpA7Area, this, GetMap()->GetA7(), afTimeStep);
 }
 
 //-----------------------------------------------------------------------

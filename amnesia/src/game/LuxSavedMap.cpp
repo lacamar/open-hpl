@@ -444,48 +444,7 @@ void cLuxSavedMap::ToMap(cLuxMap *apMap)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxSavedMap)
-kSerializeVar(msFileName, eSerializeType_String)
-kSerializeVar(msDisplayNameEntry, eSerializeType_String)
-
-kSerializeVar(msLanternLitCallback, eSerializeType_String)
-
-kSerializeVar(mlNumberOfQuests, eSerializeType_Int32)
-kSerializeVar(mlTotalCompletionAmount, eSerializeType_Int32)
-kSerializeVar(mlCurrentCompletionAmount, eSerializeType_Int32)
-
-kSerializeVar(mbSkyBoxActive, eSerializeType_Bool)
-kSerializeVar(msSkyboxTexture, eSerializeType_String)
-kSerializeVar(mSkyBoxColor, eSerializeType_Color)
-
-kSerializeVar(mbFogActive, eSerializeType_Bool)
-kSerializeVar(mbFogCulling, eSerializeType_Bool)
-kSerializeVar(mfFogStart, eSerializeType_Float32)
-kSerializeVar(mfFogEnd, eSerializeType_Float32)
-kSerializeVar(mfFogFalloffExp, eSerializeType_Float32)
-kSerializeVar(mFogColor, eSerializeType_Color)
-
-kSerializeVar(msCheckPointName, eSerializeType_String)
-kSerializeVar(msCheckPointStartPos, eSerializeType_String)
-kSerializeVar(msCheckPointCallback, eSerializeType_String)
-kSerializeVar(mlCheckPointCount, eSerializeType_Int32)
-kSerializeVar(msCheckPointMusic, eSerializeType_String)
-kSerializeVar(mlCheckPointMusicPrio, eSerializeType_Int32)
-kSerializeVar(mbCheckPointMusicResume, eSerializeType_Bool)
-kSerializeVar(mfCheckPointMusicVolume, eSerializeType_Float32)
-
-kSerializeClassContainer(mlstLights, cEngineLight_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mlstRopes, cEngineRope_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mlstSounds, cEngineSound_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mlstPS, cEnginePS_SaveData, eSerializeType_Class)
-
-kSerializeClassContainer(mlstEntities,iLuxEntity_SaveData, eSerializeType_ClassPointer)
-
-kSerializeClassContainer(mlstTimers, cLuxEventTimer,  eSerializeType_Class)
-kSerializeClassContainer(mlstVars, cLuxScriptVar,  eSerializeType_Class)
-
-kSerializeClassContainer(mvUseItemCallbacks,cLuxUseItemCallback, eSerializeType_Class)
-kEndSerialize()
+kSerializeRustClass(cLuxSavedMap)
 
 
 //-----------------------------------------------------------------------

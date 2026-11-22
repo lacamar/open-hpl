@@ -18,7 +18,6 @@
  */
 
 #include "LuxInteractConnections.h"
-#include "RustLuxSerialize.h"
 
 #include "LuxProp_Wheel.h"
 #include "LuxProp_SwingDoor.h"

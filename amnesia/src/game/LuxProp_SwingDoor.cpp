@@ -125,7 +125,7 @@ cLuxProp_SwingDoor::~cLuxProp_SwingDoor()
 
 bool cLuxProp_SwingDoor::CanInteract(iPhysicsBody *apBody)
 {
-	return ohpl_ga4_door_can_interact(&mP, apBody->GetMass(), mpMap->BodyIsInDetachableStickyArea(apBody));
+	return ohpl_ga4_door_can_interact(&mP, apBody->GetMass(), GetMap()->BodyIsInDetachableStickyArea(apBody));
 }
 
 //-----------------------------------------------------------------------
@@ -153,7 +153,7 @@ bool cLuxProp_SwingDoor::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos
 	cLuxSwingDoorJointData *pData = GetJointDataFromBody(apBody);
 	if(pData==NULL) Error("Could not find swing door data for body '%s'\n", apBody->GetName().c_str());
 
-	mpMap->DetachBodyFromStickyArea(apBody);
+	GetMap()->DetachBodyFromStickyArea(apBody);
 
 	std::vector<OhplGa4DoorJoint> vJoints = Ga4DoorJoints();
 	OhplGa4Run run(this);
@@ -233,7 +233,7 @@ void cLuxProp_SwingDoor::OnSetupAfterLoad(cWorld *apWorld)
 			continue;
 		}
 
-		cMeshEntity *pDamageEntity = apWorld->CreateMeshEntity(msName+"damage"+cString::ToString(i+1),pMesh);
+		cMeshEntity *pDamageEntity = apWorld->CreateMeshEntity(GetName()+"damage"+cString::ToString(i+1),pMesh);
 		pDamageEntity->SetMatrix(mpMeshEntity->GetLocalMatrix());
 
 		for(int sub=0; sub < pDamageEntity->GetSubMeshEntityNum(); ++sub)
@@ -577,12 +577,12 @@ void cLuxProp_SwingDoor::Ga4ApplyOp(const OhplGa4Op &aOp)
 				cMatrixf mtxInvLocalBody = cMath::MatrixInverse(pBodyData->m_mtxLocalTransform);
 				cMatrixf mtxEntity = cMath::MatrixMul(pMainBody->GetLocalMatrix(), mtxInvLocalBody);
 
-				mpMap->ResetLatestEntity();
-				mpMap->CreateEntity(msName + "_broken", msBrokenEntity, mtxEntity, OnLoadScaleRef());
+				GetMap()->ResetLatestEntity();
+				GetMap()->CreateEntity(GetName() + "_broken", msBrokenEntity, mtxEntity, OnLoadScaleRef());
 
 				////////////////////////
 				//Add impulse and velocity
-				iLuxEntity *pEntity = mpMap->GetLatestEntity();
+				iLuxEntity *pEntity = GetMap()->GetLatestEntity();
 				if(pEntity && pEntity->GetEntityType() == eLuxEntityType_Prop)
 				{
 					mS.broken_entity_id = pEntity->GetID();
@@ -610,10 +610,10 @@ void cLuxProp_SwingDoor::Ga4ApplyOp(const OhplGa4Op &aOp)
 		break;
 	case kOhplGa4Op_DoorDestroyBroken:
 		{
-			iLuxEntity *pEntity = mpMap->GetEntityByID(aOp.i);
+			iLuxEntity *pEntity = GetMap()->GetEntityByID(aOp.i);
 			if(pEntity)
 			{
-				mpMap->DestroyEntity(pEntity);
+				GetMap()->DestroyEntity(pEntity);
 			}
 		}
 		break;
@@ -634,7 +634,7 @@ void cLuxProp_SwingDoor::Ga4ApplyOp(const OhplGa4Op &aOp)
 				// Create Sound
 				if(sSound != "")
 				{
-					cSoundEntity *pSound = mpWorld->CreateSoundEntity(msName + "_BreakSound", sSound, true);
+					cSoundEntity *pSound = mpWorld->CreateSoundEntity(GetName() + "_BreakSound", sSound, true);
 					if(pSound) pSound->SetPosition(pMainBody->GetLocalPosition());
 				}
 
@@ -642,7 +642,7 @@ void cLuxProp_SwingDoor::Ga4ApplyOp(const OhplGa4Op &aOp)
 				// Create Particle System
 				if(sPS != "")
 				{
-					cParticleSystem *pPS = mpWorld->CreateParticleSystem(msName + "_BreakPS", sPS,1);
+					cParticleSystem *pPS = mpWorld->CreateParticleSystem(GetName() + "_BreakPS", sPS,1);
 					if(pPS) pPS->SetMatrix(pMainBody->GetLocalMatrix());
 				}
 			}
@@ -683,26 +683,7 @@ cLuxSwingDoorJointData* cLuxProp_SwingDoor::GetJointDataFromJoint(iPhysicsJoint 
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_SwingDoor_SaveData, iLuxProp_SaveData)
-
-kSerializeVar(mbLocked, eSerializeType_Bool)
-kSerializeVar(mbBroken, eSerializeType_Bool)
-kSerializeVar(mbClosed, eSerializeType_Bool)
-kSerializeVar(mlBrokenEntityID, eSerializeType_Int32)
-kSerializeVar(mlCurrentMeshEntity, eSerializeType_Int32)
-kSerializeVar(mbDisableBreakable, eSerializeType_Bool)
-kSerializeVar(mbDisableAutoClose, eSerializeType_Bool)
-
-kSerializeVar(mDamageMesh1, eSerializeType_Class)
-kSerializeVar(mDamageMesh2, eSerializeType_Class)
-
-kSerializeVar(mfGoalOpenAmount, eSerializeType_Float32)
-kSerializeVar(mbOpeningTowardsMaxAngle, eSerializeType_Bool)
-kSerializeVar(mfCurrentOpenAmount, eSerializeType_Float32)
-kSerializeVar(mfOpenSpeed, eSerializeType_Float32)
-kSerializeVar(mbIsUpdatingOpenAmount, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_SwingDoor_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

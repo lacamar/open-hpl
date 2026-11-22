@@ -52,18 +52,56 @@ class cSomaLuxEntity : public cSomaLuxScriptable, public cMeshEntityCallback
 public:
 	~cSomaLuxEntity();
 	OhplSeCore *mpCore = ohpl_se_core_new();
+	OhplSeNames *mpNames = ohpl_se_names_new();
+	enum eSeStr { eSeStr_Name, eSeStr_ClassName, eSeStr_ScriptClassName, eSeStr_FileName, eSeStr_ParentName, eSeStr_AnimLoopSound, eSeStr_InteractCallback, eSeStr_AnimMessageCallback, eSeStr_LookAtCallback, eSeStr_ConnectionCallback, eSeStr_MoveCallback, eSeStr_RotateCallback, eSeStr_AnimCallback, eSeStr_OnGuiFunc, eSeStr_LastEnum };
+	tString SeStr(eSeStr aI) const
+	{
+		size_t l;
+		const unsigned char *p = ohpl_se_names_get(mpNames, aI, &l);
+		return tString((const char *)p, l);
+	}
+	// script bindings return const tString&: one stable copy per entity and field, like the former members
+	const tString &SeStrRef(eSeStr aI) const
+	{
+		mvSeStrCache[aI] = SeStr(aI);
+		return mvSeStrCache[aI];
+	}
+	void SetSeStr(eSeStr aI, const tString &asX) { ohpl_se_names_set(mpNames, aI, (const unsigned char *)asX.data(), asX.size()); }
+	tString GetName() const { return SeStr(eSeStr_Name); }
+	void SetName(const tString &asX) { SetSeStr(eSeStr_Name, asX); }
+	tString GetClassName() const { return SeStr(eSeStr_ClassName); }
+	void SetClassName(const tString &asX) { SetSeStr(eSeStr_ClassName, asX); }
+	tString GetScriptClassName() const { return SeStr(eSeStr_ScriptClassName); }
+	void SetScriptClassName(const tString &asX) { SetSeStr(eSeStr_ScriptClassName, asX); }
+	tString GetFileName() const { return SeStr(eSeStr_FileName); }
+	void SetFileName(const tString &asX) { SetSeStr(eSeStr_FileName, asX); }
+	tString GetParentName() const { return SeStr(eSeStr_ParentName); }
+	void SetParentName(const tString &asX) { SetSeStr(eSeStr_ParentName, asX); }
+	tString GetAnimLoopSound() const { return SeStr(eSeStr_AnimLoopSound); }
+	void SetAnimLoopSound(const tString &asX) { SetSeStr(eSeStr_AnimLoopSound, asX); }
+	tString GetInteractCallback() const { return SeStr(eSeStr_InteractCallback); }
+	void SetInteractCallback(const tString &asX) { SetSeStr(eSeStr_InteractCallback, asX); }
+	tString GetAnimMessageCallback() const { return SeStr(eSeStr_AnimMessageCallback); }
+	void SetAnimMessageCallback(const tString &asX) { SetSeStr(eSeStr_AnimMessageCallback, asX); }
+	tString GetLookAtCallback() const { return SeStr(eSeStr_LookAtCallback); }
+	void SetLookAtCallback(const tString &asX) { SetSeStr(eSeStr_LookAtCallback, asX); }
+	tString GetConnectionCallback() const { return SeStr(eSeStr_ConnectionCallback); }
+	void SetConnectionCallback(const tString &asX) { SetSeStr(eSeStr_ConnectionCallback, asX); }
+	tString GetMoveCallback() const { return SeStr(eSeStr_MoveCallback); }
+	void SetMoveCallback(const tString &asX) { SetSeStr(eSeStr_MoveCallback, asX); }
+	tString GetRotateCallback() const { return SeStr(eSeStr_RotateCallback); }
+	void SetRotateCallback(const tString &asX) { SetSeStr(eSeStr_RotateCallback, asX); }
+	tString GetAnimCallback() const { return SeStr(eSeStr_AnimCallback); }
+	void SetAnimCallback(const tString &asX) { SetSeStr(eSeStr_AnimCallback, asX); }
+	tString GetOnGuiFunc() const { return SeStr(eSeStr_OnGuiFunc); }
+	void SetOnGuiFunc(const tString &asX) { SetSeStr(eSeStr_OnGuiFunc, asX); }
 
-	tString msName;
-	tString msClassName; // EntityType / AreaType
-	tString msScriptClassName;
 	iEntity3D *mpCameraNode = nullptr;
 	bool &mbSpawned = mpCore->mbSpawned;
-	tString msFileName;
 	int &meType = mpCore->meType;
 	cSomaID &mID = mpCore->mID;
 	int &mlParentType = mpCore->mlParentType;
 	cSomaID &mParentID = mpCore->mParentID;
-	tString msParentName;
 	bool &mbActive = mpCore->mbActive;
 	bool &mbSleeping = mpCore->mbSleeping;
 	bool &mbAutoSleep = mpCore->mbAutoSleep;
@@ -139,19 +177,47 @@ public:
 	iEntity3D *GetAttachEntity();
 	cSoundEntity *mpAnimLoopSound = NULL;
 	int &mlAnimLoopSoundID = mpCore->mlAnimLoopSoundID;
-	tString msAnimLoopSound;
 
 	void ResolveConnectedLights();
 
 	cResourceVarsObject mVars;		   // .ent UserDefinedVariables
 	cResourceVarsObject mInstanceVars; // map UserVariables
-	std::map<tString, tString> mmapScriptVars;
+	// std::map semantics: Var() inserts an empty value for a missing key, VarFind() does not
+	const tString &Var(const tString &asKey)
+	{
+		size_t l;
+		const unsigned char *p = ohpl_se_var_get(mpNames, (const unsigned char *)asKey.data(), asKey.size(), true, &l);
+		tString &sOut = mmapVarCache[asKey];
+		sOut.assign((const char *)p, l);
+		return sOut;
+	}
+	mutable tString mvSeStrCache[eSeStr_LastEnum];
+	std::map<tString, tString> mmapVarCache;
+	bool VarFind(const tString &asKey, tString &asOut)
+	{
+		size_t l;
+		const unsigned char *p = ohpl_se_var_get(mpNames, (const unsigned char *)asKey.data(), asKey.size(), false, &l);
+		if (!p)
+			return false;
+		asOut.assign((const char *)p, l);
+		return true;
+	}
+	void SetVar(const tString &asKey, const tString &asVal) { ohpl_se_var_set(mpNames, (const unsigned char *)asKey.data(), asKey.size(), (const unsigned char *)asVal.data(), asVal.size()); }
+	void ClearVars() { ohpl_se_var_clear(mpNames); }
+	bool VarAt(size_t aI, tString &asKey, tString &asVal)
+	{
+		const unsigned char *k;
+		size_t kl, vl;
+		const unsigned char *v = ohpl_se_var_at(mpNames, aI, &k, &kl, &vl);
+		if (!v)
+			return false;
+		asKey.assign((const char *)k, kl);
+		asVal.assign((const char *)v, vl);
+		return true;
+	}
 
-	tString msInteractCallback;
 	bool &mbInteractCallbackAutoRemove = mpCore->mbInteractCallbackAutoRemove;
-	tString msAnimMessageCallback;
 	bool &mbAnimMessageCallbackAutoRemove = mpCore->mbAnimMessageCallbackAutoRemove;
-	tString msLookAtCallback;
 	bool &mbLookAtCallbackAutoRemove = mpCore->mbLookAtCallbackAutoRemove;
 	bool &mbLookAtCheckCenter = mpCore->mbLookAtCheckCenter;
 	bool &mbLookAtCheckRay = mpCore->mbLookAtCheckRay;
@@ -214,7 +280,6 @@ public:
 	float &mfInteractConnectionState = mpCore->mfInteractConnectionState;
 	void UpdateInteractConnectionLeader();
 	void ChangeInteractConnectionState(float afT);
-	tString msConnectionCallback;
 	void ChangeConnectionState(int alState);
 
 	cColor &mEffectBaseColor = mpCore->mEffectBaseColor;
@@ -308,17 +373,14 @@ public:
 	bool &mbCheckCharacters = mpCore->mbCheckCharacters;
 	float &mfTimeSinceCheck = mpCore->mfTimeSinceCheck;
 	OhplGs1Move &mMove = mpCore->mMove;
-	tString msMoveCallback;
 	void MoveAngularTo(const cMatrixf &a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const cVector3f &avPivotLocal, const tString &asCallback);
 	void RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector3f &avAxis, bool abResetSpeed, const cVector3f &avPivotLocal);
 	void StopMove();
 	OhplGs1Rotate &mRotate = mpCore->mRotate;
-	tString msRotateCallback;
 	int &mlCurrentAnim = mpCore->mlCurrentAnim;
 
 	// cLuxProp::CreateAndSetupGui: an ImGui drawn by the map's OnGui function
 	class cSomaImGui *mpImGui = NULL;
-	tString msOnGuiFunc;
 	int &mlGuiDraws = mpCore->mlGuiDraws;
 	int &mlGuiCalls = mpCore->mlGuiCalls;
 	bool &mbGuiActive = mpCore->mbGuiActive;
@@ -342,7 +404,6 @@ public:
 	void SetupGuiScreen(const tString &asSubMesh);
 	void UpdateGuiScreen();
 	void UpdateGui(float afTimeStep);
-	tString msAnimCallback;
 	std::vector<std::pair<tString, bool>> mvAnimQueue;
 	float GetMaxInteractDistance();
 	bool CanInteract(int alType, iPhysicsBody *apBody);

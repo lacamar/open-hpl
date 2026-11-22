@@ -404,11 +404,3 @@ pub unsafe extern "C" fn ohpl_a13_map_set_quests(c: *mut Ctx, n: i32) {
     // SAFETY: caller contract.
     unsafe { m(c).props().quests = n };
 }
-
-/// # Safety
-/// `c` live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a13_map_quests(c: *mut Ctx) -> i32 {
-    // SAFETY: caller contract.
-    unsafe { m(c).props().quests }
-}

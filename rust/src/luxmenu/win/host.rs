@@ -31,6 +31,7 @@ impl W {
     }
 }
 
+#[cfg(test)]
 #[repr(C)]
 pub(super) struct Str {
     pub p: *const u32,
@@ -41,7 +42,7 @@ pub(super) type Sink = unsafe extern "C" fn(*mut c_void, *const u32, usize);
 
 #[cfg(not(test))]
 mod ffi {
-    use super::{Sink, Str, W};
+    use super::{Sink, W};
     use std::ffi::c_void;
     use std::ptr::null_mut;
     use std::sync::atomic::{AtomicPtr, Ordering};
@@ -77,30 +78,6 @@ mod ffi {
 
     table! {
 
-        ohpl_a9h_new(
-            set: W,
-            kind: i32,
-            parent: W,
-            pos: *const f32,
-            size: *const f32,
-            flags: i32,
-            t: *const u32,
-            n: usize,
-        ) -> W;
-        ohpl_a9h_popup(
-            set: W,
-            s: *const Str,
-            obj: usize,
-            kill_escape: i32,
-            copy_focus: bool,
-        ) -> W;
-        ohpl_a9h_w(w: W, op: i32, arg: usize) -> usize;
-        ohpl_a9h_w_set_f(w: W, op: i32, v: *const f32);
-        ohpl_a9h_w_str(w: W, op: i32, t: *const u32, n: usize, arg: usize) -> usize;
-        ohpl_a9h_w_get_str(w: W, op: i32, idx: i32, sink: Sink, ctx: *mut c_void);
-        ohpl_a9h_w_cb(w: W, msg: i32, obj: usize);
-        ohpl_a9h_text_width(w: W, t: *const u32, n: usize) -> f32;
-        ohpl_a9h_image_file(w: W, t: *const u32, n: usize);
         ohpl_a9h_lux(op: i32, arg: usize) -> usize;
         ohpl_a9h_lux_str(op: i32, sink: Sink, ctx: *mut c_void);
         ohpl_a9h_lux_with(op: i32, t: *const u32, n: usize) -> usize;
@@ -264,7 +241,9 @@ pub mod f {
 mod wstr {
     #[cfg(test)]
     pub const TEXT: i32 = 0;
+    #[cfg(test)]
     pub const ILLEGAL: i32 = 1;
+    #[cfg(test)]
     pub const LIST_ADD: i32 = 2;
 }
 
@@ -288,25 +267,10 @@ pub enum Arrow {
     Left = 3,
 }
 
-/// Runs the Rust-owned path first; the tests replay against the fake host.
-#[cfg(not(test))]
-macro_rules! direct {
-    ($e:expr) => {
-        if let Some(r) = $e {
-            return r;
-        }
-    };
-}
-
-#[cfg(test)]
-macro_rules! direct {
-    ($e:expr) => {};
-}
-
 pub fn create(set: W, kind: Kind, parent: W, pos: [f32; 3], size: [f32; 2], text: &[u32]) -> W {
-    direct!(super::direct::create(
-        set, kind, parent, pos, size, false, text
-    ));
+    #[cfg(not(test))]
+    return super::direct::create(set, kind, parent, pos, size, false, text);
+    #[cfg(test)]
     host!(ffi::ohpl_a9h_new(
         set,
         kind as i32,
@@ -320,15 +284,9 @@ pub fn create(set: W, kind: Kind, parent: W, pos: [f32; 3], size: [f32; 2], text
 }
 
 pub fn create_window(set: W, close: bool, pos: [f32; 3], size: [f32; 2], text: &[u32]) -> W {
-    direct!(super::direct::create(
-        set,
-        Kind::Window,
-        W::NULL,
-        pos,
-        size,
-        close,
-        text
-    ));
+    #[cfg(not(test))]
+    return super::direct::create(set, Kind::Window, W::NULL, pos, size, close, text);
+    #[cfg(test)]
     host!(ffi::ohpl_a9h_new(
         set,
         Kind::Window as i32,
@@ -373,10 +331,14 @@ pub fn popup(
     obj: usize,
     opts: Opts,
 ) -> W {
+    #[cfg(not(test))]
+    return super::direct::popup(set, [title, text, ok, cancel], obj, opts.kill_escape);
+    #[cfg(test)]
     let s = [title, text, ok, cancel].map(|t| Str {
         p: t.as_ptr(),
         n: t.len(),
     });
+    #[cfg(test)]
     host!(ffi::ohpl_a9h_popup(
         set,
         s.as_ptr(),
@@ -413,7 +375,11 @@ impl W {
     }
 
     fn op(self, op: i32, arg: usize) -> usize {
-        direct!(super::direct::op(self, op, arg));
+        #[cfg(not(test))]
+        {
+            super::direct::op(self, op, arg).unwrap_or_default()
+        }
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_w(self, op, arg))
     }
 
@@ -514,6 +480,9 @@ impl W {
     }
 
     pub fn list_add(self, text: &[u32], user: W) {
+        #[cfg(not(test))]
+        super::direct::list_add(self, text, user.addr());
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_w_str(
             self,
             wstr::LIST_ADD,
@@ -537,6 +506,9 @@ impl W {
     }
 
     pub fn set_illegal_chars(self, text: &[u32]) {
+        #[cfg(not(test))]
+        super::direct::set_illegal_chars(self, text);
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_w_str(
             self,
             wstr::ILLEGAL,
@@ -556,11 +528,18 @@ impl W {
     }
 
     pub fn list_item_text(self, i: i32) -> WStr {
+        #[cfg(not(test))]
+        {
+            super::direct::list_item_text(self, i)
+        }
+        #[cfg(test)]
         collect(|s, c| host!(ffi::ohpl_a9h_w_get_str(self, wstr::LIST_ADD, i, s, c)))
     }
 
     pub fn set_f(self, op: i32, v: &[f32]) {
-        direct!(super::direct::set_f(self, op, v).then_some(()));
+        #[cfg(not(test))]
+        super::direct::set_f(self, op, v);
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_w_set_f(self, op, v.as_ptr()));
     }
 
@@ -595,6 +574,9 @@ impl W {
     }
 
     pub fn add_callback(self, message: i32, obj: usize) {
+        #[cfg(not(test))]
+        super::direct::add_callback(self, message, obj);
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_w_cb(self, message, obj));
     }
 
@@ -606,10 +588,16 @@ impl W {
     }
 
     pub fn text_width(self, text: &[u32]) -> f32 {
+        #[cfg(not(test))]
+        return super::direct::text_width(self, text);
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_text_width(self, text.as_ptr(), text.len()))
     }
 
     pub fn set_image_file(self, file: &[u32]) {
+        #[cfg(not(test))]
+        super::direct::set_image_file(self, file);
+        #[cfg(test)]
         host!(ffi::ohpl_a9h_image_file(self, file.as_ptr(), file.len()));
     }
 }

@@ -59,7 +59,7 @@ void OhplS4bBegin(cSomaLuxEntity *apEnt)
 	if (gSeen.insert(apEnt).second == false)
 	{
 		gPrev.assign(gSeen.begin(), gSeen.end());
-		std::sort(gPrev.begin(), gPrev.end(), [](cSomaLuxEntity *a, cSomaLuxEntity *b) { return a->msName < b->msName; });
+		std::sort(gPrev.begin(), gPrev.end(), [](cSomaLuxEntity *a, cSomaLuxEntity *b) { return a->GetName() < b->GetName(); });
 		gSeen.clear();
 		gSeen.insert(apEnt);
 	}
@@ -132,7 +132,7 @@ void OhplS4bBegin(cSomaLuxEntity *apEnt)
 					if (SomaAgentGetMatrix(p, m) == false)
 						continue;
 					SomaAgentSaveExtra(p, fYaw, bS, bD);
-					fprintf(f, "SAVEAGENT %s st=%d pos=%.9g,%.9g,%.9g yaw=%.9g s=%d d=%d path=", p->msName.c_str(), SomaAgentGetState(p), m.GetTranslation().x, m.GetTranslation().y,
+					fprintf(f, "SAVEAGENT %s st=%d pos=%.9g,%.9g,%.9g yaw=%.9g s=%d d=%d path=", p->GetName().c_str(), SomaAgentGetState(p), m.GetTranslation().x, m.GetTranslation().y,
 							m.GetTranslation().z, fYaw, bS, bD);
 					for (unsigned char c : sPath)
 						fprintf(f, "%02x", c);
@@ -147,7 +147,7 @@ void OhplS4bBegin(cSomaLuxEntity *apEnt)
 		}
 	}
 	unsigned lSeed = (unsigned)glTick * 2654435761u;
-	for (char c : apEnt->msName)
+	for (char c : apEnt->GetName())
 		lSeed = lSeed * 31u + (unsigned char)c;
 	srand(lSeed);
 }
@@ -160,7 +160,7 @@ void OhplS4bEnd(cSomaLuxEntity *apEnt)
 		return;
 	cVector3f p = pBody->GetPosition(), v = pBody->GetVelocity(1.0f / 60.0f);
 	cAnimationState *pAnim = apEnt->mpMesh && apEnt->mlCurrentAnim >= 0 ? apEnt->mpMesh->GetAnimationState(apEnt->mlCurrentAnim) : NULL;
-	fprintf(f, "%s a=%d pos=%.9g,%.9g,%.9g vel=%.9g,%.9g,%.9g yaw=%.9g anim=%s@%.9g | %s\n", apEnt->msName.c_str(), apEnt->mbActive ? 1 : 0, p.x, p.y, p.z, v.x, v.y, v.z,
+	fprintf(f, "%s a=%d pos=%.9g,%.9g,%.9g vel=%.9g,%.9g,%.9g yaw=%.9g anim=%s@%.9g | %s\n", apEnt->GetName().c_str(), apEnt->mbActive ? 1 : 0, p.x, p.y, p.z, v.x, v.y, v.z,
 			pBody->GetYaw(), pAnim ? pAnim->GetName().c_str() : "-", pAnim ? pAnim->GetTimePosition() : -1.0f, SomaAgentDebug(apEnt).c_str());
 	fflush(f);
 }

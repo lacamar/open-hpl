@@ -51,8 +51,12 @@ namespace hpl {
 	class cCamera
 	{
 	public:
-		cCamera();
-		~cCamera();
+		cCamera()
+		{
+			static_assert(offsetof(cCamera, mNode) == 472 && offsetof(cCamera, mFrustum) == 520, "cCamera layout (rust/src/scene/cxx_camera.rs)");
+			ohpl_h10_cam_init(&mS);
+		}
+		~cCamera(){}
 
 		const cVector3f& GetPosition()const{return mS.mvPosition;}
 		void SetPosition(const cVector3f& avPos);
@@ -188,9 +192,9 @@ namespace hpl {
 		const cMatrixf& GetMoveMatrix();
 
 		//iCamera stuff:
-		void SetModelViewMatrix(iLowLevelGraphics* apLowLevel);
-		void SetProjectionMatrix(iLowLevelGraphics* apLowLevel);
-		cVector3f GetEyePosition(); 
+		void SetModelViewMatrix(iLowLevelGraphics* apLowLevel){}
+		void SetProjectionMatrix(iLowLevelGraphics* apLowLevel){}
+		cVector3f GetEyePosition(){ return mS.mvPosition;}
 
 		//////////////////////////////////////////////////
 		////////// RENDER SPECIFIC ///////////////////////
@@ -203,7 +207,6 @@ namespace hpl {
 		cMatrixf& GetPrevProjection(){ return mS.m_mtxPrevProjection;}
 
 	private:
-		void UpdateMoveMatrix();
 
 		OhplH10Cam mS;
 

@@ -186,37 +186,7 @@ void cLuxPlayerState_Ladder::SetupHeadTurnLimits()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxPlayerState_Ladder_SaveData, iLuxPlayerState_DefaultBase_SaveData)
-kSerializeVar(mlState, eSerializeType_Int32)
-kSerializeVar(mvStartPosition, eSerializeType_Vector3f)
-
-kSerializeVar(mlLadderID, eSerializeType_Int32)
-
-kSerializeVar(mfTimeCount, eSerializeType_Float32)
-
-kSerializeVar(mvCharPosition, eSerializeType_Vector3f)
-
-kSerializeVar(mvGoalPos, eSerializeType_Vector3f)
-kSerializeVar(mvGoalRot, eSerializeType_Vector3f)
-
-kSerializeVar(mvPosAdd, eSerializeType_Vector3f)
-kSerializeVar(mvRotAdd, eSerializeType_Vector3f)
-
-kSerializeVar(mfMoveMul, eSerializeType_Float32)
-
-kSerializeVar(mfUpSpeed, eSerializeType_Float32)
-kSerializeVar(mfDownSpeed, eSerializeType_Float32)
-
-kSerializeVar(mfStepLength, eSerializeType_Float32)
-kSerializeVar(mfStepCount, eSerializeType_Float32)
-kSerializeVar(mbPlayedSound, eSerializeType_Bool)
-
-kSerializeVar(mfPitchMaxLimit, eSerializeType_Float32)
-kSerializeVar(mfPitchMinLimit, eSerializeType_Float32)
-
-kSerializeVar(mbLanternDrawn, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxPlayerState_Ladder_SaveData, iLuxPlayerState_DefaultBase_SaveData)
 
 //-----------------------------------------------------------------------
 

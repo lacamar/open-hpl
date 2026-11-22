@@ -193,12 +193,7 @@ bool cLuxPlayerState_InteractGrab::BodyIsAdded(iPhysicsBody *apBody)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxPlayerState_InteractGrab_SaveData, iLuxPlayerState_Interact_SaveData)
-kSerializeVar(m_mtxBodyRotation, eSerializeType_Matrixf)
-kSerializeVar(mvLocalBodyOffset, eSerializeType_Vector3f)
-kSerializeVar(mfDepth, eSerializeType_Float32)
-kSerializeVar(mfMaxDistance, eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClassP(cLuxPlayerState_InteractGrab_SaveData, iLuxPlayerState_Interact_SaveData)
 
 //-----------------------------------------------------------------------
 

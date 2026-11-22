@@ -169,11 +169,11 @@ cSomaLuxMap::cSomaLuxMap(cWorld *apWorld, const tString &asFileName)
 	mvEntities.swap(cSomaLuxEntity::Pending());
 	// cLuxMap::LoadFromFile adds the player and camera proxy entities
 	cSomaLuxEntity *pPlayer = new cSomaLuxEntity();
-	pPlayer->msName = "Player";
+	pPlayer->SetName("Player");
 	pPlayer->meType = eSomaLuxEntityType_Player;
 	mvEntities.push_back(pPlayer);
 	cSomaLuxEntity *pCamera = new cSomaLuxEntity();
-	pCamera->msName = "Camera";
+	pCamera->SetName("Camera");
 	pCamera->mpCameraNode = new cCameraNode();
 	mvEntities.push_back(pCamera);
 	std::vector<cSomaLuxEntity *> vLoaded;
@@ -291,7 +291,7 @@ bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 	}
 	if (apEnt->meType == eSomaLuxEntityType_Agent)
 		SomaCreateAgent(apEnt);
-	const cSomaLuxGame::cEntityScript *pScript = cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetEntityScript(vGroups[apEnt->meType], apEnt->msClassName) : NULL;
+	const cSomaLuxGame::cEntityScript *pScript = cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetEntityScript(vGroups[apEnt->meType], apEnt->GetClassName()) : NULL;
 	if (pScript == NULL)
 		return false;
 	tString sCustomFile = apEnt->mVars.GetVarString("CustomScriptFile", "");
@@ -329,9 +329,9 @@ void cSomaLuxMap::AddEntity(cSomaLuxEntity *apEnt)
 		apEnt->mID.mB = mlNextId++;
 	}
 	apEnt->mpMap = this;
-	apEnt->msScriptName = apEnt->msName;
+	apEnt->msScriptName = apEnt->GetName();
 	mvEntities.push_back(apEnt);
-	mmapEntities[cString::ToLowerCase(apEnt->msName)] = apEnt;
+	mmapEntities[cString::ToLowerCase(apEnt->GetName())] = apEnt;
 	mmapWildcardCache.clear();
 }
 
@@ -369,7 +369,7 @@ void cSomaLuxMap::DestroyEntity(cSomaLuxEntity *apEnt)
 			apEnt->SetActive(false);
 			mvEntities.erase(mvEntities.begin() + i);
 			mmapWildcardCache.clear();
-			auto itName = mmapEntities.find(cString::ToLowerCase(apEnt->msName));
+			auto itName = mmapEntities.find(cString::ToLowerCase(apEnt->GetName()));
 			if (itName != mmapEntities.end() && itName->second == apEnt)
 				mmapEntities.erase(itName);
 			if (mpLatestEntity == apEnt)
@@ -383,8 +383,8 @@ void cSomaLuxMap::DestroyEntity(cSomaLuxEntity *apEnt)
 static bool EntityNameMatch(const tString &asPattern, cSomaLuxEntity *apEnt)
 {
 	if (apEnt->meType == eSomaLuxEntityType_Player)
-		return cString::ToLowerCase(asPattern) == "player" || cString::MatchesWildcard(asPattern, apEnt->msName);
-	return cString::MatchesWildcard(asPattern, apEnt->msName);
+		return cString::ToLowerCase(asPattern) == "player" || cString::MatchesWildcard(asPattern, apEnt->GetName());
+	return cString::MatchesWildcard(asPattern, apEnt->GetName());
 }
 
 cSomaLuxEntity *cSomaLuxMap::GetEntity(const tString &asName)
@@ -394,7 +394,7 @@ cSomaLuxEntity *cSomaLuxMap::GetEntity(const tString &asName)
 		return it->second;
 	if (asName.find('*') != tString::npos)
 		for (cSomaLuxEntity *pEnt : mvEntities)
-			if (cString::MatchesWildcard(asName, pEnt->msName))
+			if (cString::MatchesWildcard(asName, pEnt->GetName()))
 				return pEnt;
 	return NULL;
 }
@@ -582,7 +582,7 @@ void cSomaLuxMap::UpdateLookAtCallbacks(float afTimeStep)
 	for (size_t i = 0; i < mvEntities.size(); ++i)
 	{
 		cSomaLuxEntity *pEnt = mvEntities[i];
-		if ((pEnt->msLookAtCallback == "" && pEnt->mbForceLookAtCheck == false) || pEnt->mbActive == false)
+		if ((pEnt->GetLookAtCallback() == "" && pEnt->mbForceLookAtCheck == false) || pEnt->mbActive == false)
 			continue;
 		// iLuxEntity::UpdatePlayerLookAt: checks every 0.3 s, delay counts down per check
 		if (pEnt->mfLookAtCheckTimer > 0)
@@ -592,7 +592,7 @@ void cSomaLuxMap::UpdateLookAtCallbacks(float afTimeStep)
 		}
 		pEnt->mfLookAtCheckTimer = 0.3f;
 		bool bNow = SomaPlayerLooksAt(pEnt, pCam);
-		if (pEnt->msLookAtCallback == "")
+		if (pEnt->GetLookAtCallback() == "")
 		{
 			pEnt->mbLookedAt = bNow;
 			continue;
@@ -612,12 +612,13 @@ void cSomaLuxMap::UpdateLookAtCallbacks(float afTimeStep)
 		pEnt->mfLookAtCountdown -= 0.3f;
 		if (pEnt->mfLookAtCountdown >= 0)
 			continue;
-		tString sFunc = pEnt->msLookAtCallback;
+		tString sFunc = pEnt->GetLookAtCallback();
 		if (bNow && pEnt->mbLookAtCallbackAutoRemove)
-			pEnt->msLookAtCallback = "";
+			pEnt->SetLookAtCallback("");
 		int lState = bNow ? 1 : -1;
+		tString sArgName0 = pEnt->GetName();
 		mpRuntime->Call(mpScript, "void " + sFunc + "(const tString &in, int)", [&](asIScriptContext *c) {
-			c->SetArgObject(0, &pEnt->msName);
+			c->SetArgObject(0, &sArgName0);
 			c->SetArgDWord(1, lState);
 		});
 	}
@@ -659,7 +660,7 @@ void cSomaLuxMap::UpdateCollideCallbacks()
 				{
 					it = mmapWildcardCache.emplace(cb.msChild, std::vector<cSomaLuxEntity *>()).first;
 					for (cSomaLuxEntity *pEnt : mvEntities)
-						if (cString::MatchesWildcard(cb.msChild, pEnt->msName))
+						if (cString::MatchesWildcard(cb.msChild, pEnt->GetName()))
 							it->second.push_back(pEnt);
 				}
 				vChildren = it->second;
@@ -678,9 +679,10 @@ void cSomaLuxMap::UpdateCollideCallbacks()
 					continue;
 				int lState = bNow ? 1 : -1;
 				tString sDecl = "bool " + cb.msFunc + "(const tString &in, const tString &in, int)";
+				tString sP = pParent->GetName(), sC = pChild->GetName();
 				auto args = [&](asIScriptContext *ctx) {
-					ctx->SetArgObject(0, &pParent->msName);
-					ctx->SetArgObject(1, &pChild->msName);
+					ctx->SetArgObject(0, &sP);
+					ctx->SetArgObject(1, &sC);
 					ctx->SetArgDWord(2, lState);
 				};
 				bool bKeep = true;
@@ -889,7 +891,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 				std::vector<cMatrixf> vMtx;
 				for (iPhysicsBody *b : p->mvBodies)
 					vMtx.push_back(cMath::MatrixMul(rel.mtxInv, b->GetWorldMatrix()));
-				vCarried.emplace_back(p->msName, vMtx);
+				vCarried.emplace_back(p->GetName(), vMtx);
 			}
 		}
 		SomaSetPreloadMap("");
@@ -1032,7 +1034,7 @@ static void SomaDeloadMap(const tString &asArea)
 // Class filters name the script class (cScrAreaCameraAnimationNode) or the entity type
 static bool SomaEntityIsClass(cSomaLuxEntity *apEnt, const tString &asClass)
 {
-	if (asClass.empty() || asClass == apEnt->msClassName)
+	if (asClass.empty() || asClass == apEnt->GetClassName())
 		return true;
 	return apEnt->GetScript() && asClass == apEnt->GetScript()->GetObjectType()->GetName();
 }

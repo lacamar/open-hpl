@@ -102,8 +102,7 @@ void cLuxPlayerState_InteractSwingDoor::OnThrow()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxPlayerState_InteractSwingDoor_SaveData, iLuxPlayerState_InteractRotateBase_SaveData)
-kEndSerialize()
+kSerializeRustClassP(cLuxPlayerState_InteractSwingDoor_SaveData, iLuxPlayerState_InteractRotateBase_SaveData)
 
 //-----------------------------------------------------------------------
 

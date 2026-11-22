@@ -202,12 +202,7 @@ void cLuxProp_OilBarrel::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_OilBarrel_SaveData, iLuxProp_SaveData)
-
-kSerializeVar(mbAmountCalculated, eSerializeType_Bool)
-kSerializeVar(mfOilAmount, eSerializeType_Float32)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_OilBarrel_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

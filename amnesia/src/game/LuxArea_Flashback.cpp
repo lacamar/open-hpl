@@ -18,7 +18,6 @@
  */
 
 #include "LuxArea_Flashback.h"
-#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -97,7 +96,7 @@ cLuxArea_Flashback::~cLuxArea_Flashback()
 
 void cLuxArea_Flashback::OnUpdate(float afTimeStep)
 {
-	ohpl_a7_area_update(mpA7Area, this, mpMap->GetA7(), afTimeStep);
+	ohpl_a7_area_update(mpA7Area, this, GetMap()->GetA7(), afTimeStep);
 }
 
 //-----------------------------------------------------------------------

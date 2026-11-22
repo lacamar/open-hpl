@@ -616,13 +616,6 @@ pub unsafe extern "C" fn ohpl_a7_lamp_add(m: *mut Ctx, conn: *mut c_void, light:
 }
 
 /// # Safety
-/// `m` live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a7_lamp_find(m: *mut Ctx, light: *const c_void) -> *mut c_void {
-    mp!(m).lamp_find(light as usize) as *mut c_void
-}
-
-/// # Safety
 /// `m` live; `cb` valid for every connection.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_a7_lamp_each(m: *mut Ctx, cb: PtrCb, ctx: *mut c_void) {

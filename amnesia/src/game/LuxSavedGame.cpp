@@ -536,8 +536,8 @@ int cLuxSavedGameMap::Ga6FromCall(void *apCtx, unsigned alOp, int alA, int alB)
 			iLuxEntity *pEntity = e.mvEntities[alA];
 			switch(alB)
 			{
-			case eOhplGa6Func_Look: return pEntity->msLookAtCallback != "";
-			case eOhplGa6Func_Interact: return pEntity->msInteractCallback != "";
+			case eOhplGa6Func_Look: return pEntity->GetLookAtCallback() != "";
+			case eOhplGa6Func_Interact: return pEntity->GetInteractCallback() != "";
 			case eOhplGa6Func_Callback: return pEntity->msCallbackFunc != "";
 			case eOhplGa6Func_StateChange: return pEntity->msConnectionStateChangeCallback != "";
 			}
@@ -549,10 +549,10 @@ int cLuxSavedGameMap::Ga6FromCall(void *apCtx, unsigned alOp, int alA, int alB)
 			switch(alB)
 			{
 			case eOhplGa6Func_Look:
-				d.mlstEntityFunc_Look.Add(cLuxSavedGameEntityFunc(pEntity->GetID(), pEntity->msLookAtCallback, pEntity->mbLookAtCallbackRemove));
+				d.mlstEntityFunc_Look.Add(cLuxSavedGameEntityFunc(pEntity->GetID(), pEntity->GetLookAtCallback(), pEntity->GetLookAtCallbackRemove()));
 				break;
 			case eOhplGa6Func_Interact:
-				d.mlstEntityFunc_Interact.Add(cLuxSavedGameEntityFunc(pEntity->GetID(), pEntity->msInteractCallback, pEntity->mbInteractCallbackRemove));
+				d.mlstEntityFunc_Interact.Add(cLuxSavedGameEntityFunc(pEntity->GetID(), pEntity->GetInteractCallback(), pEntity->GetInteractCallbackRemove()));
 				break;
 			case eOhplGa6Func_Callback:
 				d.mlstEntityFunc_Callback.Add(cLuxSavedGameEntityFunc(pEntity->GetID(), pEntity->msCallbackFunc, false));

@@ -18,7 +18,6 @@
  */
 
 #include "LuxArea_Ladder.h"
-#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -83,7 +82,7 @@ cLuxArea_Ladder::cLuxArea_Ladder(const tString &asName, int alID, cLuxMap *apMap
 	mfMaxY(Pod<OhplA7Ladder>().maxY),
 	mfMinY(Pod<OhplA7Ladder>().minY)
 {
-	mfMaxFocusDistance = gpBase->mpGameCfg->GetFloat("Player_Interaction","Ladder_MaxFocusDist",0);
+	SetMaxFocusDistance(gpBase->mpGameCfg->GetFloat("Player_Interaction","Ladder_MaxFocusDist",0));
 }
 
 //-----------------------------------------------------------------------

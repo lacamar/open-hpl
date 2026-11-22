@@ -36,7 +36,7 @@ pub struct OhplSerHost {
     pub iter_free: Fp<Obj, ()>,
 }
 
-struct CHost<'a>(&'a OhplSerHost);
+pub(super) struct CHost<'a>(pub(super) &'a OhplSerHost);
 
 unsafe extern "C" fn collect(ctx: *mut c_void, p: *const u8, n: usize) {
     // SAFETY: `ctx` is the `Vec<u8>` passed by `top_class`; `p` is valid for `n` bytes.

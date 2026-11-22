@@ -191,8 +191,7 @@ void cLuxPlayerState_UseItem::UseItem()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxPlayerState_UseItem_SaveData, iLuxPlayerState_DefaultBase_SaveData)
-kEndSerialize()
+kSerializeRustClassP(cLuxPlayerState_UseItem_SaveData, iLuxPlayerState_DefaultBase_SaveData)
 
 //-----------------------------------------------------------------------
 

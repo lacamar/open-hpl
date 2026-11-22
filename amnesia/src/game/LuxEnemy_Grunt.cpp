@@ -153,7 +153,7 @@ const tString* cLuxEnemy_Grunt::Ga3SoundName(int alKind)
 
 void cLuxEnemy_Grunt::OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions)
 {
-	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
+	iPhysicsWorld *pPhysicsWorld = GetMap()->GetPhysicsWorld();
 
 	if(mCurrentState == eLuxEnemyState_AttackMeleeShort)
 	{
@@ -204,9 +204,7 @@ float cLuxEnemy_Grunt::GetDamageMul(float afAmount, int alStrength)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxEnemy_Grunt_SaveData, iLuxEnemy_SaveData)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxEnemy_Grunt_SaveData, iLuxEnemy_SaveData)
 
 //-----------------------------------------------------------------------
 

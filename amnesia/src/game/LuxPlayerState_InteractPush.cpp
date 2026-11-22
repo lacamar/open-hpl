@@ -134,8 +134,7 @@ float cLuxPlayerState_InteractPush::DrawDebug(cGuiSet *apSet,iFontData *apFont, 
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxPlayerState_InteractPush_SaveData, iLuxPlayerState_Interact_SaveData)
-kEndSerialize()
+kSerializeRustClassP(cLuxPlayerState_InteractPush_SaveData, iLuxPlayerState_Interact_SaveData)
 
 //-----------------------------------------------------------------------
 

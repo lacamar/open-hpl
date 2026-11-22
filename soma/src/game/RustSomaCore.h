@@ -145,6 +145,15 @@ extern "C"
 	void ohpl_se_register_props(void *engine, size_t core_offset);
 	OhplSeCore *ohpl_se_core_new();
 	void ohpl_se_core_free(OhplSeCore *);
+	struct OhplSeNames;
+	OhplSeNames *ohpl_se_names_new();
+	void ohpl_se_names_free(OhplSeNames *);
+	const unsigned char *ohpl_se_names_get(const OhplSeNames *, size_t, size_t *len);
+	const unsigned char *ohpl_se_var_get(OhplSeNames *, const unsigned char *, size_t, bool insert, size_t *len);
+	void ohpl_se_var_set(OhplSeNames *, const unsigned char *, size_t, const unsigned char *, size_t);
+	void ohpl_se_var_clear(OhplSeNames *);
+	const unsigned char *ohpl_se_var_at(const OhplSeNames *, size_t, const unsigned char **k, size_t *kl, size_t *vl);
+	void ohpl_se_names_set(OhplSeNames *, size_t, const unsigned char *, size_t len);
 }
 
 #endif

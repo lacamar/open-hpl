@@ -142,6 +142,7 @@ void ohpl_h10_node_add_translation(OhplNodePod*, const cVector3f*);
 void ohpl_h10_node_update_matrix(const OhplH10Host*, OhplNodePod*, bool);
 void ohpl_h10_node_apply_anim(const OhplH10Host*, OhplNodePod*, bool, bool);
 
+void ohpl_h10_cam_init(OhplH10Cam*);
 void ohpl_h10_cam_set_position(OhplH10Cam*, const cVector3f*);
 void ohpl_h10_cam_set_pitch(OhplH10Cam*, float);
 void ohpl_h10_cam_set_yaw(OhplH10Cam*, float);

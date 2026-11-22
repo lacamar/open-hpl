@@ -81,7 +81,7 @@ namespace hpl {
 	iPhysicsBody::iPhysicsBody(const tString &asName,iPhysicsWorld *apWorld,iCollideShape *apShape)
 		: iEntity3D(asName)
 	{
-		static_assert(offsetof(iPhysicsBody, mS) == 304, "rust/src/physics/cxx_body.rs MS_OFFSET");
+		static_assert(offsetof(iPhysicsBody, mS) == 304 && offsetof(iPhysicsBody, mpE) == 8, "rust/src/physics/cxx_body.rs MS_OFFSET, cxx_newton.rs ENT_POD");
 		ohpl_h15b_new(HostOp, reinterpret_cast<size_t>(this), &mS, reinterpret_cast<size_t>(apWorld), reinterpret_cast<size_t>(apShape));
 		mS->book = ohpl_h15_body_new();
 

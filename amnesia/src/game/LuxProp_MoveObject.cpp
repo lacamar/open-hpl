@@ -104,14 +104,14 @@ cLuxProp_MoveObject::~cLuxProp_MoveObject()
 
 bool cLuxProp_MoveObject::CanInteract(iPhysicsBody *apBody)
 {
-	return msInteractCallback!="";
+	return GetInteractCallback()!="";
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxProp_MoveObject::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	return msInteractCallback!="";
+	return GetInteractCallback()!="";
 }
 
 //-----------------------------------------------------------------------
@@ -140,7 +140,7 @@ void cLuxProp_MoveObject::UpdatePropSpecific(float afTimeStep)
 	//Check the anglular offset area
 	if(msAngularOffsetArea != "")
 	{
-		iLuxArea *pArea = static_cast<iLuxArea*>(mpMap->GetEntityByName(msAngularOffsetArea));
+		iLuxArea *pArea = static_cast<iLuxArea*>(GetMap()->GetEntityByName(msAngularOffsetArea));
 		if(pArea)
 		{
 			SetAngularOffsetPos(pArea->GetPosition());
@@ -163,7 +163,7 @@ void cLuxProp_MoveObject::UpdatePropSpecific(float afTimeStep)
 
 eLuxFocusCrosshair cLuxProp_MoveObject::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(msInteractCallback != "")
+	if(GetInteractCallback() != "")
 		return eLuxFocusCrosshair_Grab;
 	else
 		return eLuxFocusCrosshair_Default;
@@ -239,14 +239,7 @@ void cLuxProp_MoveObject::OnStartMove()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_MoveObject_SaveData, iLuxProp_SaveData)
-
-kSerializeVar(mvAngularOffsetPos, eSerializeType_Vector3f)
-kSerializeVar(mbUseAngularLocalOffset, eSerializeType_Bool)
-
-kSerializeVar(mbAutoMoveReachedGoal, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_MoveObject_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

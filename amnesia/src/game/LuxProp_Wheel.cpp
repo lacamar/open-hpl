@@ -147,7 +147,7 @@ void cLuxProp_Wheel::OnSetupAfterLoad(cWorld *apWorld)
 	iPhysicsJoint *pJoint = mvJoints[0];
 	if(pJoint->GetType() != ePhysicsJointType_Hinge)
 	{
-		Error("Wheel %s does not have a hinge joint!\n", msName.c_str());
+		Error("Wheel %s does not have a hinge joint!\n", GetName().c_str());
 		return;
 	}
 
@@ -270,7 +270,7 @@ void cLuxProp_Wheel::Ga4ApplyOp(const OhplGa4Op &aOp)
 			tString sSound = aOp.i == 1 ? msMaxLimitSound : msMinLimitSound;
 			if(sSound != "")
 			{
-				cSoundEntity *pSound = mpMap->GetWorld()->CreateSoundEntity("WheelSound", sSound, true);
+				cSoundEntity *pSound = GetMap()->GetWorld()->CreateSoundEntity("WheelSound", sSound, true);
 				if(pSound) pSound->SetPosition(mpHingeJoint->GetPivotPoint());
 			}
 		}
@@ -295,32 +295,7 @@ void cLuxProp_Wheel::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_Wheel_SaveData, iLuxProp_SaveData)
-kSerializeVar(mfAngle, eSerializeType_Float32)
-kSerializeVar(mfPrevAngle, eSerializeType_Float32)
-
-kSerializeVar(mfLastToMax, eSerializeType_Float32)
-kSerializeVar(mfLastToMin, eSerializeType_Float32)
-
-kSerializeVar(mlCurrentState, eSerializeType_Int32)
-kSerializeVar(mlStuckState, eSerializeType_Int32)
-
-kSerializeVar(mfJointAngle, eSerializeType_Float32)
-kSerializeVar(mfPrevJointAngle, eSerializeType_Float32)
-
-kSerializeVar(mbAutoMoving, eSerializeType_Bool)
-kSerializeVar(mfAutoMoveGoal, eSerializeType_Float32)
-
-kSerializeVar(mfMinLimit, eSerializeType_Float32)
-kSerializeVar(mfMaxLimit, eSerializeType_Float32)
-kSerializeVar(mbMinLimitStuck, eSerializeType_Bool)
-kSerializeVar(mbMaxLimitStuck, eSerializeType_Bool)
-
-kSerializeVar(mlSpinDir, eSerializeType_Int32)
-
-kSerializeVar(mbInteractionDisablesStuck, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_Wheel_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

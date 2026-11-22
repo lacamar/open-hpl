@@ -24,6 +24,8 @@
 #include "engine/EngineTypes.h"
 
 #include "engine/Updateable.h"
+#include "ai/AINodeGenerator.h"
+#include "system/MemoryManager.h"
 
 namespace hpl {
 
@@ -32,13 +34,13 @@ namespace hpl {
 	class cAI : public iUpdateable
 	{
 	public:
-		cAI();
-		~cAI();
+		cAI() : iUpdateable("HPL_AI"), mpAINodeGenerator(hplNew( cAINodeGenerator, () )){}
+		~cAI(){ hplDelete(mpAINodeGenerator);}
 
-		void Reset();
-		void Update(float afTimeStep);
-		
-		void Init();
+		void Reset(){}
+		void Update(float afTimeStep){}
+
+		void Init(){}
 		
 		cAINodeGenerator *GetNodeGenerator(){ return mpAINodeGenerator;}
 

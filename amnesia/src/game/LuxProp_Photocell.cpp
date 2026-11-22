@@ -178,13 +178,7 @@ void cLuxProp_Photocell::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_Photocell_SaveData, iLuxProp_SaveData)
-kSerializeVar(mbLit,	eSerializeType_Float32)
-kSerializeVar(mfLightLevel,	eSerializeType_Float32)
-kSerializeVar(mfLightLevelCheckCount,	eSerializeType_Float32)
-kSerializeVar(mfLightLevelOnLimit,	eSerializeType_Float32)
-kSerializeVar(mfLightLevelOffLimit,	eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_Photocell_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

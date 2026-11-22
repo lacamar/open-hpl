@@ -1,2 +1,1 @@
-ser_probe.xml: bytes of cSerializeClass::SaveToFile for the harness probe, recorded from the C++ before it was deleted (harness/build.sh OUT; harness/verify.sh OUT checks the Rust save bytes equal it).
-datadir_probe.cpp: binreloc vs ohpl_h1_data_dir, and spawn exit codes.
+ser_probe.xml: bytes of cSerializeClass::SaveToFile for the H1 probe, recorded from the C++ before it was deleted. The C++ harness was removed with the C++ serializer (SR, wave 17); a cargo test against this file is open (bd).

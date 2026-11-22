@@ -214,7 +214,7 @@ bool cLuxEnemy_WaterLurker::InRangeOfFood(iPhysicsBody *apFoodBody)
 
 void cLuxEnemy_WaterLurker::OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions)
 {
-	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
+	iPhysicsWorld *pPhysicsWorld = GetMap()->GetPhysicsWorld();
 
 	mpCharBody->GetCurrentBody()->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(1,1));
 
@@ -243,7 +243,7 @@ void cLuxEnemy_WaterLurker::SplashWater(eWaterLurkerSplash aType)
 	
 	if(sPS!="")
 	{
-		cParticleSystem *pPS = mpMap->GetWorld()->CreateParticleSystem("LurkerSplash", sPS,1);
+		cParticleSystem *pPS = GetMap()->GetWorld()->CreateParticleSystem("LurkerSplash", sPS,1);
 		if(pPS) pPS->SetPosition(mpCharBody->GetFeetPosition() + cVector3f(0, 0.7f, 0));
 	}
 
@@ -303,11 +303,7 @@ void cLuxEnemy_WaterLurker::PatrolEndOfPath()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxEnemy_WaterLurker_SaveData, iLuxEnemy_SaveData)
-
-kSerializeVar(mfPlayerDetectionHeight, eSerializeType_Float32)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxEnemy_WaterLurker_SaveData, iLuxEnemy_SaveData)
 
 //-----------------------------------------------------------------------
 

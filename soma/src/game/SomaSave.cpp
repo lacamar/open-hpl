@@ -476,17 +476,17 @@ public:
 	{
 		s.Clear();
 		memset(&h, 0, sizeof(h));
-		h.name = s.mPool.Add(p->msName);
+		h.name = s.mPool.Add(p->GetName());
 		h.active = p->mbActive;
 		h.interaction_disabled = p->mbInteractionDisabled;
 		h.interacted_with = p->mbInteractedWith;
 		h.effects_active = p->mbEffectsActive;
 		h.parent_type = p->mlParentType;
 		CopyB(h.parent_id, p->mParentID);
-		h.parent_name = s.mPool.Add(p->msParentName);
-		h.interact_cb = s.mPool.Add(p->msInteractCallback);
+		h.parent_name = s.mPool.Add(p->GetParentName());
+		h.interact_cb = s.mPool.Add(p->GetInteractCallback());
 		h.interact_auto_remove = p->mbInteractCallbackAutoRemove;
-		h.look_cb = s.mPool.Add(p->msLookAtCallback);
+		h.look_cb = s.mPool.Add(p->GetLookAtCallback());
 		h.look_auto_remove = p->mbLookAtCallbackAutoRemove;
 		h.look_center = p->mbLookAtCheckCenter;
 		h.look_ray = p->mbLookAtCheckRay;
@@ -544,11 +544,12 @@ public:
 	{
 		s.Clear();
 		memset(&t, 0, sizeof(t));
-		for (auto &v : p->mmapScriptVars)
-			s.mVars.push_back(OhplGs4VarPair{s.mPool.Add(v.first), s.mPool.Add(v.second)});
+		tString sKey, sVal;
+		for (size_t i = 0; p->VarAt(i, sKey, sVal); ++i)
+			s.mVars.push_back(OhplGs4VarPair{s.mPool.Add(sKey), s.mPool.Add(sVal)});
 		t.vars = Sl(s.mVars);
 		t.gui_active = p->mbGuiActive;
-		t.on_gui = s.mPool.Add(p->msOnGuiFunc);
+		t.on_gui = s.mPool.Add(p->GetOnGuiFunc());
 		if (p->mpImGui)
 		{
 			for (size_t i = 0; i < p->mpImGui->TimerCount(); ++i)
@@ -577,7 +578,7 @@ public:
 										   a->IsActive(), a->IsLooping(), a->IsPaused()});
 		}
 		t.anims = Sl(s.mAnims);
-		t.conn_cb = s.mPool.Add(p->msConnectionCallback);
+		t.conn_cb = s.mPool.Add(p->GetConnectionCallback());
 		for (auto &c : p->mvConnections)
 			s.mConns.push_back(OhplGs4Conn{s.mPool.Add(c.msName), s.mPool.Add(c.msEntity), c.mlStatesUsed, c.mbInvert});
 		t.conns = Sl(s.mConns);
@@ -663,8 +664,8 @@ public:
 			{
 				OhplGs4Spawned x;
 				memset(&x, 0, sizeof(x));
-				x.name = c.mPool.Add(p->msName);
-				x.file = c.mPool.Add(p->msFileName);
+				x.name = c.mPool.Add(p->GetName());
+				x.file = c.mPool.Add(p->GetFileName());
 				CopyF(x.mtx, p->GetMatrix());
 				CopyF(x.scale, p->mvScale);
 				CopyB(x.id, p->mID);
@@ -772,7 +773,7 @@ public:
 			{
 				OhplGs4Agent x;
 				memset(&x, 0, sizeof(x));
-				x.name = c.mPool.Add(p->msName);
+				x.name = c.mPool.Add(p->GetName());
 				CopyF(x.mtx, m);
 				x.state = SomaAgentGetState(p);
 				float fYaw;
@@ -826,7 +827,7 @@ public:
 		w.fog_areas = Sl(c.mFogAreas);
 
 		for (auto &[pParent, pChild, sFunc] : pMap->msetColliding)
-			c.mColliding.push_back(OhplGs4Colliding{c.mPool.Add(pParent->msName), c.mPool.Add(pChild->msName), c.mPool.Add(sFunc)});
+			c.mColliding.push_back(OhplGs4Colliding{c.mPool.Add(pParent->GetName()), c.mPool.Add(pChild->GetName()), c.mPool.Add(sFunc)});
 		w.colliding = Sl(c.mColliding);
 		w.display_name = c.mPool.Add(pMap->msDisplayNameEntry);
 
@@ -959,10 +960,10 @@ public:
 		t->mbInteractedWith = e->interacted_with;
 		t->mlParentType = e->parent_type;
 		IdFromB(t->mParentID, e->parent_id);
-		t->msParentName = FromRS(e->parent_name);
-		t->msInteractCallback = FromRS(e->interact_cb);
+		t->SetParentName(FromRS(e->parent_name));
+		t->SetInteractCallback(FromRS(e->interact_cb));
 		t->mbInteractCallbackAutoRemove = e->interact_auto_remove;
-		t->msLookAtCallback = FromRS(e->look_cb);
+		t->SetLookAtCallback(FromRS(e->look_cb));
 		t->mbLookAtCallbackAutoRemove = e->look_auto_remove;
 		if (glPendingVersion >= 8)
 		{
@@ -1081,9 +1082,9 @@ public:
 		cSomaLuxEntity *t = p ? p : r->mpDummyEnt.get();
 		if (glPendingVersion >= 12)
 		{
-			t->mmapScriptVars.clear();
+			t->ClearVars();
 			for (size_t i = 0; i < x->vars.n; ++i)
-				t->mmapScriptVars[FromRS(x->vars.p[i].key)] = FromRS(x->vars.p[i].value);
+				t->SetVar(FromRS(x->vars.p[i].key), FromRS(x->vars.p[i].value));
 		}
 		if (glPendingVersion >= 13)
 		{
@@ -1092,7 +1093,7 @@ public:
 		}
 		if (glPendingVersion >= 23)
 		{
-			t->msOnGuiFunc = FromRS(x->on_gui);
+			t->SetOnGuiFunc(FromRS(x->on_gui));
 			for (size_t i = 0; i < x->imgui_timers.n; ++i)
 			{
 				cSomaImGui::cTimer tm;
@@ -1124,7 +1125,7 @@ public:
 		}
 		if (glPendingVersion >= 20)
 		{
-			t->msConnectionCallback = FromRS(x->conn_cb);
+			t->SetConnectionCallback(FromRS(x->conn_cb));
 			t->mvConnections.clear();
 			for (size_t i = 0; i < x->conns.n; ++i)
 			{
@@ -1153,7 +1154,7 @@ public:
 			setSaved.insert(FromRS(apSaved[i]));
 		// entities destroyed before the save (broken windows) come back with the fresh map load
 		for (cSomaLuxEntity *p : std::vector<cSomaLuxEntity *>(pMap->GetEntities()))
-			if (setSaved.count(cString::ToLowerCase(p->msName)) == 0)
+			if (setSaved.count(cString::ToLowerCase(p->GetName())) == 0)
 				pMap->DestroyEntity(p);
 	}
 

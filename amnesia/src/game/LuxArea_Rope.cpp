@@ -18,7 +18,6 @@
  */
 
 #include "LuxArea_Rope.h"
-#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -128,11 +127,11 @@ cLuxRope::~cLuxRope()
 {
 	if(mpRopeGfx)
 	{
-		mpMap->GetWorld()->DestroyRopeEntity(mpRopeGfx);
+		GetMap()->GetWorld()->DestroyRopeEntity(mpRopeGfx);
 	}
 	if(mpRope)
 	{
-		mpMap->GetPhysicsWorld()->DestroyRope(mpRope);
+		GetMap()->GetPhysicsWorld()->DestroyRope(mpRope);
 	}
 }
 
@@ -152,11 +151,11 @@ void cLuxRope::AfterWorldLoad()
 	{
 		if(lRopeAction == kOhplGa5RopeRelink)
 		{
-			mpRope = mpMap->GetPhysicsWorld()->GetRopeFromUniqueID(mlID);
-			if(mpRope==NULL) Error("Cannot find rope physics entity with ID %d for lux rope '%s'\n", mlID, msName.c_str());
+			mpRope = GetMap()->GetPhysicsWorld()->GetRopeFromUniqueID(GetID());
+			if(mpRope==NULL) Error("Cannot find rope physics entity with ID %d for lux rope '%s'\n", GetID(), GetName().c_str());
 
-			mpRopeGfx = mpMap->GetWorld()->GetRopeEntityFromUniqueID(mlID);
-			if(mpRopeGfx==NULL) Error("Cannot find rope gfx entity with ID %d for lux rope '%s'\n", mlID, msName.c_str());
+			mpRopeGfx = GetMap()->GetWorld()->GetRopeEntityFromUniqueID(GetID());
+			if(mpRopeGfx==NULL) Error("Cannot find rope gfx entity with ID %d for lux rope '%s'\n", GetID(), GetName().c_str());
 		}
 
 		return; 
@@ -166,10 +165,10 @@ void cLuxRope::AfterWorldLoad()
 
 	/////////////////////////
 	// Get End Position
-	cLuxNode_Pos *pPosNode = mpMap->GetPosNode(msEndPosNode);
+	cLuxNode_Pos *pPosNode = GetMap()->GetPosNode(msEndPosNode);
 	if(pPosNode == NULL)
 	{
-		Error("Could not find end pos '%s' for rope '%s'\n", msEndPosNode.c_str(), msName.c_str());
+		Error("Could not find end pos '%s' for rope '%s'\n", msEndPosNode.c_str(), GetName().c_str());
 		return;
 	}
 	
@@ -185,7 +184,7 @@ void cLuxRope::AfterWorldLoad()
 
 	/////////////////////////
 	// Create Physics Rope
-	mpRope = mpMap->GetPhysicsWorld()->CreateRope(msName, mvStartPos, mvEndPos);
+	mpRope = GetMap()->GetPhysicsWorld()->CreateRope(GetName(), mvStartPos, mvEndPos);
 
 	mpRope->SetMinTotalLength(mfMinTotalLength);
 	mpRope->SetMaxTotalLength(mfMaxTotalLength);
@@ -200,7 +199,7 @@ void cLuxRope::AfterWorldLoad()
 	mpRope->SetAutoMoveAcc(mfAutoMoveAcc);
 	mpRope->SetAutoMoveMaxSpeed(mfAutoMoveMaxSpeed);
 
-	mpRope->SetUniqueID(mlID);
+	mpRope->SetUniqueID(GetID());
 
 	//Start body
 	if(pStartBody!=NULL)
@@ -221,14 +220,14 @@ void cLuxRope::AfterWorldLoad()
 	cResources *pResources = gpBase->mpEngine->GetResources();
 
 	int lMaxSegments = ohpl_ga5_rope_max_segments(mfMaxTotalLength, mfSegmentLength);
-	mpRopeGfx = mpMap->GetWorld()->CreateRopeEntity(msName, mpRope, lMaxSegments);
+	mpRopeGfx = GetMap()->GetWorld()->CreateRopeEntity(GetName(), mpRope, lMaxSegments);
 
 	mpRopeGfx->SetMaterial(pResources->GetMaterialManager()->CreateMaterial(msMaterial));
 	mpRopeGfx->SetRadius(mfRadius);
 	mpRopeGfx->SetLengthTileAmount(mfLengthTileAmount);
 	mpRopeGfx->SetLengthTileSize(mfLengthTileSize);
 
-	mpRopeGfx->SetUniqueID(mlID);
+	mpRopeGfx->SetUniqueID(GetID());
 }
 
 //-----------------------------------------------------------------------
@@ -262,10 +261,10 @@ void cLuxRope::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
 
 iPhysicsBody* cLuxRope::GetBody(const tString& asName)
 {
-	iPhysicsBody *pBody = mpMap->GetPhysicsWorld()->GetBody(asName);
+	iPhysicsBody *pBody = GetMap()->GetPhysicsWorld()->GetBody(asName);
 	if(pBody==NULL)
 	{
-		iLuxEntity *pEntity = mpMap->GetEntityByName(asName, eLuxEntityType_Prop);
+		iLuxEntity *pEntity = GetMap()->GetEntityByName(asName, eLuxEntityType_Prop);
         if(pEntity==NULL)
 		{
 			Error("Could not find body or entity with the name '%s'\n", asName.c_str());

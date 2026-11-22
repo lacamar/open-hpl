@@ -34,6 +34,7 @@ namespace hpl {
 	iPhysicsMaterial::iPhysicsMaterial(const tString &asName, iPhysicsWorld *apWorld,int alMatId)
 		: mpWorld(apWorld), msName(asName), mbPreloaded(false), mpSurfaceData(NULL)
 	{
+		static_assert(offsetof(iPhysicsMaterial, mpSurfaceData) == 48 && offsetof(iPhysicsMaterial, mlMaterialId) == 64 && offsetof(iPhysicsMaterial, mFrictionMode) == 68 && sizeof(OhplNewtonMatProps) == 20, "rust/src/physics/cxx_newton.rs material offsets");
 		iPhysicsWorld *pNWorld = static_cast<iPhysicsWorld*>(mpWorld);
 
 		mpNewtonWorld = pNWorld->GetNewtonWorld();
@@ -56,84 +57,6 @@ namespace hpl {
 		mfKineticFriction = 0.3f;
 
 		//Log(" Created physics material '%s' with Newton id %d\n",asName.c_str(),mlMaterialId);
-	}
-
-	void iPhysicsMaterial::SetElasticity(float afElasticity)
-	{
-		mfElasticity = afElasticity;
-
-		UpdateMaterials();
-	}
-
-	float iPhysicsMaterial::GetElasticity() const
-	{
-		return mfElasticity;
-	}
-
-	void iPhysicsMaterial::SetStaticFriction(float afElasticity)
-	{
-		mfStaticFriction = afElasticity;
-
-		UpdateMaterials();
-	}
-
-	float iPhysicsMaterial::GetStaticFriction() const
-	{
-		return mfStaticFriction;
-	}
-
-	void iPhysicsMaterial::SetKineticFriction(float afElasticity)
-	{
-		mfKineticFriction = afElasticity;
-
-		UpdateMaterials();
-	}
-
-	float iPhysicsMaterial::GetKineticFriction() const
-	{
-		return mfKineticFriction;
-	}
-
-	void iPhysicsMaterial::SetFrictionCombMode(ePhysicsMaterialCombMode aMode)
-	{
-		mFrictionMode = aMode;
-
-		UpdateMaterials();
-	}
-
-	ePhysicsMaterialCombMode iPhysicsMaterial::GetFrictionCombMode() const
-	{
-		return mFrictionMode;
-	}
-
-	void iPhysicsMaterial::SetElasticityCombMode(ePhysicsMaterialCombMode aMode)
-	{
-		mElasticityMode = aMode;
-
-		UpdateMaterials();
-	}
-
-	ePhysicsMaterialCombMode iPhysicsMaterial::GetElasticityCombMode() const
-	{
-		return mElasticityMode;
-	}
-
-	// PRIVATE METHODS
-
-	void iPhysicsMaterial::UpdateMaterials()
-	{
-		cPhysicsMaterialIterator MatIt = mpWorld->GetMaterialIterator();
-
-		while(MatIt.HasNext())
-		{
-			iPhysicsMaterial* pMat = static_cast<iPhysicsMaterial*>(MatIt.Next());
-
-			OhplNewtonMatProps propsA{mFrictionMode, mElasticityMode, mfElasticity, mfStaticFriction, mfKineticFriction};
-			OhplNewtonMatProps propsB{pMat->mFrictionMode, pMat->mElasticityMode, pMat->mfElasticity,
-										pMat->mfStaticFriction, pMat->mfKineticFriction};
-			ohpl_ntm_update_pair(static_cast<iPhysicsWorld*>(mpWorld)->RustHandle(), mlMaterialId, pMat->mlMaterialId,
-								&propsA, &propsB, pMat == this);
-		}
 	}
 
 	// STATIC NEWTON CALLBACKS

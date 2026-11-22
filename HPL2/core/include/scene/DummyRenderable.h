@@ -37,8 +37,8 @@ namespace hpl {
 	class cDummyRenderable : public iRenderable
 	{
 	public:
-		cDummyRenderable(tString asName);
-		virtual ~cDummyRenderable();
+		cDummyRenderable(tString asName) : iRenderable(asName){ mpE->applyBV = true; mBoundingVolume.SetSize(0);}
+		virtual ~cDummyRenderable(){}
 
 		//////////////////////////////
 		//Properties
@@ -55,7 +55,7 @@ namespace hpl {
 		eRenderableType GetRenderType(){ return eRenderableType_Dummy;}
 
 		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
-		cMatrixf* GetModelMatrix(cFrustum* apFrustum);
+		cMatrixf* GetModelMatrix(cFrustum* apFrustum){ m_mtxModelOutput = GetWorldMatrix(); return &m_mtxModelOutput;}
 		
 	private:
 		cMatrixf m_mtxModelOutput;

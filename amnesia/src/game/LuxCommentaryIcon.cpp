@@ -18,7 +18,6 @@
  */
 
 #include "LuxCommentaryIcon.h"
-#include "RustLuxSerialize.h"
 #include "RustLuxUi.h"
 
 #include "LuxMap.h"
@@ -65,7 +64,7 @@ void cLuxCommentaryIconLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 	pCommentaryIcon->mvParticleSystems = mvParticleSystems;
 	pCommentaryIcon->mvBillboards = mvBillboards;
 
-	pCommentaryIcon->mfMaxFocusDistance = mfDefaultMaxFocusDistance;
+	pCommentaryIcon->SetMaxFocusDistance(mfDefaultMaxFocusDistance);
 
 	//Set body userdata
 	for(size_t i=0; i<mvBodies.size(); ++i)
@@ -115,7 +114,7 @@ cLuxCommentaryIcon::cLuxCommentaryIcon(const tString &asName, int alID, cLuxMap 
 
 cLuxCommentaryIcon::~cLuxCommentaryIcon()
 {
-	cWorld *pWorld = mpMap->GetWorld();
+	cWorld *pWorld = GetMap()->GetWorld();
 	iPhysicsWorld *pPhysicsWorld = pWorld->GetPhysicsWorld();
 	
 	////////////////////
@@ -197,7 +196,7 @@ bool cLuxCommentaryIcon::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos
 	}
 	else
 	{
-		gpBase->mpEffectHandler->GetPlayCommentary()->Start(msTalker, msTopic, msSoundFile, mlID);
+		gpBase->mpEffectHandler->GetPlayCommentary()->Start(msTalker, msTopic, msSoundFile, GetID());
 	}
 	SetPlayingSound(!mbPlayingSound);
 	
@@ -224,7 +223,7 @@ void cLuxCommentaryIcon::SetPlayingSound(bool abX)
 
     if(lPs == eOhplGa8Ps_Create)
 	{
-		cParticleSystem *pPS = mpMap->GetWorld()->CreateParticleSystem("_commentary_icon_ps","ps_commentary_icon.ps",1);
+		cParticleSystem *pPS = GetMap()->GetWorld()->CreateParticleSystem("_commentary_icon_ps","ps_commentary_icon.ps",1);
 		if(pPS)
 		{
 			pPS->SetPosition(mvBodies[0]->GetWorldPosition());
@@ -233,7 +232,7 @@ void cLuxCommentaryIcon::SetPlayingSound(bool abX)
 	}
 	else
 	{
-		cParticleSystem *pPS = mpMap->GetWorld()->GetParticleSystem("_commentary_icon_ps");
+		cParticleSystem *pPS = GetMap()->GetWorld()->GetParticleSystem("_commentary_icon_ps");
 		if(pPS)
 		{
 			pPS->Kill();

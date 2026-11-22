@@ -18,7 +18,6 @@
  */
 
 #include "LuxCritter_Bug.h"
-#include "RustLuxSerialize.h"
 
 #include "LuxPlayer.h"
 #include "LuxPlayerState.h"

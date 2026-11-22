@@ -245,7 +245,10 @@ namespace hpl {
 										eGuiMaterial aMaterial = eGuiMaterial_Alpha,
 										bool abAnimate=false,
 										iWidget *apParent=NULL,
-										const tString& asName = "" );
+										const tString& asName = "" )
+		{
+			return (cWidgetImage*)ohpl_gw_create_image(this, asFile.data(), asFile.size(), &avLocalPos, &avSize, aMaterial, abAnimate, (uintptr_t)apParent, asName.data(), asName.size());
+		}
 
 		cWidgetListBox* CreateWidgetListBox(const cVector3f &avLocalPos=0,
 											const cVector2f &avSize=0,
@@ -384,7 +387,7 @@ namespace hpl {
 			return static_cast<cGuiPopUpColorPicker*>(ohpl_g2_popup_color(this, GetSkin(), (uintptr_t)apDestColor, (uintptr_t)apCallbackObject, reinterpret_cast<uintptr_t>(apCallback)));
 		}
 
-		cGuiPopUpUIKeyboard* CreatePopUpUIKeyboard(cWidgetTextBox* apTarget);
+		cGuiPopUpUIKeyboard* CreatePopUpUIKeyboard(cWidgetTextBox* apTarget){ return static_cast<cGuiPopUpUIKeyboard*>(ohpl_g2_popup_kb_for((uintptr_t)apTarget)); }
 
 
 		void DestroyPopUp(iGuiPopUp *apPopUp){ ohpl_g1_set_destroy_popup(this, (uintptr_t)apPopUp); }
@@ -414,8 +417,8 @@ namespace hpl {
 
 		const cVector2f& GetMousePos(){ return P().state.mousePos;}
 
-		void SetRootWidgetClips(bool abX);
-		bool GetRootWidgetClips();
+		void SetRootWidgetClips(bool abX){ ohpl_g1_set_root_clips_set(this, abX); }
+		bool GetRootWidgetClips(){ return ohpl_g1_set_root_clips(this); }
 
 		void SetVirtualSize(const cVector2f& avSize, float afMinZ, float afMaxZ, const cVector2f& avOffset=0, bool abIgnoreGlobalScale=false)
 		{ ohpl_g1_set_set_virtual_size(this, &avSize, afMinZ, afMaxZ, &avOffset, abIgnoreGlobalScale); }
@@ -460,9 +463,9 @@ namespace hpl {
 		void Set3DTransform(const cMatrixf& a_mtxTransform){ ohpl_g1_set_set_3d_transform(this, (const float*)&a_mtxTransform); }
 		const cMatrixf& Get3DTransform(){ return *(const cMatrixf*)P().mtx3D;}
 
-		bool HasFocus();
+		bool HasFocus(){ return ohpl_g1_set_has_focus(this); }
 
-		void PositionWidgetInsideBounds(iWidget* apWidget);
+		void PositionWidgetInsideBounds(iWidget* apWidget){ ohpl_g1_set_position_inside_bounds(this, (uintptr_t)apWidget); }
 
 		void SetSkin(cGuiSkin* apSkin){ ohpl_g1_set_set_skin(this, apSkin); }
 		cGuiSkin* GetSkin(){ return ohpl_g1_set_skin(this);}

@@ -62,7 +62,7 @@ void cLuxPropLoader_Object::LoadVariables(iLuxProp *apProp, cXmlElement *apRootE
 		.Slot(kOhplGa4Slot_BreakSound, pObject->mBreakData.msSound)
 		.Slot(kOhplGa4Slot_BreakPs, pObject->mBreakData.msParticleSystem);
 	ohpl_ga4_object_load(vars.Vars(), (const unsigned char*)msEntitySubType.data(), msEntitySubType.size(),
-							&pObject->mfMaxFocusDistance, fFocusDefaults, &pObject->mP);
+							pObject->MaxFocusDistancePtr(), fFocusDefaults, &pObject->mP);
 
 	const OhplGa4ObjectParams &p = pObject->mP;
 	if(p.bad_sub_type)
@@ -232,7 +232,7 @@ cLuxProp_Object::~cLuxProp_Object()
 bool cLuxProp_Object::CanInteract(iPhysicsBody *apBody)
 {
 	return ohpl_ga4_object_can_interact(&mP, apBody->GetJointNum(), apBody->GetMass(),
-										mpMap->BodyIsInDetachableStickyArea(apBody), msInteractCallback!="");
+										GetMap()->BodyIsInDetachableStickyArea(apBody), GetInteractCallback()!="");
 }
 
 //-----------------------------------------------------------------------
@@ -241,7 +241,7 @@ bool cLuxProp_Object::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
 	iPhysicsBody *pBody = mpMainBody ? mpMainBody : apBody;
 
-	mpMap->DetachBodyFromStickyArea(apBody);
+	GetMap()->DetachBodyFromStickyArea(apBody);
 
 	////////////////////////
 	// Grab
@@ -363,7 +363,7 @@ void cLuxProp_Object::BeforePropDestruction()
 		return;
 	}
 
-	cWorld *pWorld = mpMap->GetWorld();
+	cWorld *pWorld = GetMap()->GetWorld();
 	cMatrixf mtxCenterTransform = cMatrixf::Identity;
 
 	////////////////////////////////
@@ -374,7 +374,7 @@ void cLuxProp_Object::BeforePropDestruction()
 		lIdx = GetBodyIndexFromName(mBreakData.msEntityAlignBody);
 		if(lIdx < 0){
 			lIdx = 0;
-			Warning("Body '%s' was not found in object '%s'", mBreakData.msEntityAlignBody.c_str(), msName.c_str());
+			Warning("Body '%s' was not found in object '%s'", mBreakData.msEntityAlignBody.c_str(), GetName().c_str());
 		}
 	}
 	iPhysicsBody *pBaseBody = mvBodies[lIdx];
@@ -432,16 +432,16 @@ void cLuxProp_Object::BeforePropDestruction()
 			cMatrixf mtxInvLocalBody = cMath::MatrixInverse(pBodyData->m_mtxLocalTransform);
 			cMatrixf mtxEntity = cMath::MatrixMul(pBaseBody->GetLocalMatrix(), mtxInvLocalBody);
 
-			mpMap->ResetLatestEntity();
-			mpMap->CreateEntity(msName + "_broken", mBreakData.msEntity, mtxEntity, OnLoadScaleRef());
+			GetMap()->ResetLatestEntity();
+			GetMap()->CreateEntity(GetName() + "_broken", mBreakData.msEntity, mtxEntity, OnLoadScaleRef());
 			
 			////////////////////////
 			//Add impulse and velocity
-			iLuxEntity *pEntity = mpMap->GetLatestEntity();
-			if(pEntity && mpMap->EntityExists(pEntity) && pEntity->GetEntityType() == eLuxEntityType_Prop)
+			iLuxEntity *pEntity = GetMap()->GetLatestEntity();
+			if(pEntity && GetMap()->EntityExists(pEntity) && pEntity->GetEntityType() == eLuxEntityType_Prop)
 			{
 				//If the parent has full game save, so must the broken version!
-				if(mbFullGameSave)
+				if(GetFullGameSave())
 				{
 					pEntity->SetFullGameSave(true);
 				}
@@ -472,10 +472,10 @@ void cLuxProp_Object::BeforePropDestruction()
 		
 		//////////////////////
 		//Get Prop
-        iLuxEntity *pEntity = mpMap->GetEntityByName(sProp, eLuxEntityType_Prop);
+        iLuxEntity *pEntity = GetMap()->GetEntityByName(sProp, eLuxEntityType_Prop);
 		if(pEntity==NULL)
 		{
-			Error("Could not find prop '%s' which is connected to '%s'\n", sProp.c_str(), msName.c_str());
+			Error("Could not find prop '%s' which is connected to '%s'\n", sProp.c_str(), GetName().c_str());
 			continue;
 		}
 		iLuxProp *pProp = static_cast<iLuxProp*>(pEntity);
@@ -505,10 +505,10 @@ void cLuxProp_Object::BeforePropDestruction()
 	if(msContainedItem != "")
 	{
 		tString sFile = "items/"+ msContainedItem;
-		mpMap->ResetLatestEntity();
-		mpMap->CreateEntity(msName + "_item", msContainedItem, mtxCenterTransform,1);
+		GetMap()->ResetLatestEntity();
+		GetMap()->CreateEntity(GetName() + "_item", msContainedItem, mtxCenterTransform,1);
 
-		iLuxEntity *pEntity = mpMap->GetLatestEntity();
+		iLuxEntity *pEntity = GetMap()->GetLatestEntity();
 		if(pEntity && pEntity->GetEntityType() == eLuxEntityType_Prop)
 		{
 			iLuxProp *pProp = static_cast<iLuxProp*>(pEntity);
@@ -524,7 +524,7 @@ void cLuxProp_Object::BeforePropDestruction()
 	// Create Sound
 	if(mBreakData.msSound != "")
 	{
-		cSoundEntity *pSound = pWorld->CreateSoundEntity(msName + "_BreakSound", mBreakData.msSound, true);
+		cSoundEntity *pSound = pWorld->CreateSoundEntity(GetName() + "_BreakSound", mBreakData.msSound, true);
 		if(pSound) pSound->SetPosition(mtxCenterTransform.GetTranslation());
 	}
 
@@ -532,7 +532,7 @@ void cLuxProp_Object::BeforePropDestruction()
 	// Create Particle System
 	if(mBreakData.msParticleSystem != "")
 	{
-		cParticleSystem *pPS = pWorld->CreateParticleSystem(msName + "_BreakPS", mBreakData.msParticleSystem,1);
+		cParticleSystem *pPS = pWorld->CreateParticleSystem(GetName() + "_BreakPS", mBreakData.msParticleSystem,1);
 		if(pPS) pPS->SetMatrix(mtxCenterTransform);
 	}
 
@@ -547,12 +547,12 @@ void cLuxProp_Object::BeforePropDestruction()
 
 eLuxFocusCrosshair cLuxProp_Object::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	switch(ohpl_ga4_object_focus_crosshair(&mP, CanInteract(apBody), mCustomFocusCrossHair==eLuxFocusCrosshair_Default))
+	switch(ohpl_ga4_object_focus_crosshair(&mP, CanInteract(apBody), GetCustomFocusCrossHair()==eLuxFocusCrosshair_Default))
 	{
 	case 0: return eLuxFocusCrosshair_Default;
 	case 1: return eLuxFocusCrosshair_Grab;
 	case 2: return eLuxFocusCrosshair_Push;
-	case 3: return mCustomFocusCrossHair;
+	case 3: return GetCustomFocusCrossHair();
 	}
 	return eLuxFocusCrosshair_LastEnum;
 }
@@ -571,7 +571,7 @@ void  cLuxProp_Object::SetStuckState(int alState)
 void cLuxProp_Object::Break()
 {
 	mS.broken = true;
-	mpMap->DestroyEntity(this);
+	GetMap()->DestroyEntity(this);
 }
 
 //-----------------------------------------------------------------------
@@ -605,7 +605,7 @@ void cLuxProp_Object::FoodAttractEnemies()
 {
 	///////////////////////////////////////
 	// Iterate enemies and see if any is close to be attracted
-	cLuxEnemyIterator enemyIt = mpMap->GetEnemyIterator();
+	cLuxEnemyIterator enemyIt = GetMap()->GetEnemyIterator();
 	while(enemyIt.HasNext())
 	{
 		iLuxEnemy *pEnemy = enemyIt.Next();
@@ -721,16 +721,7 @@ void cLuxProp_Object::SetJointMinMax(int alIdx, float afMin, float afMax)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_Object_SaveData, iLuxProp_SaveData)
-kSerializeVar(mfLifeLengthCount, eSerializeType_Float32)
-kSerializeVar(msContainedItem, eSerializeType_String)
-kSerializeVar(mlStuckState, eSerializeType_Int32)
-kSerializeVar(mfFoodAttractCount, eSerializeType_Float32)
-kSerializeVar(mbDisableBreakable, eSerializeType_Bool)
-kSerializeVar(mbIsInsanityVision, eSerializeType_Bool)
-kSerializeVar(mfVisionMaxSanity, eSerializeType_Float32)
-kSerializeVar(mbInsanityVisionActive, eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_Object_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

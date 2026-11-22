@@ -26,6 +26,7 @@
 
 #include "scene/Entity3D.h"
 #include "graphics/Renderable.h"
+#include "gui/GuiSet.h"
 
 namespace hpl {
 
@@ -43,10 +44,10 @@ namespace hpl {
 		typedef iRenderable __super;
 	#endif
 	public:
-		cGuiSetEntity(const tString asName,cGuiSet *apSet);
-		~cGuiSetEntity();
+		cGuiSetEntity(const tString asName,cGuiSet *apSet) : iRenderable(asName), mpGuiSet(apSet){ mBoundingVolume.SetSize(apSet->Get3DSize());}
+		~cGuiSetEntity(){}
 
-        void SetGuiSet(cGuiSet *apSet);
+        void SetGuiSet(cGuiSet *apSet){ mpGuiSet = apSet; mBoundingVolume.SetSize(apSet->Get3DSize());}
 		cGuiSet* GetGuiSet(){ return mpGuiSet;}
 		
 		/////////////////////////////////
@@ -59,8 +60,8 @@ namespace hpl {
 		iVertexBuffer* GetVertexBuffer(){return NULL;}
 
 		eRenderableType GetRenderType(){ return eRenderableType_GuiSet;}
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
-		int GetMatrixUpdateCount();
+		cMatrixf* GetModelMatrix(cFrustum *apFrustum){ m_mtxTemp = GetWorldMatrix(); return &m_mtxTemp;}
+		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
 
 	private:
 		cGuiSet *mpGuiSet;

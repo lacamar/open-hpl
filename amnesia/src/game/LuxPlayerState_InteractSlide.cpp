@@ -139,8 +139,7 @@ float cLuxPlayerState_InteractSlide::DrawDebug(cGuiSet *apSet,iFontData *apFont,
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxPlayerState_InteractSlide_SaveData, iLuxPlayerState_Interact_SaveData)
-kEndSerialize()
+kSerializeRustClassP(cLuxPlayerState_InteractSlide_SaveData, iLuxPlayerState_Interact_SaveData)
 
 //-----------------------------------------------------------------------
 

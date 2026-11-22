@@ -1,45 +1,19 @@
 //! Owner of the gui popups (`iGuiPopUp` and its four subclasses). `this` of the C++ facade
 //! (`gui/GuiPopUp*.h`) is the [`G2Popup`] allocation. The popup logic is `h21_popup`; widget
-//! access goes through the host command table (`RustGuiH21Host.cpp`) with the popup as context,
-//! and the file picker's `iFileBrowser` (still a C++ object) through [`PopupOps`].
+//! access is `h21_direct` with the popup as context, the file picker's browser `h21_fb`.
 
 use super::g1_set::ohpl_g1_set_destroy_popup;
+use super::h21_fb::FileBrowser;
 use super::h21_ffi::{
     HostVt, ohpl_h21_color_new, ohpl_h21_destroy, ohpl_h21_event, ohpl_h21_fp_init,
     ohpl_h21_fp_new, ohpl_h21_fp_on_add_filter, ohpl_h21_fp_on_navigate, ohpl_h21_fp_set_save_dest,
     ohpl_h21_kb_new, ohpl_h21_kill_on_escape, ohpl_h21_msgbox_new, ohpl_h21_set_destroy_callback,
     ohpl_h21_set_kill_on_escape, ohpl_h21_set_next_focus,
 };
-use super::h21_popup::{Cmd, Popup, Ret};
+use super::h21_popup::{Popup, Ret};
 use super::set::{Msg, W};
 use std::collections::LinkedList;
 use std::ffi::c_void;
-use std::sync::atomic::{AtomicPtr, Ordering};
-
-#[repr(C)]
-pub struct PopupOps {
-    pub exec: extern "C" fn(*mut c_void, *const Cmd, *mut Ret),
-    pub fb_new: extern "C" fn(*mut G2Popup, *const u32, usize, bool) -> usize,
-    pub fb_free: extern "C" fn(usize),
-    pub fb_save_dest: extern "C" fn(usize, *mut c_void),
-    pub fb_load_dest: extern "C" fn(usize, *mut c_void),
-    pub fb_add_category: extern "C" fn(usize, *const u32, usize, *const u32, usize) -> i32,
-    pub fb_add_filter: extern "C" fn(usize, i32, *const u32, usize),
-}
-
-static OPS: AtomicPtr<PopupOps> = AtomicPtr::new(std::ptr::null_mut());
-
-fn ops() -> Option<&'static PopupOps> {
-    // SAFETY: `ohpl_g2_popup_ops` contract.
-    unsafe { OPS.load(Ordering::Acquire).as_ref() }
-}
-
-/// # Safety
-/// `ops` is a static table that outlives every popup.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_g2_popup_ops(ops: *mut PopupOps) {
-    OPS.store(ops, Ordering::Release);
-}
 
 pub struct Binding {
     popup: *mut G2Popup,
@@ -48,18 +22,18 @@ pub struct Binding {
 
 pub struct G2Popup {
     state: *mut Popup,
-    set: usize,
-    skin: usize,
+    pub(super) set: usize,
+    pub(super) skin: usize,
     queued: bool,
     bindings: LinkedList<Binding>,
     strs: [Vec<u32>; 3],
-    fb: usize,
+    pub(super) fb: usize,
 }
 
 fn vt(p: *mut G2Popup) -> Option<HostVt> {
-    ops().map(|o| HostVt {
+    Some(HostVt {
         ctx: p.cast(),
-        exec: o.exec,
+        exec: super::h21_direct::exec,
     })
 }
 
@@ -162,11 +136,11 @@ pub unsafe extern "C" fn ohpl_g2_popup_filepicker(
     cb_fn: usize,
 ) -> *mut G2Popup {
     let p = alloc(set, skin);
-    if let (Some(v), Some(o)) = (vt(p), ops()) {
-        let fb = (o.fb_new)(p, path, path_n, hidden);
+    if let Some(v) = vt(p) {
         // SAFETY: caller contract; `p` is the allocation made above.
         unsafe {
-            (*p).fb = fb;
+            let start = std::slice::from_raw_parts(path, path_n);
+            (*p).fb = Box::into_raw(Box::new(FileBrowser::new(p, start, hidden))) as usize;
             (*p).state = ohpl_h21_fp_new(&v, kind, path, path_n, name, name_n, cb_obj, cb_fn);
         }
     }
@@ -179,6 +153,19 @@ pub unsafe extern "C" fn ohpl_g2_popup_filepicker(
 pub unsafe extern "C" fn ohpl_g2_popup_kb(set: usize, skin: usize, target: W) -> *mut G2Popup {
     // SAFETY: caller contract.
     build(set, skin, |_, v| unsafe { ohpl_h21_kb_new(v, target) })
+}
+
+/// `cGuiSet::CreatePopUpUIKeyboard`: the popup for `target`'s own set.
+///
+/// # Safety
+/// `target` is a live text box of a live set.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_g2_popup_kb_for(target: W) -> *mut G2Popup {
+    let set = super::gw::set_of(target);
+    // SAFETY: caller contract.
+    let skin = unsafe { super::g1_set::ohpl_g1_set_skin(set) } as usize;
+    // SAFETY: caller contract.
+    unsafe { ohpl_g2_popup_kb(set as usize, skin, target) }
 }
 
 /// # Safety
@@ -194,8 +181,9 @@ pub unsafe extern "C" fn ohpl_g2_popup_free(p: *mut G2Popup) {
         unsafe { ohpl_h21_destroy(&v, st) };
     }
     let fb = unsafe { fbof(p) };
-    if let (true, Some(o)) = (fb != 0, ops()) {
-        (o.fb_free)(fb);
+    if fb != 0 {
+        // SAFETY: made by `Box::into_raw` in `ohpl_g2_popup_filepicker`, freed once.
+        drop(unsafe { Box::from_raw(fb as *mut FileBrowser) });
     }
     // SAFETY: `p` came from `alloc` and is not used afterwards.
     drop(unsafe { Box::from_raw(p) });
@@ -243,21 +231,6 @@ pub unsafe extern "C" fn ohpl_g2_popup_set_next_focus(p: *mut G2Popup, w: W) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_g2_popup_set(p: *mut G2Popup) -> usize {
     unsafe { (*p).set }
-}
-
-/// # Safety
-/// `p` is a live popup.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_g2_popup_skin(p: *mut G2Popup) -> usize {
-    unsafe { (*p).skin }
-}
-
-/// # Safety
-/// `p` is a live popup.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_g2_popup_fb(p: *mut G2Popup) -> usize {
-    // SAFETY: caller contract.
-    unsafe { fbof(p) }
 }
 
 /// Queues the popup for deletion by its set, once.
@@ -361,8 +334,11 @@ pub unsafe extern "C" fn ohpl_g2_popup_fp_save_dest(
     name: *const u32,
     name_n: usize,
 ) {
-    if let (Some(v), Some(o)) = (vt(p), ops()) {
-        (o.fb_save_dest)(unsafe { fbof(p) }, dest);
+    if let Some(v) = vt(p) {
+        // SAFETY: caller contract.
+        if let Some(b) = unsafe { (fbof(p) as *mut FileBrowser).as_mut() } {
+            b.save_dest = dest as usize;
+        }
         // SAFETY: caller contract.
         unsafe { ohpl_h21_fp_set_save_dest(&v, state(p), name, name_n) };
     }
@@ -372,8 +348,9 @@ pub unsafe extern "C" fn ohpl_g2_popup_fp_save_dest(
 /// `p` is a live file picker; `dest` the caller's `tWStringVec`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_g2_popup_fp_load_dest(p: *mut G2Popup, dest: *mut c_void) {
-    if let Some(o) = ops() {
-        (o.fb_load_dest)(unsafe { fbof(p) }, dest);
+    // SAFETY: caller contract.
+    if let Some(b) = unsafe { (fbof(p) as *mut FileBrowser).as_mut() } {
+        b.load_dest = dest as usize;
     }
 }
 
@@ -387,9 +364,12 @@ pub unsafe extern "C" fn ohpl_g2_popup_fp_add_category(
     filter: *const u32,
     filter_n: usize,
 ) -> i32 {
-    ops().map_or(0, |o| {
-        (o.fb_add_category)(unsafe { fbof(p) }, cat, cat_n, filter, filter_n)
-    })
+    // SAFETY: caller contract.
+    unsafe {
+        let name = std::slice::from_raw_parts(cat, cat_n);
+        let filter = std::slice::from_raw_parts(filter, filter_n);
+        super::h21_fb::add_category(fbof(p) as *mut FileBrowser, name, filter)
+    }
 }
 
 /// # Safety
@@ -401,8 +381,10 @@ pub unsafe extern "C" fn ohpl_g2_popup_fp_add_filter(
     filter: *const u32,
     filter_n: usize,
 ) {
-    if let Some(o) = ops() {
-        (o.fb_add_filter)(unsafe { fbof(p) }, cat, filter, filter_n);
+    // SAFETY: caller contract.
+    unsafe {
+        let filter = std::slice::from_raw_parts(filter, filter_n);
+        super::h21_fb::add_filter(fbof(p) as *mut FileBrowser, cat, filter);
     }
 }
 

@@ -105,8 +105,7 @@ void cLuxPlayerState_HandObject::ImplementedOnLeaveState(eLuxPlayerState aNewSta
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxPlayerState_HandObject_SaveData, iLuxPlayerState_DefaultBase_SaveData)
-kEndSerialize()
+kSerializeRustClassP(cLuxPlayerState_HandObject_SaveData, iLuxPlayerState_DefaultBase_SaveData)
 
 //-----------------------------------------------------------------------
 

@@ -196,20 +196,7 @@ void cLuxProp_LevelDoor::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_LevelDoor_SaveData, iLuxProp_SaveData)
-
-kSerializeVar(msMapFile, eSerializeType_String)
-kSerializeVar(msStartPos, eSerializeType_String)
-kSerializeVar(msTextEntry, eSerializeType_String)
-
-kSerializeVar(mbLocked, eSerializeType_Bool)
-kSerializeVar(msLockedSound, eSerializeType_String)
-kSerializeVar(msLockedTextCat, eSerializeType_String)
-kSerializeVar(msLockedTextEntry, eSerializeType_String)
-
-kSerializeVar(mbShowStats, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_LevelDoor_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

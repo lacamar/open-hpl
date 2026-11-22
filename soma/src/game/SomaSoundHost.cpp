@@ -67,7 +67,11 @@ const void *ShellString(size_t e, unsigned which, const unsigned char *p, size_t
 {
 	static tString sEmpty;
 	if (which == 0)
-		return &Shell(e)->msName;
+	{
+		static tString sName;
+		sName = Shell(e)->GetName();
+		return &sName;
+	}
 	if (which == 1)
 	{
 		static tString sParam;
@@ -114,7 +118,7 @@ void ScapeAreas(size_t m, void (*sink)(void *, const OhplGs5AreaDef *), void *ct
 {
 	for (cSomaLuxEntity *pEnt : ((cSomaLuxMap *)m)->GetEntities())
 	{
-		if (pEnt->meType != eSomaLuxEntityType_Area || pEnt->msClassName != "Soundscape")
+		if (pEnt->meType != eSomaLuxEntityType_Area || pEnt->GetClassName() != "Soundscape")
 			continue;
 		cResourceVarsObject &v = pEnt->mInstanceVars;
 		tString sLevel = v.GetVarString("Level", ""), sBg = v.GetVarString("BG_Sound", ""), sIn = v.GetVarString("SoundEnt_InNames", ""),
@@ -261,7 +265,7 @@ const OhplS7Host kHost = {
 	CameraPos,
 	BodyPos,
 	ApplyReverb,
-	[](size_t e, OhplS7Sink sink, void *ctx) { sink(ctx, (const unsigned char *)((cSomaLuxEntity *)e)->msName.data(), ((cSomaLuxEntity *)e)->msName.size()); },
+	[](size_t e, OhplS7Sink sink, void *ctx) { sink(ctx, (const unsigned char *)((cSomaLuxEntity *)e)->GetName().data(), ((cSomaLuxEntity *)e)->GetName().size()); },
 	PrefixRef,
 	ScriptCall,
 };

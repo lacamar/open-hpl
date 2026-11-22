@@ -147,10 +147,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
-	kBeginSerializeBase(cScriptVar)
-	kSerializeVar(msName, eSerializeType_String)
-	kSerializeVar(mlVal, eSerializeType_Int32)
-	kEndSerialize()
+	kSerializeRustClass(cScriptVar)
 
 	//-----------------------------------------------------------------------
 }

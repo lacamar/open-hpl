@@ -124,7 +124,7 @@ cLuxProp_Item::~cLuxProp_Item()
 
 bool cLuxProp_Item::CanInteract(iPhysicsBody *apBody)
 {
-	return ohpl_ga4c_item_can_interact(mbDestroyMe);
+	return ohpl_ga4c_item_can_interact(GetDestroyMe());
 }
 
 class cLuxItemHost
@@ -173,10 +173,10 @@ void cLuxProp_Item::Ga4ApplyOp(const OhplGa4Op &aOp)
 	switch(aOp.code)
 	{
 	case kOhplGa4cOp_ItemAdd:
-		gpBase->mpInventory->AddItem(msName, mItemType, msSubItemTypeName, msImageFile, mfAmount, msVal,msExtraVal ,&mS.remove_prop);
+		gpBase->mpInventory->AddItem(GetName(), mItemType, msSubItemTypeName, msImageFile, mfAmount, msVal,msExtraVal ,&mS.remove_prop);
 		break;
 	case kOhplGa4cOp_ItemDestroy:
-		mpMap->DestroyEntity(this);
+		GetMap()->DestroyEntity(this);
 		break;
 	case kOhplGa4cOp_ItemPickSound:
 		gpBase->mpHelpFuncs->PlayGuiSoundData("ui/pick_"+msPickSound, eSoundEntryType_World);
@@ -202,7 +202,7 @@ void cLuxProp_Item::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 void cLuxProp_Item::UpdatePropSpecific(float afTimeStep)
 {
-	if(mbInteractionDisabled) return;
+	if(GetInteractionDisabled()) return;
 
 	cCamera *pCam =  gpBase->mpPlayer->GetCamera();
 	cVector3f vCameraPos = pCam->GetPosition();
@@ -239,13 +239,7 @@ eLuxFocusCrosshair cLuxProp_Item::GetFocusCrosshair(iPhysicsBody *apBody, const 
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_Item_SaveData, iLuxProp_SaveData)
-kSerializeVar(msVal, eSerializeType_String)
-kSerializeVar(msExtraVal, eSerializeType_String)
-kSerializeVar(mlSpawnContainerID, eSerializeType_Int32)
-kSerializeVar(mfAmount, eSerializeType_Float32)
-kSerializeVar(msSubItemTypeName, eSerializeType_String)
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_Item_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

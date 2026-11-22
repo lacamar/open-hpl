@@ -18,7 +18,6 @@
  */
 
 #include "LuxEntity.h"
-#include "RustLuxSerialize.h"
 #include "RustLuxProp.h"
 #include <cstring>
 
@@ -32,34 +31,8 @@
 
 //-----------------------------------------------------------------------
 
-iLuxEntity::iLuxEntity(const tString &asName, int alID, cLuxMap *apMap, eLuxEntityType aEntityType) : iLuxCollideCallbackContainer()
+iLuxEntity::iLuxEntity(const tString &asName, int alID, cLuxMap *apMap, eLuxEntityType aEntityType) : iLuxCollideCallbackContainer(), mpS(ohpl_ent_state_new(alID, aEntityType, apMap)), msName(asName), mpSaveData(NULL)
 {
-	msName = asName;
-	mpMap = apMap;
-	mEntityType = aEntityType;
-	mlID = alID;
-	mbActive = true;
-	mbFullGameSave = false;
-
-	msCallbackFunc = "";
-	msConnectionStateChangeCallback = "";
-
-	mfMaxFocusDistance = 2.0f;
-
-	mbDestroyMe = false;
-	mbIsSaved = true;
-
-	mCustomFocusCrossHair = eLuxFocusCrosshair_Default;
-
-	msInteractCallback = "";
-	mbInteractCallbackRemove = true;
-
-	msLookAtCallback = "";
-	mbLookAtCallbackRemove = true;
-	mfLookAtCount =0;
-	mbIsLookedAt = false;
-
-	mbInteractionDisabled = false;
 }
 
 //-----------------------------------------------------------------------
@@ -81,6 +54,7 @@ iLuxEntity::~iLuxEntity()
 	STLDeleteAll(mvConnections);
 
 	DestroyCollideCallbacks();
+	ohpl_ent_state_free(mpS);
 }
 
 //-----------------------------------------------------------------------
@@ -110,7 +84,7 @@ cSoundEntity* iLuxEntity::PlaySound(const tString& asName, const tString& asFile
 {
 	if(asFile == "") return NULL;
 
-	cSoundEntity *pSound = mpMap->GetWorld()->CreateSoundEntity(msName + "_" + asName,asFile,abRemoveWhenDone);
+	cSoundEntity *pSound = GetMap()->GetWorld()->CreateSoundEntity(msName + "_" + asName,asFile,abRemoveWhenDone);
 	iEntity3D *pAttachEnt = GetAttachEntity();
 
 	switch(ohpl_ga4c_ent_attach(pSound != NULL, pAttachEnt != NULL, abAttach))
@@ -135,14 +109,14 @@ void iLuxEntity::RunCallbackFunc(const tString& asType)
 void iLuxEntity::RunInteractCallbackFunc()
 {
 	OhplGa4cEntSink sink(this);
-	ohpl_ga4c_ent_run_interact(&mGa4cCb, msInteractCallback != "", sink.Sink());
+	ohpl_ga4c_ent_run_interact(&mpS->cb, msInteractCallback != "", sink.Sink());
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxEntity::SetActive(bool abX)
 {
-	if(ohpl_ga4c_ent_set_active(&mbActive, abX) == false) return;
+	if(ohpl_ga4c_ent_set_active(&mpS->active, abX) == false) return;
 
     OnSetActive(abX);
 }
@@ -164,7 +138,7 @@ void iLuxEntity::RemoveCollideCallbackParent(iLuxCollideCallbackContainer* apCal
 void iLuxEntity::SetPlayerInteractCallback(const tString &asCallbackFunc, bool abRemoveWhenInteracted)
 {
 	msInteractCallback = asCallbackFunc;
-	mbInteractCallbackRemove = abRemoveWhenInteracted;
+	mpS->cb.interact_remove = abRemoveWhenInteracted;
 }
 
 //-----------------------------------------------------------------------
@@ -172,7 +146,7 @@ void iLuxEntity::SetPlayerInteractCallback(const tString &asCallbackFunc, bool a
 void iLuxEntity::SetPlayerLookAtCallback(const tString &asCallbackFunc, bool abRemoveWhenLookedAt)
 {
 	msLookAtCallback = asCallbackFunc;
-	mbLookAtCallbackRemove = abRemoveWhenLookedAt;
+	mpS->cb.lookat_remove = abRemoveWhenLookedAt;
 }
 
 //-----------------------------------------------------------------------
@@ -195,7 +169,7 @@ void iLuxEntity::AddConnection(const tString& asName, iLuxEntity *apEntity, bool
 
 void iLuxEntity::UpdateCheckCollideCallback(float afTimeStep)
 {
-	CheckCollisionCallback(msName, mpMap);
+	CheckCollisionCallback(msName, GetMap());
 }
 
 
@@ -260,7 +234,7 @@ void iLuxEntity::UpdatePlayerLookAt(float afTimeStep)
 	los.los = &LuxEntityLineOfSight;
 
 	OhplGa4cEntSink sink(this);
-	ohpl_ga4c_ent_look_at(&mGa4cCb, msLookAtCallback != "", afTimeStep, host.Host(), &los, sink.Sink());
+	ohpl_ga4c_ent_look_at(&mpS->cb, msLookAtCallback != "", afTimeStep, host.Host(), &los, sink.Sink());
 }
 
 //-----------------------------------------------------------------------
@@ -304,10 +278,10 @@ void iLuxEntity::Ga4cApplyOp(const OhplGa4Op &aOp, const tString *apType)
 	switch(aOp.code)
 	{
 	case kOhplGa4cOp_EntCallback:
-		mpMap->RunScript(msCallbackFunc + "(\""+msName+"\", \""+*apType+"\")" );
+		GetMap()->RunScript(msCallbackFunc + "(\""+msName+"\", \""+*apType+"\")" );
 		break;
 	case kOhplGa4cOp_EntInteract:
-		mpMap->RunScript(msInteractCallback + "(\""+msName+"\")");
+		GetMap()->RunScript(msInteractCallback + "(\""+msName+"\")");
 		break;
 	case kOhplGa4cOp_EntClearInteract:
 		msInteractCallback = "";
@@ -316,14 +290,14 @@ void iLuxEntity::Ga4cApplyOp(const OhplGa4Op &aOp, const tString *apType)
 		{
 			tString sTempCallback = msLookAtCallback;
 			if(aOp.i) msLookAtCallback = "";
-			mpMap->RunScript(sTempCallback + "(\""+msName+"\", 1)" );
+			GetMap()->RunScript(sTempCallback + "(\""+msName+"\", 1)" );
 		}
 		break;
 	case kOhplGa4cOp_EntLookAtLeave:
-		mpMap->RunScript(msLookAtCallback + "(\""+msName+"\", -1)" );
+		GetMap()->RunScript(msLookAtCallback + "(\""+msName+"\", -1)" );
 		break;
 	case kOhplGa4cOp_EntConnChangeCb:
-		mpMap->RunScript(	msConnectionStateChangeCallback +
+		GetMap()->RunScript(	msConnectionStateChangeCallback +
 							"(\""+msName+"\", "+ cString::ToString(aOp.i) + ")");
 		break;
 	case kOhplGa4cOp_EntConnSend:
@@ -337,7 +311,7 @@ void iLuxEntity::Ga4cApplyOp(const OhplGa4Op &aOp, const tString *apType)
 															"\"" + msName +  + "\"," +
 															"\"" + pConn->GetEntity()->GetName() + "\"," +
 															cString::ToString(aOp.j) + ")";
-			mpMap->RunScript(sCommand);
+			GetMap()->RunScript(sCommand);
 		}
 		break;
 	}
@@ -415,7 +389,7 @@ private:
 
 bool iLuxEntity::CollidesWithPlayer()
 {
-	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
+	iPhysicsWorld *pPhysicsWorld = GetMap()->GetPhysicsWorld();
 	iPhysicsBody *pPlayerBody = gpBase->mpPlayer->GetCharacterBody()->GetCurrentBody();
 
 	cLuxEntityCollideHost host(this, pPhysicsWorld, pPlayerBody);
@@ -465,25 +439,25 @@ kSerializeRustClassV(iLuxEntity_SaveData, )
 
 void iLuxEntity::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 {
-	apSaveData->mlEntityType = mEntityType;
+	apSaveData->mlEntityType = mpS->entity_type;
 
 	kCopyToVar(apSaveData, msName);
-	kCopyToVar(apSaveData, mbFullGameSave);
-	kCopyToVar(apSaveData, mbActive);
-	kCopyToVar(apSaveData, mlID);
-	kCopyToVar(apSaveData, mbInteractionDisabled);
+	apSaveData->mbFullGameSave = mpS->full_game_save;
+	apSaveData->mbActive = mpS->active;
+	apSaveData->mlID = mpS->id;
+	apSaveData->mbInteractionDisabled = mpS->interaction_disabled;
 
-	kCopyToVar(apSaveData, mfMaxFocusDistance);
+	apSaveData->mfMaxFocusDistance = mpS->max_focus_distance;
 
 	kCopyToVar(apSaveData, msCallbackFunc);
 	kCopyToVar(apSaveData, msConnectionStateChangeCallback);
 
 	kCopyToVar(apSaveData, msInteractCallback);
-	kCopyToVar(apSaveData, mbInteractCallbackRemove);
+	apSaveData->mbInteractCallbackRemove = mpS->cb.interact_remove;
 
 	kCopyToVar(apSaveData, msLookAtCallback);
-	kCopyToVar(apSaveData, mbLookAtCallbackRemove);
-	kCopyToVar(apSaveData, mbIsLookedAt);
+	apSaveData->mbLookAtCallbackRemove = mpS->cb.lookat_remove;
+	apSaveData->mbIsLookedAt = mpS->cb.is_looked_at;
 
 	apSaveData->mvConnections.Resize(mvConnections.size());
     for(size_t i=0; i<mvConnections.size();++i)
@@ -506,22 +480,22 @@ void iLuxEntity::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 void iLuxEntity::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 {
 	kCopyFromVar(apSaveData, msName);
-	kCopyFromVar(apSaveData, mbFullGameSave);
+	mpS->full_game_save = apSaveData->mbFullGameSave;
 	SetActive(apSaveData->mbActive);
-	kCopyFromVar(apSaveData, mlID);
-	kCopyFromVar(apSaveData, mbInteractionDisabled);
+	mpS->id = apSaveData->mlID;
+	mpS->interaction_disabled = apSaveData->mbInteractionDisabled;
 
-	kCopyFromVar(apSaveData, mfMaxFocusDistance);
+	mpS->max_focus_distance = apSaveData->mfMaxFocusDistance;
 
 	kCopyFromVar(apSaveData, msCallbackFunc);
 	kCopyFromVar(apSaveData, msConnectionStateChangeCallback);
 
 	kCopyFromVar(apSaveData, msInteractCallback);
-	kCopyFromVar(apSaveData, mbInteractCallbackRemove);
+	mpS->cb.interact_remove = apSaveData->mbInteractCallbackRemove;
 
 	kCopyFromVar(apSaveData, msLookAtCallback);
-	kCopyFromVar(apSaveData, mbLookAtCallbackRemove);
-	kCopyFromVar(apSaveData, mbIsLookedAt);
+	mpS->cb.lookat_remove = apSaveData->mbLookAtCallbackRemove;
+	mpS->cb.is_looked_at = apSaveData->mbIsLookedAt;
 }
 
 //-----------------------------------------------------------------------
@@ -532,7 +506,7 @@ void iLuxEntity::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 	for(size_t i=0; i<apSaveData->mvConnections.Size();++i)
 	{
 		mvConnections[i] = hplNew( cLuxEntityConnection, () );
-		apSaveData->mvConnections[i].ToConnection(mvConnections[i], mpMap);
+		apSaveData->mvConnections[i].ToConnection(mvConnections[i], GetMap());
 	}
 
 	cContainerListIterator<cLuxCollideCallback_SaveData> it = apSaveData->mlstCollideCallbacks.GetIterator();
@@ -541,7 +515,7 @@ void iLuxEntity::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 		cLuxCollideCallback_SaveData& saveCallback = it.Next();
 		cLuxCollideCallback *pCallback = hplNew(cLuxCollideCallback, ());
 		
-		saveCallback.ToCallback(mpMap, this, pCallback);
+		saveCallback.ToCallback(GetMap(), this, pCallback);
 		mlstCollideCallbacks.push_back(pCallback);
 	}
 }

@@ -88,10 +88,10 @@ namespace
 		pCont->SetNodeIsAtCenter(abAtCenter);
 		int lNextId = 1 << 30;
 		for (cSomaLuxEntity *pEnt : apMap->GetEntities())
-			if (pEnt->msClassName == "PathNode" || pEnt->msClassName == "PathNodePatrol" || pEnt->msClassName == "PathNodeInterestPoint")
+			if (pEnt->GetClassName() == "PathNode" || pEnt->GetClassName() == "PathNodePatrol" || pEnt->GetClassName() == "PathNodeInterestPoint")
 			{
-				auto idIt = mapIds.find(pEnt->msName);
-				pCont->AddNode(pEnt->msName, idIt != mapIds.end() ? idIt->second : lNextId++, pEnt->GetPosition(), NULL);
+				auto idIt = mapIds.find(pEnt->GetName());
+				pCont->AddNode(pEnt->GetName(), idIt != mapIds.end() ? idIt->second : lNextId++, pEnt->GetPosition(), NULL);
 			}
 		// official cLuxMap::AddPathNodeGeneratorArea output, cached next to the map
 		if (FILE *pGen = cPlatform::OpenFile(cString::SetFileExtW(pWorld->GetFilePath(), _W("gen_node_cache")), _W("rb")))
@@ -312,7 +312,7 @@ namespace
 		}
 	};
 
-	void SetArgs(asIScriptContext *c, OhplS4bIo *io, E *apEnt)
+	void SetArgs(asIScriptContext *c, OhplS4bIo *io, const tString *apName)
 	{
 		for (int k = 0; k < 3; ++k)
 		{
@@ -323,7 +323,7 @@ namespace
 			case 2: c->SetArgQWord(k, v); break;
 			case 3: c->SetArgDWord(k, (int)(uint32_t)v); break;
 			case 4: c->SetArgByte(k, (asBYTE)v); break;
-			case 5: c->SetArgObject(k, &apEnt->msName); break;
+			case 5: c->SetArgObject(k, (void *)apName); break;
 			case 6: c->SetArgAddress(k, (void *)(uintptr_t)v); break;
 			}
 		}
@@ -349,8 +349,12 @@ namespace
 			}
 			break;
 		case 4:
-			io->s[0] = (const unsigned char *)e->msName.data();
-			io->n[0] = e->msName.size();
+		{
+			static thread_local tString sName;
+			sName = e->GetName();
+			io->s[0] = (const unsigned char *)sName.data();
+			io->n[0] = sName.size();
+		}
 			break;
 		case 5: e->SetActive(io->i[0] != 0); break;
 		case 6:
@@ -388,7 +392,8 @@ namespace
 		{
 			tString sDecl = Str(io, 0);
 			OhplS4bIo a = *io;
-			auto ArgsCopy = [&](asIScriptContext *c) { SetArgs(c, &a, e); };
+			tString sEntName = e ? e->GetName() : tString();
+			auto ArgsCopy = [&](asIScriptContext *c) { SetArgs(c, &a, &sEntName); };
 			switch (io->i[0])
 			{
 			case 0: io->i[0] = e->Call(sDecl, ArgsCopy); break;
@@ -522,7 +527,7 @@ namespace
 		case 48: b->Move(eCharDir_Forward, 1); break;
 		case 49:
 		{
-			iCharacterBody *pBody = e->mpMap->GetWorld()->GetPhysicsWorld()->CreateCharacterBody(e->msName, Get(io->f));
+			iCharacterBody *pBody = e->mpMap->GetWorld()->GetPhysicsWorld()->CreateCharacterBody(e->GetName(), Get(io->f));
 			pBody->SetUserData(e);
 			pBody->SetMass(80);
 			pBody->SetCustomGravity(cVector3f(0, -12, 0));
@@ -636,14 +641,14 @@ namespace
 		}
 		case 78:
 			if (pMap)
-				if (cSoundEntity *pSound = pMap->GetWorld()->CreateSoundEntity(e->msName + "_Bark", Str(io, 0), true))
+				if (cSoundEntity *pSound = pMap->GetWorld()->CreateSoundEntity(e->GetName() + "_Bark", Str(io, 0), true))
 					pSound->SetPosition(e->GetPosition());
 			break;
 
 		case 90:
 			io->p[0] = 0;
 			if (pMap)
-				io->p[0] = (uintptr_t)GetContainer(pMap, Str(io, 0) != "" ? Str(io, 0) : cString::SetFileExt(cString::GetFileName(e->msFileName), ""), cVector3f(0.6f, 1.5f, 0.6f), io->f[0], io->f[1], io->i[0] != 0);
+				io->p[0] = (uintptr_t)GetContainer(pMap, Str(io, 0) != "" ? Str(io, 0) : cString::SetFileExt(cString::GetFileName(e->GetFileName()), ""), cVector3f(0.6f, 1.5f, 0.6f), io->f[0], io->f[1], io->i[0] != 0);
 			break;
 		case 91:
 		{
@@ -704,7 +709,7 @@ namespace
 
 		case 110:
 		{
-			cForceField *pField = e->mpMap->GetWorld()->CreateForceField(e->msName + "_ForceField", false, false);
+			cForceField *pField = e->mpMap->GetWorld()->CreateForceField(e->GetName() + "_ForceField", false, false);
 			pField->SetForce(3);
 			pField->SetRadius(1.1f);
 			pField->SetFreq(2.4f);
@@ -849,11 +854,11 @@ namespace
 		case 161: Warning("%s", Str(io, 0).c_str()); break;
 		case 162:
 			if (io->i[0] == 0)
-				OhplS4bLog("call %s %s", e->msName.c_str(), Str(io, 0).c_str());
+				OhplS4bLog("call %s %s", e->GetName().c_str(), Str(io, 0).c_str());
 			else if (io->i[0] == 1)
-				OhplS4bLog("ev %s %u %d %d", e->msName.c_str(), (unsigned)io->i[1], io->i[2], io->i[3]);
+				OhplS4bLog("ev %s %u %d %d", e->GetName().c_str(), (unsigned)io->i[1], io->i[2], io->i[3]);
 			else
-				OhplS4bLog("msg %s %d %.9g,%.9g,%.9g %d", e->msName.c_str(), io->i[1], io->f[0], io->f[1], io->f[2], io->i[2]);
+				OhplS4bLog("msg %s %d %.9g,%.9g,%.9g %d", e->GetName().c_str(), io->i[1], io->f[0], io->f[1], io->f[2], io->i[2]);
 			break;
 		case 163: io->i[0] = OhplS4bOn(); break;
 		}

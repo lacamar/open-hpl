@@ -368,7 +368,7 @@ int cLuxEnemy_ManPig::Ga3PigCall(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 
 void cLuxEnemy_ManPig::OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions)
 {
-	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
+	iPhysicsWorld *pPhysicsWorld = GetMap()->GetPhysicsWorld();
 
 	if(mCurrentState == eLuxEnemyState_AttackMeleeShort)
 	{
@@ -874,28 +874,7 @@ void cLuxEnemy_ManPig::UpdateTesla(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxEnemy_ManPig_SaveData, iLuxEnemy_SaveData)
-
-kSerializeVar(mbThreatenOnAlert, eSerializeType_Bool)
-kSerializeVar(mbFleeFromPlayer, eSerializeType_Bool)
-kSerializeVar(mbAutoDisableAfterFlee, eSerializeType_Bool)
-kSerializeVar(mfLanternSensitivity, eSerializeType_Float32)
-kSerializeVar(mIdleBehavior, eSerializeType_Int32)
-kSerializeVar(mPatrolMoveSpeed, eSerializeType_Int32)
-kSerializeVar(mfDamageMul, eSerializeType_Float32)
-kSerializeVar(mfRunSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfInLanternLightCount, eSerializeType_Float32)
-kSerializeVar(mbAllowZeroWaitTime, eSerializeType_Bool)
-kSerializeVar(mfHuntPauseTimeMul, eSerializeType_Float32)
-kSerializeVar(mbTeslaTerror, eSerializeType_Bool)
-kSerializeVar(mbTeslaFadeDisabled, eSerializeType_Bool)
-kSerializeVar(mbTeslaSoundDisabled, eSerializeType_Bool)
-kSerializeVar(mbTeslaEasyEscapeDisabled, eSerializeType_Bool)
-kSerializeVar(mlCurrentPose, eSerializeType_Int32)
-kSerializeVar(mlCurrentMoveType, eSerializeType_Int32)
-kSerializeVar(mbSkipVisibilityRangeHandicaps, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxEnemy_ManPig_SaveData, iLuxEnemy_SaveData)
 
 //-----------------------------------------------------------------------
 
