@@ -239,13 +239,7 @@ eLuxFocusCrosshair cLuxProp_Item::GetFocusCrosshair(iPhysicsBody *apBody, const 
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_Item_SaveData, iLuxProp_SaveData)
-kSerializeVar(msVal, eSerializeType_String)
-kSerializeVar(msExtraVal, eSerializeType_String)
-kSerializeVar(mlSpawnContainerID, eSerializeType_Int32)
-kSerializeVar(mfAmount, eSerializeType_Float32)
-kSerializeVar(msSubItemTypeName, eSerializeType_String)
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_Item_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

@@ -18,7 +18,6 @@
  */
 
 #include "LuxEntity.h"
-#include "RustLuxSerialize.h"
 #include "RustLuxProp.h"
 #include <cstring>
 

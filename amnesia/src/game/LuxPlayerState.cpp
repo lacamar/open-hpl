@@ -485,9 +485,7 @@ iLuxPlayerState::~iLuxPlayerState()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBaseVirtual(iLuxPlayerState_SaveData)
-kSerializeVar(mlPreviousState, eSerializeType_Int32)
-kEndSerialize()
+kSerializeRustClassV(iLuxPlayerState_SaveData, )
 
 //-----------------------------------------------------------------------
 

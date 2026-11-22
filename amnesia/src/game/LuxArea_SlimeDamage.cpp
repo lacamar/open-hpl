@@ -18,7 +18,6 @@
  */
 
 #include "LuxArea_SlimeDamage.h"
-#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"

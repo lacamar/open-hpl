@@ -1,0 +1,349 @@
+C cAreaEntity 152
+F cAreaEntity msName 8 32
+F cAreaEntity msType 40 32
+F cAreaEntity m_mtxTransform 72 64
+F cAreaEntity mvSize 136 12
+C cLuxEnemyMover_SaveData 40
+F cLuxEnemyMover_SaveData mbTurning 8 1
+F cLuxEnemyMover_SaveData mfTurnGoalAngle 12 4
+F cLuxEnemyMover_SaveData mfTurnSpeed 16 4
+F cLuxEnemyMover_SaveData mfTurnBreakAcc 20 4
+F cLuxEnemyMover_SaveData mfStuckCounter 24 4
+F cLuxEnemyMover_SaveData mlMoveState 28 4
+F cLuxEnemyMover_SaveData mbOverideMoveState 32 1
+C cLuxEnemyPathfinder_SaveData 56
+F cLuxEnemyPathfinder_SaveData mbMoving 8 1
+F cLuxEnemyPathfinder_SaveData mvMoveGoalPos 12 12
+F cLuxEnemyPathfinder_SaveData mvPathNodeIds 24 32
+C cLuxEnemyPatrolNode_SaveData 56
+F cLuxEnemyPatrolNode_SaveData mlNodeId 8 4
+F cLuxEnemyPatrolNode_SaveData mfWaitTime 12 4
+F cLuxEnemyPatrolNode_SaveData msAnimation 16 32
+F cLuxEnemyPatrolNode_SaveData mbLoopAnimation 48 1
+C cLuxEnemy_Grunt_SaveData 1072
+C cLuxEnemy_ManPig_SaveData 1128
+F cLuxEnemy_ManPig_SaveData mbThreatenOnAlert 1072 1
+F cLuxEnemy_ManPig_SaveData mbFleeFromPlayer 1073 1
+F cLuxEnemy_ManPig_SaveData mbAutoDisableAfterFlee 1074 1
+F cLuxEnemy_ManPig_SaveData mfLanternSensitivity 1076 4
+F cLuxEnemy_ManPig_SaveData mIdleBehavior 1084 4
+F cLuxEnemy_ManPig_SaveData mPatrolMoveSpeed 1088 4
+F cLuxEnemy_ManPig_SaveData mfDamageMul 1100 4
+F cLuxEnemy_ManPig_SaveData mfRunSpeedMul 1104 4
+F cLuxEnemy_ManPig_SaveData mfInLanternLightCount 1092 4
+F cLuxEnemy_ManPig_SaveData mbAllowZeroWaitTime 1080 1
+F cLuxEnemy_ManPig_SaveData mfHuntPauseTimeMul 1096 4
+F cLuxEnemy_ManPig_SaveData mbTeslaTerror 1108 1
+F cLuxEnemy_ManPig_SaveData mbTeslaFadeDisabled 1109 1
+F cLuxEnemy_ManPig_SaveData mbTeslaSoundDisabled 1110 1
+F cLuxEnemy_ManPig_SaveData mbTeslaEasyEscapeDisabled 1111 1
+F cLuxEnemy_ManPig_SaveData mlCurrentPose 1112 4
+F cLuxEnemy_ManPig_SaveData mlCurrentMoveType 1116 4
+F cLuxEnemy_ManPig_SaveData mbSkipVisibilityRangeHandicaps 1120 1
+C cLuxEnemy_WaterLurker_SaveData 1080
+F cLuxEnemy_WaterLurker_SaveData mfPlayerDetectionHeight 1072 4
+C cLuxPlayerState_HandObject_SaveData 16
+C cLuxPlayerState_InteractGrab_SaveData 120
+F cLuxPlayerState_InteractGrab_SaveData m_mtxBodyRotation 32 64
+F cLuxPlayerState_InteractGrab_SaveData mvLocalBodyOffset 96 12
+F cLuxPlayerState_InteractGrab_SaveData mfDepth 108 4
+F cLuxPlayerState_InteractGrab_SaveData mfMaxDistance 112 4
+C cLuxPlayerState_InteractLever_SaveData 32
+C cLuxPlayerState_InteractPush_SaveData 32
+C cLuxPlayerState_InteractSlide_SaveData 32
+C cLuxPlayerState_InteractSwingDoor_SaveData 32
+C cLuxPlayerState_InteractWheel_SaveData 32
+C cLuxPlayerState_Ladder_SaveData 136
+F cLuxPlayerState_Ladder_SaveData mlState 12 4
+F cLuxPlayerState_Ladder_SaveData mvStartPosition 16 12
+F cLuxPlayerState_Ladder_SaveData mlLadderID 28 4
+F cLuxPlayerState_Ladder_SaveData mfTimeCount 32 4
+F cLuxPlayerState_Ladder_SaveData mvCharPosition 36 12
+F cLuxPlayerState_Ladder_SaveData mvGoalPos 48 12
+F cLuxPlayerState_Ladder_SaveData mvGoalRot 60 12
+F cLuxPlayerState_Ladder_SaveData mvPosAdd 72 12
+F cLuxPlayerState_Ladder_SaveData mvRotAdd 84 12
+F cLuxPlayerState_Ladder_SaveData mfMoveMul 96 4
+F cLuxPlayerState_Ladder_SaveData mfUpSpeed 100 4
+F cLuxPlayerState_Ladder_SaveData mfDownSpeed 104 4
+F cLuxPlayerState_Ladder_SaveData mfStepLength 108 4
+F cLuxPlayerState_Ladder_SaveData mfStepCount 112 4
+F cLuxPlayerState_Ladder_SaveData mbPlayedSound 116 1
+F cLuxPlayerState_Ladder_SaveData mfPitchMaxLimit 120 4
+F cLuxPlayerState_Ladder_SaveData mfPitchMinLimit 124 4
+F cLuxPlayerState_Ladder_SaveData mbLanternDrawn 132 1
+C cLuxPlayerState_Normal_SaveData 16
+C cLuxPlayerState_UseItem_SaveData 16
+C cLuxPropConnectedProp 40
+F cLuxPropConnectedProp msName 8 32
+C cLuxProp_Button_SaveData 1264
+F cLuxProp_Button_SaveData mbSwitchedOn 1256 1
+F cLuxProp_Button_SaveData mbCanBeSwitchedOn 1257 1
+F cLuxProp_Button_SaveData mbCanBeSwitchedOff 1258 1
+C cLuxProp_Chest_SaveData 1264
+F cLuxProp_Chest_SaveData mbLocked 1256 1
+F cLuxProp_Chest_SaveData mlCoinsNeeded 1260 4
+C cLuxProp_EmotionStone_SaveData 1416
+F cLuxProp_EmotionStone_SaveData msDescCat 1256 32
+F cLuxProp_EmotionStone_SaveData msDescEntry 1288 32
+F cLuxProp_EmotionStone_SaveData msTextCat 1320 32
+F cLuxProp_EmotionStone_SaveData msTextEntry 1352 32
+F cLuxProp_EmotionStone_SaveData msSound 1384 32
+C cLuxProp_Item_SaveData 1360
+F cLuxProp_Item_SaveData msVal 1256 32
+F cLuxProp_Item_SaveData msExtraVal 1288 32
+F cLuxProp_Item_SaveData mlSpawnContainerID 1320 4
+F cLuxProp_Item_SaveData mfAmount 1324 4
+F cLuxProp_Item_SaveData msSubItemTypeName 1328 32
+C cLuxProp_Lamp_SaveData 1304
+F cLuxProp_Lamp_SaveData mbLit 1256 1
+F cLuxProp_Lamp_SaveData mbLightConnectionSetup 1257 1
+F cLuxProp_Lamp_SaveData msConnectionLight 1264 32
+F cLuxProp_Lamp_SaveData mfConnectionLightAmount 1296 4
+F cLuxProp_Lamp_SaveData mbConnectionLightUseOnColor 1300 1
+F cLuxProp_Lamp_SaveData mbConnectionLightUseSpec 1301 1
+C cLuxProp_LevelDoor_SaveData 1464
+F cLuxProp_LevelDoor_SaveData msMapFile 1256 32
+F cLuxProp_LevelDoor_SaveData msStartPos 1288 32
+F cLuxProp_LevelDoor_SaveData msTextEntry 1320 32
+F cLuxProp_LevelDoor_SaveData mbLocked 1352 1
+F cLuxProp_LevelDoor_SaveData msLockedSound 1360 32
+F cLuxProp_LevelDoor_SaveData msLockedTextCat 1392 32
+F cLuxProp_LevelDoor_SaveData msLockedTextEntry 1424 32
+F cLuxProp_LevelDoor_SaveData mbShowStats 1456 1
+C cLuxProp_Lever_SaveData 1280
+F cLuxProp_Lever_SaveData mlCurrentState 1256 4
+F cLuxProp_Lever_SaveData mlStuckState 1260 4
+F cLuxProp_Lever_SaveData mbInteractionDisablesStuck 1276 1
+F cLuxProp_Lever_SaveData mfMiddleAngleAmount 1264 4
+F cLuxProp_Lever_SaveData mbAutoMoveToAngle 1268 1
+F cLuxProp_Lever_SaveData mlAutoMoveGoal 1272 4
+C cLuxProp_MoveObject_SaveData 1272
+F cLuxProp_MoveObject_SaveData mvAngularOffsetPos 1256 12
+F cLuxProp_MoveObject_SaveData mbUseAngularLocalOffset 1268 1
+F cLuxProp_MoveObject_SaveData mbAutoMoveReachedGoal 1269 1
+C cLuxProp_MultiSlider_SaveData 1304
+F cLuxProp_MultiSlider_SaveData mlCurrentState 1256 4
+F cLuxProp_MultiSlider_SaveData mlStuckState 1260 4
+F cLuxProp_MultiSlider_SaveData mbInteractionDisablesStuck 1264 1
+F cLuxProp_MultiSlider_SaveData msChangeStateCallback 1272 32
+C cLuxProp_NPC_SaveData 1296
+F cLuxProp_NPC_SaveData msFollowPlayerArea 1256 32
+F cLuxProp_NPC_SaveData mfHeadAngle 1288 4
+F cLuxProp_NPC_SaveData mbPlayerIsInArea 1292 1
+F cLuxProp_NPC_SaveData mbAwake 1293 1
+F cLuxProp_NPC_SaveData mbPlayingWakeAnim 1294 1
+F cLuxProp_NPC_SaveData mbFollowPlayer 1295 1
+C cLuxProp_Object_SaveData 1320
+F cLuxProp_Object_SaveData mfLifeLengthCount 1256 4
+F cLuxProp_Object_SaveData msContainedItem 1264 32
+F cLuxProp_Object_SaveData mlStuckState 1296 4
+F cLuxProp_Object_SaveData mfFoodAttractCount 1300 4
+F cLuxProp_Object_SaveData mbDisableBreakable 1304 1
+F cLuxProp_Object_SaveData mbIsInsanityVision 1305 1
+F cLuxProp_Object_SaveData mfVisionMaxSanity 1308 4
+F cLuxProp_Object_SaveData mbInsanityVisionActive 1312 1
+C cLuxProp_OilBarrel_SaveData 1264
+F cLuxProp_OilBarrel_SaveData mbAmountCalculated 1256 1
+F cLuxProp_OilBarrel_SaveData mfOilAmount 1260 4
+C cLuxProp_Photocell_SaveData 1280
+F cLuxProp_Photocell_SaveData mbLit 1256 1
+F cLuxProp_Photocell_SaveData mfLightLevel 1260 4
+F cLuxProp_Photocell_SaveData mfLightLevelCheckCount 1264 4
+F cLuxProp_Photocell_SaveData mfLightLevelOnLimit 1268 4
+F cLuxProp_Photocell_SaveData mfLightLevelOffLimit 1272 4
+C cLuxProp_SwingDoor_SaveData 1584
+F cLuxProp_SwingDoor_SaveData mbLocked 1256 1
+F cLuxProp_SwingDoor_SaveData mbBroken 1257 1
+F cLuxProp_SwingDoor_SaveData mbClosed 1258 1
+F cLuxProp_SwingDoor_SaveData mlBrokenEntityID 1260 4
+F cLuxProp_SwingDoor_SaveData mlCurrentMeshEntity 1268 4
+F cLuxProp_SwingDoor_SaveData mbDisableBreakable 1264 1
+F cLuxProp_SwingDoor_SaveData mbDisableAutoClose 1265 1
+F cLuxProp_SwingDoor_SaveData mDamageMesh1 1296 144
+F cLuxProp_SwingDoor_SaveData mDamageMesh2 1440 144
+F cLuxProp_SwingDoor_SaveData mfGoalOpenAmount 1272 4
+F cLuxProp_SwingDoor_SaveData mbOpeningTowardsMaxAngle 1276 1
+F cLuxProp_SwingDoor_SaveData mfCurrentOpenAmount 1280 4
+F cLuxProp_SwingDoor_SaveData mfOpenSpeed 1284 4
+F cLuxProp_SwingDoor_SaveData mbIsUpdatingOpenAmount 1288 1
+C cLuxProp_Wheel_SaveData 1312
+F cLuxProp_Wheel_SaveData mfAngle 1256 4
+F cLuxProp_Wheel_SaveData mfPrevAngle 1260 4
+F cLuxProp_Wheel_SaveData mfLastToMax 1264 4
+F cLuxProp_Wheel_SaveData mfLastToMin 1268 4
+F cLuxProp_Wheel_SaveData mlCurrentState 1272 4
+F cLuxProp_Wheel_SaveData mlStuckState 1276 4
+F cLuxProp_Wheel_SaveData mfJointAngle 1280 4
+F cLuxProp_Wheel_SaveData mfPrevJointAngle 1284 4
+F cLuxProp_Wheel_SaveData mbAutoMoving 1288 1
+F cLuxProp_Wheel_SaveData mfAutoMoveGoal 1292 4
+F cLuxProp_Wheel_SaveData mfMinLimit 1296 4
+F cLuxProp_Wheel_SaveData mfMaxLimit 1300 4
+F cLuxProp_Wheel_SaveData mbMinLimitStuck 1304 1
+F cLuxProp_Wheel_SaveData mbMaxLimitStuck 1305 1
+F cLuxProp_Wheel_SaveData mlSpinDir 1308 4
+F cLuxProp_Wheel_SaveData mbInteractionDisablesStuck 1306 1
+C cLuxSavedMap 608
+F cLuxSavedMap msFileName 8 32
+F cLuxSavedMap msDisplayNameEntry 40 32
+F cLuxSavedMap msLanternLitCallback 72 32
+F cLuxSavedMap mlNumberOfQuests 104 4
+F cLuxSavedMap mlTotalCompletionAmount 108 4
+F cLuxSavedMap mlCurrentCompletionAmount 112 4
+F cLuxSavedMap mbSkyBoxActive 116 1
+F cLuxSavedMap msSkyboxTexture 120 32
+F cLuxSavedMap mSkyBoxColor 152 16
+F cLuxSavedMap mbFogActive 168 1
+F cLuxSavedMap mbFogCulling 169 1
+F cLuxSavedMap mfFogStart 172 4
+F cLuxSavedMap mfFogEnd 176 4
+F cLuxSavedMap mfFogFalloffExp 180 4
+F cLuxSavedMap mFogColor 184 16
+F cLuxSavedMap msCheckPointName 200 32
+F cLuxSavedMap msCheckPointStartPos 232 32
+F cLuxSavedMap msCheckPointCallback 264 32
+F cLuxSavedMap mlCheckPointCount 296 4
+F cLuxSavedMap msCheckPointMusic 304 32
+F cLuxSavedMap mlCheckPointMusicPrio 336 4
+F cLuxSavedMap mbCheckPointMusicResume 340 1
+F cLuxSavedMap mfCheckPointMusicVolume 344 4
+F cLuxSavedMap mlstLights 384 32
+F cLuxSavedMap mlstRopes 352 32
+F cLuxSavedMap mlstSounds 416 32
+F cLuxSavedMap mlstPS 448 32
+F cLuxSavedMap mlstEntities 480 32
+F cLuxSavedMap mlstTimers 512 32
+F cLuxSavedMap mlstVars 544 32
+F cLuxSavedMap mvUseItemCallbacks 576 32
+C cLuxStateMessage_SaveData 48
+F cLuxStateMessage_SaveData mlType 8 4
+F cLuxStateMessage_SaveData mfTime 12 4
+F cLuxStateMessage_SaveData mfCount 16 4
+F cLuxStateMessage_SaveData mvCustomValue 20 12
+F cLuxStateMessage_SaveData mfCustomValue 32 4
+F cLuxStateMessage_SaveData mlCustomValue 36 4
+F cLuxStateMessage_SaveData mlState 40 4
+C cScriptVar 48
+F cScriptVar msName 8 32
+F cScriptVar mlVal 40 4
+C cStartPosEntity 112
+F cStartPosEntity msName 72 32
+F cStartPosEntity m_mtxTransform 8 64
+C iLuxEnemy_SaveData 1072
+F iLuxEnemy_SaveData msFileName 272 32
+F iLuxEnemy_SaveData m_mtxOnLoadTransform 304 64
+F iLuxEnemy_SaveData mvOnLoadScale 368 12
+F iLuxEnemy_SaveData mbDisabled 380 1
+F iLuxEnemy_SaveData mbDisableTriggers 381 1
+F iLuxEnemy_SaveData mbBlind 382 1
+F iLuxEnemy_SaveData mbDeaf 383 1
+F iLuxEnemy_SaveData mfHealth 384 4
+F iLuxEnemy_SaveData mbCausesSanityDecrease 388 1
+F iLuxEnemy_SaveData mbHallucination 389 1
+F iLuxEnemy_SaveData mlCurrentState 396 4
+F iLuxEnemy_SaveData mlNextState 400 4
+F iLuxEnemy_SaveData mlPreviousState 404 4
+F iLuxEnemy_SaveData mlSoundState 408 4
+F iLuxEnemy_SaveData mfLookForPlayerCount 412 4
+F iLuxEnemy_SaveData mlPlayerInLOSCount 416 4
+F iLuxEnemy_SaveData mbCanSeePlayer 420 1
+F iLuxEnemy_SaveData mbPlayerDetected 421 1
+F iLuxEnemy_SaveData mbPlayerInRange 422 1
+F iLuxEnemy_SaveData mfCheckAtDoorCount 424 4
+F iLuxEnemy_SaveData mbStuckAtDoor 428 1
+F iLuxEnemy_SaveData mlStuckDoorID 432 4
+F iLuxEnemy_SaveData mfForwardSpeed 436 4
+F iLuxEnemy_SaveData mfBackwardSpeed 440 4
+F iLuxEnemy_SaveData mfForwardAcc 444 4
+F iLuxEnemy_SaveData mfForwardDeacc 448 4
+F iLuxEnemy_SaveData mfDarknessGlowAlpha 452 4
+F iLuxEnemy_SaveData mfDarknessGlowAlphaGoal 456 4
+F iLuxEnemy_SaveData mlAttackHitCounter 460 4
+F iLuxEnemy_SaveData mfFOVMul 464 4
+F iLuxEnemy_SaveData msCurrentAnimName 472 32
+F iLuxEnemy_SaveData mbAnimationIsSpeedDependant 504 1
+F iLuxEnemy_SaveData mfAnimationSpeedMul 508 4
+F iLuxEnemy_SaveData mbUseMoveAnimWhenCurrentIsOver 512 1
+F iLuxEnemy_SaveData mvStartPosition 516 12
+F iLuxEnemy_SaveData mvLastKnownPlayerPos 528 12
+F iLuxEnemy_SaveData mfLastPlayerPosCount 540 4
+F iLuxEnemy_SaveData mvTempPos 544 12
+F iLuxEnemy_SaveData mfTempVal 556 4
+F iLuxEnemy_SaveData mlTempVal 560 4
+F iLuxEnemy_SaveData mfDamageCount 564 4
+F iLuxEnemy_SaveData mvPatrolNodes 568 32
+F iLuxEnemy_SaveData mlCurrentPatrolNode 600 4
+F iLuxEnemy_SaveData mMeshEntity 608 144
+F iLuxEnemy_SaveData mvPS 752 32
+F iLuxEnemy_SaveData mvBeams 784 32
+F iLuxEnemy_SaveData mvLights 816 32
+F iLuxEnemy_SaveData mvBillboards 848 32
+F iLuxEnemy_SaveData mvMessages 880 32
+F iLuxEnemy_SaveData mMover 912 40
+F iLuxEnemy_SaveData mPathfinder 952 56
+F iLuxEnemy_SaveData mCharBody 1008 64
+C iLuxPlayerState_DefaultBase_SaveData 16
+C iLuxPlayerState_InteractRotateBase_SaveData 32
+C iLuxPlayerState_Interact_SaveData 32
+F iLuxPlayerState_Interact_SaveData mlCurrentPropId 12 4
+F iLuxPlayerState_Interact_SaveData mlCurrentBodyId 16 4
+F iLuxPlayerState_Interact_SaveData mvCurrentFocusPos 20 12
+C iLuxPlayerState_SaveData 16
+F iLuxPlayerState_SaveData mlPreviousState 8 4
+C iLuxProp_CritterBase_SaveData 1312
+F iLuxProp_CritterBase_SaveData mvVel 1256 12
+F iLuxProp_CritterBase_SaveData mvGravityVel 1268 12
+F iLuxProp_CritterBase_SaveData mvSwarmPoint 1280 12
+F iLuxProp_CritterBase_SaveData mlAnimState 1292 4
+F iLuxProp_CritterBase_SaveData mvGroundNormal 1296 12
+F iLuxProp_CritterBase_SaveData mbColliding 1308 1
+F iLuxProp_CritterBase_SaveData mbUpdateAnimation 1309 1
+C iLuxProp_SaveData 1256
+F iLuxProp_SaveData msFileName 272 32
+F iLuxProp_SaveData m_mtxOnLoadTransform 304 64
+F iLuxProp_SaveData mvOnLoadScale 368 12
+F iLuxProp_SaveData mfHealth 380 4
+F iLuxProp_SaveData mbCheckOutsidePlayer 384 1
+F iLuxProp_SaveData mbEffectsActive 385 1
+F iLuxProp_SaveData mfEffectsAlpha 388 4
+F iLuxProp_SaveData mbStaticPhysics 392 1
+F iLuxProp_SaveData mbMoving 393 1
+F iLuxProp_SaveData mbMovingLinear 394 1
+F iLuxProp_SaveData mfMoveLinearMaxSpeed 396 4
+F iLuxProp_SaveData mfMoveLinearAcc 400 4
+F iLuxProp_SaveData mfMoveLinearSpeed 404 4
+F iLuxProp_SaveData mfMoveLinearSlowdownDist 408 4
+F iLuxProp_SaveData mvMoveLinearGoal 412 12
+F iLuxProp_SaveData mbMovingAngular 424 1
+F iLuxProp_SaveData mfMoveAngularMaxSpeed 428 4
+F iLuxProp_SaveData mfMoveAngularAcc 432 4
+F iLuxProp_SaveData mfMoveAngularSpeed 436 4
+F iLuxProp_SaveData mfMoveAngularSlowdownDist 440 4
+F iLuxProp_SaveData m_mtxMoveAngularGoal 444 64
+F iLuxProp_SaveData mbMoveAngularUseOffset 524 1
+F iLuxProp_SaveData mvMoveAngularWorldOffset 528 12
+F iLuxProp_SaveData mvMoveAngularLocalOffset 540 12
+F iLuxProp_SaveData mbMoveAngularNoGoal 508 1
+F iLuxProp_SaveData mvMoveAngularNoGoalDir 512 12
+F iLuxProp_SaveData mlCurrentNonLoopAnimIndex 552 4
+F iLuxProp_SaveData msAnimCallback 560 32
+F iLuxProp_SaveData msParentEntityName 656 32
+F iLuxProp_SaveData msParentBoneName 688 32
+F iLuxProp_SaveData mpParentBoneOffsetMatrix 592 64
+F iLuxProp_SaveData mfBodyMassBackup 720 4
+F iLuxProp_SaveData mbBodyCollideBackup 724 1
+F iLuxProp_SaveData mbBodyCollideCharacterBackup 725 1
+F iLuxProp_SaveData mbBodyActiveBackup 726 1
+F iLuxProp_SaveData mBodyMatrixBackup 728 64
+F iLuxProp_SaveData mvAttachedProps 792 32
+F iLuxProp_SaveData mvConnectedProps 824 32
+F iLuxProp_SaveData mMeshEntity 856 144
+F iLuxProp_SaveData mvBodies 1000 32
+F iLuxProp_SaveData mvJoints 1032 32
+F iLuxProp_SaveData mvPS 1064 32
+F iLuxProp_SaveData mvBeams 1096 32
+F iLuxProp_SaveData mvLights 1128 32
+F iLuxProp_SaveData mvSounds 1160 32
+F iLuxProp_SaveData mvBillboards 1192 32
+F iLuxProp_SaveData mvInteractConnections 1224 32

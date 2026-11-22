@@ -204,9 +204,7 @@ float cLuxEnemy_Grunt::GetDamageMul(float afAmount, int alStrength)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxEnemy_Grunt_SaveData, iLuxEnemy_SaveData)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxEnemy_Grunt_SaveData, iLuxEnemy_SaveData)
 
 //-----------------------------------------------------------------------
 

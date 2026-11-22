@@ -18,7 +18,6 @@
  */
 
 #include "LuxStaticProp.h"
-#include "RustLuxSerialize.h"
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"

@@ -131,17 +131,7 @@ tWString cLuxProp_EmotionStone::GetFocusText()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_EmotionStone_SaveData, iLuxProp_SaveData)
-
-kSerializeVar(msDescCat, eSerializeType_String)
-kSerializeVar(msDescEntry, eSerializeType_String)
-
-kSerializeVar(msTextCat, eSerializeType_String)
-kSerializeVar(msTextEntry, eSerializeType_String)
-
-kSerializeVar(msSound, eSerializeType_String)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_EmotionStone_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

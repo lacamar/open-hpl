@@ -85,11 +85,7 @@ void iLuxPlayerState_Interact::OnAttachBodyToStickyArea(iPhysicsBody *apBody)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeVirtual(iLuxPlayerState_Interact_SaveData, iLuxPlayerState_SaveData)
-kSerializeVar(mlCurrentPropId, eSerializeType_Int32)
-kSerializeVar(mlCurrentBodyId, eSerializeType_Int32)
-kSerializeVar(mvCurrentFocusPos, eSerializeType_Vector3f)
-kEndSerialize()
+kSerializeRustClassV(iLuxPlayerState_Interact_SaveData, iLuxPlayerState_SaveData)
 
 //-----------------------------------------------------------------------
 

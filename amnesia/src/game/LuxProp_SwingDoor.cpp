@@ -683,26 +683,7 @@ cLuxSwingDoorJointData* cLuxProp_SwingDoor::GetJointDataFromJoint(iPhysicsJoint 
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_SwingDoor_SaveData, iLuxProp_SaveData)
-
-kSerializeVar(mbLocked, eSerializeType_Bool)
-kSerializeVar(mbBroken, eSerializeType_Bool)
-kSerializeVar(mbClosed, eSerializeType_Bool)
-kSerializeVar(mlBrokenEntityID, eSerializeType_Int32)
-kSerializeVar(mlCurrentMeshEntity, eSerializeType_Int32)
-kSerializeVar(mbDisableBreakable, eSerializeType_Bool)
-kSerializeVar(mbDisableAutoClose, eSerializeType_Bool)
-
-kSerializeVar(mDamageMesh1, eSerializeType_Class)
-kSerializeVar(mDamageMesh2, eSerializeType_Class)
-
-kSerializeVar(mfGoalOpenAmount, eSerializeType_Float32)
-kSerializeVar(mbOpeningTowardsMaxAngle, eSerializeType_Bool)
-kSerializeVar(mfCurrentOpenAmount, eSerializeType_Float32)
-kSerializeVar(mfOpenSpeed, eSerializeType_Float32)
-kSerializeVar(mbIsUpdatingOpenAmount, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_SwingDoor_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

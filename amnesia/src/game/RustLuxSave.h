@@ -6,7 +6,6 @@
 // dispatch function (ctx, op, a, b) -> int. Op numbers are checked against the Rust enum.
 
 #include <cstddef>
-#include "RustLuxSerialize.h"
 #include <cstdint>
 
 enum

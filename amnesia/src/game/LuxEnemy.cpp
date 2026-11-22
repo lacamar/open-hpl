@@ -1180,125 +1180,19 @@ void iLuxEnemy::OnSetActive(bool abX)
 //////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------
-kBeginSerializeBase(cLuxStateMessage_SaveData)
-
-kSerializeVar(mlType, eSerializeType_Int32)
-kSerializeVar(mfTime, eSerializeType_Float32)
-kSerializeVar(mfCount, eSerializeType_Float32)
-
-kSerializeVar(mvCustomValue, eSerializeType_Vector3f)
-kSerializeVar(mfCustomValue, eSerializeType_Float32)
-kSerializeVar(mlCustomValue, eSerializeType_Int32)
-
-kSerializeVar(mlState, eSerializeType_Int32)
-
-kEndSerialize()
+kSerializeRustClass(cLuxStateMessage_SaveData)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxEnemyPatrolNode_SaveData)
-
-kSerializeVar(mlNodeId, eSerializeType_Int32)
-kSerializeVar(mfWaitTime, eSerializeType_Float32)
-kSerializeVar(msAnimation, eSerializeType_String)
-kSerializeVar(mbLoopAnimation, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClass(cLuxEnemyPatrolNode_SaveData)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeVirtual(iLuxEnemy_SaveData, iLuxEntity_SaveData)
-
-kSerializeVar(msFileName, eSerializeType_String)
-kSerializeVar(m_mtxOnLoadTransform, eSerializeType_Matrixf)
-kSerializeVar(mvOnLoadScale, eSerializeType_Vector3f)
-
-kSerializeVar(mbDisabled, eSerializeType_Bool)
-kSerializeVar(mbDisableTriggers, eSerializeType_Bool)
-kSerializeVar(mbBlind, eSerializeType_Bool)
-kSerializeVar(mbDeaf, eSerializeType_Bool)
-
-kSerializeVar(mfHealth, eSerializeType_Float32)
-kSerializeVar(mbCausesSanityDecrease, eSerializeType_Bool)
-
-kSerializeVar(mbHallucination, eSerializeType_Bool)
-
-kSerializeVar(mlCurrentState, eSerializeType_Int32)
-kSerializeVar(mlNextState, eSerializeType_Int32)
-kSerializeVar(mlPreviousState, eSerializeType_Int32)
-
-kSerializeVar(mlSoundState, eSerializeType_Int32)
-
-kSerializeVar(mfLookForPlayerCount, eSerializeType_Float32)
-kSerializeVar(mlPlayerInLOSCount, eSerializeType_Int32)
-kSerializeVar(mbCanSeePlayer, eSerializeType_Bool)
-kSerializeVar(mbPlayerDetected, eSerializeType_Bool)
-kSerializeVar(mbPlayerInRange, eSerializeType_Bool)
-
-kSerializeVar(mfCheckAtDoorCount, eSerializeType_Float32)
-kSerializeVar(mbStuckAtDoor, eSerializeType_Bool)
-kSerializeVar(mlStuckDoorID, eSerializeType_Int32)
-
-kSerializeVar(mfForwardSpeed, eSerializeType_Float32)
-kSerializeVar(mfBackwardSpeed, eSerializeType_Float32)
-kSerializeVar(mfForwardAcc, eSerializeType_Float32)
-kSerializeVar(mfForwardDeacc, eSerializeType_Float32)
-
-kSerializeVar(mfDarknessGlowAlpha, eSerializeType_Float32)
-kSerializeVar(mfDarknessGlowAlphaGoal, eSerializeType_Float32)
-
-kSerializeVar(mlAttackHitCounter, eSerializeType_Int32)
-
-kSerializeVar(mfFOVMul, eSerializeType_Float32)
-
-kSerializeVar(msCurrentAnimName, eSerializeType_String)
-kSerializeVar(mbAnimationIsSpeedDependant, eSerializeType_Bool)
-kSerializeVar(mfAnimationSpeedMul, eSerializeType_Float32)
-kSerializeVar(mbUseMoveAnimWhenCurrentIsOver, eSerializeType_Bool)
-
-kSerializeVar(mvStartPosition, eSerializeType_Vector3f)
-
-kSerializeVar(mvLastKnownPlayerPos, eSerializeType_Vector3f)
-kSerializeVar(mfLastPlayerPosCount, eSerializeType_Float32)
-
-kSerializeVar(mvTempPos, eSerializeType_Vector3f)
-kSerializeVar(mfTempVal, eSerializeType_Float32)
-kSerializeVar(mlTempVal, eSerializeType_Int32)
-kSerializeVar(mfDamageCount, eSerializeType_Float32)
-
-kSerializeClassContainer(mvPatrolNodes, cLuxEnemyPatrolNode_SaveData, eSerializeType_Class)
-kSerializeVar(mlCurrentPatrolNode, eSerializeType_Int32)
-
-kSerializeVar(mMeshEntity, eSerializeType_Class)
-kSerializeClassContainer(mvPS, cEnginePS_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvBeams, cEngineBeam_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvLights, cEngineLight_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvBillboards, cEngineBillboard_SaveData, eSerializeType_Class)
-
-kSerializeClassContainer(mvMessages, cLuxStateMessage_SaveData, eSerializeType_Class)
-
-kSerializeVar(mMover, eSerializeType_Class)
-kSerializeVar(mPathfinder, eSerializeType_Class)
-
-kSerializeVar(mCharBody, eSerializeType_Class)
-
-kEndSerialize()
+kSerializeRustClassV(iLuxEnemy_SaveData, iLuxEntity_SaveData)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxEnemyMover_SaveData)
-
-kSerializeVar(mbTurning, eSerializeType_Bool)
-kSerializeVar(mfTurnGoalAngle, eSerializeType_Float32)
-kSerializeVar(mfTurnSpeed, eSerializeType_Float32)
-kSerializeVar(mfTurnBreakAcc, eSerializeType_Float32)
-
-kSerializeVar(mfStuckCounter, eSerializeType_Float32)
-
-kSerializeVar(mlMoveState, eSerializeType_Int32)
-kSerializeVar(mbOverideMoveState, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClass(cLuxEnemyMover_SaveData)
 
 void cLuxEnemyMover_SaveData::FromMover(uint64_t alNav)
 {
@@ -1328,14 +1222,7 @@ void cLuxEnemyMover_SaveData::ToMover(uint64_t alNav)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxEnemyPathfinder_SaveData)
-
-kSerializeVar(mbMoving, eSerializeType_Bool)
-kSerializeVar(mvMoveGoalPos, eSerializeType_Vector3f)
-
-kSerializeVarContainer(mvPathNodeIds, eSerializeType_Int32)
-
-kEndSerialize()
+kSerializeRustClass(cLuxEnemyPathfinder_SaveData)
 
 void cLuxEnemyPathfinder_SaveData::FromPathfinder(uint64_t alNav)
 {

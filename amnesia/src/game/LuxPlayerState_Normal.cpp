@@ -80,8 +80,7 @@ bool cLuxPlayerState_Normal::ImplementedDoAction(eLuxPlayerAction aAction,bool a
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxPlayerState_Normal_SaveData, iLuxPlayerState_DefaultBase_SaveData)
-kEndSerialize()
+kSerializeRustClassP(cLuxPlayerState_Normal_SaveData, iLuxPlayerState_DefaultBase_SaveData)
 
 //-----------------------------------------------------------------------
 

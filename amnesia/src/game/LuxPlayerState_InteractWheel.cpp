@@ -102,8 +102,7 @@ void cLuxPlayerState_InteractWheel::OnThrow()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxPlayerState_InteractWheel_SaveData, iLuxPlayerState_InteractRotateBase_SaveData)
-kEndSerialize()
+kSerializeRustClassP(cLuxPlayerState_InteractWheel_SaveData, iLuxPlayerState_InteractRotateBase_SaveData)
 
 //-----------------------------------------------------------------------
 

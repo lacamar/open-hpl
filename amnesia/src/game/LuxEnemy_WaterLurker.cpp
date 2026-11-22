@@ -303,11 +303,7 @@ void cLuxEnemy_WaterLurker::PatrolEndOfPath()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxEnemy_WaterLurker_SaveData, iLuxEnemy_SaveData)
-
-kSerializeVar(mfPlayerDetectionHeight, eSerializeType_Float32)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxEnemy_WaterLurker_SaveData, iLuxEnemy_SaveData)
 
 //-----------------------------------------------------------------------
 

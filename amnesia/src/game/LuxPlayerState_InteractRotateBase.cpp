@@ -149,7 +149,6 @@ float iLuxPlayerState_InteractRotateBase::DrawDebug(cGuiSet *apSet,iFontData *ap
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeVirtual(iLuxPlayerState_InteractRotateBase_SaveData, iLuxPlayerState_Interact_SaveData)
-kEndSerialize()
+kSerializeRustClassV(iLuxPlayerState_InteractRotateBase_SaveData, iLuxPlayerState_Interact_SaveData)
 
 //-----------------------------------------------------------------------

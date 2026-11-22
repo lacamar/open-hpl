@@ -18,6 +18,7 @@ pub mod gamemap;
 pub mod handler;
 pub mod layout;
 pub mod layout_ar;
+pub mod layout_gcc;
 pub mod map;
 pub mod names;
 #[cfg(test)]

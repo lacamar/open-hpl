@@ -18,7 +18,6 @@
  */
 
 #include "LuxTypes.h"
-#include "RustLuxSerialize.h"
 
 #include "LuxEntity.h"
 #include "LuxArea.h"

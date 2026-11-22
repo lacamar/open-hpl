@@ -1,3 +1,8 @@
+class cAreaEntity
+  msName - 4 1 0
+  msType - 4 1 0
+  m_mtxTransform - 9 1 0
+  mvSize - 8 1 0
 class cEngineAnimationState_SaveData
   mbActive - 1 1 0
   mbLoop - 1 1 0
@@ -821,6 +826,12 @@ class cLuxVoiceData
   mvPosition - 8 1 0
   mfMinDistance - 3 1 0
   mfMaxDistance - 3 1 0
+class cScriptVar
+  msName - 4 1 0
+  mlVal - 2 1 0
+class cStartPosEntity
+  msName - 4 1 0
+  m_mtxTransform - 9 1 0
 class iLuxArea_SaveData : iLuxEntity_SaveData
   mvSize - 8 1 0
   m_mtxTransform - 9 1 0

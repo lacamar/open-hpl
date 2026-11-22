@@ -4,6 +4,40 @@ use super::a8_table::{Cls, F};
 
 pub static CLASSES: &[Cls] = &[
     Cls {
+        name: c"cAreaEntity",
+        parent: c"",
+        fields: &[
+            F {
+                name: c"msName",
+                class: c"",
+                ty: 4,
+                main: 1,
+                array: 0,
+            },
+            F {
+                name: c"msType",
+                class: c"",
+                ty: 4,
+                main: 1,
+                array: 0,
+            },
+            F {
+                name: c"m_mtxTransform",
+                class: c"",
+                ty: 9,
+                main: 1,
+                array: 0,
+            },
+            F {
+                name: c"mvSize",
+                class: c"",
+                ty: 8,
+                main: 1,
+                array: 0,
+            },
+        ],
+    },
+    Cls {
         name: c"cEngineAnimationState_SaveData",
         parent: c"",
         fields: &[
@@ -5621,6 +5655,46 @@ pub static CLASSES: &[Cls] = &[
                 name: c"mfMaxDistance",
                 class: c"",
                 ty: 3,
+                main: 1,
+                array: 0,
+            },
+        ],
+    },
+    Cls {
+        name: c"cScriptVar",
+        parent: c"",
+        fields: &[
+            F {
+                name: c"msName",
+                class: c"",
+                ty: 4,
+                main: 1,
+                array: 0,
+            },
+            F {
+                name: c"mlVal",
+                class: c"",
+                ty: 2,
+                main: 1,
+                array: 0,
+            },
+        ],
+    },
+    Cls {
+        name: c"cStartPosEntity",
+        parent: c"",
+        fields: &[
+            F {
+                name: c"msName",
+                class: c"",
+                ty: 4,
+                main: 1,
+                array: 0,
+            },
+            F {
+                name: c"m_mtxTransform",
+                class: c"",
+                ty: 9,
                 main: 1,
                 array: 0,
             },

@@ -276,12 +276,7 @@ void cLuxProp_MultiSlider::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_MultiSlider_SaveData, iLuxProp_SaveData)
-kSerializeVar(mlCurrentState, eSerializeType_Int32)
-kSerializeVar(mlStuckState, eSerializeType_Int32)
-kSerializeVar(mbInteractionDisablesStuck, eSerializeType_Bool)
-kSerializeVar(msChangeStateCallback, eSerializeType_String)
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_MultiSlider_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

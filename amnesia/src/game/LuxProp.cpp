@@ -1350,79 +1350,12 @@ cVector3f iLuxProp::GetWorldCenterPos()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxPropConnectedProp)
-kSerializeVar(msName, eSerializeType_String)
-kEndSerialize()
+kSerializeRustClass(cLuxPropConnectedProp)
 
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeVirtual(iLuxProp_SaveData, iLuxEntity_SaveData)
-
-kSerializeVar(msFileName, eSerializeType_String)
-kSerializeVar(m_mtxOnLoadTransform, eSerializeType_Matrixf)
-kSerializeVar(mvOnLoadScale, eSerializeType_Vector3f)
-
-kSerializeVar(mfHealth, eSerializeType_Float32)
-
-kSerializeVar(mbCheckOutsidePlayer, eSerializeType_Bool)
-
-kSerializeVar(mbEffectsActive, eSerializeType_Bool)
-kSerializeVar(mfEffectsAlpha, eSerializeType_Float32)
-
-kSerializeVar(mbStaticPhysics, eSerializeType_Bool)
-
-kSerializeVar(mbMoving, eSerializeType_Bool)
-
-kSerializeVar(mbMovingLinear, eSerializeType_Bool)
-kSerializeVar(mfMoveLinearMaxSpeed, eSerializeType_Float32)
-kSerializeVar(mfMoveLinearAcc, eSerializeType_Float32)
-kSerializeVar(mfMoveLinearSpeed, eSerializeType_Float32)
-kSerializeVar(mfMoveLinearSlowdownDist, eSerializeType_Float32)
-kSerializeVar(mvMoveLinearGoal, eSerializeType_Vector3f)
-
-kSerializeVar(mbMovingAngular, eSerializeType_Bool)
-kSerializeVar(mfMoveAngularMaxSpeed, eSerializeType_Float32)
-kSerializeVar(mfMoveAngularAcc, eSerializeType_Float32)
-kSerializeVar(mfMoveAngularSpeed, eSerializeType_Float32)
-kSerializeVar(mfMoveAngularSlowdownDist, eSerializeType_Float32)
-kSerializeVar(m_mtxMoveAngularGoal, eSerializeType_Matrixf)
-kSerializeVar(mbMoveAngularUseOffset, eSerializeType_Bool)
-kSerializeVar(mvMoveAngularWorldOffset, eSerializeType_Vector3f)
-kSerializeVar(mvMoveAngularLocalOffset, eSerializeType_Vector3f)
-
-kSerializeVar(mbMoveAngularNoGoal, eSerializeType_Bool)
-kSerializeVar(mvMoveAngularNoGoalDir, eSerializeType_Vector3f)
-
-kSerializeVar(mlCurrentNonLoopAnimIndex, eSerializeType_Int32)
-kSerializeVar(msAnimCallback, eSerializeType_String)
-
-kSerializeVar(msParentEntityName, eSerializeType_String)
-kSerializeVar(msParentBoneName, eSerializeType_String)
-kSerializeVar(mpParentBoneOffsetMatrix, eSerializeType_Matrixf)
-
-kSerializeVar(mfBodyMassBackup, eSerializeType_Float32)
-kSerializeVar(mbBodyCollideBackup, eSerializeType_Bool)
-kSerializeVar(mbBodyCollideCharacterBackup, eSerializeType_Bool)
-kSerializeVar(mbBodyActiveBackup, eSerializeType_Bool)
-kSerializeVar(mBodyMatrixBackup, eSerializeType_Matrixf)
-
-kSerializeClassContainer(mvAttachedProps, cLuxProp_AttachedProp, eSerializeType_Class)
-
-kSerializeClassContainer(mvConnectedProps, cLuxPropConnectedProp, eSerializeType_Class)
-
-kSerializeVar(mMeshEntity, eSerializeType_Class)
-kSerializeClassContainer(mvBodies, cEngineBody_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvJoints, cEngineJoint_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvPS, cEnginePS_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvBeams, cEngineBeam_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvLights, cEngineLight_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvSounds, cEngineSound_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvBillboards, cEngineBillboard_SaveData, eSerializeType_Class)
-
-kSerializeClassContainer(mvInteractConnections, iLuxInteractConnection_SaveData, eSerializeType_ClassPointer)
-
-kEndSerialize()
+kSerializeRustClassV(iLuxProp_SaveData, iLuxEntity_SaveData)
 
 //-----------------------------------------------------------------------
 

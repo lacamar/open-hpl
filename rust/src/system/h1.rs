@@ -1,8 +1,8 @@
 //! Stage H1: the serialize-class registry fed at static-init time, and the process and file
 //! helpers `cPlatform` kept in C++. Selected with `OHPL_IMPL=rust`.
 
-use super::ffi::{OhplSerField, ohpl_ser_register};
-use super::serialize::{CreateFn, T_NULL};
+use super::ffi::ohpl_ser_register;
+use super::serialize::CreateFn;
 use crate::string_ffi::{Sink, emit};
 use std::ffi::{CStr, CString, c_char, c_int, c_void};
 use std::io;
@@ -11,44 +11,23 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 use std::sync::{Mutex, PoisonError};
 
-/// `cSerializeMemberField` as libstdc++ lays it out (`tString` is pointer, length, 16-byte buffer).
-#[repr(C)]
-pub struct CppMemberField {
-    name_ptr: *const u8,
-    name_len: usize,
-    name_buf: [u8; 16],
-    class_ptr: *const u8,
-    class_len: usize,
-    class_buf: [u8; 16],
-    offset: usize,
-    size: usize,
-    ty: u32,
-    main: u32,
-    array_size: usize,
-}
-
-pub const CPP_MEMBER_FIELD_SIZE: usize = 96;
-
 struct Pending {
     name: usize,
     parent: usize,
-    fields: usize,
     size: usize,
     create: Option<CreateFn>,
 }
 
 static PENDING: Mutex<Vec<Pending>> = Mutex::new(Vec::new());
 
-/// `cSerializeClass` constructor: remembers the class until `SetUpData`.
+/// `cSerializeClass` constructor: remembers the class until the first save or load.
 ///
 /// # Safety
-/// `name` and `parent` are NUL-terminated and `fields` is a `cSerializeMemberField` array ending in a
-/// `T_NULL` entry; all three stay valid for the life of the process.
+/// `name` and `parent` are NUL-terminated and stay valid for the life of the process.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h1_ser_defer(
     name: *const c_char,
     parent: *const c_char,
-    fields: *const CppMemberField,
     size: usize,
     create: Option<CreateFn>,
 ) {
@@ -58,72 +37,33 @@ pub unsafe extern "C" fn ohpl_h1_ser_defer(
         .push(Pending {
             name: name as usize,
             parent: parent as usize,
-            fields: fields as usize,
             size,
             create,
         });
 }
 
-/// `SetUpData`: registers every deferred class in construction order.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h1_ser_flush() {
+/// Registers every deferred class in construction order.
+pub fn ohpl_h1_ser_flush() {
     let pending = std::mem::take(&mut *PENDING.lock().unwrap_or_else(PoisonError::into_inner));
     for p in pending {
-        if p.fields == 0 {
-            let name = p.name as *const c_char;
-            // SAFETY: `ohpl_h1_ser_defer` contract: `name` is NUL-terminated.
-            let bytes = unsafe { std::ffi::CStr::from_ptr(name) }.to_bytes();
-            let table = crate::luxsave::a8_table::layout_table(bytes);
-            let size = crate::luxsave::layout::size(bytes)
-                .or_else(|| crate::luxsave::layout_ar::size(bytes));
-            let (Some(table), true) = (table, size == Some(p.size)) else {
-                eprintln!(
-                    "SV: class {} has no matching Rust layout",
-                    String::from_utf8_lossy(bytes)
-                );
-                continue;
-            };
-            // SAFETY: as below; the table ends in T_NULL and its strings are 'static.
-            unsafe {
-                ohpl_ser_register(
-                    name,
-                    p.parent as *const c_char,
-                    table.as_ptr(),
-                    table.len(),
-                    p.size,
-                    p.create,
-                );
-            }
-            continue;
-        }
-        let mut table = Vec::new();
-        let mut f = p.fields as *const CppMemberField;
-        loop {
-            // SAFETY: `ohpl_h1_ser_defer` contract: the array runs to its `T_NULL` entry.
-            let e = unsafe { &*f };
-            table.push(OhplSerField {
-                name: e.name_ptr.cast(),
-                class_name: e.class_ptr.cast(),
-                offset: e.offset,
-                size: e.size,
-                ty: e.ty,
-                main: e.main,
-                array_size: e.array_size,
-            });
-            if e.ty == T_NULL {
-                break;
-            }
-            f = f.wrapping_add(1);
-        }
-        // SAFETY: strings are NUL-terminated (libstdc++ strings and literals); the table ends in T_NULL.
-        unsafe {
-            let table = crate::luxsave::a8_table::refine(
-                p.name as *const c_char,
-                p.parent as *const c_char,
-                table,
+        let name = p.name as *const c_char;
+        // SAFETY: `ohpl_h1_ser_defer` contract: `name` is NUL-terminated.
+        let bytes = unsafe { CStr::from_ptr(name) }.to_bytes();
+        let table = crate::luxsave::a8_table::layout_table(bytes);
+        let size = crate::luxsave::layout::size(bytes)
+            .or_else(|| crate::luxsave::layout_ar::size(bytes))
+            .or_else(|| crate::luxsave::layout_gcc::size(bytes));
+        let (Some(table), true) = (table, size == Some(p.size)) else {
+            eprintln!(
+                "SV: class {} has no matching Rust layout",
+                String::from_utf8_lossy(bytes)
             );
+            continue;
+        };
+        // SAFETY: the table ends in T_NULL and its strings are 'static.
+        unsafe {
             ohpl_ser_register(
-                p.name as *const c_char,
+                name,
                 p.parent as *const c_char,
                 table.as_ptr(),
                 table.len(),
@@ -236,53 +176,19 @@ mod tests {
         std::fs::remove_dir_all(&dir).expect("rm");
     }
 
-    fn field(name: &'static [u8], offset: usize, ty: u32, main: u32) -> CppMemberField {
-        CppMemberField {
-            name_ptr: name.as_ptr(),
-            name_len: name.len() - 1,
-            name_buf: [0; 16],
-            class_ptr: c"".as_ptr().cast(),
-            class_len: 0,
-            class_buf: [0; 16],
-            offset,
-            size: 4,
-            ty,
-            main,
-            array_size: 0,
-        }
-    }
-
     #[test]
     fn defer_then_flush_registers_in_order() {
-        let fields: &'static [CppMemberField] = Box::leak(Box::new([
-            field(b"mlA\0", 8, 2, 1),
-            field(b"mfB\0", 12, 3, 1),
-            field(b"\0", 0, T_NULL, 0),
-        ]));
-        // SAFETY: literals and a leaked array that ends in T_NULL.
-        unsafe {
-            ohpl_h1_ser_defer(
-                c"H1Probe".as_ptr(),
-                c"H1Parent".as_ptr(),
-                fields.as_ptr(),
-                24,
-                None,
-            )
-        };
+        let size = crate::luxsave::layout_gcc::size(b"cScriptVar").expect("layout");
+        // SAFETY: literals.
+        unsafe { ohpl_h1_ser_defer(c"cScriptVar".as_ptr(), c"".as_ptr(), size, None) };
         ohpl_h1_ser_flush();
-        let class = crate::system::serialize::lookup(b"H1Probe").expect("registered");
-        assert_eq!(class.parent, b"H1Parent");
-        assert_eq!(class.size, 24);
+        let class = crate::system::serialize::lookup(b"cScriptVar").expect("registered");
+        assert_eq!(class.size, size);
         let got: Vec<_> = class
             .fields
             .iter()
-            .map(|f| (f.name.clone(), f.offset, f.ty))
+            .map(|f| (f.name.clone(), f.ty))
             .collect();
-        assert_eq!(got, vec![(b"mlA".to_vec(), 8, 2), (b"mfB".to_vec(), 12, 3)]);
-    }
-
-    #[test]
-    fn member_field_layout() {
-        assert_eq!(std::mem::size_of::<CppMemberField>(), CPP_MEMBER_FIELD_SIZE);
+        assert_eq!(got, vec![(b"msName".to_vec(), 4), (b"mlVal".to_vec(), 2)]);
     }
 }

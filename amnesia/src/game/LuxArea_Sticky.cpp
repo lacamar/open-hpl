@@ -18,7 +18,6 @@
  */
 
 #include "LuxArea_Sticky.h"
-#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"

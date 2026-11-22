@@ -284,14 +284,7 @@ void cLuxProp_Lever::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_Lever_SaveData, iLuxProp_SaveData)
-kSerializeVar(mlCurrentState, eSerializeType_Int32)
-kSerializeVar(mlStuckState, eSerializeType_Int32)
-kSerializeVar(mbInteractionDisablesStuck, eSerializeType_Bool)
-kSerializeVar(mfMiddleAngleAmount, eSerializeType_Float32)
-kSerializeVar(mbAutoMoveToAngle, eSerializeType_Bool)
-kSerializeVar(mlAutoMoveGoal, eSerializeType_Int32)
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_Lever_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

@@ -31,10 +31,6 @@ namespace hpl {
 	
 	//------------------------------------------------------------------------
 	
-	//Serialize iSaveGame
-	kBeginSerializeBaseVirtual(iSaveData)
-	kSerializeVar(mlSaveDataId, eSerializeType_Int32)
-	kEndSerialize()
 
 	//------------------------------------------------------------------------
 

@@ -303,13 +303,7 @@ cLuxChestJointData* cLuxProp_Chest::GetJointDataFromJoint(iPhysicsJoint *apJoint
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_Chest_SaveData, iLuxProp_SaveData)
-
-kSerializeVar(mbLocked, eSerializeType_Bool)
-
-kSerializeVar(mlCoinsNeeded, eSerializeType_Float32)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_Chest_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

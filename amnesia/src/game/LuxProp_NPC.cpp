@@ -334,16 +334,7 @@ float cLuxProp_NPC::DrawDebug(cGuiSet *apSet,iFontData *apFont,float afStartY)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_NPC_SaveData, iLuxProp_SaveData)
-
-kSerializeVar(msFollowPlayerArea, eSerializeType_String)
-kSerializeVar(mfHeadAngle, eSerializeType_Float32)
-kSerializeVar(mbPlayerIsInArea, eSerializeType_Bool)
-kSerializeVar(mbAwake, eSerializeType_Bool)
-kSerializeVar(mbPlayingWakeAnim, eSerializeType_Bool)
-kSerializeVar(mbFollowPlayer, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_NPC_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

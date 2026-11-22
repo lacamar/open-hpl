@@ -89,8 +89,7 @@ void cLuxPlayerState_InteractLever::OnThrow()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxPlayerState_InteractLever_SaveData, iLuxPlayerState_InteractRotateBase_SaveData)
-kEndSerialize()
+kSerializeRustClassP(cLuxPlayerState_InteractLever_SaveData, iLuxPlayerState_InteractRotateBase_SaveData)
 
 //-----------------------------------------------------------------------
 

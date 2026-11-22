@@ -155,11 +155,7 @@ void cLuxProp_Button::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_Button_SaveData, iLuxProp_SaveData)
-kSerializeVar(mbSwitchedOn,	eSerializeType_Bool)
-kSerializeVar(mbCanBeSwitchedOn,	eSerializeType_Bool)
-kSerializeVar(mbCanBeSwitchedOff,	eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_Button_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

@@ -381,14 +381,7 @@ bool cLuxProp_Lamp::CanBeIgnitByPlayer()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_Lamp_SaveData, iLuxProp_SaveData)
-kSerializeVar(mbLit,	eSerializeType_Bool)
-kSerializeVar(mbLightConnectionSetup,	eSerializeType_Bool)
-kSerializeVar(msConnectionLight,			eSerializeType_String)
-kSerializeVar(mfConnectionLightAmount,		eSerializeType_Float32)
-kSerializeVar(mbConnectionLightUseOnColor,	eSerializeType_Bool)
-kSerializeVar(mbConnectionLightUseSpec,		eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_Lamp_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

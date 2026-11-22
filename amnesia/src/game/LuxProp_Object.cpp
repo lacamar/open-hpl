@@ -721,16 +721,7 @@ void cLuxProp_Object::SetJointMinMax(int alIdx, float afMin, float afMax)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_Object_SaveData, iLuxProp_SaveData)
-kSerializeVar(mfLifeLengthCount, eSerializeType_Float32)
-kSerializeVar(msContainedItem, eSerializeType_String)
-kSerializeVar(mlStuckState, eSerializeType_Int32)
-kSerializeVar(mfFoodAttractCount, eSerializeType_Float32)
-kSerializeVar(mbDisableBreakable, eSerializeType_Bool)
-kSerializeVar(mbIsInsanityVision, eSerializeType_Bool)
-kSerializeVar(mfVisionMaxSanity, eSerializeType_Float32)
-kSerializeVar(mbInsanityVisionActive, eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_Object_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 

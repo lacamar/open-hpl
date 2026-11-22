@@ -239,14 +239,7 @@ void cLuxProp_MoveObject::OnStartMove()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxProp_MoveObject_SaveData, iLuxProp_SaveData)
-
-kSerializeVar(mvAngularOffsetPos, eSerializeType_Vector3f)
-kSerializeVar(mbUseAngularLocalOffset, eSerializeType_Bool)
-
-kSerializeVar(mbAutoMoveReachedGoal, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxProp_MoveObject_SaveData, iLuxProp_SaveData)
 
 //-----------------------------------------------------------------------
 
