@@ -20,8 +20,6 @@
 #include "physics/PhysicsMaterial.h"
 
 #include "physics/PhysicsWorld.h"
-#include "physics/PhysicsBody.h"
-#include "physics/SurfaceData.h"
 #include "impl/RustNewton.h"
 #include "impl/RustNewtonBackend.h"
 
@@ -59,50 +57,5 @@ namespace hpl {
 		//Log(" Created physics material '%s' with Newton id %d\n",asName.c_str(),mlMaterialId);
 	}
 
-	// STATIC NEWTON CALLBACKS
-
-	void iPhysicsMaterial::DispatchContacts(iPhysicsBody* pContactBody1, iPhysicsBody* pContactBody2,
-												cPhysicsContactData &contactData, int lContactNum)
-	{
-		iPhysicsMaterial *pMaterial1 = pContactBody1->GetMaterial();
-		iPhysicsMaterial *pMaterial2 = pContactBody2->GetMaterial();
-
-		//Surface data stuff
-		//Only do the effects if both bodies uses surfaces effects!
-		if(	pMaterial1->GetSurfaceData() && pMaterial2->GetSurfaceData() &&
-			pContactBody1->GetUseSurfaceEffects() && pContactBody2->GetUseSurfaceEffects() &&
-			pContactBody1->GetBuoyancyActive()==false && pContactBody2->GetBuoyancyActive()==false)
-		{
-			pMaterial1->GetSurfaceData()->CreateImpactEffect(contactData.mfMaxContactNormalSpeed,
-																contactData.mvContactPosition,
-																lContactNum,pMaterial2->GetSurfaceData(),
-																pContactBody1->GetWorld());
-
-			OhplNewtonSurfaceCalls calls;
-			ohpl_newton_surface_calls(pMaterial1->GetSurfaceData()->GetPriority(), pMaterial2->GetSurfaceData()->GetPriority(),
-										pMaterial2 == pMaterial1, contactData.mfMaxContactNormalSpeed,
-										contactData.mfMaxContactTangentSpeed, &calls);
-
-			if(calls.impact1)
-				pMaterial1->GetSurfaceData()->OnImpact(contactData.mfMaxContactNormalSpeed,
-														contactData.mvContactPosition,
-														lContactNum,pContactBody1);
-			if(calls.slide1)
-				pMaterial1->GetSurfaceData()->OnSlide(contactData.mfMaxContactTangentSpeed,
-														contactData.mvContactPosition,
-														lContactNum,pContactBody1,pContactBody2);
-			if(calls.impact2)
-				pMaterial2->GetSurfaceData()->OnImpact(contactData.mfMaxContactNormalSpeed,
-														contactData.mvContactPosition,
-														lContactNum,pContactBody2);
-			if(calls.slide2)
-				pMaterial2->GetSurfaceData()->OnSlide(contactData.mfMaxContactTangentSpeed,
-														contactData.mvContactPosition,
-														lContactNum,pContactBody2,pContactBody1);
-		}
-
-		pContactBody1->OnCollide(pContactBody2,&contactData);
-		pContactBody2->OnCollide(pContactBody1,&contactData);
-	}
 
 }
