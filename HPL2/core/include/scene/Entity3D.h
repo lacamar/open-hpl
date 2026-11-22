@@ -60,6 +60,8 @@ namespace hpl {
 
 		virtual tString GetEntityType()=0;
 
+		OhplEntPod* EntPod() const { return mpE;}
+
 		virtual void UpdateLogic(float afTimeStep){}
 
 		tString& GetName(){return msName;}

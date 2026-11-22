@@ -173,6 +173,8 @@ namespace hpl {
 			: mpW(ohpl_wd_new(this, apGraphics, apResources, apSound, apPhysics, apScene, apSystem, apAI, asName.data(), asName.size())){}
 		~cWorld(){ ohpl_wd_free(mpW); }
 
+		OhplWdPod* Rs() const { return mpW;}
+
 		void ClearTempNodes();
 		void DestroyAllEntities(tWorldDestroyAllFlag aFlags){ ohpl_wd_destroy_all(mpW, aFlags); }
 		void DumpH13(const char *asPath, const char *asMap){ ohpl_wd_dump(mpW, asPath, asMap); }
