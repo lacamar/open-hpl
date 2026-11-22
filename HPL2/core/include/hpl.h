@@ -178,7 +178,6 @@
 #include "ai/AI.h"
 #include "ai/AStar.h"
 #include "ai/AINodeContainer.h"
-#include "ai/AINodeGenerator.h"
 
 #include "gui/Gui.h"
 #include "gui/GuiSet.h"

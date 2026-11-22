@@ -66,7 +66,6 @@ namespace hpl {
 	class cAINodeContainer;
 	struct OhplH13Reg;
 	class cAStarHandler;
-	class cAINodeGeneratorParams;
 	class iVertexBuffer;
 	class iTexture;
 	class cGuiSet;
@@ -533,7 +532,6 @@ namespace hpl {
 
 		///// AI NODE METHODS ////////////////
 
-		void GenerateAINodes(cAINodeGeneratorParams *apParams);
 
 		cAINodeContainer* CreateAINodeContainer(const tString &asName, 
 											const tString &asNodeName, 
@@ -546,7 +544,6 @@ namespace hpl {
 		void DestroyAStarHandler(cAStarHandler* apHandler);
         
 		void AddAINode(const tString &asName, int alID, const tString &asType, const cVector3f &avPosition);
-		tTempAiNodeList* GetAINodeList(const tString &asType);
 
 
 		/// NODE METHODS //////////////////////
