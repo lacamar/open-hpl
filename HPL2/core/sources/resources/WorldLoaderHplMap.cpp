@@ -988,59 +988,18 @@ namespace hpl {
 		lStartTime = cPlatform::GetApplicationTime();
 		if(gbLog) Log(" Check for mesh combination sequences!\n");
 
-		int lFirstInSequence = 0; //Index of first object to be combined.
-		if(OhplBackendRustRequested())
-		{
-			std::vector<OhplH13MeshItem> vItems(vMeshObjects.size());
-			for(size_t i=0; i< vMeshObjects.size(); ++i)
-			{
-				cHplMapStaticUserData *pUserData = (cHplMapStaticUserData*)static_cast<cSubMeshEntity*>(vMeshObjects[i])->GetUserData();
-				vItems[i].mMaterial = (size_t)vMeshObjects[i]->GetMaterial();
-				vItems[i].mbShadow = vMeshObjects[i]->GetRenderFlagBit(eRenderableFlag_ShadowCaster);
-				vItems[i].mbCombine = pUserData ? pUserData->mbCombine : true;
-			}
-			std::vector<int32_t> vPlan(2 * vItems.size());
-			const size_t lRuns = ohpl_h13_plan_meshes(vItems.data(), vItems.size(), vPlan.data(), vItems.size());
-			for(size_t i=0; i<lRuns; ++i)
-				CombineObjectsAndCreateMeshEntity(vMeshObjects, vPlan[2*i], vPlan[2*i+1]);
-		}
-		else
+		std::vector<OhplH13MeshItem> vMeshItems(vMeshObjects.size());
 		for(size_t i=0; i< vMeshObjects.size(); ++i)
 		{
-			iRenderable *pMeshObject = vMeshObjects[i];
-
-
-			if(gbLog) Log("  %d Checking '%s', material: %d, cast shadows: %d\n",i,pMeshObject->GetName().c_str(),
-				pMeshObject->GetMaterial(),
-				pMeshObject->GetRenderFlagBit(eRenderableFlag_ShadowCaster));
-
-			////////////////////////
-			//Check so this is not the last element in array
-			if(i < vMeshObjects.size()-1)
-			{
-				////////////////////////////////////
-				//Get the next object
-				iRenderable *pNextObject = vMeshObjects[i+1];
-				cSubMeshEntity *pNextSubEnt =static_cast<cSubMeshEntity*>(pNextObject);
-				cHplMapStaticUserData *pNextObjectUserData = (cHplMapStaticUserData*)pNextSubEnt->GetUserData();
-
-				////////////////////////////////////////
-				//Check if next object is not part of sequence, if so combine current sequence.
-				if(	pNextObject->GetMaterial() != pMeshObject->GetMaterial() ||
-					pNextObject->GetRenderFlagBit(eRenderableFlag_ShadowCaster) != pMeshObject->GetRenderFlagBit(eRenderableFlag_ShadowCaster) ||
-					pNextObjectUserData->mbCombine == false)
-				{
-					CombineObjectsAndCreateMeshEntity(vMeshObjects, lFirstInSequence, (int) i);
-					lFirstInSequence = (int)i+1;
-				}
-			}
-			////////////////////////
-			//If last just combine all left.
-			else
-			{
-				CombineObjectsAndCreateMeshEntity(vMeshObjects, lFirstInSequence, (int)i);
-			}
+			cHplMapStaticUserData *pStaticData = (cHplMapStaticUserData*)static_cast<cSubMeshEntity*>(vMeshObjects[i])->GetUserData();
+			vMeshItems[i].mMaterial = (size_t)vMeshObjects[i]->GetMaterial();
+			vMeshItems[i].mbShadow = vMeshObjects[i]->GetRenderFlagBit(eRenderableFlag_ShadowCaster);
+			vMeshItems[i].mbCombine = pStaticData ? pStaticData->mbCombine : true;
 		}
+		std::vector<int32_t> vMeshPlan(2 * vMeshItems.size());
+		const size_t lMeshRuns = ohpl_h13_plan_meshes(vMeshItems.data(), vMeshItems.size(), vMeshPlan.data(), vMeshItems.size());
+		for(size_t i=0; i<lMeshRuns; ++i)
+			CombineObjectsAndCreateMeshEntity(vMeshObjects, vMeshPlan[2*i], vMeshPlan[2*i+1]);
 		mlCombineMeshTimeTotal += cPlatform::GetApplicationTime() - lStartTime;
 
 		////////////////////
@@ -1048,64 +1007,23 @@ namespace hpl {
 		//  Iterate physics, combine and create!
 		if(bCreateBodies==false) return;
 
-		const int lIndexCountLimit = 50000;
-		int lIndexCount =0;
 		lStartTime = cPlatform::GetApplicationTime();
 		if(gbLog) Log(" Check for body combination sequences!\n");
-		lFirstInSequence = 0;
-		if(OhplBackendRustRequested())
 		{
-			std::vector<OhplH13BodyItem> vItems(vPhysicsObjects.size());
+			std::vector<OhplH13BodyItem> vBodyItems(vPhysicsObjects.size());
 			for(size_t i=0; i< vPhysicsObjects.size(); ++i)
 			{
-				cHplMapPhysicsObject& physicsObject = vPhysicsObjects[i];
-				vItems[i].mPhysMaterial = (size_t)physicsObject.mpPhysicsMaterial;
-				vItems[i].mbShadow = physicsObject.mpObject->GetRenderFlagBit(eRenderableFlag_ShadowCaster);
-				vItems[i].mbCharCollider = physicsObject.mbCharCollider;
-				vItems[i].mbCollides = physicsObject.mpUserData->mbCollides;
-				vItems[i].mlIndexNum = vItems[i].mbCollides ? physicsObject.mpObject->GetVertexBuffer()->GetIndexNum() : 0;
+				cHplMapPhysicsObject& physObj = vPhysicsObjects[i];
+				vBodyItems[i].mPhysMaterial = (size_t)physObj.mpPhysicsMaterial;
+				vBodyItems[i].mbShadow = physObj.mpObject->GetRenderFlagBit(eRenderableFlag_ShadowCaster);
+				vBodyItems[i].mbCharCollider = physObj.mbCharCollider;
+				vBodyItems[i].mbCollides = physObj.mpUserData->mbCollides;
+				vBodyItems[i].mlIndexNum = vBodyItems[i].mbCollides ? physObj.mpObject->GetVertexBuffer()->GetIndexNum() : 0;
 			}
-			std::vector<int32_t> vPlan(2 * vItems.size());
-			const size_t lRuns = ohpl_h13_plan_bodies(vItems.data(), vItems.size(), vMeshObjects.size(), vPlan.data(), vItems.size());
-			for(size_t i=0; i<lRuns; ++i)
-				CombineObjectsAndCreatePhysics(vPhysicsObjects, vPlan[2*i], vPlan[2*i+1]);
-		}
-		else
-		for(size_t i=0; i< vPhysicsObjects.size(); ++i)
-		{
-			cHplMapPhysicsObject& physicsObject = vPhysicsObjects[i];
-
-			if(physicsObject.mpUserData->mbCollides)
-				lIndexCount += physicsObject.mpObject->GetVertexBuffer()->GetIndexNum();
-
-			if(gbLog) Log("  %d Checking '%s', physics material: %d\n",i,physicsObject.mpObject->GetName().c_str(),
-				physicsObject.mpPhysicsMaterial);
-
-			////////////////////////
-			//Check so this is not the last element in array
-			if(i < vMeshObjects.size()-1)
-			{
-				cHplMapPhysicsObject& nextObject = vPhysicsObjects[i+1];
-
-				///////////////////////////////
-				//Check if next object is not part of sequence, if so combine current sequence.
-				//Also check if max number of polys are now reached, if so compile too!
-				if(	lIndexCount > lIndexCountLimit ||
-					nextObject.mbCharCollider != physicsObject.mbCharCollider ||
-					nextObject.mpPhysicsMaterial != physicsObject.mpPhysicsMaterial ||
-					nextObject.mpObject->GetRenderFlagBit(eRenderableFlag_ShadowCaster) != physicsObject.mpObject->GetRenderFlagBit(eRenderableFlag_ShadowCaster))
-				{
-					CombineObjectsAndCreatePhysics(vPhysicsObjects, lFirstInSequence, (int) i);
-					lFirstInSequence = (int)i+1;
-					lIndexCount = 0;
-				}
-			}
-			////////////////////////
-			//If last just combine all left.
-			else
-			{
-				CombineObjectsAndCreatePhysics(vPhysicsObjects, lFirstInSequence, (int)i);
-			}
+			std::vector<int32_t> vBodyPlan(2 * vBodyItems.size());
+			const size_t lBodyRuns = ohpl_h13_plan_bodies(vBodyItems.data(), vBodyItems.size(), vMeshObjects.size(), vBodyPlan.data(), vBodyItems.size());
+			for(size_t i=0; i<lBodyRuns; ++i)
+				CombineObjectsAndCreatePhysics(vPhysicsObjects, vBodyPlan[2*i], vBodyPlan[2*i+1]);
 		}
 		mlCombineBodyTimeTotal += cPlatform::GetApplicationTime() - lStartTime;
 	}
