@@ -16,7 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 #ifndef HPL_BITMAP_LOADER_DEVIL_MISC_H
 #define HPL_BITMAP_LOADER_DEVIL_MISC_H
 
@@ -27,12 +26,11 @@ namespace hpl {
 	class cBitmapLoaderDevilMisc : public iBitmapLoaderDevil
 	{
 	public:
-		cBitmapLoaderDevilMisc();
-		~cBitmapLoaderDevilMisc();
-
-		cBitmap* LoadBitmap(const tWString& asFile, tBitmapLoadFlag aFlags);
-
-	protected:
+		cBitmapLoaderDevilMisc()
+		{
+			for(const char* e : {"jpg", "png", "tif", "bmp", "tga"}) AddSupportedExtension(e);
+		}
+		cBitmap* LoadBitmap(const tWString& asFile, tBitmapLoadFlag aFlags) { return LoadBitmapRust(asFile, 0, aFlags); }
 	};
 
 };

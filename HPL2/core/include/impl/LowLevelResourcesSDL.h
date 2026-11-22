@@ -22,6 +22,16 @@
 
 #include "resources/LowLevelResources.h"
 #include "system/SystemTypes.h"
+#include "impl/MeshLoaderMSH.h"
+#include "impl/MeshLoaderCollada.h"
+#include "impl/MeshLoaderAssimp.h"
+#include "impl/VideoStreamTheora.h"
+#include "impl/XmlDocumentTiny.h"
+#include "impl/BitmapLoaderDevilDDS.h"
+#include "impl/BitmapLoaderDevilMisc.h"
+#include "resources/MeshLoaderHandler.h"
+#include "resources/VideoLoaderHandler.h"
+#include "resources/BitmapLoaderHandler.h"
 
 namespace hpl {
 
@@ -34,14 +44,23 @@ namespace hpl {
 	class cLowLevelResourcesSDL : public iLowLevelResources
 	{
 	public:
-		cLowLevelResourcesSDL(iLowLevelGraphics *apLowLevelGraphics);
-		~cLowLevelResourcesSDL();
+		cLowLevelResourcesSDL(iLowLevelGraphics *apLowLevelGraphics) : mpLowLevelGraphics(apLowLevelGraphics) {}
 
-		void AddBitmapLoaders(cBitmapLoaderHandler* apHandler);
-		void AddMeshLoaders(cMeshLoaderHandler* apHandler);
-		void AddVideoLoaders(cVideoLoaderHandler* apHandler);
+		void AddBitmapLoaders(cBitmapLoaderHandler* apHandler)
+		{
+			apHandler->AddLoader(hplNew(cBitmapLoaderDevilDDS, ()));
+			apHandler->AddLoader(hplNew(cBitmapLoaderDevilMisc, ()));
+		}
+		void AddMeshLoaders(cMeshLoaderHandler* apHandler)
+		{
+			cMeshLoaderMSH* pMsh = hplNew(cMeshLoaderMSH, (mpLowLevelGraphics));
+			apHandler->AddLoader(pMsh);
+			apHandler->AddLoader(hplNew(cMeshLoaderCollada, (mpLowLevelGraphics, pMsh, true)));
+			apHandler->AddLoader(hplNew(cMeshLoaderAssimp, (mpLowLevelGraphics)));
+		}
+		void AddVideoLoaders(cVideoLoaderHandler* apHandler) { apHandler->AddLoader(hplNew(cVideoStreamTheora_Loader, ())); }
 
-		iXmlDocument* CreateXmlDocument(const tString& asName="");
+		iXmlDocument* CreateXmlDocument(const tString& asName="") { return hplNew(cXmlDocumentTiny, (asName)); }
 
 	private:
 		iLowLevelGraphics *mpLowLevelGraphics;
