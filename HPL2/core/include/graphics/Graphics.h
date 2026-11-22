@@ -24,12 +24,12 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "engine/Updateable.h"
+#include "graphics/RustGx.h"
 
 namespace hpl {
 
 	class cResources;
 	class iRenderer;
-	class cPostEffectsComposite;
 	class iPostEffectType;
 	class iPostEffectParams;
 	class iPostEffect;
@@ -47,38 +47,8 @@ namespace hpl {
 	class cParserVarContainer;
 
 	//------------------------------------------------------
-	
-	class cTempFrameBuffer
-	{
-	public:
-		iFrameBuffer *mpFrameBuffer;
-		cVector2l mvSize;
-		ePixelFormat mPixelFormat;
-		int mlIndex;
-	};
 
-	//------------------------------------------------------
-
-	typedef std::list<iFrameBuffer*> tFrameBufferList;
-	typedef tFrameBufferList::iterator tFrameBufferListIt;
-	
-	typedef std::list<iDepthStencilBuffer*> tDepthStencilBufferList;
-	typedef tDepthStencilBufferList::iterator tDepthStencilBufferListIt;
-	
-	typedef std::list<iTexture*> tTextureList;
-	typedef tTextureList::iterator tTextureListIt;
-
-	typedef std::list<cPostEffectComposite*> tPostEffectCompositeList;
-	typedef tPostEffectCompositeList::iterator tPostEffectCompositeListIt;
-
-	typedef std::list<iPostEffect*> tPostEffectList;
-	typedef tPostEffectList::iterator tPostEffectListIt;
-
-	typedef std::map<tString, iMaterialType*> tMaterialTypeMap;
-	typedef tMaterialTypeMap::iterator tMaterialTypeMapIt;
-
-	//------------------------------------------------------
-
+	// State and logic live in rust/src/graphics/gx_graphics.rs.
 	class cGraphics : public iUpdateable
 	{
 	public:
@@ -87,81 +57,72 @@ namespace hpl {
 
 		bool Init(int alWidth, int alHeight, int alDisplay, int alBpp, int abFullscreen, int alMultisampling,
 					eGpuProgramFormat aGpuProgramFormat,const tString &asWindowCaption, const cVector2l &avWindowPos,
-					cResources* apResources, tFlag alHplSetupFlags);
+					cResources* apResources, tFlag alHplSetupFlags)
+		{
+			return ohpl_gx_gfx_init(mpRs, alWidth, alHeight, alDisplay, alBpp, abFullscreen, alMultisampling, aGpuProgramFormat,
+									asWindowCaption.data(), asWindowCaption.size(), &avWindowPos, apResources, alHplSetupFlags);
+		}
 
 		void Update(float afTimeStep);
 
-		cVideoMode* GetValidVideoMode(int alX);
-		
 		iLowLevelGraphics* GetLowLevel(){ return mpLowLevelGraphics;}
 
-		iRenderer* GetRenderer(eRenderer aType);
-		void ReloadRendererData();
-		
-		iFrameBuffer* CreateFrameBuffer(const tString& asName);
-		void DestroyFrameBuffer(iFrameBuffer* apFrameBuffer);
+		iRenderer* GetRenderer(eRenderer aType){ return static_cast<iRenderer*>(ohpl_gx_gfx_renderer(mpRs, aType)); }
+		void ReloadRendererData(){ ohpl_gx_gfx_reload_renderer_data(mpRs); }
 
-		iFrameBuffer* GetTempFrameBuffer(const cVector2l& avSize, ePixelFormat aPixelFormat, int alIndex);
+		iFrameBuffer* CreateFrameBuffer(const tString& asName){ return static_cast<iFrameBuffer*>(ohpl_gx_gfx_create_frame_buffer(mpRs, asName.data(), asName.size())); }
+		void DestroyFrameBuffer(iFrameBuffer* apFrameBuffer){ ohpl_gx_gfx_destroy_frame_buffer(mpRs, apFrameBuffer); }
 
-		static void SetTempFrameBufferTextureType(eTextureType aType){ mTempFrameBufferTextureType = aType; }
-		static eTextureType GetTempFrameBufferTextureType(){ return mTempFrameBufferTextureType; }
+		iFrameBuffer* GetTempFrameBuffer(const cVector2l& avSize, ePixelFormat aPixelFormat, int alIndex){ return static_cast<iFrameBuffer*>(ohpl_gx_gfx_temp_frame_buffer(mpRs, &avSize, aPixelFormat, alIndex)); }
+
+		static void SetTempFrameBufferTextureType(eTextureType aType){ ohpl_gx_gfx_set_temp_texture_type(aType); }
+		static eTextureType GetTempFrameBufferTextureType(){ return (eTextureType)ohpl_gx_gfx_temp_texture_type(); }
 
 		iDepthStencilBuffer* CreateDepthStencilBuffer(	const cVector2l& avSize, int alDepthBits, int alStencilBits,
-														bool abLookForMatchingFirst);
-		iDepthStencilBuffer* FindDepthStencilBuffer(const cVector2l& avSize, int alMinDepthBits, int alMinStencilBits);
-		void DestoroyDepthStencilBuffer(iDepthStencilBuffer* apBuffer);
-		
-		iTexture* CreateTexture(const tString &asName,eTextureType aType,   eTextureUsage aUsage);
-		void DestroyTexture(iTexture *apTexture);
+														bool abLookForMatchingFirst){ return static_cast<iDepthStencilBuffer*>(ohpl_gx_gfx_create_depth_stencil(mpRs, &avSize, alDepthBits, alStencilBits, abLookForMatchingFirst)); }
+		iDepthStencilBuffer* FindDepthStencilBuffer(const cVector2l& avSize, int alMinDepthBits, int alMinStencilBits){ return static_cast<iDepthStencilBuffer*>(ohpl_gx_gfx_find_depth_stencil(mpRs, &avSize, alMinDepthBits, alMinStencilBits)); }
+		void DestoroyDepthStencilBuffer(iDepthStencilBuffer* apBuffer){ ohpl_gx_gfx_destroy_depth_stencil(mpRs, apBuffer); }
 
-		cPostEffectComposite* CreatePostEffectComposite();
-		void DestroyPostEffectComposite(cPostEffectComposite* apComposite);
-		
-        void AddPostEffectType(iPostEffectType *apPostEffectBase);
-		
-		iPostEffect* CreatePostEffect(iPostEffectParams *apParams);
-		void DestroyPostEffect(iPostEffect* apPostEffect);
+		iTexture* CreateTexture(const tString &asName,eTextureType aType,   eTextureUsage aUsage){ return static_cast<iTexture*>(ohpl_gx_gfx_create_texture(mpRs, asName.data(), asName.size(), aType, aUsage)); }
+		void DestroyTexture(iTexture *apTexture){ ohpl_gx_gfx_destroy_texture(mpRs, apTexture); }
 
-		iGpuProgram* CreateGpuProgram(const tString& asName);
+		cPostEffectComposite* CreatePostEffectComposite(){ return static_cast<cPostEffectComposite*>(ohpl_gx_gfx_create_composite(mpRs)); }
+		void DestroyPostEffectComposite(cPostEffectComposite* apComposite){ ohpl_gx_gfx_destroy_composite(mpRs, apComposite); }
+
+        void AddPostEffectType(iPostEffectType *apPostEffectBase){ ohpl_gx_gfx_add_post_effect_type(mpRs, apPostEffectBase); }
+
+		iPostEffect* CreatePostEffect(iPostEffectParams *apParams){ return static_cast<iPostEffect*>(ohpl_gx_gfx_create_post_effect(mpRs, apParams)); }
+		void DestroyPostEffect(iPostEffect* apPostEffect){ ohpl_gx_gfx_destroy_post_effect(mpRs, apPostEffect); }
+
+		iGpuProgram* CreateGpuProgram(const tString& asName){ return static_cast<iGpuProgram*>(ohpl_gx_gfx_create_gpu_program(mpRs, asName.data(), asName.size())); }
 		iGpuProgram* CreateGpuProgramFromShaders(	const tString& asName, const tString& asVtxShader,const tString& asFragShader,
-													cParserVarContainer *apVarContainer);
-		void DestroyGpuProgram(iGpuProgram* apProgram);
-            
-		void AddMaterialType(iMaterialType *apType, const tString& asName);
-		iMaterialType *GetMaterialType(const tString& asName);
-		tStringVec GetMaterialTypeNames();
-		void ReloadMaterials();
-		
-		cMeshCreator* GetMeshCreator(){return mpMeshCreator;}
-		cTextureCreator* GetTextureCreator(){ return mpTextureCreator;}
-		cDecalCreator* GetDecalCreator() {return mpDecalCreator;}
-		
-		bool GetScreenIsSetUp(){ return mbScreenIsSetup;}
-	
+													cParserVarContainer *apVarContainer)
+		{
+			return static_cast<iGpuProgram*>(ohpl_gx_gfx_create_gpu_program_from_shaders(mpRs, asName.data(), asName.size(),
+												asVtxShader.data(), asVtxShader.size(), asFragShader.data(), asFragShader.size(), apVarContainer));
+		}
+		void DestroyGpuProgram(iGpuProgram* apProgram){ ohpl_gx_gfx_destroy_gpu_program(mpRs, apProgram); }
+
+		void AddMaterialType(iMaterialType *apType, const tString& asName){ ohpl_gx_gfx_add_material_type(mpRs, apType, asName.data(), asName.size()); }
+		iMaterialType *GetMaterialType(const tString& asName){ return static_cast<iMaterialType*>(ohpl_gx_gfx_material_type(mpRs, asName.data(), asName.size())); }
+		tStringVec GetMaterialTypeNames()
+		{
+			tStringVec vNames;
+			size_t lLen;
+			for(size_t i=0; const char *pName = ohpl_gx_gfx_material_type_name(mpRs, i, &lLen); ++i) vNames.push_back(tString(pName, lLen));
+			return vNames;
+		}
+		void ReloadMaterials(){ ohpl_gx_gfx_reload_materials(mpRs); }
+
+		cMeshCreator* GetMeshCreator(){return static_cast<cMeshCreator*>(ohpl_gx_gfx_mesh_creator(mpRs));}
+		cTextureCreator* GetTextureCreator(){ return static_cast<cTextureCreator*>(ohpl_gx_gfx_texture_creator(mpRs));}
+		cDecalCreator* GetDecalCreator() {return static_cast<cDecalCreator*>(ohpl_gx_gfx_decal_creator(mpRs));}
+
+		bool GetScreenIsSetUp(){ return ohpl_gx_gfx_screen_is_setup(mpRs);}
+
 	private:
 		iLowLevelGraphics *mpLowLevelGraphics;
-		iLowLevelResources *mpLowLevelResources;
-		cMeshCreator *mpMeshCreator;
-		cTextureCreator* mpTextureCreator;
-		cDecalCreator* mpDecalCreator;
-		cResources *mpResources;
-
-		std::vector<cTempFrameBuffer> mvTempFrameBuffers;
-
-		static eTextureType mTempFrameBufferTextureType;
-		
-		std::vector<iRenderer*> mvRenderers;
-		std::vector<iPostEffectType*> mvPostEffectTypes;
-
-		tFrameBufferList mlstFrameBuffers;
-		tDepthStencilBufferList mlstDepthStencilBuffers;
-		tTextureList mlstTextures;
-		tPostEffectCompositeList mlstPostEffectComposites;
-		tGpuProgramList mlstGpuPrograms;
-		tMaterialTypeMap m_mapMaterialTypes;
-		tPostEffectList mlstPostEffects;
-
-		bool mbScreenIsSetup;
+		OhplGxGraphics *mpRs;
 	};
 
 };

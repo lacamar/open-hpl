@@ -23,6 +23,7 @@
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/RustGx.h"
 
 namespace hpl {
 
@@ -33,8 +34,7 @@ namespace hpl {
 	class cTextureCreator
 	{
 	public:
-		cTextureCreator(iLowLevelGraphics *apLowLevelGraphics, cResources *apResources);
-		~cTextureCreator();
+		cTextureCreator(iLowLevelGraphics *apLowLevelGraphics, cResources *apResources){}
 		
 		/**
 		 * Creates a 3d texture with alSize * alSize number of scatter disks with a certain number of samples. The samples are uniformly distribute on the disk.
@@ -43,12 +43,9 @@ namespace hpl {
 		 * \param alSamples Samples per scatter disk. Number of samples /2 is the depth of the texture.
 		 * \param abSortSamples If the samples should be sorted, largest -> smallest.
 		 */
-		void GenerateScatterDiskMap3D(iTexture *apOffsetTexture, int alSize, int alSamples, bool abSortSamples);
-		void GenerateScatterDiskMap2D(iTexture *apOffsetTexture, int alSize, int alSamples, bool abSortSamples);
+		void GenerateScatterDiskMap3D(iTexture *apOffsetTexture, int alSize, int alSamples, bool abSortSamples){ ohpl_gx_texgen_scatter(apOffsetTexture, alSize, alSamples, abSortSamples, true); }
+		void GenerateScatterDiskMap2D(iTexture *apOffsetTexture, int alSize, int alSamples, bool abSortSamples){ ohpl_gx_texgen_scatter(apOffsetTexture, alSize, alSamples, abSortSamples, false); }
         
-	private:
-		iLowLevelGraphics *mpLowLevelGraphics;
-		cResources *mpResources;
 	};
 
 };

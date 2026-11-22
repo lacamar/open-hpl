@@ -1198,6 +1198,19 @@ namespace hpl {
 			for (cSubMeshEntity* pPatch : avPatches) creator.AddSubMesh(pPatch);
 			cMesh* pMesh = creator.CreateDecalMesh();
 			if (pMesh == NULL) continue;
+			static FILE* pDump = [] { const char* s = getenv("OHPL_GX_DECALDUMP"); return s ? fopen(s, "a") : (FILE*)NULL; }();
+			if (pDump)
+			{
+				iVertexBuffer* pVb = pMesh->GetSubMesh(0)->GetVertexBuffer();
+				uint64_t lHash = 1469598103934665603ull;
+				auto Mix = [&](const void* apData, size_t alBytes) { for (size_t i = 0; i < alBytes; ++i) lHash = (lHash ^ ((const unsigned char*)apData)[i]) * 1099511628211ull; };
+				const int lVtx = pVb->GetVertexNum();
+				for (int lElem : { (int)eVertexBufferElement_Position, (int)eVertexBufferElement_Normal, (int)eVertexBufferElement_Texture0, (int)eVertexBufferElement_Color0, (int)eVertexBufferElement_Texture1 })
+					if (float* pArr = pVb->GetFloatArray((eVertexBufferElement)lElem)) Mix(pArr, sizeof(float) * lVtx * pVb->GetElementNum((eVertexBufferElement)lElem));
+				Mix(pVb->GetIndices(), sizeof(unsigned int) * pVb->GetIndexNum());
+				fprintf(pDump, "decal %zu %s vtx=%d idx=%d hash=%016llx\n", lDecal, decal.file, lVtx, pVb->GetIndexNum(), (unsigned long long)lHash);
+				fflush(pDump);
+			}
 			cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity("TerrainDecal_" + cString::ToString(lCount++), pMesh, true);
 			pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, false);
 		}

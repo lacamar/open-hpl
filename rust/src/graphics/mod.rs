@@ -36,6 +36,13 @@ pub(crate) mod stdsort;
 pub mod submesh;
 pub mod uv;
 
+pub mod gx_decal;
+mod gx_ffi;
+mod gx_gfx_ffi;
+pub mod gx_gfx_host;
+pub mod gx_graphics;
+pub mod gx_host;
+
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

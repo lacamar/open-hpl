@@ -50,6 +50,7 @@ pub(crate) use matrix::{quat_add, quat_mul, quat_sub};
 pub(crate) use matrix::{quat_normalize, quat_scale, quat_slerp};
 pub(crate) use scalar::angle_distance;
 pub(crate) use scalar::angle_from_points_2d;
+pub(crate) use scalar::is_pow2;
 pub(crate) use scalar::log2_to_int;
 pub(crate) use scalar::to_deg;
 pub(crate) use scalar::{angle_from_vector, randomize};

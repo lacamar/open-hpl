@@ -23,114 +23,53 @@
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include "graphics/GraphicsTypes.h"
-#include "math/BoundingVolume.h"
+#include "graphics/RustGx.h"
 
 namespace hpl {
 
-	class cMesh2D;
-	class iVertexBuffer;
 	class iLowLevelGraphics;
 	class cResources;
 	class cMesh;
+	class cMaterial;
 	class cSubMeshEntity;
-	class cRendererCallbackFunctions;
-	class cBoundingVolume;
 
+	// State and logic live in rust/src/graphics/gx_decal.rs.
 	class cDecalCreator
 	{
 	public:
-		cDecalCreator(iLowLevelGraphics *apLowLevelGraphics, cResources *apResources);
-		~cDecalCreator();
+		cDecalCreator(iLowLevelGraphics *apLowLevelGraphics, cResources *apResources) : mpRs(ohpl_gx_decal_new(apLowLevelGraphics, apResources)) {}
+		~cDecalCreator() { ohpl_gx_decal_free(mpRs); }
+		cDecalCreator(const cDecalCreator&) = delete;
+		cDecalCreator& operator=(const cDecalCreator&) = delete;
 
-		bool AddSubMesh(cSubMeshEntity* apSubMesh);
-		void AddAffectedSubMesh(cSubMeshEntity* apSubMesh);
-		void ClearMeshes();
+		bool AddSubMesh(cSubMeshEntity* apSubMesh) { return ohpl_gx_decal_add_submesh(mpRs, apSubMesh); }
+		void AddAffectedSubMesh(cSubMeshEntity* apSubMesh) { ohpl_gx_decal_add_affected(mpRs, apSubMesh); }
+		void ClearMeshes() { ohpl_gx_decal_clear_meshes(mpRs); }
 
-		void SetMaxTrianglesPerDecal(int alMaxTris) { mlMaxDecalTriangleCount = alMaxTris; }
+		void SetMaxTrianglesPerDecal(int alMaxTris) { ohpl_gx_decal_set_max_tris(mpRs, alMaxTris); }
 
-		void SetDecalPosition(const cVector3f& avPosition);
-		void SetDecalUp(const cVector3f& avUp, bool abComputeBasis=true);
-		void SetDecalRight(const cVector3f& avRight, bool abComputeBasis=true);
-		void SetDecalForward(const cVector3f& avForward, bool abComputeBasis=true);
-		void SetDecalOffset(float afOffset);
-		void SetDecalSize(const cVector3f& avSize);
-		void SetMaterial(const tString& asMat);
-		void SetColor(const cColor& aCol);
-		void SetUVSubDivisions(const cVector2l& avSubDiv);
-		void SetCurrentSubDiv(int alSubDiv);
+		void SetDecalPosition(const cVector3f& avPosition) { ohpl_gx_decal_set_position(mpRs, &avPosition); }
+		void SetDecalUp(const cVector3f& avUp, bool abComputeBasis=true) { ohpl_gx_decal_set_up(mpRs, &avUp, abComputeBasis); }
+		void SetDecalRight(const cVector3f& avRight, bool abComputeBasis=true) { ohpl_gx_decal_set_right(mpRs, &avRight, abComputeBasis); }
+		void SetDecalForward(const cVector3f& avForward, bool abComputeBasis=true) { ohpl_gx_decal_set_forward(mpRs, &avForward, abComputeBasis); }
+		void SetDecalOffset(float afOffset) { ohpl_gx_decal_set_offset(mpRs, afOffset); }
+		void SetDecalSize(const cVector3f& avSize) { ohpl_gx_decal_set_size(mpRs, &avSize); }
+		void SetMaterial(const tString& asMat) { ohpl_gx_decal_set_material(mpRs, asMat.data(), asMat.size()); }
+		void SetColor(const cColor& aCol) { ohpl_gx_decal_set_color(mpRs, &aCol); }
+		void SetUVSubDivisions(const cVector2l& avSubDiv) { ohpl_gx_decal_set_sub_div(mpRs, &avSubDiv); }
+		void SetCurrentSubDiv(int alSubDiv) { ohpl_gx_decal_set_current_sub_div(mpRs, alSubDiv); }
 
-		bool IsUpdated() { return mbUpdated; }
-		bool Compile();
-		bool CanCreateDecal();
+		bool IsUpdated() { return ohpl_gx_decal_is_updated(mpRs); }
+		bool Compile() { return ohpl_gx_decal_compile(mpRs); }
+		bool CanCreateDecal() { return ohpl_gx_decal_can_create(mpRs); }
 
+		cMesh* CreateDecalMesh() { return static_cast<cMesh*>(ohpl_gx_decal_create_mesh(mpRs)); }
 
-		cMesh* CreateDecalMesh();
-
-		////////////////////////////////////////////////////////////
-		// Debug
-		const cVector3f& GetPosition() { return mvDecalPosition; }
-		const cVector3f& GetUp() { return mvDecalUp; }
-		const cVector3f& GetRight() { return mvDecalRight; }
-		const cVector3f& GetForward() { return mvDecalForward; }
-		const cVector3f& GetSize() { return mvDecalSize; }
-		int GetCurrentSubDiv() { return mlCurrentSubDiv; }
-
-		iVertexBuffer* GetVB() { return mpDecalVB; }
-		cMaterial* GetMaterial() { return mpDecalMaterial; }
-
-		void DrawDebug(cRendererCallbackFunctions* apFunctions, bool abDrawAxes, bool abDrawWireframe);
-
-		cBoundingVolume* GetDecalBoundingVolume();
+		cMaterial* GetMaterial() { return static_cast<cMaterial*>(ohpl_gx_decal_material(mpRs)); }
 
 	private:
-		void ComputeBasis();
-
-		void ClipMesh(cSubMeshEntity* apMesh, iVertexBuffer* apDecalVB);
-
-
-		iLowLevelGraphics *mpLowLevelGraphics;
-		cResources *mpResources;
-
-		std::vector<cSubMeshEntity*> mvMeshes;
-
-		bool mbCompiled;
-		bool mbUpdated;
-		bool mbCanCreate;
-
-		bool mbBVUpdated;
-		cBoundingVolume mDecalBV;
-
-		cVector3f mvDecalPosition;
-		cVector3f mvDecalUp;
-		cVector3f mvDecalRight;
-		cVector3f mvDecalForward;
-		float mfDecalOffset;
-		cVector3f mvDecalSize;
-
-		cVector3f mvDebugDecalPos;
-		cVector3f mvDebugDecalUp;
-		cVector3f mvDebugDecalRight;
-		cVector3f mvDebugDecalForward;
-
-		int mlDecalVertexCount;
-		int mlDecalTriangleCount;
-		int mlMaxDecalTriangleCount;
-
-		tPlanefVec mvClipPlanes;
-
-		tString msMaterial;
-		cVector2l mvSubDiv;
-		int		mlCurrentSubDiv;
-		cColor mColor;
-		
-		cMaterial* mpDecalMaterial;
-		iVertexBuffer* mpDecalVB;
-
-		tVector3fVec mvTransformedBases;
-		tMatrixfVec mvMatrices;
+		OhplGxDecal *mpRs;
 	};
 
 };
 #endif // HPL_DECALCREATOR_H
-
-
