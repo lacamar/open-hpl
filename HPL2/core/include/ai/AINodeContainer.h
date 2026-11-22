@@ -25,6 +25,9 @@
 
 #include "physics/PhysicsWorld.h"
 #include "ai/RustAI.h"
+#include "system/String.h"
+#include "system/LowLevelSystem.h"
+#include "system/RustXml.h"
 
 namespace hpl {
 
@@ -42,6 +45,7 @@ namespace hpl {
 	//--------------------------------
 	class cAINode;
 
+	// Layout twins of rust/src/ai CEdge and CNode; Rust owns the objects.
 	class cAINodeEdge
 	{
 	public:
@@ -50,54 +54,37 @@ namespace hpl {
 		cAINode *mpNode;
 	};
 
-	typedef std::vector<cAINodeEdge> tAINodeEdgeVec;
-	typedef tAINodeEdgeVec::iterator tAINodeEdgeVecIt;
-
-	//--------------------------------
-
 	class cAINode
 	{
-		friend class cAINodeContainer;
 	public:
-		cAINode();
-		~cAINode();
-
-		void AddEdge(cAINode *pNode);
 		int GetIdx() const { return mlIdx;}
 
-		int GetEdgeNum() const { return (int)mvEdges.size();}
-		inline cAINodeEdge* GetEdge(int alIdx) { return &mvEdges[alIdx];}
+		int GetEdgeNum() const { return (int)mlEdgeNum;}
+		inline cAINodeEdge* GetEdge(int alIdx) { return &mpEdges[alIdx];}
 
 		const cVector3f& GetPosition(){ return mvPosition;}
-		
-		const tString& GetName(){ return msName;}
+
+		tString GetName(){ return tString(mpName, mlNameLen);}
 		int GetID(){ return mlID; }
-		
+
 	private:
-		tString msName;
+		cAINode();
 		int mlID;
 		int mlIdx;
-		OhplAiGraph *mpGraph;
 		cVector3f mvPosition;
-		void *mpUserData;
-
-		tAINodeEdgeVec mvEdges;
+		const char *mpName;
+		size_t mlNameLen;
+		cAINodeEdge *mpEdges;
+		size_t mlEdgeNum;
 	};
+	static_assert(sizeof(cAINode) == 56 && sizeof(cAINodeEdge) == 16, "rust/src/ai CNode layout");
 
 	typedef std::vector<cAINode*> tAINodeVec;
 	typedef tAINodeVec::iterator tAINodeVecIt;
 
 	typedef std::list<cAINode*> tAINodeList;
 	typedef tAINodeList::iterator tAINodeListIt;
-	
-	typedef std::map<tString,cAINode*> tAINodeNameMap;
-	typedef tAINodeNameMap::iterator tAINodeNameMapIt;
 
-	typedef std::map<int,cAINode*> tAINodeIDMap;
-	typedef tAINodeIDMap::iterator tAINodeIDMapIt;
-	
-	//--------------------------------
-	
 	class iAIFreePathCallback
 	{
 	public:
@@ -136,16 +123,15 @@ namespace hpl {
 	{
 	public:
 		cAINodeIterator(cAINodeContainer *apContainer, const cVector3f &avPos, float afRadius);
-		
-		bool HasNext();
-		cAINode *Next();
+
+		bool HasNext(){ return mlPos < mvNodes.size();}
+		cAINode *Next(){ return mlPos < mvNodes.size() ? mvNodes[mlPos++] : NULL;}
 
 	private:
 		std::vector<cAINode*> mvNodes;
 		size_t mlPos;
 	};
 
-	//--------------------------------
 		
 	class cAINodeContainer
 	{
@@ -165,7 +151,7 @@ namespace hpl {
 		 * Reserves spaces for nodes.
 		 * \param alReserveSpace Number of nodes to reserve space for.
 		 */
-		void ReserveSpace(size_t alReserveSpace);
+		void ReserveSpace(size_t alReserveSpace){}
 
 		/**
 		* Adds a new node to the container.
@@ -173,36 +159,42 @@ namespace hpl {
 		* \param &avPosition Position of the node.
 		* \param *apUserData Data supplied by user.
          */
-        void AddNode(const tString &asName, int alID, const cVector3f &avPosition, void *apUserData=NULL);
+        void AddNode(const tString &asName, int alID, const cVector3f &avPosition, void *apUserData=NULL)
+		{
+			ohpl_ai_graph_add(mpGraph, &avPosition, (const unsigned char*)asName.data(), asName.size(), alID);
+		}
 
 		/**
 		 * Get the number of nodes.
 		 */
-		int GetNodeNum() const;
+		int GetNodeNum() const { return (int)ohpl_ai_graph_node_count(mpGraph);}
 
 		/**
 		 * Get a node.
 		 * \param alIdx index of node.
 		 */
-		inline cAINode* GetNode(int alIdx){return mvNodes[alIdx];}
+		inline cAINode* GetNode(int alIdx){ return (cAINode*)ohpl_ai_graph_node_at(mpGraph, (uint32_t)alIdx);}
 
 		/**
 		 * Gets a node based on the name.
 		 * \param &asName Name of the node.
 		 */
-		cAINode* GetNodeFromName(const tString &asName);
-		cAINode* GetNodeFromID(int alID);
+		cAINode* GetNodeFromName(const tString &asName)
+		{
+			return (cAINode*)ohpl_ai_graph_node_by_name(mpGraph, (const unsigned char*)asName.data(), asName.size());
+		}
+		cAINode* GetNodeFromID(int alID){ return (cAINode*)ohpl_ai_graph_node_by_id(mpGraph, alID);}
 
 
 		/**
 		 * Compile the added nodes.
 		 */
-		void Compile();
+		void Compile(){ ohpl_ai_graph_compile(mpGraph);}
 
 		/**
 		 * Build a grid map for nodes. (Used internally mostly)
 		 */
-		void BuildNodeGridMap();
+		void BuildNodeGridMap(){ ohpl_ai_graph_build_grid(mpGraph);}
 
 		/**
 		 * Returns a node iterator. Note that the radius is not checked, some nodes may lie outside.
@@ -210,7 +202,7 @@ namespace hpl {
 		 * \param afRadius 
 		 * \return 
 		 */
-		cAINodeIterator GetNodeIterator(const cVector3f &avPosition, float afRadius);
+		cAINodeIterator GetNodeIterator(const cVector3f &avPosition, float afRadius){ return cAINodeIterator(this,avPosition, afRadius);}
 
 		/**
 		 * Checks for a free path using the containers collide size.
@@ -222,7 +214,14 @@ namespace hpl {
 		 * \return 
 		 */
 		bool FreePath(const cVector3f &avStart, const cVector3f &avEnd, int alRayNum=-1, 
-						tAIFreePathFlag aFlags=0, iAIFreePathCallback *apCallback=NULL);
+						tAIFreePathFlag aFlags=0, iAIFreePathCallback *apCallback=NULL)
+		{
+			iAIFreePathCallback *pPrevCallback = mpFreePathCallback;
+			mpFreePathCallback = apCallback;
+			bool bFree = ohpl_ai_graph_free_path(mpGraph, &avStart, &avEnd, alRayNum, aFlags);
+			mpFreePathCallback = pPrevCallback;
+			return bFree;
+		}
 
 
 		/**
@@ -260,14 +259,27 @@ namespace hpl {
 		/**
 		 * Saves all the node connections to file.
 		 */
-		void SaveToFile(const tWString &asFile);
+		void SaveToFile(const tWString &asFile)
+		{
+			tString sFile = cString::To8Char(asFile);
+			if(ohpl_ai_graph_save(mpGraph, (const unsigned char*)sFile.data(), sFile.size())==false)
+				Error("Couldn't save XML file %s\n",asFile.c_str());
+		}
 		/**
 		* Loads all node connections from file. Only to be done after all nodes are loaded.
 		*/
-		void LoadFromFile(const tWString &asFile);
+		void LoadFromFile(const tWString &asFile)
+		{
+			tString sFile = cString::To8Char(asFile), sLog;
+			if(ohpl_ai_graph_load(mpGraph, (const unsigned char*)sFile.data(), sFile.size(), OhplXmlAssign, &sLog))
+			{
+				Log("%s", sLog.c_str());
+				Warning("Couldn't open XML file %s\n", sFile.c_str());
+			}
+		}
 
 	private:
-		void SyncParams();
+		void SyncParams(){ ohpl_ai_graph_set_params(mpGraph, mlMaxNodeEnds, mlMinNodeEnds, mfMaxEndDistance, mfMaxHeight, mbNodeIsAtCenter);}
 		static bool CastRay(void *apContainer, unsigned int alFlags, const cVector3f *apStart, const cVector3f *apEnd);
 
 		tString msName;
@@ -277,14 +289,10 @@ namespace hpl {
 		cVector3f mvSize;
 
 		cAINodeRayCallback *mpRayCallback;
-		tAINodeVec mvNodes;
-		tAINodeNameMap m_mapNodesByName;
-		tAINodeIDMap m_mapNodesByID;
 
 		bool mbNodeIsAtCenter;
 
 		OhplAiGraph *mpGraph;
-		bool mbRsMaps;
 		iAIFreePathCallback *mpFreePathCallback;
 
 		//properties
@@ -293,6 +301,13 @@ namespace hpl {
 		float mfMaxEndDistance;
 		float mfMaxHeight;
 	};
+
+	inline cAINodeIterator::cAINodeIterator(cAINodeContainer *apContainer, const cVector3f &avPos, float afRadius)
+		: mlPos(0)
+	{
+		mvNodes.resize(ohpl_ai_graph_query(apContainer->mpGraph, &avPos, afRadius));
+		ohpl_ai_graph_result_nodes(apContainer->mpGraph, (OhplAiNode**)mvNodes.data(), mvNodes.size());
+	}
 
 };
 #endif // HPL_AI_NODE_CONTAINER_H

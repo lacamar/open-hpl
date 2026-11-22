@@ -23,6 +23,7 @@
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
 #include "math/MathTypes.h"
+#include "ai/AINodeContainer.h"
 
 namespace hpl {
 
@@ -56,10 +57,21 @@ namespace hpl {
 	class cAStarHandler
 	{
 	public:
-		cAStarHandler(cAINodeContainer *apContainer);
-		~cAStarHandler();
-		
-		bool GetPath(const cVector3f& avStart, const cVector3f& avGoal, tAINodeList *apNodeList);
+		cAStarHandler(cAINodeContainer *apContainer) : mpContainer(apContainer), mlMaxIterations(-1), mpCallback(NULL) {}
+
+		bool GetPath(const cVector3f& avStart, const cVector3f& avGoal, tAINodeList *apNodeList)
+		{
+			OhplAiGraph *pGraph = mpContainer->mpGraph;
+			if(ohpl_ai_graph_astar(pGraph, &avStart, &avGoal, mlMaxIterations, mpCallback ? CanAddNode : NULL, this)==false)
+				return false;
+			if(apNodeList)
+			{
+				std::vector<cAINode*> vNodes(ohpl_ai_graph_result_nodes(pGraph, NULL, 0));
+				ohpl_ai_graph_result_nodes(pGraph, (OhplAiNode**)vNodes.data(), vNodes.size());
+				apNodeList->insert(apNodeList->end(), vNodes.begin(), vNodes.end());
+			}
+			return true;
+		}
 
 		/**
 		 * Set max number of times the algorithm is iterated.
@@ -70,7 +82,11 @@ namespace hpl {
 		void SetCallback(iAStarCallback *apCallback){ mpCallback = apCallback;}
 
 	private:
-		static bool CanAddNode(void *apHandler, unsigned int alParent, unsigned int alChild);
+		static bool CanAddNode(void *apHandler, unsigned int alParent, unsigned int alChild)
+		{
+			cAStarHandler *pHandler = (cAStarHandler*)apHandler;
+			return pHandler->mpCallback->CanAddNode(pHandler->mpContainer->GetNode(alParent), pHandler->mpContainer->GetNode(alChild));
+		}
 
 		cAINodeContainer *mpContainer;
 

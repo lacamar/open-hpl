@@ -1,7 +1,7 @@
 //! C ABI for `ai/mod.rs`, mirrored in `HPL2/core/include/ai/RustAI.h`.
 //! The graph is owned by the `cAINodeContainer` that created it; nodes are addressed by insertion index.
 
-use super::{CanAddFn, CastFn, Graph, Params};
+use super::{CNode, CanAddFn, CastFn, Graph, Params};
 use crate::types::Vector3f;
 use std::ffi::c_void;
 
@@ -25,16 +25,6 @@ pub unsafe extern "C" fn ohpl_ai_graph_free(g: *mut Graph) {
     if !g.is_null() {
         // SAFETY: caller contract.
         drop(unsafe { Box::from_raw(g) });
-    }
-}
-
-/// # Safety
-/// `g` live; `pos` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ai_graph_add_node(g: *mut Graph, pos: *const Vector3f, key: u64) {
-    // SAFETY: caller contract.
-    if let (Some(g), Some(pos)) = unsafe { (g.as_mut(), pos.as_ref()) } {
-        g.add_node(*pos, key);
     }
 }
 
@@ -79,67 +69,6 @@ pub unsafe extern "C" fn ohpl_ai_graph_compile(g: *mut Graph) {
     if let Some(g) = unsafe { g.as_mut() } {
         g.compile();
     }
-}
-
-/// # Safety
-/// `g` live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ai_graph_edge_count(g: *const Graph, node: u32) -> u32 {
-    // SAFETY: caller contract.
-    unsafe { g.as_ref() }.map_or(0, |g| g.edges(node).len() as u32)
-}
-
-/// # Safety
-/// `g` live; outputs valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ai_graph_edge(
-    g: *const Graph,
-    node: u32,
-    index: u32,
-    to: *mut u32,
-    dist: *mut f32,
-    sqr: *mut f32,
-) -> bool {
-    // SAFETY: caller contract.
-    let (Some(g), Some(to), Some(dist), Some(sqr)) = (
-        unsafe { g.as_ref() },
-        unsafe { to.as_mut() },
-        unsafe { dist.as_mut() },
-        unsafe { sqr.as_mut() },
-    ) else {
-        return false;
-    };
-    match g.edges(node).get(index as usize) {
-        Some(e) => {
-            *to = e.to;
-            *dist = e.dist;
-            *sqr = e.sqr;
-            true
-        }
-        None => false,
-    }
-}
-
-/// # Safety
-/// `g` live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ai_graph_add_edge(
-    g: *mut Graph,
-    from: u32,
-    to: u32,
-    dist: f32,
-    sqr: f32,
-) -> bool {
-    // SAFETY: caller contract.
-    unsafe { g.as_mut() }.is_some_and(|g| g.add_edge(from, to, dist, sqr))
-}
-
-/// # Safety
-/// `g` live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ai_graph_connect(g: *mut Graph, from: u32, to: u32) -> bool {
-    // SAFETY: caller contract.
-    unsafe { g.as_mut() }.is_some_and(|g| g.connect(from, to))
 }
 
 /// # Safety
@@ -215,12 +144,82 @@ pub unsafe extern "C" fn ohpl_ai_graph_astar(
     }
 }
 
-/// Copies up to `cap` entries of the result buffer; returns the buffer length.
+/// Appends a node and returns the `cAINode` view of it.
+///
+/// # Safety
+/// `g` live; `pos` valid; `name` readable for `len`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ai_graph_add(
+    g: *mut Graph,
+    pos: *const Vector3f,
+    name: *const u8,
+    len: usize,
+    id: i32,
+) -> *mut CNode {
+    // SAFETY: caller contract.
+    match unsafe { (g.as_mut(), pos.as_ref()) } {
+        (Some(g), Some(pos)) => {
+            // SAFETY: caller contract.
+            let name = unsafe { std::slice::from_raw_parts(name, len) };
+            g.add_named(*pos, name, id)
+        }
+        _ => std::ptr::null_mut(),
+    }
+}
+
+/// # Safety
+/// `g` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ai_graph_node_at(g: *const Graph, idx: u32) -> *mut CNode {
+    // SAFETY: caller contract.
+    unsafe { g.as_ref() }.map_or(std::ptr::null_mut(), |g| g.node_ptr(idx))
+}
+
+/// # Safety
+/// `g` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ai_graph_node_count(g: *const Graph) -> usize {
+    // SAFETY: caller contract.
+    unsafe { g.as_ref() }.map_or(0, Graph::node_count)
+}
+
+/// # Safety
+/// `g` live; `name` readable for `len`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ai_graph_node_by_name(
+    g: *const Graph,
+    name: *const u8,
+    len: usize,
+) -> *mut CNode {
+    // SAFETY: caller contract.
+    unsafe { g.as_ref() }
+        .and_then(|g| g.find_name(unsafe { std::slice::from_raw_parts(name, len) }))
+        .map_or(std::ptr::null_mut(), |i| {
+            // SAFETY: `g` live, as above.
+            unsafe { &*g }.node_ptr(i)
+        })
+}
+
+/// # Safety
+/// `g` live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_ai_graph_node_by_id(g: *const Graph, id: i32) -> *mut CNode {
+    // SAFETY: caller contract.
+    unsafe { g.as_ref() }
+        .and_then(|g| g.find_id(id).map(|i| g.node_ptr(i)))
+        .unwrap_or(std::ptr::null_mut())
+}
+
+/// Copies up to `cap` node pointers of the result buffer; returns the buffer length.
 ///
 /// # Safety
 /// `g` live; `out` valid for `cap` writes.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ai_graph_result(g: *const Graph, out: *mut u32, cap: usize) -> usize {
+pub unsafe extern "C" fn ohpl_ai_graph_result_nodes(
+    g: *const Graph,
+    out: *mut *mut CNode,
+    cap: usize,
+) -> usize {
     // SAFETY: caller contract.
     let Some(g) = (unsafe { g.as_ref() }) else {
         return 0;
@@ -232,52 +231,8 @@ pub unsafe extern "C" fn ohpl_ai_graph_result(g: *const Graph, out: *mut u32, ca
         // SAFETY: caller contract, `n <= cap`.
         let dst = unsafe { std::slice::from_raw_parts_mut(out, cap.min(r.len())) };
         for (d, s) in dst.iter_mut().zip(r.iter()) {
-            *d = *s;
+            *d = g.node_ptr(*s);
         }
     }
     r.len()
-}
-
-/// # Safety
-/// `g` live; `name` readable for `len`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ai_graph_name_node(
-    g: *mut Graph,
-    node: u32,
-    name: *const u8,
-    len: usize,
-    id: i32,
-) {
-    // SAFETY: caller contract.
-    if let Some(g) = unsafe { g.as_mut() } {
-        g.name_node(node, unsafe { std::slice::from_raw_parts(name, len) }, id);
-    }
-}
-
-/// Node index or -1.
-///
-/// # Safety
-/// `g` live; `name` readable for `len`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ai_graph_find_name(
-    g: *const Graph,
-    name: *const u8,
-    len: usize,
-) -> i64 {
-    // SAFETY: caller contract.
-    unsafe { g.as_ref() }
-        .and_then(|g| g.find_name(unsafe { std::slice::from_raw_parts(name, len) }))
-        .map_or(-1, i64::from)
-}
-
-/// Node index or -1.
-///
-/// # Safety
-/// `g` live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ai_graph_find_id(g: *const Graph, id: i32) -> i64 {
-    // SAFETY: caller contract.
-    unsafe { g.as_ref() }
-        .and_then(|g| g.find_id(id))
-        .map_or(-1, i64::from)
 }

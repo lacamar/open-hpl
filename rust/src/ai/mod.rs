@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 use std::ffi::c_void;
 
 mod ffi;
+mod file;
 #[cfg(test)]
 mod tests;
 
@@ -29,11 +30,40 @@ pub struct Edge {
     pub to: u32,
 }
 
-#[derive(Debug)]
+/// Read in place by C++ `cAINodeEdge`.
+#[repr(C)]
+pub struct CEdge {
+    pub dist: f32,
+    pub sqr: f32,
+    pub node: *mut CNode,
+}
+
+/// Read in place by C++ `cAINode`.
+#[repr(C)]
+pub struct CNode {
+    pub id: i32,
+    pub idx: i32,
+    pub pos: Vector3f,
+    name: *const u8,
+    name_len: usize,
+    edges: *const CEdge,
+    edge_num: usize,
+}
+
 struct Node {
     pos: Vector3f,
     key: u64,
     edges: Vec<Edge>,
+    c: *mut CNode,
+    name: Vec<u8>,
+    cedges: Vec<CEdge>,
+}
+
+impl Drop for Node {
+    fn drop(&mut self) {
+        // SAFETY: `c` comes from `Box::into_raw` in `add_node` and is freed only here.
+        drop(unsafe { Box::from_raw(self.c) });
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -102,8 +132,17 @@ impl Graph {
         }
     }
 
-    /// Registers the last-added node's lookup keys; like `std::map::insert`, the first node wins.
+    /// Names a node; like `std::map::insert`, the first node of a name or id wins the lookup.
     pub fn name_node(&mut self, node: u32, name: &[u8], id: i32) {
+        if let Some(n) = self.nodes.get_mut(node as usize) {
+            n.name = name.to_vec();
+            // SAFETY: `c` is live until the node drops; the name buffer outlives it.
+            unsafe {
+                (*n.c).id = id;
+                (*n.c).name = n.name.as_ptr();
+                (*n.c).name_len = n.name.len();
+            }
+        }
         self.by_name.entry(name.to_vec()).or_insert(node);
         self.by_id.entry(id).or_insert(node);
     }
@@ -117,11 +156,69 @@ impl Graph {
     }
 
     pub fn add_node(&mut self, pos: Vector3f, key: u64) {
+        let c = Box::into_raw(Box::new(CNode {
+            id: 0,
+            idx: self.nodes.len() as i32,
+            pos,
+            name: std::ptr::null(),
+            name_len: 0,
+            edges: std::ptr::null(),
+            edge_num: 0,
+        }));
         self.nodes.push(Node {
             pos,
             key,
             edges: Vec::new(),
+            c,
+            name: Vec::new(),
+            cedges: Vec::new(),
         });
+    }
+
+    /// `cAINodeContainer::AddNode`; the open-list tie key is the node's address.
+    pub fn add_named(&mut self, pos: Vector3f, name: &[u8], id: i32) -> *mut CNode {
+        self.add_node(pos, 0);
+        let i = self.nodes.len() - 1;
+        let Some(n) = self.nodes.last_mut() else {
+            return std::ptr::null_mut();
+        };
+        n.key = n.c as u64;
+        let c = n.c;
+        self.name_node(i as u32, name, id);
+        c
+    }
+
+    pub fn node_count(&self) -> usize {
+        self.nodes.len()
+    }
+
+    pub fn node_ptr(&self, idx: u32) -> *mut CNode {
+        self.nodes
+            .get(idx as usize)
+            .map_or(std::ptr::null_mut(), |n| n.c)
+    }
+
+    fn sync_edges(&mut self, i: usize) {
+        let Some(n) = self.nodes.get(i) else {
+            return;
+        };
+        let cedges: Vec<CEdge> = n
+            .edges
+            .iter()
+            .map(|e| CEdge {
+                dist: e.dist,
+                sqr: e.sqr,
+                node: self.node_ptr(e.to),
+            })
+            .collect();
+        if let Some(n) = self.nodes.get_mut(i) {
+            n.cedges = cedges;
+            // SAFETY: `c` is live until the node drops.
+            unsafe {
+                (*n.c).edges = n.cedges.as_ptr();
+                (*n.c).edge_num = n.cedges.len();
+            }
+        }
     }
 
     pub fn edges(&self, node: u32) -> &[Edge] {
@@ -137,6 +234,7 @@ impl Graph {
         match self.nodes.get_mut(from as usize) {
             Some(n) => {
                 n.edges.push(Edge { dist, sqr, to });
+                self.sync_edges(from as usize);
                 true
             }
             None => false,
@@ -337,6 +435,7 @@ impl Graph {
                     break;
                 }
             }
+            self.sync_edges(i);
         }
     }
 

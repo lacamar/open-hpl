@@ -63,7 +63,6 @@
 #include "physics/PhysicsJoint.h"
 #include "ai/AI.h"
 #include "ai/AINodeContainer.h"
-#include "ai/AINodeGenerator.h"
 #include "ai/AStar.h"
 #include "scene/RustWd.h"
 #include "system/MemoryManager.h"
@@ -420,11 +419,6 @@ namespace hpl {
 	}
 	void cWorld::ClearTempNodes(){ STLMapDeleteAll(m_mapTempNodes); }
 
-	void  cWorld::GenerateAINodes(cAINodeGeneratorParams *apParams)
-	{
-		mpW->mpAI->GetNodeGenerator()->Generate(this, apParams);
-	}
-
 	//-----------------------------------------------------------------------
 
 	cAINodeContainer* cWorld::CreateAINodeContainer(const tString &asName,
@@ -555,22 +549,6 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-
-	tTempAiNodeList* cWorld::GetAINodeList(const tString &asType)
-	{
-		cTempNodeContainer *pContainer = NULL;
-		tTempNodeContainerMapIt it = m_mapTempNodes.find(asType);
-		if(it != m_mapTempNodes.end()){
-			pContainer = it->second;
-		}
-
-		if(pContainer==NULL){
-			pContainer = hplNew( cTempNodeContainer, () );
-			m_mapTempNodes.insert(tTempNodeContainerMap::value_type(asType,pContainer));
-		}
-
-		return &pContainer->mlstNodes;
-	}
 
 	//-----------------------------------------------------------------------
 
