@@ -93,12 +93,6 @@ bool cLuxPlayerState_InteractPush::OnDoAction(eLuxPlayerAction aAction,bool abPr
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerState_InteractPush::OnScroll(float afAmount)
-{
-	
-}
-
-//-----------------------------------------------------------------------
 
 bool cLuxPlayerState_InteractPush::OnMove(eCharDir aDir, float afMul)
 {
@@ -108,17 +102,7 @@ bool cLuxPlayerState_InteractPush::OnMove(eCharDir aDir, float afMul)
 
 //-----------------------------------------------------------------------
 
-bool cLuxPlayerState_InteractPush::OnAddYaw(float afAmount)
-{
-	return true;
-}
 
-bool cLuxPlayerState_InteractPush::OnAddPitch(float afAmount)
-{
-	return true;
-}
-
-//-----------------------------------------------------------------------
 
 cGuiGfxElement* cLuxPlayerState_InteractPush::GetCrosshair()
 {

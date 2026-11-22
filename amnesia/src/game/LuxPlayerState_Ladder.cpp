@@ -79,13 +79,6 @@ void cLuxPlayerState_Ladder::Update(float afTimeStep)
 //-----------------------------------------------------------------------
 
 
-void cLuxPlayerState_Ladder::OnDraw(cGuiSet *apGuiSet ,float afFrameTime)
-{
-
-}
-
-//-----------------------------------------------------------------------
-
 
 cGuiGfxElement* cLuxPlayerState_Ladder::GetCrosshair()
 {

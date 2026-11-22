@@ -54,12 +54,9 @@ public:
 
 	bool OnDoAction(eLuxPlayerAction aAction,bool abPressed);
 
-	void OnScroll(float afAmount);
 
 	bool OnMove(eCharDir aDir, float afMul);
 
-	bool OnAddYaw(float afAmount);
-	bool OnAddPitch(float afAmount);
 
 	bool OnRun(bool abPressed){ return true;}
 	bool OnJump(bool abPressed){ return false;}
