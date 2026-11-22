@@ -16,7 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 #ifndef HPL_OPENAL_SOUND_CHANNEL_H
 #define HPL_OPENAL_SOUND_CHANNEL_H
 
@@ -29,49 +28,44 @@ namespace hpl {
 	class cOpenALSoundChannel : public iSoundChannel
 	{
 	public:
-		cOpenALSoundChannel(iSoundData* apData, int alChannel, cSoundManager* apSoundManger);
+		cOpenALSoundChannel(iSoundData* apData, int alChannel, cSoundManager* apSoundManger)
+			: iSoundChannel(apData, apSoundManger) { OhplL5InstallLog(); mpRust = ohpl_l5_chan_new(alChannel); }
 		~cOpenALSoundChannel();
 
-		void Play();
-		void Stop();
+		void Play(){ SetPaused(false); mbStopUsed = false; }
+		void Stop(){ ohpl_l5_chan_stop(mpRust); mbStopUsed = true; }
 
-		void SetPaused(bool abX);
-		void SetSpeed(float afSpeed);
-		void SetVolume (float afVolume); 
-		void SetLooping (bool abLoop);
-		void SetPan (float afPan);
-		void Set3D(bool ab3D);
+		void SetPaused(bool b){ mbPaused = b; ohpl_l5_chan_set_paused(mpRust, b); }
+		void SetSpeed(float f){ mfSpeed = f; ohpl_l5_chan_set_pitch(mpRust, f); }
+		void SetVolume(float f){ mfVolume = f; ohpl_l5_chan_set_volume(mpRust, f); }
+		void SetLooping(bool b){ mbLooping = b; ohpl_l5_chan_set_loop(mpRust, b); }
+		void SetPan(float){}
+		void Set3D(bool b){ mb3D = b; ohpl_l5_chan_set_spatialize(mpRust, b && !mbPositionRelative); }
 
-		void SetPriority(int alX);
-		int GetPriority();
+		void SetPriority(int i){ ohpl_l5_chan_set_priority(mpRust, i, mlPriorityModifier); }
+		int GetPriority(){ return ohpl_l5_chan_priority(mpRust); }
 
-		void SetPositionIsRelative(bool abRelative);
-		void SetPosition(const cVector3f &avPos);
-		void SetVelocity(const cVector3f &avVel);
-		
-		void SetMinDistance(float fMin);
-		void SetMaxDistance(float fMax); 
+		void SetPositionIsRelative(bool b){ mbPositionRelative = b; ohpl_l5_chan_set_spatialize(mpRust, mb3D && !b); }
+		void SetPosition(const cVector3f &v){ mvPosition = v; ohpl_l5_chan_set_attributes(mpRust, v.v, mvVelocity.v); }
+		void SetVelocity(const cVector3f &v){ mvVelocity = v; ohpl_l5_chan_set_attributes(mpRust, mvPosition.v, v.v); }
 
-		bool IsPlaying();
+		void SetMinDistance(float f){ mfMinDistance = f; }
+		void SetMaxDistance(float f){ mfMaxDistance = f; }
 
-		bool IsBufferUnderrun();
-		double GetElapsedTime();
-		double GetTotalTime();
-		void SetElapsedTime(double afTime);
+		bool IsPlaying(){ return ohpl_l5_chan_is_playing(mpRust); }
+		bool IsBufferUnderrun(){ return ohpl_l5_chan_is_underrun(mpRust); }
+		double GetElapsedTime(){ return ohpl_l5_chan_elapsed(mpRust); }
+		double GetTotalTime(){ return ohpl_l5_chan_total(mpRust); }
+		void SetElapsedTime(double t){ ohpl_l5_chan_set_elapsed(mpRust, t); }
 
-		void SetAffectedByEnv(bool abAffected);
-		void SetFiltering ( bool abEnabled, int alFlags);
-		void SetFilterGain(float afGain);
-		void SetFilterGainHF(float afGainHF);
-		void SetFilterGainLF(float afGainLF);
-		void SetEnvSendGain(float afGain);
-	
+		void SetAffectedByEnv(bool b){ iSoundChannel::SetAffectedByEnv(b); ohpl_l5_chan_set_aux_slot(mpRust, mbAffectedByEnv); }
+		void SetFiltering(bool b, int flags){ ohpl_l5_chan_set_filtering(mpRust, b, flags); }
+		void SetFilterGain(float f){ ohpl_l5_chan_set_filter_gain(mpRust, f); }
+		void SetFilterGainHF(float f){ ohpl_l5_chan_set_filter_gain_hf(mpRust, f); }
+		void SetFilterGainLF(float f){ ohpl_l5_chan_set_filter_gain_lf(mpRust, f); }
+		void SetEnvSendGain(float f){ ohpl_l5_chan_set_env_send_gain(mpRust, f); }
+
 	private:
-		int mlChannel;
-		int mlDefaultFreq;
-
-		float mfPosition[3];
-		float mfVelocity[3];
 		OhplL5Channel* mpRust;
 	};
 };
