@@ -21,17 +21,16 @@
 #define HPL_SCENE_H
 
 #include <list>
-
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
-
 #include "engine/Updateable.h"
 #include "scene/Camera.h"
-
+#include "scene/SceneTypes.h"
+#include "scene/RustScn.h"
 #include "resources/MeshLoader.h"
 
 namespace hpl {
-	
+
 	class cAI;
 	class cGraphics;
 	class cResources;
@@ -39,7 +38,6 @@ namespace hpl {
 	class cSound;
 	class cPhysics;
 	class cGui;
-
 	class cCamera;
 	class cFrustum;
 	class cUpdater;
@@ -47,18 +45,10 @@ namespace hpl {
 	class cViewport;
 
 	//--------------------------------------------------------------------
-	
-	typedef std::list<cViewport*> tViewportList;
-	typedef tViewportList::iterator tViewportListIt;
-		
-	typedef std::list<cCamera*> tCameraList;
-	typedef tCameraList::iterator tCameraListIt;
-	
-	typedef std::list<cWorld*> tWorldList;
-	typedef tWorldList::iterator tWorldListIt;
+
+	typedef cOhplPtrView<cViewport> tViewportList;
 
 	//--------------------------------------------------------------------
-
 
 	#define tSceneRenderFlag_World			0x00000001
 	#define tSceneRenderFlag_Gui			0x00000002
@@ -67,61 +57,51 @@ namespace hpl {
 
 	//--------------------------------------------------------------------
 
+	// State and logic live in rust/src/scene/scn.rs.
 	class cScene : public iUpdateable
 	{
 	public:
 		cScene(cGraphics *apGraphics,cResources *apResources, cSound* apSound, cPhysics *apPhysics,
-				cSystem *apSystem, cAI *apAI,cGui *apGui);
-		~cScene();
+				cSystem *apSystem, cAI *apAI,cGui *apGui)
+			: iUpdateable("HPL_Scene"), mpS(ohpl_scn_new(this, apGraphics, apResources, apSound, apPhysics, apSystem, apAI, apGui)){}
+		~cScene(){ ohpl_scn_free(mpS);}
 
-		void Reset();
-		
+		void Reset(){}
+
 		/**
 		 * Called by cEngine
 		 */
-		void Render(float afFrameTime, tFlag alFlags);
+		void Render(float afFrameTime, tFlag alFlags){ ohpl_scn_render(mpS, afFrameTime, alFlags);}
+		void PostUpdate(float afTimeStep){ ohpl_scn_post_update(mpS, afTimeStep);}
 
-		void PostUpdate(float afTimeStep);
-		
 		///// VIEW PORT METHODS ////////////////////
-		
-		cViewport* CreateViewport(cCamera *apCamera=NULL, cWorld *apWorld=NULL, bool abPushFront = false);
-		void DestroyViewport(cViewport* apViewPort);
-		bool ViewportExists(cViewport* apViewPort);
 
-		void SetCurrentListener(cViewport* apViewPort);
-		tViewportList& GetViewportList(){ return mlstViewports; }
-		
+		cViewport* CreateViewport(cCamera *apCamera=NULL, cWorld *apWorld=NULL, bool abPushFront = false)
+		{
+			return ohpl_scn_create_viewport(mpS, apCamera, apWorld, abPushFront);
+		}
+		void DestroyViewport(cViewport* apViewPort){ ohpl_scn_destroy_viewport(mpS, apViewPort);}
+		bool ViewportExists(cViewport* apViewPort){ return ohpl_scn_viewport_exists(mpS, apViewPort);}
+		void SetCurrentListener(cViewport* apViewPort){ ohpl_scn_set_current_listener(mpS, apViewPort);}
+		const tViewportList& GetViewportList(){ return *static_cast<const tViewportList*>(ohpl_scn_viewports(mpS));}
+
 		///// CAMERA METHODS ////////////////////
 
-		cCamera* CreateCamera(eCameraMoveMode aMoveMode);
-		void DestroyCamera(cCamera* apCam);
-		
+		cCamera* CreateCamera(eCameraMoveMode aMoveMode){ return static_cast<cCamera*>(ohpl_scn_create_camera(mpS));}
+		void DestroyCamera(cCamera* apCam){ ohpl_scn_destroy_camera(mpS, apCam);}
+
 		///// WORLD METHODS ////////////////////
 
-		cWorld* LoadWorld(const tString& asFile, tWorldLoadFlag aFlags);
-		cWorld* CreateWorld(const tString& asName);
-		void DestroyWorld(cWorld* apWorld);
-		bool WorldExists(cWorld* apWorld);
-		
-		
+		cWorld* LoadWorld(const tString& asFile, tWorldLoadFlag aFlags)
+		{
+			return static_cast<cWorld*>(ohpl_scn_load_world(mpS, asFile.data(), asFile.size(), aFlags));
+		}
+		cWorld* CreateWorld(const tString& asName){ return static_cast<cWorld*>(ohpl_scn_create_world(mpS, asName.data(), asName.size()));}
+		void DestroyWorld(cWorld* apWorld){ ohpl_scn_destroy_world(mpS, apWorld);}
+		bool WorldExists(cWorld* apWorld){ return ohpl_scn_world_exists(mpS, apWorld);}
+
 	private:
-		void Render3DGui(cViewport* apViewPort,cFrustum *apFrustum,float afTimeStep);
-		void RenderScreenGui(cViewport* apViewPort, float afTimeStep);
-
-        cGraphics *mpGraphics;
-		cResources *mpResources;
-		cSound *mpSound;
-		cPhysics *mpPhysics;
-		cSystem *mpSystem;
-		cAI *mpAI;
-		cGui *mpGui;
-
-		cViewport *mpCurrentListener;
-
-        tViewportList mlstViewports;
-		tWorldList mlstWorlds;
-		tCameraList mlstCameras;
+		OhplScn *mpS;
 	};
 
 };

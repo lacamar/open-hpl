@@ -510,3 +510,7 @@ mod wd_host;
 
 pub(crate) mod efl;
 pub(crate) mod efl_hpm;
+
+pub(crate) mod cxx_camera;
+pub(crate) mod scn;
+mod scx;

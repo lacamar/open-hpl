@@ -24,11 +24,12 @@
 #include "graphics/GraphicsTypes.h"
 #include "gui/GuiTypes.h"
 #include "scene/SceneTypes.h"
+#include "scene/RustScn.h"
 
 namespace hpl {
 
 	//------------------------------------------
-	
+
 	class cScene;
 	class cCamera;
 	class iRenderer;
@@ -39,14 +40,15 @@ namespace hpl {
 	class iViewportCallback;
 	class iRendererCallback;
 	class cGuiSet;
-	
+
 	//------------------------------------------
-	
+
+	// Allocated and owned by Rust (rust/src/scene/scn.rs Viewport); the members mirror its leading fields.
 	class cViewport
 	{
 	public:
-		cViewport(cScene *apScene);
-		~cViewport();
+		cViewport() = delete;
+		~cViewport() = delete;
 
 		void SetActive(bool abX){ mbActive = abX;}
 		void SetVisible(bool abX) { mbVisible = abX;}
@@ -59,9 +61,9 @@ namespace hpl {
 		void SetCamera(cCamera *apCamera){ mpCamera = apCamera;}
 		cCamera* GetCamera(){ return mpCamera;}
 
-		void SetWorld(cWorld *apWorld);
+		void SetWorld(cWorld *apWorld){ ohpl_vp_set_world(this, apWorld);}
 		cWorld* GetWorld(){ return mpWorld;}
-		
+
 		void SetRenderer(iRenderer *apRenderer){ mpRenderer = apRenderer;}
 		iRenderer* GetRenderer(){ return mpRenderer;}
 
@@ -73,50 +75,45 @@ namespace hpl {
 		void SetPostEffectComposite(cPostEffectComposite *apPostEffectComposite){ mpPostEffectComposite = apPostEffectComposite;}
 		cPostEffectComposite* GetPostEffectComposite(){ return mpPostEffectComposite;}
 
-		void AddGuiSet(cGuiSet *apSet);
-		void RemoveGuiSet(cGuiSet *apSet);
-		cGuiSetListIterator GetGuiSetIterator();
+		void AddGuiSet(cGuiSet *apSet){ ohpl_vp_add_gui(this, apSet);}
+		void RemoveGuiSet(cGuiSet *apSet){ ohpl_vp_remove_gui(this, apSet);}
 
 		void SetPosition(const cVector2l& avPos){ mRenderTarget.mvPos = avPos;}
 		void SetSize(const cVector2l& avSize){ mRenderTarget.mvSize = avSize;}
-		
 		const cVector2l& GetPosition(){ return  mRenderTarget.mvPos;}
 		const cVector2l& GetSize(){ return mRenderTarget.mvSize;}
 
 		cRenderTarget* GetRenderTarget(){ return &mRenderTarget; }
-		
-		void AddViewportCallback(iViewportCallback *apCallback);
-		void RemoveViewportCallback(iViewportCallback *apCallback);
-		void RunViewportCallbackMessage(eViewportMessage aMessage);
 
-		void AddRendererCallback(iRendererCallback *apCallback);
-		void RemoveRendererCallback(iRendererCallback *apCallback);
-		tRendererCallbackList* GetRendererCallbackList(){ return &mlstRendererCallbacks;}
-			
+		void AddViewportCallback(iViewportCallback *apCallback){ ohpl_vp_add_callback(this, apCallback);}
+		void RemoveViewportCallback(iViewportCallback *apCallback){ ohpl_vp_remove_callback(this, apCallback);}
+		void RunViewportCallbackMessage(eViewportMessage aMessage){ ohpl_vp_run_callbacks(this, (int)aMessage);}
+
+		void AddRendererCallback(iRendererCallback *apCallback){ ohpl_vp_add_renderer_callback(this, apCallback);}
+		void RemoveRendererCallback(iRendererCallback *apCallback){ ohpl_vp_remove_renderer_callback(this, apCallback);}
+		tRendererCallbackList* GetRendererCallbackList(){ return &mRendererCallbacks;}
+
 	private:
-		cScene *mpScene;
+		static void Layout()
+		{
+			static_assert(offsetof(cViewport, mpRenderer) == 24 && offsetof(cViewport, mRenderTarget) == 40
+						&& offsetof(cViewport, mpRenderSettings) == 64, "cViewport layout (rust/src/scene/scn.rs)");
+		}
 
 		cCamera *mpCamera;
 		cWorld *mpWorld;
-
-        bool mbActive;
+		bool mbActive;
 		bool mbVisible;
-
 		bool mbIsListener;
-
 		iRenderer *mpRenderer;
 		cPostEffectComposite *mpPostEffectComposite;
-
 		cRenderTarget mRenderTarget;
-		
-		tViewportCallbackList mlstCallbacks;
-		tRendererCallbackList mlstRendererCallbacks;
-		tGuiSetList mlstGuiSets;
-		
 		cRenderSettings *mpRenderSettings;
+		tRendererCallbackList mRendererCallbacks;
 	};
 
 	//------------------------------------------
 
 };
+
 #endif // HPL_VIEWPORT_H

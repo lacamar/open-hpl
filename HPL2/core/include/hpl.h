@@ -136,7 +136,6 @@
 #include "scene/LightBox.h"
 #include "scene/LightDirectional.h"
 #include "scene/AnimationState.h"
-#include "scene/NodeState.h"
 #include "scene/SoundEntity.h"
 #include "scene/BillBoard.h"
 #include "scene/LensFlare.h"
@@ -180,7 +179,6 @@
 #include "ai/AStar.h"
 #include "ai/AINodeContainer.h"
 #include "ai/AINodeGenerator.h"
-#include "ai/StateMachine.h"
 
 #include "gui/Gui.h"
 #include "gui/GuiSet.h"
