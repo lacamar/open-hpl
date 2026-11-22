@@ -119,6 +119,7 @@ OhplL5Low* ohpl_l5_low_new();
 void ohpl_l5_low_free(OhplL5Low*);
 void ohpl_l5_low_update(OhplL5Low*);
 void ohpl_l5_low_set_listener(OhplL5Low*, const float* pos, const float* vel, const float* fwd, const float* up);
+void ohpl_l5_low_set_listener_full(OhplL5Low*, const float* pos, const float* vel, const float* fwd, const float* up, float* right, float* mtx);
 void ohpl_l5_low_set_rolloff(OhplL5Low*, float);
 void ohpl_l5_low_set_volume(OhplL5Low*, float);
 bool ohpl_l5_low_set_env_volume(OhplL5Low*, float v, float* out);

@@ -16,11 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 #ifndef HPL_OPENAL_SOUND_DATA_H
 #define HPL_OPENAL_SOUND_DATA_H
 
 #include "sound/SoundData.h"
+#include "impl/OpenALSoundChannel.h"
+#include "system/LowLevelSystem.h"
 #include "impl/RustL5.h"
 
 namespace hpl {
@@ -28,22 +29,29 @@ namespace hpl {
 	class cOpenALSoundData : public iSoundData
 	{
 	public:
-		cOpenALSoundData(const tString& asName, bool abStream);
+		cOpenALSoundData(const tString& asName, bool abStream) : iSoundData(asName, _W(""), abStream), mpRust(NULL) {}
 		~cOpenALSoundData();
 
-		bool CreateFromFile(const tWString &asFile);
+		bool CreateFromFile(const tWString &asFile)
+		{
+			SetFullPath(asFile);
+			OhplL5InstallLog();
+			if(mpRust) ohpl_l5_data_free(mpRust);
+			mpRust = ohpl_l5_data_new(mbStream, mbLoopStream);
+			return ohpl_l5_data_create(mpRust, (const uint32_t*)asFile.c_str(), asFile.size());
+		}
 
-		iSoundChannel* CreateChannel(int alPriority);
+		iSoundChannel* CreateChannel(int alPriority)
+		{
+			int lHandle = mpRust ? ohpl_l5_data_channel(mpRust, alPriority) : -1;
+			return lHandle == -1 ? NULL : hplNew( cOpenALSoundChannel, (this, lHandle, mpSoundManger) );
+		}
 
 		bool IsStream(){ return mbStream;}
+		bool IsStereo(){ return mpRust && ohpl_l5_data_is_stereo(mpRust); }
 
-		bool IsStereo();
-
-	
 	private:
-		OhplL5Data*		mpRust;
-
-//iOAL_Loadable*	mpSoundData;
+		OhplL5Data* mpRust;
 	};
 };
 #endif // HPL_OPENAL_SOUND_DATA_H

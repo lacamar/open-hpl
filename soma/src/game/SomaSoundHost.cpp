@@ -187,27 +187,16 @@ bool BodyPos(float *o)
 void ApplyReverb(const float *p)
 {
 	static cOpenALSoundEnvironment env;
-	env.SetGain(p[0]);
-	env.SetGainHF(p[1]);
-	env.SetGainLF(p[2]);
-	env.SetDecayTime(p[3]);
-	env.SetDecayHFRatio(p[4]);
-	env.SetDecayLFRatio(p[5]);
-	env.SetReflectionsGain(p[6]);
-	env.SetReflectionsDelay(p[7]);
-	env.SetLateReverbGain(p[8]);
-	env.SetLateReverbDelay(p[9]);
-	env.SetModulationTime(p[10]);
-	env.SetModulationDepth(p[11]);
-	env.SetHFReference(p[12]);
-	env.SetLFReference(p[13]);
-	env.SetDiffusion(p[14]);
-	env.SetDensity(p[15]);
-	env.SetEchoTime(0.25f);
-	env.SetEchoDepth(0);
-	env.SetAirAbsorptionGainHF(0.994f);
-	env.SetRoomRolloffFactor(0);
-	env.SetDecayHFLimit(0);
+	OhplL5EnvParams &e = env.Params();
+	e.gain = p[0]; e.gain_hf = p[1]; e.gain_lf = p[2];
+	e.decay_time = p[3]; e.decay_hf_ratio = p[4]; e.decay_lf_ratio = p[5];
+	e.reflections_gain = p[6]; e.reflections_delay = p[7];
+	e.late_reverb_gain = p[8]; e.late_reverb_delay = p[9];
+	e.modulation_time = p[10]; e.modulation_depth = p[11];
+	e.hf_reference = p[12]; e.lf_reference = p[13];
+	e.diffusion = p[14]; e.density = p[15];
+	e.echo_time = 0.25f; e.echo_depth = 0; e.air_absorption_gain_hf = 0.994f;
+	e.room_rolloff_factor = 0; e.decay_hf_limit = 0;
 	gpSomaBase->mpEngine->GetSound()->GetLowLevel()->SetSoundEnvironment(&env);
 }
 
