@@ -173,24 +173,11 @@ void cLuxProp_Lever::OnSetupAfterLoad(cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_Lever::OnResetProperties()
-{
-
-}
-//-----------------------------------------------------------------------
-
 void cLuxProp_Lever::UpdatePropSpecific(float afTimeStep)
 {
 	OhplGa4Run run(this);
 	ohpl_ga4_lever_update(&mS, &mP, afTimeStep, IsInteractedWith(), run.Host(), run.Sink());
 	run.Finish();
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Lever::BeforePropDestruction()
-{
-	
 }
 
 //-----------------------------------------------------------------------

@@ -100,8 +100,6 @@ public:
 	
 	void OnSetupAfterLoad(cWorld *apWorld);
 
-	void OnResetProperties();
-
 	void UpdatePropSpecific(float afTimeStep);
 	
 	void BeforePropDestruction();
@@ -115,7 +113,6 @@ public:
 	void Break();
 
 	void OnHealthChange();
-	void OnDamage(float afAmount, int alStrength);
 
 	//////////////////////
 	//Properties
@@ -139,8 +136,6 @@ public:
 	iLuxEntity_SaveData* CreateSaveData();
 	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
-	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
-
 
 private:
 	void UpdateFoodEnemyAttraction(float afTimeStep);
@@ -159,7 +154,6 @@ private:
 	//Vars
 	tString msContainedItem;
 
-
 	
 	//Data
 	OhplGa4ObjectParams mP;
@@ -169,11 +163,6 @@ private:
 	cLuxProp_Object_BodyCallback *mpBodyCallback;
 
 	cLuxProp_Object_BreakData mBreakData;
-
-
-
-
-
 
 	cLuxInteractData_Grab mGrabData;
 	cLuxInteractData_Push mPushData;	
@@ -200,6 +189,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_H

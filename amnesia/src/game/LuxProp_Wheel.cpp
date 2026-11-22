@@ -138,11 +138,6 @@ bool cLuxProp_Wheel::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_Wheel::OnResetProperties()
-{
-	
-}
-
 
 //-----------------------------------------------------------------------
 
@@ -174,13 +169,6 @@ void cLuxProp_Wheel::UpdatePropSpecific(float afTimeStep)
 	OhplGa4Run run(this);
 	ohpl_ga4_wheel_update(&mS, &mP, afTimeStep, IsInteractedWith(), run.Host(), run.Sink());
 	run.Finish();
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Wheel::BeforePropDestruction()
-{
-	
 }
 
 //-----------------------------------------------------------------------
@@ -411,13 +399,6 @@ void cLuxProp_Wheel::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	mS.interaction_disables_stuck = pData->mbInteractionDisablesStuck;
 
 	SetStuckState(pData->mlStuckState, false);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Wheel::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

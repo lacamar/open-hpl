@@ -132,12 +132,6 @@ void cLuxProp_MoveObject::OnSetupAfterLoad(cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_MoveObject::OnResetProperties()
-{
-
-}
-//-----------------------------------------------------------------------
-
 void cLuxProp_MoveObject::UpdatePropSpecific(float afTimeStep)
 {
 	//Log("Body pos: (%s) Size: (%s)\n", mvBodies[0]->GetWorldPosition().ToString().c_str(), mvBodies[0]->GetShape()->GetSize().ToString().c_str());
@@ -163,13 +157,6 @@ void cLuxProp_MoveObject::UpdatePropSpecific(float afTimeStep)
 	//Update Automove
 	UpdateAutoMove(afTimeStep);
 	
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_MoveObject::BeforePropDestruction()
-{
-
 }
 
 //-----------------------------------------------------------------------
@@ -300,13 +287,6 @@ void cLuxProp_MoveObject::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	mS.auto_move_reached_goal = pData->mbAutoMoveReachedGoal;
 
 	SetAngularOffsetPos(cVector3f(mS.angular_offset_pos[0], mS.angular_offset_pos[1], mS.angular_offset_pos[2]));
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_MoveObject::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

@@ -119,32 +119,6 @@ bool cLuxProp_Button::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_Button::OnSetupAfterLoad(cWorld *apWorld)
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Button::OnResetProperties()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Button::UpdatePropSpecific(float afTimeStep)
-{
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Button::BeforePropDestruction()
-{
-}
-
-//-----------------------------------------------------------------------
-
 eLuxFocusCrosshair cLuxProp_Button::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
 	if(CanInteract(apBody) ) return eLuxFocusCrosshair_Grab;
@@ -240,13 +214,6 @@ void cLuxProp_Button::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//////////////////
 	//Set variables
 	ohpl_a8_button_load(&mS, pData);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Button::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

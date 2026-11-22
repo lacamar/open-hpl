@@ -41,7 +41,6 @@ public:
 
 //----------------------------------------------
 
-
 class cLuxProp_EmotionStone : public iLuxProp
 {
 typedef iLuxProp super_class;
@@ -55,13 +54,8 @@ public:
 	bool CanInteract(iPhysicsBody *apBody);
 	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
 	
-	void OnSetupAfterLoad(cWorld *apWorld);
 
-	void OnResetProperties();
-
-	void UpdatePropSpecific(float afTimeStep);
 	
-	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 	tWString GetFocusText();
@@ -71,15 +65,12 @@ public:
 	
 	//////////////////////
 	//Connection callbacks
-	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
-
 
 	//////////////////////
 	//Save data stuff
 	iLuxEntity_SaveData* CreateSaveData();
 	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
-	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
 	//////////////////////
@@ -112,6 +103,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_EMOTION_STONE_H

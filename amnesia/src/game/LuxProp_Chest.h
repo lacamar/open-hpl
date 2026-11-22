@@ -46,7 +46,6 @@ public:
     float mfMaxAngle;
 };
 
-
 //----------------------------------------------
 
 class cLuxProp_Chest;
@@ -65,7 +64,6 @@ private:
 
 //----------------------------------------------
 
-
 class cLuxProp_Chest : public iLuxProp
 {
 typedef iLuxProp super_class;
@@ -82,20 +80,10 @@ public:
 	
 	void OnSetupAfterLoad(cWorld *apWorld);
 
-	void OnResetProperties();
-
-	void UpdatePropSpecific(float afTimeStep);
 	
-	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 	tWString GetFocusText();
-
-	void ImplementedOnSetActive(bool abX);
-
-	void OnDamage(float afAmount, int alStrength);
-
-	void InFocusDraw(cGuiSet *apGuiSet,float afFrameTime);
 
 	//////////////////////
 	//Properties
@@ -109,13 +97,11 @@ public:
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
 	void Ga4ApplyOp(const OhplGa4Op &aOp);
 
-
 	//////////////////////
 	//Save data stuff
 	iLuxEntity_SaveData* CreateSaveData();
 	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
-	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
 	cLuxChestJointData* GetJointDataFromBody(iPhysicsBody *apBody);
@@ -153,6 +139,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_CHEST_H

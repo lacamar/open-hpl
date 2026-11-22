@@ -318,13 +318,6 @@ void cLuxProp_SwingDoor::UpdatePropSpecific(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_SwingDoor::BeforePropDestruction()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
 eLuxFocusCrosshair cLuxProp_SwingDoor::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
 	if(CanInteract(apBody)) return eLuxFocusCrosshair_Grab;
@@ -361,13 +354,6 @@ void cLuxProp_SwingDoor::OnHealthChange()
 	OhplGa4Run run(this);
 	ohpl_ga4_door_on_health_change(&mS, &mP, S().health, bHasMain, run.Sink());
 	run.Finish();
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_SwingDoor::OnDamage(float afAmount, int alStrength)
-{
-	
 }
 
 //-----------------------------------------------------------------------
@@ -792,13 +778,6 @@ void cLuxProp_SwingDoor::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 		pData->mDamageMesh1.ToMeshEntity(mpDamageMeshEntity[1]);
 	if(mpDamageMeshEntity[2])
 		pData->mDamageMesh2.ToMeshEntity(mpDamageMeshEntity[2]);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_SwingDoor::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

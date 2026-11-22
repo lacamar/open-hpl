@@ -48,7 +48,6 @@ public:
 
 //----------------------------------------------
 
-
 class cLuxProp_MultiSlider : public iLuxProp
 {
 typedef iLuxProp super_class;
@@ -64,11 +63,8 @@ public:
 	
 	void OnSetupAfterLoad(cWorld *apWorld);
 
-	void OnResetProperties();
-
 	void UpdatePropSpecific(float afTimeStep);
 	
-	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 
@@ -88,7 +84,6 @@ public:
 
 	//////////////////////
 	//Connection callbacks
-	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
 	void Ga4ApplyOp(const OhplGa4Op &aOp);
 	void Ga4Slider(OhplGa4Slider *apOut);
 	
@@ -100,8 +95,6 @@ public:
 	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
-
-
 
 	cLuxInteractData_Slide mSlideData;
 
@@ -116,9 +109,6 @@ private:
 	
 	tString msChangeStateSound;
 	tString msStuckSound;
-
-
-
 
 	cPidController<float> mAutoMovePid;
 
@@ -141,6 +131,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_MULTI_SLIDER_H

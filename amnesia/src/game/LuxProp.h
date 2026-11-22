@@ -475,10 +475,11 @@ protected:
 	virtual void OnHealthChange(){}
 	virtual void OnDamage(float afAmount, int alStrength){}
 
-	virtual void OnResetProperties()=0;
+	virtual void OnConnectionStateChange(iLuxEntity *apEntity, int alState){}
+	virtual void OnResetProperties(){}
 
-	virtual void OnSetupAfterLoad(cWorld *apWorld)=0;
-	virtual void UpdatePropSpecific(float afTimeStep)=0;
+	virtual void OnSetupAfterLoad(cWorld *apWorld){}
+	virtual void UpdatePropSpecific(float afTimeStep){}
 	virtual void ImplementedOnSetActive(bool abX){}
 	virtual void BeforePropDestruction(){}
 

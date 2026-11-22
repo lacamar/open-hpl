@@ -47,7 +47,6 @@ public:
 	float mfOpenSpeed;
 	bool mbIsUpdatingOpenAmount;
 
-
     cEngineMeshEntity_SaveData mDamageMesh1;	
 	cEngineMeshEntity_SaveData mDamageMesh2;
 };
@@ -64,9 +63,7 @@ public:
     float mfMinAngle;
 };
 
-
 //----------------------------------------------
-
 
 class cLuxProp_SwingDoor : public iLuxProp
 {
@@ -87,14 +84,12 @@ public:
 
 	void UpdatePropSpecific(float afTimeStep);
 	
-	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 
 	void ImplementedOnSetActive(bool abX);
 
 	void OnHealthChange();
-	void OnDamage(float afAmount, int alStrength);
 
 	//////////////////////
 	//Properties
@@ -126,13 +121,11 @@ public:
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
 
-
 	//////////////////////
 	//Save data stuff
 	iLuxEntity_SaveData* CreateSaveData();
 	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
-	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
     void SetOpenAmount(float afOpenAmount, float afDuration, bool abGoTowardsMaxAngle);
 
@@ -167,15 +160,10 @@ private:
 	tString msBreakSound;
 	tString msBreakPS;
 
-
 	cMeshEntity* mpDamageMeshEntity[3];
 
 	//////////////////////
 	// Variables
-
-
-
-
 
 };
 
@@ -195,6 +183,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_SWING_DOOR_H

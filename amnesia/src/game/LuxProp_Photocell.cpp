@@ -106,19 +106,6 @@ bool cLuxProp_Photocell::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_Photocell::OnSetupAfterLoad(cWorld *apWorld)
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Photocell::OnResetProperties()
-{
-
-}
-//-----------------------------------------------------------------------
-
 
 void cLuxProp_Photocell::UpdatePropSpecific(float afTimeStep)
 {
@@ -127,12 +114,6 @@ void cLuxProp_Photocell::UpdatePropSpecific(float afTimeStep)
 	OhplA5PhotoHost host = { this, &HostBounds, &HostLightAt, &HostIllumination };
 	OhplGa4Run run(this);
 	ohpl_a5_photocell_update(&mS, afTimeStep, &host, run.Sink());
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Photocell::BeforePropDestruction()
-{
 }
 
 //-----------------------------------------------------------------------
@@ -247,13 +228,6 @@ void cLuxProp_Photocell::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//////////////////
 	//Set variables
 	ohpl_a8_photocell_load(&mS, pData);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Photocell::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

@@ -37,7 +37,6 @@ public:
 	tString msSubItemTypeName;
 };
 
-
 //----------------------------------------------
 
 class cLuxProp_Item : public iLuxProp
@@ -54,13 +53,8 @@ public:
 	bool CanInteract(iPhysicsBody *apBody);
 	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
 
-	void OnSetupAfterLoad(cWorld *apWorld);
-
-	void OnResetProperties();
-
 	void UpdatePropSpecific(float afTimeStep);
 	
-	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 
@@ -81,7 +75,6 @@ public:
 	
 	//////////////////////
 	//Connection callbacks
-	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
 	void Ga4ApplyOp(const OhplGa4Op &aOp);
 
 	//////////////////////
@@ -89,8 +82,6 @@ public:
 	iLuxEntity_SaveData* CreateSaveData();
 	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
-	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
-
 
 private:
 	////////////////
@@ -129,6 +120,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_ITEM_H

@@ -190,27 +190,6 @@ void cLuxProp_Chest::OnSetupAfterLoad(cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_Chest::OnResetProperties()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Chest::UpdatePropSpecific(float afTimeStep)
-{
-	
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Chest::BeforePropDestruction()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
 eLuxFocusCrosshair cLuxProp_Chest::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
 	if(ohpl_ga4c_chest_crosshair(mbLocked) == kOhplGa4cCrosshair_Grab)
@@ -227,27 +206,6 @@ tWString cLuxProp_Chest::GetFocusText()
 		return	_W("Locked. Costs ")+cString::ToStringW(mlCoinsNeeded)+_W(" Thalers to open.");
 	else
 		return _W("");
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Chest::ImplementedOnSetActive(bool abX)
-{
-	
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Chest::OnDamage(float afAmount, int alStrength)
-{
-	
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Chest::InFocusDraw(cGuiSet *apGuiSet, float afFrameTime)
-{
-	
 }
 
 //-----------------------------------------------------------------------
@@ -389,13 +347,6 @@ void cLuxProp_Chest::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//Set variables
 	SetLocked(pData->mbLocked, false);
 	kCopyFromVar(pData, mlCoinsNeeded);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Chest::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

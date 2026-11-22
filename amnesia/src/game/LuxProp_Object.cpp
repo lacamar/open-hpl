@@ -338,12 +338,6 @@ void cLuxProp_Object::OnSetupAfterLoad(cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_Object::OnResetProperties()
-{
-
-}
-//-----------------------------------------------------------------------
-
 void cLuxProp_Object::UpdatePropSpecific(float afTimeStep)
 {
 	OhplGa4ObjectUpdateIn in;
@@ -592,11 +586,6 @@ void cLuxProp_Object::OnHealthChange()
 //-----------------------------------------------------------------------
 
 
-void cLuxProp_Object::OnDamage(float afAmount, int alStrength)
-{
-	
-}
-
 //-----------------------------------------------------------------------
 
 bool cLuxProp_Object::ShowOutlinesOnConnectedBodies()
@@ -791,13 +780,6 @@ void cLuxProp_Object::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	mI.is_insanity_vision = pData->mbIsInsanityVision;
 	mI.vision_max_sanity = pData->mfVisionMaxSanity;
 	mS.insanity_vision_active = pData->mbInsanityVisionActive;
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Object::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

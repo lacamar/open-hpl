@@ -179,24 +179,11 @@ void cLuxProp_MultiSlider::OnSetupAfterLoad(cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_MultiSlider::OnResetProperties()
-{
-
-}
-//-----------------------------------------------------------------------
-
 void cLuxProp_MultiSlider::UpdatePropSpecific(float afTimeStep)
 {
 	OhplGa4Run run(this);
 	ohpl_ga4_multi_update(&mS, &mP, mvStates.data(), (int)mvStates.size(), afTimeStep, IsInteractedWith(), run.Host(), run.Sink());
 	run.Finish();
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_MultiSlider::BeforePropDestruction()
-{
-	
 }
 
 //-----------------------------------------------------------------------
@@ -215,12 +202,6 @@ void cLuxProp_MultiSlider::SetStuckState(int alState, bool abEffects)
 	OhplGa4Run run(this);
 	ohpl_ga4_multi_set_stuck_state(&mS, mvStates.data(), (int)mvStates.size(), alState, abEffects, run.Sink());
 	run.Finish();
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_MultiSlider::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
-{
 }
 
 //-----------------------------------------------------------------------

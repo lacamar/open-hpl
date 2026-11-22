@@ -39,7 +39,6 @@ public:
 	bool mbConnectionLightUseSpec;
 };
 
-
 //----------------------------------------------
 
 class cLuxProp_Lamp;
@@ -89,13 +88,8 @@ public:
 	bool CanInteract(iPhysicsBody *apBody);
 	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
 
-	void OnSetupAfterLoad(cWorld *apWorld);
-
-	void OnResetProperties();
-
 	void UpdatePropSpecific(float afTimeStep);
 	
-	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 	tWString GetFocusText();
@@ -123,12 +117,10 @@ public:
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
 	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
-
 private:
 	void SetupLampLightConnection();
 
 	//Vars
-
 
 	cLuxLampLightConnection *mpLightConnection;
 	tString msConnectionLight;
@@ -158,6 +150,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_H

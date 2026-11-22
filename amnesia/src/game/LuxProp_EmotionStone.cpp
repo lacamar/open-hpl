@@ -110,34 +110,6 @@ bool cLuxProp_EmotionStone::OnInteract(iPhysicsBody *apBody, const cVector3f &av
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_EmotionStone::OnSetupAfterLoad(cWorld *apWorld)
-{
-	
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_EmotionStone::OnResetProperties()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_EmotionStone::UpdatePropSpecific(float afTimeStep)
-{
-	
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_EmotionStone::BeforePropDestruction()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
 eLuxFocusCrosshair cLuxProp_EmotionStone::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
 	return eLuxFocusCrosshair_Grab;
@@ -150,13 +122,6 @@ tWString cLuxProp_EmotionStone::GetFocusText()
 	if(ohpl_ga4c_emotion_has_text(msDescCat == "", msDescEntry == "") == false) return _W("");
 
 	return gpBase->mpHelpFuncs->ParseString(kTranslate(msDescCat ,msDescEntry));
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_EmotionStone::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
-{
-	
 }
 
 //-----------------------------------------------------------------------
@@ -234,13 +199,6 @@ void cLuxProp_EmotionStone::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyFromVar(pData, msTextEntry);
 
 	kCopyFromVar(pData, msSound);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_EmotionStone::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

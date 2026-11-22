@@ -36,7 +36,6 @@ public:
 	bool mbCanBeSwitchedOff;
 };
 
-
 //----------------------------------------------
 
 class cLuxProp_Button : public iLuxProp
@@ -51,14 +50,6 @@ public:
 	//General
 	bool CanInteract(iPhysicsBody *apBody);
 	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
-
-	void OnSetupAfterLoad(cWorld *apWorld);
-
-	void OnResetProperties();
-
-	void UpdatePropSpecific(float afTimeStep);
-
-	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 
@@ -81,8 +72,6 @@ public:
 	iLuxEntity_SaveData* CreateSaveData();
 	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
-	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
-
 
 private:
 	OhplA5Button mS;
@@ -104,6 +93,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_BUTTON_H

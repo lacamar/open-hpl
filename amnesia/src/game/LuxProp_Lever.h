@@ -42,7 +42,6 @@ public:
 
 //----------------------------------------------
 
-
 class cLuxProp_Lever : public iLuxProp
 {
 typedef iLuxProp super_class;
@@ -58,11 +57,8 @@ public:
 	
 	void OnSetupAfterLoad(cWorld *apWorld);
 
-	void OnResetProperties();
-
 	void UpdatePropSpecific(float afTimeStep);
 	
-	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 
@@ -93,23 +89,18 @@ public:
 
 private:
 
-
-
 	cLuxInteractData_Lever mLeverData;
 	OhplGa4LeverParams mP;
 	OhplGa4Lever mS;
-
 
 	iPhysicsJointHinge *mpHingeJoint;
 	iPhysicsBody *mpLeverBody;
 	
 
-
 	tString msMinLimitSound;
 	tString msMaxLimitSound;
 
 	cPidController<cVector3f> mRotatePid;
-
 
 	tString msStuckSound;
 
@@ -131,6 +122,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_LEVER_H

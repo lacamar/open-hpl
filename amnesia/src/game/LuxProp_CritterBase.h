@@ -117,11 +117,8 @@ public:
 	
 	void OnSetupAfterLoad(cWorld *apWorld);
 
-	void OnResetProperties();
-
 	void UpdatePropSpecific(float afTimeStep);
 	
-	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 
@@ -143,8 +140,6 @@ public:
 	//Save data stuff
 	virtual void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
 	virtual void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
-	virtual void SetupSaveData(iLuxEntity_SaveData *apSaveData);
-
 
 protected:
 	virtual void OnDamageCritter(float afAmount){}
@@ -152,7 +147,6 @@ protected:
 
 	virtual void UpdateCritterSpecific(float afTimeStep)=0;
 	virtual void OnShapeCollision(const cVector3f& avPushVec, float afTimeStep){}
-
 
 	cMatrixf GetAttackMatrix(const cVector3f& avDir);
 	bool Attack(const cVector3f& avDir);
@@ -196,6 +190,5 @@ public:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_CRITTER_BASE_H

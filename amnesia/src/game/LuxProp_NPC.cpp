@@ -189,32 +189,11 @@ bool cLuxProp_NPC::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_NPC::OnSetupAfterLoad(cWorld *apWorld)
-{
-	
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_NPC::OnResetProperties()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
 void cLuxProp_NPC::UpdatePropSpecific(float afTimeStep)
 {
 	UpdateWakeState(afTimeStep);
 	UpdateCheckPlayerIsInArea(afTimeStep);
 	UpdateHeadMovement(afTimeStep);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_NPC::BeforePropDestruction()
-{
-
 }
 
 //-----------------------------------------------------------------------
@@ -260,13 +239,6 @@ void cLuxProp_NPC::Ga4ApplyOp(const OhplGa4Op &aOp)
 	default:
 		iLuxProp::Ga4ApplyOp(aOp);
 	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_NPC::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
-{
-	
 }
 
 //-----------------------------------------------------------------------
@@ -416,13 +388,6 @@ void cLuxProp_NPC::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	mS.awake = pData->mbAwake;
 	mS.playing_wake_anim = pData->mbPlayingWakeAnim;
 	mS.follow_player = pData->mbFollowPlayer;
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_NPC::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

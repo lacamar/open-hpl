@@ -43,9 +43,7 @@ public:
 	bool mbShowStats;
 };
 
-
 //----------------------------------------------
-
 
 class cLuxProp_LevelDoor : public iLuxProp
 {
@@ -60,15 +58,10 @@ public:
 	bool CanInteract(iPhysicsBody *apBody);
 	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
 
-	void OnSetupAfterLoad(cWorld *apWorld);
-
-	void OnResetProperties();
-
 	void UpdatePropSpecific(float afTimeStep);
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 	tWString GetFocusText();
-
 
 	//////////////////////
 	//Properties
@@ -80,7 +73,6 @@ public:
 
 	//////////////////////
 	//Connection callbacks
-	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
 
 	//////////////////////
 	//Rust replay
@@ -91,7 +83,6 @@ public:
 	iLuxEntity_SaveData* CreateSaveData();
 	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
-	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
 
@@ -129,6 +120,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_LEVEL_DOOR_H
