@@ -2,6 +2,7 @@
 #define SOMA_LUX_H
 
 #include "hpl.h"
+#include "RustSomaCore.h"
 
 #include <angelscript.h>
 #include <list>
@@ -13,6 +14,34 @@ using namespace hpl;
 
 class cSomaScriptRuntime;
 class cSomaLuxEntity;
+
+struct OhplSoRoster;
+extern "C"
+{
+	OhplSoRoster *ohpl_so_roster_new();
+	void ohpl_so_roster_free(OhplSoRoster *);
+	void ohpl_so_roster_add(OhplSoRoster *, size_t ent, const OhplSeCore *, const OhplSeNames *);
+	bool ohpl_so_roster_remove(OhplSoRoster *, size_t ent);
+	cSomaLuxEntity *const *ohpl_so_roster_live(const OhplSoRoster *, size_t *len);
+	cSomaLuxEntity *const *ohpl_so_roster_destroyed(const OhplSoRoster *, size_t *len);
+	void ohpl_so_roster_flush(OhplSoRoster *);
+	cSomaLuxEntity *ohpl_so_roster_by_name(const OhplSoRoster *, const unsigned char *, size_t);
+	cSomaLuxEntity *ohpl_so_roster_by_id(const OhplSoRoster *, uint8_t, int32_t, int32_t);
+	cSomaLuxEntity *const *ohpl_so_roster_children(OhplSoRoster *, const unsigned char *, size_t, size_t *n);
+}
+
+// View of a Rust-owned entity array; valid until the roster changes
+struct cSomaEntSpan
+{
+	cSomaLuxEntity *const *mp;
+	size_t mn;
+	cSomaLuxEntity *const *begin() const { return mp; }
+	cSomaLuxEntity *const *end() const { return mp + mn; }
+	size_t size() const { return mn; }
+	bool empty() const { return mn == 0; }
+	cSomaLuxEntity *operator[](size_t i) const { return mp[i]; }
+	std::vector<cSomaLuxEntity *> Vec() const { return std::vector<cSomaLuxEntity *>(mp, mp + mn); }
+};
 
 class cSomaLuxMap
 {
@@ -47,7 +76,12 @@ public:
 
 	cSomaLuxEntity *GetEntity(const tString &asName);
 	cSomaLuxEntity *GetEntity(const struct cSomaID &aID);
-	const std::vector<cSomaLuxEntity *> &GetEntities() { return mvEntities; }
+	cSomaEntSpan GetEntities() const
+	{
+		cSomaEntSpan s;
+		s.mp = ohpl_so_roster_live(mpRoster, &s.mn);
+		return s;
+	}
 	cSomaLuxEntity *CreateEntity(const tString &asName, const tString &asFile, const cMatrixf &a_mtx, const cVector3f &avScale);
 	void DestroyEntity(cSomaLuxEntity *apEnt);
 	cSomaLuxEntity *mpLatestEntity = NULL;
@@ -69,16 +103,12 @@ private:
 	tString msFileName;
 	cSomaScriptRuntime *mpRuntime;
 	asIScriptObject *mpScript;
-	std::vector<cSomaLuxEntity *> mvEntities;
-	std::map<tString, cSomaLuxEntity *> mmapEntities;
-	std::map<tString, std::vector<cSomaLuxEntity *>> mmapWildcardCache;
+	OhplSoRoster *mpRoster = ohpl_so_roster_new();
 
 	void UpdateCollideCallbacks();
 	void UpdateLookAtCallbacks(float afTimeStep);
 	bool SetupEntityScript(cSomaLuxEntity *apEnt);
 	void AddEntity(cSomaLuxEntity *apEnt);
-	std::vector<cSomaLuxEntity *> mvDestroyed;
-	size_t mlDestroyedFlushed = 0;
 public:
 	int mlNextId = 1;
 	std::vector<cSomaLuxEntity *> mvPendingBreaks;

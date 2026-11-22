@@ -10,6 +10,16 @@ pub struct Names {
     vars: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
+impl Names {
+    pub(crate) fn name(&self) -> &[u8] {
+        &self.s[0]
+    }
+    #[cfg(test)]
+    pub(crate) fn set_name(&mut self, n: &[u8]) {
+        self.s[0] = n.to_vec();
+    }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_se_names_new() -> *mut Names {
     Box::into_raw(Box::default())
