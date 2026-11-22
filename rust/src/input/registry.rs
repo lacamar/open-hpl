@@ -32,6 +32,43 @@ pub struct SubSpec {
     pub max: f32,
 }
 
+impl SubSpec {
+    /// Type string `iSubAction::GetInputType` reports.
+    pub fn type_name(&self) -> &'static str {
+        match self.kind {
+            SUB_KEY => "Keyboard",
+            SUB_MOUSE => "MouseButton",
+            SUB_PAD_BUTTON => "GamepadButton",
+            SUB_PAD_AXIS => "GamepadAxis",
+            SUB_PAD_HAT => "GamepadHat",
+            _ => "",
+        }
+    }
+
+    pub fn input_name(&self) -> String {
+        use super::{
+            key_name, mouse_button_name, pad_axis_name, pad_axis_range_name, pad_button_name,
+            pad_hat_name, pad_hat_state_name,
+        };
+        match self.kind {
+            SUB_KEY => key_name(self.id).into(),
+            SUB_MOUSE => mouse_button_name(self.id).into(),
+            SUB_PAD_BUTTON => pad_button_name(self.id).into(),
+            SUB_PAD_AXIS => format!(
+                "{}.{}",
+                pad_axis_name(self.id),
+                pad_axis_range_name(self.range)
+            ),
+            SUB_PAD_HAT => format!(
+                "{}.{}",
+                pad_hat_name(self.id),
+                pad_hat_state_name(self.range)
+            ),
+            _ => String::new(),
+        }
+    }
+}
+
 pub struct Action {
     id: i32,
     user: *mut c_void,

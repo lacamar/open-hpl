@@ -427,3 +427,31 @@ from_name_fn!(ohpl_input_pad_ball_from_name, input::pad_ball_from_name);
 pub extern "C" fn ohpl_input_pad_axis_range_from_value(v: f32) -> i32 {
     input::pad_axis_range_from_value(v)
 }
+
+/// # Safety
+/// `spec` is null or live; `sink` accepts `ctx` and a slice valid for the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_input_sub_type(
+    spec: *const input::registry::SubSpec,
+    sink: Sink<u8>,
+    ctx: *mut c_void,
+) {
+    // SAFETY: caller contract.
+    if let Some(s) = unsafe { spec.as_ref() } {
+        unsafe { emit(sink, ctx, s.type_name().as_bytes()) }
+    }
+}
+
+/// # Safety
+/// `spec` is null or live; `sink` accepts `ctx` and a slice valid for the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_input_sub_name(
+    spec: *const input::registry::SubSpec,
+    sink: Sink<u8>,
+    ctx: *mut c_void,
+) {
+    // SAFETY: caller contract.
+    if let Some(s) = unsafe { spec.as_ref() } {
+        unsafe { emit(sink, ctx, s.input_name().as_bytes()) }
+    }
+}

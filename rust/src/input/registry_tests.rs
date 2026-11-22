@@ -281,3 +281,24 @@ fn stale_handles_are_inert() {
     assert!(r.find_name(b"a").is_none() && r.find_id(-1).is_none());
     assert!(!r.double_triggered(h, 1.0));
 }
+
+#[test]
+fn sub_names() {
+    use crate::input::{key_name, pad_axis_name, pad_axis_range_name};
+    let mk = |kind, id, range| SubSpec {
+        kind,
+        pad: 0,
+        id,
+        range,
+        min: 0.0,
+        max: 0.0,
+    };
+    assert_eq!(mk(SUB_KEY, 4, 0).type_name(), "Keyboard");
+    assert_eq!(mk(SUB_MOUSE, 1, 0).type_name(), "MouseButton");
+    assert_eq!(mk(SUB_KEY, 4, 0).input_name(), key_name(4));
+    assert_eq!(
+        mk(SUB_PAD_AXIS, 0, 1).input_name(),
+        format!("{}.{}", pad_axis_name(0), pad_axis_range_name(1))
+    );
+    assert_eq!(mk(0, 0, 0).type_name(), "");
+}

@@ -29,44 +29,15 @@ namespace hpl {
 
 	class iSubAction
 	{
-	friend class cAction;
 	public:
-		virtual ~iSubAction(){}
+		iSubAction(const OhplSubSpec &aSpec) : mSpec(aSpec) {}
 
-		void Update(float afTimeStep);
+		const OhplSubSpec& OhplSpec(){ return mSpec; }
+		tString GetInputType(){ return OhplSubText(ohpl_input_sub_type, mSpec); }
+		tString GetInputName(){ return OhplSubText(ohpl_input_sub_name, mSpec); }
 
-		/**
-		* Update special logic for the action. Normally empty
-		*/
-		virtual void UpdateLogic(float afTimeStep){}
-
-
-		/**
-		* Filled in by the class that inherits from Action.
-		* \return true if the action is being triggered
-		*/
-		virtual bool IsTriggerd()=0;
-
-		/**
-		* The registry form of this sub action; kind 0 never triggers.
-		*/
-		virtual OhplSubSpec OhplSpec(){ OhplSubSpec s = {}; return s; }
-
-		/**
-		* 
-		* \return A value from the input, ie the relative mouse x position.
-		*/
-		virtual float GetValue()=0;
-
-		/**
-		* The name of the input, ie for keyboard the name of the key is returned.
-		*/
-		virtual tString GetInputName()=0;
-
-		/**
-		* The name of the input type.
-		*/
-		virtual tString GetInputType()=0;
+	private:
+		OhplSubSpec mSpec;
 	};
 
 	//---------------------------------------------------------
@@ -90,7 +61,7 @@ namespace hpl {
 		void AddGamepadAxis(int alPadIndex, eGamepadAxis aAxis, eGamepadAxisRange aRange, float afMinThreshold, float afMaxThreshold=1.0f); 
 		void AddGamepadHat(int alPadIndex, eGamepadHat aHat, eGamepadHatState aHatState);
 
-		void AddSubAction(iSubAction *apSubAction);
+		void AddSubAction(const OhplSubSpec &aSpec);
 
 		void ClearSubActions();
 
