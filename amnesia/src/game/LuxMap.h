@@ -196,7 +196,6 @@ public:
 	{
 		return static_cast<cLuxLampLightConnection*>(ohpl_a13_map_add_lamp(mpA7, apLamp, apLight, afAmount, abUseOnColor, abUseSpec));
 	}
-	cLuxLampLightConnection* GetLampLightConnection(iLight *apLight){ return static_cast<cLuxLampLightConnection*>(ohpl_a7_lamp_find(mpA7, apLight));}
 
 	cLuxScriptVar* GetVar(const tString &asName);
 
@@ -207,7 +206,6 @@ public:
 	//////////////////////////
 	// Properties
 	void SetNumberOfQuests(int alX){ ohpl_a13_map_set_quests(mpA7, alX);}
-	int GetNumberOfQuests(){ return ohpl_a13_map_quests(mpA7);}
 	void AddCompletionAmount(int alAmount, float afDelay=0.0f){ ohpl_a13_map_add_completion(mpA7, alAmount, afDelay);}
 
 	void SetLanternLitCallback(const tString& asCallback){ msLanternLitCallback = asCallback;}

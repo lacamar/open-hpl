@@ -181,12 +181,7 @@ public:
 	iLuxUpdateable *AddGlobalModule(iLuxUpdateable *apModule);
 
 
-	void RaiseCrashFlag();
-	void LowerCrashFlag();
-	bool CheckCrashFlag();
-
 	void RaiseFirstStartFlag();
-	void LowerFirstStartFlag();
 	bool CheckFirstStartFlag();
 
 

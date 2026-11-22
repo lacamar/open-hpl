@@ -111,7 +111,6 @@ extern "C" {
 	void ohpl_a7_dissolve_add(OhplA7Ctx *m, void *obj, float time);
 	void ohpl_a7_dissolve_update(OhplA7Ctx *m, float step, OhplA7DissolveFn cb, void *ctx);
 	void ohpl_a7_lamp_add(OhplA7Ctx *m, void *conn, const void *light);
-	void *ohpl_a7_lamp_find(OhplA7Ctx *m, const void *light);
 	void ohpl_a7_lamp_each(OhplA7Ctx *m, OhplA7PtrFn cb, void *ctx);
 	void ohpl_a7_start_add(OhplA7Ctx *m, void *p, const char *name, size_t n);
 	void *ohpl_a7_start_find(OhplA7Ctx *m, const char *name, size_t n);
