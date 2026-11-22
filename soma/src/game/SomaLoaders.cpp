@@ -72,8 +72,8 @@ static eSomaLuxEntityType TypeFromEntityType(const tString &asType)
 static void CreateAreaEntity(const tString &asName, const tString &asType, bool abActive, const cVector3f &avSize, const cMatrixf &a_mtxTransform)
 {
 	cSomaLuxEntity *pEnt = new cSomaLuxEntity();
-	pEnt->msName = asName;
-	pEnt->msClassName = asType;
+	pEnt->SetName(asName);
+	pEnt->SetClassName(asType);
 	pEnt->meType = asType == "Liquid" ? eSomaLuxEntityType_LiquidArea : eSomaLuxEntityType_Area;
 	pEnt->mID = ElementID();
 	pEnt->mbActive = abActive;
@@ -190,9 +190,9 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 	if (cWorldLoaderHpm::GetCurrentElement() || gsSomaSpawnName != "")
 	{
 		cSomaLuxEntity *pEnt = new cSomaLuxEntity();
-		pEnt->msName = cWorldLoaderHpm::GetCurrentElement() ? cWorldLoaderHpm::GetCurrentElement()->GetAttributeString("Name", "") : gsSomaSpawnName;
-		pEnt->msClassName = msEntityType;
-		pEnt->msFileName = msFileName;
+		pEnt->SetName(cWorldLoaderHpm::GetCurrentElement() ? cWorldLoaderHpm::GetCurrentElement()->GetAttributeString("Name", "") : gsSomaSpawnName);
+		pEnt->SetClassName(msEntityType);
+		pEnt->SetFileName(msFileName);
 		pEnt->meType = TypeFromEntityType(msEntityType);
 		pEnt->mID = ElementID();
 		pEnt->mbActive = mbActive;
@@ -238,10 +238,10 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mVars.LoadVariables(apRootElem->GetFirstElement("UserDefinedVariables"));
 		tString sMainBody = pEnt->mVars.GetVarString("MainPhysicsBody", "");
 		for (iPhysicsBody *pBody : mvBodies)
-			if (pBody->GetName() == pEnt->msName + "_" + sMainBody)
+			if (pBody->GetName() == pEnt->GetName() + "_" + sMainBody)
 				pEnt->mpMainBody = pBody;
 		if (sMainBody != "" && pEnt->mpMainBody == NULL)
-			Warning("Could not find main physics body '%s'\n", pEnt->msName.c_str());
+			Warning("Could not find main physics body '%s'\n", pEnt->GetName().c_str());
 		for (size_t i = 0; i < mvBodies.size() && i < mvBodyExtraData.size(); ++i)
 			if (pEnt->GetMainBody() == mvBodies[i])
 				pEnt->mvBodyOffset = mvBodyExtraData[i].m_mtxLocalTransform.GetTranslation();
