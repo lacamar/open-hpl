@@ -21,6 +21,7 @@
 #define HPL_IMAGEMANAGER_H
 
 #include "resources/ResourceManager.h"
+#include "resources/RustFrames.h"
 #include "math/MathTypes.h"
 
 namespace hpl {
@@ -34,15 +35,8 @@ namespace hpl {
 	class cBitmapLoaderHandler;
 	class iTexture;
 
-	typedef std::list<cFrameBitmap*> tFrameBitmapList;
-	typedef tFrameBitmapList::iterator tFrameBitmapListIt;
-	
-	typedef std::map<int,cFrameTexture*> tFrameTextureMap;
-	typedef tFrameTextureMap::iterator tFrameTextureMapIt;
-
 	class cImageManager :public iResourceManager
 	{
-	friend class cFrameTexture;
 	public:
 		cImageManager(	cResources *mpResources, iLowLevelGraphics *apLowLevelGraphics,
 						iLowLevelSystem *apLowLevelSystem);
@@ -75,7 +69,6 @@ namespace hpl {
 		static void SetDefaultFrameSize(const cVector2l &avSize) { mvDefaultFrameSize = avSize; }
 	protected:
 		void* H3Create(OhplH3Create &aCreate) override;
-		int64_t H3Call(int alWhat, void *apObj, int64_t alArg) override;
 	private:
 		static cVector2l mvDefaultFrameSize;
 
@@ -84,6 +77,10 @@ namespace hpl {
 		
 		
 		cVector2l mvFrameSize;
+
+		OhplFrHost mFrHost;
+		tString mFrScratch;
+		void InitFrameHost();
 
 
 	};

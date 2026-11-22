@@ -42,27 +42,33 @@ struct OhplEntState
 	bool destroy_me;
 };
 
-static_assert(sizeof(OhplEntState) == 48, "OhplEntState layout");
-
 extern "C"
 {
 	OhplEntState *ohpl_ent_state_new(int id, int entity_type, void *map);
 	void ohpl_ent_state_free(OhplEntState *s);
+	const unsigned char *ohpl_ent_str(const OhplEntState *s, int kind, size_t *len);
+	void ohpl_ent_str_set(OhplEntState *s, int kind, const unsigned char *p, size_t n);
+	const unsigned char *ohpl_ent_script(OhplEntState *s, int code, int i, int j, const unsigned char *type, size_t type_len, size_t *len);
+	void ohpl_ent_run_callback(OhplEntState *s, const OhplGa4Sink *sink);
+	void ohpl_ent_run_interact(OhplEntState *s, const OhplGa4Sink *sink);
+	void ohpl_ent_look_at(OhplEntState *s, float dt, const OhplGa4cLookHost *host, const OhplGa4bLos *los, const OhplGa4Sink *sink);
+	void ohpl_ent_conn_change(OhplEntState *s, int state, const OhplGa4Sink *sink);
+	void ohpl_ent_conn_add(OhplEntState *s, const unsigned char *name, size_t name_len, void *entity, OhplEntState *entity_state, bool invert, int states, const unsigned char *cb, size_t cb_len);
+	void ohpl_ent_conn_clear(OhplEntState *s);
+	int ohpl_ent_conn_num(const OhplEntState *s);
+	const unsigned char *ohpl_ent_conn_str(const OhplEntState *s, int i, int kind, size_t *len);
+	void ohpl_ent_conn_info(const OhplEntState *s, int i, int *entity_id, bool *invert, int *states);
+	void *ohpl_ent_conn_entity(const OhplEntState *s, int i);
 }
 
 class iLuxEntity;
 
 //----------------------------------------------
 
-class cLuxEntityConnection;
-
 class cLuxEntityConnection_SaveData : public iSerializable
 {
 	kSerializableClassInit(cLuxEntityConnection_SaveData)
 public:
-	void FromConnection(cLuxEntityConnection *apConnection);
-	void ToConnection(cLuxEntityConnection *apConnection, cLuxMap *apMap);
-
 	tString msName;
 	int mlEntityId;
 	bool mbInvertStateSent;
@@ -106,33 +112,6 @@ public:
 
 //----------------------------------------------
 
-class cLuxEntityConnection
-{
-friend class cLuxEntityConnection_SaveData;
-public:
-	cLuxEntityConnection(){}
-	cLuxEntityConnection(const tString& asName, iLuxEntity *apEntity, bool abInvertStateSent, int alStatesUsed, const tString& asCallbackFunc) 
-		: msName(asName), mpEntity(apEntity), mbInvertStateSent(abInvertStateSent), mlStatesUsed(alStatesUsed), msCallbackFunc(asCallbackFunc) {}
-
-	const tString& GetName(){ return msName; }
-
-	iLuxEntity* GetEntity(){ return mpEntity; }
-
-	bool GetInvertStateSent(){ return mbInvertStateSent;}
-	int GetStateUsed(){ return mlStatesUsed;}
-
-	const tString& GetCallbackFunc(){ return msCallbackFunc; }
-
-private:
-	tString msName;
-	iLuxEntity *mpEntity;
-	bool mbInvertStateSent;
-	int mlStatesUsed;
-	tString msCallbackFunc;
-};
-
-//----------------------------------------------
-
 class cLuxMap;
 
 class iLuxEntity : public iLuxCollideCallbackContainer
@@ -172,7 +151,8 @@ public:
 	// Properties
 	eLuxEntityType GetEntityType()const{ return (eLuxEntityType)mpS->entity_type;}
 	
-	const tString& GetName()const{ return msName;}
+	tString GetName()const{ return GetEntStr(kEntStrName);}
+	const unsigned char *GetNameData(size_t *apLen)const{ return ohpl_ent_str(mpS, kEntStrName, apLen);}
 	int GetID()const{ return mpS->id;}
 
 	void SetActive(bool abX);
@@ -201,8 +181,8 @@ public:
 
 	virtual cMeshEntity* GetMeshEntity(){ return NULL; }
 
-	void SetCallbackFunc(const tString& asFunc){ msCallbackFunc = asFunc;}
-	void SetConnectionStateChangeCallback(const tString& asFunc){ msConnectionStateChangeCallback = asFunc;}
+	void SetCallbackFunc(const tString& asFunc){ SetEntStr(kEntStrCallback, asFunc);}
+	void SetConnectionStateChangeCallback(const tString& asFunc){ SetEntStr(kEntStrConnChange, asFunc);}
 
 	void SetPlayerInteractCallback(const tString &asCallbackFunc, bool abRemoveWhenInteracted);
 	void SetPlayerLookAtCallback(const tString &asCallbackFunc, bool abRemoveWhenLookedAt);
@@ -213,8 +193,9 @@ public:
 	
 	//////////////////
 	// Connection
-	int GetConnectionNum(){ return (int)mvConnections.size();}
-	cLuxEntityConnection *GetConnection(int lIdx){ return mvConnections[lIdx];}
+	int GetConnectionNum(){ return ohpl_ent_conn_num(mpS);}
+	void SaveConnections(cContainerVec<cLuxEntityConnection_SaveData> &avOut);
+	void LoadConnections(cContainerVec<cLuxEntityConnection_SaveData> &avIn, cLuxMap *apMap);
 	void AddConnection(const tString& asName, iLuxEntity *apEntity, bool abInvertStateSent, int alStatesUsed, const tString &asCallbackFunc);
 
 	////////////////
@@ -234,23 +215,21 @@ public:
 
 	//////////////////
 	// Member accessors
-	const tString& GetCallbackFunc()const{ return msCallbackFunc;}
-	const tString& GetConnectionStateChangeCallback()const{ return msConnectionStateChangeCallback;}
-	const tString& GetInteractCallback()const{ return msInteractCallback;}
-	void ClearInteractCallback(){ msInteractCallback = "";}
-	const tString& GetLookAtCallback()const{ return msLookAtCallback;}
+	tString GetCallbackFunc()const{ return GetEntStr(kEntStrCallback);}
+	tString GetConnectionStateChangeCallback()const{ return GetEntStr(kEntStrConnChange);}
+	tString GetInteractCallback()const{ return GetEntStr(kEntStrInteract);}
+	void ClearInteractCallback(){ SetEntStr(kEntStrInteract, "");}
+	tString GetLookAtCallback()const{ return GetEntStr(kEntStrLookAt);}
 	bool GetInteractCallbackRemove()const{ return mpS->cb.interact_remove;}
 	bool GetLookAtCallbackRemove()const{ return mpS->cb.lookat_remove;}
 	void SetInteractCallbackRemove(bool abX){ mpS->cb.interact_remove = abX;}
 	void SetMaxFocusDistance(float afX){ mpS->max_focus_distance = afX;}
 	eLuxFocusCrosshair GetCustomFocusCrossHair()const{ return (eLuxFocusCrosshair)mpS->crosshair;}
-	void SetName(const tString& asX){ msName = asX;}
+	void SetName(const tString& asX){ SetEntStr(kEntStrName, asX);}
 	void SetID(int alX){ mpS->id = alX;}
 	void SetMap(cLuxMap *apMap){ mpS->map = apMap;}
 	void SetDestroyMeFlag(bool abX){ mpS->destroy_me = abX;}
 	void SetIsLookedAt(bool abX){ mpS->cb.is_looked_at = abX;}
-	tString& CallbackFuncRef(){ return msCallbackFunc;}
-	tString& ConnectionStateChangeCallbackRef(){ return msConnectionStateChangeCallback;}
 	float* MaxFocusDistancePtr(){ return &mpS->max_focus_distance;}
 
 protected:
@@ -271,20 +250,17 @@ protected:
 	bool CollidesWithPlayer();
 
 private:
+	enum { kEntStrName, kEntStrCallback, kEntStrConnChange, kEntStrInteract, kEntStrLookAt };
+
 	OhplEntState *mpS;
-	tString msName;
 	tLuxCollideCallbackContainerList mlstCollideCallbackParents;
-
-	tString msCallbackFunc;
-	tString msConnectionStateChangeCallback;
-
-	tString msInteractCallback;
-	tString msLookAtCallback;
 
 	iLuxEntity_SaveData *mpSaveData;
 
 	std::vector<cMesh*> mvPreloadedMeshes;
-	std::vector<cLuxEntityConnection*> mvConnections;
+
+	tString GetEntStr(int alKind)const{ size_t n; const unsigned char *p = ohpl_ent_str(mpS, alKind, &n); return tString((const char*)p, n);}
+	void SetEntStr(int alKind, const tString &asX){ ohpl_ent_str_set(mpS, alKind, (const unsigned char*)asX.data(), asX.size());}
 
 	void DestroyMe(){ mpS->destroy_me = true;}
 	void Ga4cApplyOp(const OhplGa4Op &aOp, const tString *apType);

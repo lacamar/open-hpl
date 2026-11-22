@@ -20,7 +20,5 @@ int hplMain(const tString &asCommandline)
 
 	hplDelete(gpAmfpBase);
 
-	cMemoryManager::LogResults();
-
 	return 0;
 }

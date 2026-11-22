@@ -166,18 +166,17 @@ cSomaLuxMap::cSomaLuxMap(cWorld *apWorld, const tString &asFileName)
 	: mpWorld(apWorld), msFileName(asFileName), mpRuntime(NULL), mpScript(NULL)
 {
 	msName = cString::SetFileExt(cString::GetFileName(asFileName), "");
-	mvEntities.swap(cSomaLuxEntity::Pending());
+	std::vector<cSomaLuxEntity *> vLoaded;
+	vLoaded.swap(cSomaLuxEntity::Pending());
 	// cLuxMap::LoadFromFile adds the player and camera proxy entities
 	cSomaLuxEntity *pPlayer = new cSomaLuxEntity();
 	pPlayer->SetName("Player");
 	pPlayer->meType = eSomaLuxEntityType_Player;
-	mvEntities.push_back(pPlayer);
+	vLoaded.push_back(pPlayer);
 	cSomaLuxEntity *pCamera = new cSomaLuxEntity();
 	pCamera->SetName("Camera");
 	pCamera->mpCameraNode = new cCameraNode();
-	mvEntities.push_back(pCamera);
-	std::vector<cSomaLuxEntity *> vLoaded;
-	vLoaded.swap(mvEntities);
+	vLoaded.push_back(pCamera);
 	for (cSomaLuxEntity *pEnt : vLoaded)
 		AddEntity(pEnt);
 }
@@ -187,10 +186,13 @@ cSomaLuxMap::~cSomaLuxMap()
 	ohpl_s9_map_free((size_t)this);
 	SomaClearObjectIDs();
 	cSomaSoundscape::Get()->Forget(this);
-	for (cSomaLuxEntity *pEnt : mvDestroyed)
+	size_t lDead;
+	cSomaLuxEntity *const *ppDead = ohpl_so_roster_destroyed(mpRoster, &lDead);
+	for (size_t i = 0; i < lDead; ++i)
+		delete ppDead[i];
+	for (cSomaLuxEntity *pEnt : GetEntities())
 		delete pEnt;
-	for (cSomaLuxEntity *pEnt : mvEntities)
-		delete pEnt;
+	ohpl_so_roster_free(mpRoster);
 	if (mpCurrent == this)
 		mpCurrent = NULL;
 	if (mpScript)
@@ -252,20 +254,20 @@ bool cSomaLuxMap::CreateScript(cSomaScriptRuntime *apRuntime, const tString &asS
 
 	// Entity script classes (cLuxMap::LoadFromFile -> iLuxEntity::AfterWorldLoad)
 	int lScripted = 0;
-	for (cSomaLuxEntity *pEnt : mvEntities)
+	for (cSomaLuxEntity *pEnt : GetEntities())
 		lScripted += SetupEntityScript(pEnt) ? 1 : 0;
-	SomaRegisterBodyIDs(mvEntities);
-	Log("SOMA script: %d map entities, %d with a script class\n", (int)mvEntities.size(), lScripted);
-	for (cSomaLuxEntity *pEnt : mvEntities)
+	SomaRegisterBodyIDs(GetEntities().Vec());
+	Log("SOMA script: %d map entities, %d with a script class\n", (int)GetEntities().size(), lScripted);
+	for (cSomaLuxEntity *pEnt : GetEntities())
 	{
 		cResourceVarsObject &v = pEnt->mInstanceVars;
 		if (cSomaLuxEntity *pParent = GetEntity(v.GetVarString("ParentAttachEntity", "")))
 			pEnt->AttachTo(pParent, pParent->GetBodyFromName(v.GetVarString("ParentAttachBody", "")), v.GetVarString("ParentAttachSocket", ""),
 						   v.GetVarBool("ParentAttachUseRotation", true), v.GetVarBool("ParentAttachSnap", false), v.GetVarBool("ParentAttachLocked", false));
 	}
-	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
+	for (cSomaLuxEntity *pEnt : GetEntities().Vec())
 		pEnt->Call("void OnAfterWorldLoad()");
-	for (cSomaLuxEntity *pEnt : mvEntities)
+	for (cSomaLuxEntity *pEnt : GetEntities())
 	{
 		pEnt->CaptureEffectDefaults();
 		if (pEnt->mbEffectsActive == false)
@@ -330,9 +332,7 @@ void cSomaLuxMap::AddEntity(cSomaLuxEntity *apEnt)
 	}
 	apEnt->mpMap = this;
 	apEnt->msScriptName = apEnt->GetName();
-	mvEntities.push_back(apEnt);
-	mmapEntities[cString::ToLowerCase(apEnt->GetName())] = apEnt;
-	mmapWildcardCache.clear();
+	ohpl_so_roster_add(mpRoster, (size_t)apEnt, apEnt->mpCore, apEnt->mpNames);
 }
 
 extern tString gsSomaSpawnName;
@@ -363,21 +363,13 @@ cSomaLuxEntity *cSomaLuxMap::CreateEntity(const tString &asName, const tString &
 
 void cSomaLuxMap::DestroyEntity(cSomaLuxEntity *apEnt)
 {
-	for (size_t i = 0; i < mvEntities.size(); ++i)
-		if (mvEntities[i] == apEnt)
-		{
-			apEnt->SetActive(false);
-			mvEntities.erase(mvEntities.begin() + i);
-			mmapWildcardCache.clear();
-			auto itName = mmapEntities.find(cString::ToLowerCase(apEnt->GetName()));
-			if (itName != mmapEntities.end() && itName->second == apEnt)
-				mmapEntities.erase(itName);
-			if (mpLatestEntity == apEnt)
-				mpLatestEntity = NULL;
-			// Scripts may still hold the handle this frame
-			mvDestroyed.push_back(apEnt);
-			return;
-		}
+	cSomaEntSpan live = GetEntities();
+	if (std::find(live.begin(), live.end(), apEnt) == live.end())
+		return;
+	apEnt->SetActive(false);
+	ohpl_so_roster_remove(mpRoster, (size_t)apEnt);
+	if (mpLatestEntity == apEnt)
+		mpLatestEntity = NULL;
 }
 
 static bool EntityNameMatch(const tString &asPattern, cSomaLuxEntity *apEnt)
@@ -389,26 +381,12 @@ static bool EntityNameMatch(const tString &asPattern, cSomaLuxEntity *apEnt)
 
 cSomaLuxEntity *cSomaLuxMap::GetEntity(const tString &asName)
 {
-	std::map<tString, cSomaLuxEntity *>::iterator it = mmapEntities.find(cString::ToLowerCase(asName));
-	if (it != mmapEntities.end())
-		return it->second;
-	if (asName.find('*') != tString::npos)
-		for (cSomaLuxEntity *pEnt : mvEntities)
-			if (cString::MatchesWildcard(asName, pEnt->GetName()))
-				return pEnt;
-	return NULL;
+	return ohpl_so_roster_by_name(mpRoster, U(asName), asName.size());
 }
 
 cSomaLuxEntity *cSomaLuxMap::GetEntity(const cSomaID &aID)
 {
-	for (cSomaLuxEntity *pEnt : mvEntities)
-		if (pEnt->mID == aID)
-			return pEnt;
-	// cLuxMap::DestroyEntity only queues: the ID resolves until the flush
-	for (size_t i = mlDestroyedFlushed; i < mvDestroyed.size(); ++i)
-		if (mvDestroyed[i]->mID == aID)
-			return mvDestroyed[i];
-	return NULL;
+	return ohpl_so_roster_by_id(mpRoster, aID.mA, aID.mB, aID.mC);
 }
 
 void cSomaLuxMap::Setup()
@@ -490,7 +468,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 	mpRuntime->Call(mpScript, "void VariableUpdate(float afDeltaTime)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
 
 	SomaBeginCritterFrame();
-	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
+	for (cSomaLuxEntity *pEnt : GetEntities().Vec())
 	{
 		if (pEnt->GetScript() == NULL || pEnt->mbActive == false)
 			continue;
@@ -527,20 +505,20 @@ void cSomaLuxMap::Update(float afTimeStep)
 			SomaUpdateComponents(pEnt, afTimeStep);
 	}
 
-	for (size_t i = 0; i < mvEntities.size(); ++i)
+	for (size_t i = 0; i < GetEntities().size(); ++i)
 	{
-		if (mvEntities[i]->mbActive)
-			mvEntities[i]->UpdateAnimation(afTimeStep);
-		mvEntities[i]->UpdateSocketNodes();
-		if (mvEntities[i]->mbActive)
+		if (GetEntities()[i]->mbActive)
+			GetEntities()[i]->UpdateAnimation(afTimeStep);
+		GetEntities()[i]->UpdateSocketNodes();
+		if (GetEntities()[i]->mbActive)
 		{
-			mvEntities[i]->UpdateMove(afTimeStep);
-			mvEntities[i]->UpdateCharCollision();
-			mvEntities[i]->UpdateProcAnimations(afTimeStep);
+			GetEntities()[i]->UpdateMove(afTimeStep);
+			GetEntities()[i]->UpdateCharCollision();
+			GetEntities()[i]->UpdateProcAnimations(afTimeStep);
 		}
-		mvEntities[i]->UpdateEffectColor(afTimeStep);
-		mvEntities[i]->UpdateLiquidAmount(afTimeStep);
-		mvEntities[i]->UpdateGui(afTimeStep);
+		GetEntities()[i]->UpdateEffectColor(afTimeStep);
+		GetEntities()[i]->UpdateLiquidAmount(afTimeStep);
+		GetEntities()[i]->UpdateGui(afTimeStep);
 	}
 }
 
@@ -550,14 +528,14 @@ void cSomaLuxMap::PostUpdate(float afTimeStep)
 	if (mpScript == NULL)
 		return;
 	float fStep = afTimeStep;
-	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
+	for (cSomaLuxEntity *pEnt : GetEntities().Vec())
 		pEnt->UpdateAttachment();
 	SomaUpdateLightConnections();
 	cSomaSoundscape::Get()->Update(this, afTimeStep);
 	UpdateLookAtCallbacks(afTimeStep);
 	UpdateCollideCallbacks();
 	mpRuntime->Call(mpScript, "void PostUpdate(float afTimeStep)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
-	for (cSomaLuxEntity *pEnt : mvEntities)
+	for (cSomaLuxEntity *pEnt : GetEntities())
 		if (pEnt->GetScript() && pEnt->mbActive)
 			pEnt->CallWithFloat("void OnPostUpdate(float afTimeStep)", afTimeStep);
 	std::vector<cPendingCollision> vCollisions;
@@ -568,7 +546,7 @@ void cSomaLuxMap::PostUpdate(float afTimeStep)
 	vBreaks.swap(mvPendingBreaks);
 	for (cSomaLuxEntity *pEnt : vBreaks)
 		pEnt->DoBreak();
-	mlDestroyedFlushed = mvDestroyed.size();
+	ohpl_so_roster_flush(mpRoster);
 	SomaScriptTick();
 }
 
@@ -579,9 +557,9 @@ void cSomaLuxMap::UpdateLookAtCallbacks(float afTimeStep)
 	cCamera *pCam = pPlayer ? pPlayer->GetCamera() : NULL;
 	if (pCam == NULL)
 		return;
-	for (size_t i = 0; i < mvEntities.size(); ++i)
+	for (size_t i = 0; i < GetEntities().size(); ++i)
 	{
-		cSomaLuxEntity *pEnt = mvEntities[i];
+		cSomaLuxEntity *pEnt = GetEntities()[i];
 		if ((pEnt->GetLookAtCallback() == "" && pEnt->mbForceLookAtCheck == false) || pEnt->mbActive == false)
 			continue;
 		// iLuxEntity::UpdatePlayerLookAt: checks every 0.3 s, delay counts down per check
@@ -637,34 +615,19 @@ void cSomaLuxMap::OnAction(int alAction, bool abPressed)
 void cSomaLuxMap::UpdateCollideCallbacks()
 {
 	std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> setNow;
-	for (size_t e = 0; e < mvEntities.size(); ++e)
+	for (size_t e = 0; e < GetEntities().size(); ++e)
 	{
-		cSomaLuxEntity *pParent = mvEntities[e];
+		cSomaLuxEntity *pParent = GetEntities()[e];
 		if (pParent->mvCollideCallbacks.empty() || pParent->mbActive == false)
 			continue;
 		for (size_t i = 0; i < pParent->mvCollideCallbacks.size(); ++i)
 		{
 			cSomaLuxEntity::cCollideCallback cb = pParent->mvCollideCallbacks[i];
 			bool bRemove = false;
+			size_t lChildren;
 			std::vector<cSomaLuxEntity *> vChildren;
-			if (cb.msChild.find('*') == tString::npos)
-			{
-				auto it = mmapEntities.find(cString::ToLowerCase(cb.msChild));
-				if (it != mmapEntities.end())
-					vChildren.push_back(it->second);
-			}
-			else
-			{
-				auto it = mmapWildcardCache.find(cb.msChild);
-				if (it == mmapWildcardCache.end())
-				{
-					it = mmapWildcardCache.emplace(cb.msChild, std::vector<cSomaLuxEntity *>()).first;
-					for (cSomaLuxEntity *pEnt : mvEntities)
-						if (cString::MatchesWildcard(cb.msChild, pEnt->GetName()))
-							it->second.push_back(pEnt);
-				}
-				vChildren = it->second;
-			}
+			cSomaLuxEntity *const *ppChildren = ohpl_so_roster_children(mpRoster, U(cb.msChild), cb.msChild.size(), &lChildren);
+			vChildren.assign(ppChildren, ppChildren + lChildren);
 			for (size_t c = 0; c < vChildren.size() && bRemove == false; ++c)
 			{
 				cSomaLuxEntity *pChild = vChildren[c];

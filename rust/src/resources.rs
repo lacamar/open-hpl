@@ -9,6 +9,7 @@ pub mod h3_ffi;
 #[cfg(test)]
 mod h3_flow_golden;
 pub mod h3_flows;
+pub mod h3_frames;
 pub mod h3_gpu;
 pub mod h3_image;
 pub mod h3_material;

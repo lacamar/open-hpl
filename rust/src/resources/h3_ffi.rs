@@ -1,5 +1,6 @@
 //! C ABI of the H3 manager flows, mirrored in `HPL2/core/include/resources/RustResourcesH3.h`.
 
+use super::h3_frames::{FrHost, Real};
 use super::h3_ops::{Flow, LOG_CREATE_AND_DELETE, Ops, Str};
 use super::manager::Manager;
 use crate::string_ffi::{Sink, emit, units};
@@ -212,9 +213,10 @@ ffi!(fn ohpl_h3f_mem_usage(m, o) -> i32 {
     (*m).mem_usage
 });
 
-ffi!(fn ohpl_h3f_image_init(m, o, w: i32, h: i32) {
+ffi!(fn ohpl_h3f_image_init(m, o, host: *const FrHost, w: i32, h: i32) {
     let _ = o;
     (*m).frames.size = (w, h);
+    (*m).frames.api = Box::new(Real { host });
 });
 
 ffi!(fn ohpl_h3f_image_create_in_frame(m, o, name: *const u8, n: usize, handle: i32, exts: *const Str, ne: usize) -> *mut c_void {

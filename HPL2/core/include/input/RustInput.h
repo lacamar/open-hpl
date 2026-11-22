@@ -126,6 +126,8 @@ extern "C" {
 	bool ohpl_input_reg_first_down(OhplInputReg*, uint32_t* kind, int32_t* id);
 
 	typedef void (*OhplInputSink)(void*, const unsigned char*, size_t);
+	void ohpl_input_sub_type(const OhplSubSpec*, OhplInputSink, void*);
+	void ohpl_input_sub_name(const OhplSubSpec*, OhplInputSink, void*);
 	void ohpl_input_key_name(int, OhplInputSink, void*);
 	void ohpl_input_modifier_name(int, OhplInputSink, void*);
 	void ohpl_input_mouse_button_name(int, OhplInputSink, void*);
@@ -156,6 +158,13 @@ namespace hpl {
 	{
 		std::string sOut;
 		aFn(alValue, OhplInputAssign, &sOut);
+		return sOut;
+	}
+
+	inline std::string OhplSubText(void (*aFn)(const OhplSubSpec*, OhplInputSink, void*), const OhplSubSpec& aSpec)
+	{
+		std::string sOut;
+		aFn(&aSpec, OhplInputAssign, &sOut);
 		return sOut;
 	}
 

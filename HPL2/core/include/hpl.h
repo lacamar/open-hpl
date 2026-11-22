@@ -73,7 +73,6 @@
 #include "graphics/VideoStream.h"
 #include "graphics/Bitmap.h"
 #include "graphics/FrameTexture.h"
-#include "graphics/FrameBitmap.h"
 #include "graphics/FrameSubImage.h"
 #include "graphics/FrameBuffer.h"
 #include "graphics/PostEffect.h"
@@ -178,7 +177,6 @@
 #include "ai/AI.h"
 #include "ai/AStar.h"
 #include "ai/AINodeContainer.h"
-#include "ai/AINodeGenerator.h"
 
 #include "gui/Gui.h"
 #include "gui/GuiSet.h"

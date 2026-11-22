@@ -24,8 +24,6 @@
 #include "input/Gamepad.h"
 #include "input/LowLevelInput.h"
 #include "input/Action.h"
-#include "input/ActionKeyboard.h"
-#include "input/ActionMouseButton.h"
 
 #if USE_XINPUT
 #include "impl/GamepadXInput.h"
@@ -327,8 +325,8 @@ namespace hpl
 		uint32_t lKind;
 		int32_t lId;
 		if(!ohpl_input_reg_first_down(mpRegistry, &lKind, &lId)) return NULL;
-		if(lKind == eOhplSub_Key) return hplNew( cActionKeyboard, (this,(eKey)lId));
-		return hplNew( cActionMouseButton, (this,(eMouseButton)lId));
+		OhplSubSpec spec = {lKind == eOhplSub_Key ? (uint32_t)eOhplSub_Key : (uint32_t)eOhplSub_Mouse, 0, lId, 0, 0, 0};
+		return hplNew( iSubAction, (spec) );
 	}
 
 	//-----------------------------------------------------------------------

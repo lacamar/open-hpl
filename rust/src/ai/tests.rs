@@ -302,3 +302,29 @@ fn h16_container_and_astar_match_golden() {
     }
     assert!(checked > 400);
 }
+
+#[test]
+fn cnode_layout_and_edge_file_round_trip() {
+    assert_eq!(std::mem::size_of::<CNode>(), 56);
+    assert_eq!(std::mem::size_of::<CEdge>(), 16);
+    let mut a = Graph::new(cast_wall, std::ptr::null_mut(), v3(0.6, 1.5, 0.6));
+    let mut b = Graph::new(cast_wall, std::ptr::null_mut(), v3(0.6, 1.5, 0.6));
+    for g in [&mut a, &mut b] {
+        for i in 0..3 {
+            g.add_named(v3(i as f32, 0.0, 0.0), format!("n{i}").as_bytes(), 10 + i);
+        }
+    }
+    assert!(a.add_edge(0, 1, 1.0, 1.0) && a.add_edge(1, 2, 1.5, 2.25));
+    let bytes = a.save_xml();
+    let mut doc = crate::xml::Doc::new();
+    assert!(doc.load(&bytes, true));
+    let root = doc
+        .first_child_element(crate::xml::DOC, None)
+        .expect("root");
+    b.load_edges(&doc, root);
+    assert_eq!(b.edges(0), a.edges(0));
+    assert_eq!(b.edges(1), a.edges(1));
+    // SAFETY: nodes are live.
+    let n1 = unsafe { &*b.node_ptr(1) };
+    assert_eq!((n1.id, n1.idx, n1.edge_num), (11, 1, 1));
+}

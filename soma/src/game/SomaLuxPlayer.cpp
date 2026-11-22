@@ -266,7 +266,7 @@ int32_t cSomaLuxPlayer::HostCall(void *, uint32_t alOp, OhplS5Io *io)
 	}
 	case kOhplS5d_DEAD_BROADCAST:
 		if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
-			for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(pMap->GetEntities()))
+			for (cSomaLuxEntity *pEnt : pMap->GetEntities().Vec())
 				SomaAgentSendMessage(pEnt, 10);
 		return 0;
 	}

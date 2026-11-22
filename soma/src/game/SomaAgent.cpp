@@ -409,7 +409,7 @@ namespace
 		case 15: io->i[0] = e->mpMap ? (int)e->mpMap->GetEntities().size() : 0; break;
 		case 16:
 		{
-			const std::vector<cSomaLuxEntity *> &v = e->mpMap->GetEntities();
+			cSomaEntSpan v = e->mpMap->GetEntities();
 			cSomaLuxEntity *pDoor = v[io->i[0]];
 			float fDist;
 			io->i[1] = 0;
@@ -422,7 +422,7 @@ namespace
 		}
 		case 17:
 		{
-			const std::vector<cSomaLuxEntity *> &v = e->mpMap->GetEntities();
+			cSomaEntSpan v = e->mpMap->GetEntities();
 			io->i[0] = io->i[0] >= 0 && (size_t)io->i[0] < v.size();
 			if (io->i[0])
 				memcpy((void *)io->p[1], &v[io->i[0]]->mID, sizeof(cSomaID));

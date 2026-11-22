@@ -35,7 +35,5 @@ int hplMain(const tString &asCommandline)
 
 	hplDelete(gpSomaBase);
 
-	cMemoryManager::LogResults();
-
 	return 0;
 }

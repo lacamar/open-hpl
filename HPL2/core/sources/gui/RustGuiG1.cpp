@@ -47,13 +47,10 @@ namespace hpl {
 	{
 		cFrameSubImage *pImage = (cFrameSubImage*)aImage;
 		apOut->texture = (uintptr_t)pImage->GetTexture();
-		const tVertexVec &vtx = pImage->GetVertexVec();
+		const OhplFrSub *pRs = pImage->Rs();
 		for(int i=0; i<4; ++i)
-		{
-			apOut->tex[i][0] = vtx[i].tex.x;
-			apOut->tex[i][1] = vtx[i].tex.y;
-			apOut->tex[i][2] = vtx[i].tex.z;
-		}
+			for(int j=0; j<3; ++j)
+				apOut->tex[i][j] = pRs->tex[i][j];
 		apOut->width = pImage->GetWidth();
 		apOut->height = pImage->GetHeight();
 		apOut->updateCount = pImage->GetUpdateCount();

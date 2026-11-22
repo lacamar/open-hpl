@@ -26,7 +26,6 @@ namespace hpl {
 	class iMutex
 	{
 	public:
-		iMutex();
 		virtual ~iMutex(){}
 
 		virtual bool Lock()=0;

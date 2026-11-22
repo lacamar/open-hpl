@@ -21,57 +21,8 @@
 
 #include "scene/World.h"
 #include "physics/PhysicsBody.h"
-#include "system/String.h"
-#include "system/LowLevelSystem.h"
-#include "system/Platform.h"
-
-#include "math/Math.h"
-#include "impl/RustBackends.h"
-
-
-#include "system/RustXml.h"
-#include "impl/XmlDocumentTiny.h"
-
-#include <algorithm>
 
 namespace hpl {
-
-	//////////////////////////////////////////////////////////////////////////
-	// AI NODE
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-	
-	cAINode::cAINode()
-	{
-		mlID = 0;
-		mlIdx = -1;
-		mpGraph = NULL;
-		mpUserData = NULL;
-	}
-
-	//-----------------------------------------------------------------------
-
-	cAINode::~cAINode()
-	{
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cAINode::AddEdge(cAINode *pNode)
-	{
-		cAINodeEdge Edge;
-		
-		Edge.mpNode = pNode;
-		Edge.mfDistance = cMath::Vector3Dist(mvPosition, pNode->mvPosition);
-		Edge.mfSqrDistance = cMath::Vector3DistSqr(mvPosition, pNode->mvPosition);
-		
-		mvEdges.push_back(Edge);
-
-		if(mpGraph && pNode->mlIdx >= 0) ohpl_ai_graph_connect(mpGraph, (uint32_t)mlIdx, (uint32_t)pNode->mlIdx);
-	}
-	
-	//-----------------------------------------------------------------------
 
 	//////////////////////////////////////////////////////////////////////////
 	// RAY INTERSECT
@@ -133,51 +84,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cAINodeIterator::cAINodeIterator(cAINodeContainer *apContainer, const cVector3f &avPos, float afRadius)
-	{
-		mlPos = 0;
-
-		size_t lCount = ohpl_ai_graph_query(apContainer->mpGraph, &avPos, afRadius);
-		std::vector<uint32_t> vIdx(lCount);
-		ohpl_ai_graph_result(apContainer->mpGraph, vIdx.data(), lCount);
-
-		mvNodes.reserve(lCount);
-		for(size_t i=0; i<lCount; ++i)
-		{
-			mvNodes.push_back(apContainer->mvNodes[vIdx[i]]);
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cAINodeIterator::HasNext()
-	{
-		return mlPos < mvNodes.size();
-	}
-
-	//-----------------------------------------------------------------------
-
-	cAINode *cAINodeIterator::Next()
-	{
-		if(mlPos >= mvNodes.size()) return NULL;
-
-		return mvNodes[mlPos++];
-	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	bool (*cAINodeContainer::mpTestCast)(unsigned int, const cVector3f*, const cVector3f*) = NULL;
 
 	cAINodeContainer::cAINodeContainer(	const tString& asName, const tString &asNodeName, 
@@ -191,7 +97,6 @@ namespace hpl {
 		mpRayCallback = hplNew( cAINodeRayCallback, () );
 		mpFreePathCallback = NULL;
 		mpGraph = ohpl_ai_graph_new(CastRay, this, &mvSize);
-		mbRsMaps = OhplBackendRustRequested();
 
 		mlMaxNodeEnds = 5;
 		mlMinNodeEnds = 2;
@@ -209,121 +114,7 @@ namespace hpl {
 	{
 		hplDelete(mpRayCallback);
 		ohpl_ai_graph_free(mpGraph);
-
-		STLDeleteAll(mvNodes);
 	}	
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-	
-	//-----------------------------------------------------------------------
-
-	void cAINodeContainer::ReserveSpace(size_t alReserveSpace)
-	{
-		mvNodes.reserve(alReserveSpace);
-	}
-
-	//-----------------------------------------------------------------------
-	
-	void cAINodeContainer::AddNode(const tString &asName, int alID, const cVector3f &avPosition, void *apUserData)
-	{
-		cAINode *pNode = hplNew( cAINode, () );
-		pNode->msName = asName;
-		pNode->mlID = alID;
-		pNode->mvPosition = avPosition;
-		pNode->mpUserData = apUserData;
-		pNode->mlIdx = (int)mvNodes.size();
-		pNode->mpGraph = mpGraph;
-		ohpl_ai_graph_add_node(mpGraph, &avPosition, (uint64_t)(uintptr_t)pNode);
-
-		mvNodes.push_back(pNode);
-		if(mbRsMaps) ohpl_ai_graph_name_node(mpGraph, (uint32_t)pNode->mlIdx, (const unsigned char*)asName.data(), asName.size(), alID);
-		else
-		{
-			m_mapNodesByName.insert(tAINodeNameMap::value_type(asName,pNode));
-			m_mapNodesByID.insert(tAINodeIDMap::value_type(alID,pNode));
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	int cAINodeContainer::GetNodeNum() const
-	{
-		return (int)mvNodes.size();
-	}
-
-	//-----------------------------------------------------------------------
-
-	cAINode* cAINodeContainer::GetNodeFromName(const tString &asName)
-	{
-		if(mbRsMaps)
-		{
-			int64_t lIdx = ohpl_ai_graph_find_name(mpGraph, (const unsigned char*)asName.data(), asName.size());
-			return lIdx < 0 ? NULL : mvNodes[lIdx];
-		}
-		tAINodeNameMapIt it = m_mapNodesByName.find(asName);
-		if(it == m_mapNodesByName.end())
-		{
-			return NULL;
-		}
-		return it->second;
-	}
-	
-	//-----------------------------------------------------------------------
-
-	cAINode* cAINodeContainer::GetNodeFromID(int alID)
-	{
-		if(mbRsMaps)
-		{
-			int64_t lIdx = ohpl_ai_graph_find_id(mpGraph, alID);
-			return lIdx < 0 ? NULL : mvNodes[lIdx];
-		}
-		tAINodeIDMapIt it = m_mapNodesByID.find(alID);
-		if(it == m_mapNodesByID.end())
-		{
-			return NULL;
-		}
-		return it->second;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cAINodeContainer::Compile()
-	{
-		ohpl_ai_graph_compile(mpGraph);
-
-		for(size_t i=0; i<mvNodes.size(); ++i)
-		{
-			cAINode *pNode = mvNodes[i];
-			uint32_t lCount = ohpl_ai_graph_edge_count(mpGraph, (uint32_t)i);
-			pNode->mvEdges.clear();
-			for(uint32_t e=0; e<lCount; ++e)
-			{
-				uint32_t lTo;
-				cAINodeEdge Edge;
-				ohpl_ai_graph_edge(mpGraph, (uint32_t)i, e, &lTo, &Edge.mfDistance, &Edge.mfSqrDistance);
-				Edge.mpNode = mvNodes[lTo];
-				pNode->mvEdges.push_back(Edge);
-			}
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cAINodeContainer::BuildNodeGridMap()
-	{
-		ohpl_ai_graph_build_grid(mpGraph);
-	}
-
-	//-----------------------------------------------------------------------
-
-	cAINodeIterator cAINodeContainer::GetNodeIterator(const cVector3f &avPosition, float afRadius)
-	{
-		return cAINodeIterator(this,avPosition, afRadius);
-	}
 
 	//-----------------------------------------------------------------------
 
@@ -346,108 +137,4 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	bool cAINodeContainer::FreePath(const cVector3f &avStart, const cVector3f &avEnd, int alRayNum,
-									tAIFreePathFlag aFlags,iAIFreePathCallback *apCallback)
-	{
-		iAIFreePathCallback *pPrevCallback = mpFreePathCallback;
-		mpFreePathCallback = apCallback;
-		bool bFree = ohpl_ai_graph_free_path(mpGraph, &avStart, &avEnd, alRayNum, aFlags);
-		mpFreePathCallback = pPrevCallback;
-
-		return bFree;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cAINodeContainer::SyncParams()
-	{
-		ohpl_ai_graph_set_params(mpGraph, mlMaxNodeEnds, mlMinNodeEnds, mfMaxEndDistance, mfMaxHeight, mbNodeIsAtCenter);
-	}
-
-	//-----------------------------------------------------------------------
-	
-	void cAINodeContainer::SaveToFile(const tWString &asFile)
-	{
-		OhplXmlDocPtr xmlDoc;
-		unsigned lRoot = OhplXmlAddElement(xmlDoc.p, 0, "AINodes");
-
-		for(size_t i=0; i< mvNodes.size(); ++i)
-		{
-			cAINode * pNode = mvNodes[i];
-			unsigned lNode = OhplXmlAddElement(xmlDoc.p, lRoot, "Node");
-
-			OhplXmlSetAttr(xmlDoc.p, lNode, "Name", pNode->GetName());
-			OhplXmlSetAttr(xmlDoc.p, lNode, "ID", cString::ToString(pNode->GetID()));
-
-			for(int edge =0; edge < pNode->GetEdgeNum(); ++edge)
-			{
-				cAINodeEdge *pEdge = pNode->GetEdge(edge);
-				unsigned lEdge = OhplXmlAddElement(xmlDoc.p, lNode, "Edge");
-
-				OhplXmlSetAttr(xmlDoc.p, lEdge, "Node", pEdge->mpNode->GetName());
-				OhplXmlSetAttr(xmlDoc.p, lEdge, "Distance", cString::ToString(pEdge->mfDistance));
-			}
-		}
-
-		FILE *pFile = cPlatform::OpenFile(asFile, _W("w+"));
-		if(pFile==NULL || OhplXmlSaveFile(xmlDoc.p, pFile)==false)
-		{
-			Error("Couldn't save XML file %s\n",asFile.c_str());
-			return;
-		}
-		fclose(pFile);
-	}
-	
-	//-----------------------------------------------------------------------
-	
-	void cAINodeContainer::LoadFromFile(const tWString &asFile)
-	{
-		BuildNodeGridMap();
-
-		FILE *pFile = cPlatform::OpenFile(asFile, _W("rb"));
-		if(pFile==NULL) return;
-		fclose(pFile);
-
-		cXmlDocumentTiny xmlDoc("AINodes");
-		if(xmlDoc.CreateFromFile(asFile)==false)
-		{
-			Warning("Couldn't open XML file %s\n",cString::To8Char(asFile).c_str());
-			return;
-		}
-
-		cXmlNodeListIterator nodeIt = xmlDoc.GetChildIterator();
-		while(nodeIt.HasNext())
-		{
-			cXmlElement *pNodeElem = nodeIt.Next()->ToElement();
-			if(pNodeElem->GetValue()!="Node") continue;
-
-			tString sName = cString::ToString(pNodeElem->GetAttribute("Name"),"");
-			int alID = cString::ToInt(pNodeElem->GetAttribute("ID"),-1);
-
-			cAINode *pNode = GetNodeFromID(alID);
-			if(pNode==NULL) continue;
-            
-			cXmlNodeListIterator edgeIt = pNodeElem->GetChildIterator();
-			while(edgeIt.HasNext())
-			{
-				cXmlElement *pEdgeElem = edgeIt.Next()->ToElement();
-				if(pEdgeElem->GetValue()!="Edge") continue;
-
-				tString sNodeName = cString::ToString(pEdgeElem->GetAttribute("Node"),"");
-				cAINode *pEdgeNode = GetNodeFromName(sNodeName);
-				if(pEdgeNode==NULL) continue;
-
-				cAINodeEdge Edge;
-				Edge.mpNode = pEdgeNode;
-				Edge.mfDistance = cString::ToFloat(pEdgeElem->GetAttribute("Distance"),0);
-				Edge.mfSqrDistance = Edge.mfDistance*Edge.mfDistance;
-
-				pNode->mvEdges.push_back(Edge);
-				ohpl_ai_graph_add_edge(mpGraph, (uint32_t)pNode->mlIdx, (uint32_t)pEdgeNode->mlIdx, Edge.mfDistance, Edge.mfSqrDistance);
-			}
-		}
-
-	}
-	//-----------------------------------------------------------------------
-	
 }

@@ -91,8 +91,11 @@ pub mod k {
     pub const IMAGE: i32 = 16;
     pub const MATERIAL: i32 = 17;
     pub const CUSTOM_RESOLVER: i32 = 18;
+    #[cfg(test)]
     pub const IMG_BITMAP_FRAME: i32 = 19;
+    #[cfg(test)]
     pub const IMG_CUSTOM_FRAME: i32 = 20;
+    #[cfg(test)]
     pub const IMG_ADD_BITMAP: i32 = 21;
     pub const SHADER_FILE: i32 = 22;
     pub const SHADER_STRING: i32 = 23;
@@ -116,27 +119,47 @@ pub mod c {
     pub const MEM_SIZE: i32 = 4;
     pub const UPDATE: i32 = 5;
     pub const PRELOAD_SOUNDS: i32 = 6;
+    #[cfg(test)]
     pub const IMG_FRAME_TEX: i32 = 7;
+    #[cfg(test)]
     pub const IMG_FRAME_BMP: i32 = 8;
+    #[cfg(test)]
     pub const FRAME_DEC_PIC: i32 = 9;
+    #[cfg(test)]
     pub const BMPFRAME_DEC_PIC: i32 = 10;
+    #[cfg(test)]
     pub const FRAME_IS_EMPTY: i32 = 11;
+    #[cfg(test)]
     pub const FRAME_IS_CUSTOM: i32 = 12;
+    #[cfg(test)]
     pub const BMPFRAME_HANDLE: i32 = 13;
+    #[cfg(test)]
     pub const BMPFRAME_TEX: i32 = 14;
+    #[cfg(test)]
     pub const BMPFRAME_IS_FULL: i32 = 15;
+    #[cfg(test)]
     pub const BMPFRAME_IS_LOCKED: i32 = 16;
+    #[cfg(test)]
     pub const BMPFRAME_ADDITIONS: i32 = 17;
+    #[cfg(test)]
     pub const BMPFRAME_REORGANIZE: i32 = 18;
+    #[cfg(test)]
     pub const BMPFRAME_FLUSH: i32 = 19;
+    #[cfg(test)]
     pub const BMPFRAME_SET_LOCKED: i32 = 20;
+    #[cfg(test)]
     pub const BMPFRAME_DELETE: i32 = 21;
+    #[cfg(test)]
     pub const FRAME_DELETE: i32 = 22;
+    #[cfg(test)]
     pub const FRAME_HANDLE: i32 = 23;
+    #[cfg(test)]
     pub const BMP_WIDTH: i32 = 24;
+    #[cfg(test)]
     pub const BMP_HEIGHT: i32 = 25;
     pub const IMAGE_SET_PRELOADED: i32 = 26;
     pub const PHYSICS_NAME_OF: i32 = 27;
+    #[cfg(test)]
     pub const BMP_DELETE: i32 = 29;
     pub const SHADER_POST: i32 = 30;
     pub const SHADER_ERROR: i32 = 31;
