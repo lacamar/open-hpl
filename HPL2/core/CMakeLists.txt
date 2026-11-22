@@ -255,7 +255,8 @@ FUNCTION(AddTestTarget target_name)
     add_executable(${target_name} EXCLUDE_FROM_ALL
         ${ARGN}
     )
-    target_link_libraries(${target_name} HPL2)
+    # HPL2 and the Rust lib reference each other; small test binaries need both archives rescanned
+    target_link_libraries(${target_name} "$<LINK_GROUP:RESCAN,HPL2,ohpl_rust>")
 ENDFUNCTION()
 
 enable_testing()
