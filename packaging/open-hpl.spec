@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.4.11
+Version:        1.4.12
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,11 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Sun Nov 22 2026 lacamar <lchlnm@pm.me> - 1.4.12-1
+- Serializer, AI node graph, image frames in Rust
+- Input, system and engine sources in Rust
+- Fix entity name lookup in Amnesia maps
+
 * Sun Nov 22 2026 lacamar <lchlnm@pm.me> - 1.4.11-1
 - Graphics, decal and texture creators in Rust
 - Engine file loading and hpm world tier in Rust
