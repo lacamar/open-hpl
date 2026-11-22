@@ -127,13 +127,6 @@ void iPhysicsJoint::RustPositionCheck(size_t j, float afDistSqr)
 			}
 		}
 
-	iPhysicsController* iPhysicsJoint::ControllerAt(int alIdx)
-	{
-		OhplStr name; size_t obj = 0;
-		ohpl_h15j_controller_at(mS->shell, alIdx, &name, &obj);
-		return reinterpret_cast<iPhysicsController*>(obj);
-	}
-
 	cPhysicsControllerIterator iPhysicsJoint::GetControllerIterator()
 	{
 		m_mapControllers.clear();

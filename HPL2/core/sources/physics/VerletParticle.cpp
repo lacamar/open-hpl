@@ -33,16 +33,13 @@ namespace hpl {
 
 	cVerletParticleRayCallback::cVerletParticleRayCallback(iVerletParticleContainer *apContainer)
 	{
+		static_assert(offsetof(cVerletParticleRayCallback, mbIntersected) == 16 && offsetof(cVerletParticleRayCallback, mvIntersectPos) == 20 &&
+			offsetof(cVerletParticleRayCallback, mvIntersectNormal) == 32 && offsetof(cVerletParticleRayCallback, mfClosestDist) == 44 &&
+			offsetof(cPhysicsRayParams, mfDist) == 4 && offsetof(cPhysicsRayParams, mvNormal) == 8 && offsetof(cPhysicsRayParams, mvPoint) == 20, "callback layout");
 		mpContainer = apContainer;
 
 		mvIntersectPos =0;
 		mvIntersectNormal =0;
-	}
-
-	void cVerletParticleRayCallback::Reset()
-	{
-		mfClosestDist = 9999999.0f;
-		mbIntersected = false;
 	}
 
 	bool cVerletParticleRayCallback::BeforeIntersect(iPhysicsBody *pBody)
@@ -50,19 +47,6 @@ namespace hpl {
 		if(pBody->GetCollide()==false) return false;
 
         return mpContainer->CheckParticleBodyCollision(pBody);
-	}
-
-	bool cVerletParticleRayCallback::OnIntersect(iPhysicsBody *pBody,cPhysicsRayParams *apParams)
-	{
-		mbIntersected = true;
-
-		if(apParams->mfDist < mfClosestDist)
-		{
-			mfClosestDist = apParams->mfDist;
-			mvIntersectPos = apParams->mvPoint;
-			mvIntersectNormal = apParams->mvNormal;
-		}
-		return true;
 	}
 
 	// PARTICLE
@@ -102,6 +86,8 @@ namespace hpl {
 
 	iVerletParticleContainer::iVerletParticleContainer(const tString &asName, iPhysicsWorld *apWorld)
 	{
+		static_assert(offsetof(iVerletParticleContainer, mS) == 8 && offsetof(iVerletParticleContainer, mlstParticles) == 96 &&
+			offsetof(iVerletParticleContainer, mfDamping) == 124, "container layout");
 		mS = ohpl_h14_rope_alloc();
 		msName = asName;
 
@@ -114,14 +100,6 @@ namespace hpl {
 	{
 		ohpl_h14_rope_release(mS);
 
-	}
-
-	void iVerletParticleContainer::SetDamping(float afX)
-	{
-		afX = cMath::Clamp(afX,0,1);
-
-		mfDamping = afX;
-		mS->dampingMul = 1 - mfDamping;
 	}
 
 	void iVerletParticleContainer::SetParticleRadius(float afX)
@@ -144,26 +122,6 @@ namespace hpl {
 		SetSpecificDataSleeping(abX);
 	}
 
-	void cVerletParticle::UpdateMovement(float afTimeStep)
-	{
-		ohpl_verlet_update_movement(this, mpContainer->mS->dampingMul, OhplV3{mpContainer->mS->gravityForce.x, mpContainer->mS->gravityForce.y, mpContainer->mS->gravityForce.z}, afTimeStep);
-	}
-
-	void iVerletParticleContainer::UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness)
-	{
-		ohpl_verlet_length_constraint(apP1, apP2, afLength, afStiffness);
-	}
-
-	void iVerletParticleContainer::UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afMinLength, float afMaxLength, float afStiffness)
-	{
-		ohpl_verlet_length_constraint_range(apP1, apP2, afMinLength, afMaxLength, afStiffness);
-	}
-
-	void iVerletParticleContainer::UpdateLengthConstraintStretch(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness)
-	{
-		ohpl_verlet_length_constraint_stretch(apP1, apP2, afLength, afStiffness);
-	}
-
 	bool iVerletParticleContainer::CastParticleRay(const cVector3f &avStart, const cVector3f &avEnd, cVector3f *apPos, cVector3f *apNormal)
 	{
 		mpRayParticleCallback->Reset();
@@ -182,13 +140,6 @@ namespace hpl {
 					reinterpret_cast<cVector3f*>(apPos), reinterpret_cast<cVector3f*>(apNormal));
 			},
 			this, mS, apPart, OhplV3{avPrevPos.x, avPrevPos.y, avPrevPos.z}, afRadius);
-	}
-
-	cVerletParticle* iVerletParticleContainer::GetParticle(int alIdx)
-	{
-		// ponytail: O(n) list walk, vector storage if ropes get long
-		if(alIdx<0 || alIdx>=(int)mlstParticles.size()) return NULL;
-		return *std::next(mlstParticles.begin(), alIdx);
 	}
 
 }
