@@ -128,7 +128,7 @@ namespace hpl {
 						bmp->CreateData(size, (ePixelFormat)in.mlFormat, (int)i, (int)m);
 						cBitmapData *d = bmp->GetData((int)i, (int)m);
 						const cLevel &lv = in.mpLevels[i * in.mlMips + m];
-						memcpy(d->mpData, lv.mpData, lv.mlLen < (size_t)d->mlSize ? lv.mlLen : (size_t)d->mlSize);
+						memcpy(d->Data(), lv.mpData, lv.mlLen < (size_t)d->Size() ? lv.mlLen : (size_t)d->Size());
 					}
 				avOut.push_back(bmp);
 			}
@@ -274,7 +274,7 @@ namespace hpl {
 			cVector2l p = r.V2i(); cVector2l s = r.V2i();
 			cBitmap *b = g->CopyFrameBufferToBitmap(p, s);
 			cBitmapData *d = b->GetData(0, 0);
-			mBytes.assign(d->mpData, d->mpData + d->mlSize);
+			mBytes.assign(d->Data(), d->Data() + d->Size());
 			out[0] = (uint64_t)(int64_t)b->GetSize().x; out[1] = (uint64_t)(int64_t)b->GetSize().y; out[2] = (uint64_t)(int64_t)b->GetSize().z;
 			out[3] = (uint64_t)(int64_t)b->GetPixelFormat(); out[4] = mBytes.size();
 			delete b;

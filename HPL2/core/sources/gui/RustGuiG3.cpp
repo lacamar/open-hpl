@@ -115,7 +115,7 @@ namespace hpl {
 	{
 		cGlyph *pGlyph = ((iFontData*)aFont)->GetGlyph(alChar);
 		if(pGlyph==NULL) return false;
-		*apAdvance = pGlyph->mfAdvance;
+		*apAdvance = pGlyph->GetAdvance();
 		return true;
 	}
 

@@ -231,7 +231,7 @@ namespace hpl {
 			cEngine *pEngine = ((cHeadlessControlServer*)apCtx)->mpEngine;
 			cBitmap *pBmp = pEngine->GetGraphics()->GetLowLevel()->CopyFrameBufferToBitmap();
 			if(pBmp == NULL) return false;
-			tString sFrame = cEngineDiagnostics::GetFrameStatsJson(pBmp->GetData(0,0)->mpData, pBmp->GetWidth(), pBmp->GetHeight(),
+			tString sFrame = cEngineDiagnostics::GetFrameStatsJson(pBmp->GetData(0,0)->Data(), pBmp->GetWidth(), pBmp->GetHeight(),
 																	 pBmp->GetBytesPerPixel());
 			tString sGl = cEngineDiagnostics::PollGLErrorsJson(false);
 			hplDelete(pBmp);
@@ -258,7 +258,7 @@ namespace hpl {
 			if(pBmp->GetBytesPerPixel() == 4)
 			{
 				cBitmapData *pData = pBmp->GetData(0,0);
-				for(size_t i = 3; i < (size_t)pData->mlSize; i += 4) pData->mpData[i] = 255;
+				for(size_t i = 3; i < (size_t)pData->Size(); i += 4) pData->Data()[i] = 255;
 			}
 			cEngineDiagnostics::ApplyDisplayGamma(pBmp, pEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection());
 

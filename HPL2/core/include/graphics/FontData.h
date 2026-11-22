@@ -20,6 +20,7 @@
 #ifndef HPL_FONTDATA_H
 #define HPL_FONTDATA_H
 
+#include <cstddef>
 #include <vector>
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
@@ -27,6 +28,10 @@
 #include "graphics/GraphicsTypes.h"
 #include "resources/ResourceBase.h"
 #include "resources/LowLevelResources.h"
+#include "graphics/RustGraphicsH5b.h"
+#include <cstdarg>
+#include <cwchar>
+#include <stdexcept>
 
 namespace hpl {
 
@@ -43,9 +48,22 @@ namespace hpl {
 	{
 	public:
 		cGlyph(	cGuiGfxElement *apGuiGfx,const cVector2f &avOffset,
-				const cVector2f &avSize, float afAdvance);
+				const cVector2f &avSize, float afAdvance)
+			: mpGuiGfx(apGuiGfx), mvOffset(avOffset), mvSize(avSize), mfAdvance(afAdvance) {}
 		~cGlyph();
 
+		cGuiGfxElement* GetGuiGfx() const { return mpGuiGfx; }
+		const cVector2f& GetOffset() const { return mvOffset; }
+		const cVector2f& GetSize() const { return mvSize; }
+		float GetAdvance() const { return mfAdvance; }
+
+		// Byte offsets read by the Rust draw path (RustGuiG1.cpp).
+		static size_t GfxOffset() { return offsetof(cGlyph, mpGuiGfx); }
+		static size_t OffsetOffset() { return offsetof(cGlyph, mvOffset); }
+		static size_t SizeOffset() { return offsetof(cGlyph, mvSize); }
+		static size_t AdvanceOffset() { return offsetof(cGlyph, mfAdvance); }
+
+	private:
 		cGuiGfxElement *mpGuiGfx;
 		cVector2f mvOffset;
 		cVector2f mvSize;
@@ -58,7 +76,9 @@ namespace hpl {
 	class iFontData : public iResourceBase
 	{
 	public:
-		iFontData(const tString &asName, iLowLevelGraphics* apLowLevelGraphics);
+		iFontData(const tString &asName, iLowLevelGraphics* apLowLevelGraphics)
+			: iResourceBase(asName,_W(""),0), mpLowLevelGraphics(apLowLevelGraphics), mpResources(NULL), mpGui(NULL),
+			  mfHeight(0), mlFirstChar(0), mlLastChar(0), mlRs(ohpl_h5b_font_new()) {}
 		~iFontData();
 
 		virtual bool CreateFromFontFile(const tWString &asFileName, int alSize,unsigned short alFirstChar, 
@@ -120,7 +140,14 @@ namespace hpl {
 
 		
 		void GetWordWrapRows(float afLength,float afFontHeight,cVector2f avSize,const tWString& asString,
-								tWStringVec *apRowVec);
+								tWStringVec *apRowVec)
+		{
+			auto push = [](void* apCtx, const uint32_t* apRow, size_t alLen) {
+				static_cast<tWStringVec*>(apCtx)->emplace_back((const wchar_t*)apRow, alLen);
+			};
+			if(!ohpl_h5b_font_word_wrap(mlRs, afLength, avSize.x, (const uint32_t*)asString.data(), asString.size(), push, apRowVec))
+				throw std::out_of_range("basic_string::substr");
+		}
 
 		/**
 		 * Get height of the font.
@@ -135,20 +162,48 @@ namespace hpl {
 		 * \param ... 
 		 * \return 
 		 */
-		float GetLengthFmt(const cVector2f& avSize,const wchar_t* fmt,...);
-		/**
-		 * Get the length in virtual screen size "pixels" of a string
-		 * \param avSize size of the characters
-		 * \param sText 
-		 * \return 
-		 */
-		float GetLength(const cVector2f& avSize,const wchar_t* sText);
+		float GetLengthFmt(const cVector2f& avSize,const wchar_t* fmt,...)
+		{
+			if(!fmt) return 0;
+			wchar_t vText[256];
+			va_list vArgs;
+			va_start(vArgs, fmt);
+			vswprintf(vText, 255, fmt, vArgs);
+			va_end(vArgs);
+			return GetLength(avSize, vText);
+		}
+		float GetLength(const cVector2f& avSize,const wchar_t* sText)
+		{
+			return ohpl_h5b_font_length(mlRs, avSize.x, (const uint32_t*)sText, wcslen(sText));
+		}
 
 	protected:
+		void SetMetrics(float afHeight, const cVector2f& avSizeRatio, unsigned short alFirst, unsigned short alLast, size_t alGlyphs)
+		{
+			mfHeight = afHeight;
+			mvSizeRatio = avSizeRatio;
+			mlFirstChar = alFirst;
+			mlLastChar = alLast;
+			mvGlyphs.resize(alGlyphs, NULL);
+			OhplH5bFontHdr hdr = { alFirst, alLast, afHeight, { avSizeRatio.x, avSizeRatio.y } };
+			ohpl_h5b_font_set_hdr(mlRs, &hdr, alGlyphs);
+		}
+		void SetGlyph(int alId, cGlyph *apGlyph)
+		{
+			mvGlyphs[alId] = apGlyph;
+			const OhplH5bGlyph g = { apGlyph->GetGuiGfx(), { apGlyph->GetOffset().x, apGlyph->GetOffset().y },
+									 { apGlyph->GetSize().x, apGlyph->GetSize().y }, apGlyph->GetAdvance() };
+			ohpl_h5b_font_set_glyph(mlRs, alId, &g);
+		}
+
+		cGlyph* CreateGlyph(cFrameSubImage* apImage, const cVector2l &avOffset,const cVector2l &avSize,
+							const cVector2l& avFontSize, int alAdvance);
+
 		iLowLevelGraphics* mpLowLevelGraphics;
 		cResources* mpResources;
 		cGui *mpGui;
-		
+
+	private:
 		tGlyphVec mvGlyphs;
 
 		float mfHeight;
@@ -157,14 +212,7 @@ namespace hpl {
 
 		cVector2f mvSizeRatio;
 
-		// OHPL_IMPL=rust: mirror of the glyph table in Rust, rebuilt lazily after the glyphs change.
 		unsigned long long mlRs;
-		bool mbRsDirty;
-		void SyncRs();
-
-		cGlyph* CreateGlyph(cFrameSubImage* apImage, const cVector2l &avOffset,const cVector2l &avSize,
-							const cVector2l& avFontSize, int alAdvance);
-		void AddGlyph(cGlyph *apGlyph);
 	};
 
 };

@@ -138,7 +138,7 @@ namespace hpl {
 			if(pHud->mpBugShot && pHud->mpBugShot->GetBytesPerPixel() == 4)
 			{
 				cBitmapData *pData = pHud->mpBugShot->GetData(0,0);
-				for(size_t i = 3; i < (size_t)pData->mlSize; i += 4) pData->mpData[i] = 255;
+				for(size_t i = 3; i < (size_t)pData->Size(); i += 4) pData->Data()[i] = 255;
 			}
 			if(pHud->mpBugShot) cEngineDiagnostics::ApplyDisplayGamma(pHud->mpBugShot, pLowGfx->GetGammaCorrection());
 		};

@@ -456,8 +456,8 @@ namespace hpl {
 		unsigned char vLut[256];
 		ohpl_diag_gamma_lut(afGamma, vLut);
 		cBitmapData *pData = apBitmap->GetData(0,0);
-		for(size_t i=0; i+2 < (size_t)pData->mlSize; i += lBpp)
-			for(int c=0; c<3; ++c) pData->mpData[i+c] = vLut[pData->mpData[i+c]];
+		for(size_t i=0; i+2 < (size_t)pData->Size(); i += lBpp)
+			for(int c=0; c<3; ++c) pData->Data()[i+c] = vLut[pData->Data()[i+c]];
 	}
 
 	tString cEngineDiagnostics::GetFrameStatsJson(const unsigned char *apPixels, int alWidth, int alHeight, int alBytesPerPixel)

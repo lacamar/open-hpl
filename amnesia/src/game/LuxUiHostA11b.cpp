@@ -98,9 +98,9 @@ static int FontGlyph(size_t alFont, unsigned alIdx, float *apOut)
 {
 	cGlyph *pGlyph = ((iFontData*)alFont)->GetGlyph((int)alIdx);
 	if(pGlyph == NULL) { OhplA11Ans("font_glyph", std::to_string(alIdx), "none"); return 0; }
-	apOut[0] = pGlyph->mvSize.x;
-	apOut[1] = pGlyph->mvSize.y;
-	apOut[2] = pGlyph->mfAdvance;
+	apOut[0] = pGlyph->GetSize().x;
+	apOut[1] = pGlyph->GetSize().y;
+	apOut[2] = pGlyph->GetAdvance();
 	OhplA11Ans("font_glyph", std::to_string(alIdx), OhplA11Num(apOut[0])+"|"+OhplA11Num(apOut[1])+"|"+OhplA11Num(apOut[2]));
 	return 1;
 }
