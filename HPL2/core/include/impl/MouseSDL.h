@@ -20,6 +20,11 @@
 #ifndef HPL_MOUSE_SDL_H
 #define HPL_MOUSE_SDL_H
 
+#include <cstdlib>
+#include "SDL2/SDL.h"
+#include "impl/LowLevelInputSDL.h"
+#include "impl/RustInputSDL.h"
+
 #include <vector>
 #include "input/Mouse.h"
 #include "input/RustInput.h"
@@ -61,6 +66,14 @@ namespace hpl {
 		std::vector<OhplInputEvent> mvEvents;
 		cLowLevelInputSDL *mpLowLevelInputSDL;
 	};
+
+
+inline cMouseSDL::cMouseSDL(cLowLevelInputSDL *apLowLevelInputSDL) : iMouse("SDL Portable Mouse") { mpLowLevelInputSDL = apLowLevelInputSDL; mpRust = ohpl_input_mouse_new(); }
+inline cMouseSDL::~cMouseSDL() { ohpl_input_mouse_free(mpRust); }
+inline void cMouseSDL::Update() { if(ohpl_input_mouse_take_first_time(mpRust)) { ohpl_l1_mouse_flush(); } static const bool bHeadless = getenv("OPENHPL_HEADLESS_SOCKET") != NULL; OhplConvertEvents(mpLowLevelInputSDL->mlstEvents, mvEvents); int lX,lY; ohpl_l1_mouse_relative(&lX, &lY); OhplVec2l vRel = {lX, lY}; ohpl_input_mouse_update(mpRust, mvEvents.data(), mvEvents.size(), bHeadless, vRel); }
+inline bool cMouseSDL::ButtonIsDown(eMouseButton mButton) { return ohpl_input_mouse_button_is_down(mpRust, mButton); }
+inline cVector2l cMouseSDL::GetAbsPosition() { OhplVec2l v = ohpl_input_mouse_abs(mpRust); return cVector2l(v.x, v.y); }
+inline cVector2l cMouseSDL::GetRelPosition() { OhplVec2l v = ohpl_input_mouse_take_rel(mpRust); return cVector2l(v.x, v.y); }
 
 };
 

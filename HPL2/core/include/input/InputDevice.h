@@ -20,6 +20,8 @@
 #ifndef HPL_INPUTDEVICE_H
 #define HPL_INPUTDEVICE_H
 
+
+
 #include "system/SystemTypes.h"
 #include "input/InputTypes.h"
 
@@ -52,6 +54,11 @@ namespace hpl {
 		tString msName;
 		eInputDeviceType mType;
 	};
+
+
+inline iInputDevice::iInputDevice(tString asName,eInputDeviceType aType) : msName(asName), mType(aType) { }
+inline tString iInputDevice::GetName(){ return msName; }
+inline eInputDeviceType iInputDevice::GetType(){ return mType; }
 
 };
 #endif // HPL_INPUTDEVICE_H

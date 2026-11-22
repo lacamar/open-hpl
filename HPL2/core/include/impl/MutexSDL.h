@@ -20,6 +20,8 @@
 #ifndef HPL_MUTEX_SDL_H
 #define HPL_MUTEX_SDL_H
 
+#include "impl/RustL1.h"
+
 #include "system/Mutex.h"
 
 struct SDL_mutex;
@@ -41,6 +43,12 @@ namespace hpl {
 		OhplL1Mutex* mpRust;
 
 	};
+
+
+inline cMutexSDL::cMutexSDL() { mpRust = ohpl_l1_mutex_new(); }
+inline cMutexSDL::~cMutexSDL() { ohpl_l1_mutex_free(mpRust); }
+inline bool cMutexSDL::Lock() { return ohpl_l1_mutex_lock(mpRust); }
+inline bool cMutexSDL::Unlock() { return ohpl_l1_mutex_unlock(mpRust); }
 
 };
 #endif // HPL_MUTEX_SDL_H

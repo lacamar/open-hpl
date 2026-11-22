@@ -20,6 +20,9 @@
 #ifndef HPL_ACTION_H
 #define HPL_ACTION_H
 
+#include "input/Input.h"
+#include "system/LowLevelSystem.h"
+
 #include "system/SystemTypes.h"
 #include "input/InputTypes.h"
 #include "input/RustInput.h"
@@ -115,6 +118,23 @@ namespace hpl {
 	};
 
 	//---------------------------------------------------------
+
+
+inline cAction::cAction(const tString& asName,int alId, cInput *apInput) { msName = asName; mlId = alId; mpInput = apInput; mpReg = mpInput->GetRustRegistry(); mlHandle = ohpl_input_reg_create(mpReg, (const unsigned char*)asName.data(), asName.size(), alId, this); }
+inline cAction::~cAction() { STLDeleteAll(mvSubActions); }
+inline void cAction::AddKey(eKey aKey) { AddSubAction({eOhplSub_Key, 0, (int)aKey, 0, 0, 0}); }
+inline void cAction::AddMouseButton(eMouseButton aButton) { AddSubAction({eOhplSub_Mouse, 0, (int)aButton, 0, 0, 0}); }
+inline void cAction::AddGamepadButton(int alPadIndex, eGamepadButton aButton) { AddSubAction({eOhplSub_PadButton, alPadIndex, (int)aButton, 0, 0, 0}); }
+inline void cAction::AddGamepadAxis(int alPadIndex, eGamepadAxis aAxis, eGamepadAxisRange aRange, float afMinThreshold, float afMaxThreshold) { AddSubAction({eOhplSub_PadAxis, alPadIndex, (int)aAxis, (int)aRange, afMinThreshold, afMaxThreshold}); }
+inline void cAction::AddGamepadHat(int alPadIndex, eGamepadHat aHat, eGamepadHatState aHatState) { AddSubAction({eOhplSub_PadHat, alPadIndex, (int)aHat, (int)aHatState, 0, 0}); }
+inline void cAction::AddSubAction(const OhplSubSpec &aSpec) { mvSubActions.push_back(hplNew( iSubAction, (aSpec) )); ohpl_input_reg_add_sub(mpReg, mlHandle, &aSpec); }
+inline void cAction::ClearSubActions() { ohpl_input_reg_clear_subs(mpReg, mlHandle); STLDeleteAll(mvSubActions); }
+inline bool cAction::IsTriggerd() { return ohpl_input_reg_is_down(mpReg, mlHandle); }
+inline bool cAction::WasTriggerd() { return ohpl_input_reg_was_triggered(mpReg, mlHandle); }
+inline bool cAction::BecameTriggerd() { return ohpl_input_reg_became_triggered(mpReg, mlHandle); }
+inline bool cAction::DoubleTriggerd(float afLimit) { return ohpl_input_reg_double_triggered(mpReg, mlHandle, afLimit); }
+inline void cAction::ResetToCurrentState() { ohpl_input_reg_reset(mpReg, mlHandle); }
+inline void cAction::Update(float afTimeStep) { ohpl_input_reg_update_action(mpReg, mlHandle, afTimeStep); }
 
 };
 #endif // HPL_ACTION_H
