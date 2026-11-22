@@ -10,7 +10,7 @@ pub(crate) mod a5_small;
 mod a5_tests;
 mod base;
 mod critter;
-mod entc;
+pub(crate) mod entc;
 mod entity;
 mod ffi;
 mod ffi_b;

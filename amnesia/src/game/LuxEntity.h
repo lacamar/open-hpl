@@ -27,6 +27,29 @@
 
 //----------------------------------------------
 
+struct OhplEntState
+{
+	void *map;
+	float max_focus_distance;
+	int id;
+	int entity_type;
+	int crosshair;
+	OhplGa4cEntityCb cb;
+	bool active;
+	bool full_game_save;
+	bool is_saved;
+	bool interaction_disabled;
+	bool destroy_me;
+};
+
+static_assert(sizeof(OhplEntState) == 48, "OhplEntState layout");
+
+extern "C"
+{
+	OhplEntState *ohpl_ent_state_new(int id, int entity_type, void *map);
+	void ohpl_ent_state_free(OhplEntState *s);
+}
+
 class iLuxEntity;
 
 //----------------------------------------------
@@ -147,30 +170,30 @@ public:
 
 	//////////////////
 	// Properties
-	eLuxEntityType GetEntityType()const{ return mEntityType;}
+	eLuxEntityType GetEntityType()const{ return (eLuxEntityType)mpS->entity_type;}
 	
 	const tString& GetName()const{ return msName;}
-	int GetID()const{ return mlID;}
+	int GetID()const{ return mpS->id;}
 
 	void SetActive(bool abX);
-	bool IsActive()const{ return mbActive;}
+	bool IsActive()const{ return mpS->active;}
 
-	cLuxMap *GetMap()const{ return mpMap;}
+	cLuxMap *GetMap()const{ return (cLuxMap*)mpS->map;}
 
-	void SetFullGameSave(bool abX){ mbFullGameSave=abX;}
-	bool GetFullGameSave(){ return mbFullGameSave;}
+	void SetFullGameSave(bool abX){ mpS->full_game_save=abX;}
+	bool GetFullGameSave(){ return mpS->full_game_save;}
 
-	void SetIsSaved(bool abX){ mbIsSaved = abX;}
-	bool IsSaved(){ return mbIsSaved;}
-	bool GetDestroyMe(){ return mbDestroyMe;}
+	void SetIsSaved(bool abX){ mpS->is_saved = abX;}
+	bool IsSaved(){ return mpS->is_saved;}
+	bool GetDestroyMe(){ return mpS->destroy_me;}
 
-	void SetInteractionDisabled(bool abX){ mbInteractionDisabled = abX; }
-	bool GetInteractionDisabled(){ return mbInteractionDisabled; }
+	void SetInteractionDisabled(bool abX){ mpS->interaction_disabled = abX; }
+	bool GetInteractionDisabled(){ return mpS->interaction_disabled; }
 
-	float GetMaxFocusDistance(){ return mfMaxFocusDistance;}
+	float GetMaxFocusDistance(){ return mpS->max_focus_distance;}
 	virtual eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)=0;
 
-	void SetCustomFocusCrossHair(eLuxFocusCrosshair aX){ mCustomFocusCrossHair = aX;}
+	void SetCustomFocusCrossHair(eLuxFocusCrosshair aX){ mpS->crosshair = aX;}
 
 	virtual tWString GetFocusText(){ return _W("");}
 
@@ -183,7 +206,7 @@ public:
 
 	void SetPlayerInteractCallback(const tString &asCallbackFunc, bool abRemoveWhenInteracted);
 	void SetPlayerLookAtCallback(const tString &asCallbackFunc, bool abRemoveWhenLookedAt);
-	bool IsLookedAtByPlayer(){ return mbIsLookedAt; }
+	bool IsLookedAtByPlayer(){ return mpS->cb.is_looked_at; }
 
 	void AddCollideCallbackParent(iLuxCollideCallbackContainer* apCallback);
 	void RemoveCollideCallbackParent(iLuxCollideCallbackContainer* apCallback);
@@ -216,17 +239,19 @@ public:
 	const tString& GetInteractCallback()const{ return msInteractCallback;}
 	void ClearInteractCallback(){ msInteractCallback = "";}
 	const tString& GetLookAtCallback()const{ return msLookAtCallback;}
-	void SetInteractCallbackRemove(bool abX){ mbInteractCallbackRemove = abX;}
-	void SetMaxFocusDistance(float afX){ mfMaxFocusDistance = afX;}
-	eLuxFocusCrosshair GetCustomFocusCrossHair()const{ return mCustomFocusCrossHair;}
+	bool GetInteractCallbackRemove()const{ return mpS->cb.interact_remove;}
+	bool GetLookAtCallbackRemove()const{ return mpS->cb.lookat_remove;}
+	void SetInteractCallbackRemove(bool abX){ mpS->cb.interact_remove = abX;}
+	void SetMaxFocusDistance(float afX){ mpS->max_focus_distance = afX;}
+	eLuxFocusCrosshair GetCustomFocusCrossHair()const{ return (eLuxFocusCrosshair)mpS->crosshair;}
 	void SetName(const tString& asX){ msName = asX;}
-	void SetID(int alX){ mlID = alX;}
-	void SetMap(cLuxMap *apMap){ mpMap = apMap;}
-	void SetDestroyMeFlag(bool abX){ mbDestroyMe = abX;}
-	void SetIsLookedAt(bool abX){ mbIsLookedAt = abX;}
+	void SetID(int alX){ mpS->id = alX;}
+	void SetMap(cLuxMap *apMap){ mpS->map = apMap;}
+	void SetDestroyMeFlag(bool abX){ mpS->destroy_me = abX;}
+	void SetIsLookedAt(bool abX){ mpS->cb.is_looked_at = abX;}
 	tString& CallbackFuncRef(){ return msCallbackFunc;}
 	tString& ConnectionStateChangeCallbackRef(){ return msConnectionStateChangeCallback;}
-	float* MaxFocusDistancePtr(){ return &mfMaxFocusDistance;}
+	float* MaxFocusDistancePtr(){ return &mpS->max_focus_distance;}
 
 protected:
 	void UpdateCheckCollideCallback(float afTimeStep);
@@ -246,14 +271,8 @@ protected:
 	bool CollidesWithPlayer();
 
 private:
+	OhplEntState *mpS;
 	tString msName;
-	bool mbFullGameSave;
-	bool mbActive;
-	bool mbIsSaved;
-	int mlID;
-
-	bool mbInteractionDisabled;
-
 	tLuxCollideCallbackContainerList mlstCollideCallbackParents;
 
 	tString msCallbackFunc;
@@ -261,34 +280,13 @@ private:
 
 	tString msInteractCallback;
 	tString msLookAtCallback;
-	union
-	{
-		OhplGa4cEntityCb mGa4cCb;
-		struct
-		{
-			bool mbInteractCallbackRemove;
-			bool mbLookAtCallbackRemove;
-			float mfLookAtCount;
-			bool mbIsLookedAt;
-		};
-	};
 
-	float mfMaxFocusDistance;
-
-	eLuxFocusCrosshair mCustomFocusCrossHair;
-
-	cLuxMap *mpMap;
-
-	bool mbDestroyMe;
-	
 	iLuxEntity_SaveData *mpSaveData;
 
 	std::vector<cMesh*> mvPreloadedMeshes;
 	std::vector<cLuxEntityConnection*> mvConnections;
 
-	eLuxEntityType mEntityType;
-
-	void DestroyMe(){ mbDestroyMe = true;}
+	void DestroyMe(){ mpS->destroy_me = true;}
 	void Ga4cApplyOp(const OhplGa4Op &aOp, const tString *apType);
 };
 
