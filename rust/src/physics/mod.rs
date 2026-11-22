@@ -14,6 +14,7 @@ mod cxx_char;
 mod cxx_newton;
 mod cxx_physics;
 mod cxx_surface;
+mod cxx_verlet;
 mod cxx_world;
 mod ffi;
 mod ffi_character;

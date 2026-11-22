@@ -24,6 +24,7 @@ namespace hpl {
 		iPhysicsWorld *apWorld,const cVector3f &avPivotPoint, const cVector3f &avPinDir)
 		: msName(asName)
 	{
+		static_assert(offsetof(iPhysicsJoint, mS) == 8, "joint layout");
 		mS = ohpl_h15j_new(HostOp, reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(OhplPhysHost()), reinterpret_cast<size_t>(apParentBody),
 			reinterpret_cast<size_t>(apChildBody), reinterpret_cast<size_t>(apWorld), OhplV3Pod{avPivotPoint.x, avPivotPoint.y, avPivotPoint.z},
 			OhplV3Pod{avPinDir.x, avPinDir.y, avPinDir.z});
