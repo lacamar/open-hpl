@@ -241,6 +241,22 @@ pub(crate) fn widget_dummy(s: usize, pos: [f32; 3], parent: usize) -> usize {
     create(s, KIND_DUMMY, pos, None, &[], parent, 0, 0, 0, 0)
 }
 
+/// The element and size `cGuiSet::CreateWidgetImage` builds the widget from.
+fn image_parts(file: &[u8], size: [f32; 2], material: i32, animate: bool) -> (usize, [f32; 2]) {
+    let mut gfx = 0;
+    if !file.is_empty() {
+        gfx = if animate {
+            g1_gui::create_gfx_image_buffer(gui(), file, material, true, WHITE, true) as usize
+        } else {
+            gfx_image(file, material)
+        };
+    }
+    if gfx != 0 && size[0] < 0.0 {
+        return (gfx, gfx_image_size(gfx));
+    }
+    (gfx, size)
+}
+
 /// `cGuiSet::CreateWidgetImage`.
 pub(crate) fn widget_image(
     s: usize,
@@ -251,19 +267,109 @@ pub(crate) fn widget_image(
     animate: bool,
     parent: usize,
 ) -> usize {
-    let mut gfx = 0;
-    if !file.is_empty() {
-        gfx = if animate {
-            g1_gui::create_gfx_image_buffer(gui(), file, material, true, WHITE, true) as usize
-        } else {
-            gfx_image(file, material)
-        };
-    }
-    let mut size = size;
-    if gfx != 0 && size[0] < 0.0 {
-        size = gfx_image_size(gfx);
-    }
+    let (gfx, size) = image_parts(file, size, material, animate);
     create(s, KIND_IMAGE, pos, Some(size), &[], parent, 0, 0, 0, gfx)
+}
+
+/// `cGuiSet::CreateWidgetImage` with a widget name.
+///
+/// # Safety
+/// `s` is a live set; `file` and `name` are readable for their lengths, `pos` and `size` valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_gw_create_image(
+    s: *mut Set,
+    file: *const u8,
+    file_n: usize,
+    pos: *const Vector3f,
+    size: *const Vector2f,
+    material: i32,
+    animate: bool,
+    parent: usize,
+    name: *const u8,
+    name_n: usize,
+) -> usize {
+    // SAFETY: caller contract.
+    let (file, pos, size, name) = unsafe {
+        (
+            std::slice::from_raw_parts(file, file_n),
+            *pos,
+            *size,
+            std::slice::from_raw_parts(name, name_n),
+        )
+    };
+    let (gfx, size) = image_parts(file, [size.x, size.y], material, animate);
+    // SAFETY: as above.
+    unsafe {
+        gw_kinds::ohpl_gw_create(
+            s.cast(),
+            KIND_IMAGE,
+            &pos,
+            &size_v(size),
+            ptr::null(),
+            0,
+            parent,
+            name.as_ptr(),
+            name.len(),
+            0,
+            0,
+            0,
+            gfx as *mut Element,
+        )
+    }
+}
+
+fn size_v(s: [f32; 2]) -> Vector2f {
+    vec2(s)
+}
+
+/// `cGuiSet::SetRootWidgetClips`.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_g1_set_root_clips_set(s: *mut Set, on: bool) {
+    // SAFETY: `s` is a live set.
+    let root = unsafe { g1_set::ohpl_g1_set_root(s) };
+    gw::ohpl_gw_set_clip_active(root, on);
+    let size = if on {
+        let v = g1_set::set_info(s).0;
+        [v[0], v[1]]
+    } else {
+        [0.0; 2]
+    };
+    gw::set_size(root, vec2(size));
+}
+
+/// `cGuiSet::GetRootWidgetClips`.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_g1_set_root_clips(s: *mut Set) -> bool {
+    // SAFETY: `s` is a live set.
+    gw::ohpl_gw_clip_active(unsafe { g1_set::ohpl_g1_set_root(s) })
+}
+
+/// `cGuiSet::HasFocus`.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_g1_set_has_focus(s: *mut Set) -> bool {
+    g1_gui::focused_set(g1_set::set_gui_rust(s)) == s as usize
+}
+
+/// `cGuiSet::PositionWidgetInsideBounds`.
+pub(crate) fn position_inside_bounds(s: *mut Set, w: usize) {
+    let (pos, size) = (gw::global_position(w), gw::size(w));
+    let v = g1_set::set_info(s).0;
+    let mut out = pos;
+    // SAFETY: all pointers are to locals.
+    unsafe {
+        super::ffi::ohpl_gui_position_inside_bounds(
+            &pos,
+            &size,
+            &Vector2f { x: v[0], y: v[1] },
+            &mut out,
+        );
+    }
+    gw::set_global_position(w, out);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_g1_set_position_inside_bounds(s: *mut Set, w: usize) {
+    position_inside_bounds(s, w);
 }
 
 pub(crate) fn widget_slider(
@@ -442,4 +548,72 @@ pub(crate) fn widget_group(
     parent: usize,
 ) -> usize {
     create(s, KIND_GROUP, pos, Some(size), text, parent, 0, 0, 0, 0)
+}
+
+/// `cGuiSet::CreateWidgetListBox`.
+pub(crate) fn widget_list(s: usize, pos: [f32; 3], size: [f32; 2], parent: usize) -> usize {
+    complex(
+        s,
+        super::gw_h20::KIND_LIST,
+        pos,
+        size,
+        &[],
+        parent,
+        0,
+        0,
+        0.0,
+    )
+}
+
+/// `cGuiSet::CreateWidgetTextBox` with the default type, buttons and numeric step.
+pub(crate) fn widget_textbox(
+    s: usize,
+    pos: [f32; 3],
+    size: [f32; 2],
+    text: &[u32],
+    parent: usize,
+) -> usize {
+    complex(
+        s,
+        super::gw_h20::KIND_TEXTBOX,
+        pos,
+        size,
+        text,
+        parent,
+        0,
+        1,
+        1.0,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn complex(
+    s: usize,
+    kind: i32,
+    pos: [f32; 3],
+    size: [f32; 2],
+    text: &[u32],
+    parent: usize,
+    a: i32,
+    b: i32,
+    add: f32,
+) -> usize {
+    let (pos, size) = (vec3(pos), vec2(size));
+    // SAFETY: `s` is a live set; every pointer is readable for the call.
+    unsafe {
+        super::gw_h20::ohpl_gw_create_c(
+            s as *mut _,
+            kind,
+            &pos,
+            &size,
+            text.as_ptr(),
+            text.len(),
+            parent,
+            ptr::null(),
+            0,
+            a,
+            b,
+            add,
+        )
+    }
 }

@@ -13,12 +13,6 @@ static_assert(sizeof(cDate) == 8 * sizeof(int32_t), "cDate layout");
 namespace
 {
 	tWString W(const uint32_t *apText, size_t alLen) { return tWString((const wchar_t*)apText, alLen); }
-	tString Bytes(const uint32_t *apText, size_t alLen)
-	{
-		tString sOut;
-		for(size_t i = 0; i < alLen; ++i) sOut += (char)apText[i];
-		return sOut;
-	}
 	void Emit(OhplA9Sink apSink, void *apCtx, const tWString &asText) { apSink(apCtx, (const uint32_t*)asText.data(), asText.size()); }
 	void EmitBytes(OhplA9Sink apSink, void *apCtx, const tString &asText)
 	{
@@ -27,132 +21,12 @@ namespace
 		apSink(apCtx, vText.data(), vText.size());
 	}
 
-	bool Tramp(void *apObject, iWidget *apWidget, const cGuiMessageData &aData)
-	{
-		return ohpl_a9_cb((size_t)apObject, apWidget, aData.mlVal);
-	}
-
-	const eGuiMessage kMsg[] = { eGuiMessage_OnUpdate, eGuiMessage_ButtonPressed, eGuiMessage_UIButtonPress,
-		eGuiMessage_SelectionDoubleClick, eGuiMessage_CheckChange, eGuiMessage_GetUINavFocus, eGuiMessage_SelectionChange,
-		eGuiMessage_WindowClose, eGuiMessage_TextBoxEnter };
-	const eUIArrow kArrow[] = { eUIArrow_Up, eUIArrow_Right, eUIArrow_Down, eUIArrow_Left };
-
-	iWidget *Wd(OhplA9W apWidget) { return (iWidget*)apWidget; }
-	cWidgetListBox *List(OhplA9W apWidget) { return (cWidgetListBox*)apWidget; }
-	cWidgetLabel *Label(OhplA9W apWidget) { return (cWidgetLabel*)apWidget; }
-	cWidgetTextBox *Text(OhplA9W apWidget) { return (cWidgetTextBox*)apWidget; }
-	cColor Color(const float *v) { return cColor(v[0], v[1], v[2], v[3]); }
 }
 
 //-----------------------------------------------------------------------
 
 namespace
 {
-
-OhplA9W ohpl_a9h_new(OhplA9W apSet, int alKind, OhplA9W apParent, const float *apPos, const float *apSize, int alFlags,
-					const uint32_t *apText, size_t alLen)
-{
-	cGuiSet *pSet = (cGuiSet*)apSet;
-	iWidget *pParent = Wd(apParent);
-	cVector3f vPos(apPos[0], apPos[1], apPos[2]);
-	cVector2f vSize(apSize[0], apSize[1]);
-	tWString sText = W(apText, alLen);
-
-	switch(alKind)
-	{
-	case 3: return pSet->CreateWidgetListBox(vPos, vSize, pParent);
-	case 6: return pSet->CreateWidgetTextBox(vPos, vSize, sText, pParent);
-	}
-	return NULL;
-}
-
-OhplA9W ohpl_a9h_popup(OhplA9W apSet, const OhplA9Str *apStr, size_t alObj, int alKillOnEscape, bool abCopyFocus)
-{
-	cGuiSet *pSet = (cGuiSet*)apSet;
-	cGuiPopUpMessageBox *pPopUp = pSet->CreatePopUpMessageBox(W(apStr[0].mpText, apStr[0].mlLen), W(apStr[1].mpText, apStr[1].mlLen),
-								W(apStr[2].mpText, apStr[2].mlLen), W(apStr[3].mpText, apStr[3].mlLen),
-								alObj ? (void*)alObj : NULL, alObj ? &Tramp : NULL);
-	if(abCopyFocus) pPopUp->GetGuiSet()->SetDrawFocus(pSet->GetDrawFocus());
-	if(alKillOnEscape >= 0) pPopUp->SetKillOnEscapeKey(alKillOnEscape != 0);
-	return pPopUp;
-}
-
-size_t ohpl_a9h_w(OhplA9W apWidget, int alOp, size_t alArg)
-{
-	iWidget *pWidget = Wd(apWidget);
-	switch(alOp)
-	{
-	case 12: Text(pWidget)->SetForceCallBackOnEnter(alArg != 0); break;
-	case 13: Text(pWidget)->SetCallbackOnLostFocus(alArg != 0); break;
-	case 14: Text(pWidget)->SetMaxTextLength((int)alArg); break;
-	case 15: Text(pWidget)->SetSelectedText(); break;
-	case 16: List(pWidget)->ClearItems(); break;
-	case 17: return List(pWidget)->GetItemNum();
-	case 18: return (size_t)(ssize_t)List(pWidget)->GetSelectedItem();
-	case 19: List(pWidget)->SetSelectedItem((int)alArg); break;
-	case 20: List(pWidget)->SetIsLocked(alArg != 0); break;
-	case 21: return List(pWidget)->GetIsLocked();
-	case 23: return (size_t)List(pWidget)->GetItem((int)alArg)->GetUserData();
-	}
-	return 0;
-}
-
-void ohpl_a9h_w_set_f(OhplA9W apWidget, int alOp, const float *apVal)
-{
-	if(alOp == 6) Wd(apWidget)->SetDefaultFontSize(cVector2f(apVal[0], apVal[1]));
-}
-
-size_t ohpl_a9h_w_str(OhplA9W apWidget, int alOp, const uint32_t *apText, size_t alLen, size_t alArg)
-{
-	iWidget *pWidget = Wd(apWidget);
-	switch(alOp)
-	{
-	case 1: Text(pWidget)->SetIllegalChars(W(apText, alLen)); break;
-	case 2:
-		{
-			cWidgetItem *pItem = List(pWidget)->AddItem(W(apText, alLen));
-			if(alArg) pItem->SetUserData((void*)alArg);
-		}
-		break;
-	}
-	return 0;
-}
-
-void ohpl_a9h_w_get_str(OhplA9W apWidget, int alOp, int alIdx, OhplA9Sink apSink, void *apCtx)
-{
-	if(alOp != 0) Emit(apSink, apCtx, List(apWidget)->GetItem(alIdx)->GetText());
-}
-
-void ohpl_a9h_w_cb(OhplA9W apWidget, int alMsg, size_t alObj)
-{
-	Wd(apWidget)->AddCallback(kMsg[alMsg], (void*)alObj, &Tramp);
-}
-
-float ohpl_a9h_text_width(OhplA9W apWidget, const uint32_t *apText, size_t alLen)
-{
-	iWidget *pWidget = Wd(apWidget);
-	tWString sText = W(apText, alLen);
-	return pWidget->GetDefaultFontType()->GetLength(pWidget->GetDefaultFontSize(), sText.c_str());
-}
-
-void ohpl_a9h_image_file(OhplA9W apWidget, const uint32_t *apText, size_t alLen)
-{
-	cWidgetImage *pImage = (cWidgetImage*)apWidget;
-	cGui *pGui = gpBase->mpEngine->GetGui();
-
-	cGuiGfxElement *pGfx = pImage->GetImage();
-	if(pGfx)
-	{
-		pGui->DestroyGfx(pGfx);
-		pGfx = NULL;
-	}
-
-	iTexture *pTex = gpBase->mpEngine->GetResources()->GetTextureManager()->Create2D(Bytes(apText, alLen), false, eTextureType_Rect);
-	if(pTex)
-		pGfx = pGui->CreateGfxTexture(pTex, true, eGuiMaterial_Alpha);
-
-	pImage->SetImage(pGfx);
-}
 
 size_t ohpl_a9h_lux(int alOp, size_t alArg)
 {
@@ -289,15 +163,6 @@ void ohpl_a9h_story_free(OhplA9W apStory) { hplDelete((cLuxCustomStorySettings*)
 }
 
 const OhplA9Host gHost = {
-	&ohpl_a9h_new,
-	&ohpl_a9h_popup,
-	&ohpl_a9h_w,
-	&ohpl_a9h_w_set_f,
-	&ohpl_a9h_w_str,
-	&ohpl_a9h_w_get_str,
-	&ohpl_a9h_w_cb,
-	&ohpl_a9h_text_width,
-	&ohpl_a9h_image_file,
 	&ohpl_a9h_lux,
 	&ohpl_a9h_lux_str,
 	&ohpl_a9h_lux_with,

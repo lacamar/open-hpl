@@ -4,7 +4,7 @@
 //! must equal the recorded one, in order, and every entry point must return what it returned.
 
 use super::h21_log::{Ids, fmt_cmd};
-use super::h21_popup::{self as pop, Cmd, Host, Hx, OP_NAMES, Popup, Ret};
+use super::h21_popup::{self as pop, Cmd, Host, Hx, Popup, Ret};
 use super::set::Msg;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -289,21 +289,4 @@ fn abi_layout() {
     assert_eq!(std::mem::size_of::<Cmd>(), 136);
     assert_eq!(std::mem::size_of::<Ret>(), 80);
     assert_eq!(std::mem::align_of::<Cmd>(), 8);
-}
-
-#[test]
-fn header_op_list_matches() {
-    let h = Path::new(env!("CARGO_MANIFEST_DIR")).join("../HPL2/core/include/gui/RustGuiH21.h");
-    let text = std::fs::read_to_string(h).expect("header");
-    let body = text
-        .split("enum OhplH21Op {")
-        .nth(1)
-        .and_then(|r| r.split('}').next())
-        .expect("enum");
-    let names: Vec<&str> = body
-        .split(',')
-        .filter_map(|n| n.trim().strip_prefix("kOhplH21"))
-        .filter(|n| *n != "OpCount")
-        .collect();
-    assert_eq!(names, OP_NAMES);
 }

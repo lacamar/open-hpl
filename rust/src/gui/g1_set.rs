@@ -1656,6 +1656,10 @@ pub(crate) fn focused_widget(s: *mut Set) -> W {
     with(s, |s| s.p.state.focused)
 }
 
+pub(crate) fn default_nav_widget(s: *mut Set) -> W {
+    with(s, |s| s.p.state.default_nav)
+}
+
 pub(crate) fn attention_widget(s: *mut Set) -> W {
     with(s, |s| s.p.state.attention)
 }
