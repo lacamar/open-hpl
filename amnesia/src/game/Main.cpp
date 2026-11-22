@@ -64,8 +64,6 @@ int hplMain(const tString &asCommandline)
 
 	hplDelete(gpBase);
 
-	cMemoryManager::LogResults();
-
 	//////////////////////////
 	// Exit BlackBox
 	#ifdef WIN32

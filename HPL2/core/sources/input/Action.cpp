@@ -21,11 +21,6 @@
 #include "system/LowLevelSystem.h"
 
 #include "input/Input.h"
-#include "input/ActionKeyboard.h"
-#include "input/ActionMouseButton.h"
-#include "input/ActionGamepadButton.h"
-#include "input/ActionGamepadAxis.h"
-#include "input/ActionGamepadHat.h"
 
 
 namespace hpl {
@@ -35,11 +30,6 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
-
-	void iSubAction::Update(float afTimeStep)
-	{
-		UpdateLogic(afTimeStep);
-	}
 
 	//-----------------------------------------------------------------------
 
@@ -76,36 +66,35 @@ namespace hpl {
 
 	void cAction::AddKey(eKey aKey)
 	{
-		AddSubAction( hplNew(cActionKeyboard, (mpInput,aKey) ));
+		AddSubAction({eOhplSub_Key, 0, (int)aKey, 0, 0, 0});
 	}
 	
 	void cAction::AddMouseButton(eMouseButton aButton)
 	{
-		AddSubAction( hplNew(cActionMouseButton, (mpInput,aButton) ));
+		AddSubAction({eOhplSub_Mouse, 0, (int)aButton, 0, 0, 0});
 	}
 
 	void cAction::AddGamepadButton(int alPadIndex, eGamepadButton aButton)
 	{
-		AddSubAction( hplNew(cActionGamepadButton, (mpInput, alPadIndex, aButton)));
+		AddSubAction({eOhplSub_PadButton, alPadIndex, (int)aButton, 0, 0, 0});
 	}
 	
 	void cAction::AddGamepadAxis(int alPadIndex, eGamepadAxis aAxis, eGamepadAxisRange aRange, float afMinThreshold, float afMaxThreshold)
 	{
-		AddSubAction( hplNew(cActionGamepadAxis, (mpInput, alPadIndex, aAxis, aRange, afMinThreshold, afMaxThreshold)));
+		AddSubAction({eOhplSub_PadAxis, alPadIndex, (int)aAxis, (int)aRange, afMinThreshold, afMaxThreshold});
 	}
 
 	void cAction::AddGamepadHat(int alPadIndex, eGamepadHat aHat, eGamepadHatState aHatState)
 	{
-		AddSubAction( hplNew(cActionGamepadHat, (mpInput, alPadIndex, aHat, aHatState)));
+		AddSubAction({eOhplSub_PadHat, alPadIndex, (int)aHat, (int)aHatState, 0, 0});
 	}
 
 	//-----------------------------------------------------------------------
 
-	void cAction::AddSubAction(iSubAction *apSubAction)
+	void cAction::AddSubAction(const OhplSubSpec &aSpec)
 	{
-		mvSubActions.push_back(apSubAction);
-		OhplSubSpec spec = apSubAction->OhplSpec();
-		ohpl_input_reg_add_sub(mpReg, mlHandle, &spec);
+		mvSubActions.push_back(hplNew( iSubAction, (aSpec) ));
+		ohpl_input_reg_add_sub(mpReg, mlHandle, &aSpec);
 	}
 
 	//-----------------------------------------------------------------------

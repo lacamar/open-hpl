@@ -7,8 +7,6 @@
 #include "SomaLuxGame.h"
 
 #include "impl/RustEasArray.h"
-#include "input/ActionKeyboard.h"
-#include "input/ActionMouseButton.h"
 
 #include <cmath>
 #include <cstring>
@@ -338,10 +336,10 @@ namespace
 		{
 			iSubAction *pSub = pAction->GetSubAction(i);
 			int lKind = 0, lCode = 0;
-			if (pSub->GetInputType() == "Keyboard")
-				lKind = 1, lCode = (int)static_cast<cActionKeyboard *>(pSub)->GetKey();
-			else if (pSub->GetInputType() == "MouseButton")
-				lKind = 2, lCode = (int)static_cast<cActionMouseButton *>(pSub)->GetButton();
+			if (pSub->OhplSpec().kind == eOhplSub_Key)
+				lKind = 1, lCode = pSub->OhplSpec().id;
+			else if (pSub->OhplSpec().kind == eOhplSub_Mouse)
+				lKind = 2, lCode = pSub->OhplSpec().id;
 			tString sName = pSub->GetInputName();
 			f(c, lKind, lCode, (const unsigned char *)sName.data(), sName.size());
 		}
