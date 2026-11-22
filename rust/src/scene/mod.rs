@@ -505,7 +505,8 @@ mod ls_light;
 mod ls_rope;
 mod meshent;
 
-mod wd;
+pub(crate) mod wd;
 mod wd_host;
 
 pub(crate) mod efl;
+pub(crate) mod efl_hpm;

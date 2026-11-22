@@ -23,12 +23,12 @@ use std::sync::atomic::{AtomicPtr, Ordering};
 type P = *mut c_void;
 
 const FOG_AREA: u32 = 11;
-const KIND_FOG: u32 = 0;
-const KIND_LIGHT: u32 = 1;
-const KIND_BILLBOARD: u32 = 2;
-const KIND_FLARE: u32 = 3;
-const KIND_PARTICLE: u32 = 4;
-const KIND_SOUND: u32 = 5;
+pub(super) const KIND_FOG: u32 = 0;
+pub(super) const KIND_LIGHT: u32 = 1;
+pub(super) const KIND_BILLBOARD: u32 = 2;
+pub(super) const KIND_FLARE: u32 = 3;
+pub(super) const KIND_PARTICLE: u32 = 4;
+pub(super) const KIND_SOUND: u32 = 5;
 
 const TEX_1D: i32 = 0;
 const TEX_2D: i32 = 1;
@@ -66,7 +66,7 @@ pub unsafe extern "C" fn ohpl_efl_set_host(h: *const Host) {
     HOST.store(h.cast_mut(), Ordering::Release);
 }
 
-fn host() -> Option<&'static Host> {
+pub(super) fn host() -> Option<&'static Host> {
     // SAFETY: set once by `ohpl_efl_set_host`; the table is static.
     unsafe { HOST.load(Ordering::Acquire).as_ref() }
 }
@@ -106,13 +106,13 @@ unsafe fn read_el(h: &Host, el: P) -> El {
     out
 }
 
-struct Obj {
-    pod: P,
-    ent: *mut EntBox,
-    rnd: *mut Rnd,
+pub(super) struct Obj {
+    pub(super) pod: P,
+    pub(super) ent: *mut EntBox,
+    pub(super) rnd: *mut Rnd,
 }
 
-fn pods(h: &Host, kind: u32, obj: P) -> Obj {
+pub(super) fn pods(h: &Host, kind: u32, obj: P) -> Obj {
     let mut out = [std::ptr::null_mut::<c_void>(); 3];
     // SAFETY: table contract.
     unsafe { (h.pods)(kind, obj, out.as_mut_ptr()) };
@@ -176,7 +176,7 @@ unsafe fn setup(h: &Host, o: &Obj, el: &El) {
 ///
 /// # Safety
 /// `ent` live.
-unsafe fn transform_updated(h: &Host, ent: *mut EntBox) {
+pub(super) unsafe fn transform_updated(h: &Host, ent: *mut EntBox) {
     // SAFETY: caller contract.
     unsafe { h10::ent_set_transform_updated(&*h.h10, ent, true) }
 }

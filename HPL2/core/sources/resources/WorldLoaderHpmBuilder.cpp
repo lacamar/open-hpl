@@ -507,43 +507,6 @@ namespace hpl {
 		return bRead ? 1 : 2;
 	}
 
-	void cHpmWorldBuilder::GlobalFog(const OhplHpmFog& f)
-	{
-		mpCurrentWorld->SetFogActive(f.active);
-		mpCurrentWorld->SetFogColor(cColor(f.color[0], f.color[1], f.color[2], f.color[3]));
-		mpCurrentWorld->SetFogFalloffExp(f.falloffExp);
-		mpCurrentWorld->SetFogStart(f.fadeStart);
-		mpCurrentWorld->SetFogEnd(f.fadeEnd);
-		mpCurrentWorld->SetFogCulling(f.culling);
-		mpCurrentWorld->SetFogBrightness(f.brightness);
-		mpCurrentWorld->SetFogUnderwater(f.underwater);
-		mpCurrentWorld->SetFogUseSkybox(f.useSkybox);
-		mpCurrentWorld->SetFogApplyAfterFogAreas(f.applyAfterFogAreas);
-		mpCurrentWorld->SetFogNoise(f.noiseStrength, f.noiseSize, cVector3f(f.noiseTurbulence[0], f.noiseTurbulence[1], f.noiseTurbulence[2]));
-		mpCurrentWorld->SetSecondaryFogActive(f.secondaryActive);
-		mpCurrentWorld->SetSecondaryFogColor(cColor(f.secondaryColor[0], f.secondaryColor[1], f.secondaryColor[2], f.secondaryColor[3]));
-		mpCurrentWorld->SetSecondaryFogStart(f.secondaryFadeStart);
-		mpCurrentWorld->SetSecondaryFogEnd(f.secondaryFadeEnd);
-		mpCurrentWorld->SetSecondaryFogFalloffExp(f.secondaryFalloffExp);
-		mpCurrentWorld->SetFogLighten(f.lighten);
-		mpCurrentWorld->SetFogHeightBased(f.heightBased);
-		mpCurrentWorld->SetFogExponential(f.exponential);
-		mpCurrentWorld->SetFogDensity(f.density);
-		mpCurrentWorld->SetFogHeightDensity(f.heightDensity);
-		mpCurrentWorld->SetFogHeightHorizon(f.heightHorizon);
-		mpCurrentWorld->SetSecondaryFogDensity(f.secondaryDensity);
-		mpCurrentWorld->SetSecondaryFogHeightDensity(f.secondaryHeightDensity);
-		mpCurrentWorld->SetSecondaryFogHeightHorizon(f.secondaryHeightHorizon);
-	}
-
-	void cHpmWorldBuilder::DistanceCull(const OhplHpmDistanceCull& c)
-	{
-		mpCurrentWorld->SetDistanceCullActive(c.active);
-		mpCurrentWorld->SetDistanceCullMinRange(c.minRange);
-		mpCurrentWorld->SetDistanceCullScreenSize(c.screenSize);
-		mpCurrentWorld->SetDistanceCullRandomSize(c.randomSize);
-	}
-
 	void cHpmWorldBuilder::DirLight(const OhplHpmDirLight& d)
 	{
 		cLightDirectional* pLight = mpCurrentWorld->GetDirectionalLight();
@@ -723,11 +686,6 @@ namespace hpl {
 		return pEntity != NULL;
 	}
 
-	bool cHpmWorldBuilder::Light(cXmlElement* apElement)
-	{
-		return cEngineFileLoading::LoadLight(apElement, "", mpCurrentWorld, mpResources, true);
-	}
-
 	bool cHpmWorldBuilder::Area(const OhplHpmArea& a, cXmlElement* apElement)
 	{
 		tString sName = a.name;
@@ -758,13 +716,6 @@ namespace hpl {
 		return true;
 	}
 
-	bool cHpmWorldBuilder::Sound(cXmlElement* apElement, bool abActive)
-	{
-		cSoundEntity* pSound = cEngineFileLoading::LoadSound(apElement, "", mpCurrentWorld);
-		if (pSound && !abActive) pSound->SetActive(false);
-		return pSound != NULL;
-	}
-
 	bool cHpmWorldBuilder::Decal(const OhplHpmDecal& d, cXmlElement* apMeshElement)
 	{
 		cMesh* pMesh = cEngineFileLoading::LoadDecalMeshHelper(apMeshElement, mpGraphics, mpResources, d.name, d.material,
@@ -775,76 +726,6 @@ namespace hpl {
 		pMeshEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, false);
 		pMeshEntity->SetUniqueID(d.id);
 		return true;
-	}
-
-	bool cHpmWorldBuilder::Billboard(cXmlElement* apElement)
-	{
-		return cEngineFileLoading::LoadBillboard(apElement, "", mpCurrentWorld, mpResources, true, &mlstLightBillboardConnections);
-	}
-
-	bool cHpmWorldBuilder::ParticleSystem(cXmlElement* apElement, const char* asConnectLight)
-	{
-		cParticleSystem* pPS = cEngineFileLoading::LoadParticleSystem(apElement, "", mpCurrentWorld);
-		tString sLight = asConnectLight;
-		if (pPS && sLight != "") mvLightParticleConnections.push_back(std::make_pair(pPS, sLight));
-		return pPS != NULL;
-	}
-
-	bool cHpmWorldBuilder::FogArea(cXmlElement* apElement)
-	{
-		return cEngineFileLoading::LoadFogArea(apElement, "", mpCurrentWorld, true);
-	}
-
-	bool cHpmWorldBuilder::LensFlare(cXmlElement* apElement)
-	{
-		return cEngineFileLoading::LoadLensFlare(apElement, "", mpCurrentWorld, mpResources, false);
-	}
-
-	void cHpmWorldBuilder::LightMaskBox(const OhplHpmLightMask& m)
-	{
-		OhplH4LightMask p;
-		ohpl_h4_light_mask(m.rotation, m.size, m.scale, m.worldPos, &p);
-		mmapLightMasks[m.id] = std::make_pair(cVector3f(p.center[0], p.center[1], p.center[2]), cVector3f(p.extent[0], p.extent[1], p.extent[2]));
-	}
-
-	void cHpmWorldBuilder::ConnectLightMasks()
-	{
-		cLightListIterator it = mpCurrentWorld->GetLightIterator();
-		while (it.HasNext())
-		{
-			iLight* pLight = it.Next();
-			std::map<unsigned int, std::pair<cVector3f, cVector3f> >::iterator maskIt = mmapLightMasks.find(pLight->GetMaskID());
-			if (maskIt != mmapLightMasks.end())
-				pLight->SetMaskBox(true, maskIt->second.first, maskIt->second.second);
-		}
-		mmapLightMasks.clear();
-	}
-
-	void cHpmWorldBuilder::ConnectLights(int* apMissingBillboards, int* apMissingParticles)
-	{
-		*apMissingBillboards = 0;
-		*apMissingParticles = 0;
-		tEFL_LightBillboardConnectionListIt it = mlstLightBillboardConnections.begin();
-		for (; it != mlstLightBillboardConnections.end(); ++it)
-		{
-			cBillboard* pBB = mpCurrentWorld->GetBillboardFromUniqueID(it->msBillboardID);
-			iLight* pLight = mpCurrentWorld->GetLight(it->msLightName);
-			if (pBB == NULL || pLight == NULL)
-			{
-				++*apMissingBillboards;
-				continue;
-			}
-			pLight->AttachBillboard(pBB, pBB->GetColor());
-		}
-		mlstLightBillboardConnections.clear();
-
-		for (size_t i = 0; i < mvLightParticleConnections.size(); ++i)
-		{
-			iLight* pLight = mpCurrentWorld->GetLight(mvLightParticleConnections[i].second);
-			if (pLight) pLight->AttachParticleSystem(mvLightParticleConnections[i].first);
-			else ++*apMissingParticles;
-		}
-		mvLightParticleConnections.clear();
 	}
 
 	int cHpmWorldBuilder::DetailMeshes(const OhplHpmDetailMeshes& d)
