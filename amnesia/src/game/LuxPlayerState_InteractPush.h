@@ -54,12 +54,9 @@ public:
 
 	bool OnDoAction(eLuxPlayerAction aAction,bool abPressed);
 
-	void OnScroll(float afAmount);
 
 	bool OnMove(eCharDir aDir, float afMul);
 
-	bool OnAddYaw(float afAmount);
-	bool OnAddPitch(float afAmount);
 
 	bool OnRun(bool abPressed){ return true;}
 	bool OnJump(bool abPressed){ return false;}
@@ -75,9 +72,6 @@ public:
 	virtual bool IsSaved(){ return false; }
 	iLuxPlayerState_SaveData* CreateSaveData();
 
-	void SaveToSaveData(iLuxPlayerState_SaveData* apSaveData);
-	void LoadFromSaveDataBeforeEnter(cLuxMap *apMap,iLuxPlayerState_SaveData* apSaveData);
-	void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:
 

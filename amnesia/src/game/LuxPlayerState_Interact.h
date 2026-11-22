@@ -55,7 +55,6 @@ public:
 	//Save data stuff
 	virtual void SaveToSaveData(iLuxPlayerState_SaveData* apSaveData);
 	virtual void LoadFromSaveDataBeforeEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
-	virtual void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:
 

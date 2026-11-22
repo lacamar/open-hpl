@@ -52,7 +52,6 @@ public:
 	void OnLeaveState(eLuxPlayerState aNewState);
 
 	void Update(float afTimeStep);
-	void PostUpdate(float afTimeStep);
 
 	bool OnDoAction(eLuxPlayerAction aAction,bool abPressed);
 
@@ -63,20 +62,15 @@ public:
 
 	cGuiGfxElement* GetCrosshair();
 
-	void OnSaveBody(iPhysicsBody *apBody, float &afMass, bool &abCollideCharacter);
 
 	float DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY);
 	
-	void RenderSolid(cRendererCallbackFunctions* apFunctions);
 
 	/////////////////////////////////
 	//Save data stuff
 	virtual bool IsSaved(){ return true; }
 	iLuxPlayerState_SaveData* CreateSaveData();
 
-	void SaveToSaveData(iLuxPlayerState_SaveData* apSaveData);
-	void LoadFromSaveDataBeforeEnter(cLuxMap *apMap,iLuxPlayerState_SaveData* apSaveData);
-	void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:
 

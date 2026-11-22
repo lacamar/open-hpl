@@ -79,12 +79,6 @@ void cLuxPlayerState_InteractSlide::Update(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerState_InteractSlide::PostUpdate(float afTimeStep)
-{
-	
-}
-
-//-----------------------------------------------------------------------
 
 bool cLuxPlayerState_InteractSlide::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
@@ -123,50 +117,12 @@ cGuiGfxElement* cLuxPlayerState_InteractSlide::GetCrosshair()
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerState_InteractSlide::OnSaveBody(iPhysicsBody *apBody, float &afMass, bool &abCollideCharacter)
-{
-	
-}
-
-//-----------------------------------------------------------------------
 
 float cLuxPlayerState_InteractSlide::DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY)
 {
 	OhplA3Host h = A3HostTable();
 	return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
 }
-
-void cLuxPlayerState_InteractSlide::RenderSolid(cRendererCallbackFunctions* apFunctions)
-{
-	return;
-	apFunctions->SetMatrix(NULL);
-
-	cCamera *pCam = mpPlayer->GetCamera();
-	cVector3f vUp = pCam->GetUp();
-	cVector3f vRight = pCam->GetRight();
-	cVector3f vForward = pCam->GetForward();
-
-	cVector3f vCamRotation( pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
-	cMatrixf mtxCamTransform = cMath::MatrixRotate(vCamRotation, eEulerRotationOrder_XYZ);
-	mtxCamTransform.SetTranslation(pCam->GetPosition());
-
-	cVector3f vWorldInteractPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mR.localInteractPos);
-
-	apFunctions->GetLowLevelGfx()->DrawSphere(vWorldInteractPos, 0.1f, cColor(0,1,0,1));
-	
-	cVector3f vMouseCamDir = vUp * mvLastMouseAdd.y + vRight * -mvLastMouseAdd.x;
-	float fSpeedAdd = cMath::Vector3Dot(vMouseCamDir, mpCurrentJoint->GetPinDir());
-
-	apFunctions->GetLowLevelGfx()->DrawLine(vWorldInteractPos, vWorldInteractPos+vMouseCamDir*50, cColor(1,0,0,1));
-
-	apFunctions->GetLowLevelGfx()->DrawLine(vWorldInteractPos, vWorldInteractPos+mpCurrentJoint->GetPinDir(),cColor(0,0,0.3f,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vWorldInteractPos, vWorldInteractPos+mpCurrentJoint->GetPinDir()*fSpeedAdd*50,cColor(0,0,1,1));
-	 
-
-	//apFunctions->GetLowLevelGfx()->DrawLine(vPos, vPos+vRight, cColor(1,0,1,1));
-}
-
-//-----------------------------------------------------------------------
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -194,48 +150,3 @@ iLuxPlayerState_SaveData* cLuxPlayerState_InteractSlide::CreateSaveData()
 }
 
 //-----------------------------------------------------------------------
-
-
-void cLuxPlayerState_InteractSlide::SaveToSaveData(iLuxPlayerState_SaveData* apSaveData)
-{
-	///////////////////////
-	// Init
-	super_class::SaveToSaveData(apSaveData);
-	cLuxPlayerState_InteractSlide_SaveData *pData = static_cast<cLuxPlayerState_InteractSlide_SaveData*>(apSaveData);
-
-	
-	///////////////////////
-	// Save vars
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPlayerState_InteractSlide::LoadFromSaveDataBeforeEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData)
-{
-	///////////////////////
-	// Init
-	super_class::LoadFromSaveDataBeforeEnter(apMap,apSaveData);
-	cLuxPlayerState_InteractSlide_SaveData *pData = static_cast<cLuxPlayerState_InteractSlide_SaveData*>(apSaveData);
-
-	///////////////////////
-	// Setup before entering
-	
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPlayerState_InteractSlide::LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData)
-{
-	///////////////////////
-	// Init
-	super_class::LoadFromSaveDataAfterEnter(apMap,apSaveData);
-	cLuxPlayerState_InteractSlide_SaveData *pData = static_cast<cLuxPlayerState_InteractSlide_SaveData*>(apSaveData);
-
-	///////////////////////
-	// Load vars
-}
-
-//-----------------------------------------------------------------------
-
-
-

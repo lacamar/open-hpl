@@ -80,8 +80,6 @@ public:
 	void OnLeaveState(eLuxPlayerState aNewState);
 
 	void Update(float afTimeStep);
-	void PostUpdate(float afTimeStep);
-	virtual void OnDraw(cGuiSet *apGuiSet ,float afFrameTime);
 
 	virtual cGuiGfxElement* GetCrosshair();
 

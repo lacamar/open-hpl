@@ -144,41 +144,6 @@ float cLuxPlayerState_InteractGrab::DrawDebug(cGuiSet *apSet,iFontData *apFont, 
 	return ohpl_a3_draw_debug(mpA3, &h, apSet, apFont, afStartY);
 }
 
-void cLuxPlayerState_InteractGrab::RenderSolid(cRendererCallbackFunctions* apFunctions)
-{
-	return;
-	apFunctions->SetMatrix(NULL);
-
-	cCamera *pCam = mpPlayer->GetCamera();
-
-	cVector3f vCamRotation( pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
-	cMatrixf mtxCamTransform = cMath::MatrixRotate(vCamRotation, eEulerRotationOrder_XYZ);
-	mtxCamTransform.SetTranslation(pCam->GetPosition());
-
-	cVector3f vBasePos = mR.data->mvGrabPositionOffset + cVector3f(0,0,-mR.depth);
-	cMatrixf mtxGoal = cMath::MatrixMul(cMath::MatrixTranslate(vBasePos), mR.bodyRotation);
-	mtxGoal = cMath::MatrixMul(mtxCamTransform,mtxGoal);
-
-	cMatrixf mtxGoalInv = cMath::MatrixInverse(mtxGoal);
-
-	cVector3f vWantedUp = mtxGoalInv.GetUp();
-	cVector3f vWantedRight = mtxGoalInv.GetRight();
-
-	cMatrixf mtxBodyInv = cMath::MatrixInverse(mpCurrentBody->GetLocalMatrix());
-	cVector3f vUp = mtxBodyInv.GetUp();
-	cVector3f vRight = mtxBodyInv.GetRight();
-
-	cVector3f vPos = mpCurrentBody->GetLocalPosition();
-	apFunctions->GetLowLevelGfx()->DrawLine(vPos, vPos+vWantedUp, cColor(0,1,0,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vPos, vPos+vUp, cColor(0,1,1,1));
-
-	apFunctions->GetLowLevelGfx()->DrawLine(vPos, vPos+vWantedRight, cColor(1,0,0,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vPos, vPos+vRight, cColor(1,0,1,1));
-
-}
-
-//-----------------------------------------------------------------------
-
 
 //////////////////////////////////////////////////////////////////////////
 // PRIVATE METHODS
@@ -263,19 +228,6 @@ void cLuxPlayerState_InteractGrab::SaveToSaveData(iLuxPlayerState_SaveData* apSa
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerState_InteractGrab::LoadFromSaveDataBeforeEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData)
-{
-	///////////////////////
-	// Init
-	super_class::LoadFromSaveDataBeforeEnter(apMap,apSaveData);
-	cLuxPlayerState_InteractGrab_SaveData *pData = static_cast<cLuxPlayerState_InteractGrab_SaveData*>(apSaveData);
-
-	///////////////////////
-	// Setup before entering
-	
-}
-
-//-----------------------------------------------------------------------
 
 void cLuxPlayerState_InteractGrab::LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData)
 {
@@ -293,6 +245,3 @@ void cLuxPlayerState_InteractGrab::LoadFromSaveDataAfterEnter(cLuxMap *apMap, iL
 }
 
 //-----------------------------------------------------------------------
-
-
-

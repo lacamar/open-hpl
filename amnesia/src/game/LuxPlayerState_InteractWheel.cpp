@@ -55,38 +55,6 @@ cLuxPlayerState_InteractWheel::~cLuxPlayerState_InteractWheel()
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerState_InteractWheel::RenderSolid(cRendererCallbackFunctions* apFunctions)
-{
-	return;
-	cCamera *pCam = mpPlayer->GetCamera();
-
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetMatrix(NULL);
-
-
-	cVector3f vAxes(1,1,1);
-	vAxes = cMath::MatrixMul(mpCurrentBody->GetInertiaMatrix(), vAxes);
-
-	cVector3f vPinDir = mpCurrentJoint->GetPinDir();
-	vPinDir = cMath::MatrixMul(mpCurrentBody->GetInertiaMatrix(), vPinDir);
-	
-	cVector3f vPivot = mpCurrentJoint->GetPivotPoint();
-	//apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+cVector3f(1,0,0)*vAxes.x*10, cColor(1,0,0,1));
-	//apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+cVector3f(0,1,0)*vAxes.y*10, cColor(0,1,0,1));
-	//apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+cVector3f(0,0,1)*vAxes.z*-10, cColor(0,0,1,1));
-
-	apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+vPinDir*10, cColor(0,0,1,1));
-	
-	//apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+mpCurrentJoint->GetPinDir(), cColor(0,0,1,1));
-	//apFunctions->GetLowLevelGfx()->DrawLine(mpCurrentBody->GetLocalPosition(), 
-	//										mpCurrentBody->GetLocalPosition() + mpCurrentBody->GetAngularVelocity(), 
-	//										cColor(0,0,1,1));
-
-}
-
-
-//-----------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////
 // PRIVATE METHODS
@@ -145,49 +113,3 @@ iLuxPlayerState_SaveData* cLuxPlayerState_InteractWheel::CreateSaveData()
 }
 
 //-----------------------------------------------------------------------
-
-
-void cLuxPlayerState_InteractWheel::SaveToSaveData(iLuxPlayerState_SaveData* apSaveData)
-{
-	///////////////////////
-	// Init
-	super_class::SaveToSaveData(apSaveData);
-	cLuxPlayerState_InteractWheel_SaveData *pData = static_cast<cLuxPlayerState_InteractWheel_SaveData*>(apSaveData);
-
-
-	///////////////////////
-	// Save vars
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPlayerState_InteractWheel::LoadFromSaveDataBeforeEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData)
-{
-	///////////////////////
-	// Init
-	super_class::LoadFromSaveDataBeforeEnter(apMap,apSaveData);
-	cLuxPlayerState_InteractWheel_SaveData *pData = static_cast<cLuxPlayerState_InteractWheel_SaveData*>(apSaveData);
-
-	///////////////////////
-	// Load vars
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxPlayerState_InteractWheel::LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData)
-{
-	///////////////////////
-	// Init
-	super_class::LoadFromSaveDataAfterEnter(apMap,apSaveData);
-	cLuxPlayerState_InteractWheel_SaveData *pData = static_cast<cLuxPlayerState_InteractWheel_SaveData*>(apSaveData);
-
-	///////////////////////
-	// Load vars
-}
-
-//-----------------------------------------------------------------------
-
-
-
-
-
