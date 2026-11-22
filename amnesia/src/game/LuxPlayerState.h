@@ -93,7 +93,7 @@ public:
 	virtual void OnMapLeave(cLuxMap *apMap){}
 
 	virtual void Update(float afTimeStep)=0;
-	virtual void PostUpdate(float afTimeStep)=0;
+	virtual void PostUpdate(float afTimeStep){}
 	virtual void OnDraw(cGuiSet *apGuiSet ,float afFrameTime){}
 
 	virtual bool OnDoAction(eLuxPlayerAction aAction,bool abPressed)=0;
@@ -112,7 +112,7 @@ public:
 	virtual cGuiGfxElement* GetCrosshair(){ return mpDefaultCrosshairGfx;}
 	virtual bool OnDrawCrossHair(cGuiGfxElement *apGfx, const cVector3f& avPos, const cVector2f &avSize){ return true;}
 
-	virtual void OnSaveBody(iPhysicsBody *apBody, float &afMass, bool &abCollideCharacter)=0;
+	virtual void OnSaveBody(iPhysicsBody *apBody, float &afMass, bool &abCollideCharacter){}
 	virtual bool AllowBuoyancy(iPhysicsBody *apBody){ return true;}
 	virtual void OnDestroyEntity(iLuxEntity *apEntity){}
 	virtual void OnAttachBodyToStickyArea(iPhysicsBody *apBody){}

@@ -49,7 +49,6 @@ public:
 	void OnLeaveState(eLuxPlayerState aNewState);
 
 	void Update(float afTimeStep);
-	void PostUpdate(float afTimeStep);
 
 	bool OnDoAction(eLuxPlayerAction aAction,bool abPressed);
 
@@ -69,15 +68,11 @@ public:
 
 	float DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY);
 	
-	virtual void RenderSolid(cRendererCallbackFunctions* apFunctions);
 
 	/////////////////////////////////
 	//Save data stuff
 	virtual bool IsSaved(){ return false; }
 	
-	virtual void SaveToSaveData(iLuxPlayerState_SaveData* apSaveData);
-	virtual void LoadFromSaveDataBeforeEnter(cLuxMap *apMap,iLuxPlayerState_SaveData* apSaveData);
-	virtual void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 
 protected:

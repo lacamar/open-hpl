@@ -78,13 +78,6 @@ void cLuxPlayerState_Ladder::Update(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerState_Ladder::PostUpdate(float afTimeStep)
-{
-
-}
-
-//-----------------------------------------------------------------------
-
 
 void cLuxPlayerState_Ladder::OnDraw(cGuiSet *apGuiSet ,float afFrameTime)
 {
@@ -355,5 +348,3 @@ void cLuxPlayerState_Ladder::LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlay
 }
 
 //-----------------------------------------------------------------------
-
-

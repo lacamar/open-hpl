@@ -80,11 +80,6 @@ void iLuxPlayerState_InteractRotateBase::Update(float afTimeStep)
 	ohpl_a3_update(mpA3, &h, afTimeStep);
 }
 
-void iLuxPlayerState_InteractRotateBase::PostUpdate(float afTimeStep)
-{
-}
-
-//-----------------------------------------------------------------------
 
 bool iLuxPlayerState_InteractRotateBase::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
@@ -138,36 +133,6 @@ float iLuxPlayerState_InteractRotateBase::DrawDebug(cGuiSet *apSet,iFontData *ap
 
 //-----------------------------------------------------------------------
 
-void iLuxPlayerState_InteractRotateBase::RenderSolid(cRendererCallbackFunctions* apFunctions)
-{
-	/*cCamera *pCam = mpPlayer->GetCamera();
-	cVector3f vJointPos = mpCurrentBody->GetLocalPosition();//mpCurrentJoint->GetPivotPoint();
-
-	cVector3f vBodyCenter = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mpCurrentBody->GetMassCentre());
-	cVector3f vJointToBody =  cMath::Vector3Normalize(vBodyCenter - mpCurrentJoint->GetPivotPoint());
-
-	cVector3f vUp = pCam->GetUp();
-	cVector3f vRight = pCam->GetRight();
-	cVector3f vForward = pCam->GetForward();
-
-	cVector3f vPushAmount = (vUp + vForward) * 1 + vRight * -1;
-	cVector3f vPushRotateDir = cMath::Vector3Cross(vJointToBody, vPushAmount);
-
-	float fSpeedAdd = cMath::Vector3Dot(vPushRotateDir, mpCurrentJoint->GetPinDir());
-
-	//apFunctions->GetLowLevelGfx()->DrawLine(vJointPos, vJointPos+cMath::Vector3Normalize(vPushAmount), cColor(1,0,0,1));
-	//apFunctions->GetLowLevelGfx()->DrawLine(vJointPos, vJointPos+cMath::Vector3Normalize(vPushRotateDir), cColor(0,1,0,1));
-
-	apFunctions->GetLowLevelGfx()->DrawLine(vJointPos, vJointPos+mvForceAxis[0], cColor(1,0,0,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vJointPos, vJointPos+mvForceAxis[1], cColor(0,1,0,1));
-
-	//float fAdd = GetSpeedAdd(mpPlayer->GetCamera());
-	//apFunctions->GetLowLevelGfx()->DrawLine(vJointPos, vJointPos + mpCurrentJoint->GetPinDir()*fAdd*10.0f, cColor(0,0,1,1));*/
-}
-
-
-//-----------------------------------------------------------------------
-
 
 //////////////////////////////////////////////////////////////////////////
 // PRIVATE METHODS
@@ -188,49 +153,3 @@ kBeginSerializeVirtual(iLuxPlayerState_InteractRotateBase_SaveData, iLuxPlayerSt
 kEndSerialize()
 
 //-----------------------------------------------------------------------
-
-
-void iLuxPlayerState_InteractRotateBase::SaveToSaveData(iLuxPlayerState_SaveData* apSaveData)
-{
-	///////////////////////
-	// Init
-	super_class::SaveToSaveData(apSaveData);
-	iLuxPlayerState_InteractRotateBase_SaveData *pData = static_cast<iLuxPlayerState_InteractRotateBase_SaveData*>(apSaveData);
-
-
-	///////////////////////
-	// Save vars
-}
-
-//-----------------------------------------------------------------------
-
-void iLuxPlayerState_InteractRotateBase::LoadFromSaveDataBeforeEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData)
-{
-	///////////////////////
-	// Init
-	super_class::LoadFromSaveDataBeforeEnter(apMap,apSaveData);
-	iLuxPlayerState_InteractRotateBase_SaveData *pData = static_cast<iLuxPlayerState_InteractRotateBase_SaveData*>(apSaveData);
-
-	///////////////////////
-	// Load vars
-}
-
-//-----------------------------------------------------------------------
-
-void iLuxPlayerState_InteractRotateBase::LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData)
-{
-	///////////////////////
-	// Init
-	super_class::LoadFromSaveDataAfterEnter(apMap,apSaveData);
-	iLuxPlayerState_InteractRotateBase_SaveData *pData = static_cast<iLuxPlayerState_InteractRotateBase_SaveData*>(apSaveData);
-
-	///////////////////////
-	// Load vars
-}
-
-//-----------------------------------------------------------------------
-
-
-
-
-

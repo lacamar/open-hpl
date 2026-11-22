@@ -69,9 +69,6 @@ public:
 	//Save data stuff
 	virtual bool IsSaved(){ return true; }
 	
-	void SaveToSaveData(iLuxPlayerState_SaveData* apSaveData);
-	void LoadFromSaveDataBeforeEnter(cLuxMap *apMap,iLuxPlayerState_SaveData* apSaveData);
-	void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:
 	virtual bool ShowOutlineOnEntity(iLuxEntity *apEntity, iPhysicsBody *apBody, const cVector3f &avFocusPos);

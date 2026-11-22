@@ -89,7 +89,6 @@ public:
 
 	float DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY);
 	
-	void RenderSolid(cRendererCallbackFunctions* apFunctions);
 
 	/////////////////////////////////
 	//Save data stuff
@@ -97,7 +96,6 @@ public:
 	iLuxPlayerState_SaveData* CreateSaveData();
 
 	void SaveToSaveData(iLuxPlayerState_SaveData* apSaveData);
-	void LoadFromSaveDataBeforeEnter(cLuxMap *apMap,iLuxPlayerState_SaveData* apSaveData);
 	void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:

@@ -56,9 +56,6 @@ public:
 	virtual bool IsSaved(){ return true; }
 	iLuxPlayerState_SaveData* CreateSaveData();
 
-	void SaveToSaveData(iLuxPlayerState_SaveData* apSaveData);
-	void LoadFromSaveDataBeforeEnter(cLuxMap *apMap,iLuxPlayerState_SaveData* apSaveData);
-	void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:
 };

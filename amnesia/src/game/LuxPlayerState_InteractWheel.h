@@ -45,16 +45,12 @@ public:
 	cLuxPlayerState_InteractWheel(cLuxPlayer *apPlayer);
 	virtual ~cLuxPlayerState_InteractWheel();
 
-	void RenderSolid(cRendererCallbackFunctions* apFunctions);
 
 	/////////////////////////////////
 	//Save data stuff
 	virtual bool IsSaved(){ return false; }
 	iLuxPlayerState_SaveData* CreateSaveData();
 
-	void SaveToSaveData(iLuxPlayerState_SaveData* apSaveData);
-	void LoadFromSaveDataBeforeEnter(cLuxMap *apMap,iLuxPlayerState_SaveData* apSaveData);
-	void LoadFromSaveDataAfterEnter(cLuxMap *apMap, iLuxPlayerState_SaveData* apSaveData);
 
 protected:
 	void EnterRotateBase(eLuxPlayerState aPrevState);
