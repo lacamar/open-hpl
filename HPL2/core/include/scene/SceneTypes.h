@@ -157,10 +157,20 @@ namespace hpl
 
 	//------------------------------------------
 
-	typedef std::list<iViewportCallback*> tViewportCallbackList;
-	typedef tViewportCallbackList::iterator tViewportCallbackListIt;
+	// Read-only view of a pointer list owned by Rust (rust/src/scene/scn.rs PtrView).
+	template<class T>
+	struct cOhplPtrView
+	{
+		typedef T* const* iterator;
+		T* const* mpData;
+		size_t mlSize;
 
-	typedef std::list<iRendererCallback*> tRendererCallbackList;
+		iterator begin() const { return mpData;}
+		iterator end() const { return mpData + mlSize;}
+		size_t size() const { return mlSize;}
+	};
+
+	typedef cOhplPtrView<iRendererCallback> tRendererCallbackList;
 	typedef tRendererCallbackList::iterator tRendererCallbackListIt;
 
     //------------------------------------------
