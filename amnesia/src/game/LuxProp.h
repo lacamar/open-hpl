@@ -475,10 +475,12 @@ protected:
 	virtual void OnHealthChange(){}
 	virtual void OnDamage(float afAmount, int alStrength){}
 
-	virtual void OnResetProperties()=0;
+	virtual void OnConnectionStateChange(iLuxEntity *apEntity, int alState){}
+	virtual eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos){ return CanInteract(apBody) ? eLuxFocusCrosshair_Grab : eLuxFocusCrosshair_Default;}
+	virtual void OnResetProperties(){}
 
-	virtual void OnSetupAfterLoad(cWorld *apWorld)=0;
-	virtual void UpdatePropSpecific(float afTimeStep)=0;
+	virtual void OnSetupAfterLoad(cWorld *apWorld){}
+	virtual void UpdatePropSpecific(float afTimeStep){}
 	virtual void ImplementedOnSetActive(bool abX){}
 	virtual void BeforePropDestruction(){}
 
@@ -594,12 +596,12 @@ public:
 	iLuxPropLoader(const tString& asName);
 	virtual ~iLuxPropLoader(){}
 
-	void BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
+	void BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars){}
 	void AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
 	
 	virtual iLuxProp *CreateProp(const tString& asName, int alID, cLuxMap *apMap)=0;
-	virtual void LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)=0;
-	virtual void LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)=0;
+	virtual void LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem){}
+	virtual void LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars){}
 
 protected:
 	float mfDefaultMaxFocusDistance;

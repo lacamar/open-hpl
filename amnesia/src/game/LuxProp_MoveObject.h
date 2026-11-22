@@ -54,11 +54,8 @@ public:
 	
 	void OnSetupAfterLoad(cWorld *apWorld);
 
-	void OnResetProperties();
-
 	void UpdatePropSpecific(float afTimeStep);
 	
-	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 
@@ -85,7 +82,6 @@ public:
 	iLuxEntity_SaveData* CreateSaveData();
 	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
-	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
 	void UpdateAutoMove(float afTimeStep);
@@ -99,7 +95,6 @@ private:
 	OhplGa4MoveObj mS;
 
 	//Data
-
 
 	
 	
@@ -123,6 +118,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_SWING_DOOR_H

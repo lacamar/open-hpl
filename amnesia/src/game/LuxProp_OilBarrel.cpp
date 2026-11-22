@@ -61,15 +61,6 @@ void cLuxPropLoader_OilBarrel::LoadVariables(iLuxProp *apProp, cXmlElement *apRo
 
 //-----------------------------------------------------------------------
 
-void cLuxPropLoader_OilBarrel::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)
-{
-	cLuxProp_OilBarrel  *pOilBarrel = static_cast<cLuxProp_OilBarrel*>(apProp);
-
-	//pOilBarrel->mlCoinsNeeded = apInstanceVars->GetVarInt("CoinsNeeded",0);
-}
-
-//-----------------------------------------------------------------------
-
 //////////////////////////////////////////////////////////////////////////
 // CONSTRUCTORS
 //////////////////////////////////////////////////////////////////////////
@@ -111,34 +102,6 @@ bool cLuxProp_OilBarrel::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_OilBarrel::OnSetupAfterLoad(cWorld *apWorld)
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_OilBarrel::OnResetProperties()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_OilBarrel::UpdatePropSpecific(float afTimeStep)
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_OilBarrel::BeforePropDestruction()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
 eLuxFocusCrosshair cLuxProp_OilBarrel::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
 	return eLuxFocusCrosshair_Grab;
@@ -159,13 +122,6 @@ tWString cLuxProp_OilBarrel::GetFocusText()
 	else					sText = kTranslate("Game", "OilBarrel_FocusText_100");
 
 	return sText;
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_OilBarrel::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
-{
-
 }
 
 //-----------------------------------------------------------------------
@@ -286,13 +242,6 @@ void cLuxProp_OilBarrel::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//////////////////
 	//Set variables
 	ohpl_a8_oil_load(&mS, pData);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_OilBarrel::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

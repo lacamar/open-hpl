@@ -47,12 +47,6 @@ iLuxPropLoader::iLuxPropLoader(const tString& asName) : cEntityLoader_Object(asN
 
 //-----------------------------------------------------------------------
 
-void iLuxPropLoader::BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
-{
-
-}
-
-//-----------------------------------------------------------------------
 
 void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {

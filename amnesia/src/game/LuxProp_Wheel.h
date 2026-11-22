@@ -57,7 +57,6 @@ public:
 
 //----------------------------------------------
 
-
 class cLuxProp_Wheel : public iLuxProp
 {
 typedef iLuxProp super_class;
@@ -73,11 +72,8 @@ public:
 	
 	void OnSetupAfterLoad(cWorld *apWorld);
 
-	void OnResetProperties();
-
 	void UpdatePropSpecific(float afTimeStep);
 	
-	void BeforePropDestruction();
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 
@@ -110,7 +106,6 @@ public:
 	iLuxEntity_SaveData* CreateSaveData();
 	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
-	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
 
@@ -132,9 +127,6 @@ private:
 	////////////////////////////
 	// Settings
 
-
-
-
 	tString msMinLimitSound;
 	tString msMaxLimitSound;
 	
@@ -145,10 +137,7 @@ private:
 	////////////////////////////
 	// Variables
 
-
 	
-
-
 
 };
 
@@ -168,6 +157,5 @@ private:
 };
 
 //----------------------------------------------
-
 
 #endif // LUX_PROP_WHEEL_H

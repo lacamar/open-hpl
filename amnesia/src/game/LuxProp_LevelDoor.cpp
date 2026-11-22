@@ -116,19 +116,6 @@ bool cLuxProp_LevelDoor::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_LevelDoor::OnSetupAfterLoad(cWorld *apWorld)
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_LevelDoor::OnResetProperties()
-{
-
-}
-//-----------------------------------------------------------------------
-
 void cLuxProp_LevelDoor::UpdatePropSpecific(float afTimeStep)
 {
 	ohpl_a5_door_update(&mS, afTimeStep);
@@ -190,13 +177,6 @@ void cLuxProp_LevelDoor::Ga4ApplyOp(const OhplGa4Op &aOp)
 	default:
 		iLuxProp::Ga4ApplyOp(aOp);
 	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_LevelDoor::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
-{
-
 }
 
 //-----------------------------------------------------------------------
@@ -280,13 +260,6 @@ void cLuxProp_LevelDoor::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyFromVar(pData, msLockedTextCat);
 	kCopyFromVar(pData, msLockedTextEntry);
 
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_LevelDoor::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

@@ -43,17 +43,6 @@ iLuxProp *cLuxPropLoader_Button::CreateProp(const tString& asName, int alID, cLu
 
 //-----------------------------------------------------------------------
 
-void cLuxPropLoader_Button::LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)
-{
-	cLuxProp_Button  *pButton = static_cast<cLuxProp_Button*>(apProp);
-
-	///////////////////////////
-	// General
-	//pButton->mbCanBeLitByPlayer = GetVarBool("CanBeLitByPlayer", true);
-}
-
-//-----------------------------------------------------------------------
-
 void cLuxPropLoader_Button::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)
 {
     cLuxProp_Button  *pButton = static_cast<cLuxProp_Button*>(apProp);
@@ -115,41 +104,6 @@ bool cLuxProp_Button::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 	OhplGa4Run run(this);
 	ohpl_a5_button_interact(&mS, run.Sink());
 	return true;
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Button::OnSetupAfterLoad(cWorld *apWorld)
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Button::OnResetProperties()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Button::UpdatePropSpecific(float afTimeStep)
-{
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Button::BeforePropDestruction()
-{
-}
-
-//-----------------------------------------------------------------------
-
-eLuxFocusCrosshair cLuxProp_Button::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
-{
-	if(CanInteract(apBody) ) return eLuxFocusCrosshair_Grab;
-
-	return eLuxFocusCrosshair_Default;
 }
 
 //-----------------------------------------------------------------------
@@ -240,13 +194,6 @@ void cLuxProp_Button::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//////////////////
 	//Set variables
 	ohpl_a8_button_load(&mS, pData);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Button::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

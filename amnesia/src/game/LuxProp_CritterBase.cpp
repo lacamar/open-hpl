@@ -183,13 +183,6 @@ void iLuxProp_CritterBase::OnSetupAfterLoad(cWorld *apWorld)
 
 //-----------------------------------------------------------------------
 
-void iLuxProp_CritterBase::OnResetProperties()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
 void iLuxProp_CritterBase::UpdatePropSpecific(float afTimeStep)
 {
 	cVector3f vPlayerPos = gpBase->mpPlayer->GetCharacterBody()->GetFeetPosition();
@@ -199,12 +192,6 @@ void iLuxProp_CritterBase::UpdatePropSpecific(float afTimeStep)
 	UpdateCritterSpecific(afTimeStep);
 	UpdateMovement(afTimeStep);
 	UpdateMesh(afTimeStep);
-}
-
-//-----------------------------------------------------------------------
-
-void iLuxProp_CritterBase::BeforePropDestruction()
-{
 }
 
 //-----------------------------------------------------------------------
@@ -540,13 +527,6 @@ void iLuxProp_CritterBase::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	mC.ground_normal[0] = pData->mvGroundNormal.x; mC.ground_normal[1] = pData->mvGroundNormal.y; mC.ground_normal[2] = pData->mvGroundNormal.z;
 	mC.colliding = pData->mbColliding;
 	mC.update_animation = pData->mbUpdateAnimation;
-}
-
-//-----------------------------------------------------------------------
-
-void iLuxProp_CritterBase::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

@@ -200,20 +200,6 @@ void cLuxProp_Item::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_Item::OnResetProperties()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Item::OnSetupAfterLoad(cWorld *apWorld)
-{
-	
-}
-
-//-----------------------------------------------------------------------
-
 void cLuxProp_Item::UpdatePropSpecific(float afTimeStep)
 {
 	if(mbInteractionDisabled) return;
@@ -232,22 +218,9 @@ void cLuxProp_Item::UpdatePropSpecific(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_Item::BeforePropDestruction()
-{
-}
-
-//-----------------------------------------------------------------------
-
 eLuxFocusCrosshair cLuxProp_Item::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
 	return eLuxFocusCrosshair_Pick;
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Item::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
-{
-	//TODO!
 }
 
 //-----------------------------------------------------------------------
@@ -315,13 +288,6 @@ void cLuxProp_Item::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyFromVar(pData,mlSpawnContainerID);
 	kCopyFromVar(pData,mfAmount);
 	kCopyFromVar(pData,msSubItemTypeName);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Item::SetupSaveData(iLuxEntity_SaveData *apSaveData)
-{
-	super_class::SetupSaveData(apSaveData);
 }
 
 //-----------------------------------------------------------------------

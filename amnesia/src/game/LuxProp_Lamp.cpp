@@ -258,20 +258,6 @@ bool cLuxProp_Lamp::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 //-----------------------------------------------------------------------
 
-void cLuxProp_Lamp::OnResetProperties()
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Lamp::OnSetupAfterLoad(cWorld *apWorld)
-{
-	
-}
-
-//-----------------------------------------------------------------------
-
 void cLuxProp_Lamp::UpdatePropSpecific(float afTimeStep)
 {
 	if(mS.light_connection_setup == false)
@@ -298,12 +284,6 @@ void cLuxProp_Lamp::FadeTo(float afR, float afG, float afB, float afA, float afR
 		pLight->SetVisible(true);
 		pLight->FadeTo(newColor, fNewRadius, afTime);
 	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Lamp::BeforePropDestruction()
-{
 }
 
 //-----------------------------------------------------------------------
