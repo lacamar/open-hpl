@@ -318,15 +318,6 @@ void cLuxProp_SwingDoor::UpdatePropSpecific(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-eLuxFocusCrosshair cLuxProp_SwingDoor::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
-{
-	if(CanInteract(apBody)) return eLuxFocusCrosshair_Grab;
-
-	return eLuxFocusCrosshair_Default;
-}
-
-//-----------------------------------------------------------------------
-
 void cLuxProp_SwingDoor::ImplementedOnSetActive(bool abX)
 {
 	for(int i=0; i<3; ++i)

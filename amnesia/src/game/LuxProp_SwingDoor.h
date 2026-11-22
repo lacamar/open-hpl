@@ -85,8 +85,6 @@ public:
 	void UpdatePropSpecific(float afTimeStep);
 	
 
-	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
-
 	void ImplementedOnSetActive(bool abX);
 
 	void OnHealthChange();

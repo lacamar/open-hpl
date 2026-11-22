@@ -108,15 +108,6 @@ bool cLuxProp_Button::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 //-----------------------------------------------------------------------
 
-eLuxFocusCrosshair cLuxProp_Button::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
-{
-	if(CanInteract(apBody) ) return eLuxFocusCrosshair_Grab;
-
-	return eLuxFocusCrosshair_Default;
-}
-
-//-----------------------------------------------------------------------
-
 void cLuxProp_Button::SetSwitchedOn(bool abX, bool abUseEffects)
 {
 	OhplGa4Run run(this);

@@ -51,8 +51,6 @@ public:
 	bool CanInteract(iPhysicsBody *apBody);
 	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
 
-	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
-
 	//////////////////////
 	//Properties
 	void SetSwitchedOn(bool abX, bool abUseEffects);

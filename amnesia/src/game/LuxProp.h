@@ -476,6 +476,7 @@ protected:
 	virtual void OnDamage(float afAmount, int alStrength){}
 
 	virtual void OnConnectionStateChange(iLuxEntity *apEntity, int alState){}
+	virtual eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos){ return CanInteract(apBody) ? eLuxFocusCrosshair_Grab : eLuxFocusCrosshair_Default;}
 	virtual void OnResetProperties(){}
 
 	virtual void OnSetupAfterLoad(cWorld *apWorld){}
