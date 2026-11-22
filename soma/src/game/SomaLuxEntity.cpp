@@ -1896,7 +1896,7 @@ void cSomaLuxEntity::UpdateCheckCollision(float afTimeStep)
 		return;
 	mfTimeSinceCheck = 0;
 	bool bContinue = true;
-	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mpMap->GetEntities()))
+	for (cSomaLuxEntity *pEnt : mpMap->GetEntities().Vec())
 	{
 		if (bContinue == false)
 			break;

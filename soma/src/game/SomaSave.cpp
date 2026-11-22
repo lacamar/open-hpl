@@ -673,7 +673,7 @@ public:
 			}
 		w.spawned = Sl(c.mSpawned);
 
-		c.mvEnts = pMap->GetEntities();
+		c.mvEnts = pMap->GetEntities().Vec();
 		w.entity_count = c.mvEnts.size();
 		for (cSomaLuxScriptable *p : cSomaLuxScriptable::GetAll())
 			if (dynamic_cast<cSomaLuxEntity *>(p) == NULL && p->GetScript() && p->mbSaved)
@@ -1153,7 +1153,7 @@ public:
 		for (size_t i = 0; i < alCount; ++i)
 			setSaved.insert(FromRS(apSaved[i]));
 		// entities destroyed before the save (broken windows) come back with the fresh map load
-		for (cSomaLuxEntity *p : std::vector<cSomaLuxEntity *>(pMap->GetEntities()))
+		for (cSomaLuxEntity *p : pMap->GetEntities().Vec())
 			if (setSaved.count(cString::ToLowerCase(p->GetName())) == 0)
 				pMap->DestroyEntity(p);
 	}
