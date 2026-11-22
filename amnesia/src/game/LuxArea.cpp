@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -249,13 +250,7 @@ void iLuxArea::OnUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeVirtual(iLuxArea_SaveData, iLuxEntity_SaveData)
-kSerializeVar(mvSize,eSerializeType_Vector3f)
-kSerializeVar(m_mtxTransform,eSerializeType_Matrixf)
-kSerializeVar(mvRelativeOffset, eSerializeType_Vector3f)
-kSerializeVar(msPropName, eSerializeType_String)
-kSerializeVar(mlBodyId, eSerializeType_Int32)
-kEndSerialize()
+kSerializeRustClassV(iLuxArea_SaveData, iLuxEntity_SaveData)
 
 
 //-----------------------------------------------------------------------

@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Liquid.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -143,21 +144,7 @@ void cLuxArea_Liquid::OnUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxArea_Liquid_SaveData, iLuxArea_SaveData)
-kSerializeVar(mfDensity, eSerializeType_Float32)
-kSerializeVar(mfLinearViscosity, eSerializeType_Float32)
-kSerializeVar(mfAngularViscosity, eSerializeType_Float32)
-
-kSerializeVar(msPhysicsMaterial, eSerializeType_String)
-
-kSerializeVar(mbHasWaves, eSerializeType_Bool)
-kSerializeVar(mfWaveAmp, eSerializeType_Float32)
-kSerializeVar(mfWaveFreq, eSerializeType_Float32)
-
-kSerializeVar(mfPlayerSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfMaxWaveDistanceSqr, eSerializeType_Float32)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxArea_Liquid_SaveData, iLuxArea_SaveData)
 
 //-----------------------------------------------------------------------
 

@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Insanity.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -118,11 +119,7 @@ void cLuxArea_Insanity::OnUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxArea_Insanity_SaveData, iLuxArea_SaveData)
-
-kSerializeVar(mbAutoDisable, eSerializeType_Bool)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxArea_Insanity_SaveData, iLuxArea_SaveData)
 
 //-----------------------------------------------------------------------
 

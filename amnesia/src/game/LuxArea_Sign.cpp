@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Sign.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxMapA7.h"
 
 
@@ -143,12 +144,7 @@ tWString cLuxArea_Sign::GetFocusText()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxArea_Sign_SaveData, iLuxArea_SaveData)
-
-kSerializeVar(msTextCat, eSerializeType_String)
-kSerializeVar(msTextEntry, eSerializeType_String)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxArea_Sign_SaveData, iLuxArea_SaveData)
 
 //-----------------------------------------------------------------------
 

@@ -18,6 +18,7 @@
  */
 
 #include "LuxCritter_Spider.h"
+#include "RustLuxSerialize.h"
 
 #include "LuxPlayer.h"
 #include "LuxPlayerHelpers.h"
@@ -173,15 +174,7 @@ void cLuxCritter_Spider::OnShapeCollision(const cVector3f& avPushVec, float afTi
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxCritter_Spider_SaveData, iLuxProp_CritterBase_SaveData)
-kSerializeVar(mlState, eSerializeType_Int32)
-kSerializeVar(mfFallingCount, eSerializeType_Float32)
-kSerializeVar(mfNewGroundNormalCount, eSerializeType_Float32)
-kSerializeVar(mbOnGround, eSerializeType_Bool)
-kSerializeVar(mfMaxSpeed, eSerializeType_Float32)
-kSerializeVar(mfCount, eSerializeType_Float32)
-kSerializeVar(mfPlaySoundCount, eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClassP(cLuxCritter_Spider_SaveData, iLuxProp_CritterBase_SaveData)
 
 //-----------------------------------------------------------------------
 

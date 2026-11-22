@@ -6,6 +6,7 @@
 // dispatch function (ctx, op, a, b) -> int. Op numbers are checked against the Rust enum.
 
 #include <cstddef>
+#include "RustLuxSerialize.h"
 #include <cstdint>
 
 enum
@@ -483,10 +484,5 @@ void ohpl_ga6h_load_from_file(OhplGa6Handler *h, void *ctx, OhplGa6HostCall call
 bool ohpl_ga6h_run(OhplGa6Handler *h, void *ctx, OhplGa6HostCall call, unsigned what);
 int ohpl_ga6_find_map(const OhplGa6Str *names, size_t n, const unsigned char *name, size_t name_n);
 }
-
-// Class layout and field table are Rust-owned (rust/src/luxsave/layout.rs); C++ supplies the factory.
-#define kSerializeRustClass(aClass) \
-	static iSerializable *Create_##aClass() { return hplNew(aClass, ()); } \
-	static cSerializeClass gSerializedClass_##aClass(#aClass, "", NULL, sizeof(aClass), Create_##aClass);
 
 #endif // LUX_RUST_SAVE_H

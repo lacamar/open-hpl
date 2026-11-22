@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Rope.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -284,34 +285,7 @@ iPhysicsBody* cLuxRope::GetBody(const tString& asName)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxRope_SaveData, iLuxEntity_SaveData)
-//mvSize
-kSerializeVar(mbRopeCreated,eSerializeType_Bool)
-
-kSerializeVar(mvStartPos,eSerializeType_Vector3f)
-kSerializeVar(mvEndPos,eSerializeType_Vector3f)
-
-kSerializeVar(msEndPosNode,eSerializeType_String)
-kSerializeVar(msStartBody,eSerializeType_String)
-kSerializeVar(msEndBody,eSerializeType_String)
-
-kSerializeVar(mfMinTotalLength,eSerializeType_Float32)
-kSerializeVar(mfMaxTotalLength,eSerializeType_Float32)
-kSerializeVar(mfSegmentLength,eSerializeType_Float32)
-kSerializeVar(mfDamping,eSerializeType_Float32)
-kSerializeVar(mfStrength,eSerializeType_Float32)
-kSerializeVar(mfStiffness,eSerializeType_Float32)
-kSerializeVar(msMaterial,eSerializeType_String)
-kSerializeVar(mfRadius,eSerializeType_Float32)
-kSerializeVar(mfLengthTileAmount,eSerializeType_Float32)
-kSerializeVar(mfLengthTileSize,eSerializeType_Float32)
-kSerializeVar(msSound,eSerializeType_String)
-kSerializeVar(mfSoundStartSpeed,eSerializeType_Float32)
-kSerializeVar(mfSoundStopSpeed,eSerializeType_Float32)
-kSerializeVar(mbAutoMove,eSerializeType_Bool)
-kSerializeVar(mfAutoMoveAcc,eSerializeType_Float32)
-kSerializeVar(mfAutoMoveMaxSpeed,eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClassP(cLuxRope_SaveData, iLuxEntity_SaveData)
 
 
 //-----------------------------------------------------------------------

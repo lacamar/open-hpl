@@ -18,6 +18,7 @@
  */
 
 #include "LuxStaticProp.h"
+#include "RustLuxSerialize.h"
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"
@@ -169,14 +170,6 @@ cLuxStaticProp::~cLuxStaticProp()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(iLuxStaticProp_SaveData)
-
-kSerializeVar(msName, eSerializeType_String)
-kSerializeVar(mlID, eSerializeType_Int32)
-
-kSerializeVar(msFileName, eSerializeType_String)
-kSerializeVar(m_mtxOnLoadTransform, eSerializeType_Matrixf)
-
-kEndSerialize()
+kSerializeRustClass(iLuxStaticProp_SaveData)
 
 //-----------------------------------------------------------------------

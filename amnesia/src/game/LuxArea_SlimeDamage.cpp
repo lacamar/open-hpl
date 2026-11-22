@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_SlimeDamage.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -138,24 +139,7 @@ void cLuxArea_SlimeDamage::OnUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxArea_SlimeDamage_SaveData, iLuxArea_SaveData)
-
-kSerializeVar(mlSlimeType, eSerializeType_Int32)
-
-kSerializeVar(mfMinCheckAttackTime, eSerializeType_Float32)
-kSerializeVar(mfMaxCheckAttackTime, eSerializeType_Float32)
-kSerializeVar(mbDisableAfterAttack, eSerializeType_Bool)
-kSerializeVar(msCallback, eSerializeType_String)
-
-kSerializeVar(mfCheckCollisionCount, eSerializeType_Float32)
-
-kSerializeVar(msAttackSound, eSerializeType_String)
-kSerializeVar(msAttackPS, eSerializeType_String)
-kSerializeVar(mfMinAttackDamage, eSerializeType_Float32)
-kSerializeVar(mfMaxAttackDamage, eSerializeType_Float32)
-kSerializeVar(mfScreenShakeAmount, eSerializeType_Float32)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxArea_SlimeDamage_SaveData, iLuxArea_SaveData)
 
 //-----------------------------------------------------------------------
 

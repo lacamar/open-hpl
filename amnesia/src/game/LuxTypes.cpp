@@ -18,6 +18,7 @@
  */
 
 #include "LuxTypes.h"
+#include "RustLuxSerialize.h"
 
 #include "LuxEntity.h"
 #include "LuxArea.h"
@@ -58,10 +59,7 @@ bool LuxIsCorrectType(iLuxEntity *apEntity, eLuxEntityType aType, int alSubType)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxIdPair)
-kSerializeVar(mlParentId, eSerializeType_Int32)
-kSerializeVar(mlChildId, eSerializeType_Int32)
-kEndSerialize()
+kSerializeRustClass(cLuxIdPair)
 
 //-----------------------------------------------------------------------
 
@@ -363,13 +361,7 @@ void cLuxAlphaFader::Update(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxHeadPosAdd)
-kSerializeVar(mvAdd, eSerializeType_Vector3f)
-kSerializeVar(mbMoving, eSerializeType_Bool)
-kSerializeVar(mvMoveGoal, eSerializeType_Vector3f)
-kSerializeVar(mfMoveSpeed, eSerializeType_Float32)
-kSerializeVar(mfMoveSlowDownDist, eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClass(cLuxHeadPosAdd)
 
 //-----------------------------------------------------------------------
 
@@ -379,12 +371,7 @@ kEndSerialize()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxEventTimer)
-kSerializeVar(msName, eSerializeType_String)
-kSerializeVar(msFunction, eSerializeType_String)
-kSerializeVar(mfCount, eSerializeType_Float32)
-kSerializeVar(mbDestroyMe, eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClass(cLuxEventTimer)
 
 //-----------------------------------------------------------------------
 
@@ -394,13 +381,7 @@ kEndSerialize()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxCombineItemsCallback)
-kSerializeVar(msName, eSerializeType_String)
-kSerializeVar(msItemA, eSerializeType_String)
-kSerializeVar(msItemB, eSerializeType_String)
-kSerializeVar(msFunction, eSerializeType_String)
-kSerializeVar(mbAutoDestroy, eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClass(cLuxCombineItemsCallback)
 
 //-----------------------------------------------------------------------
 
@@ -410,13 +391,7 @@ kEndSerialize()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxUseItemCallback)
-kSerializeVar(msName, eSerializeType_String)
-kSerializeVar(msItem, eSerializeType_String)
-kSerializeVar(msEntity, eSerializeType_String)
-kSerializeVar(msFunction, eSerializeType_String)
-kSerializeVar(mbAutoDestroy, eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClass(cLuxUseItemCallback)
 
 //-----------------------------------------------------------------------
 
@@ -427,13 +402,7 @@ kEndSerialize()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxNote)
-kSerializeVar(msNameEntry, eSerializeType_String)
-kSerializeVar(msTextEntry, eSerializeType_String)
-
-kSerializeVar(msIconFile, eSerializeType_String)
-kSerializeVar(msImageFile, eSerializeType_String)
-kEndSerialize()
+kSerializeRustClass(cLuxNote)
 //-----------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////
@@ -442,13 +411,7 @@ kEndSerialize()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxDiary)
-kSerializeVar(msNameEntry, eSerializeType_String)
-kSerializeVar(msTextEntry, eSerializeType_String)
-
-kSerializeVar(msIconFile, eSerializeType_String)
-kSerializeVar(msImageFile, eSerializeType_String)
-kEndSerialize()
+kSerializeRustClass(cLuxDiary)
 
 //////////////////////////////////////////////////////////////////////////
 // QUEST NOTE
@@ -456,12 +419,7 @@ kEndSerialize()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxQuestNote)
-kSerializeVar(mbActive, eSerializeType_Bool)
-kSerializeVar(msName, eSerializeType_String)
-kSerializeVar(msNameEntry, eSerializeType_String)
-kSerializeVar(msTextEntry, eSerializeType_String)
-kEndSerialize()
+kSerializeRustClass(cLuxQuestNote)
 
 //-----------------------------------------------------------------------
 
@@ -470,10 +428,7 @@ kEndSerialize()
 //////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------
-kBeginSerializeBase(cLuxScriptVar)
-kSerializeVar(msName, eSerializeType_String)
-kSerializeVar(msVal, eSerializeType_String)
-kEndSerialize()
+kSerializeRustClass(cLuxScriptVar)
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -481,30 +436,7 @@ kEndSerialize()
 //////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------
-kBeginSerializeBase(cLuxVoiceData)
-
-kSerializeVar(msText, eSerializeType_WString)
-kSerializeVar(mfTextDelay, eSerializeType_Float32)
-kSerializeVar(msText2, eSerializeType_WString)
-kSerializeVar(mfText2Delay, eSerializeType_Float32)
-kSerializeVar(msText3, eSerializeType_WString)
-kSerializeVar(mfText3Delay, eSerializeType_Float32)
-kSerializeVar(msText4, eSerializeType_WString)
-kSerializeVar(mfText4Delay, eSerializeType_Float32)
-kSerializeVar(msText5, eSerializeType_WString)
-kSerializeVar(mfText5Delay, eSerializeType_Float32)
-kSerializeVar(msText6, eSerializeType_WString)
-kSerializeVar(mfText6Delay, eSerializeType_Float32)
-kSerializeVar(msText7, eSerializeType_WString)
-kSerializeVar(mfText7Delay, eSerializeType_Float32)
-kSerializeVar(msVoiceFile, eSerializeType_String)
-kSerializeVar(msEffectFile, eSerializeType_String)
-kSerializeVar(mbUsePosition, eSerializeType_Bool)
-kSerializeVar(mvPosition, eSerializeType_Vector3f)
-kSerializeVar(mfMinDistance, eSerializeType_Float32)
-kSerializeVar(mfMaxDistance, eSerializeType_Float32)
-
-kEndSerialize()
+kSerializeRustClass(cLuxVoiceData)
 
 //-----------------------------------------------------------------------
 
@@ -547,13 +479,7 @@ void cLuxCollideCallback_SaveData::ToCallback(cLuxMap *apMap, iLuxCollideCallbac
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxCollideCallback_SaveData)
-kSerializeVar(mlCollideEntity, eSerializeType_Int32)
-kSerializeVar(msCallbackFunc, eSerializeType_String)
-kSerializeVar(mbDeleteWhenColliding, eSerializeType_Bool)
-kSerializeVar(mlStates, eSerializeType_Int32)
-kSerializeVar(mbColliding, eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClass(cLuxCollideCallback_SaveData)
 
 //-----------------------------------------------------------------------
 
@@ -563,10 +489,6 @@ kEndSerialize()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxProp_AttachedProp)
-kSerializeVar(msFileName, eSerializeType_String)
-kSerializeVar(msName, eSerializeType_String)
-kSerializeVar(m_mtxOffset, eSerializeType_Matrixf)
-kEndSerialize()
+kSerializeRustClass(cLuxProp_AttachedProp)
 
 //-----------------------------------------------------------------------
