@@ -204,17 +204,7 @@ void cEngineCharacterBody_SaveData::ToBody(iCharacterBody *apBody)
 
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineCharacterBody_SaveData)
-kSerializeVar(mbActive, eSerializeType_Bool)
-kSerializeVar(mfMass, eSerializeType_Float32)
-kSerializeVar(mvPosition, eSerializeType_Vector3f)
-kSerializeVar(mfYaw, eSerializeType_Float32)
-kSerializeVar(mfPitch, eSerializeType_Float32)
-kSerializeVar(mfSpeedForward, eSerializeType_Float32)
-kSerializeVar(mfSpeedRight, eSerializeType_Float32)
-kSerializeVar(mvForceVelocity, eSerializeType_Vector3f)
-kSerializeVar(mlActiveSize, eSerializeType_Int32)
-kEndSerialize()
+kSerializeRustClass(cEngineCharacterBody_SaveData)
 
 //------------------------------------------------------------------------
 
@@ -244,12 +234,7 @@ void cEngineVerletParticle_SaveData::ToParticle(cVerletParticle *apPart)
 
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineVerletParticle_SaveData)
-kSerializeVar(mvPosition, eSerializeType_Vector3f)
-kSerializeVar(mvPrevPosition, eSerializeType_Vector3f)
-kSerializeVar(mvSmoothPosition, eSerializeType_Vector3f)
-kSerializeVar(mfInvMass, eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClass(cEngineVerletParticle_SaveData)
 
 //------------------------------------------------------------------------
 
@@ -306,57 +291,7 @@ void cEngineRope_SaveData::ToRope(cRopeEntity *apRope, cLuxMap *apMap)
 
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineRope_SaveData)
-kSerializeVar(msName, eSerializeType_String)
-kSerializeVar(msPhysicsName, eSerializeType_String)
-kSerializeVar(mlUniquePhysicsID, eSerializeType_Int32)
-kSerializeVar(mlUniqueGfxID, eSerializeType_Int32)
-
-kSerializeClassContainer(mvParticles, cEngineVerletParticle_SaveData, eSerializeType_Class)
-
-kSerializeVar(mvStartPos, eSerializeType_Vector3f)
-kSerializeVar(mvEndPos, eSerializeType_Vector3f)
-
-kSerializeVar(mStartBody, eSerializeType_Class)
-kSerializeVar(mEndBody, eSerializeType_Class)
-
-kSerializeVar(mvStartBodyLocalPos, eSerializeType_Vector3f)
-kSerializeVar(mvEndBodyLocalPos, eSerializeType_Vector3f)
-
-kSerializeVar(mlMaxIterations, eSerializeType_Int32)
-kSerializeVar(mfTotalLength, eSerializeType_Float32)
-kSerializeVar(mfMinTotalLength, eSerializeType_Float32)
-kSerializeVar(mfMaxTotalLength, eSerializeType_Float32)
-kSerializeVar(mfSegmentLength, eSerializeType_Float32)
-
-kSerializeVar(mfDamping, eSerializeType_Float32)
-kSerializeVar(mfStrength, eSerializeType_Float32)
-kSerializeVar(mfStiffness, eSerializeType_Float32)
-
-kSerializeVar(msMaterial, eSerializeType_String)
-
-kSerializeVar(mfParticleRadius, eSerializeType_Float32)
-
-kSerializeVar(mlMaxSegments, eSerializeType_Int32)
-kSerializeVar(mfRadius, eSerializeType_Float32)
-kSerializeVar(mfLengthTileAmount, eSerializeType_Float32)
-kSerializeVar(mfLengthTileSize, eSerializeType_Float32)
-
-kSerializeVar(msSound, eSerializeType_String)
-kSerializeVar(mfSoundStartSpeed, eSerializeType_Float32)
-kSerializeVar(mfSoundStopSpeed, eSerializeType_Float32)
-
-kSerializeVar(mbMotorActive, eSerializeType_Bool)
-kSerializeVar(mfMotorWantedLength, eSerializeType_Float32)
-kSerializeVar(mfMotorSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfMotorMinSpeed, eSerializeType_Float32)
-kSerializeVar(mfMotorMaxSpeed, eSerializeType_Float32)
-
-kSerializeVar(mbAutoMove, eSerializeType_Bool)
-kSerializeVar(mfAutoMoveSpeed, eSerializeType_Float32)
-kSerializeVar(mfAutoMoveAcc, eSerializeType_Float32)
-kSerializeVar(mfAutoMoveMaxSpeed, eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClass(cEngineRope_SaveData)
 
 //------------------------------------------------------------------------
 
@@ -380,9 +315,7 @@ void cEngineBillboard_SaveData::ToBillboard(cBillboard *apBillboard)
 
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineBillboard_SaveData)
-kSerializeVar(mColor, eSerializeType_Color)
-kEndSerialize()
+kSerializeRustClass(cEngineBillboard_SaveData)
 
 //------------------------------------------------------------------------
 
@@ -421,15 +354,7 @@ void cEngineAnimationState_SaveData::ToAnim(cAnimationState *apAnim)
 
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineAnimationState_SaveData)
-kSerializeVar(mbActive, eSerializeType_Bool)
-kSerializeVar(mbLoop, eSerializeType_Bool)
-
-kSerializeVar(mfWeight, eSerializeType_Float32)
-kSerializeVar(mfFadeStep, eSerializeType_Float32)
-kSerializeVar(mfTimePos, eSerializeType_Float32)
-kSerializeVar(mfSpeed, eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClass(cEngineAnimationState_SaveData)
 //------------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////
@@ -458,12 +383,7 @@ void cEngineSubMeshEntity_SaveData::ToSubMeshEntity(cSubMeshEntity *apSubMeshEnt
 
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineSubMeshEntity_SaveData)
-kSerializeVar(mbActive, eSerializeType_Bool)
-kSerializeVar(mbVisible, eSerializeType_Bool)
-kSerializeVar(mfIlluminationAmount, eSerializeType_Float32)
-kSerializeVar(m_mtxTransform, eSerializeType_Matrixf)
-kEndSerialize()
+kSerializeRustClass(cEngineSubMeshEntity_SaveData)
 //------------------------------------------------------------------------
 
 
@@ -562,14 +482,7 @@ void cEngineMeshEntity_SaveData::ToMeshEntity(cMeshEntity *apMeshEntity)
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineMeshEntity_SaveData)
-kSerializeVar(mbActive, eSerializeType_Bool)
-kSerializeVar(mbVisible, eSerializeType_Bool)
-kSerializeVar(mfIlluminationAmount, eSerializeType_Float32)
-kSerializeVar(m_mtxTransform, eSerializeType_Matrixf)
-kSerializeClassContainer(mvAnimations, cEngineAnimationState_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mvSubMeshEntities, cEngineSubMeshEntity_SaveData, eSerializeType_Class)
-kEndSerialize()
+kSerializeRustClass(cEngineMeshEntity_SaveData)
 
 //------------------------------------------------------------------------
 
@@ -608,14 +521,7 @@ void cEngineBody_SaveData::ToBody(iPhysicsBody *apBody)
 
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineBody_SaveData)
-kSerializeVar(mfMass,eSerializeType_Float32)
-kSerializeVar(mbActive,eSerializeType_Bool)
-kSerializeVar(mbCollideCharacter,eSerializeType_Bool)
-kSerializeVar(mvLinearVelocity,eSerializeType_Vector3f)
-kSerializeVar(mvAngularVelocity,eSerializeType_Vector3f)
-kSerializeVar(m_mtxTransform,eSerializeType_Matrixf)
-kEndSerialize()
+kSerializeRustClass(cEngineBody_SaveData)
 
 //------------------------------------------------------------------------
 
@@ -792,22 +698,9 @@ void cEngineJoint_SaveData::ToJoint(iPhysicsJoint *apJoint)
 
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineJointController_SaveData)
-kSerializeVar(msName,eSerializeType_String)
-kSerializeVar(mfDestValue,eSerializeType_Float32)
-kSerializeVar(mbActive,eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClass(cEngineJointController_SaveData)
 
-kBeginSerializeBase(cEngineJoint_SaveData)
-kSerializeVar(msName,eSerializeType_String)
-kSerializeVar(mlID, eSerializeType_Int32)
-kSerializeVar(mfMinLimit,eSerializeType_Float32)
-kSerializeVar(mfMaxLimit,eSerializeType_Float32)
-kSerializeVar(mbBroken,eSerializeType_Bool)
-kSerializeVar(msOnMinCallback,eSerializeType_String)
-kSerializeVar(msOnMaxCallback,eSerializeType_String)
-kSerializeClassContainer(mvControllers,cEngineJointController_SaveData,eSerializeType_Class)
-kEndSerialize()
+kSerializeRustClass(cEngineJoint_SaveData)
 //------------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////
@@ -921,30 +814,9 @@ void cEnginePS_SaveData::ToPS(cParticleSystem *apPS)
 
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEnginePSEmitter_SaveData)
-kSerializeVar(mbActive,eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClass(cEnginePSEmitter_SaveData)
 
-kBeginSerializeBase(cEnginePS_SaveData)
-kSerializeVar(msName,eSerializeType_String)
-kSerializeVar(mlID, eSerializeType_Int32)
-
-kSerializeVar(mbActive,eSerializeType_Bool)
-kSerializeVar(mbVisible,eSerializeType_Bool)
-
-kSerializeVar(msType,eSerializeType_String)
-kSerializeVar(mvSize,eSerializeType_Vector3f)
-kSerializeVar(m_mtxTransform,eSerializeType_Matrixf)
-
-kSerializeVar(mColor,eSerializeType_Color)
-kSerializeVar(mbFadeAtDistance,eSerializeType_Bool)
-kSerializeVar(mfMinFadeDistanceStart,eSerializeType_Float32)
-kSerializeVar(mfMinFadeDistanceEnd,eSerializeType_Float32)
-kSerializeVar(mfMaxFadeDistanceStart,eSerializeType_Float32)
-kSerializeVar(mfMaxFadeDistanceEnd,eSerializeType_Float32)
-
-kSerializeClassContainer(mvEmitterActive,cEnginePSEmitter_SaveData,eSerializeType_Class)
-kEndSerialize()
+kSerializeRustClass(cEnginePS_SaveData)
 
 //------------------------------------------------------------------------
 
@@ -976,14 +848,7 @@ void cEngineBeam_SaveData::ToBeam(cBeam *apBeam)
 
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineBeam_SaveData)
-kSerializeVar(msName,eSerializeType_String)
-kSerializeVar(mlID, eSerializeType_Int32)
-kSerializeVar(msFile,eSerializeType_String)
-
-kSerializeVar(mvStartPos,eSerializeType_Vector3f)
-kSerializeVar(mvEndPos,eSerializeType_Vector3f)
-kEndSerialize()
+kSerializeRustClass(cEngineBeam_SaveData)
 
 //------------------------------------------------------------------------
 
@@ -1162,18 +1027,7 @@ void cEngineSound_SaveData::ToSound(cSoundEntity* apSound)
 }
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineSound_SaveData)
-kSerializeVar(msName,eSerializeType_String)
-kSerializeVar(mlID, eSerializeType_Int32)
-kSerializeVar(mbActive,eSerializeType_Bool)
-kSerializeVar(mbStopped,eSerializeType_Bool)
-kSerializeVar(msSoundDataName,eSerializeType_String)
-kSerializeVar(mfMinDistance,eSerializeType_Float32)
-kSerializeVar(mfMaxDistance,eSerializeType_Float32)
-kSerializeVar(mfVolume,eSerializeType_Float32)
-kSerializeVar(mvLocalPosition,eSerializeType_Vector3f)
-kSerializeVar(mbRemoveWhenOver,eSerializeType_Bool)
-kEndSerialize()
+kSerializeRustClass(cEngineSound_SaveData)
 
 //------------------------------------------------------------------------
 
@@ -1199,33 +1053,7 @@ void cEngineLight_SaveData::ToLight(iLight *apLight)
 
 //------------------------------------------------------------------------
 
-kBeginSerializeBase(cEngineLight_SaveData)
-kSerializeVar(msName,eSerializeType_String)
-kSerializeVar(mlID, eSerializeType_Int32)
-kSerializeVar(mbActive,eSerializeType_Bool)
-kSerializeVar(mbVisible,eSerializeType_Bool)
-kSerializeVar(mbOnlyAffectInSector,eSerializeType_Bool)
-
-kSerializeVar(mDiffuseColor, eSerializeType_Color)
-kSerializeVar(mfFarAttenuation, eSerializeType_Float32)
-
-kSerializeVar(mbFlickering,eSerializeType_Bool)
-kSerializeVar(msFlickerOffSound,eSerializeType_String)
-kSerializeVar(msFlickerOnSound,eSerializeType_String)
-kSerializeVar(msFlickerOffPS,eSerializeType_String)
-kSerializeVar(msFlickerOnPS,eSerializeType_String)
-kSerializeVar(mfFlickerOnMinLength, eSerializeType_Float32)
-kSerializeVar(mfFlickerOffMinLength, eSerializeType_Float32)
-kSerializeVar(mfFlickerOnMaxLength, eSerializeType_Float32)
-kSerializeVar(mfFlickerOffMaxLength, eSerializeType_Float32)
-kSerializeVar(mFlickerOffColor, eSerializeType_Color)
-kSerializeVar(mfFlickerOffRadius, eSerializeType_Float32)
-kSerializeVar(mbFlickerFade,eSerializeType_Bool)
-kSerializeVar(mfFlickerOnFadeMinLength, eSerializeType_Float32)
-kSerializeVar(mfFlickerOnFadeMaxLength, eSerializeType_Float32)
-kSerializeVar(mfFlickerOffFadeMinLength, eSerializeType_Float32)
-kSerializeVar(mfFlickerOffFadeMaxLength, eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClass(cEngineLight_SaveData)
 
 //------------------------------------------------------------------------
 

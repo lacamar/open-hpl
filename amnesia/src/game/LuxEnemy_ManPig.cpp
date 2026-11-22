@@ -53,20 +53,7 @@ void cLuxEnemyLoader_ManPig::LoadVariables(iLuxEnemy *apEnemy, cXmlElement *apRo
 {
 	cLuxEnemy_ManPig *pManPig = static_cast<cLuxEnemy_ManPig*>(apEnemy);
 
-	pManPig->mfDefaultForwardSpeed[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Walk] =	GetVarFloat("Quadruped_Walk_ForwardSpeed", 0);
-	pManPig->mfDefaultBackwardSpeed[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Walk] =	GetVarFloat("Quadruped_Walk_BackwardSpeed", 0);
-	pManPig->mfDefaultForwardAcc[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Walk] =		GetVarFloat("Quadruped_Walk_ForwardAcc", 0);
-	pManPig->mfDefaultForwardDeacc[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Walk] =	GetVarFloat("Quadruped_Walk_ForwardDeacc", 0);
-
-	pManPig->mfDefaultForwardSpeed[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Run] =		GetVarFloat("Quadruped_Run_ForwardSpeed", 0);
-	pManPig->mfDefaultBackwardSpeed[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Run] =	GetVarFloat("Quadruped_Run_BackwardSpeed", 0);
-	pManPig->mfDefaultForwardAcc[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Run] =		GetVarFloat("Quadruped_Run_ForwardAcc", 0);
-	pManPig->mfDefaultForwardDeacc[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Run] =		GetVarFloat("Quadruped_Run_ForwardDeacc", 0);
-
-	pManPig->mfStoppedToWalkSpeed[eLuxEnemyPoseType_Quadruped] =	GetVarFloat("Quadruped_StoppedToWalkSpeed", 0);
-	pManPig->mfWalkToStoppedSpeed[eLuxEnemyPoseType_Quadruped] =	GetVarFloat("Quadruped_WalkToStoppedSpeed", 0);
-	pManPig->mfWalkToRunSpeed[eLuxEnemyPoseType_Quadruped] =		GetVarFloat("Quadruped_WalkToRunSpeed", 0);
-	pManPig->mfRunToWalkSpeed[eLuxEnemyPoseType_Quadruped] =		GetVarFloat("Quadruped_RunToWalkSpeed", 0);
+	ohpl_ae_load_pig(mpVarsRs, true, &pManPig->mCfg, &pManPig->mPig);
 
 	pManPig->msNoticeSound = GetVarString("NoticeSound");
 	pManPig->msGiveUpNoticeSound = GetVarString("GiveUpNoticeSound");
@@ -76,19 +63,7 @@ void cLuxEnemyLoader_ManPig::LoadVariables(iLuxEnemy *apEnemy, cXmlElement *apRo
 	gpBase->PreloadSound(pManPig->msEnabledSound);
 	gpBase->PreloadSound(pManPig->msChaseSound);
 
-	pManPig->mfGroggyDamageCount = GetVarFloat("GroggyDamageCount", 0);
-	pManPig->mfAlertToHuntDistance = GetVarFloat("AlertToHuntDistance", 0);
-	pManPig->mfAlertToInstantHuntDistance = GetVarFloat("AlertToInstantHuntDistance", 0);
-	pManPig->mfHuntPauseMinTime = GetVarFloat("HuntPauseMinTime", 0);
-	pManPig->mfHuntPauseMaxTime = GetVarFloat("HuntPauseMaxTime", 0);
-	pManPig->mfIncreaseAlertSpeedDistance = GetVarFloat("IncreaseAlertSpeedDistance", 0);
-	pManPig->mfIncreasedAlertSpeedMul = GetVarFloat("IncreasedAlertSpeedMul", 0);
-	
-	pManPig->mfAlertRunTowardsToHuntLimit = GetVarFloat("AlertRunTowardsToHuntLimit", 0);
-	pManPig->mfAlertRunTowardsCheckDistance = GetVarFloat("AlertRunTowardsCheckDistance", 0);
-
 	pManPig->msTeslaMindFuckLoop = GetVarString("TeslaSoundLoop");
-	pManPig->mbIsTelsa = GetVarBool("IsTelsa", false);
 }
 
 //-----------------------------------------------------------------------

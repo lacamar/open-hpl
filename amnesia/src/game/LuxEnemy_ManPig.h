@@ -147,16 +147,17 @@ private:
 	tString msChaseSound;
 	tString msTeslaMindFuckLoop;
 
-	float mfGroggyDamageCount;
-	float mfAlertToHuntDistance;
-	float mfAlertToInstantHuntDistance;
-	float mfHuntPauseMinTime;
-	float mfHuntPauseMaxTime;
-	float mfIncreaseAlertSpeedDistance;
-	float mfIncreasedAlertSpeedMul;
-	float mfAlertRunTowardsToHuntLimit;
-	float mfAlertRunTowardsCheckDistance;
-	bool mbIsTelsa;
+	OhplAePig mPig = {};
+	float &mfGroggyDamageCount = mPig.groggyDamageCount;
+	float &mfAlertToHuntDistance = mPig.alertToHuntDistance;
+	float &mfAlertToInstantHuntDistance = mPig.alertToInstantHuntDistance;
+	float &mfHuntPauseMinTime = mPig.huntPauseMinTime;
+	float &mfHuntPauseMaxTime = mPig.huntPauseMaxTime;
+	float &mfIncreaseAlertSpeedDistance = mPig.increaseAlertSpeedDistance;
+	float &mfIncreasedAlertSpeedMul = mPig.increasedAlertSpeedMul;
+	float &mfAlertRunTowardsToHuntLimit = mPig.alertRunTowardsToHuntLimit;
+	float &mfAlertRunTowardsCheckDistance = mPig.alertRunTowardsCheckDistance;
+	bool &mbIsTelsa = mPig.isTesla;
 
 
 	std::vector<cColor> mvDefaultLightColors;

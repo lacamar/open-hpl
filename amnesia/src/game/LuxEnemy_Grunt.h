@@ -86,19 +86,20 @@ private:
 	tString msGiveUpNoticeSound;
 	tString msEnabledSound;
 
-	float mfGroggyDamageCount;
-	float mfAlertToHuntDistance;
-	float mfAlertToInstantHuntDistance;
-	float mfHuntPauseMinTime;
-	float mfHuntPauseMaxTime;
-	float mfIncreaseAlertSpeedDistance;
-	float mfIncreasedAlertSpeedMul;
-	float mfAlertRunTowardsToHuntLimit;
-	float mfAlertRunTowardsCheckDistance;
+	OhplAePig mPig = {};
+	float &mfGroggyDamageCount = mPig.groggyDamageCount;
+	float &mfAlertToHuntDistance = mPig.alertToHuntDistance;
+	float &mfAlertToInstantHuntDistance = mPig.alertToInstantHuntDistance;
+	float &mfHuntPauseMinTime = mPig.huntPauseMinTime;
+	float &mfHuntPauseMaxTime = mPig.huntPauseMaxTime;
+	float &mfIncreaseAlertSpeedDistance = mPig.increaseAlertSpeedDistance;
+	float &mfIncreasedAlertSpeedMul = mPig.increasedAlertSpeedMul;
+	float &mfAlertRunTowardsToHuntLimit = mPig.alertRunTowardsToHuntLimit;
+	float &mfAlertRunTowardsCheckDistance = mPig.alertRunTowardsCheckDistance;
 
-	float mfIdleExtraTimeMin;
-	float mfIdleExtraTimeMax;
-	int mlIdleExtraNum;
+	float &mfIdleExtraTimeMin = mPig.idleExtraTimeMin;
+	float &mfIdleExtraTimeMax = mPig.idleExtraTimeMax;
+	int32_t &mlIdleExtraNum = mPig.idleExtraNum;
 	
 	
 	//////////////

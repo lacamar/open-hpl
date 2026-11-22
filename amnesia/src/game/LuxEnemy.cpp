@@ -113,6 +113,34 @@ static eLuxEnemyPoseType ToPoseType(const tString& asPose)
 
 //-----------------------------------------------------------------------
 
+static eLuxDamageType ToDamageType(const tString& asType)
+{
+	tString sLowType = cString::ToLowerCase(asType);
+
+	if(sLowType == "bloodsplat") return eLuxDamageType_BloodSplat;
+	if(sLowType == "claws") return eLuxDamageType_Claws;
+	if(sLowType == "slash") return eLuxDamageType_Slash;
+
+	Error("Damage type '%s' does not exist!\n", asType.c_str());
+	return eLuxDamageType_BloodSplat;
+}
+
+//-----------------------------------------------------------------------
+
+
+static void ApplyAttack(const OhplAeAttack &aSrc, const tString &asType, cEnemyAttackDamageData *apData)
+{
+	apData->mlStrength = aSrc.strength;
+	apData->mfMinDamage = aSrc.minDamage;
+	apData->mfMaxDamage = aSrc.maxDamage;
+	apData->mfForce = aSrc.force;
+	apData->mfMaxImpulse = aSrc.maxImpulse;
+	apData->mDamageType = ToDamageType(asType);
+	gpBase->PreloadSound(apData->msHitSound);
+}
+
+//-----------------------------------------------------------------------
+
 void iLuxEnemyLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
 	cLuxMap *pMap = gpBase->mpCurrentMapLoading;
@@ -141,61 +169,41 @@ void iLuxEnemyLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTr
 	
 	//////////////////////////////
 	// Load base properties
-	pEnemy->mfHealth = GetVarFloat("Health", 100);
-	pEnemy->mlToughness = GetVarInt("Toughness", 0);
-
-	pEnemy->mfSightRange = GetVarFloat("SightRange", 0);
-	pEnemy->mfDarknessSightRange = GetVarFloat("DarknessSightRange", 0);
-	pEnemy->mfHearVolume = GetVarFloat("HearVolume", 0);
-
-	pEnemy->mfFOV = cMath::ToRad(GetVarFloat("FOV", 0));
-	pEnemy->mfFOVXMul = GetVarFloat("FOVXMul", 1);
-
-	pEnemy->mfMaxRegenHealth = GetVarFloat("MaxRegenHealth", 100);
-	pEnemy->mfRegenHealthSpeed = GetVarFloat("RegenHealthSpeed", 0);
-
-	pEnemy->mfActivationDistance = GetVarFloat("ActivationDistance", 0);
-
-	pEnemy->msDangerMusic = GetVarString("DangerMusic", "");
-	pEnemy->mlDangerMusicPrio = GetVarInt("DangerMusicPrio", 0);
-	
-	pEnemy->msMusic[eLuxEnemyMusic_Search] = GetVarString("SearchMusic", "");
-	pEnemy->mlMusicPrio[eLuxEnemyMusic_Search] = GetVarInt("SearchMusicPrio", 0);
-
-	pEnemy->msMusic[eLuxEnemyMusic_Attack] = GetVarString("AttackMusic", "");
-	pEnemy->mlMusicPrio[eLuxEnemyMusic_Attack] = GetVarInt("AttackMusicPrio", 0);
-
-	pEnemy->mbAutoRemoveAtPathEnd = GetVarBool("AutoRemoveAtPathEnd", true);
+	tString sNormalType, sBreakDoorType;
+	tString *vpStr[18] = {&pEnemy->msDangerMusic, &pEnemy->msMusic[eLuxEnemyMusic_Search], &pEnemy->msMusic[eLuxEnemyMusic_Attack],
+		&pEnemy->msHitPS[0], &pEnemy->msHitPS[1], &pEnemy->msHitPS[2], &pEnemy->msHitPS[3],
+		&pEnemy->msHitSound[0], &pEnemy->msHitSound[1], &pEnemy->msHitSound[2], &pEnemy->msHitSound[3],
+		&pEnemy->msAmbientSound[eLuxEnemySoundState_Idle], &pEnemy->msAmbientSound[eLuxEnemySoundState_Alert], &pEnemy->msAmbientSound[eLuxEnemySoundState_Hunt],
+		&pEnemy->mNormalAttackDamage.msHitSound, &sNormalType, &pEnemy->mBreakDoorAttackDamage.msHitSound, &sBreakDoorType};
+	OhplAeCfg &cfg = pEnemy->mCfg;
+	ohpl_ae_load_base(mpVarsRs, gpBase->mbHardMode, &cfg,
+		[](void *c, int alSlot, const unsigned char *s, size_t n){ static_cast<tString**>(c)[alSlot]->assign((const char*)s, n); }, vpStr);
+	pEnemy->mlToughness = cfg.toughness;
+	pEnemy->mA4.moveSpeedAnimMul = cfg.moveSpeedAnimMul;
+	for(int i=eLuxEnemySoundState_Idle; i<eLuxEnemySoundState_LastEnum; ++i)
+	{
+		pEnemy->mfAmbientSoundMinTime[i] = cfg.ambientMin[i];
+		pEnemy->mfAmbientSoundMaxTime[i] = cfg.ambientMax[i];
+	}
 
 	//////////////////////////////
-	// AI base properties
-	pEnemy->mfPlayerSearchMaxAngle = cMath::ToRad(GetVarFloat("PlayerSearchMaxAngle", 0));
-	pEnemy->mfPlayerSearchMinDistMul = GetVarFloat("PlayerSearchMinDistMul", 0);
-	pEnemy->mfPlayerSearchMaxDistMul = GetVarFloat("PlayerSearchMaxDistMul", 0);
-	pEnemy->mfPlayerSearchTime = GetVarFloat("PlayerSearchTime", 0);
-
-	pEnemy->mfPlayerPatrolMaxAngle = cMath::ToRad(GetVarFloat("PlayerPatrolMaxAngle", 0));
-	pEnemy->mfPlayerPatrolMinDist = GetVarFloat("PlayerPatrolMinDist", 0);
-	pEnemy->mfPlayerPatrolMaxDist = GetVarFloat("PlayerPatrolMaxDist", 0);
-
-
-    //////////////////////////////
 	// Load character body
-	iCharacterBody *pCharBody = apWorld->GetPhysicsWorld()->CreateCharacterBody(msName, GetVarVector3f("Body_Size", 1));
-	
-	pCharBody->SetMass(					GetVarFloat("Body_Mass", 1));
-	pCharBody->SetAccurateClimbing(		GetVarBool("Body_AccurateClimbing",false) );
-	pCharBody->SetMaxNoSlideSlopeAngle(cMath::ToRad(GetVarFloat("Body_MaxNoSlideSlopeAngle",0) ) );
-	pCharBody->SetMaxPushMass(			GetVarFloat("Body_MaxPushMass",0) );
-	pCharBody->SetPushForce(			GetVarFloat("Body_PushForce",0) );
-	pCharBody->SetCharacterMaxPushMass(	GetVarFloat("Body_CharacterMaxPushMass",0) );
-	pCharBody->SetCharacterPushForce(	GetVarFloat("Body_CharacterPushForce",0) );
-	pCharBody->SetMaxStepSize(			GetVarFloat("Body_MaxStepSize",0) );
-	pCharBody->SetMaxStepSizeInAir(		GetVarFloat("Body_MaxStepSize",0) );
-	pCharBody->SetStepClimbSpeed(		GetVarFloat("Body_StepClimbSpeed",0) );
+	const OhplAeBody &body = cfg.body;
+	iCharacterBody *pCharBody = apWorld->GetPhysicsWorld()->CreateCharacterBody(msName, cVector3f(body.size[0], body.size[1], body.size[2]));
 
-	pEnemy->m_mtxCharMeshOffset = cMath::MatrixRotate(  cMath::Vector3ToRad(GetVarVector3f("Body_OffsetRot", 0)), eEulerRotationOrder_XYZ);
-	pEnemy->m_mtxCharMeshOffset.SetTranslation( GetVarVector3f("Body_OffsetTrans", 0)- cVector3f(0,pCharBody->GetSize().y/2,0) );
+	pCharBody->SetMass(body.mass);
+	pCharBody->SetAccurateClimbing(body.accurateClimbing);
+	pCharBody->SetMaxNoSlideSlopeAngle(body.maxNoSlideSlope);
+	pCharBody->SetMaxPushMass(body.maxPushMass);
+	pCharBody->SetPushForce(body.pushForce);
+	pCharBody->SetCharacterMaxPushMass(body.charMaxPushMass);
+	pCharBody->SetCharacterPushForce(body.charPushForce);
+	pCharBody->SetMaxStepSize(body.maxStepSize);
+	pCharBody->SetMaxStepSizeInAir(body.maxStepSize);
+	pCharBody->SetStepClimbSpeed(body.stepClimbSpeed);
+
+	pEnemy->m_mtxCharMeshOffset = cMath::MatrixRotate(cVector3f(body.offsetRot[0], body.offsetRot[1], body.offsetRot[2]), eEulerRotationOrder_XYZ);
+	pEnemy->m_mtxCharMeshOffset.SetTranslation(cVector3f(body.offsetTrans[0], body.offsetTrans[1], body.offsetTrans[2]) - cVector3f(0,pCharBody->GetSize().y/2,0));
 
 	pCharBody->SetEntity(pEnemy->mpMeshEntity);
 	pCharBody->SetEntityOffset(pEnemy->m_mtxCharMeshOffset);
@@ -204,143 +212,22 @@ void iLuxEnemyLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTr
 
 	pCharBody->SetFeetPosition(mpEntity->GetWorldPosition());
 
-    pCharBody->SetUserData(pEnemy);
+	pCharBody->SetUserData(pEnemy);
 	pEnemy->mpCharBody = pCharBody;
 
 	//////////////////////////////
-	// Load default movement speeds
-	pEnemy->mfDefaultForwardSpeed[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Walk] =	GetVarFloat("Walk_ForwardSpeed", 0);
-	pEnemy->mfDefaultBackwardSpeed[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Walk] =	GetVarFloat("Walk_BackwardSpeed", 0);
-	pEnemy->mfDefaultForwardAcc[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Walk] =		GetVarFloat("Walk_ForwardAcc", 0);
-	pEnemy->mfDefaultForwardDeacc[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Walk] =	GetVarFloat("Walk_ForwardDeacc", 0);
-
-	pEnemy->mfDefaultForwardSpeed[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Run] =	GetVarFloat("Run_ForwardSpeed", 0);
-	pEnemy->mfDefaultBackwardSpeed[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Run] =	GetVarFloat("Run_BackwardSpeed", 0);
-	pEnemy->mfDefaultForwardAcc[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Run] =		GetVarFloat("Run_ForwardAcc", 0);
-	pEnemy->mfDefaultForwardDeacc[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Run] =	GetVarFloat("Run_ForwardDeacc", 0);
-
-	pEnemy->mfDefaultForwardSpeed[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Walk] =	0;
-	pEnemy->mfDefaultBackwardSpeed[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Walk] =	0;
-	pEnemy->mfDefaultForwardAcc[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Walk] =		0;
-	pEnemy->mfDefaultForwardDeacc[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Walk] =	0;
-
-	pEnemy->mfDefaultForwardSpeed[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Run] =	0;
-	pEnemy->mfDefaultBackwardSpeed[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Run] =	0;
-	pEnemy->mfDefaultForwardAcc[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Run] =		0;
-	pEnemy->mfDefaultForwardDeacc[eLuxEnemyPoseType_Quadruped][eLuxEnemyMoveSpeed_Run] =	0;
-
+	// Attack data
+	ApplyAttack(cfg.normal, sNormalType, &pEnemy->mNormalAttackDamage);
+	ApplyAttack(cfg.breakDoor, sBreakDoorType, &pEnemy->mBreakDoorAttackDamage);
+	pEnemy->mNormalAttackSize.mvOffset = cVector3f(cfg.normal.offset[0], cfg.normal.offset[1], cfg.normal.offset[2]);
+	cVector3f vAttackSize(cfg.normal.size[0], cfg.normal.size[1], cfg.normal.size[2]);
+	pEnemy->mNormalAttackSize.mlShapeIdx = pEnemy->CreateAttackShape(apWorld, vAttackSize);
 
 	//////////////////////////////
-	// Load movement variables
-	pEnemy->mfTurnSpeedMul = GetVarFloat("TurnSpeedMul", 1);
-	pEnemy->mfTurnMaxSpeed = GetVarFloat("TurnMaxSpeed", 1);
-	pEnemy->mfTurnMinBreakAngle = cMath::ToRad(GetVarFloat("TurnMinBreakAngle", 1));
-	pEnemy->mfTurnBreakMul = GetVarFloat("TurnBreakMul", 1);
-
-	pEnemy->mA4.moveSpeedAnimMul =	GetVarFloat("MoveSpeedAnimMul", 1);
-
-	pEnemy->mfStoppedToWalkSpeed[eLuxEnemyPoseType_Biped] =	GetVarFloat("StoppedToWalkSpeed", 0);
-	pEnemy->mfWalkToStoppedSpeed[eLuxEnemyPoseType_Biped] =	GetVarFloat("WalkToStoppedSpeed", 0);
-	pEnemy->mfWalkToRunSpeed[eLuxEnemyPoseType_Biped] =		GetVarFloat("WalkToRunSpeed", 0);
-	pEnemy->mfRunToWalkSpeed[eLuxEnemyPoseType_Biped] =		GetVarFloat("RunToWalkSpeed", 0);
-
-	pEnemy->mfStoppedToWalkSpeed[eLuxEnemyPoseType_Quadruped] =	0;
-	pEnemy->mfWalkToStoppedSpeed[eLuxEnemyPoseType_Quadruped] = 0;
-	pEnemy->mfWalkToRunSpeed[eLuxEnemyPoseType_Quadruped] =		0;
-	pEnemy->mfRunToWalkSpeed[eLuxEnemyPoseType_Quadruped] =		0;
-
-	pEnemy->mfWaterStepSpeedWalk = GetVarFloat("WaterStepSpeedWalk", 0);
-	pEnemy->mfWaterStepSpeedRun = GetVarFloat("WaterStepSpeedRun", 0);
-	pEnemy->mfWaterStepSpeedMisc = GetVarFloat("WaterStepSpeedMisc", 0);
-	
-	//////////////////////////////
-	// Load hit variables
-	pEnemy->msHitPS[eLuxWeaponHitType_Sword] = GetVarString("HitPS_Sword");
-	pEnemy->msHitSound[eLuxWeaponHitType_Sword] = GetVarString("HitSound_Sword");
-
-	pEnemy->msHitPS[eLuxWeaponHitType_Club] = GetVarString("HitPS_Club");
-	pEnemy->msHitSound[eLuxWeaponHitType_Club] = GetVarString("HitSound_Club");
-
-	pEnemy->msHitPS[eLuxWeaponHitType_Bullet] = GetVarString("HitPS_Club");
-	pEnemy->msHitSound[eLuxWeaponHitType_Bullet] = GetVarString("HitSound_Club");
-	
-	pEnemy->msHitPS[eLuxWeaponHitType_Dud] = GetVarString("HitPS_Dud");
-	pEnemy->msHitSound[eLuxWeaponHitType_Dud] = GetVarString("HitSound_Dud");
-
-	//////////////////////////////
-	// Load attack variables
-	pEnemy->mfNormalAttackDistance = GetVarFloat("NormalAttackDistance", 0);
-
-	//////////////////////////
-	// HARDMODE 
-	if (gpBase->mbHardMode)
-	{
-		pEnemy->mfSightRange *= 1.15f;
-		pEnemy->mfDarknessSightRange *= 1.15f;
-		pEnemy->mfHearVolume *= 0.6f;
-
-		pEnemy->mfFOV *= 1.1f;
-		pEnemy->mfFOVXMul *= 1.1f;
-
-		pEnemy->mfPlayerSearchMaxAngle *= 1.1f;
-		pEnemy->mfPlayerSearchMinDistMul *= 1.25f;
-		pEnemy->mfPlayerSearchMaxDistMul *= 1.25f;
-		
-		pEnemy->mfPlayerSearchTime *= 2.5f;
-
-		pEnemy->mfPlayerPatrolMaxAngle	*= 1.25f;
-		pEnemy->mfPlayerPatrolMinDist	*= 1.5f;
-		pEnemy->mfPlayerPatrolMaxDist	*= 1.5f;
-
-		pEnemy->mfDefaultForwardSpeed[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Walk]		*= 1.1f;
-		pEnemy->mfDefaultBackwardSpeed[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Walk]	*= 1.1f;
-		pEnemy->mfDefaultForwardAcc[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Walk]		*= 1.1f;
-		pEnemy->mfDefaultForwardDeacc[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Walk]		*= 1.1f;
-
-		pEnemy->mfDefaultForwardSpeed[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Run]		*= 1.2f;
-		pEnemy->mfDefaultBackwardSpeed[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Run]		*= 1.2f;
-		pEnemy->mfDefaultForwardAcc[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Run]		*= 1.2f;
-		pEnemy->mfDefaultForwardDeacc[eLuxEnemyPoseType_Biped][eLuxEnemyMoveSpeed_Run]		*= 1.2f;
-
-		pEnemy->mfTurnSpeedMul		*= 1.35f;
-		pEnemy->mfTurnMaxSpeed		*= 1.0f;
-		pEnemy->mfTurnMinBreakAngle *= 1.0f;
-		pEnemy->mfTurnBreakMul		*= 1.0f;
-
-		pEnemy->mfStoppedToWalkSpeed[eLuxEnemyPoseType_Biped]	*= 1.0f;
-		pEnemy->mfWalkToStoppedSpeed[eLuxEnemyPoseType_Biped]	*= 1.0f;
-		pEnemy->mfWalkToRunSpeed[eLuxEnemyPoseType_Biped]		*= 1.0f;
-		pEnemy->mfRunToWalkSpeed[eLuxEnemyPoseType_Biped]		*= 1.0f;
-
-
-		pEnemy->mfWaterStepSpeedWalk	*= 1.5f;
-		pEnemy->mfWaterStepSpeedRun		*= 1.5f;
-		pEnemy->mfWaterStepSpeedMisc	*= 1.0f;
-	}
-
-
-	LoadAttackDamageData("Normal", &pEnemy->mNormalAttackDamage);
-	LoadAttackDamageData("BreakDoor", &pEnemy->mBreakDoorAttackDamage);
-	LoadAttackSizeData("Normal", &pEnemy->mNormalAttackSize, pEnemy, apWorld); 
-	
-	
-	//////////////////////////////
-	// Load ambient sounds
-	pEnemy->msAmbientSound[eLuxEnemySoundState_Idle] = GetVarString("AmbientSound_Idle");
-	pEnemy->mfAmbientSoundMinTime[eLuxEnemySoundState_Idle] = GetVarFloat("AmbientMinTime_Idle");
-	pEnemy->mfAmbientSoundMaxTime[eLuxEnemySoundState_Idle] = GetVarFloat("AmbientMaxTime_Idle");
-
-	pEnemy->msAmbientSound[eLuxEnemySoundState_Alert] = GetVarString("AmbientSound_Alert");
-	pEnemy->mfAmbientSoundMinTime[eLuxEnemySoundState_Alert] = GetVarFloat("AmbientMinTime_Alert");
-	pEnemy->mfAmbientSoundMaxTime[eLuxEnemySoundState_Alert] = GetVarFloat("AmbientMaxTime_Alert");
-
-	pEnemy->msAmbientSound[eLuxEnemySoundState_Hunt] = GetVarString("AmbientSound_Hunt");
-	pEnemy->mfAmbientSoundMinTime[eLuxEnemySoundState_Hunt] = GetVarFloat("AmbientMinTime_Hunt");
-	pEnemy->mfAmbientSoundMaxTime[eLuxEnemySoundState_Hunt] = GetVarFloat("AmbientMaxTime_Hunt");
-
+	// Ambient sounds
 	for(size_t i=0; i<eLuxEnemySoundState_LastEnum; ++i)
 		gpBase->PreloadSound(pEnemy->msAmbientSound[i]);
-	
+
 	//////////////////////////////
 	// Load type specific Properties
 	LoadVariables(pEnemy, apRootElem);
@@ -373,54 +260,6 @@ void iLuxEnemyLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTr
 }
 
 //-----------------------------------------------------------------------
-
-eLuxDamageType iLuxEnemyLoader::ToDamageType(const tString& asType)
-{
-	tString sLowType = cString::ToLowerCase(asType);
-
-	if(sLowType == "bloodsplat") return eLuxDamageType_BloodSplat;
-	if(sLowType == "claws") return eLuxDamageType_Claws;
-	if(sLowType == "slash") return eLuxDamageType_Slash;
-
-	Error("Damage type '%s' does not exist!\n", asType.c_str());
-	return eLuxDamageType_BloodSplat;
-}
-
-//-----------------------------------------------------------------------
-
-
-void iLuxEnemyLoader::LoadAttackDamageData(const tString &asPrefix, cEnemyAttackDamageData *apData)
-{
-	cVector2f vDamageMinMax = GetVarVector2f(asPrefix+"AttackDamage", 0);
-	cVector2f vForceAndMaxImpulse = GetVarVector2f(asPrefix+"AttackForce", 0);
-	apData->msHitSound = GetVarString(asPrefix+"AttackHitSound", "");
-	apData->mlStrength = GetVarInt(asPrefix+"AttackStrength", 0);
-	apData->mfMinDamage = vDamageMinMax.x;
-	apData->mfMaxDamage = vDamageMinMax.y;
-	apData->mfForce = vForceAndMaxImpulse.x;
-	apData->mfMaxImpulse = vForceAndMaxImpulse.y;
-	apData->mDamageType =  ToDamageType(GetVarString(asPrefix+"DamageType","bloodsplat"));
-	gpBase->PreloadSound(apData->msHitSound);
-
-	///////////////////////
-	// HARDMODE
-	if (gpBase->mbHardMode)
-	{
-		// Double min & max damage
-		apData->mfMinDamage *= 2.0f;
-		apData->mfMaxDamage *= 2.0f;
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void iLuxEnemyLoader::LoadAttackSizeData(const tString &asPrefix, cEnemyAttackSizeData *apData, iLuxEnemy *apEnemy, cWorld *apWorld)
-{
-	cVector3f vSize = GetVarVector3f(asPrefix+"DamageSize", 0);
-	apData->mvOffset = GetVarVector3f(asPrefix+"DamageOffset", 0);
-	apData->mlShapeIdx = apEnemy->CreateAttackShape(apWorld,vSize);
-}
-
 
 //-----------------------------------------------------------------------
 
