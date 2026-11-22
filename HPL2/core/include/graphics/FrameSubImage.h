@@ -7,7 +7,6 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version. 
-
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -23,75 +22,47 @@
 #include <vector>
 
 #include "resources/ResourceBase.h"
+#include "resources/RustFrames.h"
 
-#include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
 
 namespace hpl {
 
-	class cFrameTexture;
-	class cFrameBitmap;
 	class iTexture;
-	class cFBitmapImage;
 
 	//----------------------------------------------------
 
+	// Shell: the state lives in Rust (OhplFrSub prefix is read in place).
 	class cFrameSubImage : public iResourceBase
 	{
-	friend class cFBitmapImage;
-	friend class cFrameBitmap;
-	friend class cImageManager;
 	public:
-		cFrameSubImage(const tString& asName,const tWString& asFullPath, cFrameTexture *apFrameTex, 
-						cFrameBitmap *apFrameBmp,
-						cRect2l aRect,
-						cVector2l avSrcSize, int alHandle,
-						cFBitmapImage *apFrameBitmapImage);
+		cFrameSubImage(const tString& asName,const tWString& asFullPath, ::OhplFrSub *apRs)
+			: iResourceBase(asName, asFullPath, 0), mpRs(apRs) {}
 		~cFrameSubImage();
 
-		
-		bool Reload();
-		void Unload();
-		void Destroy();
+		bool Reload(){ return false; }
+		void Unload(){}
+		void Destroy(){}
 
-		//Image specific
-		int GetHeight()const{return mRect.h;}
-		int GetWidth()const{return mRect.w;}
-		cVector2l GetSize()const{return cVector2l(mRect.w,mRect.h);}
-        cVector2l GetPosition()const{return cVector2l(mRect.x,mRect.y);}
+		int GetHeight()const{return mpRs->rect.h;}
+		int GetWidth()const{return mpRs->rect.w;}
+		cVector2l GetSize()const{return cVector2l(mpRs->rect.w,mpRs->rect.h);}
+		cVector2l GetPosition()const{return cVector2l(mpRs->rect.x,mpRs->rect.y);}
 
-		int GetSourceWidth()const{return mvSourceSize.x;}
-		int GetSourceHeight()const{return mvSourceSize.y;}
+		int GetSourceWidth()const{return mpRs->src.x;}
+		int GetSourceHeight()const{return mpRs->src.y;}
 
-		iTexture *GetTexture()const;
+		iTexture *GetTexture()const{ return static_cast<iTexture*>(ohpl_fr_sub_texture(mpRs)); }
 
-		cFrameTexture *GetFrameTexture()const{return mpFrameTexture;}
-		cFrameBitmap *GetFrameBitmap()const{return mpFrameBitmap;}
+		int GetUpdateCount(){ return mpRs->updateCount;}
 
-		tVertexVec GetVertexVecCopy(const cVector2f &avPos, const cVector2f &avSize);
-		const tVertexVec& GetVertexVec(){return mvVtx;}
+		void Flush(){ ohpl_fr_sub_flush(mpRs); }
 
-		int GetUpdateCount(){ return mlUpdateCount;}
+		const OhplFrSub* Rs()const{ return mpRs; }
+		OhplFrSub* Rs(){ return mpRs; }
 
-		void Flush();
-
-		void SetNeedUpdateUvs();
-
-    private:
-		void UpdateUvs();
-        		
-		cFrameTexture *mpFrameTexture;
-		cFrameBitmap *mpFrameBitmap;
-		cFBitmapImage *mpFrameBitmapImage;
-		
-		cVector2l mvSourceSize;
-		cRect2l mRect;
-		tVertexVec mvVtx;
-
-		int mlHandle;
-
-		bool mbNeedUvUpdate;
-		int mlUpdateCount;
+	private:
+		::OhplFrSub *mpRs;
 	};
 
 	typedef std::vector<cFrameSubImage*> tResourceImageVec;
