@@ -20,6 +20,8 @@
 #ifndef HPL_TIMER_SDL_H
 #define HPL_TIMER_SDL_H
 
+#include "impl/RustL1.h"
+
 #include "system/Timer.h"
 
 struct OhplL1Timer;
@@ -46,6 +48,13 @@ namespace hpl {
 	private:
 		OhplL1Timer *mpRust;
 	};
+
+
+inline cTimerSDL::cTimerSDL() { mpRust = ohpl_l1_timer_new(); }
+inline cTimerSDL::~cTimerSDL() { ohpl_l1_timer_free(mpRust); }
+inline void cTimerSDL::Start() { ohpl_l1_timer_start(mpRust); }
+inline void cTimerSDL::Stop() { ohpl_l1_timer_stop(mpRust); }
+inline double cTimerSDL::GetTimeInMicroSec() { return ohpl_l1_timer_micros(mpRust); }
 
 };
 #endif // HPL_TIMER_SDL_H

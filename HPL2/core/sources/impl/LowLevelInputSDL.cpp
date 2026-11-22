@@ -21,7 +21,6 @@
 
 #include "impl/MouseSDL.h"
 #include "impl/KeyboardSDL.h"
-#include "impl/GamepadSDL.h"
 #include "impl/GamepadSDL2.h"
 #include "impl/RustL1.h"
 
@@ -30,18 +29,9 @@
 
 #include "engine/Engine.h"
 
-#if USE_SDL2
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
-#else
-#include "SDL/SDL.h"
-#include "SDL/SDL_syswm.h"
-#endif
 
-#if defined WIN32 && !SDL_VERSION_ATLEAST(2,0,0)
-#include <Windows.h>
-#include <Dbt.h>
-#endif
 
 namespace hpl {
 
@@ -119,25 +109,15 @@ namespace hpl {
 
 	void cLowLevelInputSDL::InitGamepadSupport()
 	{
-#if !SDL_VERSION_ATLEAST(2, 0, 0)
-		SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-#endif
 	}
 
 	void cLowLevelInputSDL::DropGamepadSupport()
 	{
-#if !SDL_VERSION_ATLEAST(2, 0, 0)
-		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
-#endif
 	}
 
 	int cLowLevelInputSDL::GetPluggedGamepadNum()
 	{
-#if USE_XINPUT
-		return cGamepadXInput::GetNumConnected();
-#else
 		return ohpl_l1_joystick_count();
-#endif
 	}
 
 	//-----------------------------------------------------------------------
@@ -158,11 +138,7 @@ namespace hpl {
 
 	iGamepad* cLowLevelInputSDL::CreateGamepad(int alIndex)
 	{
-#if USE_SDL2
 		return hplNew( cGamepadSDL2, (this, alIndex) );
-#else
-		return hplNew( cGamepadSDL, (this, alIndex) );
-#endif
 	}
 	
 	//-----------------------------------------------------------------------
