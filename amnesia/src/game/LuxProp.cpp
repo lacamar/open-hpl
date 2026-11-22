@@ -90,7 +90,7 @@ void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTra
 		OhplGa4VarsAdapter vars(this);
 		ohpl_a5e_load_base(pProp->mhState, vars.Vars(), &bp);
 	}
-	pProp->mfMaxFocusDistance = bp.max_focus_distance;
+	pProp->SetMaxFocusDistance(bp.max_focus_distance);
 	if(mpEntity) mpEntity->SetVisible(pProp->S().show_mesh);
 
 	gpBase->PreloadSound(tString(pProp->Str(kOhplA5eStr_MoveStartSound)));
@@ -116,7 +116,7 @@ void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTra
 	// Extra setup
 
 	//If focus distance is still 0 or below, set it as default.
-	if(pProp->mfMaxFocusDistance<=0) pProp->mfMaxFocusDistance = mfDefaultMaxFocusDistance;
+	if(pProp->GetMaxFocusDistance()<=0) pProp->SetMaxFocusDistance(mfDefaultMaxFocusDistance);
 
 	pProp->SetupAfterLoad(apWorld);
 
@@ -133,8 +133,8 @@ void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTra
 		{
 			OhplGa4VarsAdapter inst(apInstanceVars);
 			inst.Slots(kOhplGa4Slot_ConnectedProp, pProp->mvConnectedProps)
-				.Slot(kOhplGa4Slot_CallbackFunc, pProp->msCallbackFunc)
-				.Slot(kOhplGa4Slot_ConnChange, pProp->msConnectionStateChangeCallback);
+				.Slot(kOhplGa4Slot_CallbackFunc, pProp->CallbackFuncRef())
+				.Slot(kOhplGa4Slot_ConnChange, pProp->ConnectionStateChangeCallbackRef());
 			tString sLookAt, sInteract;
 			inst.Slot(kOhplGa4Slot_LookAt, sLookAt).Slot(kOhplGa4Slot_Interact, sInteract);
 			ohpl_ga4_base_load_instance(inst.Vars(), mbForceFullGameSave, &bi);
@@ -144,7 +144,7 @@ void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTra
 				pProp->mpMeshEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, bi.cast_shadows);
 			}
 
-			pProp->mbFullGameSave = bi.full_game_save;
+			pProp->SetFullGameSave(bi.full_game_save);
 
 			pProp->SetPlayerLookAtCallback(sLookAt, bi.look_at_auto_remove);
 			pProp->SetPlayerInteractCallback(sInteract, bi.interact_auto_remove);
@@ -173,7 +173,7 @@ iLuxProp::iLuxProp(const tString &asName, int alID, cLuxMap *apMap, eLuxPropType
 
 	mpAttachmentParent = NULL;
 
-	mbInteractionDisabled = false;
+	SetInteractionDisabled(false);
 
 	mpMainBody = NULL;
 
@@ -191,7 +191,7 @@ iLuxProp::~iLuxProp()
 
 	////////////////////
 	// Attachment
-	if(mpAttachmentParent && mpMap && mpMap->IsDeletingAllWorldEntities()==false)
+	if(mpAttachmentParent && GetMap() && GetMap()->IsDeletingAllWorldEntities()==false)
 	{
 		mpAttachmentParent->RemoveAttachedProp(this);
 		mpAttachmentParent = NULL;
@@ -199,7 +199,7 @@ iLuxProp::~iLuxProp()
 	for(tLuxProp_AttachedPropListIt it = mlstAttachedProps.begin(); it != mlstAttachedProps.end(); ++it)
 	{
 		//Map is currently deleting all 
-		if(mpMap->IsDeletingAllWorldEntities())
+		if(GetMap()->IsDeletingAllWorldEntities())
 		{
 			hplDelete(*it);
 		}
@@ -304,10 +304,10 @@ void iLuxProp::SetupAfterLoad(cWorld *apWorld)
 	//Get the main body if any
 	if(Str(kOhplA5eStr_MainBodyName) != "")
 	{
-		mpMainBody = (iPhysicsBody*)STLFindByName(mvBodies,msName + "_"+ Str(kOhplA5eStr_MainBodyName));
+		mpMainBody = (iPhysicsBody*)STLFindByName(mvBodies,GetName() + "_"+ Str(kOhplA5eStr_MainBodyName));
         if(mpMainBody == NULL)
 		{
-			Warning("Could not find main physics body '%s'\n", msName.c_str());
+			Warning("Could not find main physics body '%s'\n", GetName().c_str());
 		}
 	}
 	
@@ -431,7 +431,7 @@ void iLuxProp::BeforeEntityDestruction()
 {
 	if(S().dissolve_on_destruction && mpMeshEntity)
 	{
-		mpMap->AddDissolveEntity(mpMeshEntity, S().dissolve_time);
+		GetMap()->AddDissolveEntity(mpMeshEntity, S().dissolve_time);
 	}
 
 	BeforePropDestruction();
@@ -576,7 +576,7 @@ void iLuxProp::PlayAnimation(const tString& asName, float afFadeTime, bool abLoo
 	int lIdx = mpMeshEntity->GetAnimationStateIndex(asName);
 	if(lIdx<0)
 	{
-		Error("Could not find animation '%s' for entity '%s'\n", asName.c_str(), msName.c_str());
+		Error("Could not find animation '%s' for entity '%s'\n", asName.c_str(), GetName().c_str());
 		return;
 	}
 
@@ -712,19 +712,19 @@ void iLuxProp::AddAndAttachProp(const tString& asName, const tString& asFileName
 {
 	if(GetMainBody()==NULL)
 	{
-		Error("Could not attach prop %s to %s because it does not have a main body!\n", msName.c_str(), asFileName.c_str());
+		Error("Could not attach prop %s to %s because it does not have a main body!\n", GetName().c_str(), asFileName.c_str());
 		return;
 	}
 
 	/////////////////////////////////
 	// Create the entity
-	mpMap->ResetLatestEntity();
-	mpMap->CreateEntity(asName, asFileName, cMatrixf::Identity,1);
+	GetMap()->ResetLatestEntity();
+	GetMap()->CreateEntity(asName, asFileName, cMatrixf::Identity,1);
     
-	iLuxEntity *pEntity = mpMap->GetLatestEntity();
+	iLuxEntity *pEntity = GetMap()->GetLatestEntity();
 	if(pEntity==NULL || pEntity->GetEntityType() != eLuxEntityType_Prop || pEntity->GetName() != asName)
 	{
-		Error("Could not create attach entity '%s' for prop '%s'\n", asFileName.c_str(), msName.c_str());
+		Error("Could not create attach entity '%s' for prop '%s'\n", asFileName.c_str(), GetName().c_str());
 		return;
 	}
 
@@ -785,7 +785,7 @@ bool iLuxProp::DestroyAttachedProp(const tString& asName)
 void iLuxProp::DestroyAttachedProp(cLuxProp_AttachedProp *apAttachedProp)
 {
 	apAttachedProp->mpProp->mpAttachmentParent = NULL; //Must set this null, else it will try and erase itself when delted!
-    mpMap->DestroyEntity(apAttachedProp->mpProp);
+    GetMap()->DestroyEntity(apAttachedProp->mpProp);
 	hplDelete(apAttachedProp);
 }
 
@@ -879,7 +879,7 @@ iPhysicsBody* iLuxProp::GetBodyFromID(int alID)
 
 int iLuxProp::GetBodyIndexFromName(const tString& asName)
 {
-	tString sFinalName = msName + '_'+asName;
+	tString sFinalName = GetName() + '_'+asName;
 	for(size_t i=0; i<mvBodies.size(); ++i)
 	{
 		iPhysicsBody *pBody = mvBodies[i];
@@ -1098,7 +1098,7 @@ void iLuxProp::UpdateMoveSoundVolume()
 
 void iLuxProp::UpdateMoving(float afTimeStep)
 {
-	bool bLoopAlive = mpMoveLoopSound && mpMap->GetWorld()->SoundEntityExists(mpMoveLoopSound, S().move_loop_sound_id);
+	bool bLoopAlive = mpMoveLoopSound && GetMap()->GetWorld()->SoundEntityExists(mpMoveLoopSound, S().move_loop_sound_id);
 
 	OhplGa4Run run(this);
 	ohpl_a5e_update_moving(mhState, afTimeStep, Base().moving ? GetMainBody()->GetLocalMatrix().v : NULL, mpMoveLoopSound != NULL, bLoopAlive, run.Host(), run.Sink());
@@ -1142,7 +1142,7 @@ void iLuxProp::UpdateCheckIfOutsidePlayer(float afTimeStep)
 
 void iLuxProp::Ga4MovePush(const float *apAdd, float *apOut)
 {
-	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
+	iPhysicsWorld *pPhysicsWorld = GetMap()->GetPhysicsWorld();
 	iPhysicsBody *pBody = GetMainBody();
 
 	cMatrixf mtxNew = pBody->GetLocalMatrix();
@@ -1242,7 +1242,7 @@ void iLuxProp::Ga4ApplyOp(const OhplGa4Op &aOp)
 
 			if(sSound != "")
 			{
-				cSoundEntity *pSound = mpWorld->CreateSoundEntity(msName + "_lightlitchange",sSound, true);
+				cSoundEntity *pSound = mpWorld->CreateSoundEntity(GetName() + "_lightlitchange",sSound, true);
 				if(pSound)
 				{
 					pSound->SetPosition(GetWorldCenterPos());
@@ -1290,7 +1290,7 @@ void iLuxProp::Ga4ApplyOp(const OhplGa4Op &aOp)
 		break;
 	case kOhplGa4Op_MoveLoopKill:
 		mpMoveLoopSound->Stop(false);
-		mpMap->GetWorld()->DestroySoundEntity(mpMoveLoopSound);
+		GetMap()->GetWorld()->DestroySoundEntity(mpMoveLoopSound);
 
 		mpMoveLoopSound = NULL;
 		if(aOp.j) S().move_loop_sound_id = -1;
@@ -1320,7 +1320,7 @@ void iLuxProp::Ga4ApplyOp(const OhplGa4Op &aOp)
 		ConnectionStateChange(aOp.i);
 		break;
 	case kOhplGa4Op_RunAnimCallback:
-		mpMap->RunScript(Str(kOhplA5eStr_AnimCallback) + "(\""+ msName + "\")");
+		GetMap()->RunScript(Str(kOhplA5eStr_AnimCallback) + "(\""+ GetName() + "\")");
 		break;
 	}
 }
@@ -1807,7 +1807,7 @@ void iLuxProp::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 	for(size_t i=0; i<pData->mvInteractConnections.Size(); ++i)
 	{
 		iLuxInteractConnection_SaveData *pSaveConn = pData->mvInteractConnections[i];
-		iLuxInteractConnection *pConn = pSaveConn->CreateConnection(mpMap);
+		iLuxInteractConnection *pConn = pSaveConn->CreateConnection(GetMap());
 
 		if(pConn) mvInteractConnections.push_back(pConn);
 	}
@@ -1819,7 +1819,7 @@ void iLuxProp::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 	// Bone attachment
 	if(Str(kOhplA5eStr_ParentBoneName) != "" && Str(kOhplA5eStr_ParentEntityName) != "")
 	{
-		iLuxEntity * pParentEntity = mpMap->GetEntityByName(Str(kOhplA5eStr_ParentEntityName));
+		iLuxEntity * pParentEntity = GetMap()->GetEntityByName(Str(kOhplA5eStr_ParentEntityName));
 
 		if(pParentEntity)
 		{	

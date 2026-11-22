@@ -239,7 +239,7 @@ void iLuxProp_CritterBase::OnHealthChange()
 	// Death
 	if(S().health <=0)
 	{
-		cWorld *pWorld = mpMap->GetWorld();
+		cWorld *pWorld = GetMap()->GetWorld();
 
 		if(msDeathSound != "")
 			PlaySound("CritterDeath",msDeathSound, true, true);
@@ -255,12 +255,12 @@ void iLuxProp_CritterBase::OnHealthChange()
 
 		if(msDeathEntity != "")
 		{
-			pWorld->CreateEntity(msName+"_Dead", mpMeshEntity->GetWorldMatrix(), msDeathEntity);
+			pWorld->CreateEntity(GetName()+"_Dead", mpMeshEntity->GetWorldMatrix(), msDeathEntity);
 		}
 
 		OnKillCritter();
 
-		mpMap->DestroyEntity(this);
+		GetMap()->DestroyEntity(this);
 	}
 }
 

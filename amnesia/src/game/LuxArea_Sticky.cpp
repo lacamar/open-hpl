@@ -138,7 +138,7 @@ cLuxArea_Sticky::cLuxArea_Sticky(const tString &asName, int alID, cLuxMap *apMap
 	mfAttachedBodyMass =0;
 	mbAttachedEntityFullGameSaved = false;
 
-	mbFullGameSave = true;
+	SetFullGameSave(true);
 }
 
 //-----------------------------------------------------------------------
@@ -164,7 +164,7 @@ void cLuxArea_Sticky::SetupAfterLoad(cWorld *apWorld)
 
 void cLuxArea_Sticky::OnUpdate(float afTimeStep)
 {
-	ohpl_a7_area_update(mpA7Area, this, mpMap->GetA7(), afTimeStep);
+	ohpl_a7_area_update(mpA7Area, this, GetMap()->GetA7(), afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -178,7 +178,7 @@ void cLuxArea_Sticky::AttachBody(iPhysicsBody *apBody)
 
 void cLuxArea_Sticky::DetachBody()
 {
-	ohpl_a7_area_sticky_detach(mpA7Area, this, mpMap->GetA7());
+	ohpl_a7_area_sticky_detach(mpA7Area, this, GetMap()->GetA7());
 }
 
 //-----------------------------------------------------------------------
@@ -264,7 +264,7 @@ void cLuxArea_Sticky::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	// Attached body
 	if(pData->mlAttachedEntityID >=0)
 	{
-		iLuxEntity *pEntity = mpMap->GetEntityByID(pData->mlAttachedEntityID);
+		iLuxEntity *pEntity = GetMap()->GetEntityByID(pData->mlAttachedEntityID);
 		if(pEntity && pEntity->GetEntityType() == eLuxEntityType_Prop)
 		{
 			iLuxProp *pProp = static_cast<iLuxProp*>(pEntity);

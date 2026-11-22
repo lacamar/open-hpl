@@ -246,10 +246,10 @@ void cLuxProp_Chest::Ga4ApplyOp(const OhplGa4Op &aOp)
 		SetLocked(false, true);
 		break;
 	case kOhplGa4cOp_ChestLog:
-		ProgLog(eLuxProgressLogLevel_Medium, "Opened chest "+ msName);
+		ProgLog(eLuxProgressLogLevel_Medium, "Opened chest "+ GetName());
 		break;
 	case kOhplGa4cOp_ChestCompletion:
-		mpMap->AddCompletionAmount(gpBase->mpCompletionCountHandler->mlChestCompletionValue);
+		GetMap()->AddCompletionAmount(gpBase->mpCompletionCountHandler->mlChestCompletionValue);
 		break;
 	case kOhplGa4cOp_ChestSound:
 		gpBase->mpHelpFuncs->PlayGuiSoundData("gameplay_open_chest", eSoundEntryType_Gui);

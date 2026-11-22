@@ -368,7 +368,7 @@ int cLuxEnemy_ManPig::Ga3PigCall(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 
 void cLuxEnemy_ManPig::OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions)
 {
-	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
+	iPhysicsWorld *pPhysicsWorld = GetMap()->GetPhysicsWorld();
 
 	if(mCurrentState == eLuxEnemyState_AttackMeleeShort)
 	{

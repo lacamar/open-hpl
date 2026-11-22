@@ -150,12 +150,12 @@ public:
 	eLuxEntityType GetEntityType()const{ return mEntityType;}
 	
 	const tString& GetName()const{ return msName;}
-	int GetID(){ return mlID;}
+	int GetID()const{ return mlID;}
 
 	void SetActive(bool abX);
-	bool IsActive(){ return mbActive;}
+	bool IsActive()const{ return mbActive;}
 
-	cLuxMap *GetMap(){ return mpMap;}
+	cLuxMap *GetMap()const{ return mpMap;}
 
 	void SetFullGameSave(bool abX){ mbFullGameSave=abX;}
 	bool GetFullGameSave(){ return mbFullGameSave;}
@@ -209,6 +209,25 @@ public:
 	virtual void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
 	virtual void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
+	//////////////////
+	// Member accessors
+	const tString& GetCallbackFunc()const{ return msCallbackFunc;}
+	const tString& GetConnectionStateChangeCallback()const{ return msConnectionStateChangeCallback;}
+	const tString& GetInteractCallback()const{ return msInteractCallback;}
+	void ClearInteractCallback(){ msInteractCallback = "";}
+	const tString& GetLookAtCallback()const{ return msLookAtCallback;}
+	void SetInteractCallbackRemove(bool abX){ mbInteractCallbackRemove = abX;}
+	void SetMaxFocusDistance(float afX){ mfMaxFocusDistance = afX;}
+	eLuxFocusCrosshair GetCustomFocusCrossHair()const{ return mCustomFocusCrossHair;}
+	void SetName(const tString& asX){ msName = asX;}
+	void SetID(int alX){ mlID = alX;}
+	void SetMap(cLuxMap *apMap){ mpMap = apMap;}
+	void SetDestroyMeFlag(bool abX){ mbDestroyMe = abX;}
+	void SetIsLookedAt(bool abX){ mbIsLookedAt = abX;}
+	tString& CallbackFuncRef(){ return msCallbackFunc;}
+	tString& ConnectionStateChangeCallbackRef(){ return msConnectionStateChangeCallback;}
+	float* MaxFocusDistancePtr(){ return &mfMaxFocusDistance;}
+
 protected:
 	void UpdateCheckCollideCallback(float afTimeStep);
 	void UpdatePlayerLookAt(float afTimeStep);
@@ -226,6 +245,7 @@ protected:
 	void PreloadEntityModel(const tString &asFile);
 	bool CollidesWithPlayer();
 
+private:
 	tString msName;
 	bool mbFullGameSave;
 	bool mbActive;
@@ -266,7 +286,6 @@ protected:
 	std::vector<cMesh*> mvPreloadedMeshes;
 	std::vector<cLuxEntityConnection*> mvConnections;
 
-private:
 	eLuxEntityType mEntityType;
 
 	void DestroyMe(){ mbDestroyMe = true;}

@@ -127,10 +127,10 @@ iLuxArea::~iLuxArea()
 {
 	if(mpBody)
 	{
-		mpMap->GetPhysicsWorld()->DestroyBody(mpBody);
+		GetMap()->GetPhysicsWorld()->DestroyBody(mpBody);
 	}
 
-	ohpl_a7_area_free(mpMap->GetA7(), mpA7Area);
+	ohpl_a7_area_free(GetMap()->GetA7(), mpA7Area);
 }
 
 //-----------------------------------------------------------------------
@@ -182,7 +182,7 @@ iEntity3D* iLuxArea::GetAttachEntity()
 
 void iLuxArea::AttachToBody(const tString& asPropName, int alBodyId)
 {
-	iLuxEntity *apEntity = mpMap->GetEntityByName(asPropName);
+	iLuxEntity *apEntity = GetMap()->GetEntityByName(asPropName);
 	if(apEntity && apEntity->GetEntityType() == eLuxEntityType_Prop)
 	{
 		iLuxProp* pProp = static_cast<iLuxProp*>(apEntity);
@@ -294,21 +294,21 @@ void iLuxArea::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////////////////
 	// Create and set body
-	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
+	iPhysicsWorld *pPhysicsWorld = GetMap()->GetPhysicsWorld();
 	iCollideShape* pShape = pPhysicsWorld->CreateBoxShape(mvSize, NULL);
-	iPhysicsBody* pBody = pPhysicsWorld->CreateBody(msName,pShape);
+	iPhysicsBody* pBody = pPhysicsWorld->CreateBody(GetName(),pShape);
 
 	pBody->SetCollide(false);
 	pBody->SetCollideCharacter(false);
 	pBody->SetMatrix(m_mtxTransform);
 	pBody->SetUserData(this);
-	pBody->SetActive(mbActive);
+	pBody->SetActive(IsActive());
 
 	mpBody = pBody;
 	
 	///////////////////
 	//Do setup
-	SetupAfterLoad(mpMap->GetWorld());
+	SetupAfterLoad(GetMap()->GetWorld());
 }
 
 //-----------------------------------------------------------------------
