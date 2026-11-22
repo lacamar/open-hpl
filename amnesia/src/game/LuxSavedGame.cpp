@@ -96,11 +96,7 @@ int cLuxSavedGameEntity::Ga6FromCall(void *apCtx, unsigned alOp, int alA, int al
 		}
 		return 0;
 	case eOhplGa6Op_GeFromConns:
-		d.mvConnections.Resize(apEntity->mvConnections.size());
-		for(size_t i=0; i<apEntity->mvConnections.size();++i)
-		{
-			d.mvConnections[i].FromConnection(apEntity->mvConnections[i]);
-		}
+		apEntity->SaveConnections(d.mvConnections);
 		return 0;
 	case eOhplGa6Op_GeFromCollide:
 		for(tLuxCollideCallbackListIt it = apEntity->mlstCollideCallbacks.begin(); it != apEntity->mlstCollideCallbacks.end(); ++it)
@@ -145,12 +141,7 @@ int cLuxSavedGameEntity::Ga6ToCall(void *apCtx, unsigned alOp, int alA, int alB)
 		static_cast<iLuxProp*>(apEntity)->mvInteractConnections.push_back(e.mpConn);
 		return 0;
 	case eOhplGa6Op_GeToConns:
-		apEntity->mvConnections.resize(d.mvConnections.Size());
-		for(size_t i=0; i<d.mvConnections.Size();++i)
-		{
-			apEntity->mvConnections[i] = hplNew( cLuxEntityConnection, () );
-			d.mvConnections[i].ToConnection(apEntity->mvConnections[i], apMap);
-		}
+		apEntity->LoadConnections(d.mvConnections, apMap);
 		return 0;
 	case eOhplGa6Op_GeToCollide:
 		{
@@ -538,8 +529,8 @@ int cLuxSavedGameMap::Ga6FromCall(void *apCtx, unsigned alOp, int alA, int alB)
 			{
 			case eOhplGa6Func_Look: return pEntity->GetLookAtCallback() != "";
 			case eOhplGa6Func_Interact: return pEntity->GetInteractCallback() != "";
-			case eOhplGa6Func_Callback: return pEntity->msCallbackFunc != "";
-			case eOhplGa6Func_StateChange: return pEntity->msConnectionStateChangeCallback != "";
+			case eOhplGa6Func_Callback: return pEntity->GetCallbackFunc() != "";
+			case eOhplGa6Func_StateChange: return pEntity->GetConnectionStateChangeCallback() != "";
 			}
 		}
 		return 0;
@@ -555,10 +546,10 @@ int cLuxSavedGameMap::Ga6FromCall(void *apCtx, unsigned alOp, int alA, int alB)
 				d.mlstEntityFunc_Interact.Add(cLuxSavedGameEntityFunc(pEntity->GetID(), pEntity->GetInteractCallback(), pEntity->GetInteractCallbackRemove()));
 				break;
 			case eOhplGa6Func_Callback:
-				d.mlstEntityFunc_Callback.Add(cLuxSavedGameEntityFunc(pEntity->GetID(), pEntity->msCallbackFunc, false));
+				d.mlstEntityFunc_Callback.Add(cLuxSavedGameEntityFunc(pEntity->GetID(), pEntity->GetCallbackFunc(), false));
 				break;
 			case eOhplGa6Func_StateChange:
-				d.mlstEntityFunc_StateChange.Add(cLuxSavedGameEntityFunc(pEntity->GetID(), pEntity->msConnectionStateChangeCallback, false));
+				d.mlstEntityFunc_StateChange.Add(cLuxSavedGameEntityFunc(pEntity->GetID(), pEntity->GetConnectionStateChangeCallback(), false));
 				break;
 			}
 		}

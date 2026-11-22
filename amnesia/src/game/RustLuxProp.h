@@ -1264,13 +1264,6 @@ struct OhplGa4cLookHost
 	bool (*body)(void *ctx, int i, OhplGa4bLookIn *out);
 };
 
-struct OhplGa4cConnHost
-{
-	void *ctx;
-	int (*conn_num)(void *ctx);
-	void (*conn)(void *ctx, int i, int *used, bool *invert);
-	bool (*has_callback)(void *ctx, int i);
-};
 
 struct OhplGa4cCollideHost
 {
@@ -1314,12 +1307,8 @@ static_assert(sizeof(OhplGa4cNpcBone) == 20, "OhplGa4cNpcBone layout");
 
 extern "C"
 {
-	void ohpl_ga4c_ent_run_callback(bool has, const OhplGa4Sink *sink);
-	void ohpl_ga4c_ent_run_interact(OhplGa4cEntityCb *cb, bool has, const OhplGa4Sink *sink);
 	bool ohpl_ga4c_ent_set_active(bool *active, bool x);
 	int ohpl_ga4c_ent_attach(bool sound, bool attach_entity, bool attach);
-	void ohpl_ga4c_ent_look_at(OhplGa4cEntityCb *cb, bool has_callback, float dt, const OhplGa4cLookHost *host, const OhplGa4bLos *los, const OhplGa4Sink *sink);
-	void ohpl_ga4c_ent_conn_change(int state, bool has_change_callback, const OhplGa4cConnHost *host, const OhplGa4Sink *sink);
 	bool ohpl_ga4c_ent_collides(const OhplGa4cCollideHost *host);
 	bool ohpl_ga4c_ent_preload_has_doc(bool doc);
 	bool ohpl_ga4c_ent_preload_has_mesh(bool mesh);
