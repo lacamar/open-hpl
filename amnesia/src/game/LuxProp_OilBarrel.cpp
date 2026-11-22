@@ -61,15 +61,6 @@ void cLuxPropLoader_OilBarrel::LoadVariables(iLuxProp *apProp, cXmlElement *apRo
 
 //-----------------------------------------------------------------------
 
-void cLuxPropLoader_OilBarrel::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)
-{
-	cLuxProp_OilBarrel  *pOilBarrel = static_cast<cLuxProp_OilBarrel*>(apProp);
-
-	//pOilBarrel->mlCoinsNeeded = apInstanceVars->GetVarInt("CoinsNeeded",0);
-}
-
-//-----------------------------------------------------------------------
-
 //////////////////////////////////////////////////////////////////////////
 // CONSTRUCTORS
 //////////////////////////////////////////////////////////////////////////

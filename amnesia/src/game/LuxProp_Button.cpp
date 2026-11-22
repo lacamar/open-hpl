@@ -43,17 +43,6 @@ iLuxProp *cLuxPropLoader_Button::CreateProp(const tString& asName, int alID, cLu
 
 //-----------------------------------------------------------------------
 
-void cLuxPropLoader_Button::LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)
-{
-	cLuxProp_Button  *pButton = static_cast<cLuxProp_Button*>(apProp);
-
-	///////////////////////////
-	// General
-	//pButton->mbCanBeLitByPlayer = GetVarBool("CanBeLitByPlayer", true);
-}
-
-//-----------------------------------------------------------------------
-
 void cLuxPropLoader_Button::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)
 {
     cLuxProp_Button  *pButton = static_cast<cLuxProp_Button*>(apProp);

@@ -44,15 +44,6 @@ iLuxProp *cLuxPropLoader_Photocell::CreateProp(const tString& asName, int alID, 
 
 //-----------------------------------------------------------------------
 
-void cLuxPropLoader_Photocell::LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)
-{
-	cLuxProp_Photocell  *pPhotocell = static_cast<cLuxProp_Photocell*>(apProp);
-
-
-}
-
-//-----------------------------------------------------------------------
-
 void cLuxPropLoader_Photocell::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)
 {
 	cLuxProp_Photocell  *pPhotocell = static_cast<cLuxProp_Photocell*>(apProp);

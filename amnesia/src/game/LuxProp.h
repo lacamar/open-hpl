@@ -595,12 +595,12 @@ public:
 	iLuxPropLoader(const tString& asName);
 	virtual ~iLuxPropLoader(){}
 
-	void BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
+	void BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars){}
 	void AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
 	
 	virtual iLuxProp *CreateProp(const tString& asName, int alID, cLuxMap *apMap)=0;
-	virtual void LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)=0;
-	virtual void LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)=0;
+	virtual void LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem){}
+	virtual void LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars){}
 
 protected:
 	float mfDefaultMaxFocusDistance;

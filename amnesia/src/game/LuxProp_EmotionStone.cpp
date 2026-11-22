@@ -44,17 +44,6 @@ iLuxProp *cLuxPropLoader_EmotionStone::CreateProp(const tString& asName, int alI
 
 //-----------------------------------------------------------------------
 
-void cLuxPropLoader_EmotionStone::LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)
-{
-	cLuxProp_EmotionStone  *pEmotionStone = static_cast<cLuxProp_EmotionStone*>(apProp);
-
-	///////////////////////////
-	// General
-	//pEmotionStone->mSwingDoorData.mfMoveMaxSpeed = GetVarFloat("MoveMaxSpeed", 13.5f);
-}
-
-//-----------------------------------------------------------------------
-
 void cLuxPropLoader_EmotionStone::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)
 {
 	cLuxProp_EmotionStone  *pEmotionStone = static_cast<cLuxProp_EmotionStone*>(apProp);
