@@ -45,21 +45,6 @@ namespace hpl {
 
 	// PUBLIC METHODS
 
-	cVector3f iPhysicsWorld::GetWorldSizeMin()
-	{
-		cVector3f v; ohpl_ntw_size(mhRust, false, &v); return v;
-	}
-
-	cVector3f iPhysicsWorld::GetWorldSizeMax()
-	{
-		cVector3f v; ohpl_ntw_size(mhRust, true, &v); return v;
-	}
-
-	cVector3f iPhysicsWorld::GetGravity()
-	{
-		cVector3f v; ohpl_ntw_gravity(mhRust, &v); return v;
-	}
-
 	iCollideShape* iPhysicsWorld::CreateNullShape()
 	{
 		iCollideShape *pShape = hplNew( iCollideShape, (eCollideShapeType_Null, 0, NULL,
@@ -258,21 +243,6 @@ namespace hpl {
 		return pRope;
 	}
 
-	void iPhysicsWorld::CastRay(iPhysicsRayCallback *apCallback,
-								const cVector3f &avOrigin, const cVector3f& avEnd,
-								bool abCalcDist, bool abCalcNormal,bool abCalcPoint,
-								bool abUsePrefilter)
-	{
-		ohpl_ntw_cast_ray(mhRust, (size_t)apCallback, &avOrigin, &avEnd, abCalcDist, abCalcNormal, abCalcPoint, abUsePrefilter);
-	}
-
-	float iPhysicsWorld::CastRayOnShape(iCollideShape* apShape, const cMatrixf& a_mtxTransform, const cVector3f& avOrigin, const cVector3f& avEnd,
-											cVector3f& avOutNormal, bool abLocalRayPositions)
-	{
-		return ohpl_ntw_cast_ray_on_shape(static_cast<iCollideShape*>(apShape)->GetNewtonCollision(), &a_mtxTransform,
-										&avOrigin, &avEnd, &avOutNormal, abLocalRayPositions);
-	}
-
 	bool iPhysicsWorld::CheckShapeCollision(	iCollideShape* apShapeA, const cMatrixf& a_mtxA,
 										iCollideShape* apShapeB, const cMatrixf& a_mtxB,
 										cCollideData & aCollideData, int alMaxPoints,
@@ -303,13 +273,6 @@ namespace hpl {
 							aCollideData.mvContactPoints.size(), &lCount);
 		aCollideData.mlNumOfPoints = lCount;
 		return bHit;
-	}
-
-	void iPhysicsWorld::RenderShapeDebugGeometry(	iCollideShape *apShape, const cMatrixf& a_mtxTransform,
-														iLowLevelGraphics *apLowLevel, const cColor& aColor)
-	{
-		ohpl_ntw_debug_shape(static_cast<iCollideShape*>(apShape)->GetNewtonCollision(), &a_mtxTransform,
-							(size_t)apLowLevel, (size_t)&aColor);
 	}
 
 	void iPhysicsWorld::RenderDebugGeometry(iLowLevelGraphics *apLowLevel,const cColor &aColor)

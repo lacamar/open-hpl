@@ -8,7 +8,7 @@
 pub(crate) mod body;
 mod host;
 mod joint;
-mod material;
+pub(crate) mod material;
 mod reg;
 mod shape;
 pub(crate) mod world;
