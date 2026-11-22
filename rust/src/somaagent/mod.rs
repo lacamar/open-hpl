@@ -5,6 +5,7 @@
 
 mod agent;
 mod charmover;
+mod gridnav;
 mod host;
 mod misc;
 mod pathfinder;

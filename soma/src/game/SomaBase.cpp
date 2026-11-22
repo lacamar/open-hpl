@@ -1,4 +1,5 @@
 #include "SomaBase.h"
+#include "RustSomaAgentS4.h"
 #include "RustSomaSave.h"
 #include "SomaPostEffects.h"
 #include "SomaSound.h"
@@ -494,136 +495,52 @@ static void cSomaBase_HeadlessCmd_Raycast(void *apUserData, const cHeadlessReque
 	aResp.Set("bodies", sOut);
 }
 
-// ponytail: player-size grid A* over live physics queries, expansion-capped; bake a navmesh if it gets slow.
 static tString GridNavPath(const cVector3f &vStart, const cVector3f &avGoal, int alMaxExpand)
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
 	if (pMap == NULL)
 		return "";
-	iPhysicsWorld *pPhys = pMap->GetWorld()->GetPhysicsWorld();
-	iPhysicsBody *pSkip = NULL;
-	tFlag lFlags = SomaCollideFlag("+player");
-	if (cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GetCharacterBody())
-		pSkip = cSomaLuxPlayer::Get()->GetCharacterBody()->GetCurrentBody();
-	const float kCell = 0.4f, kStep = 0.45f, kDrop = 1.5f;
-	struct cFloor : iPhysicsRayCallback
+	struct cProbe : iPhysicsRayCallback
 	{
-		float mfDist = 1e9f;
+		iPhysicsWorld *mpPhys;
+		iPhysicsBody *mpSkip = NULL;
 		tFlag mlFlags;
+		iCollideShape *mpSlab, *mpStand, *mpCrouch;
+		float mfDist;
 		bool OnIntersect(iPhysicsBody *b, cPhysicsRayParams *p) override
 		{
 			if (b->IsCharacter() == false && b->GetCollideCharacter() && iPhysicsBody::CollideFlagsMatch(mlFlags, b->GetCollideFlags()) && p->mfDist < mfDist)
 				mfDist = p->mfDist;
 			return true;
 		}
-	};
-	iCollideShape *pSlab = pPhys->CreateBoxShape(cVector3f(0.3f, 0.06f, 0.3f), NULL);
-	auto floorAt = [&](float x, float y, float z, float &afY) {
-		cFloor ray;
-		ray.mlFlags = lFlags;
-		// rays exactly on a terrain patch edge miss both heightfields
-		x += 0.01f, z += 0.01f;
-		pPhys->CastRay(&ray, cVector3f(x, y + kStep + 0.15f, z), cVector3f(x, y - kDrop - 0.1f, z), true, false, false);
-		afY = y + kStep + 0.15f - ray.mfDist;
-		// rays fall between grating bars
-		if (afY < y - 0.05f &&
-			pPhys->CheckShapeWorldCollision(NULL, pSlab, cMath::MatrixTranslate(cVector3f(x, y - 0.04f, z)), pSkip, false, true, NULL, false, 0, lFlags))
-		{
-			afY = y;
-			return true;
-		}
-		return ray.mfDist < 1e8f;
-	};
-	iCollideShape *pStand = pPhys->CreateBoxShape(cVector3f(0.5f, 1.55f, 0.5f), NULL);
-	iCollideShape *pCrouch = pPhys->CreateBoxShape(cVector3f(0.5f, 0.7f, 0.5f), NULL);
-	auto clear = [&](iCollideShape *apShape, float x, float y, float z) {
-		float fMid = apShape == pStand ? 1.225f : 0.8f;
-		return pPhys->CheckShapeWorldCollision(NULL, apShape, cMath::MatrixTranslate(cVector3f(x, y + fMid, z)), pSkip, false, true, NULL, false, 0, lFlags) == false;
-	};
-	struct cNode { cVector3f p; int ix, iz; float g; int parent; bool crouch; };
-	std::vector<cNode> vNodes;
-	std::map<std::tuple<int, int, int>, int> mapSeen;
-	typedef std::pair<float, int> tOpen;
-	std::priority_queue<tOpen, std::vector<tOpen>, std::greater<tOpen>> open;
-	auto key = [&](int ix, int iz, float y) { return std::make_tuple(ix, iz, (int)floorf(y / 0.5f + 0.5f)); };
-	float fY;
-	cVector3f vGoal = avGoal;
-	for (float d = 0; d < 6; d += kDrop)
-		if (floorAt(vGoal.x, avGoal.y - d, vGoal.z, fY))
-		{
-			vGoal.y = fY;
-			break;
-		}
-	int lSx = (int)lroundf(vStart.x / kCell), lSz = (int)lroundf(vStart.z / kCell);
-	cVector3f vS(lSx * kCell, vStart.y, lSz * kCell);
-	if (floorAt(vS.x, vS.y, vS.z, fY))
-		vS.y = fY;
-	vNodes.push_back({vS, lSx, lSz, 0, -1, false});
-	mapSeen[key(lSx, lSz, vS.y)] = 0;
-	open.push(tOpen(cMath::Vector3Dist(vS, vGoal), 0));
-	int lBest = 0, lFound = -1;
-	float fBest = 1e9f;
-	for (int lExpand = 0; open.empty() == false && lExpand < alMaxExpand; ++lExpand)
-	{
-		int i = open.top().second;
-		open.pop();
-		cVector3f v = vNodes[i].p;
-		int ix = vNodes[i].ix, iz = vNodes[i].iz;
-		float fH = cMath::Vector3Dist(v, vGoal);
-		if (fH < fBest)
-			fBest = fH, lBest = i;
-		if (cMath::Vector2Dist(cVector2f(v.x, v.z), cVector2f(vGoal.x, vGoal.z)) < kCell * 1.5f && std::abs(v.y - vGoal.y) < 1.0f)
-		{
-			lFound = i;
-			break;
-		}
-		for (int dx = -1; dx <= 1; ++dx)
-			for (int dz = -1; dz <= 1; ++dz)
-			{
-				if (dx == 0 && dz == 0)
-					continue;
-				cVector3f n((ix + dx) * kCell, v.y, (iz + dz) * kCell);
-				float fMidY;
-				if (floorAt((n.x + v.x) * 0.5f, v.y, (n.z + v.z) * 0.5f, fMidY) == false || floorAt(n.x, fMidY, n.z, fY) == false) continue;
-				if (fMidY - v.y > kStep || fY - fMidY > kStep || v.y - fY > kDrop) continue;
-				n.y = fY;
-				auto k = key(ix + dx, iz + dz, n.y);
-				if (mapSeen.count(k))
-					continue;
-				mapSeen[k] = -1;
-				if (clear(pCrouch, n.x, n.y, n.z) == false || clear(pCrouch, (n.x + v.x) * 0.5f, std::max(fMidY, std::max(n.y, v.y)), (n.z + v.z) * 0.5f) == false)
-					continue;
-				bool bCrouch = clear(pStand, n.x, n.y, n.z) == false;
-				float g = vNodes[i].g + cMath::Vector3Dist(v, n) * (bCrouch ? 2.0f : 1.0f);
-				mapSeen[k] = (int)vNodes.size();
-				vNodes.push_back({n, ix + dx, iz + dz, g, i, bCrouch});
-				open.push(tOpen(g + cMath::Vector3Dist(n, vGoal), (int)vNodes.size() - 1));
-			}
-	}
-	pPhys->DestroyShape(pStand);
-	pPhys->DestroyShape(pCrouch);
-	pPhys->DestroyShape(pSlab);
-	std::vector<cVector3f> vPath;
-	std::vector<bool> vCrouch;
-	for (int i = lFound >= 0 ? lFound : lBest; i >= 0; i = vNodes[i].parent)
-	{
-		vPath.push_back(vNodes[i].p);
-		vCrouch.push_back(vNodes[i].crouch);
-	}
-	std::reverse(vCrouch.begin(), vCrouch.end());
-	std::reverse(vPath.begin(), vPath.end());
-	tString sOut = lFound >= 0 ? "" : "partial\n";
-	for (size_t i = 1; i < vPath.size(); ++i)
-	{
-		bool bCorner = i + 1 == vPath.size() || std::abs(vPath[i].y - vPath[i - 1].y) > 0.05f || vCrouch[i] != vCrouch[i + 1];
-		if (bCorner == false)
-		{
-			cVector3f d0 = vPath[i] - vPath[i - 1], d1 = vPath[i + 1] - vPath[i];
-			bCorner = std::abs(d0.x - d1.x) > 0.01f || std::abs(d0.z - d1.z) > 0.01f;
-		}
-		if (bCorner)
-			sOut += cString::ToString(vPath[i].x) + " " + cString::ToString(vPath[i].y) + " " + cString::ToString(vPath[i].z) + (vCrouch[i] ? " c\n" : "\n");
-	}
+		bool Hit(iCollideShape *apShape, const float *v) { return mpPhys->CheckShapeWorldCollision(NULL, apShape, cMath::MatrixTranslate(cVector3f(v[0], v[1], v[2])), mpSkip, false, true, NULL, false, 0, mlFlags); }
+	} probe;
+	probe.mpPhys = pMap->GetWorld()->GetPhysicsWorld();
+	probe.mlFlags = SomaCollideFlag("+player");
+	if (cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GetCharacterBody())
+		probe.mpSkip = cSomaLuxPlayer::Get()->GetCharacterBody()->GetCurrentBody();
+	probe.mpSlab = probe.mpPhys->CreateBoxShape(cVector3f(0.3f, 0.06f, 0.3f), NULL);
+	probe.mpStand = probe.mpPhys->CreateBoxShape(cVector3f(0.5f, 1.55f, 0.5f), NULL);
+	probe.mpCrouch = probe.mpPhys->CreateBoxShape(cVector3f(0.5f, 0.7f, 0.5f), NULL);
+	OhplSoGridHost host = {&probe,
+		+[](void *c, const float *f, const float *t) {
+			cProbe &p = *(cProbe *)c;
+			p.mfDist = 1e9f;
+			p.mpPhys->CastRay(&p, cVector3f(f[0], f[1], f[2]), cVector3f(t[0], t[1], t[2]), true, false, false);
+			return p.mfDist;
+		},
+		+[](void *c, const float *v) { cProbe &p = *(cProbe *)c; return p.Hit(p.mpSlab, v); },
+		+[](void *c, bool abCrouch, const float *v) {
+			cProbe &p = *(cProbe *)c;
+			float fMid = abCrouch ? 0.8f : 1.225f;
+			float w[3] = {v[0], v[1] + fMid, v[2]};
+			return p.Hit(abCrouch ? p.mpCrouch : p.mpStand, w) == false;
+		}};
+	tString sOut;
+	ohpl_so_grid_nav_path(&host, &vStart.x, &avGoal.x, alMaxExpand, &sOut, +[](void *c, const unsigned char *p, size_t n) { ((tString *)c)->assign((const char *)p, n); });
+	probe.mpPhys->DestroyShape(probe.mpStand);
+	probe.mpPhys->DestroyShape(probe.mpCrouch);
+	probe.mpPhys->DestroyShape(probe.mpSlab);
 	return sOut;
 }
 
