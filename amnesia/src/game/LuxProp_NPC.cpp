@@ -162,14 +162,14 @@ void cLuxProp_NPC::AfterWorldLoad()
 {
 	if(ohpl_ga4c_npc_after_world_load(msFollowPlayerArea == "") == kOhplGa4cArea_WarnEmpty)
 	{
-		Warning("NPC '%s' does not have a follow player area!\n", msName.c_str());
+		Warning("NPC '%s' does not have a follow player area!\n", GetName().c_str());
 		return;
 	}
 
-    mpFollowPlayerArea = mpMap->GetEntityByName(msFollowPlayerArea);
+    mpFollowPlayerArea = GetMap()->GetEntityByName(msFollowPlayerArea);
 	if(ohpl_ga4c_npc_area_missing(mpFollowPlayerArea != NULL))
 	{
-		Error("Could not find follow area '%s' for NPC '%s'!\n",msFollowPlayerArea.c_str(), msName.c_str());
+		Error("Could not find follow area '%s' for NPC '%s'!\n",msFollowPlayerArea.c_str(), GetName().c_str());
 	}
 }
 
@@ -262,7 +262,7 @@ public:
 
 private:
 	static cLuxProp_NPC *Npc(void *c) { return ((cLuxNpcHost*)c)->mpNPC; }
-	static bool CheckArea(void *c) { return Npc(c)->mpMap->CheckCollision(Npc(c)->mpFollowPlayerArea, gpBase->mpPlayer); }
+	static bool CheckArea(void *c) { return Npc(c)->GetMap()->CheckCollision(Npc(c)->mpFollowPlayerArea, gpBase->mpPlayer); }
 	static void MeshWorld(void *c, float *apOut)
 	{
 		cMatrixf mtxWorld = Npc(c)->mpMeshEntity->GetWorldMatrix();

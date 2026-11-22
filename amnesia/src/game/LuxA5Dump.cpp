@@ -80,12 +80,12 @@ void OhplA5Dump::Base(std::string &s, iLuxProp *p)
 {
 	const OhplGa4Base &b = p->Base();
 	Fd(s, "type", p->GetPropType());
-	Fd(s, "id", p->mlID);
-	Fd(s, "act", p->mbActive);
-	Fd(s, "nointer", p->mbInteractionDisabled);
-	Fd(s, "fgs", p->mbFullGameSave);
-	Fd(s, "saved", p->mbIsSaved);
-	Fd(s, "destroy", p->mbDestroyMe);
+	Fd(s, "id", p->GetID());
+	Fd(s, "act", p->IsActive());
+	Fd(s, "nointer", p->GetInteractionDisabled());
+	Fd(s, "fgs", p->GetFullGameSave());
+	Fd(s, "saved", p->IsSaved());
+	Fd(s, "destroy", p->GetDestroyMe());
 	Fd(s, "look", p->IsLookedAtByPlayer());
 	Fd(s, "outl", p->ShowOutlinesOnConnectedBodies());
 	Fd(s, "inter", p->S().interacted_with);

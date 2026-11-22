@@ -63,7 +63,7 @@ void cLuxAreaLoader_Liquid::LoadVariables(iLuxArea *apArea, cWorld *apWorld)
 	tString sPhysicsMaterial = GetVarString("PhysicsMaterial", "");
 	pLiquidArea->mpPhysicsMaterial = apWorld->GetPhysicsWorld()->GetMaterialFromName(sPhysicsMaterial);
 	if(pLiquidArea->mpPhysicsMaterial ==NULL)
-		Error("Could not load physics material '%s' for liquid area '%s'!\n",sPhysicsMaterial.c_str(), pLiquidArea->msName.c_str());
+		Error("Could not load physics material '%s' for liquid area '%s'!\n",sPhysicsMaterial.c_str(), pLiquidArea->GetName().c_str());
 
 	pLiquidArea->mbHasWaves = GetVarBool("HasWaves",false);
 	pLiquidArea->mfWaveAmp = GetVarFloat("WaveAmp",0);
@@ -101,7 +101,7 @@ cLuxArea_Liquid::cLuxArea_Liquid(const tString &asName, int alID, cLuxMap *apMap
 	mSurfacePlane(*reinterpret_cast<cPlanef*>(&Pod<OhplA7Liquid>().surfacePlane))
 {
 	mpPhysicsMaterial = NULL;
-	mbFullGameSave = true;
+	SetFullGameSave(true);
 
 	mfTimeCount = 0;
 }
@@ -132,7 +132,7 @@ void cLuxArea_Liquid::SetupAfterLoad(cWorld *apWorld)
 
 void cLuxArea_Liquid::OnUpdate(float afTimeStep)
 {
-	ohpl_a7_area_update(mpA7Area, this, mpMap->GetA7(), afTimeStep);
+	ohpl_a7_area_update(mpA7Area, this, GetMap()->GetA7(), afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -191,9 +191,9 @@ void cLuxArea_Liquid::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 
 	if(pData->msPhysicsMaterial != "")
 	{
-		mpPhysicsMaterial = mpMap->GetPhysicsWorld()->GetMaterialFromName(pData->msPhysicsMaterial);
+		mpPhysicsMaterial = GetMap()->GetPhysicsWorld()->GetMaterialFromName(pData->msPhysicsMaterial);
 		if(mpPhysicsMaterial ==NULL)
-			Error("Could not load physics material '%s' for liquid area '%s'!\n",pData->msPhysicsMaterial.c_str(), msName.c_str());
+			Error("Could not load physics material '%s' for liquid area '%s'!\n",pData->msPhysicsMaterial.c_str(), GetName().c_str());
 	}
 
 	kCopyFromVar(pData, mfDensity);

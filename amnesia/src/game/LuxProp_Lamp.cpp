@@ -211,7 +211,7 @@ cLuxProp_Lamp::~cLuxProp_Lamp()
 
 bool cLuxProp_Lamp::CanInteract(iPhysicsBody *apBody)
 {
-	return ohpl_ga4_lamp_can_interact(&mS, &mP, msInteractCallback != "");
+	return ohpl_ga4_lamp_can_interact(&mS, &mP, GetInteractCallback() != "");
 }
 
 //-----------------------------------------------------------------------
@@ -290,9 +290,9 @@ void cLuxProp_Lamp::FadeTo(float afR, float afG, float afB, float afA, float afR
 
 eLuxFocusCrosshair cLuxProp_Lamp::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	switch(ohpl_ga4_lamp_focus_crosshair(&mS, &mP, mCustomFocusCrossHair==eLuxFocusCrosshair_Default, msInteractCallback != ""))
+	switch(ohpl_ga4_lamp_focus_crosshair(&mS, &mP, GetCustomFocusCrossHair()==eLuxFocusCrosshair_Default, GetInteractCallback() != ""))
 	{
-	case 1: return mCustomFocusCrossHair;
+	case 1: return GetCustomFocusCrossHair();
 	case 2: return eLuxFocusCrosshair_Ignite;
 	}
 
@@ -356,11 +356,11 @@ void cLuxProp_Lamp::SetupLampLightConnection()
 			
 		if(pConnectionLight)
 		{
-			mpMap->AddLampLightConnection(this, pConnectionLight, mS.connection_light_amount, mS.connection_light_use_on_color, mS.connection_light_use_spec);
+			GetMap()->AddLampLightConnection(this, pConnectionLight, mS.connection_light_amount, mS.connection_light_use_on_color, mS.connection_light_use_spec);
 		}
 		else
 		{
-			Error("Light '%s' that is connected to lamp '%s' does not exist!\n", msConnectionLight.c_str(), msName.c_str());
+			Error("Light '%s' that is connected to lamp '%s' does not exist!\n", msConnectionLight.c_str(), GetName().c_str());
 		}
 	}
 	mS.light_connection_setup = true;

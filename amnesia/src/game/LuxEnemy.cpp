@@ -246,7 +246,7 @@ void iLuxEnemyLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTr
 	// Instance vars
 	if(apInstanceVars)
 	{
-		pEnemy->msCallbackFunc = apInstanceVars->GetVarString("CallbackFunc", "");
+		pEnemy->SetCallbackFunc(apInstanceVars->GetVarString("CallbackFunc", ""));
 		pEnemy->mbDisableTriggers = apInstanceVars->GetVarBool("DisableTriggers", false);
 		pEnemy->mA4.hallucination =  apInstanceVars->GetVarBool("Hallucination", false);
 		pEnemy->mA4.hallucinationEndDist = apInstanceVars->GetVarFloat("HallucinationEndDist", false);
@@ -423,7 +423,7 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 
 iLuxEnemy::~iLuxEnemy()
 {
-	cWorld *pWorld = mpMap->GetWorld();
+	cWorld *pWorld = GetMap()->GetWorld();
 	iPhysicsWorld *pPhysicsWorld = pWorld->GetPhysicsWorld();
 	
 	////////////////////
@@ -500,7 +500,7 @@ void iLuxEnemy::SetupAfterLoad(cWorld *apWorld)
 
 void iLuxEnemy::AfterWorldLoad()
 {
-	cWorld *pWorld = mpMap->GetWorld();
+	cWorld *pWorld = GetMap()->GetWorld();
 	tString sType = cString::SetFileExt(cString::GetFileName(msFileName),"");
 	cAINodeContainer *pNodeContainer = pWorld->CreateAINodeContainer( sType, "Default", mpCharBody->GetSize(), false, 2 , 6 , 5.0f,0.41f);
 	if(pNodeContainer==NULL)
@@ -531,7 +531,7 @@ void iLuxEnemy::OnUpdate(float afTimeStep)
 void iLuxEnemy::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 {
 	//return;
-	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
+	iPhysicsWorld *pPhysicsWorld = GetMap()->GetPhysicsWorld();
 
 	//pPhysicsWorld->RenderShapeDebugGeometry(mpCharBody->GetCurrentShape(), mpCharBody->GetMoveMatrix(), apFunctions->GetLowLevelGfx(),cColor(1,1));
 
@@ -698,7 +698,7 @@ cSoundEntity* iLuxEnemy::PlaySound(const tString &asName)
 {
 	if(asName=="") return NULL;
 
-	cSoundEntity *pSound = mpMap->GetWorld()->CreateSoundEntity("EnemySound", asName, true);
+	cSoundEntity *pSound = GetMap()->GetWorld()->CreateSoundEntity("EnemySound", asName, true);
 	if(pSound)
 	{
 		//pSound->SetPosition(mpCharBody->GetPosition());
@@ -726,7 +726,7 @@ void iLuxEnemy::FadeToSmoke(bool abPlaySound)
 	//Add particles at skeleton bones
 	if(mpMeshEntity->GetMesh()->GetSkeleton())
 	{
-		cWorld *pWorld = mpMap->GetWorld();
+		cWorld *pWorld = GetMap()->GetWorld();
 		for(int i=0; i<mpMeshEntity->GetBoneStateNum(); ++i)
 		{
 			cBoneState *pBone = mpMeshEntity->GetBoneState(i);
@@ -829,7 +829,7 @@ float iLuxEnemy::DrawDebug(cGuiSet *apSet,iFontData *apFont,float afStartY)
 	OhplGa3MoverParams params;
 	Ga3MoverParams(params);
 
-    apSet->DrawFont(apFont, cVector3f(5,afStartY,10),13,cColor(1,1), _W("Name: '%ls'"),cString::To16Char(msName).c_str());
+    apSet->DrawFont(apFont, cVector3f(5,afStartY,10),13,cColor(1,1), _W("Name: '%ls'"),cString::To16Char(GetName()).c_str());
 	afStartY += 14;
 
 	apSet->DrawFont(apFont, cVector3f(5,afStartY,10),13,cColor(1,1), 
@@ -1288,7 +1288,7 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	super_class::SaveToSaveData(apSaveData);
 	iLuxEnemy_SaveData *pData = static_cast<iLuxEnemy_SaveData*>(apSaveData);
 
-    cWorld *pWorld = mpMap->GetWorld();
+    cWorld *pWorld = GetMap()->GetWorld();
 	iPhysicsWorld *pPhysicsWorld = pWorld->GetPhysicsWorld();
 
 	///////////////////////
@@ -1449,7 +1449,7 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	super_class::LoadFromSaveData(apSaveData);
 	iLuxEnemy_SaveData *pData = static_cast<iLuxEnemy_SaveData*>(apSaveData);
 
-	cWorld *pWorld = mpMap->GetWorld();
+	cWorld *pWorld = GetMap()->GetWorld();
 	iPhysicsWorld *pPhysicsWorld = pWorld->GetPhysicsWorld();
 
 	///////////////////////
@@ -1628,7 +1628,7 @@ void iLuxEnemy::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 			patrolNode.mpNode =pNodeContainer->GetNodeFromID(pData->mvPatrolNodes[i].mlNodeId);
 			if(patrolNode.mpNode==NULL)
 			{
-				Error("Could not find patrol node id: %d for '%s'!\n", pData->mvPatrolNodes[i].mlNodeId, msName.c_str());
+				Error("Could not find patrol node id: %d for '%s'!\n", pData->mvPatrolNodes[i].mlNodeId, GetName().c_str());
 				continue;
 			}
 
@@ -1846,19 +1846,19 @@ int iLuxEnemy::Ga3Call(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 		return gpBase->mpMapHelper->CheckLineOfSight(Ga3Get(apIo->v[0]), Ga3Get(apIo->v[1]), false) ? 1 : 0;
 	case eOhplGa3Op_EntityAttachPos:
 	{
-		iLuxEntity *pEnt = pEnemy->mpMap->GetEntityByID(apIo->i[0]);
+		iLuxEntity *pEnt = pEnemy->GetMap()->GetEntityByID(apIo->i[0]);
 		if(pEnt==NULL){ Ga3Put(apIo->v[0], cVector3f(0)); return 0;}
 		Ga3Put(apIo->v[0], pEnt->GetAttachEntity()->GetWorldPosition());
 		return 0;
 	}
-	case eOhplGa3Op_DoorBroken:		return pEnemy->mpMap->DoorIsBroken(apIo->i[0]) ? 1 : 0;
+	case eOhplGa3Op_DoorBroken:		return pEnemy->GetMap()->DoorIsBroken(apIo->i[0]) ? 1 : 0;
 	case eOhplGa3Op_DebugMsg:
 		switch(apIo->i[0])
 		{
-		case 1:		gpBase->mpDebugHandler->AddMessage(_W("Enemy ") + cString::To16Char(pEnemy->msName)+_W(" enabled!"), false ); break;
+		case 1:		gpBase->mpDebugHandler->AddMessage(_W("Enemy ") + cString::To16Char(pEnemy->GetName())+_W(" enabled!"), false ); break;
 		case 2:		gpBase->mpDebugHandler->AddMessage(_W("Sound Heard! Vol: ")+cString::ToStringW(apIo->f[0]),false); break;
 		case 3:		gpBase->mpDebugHandler->AddMessage(_W("Could not find node near sound!"),false); break;
-		case 100:	gpBase->mpProgressLogHandler->AddLog(eLuxProgressLogLevel_Low, "Enemy '"+pEnemy->msName+"'  is in range"); break;
+		case 100:	gpBase->mpProgressLogHandler->AddLog(eLuxProgressLogLevel_Low, "Enemy '"+pEnemy->GetName()+"'  is in range"); break;
 		}
 		return 0;
 	case eOhplGa3Op_PlaySound:
@@ -1895,7 +1895,7 @@ int iLuxEnemy::Ga3Call(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 		while(it.HasNext()) pEnemy->mvNavScratch.push_back(it.Next());
 		return (int)pEnemy->mvNavScratch.size();
 	}
-	case eOhplGa3Op_NodeUsedAsGoal:	return pEnemy->mpMap->AINodeIsUsedAsGoal(static_cast<cAINode*>(Ga3Ptr(apIo, 0))) ? 1 : 0;
+	case eOhplGa3Op_NodeUsedAsGoal:	return pEnemy->GetMap()->AINodeIsUsedAsGoal(static_cast<cAINode*>(Ga3Ptr(apIo, 0))) ? 1 : 0;
 	case eOhplGa3Op_NcFreePathAt:
 		return static_cast<cAINodeContainer*>(Ga3Ptr(apIo, 2))->FreePath(Ga3Get(apIo->v[0]), Ga3Get(apIo->v[1]), apIo->i[0], apIo->i[1]) ? 1 : 0;
 	case eOhplGa3Op_WaterStepCheck:	return pEnemy->WaterStepCheck() ? 1 : 0;
@@ -1924,7 +1924,7 @@ int iLuxEnemy::Ga3Call(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 	{
 		pEnemy->mvGa3Doors.clear();
 		cBoundingVolume *pBV = pBody->GetCurrentBody()->GetBoundingVolume();
-		cLuxEntityIterator entIt = pEnemy->mpMap->GetEntityIterator();
+		cLuxEntityIterator entIt = pEnemy->GetMap()->GetEntityIterator();
 		while(entIt.HasNext())
 		{
 			iLuxEntity *pEntity = entIt.Next();
@@ -1969,7 +1969,7 @@ int iLuxEnemy::Ga3Call(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 	case eOhplGa3Op_SetActiveFalse:		pEnemy->SetActive(false); return 0;
 	case eOhplGa3Op_RunCallback:		pEnemy->RunCallbackFunc("OnAutoDisabled"); return 0;
 	case eOhplGa3Op_BroadcastHelp:
-		pEnemy->mpMap->BroadcastEnemyMessage(eLuxEnemyMessage_HelpMe, true, Ga3Get(apIo->v[0]), apIo->f[0], 0, false, Ga3Get(apIo->v[1]));
+		pEnemy->GetMap()->BroadcastEnemyMessage(eLuxEnemyMessage_HelpMe, true, Ga3Get(apIo->v[0]), apIo->f[0], 0, false, Ga3Get(apIo->v[1]));
 		return 0;
 	case eOhplGa3Op_Attack:
 		if(apIo->i[0] == 0)	pEnemy->Attack(pEnemy->mNormalAttackSize, pEnemy->mNormalAttackDamage);

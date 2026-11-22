@@ -1668,24 +1668,6 @@ iLuxUpdateable* cLuxBase::AddGlobalModule(iLuxUpdateable *apModule)
 }
 //-----------------------------------------------------------------------
 
-void cLuxBase::RaiseCrashFlag()
-{
-	FILE* pCrashFlagFile = cPlatform::OpenFile(msCrashFlagPath.c_str(), _W("w"));
-	fclose(pCrashFlagFile);
-}
-
-void cLuxBase::LowerCrashFlag()
-{
-	cPlatform::RemoveFile(msCrashFlagPath);
-}
-
-bool cLuxBase::CheckCrashFlag()
-{
-	return cPlatform::FileExists(msCrashFlagPath);
-}
-
-//-----------------------------------------------------------------------
-
 void cLuxBase::RaiseFirstStartFlag()
 {
 	if(CheckFirstStartFlag())
@@ -1693,11 +1675,6 @@ void cLuxBase::RaiseFirstStartFlag()
 
 	FILE* pFirstStartFlagFile = cPlatform::OpenFile(msFirstStartFlagPath.c_str(), _W("w"));
 	fclose(pFirstStartFlagFile);
-}
-
-void cLuxBase::LowerFirstStartFlag()
-{
-	cPlatform::RemoveFile(msFirstStartFlagPath);
 }
 
 bool cLuxBase::CheckFirstStartFlag()

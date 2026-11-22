@@ -34,7 +34,7 @@ struct OhplAreaHost
 		if(pImpact == NULL) return;
 		cVector3f vEffectPos = cMath::MatrixMul(apBody->GetLocalMatrix(),apBody->GetMassCentre());
 		vEffectPos.y = afSurfaceY+0.01f;
-		cWorld *pWorld = apArea->mpMap->GetWorld();
+		cWorld *pWorld = apArea->GetMap()->GetWorld();
 		if(pImpact->GetPSName() != "")
 		{
 			cParticleSystem *pPS = pWorld->CreateParticleSystem("Splash", pImpact->GetPSName(),1);
@@ -59,7 +59,7 @@ struct OhplAreaHost
 		{
 			iLuxArea *pArea = (iLuxArea*)a->p[0];
 			a->p[1] = (uintptr_t)pArea->mpBody;
-			a->p[2] = (uintptr_t)pArea->mpMap->GetPhysicsWorld();
+			a->p[2] = (uintptr_t)pArea->GetMap()->GetPhysicsWorld();
 			cVector3f vPos = pArea->mpBody->GetWorldPosition();
 			cVector3f vSize = pArea->mpBody->GetShape()->GetSize();
 			a->f[0] = vPos.x; a->f[1] = vPos.y; a->f[2] = vPos.z; a->f[3] = vSize.x; a->f[4] = vSize.y; a->f[5] = vSize.z;
@@ -231,7 +231,7 @@ struct OhplAreaHost
 		case 114:
 		{
 			iLuxArea *pArea = (iLuxArea*)a->p[0];
-			cWorld *pWorld = pArea->mpMap->GetWorld();
+			cWorld *pWorld = pArea->GetMap()->GetWorld();
 			tString sName((const char*)a->s[0].p, a->s[0].n);
 			if(a->i[0] == 0)
 			{
@@ -281,7 +281,7 @@ struct OhplAreaHost
 		case 121:
 		{
 			iLuxArea *pArea = (iLuxArea*)a->p[0];
-			cParticleSystem *pPS = pArea->mpMap->GetWorld()->CreateParticleSystem("SlimeAttack", tString((const char*)a->s[0].p, a->s[0].n), 1);
+			cParticleSystem *pPS = pArea->GetMap()->GetWorld()->CreateParticleSystem("SlimeAttack", tString((const char*)a->s[0].p, a->s[0].n), 1);
 			if(pPS) pPS->SetPosition(pArea->mpBody->GetLocalPosition());
 			break;
 		}

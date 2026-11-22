@@ -147,7 +147,7 @@ void cLuxProp_Wheel::OnSetupAfterLoad(cWorld *apWorld)
 	iPhysicsJoint *pJoint = mvJoints[0];
 	if(pJoint->GetType() != ePhysicsJointType_Hinge)
 	{
-		Error("Wheel %s does not have a hinge joint!\n", msName.c_str());
+		Error("Wheel %s does not have a hinge joint!\n", GetName().c_str());
 		return;
 	}
 
@@ -270,7 +270,7 @@ void cLuxProp_Wheel::Ga4ApplyOp(const OhplGa4Op &aOp)
 			tString sSound = aOp.i == 1 ? msMaxLimitSound : msMinLimitSound;
 			if(sSound != "")
 			{
-				cSoundEntity *pSound = mpMap->GetWorld()->CreateSoundEntity("WheelSound", sSound, true);
+				cSoundEntity *pSound = GetMap()->GetWorld()->CreateSoundEntity("WheelSound", sSound, true);
 				if(pSound) pSound->SetPosition(mpHingeJoint->GetPivotPoint());
 			}
 		}

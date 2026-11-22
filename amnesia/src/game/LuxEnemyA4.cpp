@@ -93,7 +93,7 @@ int iLuxEnemy::A4Call(void *apEnemy, unsigned alOp, OhplA4Io *apIo)
 	case kOhplA4Op_ANIM_SET_SPEED:	pAnim->SetSpeed(f[0]); return 0;
 	case kOhplA4Op_ANIM_LENGTH:		f[0] = pAnim->GetLength(); return 0;
 
-	case kOhplA4Op_SOUND_EXISTS:	return pEnemy->mpMap->GetWorld()->SoundEntityExists(pSound, apIo->i[0]) ? 1 : 0;
+	case kOhplA4Op_SOUND_EXISTS:	return pEnemy->GetMap()->GetWorld()->SoundEntityExists(pSound, apIo->i[0]) ? 1 : 0;
 	case kOhplA4Op_SOUND_FADE_OUT:	pSound->FadeOut(f[0]); return 0;
 	case kOhplA4Op_SOUND_CREATE:	apIo->p[1] = pEnemy->PlaySound(pEnemy->msAmbientSound[apIo->i[0]]); return 0;
 	case kOhplA4Op_SOUND_ID:		return pSound->GetCreationID();
@@ -165,7 +165,7 @@ int iLuxEnemy::A4Call(void *apEnemy, unsigned alOp, OhplA4Io *apIo)
 	case kOhplA4Op_FOOD_BEGIN:
 	{
 		pEnemy->mvA4Entities.clear();
-		cLuxEntityIterator it = pEnemy->mpMap->GetEntityIterator();
+		cLuxEntityIterator it = pEnemy->GetMap()->GetEntityIterator();
 		while(it.HasNext()) pEnemy->mvA4Entities.push_back(it.Next());
 		return (int)pEnemy->mvA4Entities.size();
 	}

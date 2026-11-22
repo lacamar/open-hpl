@@ -89,7 +89,6 @@ extern "C" {
 	void ohpl_a13_map_get(OhplA7Ctx *c, OhplA13MapState *out);
 	void ohpl_a13_map_set(OhplA7Ctx *c, const OhplA13MapState *s);
 	void ohpl_a13_map_set_quests(OhplA7Ctx *c, int32_t n);
-	int32_t ohpl_a13_map_quests(OhplA7Ctx *c);
 
 	OhplA13H *ohpl_a13_handler_new(uintptr_t cpp);
 	void ohpl_a13_handler_free(OhplA13H *h);

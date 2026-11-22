@@ -39,7 +39,7 @@ void iLuxEnemy::A4bDump()
 	OhplA4bMoverSave mv;
 	ohpl_a4b_mover_get(mNav, &mv);
 	fprintf(f, "%s st=%d/%d/%d pos=%.9g,%.9g,%.9g vel=%.9g,%.9g,%.9g ms=%d turn=%d tga=%.9g ts=%.9g tba=%.9g stuck=%.9g ovr=%d pf=%d goal=%.9g,%.9g,%.9g ids=",
-		msName.c_str(), (int)mCurrentState, (int)mNextState, (int)mPreviousState, vP.x, vP.y, vP.z, vV.x, vV.y, vV.z,
+		GetName().c_str(), (int)mCurrentState, (int)mNextState, (int)mPreviousState, vP.x, vP.y, vP.z, vV.x, vV.y, vV.z,
 		mv.moveState, mv.turning ? 1 : 0, mv.turnGoalAngle, mv.turnSpeed, mv.turnBreakAcc,
 		mv.stuckCounter, mv.overrideMoveState ? 1 : 0, ohpl_a4b_nav_moving(mNav) ? 1 : 0, vG.x, vG.y, vG.z);
 	for(size_t i=0, lN = ohpl_a4b_nav_path_len(mNav); i<lN; ++i) fprintf(f, "%d,", ((cAINode*)ohpl_a4b_nav_path_at(mNav, i))->GetID());

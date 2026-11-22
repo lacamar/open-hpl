@@ -160,7 +160,7 @@ void cLuxProp_MultiSlider::OnSetupAfterLoad(cWorld *apWorld)
 	iPhysicsJoint *pJoint = mvJoints[0];
 	if(pJoint->GetType() != ePhysicsJointType_Slider)
 	{
-		Error("MultiSlider %s does not have a hinge joint!\n", msName.c_str());
+		Error("MultiSlider %s does not have a hinge joint!\n", GetName().c_str());
 		return;
 	}
 
@@ -246,14 +246,14 @@ void cLuxProp_MultiSlider::Ga4ApplyOp(const OhplGa4Op &aOp)
 	case kOhplGa4Op_ChangeSound:
 		if(aOp.j && msChangeStateSound != "")
 		{
-			cSoundEntity *pSound = mpMap->GetWorld()->CreateSoundEntity("MultiSliderSound", msChangeStateSound, true);
+			cSoundEntity *pSound = GetMap()->GetWorld()->CreateSoundEntity("MultiSliderSound", msChangeStateSound, true);
 			if(pSound) pSound->SetPosition(mpSliderBody->GetLocalPosition());
 		}
 		break;
 	case kOhplGa4Op_RunChangeCallback:
 		if(msChangeStateCallback!="")
 		{
-			mpMap->RunScript(msChangeStateCallback + "(\""+msName+"\", "+cString::ToString(aOp.i)+")");
+			GetMap()->RunScript(msChangeStateCallback + "(\""+GetName()+"\", "+cString::ToString(aOp.i)+")");
 		}
 		break;
 	default:

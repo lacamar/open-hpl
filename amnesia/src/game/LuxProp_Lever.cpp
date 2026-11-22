@@ -151,7 +151,7 @@ void cLuxProp_Lever::OnSetupAfterLoad(cWorld *apWorld)
 	iPhysicsJoint *pJoint = mvJoints[0];
 	if(pJoint->GetType() != ePhysicsJointType_Hinge)
 	{
-		Error("Lever %s does not have a hinge joint!\n", msName.c_str());
+		Error("Lever %s does not have a hinge joint!\n", GetName().c_str());
 		return;
 	}
 
@@ -259,7 +259,7 @@ void cLuxProp_Lever::Ga4ApplyOp(const OhplGa4Op &aOp)
 			tString sSound = aOp.i == 1 ? msMaxLimitSound : msMinLimitSound;
 			if(sSound != "")
 			{
-				cSoundEntity *pSound = mpMap->GetWorld()->CreateSoundEntity("LeverSound", sSound, true);
+				cSoundEntity *pSound = GetMap()->GetWorld()->CreateSoundEntity("LeverSound", sSound, true);
 				if(pSound) pSound->SetPosition(mpHingeJoint->GetPivotPoint());
 			}
 		}

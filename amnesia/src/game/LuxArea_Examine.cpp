@@ -88,7 +88,7 @@ cLuxArea_Examine::cLuxArea_Examine(const tString &asName, int alID, cLuxMap *apM
 	mfInsaneLimit(Pod<OhplA7Examine>().insaneLimit),
 	mfPlaySoundCount(Pod<OhplA7Examine>().playSoundCount)
 {
-	mfMaxFocusDistance = gpBase->mpGameCfg->GetFloat("Player_Interaction","Examine_MaxFocusDist",0);
+	SetMaxFocusDistance(gpBase->mpGameCfg->GetFloat("Player_Interaction","Examine_MaxFocusDist",0));
 	mfInsaneLimit = gpBase->mpGameCfg->GetFloat("Player_Interaction","MaxExamineSanity",0);
 
 	mfPlaySoundCount =0;

@@ -70,7 +70,7 @@ void cLuxAreaLoader_Sign::SetupArea(iLuxArea *apArea, cWorld *apWorld)
 
 cLuxArea_Sign::cLuxArea_Sign(const tString &asName, int alID, cLuxMap *apMap)  : iLuxArea(asName,alID,apMap, eLuxAreaType_Sign)
 {
-	mfMaxFocusDistance = gpBase->mpGameCfg->GetFloat("Player_Interaction","Sign_MaxFocusDist",0);
+	SetMaxFocusDistance(gpBase->mpGameCfg->GetFloat("Player_Interaction","Sign_MaxFocusDist",0));
 }
 
 //-----------------------------------------------------------------------
