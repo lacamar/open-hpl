@@ -2,10 +2,9 @@
 //! base, chest, emotion stone, item, NPC, static prop and the hand-object base.
 #![allow(clippy::missing_safety_doc, clippy::too_many_arguments)]
 
-use super::entc::{self, CollideHost, ConnHost, EntityCb, LookHost};
+use super::entc::{self, CollideHost, EntityCb, LookHost};
 use super::entity::LookIn;
 use super::ffi::{Sink, VarsRef};
-use super::ffi_b::LosRef;
 use super::handc;
 use super::object::MoveData;
 use super::ops::{Op, Ops, Pod};
@@ -83,31 +82,6 @@ impl LookHost for &LookHostRef {
 }
 
 #[repr(C)]
-pub struct ConnHostRef {
-    pub ctx: *mut c_void,
-    pub conn_num: unsafe extern "C" fn(*mut c_void) -> i32,
-    pub conn: unsafe extern "C" fn(*mut c_void, i32, *mut i32, *mut bool),
-    pub has_callback: unsafe extern "C" fn(*mut c_void, i32) -> bool,
-}
-
-impl ConnHost for &ConnHostRef {
-    fn conn_num(&mut self) -> i32 {
-        // SAFETY: the C++ side keeps the table alive for the call.
-        unsafe { (self.conn_num)(self.ctx) }
-    }
-    fn conn(&mut self, i: i32) -> (i32, bool) {
-        let (mut used, mut invert) = (0, false);
-        // SAFETY: as above.
-        unsafe { (self.conn)(self.ctx, i, &mut used, &mut invert) };
-        (used, invert)
-    }
-    fn conn_has_callback(&mut self, i: i32) -> bool {
-        // SAFETY: as above.
-        unsafe { (self.has_callback)(self.ctx, i) }
-    }
-}
-
-#[repr(C)]
 pub struct CollideHostRef {
     pub ctx: *mut c_void,
     pub body_num: unsafe extern "C" fn(*mut c_void) -> i32,
@@ -131,20 +105,6 @@ impl CollideHost for &CollideHostRef {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4c_ent_run_callback(has: bool, sink: *const Sink) {
-    with_ops(rd(sink), |o| entc::run_callback(has, o));
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4c_ent_run_interact(
-    cb: *mut EntityCb,
-    has: bool,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |o| entc::run_interact(pod(cb), has, o));
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4c_ent_set_active(active: *mut bool, x: bool) -> bool {
     entc::set_active(rw(active), x)
 }
@@ -152,32 +112,6 @@ pub unsafe extern "C" fn ohpl_ga4c_ent_set_active(active: *mut bool, x: bool) ->
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_ga4c_ent_attach(sound: bool, attach_entity: bool, attach: bool) -> i32 {
     entc::play_sound_attach(sound, attach_entity, attach)
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4c_ent_look_at(
-    cb: *mut EntityCb,
-    has_callback: bool,
-    dt: f32,
-    host: *const LookHostRef,
-    los: *const LosRef,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |o| {
-        entc::update_look_at(pod(cb), has_callback, dt, &mut rd(host), &mut rd(los), o);
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4c_ent_conn_change(
-    state: i32,
-    has_change_callback: bool,
-    host: *const ConnHostRef,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |o| {
-        entc::connection_state_change(state, has_change_callback, &mut rd(host), o);
-    });
 }
 
 #[unsafe(no_mangle)]

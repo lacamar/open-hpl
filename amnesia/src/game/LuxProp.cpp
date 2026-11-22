@@ -132,12 +132,15 @@ void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTra
 		OhplGa4BaseInstance bi;
 		{
 			OhplGa4VarsAdapter inst(apInstanceVars);
+			tString sCallback = pProp->GetCallbackFunc(), sConnChange = pProp->GetConnectionStateChangeCallback();
 			inst.Slots(kOhplGa4Slot_ConnectedProp, pProp->mvConnectedProps)
-				.Slot(kOhplGa4Slot_CallbackFunc, pProp->CallbackFuncRef())
-				.Slot(kOhplGa4Slot_ConnChange, pProp->ConnectionStateChangeCallbackRef());
+				.Slot(kOhplGa4Slot_CallbackFunc, sCallback)
+				.Slot(kOhplGa4Slot_ConnChange, sConnChange);
 			tString sLookAt, sInteract;
 			inst.Slot(kOhplGa4Slot_LookAt, sLookAt).Slot(kOhplGa4Slot_Interact, sInteract);
 			ohpl_ga4_base_load_instance(inst.Vars(), mbForceFullGameSave, &bi);
+			pProp->SetCallbackFunc(sCallback);
+			pProp->SetConnectionStateChangeCallback(sConnChange);
 
 			if(pProp->mpMeshEntity)
 			{
