@@ -19,6 +19,12 @@ macro_rules! ops {
         #[repr(i32)]
         pub enum Op { $($n),* }
         pub const OP_NAMES: &[&str] = &[$(stringify!($n)),*];
+        impl Op {
+            pub fn from_i32(v: i32) -> Option<Op> {
+                $(if v == Op::$n as i32 { return Some(Op::$n); })*
+                None
+            }
+        }
     };
 }
 

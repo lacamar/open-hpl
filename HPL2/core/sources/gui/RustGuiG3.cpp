@@ -27,6 +27,7 @@
 #include "gui/WidgetTabFrame.h"
 #include "input/Input.h"
 #include "input/Keyboard.h"
+#include "resources/Resources.h"
 
 namespace hpl {
 
@@ -184,4 +185,61 @@ namespace hpl {
 		mpSet->DrawFont(asText,GetDefaultFontType(),avPosition,GetDefaultFontSize(),
 						GetDefaultFontHighlightColor()*GetColorMul(),aAlign);
 	}
+
+	// Platform and resource calls of the Rust file browser and popups (rust/src/gui/h21_fb.rs).
+	typedef void (*OhplFbSink)(void*, const uint32_t*, size_t);
+
+	static tWString FbW(const uint32_t *apText, size_t alLen) { return tWString((const wchar_t*)apText, alLen); }
+	static void FbSink(OhplFbSink apSink, void *apCtx, const tWString &asText)
+	{
+		apSink(apCtx, (const uint32_t*)asText.data(), asText.size());
+	}
+
+	struct OhplFbHost
+	{
+		bool (*exists)(int, const uint32_t*, size_t);
+		void (*list)(int, const uint32_t*, size_t, const uint32_t*, size_t, bool, OhplFbSink, void*);
+		void (*info)(const uint32_t*, size_t, uint64_t*, OhplFbSink, void*);
+		void (*special)(int, OhplFbSink, void*);
+		uint64_t (*drives)();
+		void (*assign)(void*, int, const uint32_t*, size_t);
+		void (*addResourceDir)(void*, const uint32_t*, size_t);
+	};
+
+	extern "C" void ohpl_g2fb_set_host(OhplFbHost*);
+
+	static OhplFbHost gFbHost = {
+		[](int alKind, const uint32_t *apText, size_t alLen) -> bool
+		{
+			return alKind ? cPlatform::FolderExists(FbW(apText, alLen)) : cPlatform::FileExists(FbW(apText, alLen));
+		},
+		[](int alKind, const uint32_t *apDir, size_t alDirLen, const uint32_t *apMask, size_t alMaskLen, bool abHidden, OhplFbSink apSink, void *apCtx)
+		{
+			tWStringList lstNames;
+			if(alKind) cPlatform::FindFoldersInDir(lstNames, FbW(apDir, alDirLen), abHidden, true);
+			else cPlatform::FindFilesInDir(lstNames, FbW(apDir, alDirLen), FbW(apMask, alMaskLen), abHidden);
+			for(tWStringListIt it = lstNames.begin(); it != lstNames.end(); ++it) FbSink(apSink, apCtx, *it);
+		},
+		[](const uint32_t *apPath, size_t alLen, uint64_t *apSize, OhplFbSink apSink, void *apCtx)
+		{
+			tWString sPath = FbW(apPath, alLen);
+			*apSize = cPlatform::GetFileSize(sPath);
+			FbSink(apSink, apCtx, cString::To16Char(cPlatform::FileModifiedDate(sPath).ToString()));
+		},
+		[](int alKind, OhplFbSink apSink, void *apCtx)
+		{
+			FbSink(apSink, apCtx, alKind ? cPlatform::GetWorkingDir() : cPlatform::GetSystemSpecialPath(eSystemPath_Personal));
+		},
+		[]() -> uint64_t { return cPlatform::GetSystemAvailableDrives(); },
+		[](void *apDest, int alKind, const uint32_t *apText, size_t alLen)
+		{
+			if(alKind == 0) { *(tWString*)apDest = FbW(apText, alLen); return; }
+			tWStringVec *pVec = (tWStringVec*)apDest;
+			pVec->clear();
+			pVec->push_back(FbW(apText, alLen));
+		},
+		[](void *apResources, const uint32_t *apText, size_t alLen) { ((cResources*)apResources)->AddResourceDir(FbW(apText, alLen), false); },
+	};
+
+	static struct OhplFbRegister { OhplFbRegister() { ohpl_g2fb_set_host(&gFbHost); } } gFbRegister;
 }

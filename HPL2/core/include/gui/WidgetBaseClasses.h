@@ -147,84 +147,18 @@ namespace hpl {
 
 	//--------------------------------------
 
-	/////////////////////////////////////////////////////////////
-	// FILE BROWSING COMPONENT CLASS
-	/////////////////////////////////////////////////////////////
+	// The file picker's browser is Rust-owned (rust/src/gui/h21_fb.rs); only its start folders are set from C++.
+	extern "C" void ohpl_g2fb_set_dir(int alKind, const uint32_t* apText, size_t alLen);
 
-	//--------------------------------------
-
-	enum eFileBrowserFileType
+	template<int K> struct OhplFbDir
 	{
-		eFileBrowserFileType_Graphics,
-		eFileBrowserFileType_Models,
-		eFileBrowserFileType_Sounds,
-		eFileBrowserFileType_Text,
-		eFileBrowserFileType_Other,
-		eFileBrowserFileType_Folder,
-
-		eFileBrowserFileType_LastEnum
+		OhplFbDir& operator=(const tWString& asDir){ ohpl_g2fb_set_dir(K, (const uint32_t*)asDir.data(), asDir.size()); return *this; }
 	};
 
-	class cFileBrowserCategory
+	struct iFileBrowser
 	{
-	public:
-		tWString msName;
-		tWStringVec mvFilters;
-	};
-
-	//--------------------------------------
-
-	typedef std::vector<cFileBrowserCategory*> tFileBrowserCategoryVec;
-	typedef tFileBrowserCategoryVec::iterator tFileBrowserCategoryVecIt;
-
-	//--------------------------------------
-
-	class iFileBrowser
-	{
-	public:
-		iFileBrowser(const tWString& asStartPath, bool abAddHiddenFiles = false);
-		virtual ~iFileBrowser();
-
-		void InitBrowser();
-
-		int AddCategory(const tWString& asCategory, const tWString& asFilter=_W(""));
-		void AddFilter(const int alCategoryId, const tWString& asFilter);
-
-		void SetPathFromString(const tWString &asPath);
-
-		bool NavigateTo(const tWString& asPath);
-		bool NavigateUp();
-
-		void GetFilesAndFoldersInCurrentPath(int alCategoryIndex, tWStringList& alstDestination);
-		eFileBrowserFileType GetFileTypeByName(const tWString& asFilename);
-		tWString GetHumanReadableSize(unsigned long alSize);
-
-
-		tWString InterpretPath(const tWString& asPath);
-
-		tWString GetCurrentFullPath();
-
-		virtual void OnAddFilter()=0;
-		virtual void OnNavigate()=0;
-
-		//////////////////////////////
-		// Data
-		bool mbAddHiddenFiles;
-
-		tWString msStartPath;
-
-		tFileBrowserCategoryVec mvCategories;
-
-		tWStringList mlstFiles;
-		tWStringVec mvCurrentDirFullPath;
-
-		tWStringVec mvSystemRootFolders;
-		std::vector<tWStringVec> mvFileTypeExtensions;
-
-        static tWString msGameDir;
-        static tWString msPersonalDir;
-
-		static tWStringVec mvSizeStrings;
+		static inline OhplFbDir<0> msGameDir;
+		static inline OhplFbDir<1> msPersonalDir;
 	};
 
 	//--------------------------------------

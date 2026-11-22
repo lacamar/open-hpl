@@ -13,12 +13,14 @@ pub mod guicore;
 
 pub mod h19_widget;
 pub mod h20_combo;
-mod h20_ffi;
+pub(crate) mod h20_ffi;
 pub mod h20_host;
 pub mod h20_list;
 pub mod h20_menu;
 pub mod h20_tab;
 pub mod h20_text;
+mod h21_direct;
+pub mod h21_fb;
 mod h21_ffi;
 pub mod h21_log;
 pub mod h21_popup;
