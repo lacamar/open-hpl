@@ -73,7 +73,6 @@
 #include "graphics/VideoStream.h"
 #include "graphics/Bitmap.h"
 #include "graphics/FrameTexture.h"
-#include "graphics/FrameBitmap.h"
 #include "graphics/FrameSubImage.h"
 #include "graphics/FrameBuffer.h"
 #include "graphics/PostEffect.h"

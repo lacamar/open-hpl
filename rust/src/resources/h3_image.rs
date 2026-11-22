@@ -1,45 +1,27 @@
 //! `cImageManager`: frame bookkeeping and the image load/destroy flows.
 
-use super::h3_ops::{Create, Flow, WStr, c, k, null};
+use super::h3_frames::FrameApi;
+use super::h3_ops::{Create, Flow, WStr, k, null};
 use crate::resmgr;
-use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
 use std::ffi::c_void;
-
-pub struct Frames {
-    pub bitmap: Vec<usize>,
-    pub textures: BTreeMap<i32, usize>,
-    pub handle: i32,
-    pub size: (i32, i32),
-}
-
-impl Default for Frames {
-    fn default() -> Self {
-        Self {
-            bitmap: Vec::new(),
-            textures: BTreeMap::new(),
-            handle: 0,
-            size: (512, 512),
-        }
-    }
-}
 
 fn ptr(p: usize) -> *mut c_void {
     std::ptr::with_exposed_provenance_mut(p)
 }
 
-fn handle_arg(h: i32) -> i64 {
-    i64::from(h)
-}
-
 impl Flow<'_> {
+    fn fr<'b>(&self) -> &'b dyn FrameApi {
+        // SAFETY: the backend box lives in the manager, which outlives the flow, and is only
+        // replaced between calls.
+        unsafe { &*std::ptr::from_ref::<dyn FrameApi>(&*self.m_ref().frames.api) }
+    }
+
     pub fn image_bitmap_frame(&mut self, w: i32, h: i32) -> *mut c_void {
         let handle = self.m().frames.handle;
-        let mut cr = Create::new(k::IMG_BITMAP_FRAME);
-        cr.i = [w, h, handle, 0];
-        let f = self.ops.create(&mut cr);
+        let f = self.fr().new_bitmap_frame(self.ops, w, h, handle);
         self.m().frames.bitmap.push(f.expose_provenance());
-        let tf = self.ops.call(c::BMPFRAME_TEX, f, 0) as usize;
+        let tf = self.fr().bmp_tex(self.ops, f);
         match self.m().frames.textures.entry(handle) {
             Entry::Occupied(_) => {
                 let shown = tf as u32 as i32;
@@ -65,11 +47,7 @@ impl Flow<'_> {
         bmp: *mut c_void,
         path: &[u32],
     ) -> *mut c_void {
-        let mut cr = Create::new(k::IMG_ADD_BITMAP);
-        cr.ptr = frame;
-        cr.ptr2 = bmp;
-        cr.path = WStr::of(path);
-        self.ops.create(&mut cr)
+        self.fr().add_bitmap(self.ops, frame, bmp, path)
     }
 
     pub fn image_add_to_frame(
@@ -86,12 +64,10 @@ impl Flow<'_> {
         if handle < 0 {
             let mut found = false;
             for f in self.m().frames.bitmap.clone().into_iter().map(ptr) {
-                if self.ops.call(c::BMPFRAME_IS_FULL, f, 0) == 0
-                    && self.ops.call(c::BMPFRAME_IS_LOCKED, f, 0) == 0
-                {
+                if !self.fr().bmp_is_full(self.ops, f) && !self.fr().bmp_is_locked(self.ops, f) {
                     img = self.image_add_bitmap(f, bmp, path);
-                    if img.is_null() && self.ops.call(c::BMPFRAME_ADDITIONS, f, 0) > 1 {
-                        self.ops.call(c::BMPFRAME_REORGANIZE, f, 0);
+                    if img.is_null() && self.fr().bmp_additions(self.ops, f) > 1 {
+                        self.fr().bmp_reorganize(self.ops, f);
                         img = self.image_add_bitmap(f, bmp, path);
                     }
                     if !img.is_null() {
@@ -101,9 +77,8 @@ impl Flow<'_> {
                 }
             }
             if !found {
-                let bw = self.ops.call(c::BMP_WIDTH, bmp, 0) as i32;
-                let bh = self.ops.call(c::BMP_HEIGHT, bmp, 0) as i32;
-                let (w, h) = resmgr::image_frame_size(self.m().frames.size, (bw, bh));
+                let bsize = self.fr().bitmap_size(self.ops, bmp);
+                let (w, h) = resmgr::image_frame_size(self.m().frames.size, bsize);
                 let f = self.image_bitmap_frame(w, h);
                 if !f.is_null() {
                     img = self.image_add_bitmap(f, bmp, path);
@@ -114,7 +89,7 @@ impl Flow<'_> {
             }
         } else {
             for f in self.m().frames.bitmap.clone().into_iter().map(ptr) {
-                if self.ops.call(c::BMPFRAME_HANDLE, f, 0) == handle_arg(handle) {
+                if self.fr().bmp_handle(self.ops, f) == handle {
                     img = self.image_add_bitmap(f, bmp, path);
                     break;
                 }
@@ -153,7 +128,7 @@ impl Flow<'_> {
                 return null();
             }
             img = self.image_add_to_frame(bmp, &lk.path, handle);
-            self.ops.call(c::BMP_DELETE, bmp, 0);
+            self.fr().bitmap_delete(self.ops, bmp);
             if img.is_null() {
                 self.ops
                     .err(&[b"Imagemanager couldn't create image '", name, b"'\n"]);
@@ -184,10 +159,7 @@ impl Flow<'_> {
 
     pub fn image_custom_frame(&mut self, tex: *mut c_void) -> *mut c_void {
         let handle = self.m().frames.handle;
-        let mut cr = Create::new(k::IMG_CUSTOM_FRAME);
-        cr.ptr = tex;
-        cr.i[0] = handle;
-        let f = self.ops.create(&mut cr);
+        let f = self.fr().new_custom_frame(self.ops, tex, handle);
         self.m()
             .frames
             .textures
@@ -210,13 +182,13 @@ impl Flow<'_> {
         if f.is_null() {
             return -1;
         }
-        self.ops.call(c::BMPFRAME_HANDLE, f, 0) as i32
+        self.fr().bmp_handle(self.ops, f)
     }
 
     pub fn image_set_frame_locked(&mut self, handle: i32, locked: bool) {
         for f in self.m().frames.bitmap.clone().into_iter().map(ptr) {
-            if self.ops.call(c::BMPFRAME_HANDLE, f, 0) == handle_arg(handle) {
-                self.ops.call(c::BMPFRAME_SET_LOCKED, f, i64::from(locked));
+            if self.fr().bmp_handle(self.ops, f) == handle {
+                self.fr().bmp_set_locked(self.ops, f, locked);
                 break;
             }
         }
@@ -225,7 +197,7 @@ impl Flow<'_> {
     pub fn image_flush_all(&mut self) -> i32 {
         let mut n = 0;
         for f in self.m().frames.bitmap.clone().into_iter().map(ptr) {
-            if self.ops.call(c::BMPFRAME_FLUSH, f, 0) != 0 {
+            if self.fr().bmp_flush(self.ops, f) {
                 n += 1;
             }
         }
@@ -234,41 +206,41 @@ impl Flow<'_> {
 
     pub fn image_reorganize_all(&mut self) {
         for f in self.m().frames.bitmap.clone().into_iter().map(ptr) {
-            self.ops.call(c::BMPFRAME_REORGANIZE, f, 0);
+            self.fr().bmp_reorganize(self.ops, f);
         }
     }
 
     pub fn image_destroy(&mut self, img: *mut c_void) {
-        let frame = ptr(self.ops.call(c::IMG_FRAME_TEX, img, 0) as usize);
-        let bmp_frame = ptr(self.ops.call(c::IMG_FRAME_BMP, img, 0) as usize);
+        let frame = ptr(self.fr().img_tex(self.ops, img));
+        let bmp_frame = ptr(self.fr().img_bmp(self.ops, img));
         if self.dec_user_is_free(img) {
-            self.ops.call(c::FRAME_DEC_PIC, frame, 0);
+            self.fr().tex_dec_pic(self.ops, frame);
             if !bmp_frame.is_null() {
-                self.ops.call(c::BMPFRAME_DEC_PIC, bmp_frame, 0);
+                self.fr().bmp_dec_pic(self.ops, bmp_frame);
             }
             self.m().remove(img);
             self.ops.destroy(img);
         }
         let after = resmgr::destroy_image_frame(
-            self.ops.call(c::FRAME_IS_EMPTY, frame, 0) != 0,
-            self.ops.call(c::FRAME_IS_CUSTOM, frame, 0) != 0,
+            self.fr().tex_is_empty(self.ops, frame),
+            self.fr().tex_is_custom(self.ops, frame),
             !bmp_frame.is_null(),
         );
         if after.delete_frame {
             if after.delete_frame_bitmap {
-                let want = frame.expose_provenance() as i64;
+                let want = frame.expose_provenance();
                 let list = self.m_ref().frames.bitmap.clone();
                 let pos = list
                     .iter()
-                    .position(|&f| self.ops.call(c::BMPFRAME_TEX, ptr(f), 0) == want);
+                    .position(|&f| self.fr().bmp_tex(self.ops, ptr(f)) == want);
                 if let Some(pos) = pos {
                     let f = self.m().frames.bitmap.remove(pos);
-                    self.ops.call(c::BMPFRAME_DELETE, ptr(f), 0);
+                    self.fr().bmp_delete(self.ops, ptr(f));
                 }
             }
-            let h = self.ops.call(c::FRAME_HANDLE, frame, 0) as i32;
+            let h = self.fr().tex_handle(self.ops, frame);
             self.m().frames.textures.remove(&h);
-            self.ops.call(c::FRAME_DELETE, frame, 0);
+            self.fr().tex_delete(self.ops, frame);
         }
     }
 }

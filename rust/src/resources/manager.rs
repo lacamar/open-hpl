@@ -22,7 +22,7 @@ pub struct Manager {
     pub anim: BTreeSet<usize>,
     pub streams: Vec<usize>,
     pub custom: CustomMap,
-    pub frames: super::h3_image::Frames,
+    pub frames: super::h3_frames::Frames,
     pub mat_blank: bool,
 }
 

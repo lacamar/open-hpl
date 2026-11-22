@@ -7,7 +7,6 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version. 
-
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -20,39 +19,28 @@
 #ifndef HPL_FRAMETEXTURE_H
 #define HPL_FRAMETEXTURE_H
 
-#include "graphics/FrameBase.h"
+#include "graphics/FrameSubImage.h"
+#include "resources/RustFrames.h"
 
 namespace hpl {
 
 	class iTexture;
-	class cFrameSubImage;
-	class cImageManager;
 
-	class cFrameTexture : public iFrameBase
+	// Opaque: a Rust-owned frame texture; the pointer is its address.
+	class cFrameTexture
 	{
 	public:
-		cFrameTexture(iTexture *pTex, int alHandle,cImageManager *apImageManager, bool abIsCustom);
-		~cFrameTexture();
+		cFrameTexture() = delete;
 
-		iTexture* GetTexture();
-		int GetHandle(){return mlHandle;}
-
-		inline bool IsCustom(){ return mbIsCustom;}
+		iTexture* GetTexture(){ return static_cast<iTexture*>(ohpl_fr_ftex_texture(this)); }
 
 		/**
 		* Creates a subimage in frame at pos and with size messured in pixel. Only works on custom frames!
 		*/
-		cFrameSubImage* CreateCustomImage(const cVector2l& avPixelPos,const cVector2l& avPixelSize);
-		
-	private:
-		
-
-		iTexture *mpTexture;
-		int mlHandle;
-
-		bool mbIsCustom;
-
-		cImageManager *mpImageManager;
+		cFrameSubImage* CreateCustomImage(const cVector2l& avPixelPos,const cVector2l& avPixelSize)
+		{
+			return static_cast<cFrameSubImage*>(static_cast<iResourceBase*>(ohpl_fr_ftex_custom_image(this, &avPixelPos, &avPixelSize)));
+		}
 	};
 
 };

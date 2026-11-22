@@ -22,11 +22,11 @@
 #include "system/LowLevelSystem.h"
 
 #include "graphics/LowLevelGraphics.h"
+#include "graphics/Texture.h"
 #include "graphics/Bitmap.h"
 
 
 #include "graphics/FrameSubImage.h"
-#include "graphics/FrameBitmap.h"
 #include "graphics/FrameTexture.h"
 #include "resources/LowLevelResources.h"
 #include "resources/Resources.h"
@@ -54,7 +54,8 @@ namespace hpl {
 	   mpBitmapLoaderHandler = mpResources->GetBitmapLoaderHandler();
 
 	   mvFrameSize = mvDefaultFrameSize;
-	   ohpl_h3f_image_init(mpRs, &mOps, mvFrameSize.x, mvFrameSize.y);
+	   InitFrameHost();
+	   ohpl_h3f_image_init(mpRs, &mOps, &mFrHost, mvFrameSize.x, mvFrameSize.y);
 	}
 
 	cImageManager::~cImageManager()
@@ -164,56 +165,73 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void* cImageManager::H3Create(OhplH3Create &aCreate)
+	void cImageManager::InitFrameHost()
 	{
-		switch(aCreate.kind)
+		memset(&mFrHost, 0, sizeof(mFrHost));
+		mFrHost.ctx = this;
+		mFrHost.log = [](void*, int alLevel, const uint8_t *apMsg, size_t alLen)
 		{
-		case OHPL_H3_IMAGE:
-			return mpBitmapLoaderHandler->LoadBitmap(H3Wide(aCreate.path), eBitmapLoadFlag_ForceNoCompression);
-		case OHPL_H3_IMG_BITMAP_FRAME:
+			tString sMsg(reinterpret_cast<const char*>(apMsg), alLen);
+			if(alLevel == 2) Error("%s", sMsg.c_str());
+			else if(alLevel == 1) Warning("%s", sMsg.c_str());
+			else Log("%s", sMsg.c_str());
+		};
+		mFrHost.texNew = [](void *c) -> void*
 		{
-			iTexture *pTex = mpLowLevelGraphics->CreateTexture("ImageFrame",eTextureType_2D,eTextureUsage_Normal);
-			cFrameTexture *pTFrame = hplNew( cFrameTexture, (pTex,aCreate.i[2],this,false) );
+			return static_cast<cImageManager*>(c)->mpLowLevelGraphics->CreateTexture("ImageFrame",eTextureType_2D,eTextureUsage_Normal);
+		};
+		mFrHost.texDelete = [](void*, void *apTex){ hplDelete(static_cast<iTexture*>(apTex)); };
+		mFrHost.texUpload = [](void*, void *apTex, void *apBmp)
+		{
+			iTexture *pTex = static_cast<iTexture*>(apTex);
+			pTex->CreateFromBitmap(static_cast<cBitmap*>(apBmp));
+			pTex->SetWrapS(eTextureWrap_ClampToEdge);
+			pTex->SetWrapT(eTextureWrap_ClampToEdge);
+		};
+		mFrHost.texSize = [](void*, void *apTex, cVector3l *apSize){ *apSize = static_cast<iTexture*>(apTex)->GetSize(); };
+		mFrHost.bmpNew = [](void*, int alW, int alH) -> void*
+		{
 			cBitmap *pBmp = hplNew(cBitmap, () );
-			pBmp->CreateData(cVector3l(aCreate.i[0], aCreate.i[1],1),ePixelFormat_RGBA,0,0);
-			cFrameBitmap *pBFrame = hplNew(  cFrameBitmap, (pBmp,pTFrame,aCreate.i[2]) );
-			return pBFrame;
-		}
-		case OHPL_H3_IMG_CUSTOM_FRAME:
-			return hplNew( cFrameTexture, (static_cast<iTexture*>(aCreate.ptr),aCreate.i[0],this,true) );
-		case OHPL_H3_IMG_ADD_BITMAP:
-			return static_cast<iResourceBase*>(static_cast<cFrameBitmap*>(aCreate.ptr)->AddBitmap(static_cast<cBitmap*>(aCreate.ptr2), H3Wide(aCreate.path), NULL));
-		}
-		return NULL;
+			pBmp->CreateData(cVector3l(alW, alH, 1),ePixelFormat_RGBA,0,0);
+			return pBmp;
+		};
+		mFrHost.bmpDelete = [](void*, void *apBmp){ hplDelete(static_cast<cBitmap*>(apBmp)); };
+		mFrHost.bmpInfo = [](void *c, void *apBmp, OhplFrBmpInfo *apInfo)
+		{
+			cImageManager *pThis = static_cast<cImageManager*>(c);
+			cBitmap *pBmp = static_cast<cBitmap*>(apBmp);
+			apInfo->size = pBmp->GetSize();
+			apInfo->format = pBmp->GetPixelFormat();
+			apInfo->bytesPerPixel = pBmp->GetBytesPerPixel();
+			cBitmapData *pData = pBmp->GetData(0,0);
+			apInfo->data = pData ? pData->mpData : NULL;
+			apInfo->len = (pData && pData->mpData) ? (size_t)pData->mlSize : 0;
+			apInfo->compressed = pBmp->IsCompressed();
+			pThis->mFrScratch = cString::To8Char(pBmp->GetFileName());
+			apInfo->name = OhplH3Str{reinterpret_cast<const uint8_t*>(pThis->mFrScratch.data()), pThis->mFrScratch.size()};
+		};
+		mFrHost.bmpClear = [](void*, void *apBmp){ static_cast<cBitmap*>(apBmp)->Clear(cColor(1,0,1,0),0,0); };
+		mFrHost.subNew = [](void*, OhplH3Str aName, OhplH3WStr aPath, void *apRs, bool abIncUser) -> void*
+		{
+			cFrameSubImage *pImage = hplNew( cFrameSubImage, (H3Name(aName), H3Wide(aPath), static_cast<OhplFrSub*>(apRs)) );
+			if(abIncUser) pImage->IncUserCount();
+			return static_cast<iResourceBase*>(pImage);
+		};
+		mFrHost.subRs = [](void*, void *apShell) -> void*
+		{
+			return static_cast<cFrameSubImage*>(static_cast<iResourceBase*>(apShell))->Rs();
+		};
 	}
 
-	int64_t cImageManager::H3Call(int alWhat, void *apObj, int64_t alArg)
+	cFrameSubImage::~cFrameSubImage()
 	{
-		cFrameBitmap *pBmpFrame = static_cast<cFrameBitmap*>(apObj);
-		cFrameTexture *pFrame = static_cast<cFrameTexture*>(apObj);
-		switch(alWhat)
-		{
-		case OHPL_H3C_IMG_FRAME_TEX: return (int64_t)(intptr_t)H3Res<cFrameSubImage>(apObj)->GetFrameTexture();
-		case OHPL_H3C_IMG_FRAME_BMP: return (int64_t)(intptr_t)H3Res<cFrameSubImage>(apObj)->GetFrameBitmap();
-		case OHPL_H3C_FRAME_DEC_PIC: pFrame->DecPicCount(); return 0;
-		case OHPL_H3C_BMPFRAME_DEC_PIC: pBmpFrame->DecPicCount(); return 0;
-		case OHPL_H3C_FRAME_IS_EMPTY: return pFrame->IsEmpty();
-		case OHPL_H3C_FRAME_IS_CUSTOM: return pFrame->IsCustom();
-		case OHPL_H3C_BMPFRAME_HANDLE: return pBmpFrame->GetHandle();
-		case OHPL_H3C_BMPFRAME_TEX: return (int64_t)(intptr_t)pBmpFrame->GetFrameTexture();
-		case OHPL_H3C_BMPFRAME_IS_FULL: return pBmpFrame->IsFull();
-		case OHPL_H3C_BMPFRAME_IS_LOCKED: return pBmpFrame->IsLocked();
-		case OHPL_H3C_BMPFRAME_ADDITIONS: return pBmpFrame->GetAdditionsSinceReorganization();
-		case OHPL_H3C_BMPFRAME_REORGANIZE: pBmpFrame->Reorganize(); return 0;
-		case OHPL_H3C_BMPFRAME_FLUSH: return pBmpFrame->FlushToTexture();
-		case OHPL_H3C_BMPFRAME_SET_LOCKED: pBmpFrame->SetLocked(alArg != 0); return 0;
-		case OHPL_H3C_BMPFRAME_DELETE: hplDelete(pBmpFrame); return 0;
-		case OHPL_H3C_FRAME_DELETE: hplDelete(pFrame); return 0;
-		case OHPL_H3C_FRAME_HANDLE: return pFrame->GetHandle();
-		case OHPL_H3C_BMP_WIDTH: return static_cast<cBitmap*>(apObj)->GetWidth();
-		case OHPL_H3C_BMP_HEIGHT: return static_cast<cBitmap*>(apObj)->GetHeight();
-		case OHPL_H3C_BMP_DELETE: hplDelete(static_cast<cBitmap*>(apObj)); return 0;
-		}
-		return 0;
+		ohpl_fr_sub_free(mpRs, GetUserCount());
+	}
+
+	//-----------------------------------------------------------------------
+
+	void* cImageManager::H3Create(OhplH3Create &aCreate)
+	{
+		return mpBitmapLoaderHandler->LoadBitmap(H3Wide(aCreate.path), eBitmapLoadFlag_ForceNoCompression);
 	}
 }
