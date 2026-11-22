@@ -123,7 +123,7 @@ std::vector<cSomaCameraTextureState> SomaGetCameraTextures()
 		cSomaCameraTexture *p = it.second;
 		cSomaLuxEntity *pEnt = p->mbAttached && pMap ? pMap->GetEntity(p->mAttached) : NULL;
 		cCamera *c = p->mpCamera;
-		v.push_back({it.first, pEnt ? pEnt->msName : "", p->mvSize, p->mlFPS, cMath::ToDeg(c->GetFOV()), c->GetNearClipPlane(), c->GetFarClipPlane(),
+		v.push_back({it.first, pEnt ? pEnt->GetName() : "", p->mvSize, p->mlFPS, cMath::ToDeg(c->GetFOV()), c->GetNearClipPlane(), c->GetFarClipPlane(),
 					 c->GetRotationMatrix(), c->GetPosition()});
 	}
 	return v;

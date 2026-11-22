@@ -252,7 +252,7 @@ int32_t cSomaLuxPlayer::HostCall(void *, uint32_t alOp, OhplS5Io *io)
 	{
 		cSomaLuxEntity *pEnt = PlayerEntity(), *pOther = (cSomaLuxEntity *)io->p[1];
 		if (pEnt && pOther)
-			pEnt->mvCollideCallbacks.push_back(cSomaLuxEntity::cCollideCallback{pOther->msName, Str(io)});
+			pEnt->mvCollideCallbacks.push_back(cSomaLuxEntity::cCollideCallback{pOther->GetName(), Str(io)});
 		return 0;
 	}
 	case kOhplS5d_REMOVE_COLLIDE:

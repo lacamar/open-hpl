@@ -277,7 +277,7 @@ void SomaRegisterCritterNatives(asIScriptEngine *e)
 		return vOut;
 	});
 	SOMA_METHOD(e, T, "void SetGroup(const tString&in asEntityName)", +[](E *p, const tString &s) { State(p).msGroup = s; });
-	SOMA_METHOD(e, T, "void SetGroup(iLuxEntity @apEntity)", +[](E *p, E *g) { State(p).msGroup = g ? g->msName : tString(); });
+	SOMA_METHOD(e, T, "void SetGroup(iLuxEntity @apEntity)", +[](E *p, E *g) { State(p).msGroup = g ? g->GetName() : tString(); });
 	SOMA_METHOD(e, T, "void SetIsFlying(bool abX)", +[](E *p, bool b) { State(p).mRust.flying = b; });
 	SOMA_METHOD(e, T, "bool IsFlying()", +[](E *p) { return State(p).mRust.flying; });
 	SOMA_METHOD(e, T, "void SetTestCollision(bool abX)", +[](E *p, bool b) { State(p).mRust.test_collision = b; });

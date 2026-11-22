@@ -139,15 +139,15 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 		aResp.SetError("no such entity");
 		return;
 	}
-	aResp.Set("name", pEnt->msName);
+	aResp.Set("name", pEnt->GetName());
 	aResp.Set("type", pEnt->meType);
-	aResp.Set("class", pEnt->msClassName);
+	aResp.Set("class", pEnt->GetClassName());
 	aResp.Set("script", pEnt->GetScript() ? tString(pEnt->GetScript()->GetObjectType()->GetName()) : tString(""));
-	aResp.Set("file", pEnt->msFileName);
+	aResp.Set("file", pEnt->GetFileName());
 	aResp.Set("health", pEnt->mfHealth);
 	aResp.Set("active", pEnt->mbActive);
 	aResp.Set("interaction_disabled", pEnt->mbInteractionDisabled);
-	aResp.Set("interact_callback", pEnt->msInteractCallback);
+	aResp.Set("interact_callback", pEnt->GetInteractCallback());
 	tString sCallbacks;
 	for (auto &c : pEnt->mvCollideCallbacks)
 		sCallbacks += c.msChild + ":" + c.msFunc + " ";
@@ -161,7 +161,7 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 	if (pEnt->mpImGui)
 	{
 		aResp.Set("gui_active", pEnt->mbGuiActive);
-		aResp.Set("gui_func", pEnt->msOnGuiFunc);
+		aResp.Set("gui_func", pEnt->GetOnGuiFunc());
 		aResp.Set("gui_screen", pEnt->mpGuiSubMesh != NULL);
 		aResp.Set("gui_calls", pEnt->mlGuiCalls);
 		aResp.Set("gui_draws", pEnt->mlGuiDraws);
@@ -461,7 +461,7 @@ static void cSomaBase_HeadlessCmd_Raycast(void *apUserData, const cHeadlessReque
 	std::map<iPhysicsBody *, tString> mapOwner;
 	for (cSomaLuxEntity *pEnt : pMap->GetEntities())
 		for (iPhysicsBody *pBody : pEnt->mvBodies)
-			mapOwner[pBody] = pEnt->msName;
+			mapOwner[pBody] = pEnt->GetName();
 	struct cHits : iPhysicsRayCallback
 	{
 		std::vector<std::pair<float, iPhysicsBody *>> mvHits;
