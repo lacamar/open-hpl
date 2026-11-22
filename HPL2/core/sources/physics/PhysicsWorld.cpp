@@ -152,7 +152,7 @@ namespace hpl {
 	iPhysicsWorld::iPhysicsWorld()
 	{
 		mpWorld = NULL;
-		static_assert(offsetof(iPhysicsWorld, mRsBook) == 32 && offsetof(iPhysicsWorld, mhRust) == 176 && sizeof(tString) == 32, "rust/src/physics/cxx_world.rs offsets");
+		static_assert(sizeof(cColor) == 16 && offsetof(iPhysicsWorld, mRsBook) == 32 && offsetof(iPhysicsWorld, mhRust) == 176 && sizeof(tString) == 32, "rust/src/physics/cxx_world.rs offsets");
 		mRsBook = ohpl_h15w_new(WorldOp, reinterpret_cast<size_t>(this));
 
 		OhplL4InstallHost();
@@ -231,26 +231,6 @@ namespace hpl {
 		apLowLevel->DrawLine(mvContactPoints[i].mvPoint,
 							mvContactPoints[i].mvNormal * mvContactPoints[i].mfDepth *0.2f,
 							aLineColor);
-	}
-
-	void iPhysicsWorld::RenderContactPoints(iLowLevelGraphics *apLowLevel, const cColor& aPointColor,
-											const cColor& aLineColor)
-	{
-		const cColor colors[2] = { aPointColor, aLineColor };
-		ohpl_h15w_render_contacts(mRsBook, reinterpret_cast<size_t>(apLowLevel), reinterpret_cast<size_t>(colors));
-	}
-
-	bool iPhysicsWorld::CheckShapeWorldCollision(cVector3f *apPushVector,
-							iCollideShape* apShape, const cMatrixf& a_mtxTransform,
-							iPhysicsBody *apSkipBody, bool abSkipStatic, bool abIsCharacter,
-							iPhysicsWorldCollisionCallback *apCallback,
-							bool abCollideCharacter,
-							int alMinPushStrength,
-							tFlag alCollideFlags,
-							bool abDebug)
-	{
-		const OhplH15Query query = { reinterpret_cast<size_t>(apSkipBody), (uint32_t)alCollideFlags, abCollideCharacter, abIsCharacter, abSkipStatic, (int32_t)alMinPushStrength };
-		return ohpl_h15w_shape_world_collision(mRsBook, apPushVector, reinterpret_cast<size_t>(apShape), &a_mtxTransform, &query, reinterpret_cast<size_t>(apCallback));
 	}
 
 }

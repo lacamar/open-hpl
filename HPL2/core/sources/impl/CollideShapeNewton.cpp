@@ -40,6 +40,7 @@ namespace hpl {
 											iPhysicsWorld *apWorld)
 	: mlUserCount(0), mpWorld(apWorld)
 	{
+		static_assert(offsetof(iCollideShape, mpNewtonCollision) == 304, "rust/src/physics/cxx_newton.rs SHAPE_COLLISION");
 		mpNewtonCollision = NULL;
 		mpNewtonWorld = apNewtonWorld;
 		if(apWorld) mhWorld = static_cast<iPhysicsWorld*>(apWorld)->RustHandle();

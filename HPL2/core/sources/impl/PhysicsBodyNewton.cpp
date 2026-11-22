@@ -52,34 +52,6 @@ namespace hpl {
 
 	// PUBLIC METHODS
 
-	void iPhysicsBody::SetMaterial(iPhysicsMaterial* apMaterial)
-	{
-		mS->material = apMaterial;
-		if(apMaterial == NULL) return;
-		ohpl_ntb_set_material(mS->rust, static_cast<iPhysicsMaterial*>(mS->material)->GetId());
-	}
-
-	cVector3f iPhysicsBody::GetLinearVelocity() const
-	{
-		cVector3f vVel;
-		ohpl_ntb_velocity(mS->rust, &vVel);
-		return vVel;
-	}
-
-	cVector3f iPhysicsBody::GetAngularVelocity() const
-	{
-		cVector3f vVel;
-		ohpl_ntb_omega(mS->rust, &vVel);
-		return vVel;
-	}
-
-	cVector3f iPhysicsBody::GetInertiaVector()
-	{
-		cVector3f vInertia;
-		ohpl_ntb_inertia(mS->rust, &vInertia);
-		return vInertia;
-	}
-
 	cMatrixf iPhysicsBody::GetInertiaMatrix()
 	{
 		cVector3f vI = GetInertiaVector();
@@ -90,23 +62,6 @@ namespace hpl {
 						0,	 0,	  vI.z,	0,
 						0,	 0,	  0,	1);
 		return cMath::MatrixMul(cMath::MatrixMul(mtxRot,mtxI), mtxTransRot);
-	}
-
-	void  iPhysicsBody::SetMass(float afMass)
-	{
-		ohpl_ntb_set_mass(mS->rust, static_cast<iCollideShape*>(mS->shape)->GetNewtonCollision(), afMass);
-	}
-	cVector3f iPhysicsBody::GetMassCentre() const
-	{
-		cVector3f vCentre;
-		ohpl_ntb_mass_centre(mS->rust, &vCentre);
-		return vCentre;
-	}
-
-	void iPhysicsBody::AddForceAtPosition(const cVector3f &avForce, const cVector3f &avPos)
-	{
-		ohpl_ntb_add_force_at_position(mS->rust, &avForce, &avPos, &GetLocalMatrix());
-		Enable();
 	}
 
 	void iPhysicsBody::AddImpulse(const cVector3f &avImpulse)
