@@ -43,6 +43,8 @@ struct OhplScnHost
 	void (*log)(bool, const char*, size_t);
 };
 
+void OhplScnRegisterHost();
+
 extern "C" {
 void ohpl_scn_set_host(const OhplScnHost*);
 OhplScn* ohpl_scn_new(cScene*, void*, void*, void*, void*, void*, void*, void*);

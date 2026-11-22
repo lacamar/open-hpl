@@ -85,9 +85,10 @@ void LogMsg(bool abError, const char *asMsg, size_t alLen)
 	else Log("%.*s", (int)alLen, asMsg);
 }
 
-struct cRegister
+}
+
+void OhplScnRegisterHost()
 {
-	cRegister()
 	{
 		static const OhplScnHost h = {
 			[]() -> void* { return hplNew( cRenderSettings, () ); },
@@ -115,8 +116,6 @@ struct cRegister
 			LogMsg };
 		ohpl_scn_set_host(&h);
 	}
-} gRegister;
-
 }
 
 }

@@ -63,7 +63,7 @@ namespace hpl {
 	public:
 		cScene(cGraphics *apGraphics,cResources *apResources, cSound* apSound, cPhysics *apPhysics,
 				cSystem *apSystem, cAI *apAI,cGui *apGui)
-			: iUpdateable("HPL_Scene"), mpS(ohpl_scn_new(this, apGraphics, apResources, apSound, apPhysics, apSystem, apAI, apGui)){}
+			: iUpdateable("HPL_Scene"), mpS((OhplScnRegisterHost(), ohpl_scn_new(this, apGraphics, apResources, apSound, apPhysics, apSystem, apAI, apGui))){}
 		~cScene(){ ohpl_scn_free(mpS);}
 
 		void Reset(){}
