@@ -4,6 +4,8 @@
 use super::abi::{self, Cstr};
 use super::el::El;
 use super::parse::{Builder, FileRead, parse_map};
+use crate::scene::efl_hpm::HpmEnv;
+use crate::scene::wd::World;
 use std::ffi::c_void;
 
 type ReadSink = unsafe extern "C" fn(*mut c_void, *const u8, usize);
@@ -20,13 +22,12 @@ pub struct TreeSink {
 #[repr(C)]
 pub struct Vt {
     ctx: *mut c_void,
+    world: *mut World,
     now_ms: unsafe extern "C" fn(*mut c_void) -> u64,
     object_done: unsafe extern "C" fn(*mut c_void),
     warn: unsafe extern "C" fn(*mut c_void, Cstr),
     log: unsafe extern "C" fn(*mut c_void, Cstr),
     read_file: unsafe extern "C" fn(*mut c_void, *const u32, usize, ReadSink, *mut c_void) -> i32,
-    global_fog: unsafe extern "C" fn(*mut c_void, *const abi::Fog),
-    distance_cull: unsafe extern "C" fn(*mut c_void, *const abi::DistanceCull),
     dir_light: unsafe extern "C" fn(*mut c_void, *const abi::DirLight),
     env_particles: unsafe extern "C" fn(*mut c_void, *const abi::EnvParticles),
     post_effects: unsafe extern "C" fn(*mut c_void, *const abi::PostEffects),
@@ -34,17 +35,8 @@ pub struct Vt {
     static_object: unsafe extern "C" fn(*mut c_void, *const abi::StaticObject) -> bool,
     plane: unsafe extern "C" fn(*mut c_void, *const abi::Plane) -> bool,
     entity: unsafe extern "C" fn(*mut c_void, *const abi::Entity, *const El) -> bool,
-    light: unsafe extern "C" fn(*mut c_void, *const El) -> bool,
     area: unsafe extern "C" fn(*mut c_void, *const abi::Area, *const El) -> bool,
-    sound: unsafe extern "C" fn(*mut c_void, *const El, bool) -> bool,
     decal: unsafe extern "C" fn(*mut c_void, *const abi::Decal, *const El) -> bool,
-    billboard: unsafe extern "C" fn(*mut c_void, *const El) -> bool,
-    particle_system: unsafe extern "C" fn(*mut c_void, *const El, Cstr) -> bool,
-    fog_area: unsafe extern "C" fn(*mut c_void, *const El) -> bool,
-    lens_flare: unsafe extern "C" fn(*mut c_void, *const El) -> bool,
-    light_mask_box: unsafe extern "C" fn(*mut c_void, *const abi::LightMask),
-    connect_lights: unsafe extern "C" fn(*mut c_void, *mut i32, *mut i32),
-    connect_light_masks: unsafe extern "C" fn(*mut c_void),
     detail_meshes: unsafe extern "C" fn(*mut c_void, *const abi::DetailMeshes) -> i32,
     exposure_area: unsafe extern "C" fn(*mut c_void, *const abi::ExposureArea),
     terrain: unsafe extern "C" fn(*mut c_void, *const abi::Terrain),
@@ -52,7 +44,10 @@ pub struct Vt {
         unsafe extern "C" fn(*mut c_void, Cstr, i32, i32, i32, bool, *const abi::Skip, usize),
 }
 
-struct VtBuilder<'a>(&'a Vt);
+struct VtBuilder<'a> {
+    vt: &'a Vt,
+    env: HpmEnv,
+}
 
 unsafe extern "C" fn collect(ctx: *mut c_void, p: *const u8, n: usize) {
     // SAFETY: `ctx` is the `Vec` handed to `read_file` and `p` holds `n` bytes.
@@ -67,26 +62,26 @@ fn msg(m: &[u8]) -> std::ffi::CString {
 // and every pointer passed lives across the call.
 impl Builder for VtBuilder<'_> {
     fn now_ms(&mut self) -> u64 {
-        unsafe { (self.0.now_ms)(self.0.ctx) }
+        unsafe { (self.vt.now_ms)(self.vt.ctx) }
     }
 
     fn object_done(&mut self) {
-        unsafe { (self.0.object_done)(self.0.ctx) }
+        unsafe { (self.vt.object_done)(self.vt.ctx) }
     }
 
     fn warn(&mut self, m: &[u8]) {
-        unsafe { (self.0.warn)(self.0.ctx, msg(m).as_ptr()) }
+        unsafe { (self.vt.warn)(self.vt.ctx, msg(m).as_ptr()) }
     }
 
     fn log(&mut self, m: &[u8]) {
-        unsafe { (self.0.log)(self.0.ctx, msg(m).as_ptr()) }
+        unsafe { (self.vt.log)(self.vt.ctx, msg(m).as_ptr()) }
     }
 
     fn read_file(&mut self, path: &[u32]) -> FileRead {
         let mut data = Vec::new();
         let status = unsafe {
-            (self.0.read_file)(
-                self.0.ctx,
+            (self.vt.read_file)(
+                self.vt.ctx,
                 path.as_ptr(),
                 path.len(),
                 collect,
@@ -101,98 +96,98 @@ impl Builder for VtBuilder<'_> {
     }
 
     fn global_fog(&mut self, v: &abi::Fog) {
-        unsafe { (self.0.global_fog)(self.0.ctx, v) }
+        self.env.global_fog(v);
     }
 
     fn distance_cull(&mut self, v: &abi::DistanceCull) {
-        unsafe { (self.0.distance_cull)(self.0.ctx, v) }
-    }
-
-    fn dir_light(&mut self, v: &abi::DirLight) {
-        unsafe { (self.0.dir_light)(self.0.ctx, v) }
-    }
-
-    fn env_particles(&mut self, v: &abi::EnvParticles) {
-        unsafe { (self.0.env_particles)(self.0.ctx, v) }
-    }
-
-    fn post_effects(&mut self, v: &abi::PostEffects) {
-        unsafe { (self.0.post_effects)(self.0.ctx, v) }
-    }
-
-    fn sky_box(&mut self, v: &abi::SkyBox) {
-        unsafe { (self.0.sky_box)(self.0.ctx, v) }
-    }
-
-    fn static_object(&mut self, v: &abi::StaticObject) -> bool {
-        unsafe { (self.0.static_object)(self.0.ctx, v) }
-    }
-
-    fn plane(&mut self, v: &abi::Plane) -> bool {
-        unsafe { (self.0.plane)(self.0.ctx, v) }
-    }
-
-    fn entity(&mut self, v: &abi::Entity, el: &El) -> bool {
-        unsafe { (self.0.entity)(self.0.ctx, v, el) }
+        self.env.distance_cull(v);
     }
 
     fn light(&mut self, el: &El) -> bool {
-        unsafe { (self.0.light)(self.0.ctx, el) }
-    }
-
-    fn area(&mut self, v: &abi::Area, el: &El) -> bool {
-        unsafe { (self.0.area)(self.0.ctx, v, el) }
+        self.env.light(el)
     }
 
     fn sound(&mut self, el: &El, active: bool) -> bool {
-        unsafe { (self.0.sound)(self.0.ctx, el, active) }
+        self.env.sound(el, active)
+    }
+
+    fn billboard(&mut self, el: &El) -> bool {
+        self.env.billboard(el)
+    }
+
+    fn particle_system(&mut self, el: &El, connect_light: Cstr) -> bool {
+        // SAFETY: the parser passes a NUL-terminated string.
+        let light = unsafe { std::ffi::CStr::from_ptr(connect_light) };
+        self.env.particle_system(el, light.to_bytes())
+    }
+
+    fn fog_area(&mut self, el: &El) -> bool {
+        self.env.fog_area(el)
+    }
+
+    fn lens_flare(&mut self, el: &El) -> bool {
+        self.env.lens_flare(el)
+    }
+
+    fn light_mask_box(&mut self, v: &abi::LightMask) {
+        self.env.light_mask_box(v);
+    }
+
+    fn connect_lights(&mut self) -> (i32, i32) {
+        self.env.connect_lights()
+    }
+
+    fn connect_light_masks(&mut self) {
+        self.env.connect_light_masks();
+    }
+
+    fn dir_light(&mut self, v: &abi::DirLight) {
+        unsafe { (self.vt.dir_light)(self.vt.ctx, v) }
+    }
+
+    fn env_particles(&mut self, v: &abi::EnvParticles) {
+        unsafe { (self.vt.env_particles)(self.vt.ctx, v) }
+    }
+
+    fn post_effects(&mut self, v: &abi::PostEffects) {
+        unsafe { (self.vt.post_effects)(self.vt.ctx, v) }
+    }
+
+    fn sky_box(&mut self, v: &abi::SkyBox) {
+        unsafe { (self.vt.sky_box)(self.vt.ctx, v) }
+    }
+
+    fn static_object(&mut self, v: &abi::StaticObject) -> bool {
+        unsafe { (self.vt.static_object)(self.vt.ctx, v) }
+    }
+
+    fn plane(&mut self, v: &abi::Plane) -> bool {
+        unsafe { (self.vt.plane)(self.vt.ctx, v) }
+    }
+
+    fn entity(&mut self, v: &abi::Entity, el: &El) -> bool {
+        unsafe { (self.vt.entity)(self.vt.ctx, v, el) }
+    }
+
+    fn area(&mut self, v: &abi::Area, el: &El) -> bool {
+        unsafe { (self.vt.area)(self.vt.ctx, v, el) }
     }
 
     fn decal(&mut self, v: &abi::Decal, mesh: Option<&El>) -> bool {
         let mesh = mesh.map_or(std::ptr::null(), std::ptr::from_ref);
-        unsafe { (self.0.decal)(self.0.ctx, v, mesh) }
-    }
-
-    fn billboard(&mut self, el: &El) -> bool {
-        unsafe { (self.0.billboard)(self.0.ctx, el) }
-    }
-
-    fn particle_system(&mut self, el: &El, connect_light: Cstr) -> bool {
-        unsafe { (self.0.particle_system)(self.0.ctx, el, connect_light) }
-    }
-
-    fn fog_area(&mut self, el: &El) -> bool {
-        unsafe { (self.0.fog_area)(self.0.ctx, el) }
-    }
-
-    fn lens_flare(&mut self, el: &El) -> bool {
-        unsafe { (self.0.lens_flare)(self.0.ctx, el) }
-    }
-
-    fn light_mask_box(&mut self, v: &abi::LightMask) {
-        unsafe { (self.0.light_mask_box)(self.0.ctx, v) }
-    }
-
-    fn connect_lights(&mut self) -> (i32, i32) {
-        let (mut billboards, mut particles) = (0, 0);
-        unsafe { (self.0.connect_lights)(self.0.ctx, &mut billboards, &mut particles) };
-        (billboards, particles)
-    }
-
-    fn connect_light_masks(&mut self) {
-        unsafe { (self.0.connect_light_masks)(self.0.ctx) }
+        unsafe { (self.vt.decal)(self.vt.ctx, v, mesh) }
     }
 
     fn detail_meshes(&mut self, v: &abi::DetailMeshes) -> i32 {
-        unsafe { (self.0.detail_meshes)(self.0.ctx, v) }
+        unsafe { (self.vt.detail_meshes)(self.vt.ctx, v) }
     }
 
     fn exposure_area(&mut self, v: &abi::ExposureArea) {
-        unsafe { (self.0.exposure_area)(self.0.ctx, v) }
+        unsafe { (self.vt.exposure_area)(self.vt.ctx, v) }
     }
 
     fn terrain(&mut self, v: &abi::Terrain) {
-        unsafe { (self.0.terrain)(self.0.ctx, v) }
+        unsafe { (self.vt.terrain)(self.vt.ctx, v) }
     }
 
     fn track_report(
@@ -205,8 +200,8 @@ impl Builder for VtBuilder<'_> {
         skipped: &[abi::Skip],
     ) {
         unsafe {
-            (self.0.track_report)(
-                self.0.ctx,
+            (self.vt.track_report)(
+                self.vt.ctx,
                 track,
                 in_xml,
                 created,
@@ -227,7 +222,9 @@ impl Builder for VtBuilder<'_> {
 pub unsafe extern "C" fn ohpl_hpm_parse(vt: *const Vt, base: *const u32, n: usize) {
     // SAFETY: caller contract.
     let (vt, base) = unsafe { (&*vt, crate::string_ffi::units(base, n)) };
-    parse_map(&mut VtBuilder(vt), base);
+    // SAFETY: the table carries a live world.
+    let env = unsafe { HpmEnv::new(vt.world) };
+    parse_map(&mut VtBuilder { vt, env }, base);
 }
 
 fn walk(el: &El, s: &TreeSink) {

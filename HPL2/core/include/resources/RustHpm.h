@@ -21,13 +21,12 @@ struct OhplHpmTreeSink
 struct OhplHpmVt
 {
 	void* ctx;
+	void* world;
 	uint64_t (*now_ms)(void*);
 	void (*object_done)(void*);
 	void (*warn)(void*, const char*);
 	void (*log)(void*, const char*);
 	int (*read_file)(void*, const wchar_t*, size_t, void (*)(void*, const char*, size_t), void*);
-	void (*global_fog)(void*, const OhplHpmFog*);
-	void (*distance_cull)(void*, const OhplHpmDistanceCull*);
 	void (*dir_light)(void*, const OhplHpmDirLight*);
 	void (*env_particles)(void*, const OhplHpmEnvParticles*);
 	void (*post_effects)(void*, const OhplHpmPostEffects*);
@@ -35,17 +34,8 @@ struct OhplHpmVt
 	bool (*static_object)(void*, const OhplHpmStaticObject*);
 	bool (*plane)(void*, const OhplHpmPlane*);
 	bool (*entity)(void*, const OhplHpmEntity*, const OhplHpmEl*);
-	bool (*light)(void*, const OhplHpmEl*);
 	bool (*area)(void*, const OhplHpmArea*, const OhplHpmEl*);
-	bool (*sound)(void*, const OhplHpmEl*, bool);
 	bool (*decal)(void*, const OhplHpmDecal*, const OhplHpmEl*);
-	bool (*billboard)(void*, const OhplHpmEl*);
-	bool (*particle_system)(void*, const OhplHpmEl*, const char*);
-	bool (*fog_area)(void*, const OhplHpmEl*);
-	bool (*lens_flare)(void*, const OhplHpmEl*);
-	void (*light_mask_box)(void*, const OhplHpmLightMask*);
-	void (*connect_lights)(void*, int*, int*);
-	void (*connect_light_masks)(void*);
 	int (*detail_meshes)(void*, const OhplHpmDetailMeshes*);
 	void (*exposure_area)(void*, const OhplHpmExposureArea*);
 	void (*terrain)(void*, const OhplHpmTerrain*);

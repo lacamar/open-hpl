@@ -44,7 +44,7 @@ namespace hpl {
 		pWorld->SetPhysicsWorld(pPhysicsWorld);
 
 		cHpmWorldBuilder builder(pWorld, pPhysicsWorld, mpResources, mpGraphics, mpObjectDoneCallback, &mpCurrentElement);
-		ParseHpmMap(builder, asFile);
+		ParseHpmMap(builder, asFile, pWorld->Rs());
 		builder.Finish();
 
 		BuildLoadReport(cString::To8Char(cString::GetFileNameW(asFile)), (int)(cPlatform::GetApplicationTime() - lLoadStartTime), builder);

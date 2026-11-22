@@ -124,6 +124,8 @@ namespace hpl {
 		void SetParam(const tString &asName, float afValue){ if(iSoundEntityEvent *pEvent = GetEvent()) pEvent->SetParam(asName, afValue); }
 		void SetParam(int alIdx, float afValue){ if(iSoundEntityEvent *pEvent = GetEvent()) pEvent->SetParam(alIdx, afValue); }
 
+		OhplSndEnt* RsPod() const { return mpRs;}
+
 	private:
 		OhplSndEnt *mpRs;
 		cSoundEntityData *mpData;

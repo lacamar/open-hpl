@@ -52,8 +52,6 @@ namespace hpl {
 		void Log(const char* asMessage);
 		int ReadFile(const tWString& asPath, std::vector<char>& avData);
 
-		void GlobalFog(const OhplHpmFog& aFog);
-		void DistanceCull(const OhplHpmDistanceCull& aCull);
 		void DirLight(const OhplHpmDirLight& aLight);
 		void EnvParticles(const OhplHpmEnvParticles& aParticles);
 		void PostEffects(const OhplHpmPostEffects& aEffects);
@@ -62,18 +60,9 @@ namespace hpl {
 		bool StaticObject(const OhplHpmStaticObject& aObject);
 		bool Plane(const OhplHpmPlane& aPlane);
 		bool Entity(const OhplHpmEntity& aEntity, cXmlElement* apElement);
-		bool Light(cXmlElement* apElement);
 		bool Area(const OhplHpmArea& aArea, cXmlElement* apElement);
-		bool Sound(cXmlElement* apElement, bool abActive);
 		bool Decal(const OhplHpmDecal& aDecal, cXmlElement* apMeshElement);
-		bool Billboard(cXmlElement* apElement);
-		bool ParticleSystem(cXmlElement* apElement, const char* asConnectLight);
-		bool FogArea(cXmlElement* apElement);
-		bool LensFlare(cXmlElement* apElement);
-		void LightMaskBox(const OhplHpmLightMask& aMask);
 
-		void ConnectLights(int* apMissingBillboards, int* apMissingParticles);
-		void ConnectLightMasks();
 
 		int DetailMeshes(const OhplHpmDetailMeshes& aMeshes);
 		void ExposureArea(const OhplHpmExposureArea& aArea);
@@ -120,9 +109,6 @@ namespace hpl {
 		std::map<tStaticShapeBatchKey, cStaticShapeBatch> m_mapStaticShapeBatches;
 
 		std::map<tString, cHpmTrackStats> mmapTrackStats;
-		tEFL_LightBillboardConnectionList mlstLightBillboardConnections;
-		std::vector<std::pair<cParticleSystem*, tString> > mvLightParticleConnections;
-		std::map<unsigned int, std::pair<cVector3f, cVector3f> > mmapLightMasks;
 		bool mbTerrainActive;
 	};
 

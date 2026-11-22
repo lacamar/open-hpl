@@ -9,7 +9,7 @@ use std::cmp::Ordering;
 
 const XYZ: i32 = 0;
 
-fn set_translation(m: &mut Matrixf, t: Vector3f) {
+pub(crate) fn set_translation(m: &mut Matrixf, t: Vector3f) {
     for (row, v) in m.m.iter_mut().zip([t.x, t.y, t.z]) {
         if let Some(c) = row.get_mut(3) {
             *c = v;

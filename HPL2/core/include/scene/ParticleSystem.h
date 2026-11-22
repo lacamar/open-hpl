@@ -128,6 +128,8 @@ namespace hpl {
 
 		bool FirstUpdate() const { return mpS->mbFirstUpdate;}
 
+		OhplSPSys* RsPod() const { return mpRust;}
+
 	private:
 		OhplSPSys *mpRust;
 		OhplSPPub *mpS;

@@ -229,6 +229,7 @@ struct OhplHpmSkip
 namespace hpl {
 
 	class cXmlElement;
+	struct OhplWdPod;
 
 	// Every create method returns true when the object was made.
 	class iHpmBuilder
@@ -243,8 +244,6 @@ namespace hpl {
 		// 0: not opened, 1: read (possibly empty), 2: opened but the read came up short.
 		virtual int ReadFile(const tWString& asPath, std::vector<char>& avData) = 0;
 
-		virtual void GlobalFog(const OhplHpmFog& aFog) = 0;
-		virtual void DistanceCull(const OhplHpmDistanceCull& aCull) = 0;
 		virtual void DirLight(const OhplHpmDirLight& aLight) = 0;
 		virtual void EnvParticles(const OhplHpmEnvParticles& aParticles) = 0;
 		virtual void PostEffects(const OhplHpmPostEffects& aEffects) = 0;
@@ -253,18 +252,9 @@ namespace hpl {
 		virtual bool StaticObject(const OhplHpmStaticObject& aObject) = 0;
 		virtual bool Plane(const OhplHpmPlane& aPlane) = 0;
 		virtual bool Entity(const OhplHpmEntity& aEntity, cXmlElement* apElement) = 0;
-		virtual bool Light(cXmlElement* apElement) = 0;
 		virtual bool Area(const OhplHpmArea& aArea, cXmlElement* apElement) = 0;
-		virtual bool Sound(cXmlElement* apElement, bool abActive) = 0;
 		virtual bool Decal(const OhplHpmDecal& aDecal, cXmlElement* apMeshElement) = 0;
-		virtual bool Billboard(cXmlElement* apElement) = 0;
-		virtual bool ParticleSystem(cXmlElement* apElement, const char* asConnectLight) = 0;
-		virtual bool FogArea(cXmlElement* apElement) = 0;
-		virtual bool LensFlare(cXmlElement* apElement) = 0;
-		virtual void LightMaskBox(const OhplHpmLightMask& aMask) = 0;
 
-		virtual void ConnectLights(int* apMissingBillboards, int* apMissingParticles) = 0;
-		virtual void ConnectLightMasks() = 0;
 
 		// Returns how many instances were made; stops at the first mesh that fails to load.
 		virtual int DetailMeshes(const OhplHpmDetailMeshes& aMeshes) = 0;
@@ -276,7 +266,7 @@ namespace hpl {
 	};
 
 	// Parses the map at asFile and its sidecar files, driving aBuilder.
-	void ParseHpmMap(iHpmBuilder& aBuilder, const tWString& asFile);
+	void ParseHpmMap(iHpmBuilder& aBuilder, const tWString& asFile, OhplWdPod* apWorld);
 
 };
 #endif // HPL_HPM_BUILDER_H

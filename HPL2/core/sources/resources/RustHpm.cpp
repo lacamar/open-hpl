@@ -73,8 +73,6 @@ namespace hpl {
 			return lStatus;
 		}
 
-		void GlobalFog(void* c, const OhplHpmFog* p) { B(c).GlobalFog(*p); }
-		void DistanceCull(void* c, const OhplHpmDistanceCull* p) { B(c).DistanceCull(*p); }
 		void DirLight(void* c, const OhplHpmDirLight* p) { B(c).DirLight(*p); }
 		void EnvParticles(void* c, const OhplHpmEnvParticles* p) { B(c).EnvParticles(*p); }
 		void PostEffects(void* c, const OhplHpmPostEffects* p) { B(c).PostEffects(*p); }
@@ -82,17 +80,8 @@ namespace hpl {
 		bool StaticObject(void* c, const OhplHpmStaticObject* p) { return B(c).StaticObject(*p); }
 		bool Plane(void* c, const OhplHpmPlane* p) { return B(c).Plane(*p); }
 		bool Entity(void* c, const OhplHpmEntity* p, const OhplHpmEl* e) { cTempElement el(e); return B(c).Entity(*p, el.Get()); }
-		bool Light(void* c, const OhplHpmEl* e) { cTempElement el(e); return B(c).Light(el.Get()); }
 		bool Area(void* c, const OhplHpmArea* p, const OhplHpmEl* e) { cTempElement el(e); return B(c).Area(*p, el.Get()); }
-		bool Sound(void* c, const OhplHpmEl* e, bool abActive) { cTempElement el(e); return B(c).Sound(el.Get(), abActive); }
 		bool Decal(void* c, const OhplHpmDecal* p, const OhplHpmEl* e) { cTempElement el(e); return B(c).Decal(*p, el.Get()); }
-		bool Billboard(void* c, const OhplHpmEl* e) { cTempElement el(e); return B(c).Billboard(el.Get()); }
-		bool ParticleSystem(void* c, const OhplHpmEl* e, const char* asLight) { cTempElement el(e); return B(c).ParticleSystem(el.Get(), asLight); }
-		bool FogArea(void* c, const OhplHpmEl* e) { cTempElement el(e); return B(c).FogArea(el.Get()); }
-		bool LensFlare(void* c, const OhplHpmEl* e) { cTempElement el(e); return B(c).LensFlare(el.Get()); }
-		void LightMaskBox(void* c, const OhplHpmLightMask* p) { B(c).LightMaskBox(*p); }
-		void ConnectLights(void* c, int* apBillboards, int* apParticles) { B(c).ConnectLights(apBillboards, apParticles); }
-		void ConnectLightMasks(void* c) { B(c).ConnectLightMasks(); }
 		int DetailMeshes(void* c, const OhplHpmDetailMeshes* p) { return B(c).DetailMeshes(*p); }
 		void ExposureArea(void* c, const OhplHpmExposureArea* p) { B(c).ExposureArea(*p); }
 		void Terrain(void* c, const OhplHpmTerrain* p) { B(c).Terrain(*p); }
@@ -104,12 +93,10 @@ namespace hpl {
 		}
 	}
 
-	void ParseHpmMap(iHpmBuilder& aBuilder, const tWString& asFile)
+	void ParseHpmMap(iHpmBuilder& aBuilder, const tWString& asFile, OhplWdPod* apWorld)
 	{
-		OhplHpmVt vt = {&aBuilder,	  NowMs,		   ObjectDone,	  Warn,			 LogMsg,	  ReadFile,		  GlobalFog,   DistanceCull,
-						DirLight,	  EnvParticles,	   PostEffects,	  SkyBox,		 StaticObject, Plane,		  Entity,	   Light,
-						Area,		  Sound,		   Decal,		  Billboard,	 ParticleSystem, FogArea,		  LensFlare,   LightMaskBox,
-						ConnectLights, ConnectLightMasks, DetailMeshes, ExposureArea, Terrain,	  TrackReport};
+		OhplHpmVt vt = {&aBuilder, apWorld, NowMs, ObjectDone, Warn, LogMsg, ReadFile, DirLight, EnvParticles, PostEffects, SkyBox,
+						StaticObject, Plane, Entity, Area, Decal, DetailMeshes, ExposureArea, Terrain, TrackReport};
 		ohpl_hpm_parse(&vt, asFile.data(), asFile.size());
 	}
 
