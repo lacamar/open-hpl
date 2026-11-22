@@ -616,8 +616,9 @@ void cSomaLuxMap::UpdateLookAtCallbacks(float afTimeStep)
 		if (bNow && pEnt->mbLookAtCallbackAutoRemove)
 			pEnt->SetLookAtCallback("");
 		int lState = bNow ? 1 : -1;
+		tString sArgName0 = pEnt->GetName();
 		mpRuntime->Call(mpScript, "void " + sFunc + "(const tString &in, int)", [&](asIScriptContext *c) {
-			{ static thread_local tString sN; sN = pEnt->GetName(); c->SetArgObject(0, &sN); }
+			c->SetArgObject(0, &sArgName0);
 			c->SetArgDWord(1, lState);
 		});
 	}
@@ -678,10 +679,10 @@ void cSomaLuxMap::UpdateCollideCallbacks()
 					continue;
 				int lState = bNow ? 1 : -1;
 				tString sDecl = "bool " + cb.msFunc + "(const tString &in, const tString &in, int)";
+				tString sP = pParent->GetName(), sC = pChild->GetName();
 				auto args = [&](asIScriptContext *ctx) {
-					{ static thread_local tString sP, sC; sP = pParent->GetName(); sC = pChild->GetName();
 					ctx->SetArgObject(0, &sP);
-					ctx->SetArgObject(1, &sC); }
+					ctx->SetArgObject(1, &sC);
 					ctx->SetArgDWord(2, lState);
 				};
 				bool bKeep = true;

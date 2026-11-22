@@ -312,7 +312,7 @@ namespace
 		}
 	};
 
-	void SetArgs(asIScriptContext *c, OhplS4bIo *io, E *apEnt)
+	void SetArgs(asIScriptContext *c, OhplS4bIo *io, const tString *apName)
 	{
 		for (int k = 0; k < 3; ++k)
 		{
@@ -323,7 +323,7 @@ namespace
 			case 2: c->SetArgQWord(k, v); break;
 			case 3: c->SetArgDWord(k, (int)(uint32_t)v); break;
 			case 4: c->SetArgByte(k, (asBYTE)v); break;
-			case 5: { static thread_local tString sN; sN = apEnt->GetName(); c->SetArgObject(k, &sN); break; }
+			case 5: c->SetArgObject(k, (void *)apName); break;
 			case 6: c->SetArgAddress(k, (void *)(uintptr_t)v); break;
 			}
 		}
@@ -392,7 +392,8 @@ namespace
 		{
 			tString sDecl = Str(io, 0);
 			OhplS4bIo a = *io;
-			auto ArgsCopy = [&](asIScriptContext *c) { SetArgs(c, &a, e); };
+			tString sEntName = e ? e->GetName() : tString();
+			auto ArgsCopy = [&](asIScriptContext *c) { SetArgs(c, &a, &sEntName); };
 			switch (io->i[0])
 			{
 			case 0: io->i[0] = e->Call(sDecl, ArgsCopy); break;

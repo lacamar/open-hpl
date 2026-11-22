@@ -53,12 +53,18 @@ public:
 	~cSomaLuxEntity();
 	OhplSeCore *mpCore = ohpl_se_core_new();
 	OhplSeNames *mpNames = ohpl_se_names_new();
-	enum eSeStr { eSeStr_Name, eSeStr_ClassName, eSeStr_ScriptClassName, eSeStr_FileName, eSeStr_ParentName, eSeStr_AnimLoopSound, eSeStr_InteractCallback, eSeStr_AnimMessageCallback, eSeStr_LookAtCallback, eSeStr_ConnectionCallback, eSeStr_MoveCallback, eSeStr_RotateCallback, eSeStr_AnimCallback, eSeStr_OnGuiFunc };
+	enum eSeStr { eSeStr_Name, eSeStr_ClassName, eSeStr_ScriptClassName, eSeStr_FileName, eSeStr_ParentName, eSeStr_AnimLoopSound, eSeStr_InteractCallback, eSeStr_AnimMessageCallback, eSeStr_LookAtCallback, eSeStr_ConnectionCallback, eSeStr_MoveCallback, eSeStr_RotateCallback, eSeStr_AnimCallback, eSeStr_OnGuiFunc, eSeStr_LastEnum };
 	tString SeStr(eSeStr aI) const
 	{
 		size_t l;
 		const unsigned char *p = ohpl_se_names_get(mpNames, aI, &l);
 		return tString((const char *)p, l);
+	}
+	// script bindings return const tString&: one stable copy per entity and field, like the former members
+	const tString &SeStrRef(eSeStr aI) const
+	{
+		mvSeStrCache[aI] = SeStr(aI);
+		return mvSeStrCache[aI];
 	}
 	void SetSeStr(eSeStr aI, const tString &asX) { ohpl_se_names_set(mpNames, aI, (const unsigned char *)asX.data(), asX.size()); }
 	tString GetName() const { return SeStr(eSeStr_Name); }
@@ -179,12 +185,14 @@ public:
 	// std::map semantics: Var() inserts an empty value for a missing key, VarFind() does not
 	const tString &Var(const tString &asKey)
 	{
-		static thread_local tString sOut;
 		size_t l;
 		const unsigned char *p = ohpl_se_var_get(mpNames, (const unsigned char *)asKey.data(), asKey.size(), true, &l);
+		tString &sOut = mmapVarCache[asKey];
 		sOut.assign((const char *)p, l);
 		return sOut;
 	}
+	mutable tString mvSeStrCache[eSeStr_LastEnum];
+	std::map<tString, tString> mmapVarCache;
 	bool VarFind(const tString &asKey, tString &asOut)
 	{
 		size_t l;

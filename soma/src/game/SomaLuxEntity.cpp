@@ -440,9 +440,10 @@ void cSomaLuxEntity::UpdateAnimation(float afTimeStep)
 	if (lAction == kOhplGs1AnimFinishCallback)
 	{
 		cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+		tString sArgName0 = GetName();
 		if (pMap && pMap->GetScript())
 			cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sCallback + "(const tString &in, const tString &in)", [&](asIScriptContext *c) {
-				{ static thread_local tString sN; sN = GetName(); c->SetArgObject(0, &sN); }
+				c->SetArgObject(0, &sArgName0);
 				c->SetArgObject(1, &sAnim);
 			});
 	}
@@ -476,8 +477,9 @@ static void RunMoveCallback(cSomaLuxEntity *apEnt, cSomaLuxEntity::eSeStr aWhich
 	tString sCallback = apEnt->SeStr(aWhich);
 	apEnt->SetSeStr(aWhich, "");
 	cSomaLuxMap *pMap = apEnt->mpMap ? apEnt->mpMap : cSomaLuxMap::GetCurrent();
+	tString sArgName1 = apEnt->GetName();
 	if (sCallback != "" && pMap && pMap->GetScript())
-		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sCallback + "(const tString &in)", [&](asIScriptContext *c) { { static thread_local tString sN; sN = apEnt->GetName(); c->SetArgObject(0, &sN); } });
+		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &sArgName1); });
 }
 
 static const OhplSeHost gSeHost = {
@@ -983,9 +985,10 @@ void cSomaLuxEntity::UpdateGui(float afTimeStep)
 	cSomaImGui::SetCurrent(mpImGui);
 	mpImGui->Begin(afTimeStep);
 	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+	tString sArgName2 = GetName();
 	if (pMap && pMap->GetScript())
 		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + GetOnGuiFunc() + "(const tString&in, float)", [&](asIScriptContext *c) {
-			{ static thread_local tString sN; sN = GetName(); c->SetArgObject(0, &sN); }
+			c->SetArgObject(0, &sArgName2);
 			c->SetArgFloat(1, afTimeStep);
 		});
 	mpImGui->End();
@@ -1135,8 +1138,9 @@ void cSomaLuxEntity::DoBreak()
 				pPS->SetMatrix(mtxCenter);
 	}
 	tString sCallback = mInstanceVars.GetVarString("OnBreakCallbackFunc", "");
+	tString sArgName3 = GetName();
 	if (sCallback != "" && pMap->GetScript())
-		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sCallback + "(const tString &in)", [&](asIScriptContext *c) { { static thread_local tString sN; sN = GetName(); c->SetArgObject(0, &sN); } });
+		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &sArgName3); });
 	pMap->DestroyEntity(this);
 }
 
@@ -1197,9 +1201,10 @@ void cSomaLuxEntity::ChangeConnectionState(int alState)
 	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
 	if (pMap == NULL)
 		return;
+	tString sArgName4 = GetName();
 	if (GetConnectionCallback() != "" && pMap->GetScript())
 		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + GetConnectionCallback() + "(const tString &in, int)", [&](asIScriptContext *c) {
-			{ static thread_local tString sN; sN = GetName(); c->SetArgObject(0, &sN); }
+			c->SetArgObject(0, &sArgName4);
 			c->SetArgDWord(1, alState);
 		});
 	std::vector<cConnection> vConnections = mvConnections;
@@ -1267,9 +1272,10 @@ bool cSomaLuxEntity::OnInteract(int alType, iPhysicsBody *apBody, const cVector3
 		if (mbInteractCallbackAutoRemove)
 			SetInteractCallback("");
 		cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+		tString sArgName5 = GetName();
 		if (pMap && pMap->GetScript())
 			cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sFunc + "(const tString &in)",
-											[&](asIScriptContext *c) { { static thread_local tString sN; sN = GetName(); c->SetArgObject(0, &sN); } });
+											[&](asIScriptContext *c) { c->SetArgObject(0, &sArgName5); });
 	}
 	return CallBool("bool OnInteract(int, iPhysicsBody@, const cVector3f &in, const tString&in)", [&](asIScriptContext *c) {
 		c->SetArgDWord(0, alType);
@@ -2094,13 +2100,6 @@ template <class F> static void ForMatching(const tString &asName, F aFunc)
 				aFunc(pEnt);
 }
 
-static const tString &SeKeep(tString asX)
-{
-	static thread_local tString sOut;
-	sOut = std::move(asX);
-	return sOut;
-}
-
 static tString VarGet(cSomaLuxEntity *e, const tString &n)
 {
 	tString s;
@@ -2158,15 +2157,15 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	typedef const tString &S;
 	SOMA_METHOD_NEW(e, T, "void GetClosestBody(const tString&in asCallbackFunc, const cVector3f&in avStart,const cVector3f&in avDir, float afRayLength)",
 					+[](E *p, S f, const cVector3f &st, const cVector3f &dir, float len) { SomaClosestBodyCallback(p->GetScript(), f, st, dir, len); });
-	SOMA_METHOD_NEW(e, T, "const tString& GetName()", +[](E *p) -> const tString & { return SeKeep(p->GetName()); });
+	SOMA_METHOD_NEW(e, T, "const tString& GetName()", +[](E *p) -> const tString & { return p->SeStrRef(cSomaLuxEntity::eSeStr_Name); });
 	ohpl_se_register_entity(e, T, offsetof(cSomaLuxEntity, mpCore));
 	SOMA_METHOD_NEW(e, T, "const tString& GetClassName()", +[](E *p) -> const tString & {
 		if (p->GetScript() == NULL)
-			return SeKeep(p->GetClassName());
+			return p->SeStrRef(cSomaLuxEntity::eSeStr_ClassName);
 		p->SetScriptClassName(p->GetScript()->GetObjectType()->GetName());
-		return SeKeep(p->GetScriptClassName());
+		return p->SeStrRef(cSomaLuxEntity::eSeStr_ScriptClassName);
 	});
-	SOMA_METHOD_NEW(e, T, "const tString& GetFileName()", +[](E *p) -> const tString & { return SeKeep(p->GetFileName()); });
+	SOMA_METHOD_NEW(e, T, "const tString& GetFileName()", +[](E *p) -> const tString & { return p->SeStrRef(cSomaLuxEntity::eSeStr_FileName); });
 	SOMA_METHOD_NEW(e, T, "void SetActive(bool abX)", +[](E *p, bool b) { p->SetActive(b); });
 	SOMA_METHOD_NEW(e, T, "cLuxMap@ GetMap()", +[](E *p) { return p->mpMap; });
 	SOMA_METHOD_NEW(e, T, "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](E *p, const cMatrixf &m) { p->SetMatrix(m); });
@@ -2219,7 +2218,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 		p->mParentID = id;
 		p->SetParentName(n);
 	});
-	SOMA_METHOD_NEW(e, T, "const tString& GetParentName()", +[](E *p) -> const tString & { return SeKeep(p->GetParentName()); });
+	SOMA_METHOD_NEW(e, T, "const tString& GetParentName()", +[](E *p) -> const tString & { return p->SeStrRef(cSomaLuxEntity::eSeStr_ParentName); });
 	SOMA_METHOD_NEW(e, T, "float GetEffectsOnTime()", +[](E *p) { return p->mVars.GetVarFloat("EffectsOnTime", 1); });
 	SOMA_METHOD_NEW(e, T, "float GetEffectsOffTime()", +[](E *p) { return p->mVars.GetVarFloat("EffectsOffTime", 1); });
 	SOMA_METHOD_NEW(e, T, "int GetJointNum()", +[](E *p) { return (int)p->Joints().size(); });
@@ -2479,10 +2478,11 @@ bool cSomaLuxEntity::OnAnimationEvent(cMeshEntity *apMesh, cAnimationEvent *apEv
 	{
 		cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
 		tString sAnim = mlCurrentAnim >= 0 ? apMesh->GetAnimationState(mlCurrentAnim)->GetName() : "";
+		tString sArgName6 = GetName();
 		if (pMap && pMap->GetScript())
 			cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + GetAnimMessageCallback() + "(const tString &in, const tString &in, int)",
 											[&](asIScriptContext *c) {
-												{ static thread_local tString sN; sN = GetName(); c->SetArgObject(0, &sN); }
+												c->SetArgObject(0, &sArgName6);
 												c->SetArgObject(1, &sAnim);
 												c->SetArgDWord(2, cString::ToInt(apEvent->msValue.c_str(), 0));
 											});
