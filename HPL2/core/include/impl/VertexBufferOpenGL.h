@@ -25,6 +25,7 @@
 #include "system/LowLevelSystem.h"
 #include "impl/RustGl.h"
 #include "impl/RustGlRes.h"
+#include "graphics/LowLevelGraphics.h"
 
 namespace hpl {
 
@@ -40,7 +41,7 @@ namespace hpl {
 							int alReserveVtxSize,int alReserveIdxSize, bool abVbo=false) :
 		iVertexBuffer(apLowLevelGraphics, aType, aDrawType,aUsageType, alReserveVtxSize, alReserveIdxSize),
 		mlRs(ohpl_vb_new(abVbo, alReserveVtxSize, alReserveIdxSize)) {}
-		~iVertexBufferOpenGL();
+		~iVertexBufferOpenGL(){ ohpl_vb_free(mlRs); }
 
 		void CreateElementArray(	eVertexBufferElement aType, eVertexBufferElementFormat aFormat,
 									int alElementNum, int alProgramVarIndex=0)
@@ -74,8 +75,24 @@ namespace hpl {
 			if(vtxFlag) UpdateData(vtxFlag, false);
 		}
 		iVertexBuffer* CreateCopy(	eVertexBufferType aType, eVertexBufferUsageType aUsageType,
-									tVertexElementFlag alVtxToCopy);
-		cBoundingVolume CreateBoundingVolume();
+									tVertexElementFlag alVtxToCopy)
+		{
+			auto *p = static_cast<iVertexBufferOpenGL*>(
+				mpLowLevelGraphics->CreateVertexBuffer(aType, mDrawType, aUsageType, GetIndexNum(), GetVertexNum()));
+			p->mVertexFlags |= ohpl_vb_copy_into(mlRs, p->mlRs, alVtxToCopy);
+			p->Compile(0);
+			return p;
+		}
+		cBoundingVolume CreateBoundingVolume()
+		{
+			cBoundingVolume bv;
+			int lCheck = ohpl_vb_bounding_check(mlRs);
+			if(lCheck == 1){ Warning("Could not create bounding volume from buffer %d  because no position element was present!\n",this); return bv; }
+			if(lCheck == 2){ Warning("Could not breate bounding volume since postion was not for format float in buffer %d!\n",this); return bv; }
+			bv.AddArrayPoints(GetFloatArray(eVertexBufferElement_Position), GetVertexNum());
+			bv.CreateFromPoints(GetElementNum(eVertexBufferElement_Position));
+			return bv;
+		}
 
 		int GetVertexNum(){ return ohpl_vb_vertex_num(mlRs); }
 		int GetIndexNum(){ return ohpl_vb_index_num(mlRs); }
