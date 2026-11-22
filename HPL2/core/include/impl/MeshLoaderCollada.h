@@ -26,6 +26,8 @@
 #include "graphics/VertexBuffer.h"
 #include "physics/PhysicsJoint.h"
 #include "system/MemoryManager.h"
+#include "impl/MeshLoaderMSH.h"
+#include "impl/RustL6.h"
 
 
 namespace hpl {
@@ -48,31 +50,46 @@ namespace hpl {
 	class cMeshLoaderCollada : public iMeshLoader
 	{
 	public:
-		cMeshLoaderCollada(iLowLevelGraphics *apLowLevelGraphics, cMeshLoaderMSH *apMeshLoaderMSH, bool abLoadAndSaveMSHFormat);
-		~cMeshLoaderCollada();
+		cMeshLoaderCollada(iLowLevelGraphics *apLowLevelGraphics, cMeshLoaderMSH *apMeshLoaderMSH, bool abLoadAndSaveMSHFormat)
+			: iMeshLoader(apLowLevelGraphics), mpMeshLoaderMSH(apMeshLoaderMSH), mbLoadAndSaveMSHFormat(abLoadAndSaveMSHFormat)
+		{
+			AddSupportedExtension("dae");
+			AddSupportedExtension("dae_anim");
+		}
 
 		void SetLoadAndSaveMSHFormat(bool abX){ mbLoadAndSaveMSHFormat = abX;} //Needed for tools!
 
-		cMesh* LoadMesh(const tWString& asFile, tMeshLoadFlag aFlags);
+		cMesh* LoadMesh(const tWString& asFile, tMeshLoadFlag aFlags)
+		{
+			OhplL6CfgBuf cfg;
+			OhplL6FillCfg(cfg, mpMeshManager, mbLoadAndSaveMSHFormat, aFlags);
+			return OhplL6LoadMesh(eOhplL6KindCollada, Env(), cfg.cfg, asFile);
+		}
 		bool SaveMesh(cMesh* apMesh,const tWString& asFile){return false;}
 
-		cAnimation* LoadAnimation(const tWString& asFile);
+		cAnimation* LoadAnimation(const tWString& asFile)
+		{
+			OhplL6CfgBuf cfg;
+			OhplL6FillCfg(cfg, mpMeshManager, mbLoadAndSaveMSHFormat, 0);
+			return OhplL6LoadAnim(eOhplL6KindCollada, Env(), cfg.cfg, asFile);
+		}
 		bool SaveAnimation(cAnimation* apAnimation, const tWString& asFile){return false;}
 
 		static void SetConvertUnit(bool abX) { mbConvertUnit = abX; }
 		static bool GetConvertUnit() { return mbConvertUnit; }
 		static void SetConvertUnitFromAnyTool(bool abX) { mbConvertUnitFromAnyTool = abX; }
 		static bool GetConvertUnitFromAnyTool() { return mbConvertUnitFromAnyTool; }
-		static void SetUnscaledSkeleton(bool abX);
+		static void SetUnscaledSkeleton(bool abX) { mbUnscaledSkeleton = abX; cMeshLoaderMSH::mbBoneUnitScale = abX; }
 		static bool GetUnscaledSkeleton() { return mbUnscaledSkeleton; }
 
 	private:
+		OhplL6Env Env() const { return { mpLowLevelGraphics, mpMaterialManager, mpAnimationManager, mpMeshLoaderMSH }; }
 		cMeshLoaderMSH *mpMeshLoaderMSH;
 		bool mbLoadAndSaveMSHFormat;
 
-		static bool mbConvertUnit;
-		static bool mbConvertUnitFromAnyTool;
-		static bool mbUnscaledSkeleton;
+		inline static bool mbConvertUnit = true;
+		inline static bool mbConvertUnitFromAnyTool = false;
+		inline static bool mbUnscaledSkeleton = false;
 	};
 
 };
