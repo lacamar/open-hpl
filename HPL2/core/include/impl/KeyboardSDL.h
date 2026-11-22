@@ -55,7 +55,6 @@ namespace hpl {
 
 	private:
 		OhplKeyboard *mpRust;
-		std::vector<OhplInputEvent> mvEvents;
 
 		cLowLevelInputSDL *mpLowLevelInputSDL;
 	};
@@ -63,7 +62,7 @@ namespace hpl {
 
 inline cKeyboardSDL::cKeyboardSDL(cLowLevelInputSDL *apLowLevelInputSDL) : iKeyboard("SDL Portable Keyboard") { mpLowLevelInputSDL = apLowLevelInputSDL; mpRust = ohpl_input_kb_new(); }
 inline cKeyboardSDL::~cKeyboardSDL() { ohpl_input_kb_free(mpRust); }
-inline void cKeyboardSDL::Update() { OhplConvertEvents(mpLowLevelInputSDL->mlstEvents, mvEvents); ohpl_input_kb_update(mpRust, mvEvents.data(), mvEvents.size(), ohpl_l1_mod_state()); }
+inline void cKeyboardSDL::Update() { const std::vector<OhplInputEvent> &vEvents = mpLowLevelInputSDL->GetEvents(); ohpl_input_kb_update(mpRust, vEvents.data(), vEvents.size(), ohpl_l1_mod_state()); }
 inline bool cKeyboardSDL::KeyIsDown(eKey aKey) { return ohpl_input_kb_key_is_down(mpRust, aKey); }
 inline cKeyPress cKeyboardSDL::GetKey() { cKeyPress key(eKey_None, 0, 0); ohpl_input_kb_pop_pressed(mpRust, &key); return key; }
 inline bool cKeyboardSDL::KeyIsPressed() { return ohpl_input_kb_key_is_pressed(mpRust); }

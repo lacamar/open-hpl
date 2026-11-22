@@ -272,7 +272,7 @@ namespace hpl {
 			memset(&ev, 0, sizeof(ev));
 			ev.type = SDL_TEXTINPUT;
 			memcpy(ev.text.text, apText, alLen);
-			static_cast<cLowLevelInputSDL*>(((cHeadlessControlServer*)apCtx)->mpEngine->GetInput()->GetLowLevel())->mlstInjected.push_back(ev);
+			static_cast<cLowLevelInputSDL*>(((cHeadlessControlServer*)apCtx)->mpEngine->GetInput()->GetLowLevel())->InjectEvent(ev);
 #endif
 		};
 		mRsHost.call_handler = [](void *apCtx, size_t alSlot, const uint8_t *apBlob, size_t alLen, OhplH22Sink apSink, void *apSinkCtx) {
