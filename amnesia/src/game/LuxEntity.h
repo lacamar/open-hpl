@@ -152,6 +152,7 @@ public:
 	eLuxEntityType GetEntityType()const{ return (eLuxEntityType)mpS->entity_type;}
 	
 	tString GetName()const{ return GetEntStr(kEntStrName);}
+	const unsigned char *GetNameData(size_t *apLen)const{ return ohpl_ent_str(mpS, kEntStrName, apLen);}
 	int GetID()const{ return mpS->id;}
 
 	void SetActive(bool abX);
