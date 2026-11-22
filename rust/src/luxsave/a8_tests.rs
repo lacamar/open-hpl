@@ -110,3 +110,27 @@ fn every_mirrored_class_has_a_layout_table() {
         assert!(super::layout::size(c.as_bytes()).is_some());
     }
 }
+
+#[test]
+fn ar_layouts_have_tables() {
+    for c in super::layout_ar::CLASSES {
+        assert!(super::a8_table::layout_table(c.as_bytes()).is_some(), "{c}");
+    }
+}
+
+#[test]
+fn ar_layouts_match_gcc() {
+    let mut n = 0;
+    for l in include_str!("layout_ar_gcc.txt").lines() {
+        let w: Vec<&str> = l.split(' ').collect();
+        let (c, num) = (w[1].as_bytes(), |s: &str| s.parse::<usize>().unwrap());
+        if w[0] == "C" {
+            assert_eq!(super::layout_ar::size(c), Some(num(w[2])), "{}", w[1]);
+        } else {
+            let got = super::layout_ar::field(c, w[2].as_bytes());
+            assert_eq!(got, Some((num(w[3]), num(w[4]))), "{} {}", w[1], w[2]);
+        }
+        n += 1;
+    }
+    assert_eq!(n, 612);
+}

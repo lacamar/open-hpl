@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Ladder.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -199,11 +200,7 @@ cVector3f cLuxArea_Ladder::GetStartPosition()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxArea_Ladder_SaveData, iLuxArea_SaveData)
-
-kSerializeVar(msMaterial, eSerializeType_String)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxArea_Ladder_SaveData, iLuxArea_SaveData)
 
 //-----------------------------------------------------------------------
 

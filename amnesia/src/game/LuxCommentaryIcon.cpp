@@ -18,6 +18,7 @@
  */
 
 #include "LuxCommentaryIcon.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxUi.h"
 
 #include "LuxMap.h"
@@ -334,17 +335,7 @@ iLuxEntity_SaveData* cLuxCommentaryIcon::CreateSaveData()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxCommentaryIcon_SaveData, iLuxEntity_SaveData)
-
-kSerializeVar(msFileName, eSerializeType_String)
-kSerializeVar(m_mtxOnLoadTransform, eSerializeType_Matrixf)
-kSerializeVar(mvOnLoadScale, eSerializeType_Vector3f)
-
-kSerializeVar(msTalker,eSerializeType_String)
-kSerializeVar(msTopic,eSerializeType_String)
-kSerializeVar(msSoundFile,eSerializeType_String)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxCommentaryIcon_SaveData, iLuxEntity_SaveData)
 
 //-----------------------------------------------------------------------
 

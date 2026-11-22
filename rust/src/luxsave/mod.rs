@@ -17,6 +17,7 @@ pub mod game;
 pub mod gamemap;
 pub mod handler;
 pub mod layout;
+pub mod layout_ar;
 pub mod map;
 pub mod names;
 #[cfg(test)]

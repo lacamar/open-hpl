@@ -18,6 +18,7 @@
  */
 
 #include "LuxCritter_Bug.h"
+#include "RustLuxSerialize.h"
 
 #include "LuxPlayer.h"
 #include "LuxPlayerState.h"
@@ -121,9 +122,7 @@ void cLuxCritter_Bug::OnGa4bSound(int alKind)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxCritter_Bug_SaveData, iLuxProp_CritterBase_SaveData)
-kSerializeVar(mfPlaySoundCount, eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClassP(cLuxCritter_Bug_SaveData, iLuxProp_CritterBase_SaveData)
 
 //-----------------------------------------------------------------------
 

@@ -74,7 +74,8 @@ pub extern "C" fn ohpl_h1_ser_flush() {
             // SAFETY: `ohpl_h1_ser_defer` contract: `name` is NUL-terminated.
             let bytes = unsafe { std::ffi::CStr::from_ptr(name) }.to_bytes();
             let table = crate::luxsave::a8_table::layout_table(bytes);
-            let size = crate::luxsave::layout::size(bytes);
+            let size = crate::luxsave::layout::size(bytes)
+                .or_else(|| crate::luxsave::layout_ar::size(bytes));
             let (Some(table), true) = (table, size == Some(p.size)) else {
                 eprintln!(
                     "SV: class {} has no matching Rust layout",

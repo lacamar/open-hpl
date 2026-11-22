@@ -127,7 +127,8 @@ pub fn layout_table(name: &[u8]) -> Option<Vec<OhplSerField>> {
         .fields
         .iter()
         .map(|f| {
-            let (offset, size) = super::layout::field(name, f.name.to_bytes())?;
+            let (offset, size) = super::layout::field(name, f.name.to_bytes())
+                .or_else(|| super::layout_ar::field(name, f.name.to_bytes()))?;
             Some(OhplSerField {
                 name: f.name.as_ptr(),
                 class_name: f.class.as_ptr(),

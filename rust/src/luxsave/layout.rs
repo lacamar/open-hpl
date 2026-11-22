@@ -44,6 +44,8 @@ macro_rules! mirror {
     };
 }
 
+pub(super) use mirror;
+
 mirror! {
     cEngineCharacterBody_SaveData { mbActive: u8, mfMass: f32, mvPosition: V3, mfYaw: f32, mfPitch: f32, mfSpeedForward: f32, mfSpeedRight: f32, mvForceVelocity: V3, mlActiveSize: i32 }
     cEngineVerletParticle_SaveData { mvPosition: V3, mvPrevPosition: V3, mvSmoothPosition: V3, mfInvMass: f32 }

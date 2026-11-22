@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Examine.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -192,18 +193,7 @@ eLuxFocusCrosshair cLuxArea_Examine::GetFocusCrosshair(iPhysicsBody *apBody, con
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxArea_Examine_SaveData, iLuxArea_SaveData)
-
-kSerializeVar(msDescCat, eSerializeType_String)
-kSerializeVar(msDescEntry, eSerializeType_String)
-
-kSerializeVar(msDescInsaneCat, eSerializeType_String)
-kSerializeVar(msDescInsaneEntry, eSerializeType_String)
-
-kSerializeVar(msSound, eSerializeType_String)
-kSerializeVar(msInsaneSound, eSerializeType_String)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxArea_Examine_SaveData, iLuxArea_SaveData)
 
 //-----------------------------------------------------------------------
 

@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Flashback.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -116,10 +117,7 @@ void cLuxArea_Flashback::OnUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxArea_Flashback_SaveData, iLuxArea_SaveData)
-kSerializeVar(msFlashbackFile, eSerializeType_String)
-kSerializeVar(msCallback, eSerializeType_String)
-kEndSerialize()
+kSerializeRustClassP(cLuxArea_Flashback_SaveData, iLuxArea_SaveData)
 
 //-----------------------------------------------------------------------
 

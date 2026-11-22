@@ -18,6 +18,7 @@
  */
 
 #include "LuxInteractConnections.h"
+#include "RustLuxSerialize.h"
 
 #include "LuxProp_Wheel.h"
 #include "LuxProp_SwingDoor.h"
@@ -43,13 +44,7 @@ void iLuxInteractConnection_SaveData::FromConnection(iLuxInteractConnection* apC
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBaseVirtual(iLuxInteractConnection_SaveData)
-kSerializeVar(msName, eSerializeType_String)
-kSerializeVar(mbInteractionOnly,eSerializeType_Bool)
-kSerializeVar(mlPropId,eSerializeType_Int32)
-kSerializeVar(mbInvert,eSerializeType_Bool)
-kSerializeVar(mlStateUsed,eSerializeType_Int32)
-kEndSerialize()
+kSerializeRustClassV(iLuxInteractConnection_SaveData, )
 
 //-----------------------------------------------------------------------
 
@@ -172,12 +167,7 @@ void cLuxInteractConnection_Rope_SaveData::FromConnection(iLuxInteractConnection
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxInteractConnection_Rope_SaveData, iLuxInteractConnection_SaveData)
-kSerializeVar(mlRopeId, eSerializeType_Int32)
-kSerializeVar(mfSpeedMul, eSerializeType_Float32)
-kSerializeVar(mfMinSpeed, eSerializeType_Float32)
-kSerializeVar(mfMaxSpeed, eSerializeType_Float32)
-kEndSerialize()
+kSerializeRustClassP(cLuxInteractConnection_Rope_SaveData, iLuxInteractConnection_SaveData)
 
 //-----------------------------------------------------------------------
 
@@ -293,8 +283,6 @@ void cLuxInteractConnection_MoveObject_SaveData::FromConnection(iLuxInteractConn
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxInteractConnection_MoveObject_SaveData, iLuxInteractConnection_SaveData)
-kSerializeVar(mlMoveObjectId, eSerializeType_Int32)
-kEndSerialize()
+kSerializeRustClassP(cLuxInteractConnection_MoveObject_SaveData, iLuxInteractConnection_SaveData)
 
 //-----------------------------------------------------------------------

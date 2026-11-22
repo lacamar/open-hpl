@@ -18,6 +18,7 @@
  */
 
 #include "LuxEntity.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxProp.h"
 #include <cstring>
 
@@ -430,13 +431,7 @@ bool iLuxEntity::CollidesWithPlayer()
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBase(cLuxEntityConnection_SaveData)
-kSerializeVar(msName,eSerializeType_String)
-kSerializeVar(mlEntityId,eSerializeType_Int32)
-kSerializeVar(mbInvertStateSent,eSerializeType_Bool)
-kSerializeVar(mlStatesUsed,eSerializeType_Int32)
-kSerializeVar(msCallbackFunc,eSerializeType_String)
-kEndSerialize()
+kSerializeRustClass(cLuxEntityConnection_SaveData)
 
 void cLuxEntityConnection_SaveData::FromConnection(cLuxEntityConnection *apConnection)
 {
@@ -464,31 +459,7 @@ void cLuxEntityConnection_SaveData::ToConnection(cLuxEntityConnection *apConnect
 
 //-----------------------------------------------------------------------
 
-kBeginSerializeBaseVirtual(iLuxEntity_SaveData)
-kSerializeVar(msName,eSerializeType_String)
-kSerializeVar(mbFullGameSave,eSerializeType_Bool)
-kSerializeVar(mbActive,eSerializeType_Bool)
-kSerializeVar(mlEntityType,eSerializeType_Int32)
-kSerializeVar(mlID,eSerializeType_Int32)
-
-kSerializeVar(mfMaxFocusDistance, eSerializeType_Float32)
-
-kSerializeVar(mbInteractionDisabled, eSerializeType_Bool)
-
-kSerializeVar(msCallbackFunc, eSerializeType_String)
-kSerializeVar(msConnectionStateChangeCallback, eSerializeType_String)
-
-kSerializeVar(msInteractCallback,eSerializeType_String)
-kSerializeVar(mbInteractCallbackRemove,eSerializeType_Bool)
-
-kSerializeVar(msLookAtCallback,eSerializeType_String)
-kSerializeVar(mbLookAtCallbackRemove,eSerializeType_Bool)
-kSerializeVar(mbIsLookedAt,eSerializeType_Bool)
-
-kSerializeClassContainer(mvConnections, cLuxEntityConnection_SaveData, eSerializeType_Class)
-kSerializeClassContainer(mlstCollideCallbacks, cLuxCollideCallback_SaveData, eSerializeType_Class)
-
-kEndSerialize()
+kSerializeRustClassV(iLuxEntity_SaveData, )
 
 //-----------------------------------------------------------------------
 

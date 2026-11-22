@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Sticky.h"
+#include "RustLuxSerialize.h"
 #include "RustLuxMap.h"
 
 #include "LuxMap.h"
@@ -188,35 +189,7 @@ void cLuxArea_Sticky::DetachBody()
 
 //-----------------------------------------------------------------------
 
-kBeginSerialize(cLuxArea_Sticky_SaveData, iLuxArea_SaveData)
-
-kSerializeVar(msAttachFunction, eSerializeType_String)
-kSerializeVar(msDetachFunction, eSerializeType_String)
-
-kSerializeVar(msAttachSound, eSerializeType_String)
-kSerializeVar(msDetachSound, eSerializeType_String)
-
-kSerializeVar(msAttachPS, eSerializeType_String)
-kSerializeVar(msDetachPS, eSerializeType_String)
-
-kSerializeVar(mbCanDetach, eSerializeType_Bool)
-
-kSerializeVar(mfPoseTime, eSerializeType_Float32)
-
-kSerializeVar(mbCheckCenterInArea, eSerializeType_Bool)
-
-kSerializeVar(msAttachableBodyName, eSerializeType_String)
-
-kSerializeVar(mlAttachedEntityID, eSerializeType_Int32)
-kSerializeVar(mlAttachedBodyID, eSerializeType_Int32)
-
-kSerializeVar(mfAttachedBodyMass, eSerializeType_Float32)
-kSerializeVar(mbAttachedBodyGravity, eSerializeType_Bool)
-kSerializeVar(mbAttachedEntityFullGameSaved, eSerializeType_Bool)
-
-kSerializeVar(mfSetMtxTime, eSerializeType_Float32)
-
-kEndSerialize()
+kSerializeRustClassP(cLuxArea_Sticky_SaveData, iLuxArea_SaveData)
 
 //-----------------------------------------------------------------------
 
