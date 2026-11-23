@@ -11,6 +11,15 @@ unsafe fn state<'a>(this: *const u8) -> &'a mut SurfaceState {
 
 const MS_OFFSET: usize = 80;
 
+/// `GetPriority` for Rust callers: a weak reference to the Rust-defined symbol breaks single-unit builds.
+///
+/// # Safety
+/// `this` is a live `cSurfaceData`.
+pub(super) unsafe fn priority_of(this: *const u8) -> i32 {
+    // SAFETY: caller contract.
+    unsafe { state(this).get_i32(0) }
+}
+
 super::cxx::cxx! {
     state;
     "_ZN3hpl12cSurfaceData13SetElasticityEf" set_elasticity[this, s](v: f32) => s.set_f32(0, v);

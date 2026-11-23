@@ -99,7 +99,6 @@ macro_rules! weak_calls {
 }
 
 weak_calls! {
-    "_ZNK3hpl12cSurfaceData11GetPriorityEv" "ohpl_nwt_priority" surface_priority(s: *const u8) -> i32;
     "_ZN3hpl12cSurfaceData18CreateImpactEffectEfRKNS_8cVector3IfEEiPS0_PNS_13iPhysicsWorldE" "ohpl_nwt_impact_effect" surface_impact_effect(s: *const u8, speed: f32, pos: *const Vector3f, contacts: i32, other: *const u8, world: *const u8);
     "_ZN3hpl12cSurfaceData8OnImpactEfRKNS_8cVector3IfEEiPNS_12iPhysicsBodyE" "ohpl_nwt_on_impact" surface_on_impact(s: *const u8, speed: f32, pos: *const Vector3f, contacts: i32, body: *const u8);
     "_ZN3hpl12cSurfaceData7OnSlideEfRKNS_8cVector3IfEEiPNS_12iPhysicsBodyES6_" "ohpl_nwt_on_slide" surface_on_slide(s: *const u8, speed: f32, pos: *const Vector3f, contacts: i32, body: *const u8, against: *const u8);
@@ -142,8 +141,8 @@ unsafe extern "C" fn dispatch_contacts(
             let pos = data.add(CD_POS).cast::<Vector3f>();
             surface_impact_effect(d1, normal, pos, contacts, d2, s1.world as *const u8);
             let c = surface_calls(
-                surface_priority(d1),
-                surface_priority(d2),
+                super::cxx_surface::priority_of(d1),
+                super::cxx_surface::priority_of(d2),
                 m1 == m2,
                 normal,
                 tangent,
