@@ -76,6 +76,9 @@ namespace hpl {
 		 * \return 
 		 */
 		bool AddGlobalUpdate(iUpdateable* apUpdate);
+
+		OhplEnUpdater* Handle(){ return mpHandle;}
+		static OhplEnVisitFn VisitFn();
 	
 	private:
 		OhplEnUpdater *mpHandle;

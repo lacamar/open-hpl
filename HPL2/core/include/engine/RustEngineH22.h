@@ -6,8 +6,10 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "engine/RustEngine.h"
+#include "system/RustSystem.h"
+
 struct OhplH22Hc;
-struct OhplEnLoop;
 
 typedef void (*OhplH22Sink)(void*, const uint8_t*, size_t);
 
@@ -55,20 +57,48 @@ struct OhplH22HudHost
 
 typedef double (*OhplH22Call)(void*, int, double, double, double, double);
 
-// Ops of OhplH22Call, mirrored in h22_engine_ffi.rs `op`.
+// Ops of OhplH22Call, mirrored in h22_engine_ffi.rs `op`. Gaps in the numbering are ops the Rust loop does itself.
 enum
 {
-	OHPL_H22_OP_LOG = 0, OHPL_H22_OP_LOG_MEDIUM, OHPL_H22_OP_BROADCAST, OHPL_H22_OP_RUN_MESSAGE,
-	OHPL_H22_OP_CONTAINER_IS_DEFAULT, OHPL_H22_OP_LT_RESET, OHPL_H22_OP_WANT_UPDATE, OHPL_H22_OP_END_UPDATE_LOOP,
-	OHPL_H22_OP_STEP_SIZE, OHPL_H22_OP_GAME_IS_DONE, OHPL_H22_OP_WAIT_OUT_OF_FOCUS, OHPL_H22_OP_WINDOW_INPUT_FOCUS,
-	OHPL_H22_OP_SLEEP, OHPL_H22_OP_INPUT_UPDATE, OHPL_H22_OP_PAUSED, OHPL_H22_OP_HAS_HEADLESS,
-	OHPL_H22_OP_HC_LOGIC_STEP, OHPL_H22_OP_HC_UPDATE, OHPL_H22_OP_QUIT_POSTED, OHPL_H22_OP_RESET_QUIT,
-	OHPL_H22_OP_WINDOW_FOCUS_BITS, OHPL_H22_OP_TAKE_PLUGGED, OHPL_H22_OP_TAKE_REMOVED, OHPL_H22_OP_UPDATE_LOG_ACTIVE,
-	OHPL_H22_OP_CLEAR_UPDATE_LOG, OHPL_H22_OP_RENDER_ONCE, OHPL_H22_OP_LIMIT_FPS, OHPL_H22_OP_SWAP,
-	OHPL_H22_OP_TIMING, OHPL_H22_OP_FT_START, OHPL_H22_OP_FT_STOP, OHPL_H22_OP_FT_SEC,
-	OHPL_H22_OP_SCENE_RENDER, OHPL_H22_OP_DEVHUD_RENDER, OHPL_H22_OP_FLUSH, OHPL_H22_OP_DIAG_END_FRAME,
-	OHPL_H22_OP_DIAG_ADD_TIMING, OHPL_H22_OP_FPS_ADD, OHPL_H22_OP_APP_TIME, OHPL_H22_OP_STEADY_NS,
-	OHPL_H22_OP_STEP
+	OHPL_H22_OP_LOG = 0,
+	OHPL_H22_OP_LOG_MEDIUM = 1,
+	OHPL_H22_OP_WINDOW_INPUT_FOCUS = 11,
+	OHPL_H22_OP_INPUT_UPDATE = 13,
+	OHPL_H22_OP_HC_LOGIC_STEP = 16,
+	OHPL_H22_OP_HC_UPDATE = 17,
+	OHPL_H22_OP_QUIT_POSTED = 18,
+	OHPL_H22_OP_RESET_QUIT = 19,
+	OHPL_H22_OP_WINDOW_FOCUS_BITS = 20,
+	OHPL_H22_OP_TAKE_PLUGGED = 21,
+	OHPL_H22_OP_TAKE_REMOVED = 22,
+	OHPL_H22_OP_UPDATE_LOG_ACTIVE = 23,
+	OHPL_H22_OP_CLEAR_UPDATE_LOG = 24,
+	OHPL_H22_OP_SWAP = 27,
+	OHPL_H22_OP_TIMING = 28,
+	OHPL_H22_OP_FT_START = 29,
+	OHPL_H22_OP_FT_STOP = 30,
+	OHPL_H22_OP_FT_SEC = 31,
+	OHPL_H22_OP_SCENE_RENDER = 32,
+	OHPL_H22_OP_DEVHUD_RENDER = 33,
+	OHPL_H22_OP_FLUSH = 34,
+	OHPL_H22_OP_DIAG_END_FRAME = 35,
+	OHPL_H22_OP_DIAG_ADD_TIMING = 36,
+	OHPL_H22_OP_STEP = 40,
+};
+
+// Engine members the Rust loop reads and drives itself.
+struct OhplH22Refs
+{
+	OhplEnUpdater* updater;
+	OhplEnVisitFn visit;
+	OhplLogicTimer* timer;
+	OhplEnFps* fps;
+	const bool* gameDone;
+	const bool* paused;
+	const bool* renderOnce;
+	const bool* limitFps;
+	const bool* waitFocus;
+	void* const* headless;
 };
 
 extern "C" {
@@ -84,7 +114,7 @@ extern "C" {
 	bool ohpl_h22_hud_render(const OhplH22HudHost* host, bool hud, bool bugOpen, bool bugCapture, uint64_t savedTime,
 							 const uint32_t* text, size_t textN, const uint8_t* last, size_t lastN);
 
-	void ohpl_h22_engine_run(OhplH22Call call, void* ctx, OhplEnLoop* loop, float* frameTime, uint32_t* focusBits);
+	void ohpl_h22_engine_run(OhplH22Call call, void* ctx, const OhplH22Refs* refs, OhplEnLoop* loop, float* frameTime, uint32_t* focusBits);
 	void ohpl_h22_engine_init(OhplH22Call call, void* ctx);
 	void ohpl_h22_engine_exit(OhplH22Call call, void* ctx);
 }

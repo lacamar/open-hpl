@@ -21,6 +21,7 @@
 #define HPL_LOGICTIMER_H
 
 
+#include "system/Platform.h"
 #include "system/RustSystem.h"
 
 namespace hpl {
@@ -36,49 +37,50 @@ namespace hpl {
 		 * \param *apLowLevelSystem 
 		 * \return 
 		 */
-		cLogicTimer(int alUpdatesPerSec,iLowLevelSystem *apLowLevelSystem);
-		~cLogicTimer();
+		cLogicTimer(int alUpdatesPerSec,iLowLevelSystem *apLowLevelSystem) : mpLowLevelSystem(apLowLevelSystem)
+		{ ohpl_lt_init(&mTimer, alUpdatesPerSec, cPlatform::GetApplicationTime()); }
 
 		/**
 		 * Reset the time. Do this when the logical update of the game has been ide, ie while loading.
 		 */
-		void Reset();
+		void Reset(){ ohpl_lt_reset(&mTimer, cPlatform::GetApplicationTime()); }
 		/**
 		 * Check with the time if it is time for another logical update
 		 * \return true if logic should be updated, else false.
 		 */
-		bool WantUpdate();
+		bool WantUpdate(){ return ohpl_lt_want_update(&mTimer, cPlatform::GetApplicationTime()); }
 
 		/**
 		 * Resets various variables that makes the graphics is never frozen.
 		 */
-		void EndUpdateLoop();
+		void EndUpdateLoop(){ ohpl_lt_end_update_loop(&mTimer, cPlatform::GetApplicationTime()); }
 
 		/**
 		 * Set the number of times per second to update
 		 * \param alUpdatesPerSec 
 		 */
-		void SetUpdatesPerSec(int alUpdatesPerSec);
+		void SetUpdatesPerSec(int alUpdatesPerSec){ ohpl_lt_set_updates_per_sec(&mTimer, alUpdatesPerSec, cPlatform::GetApplicationTime()); }
 
 		/**
 		 * Sets the maximum updates in a row.
 		 * \param alUpdatesPerSec 
 		 */
-		void SetMaxUpdates(int alMax);
+		void SetMaxUpdates(int alMax){ mTimer.maxUpdates = alMax;}
 
 		/**
 		 * Get the number of updates per second.
 		 */
-		int GetUpdatesPerSec();
+		int GetUpdatesPerSec(){ return ohpl_lt_updates_per_sec(&mTimer);}
 		/**
 		 * Get the size of each step in seconds.
 		 */
-		float GetStepSize();
+		float GetStepSize(){ return ohpl_lt_step_size(&mTimer);}
 
 		double GetLocalTime(){ return mTimer.localTime;}
 		double GetLocalTimeAdd(){ return mTimer.localTimeAdd;}
 
 		void SetSpeedMul(float afX){ mTimer.speedMul = afX;}
+		OhplLogicTimer* Raw(){ return &mTimer;}
 		
 	private:
 		OhplLogicTimer mTimer;

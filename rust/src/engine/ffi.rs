@@ -13,7 +13,7 @@ use std::ffi::c_void;
 
 pub type VisitFn = unsafe extern "C" fn(*mut c_void, usize, i32, i32, f32, *const u8, usize);
 
-fn visitor(cb: VisitFn, ctx: *mut c_void) -> impl FnMut(usize, Visit<'_>) {
+pub(super) fn visitor(cb: VisitFn, ctx: *mut c_void) -> impl FnMut(usize, Visit<'_>) {
     move |w, v| {
         let (op, msg, x, name): (i32, i32, f32, &[u8]) = match v {
             Visit::Message(m, x) => (0, m, x, &[]),

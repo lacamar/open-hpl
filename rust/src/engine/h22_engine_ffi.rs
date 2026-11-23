@@ -1,31 +1,28 @@
 //! C ABI of the engine loop (`RustEngineH22.h`): every host operation goes through one
 //! `call(ctx, op, a0..a3)` entry so the C++ shell stays a switch.
 
+use super::ffi::{VisitFn, visitor};
+use super::frame::Fps;
 use super::frame::Loop;
 use super::h22_engine::{
-    self as eng, EngineHost, Module, RunLog, RunState, Step, StepHost, Timing,
+    self as eng, EngineHost, Module, Native, RunLog, RunState, Step, StepHost, Timing,
 };
+use super::updater::{self, Updater};
+use crate::backend::sdl::{delay_ms, ohpl_l1_ticks};
+use crate::system::logic_timer::LogicTimer;
 use std::ffi::c_void;
+use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Instant;
 
 pub type CallFn = unsafe extern "C" fn(*mut c_void, i32, f64, f64, f64, f64) -> f64;
 
+/// Numbers are the original `OHPL_H22_OP_*` values; gaps are ops the loop now does itself.
 pub mod op {
     pub const LOG: i32 = 0;
     pub const LOG_MEDIUM: i32 = 1;
-    pub const BROADCAST: i32 = 2;
-    pub const RUN_MESSAGE: i32 = 3;
-    pub const CONTAINER_IS_DEFAULT: i32 = 4;
-    pub const LT_RESET: i32 = 5;
-    pub const WANT_UPDATE: i32 = 6;
-    pub const END_UPDATE_LOOP: i32 = 7;
-    pub const STEP_SIZE: i32 = 8;
-    pub const GAME_IS_DONE: i32 = 9;
-    pub const WAIT_OUT_OF_FOCUS: i32 = 10;
     pub const WINDOW_INPUT_FOCUS: i32 = 11;
-    pub const SLEEP: i32 = 12;
     pub const INPUT_UPDATE: i32 = 13;
-    pub const PAUSED: i32 = 14;
-    pub const HAS_HEADLESS: i32 = 15;
     pub const HC_LOGIC_STEP: i32 = 16;
     pub const HC_UPDATE: i32 = 17;
     pub const QUIT_POSTED: i32 = 18;
@@ -35,8 +32,6 @@ pub mod op {
     pub const TAKE_REMOVED: i32 = 22;
     pub const UPDATE_LOG_ACTIVE: i32 = 23;
     pub const CLEAR_UPDATE_LOG: i32 = 24;
-    pub const RENDER_ONCE: i32 = 25;
-    pub const LIMIT_FPS: i32 = 26;
     pub const SWAP: i32 = 27;
     pub const TIMING: i32 = 28;
     pub const FT_START: i32 = 29;
@@ -47,9 +42,6 @@ pub mod op {
     pub const FLUSH: i32 = 34;
     pub const DIAG_END_FRAME: i32 = 35;
     pub const DIAG_ADD_TIMING: i32 = 36;
-    pub const FPS_ADD: i32 = 37;
-    pub const APP_TIME: i32 = 38;
-    pub const STEADY_NS: i32 = 39;
     /// Init/exit step: a0 = step code, a1 = module.
     pub const STEP: i32 = 40;
 }
@@ -93,47 +85,11 @@ impl EngineHost for CHost {
     fn log_medium_framerate(&self, fps: f64) {
         self.c(op::LOG_MEDIUM, [fps, 0.0, 0.0, 0.0]);
     }
-    fn broadcast(&self, msg: i32) {
-        self.c(op::BROADCAST, [f64::from(msg), 0.0, 0.0, 0.0]);
-    }
-    fn run_message(&self, msg: i32, x: f32) {
-        self.c(op::RUN_MESSAGE, [f64::from(msg), f64::from(x), 0.0, 0.0]);
-    }
-    fn current_container_is_default(&self) -> bool {
-        self.q(op::CONTAINER_IS_DEFAULT)
-    }
-    fn logic_timer_reset(&self) {
-        self.v(op::LT_RESET);
-    }
-    fn want_update(&self) -> bool {
-        self.q(op::WANT_UPDATE)
-    }
-    fn end_update_loop(&self) {
-        self.v(op::END_UPDATE_LOOP);
-    }
-    fn step_size(&self) -> f32 {
-        self.c(op::STEP_SIZE, [0.0; 4]) as f32
-    }
-    fn game_is_done(&self) -> bool {
-        self.q(op::GAME_IS_DONE)
-    }
-    fn wait_if_out_of_focus(&self) -> bool {
-        self.q(op::WAIT_OUT_OF_FOCUS)
-    }
     fn window_input_focus(&self) -> bool {
         self.q(op::WINDOW_INPUT_FOCUS)
     }
-    fn sleep_ms(&self, ms: u32) {
-        self.c(op::SLEEP, [f64::from(ms), 0.0, 0.0, 0.0]);
-    }
     fn input_update(&self, dt: f32) {
         self.c(op::INPUT_UPDATE, [f64::from(dt), 0.0, 0.0, 0.0]);
-    }
-    fn paused(&self) -> bool {
-        self.q(op::PAUSED)
-    }
-    fn has_headless(&self) -> bool {
-        self.q(op::HAS_HEADLESS)
     }
     fn headless_logic_step(&self) {
         self.v(op::HC_LOGIC_STEP);
@@ -161,12 +117,6 @@ impl EngineHost for CHost {
     }
     fn clear_update_log(&self) {
         self.v(op::CLEAR_UPDATE_LOG);
-    }
-    fn render_once(&self) -> bool {
-        self.q(op::RENDER_ONCE)
-    }
-    fn limit_fps(&self) -> bool {
-        self.q(op::LIMIT_FPS)
     }
     fn swap_buffers(&self) {
         self.v(op::SWAP);
@@ -208,15 +158,6 @@ impl EngineHost for CHost {
             op::DIAG_ADD_TIMING,
             [logic_ms, f64::from(steps), render_ms, swap_ms],
         );
-    }
-    fn fps_add_frame(&self) {
-        self.v(op::FPS_ADD);
-    }
-    fn app_time_ms(&self) -> u64 {
-        self.c(op::APP_TIME, [0.0; 4]) as u64
-    }
-    fn steady_ns(&self) -> i64 {
-        self.c(op::STEADY_NS, [0.0; 4]) as i64
     }
 }
 
@@ -289,13 +230,109 @@ impl StepHost for CHost {
     }
 }
 
+/// Engine members the loop reads and drives itself (`OhplH22Refs` in RustEngineH22.h).
+#[repr(C)]
+pub struct Refs {
+    pub updater: *mut Updater,
+    pub visit: VisitFn,
+    pub timer: *mut LogicTimer,
+    pub fps: *mut Fps,
+    pub game_done: *const bool,
+    pub paused: *const bool,
+    pub render_once: *const bool,
+    pub limit_fps: *const bool,
+    pub wait_focus: *const bool,
+    pub headless: *const *const c_void,
+}
+
+fn ticks_ms() -> u64 {
+    u64::from(ohpl_l1_ticks())
+}
+
+impl Refs {
+    fn flag(p: *const bool) -> bool {
+        // SAFETY: the shell passes live engine members; `Exit`/`SetPaused` write them from other
+        // threads, so the read is atomic.
+        unsafe { AtomicBool::from_ptr(p.cast_mut()).load(Ordering::Acquire) }
+    }
+
+    fn visit(&self, f: impl FnOnce(&mut dyn FnMut(usize, updater::Visit<'_>))) {
+        f(&mut visitor(self.visit, std::ptr::null_mut()));
+    }
+}
+
+impl Native for Refs {
+    fn broadcast(&self, msg: i32) {
+        // SAFETY: live updater; visits re-enter through the same pointer.
+        self.visit(|cb| unsafe { updater::broadcast(self.updater, msg, 0.0, cb) });
+    }
+    fn run_message(&self, msg: i32, x: f32) {
+        // SAFETY: as above.
+        self.visit(|cb| unsafe { updater::run_message(self.updater, msg, x, cb) });
+    }
+    fn current_container_is_default(&self) -> bool {
+        // SAFETY: live updater, short borrow.
+        unsafe { (*self.updater).current_name() == b"Default" }
+    }
+    fn logic_timer_reset(&self) {
+        // SAFETY: live timer, short borrow.
+        unsafe { (*self.timer).reset(ticks_ms()) }
+    }
+    fn want_update(&self) -> bool {
+        // SAFETY: as above.
+        unsafe { (*self.timer).want_update(ticks_ms()) }
+    }
+    fn end_update_loop(&self) {
+        // SAFETY: as above.
+        unsafe { (*self.timer).end_update_loop(ticks_ms()) }
+    }
+    fn step_size(&self) -> f32 {
+        // SAFETY: as above.
+        unsafe { (*self.timer).step_size() }
+    }
+    fn game_is_done(&self) -> bool {
+        Self::flag(self.game_done)
+    }
+    fn wait_if_out_of_focus(&self) -> bool {
+        Self::flag(self.wait_focus)
+    }
+    fn sleep_ms(&self, ms: u32) {
+        delay_ms(ms);
+    }
+    fn paused(&self) -> bool {
+        Self::flag(self.paused)
+    }
+    fn has_headless(&self) -> bool {
+        // SAFETY: points at the shell's member.
+        unsafe { !(*self.headless).is_null() }
+    }
+    fn render_once(&self) -> bool {
+        Self::flag(self.render_once)
+    }
+    fn limit_fps(&self) -> bool {
+        Self::flag(self.limit_fps)
+    }
+    fn fps_add_frame(&self) {
+        // SAFETY: live counter, short borrow.
+        unsafe { (*self.fps).add_frame(ticks_ms()) }
+    }
+    fn app_time_ms(&self) -> u64 {
+        ticks_ms()
+    }
+    fn steady_ns(&self) -> i64 {
+        static BASE: OnceLock<Instant> = OnceLock::new();
+        BASE.get_or_init(Instant::now).elapsed().as_nanos() as i64
+    }
+}
+
 /// # Safety
-/// `call`/`ctx` are a valid host; `lp`, `frame_time` and `focus_bits` point at engine members that
-/// outlive the call.
+/// `call`/`ctx` are a valid host; `refs`, `lp`, `frame_time` and `focus_bits` point at engine
+/// members that outlive the call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h22_engine_run(
     call: CallFn,
     ctx: *mut c_void,
+    refs: *const Refs,
     lp: *mut Loop,
     frame_time: *mut f32,
     focus_bits: *mut u32,
@@ -303,6 +340,8 @@ pub unsafe extern "C" fn ohpl_h22_engine_run(
     let host = CHost { call, ctx };
     eng::run(
         &host,
+        // SAFETY: caller contract.
+        unsafe { &*refs },
         &RunState {
             lp,
             frame_time,
