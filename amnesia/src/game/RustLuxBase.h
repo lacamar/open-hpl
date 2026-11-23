@@ -238,7 +238,6 @@ extern "C"
 	void ohpl_ga9_ret_bytes(OhplGa9Ret *r, const unsigned char *p, size_t n);
 	void ohpl_ga9_ret_wide(OhplGa9Ret *r, const uint32_t *p, size_t n);
 
-
 	void ohpl_ga9_parse_cmdline(const unsigned char *cmd, size_t n, bool *out, OhplGa9Emit emit, void *ectx);
 	void ohpl_ga9_error_text(const uint32_t *msg, size_t n, OhplGa9Emit emit, void *ectx);
 	bool ohpl_ga9_init_app(void *ctx, OhplGa9Call call, const uint32_t *init_file, size_t init_n, const uint32_t *default_init, size_t default_n, OhplGa9Emit emit, void *ectx);
@@ -246,8 +245,6 @@ extern "C"
 	bool ohpl_ga9_use_wanted_config(bool force_default, bool wanted_exists);
 	void ohpl_ga9_main_vars(void *ctx, OhplGa9Call call, bool *out, OhplGa9Emit emit, void *ectx);
 	bool ohpl_ga9_feature_error(int32_t sm2, int32_t draw_buffers, int32_t packed, OhplGa9Emit emit, void *ectx);
-	int32_t ohpl_ga9_start_mode(bool show_pre_menu, bool show_menu);
-	int32_t ohpl_ga9_direct_start_input(bool debug_window_active, bool fullscreen);
 	bool ohpl_ga9_custom_story(void *ctx, OhplGa9Call call, const uint32_t *root, size_t root_n, const unsigned char *default_lang, size_t lang_n, OhplGa9Emit emit, void *ectx);
 	void ohpl_ga9_custom_story_save_path(const uint32_t *profile, size_t profile_n, const uint32_t *root, size_t root_n, OhplGa9Emit emit, void *ectx);
 	void ohpl_ga9_resolve_start(void *ctx, OhplGa9Call call, const OhplGa9StartArgs *a, OhplGa9Emit emit, void *ectx);
@@ -255,7 +252,6 @@ extern "C"
 	void ohpl_ga9_set_profile(OhplGa9Str prev, bool have_user_config, OhplGa9Str name, OhplGa9Str base_save, OhplGa9Str base_config, OhplGa9Emit emit, void *ectx);
 	bool ohpl_ga9_profile_folder(OhplGa9Str base_save, OhplGa9Str name, bool exists, OhplGa9Emit emit, void *ectx);
 	void ohpl_ga9_calc_gui_set_offset(float vx, float vy, float sx, float sy, float *out);
-	bool ohpl_ga9_chinese_font(const unsigned char *cur, size_t n);
 	int32_t ohpl_ga9_axis_from_name(const unsigned char *s, size_t n, bool *ok);
 
 	uint64_t ohpl_in_new();
