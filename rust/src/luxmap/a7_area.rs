@@ -17,6 +17,7 @@ pub const T_LADDER: i32 = 5;
 pub const T_LIQUID: i32 = 6;
 pub const T_STICKY: i32 = 7;
 pub const T_SLIME: i32 = 8;
+pub const T_ROPE: i32 = 9;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -115,6 +116,29 @@ pub struct SlimeS {
     pub disable_after_attack: bool,
 }
 
+/// Rope entity settings; the C++ rope shell reads them when it creates the physics rope.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct RopeS {
+    pub start_pos: Vector3f,
+    pub end_pos: Vector3f,
+    pub min_total_length: f32,
+    pub max_total_length: f32,
+    pub segment_length: f32,
+    pub damping: f32,
+    pub strength: f32,
+    pub stiffness: f32,
+    pub radius: f32,
+    pub length_tile_amount: f32,
+    pub length_tile_size: f32,
+    pub sound_start_speed: f32,
+    pub sound_stop_speed: f32,
+    pub auto_move_acc: f32,
+    pub auto_move_max_speed: f32,
+    pub rope_created: bool,
+    pub auto_move: bool,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Pod {
     Script(ScriptS),
@@ -126,6 +150,7 @@ pub enum Pod {
     Liquid(LiquidS),
     Sticky(StickyS),
     Slime(SlimeS),
+    Rope(RopeS),
 }
 
 impl Pod {
@@ -140,6 +165,7 @@ impl Pod {
             T_LIQUID => Self::Liquid(LiquidS::default()),
             T_STICKY => Self::Sticky(StickyS::default()),
             T_SLIME => Self::Slime(SlimeS::default()),
+            T_ROPE => Self::Rope(RopeS::default()),
             _ => return None,
         })
     }
@@ -156,6 +182,7 @@ impl Pod {
             T_LIQUID => size_of::<LiquidS>(),
             T_STICKY => size_of::<StickyS>(),
             T_SLIME => size_of::<SlimeS>(),
+            T_ROPE => size_of::<RopeS>(),
             _ => 0,
         }
     }
@@ -171,6 +198,7 @@ impl Pod {
             Self::Liquid(_) => Self::size_of(T_LIQUID),
             Self::Sticky(_) => Self::size_of(T_STICKY),
             Self::Slime(_) => Self::size_of(T_SLIME),
+            Self::Rope(_) => Self::size_of(T_ROPE),
         }
     }
 
@@ -185,6 +213,7 @@ impl Pod {
             Self::Liquid(s) => std::ptr::from_mut(s).cast(),
             Self::Sticky(s) => std::ptr::from_mut(s).cast(),
             Self::Slime(s) => std::ptr::from_mut(s).cast(),
+            Self::Rope(s) => std::ptr::from_mut(s).cast(),
         }
     }
 }
@@ -203,6 +232,20 @@ pub mod st {
     pub const SLIME_PS: usize = 2;
     pub const FLASHBACK_FILE: usize = 0;
     pub const FLASHBACK_CALLBACK: usize = 1;
+    pub const DESC_CAT: usize = 0;
+    pub const DESC_ENTRY: usize = 1;
+    pub const INSANE_CAT: usize = 2;
+    pub const INSANE_ENTRY: usize = 3;
+    pub const EXAMINE_SOUND: usize = 4;
+    pub const INSANE_SOUND: usize = 5;
+    pub const TEXT_CAT: usize = 0;
+    pub const TEXT_ENTRY: usize = 1;
+    pub const MATERIAL: usize = 0;
+    pub const END_POS_NODE: usize = 0;
+    pub const START_BODY: usize = 1;
+    pub const END_BODY: usize = 2;
+    pub const ROPE_MATERIAL: usize = 3;
+    pub const ROPE_SOUND: usize = 4;
     pub const COUNT: usize = 7;
 }
 
@@ -320,6 +363,19 @@ impl A7Area {
         let out = area::examine_interact(i, sanity, s.insane_limit, s.play_sound_count);
         s.play_sound_count = 0.5;
         out
+    }
+
+    /// Examine interaction; the flags come from which strings are set.
+    pub fn examine(&mut self, sanity: f32) -> ExamineOut {
+        let set = |i: usize| self.strs.get(i).is_some_and(|s| !s.is_empty());
+        let i = ExamineIn {
+            has_cat: set(st::DESC_CAT),
+            has_insane_cat: set(st::INSANE_CAT),
+            has_insane_entry: set(st::INSANE_ENTRY),
+            has_sound: set(st::EXAMINE_SOUND),
+            has_insane_sound: set(st::INSANE_SOUND),
+        };
+        self.examine_interact(i, sanity)
     }
 
     pub fn ladder_setup(&mut self, world: &Matrixf, pos_y: f32, size_y: f32) {

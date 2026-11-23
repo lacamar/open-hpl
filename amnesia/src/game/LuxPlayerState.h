@@ -33,7 +33,7 @@ class cLuxPlayer;
 class iLuxProp;
 class cLuxMap;
 class cLuxInventory_Item;
-class cLuxArea_Ladder;
+class cLuxAreaRs;
 
 //----------------------------------------------
 
@@ -43,11 +43,11 @@ public:
 	static void SetupHandObject(const tString& asHandObject){ msHandObject = asHandObject; }
 	static void SetupInteraction(iPhysicsBody *apBody, const cVector3f &avInteractPos);
 	static void SetupUseItem(cLuxInventory_Item *apItem){mpInventoryItem = apItem; }
-	static void SetupLadder(cLuxArea_Ladder *apLadder, const cVector3f &avStartPos){mpLadder = apLadder; mvLadderStartPos = avStartPos;}
+	static void SetupLadder(cLuxAreaRs *apLadder, const cVector3f &avStartPos){mpLadder = apLadder; mvLadderStartPos = avStartPos;}
 
 	///////////////////////
 	//Ladder
-	static cLuxArea_Ladder *mpLadder;
+	static cLuxAreaRs *mpLadder;
 	static cVector3f mvLadderStartPos;
 	
 	///////////////////////

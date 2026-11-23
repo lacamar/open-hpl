@@ -1,6 +1,9 @@
 //! Shell glue against a fake shell: constructor defaults, loader variables, save data round trip.
 
-use super::a7_area::{A7Area, Pod, T_FLASHBACK, T_INSANITY, T_LIQUID, T_SLIME, T_STICKY, st};
+use super::a7_area::{
+    A7Area, Pod, T_EXAMINE, T_FLASHBACK, T_INSANITY, T_LADDER, T_LIQUID, T_SCRIPT, T_SIGN, T_SLIME,
+    T_STICKY, st,
+};
 use super::a7_shell::{Sv, V, Vt};
 use crate::luxsave::layout_ar as lay;
 use std::ffi::c_void;
@@ -14,12 +17,24 @@ unsafe extern "C" fn var_i(_: *mut c_void, _: *const u8, _: usize, d: i32) -> i3
 unsafe extern "C" fn var_b(_: *mut c_void, _: *const u8, _: usize, d: bool) -> bool {
     d
 }
-unsafe extern "C" fn var_s(_: *mut c_void, _: *const u8, _: usize) -> Sv {
+unsafe extern "C" fn var_s(_: *mut c_void, _: *const u8, _: usize, d: *const u8, n: usize) -> Sv {
+    Sv { p: d, n }
+}
+unsafe extern "C" fn doc_open(_: *mut c_void, _: *const u8, _: usize) -> bool {
+    false
+}
+unsafe extern "C" fn doc_f(_: *mut c_void, _: *const u8, _: usize) -> f32 {
+    0.0
+}
+unsafe extern "C" fn doc_s(_: *mut c_void, _: *const u8, _: usize) -> Sv {
     Sv {
         p: std::ptr::null(),
         n: 0,
     }
 }
+unsafe extern "C" fn doc_close(_: *mut c_void) {}
+unsafe extern "C" fn max_focus(_: *mut c_void, _: f32) {}
+unsafe extern "C" fn callback(_: *mut c_void, _: i32, _: *const u8, _: usize, _: bool) {}
 unsafe extern "C" fn cfg_f(
     _: *mut c_void,
     _: *const u8,
@@ -72,6 +87,12 @@ fn vt() -> Vt {
         mat_name,
         body_ids,
         find_body,
+        max_focus,
+        callback,
+        doc_open,
+        doc_f,
+        doc_s,
+        doc_close,
     }
 }
 
@@ -221,4 +242,93 @@ fn insanity_and_flashback_round_trip() {
     // SAFETY: as above.
     unsafe { g.load(std::ptr::from_ref(&*d).cast(), &v) };
     assert_eq!(g.strs[st::FLASHBACK_FILE], b"fb.xml");
+}
+
+#[test]
+fn script_sign_examine_ladder_round_trip() {
+    let t = vt();
+    // SAFETY: as above.
+    let v = unsafe { V::new(&t) };
+
+    let mut a = area(T_SCRIPT);
+    a.load_vars(&v);
+    if let Pod::Script(s) = &mut a.pod {
+        s.item_interaction = true;
+    }
+    let mut d = zeroed::<lay::cLuxArea_Script_SaveData>();
+    // SAFETY: as above.
+    unsafe { a.save(std::ptr::from_mut(&mut *d).cast(), &v) };
+    let mut b = area(T_SCRIPT);
+    // SAFETY: as above.
+    unsafe { b.load(std::ptr::from_ref(&*d).cast(), &v) };
+    assert!(matches!(b.pod, Pod::Script(s) if s.item_interaction));
+
+    let mut a = area(T_SIGN);
+    a.strs[st::TEXT_CAT] = b"cat".to_vec();
+    a.strs[st::TEXT_ENTRY] = b"entry".to_vec();
+    let mut d = zeroed::<lay::cLuxArea_Sign_SaveData>();
+    // SAFETY: as above.
+    unsafe { a.save(std::ptr::from_mut(&mut *d).cast(), &v) };
+    let mut b = area(T_SIGN);
+    // SAFETY: as above.
+    unsafe { b.load(std::ptr::from_ref(&*d).cast(), &v) };
+    assert_eq!(
+        (&b.strs[0][..], &b.strs[1][..]),
+        (&b"cat"[..], &b"entry"[..])
+    );
+
+    let mut a = area(T_EXAMINE);
+    a.strs[st::INSANE_SOUND] = b"snd".to_vec();
+    a.strs[st::DESC_ENTRY] = b"e".to_vec();
+    let mut d = zeroed::<lay::cLuxArea_Examine_SaveData>();
+    // SAFETY: as above.
+    unsafe { a.save(std::ptr::from_mut(&mut *d).cast(), &v) };
+    let mut b = area(T_EXAMINE);
+    // SAFETY: as above.
+    unsafe { b.load(std::ptr::from_ref(&*d).cast(), &v) };
+    assert_eq!(b.strs[st::INSANE_SOUND], b"snd");
+    assert_eq!(b.strs[st::DESC_ENTRY], b"e");
+
+    let mut a = area(T_LADDER);
+    a.load_vars(&v);
+    assert_eq!(a.strs[st::MATERIAL], b"metal");
+    let mut d = zeroed::<lay::cLuxArea_Ladder_SaveData>();
+    // SAFETY: as above.
+    unsafe { a.save(std::ptr::from_mut(&mut *d).cast(), &v) };
+    let mut b = area(T_LADDER);
+    // SAFETY: as above.
+    unsafe { b.load(std::ptr::from_ref(&*d).cast(), &v) };
+    assert_eq!(b.strs[st::MATERIAL], b"metal");
+}
+
+#[test]
+fn rope_loads_start_and_round_trips() {
+    let t = vt();
+    // SAFETY: as above.
+    let v = unsafe { V::new(&t) };
+    let mut a = area(super::a7_area::T_ROPE);
+    a.load_rope(
+        crate::types::Vector3f {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        },
+        &v,
+    );
+    a.strs[st::ROPE_SOUND] = b"rope.snt".to_vec();
+    if let Pod::Rope(s) = &mut a.pod {
+        s.rope_created = true;
+        s.radius = 0.25;
+    }
+    let mut d = zeroed::<lay::cLuxRope_SaveData>();
+    // SAFETY: as above.
+    unsafe { a.save(std::ptr::from_mut(&mut *d).cast(), &v) };
+    assert_eq!(d.mvStartPos, [1.0, 2.0, 3.0]);
+    let mut b = area(super::a7_area::T_ROPE);
+    // SAFETY: as above.
+    unsafe { b.load(std::ptr::from_ref(&*d).cast(), &v) };
+    assert_eq!(b.strs[st::ROPE_SOUND], b"rope.snt");
+    assert!(
+        matches!(b.pod, Pod::Rope(s) if s.rope_created && s.radius == 0.25 && s.start_pos.z == 3.0)
+    );
 }

@@ -137,7 +137,7 @@ public:
 
 //----------------------------------------------
 
-// Liquid, sticky, slime, insanity and flashback areas: all state and logic is Rust (A7Area).
+// Every area type but rope: all state and logic is Rust (A7Area).
 class cLuxAreaRs : public iLuxArea
 {
 typedef iLuxArea super_class;
@@ -150,6 +150,17 @@ public:
 	void OnUpdate(float afTimeStep);
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState){}
 
+	bool CanInteract(iPhysicsBody *apBody);
+	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
+	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
+	tWString GetFocusText();
+
+	const cVector3f& GetForward(){ return *reinterpret_cast<cVector3f*>(&Pod<OhplA7Ladder>().forward);}
+	float GetMaxY(){ return Pod<OhplA7Ladder>().maxY;}
+	float GetMinY(){ return Pod<OhplA7Ladder>().minY;}
+	tString GetMaterial(){ return Str(kOhplA7sLadderMaterial);}
+	cVector3f GetStartRotation();
+
 	void StickyAttach(iPhysicsBody *apBody){ ohpl_a7_area_sticky_attach_body(mpA7Area, apBody);}
 	void StickyDetach();
 	iPhysicsBody *GetAttachedBody(){ return reinterpret_cast<iPhysicsBody*>(ohpl_a7_area_sticky_attached(mpA7Area));}
@@ -160,7 +171,9 @@ public:
 	virtual void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
 
 private:
-	void LoadVars(class cLuxAreaLoaderRs *apLoader, cWorld *apWorld);
+	tString Str(size_t alIdx);
+	bool LadderInteract();
+	void LoadVars(iAreaLoader *apLoader, cWorld *apWorld);
 };
 
 class cLuxAreaLoaderRs : public iLuxAreaLoader
@@ -174,6 +187,86 @@ public:
 
 private:
 	eLuxAreaType mAreaType;
+};
+
+//----------------------------------------------
+
+// Rope entity: settings, loader and save data are Rust (A7Area); this shell creates the physics and graphic rope.
+class cLuxRope_SaveData : public iLuxEntity_SaveData
+{
+	kSerializableClassInit(cLuxRope_SaveData)
+public:
+	bool mbRopeCreated;
+	cVector3f mvStartPos;
+	cVector3f mvEndPos;
+	tString msEndPosNode;
+	tString msStartBody;
+	tString msEndBody;
+	float mfMinTotalLength;
+	float mfMaxTotalLength;
+	float mfSegmentLength;
+	float mfDamping;
+	float mfStrength;
+	float mfStiffness;
+	tString msMaterial;
+	float mfRadius;
+	float mfLengthTileAmount;
+	float mfLengthTileSize;
+	tString msSound;
+	float mfSoundStartSpeed;
+	float mfSoundStopSpeed;
+	bool mbAutoMove;
+	float mfAutoMoveAcc;
+	float mfAutoMoveMaxSpeed;
+
+	iLuxEntity* CreateEntity(cLuxMap *apMap);
+};
+
+class cLuxRope : public iLuxEntity
+{
+typedef iLuxEntity super_class;
+friend struct OhplA7bDump;
+friend class cLuxAreaRopeLoader;
+public:
+	cLuxRope(const tString& asName, int alID, cLuxMap *apMap);
+	~cLuxRope();
+
+	void AfterWorldLoad();
+
+	void OnSetActive(bool abX){}
+	void OnUpdate(float afTimeStep){}
+	void OnConnectionStateChange(iLuxEntity *apEntity, int alState){}
+
+	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos){ return eLuxFocusCrosshair_Default; }
+	iEntity3D* GetAttachEntity(){ return NULL;}
+	void GiveDamage(float afAmount, int alStrength){}
+	bool CanInteract(iPhysicsBody *apBody){ return false; }
+	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos){ return false;}
+	int GetBodyNum(){ return 0;}
+	iPhysicsBody* GetBody(int alIdx){ return NULL;}
+
+	iLuxEntity_SaveData* CreateSaveData(){ return hplNew(cLuxRope_SaveData, ());}
+	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
+	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
+	void SetupSaveData(iLuxEntity_SaveData *apSaveData){ super_class::SetupSaveData(apSaveData);}
+private:
+	iPhysicsBody* GetBody(const tString& asName);
+	tString Str(size_t alIdx);
+
+	OhplA7Area *mpA7Area;
+	OhplA7Rope &mR;
+
+	iPhysicsRope *mpRope;
+	cRopeEntity *mpRopeGfx;
+};
+
+class cLuxAreaRopeLoader : public iAreaLoader
+{
+public:
+	cLuxAreaRopeLoader(const tString& asName) : iAreaLoader(asName){}
+	virtual ~cLuxAreaRopeLoader(){}
+
+	void Load(const tString &asName, int alID, bool abActive, const cVector3f &avSize, const cMatrixf &a_mtxTransform,cWorld *apWorld);
 };
 
 //----------------------------------------------

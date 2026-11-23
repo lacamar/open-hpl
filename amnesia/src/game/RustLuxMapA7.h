@@ -24,15 +24,22 @@ struct OhplA7Script { bool itemInteraction; };
 struct OhplA7Examine { float insaneLimit, playSoundCount; };
 struct OhplA7Sign { unsigned char unused; };
 struct OhplA7Ladder { OhplGa5Vec3 forward; float maxY, minY; };
+struct OhplA7Rope
+{
+	OhplGa5Vec3 startPos, endPos;
+	float minTotalLength, maxTotalLength, segmentLength, damping, strength, stiffness, radius, lengthTileAmount, lengthTileSize;
+	float soundStartSpeed, soundStopSpeed, autoMoveAcc, autoMoveMaxSpeed;
+	bool ropeCreated, autoMove;
+};
 
 static_assert(sizeof(OhplA7Base) == 96, "OhplA7Base");
 static_assert(sizeof(OhplA7Script) == 1 && sizeof(OhplA7Examine) == 8, "pods");
-static_assert(sizeof(OhplA7Sign) == 1 && sizeof(OhplA7Ladder) == 20, "pods");
+static_assert(sizeof(OhplA7Sign) == 1 && sizeof(OhplA7Ladder) == 20 && sizeof(OhplA7Rope) == 80, "pods");
 
 enum
 {
 	kOhplA7Script, kOhplA7Examine, kOhplA7Insanity, kOhplA7Flashback, kOhplA7Sign,
-	kOhplA7Ladder, kOhplA7Liquid, kOhplA7Sticky, kOhplA7Slime,
+	kOhplA7Ladder, kOhplA7Liquid, kOhplA7Sticky, kOhplA7Slime, kOhplA7Rope,
 };
 enum { kOhplA7Entity, kOhplA7Dissolve, kOhplA7Lamp, kOhplA7Start, kOhplA7Pos, kOhplA7UseItem };
 enum { kOhplA7Entities, kOhplA7Enemies, kOhplA7Doomed, kOhplA7StickyList };
@@ -45,7 +52,7 @@ struct OhplA7Vt
 	float (*var_f)(void *, const char *, size_t, float);
 	int (*var_i)(void *, const char *, size_t, int);
 	bool (*var_b)(void *, const char *, size_t, bool);
-	OhplA7Sv (*var_s)(void *, const char *, size_t);
+	OhplA7Sv (*var_s)(void *, const char *, size_t, const char *, size_t);
 	float (*cfg_f)(void *, const char *, size_t, const char *, size_t, float);
 	OhplA7Sv (*cfg_s)(void *, const char *, size_t, const char *, size_t);
 	void (*preload_sound)(void *, const char *, size_t);
@@ -54,7 +61,17 @@ struct OhplA7Vt
 	OhplA7Sv (*mat_name)(void *, size_t);
 	void (*body_ids)(void *, size_t, int *);
 	size_t (*find_body)(void *, int, int);
+	void (*max_focus)(void *, float);
+	void (*callback)(void *, int, const char *, size_t, bool);
+	bool (*doc_open)(void *, const char *, size_t);
+	float (*doc_f)(void *, const char *, size_t);
+	OhplA7Sv (*doc_s)(void *, const char *, size_t);
+	void (*doc_close)(void *);
 };
+
+// Indices of the strings an area keeps (A7Area::strs).
+enum { kOhplA7sExDescCat = 0, kOhplA7sExInsaneCat = 2, kOhplA7sExSound = 4, kOhplA7sExInsaneSound = 5, kOhplA7sSignCat = 0, kOhplA7sLadderMaterial = 0,
+	kOhplA7sRopeEndPosNode = 0, kOhplA7sRopeStartBody = 1, kOhplA7sRopeEndBody = 2, kOhplA7sRopeMaterial = 3, kOhplA7sRopeSound = 4 };
 
 typedef void (*OhplA7DropFn)(void *);
 typedef void (*OhplA7DissolveFn)(void *, void *, float, bool);
@@ -129,12 +146,14 @@ extern "C" {
 	bool ohpl_a7_area_on_interact(OhplA7Area *a, bool has_callback);
 	int ohpl_a7_area_crosshair(OhplA7Area *a, bool has_callback, int custom, const int (*tbl)[4]);
 	bool ohpl_a7_area_tick(OhplA7Area *a, float step, float engine_step);
-	void ohpl_a7_area_examine(OhplA7Area *a, const OhplGa5ExamineIn *i, float sanity, OhplGa5ExamineOut *out);
+	void ohpl_a7_area_examine(OhplA7Area *a, float sanity, OhplGa5ExamineOut *out);
+	const char *ohpl_a7_area_str(const OhplA7Area *a, size_t idx, size_t *len);
 	void ohpl_a7_area_ladder_setup(OhplA7Area *a, const OhplGa5Mtx *world, float pos_y, float size_y);
 	void ohpl_a7_area_ladder_start(OhplA7Area *a, const OhplGa5Vec3 *area_pos, const OhplGa5Vec3 *char_size, float char_y, OhplGa5Vec3 *out);
 	void ohpl_a7_area_liquid_setup(OhplA7Area *a, float pos_y, float size_y);
 	void ohpl_a7_area_update(OhplA7Area *a, void *shell, OhplA7Ctx *ctx, float step);
 	bool ohpl_a7_area_init(OhplA7Area *a, const char *name, size_t name_n, const OhplA7Vt *vt);
+	void ohpl_a7_rope_load(OhplA7Area *a, const OhplGa5Vec3 *start, const OhplA7Vt *vt);
 	void ohpl_a7_area_load_vars(OhplA7Area *a, const OhplA7Vt *vt);
 	void ohpl_a7_area_save(OhplA7Area *a, void *data, const OhplA7Vt *vt);
 	void ohpl_a7_area_load(OhplA7Area *a, const void *data, const OhplA7Vt *vt);

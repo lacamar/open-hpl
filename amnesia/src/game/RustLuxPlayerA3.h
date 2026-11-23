@@ -127,7 +127,7 @@ class iPhysicsJoint;
 }
 class iLuxEntity;
 class iLuxProp;
-class cLuxArea_Ladder;
+class cLuxAreaRs;
 class cLuxInventory_Item;
 class cLuxInteractData_Grab;
 class cLuxInteractData_Push;
@@ -223,7 +223,7 @@ struct OhplA3Rotate
 struct OhplA3Ladder
 {
 	OhplA3Base base;
-	cLuxArea_Ladder *ladder;
+	cLuxAreaRs *ladder;
 	int32_t state;
 	float timeCount;
 	hpl::cVector3f startPosition, charPosition, goalPos, goalRot, posAdd, rotAdd;

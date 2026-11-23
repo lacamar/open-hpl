@@ -204,6 +204,9 @@ pub unsafe fn update(a: *mut A7Area, shell: usize, ctx: *mut Ctx, step: f32) {
         Pod::Slime(_) => slime_update(a, shell, ctx, step),
         Pod::Insanity(_) => insanity_update(a, shell, step),
         Pod::Flashback(_) => flashback_update(a, shell, step),
+        Pod::Examine(_) => {
+            tick(a, step, 0.0);
+        }
         _ => {}
     }
 }
