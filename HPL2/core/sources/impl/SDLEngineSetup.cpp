@@ -45,17 +45,8 @@
 #include "impl/LowLevelInputSDL.h"
 #include "impl/LowLevelSoundOpenAL.h"
 
-#if USE_SDL2
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
-#else
-#include "SDL/SDL.h"
-#include "SDL/SDL_syswm.h"
-#endif
-#ifdef WIN32
-#include "Windows.h"
-#include "Dbt.h"
-#endif
 
 namespace hpl {
 

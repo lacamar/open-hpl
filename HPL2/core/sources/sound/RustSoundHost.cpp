@@ -7,6 +7,7 @@
 #include "sound/SoundChannel.h"
 #include "sound/SoundData.h"
 #include "sound/LowLevelSound.h"
+#include "impl/LowLevelSoundOpenAL.h"
 #include "scene/SoundEntity.h"
 #include "scene/World.h"
 #include "physics/PhysicsWorld.h"
@@ -174,6 +175,23 @@ namespace hpl {
 	}
 
 	const OhplSndHost* OhplSndHostTable(){ return &kHost; }
+
+	static void OhplL5DeviceSink(void* apCtx, int32_t alId, const uint8_t* apName, size_t alLen, bool abDefault)
+	{
+		((tSoundDeviceVec*)apCtx)->push_back(hplNew(cSoundDeviceIdentifierOpenAL,(alId, tString((const char*)apName, alLen), abDefault)));
+	}
+
+	void iLowLevelSound::PopulateAvailableSoundDevices(tSoundDeviceVec& avSoundDeviceVec)
+	{
+		STLDeleteAll(avSoundDeviceVec);
+		OhplL5InstallLog();
+		ohpl_l5_devices(OhplL5DeviceSink, &avSoundDeviceVec);
+	}
+
+	cOpenALSoundChannel::~cOpenALSoundChannel(){ ohpl_l5_chan_free(mpRust); DestroyData(); }
+	cOpenALSoundData::~cOpenALSoundData(){ if(mpRust) ohpl_l5_data_free(mpRust); }
+	cOpenALSoundEnvironment::~cOpenALSoundEnvironment(){}
+	cLowLevelSoundOpenAL::~cLowLevelSoundOpenAL(){ ohpl_l5_low_free(mpRust); }
 
 	void iSoundChannel::DestroyData()
 	{

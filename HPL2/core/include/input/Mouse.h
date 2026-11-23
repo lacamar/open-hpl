@@ -20,6 +20,8 @@
 #ifndef HPL_MOUSE_H
 #define HPL_MOUSE_H
 
+#include "input/RustInput.h"
+
 #include "input/InputTypes.h"
 #include "input/InputDevice.h"
 #include "math/MathTypes.h"
@@ -63,6 +65,11 @@ namespace hpl {
 		 */
 		virtual eMouseButton StringToButton(const tString&);
 	};
+
+
+inline iMouse::iMouse(tString asName) : iInputDevice(asName, eInputDeviceType_Mouse) { }
+inline tString iMouse::ButtonToString(eMouseButton aButton) { return OhplInputName(ohpl_input_mouse_button_name, aButton); }
+inline eMouseButton iMouse::StringToButton(const tString& asButton) { return (eMouseButton)OhplInputFromName(ohpl_input_mouse_button_from_name, asButton); }
 
 };
 

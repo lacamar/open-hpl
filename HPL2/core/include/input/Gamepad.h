@@ -20,6 +20,8 @@
 #ifndef HPL_GAMEPAD_H
 #define HPL_GAMEPAD_H
 
+#include "input/RustInput.h"
+
 #include "input/InputTypes.h"
 #include "input/InputDevice.h"
 
@@ -226,6 +228,22 @@ namespace hpl {
 	};
 
 	//------------------------------
+
+
+inline iGamepad::iGamepad(tString asName, int alIndex) : iInputDevice(asName, eInputDeviceType_Gamepad) { mlIndex = alIndex; }
+inline eGamepadAxisRange iGamepad::GetAxisRangeFromValue(float afX) { return (eGamepadAxisRange)ohpl_input_pad_axis_range_from_value(afX); }
+inline tString iGamepad::ButtonToString(eGamepadButton aButton) { return OhplInputName(ohpl_input_pad_button_name, aButton); }
+inline eGamepadButton iGamepad::StringToButton(const tString& asButton) { return (eGamepadButton)OhplInputFromName(ohpl_input_pad_button_from_name, asButton); }
+inline tString iGamepad::AxisToString(eGamepadAxis aAxis) { return OhplInputName(ohpl_input_pad_axis_name, aAxis); }
+inline eGamepadAxis iGamepad::StringToAxis(const tString& asAxis) { return (eGamepadAxis)OhplInputFromName(ohpl_input_pad_axis_from_name, asAxis); }
+inline tString iGamepad::AxisRangeToString(eGamepadAxisRange aRange) { return OhplInputName(ohpl_input_pad_axis_range_name, aRange); }
+inline eGamepadAxisRange iGamepad::StringToAxisRange(const tString& asRange) { return (eGamepadAxisRange)OhplInputFromName(ohpl_input_pad_axis_range_from_name, asRange); }
+inline tString iGamepad::HatToString(eGamepadHat aHat) { return OhplInputName(ohpl_input_pad_hat_name, aHat); }
+inline eGamepadHat iGamepad::StringToHat(const tString& asHat) { return (eGamepadHat)OhplInputFromName(ohpl_input_pad_hat_from_name, asHat); }
+inline tString iGamepad::HatStateToString(eGamepadHatState aHatState) { return OhplInputName(ohpl_input_pad_hat_state_name, aHatState); }
+inline eGamepadHatState iGamepad::StringToHatState(const tString& asHatState) { return (eGamepadHatState)OhplInputFromName(ohpl_input_pad_hat_state_from_name, asHatState); }
+inline tString iGamepad::BallToString(eGamepadBall aBall) { return OhplInputName(ohpl_input_pad_ball_name, aBall); }
+inline eGamepadBall iGamepad::StringToBall(const tString& asBall) { return (eGamepadBall)OhplInputFromName(ohpl_input_pad_ball_from_name, asBall); }
 
 };
 

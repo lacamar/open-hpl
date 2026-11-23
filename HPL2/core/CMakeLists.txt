@@ -82,8 +82,6 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     # GL
     sources/impl/FrameBufferGL.cpp
     sources/impl/GLSL*
-    sources/impl/OcclusionQueryOGL.cpp
-    sources/impl/VertexBufferOpenGL.cpp
     # SDL
     sources/impl/GamepadSDL.cpp
     sources/impl/GamepadSDL2.cpp

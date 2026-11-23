@@ -3,9 +3,10 @@
 //! Methods returning `cVector3f` by value get an sret stub: it moves `this` to x1 and the result address (x8) to x0.
 
 use super::cxx::{ptr_member, val_member};
-use super::newton_material::MatProps;
+use super::newton_material::{MatProps, surface_calls};
 use super::shell::BodyState;
 use super::{ffi_h15w as w, wreg};
+use crate::backend::newton::reg::Buoy;
 use crate::backend::newton::{body as nb, material as nm, world as nw};
 use crate::types::{Matrixf, Vector3f};
 use std::arch::global_asm;
@@ -80,6 +81,88 @@ mat_prop! {
 unsafe extern "C" fn update_materials_sym(this: *const u8) {
     // SAFETY: C++ calls with a live material.
     unsafe { update_materials(this) }
+}
+
+const MAT_SURFACE: usize = 48;
+const CD_TANGENT: usize = 4;
+const CD_POS: usize = 20;
+
+// Weak references: a strong one would pull SurfaceData.o (-> Log -> main) into test binaries that link libohpl.a.
+macro_rules! weak_calls {
+    ($($sym:literal $tramp:literal $name:ident($($a:ident: $t:ty),*) $(-> $r:ty)?;)*) => {
+        $(global_asm!(concat!(
+            ".weak ", $sym, "\n.global ", $tramp, "\n", $tramp, ":\nadrp x16, :got:", $sym,
+            "\nldr x16, [x16, :got_lo12:", $sym, "]\nbr x16"
+        ));)*
+        unsafe extern "C" { $(#[link_name = $tramp] fn $name($($a: $t),*) $(-> $r)?;)* }
+    };
+}
+
+weak_calls! {
+    "_ZN3hpl12cSurfaceData18CreateImpactEffectEfRKNS_8cVector3IfEEiPS0_PNS_13iPhysicsWorldE" "ohpl_nwt_impact_effect" surface_impact_effect(s: *const u8, speed: f32, pos: *const Vector3f, contacts: i32, other: *const u8, world: *const u8);
+    "_ZN3hpl12cSurfaceData8OnImpactEfRKNS_8cVector3IfEEiPNS_12iPhysicsBodyE" "ohpl_nwt_on_impact" surface_on_impact(s: *const u8, speed: f32, pos: *const Vector3f, contacts: i32, body: *const u8);
+    "_ZN3hpl12cSurfaceData7OnSlideEfRKNS_8cVector3IfEEiPNS_12iPhysicsBodyES6_" "ohpl_nwt_on_slide" surface_on_slide(s: *const u8, speed: f32, pos: *const Vector3f, contacts: i32, body: *const u8, against: *const u8);
+}
+
+unsafe extern "C" {
+    #[link_name = "_ZN3hpl12iPhysicsBody9OnCollideEPS0_PNS_19cPhysicsContactDataE"]
+    fn body_on_collide(b: *const u8, other: *const u8, data: *const u8);
+}
+
+/// # Safety
+/// Both bodies and the contact data are live; the bodies' materials are set.
+#[unsafe(export_name = "_ZN3hpl16iPhysicsMaterial16DispatchContactsEPNS_12iPhysicsBodyES2_RNS_19cPhysicsContactDataEi")]
+unsafe extern "C" fn dispatch_contacts(
+    b1: *const u8,
+    b2: *const u8,
+    data: *const u8,
+    contacts: i32,
+) {
+    // SAFETY: C++ calls with live bodies and contact data.
+    unsafe {
+        let (s1, s2) = (body(b1), body(b2));
+        let (m1, m2) = (s1.material as *const u8, s2.material as *const u8);
+        let (d1, d2): (*const u8, *const u8) =
+            (val_member(m1, MAT_SURFACE), val_member(m2, MAT_SURFACE));
+        let buoy_active = |s: &BodyState| {
+            let mut b = std::mem::zeroed::<Buoy>();
+            nb::ohpl_ntb_buoy(s.rust, &mut b);
+            b.active
+        };
+        if !d1.is_null()
+            && !d2.is_null()
+            && s1.use_surface_effects
+            && s2.use_surface_effects
+            && !buoy_active(s1)
+            && !buoy_active(s2)
+        {
+            let normal: f32 = val_member(data, 0);
+            let tangent: f32 = val_member(data, CD_TANGENT);
+            let pos = data.add(CD_POS).cast::<Vector3f>();
+            surface_impact_effect(d1, normal, pos, contacts, d2, s1.world as *const u8);
+            let c = surface_calls(
+                super::cxx_surface::priority_of(d1),
+                super::cxx_surface::priority_of(d2),
+                m1 == m2,
+                normal,
+                tangent,
+            );
+            if c.impact1 {
+                surface_on_impact(d1, normal, pos, contacts, b1);
+            }
+            if c.slide1 {
+                surface_on_slide(d1, tangent, pos, contacts, b1, b2);
+            }
+            if c.impact2 {
+                surface_on_impact(d2, normal, pos, contacts, b2);
+            }
+            if c.slide2 {
+                surface_on_slide(d2, tangent, pos, contacts, b2, b1);
+            }
+        }
+        body_on_collide(b1, b2, data);
+        body_on_collide(b2, b1, data);
+    }
 }
 
 /// # Safety

@@ -20,6 +20,8 @@
 #ifndef HPL_KEYBOARD_H
 #define HPL_KEYBOARD_H
 
+#include "input/RustInput.h"
+
 #include "input/InputTypes.h"
 #include "input/InputDevice.h"
 
@@ -84,6 +86,13 @@ namespace hpl {
 		 */
 		virtual eKey StringToKey(const tString&);
 	};
+
+
+inline iKeyboard::iKeyboard(tString asName) : iInputDevice(asName, eInputDeviceType_Keyboard) { }
+inline int iKeyboard::GetModifier() { int lMod = 0; lMod |= (KeyIsDown(eKey_RightCtrl) || KeyIsDown(eKey_LeftCtrl))? eKeyModifier_Ctrl : 0; lMod |= (KeyIsDown(eKey_RightShift) || KeyIsDown(eKey_LeftShift))? eKeyModifier_Shift : 0; lMod |= (KeyIsDown(eKey_RightAlt) || KeyIsDown(eKey_LeftAlt))? eKeyModifier_Alt : 0; return lMod; }
+inline tString iKeyboard::KeyToString(eKey aKey) { return OhplInputName(ohpl_input_key_name, aKey); }
+inline tString iKeyboard::ModifierKeyToString(eKeyModifier aModKey) { return OhplInputName(ohpl_input_modifier_name, aModKey); }
+inline eKey iKeyboard::StringToKey(const tString& asKey) { return (eKey)OhplInputFromName(ohpl_input_key_from_name, asKey); }
 
 };
 

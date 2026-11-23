@@ -24,6 +24,8 @@
 #include "resources/VideoLoader.h"
 
 #include "impl/RustL5.h"
+#include "graphics/Texture.h"
+#include "system/String.h"
 
 namespace hpl {
 
@@ -34,22 +36,31 @@ namespace hpl {
 	{
 	public:
 		cVideoStreamTheora(const tString& asName, cVideoStreamTheora_Loader* apLoader);
-		~cVideoStreamTheora();
+		~cVideoStreamTheora() { ohpl_l5_video_free(mpRust); }
 
-        bool LoadFromFile(const tWString& asFilePath);
-		
-		void Update(float afTimeStep);
+		bool LoadFromFile(const tWString& asFilePath)
+		{
+			SetFullPath(asFilePath);
+			msFilePath = asFilePath;
+			if(!ohpl_l5_video_load(mpRust, (const uint32_t*)asFilePath.c_str(), asFilePath.size())) return false;
+			int32_t w, h;
+			ohpl_l5_video_size(mpRust, &w, &h);
+			mvSize = cVector2l(w, h);
+			return true;
+		}
 
-		void Play();
-		void Stop();
-
-		void Pause(bool abX);
+		void Update(float afTimeStep) { ohpl_l5_video_update(mpRust, afTimeStep); }
+		void Play() { ohpl_l5_video_play(mpRust); }
+		void Stop() { ohpl_l5_video_stop(mpRust); }
+		void Pause(bool abX) { mbPaused = abX; ohpl_l5_video_pause(mpRust, abX); }
 		bool IsPaused(){ return mbPaused;}
-
-		void SetLoop(bool abX);
+		void SetLoop(bool abX) { mbLooping = abX; ohpl_l5_video_set_loop(mpRust, abX); }
 		bool IsLooping(){ return mbLooping;}
-
-		void CopyToTexture(iTexture *apTexture);
+		void CopyToTexture(iTexture *apTexture)
+		{
+			if(const uint8_t* p = ohpl_l5_video_take_frame(mpRust))
+				apTexture->SetRawData(0, 0, cVector3l(mvSize.x, mvSize.y, 1), ePixelFormat_RGB, (unsigned char*)p);
+		}
 
 	private:
 		OhplL5Video *mpRust;
@@ -64,16 +75,32 @@ namespace hpl {
 	{
 	friend class cVideoStreamTheora;
 	public:
-		cVideoStreamTheora_Loader();
-		~cVideoStreamTheora_Loader();
-		
-		iVideoStream* LoadVideo(const tWString& asName);
+		cVideoStreamTheora_Loader()
+		{
+			AddSupportedExtension("dds");
+			OhplL5InstallLog();
+			mpRust = ohpl_l5_vloader_new();
+		}
+		~cVideoStreamTheora_Loader() { ohpl_l5_vloader_free(mpRust); }
+
+		iVideoStream* LoadVideo(const tWString& asName)
+		{
+			cVideoStreamTheora* pVideo = hplNew(cVideoStreamTheora, (cString::To8Char(cString::GetFileNameW(asName)), this));
+			if(pVideo->LoadFromFile(asName)) return pVideo;
+			hplDelete(pVideo);
+			return NULL;
+		}
 	
 	private:
 		OhplL5VLoader* mpRust;
 	};
 
-	//-----------------------------------------
+	inline cVideoStreamTheora::cVideoStreamTheora(const tString& asName, cVideoStreamTheora_Loader* apLoader) : iVideoStream(asName, _W(""))
+	{
+		mbLooping = mbPaused = false;
+		OhplL5InstallLog();
+		mpRust = ohpl_l5_video_new(apLoader->mpRust);
+	}
 
 };
 #endif // HPL_VIDEO_STREAM_THEORA_H

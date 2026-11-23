@@ -20,12 +20,6 @@
 //#include <vld.h>
 //Use this to check for memory leaks!
 
-#ifdef WIN32
-#pragma comment(lib, "angelscript.lib")
-#define UNICODE
-#include <windows.h>
-#include <shlobj.h>
-#endif
 
 #define _UNICODE
 
@@ -38,19 +32,13 @@
 #include <string>
 #include <vector>
 
-#ifndef WIN32
 #include <unistd.h>
-#endif
 
 #include "impl/LowLevelSystemSDL.h"
 #include "impl/SqScript.h"
 #include "system/Platform.h"
 
-#if USE_SDL2
 #include "SDL2/SDL.h"
-#else
-#include "SDL/SDL.h"
-#endif
 
 
 #include "system/String.h"
@@ -64,11 +52,9 @@ static void AppendSink(void *apCtx, const char *apData, size_t alLen)
 	((std::string*)apCtx)->append(apData, alLen);
 }
 
-#ifndef WIN32
 #include <clocale>
 #include <langinfo.h>
 #include <unistd.h>
-#endif
 
 #ifdef __linux__
 #include <string.h>
@@ -83,13 +69,6 @@ static void AppendSink(void *apCtx, const char *apData, size_t alLen)
 #ifndef IGNORE_HPL_MAIN
 extern int hplMain(const hpl::tString &asCommandLine);
 
-#ifdef WIN32
-#include <windows.h>
-int WINAPI WinMain(	HINSTANCE hInstance,  HINSTANCE hPrevInstance,LPSTR	lpCmdLine, int nCmdShow)
-{
-	return hplMain(lpCmdLine);
-}
-#else
 static void AppendSinkU8(void *apCtx, const unsigned char *apData, size_t alLen)
 {
 	((std::string*)apCtx)->append((const char*)apData, alLen);
@@ -108,7 +87,6 @@ int main(int argc, char *argv[])
 	if(!ohpl_l1_protect_steam()) return 1;
 	return hplMain(sCmdLine);
 }
-#endif
 #endif
 
 
@@ -169,10 +147,8 @@ namespace hpl {
 	{
 		tString sPath = cString::To8Char(asFile);
 		const char *pCwd = NULL;
-#ifndef WIN32
 		char vCwd[4096];
 		if (sPath.empty() == false && sPath[0] != '/' && getcwd(vCwd, sizeof(vCwd)) != NULL) pCwd = vCwd;
-#endif
 		return ohpl_sys_looks_like_steam_install(sPath.data(), sPath.size(), pCwd);
 	}
 
@@ -236,9 +212,6 @@ namespace hpl {
 		if(gpLogMessageCallbackFunc) gpLogMessageCallbackFunc(eLogOutputType_FatalError, sMess.c_str());
 
 #if defined(__APPLE__) || defined(__linux__)
-#if !SDL_VERSION_ATLEAST(2, 0, 0)
-		SDL_WM_GrabInput(SDL_GRAB_OFF);
-#endif
 		SDL_Quit();
 #endif
 		if(getenv("OPENHPL_HEADLESS_SOCKET") == NULL)

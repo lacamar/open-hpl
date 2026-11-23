@@ -20,6 +20,10 @@
 #ifndef HPL_THREAD_SDL_H
 #define HPL_THREAD_SDL_H
 
+#include "impl/RustL1.h"
+#include "SDL2/SDL.h"
+#include <typeinfo>
+
 #include "system/Thread.h"
 
 struct SDL_Thread;
@@ -46,6 +50,15 @@ namespace hpl {
 		OhplL1Thread* mpRust;
 
 	};
+
+
+inline cThreadSDL::cThreadSDL() { mpRust = ohpl_l1_thread_new(); }
+inline cThreadSDL::~cThreadSDL() { ohpl_l1_thread_free(mpRust); }
+inline void cThreadSDL::Start() { mbThreadActive = true; ohpl_l1_thread_start(mpRust, iThread::MainThreadFunc, typeid(this).name(), this); }
+inline void cThreadSDL::Stop() { mbThreadActive = false; ohpl_l1_thread_stop(mpRust); }
+inline void cThreadSDL::Sleep(unsigned int alSleepTime) { ohpl_l1_delay(alSleepTime); }
+inline void cThreadSDL::SetPriority(eThreadPrio aPrio) { ohpl_l1_thread_set_priority((int)aPrio); iThread::SetPriority(aPrio); }
+inline int cThreadSDL::TranslateEnginePrio(eThreadPrio aPrio) { switch (aPrio) { case eThreadPrio_Low: return SDL_THREAD_PRIORITY_LOW; case eThreadPrio_High: return SDL_THREAD_PRIORITY_HIGH; case eThreadPrio_Normal: default: return SDL_THREAD_PRIORITY_NORMAL; } }
 
 };
 #endif // HPL_THREAD_SDL_H

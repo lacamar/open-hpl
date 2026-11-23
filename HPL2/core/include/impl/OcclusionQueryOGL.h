@@ -28,18 +28,15 @@ namespace hpl {
 	class cOcclusionQueryOGL : public iOcclusionQuery
 	{
 	public:
-		cOcclusionQueryOGL();
-		~cOcclusionQueryOGL();
+		cOcclusionQueryOGL(){ ohpl_glq_create(&mRs); }
+		~cOcclusionQueryOGL(){ ohpl_glq_destroy(&mRs); }
 
-		void Begin();
-		void End();
-		bool FetchResults();
-		unsigned int GetSampleCount();
+		void Begin(){ ohpl_glq_begin(&mRs); }
+		void End(){ ohpl_glq_end(&mRs); }
+		bool FetchResults(){ return ohpl_glq_fetch(&mRs); }
+		unsigned int GetSampleCount(){ return mRs.lastSamples; }
 
 	public:
-		bool mbResultsAreFetched;
-		int mlLastSampleCount;
-		unsigned int mlQueryId;
 		OhplGlQuery mRs;
 	};
 

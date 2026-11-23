@@ -5,7 +5,9 @@ use super::env::{self, EnvParams};
 use super::log::{self, Level, c_bytes};
 use super::oal::RealOal;
 use super::snd::{Channel, Data, Device, InitArgs, Low, enumerate_devices, first_default};
+use crate::math::{IDENTITY, cross3, matrix_inverse};
 use crate::string_ffi::units;
+use crate::types::{Matrixf, Vector3f};
 use core::ffi::{c_char, c_void};
 use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
@@ -218,6 +220,65 @@ pub unsafe extern "C" fn ohpl_l5_low_set_listener(
         ) {
             l.set_listener(&RealOal, p, v, f, u);
         }
+    }
+}
+
+/// Right axis and inverse listener matrix of `SetListenerAttributes`.
+fn listener_axes(p: [f32; 3], f: [f32; 3], u: [f32; 3]) -> (Vector3f, Matrixf) {
+    let rt = cross3(
+        Vector3f {
+            x: f[0],
+            y: f[1],
+            z: f[2],
+        },
+        Vector3f {
+            x: u[0],
+            y: u[1],
+            z: u[2],
+        },
+    );
+    let mut m = IDENTITY;
+    m.m[0][..3].copy_from_slice(&[rt.x, rt.y, rt.z]);
+    m.m[1][..3].copy_from_slice(&u);
+    m.m[2][..3].copy_from_slice(&f.map(|c| -c));
+    let mut m = matrix_inverse(&m);
+    for (row, c) in m.m.iter_mut().zip(p) {
+        row[3] = c;
+    }
+    (rt, m)
+}
+
+/// `SetListenerAttributes`: sets the OpenAL listener and writes the right axis and the inverse
+/// listener matrix; `fwd` is the engine forward, negated for OpenAL.
+///
+/// # Safety
+/// `l` is live; every pointer is valid (`right` for 3 floats, `mtx` for 16).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_l5_low_set_listener_full(
+    l: *mut Low,
+    pos: *const [f32; 3],
+    vel: *const [f32; 3],
+    fwd: *const [f32; 3],
+    up: *const [f32; 3],
+    right: *mut [f32; 3],
+    mtx: *mut Matrixf,
+) {
+    // SAFETY: caller contract.
+    let (Some(&p), Some(&f), Some(&u)) = (unsafe { (pos.as_ref(), fwd.as_ref(), up.as_ref()) })
+    else {
+        return;
+    };
+    let (rt, m) = listener_axes(p, f, u);
+    let nf = f.map(|c| -c);
+    // SAFETY: caller contract.
+    unsafe {
+        if let Some(o) = right.as_mut() {
+            *o = [rt.x, rt.y, rt.z];
+        }
+        if let Some(o) = mtx.as_mut() {
+            *o = m;
+        }
+        ohpl_l5_low_set_listener(l, pos.cast(), vel.cast(), nf.as_ptr(), up.cast());
     }
 }
 
@@ -459,3 +520,19 @@ const _: () = assert!(
         && core::mem::offset_of!(OhplL5InitArgs, enable_log) == 36
         && size_of::<OhplL5InitResult>() == 8
 );
+
+#[cfg(test)]
+mod listener_tests {
+    use super::*;
+
+    #[test]
+    fn listener_matrix_for_default_axes() {
+        let (rt, m) = listener_axes([1.0, 2.0, 3.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0]);
+        assert_eq!([rt.x, rt.y, rt.z], [-1.0, 0.0, 0.0]);
+        assert_eq!(
+            [m.m[0][3], m.m[1][3], m.m[2][3], m.m[3][3]],
+            [1.0, 2.0, 3.0, 1.0]
+        );
+        assert_eq!(m.m[1][1], 1.0);
+    }
+}
