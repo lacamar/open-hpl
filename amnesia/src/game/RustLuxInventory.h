@@ -81,7 +81,6 @@ int ohpl_inv_combine_num();
 int ohpl_inv_find_combine(OhplA11aStr a, OhplA11aStr b);
 void ohpl_inv_combine_str(int idx, int which, OhplA11aSink sink, void *ctx);
 int ohpl_inv_combine_auto(int idx);
-void ohpl_inv_run_script(OhplA11aStr cmd);
 int ohpl_inv_recompile(OhplA11aSink sink, void *ctx);
 void ohpl_inv_open_journal();
 void ohpl_inv_set_disabled(int v);
@@ -106,7 +105,6 @@ int ohpl_inv_type_has_count(int type);
 int ohpl_inv_type_max_count(int type);
 int ohpl_inv_type_has_max(int type);
 void ohpl_inv_type_name(int type, OhplA11aSink sink, void *ctx);
-void ohpl_inv_set_show_journal(int v);
 int ohpl_inv_cb(uintptr_t token, uintptr_t widget, int lval, float fval);
 
 void ohpl_jrn_new();
