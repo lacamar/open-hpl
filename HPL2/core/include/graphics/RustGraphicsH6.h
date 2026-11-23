@@ -13,7 +13,6 @@ namespace hpl {
 struct OhplH6Skel;
 struct OhplH6Track;
 struct OhplH6Anim;
-struct OhplH6Mesh;
 
 extern "C" {
 

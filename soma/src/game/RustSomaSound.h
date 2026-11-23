@@ -9,16 +9,6 @@
 #include <string>
 
 
-struct OhplGs5PlayReq
-{
-	uint8_t kind; // 0 3D, 1 GUI stream, 2 GUI
-	const unsigned char *file;
-	size_t file_len;
-	bool looped;
-	float pos[3];
-	int entry_type;
-	bool stream;
-};
 
 struct OhplGs5InstState
 {
@@ -119,7 +109,6 @@ extern "C" {
 	size_t ohpl_s7_resolve(const unsigned char *name, size_t n);
 	void ohpl_s7_preload(const unsigned char *name, size_t n);
 	size_t ohpl_s7_play_gui(const unsigned char *name, size_t n, float volume, int type, bool looped, bool stream);
-	size_t ohpl_s7_play_3d(const unsigned char *name, size_t n, float volume, const float *pos, int type);
 	size_t ohpl_s7_find_instance(const unsigned char *name, size_t n);
 	bool ohpl_s7_is_live(size_t shell, int id);
 	void ohpl_s7_fade_out_all(unsigned types, float speed);
@@ -143,10 +132,6 @@ extern "C" {
 	void ohpl_s7_dump_text(const unsigned char *tag, size_t tn, const unsigned char *text, size_t n);
 }
 
-inline void OhplS7Text(const char *tag, const std::string &text)
-{
-	ohpl_s7_dump_text((const unsigned char *)tag, strlen(tag), (const unsigned char *)text.data(), text.size());
-}
 
 
 
@@ -171,12 +156,6 @@ struct OhplGs5AreaDef
 extern "C" {
 
 
-	bool ohpl_gs5_fsb_mode_supported(unsigned int mode);
-	unsigned char ohpl_gs5_fsb_cached_state(bool has_ogg, bool has_wav);
-	void ohpl_gs5_fsb_output_name(const unsigned char *prefix, size_t pn, const unsigned char *sample, size_t sn, unsigned int mode, int channels,
-								  void (*sink)(void *, const unsigned char *, size_t), void *ctx);
-	int64_t ohpl_gs5_fsb_wanted_index(const unsigned char *sample, size_t sn, const OhplGs5Str *wanted, size_t count);
-	void ohpl_gs5_fsb_downmix_block(const float *const *planes, size_t ch, size_t n, const float *left, const float *right, short *out);
 }
 
 #endif

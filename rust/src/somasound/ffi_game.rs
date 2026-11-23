@@ -187,27 +187,6 @@ pub unsafe extern "C" fn ohpl_s7_play_gui(
 }
 
 /// # Safety
-/// `name` is readable for `n` bytes; `pos` is three floats.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_s7_play_3d(
-    name: *const u8,
-    n: usize,
-    volume: f32,
-    pos: *const f32,
-    ty: i32,
-) -> usize {
-    // SAFETY: caller contract.
-    unsafe {
-        glue::play_3d(
-            units(name, n),
-            volume,
-            pos.cast::<[f32; 3]>().read_unaligned(),
-            ty,
-        )
-    }
-}
-
-/// # Safety
 /// `name` is readable for `n` bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_s7_find_instance(name: *const u8, n: usize) -> usize {

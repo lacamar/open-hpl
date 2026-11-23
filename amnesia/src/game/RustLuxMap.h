@@ -9,10 +9,6 @@
 #include <string>
 #include <vector>
 
-struct OhplGa5Plane
-{
-	float a, b, c, d;
-};
 
 struct OhplGa5Vec3
 {
@@ -24,13 +20,6 @@ struct OhplGa5Mtx
 	float m[4][4];
 };
 
-struct OhplGa5StickyIn
-{
-	OhplGa5Mtx start, areaWorld;
-	OhplGa5Vec3 areaPos, massCentre, attachedPos;
-	float poseTime, step, setTime;
-	bool moveBody, rotateBody;
-};
 
 struct OhplGa5StickyOut
 {
@@ -51,11 +40,6 @@ struct OhplGa5ExamineOut
 	bool showText, insaneText, playSound, insaneSound;
 };
 
-struct OhplGa5LadderSetup
-{
-	OhplGa5Vec3 forward;
-	float maxY, minY;
-};
 
 struct OhplGa5PlayerStart
 {

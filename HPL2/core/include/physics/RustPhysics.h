@@ -9,7 +9,6 @@
 #include "system/SystemTypes.h"
 #include "physics/RustPhysBook.h"
 
-struct OhplImpactCounts;
 
 namespace hpl {
 
@@ -89,25 +88,7 @@ struct OhplSurfaceParams
 	OhplStr scrapeSound, rollSound;
 };
 
-struct OhplImpactDef
-{
-	float minSpeed;
-	OhplStr sound, ps;
-	int32_t psPrio;
-};
 
-struct OhplSurfaceDef
-{
-	OhplStr name, userVar, stepType, scrapeSound, rollSound;
-	float elasticity, kineticFriction, staticFriction;
-	int32_t priority, elasticityMode, frictionMode;
-	float minScrapeSpeed, minScrapeFreq, minScrapeFreqSpeed, middleScrapeSpeed, maxScrapeFreqSpeed, maxScrapeFreq;
-	int32_t minScrapeContacts;
-	float minRollSpeed, minRollFreq, minRollVolume, minRollFreqSpeed, middleRollSpeed, maxRollFreqSpeed, maxRollFreq, maxRollVolume;
-	uint32_t rollAxisFlags;
-	const OhplImpactDef* impacts; size_t nImpacts;
-	const OhplImpactDef* hits; size_t nHits;
-};
 
 struct OhplMoveParams
 {

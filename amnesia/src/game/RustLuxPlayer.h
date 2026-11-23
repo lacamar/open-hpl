@@ -8,18 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 
-struct OhplGa2Op
-{
-	uint32_t kind;
-	int32_t i;
-	float a, b, c, d;
-};
 
-struct OhplGa2Ops
-{
-	uint32_t n;
-	OhplGa2Op ops[16];
-};
 
 enum OhplGa2OpKind : uint32_t
 {
@@ -115,11 +104,6 @@ enum OhplGa2OpKind : uint32_t
 	kOhplGa2SanPant = 214,
 };
 
-struct OhplGa2Vitals
-{
-	float mfHealth, mfSanity, mfLampOil;
-	uint32_t mbHardMode;
-};
 
 enum OhplGa2VitalsOp
 {
@@ -202,11 +186,6 @@ struct OhplGa2Lantern
 	float mfAlpha;
 };
 
-struct OhplGa2LanternSet
-{
-	bool mbActive, mbUseEffects, mbCheckOilItems, mbCheckAllowed, mbCurrent, mbAllowed, mbHasItem, mbDisabled;
-	float mfOil;
-};
 
 struct OhplGa2Darkness
 {
@@ -215,11 +194,6 @@ struct OhplGa2Darkness
 	float mfLoopSoundCount, mfSanityLossMul, mfShowHintTimer;
 };
 
-struct OhplGa2DarknessIn
-{
-	float mfExtLevel, mfNormalLevel;
-	bool mbHardMode, mbFlashbackActive, mbDrainDisabled, mbEmotionFlash;
-};
 
 struct OhplGa2Death
 {
@@ -245,11 +219,6 @@ struct OhplGa2Sanity
 		mfSanityLowLimitMaxTime, mfSanityLowNewSanityAmount, mfCheckNearEnemyInterval, mfNearEnemyDecrease;
 };
 
-struct OhplGa2HandsPos
-{
-	hpl::cVector3f mvCamPos, mvRight, mvUp, mvForward, mvBob, mvShake, mvHurt;
-	float mfPosAddMul;
-};
 
 extern "C" {
 float ohpl_ga2_clamp_pitch_goal(float x, float min, float max);
@@ -265,10 +234,6 @@ enum OhplGa2bAct : int32_t { kOhplGa2bActOther = 0, kOhplGa2bActHolster = 1, kOh
 enum OhplGa2bPs : int32_t { kOhplGa2bPsNone = 0, kOhplGa2bPsNormal = 1, kOhplGa2bPsHand = 2, kOhplGa2bPsPrevious = 3, kOhplGa2bPsPush = 4, kOhplGa2bPsGrab = 5, kOhplGa2bPsOther = 9 };
 
 enum OhplGa2bPlan : int32_t { kOhplGa2bPlanNone = 0, kOhplGa2bPlanCallback = 1, kOhplGa2bPlanDoesNotWork = 2, kOhplGa2bPlanNoObject = 3 };
-enum OhplGa2bDraw : int32_t { kOhplGa2bDrawNo = 0, kOhplGa2bDrawCheckCallback = 1, kOhplGa2bDrawYes = 2 };
-enum OhplGa2bSound : int32_t { kOhplGa2bSoundNone = 0, kOhplGa2bSoundUp = 1, kOhplGa2bSoundDown = 2 };
-enum OhplGa2bGrabStatus : int32_t { kOhplGa2bGrabTooFar = 0, kOhplGa2bGrabForce = 1, kOhplGa2bGrabForceTorque = 2 };
-enum OhplGa2bBottom : int32_t { kOhplGa2bBottomNo = 0, kOhplGa2bBottomYes = 1, kOhplGa2bBottomCheckRays = 2 };
 
 struct OhplGa2bPid3
 {
@@ -346,114 +311,18 @@ struct OhplGa2bAction
 	uint32_t forwardToHands, useItem;
 };
 
-struct OhplGa2bGrabEnterIn
-{
-	hpl::cVector3f camPos, camRot;
-	hpl::cMatrixf bodyMatrix;
-	hpl::cVector3f bodyPos, focusPos, rotOffset;
-	uint32_t useOffset, useDepth;
-	float depth, maxDepth, properMassSum, minSlowMass, maxSlowMass, minSlowMul;
-};
 
-struct OhplGa2bGrabEnterOut
-{
-	hpl::cMatrixf bodyRot;
-	hpl::cVector3f localOffset;
-	float depth, maxDistance;
-	uint32_t slow;
-	float slowMul;
-};
 
-struct OhplGa2bGrabPost
-{
-	hpl::cVector3f camPos, camRot;
-	hpl::cMatrixf bodyMatrix;
-	hpl::cVector3f bodyPos, bodyAngVel;
-	hpl::cMatrixf inertia, bodyRot;
-	hpl::cVector3f localOffset, posOffset;
-	float depth, maxDistance;
-	uint32_t useOffset, useRotation;
-	float massSum, maxForce, maxTorque, maxAngularSpeed, forceMul, torqueMul;
-};
 
-struct OhplGa2bGrabPostOut
-{
-	int32_t status;
-	hpl::cVector3f force, torque;
-};
 
-struct OhplGa2bPushEnterIn
-{
-	float pitch, yaw, pitchMinRange, pitchMaxRange, yawRange;
-	uint32_t atPoint;
-	hpl::cMatrixf bodyMatrix;
-	hpl::cVector3f bodyPos, feet, interactPos;
-};
 
-struct OhplGa2bPushEnterOut
-{
-	float pitchMin, pitchMax, yawMin, yawMax;
-	hpl::cVector3f localAttach;
-	float maxAttachDist;
-};
 
-struct OhplGa2bPushBegin
-{
-	uint32_t atPoint;
-	hpl::cMatrixf bodyMatrix;
-	hpl::cVector3f localAttach, bodyPos, feet;
-	float maxAttachDist;
-	hpl::cVector3f forward, right;
-	uint32_t moving[2];
-	float totalMoveMul[2];
-};
 
-struct OhplGa2bPushBeginOut
-{
-	uint32_t tooFar;
-	hpl::cVector3f attach, pushDir;
-	uint32_t noMovement;
-};
 
-struct OhplGa2bPushDrive
-{
-	hpl::cVector3f pushDir, vel;
-	float mass, maxForce, maxSpeed, pushForce, forceMul;
-	hpl::cMatrixf bodyMatrix;
-	hpl::cVector3f forward, right;
-};
 
-struct OhplGa2bPushDriveOut
-{
-	hpl::cVector3f correctForce;
-	uint32_t hasPushForce;
-	hpl::cVector3f pushForce;
-	hpl::cMatrixf nextTransform;
-	float maxSpeed[2];
-};
 
-struct OhplGa2bSlideIn
-{
-	hpl::cVector3f camPos, up, right;
-	hpl::cMatrixf bodyMatrix;
-	hpl::cVector3f localInteract;
-	hpl::cVector2f mouse;
-	hpl::cVector3f pin, vel;
-	float mass, maxDistance, slowDownFactor, speedFactor, maxSpeed, maxForce;
-};
 
-struct OhplGa2bSlideOut
-{
-	uint32_t outOfRange;
-	hpl::cVector3f force;
-};
 
-struct OhplGa2bRotateTorqueIn
-{
-	hpl::cVector3f pin, angVel;
-	hpl::cMatrixf inertia;
-	float speedAdd, speedFactor, maxSpeed, maxTorque;
-};
 
 struct OhplGa2bJointGeom
 {
@@ -462,33 +331,9 @@ struct OhplGa2bJointGeom
 	hpl::cVector2f mouse;
 };
 
-struct OhplGa2bLadderEnterIn
-{
-	hpl::cVector3f pos, start;
-	float maxY, startYaw, pitch, yaw;
-};
 
-struct OhplGa2bLadderEnterOut
-{
-	float time;
-	hpl::cVector3f posAdd;
-	hpl::cVector2f rotAdd;
-};
 
-struct OhplGa2bLadderState
-{
-	int32_t state;
-	float timeCount, stepCount, moveMul, leaveAtTop;
-	uint32_t playedSound;
-	hpl::cVector3f charPos, posAdd;
-	hpl::cVector2f rotAdd;
-};
 
-struct OhplGa2bLadderAttachOut
-{
-	float pitchAdd, yawAdd;
-	uint32_t done;
-};
 
 extern "C" {
 float ohpl_ga2b_move_speed_mul(const OhplGa2bMoveMulIn *i);

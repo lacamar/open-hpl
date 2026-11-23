@@ -34,12 +34,6 @@ struct OhplEnLoop
 	bool swappedOnce;
 };
 
-struct OhplEnFrameTiming
-{
-	double logicMs;
-	double swapMs;
-	int steps;
-};
 
 struct OhplEnMsEntry
 {
@@ -69,35 +63,8 @@ struct OhplEnBytesPair
 	OhplEnBytes val;
 };
 
-struct OhplEnHudLayout
-{
-	float font;
-	float pad;
-	float lineH;
-	float bgW;
-	float bgH;
-	float textX;
-	float textY;
-};
 
-struct OhplEnBugMetrics
-{
-	float font;
-	float pad;
-	float lineH;
-	float boxW;
-	float textW;
-};
 
-struct OhplEnBugBox
-{
-	float x;
-	float y;
-	float w;
-	float h;
-	float textX;
-	float textY;
-};
 
 struct OhplEnReport
 {
@@ -159,22 +126,6 @@ extern "C" {
 	float ohpl_en_fps_avg_frame_ms(const OhplEnFps* f);
 
 	void ohpl_en_loop_init(OhplEnLoop* l);
-	void ohpl_en_loop_begin_run(OhplEnLoop* l);
-	void ohpl_en_loop_step_begin(OhplEnLoop* l);
-	void ohpl_en_loop_step_end(OhplEnLoop* l);
-	void ohpl_en_loop_pause_tick(OhplEnLoop* l);
-	void ohpl_en_loop_advance_game_time(OhplEnLoop* l, float step);
-	bool ohpl_en_loop_update_log_tick(OhplEnLoop* l);
-	void ohpl_en_loop_add_logic_ms(OhplEnLoop* l, double ms);
-	void ohpl_en_loop_add_swap_ms(OhplEnLoop* l, double ms);
-	bool ohpl_en_loop_skip_render_once(OhplEnLoop* l, bool renderOnce);
-	bool ohpl_en_loop_take_swap(OhplEnLoop* l);
-	bool ohpl_en_loop_swap_done(OhplEnLoop* l, bool renderOnce);
-	bool ohpl_en_loop_want_render(OhplEnLoop* l, bool limitFps);
-	double ohpl_en_loop_mean_framerate(OhplEnLoop* l, uint64_t elapsedMs);
-	void ohpl_en_loop_frame_rendered(OhplEnLoop* l, OhplEnFrameTiming* out);
-	float ohpl_en_frame_time(double timerSec);
-	size_t ohpl_en_focus_messages(uint32_t had, uint32_t now, int* out);
 	bool ohpl_en_dev_hud_active(bool requested, int envFirst);
 	int ohpl_en_engine_type_from_string(const uint8_t* s, size_t n);
 	bool ohpl_en_engine_type_name(int i, OhplEnSink sink, void* ctx);
@@ -196,7 +147,6 @@ extern "C" {
 	float ohpl_en_ms_calc_results(const OhplEnMsEntry* const* slots, size_t n, unsigned int types, int calc, float def);
 	int ohpl_en_ms_slot_action(int idx, size_t len, bool occupied, bool force);
 	size_t ohpl_en_ms_create_slot(const OhplEnMsEntry* const* slots, size_t n);
-	size_t ohpl_en_ms_entry_layout(size_t* out);
 
 	OhplEnRegistry* ohpl_en_reg_new();
 	void ohpl_en_reg_free(OhplEnRegistry* r);
@@ -210,16 +160,6 @@ extern "C" {
 	int ohpl_en_save_next_id(int* counter);
 	int ohpl_en_reg_set_up_all(OhplEnRegistry* r, int (*visit)(void*, size_t), void* ctx);
 
-	float ohpl_en_hud_font_size(int screenY);
-	OhplEnHudLayout ohpl_en_hud_layout(float font, float maxWidth, size_t lines);
-	void ohpl_en_hud_stats_line(int w, int h, float fps, float frameMs, OhplEnSink sink, void* ctx);
-	OhplEnBugMetrics ohpl_en_bug_metrics(int sx, int sy);
-	float ohpl_en_bug_toast_box_w(OhplEnBugMetrics m, float pathWidth);
-	OhplEnBugBox ohpl_en_bug_box(OhplEnBugMetrics m, float boxW, size_t lines, int sx, int sy);
-	bool ohpl_en_toast_active(uint64_t savedMs, uint64_t nowMs);
-	bool ohpl_en_should_render(bool hud, bool bugOpen, bool toast);
-	uint32_t ohpl_en_cursor_char(uint64_t nowMs);
-	void ohpl_en_wrap_bug_text(const uint32_t* text, size_t n, float textW, float (*measure)(void*, const uint32_t*, size_t), OhplEnWSink line, void* ctx);
 	void ohpl_en_ctrl_backspace(const uint32_t* text, size_t n, OhplEnWSink sink, void* ctx);
 	int ohpl_en_key_action(int key, bool ctrl, bool shift, bool textEmpty);
 	bool ohpl_en_swallowed_event(uint32_t type);

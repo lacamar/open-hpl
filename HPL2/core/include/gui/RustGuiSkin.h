@@ -11,21 +11,7 @@
 
 namespace hpl {
 
-struct OhplGuiAnimState {
-	float currentFrame;
-	int activeImage;
-	bool forward;
-};
 
-struct OhplGuiAnimInput {
-	size_t animationCount;
-	size_t bufferLen;
-	int currentAnimation;
-	int type;
-	float frameLength;
-	float timeStep;
-	int paused;
-};
 
 struct OhplSkinAttribute {
 	const char* type;

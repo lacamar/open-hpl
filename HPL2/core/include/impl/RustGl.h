@@ -132,7 +132,6 @@ static_assert(sizeof(OhplGlCreateIn) == 44 && sizeof(OhplGlCreatePlan) == 36 && 
 static_assert(sizeof(OhplGlMipPlan) == 24 && sizeof(OhplGlProps) == 20 && sizeof(OhplGlClock) == 8, "gl texture plan layout");
 static_assert(sizeof(OhplGlAttach) == 32 && sizeof(OhplGlDrawPlan) == 28, "gl framebuffer plan layout");
 
-struct OhplGlParams;
 
 extern "C" {
 

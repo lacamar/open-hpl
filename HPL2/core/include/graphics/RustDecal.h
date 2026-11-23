@@ -18,17 +18,6 @@ namespace hpl {
 		int maxTris;
 	};
 
-	struct OhplDecalMesh
-	{
-		const float* positions;
-		size_t positionLen;
-		uint32_t posStride;
-		const float* normals;
-		size_t normalLen;
-		uint32_t nrmStride;
-		const unsigned int* indices;
-		uint32_t indexNum;
-	};
 
 	struct OhplDecalCounts
 	{
@@ -36,14 +25,6 @@ namespace hpl {
 		int triangles;
 	};
 
-	struct OhplDecalOut
-	{
-		const cVector3f* positions;
-		const cVector3f* normals;
-		uint32_t vertexCount;
-		const unsigned int* indices;
-		uint32_t indexCount;
-	};
 
 	struct OhplDecalUv
 	{

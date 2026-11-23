@@ -44,7 +44,6 @@ static_assert(eUIArrow_Up == 1 && eUIArrow_Right == 2 && eUIArrow_Down == 4 && e
 			  "eUIArrow values");
 static_assert(eKeyModifier_None == 0 && eKeyModifier_Shift == 2, "eKeyModifier values");
 
-typedef uintptr_t OhplH18W;
 
 }
 

@@ -1,7 +1,7 @@
 //! C ABI of `luxscript`. Inputs are (pointer, length); outputs go through sinks.
 
 use super::help;
-use super::lookup::{self, Wild};
+use super::lookup;
 use super::tables;
 use super::types::{self, AlphaFader, CollideStep};
 use super::vars;
@@ -48,32 +48,6 @@ macro_rules! scalar {
 
 // lookup
 
-/// # Safety
-/// `name` valid for `n` bytes. Free the result with `ohpl_ga1_wild_free`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga1_wild_new(name: *const u8, n: usize) -> *mut Wild {
-    // SAFETY: caller contract.
-    Box::into_raw(Box::new(Wild::new(unsafe { units(name, n) })))
-}
-
-/// # Safety
-/// `w` is null or from `ohpl_ga1_wild_new`, freed once.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga1_wild_free(w: *mut Wild) {
-    if !w.is_null() {
-        // SAFETY: caller contract.
-        drop(unsafe { Box::from_raw(w) });
-    }
-}
-
-/// # Safety
-/// `w` from `ohpl_ga1_wild_new`; `name` valid for `n` bytes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga1_wild_matches(w: *const Wild, name: *const u8, n: usize) -> bool {
-    // SAFETY: caller contract.
-    unsafe { w.as_ref() }.is_some_and(|w| w.matches(unsafe { units(name, n) }))
-}
-
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_ga1_type_prep(entity_type: i32, want_type: i32, want_sub: i32) -> i32 {
     lookup::type_prep(entity_type, want_type, want_sub)
@@ -98,8 +72,6 @@ text_fn!(ohpl_ga1_progress_level, (), s => tables::progress_level(s));
 text_fn!(ohpl_ga1_damage_type, (), s => tables::damage_type(s));
 text_fn!(ohpl_ga1_crosshair, (), s => tables::crosshair(s));
 text_fn!(ohpl_ga1_pose, (), s => tables::pose(s));
-text_fn!(ohpl_ga1_achievement, (), s => tables::achievement(s));
-text_fn!(ohpl_ga1_quest_achievement, (), s => tables::quest_achievement(s));
 
 scalar!(ohpl_ga1_sanity_boost, tables::sanity_boost; (s));
 scalar!(ohpl_ga1_sanity_boost_small, tables::sanity_boost_small; (s));

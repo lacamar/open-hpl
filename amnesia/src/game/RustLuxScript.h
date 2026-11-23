@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-struct OhplGa1Wild;
 
 struct OhplGa1CollideStep
 {
@@ -22,30 +21,17 @@ enum
 };
 enum { kOhplGa1OpChar, kOhplGa1OpCommand };
 enum { kOhplGa1CmdButton = 1, kOhplGa1CmdLook, kOhplGa1CmdBad };
-// Ids returned by ohpl_ga1_achievement / ohpl_ga1_quest_achievement
-enum
-{
-	kOhplGa1AchNone, kOhplGa1AchBenefactor, kOhplGa1AchSurvivor, kOhplGa1AchSacrifice, kOhplGa1AchQuitter,
-	kOhplGa1AchEgotist, kOhplGa1AchAltruist, kOhplGa1AchVacillator, kOhplGa1AchAlchemist,
-	kOhplGa1AchPipeworker, kOhplGa1AchRestorer,
-};
-
 typedef void (*OhplGa1Sink8)(void *, const unsigned char *, size_t);
 typedef void (*OhplGa1Sink32)(void *, const unsigned int *, size_t);
 
 extern "C" {
 	// lookup
-	OhplGa1Wild *ohpl_ga1_wild_new(const char *name, size_t n);
-	void ohpl_ga1_wild_free(OhplGa1Wild *w);
-	bool ohpl_ga1_wild_matches(const OhplGa1Wild *w, const char *name, size_t n);
 	int ohpl_ga1_type_prep(int entity_type, int want_type, int want_sub);
 	bool ohpl_ga1_type_sub(int got, int want);
 
 	// variables and strings
 
 	// tables and small math
-	int ohpl_ga1_achievement(const char *s, size_t n);
-	int ohpl_ga1_quest_achievement(const char *s, size_t n);
 
 	// script math
 
@@ -73,16 +59,6 @@ inline void OhplGa1SinkU32(void *ctx, const unsigned int *p, size_t n)
 {
 	static_cast<std::vector<unsigned int> *>(ctx)->assign(p, p + n);
 }
-
-struct OhplGa1WildPtr
-{
-	OhplGa1Wild *w;
-	explicit OhplGa1WildPtr(const std::string &s) : w(ohpl_ga1_wild_new(s.data(), s.size())) {}
-	~OhplGa1WildPtr() { ohpl_ga1_wild_free(w); }
-	OhplGa1WildPtr(const OhplGa1WildPtr &) = delete;
-	OhplGa1WildPtr &operator=(const OhplGa1WildPtr &) = delete;
-	bool Matches(const std::string &s) const { return ohpl_ga1_wild_matches(w, s.data(), s.size()); }
-};
 
 #define OHPL_GA1_S(s) (s).data(), (s).size()
 

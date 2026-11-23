@@ -123,16 +123,6 @@ namespace hpl {
 
 	static_assert(sizeof(OhplSLFlare) == 608 && sizeof(OhplSLFlareType) == 80, "SL pod layout");
 
-	struct OhplSLHostVt
-	{
-		void *ctx;
-		float (*ease)(void*, float);
-		void (*setBrightness)(void*, float);
-		void (*setRadius)(void*, float);
-		void (*setDiffuse)(void*, const cColor*);
-		void (*flickerSound)(void*, bool);
-		void (*flickerEvent)(void*, bool);
-	};
 
 extern "C" {
 void ohpl_sl_flare_fade(OhplSLFlare*, bool, float);
