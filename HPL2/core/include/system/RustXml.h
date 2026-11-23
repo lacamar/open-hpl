@@ -20,14 +20,6 @@ struct OhplXmlTreeSink
 	void (*end)(void*);
 };
 
-struct OhplLangSink
-{
-	void* ctx;
-	void (*directory)(void*, const char*, size_t, bool);
-	void (*no_resources)(void*);
-	void (*category)(void*, const char*, size_t);
-	void (*entry)(void*, const char*, size_t, const int*, size_t);
-};
 
 extern "C" {
 	OhplXmlDoc* ohpl_xml_doc_new();
@@ -67,15 +59,7 @@ inline bool OhplXmlLoadFile(OhplXmlDoc* doc, FILE* file)
 	return ohpl_xml_doc_load(doc, buf.data(), length, ok);
 }
 
-inline unsigned OhplXmlAddElement(OhplXmlDoc* doc, unsigned parent, const std::string& name)
-{
-	return ohpl_xml_doc_add_element(doc, parent, name.c_str(), name.size());
-}
 
-inline void OhplXmlSetAttr(OhplXmlDoc* doc, unsigned id, const char* name, const std::string& val)
-{
-	ohpl_xml_doc_set_attr(doc, id, name, strlen(name), val.c_str(), val.size());
-}
 
 inline void OhplXmlDumpBytes(const char* tag, const char* data, size_t n)
 {

@@ -39,16 +39,6 @@ namespace hpl {
 
 	static_assert(sizeof(OhplH12PeCtl) == 16, "H12 emitter ctl layout");
 
-	struct OhplH12PsHost
-	{
-		void *ctx;
-		int32_t (*emitter_count)(void*);
-		float (*warm_up_time)(void*, int32_t);
-		float (*warm_up_steps)(void*, int32_t);
-		void (*update)(void*, int32_t, float);
-		void (*apply)(void*, int32_t, int32_t, bool);
-		bool (*query)(void*, int32_t, int32_t);
-	};
 
 	enum { kOhplH12OpVisible, kOhplH12OpCullDistance, kOhplH12OpCullFog, kOhplH12OpKill, kOhplH12OpKillInstantly };
 	enum { kOhplH12QueryDead, kOhplH12QueryDying };

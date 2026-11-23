@@ -34,14 +34,6 @@ struct OhplW3MenuOp {
 	cVector3f pos;
 	cVector2f size;
 };
-struct OhplW3ItemDrawIn {
-	int32_t kind;
-	bool separator, highlighted, enabled, widget_enabled, is_parent, checked;
-	cVector3f global;
-	cVector2f size;
-	float separator_padding, separator_height;
-	cVector3f arrow_offset, check_offset, text_offset;
-};
 struct OhplW3ItemUpdate { float timer; bool show_submenu; };
 struct OhplW3ItemUp { bool ret, hide_topmost, press; };
 struct OhplW3ItemLeave { bool ret, clear_highlight, reset_timer; };

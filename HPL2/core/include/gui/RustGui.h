@@ -27,18 +27,7 @@ struct OhplGuiGfxInfo {
 	const cVertex* vtx;
 };
 
-struct OhplGuiHost {
-	void* ctx;
-	void (*gfx_info)(void*, void*, OhplGuiGfxInfo*);
-	void (*gfx_flush)(void*, void*);
-	void* (*material)(void*, int);
-};
 
-struct OhplGuiFrame {
-	const void* clip;
-	cRect2f clip_rect;
-	cVector3f draw_offset;
-};
 
 struct OhplGuiGlyphTable {
 	const void* const* glyphs;
@@ -73,11 +62,6 @@ struct OhplGuiBatches {
 	size_t vertex_count;
 };
 
-struct OhplGuiTooltip {
-	cVector3f pos;
-	cVector2f size;
-	cVector2f background_size;
-};
 
 extern "C" {
 

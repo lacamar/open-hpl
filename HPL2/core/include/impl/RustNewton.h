@@ -10,11 +10,9 @@
 namespace hpl {
 
 	struct OhplNewtonMatProps { int32_t frictionMode, elasticityMode; float elasticity, staticFriction, kineticFriction; };
-	struct OhplNewtonPairParams { float elasticity, staticFriction, kineticFriction; };
 	struct OhplNewtonGateBody { bool collide, active, isRagDoll, collideRagDoll, isCharacter, collideCharacter; };
 	struct OhplNewtonContact { float normalSpeed, tangentSpeed0, tangentSpeed1; cVector3f force, position, normal; };
 	struct OhplNewtonContactAgg { float maxNormalSpeed, maxTangentSpeed; cVector3f force, normal, position; };
-	struct OhplNewtonSurfaceCalls { bool impact1, slide1, impact2, slide2; };
 	struct OhplNewtonSubShape { const cVector3f* points; size_t count; float radius, volume; };
 	struct OhplNewtonBuoyIn
 	{

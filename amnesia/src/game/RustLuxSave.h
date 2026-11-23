@@ -364,11 +364,6 @@ struct OhplGa6Date
 	int seconds, minutes, hours, month_day, month, year;
 };
 
-struct OhplGa6NameState
-{
-	int count;
-	OhplGa6Date latest;
-};
 
 struct OhplGa6Str
 {

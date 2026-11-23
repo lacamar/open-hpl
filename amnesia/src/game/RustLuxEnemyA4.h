@@ -117,18 +117,6 @@ struct OhplA4Base
 	uint8_t pad;
 };
 
-struct OhplA4Grunt
-{
-	OhplA4Base b;
-};
-struct OhplA4ManPig
-{
-	OhplA4Base b;
-};
-struct OhplA4WaterLurker
-{
-	OhplA4Base b;
-};
 
 static_assert(sizeof(OhplA4Io) == 88, "A4 layout");
 static_assert(sizeof(OhplA4Base) == 136, "A4 layout");

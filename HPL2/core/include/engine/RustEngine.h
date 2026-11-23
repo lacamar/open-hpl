@@ -34,12 +34,6 @@ struct OhplEnLoop
 	bool swappedOnce;
 };
 
-struct OhplEnFrameTiming
-{
-	double logicMs;
-	double swapMs;
-	int steps;
-};
 
 struct OhplEnMsEntry
 {
@@ -69,35 +63,8 @@ struct OhplEnBytesPair
 	OhplEnBytes val;
 };
 
-struct OhplEnHudLayout
-{
-	float font;
-	float pad;
-	float lineH;
-	float bgW;
-	float bgH;
-	float textX;
-	float textY;
-};
 
-struct OhplEnBugMetrics
-{
-	float font;
-	float pad;
-	float lineH;
-	float boxW;
-	float textW;
-};
 
-struct OhplEnBugBox
-{
-	float x;
-	float y;
-	float w;
-	float h;
-	float textX;
-	float textY;
-};
 
 struct OhplEnReport
 {

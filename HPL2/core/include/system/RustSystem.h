@@ -34,16 +34,6 @@ struct OhplSerHost
 	void (*iter_free)(void*);
 };
 
-struct OhplSerField
-{
-	const char* name;
-	const char* class_name;
-	size_t offset;
-	size_t size;
-	unsigned type;
-	unsigned main_type;
-	size_t array_size;
-};
 
 struct OhplLogicTimer
 {
@@ -62,7 +52,6 @@ struct OhplHcField
 	size_t val_n;
 };
 
-struct OhplHcSplitter;
 
 extern "C" {
 

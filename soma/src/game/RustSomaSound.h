@@ -9,16 +9,6 @@
 #include <string>
 
 
-struct OhplGs5PlayReq
-{
-	uint8_t kind; // 0 3D, 1 GUI stream, 2 GUI
-	const unsigned char *file;
-	size_t file_len;
-	bool looped;
-	float pos[3];
-	int entry_type;
-	bool stream;
-};
 
 struct OhplGs5InstState
 {
@@ -143,10 +133,6 @@ extern "C" {
 	void ohpl_s7_dump_text(const unsigned char *tag, size_t tn, const unsigned char *text, size_t n);
 }
 
-inline void OhplS7Text(const char *tag, const std::string &text)
-{
-	ohpl_s7_dump_text((const unsigned char *)tag, strlen(tag), (const unsigned char *)text.data(), text.size());
-}
 
 
 

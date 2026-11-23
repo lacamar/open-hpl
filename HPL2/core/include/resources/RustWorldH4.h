@@ -12,10 +12,6 @@ struct OhplH4Xform
 	hpl::cMatrixf world, body;
 };
 
-struct OhplH4LightMask
-{
-	float center[3], extent[3];
-};
 
 struct OhplH4Exposure
 {

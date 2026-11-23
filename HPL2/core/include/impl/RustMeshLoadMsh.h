@@ -33,15 +33,6 @@ namespace hpl {
 		const uint32_t* indices; size_t indexNum;
 	};
 
-	struct OhplMshMesh
-	{
-		int32_t hpl3;
-		int32_t hasSkeleton;
-		const OhplMshBone* bones; size_t boneNum;
-		const OhplMshNode* nodes; size_t nodeNum;
-		const OhplMshSub* subs; size_t subNum;
-		const OhplMshAnim* anims; size_t animNum;
-	};
 
 	static_assert(sizeof(OhplMshKey) == 32 && offsetof(OhplMshKey, rot) == 16, "OhplMshKey layout");
 	static_assert(sizeof(OhplMshPair) == 12, "OhplMshPair layout");

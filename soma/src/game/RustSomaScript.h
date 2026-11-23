@@ -15,7 +15,6 @@ struct OhplGs6Str
 };
 
 struct OhplGs6Builder;
-struct OhplGs6Enums;
 
 // Script struct state edited in place by Rust: cPidController<float> (N = 1) and <cVector3f> (N = 3)
 template <int N> struct OhplGs6Pid

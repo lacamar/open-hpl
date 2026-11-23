@@ -17,13 +17,6 @@ struct OhplSurface {
 };
 static_assert(sizeof(OhplSurface) == 20, "OhplSurface layout");
 
-struct OhplGlyphs {
-	const void* const* glyphs;
-	size_t count;
-	unsigned short first;
-	unsigned short last;
-	size_t advance_offset;
-};
 static_assert(sizeof(wchar_t) == 4, "wide text crosses the ABI as u32");
 
 extern "C" {

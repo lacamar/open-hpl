@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <cstdint>
 
-struct OhplFileSearcher;
 struct OhplResMap;
 struct OhplExtList;
 struct OhplLoaderTable;

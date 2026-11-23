@@ -39,18 +39,6 @@ namespace hpl {
 		bool fade;
 	};
 
-	struct OhplLightHostVt
-	{
-		void *ctx;
-		float (*ease)(void*, float);
-		void (*set_brightness)(void*, float);
-		void (*set_radius)(void*, float);
-		void (*set_diffuse)(void*, const cColor*);
-		void (*assign_diffuse)(void*, const cColor*);
-		void (*raw_radius)(void*, float);
-		void (*flicker_sound)(void*, bool);
-		void (*flicker_event)(void*, bool);
-	};
 
 	struct OhplFlareIn
 	{
