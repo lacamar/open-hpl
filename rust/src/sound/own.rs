@@ -2,10 +2,11 @@
 //! data records and the sound entities. C++ keeps only the channels, the resource managers, the
 //! physics world and the game's event objects, reached through `SndHost`.
 
-use super::channel::{CChannel, Channel, ChannelOps, EntryHost};
+use super::channel::{CChannel, Channel, EntryHost, OalChan};
 use super::entity_data::{self, LoadError, Names, Props};
 use super::entry::{EntryState, Step};
 use super::play::{self, PlayParams};
+use crate::backend::media::oal::Oal;
 use crate::engine::multi_settings::{self as ms, Entry as GsEntry, SlotAction};
 use crate::scene::soundentity::{self, PlayResult, SoundCfg, SoundHost, SoundState};
 use crate::string::{float_to_string, int_to_string};
@@ -38,11 +39,18 @@ pub struct EventOps {
 /// The C++ objects the sound layer still reaches: channels, resources, physics, the entity shell.
 #[repr(C)]
 pub struct SndHost {
-    pub channel: *const ChannelOps,
     pub event: *const EventOps,
-    pub create_channel:
-        unsafe extern "C" fn(*mut c_void, *const u8, usize, i32, bool, *mut bool) -> *mut c_void,
-    pub delete_channel: unsafe extern "C" fn(*mut c_void),
+    /// The new source handle (-1 for none) and the `iSoundData` it plays.
+    pub create_channel: unsafe extern "C" fn(
+        *mut c_void,
+        *const u8,
+        usize,
+        i32,
+        bool,
+        *mut bool,
+        *mut *mut c_void,
+    ) -> i32,
+    pub release_data: unsafe extern "C" fn(*mut c_void),
     pub is_blocked: unsafe extern "C" fn(*mut c_void, *mut c_void, *const Vector3f) -> bool,
     pub listener_position: unsafe extern "C" fn(*mut c_void, *mut Vector3f),
     pub listener_matrix: unsafe extern "C" fn(*mut c_void, *mut Matrixf),
@@ -55,7 +63,8 @@ pub struct SndHost {
     pub world_is_emitter: unsafe extern "C" fn(*mut c_void) -> bool,
     pub data_release: unsafe extern "C" fn(*mut c_void),
     pub on_start: unsafe extern "C" fn(*mut c_void),
-    pub create_stream: unsafe extern "C" fn(*mut c_void, *const u8, usize, bool) -> *mut c_void,
+    pub create_stream:
+        unsafe extern "C" fn(*mut c_void, *const u8, usize, bool, *mut *mut c_void) -> i32,
     pub set_lock: unsafe extern "C" fn(*mut c_void, *const u8, usize, f32, bool),
 }
 
@@ -77,6 +86,7 @@ struct Core {
     host: *const SndHost,
     lowlevel: *mut c_void,
     resources: *mut c_void,
+    oal: Option<&'static dyn Oal>,
     world: *mut c_void,
     silent: bool,
     volume: [f32; 32],
@@ -89,11 +99,6 @@ impl Core {
     pub(super) fn host(&self) -> &SndHost {
         // SAFETY: `ohpl_sndh_new` contract: the table outlives the handler.
         unsafe { &*self.host }
-    }
-
-    fn channel_ops(&self) -> &ChannelOps {
-        // SAFETY: the host table points at a static channel table.
-        unsafe { &*self.host().channel }
     }
 
     fn log(&self, level: i32, msg: &[u8]) {
@@ -168,12 +173,18 @@ fn dump_file() -> Option<&'static Mutex<std::fs::File>> {
 impl Handler {
     /// # Safety
     /// `host` outlives the handler.
-    pub unsafe fn new(host: *const SndHost, lowlevel: *mut c_void, resources: *mut c_void) -> Self {
+    pub unsafe fn new(
+        host: *const SndHost,
+        lowlevel: *mut c_void,
+        resources: *mut c_void,
+        oal: Option<&'static dyn Oal>,
+    ) -> Self {
         Self {
             core: Core {
                 host,
                 lowlevel,
                 resources,
+                oal,
                 world: std::ptr::null_mut(),
                 silent: false,
                 volume: [1.0; 32],
@@ -245,8 +256,8 @@ impl Handler {
     }
 
     fn ch<'a>(&self, rec: &Rec) -> CChannel<'a> {
-        // SAFETY: a record's channel is live for the table until the record is freed.
-        unsafe { CChannel::new(&*(*self.core.host).channel, rec.channel) }
+        // SAFETY: a record's channel is live until the record is freed.
+        unsafe { CChannel::new(rec.channel) }
     }
 
     pub fn stop(&mut self, name: &[u8]) -> bool {
@@ -410,7 +421,7 @@ impl Handler {
         while let Some(rec) = self.entries.get_mut(i) {
             let rec = &mut **rec;
             let alive = {
-                let mut ch = CChannel::new_for(&self.core, rec.channel);
+                let mut ch = unsafe { CChannel::new(rec.channel) };
                 match rec.state.update(dt, &mut ch, &mut self.core) {
                     Step::Alive => true,
                     Step::Finished { release } => {
@@ -438,8 +449,8 @@ impl Handler {
         if !rec.channel.is_null() {
             let mut ch = self.ch(&rec);
             ch.stop();
-            // SAFETY: table contract; the channel is not used afterwards.
-            unsafe { (self.core.host().delete_channel)(rec.channel) };
+            // SAFETY: the channel came from `OalChan::into_raw` and is not used afterwards.
+            unsafe { OalChan::free(rec.channel) };
         }
     }
 
@@ -458,8 +469,12 @@ impl Handler {
         let dist_prio =
             play::distance_priority(a.pos, listener, a.min_dist, a.max_dist, a.is_3d, a.relative);
         let mut ne = false;
+        let Some(oal) = self.core.oal else {
+            return std::ptr::null_mut();
+        };
+        let mut data = std::ptr::null_mut();
         // SAFETY: table contract.
-        let channel = unsafe {
+        let handle = unsafe {
             (self.core.host().create_channel)(
                 self.core.resources,
                 a.name.as_ptr(),
@@ -467,9 +482,10 @@ impl Handler {
                 dist_prio + a.priority_modifier,
                 a.stream,
                 &raw mut ne,
+                &raw mut data,
             )
         };
-        if channel.is_null() {
+        if handle < 0 {
             *not_enough = ne;
             let text = |pre: &str, post: &str| [pre.as_bytes(), a.name, post.as_bytes()].concat();
             if ne {
@@ -483,6 +499,7 @@ impl Handler {
             }
             return std::ptr::null_mut();
         }
+        let channel = OalChan::into_raw(oal, handle, data, self.core.host().release_data);
         let params = PlayParams {
             pos: a.pos,
             min_dist: a.min_dist,
@@ -496,7 +513,7 @@ impl Handler {
         };
         let lm = self.core.listener_matrix();
         play::setup_channel(
-            &mut CChannel::new_for(&self.core, channel),
+            &mut unsafe { CChannel::new(channel) },
             &params,
             dist_prio,
             &lm,
@@ -600,13 +617,6 @@ fn fresh_entry() -> GsEntry {
     }
 }
 
-impl<'a> CChannel<'a> {
-    fn new_for(core: &Core, ch: *mut c_void) -> Self {
-        // SAFETY: the host table's channel table is static; `ch` is a live channel.
-        unsafe { CChannel::new(&*core.host().channel, ch) }
-    }
-}
-
 impl Rec {
     pub fn set_filter(&self, which: i32, gain: f32) {
         self.chan().set_filter(which, gain);
@@ -618,6 +628,10 @@ impl Rec {
 
     pub fn total_time(&self) -> f64 {
         self.chan().total_time()
+    }
+
+    pub fn elapsed_time(&self) -> f64 {
+        self.chan().elapsed_time()
     }
 
     pub fn set_looping(&self, looping: bool) {
@@ -632,14 +646,9 @@ impl Rec {
         self.handler
     }
 
-    pub fn channel_ops(&self) -> &ChannelOps {
-        // SAFETY: the owning handler outlives its records.
-        unsafe { (*self.handler).core.channel_ops() }
-    }
-
     pub(super) fn chan(&self) -> CChannel<'_> {
-        // SAFETY: as `channel_ops`; the record's channel is live.
-        unsafe { CChannel::new(self.channel_ops(), self.channel) }
+        // SAFETY: the record's channel is live.
+        unsafe { CChannel::new(self.channel) }
     }
 }
 

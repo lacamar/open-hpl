@@ -812,7 +812,7 @@ void cLuxPlayer::UpdateTerrorSound()
 		mpTerrorSound->SetVolumeMul(mfTerror);
 		if(mfTerror <= 0)
 		{
-			mpTerrorSound->GetChannel()->Stop();
+			ohpl_sndch_stop(mpTerrorSound->GetChannel());
 			mpTerrorSound = NULL;
 			mlTerrorSoundID = -1;
 		}

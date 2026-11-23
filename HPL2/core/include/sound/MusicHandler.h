@@ -26,7 +26,6 @@
 namespace hpl {
 
 	class iLowLevelSound;
-	class iSoundChannel;
 	class cResources;
 
 	class cMusicLock

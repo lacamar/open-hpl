@@ -20,7 +20,6 @@
 #define HPL_OPENAL_SOUND_DATA_H
 
 #include "sound/SoundData.h"
-#include "impl/OpenALSoundChannel.h"
 #include "system/LowLevelSystem.h"
 #include "impl/RustL5.h"
 
@@ -41,11 +40,7 @@ namespace hpl {
 			return ohpl_l5_data_create(mpRust, (const uint32_t*)asFile.c_str(), asFile.size());
 		}
 
-		iSoundChannel* CreateChannel(int alPriority)
-		{
-			int lHandle = mpRust ? ohpl_l5_data_channel(mpRust, alPriority) : -1;
-			return lHandle == -1 ? NULL : hplNew( cOpenALSoundChannel, (this, lHandle, mpSoundManger) );
-		}
+		int CreateChannelHandle(int alPriority){ return mpRust ? ohpl_l5_data_channel(mpRust, alPriority) : -1; }
 
 		bool IsStream(){ return mbStream;}
 		bool IsStereo(){ return mpRust && ohpl_l5_data_is_stereo(mpRust); }

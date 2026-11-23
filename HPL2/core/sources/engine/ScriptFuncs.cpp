@@ -41,7 +41,6 @@
 #include "resources/SoundEntityManager.h"
 #include "resources/TextureManager.h"
 #include "sound/SoundData.h"
-#include "sound/SoundChannel.h"
 #include "sound/SoundHandler.h"
 #include "sound/SoundEntityData.h"
 #include "system/String.h"

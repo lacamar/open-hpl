@@ -97,7 +97,7 @@ void SndVolMul(size_t aE, float afX)
 
 double SndElapsed(size_t aE)
 {
-	double d = ((cSoundEntry*)aE)->GetChannel()->GetElapsedTime();
+	double d = ohpl_sndch_read(((cSoundEntry*)aE)->GetChannel(), OhplSndCh_Elapsed);
 	OhplA12Log("snd_elapsed 1 => %s", OhplA12D(d).c_str());
 	return d;
 }
@@ -105,7 +105,7 @@ double SndElapsed(size_t aE)
 void SndSetElapsed(size_t aE, double afX)
 {
 	OhplA12Log("snd_set_elapsed 1 %s", OhplA12D(afX).c_str());
-	((cSoundEntry*)aE)->GetChannel()->SetElapsedTime(afX);
+	ohpl_sndch_set_elapsed(((cSoundEntry*)aE)->GetChannel(), afX);
 }
 
 void SndCommentary(int alMode)

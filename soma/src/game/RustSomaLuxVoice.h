@@ -10,13 +10,6 @@
 struct OhplS5bVoiceHost
 {
 	bool (*entry_valid)(size_t, int);
-	void (*entry_set_volume_mul)(size_t, float);
-	void (*entry_fade_out)(size_t, float);
-	void (*entry_set_paused)(size_t, bool);
-	void (*channel_set_position)(size_t, const float *);
-	void (*channel_filter)(size_t, bool high, float);
-	double (*channel_total)(size_t);
-	double (*channel_elapsed)(size_t);
 	void (*listener_pos)(float *);
 	bool (*map_entity_pos)(const unsigned char *, size_t, float *);
 	bool (*map_current)();

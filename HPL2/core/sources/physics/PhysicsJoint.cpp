@@ -28,7 +28,6 @@
 #include "sound/Sound.h"
 #include "scene/SoundEntity.h"
 #include "sound/SoundHandler.h"
-#include "sound/SoundChannel.h"
 
 #include "scene/World.h"
 #include "scene/Scene.h"

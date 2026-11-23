@@ -51,18 +51,6 @@ bool EffectOut(cSomaSoundInstance *p, size_t *pe, int *pid)
 
 const OhplS5bVoiceHost kHost = {
 	[](size_t e, int id) { return H()->IsValid((cSoundEntry *)e, id); },
-	[](size_t e, float f) { ((cSoundEntry *)e)->SetVolumeMul(f); },
-	[](size_t e, float f) { ((cSoundEntry *)e)->FadeOut(f); },
-	[](size_t e, bool b) { ((cSoundEntry *)e)->SetPaused(b); },
-	[](size_t e, const float *v) { ((cSoundEntry *)e)->GetChannel()->SetPosition(cVector3f(v[0], v[1], v[2])); },
-	[](size_t e, bool abHigh, float f) {
-		if (abHigh)
-			((cSoundEntry *)e)->GetChannel()->SetFilterGainLF(f);
-		else
-			((cSoundEntry *)e)->GetChannel()->SetFilterGainHF(f);
-	},
-	[](size_t e) { return (double)((cSoundEntry *)e)->GetChannel()->GetTotalTime(); },
-	[](size_t e) { return (double)((cSoundEntry *)e)->GetChannel()->GetElapsedTime(); },
 	[](float *o) { Vec3(o, E()->GetSound()->GetLowLevel()->GetListenerPosition()); },
 	[](const unsigned char *n, size_t l, float *o) {
 		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();

@@ -29,7 +29,6 @@
 namespace hpl {
 
 	class iLowLevelSound;
-	class iSoundChannel;
 	class cResources;
 	class cWorld;
 
@@ -52,7 +51,7 @@ namespace hpl {
 		tString GetName() const { size_t n; const unsigned char *p = ohpl_sndent_name(R(), &n); return tString((const char*)p, n); }
 		eSoundEntryType GetType() const { return (eSoundEntryType)ohpl_sndent_type(R()); }
 		int GetId() const { return ohpl_sndent_id(R()); }
-		iSoundChannel* GetChannel() const { return (iSoundChannel*)ohpl_sndent_channel(R()); }
+		void* GetChannel() const { return ohpl_sndent_channel(R()); }
 
 		bool IsFirstTime(){ return ohpl_sndent_get(R(), 1) != 0; }
 

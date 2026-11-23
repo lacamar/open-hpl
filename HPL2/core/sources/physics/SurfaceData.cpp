@@ -32,7 +32,6 @@
 #include "scene/World.h"
 #include "scene/SoundEntity.h"
 #include "sound/Sound.h"
-#include "sound/SoundChannel.h"
 #include "sound/SoundHandler.h"
 
 #include "resources/Resources.h"

@@ -1,6 +1,7 @@
-//! The seam to the C++ `iSoundChannel` and the sound handler: Rust never owns either, it calls
-//! back through function tables, so the OpenAL backend and the game layers stay C++.
+//! The playing channel (`OalChan`) and the `Channel` trait the entry and music logic drives.
 
+use crate::backend::media::oal::Oal;
+use crate::backend::media::snd;
 use crate::types::{Matrixf, Vector3f};
 use std::ffi::c_void;
 
@@ -49,172 +50,219 @@ pub(super) trait EntryHost {
     fn listener_matrix(&self) -> Matrixf;
 }
 
-type Fn0<R = ()> = unsafe extern "C" fn(*mut c_void) -> R;
-type Fn1<A, R = ()> = unsafe extern "C" fn(*mut c_void, A) -> R;
-
-/// Calls on one `iSoundChannel`; every entry takes the channel pointer first.
-#[repr(C)]
-pub struct ChannelOps {
-    pub play: Fn0,
-    pub stop: Fn0,
-    pub set_paused: Fn1<bool>,
-    pub paused: Fn0<bool>,
-    pub is_playing: Fn0<bool>,
-    pub stop_used: Fn0<bool>,
-    pub speed: Fn0<f32>,
-    pub set_speed: Fn1<f32>,
-    pub volume: Fn0<f32>,
-    pub set_volume: Fn1<f32>,
-    pub looping: Fn0<bool>,
-    pub set_looping: Fn1<bool>,
-    pub set_3d: Fn1<bool>,
-    pub set_priority: Fn1<i32>,
-    pub set_priority_modifier: Fn1<i32>,
-    pub set_affected_by_env: Fn1<bool>,
-    pub position_is_relative: Fn0<bool>,
-    pub set_position_is_relative: Fn1<bool>,
-    pub position: Fn1<*mut Vector3f>,
-    pub set_position: Fn1<*const Vector3f>,
-    pub rel_position: Fn1<*mut Vector3f>,
-    pub set_rel_position: Fn1<*const Vector3f>,
-    pub min_distance: Fn0<f32>,
-    pub set_min_distance: Fn1<f32>,
-    pub max_distance: Fn0<f32>,
-    pub set_max_distance: Fn1<f32>,
-    pub block_volume_mul: Fn0<f32>,
-    pub elapsed_time: Fn0<f64>,
-    pub total_time: Fn0<f64>,
-    pub set_elapsed_time: Fn1<f64>,
-    pub set_blockable: Fn1<bool>,
-    pub set_block_volume_mul: Fn1<f32>,
-    pub set_filter: unsafe extern "C" fn(*mut c_void, i32, f32),
-}
-
-/// A live `iSoundChannel` and its function table.
+/// A live `OalChan`; the playing source and the base-class state of the former `iSoundChannel`.
 pub(super) struct CChannel<'a> {
-    ops: &'a ChannelOps,
-    ch: *mut c_void,
+    ch: &'a mut OalChan,
 }
 
 impl<'a> CChannel<'a> {
     /// # Safety
-    /// `ch` stays a valid channel for `ops` for the lifetime of the value.
-    pub(super) unsafe fn new(ops: &'a ChannelOps, ch: *mut c_void) -> Self {
-        Self { ops, ch }
+    /// `ch` is a live `OalChan` from `OalChan::into_raw` for the lifetime of the value.
+    pub(super) unsafe fn new(ch: *mut c_void) -> Self {
+        Self {
+            // SAFETY: the contract above.
+            ch: unsafe { &mut *ch.cast::<OalChan>() },
+        }
     }
 }
 
-macro_rules! call {
-    ($s:expr, $f:ident $(, $a:expr)*) => {
-        // SAFETY: `CChannel::new` contract: `ch` is valid for the table that was paired with it.
-        unsafe { ($s.ops.$f)($s.ch $(, $a)*) }
-    };
+/// One playing OpenAL source (`cOpenALSoundChannel`): the L5 channel plus the C++ `iSoundData`
+/// it plays, released through the host when the channel is freed.
+pub struct OalChan {
+    l5: snd::Channel,
+    oal: &'static dyn Oal,
+    data: *mut c_void,
+    release: unsafe extern "C" fn(*mut c_void),
 }
 
-fn read_vec(f: impl FnOnce(*mut Vector3f)) -> Vector3f {
-    let mut v = Vector3f::default();
-    f(&raw mut v);
-    v
+impl OalChan {
+    pub(super) fn into_raw(
+        oal: &'static dyn Oal,
+        handle: i32,
+        data: *mut c_void,
+        release: unsafe extern "C" fn(*mut c_void),
+    ) -> *mut c_void {
+        let l5 = snd::Channel::new(oal, handle);
+        Box::into_raw(Box::new(Self {
+            l5,
+            oal,
+            data,
+            release,
+        }))
+        .cast()
+    }
+
+    /// # Safety
+    /// `ch` from `into_raw`, freed once.
+    pub(super) unsafe fn free(ch: *mut c_void) {
+        // SAFETY: caller contract.
+        let c = unsafe { Box::from_raw(ch.cast::<Self>()) };
+        let (data, release, oal) = (c.data, c.release, c.oal);
+        c.l5.destroy(oal);
+        // SAFETY: `release` is the host's `release_data`; `data` is the live `iSoundData`.
+        unsafe { release(data) };
+    }
+
+    pub(super) fn data(&self) -> *mut c_void {
+        self.data
+    }
+
+    /// Diagnostic read, codes as `OhplSndCh` in RustSound.h.
+    pub(super) fn read(&self, what: i32) -> f64 {
+        match what {
+            0 => f64::from(self.l5.shadow.volume),
+            1 => f64::from(self.l5.is_playing(self.oal)),
+            2 => f64::from(self.l5.priority(self.oal) as i32),
+            3 => self.l5.elapsed(self.oal),
+            4 => self.l5.total(self.oal),
+            5 => f64::from(self.l5.is_buffer_underrun(self.oal)),
+            6 => f64::from(self.l5.shadow.paused),
+            7 => f64::from(self.l5.shadow.looping),
+            8 => f64::from(self.l5.shadow.is_3d),
+            9 => f64::from(self.l5.shadow.position_relative),
+            10 => f64::from(self.l5.shadow.position[0]),
+            11 => f64::from(self.l5.shadow.position[1]),
+            12 => f64::from(self.l5.shadow.position[2]),
+            13 => f64::from(self.l5.shadow.rel_position[0]),
+            14 => f64::from(self.l5.shadow.rel_position[1]),
+            15 => f64::from(self.l5.shadow.rel_position[2]),
+            16 => f64::from(self.l5.shadow.min_distance),
+            _ => f64::from(self.l5.shadow.max_distance),
+        }
+    }
 }
 
 impl Channel for CChannel<'_> {
     fn play(&mut self) {
-        call!(self, play)
+        self.set_paused(false);
+        self.ch.l5.shadow.stop_used = false;
     }
     fn stop(&mut self) {
-        call!(self, stop)
+        self.ch.l5.stop(self.ch.oal);
+        self.ch.l5.shadow.stop_used = true;
     }
     fn set_paused(&mut self, paused: bool) {
-        call!(self, set_paused, paused)
+        self.ch.l5.shadow.paused = paused;
+        self.ch.l5.set_paused(self.ch.oal, paused);
     }
     fn paused(&self) -> bool {
-        call!(self, paused)
+        self.ch.l5.shadow.paused
     }
     fn is_playing(&mut self) -> bool {
-        call!(self, is_playing)
+        self.ch.l5.is_playing(self.ch.oal)
     }
     fn stop_used(&self) -> bool {
-        call!(self, stop_used)
+        self.ch.l5.shadow.stop_used
     }
     fn speed(&self) -> f32 {
-        call!(self, speed)
+        self.ch.l5.shadow.speed
     }
     fn set_speed(&mut self, speed: f32) {
-        call!(self, set_speed, speed)
+        self.ch.l5.shadow.speed = speed;
+        self.ch.l5.set_pitch(self.ch.oal, speed);
     }
     fn volume(&self) -> f32 {
-        call!(self, volume)
+        self.ch.l5.shadow.volume
     }
     fn set_volume(&mut self, volume: f32) {
-        call!(self, set_volume, volume)
+        self.ch.l5.shadow.volume = volume;
+        self.ch.l5.set_volume(self.ch.oal, volume);
     }
     fn looping(&self) -> bool {
-        call!(self, looping)
+        self.ch.l5.shadow.looping
     }
     fn set_looping(&mut self, looping: bool) {
-        call!(self, set_looping, looping)
+        self.ch.l5.shadow.looping = looping;
+        self.ch.l5.set_loop(self.ch.oal, looping);
     }
     fn set_3d(&mut self, is_3d: bool) {
-        call!(self, set_3d, is_3d)
+        let sh = &mut self.ch.l5.shadow;
+        sh.is_3d = is_3d;
+        let on = is_3d && !sh.position_relative;
+        self.ch.l5.set_spatialize(self.ch.oal, on);
     }
     fn set_priority(&mut self, priority: i32) {
-        call!(self, set_priority, priority)
+        let m = self.ch.l5.shadow.priority_modifier;
+        self.ch.l5.set_priority(self.ch.oal, priority, m);
     }
     fn set_priority_modifier(&mut self, modifier: i32) {
-        call!(self, set_priority_modifier, modifier)
+        self.ch.l5.shadow.priority_modifier = modifier;
+        let p = self.ch.l5.priority(self.ch.oal) as i32;
+        self.set_priority(p);
     }
     fn set_affected_by_env(&mut self, affected: bool) {
-        call!(self, set_affected_by_env, affected)
+        self.ch.l5.shadow.affected_by_env = affected;
+        self.ch.l5.set_aux_send_slot(self.ch.oal, affected);
     }
     fn position_is_relative(&self) -> bool {
-        call!(self, position_is_relative)
+        self.ch.l5.shadow.position_relative
     }
     fn set_position_is_relative(&mut self, relative: bool) {
-        call!(self, set_position_is_relative, relative)
+        let sh = &mut self.ch.l5.shadow;
+        sh.position_relative = relative;
+        let on = sh.is_3d && !relative;
+        self.ch.l5.set_spatialize(self.ch.oal, on);
     }
     fn position(&self) -> Vector3f {
-        read_vec(|out| call!(self, position, out))
+        let p = self.ch.l5.shadow.position;
+        Vector3f {
+            x: p[0],
+            y: p[1],
+            z: p[2],
+        }
     }
     fn set_position(&mut self, pos: Vector3f) {
-        call!(self, set_position, &raw const pos)
+        let sh = &mut self.ch.l5.shadow;
+        sh.position = [pos.x, pos.y, pos.z];
+        let (p, v) = (sh.position, sh.velocity);
+        self.ch.l5.set_attributes(self.ch.oal, &p, &v);
     }
     fn rel_position(&self) -> Vector3f {
-        read_vec(|out| call!(self, rel_position, out))
+        let p = self.ch.l5.shadow.rel_position;
+        Vector3f {
+            x: p[0],
+            y: p[1],
+            z: p[2],
+        }
     }
     fn set_rel_position(&mut self, pos: Vector3f) {
-        call!(self, set_rel_position, &raw const pos)
+        self.ch.l5.shadow.rel_position = [pos.x, pos.y, pos.z];
     }
     fn min_distance(&self) -> f32 {
-        call!(self, min_distance)
+        self.ch.l5.shadow.min_distance
     }
     fn set_min_distance(&mut self, dist: f32) {
-        call!(self, set_min_distance, dist)
+        self.ch.l5.shadow.min_distance = dist;
     }
     fn max_distance(&self) -> f32 {
-        call!(self, max_distance)
+        self.ch.l5.shadow.max_distance
     }
     fn set_max_distance(&mut self, dist: f32) {
-        call!(self, set_max_distance, dist)
+        self.ch.l5.shadow.max_distance = dist;
     }
     fn block_volume_mul(&self) -> f32 {
-        call!(self, block_volume_mul)
+        self.ch.l5.shadow.block_volume_mul
     }
     fn elapsed_time(&self) -> f64 {
-        call!(self, elapsed_time)
+        self.ch.l5.elapsed(self.ch.oal)
     }
     fn total_time(&self) -> f64 {
-        call!(self, total_time)
+        self.ch.l5.total(self.ch.oal)
     }
     fn set_elapsed_time(&mut self, time: f64) {
-        call!(self, set_elapsed_time, time)
+        self.ch.l5.set_elapsed(self.ch.oal, time);
     }
     fn set_blockable(&mut self, blockable: bool) {
-        call!(self, set_blockable, blockable)
+        self.ch.l5.shadow.blockable = blockable;
     }
     fn set_block_volume_mul(&mut self, mul: f32) {
-        call!(self, set_block_volume_mul, mul)
+        self.ch.l5.shadow.block_volume_mul = mul;
     }
     fn set_filter(&mut self, which: i32, gain: f32) {
-        call!(self, set_filter, which, gain)
+        match which {
+            0 => self.ch.l5.set_filter_gain_hf(self.ch.oal, gain),
+            1 => self.ch.l5.set_filter_gain_lf(self.ch.oal, gain),
+            _ => self.ch.l5.set_env_send_gain(self.ch.oal, gain),
+        }
     }
 }
