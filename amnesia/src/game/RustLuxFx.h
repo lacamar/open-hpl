@@ -181,7 +181,6 @@ static_assert(sizeof(OhplGa9bCompletion) == 24, "layout");
 
 extern "C"
 {
-	size_t ohpl_ga9b_stream_rows(size_t rows, OhplGa9bRow *out);
 
 	void ohpl_ga9b_completion_reset(OhplGa9bCompletion *c);
 	void ohpl_ga9b_completion_update(OhplGa9bCompletion *c, float dt);
