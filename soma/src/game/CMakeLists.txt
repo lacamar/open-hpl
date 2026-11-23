@@ -11,12 +11,13 @@ file(GLOB all_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     *.h
 )
 
-add_executable(Soma
+add_library(SomaGame STATIC
     ${all_sources}
 )
-target_link_libraries(Soma HPL2)
-set_target_properties(Soma PROPERTIES CXX_STANDARD 20)
-target_compile_definitions(Soma PRIVATE OPENHPL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../..")
+target_link_libraries(SomaGame PUBLIC HPL2)
+set_target_properties(SomaGame PROPERTIES CXX_STANDARD 20)
+target_compile_definitions(SomaGame PRIVATE OPENHPL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../..")
+ohpl_game(Soma soma)
 
 add_definitions(-DLINUX)
 

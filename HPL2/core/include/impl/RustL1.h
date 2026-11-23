@@ -66,8 +66,8 @@ bool ohpl_l1_working_dir(void (*sink)(void*, const unsigned char*, size_t), void
 void ohpl_l1_find_files(const char* dir, const uint32_t* mask, size_t mask_len, void (*sink)(void*, const uint32_t*, size_t), void* ctx);
 void ohpl_l1_find_folders(const char* dir, bool add_hidden, bool add_up, void (*sink)(void*, const uint32_t*, size_t), void* ctx);
 
-int ohpl_l1_main_args(int argc, const char* const* argv, void (*sink)(void*, const unsigned char*, size_t), void* ctx, bool* cwd);
-bool ohpl_l1_protect_steam();
+int ohpl_l1_game_main(int argc, const char* const* argv, int (*game)(const unsigned char*, size_t));
+int OhplGameMain(const unsigned char* cmd, size_t len);
 void ohpl_l1_sdl_hints();
 bool ohpl_l1_sdl_init(bool video);
 void ohpl_l1_sdl_error(void (*sink)(void*, const unsigned char*, size_t), void* ctx);

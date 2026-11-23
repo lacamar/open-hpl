@@ -209,8 +209,7 @@ pub fn parse_args(
 ///
 /// # Safety
 /// `argv` has `argc` NUL-terminated entries; `cwd` is a valid out pointer; `sink` accepts `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_l1_main_args(
+unsafe extern "C" fn main_args(
     argc: c_int,
     argv: *const *const c_char,
     sink: Sink<u8>,
@@ -257,9 +256,58 @@ pub unsafe extern "C" fn ohpl_l1_main_args(
 }
 
 /// The Steam-library read-only protection. False means the engine must not start.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_l1_protect_steam() -> bool {
+fn protect_steam() -> bool {
     protect(&collect_roots())
+}
+
+type GameEntry = unsafe extern "C" fn(*const u8, usize) -> c_int;
+
+unsafe extern "C" fn append_sink(ctx: *mut c_void, p: *const u8, n: usize) {
+    // SAFETY: `ctx` is the `Vec<u8>` passed by `game_main`; `p` holds `n` bytes.
+    unsafe { (*ctx.cast::<Vec<u8>>()).extend_from_slice(core::slice::from_raw_parts(p, n)) };
+}
+
+/// `main` of the game executables: argument pass, data directory, Steam protection, then `game`
+/// with the command line. The C++ side implements `game` as `hplMain`.
+///
+/// # Safety
+/// `argv` has `argc` NUL-terminated entries; `game` accepts a pointer and a length.
+pub unsafe fn game_main(argc: c_int, argv: *const *const c_char, game: GameEntry) -> c_int {
+    let mut cmd: Vec<u8> = Vec::new();
+    let mut cwd = false;
+    let ctx = (&raw mut cmd).cast::<c_void>();
+    // SAFETY: caller contract; `append_sink` matches `ctx`.
+    if unsafe { main_args(argc, argv, append_sink, ctx, &mut cwd) } != 0 {
+        return 1;
+    }
+    if !cwd {
+        let mut dir: Vec<u8> = Vec::new();
+        // SAFETY: `append_sink` matches the `Vec` context.
+        unsafe { crate::system::h1::ohpl_h1_data_dir(append_sink, (&raw mut dir).cast()) };
+        if let Some(c) = cstring(&dir) {
+            // SAFETY: NUL-terminated path; a failed chdir keeps the start directory.
+            unsafe { clib::chdir(c.as_ptr()) };
+        }
+    }
+    if !protect_steam() {
+        return 1;
+    }
+    // SAFETY: caller contract.
+    unsafe { game(cmd.as_ptr(), cmd.len()) }
+}
+
+/// Entry for the C++ `main` of the test and launcher executables.
+///
+/// # Safety
+/// As `game_main`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_l1_game_main(
+    argc: c_int,
+    argv: *const *const c_char,
+    game: GameEntry,
+) -> c_int {
+    // SAFETY: caller contract.
+    unsafe { game_main(argc, argv, game) }
 }
 
 #[unsafe(no_mangle)]
