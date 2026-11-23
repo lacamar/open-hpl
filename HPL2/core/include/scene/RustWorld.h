@@ -47,18 +47,9 @@ namespace hpl {
 	extern "C" {
 	int32_t ohpl_world_find_name(const OhplName*, int32_t, OhplName);
 	int32_t ohpl_world_find_last_name(const OhplName*, int32_t, OhplName);
-	int32_t ohpl_world_first_by_name(const OhplName*, int32_t);
 	int32_t ohpl_world_find_id(const int32_t*, int32_t, int32_t);
 	int32_t ohpl_world_find_ptr(const void* const*, int32_t, const void*);
-	int32_t ohpl_world_force_fields(const OhplFieldIn*, int32_t, const cVector3f*, const cVector3f*, uint32_t*);
-	void ohpl_world_skybox_color(const cColor*, bool, float, cColor*);
-	void ohpl_world_physics_bounds(const cVector3f*, const cVector3f*, cVector3f*, cVector3f*);
-	uint32_t ohpl_world_pre_update_steps(float, float);
-	uint32_t ohpl_world_destroy_plan(uint32_t);
 
-	bool ohpl_scene_wants_post_effects(uint32_t, bool);
-	uint32_t ohpl_scene_plan_viewport(uint32_t, const OhplViewportIn*);
-	int32_t ohpl_scene_gui_order(const int32_t*, int32_t, uint32_t*);
 	}
 
 	// Index of the first (or, with abLast, last) element whose GetName() equals asName, or -1.
