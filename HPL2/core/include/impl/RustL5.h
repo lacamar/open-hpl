@@ -93,6 +93,7 @@ bool ohpl_l5_data_is_stereo(OhplL5Data*);
 void ohpl_l5_data_free(OhplL5Data*);
 
 OhplL5Channel* ohpl_l5_chan_new(int handle);
+void* ohpl_l5_chan_shadow(OhplL5Channel*);
 void ohpl_l5_chan_free(OhplL5Channel*);
 void ohpl_l5_chan_stop(OhplL5Channel*);
 void ohpl_l5_chan_set_paused(OhplL5Channel*, bool);
