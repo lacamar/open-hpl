@@ -59,9 +59,12 @@ namespace hpl {
 
 		OhplH6Skel* Rs(){ return mpRs;}
 
-		bool mbFileUnits = false;
+		bool GetFileUnits(){ return mbFileUnits;}
+		void SetFileUnits(bool abX){ mbFileUnits = abX;}
+		bool* FileUnitsPtr(){ return &mbFileUnits;}
 
 	private:
+		bool mbFileUnits = false;
 		OhplH6Skel *mpRs;
 		cBone *mpRootBone;
 	};
