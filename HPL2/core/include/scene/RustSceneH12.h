@@ -65,16 +65,9 @@ const OhplH12PsDesc* ohpl_h12_ps_desc(const OhplH12PsBox*);
 OhplH12PsDesc* ohpl_h12_ps_desc_mut(OhplH12PsBox*);
 void ohpl_h12_ps_finish(OhplH12PsBox*, uint32_t alMaterials, const cVector2l *apFirstSubDiv);
 void ohpl_h12_ps_free(OhplH12PsBox*);
-float ohpl_h12_ps_frame_step(float afAnimationLength, uint32_t alMaterials);
-float ohpl_h12_ps_max_frame_time(uint32_t alMaterials);
 
-void ohpl_h12b_ps_update_logic(const OhplH12PsHost*, bool *apFirst, bool abActive, float afStep);
-void ohpl_h12b_ps_set_visible(const OhplH12PsHost*, bool *apVisible, bool abX);
-void ohpl_h12b_ps_apply_all(const OhplH12PsHost*, int32_t alOp, bool abArg);
-bool ohpl_h12b_ps_all(const OhplH12PsHost*, int32_t alQuery);
 bool ohpl_h12b_psdata_plan(bool abRootOk, const bool *apChildIsEmitter, uint32_t alN, uint32_t alExisting, bool *apLoad);
 bool ohpl_h12b_psdata_can_create(uint32_t alEmitters);
-void ohpl_h12b_pe_ctl_init(OhplH12PeCtl*);
 uint32_t ohpl_h12b_pe_update_gate(OhplH12PeCtl*, bool abActive, bool abDying, bool abSameRenderFrame, bool abUsesDirection, int32_t alMatrixCount);
 bool ohpl_h12b_pe_axis_gate(OhplH12PeCtl*, bool abIsAxis, int32_t alMatrixCount);
 uint32_t ohpl_h12b_pe_bv_gate(OhplH12PeCtl*, bool abIsAxis, int32_t alMatrixCount);
