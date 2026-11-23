@@ -185,7 +185,7 @@ namespace hpl {
 			for(int f=0; f<lFaces; ++f)
 			{
 				cBitmapData *pData = apBmp->GetData(f, 0);
-				vResized[f].assign(pData->mpData, pData->mpData + pData->mlSize);
+				vResized[f].assign(pData->Data(), pData->Data() + pData->Size());
 				cVector3l vSize = GetSize();
 				for(int i=0; i<(int)GetSizeDownScaleLevel(); ++i)
 				{
@@ -209,8 +209,8 @@ namespace hpl {
 			for(int l=0; l<lUploadLevels; ++l)
 			{
 				cBitmapData *pData = apBmp->GetData(f, l + lStart);
-				const void *pSrc = bCpuResize ? (const void*)vResized[f].data() : (const void*)pData->mpData;
-				int lSize = bCpuResize ? (int)vResized[f].size() : pData->mlSize;
+				const void *pSrc = bCpuResize ? (const void*)vResized[f].data() : (const void*)pData->Data();
+				int lSize = bCpuResize ? (int)vResized[f].size() : pData->Size();
 				Upload(alIdx, l, f, cVector3l(0,0,0), vSize, format, pSrc, lSize);
 				SetMemorySizeBase(GetMemorySize() + lSize);
 				vSize.x = std::max(1, vSize.x >> 1);
@@ -258,7 +258,7 @@ namespace hpl {
 			for(int l=0; l<(bProvidedMips ? lLevels : 1); ++l)
 			{
 				cBitmapData *pData = pBmp->GetData(0, l);
-				Upload(0, l, f, cVector3l(0,0,0), vSize, format, pData->mpData, pData->mlSize);
+				Upload(0, l, f, cVector3l(0,0,0), vSize, format, pData->Data(), pData->Size());
 				vSize.x = std::max(1, vSize.x >> 1);
 				vSize.y = std::max(1, vSize.y >> 1);
 			}

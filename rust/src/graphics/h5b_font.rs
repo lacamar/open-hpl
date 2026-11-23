@@ -33,6 +33,12 @@ impl FontTable {
         self.glyphs = g;
     }
 
+    pub fn put(&mut self, i: usize, g: Glyph) {
+        if let Some(s) = self.glyphs.get_mut(i) {
+            *s = Some(g);
+        }
+    }
+
     pub fn glyph(&self, i: usize) -> Option<&Glyph> {
         self.glyphs.get(i).and_then(Option::as_ref)
     }
@@ -139,6 +145,34 @@ pub unsafe extern "C" fn ohpl_h5b_font_set(
         t.size_ratio = hdr.ratio;
         t.set_glyphs(table);
     });
+}
+
+/// Sets the header and resizes the table to `n` absent glyphs.
+///
+/// # Safety
+/// `hdr` is readable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h5b_font_set_hdr(h: u64, hdr: *const FontHdr, n: usize) {
+    // SAFETY: caller contract.
+    let hdr = unsafe { &*hdr };
+    with(h, |t| {
+        t.first = hdr.first;
+        t.last = hdr.last;
+        t.height = hdr.height;
+        t.size_ratio = hdr.ratio;
+        t.set_glyphs(vec![None; n]);
+    });
+}
+
+/// Stores glyph `i`; ignored out of range.
+///
+/// # Safety
+/// `g` is readable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_h5b_font_set_glyph(h: u64, i: usize, g: *const Glyph) {
+    // SAFETY: caller contract.
+    let g = unsafe { *g };
+    with(h, |t| t.put(i, g));
 }
 
 /// Writes glyph `i` to `out`; false where absent.

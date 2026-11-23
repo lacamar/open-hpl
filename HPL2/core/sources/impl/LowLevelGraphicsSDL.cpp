@@ -626,7 +626,7 @@ namespace hpl {
 
 		//////////////////////////////
 		//Copy pixels
-		ohpl_glctx_read_pixels(mpRs, &vRect, pixelFormat, pBitmap->GetData(0,0)->mpData);
+		ohpl_glctx_read_pixels(mpRs, &vRect, pixelFormat, pBitmap->GetData(0,0)->Data());
 
 		//TODO: Flip, not needed?
 

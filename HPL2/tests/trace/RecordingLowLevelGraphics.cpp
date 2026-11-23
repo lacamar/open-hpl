@@ -409,7 +409,7 @@ namespace hpl {
 			for(int m = 0; m < apBmp->GetNumOfMipMaps(); ++m)
 			{
 				cBitmapData* d = apBmp->GetData(i, m);
-				if(d && d->mpData) w.PutHash("img", d->mpData, d->mlSize);
+				if(d && d->Data()) w.PutHash("img", d->Data(), d->Size());
 			}
 		Rec(asFn, w.Text());
 	}

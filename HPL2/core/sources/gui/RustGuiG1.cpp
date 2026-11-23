@@ -157,7 +157,7 @@ namespace hpl {
 	{
 		const tGlyphVec &vGlyphs = apFont->GetGlyphs();
 		OhplGuiGlyphTable table = {	(const void* const*)vGlyphs.data(), vGlyphs.size(), apFont->GetFirstChar(), apFont->GetLastChar(),
-									offsetof(cGlyph, mpGuiGfx), offsetof(cGlyph, mvOffset), offsetof(cGlyph, mvSize), offsetof(cGlyph, mfAdvance) };
+									cGlyph::GfxOffset(), cGlyph::OffsetOffset(), cGlyph::SizeOffset(), cGlyph::AdvanceOffset() };
 		ohpl_g1_set_draw_text(apSet, &table, (const uint32_t*)apString, wcslen(apString), &avSize, &avPosition, &aColor, aMaterial, aAlign);
 	}
 
