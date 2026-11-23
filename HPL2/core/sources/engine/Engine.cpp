@@ -52,7 +52,6 @@
 
 #include "impl/SDLEngineSetup.h"
 
-#include <chrono>
 #include <cstdlib>
 
 static_assert(hpl::eVariableType_LastEnum == 8, "ohpl_en variable types");
@@ -243,7 +242,10 @@ namespace hpl {
 
 	void cEngine::RunRust()
 	{
-		ohpl_h22_engine_run(RustCall, this, &mLoop, &mfFrameTime, &mlRustFocusBits);
+		OhplH22Refs refs = { mpUpdater->Handle(), cUpdater::VisitFn(), mpLogicTimer->Raw(), &mpFPSCounter->mFps,
+			&mbGameIsDone, &mbPaused, &mbRenderOnce, &mbLimitFPS, &mbWaitIfAppOutOfFocus,
+			reinterpret_cast<void* const*>(&mpHeadlessControl) };
+		ohpl_h22_engine_run(RustCall, this, &refs, &mLoop, &mfFrameTime, &mlRustFocusBits);
 	}
 
 	double cEngine::RustCall(void *apCtx, int alOp, double a0, double a1, double a2, double a3)
@@ -258,7 +260,6 @@ namespace hpl {
 
 	double cEngine::RustHost(int alOp, double a0, double a1, double a2, double a3)
 	{
-		static const std::chrono::steady_clock::time_point tBase = std::chrono::steady_clock::now();
 		switch(alOp)
 		{
 		case OHPL_H22_OP_LOG:
@@ -272,20 +273,8 @@ namespace hpl {
 			}
 			return 0;
 		case OHPL_H22_OP_LOG_MEDIUM: Log(" Medium framerate: %f\n", a0); return 0;
-		case OHPL_H22_OP_BROADCAST: mpUpdater->BroadcastMessageToAll((eUpdateableMessage)(int)a0); return 0;
-		case OHPL_H22_OP_RUN_MESSAGE: mpUpdater->RunMessage((eUpdateableMessage)(int)a0, (float)a1); return 0;
-		case OHPL_H22_OP_CONTAINER_IS_DEFAULT: return mpUpdater->GetCurrentContainerName() == "Default";
-		case OHPL_H22_OP_LT_RESET: mpLogicTimer->Reset(); return 0;
-		case OHPL_H22_OP_WANT_UPDATE: return mpLogicTimer->WantUpdate();
-		case OHPL_H22_OP_END_UPDATE_LOOP: mpLogicTimer->EndUpdateLoop(); return 0;
-		case OHPL_H22_OP_STEP_SIZE: return GetStepSize();
-		case OHPL_H22_OP_GAME_IS_DONE: return GetGameIsDone();
-		case OHPL_H22_OP_WAIT_OUT_OF_FOCUS: return mbWaitIfAppOutOfFocus;
 		case OHPL_H22_OP_WINDOW_INPUT_FOCUS: return mpGraphics->GetLowLevel()->GetWindowInputFocus();
-		case OHPL_H22_OP_SLEEP: cPlatform::Sleep((unsigned int)a0); return 0;
 		case OHPL_H22_OP_INPUT_UPDATE: mpInput->Update((float)a0); return 0;
-		case OHPL_H22_OP_PAUSED: return GetPaused();
-		case OHPL_H22_OP_HAS_HEADLESS: return mpHeadlessControl != NULL;
 		case OHPL_H22_OP_HC_LOGIC_STEP: mpHeadlessControl->LogicStep(); return 0;
 		case OHPL_H22_OP_HC_UPDATE: mpHeadlessControl->Update(); return 0;
 		case OHPL_H22_OP_QUIT_POSTED: return mpInput->isQuitMessagePosted();
@@ -302,8 +291,6 @@ namespace hpl {
 		case OHPL_H22_OP_TAKE_REMOVED: { bool b = mbDeviceRemoved; mbDeviceRemoved = false; return b; }
 		case OHPL_H22_OP_UPDATE_LOG_ACTIVE: return GetUpdateLogActive();
 		case OHPL_H22_OP_CLEAR_UPDATE_LOG: ClearUpdateLogFile(); return 0;
-		case OHPL_H22_OP_RENDER_ONCE: return mbRenderOnce;
-		case OHPL_H22_OP_LIMIT_FPS: return mbLimitFPS;
 		case OHPL_H22_OP_SWAP: mpGraphics->GetLowLevel()->SwapBuffers(); return 0;
 		case OHPL_H22_OP_TIMING:
 		{
@@ -325,9 +312,6 @@ namespace hpl {
 		case OHPL_H22_OP_FLUSH: mpGraphics->GetLowLevel()->FlushRendering(); return 0;
 		case OHPL_H22_OP_DIAG_END_FRAME: cEngineDiagnostics::EndFrame(); return 0;
 		case OHPL_H22_OP_DIAG_ADD_TIMING: cEngineDiagnostics::AddFrameTiming(a0, (int)a1, a2, a3); return 0;
-		case OHPL_H22_OP_FPS_ADD: mpFPSCounter->AddFrame(); return 0;
-		case OHPL_H22_OP_APP_TIME: return (double)cPlatform::GetApplicationTime();
-		case OHPL_H22_OP_STEADY_NS: return (double)std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - tBase).count();
 		}
 		return 0;
 	}

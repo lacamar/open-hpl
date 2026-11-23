@@ -13,4 +13,5 @@ mod timer;
 #[cfg(test)]
 mod tests;
 
+pub use plat::{ohpl_l1_delay as delay_ms, ohpl_l1_ticks};
 pub use timer::micros;
