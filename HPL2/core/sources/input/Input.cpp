@@ -30,6 +30,13 @@
 
 namespace hpl 
 {
+	cAction::cAction(const tString& asName,int alId, cInput *apInput) {
+		msName = asName; mlId = alId;
+		mpInput = apInput;
+		mpReg = mpInput->GetRustRegistry();
+		mlHandle = ohpl_input_reg_create(mpReg, (const unsigned char*)asName.data(), asName.size(), alId, this);
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////

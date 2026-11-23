@@ -83,13 +83,13 @@ namespace hpl {
 		mpBugShot = NULL;
 		mlSavedTime = 0;
 
-		static_cast<cLowLevelInputSDL*>(apEngine->GetInput()->GetLowLevel())->mEventFilter =
-			[this](const SDL_Event &aEvent) { return FilterEvent(aEvent); };
+		static_cast<cLowLevelInputSDL*>(apEngine->GetInput()->GetLowLevel())->SetEventFilter(
+			[this](const SDL_Event &aEvent) { return FilterEvent(aEvent); });
 	}
 
 	cDevHud::~cDevHud()
 	{
-		static_cast<cLowLevelInputSDL*>(mpEngine->GetInput()->GetLowLevel())->mEventFilter = nullptr;
+		static_cast<cLowLevelInputSDL*>(mpEngine->GetInput()->GetLowLevel())->SetEventFilter(nullptr);
 		if(mpBugShot) hplDelete(mpBugShot);
 	}
 

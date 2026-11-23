@@ -22,7 +22,9 @@
 
 #include <list>
 #include <functional>
+#include <vector>
 #include "input/LowLevelInput.h"
+#include "input/RustInput.h"
 
 #if USE_SDL2
 #include "SDL2/SDL_events.h"
@@ -59,12 +61,18 @@ namespace hpl {
 
 		bool isQuitMessagePosted();
 		void resetQuitMessagePosted();
-	public:
-		std::list<SDL_Event> mlstEvents;
-		std::function<bool(const SDL_Event&)> mEventFilter;
-		std::list<SDL_Event> mlstInjected;
+		void SetEventFilter(std::function<bool(const SDL_Event&)> aFilter) { mFilter = std::move(aFilter); }
+		void InjectEvent(const SDL_Event &aEvent) { mlstInjected.push_back(aEvent); }
+		const std::vector<OhplInputEvent>& GetEvents() const { return mvConverted; }
 
-	private: 
+	private:
+		static bool L1EventFilter(void *apCtx, const SDL_Event *apEvent);
+		static void L1EventPush(void *apCtx, const SDL_Event *apEvent);
+
+		std::list<SDL_Event> mlstInjected;
+		std::function<bool(const SDL_Event&)> mFilter;
+		std::vector<OhplInputEvent> mvConverted;
+		std::list<SDL_Event> mlstPolled;
 		iLowLevelGraphics *mpLowLevelGraphics;
 		bool mbQuitMessagePosted;
 	};

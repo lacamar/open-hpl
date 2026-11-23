@@ -20,7 +20,6 @@
 #ifndef HPL_ACTION_H
 #define HPL_ACTION_H
 
-#include "input/Input.h"
 #include "system/LowLevelSystem.h"
 
 #include "system/SystemTypes.h"
@@ -120,7 +119,6 @@ namespace hpl {
 	//---------------------------------------------------------
 
 
-inline cAction::cAction(const tString& asName,int alId, cInput *apInput) { msName = asName; mlId = alId; mpInput = apInput; mpReg = mpInput->GetRustRegistry(); mlHandle = ohpl_input_reg_create(mpReg, (const unsigned char*)asName.data(), asName.size(), alId, this); }
 inline cAction::~cAction() { STLDeleteAll(mvSubActions); }
 inline void cAction::AddKey(eKey aKey) { AddSubAction({eOhplSub_Key, 0, (int)aKey, 0, 0, 0}); }
 inline void cAction::AddMouseButton(eMouseButton aButton) { AddSubAction({eOhplSub_Mouse, 0, (int)aButton, 0, 0, 0}); }
