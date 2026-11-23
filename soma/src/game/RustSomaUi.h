@@ -89,25 +89,6 @@ extern "C"
 	void ohpl_gs7_critter_wall_avoid_add(OhplGs7CritterState *, OhplGs7CritterProps *, const OhplGs7CritterHost *, const float *pos, float distance_forward, float dt,
 										 bool far_exceeded, float *out);
 
-	float ohpl_gs7_gamma_wrap_width(float screen_w);
-	void ohpl_gs7_gamma_layout(const float *screen, const float *checker, float wrap_w, size_t rows, OhplGs7GammaLayout *out);
-	int ohpl_gs7_gamma_to_slider(float gamma);
-	float ohpl_gs7_gamma_from_slider(int value, int max_value);
-	int ohpl_gs7_mouse_edge(bool down, bool was_down);
-
-	bool ohpl_gs7_splash_update(float *elapsed, float dt);
-	bool ohpl_gs7_splash_scripts_may_run(bool finished, float elapsed);
-	float ohpl_gs7_splash_boot_bar_fraction(float t);
-	float ohpl_gs7_splash_virtual_width(const float *screen);
-	void ohpl_gs7_splash_virtual_to_screen(const float *pos, float z, float vw, const float *screen, float *out);
-	void ohpl_gs7_splash_virtual_size_to_screen(const float *size, float vw, const float *screen, float *out);
-	int ohpl_gs7_splash_brain_frame(float time);
-	bool ohpl_gs7_splash_load_draw_due(uint64_t now, uint64_t last);
-	float ohpl_gs7_splash_boot_elapsed(uint64_t now, uint64_t boot_start);
-	float ohpl_gs7_splash_load_fraction(uint64_t now, uint64_t start);
-	void ohpl_gs7_splash_plan(const float *screen, float vw, float t, const float *premenu, OhplGs7SplashPlan *out);
-	void ohpl_gs7_splash_brain_rect(float vw, const float *screen, float *pos, float *size);
-
 	int ohpl_gs7_load_kind(const unsigned char *name, size_t n); // 0 prop, 1 agent, 2 critter
 	bool ohpl_gs7_load_is_dynamic(bool spawned, bool has_anim, bool has_proc_anim, const float *masses, size_t n);
 	void ohpl_gs7_load_element_id(const int *uid, size_t n, int id_attr, OhplGs7ElementId *out);
