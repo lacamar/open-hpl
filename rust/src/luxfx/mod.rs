@@ -4,6 +4,7 @@
 //! Each step edits a POD copy of the C++ members and returns ordered ops or a draw plan; C++ keeps
 //! object creation, gui/sound/gl calls, scripts and callbacks and replays them.
 
+mod dump;
 mod effects;
 mod ffi;
 mod hw;

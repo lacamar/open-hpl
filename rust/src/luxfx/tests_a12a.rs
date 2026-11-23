@@ -3,7 +3,7 @@
 //! wrote on Amnesia 02_library (`OHPL_A12A_DUMP`, fixed 1/60 step, frames 1..299). The fake host
 //! logs every call in the dump's format and answers from the results recorded there.
 
-use super::fxobj::{Ctx, Handler, State};
+use super::fxobj::{Ctx, Handler};
 use super::host::{Fx, Hud};
 use super::postfx::{self, Clock};
 use super::rend::{self, Rend};
@@ -18,32 +18,10 @@ const EXPECTED: &str = include_str!("../../tests/golden/A12a/expected.txt");
 const DT: f32 = 1.0 / 60.0;
 const LAST_FRAME: i32 = 299;
 
-fn hf(x: f32) -> String {
-    format!("{:08x}", x.to_bits())
-}
-
-fn hd(x: f64) -> String {
-    format!("{:016x}", x.to_bits())
-}
+use super::dump::{self, Env, esc, escb, fs, hd, hf};
 
 fn unhf(s: &str) -> f32 {
     f32::from_bits(u32::from_str_radix(s, 16).unwrap_or(0))
-}
-
-fn esc(units: &[u32]) -> String {
-    let mut o = String::new();
-    for &c in units {
-        if (33..127).contains(&c) && c != 92 && c != 124 {
-            o.push(char::from_u32(c).unwrap_or('?'));
-        } else {
-            o.push_str(&format!("\\u{c:04x}"));
-        }
-    }
-    o
-}
-
-fn escb(b: &[u8]) -> String {
-    esc(&b.iter().map(|&c| u32::from(c)).collect::<Vec<_>>())
 }
 
 fn unesc(s: &str) -> Vec<u32> {
@@ -61,10 +39,6 @@ fn unesc(s: &str) -> Vec<u32> {
         }
     }
     o
-}
-
-fn fs(v: &[f32]) -> String {
-    v.iter().map(|x| hf(*x)).collect::<Vec<_>>().join(" ")
 }
 
 struct Rec {
@@ -410,8 +384,8 @@ struct Sim<'a> {
     log_pos: usize,
 }
 
-impl Sim<'_> {
-    fn ctx(&self) -> Ctx<'_> {
+impl<'a> Sim<'a> {
+    fn ctx(&self) -> Ctx<'a> {
         Ctx {
             arena: self.arena,
             h: self.h,
@@ -420,192 +394,44 @@ impl Sim<'_> {
     }
 }
 
-fn tokens(line: &str) -> std::str::SplitWhitespace<'_> {
-    line.split_whitespace()
-}
-
-fn st(t: Option<&str>) -> Vec<u8> {
-    match t {
-        Some("-") | None => Vec::new(),
-        Some(s) => s.as_bytes().to_vec(),
+impl Env for Sim<'_> {
+    fn log(&self, line: String) {
+        self.rec.log(line);
     }
-}
 
-fn num<T: std::str::FromStr + Default>(t: Option<&str>) -> T {
-    t.and_then(|s| s.parse().ok()).unwrap_or_default()
-}
-
-fn run(sim: &mut Sim, line: &str) {
-    sim.rec.log(format!("cmd{line}"));
-    let mut t = tokens(line);
-    let cmd = t.next().unwrap_or("");
-    let c = sim.ctx();
-    let obj = 1usize;
-    match cmd {
-        "fade_in" => c.fade_in(num(t.next())),
-        "fade_out" => c.fade_out(num(t.next())),
-        "fade_direct" => c.fade_direct(num(t.next())),
-        "flash" => c.flash_start(num(t.next()), num(t.next()), num(t.next())),
-        "sanity" => c.sanity_start(),
-        "emotion" => {
-            let (cat, entry) = (st(t.next()), st(t.next()));
-            c.emotion_start(&cat, &entry, b"");
-        }
-        "emotion_act" => c.emotion_action(num::<i32>(t.next()) != 0),
-        "radial" => c.amount_fade_to(0, num(t.next()), num(t.next())),
-        "radial_dist" => c.radial_start_dist(num(t.next())),
-        "sepia" => c.amount_fade_to(1, num(t.next()), num(t.next())),
-        "trail" => c.amount_fade_to(2, num(t.next()), num(t.next())),
-        "shake" => c.shake_start(num(t.next()), num(t.next()), num(t.next()), num(t.next())),
-        "voice" | "multivoice" => {
-            let (vf, ef, cat) = (st(t.next()), st(t.next()), st(t.next()));
-            let n = if cmd == "voice" { 1 } else { 7 };
-            let mut entries: [Vec<u8>; 7] = Default::default();
-            let mut delays = [0.0f32; 7];
-            for i in 0..n {
-                entries[i] = st(t.next());
-                delays[i] = num(t.next());
-            }
-            let use_pos = num::<i32>(t.next()) != 0;
-            let pos = [num(t.next()), num(t.next()), num(t.next())];
-            let (min, max): (f32, f32) = (num(t.next()), num(t.next()));
-            let (prio, rm): (i32, i32) = (num(t.next()), num(t.next()));
-            let e: [&[u8]; 7] = std::array::from_fn(|i| entries[i].as_slice());
-            c.voice_add(
-                &vf,
-                &ef,
-                &cat,
-                e,
-                delays,
-                use_pos,
-                pos,
-                min,
-                max,
-                prio,
-                rm != 0,
-            );
-        }
-        "voice_stop" => c.voice_stop(num(t.next())),
-        "voice_pause" => c.voice_pause(),
-        "voice_unpause" => c.voice_unpause(),
-        "voice_vol" => c.voice_set_volume(num(t.next())),
-        "voice_cb" => {
-            let cb = st(t.next());
-            c.with(|s| s.voice.over_cb = cb);
-        }
-        "commentary" => {
-            let file = st(t.next());
-            let icon: i32 = num(t.next());
-            c.commentary_start(icon, &file);
-        }
-        "commentary_stop" => c.commentary_stop(),
-        "map_leave" => c.on_map_leave(),
-        "reset" => c.reset(),
-        "player_paused" => c.set_player_paused(num::<i32>(t.next()) != 0),
-        "insanity" => {
-            let on: i32 = num(t.next());
-            sim.clock.wave_alpha = num(t.next());
-            sim.clock.zoom_alpha = num(t.next());
-            sim.clock.wave_speed = num(t.next());
-            let _ = on;
-        }
-        "rflash" => sim.rend.flash.push((obj, num(t.next()))),
-        "rglow" => sim.rend.glow.push((obj, num(t.next()))),
-        "routline" => sim.rend.outline.push(obj),
-        "rclear_outline" => sim.rend.outline.clear(),
-        "rreset" => sim.rend.reset(),
-        other => panic!("unknown command {other}"),
+    fn insanity(&mut self, _on: bool, wave: f32, zoom: f32, speed: f32) {
+        self.clock.wave_alpha = wave;
+        self.clock.zoom_alpha = zoom;
+        self.clock.wave_speed = speed;
     }
-}
 
-fn log_state(sim: &Sim, frame: i32) {
-    let s: State = sim.ctx().state();
-    let rec = sim.rec;
-    rec.log(format!(
-        "fade {} {} {} {}",
-        hf(s.fade.goal),
-        hf(s.fade.alpha),
-        hf(s.fade.speed),
-        s.fade.active
-    ));
-    let fl = |name: &str, f: &super::effects::Flash| {
-        let mut o = format!("{name} a={} act={}", hf(f.alpha), f.active);
-        if f.active != 0 {
-            let cnt = if f.step >= 1 {
-                hf(f.count)
-            } else {
-                "-".to_string()
-            };
-            o += &format!(
-                " step={} c={cnt} {} {} {}",
-                f.step,
-                hf(f.in_speed),
-                hf(f.white_speed),
-                hf(f.out_speed)
-            );
-        }
-        o
-    };
-    rec.log(fl("flash", &s.flash));
-    rec.log(fl("sanity", &s.sanity));
-    for (name, a) in [
-        ("trail", &s.trail),
-        ("sepia", &s.sepia),
-        ("radial", &s.radial),
-    ] {
-        let mut o = format!(
-            "{name} {} {} {} {}",
-            hf(a.amount),
-            hf(a.goal),
-            hf(a.speed),
-            a.active
-        );
-        if name == "radial" {
-            o += &format!(" {}", hf(s.radial_start));
-        }
-        rec.log(o);
+    fn first_object(&self) -> usize {
+        1
     }
-    let e = &s.emotion;
-    let mut o = format!("emotion act={}", e.active);
-    if e.active != 0 {
-        let cnt = if e.step >= 1 {
-            hf(e.count)
+
+    fn rend_add(&mut self, kind: i32, obj: usize, alpha: f32) {
+        match kind {
+            0 => self.rend.flash.push((obj, alpha)),
+            1 => self.rend.glow.push((obj, alpha)),
+            _ => self.rend.outline.push(obj),
+        }
+    }
+
+    fn rend_clear(&mut self, op: i32) {
+        if op == 0 {
+            self.rend.reset();
         } else {
-            "-".to_string()
-        };
-        o += &format!(
-            " {} {} {cnt} {} {}",
-            hf(e.alpha),
-            e.step,
-            hf(e.text_alpha),
-            hf(e.text_time)
-        );
+            self.rend.outline.clear();
+        }
     }
-    rec.log(o);
-    rec.log(format!("shake act={} n={}", s.shake_active, s.shake_count));
-    rec.log(format!(
-        "voice act={} pause={} n={} rows={} queue={} entries={} vol={}",
-        s.voice_active,
-        s.voice_paused,
-        s.voice_count,
-        s.voice_rows,
-        s.voice_queue,
-        s.voice_entries,
-        hf(s.voice_vol)
-    ));
-    rec.log(format!(
-        "commentary act={} icon={}",
-        s.commentary_active, s.commentary_icon
-    ));
-    rec.log(format!("paused {}", s.player_paused));
-    if frame >= 3 {
-        rec.log(format!(
-            "insanity act={} {} {} {}",
-            u8::from(sim.ins_active),
-            hf(sim.clock.wave_alpha),
-            hf(sim.clock.zoom_alpha),
-            hf(sim.clock.wave_speed)
-        ));
+
+    fn ins_state(&self) -> (bool, f32, f32, f32) {
+        (
+            self.ins_active,
+            self.clock.wave_alpha,
+            self.clock.zoom_alpha,
+            self.clock.wave_speed,
+        )
     }
 }
 
@@ -689,7 +515,8 @@ fn golden_replay_matches_cpp_dump() {
         sim.rend.outline.clear();
         for (a, b, line) in &cmds {
             if frame >= *a && frame <= *b {
-                run(&mut sim, line);
+                let c = sim.ctx();
+                dump::run(&mut sim, &c, line);
             }
         }
         sim.ins_active = recorded_ins_active(frame);
@@ -699,7 +526,7 @@ fn golden_replay_matches_cpp_dump() {
             rend::ins_update(&mut sim.clock, DT);
         }
         rec.log(format!("tick {frame}"));
-        log_state(&sim, frame);
+        dump::log_state(&sim, &sim.ctx(), frame);
         sim.ctx().draw();
         for p in passes(frame) {
             match p {

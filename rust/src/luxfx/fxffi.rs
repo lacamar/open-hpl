@@ -2,6 +2,7 @@
 //! (`amnesia/src/game/RustLuxFxA12a.h`). Objects live in thread-local arenas; the C++ shells hold
 //! the handle bits.
 
+use super::dump;
 use super::fxobj::{Ctx, Handler, State, VoiceData};
 use super::host::host;
 use super::postfx::Clock;
@@ -41,7 +42,7 @@ fn units<'a>(p: *const u32, n: usize) -> &'a [u32] {
     unsafe { std::slice::from_raw_parts(p, n) }
 }
 
-fn fx<R>(bits: u64, none: R, f: impl FnOnce(&Ctx) -> R) -> R {
+pub(super) fn fx<R>(bits: u64, none: R, f: impl FnOnce(&Ctx) -> R) -> R {
     let (Some(h), Some(host)) = (Handle::from_bits(bits), host()) else {
         return none;
     };
@@ -76,6 +77,7 @@ pub extern "C" fn ohpl_a12a_fx_update(h: u64, dt: f32) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_a12a_fx_draw(h: u64) {
+    dump::tick(h);
     fx(h, (), |c| c.draw());
 }
 
@@ -464,11 +466,13 @@ fn rend<R>(bits: u64, none: R, f: impl FnOnce(&mut Rend) -> R) -> R {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_a12a_rend_new(programs: u32) -> u64 {
-    RENDS.with(|a| {
+    let h = RENDS.with(|a| {
         a.borrow_mut()
             .insert(Rend::new(programs))
             .map_or(0, Handle::to_bits)
-    })
+    });
+    dump::set_handles(Some(h), None);
+    h
 }
 
 #[unsafe(no_mangle)]
@@ -526,11 +530,19 @@ fn clock<R>(bits: u64, none: R, f: impl FnOnce(&mut Clock) -> R) -> R {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_a12a_ins_new() -> u64 {
-    CLOCKS.with(|a| {
+    let h = CLOCKS.with(|a| {
         a.borrow_mut()
             .insert(Clock::default())
             .map_or(0, Handle::to_bits)
-    })
+    });
+    dump::set_handles(None, Some(h));
+    h
+}
+
+/// True while the dump driver owns the handlers' updates.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_a12a_dump_gated() -> i32 {
+    i32::from(dump::gated())
 }
 
 #[unsafe(no_mangle)]
@@ -586,5 +598,13 @@ pub extern "C" fn ohpl_a12a_ins_render(
     let (c, Some(host)) = (clock(h, Clock::default(), |c| *c), host()) else {
         return;
     };
+    dump::rlog(|| {
+        format!(
+            "p_in {} {} {}",
+            dump::hf(sx),
+            dump::hf(sy),
+            u8::from(program_ok != 0)
+        )
+    });
     rend::ins_render(&host, &c, [sx, sy], program_ok != 0, effect, input, fb);
 }

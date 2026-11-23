@@ -22,7 +22,6 @@
 
 #include "LuxBase.h"
 #include "RustLuxFxA12a.h"
-#include "LuxA12aDump.h"
 
 // The effects live in Rust (rust/src/luxfx/fxobj.rs); these shells hold the handler handle.
 
@@ -184,7 +183,7 @@ public:
 	void OnStart(){}
 	void Update(float afTimeStep)
 	{
-		if(OhplA12Enabled() && OhplA12InTick() == false) return;
+		if(ohpl_a12a_dump_gated()) return;
 		ohpl_a12a_fx_update(mlH, afTimeStep);
 	}
 	void Reset(){ ohpl_a12a_fx_reset(mlH); }
@@ -194,7 +193,6 @@ public:
 
 	void OnDraw(float afFrameTime)
 	{
-		OhplA12Tick();
 		ohpl_a12a_fx_draw(mlH);
 	}
 

@@ -53,7 +53,7 @@ struct OhplA12aHost
 	void (*r_clip)(size_t, const float*, const float*, int*);
 	void (*r_replay)(size_t, const size_t*, size_t, const OhplGa9bROp*, size_t, const int*);
 	void (*p_replay)(size_t, size_t, size_t, const OhplGa9bPOp*, size_t);
-	void (*log)(OhplA12aBytes);
+	size_t (*dump)(int, float);
 };
 
 struct OhplA12aFxState
@@ -132,6 +132,7 @@ enum
 extern "C"
 {
 	void ohpl_a12a_set_host(const OhplA12aHost *apHost);
+	int ohpl_a12a_dump_gated();
 
 	uint64_t ohpl_a12a_fx_new();
 	void ohpl_a12a_fx_free(uint64_t h);

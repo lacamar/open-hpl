@@ -107,12 +107,6 @@ void cLuxEffectRenderer::Replay(cRendererCallbackFunctions* apFunctions, const s
 	for(size_t n=0; n<alOps; ++n)
 	{
 		const OhplGa9bROp &op = apOps[n];
-		if(OhplA12Enabled() && OhplA12Frame() >= 10)
-		{
-			std::string sOp = "R " + std::to_string(op.kind) + " " + std::to_string(op.i) + " " + std::to_string(op.j);
-			for(int k=0; k<16; ++k) sOp += " " + OhplA12F(op.f[k]);
-			OhplA12Log("%s", sOp.c_str());
-		}
 		switch(op.kind)
 		{
 		case kOhplGa9bRDepthFunc:		apFunctions->SetDepthTestFunc(op.i == kOhplGa9bDepthEqual ? eDepthTestFunc_Equal : eDepthTestFunc_LessOrEqual); break;
