@@ -171,7 +171,7 @@ cSomaLuxMap::cSomaLuxMap(cWorld *apWorld, const tString &asFileName)
 	// cLuxMap::LoadFromFile adds the player and camera proxy entities
 	cSomaLuxEntity *pPlayer = new cSomaLuxEntity();
 	pPlayer->SetName("Player");
-	pPlayer->meType = eSomaLuxEntityType_Player;
+	pPlayer->mpCore->meType = eSomaLuxEntityType_Player;
 	vLoaded.push_back(pPlayer);
 	cSomaLuxEntity *pCamera = new cSomaLuxEntity();
 	pCamera->SetName("Camera");
@@ -270,7 +270,7 @@ bool cSomaLuxMap::CreateScript(cSomaScriptRuntime *apRuntime, const tString &asS
 	for (cSomaLuxEntity *pEnt : GetEntities())
 	{
 		pEnt->CaptureEffectDefaults();
-		if (pEnt->mbEffectsActive == false)
+		if (pEnt->mpCore->mbEffectsActive == false)
 			pEnt->SetEffectsActive(false);
 		pEnt->ApplyEffectsAlpha();
 		pEnt->ResolveConnectedLights();
@@ -284,16 +284,16 @@ bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 {
 	apEnt->ApplyInstanceVars(GetEntity(tString("Player")));
 	static const char *vGroups[] = {"PropTypes", "AreaTypes", "LiquidAreaTypes", "LiquidAreaTypes", "CritterTypes", "AgentTypes"};
-	if (apEnt->meType >= (int)(sizeof(vGroups) / sizeof(vGroups[0])))
+	if (apEnt->mpCore->meType >= (int)(sizeof(vGroups) / sizeof(vGroups[0])))
 		return false;
-	if (apEnt->meType == eSomaLuxEntityType_Critter && apEnt->mpCritterProps == NULL)
+	if (apEnt->mpCore->meType == eSomaLuxEntityType_Critter && apEnt->mpCritterProps == NULL)
 	{
 		apEnt->mpCritterProps = SomaNewPropBlock("cLuxCritter");
 		SomaInitCritterProps(apEnt);
 	}
-	if (apEnt->meType == eSomaLuxEntityType_Agent)
+	if (apEnt->mpCore->meType == eSomaLuxEntityType_Agent)
 		SomaCreateAgent(apEnt);
-	const cSomaLuxGame::cEntityScript *pScript = cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetEntityScript(vGroups[apEnt->meType], apEnt->GetClassName()) : NULL;
+	const cSomaLuxGame::cEntityScript *pScript = cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetEntityScript(vGroups[apEnt->mpCore->meType], apEnt->GetClassName()) : NULL;
 	if (pScript == NULL)
 		return false;
 	tString sCustomFile = apEnt->mVars.GetVarString("CustomScriptFile", "");
@@ -303,9 +303,9 @@ bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 	if (bLoaded == false && apEnt->LoadScript(mpRuntime, pScript->msFile, pScript->msClass, apEnt->GetBaseTypeName()) == false)
 		return false;
 	cWorld *pWorld = mpWorld;
-	if (apEnt->meType == eSomaLuxEntityType_Agent)
+	if (apEnt->mpCore->meType == eSomaLuxEntityType_Agent)
 		apEnt->Call("void SetupCharBody()");
-	if (apEnt->meType == eSomaLuxEntityType_Area ||apEnt->meType == eSomaLuxEntityType_LiquidArea)
+	if (apEnt->mpCore->meType == eSomaLuxEntityType_Area ||apEnt->mpCore->meType == eSomaLuxEntityType_LiquidArea)
 		apEnt->Call("void SetupAfterLoad(cWorld @apWorld, cResourceVarsObject @apVars)", [&](asIScriptContext *c) {
 			c->SetArgAddress(0, pWorld);
 			c->SetArgAddress(1, &apEnt->mInstanceVars);
@@ -316,19 +316,19 @@ bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 			c->SetArgAddress(1, &apEnt->mVars);
 			c->SetArgAddress(2, &apEnt->mInstanceVars);
 		});
-	if (apEnt->meType == eSomaLuxEntityType_Area)
+	if (apEnt->mpCore->meType == eSomaLuxEntityType_Area)
 		apEnt->CreateAreaBody(mpWorld->GetPhysicsWorld());
-	else if (apEnt->meType == eSomaLuxEntityType_LiquidArea)
+	else if (apEnt->mpCore->meType == eSomaLuxEntityType_LiquidArea)
 		apEnt->CreateLiquidGraphics(mpWorld);
 	return true;
 }
 
 void cSomaLuxMap::AddEntity(cSomaLuxEntity *apEnt)
 {
-	if (apEnt->mID == cSomaID())
+	if (apEnt->mpCore->mID == cSomaID())
 	{
-		apEnt->mID.mA = 0xfd;
-		apEnt->mID.mB = mlNextId++;
+		apEnt->mpCore->mID.mA = 0xfd;
+		apEnt->mpCore->mID.mB = mlNextId++;
 	}
 	apEnt->mpMap = this;
 	apEnt->msScriptName = apEnt->GetName();
@@ -357,7 +357,7 @@ cSomaLuxEntity *cSomaLuxMap::CreateEntity(const tString &asName, const tString &
 	}
 	if (vNew.empty())
 		return NULL;
-	vNew.back()->mbSpawned = true;
+	vNew.back()->mpCore->mbSpawned = true;
 	return vNew.back();
 }
 
@@ -374,7 +374,7 @@ void cSomaLuxMap::DestroyEntity(cSomaLuxEntity *apEnt)
 
 static bool EntityNameMatch(const tString &asPattern, cSomaLuxEntity *apEnt)
 {
-	if (apEnt->meType == eSomaLuxEntityType_Player)
+	if (apEnt->mpCore->meType == eSomaLuxEntityType_Player)
 		return cString::ToLowerCase(asPattern) == "player" || cString::MatchesWildcard(asPattern, apEnt->GetName());
 	return cString::MatchesWildcard(asPattern, apEnt->GetName());
 }
@@ -470,47 +470,47 @@ void cSomaLuxMap::Update(float afTimeStep)
 	SomaBeginCritterFrame();
 	for (cSomaLuxEntity *pEnt : GetEntities().Vec())
 	{
-		if (pEnt->GetScript() == NULL || pEnt->mbActive == false)
+		if (pEnt->GetScript() == NULL || pEnt->mpCore->mbActive == false)
 			continue;
 		pEnt->UpdateTimers(afTimeStep);
 		// ponytail: only areas auto-sleep (cLuxArea::OnUpdateAutoSleep); props need the engine's body/animation wake-ups
-		bool bAreaIdle = pEnt->meType == eSomaLuxEntityType_Area && pEnt->mbCheckCollision == false && pEnt->TimersIdle();
-		if (pEnt->meType == eSomaLuxEntityType_Area && bAreaIdle == false)
-			pEnt->mbSleeping = false;
-		if (pEnt->mbSleeping == false)
+		bool bAreaIdle = pEnt->mpCore->meType == eSomaLuxEntityType_Area && pEnt->mpCore->mbCheckCollision == false && pEnt->TimersIdle();
+		if (pEnt->mpCore->meType == eSomaLuxEntityType_Area && bAreaIdle == false)
+			pEnt->mpCore->mbSleeping = false;
+		if (pEnt->mpCore->mbSleeping == false)
 		{
 			pEnt->CallWithFloat("void OnUpdate(float afTimeStep)", afTimeStep);
 			// iLuxEntity::OnVariableUpdate: no faster than the rate, with the accumulated step
-			pEnt->mfVariableUpdateAcc += afTimeStep;
-			if (pEnt->mfVariableUpdateAcc > pEnt->mfVariableUpdateRate && pEnt->mfVariableUpdateRate >= 0)
+			pEnt->mpCore->mfVariableUpdateAcc += afTimeStep;
+			if (pEnt->mpCore->mfVariableUpdateAcc > pEnt->mpCore->mfVariableUpdateRate && pEnt->mpCore->mfVariableUpdateRate >= 0)
 			{
-				pEnt->CallWithFloat("void OnVariableUpdate(float afTimeStep)", pEnt->mfVariableUpdateAcc);
-				pEnt->mfVariableUpdateAcc = 0;
+				pEnt->CallWithFloat("void OnVariableUpdate(float afTimeStep)", pEnt->mpCore->mfVariableUpdateAcc);
+				pEnt->mpCore->mfVariableUpdateAcc = 0;
 			}
-			if (bAreaIdle && pEnt->mbAutoSleep && pEnt->CallBool("bool OnUpdateAutoSleep()", {}, true))
-				pEnt->mbSleeping = true;
+			if (bAreaIdle && pEnt->mpCore->mbAutoSleep && pEnt->CallBool("bool OnUpdateAutoSleep()", {}, true))
+				pEnt->mpCore->mbSleeping = true;
 		}
-		if (pEnt->meType == eSomaLuxEntityType_Critter)
+		if (pEnt->mpCore->meType == eSomaLuxEntityType_Critter)
 		{
 			SomaUpdateCritter(pEnt, afTimeStep);
 			SomaUpdateComponents(pEnt, afTimeStep);
 		}
-		else if (pEnt->meType == eSomaLuxEntityType_Agent)
+		else if (pEnt->mpCore->meType == eSomaLuxEntityType_Agent)
 			SomaUpdateAgent(pEnt, afTimeStep);
-		else if (pEnt->meType == eSomaLuxEntityType_Area)
+		else if (pEnt->mpCore->meType == eSomaLuxEntityType_Area)
 			pEnt->UpdateCheckCollision(afTimeStep);
-		else if (pEnt->meType == eSomaLuxEntityType_LiquidArea)
+		else if (pEnt->mpCore->meType == eSomaLuxEntityType_LiquidArea)
 			pEnt->UpdateLiquid(afTimeStep);
-		if (pEnt->meType != eSomaLuxEntityType_Critter && pEnt->meType != eSomaLuxEntityType_Agent && pEnt->mbSleeping == false)
+		if (pEnt->mpCore->meType != eSomaLuxEntityType_Critter && pEnt->mpCore->meType != eSomaLuxEntityType_Agent && pEnt->mpCore->mbSleeping == false)
 			SomaUpdateComponents(pEnt, afTimeStep);
 	}
 
 	for (size_t i = 0; i < GetEntities().size(); ++i)
 	{
-		if (GetEntities()[i]->mbActive)
+		if (GetEntities()[i]->mpCore->mbActive)
 			GetEntities()[i]->UpdateAnimation(afTimeStep);
 		GetEntities()[i]->UpdateSocketNodes();
-		if (GetEntities()[i]->mbActive)
+		if (GetEntities()[i]->mpCore->mbActive)
 		{
 			GetEntities()[i]->UpdateMove(afTimeStep);
 			GetEntities()[i]->UpdateCharCollision();
@@ -536,7 +536,7 @@ void cSomaLuxMap::PostUpdate(float afTimeStep)
 	UpdateCollideCallbacks();
 	mpRuntime->Call(mpScript, "void PostUpdate(float afTimeStep)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
 	for (cSomaLuxEntity *pEnt : GetEntities())
-		if (pEnt->GetScript() && pEnt->mbActive)
+		if (pEnt->GetScript() && pEnt->mpCore->mbActive)
 			pEnt->CallWithFloat("void OnPostUpdate(float afTimeStep)", afTimeStep);
 	std::vector<cPendingCollision> vCollisions;
 	vCollisions.swap(mvPendingCollisions);
@@ -560,38 +560,38 @@ void cSomaLuxMap::UpdateLookAtCallbacks(float afTimeStep)
 	for (size_t i = 0; i < GetEntities().size(); ++i)
 	{
 		cSomaLuxEntity *pEnt = GetEntities()[i];
-		if ((pEnt->GetLookAtCallback() == "" && pEnt->mbForceLookAtCheck == false) || pEnt->mbActive == false)
+		if ((pEnt->GetLookAtCallback() == "" && pEnt->mpCore->mbForceLookAtCheck == false) || pEnt->mpCore->mbActive == false)
 			continue;
 		// iLuxEntity::UpdatePlayerLookAt: checks every 0.3 s, delay counts down per check
-		if (pEnt->mfLookAtCheckTimer > 0)
+		if (pEnt->mpCore->mfLookAtCheckTimer > 0)
 		{
-			pEnt->mfLookAtCheckTimer -= afTimeStep;
+			pEnt->mpCore->mfLookAtCheckTimer -= afTimeStep;
 			continue;
 		}
-		pEnt->mfLookAtCheckTimer = 0.3f;
+		pEnt->mpCore->mfLookAtCheckTimer = 0.3f;
 		bool bNow = SomaPlayerLooksAt(pEnt, pCam);
 		if (pEnt->GetLookAtCallback() == "")
 		{
-			pEnt->mbLookedAt = bNow;
+			pEnt->mpCore->mbLookedAt = bNow;
 			continue;
 		}
-		if (bNow != pEnt->mbLookedAt)
+		if (bNow != pEnt->mpCore->mbLookedAt)
 		{
-			pEnt->mbLookedAt = bNow;
-			if (pEnt->mfLookAtCountdown >= 0)
+			pEnt->mpCore->mbLookedAt = bNow;
+			if (pEnt->mpCore->mfLookAtCountdown >= 0)
 			{
-				pEnt->mfLookAtCountdown = -1;
+				pEnt->mpCore->mfLookAtCountdown = -1;
 				continue;
 			}
-			pEnt->mfLookAtCountdown = std::max(pEnt->mfLookAtDelay, 0.0f);
+			pEnt->mpCore->mfLookAtCountdown = std::max(pEnt->mpCore->mfLookAtDelay, 0.0f);
 		}
-		if (pEnt->mfLookAtCountdown < 0)
+		if (pEnt->mpCore->mfLookAtCountdown < 0)
 			continue;
-		pEnt->mfLookAtCountdown -= 0.3f;
-		if (pEnt->mfLookAtCountdown >= 0)
+		pEnt->mpCore->mfLookAtCountdown -= 0.3f;
+		if (pEnt->mpCore->mfLookAtCountdown >= 0)
 			continue;
 		tString sFunc = pEnt->GetLookAtCallback();
-		if (bNow && pEnt->mbLookAtCallbackAutoRemove)
+		if (bNow && pEnt->mpCore->mbLookAtCallbackAutoRemove)
 			pEnt->SetLookAtCallback("");
 		int lState = bNow ? 1 : -1;
 		tString sArgName0 = pEnt->GetName();
@@ -618,7 +618,7 @@ void cSomaLuxMap::UpdateCollideCallbacks()
 	for (size_t e = 0; e < GetEntities().size(); ++e)
 	{
 		cSomaLuxEntity *pParent = GetEntities()[e];
-		if (pParent->mvCollideCallbacks.empty() || pParent->mbActive == false)
+		if (pParent->mvCollideCallbacks.empty() || pParent->mpCore->mbActive == false)
 			continue;
 		for (size_t i = 0; i < pParent->mvCollideCallbacks.size(); ++i)
 		{
@@ -631,7 +631,7 @@ void cSomaLuxMap::UpdateCollideCallbacks()
 			for (size_t c = 0; c < vChildren.size() && bRemove == false; ++c)
 			{
 				cSomaLuxEntity *pChild = vChildren[c];
-				if (pChild == pParent || pChild->mbActive == false)
+				if (pChild == pParent || pChild->mpCore->mbActive == false)
 					continue;
 				auto key = std::make_tuple(pParent, pChild, cb.msFunc);
 				bool bWas = msetColliding.count(key) > 0;
@@ -846,10 +846,10 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 			ohpl_gs3_capture(&mtxArea, &vFeet, pBody->GetYaw(), pBody->GetActiveSize(), bCamera, bCamera ? pPlayer->GetCamera()->GetPitch() : 0, &rel);
 			for (cSomaLuxEntity *p : cSomaLuxMap::GetCurrent()->GetEntities())
 			{
-				if (p->meType != eSomaLuxEntityType_Prop || p->mbAllowMapTransfer == false || p->mbActive == false || p->mvBodies.empty())
+				if (p->mpCore->meType != eSomaLuxEntityType_Prop || p->mpCore->mbAllowMapTransfer == false || p->mpCore->mbActive == false || p->mvBodies.empty())
 					continue;
 				cVector3f vBodyPos = p->mvBodies[0]->GetWorldPosition();
-				if (ohpl_gs3_carries(&rel.mtxInv, &vBodyPos, &pArea->mvSize) == false)
+				if (ohpl_gs3_carries(&rel.mtxInv, &vBodyPos, &pArea->mpCore->mvSize) == false)
 					continue;
 				std::vector<cMatrixf> vMtx;
 				for (iPhysicsBody *b : p->mvBodies)
@@ -957,7 +957,7 @@ static void SomaDeloadMap(const tString &asArea)
 	cVector3f vMin(1e9f), vMax(-1e9f);
 	for (int i = 0; i < 8; ++i)
 	{
-		cVector3f v((i & 1 ? 0.5f : -0.5f) * pArea->mvSize.x, (i & 2 ? 0.5f : -0.5f) * pArea->mvSize.y, (i & 4 ? 0.5f : -0.5f) * pArea->mvSize.z);
+		cVector3f v((i & 1 ? 0.5f : -0.5f) * pArea->mpCore->mvSize.x, (i & 2 ? 0.5f : -0.5f) * pArea->mpCore->mvSize.y, (i & 4 ? 0.5f : -0.5f) * pArea->mpCore->mvSize.z);
 		v = cMath::MatrixMul(pArea->GetMatrix(), v);
 		vMin = cMath::Vector3Min(vMin, v);
 		vMax = cMath::Vector3Max(vMax, v);
@@ -1354,7 +1354,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cAnimationState", "void FadeSpeed(float afDest, float afTime)", +[](cAnimationState *o, float d, float t) { o->FadeSpeed(d, t); });
 	if (SomaGameId() != "soma")
 	{
-		SOMA_METHOD_NEW(e, "cLuxAgent", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
+		SOMA_METHOD_NEW(e, "cLuxAgent", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mpCore->mfHealth; });
 		for (const char *pType : {"iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"})
 			SOMA_METHOD_NEW(e, pType, "cMatrixf GetBaseMatrix()", +[](cSomaLuxEntity *p) { return p->GetMatrix(); });
 	}
@@ -1403,15 +1403,15 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, M, "iLuxEntity @GetEntityByName(const tString&in asName, eLuxEntityType aType=eLuxEntityType_LastEnum, const tString&in asClassName=\"\")",
 				+[](cSomaLuxMap &m, const tString &n, int t, const tString &c) {
 					cSomaLuxEntity *p = m.GetEntity(n);
-					return p && (t >= eSomaLuxEntityType_LastEnum || p->meType == t) && SomaEntityIsClass(p, c) ? p : (cSomaLuxEntity *)NULL;
+					return p && (t >= eSomaLuxEntityType_LastEnum || p->mpCore->meType == t) && SomaEntityIsClass(p, c) ? p : (cSomaLuxEntity *)NULL;
 				});
 	SOMA_METHOD(e, M, "iLuxEntity @GetEntityByID(tID alID, eLuxEntityType aType=eLuxEntityType_LastEnum, const tString&in asClassName=\"\")",
 				+[](cSomaLuxMap &m, cSomaID id, int t, const tString &c) {
 					cSomaLuxEntity *p = m.GetEntity(id);
-					return p && (t >= eSomaLuxEntityType_LastEnum || p->meType == t) && SomaEntityIsClass(p, c) ? p : (cSomaLuxEntity *)NULL;
+					return p && (t >= eSomaLuxEntityType_LastEnum || p->mpCore->meType == t) && SomaEntityIsClass(p, c) ? p : (cSomaLuxEntity *)NULL;
 				});
 	SOMA_METHOD(e, M, "tID GetEntityIDByName(const tString&in asName, eLuxEntityType aType=eLuxEntityType_LastEnum, const tString&in asClassName=\"\")",
-				+[](cSomaLuxMap &m, const tString &n, int, const tString &) { cSomaLuxEntity *p = m.GetEntity(n); return p ? p->mID : cSomaID(); });
+				+[](cSomaLuxMap &m, const tString &n, int, const tString &) { cSomaLuxEntity *p = m.GetEntity(n); return p ? p->mpCore->mID : cSomaID(); });
 	// ponytail: gates an EntityExists check; always true instead of a per-frame destroyed flag
 	SOMA_METHOD(e, M, "bool EntityWasDestroyed()", +[](cSomaLuxMap &) { return true; });
 	SOMA_METHOD(e, M, "bool EntityExists(iLuxEntity @apEntity)", +[](cSomaLuxMap &m, cSomaLuxEntity *p) {
@@ -1430,7 +1430,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				+[](cSomaLuxMap &m, S n, int t, S c, OhplEasArray &a) {
 					bool bAny = false;
 					for (cSomaLuxEntity *p : m.GetEntities())
-						if ((t >= eSomaLuxEntityType_LastEnum || p->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
+						if ((t >= eSomaLuxEntityType_LastEnum || p->mpCore->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
 						{
 							a.InsertLast(&p);
 							bAny = true;
@@ -1447,9 +1447,9 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				+[](cSomaLuxMap &m, S n, int t, S c, OhplEasArray &a) {
 					bool bAny = false;
 					for (cSomaLuxEntity *p : m.GetEntities())
-						if ((t >= eSomaLuxEntityType_LastEnum || p->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
+						if ((t >= eSomaLuxEntityType_LastEnum || p->mpCore->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
 						{
-							a.InsertLast(&p->mID);
+							a.InsertLast(&p->mpCore->mID);
 							bAny = true;
 						}
 					return bAny;

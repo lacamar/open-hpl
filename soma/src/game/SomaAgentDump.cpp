@@ -159,8 +159,8 @@ void OhplS4bEnd(cSomaLuxEntity *apEnt)
 	if (f == NULL || pBody == NULL || gbEnded)
 		return;
 	cVector3f p = pBody->GetPosition(), v = pBody->GetVelocity(1.0f / 60.0f);
-	cAnimationState *pAnim = apEnt->mpMesh && apEnt->mlCurrentAnim >= 0 ? apEnt->mpMesh->GetAnimationState(apEnt->mlCurrentAnim) : NULL;
-	fprintf(f, "%s a=%d pos=%.9g,%.9g,%.9g vel=%.9g,%.9g,%.9g yaw=%.9g anim=%s@%.9g | %s\n", apEnt->GetName().c_str(), apEnt->mbActive ? 1 : 0, p.x, p.y, p.z, v.x, v.y, v.z,
+	cAnimationState *pAnim = apEnt->mpMesh && apEnt->mpCore->mlCurrentAnim >= 0 ? apEnt->mpMesh->GetAnimationState(apEnt->mpCore->mlCurrentAnim) : NULL;
+	fprintf(f, "%s a=%d pos=%.9g,%.9g,%.9g vel=%.9g,%.9g,%.9g yaw=%.9g anim=%s@%.9g | %s\n", apEnt->GetName().c_str(), apEnt->mpCore->mbActive ? 1 : 0, p.x, p.y, p.z, v.x, v.y, v.z,
 			pBody->GetYaw(), pAnim ? pAnim->GetName().c_str() : "-", pAnim ? pAnim->GetTimePosition() : -1.0f, SomaAgentDebug(apEnt).c_str());
 	fflush(f);
 }

@@ -221,7 +221,7 @@ namespace
 				ohpl_s4b_glow_each(&ctx, +[](void *c, uintptr_t aEnt, const float *aColor, float afAlpha, float afThickness, float afLimit) {
 					cCtx &x = *(cCtx *)c;
 					E *p = (E *)aEnt;
-					if (p->mpMesh == NULL || p->mbActive == false || p->mpMesh->IsVisible() == false ||
+					if (p->mpMesh == NULL || p->mpCore->mbActive == false || p->mpMesh->IsVisible() == false ||
 						x.mpFrustum->CollideBoundingVolume(p->mpMesh->GetBoundingVolume()) == eCollision_Outside)
 						return;
 					// ponytail: one light sample per entity, the original samples each submesh BV
@@ -244,7 +244,7 @@ namespace
 			for (cGlow &glow : mvGlow)
 			{
 				E *p = pMap && mpOutline ? pMap->GetEntity(glow.mID) : NULL;
-				if (p == NULL || p->mpMesh == NULL || p->mbActive == false || p->mpMesh->IsVisible() == false)
+				if (p == NULL || p->mpMesh == NULL || p->mpCore->mbActive == false || p->mpMesh->IsVisible() == false)
 					continue;
 				Begin(mpOutline);
 				mpOutline->SetVec4f(0, glow.mColor.r, glow.mColor.g, glow.mColor.b, glow.mColor.a);
@@ -337,15 +337,15 @@ namespace
 		switch (alOp)
 		{
 		case 1: Put(io->f, e->GetPosition()); break;
-		case 2: io->f[0] = e->mvScale.y; break;
+		case 2: io->f[0] = e->mpCore->mvScale.y; break;
 		case 3:
 			io->i[4] = pMap && pMap->GetScript();
 			if (e)
 			{
 				io->i[0] = e->mpMap != NULL;
 				io->i[1] = e->mpMesh != NULL;
-				io->i[2] = e->mbActive;
-				io->i[3] = e->mbGlobalSpaceAnim;
+				io->i[2] = e->mpCore->mbActive;
+				io->i[3] = e->mpCore->mbGlobalSpaceAnim;
 			}
 			break;
 		case 4:
@@ -364,11 +364,11 @@ namespace
 			e->mpMesh->SetMatrix(mtx);
 			break;
 		}
-		case 7: io->i[0] = e->mlCurrentAnim; break;
+		case 7: io->i[0] = e->mpCore->mlCurrentAnim; break;
 		case 8: io->i[0] = e->PlayAnimation(Str(io, 0), io->f[0], io->i[0] != 0, Str(io, 1)); break;
 		case 9:
-			if (e->mpMesh && e->mlCurrentAnim >= 0)
-				if (cAnimationState *pAnim = e->mpMesh->GetAnimationState(e->mlCurrentAnim))
+			if (e->mpMesh && e->mpCore->mlCurrentAnim >= 0)
+				if (cAnimationState *pAnim = e->mpMesh->GetAnimationState(e->mpCore->mlCurrentAnim))
 					pAnim->SetSpeed(io->f[0]);
 			break;
 		case 10:
@@ -387,7 +387,7 @@ namespace
 			break;
 		}
 		case 12: io->i[0] = e->mpMesh && e->mpMesh->GetAnimationStateFromName(Str(io, 0)); break;
-		case 13: Out(io, e->mpMesh && e->mlCurrentAnim >= 0 ? e->mpMesh->GetAnimationState(e->mlCurrentAnim)->GetName() : tString("")); break;
+		case 13: Out(io, e->mpMesh && e->mpCore->mlCurrentAnim >= 0 ? e->mpMesh->GetAnimationState(e->mpCore->mlCurrentAnim)->GetName() : tString("")); break;
 		case 14:
 		{
 			tString sDecl = Str(io, 0);
@@ -413,7 +413,7 @@ namespace
 			cSomaLuxEntity *pDoor = v[io->i[0]];
 			float fDist;
 			io->i[1] = 0;
-			if (pDoor->mbIsDoor && pDoor->mbIsClosedDoor && pDoor->mbActive && SomaRayHitsEntity(pDoor, Get(io->f), Get(io->f + 3), io->f[6], fDist))
+			if (pDoor->mpCore->mbIsDoor && pDoor->mpCore->mbIsClosedDoor && pDoor->mpCore->mbActive && SomaRayHitsEntity(pDoor, Get(io->f), Get(io->f + 3), io->f[6], fDist))
 			{
 				Put(io->f, pDoor->GetPosition());
 				io->i[1] = 1;
@@ -425,7 +425,7 @@ namespace
 			cSomaEntSpan v = e->mpMap->GetEntities();
 			io->i[0] = io->i[0] >= 0 && (size_t)io->i[0] < v.size();
 			if (io->i[0])
-				memcpy((void *)io->p[1], &v[io->i[0]]->mID, sizeof(cSomaID));
+				memcpy((void *)io->p[1], &v[io->i[0]]->mpCore->mID, sizeof(cSomaID));
 			break;
 		}
 		case 18:
@@ -471,16 +471,16 @@ namespace
 		}
 		case 24:
 		{
-			bool &bFlag = io->i[0] == 0 ? e->mbIsDoor : e->mbIsClosedDoor;
+			bool &bFlag = io->i[0] == 0 ? e->mpCore->mbIsDoor : e->mpCore->mbIsClosedDoor;
 			if (io->i[1])
 				bFlag = io->i[2] != 0;
 			io->i[3] = bFlag;
 			break;
 		}
-		case 25: Put(io->f, e->mvScale); break;
+		case 25: Put(io->f, e->mpCore->mvScale); break;
 		case 26:
 		{
-			cMatrixf &m = e->m_mtxOnLoad;
+			cMatrixf &m = e->mpCore->m_mtxOnLoad;
 			Put(io->f, m.GetTranslation());
 			io->f[3] = m.m[0][2];
 			io->f[4] = m.m[2][2];
@@ -562,7 +562,7 @@ namespace
 			break;
 		}
 		case 62:
-			io->i[0] = cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GiveDamage(io->f[0], io->i[0], io->f[1], e->mID, io->i[1]);
+			io->i[0] = cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GiveDamage(io->f[0], io->i[0], io->f[1], e->mpCore->mID, io->i[1]);
 			break;
 		case 63:
 			if (PlayerBody())
@@ -794,13 +794,13 @@ namespace
 			gEdgeGlowRenderer.Register();
 			cColor col(io->f[0], io->f[1], io->f[2], io->f[3]);
 			for (auto &g : gEdgeGlowRenderer.mvGlow)
-				if (g.mID == e->mID)
+				if (g.mID == e->mpCore->mID)
 				{
 					g.mColor = col;
 					g.mfY = io->f[4];
 					return 0;
 				}
-			gEdgeGlowRenderer.mvGlow.push_back({e->mID, col, io->f[4]});
+			gEdgeGlowRenderer.mvGlow.push_back({e->mpCore->mID, col, io->f[4]});
 			break;
 		}
 
