@@ -58,7 +58,6 @@ extern "C" {
 	double ohpl_s9_map_time(size_t map);
 	int32_t ohpl_s9_map_stamp(size_t map);
 	void ohpl_s9_timers_update(size_t map, float dt);
-	size_t ohpl_s9_timer_count(size_t map);
 	bool ohpl_s9_timer_get(size_t map, size_t i, OhplS9Timer *out);
 	void ohpl_s9_timers_clear(size_t map);
 	void ohpl_s9_timer_push_back(size_t map, const OhplS9Timer *t);
