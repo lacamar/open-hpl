@@ -39,16 +39,7 @@ extern "C" {
 	bool ohpl_rm_mat_texture_is_srgb(int32_t type);
 	bool ohpl_rm_mat_anisotropy_accepted(float x, int32_t caps, int32_t max, float current);
 
-	int32_t ohpl_rm_world_billboard_type(const uint8_t*, size_t);
-	int32_t ohpl_rm_world_shadow_resolution(const uint8_t*, size_t);
-	int32_t ohpl_rm_world_light_kind(const uint8_t*, size_t);
-	int32_t ohpl_rm_world_gobo_kind(bool spot, int32_t anim_mode);
-	uint32_t ohpl_rm_world_shadow_casters(bool dynamic, bool stat);
-	bool ohpl_rm_world_sound_use_default(bool use_default, int32_t custom);
-	size_t ohpl_rm_world_band_count(size_t values);
-	uint32_t ohpl_rm_world_light_mask_id(const uint8_t*, size_t);
 	bool ohpl_rm_world_decal_vertices(const float* const* arrays, const size_t* lens, size_t verts, float* out);
-
 
 	void ohpl_rm_cache_file(const uint32_t* home, size_t hn, const uint32_t* file, size_t fn, const uint32_t* ext, size_t en, OhplRmOut*);
 }
