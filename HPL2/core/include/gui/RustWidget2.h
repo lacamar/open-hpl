@@ -123,13 +123,6 @@ struct OhplW2TextCall {
 
 extern "C" {
 
-
-
-
-OhplW2Combo ohpl_w2_combo_init();
-
-OhplW2Text ohpl_w2_tb_init(bool numeric);
-
 }
 
 static_assert(sizeof(OhplW2Slider) == 88, "OhplW2Slider layout");
