@@ -67,6 +67,7 @@ pub extern "C" fn ohpl_inv_reset() {
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_inv_on_game_start() {
     obj::on_game_start();
+    super::dump::inv_dump();
 }
 
 #[unsafe(no_mangle)]

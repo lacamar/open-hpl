@@ -232,7 +232,9 @@ cGuiClipRegion* ohpl_g1_clip_create_child(cGuiClipRegion*, const cVector3f*, con
 void ohpl_g1_clip_rect(const cGuiClipRegion*, cRect2f*);
 void ohpl_g1_set_clear_base_clip(cGuiSet*);
 void ohpl_g1_set_scissor(cGuiSet*, const cGuiClipRegion*, const cVector2l*, cVector2l*, cVector2l*);
-void ohpl_g1_set_trace_fn(void (*)(void*, void*, const cVector3f*, const cVector2f*, const cColor*, int));
+extern unsigned char ohpl_a11c_trace_on;
+void ohpl_a11c_trace_gfx(cGuiSet*, const cGuiGfxElement*, const cVector3f*, const cVector2f*, const cColor*, int);
+void ohpl_a11c_trace_text(cGuiSet*, const uint32_t*, size_t, const cVector3f*, const cVector2f*, const cColor*, int);
 
 const char* ohpl_g1_skin_name(cGuiSkin*, size_t*);
 bool ohpl_g1_skin_load(cGuiSkin*, const uint32_t*, size_t);

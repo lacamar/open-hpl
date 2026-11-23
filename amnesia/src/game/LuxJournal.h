@@ -21,7 +21,6 @@
 #define LUX_JOURNAL_H
 
 #include "LuxBase.h"
-#include "LuxA11cDump.h"
 #include "RustLuxInventory.h"
 
 enum eLuxJournalState
@@ -49,15 +48,10 @@ public:
 	void OnStart(){}
 	void Reset(){ ohpl_jrn_reset(); }
 	void OnGameStart(){}
-	void Update(float afTimeStep){ if(OhplA11cOn() == false) ohpl_jrn_update(afTimeStep); }
+	void Update(float afTimeStep){ ohpl_jrn_update(afTimeStep); }
 	void OnEnterContainer(const tString& asOldContainer){ ohpl_jrn_on_enter(); }
 	void OnLeaveContainer(const tString& asNewContainer){ ohpl_jrn_on_leave(); }
-	void OnDraw(float afFrameTime)
-	{
-		OhplA11cTick();
-		if(OhplA11cOn()) ohpl_jrn_update(OhplA11cDt());
-		ohpl_jrn_on_draw(afFrameTime);
-	}
+	void OnDraw(float afFrameTime){ ohpl_jrn_on_draw(afFrameTime); }
 
 	cGuiSet* GetSet(){ return (cGuiSet*)ohpl_jrn_get_set(); }
 

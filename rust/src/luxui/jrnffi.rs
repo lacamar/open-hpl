@@ -43,7 +43,9 @@ pub extern "C" fn ohpl_jrn_reset() {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_jrn_update(dt: f32) {
-    jrn::update(dt);
+    if !super::dump::c_on() {
+        jrn::update(dt);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -58,6 +60,10 @@ pub extern "C" fn ohpl_jrn_on_leave() {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_jrn_on_draw(frame_time: f32) {
+    super::dump::c_tick();
+    if super::dump::c_on() {
+        jrn::update(super::dump::DT);
+    }
     jrn::on_draw(frame_time);
 }
 

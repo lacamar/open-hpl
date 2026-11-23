@@ -25,8 +25,6 @@ struct OhplA11bHost
 	void (*menu_vec2)(OhplA11bBytes, OhplA11bBytes, float, float*);
 	int (*user_bool)(OhplA11bBytes, OhplA11bBytes, int);
 	void (*set_user_bool)(OhplA11bBytes, OhplA11bBytes, int);
-	void (*wrap_rows)(size_t, float, float, const float*, const unsigned*, size_t, OhplA11bSink32, void*);
-	float (*font_len)(size_t, const float*, const unsigned*, size_t);
 	void (*font_range)(size_t, unsigned*);
 	int (*font_glyph)(size_t, unsigned, float*);
 	void (*parse_string)(const unsigned*, size_t, OhplA11bSink32, void*);
@@ -40,8 +38,9 @@ struct OhplA11bHost
 	void (*translate)(OhplA11bBytes, OhplA11bBytes, OhplA11bSink32, void*);
 	int (*chinese)();
 	void (*callback)(size_t, int);
-	void (*log_gfx)(const float*, const float*, const float*, int);
-	void (*ans)(OhplA11bBytes, OhplA11bBytes, OhplA11bBytes);
+	int (*map_loaded)();
+	int (*journal_active)();
+	void (*enter_journal)();
 };
 
 extern "C"
@@ -56,6 +55,8 @@ extern "C"
 	void ohpl_a11b_hint_save_user_config(uint64_t h);
 	void ohpl_a11b_hint_update(uint64_t h, float dt);
 	void ohpl_a11b_hint_draw(uint64_t h, size_t set);
+	void ohpl_a11b_hint_on_update(uint64_t h, float dt);
+	void ohpl_a11b_hint_on_draw(uint64_t h, size_t set);
 	void ohpl_a11b_hint_set_active(uint64_t h, int on);
 	int ohpl_a11b_hint_is_active(uint64_t h);
 	int ohpl_a11b_hint_add(uint64_t h, const char *name, size_t nn, const unsigned *text, size_t tn, float time);
@@ -71,8 +72,8 @@ extern "C"
 	void ohpl_a11b_msg_reset(uint64_t h);
 	void ohpl_a11b_msg_load_user_config(uint64_t h);
 	void ohpl_a11b_msg_save_user_config(uint64_t h);
-	void ohpl_a11b_msg_update(uint64_t h, float dt);
-	void ohpl_a11b_msg_draw(uint64_t h);
+	void ohpl_a11b_msg_on_update(uint64_t h, float dt);
+	void ohpl_a11b_msg_on_draw(uint64_t h);
 	void ohpl_a11b_msg_start_quest(uint64_t h);
 	void ohpl_a11b_msg_start_pause(uint64_t h, const unsigned *text, size_t n, int yes_no, size_t cb);
 	void ohpl_a11b_msg_set_message(uint64_t h, const unsigned *text, size_t n, float time);

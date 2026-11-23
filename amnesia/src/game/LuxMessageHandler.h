@@ -21,7 +21,6 @@
 #define LUX_MESSAGE_HANDLER_H
 
 #include "LuxBase.h"
-#include "LuxA11bDump.h"
 #include "RustLuxUiA11b.h"
 
 class cLuxMessageHandler : public iLuxUpdateable
@@ -36,10 +35,7 @@ public:
 
 	void LoadFonts() { ohpl_a11b_msg_font(mlH, (size_t)LoadFont("game_default.fnt")); }
 	void OnStart(){}
-	void Update(float afTimeStep)
-	{
-		if(OhplA11Enabled() == false) ohpl_a11b_msg_update(mlH, afTimeStep);
-	}
+	void Update(float afTimeStep) { ohpl_a11b_msg_on_update(mlH, afTimeStep); }
 	void Reset() { ohpl_a11b_msg_reset(mlH); }
 
 	void LoadUserConfig() { ohpl_a11b_msg_load_user_config(mlH); }
@@ -65,12 +61,7 @@ public:
 	bool IsMessageActive(){ return ohpl_a11b_msg_flag(mlH, 0) != 0; }
 	uint64_t GetHandle(){ return mlH; }
 
-	void OnDraw(float afFrameTime)
-	{
-		OhplA11Tick();
-		if(OhplA11Enabled()) ohpl_a11b_msg_update(mlH, OhplA11Dt());
-		ohpl_a11b_msg_draw(mlH);
-	}
+	void OnDraw(float afFrameTime) { ohpl_a11b_msg_on_draw(mlH); }
 
 	void DoAction(eLuxPlayerAction aAction, bool abPressed)
 	{

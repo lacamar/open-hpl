@@ -82,10 +82,6 @@ enum
 
 extern "C"
 {
-int ohpl_ga8_key_verify(unsigned char c);
-int ohpl_ga8_key_route(int keyboard, int paste, int tab);
-int ohpl_ga8_key_action(int composed, int len, int pos, int mark, unsigned char ascii, int* out_pos, int* out_epos, unsigned char* out_ch);
-size_t ohpl_ga8_key_paste(const unsigned char* p, size_t n, unsigned char* out, size_t cap);
 float ohpl_ga8_comm_spin(float y, int playing, float dt);
 int ohpl_ga8_comm_set_playing(int current, int next);
 void ohpl_ga8_comm_focus_text(const unsigned char* talker, size_t tn, const unsigned char* topic, size_t pn, OhplGa8Sink s, void* c);

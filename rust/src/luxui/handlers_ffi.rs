@@ -60,7 +60,9 @@ fn msg<R>(bits: u64, none: R, f: impl FnOnce(&Msg) -> R) -> R {
 pub extern "C" fn ohpl_a11b_hint_new() -> u64 {
     let Some(ui) = host() else { return 0 };
     let h = HintHandler::new(&ui);
-    HINTS.with(|a| a.borrow_mut().insert(h).map_or(0, Handle::to_bits))
+    let bits = HINTS.with(|a| a.borrow_mut().insert(h).map_or(0, Handle::to_bits));
+    super::dump::hint_created(bits);
+    bits
 }
 
 #[unsafe(no_mangle)]
@@ -109,6 +111,23 @@ pub extern "C" fn ohpl_a11b_hint_update(h: u64, dt: f32) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_a11b_hint_draw(h: u64, set: usize) {
+    hint(h, (), |x| x.draw(set));
+}
+
+/// `cLuxHintHandler::Update`: the dump driver steps the handler from its draw instead.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_a11b_hint_on_update(h: u64, dt: f32) {
+    if !super::dump::enabled() {
+        hint(h, (), |x| x.update(dt));
+    }
+}
+
+/// `cLuxHintHandler::OnDraw`.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_a11b_hint_on_draw(h: u64, set: usize) {
+    if super::dump::enabled() {
+        hint(h, (), |x| x.update(super::dump::DT));
+    }
     hint(h, (), |x| x.draw(set));
 }
 
@@ -202,7 +221,9 @@ pub unsafe extern "C" fn ohpl_a11b_hint_names_add(h: u64, blocked: i32, name: *c
 pub extern "C" fn ohpl_a11b_msg_new() -> u64 {
     let Some(ui) = host() else { return 0 };
     let h = MessageHandler::new(&ui);
-    MSGS.with(|a| a.borrow_mut().insert(h).map_or(0, Handle::to_bits))
+    let bits = MSGS.with(|a| a.borrow_mut().insert(h).map_or(0, Handle::to_bits));
+    super::dump::msg_created(bits);
+    bits
 }
 
 #[unsafe(no_mangle)]
@@ -250,6 +271,24 @@ pub extern "C" fn ohpl_a11b_msg_update(h: u64, dt: f32) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_a11b_msg_draw(h: u64) {
+    msg(h, (), |x| x.draw());
+}
+
+/// `cLuxMessageHandler::Update`.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_a11b_msg_on_update(h: u64, dt: f32) {
+    if !super::dump::enabled() {
+        msg(h, (), |x| x.update(dt));
+    }
+}
+
+/// `cLuxMessageHandler::OnDraw`: the dump drivers step first.
+#[unsafe(no_mangle)]
+pub extern "C" fn ohpl_a11b_msg_on_draw(h: u64) {
+    super::dump::tick();
+    if super::dump::enabled() {
+        msg(h, (), |x| x.update(super::dump::DT));
+    }
     msg(h, (), |x| x.draw());
 }
 

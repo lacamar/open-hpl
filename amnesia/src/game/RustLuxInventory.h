@@ -78,7 +78,6 @@ int ohpl_inv_item_num();
 void ohpl_inv_add_combine(OhplA11aStr name, OhplA11aStr a, OhplA11aStr b, OhplA11aStr func, int autoDestroy);
 void ohpl_inv_remove_combine(OhplA11aStr name);
 int ohpl_inv_combine_num();
-int ohpl_inv_find_combine(OhplA11aStr a, OhplA11aStr b);
 void ohpl_inv_combine_str(int idx, int which, OhplA11aSink sink, void *ctx);
 int ohpl_inv_combine_auto(int idx);
 int ohpl_inv_recompile(OhplA11aSink sink, void *ctx);
@@ -101,10 +100,6 @@ uintptr_t ohpl_inv_item_image(uintptr_t item);
 void ohpl_inv_item_set_count(uintptr_t item, int n);
 void ohpl_inv_item_set_entries(uintptr_t item, OhplA11aStr name, OhplA11aStr desc);
 int ohpl_inv_type_show_pickup(int type);
-int ohpl_inv_type_has_count(int type);
-int ohpl_inv_type_max_count(int type);
-int ohpl_inv_type_has_max(int type);
-void ohpl_inv_type_name(int type, OhplA11aSink sink, void *ctx);
 int ohpl_inv_cb(uintptr_t token, uintptr_t widget, int lval, float fval);
 
 void ohpl_jrn_new();
