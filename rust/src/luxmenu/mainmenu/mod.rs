@@ -2,6 +2,7 @@
 //! flow. Rust owns the menu and its windows; the C++ class is a shell holding the handle, and
 //! every engine object (GUI set, viewport, textures, world, camera) is reached through `host`.
 
+mod dump;
 pub mod ffi;
 pub mod host;
 #[cfg(test)]

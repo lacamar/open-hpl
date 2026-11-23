@@ -3,7 +3,13 @@
 
 use super::host::*;
 use crate::gui::direct as d;
-use crate::types::Color;
+use crate::gui::g1_set::Set;
+use crate::gui::gw;
+use crate::types::{Color, Vector2f, Vector3f};
+
+fn nul_cut(t: &[u32]) -> &[u32] {
+    t.split(|&c| c == 0).next().unwrap_or_default()
+}
 
 fn p(a: &[Arg], i: usize) -> usize {
     match a.get(i) {
@@ -187,6 +193,50 @@ pub(super) fn call(op: i32, a: &[Arg]) -> Option<Res> {
         WIDGET_ENABLED => {
             crate::gui::gw::set_enabled(p(a, 0), b(a, 1));
             unit
+        }
+        DRAW_FONT => {
+            let (pos, size, c) = (v3(a, 3), v2(a, 6), c4(a, 8));
+            gw::draw_font(
+                p(a, 0) as *mut Set,
+                p(a, 2),
+                w(a, 1),
+                Vector2f {
+                    x: size[0],
+                    y: size[1],
+                },
+                Vector3f {
+                    x: pos[0],
+                    y: pos[1],
+                    z: pos[2],
+                },
+                c,
+                n(a, 12),
+            );
+            unit
+        }
+        FONT_WRAP => Res {
+            s: gw::font_rows(
+                p(a, 0),
+                f(a, 1),
+                f(a, 2),
+                Vector2f {
+                    x: f(a, 3),
+                    y: f(a, 4),
+                },
+                w(a, 5),
+            ),
+            ..Res::default()
+        },
+        FONT_LEN => {
+            let size = v2(a, 1);
+            fr(&[gw::font_length(
+                p(a, 0),
+                Vector2f {
+                    x: size[0],
+                    y: size[1],
+                },
+                nul_cut(w(a, 3)),
+            )])
         }
         WIDGET_IS_VISIBLE => pr(usize::from(crate::gui::gw::is_visible(p(a, 0)))),
         WIDGET_TEXT => {

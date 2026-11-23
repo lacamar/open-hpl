@@ -181,7 +181,6 @@ void ohpl_a10b_pm_draw(const OhplA10bHost *h, uint64_t o);
 void ohpl_a10b_pm_button_pressed(const OhplA10bHost *h, uint64_t o);
 void ohpl_a10b_pm_focus(const OhplA10bHost *h, bool got);
 size_t ohpl_a10b_pm_set(uint64_t o);
-int ohpl_a10b_pm_state(uint64_t o);
 bool ohpl_a10b_pm_continue_visible(const OhplA10bHost *h, uint64_t o);
 bool ohpl_a10b_pm_cb(const OhplA10bHost *h, uint64_t o, int tag, int lval);
 

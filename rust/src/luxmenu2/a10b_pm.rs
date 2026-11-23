@@ -514,10 +514,6 @@ pub fn set_of(h: u64) -> usize {
     with(h, |p| p.set).unwrap_or(0)
 }
 
-pub fn state_of(h: u64) -> i32 {
-    with(h, |p| p.s.state).unwrap_or(0)
-}
-
 pub fn continue_visible(e: &Eng, h: u64) -> bool {
     match with(h, |p| p.cont) {
         Some(c) => e.h.call(super::host::WIDGET_IS_VISIBLE, &[Arg::P(c)]).b(),

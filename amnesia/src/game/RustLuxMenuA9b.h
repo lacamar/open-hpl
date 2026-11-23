@@ -6,26 +6,11 @@
 #include <cstddef>
 #include <cstdint>
 
-struct OhplA9bState
-{
-	size_t mpSet;
-	size_t mpFirstLabel;
-	size_t mpCamera;
-	size_t mpWorld;
-	size_t mpLogo;
-	float mfTopAlpha;
-	float mfFadeAlpha;
-	float mvLogoSize[2];
-	int mlWindow;
-	int mlTopVisible;
-};
-
 extern "C"
 {
 	uint64_t ohpl_a9b_new();
 	void ohpl_a9b_free(uint64_t alMe);
 	void ohpl_a9b_load_fonts(uint64_t alMe);
-	void ohpl_a9b_create_gui(uint64_t alMe);
 	void ohpl_a9b_reset(uint64_t alMe);
 	void ohpl_a9b_on_quit(uint64_t alMe);
 	void ohpl_a9b_enter(uint64_t alMe);
@@ -37,10 +22,8 @@ extern "C"
 	void ohpl_a9b_focus(uint64_t alMe, int alGot);
 	void ohpl_a9b_device_changed(uint64_t alMe);
 	size_t ohpl_a9b_set(uint64_t alMe);
-	void ohpl_a9b_state(uint64_t alMe, OhplA9bState *apOut);
-	size_t ohpl_a9b_dump_window(uint64_t alMe, int alWindow, int alBegin);
-	void ohpl_a9b_dump_background(uint64_t alMe);
-	void ohpl_a9b_dump_end(uint64_t alMe);
+	void ohpl_a9b_dump_a10a(uint64_t alMe);
+	void ohpl_a9b_dump_a9(uint64_t alMe);
 }
 
 #endif

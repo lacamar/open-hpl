@@ -70,7 +70,7 @@ public:
 	void LoadFonts() { ohpl_a9b_load_fonts(mlMe); }
 	void OnClearFonts(){}
 	
-	void OnStart();
+	void OnStart() { ohpl_a9b_dump_a9(mlMe); }
 	void Update(float afTimeStep) { ohpl_a9b_update(mlMe, afTimeStep); }
 	void Reset() { ohpl_a9b_reset(mlMe); }
 	void OnQuit() { ohpl_a9b_on_quit(mlMe); }
@@ -95,8 +95,6 @@ public:
 #endif
 
 private:
-	void DumpA9(const char *asFile);
-
 	uint64_t mlMe;
 };
 
