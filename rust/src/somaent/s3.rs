@@ -272,16 +272,6 @@ pub extern "C" fn ohpl_s3_ids_new(seed: i32) -> *mut Ids {
 }
 
 /// # Safety
-/// `ids` from `ohpl_s3_ids_new`, not used afterwards.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_s3_ids_free(ids: *mut Ids) {
-    if !ids.is_null() {
-        // SAFETY: caller contract.
-        drop(unsafe { Box::from_raw(ids) });
-    }
-}
-
-/// # Safety
 /// `ids` valid.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_s3_ids_clear(ids: *mut Ids) {

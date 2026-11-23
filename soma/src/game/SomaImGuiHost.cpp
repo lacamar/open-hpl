@@ -145,7 +145,7 @@ void SomaRestoreCameraTexture(const cSomaCameraTextureState &s)
 	cSomaLuxEntity *pEnt = s.msAttached.empty() ? NULL : cSomaLuxMap::GetCurrent()->GetEntity(s.msAttached);
 	p->mbAttached = pEnt != NULL;
 	if (pEnt)
-		p->mAttached = pEnt->mID;
+		p->mAttached = pEnt->mpCore->mID;
 }
 
 static cGuiGfxElement *GfxElement(const tString &sFile, int lType, int lMaterial, const cVector2f &vUVMin, const cVector2f &vUVMax);
@@ -381,7 +381,7 @@ namespace
 		cSomaLuxEntity *pEnt = (cSomaLuxEntity *)ent;
 		if (it == gmapCameraTextures.end() || pEnt == NULL)
 			return;
-		it->second->mAttached = pEnt->mID;
+		it->second->mAttached = pEnt->mpCore->mID;
 		it->second->mbAttached = true;
 	}
 

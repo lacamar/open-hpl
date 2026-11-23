@@ -118,7 +118,7 @@ void ScapeAreas(size_t m, void (*sink)(void *, const OhplGs5AreaDef *), void *ct
 {
 	for (cSomaLuxEntity *pEnt : ((cSomaLuxMap *)m)->GetEntities())
 	{
-		if (pEnt->meType != eSomaLuxEntityType_Area || pEnt->GetClassName() != "Soundscape")
+		if (pEnt->mpCore->meType != eSomaLuxEntityType_Area || pEnt->GetClassName() != "Soundscape")
 			continue;
 		cResourceVarsObject &v = pEnt->mInstanceVars;
 		tString sLevel = v.GetVarString("Level", ""), sBg = v.GetVarString("BG_Sound", ""), sIn = v.GetVarString("SoundEnt_InNames", ""),
@@ -151,14 +151,14 @@ void ScapeAreas(size_t m, void (*sink)(void *, const OhplGs5AreaDef *), void *ct
 void AreaState(size_t e, bool *pActive, float *o)
 {
 	cSomaLuxEntity *p = (cSomaLuxEntity *)e;
-	*pActive = p->mbActive;
+	*pActive = p->mpCore->mbActive;
 	cMatrixf m = p->GetMatrix();
 	for (int r = 0; r < 4; ++r)
 		for (int c = 0; c < 4; ++c)
 			o[r * 4 + c] = m.m[r][c];
-	o[16] = p->mvSize.x;
-	o[17] = p->mvSize.y;
-	o[18] = p->mvSize.z;
+	o[16] = p->mpCore->mvSize.x;
+	o[17] = p->mpCore->mvSize.y;
+	o[18] = p->mpCore->mvSize.z;
 }
 
 bool CameraPos(float *o)
@@ -217,7 +217,7 @@ const OhplS7Host kHost = {
 		id.mB = b;
 		id.mC = c;
 		cSomaLuxEntity *p = pMap ? pMap->GetEntity(id) : NULL;
-		return p != NULL && p->mbActive;
+		return p != NULL && p->mpCore->mbActive;
 	},
 	FindFile,
 	[](const unsigned char *p, size_t n) { gpSomaBase->mpEngine->GetResources()->AddResourceDir(cString::To16Char(Str(p, n)), false); },

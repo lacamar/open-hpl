@@ -40,7 +40,6 @@ struct OhplS3LiquidBodyPlan
 extern "C"
 {
 	OhplS3Ids *ohpl_s3_ids_new(int seed);
-	void ohpl_s3_ids_free(OhplS3Ids *);
 	void ohpl_s3_ids_clear(OhplS3Ids *);
 	void ohpl_s3_ids_register_bodies(OhplS3Ids *, const size_t *bodies, size_t n);
 	void ohpl_s3_object_id(OhplS3Ids *, OhplS3IdHost *, size_t obj, const unsigned char *ty, size_t tyn, OhplS3Id *out);

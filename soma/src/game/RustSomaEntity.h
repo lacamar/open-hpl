@@ -95,12 +95,8 @@ enum
 
 extern "C" {
 	void ohpl_gs1_move_start(OhplGs1Move *, const hpl::cVector3f *goal, float acc, float max_speed, float slowdown, bool reset);
-	int ohpl_gs1_move_step(OhplGs1Move *, float dt, const hpl::cVector3f *pos, hpl::cVector3f *out);
-	void ohpl_gs1_move_stop(OhplGs1Move *);
 	void ohpl_gs1_rotate_align(OhplGs1Rotate *, const hpl::cMatrixf *goal, float acc, float max_speed, float slowdown, bool reset, const hpl::cVector3f *pivot);
 	void ohpl_gs1_rotate_speed(OhplGs1Rotate *, float acc, float goal_speed, const hpl::cVector3f *axis, bool reset, const hpl::cVector3f *pivot);
-	void ohpl_gs1_rotate_stop(OhplGs1Rotate *);
-	int ohpl_gs1_rotate_step(OhplGs1Rotate *, float dt, const hpl::cMatrixf *m, hpl::cMatrixf *out);
 	bool ohpl_gs1_static_move_enter(bool moving, bool flag, bool loop_present);
 	int ohpl_gs1_static_move_plan(bool moving, bool flag, bool loop_alive);
 	bool ohpl_gs1_is_moving(bool moving, int rotate_mode, float rotate_max_speed);
@@ -111,11 +107,6 @@ extern "C" {
 	void ohpl_gs1_effect_color(const hpl::cColor *def, const hpl::cColor *base, float alpha, hpl::cColor *out);
 	bool ohpl_gs1_effects_on(float alpha, bool active);
 	bool ohpl_gs1_light_lit(const hpl::cColor *col, bool on);
-	unsigned ohpl_gs1_effects_update_fades(float *mesh_alpha, float mesh_speed, bool has_mesh, float *alpha, float *speed, float off_alpha, float dt);
-	bool ohpl_gs1_color_fade_begin(float time, float *color_time, float *color_t);
-	bool ohpl_gs1_color_fade_step(const hpl::cColor *from, const hpl::cColor *to, float *color_time, float *color_t, float dt, hpl::cColor *out);
-	bool ohpl_gs1_liquid_fade(float target, float time, float amount, float *cur_target, float *speed);
-	int ohpl_gs1_liquid_update(float dt, float *amount, float target, float speed);
 
 	void ohpl_gs1_proc_play(OhplGs1Proc *, float length, bool looping, float amount_fade, float speed_fade);
 	bool ohpl_gs1_proc_step(OhplGs1Proc *, float dt);
@@ -148,7 +139,6 @@ extern "C" {
 								  bool use_rotation, bool locked, hpl::cMatrixf *out);
 	void ohpl_gs1_liquid_extent(const OhplGs1Obb *b, hpl::cVector3f *out);
 	float ohpl_gs1_liquid_wave_height(float surface_y, float amp, float freq, float time, float cx, float cz);
-	bool ohpl_gs1_liquid_body_under(float bv_max_y, float center_y, float ext_y);
 	float ohpl_gs1_liquid_surface(const OhplGs1Obb *b);
 
 	void ohpl_gs1_apply_instance_vars(const OhplGs1Vars *inst, const OhplGs1Vars *vars, void (*sink)(void *, const OhplGs1Op *), void *sink_ctx);

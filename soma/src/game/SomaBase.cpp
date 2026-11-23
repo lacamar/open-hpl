@@ -140,13 +140,13 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 		return;
 	}
 	aResp.Set("name", pEnt->GetName());
-	aResp.Set("type", pEnt->meType);
+	aResp.Set("type", pEnt->mpCore->meType);
 	aResp.Set("class", pEnt->GetClassName());
 	aResp.Set("script", pEnt->GetScript() ? tString(pEnt->GetScript()->GetObjectType()->GetName()) : tString(""));
 	aResp.Set("file", pEnt->GetFileName());
-	aResp.Set("health", pEnt->mfHealth);
-	aResp.Set("active", pEnt->mbActive);
-	aResp.Set("interaction_disabled", pEnt->mbInteractionDisabled);
+	aResp.Set("health", pEnt->mpCore->mfHealth);
+	aResp.Set("active", pEnt->mpCore->mbActive);
+	aResp.Set("interaction_disabled", pEnt->mpCore->mbInteractionDisabled);
 	aResp.Set("interact_callback", pEnt->GetInteractCallback());
 	tString sCallbacks;
 	for (auto &c : pEnt->mvCollideCallbacks)
@@ -157,15 +157,15 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 	aResp.Set("y", v.y);
 	aResp.Set("z", v.z);
 	aResp.Set("agent", SomaAgentDebug(pEnt));
-	aResp.Set("size", cString::ToString(pEnt->mvSize.x) + " " + cString::ToString(pEnt->mvSize.y) + " " + cString::ToString(pEnt->mvSize.z));
+	aResp.Set("size", cString::ToString(pEnt->mpCore->mvSize.x) + " " + cString::ToString(pEnt->mpCore->mvSize.y) + " " + cString::ToString(pEnt->mpCore->mvSize.z));
 	if (pEnt->mpImGui)
 	{
-		aResp.Set("gui_active", pEnt->mbGuiActive);
+		aResp.Set("gui_active", pEnt->mpCore->mbGuiActive);
 		aResp.Set("gui_func", pEnt->GetOnGuiFunc());
 		aResp.Set("gui_screen", pEnt->mpGuiSubMesh != NULL);
-		aResp.Set("gui_calls", pEnt->mlGuiCalls);
-		aResp.Set("gui_draws", pEnt->mlGuiDraws);
-		aResp.Set("gui_cache_at", pEnt->mfGuiCacheAtScreenSize);
+		aResp.Set("gui_calls", pEnt->mpCore->mlGuiCalls);
+		aResp.Set("gui_draws", pEnt->mpCore->mlGuiDraws);
+		aResp.Set("gui_cache_at", pEnt->mpCore->mfGuiCacheAtScreenSize);
 		if (pEnt->mpGuiSubMesh)
 			aResp.Set("gui_bv", pEnt->mpGuiSubMesh->GetBoundingVolume()->GetMin().ToString() + " " + pEnt->mpGuiSubMesh->GetBoundingVolume()->GetMax().ToString());
 		aResp.Set("gui_ops", pEnt->mpImGui->DebugOps(12));
@@ -364,7 +364,7 @@ static void cSomaBase_HeadlessCmd_BodyContacts(void *apUserData, const cHeadless
 	}
 	iPhysicsWorld *pWorld = pMap->GetWorld()->GetPhysicsWorld();
 	std::vector<iPhysicsBody *> vBodies = pEnt->mvBodies;
-	iCharacterBody *pChar = pEnt->meType == eSomaLuxEntityType_Player && cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : SomaAgentGetBody(pEnt);
+	iCharacterBody *pChar = pEnt->mpCore->meType == eSomaLuxEntityType_Player && cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : SomaAgentGetBody(pEnt);
 	if (pChar)
 		vBodies = {pChar->GetCurrentBody()};
 	tString sOut;

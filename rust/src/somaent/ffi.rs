@@ -53,36 +53,6 @@ pub unsafe extern "C" fn ohpl_gs1_move_start(
     unsafe { rw(m).start(rd(goal), acc, max_speed, slowdown, reset) }
 }
 
-/// 0: not moving, 1: `out` is the new position, 2: as 1 and the goal was reached.
-///
-/// # Safety
-/// Pointers are valid; `m` is exclusively borrowed.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs1_move_step(
-    m: *mut Move,
-    dt: f32,
-    pos: *const Vector3f,
-    out: *mut Vector3f,
-) -> i32 {
-    // SAFETY: caller contract.
-    match unsafe { rw(m).step(dt, rd(pos)) } {
-        None => 0,
-        Some((to, done)) => {
-            // SAFETY: caller contract.
-            unsafe { wr(out, to) };
-            1 + i32::from(done)
-        }
-    }
-}
-
-/// # Safety
-/// `m` is exclusively borrowed.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs1_move_stop(m: *mut Move) {
-    // SAFETY: caller contract.
-    unsafe { rw(m).stop() }
-}
-
 /// # Safety
 /// Pointers are valid; `r` is exclusively borrowed.
 #[unsafe(no_mangle)]
@@ -112,36 +82,6 @@ pub unsafe extern "C" fn ohpl_gs1_rotate_speed(
 ) {
     // SAFETY: caller contract.
     unsafe { rw(r).at_speed(acc, goal_speed, rd(axis), reset, rd(pivot)) }
-}
-
-/// # Safety
-/// `r` is exclusively borrowed.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs1_rotate_stop(r: *mut Rotate) {
-    // SAFETY: caller contract.
-    unsafe { rw(r).stop() }
-}
-
-/// 0: nothing to apply, 1: `out` is the matrix to set, 2: as 1 and the goal was reached.
-///
-/// # Safety
-/// Pointers are valid; `r` is exclusively borrowed.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs1_rotate_step(
-    r: *mut Rotate,
-    dt: f32,
-    m: *const Matrixf,
-    out: *mut Matrixf,
-) -> i32 {
-    // SAFETY: caller contract.
-    match unsafe { rw(r).step(dt, &rd(m)) } {
-        None => 0,
-        Some(o) => {
-            // SAFETY: caller contract.
-            unsafe { wr(out, o.matrix) };
-            1 + i32::from(o.done)
-        }
-    }
 }
 
 #[unsafe(no_mangle)]
@@ -251,93 +191,6 @@ pub extern "C" fn ohpl_gs1_effects_on(alpha: f32, active: bool) -> bool {
 pub unsafe extern "C" fn ohpl_gs1_light_lit(col: *const Color, on: bool) -> bool {
     // SAFETY: caller contract.
     effects::light_lit(unsafe { rd(col) }, on)
-}
-
-/// # Safety
-/// The float pointers are valid for reads and writes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs1_effects_update_fades(
-    mesh_alpha: *mut f32,
-    mesh_speed: f32,
-    has_mesh: bool,
-    alpha: *mut f32,
-    speed: *mut f32,
-    off_alpha: f32,
-    dt: f32,
-) -> u32 {
-    // SAFETY: caller contract.
-    unsafe {
-        effects::update_fades(
-            rw(mesh_alpha),
-            mesh_speed,
-            has_mesh,
-            rw(alpha),
-            rw(speed),
-            off_alpha,
-            dt,
-        )
-    }
-}
-
-/// # Safety
-/// The float pointers are valid for reads and writes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs1_color_fade_begin(
-    time: f32,
-    color_time: *mut f32,
-    color_t: *mut f32,
-) -> bool {
-    // SAFETY: caller contract.
-    unsafe { effects::color_fade_begin(time, rw(color_time), rw(color_t)) }
-}
-
-/// # Safety
-/// Pointers are valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs1_color_fade_step(
-    from: *const Color,
-    to: *const Color,
-    color_time: *mut f32,
-    color_t: *mut f32,
-    dt: f32,
-    out: *mut Color,
-) -> bool {
-    // SAFETY: caller contract.
-    match unsafe { effects::color_fade_step(rd(from), rd(to), rw(color_time), rw(color_t), dt) } {
-        Some(c) => {
-            // SAFETY: caller contract.
-            unsafe { wr(out, c) };
-            true
-        }
-        None => false,
-    }
-}
-
-/// # Safety
-/// The float pointers are valid for reads and writes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs1_liquid_fade(
-    target: f32,
-    time: f32,
-    amount: f32,
-    cur_target: *mut f32,
-    speed: *mut f32,
-) -> bool {
-    // SAFETY: caller contract.
-    unsafe { effects::liquid_fade(target, time, amount, rw(cur_target), rw(speed)) }
-}
-
-/// # Safety
-/// `amount` is valid for reads and writes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs1_liquid_update(
-    dt: f32,
-    amount: *mut f32,
-    target: f32,
-    speed: f32,
-) -> i32 {
-    // SAFETY: caller contract.
-    unsafe { effects::liquid_update(dt, rw(amount), target, speed) }
 }
 
 /// # Safety
@@ -701,11 +554,6 @@ pub extern "C" fn ohpl_gs1_liquid_wave_height(
     cz: f32,
 ) -> f32 {
     geom::liquid_wave_height(surface_y, amp, freq, time, cx, cz)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs1_liquid_body_under(bv_max_y: f32, center_y: f32, ext_y: f32) -> bool {
-    geom::liquid_body_under(bv_max_y, center_y, ext_y)
 }
 
 /// # Safety
