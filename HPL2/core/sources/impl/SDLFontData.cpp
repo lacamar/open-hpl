@@ -28,6 +28,9 @@
 #include "graphics/FrameTexture.h"
 #include "graphics/FrameSubImage.h"
 #include "graphics/Texture.h"
+#include "gui/GuiGfxElement.h"
+#include "gui/Gui.h"
+#include "graphics/RustGraphics.h"
 
 
 #include "system/String.h"
@@ -43,6 +46,32 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
+
+	cGlyph::~cGlyph()
+	{
+		delete mpGuiGfx;
+	}
+
+	iFontData::~iFontData()
+	{
+		for(size_t i=0;i<mvGlyphs.size();i++)
+		{
+			delete mvGlyphs[i];
+		}
+		ohpl_h5b_font_free(mlRs);
+	}
+
+	cGlyph* iFontData::CreateGlyph(	cFrameSubImage* apImage, const cVector2l &avOffset,const cVector2l &avSize,
+									const cVector2l& avFontSize, int alAdvance)
+	{
+		cGuiGfxElement* pGuiGfx = mpGui->CreateGfxFilledRect(cColor(1,1),eGuiMaterial_FontNormal,false);
+		pGuiGfx->AddImage(apImage);
+
+		float vM[5];
+		ohpl_font_glyph_metrics(&avOffset, &avSize, &avFontSize, alAdvance, &mvSizeRatio, vM);
+
+		return hplNew( cGlyph,(pGuiGfx,cVector2f(vM[0], vM[1]),cVector2f(vM[2], vM[3]),vM[4]));
+	}
 
 	cSDLFontData::cSDLFontData(const tString &asName,iLowLevelGraphics* apLowLevelGraphics)
 		: iFontData(asName,apLowLevelGraphics)
@@ -95,13 +124,7 @@ namespace hpl {
 		int lLineHeight = info.line_height;
 		int lBase = info.base;
 
-		mfHeight = info.height;
-		mvSizeRatio.x = info.size_ratio_x;
-		mvSizeRatio.y = 1;
-
-		mlFirstChar =0;
-		mlLastChar = info.largest_id;
-		mvGlyphs.resize(info.glyph_count, NULL);
+		SetMetrics(info.height, cVector2f(info.size_ratio_x, 1), 0, info.largest_id, info.glyph_count);
 
 		std::vector<cFrameTexture*> vFrameTextures;
 		for(size_t lPage=0; lPage<info.pages; ++lPage)
@@ -159,7 +182,7 @@ namespace hpl {
 			cFrameSubImage *pImage = pFrameTexture->CreateCustomImage(cVector2l(c.x, c.y),cVector2l(c.width,c.height));
 			cGlyph *pGlyph = CreateGlyph(pImage,cVector2l(c.x_offset,c.y_offset),cVector2l(c.width,c.height),
 										cVector2l(lBase,lLineHeight),c.advance);
-			mvGlyphs[c.id] = pGlyph;
+			SetGlyph(c.id, pGlyph);
 		}
 
 		ohpl_l5_font_free(pFont);

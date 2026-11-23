@@ -56,7 +56,7 @@ namespace hpl {
 			return;
 		case kOhplGlDsErrPackedBits:
 			Error("Depth-stencil has %d depth bits and %d stencil bits! Only a combination of 24 depth bits and 8 stencil bits is supported!\n",
-					mlDepthBits, mlStencilBits);
+					GetDepthBits(), GetStencilBits());
 			return;
 		case kOhplGlDsErrDepth:
 			Error("Invalid depth format: %d bits! Could not create depth buffer\n",alDepthBits);
@@ -172,8 +172,8 @@ namespace hpl {
 		ohpl_glfb_set_depth_stencil(mlRs, apBuffer != NULL, apBuffer ? pRsBuffer->GetHandle() : 0,
 									apBuffer ? pRsBuffer->GetDepthBits() : 0, apBuffer ? pRsBuffer->GetStencilBits() : 0);
 		if(apBuffer == NULL) return;
-		if(pRsBuffer->GetDepthBits() > 0) mpDepthBuffer = apBuffer;
-		if(pRsBuffer->GetStencilBits() > 0) mpStencilBuffer = apBuffer;
+		if(pRsBuffer->GetDepthBits() > 0) SetDepthBufferBase(apBuffer);
+		if(pRsBuffer->GetStencilBits() > 0) SetStencilBufferBase(apBuffer);
 		mbIsUpdated = true;
 		SetFirstSize(apBuffer->GetSize());
 	}
@@ -189,21 +189,21 @@ namespace hpl {
 		unsigned int lOccupied = 0;
 		for(int i=0; i<kMaxDrawColorBuffers; ++i)
 		{
-			if(mpColorBuffer[i] != NULL) lOccupied |= 1u << i;
+			if(GetColorBuffer(i) != NULL) lOccupied |= 1u << i;
 		}
 
 		unsigned int lStatusClass = ohpl_glfb_compile(mlRs, lOccupied);
 		switch(lStatusClass)
 		{
 		case kOhplGlStatusComplete:		bRet = true; break;
-		case kOhplGlStatusUnsupported:	Error("Frame buffer '%s' is not complete! Format is unsupported!\n", msName.c_str()); break;
-		case kOhplGlStatusAttachment:	Error("Frame buffer '%s' is not complete! Incomplete attachments!\n", msName.c_str()); break;
-		case kOhplGlStatusMissing:		Error("Frame buffer '%s' is not complete! Missing attachments!\n", msName.c_str()); break;
-		case kOhplGlStatusDimensions:	Error("Frame buffer '%s' is not complete! Incomplete dimensions!\n", msName.c_str()); break;
-		case kOhplGlStatusFormats:		Error("Frame buffer '%s' is not complete! Incomplete formats!\n", msName.c_str()); break;
-		case kOhplGlStatusDrawBuffer:	Error("Frame buffer '%s' is not complete! Incomplete draw buffer!\n", msName.c_str()); break;
-		case kOhplGlStatusReadBuffer:	Error("Frame buffer '%s' is not complete! Incomplete read buffer!\n", msName.c_str()); break;
-		default:						Error("Frame buffer '%s' is not complete! Unknown error!\n", msName.c_str()); break;
+		case kOhplGlStatusUnsupported:	Error("Frame buffer '%s' is not complete! Format is unsupported!\n", GetName().c_str()); break;
+		case kOhplGlStatusAttachment:	Error("Frame buffer '%s' is not complete! Incomplete attachments!\n", GetName().c_str()); break;
+		case kOhplGlStatusMissing:		Error("Frame buffer '%s' is not complete! Missing attachments!\n", GetName().c_str()); break;
+		case kOhplGlStatusDimensions:	Error("Frame buffer '%s' is not complete! Incomplete dimensions!\n", GetName().c_str()); break;
+		case kOhplGlStatusFormats:		Error("Frame buffer '%s' is not complete! Incomplete formats!\n", GetName().c_str()); break;
+		case kOhplGlStatusDrawBuffer:	Error("Frame buffer '%s' is not complete! Incomplete draw buffer!\n", GetName().c_str()); break;
+		case kOhplGlStatusReadBuffer:	Error("Frame buffer '%s' is not complete! Incomplete read buffer!\n", GetName().c_str()); break;
+		default:						Error("Frame buffer '%s' is not complete! Unknown error!\n", GetName().c_str()); break;
 		}
 
 		return bRet;
@@ -216,10 +216,10 @@ namespace hpl {
 		if(mbExplicitMipLevel) return;
 		for(int i=0; i<kMaxDrawColorBuffers; ++i)
 		{
-			if(mpColorBuffer[i]) PostBindUpdateAttachment(mpColorBuffer[i]);
+			if(GetColorBuffer(i)) PostBindUpdateAttachment(GetColorBuffer(i));
 		}
-        if(mpDepthBuffer) PostBindUpdateAttachment(mpDepthBuffer);
-		if(mpStencilBuffer) PostBindUpdateAttachment(mpStencilBuffer);
+        if(GetDepthBuffer()) PostBindUpdateAttachment(GetDepthBuffer());
+		if(GetStencilBuffer()) PostBindUpdateAttachment(GetStencilBuffer());
 	}
 	
 	//-----------------------------------------------------------------------
@@ -264,13 +264,13 @@ namespace hpl {
 		switch(at.slot)
 		{
 		case kOhplGlSlotColor:
-			if(at.colorIndex >= 0) mpColorBuffer[at.colorIndex] = apTexture;
+			if(at.colorIndex >= 0) SetColorBufferBase(at.colorIndex, apTexture);
 			break;
 		case kOhplGlSlotDepth:
-			mpDepthBuffer = apTexture;
+			SetDepthBufferBase(apTexture);
 			break;
 		case kOhplGlSlotStencil:
-			mpStencilBuffer = apTexture;
+			SetStencilBufferBase(apTexture);
 			break;
 		}
 
@@ -283,9 +283,9 @@ namespace hpl {
 
 	void cFrameBufferGL::SetFirstSize(const cVector2l &avSize)
 	{	
-		if(mvSize.x > -1) return;
+		if(GetSize().x > -1) return;
 
-        mvSize = avSize;
+        SetSizeBase(avSize);
 	}
 	
 	//-----------------------------------------------------------------------

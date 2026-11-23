@@ -348,11 +348,11 @@ namespace hpl {
 			for (int j = 0; j < pSubMesh->GetColliderNum(); ++j)
 			{
 				cMeshCollider* pCollider = pSubMesh->GetCollider(j);
-				vIsChar[j] = pCollider->mbCharCollider;
-				cMatrixf mtxOffset = pCollider->m_mtxOffset;
+				vIsChar[j] = pCollider->IsCharCollider();
+				cMatrixf mtxOffset = pCollider->Offset();
 				mtxOffset.SetTranslation(mtxOffset.GetTranslation() * avScale);
 				if (iCollideShape* pShape = cSubMesh::CreateCollideShapeFromCollider(pCollider, mpCurrentPhysicsWorld, avScale, &mtxOffset))
-					vShapes[pCollider->mbCharCollider].push_back(pShape);
+					vShapes[pCollider->IsCharCollider()].push_back(pShape);
 			}
 			for (int j = 0; j < 2; ++j)
 			{

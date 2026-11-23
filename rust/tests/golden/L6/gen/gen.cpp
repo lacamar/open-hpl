@@ -126,7 +126,7 @@ static void HashMesh(Sums& s, cMesh* m)
 	s.bone.I(sk != NULL);
 	if(sk)
 	{
-		s.bone.I(sk->mbFileUnits);
+		s.bone.I(sk->GetFileUnits());
 		s.bone.I(sk->GetBoneNum());
 		for(int i = 0; i < sk->GetBoneNum(); ++i)
 		{
@@ -166,10 +166,10 @@ static void HashMesh(Sums& s, cMesh* m)
 		for(int c = 0; c < sm->GetColliderNum(); ++c)
 		{
 			cMeshCollider* mc = sm->GetCollider(c);
-			s.xf.I(mc->mType);
-			s.xf.V3(mc->mvSize);
-			s.xf.M(mc->m_mtxOffset);
-			s.xf.I(mc->mbCharCollider);
+			s.xf.I(mc->Type());
+			s.xf.V3(mc->Size());
+			s.xf.M(mc->Offset());
+			s.xf.I(mc->IsCharCollider());
 		}
 		s.bone.I(sm->GetVertexBonePairNum());
 		for(int p = 0; p < sm->GetVertexBonePairNum(); ++p)

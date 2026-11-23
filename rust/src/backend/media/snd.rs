@@ -84,8 +84,57 @@ impl Data {
     }
 }
 
+/// Base-class state of the C++ `iSoundChannel`; C++ reads and writes it through `OhplL5ChanShadow`.
+#[repr(C)]
+pub struct ChanShadow {
+    pub speed: f32,
+    pub volume: f32,
+    pub pan: f32,
+    pub max_distance: f32,
+    pub min_distance: f32,
+    pub block_volume_mul: f32,
+    pub velocity: [f32; 3],
+    pub position: [f32; 3],
+    pub rel_position: [f32; 3],
+    pub priority_modifier: i32,
+    pub looping: bool,
+    pub paused: bool,
+    pub position_relative: bool,
+    pub is_3d: bool,
+    pub blockable: bool,
+    pub affected_by_env: bool,
+    pub stop_used: bool,
+}
+
+impl ChanShadow {
+    const fn new() -> Self {
+        Self {
+            speed: 1.0,
+            volume: 1.0,
+            pan: 0.0,
+            max_distance: 0.0,
+            min_distance: 0.0,
+            block_volume_mul: 1.0,
+            velocity: [0.0; 3],
+            position: [0.0; 3],
+            rel_position: [0.0; 3],
+            priority_modifier: 0,
+            looping: false,
+            paused: true,
+            position_relative: false,
+            is_3d: false,
+            blockable: false,
+            affected_by_env: false,
+            stop_used: false,
+        }
+    }
+}
+
+const _: () = assert!(core::mem::size_of::<ChanShadow>() == 72);
+
 pub struct Channel {
     handle: i32,
+    pub shadow: ChanShadow,
 }
 
 impl Channel {
@@ -94,7 +143,10 @@ impl Channel {
         oal.source_set_attributes(handle, &zero, &zero);
         oal.source_set_filter_type_bandpass(handle);
         oal.source_set_spatialize(handle, false);
-        Self { handle }
+        Self {
+            handle,
+            shadow: ChanShadow::new(),
+        }
     }
 
     pub fn destroy(self, oal: &dyn Oal) {

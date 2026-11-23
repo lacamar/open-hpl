@@ -409,7 +409,7 @@ namespace hpl {
 			for(int m = 0; m < apBmp->GetNumOfMipMaps(); ++m)
 			{
 				cBitmapData* d = apBmp->GetData(i, m);
-				if(d && d->mpData) w.PutHash("img", d->mpData, d->mlSize);
+				if(d && d->Data()) w.PutHash("img", d->Data(), d->Size());
 			}
 		Rec(asFn, w.Text());
 	}
@@ -417,8 +417,8 @@ namespace hpl {
 	bool cRecordingTexture::CreateFromBitmap(cBitmap* pBmp)
 	{
 		RecBitmap("CreateFromBitmap", pBmp);
-		mvSize = pBmp->GetSize();
-		mPixelFormat = pBmp->GetPixelFormat();
+		SetSizeBase(pBmp->GetSize());
+		SetPixelFormatBase(pBmp->GetPixelFormat());
 		return true;
 	}
 
@@ -426,7 +426,7 @@ namespace hpl {
 	{
 		Rec("CreateAnimFromBitmapVec", (int)avBitmaps->size());
 		for(cBitmap* b : *avBitmaps) RecBitmap("  frame", b);
-		if(!avBitmaps->empty()) { mvSize = (*avBitmaps)[0]->GetSize(); mPixelFormat = (*avBitmaps)[0]->GetPixelFormat(); }
+		if(!avBitmaps->empty()) { SetSizeBase((*avBitmaps)[0]->GetSize()); SetPixelFormatBase((*avBitmaps)[0]->GetPixelFormat()); }
 		mlFrames = (int)avBitmaps->size();
 		return true;
 	}
@@ -435,7 +435,7 @@ namespace hpl {
 	{
 		Rec("CreateCubeFromBitmapVec", (int)avBitmaps->size());
 		for(cBitmap* b : *avBitmaps) RecBitmap("  face", b);
-		if(!avBitmaps->empty()) { mvSize = (*avBitmaps)[0]->GetSize(); mPixelFormat = (*avBitmaps)[0]->GetPixelFormat(); }
+		if(!avBitmaps->empty()) { SetSizeBase((*avBitmaps)[0]->GetSize()); SetPixelFormatBase((*avBitmaps)[0]->GetPixelFormat()); }
 		return true;
 	}
 
@@ -447,8 +447,8 @@ namespace hpl {
 		else
 			w.Put("null");
 		Rec("CreateFromRawData", avSize, aPixelFormat, w.Text());
-		mvSize = avSize;
-		mPixelFormat = aPixelFormat;
+		SetSizeBase(avSize);
+		SetPixelFormatBase(aPixelFormat);
 		return true;
 	}
 
@@ -464,14 +464,14 @@ namespace hpl {
 	}
 
 	void cRecordingTexture::Update(float afTimeStep) { Rec("Update", afTimeStep); }
-	void cRecordingTexture::SetFilter(eTextureFilter aFilter) { Rec("SetFilter", aFilter); mFilter = aFilter; }
-	void cRecordingTexture::SetAnisotropyDegree(float afX) { Rec("SetAnisotropyDegree", afX); mfAnisotropyDegree = afX; }
-	void cRecordingTexture::SetWrapS(eTextureWrap aMode) { Rec("SetWrapS", aMode); mWrapS = aMode; }
-	void cRecordingTexture::SetWrapT(eTextureWrap aMode) { Rec("SetWrapT", aMode); mWrapT = aMode; }
-	void cRecordingTexture::SetWrapR(eTextureWrap aMode) { Rec("SetWrapR", aMode); mWrapR = aMode; }
-	void cRecordingTexture::SetWrapSTR(eTextureWrap aMode) { Rec("SetWrapSTR", aMode); mWrapS = mWrapT = mWrapR = aMode; }
-	void cRecordingTexture::SetCompareMode(eTextureCompareMode aMode) { Rec("SetCompareMode", aMode); mCompareMode = aMode; }
-	void cRecordingTexture::SetCompareFunc(eTextureCompareFunc aFunc) { Rec("SetCompareFunc", aFunc); mCompareFunc = aFunc; }
+	void cRecordingTexture::SetFilter(eTextureFilter aFilter) { Rec("SetFilter", aFilter); SetFilterBase(aFilter); }
+	void cRecordingTexture::SetAnisotropyDegree(float afX) { Rec("SetAnisotropyDegree", afX); SetAnisotropyBase(afX); }
+	void cRecordingTexture::SetWrapS(eTextureWrap aMode) { Rec("SetWrapS", aMode); SetWrapBase(aMode, GetWrapT(), GetWrapR()); }
+	void cRecordingTexture::SetWrapT(eTextureWrap aMode) { Rec("SetWrapT", aMode); SetWrapBase(GetWrapS(), aMode, GetWrapR()); }
+	void cRecordingTexture::SetWrapR(eTextureWrap aMode) { Rec("SetWrapR", aMode); SetWrapBase(GetWrapS(), GetWrapT(), aMode); }
+	void cRecordingTexture::SetWrapSTR(eTextureWrap aMode) { Rec("SetWrapSTR", aMode); SetWrapBase(aMode, aMode, aMode); }
+	void cRecordingTexture::SetCompareMode(eTextureCompareMode aMode) { Rec("SetCompareMode", aMode); SetCompareBase(aMode, GetCompareFunc()); }
+	void cRecordingTexture::SetCompareFunc(eTextureCompareFunc aFunc) { Rec("SetCompareFunc", aFunc); SetCompareBase(GetCompareMode(), aFunc); }
 	void cRecordingTexture::SetRedFromAlpha(bool abX) { Rec("SetRedFromAlpha", abX); }
 	void cRecordingTexture::AutoGenerateMipmaps() { Rec("AutoGenerateMipmaps"); }
 	bool cRecordingTexture::HasAnimation() { return mlFrames > 1; }
@@ -485,7 +485,7 @@ namespace hpl {
 	bool cRecordingTexture::GetRawPixelsRGBAFloat(std::vector<float>& avOut)
 	{
 		Rec("GetRawPixelsRGBAFloat");
-		avOut.assign((size_t)mvSize.x * mvSize.y * 4, 0.0f);
+		avOut.assign((size_t)GetSize().x * GetSize().y * 4, 0.0f);
 		return true;
 	}
 
@@ -765,7 +765,7 @@ namespace hpl {
 
 	bool cRecordingGpuProgram::Link()
 	{
-		Rec("Link", mpShader[0], mpShader[1]);
+		Rec("Link", GetShader(eGpuShaderType_Vertex), GetShader(eGpuShaderType_Fragment));
 		return true;
 	}
 
@@ -856,41 +856,41 @@ namespace hpl {
 	void cRecordingFrameBuffer::SetTexture2D(int alColorIdx, iTexture* apTexture, int alMipmapLevel)
 	{
 		Rec("SetTexture2D", alColorIdx, apTexture, alMipmapLevel);
-		mpColorBuffer[alColorIdx] = apTexture;
-		if(apTexture) mvSize = cVector2l(apTexture->GetWidth(), apTexture->GetHeight());
+		SetColorBufferBase(alColorIdx, apTexture);
+		if(apTexture) SetSizeBase(cVector2l(apTexture->GetWidth(), apTexture->GetHeight()));
 	}
 
 	void cRecordingFrameBuffer::SetTexture3D(int alColorIdx, iTexture* apTexture, int alZ, int alMipmapLevel)
 	{
 		Rec("SetTexture3D", alColorIdx, apTexture, alZ, alMipmapLevel);
-		mpColorBuffer[alColorIdx] = apTexture;
-		if(apTexture) mvSize = cVector2l(apTexture->GetWidth(), apTexture->GetHeight());
+		SetColorBufferBase(alColorIdx, apTexture);
+		if(apTexture) SetSizeBase(cVector2l(apTexture->GetWidth(), apTexture->GetHeight()));
 	}
 
 	void cRecordingFrameBuffer::SetTextureCubeMap(int alColorIdx, iTexture* apTexture, int alFace, int alMipmapLevel)
 	{
 		Rec("SetTextureCubeMap", alColorIdx, apTexture, alFace, alMipmapLevel);
-		mpColorBuffer[alColorIdx] = apTexture;
-		if(apTexture) mvSize = cVector2l(apTexture->GetWidth(), apTexture->GetHeight());
+		SetColorBufferBase(alColorIdx, apTexture);
+		if(apTexture) SetSizeBase(cVector2l(apTexture->GetWidth(), apTexture->GetHeight()));
 	}
 
 	void cRecordingFrameBuffer::SetDepthTexture2D(iTexture* apTexture, int alMipmapLevel)
 	{
 		Rec("SetDepthTexture2D", apTexture, alMipmapLevel);
-		mpDepthBuffer = apTexture;
+		SetDepthBufferBase(apTexture);
 	}
 
 	void cRecordingFrameBuffer::SetDepthTextureCubeMap(iTexture* apTexture, int alFace, int alMipmapLevel)
 	{
 		Rec("SetDepthTextureCubeMap", apTexture, alFace, alMipmapLevel);
-		mpDepthBuffer = apTexture;
+		SetDepthBufferBase(apTexture);
 	}
 
 	void cRecordingFrameBuffer::SetDepthStencilBuffer(iDepthStencilBuffer* apBuffer)
 	{
 		Rec("SetDepthStencilBuffer", apBuffer);
-		mpDepthBuffer = apBuffer;
-		mpStencilBuffer = apBuffer;
+		SetDepthBufferBase(apBuffer);
+		SetStencilBufferBase(apBuffer);
 	}
 
 	bool cRecordingFrameBuffer::CompileAndValidate()

@@ -93,11 +93,11 @@ namespace hpl {
 		cVulkanImage& img = mvImages[alIdx];
 		mpGfx->DestroyImage(img);
 
-		cVkFormat fmt = ToVkFormat(aFormat, mbsRGB, mpGfx->mDepth24Format);
+		cVkFormat fmt = ToVkFormat(aFormat, GetsRGB(), mpGfx->mDepth24Format);
 		if(fmt.mFormat == VK_FORMAT_UNDEFINED) { Error("Vulkan: unsupported pixel format %d for '%s'\n", (int)aFormat, msName.c_str()); return false; }
 		bool bDepth = PixelFormatIsDepth(aFormat);
 		VkImageUsageFlags lUsage = VK_IMAGE_USAGE_SAMPLED_BIT;
-		if(mUsage == eTextureUsage_RenderTarget || bDepth)
+		if(GetUsage() == eTextureUsage_RenderTarget || bDepth)
 			lUsage |= bDepth ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		else if(!PixelFormatIsCompressed(aFormat))
 			lUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // engine may render into any texture through a frame buffer
@@ -105,7 +105,7 @@ namespace hpl {
 		VkImageType type = VK_IMAGE_TYPE_2D;
 		VkImageViewType view = VK_IMAGE_VIEW_TYPE_2D;
 		int lLayers = 1;
-		switch(mType)
+		switch(GetType())
 		{
 		case eTextureType_1D: type = VK_IMAGE_TYPE_1D; view = VK_IMAGE_VIEW_TYPE_1D; break;
 		case eTextureType_3D: type = VK_IMAGE_TYPE_3D; view = VK_IMAGE_VIEW_TYPE_3D; break;
@@ -114,7 +114,7 @@ namespace hpl {
 		}
 		VkComponentMapping swizzle = fmt.mSwizzle;
 		mSwizzle = swizzle;
-		if(mbRedFromAlpha && mType == eTextureType_2D) swizzle.r = VK_COMPONENT_SWIZZLE_A;
+		if(mbRedFromAlpha && GetType() == eTextureType_2D) swizzle.r = VK_COMPONENT_SWIZZLE_A;
 		mpGfx->CreateImage(img, type, view, fmt.mFormat, avSize, alLevels, lLayers, lUsage, &swizzle);
 		return img.mImage != VK_NULL_HANDLE;
 	}
@@ -123,7 +123,7 @@ namespace hpl {
 								const void *apData, int alDataSize)
 	{
 		if(apData == NULL || alIdx >= (int)mvImages.size()) return;
-		cVkFormat fmt = ToVkFormat(aFormat, mbsRGB, mpGfx->mDepth24Format);
+		cVkFormat fmt = ToVkFormat(aFormat, GetsRGB(), mpGfx->mDepth24Format);
 		std::vector<unsigned char> vScratch;
 		size_t lSize = alDataSize;
 		size_t lPixels = (size_t)std::max(1, avSize.x) * std::max(1, avSize.y) * std::max(1, avSize.z);
@@ -147,7 +147,7 @@ namespace hpl {
 
 	bool cVulkanTexture::CreateFromBitmapToIndex(cBitmap* apBmp, int alIdx)
 	{
-		int lFaces = mType == eTextureType_CubeMap ? 6 : 1;
+		int lFaces = GetType() == eTextureType_CubeMap ? 6 : 1;
 		if(lFaces == 6 && apBmp->GetNumOfImages() < 6)
 		{
 			Error("Bitmap has to few images (%d) to create cubmap texture '%s'\n", apBmp->GetNumOfImages(), msName.c_str());
@@ -155,76 +155,76 @@ namespace hpl {
 		}
 		ePixelFormat format = apBmp->GetPixelFormat();
 		int lNumMips = apBmp->GetNumOfMipMaps();
-		mvSize = apBmp->GetSize();
-		mPixelFormat = format;
-		mbIsCompressed = PixelFormatIsCompressed(format);
+		SetSizeBase(apBmp->GetSize());
+		SetPixelFormatBase(format);
+		SetCompressedBase(PixelFormatIsCompressed(format));
 		OhplVkMipIn mipIn = {};
-		mipIn.size[0] = mvSize.x; mipIn.size[1] = mvSize.y; mipIn.size[2] = mvSize.z;
+		mipIn.size[0] = GetSize().x; mipIn.size[1] = GetSize().y; mipIn.size[2] = GetSize().z;
 		mipIn.numMips = lNumMips;
-		mipIn.downscale = mlSizeDownScaleLevel;
-		mipIn.minSize[0] = mvMinDownScaleSize.x; mipIn.minSize[1] = mvMinDownScaleSize.y; mipIn.minSize[2] = mvMinDownScaleSize.z;
-		mipIn.useMipmaps = mbUseMipMaps;
-		mipIn.compressed = mbIsCompressed;
+		mipIn.downscale = GetSizeDownScaleLevel();
+		mipIn.minSize[0] = GetMinLevelSize().x; mipIn.minSize[1] = GetMinLevelSize().y; mipIn.minSize[2] = GetMinLevelSize().z;
+		mipIn.useMipmaps = UsesMipMaps();
+		mipIn.compressed = IsCompressed();
 		mipIn.depth = PixelFormatIsDepth(format);
 		mipIn.floating = PixelFormatIsFloatingPoint(format);
-		mipIn.cube = mType == eTextureType_CubeMap;
-		mipIn.tex2d = mType == eTextureType_2D;
-		mipIn.rect = mType == eTextureType_Rect;
+		mipIn.cube = GetType() == eTextureType_CubeMap;
+		mipIn.tex2d = GetType() == eTextureType_2D;
+		mipIn.rect = GetType() == eTextureType_Rect;
 		OhplVkMipPlan mipPlan;
 		ohpl_vk_mip_plan(&mipIn, &mipPlan);
-		mbUseMipMaps = mipPlan.useMipmaps;
+		SetUseMipMaps(mipPlan.useMipmaps);
 		int lStart = mipPlan.start;
 		bool bCpuResize = mipPlan.cpuResize;
-		if(!bCpuResize) mvSize = cVector3l(mipPlan.size[0], mipPlan.size[1], mipPlan.size[2]);
+		if(!bCpuResize) SetSizeBase(cVector3l(mipPlan.size[0], mipPlan.size[1], mipPlan.size[2]));
 
 		std::vector<std::vector<unsigned char>> vResized(lFaces);
-		cVector3l vBaseSize = mvSize;
+		cVector3l vBaseSize = GetSize();
 		if(bCpuResize)
 		{
 			int lBpp = GetBytesPerPixel(format);
 			for(int f=0; f<lFaces; ++f)
 			{
 				cBitmapData *pData = apBmp->GetData(f, 0);
-				vResized[f].assign(pData->mpData, pData->mpData + pData->mlSize);
-				cVector3l vSize = mvSize;
-				for(int i=0; i<(int)mlSizeDownScaleLevel; ++i)
+				vResized[f].assign(pData->Data(), pData->Data() + pData->Size());
+				cVector3l vSize = GetSize();
+				for(int i=0; i<(int)GetSizeDownScaleLevel(); ++i)
 				{
-					if(vSize.x/2 < mvMinDownScaleSize.x || vSize.y/2 < mvMinDownScaleSize.y) break;
+					if(vSize.x/2 < GetMinLevelSize().x || vSize.y/2 < GetMinLevelSize().y) break;
 					HalveImage(vResized[f], vSize, lBpp);
 				}
 				vBaseSize = vSize;
 			}
-			mvSize = vBaseSize;
+			SetSizeBase(vBaseSize);
 		}
 
 		bool bProvidedMips = mipPlan.provided;
 		int lLevels = mipPlan.levels;
-		if(!CreateImage(alIdx, mvSize, format, lLevels)) return false;
+		if(!CreateImage(alIdx, GetSize(), format, lLevels)) return false;
 
-		mlMemorySize = 0;
+		SetMemorySizeBase(0);
 		for(int f=0; f<lFaces; ++f)
 		{
-			cVector3l vSize = mvSize;
+			cVector3l vSize = GetSize();
 			int lUploadLevels = bProvidedMips ? lLevels : 1;
 			for(int l=0; l<lUploadLevels; ++l)
 			{
 				cBitmapData *pData = apBmp->GetData(f, l + lStart);
-				const void *pSrc = bCpuResize ? (const void*)vResized[f].data() : (const void*)pData->mpData;
-				int lSize = bCpuResize ? (int)vResized[f].size() : pData->mlSize;
+				const void *pSrc = bCpuResize ? (const void*)vResized[f].data() : (const void*)pData->Data();
+				int lSize = bCpuResize ? (int)vResized[f].size() : pData->Size();
 				Upload(alIdx, l, f, cVector3l(0,0,0), vSize, format, pSrc, lSize);
-				mlMemorySize += lSize;
+				SetMemorySizeBase(GetMemorySize() + lSize);
 				vSize.x = std::max(1, vSize.x >> 1);
 				vSize.y = std::max(1, vSize.y >> 1);
 				vSize.z = std::max(1, vSize.z >> 1);
 			}
 		}
-		if(mbUseMipMaps && !bProvidedMips) mpGfx->GenerateMips(mvImages[alIdx]);
+		if(UsesMipMaps() && !bProvidedMips) mpGfx->GenerateMips(mvImages[alIdx]);
 
 		mbContainsData = true;
-		mbMipFilter = mbUseMipMaps && mType != eTextureType_Rect;
+		mbMipFilter = UsesMipMaps() && GetType() != eTextureType_Rect;
 		mMinFilter = mMagFilter = VK_FILTER_LINEAR;
-		mMipMode = mFilter == eTextureFilter_Bilinear ? VK_SAMPLER_MIPMAP_MODE_NEAREST : VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		if(mType == eTextureType_Rect) mWrapS = mWrapT = mWrapR = eTextureWrap_ClampToEdge;
+		mMipMode = GetFilter() == eTextureFilter_Bilinear ? VK_SAMPLER_MIPMAP_MODE_NEAREST : VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		if(GetType() == eTextureType_Rect) SetWrapBase(eTextureWrap_ClampToEdge, eTextureWrap_ClampToEdge, eTextureWrap_ClampToEdge);
 		return true;
 	}
 
@@ -239,58 +239,58 @@ namespace hpl {
 
 	bool cVulkanTexture::CreateCubeFromBitmapVec(std::vector<cBitmap*> *avBitmaps)
 	{
-		if(mUsage == eTextureUsage_RenderTarget || mType != eTextureType_CubeMap) return false;
+		if(GetUsage() == eTextureUsage_RenderTarget || GetType() != eTextureType_CubeMap) return false;
 		if(avBitmaps->size() < 6) { Error("Only %d bitmaps supplied for creation of cube map, 6 needed.", (int)avBitmaps->size()); return false; }
 		cBitmap *pFirst = (*avBitmaps)[0];
 		ePixelFormat format = pFirst->GetPixelFormat();
-		mvSize = pFirst->GetSize();
-		mPixelFormat = format;
-		mbIsCompressed = PixelFormatIsCompressed(format);
+		SetSizeBase(pFirst->GetSize());
+		SetPixelFormatBase(format);
+		SetCompressedBase(PixelFormatIsCompressed(format));
 		int lNumMips = pFirst->GetNumOfMipMaps();
-		if(mbIsCompressed && lNumMips <= 1) mbUseMipMaps = false;
-		bool bProvidedMips = mbUseMipMaps && lNumMips > 1;
-		int lLevels = !mbUseMipMaps ? 1 : bProvidedMips ? lNumMips : FullMipCount(mvSize);
-		if(!CreateImage(0, mvSize, format, lLevels)) return false;
+		if(IsCompressed() && lNumMips <= 1) SetUseMipMaps(false);
+		bool bProvidedMips = UsesMipMaps() && lNumMips > 1;
+		int lLevels = !UsesMipMaps() ? 1 : bProvidedMips ? lNumMips : FullMipCount(GetSize());
+		if(!CreateImage(0, GetSize(), format, lLevels)) return false;
 		for(int f=0; f<6; ++f)
 		{
 			cBitmap *pBmp = (*avBitmaps)[f];
-			cVector3l vSize = mvSize;
+			cVector3l vSize = GetSize();
 			for(int l=0; l<(bProvidedMips ? lLevels : 1); ++l)
 			{
 				cBitmapData *pData = pBmp->GetData(0, l);
-				Upload(0, l, f, cVector3l(0,0,0), vSize, format, pData->mpData, pData->mlSize);
+				Upload(0, l, f, cVector3l(0,0,0), vSize, format, pData->Data(), pData->Size());
 				vSize.x = std::max(1, vSize.x >> 1);
 				vSize.y = std::max(1, vSize.y >> 1);
 			}
 		}
-		if(mbUseMipMaps && !bProvidedMips) mpGfx->GenerateMips(mvImages[0]);
+		if(UsesMipMaps() && !bProvidedMips) mpGfx->GenerateMips(mvImages[0]);
 		mbContainsData = true;
-		mbMipFilter = mbUseMipMaps;
-		mMipMode = mFilter == eTextureFilter_Bilinear ? VK_SAMPLER_MIPMAP_MODE_NEAREST : VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		mbMipFilter = UsesMipMaps();
+		mMipMode = GetFilter() == eTextureFilter_Bilinear ? VK_SAMPLER_MIPMAP_MODE_NEAREST : VK_SAMPLER_MIPMAP_MODE_LINEAR;
 		return true;
 	}
 
 	bool cVulkanTexture::CreateFromRawData(const cVector3l &avSize, ePixelFormat aPixelFormat, unsigned char *apData)
 	{
-		mvSize = cVector3l(std::max(1, avSize.x), std::max(1, avSize.y), std::max(1, avSize.z));
-		mPixelFormat = aPixelFormat;
-		mbIsCompressed = PixelFormatIsCompressed(aPixelFormat);
-		if(mType == eTextureType_Rect || (mbIsCompressed && apData)) mbUseMipMaps = false;
-		int lLevels = mbUseMipMaps ? FullMipCount(mvSize) : 1;
-		if(!CreateImage(0, mvSize, aPixelFormat, lLevels)) return false;
-		int lLayers = mType == eTextureType_CubeMap ? 6 : 1;
+		SetSizeBase(cVector3l(std::max(1, avSize.x), std::max(1, avSize.y), std::max(1, avSize.z)));
+		SetPixelFormatBase(aPixelFormat);
+		SetCompressedBase(PixelFormatIsCompressed(aPixelFormat));
+		if(GetType() == eTextureType_Rect || (IsCompressed() && apData)) SetUseMipMaps(false);
+		int lLevels = UsesMipMaps() ? FullMipCount(GetSize()) : 1;
+		if(!CreateImage(0, GetSize(), aPixelFormat, lLevels)) return false;
+		int lLayers = GetType() == eTextureType_CubeMap ? 6 : 1;
 		if(apData)
 		{
-			int lDataSize = mvSize.x * mvSize.y * mvSize.z * GetBytesPerPixel(aPixelFormat);
-			for(int f=0; f<lLayers; ++f) Upload(0, 0, f, cVector3l(0,0,0), mvSize, aPixelFormat, apData, lDataSize);
-			mlMemorySize = lDataSize * lLayers;
-			if(mbUseMipMaps) mpGfx->GenerateMips(mvImages[0]);
+			int lDataSize = GetSize().x * GetSize().y * GetSize().z * GetBytesPerPixel(aPixelFormat);
+			for(int f=0; f<lLayers; ++f) Upload(0, 0, f, cVector3l(0,0,0), GetSize(), aPixelFormat, apData, lDataSize);
+			SetMemorySizeBase(lDataSize * lLayers);
+			if(UsesMipMaps()) mpGfx->GenerateMips(mvImages[0]);
 		}
 		mbContainsData = true;
-		mbMipFilter = mbUseMipMaps && mType != eTextureType_Rect;
+		mbMipFilter = UsesMipMaps() && GetType() != eTextureType_Rect;
 		mMinFilter = mMagFilter = VK_FILTER_LINEAR;
-		mMipMode = mFilter == eTextureFilter_Bilinear ? VK_SAMPLER_MIPMAP_MODE_NEAREST : VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		if(mType == eTextureType_Rect) mWrapS = mWrapT = mWrapR = eTextureWrap_ClampToEdge;
+		mMipMode = GetFilter() == eTextureFilter_Bilinear ? VK_SAMPLER_MIPMAP_MODE_NEAREST : VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		if(GetType() == eTextureType_Rect) SetWrapBase(eTextureWrap_ClampToEdge, eTextureWrap_ClampToEdge, eTextureWrap_ClampToEdge);
 		return true;
 	}
 
@@ -305,12 +305,12 @@ namespace hpl {
 	{
 		if(mvImages.size() <= 1) return;
 		float fMax = (float)mvImages.size();
-		mfTimeCount += afTimeStep * (1.0f/mfFrameTime) * mfTimeDir;
+		mfTimeCount += afTimeStep * (1.0f/GetFrameTime()) * mfTimeDir;
 		if(mfTimeDir > 0)
 		{
 			if(mfTimeCount >= fMax)
 			{
-				if(mAnimMode == eTextureAnimMode_Loop) mfTimeCount = 0;
+				if(GetAnimMode() == eTextureAnimMode_Loop) mfTimeCount = 0;
 				else { mfTimeCount = fMax - 1.0f; mfTimeDir = -1.0f; }
 			}
 		}
@@ -327,7 +327,7 @@ namespace hpl {
 		{
 			if(mfTimeCount >= fMax)
 			{
-				if(mAnimMode == eTextureAnimMode_Loop) mfTimeCount = 0;
+				if(GetAnimMode() == eTextureAnimMode_Loop) mfTimeCount = 0;
 				else { mfTimeCount = fMax - 1.0f; mfTimeDir = -1.0f; }
 			}
 		}
@@ -342,7 +342,7 @@ namespace hpl {
 		{
 			if(mfTimeCount >= fMax)
 			{
-				if(mAnimMode == eTextureAnimMode_Loop) mfTimeCount = 0;
+				if(GetAnimMode() == eTextureAnimMode_Loop) mfTimeCount = 0;
 				else { mfTimeCount = fMax - 1.0f; mfTimeDir = -1.0f; }
 			}
 		}
@@ -356,17 +356,17 @@ namespace hpl {
 	bool cVulkanTexture::GetRawPixelsRGBAFloat(std::vector<float> &avOut)
 	{
 		cVulkanImage *pImg = GetImage();
-		if(pImg == NULL || mbIsCompressed) return false;
+		if(pImg == NULL || IsCompressed()) return false;
 		VulkanReadPixelsFloat(mpGfx, *pImg, 0, 0, cVector2l(0,0), cVector2l(pImg->mvSize.x, pImg->mvSize.y), avOut);
 		return true;
 	}
 
 	void cVulkanTexture::SetFilter(eTextureFilter aFilter)
 	{
-		if(mFilter == aFilter) return;
-		mFilter = aFilter;
+		if(GetFilter() == aFilter) return;
+		SetFilterBase(aFilter);
 		if(!mbContainsData) return;
-		if(mbUseMipMaps && mType != eTextureType_Rect)
+		if(UsesMipMaps() && GetType() != eTextureType_Rect)
 		{
 			mbMipFilter = true;
 			mMagFilter = mMinFilter = aFilter == eTextureFilter_Nearest ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
@@ -382,19 +382,19 @@ namespace hpl {
 	void cVulkanTexture::SetAnisotropyDegree(float afX)
 	{
 		if(!mbContainsData || afX < 1.0f || afX > mpGfx->mfMaxAnisotropy) return;
-		mfAnisotropyDegree = afX;
+		SetAnisotropyBase(afX);
 	}
 
-	void cVulkanTexture::SetWrapS(eTextureWrap aMode){ if(mType != eTextureType_Rect) mWrapS = aMode; }
-	void cVulkanTexture::SetWrapT(eTextureWrap aMode){ if(mType != eTextureType_Rect) mWrapT = aMode; }
-	void cVulkanTexture::SetWrapR(eTextureWrap aMode){ if(mType != eTextureType_Rect) mWrapR = aMode; }
-	void cVulkanTexture::SetWrapSTR(eTextureWrap aMode){ if(mType != eTextureType_Rect) mWrapS = mWrapT = mWrapR = aMode; }
-	void cVulkanTexture::SetCompareMode(eTextureCompareMode aMode){ mCompareMode = aMode; }
-	void cVulkanTexture::SetCompareFunc(eTextureCompareFunc aFunc){ mCompareFunc = aFunc; }
+	void cVulkanTexture::SetWrapS(eTextureWrap aMode){ if(GetType() != eTextureType_Rect) SetWrapBase(aMode, GetWrapT(), GetWrapR()); }
+	void cVulkanTexture::SetWrapT(eTextureWrap aMode){ if(GetType() != eTextureType_Rect) SetWrapBase(GetWrapS(), aMode, GetWrapR()); }
+	void cVulkanTexture::SetWrapR(eTextureWrap aMode){ if(GetType() != eTextureType_Rect) SetWrapBase(GetWrapS(), GetWrapT(), aMode); }
+	void cVulkanTexture::SetWrapSTR(eTextureWrap aMode){ if(GetType() != eTextureType_Rect) SetWrapBase(aMode, aMode, aMode); }
+	void cVulkanTexture::SetCompareMode(eTextureCompareMode aMode){ SetCompareBase(aMode, GetCompareFunc()); }
+	void cVulkanTexture::SetCompareFunc(eTextureCompareFunc aFunc){ SetCompareBase(GetCompareMode(), aFunc); }
 
 	void cVulkanTexture::SetRedFromAlpha(bool abX)
 	{
-		if(!mbContainsData || mType != eTextureType_2D || mbRedFromAlpha == abX) return;
+		if(!mbContainsData || GetType() != eTextureType_2D || mbRedFromAlpha == abX) return;
 		mbRedFromAlpha = abX;
 		UpdateView();
 	}
@@ -421,7 +421,7 @@ namespace hpl {
 
 	void cVulkanTexture::AutoGenerateMipmaps()
 	{
-		if(!mbUseMipMaps) return;
+		if(!UsesMipMaps()) return;
 		for(cVulkanImage& img : mvImages) mpGfx->GenerateMips(img);
 	}
 
@@ -449,14 +449,14 @@ namespace hpl {
 		sci.magFilter = mMagFilter;
 		sci.minFilter = mMinFilter;
 		sci.mipmapMode = mMipMode;
-		sci.addressModeU = ToVkWrap(mWrapS);
-		sci.addressModeV = ToVkWrap(mWrapT);
-		sci.addressModeW = ToVkWrap(mWrapR);
+		sci.addressModeU = ToVkWrap(GetWrapS());
+		sci.addressModeV = ToVkWrap(GetWrapT());
+		sci.addressModeW = ToVkWrap(GetWrapR());
 		sci.maxLod = mbMipFilter ? VK_LOD_CLAMP_NONE : 0.0f;
-		sci.anisotropyEnable = mfAnisotropyDegree > 1.0f && mbMipFilter;
-		sci.maxAnisotropy = mfAnisotropyDegree;
-		sci.compareEnable = abShadow || (mCompareMode != eTextureCompareMode_None && IsDepth());
-		sci.compareOp = mCompareFunc == eTextureCompareFunc_GreaterOrEqual ? VK_COMPARE_OP_GREATER_OR_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL;
+		sci.anisotropyEnable = GetAnisotropy() > 1.0f && mbMipFilter;
+		sci.maxAnisotropy = GetAnisotropy();
+		sci.compareEnable = abShadow || (GetCompareMode() != eTextureCompareMode_None && IsDepth());
+		sci.compareOp = GetCompareFunc() == eTextureCompareFunc_GreaterOrEqual ? VK_COMPARE_OP_GREATER_OR_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL;
 		sci.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 		return mpGfx->GetSampler(sci);
 	}
@@ -487,7 +487,7 @@ namespace hpl {
 	void cVulkanFrameBuffer::SetColor(int alIdx, iTexture *apTexture, int alLevel, int alLayer)
 	{
 		mpGfx->FrameBufferChanged(this);
-		mpColorBuffer[alIdx] = apTexture;
+		SetColorBufferBase(alIdx, apTexture);
 		mvLevel[alIdx] = alLevel;
 		mvLayer[alIdx] = alLayer;
 		if(alLevel > 0) mbExplicitMipLevel = true;
@@ -515,7 +515,7 @@ namespace hpl {
 	void cVulkanFrameBuffer::SetDepthTexture2D(iTexture *apTexture, int alMipmapLevel)
 	{
 		mpGfx->FrameBufferChanged(this);
-		mpDepthBuffer = apTexture;
+		SetDepthBufferBase(apTexture);
 		mvLevel[kMaxDrawColorBuffers] = alMipmapLevel;
 		mvLayer[kMaxDrawColorBuffers] = 0;
 		if(apTexture) SetFirstSize(apTexture->GetSizeInt2D());
@@ -524,7 +524,7 @@ namespace hpl {
 	void cVulkanFrameBuffer::SetDepthTextureCubeMap(iTexture *apTexture, int alFace, int alMipmapLevel)
 	{
 		mpGfx->FrameBufferChanged(this);
-		mpDepthBuffer = apTexture;
+		SetDepthBufferBase(apTexture);
 		mvLevel[kMaxDrawColorBuffers] = alMipmapLevel;
 		mvLayer[kMaxDrawColorBuffers] = alFace;
 		if(apTexture) SetFirstSize(apTexture->GetSizeInt2D());
@@ -533,9 +533,9 @@ namespace hpl {
 	void cVulkanFrameBuffer::SetDepthStencilBuffer(iDepthStencilBuffer* apBuffer)
 	{
 		mpGfx->FrameBufferChanged(this);
-		if(apBuffer == NULL) { mpDepthBuffer = mpStencilBuffer = NULL; return; }
-		if(apBuffer->GetDepthBits() > 0) mpDepthBuffer = apBuffer;
-		if(apBuffer->GetStencilBits() > 0) mpStencilBuffer = apBuffer;
+		if(apBuffer == NULL) { SetDepthBufferBase(NULL); SetStencilBufferBase(NULL); return; }
+		if(apBuffer->GetDepthBits() > 0) SetDepthBufferBase(apBuffer);
+		if(apBuffer->GetStencilBits() > 0) SetStencilBufferBase(apBuffer);
 		SetFirstSize(apBuffer->GetSize());
 	}
 
@@ -550,7 +550,7 @@ namespace hpl {
 		if(mbExplicitMipLevel) return;
 		for(int i=0; i<kMaxDrawColorBuffers; ++i)
 		{
-			iFrameBufferAttachment *pAtt = mpColorBuffer[i];
+			iFrameBufferAttachment *pAtt = GetColorBuffer(i);
 			if(pAtt && pAtt->GetFrameBufferAttachmentType() == eFrameBufferAttachment_Texture)
 			{
 				iTexture *pTex = static_cast<iTexture*>(pAtt);
@@ -741,9 +741,9 @@ namespace hpl {
 
 	bool cVulkanProgram::Link()
 	{
-		cVulkanShader *pVtx = static_cast<cVulkanShader*>(mpShader[eGpuShaderType_Vertex]);
-		cVulkanShader *pFrag = static_cast<cVulkanShader*>(mpShader[eGpuShaderType_Fragment]);
-		if(pVtx == NULL || pFrag == NULL) { Error("Vulkan program '%s' needs both stages\n", msName.c_str()); return false; }
+		cVulkanShader *pVtx = static_cast<cVulkanShader*>(GetShader(eGpuShaderType_Vertex));
+		cVulkanShader *pFrag = static_cast<cVulkanShader*>(GetShader(eGpuShaderType_Fragment));
+		if(pVtx == NULL || pFrag == NULL) { Error("Vulkan program '%s' needs both stages\n", GetName().c_str()); return false; }
 		if(!LinkFromSource(pVtx->msSource, pFrag->msSource)) return false;
 		for(iGpuShader *pShader : {(iGpuShader*)pVtx, (iGpuShader*)pFrag})
 			for(int i=0; i<pShader->GetSamplerUnitNum(); ++i)
@@ -763,10 +763,10 @@ namespace hpl {
 			bOk = CompileGlslToSpirv(s == 0 ? prog.msVertex : prog.msFragment, s == 0, vSpirv[s], sLog);
 		if(bOk) bOk = mpGfx->CreateShaders(vSpirv[0], vSpirv[1], mvShaders);
 		cEngineDiagnostics::AddLinkTime((double)(cPlatform::GetApplicationTime() - lStart));
-		cEngineDiagnostics::ReportShader(msName, "link", bOk, sLog);
+		cEngineDiagnostics::ReportShader(GetName(), "link", bOk, sLog);
 		if(!bOk)
 		{
-			Error("Failed to build Vulkan program '%s': %s\n", msName.c_str(), sLog.c_str());
+			Error("Failed to build Vulkan program '%s': %s\n", GetName().c_str(), sLog.c_str());
 			if(getenv("OPENHPL_VK_SHADER_LOG")) Log("Vertex:\n%s\nFragment:\n%s\n", prog.msVertex.c_str(), prog.msFragment.c_str());
 			return false;
 		}

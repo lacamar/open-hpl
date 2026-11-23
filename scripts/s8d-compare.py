@@ -3,7 +3,8 @@
 
 Fades run on the frame clock, so runs drop or repeat frames and differ in length; the random
 dust, flash and ghoul particles and the random frame art (p<N>_*.tga) are masked. Almost every frame (98%) of A must appear in
-the union of the reference runs bit for bit, and A must cover part of the reference frames.
+the union of the reference runs bit for bit, up to the length of the longest reference run, and A must cover part of
+the reference frames.
 Usage: s8d-compare.py A B [B2...] [--min-cover 0.3]
 """
 import re
@@ -11,16 +12,16 @@ import sys
 
 
 def frames(path):
-    out, cur = {}, None
+    out, cur = [], None
     for line in open(path, errors="replace"):
         if line.startswith("im "):
             cur = [line]
-            out[id(cur)] = cur
+            out.append(cur)
         elif cur is not None:
             if line.startswith(("g dust_", "g flashes-", "g menu_bg_uw_ghoul")) or re.match(r"g p\d_", line):
                 continue
             cur.append(line)
-    return {"".join(f) for f in out.values()}
+    return ["".join(f) for f in out]
 
 
 def main():
@@ -30,10 +31,10 @@ def main():
         i = args.index("--min-cover")
         cover = float(args[i + 1])
         del args[i : i + 2]
-    a = frames(args[0])
-    b = set()
-    for p in args[1:]:
-        b |= frames(p)
+    refs = [frames(p) for p in args[1:]]
+    # frames past the longest reference run have nothing to compare with
+    a = set(frames(args[0])[: max((len(r) for r in refs), default=0)])
+    b = set().union(*refs)
     extra = a - b
     covered = len(a & b) / len(b) if b else 1.0
     print(f"{len(a)} frames vs {len(b)}: {len(extra)} not in the reference, reference covered {covered:.3f}")

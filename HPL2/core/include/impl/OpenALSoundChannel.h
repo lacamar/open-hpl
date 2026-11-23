@@ -29,28 +29,28 @@ namespace hpl {
 	{
 	public:
 		cOpenALSoundChannel(iSoundData* apData, int alChannel, cSoundManager* apSoundManger)
-			: iSoundChannel(apData, apSoundManger) { OhplL5InstallLog(); mpRust = ohpl_l5_chan_new(alChannel); }
+			: iSoundChannel(apData, apSoundManger) { OhplL5InstallLog(); mpRust = ohpl_l5_chan_new(alChannel); mS = static_cast<OhplL5ChanShadow*>(ohpl_l5_chan_shadow(mpRust)); }
 		~cOpenALSoundChannel();
 
-		void Play(){ SetPaused(false); mbStopUsed = false; }
-		void Stop(){ ohpl_l5_chan_stop(mpRust); mbStopUsed = true; }
+		void Play(){ SetPaused(false); mS->mbStopUsed = false; }
+		void Stop(){ ohpl_l5_chan_stop(mpRust); mS->mbStopUsed = true; }
 
-		void SetPaused(bool b){ mbPaused = b; ohpl_l5_chan_set_paused(mpRust, b); }
-		void SetSpeed(float f){ mfSpeed = f; ohpl_l5_chan_set_pitch(mpRust, f); }
-		void SetVolume(float f){ mfVolume = f; ohpl_l5_chan_set_volume(mpRust, f); }
-		void SetLooping(bool b){ mbLooping = b; ohpl_l5_chan_set_loop(mpRust, b); }
+		void SetPaused(bool b){ mS->mbPaused = b; ohpl_l5_chan_set_paused(mpRust, b); }
+		void SetSpeed(float f){ mS->mfSpeed = f; ohpl_l5_chan_set_pitch(mpRust, f); }
+		void SetVolume(float f){ mS->mfVolume = f; ohpl_l5_chan_set_volume(mpRust, f); }
+		void SetLooping(bool b){ mS->mbLooping = b; ohpl_l5_chan_set_loop(mpRust, b); }
 		void SetPan(float){}
-		void Set3D(bool b){ mb3D = b; ohpl_l5_chan_set_spatialize(mpRust, b && !mbPositionRelative); }
+		void Set3D(bool b){ mS->mb3D = b; ohpl_l5_chan_set_spatialize(mpRust, b && !mS->mbPositionRelative); }
 
-		void SetPriority(int i){ ohpl_l5_chan_set_priority(mpRust, i, mlPriorityModifier); }
+		void SetPriority(int i){ ohpl_l5_chan_set_priority(mpRust, i, mS->mlPriorityModifier); }
 		int GetPriority(){ return ohpl_l5_chan_priority(mpRust); }
 
-		void SetPositionIsRelative(bool b){ mbPositionRelative = b; ohpl_l5_chan_set_spatialize(mpRust, mb3D && !b); }
-		void SetPosition(const cVector3f &v){ mvPosition = v; ohpl_l5_chan_set_attributes(mpRust, v.v, mvVelocity.v); }
-		void SetVelocity(const cVector3f &v){ mvVelocity = v; ohpl_l5_chan_set_attributes(mpRust, mvPosition.v, v.v); }
+		void SetPositionIsRelative(bool b){ mS->mbPositionRelative = b; ohpl_l5_chan_set_spatialize(mpRust, mS->mb3D && !b); }
+		void SetPosition(const cVector3f &v){ mS->mvPosition = v; ohpl_l5_chan_set_attributes(mpRust, v.v, mS->mvVelocity.v); }
+		void SetVelocity(const cVector3f &v){ mS->mvVelocity = v; ohpl_l5_chan_set_attributes(mpRust, mS->mvPosition.v, v.v); }
 
-		void SetMinDistance(float f){ mfMinDistance = f; }
-		void SetMaxDistance(float f){ mfMaxDistance = f; }
+		void SetMinDistance(float f){ mS->mfMinDistance = f; }
+		void SetMaxDistance(float f){ mS->mfMaxDistance = f; }
 
 		bool IsPlaying(){ return ohpl_l5_chan_is_playing(mpRust); }
 		bool IsBufferUnderrun(){ return ohpl_l5_chan_is_underrun(mpRust); }
@@ -58,7 +58,7 @@ namespace hpl {
 		double GetTotalTime(){ return ohpl_l5_chan_total(mpRust); }
 		void SetElapsedTime(double t){ ohpl_l5_chan_set_elapsed(mpRust, t); }
 
-		void SetAffectedByEnv(bool b){ iSoundChannel::SetAffectedByEnv(b); ohpl_l5_chan_set_aux_slot(mpRust, mbAffectedByEnv); }
+		void SetAffectedByEnv(bool b){ iSoundChannel::SetAffectedByEnv(b); ohpl_l5_chan_set_aux_slot(mpRust, mS->mbAffectedByEnv); }
 		void SetFiltering(bool b, int flags){ ohpl_l5_chan_set_filtering(mpRust, b, flags); }
 		void SetFilterGain(float f){ ohpl_l5_chan_set_filter_gain(mpRust, f); }
 		void SetFilterGainHF(float f){ ohpl_l5_chan_set_filter_gain_hf(mpRust, f); }

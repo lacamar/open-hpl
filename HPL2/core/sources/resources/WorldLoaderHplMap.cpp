@@ -1377,7 +1377,7 @@ namespace hpl {
 			{
 				for(int j=0; j<pSubMesh->GetColliderNum(); ++j)
 				{
-					if(pSubMesh->GetCollider(j)->mbCharCollider==false) 
+					if(pSubMesh->GetCollider(j)->IsCharCollider()==false)
 						bCreateMeshCollider = false;
 				}
 			}
@@ -1472,12 +1472,12 @@ namespace hpl {
 
 			cHplMapShape *pMapShape = hplNew(cHplMapShape, ());
 			
-			pMapShape->m_mtxOffset = pMeshCollider->m_mtxOffset;
-			pMapShape->m_mtxOffset.SetTranslation(pMeshCollider->m_mtxOffset.GetTranslation() * avScale);
-			pMapShape->mType = pMeshCollider->mType;
-			pMapShape->mvSize = pMeshCollider->mvSize * avScale;
+			pMapShape->m_mtxOffset = pMeshCollider->Offset();
+			pMapShape->m_mtxOffset.SetTranslation(pMeshCollider->Offset().GetTranslation() * avScale);
+			pMapShape->mType = pMeshCollider->Type();
+			pMapShape->mvSize = pMeshCollider->Size() * avScale;
 
-			if(pMeshCollider->mbCharCollider)
+			if(pMeshCollider->IsCharCollider())
 				vCharColliders.push_back(pMapShape);
 			else
 				vNormalColliders.push_back(pMapShape);

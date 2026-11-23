@@ -1674,7 +1674,7 @@ namespace hpl {
 		std::vector<float> vPixels;
 		VulkanReadPixelsFloat(this, *pSrc, lLevel, lLayer, vPos, vSize, vPixels);
 
-		unsigned char *pDst = pBitmap->GetData(0,0)->mpData;
+		unsigned char *pDst = pBitmap->GetData(0,0)->Data();
 		int lBpp = pBitmap->GetBytesPerPixel();
 		int lDstW = pBitmap->GetWidth();
 		for(int y=0; y<vSize.y; ++y)

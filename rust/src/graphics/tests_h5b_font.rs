@@ -94,3 +94,20 @@ fn font_table_matches_cpp() {
         assert_eq!(replay(&want), want, "font seed {s}");
     }
 }
+
+#[test]
+fn put_fills_one_slot_and_ignores_out_of_range() {
+    let mut t = FontTable::default();
+    t.set_glyphs(vec![None; 2]);
+    let g = Glyph {
+        gfx: core::ptr::null_mut(),
+        offset: [1.0, 2.0],
+        size: [3.0, 4.0],
+        advance: 5.0,
+    };
+    t.put(1, g);
+    t.put(2, g);
+    assert!(t.glyph(0).is_none());
+    assert_eq!(t.glyph(1), Some(&g));
+    assert_eq!(t.len(), 2);
+}

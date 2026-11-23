@@ -231,7 +231,7 @@ namespace hpl {
 			cEngine *pEngine = ((cHeadlessControlServer*)apCtx)->mpEngine;
 			cBitmap *pBmp = pEngine->GetGraphics()->GetLowLevel()->CopyFrameBufferToBitmap();
 			if(pBmp == NULL) return false;
-			tString sFrame = cEngineDiagnostics::GetFrameStatsJson(pBmp->GetData(0,0)->mpData, pBmp->GetWidth(), pBmp->GetHeight(),
+			tString sFrame = cEngineDiagnostics::GetFrameStatsJson(pBmp->GetData(0,0)->Data(), pBmp->GetWidth(), pBmp->GetHeight(),
 																	 pBmp->GetBytesPerPixel());
 			tString sGl = cEngineDiagnostics::PollGLErrorsJson(false);
 			hplDelete(pBmp);
@@ -258,7 +258,7 @@ namespace hpl {
 			if(pBmp->GetBytesPerPixel() == 4)
 			{
 				cBitmapData *pData = pBmp->GetData(0,0);
-				for(size_t i = 3; i < (size_t)pData->mlSize; i += 4) pData->mpData[i] = 255;
+				for(size_t i = 3; i < (size_t)pData->Size(); i += 4) pData->Data()[i] = 255;
 			}
 			cEngineDiagnostics::ApplyDisplayGamma(pBmp, pEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection());
 
@@ -272,7 +272,7 @@ namespace hpl {
 			memset(&ev, 0, sizeof(ev));
 			ev.type = SDL_TEXTINPUT;
 			memcpy(ev.text.text, apText, alLen);
-			static_cast<cLowLevelInputSDL*>(((cHeadlessControlServer*)apCtx)->mpEngine->GetInput()->GetLowLevel())->mlstInjected.push_back(ev);
+			static_cast<cLowLevelInputSDL*>(((cHeadlessControlServer*)apCtx)->mpEngine->GetInput()->GetLowLevel())->InjectEvent(ev);
 #endif
 		};
 		mRsHost.call_handler = [](void *apCtx, size_t alSlot, const uint8_t *apBlob, size_t alLen, OhplH22Sink apSink, void *apSinkCtx) {

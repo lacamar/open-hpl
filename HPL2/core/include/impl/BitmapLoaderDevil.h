@@ -39,7 +39,7 @@ namespace hpl {
 			OhplL5InstallLog();
 			cBitmap& b = *apBitmap;
 			return ohpl_l5_bitmap_save((const uint32_t*)asFile.c_str(), asFile.size(), b.GetWidth(), b.GetHeight(), b.GetDepth(),
-									   (uint8_t)b.GetBytesPerPixel(), (uint32_t)b.GetPixelFormat(), b.GetData(0,0)->mpData);
+									   (uint8_t)b.GetBytesPerPixel(), (uint32_t)b.GetPixelFormat(), b.GetData(0,0)->Data());
 		}
 
 	protected:

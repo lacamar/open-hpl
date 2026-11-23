@@ -35,15 +35,15 @@
 
 namespace hpl {
 
-	static bool L1EventFilter(void *apCtx, const SDL_Event *apEvent)
+	bool cLowLevelInputSDL::L1EventFilter(void *apCtx, const SDL_Event *apEvent)
 	{
 		cLowLevelInputSDL *pInput = static_cast<cLowLevelInputSDL*>(apCtx);
-		return pInput->mEventFilter && pInput->mEventFilter(*apEvent);
+		return pInput->mFilter && pInput->mFilter(*apEvent);
 	}
 
-	static void L1EventPush(void *apCtx, const SDL_Event *apEvent)
+	void cLowLevelInputSDL::L1EventPush(void *apCtx, const SDL_Event *apEvent)
 	{
-		static_cast<cLowLevelInputSDL*>(apCtx)->mlstEvents.push_back(*apEvent);
+		static_cast<cLowLevelInputSDL*>(apCtx)->mlstPolled.push_back(*apEvent);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -88,14 +88,18 @@ namespace hpl {
 
 	void cLowLevelInputSDL::BeginInputUpdate()
 	{
-		mlstEvents.clear();
+		mlstPolled.clear();
 		unsigned lFlags = ohpl_l1_poll(L1EventFilter, L1EventPush, this);
 		if(lFlags & kOhplL1PollPlugged) cEngine::SetDeviceWasPlugged();
 		if(lFlags & kOhplL1PollRemoved) cEngine::SetDeviceWasRemoved();
 		if(lFlags & kOhplL1PollQuit) mbQuitMessagePosted = true;
 		for(const SDL_Event &ev : mlstInjected)
-			if(ohpl_l1_filter_keeps(L1EventFilter, this, &ev)) mlstEvents.push_back(ev);
+			if(ohpl_l1_filter_keeps(L1EventFilter, this, &ev)) mlstPolled.push_back(ev);
 		mlstInjected.clear();
+		std::vector<SDL_Event> vEvents(mlstPolled.begin(), mlstPolled.end());
+		mvConverted.resize(vEvents.size());
+		ohpl_l1_convert_events(vEvents.data(), vEvents.size(), mvConverted.data());
+		mlstPolled.clear();
 	}
 
 	//-----------------------------------------------------------------------

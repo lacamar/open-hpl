@@ -86,7 +86,7 @@ namespace hpl {
 		void SetUserId(unsigned int alX){mlUserId = alX;}
 		unsigned int GetUserId(){ return mlUserId;}
 
-	protected:
+	private:
 		tString msName;
 		cResources *mpResources;
 		unsigned int mlUserId;

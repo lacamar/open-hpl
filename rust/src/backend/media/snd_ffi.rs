@@ -84,6 +84,18 @@ pub unsafe extern "C" fn ohpl_l5_chan_free(c: *mut Channel) {
     }
 }
 
+/// The Rust-owned base-class state, valid until `ohpl_l5_chan_free`.
+///
+/// # Safety
+/// `c` is live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_l5_chan_shadow(c: *mut Channel) -> *mut c_void {
+    // SAFETY: caller contract.
+    unsafe { r(c) }.map_or(core::ptr::null_mut(), |c| {
+        core::ptr::from_mut(&mut c.shadow).cast()
+    })
+}
+
 macro_rules! chan_fn {
     ($name:ident($($a:ident: $t:ty),*) $body:expr) => {
         /// # Safety

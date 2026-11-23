@@ -83,13 +83,13 @@ namespace hpl {
 		mpBugShot = NULL;
 		mlSavedTime = 0;
 
-		static_cast<cLowLevelInputSDL*>(apEngine->GetInput()->GetLowLevel())->mEventFilter =
-			[this](const SDL_Event &aEvent) { return FilterEvent(aEvent); };
+		static_cast<cLowLevelInputSDL*>(apEngine->GetInput()->GetLowLevel())->SetEventFilter(
+			[this](const SDL_Event &aEvent) { return FilterEvent(aEvent); });
 	}
 
 	cDevHud::~cDevHud()
 	{
-		static_cast<cLowLevelInputSDL*>(mpEngine->GetInput()->GetLowLevel())->mEventFilter = nullptr;
+		static_cast<cLowLevelInputSDL*>(mpEngine->GetInput()->GetLowLevel())->SetEventFilter(nullptr);
 		if(mpBugShot) hplDelete(mpBugShot);
 	}
 
@@ -138,7 +138,7 @@ namespace hpl {
 			if(pHud->mpBugShot && pHud->mpBugShot->GetBytesPerPixel() == 4)
 			{
 				cBitmapData *pData = pHud->mpBugShot->GetData(0,0);
-				for(size_t i = 3; i < (size_t)pData->mlSize; i += 4) pData->mpData[i] = 255;
+				for(size_t i = 3; i < (size_t)pData->Size(); i += 4) pData->Data()[i] = 255;
 			}
 			if(pHud->mpBugShot) cEngineDiagnostics::ApplyDisplayGamma(pHud->mpBugShot, pLowGfx->GetGammaCorrection());
 		};

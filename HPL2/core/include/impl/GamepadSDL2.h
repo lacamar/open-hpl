@@ -89,7 +89,6 @@ namespace hpl {
 		tString msGamepadName;
 
 		OhplGamepad *mpRust;
-		std::vector<OhplInputEvent> mvEvents;
 
 		SDL_JoystickID		mlInstance;
 		cLowLevelInputSDL	*mpLowLevelInputSDL;
@@ -106,7 +105,7 @@ inline int cGamepadSDL2::GetNumHats() { return 0; }
 inline int cGamepadSDL2::GetNumBalls() { return 0; }
 inline void cGamepadSDL2::ClearState() { ohpl_input_pad_clear_state(mpRust); }
 inline float cGamepadSDL2::GetTimeSinceLastActive() { return ohpl_input_pad_time_since_active(mpRust, cPlatform::GetApplicationTime()); }
-inline void cGamepadSDL2::Update() { OhplConvertEvents(mpLowLevelInputSDL->mlstEvents, mvEvents); ohpl_input_pad_update(mpRust, mvEvents.data(), mvEvents.size(), cPlatform::GetApplicationTime()); }
+inline void cGamepadSDL2::Update() { const std::vector<OhplInputEvent> &vEvents = mpLowLevelInputSDL->GetEvents(); ohpl_input_pad_update(mpRust, vEvents.data(), vEvents.size(), cPlatform::GetApplicationTime()); }
 inline bool cGamepadSDL2::HasInputUpdates() { return ohpl_input_pad_has_updates(mpRust); }
 inline cGamepadInputData cGamepadSDL2::GetInputUpdate() { cGamepadInputData input; ohpl_input_pad_pop_update(mpRust, &input); return input; }
 inline bool cGamepadSDL2::ButtonIsDown(eGamepadButton aButton) { return ohpl_input_pad_button_is_down(mpRust, aButton); }

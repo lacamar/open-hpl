@@ -204,8 +204,8 @@ namespace hpl {
 			apInfo->format = pBmp->GetPixelFormat();
 			apInfo->bytesPerPixel = pBmp->GetBytesPerPixel();
 			cBitmapData *pData = pBmp->GetData(0,0);
-			apInfo->data = pData ? pData->mpData : NULL;
-			apInfo->len = (pData && pData->mpData) ? (size_t)pData->mlSize : 0;
+			apInfo->data = pData ? pData->Data() : NULL;
+			apInfo->len = (pData && pData->Data()) ? (size_t)pData->Size() : 0;
 			apInfo->compressed = pBmp->IsCompressed();
 			pThis->mFrScratch = cString::To8Char(pBmp->GetFileName());
 			apInfo->name = OhplH3Str{reinterpret_cast<const uint8_t*>(pThis->mFrScratch.data()), pThis->mFrScratch.size()};

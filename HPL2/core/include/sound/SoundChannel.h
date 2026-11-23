@@ -29,17 +29,22 @@ namespace hpl {
 	class iSoundData;
 	class cSoundManager;
 	
+	// Rust-owned (rust/src/backend/media/snd.rs ChanShadow); layouts must match
+	struct OhplL5ChanShadow
+	{
+		float mfSpeed, mfVolume, mfPan, mfMaxDistance, mfMinDistance, mfBlockVolumeMul;
+		cVector3f mvVelocity, mvPosition, mvRelPosition;
+		int mlPriorityModifier;
+		bool mbLooping, mbPaused, mbPositionRelative, mb3D, mbBlockable, mbAffectedByEnv, mbStopUsed;
+	};
+	static_assert(sizeof(OhplL5ChanShadow) == 72, "OhplL5ChanShadow");
+
 	//--------------------------------------------
 
 	class iSoundChannel
 	{
 	public:
-		iSoundChannel(iSoundData* apData,cSoundManager* apSoundManger) :
-			mbLooping(false), mbPaused(true), mbPositionRelative(false),
-			mfSpeed(1), mfVolume(1), mfMaxDistance(0), mfMinDistance(0),
-			mvVelocity(0,0,0), mvPosition(0,0,0), mvRelPosition(0,0,0),
-			mbBlockable(false), mfBlockVolumeMul(1), mbAffectedByEnv(false),
-			mlPriorityModifier(0), mbStopUsed(false)
+		iSoundChannel(iSoundData* apData,cSoundManager* apSoundManger) : mS(NULL)
 		{
 			mpData = apData;
 			mpData->IncUserCount();
@@ -61,14 +66,14 @@ namespace hpl {
 		virtual int GetPriority()=0;
 
 		void SetPriorityModifier(int alX){ 
-			mlPriorityModifier = alX;
+			mS->mlPriorityModifier = alX;
 			SetPriority(GetPriority());
 		}
-		int GetPriorityModifier(){ return mlPriorityModifier;}
+		int GetPriorityModifier(){ return mS->mlPriorityModifier;}
 
 		virtual void SetPositionIsRelative(bool abRelative)=0;
 		virtual void SetPosition(const cVector3f &avPos)=0;
-		void SetRelPosition(const cVector3f &avPos){ mvRelPosition = avPos;}
+		void SetRelPosition(const cVector3f &avPos){ mS->mvRelPosition = avPos;}
 
 		virtual void SetVelocity(const cVector3f &avVel)=0;
 		
@@ -81,33 +86,33 @@ namespace hpl {
 		virtual double GetTotalTime()=0;
 		virtual void SetElapsedTime(double afTime)=0;
 
-		bool GetPaused(){return mbPaused;}
-		float GetSpeed(){return mfSpeed;}
-		float GetVolume (){return mfVolume;} 
-		bool GetLooping (){return mbLooping;}
-		float GetPan (){return mfPan;}
-		bool Get3D (){return mb3D;}
+		bool GetPaused(){return mS->mbPaused;}
+		float GetSpeed(){return mS->mfSpeed;}
+		float GetVolume (){return mS->mfVolume;}
+		bool GetLooping (){return mS->mbLooping;}
+		float GetPan (){return mS->mfPan;}
+		bool Get3D (){return mS->mb3D;}
 
-		bool GetStopUsed(){ return mbStopUsed;}
+		bool GetStopUsed(){ return mS->mbStopUsed;}
 
-		bool GetBlockable(){ return mbBlockable;}
-		void SetBlockable(bool abX){ mbBlockable = abX;}
-		void SetBlockVolumeMul(float afX){ mfBlockVolumeMul = afX;}
-		float GetBlockVolumeMul(){ return mfBlockVolumeMul;}
+		bool GetBlockable(){ return mS->mbBlockable;}
+		void SetBlockable(bool abX){ mS->mbBlockable = abX;}
+		void SetBlockVolumeMul(float afX){ mS->mfBlockVolumeMul = afX;}
+		float GetBlockVolumeMul(){ return mS->mfBlockVolumeMul;}
 
-		bool GetPositionIsRelative(){return mbPositionRelative;}
+		bool GetPositionIsRelative(){return mS->mbPositionRelative;}
 		
-		const cVector3f& GetRelPosition(){ return mvRelPosition;}
-		const cVector3f& GetPosition(){ return mvPosition;}
-		const cVector3f& GetVelocity (){ return mvVelocity;}
+		const cVector3f& GetRelPosition(){ return mS->mvRelPosition;}
+		const cVector3f& GetPosition(){ return mS->mvPosition;}
+		const cVector3f& GetVelocity (){ return mS->mvVelocity;}
 		
-		float GetMinDistance(){ return mfMinDistance;} 
-		float GetMaxDistance(){ return mfMaxDistance;} 
+		float GetMinDistance(){ return mS->mfMinDistance;}
+		float GetMaxDistance(){ return mS->mfMaxDistance;}
 
 		iSoundData* GetData(){return mpData;}
 
 		//virtual void SetFiltering ( iFilter* apFilter, int alFlags ) = 0;
-		virtual void SetAffectedByEnv ( bool abAffected )  { mbAffectedByEnv = abAffected; }
+		virtual void SetAffectedByEnv ( bool abAffected )  { mS->mbAffectedByEnv = abAffected; }
 		virtual void SetFiltering ( bool abEnabled, int alFlags ) = 0;
 		virtual void SetFilterGain(float afGain) =0;
 		virtual void SetFilterGainHF(float afGainHF)=0;
@@ -120,31 +125,7 @@ namespace hpl {
 		iSoundData* mpData;
 		cSoundManager* mpSoundManger;
 
-		bool mbLooping;
-		bool mbPaused;
-		bool mbPositionRelative;
-		bool mb3D;
-
-		float mfSpeed;
-		float mfVolume;
-		float mfPan;
-		float mfMaxDistance;
-		float mfMinDistance;
-
-		cVector3f mvVelocity;
-		cVector3f mvPosition;
-		cVector3f mvRelPosition;
-
-		bool mbBlockable;
-		float mfBlockVolumeMul;
-
-		bool mbAffectedByEnv;
-        
-
-		int mlPriority;
-		int mlPriorityModifier;
-
-		bool mbStopUsed;
+		OhplL5ChanShadow* mS;
 	};
 
 	typedef std::list<iSoundChannel*> tSoundChannelList;

@@ -181,13 +181,13 @@ namespace hpl {
 				{
 					cMeshCollider *pCollider = pSubMesh->GetCollider(i);
 
-					binBuff.AddShort16(pCollider->mType);
-					binBuff.AddMatrixf(pCollider->m_mtxOffset);
-					binBuff.AddVector3f(pCollider->mvSize);
-					binBuff.AddBool(pCollider->mbCharCollider);
+					binBuff.AddShort16(pCollider->Type());
+					binBuff.AddMatrixf(pCollider->Offset());
+					binBuff.AddVector3f(pCollider->Size());
+					binBuff.AddBool(pCollider->IsCharCollider());
 
-					if(gbLogMSHLoad) Log("  Collider%d: %d %s %s %d\n",i, pCollider->mType, pCollider->m_mtxOffset.ToString().c_str(), 
-																		pCollider->mvSize.ToString().c_str(), pCollider->mbCharCollider);
+					if(gbLogMSHLoad) Log("  Collider%d: %d %s %s %d\n",i, pCollider->Type(), pCollider->Offset().ToString().c_str(),
+																		pCollider->Size().ToString().c_str(), pCollider->IsCharCollider());
 				}
 			}
 

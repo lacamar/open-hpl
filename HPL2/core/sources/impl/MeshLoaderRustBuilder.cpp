@@ -162,7 +162,7 @@ namespace hpl {
 	void BSkeletonEnd(void* p, int aFileUnits)
 	{
 		Ctx& c = C(p);
-		c.skel->mbFileUnits = aFileUnits != 0;
+		c.skel->SetFileUnits(aFileUnits != 0);
 		c.mesh->SetSkeleton(c.skel);
 	}
 
@@ -208,9 +208,9 @@ namespace hpl {
 	void BSubCollider(void* p, const OhplL6Collider* apColl)
 	{
 		cMeshCollider *pCollider = C(p).sub->CreateCollider((eCollideShapeType)apColl->kind);
-		Mtx(pCollider->m_mtxOffset, apColl->m);
-		pCollider->mvSize = cVector3f(apColl->size[0], apColl->size[1], apColl->size[2]);
-		pCollider->mbCharCollider = apColl->charCollider != 0;
+		Mtx(pCollider->Offset(), apColl->m);
+		pCollider->SetSize(cVector3f(apColl->size[0], apColl->size[1], apColl->size[2]));
+		pCollider->SetCharCollider(apColl->charCollider != 0);
 	}
 
 	void BSubPairs(void* p, const OhplL6Pair* apPairs, size_t alNum)

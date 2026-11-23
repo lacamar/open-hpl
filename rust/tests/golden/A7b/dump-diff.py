@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Compare two OHPL_A7B_DUMP files. Masked: Combined* bodies (their number depends on the map cache state) and
-the sticky pod past byte 84 (attached/last body pointers) and the insanity (bytes 8..12) and slime (12..16) check counters (random draws). Rope positions agree within 0.1 (the rope settles differently between runs of the same binary: 0.05 C++ vs C++; digests skip rope lines). Everything else is exact.
+the sticky pod past byte 82 (2 uninitialised padding bytes, then the attached/last body pointers) and the insanity (bytes 8..12) and slime (12..16) check counters (random draws). Rope positions agree within 0.1 (the rope settles differently between runs of the same binary: 0.05 C++ vs C++; digests skip rope lines). Everything else is exact.
 Exit 0 when equal after masking; prints a summary line.
 `--digest FILE...` prints sha256 of the masked dump (digests.txt holds the C++ baseline's)."""
 import re
@@ -30,7 +30,7 @@ def norm(line):
         return COMB.sub("Combined", line)
     fr, name, t, act, pod, ov, rest = m.groups()
     if t == "4":
-        pod = pod[:168]
+        pod = pod[:164]
     if t == "5":
         pod = pod[:16] + "xxxxxxxx" + pod[24:]
     if t == "8":

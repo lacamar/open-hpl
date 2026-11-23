@@ -42,6 +42,14 @@ namespace hpl {
 	class cMeshCollider
 	{
 	public:
+		eCollideShapeType Type() const { return mType; }
+		const cVector3f& Size() const { return mvSize; }
+		void SetSize(const cVector3f& avSize){ mvSize = avSize; }
+		const cMatrixf& Offset() const { return m_mtxOffset; }
+		cMatrixf& Offset(){ return m_mtxOffset; }
+		bool IsCharCollider() const { return mbCharCollider; }
+		void SetCharCollider(bool abX){ mbCharCollider = abX; }
+	private:
 		eCollideShapeType mType;
 		cVector3f mvSize;
 		cMatrixf m_mtxOffset;
