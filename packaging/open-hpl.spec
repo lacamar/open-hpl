@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.4.12
+Version:        1.4.13
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,11 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Nov 23 2026 lacamar <lchlnm@pm.me> - 1.4.13-1
+- OpenAL sound, input devices and loaders as header-only facades over Rust
+- Sound channel state and texture/bitmap fields behind accessors
+- Gate fixes: sticky pod padding mask, s8d tail frames
+
 * Sun Nov 22 2026 lacamar <lchlnm@pm.me> - 1.4.12-1
 - Serializer, AI node graph, image frames in Rust
 - Input, system and engine sources in Rust
