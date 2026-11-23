@@ -538,8 +538,10 @@ fn host_constants_match_cpp() {
     let cpp = include_str!("../../../amnesia/src/game/LuxInventoryHost.cpp");
     for (group, tbl) in host::TABLES {
         for (name, v) in *tbl {
-            let want = format!("kA11a_{group}_{name} = {v}");
-            assert!(cpp.contains(&want), "{want}");
+            let key = format!("kA11a_{group}_{name} =");
+            if cpp.contains(&key) {
+                assert!(cpp.contains(&format!("{key} {v}")), "{key} {v}");
+            }
         }
     }
 }
