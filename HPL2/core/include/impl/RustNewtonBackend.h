@@ -69,30 +69,14 @@ namespace hpl {
 
 		uint64_t ohpl_ntw_create(NewtonWorld** outWorld);
 		void ohpl_ntw_destroy(uint64_t w);
-		void ohpl_ntw_simulate(uint64_t w, float timeStep);
-		void ohpl_ntw_set_max_step(uint64_t w, float step);
-		float ohpl_ntw_max_step(uint64_t w);
-		void ohpl_ntw_size(uint64_t w, bool max, cVector3f* out);
-		void ohpl_ntw_set_gravity(uint64_t w, const cVector3f* g);
-		void ohpl_ntw_gravity(uint64_t w, cVector3f* out);
-		int32_t ohpl_ntw_accuracy(uint64_t w);
 		void ohpl_ntw_set_log_debug(uint64_t w, bool on);
 		bool ohpl_ntw_log_debug(uint64_t w);
 		void ohpl_ntw_set_save_contacts(uint64_t w, bool on);
 		bool ohpl_ntw_save_contacts(uint64_t w);
-		void ohpl_ntw_set_size(uint64_t w, const float* minV, const float* maxV);
-		void ohpl_ntw_set_accuracy(uint64_t w, int32_t accuracy);
-		void ohpl_ntw_set_threads(uint64_t w, int32_t n);
-		int32_t ohpl_ntw_threads(uint64_t w);
 		void ohpl_ntw_bodies_in_aabb(uint64_t w, const float* minV, const float* maxV, size_t vec);
-		void ohpl_ntw_cast_ray(uint64_t w, size_t cb, const cVector3f* origin, const cVector3f* end,
-								bool calcDist, bool calcNormal, bool calcPoint, bool prefilter);
-		float ohpl_ntw_cast_ray_on_shape(const NewtonCollision* coll, const cMatrixf* transform, const cVector3f* origin,
-								const cVector3f* end, cVector3f* normal, bool localPositions);
 		bool ohpl_ntw_check_collision(uint64_t w, NewtonCollision* const* subsA, size_t na, NewtonCollision* const* subsB, size_t nb,
 								bool compound, const cMatrixf* mtxA, const cMatrixf* mtxB, int32_t maxPoints, bool correct,
 								bool aIsMesh, OhplL4CollPoint* out, size_t cap, int32_t* outCount);
-		void ohpl_ntw_debug_shape(const NewtonCollision* coll, const cMatrixf* transform, size_t low, size_t color);
 
 		NewtonCollision* ohpl_nts_create(uint64_t w, int32_t kind, const cVector3f* size, const cMatrixf* offset);
 		void ohpl_nts_release(uint64_t w, NewtonCollision* coll);
@@ -112,47 +96,11 @@ namespace hpl {
 		void ohpl_ntb_set_buoy_surface(uint64_t b, const cPlanef* p);
 		void ohpl_ntb_buoy(uint64_t b, hpl::OhplL4Buoy* out);
 		void ohpl_ntb_set_buoy_drag(uint64_t b, const cVector3f* prevLinear, const cVector3f* prevAngular, bool noPrevVel, float dragDensityMul);
-		void ohpl_ntb_set_auto_linear(uint64_t b, float v);
-		float ohpl_ntb_auto_linear(uint64_t b);
-		void ohpl_ntb_set_auto_angular(uint64_t b, float v);
-		float ohpl_ntb_auto_angular(uint64_t b);
-		void ohpl_ntb_set_auto_steps(uint64_t b, int32_t v);
-		int32_t ohpl_ntb_auto_steps(uint64_t b);
 		void ohpl_ntb_set_matrix(uint64_t b, const cMatrixf* m);
-		void ohpl_ntb_set_material(uint64_t b, int32_t id);
-		void ohpl_ntb_set_velocity(uint64_t b, const cVector3f* v);
-		void ohpl_ntb_velocity(uint64_t b, cVector3f* out);
-		void ohpl_ntb_set_omega(uint64_t b, const cVector3f* v);
-		void ohpl_ntb_omega(uint64_t b, cVector3f* out);
-		void ohpl_ntb_set_linear_damping(uint64_t b, float d);
-		float ohpl_ntb_linear_damping(uint64_t b);
-		void ohpl_ntb_set_angular_damping(uint64_t b, float d);
-		float ohpl_ntb_angular_damping(uint64_t b);
-		void ohpl_ntb_set_max_linear(uint64_t b, float s);
-		float ohpl_ntb_max_linear(uint64_t b);
-		void ohpl_ntb_set_max_angular(uint64_t b, float s);
-		float ohpl_ntb_max_angular(uint64_t b);
-		void ohpl_ntb_set_gravity(uint64_t b, bool on);
-		bool ohpl_ntb_gravity(uint64_t b);
-		void ohpl_ntb_inertia(uint64_t b, cVector3f* out);
-		void ohpl_ntb_set_mass(uint64_t b, const NewtonCollision* coll, float mass);
 		float ohpl_ntb_mass(uint64_t b);
-		void ohpl_ntb_set_mass_centre(uint64_t b, const cVector3f* v);
-		void ohpl_ntb_mass_centre(uint64_t b, cVector3f* out);
-		void ohpl_ntb_add_force(uint64_t b, const cVector3f* f);
-		void ohpl_ntb_add_force_at_position(uint64_t b, const cVector3f* f, const cVector3f* pos, const cMatrixf* local);
-		void ohpl_ntb_add_torque(uint64_t b, const cVector3f* t);
 		void ohpl_ntb_add_impulse(uint64_t b, const cVector3f* impulse, const cMatrixf* world);
-		void ohpl_ntb_add_impulse_at(uint64_t b, const cVector3f* impulse, const cVector3f* pos);
-		void ohpl_ntb_set_freeze(uint64_t b, int32_t state);
-		bool ohpl_ntb_enabled(uint64_t b);
-		void ohpl_ntb_set_auto_sleep(uint64_t b, bool on);
-		bool ohpl_ntb_auto_sleep(uint64_t b);
-		void ohpl_ntb_set_continuous(uint64_t b, bool on);
-		bool ohpl_ntb_continuous(uint64_t b);
 
 		int32_t ohpl_ntm_create_group(uint64_t w);
-		void ohpl_ntm_update_pair(uint64_t w, int32_t idA, int32_t idB, const OhplNewtonMatProps* a, const OhplNewtonMatProps* b, bool same);
 
 		uint64_t ohpl_ntj_create_ball(uint64_t w, const cVector3f* pivot, NewtonBody* child, NewtonBody* parent, NewtonJoint** outJoint);
 		uint64_t ohpl_ntj_create_hinge(uint64_t w, NewtonBody* child, NewtonBody* parent, size_t cpp, const OhplL4JointOps* ops,
