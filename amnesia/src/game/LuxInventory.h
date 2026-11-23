@@ -23,9 +23,6 @@
 #include "LuxBase.h"
 #include "RustLuxInventory.h"
 
-class cLuxInventory;
-void OhplA11aInvDump(cLuxInventory *apInv);
-
 class cLuxInventory : public iLuxUpdateable
 {
 public:
@@ -34,7 +31,7 @@ public:
 
 	void LoadFonts(){ ohpl_inv_load_fonts(); }
 	void Reset(){ ohpl_inv_reset(); }
-	void OnGameStart(){ ohpl_inv_on_game_start(); OhplA11aInvDump(this); }
+	void OnGameStart(){ ohpl_inv_on_game_start(); }
 	void Update(float afTimeStep){ ohpl_inv_update(afTimeStep); }
 	void OnEnterContainer(const tString& asOldContainer){ ohpl_inv_on_enter(); }
 	void OnLeaveContainer(const tString& asNewContainer){ ohpl_inv_on_leave(); }

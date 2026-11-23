@@ -21,7 +21,6 @@
 #define LUX_HINT_HANDLER_H
 
 #include "LuxBase.h"
-#include "LuxA11bDump.h"
 #include "RustLuxUiA11b.h"
 
 
@@ -40,18 +39,11 @@ public:
 		ohpl_a11b_hint_font(mlH, (size_t)LoadFont(gpBase->mpMenuCfg->GetString("Hints","DefaultFont","")));
 	}
 	void OnStart(){}
-	void Update(float afTimeStep)
-	{
-		if(OhplA11Enabled() == false) UpdateHintText(afTimeStep);
-	}
+	void Update(float afTimeStep) { ohpl_a11b_hint_on_update(mlH, afTimeStep); }
 	void LoadUserConfig() { ohpl_a11b_hint_load_user_config(mlH); }
 	void SaveUserConfig() { ohpl_a11b_hint_save_user_config(mlH); }
 	void Reset() { ohpl_a11b_hint_reset(mlH); }
-	void OnDraw(float afFrameTime)
-	{
-		if(OhplA11Enabled()) UpdateHintText(OhplA11Dt());
-		DrawHintText(afFrameTime, gpBase->mpGameHudSet);
-	}
+	void OnDraw(float afFrameTime) { ohpl_a11b_hint_on_draw(mlH, (size_t)gpBase->mpGameHudSet); }
 
 	void DrawHintText(float afFrameTime, cGuiSet *apGuiSet) { ohpl_a11b_hint_draw(mlH, (size_t)apGuiSet); }
 	void UpdateHintText(float afTimeStep) { ohpl_a11b_hint_update(mlH, afTimeStep); }

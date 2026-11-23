@@ -109,8 +109,6 @@ namespace hpl {
 		cGuiGlobalShortcut();
 	};
 
-	extern void (*gfpOhplGuiTrace)(cGuiSet*, const cGuiGfxElement*, const tWString*, const cVector3f&, const cVector2f&, const cColor&, int);
-
 	// Rust-owned (rust/src/gui/g1_set.rs): plain fields are read through P(), the rest through
 	// the ohpl_g1_set_* ABI. Widget, popup and tooltip construction and rendering stay C++
 	// (GuiSetWidgets.cpp, RustGuiG1.cpp).
@@ -149,7 +147,7 @@ namespace hpl {
 						float afRotationAngle=0,
 						bool abUseCustomPivot=false, const cVector3f& avCustomPivot=0)
 		{
-			if(gfpOhplGuiTrace) gfpOhplGuiTrace(this, apGfx, NULL, avPos, avSize, aColor, (int)aMaterial);
+			if(ohpl_a11c_trace_on) ohpl_a11c_trace_gfx(this, apGfx, &avPos, &avSize, &aColor, (int)aMaterial);
 			ohpl_g1_set_draw_gfx(this, apGfx, &avPos, &avSize, &aColor, aMaterial, afRotationAngle, abUseCustomPivot ? &avCustomPivot : NULL);
 		}
 

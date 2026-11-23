@@ -13,6 +13,7 @@ use std::cell::{Cell, RefCell};
 thread_local! {
     static SETS: Cell<(usize, usize)> = const { Cell::new((0, 0)) };
     static TEXT: RefCell<Vec<u32>> = const { RefCell::new(Vec::new()) };
+    static ROWS: RefCell<Vec<Vec<u32>>> = const { RefCell::new(Vec::new()) };
 }
 
 const MAT_ADDITIVE: i32 = 3;
@@ -321,6 +322,16 @@ fn widget_x(set: usize, a: &mut A) -> bool {
         7 => a.r = d::widget_default_font(w),
         8 => a.r = gw_kinds::ohpl_gw_label_align(w) as isize as usize,
         9 => d::widget_destroy(set, w),
+        10 => {
+            a.f[0] = gw::font_length(
+                w,
+                Vector2f {
+                    x: f(a, 0),
+                    y: f(a, 1),
+                },
+                wide(a, 0),
+            );
+        }
         _ => return false,
     }
     true
@@ -348,6 +359,47 @@ pub(super) fn call(code: i32, a: &mut A) -> bool {
         op::WIDGET_GET => widget_get(a),
         op::WIDGET_SET => widget_set(a),
         op::WIDGET_X => widget_x(set, a),
+        op::DRAW_FONT => {
+            let size = Vector2f {
+                x: f(a, 3),
+                y: f(a, 4),
+            };
+            let pos = Vector3f {
+                x: f(a, 0),
+                y: f(a, 1),
+                z: f(a, 2),
+            };
+            gw::draw_font(
+                set as *mut Set,
+                a.p[0],
+                wide(a, 0),
+                size,
+                pos,
+                col(a, 5),
+                a.i[0],
+            );
+            true
+        }
+        op::FONT_WRAP => {
+            let size = Vector2f {
+                x: f(a, 2),
+                y: f(a, 2),
+            };
+            let rows = gw::font_rows(a.p[0], f(a, 0), f(a, 1), size, wide(a, 0));
+            a.i[0] = rows.len() as i32;
+            ROWS.with(|r| *r.borrow_mut() = rows);
+            true
+        }
+        op::FONT_ROW => {
+            ROWS.with(|r| {
+                let r = r.borrow();
+                if let Some(row) = usize::try_from(a.i[0]).ok().and_then(|i| r.get(i)) {
+                    a.rw.p = row.as_ptr();
+                    a.rw.n = row.len();
+                }
+            });
+            true
+        }
         _ => false,
     }
 }

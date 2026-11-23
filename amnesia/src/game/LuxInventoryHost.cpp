@@ -2,7 +2,6 @@
 
 #include "LuxInventory.h"
 #include "LuxJournal.h"
-#include "LuxA11cDump.h"
 
 #include "LuxPlayer.h"
 #include "LuxPlayerHelpers.h"
@@ -26,10 +25,8 @@ namespace
 enum
 {
 	kA11a_Op_CFG = 1, kA11a_Op_TRANSLATE = 2, kA11a_Op_PARSE_STRING = 3, kA11a_Op_STRING_DURATION = 4, kA11a_Op_GUI_INIT = 5,
-	kA11a_Op_SET_OP = 6, kA11a_Op_SET_QUERY = 7, kA11a_Op_GFX_NEW = 8, kA11a_Op_GFX_OP = 9, kA11a_Op_DRAW_GFX = 10,
-	kA11a_Op_DRAW_FONT = 11, kA11a_Op_FONT_LOAD = 12, kA11a_Op_FONT_WRAP = 13, kA11a_Op_FONT_ROW = 14, kA11a_Op_WIDGET_NEW = 15,
-	kA11a_Op_WIDGET_CB = 16, kA11a_Op_WIDGET_GET = 17, kA11a_Op_WIDGET_SET = 18, kA11a_Op_LL = 19, kA11a_Op_SCRIPT = 20,
-	kA11a_Op_GAME = 21, kA11a_Op_ITEM_EVENT = 22, kA11a_Op_LOG = 24, kA11a_Op_WIDGET_NEW2 = 25, kA11a_Op_WIDGET_X = 26, kA11a_Op_JGAME = 27
+	kA11a_Op_SET_OP = 6, kA11a_Op_FONT_LOAD = 12, kA11a_Op_WIDGET_CB = 16, kA11a_Op_LL = 19, kA11a_Op_SCRIPT = 20,
+	kA11a_Op_GAME = 21, kA11a_Op_ITEM_EVENT = 22, kA11a_Op_LOG = 24, kA11a_Op_JGAME = 27
 };
 
 enum
@@ -39,23 +36,7 @@ enum
 
 enum
 {
-	kA11a_Set_ACTIVE = 0, kA11a_Set_DRAW_MOUSE = 1, kA11a_Set_MOUSE_MOVEMENT = 2, kA11a_Set_DRAW_FOCUS = 3, kA11a_Set_RESET_MOUSE_OVER = 4,
-	kA11a_Set_GUI_FOCUS = 5, kA11a_Set_FOCUSED_WIDGET = 6, kA11a_Set_DEFAULT_NAV = 7, kA11a_Set_VIEWPORT = 8, kA11a_Set_GAMEPAD_PRESENT = 9,
-	kA11a_Set_MOUSE_POS = 10, kA11a_Set_MOUSE_Z = 11, kA11a_Set_GET_FOCUSED = 12, kA11a_Set_POINTER_GFX = 13, kA11a_Set_CLIP_CURRENT = 14,
-	kA11a_Set_CLIP_SET = 15, kA11a_Set_CLIP_CHILD = 16
-};
-
-enum
-{
-	kA11a_Gfx_IMAGE = 0, kA11a_Gfx_RECT = 1, kA11a_Gfx_TEXTURE = 2, kA11a_Gfx_FILE = 3, kA11a_Gfx_DESTROY = 0, kA11a_Gfx_SIZES = 1, kA11a_Gfx_COLOR = 2,
-	kA11a_Gfx_ACTIVE_SIZE = 3
-};
-
-enum
-{
-	kA11a_Wd_IMAGE = 0, kA11a_Wd_DUMMY = 1, kA11a_Wd_GET_SIZE = 0, kA11a_Wd_GET_GLOBAL = 1, kA11a_Wd_GET_USER_VALUE = 2,
-	kA11a_Wd_GET_COLOR_MUL = 3, kA11a_Wd_GET_IMAGE = 4, kA11a_Wd_SET_POSITION = 0, kA11a_Wd_SET_SIZE = 1, kA11a_Wd_SET_IMAGE = 2,
-	kA11a_Wd_SET_USER_VALUE = 3, kA11a_Wd_SET_COLOR_MUL = 4, kA11a_Wd_SET_GLOBAL_UI = 5, kA11a_Wd_SET_NAV = 6, kA11a_Wd_NAV_FOCUS = 7
+	kA11a_Set_VIEWPORT = 8, kA11a_Set_GAMEPAD_PRESENT = 9
 };
 
 enum
@@ -86,17 +67,6 @@ enum
 
 enum
 {
-	kA11a_Wn_LABEL = 0, kA11a_Wn_IMAGE = 1, kA11a_Wn_DUMMY = 2, kA11a_Wn_FRAME = 3
-};
-
-enum
-{
-	kA11a_Wx_SET_VISIBLE = 0, kA11a_Wx_SET_ENABLED = 1, kA11a_Wx_SETUP_LABEL = 2, kA11a_Wx_IS_VISIBLE = 3, kA11a_Wx_HOVER_OR_FOCUS = 4,
-	kA11a_Wx_GET_TEXT = 5, kA11a_Wx_GET_FONT_SIZE = 6, kA11a_Wx_GET_FONT = 7, kA11a_Wx_GET_ALIGN = 8, kA11a_Wx_DESTROY = 9, kA11a_Wx_FONT_LENGTH = 10
-};
-
-enum
-{
 	kA11a_Jg_PROG_LOW = 3, kA11a_Jg_HINT_RECENT = 4,
 	kA11a_Jg_MAIN_BOOL_GET = 5, kA11a_Jg_MAIN_BOOL_SAVE = 6, kA11a_Jg_ACH_ARCHIVIST = 7, kA11a_Jg_GAME_NAME = 8, kA11a_Jg_DPAD_DOWN_OK = 9
 };
@@ -121,7 +91,6 @@ HostCtx *gpCtx = &gInvCtx;
 #define gpEffectProgram (gpCtx->pProgram)
 std::string gsRet;
 tWString gsRetW;
-tWStringVec gvRows;
 
 tString S(OhplA11aArgs *a, int i){ return tString((const char*)a->s[i].p, a->s[i].n); }
 tWString W(OhplA11aArgs *a, int i){ return tWString((const wchar_t*)a->w[i].p, a->w[i].n); }
@@ -360,11 +329,6 @@ void OpItemEvent(OhplA11aArgs *a)
 	}
 }
 
-void OpWidgetX(OhplA11aArgs *a)
-{
-	if(a->i[0] == kA11a_Wx_FONT_LENGTH) a->f[0] = ((iFontData*)a->p[0])->GetLength(V2(a), W(a, 0).c_str());
-}
-
 void OpJGame(OhplA11aArgs *a)
 {
 	switch(a->i[0])
@@ -402,25 +366,15 @@ void HostOp(int alOp, OhplA11aArgs *a)
 	case kA11a_Op_STRING_DURATION: a->f[0] = gpBase->mpHelpFuncs->GetStringDuration(W(a, 0)); break;
 	case kA11a_Op_GUI_INIT: OpGuiInit(a); break;
 	case kA11a_Op_SET_OP: OpSet(a); break;
-	case kA11a_Op_DRAW_FONT:
-		gpSet->DrawFont(W(a, 0), (iFontData*)a->p[0], V3(a), V2(a, 3), Col(a, 5), (eFontAlign)a->i[0]);
-		break;
 	case kA11a_Op_FONT_LOAD:
 		if(InJournal()) a->r = (uintptr_t)gpJrn->LoadFont(gpBase->mpMenuCfg->GetString("Journal", S(a, 0), ""));
 		else a->r = (uintptr_t)gpInv->LoadFont(gpBase->mpMenuCfg->GetString("Inventory", S(a, 0), ""));
 		break;
-	case kA11a_Op_FONT_WRAP:
-		gvRows.clear();
-		((iFontData*)a->p[0])->GetWordWrapRows(a->f[0], a->f[1], cVector2f(a->f[2]), W(a, 0), &gvRows);
-		a->i[0] = (int)gvRows.size();
-		break;
-	case kA11a_Op_FONT_ROW: RetW(a, gvRows[a->i[0]]); break;
 	case kA11a_Op_WIDGET_CB: ((iWidget*)a->p[0])->AddCallback(Msg(a->i[0]), (void*)a->p[1], InJournal() ? &TrampJ : &Tramp); break;
 	case kA11a_Op_LL: OpLowLevel(a); break;
 	case kA11a_Op_SCRIPT: OpScript(a); break;
 	case kA11a_Op_GAME: OpGame(a); break;
 	case kA11a_Op_ITEM_EVENT: OpItemEvent(a); break;
-	case kA11a_Op_WIDGET_X: OpWidgetX(a); break;
 	case kA11a_Op_JGAME: OpJGame(a); break;
 	case kA11a_Op_LOG:
 		if(a->i[0] == 0) Error("%s", S(a, 0).c_str()); else Warning("%s", S(a, 0).c_str());
@@ -442,116 +396,6 @@ void Host(int alOp, OhplA11aArgs *a)
 }
 
 }
-
-// OHPL_A11A_INVDUMP=<file>: item/type/combine/save-data sequence through the public inventory API
-static void OhplA11aDumpItems(FILE *f, const char *asTag, cLuxInventory *apInv, bool abEquip=true)
-{
-	fprintf(f, "%s n=%d eq=%d dis=%d msg=%d picked=%d\n", asTag, apInv->GetItemNum(), abEquip ? apInv->GetItemIndex(apInv->GetEquippedHandItem()) : -2,
-			apInv->GetDisabled(), apInv->GetMessageActive(), apInv->GetPickedItem()!=NULL);
-	for(int i=0; i<apInv->GetItemNum(); ++i)
-	{
-		cLuxInventory_Item *p = apInv->GetItem(i);
-		fprintf(f, "  [%d] name=%s type=%d sub=%s val=%s extra=%s img=%s cnt=%d amt=%g ne=%s de=%s gfx=%d\n", i, OhplInvName(p).c_str(), (int)OhplInvType(p),
-				OhplInvSubType(p).c_str(), OhplInvStringVal(p).c_str(), OhplInvExtraVal(p).c_str(), OhplInvImageName(p).c_str(), OhplInvCount(p),
-				OhplInvAmount(p), OhplInvNameEntry(p).c_str(), OhplInvDescEntry(p).c_str(), OhplInvImage(p)!=NULL);
-	}
-}
-
-void OhplA11aInvDump(cLuxInventory *apInv)
-{
-	static bool bDone = false;
-	const char *sPath = getenv("OHPL_A11A_INVDUMP");
-	if(sPath==NULL || bDone) return;
-	bDone = true;
-	FILE *f = fopen(sPath, "w");
-	if(f==NULL) return;
-
-	static const char *vTypes[] = { "Puzzle","coins","NOTE","Diary","Lantern","Health","Sanity","LampOil","Tinderbox","HandObject" };
-	for(size_t i=0; i<sizeof(vTypes)/sizeof(vTypes[0]); ++i)
-	{
-		eLuxItemType t = apInv->GetItemTypeFromString(vTypes[i]);
-		tString sName;
-		ohpl_inv_type_name(t, OhplA11aStrSink, &sName);
-		fprintf(f, "type %s -> %d name=%s count=%d max=%d pickup=%d hasmax=%d\n", vTypes[i], (int)t, sName.c_str(), ohpl_inv_type_has_count(t), ohpl_inv_type_max_count(t),
-				ohpl_inv_type_show_pickup(t), ohpl_inv_type_has_max(t));
-	}
-
-	apInv->Reset();
-	bool bRemove;
-	struct { const char *name; eLuxItemType type; const char *sub; float amount; const char *val; const char *extra; } vAdd[] = {
-		{ "puz_a", eLuxItemType_Puzzle, "agrippa_head", 0, "", "" },
-		{ "puz_b", eLuxItemType_Puzzle, "bone_saw", 1, "L02_Shipment", "x" },
-		{ "hp_a", eLuxItemType_Health, "health", 25, "", "" },
-		{ "hp_b", eLuxItemType_Health, "health", 25, "", "" },
-		{ "san_a", eLuxItemType_Sanity, "sanity", 30, "", "" },
-		{ "oil_a", eLuxItemType_LampOil, "oil", 20, "", "" },
-		{ "oil_b", eLuxItemType_LampOil, "oil", 20, "", "" },
-		{ "lantern", eLuxItemType_Lantern, "lantern", 0, "", "" },
-		{ "hand_a", eLuxItemType_HandObject, "bucket_of_tar", 0, "", "" },
-		{ "hand_b", eLuxItemType_HandObject, "bone_saw", 0, "", "" },
-		{ "tb_a", eLuxItemType_Tinderbox, "tinderbox", 0, "", "" },
-		{ "coins", eLuxItemType_Coins, "coins_large", 10, "", "" },
-	};
-	for(size_t i=0; i<sizeof(vAdd)/sizeof(vAdd[0]); ++i)
-	{
-		bRemove = false;
-		cLuxInventory_Item *pItem = apInv->AddItem(vAdd[i].name, vAdd[i].type, vAdd[i].sub, "agrippa_head.tga", vAdd[i].amount, vAdd[i].val, vAdd[i].extra, &bRemove);
-		fprintf(f, "add %s -> %d remove=%d idx=%d\n", vAdd[i].name, pItem!=NULL, bRemove, apInv->GetItemIndex(pItem));
-		OhplA11aDumpItems(f, " state", apInv);
-	}
-	for(int i=0; i<100; ++i) apInv->AddItem("hp_x", eLuxItemType_Health, "health", "agrippa_head.tga", 25, "", "", &bRemove);
-	OhplA11aDumpItems(f, "capped", apInv);
-	fprintf(f, "has lantern=%d oil=%d tinder=%d note=%d\n", apInv->HasItemOfType(eLuxItemType_Lantern), apInv->HasItemOfType(eLuxItemType_LampOil),
-			apInv->HasItemOfType(eLuxItemType_Tinderbox), apInv->HasItemOfType(eLuxItemType_Note));
-	fprintf(f, "get puz_b=%d sub bone_saw=%d nothing=%d\n", apInv->GetItemIndex(apInv->GetItem("puz_b")),
-			apInv->GetItemIndex(apInv->GetItemFromSubType("bone_saw")), apInv->GetItem("nothing")!=NULL);
-
-	apInv->SetEquippedHandItem(apInv->GetItem("hand_b"));
-	apInv->AddCombineCallback("cb1", "puz_a", "puz_b", "CombineFn", true);
-	apInv->AddCombineCallback("cb2", "hp_a", "oil_a", "OtherFn", false);
-	apInv->RemoveCombineCallback("cb2");
-	apInv->SetDisabled(true);
-	const char *vPairs[][2] = { {"puz_a","puz_b"}, {"puz_b","puz_a"}, {"hp_a","oil_a"}, {"puz_a","puz_a"} };
-	for(size_t i=0; i<4; ++i)
-	{
-		int lComb = ohpl_inv_find_combine(OhplA11aS(vPairs[i][0]), OhplA11aS(vPairs[i][1]));
-		tString sName, sFunc;
-		if(lComb >= 0) { ohpl_inv_combine_str(lComb, 0, OhplA11aStrSink, &sName); ohpl_inv_combine_str(lComb, 3, OhplA11aStrSink, &sFunc); }
-		fprintf(f, "comb %s,%s -> %s\n", vPairs[i][0], vPairs[i][1], lComb >= 0 ? (sName+","+sFunc).c_str() : "none");
-	}
-
-	cLuxInventory_SaveData save;
-	save.FromInventory(apInv);
-	fprintf(f, "save dis=%d eq=%d items=%d cbs=%d\n", save.mbDisabled, save.mlEquippedHandItem, (int)save.mvItems.Size(), (int)save.mvCombineCallbacks.Size());
-	for(size_t i=0; i<save.mvItems.Size(); ++i)
-	{
-		cLuxInventory_Item_SaveData &s = save.mvItems[i];
-		fprintf(f, "  s[%d] %s %d %s %s %s %s %g %d %s %s\n", (int)i, s.msName.c_str(), s.mlType, s.msSubType.c_str(), s.msVal.c_str(), s.msExtraVal.c_str(),
-				s.msImageFile.c_str(), s.mfAmount, s.mlCount, s.msGameNameEntry.c_str(), s.msGameDescEntry.c_str());
-	}
-	for(size_t i=0; i<save.mvCombineCallbacks.Size(); ++i)
-	{
-		cLuxCombineItemsCallback &c = save.mvCombineCallbacks[i];
-		fprintf(f, "  c[%d] %s %s %s %s %d\n", (int)i, c.msName.c_str(), c.msItemA.c_str(), c.msItemB.c_str(), c.msFunction.c_str(), c.mbAutoDestroy);
-	}
-
-	apInv->Reset();
-	OhplA11aDumpItems(f, "reset", apInv);
-	save.ToInventory(NULL, apInv);
-	OhplA11aDumpItems(f, "restored", apInv, false);
-	fprintf(f, "restored comb=%d\n", ohpl_inv_find_combine(OhplA11aS("puz_b"), OhplA11aS("puz_a"))>=0);
-	apInv->RemoveItem(apInv->GetItem("hp_a"));
-	apInv->RemoveItem("puz_a");
-	apInv->RemoveItem("oil_a");
-	apInv->RemoveItem("missing");
-	apInv->RemoveItemOfType(eLuxItemType_Sanity);
-	OhplA11aDumpItems(f, "removed", apInv, false);
-
-	apInv->Reset();
-	apInv->LoadScript();
-	fclose(f);
-}
-
 
 cLuxInventory::cLuxInventory() : iLuxUpdateable("LuxInventory")
 {

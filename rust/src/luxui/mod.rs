@@ -3,13 +3,14 @@
 //! every call that can re-enter the game comes back as an ordered [`event::Ev`].
 
 pub mod commentary;
+mod dump;
+pub(crate) use dump::trace_gfx;
 pub mod event;
 mod ffi;
 pub mod hint;
 pub mod inventory;
 pub mod itemtype;
 pub mod journal;
-pub mod keyentry;
 pub mod message;
 #[cfg(test)]
 mod tests;
