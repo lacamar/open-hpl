@@ -2,7 +2,14 @@ use super::own::{Data, Handler};
 
 fn handler() -> Handler {
     // SAFETY: the settings tables never touch the host table, the lowlevel or the resources.
-    unsafe { Handler::new(std::ptr::null(), std::ptr::null_mut(), std::ptr::null_mut()) }
+    unsafe {
+        Handler::new(
+            std::ptr::null(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            None,
+        )
+    }
 }
 
 #[test]

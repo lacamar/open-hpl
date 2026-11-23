@@ -1,13 +1,14 @@
 //! C ABI of the owned sound objects, mirrored in `HPL2/core/include/sound/RustSound.h`.
 //! `cSoundEntry*` is a `*mut Rec`, the data record a `*mut Data`, the sound entity a `*mut Entity`.
 
-use super::channel::{CChannel, Channel};
+use super::channel::{CChannel, Channel, OalChan};
 use super::music::{Music, MusicHost, Song};
 use super::own::{
     Data, Entity, Handler, PlayArgs, Rec, SndHost, ent_fade_in, ent_fade_out, ent_free, ent_play,
     ent_stop, ent_update, register_data, register_entity, set_handler, set_lazy_load,
     unregister_data,
 };
+use crate::backend::media::oal::{Oal, RealOal};
 use crate::engine::multi_settings::Entry as GsEntry;
 use crate::string_ffi::units;
 use crate::types::Vector3f;
@@ -37,7 +38,9 @@ pub unsafe extern "C" fn ohpl_sndh_new(
     resources: *mut c_void,
 ) -> *mut Handler {
     // SAFETY: caller contract.
-    let h = Box::into_raw(Box::new(unsafe { Handler::new(host, lowlevel, resources) }));
+    let h = Box::into_raw(Box::new(unsafe {
+        Handler::new(host, lowlevel, resources, Some(&RealOal))
+    }));
     set_handler(h);
     h
 }
@@ -329,6 +332,40 @@ pub unsafe extern "C" fn ohpl_sndent_id(e: *mut Rec) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_sndent_channel(e: *mut Rec) -> *mut c_void {
     r!(e).channel
+}
+
+/// The `iSoundData` a channel plays.
+///
+/// # Safety
+/// `c` is a live channel.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_sndch_data(c: *mut OalChan) -> *mut c_void {
+    r!(c).data()
+}
+
+/// # Safety
+/// `c` is a live channel.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_sndch_stop(c: *mut OalChan) {
+    // SAFETY: caller contract.
+    unsafe { CChannel::new(c.cast()) }.stop();
+}
+
+/// # Safety
+/// `c` is a live channel.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_sndch_set_elapsed(c: *mut OalChan, time: f64) {
+    // SAFETY: caller contract.
+    unsafe { CChannel::new(c.cast()) }.set_elapsed_time(time);
+}
+
+/// Debug read of a channel; codes are `OhplSndCh` in RustSound.h.
+///
+/// # Safety
+/// `c` is a live channel.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_sndch_read(c: *mut OalChan, what: i32) -> f64 {
+    r!(c).read(what)
 }
 
 /// Sets one field: 0 volume mul (also its fade target), 1 speed mul (same), 2 default volume,
@@ -719,6 +756,7 @@ pub struct SongRec {
 struct CMusicHost<'a> {
     host: &'a SndHost,
     res: *mut c_void,
+    oal: &'static dyn Oal,
 }
 
 impl<'a> MusicHost for CMusicHost<'a> {
@@ -743,15 +781,18 @@ impl<'a> MusicHost for CMusicHost<'a> {
         unsafe {
             let rec = Box::from_raw(song.cast::<SongRec>());
             if !rec.song.stream.is_null() {
-                (self.host.delete_channel)(rec.song.stream);
+                OalChan::free(rec.song.stream);
             }
         }
     }
 
     fn create_stream(&mut self, name: &[u8], looping: bool) -> Option<*mut c_void> {
+        let mut data = std::ptr::null_mut();
         // SAFETY: table contract.
-        let s = unsafe { (self.host.create_stream)(self.res, name.as_ptr(), name.len(), looping) };
-        (!s.is_null()).then_some(s)
+        let handle = unsafe {
+            (self.host.create_stream)(self.res, name.as_ptr(), name.len(), looping, &raw mut data)
+        };
+        (handle >= 0).then(|| OalChan::into_raw(self.oal, handle, data, self.host.release_data))
     }
 
     fn set_song_name(&mut self, song: *mut Song, name: &[u8]) {
@@ -765,8 +806,8 @@ impl<'a> MusicHost for CMusicHost<'a> {
     }
 
     unsafe fn stream(&self, stream: *mut c_void) -> CChannel<'a> {
-        // SAFETY: the table's channel ops are static; `stream` is live per the trait contract.
-        unsafe { CChannel::new(&*self.host.channel, stream) }
+        // SAFETY: `stream` is a live `OalChan` per the trait contract.
+        unsafe { CChannel::new(stream) }
     }
 }
 
@@ -775,6 +816,7 @@ pub struct MusicOwner {
     music: Music,
     host: *const SndHost,
     res: *mut c_void,
+    oal: &'static dyn Oal,
 }
 
 static MUSIC: AtomicPtr<MusicOwner> = AtomicPtr::new(std::ptr::null_mut());
@@ -823,6 +865,7 @@ impl MusicOwner {
             CMusicHost {
                 host,
                 res: self.res,
+                oal: self.oal,
             },
         )
     }
@@ -836,6 +879,7 @@ pub unsafe extern "C" fn ohpl_music_new(host: *const SndHost, res: *mut c_void) 
         music: Music::new(),
         host,
         res,
+        oal: &RealOal,
     }));
     MUSIC.store(m, Ordering::Release);
     m

@@ -268,7 +268,7 @@ static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRe
 	for (size_t i = 0; i < pSoundHandler->GetEntryNum(); ++i)
 		vEntries.push_back(pSoundHandler->GetEntryAt(i));
 	for (cSoundEntry *pEntry : vEntries)
-		mapCount[pEntry->GetName() + (pEntry->GetChannel()->GetLooping() ? " (loop)" : "")]++;
+		mapCount[pEntry->GetName() + (ohpl_sndch_read(pEntry->GetChannel(), OhplSndCh_Looping) != 0 ? " (loop)" : "")]++;
 	tString sEntries;
 	for (auto &it : mapCount)
 		sEntries += cString::ToString(it.second) + " " + it.first + "\n";
@@ -276,13 +276,16 @@ static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRe
 	tString sDetail;
 	for (cSoundEntry *pEntry : vEntries)
 	{
-		iSoundChannel *pCh = pEntry->GetChannel();
-		float fDist = pCh->Get3D() ? cMath::Vector3Dist(pCh->GetPositionIsRelative() ? vListener + pCh->GetRelPosition() : pCh->GetPosition(), vListener) : 0;
-		sDetail += pEntry->GetName() + "|" + (pCh->GetData() ? pCh->GetData()->GetName() : "") + "|" + cString::ToString(pEntry->GetType()) + "|" +
-				   cString::ToString(pCh->GetVolume()) + "|" + cString::ToString(pEntry->GetVolumeMul()) + "|" + (pCh->GetLooping() ? "1" : "0") + "|" +
-				   (pCh->Get3D() ? "1" : "0") + "|" + cString::ToString(fDist) + "|" + cString::ToString(pCh->GetMinDistance()) + "|" +
-				   cString::ToString(pCh->GetMaxDistance()) + "|" + cString::ToString((float)pCh->GetElapsedTime()) + "|" +
-				   cString::ToString((float)pCh->GetTotalTime()) + "|" + (pCh->GetPaused() ? "1" : "0") + "\n";
+		void *pCh = pEntry->GetChannel();
+		auto Rd = [pCh](int alWhat){ return (float)ohpl_sndch_read(pCh, alWhat); };
+		auto Vec = [&Rd](int alFirst){ return cVector3f(Rd(alFirst), Rd(alFirst + 1), Rd(alFirst + 2)); };
+		iSoundData *pData = static_cast<iSoundData*>(ohpl_sndch_data(pCh));
+		float fDist = Rd(OhplSndCh_Is3D) != 0 ? cMath::Vector3Dist(Rd(OhplSndCh_Relative) != 0 ? vListener + Vec(OhplSndCh_RelPos) : Vec(OhplSndCh_Pos), vListener) : 0;
+		sDetail += pEntry->GetName() + "|" + (pData ? pData->GetName() : "") + "|" + cString::ToString(pEntry->GetType()) + "|" +
+				   cString::ToString(Rd(OhplSndCh_Volume)) + "|" + cString::ToString(pEntry->GetVolumeMul()) + "|" + (Rd(OhplSndCh_Looping) != 0 ? "1" : "0") + "|" +
+				   (Rd(OhplSndCh_Is3D) != 0 ? "1" : "0") + "|" + cString::ToString(fDist) + "|" + cString::ToString(Rd(OhplSndCh_MinDist)) + "|" +
+				   cString::ToString(Rd(OhplSndCh_MaxDist)) + "|" + cString::ToString(Rd(OhplSndCh_Elapsed)) + "|" +
+				   cString::ToString(Rd(OhplSndCh_Total)) + "|" + (Rd(OhplSndCh_Paused) != 0 ? "1" : "0") + "\n";
 	}
 	aResp.Set("count", (int)vEntries.size());
 	aResp.Set("entries", sEntries);
@@ -316,9 +319,9 @@ static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRe
 	aResp.Set("music", pMusic->GetCurrentSongName());
 	aResp.Set("music_volume", pMusic->GetCurrentSongVolume());
 	if (cMusicEntry *pSong = pMusic->GetCurrentSong())
-		aResp.Set("music_stream", cString::ToString(pSong->mpStream->GetVolume()) + " " + cString::ToString((float)pSong->mpStream->GetElapsedTime()) + "/" +
-									  cString::ToString((float)pSong->mpStream->GetTotalTime()) + (pSong->mpStream->IsPlaying() ? "" : " stopped") +
-									  (pSong->mpStream->GetPaused() ? " paused" : ""));
+		aResp.Set("music_stream", cString::ToString((float)ohpl_sndch_read(pSong->mpStream, OhplSndCh_Volume)) + " " + cString::ToString((float)ohpl_sndch_read(pSong->mpStream, OhplSndCh_Elapsed)) + "/" +
+									  cString::ToString((float)ohpl_sndch_read(pSong->mpStream, OhplSndCh_Total)) + (ohpl_sndch_read(pSong->mpStream, OhplSndCh_Playing) != 0 ? "" : " stopped") +
+									  (ohpl_sndch_read(pSong->mpStream, OhplSndCh_Paused) != 0 ? " paused" : ""));
 }
 
 static void cSomaBase_HeadlessCmd_StubReport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)

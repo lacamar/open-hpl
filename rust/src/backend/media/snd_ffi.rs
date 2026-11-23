@@ -4,7 +4,7 @@
 use super::env::{self, EnvParams};
 use super::log::{self, Level, c_bytes};
 use super::oal::RealOal;
-use super::snd::{Channel, Data, Device, InitArgs, Low, enumerate_devices, first_default};
+use super::snd::{Data, Device, InitArgs, Low, enumerate_devices, first_default};
 use crate::math::{IDENTITY, cross3, matrix_inverse};
 use crate::string_ffi::units;
 use crate::types::{Matrixf, Vector3f};
@@ -67,123 +67,6 @@ pub unsafe extern "C" fn ohpl_l5_data_free(d: *mut Data) {
         // SAFETY: caller contract.
         unsafe { Box::from_raw(d) }.release(&RealOal);
     }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_l5_chan_new(handle: i32) -> *mut Channel {
-    Box::into_raw(Box::new(Channel::new(&RealOal, handle)))
-}
-
-/// # Safety
-/// `c` from `ohpl_l5_chan_new`, freed once.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_l5_chan_free(c: *mut Channel) {
-    if !c.is_null() {
-        // SAFETY: caller contract.
-        unsafe { Box::from_raw(c) }.destroy(&RealOal);
-    }
-}
-
-/// The Rust-owned base-class state, valid until `ohpl_l5_chan_free`.
-///
-/// # Safety
-/// `c` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_l5_chan_shadow(c: *mut Channel) -> *mut c_void {
-    // SAFETY: caller contract.
-    unsafe { r(c) }.map_or(core::ptr::null_mut(), |c| {
-        core::ptr::from_mut(&mut c.shadow).cast()
-    })
-}
-
-macro_rules! chan_fn {
-    ($name:ident($($a:ident: $t:ty),*) $body:expr) => {
-        /// # Safety
-        /// `c` is live.
-        #[unsafe(no_mangle)]
-        pub unsafe extern "C" fn $name(c: *mut Channel $(, $a: $t)*) {
-            // SAFETY: caller contract.
-            if let Some(c) = unsafe { r(c) } {
-                let f: fn(&mut Channel $(, $t)*) = $body;
-                f(c $(, $a)*);
-            }
-        }
-    };
-}
-
-chan_fn!(ohpl_l5_chan_stop() | c | c.stop(&RealOal));
-chan_fn!(ohpl_l5_chan_set_paused(p: bool) |c, p| c.set_paused(&RealOal, p));
-chan_fn!(ohpl_l5_chan_set_pitch(v: f32) |c, v| c.set_pitch(&RealOal, v));
-chan_fn!(ohpl_l5_chan_set_volume(v: f32) |c, v| c.set_volume(&RealOal, v));
-chan_fn!(ohpl_l5_chan_set_loop(l: bool) |c, l| c.set_loop(&RealOal, l));
-chan_fn!(ohpl_l5_chan_set_spatialize(v: bool) |c, v| c.set_spatialize(&RealOal, v));
-chan_fn!(ohpl_l5_chan_set_elapsed(t: f64) |c, t| c.set_elapsed(&RealOal, t));
-chan_fn!(ohpl_l5_chan_set_priority(x: i32, modifier: i32) |c, x, m| c.set_priority(&RealOal, x, m));
-chan_fn!(ohpl_l5_chan_set_aux_slot(affected: bool) |c, a| c.set_aux_send_slot(&RealOal, a));
-chan_fn!(ohpl_l5_chan_set_filtering(on: bool, flags: i32) |c, on, f| c.set_filtering(&RealOal, on, f));
-chan_fn!(ohpl_l5_chan_set_filter_gain(g: f32) |c, g| c.set_filter_gain(&RealOal, g));
-chan_fn!(ohpl_l5_chan_set_filter_gain_hf(g: f32) |c, g| c.set_filter_gain_hf(&RealOal, g));
-chan_fn!(ohpl_l5_chan_set_filter_gain_lf(g: f32) |c, g| c.set_filter_gain_lf(&RealOal, g));
-chan_fn!(ohpl_l5_chan_set_env_send_gain(g: f32) |c, g| c.set_env_send_gain(&RealOal, g));
-
-/// # Safety
-/// `c` is live; `pos` and `vel` point to three floats each.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_l5_chan_set_attributes(
-    c: *mut Channel,
-    pos: *const f32,
-    vel: *const f32,
-) {
-    // SAFETY: caller contract.
-    unsafe {
-        if let (Some(c), Some(p), Some(v)) = (
-            r(c),
-            pos.cast::<[f32; 3]>().as_ref(),
-            vel.cast::<[f32; 3]>().as_ref(),
-        ) {
-            c.set_attributes(&RealOal, p, v);
-        }
-    }
-}
-
-/// # Safety
-/// `c` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_l5_chan_is_playing(c: *mut Channel) -> bool {
-    // SAFETY: caller contract.
-    unsafe { r(c) }.is_some_and(|c| c.is_playing(&RealOal))
-}
-
-/// # Safety
-/// `c` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_l5_chan_is_underrun(c: *mut Channel) -> bool {
-    // SAFETY: caller contract.
-    unsafe { r(c) }.is_some_and(|c| c.is_buffer_underrun(&RealOal))
-}
-
-/// # Safety
-/// `c` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_l5_chan_elapsed(c: *mut Channel) -> f64 {
-    // SAFETY: caller contract.
-    unsafe { r(c) }.map_or(0.0, |c| c.elapsed(&RealOal))
-}
-
-/// # Safety
-/// `c` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_l5_chan_total(c: *mut Channel) -> f64 {
-    // SAFETY: caller contract.
-    unsafe { r(c) }.map_or(0.0, |c| c.total(&RealOal))
-}
-
-/// # Safety
-/// `c` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_l5_chan_priority(c: *mut Channel) -> i32 {
-    // SAFETY: caller contract.
-    unsafe { r(c) }.map_or(0, |c| c.priority(&RealOal) as i32)
 }
 
 #[unsafe(no_mangle)]

@@ -26,7 +26,6 @@
 #include "sound/SoundEntityData.h"
 #include "system/LowLevelSystem.h"
 #include "sound/SoundHandler.h"
-#include "sound/SoundChannel.h"
 #include "resources/RustResMgr.h"
 
 namespace hpl {

@@ -150,7 +150,6 @@
 
 
 #include "sound/Sound.h"
-#include "sound/SoundChannel.h"
 #include "sound/SoundData.h"
 #include "sound/SoundEnvironment.h"
 #include "sound/SoundEntityData.h"
