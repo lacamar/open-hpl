@@ -51,8 +51,6 @@ iTexture* cLuxPostEffect_Insanity::RenderEffect(iTexture *apInputTexture, iFrame
 {
 	cVector2f vScreenSize(0);
 	if(mpProgram) vScreenSize = mpLowLevelGraphics->GetScreenSizeFloat();
-	if(OhplA12Enabled() && OhplA12Frame() >= 10)
-		OhplA12Log("p_in %s %s %d", OhplA12F(vScreenSize.x).c_str(), OhplA12F(vScreenSize.y).c_str(), mpProgram != NULL ? 1 : 0);
 	ohpl_a12a_ins_render(mlH, vScreenSize.x, vScreenSize.y, mpProgram != NULL, (size_t)this, (size_t)apInputTexture, (size_t)apFinalTempBuffer);
 
 	return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
@@ -66,8 +64,6 @@ void cLuxPostEffect_Insanity::Replay(const OhplGa9bPOp *apOps, size_t alOps, iTe
 	for(size_t n=0; n<alOps; ++n)
 	{
 		const OhplGa9bPOp &op = apOps[n];
-		if(OhplA12Enabled() && OhplA12Frame() >= 10)
-			OhplA12Log("P %u %d %d %s %s", op.kind, op.a, op.b, op.kind == kOhplGa9bPFloat && (op.b == 1 || op.b == 3) ? "~" : OhplA12F(op.f[0]).c_str(), OhplA12F(op.f[1]).c_str());
 		switch(op.kind)
 		{
 		case kOhplGa9bPFlatProjection:		mpCurrentComposite->SetFlatProjection(); break;

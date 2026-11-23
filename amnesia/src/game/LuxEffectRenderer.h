@@ -22,7 +22,6 @@
 
 #include "LuxBase.h"
 #include "RustLuxFxA12a.h"
-#include "LuxA12aDump.h"
 
 // The object lists, flash oscillation and pass plans live in Rust (rust/src/luxfx/rend.rs); this
 // shell owns the GPU programs and buffers and replays the plans.
@@ -37,7 +36,7 @@ public:
 
 	void Update(float afTimeStep)
 	{
-		if(OhplA12Enabled() && OhplA12InTick() == false) return;
+		if(ohpl_a12a_dump_gated()) return;
 		ohpl_a12a_rend_update(mlH, afTimeStep);
 	}
 
