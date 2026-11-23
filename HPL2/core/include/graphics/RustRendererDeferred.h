@@ -212,7 +212,6 @@ namespace hpl {
 	{
 		OhplDrPlan* ohpl_dr_plan_copy_accum(const OhplDrCopyIn* in, const OhplDrFilmGrain* grain);
 		OhplDrPlan* ohpl_dr_plan_setup_gbuffer(bool gbuffer64bit, int linearDepthIdx);
-		OhplDrPlan* ohpl_dr_plan_pass(uint32_t kind);
 		OhplDrPlan* ohpl_dr_plan_objects(OhplDrObjectsIn in);
 		bool ohpl_dr_plan_next(OhplDrPlan*, OhplDrOp* out);
 		void ohpl_dr_plan_feed_bool(OhplDrPlan*, bool v);
@@ -225,7 +224,6 @@ namespace hpl {
 		void ohpl_dr_plan_free(OhplDrPlan*);
 
 		void ohpl_dr_film_grain_init(OhplDrFilmGrain* out);
-		int ohpl_dr_cdiv(int a, int b);
 		void ohpl_dr_far_plane(float fov, float aspect, float far, OhplDrFarPlane* out);
 		void ohpl_dr_accum_quad_uv(OhplVec2l rtPos, OhplVec2l rtSize, OhplVec2f screen, bool rect, OhplVec2f* outMin,
 								   OhplVec2f* outMax);
