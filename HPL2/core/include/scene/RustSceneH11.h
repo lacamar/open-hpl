@@ -54,34 +54,7 @@ namespace hpl {
 
 extern "C" {
 
-void ohpl_h11_mesh_ctl_init(OhplH11MeshCtl*);
-void ohpl_h11_mesh_physics_set(OhplH11MeshCtl*, bool);
-bool ohpl_h11_mesh_physics_fade(OhplH11MeshCtl*, float);
-uint32_t ohpl_h11_mesh_graphics_gate(OhplH11MeshCtl*, bool, int32_t);
-bool ohpl_h11_sub_skin_gate(bool*, int32_t*, int32_t, bool);
-bool ohpl_h11_sub_static_null(int32_t*, const cMatrixf*);
 bool ohpl_h11_rest_pose_from_map(const float*, int32_t, const cMatrixf*, const float*, cMatrixf*, int32_t);
-void ohpl_h11_transform_from_skeleton(const cMatrixf*, const cMatrixf*, cMatrixf*, cVector3f*, float*);
-bool ohpl_h11_bounds_union(const cVector3f*, const cVector3f*, int32_t, cVector3f*, cVector3f*);
-bool ohpl_h11_light_is_lit(const cColor*, float, bool);
-bool ohpl_h11_light_is_visible(bool, float, bool);
-void ohpl_h11_light_mask_bounds(const cVector3f*, const cVector3f*, const cVector3f*, const cVector3f*, cVector3f*, cVector3f*);
-void ohpl_h11_spot_init(OhplH11SpotCtl*);
-bool ohpl_h11_spot_view_stale(OhplH11SpotCtl*, int32_t);
-bool ohpl_h11_spot_projection_stale(OhplH11SpotCtl*);
-bool ohpl_h11_spot_view_proj_stale(const OhplH11SpotCtl*, int32_t);
-void ohpl_h11_spot_view_proj_done(OhplH11SpotCtl*, int32_t);
-bool ohpl_h11_spot_frustum_stale(const OhplH11SpotCtl*, int32_t);
-void ohpl_h11_spot_frustum_done(OhplH11SpotCtl*, int32_t);
-OhplH11ShadowCache* ohpl_h11_shadow_cache_new();
-void ohpl_h11_shadow_cache_free(OhplH11ShadowCache*);
-void ohpl_h11_shadow_cache_add(OhplH11ShadowCache*, uintptr_t, int32_t);
-bool ohpl_h11_shadow_cache_valid(const OhplH11ShadowCache*, uintptr_t, int32_t);
-bool ohpl_h11_shadow_cache_unchanged(const OhplH11ShadowCache*, const OhplH11Caster*, int32_t);
-void ohpl_h11_shadow_cache_set(OhplH11ShadowCache*, const OhplH11Caster*, int32_t);
-void ohpl_h11_shadow_cache_clear(OhplH11ShadowCache*);
-int32_t ohpl_h11_shadow_cache_len(const OhplH11ShadowCache*);
-void ohpl_h11_fog_bounds_size(const cVector3f*, cVector3f*);
 
 }
 }
