@@ -28,11 +28,6 @@ struct OhplResMapEntry
 };
 
 extern "C" {
-	OhplFileSearcher* ohpl_fs_new();
-	void ohpl_fs_free(OhplFileSearcher*);
-	int64_t ohpl_fs_add(OhplFileSearcher*, const char* key, size_t kn, const uint32_t* path, size_t pn, bool (*same_as)(void*, uint32_t), void* ctx);
-	void ohpl_fs_clear(OhplFileSearcher*);
-	int64_t ohpl_fs_get(const OhplFileSearcher*, const char* name, size_t n, int* equal_count);
 
 	OhplResMap* ohpl_resmap_new();
 	void ohpl_resmap_free(OhplResMap*);
@@ -41,8 +36,6 @@ extern "C" {
 	void ohpl_resmap_insert(OhplResMap*, unsigned int hash, void* res);
 	bool ohpl_resmap_remove(OhplResMap*, unsigned int hash, void* res);
 	void* ohpl_resmap_find(const OhplResMap*, unsigned int hash, bool (*matches)(void*, void*), void* ctx);
-	void ohpl_resmap_eviction_order(const OhplResMap*, void (*key)(void*, void*, unsigned int*, unsigned long*), void* kctx,
-									void (*sink)(void*, void* const*, size_t), void* sctx);
 
 	OhplExtList* ohpl_exts_new();
 	void ohpl_exts_free(OhplExtList*);
@@ -56,7 +49,6 @@ extern "C" {
 	void ohpl_loaders_add(OhplLoaderTable*, void* loader, const OhplExtList* exts);
 	size_t ohpl_loaders_len(const OhplLoaderTable*);
 	void* ohpl_loaders_at(const OhplLoaderTable*, size_t i);
-	void* ohpl_loaders_find(const OhplLoaderTable*, const char* ext, size_t n);
 
 	void ohpl_resmeta_init(OhplResMeta*, unsigned int prio, unsigned long now);
 	void ohpl_resmeta_inc_user(OhplResMeta*, unsigned long now);
