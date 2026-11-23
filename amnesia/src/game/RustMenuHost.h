@@ -60,6 +60,5 @@ extern "C"
 
 void OhplA10aHostInit();
 void OhplA9RegisterHost();
-void OhplA10aDumpWindow(const char* asName, iWidget* apRoot);
 
 #endif

@@ -1,38 +1,6 @@
 //! C ABI of the main menu shell, mirrored in `amnesia/src/game/RustLuxMenuA9b.h`.
 
-use super::{DumpInfo, lookup};
-
-#[repr(C)]
-#[derive(Clone, Copy, Default)]
-pub struct State {
-    pub set: usize,
-    pub first_label: usize,
-    pub camera: usize,
-    pub world: usize,
-    pub logo: usize,
-    pub top_alpha: f32,
-    pub fade_alpha: f32,
-    pub logo_size: [f32; 2],
-    pub window: i32,
-    pub top_visible: i32,
-}
-
-impl From<DumpInfo> for State {
-    fn from(d: DumpInfo) -> State {
-        State {
-            set: d.set,
-            first_label: d.first_label,
-            camera: d.camera,
-            world: d.world,
-            logo: d.logo,
-            top_alpha: d.top_alpha,
-            fade_alpha: d.fade_alpha,
-            logo_size: d.logo_size,
-            window: d.window,
-            top_visible: i32::from(d.top_visible),
-        }
-    }
-}
+use super::lookup;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_a9b_new() -> u64 {
@@ -48,13 +16,6 @@ pub extern "C" fn ohpl_a9b_free(me: u64) {
 pub extern "C" fn ohpl_a9b_load_fonts(me: u64) {
     if let Some(m) = lookup(me) {
         m.load_fonts();
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a9b_create_gui(me: u64) {
-    if let Some(m) = lookup(me) {
-        m.create_gui();
     }
 }
 
@@ -133,33 +94,18 @@ pub extern "C" fn ohpl_a9b_set(me: u64) -> usize {
     lookup(me).map_or(0, |m| m.set_ptr())
 }
 
-/// # Safety
-/// `out` is null or points at a writable `State`.
+/// `OHPL_A10A_DUMP` hook: dumps the options and key config windows.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a9b_state(me: u64, out: *mut State) {
-    let (Some(m), false) = (lookup(me), out.is_null()) else {
-        return;
-    };
-    // SAFETY: non-null and writable per the contract.
-    unsafe { out.write(m.dump_info().into()) };
-}
-
-/// Builds (`begin`) or hides a window's widgets for the `OHPL_A10A_DUMP` hook; returns the widget.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a9b_dump_window(me: u64, win: i32, begin: i32) -> usize {
-    lookup(me).map_or(0, |m| m.window_dump(win, begin != 0))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a9b_dump_background(me: u64) {
+pub extern "C" fn ohpl_a9b_dump_a10a(me: u64) {
     if let Some(m) = lookup(me) {
-        m.dump_background();
+        m.dump_a10a();
     }
 }
 
+/// `OHPL_A9_MENUDUMP` hook: steps the menu and dumps its widgets.
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a9b_dump_end(me: u64) {
+pub extern "C" fn ohpl_a9b_dump_a9(me: u64) {
     if let Some(m) = lookup(me) {
-        m.dump_end();
+        m.dump_a9();
     }
 }

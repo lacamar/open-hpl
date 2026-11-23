@@ -28,7 +28,6 @@ static bool AB(const OhplA10bArg &a) { return a.v != 0; }
 static tString AS(const OhplA10bArg &a) { return tString((const char*)(uintptr_t)a.v, a.n); }
 static tWString AW(const OhplA10bArg &a) { return a.n ? tWString((const wchar_t*)(uintptr_t)a.v, a.n) : tWString(); }
 
-static cVector3f V3(const OhplA10bArg *a, int i) { return cVector3f(AF(a[i]), AF(a[i+1]), AF(a[i+2])); }
 static cVector2f V2(const OhplA10bArg *a, int i) { return cVector2f(AF(a[i]), AF(a[i+1])); }
 static cColor C4(const OhplA10bArg *a, int i) { return cColor(AF(a[i]), AF(a[i+1]), AF(a[i+2]), AF(a[i+3])); }
 
@@ -114,18 +113,7 @@ static void HostOp(cOhplA10bShell *s, OhplA10bCall *c)
 	case kOhplA10b_VIEWPORT_VISIBLE: ((cViewport*)AP(a[0]))->SetVisible(AB(a[1])); break;
 	case kOhplA10b_VIEWPORT_ADD_SET: ((cViewport*)AP(a[0]))->AddGuiSet((cGuiSet*)AP(a[1])); break;
 	case kOhplA10b_TEX_2D: SetP(c, pRes->GetTextureManager()->Create2D(AS(a[0]), false, eTextureType_Rect)); break;
-	case kOhplA10b_DRAW_FONT:
-		((cGuiSet*)AP(a[0]))->DrawFont(AW(a[1]), (iFontData*)AP(a[2]), V3(a,3), V2(a,6), C4(a,8), (eFontAlign)AI(a[12]));
-		break;
 	case kOhplA10b_FONT_LOAD: SetP(c, s->mpOwner->LoadFont(AS(a[0]))); break;
-	case kOhplA10b_FONT_WRAP:
-	{
-		tWStringVec vRows;
-		((iFontData*)AP(a[0]))->GetWordWrapRows(AF(a[1]), AF(a[2]), V2(a,3), AW(a[5]), &vRows);
-		for(size_t i=0; i<vRows.size(); ++i) PutW(c, vRows[i]);
-		break;
-	}
-	case kOhplA10b_FONT_LEN: SetF(c,0, ((iFontData*)AP(a[0]))->GetLength(V2(a,1), AW(a[3]).c_str())); break;
 	case kOhplA10b_FONT_HEIGHT: SetF(c,0, ((iFontData*)AP(a[0]))->GetHeight()); break;
 	case kOhplA10b_TRANSLATE: PutW(c, kTranslate(AS(a[0]), AS(a[1]))); break;
 	case kOhplA10b_CFG_STRING: PutS(c, Cfg(AI(a[0]))->GetString(AS(a[1]), AS(a[2]), AS(a[3]))); break;

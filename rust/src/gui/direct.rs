@@ -196,6 +196,21 @@ fn create(
     c: i32,
     img: usize,
 ) -> usize {
+    create_named(s, kind, pos, size, text, parent, [a, b, c], img, &[])
+}
+
+#[allow(clippy::too_many_arguments)]
+fn create_named(
+    s: usize,
+    kind: i32,
+    pos: [f32; 3],
+    size: Option<[f32; 2]>,
+    text: &[u32],
+    parent: usize,
+    [a, b, c]: [i32; 3],
+    img: usize,
+    name: &[u8],
+) -> usize {
     let (pos, size) = (vec3(pos), size.map(vec2));
     // SAFETY: `s` is a live set; every pointer is readable for the call.
     unsafe {
@@ -207,14 +222,25 @@ fn create(
             text.as_ptr(),
             text.len(),
             parent,
-            ptr::null(),
-            0,
+            name.as_ptr(),
+            name.len(),
             a,
             b,
             c,
             img as *mut Element,
         )
     }
+}
+
+/// `cGuiSet::CreateWidgetLabel` with a widget name.
+pub(crate) fn widget_label_named(
+    s: usize,
+    pos: [f32; 3],
+    size: [f32; 2],
+    text: &[u32],
+    name: &[u8],
+) -> usize {
+    create_named(s, KIND_LABEL, pos, Some(size), text, 0, [0; 3], 0, name)
 }
 
 pub(crate) fn widget_label(
@@ -267,8 +293,33 @@ pub(crate) fn widget_image(
     animate: bool,
     parent: usize,
 ) -> usize {
+    widget_image_named(s, file, pos, size, material, animate, parent, &[])
+}
+
+/// `cGuiSet::CreateWidgetImage` with a widget name.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn widget_image_named(
+    s: usize,
+    file: &[u8],
+    pos: [f32; 3],
+    size: [f32; 2],
+    material: i32,
+    animate: bool,
+    parent: usize,
+    name: &[u8],
+) -> usize {
     let (gfx, size) = image_parts(file, size, material, animate);
-    create(s, KIND_IMAGE, pos, Some(size), &[], parent, 0, 0, 0, gfx)
+    create_named(
+        s,
+        KIND_IMAGE,
+        pos,
+        Some(size),
+        &[],
+        parent,
+        [0; 3],
+        gfx,
+        name,
+    )
 }
 
 /// `cGuiSet::CreateWidgetImage` with a widget name.
@@ -548,6 +599,43 @@ pub(crate) fn widget_group(
     parent: usize,
 ) -> usize {
     create(s, KIND_GROUP, pos, Some(size), text, parent, 0, 0, 0, 0)
+}
+
+/// `cGuiSet::CreateWidgetComboBox` without text.
+pub(crate) fn widget_combo(s: usize, pos: [f32; 3], size: [f32; 2], parent: usize) -> usize {
+    complex(
+        s,
+        super::gw_h20::KIND_COMBO,
+        pos,
+        size,
+        &[],
+        parent,
+        0,
+        0,
+        0.0,
+    )
+}
+
+/// `cGuiSet::CreateWidgetTabFrame` without text, both scrolls on for `hscroll`/`vscroll`.
+pub(crate) fn widget_tab_frame(
+    s: usize,
+    pos: [f32; 3],
+    size: [f32; 2],
+    parent: usize,
+    hscroll: bool,
+    vscroll: bool,
+) -> usize {
+    complex(
+        s,
+        super::gw_h20::KIND_TABFRAME,
+        pos,
+        size,
+        &[],
+        parent,
+        i32::from(hscroll),
+        i32::from(vscroll),
+        0.0,
+    )
 }
 
 /// `cGuiSet::CreateWidgetListBox`.

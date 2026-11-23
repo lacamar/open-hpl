@@ -3,7 +3,11 @@
 
 use super::host::{Args, op};
 use crate::gui::g1_set::{self, Set};
-use crate::gui::{direct as d, gw, gw_kinds};
+use crate::gui::gw_h20::{self, P};
+use crate::gui::gw_kinds::Kind;
+use crate::gui::h20_host::HostVt;
+use crate::gui::h20_tab::{Frame, Tab};
+use crate::gui::{direct as d, gw, gw_items as gi, gw_kinds, h20_ffi};
 use crate::types::Color;
 use std::cell::RefCell;
 
@@ -64,9 +68,18 @@ fn create(code: i32, a: &Args) -> Option<usize> {
         op::LABEL => d::widget_label(set, p, s, t, parent),
         op::CHECKBOX => d::widget_checkbox(set, p, s, t, parent),
         op::SLIDER => d::widget_slider(set, 0, p, s, 0, parent),
-        op::IMAGE if a.n[1] == 0 => {
-            d::widget_image(set, &narrow(a, 0), p, s, d::MAT_ALPHA, false, parent)
-        }
+        op::IMAGE => d::widget_image_named(
+            set,
+            &narrow(a, 0),
+            p,
+            s,
+            d::MAT_ALPHA,
+            false,
+            parent,
+            &narrow(a, 1),
+        ),
+        op::COMBO => d::widget_combo(set, p, s, parent),
+        op::TABFRAME => d::widget_tab_frame(set, p, s, parent, false, true),
         op::GROUP => d::widget_group(set, p, s, t, parent),
         op::DUMMY => d::widget_dummy(set, p, parent),
         op::FRAME => d::widget_frame_scroll(set, p, s, parent, false, true),
@@ -96,6 +109,30 @@ fn set_op(code: i32, a: &Args) -> Option<usize> {
         }
     }
     Some(0)
+}
+
+fn nul_cut(t: &[u32]) -> &[u32] {
+    t.split(|&c| c == 0).next().unwrap_or_default()
+}
+
+fn hx_add_tab(hx: *const HostVt, f: *mut Frame, text: &[u32]) -> usize {
+    // SAFETY: the frame state is live and `text` readable for its length.
+    unsafe { h20_ffi::ohpl_h20_tf_add_tab(hx, f, text.as_ptr(), text.len()) }
+}
+
+fn tab_frame(w: usize, run: impl FnOnce(*const HostVt, *mut Frame) -> usize) -> usize {
+    match gw_h20::ptr(w) {
+        Some(P::TabFrame(f)) => run(gw_h20::vt(), f),
+        _ => 0,
+    }
+}
+
+fn tab(w: usize, run: impl FnOnce(&Tab) -> usize) -> usize {
+    match gw_h20::ptr(w) {
+        // SAFETY: the tab state is live while the widget is.
+        Some(P::Tab(t)) => run(unsafe { &*t }),
+        _ => 0,
+    }
 }
 
 fn widget_op(code: i32, a: &mut Args) -> Option<usize> {
@@ -154,6 +191,65 @@ fn widget_op(code: i32, a: &mut Args) -> Option<usize> {
         op::SLIDER_SET => d::slider_set(w, a.i[0], a.i[1] != 0),
         op::SLIDER_GET => return Some(d::slider_get(w) as u32 as usize),
         op::SLIDER_GET_MAX => return Some(d::slider_get_max(w) as u32 as usize),
+        op::SET_FONT_SIZE => d::widget_font_size(w, [f(a, 0), f(a, 1)]),
+        op::TEXT_LENGTH => {
+            let (font, size, text) = gw::read(w, |g| (g.font_type, g.p.font_size, g.text.clone()));
+            a.f[0] = gw::font_length(font, size, nul_cut(&text));
+        }
+        op::COMBO_ADD => {
+            gi::add(w, wide(a, 0));
+        }
+        op::COMBO_CLEAR => gi::clear(w),
+        op::COMBO_SELECT => {
+            if let Some(P::Combo(c)) = gw_h20::ptr(w) {
+                // SAFETY: the combo state is live while the widget is.
+                unsafe {
+                    h20_ffi::ohpl_h20_cb_set_selected_item(
+                        gw_h20::vt(),
+                        c,
+                        a.i[0],
+                        a.i[1] != 0,
+                        a.i[2] != 0,
+                    );
+                }
+            }
+        }
+        op::COMBO_SELECTED => {
+            return Some(gw::read(w, |g| match &g.kind {
+                Kind::Combo(c) => c.combo.selected,
+                _ => 0,
+            }) as u32 as usize);
+        }
+        op::COMBO_NUM => return Some(gi::num(w)),
+        op::TAB_ADD => return Some(tab_frame(w, |hx, f| hx_add_tab(hx, f, wide(a, 0)))),
+        op::TAB_NUM => {
+            return Some(tab_frame(w, |hx, f| {
+                // SAFETY: the frame state is live while the widget is.
+                unsafe { h20_ffi::ohpl_h20_tf_tab_num(hx, f) as u32 as usize }
+            }));
+        }
+        op::TAB_GET => {
+            return Some(tab_frame(w, |hx, f| {
+                // SAFETY: as above.
+                unsafe { h20_ffi::ohpl_h20_tf_tab(hx, f, a.i[0]) }
+            }));
+        }
+        op::TAB_TOP => {
+            return Some(tab_frame(w, |_, f| {
+                // SAFETY: the frame state is live while the widget is.
+                unsafe { (*f).top_tab }
+            }));
+        }
+        op::TAB_LABEL => return Some(tab(w, |t| t.label)),
+        op::TAB_FRAME => return Some(tab(w, |t| t.frame_w)),
+        op::FRAME_OF => {
+            return Some(if gw::read(w, |g| matches!(g.kind, Kind::Frame(_))) {
+                w
+            } else {
+                0
+            });
+        }
+        op::FRAME_SCROLL_TO => gw_kinds::frame_scroll_to(w, f(a, 0), f(a, 1)),
         op::FRAME_SCROLL => {
             let v = gw::read(w, |g| g.base.scroll);
             a.f[..3].copy_from_slice(&[v.x, v.y, v.z]);
@@ -182,9 +278,13 @@ mod code {
     pub const WIDGET_NAME: i32 = 221;
     pub const WIDGET_HAS_FOCUS: i32 = 222;
     pub const WIDGET_ENABLED: i32 = 223;
+    pub const WIDGET_NAV: i32 = 224;
+    pub const WIDGET_FONT_TYPE: i32 = 225;
+    pub const WIDGET_FONT_LEN: i32 = 226;
     pub const SET_DRAW_FOCUS: i32 = 228;
     pub const SET_GET_DRAW_FOCUS: i32 = 229;
     pub const SET_GET_FOCUSED: i32 = 230;
+    pub const LABEL_NAMED: i32 = 254;
     pub const WIDGET_SET_GLOBAL_POS: i32 = 256;
     pub const GUI_FOCUS: i32 = 257;
     pub const WIDGET_CENTER: i32 = 258;
@@ -236,6 +336,24 @@ fn menu_op(c: i32, a: &mut Args) -> Option<usize> {
         }
         code::WIDGET_HAS_FOCUS => return Some(usize::from(gw::has_focus(w))),
         code::WIDGET_ENABLED => return Some(usize::from(gw::is_enabled(w))),
+        code::WIDGET_NAV => return Some(gw::focus_navigation(w, 1 << (a.i[0] & 3))),
+        code::WIDGET_FONT_TYPE => d::widget_font_type(w, a.p[1]),
+        code::WIDGET_FONT_LEN => {
+            let size = crate::types::Vector2f {
+                x: f(a, 0),
+                y: f(a, 1),
+            };
+            a.f[0] = gw::font_length(d::widget_default_font(w), size, nul_cut(wide(a, 0)));
+        }
+        code::LABEL_NAMED => {
+            return Some(d::widget_label_named(
+                w,
+                pos(a),
+                [0.0, 0.0],
+                wide(a, 0),
+                &narrow(a, 1),
+            ));
+        }
         code::SET_DRAW_FOCUS => g1_set::set_draw_focus(s, on),
         code::SET_GET_DRAW_FOCUS => return Some(usize::from(g1_set::draw_focus(s))),
         code::SET_GET_FOCUSED => return Some(g1_set::focused_widget(s)),

@@ -7,7 +7,6 @@ file(GLOB all_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 file(GLOB serial_source RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     LuxCopyProtection.cpp
-    LuxKeyEntry.cpp
     ../serial_gen/SerialGenAlgo.cpp
 )
 list(REMOVE_ITEM all_sources ${serial_source})

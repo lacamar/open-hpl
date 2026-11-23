@@ -27,29 +27,10 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 	OhplA10aHostInit();
 	mlMe = ohpl_a9b_new();
 
-	if(getenv("OHPL_A10A_DUMP"))
-	{
-		const char *vNames[2] = { "options", "keyconfig" };
-		const int vWindows[2] = { eLuxMainMenuWindow_Options, eLuxMainMenuWindow_KeyConfig };
-		for(int i = 0; i < 2; ++i)
-		{
-			OhplA10aDumpWindow(vNames[i], (iWidget*)ohpl_a9b_dump_window(mlMe, vWindows[i], 1));
-			ohpl_a9b_dump_window(mlMe, vWindows[i], 0);
-		}
-	}
+	ohpl_a9b_dump_a10a(mlMe);
 }
 
 cLuxMainMenu::~cLuxMainMenu()
 {
 	ohpl_a9b_free(mlMe);
-}
-
-void cLuxMainMenu::OnStart()
-{
-	if(const char *sDump = getenv("OHPL_A9_MENUDUMP"))
-	{
-		LoadFonts();
-		ohpl_a9b_create_gui(mlMe);
-		DumpA9(sDump);
-	}
 }
