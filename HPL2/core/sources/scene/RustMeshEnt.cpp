@@ -339,7 +339,7 @@ namespace hpl {
 
 		cSkeleton *pSkeleton = apMesh->GetSkeleton();
 		mpM = ohpl_me_new(this, OhplMeFxGet(), &mCtl, apMesh->mpRs, pSkeleton ? pSkeleton->Rs() : NULL,
-						  pSkeleton ? &pSkeleton->mbFileUnits : NULL);
+						  pSkeleton ? pSkeleton->FileUnitsPtr() : NULL);
 	}
 
 	cMeshEntity::~cMeshEntity()
