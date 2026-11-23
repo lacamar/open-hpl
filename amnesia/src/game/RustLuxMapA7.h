@@ -22,34 +22,12 @@ struct OhplA7Base
 
 struct OhplA7Script { bool itemInteraction; };
 struct OhplA7Examine { float insaneLimit, playSoundCount; };
-struct OhplA7Insanity { float checkTimeMin, checkTimeMax, checkCollisionCount; bool autoDisable; };
-struct OhplA7Flashback { float checkCollisionCount; };
 struct OhplA7Sign { unsigned char unused; };
 struct OhplA7Ladder { OhplGa5Vec3 forward; float maxY, minY; };
-struct OhplA7Liquid
-{
-	float density, linearViscosity, angularViscosity, waveAmp, waveFreq, playerSpeedMul, maxWaveDistanceSqr, timeCount;
-	OhplGa5Plane surfacePlane;
-	bool hasWaves;
-};
-struct OhplA7Sticky
-{
-	float poseTime, attachedBodyMass, setMtxTime;
-	OhplGa5Mtx attachedStart;
-	bool moveBody, rotateBody, checkCenterInArea, canDetach, attachedBodyGravity, attachedEntityFullGameSaved;
-	void *attachedBody, *lastAttached;
-};
-struct OhplA7Slime
-{
-	int slimeType;
-	float minCheckAttackTime, maxCheckAttackTime, checkCollisionCount, minAttackDamage, maxAttackDamage, screenShakeAmount;
-	bool disableAfterAttack;
-};
 
 static_assert(sizeof(OhplA7Base) == 96, "OhplA7Base");
-static_assert(sizeof(OhplA7Script) == 1 && sizeof(OhplA7Examine) == 8 && sizeof(OhplA7Insanity) == 16, "pods");
-static_assert(sizeof(OhplA7Flashback) == 4 && sizeof(OhplA7Sign) == 1 && sizeof(OhplA7Ladder) == 20, "pods");
-static_assert(sizeof(OhplA7Liquid) == 52 && sizeof(OhplA7Sticky) == 104 && sizeof(OhplA7Slime) == 32, "pods");
+static_assert(sizeof(OhplA7Script) == 1 && sizeof(OhplA7Examine) == 8, "pods");
+static_assert(sizeof(OhplA7Sign) == 1 && sizeof(OhplA7Ladder) == 20, "pods");
 
 enum
 {
@@ -58,6 +36,25 @@ enum
 };
 enum { kOhplA7Entity, kOhplA7Dissolve, kOhplA7Lamp, kOhplA7Start, kOhplA7Pos, kOhplA7UseItem };
 enum { kOhplA7Entities, kOhplA7Enemies, kOhplA7Doomed, kOhplA7StickyList };
+
+// Engine thunks the Rust area code calls while it initialises, loads and saves one area (a7_shell.rs).
+struct OhplA7Sv { const char *p; size_t n; };
+struct OhplA7Vt
+{
+	void *ctx;
+	float (*var_f)(void *, const char *, size_t, float);
+	int (*var_i)(void *, const char *, size_t, int);
+	bool (*var_b)(void *, const char *, size_t, bool);
+	OhplA7Sv (*var_s)(void *, const char *, size_t);
+	float (*cfg_f)(void *, const char *, size_t, const char *, size_t, float);
+	OhplA7Sv (*cfg_s)(void *, const char *, size_t, const char *, size_t);
+	void (*preload_sound)(void *, const char *, size_t);
+	void (*preload_ps)(void *, const char *, size_t);
+	size_t (*mat_find)(void *, const char *, size_t);
+	OhplA7Sv (*mat_name)(void *, size_t);
+	void (*body_ids)(void *, size_t, int *);
+	size_t (*find_body)(void *, int, int);
+};
 
 typedef void (*OhplA7DropFn)(void *);
 typedef void (*OhplA7DissolveFn)(void *, void *, float, bool);
@@ -122,7 +119,7 @@ extern "C" {
 
 	OhplA7Area *ohpl_a7_area_new(OhplA7Ctx *m, int kind);
 	void ohpl_a7_area_free(OhplA7Ctx *m, OhplA7Area *a);
-	size_t ohpl_a7_pod_size(int kind);
+	size_t ohpl_a7_area_pod_len(const OhplA7Area *a);
 	size_t ohpl_a7_base_size();
 	OhplA7Base *ohpl_a7_area_base(OhplA7Area *a);
 	void *ohpl_a7_area_pod(OhplA7Area *a);
@@ -137,6 +134,11 @@ extern "C" {
 	void ohpl_a7_area_ladder_start(OhplA7Area *a, const OhplGa5Vec3 *area_pos, const OhplGa5Vec3 *char_size, float char_y, OhplGa5Vec3 *out);
 	void ohpl_a7_area_liquid_setup(OhplA7Area *a, float pos_y, float size_y);
 	void ohpl_a7_area_update(OhplA7Area *a, void *shell, OhplA7Ctx *ctx, float step);
+	bool ohpl_a7_area_init(OhplA7Area *a, const char *name, size_t name_n, const OhplA7Vt *vt);
+	void ohpl_a7_area_load_vars(OhplA7Area *a, const OhplA7Vt *vt);
+	void ohpl_a7_area_save(OhplA7Area *a, void *data, const OhplA7Vt *vt);
+	void ohpl_a7_area_load(OhplA7Area *a, const void *data, const OhplA7Vt *vt);
+	size_t ohpl_a7_area_sticky_attached(const OhplA7Area *a);
 	void ohpl_a7_area_sticky_attach_body(OhplA7Area *a, void *body);
 	void ohpl_a7_area_sticky_detach(OhplA7Area *a, void *shell, OhplA7Ctx *ctx);
 	bool ohpl_a7_sticky_allow(bool set, bool value);

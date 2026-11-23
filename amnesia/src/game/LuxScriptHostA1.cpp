@@ -37,7 +37,7 @@
 #include "LuxProp_NPC.h"
 #include "LuxProp_MultiSlider.h"
 #include "LuxEnemy_ManPig.h"
-#include "LuxArea_Sticky.h"
+#include "LuxArea.h"
 #include "LuxEnemy.h"
 #include "LuxInteractConnections.h"
 
@@ -465,9 +465,9 @@ extern "C" void OhplA1HostCall2(unsigned op, const OhplA1Arg *a, size_t n, OhplA
 	case AREA_MATRIX: gmtxTemp = Area(a[0])->GetBody()->GetWorldMatrix(); r->p = &gmtxTemp; break;
 	case AREA_POSITION: r->SetF(Comp(Area(a[0])->GetPosition(), a[1].I())); break;
 	case AREA_ATTACH_TO_BODY: Area(a[0])->AttachToBody(OhplA1Str(a[1]), a[2].I()); break;
-	case STICKY_ALLOW: cLuxArea_Sticky::SetAllowAttachment(a[0].B()); break;
-	case STICKY_ATTACH_BODY: static_cast<cLuxArea_Sticky*>(Ent(a[0]))->AttachBody(Body(a[1])); break;
-	case STICKY_DETACH: static_cast<cLuxArea_Sticky*>(Ent(a[0]))->DetachBody(); break;
+	case STICKY_ALLOW: ohpl_a7_sticky_allow(true, a[0].B()); break;
+	case STICKY_ATTACH_BODY: static_cast<cLuxAreaRs*>(Ent(a[0]))->StickyAttach(Body(a[1])); break;
+	case STICKY_DETACH: static_cast<cLuxAreaRs*>(Ent(a[0]))->StickyDetach(); break;
 
 	// props
 	case PROP_INTERACTION_DISABLED: Prop(a[0])->SetInteractionDisabled(a[1].B()); break;

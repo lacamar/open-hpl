@@ -26,11 +26,11 @@
 
 class cLuxNode_Pos;
 class cLuxNode_PlayerStart;
-class cLuxArea_Sticky;
+class cLuxAreaRs;
 class cLuxLampLightConnection;
 class cLuxProp_Lamp;
 
-typedef std::list<cLuxArea_Sticky*> tLuxArea_StickyList;
+typedef std::list<cLuxAreaRs*> tLuxArea_StickyList;
 
 // Shell: the state and the logic live in rust/src/luxmap/ (mmap.rs); this class keeps the plain
 // properties other code reads (names, vars) and forwards the rest.

@@ -1,7 +1,7 @@
 //! C ABI of the A7 map/area ownership, mirrored in `amnesia/src/game/RustLuxMapA7.h`.
 //! No `&mut` to a map is held across a call that can re-enter C++ (destructor thunks, callbacks).
 
-use super::a7_area::{A7Area, AreaArena, Base, Pod};
+use super::a7_area::{A7Area, AreaArena, Base};
 use super::a7_map::{
     A7Map, Entity, K_DISSOLVE, K_ENTITY, K_LAMP, K_POS, K_START, K_USEITEM, Timer, UseItem,
     W_DOOMED,
@@ -707,9 +707,14 @@ pub unsafe extern "C" fn ohpl_a7_area_free(m: *mut Ctx, a: *mut A7Area) {
     }
 }
 
+/// Size of the family block `a` holds.
+///
+/// # Safety
+/// `a` live.
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a7_pod_size(kind: i32) -> usize {
-    Pod::size_of(kind)
+pub unsafe extern "C" fn ohpl_a7_area_pod_len(a: *const A7Area) -> usize {
+    // SAFETY: caller contract.
+    unsafe { (*a).pod.block_size() }
 }
 
 #[unsafe(no_mangle)]

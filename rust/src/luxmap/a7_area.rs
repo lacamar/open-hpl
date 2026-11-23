@@ -160,6 +160,20 @@ impl Pod {
         }
     }
 
+    pub fn block_size(&self) -> usize {
+        match self {
+            Self::Script(_) => Self::size_of(T_SCRIPT),
+            Self::Examine(_) => Self::size_of(T_EXAMINE),
+            Self::Insanity(_) => Self::size_of(T_INSANITY),
+            Self::Flashback(_) => Self::size_of(T_FLASHBACK),
+            Self::Sign(_) => Self::size_of(T_SIGN),
+            Self::Ladder(_) => Self::size_of(T_LADDER),
+            Self::Liquid(_) => Self::size_of(T_LIQUID),
+            Self::Sticky(_) => Self::size_of(T_STICKY),
+            Self::Slime(_) => Self::size_of(T_SLIME),
+        }
+    }
+
     fn ptr(&mut self) -> *mut c_void {
         match self {
             Self::Script(s) => std::ptr::from_mut(s).cast(),
@@ -175,9 +189,32 @@ impl Pod {
     }
 }
 
+/// Indices into [`A7Area::strs`].
+pub mod st {
+    pub const ATTACH_FUNCTION: usize = 0;
+    pub const DETACH_FUNCTION: usize = 1;
+    pub const ATTACH_SOUND: usize = 2;
+    pub const DETACH_SOUND: usize = 3;
+    pub const ATTACH_PS: usize = 4;
+    pub const DETACH_PS: usize = 5;
+    pub const ATTACHABLE_BODY: usize = 6;
+    pub const SLIME_CALLBACK: usize = 0;
+    pub const SLIME_SOUND: usize = 1;
+    pub const SLIME_PS: usize = 2;
+    pub const FLASHBACK_FILE: usize = 0;
+    pub const FLASHBACK_CALLBACK: usize = 1;
+    pub const COUNT: usize = 7;
+}
+
 pub struct A7Area {
     pub base: Base,
     pub pod: Pod,
+    /// Entity name (the C++ shell's `GetName()`).
+    pub name: Vec<u8>,
+    /// Sticky, slime and flashback strings, see [`st`].
+    pub strs: [Vec<u8>; st::COUNT],
+    /// Liquid `iPhysicsMaterial*`.
+    pub material: usize,
     handle: Option<Handle<Box<A7Area>>>,
 }
 
@@ -189,6 +226,9 @@ impl A7Area {
                 ..Base::default()
             },
             pod: Pod::new(kind)?,
+            name: Vec::new(),
+            strs: Default::default(),
+            material: 0,
             handle: None,
         })
     }

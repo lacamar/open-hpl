@@ -10,7 +10,7 @@
 #include "LuxPlayerHelpers.h"
 #include "LuxPlayerState.h"
 #include "LuxAreaNodes.h"
-#include "LuxArea_Sticky.h"
+#include "LuxArea.h"
 #include "LuxProp_Item.h"
 #include "LuxProp_SwingDoor.h"
 #include "LuxProp_Lamp.h"
@@ -400,7 +400,7 @@ void Host(int32_t alOp, OhplA13A *a)
 		a->i[3] = bSticky;
 		a->r = 0;
 		if(bEnemy) a->r = (uintptr_t)static_cast<iLuxEnemy*>(pEntity);
-		else if(bSticky) a->r = (uintptr_t)static_cast<cLuxArea_Sticky*>(static_cast<iLuxArea*>(pEntity));
+		else if(bSticky) a->r = (uintptr_t)static_cast<cLuxAreaRs*>(static_cast<iLuxArea*>(pEntity));
 		a->p[2] = (uintptr_t)(uint32_t)pEntity->GetID();
 		a->rs[0].p = pEntity->GetNameData(&a->rs[0].n);
 		break;
@@ -473,13 +473,13 @@ void Host(int32_t alOp, OhplA13A *a)
 	}
 	case kOp_STICKY:
 	{
-		cLuxArea_Sticky *pSticky = (cLuxArea_Sticky*)a->p[0];
+		cLuxAreaRs *pSticky = (cLuxAreaRs*)a->p[0];
 		if(a->i[0] == 0)
 		{
 			a->r = (uintptr_t)pSticky->GetAttachedBody();
 			a->i[0] = pSticky->CanDetach();
 		}
-		else pSticky->DetachBody();
+		else pSticky->StickyDetach();
 		break;
 	}
 	case kOp_PROP_BODY:
