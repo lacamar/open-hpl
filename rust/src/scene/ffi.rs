@@ -3,48 +3,9 @@
 //! Vectors cross as pointers (`cVector3` has a user-provided copy constructor). Pointers are
 //! non-null, valid and aligned for the call.
 
-use super::{Node, Object, Params, Tree, at_edge, compile, longest_axis, split_group};
-use crate::types::Vector3f;
+use super::{Node, Object, Params, Tree, compile};
 use std::ptr;
 use std::slice;
-
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_rc_split_group(
-    min: *const Vector3f,
-    max: *const Vector3f,
-    plane: f32,
-    axis: i32,
-    node_size: *const Vector3f,
-    max_intersection: f32,
-) -> i32 {
-    // SAFETY: caller contract.
-    let (min, max, size) = unsafe { (*min, *max, *node_size) };
-    split_group(min, max, plane, axis, size, max_intersection)
-}
-
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_rc_at_edge(
-    min: *const Vector3f,
-    max: *const Vector3f,
-    node_min: *const Vector3f,
-    node_max: *const Vector3f,
-) -> bool {
-    // SAFETY: caller contract.
-    let (a, b, c, d) = unsafe { (*min, *max, *node_min, *node_max) };
-    at_edge(a, b, c, d)
-}
-
-/// # Safety
-/// `size` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_rc_longest_axis(size: *const Vector3f) -> i32 {
-    // SAFETY: caller contract.
-    longest_axis(unsafe { *size })
-}
 
 /// Result is freed with `ohpl_rc_boxtree_free`.
 ///

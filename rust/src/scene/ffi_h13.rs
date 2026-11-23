@@ -311,35 +311,6 @@ pub unsafe extern "C" fn ohpl_h13_area_destroy_all(reg: *mut Reg) {
     }
 }
 
-/// # Safety
-/// `reg` live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h13_area_len(reg: *const Reg) -> usize {
-    // SAFETY: caller contract.
-    unsafe { (*reg).areas().len() }
-}
-
-/// The `i`-th area in key order; the key bytes stay valid until the map changes.
-///
-/// # Safety
-/// `reg` live; `key` writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h13_area_at(
-    reg: *const Reg,
-    i: usize,
-    key: *mut Name,
-) -> *mut c_void {
-    // SAFETY: caller contract.
-    unsafe {
-        (*reg).area_at(i, |k| {
-            *key = Name {
-                ptr: k.as_ptr(),
-                len: k.len(),
-            }
-        }) as *mut c_void
-    }
-}
-
 /// First position of the kind's list as cursor bits; 0 when empty.
 ///
 /// # Safety

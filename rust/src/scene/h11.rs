@@ -675,6 +675,7 @@ impl ShadowCache {
         self.map.clear();
     }
 
+    #[cfg(test)]
     pub fn len(&self) -> usize {
         self.map.len()
     }

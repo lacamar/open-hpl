@@ -1,6 +1,5 @@
 //! C ABI for `runtime.rs` and `check.rs`.
 
-use super::check;
 use super::ffi_api::OhplGs6Str;
 use super::runtime::{self, ApiLookup};
 use crate::string_ffi::{Sink, emit, units};
@@ -182,105 +181,5 @@ pub unsafe extern "C" fn ohpl_gs6_stub_report(
     for line in runtime::stub_report(&v, top) {
         // SAFETY: caller contract.
         unsafe { emit(sink, ctx, &line) }
-    }
-}
-
-/// Stub calls sorted most called first, as indices into the input.
-///
-/// # Safety
-/// `names` and `counts` hold `n` elements; `out` has room for `n` indices.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs6_stub_order(
-    names: *const OhplGs6Str,
-    counts: *const i32,
-    n: usize,
-    out: *mut usize,
-) {
-    // SAFETY: caller contract.
-    let (names, counts) = unsafe { (units(names, n), units(counts, n)) };
-    let mut v: Vec<(i32, Vec<u8>, usize)> = names
-        .iter()
-        .zip(counts)
-        .enumerate()
-        // SAFETY: caller contract.
-        .map(|(i, (s, &c))| (c, unsafe { units(s.ptr, s.len) }.to_vec(), i))
-        .collect();
-    v.sort_by(|a, b| (b.0, &b.1).cmp(&(a.0, &a.1)));
-    for (k, (_, _, i)) in v.iter().enumerate() {
-        // SAFETY: caller contract.
-        unsafe { out.add(k).write(*i) }
-    }
-}
-
-/// # Safety
-/// `s` valid for `n` bytes; `sink` accepts `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs6_json_escape(
-    s: *const u8,
-    n: usize,
-    sink: Sink<u8>,
-    ctx: *mut c_void,
-) {
-    // SAFETY: caller contract.
-    let r = check::json_escape(unsafe { units(s, n) });
-    // SAFETY: caller contract.
-    unsafe { emit(sink, ctx, &r) }
-}
-
-/// # Safety
-/// `s` valid for `n` bytes; `sink` accepts `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs6_from_script_dir(
-    s: *const u8,
-    n: usize,
-    sink: Sink<u8>,
-    ctx: *mut c_void,
-) {
-    // SAFETY: caller contract.
-    let r = check::from_script_dir(unsafe { units(s, n) });
-    // SAFETY: caller contract.
-    unsafe { emit(sink, ctx, r) }
-}
-
-/// Script names quoted in the config files' texts, sorted and unique; one sink call each.
-///
-/// # Safety
-/// `files` holds `n` valid strings; `sink` accepts `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs6_config_scripts(
-    files: *const OhplGs6Str,
-    n: usize,
-    sink: Sink<u8>,
-    ctx: *mut c_void,
-) {
-    // SAFETY: caller contract.
-    let files: Vec<&[u8]> = unsafe { units(files, n) }
-        .iter()
-        // SAFETY: caller contract.
-        .map(|f| unsafe { units(f.ptr, f.len) })
-        .collect();
-    for s in check::config_scripts(&files) {
-        // SAFETY: caller contract.
-        unsafe { emit(sink, ctx, &s) }
-    }
-}
-
-/// `.hps` files under `dir` (map scripts), one sink call each.
-///
-/// # Safety
-/// `dir` valid for `n` bytes; `sink` accepts `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs6_map_scripts(
-    dir: *const u8,
-    n: usize,
-    sink: Sink<u8>,
-    ctx: *mut c_void,
-) {
-    let mut out = Vec::new();
-    // SAFETY: caller contract.
-    check::map_scripts(unsafe { units(dir, n) }, 0, &mut out);
-    for p in out {
-        // SAFETY: caller contract.
-        unsafe { emit(sink, ctx, &p) }
     }
 }

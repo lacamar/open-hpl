@@ -237,13 +237,6 @@ impl Reg {
         self.areas.clear();
     }
 
-    pub fn area_at(&self, i: usize, key: impl FnOnce(&[u8])) -> usize {
-        self.areas.iter().nth(i).map_or(0, |(k, &v)| {
-            key(k);
-            v
-        })
-    }
-
     /// Area map in key order (`std::map` iteration): (name, entity).
     pub fn areas(&self) -> Vec<(Vec<u8>, usize)> {
         self.areas.iter().map(|(k, &v)| (k.clone(), v)).collect()

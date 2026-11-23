@@ -729,14 +729,6 @@ pub unsafe extern "C" fn ohpl_a2b_dark_set_active(
 }
 
 /// # Safety
-/// `s` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a2b_dark_in_darkness(s: *const DarkState, ext: f32) -> bool {
-    // SAFETY: caller contract.
-    ext <= unsafe { (*s).k.min_darkness_light_level }
-}
-
-/// # Safety
 /// `s` and `h` valid.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_a2b_lantern_set_active(

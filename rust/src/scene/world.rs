@@ -36,6 +36,7 @@ pub fn find_ptr(mut ptrs: impl Iterator<Item = usize>, p: usize) -> i32 {
     index(ptrs.position(|x| x == p))
 }
 
+#[cfg(test)]
 /// Index of the lexicographically smallest name, first one on ties.
 pub fn first_by_name<'a>(names: impl Iterator<Item = &'a [u8]>) -> i32 {
     let mut best: Option<(usize, &[u8])> = None;

@@ -132,24 +132,6 @@ pub fn clip_pad(r: Rect2l, screen: (i32, i32), half_fov_tan: f32) -> Rect2l {
 }
 
 /// # Safety
-/// `i` is null or valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h8_rl_gates(i: *const GateIn) -> u32 {
-    // SAFETY: by the caller's contract.
-    unsafe { i.as_ref() }.map_or(0, gates)
-}
-
-/// # Safety
-/// `i` and `o` are null or valid and distinct.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h8_rl_post(i: *const PostIn, o: *mut PostOut) {
-    // SAFETY: by the caller's contract.
-    if let (Some(i), Some(o)) = (unsafe { i.as_ref() }, unsafe { o.as_mut() }) {
-        *o = post(i);
-    }
-}
-
-/// # Safety
 /// `r` is null or valid.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h8_clip_pad(r: *mut Rect2l, sw: i32, sh: i32, half_fov_tan: f32) {

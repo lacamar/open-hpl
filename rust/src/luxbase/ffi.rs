@@ -895,17 +895,6 @@ pub unsafe extern "C" fn ohpl_ga9_feature_error(
     })
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga9_start_mode(show_pre_menu: bool, show_menu: bool) -> i32 {
-    base::start_mode(show_pre_menu, show_menu) as i32
-}
-
-/// -1: nothing to do, else 1 when the input is locked and 0 when not.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga9_direct_start_input(debug_window_active: bool, fullscreen: bool) -> i32 {
-    base::direct_start_input(debug_window_active, fullscreen).map_or(-1, i32::from)
-}
-
 pub const S_MAPS_FOLDER: u32 = 1;
 pub const S_START_MAP: u32 = 2;
 pub const S_START_POS: u32 = 3;
@@ -1167,13 +1156,6 @@ pub unsafe extern "C" fn ohpl_ga9_calc_gui_set_offset(
             *p = v;
         }
     }
-}
-
-/// # Safety
-/// `cur` is `n` bytes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga9_chinese_font(cur: *const u8, n: usize) -> bool {
-    base::default_font(units(cur, n)) == "game_default.fnt"
 }
 
 /// # Safety

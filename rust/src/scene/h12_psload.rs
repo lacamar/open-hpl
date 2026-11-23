@@ -334,16 +334,6 @@ pub unsafe extern "C" fn ohpl_h12_ps_free(b: *mut PsBox) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h12_ps_frame_step(animation_length: f32, materials: u32) -> f32 {
-    frame_step(animation_length, materials as usize)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h12_ps_max_frame_time(materials: u32) -> f32 {
-    max_frame_time(materials as usize)
-}
-
 #[cfg(test)]
 #[test]
 fn desc_layout_matches_header() {

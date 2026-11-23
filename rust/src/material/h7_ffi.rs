@@ -1,8 +1,7 @@
 //! C ABI of the H7 state, declared in `graphics/RustMaterialH7.h` (`OHPL_IMPL=rust`).
 
 use super::anim::UvAnim;
-use super::h7::{MatState, PeState, material_type, material_types, post_effect_type};
-use super::types::Kind;
+use super::h7::{MatState, PeState, material_types};
 use crate::types::Matrixf;
 
 fn own<T>(v: T) -> *mut T {
@@ -39,24 +38,6 @@ unsafe fn put_matrix(m: &MatState, out: *mut Matrixf) {
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_h7_mat_new(translucent: bool) -> *mut MatState {
     own(MatState::new(translucent))
-}
-
-/// # Safety
-/// `m` from `ohpl_h7_mat_new`, freed once.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h7_mat_free(m: *mut MatState) {
-    // SAFETY: caller contract.
-    unsafe { release(m) }
-}
-
-/// # Safety
-/// `m` is null or live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h7_mat_set_translucent(m: *mut MatState, translucent: bool) {
-    // SAFETY: caller contract.
-    if let Some(m) = unsafe { m.as_mut() } {
-        m.set_translucent(translucent);
-    }
 }
 
 /// Returns the blend mode now in force.
@@ -145,57 +126,10 @@ pub unsafe extern "C" fn ohpl_h7_mat_update(m: *mut MatState, dt: f32, out: *mut
     }
 }
 
-/// Kind of the type registered as `name`, or -1.
-///
-/// # Safety
-/// `name` is valid for `len` reads.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h7_type_kind(name: *const u8, len: usize) -> i32 {
-    material_type(bytes(name, len)).map_or(-1, |t| t.kind() as i32)
-}
-
 /// Number of `AddMaterialType` registrations.
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_h7_type_count() -> usize {
     material_types().count()
-}
-
-/// `mbIsTranslucent`, `mbIsDecal` and `mbHasTypeSpecifics` bits of the first type of `kind`.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h7_type_flags(kind: i32) -> u32 {
-    Kind::from_i32(kind).map_or(0, |k| {
-        material_types()
-            .find(|t| t.kind() == k)
-            .map_or(0, |t| t.flags())
-    })
-}
-
-/// `AddUsedTexture` list of the first type of `kind`; returns its length.
-///
-/// # Safety
-/// `out` is null or valid for `cap` writes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h7_type_used_textures(kind: i32, out: *mut i32, cap: usize) -> usize {
-    let list = Kind::from_i32(kind)
-        .and_then(|k| material_types().find(|t| t.kind() == k))
-        .map(|t| t.used_textures())
-        .unwrap_or_default();
-    if !out.is_null() {
-        for (i, s) in list.iter().take(cap).enumerate() {
-            // SAFETY: caller contract, `i < cap`.
-            unsafe { out.add(i).write(i32::try_from(*s).unwrap_or(0)) };
-        }
-    }
-    list.len()
-}
-
-/// Post effect type known by `name`.
-///
-/// # Safety
-/// `name` is valid for `len` reads.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h7_pe_type_known(name: *const u8, len: usize) -> bool {
-    post_effect_type(bytes(name, len)).is_some()
 }
 
 /// # Safety
@@ -225,22 +159,6 @@ pub unsafe extern "C" fn ohpl_h7_pe_set_disabled(p: *mut PeState, d: bool) {
     if let Some(p) = unsafe { p.as_mut() } {
         p.set_disabled(d);
     }
-}
-
-/// # Safety
-/// `p` is null or live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h7_pe_is_disabled(p: *const PeState) -> bool {
-    // SAFETY: caller contract.
-    unsafe { p.as_ref() }.is_some_and(PeState::is_disabled)
-}
-
-/// # Safety
-/// `p` is null or live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h7_pe_is_active(p: *const PeState) -> bool {
-    // SAFETY: caller contract.
-    unsafe { p.as_ref() }.is_some_and(PeState::is_active)
 }
 
 /// True when the caller runs `OnSetActive`.

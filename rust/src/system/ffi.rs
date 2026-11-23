@@ -226,19 +226,6 @@ pub unsafe extern "C" fn ohpl_ser_save(
     }
 }
 
-/// Loads the first `class` element under the root of `doc` into `obj`.
-///
-/// # Safety
-/// As `ohpl_ser_save`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ser_load(host: *const OhplSerHost, doc: *const Doc, obj: Obj) {
-    // SAFETY: caller contract.
-    unsafe {
-        let host = CHost(&*host);
-        Walker::new(&host).load_document(&*doc, obj);
-    }
-}
-
 // ---- logic timer ----
 
 /// # Safety
@@ -268,22 +255,6 @@ lt_fn!(ohpl_lt_updates_per_sec, updates_per_sec => i32);
 lt_fn!(ohpl_lt_step_size, step_size => f32);
 
 // ---- headless control ----
-
-type PairSink = unsafe extern "C" fn(*mut c_void, *const u8, usize, *const u8, usize);
-
-/// Calls `sink(ctx, key, value)` per field of the request line, in key order.
-///
-/// # Safety
-/// `s` is valid for `n` bytes; `sink` accepts `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_hc_parse(s: *const u8, n: usize, sink: PairSink, ctx: *mut c_void) {
-    // SAFETY: caller contract.
-    unsafe {
-        for (k, v) in headless::parse_flat_json(units(s, n)) {
-            sink(ctx, k.as_ptr(), k.len(), v.as_ptr(), v.len());
-        }
-    }
-}
 
 /// # Safety
 /// `s` valid for `n` bytes; `sink` accepts `ctx`.
@@ -335,34 +306,6 @@ pub unsafe extern "C" fn ohpl_hc_response_json(
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_hc_splitter_new() -> *mut LineSplitter {
     Box::into_raw(Box::default())
-}
-
-/// # Safety
-/// `s` comes from `ohpl_hc_splitter_new` and is not used afterwards.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_hc_splitter_free(s: *mut LineSplitter) {
-    // SAFETY: caller contract.
-    drop(unsafe { Box::from_raw(s) });
-}
-
-/// Appends a received chunk and calls `sink` once per completed non-empty line.
-///
-/// # Safety
-/// `s` is live; `data` valid for `n` bytes; `sink` accepts `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_hc_splitter_push(
-    s: *mut LineSplitter,
-    data: *const u8,
-    n: usize,
-    sink: Sink<u8>,
-    ctx: *mut c_void,
-) {
-    // SAFETY: caller contract.
-    unsafe {
-        for line in (*s).push(units(data, n)) {
-            emit(sink, ctx, &line);
-        }
-    }
 }
 
 // ---- diagnostics ----

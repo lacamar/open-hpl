@@ -371,17 +371,6 @@ pub extern "C" fn ohpl_dr_plan_setup_gbuffer(
     boxed(dr::plan_setup_gbuffer(gbuffer_64bit, linear_depth_idx))
 }
 
-/// 0 `ZBegin`, 1 `GbufferBegin`, 2 `GbufferEnd`.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_dr_plan_pass(kind: u32) -> *mut Plan {
-    let p = match kind {
-        0 => dr::Pass::ZBegin,
-        1 => dr::Pass::GbufferBegin,
-        _ => dr::Pass::GbufferEnd,
-    };
-    boxed(dr::plan_pass(p))
-}
-
 #[repr(C)]
 pub struct ObjectsInC {
     pub use_occlusion_culling: bool,
@@ -520,11 +509,6 @@ pub unsafe extern "C" fn ohpl_dr_plan_free(plan: *mut Plan) {
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_dr_film_grain_init(out: &mut dr::FilmGrain) {
     *out = dr::FilmGrain::new();
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_dr_cdiv(a: i32, b: i32) -> i32 {
-    dr::cdiv(a, b)
 }
 
 #[repr(C)]

@@ -6,9 +6,9 @@
 use std::ffi::c_void;
 use std::slice;
 
-use super::combo::{ComboCache, Release};
+use super::combo::ComboCache;
 use super::funcs::{Gpu, Log, State};
-use super::list::{self, CompileIn, CompileOut, DecalKey, IllumKey, SolidKey, TransKey};
+use super::list::{DecalKey, IllumKey, SolidKey, TransKey};
 use crate::types::{Vector2f, Vector2l, Vector3f};
 
 /// # Safety
@@ -19,17 +19,6 @@ unsafe fn items<'a, T>(p: *const T, n: usize) -> &'a [T] {
     } else {
         // SAFETY: by the caller's contract.
         unsafe { slice::from_raw_parts(p, n) }
-    }
-}
-
-/// # Safety
-/// `p` is null or points at `n` valid elements nothing else references.
-unsafe fn items_mut<'a, T>(p: *mut T, n: usize) -> &'a mut [T] {
-    if p.is_null() || n == 0 {
-        &mut []
-    } else {
-        // SAFETY: by the caller's contract.
-        unsafe { slice::from_raw_parts_mut(p, n) }
     }
 }
 
@@ -55,42 +44,6 @@ pub struct CompileOutC {
     pub trans: *mut u32,
     pub decal: *mut u32,
     pub illum: *mut u32,
-}
-
-/// Sorts the requested lists of a render list in one call; `trans[i].placement` is updated.
-///
-/// # Safety
-/// `input` and `out` point at valid structs whose arrays have the stated lengths; `out` arrays
-/// do not overlap `input` arrays.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_renderlist_compile(
-    input: *const CompileInC,
-    out: *const CompileOutC,
-) {
-    // SAFETY: the caller's contract.
-    let (Some(i), Some(o)) = (unsafe { input.as_ref() }, unsafe { out.as_ref() }) else {
-        return;
-    };
-    // SAFETY: the caller's contract.
-    unsafe {
-        list::compile(
-            CompileIn {
-                flags: i.flags,
-                origin: i.origin,
-                solid: items(i.solid, i.solid_len),
-                trans: items_mut(i.trans, i.trans_len),
-                decal: items(i.decal, i.decal_len),
-                illum: items(i.illum, i.illum_len),
-            },
-            CompileOut {
-                z: items_mut(o.z, i.solid_len),
-                diffuse: items_mut(o.diffuse, i.solid_len),
-                trans: items_mut(o.trans, i.trans_len),
-                decal: items_mut(o.decal, i.decal_len),
-                illum: items_mut(o.illum, i.illum_len),
-            },
-        );
-    }
 }
 
 macro_rules! backend {
@@ -344,16 +297,6 @@ pub extern "C" fn ohpl_combo_new(modes: usize) -> *mut ComboHandle {
 }
 
 /// # Safety
-/// `h` came from `ohpl_combo_new` and is not used afterwards.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_free(h: *mut ComboHandle) {
-    if !h.is_null() {
-        // SAFETY: `h` is a live `Box` from `ohpl_combo_new`, freed once.
-        drop(unsafe { Box::from_raw(h) });
-    }
-}
-
-/// # Safety
 /// `h` is live or null.
 unsafe fn cache<'a>(h: *mut ComboHandle) -> Option<&'a mut ComboCache> {
     // SAFETY: the caller's contract.
@@ -376,207 +319,4 @@ pub unsafe extern "C" fn ohpl_combo_setup(
         return 0;
     };
     usize::try_from(mode).map_or(0, |m| c.setup(m, stages))
-}
-
-/// # Safety
-/// `h` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_combinations(h: *mut ComboHandle, mode: i32) -> i32 {
-    // SAFETY: the caller's contract.
-    unsafe { cache(h) }.map_or(0, |c| {
-        usize::try_from(mode).map_or(0, |m| c.combinations(m))
-    })
-}
-
-/// # Safety
-/// `h` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_valid_bits(
-    h: *mut ComboHandle,
-    mode: i32,
-    flags: u32,
-    stage: u32,
-) -> u32 {
-    // SAFETY: the caller's contract.
-    unsafe { cache(h) }.map_or(0, |c| {
-        usize::try_from(mode).map_or(0, |m| c.valid_bits(m, flags, stage))
-    })
-}
-
-/// Returns 1 on a hit and stores the handle in `out`.
-///
-/// # Safety
-/// `h` is live; `out` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_program_acquire(
-    h: *mut ComboHandle,
-    mode: i32,
-    flags: u32,
-    out: *mut usize,
-) -> bool {
-    // SAFETY: the caller's contract.
-    let (Some(c), Some(out)) = (unsafe { cache(h) }, unsafe { out.as_mut() }) else {
-        return false;
-    };
-    let Some(found) = usize::try_from(mode)
-        .ok()
-        .and_then(|m| c.program_acquire(m, flags))
-    else {
-        return false;
-    };
-    *out = found;
-    true
-}
-
-/// # Safety
-/// `h` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_program_insert(
-    h: *mut ComboHandle,
-    mode: i32,
-    flags: u32,
-    handle: usize,
-) {
-    // SAFETY: the caller's contract.
-    if let (Some(c), Ok(m)) = (unsafe { cache(h) }, usize::try_from(mode)) {
-        c.program_insert(m, flags, handle);
-    }
-}
-
-fn release_code(r: Release, out: &mut usize) -> i32 {
-    match r {
-        Release::NotFound => 0,
-        Release::Kept => 1,
-        Release::Destroyed(handle) => {
-            *out = handle;
-            2
-        }
-    }
-}
-
-/// Returns 0 not found, 1 still used, 2 destroyed (handle in `out`).
-///
-/// # Safety
-/// `h` is live; `out` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_program_release(
-    h: *mut ComboHandle,
-    mode: i32,
-    flags: u32,
-    out: *mut usize,
-) -> i32 {
-    // SAFETY: the caller's contract.
-    let (Some(c), Some(out), Ok(m)) = (
-        unsafe { cache(h) },
-        unsafe { out.as_mut() },
-        usize::try_from(mode),
-    ) else {
-        return 0;
-    };
-    release_code(c.program_release(m, flags), out)
-}
-
-/// # Safety
-/// `h` is live; `out` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_shader_acquire(
-    h: *mut ComboHandle,
-    mode: i32,
-    stage: u32,
-    bits: u32,
-    out: *mut usize,
-) -> bool {
-    // SAFETY: the caller's contract.
-    let (Some(c), Some(out), Ok(m)) = (
-        unsafe { cache(h) },
-        unsafe { out.as_mut() },
-        usize::try_from(mode),
-    ) else {
-        return false;
-    };
-    let Some(found) = c.shader_acquire(m, stage, bits) else {
-        return false;
-    };
-    *out = found;
-    true
-}
-
-/// # Safety
-/// `h` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_shader_insert(
-    h: *mut ComboHandle,
-    mode: i32,
-    stage: u32,
-    bits: u32,
-    handle: usize,
-) {
-    // SAFETY: the caller's contract.
-    if let (Some(c), Ok(m)) = (unsafe { cache(h) }, usize::try_from(mode)) {
-        c.shader_insert(m, stage, bits, handle);
-    }
-}
-
-/// Returns 0 not found, 1 still used, 2 destroyed (handle in `out`).
-///
-/// # Safety
-/// `h` is live; `out` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_shader_release(
-    h: *mut ComboHandle,
-    mode: i32,
-    stage: u32,
-    bits: u32,
-    out: *mut usize,
-) -> i32 {
-    // SAFETY: the caller's contract.
-    let (Some(c), Some(out), Ok(m)) = (
-        unsafe { cache(h) },
-        unsafe { out.as_mut() },
-        usize::try_from(mode),
-    ) else {
-        return 0;
-    };
-    release_code(c.shader_release(m, stage, bits), out)
-}
-
-/// Removes the entry with the smallest key; false when empty.
-///
-/// # Safety
-/// `h` is live; `out` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_pop_program(
-    h: *mut ComboHandle,
-    mode: i32,
-    out: *mut usize,
-) -> bool {
-    // SAFETY: the caller's contract.
-    let (Some(c), Some(out), Ok(m)) = (
-        unsafe { cache(h) },
-        unsafe { out.as_mut() },
-        usize::try_from(mode),
-    ) else {
-        return false;
-    };
-    c.pop_program(m).map(|handle| *out = handle).is_some()
-}
-
-/// # Safety
-/// `h` is live; `out` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_pop_shader(
-    h: *mut ComboHandle,
-    mode: i32,
-    stage: u32,
-    out: *mut usize,
-) -> bool {
-    // SAFETY: the caller's contract.
-    let (Some(c), Some(out), Ok(m)) = (
-        unsafe { cache(h) },
-        unsafe { out.as_mut() },
-        usize::try_from(mode),
-    ) else {
-        return false;
-    };
-    c.pop_shader(m, stage).map(|handle| *out = handle).is_some()
 }

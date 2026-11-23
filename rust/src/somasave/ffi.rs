@@ -733,31 +733,6 @@ pub extern "C" fn ohpl_gs4_out_new() -> *mut Out {
     Box::into_raw(Box::new(Out::default()))
 }
 
-/// # Safety
-/// `o` came from `ohpl_gs4_out_new`; the bytes are valid until `o` is freed or written to.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs4_out_bytes(o: *const Out, p: *mut *const u8, n: *mut usize) {
-    // SAFETY: valid per the contract.
-    let Some(o) = (unsafe { o.as_ref() }) else {
-        return;
-    };
-    // SAFETY: out pointers valid per the contract.
-    unsafe {
-        *p = o.s.as_ptr();
-        *n = o.s.len();
-    }
-}
-
-/// # Safety
-/// `o` came from `ohpl_gs4_out_new` and is not used afterwards.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs4_out_free(o: *mut Out) {
-    if !o.is_null() {
-        // SAFETY: allocated by `ohpl_gs4_out_new`.
-        drop(unsafe { Box::from_raw(o) });
-    }
-}
-
 #[repr(C)]
 pub struct OhplGs4WriteHost {
     pub ctx: Ctx,
@@ -1214,36 +1189,6 @@ pub unsafe extern "C" fn ohpl_gs4_read_world(
             t: host,
             s: CScript(script),
         },
-    );
-    i.p = r.p;
-    i.ok = r.ok;
-}
-
-/// `ReadScript` / `WriteScript` helpers for callers outside the world (none today).
-///
-/// # Safety
-/// `host` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs4_read_script(
-    i: *mut OhplGs4In,
-    version: i32,
-    host: *const OhplGs4ScriptHost,
-    obj: usize,
-) {
-    // SAFETY: valid per the contract.
-    let (Some(i), Some(host)) = (unsafe { i.as_mut() }, unsafe { host.as_ref() }) else {
-        return;
-    };
-    let mut r = In {
-        s: &i.data,
-        p: i.p,
-        ok: i.ok,
-    };
-    script::read_script(
-        &mut CScript(host),
-        &mut r,
-        version,
-        (obj != 0).then_some(obj),
     );
     i.p = r.p;
     i.ok = r.ok;

@@ -130,67 +130,6 @@ pub unsafe extern "C" fn ohpl_h15s_free(state: *const SurfaceState) {
 }
 
 /// # Safety
-/// `state` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h15s_set_f32(state: *mut SurfaceState, id: i32, v: f32) {
-    // SAFETY: caller contract.
-    if let Some(s) = unsafe { state.as_mut() } {
-        s.set_f32(id, v);
-    }
-}
-
-/// # Safety
-/// `state` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h15s_get_f32(state: *mut SurfaceState, id: i32) -> f32 {
-    // SAFETY: caller contract.
-    unsafe { state.as_mut() }.map_or(0.0, |s| s.get_f32(id))
-}
-
-/// # Safety
-/// `state` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h15s_set_i32(state: *mut SurfaceState, id: i32, v: i32) {
-    // SAFETY: caller contract.
-    if let Some(s) = unsafe { state.as_mut() } {
-        s.set_i32(id, v);
-    }
-}
-
-/// # Safety
-/// `state` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h15s_get_i32(state: *const SurfaceState, id: i32) -> i32 {
-    // SAFETY: caller contract.
-    unsafe { state.as_ref() }.map_or(0, |s| s.get_i32(id))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15s_create_impact(rs: u64, min_speed: f32, hit: bool) -> usize {
-    surf::create_impact(rs, min_speed, hit)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15s_impact_at(rs: u64, hit: bool, i: i32) -> usize {
-    surf::impact_at(rs, hit, i)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15s_impact_num(rs: u64, hit: bool) -> i32 {
-    surf::impact_num(rs, hit)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15s_impact_from_speed(rs: u64, hit: bool, speed: f32) -> usize {
-    surf::impact_from_speed(rs, hit, speed)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15s_preload(rs: u64) {
-    surf::preload_data(rs);
-}
-
-/// # Safety
 /// `state` is live; `name` points to `n` readable bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h15s_to_material(
