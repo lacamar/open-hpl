@@ -14,4 +14,5 @@ mod timer;
 mod tests;
 
 pub use plat::{ohpl_l1_delay as delay_ms, ohpl_l1_ticks};
+pub use start::game_main;
 pub use timer::micros;

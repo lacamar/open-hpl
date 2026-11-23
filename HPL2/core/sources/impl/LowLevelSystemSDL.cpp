@@ -47,51 +47,9 @@
 #include "impl/RustL1.h"
 #include "impl/RustL7.h"
 
-static void AppendSink(void *apCtx, const char *apData, size_t alLen)
-{
-	((std::string*)apCtx)->append(apData, alLen);
-}
-
-#include <clocale>
-#include <langinfo.h>
-#include <unistd.h>
-
 #ifdef __linux__
 #include <string.h>
 #endif
-
-
-// Include for using the versioning header
-//#include "BuildID_HPL2_0.h"
-
-// @todo redo this prototype to take a tStringVec instead
-
-#ifndef IGNORE_HPL_MAIN
-extern int hplMain(const hpl::tString &asCommandLine);
-
-static void AppendSinkU8(void *apCtx, const unsigned char *apData, size_t alLen)
-{
-	((std::string*)apCtx)->append((const char*)apData, alLen);
-}
-
-int main(int argc, char *argv[])
-{
-	bool bCwd = false;
-	hpl::tString sCmdLine;
-	if(ohpl_l1_main_args(argc, argv, AppendSinkU8, &sCmdLine, &bCwd) != 0) return 1;
-	if(!bCwd)
-	{
-		hpl::tString sDataDir = hpl::cPlatform::GetDataDir();
-		if(chdir(sDataDir.c_str())) {}
-	}
-	if(!ohpl_l1_protect_steam()) return 1;
-	return hplMain(sCmdLine);
-}
-#endif
-
-
-
-
 
 namespace hpl {
 

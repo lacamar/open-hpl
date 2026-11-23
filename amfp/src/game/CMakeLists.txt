@@ -12,10 +12,11 @@ file(GLOB all_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     *.h
 )
 
-add_executable(Amfp
+add_library(AmfpGame STATIC
     ${all_sources}
 )
-target_link_libraries(Amfp HPL2)
+target_link_libraries(AmfpGame PUBLIC HPL2)
+ohpl_game(Amfp amfp)
 
 add_definitions(-DLINUX)
 

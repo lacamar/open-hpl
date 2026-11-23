@@ -26,5 +26,5 @@ script-check:
 
 lint:
     git diff --check HEAD
-    cargo fmt --check --manifest-path rust/Cargo.toml
-    cargo clippy -q --offline --manifest-path rust/Cargo.toml --all-targets -- -D warnings
+    cargo fmt --all --check --manifest-path rust/Cargo.toml
+    cargo clippy -q --offline --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
