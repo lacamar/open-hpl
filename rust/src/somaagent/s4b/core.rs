@@ -62,48 +62,6 @@ pub fn log_err(s: &str) {
     Io::new().s(0, s.as_bytes()).go(op::LOG_ERR);
 }
 
-fn dump_on() -> bool {
-    use std::sync::atomic::{AtomicI8, Ordering};
-    static ON: AtomicI8 = AtomicI8::new(-1);
-    let v = ON.load(Ordering::Relaxed);
-    if v >= 0 {
-        return v == 1;
-    }
-    let on = Io::new().go(op::DUMP_ON).int(0) != 0;
-    ON.store(i8::from(on), Ordering::Relaxed);
-    on
-}
-
-fn dump_call(ent: usize, decl: &[u8]) {
-    if dump_on() {
-        Io::new().p(0, ent).i(0, 0).s(0, decl).go(op::DUMP);
-    }
-}
-
-fn dump_ev(ent: usize, kind: u32, a: i32, b: i32) {
-    if dump_on() {
-        Io::new()
-            .p(0, ent)
-            .i(0, 1)
-            .i(1, kind as i32)
-            .i(2, a)
-            .i(3, b)
-            .go(op::DUMP);
-    }
-}
-
-fn dump_msg(ent: usize, id: i32, v: Vector3f, x: i32) {
-    if dump_on() {
-        Io::new()
-            .p(0, ent)
-            .i(0, 2)
-            .i(1, id)
-            .i(2, x)
-            .v(0, v)
-            .go(op::DUMP);
-    }
-}
-
 #[allow(clippy::vec_box)] // components and scripts hold agent addresses
 struct Reg(UnsafeCell<Vec<Box<Agent>>>);
 
@@ -209,11 +167,11 @@ pub fn sm_of(a: *mut Agent) -> *mut Sm {
 }
 
 pub fn ent_name(ent: usize) -> Vec<u8> {
-    Io::new().p(0, ent).go(op::E_NAME).out_s(0).to_vec()
+    super::pod::name(ent)
 }
 
 pub fn ent_active(ent: usize) -> bool {
-    Io::new().p(0, ent).go(op::E_FLAGS).int(2) != 0
+    super::pod::active(ent)
 }
 
 pub fn player_feet() -> Vector3f {
@@ -253,7 +211,7 @@ pub fn replay(ent: usize, ev: &Events) {
         if a.is_null() {
             return;
         }
-        dump_ev(ent, e.kind, e.a, e.b);
+        super::dump::log_ev(ent, e.kind, e.a, e.b);
         let (pf, cm) = (pf_of(a), cm_of(a));
         let name_arg = [Arg::EntName];
         match e.kind {
@@ -386,7 +344,7 @@ pub fn send_message(ent: usize, msg: i32, v: Vector3f, x: i32) {
         if msg != MSG_DOOR {
             (*a).msg.clear_id();
         }
-        dump_msg(ent, msg, v, x);
+        super::dump::log_msg(ent, msg, v, x);
         (*a).msg.set(v, x);
         (*a).msg.ptr() as usize
     };
@@ -467,7 +425,7 @@ fn sm_run(ent: usize, c: *mut Comp, sub: bool, id: i32, func: &str, args: &[Arg]
     );
     let run = |st: &[u8]| {
         let decl = [pre.as_bytes(), st, b"_", func.as_bytes()].concat();
-        dump_call(ent, &decl);
+        super::dump::log_call(ent, &decl);
         if bmsg {
             call(ent, CALL_ENT_BOOL, false, &decl, args)
         } else {

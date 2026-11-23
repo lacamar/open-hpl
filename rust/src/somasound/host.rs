@@ -38,11 +38,10 @@ pub struct S7Host {
         *mut c_void,
     ),
     pub world_sound_by_name: unsafe extern "C" fn(usize, *const u8, usize) -> usize,
-    pub area_state: unsafe extern "C" fn(usize, *mut bool, *mut f32),
+    pub area_matrix: unsafe extern "C" fn(usize, *mut f32),
     pub camera_pos: unsafe extern "C" fn(*mut f32) -> bool,
     pub body_pos: unsafe extern "C" fn(*mut f32) -> bool,
     pub apply_reverb: unsafe extern "C" fn(*const f32),
-    pub ent_name: unsafe extern "C" fn(usize, Sink, *mut c_void),
     pub prefix_ref: unsafe extern "C" fn(*const u8, usize) -> *const c_void,
     pub script_call: unsafe extern "C" fn(*const u8, usize, *const CallArg, usize, bool) -> i32,
 }
@@ -82,6 +81,8 @@ pub struct AreaDefC {
     pub reverb_type: Str,
     pub reverb_amount: f32,
     pub reverb_fade: f32,
+    pub core: usize,
+    pub names: usize,
 }
 
 static HOST: OnceLock<&'static S7Host> = OnceLock::new();

@@ -233,6 +233,8 @@ pub mod op {
     pub const U_TIMERS: u32 = 155;
     pub const LOG_ERR: u32 = 160;
     pub const LOG_WARN: u32 = 161;
-    pub const DUMP: u32 = 162;
-    pub const DUMP_ON: u32 = 163;
+    pub const D_MAP_NAME: u32 = 164;
+    pub const D_PLAYER_FEET: u32 = 165;
+    pub const D_SAVE: u32 = 166;
+    pub const D_ANIM: u32 = 167;
 }

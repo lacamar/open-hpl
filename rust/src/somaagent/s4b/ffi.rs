@@ -34,18 +34,22 @@ pub unsafe extern "C" fn ohpl_s4b_register(engine: *mut c_void) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_s4b_create(ent: usize) {
+pub extern "C" fn ohpl_s4b_create(ent: usize, core: usize, names: usize) {
+    super::pod::register(ent, core, names);
     api::create_agent(ent);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_s4b_destroy(ent: usize) {
     core::destroy_agent(ent);
+    super::pod::forget(ent);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_s4b_update(ent: usize, dt: f32) {
+    super::dump::begin(ent);
     core::update_agent(ent, dt);
+    super::dump::end(ent);
 }
 
 #[unsafe(no_mangle)]

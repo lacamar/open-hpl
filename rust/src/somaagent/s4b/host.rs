@@ -6,6 +6,7 @@ use super::super::host::Host;
 use super::super::pathfinder::TrackNodeInfo;
 use super::io::{Io, op};
 use super::model::{Agent, COMP_CHAR_MOVER, COMP_PATHFINDER, Cm, K, Pf};
+use super::pod;
 use crate::math::{Matrixf, Vector3f, v3};
 
 pub struct H(pub *mut Agent);
@@ -147,10 +148,10 @@ impl Host for H {
         self.ent_pos_()
     }
     fn ent_scale_y(&mut self) -> f32 {
-        Io::new().p(0, self.ent()).go(op::E_SCALE_Y).fl(0)
+        pod::scale(self.ent()).y
     }
     fn ent_global_space_anim(&mut self) -> bool {
-        self.eflag(3)
+        pod::global_space_anim(self.ent())
     }
     fn body_pos(&mut self) -> Vector3f {
         self.b3(0)
@@ -332,7 +333,7 @@ impl Host for H {
         }
     }
     fn anim_current(&mut self) -> i32 {
-        Io::new().p(0, self.ent()).go(op::E_ANIM_CURRENT).int(0)
+        pod::current_anim(self.ent())
     }
     fn anim_name_nonempty(&mut self, state: i32) -> bool {
         self.move_anim(state).is_some_and(|n| !n.is_empty())
@@ -431,7 +432,7 @@ impl Host for H {
         };
         if nd == 0 || io.ptr(0) == 0 {
             let mut msg = b"SOMA agent '".to_vec();
-            msg.extend_from_slice(Io::new().p(0, self.ent()).go(op::E_NAME).out_s(0));
+            msg.extend_from_slice(&pod::name(self.ent()));
             msg.extend_from_slice(b"': track node '");
             msg.extend_from_slice(&name);
             msg.extend_from_slice(b"' not found\n");

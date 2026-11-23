@@ -30,10 +30,11 @@ pub(crate) use geom::{
     plane_aabb_sphere_collision,
 };
 pub(crate) use geom::{point_in_aabb, points_aabb_planes_collision};
+#[cfg(test)]
+pub(crate) use libm::c_rand;
+pub(crate) use libm::c_srand;
 pub(crate) use libm::{acos, asin, cos, sin};
 pub(crate) use libm::{atan2, tan};
-#[cfg(test)]
-pub(crate) use libm::{c_rand, c_srand};
 pub(crate) use matrix::{
     IDENTITY, matrix_inverse, matrix_mul, matrix_mul_3x3, matrix_mul_vec, matrix_rotate,
     matrix_scale, rotate_y, rotate_z,

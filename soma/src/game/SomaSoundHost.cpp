@@ -144,21 +144,18 @@ void ScapeAreas(size_t m, void (*sink)(void *, const OhplGs5AreaDef *), void *ct
 		d.reverb_type = S(sReverb);
 		d.reverb_amount = v.GetVarFloat("ReverbAmount", 1);
 		d.reverb_fade = v.GetVarFloat("ReverbFadeTime", 1);
+		d.core = pEnt->mpCore;
+		d.names = pEnt->mpNames;
 		sink(ctx, &d);
 	}
 }
 
-void AreaState(size_t e, bool *pActive, float *o)
+void AreaMatrix(size_t e, float *o)
 {
-	cSomaLuxEntity *p = (cSomaLuxEntity *)e;
-	*pActive = p->mpCore->mbActive;
-	cMatrixf m = p->GetMatrix();
+	cMatrixf m = ((cSomaLuxEntity *)e)->GetMatrix();
 	for (int r = 0; r < 4; ++r)
 		for (int c = 0; c < 4; ++c)
 			o[r * 4 + c] = m.m[r][c];
-	o[16] = p->mpCore->mvSize.x;
-	o[17] = p->mpCore->mvSize.y;
-	o[18] = p->mpCore->mvSize.z;
 }
 
 bool CameraPos(float *o)
@@ -250,11 +247,10 @@ const OhplS7Host kHost = {
 	ScapeWorld,
 	ScapeAreas,
 	[](size_t w, const unsigned char *n, size_t l) { return (size_t)((cWorld *)w)->GetSoundEntity(Str(n, l)); },
-	AreaState,
+	AreaMatrix,
 	CameraPos,
 	BodyPos,
 	ApplyReverb,
-	[](size_t e, OhplS7Sink sink, void *ctx) { sink(ctx, (const unsigned char *)((cSomaLuxEntity *)e)->GetName().data(), ((cSomaLuxEntity *)e)->GetName().size()); },
 	PrefixRef,
 	ScriptCall,
 };
