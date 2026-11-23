@@ -52,7 +52,7 @@ namespace hpl {
 		void DecUserCount(){--mlUserCount;}
 		bool HasUsers(){ return mlUserCount >0; }
 
-	protected:
+	private:
 		cVector2l mvSize;
 		int mlDepthBits;
 		int mlStencilBits;
@@ -98,7 +98,13 @@ namespace hpl {
 		inline const cVector2l& GetSize(){ return mvSize;}
 
 	protected:
+		void SetColorBufferBase(int alIdx, iFrameBufferAttachment* apX){ mpColorBuffer[alIdx] = apX;}
+		void SetDepthBufferBase(iFrameBufferAttachment* apX){ mpDepthBuffer = apX;}
+		void SetStencilBufferBase(iFrameBufferAttachment* apX){ mpStencilBuffer = apX;}
+		void SetSizeBase(const cVector2l& avSize){ mvSize = avSize;}
+
 		iLowLevelGraphics* mpLowLevelGraphics;
+	private:
 
 		tString msName;
 

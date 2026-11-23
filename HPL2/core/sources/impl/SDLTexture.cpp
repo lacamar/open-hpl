@@ -101,7 +101,7 @@ namespace hpl {
 
 		/////////////////////////////
 		//Check so everything is correct
-		if(mUsage == eTextureUsage_RenderTarget || mType != eTextureType_CubeMap)
+		if(GetUsage() == eTextureUsage_RenderTarget || GetType() != eTextureType_CubeMap)
 		{
 			return false;
 		}
@@ -156,7 +156,7 @@ namespace hpl {
 
 	void cSDLTexture::Update(float afTimeStep)
 	{
-		ohpl_gl_clock_update(&mClock, HandleCount(), afTimeStep, mfFrameTime, mAnimMode);
+		ohpl_gl_clock_update(&mClock, HandleCount(), afTimeStep, GetFrameTime(), GetAnimMode());
 	}
 
 	//-----------------------------------------------------------------------
@@ -168,12 +168,12 @@ namespace hpl {
 	
 	void cSDLTexture::NextFrame()
 	{
-		ohpl_gl_clock_next(&mClock, HandleCount(), mAnimMode);
+		ohpl_gl_clock_next(&mClock, HandleCount(), GetAnimMode());
 	}
 
 	void cSDLTexture::PrevFrame()
 	{
-		ohpl_gl_clock_prev(&mClock, HandleCount(), mAnimMode);
+		ohpl_gl_clock_prev(&mClock, HandleCount(), GetAnimMode());
 	}
 	
 	float cSDLTexture::GetT()
@@ -203,8 +203,8 @@ namespace hpl {
 
 		OhplTexIo io;
 		LoadIo(io);
-		avOut.resize(mvSize.x * mvSize.y * 4);
-		bool bDepth = mPixelFormat == ePixelFormat_Depth16 || mPixelFormat == ePixelFormat_Depth24 || mPixelFormat == ePixelFormat_Depth32;
+		avOut.resize(GetWidth() * GetHeight() * 4);
+		bool bDepth = GetPixelFormat() == ePixelFormat_Depth16 || GetPixelFormat() == ePixelFormat_Depth24 || GetPixelFormat() == ePixelFormat_Depth32;
 		return ohpl_gltex_read_pixels(mlRs, &io, mClock.count, bDepth, avOut.data());
 	}
 
@@ -223,9 +223,9 @@ namespace hpl {
 		if(ContainsData()==false) return;
 		if(!mpLowLevelGraphics->GetCaps(eGraphicCaps_AnisotropicFiltering)) return;
 		if(afX < 1.0f) return;
-		if(!ohpl_gl_tex_aniso_apply(true, true, mpLowLevelGraphics->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), afX, mfAnisotropyDegree)) return;
+		if(!ohpl_gl_tex_aniso_apply(true, true, mpLowLevelGraphics->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), afX, GetAnisotropy())) return;
 
-		mfAnisotropyDegree = afX;
+		SetAnisotropyBase(afX);
 
 		OhplTexIo io;
 		LoadIo(io);
@@ -236,7 +236,7 @@ namespace hpl {
 
 	void cSDLTexture::SetWrapS(eTextureWrap aMode)
 	{
-		if(mType == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
+		if(GetType() == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
 
 		WrapRs(1, aMode);
 	}
@@ -245,7 +245,7 @@ namespace hpl {
 
 	void cSDLTexture::SetWrapT(eTextureWrap aMode)
 	{
-		if(mType == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
+		if(GetType() == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
 
 		WrapRs(2, aMode);
 	}
@@ -254,7 +254,7 @@ namespace hpl {
 
 	void cSDLTexture::SetWrapR(eTextureWrap aMode)
 	{
-		if(mType == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
+		if(GetType() == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
 
 		WrapRs(4, aMode);
 	}
@@ -263,7 +263,7 @@ namespace hpl {
 
 	void cSDLTexture::SetWrapSTR(eTextureWrap aMode)
 	{
-		if(mType == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
+		if(GetType() == eTextureType_Rect) return; //Rect only has one mode! (clamp to edge)
 
 		;
 
@@ -294,7 +294,7 @@ namespace hpl {
 
 	void cSDLTexture::AutoGenerateMipmaps()
 	{
-		if(mbUseMipMaps==false) return;
+		if(UsesMipMaps()==false) return;
 
 		OhplTexIo io;
 		LoadIo(io);
@@ -328,24 +328,24 @@ namespace hpl {
 
 	void cSDLTexture::LoadIo(OhplTexIo &aIo)
 	{
-		aIo.type = mType; aIo.usage = mUsage; aIo.filter = mFilter;
-		aIo.wrap[0] = mWrapS; aIo.wrap[1] = mWrapT; aIo.wrap[2] = mWrapR;
-		aIo.compareMode = mCompareMode; aIo.compareFunc = mCompareFunc;
-		aIo.animMode = mAnimMode; aIo.pixelFormat = mPixelFormat;
-		aIo.downLevel = mlSizeDownScaleLevel; aIo.memory = mlMemorySize;
-		aIo.size = mvSize; aIo.minSize = mvMinDownScaleSize;
-		aIo.frameTime = mfFrameTime; aIo.aniso = mfAnisotropyDegree;
-		aIo.useMips = mbUseMipMaps; aIo.srgb = mbsRGB; aIo.compressed = mbIsCompressed;
+		aIo.type = GetType(); aIo.usage = GetUsage(); aIo.filter = GetFilter();
+		aIo.wrap[0] = GetWrapS(); aIo.wrap[1] = GetWrapT(); aIo.wrap[2] = GetWrapR();
+		aIo.compareMode = GetCompareMode(); aIo.compareFunc = GetCompareFunc();
+		aIo.animMode = GetAnimMode(); aIo.pixelFormat = GetPixelFormat();
+		aIo.downLevel = GetSizeDownScaleLevel(); aIo.memory = GetMemorySize();
+		aIo.size = GetSize(); aIo.minSize = GetMinLevelSize();
+		aIo.frameTime = GetFrameTime(); aIo.aniso = GetAnisotropy();
+		aIo.useMips = UsesMipMaps(); aIo.srgb = GetsRGB(); aIo.compressed = IsCompressed();
 	}
 
 	void cSDLTexture::StoreIo(const OhplTexIo &aIo)
 	{
-		mFilter = (eTextureFilter)aIo.filter;
-		mWrapS = (eTextureWrap)aIo.wrap[0]; mWrapT = (eTextureWrap)aIo.wrap[1]; mWrapR = (eTextureWrap)aIo.wrap[2];
-		mCompareMode = (eTextureCompareMode)aIo.compareMode; mCompareFunc = (eTextureCompareFunc)aIo.compareFunc;
-		mPixelFormat = (ePixelFormat)aIo.pixelFormat;
-		mlMemorySize = aIo.memory; mvSize = aIo.size;
-		mbUseMipMaps = aIo.useMips; mbIsCompressed = aIo.compressed;
+		SetFilterBase((eTextureFilter)aIo.filter);
+		SetWrapBase((eTextureWrap)aIo.wrap[0], (eTextureWrap)aIo.wrap[1], (eTextureWrap)aIo.wrap[2]);
+		SetCompareBase((eTextureCompareMode)aIo.compareMode, (eTextureCompareFunc)aIo.compareFunc);
+		SetPixelFormatBase((ePixelFormat)aIo.pixelFormat);
+		SetMemorySizeBase(aIo.memory); SetSizeBase(aIo.size);
+		SetUseMipMaps(aIo.useMips); SetCompressedBase(aIo.compressed);
 	}
 
 	void cSDLTexture::WrapRs(unsigned alMask, eTextureWrap aMode)
@@ -388,7 +388,7 @@ namespace hpl {
 		if(lState == 0) return;
 		if(lState == 1 &&
 			mpLowLevelGraphics->GetCaps(eGraphicCaps_AnisotropicFiltering) &&
-			ohpl_gl_tex_aniso_fits(mpLowLevelGraphics->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), mfAnisotropyDegree))
+			ohpl_gl_tex_aniso_fits(mpLowLevelGraphics->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), GetAnisotropy()))
 		{
 			ohpl_gltex_props_aniso(mlRs, &io);
 		}
@@ -406,7 +406,7 @@ namespace hpl {
 	{
 		////////////////////////////
 		//Create Cubemap texture
-		if(mType == eTextureType_CubeMap)
+		if(GetType() == eTextureType_CubeMap)
 		{
 			//Check so there are at least 6 images.
 			if(apBmp->GetNumOfImages()<6)

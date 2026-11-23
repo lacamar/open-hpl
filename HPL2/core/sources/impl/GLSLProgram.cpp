@@ -54,8 +54,8 @@ namespace hpl{
 
 	cGLSLProgram::~cGLSLProgram()
 	{
-		cGLSLShader* pRsShader0 = static_cast<cGLSLShader*>(mpShader[0]);
-		cGLSLShader* pRsShader1 = static_cast<cGLSLShader*>(mpShader[1]);
+		cGLSLShader* pRsShader0 = static_cast<cGLSLShader*>(GetShader(eGpuShaderType_Vertex));
+		cGLSLShader* pRsShader1 = static_cast<cGLSLShader*>(GetShader(eGpuShaderType_Fragment));
 		ohpl_glprog_free(mlRs, pRsShader0 ? (int64_t)pRsShader0->GetHandle() : -1, pRsShader1 ? (int64_t)pRsShader1->GetHandle() : -1);
 	}
 	
@@ -71,7 +71,7 @@ namespace hpl{
 	{
 		for(int i=0; i<2; ++i)
 		{
-			cGLSLShader* pRsShader = static_cast<cGLSLShader*>(mpShader[i]);
+			cGLSLShader* pRsShader = static_cast<cGLSLShader*>(GetShader((eGpuShaderType)i));
 			if(pRsShader) ohpl_glprog_attach(mlRs, pRsShader->GetHandle());
 		}
 
@@ -84,18 +84,18 @@ namespace hpl{
 			size_t lLogLen = 0;
 			const unsigned char *pLog = ohpl_glprog_log(mlRs, &lLogLen);
 			if(lLogLen) sInfoLog.assign((const char*)pLog, lLogLen);
-			cEngineDiagnostics::ReportShader(msName, "link", bRsLinked, sInfoLog);
+			cEngineDiagnostics::ReportShader(GetName(), "link", bRsLinked, sInfoLog);
 		}
 		if(bRsLinked == false)
 		{
-			Error("Failed to link GLSL program %s\n",msName.c_str());
+			Error("Failed to link GLSL program %s\n",GetName().c_str());
 			LogProgramInfoLog();
 			return false;
 		}
 
 		for(eGpuShaderType type : {eGpuShaderType_Vertex, eGpuShaderType_Fragment})
 		{
-			iGpuShader* pShader = mpShader[type];
+			iGpuShader* pShader = GetShader(type);
 			if(pShader == NULL || pShader->GetSamplerUnitNum() == 0) continue;
 			ohpl_glprog_use(mlRs);
 

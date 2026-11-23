@@ -132,7 +132,23 @@ namespace hpl {
 		void SetsRGB(bool abX){ mbsRGB = abX; }
 		bool GetsRGB(){ return mbsRGB; }
 
+		float GetAnisotropy() const { return mfAnisotropyDegree; }
+		unsigned int GetSizeDownScaleLevel() const { return mlSizeDownScaleLevel; }
+		const cVector3l& GetMinLevelSize() const { return mvMinDownScaleSize; }
+
 	protected:
+		void SetAnisotropyBase(float afX){ mfAnisotropyDegree = afX; }
+		void SetFilterBase(eTextureFilter aFilter){ mFilter = aFilter; }
+		void SetWrapBase(eTextureWrap aS, eTextureWrap aT, eTextureWrap aR){ mWrapS = aS; mWrapT = aT; mWrapR = aR; }
+		void SetCompareBase(eTextureCompareMode aMode, eTextureCompareFunc aFunc){ mCompareMode = aMode; mCompareFunc = aFunc; }
+		void SetPixelFormatBase(ePixelFormat aFormat){ mPixelFormat = aFormat; }
+		void SetMemorySizeBase(int alSize){ mlMemorySize = alSize; }
+		void SetSizeBase(const cVector3l& avSize){ mvSize = avSize; }
+		void SetCompressedBase(bool abX){ mbIsCompressed = abX; }
+
+		iLowLevelGraphics* mpLowLevelGraphics;
+
+	private:
 		eTextureUsage mUsage;
 		eTextureType mType;
 
@@ -153,7 +169,6 @@ namespace hpl {
 		bool mbIsCompressed;
 		bool mbsRGB;
 		ePixelFormat mPixelFormat;
-		iLowLevelGraphics* mpLowLevelGraphics;
 		float mfFrameTime;
 		eTextureAnimMode mAnimMode;
 		

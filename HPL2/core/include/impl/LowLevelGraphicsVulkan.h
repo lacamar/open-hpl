@@ -83,7 +83,7 @@ namespace hpl {
 		cVulkanImage* GetImage();
 		VkImageView GetAttachView(int alLevel, int alLayer);
 		VkSampler GetSampler(bool abShadow=false);
-		bool IsDepth(){ return PixelFormatIsDepth(mPixelFormat); }
+		bool IsDepth(){ return PixelFormatIsDepth(GetPixelFormat()); }
 
 	private:
 		bool CreateFromBitmapToIndex(cBitmap* apBmp, int alIdx);
@@ -134,7 +134,7 @@ namespace hpl {
 		bool mbExplicitMipLevel = false;
 	private:
 		void SetColor(int alIdx, iTexture *apTexture, int alLevel, int alLayer);
-		void SetFirstSize(const cVector2l& avSize){ if(mvSize.x < 0) mvSize = avSize; }
+		void SetFirstSize(const cVector2l& avSize){ if(GetSize().x < 0) SetSizeBase(avSize); }
 		cLowLevelGraphicsVulkan* mpGfx;
 	};
 
