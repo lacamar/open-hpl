@@ -523,7 +523,7 @@ pub fn register_components(s: &Soma, e: Engine) {
     s.method("cLuxLightSensor", "bool IsSensoring()", |f| {
         let c = comp(f);
         let a = find(c.ent);
-        let active = Io::new().p(0, c.ent).go(op::E_FLAGS).int(2) != 0;
+        let active = super::pod::active(c.ent);
         // SAFETY: a registry agent or null.
         f.ret(active && unsafe { a.as_ref() }.is_none_or(|a| a.st.senses_active));
     });

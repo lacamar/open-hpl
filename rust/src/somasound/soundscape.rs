@@ -5,9 +5,13 @@ use super::game::game;
 use super::glue;
 use super::host::{AreaDefC, Engine, Str, ops};
 use super::scape::{AreaDef, AreaState, ReverbEnv, Scape, ScapeHost};
+use crate::somaent::ent_core::Core;
+use crate::somaent::names::Names;
 use crate::somascript::s2_as::{Frame, Soma};
 use crate::sound::own::{ent_fade_in, ent_fade_out, entity_of};
+use std::collections::BTreeMap;
 use std::ffi::c_void;
+use std::sync::Mutex;
 
 const ENTRY_WORLD: i32 = 1;
 
@@ -94,13 +98,19 @@ impl ScapeHost for Host {
 
     fn area(&mut self, ent: usize) -> AreaState {
         let mut st = AreaState::default();
-        let mut b = [0.0f32; 19];
         if let Some(o) = ops() {
-            // SAFETY: `ent` is an area entity of the current map; `b` holds 19 floats.
-            unsafe { (o.area_state)(ent, &mut st.active, b.as_mut_ptr()) };
+            // SAFETY: `ent` is an area entity of the current map; the matrix holds 16 floats.
+            unsafe { (o.area_matrix)(ent, st.matrix.as_mut_ptr()) };
         }
-        st.matrix.copy_from_slice(b.get(..16).unwrap_or(&[0.0; 16]));
-        st.size.copy_from_slice(b.get(16..).unwrap_or(&[0.0; 3]));
+        if let Some(c) = pod_of(ent)
+            .map(|p| p.0 as *const Core)
+            .filter(|p| !p.is_null())
+        {
+            // SAFETY: the pod belongs to a live area entity of the current map.
+            let c = unsafe { &*c };
+            st.active = c.mbActive;
+            st.size = [c.mvSize.x, c.mvSize.y, c.mvSize.z];
+        }
         st
     }
 
@@ -154,6 +164,9 @@ fn text(s: &Str) -> Vec<u8> {
 unsafe extern "C" fn collect(ctx: *mut c_void, d: *const AreaDefC) {
     // SAFETY: `ctx` is the vector below; `d` is valid for the callback.
     let (v, d) = unsafe { (&mut *ctx.cast::<Vec<AreaDef>>(), &*d) };
+    if let Ok(mut m) = PODS.lock() {
+        m.insert(d.ent, (d.core, d.names));
+    }
     v.push(AreaDef {
         ent: d.ent,
         level: text(&d.level),
@@ -180,6 +193,9 @@ unsafe extern "C" fn collect(ctx: *mut c_void, d: *const AreaDefC) {
 fn load(map: usize) {
     let mut defs: Vec<AreaDef> = Vec::new();
     let mut world = 0;
+    if let Ok(mut m) = PODS.lock() {
+        m.clear();
+    }
     if map != 0
         && let Some(o) = ops()
     {
@@ -221,17 +237,18 @@ pub fn set_paused(on: bool) {
     game().soundscape.scape = sc;
 }
 
+static PODS: Mutex<BTreeMap<usize, (usize, usize)>> = Mutex::new(BTreeMap::new());
+
+fn pod_of(ent: usize) -> Option<(usize, usize)> {
+    PODS.lock().ok()?.get(&ent).copied()
+}
+
 fn ent_name(ent: usize) -> Vec<u8> {
-    unsafe extern "C" fn sink(ctx: *mut c_void, p: *const u8, n: usize) {
-        // SAFETY: `ctx` is the vector below; the host passes `n` valid bytes.
-        unsafe { (*ctx.cast::<Vec<u8>>()).extend_from_slice(std::slice::from_raw_parts(p, n)) }
-    }
-    let mut v = Vec::new();
-    if let Some(o) = ops() {
-        // SAFETY: `v` outlives the call.
-        unsafe { (o.ent_name)(ent, sink, std::ptr::from_mut(&mut v).cast()) };
-    }
-    v
+    pod_of(ent)
+        .filter(|p| p.1 != 0)
+        // SAFETY: the pod belongs to a live area entity of the current map.
+        .map(|p| unsafe { &*(p.1 as *const Names) }.name().to_vec())
+        .unwrap_or_default()
 }
 
 fn ts(v: f32) -> String {

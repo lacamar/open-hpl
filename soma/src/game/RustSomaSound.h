@@ -85,11 +85,10 @@ struct OhplS7Host
 	size_t (*scape_world)(size_t);
 	void (*scape_areas)(size_t, void (*)(void *, const OhplGs5AreaDef *), void *);
 	size_t (*world_sound_by_name)(size_t, const unsigned char *, size_t);
-	void (*area_state)(size_t, bool *, float *);
+	void (*area_matrix)(size_t, float *);
 	bool (*camera_pos)(float *);
 	bool (*body_pos)(float *);
 	void (*apply_reverb)(const float *);
-	void (*ent_name)(size_t, OhplS7Sink, void *);
 	const void *(*prefix_ref)(const unsigned char *, size_t);
 	int (*script_call)(const unsigned char *, size_t, const OhplS7CallArg *, size_t, bool);
 };
@@ -166,6 +165,7 @@ struct OhplGs5AreaDef
 	int reverb_prio;
 	OhplGs5Str reverb_type;
 	float reverb_amount, reverb_fade;
+	const void *core, *names;
 };
 
 extern "C" {
