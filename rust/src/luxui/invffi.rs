@@ -236,11 +236,6 @@ pub extern "C" fn ohpl_inv_combine_auto(idx: i32) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_inv_run_script(cmd: Str) {
-    obj::run_script(b(cmd));
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn ohpl_inv_recompile(s: Sink, c: Ctx) -> i32 {
     let (ok, out) = obj::recompile_script();
     sink(s, c, &out);

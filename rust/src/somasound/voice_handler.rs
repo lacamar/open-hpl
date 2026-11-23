@@ -8,8 +8,11 @@ use crate::backend::media::audio::Vorbis;
 use crate::somascript::s2_as::{
     Engine, Frame, Soma, ohpl_as2_wstr_data, ohpl_as2_wstr_len, str_bytes,
 };
+use crate::sound::own::Rec;
+use crate::sound::own_ffi::{ohpl_sndent_fade, ohpl_sndent_set, ohpl_sndent_set_paused};
 use crate::string::wide_to_utf8;
 use crate::string_ffi::units;
+use crate::types::Vector3f;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::{c_long, c_void};
@@ -21,13 +24,6 @@ type RowSink = unsafe extern "C" fn(*mut c_void, *const u32, usize);
 #[repr(C)]
 pub struct Host {
     pub entry_valid: unsafe extern "C" fn(usize, i32) -> bool,
-    pub entry_set_volume_mul: unsafe extern "C" fn(usize, f32),
-    pub entry_fade_out: unsafe extern "C" fn(usize, f32),
-    pub entry_set_paused: unsafe extern "C" fn(usize, bool),
-    pub channel_set_position: unsafe extern "C" fn(usize, *const f32),
-    pub channel_filter: unsafe extern "C" fn(usize, bool, f32),
-    pub channel_total: unsafe extern "C" fn(usize) -> f64,
-    pub channel_elapsed: unsafe extern "C" fn(usize) -> f64,
     pub listener_pos: unsafe extern "C" fn(*mut f32),
     pub map_entity_pos: unsafe extern "C" fn(*const u8, usize, *mut f32) -> bool,
     pub map_current: unsafe extern "C" fn() -> bool,
@@ -143,31 +139,44 @@ fn collect(f: impl FnOnce(Sink, *mut c_void) -> bool) -> Option<Vec<u8>> {
     f(sink, (&raw mut v).cast()).then_some(v)
 }
 
+/// `entry` is a live record the sound layer handed out.
+fn rec<'a>(entry: usize) -> &'a Rec {
+    // SAFETY: caller contract of the voice layer: entries are validated before use.
+    unsafe { &*(entry as *const Rec) }
+}
+
 // SAFETY (all calls below): the table's thunks accept the entries the sound layer handed out.
 impl VoiceHost for Ops<'_> {
     fn entry_valid(&mut self, entry: usize, id: i32) -> bool {
         unsafe { (self.h.entry_valid)(entry, id) }
     }
     fn entry_set_volume_mul(&mut self, entry: usize, vol: f32) {
-        unsafe { (self.h.entry_set_volume_mul)(entry, vol) }
+        // SAFETY: `entry` is a live record the sound layer handed out.
+        unsafe { ohpl_sndent_set(entry as *mut Rec, 0, vol) }
     }
     fn entry_fade_out(&mut self, entry: usize, speed: f32) {
-        unsafe { (self.h.entry_fade_out)(entry, speed) }
+        // SAFETY: as above.
+        unsafe { ohpl_sndent_fade(entry as *mut Rec, 2, 0.0, speed) }
     }
     fn entry_set_paused(&mut self, entry: usize, on: bool) {
-        unsafe { (self.h.entry_set_paused)(entry, on) }
+        // SAFETY: as above.
+        unsafe { ohpl_sndent_set_paused(entry as *mut Rec, on) }
     }
     fn channel_set_position(&mut self, entry: usize, pos: [f32; 3]) {
-        unsafe { (self.h.channel_set_position)(entry, pos.as_ptr()) }
+        rec(entry).set_position(Vector3f {
+            x: pos[0],
+            y: pos[1],
+            z: pos[2],
+        })
     }
     fn channel_filter(&mut self, entry: usize, high: bool, gain: f32) {
-        unsafe { (self.h.channel_filter)(entry, high, gain) }
+        rec(entry).set_filter(i32::from(high), gain)
     }
     fn channel_total(&mut self, entry: usize) -> f64 {
-        unsafe { (self.h.channel_total)(entry) }
+        rec(entry).total_time()
     }
     fn channel_elapsed(&mut self, entry: usize) -> f64 {
-        unsafe { (self.h.channel_elapsed)(entry) }
+        rec(entry).elapsed_time()
     }
     fn listener_pos(&mut self) -> [f32; 3] {
         let mut b = [0.0f32; 3];
@@ -762,7 +771,7 @@ fn spectrum_of(by_scene: bool, key: &[u8], num: i32) -> Vec<f32> {
         if entry == 0 || !unsafe { (host.entry_valid)(entry, id) } || !load_pcm(h, &file) {
             return zeros;
         }
-        let elapsed = unsafe { (host.channel_elapsed)(entry) };
+        let elapsed = rec(entry).elapsed_time();
         spectrum(&h.pcm.data, h.pcm.channels, h.pcm.rate, elapsed, num)
     })
     .unwrap_or_default()

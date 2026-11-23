@@ -40,7 +40,7 @@ std::vector<cSomaLuxEntity *> UsedLiquidAreas()
 	std::vector<cSomaLuxEntity *> v;
 	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
 		for (cSomaLuxEntity *pEnt : pMap->GetEntities())
-			if (pEnt->meType == eSomaLuxEntityType_LiquidArea && pEnt->mbPlayerInLiquid)
+			if (pEnt->mpCore->meType == eSomaLuxEntityType_LiquidArea && pEnt->mpCore->mbPlayerInLiquid)
 				v.push_back(pEnt);
 	return v;
 }
@@ -236,13 +236,13 @@ int32_t cSomaLuxPlayer::HostCall(void *, uint32_t alOp, OhplS5Io *io)
 		int lIndex = io->i[0];
 		if (lIndex < 0 || lIndex >= (int)v.size())
 			return 0;
-		io->i[0] = v[lIndex]->mID.mA;
-		io->i[1] = v[lIndex]->mID.mB;
-		io->i[2] = v[lIndex]->mID.mC;
+		io->i[0] = v[lIndex]->mpCore->mID.mA;
+		io->i[1] = v[lIndex]->mpCore->mID.mB;
+		io->i[2] = v[lIndex]->mpCore->mID.mC;
 		return 1;
 	}
-	case kOhplS5d_LIQUID_SET: ((cSomaLuxEntity *)io->p[1])->mbPlayerInLiquid = io->i[0] != 0; return 0;
-	case kOhplS5d_LIQUID_GET: return ((cSomaLuxEntity *)io->p[1])->mbPlayerInLiquid;
+	case kOhplS5d_LIQUID_SET: ((cSomaLuxEntity *)io->p[1])->mpCore->mbPlayerInLiquid = io->i[0] != 0; return 0;
+	case kOhplS5d_LIQUID_GET: return ((cSomaLuxEntity *)io->p[1])->mpCore->mbPlayerInLiquid;
 	case kOhplS5d_HAS_COLLIDE:
 	{
 		cSomaLuxEntity *pEnt = PlayerEntity();

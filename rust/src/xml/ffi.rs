@@ -2,7 +2,7 @@
 //! by the C++ side until `ohpl_xml_doc_free`; byte arguments are (pointer, length) pairs.
 
 use super::lang::{self, LangSink};
-use super::{Doc, NodeId, c_str, config_get, config_set};
+use super::{Doc, NodeId, c_str};
 use crate::string_ffi::{Sink, emit, units};
 use std::ffi::{c_char, c_void};
 
@@ -52,14 +52,6 @@ pub unsafe extern "C" fn ohpl_xml_doc_load(
     // SAFETY: caller contract.
     let (doc, data) = unsafe { (doc_mut(doc), units(data, len)) };
     doc.load(data, read_ok)
-}
-
-/// # Safety
-/// `doc` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_xml_doc_error(doc: *const Doc) -> bool {
-    // SAFETY: caller contract.
-    unsafe { &*doc }.error()
 }
 
 /// Writes the error row and column, then delivers the description through `sink`.
@@ -150,15 +142,6 @@ pub unsafe extern "C" fn ohpl_xml_doc_add_element(
 /// # Safety
 /// `doc` is live; pointers valid for their lengths.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_xml_doc_set_value(doc: *mut Doc, id: u32, name: *const u8, n: usize) {
-    // SAFETY: caller contract.
-    let (doc, name) = unsafe { (doc_mut(doc), units(name, n)) };
-    doc.set_value(id, name);
-}
-
-/// # Safety
-/// `doc` is live; pointers valid for their lengths.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_xml_doc_set_attr(
     doc: *mut Doc,
     id: u32,
@@ -198,56 +181,6 @@ pub unsafe extern "C" fn ohpl_xml_doc_print_stream(
 ) {
     // SAFETY: caller contract.
     unsafe { emit(sink, ctx, &(*doc).print_stream()) };
-}
-
-/// Delivers the attribute through `sink` and returns true, or returns false when absent.
-///
-/// # Safety
-/// `doc` is live; pointers valid for their lengths; `sink` accepts `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_xml_config_get(
-    doc: *const Doc,
-    level: *const u8,
-    ln: usize,
-    name: *const u8,
-    nn: usize,
-    sink: Sink<u8>,
-    ctx: *mut c_void,
-) -> bool {
-    // SAFETY: caller contract.
-    unsafe {
-        match config_get(&*doc, units(level, ln), units(name, nn)) {
-            Some(v) => {
-                emit(sink, ctx, v);
-                true
-            }
-            None => false,
-        }
-    }
-}
-
-/// # Safety
-/// `doc` is live; pointers valid for their lengths.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_xml_config_set(
-    doc: *mut Doc,
-    level: *const u8,
-    ln: usize,
-    name: *const u8,
-    nn: usize,
-    val: *const u8,
-    vn: usize,
-) {
-    // SAFETY: caller contract.
-    let (doc, level, name, val) = unsafe {
-        (
-            doc_mut(doc),
-            units(level, ln),
-            units(name, nn),
-            units(val, vn),
-        )
-    };
-    config_set(doc, level, name, val);
 }
 
 #[repr(C)]

@@ -106,11 +106,6 @@ pub extern "C" fn ohpl_a10b_pm_set(h: u64) -> usize {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a10b_pm_state(h: u64) -> i32 {
-    pm::state_of(h)
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn ohpl_a10b_pm_continue_visible(vt: *const HostVt, h: u64) -> bool {
     eng!(vt, e, false, { pm::continue_visible(&e, h) })
 }

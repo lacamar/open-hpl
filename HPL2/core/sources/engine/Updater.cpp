@@ -53,6 +53,8 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	OhplEnVisitFn cUpdater::VisitFn(){ return RunVisit;}
+
 	cUpdater::cUpdater(iLowLevelSystem *apLowLevelSystem)
 	{
 		mpHandle = ohpl_en_upd_new();

@@ -62,58 +62,6 @@ pub extern "C" fn ohpl_rm_mat_anisotropy_accepted(
     resmgr::mat::anisotropy_accepted(x, caps, max, current)
 }
 
-/// -1 unknown element, else 0 box, 1 spot, 2 point.
-///
-/// # Safety
-/// `s` valid for `n`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_rm_world_light_kind(s: *const u8, n: usize) -> i32 {
-    use resmgr::world::Light;
-    // SAFETY: caller contract.
-    match resmgr::world::light_kind(unsafe { units(s, n) }) {
-        None => -1,
-        Some(Light::Box) => 0,
-        Some(Light::Spot) => 1,
-        Some(Light::Point) => 2,
-    }
-}
-
-/// 0 2D, 1 animated 2D, 2 cube, 3 animated cube.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_rm_world_gobo_kind(spot: bool, anim_mode: i32) -> i32 {
-    use resmgr::world::Gobo;
-    match resmgr::world::gobo_kind(spot, anim_mode) {
-        Gobo::Tex2D => 0,
-        Gobo::Anim2D => 1,
-        Gobo::Cube => 2,
-        Gobo::AnimCube => 3,
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_rm_world_shadow_casters(dynamic: bool, stat: bool) -> u32 {
-    resmgr::world::shadow_casters(dynamic, stat)
-}
-
-/// `custom`: -1 attribute absent, else its boolean value.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_rm_world_sound_use_default(use_default: bool, custom: i32) -> bool {
-    resmgr::world::sound_use_default(use_default, (custom >= 0).then_some(custom != 0))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_rm_world_band_count(values: usize) -> usize {
-    resmgr::world::band_count(values)
-}
-
-/// # Safety
-/// `s` valid for `n`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_rm_world_light_mask_id(s: *const u8, n: usize) -> u32 {
-    // SAFETY: caller contract.
-    resmgr::world::light_mask_id(unsafe { units(s, n) })
-}
-
 /// Packs decal vertex data into `verts * 4` `[x, y, z, w]` rows (one per array).
 /// False when an array is shorter than the vertex count needs; nothing is written. A NULL `out` only checks.
 ///

@@ -44,10 +44,6 @@ namespace hpl {
 
 extern "C" {
 
-int ohpl_rc_split_group(const cVector3f*, const cVector3f*, float, int, const cVector3f*, float);
-bool ohpl_rc_at_edge(const cVector3f*, const cVector3f*, const cVector3f*, const cVector3f*);
-int ohpl_rc_longest_axis(const cVector3f*);
-
 OhplBoxTree* ohpl_rc_boxtree_compile(const OhplRcObject*, size_t, const OhplRcParams*);
 size_t ohpl_rc_boxtree_node_count(const OhplBoxTree*);
 const OhplRcNode* ohpl_rc_boxtree_nodes(const OhplBoxTree*);

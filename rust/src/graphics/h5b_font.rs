@@ -175,19 +175,6 @@ pub unsafe extern "C" fn ohpl_h5b_font_set_glyph(h: u64, i: usize, g: *const Gly
     with(h, |t| t.put(i, g));
 }
 
-/// Writes glyph `i` to `out`; false where absent.
-///
-/// # Safety
-/// `out` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h5b_font_glyph(h: u64, i: usize, out: *mut Glyph) -> bool {
-    with(h, |t| t.glyph(i).copied()).flatten().is_some_and(|g| {
-        // SAFETY: caller contract.
-        unsafe { out.write(g) };
-        true
-    })
-}
-
 /// # Safety
 /// `s` has `n` wide chars.
 #[unsafe(no_mangle)]

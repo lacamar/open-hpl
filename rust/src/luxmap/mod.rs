@@ -5,6 +5,9 @@
 pub mod a7_area;
 mod a7_ffi;
 pub mod a7_map;
+mod a7_shell;
+#[cfg(test)]
+mod a7_shell_tests;
 #[cfg(test)]
 mod a7_tests;
 pub mod area;

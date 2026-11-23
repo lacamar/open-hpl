@@ -54,36 +54,8 @@ struct OhplYuvTables {
 	const unsigned char* g_y_uv;
 };
 
-bool ohpl_dds_plan_block(const unsigned char* header, size_t len, uint64_t fileSize, bool noCompression, OhplDdsBlockPlan* out);
-int ohpl_dds_mip_size(const OhplDdsBlockPlan* plan, unsigned mip);
-bool ohpl_dds_plan_alpha(const unsigned char* header, size_t len, uint64_t fileSize, OhplDdsAlphaPlan* out);
-
-unsigned ohpl_devil_pixel_format_to_hpl(unsigned il);
-unsigned ohpl_devil_pixel_format_from_hpl(unsigned format);
-unsigned ohpl_devil_dxt_to_hpl(unsigned il);
-unsigned ohpl_devil_type_from_extension(const unsigned* ext, size_t len);
-void ohpl_devil_dds_layout(int ilImages, int ilMips, int cubeFlags, OhplDdsLayout* out);
-int ohpl_devil_misc_image_count(int ilImages);
-
-void ohpl_theora_fill_tables(unsigned char* toR, unsigned char* toB, unsigned short* gUv, unsigned char* gYUv);
-size_t ohpl_theora_frame_len(int w, int h);
-bool ohpl_theora_draw_frame(unsigned char* out, size_t outLen, const OhplYuvPlanes* planes, const OhplYuvTables* tables, int w, int h);
-
-OhplFontHeader ohpl_font_header(int outline, int lineHeight, int base);
-long long ohpl_font_glyph_count(int largestId);
-bool ohpl_font_glyph_id_valid(int id, size_t glyphCount);
-int ohpl_font_glyph_advance(int xadvance, int outline);
-bool ohpl_font_page_valid(int page, size_t pages);
-
-bool ohpl_sys_steam_root(const char* real, void (*sink)(void*, const char*, size_t), void* ctx);
-bool ohpl_sys_vdf_path(const char* line, size_t len, void (*sink)(void*, const char*, size_t), void* ctx);
 bool ohpl_sys_looks_like_steam_install(const char* path, size_t len, const char* cwd);
-uint64_t ohpl_sys_remount_flags(uint64_t stFlag);
-unsigned ohpl_sys_classify_arg(const char* arg, bool gotGameDir);
-unsigned ohpl_sys_engine_env(bool headless, bool alsoftSet, bool video, bool videodriverSet, bool displaySet);
 bool ohpl_sys_renderer_is_vulkan(const char* name);
-void ohpl_sys_script_message(const char* section, int row, int col, unsigned kind, const char* message, void (*sink)(void*, const char*, size_t), void* ctx);
-void ohpl_sys_script_chunks(const char* msg, size_t len, void (*sink)(void*, const char*, size_t), void* ctx);
 
 }
 

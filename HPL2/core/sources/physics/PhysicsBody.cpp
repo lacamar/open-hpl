@@ -34,7 +34,6 @@
 
 #include "scene/SoundEntity.h"
 #include "sound/SoundHandler.h"
-#include "sound/SoundChannel.h"
 
 #include "math/Math.h"
 #include "physics/RustPhysics.h"

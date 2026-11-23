@@ -1,7 +1,7 @@
 //! S2: C ABI of the Rust script natives (`soma/src/game/RustSomaScriptS2.h`).
 
 use super::s2_api::{self, Api};
-use super::s2_as::{self, Engine, Func};
+use super::s2_as::{Engine, Func};
 use super::s2_host;
 use super::{s1_gen, s2_globals, s2_math, s2_strings};
 use crate::string_ffi::{Sink, emit, units};
@@ -253,14 +253,6 @@ pub unsafe extern "C" fn ohpl_s2_stub_counts(sink: CountSink, ctx: *mut c_void) 
     }
 }
 
-/// # Safety
-/// `engine` is live; `path` is NUL-terminated.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_s2_dump_decls(engine: *mut c_void, path: *const c_char) -> c_int {
-    // SAFETY: caller contract.
-    unsafe { s2_as::ohpl_as2_dump_decls(engine, path) }
-}
-
 /// `ConfigureSomaScriptEngine`: scripts use `'x'` integer literals, unqualified `&` references and
 /// property accessors, and members exist before the constructor body.
 ///
@@ -273,17 +265,4 @@ pub unsafe extern "C" fn ohpl_s2_configure_engine(engine: *mut c_void) {
     e.set_property(1, 1);
     e.set_property(14, 3);
     e.set_property(38, 0);
-}
-
-/// # Safety
-/// `engine` is live; `path` is NUL-terminated.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_s2_call_corpus(
-    engine: *mut c_void,
-    seed: u32,
-    calls: u32,
-    path: *const c_char,
-) -> c_int {
-    // SAFETY: caller contract.
-    unsafe { s2_as::ohpl_as2_call_corpus(engine, seed, calls, path) }
 }

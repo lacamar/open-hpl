@@ -149,28 +149,18 @@ bool ohpl_a4_play_anim(OhplA4Base *b, const OhplA4Host *h, const char *name, boo
 bool ohpl_a4_play_anim_impl(OhplA4Base *b, const OhplA4Host *h, const char *name, bool loop, float fade, bool dependsOnSpeed, float speedMul, bool sync, bool useMoveWhenOver);
 void ohpl_a4_fade_out_current_anim(OhplA4Base *b, const OhplA4Host *h, float fade);
 bool ohpl_a4_fade_out_current_anim_impl(OhplA4Base *b, const OhplA4Host *h, float fade);
-float ohpl_a4_anim_absolute_time(OhplA4Base *b, const OhplA4Host *h, float rel);
 void ohpl_a4_reset_properties(OhplA4Base *b, const OhplA4Host *h);
 void ohpl_a4_change_sound_state(OhplA4Base *b, const OhplA4Host *h, int32_t state);
-void ohpl_a4_update_sound_state(OhplA4Base *b, const OhplA4Host *h, float dt);
 void ohpl_a4_update_animation(OhplA4Base *b, const OhplA4Host *h, float dt);
-void ohpl_a4_update_darkness_glow(OhplA4Base *b, const OhplA4Host *h, float dt);
-void ohpl_a4_update_hallucination(OhplA4Base *b, const OhplA4Host *h);
-void ohpl_a4_update_align_ground_ray(OhplA4Base *b, const OhplA4Host *h, float dt);
 bool ohpl_a4_attack(OhplA4Base *b, const OhplA4Host *h, const void *size, const void *damage, float mul);
 void ohpl_a4_set_move_speed(OhplA4Base *b, int32_t speed);
 void ohpl_a4_damage_shape_matrix(OhplA4Base *b, const OhplA4Host *h, const float *offset, float *out16);
 void *ohpl_a4_closest_food(OhplA4Base *b, const OhplA4Host *h, float maxDist, float maxHeightDist);
-float ohpl_a4_dist_2d(OhplA4Base *b, const OhplA4Host *h, const float *pos);
-float ohpl_a4_dist_to_char(OhplA4Base *b, const OhplA4Host *h, const float *feet);
-float ohpl_a4_dist_to_char_2d(OhplA4Base *b, const OhplA4Host *h, const float *feet);
-float ohpl_a4_abs_height_dist(OhplA4Base *b, const OhplA4Host *h, const float *feet);
 float ohpl_a4_abs_height_dist_to_player(OhplA4Base *b, const OhplA4Host *h);
 void ohpl_a4_direction_2d(OhplA4Base *b, const OhplA4Host *h, const float *pos, float *out3);
 bool ohpl_a4_is_seen_by_player(OhplA4Base *b, const OhplA4Host *h);
 bool ohpl_a4_in_player_fov_at_feet(OhplA4Base *b, const OhplA4Host *h, const float *feet);
 bool ohpl_a4_visible_to_player_at_feet(OhplA4Base *b, const OhplA4Host *h, const float *feet);
-bool ohpl_a4_outside_start_radius(OhplA4Base *b, const OhplA4Host *h);
 void ohpl_a4_on_set_active(OhplA4Base *b, const OhplA4Host *h, bool active);
 }
 

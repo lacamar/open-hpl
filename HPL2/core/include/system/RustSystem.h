@@ -65,9 +65,6 @@ struct OhplHcField
 struct OhplHcSplitter;
 
 extern "C" {
-	void ohpl_ser_register(const char* name, const char* parent, const OhplSerField* fields, size_t n, size_t size, void* (*create)());
-	void ohpl_ser_save(const OhplSerHost* host, OhplXmlDoc* doc, void* obj, const char* root);
-	void ohpl_ser_load(const OhplSerHost* host, const OhplXmlDoc* doc, void* obj);
 
 	void ohpl_lt_init(OhplLogicTimer* t, int updatesPerSec, unsigned long now);
 	void ohpl_lt_reset(OhplLogicTimer* t, unsigned long now);
@@ -77,12 +74,8 @@ extern "C" {
 	int ohpl_lt_updates_per_sec(OhplLogicTimer* t);
 	float ohpl_lt_step_size(OhplLogicTimer* t);
 
-	void ohpl_hc_parse(const char* s, size_t n, void (*sink)(void*, const char*, size_t, const char*, size_t), void* ctx);
 	void ohpl_hc_json_escape(const char* s, size_t n, void (*sink)(void*, const char*, size_t), void* ctx);
 	void ohpl_hc_response_json(bool ok, const char* err, size_t errN, const OhplHcField* fields, size_t n, void (*sink)(void*, const char*, size_t), void* ctx);
-	OhplHcSplitter* ohpl_hc_splitter_new();
-	void ohpl_hc_splitter_free(OhplHcSplitter* s);
-	void ohpl_hc_splitter_push(OhplHcSplitter* s, const char* data, size_t n, void (*sink)(void*, const char*, size_t), void* ctx);
 
 	void ohpl_diag_json_escape(const char* s, size_t n, void (*sink)(void*, const char*, size_t), void* ctx);
 	void ohpl_diag_num(float x, void (*sink)(void*, const char*, size_t), void* ctx);

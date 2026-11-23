@@ -77,18 +77,6 @@ pub unsafe extern "C" fn ohpl_h6_skel_num(s: *const Skeleton) -> i32 {
     unsafe { s.as_ref() }.map_or(0, Skeleton::num)
 }
 
-/// Bone id at order position `idx`, -1 when out of range.
-///
-/// # Safety
-/// `s` live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h6_skel_by_index(s: *const Skeleton, idx: i32) -> i32 {
-    // SAFETY: caller contract.
-    unsafe { s.as_ref() }
-        .and_then(|s| s.by_index(idx))
-        .map_or(-1, |i| i as i32)
-}
-
 /// # Safety
 /// `s` live; name readable.
 #[unsafe(no_mangle)]
@@ -171,16 +159,6 @@ pub unsafe extern "C" fn ohpl_h6_bone_set_owner(s: *mut Skeleton, b: i32, owner:
     if let Some(s) = unsafe { s.as_mut() } {
         s.set_owner(id(b), owner as usize);
     }
-}
-
-/// C++ object of bone `b`, null when unset.
-///
-/// # Safety
-/// `s` live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h6_bone_owner(s: *const Skeleton, b: i32) -> *mut c_void {
-    // SAFETY: caller contract.
-    unsafe { s.as_ref() }.map_or(0, |s| s.owner(id(b))) as *mut c_void
 }
 
 /// C++ object of the bone at order position `idx`, null when out of range.
@@ -350,78 +328,4 @@ pub unsafe extern "C" fn ohpl_h6_anim_track_by_name(
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_h6_mesh_new() -> *mut MeshInfo {
     own(MeshInfo::default())
-}
-
-/// # Safety
-/// `m` from `ohpl_h6_mesh_new`, freed once.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h6_mesh_free(m: *mut MeshInfo) {
-    // SAFETY: caller contract.
-    unsafe { release(m) }
-}
-
-/// # Safety
-/// `m` live; name readable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h6_mesh_add_sub(m: *mut MeshInfo, name: *const u8, len: usize) {
-    // SAFETY: caller contract.
-    if let Some(m) = unsafe { m.as_mut() } {
-        m.add_sub(bytes(name, len));
-    }
-}
-
-/// # Safety
-/// `m` live; name readable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h6_mesh_sub_index(
-    m: *const MeshInfo,
-    name: *const u8,
-    len: usize,
-) -> i32 {
-    // SAFETY: caller contract.
-    unsafe { m.as_ref() }.map_or(-1, |m| m.sub_index(bytes(name, len)))
-}
-
-/// # Safety
-/// `m` live; name readable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h6_mesh_sub_by_name(
-    m: *const MeshInfo,
-    name: *const u8,
-    len: usize,
-) -> i32 {
-    // SAFETY: caller contract.
-    unsafe { m.as_ref() }.map_or(-1, |m| m.sub_by_name(bytes(name, len)))
-}
-
-/// # Safety
-/// `m` live; name readable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h6_mesh_add_animation(m: *mut MeshInfo, name: *const u8, len: usize) {
-    // SAFETY: caller contract.
-    if let Some(m) = unsafe { m.as_mut() } {
-        m.add_animation(bytes(name, len));
-    }
-}
-
-/// # Safety
-/// `m` live; name readable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h6_mesh_animation_index(
-    m: *const MeshInfo,
-    name: *const u8,
-    len: usize,
-) -> i32 {
-    // SAFETY: caller contract.
-    unsafe { m.as_ref() }.map_or(-1, |m| m.animation_index(bytes(name, len)))
-}
-
-/// # Safety
-/// `m` live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h6_mesh_clear_animations(m: *mut MeshInfo) {
-    // SAFETY: caller contract.
-    if let Some(m) = unsafe { m.as_mut() } {
-        m.clear_animations();
-    }
 }

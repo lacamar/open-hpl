@@ -20,8 +20,6 @@ iGuiPopUp* ohpl_g2_popup_color(cGuiSet*, cGuiSkin*, uintptr_t dest, uintptr_t cb
 iGuiPopUp* ohpl_g2_popup_filepicker(cGuiSet*, cGuiSkin*, int32_t kind, const uint32_t* path, size_t pathN, const uint32_t* name, size_t nameN,
 									bool hidden, uintptr_t cbObj, uintptr_t cbFn);
 iGuiPopUp* ohpl_g2_popup_kb_for(uintptr_t target);
-iGuiPopUp* ohpl_g2_popup_kb(cGuiSet*, cGuiSkin*, uintptr_t target);
-void ohpl_g2_popup_free(iGuiPopUp*);
 void ohpl_g2_popup_add_destroy_cb(iGuiPopUp*, uintptr_t obj, uintptr_t fn);
 void ohpl_g2_popup_set_kill_on_escape(iGuiPopUp*, bool);
 bool ohpl_g2_popup_kill_on_escape(iGuiPopUp*);

@@ -30,13 +30,6 @@ void ohpl_anim_fade_out(OhplAnimCore*, float);
 void ohpl_anim_fade_speed(OhplAnimCore*, float, float);
 void ohpl_anim_set_active(OhplAnimCore*, bool);
 
-float ohpl_meshentity_weight_mul(const OhplAnimCore* const*, int32_t, bool);
-void ohpl_meshentity_update_anims(OhplAnimCore* const*, int32_t, float);
-uint32_t ohpl_meshentity_bone_matrices(const cMatrixf*, const cMatrixf* const*, const cMatrixf* const*, cMatrixf*, int32_t);
-void ohpl_meshentity_aabb_from_bones(const cMatrixf* const*, const float*, int32_t, cVector3f*, cVector3f*);
-void ohpl_submesh_skin(const float*, const float*, const float*, float*, float*, float*, const float*,
-					   const unsigned char*, const cMatrixf*, int32_t, int32_t, int32_t);
-
 }
 }
 

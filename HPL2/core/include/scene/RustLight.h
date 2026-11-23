@@ -96,46 +96,6 @@ namespace hpl {
 
 extern "C" {
 
-void ohpl_light_update(OhplLightAnim*, OhplLightLive*, bool, bool, OhplLightHostVt*, float);
-void ohpl_light_fade_brightness_to(OhplLightAnim*, const OhplLightLive*, float, float);
-void ohpl_light_fade_to(OhplLightAnim*, const OhplLightLive*, const cColor*, float, float);
-void ohpl_light_set_flicker(OhplLightAnim*, const OhplLightLive*, const OhplFlickerCfg*);
-void ohpl_light_spot_projection(float, float, float, float, float, cMatrixf*);
-float ohpl_light_spot_near(float, float);
-void ohpl_light_spot_half_fov(float, float*, float*);
-void ohpl_light_spot_view_proj(const cMatrixf*, const cMatrixf*, cMatrixf*);
-float ohpl_light_box_fade_speed(float);
-bool ohpl_light_box_fade_step(cVector3f*, const cVector3f*, const cVector3f*, float*, float, float);
-
-float ohpl_flare_fade_in_rate(float, float);
-float ohpl_flare_fade_out_rate(float, float);
-float ohpl_flare_update_fade(float, float, float);
-float ohpl_flare_outer_cos(float, float);
-void ohpl_flare_set_inner_fov(float, float, float*, float*);
-float ohpl_flare_clamp01(float);
-void ohpl_flare_update_visibility(OhplFlareVis*, float, int);
-float ohpl_flare_bv_radius(const bool*, const cVector2f*);
-void ohpl_flare_color(const OhplFlareIn*, const OhplFlareEnt*, const OhplFlareView*, int, float, cColor*);
-void ohpl_flare_glare(const OhplFlareIn*, const OhplFlareEnt*, const OhplFlareView*, float, cColor*, cVector3f*);
-void ohpl_flare_size_rotation(const OhplFlareIn*, const OhplFlareEnt*, const OhplFlareView*, int, float, cMatrixf*);
-void ohpl_flare_billboard(const OhplFlareIn*, const OhplFlareEnt*, const OhplFlareView*, cMatrixf*);
-bool ohpl_flare_type_color(const OhplFlareIn*, const OhplFlareEnt*, const OhplFlareView*, int, float, cColor*);
-float ohpl_flare_occlusion_target(float, float, const cVector3f*, const cVector3f*);
-bool ohpl_flare_collide_box(const OhplFlareIn*, const OhplFlareView*, const cVector3f*, const cVector3f*,
-							const cVector3f*, const cVector3f*, cVector3f*, cVector3f*);
-int ohpl_flare_multi_iris(const OhplFlareIn*, const OhplFlareEnt*, const OhplFlareView*, float, float*, float*,
-						  float*, int);
-
-void ohpl_beam_set_edge_colors(const cColor*, bool, float*);
-void ohpl_beam_bounds(const cVector3f*, const cVector3f*, float, cVector3f*, cVector3f*);
-void ohpl_beam_geometry(const cVector3f*, const cVector3f*, float, float, bool, float*, float*, cVector3f*, cVector3f*);
-void ohpl_beam_model_matrix(const cMatrixf*, const cVector3f*, const cVector3f*, const cVector3f*, const cVector3f*,
-							cMatrixf*);
-
-void ohpl_rope_set_colors(const cColor*, bool, float*, int);
-void ohpl_rope_bounds(const cVector3f*, int, float, cVector3f*, cVector3f*);
-int ohpl_rope_quads(const cVector3f*, int, const OhplRopeParams*, float*, float*, float*, float*, int);
-
 }
 }
 

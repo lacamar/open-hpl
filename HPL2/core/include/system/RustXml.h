@@ -34,17 +34,12 @@ extern "C" {
 	void ohpl_xml_doc_free(OhplXmlDoc* doc);
 	bool ohpl_xml_doc_parse(OhplXmlDoc* doc, const char* s);
 	bool ohpl_xml_doc_load(OhplXmlDoc* doc, const char* data, size_t len, bool readOk);
-	bool ohpl_xml_doc_error(const OhplXmlDoc* doc);
 	void ohpl_xml_doc_error_info(const OhplXmlDoc* doc, int* row, int* col, void (*sink)(void*, const char*, size_t), void* ctx);
 	bool ohpl_xml_doc_walk(const OhplXmlDoc* doc, const OhplXmlTreeSink* sink);
 	unsigned ohpl_xml_doc_add_element(OhplXmlDoc* doc, unsigned parent, const char* name, size_t n);
-	void ohpl_xml_doc_set_value(OhplXmlDoc* doc, unsigned id, const char* name, size_t n);
 	void ohpl_xml_doc_set_attr(OhplXmlDoc* doc, unsigned id, const char* name, size_t nn, const char* val, size_t vn);
 	void ohpl_xml_doc_print_file(const OhplXmlDoc* doc, void (*sink)(void*, const char*, size_t), void* ctx);
 	void ohpl_xml_doc_print_stream(const OhplXmlDoc* doc, void (*sink)(void*, const char*, size_t), void* ctx);
-	bool ohpl_xml_config_get(const OhplXmlDoc* doc, const char* level, size_t ln, const char* name, size_t nn, void (*sink)(void*, const char*, size_t), void* ctx);
-	void ohpl_xml_config_set(OhplXmlDoc* doc, const char* level, size_t ln, const char* name, size_t nn, const char* val, size_t vn);
-	bool ohpl_xml_lang_read(const char* data, size_t len, bool readOk, bool addDirs, const OhplLangSink* sink);
 	void ohpl_xml_lang_decode(const char* s, size_t n, void (*sink)(void*, const int*, size_t), void* ctx);
 }
 

@@ -11,12 +11,6 @@ pub struct H4Xform {
 }
 
 #[repr(C)]
-pub struct H4LightMask {
-    pub center: [f32; 3],
-    pub extent: [f32; 3],
-}
-
-#[repr(C)]
 pub struct H4Exposure {
     pub inv_transform: Matrixf,
     pub half_size: [f32; 3],
@@ -110,27 +104,6 @@ pub unsafe extern "C" fn ohpl_h4_rot_trans(
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_h4_is_combine_candidate(has_pose: bool, pose_applied: bool) -> bool {
     plan::is_combine_candidate(has_pose, pose_applied)
-}
-
-/// # Safety
-/// `out` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h4_light_mask(
-    rot: *const [f32; 3],
-    size: *const [f32; 3],
-    scale: *const [f32; 3],
-    world_pos: *const [f32; 3],
-    out: *mut H4LightMask,
-) {
-    // SAFETY: caller contract.
-    let p = unsafe { plan::light_mask(v3(rot), v3(size), v3(scale), v3(world_pos)) };
-    // SAFETY: caller contract.
-    unsafe {
-        *out = H4LightMask {
-            center: arr(p.center),
-            extent: arr(p.extent),
-        }
-    };
 }
 
 /// # Safety

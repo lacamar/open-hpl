@@ -95,15 +95,10 @@
 
 #include "LuxAreaNodes.h"
 #include "LuxArea_Script.h"
-#include "LuxArea_Flashback.h"
 #include "LuxArea_Ladder.h"
-#include "LuxArea_Liquid.h"
-#include "LuxArea_Sticky.h"
-#include "LuxArea_Insanity.h"
 #include "LuxArea_Examine.h"
 #include "LuxArea_Sign.h"
 #include "LuxArea_Rope.h"
-#include "LuxArea_SlimeDamage.h"
 
 #include "LuxEnemy_Grunt.h"
 #include "LuxEnemy_WaterLurker.h"
@@ -1411,6 +1406,7 @@ bool cLuxBase::InitGame()
 			tString sKey = OhplGa9GetS(a[2]);
 			cResources *pRes = mpEngine->GetResources();
 #define LUX_ENTITY_LOADER(aClass) { OhplA13bLog("loader entity %s %s", #aClass, sKey.c_str()); pRes->AddEntityLoader(hplNew(aClass, (sKey))); }
+#define LUX_AREA_LOADER_RS(aType, aName) { OhplA13bLog("loader area %s %s", aName, sKey.c_str()); pRes->AddAreaLoader(hplNew(cLuxAreaLoaderRs, (sKey, aType))); }
 #define LUX_AREA_LOADER(aClass) { OhplA13bLog("loader area %s %s", #aClass, sKey.c_str()); pRes->AddAreaLoader(hplNew(aClass, (sKey))); }
 			if(a[0].i == 0)
 			{
@@ -1452,23 +1448,24 @@ bool cLuxBase::InitGame()
 				case 1: LUX_AREA_LOADER(cLuxAreaNodeLoader_PathNode) break;
 				case 2: LUX_AREA_LOADER(cLuxAreaNodeLoader_PosNode) break;
 				case 3: LUX_AREA_LOADER(cLuxAreaLoader_Script) break;
-				case 4: LUX_AREA_LOADER(cLuxAreaLoader_Flashback) break;
+				case 4: LUX_AREA_LOADER_RS(eLuxAreaType_Flashback, "cLuxAreaLoader_Flashback") break;
 #ifndef LUX_DEMO_VERSION
 				case 5: LUX_AREA_LOADER(cLuxAreaLoader_Ladder) break;
 #endif
-				case 6: LUX_AREA_LOADER(cLuxAreaLoader_Liquid) break;
+				case 6: LUX_AREA_LOADER_RS(eLuxAreaType_Liquid, "cLuxAreaLoader_Liquid") break;
 #ifndef LUX_DEMO_VERSION
-				case 7: LUX_AREA_LOADER(cLuxAreaLoader_Sticky) break;
+				case 7: LUX_AREA_LOADER_RS(eLuxAreaType_Sticky, "cLuxAreaLoader_Sticky") break;
 #endif
-				case 8: LUX_AREA_LOADER(cLuxAreaLoader_Insanity) break;
+				case 8: LUX_AREA_LOADER_RS(eLuxAreaType_Insanity, "cLuxAreaLoader_Insanity") break;
 				case 9: LUX_AREA_LOADER(cLuxAreaLoader_Examine) break;
 				case 10: LUX_AREA_LOADER(cLuxAreaLoader_Sign) break;
-				case 11: LUX_AREA_LOADER(cLuxAreaLoader_SlimeDamage) break;
+				case 11: LUX_AREA_LOADER_RS(eLuxAreaType_SlimeDamage, "cLuxAreaLoader_SlimeDamage") break;
 				case 12: LUX_AREA_LOADER(cLuxAreaRopeLoader) break;
 				}
 			}
 #undef LUX_ENTITY_LOADER
 #undef LUX_AREA_LOADER
+#undef LUX_AREA_LOADER_RS
 			break;
 		}
 		case eOhplGa13bOp_GMessage:

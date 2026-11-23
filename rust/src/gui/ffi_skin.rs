@@ -4,7 +4,6 @@
 use std::ffi::c_void;
 
 use super::guicore::{self, SkinKind};
-use crate::string_ffi::units;
 
 fn kind(k: i32) -> Option<SkinKind> {
     match k {
@@ -13,19 +12,6 @@ fn kind(k: i32) -> Option<SkinKind> {
         2 => Some(SkinKind::Gfx),
         _ => None,
     }
-}
-
-/// `cGui::GetSkin{Font,Attribute,Gfx}FromString`: the table length (`LastEnum`) when unknown.
-///
-/// # Safety
-/// `name` is readable for `len` bytes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gui_skin_from_name(k: i32, name: *const u8, len: usize) -> u32 {
-    let Some(kind) = kind(k) else {
-        return 0;
-    };
-    // SAFETY: caller contract.
-    kind.from_name(unsafe { units(name, len) })
 }
 
 /// `cGui::GetSkin{Font,Attribute,Gfx}String`, delivered through `sink`.
@@ -42,11 +28,6 @@ pub unsafe extern "C" fn ohpl_gui_skin_name(
     let name = kind(k).map_or("Unknown", |kind| kind.name(index));
     // SAFETY: caller contract.
     unsafe { sink(ctx, name.as_ptr(), name.len()) }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gui_material_slot(ty: u32) -> u32 {
-    guicore::material_slot(ty)
 }
 
 /// The blend factors of a GUI material; false for an unknown material.

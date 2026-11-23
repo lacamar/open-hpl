@@ -10,7 +10,6 @@
 #include "scene/SoundEntity.h"
 #include "scene/World.h"
 #include "sound/Sound.h"
-#include "sound/SoundChannel.h"
 #include "sound/SoundHandler.h"
 #include "system/LowLevelSystem.h"
 #include "math/Math.h"

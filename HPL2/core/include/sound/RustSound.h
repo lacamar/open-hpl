@@ -9,45 +9,6 @@
 #include "math/RustTypes.h"
 #include "system/RustXml.h"
 
-namespace hpl { class iSoundChannel; }
-
-struct OhplSoundChannelOps
-{
-	void (*play)(void*);
-	void (*stop)(void*);
-	void (*set_paused)(void*, bool);
-	bool (*paused)(void*);
-	bool (*is_playing)(void*);
-	bool (*stop_used)(void*);
-	float (*speed)(void*);
-	void (*set_speed)(void*, float);
-	float (*volume)(void*);
-	void (*set_volume)(void*, float);
-	bool (*looping)(void*);
-	void (*set_looping)(void*, bool);
-	void (*set_3d)(void*, bool);
-	void (*set_priority)(void*, int);
-	void (*set_priority_modifier)(void*, int);
-	void (*set_affected_by_env)(void*, bool);
-	bool (*position_is_relative)(void*);
-	void (*set_position_is_relative)(void*, bool);
-	void (*position)(void*, hpl::cVector3f*);
-	void (*set_position)(void*, const hpl::cVector3f*);
-	void (*rel_position)(void*, hpl::cVector3f*);
-	void (*set_rel_position)(void*, const hpl::cVector3f*);
-	float (*min_distance)(void*);
-	void (*set_min_distance)(void*, float);
-	float (*max_distance)(void*);
-	void (*set_max_distance)(void*, float);
-	float (*block_volume_mul)(void*);
-	double (*elapsed_time)(void*);
-	double (*total_time)(void*);
-	void (*set_elapsed_time)(void*, double);
-	void (*set_blockable)(void*, bool);
-	void (*set_block_volume_mul)(void*, float);
-	void (*set_filter)(void*, int, float);
-};
-
 struct OhplSndEventOps
 {
 	void (*play)(void*);
@@ -61,10 +22,9 @@ struct OhplSndEventOps
 
 struct OhplSndHost
 {
-	const OhplSoundChannelOps* channel;
 	const OhplSndEventOps* event;
-	void* (*create_channel)(void* res, const unsigned char* name, size_t len, int priority, bool stream, bool* notEnough);
-	void (*delete_channel)(void*);
+	int (*create_channel)(void* res, const unsigned char* name, size_t len, int priority, bool stream, bool* notEnough, void** data);
+	void (*release_data)(void* data);
 	bool (*is_blocked)(void* world, void* lowLevel, const hpl::cVector3f*);
 	void (*listener_position)(void* lowLevel, hpl::cVector3f*);
 	void (*listener_matrix)(void* lowLevel, hpl::cMatrixf*);
@@ -77,7 +37,7 @@ struct OhplSndHost
 	bool (*world_is_emitter)(void* world);
 	void (*data_release)(void* dataShell);
 	void (*on_start)(void* entity);
-	void* (*create_stream)(void* res, const unsigned char*, size_t, bool loop);
+	int (*create_stream)(void* res, const unsigned char*, size_t, bool loop, void** data);
 	void (*set_lock)(void* lock, const unsigned char*, size_t, float, bool);
 };
 
@@ -89,7 +49,7 @@ struct OhplMusic;
 
 struct OhplMusicSong
 {
-	hpl::iSoundChannel* mpStream;
+	void* mpStream;
 	float mfMaxVolume;
 	float mfVolume;
 	float mfVolumeAdd;
@@ -101,6 +61,13 @@ struct OhplSndGsEntry;
 static_assert(sizeof(OhplMusicSong) == 24 && offsetof(OhplMusicSong, mfMaxVolume) == 8, "OhplMusicSong layout");
 
 namespace hpl { const OhplSndHost* OhplSndHostTable(); }
+
+enum OhplSndCh
+{
+	OhplSndCh_Volume, OhplSndCh_Playing, OhplSndCh_Priority, OhplSndCh_Elapsed, OhplSndCh_Total, OhplSndCh_Underrun,
+	OhplSndCh_Paused, OhplSndCh_Looping, OhplSndCh_Is3D, OhplSndCh_Relative, OhplSndCh_Pos, OhplSndCh_RelPos = 13,
+	OhplSndCh_MinDist = 16, OhplSndCh_MaxDist
+};
 
 extern "C" {
 	OhplSndHandler* ohpl_sndh_new(const OhplSndHost* host, void* lowLevel, void* resources);
@@ -133,6 +100,10 @@ extern "C" {
 	const unsigned char* ohpl_sndent_name(OhplSndRec*, size_t* len);
 	int ohpl_sndent_id(OhplSndRec*);
 	void* ohpl_sndent_channel(OhplSndRec*);
+	void* ohpl_sndch_data(void* channel);
+	double ohpl_sndch_read(void* channel, int what);
+	void ohpl_sndch_set_elapsed(void* channel, double time);
+	void ohpl_sndch_stop(void* channel);
 	void ohpl_sndent_set(OhplSndRec*, int what, float v);
 	float ohpl_sndent_get(OhplSndRec*, int what);
 	uint32_t ohpl_sndent_type(OhplSndRec*);

@@ -35,8 +35,6 @@ namespace hpl {
 	struct OhplH8Rect { int x, y, w, h; };
 
 	extern "C" {
-		unsigned ohpl_h8_rl_gates(const OhplH8GateIn *apIn);
-		void ohpl_h8_rl_post(const OhplH8PostIn *apIn, OhplH8PostOut *apOut);
 		void ohpl_h8_clip_pad(OhplH8Rect *apRect, int alScreenW, int alScreenH, float afHalfFovTan);
 	}
 

@@ -97,41 +97,16 @@ public:
 	void SetOnGuiFunc(const tString &asX) { SetSeStr(eSeStr_OnGuiFunc, asX); }
 
 	iEntity3D *mpCameraNode = nullptr;
-	bool &mbSpawned = mpCore->mbSpawned;
-	int &meType = mpCore->meType;
-	cSomaID &mID = mpCore->mID;
-	int &mlParentType = mpCore->mlParentType;
-	cSomaID &mParentID = mpCore->mParentID;
-	bool &mbActive = mpCore->mbActive;
-	bool &mbSleeping = mpCore->mbSleeping;
-	bool &mbAutoSleep = mpCore->mbAutoSleep;
 	void WakeUp();
 	void SetAutoSleep(bool abX);
-	bool &mbShowMesh = mpCore->mbShowMesh;
-	bool &mbIsDoor = mpCore->mbIsDoor;
-	bool &mbIsClosedDoor = mpCore->mbIsClosedDoor;
-	bool &mbInteractionDisabled = mpCore->mbInteractionDisabled;
-	float &mfMaxInteractDistance = mpCore->mfMaxInteractDistance;
-	float &mfVariableUpdateRate = mpCore->mfVariableUpdateRate;
-	float &mfVariableUpdateAcc = mpCore->mfVariableUpdateAcc;
-	bool &mbInteractedWith = mpCore->mbInteractedWith;
-	cMatrixf &m_mtxOnLoad = mpCore->m_mtxOnLoad;
-	cVector3f &mvScale = mpCore->mvScale;
-	cVector3f &mvMeshScaleMul = mpCore->mvMeshScaleMul;
-	bool &mbGlobalSpaceAnim = mpCore->mbGlobalSpaceAnim;
-	cVector3f &mvSize = mpCore->mvSize;
 
 	cMeshEntity *mpMesh = NULL;
 	std::vector<iPhysicsBody *> mvBodies;
 	std::vector<bool> mvDefaultCollideCharacter;
-	bool &mbCheckOutsidePlayer = mpCore->mbCheckOutsidePlayer;
-	bool &mbCharCollisionUntilStopped = mpCore->mbCharCollisionUntilStopped;
-	bool &mbCharCollisionUntilStoppedStarted = mpCore->mbCharCollisionUntilStoppedStarted;
 	void SetDisableCollisionUntilOutSidePlayer(bool abX);
 	void UpdateCharCollision();
 	std::vector<cEntityBodyExtraData> mvBodyExtraData;
 	iPhysicsBody *mpMainBody = NULL;
-	cVector3f &mvBodyOffset = mpCore->mvBodyOffset;
 	std::vector<iPhysicsJoint *> mvJoints;
 	std::vector<iPhysicsJoint *> &Joints();
 	// cLuxCritter members at the official offsets, see SomaNewPropBlock
@@ -176,7 +151,6 @@ public:
 	void AttachAnimationEventEntity(const tString &asSocket, iEntity3D *apEntity);
 	iEntity3D *GetAttachEntity();
 	cSoundEntity *mpAnimLoopSound = NULL;
-	int &mlAnimLoopSoundID = mpCore->mlAnimLoopSoundID;
 
 	void ResolveConnectedLights();
 
@@ -216,20 +190,8 @@ public:
 		return true;
 	}
 
-	bool &mbInteractCallbackAutoRemove = mpCore->mbInteractCallbackAutoRemove;
-	bool &mbAnimMessageCallbackAutoRemove = mpCore->mbAnimMessageCallbackAutoRemove;
-	bool &mbLookAtCallbackAutoRemove = mpCore->mbLookAtCallbackAutoRemove;
-	bool &mbLookAtCheckCenter = mpCore->mbLookAtCheckCenter;
-	bool &mbLookAtCheckRay = mpCore->mbLookAtCheckRay;
-	float &mfLookAtMaxDistance = mpCore->mfLookAtMaxDistance;
-	float &mfLookAtDelay = mpCore->mfLookAtDelay;
-	bool &mbForceLookAtCheck = mpCore->mbForceLookAtCheck;
-	float &mfLookAtCheckTimer = mpCore->mfLookAtCheckTimer;
-	float &mfLookAtCountdown = mpCore->mfLookAtCountdown;
-	bool &mbLookedAt = mpCore->mbLookedAt;
 	// cLuxPropLoader::AfterLoad: callbacks and interaction settings from the map's UserVariables
 	void ApplyInstanceVars(cSomaLuxEntity *apPlayer);
-	bool &mbEffectsActive = mpCore->mbEffectsActive;
 
 	struct cCollideCallback
 	{
@@ -243,15 +205,8 @@ public:
 	void SetActive(bool abX);
 	void SetStaticPhysics(bool abX);
 	void MakeDynamic();
-	bool &mbStaticPhysics = mpCore->mbStaticPhysics;
-	bool &mbAllowMapTransfer = mpCore->mbAllowMapTransfer;
 	std::vector<float> mvDynamicMass;
 	void SetEffectsActive(bool abX, bool abFade = false);
-	float &mfEffectsAlpha = mpCore->mfEffectsAlpha;
-	float &mfEffectsFadeSpeed = mpCore->mfEffectsFadeSpeed;
-	float &mfEffectsOffAlpha = mpCore->mfEffectsOffAlpha;
-	cColor &mIllumBaseColor = mpCore->mIllumBaseColor;
-	bool &mbIllumBaseSet = mpCore->mbIllumBaseSet;
 	void ApplyEffectsAlpha();
 	void CaptureEffectDefaults();
 	cVector3f GetPosition();
@@ -276,39 +231,23 @@ public:
 		int mlEasing;
 	};
 	std::vector<cInteractConnection> mvInteractConnections;
-	cSomaID &mInteractLeaderID = mpCore->mInteractLeaderID;
-	float &mfInteractConnectionState = mpCore->mfInteractConnectionState;
 	void UpdateInteractConnectionLeader();
 	void ChangeInteractConnectionState(float afT);
 	void ChangeConnectionState(int alState);
 
-	cColor &mEffectBaseColor = mpCore->mEffectBaseColor;
-	cColor &mEffectColorFrom = mpCore->mEffectColorFrom;
-	cColor &mEffectColorTo = mpCore->mEffectColorTo;
-	float &mfEffectColorTime = mpCore->mfEffectColorTime;
-	float &mfEffectColorT = mpCore->mfEffectColorT;
 	std::vector<cColor> mvEffectDefaults;
 	void SetEffectBaseColor(const cColor &aCol);
 	void FadeEffectBaseColor(const cColor &aCol, float afTime);
 	void UpdateEffectColor(float afTimeStep);
-	float &mfMeshFadeAlpha = mpCore->mfMeshFadeAlpha;
-	float &mfMeshFadeSpeed = mpCore->mfMeshFadeSpeed;
-	float &mfLiquidAmount = mpCore->mfLiquidAmount;
-	float &mfLiquidTarget = mpCore->mfLiquidTarget;
-	float &mfLiquidSpeed = mpCore->mfLiquidSpeed;
 	void SetLiquidAmount(float afX);
 	void FadeLiquidAmountTo(float afTarget, float afTime);
 	void UpdateLiquidAmount(float afTimeStep);
 	bool CollidesWithPlayer();
 
-	float &mfHealth = mpCore->mfHealth;
-	bool &mbBroken = mpCore->mbBroken;
 	void SetHealth(float afX);
 	void GiveDamage(float afAmount, int alStrength, const tString &asType, const tString &asSource);
 	void Break();
 	void DoBreak();
-	bool &mbBreakable = mpCore->mbBreakable;
-	bool &mbScriptCollision = mpCore->mbScriptCollision;
 	void AddBodyCallback();
 	void OnPhysicsCollision(iPhysicsBody *apBody, iPhysicsBody *apCollideBody, const cPhysicsContactData &aData);
 	class cBreakBodyCallback : public iPhysicsBodyCallback
@@ -345,7 +284,6 @@ public:
 		OhplGs1Proc mState;
 	};
 	std::vector<cProcAnim> mvProcAnims;
-	bool &mbProcDirty = mpCore->mbProcDirty;
 	void PlayProcAnimation(const tString &asName, float afLength, bool abLoop, float afAmountFadeTime, float afSpeedFadeTime);
 	void UpdateProcAnimations(float afTimeStep);
 
@@ -353,54 +291,23 @@ public:
 	void UpdateMove(float afTimeStep);
 	void UpdateStaticMoveSound();
 	cSoundEntity *mpStaticMoveLoop = NULL;
-	int &mlStaticMoveLoopID = mpCore->mlStaticMoveLoopID;
-	bool &mbStaticMoveSound = mpCore->mbStaticMoveSound;
 	void UpdateCheckCollision(float afTimeStep);
 	void UpdateLiquid(float afTimeStep);
 	void CreateLiquidGraphics(cWorld *apWorld);
 	void PlaceLiquidGraphics();
-	bool &mbCameraInLiquid = mpCore->mbCameraInLiquid;
-	bool &mbPlayerInLiquid = mpCore->mbPlayerInLiquid;
-	float &mfLiquidTime = mpCore->mfLiquidTime;
-	float &mfLiquidSurfaceY = mpCore->mfLiquidSurfaceY;
 	cMeshEntity *mpLiquidMesh = NULL;
 	cFogArea *mpLiquidFog = NULL;
-	cMatrixf &m_mtxLiquidPlaced = mpCore->m_mtxLiquidPlaced;
-	bool &mbCheckCollision = mpCore->mbCheckCollision;
-	bool &mbCheckCenterInArea = mpCore->mbCheckCenterInArea;
-	bool &mbCheckDynamic = mpCore->mbCheckDynamic;
-	bool &mbCheckStatic = mpCore->mbCheckStatic;
-	bool &mbCheckCharacters = mpCore->mbCheckCharacters;
-	float &mfTimeSinceCheck = mpCore->mfTimeSinceCheck;
-	OhplGs1Move &mMove = mpCore->mMove;
 	void MoveAngularTo(const cMatrixf &a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const cVector3f &avPivotLocal, const tString &asCallback);
 	void RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector3f &avAxis, bool abResetSpeed, const cVector3f &avPivotLocal);
 	void StopMove();
-	OhplGs1Rotate &mRotate = mpCore->mRotate;
-	int &mlCurrentAnim = mpCore->mlCurrentAnim;
 
 	// cLuxProp::CreateAndSetupGui: an ImGui drawn by the map's OnGui function
 	class cSomaImGui *mpImGui = NULL;
-	int &mlGuiDraws = mpCore->mlGuiDraws;
-	int &mlGuiCalls = mpCore->mlGuiCalls;
-	bool &mbGuiActive = mpCore->mbGuiActive;
 	// cGuiSetEntity::FadeIn/FadeOut
-	float &mfGuiFade = mpCore->mfGuiFade;
-	float &mfGuiFadeSpeed = mpCore->mfGuiFadeSpeed;
 	void SetGuiActive(bool abX, float afFadeTime);
 	// cLuxProp::OnVariableUpdate gating of unfocused screens
-	float &mfGuiFPS = mpCore->mfGuiFPS;
-	float &mfGuiTimeAcc = mpCore->mfGuiTimeAcc;
-	bool &mbGuiSetUseInput = mpCore->mbGuiSetUseInput;
-	bool &mbGuiUpdateWhenOutOfView = mpCore->mbGuiUpdateWhenOutOfView;
-	bool &mbGuiDirty = mpCore->mbGuiDirty;
-	float &mfGuiCacheAtScreenSize = mpCore->mfGuiCacheAtScreenSize;
-	bool &mbGuiCacheForced = mpCore->mbGuiCacheForced;
 	// Prop GUI drawn on a submesh: a 3D gui set over the screen rectangle fitted from its UVs
 	cSubMeshEntity *mpGuiSubMesh = NULL;
-	cVector3f &mvGuiOrigin = mpCore->mvGuiOrigin;
-	cVector3f &mvGuiRight = mpCore->mvGuiRight;
-	cVector3f &mvGuiDown = mpCore->mvGuiDown;
 	void SetupGuiScreen(const tString &asSubMesh);
 	void UpdateGuiScreen();
 	void UpdateGui(float afTimeStep);

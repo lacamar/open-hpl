@@ -1,10 +1,6 @@
 // Host ops of the Rust area updates (rust/src/luxmap/aupd.rs): the engine objects liquid, sticky, slime, insanity and flashback areas reach.
 
-#include "LuxArea_Liquid.h"
-#include "LuxArea_Sticky.h"
-#include "LuxArea_SlimeDamage.h"
-#include "LuxArea_Insanity.h"
-#include "LuxArea_Flashback.h"
+#include "LuxArea.h"
 #include "LuxMap.h"
 #include "LuxPlayer.h"
 #include "LuxPlayerState.h"
@@ -21,10 +17,10 @@ struct OhplAreaHost
 		OhplA13S s = { reinterpret_cast<const unsigned char*>(asStr.data()), asStr.size() };
 		return s;
 	}
-	static void Splash(cLuxArea_Liquid *apArea, iPhysicsBody *apBody, float afSurfaceY)
+	static void Splash(iLuxArea *apArea, iPhysicsMaterial *apMaterial, iPhysicsBody *apBody, float afSurfaceY)
 	{
-		if(apArea->mpPhysicsMaterial==NULL) return;
-		cSurfaceData *pSurface = apArea->mpPhysicsMaterial->GetSurfaceData();
+		if(apMaterial==NULL) return;
+		cSurfaceData *pSurface = apMaterial->GetSurfaceData();
 		float fSpeed;
 		if(apBody->IsCharacter())
 			fSpeed = apBody->GetCharacterBody()->GetForceVelocity().Length();
@@ -104,7 +100,7 @@ struct OhplAreaHost
 				pBody->SetBuoyancyDensity(a->f[4]);
 				pBody->SetBuoyancyLinearViscosity(a->f[5]);
 				pBody->SetBuoyancyAngularViscosity(a->f[6]);
-				Splash((cLuxArea_Liquid*)a->p[1], pBody, a->f[7]);
+				Splash((iLuxArea*)a->p[1], (iPhysicsMaterial*)a->p[2], pBody, a->f[7]);
 				pBody->SetBuoyancyActive(true);
 			}
 			else
@@ -134,7 +130,8 @@ struct OhplAreaHost
 		}
 		case 107:
 		{
-			cLuxArea_Liquid *pArea = (cLuxArea_Liquid*)a->p[0];
+			iLuxArea *pArea = (iLuxArea*)a->p[0];
+			iPhysicsMaterial *pMaterial = (iPhysicsMaterial*)a->p[2];
 			iCharacterBody *pChar = ((iPhysicsBody*)a->p[1])->GetCharacterBody();
 			bool bEnter = a->i[1] == 1;
 			if(a->i[0])
@@ -144,8 +141,8 @@ struct OhplAreaHost
 				{
 					pPlayer->SetIsInWater(true);
 					pPlayer->SetWaterSpeedMul(a->f[1]);
-					if(pArea->mpPhysicsMaterial) pPlayer->SetWaterStepSound(pArea->mpPhysicsMaterial->GetSurfaceData()->GetStepType());
-					Splash(pArea, pChar->GetCurrentBody(), a->f[0]);
+					if(pMaterial) pPlayer->SetWaterStepSound(pMaterial->GetSurfaceData()->GetStepType());
+					Splash(pArea, pMaterial, pChar->GetCurrentBody(), a->f[0]);
 				}
 				else pPlayer->SetIsInWater(false);
 			}
@@ -156,7 +153,7 @@ struct OhplAreaHost
 				{
 					pEnemy->SetInWater(true);
 					pEnemy->SetWaterSurfaceY(a->f[0]);
-					pEnemy->SetWaterSurfaceData(pArea->mpPhysicsMaterial->GetSurfaceData());
+					pEnemy->SetWaterSurfaceData(pMaterial->GetSurfaceData());
 				}
 				else pEnemy->SetInWater(false);
 			}
@@ -174,26 +171,6 @@ struct OhplAreaHost
 				a->i[0] = cMath::CheckPointInBVIntersection(cMath::MatrixMul(pBody->GetLocalMatrix(),pBody->GetMassCentre()), *pAreaBody->GetBoundingVolume());
 			else
 				a->i[0] = cMath::CheckBVIntersection(*pBody->GetBoundingVolume(), *pAreaBody->GetBoundingVolume());
-			break;
-		}
-		case 110:
-		{
-			iLuxArea *pArea = (iLuxArea*)a->p[0];
-			switch(a->i[0])
-			{
-			case 0: sTmp = static_cast<cLuxArea_Sticky*>(pArea)->msAttachFunction; break;
-			case 1: sTmp = static_cast<cLuxArea_Sticky*>(pArea)->msDetachFunction; break;
-			case 2: sTmp = static_cast<cLuxArea_Sticky*>(pArea)->msAttachSound; break;
-			case 3: sTmp = static_cast<cLuxArea_Sticky*>(pArea)->msDetachSound; break;
-			case 4: sTmp = static_cast<cLuxArea_Sticky*>(pArea)->msAttachPS; break;
-			case 5: sTmp = static_cast<cLuxArea_Sticky*>(pArea)->msDetachPS; break;
-			case 6: sTmp = static_cast<cLuxArea_Sticky*>(pArea)->msAttachableBodyName; break;
-			case 7: sTmp = pArea->GetName(); break;
-			case 8: sTmp = static_cast<cLuxArea_SlimeDamage*>(pArea)->msCallback; break;
-			case 9: sTmp = static_cast<cLuxArea_SlimeDamage*>(pArea)->msAttackSound; break;
-			default: sTmp = static_cast<cLuxArea_SlimeDamage*>(pArea)->msAttackPS; break;
-			}
-			a->rs[0] = Str(sTmp);
 			break;
 		}
 		case 111:
@@ -294,8 +271,7 @@ struct OhplAreaHost
 			break;
 		case 124:
 		{
-			cLuxArea_Flashback *pArea = (cLuxArea_Flashback*)a->p[0];
-			gpBase->mpPlayer->GetHelperFlashback()->Start(pArea->msFlashbackFile, pArea->msCallback);
+			gpBase->mpPlayer->GetHelperFlashback()->Start(tString((const char*)a->s[0].p, a->s[0].n), tString((const char*)a->s[1].p, a->s[1].n));
 			break;
 		}
 		}

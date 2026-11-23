@@ -51,11 +51,6 @@ namespace hpl {
 extern "C" {
 
 // 0 ok, 1 bad magic, 2 bad version, 3+ input the original loader crashes or throws on
-const char* ohpl_msh_reason(int);
-int ohpl_msh_parse(const uint8_t* data, size_t len, bool boneUnitScale, bool keepHpl3Anims, OhplMshMesh** out);
-void ohpl_msh_free(OhplMshMesh*);
-int ohpl_msh_parse_anim(const uint8_t* data, size_t len, OhplMshAnim** out);
-void ohpl_msh_anim_free(OhplMshAnim*);
 
 }
 

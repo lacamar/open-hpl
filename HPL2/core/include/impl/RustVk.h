@@ -46,7 +46,6 @@ int ohpl_vk_prim(int);
 void ohpl_vk_format(int, bool, uint32_t, OhplVkFormat*);
 uint32_t ohpl_vk_unorm_of_srgb(uint32_t);
 size_t ohpl_vk_format_size(uint32_t);
-uint16_t ohpl_vk_float_to_half(float);
 bool ohpl_vk_convert_len(const OhplVkFormat*, size_t, size_t*, size_t*);
 void ohpl_vk_convert_pixels(const OhplVkFormat*, const uint8_t*, size_t, size_t, uint8_t*, size_t);
 int ohpl_vk_full_mip_count(int, int, int);

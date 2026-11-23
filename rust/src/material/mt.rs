@@ -1017,17 +1017,6 @@ pub extern "C" fn ohpl_mt_get_depth_of_field() -> bool {
     DEPTH_OF_FIELD.load(Ordering::Relaxed)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_mt_get_dof_params(out: *mut f32) {
-    if out.is_null() {
-        return;
-    }
-    for (i, s) in DOF_PARAMS.iter().enumerate() {
-        // SAFETY: the caller passes room for four floats.
-        unsafe { out.add(i).write(f32::from_bits(s.load(Ordering::Relaxed))) };
-    }
-}
-
 const _: () = {
     assert!(blend::ADD == 1);
     assert!(manager::OWN == 0 && manager::GLOBAL == 1);

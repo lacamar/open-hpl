@@ -112,28 +112,8 @@ extern "C" {
 	bool ohpl_gs6_builder_collect(const OhplGs6Builder *b, const unsigned char *entry, size_t n, OhplGs6SectionSink section,
 								  OhplGs6Sink8 missing, OhplGs6Sink8 warning, void *ctx);
 	bool ohpl_gs6_is_nosave(const unsigned char *key, size_t n);
-	void ohpl_gs6_cache_key(uint64_t exe_size, int64_t mtime_sec, int64_t mtime_nsec, const unsigned char *const *names, const size_t *name_lens,
-							const unsigned char *const *codes, const size_t *code_lens, size_t count, OhplGs6Sink8 sink, void *ctx);
-	void ohpl_gs6_cache_file_name(const unsigned char *entry, size_t n, OhplGs6Sink8 sink, void *ctx);
 
 	// api
-	void ohpl_gs6_api_load(const unsigned char *text, size_t n, OhplGs6RecordSink sink, void *ctx);
-	void ohpl_gs6_decl_name(const unsigned char *decl, size_t n, OhplGs6Sink8 sink, void *ctx);
-	ptrdiff_t ohpl_gs6_native_decl_pick(const OhplGs6Str *cands, size_t n_cands, const OhplGs6Str *enums, size_t n_enums, const unsigned char *decl,
-										size_t decl_len);
-	OhplGs6Enums *ohpl_gs6_enums_new();
-	void ohpl_gs6_enums_free(OhplGs6Enums *e);
-	void ohpl_gs6_enums_add(OhplGs6Enums *e, const unsigned char *name, size_t n);
-	void ohpl_gs6_enums_add_value(OhplGs6Enums *e, const unsigned char *name, size_t n, int value);
-	void ohpl_gs6_enums_rebase(OhplGs6Enums *e, const OhplGs6Enums *base);
-	void ohpl_gs6_enums_values(const OhplGs6Enums *e, OhplGs6SinkI32 sink, void *ctx);
-	bool ohpl_gs6_is_lookup_name(const unsigned char *name, size_t n);
-	unsigned int ohpl_gs6_stub_return_kind(bool is_void, bool inout_ref, bool is_handle);
-	bool ohpl_gs6_is_script_struct(const unsigned char *kind, size_t kind_len, const unsigned char *name, size_t name_len, bool has_factory);
-	bool ohpl_gs6_is_copy_ctor(const unsigned char *params, size_t params_len, const unsigned char *name, size_t name_len);
-	bool ohpl_gs6_property_accessors(const unsigned char *decl, size_t decl_len, const OhplGs6Str *enums, size_t n_enums, OhplGs6Sink8 get,
-									 OhplGs6Sink8 set, void *ctx);
-	void ohpl_gs6_prop_name(const unsigned char *decl, size_t n, OhplGs6Sink8 sink, void *ctx);
 
 	// globals
 	void ohpl_gs6_var_set(unsigned int scope, const unsigned char *name, size_t name_len, int idx, unsigned int field, const unsigned int *words,
@@ -141,7 +121,6 @@ extern "C" {
 	void ohpl_gs6_var_get(unsigned int scope, const unsigned char *name, size_t name_len, int idx, unsigned int field, unsigned int *out);
 	void ohpl_gs6_var_get_str(unsigned int scope, const unsigned char *name, size_t name_len, int idx, OhplGs6Sink8 sink, void *ctx);
 	void ohpl_gs6_reset_return();
-	void ohpl_gs6_reset_all();
 	void ohpl_gs6_serialize_vars(OhplGs6Sink8 sink, void *ctx);
 	void ohpl_gs6_deserialize_vars(const unsigned char *data, size_t n);
 	bool ohpl_gs6_secret_code(const unsigned char *key, const unsigned char *x, size_t n);
@@ -156,11 +135,6 @@ extern "C" {
 	void ohpl_gs6_script_files_error(const OhplGs6Str *keys, size_t n, OhplGs6Sink8 sink, void *ctx);
 	ptrdiff_t ohpl_gs6_pick_module(const OhplGs6Str *keys, const bool *loaded, size_t n, const unsigned char *needle, size_t needle_len);
 	void ohpl_gs6_stub_report(const OhplGs6Str *names, const int *counts, size_t n, int top, OhplGs6Sink8 sink, void *ctx);
-	void ohpl_gs6_stub_order(const OhplGs6Str *names, const int *counts, size_t n, size_t *out);
-	void ohpl_gs6_json_escape(const unsigned char *s, size_t n, OhplGs6Sink8 sink, void *ctx);
-	void ohpl_gs6_from_script_dir(const unsigned char *s, size_t n, OhplGs6Sink8 sink, void *ctx);
-	void ohpl_gs6_config_scripts(const OhplGs6Str *files, size_t n, OhplGs6Sink8 sink, void *ctx);
-	void ohpl_gs6_map_scripts(const unsigned char *dir, size_t n, OhplGs6Sink8 sink, void *ctx);
 }
 
 namespace OhplGs6

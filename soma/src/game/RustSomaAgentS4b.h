@@ -38,7 +38,6 @@ extern "C"
 	void ohpl_s4b_broadcast_sound(const float *pos, float radius, int prio);
 	void ohpl_s4b_debug(uintptr_t ent, void *ctx, void (*sink)(void *, const unsigned char *, size_t));
 	void ohpl_s4b_glow_each(void *ctx, void (*cb)(void *, uintptr_t, const float *, float, float, float));
-	bool ohpl_s4b_has_agents();
 }
 
 #endif

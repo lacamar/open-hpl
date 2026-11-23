@@ -88,7 +88,7 @@ namespace
 		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
 		if (pMap && sGroup != "")
 			for (cSomaLuxEntity *pEnt : pMap->GetEntities())
-				if (pEnt->meType == eSomaLuxEntityType_Critter && pEnt->mbActive && State(pEnt).msGroup == sGroup)
+				if (pEnt->mpCore->meType == eSomaLuxEntityType_Critter && pEnt->mpCore->mbActive && State(pEnt).msGroup == sGroup)
 					vOut.push_back(pEnt);
 		return vOut;
 	}
@@ -289,5 +289,5 @@ void SomaRegisterCritterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetUseRayCollision(bool abX)", +[](E *p, bool b) { State(p).mRust.use_ray_collision = b; });
 	SOMA_METHOD(e, T, "bool GetUseRayCollision()", +[](E *p) { return State(p).mRust.use_ray_collision; });
 	SOMA_METHOD(e, T, "void SetHealth(float afX)", +[](E *p, float x) { p->SetHealth(x); });
-	SOMA_METHOD(e, T, "float GetHealth()", +[](E *p) { return p->mfHealth; });
+	SOMA_METHOD(e, T, "float GetHealth()", +[](E *p) { return p->mpCore->mfHealth; });
 }

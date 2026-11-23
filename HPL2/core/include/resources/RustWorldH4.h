@@ -61,7 +61,6 @@ extern "C"
 	void ohpl_h4_static_xform(const float* rot, const float* scale, const float* pos, OhplH4Xform* out);
 	void ohpl_h4_rot_trans(const float* rot, const float* pos, hpl::cMatrixf* out);
 	bool ohpl_h4_is_combine_candidate(bool hasPose, bool poseApplied);
-	void ohpl_h4_light_mask(const float* rot, const float* size, const float* scale, const float* worldPos, OhplH4LightMask* out);
 	void ohpl_h4_exposure_area(const float* rot, const float* worldPos, const float* scale, OhplH4Exposure* out);
 	float ohpl_h4_detail_mesh_radius(const float* mins, const float* maxs, size_t n);
 	float ohpl_h4_detail_scale(bool hasRadius, float radius, float meshRadius);

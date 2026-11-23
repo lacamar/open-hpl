@@ -11,7 +11,6 @@
 #include "system/LowLevelSystem.h"
 
 struct OhplL5Data;
-struct OhplL5Channel;
 struct OhplL5Low;
 struct OhplL5Bitmap;
 struct OhplL5Font;
@@ -92,30 +91,6 @@ int ohpl_l5_data_channel(OhplL5Data*, int priority);
 bool ohpl_l5_data_is_stereo(OhplL5Data*);
 void ohpl_l5_data_free(OhplL5Data*);
 
-OhplL5Channel* ohpl_l5_chan_new(int handle);
-void* ohpl_l5_chan_shadow(OhplL5Channel*);
-void ohpl_l5_chan_free(OhplL5Channel*);
-void ohpl_l5_chan_stop(OhplL5Channel*);
-void ohpl_l5_chan_set_paused(OhplL5Channel*, bool);
-void ohpl_l5_chan_set_pitch(OhplL5Channel*, float);
-void ohpl_l5_chan_set_volume(OhplL5Channel*, float);
-void ohpl_l5_chan_set_loop(OhplL5Channel*, bool);
-void ohpl_l5_chan_set_spatialize(OhplL5Channel*, bool);
-void ohpl_l5_chan_set_elapsed(OhplL5Channel*, double);
-void ohpl_l5_chan_set_priority(OhplL5Channel*, int x, int modifier);
-void ohpl_l5_chan_set_aux_slot(OhplL5Channel*, bool affected);
-void ohpl_l5_chan_set_filtering(OhplL5Channel*, bool on, int flags);
-void ohpl_l5_chan_set_filter_gain(OhplL5Channel*, float);
-void ohpl_l5_chan_set_filter_gain_hf(OhplL5Channel*, float);
-void ohpl_l5_chan_set_filter_gain_lf(OhplL5Channel*, float);
-void ohpl_l5_chan_set_env_send_gain(OhplL5Channel*, float);
-void ohpl_l5_chan_set_attributes(OhplL5Channel*, const float* pos, const float* vel);
-bool ohpl_l5_chan_is_playing(OhplL5Channel*);
-bool ohpl_l5_chan_is_underrun(OhplL5Channel*);
-double ohpl_l5_chan_elapsed(OhplL5Channel*);
-double ohpl_l5_chan_total(OhplL5Channel*);
-int ohpl_l5_chan_priority(OhplL5Channel*);
-
 OhplL5Low* ohpl_l5_low_new();
 void ohpl_l5_low_free(OhplL5Low*);
 void ohpl_l5_low_update(OhplL5Low*);
@@ -158,11 +133,9 @@ void ohpl_l5_video_pause(OhplL5Video*, bool);
 void ohpl_l5_video_set_loop(OhplL5Video*, bool);
 void ohpl_l5_video_size(const OhplL5Video*, int32_t* w, int32_t* h);
 const uint8_t* ohpl_l5_video_take_frame(OhplL5Video*);
-uint32_t ohpl_l5_video_flags(const OhplL5Video*);
 void ohpl_l5_video_free(OhplL5Video*);
 
 bool ohpl_l5_audio_hash(const char* path, uint64_t* out);
-bool ohpl_l5_wav_hash(const uint8_t* data, size_t len, uint64_t* out);
 
 }
 

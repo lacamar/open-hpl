@@ -403,16 +403,6 @@ pub unsafe extern "C" fn ohpl_l5_video_take_frame(v: *mut Video) -> *const u8 {
 }
 
 /// # Safety
-/// `v` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_l5_video_flags(v: *const Video) -> u32 {
-    // SAFETY: caller contract.
-    unsafe { v.as_ref() }.map_or(0, |v| {
-        u32::from(v.is_paused()) | u32::from(v.is_looping()) << 1
-    })
-}
-
-/// # Safety
 /// `v` from `ohpl_l5_video_new`, freed once.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_l5_video_free(v: *mut Video) {
@@ -447,22 +437,6 @@ pub unsafe extern "C" fn ohpl_l5_audio_hash(path: *const c_char, out: *mut u64) 
         _ => None,
     };
     pcm.is_some_and(|pcm| {
-        *out = audio::hash(&pcm);
-        true
-    })
-}
-
-/// Hash of the decoded samples of an in-memory WAV file.
-///
-/// # Safety
-/// `data` holds `len` bytes; `out` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_l5_wav_hash(data: *const u8, len: usize, out: *mut u64) -> bool {
-    // SAFETY: caller contract.
-    let (Some(out), data) = (unsafe { out.as_mut() }, unsafe { units(data, len) }) else {
-        return false;
-    };
-    audio::decode_wav(data).is_some_and(|pcm| {
         *out = audio::hash(&pcm);
         true
     })

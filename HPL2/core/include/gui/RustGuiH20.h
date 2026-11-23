@@ -157,60 +157,21 @@ static_assert(sizeof(OhplH20MenuItem) == 104 && offsetof(OhplH20MenuItem, timer)
 
 extern "C" {
 
-void ohpl_h20_lb_init(const OhplH20Host*, OhplH20ListBase*, uintptr_t self, uintptr_t container, OhplH19Base* base, int kind);
-void ohpl_h20_lb_free(OhplH20ListBase*);
-void ohpl_h20_lb_destroy_slider(const OhplH20Host*, OhplH20ListBase*);
-void ohpl_h20_lb_destroy_columns(const OhplH20Host*, OhplH20ListBase*);
 void ohpl_h20_lb_set_selected_item(const OhplH20Host*, OhplH20ListBase*, int x, bool moveList, bool callback, int type, bool clearPrevious);
 int ohpl_h20_lb_selected_item(const OhplH20Host*, OhplH20ListBase*);
 int ohpl_h20_lb_multi_selection(const OhplH20Host*, OhplH20ListBase*, int idx);
 int ohpl_h20_lb_multi_selection_num(const OhplH20Host*, OhplH20ListBase*);
 void ohpl_h20_lb_clear_selection(const OhplH20Host*, OhplH20ListBase*);
-void ohpl_h20_lb_update_properties(const OhplH20Host*, OhplH20ListBase*);
-void ohpl_h20_lb_on_change_size(const OhplH20Host*, OhplH20ListBase*);
-void ohpl_h20_lb_on_init(const OhplH20Host*, OhplH20ListBase*);
-void ohpl_h20_lb_add_item_to_selection(const OhplH20Host*, OhplH20ListBase*, uintptr_t item);
-void ohpl_h20_lb_remove_item_from_selection(const OhplH20Host*, OhplH20ListBase*, uintptr_t item);
-void ohpl_h20_lb_on_load_graphics(const OhplH20Host*, OhplH20ListBase*);
-void ohpl_h20_lb_on_draw(const OhplH20Host*, OhplH20ListBase*);
-void ohpl_h20_lb_on_draw_after_clip(const OhplH20Host*, OhplH20ListBase*, uintptr_t clip);
 void ohpl_h20_lb_set_cursor_pos(const OhplH20Host*, OhplH20ListBase*, int pos, bool moveList, bool clamp);
-bool ohpl_h20_lb_on_mouse_down(const OhplH20Host*, OhplH20ListBase*, const cGuiMessageData*);
-bool ohpl_h20_lb_on_mouse_double_click(const OhplH20Host*, OhplH20ListBase*, const cGuiMessageData*);
-bool ohpl_h20_lb_on_key_press(const OhplH20Host*, OhplH20ListBase*, const cGuiMessageData*);
-bool ohpl_h20_lb_on_ui_arrow_press(const OhplH20Host*, OhplH20ListBase*, const cGuiMessageData*);
-bool ohpl_h20_lb_on_ui_button_press(const OhplH20Host*, OhplH20ListBase*, const cGuiMessageData*);
-bool ohpl_h20_lb_on_ui_button_release(const OhplH20Host*, OhplH20ListBase*);
-bool ohpl_h20_lb_on_ui_button_double_press(const OhplH20Host*, OhplH20ListBase*, const cGuiMessageData*);
 void ohpl_h20_lb_add_column(const OhplH20Host*, OhplH20ListBase*, const wchar_t* text, size_t len, int index, int align);
 void ohpl_h20_lb_set_column_width(const OhplH20Host*, OhplH20ListBase*, int idx, float width);
 void ohpl_h20_lb_item_start_pos(const OhplH20Host*, OhplH20ListBase*, cVector3f* out);
 
-void ohpl_h20_cb_init(const OhplH20Host*, OhplH20Combo*, uintptr_t self, uintptr_t container, OhplH19Base* base);
-void ohpl_h20_cb_destroy_children(const OhplH20Host*, OhplH20Combo*);
 void ohpl_h20_cb_set_selected_item(const OhplH20Host*, OhplH20Combo*, int x, bool moveList, bool callback);
 void ohpl_h20_cb_set_can_edit(const OhplH20Host*, OhplH20Combo*, bool v);
 bool ohpl_h20_cb_can_edit(const OhplH20Host*, OhplH20Combo*);
 void ohpl_h20_cb_set_max_shown_items(const OhplH20Host*, OhplH20Combo*, int v);
-void ohpl_h20_cb_set_default_font_size(const OhplH20Host*, OhplH20Combo*, float x, float y);
-void ohpl_h20_cb_update_properties(const OhplH20Host*, OhplH20Combo*);
-void ohpl_h20_cb_on_init(const OhplH20Host*, OhplH20Combo*);
-void ohpl_h20_cb_on_change_size(const OhplH20Host*, OhplH20Combo*);
-void ohpl_h20_cb_on_change_text(const OhplH20Host*, OhplH20Combo*);
-void ohpl_h20_cb_on_load_graphics(const OhplH20Host*, OhplH20Combo*);
-void ohpl_h20_cb_on_draw(const OhplH20Host*, OhplH20Combo*);
-bool ohpl_h20_cb_on_mouse_move(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
-bool ohpl_h20_cb_on_mouse_down(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
-bool ohpl_h20_cb_on_mouse_up(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
-bool ohpl_h20_cb_on_ui_arrow_press(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
-bool ohpl_h20_cb_on_ui_button_press(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
-bool ohpl_h20_cb_on_ui_button_release(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
-bool ohpl_h20_cb_on_lost_focus(const OhplH20Host*, OhplH20Combo*, const cGuiMessageData*);
-bool ohpl_h20_cb_point_is_inside(const OhplH20Host*, OhplH20Combo*, float x, float y, bool onlyClipped);
 
-void ohpl_h20_tf_init(const OhplH20Host*, OhplH20TabFrame*, uintptr_t self, OhplH19Base* base);
-void ohpl_h20_tf_free(OhplH20TabFrame*);
-void ohpl_h20_tf_destroy(const OhplH20Host*, OhplH20TabFrame*);
 uintptr_t ohpl_h20_tf_add_tab(const OhplH20Host*, OhplH20TabFrame*, const wchar_t* text, size_t len);
 void ohpl_h20_tf_clear_tabs(const OhplH20Host*, OhplH20TabFrame*);
 int ohpl_h20_tf_tab_num(const OhplH20Host*, OhplH20TabFrame*);
@@ -220,34 +181,11 @@ void ohpl_h20_tf_set_tab_on_top(const OhplH20Host*, OhplH20TabFrame*, uintptr_t 
 void ohpl_h20_tf_set_tab_on_top_by_index(const OhplH20Host*, OhplH20TabFrame*, int idx);
 void ohpl_h20_tf_set_hori_scroll(const OhplH20Host*, OhplH20TabFrame*, bool v);
 void ohpl_h20_tf_set_vert_scroll(const OhplH20Host*, OhplH20TabFrame*, bool v);
-bool ohpl_h20_tf_on_ui_button_press(const OhplH20Host*, OhplH20TabFrame*, const cGuiMessageData*);
-void ohpl_h20_tf_set_scroll_buttons_hidden(const OhplH20Host*, OhplH20TabFrame*, bool v);
-void ohpl_h20_tf_update_tab_visibility(const OhplH20Host*, OhplH20TabFrame*);
-void ohpl_h20_tf_on_init(const OhplH20Host*, OhplH20TabFrame*);
-void ohpl_h20_tf_on_change_size(const OhplH20Host*, OhplH20TabFrame*);
-void ohpl_h20_tf_on_load_graphics(const OhplH20Host*, OhplH20TabFrame*);
 
-void ohpl_h20_tab_init(const OhplH20Host*, OhplH20Tab*, uintptr_t self, uintptr_t frameW, OhplH20TabFrame* fs, OhplH19Base* base);
-void ohpl_h20_tab_destroy(const OhplH20Host*, OhplH20Tab*);
-void ohpl_h20_tab_attach_child(const OhplH20Host*, OhplH20Tab*, uintptr_t child, bool remove);
 void ohpl_h20_tab_set_icon(const OhplH20Host*, OhplH20Tab*, uintptr_t icon);
 void ohpl_h20_tab_set_on_top(const OhplH20Host*, OhplH20Tab*, bool v);
-bool ohpl_h20_tab_point_is_inside(const OhplH20Host*, OhplH20Tab*, float x, float y, bool onlyClipped);
-void ohpl_h20_tab_on_change_text(const OhplH20Host*, OhplH20Tab*);
-void ohpl_h20_tab_on_change_size(const OhplH20Host*, OhplH20Tab*);
-void ohpl_h20_tab_on_init(const OhplH20Host*, OhplH20Tab*);
-void ohpl_h20_tab_on_draw(const OhplH20Host*, OhplH20Tab*);
 
-void ohpl_h20_tl_init(const OhplH20Host*, OhplH20TabLabel*, uintptr_t self, OhplH19Base* base);
-bool ohpl_h20_tl_on_mouse_down(const OhplH20Host*, OhplH20TabLabel*);
-void ohpl_h20_tl_on_change_text(const OhplH20Host*, OhplH20TabLabel*);
-bool ohpl_h20_tl_on_get_ui_nav_focus(const OhplH20Host*, OhplH20TabLabel*);
-void ohpl_h20_tl_on_draw(const OhplH20Host*, OhplH20TabLabel*);
-
-void ohpl_h20_tb_init(const OhplH20Host*, OhplH20TextBox*, uintptr_t self, OhplH19Base* base, bool numeric);
-void ohpl_h20_tb_free(OhplH20TextBox*);
 void ohpl_h20_tb_set_default_decimals(int v);
-void ohpl_h20_tb_destroy_buttons(const OhplH20Host*, OhplH20TextBox*);
 void ohpl_h20_tb_set_illegal_chars(const OhplH20Host*, OhplH20TextBox*, const wchar_t* text, size_t len);
 void ohpl_h20_tb_set_max_text_length(const OhplH20Host*, OhplH20TextBox*, int len);
 void ohpl_h20_tb_set_selected_text(const OhplH20Host*, OhplH20TextBox*, int start, int count);
@@ -256,55 +194,6 @@ float ohpl_h20_tb_numeric_value(const OhplH20Host*, OhplH20TextBox*);
 void ohpl_h20_tb_background_size(const OhplH20Host*, OhplH20TextBox*, cVector2f* out);
 void ohpl_h20_tb_set_can_edit(const OhplH20Host*, OhplH20TextBox*, bool v);
 void ohpl_h20_tb_on_change_size(const OhplH20Host*, OhplH20TextBox*);
-void ohpl_h20_tb_on_change_text(const OhplH20Host*, OhplH20TextBox*);
-void ohpl_h20_tb_on_init(const OhplH20Host*, OhplH20TextBox*);
-void ohpl_h20_tb_on_load_graphics(const OhplH20Host*, OhplH20TextBox*);
-void ohpl_h20_tb_on_draw(const OhplH20Host*, OhplH20TextBox*);
-bool ohpl_h20_tb_on_mouse_move(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
-bool ohpl_h20_tb_on_mouse_down(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
-bool ohpl_h20_tb_on_mouse_up(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
-bool ohpl_h20_tb_on_mouse_double_click(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
-bool ohpl_h20_tb_on_got_focus(const OhplH20Host*, OhplH20TextBox*);
-bool ohpl_h20_tb_on_got_tab_focus(const OhplH20Host*, OhplH20TextBox*);
-bool ohpl_h20_tb_on_lost_focus(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
-bool ohpl_h20_tb_on_key_press(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
-bool ohpl_h20_tb_on_ui_button_press(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
-bool ohpl_h20_tb_on_enter(const OhplH20Host*, OhplH20TextBox*, const cGuiMessageData*);
-void ohpl_h20_tb_ui_keyboard_open(const OhplH20Host*, OhplH20TextBox*);
-
-void ohpl_h20_mi_init(const OhplH20Host*, OhplH20MenuItem*, uintptr_t self, OhplH19Base* base, int kind);
-void ohpl_h20_mi_on_init(const OhplH20Host*, OhplH20MenuItem*);
-void ohpl_h20_mi_on_update(const OhplH20Host*, OhplH20MenuItem*, float dt);
-void ohpl_h20_mi_on_draw(const OhplH20Host*, OhplH20MenuItem*);
-bool ohpl_h20_mi_on_mouse_down(const OhplH20Host*, OhplH20MenuItem*);
-bool ohpl_h20_mi_on_mouse_up(const OhplH20Host*, OhplH20MenuItem*, const cGuiMessageData*);
-bool ohpl_h20_mi_on_mouse_move(const OhplH20Host*, OhplH20MenuItem*);
-bool ohpl_h20_mi_on_mouse_leave(const OhplH20Host*, OhplH20MenuItem*);
-bool ohpl_h20_mi_on_key_press(const OhplH20Host*, OhplH20MenuItem*, const cGuiMessageData*);
-void ohpl_h20_mi_on_load_graphics(const OhplH20Host*, OhplH20MenuItem*);
-
-void ohpl_h20_cm_init(const OhplH20Host*, OhplH20CtxMenu*, uintptr_t self, OhplH19Base* base);
-void ohpl_h20_cm_hide(const OhplH20Host*, OhplH20CtxMenu*);
-float ohpl_h20_cm_item_width(const OhplH20Host*, OhplH20CtxMenu*);
-void ohpl_h20_cm_update_items_pos(const OhplH20Host*, OhplH20CtxMenu*, uintptr_t item);
-void ohpl_h20_cm_update_items_size(const OhplH20Host*, OhplH20CtxMenu*, uintptr_t item);
-void ohpl_h20_cm_update_width(const OhplH20Host*, OhplH20CtxMenu*, float textWidth);
-void ohpl_h20_cm_on_draw(const OhplH20Host*, OhplH20CtxMenu*);
-void ohpl_h20_cm_on_update(const OhplH20Host*, OhplH20CtxMenu*, float dt);
-bool ohpl_h20_cm_on_lost_focus(const OhplH20Host*, OhplH20CtxMenu*);
-bool ohpl_h20_cm_on_got_focus(const OhplH20Host*, OhplH20CtxMenu*);
-bool ohpl_h20_cm_on_key_press(const OhplH20Host*, OhplH20CtxMenu*, const cGuiMessageData*);
-void ohpl_h20_cm_on_load_graphics(const OhplH20Host*, OhplH20CtxMenu*);
-
-void ohpl_h20_mm_init(const OhplH20Host*, OhplH20MainMenu*, uintptr_t self, OhplH19Base* base);
-void ohpl_h20_mm_update_items_pos(const OhplH20Host*, OhplH20MainMenu*, uintptr_t item);
-void ohpl_h20_mm_update_items_size(const OhplH20Host*, OhplH20MainMenu*, uintptr_t item);
-void ohpl_h20_mm_on_child_menu_hide(const OhplH20Host*, OhplH20MainMenu*);
-void ohpl_h20_mm_hide(const OhplH20Host*, OhplH20MainMenu*);
-void ohpl_h20_mm_on_draw(const OhplH20Host*, OhplH20MainMenu*);
-void ohpl_h20_mm_on_update(const OhplH20Host*, OhplH20MainMenu*);
-void ohpl_h20_mm_on_init(const OhplH20Host*, OhplH20MainMenu*);
-void ohpl_h20_mm_on_load_graphics(const OhplH20Host*, OhplH20MainMenu*);
 
 }
 

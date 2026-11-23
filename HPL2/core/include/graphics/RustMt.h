@@ -109,7 +109,6 @@ namespace hpl {
 	void ohpl_mt_set_depth_of_field(bool, float, float, float, float);
 	bool ohpl_mt_get_light_probes();
 	bool ohpl_mt_get_depth_of_field();
-	void ohpl_mt_get_dof_params(float*);
 
 	}
 }

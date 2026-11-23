@@ -72,13 +72,10 @@ enum { kOhplSkinFont = 0, kOhplSkinAttribute = 1, kOhplSkinGfx = 2 };
 
 extern "C" {
 
-uint32_t ohpl_gui_skin_from_name(int kind, const char* name, size_t len);
 void ohpl_gui_skin_name(int kind, uint32_t index, void (*sink)(void*, const char*, size_t), void* ctx);
-uint32_t ohpl_gui_material_slot(uint32_t type);
 bool ohpl_gui_material_blend(uint32_t type, int* src, int* dst);
 int ohpl_gui_mouse_to_mouse(int button);
 int ohpl_gui_mouse_to_gui(int button);
-
 
 void* ohpl_gui_skin_parse(const char* data, size_t len, bool readOk, int* status);
 const OhplSkinView* ohpl_gui_skin_view(const void* handle);

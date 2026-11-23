@@ -2,7 +2,7 @@
 
 use super::env::{Env, Op};
 use super::handler::{HOp, Handler, Host};
-use super::names::{self, Date, NameState};
+use super::names::{self};
 use super::{engine, game, gamemap, map};
 use std::ffi::c_void;
 
@@ -91,27 +91,6 @@ fn push(sink: Sink32, ctx: Ctx, v: &[u32]) {
 }
 
 /// # Safety
-/// `st` and `date` are valid; buffers are live for their lengths; `sink` accepts `sctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga6_save_name(
-    st: *mut NameState,
-    prefix: *const u32,
-    prefix_n: usize,
-    map: *const u32,
-    map_n: usize,
-    date: *const Date,
-    sink: Sink32,
-    sctx: Ctx,
-) {
-    // SAFETY: valid pointers per the contract.
-    let (Some(st), Some(date)) = (unsafe { st.as_mut() }, unsafe { date.as_ref() }) else {
-        return;
-    };
-    let name = names::save_name(st, units(prefix, prefix_n), units(map, map_n), date);
-    push(sink, sctx, &name);
-}
-
-/// # Safety
 /// Buffers are live for their lengths; `translate` accepts `tctx`, `sink` accepts `sctx`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga6_proper_name(
@@ -142,56 +121,6 @@ pub unsafe extern "C" fn ohpl_ga6_proper_name(
         out
     });
     push(sink, sctx, &name);
-}
-
-/// # Safety
-/// `dates` is `n` readable dates.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga6_newest(dates: *const Date, n: usize) -> i32 {
-    let d = if n == 0 || dates.is_null() {
-        &[]
-    } else {
-        // SAFETY: per the contract.
-        unsafe { std::slice::from_raw_parts(dates, n) }
-    };
-    names::newest(d)
-        .and_then(|i| i32::try_from(i).ok())
-        .unwrap_or(-1)
-}
-
-/// Writes the removal order into `out` (room for `n` entries) and returns its length.
-///
-/// # Safety
-/// `dates` is `n` readable dates and `out` is `n` writable ints.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga6_rotation_victims(
-    dates: *const Date,
-    n: usize,
-    max: i32,
-    out: *mut i32,
-) -> usize {
-    if n == 0 || dates.is_null() || out.is_null() {
-        return 0;
-    }
-    // SAFETY: per the contract.
-    let (d, o) = unsafe {
-        (
-            std::slice::from_raw_parts(dates, n),
-            std::slice::from_raw_parts_mut(out, n),
-        )
-    };
-    let victims = names::rotation_victims(d, max);
-    for (slot, v) in o.iter_mut().zip(&victims) {
-        *slot = i32::try_from(*v).unwrap_or(-1);
-    }
-    victims.len().min(n)
-}
-
-/// # Safety
-/// `file` is `n` readable units.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga6_hardmode_file_ok(file: *const u32, n: usize) -> bool {
-    names::hardmode_file_ok(units(file, n))
 }
 
 #[repr(C)]

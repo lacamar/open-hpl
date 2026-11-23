@@ -195,8 +195,3 @@ pub unsafe extern "C" fn ohpl_s4b_glow_each(ctx: *mut c_void, cb: GlowFn) {
         };
     }
 }
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_s4b_has_agents() -> bool {
-    core::has_agents()
-}

@@ -2,7 +2,7 @@
 //! original C++ produced (rust/tests/golden/H22/harness), plus init/exit order.
 
 use super::frame::Loop;
-use super::h22_engine::{self as eng, RunState};
+use super::h22_engine::{self as eng, Native, RunState};
 use super::h22_engine_ffi::{CHost, op};
 use super::h22_hc::{Ev, HcHost, HcServer, LogLevel, MouseButton, Request, Response, Shot};
 use std::cell::{Cell, RefCell};
@@ -33,6 +33,89 @@ fn golden_files(prefix: &str) -> Vec<PathBuf> {
 }
 
 // ---- frame loop ----
+
+/// Ops the loop now performs itself; the mock still traces them under their original numbers.
+mod nop {
+    pub const BROADCAST: i32 = 2;
+    pub const RUN_MESSAGE: i32 = 3;
+    pub const CONTAINER_IS_DEFAULT: i32 = 4;
+    pub const LT_RESET: i32 = 5;
+    pub const WANT_UPDATE: i32 = 6;
+    pub const END_UPDATE_LOOP: i32 = 7;
+    pub const STEP_SIZE: i32 = 8;
+    pub const GAME_IS_DONE: i32 = 9;
+    pub const WAIT_OUT_OF_FOCUS: i32 = 10;
+    pub const SLEEP: i32 = 12;
+    pub const PAUSED: i32 = 14;
+    pub const HAS_HEADLESS: i32 = 15;
+    pub const RENDER_ONCE: i32 = 25;
+    pub const LIMIT_FPS: i32 = 26;
+    pub const FPS_ADD: i32 = 37;
+    pub const APP_TIME: i32 = 38;
+    pub const STEADY_NS: i32 = 39;
+}
+
+struct MockNative<'a>(&'a RefCell<RunMock>);
+
+impl MockNative<'_> {
+    fn q(&self, o: i32, a: [f64; 4]) -> f64 {
+        self.0.borrow_mut().op(o, a)
+    }
+}
+
+impl Native for MockNative<'_> {
+    fn broadcast(&self, msg: i32) {
+        self.q(nop::BROADCAST, [f64::from(msg), 0.0, 0.0, 0.0]);
+    }
+    fn run_message(&self, msg: i32, x: f32) {
+        self.q(nop::RUN_MESSAGE, [f64::from(msg), f64::from(x), 0.0, 0.0]);
+    }
+    fn current_container_is_default(&self) -> bool {
+        self.q(nop::CONTAINER_IS_DEFAULT, [0.0; 4]) != 0.0
+    }
+    fn logic_timer_reset(&self) {
+        self.q(nop::LT_RESET, [0.0; 4]);
+    }
+    fn want_update(&self) -> bool {
+        self.q(nop::WANT_UPDATE, [0.0; 4]) != 0.0
+    }
+    fn end_update_loop(&self) {
+        self.q(nop::END_UPDATE_LOOP, [0.0; 4]);
+    }
+    fn step_size(&self) -> f32 {
+        self.q(nop::STEP_SIZE, [0.0; 4]) as f32
+    }
+    fn game_is_done(&self) -> bool {
+        self.q(nop::GAME_IS_DONE, [0.0; 4]) != 0.0
+    }
+    fn wait_if_out_of_focus(&self) -> bool {
+        self.q(nop::WAIT_OUT_OF_FOCUS, [0.0; 4]) != 0.0
+    }
+    fn sleep_ms(&self, ms: u32) {
+        self.q(nop::SLEEP, [f64::from(ms), 0.0, 0.0, 0.0]);
+    }
+    fn paused(&self) -> bool {
+        self.q(nop::PAUSED, [0.0; 4]) != 0.0
+    }
+    fn has_headless(&self) -> bool {
+        self.q(nop::HAS_HEADLESS, [0.0; 4]) != 0.0
+    }
+    fn render_once(&self) -> bool {
+        self.q(nop::RENDER_ONCE, [0.0; 4]) != 0.0
+    }
+    fn limit_fps(&self) -> bool {
+        self.q(nop::LIMIT_FPS, [0.0; 4]) != 0.0
+    }
+    fn fps_add_frame(&self) {
+        self.q(nop::FPS_ADD, [0.0; 4]);
+    }
+    fn app_time_ms(&self) -> u64 {
+        self.q(nop::APP_TIME, [0.0; 4]) as u64
+    }
+    fn steady_ns(&self) -> i64 {
+        self.q(nop::STEADY_NS, [0.0; 4]) as i64
+    }
+}
 
 const OP_WINDOW_MOUSE: i32 = 100;
 const OP_WINDOW_VISIBLE: i32 = 101;
@@ -139,10 +222,10 @@ impl RunMock {
 
     fn op(&mut self, o: i32, a: [f64; 4]) -> f64 {
         match o {
-            op::HAS_HEADLESS => return f64::from(u8::from(self.headless)),
-            op::WAIT_OUT_OF_FOCUS => return f64::from(u8::from(self.wait_focus)),
-            op::RENDER_ONCE => return f64::from(u8::from(self.render_once)),
-            op::LIMIT_FPS => return f64::from(u8::from(self.limit_fps)),
+            nop::HAS_HEADLESS => return f64::from(u8::from(self.headless)),
+            nop::WAIT_OUT_OF_FOCUS => return f64::from(u8::from(self.wait_focus)),
+            nop::RENDER_ONCE => return f64::from(u8::from(self.render_once)),
+            nop::LIMIT_FPS => return f64::from(u8::from(self.limit_fps)),
             op::WINDOW_FOCUS_BITS => {
                 let i = self.op(op::WINDOW_INPUT_FOCUS, [0.0; 4]) != 0.0;
                 let m = self.op(OP_WINDOW_MOUSE, [0.0; 4]) != 0.0;
@@ -154,32 +237,32 @@ impl RunMock {
         self.calls += 1;
         let mut r = 0.0;
         match o {
-            op::GAME_IS_DONE => {
+            nop::GAME_IS_DONE => {
                 if self.calls >= self.budget {
                     self.done = true;
                 }
                 r = f64::from(u8::from(self.done));
             }
-            op::WANT_UPDATE => r = f64::from(u8::from(self.pm(450))),
-            op::STEP_SIZE => r = f64::from(1.0f32 / 60.0f32),
-            op::PAUSED => r = f64::from(u8::from(self.paused)),
+            nop::WANT_UPDATE => r = f64::from(u8::from(self.pm(450))),
+            nop::STEP_SIZE => r = f64::from(1.0f32 / 60.0f32),
+            nop::PAUSED => r = f64::from(u8::from(self.paused)),
             op::WINDOW_INPUT_FOCUS | OP_WINDOW_MOUSE => r = f64::from(u8::from(self.pm(500))),
             OP_WINDOW_VISIBLE => r = f64::from(u8::from(self.pm(700))),
             op::QUIT_POSTED => r = f64::from(u8::from(self.quit)),
             op::RESET_QUIT => self.quit = false,
             op::TAKE_PLUGGED | op::TAKE_REMOVED => r = f64::from(u8::from(self.pm(60))),
             op::UPDATE_LOG_ACTIVE => r = f64::from(u8::from(self.update_log)),
-            op::CONTAINER_IS_DEFAULT => r = f64::from(u8::from(self.pm(600))),
+            nop::CONTAINER_IS_DEFAULT => r = f64::from(u8::from(self.pm(600))),
             op::FT_SEC => r = 0.001 * f64::from(1 + (self.rnd() % 30) as i32),
-            op::APP_TIME => {
+            nop::APP_TIME => {
                 self.app_time += 1 + self.rnd() % 25;
                 r = self.app_time as f64;
             }
-            op::STEADY_NS => {
+            nop::STEADY_NS => {
                 self.steady_ns += 100_000 + (self.rnd() % 3_000_000) as i64;
                 r = self.steady_ns as f64;
             }
-            op::RUN_MESSAGE => {
+            nop::RUN_MESSAGE => {
                 let v = self.rnd() % 1000;
                 if v < 20 {
                     self.paused = !self.paused;
@@ -253,6 +336,7 @@ fn run_traces_match_cpp() {
         let host = CHost::new(run_call, std::ptr::from_ref(&mock).cast_mut().cast());
         eng::run(
             &host,
+            &MockNative(&mock),
             &RunState {
                 lp: &raw mut lp,
                 frame_time: &raw mut ft,

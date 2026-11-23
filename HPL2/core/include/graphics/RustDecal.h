@@ -60,10 +60,6 @@ namespace hpl {
 
 extern "C" {
 
-OhplDecalOut* ohpl_decal_clip_mesh(const OhplDecalClip*, const OhplDecalMesh*, OhplDecalCounts*);
-void ohpl_decal_out_free(OhplDecalOut*);
-void ohpl_decal_uvs(const float*, size_t, uint32_t, uint32_t, const OhplDecalUv*, cVector3f*);
-
 }
 }
 

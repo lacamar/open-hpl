@@ -2,7 +2,7 @@
 
 use super::a7_area::{A7Area, Pod, T_LIQUID, T_SLIME, T_STICKY};
 use super::aupd::{self, aop};
-use super::mhost::{self, A, S, body, op};
+use super::mhost::{self, A, body, op};
 use std::sync::Mutex;
 
 static LOG: Mutex<Vec<i32>> = Mutex::new(Vec::new());
@@ -28,7 +28,6 @@ unsafe extern "C" fn fake(o: i32, a: *mut A) {
         aop::LQ_BODY_READ => a.i[1] = 1,
         aop::COLLIDES => a.i[0] = i32::from(*COLLIDES.lock().unwrap()),
         aop::ST_PRE_ATTACH => a.i[1] = -1,
-        aop::STR => a.rs[0] = S::NONE,
         _ => {}
     }
 }
@@ -110,11 +109,8 @@ fn slime_attacks_in_order_and_stays_quiet_without_a_collision() {
         [
             aop::COLLIDES,
             aop::SLIME_DAMAGE,
-            aop::STR,
             aop::PLAY_SOUND,
-            aop::STR,
             aop::SHAKE,
-            aop::STR,
             aop::SET_ACTIVE
         ]
     );

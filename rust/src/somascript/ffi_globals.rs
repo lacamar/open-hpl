@@ -95,12 +95,6 @@ pub extern "C" fn ohpl_gs6_reset_return() {
     globals::lock().ret = Variant::default();
 }
 
-/// Drops every variable and argument and resets the return value.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs6_reset_all() {
-    *globals::lock() = Globals::default();
-}
-
 /// # Safety
 /// `sink` accepts `ctx`.
 #[unsafe(no_mangle)]

@@ -18,7 +18,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <map>
 
 static_assert(sizeof(wchar_t) == 4, "tWString holds UTF-32");
 static_assert(eKey_Escape == 5 && eGamepadButton_B == 1 && eGuiMouseButton_Left == 1, "menu host constants");
@@ -78,8 +77,6 @@ static tString Narrow(const OhplA10aArgs& a, int i)
 }
 static tWString Widen(const tString& s) { tWString w; for(size_t k = 0; k < s.size(); ++k) w += (wchar_t)(unsigned char)s[k]; return w; }
 static void Out(OhplA10aArgs& a, const tWString& s) { gOut = s; a.s[0] = (const uint32_t*)gOut.data(); a.n[0] = gOut.size(); }
-static cVector3f Pos(const OhplA10aArgs& a) { return cVector3f(a.f[0], a.f[1], a.f[2]); }
-static cVector2f Size(const OhplA10aArgs& a) { return cVector2f(a.f[3], a.f[4]); }
 static void SetStr(OhplA10aStr& d, const tString& s) { d.n = (uint32_t)std::min(s.size(), sizeof(d.b)); memcpy(d.b, s.data(), d.n); }
 static tString GetStr(const OhplA10aStr& d) { return tString(d.b, std::min<size_t>(d.n, sizeof(d.b))); }
 
@@ -89,7 +86,6 @@ static const eGuiMessage kMsgs[] = {
 	eGuiMessage_LoseUINavFocus, eGuiMessage_MouseEnter, eGuiMessage_MouseLeave, eGuiMessage_MouseDown,
 	eGuiMessage_TextChange, eGuiMessage_KeyPress, eGuiMessage_UIArrowPress, eGuiMessage_GamepadInput, eGuiMessage_OnDraw,
 };
-static const eUIArrow kArrows[] = { eUIArrow_Up, eUIArrow_Right, eUIArrow_Down, eUIArrow_Left };
 
 static bool Trampoline(void* apToken, iWidget* apWidget, const cGuiMessageData& aData)
 {
@@ -229,32 +225,9 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 	OhplA10aArgs& a = *apA;
 	iWidget* pW = (iWidget*)a.p[0];
 	cGuiSet* pSet = (cGuiSet*)a.p[0];
-	iWidget* pParent = (iWidget*)a.p[1];
 	switch(alOp)
 	{
-	case eLabelNamed: return (size_t)pSet->CreateWidgetLabel(Pos(a), 0, Wide(a, 0), NULL, Narrow(a, 1));
-	case eCombo: return (size_t)pSet->CreateWidgetComboBox(Pos(a), Size(a), _W(""), pParent);
-	case eTabFrame: return (size_t)pSet->CreateWidgetTabFrame(Pos(a), Size(a), _W(""), pParent, false, true);
-	case eImage:
-		return (size_t)pSet->CreateWidgetImage(Narrow(a, 0), Pos(a), Size(a), eGuiMaterial_Alpha, false, pParent, Narrow(a, 1));
-
-	case eSetFontSize: pW->SetDefaultFontSize(cVector2f(a.f[0], a.f[1])); return 0;
-	case eTextLength: a.f[0] = pW->GetDefaultFontType()->GetLength(pW->GetDefaultFontSize(), pW->GetText().c_str()); return 0;
 	case eAddCallback: pW->AddCallback(kMsgs[a.i[0]], (void*)a.p[1], &Trampoline); return 0;
-	case eComboAdd: static_cast<cWidgetComboBox*>(pW)->AddItem(Wide(a, 0)); return 0;
-	case eComboClear: static_cast<cWidgetComboBox*>(pW)->ClearItems(); return 0;
-	case eComboSelect: static_cast<cWidgetComboBox*>(pW)->SetSelectedItem(a.i[0], a.i[1] != 0, a.i[2] != 0); return 0;
-	case eComboSelected: return (size_t)(unsigned)static_cast<cWidgetComboBox*>(pW)->GetSelectedItem();
-	case eComboNum: return (size_t)(unsigned)static_cast<cWidgetComboBox*>(pW)->GetItemNum();
-	case eTabAdd: return (size_t)static_cast<cWidgetTabFrame*>(pW)->AddTab(Wide(a, 0));
-	case eTabNum: return (size_t)(unsigned)static_cast<cWidgetTabFrame*>(pW)->GetTabNum();
-	case eTabGet: return (size_t)static_cast<cWidgetTabFrame*>(pW)->GetTab(a.i[0]);
-	case eTabTop: return (size_t)static_cast<cWidgetTabFrame*>(pW)->GetTabOnTop();
-	case eTabLabel: return (size_t)static_cast<cWidgetTab*>(pW)->GetTabLabel();
-	case eTabFrameOf: return (size_t)static_cast<cWidgetTab*>(pW)->GetParentTabFrame();
-	case eFrameOf: return (size_t)dynamic_cast<cWidgetFrame*>(pW);
-	case eFrameScrollTo: static_cast<cWidgetFrame*>(pW)->ScrollToPosition(cVector2f(a.f[0], a.f[1])); return 0;
-
 	case eMsgBox: return (size_t)pSet->CreatePopUpMessageBox(Wide(a, 0), Wide(a, 1), Wide(a, 2), Wide(a, 3), (void*)a.p[1], &Trampoline);
 
 	case eTranslate: Out(a, kTranslate(Narrow(a, 0), Narrow(a, 1))); return 0;
@@ -364,14 +337,6 @@ static size_t Host(int alOp, OhplA10aArgs* apA)
 			case 1: { cVector2f v = pCfg->GetVector2f(Narrow(a, 0), Narrow(a, 1), 0); a.f[0] = v.x; a.f[1] = v.y; break; }
 			default: Out(a, Widen(pCfg->GetString(Narrow(a, 0), Narrow(a, 1), Narrow(a, 2)))); break;
 			}
-			return 0;
-		}
-	case eNavGet: return (size_t)pW->GetFocusNavigation(kArrows[a.i[0] & 3]);
-	case eFontType: pW->SetDefaultFontType((iFontData*)a.p[1]); return 0;
-	case eFontLen:
-		{
-			float fLength = pW->GetDefaultFontType()->GetLength(cVector2f(a.f[0], a.f[1]), Wide(a, 0).c_str());
-			a.f[0] = fLength;
 			return 0;
 		}
 	case eFontLoad: return (size_t)gpBase->mpMainMenu->LoadFont(Narrow(a, 0));
@@ -564,65 +529,4 @@ void OhplA10aHostInit()
 	if(bDone) return;
 	bDone = true;
 	if(ohpl_a10a_set_host(&Host, sizeof(OhplA10aOpts)) == 0) abort();
-}
-
-static void DumpWidget(FILE* apOut, iWidget* apWidget, int alDepth, std::map<iWidget*,int>& amIds)
-{
-	int lId = amIds[apWidget];
-	fprintf(apOut, "%*s#%d type=%d name=%s", alDepth*2, "", lId, (int)apWidget->GetType(), apWidget->GetName().c_str());
-	const cVector3f& vPos = apWidget->GetLocalPosition();
-	cVector2f vSize = apWidget->GetSize();
-	fprintf(apOut, " pos=%.9g,%.9g,%.9g size=%.9g,%.9g", vPos.x, vPos.y, vPos.z, vSize.x, vSize.y);
-	fprintf(apOut, " text=\"%s\" vis=%d en=%d uv=%d ud=%d", cString::To8Char(apWidget->GetText()).c_str(), apWidget->IsVisible(), apWidget->IsEnabled(), apWidget->GetUserValue(), apWidget->GetUserData() != NULL);
-	const cColor& col = apWidget->GetDefaultFontColor();
-	fprintf(apOut, " col=%.9g,%.9g,%.9g,%.9g fs=%.9g,%.9g", col.r, col.g, col.b, col.a, apWidget->GetDefaultFontSize().x, apWidget->GetDefaultFontSize().y);
-	fprintf(apOut, " nav=");
-	const eUIArrow vArrows[4] = { eUIArrow_Up, eUIArrow_Right, eUIArrow_Down, eUIArrow_Left };
-	for(int i=0;i<4;++i)
-	{
-		iWidget* pNav = apWidget->GetFocusNavigation(vArrows[i]);
-		fprintf(apOut, "%d%s", pNav && amIds.count(pNav) ? amIds[pNav] : -1, i<3 ? "," : "");
-	}
-	if(cWidgetCheckBox* pCheck = dynamic_cast<cWidgetCheckBox*>(apWidget))
-		fprintf(apOut, " checked=%d", pCheck->IsChecked());
-	if(cWidgetSlider* pSlider = dynamic_cast<cWidgetSlider*>(apWidget))
-		fprintf(apOut, " slider=%d/%d", pSlider->GetValue(), pSlider->GetMaxValue());
-	if(cWidgetComboBox* pCombo = dynamic_cast<cWidgetComboBox*>(apWidget))
-	{
-		fprintf(apOut, " combo=%d[", pCombo->GetSelectedItem());
-		for(int i=0;i<pCombo->GetItemNum();++i)
-			fprintf(apOut, "%s\"%s\"", i ? "," : "", cString::To8Char(pCombo->GetItem(i)->GetText()).c_str());
-		fprintf(apOut, "]");
-	}
-	if(cWidgetLabel* pLabel = dynamic_cast<cWidgetLabel*>(apWidget))
-		fprintf(apOut, " align=%d wrap=%d", (int)pLabel->GetTextAlign(), pLabel->GetWordWrap());
-	fprintf(apOut, "\n");
-
-	tWidgetList lstChildren = apWidget->GetChildren();
-	for(tWidgetListIt it = lstChildren.begin(); it != lstChildren.end(); ++it)
-		DumpWidget(apOut, *it, alDepth+1, amIds);
-}
-
-static void NumberWidgets(iWidget* apWidget, std::map<iWidget*,int>& amIds)
-{
-	int lId = (int)amIds.size();
-	amIds[apWidget] = lId;
-	tWidgetList lstChildren = apWidget->GetChildren();
-	for(tWidgetListIt it = lstChildren.begin(); it != lstChildren.end(); ++it)
-		NumberWidgets(*it, amIds);
-}
-
-void OhplA10aDumpWindow(const char* asName, iWidget* apRoot)
-{
-	const char* sPath = getenv("OHPL_A10A_DUMP");
-	if(sPath == NULL || apRoot == NULL) return;
-
-	FILE* pOut = fopen(sPath, "a");
-	if(pOut == NULL) return;
-
-	std::map<iWidget*,int> mIds;
-	NumberWidgets(apRoot, mIds);
-	fprintf(pOut, "== %s\n", asName);
-	DumpWidget(pOut, apRoot, 0, mIds);
-	fclose(pOut);
 }

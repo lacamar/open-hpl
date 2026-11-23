@@ -4,7 +4,6 @@
 #include "sound/SoundHandler.h"
 #include "sound/MusicHandler.h"
 #include "sound/SoundEntityData.h"
-#include "sound/SoundChannel.h"
 #include "sound/SoundData.h"
 #include "sound/LowLevelSound.h"
 #include "impl/LowLevelSoundOpenAL.h"
@@ -35,52 +34,11 @@ namespace hpl {
 			bool mbHasCollided;
 		};
 
-		iSoundChannel* Ch(void *ap){ return static_cast<iSoundChannel*>(ap); }
 		cResources* Res(void *ap){ return static_cast<cResources*>(ap); }
 		iLowLevelSound* Low(void *ap){ return static_cast<iLowLevelSound*>(ap); }
 		iSoundEntityEvent* Ev(void *ap){ return static_cast<iSoundEntityEvent*>(ap); }
 		cSoundEntity* Ent(void *ap){ return static_cast<cSoundEntity*>(ap); }
 		tString Str(const unsigned char *p, size_t n){ return tString((const char*)p, n); }
-
-		const OhplSoundChannelOps kChannelOps = {
-			[](void *c){ Ch(c)->Play(); },
-			[](void *c){ Ch(c)->Stop(); },
-			[](void *c, bool x){ Ch(c)->SetPaused(x); },
-			[](void *c){ return Ch(c)->GetPaused(); },
-			[](void *c){ return Ch(c)->IsPlaying(); },
-			[](void *c){ return Ch(c)->GetStopUsed(); },
-			[](void *c){ return Ch(c)->GetSpeed(); },
-			[](void *c, float x){ Ch(c)->SetSpeed(x); },
-			[](void *c){ return Ch(c)->GetVolume(); },
-			[](void *c, float x){ Ch(c)->SetVolume(x); },
-			[](void *c){ return Ch(c)->GetLooping(); },
-			[](void *c, bool x){ Ch(c)->SetLooping(x); },
-			[](void *c, bool x){ Ch(c)->Set3D(x); },
-			[](void *c, int x){ Ch(c)->SetPriority(x); },
-			[](void *c, int x){ Ch(c)->SetPriorityModifier(x); },
-			[](void *c, bool x){ Ch(c)->SetAffectedByEnv(x); },
-			[](void *c){ return Ch(c)->GetPositionIsRelative(); },
-			[](void *c, bool x){ Ch(c)->SetPositionIsRelative(x); },
-			[](void *c, cVector3f *o){ *o = Ch(c)->GetPosition(); },
-			[](void *c, const cVector3f *v){ Ch(c)->SetPosition(*v); },
-			[](void *c, cVector3f *o){ *o = Ch(c)->GetRelPosition(); },
-			[](void *c, const cVector3f *v){ Ch(c)->SetRelPosition(*v); },
-			[](void *c){ return Ch(c)->GetMinDistance(); },
-			[](void *c, float x){ Ch(c)->SetMinDistance(x); },
-			[](void *c){ return Ch(c)->GetMaxDistance(); },
-			[](void *c, float x){ Ch(c)->SetMaxDistance(x); },
-			[](void *c){ return Ch(c)->GetBlockVolumeMul(); },
-			[](void *c){ return Ch(c)->GetElapsedTime(); },
-			[](void *c){ return Ch(c)->GetTotalTime(); },
-			[](void *c, double x){ Ch(c)->SetElapsedTime(x); },
-			[](void *c, bool x){ Ch(c)->SetBlockable(x); },
-			[](void *c, float x){ Ch(c)->SetBlockVolumeMul(x); },
-			[](void *c, int which, float f){
-				if(which == 0) Ch(c)->SetFilterGainHF(f);
-				else if(which == 1) Ch(c)->SetFilterGainLF(f);
-				else Ch(c)->SetEnvSendGain(f);
-			},
-		};
 
 		const OhplSndEventOps kEventOps = {
 			[](void *e){ Ev(e)->Play(); },
@@ -93,9 +51,8 @@ namespace hpl {
 		};
 
 		const OhplSndHost kHost = {
-			&kChannelOps,
 			&kEventOps,
-			[](void *apRes, const unsigned char *asName, size_t alLen, int alPriority, bool abStream, bool *apNotEnough) -> void*
+			[](void *apRes, const unsigned char *asName, size_t alLen, int alPriority, bool abStream, bool *apNotEnough, void **apData) -> int
 			{
 				*apNotEnough = false;
 				tString sName = Str(asName, alLen);
@@ -103,17 +60,20 @@ namespace hpl {
 				if(pData == NULL)
 				{
 					Error("Could not load sound '%s'\n", sName.c_str());
-					return NULL;
+					return -1;
 				}
-				iSoundChannel *pSound = pData->CreateChannel(alPriority);
-				if(pSound == NULL)
+				int lHandle = pData->CreateChannelHandle(alPriority);
+				if(lHandle == -1)
 				{
 					if(abStream) Res(apRes)->GetSoundManager()->Destroy(pData);
 					*apNotEnough = true;
+					return -1;
 				}
-				return pSound;
+				pData->IncUserCount();
+				*apData = pData;
+				return lHandle;
 			},
-			[](void *c){ hplDelete(Ch(c)); },
+			[](void *d){ static_cast<iSoundData*>(d)->ReleaseFromChannel(); },
 			[](void *apWorld, void *apLow, const cVector3f *apPos)
 			{
 				cWorld *pWorld = static_cast<cWorld*>(apWorld);
@@ -146,23 +106,25 @@ namespace hpl {
 				tSoundEntityGlobalCallbackList &lst = cSoundEntity::GlobalCallbacks();
 				for(tSoundEntityGlobalCallbackListIt it = lst.begin(); it != lst.end(); ++it) (*it)->OnStart(Ent(e));
 			},
-			[](void *apRes, const unsigned char *p, size_t n, bool abLoop) -> void*
+			[](void *apRes, const unsigned char *p, size_t n, bool abLoop, void **apData) -> int
 			{
 				tString sName = Str(p, n);
 				iSoundData *pData = Res(apRes)->GetSoundManager()->CreateSoundData(sName, true, abLoop);
 				if(pData == NULL)
 				{
 					Error("Couldn't load music '%s'\n", sName.c_str());
-					return NULL;
+					return -1;
 				}
-				iSoundChannel *pStream = pData->CreateChannel(256);
-				if(pStream == NULL)
+				int lHandle = pData->CreateChannelHandle(256);
+				if(lHandle == -1)
 				{
 					Res(apRes)->GetSoundManager()->Destroy(pData);
 					Error("Couldn't stream music '%s'!\n", sName.c_str());
-					return NULL;
+					return -1;
 				}
-				return pStream;
+				pData->IncUserCount();
+				*apData = pData;
+				return lHandle;
 			},
 			[](void *apLock, const unsigned char *p, size_t n, float afVolume, bool abLoop)
 			{
@@ -188,14 +150,13 @@ namespace hpl {
 		ohpl_l5_devices(OhplL5DeviceSink, &avSoundDeviceVec);
 	}
 
-	cOpenALSoundChannel::~cOpenALSoundChannel(){ ohpl_l5_chan_free(mpRust); DestroyData(); }
 	cOpenALSoundData::~cOpenALSoundData(){ if(mpRust) ohpl_l5_data_free(mpRust); }
 	cOpenALSoundEnvironment::~cOpenALSoundEnvironment(){}
 	cLowLevelSoundOpenAL::~cLowLevelSoundOpenAL(){ ohpl_l5_low_free(mpRust); }
 
-	void iSoundChannel::DestroyData()
+	void iSoundData::ReleaseFromChannel()
 	{
-		if(mpSoundManger) mpSoundManger->Destroy(mpData);
+		if(mpSoundManger) mpSoundManger->Destroy(this);
 	}
 
 	//-----------------------------------------------------------------------

@@ -2,7 +2,7 @@
 //! buoyancy, attach and detach run here against the engine through `mhost` ops (`aop`); the state is the A7 pod block.
 //! No reference to an area block or the map is held across a host op: scripts and entities re-enter.
 
-use super::a7_area::{A7Area, InsanityS, LiquidS, Pod, SlimeS, StickyS};
+use super::a7_area::{A7Area, InsanityS, LiquidS, Pod, SlimeS, StickyS, st};
 use super::mhost::{self, A, S, body, op};
 use super::mmap::M;
 use super::{a7_ffi::Ctx, area};
@@ -21,7 +21,6 @@ pub mod aop {
     pub const LQ_CHAR_APPLY: i32 = 107;
     pub const BODY_NAME: i32 = 108;
     pub const BODY_IN_AREA: i32 = 109;
-    pub const STR: i32 = 110;
     pub const ST_PRE_ATTACH: i32 = 111;
     pub const ST_ATTACH_APPLY: i32 = 112;
     pub const ST_DETACH_APPLY: i32 = 113;
@@ -36,21 +35,6 @@ pub mod aop {
     pub const SHAKE: i32 = 122;
     pub const INSANITY: i32 = 123;
     pub const FLASHBACK: i32 = 124;
-}
-
-/// Names of the C++ shell strings the host returns for `aop::STR`.
-pub mod string_of {
-    pub const ATTACH_FUNCTION: i32 = 0;
-    pub const DETACH_FUNCTION: i32 = 1;
-    pub const ATTACH_SOUND: i32 = 2;
-    pub const DETACH_SOUND: i32 = 3;
-    pub const ATTACH_PS: i32 = 4;
-    pub const DETACH_PS: i32 = 5;
-    pub const ATTACHABLE_BODY: i32 = 6;
-    pub const AREA_NAME: i32 = 7;
-    pub const SLIME_CALLBACK: i32 = 8;
-    pub const SLIME_SOUND: i32 = 9;
-    pub const SLIME_PS: i32 = 10;
 }
 
 /// `cLuxArea_Sticky::mbAllowAttachment`: set by `ohpl_ga5_sticky_name` and by the script `SetAllowAttachment`.
@@ -75,11 +59,19 @@ fn text(a: &A) -> Vec<u8> {
     a.ret_bytes(0)
 }
 
-fn shell_string(shell: usize, which: i32) -> Vec<u8> {
-    text(&host(aop::STR, |a| {
-        a.p[0] = shell;
-        a.i[0] = which;
-    }))
+fn area_str(a: *mut A7Area, which: usize) -> Vec<u8> {
+    // SAFETY: `a` is a live block (caller contract of every entry); the string is copied out.
+    unsafe { (*a).strs.get(which).cloned().unwrap_or_default() }
+}
+
+fn area_name(a: *mut A7Area) -> Vec<u8> {
+    // SAFETY: as above.
+    unsafe { (*a).name.clone() }
+}
+
+fn material(a: *mut A7Area) -> usize {
+    // SAFETY: as above.
+    unsafe { (*a).material }
 }
 
 fn vec_at(a: &A, second: bool) -> Vector3f {
@@ -281,6 +273,7 @@ fn liquid_body(a: *mut A7Area, shell: usize, b: usize, surface_y: f32, inside: b
             x.f[5] = s.linear_viscosity;
             x.f[6] = s.angular_viscosity;
             x.f[7] = surface_y;
+            x.p[2] = material(a);
         });
     }
     if out.waves {
@@ -316,6 +309,7 @@ fn liquid_char(a: *mut A7Area, shell: usize, b: usize, surface_y: f32, inside: b
         x.i[1] = action;
         x.f[0] = surface_y;
         x.f[1] = speed_mul;
+        x.p[2] = material(a);
     });
 }
 
@@ -346,11 +340,11 @@ fn sticky_update_attach(a: *mut A7Area, shell: usize, step: f32) {
         });
     }
     if out.done {
-        let sound = shell_string(shell, string_of::ATTACH_SOUND);
+        let sound = area_str(a, st::ATTACH_SOUND);
         if !sound.is_empty() {
             fx(shell, 0, &sound, 0);
         }
-        let ps = shell_string(shell, string_of::ATTACH_PS);
+        let ps = area_str(a, st::ATTACH_PS);
         if !ps.is_empty() {
             fx(shell, 1, &ps, 0);
         }
@@ -370,7 +364,7 @@ fn sticky_update_collision(a: *mut A7Area, shell: usize, ctx: *mut Ctx) {
         return;
     }
     let e = env(shell);
-    let attach_name = shell_string(shell, string_of::ATTACHABLE_BODY);
+    let attach_name = area_str(a, st::ATTACHABLE_BODY);
     for b in bodies_in(e.world, e.body) {
         let info = body_info(b);
         if skipped(&info) {
@@ -407,9 +401,9 @@ fn sticky_update_collision(a: *mut A7Area, shell: usize, ctx: *mut Ctx) {
         if !collides {
             continue;
         }
-        let func = shell_string(shell, string_of::ATTACH_FUNCTION);
+        let func = area_str(a, st::ATTACH_FUNCTION);
         if !func.is_empty() {
-            let name = shell_string(shell, string_of::AREA_NAME);
+            let name = area_name(a);
             // SAFETY: `ctx` is the live map context (caller contract of `update`).
             unsafe { M::new(ctx) }.run_script(&callback(&func, &name, b));
             if area::sticky_after_callback(true, allow_attachment()) {
@@ -449,17 +443,17 @@ pub unsafe fn detach_body(a: *mut A7Area, shell: usize, ctx: *mut Ctx) {
     if attached == 0 {
         return;
     }
-    let name = shell_string(shell, string_of::AREA_NAME);
-    let func = shell_string(shell, string_of::DETACH_FUNCTION);
+    let name = area_name(a);
+    let func = area_str(a, st::DETACH_FUNCTION);
     if !func.is_empty() {
         // SAFETY: caller contract.
         unsafe { M::new(ctx) }.run_script(&callback(&func, &name, attached));
     }
-    let sound = shell_string(shell, string_of::DETACH_SOUND);
+    let sound = area_str(a, st::DETACH_SOUND);
     if !sound.is_empty() {
         fx(shell, 0, &sound, 1);
     }
-    let ps = shell_string(shell, string_of::DETACH_PS);
+    let ps = area_str(a, st::DETACH_PS);
     if !ps.is_empty() {
         fx(shell, 1, &ps, 1);
     }
@@ -499,12 +493,12 @@ fn slime_update(a: *mut A7Area, shell: usize, ctx: *mut Ctx, step: f32) {
     };
     let damage = rand_rectf(min_attack_damage, max_attack_damage);
     host(aop::SLIME_DAMAGE, |x| x.f[0] = damage);
-    let sound = shell_string(shell, string_of::SLIME_SOUND);
+    let sound = area_str(a, st::SLIME_SOUND);
     host(aop::PLAY_SOUND, |x| {
         x.p[0] = shell;
         x.s[0] = S::of(&sound);
     });
-    let ps = shell_string(shell, string_of::SLIME_PS);
+    let ps = area_str(a, st::SLIME_PS);
     if !ps.is_empty() {
         host(aop::PS_AT, |x| {
             x.p[0] = shell;
@@ -512,9 +506,9 @@ fn slime_update(a: *mut A7Area, shell: usize, ctx: *mut Ctx, step: f32) {
         });
     }
     host(aop::SHAKE, |x| x.f[0] = screen_shake_amount);
-    let cb = shell_string(shell, string_of::SLIME_CALLBACK);
+    let cb = area_str(a, st::SLIME_CALLBACK);
     if !cb.is_empty() {
-        let name = shell_string(shell, string_of::AREA_NAME);
+        let name = area_name(a);
         // SAFETY: `ctx` is the live map context.
         unsafe { M::new(ctx) }.run_script(&area::call1(&cb, &name));
     }
@@ -548,5 +542,10 @@ fn flashback_update(a: *mut A7Area, shell: usize, step: f32) {
         return;
     }
     deactivate(shell);
-    host(aop::FLASHBACK, |x| x.p[0] = shell);
+    let file = area_str(a, st::FLASHBACK_FILE);
+    let cb = area_str(a, st::FLASHBACK_CALLBACK);
+    host(aop::FLASHBACK, |x| {
+        x.s[0] = S::of(&file);
+        x.s[1] = S::of(&cb);
+    });
 }

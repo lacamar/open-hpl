@@ -34,14 +34,6 @@ int ohpl_meshgen_plane(const cVector3f*, const cVector3f*, const cVector2f*, Ohp
 OhplMeshData* ohpl_meshgen_wireframe(const unsigned int*, size_t);
 void ohpl_meshgen_free(OhplMeshData*);
 
-float ohpl_anim_frames_at_time(const cKeyFrame* const*, size_t, float, float, float, size_t*, size_t*);
-void ohpl_anim_interpolate(const cKeyFrame* const*, size_t, float, float, float, cKeyFrame*);
-size_t ohpl_anim_insert_position(const cKeyFrame* const*, size_t, float, float, bool*);
-
-bool ohpl_submesh_one_sided(const unsigned int*, size_t, const float*, size_t, int, cVector3f*, cVector3f*);
-uint32_t ohpl_submesh_compile_bone_pairs(const cVertexBonePair*, size_t, size_t, float*, unsigned char*);
-void ohpl_mesh_bone_radii(const cVector3f*, float*, size_t, const cVertexBonePair*, size_t, const float*, size_t, int);
-
 }
 }
 

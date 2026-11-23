@@ -80,34 +80,6 @@ pub unsafe extern "C" fn ohpl_decal_out_free(out: *mut OhplDecalOut) {
     }
 }
 
-/// # Safety
-/// `positions` holds `position_len` floats, `params` is valid and `out` has room for
-/// `vertex_num` vectors.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_decal_uvs(
-    positions: *const f32,
-    position_len: usize,
-    stride: u32,
-    vertex_num: u32,
-    params: *const UvParams,
-    out: *mut Vector3f,
-) {
-    let mut uvs = Vec::with_capacity(vertex_num as usize);
-    // SAFETY: caller contract.
-    let params = unsafe { &*params };
-    decal::uvs(
-        slice_of(positions, position_len),
-        stride as usize,
-        vertex_num as usize,
-        params,
-        &mut uvs,
-    );
-    if !out.is_null() {
-        // SAFETY: `out` has room for `vertex_num` vectors and `uvs` holds exactly that many.
-        unsafe { std::ptr::copy_nonoverlapping(uvs.as_ptr(), out, uvs.len()) };
-    }
-}
-
 const _: () = {
     use std::mem::size_of;
     assert!(size_of::<Counts>() == 8);

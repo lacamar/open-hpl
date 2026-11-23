@@ -211,12 +211,12 @@ static double Query(int alK)
 	case 50:
 		gpMusic = gpBase->mpEngine->GetSound()->GetMusicHandler()->GetCurrentSong();
 		return gpMusic != NULL;
-	case 51: return gpMusic->mpStream->GetVolume();
-	case 52: return gpMusic->mpStream->IsPlaying();
-	case 53: return gpMusic->mpStream->GetPriority();
-	case 54: return gpMusic->mpStream->GetElapsedTime();
-	case 55: return gpMusic->mpStream->GetTotalTime();
-	case 56: return gpMusic->mpStream->IsBufferUnderrun();
+	case 51: return ohpl_sndch_read(gpMusic->mpStream, OhplSndCh_Volume);
+	case 52: return ohpl_sndch_read(gpMusic->mpStream, OhplSndCh_Playing);
+	case 53: return ohpl_sndch_read(gpMusic->mpStream, OhplSndCh_Priority);
+	case 54: return ohpl_sndch_read(gpMusic->mpStream, OhplSndCh_Elapsed);
+	case 55: return ohpl_sndch_read(gpMusic->mpStream, OhplSndCh_Total);
+	case 56: return ohpl_sndch_read(gpMusic->mpStream, OhplSndCh_Underrun);
 	}
 	return 0;
 }
@@ -230,7 +230,7 @@ static void QueryS(int alK, OhplGa9Ret *r)
 	case 0: RetWide(r, pBody->GetPosition().ToString()); break;
 	case 1: RetWide(r, pBody->GetForceVelocity().ToString()); break;
 	case 2: RetWide(r, pPlayer->GetHands()->GetCurrentAnimation()); break;
-	case 50: RetWide(r, gpMusic->mpStream->GetData()->GetName()); break;
+	case 50: RetWide(r, static_cast<iSoundData*>(ohpl_sndch_data(gpMusic->mpStream))->GetName()); break;
 	}
 }
 
@@ -257,19 +257,19 @@ static void SoundOp(int alOp, const OhplGa9Arg *a, OhplGa9Ret *r)
 	}
 	case eDbgOp_SndV:
 	{
-		iSoundChannel *pChannel = gvSounds[a[0].i]->GetChannel();
+		void *pChannel = gvSounds[a[0].i]->GetChannel();
 		switch((int)a[1].i)
 		{
-		case 0: r->d = pChannel->GetData()->IsStream(); break;
-		case 1: r->d = pChannel->IsBufferUnderrun(); break;
-		case 2: r->d = pChannel->GetVolume(); break;
-		case 3: r->d = pChannel->GetPriority(); break;
-		case 4: r->d = pChannel->GetElapsedTime(); break;
-		case 5: r->d = pChannel->GetTotalTime(); break;
+		case 0: r->d = static_cast<iSoundData*>(ohpl_sndch_data(pChannel))->IsStream(); break;
+		case 1: r->d = ohpl_sndch_read(pChannel, OhplSndCh_Underrun); break;
+		case 2: r->d = ohpl_sndch_read(pChannel, OhplSndCh_Volume); break;
+		case 3: r->d = ohpl_sndch_read(pChannel, OhplSndCh_Priority); break;
+		case 4: r->d = ohpl_sndch_read(pChannel, OhplSndCh_Elapsed); break;
+		case 5: r->d = ohpl_sndch_read(pChannel, OhplSndCh_Total); break;
 		}
 		break;
 	}
-	case eDbgOp_SndS: RetWide(r, gvSounds[a[0].i]->GetChannel()->GetData()->GetName()); break;
+	case eDbgOp_SndS: RetWide(r, static_cast<iSoundData*>(ohpl_sndch_data(gvSounds[a[0].i]->GetChannel()))->GetName()); break;
 	}
 }
 

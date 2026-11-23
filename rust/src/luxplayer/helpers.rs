@@ -3,7 +3,9 @@
 
 use super::hw;
 use super::ops::Ops;
-use crate::math::{clamp, rand_rectl, to_rad, v3, wrap};
+#[cfg(test)]
+use crate::math::rand_rectl;
+use crate::math::{clamp, to_rad, v3, wrap};
 use crate::types::{Vector2f, Vector3f};
 
 pub mod k {
@@ -230,6 +232,7 @@ pub struct Hurt {
     pub noise_count: i32,
 }
 
+#[cfg(test)]
 /// `Hurt::Update` after the health regain; `speed` is the body velocity length.
 pub fn hurt_update(s: &mut Hurt, health: f32, dead: bool, speed: f32, dt: f32, o: &mut Ops) {
     hurt_update_with(s, health, dead, speed, dt, o, &mut rand_rectl);

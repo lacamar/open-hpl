@@ -81,15 +81,8 @@ extern "C" {
 	OhplH3Mgr* ohpl_h3_mgr_new();
 	void ohpl_h3_mgr_free(OhplH3Mgr*);
 	OhplResMap* ohpl_h3_mgr_map(OhplH3Mgr*);
-	void ohpl_h3_mgr_add(OhplH3Mgr*, void* res, const uint32_t* path, size_t n, const OhplResMeta* meta);
 	bool ohpl_h3_mgr_remove(OhplH3Mgr*, void* res);
 	void* ohpl_h3_mgr_get(const OhplH3Mgr*, const uint32_t* path, size_t n);
-	size_t ohpl_h3_mgr_len(const OhplH3Mgr*);
-	void* ohpl_h3_mgr_first(OhplH3Mgr*);
-	void ohpl_h3_mgr_eviction_tail(const OhplH3Mgr*, int64_t keep, void (*sink)(void*, void* const*, size_t), void* ctx);
-	void ohpl_h3_begin_load(const uint8_t* name, size_t n, uint64_t now);
-	bool ohpl_h3_end_load(uint64_t now, void (*sink)(void*, const uint8_t*, size_t), void* ctx, uint64_t* elapsed);
-	int32_t ohpl_h3_tab_count();
 
 	bool ohpl_h3_log_create_get();
 	void ohpl_h3_log_create_set(bool);
@@ -97,7 +90,6 @@ extern "C" {
 	void ohpl_h3f_begin(OhplH3Mgr*, const OhplH3Ops*, const uint8_t*, size_t);
 	void ohpl_h3f_end(OhplH3Mgr*, const OhplH3Ops*);
 	void ohpl_h3f_add(OhplH3Mgr*, const OhplH3Ops*, void* res, bool log, bool toSet);
-	void ohpl_h3f_inc_user(OhplH3Mgr*, const OhplH3Ops*, void* res);
 	void ohpl_h3f_tabs(OhplH3Mgr*, const OhplH3Ops*, void (*sink)(void*, const uint8_t*, size_t), void* ctx);
 	void* ohpl_h3f_find_loaded(OhplH3Mgr*, const OhplH3Ops*, const uint8_t*, size_t, int32_t* count, void (*sink)(void*, const uint32_t*, size_t), void* ctx);
 	void ohpl_h3f_destroy_all(OhplH3Mgr*, const OhplH3Ops*);

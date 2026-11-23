@@ -74,11 +74,11 @@ static void CreateAreaEntity(const tString &asName, const tString &asType, bool 
 	cSomaLuxEntity *pEnt = new cSomaLuxEntity();
 	pEnt->SetName(asName);
 	pEnt->SetClassName(asType);
-	pEnt->meType = asType == "Liquid" ? eSomaLuxEntityType_LiquidArea : eSomaLuxEntityType_Area;
-	pEnt->mID = ElementID();
-	pEnt->mbActive = abActive;
-	pEnt->mvSize = avSize;
-	pEnt->m_mtxOnLoad = a_mtxTransform;
+	pEnt->mpCore->meType = asType == "Liquid" ? eSomaLuxEntityType_LiquidArea : eSomaLuxEntityType_Area;
+	pEnt->mpCore->mID = ElementID();
+	pEnt->mpCore->mbActive = abActive;
+	pEnt->mpCore->mvSize = avSize;
+	pEnt->mpCore->m_mtxOnLoad = a_mtxTransform;
 	LoadInstanceVars(pEnt->mInstanceVars);
 	cSomaLuxEntity::Pending().push_back(pEnt);
 }
@@ -193,36 +193,36 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->SetName(cWorldLoaderHpm::GetCurrentElement() ? cWorldLoaderHpm::GetCurrentElement()->GetAttributeString("Name", "") : gsSomaSpawnName);
 		pEnt->SetClassName(msEntityType);
 		pEnt->SetFileName(msFileName);
-		pEnt->meType = TypeFromEntityType(msEntityType);
-		pEnt->mID = ElementID();
-		pEnt->mbActive = mbActive;
-		pEnt->m_mtxOnLoad = a_mtxTransform;
-		pEnt->mvScale = mvScale;
+		pEnt->mpCore->meType = TypeFromEntityType(msEntityType);
+		pEnt->mpCore->mID = ElementID();
+		pEnt->mpCore->mbActive = mbActive;
+		pEnt->mpCore->m_mtxOnLoad = a_mtxTransform;
+		pEnt->mpCore->mvScale = mvScale;
 		pEnt->mpMesh = mpEntity;
 		if (mpEntity)
 			mpEntity->SetCallback(pEnt);
 		if (mpEntity && mpEntity->GetAnimationStateNum() > 0 && mpEntity->GetAnimationState(0)->IsActive())
 		{
 			cAnimationState *pAnim = mpEntity->GetAnimationState(0);
-			if (ohpl_gs7_load_random_anim_start(pEnt->meType == eSomaLuxEntityType_Prop, GetVarBool("RandomizeAnimationStart", true)))
+			if (ohpl_gs7_load_random_anim_start(pEnt->mpCore->meType == eSomaLuxEntityType_Prop, GetVarBool("RandomizeAnimationStart", true)))
 				pAnim->SetTimePosition(cMath::RandRectf(0, pAnim->GetLength()));
-			pEnt->mlCurrentAnim = 0;
+			pEnt->mpCore->mlCurrentAnim = 0;
 		}
-		pEnt->mbShowMesh = GetVarBool("ShowMesh", ohpl_gs7_load_default_show_mesh((const unsigned char *)msEntityType.data(), msEntityType.size()));
+		pEnt->mpCore->mbShowMesh = GetVarBool("ShowMesh", ohpl_gs7_load_default_show_mesh((const unsigned char *)msEntityType.data(), msEntityType.size()));
 		pEnt->mvBodies = mvBodies;
 		for (iPhysicsBody *pBody : mvBodies)
 			pEnt->mvDefaultCollideCharacter.push_back(pBody->GetCollideCharacter());
 		pEnt->mvBodyExtraData = mvBodyExtraData;
 		if (apInstanceVars)
-			pEnt->mbEffectsActive = apInstanceVars->GetVarBool("EffectsActive", true);
+			pEnt->mpCore->mbEffectsActive = apInstanceVars->GetVarBool("EffectsActive", true);
 		if (apInstanceVars && (apInstanceVars->GetVarBool("Static", false) || apInstanceVars->GetVarBool("StaticPhysics", false)))
 			pEnt->SetStaticPhysics(true);
 		// cLuxPropLoader::AfterLoad: gravity-free first steps let Newton put resting props to sleep
-		if (ohpl_gs7_load_freeze_props(pEnt->meType == eSomaLuxEntityType_Prop, mbActive, GetVarBool("DisableFreezeAtStart", false), mpEntity && mpEntity->GetSkeletonPhysicsActive()))
+		if (ohpl_gs7_load_freeze_props(pEnt->mpCore->meType == eSomaLuxEntityType_Prop, mbActive, GetVarBool("DisableFreezeAtStart", false), mpEntity && mpEntity->GetSkeletonPhysicsActive()))
 			for (iPhysicsBody *pBody : mvBodies)
 				if (pBody->GetMass() > 0)
 					pBody->Freeze();
-		if (ohpl_gs7_load_no_gravity_underwater(pEnt->meType == eSomaLuxEntityType_Prop, GetVarBool("NoGravityWhenUnderwater", false)))
+		if (ohpl_gs7_load_no_gravity_underwater(pEnt->mpCore->meType == eSomaLuxEntityType_Prop, GetVarBool("NoGravityWhenUnderwater", false)))
 			for (iPhysicsBody *pBody : mvBodies)
 				pBody->SetNoGravityWhenUnderwater(true);
 		if (apInstanceVars)
@@ -244,7 +244,7 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 			Warning("Could not find main physics body '%s'\n", pEnt->GetName().c_str());
 		for (size_t i = 0; i < mvBodies.size() && i < mvBodyExtraData.size(); ++i)
 			if (pEnt->GetMainBody() == mvBodies[i])
-				pEnt->mvBodyOffset = mvBodyExtraData[i].m_mtxLocalTransform.GetTranslation();
+				pEnt->mpCore->mvBodyOffset = mvBodyExtraData[i].m_mtxLocalTransform.GetTranslation();
 		if (cXmlElement *pModel = apRootElem->GetFirstElement("ModelData"))
 		{
 			LoadSockets(pModel, "", pEnt);

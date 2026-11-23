@@ -399,19 +399,6 @@ impl Emitter {
         self.particles.get(i)
     }
 
-    pub fn debug_state(&self) -> [f32; 8] {
-        [
-            self.time,
-            self.create_count,
-            self.collide_count,
-            self.pause_count,
-            self.pause_wait_count,
-            f32::from(u8::from(self.paused)),
-            self.max as f32,
-            f32::from(u8::from(self.dying)),
-        ]
-    }
-
     pub fn sub_div_count(&self) -> usize {
         self.sub_div_uv.len()
     }

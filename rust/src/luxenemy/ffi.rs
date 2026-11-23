@@ -119,14 +119,6 @@ pub unsafe extern "C" fn ohpl_ga3_queue_get(q: *const Queue, i: usize, out: *mut
 }
 
 /// # Safety
-/// `q` is a live queue.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga3_queue_clear(q: *mut Queue) {
-    // SAFETY: caller contract.
-    unsafe { (&mut *q).msgs.clear() };
-}
-
-/// # Safety
 /// `q` is a live queue and `m` is readable.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga3_queue_push_raw(q: *mut Queue, m: *const Msg) {
@@ -398,27 +390,6 @@ pub unsafe extern "C" fn ohpl_ga3_line_of_sight(
 }
 
 /// # Safety
-/// `c`, `h`, `pos` are live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga3_in_fov(
-    c: *const Ctx,
-    h: *const OhplGa3Host,
-    pos: *const f32,
-) -> bool {
-    // SAFETY: caller contract.
-    env!(e, c, h);
-    e.in_fov(unsafe { v3p(pos) })
-}
-
-/// # Safety
-/// `c`, `h` are live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga3_player_in_fov(c: *const Ctx, h: *const OhplGa3Host) -> bool {
-    env!(e, c, h);
-    e.player_in_fov()
-}
-
-/// # Safety
 /// `c`, `h` are live.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga3_dist_to_player(c: *const Ctx, h: *const OhplGa3Host) -> f32 {
@@ -443,16 +414,4 @@ pub unsafe extern "C" fn ohpl_ga3_player_movement_toward_enemy(
 ) -> f32 {
     env!(e, c, h);
     e.player_movement_toward_enemy_amount()
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga3_patrol_is_at_last(cur: i32, size: i32) -> bool {
-    cur >= size - 1
-}
-
-/// # Safety
-/// `cur` is a live int.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga3_patrol_inc(cur: *mut i32, size: i32, loop_at_end: bool) {
-    grunt::inc_patrol(cur, size, loop_at_end);
 }

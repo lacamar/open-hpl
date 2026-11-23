@@ -21,7 +21,6 @@ OhplH6Skel* ohpl_h6_skel_new();
 void ohpl_h6_skel_free(OhplH6Skel*);
 int ohpl_h6_skel_create_child(OhplH6Skel*, int parent, const char* name, size_t nameLen, const char* sid, size_t sidLen);
 int ohpl_h6_skel_num(const OhplH6Skel*);
-int ohpl_h6_skel_by_index(const OhplH6Skel*, int idx);
 int ohpl_h6_skel_index_by_name(const OhplH6Skel*, const char*, size_t);
 int ohpl_h6_skel_index_by_sid(const OhplH6Skel*, const char*, size_t);
 void ohpl_h6_bone_set_transform(OhplH6Skel*, int, const cMatrixf*);
@@ -30,7 +29,6 @@ void ohpl_h6_bone_set_inv_bind(OhplH6Skel*, int, const cMatrixf*);
 void ohpl_h6_bone_needs_update_unscaled(OhplH6Skel*, int);
 void ohpl_h6_bone_detach(OhplH6Skel*, int);
 void ohpl_h6_bone_set_owner(OhplH6Skel*, int, void*);
-void* ohpl_h6_bone_owner(const OhplH6Skel*, int);
 void* ohpl_h6_skel_owner_at(const OhplH6Skel*, int);
 const cMatrixf* ohpl_h6_bone_local(OhplH6Skel*, int);
 const cMatrixf* ohpl_h6_bone_local_unscaled(OhplH6Skel*, int);
@@ -53,15 +51,6 @@ OhplH6Anim* ohpl_h6_anim_new();
 void ohpl_h6_anim_free(OhplH6Anim*);
 void ohpl_h6_anim_add_track(OhplH6Anim*, const char*, size_t);
 int ohpl_h6_anim_track_by_name(const OhplH6Anim*, const char*, size_t);
-
-OhplH6Mesh* ohpl_h6_mesh_new();
-void ohpl_h6_mesh_free(OhplH6Mesh*);
-void ohpl_h6_mesh_add_sub(OhplH6Mesh*, const char*, size_t);
-int ohpl_h6_mesh_sub_index(const OhplH6Mesh*, const char*, size_t);
-int ohpl_h6_mesh_sub_by_name(const OhplH6Mesh*, const char*, size_t);
-void ohpl_h6_mesh_add_animation(OhplH6Mesh*, const char*, size_t);
-int ohpl_h6_mesh_animation_index(const OhplH6Mesh*, const char*, size_t);
-void ohpl_h6_mesh_clear_animations(OhplH6Mesh*);
 
 }
 }

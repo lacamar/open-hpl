@@ -509,7 +509,7 @@ int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int al
 					mfCurrentMusicMaxVolume = pMusicEntry->mfMaxVolume;
 					mfCurrentMusicVolume = pMusicEntry->mfVolume;
 					mfCurrentMusicVolumeAdd = pMusicEntry->mfVolumeAdd;
-					mfCurrentMusicTime = pMusicEntry->mpStream->GetElapsedTime();
+					mfCurrentMusicTime = ohpl_sndch_read(pMusicEntry->mpStream, OhplSndCh_Elapsed);
 					mbCurrentMusicLoop = pMusicEntry->mbLoop;
 		}
 		return 0;
@@ -573,7 +573,7 @@ int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int al
 		pMusicEntry->mfMaxVolume = mfCurrentMusicMaxVolume;
 		pMusicEntry->mfVolume = mfCurrentMusicVolume;
 		pMusicEntry->mfVolumeAdd = mfCurrentMusicVolumeAdd;
-		pMusicEntry->mpStream->SetElapsedTime(mfCurrentMusicTime);
+		ohpl_sndch_set_elapsed(pMusicEntry->mpStream, mfCurrentMusicTime);
 		pMusicEntry->mbLoop = mbCurrentMusicLoop;
 		return 0;
 	case eOhplGa6Op_MusicToMisc:

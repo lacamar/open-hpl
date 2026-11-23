@@ -137,5 +137,46 @@ public:
 
 //----------------------------------------------
 
+// Liquid, sticky, slime, insanity and flashback areas: all state and logic is Rust (A7Area).
+class cLuxAreaRs : public iLuxArea
+{
+typedef iLuxArea super_class;
+friend class cLuxAreaLoaderRs;
+public:
+	cLuxAreaRs(const tString &asName, int alID, cLuxMap *apMap, eLuxAreaType aAreaType);
+	virtual ~cLuxAreaRs();
+
+	void SetupAfterLoad(cWorld *apWorld);
+	void OnUpdate(float afTimeStep);
+	void OnConnectionStateChange(iLuxEntity *apEntity, int alState){}
+
+	void StickyAttach(iPhysicsBody *apBody){ ohpl_a7_area_sticky_attach_body(mpA7Area, apBody);}
+	void StickyDetach();
+	iPhysicsBody *GetAttachedBody(){ return reinterpret_cast<iPhysicsBody*>(ohpl_a7_area_sticky_attached(mpA7Area));}
+	bool CanDetach(){ return ohpl_a7_area_sticky_can_detach(mpA7Area);}
+
+	iLuxEntity_SaveData* CreateSaveData();
+	virtual void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
+	virtual void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
+
+private:
+	void LoadVars(class cLuxAreaLoaderRs *apLoader, cWorld *apWorld);
+};
+
+class cLuxAreaLoaderRs : public iLuxAreaLoader
+{
+public:
+	cLuxAreaLoaderRs(const tString& asName, eLuxAreaType aAreaType) : iLuxAreaLoader(asName), mAreaType(aAreaType){}
+
+	iLuxArea *CreateArea(const tString& asName, int alID, cLuxMap *apMap);
+	void LoadVariables(iLuxArea *apArea, cWorld *apWorld);
+	void SetupArea(iLuxArea *apArea, cWorld *apWorld){}
+
+private:
+	eLuxAreaType mAreaType;
+};
+
+//----------------------------------------------
+
 
 #endif // LUX_AREA_H

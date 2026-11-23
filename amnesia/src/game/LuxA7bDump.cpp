@@ -6,7 +6,6 @@
 #include "LuxBase.h"
 #include "LuxEntity.h"
 #include "LuxArea.h"
-#include "LuxArea_Sticky.h"
 #include "LuxArea_Rope.h"
 #include "RustLuxMap.h"
 
@@ -18,22 +17,6 @@
 
 struct OhplA7bDump
 {
-	static int PodKind(eLuxAreaType aType)
-	{
-		switch(aType)
-		{
-		case eLuxAreaType_Script: return kOhplA7Script;
-		case eLuxAreaType_Flashback: return kOhplA7Flashback;
-		case eLuxAreaType_Ladder: return kOhplA7Ladder;
-		case eLuxAreaType_Liquid: return kOhplA7Liquid;
-		case eLuxAreaType_Sticky: return kOhplA7Sticky;
-		case eLuxAreaType_Insanity: return kOhplA7Insanity;
-		case eLuxAreaType_Examine: return kOhplA7Examine;
-		case eLuxAreaType_Sign: return kOhplA7Sign;
-		default: return kOhplA7Slime;
-		}
-	}
-
 	static void Hex(FILE *f, const void *apData, size_t alBytes)
 	{
 		const unsigned char *p = (const unsigned char*)apData;
@@ -44,7 +27,7 @@ struct OhplA7bDump
 	{
 		iPhysicsBody *pBody = apArea->GetBody();
 		fprintf(f, "%d %s t=%d act=%d pod=", alFrame, apArea->GetName().c_str(), (int)apArea->GetAreaType(), (int)apArea->IsActive());
-		Hex(f, apArea->mpA7Pod, ohpl_a7_pod_size(PodKind(apArea->GetAreaType())));
+		Hex(f, apArea->mpA7Pod, ohpl_a7_area_pod_len(apArea->mpA7Area));
 		std::vector<iPhysicsBody*> vBodies;
 		apMap->GetPhysicsWorld()->GetBodiesInBV(pBody->GetBoundingVolume(), &vBodies);
 		std::vector<std::string> vNames;
@@ -63,7 +46,7 @@ struct OhplA7bDump
 		fprintf(f, " water=%d", (int)gpBase->mpPlayer->IsInWater());
 		if(apArea->GetAreaType() == eLuxAreaType_Sticky)
 		{
-			iPhysicsBody *pAtt = static_cast<cLuxArea_Sticky*>(apArea)->GetAttachedBody();
+			iPhysicsBody *pAtt = static_cast<cLuxAreaRs*>(apArea)->GetAttachedBody();
 			fprintf(f, " att=%s", pAtt ? pAtt->GetName().c_str() : "-");
 		}
 		fprintf(f, "\n");

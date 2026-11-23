@@ -7,7 +7,7 @@
 use super::animstate::{self, AnimCore};
 use super::meshentity;
 use super::skinning::{self, SkinJob};
-use crate::types::{Matrixf, Vector3f};
+use crate::types::Matrixf;
 
 const _: () = {
     use std::mem::{offset_of, size_of};
@@ -195,26 +195,6 @@ pub unsafe extern "C" fn ohpl_meshentity_bone_matrices(
         )
     };
     inv_world.map_or(0, |iw| skinning::bone_matrices(iw, world, inv_bind, out))
-}
-
-/// # Safety
-/// `world` holds `n` valid `Matrixf` pointers, `radii` `n` floats, `min`/`max` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_meshentity_aabb_from_bones(
-    world: *const *const Matrixf,
-    radii: *const f32,
-    n: i32,
-    min: *mut Vector3f,
-    max: *mut Vector3f,
-) {
-    // SAFETY: caller contract.
-    let (world, radii) = unsafe { (matrix_refs(world, n), slice(radii, n)) };
-    let (lo, hi) = skinning::aabb_from_bones(world, radii);
-    // SAFETY: caller contract.
-    unsafe {
-        *min = lo;
-        *max = hi;
-    }
 }
 
 /// Skins one sub mesh. `tangent` pointers may be null.

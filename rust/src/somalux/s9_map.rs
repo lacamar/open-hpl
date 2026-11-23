@@ -1029,11 +1029,6 @@ pub extern "C" fn ohpl_s9_timers_update(map: usize, dt: f32) {
     let _ = with_ops(|o| timers_update(o, map, dt));
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_s9_timer_count(map: usize) -> usize {
-    with_map(map, |m| m.timers.len())
-}
-
 /// # Safety
 /// `out` is writable; the strings stay valid until the timers change.
 #[unsafe(no_mangle)]

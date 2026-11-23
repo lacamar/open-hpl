@@ -212,35 +212,3 @@ pub unsafe extern "C" fn ohpl_a2_spin_head(c: *mut Core, h: *const Host, speed: 
     // SAFETY: caller contract.
     unsafe { spin_head(c, &*h, speed) };
 }
-
-/// # Safety
-/// As `ohpl_a2_vitals`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a2_update_camera(c: *mut Core, h: *const Host, dt: f32) {
-    // SAFETY: caller contract.
-    unsafe { update_camera(c, &*h, dt) };
-}
-
-/// # Safety
-/// As `ohpl_a2_vitals`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a2_update_head_spin(c: *mut Core, h: *const Host, dt: f32) {
-    // SAFETY: caller contract.
-    unsafe { update_head_spin(c, &*h, dt) };
-}
-
-/// # Safety
-/// As `ohpl_a2_vitals`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a2_update_terror(c: *mut Core, h: *const Host, dt: f32) {
-    // SAFETY: caller contract.
-    unsafe { update_terror(c, &*h, dt) };
-}
-
-/// # Safety
-/// As `ohpl_a2_vitals`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a2_update_focus_alpha(c: *mut Core, h: *const Host, dt: f32) {
-    // SAFETY: caller contract.
-    unsafe { update_focus_alpha(c, &*h, dt) };
-}

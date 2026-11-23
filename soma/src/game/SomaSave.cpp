@@ -477,21 +477,21 @@ public:
 		s.Clear();
 		memset(&h, 0, sizeof(h));
 		h.name = s.mPool.Add(p->GetName());
-		h.active = p->mbActive;
-		h.interaction_disabled = p->mbInteractionDisabled;
-		h.interacted_with = p->mbInteractedWith;
-		h.effects_active = p->mbEffectsActive;
-		h.parent_type = p->mlParentType;
-		CopyB(h.parent_id, p->mParentID);
+		h.active = p->mpCore->mbActive;
+		h.interaction_disabled = p->mpCore->mbInteractionDisabled;
+		h.interacted_with = p->mpCore->mbInteractedWith;
+		h.effects_active = p->mpCore->mbEffectsActive;
+		h.parent_type = p->mpCore->mlParentType;
+		CopyB(h.parent_id, p->mpCore->mParentID);
 		h.parent_name = s.mPool.Add(p->GetParentName());
 		h.interact_cb = s.mPool.Add(p->GetInteractCallback());
-		h.interact_auto_remove = p->mbInteractCallbackAutoRemove;
+		h.interact_auto_remove = p->mpCore->mbInteractCallbackAutoRemove;
 		h.look_cb = s.mPool.Add(p->GetLookAtCallback());
-		h.look_auto_remove = p->mbLookAtCallbackAutoRemove;
-		h.look_center = p->mbLookAtCheckCenter;
-		h.look_ray = p->mbLookAtCheckRay;
-		h.look_max = p->mfLookAtMaxDistance;
-		h.look_delay = p->mfLookAtDelay;
+		h.look_auto_remove = p->mpCore->mbLookAtCallbackAutoRemove;
+		h.look_center = p->mpCore->mbLookAtCheckCenter;
+		h.look_ray = p->mpCore->mbLookAtCheckRay;
+		h.look_max = p->mpCore->mfLookAtMaxDistance;
+		h.look_delay = p->mpCore->mfLookAtDelay;
 		for (auto &c : p->mvCollideCallbacks)
 			s.mCollide.push_back(OhplGs4Collide{s.mPool.Add(c.msChild), s.mPool.Add(c.msFunc)});
 		h.collide = Sl(s.mCollide);
@@ -508,7 +508,7 @@ public:
 		h.bodies = Sl(s.mBodies);
 		if (p->mvBodies.empty())
 			CopyF(h.mtx, p->GetMatrix());
-		h.static_physics = p->mbStaticPhysics;
+		h.static_physics = p->mpCore->mbStaticPhysics;
 		for (float f : p->mvDynamicMass)
 			s.mDynMass.push_back(f);
 		h.dyn_mass = Sl(s.mDynMass);
@@ -548,7 +548,7 @@ public:
 		for (size_t i = 0; p->VarAt(i, sKey, sVal); ++i)
 			s.mVars.push_back(OhplGs4VarPair{s.mPool.Add(sKey), s.mPool.Add(sVal)});
 		t.vars = Sl(s.mVars);
-		t.gui_active = p->mbGuiActive;
+		t.gui_active = p->mpCore->mbGuiActive;
 		t.on_gui = s.mPool.Add(p->GetOnGuiFunc());
 		if (p->mpImGui)
 		{
@@ -660,15 +660,15 @@ public:
 		w.map_timers = Sl(c.mMapTimers);
 
 		for (cSomaLuxEntity *p : pMap->GetEntities())
-			if (p->mbSpawned)
+			if (p->mpCore->mbSpawned)
 			{
 				OhplGs4Spawned x;
 				memset(&x, 0, sizeof(x));
 				x.name = c.mPool.Add(p->GetName());
 				x.file = c.mPool.Add(p->GetFileName());
 				CopyF(x.mtx, p->GetMatrix());
-				CopyF(x.scale, p->mvScale);
-				CopyB(x.id, p->mID);
+				CopyF(x.scale, p->mpCore->mvScale);
+				CopyB(x.id, p->mpCore->mID);
 				c.mSpawned.push_back(x);
 			}
 		w.spawned = Sl(c.mSpawned);
@@ -933,11 +933,11 @@ public:
 		cSomaID id;
 		IdFromB(id, x->id);
 		cSomaLuxEntity *p = pMap->GetEntity(sName);
-		if (p == NULL || p->mbSpawned == false)
+		if (p == NULL || p->mpCore->mbSpawned == false)
 			p = pMap->CreateEntity(sName, sFile, m, vScale);
 		if (p == NULL)
 			return;
-		p->mID = id;
+		p->mpCore->mID = id;
 		pMap->mlNextId = std::max(pMap->mlNextId, id.mB + 1);
 	}
 
@@ -956,21 +956,21 @@ public:
 		cSomaLuxEntity *p = (cSomaLuxEntity *)h;
 		cSomaLuxEntity *t = p ? p : r->mpDummyEnt.get();
 		cSomaLuxMap *apMap = r->mpMap;
-		t->mbInteractionDisabled = e->interaction_disabled;
-		t->mbInteractedWith = e->interacted_with;
-		t->mlParentType = e->parent_type;
-		IdFromB(t->mParentID, e->parent_id);
+		t->mpCore->mbInteractionDisabled = e->interaction_disabled;
+		t->mpCore->mbInteractedWith = e->interacted_with;
+		t->mpCore->mlParentType = e->parent_type;
+		IdFromB(t->mpCore->mParentID, e->parent_id);
 		t->SetParentName(FromRS(e->parent_name));
 		t->SetInteractCallback(FromRS(e->interact_cb));
-		t->mbInteractCallbackAutoRemove = e->interact_auto_remove;
+		t->mpCore->mbInteractCallbackAutoRemove = e->interact_auto_remove;
 		t->SetLookAtCallback(FromRS(e->look_cb));
-		t->mbLookAtCallbackAutoRemove = e->look_auto_remove;
+		t->mpCore->mbLookAtCallbackAutoRemove = e->look_auto_remove;
 		if (glPendingVersion >= 8)
 		{
-			t->mbLookAtCheckCenter = e->look_center;
-			t->mbLookAtCheckRay = e->look_ray;
-			t->mfLookAtMaxDistance = e->look_max;
-			t->mfLookAtDelay = e->look_delay;
+			t->mpCore->mbLookAtCheckCenter = e->look_center;
+			t->mpCore->mbLookAtCheckRay = e->look_ray;
+			t->mpCore->mfLookAtMaxDistance = e->look_max;
+			t->mpCore->mfLookAtDelay = e->look_delay;
 		}
 		t->mvCollideCallbacks.clear();
 		for (size_t i = 0; i < e->collide.n; ++i)
@@ -1011,7 +1011,7 @@ public:
 				std::vector<float> vMass(e->dyn_mass.p, e->dyn_mass.p + e->dyn_mass.n);
 				if (p)
 				{
-					p->mbStaticPhysics = e->static_physics;
+					p->mpCore->mbStaticPhysics = e->static_physics;
 					p->mvDynamicMass = vMass;
 				}
 			}
@@ -1088,8 +1088,8 @@ public:
 		}
 		if (glPendingVersion >= 13)
 		{
-			t->mbGuiActive = x->gui_active;
-			t->mfGuiFade = t->mbGuiActive;
+			t->mpCore->mbGuiActive = x->gui_active;
+			t->mpCore->mfGuiFade = t->mpCore->mbGuiActive;
 		}
 		if (glPendingVersion >= 23)
 		{
@@ -1138,10 +1138,10 @@ public:
 			}
 		}
 		bool bEffects = e->effects_active, bActive = e->active;
-		if (p && p->mbEffectsActive != bEffects)
-			p->SetEffectsActive(bEffects && p->mbActive);
-		t->mbEffectsActive = bEffects;
-		if (p && p->mbActive != bActive)
+		if (p && p->mpCore->mbEffectsActive != bEffects)
+			p->SetEffectsActive(bEffects && p->mpCore->mbActive);
+		t->mpCore->mbEffectsActive = bEffects;
+		if (p && p->mpCore->mbActive != bActive)
 			p->SetActive(bActive);
 		r->mpDummyEnt.reset();
 	}
