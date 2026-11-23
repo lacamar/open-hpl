@@ -798,11 +798,6 @@ pub extern "C" fn ohpl_s5b_voice_destroy() {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_s5b_voice_present() -> bool {
-    present()
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn ohpl_s5b_voice_update(dt: f32, game_paused: bool) {
     update(dt, game_paused);
 }
