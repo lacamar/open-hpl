@@ -110,7 +110,6 @@ namespace hpl {
 
 	extern "C"
 	{
-		void ohpl_renderlist_compile(const OhplCompileIn* in, const OhplCompileOut* out);
 
 		void ohpl_rf_init(OhplRenderState*, uintptr_t nullMatrix, bool log, bool useGlobalScissor, OhplVec2l globalPos,
 						  OhplVec2l globalSize, OhplVec2l screen, OhplVec2f screenFloat, OhplVec2l frameBufferSize,
@@ -143,19 +142,7 @@ namespace hpl {
 		void ohpl_rf_clear_frame_buffer(OhplRenderState*, const OhplRfBackend*, unsigned flags, bool usePosAndSize,
 										OhplVec2l targetPos);
 
-		OhplComboHandle* ohpl_combo_new(size_t modes);
-		void ohpl_combo_free(OhplComboHandle*);
 		int ohpl_combo_setup(OhplComboHandle*, int mode, const unsigned* stages, size_t n);
-		int ohpl_combo_combinations(OhplComboHandle*, int mode);
-		unsigned ohpl_combo_valid_bits(OhplComboHandle*, int mode, unsigned flags, unsigned stage);
-		bool ohpl_combo_program_acquire(OhplComboHandle*, int mode, unsigned flags, uintptr_t* out);
-		void ohpl_combo_program_insert(OhplComboHandle*, int mode, unsigned flags, uintptr_t handle);
-		int ohpl_combo_program_release(OhplComboHandle*, int mode, unsigned flags, uintptr_t* out);
-		bool ohpl_combo_shader_acquire(OhplComboHandle*, int mode, unsigned stage, unsigned bits, uintptr_t* out);
-		void ohpl_combo_shader_insert(OhplComboHandle*, int mode, unsigned stage, unsigned bits, uintptr_t handle);
-		int ohpl_combo_shader_release(OhplComboHandle*, int mode, unsigned stage, unsigned bits, uintptr_t* out);
-		bool ohpl_combo_pop_program(OhplComboHandle*, int mode, uintptr_t* out);
-		bool ohpl_combo_pop_shader(OhplComboHandle*, int mode, unsigned stage, uintptr_t* out);
 	}
 }
 

@@ -2,8 +2,7 @@
 //! and freed once with `_free`; null handles are tolerated everywhere and answer neutrally.
 
 use crate::input::{
-    self, ActionState, Event, Gamepad, InputData, KeyPress, Keyboard, Mouse, dead_zone,
-    set_dead_zone,
+    self, Event, Gamepad, InputData, KeyPress, Keyboard, Mouse, dead_zone, set_dead_zone,
 };
 use crate::string_ffi::{Sink, emit, units};
 use crate::types::Vector2l;
@@ -306,70 +305,6 @@ pub extern "C" fn ohpl_input_pad_dead_zone() -> f32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_input_pad_set_dead_zone(v: f32) {
     set_dead_zone(v);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_input_action_new() -> ActionState {
-    ActionState::default()
-}
-
-/// # Safety
-/// `s` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_input_action_is_down(s: *mut ActionState) -> bool {
-    // SAFETY: caller contract.
-    unsafe { handle(s) }.is_some_and(|s| s.is_down())
-}
-
-/// # Safety
-/// `s` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_input_action_was_triggered(s: *mut ActionState) -> bool {
-    // SAFETY: caller contract.
-    unsafe { handle(s) }.is_some_and(|s| s.was_triggered())
-}
-
-/// # Safety
-/// `s` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_input_action_became_triggered(s: *mut ActionState) -> bool {
-    // SAFETY: caller contract.
-    unsafe { handle(s) }.is_some_and(|s| s.became_triggered())
-}
-
-/// # Safety
-/// `s` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_input_action_double_triggered(
-    s: *mut ActionState,
-    limit: f32,
-) -> bool {
-    // SAFETY: caller contract.
-    unsafe { handle(s) }.is_some_and(|s| s.double_triggered(limit))
-}
-
-/// # Safety
-/// `s` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_input_action_update(
-    s: *mut ActionState,
-    any_down: bool,
-    time_step: f32,
-) {
-    // SAFETY: caller contract.
-    if let Some(s) = unsafe { handle(s) } {
-        s.update(any_down, time_step);
-    }
-}
-
-/// # Safety
-/// `s` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_input_action_reset(s: *mut ActionState, any_down: bool) {
-    // SAFETY: caller contract.
-    if let Some(s) = unsafe { handle(s) } {
-        s.reset_to_current_state(any_down);
-    }
 }
 
 macro_rules! name_fn {

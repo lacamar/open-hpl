@@ -237,10 +237,8 @@ size_t ohpl_h5b_run_foreign(void *ctx, OhplH5bCallFn call, uint64_t seed, uint32
 // iFontData glyph table mirror (rust/src/graphics/h5b_font.rs).
 uint64_t ohpl_h5b_font_new();
 void ohpl_h5b_font_free(uint64_t h);
-void ohpl_h5b_font_set(uint64_t h, const OhplH5bFontHdr *hdr, const OhplH5bGlyph *glyphs, const unsigned char *present, size_t n);
 void ohpl_h5b_font_set_hdr(uint64_t h, const OhplH5bFontHdr *hdr, size_t n);
 void ohpl_h5b_font_set_glyph(uint64_t h, size_t i, const OhplH5bGlyph *g);
-bool ohpl_h5b_font_glyph(uint64_t h, size_t i, OhplH5bGlyph *out);
 float ohpl_h5b_font_length(uint64_t h, float sizeX, const uint32_t *s, size_t n);
 bool ohpl_h5b_font_word_wrap(uint64_t h, float maxLength, float sizeX, const uint32_t *s, size_t n, void (*sink)(void*, const uint32_t*, size_t), void *ctx);
 

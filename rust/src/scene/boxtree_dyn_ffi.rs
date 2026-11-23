@@ -9,7 +9,7 @@ use std::ffi::c_void;
 
 use super::boxtree_dyn::{
     Bv, DynTree, Handle, Host, NodeBase, NodeDyn, PtrVec, boxtree_remove, boxtree_remove_set,
-    calculate_min_max_from_objects, dyn_add, dyn_remove, dyn_specific_update, get_add_node,
+    calculate_min_max_from_objects, dyn_add, dyn_remove, dyn_specific_update,
     object_properties_changed, push_up_need_aabb_update, update_before_rendering,
     update_before_use,
 };
@@ -587,26 +587,6 @@ pub unsafe extern "C" fn ohpl_bt_dyn_specific_update(
     // SAFETY: caller contract.
     if let Some(t) = unsafe { tree.as_mut() } {
         dyn_specific_update(&mut h, t, root, moved);
-    }
-}
-
-/// The node `obj` would be added to, starting at `start` (expands bounds on the way).
-///
-/// # Safety
-/// `vt` follows the module contract; `tree` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_bt_dyn_get_add_node(
-    vt: *const HostVt,
-    ctx: *mut c_void,
-    tree: *const DynTree,
-    start: Handle,
-    obj: Handle,
-) -> Handle {
-    let mut h = host!(vt, ctx);
-    // SAFETY: caller contract.
-    match unsafe { tree.as_ref() } {
-        Some(t) => get_add_node(&mut h, t, start, obj),
-        None => 0,
     }
 }
 

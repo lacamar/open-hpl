@@ -150,13 +150,11 @@ void ohpl_sl_fog_free(OhplSLFog*);
 void ohpl_sl_fog_set_size(OhplSLFog*, const cVector3f*, cVector3f*);
 const cMatrixf* ohpl_sl_fog_model(OhplSLFog*, const cMatrixf*);
 
-
 OhplSLBeamEnd* ohpl_sl_beam_end_new(uintptr_t);
 void ohpl_sl_beam_end_free(OhplSLBeamEnd*);
 const char* ohpl_sl_beam_file(const OhplSLBeam*, size_t*);
 
 void ohpl_sl_set_hpl3_visibility(bool);
-bool ohpl_sl_hpl3_visibility();
 float ohpl_sl_spot_shadow_near();
 void ohpl_sl_spot_set_shadow_near(float);
 bool ohpl_sl_light_is_lit(const OhplSLLight*);
@@ -170,9 +168,6 @@ void ohpl_sl_light_cache_add(OhplSLLight*, uintptr_t, int);
 bool ohpl_sl_light_cache_valid(OhplSLLight*, uintptr_t, int);
 void ohpl_sl_light_cache_clear(OhplSLLight*);
 void ohpl_sl_box_add_set(OhplSLBox*, const char*, size_t, const cVector3f*, size_t);
-bool ohpl_sl_box_fade_set(OhplSLBox*, const char*, size_t, float);
-void ohpl_sl_box_fade_step(OhplSLBox*, float);
-bool ohpl_sl_box_fading(const OhplSLBox*);
 }
 }
 #endif

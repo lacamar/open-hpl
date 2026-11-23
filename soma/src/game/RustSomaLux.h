@@ -76,14 +76,12 @@ extern "C" {
 	bool ohpl_gs3_same_map(const unsigned char *a, size_t an, const unsigned char *b, size_t bn);
 	void ohpl_gs3_map_begin(bool start_empty, bool pending_transfer_empty, bool has_map, const unsigned char *preload, size_t preload_n,
 							const unsigned char *map, size_t map_n, OhplGs3Begin *out);
-	float ohpl_gs3_start_yaw(const hpl::cMatrixf *m);
 	void ohpl_gs3_capture(const hpl::cMatrixf *area, const hpl::cVector3f *feet, float yaw, int active_size, bool has_camera, float pitch,
 						  OhplGs3Rel *out);
 	bool ohpl_gs3_carries(const hpl::cMatrixf *inv, const hpl::cVector3f *pos, const hpl::cVector3f *size);
 	void ohpl_gs3_arrive(const hpl::cMatrixf *new_area, const OhplGs3Rel *rel, OhplGs3Arrival *out);
 	int ohpl_gs3_after_load(bool loaded, bool captured, bool has_current_map);
 	int ohpl_gs3_restore_prop(bool found, bool bodies_match, bool is_static);
-	void ohpl_gs3_preload_init(OhplGs3Preload *p);
 	void ohpl_gs3_preload_tick(OhplGs3Preload *st, const unsigned char *want, size_t want_n, const unsigned char *loaded, size_t loaded_n,
 							   bool running, uint32_t frame, OhplGs3Tick *out);
 	void ohpl_gs3_preload_stepped(OhplGs3Preload *st, uint64_t elapsed_ms, uint64_t budget_ms);
@@ -92,23 +90,14 @@ extern "C" {
 	bool ohpl_gs3_preload_ready(const unsigned char *loaded, size_t loaded_n, bool running, const unsigned char *map, size_t map_n);
 
 	// pause
-	void ohpl_gs3_pause_init(OhplGs3Pause *p);
 	size_t ohpl_gs3_set_paused(OhplGs3Pause *st, bool script_paused, bool pause, bool music, bool sounds, bool ambience, uint32_t types,
 							   OhplGs3Op *ops);
-	void ohpl_gs3_disable_saving(OhplGs3Pause *st, float duration);
 	void ohpl_gs3_tick_saving(OhplGs3Pause *st, float dt);
 	uint32_t ohpl_gs3_frame_plan(bool has_game, bool has_map, bool map_active, bool uses_real_player, bool paused);
 	uint32_t ohpl_gs3_post_plan(bool updated, bool scripts_held, bool paused, bool has_game, bool has_map, bool map_active);
 
 	// game
-	bool ohpl_gs3_route_action(bool paused);
-	bool ohpl_gs3_analog_allowed(bool paused);
-	bool ohpl_gs3_visits_effect(bool effect_active, bool active_only);
 	float ohpl_gs3_string_duration(float min, float start, float per_char, size_t chars);
-	int ohpl_gs3_pointer_mode(int current, bool focus_present, bool focus_is_3d);
-	bool ohpl_gs3_pointer_moved(bool before, int rel_x, int rel_y);
-	int ohpl_gs3_action_edge(int id, int max_actions, bool down, bool prev_down);
-	int ohpl_gs3_analog_fire(int analog_id, int axis, float action_mul, bool triggered, float *mul);
 }
 
 static_assert(sizeof(OhplGs3Fader) == 32);

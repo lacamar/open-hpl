@@ -104,10 +104,6 @@ extern "C" {
 void ohpl_rope_update_before(const OhplRopeVt*, OhplRopeState*, float);
 void ohpl_rope_update_after(const OhplRopeVt*, OhplRopeState*);
 void ohpl_rope_update_constraints(const OhplRopeVt*, OhplRopeState*);
-void ohpl_verlet_update_movement(cVerletParticle*, float, OhplV3, float);
-void ohpl_verlet_length_constraint(cVerletParticle*, cVerletParticle*, float, float);
-void ohpl_verlet_length_constraint_range(cVerletParticle*, cVerletParticle*, float, float, float);
-void ohpl_verlet_length_constraint_stretch(cVerletParticle*, cVerletParticle*, float, float);
 void ohpl_verlet_collision_constraint(bool (*)(void*, OhplV3, OhplV3, OhplV3*, OhplV3*), void*, OhplRopeState*, cVerletParticle*, OhplV3, float);
 void ohpl_char_update(const OhplCharVt*, OhplCharState*, float, bool);
 void ohpl_char_update_move_matrix(OhplCharState*);

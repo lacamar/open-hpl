@@ -240,7 +240,6 @@ OhplGa3Queue *ohpl_ga3_queue_new();
 void ohpl_ga3_queue_free(OhplGa3Queue *q);
 size_t ohpl_ga3_queue_len(const OhplGa3Queue *q);
 bool ohpl_ga3_queue_get(const OhplGa3Queue *q, size_t i, OhplGa3Msg *out);
-void ohpl_ga3_queue_clear(OhplGa3Queue *q);
 void ohpl_ga3_queue_push_raw(OhplGa3Queue *q, const OhplGa3Msg *m);
 
 void ohpl_ga3_send_message(const OhplGa3Ctx *c, const OhplGa3Host *h, int ty, float time, bool local, const float *v, float f, int i);
@@ -268,13 +267,9 @@ int ohpl_ga3_search_for_player_node(const OhplGa3Ctx *c, const OhplGa3Host *h, i
 int ohpl_ga3_patrol_around_player_node(const OhplGa3Ctx *c, const OhplGa3Host *h, int iters, float a, float b, float d, const float (*p)[3],
 									   const float *start);
 bool ohpl_ga3_line_of_sight(const OhplGa3Ctx *c, const OhplGa3Host *h, const float *pos, const float *size, bool checkFov, const float *src);
-bool ohpl_ga3_in_fov(const OhplGa3Ctx *c, const OhplGa3Host *h, const float *pos);
-bool ohpl_ga3_player_in_fov(const OhplGa3Ctx *c, const OhplGa3Host *h);
 float ohpl_ga3_dist_to_player(const OhplGa3Ctx *c, const OhplGa3Host *h);
 float ohpl_ga3_dist_to_player_2d(const OhplGa3Ctx *c, const OhplGa3Host *h);
 float ohpl_ga3_player_movement_toward_enemy(const OhplGa3Ctx *c, const OhplGa3Host *h);
-bool ohpl_ga3_patrol_is_at_last(int cur, int size);
-void ohpl_ga3_patrol_inc(int *cur, int size, bool loopAtEnd);
 }
 
 // Mover and pathfinder state per enemy (rust/src/luxenemy/nav.rs): handle bits, 0 = none.

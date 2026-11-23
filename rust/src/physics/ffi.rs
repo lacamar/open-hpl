@@ -4,10 +4,9 @@
 use super::body;
 use super::book;
 use super::controller::CtrlParams;
-use super::host::{H, Str, Vt};
+use super::host::{H, Vt};
 use super::joint::{self, JointState, LimitEffect, MoveParams};
 use super::surface::{self, SurfaceParams};
-use super::surface_xml::{self, SurfaceDef};
 use super::world::{self, BodyFilter, ImpactCounts};
 use crate::types::Vector3f;
 use std::ffi::c_void;
@@ -92,26 +91,6 @@ pub unsafe extern "C" fn ohpl_phys_surface_update_roll_effect(
     if let (Some(vt), Some(p)) = unsafe { (get(vt), get(params)) } {
         surface::update_roll_effect(&vt, p, body);
     }
-}
-
-pub type SurfaceSink = unsafe extern "C" fn(*mut c_void, *const SurfaceDef);
-
-/// # Safety
-/// `data` points to `len` readable bytes (or `len` is 0); `sink` accepts `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_surface_parse(
-    data: *const u8,
-    len: usize,
-    read_ok: bool,
-    sink: SurfaceSink,
-    ctx: *mut c_void,
-) -> bool {
-    // SAFETY: caller contract.
-    let bytes = unsafe { Str { p: data, n: len }.bytes() };
-    surface_xml::parse(bytes, read_ok, |def| {
-        // SAFETY: caller contract on `sink`; `def` lives for the call.
-        unsafe { sink(ctx, def) }
-    })
 }
 
 /// # Safety
@@ -205,22 +184,6 @@ pub unsafe extern "C" fn ohpl_phys_body_static_angular_move(
 }
 
 /// # Safety
-/// `vt`, `params` valid; `state` is a live `JointState` the callbacks do not touch.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_joint_update(
-    vt: *const Vt,
-    params: *const MoveParams,
-    state: *mut JointState,
-    book: u64,
-) -> bool {
-    // SAFETY: caller contract.
-    match unsafe { (get(vt), get(params), state.as_mut()) } {
-        (Some(vt), Some(p), Some(s)) => joint::on_physics_update_bk(&vt, p, s, book),
-        _ => false,
-    }
-}
-
-/// # Safety
 /// `vt`, `effect` valid.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_phys_joint_on_limit(
@@ -232,37 +195,6 @@ pub unsafe extern "C" fn ohpl_phys_joint_on_limit(
     // SAFETY: caller contract.
     if let (Some(vt), Some(e)) = unsafe { (get(vt), get(effect)) } {
         joint::on_limit(&vt, joint, is_max, e);
-    }
-}
-
-/// # Safety
-/// `vt` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_joint_check_breakage(
-    vt: *const Vt,
-    joint: H,
-    breakable: bool,
-    broken: bool,
-    break_force: f32,
-    sound: Str,
-) -> bool {
-    // SAFETY: caller contract.
-    unsafe { get(vt) }
-        .is_some_and(|vt| joint::check_breakage(&vt, joint, breakable, broken, break_force, sound))
-}
-
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_joint_calc_sound_freq(
-    params: *const MoveParams,
-    speed: f32,
-    freq: *mut f32,
-    volume: *mut f32,
-) {
-    // SAFETY: caller contract.
-    if let (Some(p), Some(f), Some(v)) = unsafe { (get(params), freq.as_mut(), volume.as_mut()) } {
-        (*f, *v) = joint::calc_sound_freq(p, speed);
     }
 }
 
@@ -286,79 +218,6 @@ pub unsafe extern "C" fn ohpl_phys_joint_limit_auto_sleep(
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_phys_impacts_new() -> *mut ImpactCounts {
     Box::into_raw(Box::default())
-}
-
-/// # Safety
-/// `c` comes from `ohpl_phys_impacts_new` and is not used afterwards.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_impacts_free(c: *mut ImpactCounts) {
-    if !c.is_null() {
-        // SAFETY: caller contract.
-        drop(unsafe { Box::from_raw(c) });
-    }
-}
-
-/// # Safety
-/// `c` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_impacts_can_play(c: *const ImpactCounts, max: i32) -> bool {
-    // SAFETY: caller contract.
-    unsafe { get(c) }.is_some_and(|c| c.can_play(max))
-}
-
-/// # Safety
-/// `c` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_impacts_len(c: *const ImpactCounts) -> usize {
-    // SAFETY: caller contract.
-    unsafe { get(c) }.map_or(0, ImpactCounts::len)
-}
-
-/// # Safety
-/// `c` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_impacts_add(c: *mut ImpactCounts) {
-    // SAFETY: caller contract.
-    if let Some(c) = unsafe { c.as_mut() } {
-        c.add();
-    }
-}
-
-/// # Safety
-/// `c` is live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_impacts_update(
-    c: *mut ImpactCounts,
-    time_step: f32,
-    duration: f32,
-) {
-    // SAFETY: caller contract.
-    if let Some(c) = unsafe { c.as_mut() } {
-        c.update(time_step, duration);
-    }
-}
-
-/// # Safety
-/// `f` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_world_body_passes(f: *const BodyFilter) -> bool {
-    // SAFETY: caller contract.
-    unsafe { get(f) }.is_some_and(world::body_passes)
-}
-
-/// # Safety
-/// `push` valid, `normal` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_phys_world_merge_push(
-    push: *mut Vector3f,
-    normal: *const Vector3f,
-    depth: f32,
-) {
-    // SAFETY: caller contract.
-    if let Some(push) = unsafe { push.as_mut() } {
-        // SAFETY: caller contract.
-        *push = world::merge_push(*push, unsafe { vec3(normal) }, depth);
-    }
 }
 
 const _: () = {
@@ -397,16 +256,6 @@ pub extern "C" fn ohpl_h15_body_flag_set(book: u64, id: i32, v: bool) {
         2 => k.static_movement = v,
         _ => k.disable_after_sim = v,
     });
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15_joint_new() -> u64 {
-    book::joint_new()
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15_joint_free(book: u64) {
-    book::joint_free(book);
 }
 
 #[unsafe(no_mangle)]

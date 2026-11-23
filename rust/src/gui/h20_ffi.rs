@@ -4,14 +4,13 @@
 //! widgets; a null state makes a call a no-op returning the zero value.
 #![allow(unused_braces, reason = "rustfmt wraps the macro bodies in braces")]
 
-use super::h19_widget::Base;
 use super::h20_combo::{self as cb, Combo};
 use super::h20_host::{HostVt, Hx};
 use super::h20_list::{self as l, ListBase};
 use super::h20_menu::{self as mn, Ctx, Item, Main};
 use super::h20_tab::{self as tb, Frame, Label, Tab};
 use super::h20_text::{self as tx, TextBox};
-use super::set::{Msg, W};
+use super::set::Msg;
 use crate::types::Vector3f;
 
 /// # Safety
@@ -50,23 +49,6 @@ macro_rules! ffn {
             unsafe { $body }
         }
     };
-}
-
-/// # Safety
-/// `lb` is uninitialised storage of a `ListBase`, `base` the widget's base state.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h20_lb_init(
-    vt: *const HostVt,
-    lb: *mut ListBase,
-    this: W,
-    container: usize,
-    base: *mut Base,
-    kind: i32,
-) {
-    if !lb.is_null() {
-        // SAFETY: caller contract.
-        unsafe { l::init(Hx::new(vt), lb, this, container, base, kind) };
-    }
 }
 
 /// # Safety
@@ -214,22 +196,6 @@ pub unsafe extern "C" fn ohpl_h20_lb_item_start_pos(
     unsafe { out.write(l::item_start_pos(Hx::new(vt), lb)) };
 }
 
-/// # Safety
-/// `c` is uninitialised storage of a `Combo`, `base` the widget's base state.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h20_cb_init(
-    vt: *const HostVt,
-    c: *mut Combo,
-    this: W,
-    container: usize,
-    base: *mut Base,
-) {
-    if !c.is_null() {
-        // SAFETY: caller contract.
-        unsafe { cb::init(Hx::new(vt), vt, c, this, container, base) };
-    }
-}
-
 ffn!(Combo, ohpl_h20_cb_destroy_children, |hx, c| {
     cb::destroy_children(hx, c)
 });
@@ -320,21 +286,6 @@ ffn!(Combo, ohpl_h20_cb_point_is_inside, |hx,
 });
 
 /// # Safety
-/// `f` is uninitialised storage, `base` the widget's base state.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h20_tf_init(
-    vt: *const HostVt,
-    f: *mut Frame,
-    this: W,
-    base: *mut Base,
-) {
-    if !f.is_null() {
-        // SAFETY: caller contract.
-        unsafe { tb::frame_init(f, vt, this, base) };
-    }
-}
-
-/// # Safety
 /// `f` is null or initialised and not used afterwards.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h20_tf_free(f: *mut Frame) {
@@ -403,23 +354,6 @@ ffn!(Frame, ohpl_h20_tf_on_load_graphics, |hx, f| {
     tb::frame_on_load_graphics(hx, f)
 });
 
-/// # Safety
-/// `t` is uninitialised storage; `fs` the parent frame's state.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h20_tab_init(
-    vt: *const HostVt,
-    t: *mut Tab,
-    this: W,
-    frame_w: W,
-    fs: *mut Frame,
-    base: *mut Base,
-) {
-    if !t.is_null() && !fs.is_null() {
-        // SAFETY: caller contract.
-        unsafe { tb::tab_init_state(t, vt, this, frame_w, fs, base) };
-    }
-}
-
 ffn!(Tab, ohpl_h20_tab_destroy, |hx, t| tb::tab_destroy(hx, t));
 ffn!(
     Tab,
@@ -449,21 +383,6 @@ ffn!(Tab, ohpl_h20_tab_on_change_size, |hx, t| {
 ffn!(Tab, ohpl_h20_tab_on_init, |hx, t| tb::tab_on_init(hx, t));
 ffn!(Tab, ohpl_h20_tab_on_draw, |hx, t| tb::tab_on_draw(hx, t));
 
-/// # Safety
-/// `l` is uninitialised storage, `base` the widget's base state.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h20_tl_init(
-    vt: *const HostVt,
-    l: *mut Label,
-    this: W,
-    base: *mut Base,
-) {
-    if !l.is_null() {
-        // SAFETY: caller contract.
-        unsafe { tb::label_init(l, vt, this, base) };
-    }
-}
-
 ffn!(Label, ohpl_h20_tl_on_mouse_down, |hx, l| -> bool {
     tb::label_on_mouse_down(hx, l)
 });
@@ -474,22 +393,6 @@ ffn!(Label, ohpl_h20_tl_on_get_ui_nav_focus, |hx, l| -> bool {
     tb::label_on_get_ui_nav_focus(hx, l)
 });
 ffn!(Label, ohpl_h20_tl_on_draw, |hx, l| tb::label_on_draw(hx, l));
-
-/// # Safety
-/// `t` is uninitialised storage, `base` the widget's base state.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h20_tb_init(
-    vt: *const HostVt,
-    t: *mut TextBox,
-    this: W,
-    base: *mut Base,
-    numeric: bool,
-) {
-    if !t.is_null() {
-        // SAFETY: caller contract.
-        unsafe { tx::init(t, vt, this, base, numeric) };
-    }
-}
 
 /// # Safety
 /// `t` is null or initialised and not used afterwards.
@@ -618,22 +521,6 @@ ffn!(TextBox, ohpl_h20_tb_ui_keyboard_open, |hx, t| {
     tx::ui_keyboard_open(hx, t)
 });
 
-/// # Safety
-/// `i` is uninitialised storage, `base` the widget's base state.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h20_mi_init(
-    vt: *const HostVt,
-    i: *mut Item,
-    this: W,
-    base: *mut Base,
-    kind: i32,
-) {
-    if !i.is_null() {
-        // SAFETY: caller contract.
-        unsafe { mn::item_init(i, vt, this, base, kind) };
-    }
-}
-
 ffn!(Item, ohpl_h20_mi_on_init, |hx, i| mn::item_on_init(hx, i));
 ffn!(Item, ohpl_h20_mi_on_update, |hx, i, dt: f32| {
     mn::item_on_update(hx, i, dt)
@@ -663,21 +550,6 @@ ffn!(Item, ohpl_h20_mi_on_key_press, |hx,
 ffn!(Item, ohpl_h20_mi_on_load_graphics, |hx, i| {
     mn::item_on_load_graphics(hx, i)
 });
-
-/// # Safety
-/// `c` is uninitialised storage, `base` the widget's base state.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h20_cm_init(
-    vt: *const HostVt,
-    c: *mut Ctx,
-    this: W,
-    base: *mut Base,
-) {
-    if !c.is_null() {
-        // SAFETY: caller contract.
-        unsafe { mn::ctx_init(c, vt, this, base) };
-    }
-}
 
 ffn!(Ctx, ohpl_h20_cm_hide, |hx, c| mn::ctx_hide(hx, c));
 ffn!(Ctx, ohpl_h20_cm_item_width, |hx, c| -> f32 {
@@ -712,21 +584,6 @@ ffn!(Ctx, ohpl_h20_cm_on_key_press, |hx,
 ffn!(Ctx, ohpl_h20_cm_on_load_graphics, |hx, c| {
     mn::ctx_on_load_graphics(hx, c)
 });
-
-/// # Safety
-/// `m` is uninitialised storage, `base` the widget's base state.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h20_mm_init(
-    vt: *const HostVt,
-    m: *mut Main,
-    this: W,
-    base: *mut Base,
-) {
-    if !m.is_null() {
-        // SAFETY: caller contract.
-        unsafe { mn::main_init(m, vt, this, base) };
-    }
-}
 
 ffn!(Main, ohpl_h20_mm_update_items_pos, |hx, m, item: usize| {
     mn::main_update_items_pos(hx, m, item)

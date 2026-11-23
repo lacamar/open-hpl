@@ -2,10 +2,8 @@
 
 use std::ffi::c_void;
 
-use super::atlas::{Atlas, Pix};
-use super::bitmap::Surface;
+use super::atlas::Atlas;
 use super::combo::ComboSettings;
-use super::packer;
 use crate::math::Rect2l;
 use crate::string_ffi::{Sink, emit, units};
 use crate::types::{Vector2f, Vector3l};
@@ -15,31 +13,6 @@ pub struct OhplH5Surface {
     size: Vector3l,
     format: i32,
     bytes_per_pixel: i32,
-}
-
-fn surface(s: &OhplH5Surface) -> Surface {
-    Surface {
-        size: s.size,
-        format: s.format,
-        bytes_per_pixel: s.bytes_per_pixel,
-    }
-}
-
-/// # Safety
-/// `s` is valid; `data` is null or points to `len` writable bytes for the call.
-unsafe fn pix<'a>(s: *const OhplH5Surface, data: *mut u8, len: usize) -> Option<Pix<'a>> {
-    // SAFETY: caller contract.
-    let s = unsafe { s.as_ref() }?;
-    let data = if data.is_null() {
-        None
-    } else {
-        // SAFETY: caller contract.
-        Some(unsafe { std::slice::from_raw_parts_mut(data, len) })
-    };
-    Some(Pix {
-        surface: surface(s),
-        data,
-    })
 }
 
 #[repr(C)]
@@ -80,156 +53,6 @@ atlas_flags! {
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_h5_atlas_new(w: i32, h: i32, handle: i32) -> *mut c_void {
     Box::into_raw(Box::new(Atlas::new(w, h, handle))).cast()
-}
-
-/// # Safety
-/// `a` is from `ohpl_h5_atlas_new`, freed once, or null.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h5_atlas_free(a: *mut c_void) {
-    if !a.is_null() {
-        // SAFETY: caller contract.
-        drop(unsafe { Box::from_raw(a.cast::<Atlas>()) });
-    }
-}
-
-/// # Safety
-/// `a` is a live atlas.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h5_atlas_pic_count(a: *const c_void) -> i32 {
-    // SAFETY: caller contract.
-    unsafe { a.cast::<Atlas>().as_ref() }.map_or(0, |a| a.pic_count)
-}
-
-/// # Safety
-/// `a` is a live atlas.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h5_atlas_additions(a: *const c_void) -> i32 {
-    // SAFETY: caller contract.
-    unsafe { a.cast::<Atlas>().as_ref() }.map_or(0, |a| a.additions)
-}
-
-/// # Safety
-/// `a` is a live atlas.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h5_atlas_handle(a: *const c_void) -> i32 {
-    // SAFETY: caller contract.
-    unsafe { a.cast::<Atlas>().as_ref() }.map_or(-1, |a| a.handle)
-}
-
-/// Returns whether the atlas was updated and clears the flag.
-///
-/// # Safety
-/// `a` is a live atlas.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h5_atlas_take_updated(a: *mut c_void) -> bool {
-    // SAFETY: caller contract.
-    unsafe { a.cast::<Atlas>().as_mut() }.is_some_and(|a| std::mem::take(&mut a.updated))
-}
-
-/// Returns whether a reorganisation was requested and clears the flag.
-///
-/// # Safety
-/// `a` is a live atlas.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h5_atlas_take_need_reorg(a: *mut c_void) -> bool {
-    // SAFETY: caller contract.
-    unsafe { a.cast::<Atlas>().as_mut() }.is_some_and(|a| std::mem::take(&mut a.need_reorg))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h5_atlas_minimum_fit(src: *const Rect2l, dest: *const Rect2l) -> bool {
-    // SAFETY: caller passes two valid rects.
-    match unsafe { (src.as_ref(), dest.as_ref()) } {
-        (Some(s), Some(d)) => packer::minimum_fit(s, d),
-        _ => false,
-    }
-}
-
-/// Places `src` with its border blits; `linked` marks a subimage that already exists.
-/// Returns whether it fit.
-///
-/// # Safety
-/// `a` is live; the surfaces and buffers are valid for the call; `out` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h5_atlas_add(
-    a: *mut c_void,
-    dst: *const OhplH5Surface,
-    dst_data: *mut u8,
-    dst_len: usize,
-    src: *const OhplH5Surface,
-    src_data: *const u8,
-    src_len: usize,
-    linked: bool,
-    out: *mut OhplH5Added,
-) -> bool {
-    // SAFETY: caller contract.
-    let (Some(a), Some(mut d), Some(s), Some(out)) = (unsafe {
-        (
-            a.cast::<Atlas>().as_mut(),
-            pix(dst, dst_data, dst_len),
-            src.as_ref(),
-            out.as_mut(),
-        )
-    }) else {
-        return false;
-    };
-    let sdata = if src_data.is_null() {
-        None
-    } else {
-        // SAFETY: caller contract.
-        Some(unsafe { std::slice::from_raw_parts(src_data, src_len) })
-    };
-    let r = a.add(&mut d, &surface(s), sdata, linked);
-    match r {
-        Some(r) => {
-            out.rect = r.rect;
-            out.found_empty = r.found_empty;
-            true
-        }
-        None => false,
-    }
-}
-
-/// Re-packs the `n` live image rects (inner, no border). `out_rects`/`out_fit` are indexed like
-/// `rects`; `out_order` receives the placed indices in list order and `out_count` their number.
-///
-/// # Safety
-/// `a` is live; `rects` has `n` rects; the outputs have room for `n` entries.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h5_atlas_reorganize(
-    a: *mut c_void,
-    dst: *const OhplH5Surface,
-    dst_data: *mut u8,
-    dst_len: usize,
-    rects: *const Rect2l,
-    n: usize,
-    out_rects: *mut Rect2l,
-    out_fit: *mut bool,
-    out_order: *mut usize,
-    out_count: *mut usize,
-) {
-    // SAFETY: caller contract.
-    let (Some(a), Some(mut d)) = (unsafe { a.cast::<Atlas>().as_mut() }, unsafe {
-        pix(dst, dst_data, dst_len)
-    }) else {
-        return;
-    };
-    // SAFETY: caller contract.
-    let input = unsafe { units(rects, n) };
-    let r = a.reorganize(&mut d, input);
-    // SAFETY: caller contract: outputs have room for `n` entries.
-    unsafe {
-        for (i, v) in r.rects.iter().enumerate() {
-            *out_rects.add(i) = *v;
-        }
-        for (i, v) in r.fit.iter().enumerate() {
-            *out_fit.add(i) = *v;
-        }
-        for (i, v) in r.order.iter().enumerate() {
-            *out_order.add(i) = *v;
-        }
-        *out_count = r.order.len();
-    }
 }
 
 /// # Safety

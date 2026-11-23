@@ -121,6 +121,7 @@ pub(crate) fn local_force(f: [f32; 3], r: [f32; 3], u: [f32; 3], y: f32, z: f32)
     ]
 }
 
+#[cfg(test)]
 pub(crate) fn rope_segments(total: f32, segment: f32) -> i32 {
     ((total / segment) as i32).wrapping_add(4)
 }

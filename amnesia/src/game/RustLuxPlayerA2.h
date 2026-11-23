@@ -217,10 +217,6 @@ size_t ohpl_a2c_sps_count(const OhplA2cSps *s);
 extern "C" {
 void ohpl_a2_vitals(OhplA2Core *c, const OhplA2Host *h, int32_t which, float amount, int32_t ty, uint32_t flags);
 void ohpl_a2_spin_head(OhplA2Core *c, const OhplA2Host *h, float speed);
-void ohpl_a2_update_camera(OhplA2Core *c, const OhplA2Host *h, float dt);
-void ohpl_a2_update_head_spin(OhplA2Core *c, const OhplA2Host *h, float dt);
-void ohpl_a2_update_terror(OhplA2Core *c, const OhplA2Host *h, float dt);
-void ohpl_a2_update_focus_alpha(OhplA2Core *c, const OhplA2Host *h, float dt);
 void ohpl_a2b_collapse_update(OhplGa2Collapse *s, const OhplA2bHost *h, float dt);
 void ohpl_a2b_collapse_clear(OhplGa2Collapse *s, bool active, bool resetRandom);
 void ohpl_a2b_camdir_update(OhplA2bCamDir *s, const OhplA2bHost *h, float dt);
@@ -241,7 +237,6 @@ void ohpl_a2b_dark_update(OhplA2bDark *s, const OhplA2bHost *h, float dt);
 void ohpl_a2b_dark_reset(OhplA2bDark *s);
 void ohpl_a2b_dark_map_enter(OhplA2bDark *s);
 void ohpl_a2b_dark_set_active(OhplA2bDark *s, const OhplA2bHost *h, bool active);
-bool ohpl_a2b_dark_in_darkness(const OhplA2bDark *s, float ext);
 void ohpl_a2b_lantern_update(OhplA2bLantern *s, const OhplA2bHost *h, float dt);
 void ohpl_a2b_lantern_set_active(OhplA2bLantern *s, const OhplA2bHost *h, bool active, bool useEffects, bool checkOilItems, bool checkAllowed);
 void ohpl_a2b_lantern_set_disabled(OhplA2bLantern *s, const OhplA2bHost *h, bool disabled);

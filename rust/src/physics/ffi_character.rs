@@ -244,55 +244,6 @@ pub unsafe extern "C" fn ohpl_rope_update_constraints(vt: *const RopeVt, st: *mu
     }
 }
 
-/// # Safety
-/// `p` live.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_verlet_update_movement(
-    p: *mut Particle,
-    damping_mul: f32,
-    gravity: Vector3f,
-    dt: f32,
-) {
-    rope::particle_update_movement(P(p), damping_mul, gravity, dt);
-}
-
-/// # Safety
-/// `p1`, `p2` live and distinct.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_verlet_length_constraint(
-    p1: *mut Particle,
-    p2: *mut Particle,
-    length: f32,
-    stiffness: f32,
-) {
-    rope::length_constraint(P(p1), P(p2), length, stiffness);
-}
-
-/// # Safety
-/// `p1`, `p2` live and distinct.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_verlet_length_constraint_range(
-    p1: *mut Particle,
-    p2: *mut Particle,
-    min: f32,
-    max: f32,
-    stiffness: f32,
-) {
-    rope::length_constraint_range(P(p1), P(p2), min, max, stiffness);
-}
-
-/// # Safety
-/// `p1`, `p2` live and distinct.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_verlet_length_constraint_stretch(
-    p1: *mut Particle,
-    p2: *mut Particle,
-    length: f32,
-    stiffness: f32,
-) {
-    rope::length_constraint_stretch(P(p1), P(p2), length, stiffness);
-}
-
 type CastFn = unsafe extern "C" fn(Ctx, Vector3f, Vector3f, *mut Vector3f, *mut Vector3f) -> bool;
 
 /// # Safety

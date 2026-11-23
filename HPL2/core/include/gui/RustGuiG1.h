@@ -54,7 +54,6 @@ struct OhplG1Engine {
 	void (*textureDestroy)(void*, uintptr_t);
 };
 
-
 struct OhplG1Host {
 	void (*log)(int, const char*, size_t);
 	uintptr_t (*materialNew)(int, void*);
@@ -86,7 +85,6 @@ static_assert(offsetof(OhplG1SetPub, virtualSize) == 80 && offsetof(OhplG1SetPub
 			  offsetof(OhplG1SetPub, mtx3D) == 120 && offsetof(OhplG1SetPub, mouseZ) == 184 && offsetof(OhplG1SetPub, programs) == 192 &&
 			  offsetof(OhplG1SetPub, active) == 208 && offsetof(OhplG1SetPub, sortWidgets) == 216, "OhplG1SetPub layout");
 
-
 enum { kOhplG1MaterialDiffuse = 0, kOhplG1MaterialAlpha, kOhplG1MaterialFontNormal, kOhplG1MaterialAdditive,
 	   kOhplG1MaterialModulative, kOhplG1MaterialPremulAlpha };
 static_assert(eGuiMaterial_Diffuse == 0 && eGuiMaterial_PremulAlpha == 5 && eGuiMaterial_LastEnum == 6, "gui material order");
@@ -103,9 +101,6 @@ extern "C" {
 void ohpl_g1_set_engine(OhplG1Engine* engine);
 void ohpl_g1_set_host(OhplG1Host* host);
 
-
-cGuiGfxElement* ohpl_g1_gfx_new(void* resources);
-void ohpl_g1_gfx_free(cGuiGfxElement*);
 void ohpl_g1_gfx_update(cGuiGfxElement*, float);
 void ohpl_g1_gfx_add_image(cGuiGfxElement*, uintptr_t);
 void ohpl_g1_gfx_add_texture(cGuiGfxElement*, uintptr_t, const cVector2f*, const cVector2f*);
@@ -132,11 +127,9 @@ void ohpl_g1_gfx_set_color(cGuiGfxElement*, const cColor*);
 void ohpl_g1_gfx_set_flip(cGuiGfxElement*, bool);
 bool ohpl_g1_gfx_flip(cGuiGfxElement*);
 void ohpl_g1_gfx_flush(cGuiGfxElement*);
-void ohpl_g1_gfx_info(cGuiGfxElement*, OhplGuiGfxInfo*);
 void ohpl_g1_anim_add_frame(cGuiGfxAnimation*, int);
 void ohpl_g1_anim_set_type(cGuiGfxAnimation*, int);
 void ohpl_g1_anim_set_frame_length(cGuiGfxAnimation*, float);
-
 
 OhplG1Gui* ohpl_g1_gui_new(void* shell);
 void ohpl_g1_gui_free(OhplG1Gui*);
@@ -171,14 +164,12 @@ void ohpl_gui_skin_name(int, uint32_t, void (*)(void*, const char*, size_t), voi
 int ohpl_gui_mouse_to_mouse(int);
 int ohpl_gui_mouse_to_gui(int);
 
-
 void ohpl_g1_set_update(cGuiSet*, float);
 void ohpl_g1_set_draw_all(cGuiSet*, float);
 bool ohpl_g1_set_send_message(cGuiSet*, int, const cGuiMessageData*);
 void ohpl_g1_set_clear_render_objects(cGuiSet*);
 void ohpl_g1_set_draw_gfx(cGuiSet*, cGuiGfxElement*, const cVector3f*, const cVector2f*, const cColor*, int, float, const cVector3f*);
 void ohpl_g1_set_draw_text(cGuiSet*, const OhplGuiGlyphTable*, const uint32_t*, size_t, const cVector2f*, const cVector3f*, const cColor*, int, int);
-void ohpl_g1_set_add_widget(cGuiSet*, uintptr_t, uintptr_t);
 uintptr_t ohpl_g1_set_widget_from_name(cGuiSet*, const char*, size_t);
 void ohpl_g1_set_destroy_widget(cGuiSet*, uintptr_t, bool);
 void ohpl_g1_set_destroy_all_widgets(cGuiSet*);
@@ -189,15 +180,11 @@ bool ohpl_g1_set_popup_is_active(cGuiSet*);
 void ohpl_g1_set_add_popup_count(cGuiSet*, int);
 float ohpl_g1_set_popup_z(cGuiSet*);
 void ohpl_g1_set_inc_popup_z(cGuiSet*, int);
-float ohpl_g1_set_context_menu_z(cGuiSet*);
 void ohpl_g1_set_add_context_menu_z(cGuiSet*, float);
 void* ohpl_g1_set_gui(cGuiSet*);
 void* ohpl_g1_set_resources(cGuiSet*);
 void* ohpl_g1_set_graphics(cGuiSet*);
-void* ohpl_g1_set_sound(cGuiSet*);
-void* ohpl_g1_set_scene(cGuiSet*);
 cGuiSkin* ohpl_g1_set_skin(cGuiSet*);
-uintptr_t ohpl_g1_set_root(cGuiSet*);
 void ohpl_g1_set_root_clips_set(cGuiSet*, bool);
 bool ohpl_g1_set_root_clips(cGuiSet*);
 bool ohpl_g1_set_has_focus(cGuiSet*);
@@ -218,7 +205,6 @@ void ohpl_g1_set_set_virtual_size(cGuiSet*, const cVector2f*, float, float, cons
 void ohpl_g1_set_set_global_scale(float);
 float ohpl_g1_set_global_scale();
 void ohpl_g1_set_set_3d_transform(cGuiSet*, const float*);
-uintptr_t ohpl_g1_set_tip_frame(cGuiSet*);
 void ohpl_g1_set_set_focused(cGuiSet*, uintptr_t, bool);
 void ohpl_g1_set_push_focused(cGuiSet*);
 void ohpl_g1_set_pop_focused(cGuiSet*);
@@ -230,12 +216,9 @@ void ohpl_g1_set_push_default_nav(cGuiSet*);
 void ohpl_g1_set_pop_default_nav(cGuiSet*);
 void ohpl_g1_set_add_to_tab_order(cGuiSet*, uintptr_t);
 void ohpl_g1_set_clear_tab_order(cGuiSet*);
-void ohpl_g1_set_add_window(cGuiSet*, uintptr_t);
 void ohpl_g1_set_remove_window(cGuiSet*, uintptr_t);
 void ohpl_g1_set_set_window_on_top(cGuiSet*, uintptr_t);
 void ohpl_g1_set_set_last_window_z(cGuiSet*, float);
-bool ohpl_g1_set_draw_mouse(void*, iWidget*, const cGuiMessageData&);
-bool ohpl_g1_set_draw_focus(void*, iWidget*, const cGuiMessageData&);
 cGuiGlobalShortcut* ohpl_g1_set_add_global_shortcut(cGuiSet*, int, int, uintptr_t, int, bool, bool);
 void ohpl_g1_set_remove_global_shortcut(cGuiSet*, cGuiGlobalShortcut*);
 void ohpl_g1_set_clear_global_shortcuts(cGuiSet*);
@@ -246,9 +229,6 @@ bool ohpl_g1_shortcut_process_key_press(cGuiGlobalShortcut*, const cKeyPress*);
 bool ohpl_g1_shortcut_exec(cGuiGlobalShortcut*);
 void ohpl_g1_shortcut_to_string(cGuiGlobalShortcut*, void (*)(void*, const char*, size_t), void*);
 cGuiClipRegion* ohpl_g1_clip_create_child(cGuiClipRegion*, const cVector3f*, const cVector2f*);
-cGuiClipRegion* ohpl_g1_clip_new();
-void ohpl_g1_clip_set_rect(cGuiClipRegion*, float, float, float, float);
-void ohpl_g1_clip_free(cGuiClipRegion*);
 void ohpl_g1_clip_rect(const cGuiClipRegion*, cRect2f*);
 void ohpl_g1_set_clear_base_clip(cGuiSet*);
 void ohpl_g1_set_scissor(cGuiSet*, const cGuiClipRegion*, const cVector2l*, cVector2l*, cVector2l*);

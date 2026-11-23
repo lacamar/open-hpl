@@ -8,10 +8,10 @@ use std::slice;
 
 use super::renderer::{
     Chc, Checks, FogParams, FrustumData, LightKey, ShadowCache, ShadowQuery, ShadowSlot, Tracker,
-    ViewCheck, add_visible_to_list, chc_traverse, delayed_culled, distance_fade_amount,
-    fetch_delayed_results, fog_inside_near_plane, fog_sort_order, fog_visibility,
-    has_delayed_queries, node_visible, object_visible, pick_shadow_map, render_delayed_queries,
-    shadow_cache_valid, shadow_casters, shadow_map_resolution, sort_shadow_casters,
+    ViewCheck, add_visible_to_list, chc_traverse, distance_fade_amount, fetch_delayed_results,
+    fog_inside_near_plane, fog_sort_order, fog_visibility, has_delayed_queries, node_visible,
+    object_visible, pick_shadow_map, render_delayed_queries, shadow_cache_valid, shadow_casters,
+    shadow_map_resolution, sort_shadow_casters,
 };
 use crate::math::{Matrixf, Planef};
 use crate::scene::boxtree_dyn::Handle;
@@ -284,24 +284,6 @@ pub unsafe extern "C" fn ohpl_rn_render_delayed(
     // SAFETY: caller contract.
     if let Some(t) = unsafe { t.as_mut() } {
         render_delayed_queries(&mut h, t);
-    }
-}
-
-/// # Safety
-/// See the module contract.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_rn_delayed_culled(
-    vt: *const HostVt,
-    ctx: *mut c_void,
-    t: *mut Tracker,
-    frustum: Handle,
-    node: Handle,
-) -> bool {
-    let mut h = host!(vt, ctx);
-    // SAFETY: caller contract.
-    match unsafe { t.as_mut() } {
-        Some(t) => delayed_culled(&mut h, t, frustum, node),
-        None => false,
     }
 }
 

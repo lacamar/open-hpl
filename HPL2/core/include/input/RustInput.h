@@ -95,14 +95,6 @@ extern "C" {
 	float ohpl_input_pad_dead_zone();
 	void ohpl_input_pad_set_dead_zone(float);
 
-	OhplActionState ohpl_input_action_new();
-	bool ohpl_input_action_is_down(OhplActionState*);
-	bool ohpl_input_action_was_triggered(OhplActionState*);
-	bool ohpl_input_action_became_triggered(OhplActionState*);
-	bool ohpl_input_action_double_triggered(OhplActionState*, float limit);
-	void ohpl_input_action_update(OhplActionState*, bool any_down, float time_step);
-	void ohpl_input_action_reset(OhplActionState*, bool any_down);
-
 	OhplInputReg* ohpl_input_reg_new();
 	void ohpl_input_reg_free(OhplInputReg*);
 	void ohpl_input_reg_set_devices(OhplInputReg*, const OhplKeyboard*, const OhplMouse*);

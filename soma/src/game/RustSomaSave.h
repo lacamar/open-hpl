@@ -444,7 +444,6 @@ struct OhplGs4ReadHost
 
 extern "C" {
 	int32_t ohpl_gs4_game_index();
-	OhplGs4Config ohpl_gs4_cfg_default();
 	bool ohpl_gs4_cfg_load(OhplGs4Config *);
 	bool ohpl_gs4_cfg_save(const OhplGs4Config *);
 	void ohpl_gs4_paths(int32_t kind, const uint32_t *root, size_t root_n, const unsigned char *id, size_t id_n, bool headless, int32_t pid,
@@ -466,9 +465,6 @@ extern "C" {
 							 void (*sink)(void *, size_t, const uint32_t *, size_t, const unsigned char *, size_t, const uint32_t *, size_t),
 							 void *ctx);
 	void ohpl_gs4_rotation(const OhplGs4W *suffixes, size_t n, const uint32_t *suffix, size_t suffix_n, int32_t max, unsigned char *out);
-	OhplGs4Out *ohpl_gs4_out_new();
-	void ohpl_gs4_out_bytes(const OhplGs4Out *, const unsigned char **p, size_t *n);
-	void ohpl_gs4_out_free(OhplGs4Out *);
 	void ohpl_gs4_write_script(OhplGs4Out *, const OhplGs4ScriptHost *, size_t obj);
 	void ohpl_gs4_encode_save(const OhplGs4HeaderOut *, const OhplGs4World *, const OhplGs4WriteHost *,
 							  void (*sink)(void *, const unsigned char *, size_t), void *ctx);
@@ -481,7 +477,6 @@ extern "C" {
 	void ohpl_gs4_in_str(OhplGs4In *, const unsigned char **p, size_t *n);
 	void ohpl_gs4_in_free(OhplGs4In *);
 	void ohpl_gs4_read_world(OhplGs4In *, int32_t version, const OhplGs4ReadHost *);
-	void ohpl_gs4_read_script(OhplGs4In *, int32_t version, const OhplGs4ScriptHost *, size_t obj);
 }
 
 #endif // SOMA_RUST_SAVE_H

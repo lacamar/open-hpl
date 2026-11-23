@@ -133,11 +133,9 @@ void ohpl_l5_video_pause(OhplL5Video*, bool);
 void ohpl_l5_video_set_loop(OhplL5Video*, bool);
 void ohpl_l5_video_size(const OhplL5Video*, int32_t* w, int32_t* h);
 const uint8_t* ohpl_l5_video_take_frame(OhplL5Video*);
-uint32_t ohpl_l5_video_flags(const OhplL5Video*);
 void ohpl_l5_video_free(OhplL5Video*);
 
 bool ohpl_l5_audio_hash(const char* path, uint64_t* out);
-bool ohpl_l5_wav_hash(const uint8_t* data, size_t len, uint64_t* out);
 
 }
 

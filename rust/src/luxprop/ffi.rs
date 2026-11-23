@@ -234,17 +234,6 @@ macro_rules! host {
 // ---- base ----
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_base_init(s: *mut BaseState) {
-    // SAFETY: `s` is uninitialised storage for one `BaseState`.
-    unsafe { s.write(BaseState::new()) }
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_base_load(v: *const VarsRef, out: *mut BaseParams) {
-    base::load_base(vr(v), rw(out));
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4_base_load_instance(
     v: *const VarsRef,
     force_full_game_save: bool,
@@ -580,17 +569,6 @@ pub unsafe extern "C" fn ohpl_ga4_object_set_stuck_state(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_object_set_insanity_visible(
-    s: *mut ObjectState,
-    visible: bool,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        object::set_insanity_visible(rw(s), visible, ops)
-    });
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4_break_impulse(
     center: *const Vector3f,
     origin: *const Vector3f,
@@ -916,11 +894,6 @@ pub unsafe extern "C" fn ohpl_ga4_wheel_on_interact(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_wheel_reset_auto_move(s: *mut WheelState, sink: *const Sink) {
-    with_ops(rd(sink), |ops| wheel::reset_auto_move(rw(s), ops));
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4_wheel_update(
     s: *mut WheelState,
     p: *const WheelParams,
@@ -967,14 +940,6 @@ pub unsafe extern "C" fn ohpl_ga4_lever_setup(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| lever::setup(rw(s), rd(p), min, max, ops));
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_lever_calculate_middle_angle(
-    s: *mut LeverState,
-    p: *const LeverParams,
-) {
-    lever::calculate_middle_angle(rw(s), rd(p));
 }
 
 #[unsafe(no_mangle)]

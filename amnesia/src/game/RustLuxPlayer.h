@@ -252,36 +252,9 @@ struct OhplGa2HandsPos
 };
 
 extern "C" {
-void ohpl_ga2_vitals(int32_t which, const OhplGa2Vitals *v, float amount, int32_t ty, uint32_t flags, OhplGa2Ops *out);
-void ohpl_ga2_update_camera(OhplGa2CamState *s, float dt, OhplGa2Ops *out);
 float ohpl_ga2_clamp_pitch_goal(float x, float min, float max);
 void ohpl_ga2_update_head_pos_add(OhplGa2HeadPosAdd *adds, size_t n, const hpl::cVector3f *cameraPosAdd, float dt, hpl::cVector3f *total,
 	hpl::cVector3f *sum);
-void ohpl_ga2_spin_head(float rx, float ry, float speed, hpl::cVector2f *out);
-bool ohpl_ga2_update_head_spin(hpl::cVector2f *spin, float deacc, float dt, hpl::cVector2f *add);
-float ohpl_ga2_terror_step(float terror, bool enemies, float inc, float dec, float dt);
-float ohpl_ga2_focus_alpha(float alpha, bool hide, float dt);
-bool ohpl_ga2_prev_speeds_pop(size_t size, int32_t max);
-float ohpl_ga2_avg_speed(const float *p, size_t n);
-void ohpl_ga2_collapse_update(OhplGa2Collapse *s, float dt, OhplGa2Ops *out);
-void ohpl_ga2_camdir_update(OhplGa2CamDir *s, const hpl::cVector2f *list, size_t n, float sanity, float dt, OhplGa2Ops *out);
-float ohpl_ga2_camdir_add(OhplGa2CamDir *s, bool listEmpty, bool yaw, float x);
-bool ohpl_ga2_hurt_regain(float health, float limit, float speed, float dt, float *amount);
-void ohpl_ga2_hurt_update(OhplGa2Hurt *s, float health, bool dead, float speed, float dt, OhplGa2Ops *out);
-void ohpl_ga2_lookat_update(OhplGa2LookAt *s, const hpl::cVector3f *goal, float pitch, float yaw, float dt, OhplGa2Ops *out);
-void ohpl_ga2_flashback_update(OhplGa2Flashback *s, bool queued, bool voiceDone, bool hasCallback, float dt, OhplGa2Ops *out);
-bool ohpl_ga2_lantern_update(OhplGa2Lantern *s, float oil, bool emotionFlash, float dt, OhplGa2Ops *out);
-void ohpl_ga2_lantern_set_active(const OhplGa2LanternSet *p, OhplGa2Ops *out);
-void ohpl_ga2_light_positions(const hpl::cVector3f *pos, const hpl::cVector3f *size, const hpl::cVector3f *forward, hpl::cVector3f *out);
-bool ohpl_ga2_light_timer(float *count, float dt);
-void ohpl_ga2_light_combine(bool lantern, const float *ext, const float *normal, float *outExt, float *outNormal);
-void ohpl_ga2_darkness_update(OhplGa2Darkness *s, const OhplGa2DarknessIn *i, float dt, OhplGa2Ops *out);
-bool ohpl_ga2_hands_update(int32_t state, bool hasObject, bool animOver, bool objectAnimOver, int32_t *newState, OhplGa2Ops *out);
-bool ohpl_ga2_hands_action_gate(int32_t state, bool hasObject);
-int32_t ohpl_ga2_hands_switch_plan(bool hasCurrent, bool hasNew);
-bool ohpl_ga2_rotations_pop(size_t size, int32_t max);
-void ohpl_ga2_hands_rotation(const hpl::cVector3f *p, size_t n, hpl::cVector3f *out);
-void ohpl_ga2_hands_translation(const OhplGa2HandsPos *p, hpl::cVector3f *out);
 }
 
 // ---- GA2b: player and move states (rust/src/luxplayer/states_*.rs, move_normal.rs) ----
@@ -535,54 +508,19 @@ bool ohpl_ga2b_head_bob(OhplGa2bBobState *s, const OhplGa2bBobCfg *c, const Ohpl
 bool ohpl_ga2b_ledge_update(const OhplGa2bLedgeCfg *c, const hpl::cVector3f *headAdd, float pitch, float dt, float *pitchAdd);
 void ohpl_ga2b_action(int32_t which, int32_t act, bool pressed, OhplGa2bAction *out);
 bool ohpl_ga2b_hand_object_hides(int32_t newState);
-bool ohpl_ga2b_default_base_interact(int32_t act, bool pressed, bool canInteract, bool *interact);
-int32_t ohpl_ga2b_interact_action(int32_t act, bool pressed);
-bool ohpl_ga2b_ladder_action(int32_t act, bool pressed, bool *release);
 bool ohpl_ga2b_focus_in_range(bool hasEntity, float dist, float maxFocus);
 bool ohpl_ga2b_focus_can_interact(bool inRange, bool canInteract, bool disabled);
-int32_t ohpl_ga2b_crosshair_pick(int32_t crosshair, int32_t defaultCrosshair, int32_t lastEnum, bool disabled, bool styleDefault);
 bool ohpl_ga2b_outline_gate(bool hasEntity, bool isProp, float dist, float maxFocus);
 bool ohpl_ga2b_show_outline(bool isItem, bool canInteract, bool disabled);
 float ohpl_ga2b_use_item_max_focus(float maxFocus, float minUse);
 int32_t ohpl_ga2b_use_item_focus(bool hasItem, bool hasEntity, bool hasMap, float dist, float max);
 int32_t ohpl_ga2b_use_item_plan(bool callback);
-int32_t ohpl_ga2b_use_item_draw(bool hasEntity, float dist, float max, bool isProp, bool isItem);
-void ohpl_ga2b_pid_init(OhplGa2bPid3 *p, int32_t n, float kp, float ki, float kd);
-void ohpl_ga2b_pid_reset(OhplGa2bPid3 *p);
-void ohpl_ga2b_grab_enter(const OhplGa2bGrabEnterIn *i, OhplGa2bGrabEnterOut *o);
-void ohpl_ga2b_grab_post(const OhplGa2bGrabPost *i, OhplGa2bPid3 *forcePid, OhplGa2bPid3 *torquePid, float dt, OhplGa2bGrabPostOut *o);
-bool ohpl_ga2b_leave_limit(const hpl::cVector3f *v, float max, hpl::cVector3f *out);
-float ohpl_ga2b_grab_scroll(float depth, float amount, float inc, float min, float max);
-void ohpl_ga2b_grab_rotate(const hpl::cMatrixf *rot, bool pitch, float amount, hpl::cMatrixf *out);
-void ohpl_ga2b_push_enter(const OhplGa2bPushEnterIn *i, OhplGa2bPushEnterOut *o);
-void ohpl_ga2b_push_begin(const OhplGa2bPushBegin *i, OhplGa2bPushBeginOut *o);
-void ohpl_ga2b_push_stop(OhplGa2bPid3 *pid, const hpl::cVector3f *vel, float mass, float maxForce, float dt, hpl::cVector3f *out);
-void ohpl_ga2b_push_drive(OhplGa2bPid3 *pid, const OhplGa2bPushDrive *i, float dt, OhplGa2bPushDriveOut *o);
-void ohpl_ga2b_push_pick(bool normalMove, bool running, bool crouching, const float *walk, const float *run, const float *crouch, float *out);
-void ohpl_ga2b_slide_update(const OhplGa2bSlideIn *i, float *speed, OhplGa2bPid3 *pid, float dt, OhplGa2bSlideOut *o);
-void ohpl_ga2b_slide_throw(const hpl::cVector3f *pin, const hpl::cVector3f *camFwd, float impulse, hpl::cVector3f *out);
-float ohpl_ga2b_rotate_max_distance(const hpl::cVector3f *feet, const hpl::cVector3f *pivot);
-bool ohpl_ga2b_rotate_far(const hpl::cVector3f *feet, const hpl::cVector3f *pivot, float max);
-void ohpl_ga2b_rotate_slow(float *speed, const hpl::cVector2f *mouse, float slowFactor, float dt);
-void ohpl_ga2b_rotate_torque(const OhplGa2bRotateTorqueIn *i, float *speed, OhplGa2bPid3 *pid, float dt, hpl::cVector3f *out);
 float ohpl_ga2b_lever_speed_add(const OhplGa2bJointGeom *g);
 float ohpl_ga2b_swing_door_speed_add(const OhplGa2bJointGeom *g);
 void ohpl_ga2b_swing_door_throw(const OhplGa2bJointGeom *g, float impulse, hpl::cVector3f *jointForward, hpl::cVector3f *out);
 bool ohpl_ga2b_wheel_pop(size_t size);
 float ohpl_ga2b_wheel_speed_add(const hpl::cVector2f *hist, size_t n, const hpl::cVector2f *mouse, const hpl::cVector3f *pin,
 	const hpl::cVector3f *forward);
-void ohpl_ga2b_move_to_mouse(bool forward, float mul, float factor, hpl::cVector2f *mouse);
-void ohpl_ga2b_ladder_enter(const OhplGa2bLadderEnterIn *i, OhplGa2bLadderEnterOut *o);
-void ohpl_ga2b_ladder_attach(OhplGa2bLadderState *s, float dt, OhplGa2bLadderAttachOut *o);
-int32_t ohpl_ga2b_ladder_move_pre(OhplGa2bLadderState *s, const hpl::cVector3f *pos, float up, float down, float dt);
-int32_t ohpl_ga2b_ladder_move_post(OhplGa2bLadderState *s, float up, float down, float stepLen, float dt);
-void ohpl_ga2b_ladder_ground_rays(const hpl::cVector3f *feet, const hpl::cVector3f *ladderFwd, float sizeX, hpl::cVector3f *out);
-bool ohpl_ga2b_ladder_at_top(float moveMul, float y, float sizeY, float maxY);
-int32_t ohpl_ga2b_ladder_at_bottom(float moveMul, float y, float sizeY, float minY);
-void ohpl_ga2b_ladder_top_rays(const hpl::cVector3f *feet, hpl::cVector3f *out);
-bool ohpl_ga2b_ladder_leave_tick(float *count, float dt);
-void ohpl_ga2b_ladder_on_move(int32_t state, bool right, float mul, float *moveMul);
-bool ohpl_ga2b_ladder_camera_free(int32_t state);
 void ohpl_ga2b_ladder_head_limits(float yaw, float pitch, float *out);
 }
 

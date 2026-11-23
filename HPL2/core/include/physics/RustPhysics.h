@@ -152,7 +152,6 @@ void ohpl_phys_surface_on_impact(const OhplPhysVt*, const OhplSurfaceParams*, fl
 void ohpl_phys_surface_on_slide(const OhplPhysVt*, const OhplSurfaceParams*, float, const cVector3f*, int32_t, size_t, size_t);
 void ohpl_phys_surface_create_impact_effect(const OhplPhysVt*, const OhplSurfaceParams*, float, const cVector3f*, size_t, size_t);
 void ohpl_phys_surface_update_roll_effect(const OhplPhysVt*, const OhplSurfaceParams*, size_t);
-bool ohpl_phys_surface_parse(const char*, size_t, bool, void (*)(void*, const OhplSurfaceDef*), void*);
 
 void ohpl_phys_body_velocity_at_position(const OhplPhysVt*, size_t, const cVector3f*, cVector3f*);
 void ohpl_phys_body_torque_from_force(const OhplPhysVt*, size_t, const cVector3f*, const cVector3f*, cVector3f*);
@@ -161,21 +160,8 @@ void ohpl_phys_body_update_after(const OhplPhysVt*, size_t, float, uint64_t);
 void ohpl_phys_body_static_linear_move(const OhplPhysVt*, size_t, const cVector3f*, uint64_t);
 void ohpl_phys_body_static_angular_move(const OhplPhysVt*, size_t, const cVector3f*, uint64_t);
 
-bool ohpl_phys_joint_update(const OhplPhysVt*, const OhplMoveParams*, OhplJointState*, uint64_t);
 void ohpl_phys_joint_on_limit(const OhplPhysVt*, size_t, bool, const OhplLimitEffect*);
-bool ohpl_phys_joint_check_breakage(const OhplPhysVt*, size_t, bool, bool, float, OhplStr);
-void ohpl_phys_joint_calc_sound_freq(const OhplMoveParams*, float, float*, float*);
 bool ohpl_phys_joint_limit_auto_sleep(bool, float, int32_t, int32_t*, float, float, float);
-
-OhplImpactCounts* ohpl_phys_impacts_new();
-void ohpl_phys_impacts_free(OhplImpactCounts*);
-bool ohpl_phys_impacts_can_play(const OhplImpactCounts*, int32_t);
-void ohpl_phys_impacts_add(OhplImpactCounts*);
-size_t ohpl_phys_impacts_len(const OhplImpactCounts*);
-void ohpl_phys_impacts_update(OhplImpactCounts*, float, float);
-
-bool ohpl_phys_world_body_passes(const OhplBodyFilter*);
-void ohpl_phys_world_merge_push(cVector3f*, const cVector3f*, float);
 
 }
 

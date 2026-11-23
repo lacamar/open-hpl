@@ -244,7 +244,6 @@ void ohpl_bt_dyn_update_before_use(const OhplRnHostVt*, void*, const OhplBtTree*
 uintptr_t ohpl_bt_dyn_add(const OhplRnHostVt*, void*, OhplBtTree*, uintptr_t, uintptr_t);
 bool ohpl_bt_dyn_remove(const OhplRnHostVt*, void*, OhplBtTree*, uintptr_t);
 void ohpl_bt_dyn_specific_update(const OhplRnHostVt*, void*, OhplBtTree*, uintptr_t, const uintptr_t*, size_t);
-uintptr_t ohpl_bt_dyn_get_add_node(const OhplRnHostVt*, void*, const OhplBtTree*, uintptr_t, uintptr_t);
 
 OhplRnTracker* ohpl_rn_tracker_new();
 void ohpl_rn_tracker_free(OhplRnTracker*);
@@ -262,7 +261,6 @@ void ohpl_rn_add_visible_to_list(const OhplRnHostVt*, void*, const OhplRnChecks*
 void ohpl_rn_fetch_delayed(const OhplRnHostVt*, void*, OhplRnTracker*, int32_t);
 bool ohpl_rn_has_delayed_queries(const OhplRnTracker*);
 void ohpl_rn_render_delayed(const OhplRnHostVt*, void*, OhplRnTracker*);
-bool ohpl_rn_delayed_culled(const OhplRnHostVt*, void*, OhplRnTracker*, uintptr_t, uintptr_t);
 void ohpl_rn_view_check(const OhplRnFrustumData*, const OhplRnFrustumData*, OhplRnViewCheck*);
 void ohpl_rn_shadow_casters(const OhplRnHostVt*, void*, const OhplRnChecks*, const OhplRnShadowQuery*, uintptr_t);
 void ohpl_rn_sort_shadow_casters(const OhplRnHostVt*, void*, uintptr_t*, size_t);

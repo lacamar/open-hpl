@@ -33,11 +33,6 @@ namespace hpl {
 	};
 
 	extern "C" {
-		void ohpl_newton_pair_params(const OhplNewtonMatProps* a, const OhplNewtonMatProps* b, bool same, OhplNewtonPairParams* out);
-		bool ohpl_newton_aabb_gate(bool flagsMatch, const OhplNewtonGateBody* a, const OhplNewtonGateBody* b);
-		void ohpl_newton_aggregate_contacts(const OhplNewtonContact* contacts, size_t n, OhplNewtonContactAgg* out);
-		void ohpl_newton_surface_calls(int32_t prio1, int32_t prio2, bool sameMaterial, float normalSpeed, float tangentSpeed, OhplNewtonSurfaceCalls* out);
-		bool ohpl_newton_clamp_speed(const cVector3f* vel, float max, cVector3f* out);
 		bool ohpl_newton_buoyancy(const OhplNewtonBuoyIn* in, const OhplNewtonSubShape* subs, size_t n, OhplNewtonBuoyOut* out);
 		size_t ohpl_newton_buoyancy_points(int32_t shape, const cVector3f* size, cVector3f* out, size_t cap, float* radius);
 	}

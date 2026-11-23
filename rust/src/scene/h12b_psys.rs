@@ -223,11 +223,6 @@ pub extern "C" fn ohpl_h12b_psdata_can_create(emitters: u32) -> bool {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h12b_pe_ctl_init(c: &mut PeCtl) {
-    *c = PeCtl::new();
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn ohpl_h12b_pe_update_gate(
     c: &mut PeCtl,
     active: bool,

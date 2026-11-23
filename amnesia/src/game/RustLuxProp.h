@@ -626,22 +626,15 @@ extern "C"
 	const char *ohpl_a5e_str_get(uint64_t h, size_t slot, size_t *len);
 	void ohpl_a5e_str_set(uint64_t h, size_t slot, const unsigned char *p, size_t len);
 
-	void ohpl_ga4_base_init(OhplGa4Base *s);
-	void ohpl_ga4_base_load(const OhplGa4Vars *v, OhplGa4BaseParams *out);
 	void ohpl_ga4_base_load_instance(const OhplGa4Vars *v, bool force_full_game_save, OhplGa4BaseInstance *out);
-	float ohpl_ga4_give_damage(float health, int toughness, float amount, int strength, float *out_amount);
-	void ohpl_ga4_effects_set_active(OhplGa4Base *s, const OhplGa4EffectsIn *a, const OhplGa4LightData *lights, int n_lights, const OhplGa4Sink *sink);
-	void ohpl_ga4_effects_update(OhplGa4Base *s, float dt, float on_time, float off_time, const OhplGa4LightData *lights, int n_lights, bool has_mesh, const OhplGa4Sink *sink);
 	void ohpl_ga4_fade_in_mesh(OhplGa4Base *s, float time, bool has_mesh, const OhplGa4Sink *sink);
 	void ohpl_ga4_mesh_fading(OhplGa4Base *s, float dt, bool has_mesh, const OhplGa4Sink *sink);
-	void ohpl_ga4_anim_update(int *index, bool over, bool has_callback, const OhplGa4Sink *sink);
 	float ohpl_ga4_connection_turn(float angle, float min, float max);
 	void ohpl_ga4_reset_move(OhplGa4Base *s);
 	void ohpl_ga4_move_linear_to(OhplGa4Base *s, const float *goal, float acc, float max_speed, float slowdown, bool reset, const OhplGa4Sink *sink);
 	void ohpl_ga4_move_angular_to(OhplGa4Base *s, const float *goal, float acc, float max_speed, float slowdown, bool reset, bool use_offset, const float *world_offset, const float *local_offset, const OhplGa4Sink *sink);
 	void ohpl_ga4_rotate_at_speed(OhplGa4Base *s, float acc, float goal_speed, const float *axis, bool reset, bool use_offset, const float *world_offset, const float *local_offset, const OhplGa4Sink *sink);
 	void ohpl_ga4_stop_move(OhplGa4Base *s, const OhplGa4Sink *sink);
-	void ohpl_ga4_update_moving(OhplGa4Base *s, const OhplGa4MoveIn *a, const OhplGa4Host *host, const OhplGa4Sink *sink);
 	bool ohpl_ga4_outside_player(const OhplGa4OutsideBody *bodies, int n, const float *player_pos, const OhplGa4Host *host, const OhplGa4Sink *sink);
 
 	void ohpl_ga4_object_load(const OhplGa4Vars *v, const unsigned char *sub_type, size_t sub_type_len, float *focus, const float *defaults, OhplGa4ObjectParams *out);
@@ -655,7 +648,6 @@ extern "C"
 	void ohpl_ga4_object_update(OhplGa4ObjectState *s, const OhplGa4ObjectParams *p, const OhplGa4ObjectInstance *i, const OhplGa4ObjectUpdateIn *a, const OhplGa4Host *host, const OhplGa4Sink *sink);
 	void ohpl_ga4_object_joint_data(int kind, float min, float max, OhplGa4JointData *out);
 	void ohpl_ga4_object_set_stuck_state(OhplGa4ObjectState *s, int state, const OhplGa4JointData *joints, int n, const OhplGa4Sink *sink);
-	void ohpl_ga4_object_set_insanity_visible(OhplGa4ObjectState *s, bool visible, const OhplGa4Sink *sink);
 	void ohpl_ga4_break_impulse(const float *center, const float *origin, float impulse, const float *add, float *out);
 	void ohpl_ga4_bodies_center(const float *pos, int n, float *out);
 
@@ -683,14 +675,12 @@ extern "C"
 	void ohpl_ga4_wheel_set_angle(OhplGa4Wheel *s, const OhplGa4WheelParams *p, float x, bool auto_move, const OhplGa4Sink *sink);
 	void ohpl_ga4_wheel_on_connection_state(OhplGa4Wheel *s, const OhplGa4WheelParams *p, int state, const OhplGa4Host *host, const OhplGa4Sink *sink);
 	bool ohpl_ga4_wheel_on_interact(OhplGa4Wheel *s, const OhplGa4WheelParams *p, bool show_hints, const OhplGa4Host *host, const OhplGa4Sink *sink);
-	void ohpl_ga4_wheel_reset_auto_move(OhplGa4Wheel *s, const OhplGa4Sink *sink);
 	void ohpl_ga4_wheel_update(OhplGa4Wheel *s, const OhplGa4WheelParams *p, float dt, bool interacted, const OhplGa4Host *host, const OhplGa4Sink *sink);
 
 	void ohpl_ga4_lever_load(const OhplGa4Vars *v, OhplGa4LeverParams *out);
 	void ohpl_ga4_lever_load_instance(const OhplGa4Vars *v, OhplGa4Lever *s, OhplGa4LeverParams *p, const OhplGa4Sink *sink);
 	bool ohpl_ga4_lever_can_interact(const OhplGa4LeverParams *p, float mass);
 	void ohpl_ga4_lever_setup(OhplGa4Lever *s, const OhplGa4LeverParams *p, float min, float max, const OhplGa4Sink *sink);
-	void ohpl_ga4_lever_calculate_middle_angle(OhplGa4Lever *s, const OhplGa4LeverParams *p);
 	void ohpl_ga4_lever_set_stuck_state(OhplGa4Lever *s, const OhplGa4LeverParams *p, int state, bool effects, const OhplGa4Sink *sink);
 	void ohpl_ga4_lever_on_connection_state(OhplGa4Lever *s, const OhplGa4LeverParams *p, int state, const OhplGa4Sink *sink);
 	bool ohpl_ga4_lever_on_interact(OhplGa4Lever *s, const OhplGa4LeverParams *p, bool show_hints, const OhplGa4Sink *sink);
@@ -1118,23 +1108,7 @@ static_assert(sizeof(OhplGa4bOilFill) == 20, "OhplGa4bOilFill layout");
 
 extern "C"
 {
-	bool ohpl_ga4b_entity_conn_state(int state, int used, bool invert, int *out);
-	bool ohpl_ga4b_entity_look_timer(float *count, float dt);
-	bool ohpl_ga4b_entity_look_body(const OhplGa4bLookIn *in, const OhplGa4bLos *los);
-	bool ohpl_ga4b_button_set(bool *on, bool new_on, int *out);
 	bool ohpl_ga4b_button_can_interact(bool on, bool can_on, bool can_off);
-	int ohpl_ga4b_button_conn_state(int state);
-	float ohpl_ga4b_door_tick(float count, float dt);
-	void ohpl_ga4b_door_interact(bool locked, float count, OhplGa4bDoorAct *out);
-	float ohpl_ga4b_oil_amount(float total_oil);
-	void ohpl_ga4b_oil_fill(float barrel, float lamp, OhplGa4bOilFill *out);
-	int ohpl_ga4b_oil_focus_tier(float barrel);
-	bool ohpl_ga4b_photo_tick(float *count, float dt);
-	void ohpl_ga4b_photo_samples(const float *size, const float *center, float *out);
-	float ohpl_ga4b_photo_level(const float *samples, int n);
-	int ohpl_ga4b_photo_switch(float level, bool *lit, float on_limit, float off_limit);
-	float ohpl_ga4b_photo_goal(float level, float on_limit, float off_limit);
-	float ohpl_ga4b_photo_illum_step(float current, float goal, float dt);
 }
 
 // ---- GA4c: entity base, chest, emotion stone, item, NPC, static prop, hand-object base ----
@@ -1264,7 +1238,6 @@ struct OhplGa4cLookHost
 	bool (*body)(void *ctx, int i, OhplGa4bLookIn *out);
 };
 
-
 struct OhplGa4cCollideHost
 {
 	void *ctx;
@@ -1344,6 +1317,5 @@ extern "C"
 	void ohpl_ga4c_hand_child_local(const float *inv, const float *child, float *out);
 	bool ohpl_ga4c_hand_create_needed(bool has_entity);
 }
-
 
 #endif

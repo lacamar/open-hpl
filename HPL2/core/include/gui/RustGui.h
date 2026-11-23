@@ -81,26 +81,7 @@ struct OhplGuiTooltip {
 
 extern "C" {
 
-void* ohpl_gui_list_new();
-void ohpl_gui_list_free(void* list);
-void ohpl_gui_list_clear(void* list);
-
-void ohpl_gui_draw_gfx(void* list, const OhplGuiHost* host, const OhplGuiFrame* frame, void* gfx,
-					   const cVector3f* pos, const cVector2f* size, const cColor* color,
-					   int material, float angle, const cVector3f* pivot);
-void ohpl_gui_draw_text(void* list, const OhplGuiHost* host, const OhplGuiFrame* frame, const OhplGuiGlyphTable* table,
-						const wchar_t* text, size_t len, const cVector2f* size, const cVector3f* pos,
-						const cColor* color, int material, int align);
 void ohpl_gui_build(void* list, OhplGuiBatches* out);
-
-void ohpl_gui_clip_child_rect(const cRect2f* parent, const cVector3f* pos, const cVector2f* size, cRect2f* out);
-void ohpl_gui_scissor(const cRect2f* rect, const cVector2l* target, const cVector2f* virtualSize,
-					  const cVector2f* virtualOffset, bool flipY, cVector2l* outPos, cVector2l* outSize);
-void ohpl_gui_tooltip(const cVector2f* mouse, float mouseZ, const cVector2f* pointerSize, const cVector2f* virtualSize,
-					  float textLength, float fontHeight, int rows, OhplGuiTooltip* out);
-void ohpl_gui_position_inside_bounds(const cVector3f* pos, const cVector2f* size, const cVector2f* setSize, cVector3f* out);
-float ohpl_gui_next_popup_z(float z);
-void ohpl_gui_virtual_size(const cVector2f* size, float globalScale, bool ignoreGlobalScale, cVector2f* out);
 
 }
 }

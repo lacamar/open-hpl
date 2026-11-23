@@ -5,7 +5,7 @@
 use super::critter::{
     self, BugParams, BugState, CritterParams, CritterState, Query, Reply, SpiderParams, SpiderState,
 };
-use super::entity::{self, LookIn, Los};
+use super::entity::{LookIn, Los};
 use super::ffi::{Sink, VarsRef};
 use super::hand::{self, Fade, Hands, LightAttrs, LightParams, MeleeAct, Sway};
 use super::interact;
@@ -433,27 +433,6 @@ pub unsafe extern "C" fn ohpl_ga4b_move_limit_state(
 
 // ---- entity ----
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4b_entity_conn_state(
-    state: i32,
-    used: i32,
-    invert: bool,
-    out: *mut i32,
-) -> bool {
-    match entity::conn_state(state, used, invert) {
-        Some(v) => {
-            *rw(out) = v;
-            true
-        }
-        None => false,
-    }
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4b_entity_look_timer(count: *mut f32, dt: f32) -> bool {
-    entity::look_timer(rw(count), dt)
-}
-
 #[repr(C)]
 pub struct LosRef {
     pub ctx: *mut c_void,
@@ -467,108 +446,9 @@ impl Los for &LosRef {
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4b_entity_look_body(i: *const LookIn, los: *const LosRef) -> bool {
-    entity::look_body(rd(i), &mut rd(los))
-}
-
 // ---- small props ----
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4b_button_set(on: *mut bool, new_on: bool, out: *mut i32) -> bool {
-    match smallprops::button_set(rw(on), new_on) {
-        Some(v) => {
-            *rw(out) = v;
-            true
-        }
-        None => false,
-    }
-}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_ga4b_button_can_interact(on: bool, can_on: bool, can_off: bool) -> bool {
     smallprops::button_can_interact(on, can_on, can_off)
-}
-
-/// 1 switch on, 0 switch off, -1 ignore.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga4b_button_conn_state(state: i32) -> i32 {
-    match smallprops::button_conn_state(state) {
-        Some(true) => 1,
-        Some(false) => 0,
-        None => -1,
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga4b_door_tick(count: f32, dt: f32) -> f32 {
-    smallprops::door_tick(count, dt)
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4b_door_interact(locked: bool, count: f32, out: *mut DoorAct) {
-    *rw(out) = smallprops::door_interact(locked, count);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga4b_oil_amount(total_oil: f32) -> f32 {
-    smallprops::oil_amount(total_oil)
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4b_oil_fill(barrel: f32, lamp: f32, out: *mut OilFill) {
-    *rw(out) = smallprops::oil_fill(barrel, lamp);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga4b_oil_focus_tier(barrel: f32) -> i32 {
-    smallprops::oil_focus_tier(barrel)
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4b_photo_tick(count: *mut f32, dt: f32) -> bool {
-    smallprops::photo_tick(rw(count), dt)
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4b_photo_samples(
-    size: *const Vector3f,
-    center: *const Vector3f,
-    out: *mut Vector3f,
-) {
-    let s = smallprops::photo_samples(*rd(size), *rd(center));
-    for (i, v) in s.iter().enumerate() {
-        // SAFETY: `out` holds six vectors.
-        unsafe { out.add(i).write(*v) };
-    }
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4b_photo_level(samples: *const f32, n: i32) -> f32 {
-    let s = match usize::try_from(n) {
-        // SAFETY: `samples` holds `n` floats.
-        Ok(n) if n > 0 => unsafe { std::slice::from_raw_parts(samples, n) },
-        _ => &[],
-    };
-    smallprops::photo_level(s)
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4b_photo_switch(
-    level: f32,
-    lit: *mut bool,
-    on_limit: f32,
-    off_limit: f32,
-) -> i32 {
-    smallprops::photo_switch(level, rw(lit), on_limit, off_limit)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga4b_photo_goal(level: f32, on_limit: f32, off_limit: f32) -> f32 {
-    smallprops::photo_goal(level, on_limit, off_limit)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga4b_photo_illum_step(current: f32, goal: f32, dt: f32) -> f32 {
-    smallprops::photo_illum_step(current, goal, dt)
 }

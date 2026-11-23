@@ -643,7 +643,7 @@ pub fn sampler_units<'a>(vars: impl Iterator<Item = (&'a [u8], &'a [u8])>) -> Ve
 }
 
 mod ffi {
-    use super::{Bytes, fallback_name, fix_bc5, patch_hpsl, sampler_units, texture_bindings};
+    use super::{Bytes, fallback_name, patch_hpsl, sampler_units, texture_bindings};
     use crate::string_ffi::{Sink, emit, units};
     use std::ffi::c_void;
 
@@ -690,23 +690,6 @@ mod ffi {
         unsafe {
             let mut d: Bytes = units(data, data_n).to_vec();
             patch_hpsl(units(file, file_n), &mut d, hw_srgb, units(debug, debug_n));
-            emit(sink, ctx, &d);
-        }
-    }
-
-    /// # Safety
-    /// Pointers valid for their lengths; `sink` accepts `ctx`.
-    #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn ohpl_shader_fix_bc5(
-        data: *const u8,
-        n: usize,
-        sink: Sink<u8>,
-        ctx: *mut c_void,
-    ) {
-        // SAFETY: caller contract.
-        unsafe {
-            let mut d: Bytes = units(data, n).to_vec();
-            fix_bc5(&mut d);
             emit(sink, ctx, &d);
         }
     }

@@ -60,11 +60,6 @@ pub extern "C" fn ohpl_vk_format_size(f: u32) -> usize {
     tables::format_size(f)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_vk_float_to_half(f: f32) -> u16 {
-    tables::float_to_half(f)
-}
-
 /// Source and destination byte counts of a pixel conversion; false where C++ `resize` threw.
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_vk_convert_len(

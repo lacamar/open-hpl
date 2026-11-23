@@ -1,6 +1,6 @@
 //! C ABI for the Lux game layer, mirrored in `soma/src/game/RustSomaLux.h`.
 
-use super::game::{self, Edge, Route};
+use super::game::{self};
 use super::pause::{self, Op, Pause};
 use super::player::{Fade, MoveSpeeds, MoveVec};
 use super::scriptable;
@@ -119,14 +119,6 @@ pub unsafe extern "C" fn ohpl_gs3_map_begin(
 }
 
 /// # Safety
-/// `m` is readable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs3_start_yaw(m: *const Matrixf) -> f32 {
-    // SAFETY: caller contract.
-    transfer::start_yaw(&unsafe { rd(m) })
-}
-
-/// # Safety
 /// Pointers are valid; `out` is writable.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_gs3_capture(
@@ -212,14 +204,6 @@ pub extern "C" fn ohpl_gs3_restore_prop(found: bool, bodies_match: bool, is_stat
         Restore::Set => 1,
         Restore::MakeDynamicThenSet => 2,
     }
-}
-
-/// # Safety
-/// `p` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs3_preload_init(p: *mut Preload) {
-    // SAFETY: caller contract.
-    unsafe { wr(p, Preload::default()) }
 }
 
 #[repr(C)]
@@ -328,14 +312,6 @@ pub unsafe extern "C" fn ohpl_gs3_preload_ready(
 
 // pause
 
-/// # Safety
-/// `p` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs3_pause_init(p: *mut Pause) {
-    // SAFETY: caller contract.
-    unsafe { wr(p, Pause::default()) }
-}
-
 #[repr(C)]
 pub struct OpOut {
     pub code: i32,
@@ -390,14 +366,6 @@ pub unsafe extern "C" fn ohpl_gs3_set_paused(
 /// # Safety
 /// `st` is exclusively borrowed.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs3_disable_saving(st: *mut Pause, duration: f32) {
-    // SAFETY: caller contract.
-    pause::disable_saving(unsafe { rw(st) }, duration)
-}
-
-/// # Safety
-/// `st` is exclusively borrowed.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_gs3_tick_saving(st: *mut Pause, dt: f32) {
     // SAFETY: caller contract.
     pause::tick_saving(unsafe { rw(st) }, dt)
@@ -437,21 +405,6 @@ pub extern "C" fn ohpl_gs3_post_plan(
 // game
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs3_route_action(paused: bool) -> bool {
-    game::route_action(paused) == Route::ModulesOnly
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs3_analog_allowed(paused: bool) -> bool {
-    game::analog_allowed(paused)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs3_visits_effect(effect_active: bool, active_only: bool) -> bool {
-    game::visits_effect(effect_active, active_only)
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn ohpl_gs3_string_duration(
     min: f32,
     start: f32,
@@ -459,56 +412,4 @@ pub extern "C" fn ohpl_gs3_string_duration(
     chars: usize,
 ) -> f32 {
     game::string_duration(min, start, per_char, chars)
-}
-
-/// -1 keep the pointer mode, otherwise the new relative flag.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs3_pointer_mode(
-    current: i32,
-    focus_present: bool,
-    focus_is_3d: bool,
-) -> i32 {
-    game::pointer_mode(current, focus_present, focus_is_3d).map_or(-1, i32::from)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs3_pointer_moved(before: bool, rel_x: i32, rel_y: i32) -> bool {
-    game::pointer_moved(before, rel_x, rel_y)
-}
-
-/// 0 none, 1 became down, 2 became up.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs3_action_edge(
-    id: i32,
-    max_actions: i32,
-    down: bool,
-    prev_down: bool,
-) -> i32 {
-    match game::action_edge(id, max_actions, down, prev_down) {
-        Edge::None => 0,
-        Edge::Down => 1,
-        Edge::Up => 2,
-    }
-}
-
-/// Axis (0..2) of the analog sample, or -1 when the action does not fire; `mul` receives its value.
-///
-/// # Safety
-/// `mul` is writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gs3_analog_fire(
-    analog_id: i32,
-    axis: i32,
-    action_mul: f32,
-    triggered: bool,
-    mul: *mut f32,
-) -> i32 {
-    match game::analog_fire(analog_id, axis, action_mul, triggered) {
-        Some((a, m)) => {
-            // SAFETY: caller contract.
-            unsafe { wr(mul, m) };
-            a as i32
-        }
-        None => -1,
-    }
 }
