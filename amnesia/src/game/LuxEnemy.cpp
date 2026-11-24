@@ -1420,6 +1420,8 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 		savedMessage.mvCustomValue = cVector3f(message.customV[0], message.customV[1], message.customV[2]);
 		savedMessage.mlState = message.state;
 		savedMessage.mlType = message.ty;
+		savedMessage.mfCustomValue = 0;
+		savedMessage.mlCustomValue = 0;
 
 		pData->mvMessages.Add(savedMessage);
 	}
