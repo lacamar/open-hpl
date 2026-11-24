@@ -167,16 +167,7 @@ enum
 	kOhplGa4Slot_DamagePs = 39,
 	kOhplGa4Slot_DoorBreakSound = 40,
 	kOhplGa4Slot_DoorBreakPs = 41,
-	kOhplGa4Slot_WheelMinSound = 50,
-	kOhplGa4Slot_WheelMaxSound = 51,
-	kOhplGa4Slot_WheelStuckSound = 52,
-	kOhplGa4Slot_LeverMinSound = 60,
-	kOhplGa4Slot_LeverMaxSound = 61,
-	kOhplGa4Slot_LeverStuckSound = 62,
 	kOhplGa4Slot_ConnectedLight = 70,
-	kOhplGa4Slot_ChangeStateSound = 80,
-	kOhplGa4Slot_MultiStuckSound = 81,
-	kOhplGa4Slot_ChangeStateCallback = 82,
 	kOhplGa4Slot_AngularOffsetArea = 90,
 };
 
@@ -444,63 +435,6 @@ struct OhplGa4DoorJoint
 	float min_angle;
 };
 
-struct OhplGa4WheelParams
-{
-	OhplGa4MoveData data;
-	bool can_interact_static;
-	float min_limit;
-	float max_limit;
-	float min_limit_range;
-	float max_limit_range;
-	bool min_limit_stuck;
-	bool max_limit_stuck;
-	int spin_dir;
-	bool slow_down_rotation;
-	bool skip_middle_state;
-};
-
-struct OhplGa4Wheel
-{
-	float angle;
-	float prev_angle;
-	float stuck_sound_timer;
-	float last_to_max;
-	float last_to_min;
-	int current_state;
-	int stuck_state;
-	float joint_angle;
-	float prev_joint_angle;
-	bool auto_moving;
-	float auto_move_goal;
-	bool interaction_disables_stuck;
-};
-
-struct OhplGa4LeverParams
-{
-	OhplGa4MoveData data;
-	bool can_interact_static;
-	float min_limit_range;
-	float max_limit_range;
-	bool min_limit_stuck;
-	bool max_limit_stuck;
-	float middle_angle_amount;
-	bool auto_move_to_angle;
-	int auto_move_goal;
-	float auto_move_speed_factor;
-	float auto_move_max_speed;
-};
-
-struct OhplGa4Lever
-{
-	int current_state;
-	int stuck_state;
-	bool interaction_disables_stuck;
-	float stuck_sound_timer;
-	float default_min_angle;
-	float default_max_angle;
-	float middle_angle;
-};
-
 struct OhplGa4LampParams
 {
 	bool can_be_lit_by_player;
@@ -524,28 +458,6 @@ struct OhplGa4LampLink
 	bool use_spec;
 	float amount;
 	float effects_alpha;
-};
-
-struct OhplGa4MultiParams
-{
-	OhplGa4MoveData data;
-	int num_of_states;
-	bool few_states;
-	float stick_to_state_max_dist;
-	bool can_interact_static;
-	bool auto_move_to_current_state;
-	float auto_move_speed_factor;
-	float auto_move_max_speed;
-};
-
-struct OhplGa4Multi
-{
-	int current_state;
-	int stuck_state;
-	float stuck_sound_timer;
-	bool interaction_disables_stuck;
-	float default_min_dist;
-	float default_max_dist;
 };
 
 struct OhplGa4MoveParams
@@ -597,15 +509,9 @@ static_assert(sizeof(OhplGa4JointData) == 16, "OhplGa4JointData layout");
 static_assert(sizeof(OhplGa4DoorParams) == 32, "OhplGa4DoorParams layout");
 static_assert(sizeof(OhplGa4Door) == 44, "OhplGa4Door layout");
 static_assert(sizeof(OhplGa4DoorJoint) == 8, "OhplGa4DoorJoint layout");
-static_assert(sizeof(OhplGa4WheelParams) == 48, "OhplGa4WheelParams layout");
-static_assert(sizeof(OhplGa4Wheel) == 48, "OhplGa4Wheel layout");
-static_assert(sizeof(OhplGa4LeverParams) == 52, "OhplGa4LeverParams layout");
-static_assert(sizeof(OhplGa4Lever) == 28, "OhplGa4Lever layout");
 static_assert(sizeof(OhplGa4LampParams) == 72, "OhplGa4LampParams layout");
 static_assert(sizeof(OhplGa4Lamp) == 12, "OhplGa4Lamp layout");
 static_assert(sizeof(OhplGa4LampLink) == 32, "OhplGa4LampLink layout");
-static_assert(sizeof(OhplGa4MultiParams) == 40, "OhplGa4MultiParams layout");
-static_assert(sizeof(OhplGa4Multi) == 24, "OhplGa4Multi layout");
 static_assert(sizeof(OhplGa4MoveParams) == 56, "OhplGa4MoveParams layout");
 static_assert(sizeof(OhplGa4MoveObj) == 144, "OhplGa4MoveObj layout");
 static_assert(sizeof(OhplGa4Hinge) == 112, "OhplGa4Hinge layout");
@@ -667,24 +573,7 @@ extern "C"
 	void ohpl_ga4_door_on_health_change(OhplGa4Door *s, const OhplGa4DoorParams *p, float health, bool has_main, const OhplGa4Sink *sink);
 	void ohpl_ga4_door_reset(OhplGa4Door *s, const OhplGa4DoorJoint *joints, int n, int n_joints, const OhplGa4Host *host, const OhplGa4Sink *sink);
 
-	void ohpl_ga4_wheel_load(const OhplGa4Vars *v, OhplGa4WheelParams *out);
-	void ohpl_ga4_wheel_load_instance(const OhplGa4Vars *v, OhplGa4Wheel *s, OhplGa4WheelParams *p, const OhplGa4Host *host, const OhplGa4Sink *sink);
-	bool ohpl_ga4_wheel_can_interact(const OhplGa4WheelParams *p, float mass);
-	void ohpl_ga4_wheel_setup(const OhplGa4WheelParams *p, const OhplGa4Sink *sink);
-	void ohpl_ga4_wheel_set_stuck_state(OhplGa4Wheel *s, const OhplGa4WheelParams *p, int state, bool effects, const OhplGa4Host *host, const OhplGa4Sink *sink);
-	void ohpl_ga4_wheel_set_angle(OhplGa4Wheel *s, const OhplGa4WheelParams *p, float x, bool auto_move, const OhplGa4Sink *sink);
-	void ohpl_ga4_wheel_on_connection_state(OhplGa4Wheel *s, const OhplGa4WheelParams *p, int state, const OhplGa4Host *host, const OhplGa4Sink *sink);
-	bool ohpl_ga4_wheel_on_interact(OhplGa4Wheel *s, const OhplGa4WheelParams *p, bool show_hints, const OhplGa4Host *host, const OhplGa4Sink *sink);
-	void ohpl_ga4_wheel_update(OhplGa4Wheel *s, const OhplGa4WheelParams *p, float dt, bool interacted, const OhplGa4Host *host, const OhplGa4Sink *sink);
 
-	void ohpl_ga4_lever_load(const OhplGa4Vars *v, OhplGa4LeverParams *out);
-	void ohpl_ga4_lever_load_instance(const OhplGa4Vars *v, OhplGa4Lever *s, OhplGa4LeverParams *p, const OhplGa4Sink *sink);
-	bool ohpl_ga4_lever_can_interact(const OhplGa4LeverParams *p, float mass);
-	void ohpl_ga4_lever_setup(OhplGa4Lever *s, const OhplGa4LeverParams *p, float min, float max, const OhplGa4Sink *sink);
-	void ohpl_ga4_lever_set_stuck_state(OhplGa4Lever *s, const OhplGa4LeverParams *p, int state, bool effects, const OhplGa4Sink *sink);
-	void ohpl_ga4_lever_on_connection_state(OhplGa4Lever *s, const OhplGa4LeverParams *p, int state, const OhplGa4Sink *sink);
-	bool ohpl_ga4_lever_on_interact(OhplGa4Lever *s, const OhplGa4LeverParams *p, bool show_hints, const OhplGa4Sink *sink);
-	void ohpl_ga4_lever_update(OhplGa4Lever *s, const OhplGa4LeverParams *p, float dt, bool interacted, const OhplGa4Host *host, const OhplGa4Sink *sink);
 
 	void ohpl_ga4_lamp_load(const OhplGa4Vars *v, OhplGa4LampParams *out);
 	void ohpl_ga4_lamp_state_new(OhplGa4Lamp *s);
@@ -698,14 +587,6 @@ extern "C"
 	float ohpl_ga4_lamp_fade_target(const float *light, float light_radius, const float *rgba, float radius, float *out_color);
 	void ohpl_ga4_lamp_light_connection_color(const float *default_color, const OhplGa4LampLink *links, int n, float *out);
 
-	void ohpl_ga4_multi_load(const OhplGa4Vars *v, OhplGa4MultiParams *out);
-	void ohpl_ga4_multi_state_new(OhplGa4Multi *s);
-	int ohpl_ga4_multi_compute_states(float min, float max, int n, float *out);
-	bool ohpl_ga4_multi_can_interact(const OhplGa4MultiParams *p, float mass);
-	void ohpl_ga4_multi_set_stuck_state(OhplGa4Multi *s, const float *states, int n, int state, bool effects, const OhplGa4Sink *sink);
-	void ohpl_ga4_multi_on_interact(OhplGa4Multi *s, const float *states, int n, const OhplGa4Sink *sink);
-	void ohpl_ga4_multi_update(OhplGa4Multi *s, const OhplGa4MultiParams *p, const float *states, int n, float dt, bool interacted, const OhplGa4Host *host, const OhplGa4Sink *sink);
-	void ohpl_ga4_multi_load_instance(const OhplGa4Vars *v, OhplGa4Multi *s, const float *states, int n, const OhplGa4Sink *sink);
 
 	void ohpl_ga4_move_load(const OhplGa4Vars *v, OhplGa4MoveParams *out);
 	void ohpl_ga4_move_load_instance(const OhplGa4Vars *v);
@@ -1293,8 +1174,6 @@ extern "C"
 	void ohpl_ga4c_chest_press(bool yes, int coins_needed, const OhplGa4Sink *sink);
 	void ohpl_ga4c_chest_set_locked(bool *locked, bool new_locked, const float *max_angles, int n, const OhplGa4Sink *sink);
 	bool ohpl_ga4c_chest_conn_locked(int state);
-	void ohpl_ga4c_emotion_load_instance(const OhplGa4Vars *v);
-	bool ohpl_ga4c_emotion_has_text(bool cat_empty, bool entry_empty);
 	void ohpl_ga4c_item_load(const OhplGa4Vars *v, int kind, OhplGa4cItemAmount *out);
 	void ohpl_ga4c_item_load_instance(const OhplGa4Vars *v, int kind, OhplGa4cItemAmount *out);
 	bool ohpl_ga4c_item_can_interact(bool destroy_me);

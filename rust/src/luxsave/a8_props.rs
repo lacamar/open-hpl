@@ -30,7 +30,7 @@ fn slot(obj: Obj, class: &[u8], name: &[u8]) -> Option<(Obj, usize)> {
 
 /// # Safety
 /// `obj` is a live save-data object of `class` (or a subclass) laid out as registered.
-unsafe fn put<T: Copy>(obj: Obj, class: &[u8], name: &[u8], v: T) {
+pub(crate) unsafe fn put<T: Copy>(obj: Obj, class: &[u8], name: &[u8], v: T) {
     if let Some((p, size)) = slot(obj, class, name)
         && size == size_of::<T>()
     {
@@ -41,7 +41,7 @@ unsafe fn put<T: Copy>(obj: Obj, class: &[u8], name: &[u8], v: T) {
 
 /// # Safety
 /// As [`put`].
-unsafe fn get<T: Copy + Default>(obj: Obj, class: &[u8], name: &[u8]) -> T {
+pub(crate) unsafe fn get<T: Copy + Default>(obj: Obj, class: &[u8], name: &[u8]) -> T {
     match slot(obj, class, name) {
         // SAFETY: caller contract; `size` is the registered member size.
         Some((p, size)) if size == size_of::<T>() => unsafe { p.cast::<T>().read_unaligned() },

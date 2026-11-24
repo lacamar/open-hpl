@@ -181,16 +181,6 @@ pub extern "C" fn ohpl_ga4c_chest_conn_locked(state: i32) -> bool {
 
 // ---- emotion stone ----
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4c_emotion_load_instance(v: *const VarsRef) {
-    propsc::emotion_load_instance(vr(v));
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga4c_emotion_has_text(cat_empty: bool, entry_empty: bool) -> bool {
-    propsc::emotion_has_text(cat_empty, entry_empty)
-}
-
 // ---- item ----
 
 #[repr(C)]

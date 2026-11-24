@@ -1,13 +1,13 @@
 //! C ABI of the A5 small props, mirrored in `amnesia/src/game/RustLuxPropA5.h`.
 #![allow(clippy::missing_safety_doc)]
 
-use super::a5_small::{self as s, A5Button, A5Door, A5Oil, A5Photocell, OilHost, PhotoHost};
+use super::a5_small::{self as s, A5Door, OilHost, PhotoHost};
 use super::ffi::{Sink, VarsRef};
 use super::ops::{Op, Ops, Pod};
 use crate::types::Vector3f;
 use std::ffi::c_void;
 
-fn with_ops<R>(sink: &Sink, f: impl FnOnce(&mut Ops) -> R) -> R {
+pub(super) fn with_ops<R>(sink: &Sink, f: impl FnOnce(&mut Ops) -> R) -> R {
     let (ctx, push) = (sink.ctx, sink.push);
     let mut fwd = move |op: &Op| {
         // SAFETY: the sink stays valid for the call.
@@ -33,52 +33,8 @@ fn pod<T>(p: *mut T) -> Pod<T> {
 
 const _: () = {
     use std::mem::size_of;
-    assert!(size_of::<A5Button>() == 3);
-    assert!(size_of::<A5Photocell>() == 20);
     assert!(size_of::<A5Door>() == 8);
-    assert!(size_of::<A5Oil>() == 8);
 };
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a5_button_init(st: *mut A5Button) {
-    *rw(st) = A5Button::new();
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a5_button_load_instance(
-    v: *const VarsRef,
-    st: *mut A5Button,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        s::button_load_instance(rd::<VarsRef>(v), pod(st), ops)
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a5_button_can_interact(st: *const A5Button) -> bool {
-    s::button_can_interact(rd(st))
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a5_button_interact(st: *mut A5Button, sink: *const Sink) {
-    with_ops(rd(sink), |ops| s::button_interact(pod(st), ops));
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a5_button_set_on(
-    st: *mut A5Button,
-    on: bool,
-    effects: bool,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| s::button_set_on(pod(st), on, effects, ops));
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a5_button_conn(st: *mut A5Button, state: i32, sink: *const Sink) {
-    with_ops(rd(sink), |ops| s::button_conn(pod(st), state, ops));
-}
 
 #[repr(C)]
 pub struct PhotoHostC {
@@ -109,23 +65,6 @@ impl PhotoHost for &PhotoHostC {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a5_photocell_load_instance(v: *const VarsRef, st: *mut A5Photocell) {
-    s::photocell_load_instance(rd::<VarsRef>(v), rw(st));
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a5_photocell_update(
-    st: *mut A5Photocell,
-    dt: f32,
-    host: *const PhotoHostC,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        s::photocell_update(pod(st), dt, &mut rd(host), ops);
-    });
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_a5_door_load(v: *const VarsRef) {
     s::door_load(rd::<VarsRef>(v));
 }
@@ -143,11 +82,6 @@ pub unsafe extern "C" fn ohpl_a5_door_update(st: *mut A5Door, dt: f32) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_a5_door_interact(st: *mut A5Door, sink: *const Sink) {
     with_ops(rd(sink), |ops| s::door_interact(pod(st), ops));
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a5_oil_load(v: *const VarsRef) {
-    s::oil_load(rd::<VarsRef>(v));
 }
 
 #[repr(C)]
@@ -173,18 +107,4 @@ impl OilHost for &OilHostC {
         // SAFETY: as above.
         unsafe { (self.total_oil)(self.ctx) }
     }
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a5_oil_focus_tier(st: *mut A5Oil, host: *const OilHostC) -> i32 {
-    s::oil_focus_tier(rw(st), &mut rd(host))
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a5_oil_interact(
-    st: *mut A5Oil,
-    host: *const OilHostC,
-    sink: *const Sink,
-) -> bool {
-    with_ops(rd(sink), |ops| s::oil_interact(rw(st), &mut rd(host), ops))
 }

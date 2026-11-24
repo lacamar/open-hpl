@@ -26,6 +26,9 @@ mod object;
 pub(crate) mod opc;
 pub(crate) mod ops;
 mod propsc;
+mod shell;
+#[cfg(test)]
+mod shell_tests;
 mod smallprops;
 pub mod state;
 mod swingdoor;

@@ -6,22 +6,6 @@
 
 #include "RustLuxProp.h"
 
-struct OhplA5Button
-{
-	bool on;
-	bool can_on;
-	bool can_off;
-};
-
-struct OhplA5Photocell
-{
-	bool lit;
-	float light_level;
-	float check_count;
-	float on_limit;
-	float off_limit;
-};
-
 struct OhplA5Door
 {
 	bool locked;
@@ -29,10 +13,31 @@ struct OhplA5Door
 	float locked_count;
 };
 
-struct OhplA5Oil
+struct OhplPropRs;
+
+enum
 {
-	bool calculated;
-	float amount;
+	kOhplPrsButton = 0,
+	kOhplPrsPhotocell = 1,
+	kOhplPrsEmotion = 2,
+	kOhplPrsOil = 3,
+	kOhplPrsLever = 4,
+	kOhplPrsWheel = 5,
+	kOhplPrsMulti = 6,
+
+	kOhplPrsStrDescCat = 0,
+	kOhplPrsStrDescEntry = 1,
+	kOhplPrsStrTextCat = 2,
+	kOhplPrsStrTextEntry = 3,
+	kOhplPrsStrSound = 4,
+	kOhplPrsStrOilFill = 5,
+	kOhplPrsStrOilEmpty = 6,
+	kOhplPrsStrMinLimit = 0,
+	kOhplPrsStrMaxLimit = 1,
+	kOhplPrsStrStuck = 2,
+	kOhplPrsStrChangeSound = 0,
+	kOhplPrsStrMultiStuck = 1,
+	kOhplPrsStrMultiCallback = 2,
 };
 
 struct OhplA5PhotoHost
@@ -85,28 +90,41 @@ enum
 	kOhplA5Slot_OilEmpty = 209,
 };
 
-static_assert(sizeof(OhplA5Button) == 3, "OhplA5Button layout");
-static_assert(sizeof(OhplA5Photocell) == 20, "OhplA5Photocell layout");
 static_assert(sizeof(OhplA5Door) == 8, "OhplA5Door layout");
-static_assert(sizeof(OhplA5Oil) == 8, "OhplA5Oil layout");
 
 extern "C"
 {
-	void ohpl_a5_button_init(OhplA5Button *st);
-	void ohpl_a5_button_load_instance(const OhplGa4Vars *v, OhplA5Button *st, const OhplGa4Sink *sink);
-	bool ohpl_a5_button_can_interact(const OhplA5Button *st);
-	void ohpl_a5_button_interact(OhplA5Button *st, const OhplGa4Sink *sink);
-	void ohpl_a5_button_set_on(OhplA5Button *st, bool on, bool effects, const OhplGa4Sink *sink);
-	void ohpl_a5_button_conn(OhplA5Button *st, int state, const OhplGa4Sink *sink);
-	void ohpl_a5_photocell_load_instance(const OhplGa4Vars *v, OhplA5Photocell *st);
-	void ohpl_a5_photocell_update(OhplA5Photocell *st, float dt, const OhplA5PhotoHost *host, const OhplGa4Sink *sink);
+	OhplPropRs *ohpl_prs_new(int kind);
+	void ohpl_prs_free(OhplPropRs *p);
+	void ohpl_prs_load_vars(OhplPropRs *p, const OhplGa4Vars *v);
+	bool ohpl_prs_move_data(OhplPropRs *p, float *out);
+	void ohpl_prs_load_instance(OhplPropRs *p, const OhplGa4Vars *v, const OhplGa4Host *host, const OhplGa4Sink *sink);
+	bool ohpl_prs_can_interact(OhplPropRs *p, float mass);
+	int ohpl_prs_crosshair(OhplPropRs *p);
+	bool ohpl_prs_flag(OhplPropRs *p, int which);
+	bool ohpl_prs_interact(OhplPropRs *p, const OhplA5OilHost *oil, const OhplGa4Sink *sink);
+	bool ohpl_prs_joint_interact(OhplPropRs *p, bool show_hints, const OhplGa4Host *host, const OhplGa4Sink *sink);
+	int ohpl_prs_focus(OhplPropRs *p, const OhplA5OilHost *oil);
+	void ohpl_prs_update(OhplPropRs *p, float dt, const OhplA5PhotoHost *photo, const OhplGa4Sink *sink);
+	void ohpl_prs_joint_update(OhplPropRs *p, float dt, bool interacted, const OhplGa4Host *host, const OhplGa4Sink *sink);
+	void ohpl_prs_setup(OhplPropRs *p, float min, float max, const OhplGa4Sink *sink);
+	void ohpl_prs_conn(OhplPropRs *p, int state, const OhplGa4Host *host, const OhplGa4Sink *sink);
+	void ohpl_prs_set_on(OhplPropRs *p, bool on, bool effects, const OhplGa4Sink *sink);
+	void ohpl_prs_set_can(OhplPropRs *p, bool off, bool v);
+	void ohpl_prs_set_stuck(OhplPropRs *p, int state, bool effects, const OhplGa4Host *host, const OhplGa4Sink *sink);
+	int ohpl_prs_stuck_state(OhplPropRs *p);
+	int ohpl_prs_lever_state(OhplPropRs *p);
+	void ohpl_prs_set_disables(OhplPropRs *p, bool v);
+	void ohpl_prs_set_angle(OhplPropRs *p, float x, bool auto_move, const OhplGa4Sink *sink);
+	void ohpl_prs_wheel(OhplPropRs *p, float *out);
+	const unsigned char *ohpl_prs_str(OhplPropRs *p, int i, size_t *n);
+	void ohpl_prs_set_str(OhplPropRs *p, int i, const unsigned char *s, size_t n);
+	void ohpl_prs_save(OhplPropRs *p, void *d);
+	int ohpl_prs_load(OhplPropRs *p, void *d, int phase);
 	void ohpl_a5_door_load(const OhplGa4Vars *v);
 	void ohpl_a5_door_load_instance(const OhplGa4Vars *v, OhplA5Door *st);
 	void ohpl_a5_door_update(OhplA5Door *st, float dt);
 	void ohpl_a5_door_interact(OhplA5Door *st, const OhplGa4Sink *sink);
-	void ohpl_a5_oil_load(const OhplGa4Vars *v);
-	int ohpl_a5_oil_focus_tier(OhplA5Oil *st, const OhplA5OilHost *host);
-	bool ohpl_a5_oil_interact(OhplA5Oil *st, const OhplA5OilHost *host, const OhplGa4Sink *sink);
 }
 
 #endif

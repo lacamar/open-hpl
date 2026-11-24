@@ -8,16 +8,16 @@ use super::base::{
     self, BaseInstance, BaseParams, BaseState, EffectsIn, LightData, MoveIn, OutsideBody,
 };
 use super::lamp::{self, LampLink, LampParams, LampState};
-use super::lever::{self, LeverParams, LeverState};
+use super::lever::LeverParams;
 use super::moveobject::{self, MoveObjState, MoveParams};
-use super::multislider::{self, MultiParams, MultiState};
+use super::multislider::MultiParams;
 use super::object::{
     self, ImpactBody, JointData, ObjectInstance, ObjectParams, ObjectState, UpdateIn,
 };
 use super::ops::{Hinge, Op, Ops, Pod, Probe, Slider};
 use super::swingdoor::{self, DoorJoint, DoorParams, DoorState, Env};
 use super::vars::Vars;
-use super::wheel::{self, WheelParams, WheelState};
+use super::wheel::WheelState;
 use crate::string_ffi::units;
 use crate::types::{Color, Matrixf, Vector3f};
 use std::ffi::c_void;
@@ -811,187 +811,7 @@ pub unsafe extern "C" fn ohpl_ga4_door_reset(
 
 // ---- wheel ----
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_wheel_load(v: *const VarsRef, out: *mut WheelParams) {
-    wheel::load(vr(v), rw(out));
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_wheel_load_instance(
-    v: *const VarsRef,
-    s: *mut WheelState,
-    p: *mut WheelParams,
-    host: *const Host,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        wheel::load_instance(vr(v), pod(s), pod(p), host!(host), ops);
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_wheel_can_interact(p: *const WheelParams, mass: f32) -> bool {
-    wheel::can_interact(rd(p), mass)
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_wheel_setup(p: *const WheelParams, sink: *const Sink) {
-    with_ops(rd(sink), |ops| wheel::setup(rd(p), ops));
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_wheel_set_stuck_state(
-    s: *mut WheelState,
-    p: *const WheelParams,
-    state: i32,
-    effects: bool,
-    host: *const Host,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        wheel::set_stuck_state(pod(s), rd(p), state, effects, host!(host), ops);
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_wheel_set_angle(
-    s: *mut WheelState,
-    p: *const WheelParams,
-    x: f32,
-    auto_move: bool,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        wheel::set_angle(rw(s), rd(p), x, auto_move, ops)
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_wheel_on_connection_state(
-    s: *mut WheelState,
-    p: *const WheelParams,
-    state: i32,
-    host: *const Host,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        wheel::on_connection_state(pod(s), rd(p), state, host!(host), ops);
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_wheel_on_interact(
-    s: *mut WheelState,
-    p: *const WheelParams,
-    show_hints: bool,
-    host: *const Host,
-    sink: *const Sink,
-) -> bool {
-    with_ops(rd(sink), |ops| {
-        let disables = rd(s).interaction_disables_stuck;
-        wheel::on_interact(pod(s), rd(p), show_hints, disables, host!(host), ops)
-    })
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_wheel_update(
-    s: *mut WheelState,
-    p: *const WheelParams,
-    dt: f32,
-    interacted: bool,
-    host: *const Host,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        wheel::update(pod(s), rd(p), dt, interacted, host!(host), ops);
-    });
-}
-
 // ---- lever ----
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_lever_load(v: *const VarsRef, out: *mut LeverParams) {
-    lever::load(vr(v), rw(out));
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_lever_load_instance(
-    v: *const VarsRef,
-    s: *mut LeverState,
-    p: *mut LeverParams,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        lever::load_instance(vr(v), pod(s), pod(p), ops)
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_lever_can_interact(p: *const LeverParams, mass: f32) -> bool {
-    lever::can_interact(rd(p), mass)
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_lever_setup(
-    s: *mut LeverState,
-    p: *const LeverParams,
-    min: f32,
-    max: f32,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| lever::setup(rw(s), rd(p), min, max, ops));
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_lever_set_stuck_state(
-    s: *mut LeverState,
-    p: *const LeverParams,
-    state: i32,
-    effects: bool,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        lever::set_stuck_state(pod(s), rd(p), state, effects, ops)
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_lever_on_connection_state(
-    s: *mut LeverState,
-    p: *const LeverParams,
-    state: i32,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        lever::on_connection_state(pod(s), rd(p), state, ops)
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_lever_on_interact(
-    s: *mut LeverState,
-    p: *const LeverParams,
-    show_hints: bool,
-    sink: *const Sink,
-) -> bool {
-    with_ops(rd(sink), |ops| {
-        lever::on_interact(pod(s), rd(p), show_hints, ops)
-    })
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_lever_update(
-    s: *mut LeverState,
-    p: *const LeverParams,
-    dt: f32,
-    interacted: bool,
-    host: *const Host,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        lever::update(pod(s), rd(p), dt, interacted, host!(host), ops);
-    });
-}
 
 // ---- lamp ----
 
@@ -1127,101 +947,6 @@ pub unsafe extern "C" fn ohpl_ga4_lamp_light_connection_color(
 }
 
 // ---- multi slider ----
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_multi_load(v: *const VarsRef, out: *mut MultiParams) {
-    multislider::load(vr(v), rw(out));
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_multi_state_new(s: *mut MultiState) {
-    // SAFETY: `s` is uninitialised storage for one `MultiState`.
-    unsafe { s.write(MultiState::new()) }
-}
-
-/// Fills `out[0..n)` (`n` states) and returns how many were written.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_multi_compute_states(
-    min: f32,
-    max: f32,
-    n: i32,
-    out: *mut f32,
-) -> i32 {
-    let states = multislider::compute_states(min, max, n);
-    for (i, v) in states.iter().enumerate() {
-        // SAFETY: caller contract: `out` holds `n` floats.
-        unsafe { out.add(i).write(*v) };
-    }
-    states.len() as i32
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_multi_can_interact(p: *const MultiParams, mass: f32) -> bool {
-    multislider::can_interact(rd(p), mass)
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_multi_set_stuck_state(
-    s: *mut MultiState,
-    states: *const f32,
-    n: i32,
-    state: i32,
-    effects: bool,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        multislider::set_stuck_state(pod(s), sl(states, n), state, effects, ops);
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_multi_on_interact(
-    s: *mut MultiState,
-    states: *const f32,
-    n: i32,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        multislider::on_interact(pod(s), sl(states, n), ops)
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_multi_update(
-    s: *mut MultiState,
-    p: *const MultiParams,
-    states: *const f32,
-    n: i32,
-    dt: f32,
-    interacted: bool,
-    host: *const Host,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        multislider::update(
-            pod(s),
-            rd(p),
-            sl(states, n),
-            dt,
-            interacted,
-            host!(host),
-            ops,
-        );
-    });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga4_multi_load_instance(
-    v: *const VarsRef,
-    s: *mut MultiState,
-    states: *const f32,
-    n: i32,
-    sink: *const Sink,
-) {
-    with_ops(rd(sink), |ops| {
-        multislider::load_instance(vr(v), pod(s), sl(states, n), ops);
-    });
-}
 
 // ---- move object ----
 
