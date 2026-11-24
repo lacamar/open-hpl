@@ -76,19 +76,12 @@
 
 #include "LuxProp_Object.h"
 #include "LuxProp_SwingDoor.h"
-#include "LuxProp_Lever.h"
-#include "LuxProp_Wheel.h"
 #include "LuxProp_Lamp.h"
-#include "LuxProp_Photocell.h"
 #include "LuxProp_MoveObject.h"
 #include "LuxProp_Item.h"
 #include "LuxProp_Chest.h"
 #include "LuxProp_LevelDoor.h"
-#include "LuxProp_Button.h"
-#include "LuxProp_OilBarrel.h"
-#include "LuxProp_EmotionStone.h"
 #include "LuxProp_NPC.h"
-#include "LuxProp_MultiSlider.h"
 
 #include "LuxCritter_Bug.h"
 #include "LuxCritter_Spider.h"
@@ -1402,6 +1395,7 @@ bool cLuxBase::InitGame()
 			tString sKey = OhplGa9GetS(a[2]);
 			cResources *pRes = mpEngine->GetResources();
 #define LUX_ENTITY_LOADER(aClass) { OhplA13bLog("loader entity %s %s", #aClass, sKey.c_str()); pRes->AddEntityLoader(hplNew(aClass, (sKey))); }
+#define LUX_PROP_LOADER_RS(aType, aName) { OhplA13bLog("loader entity %s %s", aName, sKey.c_str()); pRes->AddEntityLoader(hplNew(cLuxPropLoaderRs, (sKey, aType))); }
 #define LUX_AREA_LOADER_RS(aType, aName) { OhplA13bLog("loader area %s %s", aName, sKey.c_str()); pRes->AddAreaLoader(hplNew(cLuxAreaLoaderRs, (sKey, aType))); }
 #define LUX_AREA_LOADER(aClass) { OhplA13bLog("loader area %s %s", #aClass, sKey.c_str()); pRes->AddAreaLoader(hplNew(aClass, (sKey))); }
 			if(a[0].i == 0)
@@ -1411,20 +1405,20 @@ bool cLuxBase::InitGame()
 				case 0: LUX_ENTITY_LOADER(cLuxStaticPropLoader) break;
 				case 1: LUX_ENTITY_LOADER(cLuxPropLoader_Object) break;
 				case 2: LUX_ENTITY_LOADER(cLuxPropLoader_SwingDoor) break;
-				case 3: LUX_ENTITY_LOADER(cLuxPropLoader_Lever) break;
-				case 4: LUX_ENTITY_LOADER(cLuxPropLoader_Wheel) break;
+				case 3: LUX_PROP_LOADER_RS(eLuxPropType_Lever, "cLuxPropLoader_Lever") break;
+				case 4: LUX_PROP_LOADER_RS(eLuxPropType_Wheel, "cLuxPropLoader_Wheel") break;
 				case 5: LUX_ENTITY_LOADER(cLuxPropLoader_Lamp) break;
-				case 6: LUX_ENTITY_LOADER(cLuxPropLoader_Photocell) break;
+				case 6: LUX_PROP_LOADER_RS(eLuxPropType_Photocell, "cLuxPropLoader_Photocell") break;
 				case 7: LUX_ENTITY_LOADER(cLuxPropLoader_MoveObject) break;
 				case 8: LUX_ENTITY_LOADER(cLuxPropLoader_Item) break;
 				case 9: LUX_ENTITY_LOADER(cLuxPropLoader_Chest) break;
 				case 10: LUX_ENTITY_LOADER(cLuxPropLoader_LevelDoor) break;
-				case 11: LUX_ENTITY_LOADER(cLuxPropLoader_Button) break;
-				case 12: LUX_ENTITY_LOADER(cLuxPropLoader_OilBarrel) break;
+				case 11: LUX_PROP_LOADER_RS(eLuxPropType_Button, "cLuxPropLoader_Button") break;
+				case 12: LUX_PROP_LOADER_RS(eLuxPropType_OilBarrel, "cLuxPropLoader_OilBarrel") break;
 #ifndef LUX_DEMO_VERSION
-				case 13: LUX_ENTITY_LOADER(cLuxPropLoader_EmotionStone) break;
+				case 13: LUX_PROP_LOADER_RS(eLuxPropType_EmotionStone, "cLuxPropLoader_EmotionStone") break;
 				case 14: LUX_ENTITY_LOADER(cLuxPropLoader_NPC) break;
-				case 15: LUX_ENTITY_LOADER(cLuxPropLoader_MultiSlider) break;
+				case 15: LUX_PROP_LOADER_RS(eLuxPropType_MultiSlider, "cLuxPropLoader_MultiSlider") break;
 #endif
 				case 16: LUX_ENTITY_LOADER(cLuxPropLoader_Critter_Bug) break;
 				case 17: LUX_ENTITY_LOADER(cLuxPropLoader_Critter_Spider) break;
@@ -1461,6 +1455,7 @@ bool cLuxBase::InitGame()
 			}
 #undef LUX_ENTITY_LOADER
 #undef LUX_AREA_LOADER
+#undef LUX_PROP_LOADER_RS
 #undef LUX_AREA_LOADER_RS
 			break;
 		}

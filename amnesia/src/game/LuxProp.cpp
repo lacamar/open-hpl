@@ -22,6 +22,13 @@
 #include "LuxMap.h"
 #include "LuxPlayer.h"
 #include "LuxInteractConnections.h"
+#include "LuxEffectHandler.h"
+#include "LuxHelpFuncs.h"
+#include "LuxMapHelper.h"
+#include "LuxMessageHandler.h"
+#include "LuxInventory.h"
+#include "LuxHintHandler.h"
+#include "LuxPlayerState.h"
 
 void OhplA5PropDump(iLuxProp *apProp);
 void OhplA5OnLoad();
@@ -1771,3 +1778,544 @@ void iLuxProp::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 
 //-----------------------------------------------------------------------
 
+
+//////////////////////////////////////////////////////////////////////////
+// RUST SHELL: BUTTON, PHOTOCELL, EMOTION STONE, OIL BARREL, LEVER, WHEEL, MULTI SLIDER
+//////////////////////////////////////////////////////////////////////////
+
+//-----------------------------------------------------------------------
+
+static int OhplPropRsKind(eLuxPropType aType)
+{
+	switch(aType)
+	{
+	case eLuxPropType_Button: return kOhplPrsButton;
+	case eLuxPropType_Photocell: return kOhplPrsPhotocell;
+	case eLuxPropType_EmotionStone: return kOhplPrsEmotion;
+	case eLuxPropType_Lever: return kOhplPrsLever;
+	case eLuxPropType_Wheel: return kOhplPrsWheel;
+	case eLuxPropType_MultiSlider: return kOhplPrsMulti;
+	default: return kOhplPrsOil;
+	}
+}
+
+static const char *OhplPropRsName(eLuxPropType aType)
+{
+	return aType == eLuxPropType_Lever ? "Lever" : (aType == eLuxPropType_Wheel ? "Wheel" : "MultiSlider");
+}
+
+cLuxPropLoaderRs::cLuxPropLoaderRs(const tString& asName, eLuxPropType aPropType) : iLuxPropLoader(asName), mPropType(aPropType)
+{
+	if(aPropType == eLuxPropType_Lever || aPropType == eLuxPropType_Wheel || aPropType == eLuxPropType_MultiSlider)
+		mfDefaultMaxFocusDistance = gpBase->mpGameCfg->GetFloat("Player_Interaction", tString(OhplPropRsName(aPropType)) + "_DefaultMaxFocusDist", 0);
+}
+
+iLuxProp *cLuxPropLoaderRs::CreateProp(const tString& asName, int alID, cLuxMap *apMap)
+{
+	return hplNew(cLuxPropRs, (asName, alID, apMap, mPropType) );
+}
+
+void cLuxPropLoaderRs::LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)
+{
+	cLuxPropRs *pProp = static_cast<cLuxPropRs*>(apProp);
+	OhplGa4VarsAdapter vars(this);
+	ohpl_prs_load_vars(pProp->mpRs, vars.Vars());
+
+	float vData[4];
+	bool bFewStates = ohpl_prs_move_data(pProp->mpRs, vData);
+	if(mPropType == eLuxPropType_MultiSlider)
+	{
+		pProp->mSlideData.mfSlideMaxSpeed = vData[0];
+		pProp->mSlideData.mfSlideSlowDownFactor = vData[1];
+		pProp->mSlideData.mfSlideSpeedFactor = vData[2];
+		pProp->mSlideData.mfSlideThrowImpulse = vData[3];
+	}
+	else if(pProp->IsJoint())
+	{
+		iLuxInteractData_RotateBase *pData = pProp->GetMoveBaseData();
+		pData->mfMoveMaxSpeed = vData[0];
+		pData->mfMoveSlowDownFactor = vData[1];
+		pData->mfMoveSpeedFactor = vData[2];
+		pData->mfMoveThrowImpulse = vData[3];
+	}
+	if(bFewStates)
+		Warning("MultiSlider '%s' has fewer than 2 states! It will not function properly!\n", pProp->GetName().c_str());
+}
+
+void cLuxPropLoaderRs::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)
+{
+	cLuxPropRs *pProp = static_cast<cLuxPropRs*>(apProp);
+	OhplGa4VarsAdapter vars(apInstanceVars);
+	OhplGa4Run run(pProp);
+	ohpl_prs_load_instance(pProp->mpRs, vars.Vars(), run.Host(), run.Sink());
+}
+
+//-----------------------------------------------------------------------
+
+cLuxPropRs::cLuxPropRs(const tString &asName, int alID, cLuxMap *apMap, eLuxPropType aPropType) : iLuxProp(asName, alID, apMap, aPropType)
+{
+	mpRs = ohpl_prs_new(OhplPropRsKind(aPropType));
+	mpHingeJoint = NULL;
+	mpSliderJoint = NULL;
+	mpJointBody = NULL;
+	mRotatePid.SetErrorNum(10);
+	mRotatePid.p = 10.0f;
+	mRotatePid.i = 0.0f;
+	mRotatePid.d = aPropType == eLuxPropType_Wheel ? 0.5f : 1.0f;
+	mAutoMovePid.SetErrorNum(10);
+	mAutoMovePid.p = 40.0f;
+	mAutoMovePid.i = 0.0f;
+	mAutoMovePid.d = 0.0f;//Derative fucks up big time.. so skip!
+}
+
+cLuxPropRs::~cLuxPropRs()
+{
+	ohpl_prs_free(mpRs);
+}
+
+tString cLuxPropRs::RsStr(int alSlot)
+{
+	size_t n = 0;
+	const char *p = (const char*)ohpl_prs_str(mpRs, alSlot, &n);
+	return tString(p, n);
+}
+
+bool cLuxPropRs::IsJoint()
+{
+	return GetPropType() == eLuxPropType_Lever || GetPropType() == eLuxPropType_Wheel || GetPropType() == eLuxPropType_MultiSlider;
+}
+
+//-----------------------------------------------------------------------
+
+bool cLuxPropRs::CanInteract(iPhysicsBody *apBody)
+{
+	return ohpl_prs_can_interact(mpRs, apBody ? apBody->GetMass() : 0.0f);
+}
+
+bool cLuxPropRs::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
+{
+	if(IsJoint())
+	{
+		bool bPickMoving = apBody->GetMass()==0 && ohpl_prs_flag(mpRs, 0);
+		if(bPickMoving)
+		{
+			if(GetPropType() == eLuxPropType_Wheel) apBody = mpJointBody;
+			else
+			{
+				for(size_t i=0; i<mvBodies.size(); ++i)
+				{
+					if(mvBodies[i]->GetMass() > 0)
+					{
+						apBody = mvBodies[i];
+						break;
+					}
+				}
+			}
+		}
+		OhplGa4Run run(this);
+		bool bHint = ohpl_prs_joint_interact(mpRs, S().show_hints, run.Host(), run.Sink());
+		switch(GetPropType())
+		{
+		case eLuxPropType_Lever:
+			if(bHint) gpBase->mpHintHandler->Add("EntityLever", kTranslate("Hints", "EntityLever"), 0);
+			break;
+		case eLuxPropType_Wheel:
+			if(bHint) gpBase->mpHintHandler->Add("EntityWheel", kTranslate("Hints", "EntityWheel"), 0);
+			break;
+		default:
+			gpBase->mpHintHandler->Add("EntitySlide", kTranslate("Hints", "EntitySlide"), 0);
+		}
+		cLuxPlayerStateVars::SetupInteraction(apBody, avPos);
+		switch(GetPropType())
+		{
+		case eLuxPropType_Lever: gpBase->mpPlayer->ChangeState(eLuxPlayerState_InteractLever); mRotatePid.Reset(); break;
+		case eLuxPropType_Wheel: gpBase->mpPlayer->ChangeState(eLuxPlayerState_InteractWheel); break;
+		default: gpBase->mpPlayer->ChangeState(eLuxPlayerState_InteractSlide); mAutoMovePid.Reset();
+		}
+		return true;
+	}
+
+	OhplA5OilHost host = { this, &HostHardMode, &HostLampOil, &HostTotalOil };
+	OhplGa4Run run(this);
+	bool bRet = ohpl_prs_interact(mpRs, &host, run.Sink());
+	if(GetPropType() == eLuxPropType_EmotionStone)
+		gpBase->mpEffectHandler->GetEmotionFlash()->Start(RsStr(kOhplPrsStrTextCat), RsStr(kOhplPrsStrTextEntry), RsStr(kOhplPrsStrSound));
+	return bRet;
+}
+
+eLuxFocusCrosshair cLuxPropRs::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
+{
+	int lKind = ohpl_prs_crosshair(mpRs);
+	if(lKind == 2) lKind = CanInteract(apBody) ? 1 : 0;
+	return lKind == 1 ? eLuxFocusCrosshair_Grab : eLuxFocusCrosshair_Default;
+}
+
+tWString cLuxPropRs::GetFocusText()
+{
+	OhplA5OilHost host = { this, &HostHardMode, &HostLampOil, &HostTotalOil };
+	switch(GetPropType())
+	{
+	case eLuxPropType_EmotionStone:
+		if(ohpl_prs_focus(mpRs, &host) == 0) return _W("");
+		return gpBase->mpHelpFuncs->ParseString(kTranslate(RsStr(kOhplPrsStrDescCat), RsStr(kOhplPrsStrDescEntry)));
+	case eLuxPropType_OilBarrel:
+		{
+			static const char *vEntries[] = {"OilBarrel_FocusText_Empty", "OilBarrel_FocusText_025", "OilBarrel_FocusText_050", "OilBarrel_FocusText_075", "OilBarrel_FocusText_100"};
+			int lTier = ohpl_prs_focus(mpRs, &host);
+			return kTranslate("Game", vEntries[lTier < 0 ? 0 : (lTier > 4 ? 4 : lTier)]);
+		}
+	default:
+		return _W("");
+	}
+}
+
+void cLuxPropRs::OnSetupAfterLoad(cWorld *apWorld)
+{
+	if(IsJoint() == false) return;
+	const bool bSlider = GetPropType() == eLuxPropType_MultiSlider;
+	iPhysicsJoint *pJoint = mvJoints[0];
+	if(pJoint->GetType() != (bSlider ? ePhysicsJointType_Slider : ePhysicsJointType_Hinge))
+	{
+		Error("%s %s does not have a hinge joint!\n", OhplPropRsName(GetPropType()), GetName().c_str());
+		return;
+	}
+	OhplGa4Run run(this);
+	if(bSlider)
+	{
+		mpSliderJoint = static_cast<iPhysicsJointSlider*>(pJoint);
+		mpJointBody = mpSliderJoint->GetChildBody();
+		ohpl_prs_setup(mpRs, mpSliderJoint->GetMinDistance(), mpSliderJoint->GetMaxDistance(), run.Sink());
+		return;
+	}
+	mpHingeJoint = static_cast<iPhysicsJointHinge*>(pJoint);
+	mpJointBody = mpHingeJoint->GetChildBody();
+	if(GetPropType() == eLuxPropType_Wheel || ohpl_prs_flag(mpRs, 1))
+		mpJointBody->SetGravity(false);
+	ohpl_prs_setup(mpRs, mpHingeJoint->GetMinAngle(), mpHingeJoint->GetMaxAngle(), run.Sink());
+}
+
+void cLuxPropRs::UpdatePropSpecific(float afTimeStep)
+{
+	OhplGa4Run run(this);
+	if(IsJoint())
+	{
+		ohpl_prs_joint_update(mpRs, afTimeStep, IsInteractedWith(), run.Host(), run.Sink());
+		return;
+	}
+	if(GetPropType() != eLuxPropType_Photocell) return;
+	OhplA5PhotoHost host = { this, &HostBounds, &HostLightAt, &HostIllumination };
+	ohpl_prs_update(mpRs, afTimeStep, &host, run.Sink());
+}
+
+float cLuxPropRs::OnInteractDebugDraw(cGuiSet *apSet,iFontData *apFont, float afStartY)
+{
+	if(GetPropType() != eLuxPropType_Wheel) return afStartY;
+	float vWheel[3];
+	ohpl_prs_wheel(mpRs, vWheel);
+	apSet->DrawFont(apFont,cVector3f(5,afStartY,5),12,cColor(1,1),_W("WheelAngle: %f, Max: %f, Min: %f"),cMath::ToDeg(vWheel[0]),
+						cMath::ToDeg(vWheel[2]),cMath::ToDeg(vWheel[1]));
+	return afStartY + 13.0f;
+}
+
+void cLuxPropRs::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
+{
+	OhplGa4Run run(this);
+	ohpl_prs_conn(mpRs, alState, run.Host(), run.Sink());
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxPropRs::SetSwitchedOn(bool abX, bool abUseEffects)
+{
+	OhplGa4Run run(this);
+	ohpl_prs_set_on(mpRs, abX, abUseEffects, run.Sink());
+}
+
+void cLuxPropRs::SetCanBeSwitchedOn(bool abX)
+{
+	ohpl_prs_set_can(mpRs, false, abX);
+}
+
+void cLuxPropRs::SetCanBeSwitchedOff(bool abX)
+{
+	ohpl_prs_set_can(mpRs, true, abX);
+}
+
+void cLuxPropRs::SetStuckState(int alState, bool abEffects)
+{
+	OhplGa4Run run(this);
+	ohpl_prs_set_stuck(mpRs, alState, abEffects, run.Host(), run.Sink());
+}
+
+void cLuxPropRs::SetInteractionDisablesStuck(bool abX)
+{
+	ohpl_prs_set_disables(mpRs, abX);
+}
+
+int cLuxPropRs::GetLeverState()
+{
+	return ohpl_prs_lever_state(mpRs);
+}
+
+void cLuxPropRs::SetAngle(float afX, bool abAutoMoveToAngle)
+{
+	OhplGa4Run run(this);
+	ohpl_prs_set_angle(mpRs, afX, abAutoMoveToAngle, run.Sink());
+}
+
+float cLuxPropRs::GetMinLimit()
+{
+	float vWheel[3] = {0, 0, 0};
+	ohpl_prs_wheel(mpRs, vWheel);
+	return vWheel[1];
+}
+
+float cLuxPropRs::GetMaxLimit()
+{
+	float vWheel[3] = {0, 0, 0};
+	ohpl_prs_wheel(mpRs, vWheel);
+	return vWheel[2];
+}
+
+void cLuxPropRs::SetChangeStateCallback(const tString &asCallback)
+{
+	ohpl_prs_set_str(mpRs, kOhplPrsStrMultiCallback, (const unsigned char*)asCallback.data(), asCallback.size());
+}
+
+//-----------------------------------------------------------------------
+
+bool cLuxPropRs::HostHardMode(void *apCtx)
+{
+	return gpBase->mbHardMode;
+}
+
+float cLuxPropRs::HostLampOil(void *apCtx)
+{
+	return gpBase->mpPlayer->GetLampOil();
+}
+
+float cLuxPropRs::HostTotalOil(void *apCtx)
+{
+	float fTotalOil = gpBase->mpPlayer->GetLampOil();
+	for(int i=0; i<gpBase->mpInventory->GetItemNum(); ++i)
+	{
+		cLuxInventory_Item *pItem = gpBase->mpInventory->GetItem(i);
+		if(OhplInvType(pItem) != eLuxItemType_LampOil) continue;
+		fTotalOil += OhplInvAmount(pItem) * (float)OhplInvCount(pItem);
+	}
+	return fTotalOil;
+}
+
+void cLuxPropRs::HostBounds(void *apCtx, float *apSize, float *apCenter)
+{
+	cBoundingVolume *pBV = static_cast<cLuxPropRs*>(apCtx)->mpMeshEntity->GetBoundingVolume();
+	cVector3f vSize = pBV->GetSize();
+	cVector3f vCenter = pBV->GetWorldCenter();
+	memcpy(apSize, vSize.v, sizeof(float) * 3);
+	memcpy(apCenter, vCenter.v, sizeof(float) * 3);
+}
+
+float cLuxPropRs::HostLightAt(void *apCtx, const float *apPos)
+{
+	return gpBase->mpMapHelper->GetLightLevelAtPos(cVector3f(apPos[0], apPos[1], apPos[2]));
+}
+
+bool cLuxPropRs::HostIllumination(void *apCtx, float *apOut)
+{
+	cMeshEntity *pMesh = static_cast<cLuxPropRs*>(apCtx)->mpMeshEntity;
+	if(pMesh == NULL) return false;
+	*apOut = pMesh->GetIlluminationAmount();
+	return true;
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxPropRs::Ga4Hinge(int alIdx, OhplGa4Hinge *apOut)
+{
+	apOut->angle = mpHingeJoint->GetAngle();
+	apOut->min_angle = mpHingeJoint->GetMinAngle();
+	apOut->max_angle = mpHingeJoint->GetMaxAngle();
+	cVector3f vPin = mpHingeJoint->GetPinDir();
+	cVector3f vPivot = mpHingeJoint->GetPivotPoint();
+	cVector3f vAngVel = mpJointBody->GetAngularVelocity();
+	memcpy(apOut->pin_dir, vPin.v, sizeof(apOut->pin_dir));
+	memcpy(apOut->pivot, vPivot.v, sizeof(apOut->pivot));
+	memcpy(apOut->child, mpJointBody->GetLocalMatrix().v, sizeof(apOut->child));
+	memcpy(apOut->child_ang_vel, vAngVel.v, sizeof(apOut->child_ang_vel));
+}
+
+void cLuxPropRs::Ga4Slider(OhplGa4Slider *apOut)
+{
+	cVector3f vPin = mpSliderJoint->GetPinDir();
+	cVector3f vVel = mpSliderJoint->GetChildBody()->GetLinearVelocity();
+	apOut->distance = mpSliderJoint->GetDistance();
+	memcpy(apOut->pin_dir, vPin.v, sizeof(apOut->pin_dir));
+	memcpy(apOut->child_lin_vel, vVel.v, sizeof(apOut->child_lin_vel));
+	apOut->child_mass = mpJointBody->GetMass();
+}
+
+void cLuxPropRs::Ga4ApplyOp(const OhplGa4Op &aOp)
+{
+	const bool bMulti = GetPropType() == eLuxPropType_MultiSlider;
+	switch(aOp.code)
+	{
+	case kOhplA5Op_ConnState:
+		ConnectionStateChange(aOp.i);
+		break;
+	case kOhplA5Op_SetEffects:
+		SetEffectsActive(aOp.i != 0, aOp.j != 0);
+		break;
+	case kOhplA5Op_PhotoIllum:
+		mpMeshEntity->SetIlluminationAmount(aOp.f[0]);
+		break;
+	case kOhplA5Op_OilSound:
+		if(aOp.i == kOhplA5Snd_Empty) PlaySound("EmptyBarell", RsStr(kOhplPrsStrOilEmpty), true, false);
+		else PlaySound("FillLantern", RsStr(kOhplPrsStrOilFill), true, false);
+		break;
+	case kOhplA5Op_OilSetLamp:
+		gpBase->mpPlayer->SetLampOil(aOp.f[0]);
+		break;
+	case kOhplA5Op_OilMessage:
+		{
+			const char *sEntry = "OilBarrel_Empty";
+			switch(aOp.i)
+			{
+			case kOhplA5Msg_LanternFull:	sEntry = "OilBarrel_LanternFull"; break;
+			case kOhplA5Msg_RefillFull:		sEntry = "OilBarrel_Refill_Full"; break;
+			case kOhplA5Msg_Refill025:		sEntry = "OilBarrel_Refill_Amount_025"; break;
+			case kOhplA5Msg_Refill050:		sEntry = "OilBarrel_Refill_Amount_050"; break;
+			case kOhplA5Msg_Refill075:		sEntry = "OilBarrel_Refill_Amount_075"; break;
+			case kOhplA5Msg_Refill100:		sEntry = "OilBarrel_Refill_Amount_100"; break;
+			}
+			gpBase->mpMessageHandler->SetMessage(kTranslate("Game", sEntry), 0);
+		}
+		break;
+	case kOhplGa4Op_HingeMin:
+		mpHingeJoint->SetMinAngle(aOp.f[0]);
+		break;
+	case kOhplGa4Op_HingeMax:
+		mpHingeJoint->SetMaxAngle(aOp.f[0]);
+		break;
+	case kOhplGa4Op_HingeSticky:
+		mpHingeJoint->SetStickyMinLimit(aOp.j != 0);
+		mpHingeJoint->SetStickyMaxLimit(aOp.j != 0);
+		break;
+	case kOhplGa4Op_BodyAngVel:
+		mpJointBody->SetAngularVelocity(cVector3f(aOp.v[0], aOp.v[1], aOp.v[2]));
+		break;
+	case kOhplGa4Op_PidReset:
+		mRotatePid.Reset();
+		break;
+	case kOhplGa4Op_PidTorque:
+		{
+			cVector3f vTorque = mRotatePid.Output(cVector3f(aOp.v[0], aOp.v[1], aOp.v[2]), aOp.f[0]);
+			vTorque = cMath::MatrixMul(mpJointBody->GetInertiaMatrix(), vTorque);
+			mpJointBody->AddTorque(vTorque);
+		}
+		break;
+	case kOhplGa4Op_PlaySound:
+		PlaySound(tString(OhplPropRsName(GetPropType())) + "Stuck", RsStr(bMulti ? kOhplPrsStrMultiStuck : kOhplPrsStrStuck), true, true);
+		break;
+	case kOhplGa4Op_LimitSound:
+		if(aOp.j)
+		{
+			tString sSound = RsStr(aOp.i == 1 ? kOhplPrsStrMaxLimit : kOhplPrsStrMinLimit);
+			if(sSound != "")
+			{
+				cSoundEntity *pSound = GetMap()->GetWorld()->CreateSoundEntity(tString(OhplPropRsName(GetPropType())) + "Sound", sSound, true);
+				if(pSound) pSound->SetPosition(mpHingeJoint->GetPivotPoint());
+			}
+		}
+		break;
+	case kOhplGa4Op_SliderMin:
+		mpSliderJoint->SetMinDistance(aOp.f[0]);
+		break;
+	case kOhplGa4Op_SliderMax:
+		mpSliderJoint->SetMaxDistance(aOp.f[0]);
+		break;
+	case kOhplGa4Op_SliderWake:
+		mpJointBody->Enable();
+		break;
+	case kOhplGa4Op_SliderForce:
+		{
+			float fForceSize = mAutoMovePid.Output(aOp.f[0], aOp.f[1]);
+			fForceSize *= mpJointBody->GetMass();
+			mpJointBody->AddForce(cVector3f(aOp.v[0], aOp.v[1], aOp.v[2])*fForceSize);
+		}
+		break;
+	case kOhplGa4Op_ChangeSound:
+		if(aOp.j && RsStr(kOhplPrsStrChangeSound) != "")
+		{
+			cSoundEntity *pSound = GetMap()->GetWorld()->CreateSoundEntity("MultiSliderSound", RsStr(kOhplPrsStrChangeSound), true);
+			if(pSound) pSound->SetPosition(mpJointBody->GetLocalPosition());
+		}
+		break;
+	case kOhplGa4Op_RunChangeCallback:
+		if(RsStr(kOhplPrsStrMultiCallback) != "")
+		{
+			GetMap()->RunScript(RsStr(kOhplPrsStrMultiCallback) + "(\""+GetName()+"\", "+cString::ToString(aOp.i)+")");
+		}
+		break;
+	default:
+		iLuxProp::Ga4ApplyOp(aOp);
+	}
+}
+
+//-----------------------------------------------------------------------
+
+kSerializeRustClassP(cLuxProp_Button_SaveData, iLuxProp_SaveData)
+kSerializeRustClassP(cLuxProp_Photocell_SaveData, iLuxProp_SaveData)
+kSerializeRustClassP(cLuxProp_EmotionStone_SaveData, iLuxProp_SaveData)
+kSerializeRustClassP(cLuxProp_OilBarrel_SaveData, iLuxProp_SaveData)
+kSerializeRustClassP(cLuxProp_Lever_SaveData, iLuxProp_SaveData)
+kSerializeRustClassP(cLuxProp_Wheel_SaveData, iLuxProp_SaveData)
+kSerializeRustClassP(cLuxProp_MultiSlider_SaveData, iLuxProp_SaveData)
+
+iLuxEntity_SaveData* cLuxPropRs::CreateSaveData()
+{
+	switch(GetPropType())
+	{
+	case eLuxPropType_Button: return hplNew(cLuxProp_Button_SaveData, ());
+	case eLuxPropType_Photocell: return hplNew(cLuxProp_Photocell_SaveData, ());
+	case eLuxPropType_EmotionStone: return hplNew(cLuxProp_EmotionStone_SaveData, ());
+	case eLuxPropType_Lever: return hplNew(cLuxProp_Lever_SaveData, ());
+	case eLuxPropType_Wheel: return hplNew(cLuxProp_Wheel_SaveData, ());
+	case eLuxPropType_MultiSlider: return hplNew(cLuxProp_MultiSlider_SaveData, ());
+	default: return hplNew(cLuxProp_OilBarrel_SaveData, ());
+	}
+}
+
+void cLuxPropRs::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
+{
+	super_class::SaveToSaveData(apSaveData);
+	ohpl_prs_save(mpRs, apSaveData);
+	if(GetPropType() == eLuxPropType_MultiSlider)
+		static_cast<cLuxProp_MultiSlider_SaveData*>(apSaveData)->msChangeStateCallback = RsStr(kOhplPrsStrMultiCallback);
+	if(GetPropType() != eLuxPropType_EmotionStone) return;
+	cLuxProp_EmotionStone_SaveData *pData = static_cast<cLuxProp_EmotionStone_SaveData*>(apSaveData);
+	pData->msDescCat = RsStr(kOhplPrsStrDescCat);
+	pData->msDescEntry = RsStr(kOhplPrsStrDescEntry);
+	pData->msTextCat = RsStr(kOhplPrsStrTextCat);
+	pData->msTextEntry = RsStr(kOhplPrsStrTextEntry);
+	pData->msSound = RsStr(kOhplPrsStrSound);
+}
+
+void cLuxPropRs::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
+{
+	super_class::LoadFromSaveData(apSaveData);
+	int lStuck = ohpl_prs_load(mpRs, apSaveData, 0);
+	if(IsJoint()) SetStuckState(lStuck, false);
+	ohpl_prs_load(mpRs, apSaveData, 1);
+	if(GetPropType() == eLuxPropType_MultiSlider)
+	{
+		const tString &sCallback = static_cast<cLuxProp_MultiSlider_SaveData*>(apSaveData)->msChangeStateCallback;
+		SetChangeStateCallback(sCallback);
+	}
+	if(GetPropType() != eLuxPropType_EmotionStone) return;
+	cLuxProp_EmotionStone_SaveData *pData = static_cast<cLuxProp_EmotionStone_SaveData*>(apSaveData);
+	const tString *vStr[] = {&pData->msDescCat, &pData->msDescEntry, &pData->msTextCat, &pData->msTextEntry, &pData->msSound};
+	for(int i=0; i<5; ++i)
+		ohpl_prs_set_str(mpRs, i, (const unsigned char*)vStr[i]->data(), vStr[i]->size());
+}
+
+//-----------------------------------------------------------------------

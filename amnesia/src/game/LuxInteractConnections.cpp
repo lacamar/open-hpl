@@ -19,7 +19,7 @@
 
 #include "LuxInteractConnections.h"
 
-#include "LuxProp_Wheel.h"
+#include "LuxProp.h"
 #include "LuxProp_SwingDoor.h"
 #include "LuxProp_MoveObject.h"
 #include "LuxMap.h"
@@ -85,7 +85,7 @@ void cLuxInteractConnection_Rope::UpdateProp(float afTimeStep)
 
 	if(mpProp->GetPropType() == eLuxPropType_Wheel)
 	{
-		cLuxProp_Wheel *pWheel = static_cast<cLuxProp_Wheel*>(mpProp);
+		cLuxPropRs *pWheel = static_cast<cLuxPropRs*>(mpProp);
 		float fAngle = ohpl_ga4b_rope_wheel_angle(	mpRope->GetTotalLength(), mpRope->GetMinTotalLength(), mpRope->GetMaxTotalLength(), mbInvert,
 													pWheel->GetMinLimit(), pWheel->GetMaxLimit());
 		pWheel->SetAngle(fAngle, true);
@@ -208,7 +208,7 @@ void cLuxInteractConnection_MoveObject::UpdateProp(float afTimeStep)
 
 	if(mpProp->GetPropType() != eLuxPropType_Wheel) return;
 
-	cLuxProp_Wheel *pWheel = static_cast<cLuxProp_Wheel*>(mpProp);
+	cLuxPropRs *pWheel = static_cast<cLuxPropRs*>(mpProp);
 	float fAngle = ohpl_ga4b_move_wheel_angle(mpMoveObject->GetMoveState(), mbInvert, pWheel->GetMinLimit(), pWheel->GetMaxLimit());
 
 	if(mpProp->IsInteractedWith()==false)

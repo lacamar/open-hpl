@@ -28,14 +28,11 @@
 #include "LuxProp_Object.h"
 #include "LuxProp_SwingDoor.h"
 #include "LuxProp_Lamp.h"
-#include "LuxProp_Lever.h"
-#include "LuxProp_Wheel.h"
 #include "LuxProp_MoveObject.h"
 #include "LuxProp_Item.h"
 #include "LuxProp_LevelDoor.h"
-#include "LuxProp_Button.h"
+#include "LuxProp.h"
 #include "LuxProp_NPC.h"
-#include "LuxProp_MultiSlider.h"
 #include "LuxEnemy_ManPig.h"
 #include "LuxArea.h"
 #include "LuxEnemy.h"
@@ -512,9 +509,9 @@ extern "C" void OhplA1HostCall2(unsigned op, const OhplA1Arg *a, size_t n, OhplA
 	case LAMP_FADE_TO: static_cast<cLuxProp_Lamp*>(Prop(a[0]))->FadeTo(a[1].F(), a[2].F(), a[3].F(), a[4].F(), a[5].F(), a[6].F()); break;
 	case LAMP_CAN_BE_LIT: static_cast<cLuxProp_Lamp*>(Prop(a[0]))->SetCanBeLitByPlayer(a[1].B()); break;
 	case LAMP_SET_LIT: static_cast<cLuxProp_Lamp*>(Prop(a[0]))->SetLit(a[1].B(), a[2].B()); break;
-	case BUTTON_CAN_OFF: static_cast<cLuxProp_Button*>(Prop(a[0]))->SetCanBeSwitchedOff(a[1].B()); break;
-	case BUTTON_CAN_ON: static_cast<cLuxProp_Button*>(Prop(a[0]))->SetCanBeSwitchedOn(a[1].B()); break;
-	case BUTTON_SWITCHED_ON: static_cast<cLuxProp_Button*>(Prop(a[0]))->SetSwitchedOn(a[1].B(), a[2].B()); break;
+	case BUTTON_CAN_OFF: static_cast<cLuxPropRs*>(Prop(a[0]))->SetCanBeSwitchedOff(a[1].B()); break;
+	case BUTTON_CAN_ON: static_cast<cLuxPropRs*>(Prop(a[0]))->SetCanBeSwitchedOn(a[1].B()); break;
+	case BUTTON_SWITCHED_ON: static_cast<cLuxPropRs*>(Prop(a[0]))->SetSwitchedOn(a[1].B(), a[2].B()); break;
 	case DOOR_OPEN_AMOUNT: static_cast<cLuxProp_SwingDoor*>(Prop(a[0]))->SetOpenAmount(a[1].F(), a[2].F(), a[3].B()); break;
 	case DOOR_LOCKED: static_cast<cLuxProp_SwingDoor*>(Prop(a[0]))->SetLocked(a[1].B(), a[2].B()); break;
 	case DOOR_CLOSED: static_cast<cLuxProp_SwingDoor*>(Prop(a[0]))->SetClosed(a[1].B(), a[2].B()); break;
@@ -526,14 +523,14 @@ extern "C" void OhplA1HostCall2(unsigned op, const OhplA1Arg *a, size_t n, OhplA
 	case LEVEL_DOOR_SOUND: static_cast<cLuxProp_LevelDoor*>(Prop(a[0]))->SetLockedSound(OhplA1Str(a[1])); break;
 	case LEVEL_DOOR_TEXT: static_cast<cLuxProp_LevelDoor*>(Prop(a[0]))->SetLockedText(OhplA1Str(a[1]), OhplA1Str(a[2])); break;
 	case OBJECT_STUCK: static_cast<cLuxProp_Object*>(Prop(a[0]))->SetStuckState(a[1].I()); break;
-	case WHEEL_ANGLE: static_cast<cLuxProp_Wheel*>(Prop(a[0]))->SetAngle(a[1].F(), a[2].B()); break;
-	case WHEEL_STUCK: static_cast<cLuxProp_Wheel*>(Prop(a[0]))->SetStuckState(a[1].I(), a[2].B()); break;
-	case WHEEL_INTERACTION: static_cast<cLuxProp_Wheel*>(Prop(a[0]))->SetInteractionDisablesStuck(a[1].B()); break;
-	case LEVER_STUCK: static_cast<cLuxProp_Lever*>(Prop(a[0]))->SetStuckState(a[1].I(), a[2].B()); break;
-	case LEVER_INTERACTION: static_cast<cLuxProp_Lever*>(Prop(a[0]))->SetInteractionDisablesStuck(a[1].B()); break;
-	case LEVER_GET_STATE: r->SetI(static_cast<cLuxProp_Lever*>(Prop(a[0]))->GetLeverState()); break;
-	case MULTI_SLIDER_STUCK: static_cast<cLuxProp_MultiSlider*>(Prop(a[0]))->SetStuckState(a[1].I(), a[2].B()); break;
-	case MULTI_SLIDER_CB: static_cast<cLuxProp_MultiSlider*>(Prop(a[0]))->SetChangeStateCallback(OhplA1Str(a[1])); break;
+	case WHEEL_ANGLE: static_cast<cLuxPropRs*>(Prop(a[0]))->SetAngle(a[1].F(), a[2].B()); break;
+	case WHEEL_STUCK: static_cast<cLuxPropRs*>(Prop(a[0]))->SetStuckState(a[1].I(), a[2].B()); break;
+	case WHEEL_INTERACTION: static_cast<cLuxPropRs*>(Prop(a[0]))->SetInteractionDisablesStuck(a[1].B()); break;
+	case LEVER_STUCK: static_cast<cLuxPropRs*>(Prop(a[0]))->SetStuckState(a[1].I(), a[2].B()); break;
+	case LEVER_INTERACTION: static_cast<cLuxPropRs*>(Prop(a[0]))->SetInteractionDisablesStuck(a[1].B()); break;
+	case LEVER_GET_STATE: r->SetI(static_cast<cLuxPropRs*>(Prop(a[0]))->GetLeverState()); break;
+	case MULTI_SLIDER_STUCK: static_cast<cLuxPropRs*>(Prop(a[0]))->SetStuckState(a[1].I(), a[2].B()); break;
+	case MULTI_SLIDER_CB: static_cast<cLuxPropRs*>(Prop(a[0]))->SetChangeStateCallback(OhplA1Str(a[1])); break;
 	case NPC_AWAKE: static_cast<cLuxProp_NPC*>(Prop(a[0]))->SetAwake(a[1].B(), a[2].B()); break;
 	case NPC_FOLLOW: static_cast<cLuxProp_NPC*>(Prop(a[0]))->SetFollowPlayer(a[1].B()); break;
 	case MOVE_OBJECT_STATE: static_cast<cLuxProp_MoveObject*>(Prop(a[0]))->MoveToState(a[1].F()); break;

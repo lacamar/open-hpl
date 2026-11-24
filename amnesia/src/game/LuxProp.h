@@ -25,6 +25,7 @@
 #include "LuxEntity.h"
 #include "LuxSavedEngineTypes.h"
 #include "RustLuxProp.h"
+#include "RustLuxPropA5.h"
 #include <map>
 #include <type_traits>
 
@@ -606,6 +607,175 @@ public:
 protected:
 	float mfDefaultMaxFocusDistance;
 	bool mbForceFullGameSave;
+};
+
+//----------------------------------------------
+
+class cLuxProp_Button_SaveData : public iLuxProp_SaveData
+{
+	kSerializableClassInit(cLuxProp_Button_SaveData)
+public:
+	bool mbSwitchedOn;
+	bool mbCanBeSwitchedOn;
+	bool mbCanBeSwitchedOff;
+};
+
+class cLuxProp_Photocell_SaveData : public iLuxProp_SaveData
+{
+	kSerializableClassInit(cLuxProp_Photocell_SaveData)
+public:
+	bool mbLit;
+	float mfLightLevel;
+	float mfLightLevelCheckCount;
+	float mfLightLevelOnLimit;
+	float mfLightLevelOffLimit;
+};
+
+class cLuxProp_EmotionStone_SaveData : public iLuxProp_SaveData
+{
+	kSerializableClassInit(cLuxProp_EmotionStone_SaveData)
+public:
+	tString msDescCat;
+	tString msDescEntry;
+	tString msTextCat;
+	tString msTextEntry;
+	tString msSound;
+};
+
+class cLuxProp_OilBarrel_SaveData : public iLuxProp_SaveData
+{
+	kSerializableClassInit(cLuxProp_OilBarrel_SaveData)
+public:
+	bool mbAmountCalculated;
+	float mfOilAmount;
+};
+
+//----------------------------------------------
+
+class cLuxProp_Lever_SaveData : public iLuxProp_SaveData
+{
+	kSerializableClassInit(cLuxProp_Lever_SaveData)
+public:
+	int mlCurrentState;
+	int mlStuckState;
+	float mfMiddleAngleAmount;
+	bool mbAutoMoveToAngle;
+	int mlAutoMoveGoal;
+	bool mbInteractionDisablesStuck;
+};
+
+class cLuxProp_Wheel_SaveData : public iLuxProp_SaveData
+{
+	kSerializableClassInit(cLuxProp_Wheel_SaveData)
+public:
+	float mfAngle;
+	float mfPrevAngle;
+	float mfLastToMax;
+	float mfLastToMin;
+	int mlCurrentState;
+	int mlStuckState;
+	float mfJointAngle;
+	float mfPrevJointAngle;
+	bool mbAutoMoving;
+	float mfAutoMoveGoal;
+	float mfMinLimit;
+	float mfMaxLimit;
+	bool mbMinLimitStuck;
+	bool mbMaxLimitStuck;
+	bool mbInteractionDisablesStuck;
+	int mlSpinDir;
+};
+
+class cLuxProp_MultiSlider_SaveData : public iLuxProp_SaveData
+{
+	kSerializableClassInit(cLuxProp_MultiSlider_SaveData)
+public:
+	int mlCurrentState;
+	int mlStuckState;
+	bool mbInteractionDisablesStuck;
+	tString msChangeStateCallback;
+};
+
+//----------------------------------------------
+
+// Button, photocell, emotion stone, oil barrel, lever, wheel and multi slider: all state and logic is Rust (PropRs).
+class cLuxPropRs : public iLuxProp
+{
+typedef iLuxProp super_class;
+friend class cLuxPropLoaderRs;
+public:
+	cLuxPropRs(const tString &asName, int alID, cLuxMap *apMap, eLuxPropType aPropType);
+	virtual ~cLuxPropRs();
+
+	bool CanInteract(iPhysicsBody *apBody);
+	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
+	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
+	tWString GetFocusText();
+	void OnSetupAfterLoad(cWorld *apWorld);
+	void UpdatePropSpecific(float afTimeStep);
+	float OnInteractDebugDraw(cGuiSet *apSet,iFontData *apFont, float afStartY);
+	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
+	void Ga4Hinge(int alIdx, OhplGa4Hinge *apOut);
+	void Ga4Slider(OhplGa4Slider *apOut);
+
+	cLuxInteractData_Slide* GetSlideData(){ return GetPropType() == eLuxPropType_MultiSlider ? &mSlideData : NULL;}
+	iLuxInteractData_RotateBase* GetMoveBaseData()
+	{
+		if(GetPropType() == eLuxPropType_Lever) return &mLeverData;
+		return GetPropType() == eLuxPropType_Wheel ? static_cast<iLuxInteractData_RotateBase*>(&mWheelData) : NULL;
+	}
+
+	//Button
+	void SetSwitchedOn(bool abX, bool abUseEffects);
+	void SetCanBeSwitchedOn(bool abX);
+	void SetCanBeSwitchedOff(bool abX);
+
+	//Lever, wheel, multi slider
+	void SetStuckState(int alState, bool abEffects);
+	void SetInteractionDisablesStuck(bool abX);
+	int GetLeverState();
+	void SetAngle(float afX, bool abAutoMoveToAngle);
+	float GetMinLimit();
+	float GetMaxLimit();
+	void SetChangeStateCallback(const tString &asCallback);
+
+	iLuxEntity_SaveData* CreateSaveData();
+	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
+	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
+
+private:
+	tString RsStr(int alSlot);
+	bool IsJoint();
+	static bool HostHardMode(void *apCtx);
+	static float HostLampOil(void *apCtx);
+	static float HostTotalOil(void *apCtx);
+	static void HostBounds(void *apCtx, float *apSize, float *apCenter);
+	static float HostLightAt(void *apCtx, const float *apPos);
+	static bool HostIllumination(void *apCtx, float *apOut);
+
+	OhplPropRs *mpRs;
+	iPhysicsJointHinge *mpHingeJoint;
+	iPhysicsJointSlider *mpSliderJoint;
+	iPhysicsBody *mpJointBody;
+	cPidController<cVector3f> mRotatePid;
+	cPidController<float> mAutoMovePid;
+	cLuxInteractData_Lever mLeverData;
+	cLuxInteractData_Wheel mWheelData;
+	cLuxInteractData_Slide mSlideData;
+};
+
+class cLuxPropLoaderRs : public iLuxPropLoader
+{
+public:
+	cLuxPropLoaderRs(const tString& asName, eLuxPropType aPropType);
+
+	iLuxProp *CreateProp(const tString& asName, int alID, cLuxMap *apMap);
+	void LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem);
+	void LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars);
+
+private:
+	eLuxPropType mPropType;
 };
 
 //----------------------------------------------
