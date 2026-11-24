@@ -1,4 +1,4 @@
-//! Replays the A11b driver (`LuxA11bDump.cpp`) against the Rust handlers. Engine answers (fonts,
+//! Replays the A11b driver (`dump.rs`) against the Rust handlers. Engine answers (fonts,
 //! wrapping, strings, configs) were recorded from the live engine (`OHPL_A11B_ANSWERS`); the
 //! expected effects are the dump of the original C++ handlers on Amnesia 00_rainy_hall
 //! (`OHPL_A11B_DUMP`, frame step fixed at 1/60).

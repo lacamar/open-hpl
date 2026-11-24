@@ -66,7 +66,6 @@ static_assert(sizeof(OhplH20Combo) == 184 && offsetof(OhplH20Combo, text) == 40 
 			  offsetof(OhplH20Combo, buttonW) == 144 && offsetof(OhplH20Combo, self) == 152 && offsetof(OhplH20Combo, host) == 176,
 			  "OhplH20Combo ABI");
 
-struct OhplH20Access;
 class cWidgetTab;
 class cWidgetTabLabel;
 class cWidgetFrame;

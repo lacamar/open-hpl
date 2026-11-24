@@ -24,6 +24,11 @@
 #include "LuxMapHandler.h"
 #include "LuxProp.h"
 #include "LuxBase.h"
+#include "LuxPlayer.h"
+#include "LuxPlayerState.h"
+#include "LuxHelpFuncs.h"
+#include "LuxMessageHandler.h"
+#include "LuxMapHandler.h"
 
 //////////////////////////////////////////////////////////////////////////
 // LOADER
@@ -328,7 +333,7 @@ void iLuxArea::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 
 
 //////////////////////////////////////////////////////////////////////////
-// RUST-BACKED AREAS (liquid, sticky, slime, insanity, flashback)
+// RUST-BACKED AREAS
 //////////////////////////////////////////////////////////////////////////
 
 // Member order is the layout rust/src/luxsave/layout_ar.rs mirrors.
@@ -412,6 +417,52 @@ public:
 	tString msCallback;
 };
 
+class cLuxArea_Script_SaveData : public iLuxArea_SaveData
+{
+	kSerializableClassInit(cLuxArea_Script_SaveData)
+public:
+	iLuxArea* CreateArea(cLuxMap *apMap){ return hplNew(cLuxAreaRs, (msName, mlID, apMap, eLuxAreaType_Script)); }
+
+	bool mbItemInteraction;
+};
+
+class cLuxArea_Sign_SaveData : public iLuxArea_SaveData
+{
+	kSerializableClassInit(cLuxArea_Sign_SaveData)
+public:
+	iLuxArea* CreateArea(cLuxMap *apMap){ return hplNew(cLuxAreaRs, (msName, mlID, apMap, eLuxAreaType_Sign)); }
+
+	tString msTextCat;
+	tString msTextEntry;
+};
+
+class cLuxArea_Examine_SaveData : public iLuxArea_SaveData
+{
+	kSerializableClassInit(cLuxArea_Examine_SaveData)
+public:
+	iLuxArea* CreateArea(cLuxMap *apMap){ return hplNew(cLuxAreaRs, (msName, mlID, apMap, eLuxAreaType_Examine)); }
+
+	tString msDescCat;
+	tString msDescEntry;
+	tString msDescInsaneCat;
+	tString msDescInsaneEntry;
+	tString msSound;
+	tString msInsaneSound;
+};
+
+class cLuxArea_Ladder_SaveData : public iLuxArea_SaveData
+{
+	kSerializableClassInit(cLuxArea_Ladder_SaveData)
+public:
+	iLuxArea* CreateArea(cLuxMap *apMap){ return hplNew(cLuxAreaRs, (msName, mlID, apMap, eLuxAreaType_Ladder)); }
+
+	tString msMaterial;
+};
+
+kSerializeRustClassP(cLuxArea_Script_SaveData, iLuxArea_SaveData)
+kSerializeRustClassP(cLuxArea_Sign_SaveData, iLuxArea_SaveData)
+kSerializeRustClassP(cLuxArea_Examine_SaveData, iLuxArea_SaveData)
+kSerializeRustClassP(cLuxArea_Ladder_SaveData, iLuxArea_SaveData)
 kSerializeRustClassP(cLuxArea_Liquid_SaveData, iLuxArea_SaveData)
 kSerializeRustClassP(cLuxArea_Sticky_SaveData, iLuxArea_SaveData)
 kSerializeRustClassP(cLuxArea_SlimeDamage_SaveData, iLuxArea_SaveData)
@@ -422,9 +473,10 @@ namespace
 {
 	struct OhplAreaCtx
 	{
-		cLuxAreaRs *mpArea;
-		cLuxAreaLoaderRs *mpLoader;
+		iLuxEntity *mpArea;
+		iAreaLoader *mpLoader;
 		cWorld *mpWorld;
+		iXmlDocument *mpDoc;
 	};
 
 	// Lent to Rust until the next thunk call; Rust copies at once.
@@ -442,7 +494,34 @@ namespace
 	float VarF(void *c, const char *p, size_t n, float d){ return C(c)->mpLoader->GetVarFloat(tString(p, n), d); }
 	int VarI(void *c, const char *p, size_t n, int d){ return C(c)->mpLoader->GetVarInt(tString(p, n), d); }
 	bool VarB(void *c, const char *p, size_t n, bool d){ return C(c)->mpLoader->GetVarBool(tString(p, n), d); }
-	OhplA7Sv VarS(void *c, const char *p, size_t n){ return Lend(C(c)->mpLoader->GetVarString(tString(p, n), "")); }
+	OhplA7Sv VarS(void *c, const char *p, size_t n, const char *d, size_t dn){ return Lend(C(c)->mpLoader->GetVarString(tString(p, n), tString(d, dn))); }
+
+	bool DocOpen(void *c, const char *p, size_t n)
+	{
+		OhplAreaCtx *pCtx = C(c);
+		tString sFile(p, n);
+		pCtx->mpDoc = gpBase->mpEngine->GetResources()->LoadXmlDocument(sFile);
+		if(pCtx->mpDoc == NULL)
+			Error("Could not load '%s' for rope '%s'. Using set variables instead!\n", sFile.c_str(), pCtx->mpArea->GetName().c_str());
+		return pCtx->mpDoc != NULL;
+	}
+
+	float DocF(void *c, const char *p, size_t n){ return C(c)->mpDoc->GetAttributeFloat(tString(p, n), 0); }
+	OhplA7Sv DocS(void *c, const char *p, size_t n){ return Lend(C(c)->mpDoc->GetAttributeString(tString(p, n), "")); }
+
+	void DocClose(void *c)
+	{
+		gpBase->mpEngine->GetResources()->DestroyXmlDocument(C(c)->mpDoc);
+		C(c)->mpDoc = NULL;
+	}
+
+	void MaxFocus(void *c, float afDist){ C(c)->mpArea->SetMaxFocusDistance(afDist); }
+
+	void Callback(void *c, int alWhich, const char *p, size_t n, bool abRemove)
+	{
+		if(alWhich == 0) C(c)->mpArea->SetPlayerLookAtCallback(tString(p, n), abRemove);
+		else C(c)->mpArea->SetPlayerInteractCallback(tString(p, n), abRemove);
+	}
 
 	float CfgF(void *, const char *s, size_t sn, const char *k, size_t kn, float d)
 	{
@@ -460,7 +539,7 @@ namespace
 	size_t MatFind(void *c, const char *p, size_t n)
 	{
 		cWorld *pWorld = C(c)->mpWorld;
-		cLuxAreaRs *pArea = C(c)->mpArea;
+		iLuxEntity *pArea = C(c)->mpArea;
 		iPhysicsWorld *pPhysicsWorld = pWorld ? pWorld->GetPhysicsWorld() : pArea->GetMap()->GetPhysicsWorld();
 		tString sName(p, n);
 		iPhysicsMaterial *pMaterial = pPhysicsWorld->GetMaterialFromName(sName);
@@ -496,7 +575,7 @@ namespace
 
 	OhplA7Vt MakeVt(OhplAreaCtx *apCtx)
 	{
-		OhplA7Vt vt = { apCtx, VarF, VarI, VarB, VarS, CfgF, CfgS, PreloadSnd, PreloadPS, MatFind, MatName, BodyIds, FindBody };
+		OhplA7Vt vt = { apCtx, VarF, VarI, VarB, VarS, CfgF, CfgS, PreloadSnd, PreloadPS, MatFind, MatName, BodyIds, FindBody, MaxFocus, Callback, DocOpen, DocF, DocS, DocClose };
 		return vt;
 	}
 }
@@ -522,20 +601,103 @@ cLuxAreaRs::~cLuxAreaRs()
 {
 }
 
-void cLuxAreaRs::LoadVars(cLuxAreaLoaderRs *apLoader, cWorld *apWorld)
+void cLuxAreaRs::LoadVars(iAreaLoader *apLoader, cWorld *apWorld)
 {
-	OhplAreaCtx ctx = { this, apLoader, apWorld };
+	OhplAreaCtx ctx = { this, apLoader, apWorld, NULL };
 	OhplA7Vt vt = MakeVt(&ctx);
 	ohpl_a7_area_load_vars(mpA7Area, &vt);
 }
 
 void cLuxAreaRs::SetupAfterLoad(cWorld *apWorld)
 {
-	if(GetAreaType() != eLuxAreaType_Liquid) return;
+	if(GetAreaType() == eLuxAreaType_Liquid)
+	{
+		float fHeight = mpBody->GetShape()->GetSize().y;
+		cVector3f vPos = mpBody->GetWorldPosition();
+		ohpl_a7_area_liquid_setup(mpA7Area, vPos.y, fHeight);
+	}
+	else if(GetAreaType() == eLuxAreaType_Ladder)
+	{
+		cMatrixf mtxWorld = mpBody->GetWorldMatrix();
+		ohpl_a7_area_ladder_setup(mpA7Area, reinterpret_cast<const OhplGa5Mtx*>(&mtxWorld), mpBody->GetWorldPosition().y, mpBody->GetShape()->GetSize().y);
+	}
+}
 
-	float fHeight = mpBody->GetShape()->GetSize().y;
-	cVector3f vPos = mpBody->GetWorldPosition();
-	ohpl_a7_area_liquid_setup(mpA7Area, vPos.y, fHeight);
+tString cLuxAreaRs::Str(size_t alIdx)
+{
+	size_t lLen;
+	const char *pStr = ohpl_a7_area_str(mpA7Area, alIdx, &lLen);
+	return tString(pStr, lLen);
+}
+
+bool cLuxAreaRs::CanInteract(iPhysicsBody *apBody)
+{
+	return ohpl_a7_area_can_interact(mpA7Area, GetInteractCallback()!="");
+}
+
+eLuxFocusCrosshair cLuxAreaRs::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
+{
+	const int vTable[4] = { eLuxFocusCrosshair_Default, eLuxFocusCrosshair_Grab, eLuxFocusCrosshair_Ladder, eLuxFocusCrosshair_LastEnum };
+	return (eLuxFocusCrosshair)ohpl_a7_area_crosshair(mpA7Area, GetInteractCallback()!="", GetCustomFocusCrossHair(), &vTable);
+}
+
+tWString cLuxAreaRs::GetFocusText()
+{
+	if(GetAreaType() != eLuxAreaType_Sign) return _W("");
+	return kTranslate(Str(kOhplA7sSignCat), Str(kOhplA7sSignCat+1));
+}
+
+bool cLuxAreaRs::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
+{
+	switch(GetAreaType())
+	{
+	case eLuxAreaType_Script: return ohpl_a7_area_on_interact(mpA7Area, GetInteractCallback()!="");
+	case eLuxAreaType_Ladder: return LadderInteract();
+	case eLuxAreaType_Examine:
+	{
+		OhplGa5ExamineOut out;
+		ohpl_a7_area_examine(mpA7Area, gpBase->mpPlayer->GetSanity(), &out);
+		if(out.showText)
+		{
+			size_t lCat = out.insaneText ? kOhplA7sExInsaneCat : kOhplA7sExDescCat;
+			gpBase->mpMessageHandler->SetMessage(kTranslate(Str(lCat), Str(lCat+1)), 0);
+		}
+		if(out.playSound)
+			gpBase->mpHelpFuncs->PlayGuiSoundData(Str(out.insaneSound ? kOhplA7sExInsaneSound : kOhplA7sExSound), eSoundEntryType_Gui);
+		return true;
+	}
+	default: return false;
+	}
+}
+
+cVector3f cLuxAreaRs::GetStartRotation()
+{
+	return cMath::GetAngleFromPoints3D(cVector3f(0,0,0), GetForward()*-1);
+}
+
+static bool LadderFits(void *apCtx, const OhplGa5Vec3 *apPos)
+{
+	iCharacterBody *pCharBody = static_cast<iCharacterBody*>(apCtx);
+	return pCharBody->CheckCharacterFits(cVector3f(apPos->x, apPos->y, apPos->z), false,0,NULL,kEpsilonf);
+}
+
+bool cLuxAreaRs::LadderInteract()
+{
+	iCharacterBody *pCharBody = gpBase->mpPlayer->GetCharacterBody();
+	cVector3f vCharSize = pCharBody->GetShape(0)->GetSize();
+	cVector3f vCharPos = pCharBody->GetPosition();
+	cVector3f vLadderPos = mpBody->GetWorldPosition();
+
+	cVector3f vStartPos;
+	ohpl_a7_area_ladder_start(mpA7Area, reinterpret_cast<const OhplGa5Vec3*>(&vLadderPos), reinterpret_cast<const OhplGa5Vec3*>(&vCharSize), vCharPos.y, reinterpret_cast<OhplGa5Vec3*>(&vStartPos));
+
+	if(ohpl_ga5_ladder_find_start(reinterpret_cast<OhplGa5Vec3*>(&vStartPos), GetMaxY(), LadderFits, pCharBody)==false)
+		return false;
+
+	cLuxPlayerStateVars::SetupLadder(this, vStartPos);
+	gpBase->mpPlayer->ChangeState(eLuxPlayerState_Ladder);
+
+	return true;
 }
 
 void cLuxAreaRs::OnUpdate(float afTimeStep)
@@ -552,6 +714,10 @@ iLuxEntity_SaveData* cLuxAreaRs::CreateSaveData()
 {
 	switch(GetAreaType())
 	{
+	case eLuxAreaType_Script: return hplNew(cLuxArea_Script_SaveData, ());
+	case eLuxAreaType_Sign: return hplNew(cLuxArea_Sign_SaveData, ());
+	case eLuxAreaType_Examine: return hplNew(cLuxArea_Examine_SaveData, ());
+	case eLuxAreaType_Ladder: return hplNew(cLuxArea_Ladder_SaveData, ());
 	case eLuxAreaType_Liquid: return hplNew(cLuxArea_Liquid_SaveData, ());
 	case eLuxAreaType_Sticky: return hplNew(cLuxArea_Sticky_SaveData, ());
 	case eLuxAreaType_Insanity: return hplNew(cLuxArea_Insanity_SaveData, ());
@@ -574,6 +740,178 @@ void cLuxAreaRs::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	super_class::LoadFromSaveData(apSaveData);
 
 	OhplAreaCtx ctx = { this, NULL, NULL };
+	OhplA7Vt vt = MakeVt(&ctx);
+	ohpl_a7_area_load(mpA7Area, apSaveData, &vt);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// ROPE
+//////////////////////////////////////////////////////////////////////////
+
+kSerializeRustClassP(cLuxRope_SaveData, iLuxEntity_SaveData)
+
+iLuxEntity* cLuxRope_SaveData::CreateEntity(cLuxMap *apMap)
+{
+	cLuxRope *pRope = hplNew(cLuxRope, (msName, mlID,apMap));
+	apMap->AddEntity(pRope);
+
+	return pRope;
+}
+
+void cLuxAreaRopeLoader::Load(const tString &asName, int alID, bool abActive, const cVector3f &avSize, const cMatrixf &a_mtxTransform,cWorld *apWorld)
+{
+	cLuxMap *pMap = gpBase->mpCurrentMapLoading;
+	if(pMap==NULL) return;
+
+	cLuxRope *pRope = hplNew(cLuxRope, (asName, alID,pMap));
+
+	OhplAreaCtx ctx = { pRope, this, apWorld, NULL };
+	OhplA7Vt vt = MakeVt(&ctx);
+	cVector3f vStart = a_mtxTransform.GetTranslation();
+	ohpl_a7_rope_load(pRope->mpA7Area, reinterpret_cast<const OhplGa5Vec3*>(&vStart), &vt);
+
+	pMap->AddEntity(pRope);
+	pRope->SetActive(abActive);
+}
+
+cLuxRope::cLuxRope(const tString& asName, int alID, cLuxMap *apMap)  : iLuxEntity(asName,alID,apMap, eLuxEntityType_Rope),
+	mpA7Area(ohpl_a7_area_new(apMap->GetA7(), kOhplA7Rope)),
+	mR(*static_cast<OhplA7Rope*>(ohpl_a7_area_pod(mpA7Area))),
+	mpRope(NULL),
+	mpRopeGfx(NULL)
+{
+}
+
+cLuxRope::~cLuxRope()
+{
+	if(mpRopeGfx)
+	{
+		GetMap()->GetWorld()->DestroyRopeEntity(mpRopeGfx);
+	}
+	if(mpRope)
+	{
+		GetMap()->GetPhysicsWorld()->DestroyRope(mpRope);
+	}
+	ohpl_a7_area_free(GetMap()->GetA7(), mpA7Area);
+}
+
+tString cLuxRope::Str(size_t alIdx)
+{
+	size_t lLen;
+	const char *pStr = ohpl_a7_area_str(mpA7Area, alIdx, &lLen);
+	return tString(pStr, lLen);
+}
+
+void cLuxRope::AfterWorldLoad()
+{
+	int lRopeAction = ohpl_ga5_rope_after_world(mR.ropeCreated, mpRopeGfx==NULL && mpRope==NULL);
+	if(lRopeAction != kOhplGa5RopeCreate)
+	{
+		if(lRopeAction == kOhplGa5RopeRelink)
+		{
+			mpRope = GetMap()->GetPhysicsWorld()->GetRopeFromUniqueID(GetID());
+			if(mpRope==NULL) Error("Cannot find rope physics entity with ID %d for lux rope '%s'\n", GetID(), GetName().c_str());
+
+			mpRopeGfx = GetMap()->GetWorld()->GetRopeEntityFromUniqueID(GetID());
+			if(mpRopeGfx==NULL) Error("Cannot find rope gfx entity with ID %d for lux rope '%s'\n", GetID(), GetName().c_str());
+		}
+
+		return;
+	}
+
+	mR.ropeCreated = true;
+
+	tString sEndPosNode = Str(kOhplA7sRopeEndPosNode);
+	cLuxNode_Pos *pPosNode = GetMap()->GetPosNode(sEndPosNode);
+	if(pPosNode == NULL)
+	{
+		Error("Could not find end pos '%s' for rope '%s'\n", sEndPosNode.c_str(), GetName().c_str());
+		return;
+	}
+
+	cVector3f vEndPos = pPosNode->GetPosition();
+	mR.endPos.x = vEndPos.x; mR.endPos.y = vEndPos.y; mR.endPos.z = vEndPos.z;
+
+	tString sStartBody = Str(kOhplA7sRopeStartBody);
+	tString sEndBody = Str(kOhplA7sRopeEndBody);
+	iPhysicsBody *pStartBody = NULL;
+	if(sStartBody != "") pStartBody = GetBody(sStartBody);
+
+	iPhysicsBody *pEndBody = NULL;
+	if(sEndBody != "") pEndBody = GetBody(sEndBody);
+
+	mpRope = GetMap()->GetPhysicsWorld()->CreateRope(GetName(), cVector3f(mR.startPos.x, mR.startPos.y, mR.startPos.z), vEndPos);
+
+	mpRope->SetMinTotalLength(mR.minTotalLength);
+	mpRope->SetMaxTotalLength(mR.maxTotalLength);
+	mpRope->SetSegmentLength(mR.segmentLength);
+	mpRope->SetDamping(mR.damping);
+	mpRope->SetStrength(mR.strength);
+	mpRope->SetStiffness(mR.stiffness);
+	mpRope->SetMotorSound(Str(kOhplA7sRopeSound));
+	mpRope->SetMotorSoundStartSpeed(mR.soundStartSpeed);
+	mpRope->SetMotorSoundStopSpeed(mR.soundStopSpeed);
+	mpRope->SetAutoMoveActive(mR.autoMove);
+	mpRope->SetAutoMoveAcc(mR.autoMoveAcc);
+	mpRope->SetAutoMoveMaxSpeed(mR.autoMoveMaxSpeed);
+
+	mpRope->SetUniqueID(GetID());
+
+	if(pStartBody!=NULL)
+	{
+		mpRope->SetAttachedStartBody(pStartBody);
+		if(pStartBody->GetMass() != 0)
+			mpRope->GetStartParticle()->SetInvMass(1.0f);
+	}
+
+	if(pEndBody!=NULL)
+	{
+		mpRope->SetAttachedEndBody(pEndBody);
+	}
+
+	cResources *pResources = gpBase->mpEngine->GetResources();
+
+	int lMaxSegments = ohpl_ga5_rope_max_segments(mR.maxTotalLength, mR.segmentLength);
+	mpRopeGfx = GetMap()->GetWorld()->CreateRopeEntity(GetName(), mpRope, lMaxSegments);
+
+	mpRopeGfx->SetMaterial(pResources->GetMaterialManager()->CreateMaterial(Str(kOhplA7sRopeMaterial)));
+	mpRopeGfx->SetRadius(mR.radius);
+	mpRopeGfx->SetLengthTileAmount(mR.lengthTileAmount);
+	mpRopeGfx->SetLengthTileSize(mR.lengthTileSize);
+
+	mpRopeGfx->SetUniqueID(GetID());
+}
+
+iPhysicsBody* cLuxRope::GetBody(const tString& asName)
+{
+	iPhysicsBody *pBody = GetMap()->GetPhysicsWorld()->GetBody(asName);
+	if(pBody==NULL)
+	{
+		iLuxEntity *pEntity = GetMap()->GetEntityByName(asName, eLuxEntityType_Prop);
+		if(pEntity==NULL)
+		{
+			Error("Could not find body or entity with the name '%s'\n", asName.c_str());
+			return NULL;
+		}
+		pBody = static_cast<iLuxProp*>(pEntity)->GetMainBody();
+	}
+	return pBody;
+}
+
+void cLuxRope::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
+{
+	super_class::SaveToSaveData(apSaveData);
+
+	OhplAreaCtx ctx = { this, NULL, NULL, NULL };
+	OhplA7Vt vt = MakeVt(&ctx);
+	ohpl_a7_area_save(mpA7Area, apSaveData, &vt);
+}
+
+void cLuxRope::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
+{
+	super_class::LoadFromSaveData(apSaveData);
+
+	OhplAreaCtx ctx = { this, NULL, NULL, NULL };
 	OhplA7Vt vt = MakeVt(&ctx);
 	ohpl_a7_area_load(mpA7Area, apSaveData, &vt);
 }

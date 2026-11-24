@@ -1,13 +1,13 @@
 #include "SomaAgent.h"
 #include "RustSomaAgentS4.h"
 #include "RustSomaAgentS4b.h"
-#include "SomaAgentDump.h"
 #include "SomaBase.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
 #include "SomaLuxPlayer.h"
 #include "SomaLuxScriptable.h"
 #include "SomaLuxVoice.h"
+#include "SomaSave.h"
 #include "SomaScriptRuntime.h"
 
 #include "impl/RustEasArray.h"
@@ -337,24 +337,13 @@ namespace
 		switch (alOp)
 		{
 		case 1: Put(io->f, e->GetPosition()); break;
-		case 2: io->f[0] = e->mpCore->mvScale.y; break;
 		case 3:
 			io->i[4] = pMap && pMap->GetScript();
 			if (e)
 			{
 				io->i[0] = e->mpMap != NULL;
 				io->i[1] = e->mpMesh != NULL;
-				io->i[2] = e->mpCore->mbActive;
-				io->i[3] = e->mpCore->mbGlobalSpaceAnim;
 			}
-			break;
-		case 4:
-		{
-			static thread_local tString sName;
-			sName = e->GetName();
-			io->s[0] = (const unsigned char *)sName.data();
-			io->n[0] = sName.size();
-		}
 			break;
 		case 5: e->SetActive(io->i[0] != 0); break;
 		case 6:
@@ -364,7 +353,6 @@ namespace
 			e->mpMesh->SetMatrix(mtx);
 			break;
 		}
-		case 7: io->i[0] = e->mpCore->mlCurrentAnim; break;
 		case 8: io->i[0] = e->PlayAnimation(Str(io, 0), io->f[0], io->i[0] != 0, Str(io, 1)); break;
 		case 9:
 			if (e->mpMesh && e->mpCore->mlCurrentAnim >= 0)
@@ -467,23 +455,6 @@ namespace
 					pPS->SetPosition(e->mpMesh ? e->mpMesh->GetWorldPosition() : e->GetPosition());
 			}
 			io->p[0] = (uintptr_t)pPS;
-			break;
-		}
-		case 24:
-		{
-			bool &bFlag = io->i[0] == 0 ? e->mpCore->mbIsDoor : e->mpCore->mbIsClosedDoor;
-			if (io->i[1])
-				bFlag = io->i[2] != 0;
-			io->i[3] = bFlag;
-			break;
-		}
-		case 25: Put(io->f, e->mpCore->mvScale); break;
-		case 26:
-		{
-			cMatrixf &m = e->mpCore->m_mtxOnLoad;
-			Put(io->f, m.GetTranslation());
-			io->f[3] = m.m[0][2];
-			io->f[4] = m.m[2][2];
 			break;
 		}
 		case 27: io->p[0] = (uintptr_t)(io->i[0] ? &e->mInstanceVars : &e->mVars); break;
@@ -852,15 +823,24 @@ namespace
 
 		case 160: Error("%s", Str(io, 0).c_str()); break;
 		case 161: Warning("%s", Str(io, 0).c_str()); break;
-		case 162:
-			if (io->i[0] == 0)
-				OhplS4bLog("call %s %s", e->GetName().c_str(), Str(io, 0).c_str());
-			else if (io->i[0] == 1)
-				OhplS4bLog("ev %s %u %d %d", e->GetName().c_str(), (unsigned)io->i[1], io->i[2], io->i[3]);
-			else
-				OhplS4bLog("msg %s %d %.9g,%.9g,%.9g %d", e->GetName().c_str(), io->i[1], io->f[0], io->f[1], io->f[2], io->i[2]);
+
+		case 164: Out(io, pMap ? pMap->GetName() : tString("?")); break;
+		case 165:
+			if (cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GetCharacterBody())
+				cSomaLuxPlayer::Get()->GetCharacterBody()->SetFeetPosition(Get(io->f));
 			break;
-		case 163: io->i[0] = OhplS4bOn(); break;
+		case 166: io->i[0] = io->i[0] == 0 ? cSomaSaveHandler::Save(cString::To16Char(Str(io, 0))) : cSomaSaveHandler::Load(cString::To16Char(Str(io, 0))); break;
+		case 167:
+		{
+			cAnimationState *pAnim = e->mpMesh && e->mpCore->mlCurrentAnim >= 0 ? e->mpMesh->GetAnimationState(e->mpCore->mlCurrentAnim) : NULL;
+			io->i[0] = pAnim != NULL;
+			if (pAnim)
+			{
+				Out(io, pAnim->GetName());
+				io->f[0] = pAnim->GetTimePosition();
+			}
+			break;
+		}
 		}
 		return 0;
 	}
@@ -887,7 +867,7 @@ iPhysicsBody *SomaAgentBody(cSomaLuxEntity *apEnt)
 void SomaCreateAgent(cSomaLuxEntity *apEnt)
 {
 	Install();
-	ohpl_s4b_create((uintptr_t)apEnt);
+	ohpl_s4b_create((uintptr_t)apEnt, apEnt->mpCore, apEnt->mpNames);
 }
 
 void SomaDestroyAgent(cSomaLuxEntity *apEnt) { ohpl_s4b_destroy((uintptr_t)apEnt); }
@@ -955,12 +935,7 @@ tString SomaNavPath(const cVector3f &avFrom, const cVector3f &avTo)
 	return "";
 }
 
-void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep)
-{
-	OhplS4bBegin(apEnt);
-	ohpl_s4b_update((uintptr_t)apEnt, afTimeStep);
-	OhplS4bEnd(apEnt);
-}
+void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep) { ohpl_s4b_update((uintptr_t)apEnt, afTimeStep); }
 
 void SomaRegisterAgentNatives(asIScriptEngine *e)
 {

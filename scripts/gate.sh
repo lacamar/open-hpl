@@ -594,7 +594,19 @@ def same(name, a, b):
         return (ok_, f"equal over {k} calls up to a branch on a random draw" if ok_ else f"DIFFER at call {k}")
     if name.startswith("a12d-"):
         # sound rows and the music line follow what happens to be playing
-        mask = lambda p: [re.sub(r"^l lines=\d+ nodes=\d+ objs=(\d+) other=\d+", r"l objs=\1", l) for l in open(p, errors="replace") if not l.startswith("dn ")]
+        # the rows below the sound list move with its length
+        def mask(p):
+            out, dn = [], False
+            for l in open(p, errors="replace"):
+                if l.startswith("dn "):
+                    dn = True
+                    continue
+                if l.startswith("d end"):
+                    dn = False
+                elif dn:
+                    l = re.sub(r"^d (\d+) \d+ ", r"d \1 y ", l)
+                out.append(re.sub(r"^l lines=\d+ nodes=\d+ objs=(\d+) other=\d+", r"l objs=\1", l))
+            return out
         return (mask(a) == mask(b), "equal (playing-sound rows masked)" if mask(a) == mask(b) else "DIFFER")
     if name.startswith("s8c-"):
         # per effect type, up to the shorter run (time-driven effects render a jittering number of frames); the game's

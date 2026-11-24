@@ -17,10 +17,6 @@ inline bool OhplBackendRustRequested()
 }
 
 // Always the C++ path until an L stage flips its backend.
-inline bool OhplBackendUseRust()
-{
-	return false;
-}
 
 } // namespace hpl
 

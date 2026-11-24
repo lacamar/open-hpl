@@ -47,19 +47,15 @@ pub fn create_agent(ent: usize) {
     let a = super::core::agent_or_new(ent);
     let vars = vars_of(ent, 0);
     let inst = vars_of(ent, 1);
-    let scale = Io::new().p(0, ent).go(op::E_SCALE3).out_v(0);
+    let scale = super::pod::scale(ent);
     let sz = var_vec(vars, b"CharBodySize", v3(0.9, 1.9, 0.9));
     let size = v3(sz.x * scale.x, sz.y * scale.y, sz.z * scale.z);
     let body = Io::new().p(0, ent).v(0, size).go(op::B_CREATE).ptr(1);
-    let on = Io::new().p(0, ent).go(op::E_ONLOAD);
+    let (on_pos, on_x, on_z) = super::pod::on_load(ent);
+    Io::new().p(1, body).i(0, 1).v(0, on_pos).go(op::B_SET3);
     Io::new()
         .p(1, body)
-        .i(0, 1)
-        .v(0, on.out_v(0))
-        .go(op::B_SET3);
-    Io::new()
-        .p(1, body)
-        .f(0, atan2(on.fl(3), on.fl(4)) - PI)
+        .f(0, atan2(on_x, on_z) - PI)
         .go(op::B_SET_YAW);
     let r = var_vec(vars, b"MeshRotationOffset", v3(0.0, 0.0, 0.0));
     let mut off = matrix_rotate(v3(to_rad(r.x), to_rad(r.y), to_rad(r.z)), 0);

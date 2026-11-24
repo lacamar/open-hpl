@@ -20,7 +20,7 @@ extern "C"
 {
 	void ohpl_s4b_install(int (*apOp)(unsigned, OhplS4bIo *));
 	void ohpl_s4b_register(void *apEngine);
-	void ohpl_s4b_create(uintptr_t ent);
+	void ohpl_s4b_create(uintptr_t ent, const void *core, const void *names);
 	void ohpl_s4b_destroy(uintptr_t ent);
 	void ohpl_s4b_update(uintptr_t ent, float dt);
 	void ohpl_s4b_update_components(uintptr_t ent, float dt);

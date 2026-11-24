@@ -3,7 +3,6 @@ use super::hint::{self, HintState};
 use super::inventory::{self as inv, InvState};
 use super::itemtype::{self, Item, Player};
 use super::journal::{self as jrn, Pages};
-use super::keyentry::{self, KeyAct, Route};
 use super::message::{self as msg, MessageState};
 use super::{commentary, event};
 
@@ -30,48 +29,6 @@ fn item(amount: f32) -> Item<'static> {
         extra: b"OnRead",
         amount,
     }
-}
-
-#[test]
-fn key_chars_and_paste() {
-    assert!(keyentry::verify_char(b'a'));
-    assert!(keyentry::verify_char(b'Z'));
-    assert!(!keyentry::verify_char(b'0'));
-    assert!(!keyentry::verify_char(b'O'));
-    assert!(!keyentry::verify_char(0xe9));
-    assert_eq!(
-        keyentry::paste_filter(b"ab0-cdOzzzzzzzzzzzzzzzzzzzzzz"),
-        b"ABCDZZZZZZZZZZZZZ"
-    );
-    assert_eq!(keyentry::route(true, false, true), Route::Base);
-    assert_eq!(keyentry::route(true, false, false), Route::Key);
-    assert_eq!(keyentry::route(false, true, false), Route::Paste);
-}
-
-#[test]
-fn key_action_bounds() {
-    assert_eq!(keyentry::key_action(false, 0, 0, 0, b'a'), KeyAct::Base);
-    assert_eq!(
-        keyentry::key_action(true, 3, 5, 2, b'q'),
-        KeyAct::Insert {
-            pos: 2,
-            epos: 5,
-            ch: b'Q'
-        }
-    );
-    assert_eq!(
-        keyentry::key_action(true, 16, 16, 16, b'a'),
-        KeyAct::Swallow
-    );
-    assert_eq!(keyentry::key_action(true, 4, 4, 4, b'0'), KeyAct::Swallow);
-    assert_eq!(
-        keyentry::key_action(true, 16, 3, 4, b'a'),
-        KeyAct::Insert {
-            pos: 3,
-            epos: 4,
-            ch: b'A'
-        }
-    );
 }
 
 #[test]

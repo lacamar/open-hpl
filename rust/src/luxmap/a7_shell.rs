@@ -5,6 +5,7 @@
 use super::a7_area::{A7Area, Pod, st};
 use crate::luxsave::layout_ar as lay;
 use crate::math::rand_rectf;
+use crate::types::Vector3f;
 use std::ffi::c_void;
 
 /// A string the shell lends for the duration of one call.
@@ -23,7 +24,7 @@ pub struct Vt {
     pub var_f: unsafe extern "C" fn(*mut c_void, *const u8, usize, f32) -> f32,
     pub var_i: unsafe extern "C" fn(*mut c_void, *const u8, usize, i32) -> i32,
     pub var_b: unsafe extern "C" fn(*mut c_void, *const u8, usize, bool) -> bool,
-    pub var_s: unsafe extern "C" fn(*mut c_void, *const u8, usize) -> Sv,
+    pub var_s: unsafe extern "C" fn(*mut c_void, *const u8, usize, *const u8, usize) -> Sv,
     pub cfg_f: unsafe extern "C" fn(*mut c_void, *const u8, usize, *const u8, usize, f32) -> f32,
     pub cfg_s: unsafe extern "C" fn(*mut c_void, *const u8, usize, *const u8, usize) -> Sv,
     pub preload_sound: Key,
@@ -33,6 +34,14 @@ pub struct Vt {
     /// Writes the owning entity id, then the unique body id.
     pub body_ids: unsafe extern "C" fn(*mut c_void, usize, *mut i32),
     pub find_body: unsafe extern "C" fn(*mut c_void, i32, i32) -> usize,
+    pub max_focus: unsafe extern "C" fn(*mut c_void, f32),
+    /// Look-at (0) or interact (1) callback of the entity: name, auto remove.
+    pub callback: unsafe extern "C" fn(*mut c_void, i32, *const u8, usize, bool),
+    /// Opens the rope settings file; false (after the C++ error log) when it does not load.
+    pub doc_open: unsafe extern "C" fn(*mut c_void, *const u8, usize) -> bool,
+    pub doc_f: unsafe extern "C" fn(*mut c_void, *const u8, usize) -> f32,
+    pub doc_s: unsafe extern "C" fn(*mut c_void, *const u8, usize) -> Sv,
+    pub doc_close: unsafe extern "C" fn(*mut c_void),
 }
 
 /// Safe face of a [`Vt`]; the FFI entries state the contract once.
@@ -69,8 +78,42 @@ impl<'a> V<'a> {
     }
 
     fn s(&self, k: &str) -> Vec<u8> {
+        self.sd(k, "")
+    }
+
+    fn sd(&self, k: &str, d: &str) -> Vec<u8> {
         // SAFETY: contract of `new`.
-        own(unsafe { (self.0.var_s)(self.0.ctx, k.as_ptr(), k.len()) })
+        own(unsafe { (self.0.var_s)(self.0.ctx, k.as_ptr(), k.len(), d.as_ptr(), d.len()) })
+    }
+
+    fn doc_open(&self, name: &[u8]) -> bool {
+        // SAFETY: contract of `new`.
+        unsafe { (self.0.doc_open)(self.0.ctx, name.as_ptr(), name.len()) }
+    }
+
+    fn doc_f(&self, k: &str) -> f32 {
+        // SAFETY: contract of `new`.
+        unsafe { (self.0.doc_f)(self.0.ctx, k.as_ptr(), k.len()) }
+    }
+
+    fn doc_s(&self, k: &str) -> Vec<u8> {
+        // SAFETY: contract of `new`.
+        own(unsafe { (self.0.doc_s)(self.0.ctx, k.as_ptr(), k.len()) })
+    }
+
+    fn doc_close(&self) {
+        // SAFETY: contract of `new`.
+        unsafe { (self.0.doc_close)(self.0.ctx) }
+    }
+
+    fn max_focus(&self, f: f32) {
+        // SAFETY: contract of `new`.
+        unsafe { (self.0.max_focus)(self.0.ctx, f) }
+    }
+
+    fn callback(&self, which: i32, name: &[u8], auto_remove: bool) {
+        // SAFETY: contract of `new`.
+        unsafe { (self.0.callback)(self.0.ctx, which, name.as_ptr(), name.len(), auto_remove) }
     }
 
     fn cfg_f(&self, sec: &str, key: &str, d: f32) -> f32 {
@@ -142,6 +185,18 @@ fn write_str(f: &mut Str, b: &[u8]) {
     }
 }
 
+fn vec3(v: Vector3f) -> [f32; 3] {
+    [v.x, v.y, v.z]
+}
+
+fn unvec3(v: [f32; 3]) -> Vector3f {
+    Vector3f {
+        x: v[0],
+        y: v[1],
+        z: v[2],
+    }
+}
+
 fn read_str(f: &Str) -> Vec<u8> {
     // SAFETY: libstdc++ keeps the data pointer and the size in the first two words.
     unsafe { std::slice::from_raw_parts(f[0] as *const u8, f[1] as usize) }.to_vec()
@@ -161,6 +216,18 @@ impl A7Area {
                 s.set_mtx_time = 1.0;
                 s.attached_body_mass = 0.0;
                 s.attached_entity_full_game_saved = false;
+            }
+            Pod::Script(_) => {
+                v.max_focus(v.cfg_f("Player_Interaction", "ScriptArea_MaxFocusDist", 0.0))
+            }
+            Pod::Examine(s) => {
+                v.max_focus(v.cfg_f("Player_Interaction", "Examine_MaxFocusDist", 0.0));
+                s.insane_limit = v.cfg_f("Player_Interaction", "MaxExamineSanity", 0.0);
+                s.play_sound_count = 0.0;
+            }
+            Pod::Sign(_) => v.max_focus(v.cfg_f("Player_Interaction", "Sign_MaxFocusDist", 0.0)),
+            Pod::Ladder(_) => {
+                v.max_focus(v.cfg_f("Player_Interaction", "Ladder_MaxFocusDist", 0.0))
             }
             Pod::Insanity(s) => {
                 s.check_time_min = v.cfg_f("Insanity", "InsanityArea_CheckTimeMin", 0.0);
@@ -220,12 +287,77 @@ impl A7Area {
                 s.max_attack_damage = v.cfg_f("Slime", &format!("{p}_MaxAttackDamage"), 0.0);
                 s.screen_shake_amount = v.cfg_f("Slime", &format!("{p}_ScreenShakeAmount"), 0.0);
             }
+            Pod::Script(s) => {
+                v.callback(
+                    0,
+                    &v.s("PlayerLookAtCallback"),
+                    v.b("PlayerLookAtCallbackAutoRemove", false),
+                );
+                v.callback(
+                    1,
+                    &v.s("PlayerInteractCallback"),
+                    v.b("PlayerInteractCallbackAutoRemove", false),
+                );
+                s.item_interaction = v.b("ItemInteraction", false);
+                let max = v.f("MaxFocusDistance", -1.0);
+                if max >= 0.0 {
+                    v.max_focus(max);
+                }
+            }
+            Pod::Examine(_) => {
+                self.strs[st::DESC_CAT] = v.s("DescCat");
+                self.strs[st::DESC_ENTRY] = v.s("DescEntry");
+                self.strs[st::INSANE_CAT] = v.s("DescInsaneCat");
+                self.strs[st::INSANE_ENTRY] = v.s("DescInsaneEntry");
+                self.strs[st::EXAMINE_SOUND] = v.s("Sound");
+                self.strs[st::INSANE_SOUND] = v.s("InsaneSound");
+            }
+            Pod::Sign(_) => {
+                self.strs[st::TEXT_CAT] = v.s("TextCat");
+                self.strs[st::TEXT_ENTRY] = v.s("TextEntry");
+            }
+            Pod::Ladder(_) => self.strs[st::MATERIAL] = v.sd("Material", "metal"),
+            Pod::Rope(_) => {}
             Pod::Insanity(s) => s.auto_disable = v.b("AutoDisable", false),
             Pod::Flashback(_) => {
                 self.strs[st::FLASHBACK_FILE] = v.s("FlashbackFile");
                 self.strs[st::FLASHBACK_CALLBACK] = v.s("Callback");
             }
-            _ => {}
+        }
+    }
+
+    /// Loader of a rope entity: the start position, the loader variables, then the settings
+    /// file when `RopeFile` names one that loads, else the same keys from the variables.
+    pub fn load_rope(&mut self, start: Vector3f, v: &V) {
+        let Pod::Rope(s) = &mut self.pod else {
+            return;
+        };
+        s.start_pos = start;
+        self.strs[st::END_POS_NODE] = v.s("EndPosNode");
+        self.strs[st::START_BODY] = v.s("StartBody");
+        self.strs[st::END_BODY] = v.s("EndBody");
+        s.auto_move = v.b("AutoMove", false);
+        s.auto_move_acc = v.f("AutoMoveAcc", 0.0);
+        s.auto_move_max_speed = v.f("AutoMoveMaxSpeed", 0.0);
+        s.min_total_length = v.f("MinTotalLength", 0.0);
+        s.max_total_length = v.f("MaxTotalLength", 0.0);
+        let file = v.s("RopeFile");
+        let doc = !file.is_empty() && v.doc_open(&file);
+        let f = |k: &str| if doc { v.doc_f(k) } else { v.f(k, 0.0) };
+        let t = |k: &str| if doc { v.doc_s(k) } else { v.s(k) };
+        s.segment_length = f("SegmentLength");
+        s.damping = f("Damping");
+        s.strength = f("Strength");
+        s.stiffness = f("Stiffness");
+        self.strs[st::ROPE_MATERIAL] = t("Material");
+        s.radius = f("Radius");
+        s.length_tile_amount = f("LengthTileAmount");
+        s.length_tile_size = f("LengthTileSize");
+        self.strs[st::ROPE_SOUND] = t("Sound");
+        s.sound_start_speed = f("SoundStartSpeed");
+        s.sound_stop_speed = f("SoundStopSpeed");
+        if doc {
+            v.doc_close();
         }
     }
 
@@ -296,12 +428,58 @@ impl A7Area {
                     let d = &mut *data.cast::<lay::cLuxArea_Insanity_SaveData>();
                     d.mbAutoDisable = u8::from(s.auto_disable);
                 }
+                Pod::Script(s) => {
+                    let d = &mut *data.cast::<lay::cLuxArea_Script_SaveData>();
+                    d.mbItemInteraction = u8::from(s.item_interaction);
+                }
+                Pod::Examine(_) => {
+                    let d = &mut *data.cast::<lay::cLuxArea_Examine_SaveData>();
+                    write_str(&mut d.msDescCat, &self.strs[st::DESC_CAT]);
+                    write_str(&mut d.msDescEntry, &self.strs[st::DESC_ENTRY]);
+                    write_str(&mut d.msDescInsaneCat, &self.strs[st::INSANE_CAT]);
+                    write_str(&mut d.msDescInsaneEntry, &self.strs[st::INSANE_ENTRY]);
+                    write_str(&mut d.msSound, &self.strs[st::EXAMINE_SOUND]);
+                    write_str(&mut d.msInsaneSound, &self.strs[st::INSANE_SOUND]);
+                }
+                Pod::Sign(_) => {
+                    let d = &mut *data.cast::<lay::cLuxArea_Sign_SaveData>();
+                    write_str(&mut d.msTextCat, &self.strs[st::TEXT_CAT]);
+                    write_str(&mut d.msTextEntry, &self.strs[st::TEXT_ENTRY]);
+                }
+                Pod::Ladder(_) => {
+                    let d = &mut *data.cast::<lay::cLuxArea_Ladder_SaveData>();
+                    write_str(&mut d.msMaterial, &self.strs[st::MATERIAL]);
+                }
+                Pod::Rope(s) => {
+                    let d = &mut *data.cast::<lay::cLuxRope_SaveData>();
+                    d.mbRopeCreated = u8::from(s.rope_created);
+                    d.mvStartPos = vec3(s.start_pos);
+                    d.mvEndPos = vec3(s.end_pos);
+                    write_str(&mut d.msEndPosNode, &self.strs[st::END_POS_NODE]);
+                    write_str(&mut d.msStartBody, &self.strs[st::START_BODY]);
+                    write_str(&mut d.msEndBody, &self.strs[st::END_BODY]);
+                    d.mfMinTotalLength = s.min_total_length;
+                    d.mfMaxTotalLength = s.max_total_length;
+                    d.mfSegmentLength = s.segment_length;
+                    d.mfDamping = s.damping;
+                    d.mfStrength = s.strength;
+                    d.mfStiffness = s.stiffness;
+                    write_str(&mut d.msMaterial, &self.strs[st::ROPE_MATERIAL]);
+                    d.mfRadius = s.radius;
+                    d.mfLengthTileAmount = s.length_tile_amount;
+                    d.mfLengthTileSize = s.length_tile_size;
+                    write_str(&mut d.msSound, &self.strs[st::ROPE_SOUND]);
+                    d.mfSoundStartSpeed = s.sound_start_speed;
+                    d.mfSoundStopSpeed = s.sound_stop_speed;
+                    d.mbAutoMove = u8::from(s.auto_move);
+                    d.mfAutoMoveAcc = s.auto_move_acc;
+                    d.mfAutoMoveMaxSpeed = s.auto_move_max_speed;
+                }
                 Pod::Flashback(_) => {
                     let d = &mut *data.cast::<lay::cLuxArea_Flashback_SaveData>();
                     write_str(&mut d.msFlashbackFile, &self.strs[st::FLASHBACK_FILE]);
                     write_str(&mut d.msCallback, &self.strs[st::FLASHBACK_CALLBACK]);
                 }
-                _ => {}
             }
         }
     }
@@ -371,12 +549,58 @@ impl A7Area {
                     let d = &*data.cast::<lay::cLuxArea_Insanity_SaveData>();
                     s.auto_disable = d.mbAutoDisable != 0;
                 }
+                Pod::Script(s) => {
+                    let d = &*data.cast::<lay::cLuxArea_Script_SaveData>();
+                    s.item_interaction = d.mbItemInteraction != 0;
+                }
+                Pod::Examine(_) => {
+                    let d = &*data.cast::<lay::cLuxArea_Examine_SaveData>();
+                    self.strs[st::DESC_CAT] = read_str(&d.msDescCat);
+                    self.strs[st::DESC_ENTRY] = read_str(&d.msDescEntry);
+                    self.strs[st::INSANE_CAT] = read_str(&d.msDescInsaneCat);
+                    self.strs[st::INSANE_ENTRY] = read_str(&d.msDescInsaneEntry);
+                    self.strs[st::EXAMINE_SOUND] = read_str(&d.msSound);
+                    self.strs[st::INSANE_SOUND] = read_str(&d.msInsaneSound);
+                }
+                Pod::Sign(_) => {
+                    let d = &*data.cast::<lay::cLuxArea_Sign_SaveData>();
+                    self.strs[st::TEXT_CAT] = read_str(&d.msTextCat);
+                    self.strs[st::TEXT_ENTRY] = read_str(&d.msTextEntry);
+                }
+                Pod::Ladder(_) => {
+                    let d = &*data.cast::<lay::cLuxArea_Ladder_SaveData>();
+                    self.strs[st::MATERIAL] = read_str(&d.msMaterial);
+                }
+                Pod::Rope(s) => {
+                    let d = &*data.cast::<lay::cLuxRope_SaveData>();
+                    s.rope_created = d.mbRopeCreated != 0;
+                    s.start_pos = unvec3(d.mvStartPos);
+                    s.end_pos = unvec3(d.mvEndPos);
+                    self.strs[st::END_POS_NODE] = read_str(&d.msEndPosNode);
+                    self.strs[st::START_BODY] = read_str(&d.msStartBody);
+                    self.strs[st::END_BODY] = read_str(&d.msEndBody);
+                    s.min_total_length = d.mfMinTotalLength;
+                    s.max_total_length = d.mfMaxTotalLength;
+                    s.segment_length = d.mfSegmentLength;
+                    s.damping = d.mfDamping;
+                    s.strength = d.mfStrength;
+                    s.stiffness = d.mfStiffness;
+                    self.strs[st::ROPE_MATERIAL] = read_str(&d.msMaterial);
+                    s.radius = d.mfRadius;
+                    s.length_tile_amount = d.mfLengthTileAmount;
+                    s.length_tile_size = d.mfLengthTileSize;
+                    self.strs[st::ROPE_SOUND] = read_str(&d.msSound);
+                    s.sound_start_speed = d.mfSoundStartSpeed;
+                    s.sound_stop_speed = d.mfSoundStopSpeed;
+                    s.auto_move = d.mbAutoMove != 0;
+                    s.auto_move_acc = d.mfAutoMoveAcc;
+                    s.auto_move_max_speed = d.mfAutoMoveMaxSpeed;
+                }
                 Pod::Flashback(_) => {
                     let d = &*data.cast::<lay::cLuxArea_Flashback_SaveData>();
                     self.strs[st::FLASHBACK_FILE] = read_str(&d.msFlashbackFile);
                     self.strs[st::FLASHBACK_CALLBACK] = read_str(&d.msCallback);
                 }
-                _ => {}
             }
         }
     }
@@ -398,6 +622,14 @@ pub unsafe extern "C" fn ohpl_a7_area_init(
         let name = std::slice::from_raw_parts(name, n);
         (*a).init(name, &V::new(&*vt))
     }
+}
+
+/// # Safety
+/// `a` a live rope block; `start` readable; `vt` valid for the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_a7_rope_load(a: *mut A7Area, start: *const Vector3f, vt: *const Vt) {
+    // SAFETY: caller contract.
+    unsafe { (*a).load_rope(*start, &V::new(&*vt)) };
 }
 
 /// # Safety

@@ -71,7 +71,6 @@ namespace hpl {
 
 }
 
-struct OhplPid;
 extern "C" {
 uint64_t ohpl_h15w_new(size_t (*)(int32_t, hpl::OhplH15Wa*), size_t);
 size_t ohpl_h15w_len(uint64_t, size_t);

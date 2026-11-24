@@ -144,12 +144,6 @@ namespace hpl {
 	// cGuiSet: text drawing, rendering and the trace hook
 	//////////////////////////////////////////////////////////////////////////
 
-	void (*gfpOhplGuiTrace)(cGuiSet*, const cGuiGfxElement*, const tWString*, const cVector3f&, const cVector2f&, const cColor&, int) = NULL;
-
-	static void TraceDraw(void *apSet, void *apGfx, const cVector3f *apPos, const cVector2f *apSize, const cColor *apColor, int alMaterial)
-	{
-		if(gfpOhplGuiTrace) gfpOhplGuiTrace((cGuiSet*)apSet, (const cGuiGfxElement*)apGfx, NULL, *apPos, *apSize, *apColor, alMaterial);
-	}
 
 	static void DrawTextFromCharArray(cGuiSet *apSet, const wchar_t* apString, iFontData *apFont,
 										const cVector2f& avSize, const cVector3f& avPosition,
@@ -166,7 +160,7 @@ namespace hpl {
 							const cVector2f &avSize, const cColor& aColor,
 							eFontAlign aAlign, eGuiMaterial aMaterial)
 	{
-		if(gfpOhplGuiTrace) gfpOhplGuiTrace(this, NULL, &asText, avPos, avSize, aColor, (int)aAlign);
+		if(ohpl_a11c_trace_on) ohpl_a11c_trace_text(this, (const uint32_t*)asText.data(), asText.size(), &avPos, &avSize, &aColor, (int)aAlign);
 		DrawTextFromCharArray(this, asText.c_str(), apFont,avSize,avPos,aColor,aMaterial,aAlign);
 	}
 
@@ -342,5 +336,5 @@ namespace hpl {
 	}
 
 	void OhplGwRegisterHost();
-	static struct OhplG1Register { OhplG1Register() { ohpl_g1_set_engine(&gG1Engine); ohpl_g1_set_host(&gG1Host); OhplGwRegisterHost(); ohpl_g1_set_trace_fn(TraceDraw); } } gG1Register;
+	static struct OhplG1Register { OhplG1Register() { ohpl_g1_set_engine(&gG1Engine); ohpl_g1_set_host(&gG1Host); OhplGwRegisterHost(); } } gG1Register;
 }

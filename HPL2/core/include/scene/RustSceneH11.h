@@ -45,8 +45,6 @@ namespace hpl {
 		bool is_static;
 	};
 
-	struct OhplH11ShadowCache;
-	struct OhplH11Names;
 
 	static_assert(sizeof(OhplH11MeshCtl) == 32 && offsetof(OhplH11MeshCtl, physics) == 20, "H11 mesh ctl layout");
 	static_assert(sizeof(OhplH11SpotCtl) == 16 && offsetof(OhplH11SpotCtl, projection_updated) == 12, "H11 spot ctl layout");

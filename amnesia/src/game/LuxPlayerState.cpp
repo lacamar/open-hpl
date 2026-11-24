@@ -29,7 +29,7 @@
 #include "LuxPlayerHands.h"
 #include "LuxPlayerHelpers.h"
 #include "LuxMoveState_Normal.h"
-#include "LuxArea_Ladder.h"
+#include "LuxArea.h"
 #include "LuxHelpFuncs.h"
 #include "LuxMessageHandler.h"
 #include "LuxInventory.h"
@@ -56,7 +56,7 @@ cLuxInventory_Item *cLuxPlayerStateVars::mpInventoryItem  = NULL;
 
 ///////////////////////
 //Ladder
-cLuxArea_Ladder *cLuxPlayerStateVars::mpLadder = NULL;
+cLuxAreaRs *cLuxPlayerStateVars::mpLadder = NULL;
 cVector3f cLuxPlayerStateVars::mvLadderStartPos = 0;
 //-----------------------------------------------------------------------
 
@@ -376,7 +376,7 @@ int32_t iLuxPlayerState::A3Host(void *apCtx, uint32_t alOp, OhplA3Io *apIo)
 
 	case kOhplA3Op_LADDER_V3:
 	{
-		cLuxArea_Ladder *pLadder = (cLuxArea_Ladder*)io.p[0];
+		cLuxAreaRs *pLadder = (cLuxAreaRs*)io.p[0];
 		if(io.i[0] == 0) io.f[0] = pLadder->GetMaxY();
 		else if(io.i[0] == 1) io.f[0] = pLadder->GetMinY();
 		else
@@ -387,7 +387,7 @@ int32_t iLuxPlayerState::A3Host(void *apCtx, uint32_t alOp, OhplA3Io *apIo)
 		break;
 	}
 	case kOhplA3Op_LADDER_SOUND:
-		gpBase->mpHelpFuncs->PlayGuiSoundData("player_ladder_" + ((cLuxArea_Ladder*)io.p[0])->GetMaterial() + "_" + gA3LadderSounds[io.i[0]], eSoundEntryType_World);
+		gpBase->mpHelpFuncs->PlayGuiSoundData("player_ladder_" + ((cLuxAreaRs*)io.p[0])->GetMaterial() + "_" + gA3LadderSounds[io.i[0]], eSoundEntryType_World);
 		break;
 
 	case kOhplA3Op_DEBUG_ROW:

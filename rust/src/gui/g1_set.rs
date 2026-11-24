@@ -1257,27 +1257,6 @@ fn trace_and_draw(s: *mut Set, g: *mut Element, pos: Vector3f, size: Vector2f, c
     }
 }
 
-type TraceFn = unsafe extern "C" fn(
-    *mut c_void,
-    *mut c_void,
-    *const Vector3f,
-    *const Vector2f,
-    *const Color,
-    i32,
-);
-
-static TRACE: std::sync::atomic::AtomicPtr<c_void> =
-    std::sync::atomic::AtomicPtr::new(ptr::null_mut());
-
-/// Registers the C++ `gfpOhplGuiTrace` caller (called once at start-up).
-///
-/// # Safety
-/// `f` is a static function of the `TraceFn` shape.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_g1_set_trace_fn(f: TraceFn) {
-    TRACE.store(f as *mut c_void, Ordering::Release);
-}
-
 unsafe fn ohpl_g1_set_trace(
     s: *mut c_void,
     g: *mut c_void,
@@ -1286,12 +1265,9 @@ unsafe fn ohpl_g1_set_trace(
     color: *const Color,
     material: i32,
 ) {
-    let f = TRACE.load(Ordering::Acquire);
-    if !f.is_null() {
-        // SAFETY: stored by `ohpl_g1_set_trace_fn`.
-        let f: TraceFn = unsafe { std::mem::transmute::<*mut c_void, TraceFn>(f) };
-        // SAFETY: caller contract.
-        unsafe { f(s, g, pos, size, color, material) };
+    // SAFETY: the callers pass live vectors and a colour.
+    unsafe {
+        crate::luxui::trace_gfx(s as usize, g as usize, &*pos, &*size, &*color, material);
     }
 }
 

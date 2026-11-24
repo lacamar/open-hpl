@@ -27,7 +27,7 @@
 //----------------------------------------------
 
 class cLuxPlayer;
-class cLuxArea_Ladder;
+class cLuxAreaRs;
 
 //------------------------------------
 
@@ -116,7 +116,7 @@ private:
 	void PlaySound(const tString &asType);
 
 	int &mlState = mR.state;
-	cLuxArea_Ladder *&mpLadder = mR.ladder;
+	cLuxAreaRs *&mpLadder = mR.ladder;
 	cVector3f &mvStartPosition = mR.startPosition;
 
 	float &mfTimeCount = mR.timeCount;

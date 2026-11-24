@@ -3,13 +3,15 @@
 //! (`amnesia/src/game/RustLuxUiA11b.h`); tests use a recording fake. No host call may be made
 //! while a handler borrow is held, since a callback can re-enter the handler.
 
+use super::dump::{self, answer, answers, esc, esc32, num};
 use crate::gui::direct;
-use crate::somascript::cfmt::fmt_g9;
+use crate::gui::gw;
 use crate::types::Color;
+use crate::types::Vector2f;
 use std::collections::BTreeMap;
 use std::ffi::c_void;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicPtr, Ordering};
-use std::sync::{Mutex, OnceLock};
 
 pub type Ctx = *mut c_void;
 type Sink = unsafe extern "C" fn(Ctx, *const u8, usize);
@@ -45,9 +47,6 @@ pub struct HostTable {
     pub menu_vec2: unsafe extern "C" fn(Bytes, Bytes, f32, *mut f32),
     pub user_bool: unsafe extern "C" fn(Bytes, Bytes, i32) -> i32,
     pub set_user_bool: unsafe extern "C" fn(Bytes, Bytes, i32),
-    pub wrap_rows:
-        unsafe extern "C" fn(usize, f32, f32, *const f32, *const u32, usize, Sink32, Ctx),
-    pub font_len: unsafe extern "C" fn(usize, *const f32, *const u32, usize) -> f32,
     pub font_range: unsafe extern "C" fn(usize, *mut u32),
     pub font_glyph: unsafe extern "C" fn(usize, u32, *mut f32) -> i32,
     pub parse_string: unsafe extern "C" fn(*const u32, usize, Sink32, Ctx),
@@ -72,8 +71,9 @@ pub struct HostTable {
     pub translate: unsafe extern "C" fn(Bytes, Bytes, Sink32, Ctx),
     pub chinese: unsafe extern "C" fn() -> i32,
     pub callback: unsafe extern "C" fn(usize, i32),
-    pub log_gfx: unsafe extern "C" fn(*const f32, *const f32, *const f32, i32),
-    pub ans: unsafe extern "C" fn(Bytes, Bytes, Bytes),
+    pub map_loaded: unsafe extern "C" fn() -> i32,
+    pub journal_active: unsafe extern "C" fn() -> i32,
+    pub enter_journal: unsafe extern "C" fn(),
 }
 
 static HOST: AtomicPtr<HostTable> = AtomicPtr::new(std::ptr::null_mut());
@@ -150,6 +150,11 @@ pub trait Ui {
 
 pub struct HostUi(&'static HostTable);
 
+pub(super) fn table() -> Option<&'static HostTable> {
+    // SAFETY: as `host`.
+    unsafe { HOST.load(Ordering::Acquire).as_ref() }
+}
+
 pub fn host() -> Option<HostUi> {
     // SAFETY: `ohpl_a11b_set_host` stored a table that lives for the whole run, or null.
     unsafe { HOST.load(Ordering::Acquire).as_ref() }.map(HostUi)
@@ -173,17 +178,6 @@ unsafe extern "C" fn push_units(ctx: Ctx, p: *const u32, n: usize) {
     }
 }
 
-unsafe extern "C" fn push_row(ctx: Ctx, p: *const u32, n: usize) {
-    // SAFETY: `ctx` is the row list handed to `wrap_rows`.
-    let out = unsafe { &mut *ctx.cast::<Vec<Vec<u32>>>() };
-    let row = if p.is_null() {
-        Vec::new()
-    } else {
-        unsafe { std::slice::from_raw_parts(p, n) }.to_vec()
-    };
-    out.push(row);
-}
-
 fn bytes_out(f: impl FnOnce(Sink, Ctx)) -> Vec<u8> {
     let mut v: Vec<u8> = Vec::new();
     f(push_bytes, std::ptr::from_mut(&mut v).cast());
@@ -201,26 +195,6 @@ const TEXTURE_2D: i32 = 1;
 /// Gfx element to file name, for the recorded answers (`OHPL_A11B_ANSWERS`).
 static NAMES: Mutex<BTreeMap<usize, Vec<u8>>> = Mutex::new(BTreeMap::new());
 
-fn answers() -> bool {
-    static ON: OnceLock<bool> = OnceLock::new();
-    *ON.get_or_init(|| std::env::var_os("OHPL_A11B_ANSWERS").is_some_and(|v| !v.is_empty()))
-}
-
-/// `OhplA11Esc`.
-fn esc(s: &[u8]) -> String {
-    s.iter()
-        .map(|&c| match c {
-            32..=126 if c != b'\\' && c != b'|' => char::from(c).to_string(),
-            _ => format!("\\u{c:04x}"),
-        })
-        .collect()
-}
-
-/// `OhplA11Num`.
-fn num(v: f32) -> String {
-    String::from_utf8_lossy(&fmt_g9(v)).into_owned()
-}
-
 impl HostUi {
     fn name(&self, gfx: usize, name: &[u8]) {
         if answers()
@@ -229,38 +203,60 @@ impl HostUi {
             n.insert(gfx, name.to_vec());
         }
     }
-
-    fn answer(&self, op: &str, input: &str, out: &str) {
-        // SAFETY: the table's function reads the three strings for the call.
-        unsafe {
-            (self.0.ans)(
-                bytes(op.as_bytes()),
-                bytes(input.as_bytes()),
-                bytes(out.as_bytes()),
-            )
-        };
-    }
 }
 
 // SAFETY (all blocks below): every pointer passed is to a live local or slice for the duration
 // of the call, and the table's functions accept them.
 impl Ui for HostUi {
     fn menu_str(&self, sec: &[u8], key: &[u8], def: &[u8]) -> Vec<u8> {
-        bytes_out(|s, c| unsafe { (self.0.menu_str)(bytes(sec), bytes(key), bytes(def), s, c) })
+        let v = bytes_out(|s, c| unsafe {
+            (self.0.menu_str)(bytes(sec), bytes(key), bytes(def), s, c)
+        });
+        if answers() {
+            answer(
+                "menu_str",
+                &format!("{}|{}|{}", esc(sec), esc(key), esc(def)),
+                &esc(&v),
+            );
+        }
+        v
     }
 
     fn menu_f32(&self, sec: &[u8], key: &[u8], def: f32) -> f32 {
-        unsafe { (self.0.menu_f32)(bytes(sec), bytes(key), def) }
+        let v = unsafe { (self.0.menu_f32)(bytes(sec), bytes(key), def) };
+        if answers() {
+            answer(
+                "menu_f32",
+                &format!("{}|{}|{}", esc(sec), esc(key), num(def)),
+                &num(v),
+            );
+        }
+        v
     }
 
     fn menu_vec2(&self, sec: &[u8], key: &[u8], def: f32) -> [f32; 2] {
         let mut o = [0.0; 2];
         unsafe { (self.0.menu_vec2)(bytes(sec), bytes(key), def, o.as_mut_ptr()) };
+        if answers() {
+            answer(
+                "menu_vec2",
+                &format!("{}|{}|{}", esc(sec), esc(key), num(def)),
+                &format!("{}|{}", num(o[0]), num(o[1])),
+            );
+        }
         o
     }
 
     fn user_bool(&self, sec: &[u8], key: &[u8], def: bool) -> bool {
-        unsafe { (self.0.user_bool)(bytes(sec), bytes(key), i32::from(def)) != 0 }
+        let v = unsafe { (self.0.user_bool)(bytes(sec), bytes(key), i32::from(def)) != 0 };
+        if answers() {
+            answer(
+                "user_bool",
+                &format!("{}|{}|{}", esc(sec), esc(key), i32::from(def)),
+                &i32::from(v).to_string(),
+            );
+        }
+        v
     }
 
     fn set_user_bool(&self, sec: &[u8], key: &[u8], v: bool) {
@@ -303,7 +299,7 @@ impl Ui for HostUi {
                 .ok()
                 .and_then(|n| n.get(&gfx).cloned())
                 .unwrap_or_default();
-            self.answer(
+            answer(
                 "gfx_size",
                 &format!("{}|{}", esc(&name), i32::from(which != 0)),
                 &format!("{}|{}", num(v[0]), num(v[1])),
@@ -320,61 +316,121 @@ impl Ui for HostUi {
         size: [f32; 2],
         text: &[u32],
     ) -> Vec<Vec<u32>> {
-        let mut rows: Vec<Vec<u32>> = Vec::new();
-        unsafe {
-            (self.0.wrap_rows)(
-                font,
-                width,
-                line,
-                size.as_ptr(),
-                text.as_ptr(),
-                text.len(),
-                push_row,
-                std::ptr::from_mut(&mut rows).cast(),
-            )
-        };
+        let rows = gw::font_rows(
+            font,
+            width,
+            line,
+            Vector2f {
+                x: size[0],
+                y: size[1],
+            },
+            text,
+        );
+        if answers() {
+            let joined: String = rows
+                .iter()
+                .enumerate()
+                .map(|(i, r)| format!("{}{}", if i > 0 { "\\u0001" } else { "" }, esc32(r)))
+                .collect();
+            answer(
+                "wrap_rows",
+                &format!(
+                    "{}|{}|{}|{}|{}",
+                    num(width),
+                    num(line),
+                    num(size[0]),
+                    num(size[1]),
+                    esc32(text)
+                ),
+                &format!("{}|{joined}", rows.len()),
+            );
+        }
         rows
     }
 
     fn font_len(&self, font: usize, size: [f32; 2], text: &[u32]) -> f32 {
-        unsafe { (self.0.font_len)(font, size.as_ptr(), text.as_ptr(), text.len()) }
+        let v = gw::font_length(
+            font,
+            Vector2f {
+                x: size[0],
+                y: size[1],
+            },
+            text,
+        );
+        if answers() {
+            answer(
+                "font_len",
+                &format!("{}|{}|{}", num(size[0]), num(size[1]), esc32(text)),
+                &num(v),
+            );
+        }
+        v
     }
 
     fn font_range(&self, font: usize) -> (u32, u32) {
         let mut o = [0u32; 2];
         unsafe { (self.0.font_range)(font, o.as_mut_ptr()) };
+        if answers() {
+            answer("font_range", "", &format!("{}|{}", o[0], o[1]));
+        }
         (o[0], o[1])
     }
 
     fn font_glyph(&self, font: usize, idx: u32) -> Option<([f32; 2], f32)> {
         let mut o = [0.0f32; 3];
         let ok = unsafe { (self.0.font_glyph)(font, idx, o.as_mut_ptr()) };
+        if answers() {
+            let out = if ok == 0 {
+                "none".to_owned()
+            } else {
+                format!("{}|{}|{}", num(o[0]), num(o[1]), num(o[2]))
+            };
+            answer("font_glyph", &idx.to_string(), &out);
+        }
         (ok != 0).then_some(([o[0], o[1]], o[2]))
     }
 
     fn parse_string(&self, text: &[u32]) -> Vec<u32> {
-        units_out(|s, c| unsafe { (self.0.parse_string)(text.as_ptr(), text.len(), s, c) })
+        let v = units_out(|s, c| unsafe { (self.0.parse_string)(text.as_ptr(), text.len(), s, c) });
+        if answers() {
+            answer("parse_string", &esc32(text), &esc32(&v));
+        }
+        v
     }
 
     fn string_duration(&self, text: &[u32]) -> f32 {
-        unsafe { (self.0.string_duration)(text.as_ptr(), text.len()) }
+        let v = unsafe { (self.0.string_duration)(text.as_ptr(), text.len()) };
+        if answers() {
+            answer("string_duration", &esc32(text), &num(v));
+        }
+        v
     }
 
     fn gui_sound(&self, name: &[u8]) {
+        dump::log(&format!("snd {}", String::from_utf8_lossy(name)));
         unsafe { (self.0.gui_sound)(bytes(name)) }
     }
 
     fn set_update_active(&self, on: bool) {
+        dump::log(&format!("upd {}", i32::from(on)));
         unsafe { (self.0.set_update_active)(i32::from(on)) }
     }
 
     fn input_name(&self, action: &[u8]) -> Vec<u32> {
-        units_out(|s, c| unsafe { (self.0.input_name)(bytes(action), s, c) })
+        let v = units_out(|s, c| unsafe { (self.0.input_name)(bytes(action), s, c) });
+        if answers() {
+            answer("input_name", &esc(action), &esc32(&v));
+        }
+        v
     }
 
     fn hud(&self) -> Hud {
         let mut o = [0.0f32; 5];
         unsafe { (self.0.hud)(o.as_mut_ptr()) };
+        if answers() {
+            let out: Vec<String> = o.iter().map(|&x| num(x)).collect();
+            answer("hud", "", &out.join("|"));
+        }
         Hud {
             center: [o[0], o[1]],
             start: [o[2], o[3], o[4]],
@@ -382,7 +438,11 @@ impl Ui for HostUi {
     }
 
     fn ptest(&self) -> bool {
-        unsafe { (self.0.ptest)() != 0 }
+        let v = unsafe { (self.0.ptest)() != 0 };
+        if answers() {
+            answer("ptest", "", if v { "1" } else { "0" });
+        }
+        v
     }
 
     fn draw_gfx(
@@ -395,8 +455,7 @@ impl Ui for HostUi {
         mat: i32,
     ) {
         let size = size.unwrap_or([-1.0, -1.0]);
-        // SAFETY: the table's function reads the arrays for the call.
-        unsafe { (self.0.log_gfx)(pos.as_ptr(), size.as_ptr(), col.as_ptr(), mat) };
+        dump::log_gfx(pos, size, col, mat);
         let set = if set == 0 { direct::hud_set() } else { set };
         let c = Color {
             r: col[0],
@@ -419,6 +478,14 @@ impl Ui for HostUi {
         text: &[u32],
         space_prefix: bool,
     ) {
+        if dump::enabled() {
+            let shown: Vec<u32> = if space_prefix {
+                std::iter::once(32).chain(text.iter().copied()).collect()
+            } else {
+                text.to_vec()
+            };
+            dump::log_font(pos, size, col, align, mat, &shown);
+        }
         unsafe {
             (self.0.draw_font)(
                 set,
@@ -436,15 +503,36 @@ impl Ui for HostUi {
     }
 
     fn translate(&self, cat: &[u8], key: &[u8]) -> Vec<u32> {
-        units_out(|s, c| unsafe { (self.0.translate)(bytes(cat), bytes(key), s, c) })
+        let v = units_out(|s, c| unsafe { (self.0.translate)(bytes(cat), bytes(key), s, c) });
+        if answers() {
+            answer(
+                "translate",
+                &format!("{}|{}", esc(cat), esc(key)),
+                &esc32(&v),
+            );
+        }
+        v
     }
 
     fn chinese(&self) -> bool {
-        unsafe { (self.0.chinese)() != 0 }
+        let v = unsafe { (self.0.chinese)() != 0 };
+        if answers() {
+            answer("chinese", "", if v { "1" } else { "0" });
+        }
+        v
     }
 
     fn callback(&self, cb: usize, yes: bool) {
-        unsafe { (self.0.callback)(cb, i32::from(yes)) }
+        dump::log(&format!(
+            "callback {} {}",
+            i32::from(cb != 0),
+            i32::from(yes)
+        ));
+        if cb == dump::CALLBACK {
+            dump::log(&format!("cb {}", i32::from(yes)));
+        } else if cb != 0 {
+            unsafe { (self.0.callback)(cb, i32::from(yes)) }
+        }
     }
 }
 

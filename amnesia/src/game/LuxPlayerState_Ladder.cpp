@@ -20,7 +20,7 @@
 #include "LuxPlayerState_Ladder.h"
 
 #include "LuxPlayer.h"
-#include "LuxArea_Ladder.h"
+#include "LuxArea.h"
 #include "LuxMoveState_Normal.h"
 #include "LuxHelpFuncs.h"
 #include "LuxMapHandler.h"
@@ -257,7 +257,7 @@ void cLuxPlayerState_Ladder::LoadFromSaveDataBeforeEnter(cLuxMap *apMap, iLuxPla
 	iLuxEntity *pEntity = gpBase->mpMapHandler->GetCurrentMap()->GetEntityByID(pData->mlLadderID,eLuxEntityType_Area, eLuxAreaType_Ladder);
 	if(pEntity)
 	{
-		mpLadder = static_cast<cLuxArea_Ladder*>(pEntity);
+		mpLadder = static_cast<cLuxAreaRs*>(pEntity);
 	}
 	
 	kCopyFromVar(pData, mvStartPosition);

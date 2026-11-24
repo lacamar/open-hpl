@@ -190,12 +190,6 @@ struct OhplGa9DebugFlags
 	int32_t temp_count;
 };
 
-struct OhplGa9Toggle
-{
-	int32_t kind;
-	bool on;
-	float value;
-};
 
 struct OhplGa9Debug;
 
@@ -321,10 +315,6 @@ template <class F> struct OhplGa9EmitOf
 	static OhplGa9Emit Fn() { return &Thunk; }
 };
 
-inline OhplGa9Arg OhplGa9ArgI(long long v) { OhplGa9Arg a = {v, 0, nullptr, 0}; return a; }
-inline OhplGa9Arg OhplGa9ArgF(float v) { OhplGa9Arg a = {0, v, nullptr, 0}; return a; }
-inline OhplGa9Arg OhplGa9ArgS(const std::string &s) { OhplGa9Arg a = {0, 0, (const unsigned char *)s.data(), s.size()}; return a; }
-inline OhplGa9Arg OhplGa9ArgW(const std::wstring &s) { OhplGa9Arg a = {0, 0, (const unsigned char *)s.data(), s.size()}; return a; }
 inline std::string OhplGa9GetS(const OhplGa9Arg &a) { return std::string((const char *)a.p, a.n); }
 inline std::wstring OhplGa9GetW(const OhplGa9Arg &a) { return std::wstring((const wchar_t *)a.p, a.n); }
 inline OhplGa9Str OhplGa9StrOf(const std::string &s) { OhplGa9Str r = {(const unsigned char *)s.data(), s.size()}; return r; }

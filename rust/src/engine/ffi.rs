@@ -1,7 +1,7 @@
 //! C ABI for the engine layer (`HPL2/core/include/engine/RustEngine.h`). Byte arguments are
 //! (pointer, length) pairs; results go through sink callbacks, so Rust never hands out memory.
 
-use super::frame::{self, Fps, FrameTiming, Loop};
+use super::frame::{self, Fps, Loop};
 use super::multi_settings::{self as ms, Entry, SlotAction};
 use super::save::{self, Cursor, Registry};
 use super::setup_vars::SetupVars;
@@ -162,72 +162,6 @@ pub unsafe extern "C" fn ohpl_en_fps_avg_frame_ms(f: *const Fps) -> f32 {
 pub unsafe extern "C" fn ohpl_en_loop_init(l: *mut Loop) {
     // SAFETY: caller contract.
     unsafe { l.write(Loop::default()) }
-}
-
-macro_rules! loop_fn {
-    ($name:ident, $m:ident $(, $a:ident: $t:ty)*) => {
-        /// # Safety
-        /// `l` is valid.
-        #[unsafe(no_mangle)]
-        pub unsafe extern "C" fn $name(l: *mut Loop $(, $a: $t)*) {
-            // SAFETY: caller contract.
-            unsafe { (*l).$m($($a),*) }
-        }
-    };
-    ($name:ident, $m:ident $(, $a:ident: $t:ty)* => $r:ty) => {
-        /// # Safety
-        /// `l` is valid.
-        #[unsafe(no_mangle)]
-        pub unsafe extern "C" fn $name(l: *mut Loop $(, $a: $t)*) -> $r {
-            // SAFETY: caller contract.
-            unsafe { (*l).$m($($a),*) }
-        }
-    };
-}
-
-loop_fn!(ohpl_en_loop_begin_run, begin_run);
-loop_fn!(ohpl_en_loop_step_begin, step_begin);
-loop_fn!(ohpl_en_loop_step_end, step_end);
-loop_fn!(ohpl_en_loop_pause_tick, pause_tick);
-loop_fn!(ohpl_en_loop_advance_game_time, advance_game_time, step: f32);
-loop_fn!(ohpl_en_loop_update_log_tick, update_log_tick => bool);
-loop_fn!(ohpl_en_loop_add_logic_ms, add_logic_ms, ms: f64);
-loop_fn!(ohpl_en_loop_add_swap_ms, add_swap_ms, ms: f64);
-loop_fn!(ohpl_en_loop_skip_render_once, skip_render_once, render_once: bool => bool);
-loop_fn!(ohpl_en_loop_take_swap, take_swap => bool);
-loop_fn!(ohpl_en_loop_swap_done, swap_done, render_once: bool => bool);
-loop_fn!(ohpl_en_loop_want_render, want_render, limit_fps: bool => bool);
-loop_fn!(ohpl_en_loop_mean_framerate, mean_framerate, elapsed_ms: u64 => f64);
-
-/// # Safety
-/// `l` and `out` are valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_en_loop_frame_rendered(l: *mut Loop, out: *mut FrameTiming) {
-    // SAFETY: caller contract.
-    unsafe { out.write((*l).frame_rendered()) }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_en_frame_time(timer_sec: f64) -> f32 {
-    frame::frame_time(timer_sec)
-}
-
-fn out_msgs(v: &[i32], out: *mut i32) -> usize {
-    for (i, m) in v.iter().enumerate() {
-        // SAFETY: the callers' `out` holds 8 slots and `v` has at most 6 entries.
-        unsafe { out.add(i).write(*m) };
-    }
-    v.len()
-}
-
-/// `had`/`now` bits: 1 input focus, 2 mouse focus, 4 visible. Writes at most 6 messages.
-///
-/// # Safety
-/// `out` has room for 8 `i32`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_en_focus_messages(had: u32, now: u32, out: *mut i32) -> usize {
-    let bits = |v: u32| [v & 1 != 0, v & 2 != 0, v & 4 != 0];
-    out_msgs(&frame::focus_messages(bits(had), bits(now)), out)
 }
 
 /// `env_first` is the first byte of `OPENHPL_DEV_HUD`, or -1 when unset or empty.
@@ -460,17 +394,6 @@ pub unsafe extern "C" fn ohpl_en_ms_create_slot(slots: *const *const Entry, n: u
         .map(|p| !p.is_null())
         .collect();
     ms::create_slot(&occupied)
-}
-
-/// # Safety
-/// `out` holds 5 `usize`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_en_ms_entry_layout(out: *mut usize) -> usize {
-    for (i, o) in ms::ENTRY_OFFSETS.iter().enumerate() {
-        // SAFETY: caller contract.
-        unsafe { out.add(i).write(*o) };
-    }
-    size_of::<Entry>()
 }
 
 // ---- save registry ----

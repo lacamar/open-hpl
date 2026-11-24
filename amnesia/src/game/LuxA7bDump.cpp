@@ -6,7 +6,6 @@
 #include "LuxBase.h"
 #include "LuxEntity.h"
 #include "LuxArea.h"
-#include "LuxArea_Rope.h"
 #include "RustLuxMap.h"
 
 #include <stdio.h>

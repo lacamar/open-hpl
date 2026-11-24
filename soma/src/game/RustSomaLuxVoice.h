@@ -46,7 +46,6 @@ extern "C" {
 	void ohpl_s5b_voice_install_host(const OhplS5bVoiceHost *);
 	void ohpl_s5b_voice_create();
 	void ohpl_s5b_voice_destroy();
-	bool ohpl_s5b_voice_present();
 	void ohpl_s5b_voice_update(float dt, bool game_paused);
 	void ohpl_s5b_voice_draw();
 	void ohpl_s5b_voice_load_map_file(const unsigned char *, size_t);

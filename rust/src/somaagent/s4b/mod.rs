@@ -4,12 +4,14 @@
 mod api;
 mod comps;
 mod core;
+mod dump;
 mod ffi;
 mod host;
 pub mod io;
 mod model;
 mod natives;
 mod natives_c;
+mod pod;
 
 #[cfg(test)]
 mod tests;

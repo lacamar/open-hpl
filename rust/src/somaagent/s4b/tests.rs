@@ -8,6 +8,7 @@ use super::io::{self, Io, op};
 use super::model::{
     COMP_CHAR_MOVER, COMP_PATHFINDER, COMP_SOUND_LISTENER, COMP_STATE_MACHINE, Cm, Comp, K, Pf, Sm,
 };
+use super::pod;
 use crate::math::v3;
 use std::cell::RefCell;
 
@@ -65,6 +66,7 @@ fn state_machine_enters_then_updates_and_falls_back_to_default() {
         "void State_Default_Update(float)",
     ]);
     let ent = 0x1000;
+    pod::test_pod(ent);
     sm_agent(ent);
     core::update_components(ent, 0.5);
     let c = calls();
@@ -83,6 +85,7 @@ fn state_machine_enters_then_updates_and_falls_back_to_default() {
 fn message_runs_entity_handler_then_components_in_order() {
     setup(&["bool State_Idle_Message(int)"]);
     let ent = 0x2000;
+    pod::test_pod(ent);
     sm_agent(ent);
     core::update_components(ent, 0.0);
     CALLS.with(|c| c.borrow_mut().clear());
@@ -103,6 +106,7 @@ fn message_runs_entity_handler_then_components_in_order() {
 fn change_state_applies_on_next_update() {
     setup(&[]);
     let ent = 0x3000;
+    pod::test_pod(ent);
     sm_agent(ent);
     core::update_components(ent, 0.0);
     super::natives_c::change_state(ent, 1);
@@ -123,6 +127,7 @@ fn change_state_applies_on_next_update() {
 fn path_blob_round_trips_through_the_pathfinder() {
     setup(&[]);
     let ent = 0x4000;
+    pod::test_pod(ent);
     add_comp(ent, Comp::new(ent, COMP_CHAR_MOVER, K::Cm(Cm::new(0))));
     let mut pf = Pf::new();
     pf.st.track_active = true;
@@ -134,6 +139,7 @@ fn path_blob_round_trips_through_the_pathfinder() {
     assert!(!blob.is_empty());
     core::destroy_agent(ent);
     let ent2 = 0x4001;
+    pod::test_pod(ent2);
     add_comp(ent2, Comp::new(ent2, COMP_CHAR_MOVER, K::Cm(Cm::new(0))));
     add_comp(ent2, Comp::new(ent2, COMP_PATHFINDER, K::Pf(Pf::new())));
     api::load_path(ent2, &blob);
@@ -146,6 +152,7 @@ fn sound_broadcast_reaches_each_listener() {
     setup(&[]);
     let ents = [0x5000, 0x5001];
     for ent in ents {
+        pod::test_pod(ent);
         add_comp(
             ent,
             Comp::new(ent, COMP_SOUND_LISTENER, K::Sl(SoundListener::default())),
@@ -172,10 +179,25 @@ fn cpp_recorded_path_blobs_replay_byte_for_byte() {
             blob[1..13].fill(0);
         }
         let ent = 0x6000 + i;
+        pod::test_pod(ent);
         add_comp(ent, Comp::new(ent, COMP_CHAR_MOVER, K::Cm(Cm::new(0))));
         add_comp(ent, Comp::new(ent, COMP_PATHFINDER, K::Pf(Pf::new())));
         api::load_path(ent, &blob);
         assert_eq!(api::save_path(ent), blob, "blob {i}");
         core::destroy_agent(ent);
     }
+}
+
+#[test]
+fn pod_door_flags_and_script_ticks() {
+    let ent = 0x7000;
+    pod::test_pod(ent);
+    assert!(!pod::door_flag(ent, 0, None));
+    assert!(pod::door_flag(ent, 1, Some(true)));
+    assert!(!pod::door_flag(ent, 0, None));
+    assert_eq!(pod::name(ent), b"ag");
+    assert!(pod::active(ent));
+    assert_eq!(super::dump::atoi(" 12 wake x"), 12);
+    assert_eq!(super::dump::atoi("-3"), -3);
+    assert_eq!(super::dump::atoi("x"), 0);
 }

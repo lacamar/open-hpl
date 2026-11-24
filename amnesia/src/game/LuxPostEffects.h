@@ -22,7 +22,6 @@
 
 #include "LuxBase.h"
 #include "RustLuxFxA12a.h"
-#include "LuxA12aDump.h"
 
 class iLuxPostEffect : public iPostEffect
 {
@@ -72,7 +71,7 @@ public:
 	void OnStart(){}
 	void Update(float afTimeStep)
 	{
-		if(OhplA12Enabled() && OhplA12InTick() == false) return;
+		if(ohpl_a12a_dump_gated()) return;
 		if(mpInsanity->IsActive()) mpInsanity->Update(afTimeStep);
 	}
 	void Reset(){}

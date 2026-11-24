@@ -54,7 +54,6 @@ enum OhplH19Op {
 	kOhplH19OnRemoveChild = 15
 };
 
-typedef uintptr_t OhplH19W;
 
 }
 

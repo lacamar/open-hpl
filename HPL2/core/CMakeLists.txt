@@ -94,6 +94,8 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/LowLevelInputSDL.cpp
     sources/impl/LowLevelResourcesSDL.cpp
     sources/impl/LowLevelSystemSDL.cpp
+    sources/impl/GameEntry.cpp
+    sources/impl/HplMain.cpp
     sources/impl/SDLEngineSetup.cpp
     sources/impl/SDLFontData.cpp
     sources/impl/SDLTexture.cpp
@@ -218,6 +220,13 @@ add_custom_command(OUTPUT ${OHPL_RUST_LIB}
     DEPENDS ${ohpl_rust_sources} ${OHPL_RUST_DIR}/Cargo.toml ${OHPL_RUST_DIR}/Cargo.lock
     USES_TERMINAL)
 add_custom_target(ohpl_rust_build DEPENDS ${OHPL_RUST_LIB})
+include(OhplGame)
+set_property(GLOBAL PROPERTY OHPL_CARGO "${CARGO}")
+set_property(GLOBAL PROPERTY OHPL_RUST_DIR "${OHPL_RUST_DIR}")
+set_property(GLOBAL PROPERTY OHPL_RUST_TARGET "${OHPL_RUST_TARGET}")
+set_property(GLOBAL PROPERTY OHPL_RUST_PROFILE "${OHPL_RUST_PROFILE}")
+set_property(GLOBAL PROPERTY OHPL_RUST_OUT "${OHPL_RUST_OUT}")
+set_property(GLOBAL PROPERTY OHPL_EXE_SUFFIX "${CMAKE_EXECUTABLE_SUFFIX}")
 add_library(ohpl_rust STATIC IMPORTED GLOBAL)
 set_target_properties(ohpl_rust PROPERTIES IMPORTED_LOCATION ${OHPL_RUST_LIB})
 add_dependencies(ohpl_rust ohpl_rust_build)
@@ -248,6 +257,8 @@ if(OPENHPL_VULKAN)
     target_link_libraries(HPL2 Vulkan::Vulkan glslang::glslang glslang::SPIRV glslang::glslang-default-resource-limits)
 endif()
 
+
+ohpl_link_manifest()
 
 FUNCTION(AddTestTarget target_name)
     add_executable(${target_name} EXCLUDE_FROM_ALL

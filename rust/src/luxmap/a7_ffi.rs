@@ -6,7 +6,7 @@ use super::a7_map::{
     A7Map, Entity, K_DISSOLVE, K_ENTITY, K_LAMP, K_POS, K_START, K_USEITEM, Timer, UseItem,
     W_DOOMED,
 };
-use super::area::{ExamineIn, ExamineOut, StickyAttachOut};
+use super::area::{ExamineOut, StickyAttachOut};
 use crate::obj::Foreign;
 use crate::string_ffi::{Sink, emit, units};
 use crate::types::{Matrixf, Vector3f};
@@ -807,14 +807,27 @@ pub unsafe extern "C" fn ohpl_a7_area_tick(a: *mut A7Area, step: f32, engine_ste
 /// # Safety
 /// `a` live; `i`, `out` valid.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_a7_area_examine(
-    a: *mut A7Area,
-    i: *const ExamineIn,
-    sanity: f32,
-    out: *mut ExamineOut,
-) {
+pub unsafe extern "C" fn ohpl_a7_area_examine(a: *mut A7Area, sanity: f32, out: *mut ExamineOut) {
     // SAFETY: caller contract.
-    unsafe { *out = (*a).examine_interact(*i, sanity) };
+    unsafe { *out = (*a).examine(sanity) };
+}
+
+/// String `idx` (see `st`) of the area; valid until the next call that changes the area.
+///
+/// # Safety
+/// `a` live; `len` writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_a7_area_str(
+    a: *const A7Area,
+    idx: usize,
+    len: *mut usize,
+) -> *const u8 {
+    // SAFETY: caller contract.
+    unsafe {
+        let s = (*a).strs.get(idx).map_or(&[][..], Vec::as_slice);
+        *len = s.len();
+        s.as_ptr()
+    }
 }
 
 /// # Safety

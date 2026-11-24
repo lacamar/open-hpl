@@ -572,14 +572,10 @@ fn angle_to(ag: *mut super::model::Agent, d: Vector3f) -> f32 {
 }
 
 fn door_flag(f: &Frame, which: i32, set: bool) {
-    let io = Io::new()
-        .p(0, this(f))
-        .i(0, which)
-        .i(1, i32::from(set))
-        .i(2, if set { i32::from(f.arg::<bool>(0)) } else { 0 })
-        .go(op::E_DOOR_FLAGS);
+    let v = set.then(|| f.arg::<bool>(0));
+    let flag = super::pod::door_flag(this(f), which, v);
     if !set {
-        f.ret(io.int(3) != 0);
+        f.ret(flag);
     }
 }
 

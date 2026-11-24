@@ -1,6 +1,6 @@
 //! C ABI for `devhud.rs` (`HPL2/core/include/engine/RustEngine.h`).
 
-use super::devhud::{self, BugBox, BugMetrics, HudLayout, KeyAction, Report, Scene, SystemInfo};
+use super::devhud::{self, KeyAction, Report, Scene, SystemInfo};
 use crate::string_ffi::{Sink, emit, units};
 use std::ffi::c_void;
 
@@ -64,93 +64,6 @@ pub struct OhplEnSystemInfo {
     pub mem_gb: i32,
     pub os: Bytes,
     pub kernel: Bytes,
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_en_hud_font_size(screen_y: i32) -> f32 {
-    devhud::hud_font_size(screen_y)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_en_hud_layout(font: f32, max_width: f32, lines: usize) -> HudLayout {
-    devhud::hud_layout(font, max_width, lines)
-}
-
-/// # Safety
-/// `sink` accepts `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_en_hud_stats_line(
-    w: i32,
-    h: i32,
-    fps: f32,
-    frame_ms: f32,
-    sink: Sink<u8>,
-    ctx: *mut c_void,
-) {
-    // SAFETY: caller contract.
-    unsafe { emit(sink, ctx, &devhud::stats_line(w, h, fps, frame_ms)) }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_en_bug_metrics(sx: i32, sy: i32) -> BugMetrics {
-    devhud::bug_metrics(sx, sy)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_en_bug_toast_box_w(m: BugMetrics, path_width: f32) -> f32 {
-    devhud::toast_box_w(&m, path_width)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_en_bug_box(
-    m: BugMetrics,
-    box_w: f32,
-    lines: usize,
-    sx: i32,
-    sy: i32,
-) -> BugBox {
-    devhud::bug_box(&m, box_w, lines, sx, sy)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_en_toast_active(saved_ms: u64, now_ms: u64) -> bool {
-    devhud::toast_active(saved_ms, now_ms)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_en_should_render(hud: bool, bug_open: bool, toast: bool) -> bool {
-    devhud::should_render(hud, bug_open, toast)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_en_cursor_char(now_ms: u64) -> u32 {
-    devhud::cursor_char(now_ms)
-}
-
-/// Wraps `text` and reports each line through `line`; `measure` returns the font width of a
-/// NUL-terminated wide string it is given as a (pointer, length) pair.
-///
-/// # Safety
-/// `text` valid for `n` units; callbacks accept `ctx`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_en_wrap_bug_text(
-    text: *const u32,
-    n: usize,
-    text_w: f32,
-    measure: unsafe extern "C" fn(*mut c_void, *const u32, usize) -> f32,
-    line: Sink<u32>,
-    ctx: *mut c_void,
-) {
-    // SAFETY: caller contract.
-    let text = unsafe { units(text, n) };
-    // SAFETY: host callback contract.
-    let lines = devhud::wrap_bug_text(text, text_w, &mut |l| unsafe {
-        measure(ctx, l.as_ptr(), l.len())
-    });
-    for l in lines {
-        // SAFETY: host callback contract.
-        unsafe { emit(line, ctx, &l) }
-    }
 }
 
 /// Edits the text in place through the callbacks: `sink` receives the new text.

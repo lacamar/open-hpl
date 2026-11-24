@@ -15,54 +15,11 @@ namespace hpl {
 
 	enum { kOhplTextureUnits = 16 };
 
-	struct OhplSolidKey
-	{
-		int alphaMode;
-		float viewZ;
-		uintptr_t progZ, texDiffuse, progDiffuse, vtx, mtx, obj;
-		uintptr_t texUnits[kOhplTextureUnits];
-	};
 
-	struct OhplTransKey
-	{
-		float viewZ;
-		int placement;
-		unsigned planeCandidate;
-		unsigned pad;
-		OhplVec3f center, normal, point;
-		OhplMat4 world;
-	};
 
-	struct OhplDecalKey
-	{
-		int sortOrder;
-		unsigned pad;
-		uintptr_t texIllum, vtx, mtx;
-		OhplVec3f pos;
-		float pad2;
-	};
 
-	struct OhplIllumKey
-	{
-		float illumAmount;
-		unsigned pad;
-		uintptr_t texIllum, vtx, mtx;
-	};
 
-	struct OhplCompileIn
-	{
-		unsigned flags;
-		OhplVec3f origin;
-		const OhplSolidKey* solid; size_t solidLen;
-		OhplTransKey* trans; size_t transLen;
-		const OhplDecalKey* decal; size_t decalLen;
-		const OhplIllumKey* illum; size_t illumLen;
-	};
 
-	struct OhplCompileOut
-	{
-		unsigned *z, *diffuse, *trans, *decal, *illum;
-	};
 
 	// Mirrors rust/src/render/funcs.rs State (offsets asserted on both sides).
 	struct OhplRenderState;

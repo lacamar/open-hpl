@@ -2,8 +2,8 @@
 //! events write them to a caller array and return the count; the strings inside stay valid until
 //! the next call on the same thread, so the caller copies them before running any event.
 
+use super::commentary;
 use super::event::Str;
-use super::{commentary, keyentry};
 use std::ffi::c_void;
 
 type Ctx = *mut c_void;
@@ -24,68 +24,6 @@ fn pb<'a>(p: *const u8, n: usize) -> &'a [u8] {
 fn sink(s: Sink, c: Ctx, v: &[u8]) {
     // SAFETY: `s` accepts `c`.
     unsafe { s(c, v.as_ptr(), v.len()) }
-}
-
-// ---- key entry ------------------------------------------------------------------------------
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga8_key_verify(c: u8) -> i32 {
-    i32::from(keyentry::verify_char(c))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ga8_key_route(keyboard: i32, paste: i32, tab: i32) -> i32 {
-    match keyentry::route(keyboard != 0, paste != 0, tab != 0) {
-        keyentry::Route::Base => 0,
-        keyentry::Route::Key => 1,
-        keyentry::Route::Paste => 2,
-    }
-}
-
-/// # Safety
-/// The out pointers are writable.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga8_key_action(
-    composed: i32,
-    len: i32,
-    pos: i32,
-    mark: i32,
-    ascii: u8,
-    out_pos: *mut i32,
-    out_epos: *mut i32,
-    out_ch: *mut u8,
-) -> i32 {
-    match keyentry::key_action(composed != 0, len, pos, mark, ascii) {
-        keyentry::KeyAct::Base => 0,
-        keyentry::KeyAct::Swallow => 1,
-        keyentry::KeyAct::Insert { pos, epos, ch } => {
-            // SAFETY: writable per the contract.
-            unsafe {
-                out_pos.write(pos);
-                out_epos.write(epos);
-                out_ch.write(ch);
-            }
-            2
-        }
-    }
-}
-
-/// # Safety
-/// `p` is `n` readable bytes, `out` is `cap` writable bytes (17 suffice).
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ga8_key_paste(
-    p: *const u8,
-    n: usize,
-    out: *mut u8,
-    cap: usize,
-) -> usize {
-    let v = keyentry::paste_filter(pb(p, n));
-    let k = v.len().min(cap);
-    for (i, c) in v.iter().take(k).enumerate() {
-        // SAFETY: i < cap.
-        unsafe { out.add(i).write(*c) };
-    }
-    k
 }
 
 // ---- commentary icon ------------------------------------------------------------------------

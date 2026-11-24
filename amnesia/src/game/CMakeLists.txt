@@ -28,13 +28,14 @@ else()
 endif()
 
 
-add_executable(Amnesia
+add_library(AmnesiaGame STATIC
     ${full_sources}
 )
-target_link_libraries(Amnesia HPL2)
-set_target_properties(Amnesia PROPERTIES
+target_link_libraries(AmnesiaGame PUBLIC HPL2)
+set_target_properties(AmnesiaGame PROPERTIES
 	COMPILE_DEFINITIONS "${compile_defs}"
 )
+ohpl_game(Amnesia amnesia)
 
 add_definitions(-DLINUX)
 add_executable(AmnesiaDemo EXCLUDE_FROM_ALL

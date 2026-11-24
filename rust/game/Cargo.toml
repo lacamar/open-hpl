@@ -1,0 +1,22 @@
+[package]
+name = "ohpl-game"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+build = "build.rs"
+
+[dependencies]
+ohpl = { path = ".." }
+
+[[bin]]
+name = "amnesia"
+path = "src/bin/amnesia.rs"
+
+[[bin]]
+name = "amfp"
+path = "src/bin/amfp.rs"
+
+[[bin]]
+name = "soma"
+path = "src/bin/soma.rs"

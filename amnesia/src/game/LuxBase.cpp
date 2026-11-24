@@ -94,11 +94,7 @@
 #include "LuxCritter_Spider.h"
 
 #include "LuxAreaNodes.h"
-#include "LuxArea_Script.h"
-#include "LuxArea_Ladder.h"
-#include "LuxArea_Examine.h"
-#include "LuxArea_Sign.h"
-#include "LuxArea_Rope.h"
+#include "LuxArea.h"
 
 #include "LuxEnemy_Grunt.h"
 #include "LuxEnemy_WaterLurker.h"
@@ -1447,18 +1443,18 @@ bool cLuxBase::InitGame()
 				case 0: LUX_AREA_LOADER(cLuxAreaNodeLoader_PlayerStart) break;
 				case 1: LUX_AREA_LOADER(cLuxAreaNodeLoader_PathNode) break;
 				case 2: LUX_AREA_LOADER(cLuxAreaNodeLoader_PosNode) break;
-				case 3: LUX_AREA_LOADER(cLuxAreaLoader_Script) break;
+				case 3: LUX_AREA_LOADER_RS(eLuxAreaType_Script, "cLuxAreaLoader_Script") break;
 				case 4: LUX_AREA_LOADER_RS(eLuxAreaType_Flashback, "cLuxAreaLoader_Flashback") break;
 #ifndef LUX_DEMO_VERSION
-				case 5: LUX_AREA_LOADER(cLuxAreaLoader_Ladder) break;
+				case 5: LUX_AREA_LOADER_RS(eLuxAreaType_Ladder, "cLuxAreaLoader_Ladder") break;
 #endif
 				case 6: LUX_AREA_LOADER_RS(eLuxAreaType_Liquid, "cLuxAreaLoader_Liquid") break;
 #ifndef LUX_DEMO_VERSION
 				case 7: LUX_AREA_LOADER_RS(eLuxAreaType_Sticky, "cLuxAreaLoader_Sticky") break;
 #endif
 				case 8: LUX_AREA_LOADER_RS(eLuxAreaType_Insanity, "cLuxAreaLoader_Insanity") break;
-				case 9: LUX_AREA_LOADER(cLuxAreaLoader_Examine) break;
-				case 10: LUX_AREA_LOADER(cLuxAreaLoader_Sign) break;
+				case 9: LUX_AREA_LOADER_RS(eLuxAreaType_Examine, "cLuxAreaLoader_Examine") break;
+				case 10: LUX_AREA_LOADER_RS(eLuxAreaType_Sign, "cLuxAreaLoader_Sign") break;
 				case 11: LUX_AREA_LOADER_RS(eLuxAreaType_SlimeDamage, "cLuxAreaLoader_SlimeDamage") break;
 				case 12: LUX_AREA_LOADER(cLuxAreaRopeLoader) break;
 				}

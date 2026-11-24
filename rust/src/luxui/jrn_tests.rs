@@ -1,4 +1,4 @@
-//! Journal object against a mock host: the content and save-data half of the A11c driver (`LuxA11cDump.cpp`)
+//! Journal object against a mock host: the content and save-data half of the A11c driver (`dump.rs`)
 //! is replayed and compared with the dump of the original C++ journal (`rust/tests/golden/A11c/state.txt`), then the
 //! widget session is exercised (lists, pages, callbacks) with a recording host.
 
