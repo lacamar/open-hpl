@@ -833,4 +833,80 @@ protected:
 //----------------------------------------------
 
 
+//----------------------------------------------
+
+class cLuxEnemy_Grunt_SaveData : public iLuxEnemy_SaveData
+{
+	kSerializableClassInit(cLuxEnemy_Grunt_SaveData)
+};
+
+class cLuxEnemy_WaterLurker_SaveData : public iLuxEnemy_SaveData
+{
+	kSerializableClassInit(cLuxEnemy_WaterLurker_SaveData)
+public:
+	float mfPlayerDetectionHeight;
+};
+
+enum eWaterLurkerSplash
+{
+	eWaterLurkerSplash_Walk,
+	eWaterLurkerSplash_Run,
+	eWaterLurkerSplash_Eat,
+	eWaterLurkerSplash_Attack,
+};
+
+//----------------------------------------------
+
+class cLuxEnemyRs : public iLuxEnemy
+{
+friend class cLuxEnemyLoaderRs;
+public:
+	cLuxEnemyRs(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyType aType);
+	virtual ~cLuxEnemyRs();
+
+	void OnSetupAfterLoad(cWorld *apWorld) override;
+	void OnAfterWorldLoad(){}
+	void UpdateEnemySpecific(float afTimeStep){}
+
+	bool StateEventImplement(int alState, eLuxEnemyStateEvent aEvent, cLuxStateMessage *apMessage) override;
+	bool Ga3RustStateMachine(){ return !IsLurker();}
+	const tString* Ga3SoundName(int alKind) override;
+	bool InRangeOfFood(iPhysicsBody *apFoodBody) override;
+	void OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions) override;
+
+	iLuxEntity_SaveData* CreateSaveData() override;
+	void SaveToSaveData(iLuxEntity_SaveData* apSaveData) override;
+	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData) override;
+
+private:
+	bool IsLurker(){ return GetEnemyType() == eLuxEnemyType_WaterLurker;}
+	tString Str(size_t alSlot);
+	OhplGa3Host Ga3WlHost();
+	static int Ga3WlCall(void *apEnemy, unsigned alOp, OhplGa3Io *apIo);
+	void SplashWater(eWaterLurkerSplash aType);
+
+	bool PlayerIsDetected();
+	void OnSetActiveEnemySpecific(bool abX) override;
+	void OnDisableTriggers();
+	float GetDamageMul(float afAmount, int alStrength) override;
+
+	OhplEn1 *mpEn;
+	tString msSoundScratch;
+};
+
+class cLuxEnemyLoaderRs : public iLuxEnemyLoader
+{
+public:
+	cLuxEnemyLoaderRs(const tString& asName, eLuxEnemyType aType) : iLuxEnemyLoader(asName), mType(aType){}
+
+	iLuxEnemy *CreateEnemy(const tString& asName, int alID, cLuxMap *apMap) override;
+	void LoadVariables(iLuxEnemy *apEnemy, cXmlElement *apRootElem) override;
+	void LoadInstanceVariables(iLuxEnemy *apEnemy, cResourceVarsObject *apInstanceVars) override;
+
+private:
+	eLuxEnemyType mType;
+};
+
+//----------------------------------------------
+
 #endif // LUX_Enemy_H

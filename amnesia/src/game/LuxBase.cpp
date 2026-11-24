@@ -89,8 +89,7 @@
 #include "LuxAreaNodes.h"
 #include "LuxArea.h"
 
-#include "LuxEnemy_Grunt.h"
-#include "LuxEnemy_WaterLurker.h"
+#include "LuxEnemy.h"
 #include "LuxEnemy_ManPig.h"
 
 #include "LuxCommentaryIcon.h"
@@ -1396,6 +1395,7 @@ bool cLuxBase::InitGame()
 			cResources *pRes = mpEngine->GetResources();
 #define LUX_ENTITY_LOADER(aClass) { OhplA13bLog("loader entity %s %s", #aClass, sKey.c_str()); pRes->AddEntityLoader(hplNew(aClass, (sKey))); }
 #define LUX_PROP_LOADER_RS(aType, aName) { OhplA13bLog("loader entity %s %s", aName, sKey.c_str()); pRes->AddEntityLoader(hplNew(cLuxPropLoaderRs, (sKey, aType))); }
+#define LUX_ENEMY_LOADER_RS(aName, aType) { OhplA13bLog("loader entity %s %s", #aName, sKey.c_str()); pRes->AddEntityLoader(hplNew(cLuxEnemyLoaderRs, (sKey, aType))); }
 #define LUX_AREA_LOADER_RS(aType, aName) { OhplA13bLog("loader area %s %s", aName, sKey.c_str()); pRes->AddAreaLoader(hplNew(cLuxAreaLoaderRs, (sKey, aType))); }
 #define LUX_AREA_LOADER(aClass) { OhplA13bLog("loader area %s %s", #aClass, sKey.c_str()); pRes->AddAreaLoader(hplNew(aClass, (sKey))); }
 			if(a[0].i == 0)
@@ -1422,8 +1422,8 @@ bool cLuxBase::InitGame()
 #endif
 				case 16: LUX_ENTITY_LOADER(cLuxPropLoader_Critter_Bug) break;
 				case 17: LUX_ENTITY_LOADER(cLuxPropLoader_Critter_Spider) break;
-				case 18: LUX_ENTITY_LOADER(cLuxEnemyLoader_Grunt) break;
-				case 19: LUX_ENTITY_LOADER(cLuxEnemyLoader_WaterLurker) break;
+				case 18: LUX_ENEMY_LOADER_RS(cLuxEnemyLoader_Grunt, eLuxEnemyType_Grunt) break;
+				case 19: LUX_ENEMY_LOADER_RS(cLuxEnemyLoader_WaterLurker, eLuxEnemyType_WaterLurker) break;
 				case 20: LUX_ENTITY_LOADER(cLuxEnemyLoader_ManPig) break;
 #ifndef LUX_DEMO_VERSION
 				case 21: LUX_ENTITY_LOADER(cLuxCommentaryIconLoader) break;

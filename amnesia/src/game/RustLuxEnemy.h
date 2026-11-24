@@ -410,6 +410,19 @@ struct OhplAePig
 
 static_assert(sizeof(OhplAePig) == 52, "AePig layout");
 
+struct OhplEn1;
+
+extern "C" OhplEn1 *ohpl_en1_new(bool abWl, OhplGa3Ctx *apCtx, bool *apSanity);
+extern "C" void ohpl_en1_free(OhplEn1 *apPod);
+extern "C" void ohpl_en1_load(OhplEn1 *apPod, bool abWl, const void *apVars, OhplAeCfg *apCfg);
+extern "C" const unsigned char *ohpl_en1_str(const OhplEn1 *apPod, size_t alSlot, size_t *apLen);
+extern "C" const OhplGa3bWlCtx *ohpl_en1_wl_ctx(const OhplEn1 *apPod);
+extern "C" float ohpl_en1_height(const OhplEn1 *apPod);
+extern "C" void ohpl_en1_set_height(OhplEn1 *apPod, float afHeight);
+extern "C" float ohpl_en1_eat_damage(const OhplEn1 *apPod);
+extern "C" bool ohpl_en1_in_range_of_food(const OhplEn1 *apPod, float afYDist);
+extern "C" void ohpl_en1_fix_states(int *apCur, int *apNext, int *apPrev);
+
 extern "C" void ohpl_ae_load_pig(const void *vars, bool manpig, OhplAeCfg *cfg, OhplAePig *out);
 
 extern "C" void ohpl_ae_load_base(const void *vars, bool hardMode, OhplAeCfg *out, void (*put)(void *, int, const unsigned char *, size_t), void *ctx);
