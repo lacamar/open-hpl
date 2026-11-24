@@ -833,4 +833,108 @@ protected:
 //----------------------------------------------
 
 
+//----------------------------------------------
+
+class cLuxEnemy_Grunt_SaveData : public iLuxEnemy_SaveData
+{
+	kSerializableClassInit(cLuxEnemy_Grunt_SaveData)
+};
+
+class cLuxEnemy_WaterLurker_SaveData : public iLuxEnemy_SaveData
+{
+	kSerializableClassInit(cLuxEnemy_WaterLurker_SaveData)
+public:
+	float mfPlayerDetectionHeight;
+};
+
+enum eWaterLurkerSplash
+{
+	eWaterLurkerSplash_Walk,
+	eWaterLurkerSplash_Run,
+	eWaterLurkerSplash_Eat,
+	eWaterLurkerSplash_Attack,
+};
+
+//----------------------------------------------
+
+class cLuxEnemyRs : public iLuxEnemy
+{
+friend class cLuxEnemyLoaderRs;
+typedef iLuxEnemy super_class;
+public:
+	cLuxEnemyRs(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyType aType);
+	virtual ~cLuxEnemyRs();
+
+	void OnSetupAfterLoad(cWorld *apWorld);
+	void OnAfterWorldLoad(){}
+	void UpdateEnemySpecific(float afTimeStep){}
+
+	bool StateEventImplement(int alState, eLuxEnemyStateEvent aEvent, cLuxStateMessage *apMessage);
+	bool Ga3RustStateMachine(){ return GetEnemyType() == eLuxEnemyType_Grunt;}
+	const tString* Ga3SoundName(int alKind);
+	bool InRangeOfFood(iPhysicsBody *apFoodBody);
+	void OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions);
+
+	iLuxEntity_SaveData* CreateSaveData();
+	void SaveToSaveData(iLuxEntity_SaveData* apSaveData);
+	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
+
+private:
+	OhplGa3Host Ga3WlHost();
+	static int Ga3WlCall(void *apEnemy, unsigned alOp, OhplGa3Io *apIo);
+	void SplashWater(eWaterLurkerSplash aType);
+
+	bool PlayerIsDetected();
+	void OnSetActiveEnemySpecific(bool abX);
+	void OnDisableTriggers();
+	float GetDamageMul(float afAmount, int alStrength);
+
+	//Grunt
+	tString msNoticeSound;
+	tString msGiveUpNoticeSound;
+	tString msEnabledSound;
+
+	OhplAePig mPig = {};
+	float &mfGroggyDamageCount = mPig.groggyDamageCount;
+	float &mfAlertToHuntDistance = mPig.alertToHuntDistance;
+	float &mfAlertToInstantHuntDistance = mPig.alertToInstantHuntDistance;
+	float &mfHuntPauseMinTime = mPig.huntPauseMinTime;
+	float &mfHuntPauseMaxTime = mPig.huntPauseMaxTime;
+	float &mfIncreaseAlertSpeedDistance = mPig.increaseAlertSpeedDistance;
+	float &mfIncreasedAlertSpeedMul = mPig.increasedAlertSpeedMul;
+	float &mfAlertRunTowardsToHuntLimit = mPig.alertRunTowardsToHuntLimit;
+	float &mfAlertRunTowardsCheckDistance = mPig.alertRunTowardsCheckDistance;
+	float &mfIdleExtraTimeMin = mPig.idleExtraTimeMin;
+	float &mfIdleExtraTimeMax = mPig.idleExtraTimeMax;
+	int32_t &mlIdleExtraNum = mPig.idleExtraNum;
+
+	float mfWaitTime;
+	float mfAlertRunTowardsCount;
+
+	//WaterLurker
+	float mfPlayerDetectionHeight;
+	float mfEatDamage;
+	float mfAfterAttackPauseTime;
+
+	tString msSplashPS[4];
+	tString msSplashSound[4];
+
+	OhplGa3bWlCtx mGa3Wl;
+};
+
+class cLuxEnemyLoaderRs : public iLuxEnemyLoader
+{
+public:
+	cLuxEnemyLoaderRs(const tString& asName, eLuxEnemyType aType) : iLuxEnemyLoader(asName), mType(aType){}
+
+	iLuxEnemy *CreateEnemy(const tString& asName, int alID, cLuxMap *apMap);
+	void LoadVariables(iLuxEnemy *apEnemy, cXmlElement *apRootElem);
+	void LoadInstanceVariables(iLuxEnemy *apEnemy, cResourceVarsObject *apInstanceVars);
+
+private:
+	eLuxEnemyType mType;
+};
+
+//----------------------------------------------
+
 #endif // LUX_Enemy_H
