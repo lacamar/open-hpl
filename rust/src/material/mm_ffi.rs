@@ -94,8 +94,3 @@ pub unsafe extern "C" fn ohpl_mm_mat_load_vars(m: *mut MatState, obj: P) {
 pub extern "C" fn ohpl_mm_mat_set_destroy_type_specifics(on: bool) {
     DESTROY_TYPE_SPECIFICS.store(on, Ordering::Relaxed);
 }
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_mm_mat_destroy_type_specifics() -> bool {
-    DESTROY_TYPE_SPECIFICS.load(Ordering::Relaxed)
-}

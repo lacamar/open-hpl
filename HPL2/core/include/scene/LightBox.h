@@ -41,7 +41,6 @@ namespace hpl {
 
 		bool IsVisible(){ return IsLit() && mbIsVisible;}
 
-		void SetBoxLightPrio(int alX){ Box()->prio = alX;}
 		inline int GetBoxLightPrio()const{ return Box()->prio;}
 
 		void SetAmbientColorSky(const cColor& aX){ Box()->ambientSky = aX;}
@@ -59,7 +58,6 @@ namespace hpl {
 		void SetProbeOffset(const cVector3f& avX){ Box()->probeOffset = avX;}
 		const cVector3f& GetProbeOffset(){ return Box()->probeOffset;}
 
-		void AddIrradianceSet(const tString& asName, const std::vector<cVector3f>& avBands){ ohpl_sl_box_add_set(Box(), asName.data(), asName.size(), avBands.data(), avBands.size());}
 		void FadeIrradianceSet(const tString& asName, float afTime){ ohpl_ls_box_fade_set(mpS, asName.data(), asName.size(), afTime);}
 		const cVector3f* GetIrradianceBands(){ return Box()->bands;}
 		void UpdateLogic(float afTimeStep){ ohpl_ls_light_update_logic(mpS, afTimeStep);}

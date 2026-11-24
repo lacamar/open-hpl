@@ -2,7 +2,7 @@
 //! Every entry takes the C++ object it works on; Rust never holds a reference across a call.
 
 use super::wd::Pod;
-use crate::types::{Color, Vector2f, Vector3f};
+use crate::types::{Vector2f, Vector3f};
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicPtr, Ordering};
 
@@ -90,8 +90,6 @@ pub struct Host {
         cap: usize,
         skip_collide: bool,
     ) -> usize,
-    pub mesh_draw_bb:
-        unsafe extern "C" fn(gfx: *mut c_void, mesh: *mut c_void, color: *const Color),
     pub ps_create: unsafe extern "C" fn(
         res: *mut c_void,
         mode: i32,

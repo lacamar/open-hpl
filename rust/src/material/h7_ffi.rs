@@ -98,18 +98,6 @@ pub unsafe extern "C" fn ohpl_h7_mat_add_uv_anim(
     }
 }
 
-/// # Safety
-/// `m` is null or live; `out` is null or valid for one write.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h7_mat_clear_uv_anims(m: *mut MatState, out: *mut Matrixf) {
-    // SAFETY: caller contract.
-    if let Some(m) = unsafe { m.as_mut() } {
-        m.clear_anims();
-        // SAFETY: caller contract.
-        unsafe { put_matrix(m, out) };
-    }
-}
-
 /// `UpdateBeforeRendering`; writes the UV matrix when animations run.
 ///
 /// # Safety

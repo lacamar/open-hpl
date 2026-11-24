@@ -55,22 +55,16 @@ namespace hpl {
 		void RenderDebug(cRendererCallbackFunctions *apFunctions);
 
 		void SetMinLeafObjects(int alX){mlMinLeafObjects = alX;}
-		int GetMinLeafObjects(){ return mlMinLeafObjects;}
 
 		void SetMinSideLength(float afX){mfMinSideLength = afX;}
-		float GetMinSideLength(){ return mfMinSideLength;}
 
 		void SetMaxSideLength(float afX){mfMaxSideLength = afX;}
-		float GetMaxnSideLength(){ return mfMaxSideLength;}
 
 		void SetMaxVolumeCalcObjects(int alX){mlMaxVolumeCalcObjects = alX;}
-		int GetMaxVolumeCalcObjects(){ return mlMaxVolumeCalcObjects;}
 
 		void SetMaxIntersectionAmount(float afX){mfMaxIntersectionAmount = afX;}
-		float GetMaxIntersectionAmount(){ return mfMaxIntersectionAmount;}
 		
 		void SetMinForceIntersectionRelativeSize(float afX){mfMinForceIntersectionRelativeSize = afX;}
-		float GetMinForceIntersectionRelativeSize(){ return mfMinForceIntersectionRelativeSize;}
 		
 
 	private:

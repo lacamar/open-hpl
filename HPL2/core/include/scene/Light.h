@@ -95,7 +95,6 @@ namespace hpl {
 		OhplSLLight* Pod(){ return mpS;}
 
 		iTexture *GetFalloffMap(){ return (iTexture*)mpS->falloffMap;}
-		void SetFalloffMap(iTexture* apTexture){ ohpl_ls_light_set_falloff_map(mpS, (uintptr_t)apTexture);}
 		
 		void SetGoboTexture(iTexture *apTexture){ ohpl_ls_light_set_gobo(mpS, (uintptr_t)apTexture);}
 		iTexture* GetGoboTexture(){ return (iTexture*)mpS->gobo;}
@@ -121,7 +120,6 @@ namespace hpl {
 
 		cMatrixf* GetModelMatrix(cFrustum* apFrustum){ return &GetWorldMatrix();}
 
-		inline void RenderShadow(iRenderable *apObject,cRenderSettings *apRenderSettings,iLowLevelGraphics *apLowLevelGraphics){}
 
 		void LoadXMLProperties(const tString asFile){ ohpl_ls_light_load(mpS, asFile.data(), asFile.size());}
 
@@ -133,11 +131,8 @@ namespace hpl {
 
 		//////////////////////////
 		//Shadow caster cache
-		void AddShadowCaster(iRenderable *apObject){ ohpl_sl_light_cache_add(mpS, (uintptr_t)apObject, apObject->GetTransformUpdateCount());}
-		bool ShadowCasterIsValid(iRenderable *apObject){ return ohpl_sl_light_cache_valid(mpS, (uintptr_t)apObject, apObject->GetTransformUpdateCount());}
 		bool ShadowCastersAreUnchanged(const tRenderableVec &avObjects){ return ohpl_ls_light_casters_unchanged(mpS, (const uintptr_t*)avObjects.data(), (int32_t)avObjects.size());}
 		void SetShadowCasterCacheFromVec(const tRenderableVec &avObjects){ ohpl_ls_light_casters_set(mpS, (const uintptr_t*)avObjects.data(), (int32_t)avObjects.size());}
-		void ClearShadowCasterCache(){ ohpl_sl_light_cache_clear(mpS);}
 
         //////////////////////////
 		//Fading
@@ -239,15 +234,11 @@ namespace hpl {
 		}
 		float Ease(float afT){ return mBrightFadeEasing ? mBrightFadeEasing(afT) : afT;}
 		void ClearEasing(){ mBrightFadeEasing = nullptr;}
-		void SetMaskID(unsigned int alX){ mpS->maskId = alX;}
-		void SetGoboSpecular(bool abX){ mpS->goboSpecular = abX;}
 		bool GetGoboSpecular(){ return mpS->goboSpecular;}
 		void SetCastDiffuseLight(bool abX){ mpS->castDiffuse = abX;}
 		bool GetCastDiffuseLight(){ return mpS->castDiffuse;}
 		void SetCastSpecularLight(bool abX){ mpS->castSpecular = abX;}
 		bool GetCastSpecularLight(){ return mpS->castSpecular;}
-		unsigned int GetMaskID(){ return mpS->maskId;}
-		void SetMaskBox(bool abActive, const cVector3f& avCenter=0, const cVector3f& avSize=0){ mpS->maskBox = abActive; mpS->maskCenter = avCenter; mpS->maskSize = avSize; mpE->updateBV = true; SetTransformUpdated();}
 		bool HasMaskBox(){ return mpS->maskBox;}
 		const cVector3f& GetMaskCenter(){ return mpS->maskCenter;}
 		const cVector3f& GetMaskSize(){ return mpS->maskSize;}
@@ -256,7 +247,6 @@ namespace hpl {
 		float GetSourceRadius(){ return mpS->sourceRadius;}
 		void SetSourceRadius(float afX){ mpS->sourceRadius = afX;}
 
-		void UpdateLight(float afTimeStep){ ohpl_ls_light_update_light(mpS, afTimeStep);}
 
 		void SetWorld(cWorld *apWorld){ mpS->world = (uintptr_t)apWorld;}
 

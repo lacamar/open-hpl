@@ -218,12 +218,6 @@ namespace hpl {
 			}
 			return lNum;
 		}
-		void MeshDrawBb(void *g, void *m, const cColor *apColor)
-		{
-			cBoundingVolume *pBV = static_cast<cMeshEntity*>(m)->GetBoundingVolume();
-			Gfx(g)->GetLowLevel()->DrawBoxMinMax(pBV->GetMin(), pBV->GetMax(), *apColor);
-		}
-
 		void* PsCreate(void *r, int32_t alMode, const char *asName, size_t alNameLen, const char *asType, size_t alTypeLen, void *apElem, const cVector3f *apSize)
 		{
 			cParticleManager *pMgr = Res(r)->GetParticleManager();
@@ -396,7 +390,7 @@ namespace hpl {
 			{
 				static const OhplWdHost h = { RegForeign, RootNew, RootDelete, ContNew, ContDelete, ContAdd, ContRemove, ContRemoveSet,
 					ContCompile, ContBounds, RendOf, IsStatic, SetStatic, SetWorld, Create, LightGobo, BbMaterial, FlareHalo, FlareMaterial,
-					MeshSubs, MeshDrawBb, PsCreate, PsEmitters, PsRemoveWhenDead, Update, PhysUpdate, PhysAttach, PhysDestroy,
+					MeshSubs, PsCreate, PsEmitters, PsRemoveWhenDead, Update, PhysUpdate, PhysAttach, PhysDestroy,
 					PhysSetSize, PhysClearSounds, SoundSilent, SoundData, SoundCreationId, SkyVbNew, DirLightNew, DirLightDelete,
 					TerrainDelete, EntFileCreate, EntFileDestroy, EntFileInfo, LoaderGet, LoaderStatic, LoaderLoad, EntitySource,
 					TempNodesClear, DumpItem, FieldInfo, Log };

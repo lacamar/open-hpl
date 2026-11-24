@@ -216,7 +216,6 @@ namespace hpl {
 			ohpl_h13_area_insert(mpW->mpH13Reg, OhplName{asName.data(), asName.size()}, pArea);
 			return pArea;
 		}
-		cAreaEntity* GetAreaEntity(const tString &asName){ return static_cast<cAreaEntity*>(ohpl_h13_area_get(mpW->mpH13Reg, OhplName{asName.data(), asName.size()})); }
 
 		cMeshEntity* CreateMeshEntity(const tString &asName,cMesh *apMesh, bool abStatic=false){ return static_cast<cMeshEntity*>(ohpl_wd_create_mesh(mpW, asName.data(), asName.size(), apMesh, abStatic)); }
 		void DestroyMeshEntity(cMeshEntity* apMesh){ ohpl_wd_destroy_mesh(mpW, apMesh); }
@@ -231,7 +230,6 @@ namespace hpl {
 		cMeshEntity* GetDynamicMeshEntity(const tString& asName){ return OhplH13Name<cMeshEntity*>(mpW->mpH13Reg, kOhplH13DynMesh, asName); }
 		cMeshEntityIterator GetDynamicMeshEntityIterator(){ return cMeshEntityIterator(mpW->mpH13Reg, kOhplH13DynMesh); }
 		cMeshEntityIterator GetStaticMeshEntityIterator(){ return cMeshEntityIterator(mpW->mpH13Reg, kOhplH13StaticMesh); }
-		void DrawMeshBoundingBoxes(const cColor &aColor, bool abStatic){ ohpl_wd_draw_mesh_bounding_boxes(mpW, &aColor, abStatic); }
 
 		cLightPoint* CreateLightPoint(const tString &asName="",const tString &asGobo="", bool abStatic=false);
 		cLightSpot* CreateLightSpot(const tString &asName="", const tString &asGobo="", bool abStatic=false);
@@ -256,13 +254,11 @@ namespace hpl {
 		}
 		void DestroyLensFlare(cLensFlare* apObject){ ohpl_wd_destroy(mpW, kOhplH13LensFlare, apObject); }
 		cLensFlare* GetLensFlare(const tString& asName){ return OhplH13Name<cLensFlare*>(mpW->mpH13Reg, kOhplH13LensFlare, asName); }
-		cLensFlare* GetLensFlareFromUniqueID(int alID){ return OhplH13Id<cLensFlare*>(mpW->mpH13Reg, kOhplH13LensFlare, alID); }
 		cLensFlareIterator GetLensFlareIterator(){ return cLensFlareIterator(mpW->mpH13Reg, kOhplH13LensFlare); }
 
 		cBeam* CreateBeam(const tString& asName, bool abStatic=false){ return static_cast<cBeam*>(Simple(kOhplH13Beam, asName, abStatic)); }
 		void DestroyBeam(cBeam* apObject){ ohpl_wd_destroy(mpW, kOhplH13Beam, apObject); }
 		cBeam* GetBeam(const tString& asName){ return OhplH13Name<cBeam*>(mpW->mpH13Reg, kOhplH13Beam, asName); }
-		cBeam* GetBeamFromUniqueID(int alID){ return OhplH13Id<cBeam*>(mpW->mpH13Reg, kOhplH13Beam, alID); }
 		cBeamIterator GetBeamIterator(){ return cBeamIterator(mpW->mpH13Reg, kOhplH13Beam); }
 
 		cParticleSystem* CreateParticleSystem(const tString& asName,const tString& asType, const cVector3f& avSize, bool abRemoveWhenDead=true)
@@ -280,10 +276,6 @@ namespace hpl {
 		void DestroyAllParticleSystems(){ ohpl_wd_destroy_all_particle_systems(mpW); }
 		cParticleSystemIterator GetParticleSystemIterator(){ return cParticleSystemIterator(mpW->mpH13Reg, kOhplH13ParticleSystem); }
 
-		cGuiSetEntity* CreateGuiSetEntity(const tString& asName, cGuiSet *apSet, bool abStatic=false){ return static_cast<cGuiSetEntity*>(Simple(kOhplH13GuiSet, asName, abStatic, false, apSet)); }
-		void DestroyGuiSetEntity(cGuiSetEntity* apObject){ ohpl_wd_destroy(mpW, kOhplH13GuiSet, apObject); }
-		cGuiSetEntity* GetGuiSetEntity(const tString& asName){ return OhplH13Name<cGuiSetEntity*>(mpW->mpH13Reg, kOhplH13GuiSet, asName); }
-		cGuiSetEntity* GetGuiSetEntityFromUniqueID(int alID){ return OhplH13Id<cGuiSetEntity*>(mpW->mpH13Reg, kOhplH13GuiSet, alID); }
 		cGuiSetEntityIterator GetGuiSetEntityIterator(){ return cGuiSetEntityIterator(mpW->mpH13Reg, kOhplH13GuiSet); }
 
 		cRopeEntity* CreateRopeEntity(const tString& asName, iPhysicsRope *apRope, int alMaxSegments){ return static_cast<cRopeEntity*>(Simple(kOhplH13Rope, asName, false, false, apRope, alMaxSegments)); }
@@ -295,7 +287,6 @@ namespace hpl {
 		cFogArea* CreateFogArea(const tString& asName, bool abStatic=false){ return static_cast<cFogArea*>(Simple(kOhplH13FogArea, asName, abStatic)); }
 		void DestroyFogArea(cFogArea* apRope){ ohpl_wd_destroy(mpW, kOhplH13FogArea, apRope); }
 		cFogArea* GetFogArea(const tString& asName){ return OhplH13Name<cFogArea*>(mpW->mpH13Reg, kOhplH13FogArea, asName); }
-		cFogArea* GetFogAreaFromUniqueID(int alID){ return OhplH13Id<cFogArea*>(mpW->mpH13Reg, kOhplH13FogArea, alID); }
 		cFogAreaIterator GetFogAreaIterator(){ return cFogAreaIterator(mpW->mpH13Reg, kOhplH13FogArea); }
 
 		cForceField* CreateForceField(const tString& asName, bool abAutoRemove, bool abStatic){ return static_cast<cForceField*>(Simple(kOhplH13ForceField, asName, abStatic, abAutoRemove)); }
@@ -326,13 +317,7 @@ namespace hpl {
 		}
 		cStartPosEntity* GetStartPosEntity(const tString &asName){ return OhplH13Name<cStartPosEntity*>(mpW->mpH13Reg, kOhplH13StartPos, asName); }
 		cStartPosEntity* GetFirstStartPosEntityByName(){ return static_cast<cStartPosEntity*>(ohpl_h13_reg_first_by_name_f(mpW->mpH13Reg, kOhplH13StartPos)); }
-		cStartPosEntity* GetFirstStartPosEntity(){ return static_cast<cStartPosEntity*>(ohpl_h13_reg_get(mpW->mpH13Reg, kOhplH13StartPos, 0)); }
 
-		cDummyRenderable* CreateDummyRenderable(const tString& asName, bool abStatic=false){ return static_cast<cDummyRenderable*>(Simple(kOhplH13Dummy, asName, abStatic)); }
-		void DestroyDummyRenderable(cDummyRenderable* apDummy){ ohpl_wd_destroy(mpW, kOhplH13Dummy, apDummy); }
-		cDummyRenderable* GetDummyRenderable(const tString& asName){ return OhplH13Name<cDummyRenderable*>(mpW->mpH13Reg, kOhplH13Dummy, asName); }
-		cDummyRenderable* GetDummyRenderableFromUniqueID(int alID){ return OhplH13Id<cDummyRenderable*>(mpW->mpH13Reg, kOhplH13Dummy, alID); }
-		cDummyRenderableIterator GetDummyRenderableIterator(){ return cDummyRenderableIterator(mpW->mpH13Reg, kOhplH13Dummy); }
 
 
 
@@ -348,7 +333,6 @@ namespace hpl {
 
 		cVector3f GetWorldSize(){ return mpW->mvWorldSize;}
 
-		void SetIsSoundEmitter(bool abX){ mpW->mbIsSoundEmitter = abX;}
 		bool IsSoundEmitter(){ return mpW->mbIsSoundEmitter;}
 
 		
@@ -404,7 +388,6 @@ namespace hpl {
 		void SetFogUseSkybox(bool abX){ mpW->mbFogUseSkybox = abX; }
 		void SetFogSkyboxTexture(iTexture *apTexture){ mpW->mpFogSkyboxTexture = apTexture; }
 		void SetFogApplyAfterFogAreas(bool abX){ mpW->mbFogApplyAfterFogAreas = abX; }
-		void SetFogNoise(float afStrength, float afSize, const cVector3f& avTurbulence){ mpW->mfFogNoiseStrength = afStrength; mpW->mfFogNoiseSize = afSize; mpW->mvFogNoiseTurbulence = avTurbulence; }
 		void SetSecondaryFogActive(bool abX){ mpW->mbSecondaryFogActive = abX; }
 		void SetSecondaryFogStart(float afX){ mpW->mfSecondaryFogStart = afX; }
 		void SetSecondaryFogEnd(float afX){ mpW->mfSecondaryFogEnd = afX; }

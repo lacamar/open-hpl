@@ -67,7 +67,6 @@ namespace hpl {
 
 		void Compile(tRenderListCompileFlag aFlags);
 
-		bool ArrayHasObjects(eRenderListType aType){ return mvSorted[aType].empty()==false;}
 		cRenderableVecIterator GetArrayIterator(eRenderListType aType){ return cRenderableVecIterator(&mvSorted[aType]);}
 
 		cRenderableVecIterator GetOcclusionQueryObjectIterator(){ return cRenderableVecIterator(&mvOcclusion);}
@@ -87,10 +86,8 @@ namespace hpl {
 
 		//Temp:
 		int GetSolidObjectNum(){ return (int)mvSolid.size();}
-		iRenderable* GetSolidObject(int alIdx){ return mvSolid[alIdx];}
 
 		int GetTransObjectNum(){ return (int)mvTrans.size();}
-		iRenderable* GetTransObject(int alIdx){ return mvTrans[alIdx];}
 
 	private:
 		OhplRl *mpRs;

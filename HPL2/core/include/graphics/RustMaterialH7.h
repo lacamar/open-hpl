@@ -18,7 +18,6 @@ int ohpl_h7_mat_set_blend(OhplH7Mat*, int mode);
 int ohpl_h7_mat_set_alpha(OhplH7Mat*, int mode);
 bool ohpl_h7_mat_set_depth_test(OhplH7Mat*, bool on);
 void ohpl_h7_mat_add_uv_anim(OhplH7Mat*, int kind, float speed, float amp, int axis);
-void ohpl_h7_mat_clear_uv_anims(OhplH7Mat*, cMatrixf* uvOut);
 void ohpl_h7_mat_update(OhplH7Mat*, float dt, cMatrixf* uvOut);
 
 size_t ohpl_h7_type_count();

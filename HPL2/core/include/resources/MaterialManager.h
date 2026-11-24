@@ -47,19 +47,15 @@ namespace hpl {
 		void Unload(iResourceBase* apResource);
 
 		void SetTextureSizeDownScaleLevel(unsigned int alLevel){ mlTextureSizeDownScaleLevel = alLevel;}
-		int GetTextureSizeDownScaleLevel(){ return mlTextureSizeDownScaleLevel;}
 
 		void SetTextureFilter(eTextureFilter aFilter);
-		eTextureFilter GetTextureFilter(){ return mTextureFilter;}
 
 		void SetTextureAnisotropy(float afX);
-		float GetTextureAnisotropy(){ return mfTextureAnisotropy;}
 
 		tString GetPhysicsMaterialName(const tString& asName);
 
 		cMaterial* CreateCustomMaterial(const tString& asName, iMaterialType *apMaterialType);
 
-		void SetDisableRenderDataLoading(bool abX){ mbDisableRenderDataLoading = abX; ohpl_h3f_material_blank(mpRs, &mOps, abX); }
 
 
 
@@ -78,7 +74,6 @@ namespace hpl {
 		cGraphics* mpGraphics;
 		cResources* mpResources;
 
-		bool mbDisableRenderDataLoading;
 		cResourceVarsObject mUserVars;
 
 	};

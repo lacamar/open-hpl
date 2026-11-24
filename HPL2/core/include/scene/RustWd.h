@@ -132,7 +132,6 @@ namespace hpl {
 		void (*flareHalo)(void*, const cVector2f*);
 		void (*flareMaterial)(void*, void*);
 		size_t (*meshSubs)(void*, void**, size_t, bool);
-		void (*meshDrawBb)(void*, void*, const cColor*);
 		void* (*psCreate)(void*, int32_t, const char*, size_t, const char*, size_t, void*, const cVector3f*);
 		size_t (*psEmitters)(void*, void**, size_t);
 		void (*psRemoveWhenDead)(void*, bool);
@@ -187,7 +186,6 @@ namespace hpl {
 	void ohpl_wd_destroy_all_sounds(OhplWdPod*);
 	bool ohpl_wd_sound_exists(OhplWdPod*, void*, int32_t);
 	int32_t ohpl_wd_force_fields(OhplWdPod*, const cVector3f*, const cVector3f*, void**);
-	void ohpl_wd_draw_mesh_bounding_boxes(OhplWdPod*, const cColor*, bool);
 	void* ohpl_wd_dir_light(OhplWdPod*);
 	void ohpl_wd_set_terrain(OhplWdPod*, void*);
 	void ohpl_wd_set_physics_world(OhplWdPod*, void*, bool);

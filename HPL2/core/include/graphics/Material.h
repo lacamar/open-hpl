@@ -115,7 +115,6 @@ namespace hpl {
 		void SetTexture(eMaterialTexture aType, iTexture *apTexture){ mpRs->mvTextures[aType] = apTexture; }
 		iTexture *GetTexture(eMaterialTexture aType){ return mpRs->mvTextures[aType]; }
 
-		void SetVars(iMaterialVars *apVars){ mpRs->mpVars = apVars;}
 		iMaterialVars* GetVars(){ return mpRs->mpVars;}
 		cResourceVarsObject* GetVarsObject(){ return (cResourceVarsObject*)ohpl_mm_mat_vars_object(mpRs); }
 		void LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject){ ohpl_mm_mat_load_vars(mpRs, apVarsObject); }
@@ -128,33 +127,20 @@ namespace hpl {
 
 		bool HasRefraction(){ return mpRs->mbHasRefraction; }
 		bool UseRefractionEdgeCheck(){ return mpRs->mbUseRefractionEdgeCheck;}
-		void SetHasRefraction(bool abX){ mpRs->mbHasRefraction = abX; }
-		void SetUseRefractionEdgeCheck(bool abX){ mpRs->mbUseRefractionEdgeCheck = abX;}
 
 		bool HasWorldReflection(){ return mpRs->mbHasWorldReflection; }
-		void SetHasWorldReflection(bool abX){ mpRs->mbHasWorldReflection = abX; }
-		void SetWorldReflectionOcclusionTest(bool abX){ mpRs->mbWorldReflectionOcclusionTest=abX;}
-		void SetMaxReflectionDistance(float afX){ mpRs->mfMaxReflectionDistance = afX;}
 		bool GetWorldReflectionOcclusionTest(){ return mpRs->mbWorldReflectionOcclusionTest;}
 		float GetMaxReflectionDistance(){ return mpRs->mfMaxReflectionDistance;}
 
-		void SetHasTranslucentIllumination(bool abX){ mpRs->mbHasTranslucentIllumination = abX;}
 		bool HasTranslucentIllumination(){ return mpRs->mbHasTranslucentIllumination;}
 
-		void SetLargeTransperantSurface(bool abX){ mpRs->mbLargeTransperantSurface = abX;}
-		bool GetLargeTransperantSurface(){ return mpRs->mbLargeTransperantSurface;}
 
-		void SetAffectedByDepthOfField(bool abX){ mpRs->mbAffectedByDepthOfField = abX;}
 		bool GetAffectedByDepthOfField(){ return mpRs->mbAffectedByDepthOfField;}
 
-		bool GetUseAlphaDissolveFilter(){ return mpRs->mbUseAlphaDissolveFilter;}
-		void SetUseAlphaDissolveFilter(bool abX){ mpRs->mbUseAlphaDissolveFilter = abX;}
 
-		void SetAffectedByFog(bool abX){ mpRs->mbAffectedByFog = abX;}
 		bool GetAffectedByFog(){ return mpRs->mbAffectedByFog;}
 
 		void SetDecalSortOrder(int alX){ mpRs->mlDecalSortOrder = alX;}
-		int GetDecalSortOrder(){ return mpRs->mlDecalSortOrder;}
 
 		void SetUVSubDivisions(const cVector2l& avX){ mpRs->mvUVSubDivisions = avX;}
 		const cVector2l& GetUVSubDivisions(){ return mpRs->mvUVSubDivisions;}
@@ -179,24 +165,17 @@ namespace hpl {
 		inline void SetRenderFrameCount(const int alCount) { mpRs->mlRenderFrameCount = alCount;}
 
 		inline bool GetHasSpecificSettings(eMaterialRenderMode aMode) const{ return mpRs->mbHasSpecificSettings[aMode];}
-		void SetHasSpecificSettings(eMaterialRenderMode aMode,bool abX){ mpRs->mbHasSpecificSettings[aMode] = abX;}
 		inline bool HasObjectSpecificsSettings(eMaterialRenderMode aMode)const { return mpRs->mbHasObjectSpecificsSettings[aMode];}
-		void SetHasObjectSpecificsSettings(eMaterialRenderMode aMode,bool abX){ mpRs->mbHasObjectSpecificsSettings[aMode] = abX;}
 
 		//Animation
 		void AddUvAnimation(eMaterialUvAnimation aType, float afSpeed, float afAmp, eMaterialAnimationAxis aAxis){ ohpl_h7_mat_add_uv_anim(mpRs, aType, afSpeed, afAmp, aAxis); }
 		int GetUvAnimationNum(){ return mpRs->mlUvAnimationNum;}
-		cMaterialUvAnimation *GetUvAnimation(int alIdx){ return const_cast<cMaterialUvAnimation*>(&mpRs->mpUvAnimations[alIdx]); }
-		inline bool HasUvAnimation()const { return mpRs->mbHasUvAnimation; }
-		inline const cMatrixf& GetUvMatrix() const { return mpRs->m_mtxUV;}
-		void ClearUvAnimations(){ ohpl_h7_mat_clear_uv_anims(mpRs, NULL); }
 
 		/**
 		 * This is used so that materials do not call type specific things after types have been destroyed!
 		 * Shall only be set by graphics!
 		 */
 		static void SetDestroyTypeSpecifics(bool abX){ ohpl_mm_mat_set_destroy_type_specifics(abX); }
-		static bool GetDestroyTypeSpecifics(){ return ohpl_mm_mat_destroy_type_specifics(); }
 
 		//resources stuff.
 		bool Reload(){ return false;}

@@ -87,35 +87,21 @@ namespace hpl {
 		inline iRenderableContainerNode* GetParent(){ return (iRenderableContainerNode*)mS.mpParent;}
 		inline void SetParent(iRenderableContainerNode* apParent){ mS.mpParent = (uintptr_t)apParent;}
 
-		inline int GetObjectNum(){ return (int)mlstObjects.size();}
 
 		inline const cVector3f& GetMin() const{ return mS.mvMin;}
 		inline const cVector3f& GetMax() const{ return mS.mvMax;}
 		inline const cVector3f GetCenter() const{ return mS.mvCenter;}
 		inline float GetRadius() const { return mS.mfRadius;}
 
-		inline float GetViewDistance()const{ return mS.mfViewDistance;}
-		inline void SetViewDistance(float afX){ mS.mfViewDistance = afX;}
 
-		inline bool IsInsideView() const{ return mS.mbInsideView;}
-		inline void SetInsideView(bool abX) { mS.mbInsideView = abX;}
 
-		inline bool UsesFlagsAndVisibility() { return mS.mbUsesFlagsAndVisibility;}
 
 		inline tRenderableFlag GetRenderFlags() const { return mS.mlRenderFlags;}
-		inline bool HasVisibleObjects() const { return mS.mbVisibleObjects;}
 
-		inline void SetRenderFlags(tRenderableFlag alFlags) { mS.mlRenderFlags = alFlags;}
-		inline void SetHasVisibleObjects(bool abX) { mS.mbVisibleObjects = abX;}
 
-		inline void SetNeedPropertyUpdate(bool abX){ mS.mbNeedPropertyUpdate = abX;}
-		inline bool GetNeedPropertyUpdate() const { return mS.mbNeedPropertyUpdate;}
 
 		void PushUpNeedAABBUpdate();
-		inline bool GetNeedAABBUpdate() const { return mS.mbNeedAABBUpdate;}
 
-		inline void SetPrevFrustumCollision(eCollision aX){ mS.mPrevFrustumCollision = aX;}
-		inline eCollision GetPrevFrustumCollision() const { return (eCollision)mS.mPrevFrustumCollision;}
 
 		void CalculateMinMaxFromObjects();
 
