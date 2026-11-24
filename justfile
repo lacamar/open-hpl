@@ -11,7 +11,7 @@ test:
 
 # the RPM %check runs cargo test with these flags; NaN sign and FMA can differ from dev builds
 test-release:
-    CARGO_TARGET_DIR=rust/target/rpmcheck RUSTFLAGS='-Copt-level=3 -Ccodegen-units=1' cargo test -q --offline --release --manifest-path rust/Cargo.toml
+    CARGO_TARGET_DIR=rust/target/rpmcheck RUSTFLAGS="$(rpm --eval '%{build_rustflags}')" cargo test -q --offline --manifest-path rust/Cargo.toml
 
 script-check:
     #!/usr/bin/env bash

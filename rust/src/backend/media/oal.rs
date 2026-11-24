@@ -135,8 +135,18 @@ unsafe extern "C" fn collect_name(ctx: *mut c_void, name: *const c_char) {
     }
 }
 
-// SAFETY (all blocks below): plain calls into the shim; pointers are valid for the call.
-unsafe extern "C" {
+// The unit-test binary does not link cshim/oal_shim.cpp, and the RPM %check flags keep RealOal's vtable.
+macro_rules! shim {
+    ($(fn $n:ident($($a:ident: $t:ty),* $(,)?) $(-> $r:ty)?;)*) => {
+        #[cfg(not(test))]
+        // SAFETY (all calls): plain calls into the shim; pointers are valid for the call.
+        unsafe extern "C" { $(fn $n($($a: $t),*) $(-> $r)?;)* }
+        $(#[cfg(test)]
+        unsafe extern "C" fn $n($(_: $t),*) $(-> $r)? { unreachable!("OpenAL shim in a unit test") })*
+    };
+}
+
+shim! {
     fn ohpl_oal_sample_load(path: *const u32, len: usize) -> *mut c_void;
     fn ohpl_oal_stream_load(path: *const u32, len: usize) -> *mut c_void;
     fn ohpl_oal_sample_unload(s: *mut c_void);
