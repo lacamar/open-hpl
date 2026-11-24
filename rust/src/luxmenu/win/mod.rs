@@ -19,7 +19,6 @@ use host::W;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-pub const WIN_PROFILE: i32 = 0;
 pub const WIN_LOAD: i32 = 3;
 pub const WIN_STORY_LIST: i32 = 4;
 pub const WIN_STORY: i32 = 5;

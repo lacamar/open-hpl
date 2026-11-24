@@ -70,7 +70,6 @@ impl SubSpec {
 }
 
 pub struct Action {
-    id: i32,
     user: *mut c_void,
     state: ActionState,
     subs: Vec<SubSpec>,
@@ -106,7 +105,6 @@ impl Registry {
 
     pub fn create(&mut self, name: &[u8], id: i32, user: *mut c_void) -> Option<Handle<Action>> {
         let h = self.actions.insert(Action {
-            id,
             user,
             state: ActionState::default(),
             subs: Vec::new(),
@@ -144,10 +142,6 @@ impl Registry {
         self.actions
             .get(h)
             .map_or(core::ptr::null_mut(), |a| a.user)
-    }
-
-    pub fn action_id(&self, h: Handle<Action>) -> Option<i32> {
-        self.actions.get(h).map(|a| a.id)
     }
 
     pub fn add_sub(&mut self, h: Handle<Action>, spec: SubSpec) {

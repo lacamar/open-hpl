@@ -5,9 +5,7 @@
 pub mod draw;
 mod ffi;
 mod ffi_skin;
-mod ffi_widget;
 mod ffi_widget2;
-mod ffi_widget3;
 pub mod gfx;
 pub mod guicore;
 

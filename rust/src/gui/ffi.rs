@@ -1,8 +1,3 @@
-//! C ABI for `cGuiSet`, declared in `gui/RustGui.h`.
-//!
-//! Pointers are non-null, valid and aligned for the call unless noted. `list` is a handle from
-//! `ohpl_gui_list_new`, used from one thread.
-
 use std::ffi::c_void;
 
 use super::layout::{self};
@@ -15,11 +10,6 @@ pub struct Batches {
     batch_count: usize,
     vertices: *const OutVertex,
     vertex_count: usize,
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gui_list_new() -> *mut c_void {
-    Box::into_raw(Box::<RenderList>::default()).cast()
 }
 
 /// Sorts the list and returns the batches to emit; the arrays live until the next build, clear or free.

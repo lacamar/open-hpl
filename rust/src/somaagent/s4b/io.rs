@@ -126,12 +126,10 @@ impl Io {
 
 pub mod op {
     pub const E_POS: u32 = 1;
-    pub const E_SCALE_Y: u32 = 2;
     pub const E_FLAGS: u32 = 3;
     pub const E_NAME: u32 = 4;
     pub const E_SET_ACTIVE: u32 = 5;
     pub const E_MESH_SET_MATRIX: u32 = 6;
-    pub const E_ANIM_CURRENT: u32 = 7;
     pub const E_PLAY_ANIM: u32 = 8;
     pub const E_ANIM_SET_SPEED: u32 = 9;
     pub const E_ANIM_RESTART_RAND: u32 = 10;
@@ -148,9 +146,6 @@ pub mod op {
     pub const E_ATTACK_MATRIX: u32 = 21;
     pub const E_SAME_MAP: u32 = 22;
     pub const E_PARTICLE: u32 = 23;
-    pub const E_DOOR_FLAGS: u32 = 24;
-    pub const E_SCALE3: u32 = 25;
-    pub const E_ONLOAD: u32 = 26;
     pub const E_VARS: u32 = 27;
 
     pub const B_GET3: u32 = 40;
@@ -164,7 +159,6 @@ pub mod op {
     pub const B_MOVE_FWD: u32 = 48;
     pub const B_CREATE: u32 = 49;
     pub const B_DESTROY: u32 = 50;
-    pub const B_BONE_POS: u32 = 51;
 
     pub const P_INFO: u32 = 60;
     pub const P_VEL: u32 = 61;
@@ -180,8 +174,6 @@ pub mod op {
     pub const W_AVOID_QUERY: u32 = 76;
     pub const W_AVOID_GET: u32 = 77;
     pub const W_BARK: u32 = 78;
-    pub const W_RAND_F: u32 = 79;
-    pub const W_RAND_L: u32 = 80;
 
     pub const ND_GET: u32 = 90;
     pub const ND_PATH: u32 = 91;
@@ -196,7 +188,6 @@ pub mod op {
     pub const ND_ITER_NEXT: u32 = 100;
     pub const ND_CLEAR: u32 = 101;
     pub const ND_NODE_POS: u32 = 102;
-    pub const ND_AT_MAP: u32 = 103;
 
     pub const FF_NEW: u32 = 110;
     pub const FF_DESTROY: u32 = 111;

@@ -91,11 +91,6 @@ impl From<ConfigVals> for OhplGs4Config {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs4_cfg_default() -> OhplGs4Config {
-    ConfigVals::default().into()
-}
-
 struct FileCfg<'a>(&'a Config);
 
 impl FileCfg<'_> {
@@ -725,12 +720,6 @@ pub unsafe extern "C" fn ohpl_gs4_write_script(
         return;
     };
     script::write_script(&mut CScript(host), out, (obj != 0).then_some(obj));
-}
-
-/// Stream for tools and tests that drive `ohpl_gs4_write_script` directly.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gs4_out_new() -> *mut Out {
-    Box::into_raw(Box::new(Out::default()))
 }
 
 #[repr(C)]

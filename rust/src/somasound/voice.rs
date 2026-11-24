@@ -810,16 +810,6 @@ impl Voices {
         self.playing.clear();
     }
 
-    pub fn reset_state(&mut self) {
-        self.sources.clear();
-        self.scene_volumes.clear();
-        self.focus_scene.clear();
-        self.forced_focus_scene.clear();
-        self.focus_timer = 0.0;
-        self.speaking_callbacks.clear();
-        self.speaking.clear();
-    }
-
     pub fn skip_current_line(&mut self, host: &mut dyn VoiceHost, scene: &[u8]) {
         for i in 0..self.playing.len() {
             if self

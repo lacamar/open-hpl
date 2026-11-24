@@ -57,7 +57,6 @@ int ohpl_as_set_message_cb(void* e, OhplAsMsgFn fn, void* ctx)
 }
 
 int ohpl_as_set_engine_property(void* e, int prop, size_t value) { return E(e)->SetEngineProperty((asEEngineProp)prop, value); }
-int ohpl_as_set_default_namespace(void* e, const char* ns) { return E(e)->SetDefaultNamespace(ns); }
 
 int ohpl_as_reg_global_function(void* e, const char* decl, void* fn, int conv) { return E(e)->RegisterGlobalFunction(decl, Fn(fn), conv); }
 int ohpl_as_reg_global_property(void* e, const char* decl, void* ptr) { return E(e)->RegisterGlobalProperty(decl, ptr); }
@@ -71,7 +70,6 @@ int ohpl_as_reg_object_behaviour(void* e, int behaviour, const char* obj, const 
 int ohpl_as_reg_enum(void* e, const char* name) { return E(e)->RegisterEnum(name); }
 int ohpl_as_reg_enum_value(void* e, const char* name, const char* value, int v) { return E(e)->RegisterEnumValue(name, value, v); }
 int ohpl_as_reg_funcdef(void* e, const char* decl) { return E(e)->RegisterFuncdef(decl); }
-int ohpl_as_reg_typedef(void* e, const char* ty, const char* decl) { return E(e)->RegisterTypedef(ty, decl); }
 int ohpl_as_type_id_by_decl(void* e, const char* decl) { return E(e)->GetTypeIdByDecl(decl); }
 
 void* ohpl_as_get_module(void* e, const char* name, int flag) { return E(e)->GetModule(name, (asEGMFlags)flag); }

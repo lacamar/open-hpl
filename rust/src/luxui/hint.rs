@@ -4,7 +4,6 @@
 use super::event::{Ev, Out};
 
 pub const EV_HINT_LABEL: u32 = 1;
-pub const EV_HINT_ROW: u32 = 2;
 
 pub const WRAP_WIDTH: f32 = 680.0;
 pub const WRAP_LINE_HEIGHT: f32 = 15.0;

@@ -216,7 +216,6 @@ pub mod op {
     pub const RUN_BREAK_CALLBACK: i32 = 55;
     pub const DOOR_DESTROY_BROKEN: i32 = 56;
     pub const BODY_ZERO_VEL: i32 = 57;
-    pub const MOVE_STATE_DONE: i32 = 58;
 
     pub const SND_CLOSE_ON: i32 = 0;
     pub const SND_CLOSE_OFF: i32 = 1;

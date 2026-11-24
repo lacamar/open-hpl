@@ -921,11 +921,12 @@ fn layout_sizes() {
 
 #[test]
 fn settings_file_round_trip() {
-    use super::ffi::{OhplGs4Config, ohpl_gs4_cfg_default, ohpl_gs4_cfg_load, ohpl_gs4_cfg_save};
+    use super::base::ConfigVals;
+    use super::ffi::{OhplGs4Config, ohpl_gs4_cfg_load, ohpl_gs4_cfg_save};
     let dir = std::env::temp_dir().join(format!("ohpl-s6-{}", std::process::id()));
     // SAFETY: no other test reads XDG_CONFIG_HOME.
     unsafe { std::env::set_var("XDG_CONFIG_HOME", &dir) };
-    let mut c: OhplGs4Config = ohpl_gs4_cfg_default();
+    let mut c: OhplGs4Config = ConfigVals::default().into();
     // SAFETY: `c` is valid.
     assert!(!unsafe { ohpl_gs4_cfg_load(&mut c) });
     c.master_volume = 0.5;
@@ -936,7 +937,7 @@ fn settings_file_round_trip() {
     let text = std::fs::read_to_string(dir.join("open-hpl/soma/main_settings.cfg")).unwrap();
     assert!(text.contains("<Sound Volume=\"0.500000\""));
     assert!(text.contains("<Screen Vsync=\"true\""));
-    let mut d = ohpl_gs4_cfg_default();
+    let mut d: OhplGs4Config = ConfigVals::default().into();
     // SAFETY: `d` is valid.
     assert!(unsafe { ohpl_gs4_cfg_load(&mut d) });
     assert_eq!(

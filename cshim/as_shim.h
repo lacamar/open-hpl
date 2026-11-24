@@ -23,7 +23,6 @@ int ohpl_as_engine_release(void* e);
 int ohpl_as_engine_shutdown(void* e);
 int ohpl_as_set_message_cb(void* e, OhplAsMsgFn fn, void* ctx);
 int ohpl_as_set_engine_property(void* e, int prop, size_t value);
-int ohpl_as_set_default_namespace(void* e, const char* ns);
 
 int ohpl_as_reg_global_function(void* e, const char* decl, void* fn, int conv);
 int ohpl_as_reg_global_property(void* e, const char* decl, void* ptr);
@@ -34,7 +33,6 @@ int ohpl_as_reg_object_behaviour(void* e, int behaviour, const char* obj, const 
 int ohpl_as_reg_enum(void* e, const char* name);
 int ohpl_as_reg_enum_value(void* e, const char* name, const char* value, int v);
 int ohpl_as_reg_funcdef(void* e, const char* decl);
-int ohpl_as_reg_typedef(void* e, const char* ty, const char* decl);
 int ohpl_as_type_id_by_decl(void* e, const char* decl);
 
 void* ohpl_as_get_module(void* e, const char* name, int flag);

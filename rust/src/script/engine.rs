@@ -157,29 +157,6 @@ impl EngineRef {
         // SAFETY: strings outlive the call.
         check(unsafe { sys::ohpl_as_reg_enum_value(self.as_raw(), n.as_ptr(), s.as_ptr(), v) })
     }
-
-    pub fn funcdef(self, decl: &str) -> AsResult {
-        let d = cs(decl)?;
-        // SAFETY: `d` outlives the call.
-        check(unsafe { sys::ohpl_as_reg_funcdef(self.as_raw(), d.as_ptr()) })
-    }
-
-    pub fn typedef(self, ty: &str, decl: &str) -> AsResult {
-        let (t, d) = (cs(ty)?, cs(decl)?);
-        // SAFETY: strings outlive the call.
-        check(unsafe { sys::ohpl_as_reg_typedef(self.as_raw(), t.as_ptr(), d.as_ptr()) })
-    }
-
-    pub fn default_namespace(self, ns: &str) -> AsResult {
-        let n = cs(ns)?;
-        // SAFETY: `n` outlives the call.
-        check(unsafe { sys::ohpl_as_set_default_namespace(self.as_raw(), n.as_ptr()) })
-    }
-
-    pub fn engine_property(self, prop: i32, value: usize) -> AsResult {
-        // SAFETY: plain call.
-        check(unsafe { sys::ohpl_as_set_engine_property(self.as_raw(), prop, value) })
-    }
 }
 
 /// Bytes of a script `string` handed to a registered function as `const string &in`.
@@ -217,12 +194,6 @@ impl Output {
     pub fn clear(&self) {
         if let Ok(mut m) = self.msg.try_borrow_mut() {
             m.clear();
-        }
-    }
-
-    pub fn set(&self, v: Vec<u8>) {
-        if let Ok(mut m) = self.msg.try_borrow_mut() {
-            *m = v;
         }
     }
 

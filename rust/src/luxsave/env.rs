@@ -42,7 +42,6 @@ pub const JOINT_HINGE: i32 = 1;
 pub const JOINT_SLIDER: i32 = 2;
 pub const JOINT_SCREW: i32 = 3;
 
-pub const VOL_NORMAL: i32 = 0;
 pub const VOL_SKIPPED: i32 = 1;
 
 pub const SET_ATTACK: i32 = 0;

@@ -1,7 +1,7 @@
 //! Raw SDL2 bindings (through sdl2-compat): the functions, constants and event structs the engine uses.
 #![allow(non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
-use core::ffi::{CStr, c_char, c_int, c_ulong, c_void};
+use core::ffi::{CStr, c_char, c_int, c_void};
 
 use core::mem::offset_of;
 
@@ -297,10 +297,7 @@ unsafe extern "C" {
     pub fn SDL_DestroyWindow(window: *mut SDL_Window);
     pub fn SDL_DisableScreenSaver();
     pub fn SDL_EnableScreenSaver();
-    pub fn SDL_EventState(type_: u32, state: c_int) -> u8;
     pub fn SDL_GL_CreateContext(window: *mut SDL_Window) -> *mut c_void;
-    pub fn SDL_GL_DeleteContext(context: *mut c_void);
-    pub fn SDL_GL_GetCurrentContext() -> *mut c_void;
     pub fn SDL_GL_GetProcAddress(proc: *const c_char) -> *mut c_void;
     pub fn SDL_GL_SetAttribute(attr: c_int, value: c_int) -> c_int;
     pub fn SDL_GL_SetSwapInterval(interval: c_int) -> c_int;
@@ -312,11 +309,6 @@ unsafe extern "C" {
     pub fn SDL_GameControllerName(gamecontroller: *mut SDL_GameController) -> *const c_char;
     pub fn SDL_GameControllerOpen(joystick_index: c_int) -> *mut SDL_GameController;
     pub fn SDL_GetClipboardText() -> *mut c_char;
-    pub fn SDL_GetClosestDisplayMode(
-        displayIndex: c_int,
-        mode: *const SDL_DisplayMode,
-        closest: *mut SDL_DisplayMode,
-    ) -> *mut SDL_DisplayMode;
     pub fn SDL_GetCurrentVideoDriver() -> *const c_char;
     pub fn SDL_GetDesktopDisplayMode(displayIndex: c_int, mode: *mut SDL_DisplayMode) -> c_int;
     pub fn SDL_GetDisplayMode(
@@ -332,9 +324,7 @@ unsafe extern "C" {
     pub safe fn SDL_GetNumVideoDisplays() -> c_int;
     pub fn SDL_GetRelativeMouseState(x: *mut c_int, y: *mut c_int) -> u32;
     pub fn SDL_GetScancodeFromKey(key: i32) -> c_int;
-    pub fn SDL_GetThreadID(thread: *mut SDL_Thread) -> c_ulong;
     pub safe fn SDL_GetTicks() -> u32;
-    pub fn SDL_GetWindowDisplayIndex(window: *mut SDL_Window) -> c_int;
     pub fn SDL_GetWindowFlags(window: *mut SDL_Window) -> u32;
     pub fn SDL_GetWindowSize(window: *mut SDL_Window, w: *mut c_int, h: *mut c_int);
     pub fn SDL_HapticClose(haptic: *mut SDL_Haptic);
@@ -345,27 +335,17 @@ unsafe extern "C" {
     pub safe fn SDL_HasClipboardText() -> c_int;
     pub fn SDL_Init(flags: u32) -> c_int;
     pub fn SDL_InitSubSystem(flags: u32) -> c_int;
-    pub safe fn SDL_IsTextInputActive() -> c_int;
     pub fn SDL_JoystickInstanceID(joystick: *mut SDL_Joystick) -> i32;
-    pub fn SDL_JoystickName(joystick: *mut SDL_Joystick) -> *const c_char;
-    pub fn SDL_JoystickNumAxes(joystick: *mut SDL_Joystick) -> c_int;
-    pub fn SDL_JoystickNumBalls(joystick: *mut SDL_Joystick) -> c_int;
-    pub fn SDL_JoystickNumButtons(joystick: *mut SDL_Joystick) -> c_int;
-    pub fn SDL_JoystickNumHats(joystick: *mut SDL_Joystick) -> c_int;
-    pub fn SDL_JoystickOpen(device_index: c_int) -> *mut SDL_Joystick;
     pub fn SDL_LockMutex(mutex: *mut SDL_mutex) -> c_int;
     pub safe fn SDL_NumJoysticks() -> c_int;
     pub fn SDL_PollEvent(event: *mut SDL_Event) -> c_int;
     pub fn SDL_PumpEvents();
     pub fn SDL_PushEvent(event: *mut SDL_Event) -> c_int;
     pub fn SDL_Quit();
-    pub fn SDL_QuitSubSystem(flags: u32);
     pub fn SDL_SetClipboardText(text: *const c_char) -> c_int;
     pub fn SDL_SetHint(name: *const c_char, value: *const c_char) -> c_int;
     pub fn SDL_SetRelativeMouseMode(enabled: c_int) -> c_int;
     pub fn SDL_SetThreadPriority(priority: c_int) -> c_int;
-    pub fn SDL_SetWindowDisplayMode(window: *mut SDL_Window, mode: *const SDL_DisplayMode)
-    -> c_int;
     pub fn SDL_SetWindowFullscreen(window: *mut SDL_Window, flags: u32) -> c_int;
     pub fn SDL_SetWindowGrab(window: *mut SDL_Window, grabbed: c_int);
     pub fn SDL_SetWindowSize(window: *mut SDL_Window, w: c_int, h: c_int);
@@ -375,8 +355,6 @@ unsafe extern "C" {
         messageboxdata: *const SDL_MessageBoxData,
         buttonid: *mut c_int,
     ) -> c_int;
-    pub fn SDL_StartTextInput();
-    pub fn SDL_StopTextInput();
     pub fn SDL_UnlockMutex(mutex: *mut SDL_mutex) -> c_int;
     pub fn SDL_WaitThread(thread: *mut SDL_Thread, status: *mut c_int);
     pub fn SDL_free(mem: *mut c_void);

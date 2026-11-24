@@ -10,7 +10,7 @@ use std::ptr;
 use super::g1_gfx::Element;
 use super::g1_gui;
 use super::g1_set;
-use super::gw::{self, GfxTable, GwHost, gwp, read, with};
+use super::gw::{self, GfxTable, GwHost, read, with};
 use super::gw_host::{self, host};
 use super::h19_widget::{self as hw, Op};
 use super::set::{Msg, W};
@@ -2201,9 +2201,4 @@ pub unsafe extern "C" fn ohpl_gw_create(
         }
         _ => 0,
     }
-}
-
-#[allow(dead_code)]
-fn unused(_: *mut Element) {
-    let _ = gwp(0);
 }

@@ -146,10 +146,6 @@ impl ComboCache {
         Self::stage_map(m, stage).pop_first().map(|(_, e)| e.handle)
     }
 
-    pub fn program_count(&self, mode: usize) -> usize {
-        self.modes.get(mode).map_or(0, |m| m.programs.len())
-    }
-
     pub fn shader_count(&self, mode: usize, stage: u32) -> usize {
         self.modes.get(mode).map_or(0, |m| {
             if stage == VERTEX_BIT {

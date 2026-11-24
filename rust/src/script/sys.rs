@@ -92,10 +92,6 @@ unsafe extern "C" {
         value: *const c_char,
         v: c_int,
     ) -> c_int;
-    pub fn ohpl_as_reg_funcdef(e: *mut c_void, decl: *const c_char) -> c_int;
-    pub fn ohpl_as_reg_typedef(e: *mut c_void, ty: *const c_char, decl: *const c_char) -> c_int;
-    pub fn ohpl_as_set_default_namespace(e: *mut c_void, ns: *const c_char) -> c_int;
-    pub fn ohpl_as_set_engine_property(e: *mut c_void, prop: c_int, value: usize) -> c_int;
     pub fn ohpl_as_get_module(e: *mut c_void, name: *const c_char, flag: c_int) -> *mut c_void;
     pub fn ohpl_as_discard_module(e: *mut c_void, name: *const c_char) -> c_int;
     pub fn ohpl_as_module_add_section(

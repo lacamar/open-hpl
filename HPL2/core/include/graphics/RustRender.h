@@ -63,8 +63,6 @@ namespace hpl {
 		void (*log)(void*, int, int64_t, int64_t, int64_t, int64_t, float);
 	};
 
-	struct OhplComboHandle;
-
 	extern "C"
 	{
 
@@ -98,8 +96,6 @@ namespace hpl {
 									  bool useGlobalScissor, OhplVec2l targetPos);
 		void ohpl_rf_clear_frame_buffer(OhplRenderState*, const OhplRfBackend*, unsigned flags, bool usePosAndSize,
 										OhplVec2l targetPos);
-
-		int ohpl_combo_setup(OhplComboHandle*, int mode, const unsigned* stages, size_t n);
 	}
 }
 

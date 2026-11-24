@@ -145,7 +145,6 @@ unsafe extern "C" {
         prefilter: Option<NewtonWorldRayPrefilterCallback>,
     );
     pub fn NewtonMaterialCreateGroupID(newtonWorld: *mut NewtonWorld) -> c_int;
-    pub fn NewtonMaterialGetDefaultGroupID(newtonWorld: *const NewtonWorld) -> c_int;
     pub fn NewtonMaterialSetContinuousCollisionMode(
         newtonWorld: *const NewtonWorld,
         id0: c_int,
@@ -241,7 +240,6 @@ unsafe extern "C" {
         collision: *mut NewtonCollision,
         matrix: *mut f32,
     ) -> *mut NewtonSceneProxy;
-    pub fn NewtonSceneProxySetMatrix(proxy: *mut NewtonSceneProxy, matrix: *const f32);
     pub fn NewtonSceneCollisionOptimize(scene: *mut NewtonCollision);
     pub fn NewtonCreateCollisionFromSerialization(
         newtonWorld: *mut NewtonWorld,
@@ -345,7 +343,6 @@ unsafe extern "C" {
     );
     pub fn NewtonBodyGetOmega(body: *const NewtonBody, vector: *mut f32);
     pub fn NewtonBodyGetVelocity(body: *const NewtonBody, vector: *mut f32);
-    pub fn NewtonBodyGetForce(body: *const NewtonBody, vector: *mut f32);
     pub fn NewtonBodyGetCentreOfMass(body: *const NewtonBody, com: *mut f32);
     pub fn NewtonBodyGetLinearDamping(body: *const NewtonBody) -> f32;
     pub fn NewtonBodyGetAngularDamping(body: *const NewtonBody, vector: *mut f32);
@@ -393,12 +390,6 @@ unsafe extern "C" {
         maxConeAngle: f32,
         maxTwistAngle: f32,
     );
-    pub fn NewtonHingeGetJointAngle(hinge: *const NewtonJoint) -> f32;
-    pub fn NewtonHingeCalculateStopAlpha(
-        hinge: *const NewtonJoint,
-        desc: *const NewtonHingeSliderUpdateDesc,
-        angle: f32,
-    ) -> f32;
     pub fn NewtonConstraintCreateSlider(
         newtonWorld: *mut NewtonWorld,
         pivotPoint: *const f32,

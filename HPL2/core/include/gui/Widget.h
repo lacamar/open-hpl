@@ -103,7 +103,6 @@ namespace hpl {
 	bool ohpl_gw_process_message(uintptr_t, int, const cGuiMessageData*, bool, bool);
 	void ohpl_gw_add_callback(uintptr_t, int, void*, tGuiCallbackFunc);
 	bool ohpl_gw_focus_message(uintptr_t, int, int, const cGuiMessageData*);
-	void ohpl_gw_forward_to_parent(uintptr_t, int, uintptr_t, const cGuiMessageData*);
 	bool ohpl_gw_point_is_inside_base(uintptr_t, float, float, bool);
 	bool ohpl_gw_point_is_inside(uintptr_t, float, float, bool);
 	void ohpl_gw_attach_child(uintptr_t, uintptr_t);

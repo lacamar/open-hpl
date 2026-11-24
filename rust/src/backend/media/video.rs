@@ -124,14 +124,6 @@ impl Video {
         (self.width, self.height)
     }
 
-    pub fn is_paused(&self) -> bool {
-        self.paused
-    }
-
-    pub fn is_looping(&self) -> bool {
-        self.looping
-    }
-
     fn fill(&mut self, log: Sink) -> i32 {
         // SAFETY: `th` is live and `file` is open while a stream is loaded.
         let n = unsafe { ohpl_th_fill(self.th, self.file, self.buffer_size) };

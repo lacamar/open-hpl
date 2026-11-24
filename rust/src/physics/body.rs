@@ -200,10 +200,6 @@ pub fn static_linear_move_bk<Ho: Host>(h: &Ho, b: H, v: Vector3f, book: u64) {
     h.body_add_to_update_list(b);
 }
 
-pub fn static_angular_move<Ho: Host>(h: &Ho, b: H, v: Vector3f) {
-    static_angular_move_bk(h, b, v, 0);
-}
-
 pub fn static_angular_move_bk<Ho: Host>(h: &Ho, b: H, v: Vector3f, book: u64) {
     let k = Slots { h, b, book };
     if h.body_mass(b) != 0.0 {

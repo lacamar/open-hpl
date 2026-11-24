@@ -144,10 +144,6 @@ pub fn exit_pressed(
     }
 }
 
-pub fn root_visible(root: i32, current: i32) -> bool {
-    root == current
-}
-
 pub fn list_index(state: i32) -> i32 {
     match state {
         STATE_NOTES => 0,
@@ -517,7 +513,6 @@ pub fn is_open_state(t: i32) -> bool {
     t == STATE_OPEN_NOTE || t == STATE_OPEN_DIARY || t == STATE_OPEN_NARRATED
 }
 
-pub const BTN_NONE: i32 = 0;
 pub const BTN_BACK_ARROW: i32 = 1;
 pub const BTN_FWD_ARROW: i32 = 2;
 pub const BTN_EXIT: i32 = 3;

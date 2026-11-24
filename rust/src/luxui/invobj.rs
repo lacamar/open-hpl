@@ -900,7 +900,3 @@ pub fn drop_all() {
     destroy_script();
     take();
 }
-
-pub fn blank_from(i: Inv) {
-    install(Box::new(i));
-}

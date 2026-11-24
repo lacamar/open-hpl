@@ -4,47 +4,9 @@
 //! no-op returning the zero value.
 
 use std::ffi::c_void;
-use std::slice;
 
-use super::combo::ComboCache;
 use super::funcs::{Gpu, Log, State};
-use super::list::{DecalKey, IllumKey, SolidKey, TransKey};
-use crate::types::{Vector2f, Vector2l, Vector3f};
-
-/// # Safety
-/// `p` is null or points at `n` valid elements.
-unsafe fn items<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if p.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: by the caller's contract.
-        unsafe { slice::from_raw_parts(p, n) }
-    }
-}
-
-#[repr(C)]
-pub struct CompileInC {
-    pub flags: u32,
-    pub origin: Vector3f,
-    pub solid: *const SolidKey,
-    pub solid_len: usize,
-    pub trans: *mut TransKey,
-    pub trans_len: usize,
-    pub decal: *const DecalKey,
-    pub decal_len: usize,
-    pub illum: *const IllumKey,
-    pub illum_len: usize,
-}
-
-/// Each array has room for the matching `*_len` indices.
-#[repr(C)]
-pub struct CompileOutC {
-    pub z: *mut u32,
-    pub diffuse: *mut u32,
-    pub trans: *mut u32,
-    pub decal: *mut u32,
-    pub illum: *mut u32,
-}
+use crate::types::{Vector2f, Vector2l};
 
 macro_rules! backend {
     ($($name:ident($($a:ident: $t:ty),*) $(-> $r:ty)?;)*) => {
@@ -286,37 +248,4 @@ pub unsafe extern "C" fn ohpl_rf_model_view_set(st: *mut State, null_matrix: usi
     if let Some(s) = unsafe { st.as_mut() } {
         s.matrix = null_matrix;
     }
-}
-
-/// Opaque combo cache, one per `cProgramComboManager`.
-pub struct ComboHandle(ComboCache);
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_combo_new(modes: usize) -> *mut ComboHandle {
-    Box::into_raw(Box::new(ComboHandle(ComboCache::new(modes))))
-}
-
-/// # Safety
-/// `h` is live or null.
-unsafe fn cache<'a>(h: *mut ComboHandle) -> Option<&'a mut ComboCache> {
-    // SAFETY: the caller's contract.
-    unsafe { h.as_mut() }.map(|h| &mut h.0)
-}
-
-/// Returns the combination count.
-///
-/// # Safety
-/// `h` is live; `stages` points at `n` values.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_combo_setup(
-    h: *mut ComboHandle,
-    mode: i32,
-    stages: *const u32,
-    n: usize,
-) -> i32 {
-    // SAFETY: the caller's contract.
-    let (Some(c), stages) = (unsafe { cache(h) }, unsafe { items(stages, n) }) else {
-        return 0;
-    };
-    usize::try_from(mode).map_or(0, |m| c.setup(m, stages))
 }

@@ -1239,10 +1239,6 @@ impl Menu {
         self.set
     }
 
-    pub fn window_widget(&self, win: i32) -> usize {
-        self.window(win).map_or(0, |w| w.widget.get())
-    }
-
     pub fn window_dump(&self, win: i32, begin: bool) -> usize {
         let Some(w) = self.window(win) else {
             return 0;

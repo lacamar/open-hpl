@@ -3,7 +3,7 @@
 use std::collections::VecDeque;
 use std::hint::black_box;
 
-use super::deferred::{DlOp, Feed, NONE, Op, P3Op, Plan, State, c_max, log2, st, state};
+use super::deferred::{DlOp, Feed, Op, P3Op, Plan, State, c_max, log2, st, state};
 use super::deferred_fx::cmath::{matrix_inverse, matrix_mul, matrix_mul_vec, plane_dist};
 use super::deferred_fx::{
     Item, Seq, ask, fog_depth, fog_render_color, mat, o, ops, p4, pass, pass_begin, pass_end, v4, x,
@@ -569,6 +569,3 @@ fn fog_area_draw(w: &FogWorld, a: &FogAreaIn, idx: i32) -> Vec<Item> {
     ]));
     v
 }
-
-#[allow(dead_code)]
-const _: i32 = NONE;

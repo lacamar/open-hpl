@@ -1591,17 +1591,6 @@ impl ImGui {
         );
         self.mods.rotate_angle = angle;
     }
-
-    pub fn do_label_plain(
-        &mut self,
-        h: &dyn Host,
-        text: &[u32],
-        d: Sd,
-        pos: [f32; 3],
-        size: [f32; 2],
-    ) {
-        self.do_label(h, text, d, pos, size, 1.0);
-    }
 }
 
 fn vec3_string(p: [f32; 3]) -> String {

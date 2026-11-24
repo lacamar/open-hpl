@@ -6,7 +6,7 @@ use super::misc::{self, Completion, Date, Vitals};
 use super::ops::{Op, Ops};
 use super::postfx::{self, Clock};
 use super::renderer::{self, Glow, Outline};
-use super::voice::{self, AddIn, Row, TextsIn, UpdateIn};
+use super::voice::{AddIn, Row, TextsIn, UpdateIn};
 
 const _: () = {
     use std::mem::{offset_of, size_of};
@@ -38,25 +38,6 @@ unsafe fn rw<'a, T>(p: *mut T) -> &'a mut T {
     unsafe { &mut *p }
 }
 
-/// # Safety
-/// `p` points to `n` writable elements, or `n` is 0.
-unsafe fn slice_mut<'a, T>(p: *mut T, n: usize) -> &'a mut [T] {
-    if n == 0 {
-        return &mut [];
-    }
-    // SAFETY: caller contract.
-    unsafe { std::slice::from_raw_parts_mut(p, n) }
-}
-
-fn copy_out<T: Copy>(src: &[T], dst: *mut T, cap: usize) -> usize {
-    // SAFETY: caller contract: `dst` has room for `cap` elements.
-    let d = unsafe { slice_mut(dst, cap) };
-    for (to, from) in d.iter_mut().zip(src.iter()) {
-        *to = *from;
-    }
-    src.len()
-}
-
 macro_rules! ffi {
     ($($(#[$m:meta])* fn $name:ident($($a:ident: $t:ty),*) $(-> $r:ty)? $body:block)*) => {
         $(
@@ -68,12 +49,6 @@ macro_rules! ffi {
 }
 
 ffi! {
-    /// # Safety
-    /// `out` has room for `rows` (at least 1) elements.
-    fn ohpl_ga9b_stream_rows(rows: usize, out: *mut Row) -> usize {
-        copy_out(&voice::stream_rows(rows), out, rows.max(1))
-    }
-
     /// # Safety
     /// `c` valid.
     fn ohpl_ga9b_completion_reset(c: *mut Completion) {

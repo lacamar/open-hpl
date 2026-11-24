@@ -353,10 +353,6 @@ pub fn set_destroy_all(set: usize) {
     C::new().p(0, set).run(code::SET_DESTROY_ALL);
 }
 
-pub fn widget_name(w: Wd) -> String {
-    narrow(&C::new().p(0, w.0).out_str(code::WIDGET_NAME))
-}
-
 pub fn has_focus(w: Wd) -> bool {
     C::new().p(0, w.0).run(code::WIDGET_HAS_FOCUS) != 0
 }

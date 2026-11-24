@@ -270,10 +270,6 @@ impl Scape {
         }
     }
 
-    pub fn area_count(&self) -> usize {
-        self.areas.len()
-    }
-
     fn inside(host: &mut dyn ScapeHost, ent: usize, pos: [f32; 3]) -> bool {
         let st = host.area(ent);
         let mut m = Matrixf::default();

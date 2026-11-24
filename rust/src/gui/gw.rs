@@ -872,21 +872,6 @@ pub unsafe extern "C" fn ohpl_gw_focus_message(w: W, msg: i32, op: i32, d: *cons
     }
 }
 
-/// # Safety
-/// `d` is a `cGuiMessageData`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gw_forward_to_parent(w: W, op: i32, child: W, d: *const Msg) {
-    // SAFETY: caller contract.
-    let d = unsafe { d.as_ref() }.copied().unwrap_or(Msg::zero());
-    let op = match op {
-        8 => Op::ChildGotFocus,
-        9 => Op::ChildGotTabFocus,
-        10 => Op::ChildLostFocus,
-        _ => return,
-    };
-    hw::forward_to_parent(&mut GwHost, w, op, child, &d);
-}
-
 ffi!(ohpl_gw_point_is_inside(x: f32, y: f32, only: bool) -> bool => |w| point_is_inside(w, Vector2f { x, y }, only));
 ffi!(ohpl_gw_point_is_inside_base(x: f32, y: f32, only: bool) -> bool => |w| point_is_inside_base(w, Vector2f { x, y }, only));
 

@@ -374,10 +374,6 @@ pub fn body_on_collide(bits: u64, me: usize, other: usize, contact: usize) {
     }
 }
 
-pub fn body_has_callbacks(bits: u64) -> bool {
-    body(bits, |b| !b.callbacks.is_empty()).unwrap_or(false)
-}
-
 pub fn body_add_char(bits: u64, c: usize) {
     body(bits, |b| {
         // SAFETY: the state lives as long as the shell.
