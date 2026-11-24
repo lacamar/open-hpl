@@ -1024,11 +1024,6 @@ pub extern "C" fn ohpl_s9_map_stamp(map: usize) -> i32 {
     with_map(map, |m| m.stamp)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_s9_timers_update(map: usize, dt: f32) {
-    let _ = with_ops(|o| timers_update(o, map, dt));
-}
-
 /// # Safety
 /// `out` is writable; the strings stay valid until the timers change.
 #[unsafe(no_mangle)]

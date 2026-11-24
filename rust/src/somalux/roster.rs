@@ -61,6 +61,29 @@ impl Roster {
         true
     }
 
+    pub(super) fn len(&self) -> usize {
+        self.ents.len()
+    }
+
+    pub(super) fn entry(&self, i: usize) -> Option<(usize, *mut Core, *const Names)> {
+        self.ents
+            .get(i)
+            .map(|e| (e.ent, e.core as *mut Core, e.names))
+    }
+
+    pub(super) fn find(&self, ent: usize) -> Option<(usize, *mut Core, *const Names)> {
+        let i = self.live.iter().position(|&p| p == ent)?;
+        self.entry(i)
+    }
+
+    pub(super) fn snapshot(&self) -> Vec<(usize, *mut Core, *const Names)> {
+        (0..self.len()).filter_map(|i| self.entry(i)).collect()
+    }
+
+    pub(super) fn flush(&mut self) {
+        self.flushed = self.destroyed.len();
+    }
+
     fn by_name(&self, name: &[u8]) -> usize {
         if let Some(&p) = self.by_name.get(&to_lower(name)) {
             return p;
@@ -86,7 +109,7 @@ impl Roster {
         live.or_else(dead).map_or(0, |e| e.ent)
     }
 
-    fn children(&mut self, pat: &[u8]) -> &[usize] {
+    pub(super) fn children(&mut self, pat: &[u8]) -> &[usize] {
         if !pat.contains(&b'*') {
             self.scratch.clear();
             if let Some(&p) = self.by_name.get(&to_lower(pat)) {
@@ -176,8 +199,7 @@ pub unsafe extern "C" fn ohpl_so_roster_destroyed(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_so_roster_flush(r: *mut Roster) {
     // SAFETY: caller contract.
-    let r = unsafe { &mut *r };
-    r.flushed = r.destroyed.len();
+    unsafe { &mut *r }.flush();
 }
 
 /// # Safety
@@ -254,5 +276,51 @@ mod tests {
         assert_eq!(r.by_id(Id { a: 1, b: 0, c: 0 }), 10);
         r.flushed = r.destroyed.len();
         assert_eq!(r.by_id(Id { a: 1, b: 0, c: 0 }), 0);
+    }
+
+    #[test]
+    fn update_loop_order() {
+        use crate::somalux::map_loop::{ent_op as e, map_op as m, op, update};
+        use crate::somalux::{s5_input_ffi::Io, s5c_game::Ops};
+        struct Rec(std::cell::RefCell<Vec<(u32, i32)>>);
+        impl Ops for Rec {
+            fn go(&self, code: u32, io: Io) -> (i32, Io) {
+                self.0.borrow_mut().push((code, io.i[0]));
+                (i32::from(code == op::ENT && io.i[0] == e::HAS_SCRIPT), io)
+            }
+        }
+        let mut core = Box::new(Core::default());
+        core.mbActive = true;
+        core.mfVariableUpdateRate = -1.0;
+        let names = Box::new(Names::default());
+        let mut r = Roster::default();
+        r.add(Ent {
+            ent: 7,
+            core: &*core,
+            names: &*names,
+        });
+        let rec = Rec(Default::default());
+        update(&rec, 0x77, &r, 0.5);
+        let log = rec.0.into_inner();
+        let want = [
+            (op::MAP, m::DUMP_ENTER),
+            (op::MAP, m::DISSOLVE),
+            (op::MAP, m::CALL_F),
+            (op::MAP, m::CALL_F),
+            (op::MAP, m::CRITTER_FRAME),
+            (op::ENT, e::HAS_SCRIPT),
+            (op::ENT, e::TIMERS),
+            (op::ENT, e::CALL_F),
+            (op::ENT, e::COMPONENTS),
+            (op::ENT, e::ANIMATION),
+            (op::ENT, e::SOCKETS),
+            (op::ENT, e::MOVE),
+            (op::ENT, e::CHAR_COLLISION),
+            (op::ENT, e::PROC_ANIMATIONS),
+            (op::ENT, e::EFFECT_COLOR),
+            (op::ENT, e::LIQUID_AMOUNT),
+            (op::ENT, e::GUI),
+        ];
+        assert_eq!(log, want);
     }
 }

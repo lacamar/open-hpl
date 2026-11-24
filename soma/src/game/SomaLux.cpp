@@ -441,12 +441,8 @@ void cSomaLuxMap::AddDissolveEntity(cMeshEntity *apMeshEntity, float afTime)
 	mvDissolves.push_back({pNew, 1, afTime > 0 ? 1 / afTime : 1000.0f});
 }
 
-void cSomaLuxMap::Update(float afTimeStep)
+void cSomaLuxMap::UpdateDissolves(float afTimeStep)
 {
-	if (mpScript == NULL)
-		return;
-	if (ohpl_s9_map_stamp((size_t)this) == 0)
-		OhplS9DumpEnter(this);
 	for (size_t i = 0; i < mvDissolves.size();)
 	{
 		cDissolve &d = mvDissolves[i];
@@ -460,84 +456,28 @@ void cSomaLuxMap::Update(float afTimeStep)
 		mpWorld->DestroyMeshEntity(d.mpEntity);
 		mvDissolves.erase(mvDissolves.begin() + i);
 	}
+}
 
-	ohpl_s9_timers_update((size_t)this, afTimeStep);
+void cSomaLuxMap::CallScriptFloat(const tString &asDecl, float afX)
+{
+	mpRuntime->Call(mpScript, asDecl, [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, afX); });
+}
 
-	float fStep = afTimeStep;
-	mpRuntime->Call(mpScript, "void Update(float afTimeStep)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
-	mpRuntime->Call(mpScript, "void VariableUpdate(float afDeltaTime)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
-
-	SomaBeginCritterFrame();
-	for (cSomaLuxEntity *pEnt : GetEntities().Vec())
-	{
-		if (pEnt->GetScript() == NULL || pEnt->mpCore->mbActive == false)
-			continue;
-		pEnt->UpdateTimers(afTimeStep);
-		// ponytail: only areas auto-sleep (cLuxArea::OnUpdateAutoSleep); props need the engine's body/animation wake-ups
-		bool bAreaIdle = pEnt->mpCore->meType == eSomaLuxEntityType_Area && pEnt->mpCore->mbCheckCollision == false && pEnt->TimersIdle();
-		if (pEnt->mpCore->meType == eSomaLuxEntityType_Area && bAreaIdle == false)
-			pEnt->mpCore->mbSleeping = false;
-		if (pEnt->mpCore->mbSleeping == false)
-		{
-			pEnt->CallWithFloat("void OnUpdate(float afTimeStep)", afTimeStep);
-			// iLuxEntity::OnVariableUpdate: no faster than the rate, with the accumulated step
-			pEnt->mpCore->mfVariableUpdateAcc += afTimeStep;
-			if (pEnt->mpCore->mfVariableUpdateAcc > pEnt->mpCore->mfVariableUpdateRate && pEnt->mpCore->mfVariableUpdateRate >= 0)
-			{
-				pEnt->CallWithFloat("void OnVariableUpdate(float afTimeStep)", pEnt->mpCore->mfVariableUpdateAcc);
-				pEnt->mpCore->mfVariableUpdateAcc = 0;
-			}
-			if (bAreaIdle && pEnt->mpCore->mbAutoSleep && pEnt->CallBool("bool OnUpdateAutoSleep()", {}, true))
-				pEnt->mpCore->mbSleeping = true;
-		}
-		if (pEnt->mpCore->meType == eSomaLuxEntityType_Critter)
-		{
-			SomaUpdateCritter(pEnt, afTimeStep);
-			SomaUpdateComponents(pEnt, afTimeStep);
-		}
-		else if (pEnt->mpCore->meType == eSomaLuxEntityType_Agent)
-			SomaUpdateAgent(pEnt, afTimeStep);
-		else if (pEnt->mpCore->meType == eSomaLuxEntityType_Area)
-			pEnt->UpdateCheckCollision(afTimeStep);
-		else if (pEnt->mpCore->meType == eSomaLuxEntityType_LiquidArea)
-			pEnt->UpdateLiquid(afTimeStep);
-		if (pEnt->mpCore->meType != eSomaLuxEntityType_Critter && pEnt->mpCore->meType != eSomaLuxEntityType_Agent && pEnt->mpCore->mbSleeping == false)
-			SomaUpdateComponents(pEnt, afTimeStep);
-	}
-
-	for (size_t i = 0; i < GetEntities().size(); ++i)
-	{
-		if (GetEntities()[i]->mpCore->mbActive)
-			GetEntities()[i]->UpdateAnimation(afTimeStep);
-		GetEntities()[i]->UpdateSocketNodes();
-		if (GetEntities()[i]->mpCore->mbActive)
-		{
-			GetEntities()[i]->UpdateMove(afTimeStep);
-			GetEntities()[i]->UpdateCharCollision();
-			GetEntities()[i]->UpdateProcAnimations(afTimeStep);
-		}
-		GetEntities()[i]->UpdateEffectColor(afTimeStep);
-		GetEntities()[i]->UpdateLiquidAmount(afTimeStep);
-		GetEntities()[i]->UpdateGui(afTimeStep);
-	}
+void cSomaLuxMap::Update(float afTimeStep)
+{
+	if (mpScript)
+		ohpl_slx_map_update((size_t)this, mpRoster, afTimeStep);
 }
 
 // cLuxMapHandler::PostUpdate: after the world update, so attachments see this step's camera
 void cSomaLuxMap::PostUpdate(float afTimeStep)
 {
-	if (mpScript == NULL)
-		return;
-	float fStep = afTimeStep;
-	for (cSomaLuxEntity *pEnt : GetEntities().Vec())
-		pEnt->UpdateAttachment();
-	SomaUpdateLightConnections();
-	cSomaSoundscape::Get()->Update(this, afTimeStep);
-	UpdateLookAtCallbacks(afTimeStep);
-	UpdateCollideCallbacks();
-	mpRuntime->Call(mpScript, "void PostUpdate(float afTimeStep)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
-	for (cSomaLuxEntity *pEnt : GetEntities())
-		if (pEnt->GetScript() && pEnt->mpCore->mbActive)
-			pEnt->CallWithFloat("void OnPostUpdate(float afTimeStep)", afTimeStep);
+	if (mpScript)
+		ohpl_slx_map_post_update((size_t)this, mpRoster, afTimeStep);
+}
+
+void cSomaLuxMap::FlushPending()
+{
 	std::vector<cPendingCollision> vCollisions;
 	vCollisions.swap(mvPendingCollisions);
 	for (cPendingCollision &col : vCollisions)
@@ -546,60 +486,15 @@ void cSomaLuxMap::PostUpdate(float afTimeStep)
 	vBreaks.swap(mvPendingBreaks);
 	for (cSomaLuxEntity *pEnt : vBreaks)
 		pEnt->DoBreak();
-	ohpl_so_roster_flush(mpRoster);
-	SomaScriptTick();
 }
 
-// iLuxEntity look-at callbacks: 1 when the player starts looking at the entity, -1 when looking away
-void cSomaLuxMap::UpdateLookAtCallbacks(float afTimeStep)
+void cSomaLuxMap::LookAtCall(const tString &asFunc, const tString &asName, int alState)
 {
-	cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
-	cCamera *pCam = pPlayer ? pPlayer->GetCamera() : NULL;
-	if (pCam == NULL)
-		return;
-	for (size_t i = 0; i < GetEntities().size(); ++i)
-	{
-		cSomaLuxEntity *pEnt = GetEntities()[i];
-		if ((pEnt->GetLookAtCallback() == "" && pEnt->mpCore->mbForceLookAtCheck == false) || pEnt->mpCore->mbActive == false)
-			continue;
-		// iLuxEntity::UpdatePlayerLookAt: checks every 0.3 s, delay counts down per check
-		if (pEnt->mpCore->mfLookAtCheckTimer > 0)
-		{
-			pEnt->mpCore->mfLookAtCheckTimer -= afTimeStep;
-			continue;
-		}
-		pEnt->mpCore->mfLookAtCheckTimer = 0.3f;
-		bool bNow = SomaPlayerLooksAt(pEnt, pCam);
-		if (pEnt->GetLookAtCallback() == "")
-		{
-			pEnt->mpCore->mbLookedAt = bNow;
-			continue;
-		}
-		if (bNow != pEnt->mpCore->mbLookedAt)
-		{
-			pEnt->mpCore->mbLookedAt = bNow;
-			if (pEnt->mpCore->mfLookAtCountdown >= 0)
-			{
-				pEnt->mpCore->mfLookAtCountdown = -1;
-				continue;
-			}
-			pEnt->mpCore->mfLookAtCountdown = std::max(pEnt->mpCore->mfLookAtDelay, 0.0f);
-		}
-		if (pEnt->mpCore->mfLookAtCountdown < 0)
-			continue;
-		pEnt->mpCore->mfLookAtCountdown -= 0.3f;
-		if (pEnt->mpCore->mfLookAtCountdown >= 0)
-			continue;
-		tString sFunc = pEnt->GetLookAtCallback();
-		if (bNow && pEnt->mpCore->mbLookAtCallbackAutoRemove)
-			pEnt->SetLookAtCallback("");
-		int lState = bNow ? 1 : -1;
-		tString sArgName0 = pEnt->GetName();
-		mpRuntime->Call(mpScript, "void " + sFunc + "(const tString &in, int)", [&](asIScriptContext *c) {
-			c->SetArgObject(0, &sArgName0);
-			c->SetArgDWord(1, lState);
-		});
-	}
+	tString sName = asName;
+	mpRuntime->Call(mpScript, "void " + asFunc + "(const tString &in, int)", [&](asIScriptContext *c) {
+		c->SetArgObject(0, &sName);
+		c->SetArgDWord(1, alState);
+	});
 }
 
 void cSomaLuxMap::OnAction(int alAction, bool abPressed)
@@ -611,66 +506,125 @@ void cSomaLuxMap::OnAction(int alAction, bool abPressed)
 		});
 }
 
-// cLuxCollideCallbackContainer::CheckCollisionCallback: 1 on enter, -1 on leave, a false return removes the callback
-void cSomaLuxMap::UpdateCollideCallbacks()
+// cLuxCollideCallbackContainer::CheckCollisionCallback: a false return removes the callback
+bool cSomaLuxMap::CollideCall(cSomaLuxEntity *apParent, cSomaLuxEntity *apChild, const tString &asFunc, int alState)
 {
-	std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> setNow;
-	for (size_t e = 0; e < GetEntities().size(); ++e)
+	tString sDecl = "bool " + asFunc + "(const tString &in, const tString &in, int)";
+	tString sP = apParent->GetName(), sC = apChild->GetName();
+	auto args = [&](asIScriptContext *ctx) {
+		ctx->SetArgObject(0, &sP);
+		ctx->SetArgObject(1, &sC);
+		ctx->SetArgDWord(2, alState);
+	};
+	bool bKeep = true;
+	auto result = [&](asIScriptContext *ctx) { bKeep = ctx->GetReturnByte() != 0; };
+	if (mpScript && mpScript->GetObjectType()->GetMethodByDecl(sDecl.c_str()))
+		mpRuntime->Call(mpScript, sDecl, args, result);
+	else if (apParent->HasMethod(sDecl))
+		bKeep = apParent->CallBool(sDecl, args, true);
+	else
+		Warning("SOMA script: collide callback '%s' not found\n", asFunc.c_str());
+	return bKeep;
+}
+
+static int32_t MapOp(cSomaLuxMap *apMap, OhplS5Io *io, const tString &asIn)
+{
+	switch (io->i[0])
 	{
-		cSomaLuxEntity *pParent = GetEntities()[e];
-		if (pParent->mvCollideCallbacks.empty() || pParent->mpCore->mbActive == false)
-			continue;
-		for (size_t i = 0; i < pParent->mvCollideCallbacks.size(); ++i)
-		{
-			cSomaLuxEntity::cCollideCallback cb = pParent->mvCollideCallbacks[i];
-			bool bRemove = false;
-			size_t lChildren;
-			std::vector<cSomaLuxEntity *> vChildren;
-			cSomaLuxEntity *const *ppChildren = ohpl_so_roster_children(mpRoster, U(cb.msChild), cb.msChild.size(), &lChildren);
-			vChildren.assign(ppChildren, ppChildren + lChildren);
-			for (size_t c = 0; c < vChildren.size() && bRemove == false; ++c)
-			{
-				cSomaLuxEntity *pChild = vChildren[c];
-				if (pChild == pParent || pChild->mpCore->mbActive == false)
-					continue;
-				auto key = std::make_tuple(pParent, pChild, cb.msFunc);
-				bool bWas = msetColliding.count(key) > 0;
-				bool bNow = SomaEntitiesCollide(pParent, pChild);
-				if (bNow)
-					setNow.insert(key);
-				if (bNow == bWas)
-					continue;
-				int lState = bNow ? 1 : -1;
-				tString sDecl = "bool " + cb.msFunc + "(const tString &in, const tString &in, int)";
-				tString sP = pParent->GetName(), sC = pChild->GetName();
-				auto args = [&](asIScriptContext *ctx) {
-					ctx->SetArgObject(0, &sP);
-					ctx->SetArgObject(1, &sC);
-					ctx->SetArgDWord(2, lState);
-				};
-				bool bKeep = true;
-				auto result = [&](asIScriptContext *ctx) { bKeep = ctx->GetReturnByte() != 0; };
-				if (mpScript && mpScript->GetObjectType()->GetMethodByDecl(sDecl.c_str()))
-					mpRuntime->Call(mpScript, sDecl, args, result);
-				else if (pParent->HasMethod(sDecl))
-					bKeep = pParent->CallBool(sDecl, args, true);
-				else
-					Warning("SOMA script: collide callback '%s' not found\n", cb.msFunc.c_str());
-				bRemove = bKeep == false;
-			}
-			if (bRemove)
-			{
-				for (size_t k = 0; k < pParent->mvCollideCallbacks.size(); ++k)
-					if (pParent->mvCollideCallbacks[k].msChild == cb.msChild && pParent->mvCollideCallbacks[k].msFunc == cb.msFunc)
-					{
-						pParent->mvCollideCallbacks.erase(pParent->mvCollideCallbacks.begin() + k);
-						break;
-					}
-				--i;
-			}
-		}
+	case kOhplS9Map_DUMP_ENTER: OhplS9DumpEnter(apMap); return 0;
+	case kOhplS9Map_DISSOLVE: apMap->UpdateDissolves(io->f[0]); return 0;
+	case kOhplS9Map_CALL_F: apMap->CallScriptFloat(asIn, io->f[0]); return 0;
+	case kOhplS9Map_CRITTER_FRAME: SomaBeginCritterFrame(); return 0;
+	case kOhplS9Map_LIGHT_CONN: SomaUpdateLightConnections(); return 0;
+	case kOhplS9Map_SOUNDSCAPE: cSomaSoundscape::Get()->Update(apMap, io->f[0]); return 0;
+	case kOhplS9Map_PENDING: apMap->FlushPending(); return 0;
+	case kOhplS9Map_TICK: SomaScriptTick(); return 0;
+	case kOhplS9Map_LOOK_CAMERA:
+	{
+		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
+		io->p[1] = pPlayer ? pPlayer->GetCamera() : NULL;
+		return 0;
 	}
-	msetColliding.swap(setNow);
+	case kOhplS9Map_LOOKAT_CALL:
+	{
+		size_t lSplit = asIn.find('\0');
+		apMap->LookAtCall(asIn.substr(0, lSplit), asIn.substr(lSplit + 1), io->i[1]);
+		return 0;
+	}
+	}
+	return 0;
+}
+
+static int32_t EntOp(cSomaLuxEntity *pEnt, OhplS5Io *io, const tString &asIn)
+{
+	static std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> setNow;
+	static tString sOut;
+	float fDt = io->f[0];
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	switch (io->i[0])
+	{
+	case kOhplS9Ent_HAS_SCRIPT: return pEnt->GetScript() != NULL;
+	case kOhplS9Ent_TIMERS: pEnt->UpdateTimers(fDt); return 0;
+	case kOhplS9Ent_CALL_F:
+	{
+		static const char *const sDecl[] = {"void OnUpdate(float afTimeStep)", "void OnVariableUpdate(float afTimeStep)", "void OnPostUpdate(float afTimeStep)"};
+		pEnt->CallWithFloat(sDecl[io->i[1]], fDt);
+		return 0;
+	}
+	case kOhplS9Ent_AUTOSLEEP: return pEnt->CallBool("bool OnUpdateAutoSleep()", {}, true);
+	case kOhplS9Ent_CRITTER: SomaUpdateCritter(pEnt, fDt); return 0;
+	case kOhplS9Ent_COMPONENTS: SomaUpdateComponents(pEnt, fDt); return 0;
+	case kOhplS9Ent_AGENT: SomaUpdateAgent(pEnt, fDt); return 0;
+	case kOhplS9Ent_CHECK_COLLISION: pEnt->UpdateCheckCollision(fDt); return 0;
+	case kOhplS9Ent_LIQUID: pEnt->UpdateLiquid(fDt); return 0;
+	case kOhplS9Ent_ANIMATION: pEnt->UpdateAnimation(fDt); return 0;
+	case kOhplS9Ent_SOCKETS: pEnt->UpdateSocketNodes(); return 0;
+	case kOhplS9Ent_MOVE: pEnt->UpdateMove(fDt); return 0;
+	case kOhplS9Ent_CHAR_COLLISION: pEnt->UpdateCharCollision(); return 0;
+	case kOhplS9Ent_PROC_ANIMATIONS: pEnt->UpdateProcAnimations(fDt); return 0;
+	case kOhplS9Ent_EFFECT_COLOR: pEnt->UpdateEffectColor(fDt); return 0;
+	case kOhplS9Ent_LIQUID_AMOUNT: pEnt->UpdateLiquidAmount(fDt); return 0;
+	case kOhplS9Ent_GUI: pEnt->UpdateGui(fDt); return 0;
+	case kOhplS9Ent_ATTACHMENT: pEnt->UpdateAttachment(); return 0;
+	case kOhplS9Ent_LOOKS_AT: return SomaPlayerLooksAt(pEnt, (cCamera *)io->p[1]);
+	case kOhplS9Ent_COLL_NUM: return (int32_t)pEnt->mvCollideCallbacks.size();
+	case kOhplS9Ent_COLL_GET:
+	{
+		const cSomaLuxEntity::cCollideCallback &cb = pEnt->mvCollideCallbacks[io->i[1]];
+		sOut = cb.msChild + '\0' + cb.msFunc;
+		io->s = (const unsigned char *)sOut.data();
+		io->n = sOut.size();
+		return 0;
+	}
+	case kOhplS9Ent_COLL_REMOVE:
+	{
+		size_t lSplit = asIn.find('\0');
+		tString sChild = asIn.substr(0, lSplit), sFunc = asIn.substr(lSplit + 1);
+		for (size_t k = 0; k < pEnt->mvCollideCallbacks.size(); ++k)
+			if (pEnt->mvCollideCallbacks[k].msChild == sChild && pEnt->mvCollideCallbacks[k].msFunc == sFunc)
+			{
+				pEnt->mvCollideCallbacks.erase(pEnt->mvCollideCallbacks.begin() + k);
+				break;
+			}
+		return 0;
+	}
+	case kOhplS9Ent_COLL_WAS: return pMap->msetColliding.count(std::make_tuple(pEnt, (cSomaLuxEntity *)io->p[1], asIn)) > 0;
+	case kOhplS9Ent_COLL_NOW:
+	{
+		cSomaLuxEntity *pChild = (cSomaLuxEntity *)io->p[1];
+		bool bNow = SomaEntitiesCollide(pEnt, pChild);
+		if (bNow)
+			setNow.insert(std::make_tuple(pEnt, pChild, asIn));
+		return bNow;
+	}
+	case kOhplS9Ent_COLL_SWAP:
+		if (pMap)
+			pMap->msetColliding.swap(setNow);
+		setNow.clear();
+		return 0;
+	case kOhplS9Ent_COLL_CALL: return pMap->CollideCall(pEnt, (cSomaLuxEntity *)io->p[1], asIn, io->i[1]);
+	}
+	return 0;
 }
 
 int32_t OhplS9HostCall(uint32_t alOp, OhplS5Io *io)
@@ -681,6 +635,8 @@ int32_t OhplS9HostCall(uint32_t alOp, OhplS5Io *io)
 	tString sA = sIn.substr(0, lSplit), sB = lSplit == tString::npos ? tString() : sIn.substr(lSplit + 1);
 	switch (alOp)
 	{
+	case kOhplS9_MAP: return MapOp((cSomaLuxMap *)io->p[0], io, sIn);
+	case kOhplS9_ENT: return EntOp((cSomaLuxEntity *)io->p[0], io, sIn);
 	case kOhplS9_FIRE: ((cSomaLuxMap *)io->p[0])->FireTimer(sA, sB); return 0;
 	case kOhplS9_STR_REF:
 		sOut = sIn;
