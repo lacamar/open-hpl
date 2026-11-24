@@ -85,18 +85,12 @@ namespace hpl {
 		int DetailMeshes(void* c, const OhplHpmDetailMeshes* p) { return B(c).DetailMeshes(*p); }
 		void ExposureArea(void* c, const OhplHpmExposureArea* p) { B(c).ExposureArea(*p); }
 		void Terrain(void* c, const OhplHpmTerrain* p) { B(c).Terrain(*p); }
-
-		void TrackReport(void* c, const char* asTrack, int alInXml, int alCreated, int alTimeMs, bool abFileMissing,
-						 const OhplHpmSkip* apSkipped, size_t alNumSkipped)
-		{
-			B(c).TrackReport(asTrack, alInXml, alCreated, alTimeMs, abFileMissing, apSkipped, alNumSkipped);
-		}
 	}
 
 	void ParseHpmMap(iHpmBuilder& aBuilder, const tWString& asFile, OhplWdPod* apWorld)
 	{
 		OhplHpmVt vt = {&aBuilder, apWorld, NowMs, ObjectDone, Warn, LogMsg, ReadFile, DirLight, EnvParticles, PostEffects, SkyBox,
-						StaticObject, Plane, Entity, Area, Decal, DetailMeshes, ExposureArea, Terrain, TrackReport};
+						StaticObject, Plane, Entity, Area, Decal, DetailMeshes, ExposureArea, Terrain};
 		ohpl_hpm_parse(&vt, asFile.data(), asFile.size());
 	}
 

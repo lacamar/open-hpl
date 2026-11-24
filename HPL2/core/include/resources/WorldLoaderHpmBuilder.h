@@ -24,16 +24,6 @@ namespace hpl {
 	class cParticleSystem;
 	class iCollideShape;
 
-	struct cHpmTrackStats
-	{
-		cHpmTrackStats() : mlInXml(0), mlCreated(0), mlTimeMs(0), mbFileMissing(false) {}
-		int mlInXml;
-		int mlCreated;
-		int mlTimeMs;
-		bool mbFileMissing;
-		std::map<tString, int> mmapSkipped;
-	};
-
 	class cHpmWorldBuilder : public iHpmBuilder
 	{
 	public:
@@ -42,9 +32,6 @@ namespace hpl {
 
 		// Static batches, mesh combining and world compile once everything is parsed.
 		void Finish();
-
-		const std::map<tString, cHpmTrackStats>& GetTrackStats() { return mmapTrackStats; }
-		bool IsTerrainActive() { return mbTerrainActive; }
 
 		uint64_t NowMs();
 		void ObjectDone();
@@ -67,9 +54,6 @@ namespace hpl {
 		int DetailMeshes(const OhplHpmDetailMeshes& aMeshes);
 		void ExposureArea(const OhplHpmExposureArea& aArea);
 		void Terrain(const OhplHpmTerrain& aTerrain);
-
-		void TrackReport(const char* asTrack, int alInXml, int alCreated, int alTimeMs, bool abFileMissing,
-						 const OhplHpmSkip* apSkipped, size_t alNumSkipped);
 
 	private:
 		void CreateTerrainDecals(const OhplHpmTerrain& aTerrain, const std::vector<cSubMeshEntity*>& avPatches);
@@ -107,9 +91,6 @@ namespace hpl {
 		};
 		typedef std::tuple<tString, bool, bool, bool, int, int, int> tStaticShapeBatchKey;
 		std::map<tStaticShapeBatchKey, cStaticShapeBatch> m_mapStaticShapeBatches;
-
-		std::map<tString, cHpmTrackStats> mmapTrackStats;
-		bool mbTerrainActive;
 	};
 
 };

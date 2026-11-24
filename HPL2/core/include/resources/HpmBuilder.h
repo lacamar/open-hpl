@@ -220,12 +220,6 @@ struct OhplHpmTerrain
 	size_t numAreas;
 };
 
-struct OhplHpmSkip
-{
-	const char* reason;
-	int count;
-};
-
 namespace hpl {
 
 	class cXmlElement;
@@ -260,9 +254,6 @@ namespace hpl {
 		virtual int DetailMeshes(const OhplHpmDetailMeshes& aMeshes) = 0;
 		virtual void ExposureArea(const OhplHpmExposureArea& aArea) = 0;
 		virtual void Terrain(const OhplHpmTerrain& aTerrain) = 0;
-
-		virtual void TrackReport(const char* asTrack, int alInXml, int alCreated, int alTimeMs, bool abFileMissing,
-								 const OhplHpmSkip* apSkipped, size_t alNumSkipped) = 0;
 	};
 
 	// Parses the map at asFile and its sidecar files, driving aBuilder.

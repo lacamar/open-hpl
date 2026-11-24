@@ -4,6 +4,7 @@
 use super::abi::{self, Cstr};
 use super::el::El;
 use super::parse::{Builder, FileRead, parse_map};
+use super::report::Report;
 use crate::scene::efl_hpm::HpmEnv;
 use crate::scene::wd::World;
 use std::ffi::c_void;
@@ -40,13 +41,12 @@ pub struct Vt {
     detail_meshes: unsafe extern "C" fn(*mut c_void, *const abi::DetailMeshes) -> i32,
     exposure_area: unsafe extern "C" fn(*mut c_void, *const abi::ExposureArea),
     terrain: unsafe extern "C" fn(*mut c_void, *const abi::Terrain),
-    track_report:
-        unsafe extern "C" fn(*mut c_void, Cstr, i32, i32, i32, bool, *const abi::Skip, usize),
 }
 
 struct VtBuilder<'a> {
     vt: &'a Vt,
     env: HpmEnv,
+    report: Report,
 }
 
 unsafe extern "C" fn collect(ctx: *mut c_void, p: *const u8, n: usize) {
@@ -187,6 +187,7 @@ impl Builder for VtBuilder<'_> {
     }
 
     fn terrain(&mut self, v: &abi::Terrain) {
+        self.report.terrain();
         unsafe { (self.vt.terrain)(self.vt.ctx, v) }
     }
 
@@ -199,18 +200,27 @@ impl Builder for VtBuilder<'_> {
         file_missing: bool,
         skipped: &[abi::Skip],
     ) {
-        unsafe {
-            (self.vt.track_report)(
-                self.vt.ctx,
-                track,
-                in_xml,
-                created,
-                time_ms,
-                file_missing,
-                skipped.as_ptr(),
-                skipped.len(),
-            )
-        }
+        // SAFETY: the parser passes NUL-terminated strings.
+        let name = unsafe { std::ffi::CStr::from_ptr(track) };
+        let skipped = skipped
+            .iter()
+            // SAFETY: as above.
+            .map(|s| {
+                (
+                    unsafe { std::ffi::CStr::from_ptr(s.reason) }
+                        .to_bytes()
+                        .to_vec(),
+                    s.count,
+                )
+            });
+        self.report.track(
+            name.to_bytes(),
+            in_xml,
+            created,
+            time_ms,
+            file_missing,
+            skipped,
+        );
     }
 }
 
@@ -224,7 +234,13 @@ pub unsafe extern "C" fn ohpl_hpm_parse(vt: *const Vt, base: *const u32, n: usiz
     let (vt, base) = unsafe { (&*vt, crate::string_ffi::units(base, n)) };
     // SAFETY: the table carries a live world.
     let env = unsafe { HpmEnv::new(vt.world) };
-    parse_map(&mut VtBuilder { vt, env }, base);
+    let mut b = VtBuilder {
+        vt,
+        env,
+        report: Report::default(),
+    };
+    parse_map(&mut b, base);
+    b.report.publish();
 }
 
 fn walk(el: &El, s: &TreeSink) {

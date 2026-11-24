@@ -151,6 +151,10 @@ typedef struct
 	void (*next_mesh)(void*, OhplCacheMeshOut*) OHPL_NOEXCEPT;
 } OhplMapCacheSource;
 
+typedef struct { int vtxNum, idxNum; float matrix[16]; const float *arrays[5]; const unsigned *indices; } OhplMapCombineSrc;
+typedef struct { float *arrays[5]; unsigned *indices; size_t vtxTotal, idxTotal; } OhplMapCombineDst;
+bool ohpl_map_combine(const OhplMapCombineSrc *srcs, size_t n, bool all, const OhplMapCombineDst *dst);
+
 #ifdef __cplusplus
 }
 #endif
