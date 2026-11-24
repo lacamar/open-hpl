@@ -137,7 +137,6 @@ extern "C" {
 	OhplA7Area *ohpl_a7_area_new(OhplA7Ctx *m, int kind);
 	void ohpl_a7_area_free(OhplA7Ctx *m, OhplA7Area *a);
 	size_t ohpl_a7_area_pod_len(const OhplA7Area *a);
-	size_t ohpl_a7_base_size();
 	OhplA7Base *ohpl_a7_area_base(OhplA7Area *a);
 	void *ohpl_a7_area_pod(OhplA7Area *a);
 	void ohpl_a7_area_attach(OhplA7Area *a, const OhplGa5Vec3 *body, const OhplGa5Vec3 *parent);

@@ -257,14 +257,6 @@ pub unsafe extern "C" fn ohpl_h21_destroy(vt: *const HostVt, p: *mut Popup) {
 /// # Safety
 /// `p` valid.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_window(p: *const Popup) -> W {
-    // SAFETY: caller contract.
-    unsafe { p.as_ref() }.map_or(0, Popup::window)
-}
-
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h21_set_destroy_callback(p: *const Popup, obj: usize, f: usize) {
     // SAFETY: caller contract.
     if let Some(po) = unsafe { p.as_ref() } {

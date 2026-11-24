@@ -1,7 +1,6 @@
 //! Mesh loaders: parse model files into plain data that the C++ side turns into engine objects.
 
 pub(crate) mod collada;
-mod collada_ffi;
 mod collada_geom;
 mod collada_scene;
 #[cfg(test)]

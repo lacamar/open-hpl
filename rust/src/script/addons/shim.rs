@@ -945,13 +945,4 @@ pub mod c_api {
     ) -> c_int {
         c_int::from(unsafe { register_array(e, default_array != 0) })
     }
-
-    /// `RegisterScriptString`.
-    ///
-    /// # Safety
-    /// `e` is a live engine.
-    #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn ohpl_asx_register_string(e: *mut c_void) -> c_int {
-        c_int::from(unsafe { register_string(e) })
-    }
 }

@@ -3,10 +3,7 @@
 //! Unless noted, pointers are non-null, valid and aligned for the call and outputs do not alias
 //! inputs. Buffers cross as pointer + length.
 
-use std::ffi::c_void;
-
 use super::bitmap::{self, Surface};
-use super::packer::RectPacker;
 use super::{formats, uv};
 use crate::types::{Vector2f, Vector2l, Vector3l};
 
@@ -111,11 +108,6 @@ pub unsafe extern "C" fn ohpl_bitmap_blit(
         let s = unsafe { std::slice::from_raw_parts(src_data, src_len) };
         bitmap::blit(&dst, d, &src, s, dp, ss, sp);
     }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_packer_new(w: i32, h: i32) -> *mut c_void {
-    Box::into_raw(Box::new(RectPacker::new(w, h))).cast()
 }
 
 /// `out` receives offset (2 floats), size (2 floats) and advance.

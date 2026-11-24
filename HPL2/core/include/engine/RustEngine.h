@@ -193,10 +193,6 @@ namespace hpl {
 		static_cast<std::string*>(apCtx)->assign(reinterpret_cast<const char*>(apData), alLen);
 	}
 
-	inline void OhplEnAppend(void* apCtx, const uint8_t* apData, size_t alLen)
-	{
-		static_cast<std::string*>(apCtx)->append(reinterpret_cast<const char*>(apData), alLen);
-	}
 
 	inline void OhplEnPush(void* apCtx, const uint8_t* apData, size_t alLen)
 	{
@@ -208,10 +204,6 @@ namespace hpl {
 		static_cast<std::wstring*>(apCtx)->assign(reinterpret_cast<const wchar_t*>(apData), alLen);
 	}
 
-	inline void OhplEnWPush(void* apCtx, const uint32_t* apData, size_t alLen)
-	{
-		static_cast<std::vector<std::wstring>*>(apCtx)->emplace_back(reinterpret_cast<const wchar_t*>(apData), alLen);
-	}
 
 }
 

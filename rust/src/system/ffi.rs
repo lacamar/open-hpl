@@ -2,11 +2,10 @@
 //! (pointer, length) pairs; results go through sink callbacks, so Rust never hands out memory.
 
 use super::diag;
-use super::headless::{self, LineSplitter};
+use super::headless::{self};
 use super::logic_timer::LogicTimer;
-use super::serialize::{self, Class, CreateFn, Field, Host, Level, Obj, T_NULL, Walker};
+use super::serialize::{self, Class, CreateFn, Field, Host, Level, Obj, T_NULL};
 use crate::string_ffi::{Sink, emit, units};
-use crate::xml::Doc;
 use std::ffi::{c_char, c_void};
 use std::sync::Arc;
 
@@ -207,25 +206,6 @@ pub unsafe extern "C" fn ohpl_ser_register(
     });
 }
 
-/// Fills `doc` with `<root>` holding the serialised `obj`.
-///
-/// # Safety
-/// `host` is fully populated; `doc` is live; `obj` is a live registered object; `root` is
-/// NUL-terminated.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ser_save(
-    host: *const OhplSerHost,
-    doc: *mut Doc,
-    obj: Obj,
-    root: *const c_char,
-) {
-    // SAFETY: caller contract.
-    unsafe {
-        let host = CHost(&*host);
-        Walker::new(&host).save_document(&mut *doc, obj, cstr(root));
-    }
-}
-
 // ---- logic timer ----
 
 /// # Safety
@@ -301,11 +281,6 @@ pub unsafe extern "C" fn ohpl_hc_response_json(
             &headless::response_json(ok, units(err, err_n), &f),
         );
     }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_hc_splitter_new() -> *mut LineSplitter {
-    Box::into_raw(Box::default())
 }
 
 // ---- diagnostics ----

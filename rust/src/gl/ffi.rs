@@ -6,11 +6,11 @@
 use std::ffi::{c_char, c_void};
 
 use super::fbo::{self, Attach, DrawPlan};
-use super::glsl::{self, Params};
+use super::glsl::{self};
 use super::state::{GlState, TexPlan, Viewport};
 use super::tables;
 use super::texture::{self, Clock, CreateIn, CreatePlan, MipPlan, Props, Upload};
-use super::vbuf::{self, Elem, MAX_OPS, Op};
+use super::vbuf::{Elem, Op};
 use crate::string_ffi::{Sink, emit, units};
 
 const _: () = {
@@ -54,17 +54,6 @@ enum_tables! {
     ohpl_gl_stencil_renderbuffer => tables::stencil_renderbuffer;
 }
 
-/// # Safety
-/// `p` points to `n` writable items, or `n` is 0.
-unsafe fn units_mut<'a, T>(p: *mut T, n: usize) -> &'a mut [T] {
-    if n == 0 {
-        &mut []
-    } else {
-        // SAFETY: caller contract.
-        unsafe { std::slice::from_raw_parts_mut(p, n) }
-    }
-}
-
 macro_rules! state_fns {
     ($($name:ident($($arg:ident: $t:ty),*) -> $ret:ty => $body:expr;)*) => {$(
         /// # Safety
@@ -92,14 +81,6 @@ state_fns! {
     ohpl_gl_state_active_unit(unit: u32) -> bool => |s: &mut GlState, u| s.set_active_unit(u);
     ohpl_gl_state_cull_active(on: bool) -> () => |s: &mut GlState, on| s.cull_active = on;
     ohpl_gl_state_cull_mode(mode: i32) -> () => |s: &mut GlState, m| s.cull_mode = m;
-}
-
-/// # Safety
-/// `elems` has `n` items; `out` has `MAX_OPS` writable ops.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gl_vb_bind_vbo(elems: *const Elem, n: usize, out: *mut Op) -> usize {
-    // SAFETY: caller contract.
-    unsafe { vbuf::bind_vbo(units(elems, n), units_mut(out, MAX_OPS)) }
 }
 
 #[unsafe(no_mangle)]
@@ -146,25 +127,6 @@ pub unsafe extern "C" fn ohpl_gl_clock_next(c: *mut Clock, handles: usize, mode:
 pub unsafe extern "C" fn ohpl_gl_clock_prev(c: *mut Clock, handles: usize, mode: i32) {
     // SAFETY: caller contract.
     unsafe { (*c).prev_frame(handles, mode) }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gl_params_new() -> *mut Params {
-    Box::into_raw(Box::default())
-}
-
-/// # Safety
-/// `p` is valid; `name` has `n` bytes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_gl_params_as_id_finish(
-    p: *mut Params,
-    name: *const c_char,
-    n: usize,
-    id: i32,
-    location: i32,
-) -> bool {
-    // SAFETY: caller contract.
-    unsafe { (*p).as_id_finish(units(name.cast::<u8>(), n), id, location) }
 }
 
 type LineSink = unsafe extern "C" fn(*mut c_void, i32, *const c_char, usize);

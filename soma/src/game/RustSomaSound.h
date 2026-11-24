@@ -129,7 +129,6 @@ extern "C" {
 	void ohpl_s7_cache_dir(const unsigned char *game, size_t gn, const unsigned char *sub, size_t sn, void (*sink)(void *, const unsigned char *, size_t), void *ctx);
 	void ohpl_s7_extract_samples(const unsigned char *bank, size_t bn, const unsigned char *cache, size_t cn, const unsigned char *prefix, size_t pn,
 								 const OhplS7Str *samples, size_t count, void (*sink)(void *, const unsigned char *, size_t, const unsigned char *, size_t), void *ctx);
-	void ohpl_s7_dump_text(const unsigned char *tag, size_t tn, const unsigned char *text, size_t n);
 }
 
 

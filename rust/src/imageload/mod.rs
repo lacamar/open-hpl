@@ -3,7 +3,6 @@
 
 pub mod dds;
 pub mod devil;
-mod ffi;
 pub mod fontdata;
 pub mod theora;
 

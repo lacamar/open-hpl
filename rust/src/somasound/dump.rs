@@ -229,16 +229,3 @@ pub(super) fn fsb_digests(out: &std::collections::BTreeMap<Vec<u8>, Vec<u8>>, ca
         }
     }
 }
-
-/// # Safety
-/// Both are valid for their lengths.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_s7_dump_text(tag: *const u8, tn: usize, t: *const u8, n: usize) {
-    // SAFETY: caller contract.
-    unsafe {
-        text(
-            std::slice::from_raw_parts(tag, tn),
-            std::slice::from_raw_parts(t, n),
-        )
-    }
-}

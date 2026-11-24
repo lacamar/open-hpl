@@ -50,11 +50,6 @@ atlas_flags! {
     ohpl_h5_atlas_locked ohpl_h5_atlas_set_locked locked;
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h5_atlas_new(w: i32, h: i32, handle: i32) -> *mut c_void {
-    Box::into_raw(Box::new(Atlas::new(w, h, handle))).cast()
-}
-
 /// # Safety
 /// `name` has `n` bytes.
 #[unsafe(no_mangle)]
