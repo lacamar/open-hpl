@@ -870,7 +870,7 @@ public:
 	void UpdateEnemySpecific(float afTimeStep){}
 
 	bool StateEventImplement(int alState, eLuxEnemyStateEvent aEvent, cLuxStateMessage *apMessage);
-	bool Ga3RustStateMachine(){ return GetEnemyType() == eLuxEnemyType_Grunt;}
+	bool Ga3RustStateMachine(){ return !IsLurker();}
 	const tString* Ga3SoundName(int alKind);
 	bool InRangeOfFood(iPhysicsBody *apFoodBody);
 	void OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions);
@@ -880,6 +880,8 @@ public:
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
 
 private:
+	bool IsLurker(){ return GetEnemyType() == eLuxEnemyType_WaterLurker;}
+	tString Str(size_t alSlot);
 	OhplGa3Host Ga3WlHost();
 	static int Ga3WlCall(void *apEnemy, unsigned alOp, OhplGa3Io *apIo);
 	void SplashWater(eWaterLurkerSplash aType);
@@ -889,37 +891,8 @@ private:
 	void OnDisableTriggers();
 	float GetDamageMul(float afAmount, int alStrength);
 
-	//Grunt
-	tString msNoticeSound;
-	tString msGiveUpNoticeSound;
-	tString msEnabledSound;
-
-	OhplAePig mPig = {};
-	float &mfGroggyDamageCount = mPig.groggyDamageCount;
-	float &mfAlertToHuntDistance = mPig.alertToHuntDistance;
-	float &mfAlertToInstantHuntDistance = mPig.alertToInstantHuntDistance;
-	float &mfHuntPauseMinTime = mPig.huntPauseMinTime;
-	float &mfHuntPauseMaxTime = mPig.huntPauseMaxTime;
-	float &mfIncreaseAlertSpeedDistance = mPig.increaseAlertSpeedDistance;
-	float &mfIncreasedAlertSpeedMul = mPig.increasedAlertSpeedMul;
-	float &mfAlertRunTowardsToHuntLimit = mPig.alertRunTowardsToHuntLimit;
-	float &mfAlertRunTowardsCheckDistance = mPig.alertRunTowardsCheckDistance;
-	float &mfIdleExtraTimeMin = mPig.idleExtraTimeMin;
-	float &mfIdleExtraTimeMax = mPig.idleExtraTimeMax;
-	int32_t &mlIdleExtraNum = mPig.idleExtraNum;
-
-	float mfWaitTime;
-	float mfAlertRunTowardsCount;
-
-	//WaterLurker
-	float mfPlayerDetectionHeight;
-	float mfEatDamage;
-	float mfAfterAttackPauseTime;
-
-	tString msSplashPS[4];
-	tString msSplashSound[4];
-
-	OhplGa3bWlCtx mGa3Wl;
+	OhplEn1 *mpEn;
+	tString msSoundScratch;
 };
 
 class cLuxEnemyLoaderRs : public iLuxEnemyLoader

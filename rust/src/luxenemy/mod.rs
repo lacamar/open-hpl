@@ -13,6 +13,7 @@ mod a4_state;
 #[cfg(test)]
 mod a4_tests;
 mod ctx;
+mod en1;
 mod ffi;
 mod grunt;
 mod host;

@@ -1985,8 +1985,6 @@ int iLuxEnemy::Ga3Call(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 // Rust-backed shell: Grunt and WaterLurker (state machines in rust/src/luxenemy)
 //////////////////////////////////////////////////////////////////////////
 
-static const char *gpSplashVar[4] = {"Walk", "Run", "Eat", "Attack"};
-
 iLuxEnemy *cLuxEnemyLoaderRs::CreateEnemy(const tString& asName, int alID, cLuxMap *apMap)
 {
 	return hplNew(cLuxEnemyRs, (asName, alID, apMap, mType));
@@ -1995,27 +1993,18 @@ iLuxEnemy *cLuxEnemyLoaderRs::CreateEnemy(const tString& asName, int alID, cLuxM
 void cLuxEnemyLoaderRs::LoadVariables(iLuxEnemy *apEnemy, cXmlElement *apRootElem)
 {
 	cLuxEnemyRs *pEnemy = static_cast<cLuxEnemyRs*>(apEnemy);
+	bool bLurker = mType == eLuxEnemyType_WaterLurker;
 
-	if(mType == eLuxEnemyType_Grunt)
+	ohpl_en1_load(pEnemy->mpEn, bLurker, mpVarsRs, &pEnemy->mCfg);
+
+	if(bLurker == false)
 	{
-		pEnemy->msNoticeSound = GetVarString("NoticeSound");
-		pEnemy->msGiveUpNoticeSound = GetVarString("GiveUpNoticeSound");
-		pEnemy->msEnabledSound = GetVarString("EnabledSound");
-		gpBase->PreloadSound(pEnemy->msNoticeSound);
-		gpBase->PreloadSound(pEnemy->msEnabledSound);
-
-		ohpl_ae_load_pig(mpVarsRs, false, &pEnemy->mCfg, &pEnemy->mPig);
+		gpBase->PreloadSound(pEnemy->Str(0));
+		gpBase->PreloadSound(pEnemy->Str(2));
 		return;
 	}
-
-	pEnemy->mfPlayerDetectionHeight = GetVarFloat("PlayerDetectionHeight", 0.6f);
-	pEnemy->mfEatDamage = GetVarFloat("EatDamage", 0);
-	pEnemy->mfAfterAttackPauseTime = GetVarFloat("AfterAttackPauseTime", 0);
-
-	for(int i=0; i<4; ++i) pEnemy->msSplashPS[i] = GetVarString(tString("SplashPS_")+gpSplashVar[i], "");
-	for(int i=0; i<4; ++i) pEnemy->msSplashSound[i] = GetVarString(tString("SplashSound_")+gpSplashVar[i], "");
-	for(int i=0; i<4; ++i) gpBase->PreloadSound(pEnemy->msSplashSound[i]);
-	for(int i=0; i<4; ++i) gpBase->PreloadParticleSystem(pEnemy->msSplashPS[i]);
+	for(size_t i=7; i<11; ++i) gpBase->PreloadSound(pEnemy->Str(i));
+	for(size_t i=3; i<7; ++i) gpBase->PreloadParticleSystem(pEnemy->Str(i));
 }
 
 void cLuxEnemyLoaderRs::LoadInstanceVariables(iLuxEnemy *apEnemy, cResourceVarsObject *apInstanceVars)
@@ -2023,46 +2012,32 @@ void cLuxEnemyLoaderRs::LoadInstanceVariables(iLuxEnemy *apEnemy, cResourceVarsO
 	if(mType != eLuxEnemyType_WaterLurker) return;
 
 	float fHeight = apInstanceVars->GetVarFloat("PlayerDetectionHeight", 0);
-	if(fHeight >0) static_cast<cLuxEnemyRs*>(apEnemy)->mfPlayerDetectionHeight = fHeight;
+	if(fHeight >0) ohpl_en1_set_height(static_cast<cLuxEnemyRs*>(apEnemy)->mpEn, fHeight);
 }
 
 cLuxEnemyRs::cLuxEnemyRs(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyType aType) : iLuxEnemy(asName,alID,apMap, aType)
 {
-	if(aType == eLuxEnemyType_Grunt)
+	if(IsLurker())
 	{
-		mfWaitTime =0;
-		mfAlertRunTowardsCount = 0;
-
-		mbAlignEntityWithGroundRay = true;
-
-		mGa3Ctx.waitTime = &mfWaitTime;
-		mGa3Ctx.alertRunTowardsCount = &mfAlertRunTowardsCount;
-		mGa3Ctx.groggyDamageCount = &mfGroggyDamageCount;
-		mGa3Ctx.alertToHuntDistance = &mfAlertToHuntDistance;
-		mGa3Ctx.alertToInstantHuntDistance = &mfAlertToInstantHuntDistance;
-		mGa3Ctx.huntPauseMinTime = &mfHuntPauseMinTime;
-		mGa3Ctx.huntPauseMaxTime = &mfHuntPauseMaxTime;
-		mGa3Ctx.increaseAlertSpeedDistance = &mfIncreaseAlertSpeedDistance;
-		mGa3Ctx.increasedAlertSpeedMul = &mfIncreasedAlertSpeedMul;
-		mGa3Ctx.alertRunTowardsToHuntLimit = &mfAlertRunTowardsToHuntLimit;
-		mGa3Ctx.alertRunTowardsCheckDistance = &mfAlertRunTowardsCheckDistance;
-		mGa3Ctx.idleExtraTimeMin = &mfIdleExtraTimeMin;
-		mGa3Ctx.idleExtraTimeMax = &mfIdleExtraTimeMax;
-		mGa3Ctx.idleExtraNum = &mlIdleExtraNum;
-		return;
+		mbUseAnimations = false;
+		mbCausesSanityDecrease = false;
+		mbCausesSanityDecreaseAsDefault = false;
 	}
+	else mbAlignEntityWithGroundRay = true;
 
-	mbUseAnimations = false;
-	mbCausesSanityDecrease = false;
-	mbCausesSanityDecreaseAsDefault = false;
-
-	mGa3Wl.playerDetectionHeight = &mfPlayerDetectionHeight;
-	mGa3Wl.afterAttackPause = &mfAfterAttackPauseTime;
-	mGa3Wl.causesSanityDecrease = &mbCausesSanityDecrease;
+	mpEn = ohpl_en1_new(IsLurker(), &mGa3Ctx, &mbCausesSanityDecrease);
 }
 
 cLuxEnemyRs::~cLuxEnemyRs()
 {
+	ohpl_en1_free(mpEn);
+}
+
+tString cLuxEnemyRs::Str(size_t alSlot)
+{
+	size_t lLen = 0;
+	const unsigned char *pStr = ohpl_en1_str(mpEn, alSlot, &lLen);
+	return tString((const char*)pStr, lLen);
 }
 
 void cLuxEnemyRs::OnSetupAfterLoad(cWorld *apWorld)
@@ -2072,7 +2047,7 @@ void cLuxEnemyRs::OnSetupAfterLoad(cWorld *apWorld)
 
 void cLuxEnemyRs::OnSetActiveEnemySpecific(bool abX)
 {
-	if(GetEnemyType() != eLuxEnemyType_WaterLurker) return;
+	if(IsLurker() == false) return;
 
 	mpMeshEntity->SetActive(false);
 	mpMeshEntity->SetVisible(false);
@@ -2080,22 +2055,21 @@ void cLuxEnemyRs::OnSetActiveEnemySpecific(bool abX)
 
 bool cLuxEnemyRs::StateEventImplement(int alState, eLuxEnemyStateEvent aEvent, cLuxStateMessage *apMessage)
 {
-	if(GetEnemyType() == eLuxEnemyType_Grunt)
+	if(IsLurker() == false)
 	{
 		OhplGa3Host host = Ga3Host();
 		return ohpl_ga3_grunt_event(&mGa3Ctx, &host, alState, aEvent, (const OhplGa3Msg*)apMessage);
 	}
 	OhplGa3Host host = Ga3WlHost();
-	return ohpl_ga3b_wl_event(&mGa3Ctx, &mGa3Wl, &host, alState, aEvent, (const OhplGa3Msg*)apMessage);
+	return ohpl_ga3b_wl_event(&mGa3Ctx, ohpl_en1_wl_ctx(mpEn), &host, alState, aEvent, (const OhplGa3Msg*)apMessage);
 }
 
 const tString* cLuxEnemyRs::Ga3SoundName(int alKind)
 {
-	if(GetEnemyType() != eLuxEnemyType_Grunt) return NULL;
+	if(IsLurker()) return NULL;
 
-	if(alKind == 0) return &msNoticeSound;
-	if(alKind == 1) return &msGiveUpNoticeSound;
-	return &msEnabledSound;
+	msSoundScratch = Str(alKind < 2 ? alKind : 2);
+	return &msSoundScratch;
 }
 
 OhplGa3Host cLuxEnemyRs::Ga3WlHost()
@@ -2136,7 +2110,7 @@ int cLuxEnemyRs::Ga3WlCall(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 		vToFeet.Normalize();
 		pFoodBody->AddImpulse(vToFeet*2.5f);
 		pLurker->SplashWater(eWaterLurkerSplash_Eat);
-		pFood->GiveDamage(pLurker->mfEatDamage, 10);
+		pFood->GiveDamage(ohpl_en1_eat_damage(pLurker->mpEn), 10);
 		gpBase->mpDebugHandler->AddMessage(_W("took bite!!"),false);
 		gpBase->mpDebugHandler->AddMessage(_W("Health: ")+cString::ToStringW(pFood->GetHealth()),false);
 		cVector3f vFoodPos = pFood->GetBody(0)->GetLocalPosition();
@@ -2149,14 +2123,13 @@ int cLuxEnemyRs::Ga3WlCall(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
 
 bool cLuxEnemyRs::InRangeOfFood(iPhysicsBody *apFoodBody)
 {
-	float fYDist = apFoodBody->GetLocalPosition().y - mpCharBody->GetFeetPosition().y;
-	return cMath::Abs(fYDist) <= mfPlayerDetectionHeight;
+	return ohpl_en1_in_range_of_food(mpEn, apFoodBody->GetLocalPosition().y - mpCharBody->GetFeetPosition().y);
 }
 
 void cLuxEnemyRs::OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions)
 {
 	iPhysicsWorld *pPhysicsWorld = GetMap()->GetPhysicsWorld();
-	bool bLurker = GetEnemyType() == eLuxEnemyType_WaterLurker;
+	bool bLurker = IsLurker();
 
 	if(bLurker) mpCharBody->GetCurrentBody()->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(1,1));
 
@@ -2169,29 +2142,30 @@ void cLuxEnemyRs::OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctio
 
 void cLuxEnemyRs::SplashWater(eWaterLurkerSplash aType)
 {
-	if(msSplashPS[aType]!="")
+	tString sPS = Str(3 + aType);
+	if(sPS!="")
 	{
-		cParticleSystem *pPS = GetMap()->GetWorld()->CreateParticleSystem("LurkerSplash", msSplashPS[aType],1);
+		cParticleSystem *pPS = GetMap()->GetWorld()->CreateParticleSystem("LurkerSplash", sPS,1);
 		if(pPS) pPS->SetPosition(mpCharBody->GetFeetPosition() + cVector3f(0, 0.7f, 0));
 	}
 
-	PlaySound(msSplashSound[aType]);
+	PlaySound(Str(7 + aType));
 }
 
 bool cLuxEnemyRs::PlayerIsDetected()
 {
-	if(GetEnemyType() == eLuxEnemyType_Grunt)
+	if(IsLurker() == false)
 	{
 		OhplGa3Host host = Ga3Host();
 		return ohpl_ga3_grunt_player_is_detected(&mGa3Ctx, &host);
 	}
 	OhplGa3Host host = Ga3WlHost();
-	return ohpl_ga3b_wl_player_is_detected(&mGa3Ctx, &mGa3Wl, &host);
+	return ohpl_ga3b_wl_player_is_detected(&mGa3Ctx, ohpl_en1_wl_ctx(mpEn), &host);
 }
 
 void cLuxEnemyRs::OnDisableTriggers()
 {
-	if(GetEnemyType() != eLuxEnemyType_Grunt || mCurrentState == eLuxEnemyState_Idle) return;
+	if(IsLurker() || mCurrentState == eLuxEnemyState_Idle) return;
 
 	ChangeState(eLuxEnemyState_Patrol);
 }
@@ -2206,7 +2180,7 @@ kSerializeRustClassP(cLuxEnemy_WaterLurker_SaveData, iLuxEnemy_SaveData)
 
 iLuxEntity_SaveData* cLuxEnemyRs::CreateSaveData()
 {
-	if(GetEnemyType() == eLuxEnemyType_Grunt) return hplNew(cLuxEnemy_Grunt_SaveData, ());
+	if(IsLurker() == false) return hplNew(cLuxEnemy_Grunt_SaveData, ());
 	return hplNew(cLuxEnemy_WaterLurker_SaveData, ());
 }
 
@@ -2214,24 +2188,14 @@ void cLuxEnemyRs::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 {
 	super_class::SaveToSaveData(apSaveData);
 
-	if(GetEnemyType() == eLuxEnemyType_WaterLurker)
-	{
-		cLuxEnemy_WaterLurker_SaveData *pData = static_cast<cLuxEnemy_WaterLurker_SaveData*>(apSaveData);
-		kCopyToVar(pData,mfPlayerDetectionHeight);
-	}
+	if(IsLurker()) static_cast<cLuxEnemy_WaterLurker_SaveData*>(apSaveData)->mfPlayerDetectionHeight = ohpl_en1_height(mpEn);
 }
 
 void cLuxEnemyRs::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 {
 	super_class::LoadFromSaveData(apSaveData);
 
-	if(GetEnemyType() == eLuxEnemyType_WaterLurker)
-	{
-		cLuxEnemy_WaterLurker_SaveData *pData = static_cast<cLuxEnemy_WaterLurker_SaveData*>(apSaveData);
-		kCopyFromVar(pData,mfPlayerDetectionHeight);
-	}
+	if(IsLurker()) ohpl_en1_set_height(mpEn, static_cast<cLuxEnemy_WaterLurker_SaveData*>(apSaveData)->mfPlayerDetectionHeight);
 
-	if (mCurrentState >= eLuxEnemyState_PigEnumStart) mCurrentState = eLuxEnemyState_LastEnum;
-	if (mNextState >= eLuxEnemyState_PigEnumStart) mNextState = eLuxEnemyState_LastEnum;
-	if (mPreviousState >= eLuxEnemyState_PigEnumStart) mPreviousState = eLuxEnemyState_LastEnum;
+	ohpl_en1_fix_states((int*)&mCurrentState, (int*)&mNextState, (int*)&mPreviousState);
 }
