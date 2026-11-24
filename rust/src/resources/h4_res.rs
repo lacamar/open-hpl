@@ -14,8 +14,6 @@ use std::sync::atomic::Ordering;
 /// Create/destroy kinds (`ResOps::create`, `ResOps::destroy`).
 pub mod w {
     pub const MESH_HANDLER: i32 = 0;
-    pub const BITMAP_HANDLER: i32 = 1;
-    pub const WORLD_HANDLER: i32 = 2;
     pub const VIDEO_HANDLER: i32 = 3;
     pub const IMAGE: i32 = 4;
     pub const GPU_SHADER: i32 = 5;

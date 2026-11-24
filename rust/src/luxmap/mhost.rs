@@ -159,8 +159,6 @@ pub mod body {
     pub const PLAYER_BODY: i32 = 32;
 }
 
-pub const ENTITY_ENEMY: i32 = 1;
-
 /// Tests share the one global host slot.
 #[cfg(test)]
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());

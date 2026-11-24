@@ -59,10 +59,6 @@ ffi!(fn ohpl_h3f_add(m, o, res: *mut c_void, log: bool, to_set: bool) {
     flow(m, o).add(res, log, to_set);
 });
 
-ffi!(fn ohpl_h3f_inc_user(m, o, res: *mut c_void) {
-    flow(m, o).inc_user(res);
-});
-
 ffi!(fn ohpl_h3f_tabs(m, o, sink: Sink<u8>, ctx: *mut c_void) {
     emit(sink, ctx, &flow(m, o).tabs());
 });

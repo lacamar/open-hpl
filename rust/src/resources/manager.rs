@@ -90,12 +90,6 @@ impl Manager {
         order.into_iter().skip(keep).collect()
     }
 
-    pub fn meta_of(&self, res: *mut c_void) -> *mut ResMeta {
-        self.info
-            .get(&(res as usize))
-            .map_or(std::ptr::null_mut(), |i| i.meta.cast_mut())
-    }
-
     pub fn resources(&mut self) -> Vec<*mut c_void> {
         (0..self.map.len())
             .filter_map(|i| {

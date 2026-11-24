@@ -2,10 +2,7 @@
 //! The map state is the A7 [`Ctx`]; the engine (world, scripts, entities, player, music) is reached through [`mhost`].
 //! No reference to the context is held across a host op: entity code re-enters through the same context.
 
-use super::a7_ffi::{
-    Ctx, ohpl_a7_destroy_all, ohpl_a7_destroy_entities, ohpl_a7_ent_add, ohpl_a7_ent_unlink,
-    ohpl_a7_teardown,
-};
+use super::a7_ffi::{Ctx, ohpl_a7_ent_add, ohpl_a7_ent_unlink, ohpl_a7_teardown};
 use super::a7_map::{A7Map, W_DOOMED, W_ENEMIES, W_ENTITIES, W_STICKY};
 use super::mhost::{self, A, S, op};
 use super::{area, map};
@@ -487,11 +484,6 @@ impl M {
         self.map().doom_push(e);
     }
 
-    pub fn destroy_all_entities(&self) {
-        // SAFETY: `self.0` is live.
-        unsafe { ohpl_a7_destroy_all(self.0) };
-    }
-
     pub fn create_entity(&self, name: &[u8], file: &[u8], mtx: &[f32; 16], scale: &[f32; 3]) {
         let set = host(op::LOADING_MAP, |_| {}).r == 0;
         if set {
@@ -519,11 +511,6 @@ impl M {
         if script != 0 {
             host(op::SCRIPT_DESTROY, |a| a.p[0] = script);
         }
-    }
-
-    pub fn destroy_entities_raw(&self) {
-        // SAFETY: `self.0` is live.
-        unsafe { ohpl_a7_destroy_entities(self.0) };
     }
 
     // ---- enemies

@@ -13,11 +13,7 @@ use std::ffi::c_void;
 /// `HandlerOps::call` / `HandlerOps::query` codes.
 pub mod h {
     pub const MESH_LOAD: i32 = 0;
-    pub const MESH_SAVE: i32 = 1;
-    pub const ANIMATION_LOAD: i32 = 2;
     pub const BITMAP_LOAD: i32 = 3;
-    pub const BITMAP_SAVE: i32 = 4;
-    pub const VIDEO_LOAD: i32 = 5;
     pub const WORLD_LOAD: i32 = 6;
     pub const MESH_SET_FULL_PATH: i32 = 7;
     pub const BITMAP_SET_FILE_NAME: i32 = 8;

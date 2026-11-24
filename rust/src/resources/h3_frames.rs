@@ -13,7 +13,6 @@ use crate::math::Rect2l;
 use crate::string_ffi::units;
 use crate::types::{Vector2l, Vector3l};
 use std::ffi::c_void;
-use std::io::Write;
 
 type Ptr = *mut c_void;
 
@@ -205,26 +204,9 @@ impl Sub {
 ///
 /// # Safety
 /// `s` is from `Sub::new`, freed once.
-unsafe fn free_sub(s: *mut Sub, users: u32) {
+unsafe fn free_sub(s: *mut Sub) {
     // SAFETY: caller contract.
     let b = unsafe { Box::from_raw(s) };
-    if dump_on() {
-        let mut line = format!(
-            "sub name={} rect={},{},{},{} src={},{} uc={} users={users} uv=",
-            String::from_utf8_lossy(&b.name),
-            b.p.rect.x,
-            b.p.rect.y,
-            b.p.rect.w,
-            b.p.rect.h,
-            b.p.src.x,
-            b.p.src.y,
-            b.p.update_count
-        );
-        for v in b.p.tex.iter().flatten() {
-            line += &format!("{:08x},", v.to_bits());
-        }
-        write_dump(&(line + "\n"));
-    }
     // SAFETY: the links are null or live (frames outlive their subimages).
     unsafe {
         if let Some(f) = b.fbmp.as_mut() {
@@ -402,9 +384,6 @@ impl FrameBmp {
 unsafe fn free_bmp_frame(f: *mut FrameBmp) {
     // SAFETY: caller contract.
     let b = unsafe { Box::from_raw(f) };
-    if dump_on() {
-        dump_frame(&b);
-    }
     for &i in &b.images {
         // SAFETY: the list holds live images.
         unsafe { free_image(i) };
@@ -633,64 +612,13 @@ impl Default for Frames {
     }
 }
 
-fn dump_on() -> bool {
-    std::env::var_os("OHPL_RM_FRAMEDUMP").is_some()
-}
-
-fn dump_frame(f: &FrameBmp) {
-    let info = f.host().info(f.bmp);
-    // SAFETY: the host keeps the pixel buffer valid for this call.
-    let hash = unsafe { info.bytes(false) }.map_or(DUMP_BASIS, |b| {
-        b.iter().fold(DUMP_BASIS, |h, &x| {
-            (h ^ u64::from(x)).wrapping_mul(1_099_511_628_211)
-        })
-    });
-    let mut out = format!(
-        "frame h={} pics={} add={} full={} locked={} upd={} size={}x{} hash={hash:016x}\n",
-        f.handle,
-        f.pics,
-        f.atlas.additions,
-        i32::from(f.atlas.full),
-        i32::from(f.atlas.locked),
-        i32::from(f.atlas.updated),
-        info.size.x,
-        info.size.y,
-    );
-    for &i in &f.images {
-        // SAFETY: the list holds live images.
-        if let Some(i) = unsafe { i.as_ref() } {
-            out += &format!(
-                "  img rect={},{},{},{}\n",
-                i.rect.x, i.rect.y, i.rect.w, i.rect.h
-            );
-        }
-    }
-    write_dump(&out);
-}
-
-/// Not the FNV offset basis: the recorded C++ dump used this constant.
-const DUMP_BASIS: u64 = 1_469_598_103_934_665_603;
-
-fn write_dump(text: &str) {
-    let Some(path) = std::env::var_os("OHPL_RM_FRAMEDUMP") else {
-        return;
-    };
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(path)
-    {
-        let _ = f.write_all(text.as_bytes());
-    }
-}
-
 /// # Safety
 /// `s` is a live `Sub`, `shell` its `cFrameSubImage`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_fr_sub_free(s: Ptr, users: u32) {
+pub unsafe extern "C" fn ohpl_fr_sub_free(s: Ptr, _users: u32) {
     if !s.is_null() {
         // SAFETY: caller contract.
-        unsafe { free_sub(s.cast(), users) };
+        unsafe { free_sub(s.cast()) };
     }
 }
 

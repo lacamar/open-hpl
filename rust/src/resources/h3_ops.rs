@@ -157,15 +157,11 @@ pub mod c {
     pub const BMP_WIDTH: i32 = 24;
     #[cfg(test)]
     pub const BMP_HEIGHT: i32 = 25;
-    pub const IMAGE_SET_PRELOADED: i32 = 26;
     pub const PHYSICS_NAME_OF: i32 = 27;
     #[cfg(test)]
     pub const BMP_DELETE: i32 = 29;
     pub const SHADER_POST: i32 = 30;
     pub const SHADER_ERROR: i32 = 31;
-    pub const MAT_COMPILE_LOOKUP: i32 = 32;
-    pub const MAT_SET_FILTER: i32 = 33;
-    pub const MAT_SET_ANISO: i32 = 34;
     pub const FILE_BYTES: i32 = 35;
     pub const MAT_TYPE_Q: i32 = 36;
     pub const MAT_COMPILE: i32 = 37;
