@@ -175,10 +175,8 @@ void ohpl_ls_light_on_change_visible(OhplSLLight*);
 void ohpl_ls_light_set_diffuse(OhplSLLight*, const cColor*);
 void ohpl_ls_light_set_brightness(OhplSLLight*, float);
 void ohpl_ls_light_set_radius(OhplSLLight*, float);
-void ohpl_ls_light_update_light(OhplSLLight*, float);
 void ohpl_ls_light_update_logic(OhplSLLight*, float);
 void ohpl_ls_light_bounds(OhplSLLight*);
-void ohpl_ls_light_set_falloff_map(OhplSLLight*, uintptr_t);
 void ohpl_ls_light_set_gobo(OhplSLLight*, uintptr_t);
 bool ohpl_ls_light_casters_unchanged(OhplSLLight*, const uintptr_t*, int32_t);
 void ohpl_ls_light_casters_set(OhplSLLight*, const uintptr_t*, int32_t);
@@ -194,7 +192,6 @@ const cMatrixf* ohpl_ls_spot_projection(OhplSLLight*);
 const cMatrixf* ohpl_ls_spot_view_proj(OhplSLLight*);
 OhplFrustum* ohpl_ls_spot_frustum(OhplSLLight*);
 void ohpl_ls_spot_set_fov(OhplSLLight*, float);
-void ohpl_ls_spot_set_falloff_map(OhplSLLight*, uintptr_t);
 bool ohpl_ls_spot_collides_bv(OhplSLLight*, OhplBv*);
 bool ohpl_ls_spot_collides_frustum(OhplSLLight*, const OhplFrustum*);
 

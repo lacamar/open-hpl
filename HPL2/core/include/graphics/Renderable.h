@@ -105,7 +105,6 @@ namespace hpl {
 		void SetCulledByFog(bool abX){ mpR->mbCulledByFog = abX; }
 		bool IsCulledByFog() const { return mpR->mbCulledByFog;}
 
-		void SetLargePlaneSurfacePlacement(int alX){ mpR->mlLargePlaneSurfacePlacement = alX;};
 		inline int GetLargePlaneSurfacePlacement(){ return mpR->mlLargePlaneSurfacePlacement;};
 
 		/**
@@ -114,7 +113,6 @@ namespace hpl {
 		 */
 		virtual int GetMatrixUpdateCount()=0;
 
-		inline void SetModelMatrixPtr(cMatrixf *apMtx){ mpR->mpModelMatrix = apMtx;}
 		inline cMatrixf* GetModelMatrixPtr() const { return mpR->mpModelMatrix;}
 
 		inline float GetViewSpaceZ() const { return mpR->mfViewSpaceZ;}
@@ -122,8 +120,6 @@ namespace hpl {
 
 		cMatrixf* GetInvModelMatrix();
 
-		inline void SetPrevMatrix(const cMatrixf& a_mtxPrev){mpR->m_mtxPrevious = a_mtxPrev;}
-		inline cMatrixf& GetPrevMatrix(){ return mpR->m_mtxPrevious;}
 
 		const cVector3f& GetCalcScale();
 
@@ -141,8 +137,6 @@ namespace hpl {
 		inline iRenderableContainerNode* GetRenderContainerNode(){ return mpR->mpRenderContainerNode; }
 		inline void SetRenderContainerNode(iRenderableContainerNode* apNode){ mpR->mpRenderContainerNode = apNode; }
 
-		void SetRenderableUserData(void* apData) { mpR->mpRenderableUserData = apData; }
-		void* GetRenderableUserData() { return mpR->mpRenderableUserData; }
 
 	protected:
 		// Rust-owned state (rust/src/scene/rnd.rs); the references keep the names subclasses use.

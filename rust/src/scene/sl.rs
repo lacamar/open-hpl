@@ -891,11 +891,6 @@ pub extern "C" fn ohpl_sl_spot_shadow_near() -> f32 {
     f32::from_bits(SPOT_SHADOW_NEAR.load(Ordering::Relaxed))
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_sl_spot_set_shadow_near(v: f32) {
-    SPOT_SHADOW_NEAR.store(v.to_bits(), Ordering::Relaxed);
-}
-
 /// # Safety
 /// `p` valid.
 #[unsafe(no_mangle)]

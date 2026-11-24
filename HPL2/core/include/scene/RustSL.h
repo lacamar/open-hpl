@@ -145,8 +145,6 @@ void ohpl_sl_beam_end_free(OhplSLBeamEnd*);
 const char* ohpl_sl_beam_file(const OhplSLBeam*, size_t*);
 
 void ohpl_sl_set_hpl3_visibility(bool);
-float ohpl_sl_spot_shadow_near();
-void ohpl_sl_spot_set_shadow_near(float);
 bool ohpl_sl_light_is_lit(const OhplSLLight*);
 bool ohpl_sl_light_is_visible(const OhplSLLight*, bool);
 void ohpl_sl_light_fade_brightness_to(OhplSLLight*, float, float);
@@ -154,10 +152,6 @@ void ohpl_sl_light_fade_to(OhplSLLight*, const cColor*, float, float);
 const char* ohpl_sl_light_string(OhplSLLight*, int, size_t*);
 void ohpl_sl_light_remove_billboard(OhplSLLight*, uintptr_t);
 bool ohpl_sl_light_has_billboard(OhplSLLight*, uintptr_t);
-void ohpl_sl_light_cache_add(OhplSLLight*, uintptr_t, int);
-bool ohpl_sl_light_cache_valid(OhplSLLight*, uintptr_t, int);
-void ohpl_sl_light_cache_clear(OhplSLLight*);
-void ohpl_sl_box_add_set(OhplSLBox*, const char*, size_t, const cVector3f*, size_t);
 }
 }
 #endif

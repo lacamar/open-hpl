@@ -55,7 +55,6 @@ void ohpl_mm_mat_compile_texture_lookup(OhplH7Mat*);
 void *ohpl_mm_mat_vars_object(const OhplH7Mat*);
 void ohpl_mm_mat_load_vars(const OhplH7Mat*, void *varsObject);
 void ohpl_mm_mat_set_destroy_type_specifics(bool);
-bool ohpl_mm_mat_destroy_type_specifics();
 
 OhplMmSub *ohpl_mm_sub_new(const OhplMmHost*, void *manager, const char *name, size_t len);
 void ohpl_mm_sub_free(OhplMmSub*);

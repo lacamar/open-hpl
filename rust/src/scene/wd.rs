@@ -999,31 +999,6 @@ pub unsafe extern "C" fn ohpl_wd_force_fields(
 /// # Safety
 /// `w` live.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_wd_draw_mesh_bounding_boxes(
-    w: *mut World,
-    color: *const Color,
-    is_static: bool,
-) {
-    let Some(host) = h() else { return };
-    // SAFETY: caller contract.
-    unsafe {
-        let mut it = Cur::new((*w).reg(), DYN_MESH);
-        loop {
-            let p = it.get();
-            if p == 0 {
-                break;
-            }
-            if is_static || !(host.is_static)(DYN_MESH, p as P) {
-                (host.mesh_draw_bb)((*w).pod.graphics, p as P, color);
-            }
-            it.advance();
-        }
-    }
-}
-
-/// # Safety
-/// `w` live.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_wd_dir_light(w: *mut World) -> P {
     let Some(host) = h() else {
         return std::ptr::null_mut();

@@ -55,13 +55,10 @@ namespace hpl {
 		void SetNearClipPlane(float afX) { Spot()->nearClip = afX; Spot()->ctl.projection_updated = true;}
 		float GetNearClipPlane() { return Spot()->nearClip;}
 
-		static void SetShadowNearClip(float afX){ ohpl_sl_spot_set_shadow_near(afX); }
-		static float GetShadowNearClip(){ return ohpl_sl_spot_shadow_near(); }
 
 		cFrustum* GetFrustum(){ return (cFrustum*)ohpl_ls_spot_frustum(mpS);}
 
 		iTexture *GetSpotFalloffMap(){ return (iTexture*)Spot()->spotFalloffMap; }
-		void SetSpotFalloffMap(iTexture* apTexture){ ohpl_ls_spot_set_falloff_map(mpS, (uintptr_t)apTexture);}
 
 		bool CollidesWithBV(cBoundingVolume *apBV){ return ohpl_ls_spot_collides_bv(mpS, apBV->Rs());}
 		bool CollidesWithFrustum(cFrustum *apFrustum){ return ohpl_ls_spot_collides_frustum(mpS, OhplLsFrustum(apFrustum));}

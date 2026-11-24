@@ -79,11 +79,9 @@ namespace hpl {
 		bool GetUnderwater(){ return mpS->underwater; }
 		void SetSkybox(bool abX){ mpS->skybox = abX; }
 		bool GetSkybox(){ return mpS->skybox; }
-		void SetNoise(float afStrength, float afSize, const cVector3f& avTurbulence){ mpS->noiseStrength = afStrength; mpS->noiseSize = afSize; mpS->noiseTurbulence = avTurbulence; }
 		float GetNoiseStrength(){ return mpS->noiseStrength; }
 		float GetNoiseSize(){ return mpS->noiseSize; }
 		const cVector3f& GetNoiseTurbulence(){ return mpS->noiseTurbulence; }
-		void SetLighten(bool abX){ mpS->lighten = abX; }
 		bool GetLighten(){ return mpS->lighten; }
 		void SetHeightBased(bool abX){ mpS->heightBased = abX; }
 		bool GetHeightBased(){ return mpS->heightBased; }

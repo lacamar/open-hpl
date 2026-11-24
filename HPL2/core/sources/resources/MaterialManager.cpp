@@ -61,8 +61,6 @@ namespace hpl {
 		mTextureFilter = eTextureFilter_Bilinear;
 		mfTextureAnisotropy = 1.0f;
 
-		mbDisableRenderDataLoading = false;
-
 	}
 
 	cMaterialManager::~cMaterialManager()
