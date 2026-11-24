@@ -2186,14 +2186,14 @@ iLuxEntity_SaveData* cLuxEnemyRs::CreateSaveData()
 
 void cLuxEnemyRs::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 {
-	super_class::SaveToSaveData(apSaveData);
+	iLuxEnemy::SaveToSaveData(apSaveData);
 
 	if(IsLurker()) static_cast<cLuxEnemy_WaterLurker_SaveData*>(apSaveData)->mfPlayerDetectionHeight = ohpl_en1_height(mpEn);
 }
 
 void cLuxEnemyRs::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 {
-	super_class::LoadFromSaveData(apSaveData);
+	iLuxEnemy::LoadFromSaveData(apSaveData);
 
 	if(IsLurker()) ohpl_en1_set_height(mpEn, static_cast<cLuxEnemy_WaterLurker_SaveData*>(apSaveData)->mfPlayerDetectionHeight);
 
