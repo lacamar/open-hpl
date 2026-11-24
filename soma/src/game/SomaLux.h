@@ -60,6 +60,11 @@ public:
 	void Update(float afTimeStep);
 	void PostUpdate(float afTimeStep);
 	void OnAction(int alAction, bool abPressed);
+	void UpdateDissolves(float afTimeStep);
+	void CallScriptFloat(const tString &asDecl, float afX);
+	void FlushPending();
+	void LookAtCall(const tString &asFunc, const tString &asName, int alState);
+	bool CollideCall(cSomaLuxEntity *apParent, cSomaLuxEntity *apChild, const tString &asFunc, int alState);
 
 	void FireTimer(const tString &asName, const tString &asFunction);
 	double GetTime();
@@ -105,8 +110,6 @@ private:
 	asIScriptObject *mpScript;
 	OhplSoRoster *mpRoster = ohpl_so_roster_new();
 
-	void UpdateCollideCallbacks();
-	void UpdateLookAtCallbacks(float afTimeStep);
 	bool SetupEntityScript(cSomaLuxEntity *apEnt);
 	void AddEntity(cSomaLuxEntity *apEnt);
 public:

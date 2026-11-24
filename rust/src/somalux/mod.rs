@@ -23,4 +23,5 @@ pub mod s5d_player;
 
 pub mod s9_map;
 
+pub mod map_loop;
 pub mod roster;

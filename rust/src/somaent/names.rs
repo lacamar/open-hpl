@@ -14,6 +14,9 @@ impl Names {
     pub(crate) fn name(&self) -> &[u8] {
         &self.s[0]
     }
+    pub(crate) fn str_at(&self, i: usize) -> &[u8] {
+        self.s.get(i).map_or(&[], Vec::as_slice)
+    }
     #[cfg(test)]
     pub(crate) fn set_name(&mut self, n: &[u8]) {
         self.s[0] = n.to_vec();
