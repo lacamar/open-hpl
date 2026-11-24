@@ -8,7 +8,7 @@ creator_trace.txt   cMeshCreator over the recording low-level graphics (h6_creat
 cargo test (graphics::tests_h6) replays the scripts against the Rust state without the C++.
 
 Record (needs a build dir of this tree with `make HPL2`; `make HPL2TraceRecorder` for h6_creator):
-  harness/gen.sh <build dir> h6_script.cpp <out>/h6_script    (also h6_gen.cpp, h6_creator.cpp)
+  gen.sh <build dir> harness/h6_script.cpp <out>/h6_script    (also h6_gen.cpp, h6_creator.cpp)
   harness/compare.sh <out>/h6_script 300 <dir>                Rust vs golden per scenario, seeds 0-11 (record arg rewrites)
   harness/census.sh <out>/h6_gen <msh|dae|fbx|anm|daeanim|fbxanim> <list> <out dir>
 h6 hash: bone local/world/inverse/inverse-bind matrices, name/sid lookups, sub-mesh and animation lookups,

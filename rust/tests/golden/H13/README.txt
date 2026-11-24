@@ -6,5 +6,5 @@ reg_plan.txt: HPL2/tests/SceneH13Tests.cpp dump recorded from the C++ semantics 
   6 seeds x 400 ops, 400 plan cases. Identical for the Rust registry (the harness compares both in process).
 maps.txt: one line per *.map of Amnesia TDD (39) and Machine for Pigs (17): HplMapParse (tinyxml document, C ABI builder) trace event count and FNV-1a hash.
 Replay: cargo test scene::tests_h13 (registry and plans need no data; maps replay only when the Steam data is installed).
-Compare: scripts/h13-diff.sh <build-dir>   (reads Steam .map files read-only)   Record: scripts/h13-diff.sh <build-dir> record
+Compare: scripts/golden-diff.sh h13 <build-dir>   (reads Steam .map files read-only)   Record: scripts/golden-diff.sh h13 <build-dir> record
 World load A/B: scripts/h13-mapdump.sh <map> (OHPL_H13_MAPDUMP written by cWorld::DumpH13 at the end of LoadWorld).

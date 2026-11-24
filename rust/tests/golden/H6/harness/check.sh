@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# Usage: check.sh <build-dir> [stride]   (build-dir: configured and built `HPL2`, see gen.sh)
-# Lists the .msh/.dae/.fbx/.anm of the installed games (read-only), loads every file (or every
-# stride-th) with the Rust path and compares the output with the golden files. Skinned .dae (with <controller>) crash the C++ loader without an MSH cache and are
-# left out of the dae lists.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 g=$(dirname "$here")
@@ -10,7 +6,7 @@ stride=${2:-1}
 root=${OHPL_STEAM_COMMON:-$HOME/.local/share/Steam/steamapps/common}
 tmp=$(mktemp -d "${XDG_CACHE_HOME:-$HOME/.cache}/open-hpl/l6-tmp/check.XXXXXX")
 export OPENHPL_HEADLESS_SOCKET=x
-"$here/gen.sh" "$1" "$tmp/gen"
+"$here/../gen.sh" "$1" "$here/h6_gen.cpp" "$tmp/gen"
 games=("Amnesia The Dark Descent" "Machine for Pigs" SOMA "Amnesia Rebirth" "Amnesia The Bunker")
 list() { (cd "$root" && for d in "${games[@]}"; do find "$d" -iname "*.$1"; done | sort | awk -v s="$stride" 'NR%s==1||s==1'); }
 list dae > "$tmp/dae.all"

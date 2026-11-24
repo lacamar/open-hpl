@@ -10,5 +10,5 @@ Not covered: the rest of LoadData (textures, frame buffers, other programs) and 
 per-frame decisions were already Rust plans (G6) and are unconditional, so there is no cpp/rust frame trace difference to record.
 
 Record (needs a build dir of this tree with `make HPL2`):
-  harness/gen.sh <build dir> h9_gen.cpp <out>/h9_gen
+  gen.sh <build dir> harness/h9_gen.cpp <out>/h9_gen
   harness/compare.sh <out>/h9_gen rust/tests/golden/H9

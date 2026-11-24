@@ -12,7 +12,7 @@ pass_<seed>.txt cPostEffectComposite::Render over the real post effect types and
 Seeds 0-11 of 300 compared (mat, pe, pass).
 
 Record (needs a build dir of this tree with `make HPL2 HPL2TraceRecorder`):
-  harness/gen.sh <build dir> h7_gen.cpp <out>/h7_gen
+  gen.sh <build dir> harness/h7_gen.cpp <out>/h7_gen
   harness/compare.sh <out>/h7_gen 300 <dir>      Rust vs golden per scenario, seeds 0-11 (record arg rewrites)
   harness/census.sh <out>/h7_gen <dir>           census.cpp / census.rust over the Steam data (read-only)
   H7_SCENARIO=reg <out>/h7_gen script           reg.txt

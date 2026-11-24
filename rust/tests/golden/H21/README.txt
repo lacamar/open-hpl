@@ -15,6 +15,6 @@ digests.txt                 md5 of the full harness stdout of the original C++ (
                             chdirs into fp/sub, so dates and paths in the output depend on that location).
 
 Record (needs a build dir of this tree with `make TraceRecorderTests`):
-  harness/build.sh <repo> <build dir> <out>      builds <out>/h21_popups
+  build.sh <repo> <build dir> <out> harness/h21_popups.cpp
   harness/digests.sh <out>                       stdout of 6 kinds x 6 skins x seeds 1-3 against digests.txt
   H21_LOG=<file> H21_KIND=<kind> H21_SEED=<n> <out>/h21_popups   one cassette (run from fp/sub, see digests.sh)

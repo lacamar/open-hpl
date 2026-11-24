@@ -17,6 +17,6 @@ widgets_<skin>.txt  h19_widgets stdout with the trace replaced by its line count
                     addresses (cGuiRenderObjectCompare), so heap layout must not differ between the two runs.
 
 Record (needs a build dir of this tree with `make TraceRecorderTests`):
-  harness/build.sh <repo> <build dir> <out>     builds <out>/h19_base and <out>/h19_widgets
+  build.sh <repo> <build dir> <out> harness/h19_base.cpp harness/h19_widgets.cpp
   harness/verify.sh <out>                       base seeds and widgets over 6 skins against the committed files
   H19_SEED=<n> <out>/h19_base > base_<nnn>.txt   (seeds 1..12 committed)

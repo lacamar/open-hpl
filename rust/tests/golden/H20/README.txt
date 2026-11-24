@@ -17,6 +17,6 @@ cargo test (gui::h20_tests) checks the host op table against RustGuiH20.h and ru
 against a mock host.
 
 Record (needs a build dir of this tree with `make TraceRecorderTests`):
-  harness/build.sh <repo> <build dir> <out>     builds <out>/h20_widgets
+  build.sh <repo> <build dir> <out> harness/h20_widgets.cpp
   harness/verify.sh <out>                       widgets over 6 skins against the committed files
   H20_DIGEST=1 H20_SKIN=<skin> H20_SEED=<n> <out>/h20_widgets > widgets_<skin>.txt

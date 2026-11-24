@@ -1,6 +1,4 @@
 #!/bin/bash
-# build.sh BUILD_DIR OUT_DIR: BUILD_DIR is a configured amnesia/src build with the HPL2 target built.
-# Produces OUT_DIR/{mgr_probe,ent_new,flow_probe}.
 set -e
 H=$(cd "$(dirname "$0")" && pwd)
 W=$(git -C "$H" rev-parse --show-toplevel)
@@ -12,11 +10,11 @@ INC="-I$B/core2 -I$W/HPL2/core -I$W/HPL2/core/include -I$W/HPL2/dependencies/OAL
 LIBS="$B/core2/libHPL2.a $B/cargo/release/libohpl.a $B/core2/libbinreloc.a $B/core2/libohpl_cdeps.a $B/core2/newton/libNewton.a $B/core2/OALWrapper/libOALWrapper.a -lpugixml -lSDL2 -lz -lpthread -ldl -lrt -lm -Wl,--unresolved-symbols=ignore-all"
 cc() { g++ $FLAGS "$@"; }
 
-cc $INC -c "$H/stubs.cpp" -o "$OUT/stubs.o"
-cc $INC -I$H -c "$H/mgr_probe.cpp" -o "$OUT/mgr_probe.o"
+cc $INC -c "$H/../../H2/harness/stubs.cpp" -o "$OUT/stubs.o"
+cc $INC -I$H -I$H/../../H2/harness -c "$H/mgr_probe.cpp" -o "$OUT/mgr_probe.o"
 g++ "$OUT/mgr_probe.o" "$OUT/stubs.o" $LIBS -o "$OUT/mgr_probe"
-cc $INC -I$H -c "$H/ent_probe.cpp" -o "$OUT/ent.o"
+cc $INC -I$H -I$H/../../H2/harness -c "$H/ent_probe.cpp" -o "$OUT/ent.o"
 g++ "$OUT/ent.o" "$OUT/stubs.o" $LIBS -o "$OUT/ent_new"
 
-cc $INC -I$H -c "$H/flow_probe.cpp" -o "$OUT/flow.o"
+cc $INC -I$H -I$H/../../H2/harness -c "$H/flow_probe.cpp" -o "$OUT/flow.o"
 g++ "$OUT/flow.o" $LIBS -o "$OUT/flow_probe"

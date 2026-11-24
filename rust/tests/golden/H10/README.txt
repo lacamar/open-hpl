@@ -3,5 +3,5 @@ h10_scenes.txt: HPL2/tests/SceneH10Tests.cpp dump, 30 entity/node hierarchy scen
   o = op, = = result (float bits), e = entity OnTransformUpdated / callback events in call order, h = state hash, ~ = C++-only output (bounding volume extents, frustum planes, unproject), not replayed.
   Equal on the Rust backend (C++ bodies deleted).
 Replay: cargo test scene::tests_h10 (mock list shell around rust/src/scene/h10.rs, no C++).
-Compare: scripts/h10-diff.sh <build-dir>
+Compare: scripts/golden-diff.sh h10 <build-dir>
 Record:  OHPL_H10_SEEDS=30 OHPL_H10_DUMP=h10_scenes.txt SceneH10Tests.bin.aarch64

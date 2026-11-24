@@ -15,7 +15,7 @@ steps.txt    init/exit order of cEngine (recorded from the C++ source text befor
              eng::init_steps()/exit_steps().
 
 Record (needs a build dir of this tree with `make TraceRecorderTests`):
-  harness/build.sh <repo> <build dir> <out>        builds <out>/h22_hc
+  build.sh <repo> <build dir> <out> harness/h22_hc.cpp
   harness/gen_hc.py <dir> 24                       scripts hc_*.script
   harness/verify_hc.sh <out> <script dir>          real cHeadlessControlServer transcripts against hc_*.txt
 The key table in h22_tests.rs and the float rounding of pointer coordinates (sdl3_int) come from the installed

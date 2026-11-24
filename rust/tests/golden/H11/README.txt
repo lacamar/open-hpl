@@ -12,6 +12,6 @@ Lines: o = op, = = result, e = callback event (AfterAnimationUpdate, OnAnimation
   ~ lines (bone/node matrices, bounding volumes, skinned vertices, light frustum/projection hashes) are C++-only output, compared
   live by harness/run.sh (cpp vs rust: 36 files, 10260 ops, 0 differences; harness/soak.sh: 75 runs, 61800 ops, 0 differences).
 Replay: cargo test scene::tests_h11 (mock entity around rust/src/scene/h11.rs, no C++).
-Compare: scripts/h11-diff.sh <build-dir>
-Record:  harness/gen.sh <baseline build> h11_script.cpp <bin> <baseline tree>; harness/run.sh <bin> <dir>
+Compare: scripts/golden-diff.sh h11 <build-dir>
+Record:  gen.sh <baseline build> harness/h11_script.cpp <bin> <baseline tree>; harness/run.sh <bin> <dir>
 Not covered: skeleton bodies/colliders (the harness has no physics world), light particle/sound flicker callbacks (no world).

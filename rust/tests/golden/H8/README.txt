@@ -8,5 +8,5 @@ clip_<seed>.txt  2000 rows each: rect, screen, tan(fov/2) bits | padded rect (fo
 Equal on the Rust backend, seeds 0-299 (list, clip); cargo replays "A" and clip rows (render::h8_tests) without the C++.
 
 Record (needs a build dir of this tree with `make HPL2`):
-  harness/gen.sh <build dir> h8_gen.cpp <out>/h8_gen
+  gen.sh <build dir> harness/h8_gen.cpp <out>/h8_gen
   harness/compare.sh <out>/h8_gen 300 <dir>

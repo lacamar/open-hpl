@@ -56,7 +56,6 @@ target_link_libraries(TraceRecorderTests HPL2TraceRecorder)
 add_test(NAME TraceRecorderTests COMMAND TraceRecorderTests)
 set_tests_properties(TraceRecorderTests PROPERTIES TIMEOUT 30)
 
-# H14 differential scenes (CharacterBody, PhysicsRope, PhysicsController): scripts/h14-diff.sh.
 AddTestTarget(PhysicsH14Tests
     PhysicsH14Tests.cpp
 )
@@ -80,28 +79,23 @@ target_link_options(PhysicsH14Tests PRIVATE
     "LINKER:--wrap=ohpl_h14_update_entity"
 )
 
-# H10 differential scenes (iEntity3D, cNode3D, cCamera): scripts/h10-diff.sh.
 AddTestTarget(SceneH10Tests
     SceneH10Tests.cpp
 )
 
-# H12 differential (particle emitter data load, emitter frames): scripts/h12-diff.sh.
 AddTestTarget(SceneH12Tests
     SceneH12Tests.cpp
 )
 
-# H12 pass 2 (particle system lifecycle, emitter shell, billboard, beam, flare scenes and decision probes): scripts/h12b-diff.sh.
 AddTestTarget(SceneH12bTests
     SceneH12bTests.cpp
 )
 target_link_libraries(SceneH12bTests HPL2TraceRecorder)
 
-# H13 differential (world registry, static-combine planner, .map parse traces): scripts/h13-diff.sh.
 AddTestTarget(SceneH13Tests
     SceneH13Tests.cpp
 )
 
-# H15 differential: surface-data parse and surface-call/update-list scenes, scripts/h15-diff.sh.
 AddTestTarget(PhysicsH15Tests
     PhysicsH15Tests.cpp
 )

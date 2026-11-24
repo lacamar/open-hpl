@@ -4,4 +4,4 @@ newton_scenes.txt: PhysicsNewtonTests scenes (HPL2/tests/PhysicsNewtonScenes.h),
   indented lines: body matrices (raw float bits) every 100 steps and at the end.
   hinge lines: 64 input floats, then the hinge row geometry of cPhysicsJointHingeNewton::SubmitConstraints.
 Record:  OHPL_L4_DUMP=out.txt OHPL_L4_VERBOSE=1 PhysicsNewtonTests.bin.aarch64
-Compare: scripts/l4-diff.sh (runs the binary on the Rust backend, cmp's the dump against newton_scenes.txt).
+Compare: scripts/golden-diff.sh l4 (runs the binary on the Rust backend, cmp's the dump against newton_scenes.txt).

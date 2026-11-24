@@ -3,5 +3,5 @@ h14_scenes.txt: PhysicsH14Tests dump (HPL2/tests/PhysicsH14Scenes.h), 17 scenes 
   scene lines: rolling FNV-1a over every step's character, body, camera, entity and rope-particle state; indented lines: final positions (float bits).
   Identical to the pre-Rust-port C++ (HPL2 at 941bef3^) and to the Rust path.
 h14_vectors.txt: every ohpl_h14_* call of a PhysicsH14Tests run (inputs, host answers in call order, outputs) as hex, replayed by rust/src/physics/tests_h14.rs.
-Compare: scripts/h14-diff.sh <build-dir>
+Compare: scripts/golden-diff.sh h14 <build-dir>
 Record:  OHPL_H14_VEC=h14_vectors.txt PhysicsH14Tests.bin.aarch64
