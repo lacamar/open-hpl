@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use super::h5b_gfx::{Draw, Imm};
 use super::h5b_imm::Batch;
 use super::h5b_scn;
-use super::h5b_trace::{fnv, put};
+use super::h5b_scn::fnv;
+use super::h5b_trace::put;
 
 const SEEDS: &[u64] = &[1, 2, 3, 4, 5, 6];
 const CALLS: u32 = 100;

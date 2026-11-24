@@ -99,10 +99,6 @@ impl Skeleton {
         self.bones.get(id).map(|b| &**b)
     }
 
-    pub fn bone_mut(&mut self, id: usize) -> Option<&mut Bone> {
-        self.bones.get_mut(id).map(|b| &mut **b)
-    }
-
     pub fn name(&self, id: usize) -> &[u8] {
         self.bones.get(id).map_or(&[], |b| &b.name)
     }

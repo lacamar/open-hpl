@@ -6,7 +6,6 @@ mod collada_scene;
 #[cfg(test)]
 mod collada_tests;
 mod msh;
-mod msh_ffi;
 #[cfg(test)]
 mod msh_tests;
 

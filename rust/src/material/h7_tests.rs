@@ -2,7 +2,7 @@
 
 use super::anim::UvAnim;
 use super::ffi::vars_of;
-use super::h7::{MatState, PeState, material_type, material_types, post_effect_type};
+use super::h7::{MATERIAL_TYPES, MatState, PeState, material_type};
 use super::types::{Globals, MatView};
 use super::vars::VarDefault;
 use crate::math::IDENTITY;
@@ -33,7 +33,7 @@ fn registry_matches_cpp() {
     let mut lines = text.lines();
     assert_eq!(
         lines.next(),
-        Some(format!("count {}", material_types().count()).as_str())
+        Some(format!("count {}", MATERIAL_TYPES.len()).as_str())
     );
     for line in lines {
         let (name, rest) = line.split_once(' ').expect("name");
@@ -71,8 +71,6 @@ fn registry_matches_cpp() {
             .collect();
         assert_eq!(vars, f[vars_at + 1..].to_vec(), "{name} vars");
     }
-    assert!(post_effect_type(b"Bloom").is_some());
-    assert!(post_effect_type(b"Other").is_none());
 }
 
 fn mat_line(m: &MatState) -> String {

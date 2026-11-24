@@ -3,7 +3,10 @@
 //! `iPostEffect` base state.
 
 use super::anim::{UvAnim, uv_matrix};
-use super::types::{Kind, alpha_mode, blend};
+#[cfg(test)]
+use super::types::Kind;
+use super::types::{alpha_mode, blend};
+#[cfg(test)]
 use super::{VarDef, type_flags, used_textures, user_vars};
 use crate::graphics::mm::Host;
 use crate::math::IDENTITY;
@@ -161,38 +164,32 @@ impl MatState {
     }
 }
 
-/// `iMaterialType` data that does not touch the GPU.
-pub trait MaterialType: Sync {
-    fn name(&self) -> &'static str;
-    fn kind(&self) -> Kind;
+#[cfg(test)]
+pub struct Registered(&'static str, Kind);
 
-    fn flags(&self) -> u32 {
-        type_flags(self.kind())
-    }
-
-    fn used_textures(&self) -> Vec<u32> {
-        used_textures(self.kind())
-    }
-
-    fn user_vars(&self) -> &'static [VarDef] {
-        user_vars(self.kind())
-    }
-}
-
-struct Registered(&'static str, Kind);
-
-impl MaterialType for Registered {
-    fn name(&self) -> &'static str {
+#[cfg(test)]
+impl Registered {
+    pub fn name(&self) -> &'static str {
         self.0
     }
-    fn kind(&self) -> Kind {
-        self.1
+
+    pub fn flags(&self) -> u32 {
+        type_flags(self.1)
+    }
+
+    pub fn used_textures(&self) -> Vec<u32> {
+        used_textures(self.1)
+    }
+
+    pub fn user_vars(&self) -> &'static [VarDef] {
+        user_vars(self.1)
     }
 }
 
-/// The `AddMaterialType` calls of `cGraphics`; terrain decal and "terrain" reuse the C++
-/// classes of the kinds below.
-static MATERIAL_TYPES: [Registered; 10] = [
+pub const MATERIAL_TYPE_COUNT: usize = 10;
+
+#[cfg(test)]
+pub static MATERIAL_TYPES: [Registered; 10] = [
     Registered("soliddiffuse", Kind::SolidDiffuse),
     Registered("translucent", Kind::Translucent),
     Registered("water", Kind::Water),
@@ -205,39 +202,12 @@ static MATERIAL_TYPES: [Registered; 10] = [
     Registered("terrain", Kind::SolidDiffuse),
 ];
 
-pub fn material_types() -> impl Iterator<Item = &'static dyn MaterialType> {
-    MATERIAL_TYPES.iter().map(|r| r as &dyn MaterialType)
-}
+#[cfg(test)]
+const _: () = assert!(MATERIAL_TYPES.len() == MATERIAL_TYPE_COUNT);
 
-pub fn material_type(name: &[u8]) -> Option<&'static dyn MaterialType> {
-    material_types().find(|t| t.name().as_bytes() == name)
-}
-
-/// `iPostEffectType`: the name `SetParams`/`GetParams` check the params against.
-pub trait PostEffectType: Sync {
-    fn name(&self) -> &'static str;
-}
-
-struct PeName(&'static str);
-
-impl PostEffectType for PeName {
-    fn name(&self) -> &'static str {
-        self.0
-    }
-}
-
-static POST_EFFECT_TYPES: [PeName; 4] = [
-    PeName("Bloom"),
-    PeName("ImageTrail"),
-    PeName("RadialBlur"),
-    PeName("ColorConvTex"),
-];
-
-pub fn post_effect_type(name: &[u8]) -> Option<&'static dyn PostEffectType> {
-    POST_EFFECT_TYPES
-        .iter()
-        .map(|t| t as &dyn PostEffectType)
-        .find(|t| t.name().as_bytes() == name)
+#[cfg(test)]
+pub fn material_type(name: &[u8]) -> Option<&'static Registered> {
+    MATERIAL_TYPES.iter().find(|t| t.name().as_bytes() == name)
 }
 
 /// `iPostEffect` base state.

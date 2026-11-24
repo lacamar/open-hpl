@@ -3,6 +3,8 @@
 //! the editor lists, and `GetVariableValues`.
 
 use super::Kind;
+use super::ffi::VarsVt;
+use crate::math::clamp;
 use crate::types::{Color, Vector2f, Vector3f};
 
 /// `cResourceVarsObject::GetVar*` with the value strings parsed by the C++ side.
@@ -13,12 +15,6 @@ pub trait VarSource {
     fn vec3(&mut self, name: &str, def: Vector3f) -> Vector3f;
     fn color(&mut self, name: &str, def: Color) -> Color;
     fn string(&mut self, name: &str, def: &str) -> Vec<u8>;
-}
-
-/// `cResourceVarsObject::AddVar*`
-pub trait VarSink {
-    fn add_bool(&mut self, name: &str, v: bool);
-    fn add_float(&mut self, name: &str, v: f32);
 }
 
 pub(crate) const fn v3(x: f32, y: f32, z: f32) -> Vector3f {
@@ -238,17 +234,12 @@ pub fn load_solid(v: &mut SolidVars, s: &mut dyn VarSource) {
     };
 }
 
-pub fn solid_values(v: &SolidVars, k: &mut dyn VarSink) {
+pub fn solid_values(v: &SolidVars, k: &mut VarsVt) {
     k.add_float("HeightMapScale", v.height_map_scale);
     k.add_float("HeightMapBias", v.height_map_bias);
     k.add_float("FrenselBias", v.frensel_bias);
     k.add_float("FrenselPow", v.frensel_pow);
     k.add_bool("AlphaDissolveFilter", v.alpha_dissolve_filter);
-}
-
-/// `std::max`-free clamp as `cMath::Clamp`.
-fn clamp(x: f32, lo: f32, hi: f32) -> f32 {
-    crate::math::clamp(x, lo, hi)
 }
 
 pub fn load_projected_uv(v: &mut ProjectedUvVars, s: &mut dyn VarSource) {
@@ -321,7 +312,7 @@ pub fn load_translucent(v: &mut TranslucentVars, s: &mut dyn VarSource, out: &mu
     v.fade_in_end = s.float("FadeInEnd", 0.0);
 }
 
-pub fn translucent_values(v: &TranslucentVars, affected_by_dof: bool, k: &mut dyn VarSink) {
+pub fn translucent_values(v: &TranslucentVars, affected_by_dof: bool, k: &mut VarsVt) {
     k.add_bool("Refraction", v.refraction);
     k.add_bool("RefractionEdgeCheck", v.refraction_edge_check);
     k.add_bool("RefractionNormals", v.refraction_normals);
@@ -360,7 +351,7 @@ pub fn load_water(v: &mut WaterVars, s: &mut dyn VarSource, out: &mut LoadOut) {
 }
 
 /// `world_reflection_occlusion_test` and `large_transparent_surface` come from the material.
-pub fn water_values(v: &WaterVars, occlusion_test: bool, large_surface: bool, k: &mut dyn VarSink) {
+pub fn water_values(v: &WaterVars, occlusion_test: bool, large_surface: bool, k: &mut VarsVt) {
     k.add_bool("HasReflection", v.has_reflection);
     k.add_float("RefractionScale", v.refraction_scale);
     k.add_float("FrenselBias", v.frensel_bias);

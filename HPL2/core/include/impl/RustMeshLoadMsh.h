@@ -1,8 +1,6 @@
 #ifndef HPL_RUST_MESH_LOAD_MSH_H
 #define HPL_RUST_MESH_LOAD_MSH_H
 
-// C ABI of rust/src/meshload/msh_ffi.rs.
-
 #include <cstddef>
 #include <cstdint>
 
@@ -38,12 +36,6 @@ namespace hpl {
 	static_assert(sizeof(OhplMshPair) == 12, "OhplMshPair layout");
 	static_assert(sizeof(OhplMshNode) == 88 && sizeof(OhplMshBone) == 104 && sizeof(OhplMshCollider) == 84, "msh record layout");
 	static_assert(sizeof(OhplMshArray) == 48 && sizeof(OhplMshTrack) == 40 && sizeof(OhplMshAnim) == 24 && sizeof(OhplMshSub) == 192, "msh record layout");
-
-extern "C" {
-
-// 0 ok, 1 bad magic, 2 bad version, 3+ input the original loader crashes or throws on
-
-}
 
 }
 

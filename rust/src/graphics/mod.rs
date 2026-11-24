@@ -25,6 +25,7 @@ pub mod h5b_gl;
 pub mod h5b_imm;
 pub mod h5b_ops;
 pub mod h5b_scn;
+#[cfg(test)]
 pub mod h5b_trace;
 pub mod meshgen;
 pub mod mm;

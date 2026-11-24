@@ -1,15 +1,13 @@
 //! Replays `tests/golden/H5` (recorded from the C++ `cFrameBitmap` / `cProgramComboManager`).
 
 use std::collections::BTreeMap;
-use std::ffi::c_void;
 use std::fmt::Write;
 use std::fs;
 use std::path::PathBuf;
 
 use super::atlas::{Atlas, Pix};
 use super::bitmap::{self, Surface};
-use super::combo::{FRAGMENT_BIT, VERTEX_BIT};
-use super::ffi_h5::*;
+use super::combo::{ComboSettings, FRAGMENT_BIT, VERTEX_BIT};
 use super::{formats, uv};
 use crate::math::Rect2l;
 use crate::types::{Vector2l, Vector3l};
@@ -294,28 +292,6 @@ fn s(p: &[u8]) -> String {
     String::from_utf8_lossy(p).into_owned()
 }
 
-unsafe extern "C" fn collect_bytes(ctx: *mut c_void, p: *const u8, n: usize) {
-    // SAFETY: test sink; `ctx` is a `Vec<u8>`.
-    unsafe { (*ctx.cast::<Vec<u8>>()).extend_from_slice(std::slice::from_raw_parts(p, n)) }
-}
-
-unsafe extern "C" fn collect_var(
-    ctx: *mut c_void,
-    k: *const u8,
-    kn: usize,
-    v: *const u8,
-    vn: usize,
-) {
-    // SAFETY: test sink; `ctx` is a map.
-    unsafe {
-        let m = &mut *ctx.cast::<BTreeMap<Vec<u8>, Vec<u8>>>();
-        m.insert(
-            std::slice::from_raw_parts(k, kn).to_vec(),
-            std::slice::from_raw_parts(v, vn).to_vec(),
-        );
-    }
-}
-
 #[test]
 fn combo_replays_cpp() {
     let files = names("combo_");
@@ -325,7 +301,7 @@ fn combo_replays_cpp() {
         let mut lines = want.lines().peekable();
         let head: Vec<&str> = lines.next().unwrap().split(' ').collect();
         let modes: usize = head[2].parse().unwrap();
-        let c = unsafe { ohpl_h5_combo_new(head[1].as_ptr(), head[1].len(), modes) };
+        let mut c = ComboSettings::new(head[1].as_bytes(), modes);
         let mut creates = 0;
         while let Some(l) = lines.next() {
             let p: Vec<&str> = l.split(' ').collect();
@@ -334,52 +310,27 @@ fn combo_replays_cpp() {
             }
             let n = |i: usize| p[i].parse::<i32>().unwrap();
             match p[1] {
-                "rename" => unsafe { ohpl_h5_combo_set_name(c, p[2].as_ptr(), p[2].len()) },
-                "setup" => unsafe {
-                    ohpl_h5_combo_setup_mode(
-                        c,
-                        n(2),
-                        p[3].as_ptr(),
-                        p[3].len(),
-                        p[4].as_ptr(),
-                        p[4].len(),
-                        p[5].as_ptr(),
-                        p[5].len(),
-                    );
+                "rename" => c.name = p[2].as_bytes().to_vec(),
+                "setup" => {
+                    let m = c.mode_mut(n(2)).unwrap();
+                    m.name = p[3].as_bytes().to_vec();
+                    m.vtx_shader = p[4].as_bytes().to_vec();
+                    m.frag_shader = p[5].as_bytes().to_vec();
+                    m.features.clear();
+                    m.defaults.clear();
                     for t in &p[6..] {
                         let f: Vec<&str> = t.split(':').collect();
                         if f[0] == "f" {
-                            ohpl_h5_combo_add_feature(
-                                c,
-                                n(2),
-                                f[1].parse().unwrap(),
-                                f[2].as_ptr(),
-                                f[2].len(),
-                            );
+                            m.features
+                                .push((f[1].parse().unwrap(), f[2].as_bytes().to_vec()));
                         } else {
-                            ohpl_h5_combo_add_default(
-                                c,
-                                n(2),
-                                f[1].as_ptr(),
-                                f[1].len(),
-                                f[2].as_ptr(),
-                                f[2].len(),
-                            );
+                            m.defaults
+                                .push((f[1].as_bytes().to_vec(), f[2].as_bytes().to_vec()));
                         }
                     }
-                },
+                }
                 "name" => {
-                    let mut out = Vec::new();
-                    unsafe {
-                        ohpl_h5_combo_program_name(
-                            c,
-                            n(2),
-                            n(3),
-                            collect_bytes,
-                            (&raw mut out).cast(),
-                        )
-                    };
-                    assert_eq!(s(&out), lines.next().unwrap(), "{f}");
+                    assert_eq!(s(&c.program_name(n(2), n(3))), lines.next().unwrap(), "{f}");
                 }
                 "shader" => {
                     let ty: u32 = p[4].parse().unwrap();
@@ -389,35 +340,22 @@ fn combo_replays_cpp() {
                     };
                     lines.next();
                     creates += 1;
-                    let mut file = Vec::new();
-                    unsafe {
-                        ohpl_h5_combo_shader_file(
-                            c,
-                            n(2),
-                            ty,
-                            collect_bytes,
-                            (&raw mut file).cast(),
-                        )
+                    assert!(ty == VERTEX_BIT || ty == FRAGMENT_BIT);
+                    let m = c.mode(n(2)).unwrap();
+                    let file = if ty == VERTEX_BIT {
+                        &m.vtx_shader
+                    } else {
+                        &m.frag_shader
                     };
-                    let mut vars: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
-                    unsafe {
-                        ohpl_h5_combo_shader_vars(
-                            c,
-                            n(2),
-                            n(3),
-                            ty,
-                            collect_var,
-                            (&raw mut vars).cast(),
-                        )
-                    };
+                    let vars: BTreeMap<&[u8], &[u8]> =
+                        c.shader_vars(n(2), n(3), ty).into_iter().collect();
                     let mut got = format!(
                         "create file={} type={} vars=",
-                        s(&file),
+                        s(file),
                         u32::from(ty == FRAGMENT_BIT)
                     );
-                    assert!(ty == VERTEX_BIT || ty == FRAGMENT_BIT);
                     for (k, v) in vars {
-                        let _ = write!(got, "{}={};", s(&k), s(&v));
+                        let _ = write!(got, "{}={};", s(k), s(v));
                     }
                     assert_eq!(got, create, "{f}");
                 }
@@ -425,6 +363,5 @@ fn combo_replays_cpp() {
             }
         }
         assert!(creates > 0, "{f}");
-        unsafe { ohpl_h5_combo_free(c) };
     }
 }

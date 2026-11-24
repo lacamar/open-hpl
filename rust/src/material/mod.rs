@@ -35,10 +35,9 @@ mod pcm_tests;
 mod tests;
 
 pub use anim::{UvAnim, uv_matrix};
-pub use h7::{
-    MatState, MaterialType, PeState, PostEffectType, material_type, material_types,
-    post_effect_type,
-};
+pub use h7::{MATERIAL_TYPE_COUNT, MatState, PeState};
+#[cfg(test)]
+pub use h7::{MATERIAL_TYPES, material_type};
 pub use setup::{Feature, SetupSink};
 pub use types::{
     Bv, CompileOut, ForceFieldInfo, Globals, Host, Kind, LightInfo, MatView, ObjView, ProgSel,
@@ -46,7 +45,7 @@ pub use types::{
 };
 pub use vars::{
     LoadOut, ProjectedUvVars, SolidVars, TerrainBlendVars, TranslucentVars, UndergrowthVars,
-    VarDef, VarDefault, VarSink, VarSource, VertexBlendVars, WaterVars,
+    VarDef, VarDefault, VarSource, VertexBlendVars, WaterVars,
 };
 
 use types::{mode, tex};

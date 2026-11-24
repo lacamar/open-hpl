@@ -6,6 +6,7 @@ use std::fmt::Write as _;
 
 use super::h5b_gfx::*;
 use super::h5b_imm::Batch;
+use super::h5b_scn::fnv;
 use crate::graphics::formats;
 
 /// `cRecordingConfig`.
@@ -41,12 +42,6 @@ fn splitmix(state: &mut u64) -> u64 {
     z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
     z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
     z ^ (z >> 31)
-}
-
-pub fn fnv(data: &[u8]) -> u64 {
-    data.iter().fold(1_469_598_103_934_665_603u64, |h, &b| {
-        (h ^ u64::from(b)).wrapping_mul(1_099_511_628_211)
-    })
 }
 
 pub fn hash_tag(tag: &str, data: &[u8]) -> String {

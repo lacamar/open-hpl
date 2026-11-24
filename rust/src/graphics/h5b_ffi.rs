@@ -30,13 +30,6 @@ pub fn clear_gfx() {
     lock().0 = None;
 }
 
-/// Runs `f` on the installed device; `None` before `set_gfx`.
-pub fn with_gfx<R>(f: impl FnOnce(&mut dyn Gfx) -> R) -> Option<R> {
-    let mut slot = lock();
-    let g = slot.0.as_mut()?;
-    Some(f(g.as_mut()))
-}
-
 /// # Safety
 /// `call(ctx, ..)` is the facade entry of a live `iLowLevelGraphics`, valid until `ohpl_h5b_gfx_detach`.
 #[unsafe(no_mangle)]

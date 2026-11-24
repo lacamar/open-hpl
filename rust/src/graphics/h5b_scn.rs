@@ -5,8 +5,13 @@
 use std::fmt::Write as _;
 
 use super::h5b_gfx::*;
-use super::h5b_trace::fnv;
 use crate::graphics::formats;
+
+pub fn fnv(data: &[u8]) -> u64 {
+    data.iter().fold(1_469_598_103_934_665_603u64, |h, &b| {
+        (h ^ u64::from(b)).wrapping_mul(1_099_511_628_211)
+    })
+}
 
 struct Rng(u64);
 

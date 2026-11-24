@@ -9,7 +9,7 @@ use super::Vars;
 use super::types::{Bv, ForceFieldInfo, Host, Kind, LightInfo, WorldInfo};
 use super::vars::{
     LoadOut, ProjectedUvVars, SolidVars, TerrainBlendVars, TranslucentVars, UndergrowthVars,
-    VarSink, VarSource, VertexBlendVars, WaterVars,
+    VarSource, VertexBlendVars, WaterVars,
 };
 use crate::types::{Color, Vector2f, Vector3f};
 use std::ffi::c_void;
@@ -170,15 +170,15 @@ impl VarSource for VarsVt {
     }
 }
 
-impl VarSink for VarsVt {
-    fn add_bool(&mut self, name: &str, v: bool) {
+impl VarsVt {
+    pub fn add_bool(&mut self, name: &str, v: bool) {
         if let Some(f) = self.add_bool {
             // SAFETY: table contract.
             unsafe { f(self.ctx, name.as_ptr(), name.len(), v) };
         }
     }
 
-    fn add_float(&mut self, name: &str, v: f32) {
+    pub fn add_float(&mut self, name: &str, v: f32) {
         if let Some(f) = self.add_float {
             // SAFETY: table contract.
             unsafe { f(self.ctx, name.as_ptr(), name.len(), v) };

@@ -1,7 +1,7 @@
 //! C ABI of the H7 state, declared in `graphics/RustMaterialH7.h` (`OHPL_IMPL=rust`).
 
 use super::anim::UvAnim;
-use super::h7::{MatState, PeState, material_types};
+use super::h7::{MATERIAL_TYPE_COUNT, MatState, PeState};
 use crate::types::Matrixf;
 
 fn own<T>(v: T) -> *mut T {
@@ -33,11 +33,6 @@ unsafe fn put_matrix(m: &MatState, out: *mut Matrixf) {
         // SAFETY: caller contract.
         unsafe { out.write(m.uv) };
     }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h7_mat_new(translucent: bool) -> *mut MatState {
-    own(MatState::new(translucent))
 }
 
 /// Returns the blend mode now in force.
@@ -117,7 +112,7 @@ pub unsafe extern "C" fn ohpl_h7_mat_update(m: *mut MatState, dt: f32, out: *mut
 /// Number of `AddMaterialType` registrations.
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_h7_type_count() -> usize {
-    material_types().count()
+    MATERIAL_TYPE_COUNT
 }
 
 /// # Safety
