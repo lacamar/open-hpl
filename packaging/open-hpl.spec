@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.4.13
+Version:        1.4.14
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,14 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Tue Nov 24 2026 lacamar <lchlnm@pm.me> - 1.4.14-1
+- Rust main() for Amnesia, AMFP and SOMA
+- Amnesia areas on one Rust-backed shell
+- iSoundChannel removed; host ops in Rust
+- Debug window, effect and agent dumps in Rust
+- Dead C++ declarations removed
+- Gate: a12d sound-row mask
+
 * Mon Nov 23 2026 lacamar <lchlnm@pm.me> - 1.4.13-1
 - OpenAL sound, input devices and loaders as header-only facades over Rust
 - Sound channel state and texture/bitmap fields behind accessors
