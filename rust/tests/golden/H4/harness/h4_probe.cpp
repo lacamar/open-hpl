@@ -167,7 +167,6 @@ public:
 		Hash("expo|" + std::string(a.name) + "|" + M(inv) + "|" + V(half.x, half.y, half.z));
 	}
 	void Terrain(const OhplHpmTerrain&) { Hash("terrain"); }
-	void TrackReport(const char*, int, int, int, bool, const OhplHpmSkip*, size_t) {}
 };
 
 struct cRng

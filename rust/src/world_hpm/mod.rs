@@ -8,6 +8,7 @@ pub mod h4_plan;
 mod ld_ffi;
 mod ld_terrain;
 pub mod parse;
+mod report;
 
 #[cfg(test)]
 mod h4_golden;

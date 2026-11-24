@@ -39,12 +39,12 @@ struct OhplHpmVt
 	int (*detail_meshes)(void*, const OhplHpmDetailMeshes*);
 	void (*exposure_area)(void*, const OhplHpmExposureArea*);
 	void (*terrain)(void*, const OhplHpmTerrain*);
-	void (*track_report)(void*, const char*, int, int, int, bool, const OhplHpmSkip*, size_t);
 };
 
 extern "C" {
 	void ohpl_hpm_parse(const OhplHpmVt* vt, const wchar_t* base, size_t n);
 	void ohpl_hpm_el_walk(const OhplHpmEl* el, const OhplHpmTreeSink* sink);
+	void ohpl_hpm_report(const char* map, size_t n, int totalMs, void (*sink)(void*, const char*, size_t, const char*, size_t), void* ctx);
 }
 
 #endif

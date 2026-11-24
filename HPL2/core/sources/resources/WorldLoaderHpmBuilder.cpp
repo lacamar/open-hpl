@@ -424,7 +424,6 @@ namespace hpl {
 		mppCurrentElement = appCurrentElement;
 		mlCombinedObjects = 0;
 		mlCombinedMeshes = 0;
-		mbTerrainActive = false;
 	}
 
 	void cHpmWorldBuilder::Finish()
@@ -776,20 +775,8 @@ namespace hpl {
 		mpCurrentWorld->AddExposureArea(area);
 	}
 
-	void cHpmWorldBuilder::TrackReport(const char* asTrack, int alInXml, int alCreated, int alTimeMs, bool abFileMissing,
-									   const OhplHpmSkip* apSkipped, size_t alNumSkipped)
-	{
-		cHpmTrackStats& stats = mmapTrackStats[asTrack];
-		stats.mlInXml = alInXml;
-		stats.mlCreated = alCreated;
-		stats.mlTimeMs = alTimeMs;
-		stats.mbFileMissing = abFileMissing;
-		for (size_t i = 0; i < alNumSkipped; ++i) stats.mmapSkipped[apSkipped[i].reason] = apSkipped[i].count;
-	}
-
 	void cHpmWorldBuilder::Terrain(const OhplHpmTerrain& aTerrain)
 	{
-		mbTerrainActive = true;
 		const tWString asBaseFile = mpCurrentWorld->GetFilePath();
 		const int lSize = aTerrain.heightMapSize;
 		const int lPatch = aTerrain.geometryPatchSize;

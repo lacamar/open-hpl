@@ -24,8 +24,6 @@ namespace hpl {
 		static void (*mpObjectDoneCallback)(cWorld* apWorld);
 
 	private:
-		void BuildLoadReport(const tString& asMap, int alTotalTimeMs, cHpmWorldBuilder& aBuilder);
-
 		static tString msLastLoadReportJson;
 		static cXmlElement* mpCurrentElement;
 	};

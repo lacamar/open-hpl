@@ -4,6 +4,7 @@
 
 pub mod abi;
 mod cache;
+mod combine;
 mod parse;
 #[cfg(test)]
 mod tests;

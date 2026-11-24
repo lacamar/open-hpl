@@ -1030,12 +1030,6 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-	struct cVertexDataArray
-	{
-		eVertexBufferElement mType;
-		int mlElementNum;
-	};
-
 	void cWorldLoaderHplMap::CombineObjectsAndCreateMeshEntity(tRenderableVec &avObjects, int alFirstIdx, int alLastIdx)
 	{
 		if(gbLog) Log("  Combining objects %d -> %d\n", alFirstIdx, alLastIdx);
@@ -1045,6 +1039,9 @@ namespace hpl {
 		int lTotalVtxAmount =0;
 		int lTotalIdxAmount =0;
 		tString sName = "CombinedObjects"+cString::ToString(mlCombinedMeshNameCount);
+		std::vector<OhplMapCombineSrc> vSrcs;
+		static const eVertexBufferElement vTypes[5] = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Color0,
+														eVertexBufferElement_Texture0, eVertexBufferElement_Texture1Tangent };
 		for(int i=alFirstIdx; i<=alLastIdx; ++i)
 		{
 			//Check if the sub mesh is visible, else skip
@@ -1053,6 +1050,14 @@ namespace hpl {
 
 			//Check add the vertex num and index num from vertex buffer
 			iVertexBuffer *pVtxBuffer = avObjects[i]->GetVertexBuffer();
+
+			OhplMapCombineSrc src;
+			src.vtxNum = pVtxBuffer->GetVertexNum();
+			src.idxNum = pVtxBuffer->GetIndexNum();
+			memcpy(src.matrix, avObjects[i]->GetWorldMatrix().v, sizeof(src.matrix));
+			for(int k=0; k<5; ++k) src.arrays[k] = pVtxBuffer->GetFloatArray(vTypes[k]);
+			src.indices = pVtxBuffer->GetIndices();
+			vSrcs.push_back(src);
 
 			lTotalVtxAmount += pVtxBuffer->GetVertexNum();
 			lTotalIdxAmount += pVtxBuffer->GetIndexNum();
@@ -1077,74 +1082,20 @@ namespace hpl {
 																					eVertexBufferUsageType_Static,lTotalVtxAmount, lTotalIdxAmount);
 
 		//Set up what data arrays to use
-		const int lDataArrayNum = 5;
-		cVertexDataArray lDataArrayTypes[lDataArrayNum] = 
-		{ 
-			{eVertexBufferElement_Position, 4},
-			{eVertexBufferElement_Normal, 3},
-			{eVertexBufferElement_Color0, 4},
-			{eVertexBufferElement_Texture0, 3},
-			{eVertexBufferElement_Texture1Tangent, 4}
-		};
-		float *pDataArray[lDataArrayNum];
-
-		//Set up the data arrays
-		for(int i=0;i<lDataArrayNum; ++i)
+		static const int vElementNums[5] = { 4, 3, 4, 3, 4 };
+		OhplMapCombineDst dst;
+		for(int i=0;i<5; ++i)
 		{
-			pVtxBuffer->CreateElementArray(lDataArrayTypes[i].mType,eVertexBufferElementFormat_Float, lDataArrayTypes[i].mlElementNum);
-			pVtxBuffer->ResizeArray(lDataArrayTypes[i].mType, lTotalVtxAmount * lDataArrayTypes[i].mlElementNum);
-			pDataArray[i] = pVtxBuffer->GetFloatArray(lDataArrayTypes[i].mType);		
+			pVtxBuffer->CreateElementArray(vTypes[i],eVertexBufferElementFormat_Float, vElementNums[i]);
+			pVtxBuffer->ResizeArray(vTypes[i], lTotalVtxAmount * vElementNums[i]);
+			dst.arrays[i] = pVtxBuffer->GetFloatArray(vTypes[i]);
 		}
 				
-		//Set up and get indices
 		pVtxBuffer->ResizeIndices(lTotalIdxAmount);
-		unsigned int* pIndexArray = pVtxBuffer->GetIndices();
-		
-		///////////////////////////////////////////
-		//Fill vertex buffer with data
-		int lIdxOffset =0;
-		for(int vtxbuffer=alFirstIdx; vtxbuffer<=alLastIdx; ++vtxbuffer)
-		{
-			//Check if the sub mesh is visible, else skip
-			cHplMapStaticUserData*pUserData = (cHplMapStaticUserData*)static_cast<cSubMeshEntity*>(avObjects[vtxbuffer])->GetUserData();
-			if(pUserData->mbVisible==false) continue;
-
-			iRenderable *pObject = avObjects[vtxbuffer];
-
-			if(gbLog) Log("   Copying data from '%s'\n", pObject->GetName().c_str());
-
-			/////////////////////////////////////
-			// Create a copy of the vertex buffer and transform it according to object
-			iVertexBuffer *pSubVtxBuffer = pObject->GetVertexBuffer();
-			iVertexBuffer *pTransformedVtxBuffer = pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
-																				pSubVtxBuffer->GetVertexElementFlags());
-			pTransformedVtxBuffer->Transform(pObject->GetWorldMatrix());
-			
-			//////////////////////////////////////////////////
-			//Copy to each data array and increase the data pointer
-            for(int i=0; i<lDataArrayNum;++i)
-			{
-				int lAmount = lDataArrayTypes[i].mlElementNum * pTransformedVtxBuffer->GetVertexNum();
-				if(gbLog) Log("    copy from data %d: %d elements\n", i, lAmount);
-				
-				memcpy(pDataArray[i], pTransformedVtxBuffer->GetFloatArray(lDataArrayTypes[i].mType), lAmount * sizeof(float));
-
-				pDataArray[i] += lAmount;
-			}
-
-			//////////////////////////////////////////////
-			//Copy to index array (using offset from previous max) and increase index pointer and offset
-			unsigned int* pTransIdxArray = pTransformedVtxBuffer->GetIndices();
-			for(int i=0; i<pTransformedVtxBuffer->GetIndexNum(); ++i)
-			{
-				pIndexArray[i] = pTransIdxArray[i] + lIdxOffset;
-			}
-
-			lIdxOffset += pTransformedVtxBuffer->GetVertexNum();
-			pIndexArray += pTransformedVtxBuffer->GetIndexNum();
-
-			hplDelete(pTransformedVtxBuffer);
-		}
+		dst.indices = pVtxBuffer->GetIndices();
+		dst.vtxTotal = lTotalVtxAmount;
+		dst.idxTotal = lTotalIdxAmount;
+		ohpl_map_combine(vSrcs.data(), vSrcs.size(), true, &dst);
 
 		///////////////////////
 		// All meshes batched into one buffer, compile it.
@@ -1197,6 +1148,7 @@ namespace hpl {
 		int lTotalVtxAmount =0;
 		int lTotalIdxAmount =0;
 		tString sName = "CombinedObjects"+cString::ToString(mlCombinedBodyNameCount);
+		std::vector<OhplMapCombineSrc> vSrcs;
 		for(int i=alFirstIdx; i<=alLastIdx; ++i)
 		{
 			if(avObjects[i].mpUserData->mbCollides==false) continue;
@@ -1205,7 +1157,15 @@ namespace hpl {
 			
 			//Do a special debug test and skip highpoly entities, loading the map faster.
             if((mlCurrentFlags & eWorldLoadFlag_FastPhysicsLoad) && pVtxBuffer->GetIndexNum() > lMaxIndices)	continue;
-			
+
+			OhplMapCombineSrc src;
+			src.vtxNum = pVtxBuffer->GetVertexNum();
+			src.idxNum = pVtxBuffer->GetIndexNum();
+			memcpy(src.matrix, avObjects[i].mpObject->GetWorldMatrix().v, sizeof(src.matrix));
+			src.arrays[0] = pVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
+			src.indices = pVtxBuffer->GetIndices();
+			vSrcs.push_back(src);
+
 
 			lTotalVtxAmount += pVtxBuffer->GetVertexNum();
 			lTotalIdxAmount += pVtxBuffer->GetIndexNum();
@@ -1230,58 +1190,15 @@ namespace hpl {
 
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 4);
 		pVtxBuffer->ResizeArray(eVertexBufferElement_Position, lTotalVtxAmount * 4);
-		float *pDataArray = pVtxBuffer->GetFloatArray(eVertexBufferElement_Position);		
+		OhplMapCombineDst dst;
+		dst.arrays[0] = pVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
 		
 		//Set up and get indices
 		pVtxBuffer->ResizeIndices(lTotalIdxAmount);
-		unsigned int* pIndexArray = pVtxBuffer->GetIndices();
-
-		///////////////////////////////////////////
-		//Fill vertex buffer with data
-		int lIdxOffset =0;
-		for(int vtxbuffer=alFirstIdx; vtxbuffer<=alLastIdx; ++vtxbuffer)
-		{
-			if(avObjects[vtxbuffer].mpUserData->mbCollides==false) continue;
-
-			cSubMeshEntity *pObject = avObjects[vtxbuffer].mpObject;
-
-			////////////////////////////
-			//Add colliders if any
-			cSubMesh *pSubMesh =  avObjects[vtxbuffer].mpObject->GetSubMesh();
-			
-			//Do a special debug test and skip highpoly entities, loading the map faster.
-			if((mlCurrentFlags & eWorldLoadFlag_FastPhysicsLoad) && pSubMesh->GetVertexBuffer()->GetIndexNum() > lMaxIndices) continue;
-			
-			if(gbLog) Log("   Copying position data from '%s'\n", pObject->GetName().c_str());
-
-			////////////////////////
-			//Get vertex copy and transform
-			iVertexBuffer *pSubVtxBuffer = pObject->GetVertexBuffer();
-			iVertexBuffer *pTransformedVtxBuffer = pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
-																				eVertexElementFlag_Position);
-			pTransformedVtxBuffer->Transform(pObject->GetWorldMatrix());
-			
-			////////////////////////
-			//Copy the data
-			int lAmount = pTransformedVtxBuffer->GetVertexNum() * 4;
-
-			if(gbLog) Log("    Amount: %d\n", lAmount);
-
-			memcpy(pDataArray, pTransformedVtxBuffer->GetFloatArray(eVertexBufferElement_Position), lAmount * sizeof(float));
-			pDataArray += lAmount;
-
-			//Copy to index array and increase index pointer
-			unsigned int* pTransIdxArray = pTransformedVtxBuffer->GetIndices();
-			for(int i=0; i<pTransformedVtxBuffer->GetIndexNum(); ++i)
-			{
-				pIndexArray[i] = pTransIdxArray[i] + lIdxOffset;
-			}
-
-			lIdxOffset += pTransformedVtxBuffer->GetVertexNum();
-			pIndexArray += pTransformedVtxBuffer->GetIndexNum();
-
-			hplDelete(pTransformedVtxBuffer);
-		}
+		dst.indices = pVtxBuffer->GetIndices();
+		dst.vtxTotal = lTotalVtxAmount;
+		dst.idxTotal = lTotalIdxAmount;
+		ohpl_map_combine(vSrcs.data(), vSrcs.size(), false, &dst);
 
 		pVtxBuffer->Compile(0);
 
