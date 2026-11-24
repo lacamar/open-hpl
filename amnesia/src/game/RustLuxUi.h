@@ -27,7 +27,6 @@ struct OhplGa8Ev
 };
 static_assert(sizeof(OhplGa8Ev) == 88, "OhplGa8Ev layout");
 
-#define OHPL_GA8_EVMAX 64
 
 struct OhplGa8Event
 {
@@ -55,16 +54,7 @@ inline std::vector<OhplGa8Event> OhplGa8Take(const OhplGa8Ev *apEv, size_t alNum
 	return vOut;
 }
 
-struct OhplGa8Buf
-{
-	OhplGa8Ev mvRaw[OHPL_GA8_EVMAX];
-};
 
-inline OhplGa8Str OhplGa8S(const std::string &asX)
-{
-	OhplGa8Str s = { (const unsigned char*)asX.data(), asX.size() };
-	return s;
-}
 
 typedef void (*OhplGa8Sink)(void*, const unsigned char*, size_t);
 

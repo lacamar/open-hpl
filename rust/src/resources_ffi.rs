@@ -1,16 +1,11 @@
 //! C ABI for `resources.rs`, mirrored in `HPL2/core/include/resources/RustResources.h`.
 //! Handles are owned by the C++ object that created them; resource and loader pointers are opaque.
 
-use crate::resources::{ExtList, FileSearcher, LoaderTable, MapEntry, ResMap, ResMeta};
+use crate::resources::{ExtList, LoaderTable, MapEntry, ResMap, ResMeta};
 use crate::string_ffi::units;
 use std::ffi::c_void;
 
 type Matches = unsafe extern "C" fn(*mut c_void, *mut c_void) -> bool;
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_fs_new() -> *mut FileSearcher {
-    Box::into_raw(Box::default())
-}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_resmap_new() -> *mut ResMap {

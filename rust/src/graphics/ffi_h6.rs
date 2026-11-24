@@ -1,7 +1,7 @@
 //! C ABI of the H6 graphics state, declared in `graphics/RustGraphicsH6.h`.
 
 use super::anim::KeyFrame;
-use super::animdata::{AnimInfo, MeshInfo, Track};
+use super::animdata::{AnimInfo, Track};
 use super::skel::Skeleton;
 use crate::types::Matrixf;
 use std::ffi::c_void;
@@ -323,9 +323,4 @@ pub unsafe extern "C" fn ohpl_h6_anim_track_by_name(
 ) -> i32 {
     // SAFETY: caller contract.
     unsafe { a.as_ref() }.map_or(-1, |a| a.track_by_name(bytes(name, len)))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h6_mesh_new() -> *mut MeshInfo {
-    own(MeshInfo::default())
 }

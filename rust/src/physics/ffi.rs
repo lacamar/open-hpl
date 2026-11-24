@@ -7,7 +7,7 @@ use super::controller::CtrlParams;
 use super::host::{H, Vt};
 use super::joint::{self, JointState, LimitEffect, MoveParams};
 use super::surface::{self, SurfaceParams};
-use super::world::{self, BodyFilter, ImpactCounts};
+use super::world::{self, BodyFilter};
 use crate::types::Vector3f;
 use std::ffi::c_void;
 
@@ -213,11 +213,6 @@ pub unsafe extern "C" fn ohpl_phys_joint_limit_auto_sleep(
     // SAFETY: caller contract.
     unsafe { step_count.as_mut() }
         .is_some_and(|c| joint::limit_auto_sleep(enabled, sleep_dist, num_steps, c, min, max, dist))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_phys_impacts_new() -> *mut ImpactCounts {
-    Box::into_raw(Box::default())
 }
 
 const _: () = {

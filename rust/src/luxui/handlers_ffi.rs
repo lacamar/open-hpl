@@ -264,16 +264,6 @@ pub extern "C" fn ohpl_a11b_msg_save_user_config(h: u64) {
     });
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a11b_msg_update(h: u64, dt: f32) {
-    msg(h, (), |x| x.update(dt));
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a11b_msg_draw(h: u64) {
-    msg(h, (), |x| x.draw());
-}
-
 /// `cLuxMessageHandler::Update`.
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_a11b_msg_on_update(h: u64, dt: f32) {

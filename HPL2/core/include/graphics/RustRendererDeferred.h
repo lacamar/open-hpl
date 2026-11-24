@@ -139,7 +139,6 @@ namespace hpl {
 		eOhplDrStep_LightPass,
 	};
 
-	enum eOhplDrPass { eOhplDrPass_ZBegin, eOhplDrPass_GbufferBegin, eOhplDrPass_GbufferEnd };
 
 	enum
 	{
@@ -360,11 +359,6 @@ namespace hpl {
 	enum { kOhplDr3StencilFuncEqual = 0, kOhplDr3StencilFuncAlways = 1, kOhplDr3StencilOpKeep = 0, kOhplDr3StencilOpReplace = 1 };
 	enum { kOhplDr3LogBegin = 0, kOhplDr3LogStencil = 1, kOhplDr3LogRender = 2, kOhplDr3LogEnd = 3 };
 	enum { kOhplDr3ProgStencil = 8, kOhplDr3ProgBox0 = 9, kOhplDr3ProgBox1 = 10, kOhplDr3ProgCount = 11, kOhplDr3ShapeBox = 4, kOhplDr3ShapeFullscreenQuad = 5 };
-	enum eOhplDr3Pass
-	{
-		eOhplDr3Pass_StencilBackScreenQuad, eOhplDr3Pass_StencilFrontRenderBack, eOhplDr3Pass_RenderBack, eOhplDr3Pass_BoxStencilFrontRenderBack,
-		eOhplDr3Pass_BoxRenderBack,
-	};
 
 	struct OhplDr3PassLight
 	{

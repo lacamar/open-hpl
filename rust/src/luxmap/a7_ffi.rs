@@ -717,11 +717,6 @@ pub unsafe extern "C" fn ohpl_a7_area_pod_len(a: *const A7Area) -> usize {
     unsafe { (*a).pod.block_size() }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_a7_base_size() -> usize {
-    std::mem::size_of::<Base>()
-}
-
 /// # Safety
 /// `a` live.
 #[unsafe(no_mangle)]

@@ -145,15 +145,7 @@ size_t ohpl_h13_plan_bodies(const OhplH13BodyItem*, size_t n, size_t meshCount, 
 		ohpl_h13_reg_remove(apReg, alKind, (void*)apItem);
 	}
 
-	inline void OhplH13DeleteAll(OhplH13Reg *apReg, uint32_t alKind)
-	{
-		ohpl_h13_reg_destroy_all(apReg, alKind);
-	}
 
-	inline void OhplH13Clear(OhplH13Reg *apReg, uint32_t alKind)
-	{
-		ohpl_h13_reg_clear(apReg, alKind);
-	}
 
 	inline size_t OhplH13Size(OhplH13Reg *apReg, uint32_t alKind)
 	{
