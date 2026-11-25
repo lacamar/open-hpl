@@ -4,6 +4,9 @@ use super::env::{Env, Op};
 use super::handler::{HOp, Handler, Host};
 use super::names::{self};
 use super::{engine, game, gamemap, map};
+use crate::luxmap::mhost::slice_of as bytes;
+use crate::luxmap::mhost::slice_of as units;
+use crate::string_ffi::emit;
 use std::ffi::c_void;
 
 type Ctx = *mut c_void;
@@ -69,27 +72,6 @@ walkers! {
     ohpl_ga6_enemy_to => gamemap::enemy_to,
 }
 
-fn units<'a>(p: *const u32, n: usize) -> &'a [u32] {
-    if n == 0 || p.is_null() {
-        return &[];
-    }
-    // SAFETY: the caller of the entry point passes a live `n`-unit buffer.
-    unsafe { std::slice::from_raw_parts(p, n) }
-}
-
-fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if n == 0 || p.is_null() {
-        return &[];
-    }
-    // SAFETY: the caller of the entry point passes a live `n`-byte buffer.
-    unsafe { std::slice::from_raw_parts(p, n) }
-}
-
-fn push(sink: Sink32, ctx: Ctx, v: &[u32]) {
-    // SAFETY: `sink` accepts `ctx`.
-    unsafe { sink(ctx, v.as_ptr(), v.len()) }
-}
-
 /// # Safety
 /// Buffers are live for their lengths; `translate` accepts `tctx`, `sink` accepts `sctx`.
 #[unsafe(no_mangle)]
@@ -120,7 +102,7 @@ pub unsafe extern "C" fn ohpl_ga6_proper_name(
         }
         out
     });
-    push(sink, sctx, &name);
+    unsafe { emit(sink, sctx, &name) };
 }
 
 #[repr(C)]

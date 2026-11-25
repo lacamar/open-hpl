@@ -3,6 +3,7 @@
 
 use crate::math::clamp;
 use crate::string;
+use crate::string::latin1_to_wide as widen;
 
 pub const GFX_RENDERERS: [&str; 2] = ["OpenGL", "Vulkan"];
 pub const COLOR_OUTPUTS: [&str; 4] = ["SDR", "HDR10", "scRGB", "P3"];
@@ -90,10 +91,6 @@ pub fn slider_to_int(value: f32, min: f32, max: f32, slider_max: i32) -> i32 {
 pub fn slider_to_value(value: i32, slider_max: i32, min: f32, max: f32) -> f32 {
     let rel = value as f32 / slider_max as f32;
     (max - min).mul_add(rel, min)
-}
-
-fn widen(b: &[u8]) -> Vec<u32> {
-    b.iter().map(|&c| u32::from(c)).collect()
 }
 
 pub fn slider_label(value: f32, min: f32, max: f32) -> Vec<u32> {

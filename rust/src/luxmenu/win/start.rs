@@ -147,13 +147,6 @@ impl Start {
         self.desc.set(desc);
     }
 
-    pub fn exit_pressed(&self) {
-        if self.base.popup_active() {
-            return;
-        }
-        go(WIN_NONE);
-    }
-
     pub fn set_active(&self, on: bool) {
         if on {
             let set = self.base.set;

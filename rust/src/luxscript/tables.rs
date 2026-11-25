@@ -2,6 +2,7 @@
 
 use crate::math;
 use crate::string;
+pub(crate) use math::{cmath_max as max, cmath_min as min};
 
 pub(crate) fn progress_level(s: &[u8]) -> i32 {
     match string::to_lower(s).as_slice() {
@@ -124,12 +125,4 @@ pub(crate) fn local_force(f: [f32; 3], r: [f32; 3], u: [f32; 3], y: f32, z: f32)
 #[cfg(test)]
 pub(crate) fn rope_segments(total: f32, segment: f32) -> i32 {
     ((total / segment) as i32).wrapping_add(4)
-}
-
-pub(crate) fn min(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
-}
-
-pub(crate) fn max(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
 }

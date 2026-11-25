@@ -1,10 +1,10 @@
 //! `iLuxPlayerState_InteractRotateBase` and its lever, wheel and swing-door states: speed
 //! damping, hinge torque, per-state push direction, wheel gesture detection and the door throw.
 
-use super::hw;
 use super::states_vec::{
     Pid3, cross, dist3, dot, fmad, hmul3, madd, mat_vec, max_length, msub3, nmul, normalize,
 };
+use crate::hw;
 use crate::math::{div3, fma, len3, sub3, v3};
 use crate::types::{Matrixf, Vector2f, Vector3f};
 

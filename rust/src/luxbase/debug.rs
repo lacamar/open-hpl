@@ -3,6 +3,7 @@
 
 use super::cfg::Cfg;
 use super::debug_ui::Ui;
+use crate::math::{cmath_max, cmath_min};
 use crate::string;
 use std::collections::VecDeque;
 
@@ -238,10 +239,10 @@ pub fn inspection_line(start: [f32; 3], forward: [f32; 3]) -> ([f32; 3], [f32; 3
 
 fn pick_min(a: Option<&f32>, b: Option<&f32>) -> f32 {
     let (a, b) = (a.copied().unwrap_or(0.0), b.copied().unwrap_or(0.0));
-    if a < b { a } else { b }
+    cmath_min(a, b)
 }
 
 fn pick_max(a: Option<&f32>, b: Option<&f32>) -> f32 {
     let (a, b) = (a.copied().unwrap_or(0.0), b.copied().unwrap_or(0.0));
-    if a > b { a } else { b }
+    cmath_max(a, b)
 }

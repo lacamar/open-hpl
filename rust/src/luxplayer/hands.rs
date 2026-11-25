@@ -1,7 +1,7 @@
 //! `LuxPlayerHands.cpp`: hands animation state selection and the smoothed hands transform.
 
-use super::hw;
 use super::ops::Ops;
+use crate::hw;
 use crate::math::v3;
 use crate::types::Vector3f;
 

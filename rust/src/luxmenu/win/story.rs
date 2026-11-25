@@ -300,13 +300,6 @@ impl List {
         cancel.add_callback(msg::BUTTON_PRESSED, b.tok(PRESS_CANCEL));
     }
 
-    pub fn exit_pressed(&self) {
-        if self.base.popup_active() {
-            return;
-        }
-        go(WIN_NONE);
-    }
-
     pub fn set_active(&self, on: bool) {
         if on {
             self.populate();

@@ -2,6 +2,7 @@
 
 use super::helper::{self, DamageFilter, SubMesh};
 use super::mhost::{self, A, S, body, op, slice_of};
+use crate::math::dist3;
 use crate::math::{fma, point_in_aabb, rand_rectf};
 use crate::types::Vector3f;
 
@@ -445,11 +446,6 @@ fn lights_at_node(node: usize, pos: Vector3f, out: &mut Vec<usize>) {
             out.push(o);
         }
     }
-}
-
-fn dist3(a: Vector3f, b: Vector3f) -> f32 {
-    let (dx, dy, dz) = (b.x - a.x, b.y - a.y, b.z - a.z);
-    fma(dz, dz, fma(dx, dx, dy * dy)).sqrt()
 }
 
 pub fn light_level_at_pos(pos: Vector3f, skip: Option<&[usize]>, radius_add: f32) -> f32 {

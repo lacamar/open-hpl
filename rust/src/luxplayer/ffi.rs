@@ -5,6 +5,7 @@ use super::helpers::{CamDir, Collapse, Darkness, Death, Flashback, Hurt, Lantern
 use super::ops::{Op, Ops};
 use super::sanity::Sanity;
 use super::vitals::Vitals;
+use crate::luxprop::ops::{rd, rw};
 use crate::types::Vector3f;
 
 const _: () = {
@@ -24,20 +25,6 @@ const _: () = {
     assert!(size_of::<Sanity>() == 128);
     assert!(size_of::<CamState>() == 128);
 };
-
-/// # Safety
-/// `p` is valid and exclusively borrowed.
-unsafe fn rw<'a, T>(p: *mut T) -> &'a mut T {
-    // SAFETY: caller contract.
-    unsafe { &mut *p }
-}
-
-/// # Safety
-/// `p` is valid for reads.
-unsafe fn rd<'a, T>(p: *const T) -> &'a T {
-    // SAFETY: caller contract.
-    unsafe { &*p }
-}
 
 pub const VITALS_GIVE_DAMAGE: i32 = 0;
 pub const VITALS_SET_HEALTH: i32 = 1;
@@ -69,11 +56,7 @@ pub unsafe extern "C" fn ohpl_ga2_update_head_pos_add(
         // SAFETY: caller contract.
         unsafe { std::slice::from_raw_parts_mut(adds, n) }
     };
-    // SAFETY: caller contract.
-    let (t, s) = camera::update_head_pos_add(a, *unsafe { rd(camera_pos_add) }, dt);
-    // SAFETY: caller contract.
-    unsafe {
-        *rw(total) = t;
-        *rw(sum) = s;
-    }
+    let (t, s) = camera::update_head_pos_add(a, *rd(camera_pos_add), dt);
+    *rw(total) = t;
+    *rw(sum) = s;
 }

@@ -65,23 +65,6 @@ pub fn quest_completion(total: i32, quests: i32, value: i32) -> i32 {
     total.wrapping_add(quests.wrapping_mul(value))
 }
 
-pub const COMPLETE_NONE: i32 = 0;
-pub const COMPLETE_PUZZLE: i32 = 1;
-pub const COMPLETE_NOTE: i32 = 2;
-pub const COMPLETE_DIARY: i32 = 3;
-pub const COMPLETE_CHEST: i32 = 4;
-pub const COMPLETE_FLASHBACK: i32 = 5;
-
-/// Handler values, in the order of the `COMPLETE_*` kinds from 1.
-pub fn completion_value(kind: i32, values: &[i32; 5]) -> i32 {
-    match kind {
-        COMPLETE_PUZZLE..=COMPLETE_FLASHBACK => {
-            values.get((kind - 1) as usize).copied().unwrap_or(0)
-        }
-        _ => 0,
-    }
-}
-
 pub fn dissolve_speed(time: f32) -> f32 {
     1.0 / time
 }

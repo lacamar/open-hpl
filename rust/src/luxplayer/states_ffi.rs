@@ -14,6 +14,7 @@ use super::states_ladder::{
 };
 use super::states_rotate::{self as sr, JointGeom, RotateTorqueIn};
 use super::states_vec::Pid3;
+use crate::luxprop::ops::{rd, rw};
 use crate::types::{Matrixf, Vector2f, Vector3f};
 
 const _: () = {
@@ -50,20 +51,6 @@ const _: () = {
     assert!(size_of::<LadderAttachOut>() == 12);
 };
 
-/// # Safety
-/// `p` is valid and exclusively borrowed.
-unsafe fn rw<'a, T>(p: *mut T) -> &'a mut T {
-    // SAFETY: caller contract.
-    unsafe { &mut *p }
-}
-
-/// # Safety
-/// `p` is valid for reads.
-unsafe fn rd<'a, T>(p: *const T) -> &'a T {
-    // SAFETY: caller contract.
-    unsafe { &*p }
-}
-
 macro_rules! ffi {
     ($(#[$m:meta])* fn $name:ident($($a:ident: $t:ty),* $(,)?) $(-> $r:ty)? $body:block) => {
         $(#[$m])*
@@ -76,8 +63,7 @@ ffi!(
     /// # Safety
     /// `i` is readable.
     fn ohpl_ga2b_move_speed_mul(i: *const MoveMulIn) -> f32 {
-        // SAFETY: caller contract.
-        mv::move_speed_mul(unsafe { rd(i) })
+        mv::move_speed_mul(rd(i))
     }
 );
 
@@ -93,11 +79,7 @@ ffi!(
         running: bool,
         out: *mut SpeedMuls,
     ) {
-        // SAFETY: caller contract.
-        unsafe {
-            *rw(out) =
-                mv::speed_multipliers(rd(c), move_mul, run_mul, on_ground, crouching, running);
-        }
+        *rw(out) = mv::speed_multipliers(rd(c), move_mul, run_mul, on_ground, crouching, running);
     }
 );
 
@@ -111,8 +93,7 @@ ffi!(
         m: *const SpeedMuls,
         out: *mut MoveLimits,
     ) {
-        // SAFETY: caller contract.
-        unsafe { *rw(out) = mv::move_limits(max_fwd, max_back, max_side, rd(m)) }
+        *rw(out) = mv::move_limits(max_fwd, max_back, max_side, rd(m))
     }
 );
 
@@ -131,7 +112,7 @@ ffi!(
         mv::movement_update(
             on_ground,
             pressed_move,
-            unsafe { rw(was_moving) },
+            rw(was_moving),
             running,
             crouch_disabled,
             collapse_active,
@@ -178,8 +159,7 @@ ffi!(
     /// # Safety
     /// `s` is valid and exclusively borrowed.
     fn ohpl_ga2b_jump_tick(s: *mut JumpState, dt: f32) -> bool {
-        // SAFETY: caller contract.
-        mv::jump_tick(unsafe { rw(s) }, dt)
+        mv::jump_tick(rw(s), dt)
     }
 );
 
@@ -195,8 +175,7 @@ ffi!(
     /// # Safety
     /// `was` is valid and exclusively borrowed.
     fn ohpl_ga2b_ground_check(on_ground: bool, force_vel_y: f32, was: *mut bool) {
-        // SAFETY: caller contract.
-        mv::ground_check(on_ground, force_vel_y, unsafe { rw(was) });
+        mv::ground_check(on_ground, force_vel_y, rw(was));
     }
 );
 
@@ -217,10 +196,8 @@ ffi!(
     /// # Safety
     /// `c` is readable, `damage` writable.
     fn ohpl_ga2b_fall_damage(c: *const FallCfg, y_speed: f32, damage: *mut f32) -> i32 {
-        // SAFETY: caller contract.
-        let (tier, d) = mv::fall_damage(unsafe { rd(c) }, y_speed);
-        // SAFETY: caller contract.
-        unsafe { *rw(damage) = d };
+        let (tier, d) = mv::fall_damage(rd(c), y_speed);
+        *rw(damage) = d;
         tier
     }
 );
@@ -229,8 +206,7 @@ ffi!(
     /// # Safety
     /// All pointers are valid; `s` is exclusively borrowed.
     fn ohpl_ga2b_head_bob(s: *mut BobState, c: *const BobCfg, i: *const BobIn, dt: f32) -> bool {
-        // SAFETY: caller contract.
-        unsafe { mv::head_bob(rw(s), rd(c), rd(i), dt) }
+        mv::head_bob(rw(s), rd(c), rd(i), dt)
     }
 );
 
@@ -244,15 +220,12 @@ ffi!(
         dt: f32,
         pitch_add: *mut f32,
     ) -> bool {
-        // SAFETY: caller contract.
-        unsafe {
-            match mv::ledge_update(rd(c), *rd(head_add), pitch, dt) {
-                Some(a) => {
-                    *rw(pitch_add) = a;
-                    true
-                }
-                None => false,
+        match mv::ledge_update(rd(c), *rd(head_add), pitch, dt) {
+            Some(a) => {
+                *rw(pitch_add) = a;
+                true
             }
+            None => false,
         }
     }
 );
@@ -266,8 +239,7 @@ ffi!(
             1 => sb::hand_object_action(act, pressed),
             _ => sb::use_item_action(act, pressed),
         };
-        // SAFETY: caller contract.
-        unsafe { *rw(out) = a };
+        *rw(out) = a;
     }
 );
 
@@ -289,8 +261,7 @@ ffi!(
         interact: *mut bool,
     ) -> bool {
         let (pass, i) = sb::default_base_interact(act, pressed, can_interact);
-        // SAFETY: caller contract.
-        unsafe { *rw(interact) = i };
+        *rw(interact) = i;
         pass
     }
 );
@@ -308,8 +279,7 @@ ffi!(
     /// `release` is writable.
     fn ohpl_ga2b_ladder_action(act: i32, pressed: bool, release: *mut bool) -> bool {
         let (r, pass) = sb::ladder_action(act, pressed);
-        // SAFETY: caller contract.
-        unsafe { *rw(release) = r };
+        *rw(release) = r;
         pass
     }
 );
@@ -414,8 +384,7 @@ ffi!(
     /// # Safety
     /// `p` is valid and exclusively borrowed.
     fn ohpl_ga2b_pid_init(p: *mut Pid3, n: i32, kp: f32, ki: f32, kd: f32) {
-        // SAFETY: caller contract.
-        unsafe { rw(p) }.init(n, kp, ki, kd);
+        rw(p).init(n, kp, ki, kd);
     }
 );
 
@@ -423,8 +392,7 @@ ffi!(
     /// # Safety
     /// `p` is valid and exclusively borrowed.
     fn ohpl_ga2b_pid_reset(p: *mut Pid3) {
-        // SAFETY: caller contract.
-        unsafe { rw(p) }.reset();
+        rw(p).reset();
     }
 );
 
@@ -432,8 +400,7 @@ ffi!(
     /// # Safety
     /// All pointers are valid; `out` is writable.
     fn ohpl_ga2b_grab_enter(i: *const GrabEnterIn, o: *mut GrabEnterOut) {
-        // SAFETY: caller contract.
-        unsafe { sg::grab_enter(rd(i), rw(o)) }
+        sg::grab_enter(rd(i), rw(o))
     }
 );
 
@@ -447,8 +414,7 @@ ffi!(
         dt: f32,
         o: *mut GrabPostOut,
     ) {
-        // SAFETY: caller contract.
-        unsafe { sg::grab_post(rd(i), rw(force_pid), rw(torque_pid), dt, rw(o)) }
+        sg::grab_post(rd(i), rw(force_pid), rw(torque_pid), dt, rw(o))
     }
 );
 
@@ -456,15 +422,12 @@ ffi!(
     /// # Safety
     /// `out` is writable.
     fn ohpl_ga2b_leave_limit(v: *const Vector3f, max: f32, out: *mut Vector3f) -> bool {
-        // SAFETY: caller contract.
-        unsafe {
-            match sg::leave_limit(*rd(v), max) {
-                Some(n) => {
-                    *rw(out) = n;
-                    true
-                }
-                None => false,
+        match sg::leave_limit(*rd(v), max) {
+            Some(n) => {
+                *rw(out) = n;
+                true
             }
+            None => false,
         }
     }
 );
@@ -481,8 +444,7 @@ ffi!(
     /// # Safety
     /// `rot` is readable, `out` writable.
     fn ohpl_ga2b_grab_rotate(rot: *const Matrixf, pitch: bool, amount: f32, out: *mut Matrixf) {
-        // SAFETY: caller contract.
-        unsafe { *rw(out) = sg::grab_rotate(rd(rot), pitch, amount) }
+        *rw(out) = sg::grab_rotate(rd(rot), pitch, amount)
     }
 );
 
@@ -490,8 +452,7 @@ ffi!(
     /// # Safety
     /// All pointers are valid.
     fn ohpl_ga2b_push_enter(i: *const PushEnterIn, o: *mut PushEnterOut) {
-        // SAFETY: caller contract.
-        unsafe { sg::push_enter(rd(i), rw(o)) }
+        sg::push_enter(rd(i), rw(o))
     }
 );
 
@@ -499,8 +460,7 @@ ffi!(
     /// # Safety
     /// All pointers are valid.
     fn ohpl_ga2b_push_begin(i: *const PushBegin, o: *mut PushBeginOut) {
-        // SAFETY: caller contract.
-        unsafe { sg::push_begin(rd(i), rw(o)) }
+        sg::push_begin(rd(i), rw(o))
     }
 );
 
@@ -515,8 +475,7 @@ ffi!(
         dt: f32,
         out: *mut Vector3f,
     ) {
-        // SAFETY: caller contract.
-        unsafe { *rw(out) = sg::push_stop(rw(pid), *rd(vel), mass, max_force, dt) }
+        *rw(out) = sg::push_stop(rw(pid), *rd(vel), mass, max_force, dt)
     }
 );
 
@@ -524,8 +483,7 @@ ffi!(
     /// # Safety
     /// All pointers are valid.
     fn ohpl_ga2b_push_drive(pid: *mut Pid3, i: *const PushDrive, dt: f32, o: *mut PushDriveOut) {
-        // SAFETY: caller contract.
-        unsafe { sg::push_drive(rw(pid), rd(i), dt, rw(o)) }
+        sg::push_drive(rw(pid), rd(i), dt, rw(o))
     }
 );
 
@@ -568,8 +526,7 @@ ffi!(
         dt: f32,
         o: *mut SlideOut,
     ) {
-        // SAFETY: caller contract.
-        unsafe { sg::slide_update(rd(i), rw(speed), rw(pid), dt, rw(o)) }
+        sg::slide_update(rd(i), rw(speed), rw(pid), dt, rw(o))
     }
 );
 
@@ -582,8 +539,7 @@ ffi!(
         impulse: f32,
         out: *mut Vector3f,
     ) {
-        // SAFETY: caller contract.
-        unsafe { *rw(out) = sg::slide_throw(*rd(pin), *rd(cam_fwd), impulse) }
+        *rw(out) = sg::slide_throw(*rd(pin), *rd(cam_fwd), impulse)
     }
 );
 
@@ -591,8 +547,7 @@ ffi!(
     /// # Safety
     /// Plain values.
     fn ohpl_ga2b_rotate_max_distance(feet: *const Vector3f, pivot: *const Vector3f) -> f32 {
-        // SAFETY: caller contract.
-        unsafe { sr::rotate_max_distance(*rd(feet), *rd(pivot)) }
+        sr::rotate_max_distance(*rd(feet), *rd(pivot))
     }
 );
 
@@ -600,8 +555,7 @@ ffi!(
     /// # Safety
     /// Plain values.
     fn ohpl_ga2b_rotate_far(feet: *const Vector3f, pivot: *const Vector3f, max: f32) -> bool {
-        // SAFETY: caller contract.
-        unsafe { sr::rotate_far(*rd(feet), *rd(pivot), max) }
+        sr::rotate_far(*rd(feet), *rd(pivot), max)
     }
 );
 
@@ -609,8 +563,7 @@ ffi!(
     /// # Safety
     /// `speed` is valid and exclusively borrowed.
     fn ohpl_ga2b_rotate_slow(speed: *mut f32, mouse: *const Vector2f, slow_factor: f32, dt: f32) {
-        // SAFETY: caller contract.
-        unsafe { sr::rotate_slow(rw(speed), *rd(mouse), slow_factor, dt) }
+        sr::rotate_slow(rw(speed), *rd(mouse), slow_factor, dt)
     }
 );
 
@@ -624,8 +577,7 @@ ffi!(
         dt: f32,
         out: *mut Vector3f,
     ) {
-        // SAFETY: caller contract.
-        unsafe { *rw(out) = sr::rotate_torque(rd(i), rw(speed), rw(pid), dt) }
+        *rw(out) = sr::rotate_torque(rd(i), rw(speed), rw(pid), dt)
     }
 );
 
@@ -633,8 +585,7 @@ ffi!(
     /// # Safety
     /// `g` is readable.
     fn ohpl_ga2b_lever_speed_add(g: *const JointGeom) -> f32 {
-        // SAFETY: caller contract.
-        sr::lever_speed_add(unsafe { rd(g) })
+        sr::lever_speed_add(rd(g))
     }
 );
 
@@ -642,8 +593,7 @@ ffi!(
     /// # Safety
     /// `g` is readable.
     fn ohpl_ga2b_swing_door_speed_add(g: *const JointGeom) -> f32 {
-        // SAFETY: caller contract.
-        sr::swing_door_speed_add(unsafe { rd(g) })
+        sr::swing_door_speed_add(rd(g))
     }
 );
 
@@ -656,12 +606,9 @@ ffi!(
         joint_forward: *mut Vector3f,
         out: *mut Vector3f,
     ) {
-        // SAFETY: caller contract.
-        unsafe {
-            let (jf, v) = sr::swing_door_throw(rd(g), impulse);
-            *rw(joint_forward) = jf;
-            *rw(out) = v;
-        }
+        let (jf, v) = sr::swing_door_throw(rd(g), impulse);
+        *rw(joint_forward) = jf;
+        *rw(out) = v;
     }
 );
 
@@ -689,8 +636,7 @@ ffi!(
             // SAFETY: caller contract.
             unsafe { std::slice::from_raw_parts(hist, n) }
         };
-        // SAFETY: caller contract.
-        unsafe { sr::wheel_speed_add(h, *rd(mouse), *rd(pin), *rd(forward)) }
+        sr::wheel_speed_add(h, *rd(mouse), *rd(pin), *rd(forward))
     }
 );
 
@@ -698,8 +644,7 @@ ffi!(
     /// # Safety
     /// `mouse` is valid and exclusively borrowed.
     fn ohpl_ga2b_move_to_mouse(forward: bool, mul: f32, factor: f32, mouse: *mut Vector2f) {
-        // SAFETY: caller contract.
-        unsafe { sr::move_to_mouse(forward, mul, factor, rw(mouse)) }
+        sr::move_to_mouse(forward, mul, factor, rw(mouse))
     }
 );
 
@@ -707,8 +652,7 @@ ffi!(
     /// # Safety
     /// All pointers are valid.
     fn ohpl_ga2b_ladder_enter(i: *const LadderEnterIn, o: *mut LadderEnterOut) {
-        // SAFETY: caller contract.
-        unsafe { sl::ladder_enter(rd(i), rw(o)) }
+        sl::ladder_enter(rd(i), rw(o))
     }
 );
 
@@ -716,8 +660,7 @@ ffi!(
     /// # Safety
     /// All pointers are valid.
     fn ohpl_ga2b_ladder_attach(s: *mut LadderState, dt: f32, o: *mut LadderAttachOut) {
-        // SAFETY: caller contract.
-        unsafe { sl::ladder_attach(rw(s), dt, rw(o)) }
+        sl::ladder_attach(rw(s), dt, rw(o))
     }
 );
 
@@ -731,8 +674,7 @@ ffi!(
         down: f32,
         dt: f32,
     ) -> i32 {
-        // SAFETY: caller contract.
-        unsafe { sl::ladder_move_pre(rw(s), *rd(pos), up, down, dt) }
+        sl::ladder_move_pre(rw(s), *rd(pos), up, down, dt)
     }
 );
 
@@ -746,8 +688,7 @@ ffi!(
         step_len: f32,
         dt: f32,
     ) -> i32 {
-        // SAFETY: caller contract.
-        unsafe { sl::ladder_move_post(rw(s), up, down, step_len, dt) }
+        sl::ladder_move_post(rw(s), up, down, step_len, dt)
     }
 );
 
@@ -805,8 +746,7 @@ ffi!(
     /// # Safety
     /// `count` is valid and exclusively borrowed.
     fn ohpl_ga2b_ladder_leave_tick(count: *mut f32, dt: f32) -> bool {
-        // SAFETY: caller contract.
-        sl::ladder_leave_tick(unsafe { rw(count) }, dt)
+        sl::ladder_leave_tick(rw(count), dt)
     }
 );
 
@@ -814,8 +754,7 @@ ffi!(
     /// # Safety
     /// `move_mul` is valid and exclusively borrowed.
     fn ohpl_ga2b_ladder_on_move(state: i32, right: bool, mul: f32, move_mul: *mut f32) {
-        // SAFETY: caller contract.
-        sl::ladder_on_move(state, right, mul, unsafe { rw(move_mul) });
+        sl::ladder_on_move(state, right, mul, rw(move_mul));
     }
 );
 

@@ -143,14 +143,11 @@ const _: () = assert!(std::mem::size_of::<Disp>() == 112);
 
 /// # Safety
 /// `d` valid.
-unsafe fn ring<'a>(d: *mut Disp) -> Option<&'a mut LinkedList<f32>> {
-    // SAFETY: caller contract; the ring is only touched here and freed by `ohpl_a2d_free`.
-    unsafe {
-        if (*d).ring.is_null() {
-            (*d).ring = Box::into_raw(Box::default());
-        }
-        (*d).ring.as_mut()
+pub(super) unsafe fn ring<'a, T>(slot: &mut *mut LinkedList<T>) -> Option<&'a mut LinkedList<T>> {
+    if slot.is_null() {
+        *slot = Box::into_raw(Box::default());
     }
+    unsafe { slot.as_mut() }
 }
 
 /// # Safety
@@ -278,7 +275,7 @@ pub unsafe extern "C" fn ohpl_a2d_update(
         update_terror(c, h, dt);
         update_focus_alpha(c, h, dt);
         let speed = dh.c(k::BODY_SPEED, 0, dt, 0.0);
-        if let Some(r) = ring(d) {
+        if let Some(r) = ring(&mut (*d).ring) {
             r.push_back(speed);
             if camera::prev_speeds_pop(r.len(), (*d).max_prev_speeds) {
                 r.pop_front();

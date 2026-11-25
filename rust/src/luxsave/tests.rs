@@ -48,7 +48,7 @@ impl Env for Script {
 }
 
 fn w(s: &str) -> Vec<u32> {
-    s.bytes().map(u32::from).collect()
+    crate::string::latin1_to_wide(s.as_bytes())
 }
 
 fn date(y: i32, mo: i32, d: i32, h: i32, mi: i32, s: i32) -> Date {

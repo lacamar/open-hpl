@@ -1274,8 +1274,3 @@ pub fn callback(c: &Cb, w: Wd, data: &CbData) -> bool {
     };
     me.callback(c.id, w, data)
 }
-
-#[cfg(test)]
-pub(crate) fn lookup_for_test(bits: u64) -> Option<Rc<Menu>> {
-    lookup(bits)
-}

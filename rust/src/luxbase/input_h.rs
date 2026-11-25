@@ -10,7 +10,7 @@ use super::input::{
     STATE_INVENTORY, STATE_JOURNAL, STATE_LOAD_SCREEN, STATE_MAIN_MENU, STATE_PRE_MENU, Settings,
     Smooth, act,
 };
-use super::look::{self, LookEnv, LookIn};
+use super::look::{self, LookIn};
 use crate::obj::{Arena, Handle};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -196,37 +196,37 @@ impl MouseEnv for Mouse<'_> {
     }
 }
 
-struct Look<'a>(&'a dyn InEnv);
+pub(super) struct Look<'a>(&'a dyn InEnv);
 
-impl LookEnv for Look<'_> {
-    fn is_triggered(&mut self, action: i32) -> bool {
+impl Look<'_> {
+    pub(super) fn is_triggered(&mut self, action: i32) -> bool {
         self.0.trig(IS, action)
     }
-    fn add_lean(&mut self, v: f32) {
+    pub(super) fn add_lean(&mut self, v: f32) {
         self.0.fx(fx::PL_LEAN_ADD, 0, 0, v);
     }
-    fn set_lean(&mut self, v: f32) {
+    pub(super) fn set_lean(&mut self, v: f32) {
         self.0.fx(fx::PL_LEAN_SET, 0, 0, v);
     }
-    fn scroll(&mut self, v: f32) {
+    pub(super) fn scroll(&mut self, v: f32) {
         self.0.fx(fx::PL_SCROLL, 0, 0, v);
     }
-    fn stop_movement(&mut self) {
+    pub(super) fn stop_movement(&mut self) {
         self.0.fx(fx::PL_STOP, 0, 0, 0.0);
     }
-    fn button_down(&mut self, button: i32) -> bool {
+    pub(super) fn button_down(&mut self, button: i32) -> bool {
         self.0.val(val::PAD_BUTTON, button) != 0.0
     }
-    fn axis(&mut self, axis: i32) -> f32 {
+    pub(super) fn axis(&mut self, axis: i32) -> f32 {
         self.0.val(val::PAD_AXIS, axis) as f32
     }
-    fn dead_zone(&mut self) -> f32 {
+    pub(super) fn dead_zone(&mut self) -> f32 {
         self.0.val(val::PAD_DEAD, 0) as f32
     }
-    fn frame_time(&mut self) -> f32 {
+    pub(super) fn frame_time(&mut self) -> f32 {
         self.0.val(val::FRAME_TIME, 0) as f32
     }
-    fn step_size(&mut self) -> f32 {
+    pub(super) fn step_size(&mut self) -> f32 {
         self.0.val(val::STEP_SIZE, 0) as f32
     }
 }

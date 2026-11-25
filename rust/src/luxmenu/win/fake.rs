@@ -1,6 +1,7 @@
 //! Test double for the C++ host: a recording widget tree and game state.
 
 use super::host::{Sink, Str, W, WStr, ws};
+use crate::luxmap::mhost::slice_of as slice;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::c_void;
@@ -64,14 +65,6 @@ fn wid(w: W) -> usize {
 
 fn id(i: usize) -> W {
     W::from_addr(i)
-}
-
-fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if p.is_null() || n == 0 {
-        return &[];
-    }
-    // SAFETY: the host wrappers pass live slices.
-    unsafe { std::slice::from_raw_parts(p, n) }
 }
 
 fn wd(s: &mut State, w: W) -> Option<&mut Widget> {

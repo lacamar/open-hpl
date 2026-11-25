@@ -6,6 +6,8 @@
 
 use super::cfg::Cfg;
 use super::{amfp, base, config, debug, headless, input};
+use crate::luxmap::mhost::slice_of as bytes_of;
+use crate::luxmap::mhost::slice_of as units;
 use std::ffi::c_void;
 
 type Ctx = *mut c_void;
@@ -30,14 +32,6 @@ pub struct Ret {
 
 pub(super) type Call = unsafe extern "C" fn(Ctx, u32, *const Arg, usize, *mut Ret);
 type Emit = unsafe extern "C" fn(Ctx, u32, *const c_void, usize);
-
-fn units<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if n == 0 || p.is_null() {
-        return &[];
-    }
-    // SAFETY: the entry point's caller passes a live `n`-unit buffer.
-    unsafe { std::slice::from_raw_parts(p, n) }
-}
 
 /// # Safety
 /// `r` is the `Ret` of the current call; `p` points to `n` bytes.
@@ -577,14 +571,6 @@ pub extern "C" fn ohpl_a12b_cfg_restart(bits: u64, op: i32) -> i32 {
     })
 }
 
-fn bytes_of<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if p.is_null() || n == 0 {
-        return &[];
-    }
-    // SAFETY: the caller passes `n` readable bytes.
-    unsafe { std::slice::from_raw_parts(p, n) }
-}
-
 struct SaveHost(CfgHost);
 
 impl Cfg for SaveHost {
@@ -676,26 +662,26 @@ pub unsafe extern "C" fn ohpl_ga9_error_text(msg: *const u32, n: usize, emit: Em
     Out { emit, ctx: ectx }.wide(1, &base::error_text(units(msg, n)));
 }
 
-struct InitHost {
+pub(super) struct InitHost {
     h: Host,
     init: CfgHost,
     defaults: CfgHost,
 }
 
-impl base::InitEnv for InitHost {
-    fn load_init(&mut self) -> bool {
+impl InitHost {
+    pub(super) fn load_init(&mut self) -> bool {
         self.h.b(op::LOAD_INIT, &[])
     }
-    fn init(&mut self) -> &mut dyn Cfg {
+    pub(super) fn init(&mut self) -> &mut dyn Cfg {
         &mut self.init
     }
-    fn load_defaults(&mut self) -> bool {
+    pub(super) fn load_defaults(&mut self) -> bool {
         self.h.b(op::LOAD_DEFAULTS, &[])
     }
-    fn defaults(&mut self) -> &mut dyn Cfg {
+    pub(super) fn defaults(&mut self) -> &mut dyn Cfg {
         &mut self.defaults
     }
-    fn warn(&mut self, text: &[u32]) {
+    pub(super) fn warn(&mut self, text: &[u32]) {
         self.h.go(op::WARN, &[aw(text)]);
     }
 }

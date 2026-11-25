@@ -6,7 +6,7 @@ use super::premenu::{self, Pre};
 use crate::luxsave::names::Date;
 
 fn w(s: &str) -> Vec<u32> {
-    s.bytes().map(u32::from).collect()
+    crate::string::latin1_to_wide(s.as_bytes())
 }
 
 #[test]

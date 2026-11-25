@@ -6,15 +6,8 @@ use super::a10b_log as log;
 use super::a10b_ls as ls;
 use super::a10b_pm as pm;
 use super::host::{Eng, HostVt};
+use crate::luxmap::mhost::slice_of as bytes;
 use std::ffi::c_void;
-
-fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if n == 0 || p.is_null() {
-        return &[];
-    }
-    // SAFETY: the caller passes `n` readable bytes.
-    unsafe { std::slice::from_raw_parts(p, n) }
-}
 
 type Sink = unsafe extern "C" fn(*mut c_void, *const u8, usize);
 

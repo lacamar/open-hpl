@@ -680,7 +680,7 @@ fn item_str(h: usize, which: i32) -> String {
         };
     }
     let mut v: Vec<u8> = Vec::new();
-    inv::ohpl_inv_item_str(h, which, assign, std::ptr::from_mut(&mut v).cast());
+    unsafe { inv::ohpl_inv_item_str(h, which, assign, std::ptr::from_mut(&mut v).cast()) };
     String::from_utf8_lossy(&v).into_owned()
 }
 
@@ -695,7 +695,7 @@ fn combine_str(i: i32, which: i32) -> String {
         };
     }
     let mut v: Vec<u8> = Vec::new();
-    inv::ohpl_inv_combine_str(i, which, assign, std::ptr::from_mut(&mut v).cast());
+    unsafe { inv::ohpl_inv_combine_str(i, which, assign, std::ptr::from_mut(&mut v).cast()) };
     String::from_utf8_lossy(&v).into_owned()
 }
 
@@ -710,7 +710,7 @@ fn type_name(t: i32) -> String {
         };
     }
     let mut v: Vec<u8> = Vec::new();
-    inv::ohpl_inv_type_name(t, assign, std::ptr::from_mut(&mut v).cast());
+    unsafe { inv::ohpl_inv_type_name(t, assign, std::ptr::from_mut(&mut v).cast()) };
     String::from_utf8_lossy(&v).into_owned()
 }
 

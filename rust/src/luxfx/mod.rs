@@ -7,7 +7,6 @@
 mod dump;
 mod effects;
 mod ffi;
-mod hw;
 mod insanity;
 pub(crate) mod misc;
 mod music;

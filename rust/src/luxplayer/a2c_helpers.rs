@@ -4,9 +4,9 @@
 
 use super::a2b_helpers::{HostB, bq};
 use super::helpers::{self, Death};
-use super::hw;
 use super::ops::Ops;
 use super::sanity::{self, Sanity};
+use crate::hw;
 use crate::types::Vector3f;
 use std::ffi::c_void;
 

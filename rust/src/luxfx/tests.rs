@@ -618,10 +618,10 @@ fn completion_is_gated_but_logic_holds() {
             ..Completion::default()
         }
     );
-    misc::completion_show_for_test(&mut c, 0.0, 0.5, 1.0);
+    misc::completion_show_inner(&mut c, 0.0, 0.5, 1.0);
     assert_eq!((c.active, c.new_amount, c.disable_delay), (1, 0.5, 2.0));
     c.delay = 0.5;
-    misc::completion_step_for_test(&mut c, 0.25);
+    misc::completion_step(&mut c, 0.25);
     assert_eq!(c.delay, 0.25);
     misc::completion_reset(&mut c);
     assert_eq!((c.active, c.alpha), (0, 0.0));

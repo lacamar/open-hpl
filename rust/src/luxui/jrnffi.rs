@@ -3,6 +3,7 @@
 
 use super::event::Str;
 use super::jrn::{self, Entry, Quest};
+use crate::string_ffi::emit;
 use std::ffi::c_void;
 
 type Ctx = *mut c_void;
@@ -14,11 +15,6 @@ fn b<'a>(s: Str) -> &'a [u8] {
     }
     // SAFETY: the caller passes a live `n`-byte buffer.
     unsafe { std::slice::from_raw_parts(s.p, s.n) }
-}
-
-fn sink(s: Sink, c: Ctx, v: &[u8]) {
-    // SAFETY: `s` accepts `c`.
-    unsafe { s(c, v.as_ptr(), v.len()) }
 }
 
 #[unsafe(no_mangle)]
@@ -155,8 +151,9 @@ pub extern "C" fn ohpl_jrn_note_count() -> usize {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_jrn_note_field(n: usize, f: i32, s: Sink, c: Ctx) {
-    sink(s, c, &jrn::note_field(n, f));
+#[allow(clippy::missing_safety_doc)]
+pub unsafe extern "C" fn ohpl_jrn_note_field(n: usize, f: i32, s: Sink, c: Ctx) {
+    unsafe { emit(s, c, &jrn::note_field(n, f)) };
 }
 
 #[unsafe(no_mangle)]
@@ -165,8 +162,9 @@ pub extern "C" fn ohpl_jrn_cont_count() -> usize {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_jrn_cont_type(n: usize, s: Sink, c: Ctx) {
-    sink(s, c, &jrn::cont_type(n));
+#[allow(clippy::missing_safety_doc)]
+pub unsafe extern "C" fn ohpl_jrn_cont_type(n: usize, s: Sink, c: Ctx) {
+    unsafe { emit(s, c, &jrn::cont_type(n)) };
 }
 
 #[unsafe(no_mangle)]
@@ -175,8 +173,9 @@ pub extern "C" fn ohpl_jrn_diary_count(cont: usize) -> usize {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_jrn_diary_field(cont: usize, n: usize, f: i32, s: Sink, c: Ctx) {
-    sink(s, c, &jrn::diary_field(cont, n, f));
+#[allow(clippy::missing_safety_doc)]
+pub unsafe extern "C" fn ohpl_jrn_diary_field(cont: usize, n: usize, f: i32, s: Sink, c: Ctx) {
+    unsafe { emit(s, c, &jrn::diary_field(cont, n, f)) };
 }
 
 #[unsafe(no_mangle)]
@@ -185,8 +184,9 @@ pub extern "C" fn ohpl_jrn_quest_count() -> usize {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_jrn_quest_field(n: usize, f: i32, s: Sink, c: Ctx) {
-    sink(s, c, &jrn::quest_field(n, f));
+#[allow(clippy::missing_safety_doc)]
+pub unsafe extern "C" fn ohpl_jrn_quest_field(n: usize, f: i32, s: Sink, c: Ctx) {
+    unsafe { emit(s, c, &jrn::quest_field(n, f)) };
 }
 
 #[unsafe(no_mangle)]

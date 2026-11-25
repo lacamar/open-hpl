@@ -380,5 +380,5 @@ pub fn ledge_update(c: &LedgeCfg, head_add: Vector3f, pitch: f32, dt: f32) -> Op
     if add > c.max_pitch_speed {
         add = c.max_pitch_speed;
     }
-    Some(super::hw::mul(add, dt))
+    Some(crate::hw::mul(add, dt))
 }

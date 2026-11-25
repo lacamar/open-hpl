@@ -241,22 +241,6 @@ pub const INPUTS: [Input; 76] = [
 
 pub const INPUT_POS: [&str; 2] = ["Primary", "Secondary"];
 
-pub fn action_by_name(name: &[u8]) -> Option<&'static Action> {
-    ACTIONS.iter().find(|a| a.name.as_bytes() == name)
-}
-
-pub fn action_by_id(id: i32) -> Option<&'static Action> {
-    ACTIONS.iter().find(|a| a.id == id)
-}
-
-/// `GetActionsByCategory`; `CAT_LAST` lists everything.
-pub fn actions_by_category(cat: i32) -> Vec<&'static Action> {
-    ACTIONS
-        .iter()
-        .filter(|a| cat == CAT_LAST || a.cat == cat)
-        .collect()
-}
-
 pub fn default_inputs(action: i32) -> Vec<&'static Input> {
     INPUTS.iter().filter(|x| x.action == action).collect()
 }
@@ -584,7 +568,6 @@ impl MouseActivity {
     }
 }
 
-pub const STATE_NULL: i32 = 0;
 pub const STATE_GAME: i32 = 1;
 pub const STATE_MAIN_MENU: i32 = 2;
 pub const STATE_INVENTORY: i32 = 3;

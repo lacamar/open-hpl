@@ -3,6 +3,7 @@
 
 use super::a3_host::Ptr;
 use super::states_vec::Pid3;
+pub use crate::luxui::hint::Oscillation;
 use crate::types::{Matrixf, Vector2f, Vector3f};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -81,42 +82,6 @@ pub struct Base {
     pub has_outline: bool,
     pub pad: [u8; 7],
     pub ext: Ptr,
-}
-
-/// `hpl::cLinearOscillation`; `add` is its private last member.
-#[repr(C)]
-#[derive(Clone, Copy, Default)]
-pub struct Oscillation {
-    pub max: f32,
-    pub min: f32,
-    pub val: f32,
-    pub up_speed: f32,
-    pub down_speed: f32,
-    pub add: f32,
-}
-
-impl Oscillation {
-    pub fn set_up(&mut self, min: f32, max: f32, val: f32, up: f32, down: f32) {
-        self.min = min;
-        self.max = max;
-        self.val = val;
-        self.up_speed = up.abs();
-        self.down_speed = -down.abs();
-        self.add = self.up_speed;
-    }
-
-    pub fn update(&mut self, dt: f32) {
-        self.val = self.add.mul_add(dt, self.val);
-        if self.add > 0.0 {
-            if self.val >= self.max {
-                self.val = self.max;
-                self.add = self.down_speed;
-            }
-        } else if self.val <= self.min {
-            self.val = self.min;
-            self.add = self.up_speed;
-        }
-    }
 }
 
 #[repr(C)]

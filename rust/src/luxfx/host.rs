@@ -7,6 +7,7 @@ use super::dump;
 use super::postfx::Op as PostOp;
 use super::renderer::{Op as RendOp, Outline};
 use crate::gui::direct;
+use crate::luxmap::mhost::slice_of;
 use crate::types::{Color, Vector3f};
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicPtr, Ordering};
@@ -171,22 +172,10 @@ pub fn host() -> Option<HostFx> {
     unsafe { HOST.load(Ordering::Acquire).as_ref() }.map(HostFx)
 }
 
-unsafe extern "C" fn push_bytes(ctx: Ctx, p: *const u8, n: usize) {
-    // SAFETY: `ctx` is the `Vec` handed to the host call; the host passes `n` readable bytes.
-    let out = unsafe { &mut *ctx.cast::<Vec<u8>>() };
+unsafe extern "C" fn push<T: Copy>(ctx: Ctx, p: *const T, n: usize) {
+    let out = unsafe { &mut *ctx.cast::<Vec<T>>() };
     out.clear();
-    if !p.is_null() {
-        out.extend_from_slice(unsafe { std::slice::from_raw_parts(p, n) });
-    }
-}
-
-unsafe extern "C" fn push_units(ctx: Ctx, p: *const u32, n: usize) {
-    // SAFETY: as `push_bytes`.
-    let out = unsafe { &mut *ctx.cast::<Vec<u32>>() };
-    out.clear();
-    if !p.is_null() {
-        out.extend_from_slice(unsafe { std::slice::from_raw_parts(p, n) });
-    }
+    out.extend_from_slice(slice_of(p, n));
 }
 
 unsafe extern "C" fn push_row(ctx: Ctx, p: *const u32, n: usize) {
@@ -307,7 +296,7 @@ impl Fx for HostFx {
             (self.0.translate)(
                 bytes(cat),
                 bytes(entry),
-                push_units,
+                push::<u32>,
                 std::ptr::from_mut(&mut out).cast(),
             )
         };
@@ -479,7 +468,7 @@ impl Fx for HostFx {
                 bytes(sec),
                 bytes(key),
                 bytes(def),
-                push_bytes,
+                push::<u8>,
                 std::ptr::from_mut(&mut out).cast(),
             )
         };

@@ -14,7 +14,7 @@ use super::multislider::MultiParams;
 use super::object::{
     self, ImpactBody, JointData, ObjectInstance, ObjectParams, ObjectState, UpdateIn,
 };
-use super::ops::{Hinge, Op, Ops, Pod, Probe, Slider};
+use super::ops::{Hinge, Op, Probe, Slider, pod, rd, rw, sl, with_ops};
 use super::swingdoor::{self, DoorJoint, DoorParams, DoorState, Env};
 use super::vars::Vars;
 use super::wheel::WheelState;
@@ -48,39 +48,6 @@ const _: () = {
     assert!(size_of::<Hinge>() == 112);
     assert!(size_of::<Slider>() == 32);
 };
-
-fn rd<'a, T>(p: *const T) -> &'a T {
-    // SAFETY: caller contract.
-    unsafe { &*p }
-}
-
-fn vr<'a>(p: *const VarsRef) -> &'a VarsRef {
-    // SAFETY: caller contract.
-    unsafe { &*p }
-}
-
-fn hr<'a>(p: *const Host) -> &'a Host {
-    // SAFETY: caller contract.
-    unsafe { &*p }
-}
-
-fn pod<T>(p: *mut T) -> Pod<T> {
-    // SAFETY: caller contract: `p` is live state.
-    unsafe { Pod::from_ptr(p) }
-}
-
-fn rw<'a, T>(p: *mut T) -> &'a mut T {
-    // SAFETY: caller contract.
-    unsafe { &mut *p }
-}
-
-fn sl<'a, T>(p: *const T, n: i32) -> &'a [T] {
-    match usize::try_from(n) {
-        // SAFETY: caller contract: `p` holds `n` elements.
-        Ok(n) if n > 0 && !p.is_null() => unsafe { std::slice::from_raw_parts(p, n) },
-        _ => &[],
-    }
-}
 
 #[repr(C)]
 pub struct VarsOps {
@@ -215,19 +182,9 @@ impl Probe for &Host {
     }
 }
 
-/// Runs `f` with an `Ops` that forwards to the C sink.
-fn with_ops<R>(sink: &Sink, f: impl FnOnce(&mut Ops) -> R) -> R {
-    let (ctx, push) = (sink.ctx, sink.push);
-    let mut fwd = move |op: &Op| {
-        // SAFETY: the sink stays valid for the call.
-        unsafe { push(ctx, op) }
-    };
-    f(&mut Ops(&mut fwd))
-}
-
 macro_rules! host {
     ($h:expr) => {
-        &mut hr($h)
+        &mut rd($h)
     };
 }
 
@@ -239,7 +196,7 @@ pub unsafe extern "C" fn ohpl_ga4_base_load_instance(
     force_full_game_save: bool,
     out: *mut BaseInstance,
 ) {
-    base::load_base_instance(vr(v), force_full_game_save, rw(out));
+    base::load_base_instance(rd::<VarsRef>(v), force_full_game_save, rw(out));
 }
 
 #[unsafe(no_mangle)]
@@ -453,7 +410,7 @@ pub unsafe extern "C" fn ohpl_ga4_object_load(
         d.get(2).copied().unwrap_or(0.0),
     ];
     object::load(
-        vr(v), // SAFETY: caller contract.
+        rd::<VarsRef>(v),
         unsafe { units(sub_type, sub_type_len) },
         rw(focus),
         d,
@@ -469,7 +426,7 @@ pub unsafe extern "C" fn ohpl_ga4_object_load_instance(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        object::load_instance(vr(v), rw(s), rw(out), ops)
+        object::load_instance(rd::<VarsRef>(v), rw(s), rw(out), ops)
     });
 }
 
@@ -589,7 +546,7 @@ pub unsafe extern "C" fn ohpl_ga4_bodies_center(pos: *const Vector3f, n: i32, ou
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4_door_load(v: *const VarsRef, out: *mut DoorParams) {
-    swingdoor::load(vr(v), rw(out));
+    swingdoor::load(rd::<VarsRef>(v), rw(out));
 }
 
 #[unsafe(no_mangle)]
@@ -618,7 +575,13 @@ pub unsafe extern "C" fn ohpl_ga4_door_load_instance(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        swingdoor::load_instance(vr(v), rw(s), env!(joints, n, n_joints), host!(host), ops);
+        swingdoor::load_instance(
+            rd::<VarsRef>(v),
+            rw(s),
+            env!(joints, n, n_joints),
+            host!(host),
+            ops,
+        );
     });
 }
 
@@ -817,7 +780,7 @@ pub unsafe extern "C" fn ohpl_ga4_door_reset(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4_lamp_load(v: *const VarsRef, out: *mut LampParams) {
-    lamp::load(vr(v), rw(out));
+    lamp::load(rd::<VarsRef>(v), rw(out));
 }
 
 #[unsafe(no_mangle)]
@@ -837,7 +800,14 @@ pub unsafe extern "C" fn ohpl_ga4_lamp_load_instance(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        lamp::load_instance(vr(v), rw(s), rw(base), rd(env), sl(lights, n_lights), ops);
+        lamp::load_instance(
+            rd::<VarsRef>(v),
+            rw(s),
+            rw(base),
+            rd(env),
+            sl(lights, n_lights),
+            ops,
+        );
     });
 }
 
@@ -952,12 +922,12 @@ pub unsafe extern "C" fn ohpl_ga4_lamp_light_connection_color(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4_move_load(v: *const VarsRef, out: *mut MoveParams) {
-    moveobject::load(vr(v), rw(out));
+    moveobject::load(rd::<VarsRef>(v), rw(out));
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4_move_load_instance(v: *const VarsRef) {
-    moveobject::load_instance(vr(v));
+    moveobject::load_instance(rd::<VarsRef>(v));
 }
 
 #[unsafe(no_mangle)]

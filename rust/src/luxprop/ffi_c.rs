@@ -7,7 +7,7 @@ use super::entity::LookIn;
 use super::ffi::{Sink, VarsRef};
 use super::handc;
 use super::object::MoveData;
-use super::ops::{Op, Ops, Pod};
+use super::ops::{pod, rd, rw, sl, with_ops};
 use super::propsc::Skeleton;
 use super::propsc::{self, ItemAmount, ItemHost, ItemState, NpcBone, NpcHost, NpcParams, NpcState};
 use crate::types::{Matrixf, Vector3f};
@@ -22,43 +22,6 @@ const _: () = {
     assert!(size_of::<NpcState>() == 12);
     assert!(size_of::<NpcBone>() == 20);
 };
-
-fn rd<'a, T>(p: *const T) -> &'a T {
-    // SAFETY: caller contract.
-    unsafe { &*p }
-}
-
-fn vr<'a>(p: *const VarsRef) -> &'a VarsRef {
-    // SAFETY: caller contract.
-    unsafe { &*p }
-}
-
-fn rw<'a, T>(p: *mut T) -> &'a mut T {
-    // SAFETY: caller contract.
-    unsafe { &mut *p }
-}
-
-fn pod<T>(p: *mut T) -> Pod<T> {
-    // SAFETY: caller contract: `p` is live state.
-    unsafe { Pod::from_ptr(p) }
-}
-
-fn sl<'a, T>(p: *const T, n: i32) -> &'a [T] {
-    match usize::try_from(n) {
-        // SAFETY: caller contract: `p` holds `n` elements.
-        Ok(n) if n > 0 && !p.is_null() => unsafe { std::slice::from_raw_parts(p, n) },
-        _ => &[],
-    }
-}
-
-fn with_ops<R>(sink: &Sink, f: impl FnOnce(&mut Ops) -> R) -> R {
-    let (ctx, push) = (sink.ctx, sink.push);
-    let mut fwd = move |op: &Op| {
-        // SAFETY: the sink stays valid for the call.
-        unsafe { push(ctx, op) }
-    };
-    f(&mut Ops(&mut fwd))
-}
 
 // ---- entity ----
 
@@ -138,12 +101,12 @@ pub extern "C" fn ohpl_ga4c_ent_connection_missing(found: bool) -> bool {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4c_chest_load(v: *const VarsRef, out: *mut MoveData) {
-    *rw(out) = propsc::chest_load(vr(v));
+    *rw(out) = propsc::chest_load(rd::<VarsRef>(v));
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4c_chest_load_instance(v: *const VarsRef) -> i32 {
-    propsc::chest_load_instance(vr(v))
+    propsc::chest_load_instance(rd::<VarsRef>(v))
 }
 
 #[unsafe(no_mangle)]
@@ -208,7 +171,7 @@ impl ItemHost for &ItemHostRef {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4c_item_load(v: *const VarsRef, kind: i32, out: *mut ItemAmount) {
-    *rw(out) = propsc::item_load(vr(v), kind);
+    *rw(out) = propsc::item_load(rd::<VarsRef>(v), kind);
 }
 
 #[unsafe(no_mangle)]
@@ -217,7 +180,7 @@ pub unsafe extern "C" fn ohpl_ga4c_item_load_instance(
     kind: i32,
     out: *mut ItemAmount,
 ) {
-    *rw(out) = propsc::item_load_instance(vr(v), kind);
+    *rw(out) = propsc::item_load_instance(rd::<VarsRef>(v), kind);
 }
 
 #[unsafe(no_mangle)]
@@ -324,13 +287,13 @@ pub unsafe extern "C" fn ohpl_ga4c_npc_load(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |o| {
-        *rw(out) = propsc::npc_load(vr(v), &mut rd(skel), o);
+        *rw(out) = propsc::npc_load(rd::<VarsRef>(v), &mut rd(skel), o);
     });
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4c_npc_load_instance(v: *const VarsRef) -> bool {
-    propsc::npc_load_instance(vr(v))
+    propsc::npc_load_instance(rd::<VarsRef>(v))
 }
 
 #[unsafe(no_mangle)]
@@ -395,17 +358,17 @@ pub unsafe extern "C" fn ohpl_ga4c_npc_update_head(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4c_static_cast_shadows(v: *const VarsRef) -> bool {
-    propsc::static_cast_shadows(vr(v))
+    propsc::static_cast_shadows(rd::<VarsRef>(v))
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4c_hand_load_settings(v: *const VarsRef, out: *mut Matrixf) {
-    *rw(out) = handc::load_settings(vr(v));
+    *rw(out) = handc::load_settings(rd::<VarsRef>(v));
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4c_hand_load_main(v: *const VarsRef) {
-    handc::load_main(vr(v));
+    handc::load_main(rd::<VarsRef>(v));
 }
 
 #[unsafe(no_mangle)]

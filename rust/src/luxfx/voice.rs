@@ -1,8 +1,8 @@
 //! `cLuxEffect_PlayVoice`: decisions of the voice list, interruption and subtitle queue. The sound
 //! entries, the list itself and the word wrapping stay C++; every step returns ordered ops.
 
-use super::hw::{msub, mul};
 use super::ops::Ops;
+use crate::hw::{msub, mul};
 
 pub mod k {
     pub const FADE_VOICE: u32 = 10;

@@ -5,6 +5,7 @@ use super::event::Str;
 use super::invgui;
 use super::invhost::{self as host, OpFn};
 use super::invobj::{self as obj, Inv, ItemRef, bits, from_bits, g};
+use crate::string_ffi::emit;
 use std::ffi::c_void;
 
 type Ctx = *mut c_void;
@@ -24,11 +25,6 @@ fn wide<'a>(p: *const u32, n: usize) -> &'a [u32] {
     }
     // SAFETY: the caller passes a live `n`-unit buffer.
     unsafe { std::slice::from_raw_parts(p, n) }
-}
-
-fn sink(s: Sink, c: Ctx, v: &[u8]) {
-    // SAFETY: `s` accepts `c`.
-    unsafe { s(c, v.as_ptr(), v.len()) }
 }
 
 fn with_item<R>(h: usize, f: impl FnOnce(&obj::Item) -> R) -> Option<R> {
@@ -211,21 +207,24 @@ pub extern "C" fn ohpl_inv_find_combine(a: Str, bb: Str) -> i32 {
 
 /// Field `which` (0 name, 1 item a, 2 item b, 3 function) of combine callback `idx`.
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_inv_combine_str(idx: i32, which: i32, s: Sink, c: Ctx) {
+#[allow(clippy::missing_safety_doc)]
+pub unsafe extern "C" fn ohpl_inv_combine_str(idx: i32, which: i32, s: Sink, c: Ctx) {
     let v = usize::try_from(idx)
         .ok()
         .and_then(|n| g().and_then(|i| i.combine.get(n).cloned()));
     let Some(cb) = v else { return };
-    sink(
-        s,
-        c,
-        match which {
-            0 => &cb.name,
-            1 => &cb.a,
-            2 => &cb.b,
-            _ => &cb.func,
-        },
-    );
+    unsafe {
+        emit(
+            s,
+            c,
+            match which {
+                0 => &cb.name,
+                1 => &cb.a,
+                2 => &cb.b,
+                _ => &cb.func,
+            },
+        )
+    };
 }
 
 #[unsafe(no_mangle)]
@@ -237,9 +236,10 @@ pub extern "C" fn ohpl_inv_combine_auto(idx: i32) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_inv_recompile(s: Sink, c: Ctx) -> i32 {
+#[allow(clippy::missing_safety_doc)]
+pub unsafe extern "C" fn ohpl_inv_recompile(s: Sink, c: Ctx) -> i32 {
     let (ok, out) = obj::recompile_script();
-    sink(s, c, &out);
+    unsafe { emit(s, c, &out) };
     i32::from(ok)
 }
 
@@ -304,7 +304,8 @@ pub extern "C" fn ohpl_inv_get_set() -> usize {
 
 /// `which`: 0 name, 1 subtype, 2 value, 3 extra, 4 image name, 5 name entry, 6 description entry.
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_inv_item_str(h: usize, which: i32, s: Sink, c: Ctx) {
+#[allow(clippy::missing_safety_doc)]
+pub unsafe extern "C" fn ohpl_inv_item_str(h: usize, which: i32, s: Sink, c: Ctx) {
     let v = with_item(h, |it| match which {
         0 => it.name.clone(),
         1 => it.sub.clone(),
@@ -314,7 +315,7 @@ pub extern "C" fn ohpl_inv_item_str(h: usize, which: i32, s: Sink, c: Ctx) {
         5 => it.name_entry.clone(),
         _ => it.desc_entry.clone(),
     });
-    sink(s, c, &v.unwrap_or_default());
+    unsafe { emit(s, c, &v.unwrap_or_default()) };
 }
 
 #[unsafe(no_mangle)]
@@ -385,6 +386,7 @@ pub extern "C" fn ohpl_inv_type_has_max(t: i32) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_inv_type_name(t: i32, s: Sink, c: Ctx) {
-    sink(s, c, obj::info_of(t).map_or(&[][..], |i| i.name));
+#[allow(clippy::missing_safety_doc)]
+pub unsafe extern "C" fn ohpl_inv_type_name(t: i32, s: Sink, c: Ctx) {
+    unsafe { emit(s, c, obj::info_of(t).map_or(&[][..], |i| i.name)) };
 }

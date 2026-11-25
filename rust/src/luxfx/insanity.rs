@@ -2,28 +2,15 @@
 //! XML data, sounds, particles and gui drawing stay C++; random numbers are drawn in the original
 //! order.
 
-use super::hw::{madd, msub};
+use crate::hw::{madd, msub};
+use crate::math::rotate_y;
 use crate::math::{
-    angle_from_points_2d, cos, fma, len3, matrix_mul_vec, normalize3, rand_rectf, rand_rectl, sin,
-    v3,
+    angle_from_points_2d, fma, len3, matrix_mul_vec, normalize3, rand_rectf, rand_rectl, v3,
 };
-use crate::types::{Matrixf, Vector2f};
+use crate::types::Vector2f;
 
 const TWO_PI: f32 = std::f32::consts::TAU;
 const EPSILON: f32 = 0.0001;
-
-/// `cMatrixf` rotation about Y as `cMath::MatrixRotateY` builds it.
-fn rotate_y(a: f32) -> Matrixf {
-    let (s, c) = (sin(a), cos(a));
-    Matrixf {
-        m: [
-            [c, 0.0, s, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [-s, 0.0, c, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ],
-    }
-}
 
 fn len2(x: f32, y: f32) -> f32 {
     fma(x, x, y * y).sqrt()

@@ -6,6 +6,7 @@ use super::vars::{Vars, put_var};
 use crate::math::{
     IDENTITY, dot3, fma, len3, matrix_mul, matrix_mul_vec, matrix_rotate, normalize3, v3,
 };
+pub(crate) use crate::math::{cmath_max as cmax, cmath_min as cmin, translation};
 use crate::types::{Color, Matrixf, Vector3f};
 
 pub(crate) fn euler_angle_distance(a: &Matrixf, b: &Matrixf) -> Vector3f {
@@ -173,10 +174,6 @@ impl BaseState {
     }
 }
 
-pub(crate) fn translation(m: &Matrixf) -> Vector3f {
-    v3(m.m[0][3], m.m[1][3], m.m[2][3])
-}
-
 pub(crate) fn set_translation(m: &mut Matrixf, t: Vector3f) {
     m.m[0][3] = t.x;
     m.m[1][3] = t.y;
@@ -196,16 +193,7 @@ pub(crate) fn sqr_len(v: Vector3f) -> f32 {
     dot3(v, v)
 }
 
-/// `cMath::Min` (float overload): the second operand wins on NaN.
-pub(crate) fn cmin(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
-}
-
-pub(crate) fn cmax(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
-
-fn is_zero(v: Vector3f) -> bool {
+pub(super) fn is_zero(v: Vector3f) -> bool {
     v.x == 0.0 && v.y == 0.0 && v.z == 0.0
 }
 

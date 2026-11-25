@@ -6,7 +6,8 @@ use super::a7_ffi::{Ctx, ohpl_a7_ent_add, ohpl_a7_ent_unlink, ohpl_a7_teardown};
 use super::a7_map::{A7Map, W_DOOMED, W_ENEMIES, W_ENTITIES, W_STICKY};
 use super::mhost::{self, A, S, op};
 use super::{area, map};
-use crate::math::{dot3, fma};
+use crate::math::dist3;
+use crate::math::dot3;
 use crate::string;
 use crate::types::Vector3f;
 use std::ffi::c_void;
@@ -90,11 +91,6 @@ fn note(level: i32, msg: &[u8]) {
 
 fn vec3(x: f32, y: f32, z: f32) -> Vector3f {
     Vector3f { x, y, z }
-}
-
-fn dist3(a: Vector3f, b: Vector3f) -> f32 {
-    let (dx, dy, dz) = (b.x - a.x, b.y - a.y, b.z - a.z);
-    fma(dz, dz, fma(dx, dx, dy * dy)).sqrt()
 }
 
 fn sphere_hit(pa: Vector3f, ra: f32, pb: Vector3f, rb: f32) -> bool {

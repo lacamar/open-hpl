@@ -1,7 +1,7 @@
 //! `cLuxPlayerHands` driver (A2c): hands state, charge/alpha vars, camera-rotation smoothing and the object switch plan.
 //! The hands entity, hand objects and animations stay C++ behind the host call (`a2d_disp::DHost`).
 
-use super::a2d_disp::DHost;
+use super::a2d_disp::{DHost, ring};
 use super::hands::{self, HandsPos};
 use super::ops::Ops;
 use crate::types::Vector3f;
@@ -41,18 +41,6 @@ pub struct HandsD {
 }
 
 const _: () = assert!(std::mem::size_of::<HandsD>() == 40);
-
-/// # Safety
-/// `d` valid.
-unsafe fn ring<'a>(d: *mut HandsD) -> Option<&'a mut LinkedList<Vector3f>> {
-    // SAFETY: caller contract; the ring is only touched here and freed by `ohpl_a2d_hands_free`.
-    unsafe {
-        if (*d).ring.is_null() {
-            (*d).ring = Box::into_raw(Box::default());
-        }
-        (*d).ring.as_mut()
-    }
-}
 
 /// # Safety
 /// `d` valid.
@@ -224,7 +212,9 @@ pub unsafe extern "C" fn ohpl_a2d_hands_post_update(d: *mut HandsD, dh: *const D
         }
         let mut rot = [0.0f32; 3];
         (dh.call)(dh.ctx, hk::FILL_ROT, 0, 0.0, 0.0, rot.as_mut_ptr().cast());
-        let Some(r) = ring(d) else { return };
+        let Some(r) = ring(&mut (*d).ring) else {
+            return;
+        };
         r.push_back(Vector3f {
             x: rot[0],
             y: rot[1],

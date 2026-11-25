@@ -4,6 +4,8 @@
 use super::hint_handler::{Hint, HintHandler};
 use super::host::{Slot, Ui, host};
 use super::msg_handler::{MessageHandler, Msg};
+use crate::luxmap::mhost::slice_of as units;
+use crate::luxmap::mhost::slice_of as bytes;
 use crate::obj::{Arena, Handle};
 use std::cell::RefCell;
 use std::ffi::c_void;
@@ -14,22 +16,6 @@ type Sink = unsafe extern "C" fn(Ctx, *const u8, usize);
 thread_local! {
     static HINTS: RefCell<Arena<HintHandler>> = RefCell::new(Arena::default());
     static MSGS: RefCell<Arena<MessageHandler>> = RefCell::new(Arena::default());
-}
-
-fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if p.is_null() || n == 0 {
-        return &[];
-    }
-    // SAFETY: the caller passes `n` readable bytes.
-    unsafe { std::slice::from_raw_parts(p, n) }
-}
-
-fn units<'a>(p: *const u32, n: usize) -> &'a [u32] {
-    if p.is_null() || n == 0 {
-        return &[];
-    }
-    // SAFETY: the caller passes `n` readable units.
-    unsafe { std::slice::from_raw_parts(p, n) }
 }
 
 fn hint<R>(bits: u64, none: R, f: impl FnOnce(&Hint) -> R) -> R {

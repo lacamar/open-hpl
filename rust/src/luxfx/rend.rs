@@ -3,9 +3,9 @@
 //! the C++ shells; plans are replayed through the host.
 
 use super::host::Fx;
-use super::hw::madd;
 use super::postfx::{self, Clock};
 use super::renderer::{self, Glow};
+use crate::hw::madd;
 
 /// `cLinearOscillation`: a value ramping between `min` and `max` at fixed speeds.
 #[derive(Clone, Copy, Debug)]

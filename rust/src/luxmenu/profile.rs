@@ -1,6 +1,7 @@
 //! Profile window rules: list order, name trimming and the create/delete/select decisions.
 
 use crate::graphics::stdsort;
+pub use crate::luxsave::names::Date;
 
 pub const ILLEGAL_CHARS: [u32; 9] = [
     '*' as u32,
@@ -15,31 +16,12 @@ pub const ILLEGAL_CHARS: [u32; 9] = [
 ];
 pub const NAME_MAX: i32 = 20;
 
-#[repr(C)]
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
-pub struct Date {
-    pub seconds: i32,
-    pub minutes: i32,
-    pub hours: i32,
-    pub month_day: i32,
-    pub month: i32,
-    pub year: i32,
-}
-
-fn key(d: &Date) -> [i32; 6] {
-    [d.year, d.month, d.month_day, d.hours, d.minutes, d.seconds]
-}
-
-pub fn date_less(a: &Date, b: &Date) -> bool {
-    key(a) < key(b)
-}
-
 /// `std::sort` order of the profile folders by creation date.
 pub fn sort_order(dates: &[Date]) -> Vec<u32> {
     let mut idx: Vec<u32> = (0..dates.len() as u32).collect();
     stdsort::sort(&mut idx, |&a, &b| {
         match (dates.get(a as usize), dates.get(b as usize)) {
-            (Some(x), Some(y)) => date_less(x, y),
+            (Some(x), Some(y)) => x.before(y),
             _ => false,
         }
     });

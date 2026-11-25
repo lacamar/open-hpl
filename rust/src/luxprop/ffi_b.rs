@@ -9,10 +9,9 @@ use super::entity::{LookIn, Los};
 use super::ffi::{Sink, VarsRef};
 use super::hand::{self, Fade, Hands, LightAttrs, LightParams, MeleeAct, Sway};
 use super::interact;
-use super::ops::{Op, Ops, Pod};
+use super::ops::{pod, rd, rw, with_ops};
 use super::smallprops::{self, DoorAct, OilFill};
 use super::vars::Vars;
-use super::vars2::Vars2;
 use crate::types::{Color, Matrixf, Vector2f, Vector3f};
 use std::ffi::c_void;
 
@@ -35,30 +34,6 @@ const _: () = {
     assert!(size_of::<OilFill>() == 20);
     assert!(size_of::<LookIn>() == 88);
 };
-
-fn rd<'a, T>(p: *const T) -> &'a T {
-    // SAFETY: caller contract.
-    unsafe { &*p }
-}
-
-fn rw<'a, T>(p: *mut T) -> &'a mut T {
-    // SAFETY: caller contract.
-    unsafe { &mut *p }
-}
-
-fn pod<T>(p: *mut T) -> Pod<T> {
-    // SAFETY: caller contract: `p` is live state.
-    unsafe { Pod::from_ptr(p) }
-}
-
-fn with_ops<R>(sink: &Sink, f: impl FnOnce(&mut Ops) -> R) -> R {
-    let (ctx, push) = (sink.ctx, sink.push);
-    let mut fwd = move |op: &Op| {
-        // SAFETY: the sink stays valid for the call.
-        unsafe { push(ctx, op) }
-    };
-    f(&mut Ops(&mut fwd))
-}
 
 #[repr(C)]
 pub struct Vars2Ref {
@@ -90,10 +65,9 @@ impl Vars for Vars2Ref {
     }
 }
 
-impl Vars2 for Vars2Ref {
-    fn vec2(&self, name: &str, def: Vector2f) -> Vector2f {
+impl Vars2Ref {
+    pub fn vec2(&self, name: &str, def: Vector2f) -> Vector2f {
         let mut out = def;
-        // SAFETY: the C++ side keeps the table alive for the call.
         unsafe { (self.vec2)(self.base.ctx, name.as_ptr(), name.len(), &def, &mut out) };
         out
     }
@@ -115,21 +89,11 @@ impl Query for &QueryRef {
     }
 }
 
-fn qr<'a>(p: *const QueryRef) -> &'a QueryRef {
-    // SAFETY: caller contract.
-    unsafe { &*p }
-}
-
-fn v2<'a>(p: *const Vars2Ref) -> &'a Vars2Ref {
-    // SAFETY: caller contract.
-    unsafe { &*p }
-}
-
 // ---- critter ----
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4b_critter_load(v: *const Vars2Ref, out: *mut CritterParams) {
-    critter::load(v2(v), rw(out));
+    critter::load(rd(v), rw(out));
 }
 
 #[unsafe(no_mangle)]
@@ -163,7 +127,7 @@ pub unsafe extern "C" fn ohpl_ga4b_critter_update_movement(
     dt: f32,
 ) {
     with_ops(rd(sink), |ops| {
-        critter::update_movement(pod(s), &mut qr(q), ops, dt);
+        critter::update_movement(pod(s), &mut rd(q), ops, dt);
     });
 }
 
@@ -193,7 +157,7 @@ pub unsafe extern "C" fn ohpl_ga4b_critter_anim_step(s: *mut CritterState, sink:
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4b_bug_load(v: *const Vars2Ref, p: *mut BugParams) {
-    critter::load_bug(v2(v), rw(p));
+    critter::load_bug(rd(v), rw(p));
 }
 
 #[unsafe(no_mangle)]
@@ -212,13 +176,13 @@ pub unsafe extern "C" fn ohpl_ga4b_bug_update_velocity(
     dt: f32,
 ) {
     with_ops(rd(sink), |ops| {
-        critter::bug_update_velocity(pod(c), pod(b), rd(p), &mut qr(q), ops, dt);
+        critter::bug_update_velocity(pod(c), pod(b), rd(p), &mut rd(q), ops, dt);
     });
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga4b_spider_load(v: *const Vars2Ref, p: *mut SpiderParams) {
-    critter::load_spider(v2(v), rw(p));
+    critter::load_spider(rd(v), rw(p));
 }
 
 #[unsafe(no_mangle)]
@@ -251,7 +215,7 @@ pub unsafe extern "C" fn ohpl_ga4b_spider_update_velocity(
     dt: f32,
 ) {
     with_ops(rd(sink), |ops| {
-        critter::spider_update_velocity(pod(c), pod(s), rd(p), &mut qr(q), ops, dt);
+        critter::spider_update_velocity(pod(c), pod(s), rd(p), &mut rd(q), ops, dt);
     });
 }
 
@@ -262,7 +226,7 @@ pub unsafe extern "C" fn ohpl_ga4b_spider_ground_check(
     q: *const QueryRef,
     dt: f32,
 ) {
-    critter::spider_ground_check(pod(c), pod(s), &mut qr(q), dt);
+    critter::spider_ground_check(pod(c), pod(s), &mut rd(q), dt);
 }
 
 #[unsafe(no_mangle)]
@@ -273,7 +237,7 @@ pub unsafe extern "C" fn ohpl_ga4b_spider_on_shape_collision(
     push: *const Vector3f,
     dt: f32,
 ) {
-    critter::spider_on_shape_collision(pod(c), pod(s), &mut qr(q), *rd(push), dt);
+    critter::spider_on_shape_collision(pod(c), pod(s), &mut rd(q), *rd(push), dt);
 }
 
 // ---- hand objects ----

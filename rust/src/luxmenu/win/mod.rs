@@ -49,6 +49,12 @@ impl Base {
         self.window.set(w);
     }
 
+    pub(crate) fn exit_pressed(&self) {
+        if !self.popup_active() {
+            go(WIN_NONE);
+        }
+    }
+
     fn popup_active(&self) -> bool {
         self.set.popup_active()
     }
@@ -90,10 +96,10 @@ impl Win {
     fn exit_pressed(&self) {
         match self {
             Win::Profile(_) => {}
-            Win::Load(w) => w.exit_pressed(),
-            Win::Start(w) => w.exit_pressed(),
+            Win::Load(w) => w.base.exit_pressed(),
+            Win::Start(w) => w.base.exit_pressed(),
             Win::Story(_) => {}
-            Win::List(w) => w.exit_pressed(),
+            Win::List(w) => w.base.exit_pressed(),
         }
     }
 

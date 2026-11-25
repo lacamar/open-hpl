@@ -14,13 +14,22 @@ pub struct Op {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct Ops {
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Ops<const N: usize = MAX_OPS> {
     pub n: u32,
-    pub ops: [Op; MAX_OPS],
+    pub ops: [Op; N],
 }
 
-impl Ops {
+impl<const N: usize> Default for Ops<N> {
+    fn default() -> Self {
+        Self {
+            n: 0,
+            ops: [Op::default(); N],
+        }
+    }
+}
+
+impl<const N: usize> Ops<N> {
     pub fn push(&mut self, kind: u32, i: i32, a: f32, b: f32, c: f32, d: f32) {
         if let Some(slot) = self.ops.get_mut(self.n as usize) {
             *slot = Op {

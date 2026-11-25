@@ -1,8 +1,9 @@
 //! `LuxPlayerHelpers.cpp`: insanity collapse, camera sway, hurt, look-at, flashback, lantern, light
 //! level, darkness and death.
 
-use super::hw;
 use super::ops::Ops;
+use crate::hw;
+use crate::math::cmath_min;
 #[cfg(test)]
 use crate::math::rand_rectl;
 use crate::math::{clamp, to_rad, v3, wrap};
@@ -351,17 +352,13 @@ fn angle_dist_rad(a1: f32, a2: f32) -> f32 {
     if d1.abs() < d2.abs() { d1 } else { d2 }
 }
 
-fn fmin(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
-}
-
 /// `LookAt::Update`; `goal` is the `(pitch, yaw)` angle to the target from the camera. The
 /// original left `z` of the wanted speed uninitialised; it is 0 here.
 pub fn lookat_update(s: &mut LookAt, goal: Vector3f, pitch: f32, yaw: f32, dt: f32, o: &mut Ops) {
     let dx = angle_dist_rad(pitch, goal.x);
     let dy = angle_dist_rad(yaw, goal.y);
-    let wx = fmin(dx * s.speed_mul, s.max_speed);
-    let wy = fmin(dy * s.speed_mul, s.max_speed);
+    let wx = cmath_min(dx * s.speed_mul, s.max_speed);
+    let wy = cmath_min(dy * s.speed_mul, s.max_speed);
     let diff = v3(
         wx - s.current_speed.x,
         wy - s.current_speed.y,

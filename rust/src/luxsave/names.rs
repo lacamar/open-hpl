@@ -1,6 +1,7 @@
 //! `LuxSaveHandler.cpp`: save-slot naming and autosave rotation.
 
 use crate::string;
+use crate::string::latin1_to_wide as widen;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
@@ -41,10 +42,6 @@ impl Date {
 pub struct NameState {
     pub count: i32,
     pub latest: Date,
-}
-
-fn widen(s: &[u8]) -> Vec<u32> {
-    s.iter().map(|&c| u32::from(c)).collect()
 }
 
 fn w(s: &str) -> Vec<u32> {

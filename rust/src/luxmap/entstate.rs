@@ -2,6 +2,7 @@
 //! the connection list. Allocated and freed here.
 #![allow(clippy::missing_safety_doc, clippy::too_many_arguments)]
 
+use super::mhost::slice_of as bytes;
 use crate::luxprop::entc::{self, ConnHost, EntityCb};
 use crate::luxprop::ffi::Sink;
 use crate::luxprop::ffi_b::LosRef;
@@ -197,15 +198,6 @@ fn st<'a>(s: *const EntState) -> &'a EntState {
 fn stm<'a>(s: *mut EntState) -> &'a mut EntState {
     // SAFETY: as above; no other borrow is live (callers borrow only between events).
     unsafe { &mut *s }
-}
-
-fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if p.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: caller contract: `p` holds `n` bytes.
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
 }
 
 fn with_ops<R>(sink: *const Sink, f: impl FnOnce(&mut Ops) -> R) -> R {

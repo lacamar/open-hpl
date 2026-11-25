@@ -159,7 +159,7 @@ pub fn completion_show(c: &mut Completion, previous: f32, new: f32, delay: f32) 
     }
 }
 
-fn completion_step(c: &mut Completion, dt: f32) {
+pub(super) fn completion_step(c: &mut Completion, dt: f32) {
     let dt64 = f64::from(dt);
     if c.active == 0 {
         c.alpha = (f64::from(c.alpha) - 0.5 * dt64) as f32;
@@ -192,7 +192,7 @@ fn completion_step(c: &mut Completion, dt: f32) {
     }
 }
 
-fn completion_show_inner(c: &mut Completion, previous: f32, new: f32, delay: f32) {
+pub(super) fn completion_show_inner(c: &mut Completion, previous: f32, new: f32, delay: f32) {
     if previous == new {
         return;
     }
@@ -218,14 +218,4 @@ pub fn unlock_gate(registered: bool, known: bool) -> i32 {
     } else {
         UNLOCK_OK
     }
-}
-
-#[cfg(test)]
-pub fn completion_step_for_test(c: &mut Completion, dt: f32) {
-    completion_step(c, dt);
-}
-
-#[cfg(test)]
-pub fn completion_show_for_test(c: &mut Completion, p: f32, n: f32, d: f32) {
-    completion_show_inner(c, p, n, d);
 }

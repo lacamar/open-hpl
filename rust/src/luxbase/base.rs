@@ -2,10 +2,11 @@
 //! start-game resolution, language file plan, profile paths, custom stories and small helpers.
 
 use super::cfg::Cfg;
+use super::ffi::InitHost;
 use crate::string;
 
 pub fn w(s: &str) -> Vec<u32> {
-    s.bytes().map(u32::from).collect()
+    crate::string::latin1_to_wide(s.as_bytes())
 }
 
 fn cat(parts: &[&[u32]]) -> Vec<u32> {
@@ -129,22 +130,13 @@ pub struct AppVars {
     pub start_map_pos: Vec<u8>,
 }
 
-/// The init file and the fallback init file; each is loaded on demand.
-pub trait InitEnv {
-    fn load_init(&mut self) -> bool;
-    fn init(&mut self) -> &mut dyn Cfg;
-    fn load_defaults(&mut self) -> bool;
-    fn defaults(&mut self) -> &mut dyn Cfg;
-    fn warn(&mut self, text: &[u32]);
-}
-
 fn wstr(c: &mut dyn Cfg, lvl: &[u8], key: &[u8]) -> Vec<u32> {
     c.string_w(lvl, key, &[])
 }
 
 /// The config half of `InitApp`: the variables read so far (all on success) and, on failure,
 /// `msErrorMessage`.
-pub fn init_app(e: &mut dyn InitEnv, cmd: &CmdLine) -> (AppVars, Option<Vec<u32>>) {
+pub(super) fn init_app(e: &mut InitHost, cmd: &CmdLine) -> (AppVars, Option<Vec<u32>>) {
     let mut v = AppVars::default();
     if !e.load_init() {
         return (

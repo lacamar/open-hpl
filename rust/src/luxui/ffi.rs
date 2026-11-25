@@ -3,28 +3,12 @@
 //! the next call on the same thread, so the caller copies them before running any event.
 
 use super::commentary;
-use super::event::Str;
+use crate::luxmap::mhost::slice_of;
+use crate::string_ffi::emit;
 use std::ffi::c_void;
 
 type Ctx = *mut c_void;
 type Sink = unsafe extern "C" fn(Ctx, *const u8, usize);
-
-fn bytes<'a>(s: Str) -> &'a [u8] {
-    if s.n == 0 || s.p.is_null() {
-        return &[];
-    }
-    // SAFETY: the caller passes a live `n`-byte buffer.
-    unsafe { std::slice::from_raw_parts(s.p, s.n) }
-}
-
-fn pb<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    bytes(Str { p, n })
-}
-
-fn sink(s: Sink, c: Ctx, v: &[u8]) {
-    // SAFETY: `s` accepts `c`.
-    unsafe { s(c, v.as_ptr(), v.len()) }
-}
 
 // ---- commentary icon ------------------------------------------------------------------------
 
@@ -49,12 +33,18 @@ pub unsafe extern "C" fn ohpl_ga8_comm_focus_text(
     s: Sink,
     c: Ctx,
 ) {
-    sink(s, c, &commentary::focus_text(pb(talker, tn), pb(topic, pn)));
+    unsafe {
+        emit(
+            s,
+            c,
+            &commentary::focus_text(slice_of(talker, tn), slice_of(topic, pn)),
+        )
+    };
 }
 
 /// # Safety
 /// Buffers are live; `s` accepts `c`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_ga8_comm_file(file: *const u8, n: usize, s: Sink, c: Ctx) {
-    sink(s, c, &commentary::comment_file(pb(file, n)));
+    unsafe { emit(s, c, &commentary::comment_file(slice_of(file, n))) };
 }

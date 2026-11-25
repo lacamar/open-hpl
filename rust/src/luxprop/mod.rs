@@ -39,7 +39,6 @@ mod tests_b;
 #[cfg(test)]
 mod tests_c;
 mod vars;
-mod vars2;
 mod wheel;
 
 pub use ops::{Op, Ops, Pod, Probe, op};

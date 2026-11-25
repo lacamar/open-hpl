@@ -1,8 +1,8 @@
 //! `LuxEffectHandler.cpp` effect state machines: fades, flashes, sepia, radial blur, image trail,
 //! emotion flash and screen shake. Each step edits a POD copy of the C++ members and returns ops.
 
-use super::hw::{madd, msub, mul};
 use super::ops::Ops;
+use crate::hw::{madd, msub, mul};
 use crate::math::rand_rectf;
 
 pub mod k {

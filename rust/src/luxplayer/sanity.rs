@@ -1,8 +1,8 @@
 //! `cLuxPlayerSanity`: low-sanity timer, hit zoom, enemy-seen effect, losing-sanity sounds and
 //! insanity visuals. The enemy/critter scan and sound/effect calls stay C++.
 
-use super::hw;
 use super::ops::Ops;
+use crate::hw;
 use crate::math::sin;
 
 pub mod k {

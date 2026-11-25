@@ -3,33 +3,9 @@
 
 use super::a5_small::{self as s, A5Door, OilHost, PhotoHost};
 use super::ffi::{Sink, VarsRef};
-use super::ops::{Op, Ops, Pod};
+use super::ops::{pod, rd, rw, with_ops};
 use crate::types::Vector3f;
 use std::ffi::c_void;
-
-pub(super) fn with_ops<R>(sink: &Sink, f: impl FnOnce(&mut Ops) -> R) -> R {
-    let (ctx, push) = (sink.ctx, sink.push);
-    let mut fwd = move |op: &Op| {
-        // SAFETY: the sink stays valid for the call.
-        unsafe { push(ctx, op) }
-    };
-    f(&mut Ops(&mut fwd))
-}
-
-fn rd<'a, T>(p: *const T) -> &'a T {
-    // SAFETY: caller contract.
-    unsafe { &*p }
-}
-
-fn rw<'a, T>(p: *mut T) -> &'a mut T {
-    // SAFETY: caller contract.
-    unsafe { &mut *p }
-}
-
-fn pod<T>(p: *mut T) -> Pod<T> {
-    // SAFETY: caller contract: `p` is live state.
-    unsafe { Pod::from_ptr(p) }
-}
 
 const _: () = {
     use std::mem::size_of;

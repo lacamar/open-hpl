@@ -2,9 +2,11 @@
 //! collision response, mesh basis and the spider/bug state machines. Engine queries come through
 //! `Query`; sounds, animations, the attack and the virtual shape-collision hook leave as ops.
 
+use super::base::is_zero;
+use super::ffi_b::Vars2Ref;
 use super::ops::{Op, Ops, Pod};
-use super::vars::{put_var, zero3};
-use super::vars2::Vars2;
+use super::vars::{Vars, put_var, zero3};
+use crate::math::normalized;
 use crate::math::{
     TWO_PI, dot3, fma, len3, matrix_mul, matrix_mul_vec, matrix_quaternion, matrix_rotate,
     matrix_scale, normalize3, quat_from_angle_axis, rand_rectf, to_rad, v3,
@@ -121,12 +123,6 @@ fn scaled_minus(n: Vector3f, s: f32, v: Vector3f) -> Vector3f {
     v3(fma(n.x, s, -v.x), fma(n.y, s, -v.y), fma(n.z, s, -v.z))
 }
 
-fn normalized(v: Vector3f) -> Vector3f {
-    let mut v = v;
-    normalize3(&mut v);
-    v
-}
-
 fn dist_sqr(a: Vector3f, b: Vector3f) -> f32 {
     let dx = b.x - a.x;
     let dy = b.y - a.y;
@@ -136,10 +132,6 @@ fn dist_sqr(a: Vector3f, b: Vector3f) -> f32 {
 
 fn dist(a: Vector3f, b: Vector3f) -> f32 {
     dist_sqr(a, b).sqrt()
-}
-
-fn is_zero(v: Vector3f) -> bool {
-    v.x == 0.0 && v.y == 0.0 && v.z == 0.0
 }
 
 fn rotate_y(a: f32) -> Matrixf {
@@ -162,7 +154,7 @@ pub struct CritterParams {
 }
 
 /// `iLuxPropLoader_Critter::LoadVariables`.
-pub fn load(v: &dyn Vars2, out: &mut CritterParams) {
+pub fn load(v: &Vars2Ref, out: &mut CritterParams) {
     put_var(v, SLOT_DEATH_ENTITY, "DeathEntity");
     put_var(v, SLOT_DEATH_PS, "DeathPS");
     put_var(v, SLOT_DEATH_SOUND, "DeathSound");
@@ -536,7 +528,7 @@ pub struct BugParams {
     pub scared_sound_rand: Vector2f,
 }
 
-pub fn load_bug(v: &dyn Vars2, out: &mut BugParams) {
+pub fn load_bug(v: &Vars2Ref, out: &mut BugParams) {
     out.max_speed_normal = v.float("MaxSpeedNormal", 0.0);
     out.max_speed_afraid = v.float("MaxSpeedAfraid", 0.0);
     out.max_speed = v.float("MaxSpeed", 0.0);
@@ -697,7 +689,7 @@ pub struct SpiderParams {
     pub idle_time: Vector2f,
 }
 
-pub fn load_spider(v: &dyn Vars2, out: &mut SpiderParams) {
+pub fn load_spider(v: &Vars2Ref, out: &mut SpiderParams) {
     out.max_idle_speed = v.float("MaxIdleSpeed", 0.0);
     out.max_hunt_speed = v.float("MaxHuntSpeed", 0.0);
     put_var(v, SLOT_SPIDER_HIT_SOUND, "HitSound");

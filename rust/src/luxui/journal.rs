@@ -4,6 +4,7 @@
 
 use crate::math::sin;
 use crate::string;
+use crate::string::latin1_to_wide as wide;
 
 pub const STATE_MAIN: i32 = 0;
 pub const STATE_NOTES: i32 = 1;
@@ -271,10 +272,6 @@ pub struct Page {
 #[derive(Default)]
 pub struct Pages {
     pub pages: Vec<Page>,
-}
-
-fn wide(s: &[u8]) -> Vec<u32> {
-    s.iter().map(|&c| u32::from(c)).collect()
 }
 
 fn is_voice_prefix(row: &[u32]) -> bool {

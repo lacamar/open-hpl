@@ -3,7 +3,7 @@
 //! player state) behind the op sink and the host tables; everything else lives in [`PropRs`].
 #![allow(clippy::missing_safety_doc)]
 
-use super::a5_ffi::{OilHostC, PhotoHostC, with_ops};
+use super::a5_ffi::{OilHostC, PhotoHostC};
 use super::a5_small::{self as s, A5Button, A5Oil, A5Photocell};
 use super::ffi::{Host, Sink, VarsRef};
 use super::lever::{self, LeverParams, LeverState};
@@ -11,6 +11,7 @@ use super::multislider::{self, MultiParams, MultiState};
 use super::object::MoveData;
 use super::opc as op_c;
 use super::ops::Pod;
+use super::ops::with_ops;
 use super::propsc;
 use super::vars::Vars;
 use super::wheel::{self, WheelParams, WheelState};

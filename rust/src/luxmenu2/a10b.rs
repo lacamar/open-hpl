@@ -50,10 +50,6 @@ pub const MSG_MOUSE_LEAVE: i64 = 9;
 
 pub const UI_PRIMARY: i32 = 1;
 
-pub fn wide(s: &[u8]) -> Vec<u32> {
-    s.iter().map(|b| u32::from(*b)).collect()
-}
-
 pub fn v3(a: [f32; 2], z: f32) -> [f32; 3] {
     [a[0], a[1], z]
 }

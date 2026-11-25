@@ -2,7 +2,6 @@
 
 use super::a10b::{
     MSG_BUTTON_PRESSED, MSG_SLIDER_MOVE, MSG_UI_ARROW, MSG_UI_BUTTON, Store, UI_PRIMARY, WHITE,
-    wide,
 };
 use super::host::{
     ALIGN_LEFT, Arg, Eng, FLAG_DEBUG_WINDOW, FLAG_FIRST_START, FLAG_FULLSCREEN, FLAG_MAP_LOADED,
@@ -11,6 +10,7 @@ use super::host::{
 use super::premenu::{
     self, ACT_CHECK_SHOW, ACT_FINAL, ACT_SECTION, ACT_SET_TIMER, Pre, S_FADE_OUT,
 };
+use crate::string::latin1_to_wide as wide;
 use crate::string::{float_to_string, utf8_to_wide};
 
 pub const TAG_CONTINUE: i64 = 1;

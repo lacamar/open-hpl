@@ -1,6 +1,7 @@
 //! LuxHelpFuncs: `$command` string parsing and text duration.
 
 use crate::math;
+use crate::string::latin1_to_wide as wide;
 
 pub(crate) const OP_CHAR: u32 = 0;
 pub(crate) const OP_COMMAND: u32 = 1;
@@ -12,10 +13,6 @@ pub(crate) const CMD_BAD: u32 = 3;
 fn is_letter(c: u32) -> bool {
     (u32::from(b'a')..=u32::from(b'z')).contains(&c)
         || (u32::from(b'A')..=u32::from(b'Z')).contains(&c)
-}
-
-fn wide(s: &[u8]) -> Vec<u32> {
-    s.iter().map(|&c| u32::from(c)).collect()
 }
 
 fn command_class(cmd: &[u32]) -> u32 {

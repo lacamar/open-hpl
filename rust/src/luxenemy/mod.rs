@@ -36,6 +36,7 @@ mod waterlurker;
 pub use host::{AnimReq, Cmd, Host};
 
 use crate::math::{Matrixf, Vector2f, Vector3f, fma, v3};
+pub(crate) use crate::math::{cmath_min as cmin, dist3, normalized};
 
 unsafe extern "C" {
     fn ohpl_math_get_angle_distance(a: f32, b: f32, max: f32) -> f32;
@@ -74,24 +75,10 @@ pub(crate) fn rot_y(a: f32) -> Matrixf {
     m
 }
 
-/// `cMath::Min`.
-pub(crate) fn cmin(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
-}
-
 /// `cMath::Vector3DistSqr` as gcc contracts the inline.
 pub(crate) fn dist_sqr(a: Vector3f, b: Vector3f) -> f32 {
     let (dx, dy, dz) = (b.x - a.x, b.y - a.y, b.z - a.z);
     fma(dz, dz, fma(dx, dx, dy * dy))
-}
-
-pub(crate) fn dist3(a: Vector3f, b: Vector3f) -> f32 {
-    dist_sqr(a, b).sqrt()
-}
-
-pub(crate) fn normalized(mut v: Vector3f) -> Vector3f {
-    crate::math::normalize3(&mut v);
-    v
 }
 
 pub(crate) fn sqr_len(v: Vector3f) -> f32 {

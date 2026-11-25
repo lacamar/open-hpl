@@ -86,6 +86,28 @@ impl<T> Clone for Pod<T> {
 
 impl<T> Copy for Pod<T> {}
 
+pub(crate) fn sl<'a, T>(p: *const T, n: i32) -> &'a [T] {
+    crate::luxmap::mhost::slice_of(p, usize::try_from(n).unwrap_or(0))
+}
+
+pub(crate) fn rd<'a, T>(p: *const T) -> &'a T {
+    unsafe { &*p }
+}
+
+pub(crate) fn rw<'a, T>(p: *mut T) -> &'a mut T {
+    unsafe { &mut *p }
+}
+
+pub(crate) fn pod<T>(p: *mut T) -> Pod<T> {
+    unsafe { Pod::from_ptr(p) }
+}
+
+pub(crate) fn with_ops<R>(sink: &super::ffi::Sink, f: impl FnOnce(&mut Ops) -> R) -> R {
+    let (ctx, push) = (sink.ctx, sink.push);
+    let mut fwd = move |op: &Op| unsafe { push(ctx, op) };
+    f(&mut Ops(&mut fwd))
+}
+
 impl<T> Pod<T> {
     pub fn new(r: &mut T) -> Self {
         Self(std::ptr::NonNull::from(r))

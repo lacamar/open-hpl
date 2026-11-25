@@ -4,6 +4,7 @@
 //! state is held across [`call`].
 
 use super::event::Str;
+use crate::luxmap::mhost::slice_of;
 use std::cell::Cell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -70,14 +71,6 @@ impl Default for A {
     fn default() -> A {
         A::new()
     }
-}
-
-fn slice_of<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if p.is_null() || n == 0 {
-        return &[];
-    }
-    // SAFETY: the host returns a live `n`-unit buffer valid until the next op.
-    unsafe { std::slice::from_raw_parts(p, n) }
 }
 
 pub type OpFn = unsafe extern "C" fn(i32, *mut A);

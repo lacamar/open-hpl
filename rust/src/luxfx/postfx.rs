@@ -1,7 +1,7 @@
 //! `cLuxPostEffect_Insanity`: wave animation clock and the draw plan of `RenderEffect`.
 //! Textures and programs are slot indices; `NONE` is null.
 
-use super::hw::madd;
+use crate::hw::madd;
 
 pub const NONE: i32 = -1;
 pub const TEX_INPUT: i32 = 0;

@@ -1,20 +1,7 @@
 //! The head section of `UpdateGamePlayerInput`: mouse look, smoothing and gamepad look.
 
 use super::input::{Smooth, act};
-
-/// Gamepad and player queries and effects of the look update, in the order the C++ makes them.
-pub trait LookEnv {
-    fn is_triggered(&mut self, action: i32) -> bool;
-    fn add_lean(&mut self, v: f32);
-    fn set_lean(&mut self, v: f32);
-    fn scroll(&mut self, v: f32);
-    fn stop_movement(&mut self);
-    fn button_down(&mut self, button: i32) -> bool;
-    fn axis(&mut self, axis: i32) -> f32;
-    fn dead_zone(&mut self) -> f32;
-    fn frame_time(&mut self) -> f32;
-    fn step_size(&mut self) -> f32;
-}
+use super::input_h::Look;
 
 pub const DPAD_UP: i32 = 11;
 pub const DPAD_DOWN: i32 = 12;
@@ -45,7 +32,7 @@ fn sign(v: f32) -> f32 {
 }
 
 /// Yaw and pitch input (before the C++ negates them for `AddYaw` and `AddPitch`).
-pub fn look(smooth: &mut Smooth, i: &LookIn, e: &mut dyn LookEnv) -> [f32; 2] {
+pub(super) fn look(smooth: &mut Smooth, i: &LookIn, e: &mut Look<'_>) -> [f32; 2] {
     let rel = [
         (i.mouse_rel[0] as f32) * i.mouse_sensitivity,
         (i.mouse_rel[1] as f32) * i.mouse_sensitivity,
@@ -73,7 +60,7 @@ pub fn look(smooth: &mut Smooth, i: &LookIn, e: &mut dyn LookEnv) -> [f32; 2] {
     fin
 }
 
-fn gamepad(i: &LookIn, e: &mut dyn LookEnv, fin: &mut [f32; 2]) {
+fn gamepad(i: &LookIn, e: &mut Look<'_>, fin: &mut [f32; 2]) {
     if e.button_down(DPAD_UP) || e.button_down(DPAD_DOWN) {
         if e.is_triggered(act::ZOOM_OUT) {
             let t = e.frame_time();

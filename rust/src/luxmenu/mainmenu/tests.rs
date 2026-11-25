@@ -168,7 +168,7 @@ fn reset() {
 fn menu() -> Rc<Menu> {
     reset();
     let bits = new();
-    let me = lookup_for_test(bits).expect("menu");
+    let me = lookup(bits).expect("menu");
     me.load_fonts();
     me.create_gui();
     me
@@ -429,7 +429,7 @@ fn back_to_game_and_to_menu_with_a_map() {
         m.map_loaded = true;
         m.flags.insert(flag::NO_USER_CONFIG, false);
     });
-    let me = lookup_for_test(new()).expect("menu");
+    let me = lookup(new()).expect("menu");
     me.load_fonts();
     me.create_gui();
     let l = labels(&me);
@@ -454,7 +454,7 @@ fn back_to_game_and_to_menu_with_a_map() {
     assert!(c.contains(&(code::INPUT_STATE, input::GAME)));
     assert!(c.contains(&(code::UPDATER, updater::DEFAULT)));
 
-    let me = lookup_for_test(new()).expect("menu");
+    let me = lookup(new()).expect("menu");
     me.load_fonts();
     me.create_gui();
     let l = labels(&me);
@@ -483,7 +483,7 @@ fn hard_mode_save_pays_and_disables_the_label() {
         m.flags.insert(flag::HARD, true);
         m.flags.insert(flag::NO_USER_CONFIG, false);
     });
-    let me = lookup_for_test(new()).expect("menu");
+    let me = lookup(new()).expect("menu");
     me.load_fonts();
     me.create_gui();
     let l = labels(&me);
@@ -511,7 +511,7 @@ fn blur_render_runs_seven_passes_and_frees_its_temporaries() {
         m.map_loaded = true;
         m.flags.insert(flag::NO_USER_CONFIG, false);
     });
-    let me = lookup_for_test(new()).expect("menu");
+    let me = lookup(new()).expect("menu");
     clear_calls();
     me.enter();
     assert_eq!(count(code::PROG_BIND), 28);

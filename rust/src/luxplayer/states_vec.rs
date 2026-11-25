@@ -1,6 +1,7 @@
 //! Vector helpers in gcc's contraction order and `cPidController<cVector3f>`.
 
-use super::hw;
+use crate::hw;
+pub use crate::math::dist3;
 use crate::math::{fma, v3};
 use crate::types::{Matrixf, Vector3f};
 
@@ -130,12 +131,6 @@ pub fn max_length(v: Vector3f, max: f32) -> Vector3f {
     out
 }
 
-/// `cMath::Vector3Dist`.
-pub fn dist3(a: Vector3f, b: Vector3f) -> f32 {
-    let (dx, dy, dz) = (b.x - a.x, b.y - a.y, b.z - a.z);
-    fma(dz, dz, fma(dx, dx, dy * dy)).sqrt()
-}
-
 /// `c + a * s` per lane, fused.
 pub fn madd(a: Vector3f, s: f32, c: Vector3f) -> Vector3f {
     v3(fmad(a.x, s, c.x), fmad(a.y, s, c.y), fmad(a.z, s, c.z))
@@ -159,9 +154,9 @@ pub fn normalize(v: &mut Vector3f) -> f32 {
 /// `a - v * d` per lane, fused with `d` as the negated first multiplicand (`fmls`).
 pub fn msub3(d: f32, v: Vector3f, a: Vector3f) -> Vector3f {
     v3(
-        super::hw::msub(d, v.x, a.x),
-        super::hw::msub(d, v.y, a.y),
-        super::hw::msub(d, v.z, a.z),
+        crate::hw::msub(d, v.x, a.x),
+        crate::hw::msub(d, v.y, a.y),
+        crate::hw::msub(d, v.z, a.z),
     )
 }
 

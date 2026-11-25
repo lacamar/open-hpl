@@ -1,7 +1,7 @@
 //! `cLuxPlayer` camera fades, head offsets, head spin, terror, focus text and average speed.
 
-use super::hw;
 use super::ops::Ops;
+use crate::hw;
 use crate::math::{len3, v3};
 use crate::types::{Vector2f, Vector3f};
 

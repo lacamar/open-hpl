@@ -7,6 +7,8 @@ use super::fxobj::{Ctx, Handler, State, VoiceData};
 use super::host::host;
 use super::postfx::Clock;
 use super::rend::{self, Rend};
+use crate::luxmap::mhost::slice_of as units;
+use crate::luxmap::mhost::slice_of as bytes;
 use crate::obj::{Arena, Handle};
 use std::cell::RefCell;
 use std::ffi::c_void;
@@ -25,22 +27,6 @@ const _: () = {
     assert!(size_of::<VoiceIn>() == 224);
     assert!(size_of::<VoiceSave>() == 224);
 };
-
-fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if p.is_null() || n == 0 {
-        return &[];
-    }
-    // SAFETY: the caller passes `n` readable bytes.
-    unsafe { std::slice::from_raw_parts(p, n) }
-}
-
-fn units<'a>(p: *const u32, n: usize) -> &'a [u32] {
-    if p.is_null() || n == 0 {
-        return &[];
-    }
-    // SAFETY: the caller passes `n` readable units.
-    unsafe { std::slice::from_raw_parts(p, n) }
-}
 
 pub(super) fn fx<R>(bits: u64, none: R, f: impl FnOnce(&Ctx) -> R) -> R {
     let (Some(h), Some(host)) = (Handle::from_bits(bits), host()) else {

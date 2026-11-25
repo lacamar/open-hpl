@@ -2,7 +2,8 @@
 //! ground and top rays and the head-turn limits.
 
 use super::states_vec::madd;
-use crate::math::{div3, fma, to_rad, v3, wrap};
+use crate::math::angle_distance;
+use crate::math::{div3, fma, to_rad, v3};
 use crate::types::{Vector2f, Vector3f};
 
 const TWO_PI: f32 = std::f32::consts::TAU;
@@ -10,20 +11,6 @@ const TWO_PI: f32 = std::f32::consts::TAU;
 pub const SOUND_NONE: i32 = 0;
 pub const SOUND_UP: i32 = 1;
 pub const SOUND_DOWN: i32 = 2;
-
-fn angle_distance(a1: f32, a2: f32, max_angle: f32) -> f32 {
-    let a1 = wrap(a1, 0.0, max_angle);
-    let a2 = wrap(a2, 0.0, max_angle);
-    if a1 == a2 {
-        return 0.0;
-    }
-    let d1 = a2 - a1;
-    let mut d2 = max_angle - d1.abs();
-    if d1 > 0.0 {
-        d2 = -d2;
-    }
-    if d1.abs() < d2.abs() { d1 } else { d2 }
-}
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

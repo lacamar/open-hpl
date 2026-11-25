@@ -31,8 +31,6 @@ fn completion() {
     assert_eq!((p, n, cur), (0.3, 0.5, 5));
     let mut cur = 3;
     assert_eq!(completion_add(&mut cur, 0, 2), (0.0, 0.0));
-    assert_eq!(completion_value(COMPLETE_CHEST, &[1, 2, 3, 4, 5]), 4);
-    assert_eq!(completion_value(COMPLETE_NONE, &[1, 2, 3, 4, 5]), 0);
 }
 
 #[test]

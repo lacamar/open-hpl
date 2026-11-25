@@ -260,15 +260,7 @@ impl Profile {
             .map(|f| {
                 let mut path = base.clone();
                 path.extend_from_slice(f);
-                let d = host::file_date(host::DateKind::Created, &path);
-                Date {
-                    seconds: d.seconds,
-                    minutes: d.minutes,
-                    hours: d.hours,
-                    month_day: d.month_day,
-                    month: d.month,
-                    year: d.year,
-                }
+                host::file_date(host::DateKind::Created, &path)
             })
             .collect();
         let order = if folders.is_empty() {

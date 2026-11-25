@@ -5,6 +5,7 @@
 use super::host12::{CHost, Host};
 use super::insanity_h::InsanityHandler;
 use super::music_h::{GameMusic, MusicHandler};
+use crate::luxmap::mhost::slice_of as bytes;
 use crate::obj::{Arena, Handle};
 use std::cell::RefCell;
 use std::ffi::c_void;
@@ -16,14 +17,6 @@ type StrSink = unsafe extern "C" fn(*mut c_void, *const u8, usize);
 thread_local! {
     static MUSIC: Slots<MusicHandler> = RefCell::new(Arena::default());
     static INSANITY: Slots<InsanityHandler> = RefCell::new(Arena::default());
-}
-
-fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if p.is_null() || n == 0 {
-        return &[];
-    }
-    // SAFETY: the caller passes `n` readable bytes.
-    unsafe { std::slice::from_raw_parts(p, n) }
 }
 
 fn put<T>(arena: &'static LocalKey<Slots<T>>, v: T) -> u64 {

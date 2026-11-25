@@ -372,18 +372,18 @@ fn axis_names() {
 
 #[test]
 fn tables_are_consistent() {
-    for a in &input::ACTIONS {
-        assert_eq!(input::action_by_id(a.id), Some(a));
-        assert_eq!(input::action_by_name(a.name.as_bytes()), Some(a));
+    for (i, a) in input::ACTIONS.iter().enumerate() {
+        assert_eq!(super::ffi::ohpl_ga9_action_by_id(a.id), i as i32);
+        let name = a.name.as_bytes();
+        assert_eq!(
+            unsafe { super::ffi::ohpl_ga9_action_by_name(name.as_ptr(), name.len()) },
+            i as i32
+        );
     }
-    assert_eq!(
-        input::actions_by_category(input::CAT_LAST).len(),
-        input::ACTIONS.len()
-    );
     assert!(
         input::INPUTS
             .iter()
-            .all(|x| input::action_by_id(x.action).is_some())
+            .all(|x| super::ffi::ohpl_ga9_action_by_id(x.action) >= 0)
     );
     assert_eq!(input::default_inputs(input::act::FORWARD).len(), 2);
 }

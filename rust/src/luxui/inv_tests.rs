@@ -6,6 +6,7 @@ use super::invgui as gui;
 use super::invhost::{self as host, A, WStr, game, op, set, wd};
 use super::invobj::{self as obj, bits};
 use super::itemtype;
+use crate::string::latin1_to_wide as widen;
 use std::cell::RefCell;
 use std::sync::Mutex;
 
@@ -54,10 +55,6 @@ fn wide_of(w: WStr) -> Vec<u32> {
     }
     // SAFETY: the caller's argument block points at live buffers.
     unsafe { std::slice::from_raw_parts(w.p, w.n).to_vec() }
-}
-
-fn widen(s: &[u8]) -> Vec<u32> {
-    s.iter().map(|&b| u32::from(b)).collect()
 }
 
 unsafe extern "C" fn mock(o: i32, a: *mut A) {

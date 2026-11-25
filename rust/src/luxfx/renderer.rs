@@ -2,7 +2,7 @@
 //! enemy glow and outline passes. Objects, programs, textures and frame buffers are indices into
 //! arrays the C++ shim owns; the shim replays the plan.
 
-use super::hw::{madd, msub};
+use crate::hw::{madd, msub};
 use crate::math::{expand_aabb, matrix_mul, matrix_scale, matrix_translate};
 use crate::types::{Matrixf, Vector3f};
 

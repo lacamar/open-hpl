@@ -1,7 +1,7 @@
 //! `cLuxMainMenu_LoadGame`.
 
 use super::host::{self, Arrow, Kind, Opts, W, WStr, lux_op, lux_path, msg, set_op, tr, ws};
-use super::{Base, UI_PRIMARY, UI_SECONDARY, WIN_NONE, go, popup_ok, ui_switch};
+use super::{Base, UI_PRIMARY, UI_SECONDARY, go, popup_ok, ui_switch};
 use crate::luxmenu2::pages;
 use std::cell::{Cell, RefCell};
 
@@ -102,13 +102,6 @@ impl Load {
         for button in [ok, cancel] {
             button.nav(Arrow::Up, list);
         }
-    }
-
-    pub fn exit_pressed(&self) {
-        if self.base.popup_active() {
-            return;
-        }
-        go(WIN_NONE);
     }
 
     pub fn set_active(&self, on: bool) {

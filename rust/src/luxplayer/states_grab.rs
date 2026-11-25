@@ -1,14 +1,14 @@
 //! `cLuxPlayerState_InteractGrab`, `_InteractPush` and `_InteractSlide` math: grab distance,
 //! slow-down, goal matrix, force and torque, push direction, limits and forces, slide speed.
 
-use super::hw;
 use super::states_vec::{
     Pid3, cross, dist3, dot, fmad, hmul3, madd, mat_vec, max_length, msub3, nmul, normalize,
 };
+use crate::hw;
 use crate::math::{
-    acos, cos, div3, fma, len3, matrix_inverse, matrix_mul, matrix_rotate, matrix_translate, sin,
-    sub3, v3,
+    acos, div3, fma, len3, matrix_inverse, matrix_mul, matrix_rotate, matrix_translate, sub3, v3,
 };
+use crate::math::{rotate_x, rotate_y, translation};
 use crate::types::{Matrixf, Vector2f, Vector3f};
 
 fn angle(a: Vector3f, b: Vector3f) -> f32 {
@@ -33,35 +33,6 @@ pub(super) fn rotation(m: &Matrixf) -> Matrixf {
 pub(super) fn row3(m: &Matrixf, i: usize) -> Vector3f {
     let g = |j: usize| m.m.get(i).and_then(|x| x.get(j)).copied().unwrap_or(0.0);
     v3(g(0), g(1), g(2))
-}
-
-pub(super) fn translation(m: &Matrixf) -> Vector3f {
-    let g = |i: usize| m.m.get(i).and_then(|x| x.get(3)).copied().unwrap_or(0.0);
-    v3(g(0), g(1), g(2))
-}
-
-pub(super) fn rotate_x(a: f32) -> Matrixf {
-    let (s, c) = (sin(a), cos(a));
-    Matrixf {
-        m: [
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, c, -s, 0.0],
-            [0.0, s, c, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ],
-    }
-}
-
-pub(super) fn rotate_y(a: f32) -> Matrixf {
-    let (s, c) = (sin(a), cos(a));
-    Matrixf {
-        m: [
-            [c, 0.0, s, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [-s, 0.0, c, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ],
-    }
 }
 
 const XYZ: i32 = 0;
