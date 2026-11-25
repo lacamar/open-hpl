@@ -11,6 +11,7 @@ use super::h12b_ent;
 use super::lensflare::{self, VisState};
 use super::light::{self, FlickerCfg, LightAnim, LightLive};
 use super::rope::RopeParams;
+use crate::ffi::slice_mut;
 use crate::types::{Color, Matrixf, Vector2f, Vector2l, Vector3f};
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -35,13 +36,6 @@ const _: () = {
 
 static HPL3_VISIBILITY: AtomicBool = AtomicBool::new(false);
 static SPOT_SHADOW_NEAR: AtomicU32 = AtomicU32::new(0);
-
-unsafe fn slice_mut<'a, T>(p: *mut T, n: i32) -> &'a mut [T] {
-    match usize::try_from(n) {
-        Ok(n) if n > 0 && !p.is_null() => unsafe { std::slice::from_raw_parts_mut(p, n) },
-        _ => &mut [],
-    }
-}
 
 fn boxed<T>(v: T) -> *mut T {
     Box::into_raw(Box::new(v))
@@ -1516,9 +1510,9 @@ pub(crate) unsafe fn ohpl_sl_flare_multi_iris(
             &*e,
             &*v,
             vis,
-            slice_mut(pos, q.saturating_mul(16)),
-            slice_mut(col, q.saturating_mul(16)),
-            slice_mut(uv, q.saturating_mul(12)),
+            slice_mut(pos, usize::try_from(q.saturating_mul(16)).unwrap_or(0)),
+            slice_mut(col, usize::try_from(q.saturating_mul(16)).unwrap_or(0)),
+            slice_mut(uv, usize::try_from(q.saturating_mul(12)).unwrap_or(0)),
         )
     };
     i32::try_from(n).unwrap_or(i32::MAX)

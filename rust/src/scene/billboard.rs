@@ -1,8 +1,8 @@
 //! `cBillboard` kernels: the per-frustum model matrix and the vertex colour/position rewrites.
 //! Float expressions follow the gcc build (`fma` marks a contracted `a*b + c`).
 
-use super::particles::{rotation_part, translation};
-use crate::math::{cross3, fma, matrix_mul_vec, normalize3, v3};
+use super::particles::rotation_part;
+use crate::math::{cross3, fma, matrix_mul_vec, normalize3, translation, v3};
 use crate::types::{Color, Matrixf, Vector2f, Vector3f};
 
 pub const POINT: i32 = 0;

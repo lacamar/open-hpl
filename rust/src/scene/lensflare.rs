@@ -3,9 +3,9 @@
 //! in C++ and cross as plain values.
 
 use crate::math::{
-    IDENTITY, Matrixf, PI, TWO_PI, Vector2f, Vector2l, Vector3f, atan2, clamp, cos, cross3, dot3,
-    fma, len3, matrix_mul, matrix_mul_divide_w, matrix_mul_vec, matrix_scale, rotate_z, sin, sub3,
-    v3,
+    IDENTITY, Matrixf, PI, TWO_PI, Vector2f, Vector2l, Vector3f, atan2, clamp, cmath_max,
+    cmath_min, cos, cross3, dot3, fma, len3, matrix_mul, matrix_mul_divide_w, matrix_mul_vec,
+    matrix_scale, rotate_z, sin, sub3, v3,
 };
 use crate::types::Color;
 
@@ -87,14 +87,6 @@ pub struct VisState {
     pub frame: i32,
 }
 
-fn max(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
-
-fn min(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
-}
-
 fn col_mul(c: Color, s: f32) -> Color {
     Color {
         r: c.r * s,
@@ -130,13 +122,13 @@ pub fn update_fade(fade: f32, rate: f32, dt: f32) -> f32 {
 }
 
 pub fn outer_cos(angle: f32, inner_cos: f32) -> f32 {
-    min(cos(angle * 0.5), inner_cos)
+    cmath_min(cos(angle * 0.5), inner_cos)
 }
 
 /// Returns `(inner_cos, outer_cos)`.
 pub fn set_inner_fov(angle: f32, outer_cos: f32) -> (f32, f32) {
     let inner = cos(angle * 0.5);
-    (inner, min(outer_cos, inner))
+    (inner, cmath_min(outer_cos, inner))
 }
 
 pub fn clamp01(x: f32) -> f32 {
@@ -155,7 +147,7 @@ pub fn update_visibility(s: &mut VisState, dt: f32, frame: i32) {
             s.vis = 0.0;
             s.vel = 0.0;
         }
-        let t = min(1.0, dt * 15.0);
+        let t = cmath_min(1.0, dt * 15.0);
         let diff = s.target - s.vis;
         if s.vel * diff <= 0.0 {
             s.vel = 0.0;
@@ -170,7 +162,7 @@ pub fn bv_radius(active: &[bool; 3], size: &[Vector2f; 3]) -> f32 {
     let mut r = 0.125f32;
     for (on, s) in active.iter().zip(size) {
         if *on {
-            r = max(r, len2(*s));
+            r = cmath_max(r, len2(*s));
         }
     }
     r
@@ -190,7 +182,7 @@ fn first_active(f: &FlareIn) -> Kind {
 }
 
 fn scale_from_distance(f: &FlareIn, d: f32) -> f32 {
-    max(0.0, 1.5 * fma(1.0 - f.size_by_dist, d - 1.0, 1.5))
+    cmath_max(0.0, 1.5 * fma(1.0 - f.size_by_dist, d - 1.0, 1.5))
 }
 
 fn dir_to_camera(e: &EntIn, v: &ViewIn) -> Vector3f {
@@ -211,7 +203,7 @@ fn fov_factor(f: &FlareIn, e: &EntIn, v: &ViewIn) -> f32 {
 }
 
 fn screen_edge(ndc: Vector3f) -> f32 {
-    min(1.0 - ndc.x.abs(), 1.0 - ndc.y.abs())
+    cmath_min(1.0 - ndc.x.abs(), 1.0 - ndc.y.abs())
 }
 
 fn to_ndc(e: &EntIn, v: &ViewIn) -> (Vector3f, Vector3f) {
@@ -246,7 +238,7 @@ pub fn color_and_brightness(f: &FlareIn, e: &EntIn, v: &ViewIn, kind: Kind, vis:
             1.0,
         );
     }
-    let mut value = max(fov, 0.0);
+    let mut value = cmath_max(fov, 0.0);
     if kind == Kind::Anamorphic {
         value *= value;
     }
@@ -263,7 +255,7 @@ pub fn glare(f: &FlareIn, e: &EntIn, v: &ViewIn, scale: f32) -> (Color, Vector3f
     let to_cam = dir_to_camera(e, v);
     let axis = e.axis;
     let c = -dot3(to_cam, axis);
-    let mut g = (max(c, f.glare_cos) - f.glare_cos) / (1.0 - f.glare_cos + 1e-4);
+    let mut g = (cmath_max(c, f.glare_cos) - f.glare_cos) / (1.0 - f.glare_cos + 1e-4);
     let forward = v3(v.view.m[2][0], v.view.m[2][1], v.view.m[2][2]);
     let dv = dot3(to_cam, forward);
     if dv > 0.9125 {
@@ -375,10 +367,10 @@ pub fn type_color(f: &FlareIn, e: &EntIn, v: &ViewIn, kind: Kind, vis: f32) -> O
 /// Occlusion-queried visibility target from the sample counts and the clipped screen rectangle.
 pub fn occlusion_target(vis: f32, total: f32, mut vmin: Vector3f, mut vmax: Vector3f) -> f32 {
     let raw_area = (vmax.x - vmin.x) * (vmax.y - vmin.y);
-    vmin.x = max(vmin.x, -1.0);
-    vmin.y = max(vmin.y, -1.0);
-    vmax.x = min(vmax.x, 1.0);
-    vmax.y = min(vmax.y, 1.0);
+    vmin.x = cmath_max(vmin.x, -1.0);
+    vmin.y = cmath_max(vmin.y, -1.0);
+    vmax.x = cmath_min(vmax.x, 1.0);
+    vmax.y = cmath_min(vmax.y, 1.0);
     let clamp_area = (vmax.x - vmin.x) * (vmax.y - vmin.y);
     if raw_area > 0.0 {
         clamp(

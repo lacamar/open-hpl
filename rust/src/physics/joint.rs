@@ -2,7 +2,7 @@
 
 use super::book;
 use super::host::{H, Host, Str};
-use crate::math::{fma, len3, matrix_mul_3x3, matrix_mul_vec, sub3, v3};
+use crate::math::{cmath_max, fma, len3, matrix_mul_3x3, matrix_mul_vec, sub3, v3};
 use crate::types::{Matrixf, Vector3f};
 
 const ZERO: Vector3f = v3(0.0, 0.0, 0.0);
@@ -70,10 +70,6 @@ pub fn calc_sound_freq(p: &MoveParams, speed: f32) -> (f32, f32) {
             fma(p.middle_volume, 1.0 - t, t * p.min_volume),
         )
     }
-}
-
-fn max(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
 }
 
 /// `OnPhysicsUpdate` after the pending position reset; false when the joint is frozen.
@@ -162,7 +158,7 @@ fn step<Ho: Host>(h: &Ho, p: &MoveParams, s: &mut JointState) -> bool {
     }
 
     if s.sound != 0 {
-        let fmin = max(p.min_speed - 0.2, 0.1);
+        let fmin = cmath_max(p.min_speed - 0.2, 0.1);
         if speed <= fmin {
             h.ent_fade_out(s.sound, 4.3);
             s.sound = 0;

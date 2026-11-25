@@ -9,7 +9,7 @@ use std::hint::black_box;
 
 // Opaque operands keep LLVM from folding constant entries, which changes the NaN payload an fma
 // propagates.
-fn matrix_mul(a: &Matrixf, b: &Matrixf) -> Matrixf {
+pub(super) fn matrix_mul(a: &Matrixf, b: &Matrixf) -> Matrixf {
     mul_raw(black_box(a), black_box(b))
 }
 

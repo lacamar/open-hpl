@@ -15,6 +15,7 @@ use super::matrix::{IDENTITY, matrix_mul, matrix_mul_vec};
 use super::{
     Matrixf, Planef, Vector2f, Vector3f, cross3, dot3, fma, len3, mul3, plane_dist, sub3, tan, v3,
 };
+use crate::math::{add3, translation};
 
 pub(crate) struct Pending {
     ptr: *const f32,
@@ -73,14 +74,6 @@ impl Clone for Bv {
 }
 
 const ZERO: Vector3f = v3(0.0, 0.0, 0.0);
-
-fn translation(m: &Matrixf) -> Vector3f {
-    v3(m.m[0][3], m.m[1][3], m.m[2][3])
-}
-
-fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x + b.x, a.y + b.y, a.z + b.z)
-}
 
 fn corners(min: Vector3f, max: Vector3f) -> [Vector3f; 8] {
     [

@@ -2,6 +2,7 @@
 //! argument points to N readable floats.
 
 use super::h4_plan::{self as plan, Cand, FinishStep};
+use crate::ffi::slice;
 use crate::types::{Matrixf, Vector3f};
 
 #[repr(C)]
@@ -56,17 +57,6 @@ unsafe fn v3(a: *const [f32; 3]) -> Vector3f {
 
 fn arr(v: Vector3f) -> [f32; 3] {
     [v.x, v.y, v.z]
-}
-
-/// # Safety
-/// `p` points to `n` readable `T`, or `n` is 0.
-unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if p.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: caller contract.
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
 }
 
 /// # Safety

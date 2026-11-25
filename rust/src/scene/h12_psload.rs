@@ -104,7 +104,7 @@ impl Attrs {
     }
 }
 
-fn splat3(v: f32) -> Vector3f {
+pub(super) fn splat3(v: f32) -> Vector3f {
     Vector3f { x: v, y: v, z: v }
 }
 

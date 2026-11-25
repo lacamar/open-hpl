@@ -4,7 +4,7 @@
 //! reach the array while one of its methods is running.
 
 use super::host::*;
-use super::sort::std_sort;
+use crate::graphics::stdsort;
 use std::alloc::{Layout, alloc, dealloc};
 use std::cell::Cell;
 use std::cmp::Ordering as Ord_;
@@ -797,7 +797,7 @@ impl Array {
         self.with_cmp_ctx(true, |c| {
             let b = self.buf.get();
             let mut v: Vec<usize> = (start..end).map(|i| self.rd(b, i)).collect();
-            std_sort(&mut v, |a, b| {
+            stdsort::sort(&mut v, |&a, &b| {
                 let (a, b) = if asc { (a, b) } else { (b, a) };
                 if a == 0 {
                     return true;

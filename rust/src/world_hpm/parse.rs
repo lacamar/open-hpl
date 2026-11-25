@@ -3,14 +3,15 @@
 
 use super::abi::{self, Cstr};
 use super::el::El;
+use crate::somascript::cfmt::fmt_f;
 use crate::string;
 use crate::types::{Color, Vector2f, Vector3f};
+use crate::xml::AttrRead;
 use crate::xml::Doc;
 use std::collections::BTreeMap;
 use std::ffi::{CString, c_char, c_int};
 
 unsafe extern "C" {
-    fn snprintf(buf: *mut c_char, n: usize, fmt: *const c_char, ...) -> c_int;
     fn strtoul(s: *const c_char, end: *mut *mut c_char, base: c_int) -> std::ffi::c_ulong;
 }
 
@@ -115,20 +116,7 @@ fn num(x: i32) -> Vec<u8> {
 }
 
 fn vec3_to_string(v: Vector3f) -> Vec<u8> {
-    let mut buf = [0u8; 512];
-    // SAFETY: the buffer holds 512 bytes and the format takes three doubles.
-    let n = unsafe {
-        snprintf(
-            buf.as_mut_ptr().cast(),
-            buf.len(),
-            c"%f : %f : %f".as_ptr(),
-            f64::from(v.x),
-            f64::from(v.y),
-            f64::from(v.z),
-        )
-    };
-    let len = usize::try_from(n).unwrap_or(0).min(buf.len() - 1);
-    buf.get(..len).unwrap_or_default().to_vec()
+    [fmt_f(v.x, 512), fmt_f(v.y, 512), fmt_f(v.z, 512)].join(&b" : "[..])
 }
 
 fn strtoul_u32(s: &[u8]) -> u32 {
@@ -289,7 +277,7 @@ impl<B: Builder> Parser<'_, B> {
         for file in &index.children {
             let id = file.int(b"Id", 0);
             if let Some(slot) = usize::try_from(id).ok().and_then(|i| out.get_mut(i)) {
-                *slot = file.string(b"Path");
+                *slot = file.string(b"Path", b"");
             }
         }
         out
@@ -331,27 +319,27 @@ impl<B: Builder> Parser<'_, B> {
 
         if let Some(f) = global.first(b"Fog") {
             self.b.global_fog(&abi::Fog {
-                active: f.boolean(b"Active", false),
+                active: f.bool(b"Active", false),
                 color: arr4(f.color(b"Color", white)),
                 falloff_exp: f.float(b"FalloffExp", 1.0),
                 fade_start: f.float(b"FadeStart", 0.0),
                 fade_end: f.float(b"FadeEnd", 0.0),
-                culling: f.boolean(b"Culling", true),
+                culling: f.bool(b"Culling", true),
                 brightness: f.float(b"Brightness", 1.0),
-                underwater: f.boolean(b"Underwater", false),
-                use_skybox: f.boolean(b"UseSkybox", false),
-                apply_after_fog_areas: f.boolean(b"ApplyAfterFogAreas", true),
+                underwater: f.bool(b"Underwater", false),
+                use_skybox: f.bool(b"UseSkybox", false),
+                apply_after_fog_areas: f.bool(b"ApplyAfterFogAreas", true),
                 noise_strength: f.float(b"NoiseStrength", 0.0),
                 noise_size: f.float(b"NoiseSize", 1.0),
                 noise_turbulence: arr3(f.vec3(b"NoiseTurbulence", splat3(0.0))),
-                secondary_active: f.boolean(b"SecondaryActive", false),
+                secondary_active: f.bool(b"SecondaryActive", false),
                 secondary_color: arr4(f.color(b"SecondaryColor", clear)),
                 secondary_fade_start: f.float(b"SecondaryFadeStart", 0.0),
                 secondary_fade_end: f.float(b"SecondaryFadeEnd", 0.0),
                 secondary_falloff_exp: f.float(b"SecondaryFalloffExp", 1.0),
-                lighten: f.boolean(b"Lighten", false),
-                height_based: f.boolean(b"HeightBased", false),
-                exponential: f.boolean(b"Exponential", false),
+                lighten: f.bool(b"Lighten", false),
+                height_based: f.bool(b"HeightBased", false),
+                exponential: f.bool(b"Exponential", false),
                 density: f.float(b"Density", 0.25),
                 height_density: f.float(b"HeightDensity", 0.25),
                 height_horizon: f.float(b"HeightHorizon", 1.0),
@@ -363,7 +351,7 @@ impl<B: Builder> Parser<'_, B> {
 
         if let Some(c) = global.first(b"DistanceCulling") {
             self.b.distance_cull(&abi::DistanceCull {
-                active: c.boolean(b"Active", false),
+                active: c.bool(b"Active", false),
                 min_range: c.float(b"MinRange", 0.0),
                 screen_size: c.float(b"ScreenSize", 0.05),
                 random_size: c.float(b"RandomSize", 0.25),
@@ -372,7 +360,7 @@ impl<B: Builder> Parser<'_, B> {
 
         if let Some(d) = global.first(b"DirLight") {
             self.b.dir_light(&abi::DirLight {
-                active: d.boolean(b"Active", false),
+                active: d.bool(b"Active", false),
                 diffuse_color: arr4(d.color(b"DiffuseColor", white)),
                 brightness: d.float(b"Brightness", 1.0),
                 direction: arr3(d.vec3(
@@ -385,25 +373,25 @@ impl<B: Builder> Parser<'_, B> {
                 )),
                 sky_color: arr4(d.color(b"SkyCol", clear)),
                 ground_color: arr4(d.color(b"GroundCol", clear)),
-                cast_shadows: d.boolean(b"CastShadows", false),
+                cast_shadows: d.bool(b"CastShadows", false),
                 shadow_caster_dist: d.float(b"ShadowCasterDist", 40.0),
                 shadow_map_bias_mul: d.float(b"ShadowMapBiasMul", 1.0),
                 shadow_map_slope_scale_bias_mul: d.float(b"ShadowMapSlopeScaleBiasMul", 1.0),
                 shadow_blur_amount: d.float(b"ShadowBlurAmount", 6.0),
-                auto_shadow_slice_settings: d.boolean(b"AutoShadowSliceSettings", true),
+                auto_shadow_slice_settings: d.bool(b"AutoShadowSliceSettings", true),
                 auto_shadow_slice_log_term: d.float(b"AutoShadowSliceLogTerm", 0.9),
             });
         }
 
         if let Some(e) = global.first(b"EnvParticles") {
-            let texture = cs(&e.string(b"Texture"));
+            let texture = cs(&e.string(b"Texture", b""));
             self.b.env_particles(&abi::EnvParticles {
                 texture: texture.as_ptr(),
                 sub_div_uv: arr2(e.vec2(b"SubDivUV", splat2(1.0))),
                 box_size: e.float(b"BoxSize", 1.0),
                 num_particles: e.int(b"NumParticles", 100),
                 particle_size: arr2(e.vec2(b"ParticleSize", splat2(1.0))),
-                affected_by_light: e.boolean(b"AffectedByLight", false),
+                affected_by_light: e.bool(b"AffectedByLight", false),
                 color: arr4(e.color(b"Color", white)),
                 brightness: e.float(b"Brightness", 1.0),
                 box_distance: e.float(b"BoxDistance", 2.0),
@@ -421,18 +409,18 @@ impl<B: Builder> Parser<'_, B> {
                 wind_dir_random_amount: e.float(b"WindDirRandomAmount", 0.0),
                 rotate_velocity: arr3(e.vec3(b"RotateVelocity", splat3(0.0))),
                 rotate_speed_random_amount: e.float(b"RotateSpeedRandomAmount", 0.0),
-                rotate_both_dirs: e.boolean(b"RotateBothDirs", false),
+                rotate_both_dirs: e.bool(b"RotateBothDirs", false),
                 num_iterations: e.float(b"NumIterations", 1.0),
                 fade_in_start: e.float(b"FadeInStart", 0.2),
                 fade_in_end: e.float(b"FadeInEnd", 1.0),
                 fade_out_start: e.float(b"FadeOutStart", 10.0),
                 fade_out_end: e.float(b"FadeOutEnd", 20.0),
-                active: e.boolean(b"Active", false),
+                active: e.bool(b"Active", false),
             });
         }
 
         if let Some(p) = global.first(b"PostEffects") {
-            let grading = cs(&p.string(b"ColorGradingTexture"));
+            let grading = cs(&p.string(b"ColorGradingTexture", b""));
             self.b.post_effects(&abi::PostEffects {
                 tone_mapping_key: p.float(b"ToneMappingKey", 0.5),
                 tone_mapping_exposure: p.float(b"ToneMappingExposure", 0.0),
@@ -442,9 +430,9 @@ impl<B: Builder> Parser<'_, B> {
         }
 
         if let Some(s) = global.first(b"SkyBox") {
-            let texture = cs(&s.string(b"Texture"));
+            let texture = cs(&s.string(b"Texture", b""));
             self.b.sky_box(&abi::SkyBox {
-                active: s.boolean(b"Active", false),
+                active: s.bool(b"Active", false),
                 color: arr4(s.color(b"Color", white)),
                 brightness: s.float(b"Brightness", 1.0),
                 texture: texture.as_ptr(),
@@ -513,8 +501,8 @@ impl<B: Builder> Parser<'_, B> {
             b"Area" => self.map_area(el),
             b"Sound" if tag != b"Sound" => unsupported(),
             b"Sound" => {
-                let ok = self.b.sound(el, el.boolean(b"Active", true));
-                let reason: &[u8] = if el.string(b"SoundEntityFile").is_empty() {
+                let ok = self.b.sound(el, el.bool(b"Active", true));
+                let reason: &[u8] = if el.string(b"SoundEntityFile", b"").is_empty() {
                     b"empty_file"
                 } else {
                     b"load_failed"
@@ -535,7 +523,7 @@ impl<B: Builder> Parser<'_, B> {
             }
             b"ParticleSystem" if tag != b"ParticleSystem" => unsupported(),
             b"ParticleSystem" => {
-                let light = cs(&el.string(b"ConnectLight"));
+                let light = cs(&el.string(b"ConnectLight", b""));
                 let ok = self.b.particle_system(el, light.as_ptr());
                 when(ok, b"load_failed".to_vec())
             }
@@ -550,7 +538,7 @@ impl<B: Builder> Parser<'_, B> {
                     rotation: arr3(el.vec3(b"Rotation", splat3(0.0))),
                     size: arr3(el.vec3(b"Size", splat3(1.0))),
                     scale: arr3(el.vec3(b"Scale", splat3(1.0))),
-                    id: strtoul_u32(&el.string_or(b"ID", b"0")),
+                    id: strtoul_u32(&el.string(b"ID", b"0")),
                     world_pos: arr3(el.vec3(b"WorldPos", splat3(0.0))),
                 });
                 Vec::new()
@@ -606,13 +594,13 @@ impl<B: Builder> Parser<'_, B> {
         for section in sections.iter().flat_map(|s| &s.children) {
             for mesh in &section.children {
                 let num = mesh.int(b"NumOfInstances", 0);
-                let file = mesh.string(b"File");
+                let file = mesh.string(b"File", b"");
                 let s = self.stat(b"DetailMeshes");
                 s.in_xml = s.in_xml.wrapping_add(num);
 
                 let list = |name: &[u8]| {
                     mesh.first(name)
-                        .map(|e| float_list(&e.string(b"_Text"), Some(b" ")))
+                        .map(|e| float_list(&e.string(b"_Text", b""), Some(b" ")))
                         .unwrap_or_default()
                 };
                 let positions = list(b"DetailMeshEntityPositions");
@@ -681,7 +669,7 @@ impl<B: Builder> Parser<'_, B> {
                 s.in_xml = s.in_xml.wrapping_add(1);
                 s.created = s.created.wrapping_add(1);
 
-                let name = cs(&obj.string(b"Name"));
+                let name = cs(&obj.string(b"Name", b""));
                 self.b.exposure_area(&abi::ExposureArea {
                     name: name.as_ptr(),
                     rotation: arr3(obj.vec3(b"Rotation", splat3(0.0))),
@@ -702,7 +690,7 @@ impl<B: Builder> Parser<'_, B> {
         let terrain = self
             .track_root(&doc, b"HPLMapTrack_Terrain")
             .and_then(|r| r.first(b"Terrain"));
-        if let Some(t) = terrain.filter(|t| t.boolean(b"Active", false)) {
+        if let Some(t) = terrain.filter(|t| t.bool(b"Active", false)) {
             self.create_terrain(t);
         }
     }
@@ -714,12 +702,12 @@ impl<B: Builder> Parser<'_, B> {
             strings.last().map_or(std::ptr::null(), |c| c.as_ptr())
         };
 
-        let base_material_file = keep(&t.string(b"BaseMaterialFile"));
+        let base_material_file = keep(&t.string(b"BaseMaterialFile", b""));
         let mut layers = Vec::new();
         let blend_layers = t.first(b"BlendLayers");
         for layer in blend_layers.iter().flat_map(|l| &l.children) {
             let mut out = abi::TerrainLayer {
-                id: keep(&layer.string_or(b"ID", b"0")),
+                id: keep(&layer.string(b"ID", b"0")),
                 num_mats: 0,
                 mats: [abi::TerrainMat {
                     file: std::ptr::null(),
@@ -730,7 +718,7 @@ impl<B: Builder> Parser<'_, B> {
             };
             for (slot, m) in out.mats.iter_mut().zip(&layer.children) {
                 *slot = abi::TerrainMat {
-                    file: keep(&m.string(b"File")),
+                    file: keep(&m.string(b"File", b"")),
                     tile_amount: m.float(b"TileAmount", 1.0),
                     start_fade_value: m.float(b"StartFadeValue", 0.0),
                     detail_amount: arr3(m.vec3(b"DetailTextureAmount", splat3(0.0))),
@@ -751,7 +739,7 @@ impl<B: Builder> Parser<'_, B> {
             .zip(details_el.iter().flat_map(|d| &d.children))
         {
             *slot = abi::TerrainDetail {
-                file: keep(&d.string(b"File")),
+                file: keep(&d.string(b"File", b"")),
                 scale: d.float(b"Scale", 1.0),
             };
             num_details += 1;
@@ -764,7 +752,7 @@ impl<B: Builder> Parser<'_, B> {
         for section in sections.iter().flat_map(|s| &s.children) {
             let files: Vec<Vec<u8>> = section
                 .first(b"FileIndex_TerrainDecals")
-                .map(|i| i.children.iter().map(|f| f.string(b"Path")).collect())
+                .map(|i| i.children.iter().map(|f| f.string(b"Path", b"")).collect())
                 .unwrap_or_default();
             for d in section.first(b"Decals").iter().flat_map(|d| &d.children) {
                 let Some(file) = usize::try_from(d.int(b"FileIndex", -1))
@@ -815,7 +803,7 @@ impl<B: Builder> Parser<'_, B> {
             .zip(&area_points)
             .map(|((file, a, circle), points)| abi::UndergrowthArea {
                 file: keep(file),
-                sub: string::to_lower(&a.string(b"BlendType")) == b"sub",
+                sub: string::to_lower(&a.string(b"BlendType", b"")) == b"sub",
                 max_influence: a.float(b"MaxInfluence", 1.0),
                 fade_border: a.float(b"FadeBorder", 0.0),
                 circle: *circle,
@@ -870,7 +858,7 @@ impl<B: Builder> Parser<'_, B> {
     ) -> Option<Vec<u8>> {
         let idx = el.int(b"FileIndex", -1);
         if idx < 0 {
-            Some(el.string(b"Filename"))
+            Some(el.string(b"Filename", b""))
         } else if let Some(f) = file_index.get(idx as usize) {
             Some(f.clone())
         } else {
@@ -888,7 +876,7 @@ impl<B: Builder> Parser<'_, B> {
     }
 
     fn static_object(&mut self, el: &El, file_index: &[Vec<u8>]) -> Vec<u8> {
-        let name = el.string(b"Name");
+        let name = el.string(b"Name", b"");
         let Some(file) = self.resolve_file(el, b"static object", &name, file_index) else {
             return b"file_index_out_of_bounds".to_vec();
         };
@@ -900,7 +888,7 @@ impl<B: Builder> Parser<'_, B> {
 
         let pose = el
             .first(b"Pose")
-            .map(|p| float_list(&p.string(b"_Text"), None));
+            .map(|p| float_list(&p.string(b"_Text", b""), None));
         let name_c = cs(&name);
         let file_c = cs(&file);
         let made = self.b.static_object(&abi::StaticObject {
@@ -909,11 +897,11 @@ impl<B: Builder> Parser<'_, B> {
             position: arr3(position),
             scale: arr3(el.vec3(b"Scale", splat3(1.0))),
             rotation: arr3(el.vec3(b"Rotation", splat3(0.0))),
-            casts_shadows: el.boolean(b"CastShadows", true),
-            collides: el.boolean(b"Collides", true),
+            casts_shadows: el.bool(b"CastShadows", true),
+            collides: el.bool(b"Collides", true),
             id: el.int(b"ID", -1),
-            culled_by_distance: el.boolean(b"CulledByDistance", true),
-            culled_by_fog: el.boolean(b"CulledByFog", true),
+            culled_by_distance: el.bool(b"CulledByDistance", true),
+            culled_by_fog: el.bool(b"CulledByFog", true),
             color_mul: arr4(el.color(b"ColorMul", gray(1.0, 1.0))),
             illum_brightness: el.float(b"IllumBrightness", 1.0),
             illum_color: arr4(el.color(b"IllumColor", gray(1.0, 1.0))),
@@ -938,8 +926,8 @@ impl<B: Builder> Parser<'_, B> {
             return cat(&[b"unsupported_primitive:", &el.name]);
         }
 
-        let name = el.string(b"Name");
-        let material = el.string(b"Material");
+        let name = el.string(b"Name", b"");
+        let material = el.string(b"Material", b"");
         let position = el.vec3(b"WorldPos", splat3(0.0));
         if !self.transform_valid(&name, position) {
             return b"bad_transform".to_vec();
@@ -951,8 +939,8 @@ impl<B: Builder> Parser<'_, B> {
         let made = self.b.plane(&abi::Plane {
             name: name_c.as_ptr(),
             material: material_c.as_ptr(),
-            casts_shadows: el.boolean(b"CastShadows", true),
-            collides: el.boolean(b"Collides", true),
+            casts_shadows: el.bool(b"CastShadows", true),
+            collides: el.bool(b"Collides", true),
             id: el.int(b"ID", -1),
             position: arr3(position),
             scale: arr3(el.vec3(b"Scale", splat3(1.0))),
@@ -965,8 +953,8 @@ impl<B: Builder> Parser<'_, B> {
                 uv(b"Corner3UV"),
                 uv(b"Corner4UV"),
             ],
-            culled_by_distance: el.boolean(b"CulledByDistance", true),
-            culled_by_fog: el.boolean(b"CulledByFog", true),
+            culled_by_distance: el.bool(b"CulledByDistance", true),
+            culled_by_fog: el.bool(b"CulledByFog", true),
         });
         if made {
             Vec::new()
@@ -976,10 +964,10 @@ impl<B: Builder> Parser<'_, B> {
     }
 
     fn decal(&mut self, el: &El, file_index: &[Vec<u8>]) -> Vec<u8> {
-        let name = el.string(b"Name");
+        let name = el.string(b"Name", b"");
         let idx = el.int(b"MaterialIndex", -1);
         let material = if idx < 0 {
-            el.string(b"Material")
+            el.string(b"Material", b"")
         } else if let Some(m) = file_index.get(idx as usize) {
             m.clone()
         } else {
@@ -1005,7 +993,7 @@ impl<B: Builder> Parser<'_, B> {
     }
 
     fn map_entity(&mut self, el: &El, file_index: &[Vec<u8>]) -> Vec<u8> {
-        let name = el.string(b"Name");
+        let name = el.string(b"Name", b"");
         let position = el.vec3(b"WorldPos", splat3(0.0));
         if !self.transform_valid(&name, position) {
             return b"bad_transform".to_vec();
@@ -1021,13 +1009,13 @@ impl<B: Builder> Parser<'_, B> {
                 name: name_c.as_ptr(),
                 filename: file_c.as_ptr(),
                 id: el.int(b"ID", 0),
-                active: el.boolean(b"Active", true),
-                is_static: el.boolean(b"Static", false),
+                active: el.bool(b"Active", true),
+                is_static: el.bool(b"Static", false),
                 position: arr3(position),
                 scale: arr3(el.vec3(b"Scale", splat3(1.0))),
                 rotation: arr3(el.vec3(b"Rotation", splat3(0.0))),
-                culled_by_distance: el.boolean(b"CulledByDistance", true),
-                culled_by_fog: el.boolean(b"CulledByFog", true),
+                culled_by_distance: el.bool(b"CulledByDistance", true),
+                culled_by_fog: el.bool(b"CulledByFog", true),
             },
             el,
         );
@@ -1039,13 +1027,13 @@ impl<B: Builder> Parser<'_, B> {
     }
 
     fn map_area(&mut self, el: &El) -> Vec<u8> {
-        let name = el.string(b"Name");
+        let name = el.string(b"Name", b"");
         let position = el.vec3(b"WorldPos", splat3(0.0));
         if !self.transform_valid(&name, position) {
             return b"bad_transform".to_vec();
         }
 
-        let area_type = el.string(b"AreaType");
+        let area_type = el.string(b"AreaType", b"");
         let name_c = cs(&name);
         let type_c = cs(&area_type);
         let made = self.b.area(
@@ -1053,7 +1041,7 @@ impl<B: Builder> Parser<'_, B> {
                 name: name_c.as_ptr(),
                 area_type: type_c.as_ptr(),
                 id: el.int(b"ID", 0),
-                active: el.boolean(b"Active", true),
+                active: el.bool(b"Active", true),
                 position: arr3(position),
                 scale: arr3(el.vec3(b"Scale", splat3(1.0))),
                 rotation: arr3(el.vec3(b"Rotation", splat3(0.0))),

@@ -5,17 +5,12 @@
 //! No reference into a pod is held across a host call: every access is a short raw-pointer scope,
 //! because host calls reach virtual methods that call back into these functions.
 
-use super::node::{add_rotation, ohpl_math_quaternion_mul, update_matrix, world_to_local};
-use crate::math::{IDENTITY, fma, matrix_mul as mul_raw, sub3};
+use super::node::{
+    add_rotation, matrix_mul, ohpl_math_quaternion_mul, update_matrix, world_to_local,
+};
+use crate::math::{IDENTITY, fma, sub3};
 use crate::types::{Matrixf, Quaternion, Vector2f, Vector3f};
-use std::hint::black_box;
 use std::ptr::null_mut;
-
-// Opaque operands keep LLVM from folding constant entries, which changes the NaN payload an fma
-// propagates.
-fn mm(a: &Matrixf, b: &Matrixf) -> Matrixf {
-    mul_raw(black_box(a), black_box(b))
-}
 
 fn translation_of(m: &Matrixf) -> Vector3f {
     Vector3f {
@@ -216,12 +211,12 @@ pub unsafe fn ent_update_world(h: &Host, e: *mut EntBox) {
             node_update_world(h, pn);
             let pw = (*pn).s.world;
             let local = (*e).s.local;
-            (*e).s.world = mm(&pw, &local);
+            (*e).s.world = matrix_mul(&pw, &local);
         } else if !pe.is_null() {
             ent_update_world(h, pe);
             let pw = (*pe).s.world;
             let local = (*e).s.local;
-            (*e).s.world = mm(&pw, &local);
+            (*e).s.world = matrix_mul(&pw, &local);
         } else {
             (*e).s.world = (*e).s.local;
         }
@@ -483,12 +478,12 @@ pub unsafe fn node_update_world(h: &Host, n: *mut NodeBox) {
             node_update_world(h, parent);
             let pw = (*parent).s.world;
             let local = (*n).s.local;
-            (*n).s.world = mm(&pw, &local);
+            (*n).s.world = matrix_mul(&pw, &local);
         } else if !eparent.is_null() {
             ent_update_world(h, eparent);
             let pw = (*eparent).s.world;
             let local = (*n).s.local;
-            (*n).s.world = mm(&pw, &local);
+            (*n).s.world = matrix_mul(&pw, &local);
         } else {
             (*n).s.world = (*n).s.local;
         }
@@ -645,7 +640,11 @@ pub unsafe fn node_apply_anim(h: &Host, n: *mut NodeBox, post: bool, children: b
         if !on {
             return;
         }
-        let m = if post { mm(&t, &local) } else { mm(&local, &t) };
+        let m = if post {
+            matrix_mul(&t, &local)
+        } else {
+            matrix_mul(&local, &t)
+        };
         node_set_matrix(h, n, &m, children);
     }
 }

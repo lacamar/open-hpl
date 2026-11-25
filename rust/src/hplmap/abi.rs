@@ -9,6 +9,7 @@ use super::{
     Xml,
 };
 use crate::binary_buffer::BinaryBuffer;
+use crate::ffi::slice;
 use crate::types::{Color, Matrixf, Vector2f, Vector3f};
 use std::ffi::{CStr, c_char, c_int, c_void};
 
@@ -35,17 +36,6 @@ impl Str {
     unsafe fn bytes<'a>(self) -> &'a [u8] {
         // SAFETY: caller contract.
         unsafe { slice(self.p, self.n) }
-    }
-}
-
-/// # Safety
-/// `p` is valid for `n` elements for the returned lifetime, or null / `n` is 0.
-unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if p.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: caller contract.
-        unsafe { std::slice::from_raw_parts(p, n) }
     }
 }
 

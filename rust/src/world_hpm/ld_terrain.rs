@@ -9,7 +9,7 @@
 
 use crate::math::{
     cross3, fast_random_float, matrix_mul, matrix_mul_3x3, matrix_unit_vectors, rand_rectf,
-    rotate_y,
+    rotate_y, v3,
 };
 use crate::types::Vector3f;
 use std::collections::BTreeMap;
@@ -18,10 +18,6 @@ const KPIF: f32 = std::f32::consts::PI;
 
 fn fma(a: f32, b: f32, c: f32) -> f32 {
     a.mul_add(b, c)
-}
-
-fn v3(x: f32, y: f32, z: f32) -> Vector3f {
-    Vector3f { x, y, z }
 }
 
 fn normalize3(v: Vector3f) -> Vector3f {

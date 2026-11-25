@@ -5,7 +5,7 @@
 //! node embeds and this code edits in place; lists, node creation/deletion and renderable
 //! virtuals are reached through [`Host`]. Node/object handles are opaque addresses (0 = none).
 
-use super::{at_edge, longest_axis, split_group};
+use super::{at_edge, axis_of, longest_axis, split_group};
 use crate::math::{len3, sub3, v3};
 use crate::types::Vector3f;
 
@@ -191,15 +191,6 @@ fn center_radius(b: &mut NodeBase) {
         (b.max.z + b.min.z) * 0.5,
     );
     b.radius = len3(sub3(b.max, b.min)) * 0.5;
-}
-
-fn axis_value(v: Vector3f, axis: i32) -> f32 {
-    match axis {
-        0 => v.x,
-        1 => v.y,
-        2 => v.z,
-        _ => 0.0,
-    }
 }
 
 fn expand(min: &mut Vector3f, max: &mut Vector3f, add_min: Vector3f, add_max: Vector3f) {
@@ -480,7 +471,7 @@ pub fn update_before_use<H: Host>(h: &mut H, t: &DynTree, node: Handle) {
         let mut objs = Vec::new();
         h.objects(node, &mut objs);
         for &o in &objs {
-            pos_sum += axis_value(h.object_bv(o).position, axis);
+            pos_sum += axis_of(h.object_bv(o).position, axis);
             weight_sum += 1.0;
         }
         if h.child_count(node) > 0 {
@@ -494,7 +485,7 @@ pub fn update_before_use<H: Host>(h: &mut H, t: &DynTree, node: Handle) {
                 let add = if c_axis == axis {
                     c_plane
                 } else {
-                    axis_value(h.base(c).center, axis)
+                    axis_of(h.base(c).center, axis)
                 };
                 pos_sum = add.mul_add(mul, pos_sum);
                 weight_sum += mul;

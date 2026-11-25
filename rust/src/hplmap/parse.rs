@@ -4,31 +4,13 @@ use super::{
     Builder, Decal, Entity, FLAG_FAST_STATIC_LOAD, FLAG_NO_ENTITIES, FLAG_NO_GAME_ENTITIES,
     FLAG_NO_LIGHTS, Fog, NodeKind, Options, Parsed, Phase, Placement, Plane, StaticObject, Xml,
 };
+use crate::somascript::cfmt::fmt_f;
 use crate::string;
 use crate::types::{Color, Vector2f, Vector3f};
-use std::ffi::{c_char, c_int};
+use crate::xml::AttrRead;
 
 const MAX_FILE_INDICES: i32 = 1 << 20;
 const MESSAGE_LIMIT: usize = 4095;
-
-unsafe extern "C" {
-    fn snprintf(buf: *mut c_char, n: usize, fmt: *const c_char, ...) -> c_int;
-}
-
-fn c_float(x: f32) -> String {
-    let mut buf = [0u8; 64];
-    // SAFETY: "%f" takes one double and the buffer bound is passed.
-    let n = unsafe {
-        snprintf(
-            buf.as_mut_ptr().cast(),
-            buf.len(),
-            c"%f".as_ptr(),
-            f64::from(x),
-        )
-    };
-    let len = usize::try_from(n).unwrap_or(0).min(buf.len() - 1);
-    String::from_utf8_lossy(buf.get(..len).unwrap_or_default()).into_owned()
-}
 
 /// A message as the C++ parser formats it: truncated to its 4096-byte buffer.
 pub(super) fn message(mut msg: Vec<u8>) -> Vec<u8> {
@@ -42,55 +24,43 @@ pub(super) fn note(parts: &[&[u8]]) -> Vec<u8> {
 
 struct Reader<'a, X: Xml>(&'a X);
 
-impl<X: Xml> Reader<'_, X> {
-    fn string(&self, n: X::Node, name: &[u8]) -> Vec<u8> {
-        self.0.attr(n, name).unwrap_or_default().to_vec()
-    }
+struct At<'a, X: Xml>(&'a X, X::Node);
 
-    fn int(&self, n: X::Node, name: &[u8], default: i32) -> i32 {
-        self.0.attr(n, name).map_or(default, string::token_to_int)
+impl<X: Xml> AttrRead for At<'_, X> {
+    fn attr(&self, name: &[u8]) -> Option<&[u8]> {
+        self.0.attr(self.1, name)
     }
+}
 
-    fn float(&self, n: X::Node, name: &[u8], default: f32) -> f32 {
-        self.0.attr(n, name).map_or(default, string::token_to_float)
-    }
-
-    fn bool(&self, n: X::Node, name: &[u8], default: bool) -> bool {
-        self.0.attr(n, name).map_or(default, string::to_bool)
-    }
-
-    fn floats<const N: usize>(&self, n: X::Node, name: &[u8]) -> Option<[f32; N]> {
-        let mut v = [0.0; N];
-        let s = self.0.attr(n, name)?;
-        string::floats_exact(s, &mut v).then_some(v)
-    }
-
-    fn vec3(&self, n: X::Node, name: &[u8], default: f32) -> Vector3f {
-        self.floats::<3>(n, name).map_or(
+impl<X: Xml> At<'_, X> {
+    fn vec3(&self, name: &[u8], default: f32) -> Vector3f {
+        AttrRead::vec3(
+            self,
+            name,
             Vector3f {
                 x: default,
                 y: default,
                 z: default,
             },
-            |[x, y, z]| Vector3f { x, y, z },
         )
     }
 
-    fn vec2(&self, n: X::Node, name: &[u8]) -> Vector2f {
-        self.floats::<2>(n, name)
-            .map_or(Vector2f::default(), |[x, y]| Vector2f { x, y })
+    fn vec2(&self, name: &[u8]) -> Vector2f {
+        AttrRead::vec2(self, name, Vector2f::default())
     }
+}
 
-    fn color(&self, n: X::Node, name: &[u8], default: Color) -> Color {
-        self.floats::<4>(n, name)
-            .map_or(default, |[r, g, b, a]| Color { r, g, b, a })
+impl<X: Xml> Reader<'_, X> {
+    fn at(&self, n: X::Node) -> At<'_, X> {
+        At(self.0, n)
     }
 
     fn placement(&self, n: X::Node) -> Placement {
+        let at = self.at(n);
         Placement {
-            pos: self.vec3(n, b"WorldPos", 0.0),
-            scale: self.vec3(n, b"Scale", 1.0),
-            rot: self.vec3(n, b"Rotation", 0.0),
+            pos: at.vec3(b"WorldPos", 0.0),
+            scale: at.vec3(b"Scale", 1.0),
+            rot: at.vec3(b"Rotation", 0.0),
         }
     }
 }
@@ -139,21 +109,21 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
         let Some(data) = self.xml.first_child(doc, b"MapData") else {
             return Parsed::Abort;
         };
-        let r = &self.read;
+        let r = self.read.at(data);
 
         let fog = Fog {
-            active: r.bool(data, b"FogActive", false),
-            color: r.color(data, b"FogColor", WHITE),
-            falloff_exp: r.float(data, b"FogFalloffExp", 1.0),
-            start: r.float(data, b"FogStart", 0.0),
-            end: r.float(data, b"FogEnd", 0.0),
-            culling: r.bool(data, b"FogCulling", true),
+            active: r.bool(b"FogActive", false),
+            color: r.color(b"FogColor", WHITE),
+            falloff_exp: r.float(b"FogFalloffExp", 1.0),
+            start: r.float(b"FogStart", 0.0),
+            end: r.float(b"FogEnd", 0.0),
+            culling: r.bool(b"FogCulling", true),
         };
         self.builder.set_fog(fog);
 
-        let active = r.bool(data, b"SkyBoxActive", false);
-        let color = r.color(data, b"SkyBoxColor", WHITE);
-        let texture = r.string(data, b"SkyBoxTexture");
+        let active = r.bool(b"SkyBoxActive", false);
+        let color = r.color(b"SkyBoxColor", WHITE);
+        let texture = r.string(b"SkyBoxTexture", b"");
         self.builder.set_skybox(active, color, &texture);
 
         let Some(contents) = self.xml.first_child(data, b"MapContents") else {
@@ -191,15 +161,15 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
         let Some(table) = self.xml.first_child(contents, name) else {
             return Vec::new();
         };
-        let num = self.read.int(table, b"NumOfFiles", 0);
+        let num = self.read.at(table).int(b"NumOfFiles", 0);
         if !(0..=MAX_FILE_INDICES).contains(&num) {
             self.abort = true;
             return Vec::new();
         }
         let mut files = vec![Vec::new(); num as usize];
         for child in self.xml.children(table) {
-            let idx = self.read.int(child, b"Id", 0);
-            let path = self.read.string(child, b"Path");
+            let idx = self.read.at(child).int(b"Id", 0);
+            let path = self.read.at(child).string(b"Path", b"");
             if let Some(slot) = usize::try_from(idx).ok().and_then(|i| files.get_mut(i)) {
                 *slot = path;
             }
@@ -209,17 +179,12 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
 
     fn transform_valid(&mut self, name: &[u8], pos: Vector3f) -> bool {
         if pos.x.abs() > 10000.0 || pos.y.abs() > 10000.0 || pos.z.abs() > 10000.0 {
-            let at = format!(
-                "{} : {} : {}",
-                c_float(pos.x),
-                c_float(pos.y),
-                c_float(pos.z)
-            );
+            let at = [fmt_f(pos.x, 64), fmt_f(pos.y, 64), fmt_f(pos.z, 64)].join(&b" : "[..]);
             let msg = note(&[
                 b"The object ",
                 name,
                 b" has an invalid position: (",
-                at.as_bytes(),
+                &at,
                 b")!\n",
             ]);
             self.builder.warning(&msg);
@@ -269,8 +234,8 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
         if let Some(combos) = self.xml.first_child(contents, b"StaticObjectCombos") {
             self.builder.phase(Phase::Combos, true);
             for node in self.xml.children(combos) {
-                let group = self.read.int(node, b"ID", -1);
-                let ids = self.read.string(node, b"ObjIds");
+                let group = self.read.at(node).int(b"ID", -1);
+                let ids = self.read.at(node).string(b"ObjIds", b"");
                 let ids: Vec<i32> = string::split(&ids, None, true)
                     .map(string::token_to_int)
                     .collect();
@@ -283,11 +248,11 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
     }
 
     fn static_object(&mut self, node: X::Node) {
-        let name = self.read.string(node, b"Name");
+        let name = self.read.at(node).string(b"Name", b"");
 
-        let index = self.read.int(node, b"FileIndex", -1);
+        let index = self.read.at(node).int(b"FileIndex", -1);
         let file = if index < 0 {
-            self.read.string(node, b"Filename")
+            self.read.at(node).string(b"Filename", b"")
         } else if let Some(file) = self.static_objects.get(index as usize) {
             file.clone()
         } else {
@@ -302,9 +267,9 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
         };
 
         let at = self.read.placement(node);
-        let collides = self.read.bool(node, b"Collides", true);
-        let cast_shadows = self.read.bool(node, b"CastShadows", true);
-        let id = self.read.int(node, b"ID", -1);
+        let collides = self.read.at(node).bool(b"Collides", true);
+        let cast_shadows = self.read.at(node).bool(b"CastShadows", true);
+        let id = self.read.at(node).int(b"ID", -1);
 
         if !self.transform_valid(&name, at.pos) {
             return;
@@ -321,11 +286,11 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
 
     fn primitive(&mut self, node: X::Node) {
         let kind = self.xml.value(node).to_vec();
-        let name = self.read.string(node, b"Name");
-        let material = self.read.string(node, b"Material");
-        let cast_shadows = self.read.bool(node, b"CastShadows", true);
-        let collides = self.read.bool(node, b"Collides", true);
-        let id = self.read.int(node, b"ID", -1);
+        let name = self.read.at(node).string(b"Name", b"");
+        let material = self.read.at(node).string(b"Material", b"");
+        let cast_shadows = self.read.at(node).bool(b"CastShadows", true);
+        let collides = self.read.at(node).bool(b"Collides", true);
+        let id = self.read.at(node).int(b"ID", -1);
         let at = self.read.placement(node);
 
         if !self.transform_valid(&name, at.pos) || kind != b"Plane" {
@@ -333,7 +298,8 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
         }
         let uv = std::array::from_fn(|i| {
             self.read
-                .vec2(node, format!("Corner{}UV", i + 1).as_bytes())
+                .at(node)
+                .vec2(format!("Corner{}UV", i + 1).as_bytes())
         });
         self.builder.static_plane(&Plane {
             name: &name,
@@ -342,20 +308,20 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
             collides,
             id,
             at,
-            start_corner: self.read.vec3(node, b"StartCorner", 0.0),
-            end_corner: self.read.vec3(node, b"EndCorner", 0.0),
+            start_corner: self.read.at(node).vec3(b"StartCorner", 0.0),
+            end_corner: self.read.at(node).vec3(b"EndCorner", 0.0),
             uv,
         });
     }
 
     fn decal(&mut self, node: X::Node) {
-        let name = self.read.string(node, b"Name");
-        let color = self.read.color(node, b"Color", WHITE);
-        let id = self.read.int(node, b"ID", -1);
+        let name = self.read.at(node).string(b"Name", b"");
+        let color = self.read.at(node).color(b"Color", WHITE);
+        let id = self.read.at(node).int(b"ID", -1);
 
-        let index = self.read.int(node, b"MaterialIndex", -1);
+        let index = self.read.at(node).int(b"MaterialIndex", -1);
         let material = if index < 0 {
-            self.read.string(node, b"Material")
+            self.read.at(node).string(b"Material", b"")
         } else if let Some(material) = self.decals.get(index as usize) {
             material.clone()
         } else {
@@ -397,9 +363,9 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
         let kind = self.xml.value(node).to_vec();
 
         if kind == b"Entity" || kind == b"Area" {
-            let name = self.read.string(node, b"Name");
-            let id = self.read.int(node, b"ID", 0);
-            let active = self.read.bool(node, b"Active", true);
+            let name = self.read.at(node).string(b"Name", b"");
+            let id = self.read.at(node).int(b"ID", 0);
+            let active = self.read.at(node).bool(b"Active", true);
             let at = self.read.placement(node);
 
             if !self.transform_valid(&name, at.pos) || self.flags & FLAG_NO_GAME_ENTITIES != 0 {
@@ -408,9 +374,9 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
             let user_vars = self.xml.first_child(node, b"UserVariables");
 
             if kind == b"Entity" {
-                let index = self.read.int(node, b"FileIndex", -1);
+                let index = self.read.at(node).int(b"FileIndex", -1);
                 let file = if index < 0 {
-                    self.read.string(node, b"Filename")
+                    self.read.at(node).string(b"Filename", b"")
                 } else if let Some(file) = self.entities.get(index as usize) {
                     file.clone()
                 } else {
@@ -432,7 +398,7 @@ impl<X: Xml, B: Builder<X::Node>> Parser<'_, X, B> {
                     user_vars,
                 });
             } else {
-                let area_type = self.read.string(node, b"AreaType");
+                let area_type = self.read.at(node).string(b"AreaType", b"");
                 self.builder.area(&Entity {
                     name: &name,
                     id,

@@ -1,11 +1,7 @@
 //! Per-vertex tangent generation.
 
 use super::{Vector3f, cross3, div3, dot3, fma, normalize3, sub3, v3};
-
-/// `Max(float, float)` as `cMath` defines it: the second operand wins on NaN.
-fn fmax(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
+use crate::math::cmath_max;
 
 /// # Safety
 /// `dest` has `vertex_count * 4` writable floats; `indices` has `index_count` entries; `vertices`,
@@ -120,7 +116,12 @@ pub(crate) unsafe fn create_tri_tangent_vectors(
 
     for i in 0..vertex_count {
         let normal = at(normals, i, 3);
-        let norm = |v: Vector3f| div3(v, fmax(1.0, fmax(v.x.abs(), fmax(v.y.abs(), v.z.abs()))));
+        let norm = |v: Vector3f| {
+            div3(
+                v,
+                cmath_max(1.0, cmath_max(v.x.abs(), cmath_max(v.y.abs(), v.z.abs()))),
+            )
+        };
         let tan1 = norm(t1[i as usize]);
         let tan2 = norm(t2[i as usize]);
         let d = dot3(normal, tan1);

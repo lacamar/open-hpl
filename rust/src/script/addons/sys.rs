@@ -1,6 +1,10 @@
 //! Bindings to `cshim/as_shim_addon.h` and the parts of `as_shim.h` / `as_shim_s2.h` the add-ons use.
 //! Constants are asserted against `angelscript.h` in `cshim/layout_check.cpp`.
 
+pub use crate::script::sys::{
+    ohpl_as_ctx_execute, ohpl_as_ctx_new, ohpl_as_ctx_prepare, ohpl_as_ctx_release,
+    ohpl_as_get_module, ohpl_as_reg_object_type,
+};
 use std::ffi::{c_char, c_int, c_void};
 
 pub const BEHAVE_FACTORY: c_int = 3;
@@ -60,20 +64,9 @@ unsafe extern "C" {
     pub fn ohpl_as2_func_param(f: *mut c_void, i: u32, id: *mut c_int, fl: *mut u32) -> c_int;
     pub fn ohpl_as2_create_object(e: *mut c_void, t: *mut c_void) -> *mut c_void;
 
-    pub fn ohpl_as_reg_object_type(
-        e: *mut c_void,
-        n: *const c_char,
-        size: c_int,
-        flags: u64,
-    ) -> c_int;
     pub fn ohpl_as_reg_funcdef(e: *mut c_void, decl: *const c_char) -> c_int;
-    pub fn ohpl_as_get_module(e: *mut c_void, name: *const c_char, flag: c_int) -> *mut c_void;
-    pub fn ohpl_as_ctx_prepare(c: *mut c_void, f: *mut c_void) -> c_int;
-    pub fn ohpl_as_ctx_execute(c: *mut c_void) -> c_int;
     pub fn ohpl_as_ctx_state(c: *mut c_void) -> c_int;
     pub fn ohpl_as_ctx_abort(c: *mut c_void) -> c_int;
-    pub fn ohpl_as_ctx_release(c: *mut c_void) -> c_int;
-    pub fn ohpl_as_ctx_new(e: *mut c_void) -> *mut c_void;
     pub fn ohpl_as_ctx_set_object(c: *mut c_void, obj: *mut c_void) -> c_int;
     pub fn ohpl_as_ctx_set_arg_object(c: *mut c_void, arg: u32, v: *mut c_void) -> c_int;
     pub fn ohpl_as_ctx_set_arg_address(c: *mut c_void, arg: u32, v: *mut c_void) -> c_int;

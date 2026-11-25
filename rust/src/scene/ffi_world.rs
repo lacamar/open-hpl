@@ -6,6 +6,7 @@
 
 use super::scenemgr::ViewportIn;
 use super::world::{self, FieldIn};
+use crate::ffi::slice;
 use std::ffi::c_void;
 
 const _: () = {
@@ -23,16 +24,6 @@ pub struct Str {
 }
 
 /// # Safety
-/// `p` valid for `n` reads when `n > 0`.
-unsafe fn slice<'a, T>(p: *const T, n: i32) -> &'a [T] {
-    match usize::try_from(n) {
-        // SAFETY: caller contract.
-        Ok(n) if n > 0 && !p.is_null() => unsafe { std::slice::from_raw_parts(p, n) },
-        _ => &[],
-    }
-}
-
-/// # Safety
 /// `s.ptr` valid for `s.len` reads.
 unsafe fn bytes<'a>(s: Str) -> &'a [u8] {
     if s.len == 0 || s.ptr.is_null() {
@@ -47,7 +38,14 @@ unsafe fn bytes<'a>(s: Str) -> &'a [u8] {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_world_find_name(names: *const Str, n: i32, key: Str) -> i32 {
     // SAFETY: caller contract.
-    unsafe { world::find_by_name(slice(names, n).iter().map(|&s| bytes(s)), bytes(key)) }
+    unsafe {
+        world::find_by_name(
+            slice(names, usize::try_from(n).unwrap_or(0))
+                .iter()
+                .map(|&s| bytes(s)),
+            bytes(key),
+        )
+    }
 }
 
 /// # Safety
@@ -55,7 +53,14 @@ pub unsafe extern "C" fn ohpl_world_find_name(names: *const Str, n: i32, key: St
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_world_find_last_name(names: *const Str, n: i32, key: Str) -> i32 {
     // SAFETY: caller contract.
-    unsafe { world::find_last_by_name(slice(names, n).iter().map(|&s| bytes(s)), bytes(key)) }
+    unsafe {
+        world::find_last_by_name(
+            slice(names, usize::try_from(n).unwrap_or(0))
+                .iter()
+                .map(|&s| bytes(s)),
+            bytes(key),
+        )
+    }
 }
 
 /// # Safety
@@ -63,7 +68,12 @@ pub unsafe extern "C" fn ohpl_world_find_last_name(names: *const Str, n: i32, ke
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_world_find_id(ids: *const i32, n: i32, id: i32) -> i32 {
     // SAFETY: caller contract.
-    world::find_by_id(unsafe { slice(ids, n) }.iter().copied(), id)
+    world::find_by_id(
+        unsafe { slice(ids, usize::try_from(n).unwrap_or(0)) }
+            .iter()
+            .copied(),
+        id,
+    )
 }
 
 /// # Safety
@@ -76,7 +86,9 @@ pub unsafe extern "C" fn ohpl_world_find_ptr(
 ) -> i32 {
     // SAFETY: caller contract.
     world::find_ptr(
-        unsafe { slice(ptrs, n) }.iter().map(|&q| q as usize),
+        unsafe { slice(ptrs, usize::try_from(n).unwrap_or(0)) }
+            .iter()
+            .map(|&q| q as usize),
         p as usize,
     )
 }

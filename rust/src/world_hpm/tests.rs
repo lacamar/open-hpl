@@ -1,6 +1,7 @@
 use super::abi::{self, Cstr};
 use super::el::El;
 use super::parse::{Builder, FileRead, parse_map, widen};
+use crate::xml::AttrRead;
 use std::collections::HashMap;
 use std::ffi::CStr;
 
@@ -432,7 +433,7 @@ fn element_text_is_the_text_attribute_and_text_overrides_attribute() {
     };
     let el = El::from_doc(&doc);
     let el = el.as_ref();
-    assert_eq!(el.map(|e| e.string(b"_Text")), Some(b"body".to_vec()));
+    assert_eq!(el.map(|e| e.string(b"_Text", b"")), Some(b"body".to_vec()));
     assert_eq!(el.map(|e| e.children.len()), Some(1));
 }
 

@@ -2,8 +2,8 @@
 //! buoyancy sphere packing. Float expressions mirror the gcc build (fused multiply-adds).
 
 use crate::math::{
-    Matrixf, Planef, cross3, div3, fma, len3, matrix_mul_3x3, matrix_mul_vec, mul3, plane_dist,
-    sin, sub3, v3,
+    Matrixf, Planef, add3, cmath_max, cmath_min, cross3, div3, fma, len3, matrix_mul_3x3,
+    matrix_mul_vec, mul3, plane_dist, sin, sub3, v3,
 };
 use crate::types::Vector3f;
 
@@ -29,21 +29,9 @@ const PI2: f32 = std::f32::consts::FRAC_PI_2;
 const ZERO: Vector3f = v3(0.0, 0.0, 0.0);
 const SPHERE_VOLUME_FACTOR: f32 = 4.188_790_3;
 
-fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x + b.x, a.y + b.y, a.z + b.z)
-}
-
 /// `acc + a * s` with the product fused, as gcc emits for `acc += a * s`.
 fn fma3(a: Vector3f, s: f32, acc: Vector3f) -> Vector3f {
     v3(fma(a.x, s, acc.x), fma(a.y, s, acc.y), fma(a.z, s, acc.z))
-}
-
-fn fmin(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
-}
-
-fn fmax(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
 }
 
 /// `(vel / sqrtf(|vel|)) * max` when `|vel| > max * max` (sic: the C++ compares the length, not
@@ -170,7 +158,7 @@ pub fn hpl3_buoyancy(b: &BuoyIn, subs: &[SubShape]) -> Option<BuoyOut> {
         no_prev_vel: b.no_prev_vel,
         ..BuoyOut::default()
     };
-    let mul = fmin(b.drag_density_mul, b.density_mul);
+    let mul = cmath_min(b.drag_density_mul, b.density_mul);
     let drag = b.density * mul;
     if drag > 0.0 {
         let frac = volume / b.shape_volume;
@@ -181,21 +169,21 @@ pub fn hpl3_buoyancy(b: &BuoyIn, subs: &[SubShape]) -> Option<BuoyOut> {
         let speed = len3(lin);
         if speed > 0.0 {
             let mut c = if b.max_linear_speed > 0.0 {
-                fmin(speed, b.max_linear_speed * mul)
+                cmath_min(speed, b.max_linear_speed * mul)
             } else {
                 mul * speed
             };
-            c = fmin(c, 0.5 * c * c);
+            c = cmath_min(c, 0.5 * c * c);
             vl = mul3(lin, -c * b.linear_viscosity * drag * frac * b.mass / speed);
         }
         let ang_speed = len3(ang);
         if ang_speed > 0.0 {
             let mut c = if b.max_angular_speed > 0.0 {
-                fmin(ang_speed, b.max_angular_speed * mul)
+                cmath_min(ang_speed, b.max_angular_speed * mul)
             } else {
                 mul * ang_speed
             };
-            c = fmin(c, 0.5 * c * c);
+            c = cmath_min(c, 0.5 * c * c);
             va = mul3(
                 matrix_mul_vec(&b.inertia, div3(ang, ang_speed)),
                 -drag * c * b.angular_viscosity * frac,
@@ -246,7 +234,7 @@ pub const SHAPE_CAPSULE: i32 = 4;
 pub fn buoyancy_points(shape: i32, size: Vector3f, out: &mut Vec<Vector3f>) -> f32 {
     let mut radius = 0.0f32;
     if shape == SHAPE_BOX {
-        let r = 0.5 * fmin(size.x, fmin(size.y, size.z));
+        let r = 0.5 * cmath_min(size.x, cmath_min(size.y, size.z));
         radius = r;
         let sz = [size.x, size.y, size.z];
         let mut num = [0i32; 3];
@@ -292,7 +280,7 @@ pub fn buoyancy_points(shape: i32, size: Vector3f, out: &mut Vec<Vector3f>) -> f
             let w = -fma(
                 sin(z / r * PI2).abs(),
                 pr,
-                -fmax(fma(-z, z, r * r), 0.0).sqrt(),
+                -cmath_max(fma(-z, z, r * r), 0.0).sqrt(),
             );
             let cols = ((2.0 * w / h + 0.999) as i32).clamp(5, 8);
             let step = (2.0 * w - h) / (cols as f32 - 1.0);

@@ -3,6 +3,7 @@
 
 #![allow(clippy::needless_range_loop)]
 
+use crate::math::{sub3, translation};
 use std::fmt::Write;
 
 use super::bv::{Bv, Frustum};
@@ -57,10 +58,6 @@ fn add(a: Vector3f, b: Vector3f) -> Vector3f {
     v3(a.x + b.x, a.y + b.y, a.z + b.z)
 }
 
-fn sub(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x - b.x, a.y - b.y, a.z - b.z)
-}
-
 struct Out(String);
 
 impl Out {
@@ -108,10 +105,6 @@ impl Out {
         }
         self.f(b.radius);
     }
-}
-
-fn translation(m: &Matrixf) -> Vector3f {
-    v3(m.m[0][3], m.m[1][3], m.m[2][3])
 }
 
 fn run_bv(seed: i32, rng: &mut Rng, o: &mut Out) {
@@ -247,7 +240,7 @@ fn make_frustum(rng: &mut Rng) -> Box<Frustum> {
 
 fn bv_at(mn: Vector3f, mx: Vector3f, c: Vector3f) -> Bv {
     let mut b = Bv::new();
-    b.set_local_min_max(sub(mn, c), sub(mx, c));
+    b.set_local_min_max(sub3(mn, c), sub3(mx, c));
     b.set_position(c);
     b
 }

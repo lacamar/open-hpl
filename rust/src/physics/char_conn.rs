@@ -7,7 +7,7 @@ use super::host::H;
 use super::wreg::{Wa, WorldOp};
 use crate::math::{
     IDENTITY, len3, matrix_inverse, matrix_mul_3x3, matrix_mul_vec, matrix_to_euler_angles,
-    normalize3, v3,
+    normalize3, normalized, sub3, v3,
 };
 use crate::types::{Matrixf, Vector3f};
 
@@ -271,15 +271,6 @@ fn world_pos(op: WorldOp, body: H) -> Vector3f {
     v3(a.rv[0], a.rv[1], a.rv[2])
 }
 
-fn normalized(mut v: Vector3f) -> Vector3f {
-    normalize3(&mut v);
-    v
-}
-
-fn sub(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x - b.x, a.y - b.y, a.z - b.z)
-}
-
 /// `iCharacterBody::ConnectToBody`. The states are re-read through raw pointers around every host
 /// call, which can re-enter C++.
 ///
@@ -313,13 +304,13 @@ pub unsafe fn connect_to_body(
     let pos_local_to_body = if depend_on_body_rotation {
         matrix_mul_vec(&inv_body, pos)
     } else {
-        sub(pos, body_world)
+        sub3(pos, body_world)
     };
     let start_rotation = matrix_to_euler_angles(&rotation(&body_matrix));
 
     let align_rotation = flags & FLAG_ALIGN_BODY_ROTATION != 0;
     let align_center = flags & FLAG_ALIGN_BODY_CENTER != 0;
-    let mut normal = normalized(sub(body_world, pos));
+    let mut normal = normalized(sub3(body_world, pos));
     let distance = len3(pos_local_to_body);
 
     let Some(sv) = s() else { return };
@@ -338,7 +329,7 @@ pub unsafe fn connect_to_body(
 
     let affect_char = flags & FLAG_AFFECT_CHAR != 0;
     let Some(sv) = s() else { return };
-    let mut pos_local_to_char = sub(pos, sv.position);
+    let mut pos_local_to_char = sub3(pos, sv.position);
 
     let align_char = flags & FLAG_ALIGN_CHAR_ROTATION != 0;
     let mut char_local_forward = ZERO;

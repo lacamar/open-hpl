@@ -2,12 +2,8 @@ use super::beam;
 use super::lensflare::{self, EntIn, FlareIn, Kind, ViewIn, VisState};
 use super::light::*;
 use super::rope::{self, RopeOut, RopeParams};
-use crate::math::IDENTITY;
-use crate::types::{Color, Vector2f, Vector3f};
-
-fn v3(x: f32, y: f32, z: f32) -> Vector3f {
-    Vector3f { x, y, z }
-}
+use crate::math::{IDENTITY, v3};
+use crate::types::{Color, Vector2f};
 
 fn col(r: f32, g: f32, b: f32, a: f32) -> Color {
     Color { r, g, b, a }

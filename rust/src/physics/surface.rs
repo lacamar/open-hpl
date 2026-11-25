@@ -2,7 +2,7 @@
 
 use super::body::rotation;
 use super::host::{H, Host, Str};
-use crate::math::{fma, matrix_mul_vec};
+use crate::math::{cmath_max, cmath_min, fma, matrix_mul_vec};
 use crate::types::Vector3f;
 
 pub const ROLL_AXIS_X: u32 = 1;
@@ -32,14 +32,6 @@ pub struct SurfaceParams {
     pub roll_axis_flags: u32,
     pub scrape_sound: Str,
     pub roll_sound: Str,
-}
-
-fn max(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
-
-fn min(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
 }
 
 fn lerp_to(t: f32, to: f32) -> f32 {
@@ -151,7 +143,7 @@ pub fn on_slide<Ho: Host>(
 
     let entity = h.body_scrape_entity(body);
     if entity != 0 {
-        let fmin = max(p.min_scrape_speed - 0.7, 0.02);
+        let fmin = cmath_max(p.min_scrape_speed - 0.7, 0.02);
         if speed.abs() < fmin {
             h.ent_fade_out(entity, 4.3);
             h.body_set_scrape_entity(body, 0);
@@ -268,7 +260,7 @@ pub fn update_roll_effect<Ho: Host>(h: &Ho, p: &SurfaceParams, body: H) {
 
     let entity = h.body_roll_entity(body);
     if entity != 0 {
-        let fmin = max(p.min_roll_speed - 0.7, 0.02);
+        let fmin = cmath_max(p.min_roll_speed - 0.7, 0.02);
         if rolling < fmin || !h.body_has_collision(body) {
             h.ent_fade_out(entity, 4.3);
             h.body_set_roll_entity(body, 0);
@@ -278,7 +270,11 @@ pub fn update_roll_effect<Ho: Host>(h: &Ho, p: &SurfaceParams, body: H) {
             let entry = h.ent_main_entry(entity);
             if entry != 0 {
                 h.entry_set_speed_mul(entry, freq);
-                h.entry_fade_volume_mul_to(entry, min(volume * h.ent_volume(entity), 1.0), 4.0);
+                h.entry_fade_volume_mul_to(
+                    entry,
+                    cmath_min(volume * h.ent_volume(entity), 1.0),
+                    4.0,
+                );
                 let target = h.body_roll_entity(body);
                 h.ent_set_position(target, h.body_world_position(body));
             }

@@ -6,32 +6,13 @@
 
 use super::animstate::AnimCore;
 use super::skinning::{self, SkinJob};
+use crate::ffi::{slice, slice_mut};
 use crate::types::Matrixf;
 
 const _: () = {
     use std::mem::{offset_of, size_of};
     assert!(size_of::<AnimCore>() == 44 && offset_of!(AnimCore, active) == 40);
 };
-
-/// # Safety
-/// `p` valid for `n` reads when `n > 0`.
-unsafe fn slice<'a, T>(p: *const T, n: i32) -> &'a [T] {
-    match usize::try_from(n) {
-        // SAFETY: caller contract.
-        Ok(n) if n > 0 && !p.is_null() => unsafe { std::slice::from_raw_parts(p, n) },
-        _ => &[],
-    }
-}
-
-/// # Safety
-/// `p` valid for `n` writes when `n > 0`.
-unsafe fn slice_mut<'a, T>(p: *mut T, n: i32) -> &'a mut [T] {
-    match usize::try_from(n) {
-        // SAFETY: caller contract.
-        Ok(n) if n > 0 && !p.is_null() => unsafe { std::slice::from_raw_parts_mut(p, n) },
-        _ => &mut [],
-    }
-}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_anim_core_init(core: *mut AnimCore, length: f32) {
@@ -152,7 +133,12 @@ pub unsafe extern "C" fn ohpl_submesh_skin(
     matrix_count: i32,
 ) {
     let v = i64::from(vertex_count);
-    let len = |per: i64| i32::try_from(v.saturating_mul(per)).unwrap_or(0);
+    let len = |per: i64| {
+        i32::try_from(v.saturating_mul(per))
+            .ok()
+            .and_then(|n| usize::try_from(n).ok())
+            .unwrap_or(0)
+    };
     let stride = i64::from(pos_stride.max(1));
     // SAFETY: caller contract.
     let job = unsafe {
@@ -165,7 +151,7 @@ pub unsafe extern "C" fn ohpl_submesh_skin(
             skin_tangent: slice_mut(skin_tangent, len(4)),
             weights: slice(weights, len(4)),
             bones: slice(bones, len(4)),
-            matrices: slice(matrices, matrix_count),
+            matrices: slice(matrices, usize::try_from(matrix_count).unwrap_or(0)),
             pos_stride: usize::try_from(stride).unwrap_or(1),
         }
     };

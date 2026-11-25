@@ -1,11 +1,7 @@
 use super::camera::*;
 use super::node::*;
-use crate::math::IDENTITY;
+use crate::math::{IDENTITY, v3};
 use crate::types::{Matrixf, Quaternion, Vector2f, Vector3f};
-
-fn v3(x: f32, y: f32, z: f32) -> Vector3f {
-    Vector3f { x, y, z }
-}
 
 fn translation(x: f32, y: f32, z: f32) -> Matrixf {
     let mut m = IDENTITY;

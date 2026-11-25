@@ -5,7 +5,7 @@
 //! Unless noted, every pointer is non-null, valid and aligned for the duration of the call, and
 //! output pointers do not alias inputs.
 
-use std::slice;
+use crate::ffi::slice;
 
 use super::geom::{self, FrustumView};
 use super::matrix::{self, IDENTITY};
@@ -20,15 +20,6 @@ macro_rules! ffi {
             unsafe { $body }
         }
     )*};
-}
-
-fn slice_of<'a, T>(p: *const T, n: i32) -> &'a [T] {
-    if p.is_null() || n <= 0 {
-        &[]
-    } else {
-        // SAFETY: caller passes `n` valid elements at `p`.
-        unsafe { slice::from_raw_parts(p, n as usize) }
-    }
 }
 
 ffi! {
@@ -272,18 +263,18 @@ fn ohpl_math_check_plane_line_intersection(
     hit
 }
 fn ohpl_math_check_points_planes_collision(v: *const Vector3f, nv: i32, p: *const Planef, np: i32) -> i32 {
-    geom::points_planes_collision(slice_of(v, nv), slice_of(p, np))
+    geom::points_planes_collision(slice(v, usize::try_from(nv).unwrap_or(0)), slice(p, usize::try_from(np).unwrap_or(0)))
 }
 fn ohpl_math_check_points_aabb_planes_collision(v: *const Vector3f, nv: i32, min: *const Vector3f, max: *const Vector3f) -> i32 {
-    geom::points_aabb_planes_collision(slice_of(v, nv), *min, *max)
+    geom::points_aabb_planes_collision(slice(v, usize::try_from(nv).unwrap_or(0)), *min, *max)
 }
 fn ohpl_math_check_separating_axis_intersection(
     va: *const Vector3f, nva: i32, pa: *const Planef, npa: i32,
     vb: *const Vector3f, nvb: i32, pb: *const Planef, npb: i32
 ) -> bool {
     geom::separating_axis_intersection(
-        [slice_of(va, nva), slice_of(vb, nvb)],
-        [slice_of(pa, npa), slice_of(pb, npb)],
+        [slice(va, usize::try_from(nva).unwrap_or(0)), slice(vb, usize::try_from(nvb).unwrap_or(0))],
+        [slice(pa, usize::try_from(npa).unwrap_or(0)), slice(pb, usize::try_from(npb).unwrap_or(0))],
     )
 }
 fn ohpl_math_check_line_tri_mesh_intersection(

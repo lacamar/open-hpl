@@ -111,7 +111,7 @@ pub struct Tree {
     pub objects: Vec<u32>,
 }
 
-fn axis_of(v: Vector3f, axis: i32) -> f32 {
+pub(crate) fn axis_of(v: Vector3f, axis: i32) -> f32 {
     match axis {
         0 => v.x,
         1 => v.y,

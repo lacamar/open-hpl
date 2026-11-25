@@ -10,7 +10,7 @@ use crate::math::{
 };
 use crate::string;
 use crate::types::{Matrixf, Vector3f};
-use crate::xml::{Doc, NodeId};
+use crate::xml::{AttrRead, Doc, NodeId};
 use std::collections::BTreeMap;
 
 const PI2: f32 = 1.570_796_4;
@@ -40,37 +40,11 @@ impl<'a> El<'a> {
     fn value(self) -> &'a [u8] {
         crate::xml::c_str(&self.doc.node(self.id).value)
     }
+}
 
-    fn attr(self, name: &[u8]) -> Option<&'a [u8]> {
+impl AttrRead for El<'_> {
+    fn attr(&self, name: &[u8]) -> Option<&[u8]> {
         self.doc.attribute(self.id, name)
-    }
-
-    fn string(self, name: &[u8], default: &[u8]) -> Vec<u8> {
-        self.attr(name).unwrap_or(default).to_vec()
-    }
-
-    fn float(self, name: &[u8], default: f32) -> f32 {
-        self.attr(name).map_or(default, string::token_to_float)
-    }
-
-    fn int(self, name: &[u8], default: i32) -> i32 {
-        self.attr(name).map_or(default, string::token_to_int)
-    }
-
-    fn bool(self, name: &[u8], default: bool) -> bool {
-        self.attr(name).map_or(default, string::to_bool)
-    }
-
-    fn vec3(self, name: &[u8], default: Vector3f) -> Vector3f {
-        let mut v = [0.0f32; 3];
-        match self.attr(name) {
-            Some(s) if string::floats_exact(s, &mut v) => Vector3f {
-                x: v[0],
-                y: v[1],
-                z: v[2],
-            },
-            _ => default,
-        }
     }
 }
 

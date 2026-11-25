@@ -6,19 +6,10 @@
 //! the fields `SetParticleDefaults` does not reset.
 
 use crate::math::{
-    IDENTITY, dot3, fast_random_float, fma, len3, matrix_mul_vec, matrix_rotate, modulus,
-    normalize3, rand_rectf, rand_rectl, rotate_z, v3,
+    IDENTITY, add3, cmath_max, dot3, fast_random_float, fma, len3, matrix_mul_vec, matrix_rotate,
+    modulus, normalize3, powf, rand_rectf, rand_rectl, rotate_z, translation, v3,
 };
 use crate::types::{Color, Matrixf, Vector2f, Vector2l, Vector3f};
-
-unsafe extern "C" {
-    fn powf(x: f32, y: f32) -> f32;
-}
-
-fn pow_f32(x: f32, y: f32) -> f32 {
-    // SAFETY: pure libm function on plain floats.
-    unsafe { powf(x, y) }
-}
 
 const K2PI: f32 = std::f32::consts::TAU;
 
@@ -206,10 +197,6 @@ pub struct Emitter {
     frame: f32,
 }
 
-fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x + b.x, a.y + b.y, a.z + b.z)
-}
-
 pub(super) fn rand_v3(min: Vector3f, max: Vector3f) -> Vector3f {
     let x = rand_rectf(min.x, max.x);
     let y = rand_rectf(min.y, max.y);
@@ -279,10 +266,6 @@ fn linear(c: Color) -> Color {
     )
 }
 
-fn max_f(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
-
 pub(super) fn rotation_part(m: &Matrixf) -> Matrixf {
     let [r0, r1, r2, _] = m.m;
     Matrixf {
@@ -293,11 +276,6 @@ pub(super) fn rotation_part(m: &Matrixf) -> Matrixf {
             [0.0, 0.0, 0.0, 1.0],
         ],
     }
-}
-
-pub(super) fn translation(m: &Matrixf) -> Vector3f {
-    let [r0, r1, r2, _] = m.m;
-    v3(r0[3], r1[3], r2[3])
 }
 
 /// `a*b + c*d` as gcc contracts it: the first product is fused.
@@ -588,7 +566,7 @@ impl Emitter {
             }
 
             if a.speed_mul != 0.0 && a.speed_mul != 1.0 {
-                let m = pow_f32(a.speed_mul, dt);
+                let m = powf(a.speed_mul, dt);
                 a.vel = v3(a.vel.x * m, a.vel.y * m, a.vel.z * m);
             }
 
@@ -773,7 +751,7 @@ impl Emitter {
         if g.hpl3_color {
             cm = col_mul(linear(g.ps_color), splat(g.brightness, 1.0));
             let light = col_mul(linear(g.light_color), splat(g.light_brightness, 1.0));
-            let f_max = max_f(light.r, max_f(light.g, light.b));
+            let f_max = cmath_max(light.r, cmath_max(light.g, light.b));
             if g.add_blend || f_max > 1.0 {
                 cm = col_mul(cm, light);
             } else if f_max <= 0.0 {

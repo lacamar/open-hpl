@@ -1,18 +1,8 @@
 //! C ABI of the terrain and undergrowth bakers (`HPL2/core/include/resources/RustLdTerrain.h`).
 
 use super::ld_terrain::{AreaIn, Group, GroupOut, LdPatchOut, Mat, Terrain, build_undergrowth};
+use crate::ffi::slice;
 use crate::types::Vector3f;
-
-/// # Safety
-/// `p` points to `n` readable `T`, or `n` is 0.
-unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if p.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: caller contract.
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
-}
 
 /// # Safety
 /// `data` points to `len` readable bytes.

@@ -4,12 +4,12 @@
 //! `Aux` owns the PID, smoothing and safe-position state; the engine objects stay in C++ and are
 //! reached through [`BodyHost`], so nothing here holds a borrow across a host call.
 
-use super::character::{CharState, S, rotate_y, update_move_matrix};
+use super::character::{CharState, S, update_move_matrix};
 use super::host::H;
 use super::pid::{Pid, Pid3};
 use crate::math::{
-    IDENTITY, acos, cross3, div3, dot3, len3, matrix_inverse, matrix_mul, matrix_mul_vec,
-    matrix_to_euler_angles, normalize3, sub3, v3, vector3_angle,
+    IDENTITY, acos, add3, cross3, div3, dot3, len3, matrix_inverse, matrix_mul, matrix_mul_vec,
+    matrix_to_euler_angles, mul3, normalized, rotate_y, sub3, translation, v3, vector3_angle,
 };
 use crate::types::{Matrixf, Vector3f};
 
@@ -159,18 +159,6 @@ fn rotation(m: &Matrixf) -> Matrixf {
     r
 }
 
-fn translation(m: &Matrixf) -> Vector3f {
-    v3(m.m[0][3], m.m[1][3], m.m[2][3])
-}
-
-fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x + b.x, a.y + b.y, a.z + b.z)
-}
-
-fn mul3(a: Vector3f, s: f32) -> Vector3f {
-    v3(a.x * s, a.y * s, a.z * s)
-}
-
 /// `cMath::Vector3ClampToLength` (math/mod.rs does not export it).
 fn clamp_len(v: Vector3f, max: f32) -> Vector3f {
     if max <= 0.0 {
@@ -178,11 +166,6 @@ fn clamp_len(v: Vector3f, max: f32) -> Vector3f {
     }
     let l = len3(v);
     if l > max { mul3(div3(v, l), max) } else { v }
-}
-
-fn normalized(mut v: Vector3f) -> Vector3f {
-    normalize3(&mut v);
-    v
 }
 
 /// Mean over `list` as the C++ loops sum it: left to right from zero.

@@ -5,8 +5,8 @@
 //! it is only ever touched through a raw pointer, never a long-lived reference.
 
 use crate::math::{
-    cos, cross3, div3, dot3, fma, len3, matrix_mul_3x3, matrix_mul_vec, matrix_rotate, normalize3,
-    sin, v3,
+    add3, cmath_max, cross3, div3, dot3, fma, len3, matrix_mul_3x3, matrix_mul_vec, matrix_rotate,
+    mul3, normalize3, normalized, rotate_y, sub3, v3,
 };
 use crate::types::{Matrixf, Vector3f};
 
@@ -217,27 +217,6 @@ impl S {
     }
 }
 
-/// `cMath::MatrixRotateY`.
-pub(super) fn rotate_y(a: f32) -> Matrixf {
-    let (s, c) = (sin(a), cos(a));
-    Matrixf {
-        m: [
-            [c, 0.0, s, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [-s, 0.0, c, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ],
-    }
-}
-
-fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x + b.x, a.y + b.y, a.z + b.z)
-}
-
-fn sub3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x - b.x, a.y - b.y, a.z - b.z)
-}
-
 /// `a + b * s` per component, fused as gcc does.
 fn mul_add3(a: Vector3f, b: Vector3f, s: f32) -> Vector3f {
     v3(fma(b.x, s, a.x), fma(b.y, s, a.y), fma(b.z, s, a.z))
@@ -248,26 +227,12 @@ fn sub_mul3(a: Vector3f, b: Vector3f, s: f32) -> Vector3f {
     v3(fma(-b.x, s, a.x), fma(-b.y, s, a.y), fma(-b.z, s, a.z))
 }
 
-fn mul3s(a: Vector3f, s: f32) -> Vector3f {
-    v3(a.x * s, a.y * s, a.z * s)
-}
-
-fn normalized(v: Vector3f) -> Vector3f {
-    let mut v = v;
-    normalize3(&mut v);
-    v
-}
-
 fn sqr_length(v: Vector3f) -> f32 {
     dot3(v, v)
 }
 
 fn abs_is_zero(v: Vector3f) -> bool {
     v.x.abs() == 0.0 && v.y.abs() == 0.0 && v.z.abs() == 0.0
-}
-
-fn max(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
 }
 
 pub fn update_move_matrix(s: &S) {
@@ -403,10 +368,10 @@ fn position_from_char_speed(s: &S, dt: f32) -> Vector3f {
 
     let mut pos_add = v3(0.0, 0.0, 0.0);
     let fwd = s.forward();
-    let a = mul3s(fwd, s.move_speed(DIR_FORWARD));
+    let a = mul3(fwd, s.move_speed(DIR_FORWARD));
     pos_add = mul_add3(pos_add, a, dt);
     let right = s.right();
-    let b = mul3s(right, s.move_speed(DIR_RIGHT));
+    let b = mul3(right, s.move_speed(DIR_RIGHT));
     pos_add = mul_add3(pos_add, b, dt);
     pos_add
 }
@@ -422,7 +387,7 @@ fn align_pos_add(s: &S, pos_add: &mut Vector3f) {
     let body_forward = normalized(*pos_add);
     let right = cross3(body_forward, n);
     let forward = cross3(n, right);
-    *pos_add = mul3s(forward, len3(*pos_add));
+    *pos_add = mul3(forward, len3(*pos_add));
 }
 
 fn check_collision<H: CharHost>(h: &H, s: &S, push: &mut Vector3f, pos: Vector3f, cb: i32) -> bool {
@@ -461,8 +426,8 @@ fn check_move_collision<H: CharHost>(h: &H, s: &S, pos_add: Vector3f, dt: f32, h
         s.set_position(add3(s.position(), push));
         if !s.is_on_ground() && sqr_length(push) != 0.0 {
             let normal = normalized(push);
-            let fwd_vel = mul3s(s.forward(), s.move_speed(DIR_FORWARD));
-            let right_vel = mul3s(s.right(), s.move_speed(DIR_RIGHT));
+            let fwd_vel = mul3(s.forward(), s.move_speed(DIR_FORWARD));
+            let right_vel = mul3(s.right(), s.move_speed(DIR_RIGHT));
             deflect_speed(s, DIR_FORWARD, fwd_vel, normal);
             deflect_speed(s, DIR_RIGHT, right_vel, normal);
         }
@@ -489,16 +454,16 @@ fn check_step_climbing<H: CharHost>(
         return;
     }
     let radius = h.shape_radius();
-    let forward_add = max(len3(pos_add), 0.05);
+    let forward_add = cmath_max(len3(pos_add), 0.05);
     let move_dir = normalized(pos_add);
     let accurate = s.accurate_climbing();
     let rays = if accurate { 3 } else { 1 };
 
     let mut step_add = [v3(0.0, 0.0, 0.0); 3];
-    step_add[0] = mul3s(move_dir, radius + forward_add);
+    step_add[0] = mul3(move_dir, radius + forward_add);
     if accurate {
         let comb = |dir: Vector3f| {
-            let b = mul3s(move_dir, forward_add);
+            let b = mul3(move_dir, forward_add);
             v3(
                 fma(dir.x, radius, b.x),
                 fma(dir.y, radius, b.y),
@@ -541,11 +506,11 @@ fn check_step_climbing<H: CharHost>(
         }
         let mut height = size.y / 2.0 - dist;
         if hpl3 {
-            height = max(height, 0.0);
+            height = cmath_max(height, 0.0);
         }
         if height <= max_height && height > min_height {
             let lift = v3(0.0, height + s.climb_height_add(), 0.0);
-            let fa = mul3s(move_dir, forward_add);
+            let fa = mul3(move_dir, forward_add);
             let base = add3(s.position(), lift);
             let cfm = s.climb_forward_mul();
             let step_pos = v3(
@@ -579,7 +544,7 @@ fn update_forces<H: CharHost>(h: &H, s: &S, dt: f32) {
         let v = s.velocity();
         let length = len3(v);
         if length > s.max_gravity_speed() {
-            s.set_velocity(mul3s(div3(v, length), s.max_gravity_speed()));
+            s.set_velocity(mul3(div3(v, length), s.max_gravity_speed()));
         }
     }
     let scale = dt * (1.0 / s.mass());
@@ -614,7 +579,7 @@ fn update_friction(s: &S, dt: f32) {
         if speed < 0.0 {
             speed = 0.0;
         }
-        s.set_gravity_attachment_velocity(mul3s(dir, speed));
+        s.set_gravity_attachment_velocity(mul3(dir, speed));
     }
 }
 
@@ -681,7 +646,7 @@ fn check_force_collision<H: CharHost>(h: &H, s: &S, dt: f32) {
 
             let mut normal = normalized(push);
             let inv_gravity = if s.custom_gravity_active() {
-                normalized(mul3s(s.custom_gravity(), -1.0))
+                normalized(mul3(s.custom_gravity(), -1.0))
             } else {
                 v3(0.0, 1.0, 0.0)
             };

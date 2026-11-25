@@ -4,6 +4,7 @@
 //! callbacks only read an entity's name or id and never reach the registry.
 
 use super::h13_world::{AREA, BodyItem, EntityRef, MeshItem, Reg, plan_bodies, plan_meshes};
+use crate::ffi::slice;
 use crate::obj::{DropFn, Foreign, IdFn as FIdFn, NameFn as FNameFn};
 use std::ffi::c_void;
 
@@ -22,16 +23,6 @@ pub struct Name {
 
 type NameFn = unsafe extern "C" fn(*const c_void, *mut usize) -> *const u8;
 type IdFn = unsafe extern "C" fn(*const c_void) -> i32;
-
-/// # Safety
-/// `p` valid for `n` reads when `n > 0`.
-unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if n == 0 || p.is_null() {
-        return &[];
-    }
-    // SAFETY: caller contract.
-    unsafe { std::slice::from_raw_parts(p, n) }
-}
 
 /// # Safety
 /// `n.ptr` valid for `n.len` reads.

@@ -1,15 +1,13 @@
 //! `cCamera` matrix construction and picking rays; dirty flags and cached matrices stay in C++.
 
+use super::node::matrix_mul;
 use crate::math::{
-    IDENTITY, fma, matrix_inverse, matrix_mul as mul_raw, matrix_mul_vec, normalize3, rotate_z,
+    IDENTITY, fma, matrix_inverse, matrix_mul_vec, normalize3, rotate_x, rotate_y, rotate_z,
 };
 use crate::types::{Matrixf, Vector2f, Vector3f};
-use std::hint::black_box;
 
 unsafe extern "C" {
     safe fn ohpl_math_matrix_translate(t: &Vector3f, out: &mut Matrixf);
-    safe fn ohpl_math_matrix_rotate_x(a: f32, out: &mut Matrixf);
-    safe fn ohpl_math_matrix_rotate_y(a: f32, out: &mut Matrixf);
     safe fn ohpl_math_matrix_perspective_projection(
         near: f32,
         far: f32,
@@ -37,24 +35,6 @@ pub const ROTATE_MATRIX: i32 = 1;
 pub const MOVE_FLY: i32 = 1;
 pub const PROJECTION_PERSPECTIVE: i32 = 0;
 pub const PROJECTION_ORTHOGRAPHIC: i32 = 1;
-
-// Opaque operands keep LLVM from folding the identity/zero entries, which changes which NaN
-// payload an fma propagates.
-fn matrix_mul(a: &Matrixf, b: &Matrixf) -> Matrixf {
-    mul_raw(black_box(a), black_box(b))
-}
-
-fn rotate_x(a: f32) -> Matrixf {
-    let mut m = IDENTITY;
-    ohpl_math_matrix_rotate_x(a, &mut m);
-    m
-}
-
-fn rotate_y(a: f32) -> Matrixf {
-    let mut m = IDENTITY;
-    ohpl_math_matrix_rotate_y(a, &mut m);
-    m
-}
 
 fn translate(t: Vector3f) -> Matrixf {
     let mut m = IDENTITY;

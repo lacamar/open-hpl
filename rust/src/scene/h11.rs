@@ -6,13 +6,13 @@
 //! back (animation callbacks, `SetSkeletonPhysicsActive`), so no reference into the host's state
 //! or into `MeshCtl` is held across a host call; the animation cores are re-fetched after each.
 
+use crate::math::{
+    IDENTITY, angle_from_points_2d, cmath_min, cos, fma, matrix_inverse, matrix_mul,
+    matrix_quaternion, matrix_scale, sin,
+};
 use std::collections::BTreeMap;
 
 use super::animstate::{self, AnimCore};
-use crate::math::{
-    IDENTITY, angle_from_points_2d, cos, fma, matrix_inverse, matrix_mul, matrix_quaternion,
-    matrix_scale, sin,
-};
 use crate::types::{Matrixf, Quaternion, Vector2f, Vector3f};
 
 /// The `cMeshEntity` members the control flow reads and writes.
@@ -406,10 +406,6 @@ pub fn static_null_matrix(count: &mut i32, world: &Matrixf) -> bool {
     true
 }
 
-fn min(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
-}
-
 fn row_length(r: &[f32; 4]) -> f32 {
     let [x, y, z, _] = *r;
     fma(z, z, fma(x, x, y * y)).sqrt()
@@ -435,8 +431,8 @@ pub fn rest_pose_from_map(
         .zip(out.iter_mut())
     {
         let [w, x, y, z, tx, ty, tz] = *v;
-        let s = min(
-            min(row_length(&m.m[0]), row_length(&m.m[1])),
+        let s = cmath_min(
+            cmath_min(row_length(&m.m[0]), row_length(&m.m[1])),
             row_length(&m.m[2]),
         );
         let q = Quaternion {

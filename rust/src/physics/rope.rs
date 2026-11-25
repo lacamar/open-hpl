@@ -4,7 +4,7 @@
 //! so both are reached through raw pointers and every host call may rewrite them.
 
 use super::body::rotation;
-use crate::math::{cross3, div3, dot3, fma, len3, matrix_mul_vec, mul3, v3};
+use crate::math::{add3, cmath_max, cross3, div3, dot3, fma, len3, matrix_mul_vec, mul3, sub3, v3};
 use crate::types::{Matrixf, Vector3f};
 use std::ffi::c_void;
 
@@ -192,18 +192,6 @@ particle_fields! {
     inv_mass, set_inv_mass: f32;
 }
 
-fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x + b.x, a.y + b.y, a.z + b.z)
-}
-
-fn sub3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x - b.x, a.y - b.y, a.z - b.z)
-}
-
-fn max(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
-
 fn list<H: RopeHost>(h: &H) -> Vec<P> {
     let (p, n) = h.particles();
     if p.is_null() {
@@ -249,7 +237,8 @@ pub fn particle_update_movement(p: P, damping_mul: f32, gravity: Vector3f, dt: f
 pub fn length_constraint(p1: P, p2: P, length: f32, stiffness: f32) {
     let delta = sub3(p2.position(), p1.position());
     let dist = len3(delta);
-    let diff = stiffness * (dist - length) / (dist * max(0.0001, p1.inv_mass() + p2.inv_mass()));
+    let diff =
+        stiffness * (dist - length) / (dist * cmath_max(0.0001, p1.inv_mass() + p2.inv_mass()));
     let (i1, i2) = (p1.inv_mass(), p2.inv_mass());
     let a = p1.position();
     p1.set_position(v3(
@@ -277,7 +266,7 @@ pub fn length_constraint_range(p1: P, p2: P, min: f32, max: f32, stiffness: f32)
 pub fn length_constraint_stretch(p1: P, p2: P, length: f32, stiffness: f32) {
     let delta = sub3(p1.position(), p2.position());
     let dist = len3(delta);
-    let diff = (dist - length) / (dist * max(0.0001, p2.inv_mass()));
+    let diff = (dist - length) / (dist * cmath_max(0.0001, p2.inv_mass()));
     let i2 = p2.inv_mass();
     let b = p2.position();
     p2.set_position(v3(

@@ -1,7 +1,7 @@
 //! Newton material pair parameters, AABB-overlap gate and contact aggregation
 //! (`cPhysicsMaterialNewton`).
 
-use crate::math::{div3, v3};
+use crate::math::{add3, div3};
 use crate::types::Vector3f;
 
 #[repr(C)]
@@ -130,10 +130,6 @@ pub fn aggregate_contacts(contacts: &[Contact]) -> ContactAgg {
     agg.normal = div3(agg.normal, n);
     agg.position = div3(agg.position, n);
     agg
-}
-
-fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x + b.x, a.y + b.y, a.z + b.z)
 }
 
 #[repr(C)]

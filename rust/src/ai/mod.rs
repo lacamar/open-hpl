@@ -4,8 +4,8 @@
 //! Open-list ties follow `std::set<cAStarNode*>` order, i.e. the address of the `cAINode`,
 //! passed in as `Node::key`.
 
+use crate::graphics::stdsort;
 use crate::math::{cross3, dot3, normalize3, sub3, v3};
-use crate::resources::std_sort;
 use crate::types::{Vector2f, Vector3f};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -23,7 +23,7 @@ pub const SKIP_VOLATILE: u32 = 4;
 pub type CastFn = unsafe extern "C" fn(*mut c_void, u32, *const Vector3f, *const Vector3f) -> bool;
 pub type CanAddFn = unsafe extern "C" fn(*mut c_void, u32, u32) -> bool;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Edge {
     pub dist: f32,
     pub sqr: f32,
@@ -424,7 +424,7 @@ impl Graph {
             let Some(node) = self.nodes.get_mut(i) else {
                 break;
             };
-            std_sort(&mut node.edges, &mut |a: Edge, b: Edge| a.dist < b.dist);
+            stdsort::sort(&mut node.edges, |a, b| a.dist < b.dist);
             if p.max_edges > 0 && node.edges.len() as i64 > i64::from(p.max_edges) {
                 node.edges.truncate(p.max_edges as usize);
             }

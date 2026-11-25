@@ -1,11 +1,8 @@
 use super::scenemgr::*;
 use super::soundentity::*;
 use super::world::*;
-use crate::types::{Color, Vector3f};
-
-fn v3(x: f32, y: f32, z: f32) -> Vector3f {
-    Vector3f { x, y, z }
-}
+use crate::math::v3;
+use crate::types::Color;
 
 #[derive(Default)]
 struct Fake {

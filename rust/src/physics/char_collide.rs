@@ -6,7 +6,7 @@ use super::char_conn::CharExt;
 use super::character::CharState;
 use super::host::H;
 use super::wreg::{Wa, WorldOp};
-use crate::math::{div3, normalize3, v3};
+use crate::math::{add3, div3, mul3, normalize3, sub3, v3};
 use crate::types::Vector3f;
 
 pub const CC_BODY_MATERIAL: i32 = 508;
@@ -60,18 +60,6 @@ fn force_at(op: WorldOp, body: H, force: Vector3f, pos: Vector3f) {
         CC_BODY_ADD_FORCE_AT,
         [body, f.as_ptr() as usize, p.as_ptr() as usize, 0, 0, 0],
     );
-}
-
-fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x + b.x, a.y + b.y, a.z + b.z)
-}
-
-fn sub3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x - b.x, a.y - b.y, a.z - b.z)
-}
-
-fn mul3(a: Vector3f, s: f32) -> Vector3f {
-    v3(a.x * s, a.y * s, a.z * s)
 }
 
 /// `cCharacterBodyCollideGravity::OnCollision`.

@@ -3,7 +3,7 @@
 //! order, so random numbers are drawn at the same points as before.
 
 use crate::math::{
-    Matrixf, Vector3f, cos, fma, matrix_mul, perspective_projection, rand_rectf, tan,
+    Matrixf, Vector3f, cmath_min, cos, fma, matrix_mul, perspective_projection, rand_rectf, tan,
 };
 use crate::types::Color;
 
@@ -73,10 +73,6 @@ pub trait LightHost {
     fn raw_radius(&mut self, v: f32);
     fn flicker_sound(&mut self, on: bool);
     fn flicker_event(&mut self, on: bool);
-}
-
-fn min(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
 }
 
 pub fn fade_brightness_to(a: &mut LightAnim, live: &LightLive, dest: f32, time: f32) {
@@ -182,7 +178,7 @@ pub fn update_light<H: LightHost>(
     dt: f32,
 ) {
     if a.bright_fade_time > 0.0 {
-        a.bright_fade_count = min(a.bright_fade_count + dt, a.bright_fade_time);
+        a.bright_fade_count = cmath_min(a.bright_fade_count + dt, a.bright_fade_time);
         let t = a.bright_fade_count / a.bright_fade_time;
         let t = host.ease(t);
         let v = fma(
@@ -231,7 +227,7 @@ pub fn update_light<H: LightHost>(
 
 pub fn spot_near(near: f32, shadow_near: f32) -> f32 {
     if shadow_near > 0.0 {
-        min(near, shadow_near)
+        cmath_min(near, shadow_near)
     } else {
         near
     }
@@ -272,7 +268,7 @@ pub fn box_fade_step(
     speed: f32,
     dt: f32,
 ) -> bool {
-    *t = min(fma(speed, dt, *t), 1.0);
+    *t = cmath_min(fma(speed, dt, *t), 1.0);
     if speed >= 1e9 {
         *t = 1.0;
     }

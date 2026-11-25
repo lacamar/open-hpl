@@ -3,6 +3,7 @@
 //! one small host table (`RustEflHost.cpp`); the decal mesh helper is still C++.
 
 use super::h10::{self, EntBox};
+use super::h12_psload::splat3;
 use super::ls_host;
 use super::ls_light;
 use super::sl::{BbPod, BoxPod, FlarePod, FogPod, KIND_POINT, KIND_SPOT, LightPod, SpotPod};
@@ -17,6 +18,7 @@ use crate::resmgr::{mat, world as rmw};
 use crate::types::{Color, Vector2f, Vector3f};
 use crate::world_hpm::el::El;
 use crate::world_hpm::h4_plan::set_translation;
+use crate::xml::AttrRead;
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicPtr, Ordering};
 
@@ -131,10 +133,6 @@ fn zero3() -> Vector3f {
     }
 }
 
-fn splat3(v: f32) -> Vector3f {
-    Vector3f { x: v, y: v, z: v }
-}
-
 fn splat2(v: f32) -> Vector2f {
     Vector2f { x: v, y: v }
 }
@@ -202,7 +200,7 @@ fn tex(h: &Host, res: P, kind: i32, name: &[u8], srgb: bool) -> usize {
 /// # Safety
 /// `w` live.
 pub(crate) unsafe fn load_fog_area(h: &Host, el: &El, prefix: &[u8], w: *mut World, st: bool) -> P {
-    let name = join(prefix, el.string(b"Name"));
+    let name = join(prefix, el.string(b"Name", b""));
     // SAFETY: caller contract; each pod is live while the world holds the entity.
     unsafe {
         let p = ohpl_wd_create_simple(
@@ -221,18 +219,18 @@ pub(crate) unsafe fn load_fog_area(h: &Host, el: &El, prefix: &[u8], w: *mut Wor
         let o = pods(h, KIND_FOG, p);
         let f = &mut *o.pod.cast::<FogPod>();
         f.color = el.color(b"Color", gray(1.0, 1.0));
-        (*o.rnd).culled_by_fog = el.boolean(b"CulledByFog", true);
+        (*o.rnd).culled_by_fog = el.bool(b"CulledByFog", true);
         f.brightness = el.float(b"Brightness", 1.0);
         f.start = el.float(b"Start", 0.0);
         f.end = el.float(b"End", 0.0);
         f.falloff_exp = el.float(b"FalloffExp", 0.0);
-        f.backside_inside = el.boolean(b"ShownBacksideWhenInside", true);
-        f.backside_outside = el.boolean(b"ShownBacksideWhenOutside", true);
-        f.underwater = el.boolean(b"Underwater", false);
-        f.skybox = el.boolean(b"Skybox", false);
-        f.lighten = el.boolean(b"Lighten", false);
-        f.height_based = el.boolean(b"HeightBased", false);
-        f.exponential = el.boolean(b"Exponential", false);
+        f.backside_inside = el.bool(b"ShownBacksideWhenInside", true);
+        f.backside_outside = el.bool(b"ShownBacksideWhenOutside", true);
+        f.underwater = el.bool(b"Underwater", false);
+        f.skybox = el.bool(b"Skybox", false);
+        f.lighten = el.bool(b"Lighten", false);
+        f.height_based = el.bool(b"HeightBased", false);
+        f.exponential = el.bool(b"Exponential", false);
         f.density = el.float(b"Density", 0.25);
         f.height_density = el.float(b"HeightDensity", 0.25);
         f.height_horizon = el.float(b"HeightHorizon", 1.0);
@@ -247,8 +245,8 @@ pub(crate) unsafe fn load_fog_area(h: &Host, el: &El, prefix: &[u8], w: *mut Wor
 /// # Safety
 /// `w` live.
 pub(crate) unsafe fn load_particle_system(h: &Host, el: &El, prefix: &[u8], w: *mut World) -> P {
-    let name = join(prefix, el.string(b"Name"));
-    let file = el.string(b"File");
+    let name = join(prefix, el.string(b"Name", b""));
+    let file = el.string(b"File", b"");
     let size = splat3(1.0);
     // SAFETY: caller contract.
     unsafe {
@@ -270,14 +268,14 @@ pub(crate) unsafe fn load_particle_system(h: &Host, el: &El, prefix: &[u8], w: *
         let s = &mut *o.pod.cast::<sp_sys::SpPub>();
         s.color = el.color(b"Color", gray(1.0, 1.0));
         s.brightness = el.float(b"Brightness", 1.0);
-        s.fade_at_distance = el.boolean(b"FadeAtDistance", false);
+        s.fade_at_distance = el.bool(b"FadeAtDistance", false);
         s.min_fade_start = el.float(b"MinFadeDistanceStart", 0.0);
         s.min_fade_end = el.float(b"MinFadeDistanceEnd", 0.0);
         s.max_fade_start = el.float(b"MaxFadeDistanceStart", 0.0);
         s.max_fade_end = el.float(b"MaxFadeDistanceEnd", 0.0);
         let sys = o.pod.cast::<sp_sys::Sys>();
-        sp_sys::ohpl_sp_apply_all(sys, OP_CULL_DISTANCE, el.boolean(b"CulledByDistance", true));
-        sp_sys::ohpl_sp_apply_all(sys, OP_CULL_FOG, el.boolean(b"CulledByFog", true));
+        sp_sys::ohpl_sp_apply_all(sys, OP_CULL_DISTANCE, el.bool(b"CulledByDistance", true));
+        sp_sys::ohpl_sp_apply_all(sys, OP_CULL_FOG, el.bool(b"CulledByFog", true));
         setup(h, &o, el);
         p
     }
@@ -286,12 +284,12 @@ pub(crate) unsafe fn load_particle_system(h: &Host, el: &El, prefix: &[u8], w: *
 /// # Safety
 /// `w` live.
 pub(crate) unsafe fn load_sound(h: &Host, el: &El, prefix: &[u8], w: *mut World) -> P {
-    let name = join(prefix, el.string(b"Name"));
-    let file = el.string(b"SoundEntityFile");
+    let name = join(prefix, el.string(b"Name", b""));
+    let file = el.string(b"SoundEntityFile", b"");
     let custom = el
         .attr(b"UseCustomProperties")
-        .map(|_| el.boolean(b"UseCustomProperties", false));
-    let use_default = rmw::sound_use_default(el.boolean(b"UseDefault", false), custom);
+        .map(|_| el.bool(b"UseCustomProperties", false));
+    let use_default = rmw::sound_use_default(el.bool(b"UseDefault", false), custom);
     if file.is_empty() {
         return std::ptr::null_mut();
     }
@@ -332,10 +330,10 @@ pub(crate) unsafe fn load_billboard(
     st: bool,
     want_connection: bool,
 ) -> (P, Option<(i32, Vec<u8>)>) {
-    let name = join(prefix, el.string(b"Name"));
+    let name = join(prefix, el.string(b"Name", b""));
     let size = el.vec2(b"BillboardSize", splat2(0.0));
-    let mat_file = el.string(b"MaterialFile");
-    let ty = rmw::billboard_type(&el.string(b"BillboardType"));
+    let mat_file = el.string(b"MaterialFile", b"");
+    let ty = rmw::billboard_type(&el.string(b"BillboardType", b""));
     // SAFETY: caller contract.
     unsafe {
         let p = ohpl_wd_create_billboard(
@@ -356,15 +354,15 @@ pub(crate) unsafe fn load_billboard(
         (*b).forward_offset = el.float(b"BillboardOffset", 0.0);
         ls_bb::ohpl_ls_bb_set_color(b, &el.color(b"BillboardColor", gray(1.0, 1.0)));
         ls_bb::ohpl_ls_bb_set_brightness(b, el.float(b"Brightness", 1.0));
-        ls_bb::ohpl_ls_bb_set_is_halo(b, el.boolean(b"IsHalo", false));
+        ls_bb::ohpl_ls_bb_set_is_halo(b, el.bool(b"IsHalo", false));
         (*b).halo_source_size = el.vec3(b"HaloSourceSize", splat3(1.0));
         (*b).halo_size_updated = true;
         cull(
             o.rnd,
-            el.boolean(b"CulledByDistance", true),
-            el.boolean(b"CulledByFog", true),
+            el.bool(b"CulledByDistance", true),
+            el.bool(b"CulledByFog", true),
         );
-        let light = el.string(b"ConnectLight");
+        let light = el.string(b"ConnectLight", b"");
         let conn =
             (want_connection && !light.is_empty()).then(|| (el.int(b"ID", 0), join(prefix, light)));
         setup(h, &o, el);
@@ -381,9 +379,9 @@ pub(crate) unsafe fn load_lens_flare(
     w: *mut World,
     st: bool,
 ) -> P {
-    let name = join(prefix, el.string(b"Name"));
+    let name = join(prefix, el.string(b"Name", b""));
     let size = splat2(1.0);
-    let is_static = st || el.boolean(b"Static", false);
+    let is_static = st || el.bool(b"Static", false);
     // SAFETY: caller contract.
     unsafe {
         let p = ohpl_wd_create_lens_flare(
@@ -400,16 +398,16 @@ pub(crate) unsafe fn load_lens_flare(
         }
         let o = pods(h, KIND_FLARE, p);
         let f = o.pod.cast::<FlarePod>();
-        (*o.rnd).culled_by_fog = el.boolean(b"CulledByFog", true);
+        (*o.rnd).culled_by_fog = el.bool(b"CulledByFog", true);
         for (i, prefix) in ["Anamorphic", "Flare", "MultiIris"].iter().enumerate() {
             let k = i as i32;
             let n = |s: &str| format!("{s}{prefix}").into_bytes();
-            ls_flare::ohpl_ls_flare_set_active(f, k, el.boolean(&n("Active"), false));
+            ls_flare::ohpl_ls_flare_set_active(f, k, el.bool(&n("Active"), false));
             ls_flare::ohpl_ls_flare_set_size(f, k, &el.vec2(&n("Size"), splat2(0.125)));
             if let Some(c) = (*f).color.get_mut(i) {
                 *c = el.color(&n("Color"), gray(1.0, 1.0));
             }
-            let mat_name = el.string(&n("Material"));
+            let mat_name = el.string(&n("Material"), b"");
             let m = if mat_name.is_empty() {
                 0
             } else {
@@ -426,9 +424,9 @@ pub(crate) unsafe fn load_lens_flare(
         };
         let by_dist = el.float(b"SizeChangeBasedOnDistance", 0.0);
         sl::ohpl_sl_flare_set_size_by_dist(f, by_dist.clamp(0.0, 1.0));
-        (*f).use_parent_mesh = el.boolean(b"UseParentMeshForOcclusion", true);
-        (*f).shrink_when_occluded = el.boolean(b"ShrinkWhenOccluded", true);
-        (*f).mul_multi_iris = el.boolean(b"MulGlareWithMultiIris", false);
+        (*f).use_parent_mesh = el.bool(b"UseParentMeshForOcclusion", true);
+        (*f).shrink_when_occluded = el.bool(b"ShrinkWhenOccluded", true);
+        (*f).mul_multi_iris = el.bool(b"MulGlareWithMultiIris", false);
         sl::ohpl_sl_flare_set_outer_fov(f, el.float(b"OuterFOV", PI_F));
         sl::ohpl_sl_flare_set_inner_fov(f, el.float(b"InnerFOV", PI_F));
         (*f).glare_brightness = el.float(b"GlareBrightness", 0.5);
@@ -447,7 +445,7 @@ pub(crate) unsafe fn load_lens_flare(
 /// # Safety
 /// `w` live.
 pub(crate) unsafe fn load_light(h: &Host, el: &El, prefix: &[u8], w: *mut World, st: bool) -> P {
-    let name = join(prefix, el.string(b"Name"));
+    let name = join(prefix, el.string(b"Name", b""));
     let res = unsafe { (*w).pod.resources };
     let Some(kind) = rmw::light_kind(&el.name) else {
         ls_host::log(
@@ -481,7 +479,7 @@ pub(crate) unsafe fn load_light(h: &Host, el: &El, prefix: &[u8], w: *mut World,
                 b.weight = el.float(b"Weight", 1.0);
                 b.bevel = el.float(b"Bevel", 0.0);
                 b.falloff_pow = el.float(b"FalloffPow", 0.0);
-                b.use_sh = el.boolean(b"UseSphericalHarmonics", false);
+                b.use_sh = el.bool(b"UseSphericalHarmonics", false);
                 b.probe_offset = el.vec3(b"ProbeOffset", zero3());
                 if let Some(irr) = el.first(b"Irradiance") {
                     for set in &irr.children {
@@ -496,7 +494,7 @@ pub(crate) unsafe fn load_light(h: &Host, el: &El, prefix: &[u8], w: *mut World,
                             .map(|&[x, y, z]| Vector3f { x, y, z })
                             .take(rmw::band_count(vals.len()))
                             .collect();
-                        let set_name = set.string(b"SetName");
+                        let set_name = set.string(b"SetName", b"");
                         sl::ohpl_sl_box_add_set(
                             b,
                             set_name.as_ptr(),
@@ -516,7 +514,7 @@ pub(crate) unsafe fn load_light(h: &Host, el: &El, prefix: &[u8], w: *mut World,
                 let near = el.float(b"NearClipPlane", 0.1) * (sc.x + sc.y + sc.z) / 3.0;
                 s.near_clip = if near > 0.001 { near } else { 0.001 };
                 s.ctl.projection_updated = true;
-                let falloff = el.string(b"SpotFalloffMap");
+                let falloff = el.string(b"SpotFalloffMap", b"");
                 if !falloff.is_empty() {
                     let t = tex(h, res, TEX_1D, &falloff, false);
                     if t != 0 {
@@ -528,17 +526,17 @@ pub(crate) unsafe fn load_light(h: &Host, el: &El, prefix: &[u8], w: *mut World,
         }
         let light_type = (*l).light_type;
         if light_type == KIND_POINT || light_type == KIND_SPOT {
-            let falloff = el.string(b"FalloffMap");
+            let falloff = el.string(b"FalloffMap", b"");
             if !falloff.is_empty() {
                 let t = tex(h, res, TEX_1D, &falloff, false);
                 if t != 0 {
                     ls_light::ohpl_ls_light_set_falloff_map(l, t);
                 }
             }
-            let gobo = el.string(b"Gobo");
-            (*l).gobo_specular = el.string(b"GoboType") == b"Specular";
+            let gobo = el.string(b"Gobo", b"");
+            (*l).gobo_specular = el.string(b"GoboType", b"") == b"Specular";
             if !gobo.is_empty() {
-                let anim = mat::anim_mode(&el.string(b"GoboAnimMode"));
+                let anim = mat::anim_mode(&el.string(b"GoboAnimMode", b""));
                 let frame_time = el.float(b"GoboAnimFrameTime", 1.0);
                 let k = match rmw::gobo_kind(light_type == KIND_SPOT, anim) {
                     rmw::Gobo::Tex2D => TEX_2D,
@@ -553,35 +551,35 @@ pub(crate) unsafe fn load_light(h: &Host, el: &El, prefix: &[u8], w: *mut World,
                 }
             }
         }
-        (*l).cast_shadows = el.boolean(b"CastShadows", false);
+        (*l).cast_shadows = el.bool(b"CastShadows", false);
         cull(
             o.rnd,
-            el.boolean(b"CulledByDistance", true),
-            el.boolean(b"CulledByFog", true),
+            el.bool(b"CulledByDistance", true),
+            el.bool(b"CulledByFog", true),
         );
         ls_light::ohpl_ls_light_set_diffuse(l, &el.color(b"DiffuseColor", gray(1.0, 1.0)));
         (*l).default_diffuse = (*l).diffuse;
-        (*l).cast_diffuse = el.boolean(b"CastDiffuseLight", true);
-        (*l).cast_specular = el.boolean(b"CastSpecularLight", true);
+        (*l).cast_diffuse = el.bool(b"CastDiffuseLight", true);
+        (*l).cast_specular = el.bool(b"CastSpecularLight", true);
         ls_light::ohpl_ls_light_set_radius(l, el.float(b"Radius", 1.0));
         (*l).falloff_pow = el.float(b"FalloffPow", 1.0);
         (*l).spot_falloff_pow = el.float(b"SpotFalloffPow", 1.0);
         ls_light::ohpl_ls_light_set_brightness(l, el.float(b"Brightness", 1.0));
         (*l).default_brightness = (*l).brightness;
-        let mask = el.string_or(b"ConnectedLightMaskID", b"4294967295");
+        let mask = el.string(b"ConnectedLightMaskID", b"4294967295");
         (*l).mask_id = rmw::light_mask_id(&mask);
-        (*l).shadow_res = rmw::shadow_resolution(&el.string_or(b"ShadowResolution", b"High"));
-        let dynamic = el.boolean(b"ShadowsAffectDynamic", true);
-        let stat = el.boolean(b"ShadowsAffectStatic", true);
+        (*l).shadow_res = rmw::shadow_resolution(&el.string(b"ShadowResolution", b"High"));
+        let dynamic = el.bool(b"ShadowsAffectDynamic", true);
+        let stat = el.bool(b"ShadowsAffectStatic", true);
         (*l).shadow_casters_affected = rmw::shadow_casters(dynamic, stat);
         let fade_on = el.float(b"FlickerOnFadeLength", 0.0);
         let fade_off = el.float(b"FlickerOffFadeLength", 0.0);
-        (*l).anim.flickering = el.boolean(b"FlickerActive", false);
+        (*l).anim.flickering = el.bool(b"FlickerActive", false);
         let strings = [
-            el.string(b"FlickerOnSound"),
-            el.string(b"FlickerOnPS"),
-            el.string(b"FlickerOffSound"),
-            el.string(b"FlickerOffPS"),
+            el.string(b"FlickerOnSound", b""),
+            el.string(b"FlickerOnPS", b""),
+            el.string(b"FlickerOffSound", b""),
+            el.string(b"FlickerOffPS", b""),
         ];
         let ptrs = [
             strings[0].as_ptr(),
@@ -604,7 +602,7 @@ pub(crate) unsafe fn load_light(h: &Host, el: &El, prefix: &[u8], w: *mut World,
             // the C++ call passes OffMax where the parameter is OffMin
             el.float(b"FlickerOffMaxLength", 0.0),
             el.float(b"FlickerOffMinLength", 0.0),
-            el.boolean(b"FlickerFade", false),
+            el.bool(b"FlickerFade", false),
             el.float(b"FlickerOnFadeMinLength", fade_on),
             el.float(b"FlickerOnFadeMaxLength", fade_on),
             el.float(b"FlickerOffFadeMinLength", fade_off),
