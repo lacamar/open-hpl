@@ -2,6 +2,24 @@
 
 use crate::crc::Crc;
 
+#[allow(clippy::missing_safety_doc)]
+pub unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
+    if p.is_null() || n == 0 {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(p, n) }
+    }
+}
+
+#[allow(clippy::missing_safety_doc)]
+pub unsafe fn slice_mut<'a, T>(p: *mut T, n: usize) -> &'a mut [T] {
+    if p.is_null() || n == 0 {
+        &mut []
+    } else {
+        unsafe { std::slice::from_raw_parts_mut(p, n) }
+    }
+}
+
 /// Returns an owned `Crc`; free with `ohpl_crc_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_crc_new(key: u32) -> *mut Crc {
@@ -65,12 +83,7 @@ pub unsafe extern "C" fn ohpl_hpsl_transpile(
     shader_type: i32,
     out: *mut OhplBytes,
 ) -> bool {
-    let src: &[u8] = if len == 0 {
-        &[]
-    } else {
-        // SAFETY: caller contract above.
-        unsafe { std::slice::from_raw_parts(src, len) }
-    };
+    let src = unsafe { slice(src, len) };
     let result = crate::hpsl::transpile(src, crate::hpsl::ShaderType::from_raw(shader_type));
     let ok = result.is_ok();
     // SAFETY: caller contract above.
@@ -84,4 +97,22 @@ pub unsafe extern "C" fn ohpl_hpsl_transpile(
 pub unsafe extern "C" fn ohpl_bytes_free(bytes: OhplBytes) {
     // SAFETY: ptr/len come from the boxed slice leaked in `From<Vec<u8>>`.
     drop(unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(bytes.ptr, bytes.len)) });
+}
+
+#[cfg(test)]
+mod slice_tests {
+    use super::{slice, slice_mut};
+
+    #[test]
+    fn null_or_empty_gives_empty() {
+        let mut v = [1u8, 2, 3];
+        unsafe {
+            assert!(slice::<u8>(std::ptr::null(), 4).is_empty());
+            assert!(slice(v.as_ptr(), 0).is_empty());
+            assert_eq!(slice(v.as_ptr(), 3), [1, 2, 3]);
+            assert!(slice_mut::<u8>(std::ptr::null_mut(), 4).is_empty());
+            slice_mut(v.as_mut_ptr(), 2).fill(9);
+        }
+        assert_eq!(v, [9, 9, 3]);
+    }
 }

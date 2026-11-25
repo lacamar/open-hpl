@@ -12,6 +12,10 @@ unsafe extern "C" {
     fn atan2f(y: f32, x: f32) -> f32;
     fn logf(x: f32) -> f32;
     fn pow(x: f64, y: f64) -> f64;
+    #[link_name = "powf"]
+    fn c_powf(x: f32, y: f32) -> f32;
+    #[link_name = "fmodf"]
+    fn c_fmodf(x: f32, y: f32) -> f32;
     fn rand() -> c_int;
     fn srand(seed: u32);
     fn time(t: *mut c_long) -> c_long;
@@ -34,6 +38,14 @@ safe!(asin, asinf, (x));
 safe!(atan, atanf, (x));
 safe!(atan2, atan2f, (y, x));
 safe!(ln, logf, (x));
+
+pub(crate) fn powf(x: f32, y: f32) -> f32 {
+    unsafe { c_powf(x, y) }
+}
+
+pub(crate) fn fmodf(x: f32, y: f32) -> f32 {
+    unsafe { c_fmodf(x, y) }
+}
 
 pub(crate) fn pow_f64(x: f64, y: f64) -> f64 {
     // SAFETY: pure libm function on plain doubles.

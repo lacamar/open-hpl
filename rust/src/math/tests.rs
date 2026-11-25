@@ -266,3 +266,23 @@ fn tangents_ignore_partial_triangle() {
     };
     assert_eq!(run(4).map(f32::to_bits), run(3).map(f32::to_bits));
 }
+
+#[test]
+fn vector_helpers() {
+    let a = v3(1.0, 2.0, 3.0);
+    let b = v3(4.0, 6.0, 3.0);
+    assert_eq!(super::add3(a, b), v3(5.0, 8.0, 6.0));
+    assert_eq!(super::dist3(a, b), 5.0);
+    assert_eq!(super::normalized(v3(0.0, 3.0, 4.0)), v3(0.0, 0.6, 0.8));
+    let mut m = super::IDENTITY;
+    m.m[0][3] = 7.0;
+    m.m[2][3] = 9.0;
+    assert_eq!(super::translation(&m), v3(7.0, 0.0, 9.0));
+    assert_eq!(super::rotate_x(0.0), super::IDENTITY);
+}
+
+#[test]
+fn libm_wrappers() {
+    assert_eq!(super::powf(2.0, 3.0), 8.0);
+    assert_eq!(super::fmodf(7.0, 4.0), 3.0);
+}

@@ -87,7 +87,7 @@ pub(crate) fn matrix_mul_scalar(a: &Matrixf, s: f32) -> Matrixf {
     mat(c)
 }
 
-pub(crate) fn rotate_x(a: f32) -> Matrixf {
+pub fn rotate_x(a: f32) -> Matrixf {
     let (s, c) = (sin(a), cos(a));
     mat([
         [1.0, 0.0, 0.0, 0.0],

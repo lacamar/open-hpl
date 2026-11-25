@@ -2,6 +2,10 @@
 
 use std::ffi::{c_char, c_int, c_long, c_ulong};
 
+pub fn latin1_to_wide(s: &[u8]) -> Vec<u32> {
+    s.iter().copied().map(u32::from).collect()
+}
+
 unsafe extern "C" {
     fn tolower(c: c_int) -> c_int;
     fn toupper(c: c_int) -> c_int;

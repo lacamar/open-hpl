@@ -1,12 +1,14 @@
 //! XML layer: a tinyXML-compatible DOM, parser and writers, plus the `.cfg` and `.lang` readers
 //! built on it. Parity target is the vendored tinyXML 2.5, quirks included.
 
+mod attr;
 mod dom;
 mod ffi;
 pub mod lang;
 mod parse;
 mod print;
 
+pub use attr::AttrRead;
 pub use dom::{Attr, DOC, Doc, ErrorInfo, Kind, Node, NodeId, c_str};
 pub use print::encode_string;
 

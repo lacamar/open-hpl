@@ -11,7 +11,7 @@ struct Sorter<'a, T, F> {
     base: usize,
 }
 
-impl<T: Copy + Default, F: Fn(&T, &T) -> bool> Sorter<'_, T, F> {
+impl<T: Copy + Default, F: FnMut(&T, &T) -> bool> Sorter<'_, T, F> {
     fn at(&self, i: usize) -> T {
         self.v.get(i).copied().unwrap_or_default()
     }
@@ -22,8 +22,9 @@ impl<T: Copy + Default, F: Fn(&T, &T) -> bool> Sorter<'_, T, F> {
         }
     }
 
-    fn lt(&self, a: usize, b: usize) -> bool {
-        (self.less)(&self.at(a), &self.at(b))
+    fn lt(&mut self, a: usize, b: usize) -> bool {
+        let (x, y) = (self.at(a), self.at(b));
+        (self.less)(&x, &y)
     }
 
     fn swap(&mut self, a: usize, b: usize) {
@@ -40,17 +41,17 @@ impl<T: Copy + Default, F: Fn(&T, &T) -> bool> Sorter<'_, T, F> {
         self.set(self.base + i, x);
     }
 
-    fn hlt(&self, a: usize, b: usize) -> bool {
+    fn hlt(&mut self, a: usize, b: usize) -> bool {
         self.lt(self.base + a, self.base + b)
     }
 
     fn push_heap(&mut self, mut hole: usize, top: usize, value: T) {
         while hole > top {
             let parent = (hole - 1) >> 1;
-            if !(self.less)(&self.hat(parent), &value) {
+            let p = self.hat(parent);
+            if !(self.less)(&p, &value) {
                 break;
             }
-            let p = self.hat(parent);
             self.hset(hole, p);
             hole = parent;
         }
@@ -136,6 +137,9 @@ impl<T: Copy + Default, F: Fn(&T, &T) -> bool> Sorter<'_, T, F> {
             while last < n && self.lt(pivot, last) {
                 last = last.wrapping_sub(1);
             }
+            if last >= n {
+                return first;
+            }
             if first >= last {
                 return first;
             }
@@ -145,7 +149,7 @@ impl<T: Copy + Default, F: Fn(&T, &T) -> bool> Sorter<'_, T, F> {
     }
 
     fn introsort_loop(&mut self, first: usize, mut last: usize, mut depth: u32) {
-        while last - first > 16 {
+        while last.saturating_sub(first) > 16 {
             if depth == 0 {
                 self.heap_sort(first, last);
                 return;
@@ -161,8 +165,11 @@ impl<T: Copy + Default, F: Fn(&T, &T) -> bool> Sorter<'_, T, F> {
 
     fn linear_insert(&mut self, mut last: usize) {
         let val = self.at(last);
-        while last > 0 && (self.less)(&val, &self.at(last - 1)) {
+        while last > 0 {
             let p = self.at(last - 1);
+            if !(self.less)(&val, &p) {
+                break;
+            }
             self.set(last, p);
             last -= 1;
         }
@@ -185,7 +192,7 @@ impl<T: Copy + Default, F: Fn(&T, &T) -> bool> Sorter<'_, T, F> {
     }
 }
 
-pub fn sort<T: Copy + Default>(v: &mut [T], less: impl Fn(&T, &T) -> bool) {
+pub fn sort<T: Copy + Default>(v: &mut [T], less: impl FnMut(&T, &T) -> bool) {
     let n = v.len();
     if n < 2 {
         return;
@@ -199,5 +206,30 @@ pub fn sort<T: Copy + Default>(v: &mut [T], less: impl Fn(&T, &T) -> bool) {
         }
     } else {
         s.insertion_sort(0, n);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sort;
+
+    #[test]
+    fn inconsistent_comparison_terminates() {
+        let mut v: Vec<usize> = (0..200).collect();
+        sort(&mut v, |_, _| true);
+        let mut u: Vec<usize> = (0..200).collect();
+        sort(&mut u, |_, _| false);
+    }
+
+    #[test]
+    fn fn_mut_comparator_counts_calls() {
+        let mut calls = 0;
+        let mut v = vec![3usize, 1, 2];
+        sort(&mut v, |a, b| {
+            calls += 1;
+            a < b
+        });
+        assert_eq!(v, [1, 2, 3]);
+        assert!(calls > 0);
     }
 }

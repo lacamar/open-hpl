@@ -1,31 +1,18 @@
 //! C ABI for `string.rs`. Inputs are (pointer, length) pairs owned by the caller; outputs are
 //! delivered through a caller-supplied sink callback, so Rust never hands out an allocation.
 
-use crate::string;
+use crate::string::{self, latin1_to_wide as widen};
 use std::ffi::{c_char, c_void};
 
 pub(crate) type Sink<T> = unsafe extern "C" fn(*mut c_void, *const T, usize);
 
-/// # Safety
-/// `p` points to `n` readable units, or `n` is 0.
-pub(crate) unsafe fn units<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if n == 0 {
-        &[]
-    } else {
-        // SAFETY: caller contract.
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
-}
+pub(crate) use crate::ffi::slice as units;
 
 /// # Safety
 /// `sink` accepts `ctx` and a slice.
 pub(crate) unsafe fn emit<T>(sink: Sink<T>, ctx: *mut c_void, v: &[T]) {
     // SAFETY: caller contract.
     unsafe { sink(ctx, v.as_ptr(), v.len()) }
-}
-
-fn widen(v: &[u8]) -> Vec<u32> {
-    v.iter().copied().map(u32::from).collect()
 }
 
 macro_rules! unit_api {

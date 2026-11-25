@@ -12,7 +12,7 @@ pub mod premenu;
 #[cfg(test)]
 mod tests;
 
-mod a10b;
+pub(crate) mod a10b;
 mod a10b_cr;
 mod a10b_direct;
 mod a10b_ffi;

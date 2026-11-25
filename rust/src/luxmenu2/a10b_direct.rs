@@ -11,46 +11,6 @@ fn nul_cut(t: &[u32]) -> &[u32] {
     t.split(|&c| c == 0).next().unwrap_or_default()
 }
 
-fn p(a: &[Arg], i: usize) -> usize {
-    match a.get(i) {
-        Some(Arg::P(v)) => *v,
-        Some(Arg::I(v)) => *v as usize,
-        _ => 0,
-    }
-}
-
-fn n(a: &[Arg], i: usize) -> i32 {
-    match a.get(i) {
-        Some(Arg::I(v)) => *v as i32,
-        _ => 0,
-    }
-}
-
-fn f(a: &[Arg], i: usize) -> f32 {
-    match a.get(i) {
-        Some(Arg::F(v)) => *v,
-        _ => 0.0,
-    }
-}
-
-fn b(a: &[Arg], i: usize) -> bool {
-    matches!(a.get(i), Some(Arg::B(true)))
-}
-
-fn s<'a>(a: &[Arg<'a>], i: usize) -> &'a [u8] {
-    match a.get(i) {
-        Some(Arg::S(v)) => v,
-        _ => &[],
-    }
-}
-
-fn w<'a>(a: &[Arg<'a>], i: usize) -> &'a [u32] {
-    match a.get(i) {
-        Some(Arg::W(v)) => v,
-        _ => &[],
-    }
-}
-
 fn v2(a: &[Arg], i: usize) -> [f32; 2] {
     [f(a, i), f(a, i + 1)]
 }

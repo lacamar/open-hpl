@@ -25,30 +25,4 @@ pub mod voice;
 mod voice_handler;
 mod vorbis_setups;
 
-unsafe extern "C" {
-    #[link_name = "powf"]
-    fn c_powf(x: f32, y: f32) -> f32;
-    #[link_name = "fmodf"]
-    fn c_fmodf(x: f32, y: f32) -> f32;
-}
-
-/// libm `powf` as gcc calls it (`std::pow(float, float)`), never folded to `exp2`/`exp10`.
-pub(crate) fn powf(x: f32, y: f32) -> f32 {
-    // SAFETY: pure libm function on plain floats.
-    unsafe { c_powf(x, y) }
-}
-
-pub(crate) fn fmodf(x: f32, y: f32) -> f32 {
-    // SAFETY: pure libm function on plain floats.
-    unsafe { c_fmodf(x, y) }
-}
-
-/// `std::min(a, b)`: `b < a ? b : a`.
-pub(crate) fn std_min(a: f32, b: f32) -> f32 {
-    if b < a { b } else { a }
-}
-
-/// `std::max(a, b)`: `a < b ? b : a`.
-pub(crate) fn std_max(a: f32, b: f32) -> f32 {
-    if a < b { b } else { a }
-}
+pub(crate) use crate::math::{fmodf, powf, std_max, std_min};

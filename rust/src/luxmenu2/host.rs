@@ -165,6 +165,46 @@ pub enum Arg<'a> {
     W(&'a [u32]),
 }
 
+pub(crate) fn p(a: &[Arg], i: usize) -> usize {
+    match a.get(i) {
+        Some(Arg::P(v)) => *v,
+        Some(Arg::I(v)) => *v as usize,
+        _ => 0,
+    }
+}
+
+pub(crate) fn n(a: &[Arg], i: usize) -> i32 {
+    match a.get(i) {
+        Some(Arg::I(v)) => *v as i32,
+        _ => 0,
+    }
+}
+
+pub(crate) fn f(a: &[Arg], i: usize) -> f32 {
+    match a.get(i) {
+        Some(Arg::F(v)) => *v,
+        _ => 0.0,
+    }
+}
+
+pub(crate) fn b(a: &[Arg], i: usize) -> bool {
+    matches!(a.get(i), Some(Arg::B(true)))
+}
+
+pub(crate) fn s<'a>(a: &[Arg<'a>], i: usize) -> &'a [u8] {
+    match a.get(i) {
+        Some(Arg::S(v)) => v,
+        _ => &[],
+    }
+}
+
+pub(crate) fn w<'a>(a: &[Arg<'a>], i: usize) -> &'a [u32] {
+    match a.get(i) {
+        Some(Arg::W(v)) => v,
+        _ => &[],
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct RawArg {

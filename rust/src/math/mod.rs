@@ -35,6 +35,8 @@ pub(crate) use libm::c_rand;
 pub(crate) use libm::c_srand;
 pub(crate) use libm::{acos, asin, cos, sin};
 pub(crate) use libm::{atan2, tan};
+pub(crate) use libm::{fmodf, powf};
+pub use matrix::rotate_x;
 pub(crate) use matrix::{
     IDENTITY, matrix_inverse, matrix_mul, matrix_mul_3x3, matrix_mul_vec, matrix_rotate,
     matrix_scale, rotate_y, rotate_z,
@@ -56,9 +58,11 @@ pub(crate) use scalar::log2_to_int;
 pub(crate) use scalar::to_deg;
 pub(crate) use scalar::{angle_from_vector, randomize};
 pub(crate) use scalar::{clamp, rand_rectf, round_float_to_decimals, to_rad};
+pub use scalar::{cmath_max, cmath_min, correct_sign_of_speed};
 pub(crate) use scalar::{fast_random_float, modulus, rand_rectl};
 pub(crate) use scalar::{get_flag_bit, smooth_curve};
 pub(crate) use scalar::{increase_to, wrap};
+pub(crate) use scalar::{std_max, std_min};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -101,6 +105,14 @@ pub(crate) const fn v3(x: f32, y: f32, z: f32) -> Vector3f {
     Vector3f { x, y, z }
 }
 
+pub fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
+    v3(a.x + b.x, a.y + b.y, a.z + b.z)
+}
+
+pub fn translation(m: &Matrixf) -> Vector3f {
+    v3(m.m[0][3], m.m[1][3], m.m[2][3])
+}
+
 pub(crate) fn sub3(a: Vector3f, b: Vector3f) -> Vector3f {
     v3(a.x - b.x, a.y - b.y, a.z - b.z)
 }
@@ -122,6 +134,15 @@ pub(crate) fn dot3(a: Vector3f, b: Vector3f) -> f32 {
 #[inline(always)]
 pub(crate) fn len3(v: Vector3f) -> f32 {
     dot3(v, v).sqrt()
+}
+
+pub fn dist3(a: Vector3f, b: Vector3f) -> f32 {
+    len3(sub3(b, a))
+}
+
+pub fn normalized(mut v: Vector3f) -> Vector3f {
+    normalize3(&mut v);
+    v
 }
 
 pub(crate) fn normalize3(v: &mut Vector3f) -> f32 {

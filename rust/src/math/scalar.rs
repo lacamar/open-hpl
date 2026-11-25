@@ -85,6 +85,32 @@ pub(crate) fn clamp(x: f32, min: f32, max: f32) -> f32 {
     }
 }
 
+pub fn cmath_min(a: f32, b: f32) -> f32 {
+    if a < b { a } else { b }
+}
+
+pub fn cmath_max(a: f32, b: f32) -> f32 {
+    if a > b { a } else { b }
+}
+
+pub(crate) fn std_min(a: f32, b: f32) -> f32 {
+    if b < a { b } else { a }
+}
+
+pub(crate) fn std_max(a: f32, b: f32) -> f32 {
+    if a < b { b } else { a }
+}
+
+pub fn correct_sign_of_speed(current: f32, dest: f32, speed: f32) -> f32 {
+    if dest < current && speed > 0.0 {
+        return -speed;
+    }
+    if dest > current && speed < 0.0 {
+        return -speed;
+    }
+    speed
+}
+
 pub(crate) fn angle_distance(a1: f32, a2: f32, max_angle: f32) -> f32 {
     let a1 = wrap(a1, 0.0, max_angle);
     let a2 = wrap(a2, 0.0, max_angle);
@@ -223,5 +249,38 @@ pub(crate) fn project_vector_2d(src: Vector2f, dest: Vector2f) -> Vector2f {
     Vector2f {
         x: dest.x * t,
         y: dest.y * t,
+    }
+}
+
+#[cfg(test)]
+mod min_max_tests {
+    use super::*;
+
+    #[test]
+    fn nan_picks_the_c_branch() {
+        let n = f32::NAN;
+        assert_eq!(cmath_min(n, 1.0), 1.0);
+        assert!(cmath_min(1.0, n).is_nan());
+        assert_eq!(cmath_max(n, 1.0), 1.0);
+        assert!(cmath_max(1.0, n).is_nan());
+        assert!(std_min(n, 1.0).is_nan());
+        assert_eq!(std_min(1.0, n), 1.0);
+        assert!(std_max(n, 1.0).is_nan());
+        assert_eq!(std_max(1.0, n), 1.0);
+    }
+
+    #[test]
+    fn zero_ties_keep_the_documented_operand() {
+        assert!(cmath_min(0.0, -0.0).is_sign_negative());
+        assert!(cmath_max(0.0, -0.0).is_sign_negative());
+        assert!(std_min(0.0, -0.0).is_sign_positive());
+        assert!(std_max(0.0, -0.0).is_sign_positive());
+    }
+
+    #[test]
+    fn speed_sign_follows_destination() {
+        assert_eq!(correct_sign_of_speed(1.0, 0.0, 2.0), -2.0);
+        assert_eq!(correct_sign_of_speed(0.0, 1.0, -2.0), 2.0);
+        assert_eq!(correct_sign_of_speed(0.0, 1.0, 2.0), 2.0);
     }
 }

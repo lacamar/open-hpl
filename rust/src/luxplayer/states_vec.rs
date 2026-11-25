@@ -90,25 +90,7 @@ impl Pid3 {
     }
 }
 
-/// `a + n * m` fused with `n` the first source operand; when both multiplicands are NaN the
-/// first one wins, so the operand order is part of the result.
-#[cfg(target_arch = "aarch64")]
-#[inline(always)]
-pub fn fmad(n: f32, m: f32, a: f32) -> f32 {
-    use std::arch::asm;
-    let r: f32;
-    // SAFETY: a register-only float instruction without memory access.
-    unsafe {
-        asm!("fmadd {r:s}, {n:s}, {m:s}, {a:s}", r = lateout(vreg) r, n = in(vreg) n, m = in(vreg) m,
-            a = in(vreg) a, options(pure, nomem, nostack));
-    }
-    r
-}
-
-#[cfg(not(target_arch = "aarch64"))]
-pub fn fmad(n: f32, m: f32, a: f32) -> f32 {
-    n.mul_add(m, a)
-}
+pub use crate::hw::madd as fmad;
 
 unsafe extern "C" {
     fn ohpl_math_vector3_cross(a: *const Vector3f, b: *const Vector3f, out: *mut Vector3f);
@@ -183,24 +165,7 @@ pub fn msub3(d: f32, v: Vector3f, a: Vector3f) -> Vector3f {
     )
 }
 
-/// `-(n * m)` with `n` the first source operand (`fnmul`); the negation flips a NaN's sign.
-#[cfg(target_arch = "aarch64")]
-#[inline(always)]
-pub fn nmul(n: f32, m: f32) -> f32 {
-    use std::arch::asm;
-    let r: f32;
-    // SAFETY: a register-only float instruction without memory access.
-    unsafe {
-        asm!("fnmul {r:s}, {n:s}, {m:s}", r = lateout(vreg) r, n = in(vreg) n, m = in(vreg) m,
-            options(pure, nomem, nostack));
-    }
-    r
-}
-
-#[cfg(not(target_arch = "aarch64"))]
-pub fn nmul(n: f32, m: f32) -> f32 {
-    -(n * m)
-}
+pub use crate::hw::nmul;
 
 pub fn is_zero(a: Vector3f) -> bool {
     a.x == 0.0 && a.y == 0.0 && a.z == 0.0
