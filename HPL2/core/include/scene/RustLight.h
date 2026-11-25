@@ -1,8 +1,6 @@
 #ifndef HPL_RUST_LIGHT_H
 #define HPL_RUST_LIGHT_H
 
-// C ABI of rust/src/scene/ffi_light.rs. Layouts mirror light.rs / lensflare.rs / rope.rs.
-
 #include "math/RustTypes.h"
 #include <cstddef>
 #include <cstdint>

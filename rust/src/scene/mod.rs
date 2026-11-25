@@ -19,7 +19,6 @@ mod ffi;
 mod ffi_h10;
 mod ffi_h11;
 mod ffi_h13;
-mod ffi_light;
 mod ffi_meshentity;
 mod ffi_node;
 mod ffi_particles;

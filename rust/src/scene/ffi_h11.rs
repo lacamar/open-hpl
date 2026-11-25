@@ -2,7 +2,7 @@
 //!
 //! Pointers are non-null, valid and aligned for the call.
 
-use super::h11::{self, Caster, MeshCtl, ShadowCache, SpotCtl};
+use super::h11::{self, Caster, MeshCtl, SpotCtl};
 use crate::types::Matrixf;
 
 const _: () = {
@@ -47,57 +47,4 @@ pub unsafe extern "C" fn ohpl_h11_rest_pose_from_map(
     // SAFETY: caller contract.
     let (vals, locals, unit) = unsafe { (slice(vals, nvals), slice(locals, n), slice(unit, n)) };
     h11::rest_pose_from_map(vals, locals, unit, out)
-}
-
-/// # Safety
-/// `s` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h11_spot_view_stale(s: *mut SpotCtl, count: i32) -> bool {
-    // SAFETY: caller contract.
-    unsafe { (*s).view_stale(count) }
-}
-
-/// # Safety
-/// `s` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h11_spot_projection_stale(s: *mut SpotCtl) -> bool {
-    // SAFETY: caller contract.
-    unsafe { (*s).projection_stale() }
-}
-
-/// # Safety
-/// `s` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h11_spot_view_proj_stale(s: *const SpotCtl, count: i32) -> bool {
-    // SAFETY: caller contract.
-    unsafe { (*s).view_proj_stale(count) }
-}
-
-/// # Safety
-/// `s` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h11_spot_view_proj_done(s: *mut SpotCtl, count: i32) {
-    // SAFETY: caller contract.
-    unsafe { (*s).view_proj_done(count) }
-}
-
-/// # Safety
-/// `s` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h11_spot_frustum_stale(s: *const SpotCtl, count: i32) -> bool {
-    // SAFETY: caller contract.
-    unsafe { (*s).frustum_stale(count) }
-}
-
-/// # Safety
-/// `s` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h11_spot_frustum_done(s: *mut SpotCtl, count: i32) {
-    // SAFETY: caller contract.
-    unsafe { (*s).frustum_done(count) }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h11_shadow_cache_new() -> *mut ShadowCache {
-    Box::into_raw(Box::default())
 }

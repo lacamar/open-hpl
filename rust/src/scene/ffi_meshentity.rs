@@ -4,8 +4,7 @@
 //! Pointers are non-null, valid and aligned for the call; a null array or a count `<= 0` is an
 //! empty slice. Output arrays do not alias inputs.
 
-use super::animstate::{self, AnimCore};
-use super::meshentity;
+use super::animstate::AnimCore;
 use super::skinning::{self, SkinJob};
 use crate::types::Matrixf;
 
@@ -32,13 +31,6 @@ unsafe fn slice_mut<'a, T>(p: *mut T, n: i32) -> &'a mut [T] {
         Ok(n) if n > 0 && !p.is_null() => unsafe { std::slice::from_raw_parts_mut(p, n) },
         _ => &mut [],
     }
-}
-
-/// # Safety
-/// `p` valid for `n` reads when `n > 0`; every element a valid non-null `Matrixf` pointer.
-unsafe fn matrix_refs<'a>(p: *const *const Matrixf, n: i32) -> &'a [&'a Matrixf] {
-    // SAFETY: `&T` and non-null `*const T` share a layout; caller contract.
-    unsafe { slice(p.cast::<&Matrixf>(), n) }
 }
 
 #[unsafe(no_mangle)]
@@ -136,65 +128,6 @@ pub unsafe extern "C" fn ohpl_anim_fade_speed(core: *mut AnimCore, dest: f32, ti
 pub unsafe extern "C" fn ohpl_anim_set_active(core: *mut AnimCore, active: bool) {
     // SAFETY: caller contract.
     unsafe { with_core(core, |c| c.set_active(active)) }
-}
-
-/// `GetAnimationWeightMul`.
-///
-/// # Safety
-/// `cores` holds `n` valid `AnimCore` pointers.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_meshentity_weight_mul(
-    cores: *const *const AnimCore,
-    n: i32,
-    normalize: bool,
-) -> f32 {
-    // SAFETY: caller contract.
-    let ptrs = unsafe { slice(cores, n) };
-    // SAFETY: each pointer is a valid `AnimCore` (caller contract).
-    let states = ptrs.iter().filter_map(|&p| unsafe { p.as_ref() });
-    animstate::weight_mul(states, normalize)
-}
-
-/// Updates every active state in order.
-///
-/// # Safety
-/// `cores` holds `n` valid, distinct `AnimCore` pointers.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_meshentity_update_anims(
-    cores: *const *mut AnimCore,
-    n: i32,
-    dt: f32,
-) {
-    // SAFETY: caller contract.
-    let ptrs = unsafe { slice(cores, n) };
-    // SAFETY: each pointer is a valid, distinct `AnimCore` (caller contract).
-    let states = ptrs.iter().filter_map(|&p| unsafe { p.as_mut() });
-    meshentity::update_active(states, dt);
-}
-
-/// Bone matrices of one entity; returns how many changed.
-///
-/// # Safety
-/// `world` and `inv_bind` hold `n` valid `Matrixf` pointers; `out` holds `n` matrices;
-/// `inv_world` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_meshentity_bone_matrices(
-    inv_world: *const Matrixf,
-    world: *const *const Matrixf,
-    inv_bind: *const *const Matrixf,
-    out: *mut Matrixf,
-    n: i32,
-) -> u32 {
-    // SAFETY: caller contract.
-    let (inv_world, world, inv_bind, out) = unsafe {
-        (
-            inv_world.as_ref(),
-            matrix_refs(world, n),
-            matrix_refs(inv_bind, n),
-            slice_mut(out, n),
-        )
-    };
-    inv_world.map_or(0, |iw| skinning::bone_matrices(iw, world, inv_bind, out))
 }
 
 /// Skins one sub mesh. `tangent` pointers may be null.

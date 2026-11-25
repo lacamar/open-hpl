@@ -256,14 +256,10 @@ fn ffi_tolerates_null_and_empty_inputs() {
     unsafe {
         ohpl_anim_update(std::ptr::null_mut(), 1.0);
         assert!(!ohpl_anim_is_over(std::ptr::null()));
-        assert_eq!(ohpl_meshentity_weight_mul(std::ptr::null(), 0, true), 1.0);
-        ohpl_meshentity_update_anims(std::ptr::null(), 0, 1.0);
-        let none = std::ptr::null();
-        assert_eq!(
-            ohpl_meshentity_bone_matrices(&IDENTITY, none, none, std::ptr::null_mut(), 0),
-            0
-        );
     }
+    assert_eq!(weight_mul(std::iter::empty(), true), 1.0);
+    update_active(std::iter::empty(), 1.0);
+    assert_eq!(bone_matrices(&IDENTITY, &[], &[], &mut []), 0);
 }
 
 #[test]

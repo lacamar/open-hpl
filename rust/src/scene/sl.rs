@@ -9,24 +9,39 @@ use super::billboard::{self, ModelIn};
 use super::h11::{self, ShadowCache, SpotCtl};
 use super::h12b_ent;
 use super::lensflare::{self, VisState};
-use super::light::{self, FlickerCfg, LightAnim, LightHost, LightLive};
+use super::light::{self, FlickerCfg, LightAnim, LightLive};
+use super::rope::RopeParams;
 use crate::types::{Color, Matrixf, Vector2f, Vector2l, Vector3f};
 use std::collections::BTreeMap;
-use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 const _: () = {
-    use std::mem::size_of;
+    use std::mem::{offset_of, size_of};
     assert!(
         size_of::<FogPod>() == 148 && size_of::<BbPod>() == 240 && size_of::<BeamEndPod>() == 24
     );
     assert!(size_of::<BeamPod>() == 168 && size_of::<LightPod>() == 360);
     assert!(size_of::<SpotPod>() == 608 && size_of::<BoxPod>() == 664);
     assert!(size_of::<FlarePod>() == 608 && size_of::<FlareTypePod>() == 80);
+    assert!(size_of::<LightAnim>() == 144 && offset_of!(LightAnim, flickering) == 140);
+    assert!(size_of::<LightLive>() == 24 && size_of::<FlickerCfg>() == 56);
+    assert!(size_of::<lensflare::VisState>() == 16 && size_of::<RopeParams>() == 28);
+    assert!(
+        size_of::<lensflare::FlareIn>() == 152 && offset_of!(lensflare::FlareIn, brightness) == 144
+    );
+    assert!(offset_of!(lensflare::FlareIn, color) == 4 && size_of::<lensflare::EntIn>() == 24);
+    assert!(size_of::<lensflare::ViewIn>() == 144);
 };
 
 static HPL3_VISIBILITY: AtomicBool = AtomicBool::new(false);
 static SPOT_SHADOW_NEAR: AtomicU32 = AtomicU32::new(0);
+
+unsafe fn slice_mut<'a, T>(p: *mut T, n: i32) -> &'a mut [T] {
+    match usize::try_from(n) {
+        Ok(n) if n > 0 && !p.is_null() => unsafe { std::slice::from_raw_parts_mut(p, n) },
+        _ => &mut [],
+    }
+}
 
 fn boxed<T>(v: T) -> *mut T {
     Box::into_raw(Box::new(v))
@@ -162,13 +177,9 @@ pub struct BbPod {
     pub halo_size_updated: bool,
 }
 
-/// # Safety
-/// `size` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_bb_new(kind: i32, size: *const Vector2f) -> *mut BbPod {
+pub(crate) unsafe fn ohpl_sl_bb_new(kind: i32, size: *const Vector2f) -> *mut BbPod {
     boxed(BbPod {
         kind,
-        // SAFETY: caller contract.
         size: unsafe { *size },
         axis: Vector3f {
             x: 0.0,
@@ -195,21 +206,11 @@ pub unsafe extern "C" fn ohpl_sl_bb_new(kind: i32, size: *const Vector2f) -> *mu
     })
 }
 
-/// # Safety
-/// See `unbox`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_bb_free(p: *mut BbPod) {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_bb_free(p: *mut BbPod) {
     unsafe { unbox(p) }
 }
 
-/// True when the colour changed (the shell rewrites the vertex colours).
-///
-/// # Safety
-/// `p`, `c` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_bb_set_color(p: *mut BbPod, c: *const Color) -> bool {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_bb_set_color(p: *mut BbPod, c: *const Color) -> bool {
     unsafe {
         if (*p).color == *c {
             return false;
@@ -219,11 +220,7 @@ pub unsafe extern "C" fn ohpl_sl_bb_set_color(p: *mut BbPod, c: *const Color) ->
     true
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_bb_set_halo_alpha(p: *mut BbPod, a: f32) -> bool {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_bb_set_halo_alpha(p: *mut BbPod, a: f32) -> bool {
     unsafe {
         if (*p).halo_alpha == a {
             return false;
@@ -233,11 +230,7 @@ pub unsafe extern "C" fn ohpl_sl_bb_set_halo_alpha(p: *mut BbPod, a: f32) -> boo
     true
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_bb_set_brightness(p: *mut BbPod, b: f32) -> bool {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_bb_set_brightness(p: *mut BbPod, b: f32) -> bool {
     unsafe {
         if (*p).brightness == b {
             return false;
@@ -247,17 +240,11 @@ pub unsafe extern "C" fn ohpl_sl_bb_set_brightness(p: *mut BbPod, b: f32) -> boo
     true
 }
 
-/// Stores the (already normalized) axis; true and `out` set when the bounding size changes.
-///
-/// # Safety
-/// `p`, `axis`, `out` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_bb_set_axis(
+pub(crate) unsafe fn ohpl_sl_bb_set_axis(
     p: *mut BbPod,
     axis: *const Vector3f,
     out: *mut f32,
 ) -> bool {
-    // SAFETY: caller contract.
     unsafe {
         (*p).axis = *axis;
         let b = &*p;
@@ -268,13 +255,7 @@ pub unsafe extern "C" fn ohpl_sl_bb_set_axis(
     }
 }
 
-/// Halo bit flags of `ohpl_h12b_bb_halo_gates`.
-///
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_bb_halo_gates(p: *mut BbPod, transform_count: i32) -> u32 {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_bb_halo_gates(p: *mut BbPod, transform_count: i32) -> u32 {
     unsafe {
         let b = &mut *p;
         h12b_ent::bb_halo_gates(
@@ -285,17 +266,13 @@ pub unsafe extern "C" fn ohpl_sl_bb_halo_gates(p: *mut BbPod, transform_count: i
     }
 }
 
-/// # Safety
-/// `p`, `world`, `cam_origin`, `view_up` valid; the result lives as long as `p`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_bb_model(
+pub(crate) unsafe fn ohpl_sl_bb_model(
     p: *mut BbPod,
     world: *const Matrixf,
     cam_origin: *const Vector3f,
     view_up: *const Vector3f,
     warn: *mut bool,
 ) -> *const Matrixf {
-    // SAFETY: caller contract.
     unsafe {
         let b = &mut *p;
         let (m, w) = billboard::model_matrix(&ModelIn {
@@ -309,17 +286,6 @@ pub unsafe extern "C" fn ohpl_sl_bb_model(
         b.temp = m;
         *warn = w;
         &b.temp
-    }
-}
-
-/// # Safety
-/// `p` valid; `out` addresses 16 floats.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_bb_colors(p: *const BbPod, hdr: bool, out: *mut f32) {
-    // SAFETY: caller contract.
-    unsafe {
-        let b = &*p;
-        billboard::vertex_colors(b.color, b.brightness, b.halo_alpha, hdr, &mut *out.cast());
     }
 }
 
@@ -351,11 +317,7 @@ pub unsafe extern "C" fn ohpl_sl_beam_end_free(p: *mut BeamEndPod) {
     unsafe { unbox(p) }
 }
 
-/// # Safety
-/// `p`, `c` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_beam_end_set_color(p: *mut BeamEndPod, c: *const Color) -> bool {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_beam_end_set_color(p: *mut BeamEndPod, c: *const Color) -> bool {
     unsafe {
         if (*p).color == *c {
             return false;
@@ -391,8 +353,7 @@ pub struct BeamObj {
     pub(super) file: Vec<u8>,
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_sl_beam_new() -> *mut BeamPod {
+pub(crate) fn ohpl_sl_beam_new() -> *mut BeamPod {
     boxed(BeamObj {
         pod: BeamPod {
             material: 0,
@@ -421,19 +382,7 @@ pub extern "C" fn ohpl_sl_beam_new() -> *mut BeamPod {
     .cast()
 }
 
-/// # Safety
-/// See `unbox`; `p` from `ohpl_sl_beam_new`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_beam_free(p: *mut BeamPod) {
-    // SAFETY: caller contract.
-    unsafe { unbox(p.cast::<BeamObj>()) }
-}
-
-/// # Safety
-/// `p` from `ohpl_sl_beam_new`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_beam_set_file(p: *mut BeamPod, s: *const u8, n: usize) {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_beam_set_file(p: *mut BeamPod, s: *const u8, n: usize) {
     unsafe { (*p.cast::<BeamObj>()).file = std::slice::from_raw_parts(s, n).to_vec() }
 }
 
@@ -449,15 +398,11 @@ pub unsafe extern "C" fn ohpl_sl_beam_file(p: *const BeamPod, n: *mut usize) -> 
     }
 }
 
-/// # Safety
-/// `p`, `c` valid; `colors` addresses the buffer's colour array.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_beam_set_color(
+pub(crate) unsafe fn ohpl_sl_beam_set_color(
     p: *mut BeamPod,
     c: *const Color,
     colors: *mut f32,
 ) -> bool {
-    // SAFETY: caller contract.
     unsafe {
         if (*p).color == *c {
             return false;
@@ -472,18 +417,12 @@ pub unsafe extern "C" fn ohpl_sl_beam_set_color(
     true
 }
 
-/// End-edge colours (vertices 2 and 3).
-///
-/// # Safety
-/// `p` from `ohpl_sl_beam_new`; `e` valid; `colors` addresses the buffer's colour array.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_beam_set_end_color(
+pub(crate) unsafe fn ohpl_sl_beam_set_end_color(
     p: *mut BeamPod,
     e: *mut BeamEndPod,
     c: *const Color,
     colors: *mut f32,
 ) -> bool {
-    // SAFETY: caller contract.
     unsafe {
         if !ohpl_sl_beam_end_set_color(e, c) {
             return false;
@@ -497,17 +436,13 @@ pub unsafe extern "C" fn ohpl_sl_beam_set_end_color(
     true
 }
 
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_beam_bounds(
+pub(crate) unsafe fn ohpl_sl_beam_bounds(
     p: *const BeamPod,
     start: *const Vector3f,
     end: *const Vector3f,
     min: *mut Vector3f,
     max: *mut Vector3f,
 ) {
-    // SAFETY: caller contract.
     unsafe {
         let (lo, hi) = beam::bounds(*start, *end, (*p).size.x);
         *min = lo;
@@ -515,12 +450,7 @@ pub unsafe extern "C" fn ohpl_sl_beam_bounds(
     }
 }
 
-/// True when the shell must upload `pos`/`tex` (written here).
-///
-/// # Safety
-/// All pointers valid; `pos`/`tex` address the buffer arrays.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_beam_geometry(
+pub(crate) unsafe fn ohpl_sl_beam_geometry(
     p: *mut BeamPod,
     transform_count: i32,
     start: *const Vector3f,
@@ -528,7 +458,6 @@ pub unsafe extern "C" fn ohpl_sl_beam_geometry(
     pos: *mut f32,
     tex: *mut f32,
 ) -> bool {
-    // SAFETY: caller contract.
     unsafe {
         let b = &mut *p;
         if !h12b_ent::beam_needs_geometry(
@@ -538,31 +467,39 @@ pub unsafe extern "C" fn ohpl_sl_beam_geometry(
         ) {
             return false;
         }
-        super::ffi_light::ohpl_beam_geometry(
-            start,
-            end,
-            b.size.x,
-            b.size.y,
-            b.tile_height,
-            pos,
-            tex,
-            &mut b.axis,
-            &mut b.mid,
-        );
+        let g = beam::geometry(*start, *end, [b.size.x, b.size.y], b.tile_height);
+        for (dst, src) in slice_mut(pos, 16)
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .zip(g.pos)
+        {
+            for (d, s) in dst.iter_mut().zip(src) {
+                *d = s;
+            }
+        }
+        for (dst, src) in slice_mut(tex, 12)
+            .as_chunks_mut::<3>()
+            .0
+            .iter_mut()
+            .zip(g.uv)
+        {
+            for (d, s) in dst.iter_mut().zip(src) {
+                *d = s;
+            }
+        }
+        b.axis = g.axis;
+        b.mid = g.mid;
     }
     true
 }
 
-/// # Safety
-/// All pointers valid; the result lives as long as `p`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_beam_model(
+pub(crate) unsafe fn ohpl_sl_beam_model(
     p: *mut BeamPod,
     world: *const Matrixf,
     world_pos: *const Vector3f,
     camera: *const Vector3f,
 ) -> *const Matrixf {
-    // SAFETY: caller contract.
     unsafe {
         let b = &mut *p;
         b.temp = beam::model_matrix(&*world, *world_pos, *camera, b.axis, b.mid);
@@ -772,9 +709,7 @@ fn new_rest() -> LightRest {
     }
 }
 
-/// Allocates a light of `kind` (0 point, 1 spot, 2 box); the result is its `LightPod`.
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_sl_light_new(kind: i32) -> *mut LightPod {
+pub(crate) fn ohpl_sl_light_new(kind: i32) -> *mut LightPod {
     let mut light = LightPod::new();
     light.light_type = kind;
     match kind {
@@ -846,14 +781,10 @@ pub extern "C" fn ohpl_sl_light_new(kind: i32) -> *mut LightPod {
     }
 }
 
-/// # Safety
-/// `p` from `ohpl_sl_light_new`, not used afterwards; null is ignored.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_free(p: *mut LightPod) {
+pub(crate) unsafe fn ohpl_sl_light_free(p: *mut LightPod) {
     if p.is_null() {
         return;
     }
-    // SAFETY: caller contract; the kind selects the allocation type.
     unsafe {
         match (*p).light_type {
             KIND_SPOT => unbox(p.cast::<SpotObj>()),
@@ -881,13 +812,11 @@ pub extern "C" fn ohpl_sl_set_hpl3_visibility(on: bool) {
     HPL3_VISIBILITY.store(on, Ordering::Relaxed);
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_sl_hpl3_visibility() -> bool {
+pub(crate) fn ohpl_sl_hpl3_visibility() -> bool {
     HPL3_VISIBILITY.load(Ordering::Relaxed)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_sl_spot_shadow_near() -> f32 {
+pub(crate) fn ohpl_sl_spot_shadow_near() -> f32 {
     f32::from_bits(SPOT_SHADOW_NEAR.load(Ordering::Relaxed))
 }
 
@@ -907,13 +836,7 @@ pub unsafe extern "C" fn ohpl_sl_light_is_visible(p: *const LightPod, visible: b
     unsafe { h11::light_is_visible((*p).is_lit(), (*p).radius, visible) }
 }
 
-/// Stores the diffuse colour; true when the lit state changed.
-///
-/// # Safety
-/// `p`, `c` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_set_diffuse(p: *mut LightPod, c: *const Color) -> bool {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_light_set_diffuse(p: *mut LightPod, c: *const Color) -> bool {
     unsafe {
         let was = (*p).is_lit();
         (*p).diffuse = *c;
@@ -921,13 +844,7 @@ pub unsafe extern "C" fn ohpl_sl_light_set_diffuse(p: *mut LightPod, c: *const C
     }
 }
 
-/// Stores the brightness; true when the lit state changed.
-///
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_set_brightness(p: *mut LightPod, b: f32) -> bool {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_light_set_brightness(p: *mut LightPod, b: f32) -> bool {
     unsafe {
         let was = (*p).is_lit();
         (*p).brightness = b;
@@ -962,16 +879,12 @@ pub unsafe extern "C" fn ohpl_sl_light_fade_to(
     }
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_set_flicker(
+pub(crate) unsafe fn ohpl_sl_light_set_flicker(
     p: *mut LightPod,
     cfg: *const FlickerCfg,
     strings: *const [*const u8; 4],
     lens: *const [usize; 4],
 ) {
-    // SAFETY: caller contract.
     unsafe {
         let r = rest(p);
         for (dst, (ptr, len)) in r
@@ -1007,84 +920,11 @@ pub unsafe extern "C" fn ohpl_sl_light_string(
     }
 }
 
-#[repr(C)]
-pub struct HostVt {
-    ctx: *mut c_void,
-    ease: unsafe extern "C" fn(*mut c_void, f32) -> f32,
-    set_brightness: unsafe extern "C" fn(*mut c_void, f32),
-    set_radius: unsafe extern "C" fn(*mut c_void, f32),
-    set_diffuse: unsafe extern "C" fn(*mut c_void, *const Color),
-    flicker_sound: unsafe extern "C" fn(*mut c_void, bool),
-    flicker_event: unsafe extern "C" fn(*mut c_void, bool),
-}
-
-struct Host<'a> {
-    vt: &'a HostVt,
-    pod: *mut LightPod,
-}
-
-impl LightHost for Host<'_> {
-    fn ease(&mut self, t: f32) -> f32 {
-        // SAFETY: table contract.
-        unsafe { (self.vt.ease)(self.vt.ctx, t) }
-    }
-    fn set_brightness(&mut self, v: f32) {
-        // SAFETY: table contract.
-        unsafe { (self.vt.set_brightness)(self.vt.ctx, v) }
-    }
-    fn set_radius(&mut self, v: f32) {
-        // SAFETY: table contract.
-        unsafe { (self.vt.set_radius)(self.vt.ctx, v) }
-    }
-    fn set_diffuse(&mut self, c: Color) {
-        // SAFETY: table contract.
-        unsafe { (self.vt.set_diffuse)(self.vt.ctx, &c) }
-    }
-    fn assign_diffuse(&mut self, c: Color) {
-        // SAFETY: the pod is live; no reference to it is held across callbacks.
-        unsafe { (*self.pod).diffuse = c }
-    }
-    fn raw_radius(&mut self, v: f32) {
-        // SAFETY: as above.
-        unsafe { (*self.pod).radius = v }
-    }
-    fn flicker_sound(&mut self, on: bool) {
-        // SAFETY: table contract.
-        unsafe { (self.vt.flicker_sound)(self.vt.ctx, on) }
-    }
-    fn flicker_event(&mut self, on: bool) {
-        // SAFETY: table contract.
-        unsafe { (self.vt.flicker_event)(self.vt.ctx, on) }
-    }
-}
-
-/// `iLight::UpdateLight`; the callbacks may write the pod (not `anim`).
-///
-/// # Safety
-/// `p` live, `vt` valid for the call.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_update(p: *mut LightPod, vt: *const HostVt, dt: f32) {
-    // SAFETY: caller contract.
-    unsafe {
-        let mut live = (*p).live();
-        let (on, off) = {
-            let s = &rest(p).strings;
-            (!s[0].is_empty(), !s[2].is_empty())
-        };
-        let mut host = Host { vt: &*vt, pod: p };
-        light::update_light(&mut (*p).anim, &mut live, on, off, &mut host, dt);
-    }
-}
-
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_attach_billboard(
+pub(crate) unsafe fn ohpl_sl_light_attach_billboard(
     p: *mut LightPod,
     bb: usize,
     base: *const Color,
 ) {
-    // SAFETY: caller contract.
     unsafe { rest(p).billboards.push((bb, *base)) }
 }
 
@@ -1109,23 +949,15 @@ pub unsafe extern "C" fn ohpl_sl_light_has_billboard(p: *mut LightPod, bb: usize
     unsafe { rest(p).billboards.iter().any(|c| c.0 == bb) }
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_billboard_count(p: *mut LightPod) -> usize {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_light_billboard_count(p: *mut LightPod) -> usize {
     unsafe { rest(p).billboards.len() }
 }
 
-/// # Safety
-/// `p` valid; `i` below the count.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_billboard_at(
+pub(crate) unsafe fn ohpl_sl_light_billboard_at(
     p: *mut LightPod,
     i: usize,
     base: *mut Color,
 ) -> usize {
-    // SAFETY: caller contract.
     unsafe {
         let c = rest(p)
             .billboards
@@ -1137,21 +969,11 @@ pub unsafe extern "C" fn ohpl_sl_light_billboard_at(
     }
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_attach_ps(p: *mut LightPod, ps: usize) {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_light_attach_ps(p: *mut LightPod, ps: usize) {
     unsafe { rest(p).particle_systems.push(ps) }
 }
 
-/// True when the system was attached.
-///
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_remove_ps(p: *mut LightPod, ps: usize) -> bool {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_light_remove_ps(p: *mut LightPod, ps: usize) -> bool {
     unsafe {
         let v = &mut rest(p).particle_systems;
         v.iter()
@@ -1161,27 +983,15 @@ pub unsafe extern "C" fn ohpl_sl_light_remove_ps(p: *mut LightPod, ps: usize) ->
     }
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_ps_count(p: *mut LightPod) -> usize {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_light_ps_count(p: *mut LightPod) -> usize {
     unsafe { rest(p).particle_systems.len() }
 }
 
-/// # Safety
-/// `p` valid; `i` below the count.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_ps_at(p: *mut LightPod, i: usize) -> usize {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_light_ps_at(p: *mut LightPod, i: usize) -> usize {
     unsafe { rest(p).particle_systems.get(i).copied().unwrap_or(0) }
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_cache_add(p: *mut LightPod, object: usize, count: i32) {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_light_cache_add(p: *mut LightPod, object: usize, count: i32) {
     unsafe {
         rest(p)
             .shadow_cache
@@ -1190,15 +1000,11 @@ pub unsafe extern "C" fn ohpl_sl_light_cache_add(p: *mut LightPod, object: usize
     }
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_cache_valid(
+pub(crate) unsafe fn ohpl_sl_light_cache_valid(
     p: *mut LightPod,
     object: usize,
     count: i32,
 ) -> bool {
-    // SAFETY: caller contract.
     unsafe {
         rest(p)
             .shadow_cache
@@ -1207,15 +1013,11 @@ pub unsafe extern "C" fn ohpl_sl_light_cache_valid(
     }
 }
 
-/// # Safety
-/// `p` valid; `casters` holds `n` entries.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_cache_unchanged(
+pub(crate) unsafe fn ohpl_sl_light_cache_unchanged(
     p: *mut LightPod,
     casters: *const h11::Caster,
     n: i32,
 ) -> bool {
-    // SAFETY: caller contract.
     unsafe {
         let list = std::slice::from_raw_parts(casters, usize::try_from(n).unwrap_or(0));
         rest(p)
@@ -1225,15 +1027,11 @@ pub unsafe extern "C" fn ohpl_sl_light_cache_unchanged(
     }
 }
 
-/// # Safety
-/// `p` valid; `casters` holds `n` entries.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_cache_set(
+pub(crate) unsafe fn ohpl_sl_light_cache_set(
     p: *mut LightPod,
     casters: *const h11::Caster,
     n: i32,
 ) {
-    // SAFETY: caller contract.
     unsafe {
         let list = std::slice::from_raw_parts(casters, usize::try_from(n).unwrap_or(0));
         rest(p)
@@ -1243,11 +1041,7 @@ pub unsafe extern "C" fn ohpl_sl_light_cache_set(
     }
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_light_cache_clear(p: *mut LightPod) {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_light_cache_clear(p: *mut LightPod) {
     unsafe {
         if let Some(c) = rest(p).shadow_cache.as_mut() {
             c.clear();
@@ -1255,17 +1049,13 @@ pub unsafe extern "C" fn ohpl_sl_light_cache_clear(p: *mut LightPod) {
     }
 }
 
-/// # Safety
-/// `p` valid; `bands` holds `n` vectors.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_box_add_set(
+pub(crate) unsafe fn ohpl_sl_box_add_set(
     p: *mut BoxPod,
     name: *const u8,
     name_len: usize,
     bands: *const Vector3f,
     n: usize,
 ) {
-    // SAFETY: caller contract.
     unsafe {
         let o = &mut *p.cast::<BoxObj>();
         let first = o.box_rest.sets.is_empty();
@@ -1281,18 +1071,12 @@ pub unsafe extern "C" fn ohpl_sl_box_add_set(
     }
 }
 
-/// True when the set exists and the fade started (the shell then runs `UpdateLogic(0)`).
-///
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_box_fade_set(
+pub(crate) unsafe fn ohpl_sl_box_fade_set(
     p: *mut BoxPod,
     name: *const u8,
     name_len: usize,
     time: f32,
 ) -> bool {
-    // SAFETY: caller contract.
     unsafe {
         let o = &mut *p.cast::<BoxObj>();
         let key = std::slice::from_raw_parts(name, name_len).to_ascii_lowercase();
@@ -1307,13 +1091,7 @@ pub unsafe extern "C" fn ohpl_sl_box_fade_set(
     true
 }
 
-/// One `cLightBox::UpdateLogic` fade step.
-///
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_box_fade_step(p: *mut BoxPod, dt: f32) {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_box_fade_step(p: *mut BoxPod, dt: f32) {
     unsafe {
         let o = &mut *p.cast::<BoxObj>();
         let Some(target) = o
@@ -1339,14 +1117,6 @@ pub unsafe extern "C" fn ohpl_sl_box_fade_step(p: *mut BoxPod, dt: f32) {
             o.box_rest.fade_target = None;
         }
     }
-}
-
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_box_fading(p: *const BoxPod) -> bool {
-    // SAFETY: caller contract.
-    unsafe { (*p.cast::<BoxObj>()).box_rest.fade_target.is_some() }
 }
 
 #[cfg(test)]
@@ -1385,7 +1155,7 @@ mod tests {
             ohpl_sl_box_add_set(p, b"B".as_ptr(), 1, b.as_ptr(), 3);
             assert!(ohpl_sl_box_fade_set(p, b"b".as_ptr(), 1, 0.0));
             ohpl_sl_box_fade_step(p, 0.0);
-            assert!(!ohpl_sl_box_fading(p));
+            assert!((*p.cast::<BoxObj>()).box_rest.fade_target.is_none());
             assert_eq!((*p).bands[8], Vector3f::default());
             ohpl_sl_light_free(p.cast());
         }
@@ -1441,25 +1211,7 @@ pub struct FlareTypePod {
     pub model: Matrixf,
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_sl_flare_type_new(parent: usize, kind: i32) -> *mut FlareTypePod {
-    boxed(FlareTypePod {
-        parent,
-        kind,
-        model: Matrixf::default(),
-    })
-}
-
-/// # Safety
-/// See `unbox`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_flare_type_free(p: *mut FlareTypePod) {
-    // SAFETY: caller contract.
-    unsafe { unbox(p) }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_sl_flare_new(seed: i32) -> *mut FlarePod {
+pub(crate) fn ohpl_sl_flare_new(seed: i32) -> *mut FlarePod {
     let v2 = |x: f32, y: f32| Vector2f { x, y };
     let mut size = [v2(0.125, 0.125); 3];
     size[0] = v2(0.25, 0.0625);
@@ -1500,11 +1252,7 @@ pub extern "C" fn ohpl_sl_flare_new(seed: i32) -> *mut FlarePod {
     })
 }
 
-/// # Safety
-/// See `unbox`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_flare_free(p: *mut FlarePod) {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_flare_free(p: *mut FlarePod) {
     unsafe { unbox(p) }
 }
 
@@ -1617,13 +1365,7 @@ pub unsafe extern "C" fn ohpl_sl_flare_set_size_by_dist(p: *mut FlarePod, x: f32
     unsafe { (*p).size_by_dist = lensflare::clamp01(x) }
 }
 
-/// Bounding-volume half extent for the active types.
-///
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_flare_bv_radius(p: *const FlarePod) -> f32 {
-    // SAFETY: caller contract.
+pub(crate) unsafe fn ohpl_sl_flare_bv_radius(p: *const FlarePod) -> f32 {
     unsafe { lensflare::bv_radius(&(*p).active, &(*p).size) }
 }
 
@@ -1643,10 +1385,7 @@ pub unsafe extern "C" fn ohpl_sl_flare_any_active(p: *const FlarePod) -> bool {
     unsafe { h12b_ent::any_flare_active((*p).fade, &(*p).actives()) }
 }
 
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_flare_color(
+pub(crate) unsafe fn ohpl_sl_flare_color(
     p: *const FlarePod,
     e: *const lensflare::EntIn,
     v: *const lensflare::ViewIn,
@@ -1654,14 +1393,13 @@ pub unsafe extern "C" fn ohpl_sl_flare_color(
     vis: f32,
     out: *mut Color,
 ) {
-    // SAFETY: caller contract.
-    unsafe { super::ffi_light::ohpl_flare_color(&(*p).make_in(), e, v, kind, vis, out) }
+    let Some(kind) = lensflare::Kind::from_i32(kind) else {
+        return;
+    };
+    unsafe { *out = lensflare::color_and_brightness(&(*p).make_in(), &*e, &*v, kind, vis) }
 }
 
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_flare_glare(
+pub(crate) unsafe fn ohpl_sl_flare_glare(
     p: *const FlarePod,
     e: *const lensflare::EntIn,
     v: *const lensflare::ViewIn,
@@ -1669,53 +1407,45 @@ pub unsafe extern "C" fn ohpl_sl_flare_glare(
     out: *mut Color,
     screen: *mut Vector3f,
 ) {
-    // SAFETY: caller contract.
-    unsafe { super::ffi_light::ohpl_flare_glare(&(*p).make_in(), e, v, scale, out, screen) }
+    unsafe {
+        let (c, s) = lensflare::glare(&(*p).make_in(), &*e, &*v, scale);
+        *out = c;
+        *screen = s;
+    }
 }
 
-/// Writes the pod's matrix for `kind` and returns it.
-///
-/// # Safety
-/// All pointers valid; `kind` in 0..3.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_flare_size_rotation(
+pub(crate) unsafe fn ohpl_sl_flare_size_rotation(
     p: *mut FlarePod,
     e: *const lensflare::EntIn,
     v: *const lensflare::ViewIn,
     kind: i32,
     vis: f32,
 ) -> *mut Matrixf {
-    // SAFETY: caller contract.
     unsafe {
         let i = usize::try_from(kind).unwrap_or(0).min(2);
         let Some(m) = (*p).size_rot.get_mut(i).map(|m| m as *mut Matrixf) else {
             return std::ptr::null_mut();
         };
-        super::ffi_light::ohpl_flare_size_rotation(&(*p).make_in(), e, v, kind, vis, m);
+        if let Some(kind) = lensflare::Kind::from_i32(kind) {
+            *m = lensflare::size_and_rotation(&(*p).make_in(), &*e, &*v, kind, vis);
+        }
         m
     }
 }
 
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_flare_billboard(
+pub(crate) unsafe fn ohpl_sl_flare_billboard(
     p: *mut FlarePod,
     e: *const lensflare::EntIn,
     v: *const lensflare::ViewIn,
 ) -> *mut Matrixf {
-    // SAFETY: caller contract.
     unsafe {
         let m: *mut Matrixf = &mut (*p).billboard;
-        super::ffi_light::ohpl_flare_billboard(&(*p).make_in(), e, v, m);
+        *m = lensflare::billboard_matrix(&(*p).make_in(), &*e, &*v);
         m
     }
 }
 
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_flare_type_color(
+pub(crate) unsafe fn ohpl_sl_flare_type_color(
     p: *const FlarePod,
     e: *const lensflare::EntIn,
     v: *const lensflare::ViewIn,
@@ -1723,14 +1453,20 @@ pub unsafe extern "C" fn ohpl_sl_flare_type_color(
     vis: f32,
     out: *mut Color,
 ) -> bool {
-    // SAFETY: caller contract.
-    unsafe { super::ffi_light::ohpl_flare_type_color(&(*p).make_in(), e, v, kind, vis, out) }
+    let Some(kind) = lensflare::Kind::from_i32(kind) else {
+        return false;
+    };
+    match unsafe { lensflare::type_color(&(*p).make_in(), &*e, &*v, kind, vis) } {
+        Some(c) => {
+            unsafe { *out = c };
+            true
+        }
+        None => false,
+    }
 }
 
-/// # Safety
-/// All pointers valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_flare_collide_box(
+#[allow(clippy::too_many_arguments)]
+pub(crate) unsafe fn ohpl_sl_flare_collide_box(
     p: *const FlarePod,
     v: *const lensflare::ViewIn,
     wc: *const Vector3f,
@@ -1740,41 +1476,30 @@ pub unsafe extern "C" fn ohpl_sl_flare_collide_box(
     out_min: *mut Vector3f,
     out_max: *mut Vector3f,
 ) -> bool {
-    // SAFETY: caller contract.
     unsafe {
-        super::ffi_light::ohpl_flare_collide_box(
-            &(*p).make_in(),
-            v,
-            wc,
-            lmin,
-            lmax,
-            lc,
-            out_min,
-            out_max,
-        )
+        match lensflare::collide_box(&(*p).make_in(), &*v, *wc, *lmin, *lmax, *lc) {
+            Some((a, b)) => {
+                *out_min = a;
+                *out_max = b;
+                true
+            }
+            None => false,
+        }
     }
 }
 
-/// Sets the visibility target from the occlusion samples.
-///
-/// # Safety
-/// `p`, `vmin`, `vmax` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_flare_set_target(
+pub(crate) unsafe fn ohpl_sl_flare_set_target(
     p: *mut FlarePod,
     vis: f32,
     total: f32,
     vmin: *const Vector3f,
     vmax: *const Vector3f,
 ) {
-    // SAFETY: caller contract.
     unsafe { (*p).vis.target = lensflare::occlusion_target(vis, total, *vmin, *vmax) }
 }
 
-/// # Safety
-/// All pointers valid; the buffers hold `count` quads.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_sl_flare_multi_iris(
+#[allow(clippy::too_many_arguments)]
+pub(crate) unsafe fn ohpl_sl_flare_multi_iris(
     p: *const FlarePod,
     e: *const lensflare::EntIn,
     v: *const lensflare::ViewIn,
@@ -1784,8 +1509,17 @@ pub unsafe extern "C" fn ohpl_sl_flare_multi_iris(
     uv: *mut f32,
     count: i32,
 ) -> i32 {
-    // SAFETY: caller contract.
-    unsafe {
-        super::ffi_light::ohpl_flare_multi_iris(&(*p).make_in(), e, v, vis, pos, col, uv, count)
-    }
+    let q = count.max(0);
+    let n = unsafe {
+        lensflare::multi_iris(
+            &(*p).make_in(),
+            &*e,
+            &*v,
+            vis,
+            slice_mut(pos, q.saturating_mul(16)),
+            slice_mut(col, q.saturating_mul(16)),
+            slice_mut(uv, q.saturating_mul(12)),
+        )
+    };
+    i32::try_from(n).unwrap_or(i32::MAX)
 }

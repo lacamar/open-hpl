@@ -2,7 +2,6 @@
 //! `sl.rs`/`light.rs`; this module is what the C++ shells did around them: textures, billboards and
 //! particle systems that follow the light, XML loading, flicker side effects and the spot matrices.
 
-use super::ffi_h11 as spot_ctl;
 use super::h10::EntPub;
 use super::h11::{self, Caster};
 use super::light::{self, LightHost};
@@ -339,11 +338,7 @@ impl LightHost for Updates {
     }
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ls_light_update_light(p: *mut LightPod, dt: f32) {
-    // SAFETY: `p` is live; the callbacks write the pod through raw pointers, never `anim`.
+pub(crate) unsafe fn ohpl_ls_light_update_light(p: *mut LightPod, dt: f32) {
     unsafe {
         let mut live = (*p).live();
         let (on, off) = {
@@ -427,10 +422,7 @@ fn set_texture(res: usize, slot: &mut usize, tex: usize) {
     *slot = tex;
 }
 
-/// # Safety
-/// `p` valid; `tex` a texture the light now owns.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ls_light_set_falloff_map(p: *mut LightPod, tex: usize) {
+pub(crate) unsafe fn ohpl_ls_light_set_falloff_map(p: *mut LightPod, tex: usize) {
     let pod = lp(p);
     set_texture(pod.res, &mut pod.falloff_map, tex);
     lh::tex_clamp(tex, false);
@@ -445,10 +437,7 @@ pub unsafe extern "C" fn ohpl_ls_light_set_gobo(p: *mut LightPod, tex: usize) {
     lh::tex_clamp(tex, true);
 }
 
-/// # Safety
-/// `p` valid spot light; `tex` null or a texture the light now owns.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ls_spot_set_falloff_map(p: *mut LightPod, tex: usize) {
+pub(crate) unsafe fn ohpl_ls_spot_set_falloff_map(p: *mut LightPod, tex: usize) {
     let res = lp(p).res;
     set_texture(res, &mut spot(p).spot_falloff_map, tex);
     lh::tex_clamp(tex, false);
@@ -684,8 +673,7 @@ fn view<'a>(p: *mut LightPod) -> &'a Matrixf {
     let s = spot(p);
     let e = ent(lp(p));
     let count = e.count();
-    // SAFETY: `ctl` is a live `SpotCtl`.
-    if unsafe { spot_ctl::ohpl_h11_spot_view_stale(&mut s.ctl, count) } {
+    if s.ctl.view_stale(count) {
         s.ctl.view_count = count;
         // SAFETY: the entity matrix is live.
         s.mtx_view = matrix_inverse(unsafe { &*e.world() });
@@ -695,8 +683,7 @@ fn view<'a>(p: *mut LightPod) -> &'a Matrixf {
 
 fn projection<'a>(p: *mut LightPod) -> &'a Matrixf {
     let s = spot(p);
-    // SAFETY: `ctl` is a live `SpotCtl`.
-    if unsafe { spot_ctl::ohpl_h11_spot_projection_stale(&mut s.ctl) } {
+    if s.ctl.projection_stale() {
         s.mtx_projection = light::spot_projection(
             s.fov,
             s.aspect,
@@ -711,12 +698,10 @@ fn projection<'a>(p: *mut LightPod) -> &'a Matrixf {
 pub(super) fn view_proj<'a>(p: *mut LightPod) -> &'a Matrixf {
     let s = spot(p);
     let count = ent(lp(p)).count();
-    // SAFETY: `ctl` is a live `SpotCtl`.
-    if unsafe { spot_ctl::ohpl_h11_spot_view_proj_stale(&s.ctl, count) } {
+    if s.ctl.view_proj_stale(count) {
         let (proj, v) = (*projection(p), *view(p));
         s.mtx_view_proj = light::spot_view_proj(&proj, &v);
-        // SAFETY: as above.
-        unsafe { spot_ctl::ohpl_h11_spot_view_proj_done(&mut s.ctl, count) };
+        s.ctl.view_proj_done(count);
     }
     &s.mtx_view_proj
 }
@@ -726,8 +711,7 @@ fn frustum(p: *mut LightPod) -> *mut Frustum {
     let e = ent(lp(p));
     let count = e.count();
     let f = s.frustum as *mut Frustum;
-    // SAFETY: `ctl` is a live `SpotCtl`.
-    if unsafe { spot_ctl::ohpl_h11_spot_frustum_stale(&s.ctl, count) } {
+    if s.ctl.frustum_stale(count) {
         let (proj, v) = (*projection(p), *view(p));
         let near = light::spot_near(s.near_clip, sl::ohpl_sl_spot_shadow_near());
         // SAFETY: the spot frustum is live while the light is.
@@ -744,8 +728,8 @@ fn frustum(p: *mut LightPod) -> *mut Frustum {
                 None,
                 false,
             );
-            spot_ctl::ohpl_h11_spot_frustum_done(&mut s.ctl, count);
         }
+        s.ctl.frustum_done(count);
     }
     f
 }
