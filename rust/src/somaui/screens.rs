@@ -1,18 +1,11 @@
 //! `SomaGammaScreen.cpp` layout and `SomaSplash.cpp` timing and draw plans.
 
-use super::hw;
+use crate::hw;
 use crate::math::clamp;
 
-fn fmin(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
-}
+use crate::math::{cmath_max as fmax, cmath_min as fmin};
 
-fn fmax(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
-
-pub const GAMMA_MIN: f32 = 0.3;
-pub const GAMMA_MAX: f32 = 2.0;
+pub use crate::luxmenu2::premenu::{GAMMA_MAX, GAMMA_MIN, slider_to_gamma};
 pub const INSTRUCTIONS_ROW_HEIGHT: f32 = 30.0;
 
 /// Width the instruction text wraps at.
@@ -76,11 +69,6 @@ pub fn gamma_to_slider(gamma: f32) -> i32 {
     let g = clamp(gamma, GAMMA_MIN, GAMMA_MAX);
     let v = (g - GAMMA_MIN) * 100.0 / (GAMMA_MAX - GAMMA_MIN);
     ((f64::from(v) + 0.5).floor()) as i32
-}
-
-pub fn slider_to_gamma(value: i32, max_value: i32) -> f32 {
-    let rel = value as f32 / max_value as f32;
-    (GAMMA_MAX - GAMMA_MIN).mul_add(rel, GAMMA_MIN)
 }
 
 /// Mouse button edge: 0 none, 1 pressed, 2 released.

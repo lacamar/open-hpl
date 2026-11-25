@@ -6,6 +6,7 @@ use super::imgui::State;
 use super::s8d::{self, GfxDesc, Host, ImGui, Op, Ptr, Timer};
 use super::s8d_hud;
 use super::s8d_text::{SubAction, parse_string};
+use crate::ffi::slice;
 use crate::gui::g1_gfx::{self, Element};
 use crate::gui::g1_set::{self, Clip, Set};
 use crate::math::{Vector2f, Vector3f};
@@ -111,17 +112,6 @@ unsafe extern "C" fn push_sub(ctx: *mut c_void, kind: i32, code: i32, p: *const 
             code,
             name: slice(p, n).to_vec(),
         });
-    }
-}
-
-/// # Safety
-/// `p` covers `n` elements (or `n` is 0).
-unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if n == 0 || p.is_null() {
-        &[]
-    } else {
-        // SAFETY: caller contract.
-        unsafe { std::slice::from_raw_parts(p, n) }
     }
 }
 

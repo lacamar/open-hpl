@@ -7,9 +7,10 @@
 use super::player::{
     self, Automove, CameraRotate, DamageId, Fade, MessageKind, MoveSpeeds, MoveVec, StateChange,
 };
-use super::s5_input_ffi::{Host, Io};
+use super::s5_input_ffi::{CHost, Host, Io};
+pub use super::s5c_game::Ops;
 use crate::math::{Vector3f, to_deg, to_rad};
-use crate::somascript::s2_as::{Engine, Frame, Soma, ohpl_as2_str_ctor, str_bytes};
+use crate::somascript::s2_as::{Engine, Frame, Soma, ohpl_as2_str_ctor};
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 use std::ffi::c_void;
@@ -169,20 +170,6 @@ impl Arg<'_> {
 }
 
 // host
-
-pub trait Ops {
-    fn go(&self, op: u32, io: Io) -> (i32, Io);
-}
-
-struct CHost(&'static Host);
-
-impl Ops for CHost {
-    fn go(&self, op: u32, mut io: Io) -> (i32, Io) {
-        // SAFETY: the table was installed by the host and `io` outlives the call.
-        let r = unsafe { (self.0.call)(self.0.ctx, op, &mut io) };
-        (r, io)
-    }
-}
 
 static HOST: OnceLock<&'static Host> = OnceLock::new();
 
@@ -1036,11 +1023,6 @@ pub fn give_damage(amount: f32, ty: i32, min_health: f32, source: SomaId, damage
 
 // natives
 
-fn text<'a>(f: &Frame, i: usize) -> &'a [u8] {
-    // SAFETY: the declaration passes a `const tString &in` in slot `i`.
-    unsafe { str_bytes(f.ptr_arg(i)) }
-}
-
 fn vec_arg(f: &Frame, i: usize) -> Vector3f {
     *f.rf::<Vector3f>(i)
 }
@@ -1199,12 +1181,12 @@ fn register_basic(s: &Soma, t: &str, off: Offsets) {
     s.method(
         t,
         "void AddState(const tString&in asName, int alId, const tString&in asScriptFile, const tString&in asScriptClass)",
-        |f| add_state(text(f, 0), f.arg::<i32>(1), text(f, 2), text(f, 3), false),
+        |f| add_state(f.str_arg(0), f.arg::<i32>(1), f.str_arg(2), f.str_arg(3), false),
     );
     s.method(
         t,
         "void AddMoveState(const tString&in asName, int alId, const tString&in asScriptFile, const tString&in asScriptClass)",
-        |f| add_state(text(f, 0), f.arg::<i32>(1), text(f, 2), text(f, 3), true),
+        |f| add_state(f.str_arg(0), f.arg::<i32>(1), f.str_arg(2), f.str_arg(3), true),
     );
     s.method(
         t,
@@ -1543,14 +1525,14 @@ fn register_misc(s: &Soma, t: &str) {
         "void AddCollideCallback(iLuxEntity @apEntity, const tString&in asCallbackFunc)",
         |f| {
             let c = handle(f, 0);
-            player_entity_call(op::ADD_COLLIDE, c, text(f, 1));
+            player_entity_call(op::ADD_COLLIDE, c, f.str_arg(1));
         },
     );
     s.method(
         t,
         "void RemoveCollideCallback(const tString&in asEntityName)",
         |f| {
-            player_entity_call(op::REMOVE_COLLIDE, 0, text(f, 0));
+            player_entity_call(op::REMOVE_COLLIDE, 0, f.str_arg(0));
         },
     );
     s.method(t, "bool CheckEntityCollision(iLuxEntity@ apEntity)", |f| {
@@ -1693,12 +1675,7 @@ fn register_states(e: Engine, s: &Soma, off: Offsets) {
 // C ABI
 
 fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if p.is_null() {
-        &[]
-    } else {
-        // SAFETY: the C++ caller passes `n` readable bytes.
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
+    unsafe { crate::ffi::slice(p, n) }
 }
 
 fn vec3(p: *const f32) -> Vector3f {

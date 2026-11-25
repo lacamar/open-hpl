@@ -8,7 +8,7 @@ use super::io::{Io, op};
 use super::model::{Comp, zero3};
 use crate::math::{Vector3f, dot3, fma, len3, sub3, v3};
 use crate::somalux::scriptable::hash64;
-use crate::somascript::s2_as::{Engine, Frame, Soma, str_bytes};
+use crate::somascript::s2_as::{Engine, Frame, Soma};
 use std::cell::Cell;
 use std::ffi::c_void;
 
@@ -23,11 +23,6 @@ pub const AGENT_TYPES: [&str; 6] = [
 
 pub fn this(f: &Frame) -> usize {
     f.this as usize
-}
-
-pub fn text<'a>(f: &Frame, i: usize) -> &'a [u8] {
-    // SAFETY: the declaration passes a `const tString &in` in slot `i`.
-    unsafe { str_bytes(f.ptr_arg(i)) }
 }
 
 pub fn vec(f: &Frame, i: usize) -> Vector3f {
@@ -154,7 +149,7 @@ fn user_script(p: usize) -> *mut c_void {
 pub fn register(e: Engine) {
     let s = Soma(e);
     s.func("uint64 H64(const tString&in asStr)", |f| {
-        f.ret(hash64(text(f, 0)));
+        f.ret(hash64(f.str_arg(0)));
     });
     let a = "cLuxAgent";
     s.method(a, "iCharacterBody@ GetCharBody()", |f| {
@@ -170,7 +165,7 @@ pub fn register(e: Engine) {
         "void GetDistanceToGround(const tString&in asCallbackFunc, float afMaxTestDistance, bool abCheckDynamic, int alNumOfRays=1, float afRadius=0.25, bool abGetClosest=true)",
         |f| {
             let d = ground_dist(this(f), f, 1);
-            let decl = [b"void ".as_slice(), text(f, 0), b"(float)"].concat();
+            let decl = [b"void ".as_slice(), f.str_arg(0), b"(float)"].concat();
             call_ent(this(f), &decl, &[Arg::Float(d)]);
         },
     );
@@ -271,7 +266,7 @@ pub fn register(e: Engine) {
                 && player_body()
                 && pinfo().int(1) == 0
                 && los(p, eye(p), pinfo().out_v(2));
-            let decl = [b"void ".as_slice(), text(f, 0), b"(bool)"].concat();
+            let decl = [b"void ".as_slice(), f.str_arg(0), b"(bool)"].concat();
             call_ent(p, &decl, &[Arg::Byte(ok)]);
         },
     );
@@ -280,7 +275,7 @@ pub fn register(e: Engine) {
         "void GetPlayerIsInLineOfSight(const tString&in asCallbackFunc, float afFOV, const cVector3f &in avForward, bool abCheckFOV)",
         |f| {
             let ok = los_fov(this(f), f.arg::<f32>(1), vec(f, 2), f.arg::<bool>(3), true);
-            let decl = [b"void ".as_slice(), text(f, 0), b"(bool)"].concat();
+            let decl = [b"void ".as_slice(), f.str_arg(0), b"(bool)"].concat();
             call_ent(this(f), &decl, &[Arg::Byte(ok)]);
         },
     );
@@ -389,8 +384,8 @@ pub fn register(e: Engine) {
             |f| {
                 let io = Io::new()
                     .p(0, this(f))
-                    .s(0, text(f, 0))
-                    .s(1, text(f, 1))
+                    .s(0, f.str_arg(0))
+                    .s(1, f.str_arg(1))
                     .i(0, i32::from(f.arg::<bool>(2)))
                     .i(1, i32::from(f.arg::<bool>(3)))
                     .go(op::E_PARTICLE);
@@ -414,7 +409,7 @@ pub fn register(e: Engine) {
             "void GetEntityIsInPlayerLineOfSight(const tString&in asCallbackFunc, bool abCheckFOV)",
             |f| {
                 let ok = in_player_los(this(f), f.arg::<bool>(1));
-                let decl = [b"void ".as_slice(), text(f, 0), b"(bool)"].concat();
+                let decl = [b"void ".as_slice(), f.str_arg(0), b"(bool)"].concat();
                 call_ent(this(f), &decl, &[Arg::Byte(ok)]);
             },
         );
@@ -422,7 +417,7 @@ pub fn register(e: Engine) {
     s.func(
         "bool Entity_IsInPlayerFOV(const tString &in asEntity)",
         |f| {
-            let ent = Io::new().s(0, text(f, 0)).go(op::E_MAP_FIND).ptr(0);
+            let ent = Io::new().s(0, f.str_arg(0)).go(op::E_MAP_FIND).ptr(0);
             f.ret(on_screen(ent, false));
         },
     );
@@ -465,7 +460,7 @@ pub fn register(e: Engine) {
         a,
         "void SetAutoDisableCallback(const tString&in asCallback)",
         |f| {
-            let t = text(f, 0).to_vec();
+            let t = f.str_arg(0).to_vec();
             with_agent(f, |a| a.auto_disable_cb = t);
         },
     );
@@ -527,7 +522,7 @@ pub fn register(e: Engine) {
         a,
         "void SetRecieveMessageCallback(const tString&in asCallbackFunc)",
         |f| {
-            let t = text(f, 0).to_vec();
+            let t = f.str_arg(0).to_vec();
             with_agent(f, |a| a.message_cb = t);
         },
     );

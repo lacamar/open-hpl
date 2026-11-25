@@ -42,11 +42,6 @@ const TYPES: [(Ty, &str, &str, u32); 9] = [
     (Ty::Id, "ID", "tID alX", FIELD_ID),
 ];
 
-fn bytes<'a>(p: *mut c_void) -> &'a [u8] {
-    // SAFETY: the declaration passes a `const tString &in`.
-    unsafe { str_bytes(p) }
-}
-
 fn words_of<T: Copy>(v: &T) -> [u32; 16] {
     let mut w = [0u32; 16];
     let n = size_of::<T>().min(64);
@@ -86,7 +81,7 @@ fn value_words(ty: Ty, fr: &Frame, k: usize) -> [u32; 16] {
 
 fn set_value(ty: Ty, field: u32, scope: u32, name: &[u8], idx: i32, fr: &Frame, k: usize) {
     if let Ty::Str = ty {
-        let s = bytes(fr.ptr_arg(k)).to_vec();
+        let s = fr.str_arg(k).to_vec();
         with_variant(scope, name, idx, |v| v.s = s);
     } else {
         let w = value_words(ty, fr, k);
@@ -274,20 +269,20 @@ pub fn register_before_engine(e: Engine) {
                 set_words(v, FIELD_B, &words_of(&inst))
             });
             s2_host::run_global_func(
-                bytes(fr.ptr_arg(0)),
+                fr.str_arg(0),
                 b"cScrPropSlideDoor",
                 b"_Global_SetOpenAmount",
             );
         },
     );
     s.func("bool cScript_RunGlobalFunc(const tString&in asObjectName, const tString&in asClassName, const tString&in asFuncName)", |fr| {
-        fr.ret::<bool>(s2_host::run_global_func(bytes(fr.ptr_arg(0)), bytes(fr.ptr_arg(1)), bytes(fr.ptr_arg(2))));
+        fr.ret::<bool>(s2_host::run_global_func(fr.str_arg(0), fr.str_arg(1), fr.str_arg(2)));
     });
     for (ty, name, param, field) in TYPES {
         s.func(
             &format!("void cScript_SetGlobalVar{name}(const tString &in asName, {param})"),
             move |fr| {
-                set_value(ty, field, SCOPE_VAR, bytes(fr.ptr_arg(0)), 0, fr, 1);
+                set_value(ty, field, SCOPE_VAR, fr.str_arg(0), 0, fr, 1);
             },
         );
         s.func(
@@ -321,7 +316,7 @@ pub fn register_before_engine(e: Engine) {
                 ret_decl(name)
             ),
             move |fr| {
-                get_value(ty, field, SCOPE_VAR, bytes(fr.ptr_arg(0)), 0, fr);
+                get_value(ty, field, SCOPE_VAR, fr.str_arg(0), 0, fr);
             },
         );
     }
@@ -334,10 +329,10 @@ pub fn register_before_engine(e: Engine) {
         );
     }
     s.func("void cLux_DropPageFocus(const tString&in asX)", |fr| {
-        secret([0x1e, 0x28, 0x56], bytes(fr.ptr_arg(0)))
+        secret([0x1e, 0x28, 0x56], fr.str_arg(0))
     });
     s.func("void cLux_PreloadWebpage(const tString &in asX)", |fr| {
-        secret([0x53, 0x58, 0x15], bytes(fr.ptr_arg(0)))
+        secret([0x53, 0x58, 0x15], fr.str_arg(0))
     });
     s.func("void cLux_SetAreaOffline(int alX)", |fr| {
         secret([0x40, 0x48, 0x21], &int_text(fr.arg(0)))
@@ -424,30 +419,30 @@ pub fn register_after_engine(e: Engine) {
         s2_host::misc(
             s2_host::MISC_EXEC_PRINT,
             0,
-            &[bytes(fr.ptr_arg(0)), b"\n"].concat(),
+            &[fr.str_arg(0), b"\n"].concat(),
         );
     });
     s.func("void Log(const tString&in asString)", |fr| {
-        log(0, bytes(fr.ptr_arg(0)))
+        log(0, fr.str_arg(0))
     });
     s.func("void Warning(const tString&in asString)", |fr| {
-        log(1, bytes(fr.ptr_arg(0)))
+        log(1, fr.str_arg(0))
     });
     s.func("void Error(const tString&in asString)", |fr| {
-        log(2, bytes(fr.ptr_arg(0)))
+        log(2, fr.str_arg(0))
     });
     s.func(
         "void cLux_AddDebugMessage(const tString&in asText, bool abCheckForDuplicates)",
-        |fr| tagged(b"SOMA debug: ", bytes(fr.ptr_arg(0))),
+        |fr| tagged(b"SOMA debug: ", fr.str_arg(0)),
     );
     s.func("void cLux_AddDebugMessage(const tString&in asText)", |fr| {
-        tagged(b"SOMA debug: ", bytes(fr.ptr_arg(0)))
+        tagged(b"SOMA debug: ", fr.str_arg(0))
     });
     s.func(
         "void cLux_AddTodoMessage(const tString&in asText, bool abCheckForDuplicates)",
-        |fr| tagged(b"SOMA todo: ", bytes(fr.ptr_arg(0))),
+        |fr| tagged(b"SOMA todo: ", fr.str_arg(0)),
     );
     s.func("void cLux_AddTodoMessage(const tString&in asText)", |fr| {
-        tagged(b"SOMA todo: ", bytes(fr.ptr_arg(0)))
+        tagged(b"SOMA todo: ", fr.str_arg(0))
     });
 }

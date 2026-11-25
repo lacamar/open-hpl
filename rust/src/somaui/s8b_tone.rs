@@ -282,14 +282,9 @@ pub fn register(e: crate::somascript::s2_as::Engine, h: &'static dyn Host) {
 mod natives {
     use super::{Host, fade_exposure, fade_grading, remove_layer, set_layer, with};
     use crate::somascript::s2_api::{dummy_of, is_dummy};
-    use crate::somascript::s2_as::{Engine, Frame, Soma, str_bytes};
+    use crate::somascript::s2_as::{Engine, Frame, Soma};
 
     const T: &str = "cPostEffect_ToneMapping";
-
-    fn text<'a>(f: &Frame, i: usize) -> &'a [u8] {
-        // SAFETY: the declaration passes a `const tString &in` in slot `i`.
-        unsafe { str_bytes(f.ptr_arg(i)) }
-    }
 
     fn texture_name(h: &dyn Host, f: &Frame, i: usize) -> Option<Vec<u8>> {
         let p = f.ptr_arg(i);
@@ -423,7 +418,7 @@ mod natives {
         s.method(
             w,
             "void FadeGradingTexture(const tString&in asTexture, float afTime)",
-            move |f| fade_grading(h, text(f, 0), f.arg(1)),
+            move |f| fade_grading(h, f.str_arg(0), f.arg(1)),
         );
         s.method(
             T,
@@ -444,17 +439,17 @@ mod natives {
         );
         s.func(
             "iTexture@ cResources_CreateTexture3D(const tString&in asName, bool abUseMipMaps)",
-            move |f| f.ret_ref(h.grading_tex(text(f, 0)) as *mut std::ffi::c_void),
+            move |f| f.ret_ref(h.grading_tex(f.str_arg(0)) as *mut std::ffi::c_void),
         );
         s.method(
             T,
             "void SetGradingTexture(int alPrio, const tString&in asTexture, float afAlpha)",
-            move |f| set_layer(h, f.arg(0), text(f, 1), f.arg(2)),
+            move |f| set_layer(h, f.arg(0), f.str_arg(1), f.arg(2)),
         );
         s.method(
             T,
             "void RemoveGradingTexture(const tString&in asTexture)",
-            move |f| remove_layer(h, text(f, 0)),
+            move |f| remove_layer(h, f.str_arg(0)),
         );
         s.method(w, "float GetToneMappingFadeTime()", |f| {
             f.ret(with(|t| t.s.world_fade_time).unwrap_or(0.0))

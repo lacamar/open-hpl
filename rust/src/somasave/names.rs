@@ -37,12 +37,10 @@ pub struct NameState {
     pub latest: Date,
 }
 
-fn widen(s: &[u8]) -> Vec<u32> {
-    s.iter().map(|&c| u32::from(c)).collect()
-}
+use crate::string::latin1_to_wide as widen;
 
 fn w(s: &str) -> Vec<u32> {
-    s.bytes().map(u32::from).collect()
+    widen(s.as_bytes())
 }
 
 /// `GetSaveName`: "Prefix_map_Y_M_D_h_m_s_n[_suffix].sav", `month` is the 0-based tm month.

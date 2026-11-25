@@ -108,9 +108,7 @@ pub fn set_mouse_layout(v: Vec<Vec<u8>>) {
     LAYOUTS.with(|l| l.borrow_mut().mouse = v);
 }
 
-fn fmax(a: f32, b: f32) -> f32 {
-    if a < b { b } else { a }
-}
+use crate::math::std_max as fmax;
 
 fn widen(b: &[u8]) -> Vec<u32> {
     String::from_utf8_lossy(b).chars().map(u32::from).collect()

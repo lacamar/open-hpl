@@ -99,12 +99,7 @@ impl Io {
         let (Some(&p), Some(&n)) = (self.s.get(k), self.n.get(k)) else {
             return &[];
         };
-        if p.is_null() || n == 0 {
-            &[]
-        } else {
-            // SAFETY: the op returns a string that stays valid until the next op.
-            unsafe { std::slice::from_raw_parts(p, n) }
-        }
+        unsafe { crate::ffi::slice(p, n) }
     }
 
     pub fn go(mut self, op: u32) -> Self {

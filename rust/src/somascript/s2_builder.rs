@@ -4,23 +4,17 @@
 use super::builder::{self, Builder};
 use super::s2_as::Engine;
 use super::s2_host;
-use std::ffi::{CString, c_char, c_int, c_void};
+use std::ffi::{CString, c_int, c_void};
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
-const GM_ALWAYS_CREATE: c_int = 2;
+use crate::script::sys::{
+    GM_ALWAYS_CREATE, ohpl_as_get_module, ohpl_as_module_add_section, ohpl_as_module_build,
+};
 const AS_ERROR: c_int = -1;
 
 unsafe extern "C" {
-    fn ohpl_as_get_module(e: *mut c_void, name: *const c_char, flag: c_int) -> *mut c_void;
-    fn ohpl_as_module_add_section(
-        m: *mut c_void,
-        name: *const c_char,
-        code: *const c_char,
-        len: usize,
-    ) -> c_int;
-    fn ohpl_as_module_build(m: *mut c_void) -> c_int;
     fn ohpl_as2_module_load_bytecode(m: *mut c_void, p: *const u8, n: usize) -> c_int;
     fn ohpl_as2_module_save_bytecode(
         m: *mut c_void,

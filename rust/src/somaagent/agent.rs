@@ -5,33 +5,9 @@ use super::host::{
     MSG_PLAYER_UNDETECTED, MSG_SENSES_DEACTIVATED,
 };
 use super::{add3, angle3, dist3, normalized, std_min};
-use crate::math::{
-    Matrixf, PI, Vector3f, cos, fma, matrix_mul, matrix_mul_vec, rotate_z, sin, sub3, v3,
-};
+use crate::math::{Matrixf, PI, Vector3f, fma, matrix_mul, matrix_mul_vec, rotate_z, sub3, v3};
 
-pub(crate) fn mat_rotate_x(a: f32) -> Matrixf {
-    let (s, c) = (sin(a), cos(a));
-    Matrixf {
-        m: [
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, c, -s, 0.0],
-            [0.0, s, c, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ],
-    }
-}
-
-pub(crate) fn mat_rotate_y(a: f32) -> Matrixf {
-    let (s, c) = (sin(a), cos(a));
-    Matrixf {
-        m: [
-            [c, 0.0, s, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [-s, 0.0, c, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ],
-    }
-}
+pub(crate) use crate::math::{rotate_x as mat_rotate_x, rotate_y as mat_rotate_y};
 
 /// The scalar part of `cAgent` that scripts poke at; C++ `cAgent` derives from it.
 #[repr(C)]

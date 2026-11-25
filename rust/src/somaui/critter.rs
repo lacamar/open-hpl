@@ -1,6 +1,6 @@
 //! `SomaCritter.cpp`: critter movement step and the `cLuxCritter` Move_* natives' maths.
 
-use super::hw;
+use crate::hw;
 use crate::math::{atan2, clamp, dot3, len3, rand_rectf, sin, sub3, v3, vector3_reflect};
 use crate::types::Vector3f;
 
@@ -123,13 +123,7 @@ fn turn_towards(from: f32, to: f32, max_step: f32) -> f32 {
     from + clamp(diff, -max_step, max_step)
 }
 
-fn fmax(a: f32, b: f32) -> f32 {
-    if a < b { b } else { a }
-}
-
-fn fmin(a: f32, b: f32) -> f32 {
-    if b < a { b } else { a }
-}
+use crate::math::{std_max as fmax, std_min as fmin};
 
 /// `SomaRaycast` minus the host's map lookup; a ray too short to cast gives `None`.
 fn raycast(host: &mut dyn CritterHost, a: Vector3f, b: Vector3f) -> Option<(f32, Vector3f)> {

@@ -1,7 +1,7 @@
 //! `SomaPostEffects.cpp`: post-effect parameter maths and pass plans. The GPU programs, textures
 //! and frame buffers stay C++, which replays the plans below.
 
-use super::hw;
+use crate::hw;
 use crate::math::{clamp, matrix_mul, matrix_rotate, matrix_scale, rand_rectf, v3};
 use crate::somasound::{fmodf, powf};
 use crate::types::{Matrixf, Vector3f};
@@ -16,9 +16,7 @@ fn exp(x: f32) -> f32 {
     unsafe { c_expf(x) }
 }
 
-fn smax(a: f32, b: f32) -> f32 {
-    if a < b { b } else { a }
-}
+use crate::math::std_max as smax;
 
 pub const PARAMS: usize = 9;
 

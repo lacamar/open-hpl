@@ -5,9 +5,7 @@
 use super::imgui::{Actions, State, became_pressed};
 use crate::math::clamp;
 
-fn fmax(a: f32, b: f32) -> f32 {
-    if a < b { b } else { a }
-}
+use crate::math::std_max as fmax;
 
 /// Which colour a button's frame takes.
 pub const COLOR_BASE: i32 = 0;

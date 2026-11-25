@@ -192,10 +192,7 @@ pub(crate) fn last_char(s: &[u8]) -> &[u8] {
     s.get(s.len().saturating_sub(1)..).unwrap_or_default()
 }
 
-/// `std::wstring(s.begin(), s.end())`: plain `char` is unsigned on aarch64.
-pub(crate) fn widen(s: &[u8]) -> Vec<u32> {
-    s.iter().map(|&c| u32::from(c)).collect()
-}
+pub(crate) use crate::string::latin1_to_wide as widen;
 
 fn join(parts: &[Vec<u8>]) -> Vec<u8> {
     let mut s = b"(".to_vec();

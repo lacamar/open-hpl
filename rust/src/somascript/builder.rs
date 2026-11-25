@@ -3,6 +3,7 @@
 
 use super::patches::PATCHES;
 use super::strings::find;
+use crate::bytes::{is_space, is_word};
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
@@ -22,10 +23,6 @@ pub(crate) fn is_nosave(key: &[u8]) -> bool {
 
 fn path(b: &[u8]) -> &Path {
     Path::new(OsStr::from_bytes(b))
-}
-
-pub(crate) fn lower(s: &[u8]) -> Vec<u8> {
-    s.to_ascii_lowercase()
 }
 
 pub struct Builder {
@@ -65,21 +62,13 @@ fn index(
         if meta.is_dir() {
             index(root, &rel_name, by_rel, by_base);
         } else {
-            let lname = lower(&name);
+            let lname = name.to_ascii_lowercase();
             if lname.len() > 4 && lname.ends_with(b".hps") {
-                by_rel.insert(lower(&rel_name), full.clone());
+                by_rel.insert(rel_name.to_ascii_lowercase(), full.clone());
                 by_base.entry(lname).or_insert(full);
             }
         }
     }
-}
-
-fn is_space(c: u8) -> bool {
-    matches!(c, b' ' | b'\t' | b'\n' | 0x0b | 0x0c | b'\r')
-}
-
-fn is_word(c: u8) -> bool {
-    c.is_ascii_alphanumeric() || c == b'_'
 }
 
 /// `^\s*(?:shared\s+|abstract\s+|mixin\s+)*class\s+(\w+)`
@@ -164,7 +153,7 @@ pub(crate) fn apply_patches(
     game: &[u8],
     warnings: &mut Vec<Vec<u8>>,
 ) {
-    let lfile = lower(file);
+    let lfile = file.to_ascii_lowercase();
     let (is_soma, is_bunker) = (game == b"soma", game == b"bunker");
     for patch in PATCHES {
         let [pat_file, from, to] = patch.map(str::as_bytes);
@@ -299,7 +288,8 @@ impl Builder {
     }
 
     pub(crate) fn resolve(&self, include: &[u8], from_file: &[u8]) -> Vec<u8> {
-        let key: Vec<u8> = lower(include)
+        let key: Vec<u8> = include
+            .to_ascii_lowercase()
             .into_iter()
             .map(|c| if c == b'\\' { b'/' } else { c })
             .collect();

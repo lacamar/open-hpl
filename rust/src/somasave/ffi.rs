@@ -23,19 +23,11 @@ type Sink8 = unsafe extern "C" fn(Ctx, *const u8, usize);
 type Sink32 = unsafe extern "C" fn(Ctx, *const u32, usize);
 
 fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if n == 0 || p.is_null() {
-        return &[];
-    }
-    // SAFETY: the caller of the entry point passes a live `n`-byte buffer.
-    unsafe { std::slice::from_raw_parts(p, n) }
+    unsafe { crate::ffi::slice(p, n) }
 }
 
 fn units<'a>(p: *const u32, n: usize) -> &'a [u32] {
-    if n == 0 || p.is_null() {
-        return &[];
-    }
-    // SAFETY: the caller of the entry point passes a live `n`-unit buffer.
-    unsafe { std::slice::from_raw_parts(p, n) }
+    unsafe { crate::ffi::slice(p, n) }
 }
 
 fn push8(sink: Sink8, ctx: Ctx, b: &[u8]) {

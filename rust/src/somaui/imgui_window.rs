@@ -1,8 +1,6 @@
 //! `DoWindowStart` geometry of `SomaImGui.cpp`.
 
-fn fmax(a: f32, b: f32) -> f32 {
-    if a < b { b } else { a }
-}
+use crate::math::std_max as fmax;
 
 const ALIGN_RIGHT: i32 = 1;
 const ALIGN_CENTER: i32 = 2;

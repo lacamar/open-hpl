@@ -4,9 +4,9 @@
 
 use super::s8_trace::{self, Tracer};
 use super::screens::{self, SplashIn};
+use crate::luxmenu2::a10b::Store;
 use crate::luxmenu2::host::{Arg, Host, Res};
-use crate::obj::{Arena, Handle};
-use std::sync::{LazyLock, Mutex};
+use std::sync::LazyLock;
 
 pub mod op {
     pub const SET_NEW: i32 = 1;
@@ -195,31 +195,6 @@ impl<'a> E<'a> {
 
     fn set_active(&self, set: usize, on: bool) {
         self.v(op::SET_ACTIVE, &[Arg::P(set), Arg::B(on)]);
-    }
-}
-
-struct Store<T>(Mutex<Arena<T>>);
-
-impl<T> Store<T> {
-    fn new() -> Store<T> {
-        Store(Mutex::new(Arena::default()))
-    }
-
-    fn add(&self, v: T) -> u64 {
-        let Ok(mut a) = self.0.lock() else { return 0 };
-        a.insert(v).map_or(0, Handle::to_bits)
-    }
-
-    /// `f` must not call the host: callbacks re-enter while a class call is running.
-    fn with<R>(&self, h: u64, f: impl FnOnce(&mut T) -> R) -> Option<R> {
-        let hd = Handle::from_bits(h)?;
-        let mut a = self.0.lock().ok()?;
-        a.get_mut(hd).map(f)
-    }
-
-    fn remove(&self, h: u64) -> Option<T> {
-        let hd = Handle::from_bits(h)?;
-        self.0.lock().ok()?.remove(hd)
     }
 }
 

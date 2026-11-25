@@ -276,7 +276,7 @@ macro_rules! act {
     };
 }
 
-fn add3(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
+pub(super) fn add3(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
     [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
 }
 
@@ -286,7 +286,7 @@ fn dump_path() -> Option<&'static std::ffi::OsString> {
         .as_ref()
 }
 
-fn hex(f: f32) -> String {
+pub(super) fn hex(f: f32) -> String {
     format!("{:08x}", f.to_bits())
 }
 

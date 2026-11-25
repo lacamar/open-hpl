@@ -12,7 +12,9 @@ impl Ops for Mock {
                 .next()
                 .unwrap_or_default()
                 .to_vec();
-            self.0.borrow_mut().push(lossy(&name));
+            self.0
+                .borrow_mut()
+                .push(String::from_utf8_lossy(&name).into_owned());
             (self.1)(io.p[0] as usize, &name);
         }
         (0, io)
@@ -124,7 +126,7 @@ impl Ops for Replay {
             .to_vec();
         self.fired
             .borrow_mut()
-            .push_str(&format!("{} ", lossy(&name)));
+            .push_str(&format!("{} ", String::from_utf8_lossy(&name)));
         let h = name
             .iter()
             .fold(0u32, |h, &c| h.wrapping_mul(31).wrapping_add(u32::from(c)));
@@ -172,7 +174,7 @@ fn timers_golden_from_cpp() {
             for t in &x.timers {
                 s += &format!(
                     " {}:{:x}:{}{}",
-                    lossy(&t.name),
+                    String::from_utf8_lossy(&t.name),
                     t.time.to_bits(),
                     u8::from(t.paused),
                     u8::from(t.removed)

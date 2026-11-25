@@ -56,7 +56,7 @@ fn string_type(s: &Soma) {
         unsafe { s2_as::ohpl_as2_str_ctor(fr.this, b"".as_ptr(), 0) }
     });
     s.construct("tString", "void f(const tString &in)", |fr| {
-        let b = bytes(fr.ptr_arg(0));
+        let b = fr.str_arg(0);
         // SAFETY: constructor storage.
         unsafe { s2_as::ohpl_as2_str_ctor(fr.this, b.as_ptr(), b.len()) }
     });
@@ -70,23 +70,23 @@ fn string_type(s: &Soma) {
         }),
     );
     s.plain("tString", "tString &opAssign(const tString &in)", |fr| {
-        set_str(fr.this, bytes(fr.ptr_arg(0)));
+        set_str(fr.this, fr.str_arg(0));
         fr.ret_ref(fr.this);
     });
     s.plain("tString", "tString &opAddAssign(const tString &in)", |fr| {
-        let b = bytes(fr.ptr_arg(0));
+        let b = fr.str_arg(0);
         // SAFETY: live string.
         unsafe { s2_as::ohpl_as2_str_append(fr.this, b.as_ptr(), b.len()) };
         fr.ret_ref(fr.this);
     });
     s.plain("tString", "bool opEquals(const tString &in) const", |fr| {
-        fr.ret::<bool>(bytes(fr.this) == bytes(fr.ptr_arg(0)))
+        fr.ret::<bool>(bytes(fr.this) == fr.str_arg(0))
     });
     s.plain("tString", "int opCmp(const tString &in) const", |fr| {
-        fr.ret::<i32>(cmp(bytes(fr.this), bytes(fr.ptr_arg(0))))
+        fr.ret::<i32>(cmp(bytes(fr.this), fr.str_arg(0)))
     });
     s.plain("tString", "tString opAdd(const tString &in) const", |fr| {
-        fr.ret_string(&cat(bytes(fr.this), bytes(fr.ptr_arg(0))))
+        fr.ret_string(&cat(bytes(fr.this), fr.str_arg(0)))
     });
     s.plain("tString", "uint64 length() const", |fr| {
         fr.ret::<u64>(bytes(fr.this).len() as u64)
@@ -118,7 +118,7 @@ fn string_type(s: &Soma) {
         unsafe { s2_as::ohpl_as2_wstr_ctor(fr.this, u.as_ptr(), u.len()) }
     });
     s.construct("tWString", "void f(const tString &in)", |fr| {
-        let w = st::widen(bytes(fr.ptr_arg(0)));
+        let w = st::widen(fr.str_arg(0));
         // SAFETY: constructor storage.
         unsafe { s2_as::ohpl_as2_wstr_ctor(fr.this, w.as_ptr(), w.len()) }
     });
@@ -524,89 +524,67 @@ pub fn register_natives(e: Engine) {
     );
     s.func(
         "bool cString_ToBool(const tString&in asStr, bool abDefault)",
-        |fr| fr.ret::<bool>(cstr::to_bool(cbytes(bytes(fr.ptr_arg(0))))),
+        |fr| fr.ret::<bool>(cstr::to_bool(cbytes(fr.str_arg(0)))),
     );
     s.func(
         "cVector2f cString_ToVector2f(const tString&in asStr, const cVector2f&in avDefault)",
         |fr| {
             let mut v = [0.0f32; 2];
-            fr.ret::<[f32; 2]>(
-                if cstr::floats_exact(cbytes(bytes(fr.ptr_arg(0))), &mut v) {
-                    v
-                } else {
-                    *fr.rf::<[f32; 2]>(1)
-                },
-            );
+            fr.ret::<[f32; 2]>(if cstr::floats_exact(cbytes(fr.str_arg(0)), &mut v) {
+                v
+            } else {
+                *fr.rf::<[f32; 2]>(1)
+            });
         },
     );
     s.func(
         "cVector3f cString_ToVector3f(const tString&in asStr, const cVector3f&in avDefault)",
         |fr| {
             let mut v = [0.0f32; 3];
-            fr.ret::<[f32; 3]>(
-                if cstr::floats_exact(cbytes(bytes(fr.ptr_arg(0))), &mut v) {
-                    v
-                } else {
-                    *fr.rf::<[f32; 3]>(1)
-                },
-            );
+            fr.ret::<[f32; 3]>(if cstr::floats_exact(cbytes(fr.str_arg(0)), &mut v) {
+                v
+            } else {
+                *fr.rf::<[f32; 3]>(1)
+            });
         },
     );
     s.func(
         "cColor cString_ToColor(const tString&in asStr, const cColor&in aDefault)",
         |fr| {
             let mut v = [0.0f32; 4];
-            fr.ret::<[f32; 4]>(
-                if cstr::floats_exact(cbytes(bytes(fr.ptr_arg(0))), &mut v) {
-                    v
-                } else {
-                    *fr.rf::<[f32; 4]>(1)
-                },
-            );
+            fr.ret::<[f32; 4]>(if cstr::floats_exact(cbytes(fr.str_arg(0)), &mut v) {
+                v
+            } else {
+                *fr.rf::<[f32; 4]>(1)
+            });
         },
     );
     s.func(
         "tString cString_GetLastChar(const tString&in aString)",
-        |fr| fr.ret_string(st::last_char(bytes(fr.ptr_arg(0)))),
+        |fr| fr.ret_string(st::last_char(fr.str_arg(0))),
     );
     s.func(
         "int cString_GetFirstCharPos(const tString&in aString, int8 alChar)",
         |fr| {
-            fr.ret(st::find_char(
-                bytes(fr.ptr_arg(0)),
-                fr.arg::<i8>(1) as u8,
-                false,
-            ));
+            fr.ret(st::find_char(fr.str_arg(0), fr.arg::<i8>(1) as u8, false));
         },
     );
     s.func(
         "int cString_GetLastCharPos(const tString&in aString, int8 alChar)",
         |fr| {
-            fr.ret(st::find_char(
-                bytes(fr.ptr_arg(0)),
-                fr.arg::<i8>(1) as u8,
-                true,
-            ));
+            fr.ret(st::find_char(fr.str_arg(0), fr.arg::<i8>(1) as u8, true));
         },
     );
     s.func(
         "int cString_GetFirstStringPos(const tString&in aString, const tString&in aChar)",
         |fr| {
-            fr.ret(st::find_str(
-                bytes(fr.ptr_arg(0)),
-                bytes(fr.ptr_arg(1)),
-                false,
-            ));
+            fr.ret(st::find_str(fr.str_arg(0), fr.str_arg(1), false));
         },
     );
     s.func(
         "int cString_GetLastStringPos(const tString&in aString, const tString&in aChar)",
         |fr| {
-            fr.ret(st::find_str(
-                bytes(fr.ptr_arg(0)),
-                bytes(fr.ptr_arg(1)),
-                true,
-            ));
+            fr.ret(st::find_str(fr.str_arg(0), fr.str_arg(1), true));
         },
     );
     s.func(
@@ -632,13 +610,13 @@ pub fn register_natives(e: Engine) {
     s.func(
         "int cString_CountCharsInString(const tString&in aString, const tString&in aChar)",
         |fr| {
-            fr.ret(st::count_chars(bytes(fr.ptr_arg(0)), bytes(fr.ptr_arg(1))));
+            fr.ret(st::count_chars(fr.str_arg(0), fr.str_arg(1)));
         },
     );
     s.func(
         "tWString cString_GetDecodedString(const tString&in asStr)",
         |fr| {
-            let d: Vec<u32> = crate::xml::lang::decode_string(bytes(fr.ptr_arg(0)))
+            let d: Vec<u32> = crate::xml::lang::decode_string(fr.str_arg(0))
                 .into_iter()
                 .map(|c| c as u32)
                 .collect();
@@ -646,11 +624,11 @@ pub fn register_natives(e: Engine) {
         },
     );
     s.func("uint cString_GetHash(const tString&in asStr)", |fr| {
-        fr.ret(st::hash(bytes(fr.ptr_arg(0))))
+        fr.ret(st::hash(fr.str_arg(0)))
     });
     s.func(
         "tString cString_GetNumericSuffix(const tString&in asStr)",
-        |fr| fr.ret_string(st::numeric_suffix(bytes(fr.ptr_arg(0)))),
+        |fr| fr.ret_string(st::numeric_suffix(fr.str_arg(0))),
     );
     s.func(
         "tWString cString_GetNumericSuffixW(const tWString&in asStr)",
@@ -659,7 +637,7 @@ pub fn register_natives(e: Engine) {
     s.func(
         "int cString_GetNumericSuffixInt(const tString&in aString, int alDefault=0)",
         |fr| {
-            fr.ret(st::numeric_suffix_int(bytes(fr.ptr_arg(0)), fr.arg(1)));
+            fr.ret(st::numeric_suffix_int(fr.str_arg(0), fr.arg(1)));
         },
     );
     s.func(
@@ -678,14 +656,14 @@ pub fn register_natives(e: Engine) {
     });
     s.func("void cString_GetStringVec(const tString&in asData, array<tString> &inout avOutStrings, const tString&in asSepp)", move |fr| {
         let arr = fr.ptr_arg(1);
-        for part in st::split(bytes(fr.ptr_arg(0)), bytes(fr.ptr_arg(2))) {
+        for part in st::split(fr.str_arg(0), fr.str_arg(2)) {
             // SAFETY: the array copies the element during the call.
             with_string(part, |p| unsafe { ins(arr, p) });
         }
     });
     s.func("void cString_GetFloatVec(const tString&in asData, array<float> &inout avOutFloats, const tString&in asSepp)", move |fr| {
         let arr = fr.ptr_arg(1);
-        for t in st::split(bytes(fr.ptr_arg(0)), bytes(fr.ptr_arg(2))) {
+        for t in st::split(fr.str_arg(0), fr.str_arg(2)) {
             let mut f = super::cfmt::c_atof(t) as f32;
             // SAFETY: the array copies the element during the call.
             unsafe { ins(arr, std::ptr::from_mut(&mut f).cast()) };
@@ -693,7 +671,7 @@ pub fn register_natives(e: Engine) {
     });
     s.func("void cString_GetIntVec(const tString&in asData, array<int> &inout avOutInts, const tString&in asSepp)", move |fr| {
         let arr = fr.ptr_arg(1);
-        for t in st::split(bytes(fr.ptr_arg(0)), bytes(fr.ptr_arg(2))) {
+        for t in st::split(fr.str_arg(0), fr.str_arg(2)) {
             let mut l = super::cfmt::c_atoi(t);
             // SAFETY: the array copies the element during the call.
             unsafe { ins(arr, std::ptr::from_mut(&mut l).cast()) };

@@ -1,6 +1,6 @@
 //! `SomaLuxScriptable`: id hashing, easing, timer and fader stepping.
 
-use crate::math::{cos, sin};
+use crate::math::{cos, powf as pw, sin};
 
 pub fn hash64(s: &[u8]) -> u64 {
     if s.is_empty() {
@@ -11,15 +11,6 @@ pub fn hash64(s: &[u8]) -> u64 {
         h = (i64::from(c as i8) as u64 ^ h).wrapping_mul(0x0000_0100_0000_01b3);
     }
     h
-}
-
-unsafe extern "C" {
-    fn powf(x: f32, y: f32) -> f32;
-}
-
-fn pw(x: f32, y: f32) -> f32 {
-    // SAFETY: pure libm function on plain floats.
-    unsafe { powf(x, y) }
 }
 
 fn bounce_out(mut x: f32) -> f32 {

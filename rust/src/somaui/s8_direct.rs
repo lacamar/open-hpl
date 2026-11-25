@@ -6,47 +6,14 @@ use crate::gui::direct;
 use crate::gui::g1_gfx::{self, Element};
 use crate::gui::g1_gui;
 use crate::gui::g1_set::{self, Clip, Set};
-use crate::luxmenu2::host::{Arg, Res};
+use crate::luxmenu2::host::{Arg, Res, b, f, n, p, s};
 use crate::math::{Vector2f, Vector3f};
 use crate::types::Color;
-
-fn p(a: &[Arg], i: usize) -> usize {
-    match a.get(i) {
-        Some(Arg::P(v)) => *v,
-        Some(Arg::I(v)) => *v as usize,
-        _ => 0,
-    }
-}
 
 const TEXTURE_2D: i32 = 1;
 const MSG_MOUSE_DOWN: i32 = 1;
 const MSG_MOUSE_UP: i32 = 2;
 const MOUSE_LEFT: i32 = 1;
-
-fn n(a: &[Arg], i: usize) -> i32 {
-    match a.get(i) {
-        Some(Arg::I(v)) => *v as i32,
-        _ => 0,
-    }
-}
-
-fn s<'a>(a: &[Arg<'a>], i: usize) -> &'a [u8] {
-    match a.get(i) {
-        Some(Arg::S(v)) => v,
-        _ => &[],
-    }
-}
-
-fn f(a: &[Arg], i: usize) -> f32 {
-    match a.get(i) {
-        Some(Arg::F(v)) => *v,
-        _ => 0.0,
-    }
-}
-
-fn b(a: &[Arg], i: usize) -> bool {
-    matches!(a.get(i), Some(Arg::B(true)))
-}
 
 fn res(v: u64) -> Res {
     let mut r = Res::default();

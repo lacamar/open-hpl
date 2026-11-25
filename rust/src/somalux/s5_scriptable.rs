@@ -3,7 +3,7 @@
 
 use super::scriptable::{self, Fader, Timer, TimerAdd};
 use crate::obj::{Arena, Handle};
-use crate::somascript::s2_as::{Engine, Frame, Soma, str_bytes};
+use crate::somascript::s2_as::{Engine, Frame, Soma};
 use crate::string_ffi::{Sink, emit};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -207,11 +207,6 @@ fn with<R>(this: usize, f: impl FnOnce(&mut Table) -> R) -> Option<R> {
 
 fn on<R: Default>(fr: &Frame, f: impl FnOnce(&mut Table) -> R) -> R {
     with(fr.this as usize, f).unwrap_or_default()
-}
-
-fn text<'a>(fr: &Frame, i: usize) -> &'a [u8] {
-    // SAFETY: the declaration passes a `const tString &in` in slot `i`.
-    unsafe { str_bytes(fr.ptr_arg(i)) }
 }
 
 /// # Safety
@@ -463,7 +458,7 @@ enum Id {
 fn id(k: Id, f: &Frame) -> u64 {
     match k {
         Id::U64 => f.arg::<u64>(0),
-        Id::Hash => scriptable::hash64(text(f, 0)),
+        Id::Hash => scriptable::hash64(f.str_arg(0)),
         Id::U32 => u64::from(f.arg::<u32>(0)),
     }
 }
@@ -473,7 +468,7 @@ fn timers(s: &Soma, ty: &str, d: &str, k: Id) {
         ty,
         &format!("void Timer_Add({d}, float afTime, const tString&in asFunc=\"\", bool abCreateIfExist=true, bool abRepeat=false)"),
         move |f| {
-            let func = text(f, 2);
+            let func = f.str_arg(2);
             on(f, |t| t.add(id(k, f), f.arg(1), func, f.arg(3), f.arg(4)));
         },
     );

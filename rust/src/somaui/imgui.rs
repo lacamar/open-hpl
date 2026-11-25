@@ -112,9 +112,7 @@ impl Actions<'_> {
     }
 }
 
-fn fmax(a: f32, b: f32) -> f32 {
-    if a < b { b } else { a }
-}
+use crate::math::std_max as fmax;
 
 /// `cImGui::GetDefaultOrCurrentInt`: a widget's default re-applies whenever the caller changes it.
 pub fn default_or_current_int(s: &mut State, def: i32) -> i32 {

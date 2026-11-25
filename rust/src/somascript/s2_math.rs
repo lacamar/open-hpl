@@ -6,6 +6,7 @@ use super::s2_api;
 use super::s2_as::{Engine, Frame, Soma};
 use super::s2_host;
 use crate::math as hm;
+use crate::math::powf as pw;
 use crate::types::{Matrixf, Quaternion, Vector3f};
 use std::ffi::c_void;
 
@@ -17,7 +18,6 @@ type Rect<T> = [T; 4];
 unsafe extern "C" {
     fn atanf(x: f32) -> f32;
     fn logf(x: f32) -> f32;
-    fn powf(x: f32, y: f32) -> f32;
 }
 
 trait Lane: Copy + PartialEq {
@@ -530,11 +530,6 @@ fn color(s: &Soma) {
             ]);
         },
     );
-}
-
-fn pw(x: f32, p: f32) -> f32 {
-    // SAFETY: plain libm call.
-    unsafe { powf(x, p) }
 }
 
 fn row_matrix(a: V4, b: V4, c: V4, d: V4) -> Matrixf {

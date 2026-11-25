@@ -38,9 +38,7 @@ fn col(m: &Matrixf, i: usize) -> Vector3f {
     v3(c(0), c(1), c(2))
 }
 
-pub(crate) fn translation(m: &Matrixf) -> Vector3f {
-    col(m, 3)
-}
+pub(crate) use crate::math::translation;
 
 pub(crate) fn set_translation(m: &mut Matrixf, t: Vector3f) {
     m.m[0][3] = t.x;

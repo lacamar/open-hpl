@@ -133,13 +133,7 @@ pub unsafe extern "C" fn ohpl_s4b_save_path(ent: usize, ctx: *mut c_void, sink: 
 /// `data` is valid for `len`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_s4b_load_path(ent: usize, data: *const u8, len: usize) {
-    let d = if data.is_null() {
-        &[][..]
-    } else {
-        // SAFETY: caller contract.
-        unsafe { std::slice::from_raw_parts(data, len) }
-    };
-    api::load_path(ent, d);
+    api::load_path(ent, unsafe { crate::ffi::slice(data, len) });
 }
 
 #[unsafe(no_mangle)]

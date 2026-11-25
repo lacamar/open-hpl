@@ -1,6 +1,6 @@
 //! `SomaToneMapping.cpp`: exposure / white-cut fades, exposure areas and grading-texture blends.
 
-use super::hw;
+use crate::hw;
 use crate::math::{matrix_mul_vec, v3};
 use crate::types::{Matrixf, Vector3f};
 

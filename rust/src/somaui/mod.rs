@@ -7,7 +7,6 @@ pub mod critter;
 mod ffi_critter;
 mod ffi_loaders;
 mod ffi_screens;
-mod hw;
 pub mod imgui;
 pub mod imgui_widgets;
 pub mod imgui_window;

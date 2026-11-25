@@ -7,15 +7,7 @@ const _: () = {
     assert!(size_of::<ElementId>() == 12);
 };
 
-/// Byte string view; the bytes are not necessarily UTF-8.
-unsafe fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if n == 0 {
-        &[]
-    } else {
-        // SAFETY: caller contract.
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
-}
+use crate::ffi::slice as bytes;
 
 /// # Safety
 /// `name` has `n` bytes.

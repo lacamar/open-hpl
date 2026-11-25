@@ -41,7 +41,7 @@ pub fn dir_chain(root: &[u32], parts: &[&[u32]]) -> Vec<Vec<u32>> {
 }
 
 fn w(s: &str) -> Vec<u32> {
-    s.bytes().map(u32::from).collect()
+    crate::string::latin1_to_wide(s.as_bytes())
 }
 
 fn id_dir(id: &str) -> Vec<u32> {

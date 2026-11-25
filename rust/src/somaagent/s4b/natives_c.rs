@@ -17,7 +17,7 @@ use super::model::{
     COMP_SOUND_LISTENER, COMP_STATE_MACHINE, Cm, Comp, Glow, K, Pf, Prox, Shape, Sm, TrackNode,
     Tstr,
 };
-use super::natives::{AGENT_TYPES, comp_of_this, text, this, vec};
+use super::natives::{AGENT_TYPES, comp_of_this, this, vec};
 use crate::math::{Quaternion, Vector3f, rand_rectf, rand_rectl, sub3, to_rad, v3};
 use crate::somalux::scriptable::hash64;
 use crate::somascript::s2_as::{Engine, Frame, Soma};
@@ -703,7 +703,7 @@ pub fn register_components(s: &Soma, e: Engine) {
         |f| {
             let ent = Io::new()
                 .p(1, this(f))
-                .s(0, text(f, 1))
+                .s(0, f.str_arg(1))
                 .go(op::E_MAP_FIND)
                 .ptr(0);
             let a = if ent == 0 { std::ptr::null_mut() } else { find(ent) };
@@ -822,7 +822,7 @@ fn register_attack(s: &Soma) {
         t,
         "void SetType_AddShapeAtSocket(const tString&in asSocket, const cVector3f&in avOffset, float afRadius)",
         |f| {
-            let (n, v, r) = (text(f, 0).to_vec(), vec(f, 1), f.arg::<f32>(2));
+            let (n, v, r) = (f.str_arg(0).to_vec(), vec(f, 1), f.arg::<f32>(2));
             let c = comp(f);
             let ent = c.ent;
             if atk_cur(c).is_none() {
@@ -924,7 +924,7 @@ fn register_user(s: &Soma, e: Engine) {
                 done(f);
                 return;
             }
-            let (name, file, class, id) = (text(f, 1), text(f, 2), text(f, 3), f.arg::<i32>(4));
+            let (name, file, class, id) = (f.str_arg(1), f.str_arg(2), f.str_arg(3), f.arg::<i32>(4));
             let shell = Io::new()
                 .p(0, p)
                 .s(0, file)
@@ -1205,7 +1205,7 @@ pub fn change_state(ent: usize, st: i32) {
 fn register_state_machine(s: &Soma) {
     let t = "cLuxStateMachine";
     s.method(t, "void AddState(const tString&in asName, int alId)", |f| {
-        let (n, id) = (text(f, 0).to_vec(), f.arg::<i32>(1));
+        let (n, id) = (f.str_arg(0).to_vec(), f.arg::<i32>(1));
         if let Some(m) = sm(f) {
             m.states.insert(id, n);
             if m.states.len() == 1 {
@@ -1217,7 +1217,7 @@ fn register_state_machine(s: &Soma) {
         t,
         "void AddSubState(const tString&in asName, int alId)",
         |f| {
-            let (n, id) = (text(f, 0).to_vec(), f.arg::<i32>(1));
+            let (n, id) = (f.str_arg(0).to_vec(), f.arg::<i32>(1));
             if let Some(m) = sm(f) {
                 m.subs.insert(id, n);
             }
@@ -1277,17 +1277,17 @@ fn register_state_machine(s: &Soma) {
         t,
         "void AddTimer(const tString& in asId, float afTime)",
         |f| {
-            sm_timer(f, hash64(text(f, 0)), |x, sub, id| {
+            sm_timer(f, hash64(f.str_arg(0)), |x, sub, id| {
                 x.add_timer(sub, id, f.arg::<f32>(1))
             });
         },
     );
     s.method(t, "void StopTimer(const tString& in asId)", |f| {
-        sm_timer(f, hash64(text(f, 0)), |x, sub, id| x.stop_timer(sub, id));
+        sm_timer(f, hash64(f.str_arg(0)), |x, sub, id| x.stop_timer(sub, id));
     });
     s.method(t, "bool TimerExists(const tString& in asId)", |f| {
         let mut r = false;
-        sm_timer(f, hash64(text(f, 0)), |x, sub, id| {
+        sm_timer(f, hash64(f.str_arg(0)), |x, sub, id| {
             r = x.timer_exists(sub, id)
         });
         f.ret(r);
@@ -1435,10 +1435,10 @@ fn register_char_mover(s: &Soma) {
                 Some(m) => play_animation(
                     ent,
                     std::ptr::from_mut(m),
-                    text(f, 0),
+                    f.str_arg(0),
                     f.arg::<f32>(1),
                     f.arg::<bool>(2),
-                    text(f, 4),
+                    f.str_arg(4),
                 ),
                 None => 0,
             };
@@ -1457,7 +1457,7 @@ fn register_char_mover(s: &Soma) {
         t,
         "void SetTurnedToGoalCallbackFunc(const tString &in asFunc)",
         |f| {
-            let n = text(f, 0).to_vec();
+            let n = f.str_arg(0).to_vec();
             if let Some(m) = cm(f) {
                 m.turned_cb = n;
             }
@@ -1526,7 +1526,7 @@ fn register_char_mover(s: &Soma) {
         ("void SetRunAnimName(const tString&in asName)", 2),
     ] {
         s.method(t, decl, move |f| {
-            let n = text(f, 0).to_vec();
+            let n = f.str_arg(0).to_vec();
             if let Some(m) = cm(f) {
                 match which {
                     0 => m.idle = n,
@@ -1541,7 +1541,7 @@ fn register_char_mover(s: &Soma) {
         t,
         "void SetBackwardAnimName(const tString&in asName)",
         |f| {
-            let n = text(f, 0).to_vec();
+            let n = f.str_arg(0).to_vec();
             if let Some(m) = cm(f) {
                 m.backward = n;
             }
@@ -1637,7 +1637,7 @@ fn register_char_mover(s: &Soma) {
             let ent = comp(f).ent;
             if let Some(m) = cm(f) {
                 let (mn, mx) = (m.st.idle_extra_min, m.st.idle_extra_max);
-                setup_idle_extra(ent, m, text(f, 0), mn, mx);
+                setup_idle_extra(ent, m, f.str_arg(0), mn, mx);
             }
         },
     );
@@ -1669,7 +1669,7 @@ fn register_char_mover(s: &Soma) {
         |f| {
             let ent = comp(f).ent;
             if let Some(m) = cm(f) {
-                setup_idle_extra(ent, m, text(f, 0), f.arg::<f32>(1), f.arg::<f32>(2));
+                setup_idle_extra(ent, m, f.str_arg(0), f.arg::<f32>(1), f.arg::<f32>(2));
             }
         },
     );
@@ -1686,7 +1686,7 @@ fn register_pathfinder(s: &Soma) {
         |f| {
             let ent = comp(f).ent;
             if let Some(p) = pf(f) {
-                pf_move_to(ent, p, vec(f, 0), f.arg::<bool>(2), text(f, 3), f.arg::<bool>(4));
+                pf_move_to(ent, p, vec(f, 0), f.arg::<bool>(2), f.str_arg(3), f.arg::<bool>(4));
             }
         },
     );
@@ -1696,15 +1696,15 @@ fn register_pathfinder(s: &Soma) {
         |f| {
             let ent = comp(f).ent;
             let Some(p) = pf(f) else { return };
-            let node = node_by_name(ent, text(f, 0));
+            let node = node_by_name(ent, f.str_arg(0));
             let goal = if node != 0 {
                 Some(node_pos(node))
             } else {
-                let e = Io::new().s(0, text(f, 0)).go(op::E_MAP_FIND).ptr(0);
+                let e = Io::new().s(0, f.str_arg(0)).go(op::E_MAP_FIND).ptr(0);
                 (e != 0).then(|| Io::new().p(0, e).go(op::E_POS).out_v(0))
             };
             if let Some(g) = goal {
-                pf_move_to(ent, p, g, f.arg::<bool>(2), text(f, 3), f.arg::<bool>(4));
+                pf_move_to(ent, p, g, f.arg::<bool>(2), f.str_arg(3), f.arg::<bool>(4));
             }
         },
     );
@@ -1718,7 +1718,7 @@ fn register_pathfinder(s: &Soma) {
         t,
         "void SetEndOfPathCallbackFunc(const tString &in asCallbackFunc)",
         |f| {
-            let n = text(f, 0).to_vec();
+            let n = f.str_arg(0).to_vec();
             if let Some(p) = pf(f) {
                 p.end_cb = n;
             }
@@ -1742,7 +1742,7 @@ fn register_pathfinder(s: &Soma) {
         t,
         "cAINode@ GetNodeFromName(const tString&in asName)",
         |f| {
-            f.ret_ref(node_by_name(comp(f).ent, text(f, 0)) as *mut c_void);
+            f.ret_ref(node_by_name(comp(f).ent, f.str_arg(0)) as *mut c_void);
         },
     );
     s.method(t, "cAINodeContainer@ GetNodeContainer()", |f| {
@@ -1925,10 +1925,10 @@ fn register_pathfinder(s: &Soma) {
         "void AddTrackNode(const tString&in asNodeName, float afMinWaitTime, float afMaxWaitTime, const tString&in asAnimName, bool abLoopAnim)",
         |f| {
             let n = TrackNode {
-                node: Tstr::new(text(f, 0)),
+                node: Tstr::new(f.str_arg(0)),
                 min_wait: f.arg::<f32>(1),
                 max_wait: f.arg::<f32>(2),
-                anim: Tstr::new(text(f, 3)),
+                anim: Tstr::new(f.str_arg(3)),
                 looped: f.arg::<bool>(4),
             };
             if let Some(p) = pf(f) {
@@ -1944,7 +1944,7 @@ fn register_pathfinder(s: &Soma) {
             if let Some(p) = pf(f) {
                 p.st.track_loop = f.arg::<bool>(0);
                 p.st.track_freq = f.arg::<f32>(1);
-                p.track_cb.set(text(f, 2));
+                p.track_cb.set(f.str_arg(2));
                 p.st.track_active = true;
                 p.st.track_paused = false;
                 p.st.track_idx = 0;
@@ -2044,7 +2044,7 @@ fn register_pathfinder(s: &Soma) {
         t,
         "void SetNodeContainerName(const tString &in asName)",
         |f| {
-            let n = text(f, 0).to_vec();
+            let n = f.str_arg(0).to_vec();
             if let Some(p) = pf(f) {
                 p.container = n;
                 p.nodes = 0;
@@ -2132,7 +2132,7 @@ fn register_misc(s: &Soma) {
         "void SetState_SoundBark(const tString&in asSound, float afMinBetweenTime, float afMaxBetweenTime, bool abWaitForSoundToBeDone)",
         |f| {
             let st = BarkState {
-                sound: text(f, 0).to_vec(),
+                sound: f.str_arg(0).to_vec(),
                 min: f.arg::<f32>(1),
                 max: f.arg::<f32>(2),
             };

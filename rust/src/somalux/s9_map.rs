@@ -5,7 +5,7 @@
 use super::s5_input_ffi::Io;
 use super::s5c_game::{Ops, with_ops};
 use super::{pause::Pause, transfer::Preload};
-use crate::somascript::s2_as::{Engine, Frame, Soma, str_bytes};
+use crate::somascript::s2_as::{Engine, Frame, Soma};
 use crate::somascript::s2_host;
 use crate::string;
 use std::cell::{RefCell, UnsafeCell};
@@ -135,10 +135,6 @@ fn send(o: &dyn Ops, code: u32, s: &[u8]) -> (i32, Io) {
     o.go(code, io)
 }
 
-fn lossy(b: &[u8]) -> String {
-    String::from_utf8_lossy(b).into_owned()
-}
-
 pub fn timers_update(o: &dyn Ops, map: usize, dt: f32) {
     let ids = with_map(map, |m| {
         for t in m.timers.iter_mut().filter(|t| !t.paused) {
@@ -160,7 +156,14 @@ pub fn timers_update(o: &dyn Ops, map: usize, dt: f32) {
             Some((t.name.clone(), t.func.clone()))
         });
         let Some((name, func)) = due else { continue };
-        dump(o, &format!("tfire {} {}", lossy(&name), lossy(&func)));
+        dump(
+            o,
+            &format!(
+                "tfire {} {}",
+                String::from_utf8_lossy(&name),
+                String::from_utf8_lossy(&func)
+            ),
+        );
         let mut io = Io::new();
         io.p[0] = map as *mut c_void;
         let joined = [name.as_slice(), func.as_slice()].join(&0u8);
@@ -288,11 +291,6 @@ static PAUSE: Cell<Pause> = Cell(UnsafeCell::new(Pause {
     saving_disabled_time: 0.0,
 }));
 
-fn text<'a>(f: &Frame, i: usize) -> &'a [u8] {
-    // SAFETY: the declaration passes a `const tString &in` in slot `i`.
-    unsafe { str_bytes(f.ptr_arg(i)) }
-}
-
 fn str_ref(o: &dyn Ops, b: &[u8]) -> *mut c_void {
     send(o, op::STR_REF, b).1.p[1]
 }
@@ -339,7 +337,7 @@ pub fn register(e: Engine) {
     if bunker {
         s.func("void cLux_StartNewGame(const tString&in asMapName=\"\", const tString&in asStartPos=\"\")", |f| {
             with_o(|o| {
-                let (map, pos) = (text(f, 0), text(f, 1));
+                let (map, pos) = (f.str_arg(0), f.str_arg(1));
                 let map = if map.is_empty() { start_value(o, b"File", b"") } else { map.to_vec() };
                 let pos = if pos.is_empty() { start_value(o, b"Pos", b"") } else { pos.to_vec() };
                 request_new_game(&map, &pos);
@@ -360,7 +358,7 @@ pub fn register(e: Engine) {
             ),
         ] {
             s.func(decl, move |f| {
-                let p = with_o(|o| str_ref(o, &start_value(o, key, text(f, 0))));
+                let p = with_o(|o| str_ref(o, &start_value(o, key, f.str_arg(0))));
                 f.ret_ref(p.unwrap_or(std::ptr::null_mut()));
             });
         }
@@ -372,7 +370,7 @@ pub fn register(e: Engine) {
         });
     }
     s.func("void cLux_StartMap(const tString&in asMapName)", |f| {
-        request_new_game(text(f, 0), b"")
+        request_new_game(f.str_arg(0), b"")
     });
     s.func("const tString &cLux_GetMainMenuFile()", |f| {
         let p = with_o(|o| str_ref(o, &init_config(o, b"MainMenu", b"File")));
@@ -484,7 +482,7 @@ pub fn register(e: Engine) {
     s.func(
         "void cLux_PreloadMap(const tString&in asMapName, eWorldStreamPriority aPrio = eWorldStreamPriority_Normal)",
         |f| {
-            req(|r| r.preload_map = text(f, 0).to_vec());
+            req(|r| r.preload_map = f.str_arg(0).to_vec());
             // SAFETY: main-thread static.
             unsafe { (*PRELOAD.0.get()).prio = f.arg(1) };
         },
@@ -670,17 +668,17 @@ fn video_modes(f: &Frame) {
 }
 
 fn change_map(f: &Frame, fade: Option<f32>) {
-    request_map_change(text(f, 0), text(f, 1));
+    request_map_change(f.str_arg(0), f.str_arg(1));
     req(|r| {
-        r.transfer = text(f, 2).to_vec();
+        r.transfer = f.str_arg(2).to_vec();
         if let Some(x) = fade {
             r.fade_in = Some(x);
         }
     });
     let line = format!(
         "SOMA script: change map to {} ({})\n",
-        lossy(&req(|r| r.map.clone())),
-        lossy(text(f, 1))
+        String::from_utf8_lossy(&req(|r| r.map.clone())),
+        String::from_utf8_lossy(f.str_arg(1))
     );
     with_o(|o| send(o, 36, line.as_bytes()));
 }
@@ -692,14 +690,28 @@ fn register_map_natives(s: &Soma) {
         M,
         "void AddTimer(const tString&in asName, float afTime, const tString&in asFunction)",
         |f| {
-            let (n, fun) = (text(f, 0), text(f, 2));
-            with_o(|o| dump(o, &format!("tadd {} {}", lossy(n), lossy(fun))));
+            let (n, fun) = (f.str_arg(0), f.str_arg(2));
+            with_o(|o| {
+                dump(
+                    o,
+                    &format!(
+                        "tadd {} {}",
+                        String::from_utf8_lossy(n),
+                        String::from_utf8_lossy(fun)
+                    ),
+                )
+            });
             with_map(this_map(f), |m| m.add(n, f.arg(1), fun));
         },
     );
     s.method(M, "void RemoveTimer(const tString&in asName)", |f| {
-        with_o(|o| dump(o, &format!("trem {}", lossy(text(f, 0)))));
-        with_map(this_map(f), |m| m.remove(text(f, 0)));
+        with_o(|o| {
+            dump(
+                o,
+                &format!("trem {}", String::from_utf8_lossy(f.str_arg(0))),
+            )
+        });
+        with_map(this_map(f), |m| m.remove(f.str_arg(0)));
     });
     s.method(M, "void RestartCurrentTimer(float afTime = -1)", |f| {
         with_map(this_map(f), |m| m.restart_current(f.arg(0)));
@@ -709,7 +721,7 @@ fn register_map_natives(s: &Soma) {
         "const tString& GetTimerUserVarString(const tString&in asName)",
         |f| {
             let v = with_map(this_map(f), |m| {
-                m.find(text(f, 0))
+                m.find(f.str_arg(0))
                     .map(|t| t.user_string.clone())
                     .unwrap_or_default()
             });
@@ -722,7 +734,7 @@ fn register_map_natives(s: &Soma) {
         |f| {
             let x: i32 = f.arg(1);
             f.ret(with_map(this_map(f), |m| {
-                m.find(text(f, 0)).map_or(0, |t| {
+                m.find(f.str_arg(0)).map_or(0, |t| {
                     t.user_int = t.user_int.wrapping_add(x);
                     t.user_int
                 })
@@ -735,7 +747,7 @@ fn register_map_natives(s: &Soma) {
         |f| {
             let x: f32 = f.arg(1);
             f.ret(with_map(this_map(f), |m| {
-                m.find(text(f, 0)).map_or(0.0, |t| {
+                m.find(f.str_arg(0)).map_or(0.0, |t| {
                     t.user_float += x;
                     t.user_float
                 })
@@ -749,7 +761,7 @@ fn register_map_natives(s: &Soma) {
             let names: Vec<Vec<u8>> = with_map(this_map(f), |m| {
                 m.timers
                     .iter()
-                    .filter(|t| string::matches_wildcard(text(f, 0), &t.name))
+                    .filter(|t| string::matches_wildcard(f.str_arg(0), &t.name))
                     .map(|t| t.name.clone())
                     .collect()
             });
@@ -776,7 +788,7 @@ fn register_map_natives(s: &Soma) {
     });
     s.method(M, "float GetTimerTime(const tString&in asName)", |f| {
         f.ret(with_map(this_map(f), |m| {
-            m.find(text(f, 0)).map_or(0.0, |t| t.time)
+            m.find(f.str_arg(0)).map_or(0.0, |t| t.time)
         }));
     });
     s.method(
@@ -787,7 +799,7 @@ fn register_map_natives(s: &Soma) {
             with_map(this_map(f), |m| {
                 m.timers
                     .iter_mut()
-                    .filter(|t| t.name == text(f, 0))
+                    .filter(|t| t.name == f.str_arg(0))
                     .for_each(|t| t.paused = p)
             });
         },
@@ -797,7 +809,7 @@ fn register_map_natives(s: &Soma) {
         "void SetTimerUserVarFloat(const tString&in asName, float afX)",
         |f| {
             with_map(this_map(f), |m| {
-                m.find(text(f, 0))
+                m.find(f.str_arg(0))
                     .iter_mut()
                     .for_each(|t| t.user_float = f.arg(1))
             });
@@ -808,7 +820,7 @@ fn register_map_natives(s: &Soma) {
         "void SetTimerUserVarInt(const tString&in asName, int alX)",
         |f| {
             with_map(this_map(f), |m| {
-                m.find(text(f, 0))
+                m.find(f.str_arg(0))
                     .iter_mut()
                     .for_each(|t| t.user_int = f.arg(1))
             });
@@ -819,9 +831,9 @@ fn register_map_natives(s: &Soma) {
         "void SetTimerUserVarString(const tString&in asName, const tString&in asX)",
         |f| {
             with_map(this_map(f), |m| {
-                m.find(text(f, 0))
+                m.find(f.str_arg(0))
                     .iter_mut()
-                    .for_each(|t| t.user_string = text(f, 1).to_vec())
+                    .for_each(|t| t.user_string = f.str_arg(1).to_vec())
             });
         },
     );
@@ -830,13 +842,13 @@ fn register_map_natives(s: &Soma) {
         "float GetTimerUserVarFloat(const tString&in asName)",
         |f| {
             f.ret(with_map(this_map(f), |m| {
-                m.find(text(f, 0)).map_or(0.0, |t| t.user_float)
+                m.find(f.str_arg(0)).map_or(0.0, |t| t.user_float)
             }));
         },
     );
     s.method(M, "int GetTimerUserVarInt(const tString&in asName)", |f| {
         f.ret(with_map(this_map(f), |m| {
-            m.find(text(f, 0)).map_or(0, |t| t.user_int)
+            m.find(f.str_arg(0)).map_or(0, |t| t.user_int)
         }));
     });
 }

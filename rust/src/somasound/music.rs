@@ -2,7 +2,7 @@
 
 use super::dump;
 use super::host::ops;
-use crate::somascript::s2_as::{Frame, Soma, str_bytes};
+use crate::somascript::s2_as::{Frame, Soma};
 use crate::sound::own_ffi::music;
 use std::ffi::{c_char, c_int, c_void};
 
@@ -344,11 +344,6 @@ impl<'a> Fields<'a> {
 
 static TAG: u8 = 0;
 
-fn bytes<'a>(p: *mut c_void) -> &'a [u8] {
-    // SAFETY: the declarations below pass `const tString &in`.
-    unsafe { str_bytes(p) }
-}
-
 pub fn with<R>(f: impl FnOnce(&mut Music) -> R) -> R {
     f(&mut super::game::game().music)
 }
@@ -362,7 +357,7 @@ pub(super) fn register(s: &Soma) {
         t,
         "void Play(const tString &in asFile, bool abLoop,float afVolume, float afFreq, float afVolumeFadeTime, float afFreqFadeTime, int alPrio, bool abResume, bool abSpecialEffect)",
         |fr| {
-            let (file, looped) = (bytes(fr.ptr_arg(0)).to_vec(), fr.arg::<bool>(1));
+            let (file, looped) = (fr.str_arg(0).to_vec(), fr.arg::<bool>(1));
             let (vol, fade) = (fr.arg::<f32>(2), fr.arg::<f32>(4));
             let (prio, resume) = (fr.arg::<i32>(6), fr.arg::<bool>(7));
             with(|m| m.play(&file, looped, vol, fade, prio, resume));
@@ -381,7 +376,7 @@ pub(super) fn register(s: &Soma) {
                 id,
                 track_prio: fr.arg::<i32>(1),
                 music_prio: fr.arg::<i32>(2),
-                file: bytes(fr.ptr_arg(3)).to_vec(),
+                file: fr.str_arg(3).to_vec(),
                 volume: fr.arg::<f32>(4),
                 fade_in: fr.arg::<f32>(5),
                 fade_out: fr.arg::<f32>(6),

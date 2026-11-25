@@ -12,11 +12,6 @@ use std::ffi::c_void;
 
 const ENTRY_WORLD: i32 = 1;
 
-fn bytes<'a>(p: *mut c_void) -> &'a [u8] {
-    // SAFETY: the declarations below pass `const tString &in`.
-    unsafe { str_bytes(p) }
-}
-
 fn pos_of(fr: &Frame, i: usize) -> [f32; 3] {
     // SAFETY: a `const cVector3f &in` is three floats.
     unsafe { fr.ptr_arg(i).cast::<[f32; 3]>().read_unaligned() }
@@ -180,7 +175,7 @@ pub fn register_entries(s: &Soma) {
         t,
         "void SetParam(const tString &in asName, float afValue)",
         |fr| {
-            let (name, v) = (bytes(fr.ptr_arg(0)).to_vec(), fr.arg::<f32>(1));
+            let (name, v) = (fr.str_arg(0).to_vec(), fr.arg::<f32>(1));
             if let Some(h) = live(fr.this as usize) {
                 let idx = game().bank.param_index(h, &name);
                 set_param(h, idx, v);
@@ -439,7 +434,7 @@ fn entity_ops(s: &Soma) {
         t,
         "void SetParam(const tString&in asName, float afValue)",
         |fr| {
-            let (name, v) = (bytes(fr.ptr_arg(0)).to_vec(), fr.arg::<f32>(1));
+            let (name, v) = (fr.str_arg(0).to_vec(), fr.arg::<f32>(1));
             if let Some(h) = live(entity_event(fr.this as usize)) {
                 let idx = game().bank.param_index(h, &name);
                 set_param(h, idx, v);
@@ -451,7 +446,7 @@ fn entity_ops(s: &Soma) {
         fr.ret::<f32>(live(entity_event(fr.this as usize)).map_or(0.0, |h| param_value(h, i)));
     });
     s.method(t, "float GetParam(const tString&in asName)", |fr| {
-        let name = bytes(fr.ptr_arg(0)).to_vec();
+        let name = fr.str_arg(0).to_vec();
         fr.ret::<f32>(live(entity_event(fr.this as usize)).map_or(0.0, |h| {
             let idx = game().bank.param_index(h, &name);
             param_value(h, idx)
@@ -526,8 +521,8 @@ fn world_ops(s: &Soma) {
     let create = |fr: &Frame| -> usize {
         let (w, name, file, remove) = (
             fr.this as usize,
-            bytes(fr.ptr_arg(0)),
-            bytes(fr.ptr_arg(1)),
+            fr.str_arg(0),
+            fr.str_arg(1),
             fr.arg::<bool>(2),
         );
         if file.is_empty() {
@@ -582,7 +577,7 @@ fn world_ops(s: &Soma) {
 
 fn global_ops(s: &Soma) {
     s.func("bool cLux_PlayGuiSoundData(const tString&in asName, eSoundEntryType aDestType, float afVolMul, bool abSkipPreviousRandom)", |fr| {
-        let (n, ty, v) = (bytes(fr.ptr_arg(0)).to_vec(), fr.arg::<i32>(1), fr.arg::<f32>(2));
+        let (n, ty, v) = (fr.str_arg(0).to_vec(), fr.arg::<i32>(1), fr.arg::<f32>(2));
         fr.ret::<bool>(glue::play_gui(&n, v, ty, false, false) != 0);
     });
     let d = active_native_decl(None, b"bool cLux_PlayGuiSoundDataEx(const tString&in asName, eSoundEntryType aDestType, float afVolMul, bool abSkipPreviousRandom, cLuxSoundExtraData @apExtraData)");
@@ -603,23 +598,23 @@ fn global_ops(s: &Soma) {
 
 fn play_ops(s: &Soma) {
     s.func("cSoundEntry@ cSound_PlayGui(const tString&in asName, bool abLoop, float afVolume, const cVector3f&in avPos, eSoundEntryType aEntryType)", |fr| {
-        let (n, l, v, ty) = (bytes(fr.ptr_arg(0)).to_vec(), fr.arg::<bool>(1), fr.arg::<f32>(2), fr.arg::<i32>(4));
+        let (n, l, v, ty) = (fr.str_arg(0).to_vec(), fr.arg::<bool>(1), fr.arg::<f32>(2), fr.arg::<i32>(4));
         fr.ret_ref(glue::play_gui(&n, v, ty, l, false) as *mut c_void);
     });
     s.func("cSoundEntry@ cSound_PlayGuiStream(const tString&in asFileName, bool abLoop, float afVolume, const cVector3f&in avPos, eSoundEntryType aEntryType)", |fr| {
-        let (n, l, v, ty) = (bytes(fr.ptr_arg(0)).to_vec(), fr.arg::<bool>(1), fr.arg::<f32>(2), fr.arg::<i32>(4));
+        let (n, l, v, ty) = (fr.str_arg(0).to_vec(), fr.arg::<bool>(1), fr.arg::<f32>(2), fr.arg::<i32>(4));
         fr.ret_ref(glue::play_gui(&n, v, ty, l, true) as *mut c_void);
     });
     s.func("cSoundEntry@ cSound_PlaySoundEntityGui(const tString&in asName,bool abLoop,float afVolume, eSoundEntryType aEntryType, const cVector3f&in avPos)", |fr| {
-        let (n, l, v, ty) = (bytes(fr.ptr_arg(0)).to_vec(), fr.arg::<bool>(1), fr.arg::<f32>(2), fr.arg::<i32>(3));
+        let (n, l, v, ty) = (fr.str_arg(0).to_vec(), fr.arg::<bool>(1), fr.arg::<f32>(2), fr.arg::<i32>(3));
         fr.ret_ref(glue::play_gui(&n, v, ty, l, false) as *mut c_void);
     });
     s.func("cSoundEntry@ cSound_PlaySoundEvent(const tString&in asInternalPath,float afVolume,const cVector3f&in avPos,const cVector3f&in avOrientation, bool abNonBlockLoad)", |fr| {
-        let (n, v, pos) = (bytes(fr.ptr_arg(0)).to_vec(), fr.arg::<f32>(1), pos_of(fr, 2));
+        let (n, v, pos) = (fr.str_arg(0).to_vec(), fr.arg::<f32>(1), pos_of(fr, 2));
         fr.ret_ref(glue::play_3d(&n, v, pos, ENTRY_WORLD) as *mut c_void);
     });
     s.func("cSoundEntry@ cSound_Play3D(const tString&in asName,bool abLoop,float afVolume,const cVector3f&in avPos, float afMinDist,float afMaxDist, eSoundEntryType aEntryType, bool abRelative, int alPriority, bool abOnlyPlayInside, bool abNonBlockLoad)", |fr| {
-        let (n, l, v, pos, ty) = (bytes(fr.ptr_arg(0)).to_vec(), fr.arg::<bool>(1), fr.arg::<f32>(2), pos_of(fr, 3), fr.arg::<i32>(6));
+        let (n, l, v, pos, ty) = (fr.str_arg(0).to_vec(), fr.arg::<bool>(1), fr.arg::<f32>(2), pos_of(fr, 3), fr.arg::<i32>(6));
         let p = match glue::play_3d(&n, v, pos, ty) {
             0 => glue::play_gui(&n, v, ty, l, false),
             p => p,
@@ -629,7 +624,7 @@ fn play_ops(s: &Soma) {
     s.func(
         "void cSound_PreloadProject(const tString&in asName, bool abNonBlockingLoad)",
         |fr| {
-            glue::load_project(bytes(fr.ptr_arg(0)));
+            glue::load_project(fr.str_arg(0));
         },
     );
     s.func("void cSound_PreloadGroup(const tString&in asInternalPath, bool abNonBlockingLoad, bool abSubGroups)", |_| {});
@@ -694,7 +689,7 @@ pub fn register(engine: *mut c_void) {
     s.func(
         "cSoundEntry@ cSound_GetEntry(const tString&in asName)",
         |fr| {
-            fr.ret_ref(super::game::find_by_name(bytes(fr.ptr_arg(0))) as *mut c_void);
+            fr.ret_ref(super::game::find_by_name(fr.str_arg(0)) as *mut c_void);
         },
     );
     entity_ops(&s);

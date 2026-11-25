@@ -1,5 +1,6 @@
 //! Script math natives (`SomaScriptMath.cpp`). Every `fma` marks a site gcc contracts on aarch64.
 
+use crate::hw;
 use crate::math::{dot3, fast_random_float, fma, rand_rectf, v3};
 use crate::types::Vector3f;
 
@@ -8,66 +9,6 @@ unsafe extern "C" {
     fn cosf(x: f32) -> f32;
     fn roundf(x: f32) -> f32;
     fn floorf(x: f32) -> f32;
-}
-
-/// Single-instruction float ops with the operand order gcc emitted: which NaN an operation returns
-/// when both inputs are NaN depends on it, and LLVM is free to commute `fmul`/`fadd`/`fma`.
-#[cfg(target_arch = "aarch64")]
-mod hw {
-    use std::arch::asm;
-
-    macro_rules! binop {
-        ($name:ident, $ins:literal) => {
-            #[inline(always)]
-            pub(super) fn $name(n: f32, m: f32) -> f32 {
-                let r: f32;
-                // SAFETY: a register-only float instruction without memory access.
-                unsafe {
-                    asm!(concat!($ins, " {r:s}, {n:s}, {m:s}"), r = lateout(vreg) r, n = in(vreg) n, m = in(vreg) m,
-                        options(pure, nomem, nostack));
-                }
-                r
-            }
-        };
-    }
-    macro_rules! ternop {
-        ($name:ident, $ins:literal) => {
-            #[inline(always)]
-            pub(super) fn $name(n: f32, m: f32, a: f32) -> f32 {
-                let r: f32;
-                // SAFETY: a register-only float instruction without memory access.
-                unsafe {
-                    asm!(concat!($ins, " {r:s}, {n:s}, {m:s}, {a:s}"), r = lateout(vreg) r, n = in(vreg) n, m = in(vreg) m,
-                        a = in(vreg) a, options(pure, nomem, nostack));
-                }
-                r
-            }
-        };
-    }
-    binop!(mul, "fmul");
-    binop!(add, "fadd");
-    binop!(sub, "fsub");
-    ternop!(madd, "fmadd");
-    ternop!(msub, "fmsub");
-}
-
-#[cfg(not(target_arch = "aarch64"))]
-mod hw {
-    pub(super) fn mul(n: f32, m: f32) -> f32 {
-        n * m
-    }
-    pub(super) fn add(n: f32, m: f32) -> f32 {
-        n + m
-    }
-    pub(super) fn sub(n: f32, m: f32) -> f32 {
-        n - m
-    }
-    pub(super) fn madd(n: f32, m: f32, a: f32) -> f32 {
-        n.mul_add(m, a)
-    }
-    pub(super) fn msub(n: f32, m: f32, a: f32) -> f32 {
-        (-n).mul_add(m, a)
-    }
 }
 
 const PI_F: f32 = std::f32::consts::PI;
@@ -142,8 +83,7 @@ pub(crate) fn vector2_rotate(v: [f32; 2], a: f32) -> [f32; 2] {
 
 /// `std::max(a, std::max(b, c))`.
 pub(crate) fn vector3_max_element(v: [f32; 3]) -> f32 {
-    let max = |a: f32, b: f32| if a < b { b } else { a };
-    max(v[0], max(v[1], v[2]))
+    crate::math::std_max(v[0], crate::math::std_max(v[1], v[2]))
 }
 
 fn catmull_rom_one(p0: f32, p1: f32, p2: f32, p3: f32, t: f32) -> f32 {

@@ -3,6 +3,7 @@
 #![cfg_attr(test, allow(dead_code))]
 
 use super::s2_api;
+use crate::script::sys::{ohpl_as_reg_enum, ohpl_as_reg_enum_value, ohpl_as_reg_object_type};
 use std::ffi::{CStr, CString, c_char, c_int, c_void};
 
 pub const ALREADY_REGISTERED: c_int = -13;
@@ -19,11 +20,9 @@ pub const OBJ_APP_PRIMITIVE: u64 = 1 << 13;
 pub const TYPEID_OBJHANDLE: i32 = 0x4000_0000;
 pub const TYPEID_VOID: i32 = 0;
 pub const TM_INOUTREF: u32 = 3;
-pub const BEHAVE_CONSTRUCT: c_int = 0;
-pub const BEHAVE_DESTRUCT: c_int = 2;
-pub const BEHAVE_FACTORY: c_int = 3;
-pub const BEHAVE_ADDREF: c_int = 5;
-pub const BEHAVE_RELEASE: c_int = 6;
+pub use crate::script::sys::{
+    BEHAVE_ADDREF, BEHAVE_CONSTRUCT, BEHAVE_DESTRUCT, BEHAVE_FACTORY, BEHAVE_RELEASE,
+};
 
 // SAFETY (all blocks below): plain calls into the shim; pointers are valid for the call.
 unsafe extern "C" {
@@ -122,15 +121,6 @@ unsafe extern "C" {
     ) -> c_int;
     fn ohpl_as_str_data(s: *const c_void) -> *const c_char;
     fn ohpl_as_str_len(s: *const c_void) -> usize;
-    fn ohpl_as_reg_object_type(e: *mut c_void, n: *const c_char, size: c_int, flags: u64) -> c_int;
-    fn ohpl_as_reg_enum(e: *mut c_void, n: *const c_char) -> c_int;
-    fn ohpl_as_reg_enum_value(
-        e: *mut c_void,
-        n: *const c_char,
-        v: *const c_char,
-        x: c_int,
-    ) -> c_int;
-    fn ohpl_as_reg_global_property(e: *mut c_void, d: *const c_char, p: *mut c_void) -> c_int;
     fn ohpl_as_set_engine_property(e: *mut c_void, prop: c_int, v: usize) -> c_int;
 }
 
@@ -253,6 +243,14 @@ impl Frame {
     pub fn ret_string(&self, b: &[u8]) {
         // SAFETY: the return location is uninitialised storage for a `tString`.
         unsafe { ohpl_as2_str_ctor(self.ret, b.as_ptr(), b.len()) }
+    }
+
+    pub fn str_arg<'a>(&self, i: usize) -> &'a [u8] {
+        unsafe { str_bytes(self.ptr_arg(i)) }
+    }
+
+    pub fn put_str(&self, i: usize, b: &[u8]) {
+        unsafe { ohpl_as2_str_assign(self.ptr_arg(i), b.as_ptr(), b.len()) }
     }
 
     pub fn ret_wstring(&self, u: &[u32]) {
@@ -492,7 +490,7 @@ impl Engine {
     pub unsafe fn reg_global_property(self, decl: &[u8], p: *mut c_void) -> c_int {
         let d = cs(decl);
         // SAFETY: caller contract.
-        unsafe { ohpl_as_reg_global_property(self.0, d.as_ptr(), p) }
+        unsafe { crate::script::sys::ohpl_as_reg_global_property(self.0, d.as_ptr(), p) }
     }
 
     pub fn set_property(self, prop: c_int, v: usize) {

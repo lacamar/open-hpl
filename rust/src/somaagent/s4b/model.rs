@@ -27,11 +27,7 @@ pub const COMP_HAND_PLACEMENT: i32 = 13;
 pub const COMP_EDGE_GLOW: i32 = 1000;
 
 #[cfg(not(test))]
-unsafe extern "C" {
-    fn ohpl_as2_str_ctor(mem: *mut c_void, p: *const u8, n: usize);
-    fn ohpl_as2_str_dtor(s: *mut c_void);
-    fn ohpl_as2_str_assign(s: *mut c_void, p: *const u8, n: usize);
-}
+use crate::somascript::s2_as::{ohpl_as2_str_assign, ohpl_as2_str_ctor, ohpl_as2_str_dtor};
 
 /// A string scripts read by reference (`const tString&`): the bytes plus a lazily built
 /// `std::string` mirror the engine can point at.

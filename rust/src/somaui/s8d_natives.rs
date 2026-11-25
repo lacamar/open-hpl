@@ -3,7 +3,7 @@
 
 use super::imgui::{Layout, Prev};
 use super::s8d::{
-    Group, Host, ImGui, Mods, Timer, Val, current, id_of, preload_gfx, prev_input_focus,
+    Group, Host, ImGui, Mods, Timer, Val, add3, current, id_of, preload_gfx, prev_input_focus,
     script_input_focus, set_current, set_input_focus,
 };
 use super::s8d_hud::{ScriptImGui, create_script_imgui, geom, hud};
@@ -13,7 +13,7 @@ use super::s8d_text::{
     set_keyboard_defaults, set_mouse_layout,
 };
 use crate::somascript::s2_api::new_owned_script_struct;
-use crate::somascript::s2_as::{BEHAVE_FACTORY, Engine, Frame, Soma, str_bytes, wstr_units};
+use crate::somascript::s2_as::{BEHAVE_FACTORY, Engine, Frame, Soma, wstr_units};
 use std::ffi::c_void;
 
 const T: &str = "cImGui";
@@ -26,11 +26,6 @@ fn im<'a>(f: &Frame) -> &'a mut ImGui {
 fn ui<'a>(f: &Frame, i: usize) -> &'a mut ImGui {
     // SAFETY: a `cImGui@` argument is such a UI.
     unsafe { &mut *f.ptr_arg(i).cast::<ImGui>() }
-}
-
-fn bs<'a>(f: &Frame, i: usize) -> &'a [u8] {
-    // SAFETY: the declaration passes a `const tString &in` in slot `i`.
-    unsafe { str_bytes(f.ptr_arg(i)) }
 }
 
 fn ws<'a>(f: &Frame, i: usize) -> &'a [u32] {
@@ -81,10 +76,6 @@ fn str_ref(h: &dyn Host, s: Sd, o: usize) -> *mut c_void {
     (if p == 0 { h.intern(b"") } else { p }) as *mut c_void
 }
 
-fn add3(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
-    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-}
-
 fn osc(im: &ImGui, t: f32, ease: i32) -> f32 {
     let ph = if t > 0.0 {
         im.time_count % (2.0 * t) / t
@@ -96,27 +87,27 @@ fn osc(im: &ImGui, t: f32, ease: i32) -> f32 {
 
 pub fn register(e: Engine, h: &'static dyn Host) {
     let s = Soma(e);
-    s.method("cLuxGuiHandler", r#"void CreateCameraTexture(const tString&in asName, const cVector2l&in avSize, uint alFrameRate, float afFOV, float afNearPlane, float afFarPlane)"#, move |f| { h.camtex_create(bs(f, 0), *f.rf::<[i32; 2]>(1), f.arg(2), f.arg(3), f.arg(4), f.arg(5)); });
+    s.method("cLuxGuiHandler", r#"void CreateCameraTexture(const tString&in asName, const cVector2l&in avSize, uint alFrameRate, float afFOV, float afNearPlane, float afFarPlane)"#, move |f| { h.camtex_create(f.str_arg(0), *f.rf::<[i32; 2]>(1), f.arg(2), f.arg(3), f.arg(4), f.arg(5)); });
     s.method(
         "cLuxGuiHandler",
         r#"void DestroyCameraTexture(const tString&in asName)"#,
         move |f| {
-            h.camtex_destroy(bs(f, 0));
+            h.camtex_destroy(f.str_arg(0));
         },
     );
-    s.method("cLuxGuiHandler", r#"void SetCameraTextureSettings(const tString&in asName, float afFOV, float afNearPlane, float afFarPlane)"#, move |f| { h.camtex_settings(bs(f, 0), f.arg(1), f.arg(2), f.arg(3)); });
+    s.method("cLuxGuiHandler", r#"void SetCameraTextureSettings(const tString&in asName, float afFOV, float afNearPlane, float afFarPlane)"#, move |f| { h.camtex_settings(f.str_arg(0), f.arg(1), f.arg(2), f.arg(3)); });
     s.method(
         "cLuxGuiHandler",
         r#"void SetCameraTextureMatrix(const tString&in asName, const cMatrixf&in a_mtxCamera)"#,
         move |f| {
-            h.camtex_matrix(bs(f, 0), f.ptr_arg(1) as usize);
+            h.camtex_matrix(f.str_arg(0), f.ptr_arg(1) as usize);
         },
     );
     s.method(
         "cLuxGuiHandler",
         r#"void AttachCameraTextureToEntity(const tString&in asName, iLuxEntity@ apEnt)"#,
         move |f| {
-            h.camtex_attach(bs(f, 0), f.ptr_arg(1) as usize);
+            h.camtex_attach(f.str_arg(0), f.ptr_arg(1) as usize);
         },
     );
     for (decl, material, ty) in [
@@ -151,7 +142,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
                 if copy {
                     sd(f, 0).copy_to(g, 16, off::GFX_SIZE - 16);
                 } else if args > 0 {
-                    g.set_ptr(off::GFX_FILE, h.intern(bs(f, 0)));
+                    g.set_ptr(off::GFX_FILE, h.intern(f.str_arg(0)));
                     if material {
                         g.set_i32(off::GFX_MATERIAL, f.arg(1));
                     }
@@ -178,7 +169,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         Box::new(move |f| {
             let p = new_owned_script_struct(b"cImGuiFont");
             let g = Sd(p.cast_const().cast());
-            g.set_ptr(off::FONT_FILE, h.intern(bs(f, 0)));
+            g.set_ptr(off::FONT_FILE, h.intern(f.str_arg(0)));
             g.set_v2(off::FONT_SIZE, v2(f, 1));
             f.ret::<*mut c_void>(p);
         }),
@@ -187,7 +178,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         "cImGuiGfx",
         r#"void SetFile(const tString&in asFile)"#,
         move |f| {
-            me(f).set_ptr(off::GFX_FILE, h.intern(bs(f, 0)));
+            me(f).set_ptr(off::GFX_FILE, h.intern(f.str_arg(0)));
         },
     );
     s.method("cImGuiGfx", r#"const tString& GetFile()const"#, move |f| {
@@ -227,7 +218,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         "cImGuiFont",
         r#"void SetFile(const tString&in asFile)"#,
         move |f| {
-            me(f).set_ptr(off::FONT_FILE, h.intern(bs(f, 0)));
+            me(f).set_ptr(off::FONT_FILE, h.intern(f.str_arg(0)));
         },
     );
     s.method("cImGuiFont", r#"const tString& GetFile()const"#, move |f| {
@@ -331,10 +322,10 @@ pub fn register(e: Engine, h: &'static dyn Host) {
     s.func(
         r#"void cLux_PreloadGuiGfx(const tString &in asFile, eImGuiGfx aType)"#,
         move |f| {
-            preload_gfx(h, bs(f, 0), f.arg(1));
+            preload_gfx(h, f.str_arg(0), f.arg(1));
         },
     );
-    s.func(r#"cLuxScriptImGui@ cLux_CreateScriptImGui(const tString &in asName, bool abRegisterForDrawing, bool abSkipResetOnRegistration=true)"#, move |f| { f.ret_ref(create_script_imgui(h, bs(f, 0), f.arg(1))); });
+    s.func(r#"cLuxScriptImGui@ cLux_CreateScriptImGui(const tString &in asName, bool abRegisterForDrawing, bool abSkipResetOnRegistration=true)"#, move |f| { f.ret_ref(create_script_imgui(h, f.str_arg(0), f.arg(1))); });
     s.method("cLuxScriptImGui", r#"cImGui@ GetImGui()"#, move |f| {
         f.ret_ref(f.me::<ScriptImGui>().im);
     });
@@ -447,7 +438,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         T,
         r#"void SetFocus(const tString&in asWidgetName)"#,
         move |f| {
-            im(f).set_focus(bs(f, 0));
+            im(f).set_focus(f.str_arg(0));
         },
     );
     s.method(
@@ -488,7 +479,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"int GetStateInt(const tString&in asVarName, int aDefault=0)"#,
         move |f| {
             let v = val(f, 1, 0);
-            ret_val(f, im(f).get_or_set(id_of(bs(f, 0)), v));
+            ret_val(f, im(f).get_or_set(id_of(f.str_arg(0)), v));
         },
     );
     s.method(T, r#"void SetStateInt(uint64 alId, int aVal)"#, move |f| {
@@ -500,7 +491,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"void SetStateInt(const tString&in asVarName, int aVal)"#,
         move |f| {
             let v = val(f, 1, 0);
-            im(f).set_val(id_of(bs(f, 0)), v);
+            im(f).set_val(id_of(f.str_arg(0)), v);
         },
     );
     s.method(T, r#"void IncStateInt(uint64 alId, int aVal)"#, move |f| {
@@ -512,7 +503,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"void IncStateInt(const tString&in asVarName, int aVal)"#,
         move |f| {
             let v = val(f, 1, 0);
-            im(f).inc_val(id_of(bs(f, 0)), v);
+            im(f).inc_val(id_of(f.str_arg(0)), v);
         },
     );
     s.method(
@@ -528,7 +519,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"float GetStateFloat(const tString&in asVarName, float aDefault=0.0f)"#,
         move |f| {
             let v = val(f, 1, 1);
-            ret_val(f, im(f).get_or_set(id_of(bs(f, 0)), v));
+            ret_val(f, im(f).get_or_set(id_of(f.str_arg(0)), v));
         },
     );
     s.method(
@@ -544,7 +535,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"void SetStateFloat(const tString&in asVarName, float aVal)"#,
         move |f| {
             let v = val(f, 1, 1);
-            im(f).set_val(id_of(bs(f, 0)), v);
+            im(f).set_val(id_of(f.str_arg(0)), v);
         },
     );
     s.method(
@@ -560,7 +551,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"void IncStateFloat(const tString&in asVarName, float aVal)"#,
         move |f| {
             let v = val(f, 1, 1);
-            im(f).inc_val(id_of(bs(f, 0)), v);
+            im(f).inc_val(id_of(f.str_arg(0)), v);
         },
     );
     s.method(
@@ -571,7 +562,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
             ret_val(f, im(f).get_or_set(f.arg(0), v));
         },
     );
-    s.method(T, r#"cVector3f GetStateVector3f(const tString&in asVarName, const cVector3f&in aDefault=cVector3f(0.0f))"#, move |f| { let v = val(f, 1, 2); ret_val(f, im(f).get_or_set(id_of(bs(f, 0)), v)); });
+    s.method(T, r#"cVector3f GetStateVector3f(const tString&in asVarName, const cVector3f&in aDefault=cVector3f(0.0f))"#, move |f| { let v = val(f, 1, 2); ret_val(f, im(f).get_or_set(id_of(f.str_arg(0)), v)); });
     s.method(
         T,
         r#"void SetStateVector3f(uint64 alId, const cVector3f&in aVal)"#,
@@ -585,7 +576,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"void SetStateVector3f(const tString&in asVarName, const cVector3f&in aVal)"#,
         move |f| {
             let v = val(f, 1, 2);
-            im(f).set_val(id_of(bs(f, 0)), v);
+            im(f).set_val(id_of(f.str_arg(0)), v);
         },
     );
     s.method(
@@ -601,7 +592,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"void IncStateVector3f(const tString&in asVarName, const cVector3f&in aVal)"#,
         move |f| {
             let v = val(f, 1, 2);
-            im(f).inc_val(id_of(bs(f, 0)), v);
+            im(f).inc_val(id_of(f.str_arg(0)), v);
         },
     );
     s.method(
@@ -617,7 +608,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"cColor GetStateColor(const tString&in asVarName, const cColor&in aDefault=cColor(1,1))"#,
         move |f| {
             let v = val(f, 1, 3);
-            ret_val(f, im(f).get_or_set(id_of(bs(f, 0)), v));
+            ret_val(f, im(f).get_or_set(id_of(f.str_arg(0)), v));
         },
     );
     s.method(
@@ -633,7 +624,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"void SetStateColor(const tString&in asVarName, const cColor&in aVal)"#,
         move |f| {
             let v = val(f, 1, 3);
-            im(f).set_val(id_of(bs(f, 0)), v);
+            im(f).set_val(id_of(f.str_arg(0)), v);
         },
     );
     s.method(
@@ -649,17 +640,17 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"void IncStateColor(const tString&in asVarName, const cColor&in aVal)"#,
         move |f| {
             let v = val(f, 1, 3);
-            im(f).inc_val(id_of(bs(f, 0)), v);
+            im(f).inc_val(id_of(f.str_arg(0)), v);
         },
     );
-    s.method(T, r#"void FadeStateFloat(const tString&in asVarName, float afGoalVal,float afTime, eEasing aType=eEasing_QuadInOut, bool abReplaceIfExist=true)"#, move |f| { im(f).fade(id_of(bs(f, 0)), 0, [f.arg::<f32>(1), 0.0, 0.0, 0.0], f.arg(2), f.arg(3), f.arg(4)); });
-    s.method(T, r#"void FadeStateVector3f(const tString&in asVarName, const cVector3f&in avGoalVal,float afTime, eEasing aType=eEasing_QuadInOut, bool abReplaceIfExist=true)"#, move |f| { let g = v3(f, 1); im(f).fade(id_of(bs(f, 0)), 1, [g[0], g[1], g[2], 0.0], f.arg(2), f.arg(3), f.arg(4)); });
-    s.method(T, r#"void FadeStateColor(const tString&in asVarName, const cColor&in aGoalVal,float afTime, eEasing aType=eEasing_QuadInOut, bool abReplaceIfExist=true)"#, move |f| { im(f).fade(id_of(bs(f, 0)), 2, col(f, 1), f.arg(2), f.arg(3), f.arg(4)); });
+    s.method(T, r#"void FadeStateFloat(const tString&in asVarName, float afGoalVal,float afTime, eEasing aType=eEasing_QuadInOut, bool abReplaceIfExist=true)"#, move |f| { im(f).fade(id_of(f.str_arg(0)), 0, [f.arg::<f32>(1), 0.0, 0.0, 0.0], f.arg(2), f.arg(3), f.arg(4)); });
+    s.method(T, r#"void FadeStateVector3f(const tString&in asVarName, const cVector3f&in avGoalVal,float afTime, eEasing aType=eEasing_QuadInOut, bool abReplaceIfExist=true)"#, move |f| { let g = v3(f, 1); im(f).fade(id_of(f.str_arg(0)), 1, [g[0], g[1], g[2], 0.0], f.arg(2), f.arg(3), f.arg(4)); });
+    s.method(T, r#"void FadeStateColor(const tString&in asVarName, const cColor&in aGoalVal,float afTime, eEasing aType=eEasing_QuadInOut, bool abReplaceIfExist=true)"#, move |f| { im(f).fade(id_of(f.str_arg(0)), 2, col(f, 1), f.arg(2), f.arg(3), f.arg(4)); });
     s.method(
         T,
         r#"void StopFade(const tString&in asVarName)"#,
         move |f| {
-            im(f).fades.remove(&id_of(bs(f, 0)));
+            im(f).fades.remove(&id_of(f.str_arg(0)));
         },
     );
     s.method(
@@ -669,7 +660,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
             f.ret(
                 im(f)
                     .fades
-                    .get(&id_of(bs(f, 0)))
+                    .get(&id_of(f.str_arg(0)))
                     .is_some_and(|x| x.count >= x.time),
             );
         },
@@ -681,7 +672,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
             f.ret(
                 im(f)
                     .fades
-                    .get(&id_of(bs(f, 0)))
+                    .get(&id_of(f.str_arg(0)))
                     .is_some_and(|x| x.count < x.time),
             );
         },
@@ -694,7 +685,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"void AddTimer(const tString&in asName, float afTime)"#,
         move |f| {
             im(f).timers.push(Timer {
-                id: id_of(bs(f, 0)),
+                id: id_of(f.str_arg(0)),
                 time: f.arg(1),
                 repeat: false,
                 touched: true,
@@ -706,7 +697,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"bool RepeatTimer(const tString&in asName, float afTime)"#,
         move |f| {
             let g = im(f);
-            let id = id_of(bs(f, 0));
+            let id = id_of(f.str_arg(0));
             let found = g.timer(id);
             if let Some(t) = found
                 .and_then(|i| g.timers.get_mut(i))
@@ -726,13 +717,13 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         },
     );
     s.method(T, r#"void StopTimer(const tString&in asName)"#, move |f| {
-        let id = id_of(bs(f, 0));
+        let id = id_of(f.str_arg(0));
         im(f).timers.retain(|t| t.id != id);
     });
     s.method(T, r#"bool TimerOver(const tString&in asName)"#, move |f| {
         let g = im(f);
         f.ret(
-            g.timer(id_of(bs(f, 0)))
+            g.timer(id_of(f.str_arg(0)))
                 .and_then(|i| g.timers.get(i))
                 .is_some_and(|t| t.time <= 0.0),
         );
@@ -742,7 +733,7 @@ pub fn register(e: Engine, h: &'static dyn Host) {
         r#"bool TimerExists(const tString&in asName)"#,
         move |f| {
             let g = im(f);
-            f.ret(g.timer(id_of(bs(f, 0))).is_some());
+            f.ret(g.timer(id_of(f.str_arg(0))).is_some());
         },
     );
     s.method(
@@ -1070,27 +1061,27 @@ pub fn register(e: Engine, h: &'static dyn Host) {
             }
         },
     );
-    s.method(T, r#"bool DoButton(const tString&in asName,const tWString&in asText, const cImGuiButtonData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_button(h, bs(f, 0), ws(f, 1), sd(f, 2), v3(f, 3), v2(f, 4), 0)); });
-    s.method(T, r#"bool DoButton(const tString&in asName,const tWString&in asText, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiButtonData"); f.ret(g.do_button(h, bs(f, 0), ws(f, 1), d, v3(f, 2), v2(f, 3), 0)); });
-    s.method(T, r#"bool DoRepeatButton(const tString&in asName,const tWString&in asText, const cImGuiButtonData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_button(h, bs(f, 0), ws(f, 1), sd(f, 2), v3(f, 3), v2(f, 4), 2)); });
-    s.method(T, r#"bool DoRepeatButton(const tString&in asName,const tWString&in asText, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiButtonData"); f.ret(g.do_button(h, bs(f, 0), ws(f, 1), d, v3(f, 2), v2(f, 3), 2)); });
-    s.method(T, r#"bool DoToggleButton(const tString&in asName,const tWString&in asText, bool abDefaultChecked, const cImGuiButtonData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); super::imgui::default_or_current_int(g.state(id_of(bs(f, 0))), i32::from(f.arg::<bool>(2))); f.ret(g.do_button(h, bs(f, 0), ws(f, 1), sd(f, 3), v3(f, 4), v2(f, 5), 1)); });
-    s.method(T, r#"bool DoToggleButton(const tString&in asName,const tWString&in asText, bool abDefaultChecked, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); super::imgui::default_or_current_int(g.state(id_of(bs(f, 0))), i32::from(f.arg::<bool>(2))); let d = g.get_default(b"cImGuiButtonData"); f.ret(g.do_button(h, bs(f, 0), ws(f, 1), d, v3(f, 3), v2(f, 4), 1)); });
-    s.method(T, r#"float DoSliderHorizontal(const tString&in asName, float afDefaultValue, float afMin, float afMax, float afStepSize, const cImGuiSliderData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_slider(h, bs(f, 0), f.arg(1), f.arg(2), f.arg(3), f.arg(4), sd(f, 5), v3(f, 6), v2(f, 7), false)); });
-    s.method(T, r#"float DoSliderHorizontal(const tString&in asName, float afDefaultValue, float afMin, float afMax, float afStepSize=-1, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiSliderData"); f.ret(g.do_slider(h, bs(f, 0), f.arg(1), f.arg(2), f.arg(3), f.arg(4), d, v3(f, 5), v2(f, 6), false)); });
-    s.method(T, r#"float DoSliderVertical(const tString&in asName, float afDefaultValue, float afMin, float afMax, float afStepSize, const cImGuiSliderData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_slider(h, bs(f, 0), f.arg(1), f.arg(2), f.arg(3), f.arg(4), sd(f, 5), v3(f, 6), v2(f, 7), true)); });
-    s.method(T, r#"float DoSliderVertical(const tString&in asName, float afDefaultValue, float afMin, float afMax, float afStepSize=-1, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiSliderDataV"); f.ret(g.do_slider(h, bs(f, 0), f.arg(1), f.arg(2), f.arg(3), f.arg(4), d, v3(f, 5), v2(f, 6), true)); });
+    s.method(T, r#"bool DoButton(const tString&in asName,const tWString&in asText, const cImGuiButtonData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_button(h, f.str_arg(0), ws(f, 1), sd(f, 2), v3(f, 3), v2(f, 4), 0)); });
+    s.method(T, r#"bool DoButton(const tString&in asName,const tWString&in asText, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiButtonData"); f.ret(g.do_button(h, f.str_arg(0), ws(f, 1), d, v3(f, 2), v2(f, 3), 0)); });
+    s.method(T, r#"bool DoRepeatButton(const tString&in asName,const tWString&in asText, const cImGuiButtonData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_button(h, f.str_arg(0), ws(f, 1), sd(f, 2), v3(f, 3), v2(f, 4), 2)); });
+    s.method(T, r#"bool DoRepeatButton(const tString&in asName,const tWString&in asText, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiButtonData"); f.ret(g.do_button(h, f.str_arg(0), ws(f, 1), d, v3(f, 2), v2(f, 3), 2)); });
+    s.method(T, r#"bool DoToggleButton(const tString&in asName,const tWString&in asText, bool abDefaultChecked, const cImGuiButtonData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); super::imgui::default_or_current_int(g.state(id_of(f.str_arg(0))), i32::from(f.arg::<bool>(2))); f.ret(g.do_button(h, f.str_arg(0), ws(f, 1), sd(f, 3), v3(f, 4), v2(f, 5), 1)); });
+    s.method(T, r#"bool DoToggleButton(const tString&in asName,const tWString&in asText, bool abDefaultChecked, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); super::imgui::default_or_current_int(g.state(id_of(f.str_arg(0))), i32::from(f.arg::<bool>(2))); let d = g.get_default(b"cImGuiButtonData"); f.ret(g.do_button(h, f.str_arg(0), ws(f, 1), d, v3(f, 3), v2(f, 4), 1)); });
+    s.method(T, r#"float DoSliderHorizontal(const tString&in asName, float afDefaultValue, float afMin, float afMax, float afStepSize, const cImGuiSliderData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_slider(h, f.str_arg(0), f.arg(1), f.arg(2), f.arg(3), f.arg(4), sd(f, 5), v3(f, 6), v2(f, 7), false)); });
+    s.method(T, r#"float DoSliderHorizontal(const tString&in asName, float afDefaultValue, float afMin, float afMax, float afStepSize=-1, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiSliderData"); f.ret(g.do_slider(h, f.str_arg(0), f.arg(1), f.arg(2), f.arg(3), f.arg(4), d, v3(f, 5), v2(f, 6), false)); });
+    s.method(T, r#"float DoSliderVertical(const tString&in asName, float afDefaultValue, float afMin, float afMax, float afStepSize, const cImGuiSliderData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_slider(h, f.str_arg(0), f.arg(1), f.arg(2), f.arg(3), f.arg(4), sd(f, 5), v3(f, 6), v2(f, 7), true)); });
+    s.method(T, r#"float DoSliderVertical(const tString&in asName, float afDefaultValue, float afMin, float afMax, float afStepSize=-1, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiSliderDataV"); f.ret(g.do_slider(h, f.str_arg(0), f.arg(1), f.arg(2), f.arg(3), f.arg(4), d, v3(f, 5), v2(f, 6), true)); });
     s.method(T, r#"void DoLabel(const tWString&in asText, const cImGuiLabelData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1, float afFontSizeMul=1)"#, move |f| { im(f).do_label(h, ws(f, 0), sd(f, 1), v3(f, 2), v2(f, 3), f.arg(4)); });
     s.method(T, r#"void DoLabel(const tWString&in asText, const cVector3f&in avPos=0, const cVector2f&in avSize=-1, float afFontSizeMul=1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiLabelData"); g.do_label(h, ws(f, 0), d, v3(f, 1), v2(f, 2), f.arg(3)); });
     s.method(T, r#"void DoImage(const cImGuiGfx&in aGfxImage, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { im(f).do_image(h, sd(f, 0), v3(f, 1), v2(f, 2)); });
-    s.method(T, r#"bool DoCheckBox(const tString&in asName, const tWString&in asText, bool abDefaultChecked, const cImGuiCheckBoxData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_checkbox(h, bs(f, 0), ws(f, 1), f.arg(2), sd(f, 3), v3(f, 4), v2(f, 5))); });
-    s.method(T, r#"bool DoCheckBox(const tString&in asName, const tWString&in asText, bool abDefaultChecked, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiCheckBoxData"); f.ret(g.do_checkbox(h, bs(f, 0), ws(f, 1), f.arg(2), d, v3(f, 3), v2(f, 4))); });
+    s.method(T, r#"bool DoCheckBox(const tString&in asName, const tWString&in asText, bool abDefaultChecked, const cImGuiCheckBoxData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_checkbox(h, f.str_arg(0), ws(f, 1), f.arg(2), sd(f, 3), v3(f, 4), v2(f, 5))); });
+    s.method(T, r#"bool DoCheckBox(const tString&in asName, const tWString&in asText, bool abDefaultChecked, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiCheckBoxData"); f.ret(g.do_checkbox(h, f.str_arg(0), ws(f, 1), f.arg(2), d, v3(f, 3), v2(f, 4))); });
     s.method(T, r#"float DoTextFrame(const tWString&in asText,const cVector2f&in avEdgeSpacing, float afRowSpace, float afStartRowOffset, const cImGuiTextFrameData &in aData, const cVector3f&in avPos, const cVector2f&in avSize)"#, move |f| { let g = im(f); f.ret(g.do_text_frame(h, ws(f, 0), v2(f, 1), f.arg(2), f.arg(3), sd(f, 4), v3(f, 5), v2(f, 6))); });
     s.method(T, r#"float DoTextFrame(const tWString&in asText,const cVector2f&in avEdgeSpacing, float afRowSpace, float afStartRowOffset, const cVector3f&in avPos, const cVector2f&in avSize)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiTextFrameData"); f.ret(g.do_text_frame(h, ws(f, 0), v2(f, 1), f.arg(2), f.arg(3), d, v3(f, 4), v2(f, 5))); });
-    s.method(T, r#"int DoMultiSelect(const tString&in asName, int alDefaultSelectedItem, const cImGuiMultiSelectData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_multi_select(h, bs(f, 0), f.arg(1), sd(f, 2), v3(f, 3), v2(f, 4))); });
-    s.method(T, r#"int DoMultiSelect(const tString&in asName, int alDefaultSelectedItem, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiMultiSelectData"); f.ret(g.do_multi_select(h, bs(f, 0), f.arg(1), d, v3(f, 2), v2(f, 3))); });
-    s.method(T, r#"int DoMultiToggle(const tString&in asName, int alDefaultSelectedItem, uint alColumnNum, const cVector2f&in avSpacing, const cImGuiButtonData &in aData, const cVector3f&in avPos, const cVector2f&in avSize)"#, move |f| { let g = im(f); f.ret(g.do_multi_toggle(h, bs(f, 0), f.arg(1), f.arg(2), v2(f, 3), sd(f, 4), v3(f, 5), v2(f, 6))); });
-    s.method(T, r#"int DoMultiToggle(const tString&in asName, int alDefaultSelectedItem, uint alColumnNum, const cVector2f&in avSpacing, const cVector3f&in avPos, const cVector2f&in avSize)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiButtonData"); f.ret(g.do_multi_toggle(h, bs(f, 0), f.arg(1), f.arg(2), v2(f, 3), d, v3(f, 4), v2(f, 5))); });
+    s.method(T, r#"int DoMultiSelect(const tString&in asName, int alDefaultSelectedItem, const cImGuiMultiSelectData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); f.ret(g.do_multi_select(h, f.str_arg(0), f.arg(1), sd(f, 2), v3(f, 3), v2(f, 4))); });
+    s.method(T, r#"int DoMultiSelect(const tString&in asName, int alDefaultSelectedItem, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiMultiSelectData"); f.ret(g.do_multi_select(h, f.str_arg(0), f.arg(1), d, v3(f, 2), v2(f, 3))); });
+    s.method(T, r#"int DoMultiToggle(const tString&in asName, int alDefaultSelectedItem, uint alColumnNum, const cVector2f&in avSpacing, const cImGuiButtonData &in aData, const cVector3f&in avPos, const cVector2f&in avSize)"#, move |f| { let g = im(f); f.ret(g.do_multi_toggle(h, f.str_arg(0), f.arg(1), f.arg(2), v2(f, 3), sd(f, 4), v3(f, 5), v2(f, 6))); });
+    s.method(T, r#"int DoMultiToggle(const tString&in asName, int alDefaultSelectedItem, uint alColumnNum, const cVector2f&in avSpacing, const cVector3f&in avPos, const cVector2f&in avSize)"#, move |f| { let g = im(f); let d = g.get_default(b"cImGuiButtonData"); f.ret(g.do_multi_toggle(h, f.str_arg(0), f.arg(1), f.arg(2), v2(f, 3), d, v3(f, 4), v2(f, 5))); });
     s.method(T, r#"void DoFrame(const cImGuiFrameData &in aData, const cVector3f &in avPos=0, const cVector2f &in avSize=-1)"#, move |f| { im(f).do_frame(h, sd(f, 0), v3(f, 1), v2(f, 2)); });
     s.method(
         T,

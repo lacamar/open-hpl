@@ -456,7 +456,7 @@ impl NamesHost for Names {
 }
 
 fn w(s: &str) -> Vec<u32> {
-    s.bytes().map(u32::from).collect()
+    crate::string::latin1_to_wide(s.as_bytes())
 }
 
 #[test]

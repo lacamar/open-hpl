@@ -4,6 +4,7 @@
 
 use super::ffi_s8b::Io;
 use super::postfx::{self, BlurPlan, LevelSize, PARAMS, TentacleFades};
+use super::s8d::hex;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -139,10 +140,6 @@ fn defaults(ty: usize) -> [f32; PARAMS] {
         _ => {}
     }
     p
-}
-
-fn hex(f: f32) -> String {
-    format!("{:08x}", f.to_bits())
 }
 
 /// Typed wrappers of the host ops.
@@ -1023,13 +1020,8 @@ mod natives {
         set, with_fx,
     };
     use crate::somascript::s2_api::is_dummy;
-    use crate::somascript::s2_as::{Engine, Frame, Soma, str_bytes};
+    use crate::somascript::s2_as::{Engine, Frame, Soma};
     use std::ffi::c_void;
-
-    fn text<'a>(f: &Frame, i: usize) -> &'a [u8] {
-        // SAFETY: the declaration passes a `const tString &in` in slot `i`.
-        unsafe { str_bytes(f.ptr_arg(i)) }
-    }
 
     fn handle(f: &Frame, i: usize) -> Ptr {
         let p = f.ptr_arg(i);
@@ -1110,7 +1102,7 @@ mod natives {
             comp,
             "iPostEffect@ GetPostEffectFromType(const tString&in asType)",
             move |f| {
-                let (c, want) = (me(f), text(f, 0));
+                let (c, want) = (me(f), f.str_arg(0));
                 let g = g();
                 let found = (0..g.comp_num(c)).map(|i| g.comp_get(c, i)).find(|p| {
                     with_fx(*p, |e| {
@@ -1259,12 +1251,12 @@ mod natives {
             s.method(
                 t,
                 "void SetupTentacleEntity(const tString&in asEntFile, int alNum, int alAnimGroupNum)",
-                move |f| setup_entity(&g(), me(f), text(f, 0), f.arg(1), f.arg(2)),
+                move |f| setup_entity(&g(), me(f), f.str_arg(0), f.arg(1), f.arg(2)),
             );
             s.method(
                 t,
                 "void SetupTentacleMaterial(int alMatIndex, const tString&in asMat)",
-                move |f| setup_material(&g(), me(f), f.arg(0), text(f, 1)),
+                move |f| setup_material(&g(), me(f), f.arg(0), f.str_arg(1)),
             );
             s.method(t, "int GetTentacleEntityNum()", |f| {
                 f.ret(tent(me(f), |t| t.tentacles.len() as i32).unwrap_or(0));
@@ -1284,13 +1276,13 @@ mod natives {
             s.method(
                 t,
                 "void SetupTentacleAnimation(const tString&in asAnim, float afSpeedMin, float afSpeedMax)",
-                move |f| setup_animation(&g(), me(f), text(f, 0), f.arg(1), f.arg(2)),
+                move |f| setup_animation(&g(), me(f), f.str_arg(0), f.arg(1), f.arg(2)),
             );
             s.method(
                 t,
                 "void SetTentacleAnimationSpeed(const tString&in asAnim, float afSpeed)",
                 |f| {
-                    let (n, v): (&[u8], f32) = (text(f, 0), f.arg(1));
+                    let (n, v): (&[u8], f32) = (f.str_arg(0), f.arg(1));
                     let _ = tent(me(f), |t| {
                         if let Some(a) = t.anims.iter_mut().find(|a| a.name == n) {
                             a.speed = v;
@@ -1302,7 +1294,7 @@ mod natives {
                 t,
                 "void SetTentacleAnimationWeight(const tString&in asAnim, float afWeight)",
                 |f| {
-                    let (n, v): (&[u8], f32) = (text(f, 0), f.arg(1));
+                    let (n, v): (&[u8], f32) = (f.str_arg(0), f.arg(1));
                     let _ = tent(me(f), |t| {
                         if let Some(a) = t.anims.iter_mut().find(|a| a.name == n) {
                             a.weight = v;

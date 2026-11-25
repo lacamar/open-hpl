@@ -9,6 +9,7 @@ use super::s2_entry;
 use super::s2_host;
 use super::{api, check, s2_strings};
 use crate::script::sys::{self, AsMsg};
+use crate::script::sys::{ohpl_as_discard_module, ohpl_as_get_module};
 use std::collections::{BTreeMap, HashSet};
 use std::ffi::{CStr, c_char, c_int, c_void};
 use std::io::Write;
@@ -17,8 +18,6 @@ use std::path::Path;
 
 unsafe extern "C" {
     fn ohpl_as_engine_shutdown(e: *mut c_void) -> c_int;
-    fn ohpl_as_get_module(e: *mut c_void, name: *const c_char, flag: c_int) -> *mut c_void;
-    fn ohpl_as_discard_module(e: *mut c_void, name: *const c_char) -> c_int;
     fn ohpl_as2_module_called_funcs(
         m: *mut c_void,
         cb: unsafe extern "C" fn(*mut c_void, c_int),

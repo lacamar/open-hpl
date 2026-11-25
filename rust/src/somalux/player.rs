@@ -5,13 +5,7 @@ use crate::math::{Vector3f, atan2, dot3, len3, normalize3, sub3, v3};
 
 use std::f32::consts::{PI, TAU as TWO_PI};
 
-fn fmin(a: f32, b: f32) -> f32 {
-    if b < a { b } else { a }
-}
-
-fn fmax(a: f32, b: f32) -> f32 {
-    if a < b { b } else { a }
-}
+use crate::math::{std_max as fmax, std_min as fmin};
 
 /// `cSomaLuxPlayer::cFadeValue`.
 #[repr(C)]

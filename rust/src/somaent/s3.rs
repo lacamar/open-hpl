@@ -258,13 +258,7 @@ impl IdHost for OhplS3IdHost {
     }
 }
 
-unsafe fn ty<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if p.is_null() {
-        return &[];
-    }
-    // SAFETY: caller contract.
-    unsafe { std::slice::from_raw_parts(p, n) }
-}
+use crate::ffi::slice as ty;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_s3_ids_new(seed: i32) -> *mut Ids {

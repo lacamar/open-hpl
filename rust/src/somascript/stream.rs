@@ -2,16 +2,13 @@
 //! sticky fail/eof bits, whitespace skipping and `num_get` digit scanning.
 
 use super::cfmt;
+use crate::bytes::is_space;
 
 pub(crate) struct Stream<'a> {
     data: &'a [u8],
     pos: usize,
     eof: bool,
     fail: bool,
-}
-
-fn is_space(c: u8) -> bool {
-    matches!(c, b' ' | b'\t' | b'\n' | 0x0b | 0x0c | b'\r')
 }
 
 impl<'a> Stream<'a> {

@@ -4,8 +4,8 @@
 //! documents, ImGui and the engine stay C++ behind one host table (`OhplS5cOp`).
 
 use super::game;
-use super::s5_input_ffi::{Host, Io};
-use crate::somascript::s2_as::{Engine, Frame, Soma, ohpl_as2_str_assign, str_bytes};
+use super::s5_input_ffi::{CHost, Host, Io};
+use crate::somascript::s2_as::{Engine, Frame, Soma};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::ffi::c_void;
@@ -78,13 +78,9 @@ pub trait Ops {
     fn go(&self, op: u32, io: Io) -> (i32, Io);
 }
 
-struct CHost(&'static Host);
-
 impl Ops for CHost {
-    fn go(&self, op: u32, mut io: Io) -> (i32, Io) {
-        // SAFETY: the table was installed by the host and `io` outlives the call.
-        let r = unsafe { (self.0.call)(self.0.ctx, op, &mut io) };
-        (r, io)
+    fn go(&self, op: u32, io: Io) -> (i32, Io) {
+        CHost::go(self, op, io)
     }
 }
 
@@ -486,10 +482,6 @@ fn load_entity_types(o: &dyn Ops) {
     }
 }
 
-fn lossy(b: &[u8]) -> String {
-    String::from_utf8_lossy(b).into_owned()
-}
-
 fn dump_lists(o: &dyn Ops) {
     let (h, e, m, s) = with(|g| {
         (
@@ -501,16 +493,30 @@ fn dump_lists(o: &dyn Ops) {
     })
     .unwrap_or_default();
     for x in h {
-        dump(o, &format!("gh {}", lossy(&x.name)));
+        dump(o, &format!("gh {}", String::from_utf8_lossy(&x.name)));
     }
     for x in e {
-        dump(o, &format!("ge {} {}", x.id, lossy(&x.name)));
+        dump(
+            o,
+            &format!("ge {} {}", x.id, String::from_utf8_lossy(&x.name)),
+        );
     }
     for x in m {
-        dump(o, &format!("gm {} {}", x.id, lossy(&x.name)));
+        dump(
+            o,
+            &format!("gm {} {}", x.id, String::from_utf8_lossy(&x.name)),
+        );
     }
     for (k, (f, c)) in s {
-        dump(o, &format!("gs {} {} {}", lossy(&k), lossy(&f), lossy(&c)));
+        dump(
+            o,
+            &format!(
+                "gs {} {} {}",
+                String::from_utf8_lossy(&k),
+                String::from_utf8_lossy(&f),
+                String::from_utf8_lossy(&c)
+            ),
+        );
     }
 }
 
@@ -927,16 +933,6 @@ pub unsafe extern "C" fn ohpl_s5c_game_mouse_rel(x: *mut i32, y: *mut i32) {
 
 // script natives
 
-fn text<'a>(f: &Frame, i: usize) -> &'a [u8] {
-    // SAFETY: the declaration passes a `const tString &in` in slot `i`.
-    unsafe { str_bytes(f.ptr_arg(i)) }
-}
-
-fn put_string(f: &Frame, i: usize, b: &[u8]) {
-    // SAFETY: the declaration passes a `tString &out` in slot `i`.
-    unsafe { ohpl_as2_str_assign(f.ptr_arg(i), b.as_ptr(), b.len()) }
-}
-
 /// Script objects returned as interface handles need a reference for the caller.
 fn return_script(f: &Frame, p: usize) {
     let obj = if p == 0 {
@@ -966,7 +962,7 @@ pub fn register1(e: Engine) {
     );
     s.func(
         "iScrUserModule_Interface@ cLux_GetUserModuleFromName(const tString&in asName)",
-        |f| return_script(f, module_by_name(text(f, 0))),
+        |f| return_script(f, module_by_name(f.str_arg(0))),
     );
     s.method(
         "cLuxEffectHandler",
@@ -976,9 +972,9 @@ pub fn register1(e: Engine) {
     s.func(
         "void cLux_GetTextCatAndEntryFromString(const tString&in asData, tString &out asOutCat, tString &out asOutEntry)",
         |f| {
-            let mut v = crate::string::split(text(f, 0), None, true);
-            put_string(f, 1, v.next().unwrap_or_default());
-            put_string(f, 2, v.next().unwrap_or_default());
+            let mut v = crate::string::split(f.str_arg(0), None, true);
+            f.put_str(1, v.next().unwrap_or_default());
+            f.put_str(2, v.next().unwrap_or_default());
         },
     );
     s.func("cLuxEffectHandler@ cLux_GetEffectHandler()", |f| {

@@ -7,10 +7,6 @@ use crate::sound::own::data_of;
 use crate::string::{file_ext, to_lower};
 use std::collections::{BTreeMap, BTreeSet};
 
-fn lossy(b: &[u8]) -> String {
-    String::from_utf8_lossy(b).into_owned()
-}
-
 fn dir_of(path: &[u8]) -> &[u8] {
     let i = path
         .iter()
@@ -50,7 +46,7 @@ pub fn load_project(project: &[u8]) {
     let Some((name, count)) = loaded else {
         warn(&format!(
             "SOMA sound: no event project '{}'\n",
-            lossy(project)
+            String::from_utf8_lossy(project)
         ));
         return;
     };
@@ -83,7 +79,7 @@ pub fn load_project(project: &[u8]) {
     host::log(
         format!(
             "SOMA sound: {count} events in project '{}', {} samples\n",
-            lossy(&name),
+            String::from_utf8_lossy(&name),
             files.len()
         )
         .as_bytes(),
@@ -110,7 +106,7 @@ pub fn resolve(event: &[u8]) -> usize {
         if !ev.defs.is_empty() {
             warn(&format!(
                 "SOMA sound: event '{}' has no playable samples\n",
-                lossy(event)
+                String::from_utf8_lossy(event)
             ));
         }
         return 0;

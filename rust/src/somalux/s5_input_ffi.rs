@@ -1,7 +1,7 @@
 //! S5: C ABI of the input handler (`soma/src/game/RustSomaLuxS5.h`) and its script natives.
 
 use super::s5_input::{self as input, Action, InHost, Preset};
-use crate::somascript::s2_as::{Engine, Frame, Soma, ohpl_as2_str_assign, str_bytes};
+use crate::somascript::s2_as::{Engine, Frame, Soma, str_bytes};
 use std::ffi::c_void;
 use std::sync::OnceLock;
 
@@ -79,10 +79,10 @@ mod op {
     pub const DUMP: u32 = 29;
 }
 
-struct CHost(&'static Host);
+pub(super) struct CHost(pub(super) &'static Host);
 
 impl CHost {
-    fn go(&self, op: u32, mut io: Io) -> (i32, Io) {
+    pub(super) fn go(&self, op: u32, mut io: Io) -> (i32, Io) {
         // SAFETY: the table was installed by the host and `io` outlives the call.
         let r = unsafe { (self.0.call)(self.0.ctx, op, &mut io) };
         (r, io)
@@ -298,16 +298,6 @@ pub unsafe extern "C" fn ohpl_s5_register_input_natives(engine: *mut c_void) {
     register(Engine(engine));
 }
 
-fn text<'a>(f: &Frame, i: usize) -> &'a [u8] {
-    // SAFETY: the declaration passes a `const tString &in` in slot `i`.
-    unsafe { str_bytes(f.ptr_arg(i)) }
-}
-
-fn put_string(f: &Frame, i: usize, b: &[u8]) {
-    // SAFETY: the declaration passes a `tString &out` in slot `i`.
-    unsafe { ohpl_as2_str_assign(f.ptr_arg(i), b.as_ptr(), b.len()) }
-}
-
 fn elements<T>(f: &Frame, i: usize, read: impl Fn(*const c_void) -> T) -> Vec<T> {
     let a = f.ptr_arg(i).cast_const();
     with_host(|h| (0..h.arr_size(a)).map(|k| read(h.arr_at(a, k))).collect()).unwrap_or_default()
@@ -350,22 +340,22 @@ pub fn register(e: Engine) {
     s.func(
         "bool cInput_BecameTriggered(const tString&in asName)",
         |f| {
-            let id = with_host(|h| h.action_id_of(text(f, 0))).flatten();
+            let id = with_host(|h| h.action_id_of(f.str_arg(0))).flatten();
             f.ret(id.is_some_and(input::became_down));
         },
     );
     s.func("bool cInput_WasTriggered(const tString&in asName)", |f| {
-        let id = with_host(|h| h.action_id_of(text(f, 0))).flatten();
+        let id = with_host(|h| h.action_id_of(f.str_arg(0))).flatten();
         f.ret(id.is_some_and(input::was_triggered));
     });
     s.method(T, "void CreateAction(const tString&in asName, int alId, bool abConfigurable, const tString&in asCat)", |f| {
-        create(Action::plain(text(f, 0), f.arg(1)));
+        create(Action::plain(f.str_arg(0), f.arg(1)));
     });
     s.method(
         T,
         "void CreateDebugAction(const tString&in asName, int alId)",
         |f| {
-            create(Action::plain(text(f, 0), f.arg(1)));
+            create(Action::plain(f.str_arg(0), f.arg(1)));
         },
     );
     s.method(
@@ -376,7 +366,7 @@ pub fn register(e: Engine) {
                 axis: f.arg(4),
                 mul: f.arg(5),
                 analog_id: f.arg(6),
-                ..Action::plain(text(f, 0), f.arg(1))
+                ..Action::plain(f.str_arg(0), f.arg(1))
             };
             create(a);
         },
@@ -388,7 +378,7 @@ pub fn register(e: Engine) {
             let a = Action {
                 analog_id: f.arg(3),
                 gamepad: true,
-                ..Action::plain(text(f, 0), f.arg(1))
+                ..Action::plain(f.str_arg(0), f.arg(1))
             };
             create(a);
         },
@@ -397,7 +387,7 @@ pub fn register(e: Engine) {
         T,
         "void CreateActionInput(const tString&in asInputType, int alActionId)",
         |f| {
-            with_host(|h| input::create_action_input(h, text(f, 0), f.arg(1)));
+            with_host(|h| input::create_action_input(h, f.str_arg(0), f.arg(1)));
         },
     );
     s.method(
@@ -462,26 +452,26 @@ pub fn register(e: Engine) {
     s.method(
         T,
         "void CreateGamepadProfile(const tString&in asName, const tString&in asPrefix, array<tString> &in avButtons, array<tString> &in avAxes, array<uint> &in avDPad)",
-        |f| input::create_profile(text(f, 0), text(f, 1), strings(f, 2), strings(f, 3), uints(f, 4)),
+        |f| input::create_profile(f.str_arg(0), f.str_arg(1), strings(f, 2), strings(f, 3), uints(f, 4)),
     );
     s.method(
         T,
         "void AddPresetToProfile(const tString&in asProfile, const tString&in asPreset, array<int> &in avActions, array<tString> &in avBindings, array<bool> &in avAnalog)",
         |f| {
             let preset = Preset {
-                name: text(f, 1).to_vec(),
+                name: f.str_arg(1).to_vec(),
                 actions: ints(f, 2),
                 bindings: strings(f, 3),
                 analog: bools(f, 4),
             };
-            input::add_preset(text(f, 0), preset);
+            input::add_preset(f.str_arg(0), preset);
         },
     );
     s.method(
         T,
         "void SetGamepadMapping(const tString&in asProfile, const tString&in asPreset)",
         |f| {
-            input::set_mapping(text(f, 0), text(f, 1));
+            input::set_mapping(f.str_arg(0), f.str_arg(1));
         },
     );
     s.method(T, "int GetGamepadMappingActionNum()", |f| {
@@ -496,7 +486,7 @@ pub fn register(e: Engine) {
                 *f.rm::<i32>(1) = a;
             }
             if let Some((primary, analog)) = m.primary {
-                put_string(f, 2, &primary);
+                f.put_str(2, &primary);
                 *f.rm::<bool>(3) = analog;
             }
             f.ret(m.found);
@@ -508,17 +498,17 @@ pub fn register(e: Engine) {
         |f| {
             // SAFETY: slot 3 holds the `tString &out`.
             let mut out = unsafe { str_bytes(f.ptr_arg(3)) }.to_vec();
-            input::actions_for_control(text(f, 0), text(f, 1), text(f, 2), &mut out);
-            put_string(f, 3, &out);
+            input::actions_for_control(f.str_arg(0), f.str_arg(1), f.str_arg(2), &mut out);
+            f.put_str(3, &out);
         },
     );
     s.method(
         T,
         "void FetchGamepadInputLayoutString(const tString &in asInputName, tString &out asPrefixName, tString &out asLayoutString)",
         |f| {
-            let (prefix, layout) = input::layout(text(f, 0));
-            put_string(f, 1, &prefix);
-            put_string(f, 2, &layout);
+            let (prefix, layout) = input::layout(f.str_arg(0));
+            f.put_str(1, &prefix);
+            f.put_str(2, &layout);
         },
     );
 }

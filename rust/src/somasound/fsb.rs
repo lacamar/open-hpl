@@ -3,9 +3,7 @@
 
 use crate::math::{clamp, fma};
 
-pub const MODE_PCM16: u32 = 2;
-pub const MODE_IMA_ADPCM: u32 = 7;
-pub const MODE_VORBIS: u32 = 15;
+pub use crate::fsb5::{MODE_IMA_ADPCM, MODE_PCM16, MODE_VORBIS};
 
 pub fn mode_supported(mode: u32) -> bool {
     matches!(mode, MODE_PCM16 | MODE_IMA_ADPCM | MODE_VORBIS)

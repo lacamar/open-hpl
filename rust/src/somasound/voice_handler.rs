@@ -5,9 +5,7 @@ use super::dump;
 use super::host as s7;
 use super::voice::{UpdateEvent, VISEMES, VoiceHost, Voices, decode_text, spectrum};
 use crate::backend::media::audio::Vorbis;
-use crate::somascript::s2_as::{
-    Engine, Frame, Soma, ohpl_as2_wstr_data, ohpl_as2_wstr_len, str_bytes,
-};
+use crate::somascript::s2_as::{Engine, Soma, ohpl_as2_wstr_data, ohpl_as2_wstr_len};
 use crate::sound::own::Rec;
 use crate::sound::own_ffi::{ohpl_sndent_fade, ohpl_sndent_set, ohpl_sndent_set_paused};
 use crate::string::wide_to_utf8;
@@ -308,18 +306,26 @@ fn load_voice_file(file: &[u8], set: &[u8]) -> bool {
     let count = read_text(file).and_then(|t| with(|h| h.v.load_voice(&t, set)).flatten());
     match count {
         Some(n) => {
-            s7::log(format!("SOMA voice: {n} subjects from '{}'\n", lossy(file)).as_bytes());
+            s7::log(
+                format!(
+                    "SOMA voice: {n} subjects from '{}'\n",
+                    String::from_utf8_lossy(file)
+                )
+                .as_bytes(),
+            );
             true
         }
         None => {
-            s7::warning(format!("SOMA voice: could not load '{}'\n", lossy(file)).as_bytes());
+            s7::warning(
+                format!(
+                    "SOMA voice: could not load '{}'\n",
+                    String::from_utf8_lossy(file)
+                )
+                .as_bytes(),
+            );
             false
         }
     }
-}
-
-fn lossy(b: &[u8]) -> String {
-    String::from_utf8_lossy(b).into_owned()
 }
 
 fn dump_text(tag: &str, text: &str) {
@@ -374,8 +380,8 @@ pub fn play(
             "VP",
             &format!(
                 "{} {line} {} {prio} {r}{scene}",
-                lossy(subject),
-                lossy(callback)
+                String::from_utf8_lossy(subject),
+                String::from_utf8_lossy(callback)
             ),
         );
     };
@@ -410,7 +416,7 @@ pub fn play(
     }
     tag(
         if ok { "ok" } else { "fail" },
-        &format!(" scene={}", lossy(&scene)),
+        &format!(" scene={}", String::from_utf8_lossy(&scene)),
     );
     ok
 }
@@ -528,7 +534,12 @@ fn dispatch(ev: &UpdateEvent) {
         } => {
             dump_text(
                 "VE",
-                &format!("0 {} {} {} 0 0", lossy(callback), lossy(scene), lossy(name)),
+                &format!(
+                    "0 {} {} {} 0 0",
+                    String::from_utf8_lossy(callback),
+                    String::from_utf8_lossy(scene),
+                    String::from_utf8_lossy(name)
+                ),
             );
             let done = if *on_done != 0 {
                 take_done(*on_done)
@@ -539,7 +550,7 @@ fn dispatch(ev: &UpdateEvent) {
                 script_call(
                     &format!(
                         "void {}(const tString&in, const tString&in)",
-                        lossy(callback)
+                        String::from_utf8_lossy(callback)
                     ),
                     &[arg_str(scene), arg_str(name)],
                     -1,
@@ -560,16 +571,16 @@ fn dispatch(ev: &UpdateEvent) {
                 "VE",
                 &format!(
                     "1 {} {} {} {line} {}",
-                    lossy(func),
-                    lossy(scene),
-                    lossy(name),
+                    String::from_utf8_lossy(func),
+                    String::from_utf8_lossy(scene),
+                    String::from_utf8_lossy(name),
                     i32::from(*start)
                 ),
             );
             script_call(
                 &format!(
                     "void {}(const tString&in, const tString&in, int, bool)",
-                    lossy(func)
+                    String::from_utf8_lossy(func)
                 ),
                 &[
                     arg_str(scene),
@@ -602,7 +613,10 @@ fn update_speaking_callbacks() {
             continue;
         };
         let keep = script_call(
-            &format!("bool {}(const tString&in, bool)", lossy(&func)),
+            &format!(
+                "bool {}(const tString&in, bool)",
+                String::from_utf8_lossy(&func)
+            ),
             &[arg_str(&name), arg_num(1, i32::from(started))],
             1,
         ) != 0;
@@ -633,7 +647,7 @@ fn update_lipsync() {
             continue;
         }
         if let Some(w) = w {
-            let mut s = lossy(&name);
+            let mut s = String::from_utf8_lossy(&name).into_owned();
             s.push(' ');
             for x in w.iter().take(VISEMES) {
                 s.push_str(&format!("{:08x} ", x.to_bits()));
@@ -685,7 +699,7 @@ pub fn draw() {
                 d.alpha.to_bits(),
                 d.y.to_bits(),
                 i32::from(color_on),
-                lossy(&d.text)
+                String::from_utf8_lossy(&d.text)
             ),
         );
         let col = d.color.unwrap_or([1.0, 1.0, 1.0, d.alpha]);
@@ -854,11 +868,6 @@ pub unsafe extern "C" fn ohpl_s5b_voice_played_insert(key: *const u8, n: usize) 
     with(|h| h.played.insert(k));
 }
 
-fn text<'a>(f: &Frame, i: usize) -> &'a [u8] {
-    // SAFETY: the declaration passes a `const tString &in` in slot `i`.
-    unsafe { str_bytes(f.ptr_arg(i)) }
-}
-
 fn str_ref(b: &[u8]) -> *const c_void {
     host().map_or(std::ptr::null(), |h| {
         // SAFETY: plain call; the host keeps the string until the next call.
@@ -871,14 +880,7 @@ fn wide(p: *mut c_void) -> Vec<u32> {
     unsafe { units_u32(ohpl_as2_wstr_data(p), ohpl_as2_wstr_len(p)) }.to_vec()
 }
 
-unsafe fn units_u32<'a>(p: *const u32, n: usize) -> &'a [u32] {
-    if p.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: caller contract.
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
-}
+use crate::ffi::slice as units_u32;
 
 static VOICE_TAG: u8 = 0;
 static DIALOG_TAG: u8 = 0;
@@ -905,7 +907,7 @@ fn register_fades(s: &Soma) {
 
 fn register_spectrum(s: &Soma, t: &str, decl: &str, by_scene: bool) {
     s.method(t, decl, move |f| {
-        let (key, arr, num) = (text(f, 0), f.ptr_arg(1), f.arg::<i32>(2));
+        let (key, arr, num) = (f.str_arg(0), f.ptr_arg(1), f.arg::<i32>(2));
         if !present() {
             return;
         }
@@ -934,7 +936,7 @@ pub fn register(e: Engine) {
     s.method(
         t,
         "bool Play(const tString &in asSubject, int alSpecificLine, const tString &in asCallback, int alPrio)",
-        |f| f.ret(present() && play(text(f, 0), f.arg(1), text(f, 2), f.arg(3), None, false)),
+        |f| f.ret(present() && play(f.str_arg(0), f.arg(1), f.str_arg(2), f.arg(3), None, false)),
     );
     s.method(
         t,
@@ -942,7 +944,7 @@ pub fn register(e: Engine) {
         |f| {
             f.ret(
                 present()
-                    && play(text(f, 0), f.arg(1), text(f, 2), f.arg(3), None, f.arg(4)),
+                    && play(f.str_arg(0), f.arg(1), f.str_arg(2), f.arg(3), None, f.arg(4)),
             );
         },
     );
@@ -966,7 +968,7 @@ pub fn register(e: Engine) {
         t,
         "void AdvanceFromCurrentSound(const tString&in asScene)",
         |f| {
-            let sc = text(f, 0);
+            let sc = f.str_arg(0);
             qh((), |v, o| v.skip_current_line(o, sc));
         },
     );
@@ -974,7 +976,7 @@ pub fn register(e: Engine) {
         t,
         "float GetTimeLeftOnLastLineOfPlayingSubject(const tString&in asName)",
         |f| {
-            let n = text(f, 0);
+            let n = f.str_arg(0);
             f.ret(if present() {
                 qh(0.0, |v, o| v.time_left_on_last_line(o, n))
             } else {
@@ -985,18 +987,18 @@ pub fn register(e: Engine) {
     s.method(
         t,
         "int GetSubjectLineNumber(const tString &in asSubject)",
-        |f| f.ret(subject_line_count(text(f, 0))),
+        |f| f.ret(subject_line_count(f.str_arg(0))),
     );
     s.method(
         t,
         "const tString& GetSubjectSceneName(const tString &in asSubject)",
         |f| {
-            let sc = q(Vec::new(), |v| v.subject_scene(text(f, 0)).to_vec());
+            let sc = q(Vec::new(), |v| v.subject_scene(f.str_arg(0)).to_vec());
             f.ret_ref(str_ref(&sc).cast_mut());
         },
     );
     s.method(t, "bool SubjectExists(const tString &in asSubject)", |f| {
-        f.ret(q(false, |v| v.subject_exists(text(f, 0))))
+        f.ret(q(false, |v| v.subject_exists(f.str_arg(0))))
     });
     s.method(t, "void StopAll()", |_| {
         if present() {
@@ -1005,7 +1007,7 @@ pub fn register(e: Engine) {
     });
     s.method(t, "void Stop(const tString&in asScene)", |f| {
         if present() {
-            stop(text(f, 0));
+            stop(f.str_arg(0));
         }
     });
     for decl in [
@@ -1013,7 +1015,7 @@ pub fn register(e: Engine) {
         "void SkipCurrentSound(const tString&in asScene)",
     ] {
         s.method(t, decl, |f| {
-            let sc = text(f, 0);
+            let sc = f.str_arg(0);
             qh((), |v, o| v.skip_current_line(o, sc));
         });
     }
@@ -1021,7 +1023,7 @@ pub fn register(e: Engine) {
         t,
         "void SetPaused(const tString&in asScene, bool abX)",
         |f| {
-            let (sc, on) = (text(f, 0), f.arg::<bool>(1));
+            let (sc, on) = (f.str_arg(0), f.arg::<bool>(1));
             qh((), |v, o| v.set_paused(o, sc, on));
         },
     );
@@ -1033,21 +1035,21 @@ pub fn register(e: Engine) {
         t,
         "bool CharacterIsSpeaking(const tString&in asName)",
         |f| {
-            f.ret(q(false, |v| v.character_is_speaking(text(f, 0))));
+            f.ret(q(false, |v| v.character_is_speaking(f.str_arg(0))));
         },
     );
     s.method(
         t,
         "void AddCharacterSpeakingCallback(const tString&in asCharacter, const tString&in asCallback)",
         |f| {
-            with(|h| h.v.set_speaking_callback(text(f, 0), text(f, 1)));
+            with(|h| h.v.set_speaking_callback(f.str_arg(0), f.str_arg(1)));
         },
     );
     s.method(
         t,
         "void RemoveCharacterSpeakingCallback(const tString&in asCharacter)",
         |f| {
-            with(|h| h.v.set_speaking_callback(text(f, 0), b""));
+            with(|h| h.v.set_speaking_callback(f.str_arg(0), b""));
         },
     );
     register_spectrum(
@@ -1063,25 +1065,25 @@ pub fn register(e: Engine) {
         true,
     );
     s.method(t, "bool SubjectIsPlaying(const tString&in asName)", |f| {
-        f.ret(q(false, |v| v.subject_is_playing(text(f, 0))));
+        f.ret(q(false, |v| v.subject_is_playing(f.str_arg(0))));
     });
     s.method(t, "bool SceneIsActive(const tString&in asScene)", |f| {
-        f.ret(q(false, |v| v.scene_is_active(text(f, 0))));
+        f.ret(q(false, |v| v.scene_is_active(f.str_arg(0))));
     });
     s.method(
         t,
         "bool SceneInvolvingCharacterIsActive(const tString&in asCharacter)",
-        |f| f.ret(scene_involving_character(text(f, 0))),
+        |f| f.ret(scene_involving_character(f.str_arg(0))),
     );
     s.method(
         t,
         "void FadeSceneVolumeTo(const tString&in asScene, float afVolume, float afTime)",
         |f| {
-            with(|h| h.v.fade_scene_volume_to(text(f, 0), f.arg(1), f.arg(2)));
+            with(|h| h.v.fade_scene_volume_to(f.str_arg(0), f.arg(1), f.arg(2)));
         },
     );
     s.method(t, "void SetFocusScene(const tString&in asScene)", |f| {
-        let sc = text(f, 0);
+        let sc = f.str_arg(0);
         qh((), |v, o| v.set_focus_scene(o, sc));
     });
     s.method(
@@ -1090,8 +1092,8 @@ pub fn register(e: Engine) {
         |f| {
             with(|h| {
                 h.v.set_source(
-                    text(f, 0),
-                    text(f, 1),
+                    f.str_arg(0),
+                    f.str_arg(1),
                     f.arg(2),
                     f.arg(3),
                     f.arg(4),

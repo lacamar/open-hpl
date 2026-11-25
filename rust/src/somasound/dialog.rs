@@ -4,9 +4,8 @@
 use super::dump;
 use super::host::{CallArg, Str, ops};
 use super::voice_handler;
-use crate::somascript::s2_as::{Soma, str_bytes};
+use crate::somascript::s2_as::Soma;
 use std::collections::BTreeMap;
-use std::ffi::c_void;
 
 const EVENT_SET: i32 = 2;
 const EVENT_ADD: i32 = 3;
@@ -152,20 +151,25 @@ fn plain_arg(kind: u8, i: i32) -> CallArg {
     }
 }
 
-fn lossy(b: &[u8]) -> String {
-    String::from_utf8_lossy(b).into_owned()
-}
-
 fn item_callback(func: &[u8], subject: &[u8], start: bool) {
     dump::text(
         b"DI",
-        format!("{} {} {}", lossy(func), lossy(subject), u8::from(start)).as_bytes(),
+        format!(
+            "{} {} {}",
+            String::from_utf8_lossy(func),
+            String::from_utf8_lossy(subject),
+            u8::from(start)
+        )
+        .as_bytes(),
     );
     if func.is_empty() {
         return;
     }
     script(
-        &format!("void {}(const tString&in, bool)", lossy(func)),
+        &format!(
+            "void {}(const tString&in, bool)",
+            String::from_utf8_lossy(func)
+        ),
         &[str_arg(subject), plain_arg(1, i32::from(start))],
         false,
     );
@@ -215,11 +219,19 @@ fn finish(uid: u64) {
     };
     dump::text(
         b"DF",
-        format!("{} {}", lossy(&name), lossy(&callback)).as_bytes(),
+        format!(
+            "{} {}",
+            String::from_utf8_lossy(&name),
+            String::from_utf8_lossy(&callback)
+        )
+        .as_bytes(),
     );
     if !callback.is_empty() {
         script(
-            &format!("void {}(const tString&in)", lossy(&callback)),
+            &format!(
+                "void {}(const tString&in)",
+                String::from_utf8_lossy(&callback)
+            ),
             &[str_arg(&name)],
             false,
         );
@@ -234,17 +246,23 @@ fn end_branch(uid: u64) {
     if let Some(opt) = b.options.first() {
         host_log(&format!(
             "SOMA dialog: auto-selected option '{}'\n",
-            lossy(&opt.entry)
+            String::from_utf8_lossy(&opt.entry)
         ));
         dump::text(
             b"DO",
-            format!("{} {} {}", lossy(&opt.entry), lossy(&opt.branch), opt.id).as_bytes(),
+            format!(
+                "{} {} {}",
+                String::from_utf8_lossy(&opt.entry),
+                String::from_utf8_lossy(&opt.branch),
+                opt.id
+            )
+            .as_bytes(),
         );
         if !opt.callback.is_empty() {
             script(
                 &format!(
                     "void {}(const tString&in,const tString&in,int)",
-                    lossy(&opt.callback)
+                    String::from_utf8_lossy(&opt.callback)
                 ),
                 &[str_arg(&b.name), str_arg(&opt.entry), plain_arg(2, opt.id)],
                 false,
@@ -298,7 +316,7 @@ fn check_event(uid: u64, item: &Item, e: &Event) -> bool {
             script(
                 &format!(
                     "bool {}(const tString&in, const tString&in, int, const tString&in)",
-                    lossy(&e.var)
+                    String::from_utf8_lossy(&e.var)
                 ),
                 &[
                     str_arg(&branch),
@@ -419,11 +437,6 @@ fn character_active(name: &[u8]) -> bool {
     })
 }
 
-fn bytes<'a>(p: *mut c_void) -> &'a [u8] {
-    // SAFETY: the declarations below pass `const tString &in`.
-    unsafe { str_bytes(p) }
-}
-
 fn begin(name: &[u8]) {
     let cb = std::mem::take(&mut d().pending_callback);
     d().building = Some(Dialog::new(name, cb));
@@ -480,21 +493,21 @@ fn add_event(e: Event) {
 pub(super) fn register(s: &Soma) {
     let t = "cLuxDialogHandler";
     s.method(t, "void Begin(const tString &in asName)", |fr| {
-        begin(bytes(fr.ptr_arg(0)));
+        begin(fr.str_arg(0));
     });
     s.method(t, "void End(const tString&in asStartBranch)", |fr| {
-        end(bytes(fr.ptr_arg(0)));
+        end(fr.str_arg(0));
     });
     s.method(t, "void SetCallbackFunc(const tString&in asFunc)", |fr| {
-        d().pending_callback = bytes(fr.ptr_arg(0)).to_vec();
+        d().pending_callback = fr.str_arg(0).to_vec();
     });
     s.method(
         t,
         "void AddBranch(const tString&in asName, const tString&in asNextBranch)",
         |fr| {
             let b = Branch {
-                name: bytes(fr.ptr_arg(0)).to_vec(),
-                next: bytes(fr.ptr_arg(1)).to_vec(),
+                name: fr.str_arg(0).to_vec(),
+                next: fr.str_arg(1).to_vec(),
                 ..Branch::default()
             };
             building().branches.push(b);
@@ -505,9 +518,9 @@ pub(super) fn register(s: &Soma) {
         "void AddBranchSubject(const tString&in asSubject, const tString&in asCallback)",
         |fr| {
             add_item(Item {
-                subject: bytes(fr.ptr_arg(0)).to_vec(),
+                subject: fr.str_arg(0).to_vec(),
                 pause: -1.0,
-                callback: bytes(fr.ptr_arg(1)).to_vec(),
+                callback: fr.str_arg(1).to_vec(),
                 events: Vec::new(),
             });
         },
@@ -519,7 +532,7 @@ pub(super) fn register(s: &Soma) {
             add_item(Item {
                 subject: Vec::new(),
                 pause: fr.arg::<f32>(0),
-                callback: bytes(fr.ptr_arg(1)).to_vec(),
+                callback: fr.str_arg(1).to_vec(),
                 events: Vec::new(),
             });
         },
@@ -529,10 +542,10 @@ pub(super) fn register(s: &Soma) {
         "void AddResponseOption(const tString &in asEntry, const tString&in asBranch,int alId, const tString&in asCallback)",
         |fr| {
             let o = Option_ {
-                entry: bytes(fr.ptr_arg(0)).to_vec(),
-                branch: bytes(fr.ptr_arg(1)).to_vec(),
+                entry: fr.str_arg(0).to_vec(),
+                branch: fr.str_arg(1).to_vec(),
                 id: fr.arg::<i32>(2),
-                callback: bytes(fr.ptr_arg(3)).to_vec(),
+                callback: fr.str_arg(3).to_vec(),
             };
             add_option(o);
         },
@@ -544,34 +557,34 @@ pub(super) fn register(s: &Soma) {
             let e = Event {
                 kind: fr.arg::<i32>(0),
                 val: fr.arg::<f32>(1).round() as i32,
-                var: bytes(fr.ptr_arg(2)).to_vec(),
-                new_branch: bytes(fr.ptr_arg(3)).to_vec(),
+                var: fr.str_arg(2).to_vec(),
+                new_branch: fr.str_arg(3).to_vec(),
                 only_end: fr.arg::<bool>(4),
             };
             add_event(e);
         },
     );
     s.method(t, "bool CharacterIsActive(const tString&in asName)", |fr| {
-        let n = bytes(fr.ptr_arg(0)).to_vec();
+        let n = fr.str_arg(0).to_vec();
         fr.ret::<bool>(character_active(&n));
     });
     s.method(t, "void Stop(const tString &in asName)", |fr| {
-        let n = bytes(fr.ptr_arg(0)).to_vec();
+        let n = fr.str_arg(0).to_vec();
         for x in d().active.iter_mut().filter(|x| x.name == n) {
             x.done = true;
         }
     });
     s.method(t, "void StopAll()", |_| stop_all());
     s.method(t, "void SetVar(const tString&in asName, int alX)", |fr| {
-        let (n, x) = (bytes(fr.ptr_arg(0)).to_vec(), fr.arg::<i32>(1));
+        let (n, x) = (fr.str_arg(0).to_vec(), fr.arg::<i32>(1));
         d().vars.insert(n, x);
     });
     s.method(t, "void IncVar(const tString&in asName, int alX)", |fr| {
-        let (n, x) = (bytes(fr.ptr_arg(0)).to_vec(), fr.arg::<i32>(1));
+        let (n, x) = (fr.str_arg(0).to_vec(), fr.arg::<i32>(1));
         *d().vars.entry(n).or_insert(0) += x;
     });
     s.method(t, "int GetVar(const tString&in asName)", |fr| {
-        let n = bytes(fr.ptr_arg(0)).to_vec();
+        let n = fr.str_arg(0).to_vec();
         fr.ret::<i32>(*d().vars.entry(n).or_insert(0));
     });
 }

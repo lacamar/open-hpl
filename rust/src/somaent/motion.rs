@@ -8,14 +8,7 @@ use crate::math::{
 };
 use crate::types::{Matrixf, Quaternion, Vector3f};
 
-/// `cMath::Min` / `cMath::Max` (float overloads): the second operand wins on NaN.
-pub(crate) fn cmin(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
-}
-
-pub(crate) fn cmax(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
+pub(crate) use crate::math::{cmath_max as cmax, cmath_min as cmin};
 
 fn sqr_len(v: Vector3f) -> f32 {
     fma(v.z, v.z, fma(v.x, v.x, v.y * v.y))
