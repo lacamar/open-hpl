@@ -186,7 +186,6 @@ pub(super) extern "C" fn exec(ctx: *mut c_void, cmd: *const Cmd, ret: *mut Ret) 
     let Some(op) = Op::from_i32(c.op) else {
         return;
     };
-    let vt = gw_h20::vt();
     let ptr = gw_h20::ptr(w);
     let text_box = || match ptr {
         Some(P::Text(t)) => t,
@@ -322,8 +321,8 @@ pub(super) extern "C" fn exec(ctx: *mut c_void, cmd: *const Cmd, ret: *mut Ret) 
             Op::InsideBounds => super::direct::position_inside_bounds(set, w),
             Op::SliderGet => r.i = gk::ohpl_gw_slider_value(w),
             Op::SliderSet => gk::ohpl_gw_slider_set_value(w, c.i[0], c.i[1] != 0),
-            Op::TbGetNum => r.f[0] = f::ohpl_h20_tb_numeric_value(vt, text_box()),
-            Op::TbSetNum => f::ohpl_h20_tb_set_numeric_value(vt, text_box(), c.f[0]),
+            Op::TbGetNum => r.f[0] = f::ohpl_h20_tb_numeric_value(text_box()),
+            Op::TbSetNum => f::ohpl_h20_tb_set_numeric_value(text_box(), c.f[0]),
             Op::TbLower => {
                 if let Some(t) = text_box().as_mut() {
                     t.st.has_lower = on;
@@ -351,7 +350,7 @@ pub(super) extern "C" fn exec(ctx: *mut c_void, cmd: *const Cmd, ret: *mut Ret) 
                     t.st.enter_on_lost_focus = on;
                 }
             }
-            Op::TbSelectAll => f::ohpl_h20_tb_set_selected_text(vt, text_box(), 0, -1),
+            Op::TbSelectAll => f::ohpl_h20_tb_set_selected_text(text_box(), 0, -1),
             Op::TbUserData => r.w = gw::ohpl_gw_user_data(w) as usize,
             Op::TbKeySkip => {
                 r.i = i32::from(gw::process_message(
@@ -374,7 +373,7 @@ pub(super) extern "C" fn exec(ctx: *mut c_void, cmd: *const Cmd, ret: *mut Ret) 
             Op::FrameColor => gk::ohpl_gw_frame_set_bg_color(w, &color(c)),
             Op::FrameDrawBg => gk::ohpl_gw_frame_set_draw_bg(w, on),
             Op::FrameBgZ => gk::ohpl_gw_frame_set_bg_z(w, c.f[0]),
-            Op::CbCanEdit => f::ohpl_h20_cb_set_can_edit(vt, combo(), on),
+            Op::CbCanEdit => f::ohpl_h20_cb_set_can_edit(combo(), on),
             Op::CbItemNum => r.i = gi::num(w) as i32,
             Op::CbSelected => r.i = combo().as_ref().map_or(0, |x| x.combo.selected),
             Op::CbItemText => keep(p, r, 0, &item_text(gi::get(w, c.i[0]))),
@@ -382,14 +381,14 @@ pub(super) extern "C" fn exec(ctx: *mut c_void, cmd: *const Cmd, ret: *mut Ret) 
                 gi::add(w, text(c, 0));
             }
             Op::CbClear | Op::MlClear => gi::clear(w),
-            Op::CbSetSelected => f::ohpl_h20_cb_set_selected_item(vt, combo(), c.i[0], false, true),
+            Op::CbSetSelected => f::ohpl_h20_cb_set_selected_item(combo(), c.i[0], false, true),
             Op::MlAddColumn => {
                 let align = if c.i[1] == 1 { ALIGN_RIGHT } else { 0 };
                 let n = text(c, 0);
-                f::ohpl_h20_lb_add_column(vt, list(), n.as_ptr(), n.len(), c.i[0], align);
+                f::ohpl_h20_lb_add_column(list(), n.as_ptr(), n.len(), c.i[0], align);
             }
-            Op::MlColWidth => f::ohpl_h20_lb_set_column_width(vt, list(), c.i[0], c.f[0]),
-            Op::MlSelected => r.i = f::ohpl_h20_lb_selected_item(vt, list()),
+            Op::MlColWidth => f::ohpl_h20_lb_set_column_width(list(), c.i[0], c.f[0]),
+            Op::MlSelected => r.i = f::ohpl_h20_lb_selected_item(list()),
             Op::MlProp1 => {
                 let it = gi::get(w, c.i[0]);
                 if it.is_null() {

@@ -2,10 +2,10 @@
 //! input. State is [`Combo`], embedded in the C++ widget (`gui/RustGuiH20.h`).
 
 use super::h19_widget::Base;
-use super::h20_host::{self as hh, HostVt, Hx};
+use super::h20_host as hh;
 use super::h20_list::{MSG_SELECTION_CHANGE, MSG_SLIDER_MOVE, attr_id, gfx_id};
 use super::set::{Msg, W};
-use super::widget::{UI_BUTTON_PRIMARY, v2};
+use super::widget::UI_BUTTON_PRIMARY;
 use super::widgets_list::{self as wl, ComboState, SliderSet};
 use crate::math::v3;
 use crate::types::Vector2f;
@@ -36,10 +36,9 @@ pub struct Combo {
     pub this: W,
     pub container: usize,
     pub base: *mut Base,
-    pub host: *const HostVt,
 }
 
-const _: () = assert!(std::mem::size_of::<Combo>() == 184);
+const _: () = assert!(std::mem::size_of::<Combo>() == 176);
 
 type P = *mut Combo;
 
@@ -66,24 +65,24 @@ unsafe fn this(c: P) -> W {
 
 /// # Safety
 /// `c` is live.
-unsafe fn num(hx: Hx, c: P) -> i32 {
+unsafe fn num(c: P) -> i32 {
     // SAFETY: caller contract.
-    hx.item_num(unsafe { (*c).container })
+    hh::item_num(unsafe { (*c).container })
 }
 
 /// # Safety
 /// `c` is live.
-unsafe fn item_text(hx: Hx, c: P, idx: i32) -> (*const u32, usize) {
+unsafe fn item_text(c: P, idx: i32) -> (*const u32, usize) {
     // SAFETY: caller contract.
-    let it = hx.item(unsafe { (*c).container }, idx);
-    hx.item_text(it)
+    let it = hh::item(unsafe { (*c).container }, idx);
+    hh::item_text(it)
 }
 
 /// # Safety
 /// `c` is uninitialised storage; `base` outlives it.
-pub unsafe fn init(hx: Hx, vt: *const HostVt, c: P, this: W, container: usize, base: *mut Base) {
-    let button_w = hx.skin_attr(this, attr_id("ComboBoxButtonWidth")).x;
-    let slider_w = hx.skin_attr(this, attr_id("ComboBoxSliderWidth")).x;
+pub unsafe fn init(c: P, this: W, container: usize, base: *mut Base) {
+    let button_w = hh::skin_attr(this, attr_id("ComboBoxButtonWidth")).x;
+    let slider_w = hh::skin_attr(this, attr_id("ComboBoxSliderWidth")).x;
     // SAFETY: caller contract; the struct is written whole.
     unsafe {
         c.write(Combo {
@@ -97,153 +96,147 @@ pub unsafe fn init(hx: Hx, vt: *const HostVt, c: P, this: W, container: usize, b
             this,
             container,
             base,
-            host: vt,
         });
     }
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn destroy_children(hx: Hx, c: P) {
+pub unsafe fn destroy_children(c: P) {
     // SAFETY: caller contract.
     unsafe {
         for child in [(*c).text, (*c).button, (*c).slider] {
-            let mut a = hh::Args::new(this(c));
-            a.p[0] = child;
-            hx.raw(hh::DESTROY_WIDGET, &mut a);
+            hh::destroy_widget(this(c), child);
         }
     }
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn set_selected_item(hx: Hx, c: P, x: i32, move_list: bool, callback: bool) {
+pub unsafe fn set_selected_item(c: P, x: i32, move_list: bool, callback: bool) {
     // SAFETY: caller contract.
     unsafe {
-        let items = num(hx, c);
+        let items = num(c);
         let Some(s1) = cs(c, |s| s.select_step1(x, move_list, items)) else {
             return;
         };
-        apply(hx, c, s1);
+        apply(c, s1);
         let s2 = cs(c, |s| s.select_step2(move_list));
-        apply(hx, c, s2);
+        apply(c, s2);
         let sel = cs(c, |s| s.selected);
-        if sel >= 0 && sel < num(hx, c) {
-            hx.set_text(this(c), item_text(hx, c, sel));
+        if sel >= 0 && sel < num(c) {
+            hh::set_text(this(c), item_text(c, sel));
         } else {
-            hx.set_text(this(c), (std::ptr::null(), 0));
+            hh::set_text(this(c), (std::ptr::null(), 0));
         }
         if callback {
-            hx.process(this(c), MSG_SELECTION_CHANGE, sel, None);
+            hh::process(this(c), MSG_SELECTION_CHANGE, sel, None);
         }
     }
 }
 
 /// # Safety
 /// `c` is live.
-unsafe fn apply(hx: Hx, c: P, s: SliderSet) {
+unsafe fn apply(c: P, s: SliderSet) {
     if s.set {
         // SAFETY: caller contract.
-        hx.slider_set_value(unsafe { (*c).slider }, s.value, None);
+        hh::slider_set_value(unsafe { (*c).slider }, s.value, None);
     }
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn set_can_edit(hx: Hx, c: P, v: bool) {
+pub unsafe fn set_can_edit(c: P, v: bool) {
     // SAFETY: caller contract.
-    hx.set_flag(hh::TEXTBOX_SET_CAN_EDIT, unsafe { (*c).text }, v);
+    hh::set_can_edit(unsafe { (*c).text }, v);
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn can_edit(hx: Hx, c: P) -> bool {
+pub unsafe fn can_edit(c: P) -> bool {
     // SAFETY: caller contract.
-    hx.flag(hh::TEXTBOX_GET_CAN_EDIT, unsafe { (*c).text })
+    hh::can_edit(unsafe { (*c).text })
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn set_max_shown_items(hx: Hx, c: P, v: i32) {
+pub unsafe fn set_max_shown_items(c: P, v: i32) {
     // SAFETY: caller contract.
     unsafe {
         cs(c, |s| s.max_items = v);
-        update_properties(hx, c);
+        update_properties(c);
     }
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn set_default_font_size(hx: Hx, c: P, s: Vector2f) {
-    let mut a = hh::Args::new(unsafe { (*c).text });
-    a.f[0] = s.x;
-    a.f[1] = s.y;
-    hx.raw(hh::WIDGET_SET_FONT_SIZE, &mut a);
+pub unsafe fn set_default_font_size(c: P, s: Vector2f) {
+    hh::set_font_size(unsafe { (*c).text }, s);
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn update_properties(hx: Hx, c: P) {
+pub unsafe fn update_properties(c: P) {
     // SAFETY: caller contract.
     unsafe {
-        let fy = hx.font_size(this(c)).y;
-        let items = num(hx, c);
+        let fy = hh::font_size(this(c)).y;
+        let items = num(c);
         if cs(c, |s| s.update(fy, items)) {
-            set_selected_item(hx, c, num(hx, c) - 1, false, true);
+            set_selected_item(c, num(c) - 1, false, true);
         }
-        on_change_size(hx, c);
+        on_change_size(c);
     }
 }
 
 /// # Safety
 /// `c` is live.
-unsafe fn open_menu(hx: Hx, c: P) {
+unsafe fn open_menu(c: P) {
     // SAFETY: caller contract.
     unsafe {
         let w = this(c);
-        let items = num(hx, c);
+        let items = num(c);
         if !cs(c, |s| s.can_open(items)) {
             return;
         }
-        hx.set_call(w, hh::SC_PUSH_ATTENTION, 0);
-        hx.set_call(w, hh::SC_PUSH_FOCUSED, 0);
-        hx.set_call(w, hh::SC_PUSH_DEFAULT_NAV, 0);
-        hx.set_call(w, hh::SC_SET_ATTENTION, w);
-        let b1 = hx.gfx_size(hh::GFX_ACTIVE_SIZE, (*c).gfx[GFX_BORDERS + 1]);
-        let b2 = hx.gfx_size(hh::GFX_ACTIVE_SIZE, (*c).gfx[GFX_BORDERS + 2]);
-        let global_y = hx.global(w).y;
-        let popup_z = hx.set_call(w, hh::SC_POPUP_Z, 0).1[0];
-        let virtual_y = hx.set_call(w, hh::SC_VIRTUAL_SIZE, 0).1[1];
+        hh::push_attention(w);
+        hh::push_focused(w);
+        hh::push_default_nav(w);
+        hh::set_attention(w, w);
+        let b1 = hh::gfx_active_size((*c).gfx[GFX_BORDERS + 1]);
+        let b2 = hh::gfx_active_size((*c).gfx[GFX_BORDERS + 2]);
+        let global_y = hh::global(w).y;
+        let popup_z = hh::popup_z(w);
+        let virtual_y = hh::virtual_size(w)[1];
         let sz = size(c);
         let open = cs(c, |s| {
             s.open(items, sz, b1, b2, global_y, popup_z, virtual_y)
         });
         let slider = (*c).slider;
         if open.slider {
-            hx.set_flag(hh::WIDGET_SET_ENABLED, slider, true);
-            hx.set_flag(hh::WIDGET_SET_VISIBLE, slider, true);
-            hx.set_position(slider, open.slider_pos);
-            hx.set_size(slider, open.slider_size);
+            hh::set_enabled(slider, true);
+            hh::set_visible(slider, true);
+            hh::set_position(slider, open.slider_pos);
+            hh::set_size(slider, open.slider_size);
         }
-        hx.set_call(w, hh::SC_SET_FOCUSED, w);
+        hh::set_focused(w, w);
     }
 }
 
 /// # Safety
 /// `c` is live.
-unsafe fn close_menu(hx: Hx, c: P) {
+unsafe fn close_menu(c: P) {
     // SAFETY: caller contract.
     unsafe {
         if !cs(c, ComboState::close) {
             return;
         }
         let w = this(c);
-        hx.set_call(w, hh::SC_POP_ATTENTION, 0);
-        hx.set_call(w, hh::SC_POP_FOCUSED, 0);
-        hx.set_call(w, hh::SC_POP_DEFAULT_NAV, 0);
+        hh::pop_attention(w);
+        hh::pop_focused(w);
+        hh::pop_default_nav(w);
         let slider = (*c).slider;
-        hx.set_flag(hh::WIDGET_SET_ENABLED, slider, false);
-        hx.set_flag(hh::WIDGET_SET_VISIBLE, slider, false);
+        hh::set_enabled(slider, false);
+        hh::set_visible(slider, false);
         if let Some(b) = (*c).base.as_mut() {
             b.clips = false;
         }
@@ -254,23 +247,22 @@ extern "C" fn button_press(obj: *mut c_void, _w: W, d: *const Msg) -> bool {
     let c = obj.cast::<Combo>();
     // SAFETY: `obj` is the `Combo` registered in `on_init`; `d` is the message reference.
     unsafe {
-        let (Some(d), Some(vt)) = (d.as_ref(), (*c).host.as_ref()) else {
+        let Some(d) = d.as_ref() else {
             return false;
         };
-        let hx = Hx::new(vt);
         let mut local = v3(0.0, 0.0, 0.0);
         if d.val() == MOUSE_LEFT && cs(c, |s| s.menu_open) {
-            local = hx.world_to_local(this(c), d.pos());
+            local = hh::world_to_local(this(c), d.pos());
         }
         let sz = size(c);
         match cs(c, |s| s.button_press(d.val(), local, sz.x)) {
-            1 => on_mouse_down(hx, c, d) && on_mouse_up(hx, c, d),
+            1 => on_mouse_down(c, d) && on_mouse_up(c, d),
             2 => {
-                close_menu(hx, c);
+                close_menu(c);
                 true
             }
             3 => {
-                open_menu(hx, c);
+                open_menu(c);
                 cs(c, |s| s.clicked_after_open = false);
                 true
             }
@@ -294,13 +286,9 @@ extern "C" fn slider_lost_focus(obj: *mut c_void, _w: W, _d: *const Msg) -> bool
     let c = obj.cast::<Combo>();
     // SAFETY: as `button_press`.
     unsafe {
-        let Some(vt) = (*c).host.as_ref() else {
-            return false;
-        };
-        let hx = Hx::new(vt);
         let over = (*c).base.as_ref().is_some_and(|b| b.mouse_over);
         if cs(c, |s| s.menu_open) && !over {
-            close_menu(hx, c);
+            close_menu(c);
         }
     }
     false
@@ -310,10 +298,10 @@ extern "C" fn slider_ui_arrow_press(obj: *mut c_void, _w: W, d: *const Msg) -> b
     let c = obj.cast::<Combo>();
     // SAFETY: as `button_press`.
     unsafe {
-        let (Some(d), Some(vt)) = (d.as_ref(), (*c).host.as_ref()) else {
+        let Some(d) = d.as_ref() else {
             return false;
         };
-        let items = num(Hx::new(vt), c);
+        let items = num(c);
         cs(c, |s| s.slider_arrow(d.val(), items))
     }
 }
@@ -322,16 +310,15 @@ extern "C" fn slider_ui_button_press(obj: *mut c_void, _w: W, d: *const Msg) -> 
     let c = obj.cast::<Combo>();
     // SAFETY: as `button_press`.
     unsafe {
-        let (Some(d), Some(vt)) = (d.as_ref(), (*c).host.as_ref()) else {
+        let Some(d) = d.as_ref() else {
             return false;
         };
-        let hx = Hx::new(vt);
         if d.val() == UI_BUTTON_PRIMARY {
             let over = cs(c, |s| s.mouse_over);
-            set_selected_item(hx, c, over, false, true);
-            close_menu(hx, c);
+            set_selected_item(c, over, false, true);
+            close_menu(c);
             cs(c, |s| s.open_by_ui = false);
-            hx.set_call(this(c), hh::SC_SET_FOCUSED, this(c));
+            hh::set_focused(this(c), this(c));
         }
     }
     true
@@ -345,152 +332,139 @@ extern "C" fn draw_text(obj: *mut c_void, _w: W, _d: *const Msg) -> bool {
     let c = obj.cast::<Combo>();
     // SAFETY: as `button_press`.
     unsafe {
-        let Some(vt) = (*c).host.as_ref() else {
-            return false;
-        };
-        let hx = Hx::new(vt);
         if !cs(c, |s| s.menu_open) {
             return false;
         }
         let w = this(c);
-        let prev = hx.set_call(w, hh::SC_CURRENT_CLIP, 0).0;
-        hx.set_clip(w, hx.set_call(w, hh::SC_BASE_CLIP, 0).0);
-        let g = hx.global(w);
+        let prev = hh::current_clip(w);
+        hh::set_clip(w, hh::base_clip(w));
+        let g = hh::global(w);
         let sz = size(c);
-        let fy = hx.font_size(w).y;
-        let items = num(hx, c);
+        let fy = hh::font_size(w).y;
+        let items = num(c);
         let st = cs(c, |s| *s);
         let mut ops = vec![wl::RowOp::default(); usize::try_from(items).unwrap_or(0) * 2 + 2];
         let n = wl::combo_rows(&st, g, sz.x, fy, items, &mut ops);
         for op in ops.iter().take(n) {
             match op.kind {
-                wl::OP_SELECTION => hx.draw_gfx(w, (*c).gfx[GFX_SEL], op.pos, op.size, None),
+                wl::OP_SELECTION => hh::draw_gfx(w, (*c).gfx[GFX_SEL], op.pos, op.size, None),
                 wl::OP_TEXT_HIGHLIGHT => {
-                    hx.draw_text(w, item_text(hx, c, op.item), op.pos, ALIGN_LEFT, true);
+                    hh::draw_text(w, item_text(c, op.item), op.pos, ALIGN_LEFT, true);
                 }
                 wl::OP_TEXT => {
-                    hx.draw_text(w, item_text(hx, c, op.item), op.pos, ALIGN_LEFT, false);
+                    hh::draw_text(w, item_text(c, op.item), op.pos, ALIGN_LEFT, false);
                 }
                 _ => {}
             }
         }
-        hx.set_clip(w, prev);
+        hh::set_clip(w, prev);
     }
     true
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_init(hx: Hx, c: P) {
+pub unsafe fn on_init(c: P) {
     // SAFETY: caller contract.
     unsafe {
         let w = this(c);
         let o = c as usize;
         let sz = size(c);
-        let mut a = hh::Args::new(w);
-        a.f[0] = sz.x;
-        a.f[1] = sz.y;
-        let text = hx.raw(hh::CREATE_TEXTBOX, &mut a);
+        let text = hh::create_textbox(w, sz);
         (*c).text = text;
-        hx.set_text(text, hx.text(w));
-        hx.set_flag(hh::TEXTBOX_SET_CAN_EDIT, text, false);
-        let button = hx.raw(hh::CREATE_BUTTON, &mut hh::Args::new(w));
+        hh::set_text(text, hh::text(w));
+        hh::set_can_edit(text, false);
+        let button = hh::create_button(w);
         (*c).button = button;
-        let mut a = hh::Args::new(button);
-        a.p[0] = hx.skin_gfx(w, gfx_id("ComboBoxButtonIcon"));
-        hx.raw(hh::BUTTON_SET_IMAGE, &mut a);
-        hx.add_callback(
+        hh::button_set_image(button, hh::skin_gfx(w, gfx_id("ComboBoxButtonIcon")));
+        hh::add_callback(
             button,
             MSG_MOUSE_DOWN,
             o,
             button_press as *const () as usize,
         );
-        let mut a = hh::Args::new(w);
-        a.i[0] = 1;
-        let slider = hx.raw(hh::CREATE_SLIDER, &mut a);
+        let slider = hh::create_slider(w);
         (*c).slider = slider;
-        hx.add_callback(
+        hh::add_callback(
             slider,
             MSG_SLIDER_MOVE,
             o,
             slider_move as *const () as usize,
         );
-        hx.add_callback(
+        hh::add_callback(
             slider,
             MSG_LOST_FOCUS,
             o,
             slider_lost_focus as *const () as usize,
         );
-        hx.add_callback(
+        hh::add_callback(
             slider,
             MSG_UI_ARROW_PRESS,
             o,
             slider_ui_arrow_press as *const () as usize,
         );
-        hx.add_callback(
+        hh::add_callback(
             slider,
             MSG_UI_BUTTON_PRESS,
             o,
             slider_ui_button_press as *const () as usize,
         );
-        hx.add_callback(
+        hh::add_callback(
             slider,
             MSG_UI_BUTTON_RELEASE,
             o,
             slider_ui_button_release as *const () as usize,
         );
-        hx.set_flag(hh::WIDGET_SET_ENABLED, slider, false);
-        hx.set_flag(hh::WIDGET_SET_VISIBLE, slider, false);
-        hx.add_callback(w, MSG_ON_DRAW, o, draw_text as *const () as usize);
-        on_change_size(hx, c);
+        hh::set_enabled(slider, false);
+        hh::set_visible(slider, false);
+        hh::add_callback(w, MSG_ON_DRAW, o, draw_text as *const () as usize);
+        on_change_size(c);
     }
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_change_size(hx: Hx, c: P) {
+pub unsafe fn on_change_size(c: P) {
     // SAFETY: caller contract.
     unsafe {
         let (text, button, slider) = ((*c).text, (*c).button, (*c).slider);
         if text == 0 || button == 0 || slider == 0 {
             return;
         }
-        hx.set_size(text, size(c));
-        let ts = hx.size(text);
+        hh::set_size(text, size(c));
+        let ts = hh::size(text);
         if let Some(b) = (*c).base.as_mut() {
             b.size = ts;
         }
-        let mut a = hh::Args::new(text);
-        hx.raw(hh::TEXTBOX_BG_SIZE, &mut a);
-        let back = v2(a.rf[0], a.rf[1]);
+        let back = hh::textbox_background_size(text);
         let layout = wl::combo_layout(ts, back, (*c).button_w);
-        hx.set_size(button, layout.button_size);
-        hx.set_position(button, layout.button_pos);
+        hh::set_size(button, layout.button_size);
+        hh::set_position(button, layout.button_pos);
         let max = cs(c, |s| s.max_items);
-        hx.slider_call(hh::SLIDER_SET_BAR_VALUE_SIZE, slider, max);
-        let items = num(hx, c);
-        hx.slider_call(hh::SLIDER_SET_MAX_VALUE, slider, items.wrapping_sub(max));
+        hh::slider_set_bar_size(slider, max);
+        let items = num(c);
+        hh::slider_set_max(slider, items.wrapping_sub(max));
     }
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_change_text(hx: Hx, c: P) {
+pub unsafe fn on_change_text(c: P) {
     // SAFETY: caller contract.
     unsafe {
         let text = (*c).text;
         if text != 0 {
-            hx.set_text(text, hx.text(this(c)));
+            hh::set_text(text, hh::text(this(c)));
         }
     }
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_load_graphics(hx: Hx, c: P) {
+pub unsafe fn on_load_graphics(c: P) {
     // SAFETY: caller contract.
     let w = unsafe { this(c) };
-    let g = |n: &str| hx.skin_gfx(w, gfx_id(n));
+    let g = |n: &str| hh::skin_gfx(w, gfx_id(n));
     let table = [
         g("ComboBoxBackground"),
         g("TextBoxSelectedTextBack"),
@@ -509,30 +483,30 @@ pub unsafe fn on_load_graphics(hx: Hx, c: P) {
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_draw(hx: Hx, c: P) {
+pub unsafe fn on_draw(c: P) {
     // SAFETY: caller contract.
     unsafe {
         if !cs(c, |s| s.menu_open) {
             return;
         }
         let w = this(c);
-        let prev = hx.set_call(w, hh::SC_CURRENT_CLIP, 0).0;
-        hx.set_clip(w, hx.set_call(w, hh::SC_BASE_CLIP, 0).0);
-        let g = hx.global(w);
+        let prev = hh::current_clip(w);
+        hh::set_clip(w, hh::base_clip(w));
+        let g = hh::global(w);
         let sz = size(c);
         let st = cs(c, |s| *s);
         let d = wl::combo_draw(&st, g, sz.x);
-        hx.draw_gfx(w, (*c).gfx[GFX_BG], d.bg_pos, d.bg_size, None);
+        hh::draw_gfx(w, (*c).gfx[GFX_BG], d.bg_pos, d.bg_size, None);
         let b = [(*c).gfx[2], (*c).gfx[3], (*c).gfx[4], (*c).gfx[5]];
         let k = [(*c).gfx[6], (*c).gfx[7], (*c).gfx[8], (*c).gfx[9]];
-        hx.draw_borders(w, 0, (&b, &k), d.border_pos, d.border_size, None);
-        hx.set_clip(w, prev);
+        hh::draw_borders(w, 0, (&b, &k), d.border_pos, d.border_size, None);
+        hh::set_clip(w, prev);
     }
 }
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_mouse_move(hx: Hx, c: P, d: &Msg) -> bool {
+pub unsafe fn on_mouse_move(c: P, d: &Msg) -> bool {
     // SAFETY: caller contract.
     unsafe {
         if !cs(c, |s| s.menu_open) {
@@ -542,12 +516,12 @@ pub unsafe fn on_mouse_move(hx: Hx, c: P, d: &Msg) -> bool {
             return false;
         }
         let w = this(c);
-        let local = hx.world_to_local(w, d.pos());
+        let local = hh::world_to_local(w, d.pos());
         let sz = size(c);
-        let enabled = hx.flag(hh::WIDGET_IS_ENABLED, (*c).slider);
-        let c0 = hx.gfx_size(hh::GFX_ACTIVE_SIZE, (*c).gfx[GFX_CORNERS]).y;
-        let fy = hx.font_size(w).y;
-        let items = num(hx, c);
+        let enabled = hh::is_enabled((*c).slider);
+        let c0 = hh::gfx_active_size((*c).gfx[GFX_CORNERS]).y;
+        let fy = hh::font_size(w).y;
+        let items = num(c);
         cs(c, |s| {
             s.mouse_move(true, local, sz.x, enabled, c0, fy, items)
         })
@@ -556,7 +530,7 @@ pub unsafe fn on_mouse_move(hx: Hx, c: P, d: &Msg) -> bool {
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_mouse_down(hx: Hx, c: P, d: &Msg) -> bool {
+pub unsafe fn on_mouse_down(c: P, d: &Msg) -> bool {
     // SAFETY: caller contract.
     unsafe {
         let (ok, wheel) = cs(c, |s| s.mouse_down_pre(d.val()));
@@ -564,16 +538,16 @@ pub unsafe fn on_mouse_down(hx: Hx, c: P, d: &Msg) -> bool {
             return false;
         }
         let slider = (*c).slider;
-        let sv = hx.slider_value(slider);
-        let add = hx.slider_call(hh::SLIDER_GET_BUTTON_VALUE_ADD, slider, 0);
+        let sv = hh::slider_value(slider);
+        let add = hh::slider_button_add(slider);
         if wheel < 0 {
-            hx.slider_set_value(slider, sv.wrapping_sub(add), None);
+            hh::slider_set_value(slider, sv.wrapping_sub(add), None);
         } else if wheel > 0 {
-            hx.slider_set_value(slider, sv.wrapping_add(add), None);
+            hh::slider_set_value(slider, sv.wrapping_add(add), None);
         } else {
-            let local = hx.world_to_local(this(c), d.pos());
+            let local = hh::world_to_local(this(c), d.pos());
             if cs(c, |s| s.mouse_down_closes(local.y)) {
-                close_menu(hx, c);
+                close_menu(c);
             }
         }
         true
@@ -582,17 +556,17 @@ pub unsafe fn on_mouse_down(hx: Hx, c: P, d: &Msg) -> bool {
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_mouse_up(hx: Hx, c: P, d: &Msg) -> bool {
+pub unsafe fn on_mouse_up(c: P, d: &Msg) -> bool {
     // SAFETY: caller contract.
     unsafe {
         if !cs(c, |s| s.mouse_up_pre(d.val())) {
             return false;
         }
-        let local = hx.world_to_local(this(c), d.pos());
+        let local = hh::world_to_local(this(c), d.pos());
         if cs(c, |s| s.mouse_up_selects(local.y)) {
             let over = cs(c, |s| s.mouse_over);
-            set_selected_item(hx, c, over, false, true);
-            close_menu(hx, c);
+            set_selected_item(c, over, false, true);
+            close_menu(c);
         }
         true
     }
@@ -600,19 +574,19 @@ pub unsafe fn on_mouse_up(hx: Hx, c: P, d: &Msg) -> bool {
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_ui_arrow_press(hx: Hx, c: P, d: &Msg) -> bool {
+pub unsafe fn on_ui_arrow_press(c: P, d: &Msg) -> bool {
     // SAFETY: caller contract.
     unsafe {
         if !cs(c, |s| s.menu_open) {
             return false;
         }
         let slider = (*c).slider;
-        let items = num(hx, c);
-        let value = hx.slider_value(slider);
-        let add = hx.slider_call(hh::SLIDER_GET_BUTTON_VALUE_ADD, slider, 0);
+        let items = num(c);
+        let value = hh::slider_value(slider);
+        let add = hh::slider_button_add(slider);
         let (ret, set) = cs(c, |s| s.ui_arrow(d.val(), items, value, add));
         if let Some(v) = set {
-            hx.slider_set_value(slider, v, None);
+            hh::slider_set_value(slider, v, None);
         }
         ret
     }
@@ -620,18 +594,18 @@ pub unsafe fn on_ui_arrow_press(hx: Hx, c: P, d: &Msg) -> bool {
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_ui_button_press(hx: Hx, c: P, d: &Msg) -> bool {
+pub unsafe fn on_ui_button_press(c: P, d: &Msg) -> bool {
     // SAFETY: caller contract.
     unsafe {
-        let focus = hx.has_focus(this(c));
+        let focus = hh::has_focus(this(c));
         let b = cs(c, |s| s.ui_button(focus, d.val()));
         match b.action {
-            1 => close_menu(hx, c),
-            2 => open_menu(hx, c),
+            1 => close_menu(c),
+            2 => open_menu(c),
             3 => {
                 let over = cs(c, |s| s.mouse_over);
-                set_selected_item(hx, c, over, true, true);
-                close_menu(hx, c);
+                set_selected_item(c, over, true, true);
+                close_menu(c);
                 if b.clear_open_by_ui {
                     cs(c, |s| s.open_by_ui = false);
                 }
@@ -644,9 +618,9 @@ pub unsafe fn on_ui_button_press(hx: Hx, c: P, d: &Msg) -> bool {
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_ui_button_release(hx: Hx, c: P, d: &Msg) -> bool {
+pub unsafe fn on_ui_button_release(c: P, d: &Msg) -> bool {
     // SAFETY: caller contract.
-    if hx.has_focus(unsafe { this(c) }) {
+    if hh::has_focus(unsafe { this(c) }) {
         return d.val() == UI_BUTTON_PRIMARY;
     }
     false
@@ -654,15 +628,15 @@ pub unsafe fn on_ui_button_release(hx: Hx, c: P, d: &Msg) -> bool {
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn on_lost_focus(hx: Hx, c: P, d: &Msg) -> bool {
+pub unsafe fn on_lost_focus(c: P, d: &Msg) -> bool {
     // SAFETY: caller contract.
     unsafe {
         let (open, by_ui) = cs(c, |s| (s.menu_open, s.open_by_ui));
         if open && !by_ui {
-            let local = hx.world_to_local(this(c), d.pos());
+            let local = hh::world_to_local(this(c), d.pos());
             let sz = size(c);
             if cs(c, |s| s.lost_focus_closes(local, sz.x)) {
-                close_menu(hx, c);
+                close_menu(c);
             }
         }
     }
@@ -671,14 +645,11 @@ pub unsafe fn on_lost_focus(hx: Hx, c: P, d: &Msg) -> bool {
 
 /// # Safety
 /// `c` is live.
-pub unsafe fn point_is_inside(hx: Hx, c: P, p: [f32; 2], only_clipped: bool) -> bool {
+pub unsafe fn point_is_inside(c: P, p: [f32; 2], only_clipped: bool) -> bool {
     // SAFETY: caller contract.
     unsafe {
         let w = this(c);
-        let mut a = hh::Args::new(w);
-        a.f[0] = p[0];
-        a.f[1] = p[1];
-        let in_clip = hx.raw(hh::CHECK_POINT_CLIP, &mut a) != 0;
+        let in_clip = hh::check_point_clip(w, p);
         if !cs(c, |s| s.menu_open) && !in_clip {
             return false;
         }
@@ -686,7 +657,7 @@ pub unsafe fn point_is_inside(hx: Hx, c: P, p: [f32; 2], only_clipped: bool) -> 
         if only_clipped && !clips {
             return true;
         }
-        let local = hx.world_to_local(w, p);
+        let local = hh::world_to_local(w, p);
         let sz = size(c);
         cs(c, |s| s.point_inside(local, sz))
     }

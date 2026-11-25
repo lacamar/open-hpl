@@ -58,20 +58,20 @@ namespace hpl {
 							 bool abGenerateCallback=true,
 							 eListBoxSelectType aType=eListBoxSelectType_Toggle,
 							 bool abClearPrevious=true)
-		{ ohpl_h20_lb_set_selected_item(&gH20Host, &H(), alX, abMoveList, abGenerateCallback, aType, abClearPrevious); }
-		int GetSelectedItem(){ return ohpl_h20_lb_selected_item(&gH20Host, &H()); }
+		{ ohpl_h20_lb_set_selected_item(&H(), alX, abMoveList, abGenerateCallback, aType, abClearPrevious); }
+		int GetSelectedItem(){ return ohpl_h20_lb_selected_item(&H()); }
 
-		int GetMultiSelectionNum(){ return ohpl_h20_lb_multi_selection_num(&gH20Host, &H()); }
-		int GetMultiSelection(int alIdx){ return ohpl_h20_lb_multi_selection(&gH20Host, &H(), alIdx); }
+		int GetMultiSelectionNum(){ return ohpl_h20_lb_multi_selection_num(&H()); }
+		int GetMultiSelection(int alIdx){ return ohpl_h20_lb_multi_selection(&H(), alIdx); }
 
 		void SetAllowMultiSelection(bool abX) { H().list.allow_multi = abX; }
 		bool GetAllowMultiSelection() { return H().list.allow_multi; }
 
-		void ClearSelection(){ ohpl_h20_lb_clear_selection(&gH20Host, &H()); }
+		void ClearSelection(){ ohpl_h20_lb_clear_selection(&H()); }
 
-		cVector3f GetItemStartPos(){ cVector3f vPos; ohpl_h20_lb_item_start_pos(&gH20Host, &H(), &vPos); return vPos; }
+		cVector3f GetItemStartPos(){ cVector3f vPos; ohpl_h20_lb_item_start_pos(&H(), &vPos); return vPos; }
 
-		void SetCursorPos(int alPos, bool abMoveList, bool abClamp){ ohpl_h20_lb_set_cursor_pos(&gH20Host, &H(), alPos, abMoveList, abClamp); }
+		void SetCursorPos(int alPos, bool abMoveList, bool abClamp){ ohpl_h20_lb_set_cursor_pos(&H(), alPos, abMoveList, abClamp); }
 		int GetCursorPos() { return H().list.cursor_pos; }
 
 		void SetAnchorPos(int alX) { H().list.anchor_pos = alX; }

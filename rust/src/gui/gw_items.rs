@@ -136,9 +136,9 @@ pub(crate) fn set_selected(p: *mut Item, v: bool) {
     unsafe {
         if let Some(P::List(l)) = gw_h20::ptr(cont) {
             if v {
-                super::h20_ffi::ohpl_h20_lb_add_item_to_selection(gw_h20::vt(), l, p as usize);
+                super::h20_ffi::ohpl_h20_lb_add_item_to_selection(l, p as usize);
             } else {
-                super::h20_ffi::ohpl_h20_lb_remove_item_from_selection(gw_h20::vt(), l, p as usize);
+                super::h20_ffi::ohpl_h20_lb_remove_item_from_selection(l, p as usize);
             }
         }
     }

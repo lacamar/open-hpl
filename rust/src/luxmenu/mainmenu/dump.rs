@@ -478,7 +478,6 @@ impl Menu {
                         // SAFETY: the list state is live while the widget is.
                         unsafe {
                             crate::gui::h20_ffi::ohpl_h20_lb_set_selected_item(
-                                gw_h20::vt(),
                                 lb,
                                 0,
                                 false,

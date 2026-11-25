@@ -1,15 +1,13 @@
 //! Menu kinds: `iWidgetMenu` state (item list, highlight, offsets, parent item) shared by the
-//! context and main menus, the menu items, and the `MENU_CALL` host op over them.
+//! context and main menus, and the menu items.
 
 use std::ptr::addr_of_mut;
 
 use super::g1_set;
 use super::gw::{self, with};
-use super::gw_h20::vt;
 use super::gw_kinds::{self as gk, Kind};
 use super::h19_widget::Op;
 use super::h20_ffi as f;
-use super::h20_host::{self as hh, Args};
 use super::h20_menu::{Ctx, Item, Main};
 use super::set::{Msg, W};
 use crate::types::{Vector2f, Vector3f};
@@ -136,7 +134,7 @@ pub(crate) fn set_kind(w: W, id: i32, parent: W) {
             // SAFETY: `base` is live; the struct is written whole.
             let k = boxed(|p: *mut CtxK| unsafe {
                 addr_of_mut!((*p).m).write(MenuBase::new());
-                super::h20_menu::ctx_init(addr_of_mut!((*p).c), vt(), w, base);
+                super::h20_menu::ctx_init(addr_of_mut!((*p).c), w, base);
             });
             with(w, |g| g.kind = Kind::Ctx(k));
         }
@@ -144,7 +142,7 @@ pub(crate) fn set_kind(w: W, id: i32, parent: W) {
             // SAFETY: as above.
             let k = boxed(|p: *mut MainK| unsafe {
                 addr_of_mut!((*p).m).write(MenuBase::new());
-                super::h20_menu::main_init(addr_of_mut!((*p).c), vt(), w, base);
+                super::h20_menu::main_init(addr_of_mut!((*p).c), w, base);
             });
             with(w, |g| g.kind = Kind::Main(k));
             gw::load_graphics(w);
@@ -158,7 +156,7 @@ pub(crate) fn set_kind(w: W, id: i32, parent: W) {
             // SAFETY: as above.
             let k = boxed(|p: *mut ItemK| unsafe {
                 addr_of_mut!((*p).shortcut).write(Vec::new());
-                super::h20_menu::item_init(addr_of_mut!((*p).i), vt(), w, base, kind);
+                super::h20_menu::item_init(addr_of_mut!((*p).i), w, base, kind);
             });
             with(w, |g| g.kind = Kind::Item(k));
             gw::load_graphics(w);
@@ -193,35 +191,35 @@ fn clear_child(w: W) {
     }
 }
 
-fn hide(w: W) {
+pub(crate) fn hide(w: W) {
     // SAFETY: as in `call`.
     unsafe {
         match ptr(w) {
-            Some(P::Ctx(k)) => f::ohpl_h20_cm_hide(vt(), addr_of_mut!((*k).c)),
-            Some(P::Main(k)) => f::ohpl_h20_mm_hide(vt(), addr_of_mut!((*k).c)),
+            Some(P::Ctx(k)) => f::ohpl_h20_cm_hide(addr_of_mut!((*k).c)),
+            Some(P::Main(k)) => f::ohpl_h20_mm_hide(addr_of_mut!((*k).c)),
             _ => {}
         }
     }
 }
 
-fn item_width(w: W) -> f32 {
+pub(crate) fn item_width(w: W) -> f32 {
     match ptr(w) {
         // SAFETY: as in `call`.
-        Some(P::Ctx(k)) => unsafe { f::ohpl_h20_cm_item_width(vt(), addr_of_mut!((*k).c)) },
+        Some(P::Ctx(k)) => unsafe { f::ohpl_h20_cm_item_width(addr_of_mut!((*k).c)) },
         _ => 0.0,
     }
 }
 
-fn parent_menu_of_item(w: W) -> W {
+pub(crate) fn parent_menu_of_item(w: W) -> W {
     gw::parent(w)
 }
 
-fn parent_menu(w: W) -> W {
+pub(crate) fn parent_menu(w: W) -> W {
     let pi = mb(w, |m| m.parent_item);
     if pi == 0 { 0 } else { parent_menu_of_item(pi) }
 }
 
-fn top_most(w: W) -> W {
+pub(crate) fn top_most(w: W) -> W {
     let mut cur = w;
     while mb(cur, |m| m.parent_item) != 0 {
         cur = parent_menu(cur);
@@ -237,18 +235,16 @@ fn item_menu_open(w: W) -> bool {
     })
 }
 
-fn submenu_open(w: W) -> bool {
+pub(crate) fn submenu_open(w: W) -> bool {
     let h = mb(w, |m| m.highlighted);
     h != 0 && item_menu_open(h)
 }
 
-fn child_menu_hide(w: W) {
+pub(crate) fn child_menu_hide(w: W) {
     match ptr(w) {
         Some(P::Ctx(_)) => g1_set::set_focused(gw::set_of(w), w),
         // SAFETY: as in `call`.
-        Some(P::Main(k)) => unsafe {
-            f::ohpl_h20_mm_on_child_menu_hide(vt(), addr_of_mut!((*k).c))
-        },
+        Some(P::Main(k)) => unsafe { f::ohpl_h20_mm_on_child_menu_hide(addr_of_mut!((*k).c)) },
         _ => {}
     }
 }
@@ -258,12 +254,12 @@ fn update_items(w: W, it: W) {
     unsafe {
         match ptr(w) {
             Some(P::Ctx(k)) => {
-                f::ohpl_h20_cm_update_items_pos(vt(), addr_of_mut!((*k).c), it);
-                f::ohpl_h20_cm_update_items_size(vt(), addr_of_mut!((*k).c), it);
+                f::ohpl_h20_cm_update_items_pos(addr_of_mut!((*k).c), it);
+                f::ohpl_h20_cm_update_items_size(addr_of_mut!((*k).c), it);
             }
             Some(P::Main(k)) => {
-                f::ohpl_h20_mm_update_items_pos(vt(), addr_of_mut!((*k).c), it);
-                f::ohpl_h20_mm_update_items_size(vt(), addr_of_mut!((*k).c), it);
+                f::ohpl_h20_mm_update_items_pos(addr_of_mut!((*k).c), it);
+                f::ohpl_h20_mm_update_items_size(addr_of_mut!((*k).c), it);
             }
             _ => {}
         }
@@ -331,15 +327,14 @@ pub(crate) fn show_context_menu(set: *mut g1_set::Set, menu: W, pos: Vector3f) {
 /// Virtual `op` of the menu kinds.
 pub(crate) fn call(w: W, op: Op, other: W, d: &Msg, dt: f32) -> Option<bool> {
     let p = ptr(w)?;
-    let v = vt();
     // SAFETY: the state is live for the call; the logic re-enters through the host table only.
     unsafe {
         match p {
             P::Ctx(k) => {
                 let c = addr_of_mut!((*k).c);
                 match op {
-                    Op::Draw => f::ohpl_h20_cm_on_draw(v, c),
-                    Op::Update => f::ohpl_h20_cm_on_update(v, c, dt),
+                    Op::Draw => f::ohpl_h20_cm_on_draw(c),
+                    Op::Update => f::ohpl_h20_cm_on_update(c, dt),
                     Op::Virtual => {
                         return match other as i32 {
                             MSG_MOUSE_DOWN | MSG_MOUSE_UP | MSG_MOUSE_ENTER => Some(true),
@@ -349,9 +344,9 @@ pub(crate) fn call(w: W, op: Op, other: W, d: &Msg, dt: f32) -> Option<bool> {
                                 }
                                 Some(true)
                             }
-                            MSG_LOST_FOCUS => Some(f::ohpl_h20_cm_on_lost_focus(v, c)),
-                            MSG_GOT_FOCUS => Some(f::ohpl_h20_cm_on_got_focus(v, c)),
-                            MSG_KEY_PRESS => Some(f::ohpl_h20_cm_on_key_press(v, c, d)),
+                            MSG_LOST_FOCUS => Some(f::ohpl_h20_cm_on_lost_focus(c)),
+                            MSG_GOT_FOCUS => Some(f::ohpl_h20_cm_on_got_focus(c)),
+                            MSG_KEY_PRESS => Some(f::ohpl_h20_cm_on_key_press(c, d)),
                             _ => None,
                         };
                     }
@@ -361,24 +356,24 @@ pub(crate) fn call(w: W, op: Op, other: W, d: &Msg, dt: f32) -> Option<bool> {
             P::Main(k) => {
                 let m = addr_of_mut!((*k).c);
                 match op {
-                    Op::Draw => f::ohpl_h20_mm_on_draw(v, m),
-                    Op::Update => f::ohpl_h20_mm_on_update(v, m),
+                    Op::Draw => f::ohpl_h20_mm_on_draw(m),
+                    Op::Update => f::ohpl_h20_mm_on_update(m),
                     _ => return None,
                 }
             }
             P::Item(k) => {
                 let i = addr_of_mut!((*k).i);
                 match op {
-                    Op::Draw => f::ohpl_h20_mi_on_draw(v, i),
-                    Op::Update => f::ohpl_h20_mi_on_update(v, i, dt),
+                    Op::Draw => f::ohpl_h20_mi_on_draw(i),
+                    Op::Update => f::ohpl_h20_mi_on_update(i, dt),
                     Op::Virtual => {
                         return match other as i32 {
-                            MSG_MOUSE_DOWN => Some(f::ohpl_h20_mi_on_mouse_down(v, i)),
-                            MSG_MOUSE_UP => Some(f::ohpl_h20_mi_on_mouse_up(v, i, d)),
+                            MSG_MOUSE_DOWN => Some(f::ohpl_h20_mi_on_mouse_down(i)),
+                            MSG_MOUSE_UP => Some(f::ohpl_h20_mi_on_mouse_up(i, d)),
                             MSG_MOUSE_ENTER | MSG_GOT_FOCUS | MSG_LOST_FOCUS => Some(true),
-                            MSG_MOUSE_MOVE => Some(f::ohpl_h20_mi_on_mouse_move(v, i)),
-                            MSG_MOUSE_LEAVE => Some(f::ohpl_h20_mi_on_mouse_leave(v, i)),
-                            MSG_KEY_PRESS => Some(f::ohpl_h20_mi_on_key_press(v, i, d)),
+                            MSG_MOUSE_MOVE => Some(f::ohpl_h20_mi_on_mouse_move(i)),
+                            MSG_MOUSE_LEAVE => Some(f::ohpl_h20_mi_on_mouse_leave(i)),
+                            MSG_KEY_PRESS => Some(f::ohpl_h20_mi_on_key_press(i, d)),
                             _ => None,
                         };
                     }
@@ -391,13 +386,12 @@ pub(crate) fn call(w: W, op: Op, other: W, d: &Msg, dt: f32) -> Option<bool> {
 }
 
 pub(crate) fn on_init(w: W) -> bool {
-    let v = vt();
     // SAFETY: as in `call`.
     unsafe {
         match ptr(w) {
             Some(P::Ctx(_)) => gw::set_visible(w, false),
-            Some(P::Main(k)) => f::ohpl_h20_mm_on_init(v, addr_of_mut!((*k).c)),
-            Some(P::Item(k)) => f::ohpl_h20_mi_on_init(v, addr_of_mut!((*k).i)),
+            Some(P::Main(k)) => f::ohpl_h20_mm_on_init(addr_of_mut!((*k).c)),
+            Some(P::Item(k)) => f::ohpl_h20_mi_on_init(addr_of_mut!((*k).i)),
             None => return false,
         }
     }
@@ -405,13 +399,12 @@ pub(crate) fn on_init(w: W) -> bool {
 }
 
 pub(crate) fn on_load_graphics(w: W) -> bool {
-    let v = vt();
     // SAFETY: as in `call`.
     unsafe {
         match ptr(w) {
-            Some(P::Ctx(k)) => f::ohpl_h20_cm_on_load_graphics(v, addr_of_mut!((*k).c)),
-            Some(P::Main(k)) => f::ohpl_h20_mm_on_load_graphics(v, addr_of_mut!((*k).c)),
-            Some(P::Item(k)) => f::ohpl_h20_mi_on_load_graphics(v, addr_of_mut!((*k).i)),
+            Some(P::Ctx(k)) => f::ohpl_h20_cm_on_load_graphics(addr_of_mut!((*k).c)),
+            Some(P::Main(k)) => f::ohpl_h20_mm_on_load_graphics(addr_of_mut!((*k).c)),
+            Some(P::Item(k)) => f::ohpl_h20_mi_on_load_graphics(addr_of_mut!((*k).i)),
             None => return false,
         }
     }
@@ -430,110 +423,73 @@ pub(crate) fn state(w: W) -> usize {
     }
 }
 
-fn rf3(a: &mut Args, v: Vector3f) {
-    a.rf = [v.x, v.y, v.z];
+pub(crate) fn highlighted(w: W) -> W {
+    mb(w, |m| m.highlighted)
 }
 
-/// The `MENU_CALL` host op: `a.w` the menu (the item for `MC_ITEM_PARENT_MENU`), `a.i[0]` the call.
-pub(crate) fn menu_call(a: &mut Args) -> usize {
-    let w = a.w;
-    match a.i[0] {
-        hh::MC_HIGHLIGHTED => mb(w, |m| m.highlighted),
-        hh::MC_SET_HIGHLIGHTED => {
-            mb(w, |m| m.highlighted = a.p[0]);
-            0
-        }
-        hh::MC_HIDE => {
-            hide(w);
-            0
-        }
-        hh::MC_ARROW_OFFSET => {
-            rf3(a, mb(w, |m| m.arrow_pos));
-            0
-        }
-        hh::MC_CHECK_OFFSET => {
-            rf3(a, mb(w, |m| m.check_pos));
-            0
-        }
-        hh::MC_TEXT_OFFSET => {
-            rf3(a, mb(w, |m| m.text_pos));
-            0
-        }
-        hh::MC_ITEM_WIDTH => {
-            a.rf[0] = item_width(w);
-            0
-        }
-        hh::MC_IS_SUBMENU_OPEN => usize::from(submenu_open(w)),
-        hh::MC_TOP_MOST => top_most(w),
-        hh::MC_PARENT_MENU => parent_menu(w),
-        hh::MC_ON_CHILD_HIDE => {
-            child_menu_hide(w);
-            0
-        }
-        hh::MC_SET_MUST_HIDE => {
-            mb(w, |m| m.must_hide = a.i[1] != 0);
-            0
-        }
-        hh::MC_GET_MUST_HIDE => usize::from(mb(w, |m| m.must_hide)),
-        hh::MC_PARENT_ITEM => mb(w, |m| m.parent_item),
-        hh::MC_PREV_ATTENTION => mb(w, |m| m.prev_attention),
-        hh::MC_ITEM_COUNT => mb(w, |m| m.items.len()),
-        hh::MC_ITEM_AT => {
-            let i = usize::try_from(a.i[1]).unwrap_or(usize::MAX);
-            mb(w, |m| m.items.get(i).copied().unwrap_or(0))
-        }
-        hh::MC_SET_OFFSETS => {
-            let f = a.f;
-            let flags = a.i[1];
-            mb(w, |m| {
-                if flags & 1 != 0 {
-                    m.arrow_pos = Vector3f {
-                        x: f[0],
-                        y: f[1],
-                        z: f[2],
-                    };
-                }
-                if flags & 2 != 0 {
-                    m.text_pos = Vector3f {
-                        x: f[3],
-                        y: f[4],
-                        z: f[5],
-                    };
-                }
-                if flags & 4 != 0 {
-                    m.check_pos = Vector3f {
-                        x: f[6],
-                        y: f[7],
-                        z: f[8],
-                    };
-                }
-            });
-            0
-        }
-        hh::MC_ITEM_PARENT_MENU => parent_menu_of_item(w),
-        _ => 0,
-    }
+pub(crate) fn offset(w: W, which: Offset) -> Vector3f {
+    mb(w, |m| match which {
+        Offset::Arrow => m.arrow_pos,
+        Offset::Check => m.check_pos,
+        Offset::Text => m.text_pos,
+    })
 }
 
-/// Host ops that read a menu item: separator test, text length, shortcut text.
-pub(crate) fn item_op(code: i32, a: &mut Args) -> usize {
-    let w = a.w;
-    match code {
-        hh::ITEM_IS_SEPARATOR => usize::from(gw::read(w, |g| g.text.is_empty())),
-        hh::ITEM_TEXT_LENGTH => {
-            a.rf[0] = text_length(w);
-            0
-        }
-        hh::WIDGET_SHORTCUT_TEXT => {
-            let (p, n) = shortcut(w);
-            a.ri[0] = n as i32;
-            p as usize
-        }
-        _ => 0,
-    }
+pub(crate) fn set_must_hide(w: W, v: bool) {
+    mb(w, |m| m.must_hide = v);
 }
 
-fn shortcut(w: W) -> (*const u32, usize) {
+pub(crate) fn must_hide(w: W) -> bool {
+    mb(w, |m| m.must_hide)
+}
+
+pub(crate) fn parent_item(w: W) -> W {
+    mb(w, |m| m.parent_item)
+}
+
+pub(crate) fn prev_attention(w: W) -> W {
+    mb(w, |m| m.prev_attention)
+}
+
+pub(crate) fn item_count(w: W) -> usize {
+    mb(w, |m| m.items.len())
+}
+
+pub(crate) fn item_at(w: W, i: usize) -> W {
+    mb(w, |m| m.items.get(i).copied().unwrap_or(0))
+}
+
+pub(crate) fn set_offsets(
+    w: W,
+    arrow: Option<Vector3f>,
+    text: Option<Vector3f>,
+    check: Option<Vector3f>,
+) {
+    mb(w, |m| {
+        if let Some(v) = arrow {
+            m.arrow_pos = v;
+        }
+        if let Some(v) = text {
+            m.text_pos = v;
+        }
+        if let Some(v) = check {
+            m.check_pos = v;
+        }
+    });
+}
+
+pub(crate) fn is_separator(w: W) -> bool {
+    gw::read(w, |g| g.text.is_empty())
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum Offset {
+    Arrow,
+    Check,
+    Text,
+}
+
+pub(crate) fn shortcut(w: W) -> (*const u32, usize) {
     match ptr(w) {
         // SAFETY: live item state; the text outlives the caller's use within the op.
         Some(P::Item(k)) => unsafe { ((*k).shortcut.as_ptr(), (*k).shortcut.len()) },
@@ -575,7 +531,7 @@ pub(crate) fn item_shortcut_added(w: W, added: &[u32]) {
     // SAFETY: as in `call`.
     unsafe {
         if let Some(P::Ctx(k)) = ptr(parent) {
-            f::ohpl_h20_cm_update_width(vt(), addr_of_mut!((*k).c), len);
+            f::ohpl_h20_cm_update_width(addr_of_mut!((*k).c), len);
         }
     }
 }

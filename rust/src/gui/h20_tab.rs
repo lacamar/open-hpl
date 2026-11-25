@@ -3,7 +3,7 @@
 //! (`gui/RustGuiH20.h`); the three reach each other through state pointers.
 
 use super::h19_widget::Base;
-use super::h20_host::{self as hh, HostVt, Hx};
+use super::h20_host as hh;
 use super::h20_list::{MSG_SELECTION_CHANGE, attr_id, gfx_id};
 use super::set::{Msg, W};
 use super::widget::v2;
@@ -16,8 +16,6 @@ use std::ffi::c_void;
 
 const MSG_BUTTON_PRESSED: i32 = 11;
 const ALIGN_LEFT: i32 = 0;
-const KIND_LABEL: i32 = 0;
-const KIND_TAB: i32 = 1;
 
 const G_ARROWS: usize = 0;
 const G_LABEL_BORDERS: usize = 2;
@@ -41,7 +39,6 @@ pub struct Frame {
     pub vert: bool,
     pub this: W,
     pub base: *mut Base,
-    pub host: *const HostVt,
 }
 
 #[repr(C)]
@@ -55,7 +52,6 @@ pub struct Tab {
     pub ls: *mut Label,
     pub this: W,
     pub base: *mut Base,
-    pub host: *const HostVt,
 }
 
 #[repr(C)]
@@ -64,12 +60,11 @@ pub struct Label {
     pub icon: usize,
     pub this: W,
     pub base: *mut Base,
-    pub host: *const HostVt,
 }
 
-const _: () = assert!(std::mem::size_of::<Frame>() == 280);
-const _: () = assert!(std::mem::size_of::<Tab>() == 72);
-const _: () = assert!(std::mem::size_of::<Label>() == 40);
+const _: () = assert!(std::mem::size_of::<Frame>() == 272);
+const _: () = assert!(std::mem::size_of::<Tab>() == 64);
+const _: () = assert!(std::mem::size_of::<Label>() == 32);
 
 fn base_size(b: *mut Base) -> Vector2f {
     // SAFETY: `b` is the widget's base state or null.
@@ -83,17 +78,15 @@ unsafe fn tabs(f: *mut Frame) -> Vec<W> {
     unsafe { (*f).tabs.as_ref() }.cloned().unwrap_or_default()
 }
 
-fn state_of<T>(hx: Hx, w: W, kind: i32) -> *mut T {
-    let mut a = hh::Args::new(w);
-    a.i[0] = kind;
-    hx.raw(hh::STATE_PTR, &mut a) as *mut T
+fn state_of<T>(w: W) -> *mut T {
+    hh::state_ptr(w) as *mut T
 }
 
 // ---------------------------------------------------------------- frame
 
 /// # Safety
 /// `f` is uninitialised storage.
-pub unsafe fn frame_init(f: *mut Frame, vt: *const HostVt, this: W, base: *mut Base) {
+pub unsafe fn frame_init(f: *mut Frame, this: W, base: *mut Base) {
     // SAFETY: caller contract; the struct is written whole.
     unsafe {
         f.write(Frame {
@@ -108,7 +101,6 @@ pub unsafe fn frame_init(f: *mut Frame, vt: *const HostVt, this: W, base: *mut B
             vert: true,
             this,
             base,
-            host: vt,
         });
     }
 }
@@ -127,53 +119,49 @@ pub unsafe fn frame_free(f: *mut Frame) {
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn frame_destroy(hx: Hx, f: *mut Frame) {
+pub unsafe fn frame_destroy(f: *mut Frame) {
     // SAFETY: caller contract.
     unsafe {
         for a in (*f).arrows {
-            destroy(hx, (*f).this, a);
+            destroy((*f).this, a);
         }
-        clear_tabs(hx, f);
+        clear_tabs(f);
     }
 }
 
-fn destroy(hx: Hx, owner: W, w: W) {
-    let mut a = hh::Args::new(owner);
-    a.p[0] = w;
-    hx.raw(hh::DESTROY_WIDGET, &mut a);
+fn destroy(owner: W, w: W) {
+    hh::destroy_widget(owner, w);
 }
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn add_tab(hx: Hx, f: *mut Frame, caption: (*const u32, usize)) -> W {
+pub unsafe fn add_tab(f: *mut Frame, caption: (*const u32, usize)) -> W {
     // SAFETY: caller contract.
     unsafe {
         let w = (*f).this;
         let (pos, size) = ((*f).base.as_ref().map(|b| b.pos), base_size((*f).base));
         let pos = pos.unwrap_or_default();
-        let mut a = hh::Args::new(w);
-        a.f[..5].copy_from_slice(&[pos.x, pos.y, pos.z, size.x, size.y]);
-        let tab = hx.raw(hh::CREATE_TAB, &mut a);
-        hx.set_text(tab, caption);
-        hx.set_position(tab, v3(0.0, 0.0, (*f).bg_z));
+        let tab = hh::create_tab(w, pos, size);
+        hh::set_text(tab, caption);
+        hh::set_position(tab, v3(0.0, 0.0, (*f).bg_z));
         if (*(*f).tabs).is_empty() {
-            set_tab_on_top(hx, f, tab);
+            set_tab_on_top(f, tab);
         }
         if let Some(t) = (*f).tabs.as_mut() {
             t.push(tab);
         }
-        update_tab_visibility(hx, f);
+        update_tab_visibility(f);
         tab
     }
 }
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn clear_tabs(hx: Hx, f: *mut Frame) {
+pub unsafe fn clear_tabs(f: *mut Frame) {
     // SAFETY: caller contract.
     unsafe {
         for t in tabs(f) {
-            destroy(hx, (*f).this, t);
+            destroy((*f).this, t);
         }
         if let Some(t) = (*f).tabs.as_mut() {
             t.clear();
@@ -216,7 +204,7 @@ pub unsafe fn tab_on_top_index(f: *mut Frame) -> i32 {
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn set_tab_on_top(hx: Hx, f: *mut Frame, tab: W) {
+pub unsafe fn set_tab_on_top(f: *mut Frame, tab: W) {
     // SAFETY: caller contract.
     unsafe {
         let top = (*f).top_tab;
@@ -224,40 +212,38 @@ pub unsafe fn set_tab_on_top(hx: Hx, f: *mut Frame, tab: W) {
             return;
         }
         if top != 0 {
-            let mut v = local_pos(hx, top);
+            let mut v = local_pos(top);
             v.z = (*f).bg_z;
-            hx.set_position(top, v);
-            tab_set_on_top(hx, state_of(hx, top, KIND_TAB), false);
+            hh::set_position(top, v);
+            tab_set_on_top(state_of(top), false);
         }
         (*f).top_tab = tab;
-        let mut v = local_pos(hx, tab);
+        let mut v = local_pos(tab);
         v.z = (*f).fg_z;
-        hx.set_position(tab, v);
-        let ts = state_of::<Tab>(hx, tab, KIND_TAB);
-        tab_set_on_top(hx, ts, true);
+        hh::set_position(tab, v);
+        let ts = state_of::<Tab>(tab);
+        tab_set_on_top(ts, true);
         if !(*(*f).tabs).is_empty() {
             let idx = ts.as_ref().map_or(0, |t| t.index);
-            hx.process((*f).this, MSG_SELECTION_CHANGE, idx, None);
+            hh::process((*f).this, MSG_SELECTION_CHANGE, idx, None);
         }
     }
 }
 
-fn local_pos(hx: Hx, w: W) -> Vector3f {
-    let mut a = hh::Args::new(w);
-    hx.raw(hh::WIDGET_GET_POSITION, &mut a);
-    v3(a.rf[0], a.rf[1], a.rf[2])
+fn local_pos(w: W) -> Vector3f {
+    hh::position(w)
 }
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn set_tab_on_top_by_index(hx: Hx, f: *mut Frame, idx: i32) {
+pub unsafe fn set_tab_on_top_by_index(f: *mut Frame, idx: i32) {
     // SAFETY: caller contract.
     unsafe {
         let n = tab_num(f);
         if idx < 0 || idx >= n {
             return;
         }
-        set_tab_on_top(hx, f, tab_at(f, idx));
+        set_tab_on_top(f, tab_at(f, idx));
     }
 }
 
@@ -285,21 +271,21 @@ pub unsafe fn set_vertical_scroll_enabled(f: *mut Frame, v: bool) {
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn on_ui_button_press(hx: Hx, f: *mut Frame, d: &Msg) -> bool {
+pub unsafe fn on_ui_button_press(f: *mut Frame, d: &Msg) -> bool {
     // SAFETY: caller contract.
     unsafe {
         let top = tab_on_top_index(f);
         let Some(target) = tab_page_target(d.val(), top) else {
             return false;
         };
-        set_tab_on_top_by_index(hx, f, target);
+        set_tab_on_top_by_index(f, target);
         true
     }
 }
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn arrow_pressed(hx: Hx, f: *mut Frame, widget: W) -> bool {
+pub unsafe fn arrow_pressed(f: *mut Frame, widget: W) -> bool {
     // SAFETY: caller contract.
     unsafe {
         let n = tab_num(f);
@@ -309,37 +295,27 @@ pub unsafe fn arrow_pressed(hx: Hx, f: *mut Frame, widget: W) -> bool {
         if widget == (*f).arrows[1] {
             (*f).state.arrow(true, n);
         }
-        update_tab_visibility(hx, f);
+        update_tab_visibility(f);
         true
     }
 }
 
 extern "C" fn arrow_cb(obj: *mut c_void, w: W, _d: *const Msg) -> bool {
     let f = obj.cast::<Frame>();
-    // SAFETY: `obj` is the `Frame` registered in `on_init`.
-    unsafe {
-        match (*f).host.as_ref() {
-            Some(vt) => arrow_pressed(Hx::new(vt), f, w),
-            None => false,
-        }
-    }
+    unsafe { arrow_pressed(f, w) }
 }
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn update_tab_visibility(hx: Hx, f: *mut Frame) {
+pub unsafe fn update_tab_visibility(f: *mut Frame) {
     // SAFETY: caller contract.
     unsafe {
         let all = tabs(f);
         let labels: Vec<W> = all
             .iter()
-            .map(|t| {
-                state_of::<Tab>(hx, *t, KIND_TAB)
-                    .as_ref()
-                    .map_or(0, |t| t.label)
-            })
+            .map(|t| state_of::<Tab>(*t).as_ref().map_or(0, |t| t.label))
             .collect();
-        let widths: Vec<f32> = labels.iter().map(|l| hx.size(*l).x).collect();
+        let widths: Vec<f32> = labels.iter().map(|l| hh::size(*l).x).collect();
         let mut items = vec![TabItem::default(); all.len()];
         let sx = base_size((*f).base).x;
         let arrows = (*f).state.visibility(sx, &widths, &mut items);
@@ -348,72 +324,70 @@ pub unsafe fn update_tab_visibility(hx: Hx, f: *mut Frame) {
             if it.visible || (i as i32) >= first {
                 continue;
             }
-            hx.set_flag(hh::WIDGET_SET_VISIBLE, *label, false);
-            hx.set_flag(hh::WIDGET_SET_ENABLED, *label, false);
+            hh::set_visible(*label, false);
+            hh::set_enabled(*label, false);
         }
         for (it, label) in items.iter().zip(&labels) {
             if !it.visible {
                 continue;
             }
-            hx.set_flag(hh::WIDGET_SET_VISIBLE, *label, true);
-            hx.set_flag(hh::WIDGET_SET_ENABLED, *label, true);
-            set_label_pos_x(hx, *label, it.pos_x);
+            hh::set_visible(*label, true);
+            hh::set_enabled(*label, true);
+            set_label_pos_x(*label, it.pos_x);
         }
-        hx.set_flag(hh::WIDGET_SET_ENABLED, (*f).arrows[0], arrows.left_enabled);
-        hx.set_flag(hh::WIDGET_SET_ENABLED, (*f).arrows[1], arrows.right_enabled);
-        hx.set_flag(hh::WIDGET_SET_VISIBLE, (*f).arrows[0], arrows.shown);
-        hx.set_flag(hh::WIDGET_SET_VISIBLE, (*f).arrows[1], arrows.shown);
+        hh::set_enabled((*f).arrows[0], arrows.left_enabled);
+        hh::set_enabled((*f).arrows[1], arrows.right_enabled);
+        hh::set_visible((*f).arrows[0], arrows.shown);
+        hh::set_visible((*f).arrows[1], arrows.shown);
     }
 }
 
-fn set_label_pos_x(hx: Hx, label: W, x: f32) {
-    let mut p = local_pos(hx, label);
+fn set_label_pos_x(label: W, x: f32) {
+    let mut p = local_pos(label);
     p.x = x;
-    hx.set_position(label, p);
+    hh::set_position(label, p);
 }
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn set_scroll_buttons_hidden(hx: Hx, f: *mut Frame, hidden: bool) {
+pub unsafe fn set_scroll_buttons_hidden(f: *mut Frame, hidden: bool) {
     // SAFETY: caller contract.
     unsafe {
         for a in (*f).arrows {
-            hx.set_flag(hh::WIDGET_SET_ENABLED, a, !hidden);
-            hx.set_flag(hh::WIDGET_SET_VISIBLE, a, !hidden);
+            hh::set_enabled(a, !hidden);
+            hh::set_visible(a, !hidden);
         }
     }
 }
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn frame_on_init(hx: Hx, f: *mut Frame) {
+pub unsafe fn frame_on_init(f: *mut Frame) {
     // SAFETY: caller contract.
     unsafe {
         let w = (*f).this;
         for i in 0..2 {
-            let b = hx.raw(hh::CREATE_BUTTON, &mut hh::Args::new(w));
+            let b = hh::create_button(w);
             if let Some(slot) = (*f).arrows.get_mut(i) {
                 *slot = b;
             }
-            let mut a = hh::Args::new(b);
-            a.p[0] = (*f).gfx.get(G_ARROWS + i).copied().unwrap_or(0);
-            hx.raw(hh::BUTTON_SET_IMAGE, &mut a);
+            hh::button_set_image(b, (*f).gfx.get(G_ARROWS + i).copied().unwrap_or(0));
             let bs = (*f).state.button_size;
-            hx.set_size(b, v2(bs, bs));
-            hx.add_callback(
+            hh::set_size(b, v2(bs, bs));
+            hh::add_callback(
                 b,
                 MSG_BUTTON_PRESSED,
                 f as usize,
                 arrow_cb as *const () as usize,
             );
         }
-        frame_on_change_size(hx, f);
+        frame_on_change_size(f);
     }
 }
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn frame_on_change_size(hx: Hx, f: *mut Frame) {
+pub unsafe fn frame_on_change_size(f: *mut Frame) {
     // SAFETY: caller contract.
     unsafe {
         if (*f).arrows[0] == 0 || (*f).arrows[1] == 0 {
@@ -422,22 +396,22 @@ pub unsafe fn frame_on_change_size(hx: Hx, f: *mut Frame) {
         let size = base_size((*f).base);
         for i in 0..2 {
             let p = (*f).state.arrow_pos(size.x, i as i32, (*f).fg_z);
-            hx.set_position((*f).arrows.get(i).copied().unwrap_or(0), p);
+            hh::set_position((*f).arrows.get(i).copied().unwrap_or(0), p);
         }
         for t in tabs(f) {
-            hx.set_size(t, size);
+            hh::set_size(t, size);
         }
-        update_tab_visibility(hx, f);
+        update_tab_visibility(f);
     }
 }
 
 /// # Safety
 /// `f` is live.
-pub unsafe fn frame_on_load_graphics(hx: Hx, f: *mut Frame) {
+pub unsafe fn frame_on_load_graphics(f: *mut Frame) {
     // SAFETY: caller contract.
     unsafe {
         let w = (*f).this;
-        let at = |n: &str| hx.skin_attr(w, attr_id(n)).x;
+        let at = |n: &str| hh::skin_attr(w, attr_id(n)).x;
         let st = &mut (*f).state;
         st.button_size = at("TabFrameButtonSize");
         st.first_tab_offset = at("FirstTabOffset");
@@ -448,7 +422,7 @@ pub unsafe fn frame_on_load_graphics(hx: Hx, f: *mut Frame) {
         // the C++ reads the right padding into the left field and the reverse
         st.text_left_padding = at("TabFrameTextRightPadding");
         st.text_right_padding = at("TabFrameTextLeftPadding");
-        let g = |n: &str| hx.skin_gfx(w, gfx_id(n));
+        let g = |n: &str| hh::skin_gfx(w, gfx_id(n));
         (*f).gfx = [
             g("TabFrameArrowLeft"),
             g("TabFrameArrowRight"),
@@ -479,14 +453,7 @@ pub unsafe fn frame_on_load_graphics(hx: Hx, f: *mut Frame) {
 
 /// # Safety
 /// `t` is uninitialised storage; `fs` the parent frame's state.
-pub unsafe fn tab_init_state(
-    t: *mut Tab,
-    vt: *const HostVt,
-    this: W,
-    frame_w: W,
-    fs: *mut Frame,
-    base: *mut Base,
-) {
+pub unsafe fn tab_init_state(t: *mut Tab, this: W, frame_w: W, fs: *mut Frame, base: *mut Base) {
     // SAFETY: caller contract.
     unsafe {
         t.write(Tab {
@@ -499,78 +466,69 @@ pub unsafe fn tab_init_state(
             ls: std::ptr::null_mut(),
             this,
             base,
-            host: vt,
         });
     }
 }
 
 /// # Safety
 /// `t` is live.
-pub unsafe fn tab_destroy(hx: Hx, t: *mut Tab) {
+pub unsafe fn tab_destroy(t: *mut Tab) {
     // SAFETY: caller contract.
     unsafe {
-        destroy(hx, (*t).this, (*t).label);
-        destroy(hx, (*t).this, (*t).frame);
+        destroy((*t).this, (*t).label);
+        destroy((*t).this, (*t).frame);
     }
 }
 
 /// # Safety
 /// `t` is live.
-pub unsafe fn tab_attach_child(hx: Hx, t: *mut Tab, child: W, remove: bool) {
+pub unsafe fn tab_attach_child(t: *mut Tab, child: W, remove: bool) {
     // SAFETY: caller contract.
     unsafe {
         let (label, frame, this) = ((*t).label, (*t).frame, (*t).this);
-        let code = if remove {
-            hh::REMOVE_CHILD
+        let own = child == label || child == frame;
+        let owner = if own { this } else { frame };
+        if remove {
+            hh::remove_child(owner, child, !own);
         } else {
-            hh::ATTACH_CHILD
-        };
-        let mut a = hh::Args::new(if child == label || child == frame {
-            this
-        } else {
-            frame
-        });
-        a.p[0] = child;
-        a.i[0] = i32::from(!(child == label || child == frame));
-        hx.raw(code, &mut a);
+            hh::attach_child(owner, child, !own);
+        }
     }
 }
 
 /// # Safety
 /// `t` is live.
-pub unsafe fn tab_set_icon(hx: Hx, t: *mut Tab, icon: usize) {
+pub unsafe fn tab_set_icon(t: *mut Tab, icon: usize) {
     // SAFETY: caller contract.
     unsafe {
         if let Some(l) = (*t).ls.as_mut() {
             l.icon = icon;
         }
-        label_on_change_text(hx, (*t).ls);
+        label_on_change_text((*t).ls);
     }
 }
 
 /// # Safety
 /// `t` is live.
-pub unsafe fn tab_set_on_top(hx: Hx, t: *mut Tab, v: bool) {
+pub unsafe fn tab_set_on_top(t: *mut Tab, v: bool) {
     // SAFETY: caller contract.
     unsafe {
         let Some(tab) = t.as_mut() else { return };
         tab.on_top = v;
-        let mut pos = local_pos(hx, tab.label);
+        let mut pos = local_pos(tab.label);
         pos.y = (*tab.fs).state.label_pos_y(v);
-        hx.set_position(tab.label, pos);
-        hx.set_flag(hh::WIDGET_SET_ENABLED, tab.frame, v);
-        hx.set_flag(hh::WIDGET_SET_VISIBLE, tab.frame, v);
+        hh::set_position(tab.label, pos);
+        hh::set_enabled(tab.frame, v);
+        hh::set_visible(tab.frame, v);
     }
 }
 
 /// # Safety
 /// `t` is live.
-pub unsafe fn tab_point_is_inside(hx: Hx, t: *mut Tab, p: [f32; 2], only_clipped: bool) -> bool {
+pub unsafe fn tab_point_is_inside(t: *mut Tab, p: [f32; 2], only_clipped: bool) -> bool {
     // SAFETY: caller contract.
     unsafe {
-        let mut a = hh::Args::new((*t).this);
-        a.f[..2].copy_from_slice(&p);
-        if hx.raw(hh::CHECK_POINT_CLIP, &mut a) == 0 {
+        if !hh::check_point_clip((*t).this, p) {
             return false;
         }
         let clips = (*t).base.as_ref().is_some_and(|b| b.clips);
@@ -578,65 +536,59 @@ pub unsafe fn tab_point_is_inside(hx: Hx, t: *mut Tab, p: [f32; 2], only_clipped
             return true;
         }
         let (label, frame) = ((*t).label, (*t).frame);
-        let visible = hx.flag(hh::WIDGET_IS_VISIBLE, label);
+        let visible = hh::is_visible(label);
         tab_point_inside(
             v2(p[0], p[1]),
             visible,
-            hx.global(label),
-            hx.size(label),
-            hx.global(frame),
-            hx.size(frame),
+            hh::global(label),
+            hh::size(label),
+            hh::global(frame),
+            hh::size(frame),
         )
     }
 }
 
 /// # Safety
 /// `t` is live.
-pub unsafe fn tab_on_change_text(hx: Hx, t: *mut Tab) {
+pub unsafe fn tab_on_change_text(t: *mut Tab) {
     // SAFETY: caller contract.
     unsafe {
         if (*t).label != 0 {
-            hx.set_text((*t).label, hx.text((*t).this));
+            hh::set_text((*t).label, hh::text((*t).this));
         }
     }
 }
 
-fn skin_font_y(hx: Hx, w: W) -> f32 {
-    let mut a = hh::Args::new(w);
-    hx.raw(hh::SKIN_FONT_SIZE, &mut a);
-    a.rf[1]
+fn skin_font_y(w: W) -> f32 {
+    hh::skin_font_size(w).y
 }
 
 /// # Safety
 /// `t` is live.
-pub unsafe fn tab_on_change_size(hx: Hx, t: *mut Tab) {
+pub unsafe fn tab_on_change_size(t: *mut Tab) {
     // SAFETY: caller contract.
     unsafe {
         if (*t).label == 0 || (*t).frame == 0 {
             return;
         }
-        let fy = skin_font_y(hx, (*t).this);
+        let fy = skin_font_y((*t).this);
         let l = tab_layout(base_size((*t).base), fy, (*(*t).fs).state.active_offset);
-        hx.set_position((*t).label, l.label_pos);
-        hx.set_position((*t).frame, l.frame_pos);
-        hx.set_size((*t).frame, l.frame_size);
+        hh::set_position((*t).label, l.label_pos);
+        hh::set_position((*t).frame, l.frame_pos);
+        hh::set_size((*t).frame, l.frame_size);
     }
 }
 
 /// # Safety
 /// `t` is live.
-pub unsafe fn tab_on_init(hx: Hx, t: *mut Tab) {
+pub unsafe fn tab_on_init(t: *mut Tab) {
     // SAFETY: caller contract.
     unsafe {
         let this = (*t).this;
         let fs = (*t).fs;
-        let c = |i: usize| {
-            hx.gfx_size(
-                hh::GFX_ACTIVE_SIZE,
-                (*fs).gfx.get(G_TAB_CORNERS + i).copied().unwrap_or(0),
-            )
-        };
-        let fy = skin_font_y(hx, this);
+        let c =
+            |i: usize| hh::gfx_active_size((*fs).gfx.get(G_TAB_CORNERS + i).copied().unwrap_or(0));
+        let fy = skin_font_y(this);
         let init = tab_init(
             base_size((*t).base),
             fy,
@@ -645,34 +597,27 @@ pub unsafe fn tab_on_init(hx: Hx, t: *mut Tab) {
             c(1),
             c(2),
         );
-        let mut a = hh::Args::new(this);
-        a.f[1] = init.label_h;
-        let label = hx.raw(hh::CREATE_TAB_LABEL, &mut a);
+        let label = hh::create_tab_label(this, init.label_h);
         (*t).label = label;
-        let ls = state_of::<Label>(hx, label, KIND_LABEL);
+        let ls = state_of::<Label>(label);
         if let Some(l) = ls.as_mut() {
             l.tab = t;
         }
         (*t).ls = ls;
-        let mut a = hh::Args::new(this);
-        a.f[0] = init.frame_size.x;
-        a.f[1] = init.frame_size.y;
-        a.i[0] = i32::from((*fs).hori);
-        a.i[1] = i32::from((*fs).vert);
-        let frame = hx.raw(hh::CREATE_FRAME, &mut a);
+        let frame = hh::create_frame(this, init.frame_size, (*fs).hori, (*fs).vert);
         (*t).frame = frame;
-        hx.set_flag(hh::WIDGET_SET_CLIP_ACTIVE, frame, true);
-        tab_attach_child(hx, t, label, false);
-        tab_attach_child(hx, t, frame, false);
-        hx.set_position(label, v3(0.0, 0.0, 0.1));
-        hx.set_position(frame, init.frame_pos);
-        tab_set_on_top(hx, t, false);
+        hh::set_clip_active(frame, true);
+        tab_attach_child(t, label, false);
+        tab_attach_child(t, frame, false);
+        hh::set_position(label, v3(0.0, 0.0, 0.1));
+        hh::set_position(frame, init.frame_pos);
+        tab_set_on_top(t, false);
     }
 }
 
 /// # Safety
 /// `t` is live.
-pub unsafe fn tab_on_draw(hx: Hx, t: *mut Tab) {
+pub unsafe fn tab_on_draw(t: *mut Tab) {
     // SAFETY: caller contract.
     unsafe {
         let fs = (*t).fs;
@@ -690,12 +635,12 @@ pub unsafe fn tab_on_draw(hx: Hx, t: *mut Tab) {
             g[G_TAB_CORNERS + 3],
         ];
         let frame = (*t).frame;
-        hx.draw_borders(
+        hh::draw_borders(
             (*t).this,
             g[G_TAB_BG],
             (&b, &k),
-            hx.global(frame),
-            hx.size(frame),
+            hh::global(frame),
+            hh::size(frame),
             Some(true),
         );
     }
@@ -705,7 +650,7 @@ pub unsafe fn tab_on_draw(hx: Hx, t: *mut Tab) {
 
 /// # Safety
 /// `l` is uninitialised storage.
-pub unsafe fn label_init(l: *mut Label, vt: *const HostVt, this: W, base: *mut Base) {
+pub unsafe fn label_init(l: *mut Label, this: W, base: *mut Base) {
     // SAFETY: caller contract.
     unsafe {
         l.write(Label {
@@ -713,14 +658,13 @@ pub unsafe fn label_init(l: *mut Label, vt: *const HostVt, this: W, base: *mut B
             icon: 0,
             this,
             base,
-            host: vt,
         });
     }
 }
 
 /// # Safety
 /// `l` is live.
-pub unsafe fn label_on_mouse_down(hx: Hx, l: *mut Label) -> bool {
+pub unsafe fn label_on_mouse_down(l: *mut Label) -> bool {
     // SAFETY: caller contract.
     unsafe {
         let Some((f, tab_w)) = (*l).tab.as_ref().map(|t| (t.fs, t.this)) else {
@@ -735,20 +679,20 @@ pub unsafe fn label_on_mouse_down(hx: Hx, l: *mut Label) -> bool {
                 break;
             }
             let first = (*f).state.first_visible;
-            arrow_pressed(hx, f, (*f).arrows[1]);
+            arrow_pressed(f, (*f).arrows[1]);
             if (*f).state.first_visible == first {
                 break;
             }
             i += 1;
         }
-        set_tab_on_top(hx, f, tab_w);
+        set_tab_on_top(f, tab_w);
         true
     }
 }
 
 /// # Safety
 /// `l` is live.
-pub unsafe fn label_on_change_text(hx: Hx, l: *mut Label) {
+pub unsafe fn label_on_change_text(l: *mut Label) {
     // SAFETY: caller contract.
     unsafe {
         let Some(label) = l.as_ref().map(|l| (l.tab, l.icon, l.this, l.base)) else {
@@ -759,30 +703,24 @@ pub unsafe fn label_on_change_text(hx: Hx, l: *mut Label) {
             return;
         };
         let b = |i: usize| {
-            hx.gfx_size(
-                hh::GFX_IMAGE_SIZE,
-                (*fs).gfx.get(G_LABEL_BORDERS + i).copied().unwrap_or(0),
-            )
-            .x
+            hh::gfx_image_size((*fs).gfx.get(G_LABEL_BORDERS + i).copied().unwrap_or(0)).x
         };
         let borders = b(0) + b(1);
-        let mut a = hh::Args::new(this);
-        hx.raw(hh::TEXT_LENGTH_SKIN, &mut a);
-        let length = a.rf[0];
-        let icon_w = (icon != 0).then(|| hx.gfx_size(hh::GFX_IMAGE_SIZE, icon).x);
+        let length = hh::text_length_skin(this);
+        let icon_w = (icon != 0).then(|| hh::gfx_image_size(icon).x);
         let width = (*fs).state.label_width(length, borders, icon_w);
         let h = base_size(base).y;
-        hx.set_size(this, v2(width, h));
+        hh::set_size(this, v2(width, h));
     }
 }
 
 /// # Safety
 /// `l` is live.
-pub unsafe fn label_on_get_ui_nav_focus(hx: Hx, l: *mut Label) -> bool {
+pub unsafe fn label_on_get_ui_nav_focus(l: *mut Label) -> bool {
     // SAFETY: caller contract.
     unsafe {
         if let Some(tab) = (*l).tab.as_ref() {
-            set_tab_on_top(hx, tab.fs, tab.this);
+            set_tab_on_top(tab.fs, tab.this);
         }
         true
     }
@@ -790,7 +728,7 @@ pub unsafe fn label_on_get_ui_nav_focus(hx: Hx, l: *mut Label) -> bool {
 
 /// # Safety
 /// `l` is live.
-pub unsafe fn label_on_draw(hx: Hx, l: *mut Label) {
+pub unsafe fn label_on_draw(l: *mut Label) {
     // SAFETY: caller contract.
     unsafe {
         let Some((tab, icon, w, base)) = l.as_ref().map(|l| (l.tab, l.icon, l.this, l.base)) else {
@@ -799,8 +737,8 @@ pub unsafe fn label_on_draw(hx: Hx, l: *mut Label) {
         let Some((fs, on_top)) = tab.as_ref().map(|t| (t.fs, t.on_top)) else {
             return;
         };
-        let global = hx.global(w);
-        let icon_w = (icon != 0).then(|| hx.gfx_size(hh::GFX_IMAGE_SIZE, icon).x);
+        let global = hh::global(w);
+        let icon_w = (icon != 0).then(|| hh::gfx_image_size(icon).x);
         let text_pos = (*fs).state.label_text_pos(global, icon_w);
         let g = &(*fs).gfx;
         let bg = if on_top {
@@ -808,7 +746,7 @@ pub unsafe fn label_on_draw(hx: Hx, l: *mut Label) {
         } else {
             g[G_LABEL_BG]
         };
-        hx.draw_text(w, hx.text(w), text_pos, ALIGN_LEFT, false);
+        hh::draw_text(w, hh::text(w), text_pos, ALIGN_LEFT, false);
         let b = [
             g[G_LABEL_BORDERS],
             g[G_LABEL_BORDERS + 1],
@@ -821,6 +759,6 @@ pub unsafe fn label_on_draw(hx: Hx, l: *mut Label) {
             g[G_LABEL_CORNERS + 2],
             g[G_LABEL_CORNERS + 3],
         ];
-        hx.draw_borders(w, bg, (&b, &k), hx.global(w), base_size(base), None);
+        hh::draw_borders(w, bg, (&b, &k), hh::global(w), base_size(base), None);
     }
 }

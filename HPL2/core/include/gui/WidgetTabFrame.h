@@ -72,12 +72,12 @@ namespace hpl
 			pLabel->SetPosition(vNewPos);
 		}
 
-		void SetIcon(cGuiGfxElement* apIcon){ ohpl_h20_tab_set_icon(&gH20Host, &H(), (uintptr_t)apIcon); }
+		void SetIcon(cGuiGfxElement* apIcon){ ohpl_h20_tab_set_icon(&H(), (uintptr_t)apIcon); }
 
 		cWidgetTabFrame* GetParentTabFrame() { return H().frame; }
 		cWidgetTabLabel* GetTabLabel() { return H().label; }
 
-		void SetOnTop(bool abX){ ohpl_h20_tab_set_on_top(&gH20Host, &H(), abX); }
+		void SetOnTop(bool abX){ ohpl_h20_tab_set_on_top(&H(), abX); }
 		bool IsOnTop() { return H().onTop; }
 
 	private:
@@ -90,11 +90,11 @@ namespace hpl
 		cWidgetTabFrame(cGuiSet* apSet, cGuiSkin* apSkin) : iWidget(eWidgetType_TabFrame, apSet, apSkin)
 		{ ohpl_gw_set_kind((uintptr_t)this, kOhplGwTabFrame, 0, 0); }
 
-		cWidgetTab* AddTab(const tWString& asTabCaption){ return (cWidgetTab*)ohpl_h20_tf_add_tab(&gH20Host, &H(), asTabCaption.data(), asTabCaption.size()); }
-		void ClearTabs(){ ohpl_h20_tf_clear_tabs(&gH20Host, &H()); }
+		cWidgetTab* AddTab(const tWString& asTabCaption){ return (cWidgetTab*)ohpl_h20_tf_add_tab(&H(), asTabCaption.data(), asTabCaption.size()); }
+		void ClearTabs(){ ohpl_h20_tf_clear_tabs(&H()); }
 
-		int GetTabNum(){ return ohpl_h20_tf_tab_num(&gH20Host, &H()); }
-		cWidgetTab* GetTab(int alIdx){ return (cWidgetTab*)ohpl_h20_tf_tab(&gH20Host, &H(), alIdx); }
+		int GetTabNum(){ return ohpl_h20_tf_tab_num(&H()); }
+		cWidgetTab* GetTab(int alIdx){ return (cWidgetTab*)ohpl_h20_tf_tab(&H(), alIdx); }
 		cWidgetTab* GetTab(const tWString& asTabCaption)
 		{
 			for(int i=0;i<GetTabNum(); ++i)
@@ -112,12 +112,12 @@ namespace hpl
 		void SetForegroundZ(float afZ) { H().fgZ = afZ; }
 		float GetForegroundZ() { return H().fgZ; }
 
-		int GetTabOnTopIndex(){ return ohpl_h20_tf_tab_on_top_index(&gH20Host, &H()); }
-		void SetTabOnTop(cWidgetTab* apTab){ ohpl_h20_tf_set_tab_on_top(&gH20Host, &H(), (uintptr_t)apTab); }
-		void SetTabOnTopByIndex(int alIdx){ ohpl_h20_tf_set_tab_on_top_by_index(&gH20Host, &H(), alIdx); }
+		int GetTabOnTopIndex(){ return ohpl_h20_tf_tab_on_top_index(&H()); }
+		void SetTabOnTop(cWidgetTab* apTab){ ohpl_h20_tf_set_tab_on_top(&H(), (uintptr_t)apTab); }
+		void SetTabOnTopByIndex(int alIdx){ ohpl_h20_tf_set_tab_on_top_by_index(&H(), alIdx); }
 
-		void SetHorizontalScrollEnabled(bool abX){ ohpl_h20_tf_set_hori_scroll(&gH20Host, &H(), abX); }
-		void SetVerticalScrollEnabled(bool abX){ ohpl_h20_tf_set_vert_scroll(&gH20Host, &H(), abX); }
+		void SetHorizontalScrollEnabled(bool abX){ ohpl_h20_tf_set_hori_scroll(&H(), abX); }
+		void SetVerticalScrollEnabled(bool abX){ ohpl_h20_tf_set_vert_scroll(&H(), abX); }
 
 	private:
 		OhplH20TabFrame& H(){ return *(OhplH20TabFrame*)ohpl_gw_state((uintptr_t)this); }

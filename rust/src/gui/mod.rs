@@ -70,4 +70,3 @@ pub mod gw_kinds;
 
 pub(crate) mod direct;
 pub mod gw_menu;
-pub mod gw_ops;

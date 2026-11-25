@@ -137,17 +137,14 @@ fn op_inner(w: usize, op: i32, arg: usize) -> Option<usize> {
                     t.st.enter_on_lost_focus = on;
                 }
             }
-            wop::MAX_LEN => h20_ffi::ohpl_h20_tb_set_max_text_length(vt(), text_ptr(w), arg as i32),
-            wop::SELECT_TEXT => h20_ffi::ohpl_h20_tb_set_selected_text(vt(), text_ptr(w), 0, -1),
+            wop::MAX_LEN => h20_ffi::ohpl_h20_tb_set_max_text_length(text_ptr(w), arg as i32),
+            wop::SELECT_TEXT => h20_ffi::ohpl_h20_tb_set_selected_text(text_ptr(w), 0, -1),
             wop::LIST_CLEAR => gi::clear(w),
             wop::LIST_NUM => return Some(gi::num(w)),
             wop::LIST_SELECTED => {
-                return Some(
-                    h20_ffi::ohpl_h20_lb_selected_item(vt(), list_ptr(w)) as isize as usize,
-                );
+                return Some(h20_ffi::ohpl_h20_lb_selected_item(list_ptr(w)) as isize as usize);
             }
             wop::LIST_SET_SELECTED => h20_ffi::ohpl_h20_lb_set_selected_item(
-                vt(),
                 list_ptr(w),
                 arg as i32,
                 false,
@@ -220,10 +217,6 @@ pub(super) fn nav(w: W, dir: i32, target: W) {
 
 const LIST_SELECT_TOGGLE: i32 = 1;
 
-fn vt() -> *const crate::gui::h20_host::HostVt {
-    gw_h20::vt()
-}
-
 fn text_ptr(w: usize) -> *mut TextBox {
     match gw_h20::ptr(w) {
         Some(P::Text(t)) => t,
@@ -288,7 +281,7 @@ pub(super) fn set_image_file(w: W, file: &[u32]) {
 pub(super) fn set_illegal_chars(w: W, text: &[u32]) {
     // SAFETY: the widget is a live text box; `text` is readable.
     unsafe {
-        h20_ffi::ohpl_h20_tb_set_illegal_chars(vt(), text_ptr(w.addr()), text.as_ptr(), text.len());
+        h20_ffi::ohpl_h20_tb_set_illegal_chars(text_ptr(w.addr()), text.as_ptr(), text.len());
     }
 }
 

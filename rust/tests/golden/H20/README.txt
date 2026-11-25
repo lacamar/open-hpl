@@ -13,8 +13,7 @@ widgets_<skin>.txt  h20_widgets stdout with the trace replaced by its line count
                     The harness allocates from a bump arena: draw order ties are broken by clip/material/texture
                     addresses (cGuiRenderObjectCompare), so heap layout must not differ between the two runs.
 
-cargo test (gui::h20_tests) checks the host op table against RustGuiH20.h and runs the list selection logic
-against a mock host.
+cargo test (gui::h20_tests) runs the list selection logic against real widgets and items.
 
 Record (needs a build dir of this tree with `make TraceRecorderTests`):
   build.sh <repo> <build dir> <out> harness/h20_widgets.cpp

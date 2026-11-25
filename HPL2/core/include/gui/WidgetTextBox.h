@@ -47,16 +47,16 @@ namespace hpl {
 		void SetForceCallBackOnEnter(bool abX) { St().force_enter=abX; }
 		bool GetForceCallBackOnEnter() { return St().force_enter; }
 
-		void SetMaxTextLength(int alLength){ ohpl_h20_tb_set_max_text_length(&gH20Host, &H(), alLength); }
+		void SetMaxTextLength(int alLength){ ohpl_h20_tb_set_max_text_length(&H(), alLength); }
 		int GetMaxTextLength(){return St().max_chars;}
 
-		void SetSelectedText(int alStart=0, int alCount=-1){ ohpl_h20_tb_set_selected_text(&gH20Host, &H(), alStart, alCount); }
+		void SetSelectedText(int alStart=0, int alCount=-1){ ohpl_h20_tb_set_selected_text(&H(), alStart, alCount); }
 
-		cVector2f GetBackgroundSize(){ cVector2f vSize; ohpl_h20_tb_background_size(&gH20Host, &H(), &vSize); return vSize; }
+		cVector2f GetBackgroundSize(){ cVector2f vSize; ohpl_h20_tb_background_size(&H(), &vSize); return vSize; }
 
-		void SetMaxTextSizeNeg(float afX){ St().max_size_neg = afX; ohpl_h20_tb_on_change_size(&gH20Host, &H()); }
+		void SetMaxTextSizeNeg(float afX){ St().max_size_neg = afX; ohpl_h20_tb_on_change_size(&H()); }
 
-		void SetCanEdit(bool abX){ ohpl_h20_tb_set_can_edit(&gH20Host, &H(), abX); }
+		void SetCanEdit(bool abX){ ohpl_h20_tb_set_can_edit(&H(), abX); }
 		bool GetCanEdit(){return St().can_edit;}
 
 		void SetShowButtons(bool abX) { H().showButtons = abX; }
@@ -64,8 +64,8 @@ namespace hpl {
 		void SetNumericAdd(float afX) { St().numeric_add = afX; }
 		float GetNumericAdd() { return St().numeric_add; }
 
-		void SetNumericValue(float afX){ ohpl_h20_tb_set_numeric_value(&gH20Host, &H(), afX); }
-		float GetNumericValue(){ return ohpl_h20_tb_numeric_value(&gH20Host, &H()); }
+		void SetNumericValue(float afX){ ohpl_h20_tb_set_numeric_value(&H(), afX); }
+		float GetNumericValue(){ return ohpl_h20_tb_numeric_value(&H()); }
 
 		void SetLowerBound(bool abX, float afValue=0){ St().has_lower = abX; St().lower = afValue; }
 		float GetLowerBound() { return St().lower; }
@@ -77,7 +77,7 @@ namespace hpl {
 
 		static void SetDefaultDecimals(int alX) { ohpl_h20_tb_set_default_decimals(alX); }
 
-		void SetIllegalChars(const tWString &asIllegalChars){ ohpl_h20_tb_set_illegal_chars(&gH20Host, &H(), asIllegalChars.data(), asIllegalChars.size()); }
+		void SetIllegalChars(const tWString &asIllegalChars){ ohpl_h20_tb_set_illegal_chars(&H(), asIllegalChars.data(), asIllegalChars.size()); }
 
 		void SetLegalCharCodeLimitEnabled(bool abX){ St().limit_enabled = abX; }
 

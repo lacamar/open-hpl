@@ -5,7 +5,6 @@ use super::host::{Args, op};
 use crate::gui::g1_set::{self, Set};
 use crate::gui::gw_h20::{self, P};
 use crate::gui::gw_kinds::Kind;
-use crate::gui::h20_host::HostVt;
 use crate::gui::h20_tab::{Frame, Tab};
 use crate::gui::{direct as d, gw, gw_items as gi, gw_kinds, h20_ffi};
 use crate::types::Color;
@@ -115,14 +114,14 @@ fn nul_cut(t: &[u32]) -> &[u32] {
     t.split(|&c| c == 0).next().unwrap_or_default()
 }
 
-fn hx_add_tab(hx: *const HostVt, f: *mut Frame, text: &[u32]) -> usize {
+fn hx_add_tab(f: *mut Frame, text: &[u32]) -> usize {
     // SAFETY: the frame state is live and `text` readable for its length.
-    unsafe { h20_ffi::ohpl_h20_tf_add_tab(hx, f, text.as_ptr(), text.len()) }
+    unsafe { h20_ffi::ohpl_h20_tf_add_tab(f, text.as_ptr(), text.len()) }
 }
 
-fn tab_frame(w: usize, run: impl FnOnce(*const HostVt, *mut Frame) -> usize) -> usize {
+fn tab_frame(w: usize, run: impl FnOnce(*mut Frame) -> usize) -> usize {
     match gw_h20::ptr(w) {
-        Some(P::TabFrame(f)) => run(gw_h20::vt(), f),
+        Some(P::TabFrame(f)) => run(f),
         _ => 0,
     }
 }
@@ -204,13 +203,7 @@ fn widget_op(code: i32, a: &mut Args) -> Option<usize> {
             if let Some(P::Combo(c)) = gw_h20::ptr(w) {
                 // SAFETY: the combo state is live while the widget is.
                 unsafe {
-                    h20_ffi::ohpl_h20_cb_set_selected_item(
-                        gw_h20::vt(),
-                        c,
-                        a.i[0],
-                        a.i[1] != 0,
-                        a.i[2] != 0,
-                    );
+                    h20_ffi::ohpl_h20_cb_set_selected_item(c, a.i[0], a.i[1] != 0, a.i[2] != 0);
                 }
             }
         }
@@ -221,21 +214,21 @@ fn widget_op(code: i32, a: &mut Args) -> Option<usize> {
             }) as u32 as usize);
         }
         op::COMBO_NUM => return Some(gi::num(w)),
-        op::TAB_ADD => return Some(tab_frame(w, |hx, f| hx_add_tab(hx, f, wide(a, 0)))),
+        op::TAB_ADD => return Some(tab_frame(w, |f| hx_add_tab(f, wide(a, 0)))),
         op::TAB_NUM => {
-            return Some(tab_frame(w, |hx, f| {
+            return Some(tab_frame(w, |f| {
                 // SAFETY: the frame state is live while the widget is.
-                unsafe { h20_ffi::ohpl_h20_tf_tab_num(hx, f) as u32 as usize }
+                unsafe { h20_ffi::ohpl_h20_tf_tab_num(f) as u32 as usize }
             }));
         }
         op::TAB_GET => {
-            return Some(tab_frame(w, |hx, f| {
+            return Some(tab_frame(w, |f| {
                 // SAFETY: as above.
-                unsafe { h20_ffi::ohpl_h20_tf_tab(hx, f, a.i[0]) }
+                unsafe { h20_ffi::ohpl_h20_tf_tab(f, a.i[0]) }
             }));
         }
         op::TAB_TOP => {
-            return Some(tab_frame(w, |_, f| {
+            return Some(tab_frame(w, |f| {
                 // SAFETY: the frame state is live while the widget is.
                 unsafe { (*f).top_tab }
             }));

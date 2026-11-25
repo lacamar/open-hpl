@@ -43,13 +43,13 @@ namespace hpl {
 		{ ohpl_gw_set_kind_ctr((uintptr_t)this, kOhplGwCombo, 0, 0); }
 		virtual ~cWidgetComboBox() {}
 
-		void SetSelectedItem(int alX,bool abMoveList=false, bool abGenCallback=true){ ohpl_h20_cb_set_selected_item(&gH20Host, &H(), alX, abMoveList, abGenCallback); }
+		void SetSelectedItem(int alX,bool abMoveList=false, bool abGenCallback=true){ ohpl_h20_cb_set_selected_item(&H(), alX, abMoveList, abGenCallback); }
 		int GetSelectedItem(){ return H().combo.selected;}
 
-		void SetCanEdit(bool abX){ ohpl_h20_cb_set_can_edit(&gH20Host, &H(), abX); }
-		bool GetCanEdit(){ return ohpl_h20_cb_can_edit(&gH20Host, &H()); }
+		void SetCanEdit(bool abX){ ohpl_h20_cb_set_can_edit(&H(), abX); }
+		bool GetCanEdit(){ return ohpl_h20_cb_can_edit(&H()); }
 
-		void SetMaxShownItems(int alX){ ohpl_h20_cb_set_max_shown_items(&gH20Host, &H(), alX); }
+		void SetMaxShownItems(int alX){ ohpl_h20_cb_set_max_shown_items(&H(), alX); }
 		int GetMaxShownItems(){ return H().combo.max_items;}
 
 

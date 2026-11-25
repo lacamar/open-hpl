@@ -35,9 +35,9 @@ namespace hpl {
 		void AddColumn(const tString& asName, const int alIndex, eFontAlign aAlign=eFontAlign_Left )
 		{
 			tWString sName = cString::To16Char(asName);
-			ohpl_h20_lb_add_column(&gH20Host, &H(), sName.data(), sName.size(), alIndex, aAlign);
+			ohpl_h20_lb_add_column(&H(), sName.data(), sName.size(), alIndex, aAlign);
 		}
-		void SetColumnWidth(const int alIdx, float afWidth){ ohpl_h20_lb_set_column_width(&gH20Host, &H(), alIdx, afWidth); }
+		void SetColumnWidth(const int alIdx, float afWidth){ ohpl_h20_lb_set_column_width(&H(), alIdx, afWidth); }
 	};
 
 };

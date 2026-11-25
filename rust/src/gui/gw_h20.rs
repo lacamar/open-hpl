@@ -9,7 +9,6 @@ use super::gw_kinds::Kind;
 use super::h19_widget::Op;
 use super::h20_combo::Combo;
 use super::h20_ffi as f;
-use super::h20_host::{HostVt, Hx};
 use super::h20_list::{KIND_MULTI, ListBase};
 use super::h20_tab::{Frame, Label, Tab};
 use super::h20_text::TextBox;
@@ -39,10 +38,6 @@ const MSG_UI_BUTTON_PRESS: i32 = 19;
 const MSG_UI_BUTTON_RELEASE: i32 = 20;
 const MSG_UI_BUTTON_DBL: i32 = 21;
 const MSG_GET_UI_NAV_FOCUS: i32 = 22;
-
-pub(crate) fn vt() -> *const HostVt {
-    &raw const super::gw_ops::VT
-}
 
 /// The state pointer of a complex widget (boxed, stable while the widget lives).
 #[derive(Clone, Copy)]
@@ -86,7 +81,7 @@ pub(crate) fn set_kind(w: W, id: i32, a: i32, ctr: usize) {
     };
     if id == KIND_TEXTBOX {
         // SAFETY: `base` is the widget's live base state.
-        let t = boxed(|p| unsafe { super::h20_text::init(p, vt(), w, base, a != 0) });
+        let t = boxed(|p| unsafe { super::h20_text::init(p, w, base, a != 0) });
         with(w, |g| g.kind = Kind::Text(t));
         gw::load_graphics(w);
         let gfx = gw::skin_gfx(gw::skin_of(w), "PointerText");
@@ -94,18 +89,18 @@ pub(crate) fn set_kind(w: W, id: i32, a: i32, ctr: usize) {
     } else if id == KIND_LIST || id == KIND_MPLIST {
         let kind = i32::from(id == KIND_MPLIST);
         // SAFETY: as above; `ctr` is the shell's item container.
-        let t = boxed(|p| unsafe { super::h20_list::init(Hx::new(vt()), p, w, w, base, kind) });
+        let t = boxed(|p| unsafe { super::h20_list::init(p, w, w, base, kind) });
         with(w, |g| {
             g.kind = Kind::List(t);
             g.base.clips = true;
         });
     } else if id == KIND_COMBO {
         // SAFETY: as above.
-        let t = boxed(|p| unsafe { super::h20_combo::init(Hx::new(vt()), vt(), p, w, w, base) });
+        let t = boxed(|p| unsafe { super::h20_combo::init(p, w, w, base) });
         with(w, |g| g.kind = Kind::Combo(t));
     } else if id == KIND_TABFRAME {
         // SAFETY: as above.
-        let t = boxed(|p| unsafe { super::h20_tab::frame_init(p, vt(), w, base) });
+        let t = boxed(|p| unsafe { super::h20_tab::frame_init(p, w, base) });
         with(w, |g| g.kind = Kind::TabFrame(t));
         gw::load_graphics(w);
         with(w, |g| g.base.clips = true);
@@ -115,12 +110,12 @@ pub(crate) fn set_kind(w: W, id: i32, a: i32, ctr: usize) {
             return;
         };
         // SAFETY: as above; the frame state outlives its tabs.
-        let t = boxed(|p| unsafe { super::h20_tab::tab_init_state(p, vt(), w, ctr, fs, base) });
+        let t = boxed(|p| unsafe { super::h20_tab::tab_init_state(p, w, ctr, fs, base) });
         with(w, |g| g.kind = Kind::Tab(t));
         gw::load_graphics(w);
     } else if id == KIND_TABLABEL {
         // SAFETY: as above.
-        let t = boxed(|p| unsafe { super::h20_tab::label_init(p, vt(), w, base) });
+        let t = boxed(|p| unsafe { super::h20_tab::label_init(p, w, base) });
         with(w, |g| g.kind = Kind::TabLabel(t));
         gw::load_graphics(w);
     }
@@ -134,35 +129,35 @@ pub(crate) fn teardown(w: W) {
         match p {
             P::Text(t) => {
                 if !destroying {
-                    f::ohpl_h20_tb_destroy_buttons(vt(), t);
+                    f::ohpl_h20_tb_destroy_buttons(t);
                 }
                 f::ohpl_h20_tb_free(t);
             }
             P::List(l) => {
                 if !destroying {
                     if (*l).kind == KIND_MULTI {
-                        f::ohpl_h20_lb_destroy_columns(vt(), l);
+                        f::ohpl_h20_lb_destroy_columns(l);
                     }
-                    f::ohpl_h20_lb_destroy_slider(vt(), l);
+                    f::ohpl_h20_lb_destroy_slider(l);
                 }
                 f::ohpl_h20_lb_free(l);
                 super::gw_items::free_all(w);
             }
             P::Combo(c) => {
                 if !destroying {
-                    f::ohpl_h20_cb_destroy_children(vt(), c);
+                    f::ohpl_h20_cb_destroy_children(c);
                 }
                 super::gw_items::free_all(w);
             }
             P::TabFrame(t) => {
                 if !destroying {
-                    f::ohpl_h20_tf_destroy(vt(), t);
+                    f::ohpl_h20_tf_destroy(t);
                 }
                 f::ohpl_h20_tf_free(t);
             }
             P::Tab(t) => {
                 if !destroying {
-                    f::ohpl_h20_tab_destroy(vt(), t);
+                    f::ohpl_h20_tab_destroy(t);
                 }
             }
             P::TabLabel(_) => {}
@@ -173,101 +168,98 @@ pub(crate) fn teardown(w: W) {
 /// Virtual `op` of a complex widget; `None` when the kind is not one or leaves it to the base.
 pub(crate) fn call(w: W, op: Op, other: W, d: &Msg, fl: f32) -> Option<bool> {
     let p = ptr(w)?;
-    let v = vt();
     // SAFETY: the state is live for the call; the logic re-enters through the host table only.
     unsafe {
         match p {
             P::Text(t) => match op {
-                Op::ChangeSize => f::ohpl_h20_tb_on_change_size(v, t),
-                Op::ChangeText => f::ohpl_h20_tb_on_change_text(v, t),
-                Op::Draw => f::ohpl_h20_tb_on_draw(v, t),
+                Op::ChangeSize => f::ohpl_h20_tb_on_change_size(t),
+                Op::ChangeText => f::ohpl_h20_tb_on_change_text(t),
+                Op::Draw => f::ohpl_h20_tb_on_draw(t),
                 Op::Virtual => {
                     return match other as i32 {
-                        MSG_MOUSE_MOVE => Some(f::ohpl_h20_tb_on_mouse_move(v, t, d)),
-                        MSG_MOUSE_DOWN => Some(f::ohpl_h20_tb_on_mouse_down(v, t, d)),
-                        MSG_MOUSE_UP => Some(f::ohpl_h20_tb_on_mouse_up(v, t, d)),
-                        MSG_MOUSE_DBL => Some(f::ohpl_h20_tb_on_mouse_double_click(v, t, d)),
+                        MSG_MOUSE_MOVE => Some(f::ohpl_h20_tb_on_mouse_move(t, d)),
+                        MSG_MOUSE_DOWN => Some(f::ohpl_h20_tb_on_mouse_down(t, d)),
+                        MSG_MOUSE_UP => Some(f::ohpl_h20_tb_on_mouse_up(t, d)),
+                        MSG_MOUSE_DBL => Some(f::ohpl_h20_tb_on_mouse_double_click(t, d)),
                         MSG_MOUSE_ENTER => Some(true),
-                        MSG_GOT_FOCUS => Some(f::ohpl_h20_tb_on_got_focus(v, t)),
-                        MSG_GOT_TAB_FOCUS => Some(f::ohpl_h20_tb_on_got_tab_focus(v, t)),
-                        MSG_LOST_FOCUS => Some(f::ohpl_h20_tb_on_lost_focus(v, t, d)),
-                        MSG_KEY_PRESS => Some(f::ohpl_h20_tb_on_key_press(v, t, d)),
-                        MSG_UI_BUTTON_PRESS => Some(f::ohpl_h20_tb_on_ui_button_press(v, t, d)),
+                        MSG_GOT_FOCUS => Some(f::ohpl_h20_tb_on_got_focus(t)),
+                        MSG_GOT_TAB_FOCUS => Some(f::ohpl_h20_tb_on_got_tab_focus(t)),
+                        MSG_LOST_FOCUS => Some(f::ohpl_h20_tb_on_lost_focus(t, d)),
+                        MSG_KEY_PRESS => Some(f::ohpl_h20_tb_on_key_press(t, d)),
+                        MSG_UI_BUTTON_PRESS => Some(f::ohpl_h20_tb_on_ui_button_press(t, d)),
                         _ => None,
                     };
                 }
                 _ => return None,
             },
             P::List(l) => match op {
-                Op::ChangeSize => f::ohpl_h20_lb_on_change_size(v, l),
-                Op::Draw => f::ohpl_h20_lb_on_draw(v, l),
-                Op::DrawAfterClip => f::ohpl_h20_lb_on_draw_after_clip(v, l, other),
+                Op::ChangeSize => f::ohpl_h20_lb_on_change_size(l),
+                Op::Draw => f::ohpl_h20_lb_on_draw(l),
+                Op::DrawAfterClip => f::ohpl_h20_lb_on_draw_after_clip(l, other),
                 Op::Virtual => {
                     return match other as i32 {
                         MSG_MOUSE_MOVE | MSG_MOUSE_UP => Some(true),
-                        MSG_MOUSE_DOWN => Some(f::ohpl_h20_lb_on_mouse_down(v, l, d)),
-                        MSG_MOUSE_DBL => Some(f::ohpl_h20_lb_on_mouse_double_click(v, l, d)),
+                        MSG_MOUSE_DOWN => Some(f::ohpl_h20_lb_on_mouse_down(l, d)),
+                        MSG_MOUSE_DBL => Some(f::ohpl_h20_lb_on_mouse_double_click(l, d)),
                         MSG_MOUSE_ENTER | MSG_MOUSE_LEAVE | MSG_UI_ARROW_RELEASE => Some(false),
-                        MSG_KEY_PRESS => Some(f::ohpl_h20_lb_on_key_press(v, l, d)),
-                        MSG_UI_ARROW_PRESS => Some(f::ohpl_h20_lb_on_ui_arrow_press(v, l, d)),
-                        MSG_UI_BUTTON_PRESS => Some(f::ohpl_h20_lb_on_ui_button_press(v, l, d)),
-                        MSG_UI_BUTTON_RELEASE => Some(f::ohpl_h20_lb_on_ui_button_release(v, l)),
-                        MSG_UI_BUTTON_DBL => {
-                            Some(f::ohpl_h20_lb_on_ui_button_double_press(v, l, d))
-                        }
+                        MSG_KEY_PRESS => Some(f::ohpl_h20_lb_on_key_press(l, d)),
+                        MSG_UI_ARROW_PRESS => Some(f::ohpl_h20_lb_on_ui_arrow_press(l, d)),
+                        MSG_UI_BUTTON_PRESS => Some(f::ohpl_h20_lb_on_ui_button_press(l, d)),
+                        MSG_UI_BUTTON_RELEASE => Some(f::ohpl_h20_lb_on_ui_button_release(l)),
+                        MSG_UI_BUTTON_DBL => Some(f::ohpl_h20_lb_on_ui_button_double_press(l, d)),
                         _ => None,
                     };
                 }
                 _ => return None,
             },
             P::Combo(c) => match op {
-                Op::ChangeSize => f::ohpl_h20_cb_on_change_size(v, c),
-                Op::ChangeText => f::ohpl_h20_cb_on_change_text(v, c),
-                Op::Draw => f::ohpl_h20_cb_on_draw(v, c),
+                Op::ChangeSize => f::ohpl_h20_cb_on_change_size(c),
+                Op::ChangeText => f::ohpl_h20_cb_on_change_text(c),
+                Op::Draw => f::ohpl_h20_cb_on_draw(c),
                 Op::PointIsInside => {
                     let p = d.pos();
-                    return Some(f::ohpl_h20_cb_point_is_inside(v, c, p[0], p[1], fl != 0.0));
+                    return Some(f::ohpl_h20_cb_point_is_inside(c, p[0], p[1], fl != 0.0));
                 }
                 Op::Virtual => {
                     return match other as i32 {
-                        MSG_MOUSE_MOVE => Some(f::ohpl_h20_cb_on_mouse_move(v, c, d)),
-                        MSG_MOUSE_DOWN => Some(f::ohpl_h20_cb_on_mouse_down(v, c, d)),
-                        MSG_MOUSE_UP => Some(f::ohpl_h20_cb_on_mouse_up(v, c, d)),
+                        MSG_MOUSE_MOVE => Some(f::ohpl_h20_cb_on_mouse_move(c, d)),
+                        MSG_MOUSE_DOWN => Some(f::ohpl_h20_cb_on_mouse_down(c, d)),
+                        MSG_MOUSE_UP => Some(f::ohpl_h20_cb_on_mouse_up(c, d)),
                         MSG_MOUSE_ENTER | MSG_MOUSE_LEAVE => Some(false),
-                        MSG_UI_ARROW_PRESS => Some(f::ohpl_h20_cb_on_ui_arrow_press(v, c, d)),
-                        MSG_UI_BUTTON_PRESS => Some(f::ohpl_h20_cb_on_ui_button_press(v, c, d)),
-                        MSG_UI_BUTTON_RELEASE => Some(f::ohpl_h20_cb_on_ui_button_release(v, c, d)),
-                        MSG_LOST_FOCUS => Some(f::ohpl_h20_cb_on_lost_focus(v, c, d)),
+                        MSG_UI_ARROW_PRESS => Some(f::ohpl_h20_cb_on_ui_arrow_press(c, d)),
+                        MSG_UI_BUTTON_PRESS => Some(f::ohpl_h20_cb_on_ui_button_press(c, d)),
+                        MSG_UI_BUTTON_RELEASE => Some(f::ohpl_h20_cb_on_ui_button_release(c, d)),
+                        MSG_LOST_FOCUS => Some(f::ohpl_h20_cb_on_lost_focus(c, d)),
                         _ => None,
                     };
                 }
                 _ => return None,
             },
             P::TabFrame(t) => match op {
-                Op::ChangeSize => f::ohpl_h20_tf_on_change_size(v, t),
+                Op::ChangeSize => f::ohpl_h20_tf_on_change_size(t),
                 Op::Virtual if other as i32 == MSG_UI_BUTTON_PRESS => {
-                    return Some(f::ohpl_h20_tf_on_ui_button_press(v, t, d));
+                    return Some(f::ohpl_h20_tf_on_ui_button_press(t, d));
                 }
                 _ => return None,
             },
             P::Tab(t) => match op {
-                Op::ChangeText => f::ohpl_h20_tab_on_change_text(v, t),
-                Op::ChangeSize => f::ohpl_h20_tab_on_change_size(v, t),
-                Op::Draw => f::ohpl_h20_tab_on_draw(v, t),
-                Op::RemoveChild => f::ohpl_h20_tab_attach_child(v, t, other, true),
+                Op::ChangeText => f::ohpl_h20_tab_on_change_text(t),
+                Op::ChangeSize => f::ohpl_h20_tab_on_change_size(t),
+                Op::Draw => f::ohpl_h20_tab_on_draw(t),
+                Op::RemoveChild => f::ohpl_h20_tab_attach_child(t, other, true),
                 Op::PointIsInside => {
                     let p = d.pos();
-                    return Some(f::ohpl_h20_tab_point_is_inside(v, t, p[0], p[1], fl != 0.0));
+                    return Some(f::ohpl_h20_tab_point_is_inside(t, p[0], p[1], fl != 0.0));
                 }
                 _ => return None,
             },
             P::TabLabel(l) => match op {
-                Op::ChangeText => f::ohpl_h20_tl_on_change_text(v, l),
-                Op::Draw => f::ohpl_h20_tl_on_draw(v, l),
+                Op::ChangeText => f::ohpl_h20_tl_on_change_text(l),
+                Op::Draw => f::ohpl_h20_tl_on_draw(l),
                 Op::Virtual => {
                     return match other as i32 {
-                        MSG_MOUSE_DOWN => Some(f::ohpl_h20_tl_on_mouse_down(v, l)),
-                        MSG_GET_UI_NAV_FOCUS => Some(f::ohpl_h20_tl_on_get_ui_nav_focus(v, l)),
+                        MSG_MOUSE_DOWN => Some(f::ohpl_h20_tl_on_mouse_down(l)),
+                        MSG_GET_UI_NAV_FOCUS => Some(f::ohpl_h20_tl_on_get_ui_nav_focus(l)),
                         _ => None,
                     };
                 }
@@ -279,29 +271,27 @@ pub(crate) fn call(w: W, op: Op, other: W, d: &Msg, fl: f32) -> Option<bool> {
 }
 
 pub(crate) fn on_init(w: W) {
-    let v = vt();
     // SAFETY: as in `call`.
     unsafe {
         match ptr(w) {
-            Some(P::Text(t)) => f::ohpl_h20_tb_on_init(v, t),
-            Some(P::List(l)) => f::ohpl_h20_lb_on_init(v, l),
-            Some(P::Combo(c)) => f::ohpl_h20_cb_on_init(v, c),
-            Some(P::TabFrame(t)) => f::ohpl_h20_tf_on_init(v, t),
-            Some(P::Tab(t)) => f::ohpl_h20_tab_on_init(v, t),
+            Some(P::Text(t)) => f::ohpl_h20_tb_on_init(t),
+            Some(P::List(l)) => f::ohpl_h20_lb_on_init(l),
+            Some(P::Combo(c)) => f::ohpl_h20_cb_on_init(c),
+            Some(P::TabFrame(t)) => f::ohpl_h20_tf_on_init(t),
+            Some(P::Tab(t)) => f::ohpl_h20_tab_on_init(t),
             Some(P::TabLabel(_)) | None => {}
         }
     }
 }
 
 pub(crate) fn on_load_graphics(w: W) -> bool {
-    let v = vt();
     // SAFETY: as in `call`.
     unsafe {
         match ptr(w) {
-            Some(P::Text(t)) => f::ohpl_h20_tb_on_load_graphics(v, t),
-            Some(P::List(l)) => f::ohpl_h20_lb_on_load_graphics(v, l),
-            Some(P::Combo(c)) => f::ohpl_h20_cb_on_load_graphics(v, c),
-            Some(P::TabFrame(t)) => f::ohpl_h20_tf_on_load_graphics(v, t),
+            Some(P::Text(t)) => f::ohpl_h20_tb_on_load_graphics(t),
+            Some(P::List(l)) => f::ohpl_h20_lb_on_load_graphics(l),
+            Some(P::Combo(c)) => f::ohpl_h20_cb_on_load_graphics(c),
+            Some(P::TabFrame(t)) => f::ohpl_h20_tf_on_load_graphics(t),
             Some(P::Tab(_) | P::TabLabel(_)) => {}
             None => return false,
         }
@@ -318,7 +308,7 @@ pub(crate) fn font_size_changed(w: W) {
         Some(P::Combo(c)) => {
             let s = gw::read(w, |g| g.p.font_size);
             // SAFETY: as in `call`.
-            unsafe { f::ohpl_h20_cb_set_default_font_size(vt(), c, s.x, s.y) };
+            unsafe { f::ohpl_h20_cb_set_default_font_size(c, s.x, s.y) };
         }
         _ => {}
     }
@@ -342,7 +332,7 @@ pub extern "C" fn ohpl_gw_state(w: W) -> *mut c_void {
 pub extern "C" fn ohpl_gw_tb_kb_open(w: W) {
     if let Some(P::Text(t)) = ptr(w) {
         // SAFETY: as in `call`.
-        unsafe { f::ohpl_h20_tb_ui_keyboard_open(vt(), t) };
+        unsafe { f::ohpl_h20_tb_ui_keyboard_open(t) };
     }
 }
 
@@ -366,7 +356,7 @@ pub extern "C" fn ohpl_gw_set_kind_ctr(w: W, id: i32, a: i32, ctr: usize) {
 pub(crate) fn attach_child(w: W, child: W) -> bool {
     if let Some(P::Tab(t)) = ptr(w) {
         // SAFETY: as in `call`.
-        unsafe { f::ohpl_h20_tab_attach_child(vt(), t, child, false) };
+        unsafe { f::ohpl_h20_tab_attach_child(t, child, false) };
         return true;
     }
     false
@@ -377,8 +367,8 @@ pub(crate) fn update_properties(w: W) {
     // SAFETY: as in `call`.
     unsafe {
         match ptr(w) {
-            Some(P::List(l)) => f::ohpl_h20_lb_update_properties(vt(), l),
-            Some(P::Combo(c)) => f::ohpl_h20_cb_update_properties(vt(), c),
+            Some(P::List(l)) => f::ohpl_h20_lb_update_properties(l),
+            Some(P::Combo(c)) => f::ohpl_h20_cb_update_properties(c),
             _ => {}
         }
     }
@@ -482,8 +472,8 @@ pub unsafe extern "C" fn ohpl_gw_create_c(
             {
                 // SAFETY: as in `call`.
                 unsafe {
-                    f::ohpl_h20_tf_set_hori_scroll(vt(), f, a != 0);
-                    f::ohpl_h20_tf_set_vert_scroll(vt(), f, b != 0);
+                    f::ohpl_h20_tf_set_hori_scroll(f, a != 0);
+                    f::ohpl_h20_tf_set_vert_scroll(f, b != 0);
                 }
             }
         }
@@ -491,9 +481,4 @@ pub unsafe extern "C" fn ohpl_gw_create_c(
     set_name(w, name);
     add_widget(set, w, parent);
     w
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_gw_h20_vt() -> *const HostVt {
-    vt()
 }
