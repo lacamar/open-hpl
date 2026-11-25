@@ -844,10 +844,6 @@ pub struct FogParams {
     pub falloff_exp: f32,
 }
 
-unsafe extern "C" {
-    fn powf(x: f32, y: f32) -> f32;
-}
-
 /// `iRenderer::GetFogAreaVisibilityForObject`.
 pub fn fog_visibility(
     f: &FogParams,
@@ -870,7 +866,7 @@ pub fn fog_visibility(
     if !f.inside_near_plane && camera_dist < entry {
         return 1.0;
     }
-    let min = |a: f32, b: f32| if a < b { a } else { b };
+    let min = crate::math::cmath_min;
     let fog_dist = if f.inside_near_plane {
         if f.show_backside_inside {
             min(exit, camera_dist)
@@ -895,7 +891,7 @@ pub fn fog_visibility(
     let mut alpha = (fog_dist - f.start) / (f.end - f.start);
     if f.falloff_exp != 1.0 {
         // SAFETY: pure libm function on plain floats.
-        alpha = unsafe { powf(alpha, f.falloff_exp) };
+        alpha = crate::math::powf(alpha, f.falloff_exp);
     }
     fma(alpha_floor, alpha, 1.0 - alpha)
 }

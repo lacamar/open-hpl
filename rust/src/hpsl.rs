@@ -80,35 +80,12 @@ fn is_alnum(c: u8) -> bool {
     c.is_ascii_alphanumeric()
 }
 
-fn is_word(c: u8) -> bool {
-    is_alnum(c) || c == b'_'
-}
-
-fn is_space(c: u8) -> bool {
-    matches!(c, b' ' | b'\t' | b'\n' | 0x0b | 0x0c | b'\r')
-}
+use crate::bytes::{
+    find_from as find, has_at, is_space, is_word, rfind_upto as rfind, sl, tail, trim,
+};
 
 fn is_trim(c: u8) -> bool {
     matches!(c, b' ' | b'\t' | b'\r' | b'\n')
-}
-
-fn sl(d: &[u8], r: std::ops::Range<usize>) -> &[u8] {
-    d.get(r).unwrap_or_default()
-}
-
-fn tail(d: &[u8], from: usize) -> &[u8] {
-    d.get(from..).unwrap_or_default()
-}
-
-fn has_at(d: &[u8], at: usize, pat: &[u8]) -> bool {
-    d.get(at..).is_some_and(|t| t.starts_with(pat))
-}
-
-fn find(hay: &[u8], needle: &[u8], from: usize) -> Option<usize> {
-    if from > hay.len() || hay.len() - from < needle.len() {
-        return None;
-    }
-    (from..=hay.len() - needle.len()).find(|&i| sl(hay, i..i + needle.len()) == needle)
 }
 
 fn find_byte(hay: &[u8], b: u8, from: usize) -> Option<usize> {
@@ -118,28 +95,10 @@ fn find_byte(hay: &[u8], b: u8, from: usize) -> Option<usize> {
         .map(|i| i + from)
 }
 
-fn rfind(hay: &[u8], needle: &[u8], max_start: usize) -> Option<usize> {
-    if hay.len() < needle.len() {
-        return None;
-    }
-    let top = max_start.min(hay.len() - needle.len());
-    (0..=top)
-        .rev()
-        .find(|&i| sl(hay, i..i + needle.len()) == needle)
-}
-
 // std::string::substr with the count clamped; pos never exceeds len at the call sites
 fn substr(s: &[u8], pos: usize, len: usize) -> &[u8] {
     let rest = tail(s, pos);
     rest.get(..len).unwrap_or(rest)
-}
-
-fn trim(s: &[u8]) -> &[u8] {
-    let Some(b) = s.iter().position(|&c| !is_trim(c)) else {
-        return &[];
-    };
-    let e = s.iter().rposition(|&c| !is_trim(c)).unwrap_or(b);
-    s.get(b..=e).unwrap_or_default()
 }
 
 fn replace_all(src: &[u8], from: &[u8], to: &[u8]) -> Bytes {

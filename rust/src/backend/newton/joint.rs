@@ -44,10 +44,7 @@ fn row(m: &Matrixf, r: usize) -> Vector3f {
     v3(x, y, z)
 }
 
-fn translation(m: &Matrixf) -> Vector3f {
-    let [r0, r1, r2, _] = m.m;
-    v3(r0[3], r1[3], r2[3])
-}
+use crate::math::translation;
 
 /// `a + dir * s` with the product fused, as gcc emits it.
 fn offset(a: Vector3f, dir: Vector3f, s: f32) -> Vector3f {

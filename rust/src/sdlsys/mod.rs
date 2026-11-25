@@ -10,15 +10,7 @@ mod tests;
 const COMMON: &[u8] = b"/steamapps/common/";
 const WIN_COMMON: &[u8] = b"\\steamapps\\common\\";
 
-fn find(hay: &[u8], needle: &[u8], from: usize) -> Option<usize> {
-    let tail = hay.get(from..)?;
-    if needle.is_empty() {
-        return Some(from);
-    }
-    tail.windows(needle.len())
-        .position(|w| w == needle)
-        .map(|p| p + from)
-}
+use crate::bytes::find_from as find;
 
 fn find_byte(hay: &[u8], b: u8, from: usize) -> Option<usize> {
     hay.get(from..)?

@@ -108,15 +108,7 @@ fn open_write(path: &Path, read: bool) -> std::io::Result<std::fs::File> {
         .open(path)
 }
 
-/// # Safety
-/// `p` points to `n` readable elements.
-unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if n == 0 {
-        return &[];
-    }
-    // SAFETY: caller contract.
-    unsafe { std::slice::from_raw_parts(p, n) }
-}
+use crate::ffi::slice;
 
 /// # Safety
 /// `host` is fully populated; `obj` is a live registered object; `path` and `root` point to

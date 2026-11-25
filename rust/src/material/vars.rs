@@ -17,9 +17,7 @@ pub trait VarSource {
     fn string(&mut self, name: &str, def: &str) -> Vec<u8>;
 }
 
-pub(crate) const fn v3(x: f32, y: f32, z: f32) -> Vector3f {
-    Vector3f { x, y, z }
-}
+pub(crate) use crate::math::v3;
 
 const fn col(r: f32, g: f32, b: f32, a: f32) -> Color {
     Color { r, g, b, a }

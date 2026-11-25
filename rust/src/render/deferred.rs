@@ -49,15 +49,9 @@ pub(super) fn rand_rectf(min: f32, max: f32) -> f32 {
     unsafe { ohpl_math_rand_rectf(min, max) }
 }
 
-/// `cMath::Min(float, float)`: the second argument wins ties and NaNs.
-pub(super) fn c_min(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
-}
+pub(super) use crate::math::cmath_min as c_min;
 
-/// `cMath::Max(float, float)`.
-pub(super) fn c_max(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
+pub(super) use crate::math::cmath_max as c_max;
 
 /// `cMath::Clamp`.
 pub(super) fn c_clamp(x: f32, min: f32, max: f32) -> f32 {

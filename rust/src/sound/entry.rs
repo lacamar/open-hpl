@@ -35,15 +35,7 @@ pub(super) enum Step {
     },
 }
 
-pub(super) fn correct_sign_of_speed(current: f32, dest: f32, speed: f32) -> f32 {
-    if dest < current && speed > 0.0 {
-        return -speed;
-    }
-    if dest > current && speed < 0.0 {
-        return -speed;
-    }
-    speed
-}
+use crate::math::correct_sign_of_speed;
 
 /// `cMath::Vector3DistSqr(start, end)` as gcc contracts it.
 pub(super) fn dist_sqr(start: Vector3f, end: Vector3f) -> f32 {

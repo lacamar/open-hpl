@@ -9,9 +9,7 @@ unsafe extern "C" {
     fn snprintf(buf: *mut c_char, n: usize, fmt: *const c_char, ...) -> c_int;
 }
 
-fn fmax(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
+use crate::math::cmath_max as fmax;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]

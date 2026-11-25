@@ -2,7 +2,6 @@
 
 use super::meshgen::{self, MeshData, PlaneError};
 use crate::types::{Vector2f, Vector3f};
-use std::slice;
 
 /// Array views the C++ side reads (it declares only these fields); the arrays are owned by the
 /// trailing `data` and freed with `ohpl_meshgen_free`.
@@ -35,12 +34,7 @@ fn leak(data: MeshData) -> *mut OhplMeshData {
 }
 
 fn slice_of<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if p.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: callers pass `n` readable elements at `p`.
-        unsafe { slice::from_raw_parts(p, n) }
-    }
+    unsafe { crate::ffi::slice(p, n) }
 }
 
 /// # Safety

@@ -34,16 +34,7 @@ pub fn hex(s: &[u32]) -> String {
     o
 }
 
-/// # Safety
-/// `p` is null or points to `n` code units.
-pub unsafe fn units<'a>(p: *const u32, n: usize) -> &'a [u32] {
-    if p.is_null() {
-        &[]
-    } else {
-        // SAFETY: caller contract.
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
-}
+pub use crate::ffi::slice as units;
 
 pub fn fmt_cmd(c: &Cmd, ids: &mut Ids) -> String {
     let mut o = format!(

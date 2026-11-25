@@ -11,19 +11,11 @@ type Ctx = *mut c_void;
 type Sink = unsafe extern "C" fn(Ctx, i32, *const u8, usize);
 
 fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if n == 0 || p.is_null() {
-        return &[];
-    }
-    // SAFETY: the caller passes a live `n`-byte buffer.
-    unsafe { std::slice::from_raw_parts(p, n) }
+    unsafe { crate::ffi::slice(p, n) }
 }
 
 fn items<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if n == 0 || p.is_null() {
-        return &[];
-    }
-    // SAFETY: the caller passes a live array of `n` items.
-    unsafe { std::slice::from_raw_parts(p, n) }
+    unsafe { crate::ffi::slice(p, n) }
 }
 
 fn emit(sink: Option<Sink>, ctx: Ctx, tag: i32, b: &[u8]) {

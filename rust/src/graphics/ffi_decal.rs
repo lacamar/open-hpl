@@ -2,15 +2,9 @@
 
 use super::decal::{self, ClipParams, Counts, DecalOut, MeshView, UvParams};
 use crate::types::Vector3f;
-use std::slice;
 
 fn slice_of<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if p.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: callers pass `n` readable elements at `p`.
-        unsafe { slice::from_raw_parts(p, n) }
-    }
+    unsafe { crate::ffi::slice(p, n) }
 }
 
 #[repr(C)]

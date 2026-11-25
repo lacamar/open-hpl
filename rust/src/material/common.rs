@@ -4,30 +4,7 @@ use super::types::{ForceFieldInfo, RenderView, Uniforms};
 use crate::math::{IDENTITY, matrix_mul, v3};
 use crate::types::{Color, Matrixf, Vector3f};
 
-unsafe extern "C" {
-    fn fmodf(x: f32, y: f32) -> f32;
-    fn powf(x: f32, y: f32) -> f32;
-}
-
-pub(crate) fn fmod(x: f32, y: f32) -> f32 {
-    // SAFETY: pure libm function on plain floats.
-    unsafe { fmodf(x, y) }
-}
-
-pub(crate) fn pow(x: f32, y: f32) -> f32 {
-    // SAFETY: pure libm function on plain floats.
-    unsafe { powf(x, y) }
-}
-
-/// `cMath::Max(float, float)`
-pub(crate) fn fmax(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
-
-/// `cMath::Min(float, float)`
-pub(crate) fn fmin(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
-}
+pub(crate) use crate::math::{cmath_max as fmax, cmath_min as fmin, fmodf as fmod, powf as pow};
 
 pub(crate) const fn color(r: f32, g: f32, b: f32, a: f32) -> Color {
     Color { r, g, b, a }

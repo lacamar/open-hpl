@@ -5,14 +5,7 @@ use super::deferred_fx::cmath::matrix_mul_vec;
 use super::deferred_fx::{Item, Seq, ask, ops, p4, p4f, x};
 use crate::math::{Matrixf, dot3, len3, sub3, v3};
 
-unsafe extern "C" {
-    fn powf(x: f32, y: f32) -> f32;
-}
-
-fn pow(x: f32, y: f32) -> f32 {
-    // SAFETY: pure libm function on plain floats.
-    unsafe { powf(x, y) }
-}
+use crate::math::powf as pow;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]

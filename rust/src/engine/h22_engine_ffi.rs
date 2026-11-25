@@ -4,9 +4,7 @@
 use super::ffi::{VisitFn, visitor};
 use super::frame::Fps;
 use super::frame::Loop;
-use super::h22_engine::{
-    self as eng, EngineHost, Module, Native, RunLog, RunState, Step, StepHost, Timing,
-};
+use super::h22_engine::{self as eng, Module, Native, RunLog, RunState, Step, Timing};
 use super::updater::{self, Updater};
 use crate::backend::sdl::{delay_ms, ohpl_l1_ticks};
 use crate::system::logic_timer::LogicTimer;
@@ -71,8 +69,8 @@ impl CHost {
     }
 }
 
-impl EngineHost for CHost {
-    fn log(&self, line: RunLog) {
+impl CHost {
+    pub(super) fn log(&self, line: RunLog) {
         let i = match line {
             RunLog::RuleBlank => 0.0,
             RunLog::GameRunning => 1.0,
@@ -82,46 +80,46 @@ impl EngineHost for CHost {
         };
         self.c(op::LOG, [i, 0.0, 0.0, 0.0]);
     }
-    fn log_medium_framerate(&self, fps: f64) {
+    pub(super) fn log_medium_framerate(&self, fps: f64) {
         self.c(op::LOG_MEDIUM, [fps, 0.0, 0.0, 0.0]);
     }
-    fn window_input_focus(&self) -> bool {
+    pub(super) fn window_input_focus(&self) -> bool {
         self.q(op::WINDOW_INPUT_FOCUS)
     }
-    fn input_update(&self, dt: f32) {
+    pub(super) fn input_update(&self, dt: f32) {
         self.c(op::INPUT_UPDATE, [f64::from(dt), 0.0, 0.0, 0.0]);
     }
-    fn headless_logic_step(&self) {
+    pub(super) fn headless_logic_step(&self) {
         self.v(op::HC_LOGIC_STEP);
     }
-    fn headless_update(&self) {
+    pub(super) fn headless_update(&self) {
         self.v(op::HC_UPDATE);
     }
-    fn quit_posted(&self) -> bool {
+    pub(super) fn quit_posted(&self) -> bool {
         self.q(op::QUIT_POSTED)
     }
-    fn reset_quit_posted(&self) {
+    pub(super) fn reset_quit_posted(&self) {
         self.v(op::RESET_QUIT);
     }
-    fn window_focus_bits(&self) -> u32 {
+    pub(super) fn window_focus_bits(&self) -> u32 {
         self.c(op::WINDOW_FOCUS_BITS, [0.0; 4]) as u32
     }
-    fn take_device_plugged(&self) -> bool {
+    pub(super) fn take_device_plugged(&self) -> bool {
         self.q(op::TAKE_PLUGGED)
     }
-    fn take_device_removed(&self) -> bool {
+    pub(super) fn take_device_removed(&self) -> bool {
         self.q(op::TAKE_REMOVED)
     }
-    fn update_log_active(&self) -> bool {
+    pub(super) fn update_log_active(&self) -> bool {
         self.q(op::UPDATE_LOG_ACTIVE)
     }
-    fn clear_update_log(&self) {
+    pub(super) fn clear_update_log(&self) {
         self.v(op::CLEAR_UPDATE_LOG);
     }
-    fn swap_buffers(&self) {
+    pub(super) fn swap_buffers(&self) {
         self.v(op::SWAP);
     }
-    fn timing(&self, t: Timing, start: bool) {
+    pub(super) fn timing(&self, t: Timing, start: bool) {
         let tag = match t {
             Timing::WaitAndFinishRendering => 0.0,
             Timing::SwapBuffers => 1.0,
@@ -132,28 +130,34 @@ impl EngineHost for CHost {
         };
         self.c(op::TIMING, [tag, f64::from(u8::from(start)), 0.0, 0.0]);
     }
-    fn frame_timer_start(&self) {
+    pub(super) fn frame_timer_start(&self) {
         self.v(op::FT_START);
     }
-    fn frame_timer_stop(&self) {
+    pub(super) fn frame_timer_stop(&self) {
         self.v(op::FT_STOP);
     }
-    fn frame_timer_sec(&self) -> f64 {
+    pub(super) fn frame_timer_sec(&self) -> f64 {
         self.c(op::FT_SEC, [0.0; 4])
     }
-    fn scene_render(&self, frame_time: f32) {
+    pub(super) fn scene_render(&self, frame_time: f32) {
         self.c(op::SCENE_RENDER, [f64::from(frame_time), 0.0, 0.0, 0.0]);
     }
-    fn dev_hud_render(&self) {
+    pub(super) fn dev_hud_render(&self) {
         self.v(op::DEVHUD_RENDER);
     }
-    fn flush_rendering(&self) {
+    pub(super) fn flush_rendering(&self) {
         self.v(op::FLUSH);
     }
-    fn diag_end_frame(&self) {
+    pub(super) fn diag_end_frame(&self) {
         self.v(op::DIAG_END_FRAME);
     }
-    fn diag_add_frame_timing(&self, logic_ms: f64, steps: i32, render_ms: f64, swap_ms: f64) {
+    pub(super) fn diag_add_frame_timing(
+        &self,
+        logic_ms: f64,
+        steps: i32,
+        render_ms: f64,
+        swap_ms: f64,
+    ) {
         self.c(
             op::DIAG_ADD_TIMING,
             [logic_ms, f64::from(steps), render_ms, swap_ms],
@@ -223,8 +227,8 @@ pub fn step_code(s: Step) -> (i32, i32) {
     }
 }
 
-impl StepHost for CHost {
-    fn step(&self, s: Step) {
+impl CHost {
+    pub(super) fn step(&self, s: Step) {
         let (code, module) = step_code(s);
         self.c(op::STEP, [f64::from(code), f64::from(module), 0.0, 0.0]);
     }
@@ -354,12 +358,18 @@ pub unsafe extern "C" fn ohpl_h22_engine_run(
 /// `call`/`ctx` are a valid host.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h22_engine_init(call: CallFn, ctx: *mut c_void) {
-    eng::run_steps(&CHost { call, ctx }, &eng::init_steps());
+    let host = CHost { call, ctx };
+    for s in eng::init_steps() {
+        host.step(s);
+    }
 }
 
 /// # Safety
 /// `call`/`ctx` are a valid host.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h22_engine_exit(call: CallFn, ctx: *mut c_void) {
-    eng::run_steps(&CHost { call, ctx }, &eng::exit_steps());
+    let host = CHost { call, ctx };
+    for s in eng::exit_steps() {
+        host.step(s);
+    }
 }

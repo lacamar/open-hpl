@@ -735,16 +735,7 @@ mod ffi {
         }
     }
 
-    /// # Safety
-    /// `p` points to `n` readable bytes, or `n` is 0.
-    unsafe fn units<'a>(p: *const u8, n: usize) -> &'a [u8] {
-        if n == 0 {
-            &[]
-        } else {
-            // SAFETY: caller contract.
-            unsafe { std::slice::from_raw_parts(p, n) }
-        }
-    }
+    use crate::ffi::slice as units;
 
     /// # Safety
     /// `kv` points to `n` entries whose pointers are valid for their lengths.

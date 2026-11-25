@@ -2,7 +2,7 @@ use super::flow::{self, PathOp};
 use super::modes::{self, Custom, Device, Label, Mode};
 use super::preset::{self, Detect};
 use super::quality::{Chooser, UNKNOWN};
-use super::stdsort;
+use crate::graphics::stdsort;
 use crate::luxbase::cfg::Cfg;
 use std::collections::HashMap;
 
@@ -94,7 +94,7 @@ fn bad_database_is_an_error() {
 #[test]
 fn sort_matches_stable_small_and_orders_large() {
     let mut v: Vec<(u32, u32)> = (0..10).map(|i| (i % 3, i)).collect();
-    stdsort::sort(&mut v, &|a, b| b.0 < a.0);
+    stdsort::sort(&mut v, |&a, &b| b.0 < a.0);
     assert_eq!(
         v.iter().map(|x| x.0).collect::<Vec<_>>(),
         [2, 2, 2, 1, 1, 1, 0, 0, 0, 0]
@@ -107,12 +107,12 @@ fn sort_matches_stable_small_and_orders_large() {
         [2, 5, 8]
     );
     let mut big: Vec<u32> = (0..500).map(|i| (i * 7919) % 101).collect();
-    stdsort::sort(&mut big, &|a, b| a < b);
+    stdsort::sort(&mut big, |&a, &b| a < b);
     assert!(big.windows(2).all(|w| w[0] <= w[1]));
     let mut adversarial: Vec<u32> = (0..2000)
         .map(|i| if i % 2 == 0 { i } else { 2000 - i })
         .collect();
-    stdsort::sort(&mut adversarial, &|a, b| a < b);
+    stdsort::sort(&mut adversarial, |&a, &b| a < b);
     assert!(adversarial.windows(2).all(|w| w[0] <= w[1]));
 }
 

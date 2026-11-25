@@ -22,9 +22,7 @@ pub enum PlaneError {
 
 const ZERO: Vector3f = v3(0.0, 0.0, 0.0);
 
-fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x + b.x, a.y + b.y, a.z + b.z)
-}
+use crate::math::add3;
 
 fn mul3v(a: Vector3f, b: Vector3f) -> Vector3f {
     v3(a.x * b.x, a.y * b.y, a.z * b.z)

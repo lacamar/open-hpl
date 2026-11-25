@@ -3,6 +3,7 @@
 //! code), so shared state is only touched through short raw-pointer scopes.
 
 use super::frame::{self, Loop};
+use super::h22_engine_ffi::CHost;
 
 pub const MSG_ON_POST_BUFFER_SWAP: i32 = 0;
 pub const MSG_ON_START: i32 = 1;
@@ -41,33 +42,6 @@ pub enum Timing {
     RenderAll,
     PostRender,
     FlushRender,
-}
-
-pub trait EngineHost {
-    fn log(&self, line: RunLog);
-    fn log_medium_framerate(&self, fps: f64);
-    fn window_input_focus(&self) -> bool;
-    fn input_update(&self, dt: f32);
-    fn headless_logic_step(&self);
-    fn headless_update(&self);
-    fn quit_posted(&self) -> bool;
-    fn reset_quit_posted(&self);
-    /// Bit 1 input focus, 2 mouse focus, 4 visible.
-    fn window_focus_bits(&self) -> u32;
-    fn take_device_plugged(&self) -> bool;
-    fn take_device_removed(&self) -> bool;
-    fn update_log_active(&self) -> bool;
-    fn clear_update_log(&self);
-    fn swap_buffers(&self);
-    fn timing(&self, t: Timing, start: bool);
-    fn frame_timer_start(&self);
-    fn frame_timer_stop(&self);
-    fn frame_timer_sec(&self) -> f64;
-    fn scene_render(&self, frame_time: f32);
-    fn dev_hud_render(&self);
-    fn flush_rendering(&self);
-    fn diag_end_frame(&self);
-    fn diag_add_frame_timing(&self, logic_ms: f64, steps: i32, render_ms: f64, swap_ms: f64);
 }
 
 /// Operations on state the Rust loop owns or reads directly (updater, logic timer, flags, clocks).
@@ -110,7 +84,7 @@ impl RunState {
 }
 
 /// `cEngine::CheckAndBroadcastFocusChange`.
-fn check_focus_change(host: &dyn EngineHost, nat: &dyn Native, st: &RunState) {
+fn check_focus_change(host: &CHost, nat: &dyn Native, st: &RunState) {
     if nat.has_headless() {
         return;
     }
@@ -125,7 +99,7 @@ fn check_focus_change(host: &dyn EngineHost, nat: &dyn Native, st: &RunState) {
     }
 }
 
-fn check_device_change(host: &dyn EngineHost, nat: &dyn Native) {
+fn check_device_change(host: &CHost, nat: &dyn Native) {
     if host.take_device_plugged() {
         nat.run_message(MSG_DEVICE_PLUGGED, 0.0);
     }
@@ -134,7 +108,7 @@ fn check_device_change(host: &dyn EngineHost, nat: &dyn Native) {
     }
 }
 
-fn wait_for_focus(host: &dyn EngineHost, nat: &dyn Native) {
+fn wait_for_focus(host: &CHost, nat: &dyn Native) {
     while !host.window_input_focus() {
         nat.sleep_ms(100);
         host.input_update(FOCUS_WAIT_DT);
@@ -142,7 +116,7 @@ fn wait_for_focus(host: &dyn EngineHost, nat: &dyn Native) {
 }
 
 /// `cEngine::Run`.
-pub fn run(host: &dyn EngineHost, nat: &dyn Native, st: &RunState) {
+pub fn run(host: &CHost, nat: &dyn Native, st: &RunState) {
     host.log(RunLog::RuleBlank);
     nat.broadcast(MSG_ON_START);
     nat.logic_timer_reset();
@@ -406,14 +380,4 @@ pub fn exit_steps() -> Vec<Step> {
     }
     v.extend([LogDeleteSetup, DeleteSetup, LogExitOk]);
     v
-}
-
-pub fn run_steps(host: &dyn StepHost, steps: &[Step]) {
-    for s in steps {
-        host.step(*s);
-    }
-}
-
-pub trait StepHost {
-    fn step(&self, s: Step);
 }

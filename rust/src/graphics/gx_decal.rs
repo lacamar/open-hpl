@@ -8,9 +8,7 @@ use super::decal::{self, ClipParams, Counts, DecalOut, MeshView, UvParams};
 use super::gx_host;
 use crate::math::bv::{Bv, bv_intersect};
 use crate::math::geom::{orthonormalize_basis, plane_from_normal_point, transform_plane};
-use crate::math::{
-    EPSILON, Matrixf, Planef, matrix_inverse, matrix_unit_vectors, normalize3, transpose, v3,
-};
+use crate::math::{EPSILON, Matrixf, Planef, matrix_inverse, matrix_unit_vectors, transpose, v3};
 use crate::scene::ls_host::{self, E_COLOR0, E_NORMAL, E_POS, E_TEX0, Vb};
 use crate::types::{Color, Vector2l, Vector3f};
 use std::ffi::c_void;
@@ -57,10 +55,7 @@ fn rotation(m: &Matrixf) -> Matrixf {
     }
 }
 
-fn normalized(mut v: Vector3f) -> Vector3f {
-    normalize3(&mut v);
-    v
-}
+use crate::math::normalized;
 
 impl Decal {
     pub fn new(ll: *mut c_void, res: *mut c_void) -> Decal {

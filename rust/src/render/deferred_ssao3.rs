@@ -5,10 +5,6 @@ use super::deferred_fx::cmath::{matrix_inverse, matrix_mul};
 use super::deferred_fx::{Item, Seq, fog_depth, mat, o, ops, p4, pass_begin, pass_end, x};
 use crate::math::{IDENTITY, Matrixf, len3, tan, v3};
 
-unsafe extern "C" {
-    fn fmodf(x: f32, y: f32) -> f32;
-}
-
 /// Slots: frame buffers 0..2 are the SSAO buffers, mip buffers follow; textures 0..2 are the SSAO
 /// textures, 3 the mip texture; programs as `prog`.
 pub mod slot {
@@ -156,7 +152,7 @@ pub fn plan_hpl3_ssao(i: &Hpl3RenderIn) -> Plan {
     v.extend(ops(fog_depth(din, i.linear_idx, false, 0)));
 
     // SAFETY: pure libm function on plain floats.
-    state_out.time = unsafe { fmodf(i.time + i.frame_time, 256.0) };
+    state_out.time = crate::math::fmodf(i.time + i.frame_time, 256.0);
     let mip = [i.mip_w as f32, i.mip_h as f32];
     let lod = 0.4 * (mip[1].mul_add(mip[1], mip[0] * mip[0]) + 1.0).sqrt() as i32 as f32;
     v.push(fb3(0));

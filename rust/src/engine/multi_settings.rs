@@ -41,15 +41,7 @@ impl Calc {
     }
 }
 
-pub fn correct_sign_of_speed(current: f32, dest: f32, speed: f32) -> f32 {
-    if dest < current && speed > 0.0 {
-        return -speed;
-    }
-    if dest > current && speed < 0.0 {
-        return -speed;
-    }
-    speed
-}
+pub use crate::math::correct_sign_of_speed;
 
 impl Entry {
     pub fn fade_to(&mut self, dest: f32, speed: f32, destroy: bool) {

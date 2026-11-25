@@ -1,6 +1,6 @@
 //! `cQualityChooser`: card database from `launcher_card_database.cfg` and the series matcher.
 
-use super::stdsort;
+use crate::graphics::stdsort;
 use crate::string;
 use crate::xml::{DOC, Doc, Kind, c_str};
 
@@ -81,7 +81,7 @@ impl Chooser {
         let counts: Vec<usize> = models.iter().map(|m| words(&m.name)).collect();
         let mut order: Vec<usize> = (0..models.len()).collect();
         let count = |i: usize| counts.get(i).copied().unwrap_or(0);
-        stdsort::sort(&mut order, &|a, b| count(b) < count(a));
+        stdsort::sort(&mut order, |&a, &b| count(b) < count(a));
         let mut slots: Vec<Option<Model>> = models.into_iter().map(Some).collect();
         let models = order
             .into_iter()

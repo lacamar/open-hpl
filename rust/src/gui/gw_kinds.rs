@@ -263,9 +263,7 @@ fn v2(x: f32, y: f32) -> Vector2f {
     Vector2f { x, y }
 }
 
-fn v3(x: f32, y: f32, z: f32) -> Vector3f {
-    Vector3f { x, y, z }
-}
+use crate::math::v3;
 
 // ---------------------------------------------------------------- dispatch
 

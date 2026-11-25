@@ -80,9 +80,7 @@ pub struct MsgBoxLayout {
     pub label_size: Vector2f,
 }
 
-fn fmax(x: f32, y: f32) -> f32 {
-    if x > y { x } else { y }
-}
+use crate::math::cmath_max as fmax;
 
 pub fn msgbox_layout(
     label_len: f32,

@@ -18,12 +18,7 @@ unsafe fn release<T>(p: *mut T) {
 }
 
 fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if p.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: callers pass `n` readable bytes at `p`.
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
+    unsafe { crate::ffi::slice(p, n) }
 }
 
 /// # Safety

@@ -17,10 +17,7 @@ fn exp(x: f32) -> f32 {
     unsafe { expf(x) }
 }
 
-/// `cMath::Max(float, float)`: the second argument wins ties and NaNs.
-fn c_max(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
+use crate::math::cmath_max as c_max;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Op {

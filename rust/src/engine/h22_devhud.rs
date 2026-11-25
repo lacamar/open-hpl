@@ -39,9 +39,7 @@ fn wide(s: &str) -> Vec<u32> {
     s.chars().map(u32::from).collect()
 }
 
-fn max(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
-}
+use crate::math::cmath_max as max;
 
 /// Returns whether the pending bug capture was consumed.
 pub fn render(host: &dyn HudHost, st: &HudState<'_>) -> bool {

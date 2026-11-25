@@ -141,25 +141,7 @@ fn float_fields(ty: u32) -> usize {
     }
 }
 
-unsafe extern "C" {
-    fn snprintf(buf: *mut std::ffi::c_char, n: usize, fmt: *const std::ffi::c_char, ...) -> i32;
-}
-
-/// C `%f`.
-fn fmt_f(x: f32) -> Vec<u8> {
-    let mut buf = [0_u8; 64];
-    // SAFETY: format matches the (double) vararg; the buffer bound is passed.
-    let n = unsafe {
-        snprintf(
-            buf.as_mut_ptr().cast(),
-            buf.len(),
-            c"%f".as_ptr(),
-            f64::from(x),
-        )
-    };
-    let len = usize::try_from(n).unwrap_or(0).min(buf.len() - 1);
-    buf.get(..len).unwrap_or_default().to_vec()
-}
+use crate::somascript::cfmt::fmt_f;
 
 fn join(parts: impl Iterator<Item = Vec<u8>>) -> Vec<u8> {
     let mut out = Vec::new();
@@ -282,13 +264,13 @@ impl<'a, H: Host> Walker<'a, H> {
                 v.to_vec()
             }
             T_INT32 => rd::<i32>(p, 0).to_string().into_bytes(),
-            T_FLOAT32 => fmt_f(rd(p, 0)),
+            T_FLOAT32 => fmt_f(rd(p, 0), 64),
             T_STRING => c_str(&self.h.str_get(p)).to_vec(),
             T_VEC2L | T_VEC3L | T_RECT2L => {
                 join((0..int_fields(ty)).map(|i| rd::<i32>(p, i * 4).to_string().into_bytes()))
             }
             T_VEC2F | T_VEC3F | T_MATRIXF | T_COLOR | T_RECT2F | T_PLANEF => {
-                join((0..float_fields(ty)).map(|i| fmt_f(rd(p, i * 4))))
+                join((0..float_fields(ty)).map(|i| fmt_f(rd(p, i * 4), 64)))
             }
             T_WSTRING => {
                 let mut out = Vec::new();

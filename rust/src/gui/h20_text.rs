@@ -75,12 +75,7 @@ unsafe fn size(t: P) -> Vector2f {
 }
 
 fn slice<'a>(p: *const u32, n: usize) -> &'a [u32] {
-    if p.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: host-provided buffer valid until the next host call; copied by the callers.
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
+    unsafe { crate::ffi::slice(p, n) }
 }
 
 struct Ops {

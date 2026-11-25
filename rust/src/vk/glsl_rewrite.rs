@@ -42,13 +42,7 @@ struct Decl {
     init: Bytes,
 }
 
-fn is_word(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'_'
-}
-
-fn is_space(b: u8) -> bool {
-    matches!(b, b' ' | b'\t' | b'\n' | 0x0b | 0x0c | b'\r')
-}
+use crate::bytes::{has_at as lit, is_space, is_word, trim};
 
 fn at(s: &[u8], i: usize) -> Option<u8> {
     s.get(i).copied()
@@ -68,21 +62,8 @@ fn skip_word(s: &[u8], mut i: usize) -> usize {
     i
 }
 
-fn lit(s: &[u8], i: usize, l: &[u8]) -> bool {
-    s.get(i..).is_some_and(|t| t.starts_with(l))
-}
-
 fn left_boundary(s: &[u8], i: usize) -> bool {
     i == 0 || !i.checked_sub(1).and_then(|j| at(s, j)).is_some_and(is_word)
-}
-
-fn trim(s: &[u8]) -> &[u8] {
-    let t = |b: &u8| !matches!(b, b' ' | b'\t' | b'\r' | b'\n');
-    let Some(a) = s.iter().position(t) else {
-        return &[];
-    };
-    let b = s.iter().rposition(t).map_or(a, |b| b + 1);
-    s.get(a..b).unwrap_or(&[])
 }
 
 fn strip_comments(s: &[u8]) -> Bytes {

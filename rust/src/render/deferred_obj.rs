@@ -976,9 +976,7 @@ fn draw(tr: Tr, idx: i32, w: Vec<u32>, dof: DofResult, render_mode: i32) -> Vec<
     v
 }
 
-fn v3(x: f32, y: f32, z: f32) -> Vector3f {
-    Vector3f { x, y, z }
-}
+use crate::math::v3;
 
 fn plane_from_normal_point(n: Vector3f, p: Vector3f) -> Planef {
     Planef {

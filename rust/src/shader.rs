@@ -252,41 +252,7 @@ const GAMMA_ALBEDO: [[&str; 3]; 5] = [
     ],
 ];
 
-fn sl(d: &[u8], r: std::ops::Range<usize>) -> &[u8] {
-    d.get(r).unwrap_or_default()
-}
-
-fn tail(d: &[u8], from: usize) -> &[u8] {
-    d.get(from..).unwrap_or_default()
-}
-
-fn has_at(d: &[u8], at: usize, pat: &[u8]) -> bool {
-    d.get(at..).is_some_and(|t| t.starts_with(pat))
-}
-
-fn find(hay: &[u8], needle: &[u8]) -> Option<usize> {
-    if needle.len() > hay.len() {
-        return None;
-    }
-    (0..=hay.len() - needle.len()).find(|&i| sl(hay, i..i + needle.len()) == needle)
-}
-
-fn rfind(hay: &[u8], needle: &[u8]) -> Option<usize> {
-    if needle.len() > hay.len() {
-        return None;
-    }
-    (0..=hay.len() - needle.len())
-        .rev()
-        .find(|&i| sl(hay, i..i + needle.len()) == needle)
-}
-
-fn is_space(c: u8) -> bool {
-    matches!(c, b' ' | b'\t' | b'\n' | 0x0b | 0x0c | b'\r')
-}
-
-fn is_word(c: u8) -> bool {
-    c.is_ascii_alphanumeric() || c == b'_'
-}
+use crate::bytes::{find, has_at, is_space, is_word, rfind, sl, tail};
 
 fn is_blank(c: u8) -> bool {
     c == b' ' || c == b'\t'

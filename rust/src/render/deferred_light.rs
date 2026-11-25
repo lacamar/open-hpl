@@ -542,19 +542,9 @@ fn rotation(m: &Matrixf) -> Matrixf {
     }
 }
 
-fn translation(m: &Matrixf) -> Vector3f {
-    let a = &m.m;
-    let c = |i: usize| a.get(i).map_or(0.0, |r| r[3]);
-    Vector3f {
-        x: c(0),
-        y: c(1),
-        z: c(2),
-    }
-}
+use crate::math::translation;
 
-fn v3(x: f32, y: f32, z: f32) -> Vector3f {
-    Vector3f { x, y, z }
-}
+use crate::math::v3;
 
 /// `cRendererDeferred::SetupLightProgramVariables`.
 pub fn plan_light_variables(s: &LightState) -> Plan {

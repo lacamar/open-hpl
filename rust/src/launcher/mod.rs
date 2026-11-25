@@ -7,6 +7,5 @@ pub mod flow;
 pub mod modes;
 pub mod preset;
 pub mod quality;
-mod stdsort;
 #[cfg(test)]
 mod tests;

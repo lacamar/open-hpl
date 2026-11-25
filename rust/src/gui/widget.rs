@@ -138,9 +138,7 @@ impl<'a> Ops<'a> {
     }
 }
 
-pub fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x + b.x, a.y + b.y, a.z + b.z)
-}
+pub use crate::math::add3;
 
 pub fn add2(a: Vector2f, b: Vector2f) -> Vector2f {
     Vector2f {

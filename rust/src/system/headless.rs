@@ -2,10 +2,7 @@
 
 use std::collections::BTreeMap;
 
-/// `isspace` in the C locale.
-fn is_space(c: u8) -> bool {
-    matches!(c, b' ' | 9..=13)
-}
+use crate::bytes::is_space;
 
 fn skip_ws(s: &[u8], pos: &mut usize) {
     while s.get(*pos).is_some_and(|&c| is_space(c)) {

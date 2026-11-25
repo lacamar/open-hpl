@@ -51,9 +51,7 @@ fn with_slash(mut v: Vec<u8>) -> Vec<u8> {
     v
 }
 
-fn find(hay: &[u8], needle: &[u8]) -> Option<usize> {
-    hay.windows(needle.len()).position(|w| w == needle)
-}
+use crate::bytes::find;
 
 /// `None` where HOME is needed but unset (the C++ original threw `logic_error`).
 fn base_dir(env: &dyn Env, var: &str, default: &str) -> Option<Vec<u8>> {

@@ -4,14 +4,10 @@ use super::deferred::*;
 use crate::types::{Vector2f, Vector2l};
 
 unsafe extern "C" {
-    fn fmodf(x: f32, y: f32) -> f32;
     fn sqrtf(x: f32) -> f32;
 }
 
-fn fmod(x: f32, y: f32) -> f32 {
-    // SAFETY: pure libm function on plain floats.
-    unsafe { fmodf(x, y) }
-}
+use crate::math::fmodf as fmod;
 
 fn sqrt(x: f32) -> f32 {
     // SAFETY: pure libm function on a plain float.

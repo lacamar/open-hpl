@@ -70,9 +70,7 @@ fn rotation(m: &Matrixf) -> Matrixf {
     r
 }
 
-fn translation(m: &Matrixf) -> Vector3f {
-    v3(m.m[0][3], m.m[1][3], m.m[2][3])
-}
+use crate::math::translation;
 
 fn set_translation(m: &mut Matrixf, t: Vector3f) {
     m.m[0][3] = t.x;
@@ -117,12 +115,7 @@ fn atof(s: &[u8]) -> f64 {
         .unwrap_or(0.0)
 }
 
-fn find(hay: &[u8], needle: &[u8], from: usize) -> Option<usize> {
-    hay.get(from..)?
-        .windows(needle.len())
-        .position(|w| w == needle)
-        .map(|p| p + from)
-}
+use crate::bytes::find_from as find;
 
 // ---- cache lookup ----
 

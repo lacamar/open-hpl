@@ -41,9 +41,7 @@ fn vmin(a: Vector3f, b: Vector3f) -> Vector3f {
     v3(fmin(a.x, b.x), fmin(a.y, b.y), fmin(a.z, b.z))
 }
 
-fn add3(a: Vector3f, b: Vector3f) -> Vector3f {
-    v3(a.x + b.x, a.y + b.y, a.z + b.z)
-}
+use crate::math::add3;
 
 fn div3v(a: Vector3f, b: Vector3f) -> Vector3f {
     v3(a.x / b.x, a.y / b.y, a.z / b.z)

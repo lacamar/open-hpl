@@ -1,18 +1,11 @@
 //! C ABI of `cSubMesh` and `cMesh`, declared in `graphics/RustMeshMm.h`.
 
-use core::slice;
-
 use super::mm::{Collider, Host, Mesh, P, Sub, collide_shape};
 use super::submesh::VertexBonePair;
 use crate::types::{Matrixf, Vector3f};
 
 fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
-    if p.is_null() || n == 0 {
-        &[]
-    } else {
-        // SAFETY: callers pass `n` readable bytes at `p`.
-        unsafe { slice::from_raw_parts(p, n) }
-    }
+    unsafe { crate::ffi::slice(p, n) }
 }
 
 fn own<T>(v: T) -> *mut T {

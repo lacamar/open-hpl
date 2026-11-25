@@ -15,14 +15,7 @@ use crate::math::{
 };
 use crate::types::Vector2f;
 
-unsafe extern "C" {
-    fn powf(x: f32, y: f32) -> f32;
-}
-
-fn pow(x: f32, y: f32) -> f32 {
-    // SAFETY: pure libm function on plain floats.
-    unsafe { powf(x, y) }
-}
+use crate::math::powf as pow;
 
 /// `a + b` with gcc's operand order for NaNs: the first NaN operand wins, as in the hardware add.
 fn add_first(a: f32, b: f32) -> f32 {

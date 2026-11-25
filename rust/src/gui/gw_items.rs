@@ -152,12 +152,7 @@ macro_rules! cffi {
 }
 
 fn slice<'a>(p: *const u32, n: usize) -> &'a [u32] {
-    if p.is_null() {
-        &[]
-    } else {
-        // SAFETY: the caller passes a readable range.
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
+    unsafe { crate::ffi::slice(p, n) }
 }
 
 cffi! {

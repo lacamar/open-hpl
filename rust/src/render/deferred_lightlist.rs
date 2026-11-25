@@ -44,9 +44,7 @@ unsafe extern "C" {
     );
 }
 
-fn v3(x: f32, y: f32, z: f32) -> Vector3f {
-    Vector3f { x, y, z }
-}
+use crate::math::v3;
 
 /// The camera: `cFrustum` values the light math reads.
 #[repr(C)]
@@ -86,10 +84,7 @@ pub struct PairIn {
     pub samples: i32,
 }
 
-fn translation(m: &Matrixf) -> Vector3f {
-    let c = |i: usize| m.m.get(i).map_or(0.0, |r| r[3]);
-    v3(c(0), c(1), c(2))
-}
+use crate::math::translation;
 
 /// `SetupLightMatrix`: view-space render and transform matrices of a point or spot light.
 fn light_matrices(l: &LightIn, view: &Matrixf, radius_mul: f32) -> (Matrixf, Matrixf) {
