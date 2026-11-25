@@ -68,8 +68,7 @@ pub extern "C" fn ohpl_ntw_destroy(w: u64) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntw_simulate(w: u64, time_step: f32) {
+pub(crate) fn ohpl_ntw_simulate(w: u64, time_step: f32) {
     let Some((h, rec)) = reg::world(w) else {
         return;
     };
@@ -100,8 +99,7 @@ pub extern "C" fn ohpl_ntw_simulate(w: u64, time_step: f32) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntw_set_max_step(w: u64, step: f32) {
+pub(crate) fn ohpl_ntw_set_max_step(w: u64, step: f32) {
     if let Some(mut r) = reg()
         && let Some(h) = Handle::from_bits(w)
         && let Some(rec) = r.worlds.get_mut(h)
@@ -110,15 +108,13 @@ pub extern "C" fn ohpl_ntw_set_max_step(w: u64, step: f32) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntw_max_step(w: u64) -> f32 {
+pub(crate) fn ohpl_ntw_max_step(w: u64) -> f32 {
     reg::world(w).map_or(0.0, |(_, r)| r.max_step)
 }
 
 /// # Safety
 /// `min` and `max` point to three floats.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntw_set_size(w: u64, min: *const f32, max: *const f32) {
+pub(crate) unsafe fn ohpl_ntw_set_size(w: u64, min: *const f32, max: *const f32) {
     if let Some((h, r)) = reg::world(w) {
         // SAFETY: caller contract.
         unsafe { NewtonSetWorldSize(r.nw, min, max) };
@@ -133,8 +129,7 @@ pub unsafe extern "C" fn ohpl_ntw_set_size(w: u64, min: *const f32, max: *const 
 
 /// # Safety
 /// `out` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntw_size(w: u64, max: bool, out: *mut Vector3f) {
+pub(crate) unsafe fn ohpl_ntw_size(w: u64, max: bool, out: *mut Vector3f) {
     if let (Some((_, r)), Some(o)) = (reg::world(w), unsafe { out.as_mut() }) {
         *o = if max { r.size_max } else { r.size_min };
     }
@@ -142,8 +137,7 @@ pub unsafe extern "C" fn ohpl_ntw_size(w: u64, max: bool, out: *mut Vector3f) {
 
 /// # Safety
 /// `g` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntw_set_gravity(w: u64, g: *const Vector3f) {
+pub(crate) unsafe fn ohpl_ntw_set_gravity(w: u64, g: *const Vector3f) {
     // SAFETY: caller contract.
     if let (Some((h, _)), Some(g)) = (reg::world(w), unsafe { g.as_ref() }) {
         let g = *g;
@@ -153,16 +147,14 @@ pub unsafe extern "C" fn ohpl_ntw_set_gravity(w: u64, g: *const Vector3f) {
 
 /// # Safety
 /// `out` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntw_gravity(w: u64, out: *mut Vector3f) {
+pub(crate) unsafe fn ohpl_ntw_gravity(w: u64, out: *mut Vector3f) {
     // SAFETY: caller contract.
     if let (Some((_, r)), Some(o)) = (reg::world(w), unsafe { out.as_mut() }) {
         *o = r.gravity;
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntw_accuracy(w: u64) -> i32 {
+pub(crate) fn ohpl_ntw_accuracy(w: u64) -> i32 {
     reg::world(w).map_or(0, |(_, r)| r.accuracy)
 }
 
@@ -190,8 +182,7 @@ pub extern "C" fn ohpl_ntw_save_contacts(w: u64) -> bool {
     reg::world(w).is_some_and(|(_, r)| r.save_contacts)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntw_set_accuracy(w: u64, accuracy: i32) {
+pub(crate) fn ohpl_ntw_set_accuracy(w: u64, accuracy: i32) {
     let Some((h, r)) = reg::world(w) else { return };
     reg::update_world(h, |r| r.accuracy = accuracy);
     let (solver, friction) = match accuracy {
@@ -207,16 +198,14 @@ pub extern "C" fn ohpl_ntw_set_accuracy(w: u64, accuracy: i32) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntw_set_threads(w: u64, n: i32) {
+pub(crate) fn ohpl_ntw_set_threads(w: u64, n: i32) {
     if let Some((_, r)) = reg::world(w) {
         // SAFETY: plain Newton call.
         unsafe { NewtonSetThreadsCount(r.nw, n) };
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntw_threads(w: u64) -> i32 {
+pub(crate) fn ohpl_ntw_threads(w: u64) -> i32 {
     // SAFETY: plain Newton call.
     reg::world(w).map_or(0, |(_, r)| unsafe { NewtonGetThreadsCount(r.nw) })
 }
@@ -352,8 +341,8 @@ unsafe extern "C" fn ray_filter(
 
 /// # Safety
 /// `origin` and `end` are valid vectors.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntw_cast_ray(
+#[allow(clippy::too_many_arguments)]
+pub(crate) unsafe fn ohpl_ntw_cast_ray(
     w: u64,
     cb: usize,
     origin: *const Vector3f,
@@ -409,8 +398,7 @@ pub unsafe extern "C" fn ohpl_ntw_cast_ray(
 
 /// # Safety
 /// All pointers are valid; `normal` receives three floats.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntw_cast_ray_on_shape(
+pub(crate) unsafe fn ohpl_ntw_cast_ray_on_shape(
     coll: *const NewtonCollision,
     transform: *const Matrixf,
     origin: *const Vector3f,
@@ -627,8 +615,7 @@ unsafe extern "C" fn debug_polygon(
 
 /// # Safety
 /// `transform` is valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntw_debug_shape(
+pub(crate) unsafe fn ohpl_ntw_debug_shape(
     coll: *const NewtonCollision,
     transform: *const Matrixf,
     low: usize,

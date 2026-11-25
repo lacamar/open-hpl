@@ -322,7 +322,6 @@ fn spring_controller_applies_clamped_force_and_ends_on_dest() {
         next: Str::new(b"next"),
     };
     let mut pid = Pid::new();
-    // SAFETY: `pid` is live and not borrowed.
     unsafe { controller::update(&m, &p, &mut pid, 0.1) };
     assert!(m.calls("body_add_force")[0].contains("y: -5.5"));
 
@@ -332,7 +331,6 @@ fn spring_controller_applies_clamped_force_and_ends_on_dest() {
         max_output: 3.0,
         ..p
     };
-    // SAFETY: as above.
     unsafe { controller::update(&m2, &clamped, &mut pid, 0.1) };
     assert!(m2.calls("body_add_force")[0].contains("y: -3.0"));
 
@@ -344,14 +342,12 @@ fn spring_controller_applies_clamped_force_and_ends_on_dest() {
         dest: 3.0,
         ..p
     };
-    // SAFETY: as above.
     unsafe { controller::update(&m3, &on_dest, &mut pid, 0.1) };
     assert_eq!(count(&m3, "ctrl_deactivate"), 1);
     assert!(m3.calls("ctrl_set_active")[0].contains("(60, true)"));
 
     let idle = Mock::new();
     let paused = CtrlParams { paused: true, ..p };
-    // SAFETY: as above.
     unsafe { controller::update(&idle, &paused, &mut pid, 0.1) };
     assert!(idle.log.borrow().is_empty());
 }
@@ -489,24 +485,21 @@ struct Seen {
 
 fn parse(xml: &str) -> (bool, Vec<Seen>) {
     let mut out = Vec::new();
-    let ok = surface_xml::parse(xml.as_bytes(), true, |d| {
-        // SAFETY: the sink gets live pointers for the duration of the call.
-        unsafe {
-            out.push(Seen {
-                name: d.name.bytes().to_vec(),
-                elasticity: d.elasticity,
-                priority: d.priority,
-                friction_mode: d.friction_mode,
-                elasticity_mode: d.elasticity_mode,
-                min_scrape_speed: d.min_scrape_speed,
-                axis: d.roll_axis_flags,
-                impacts: std::slice::from_raw_parts(d.impacts, d.n_impacts)
-                    .iter()
-                    .map(|i| (i.min_speed, i.sound.bytes().to_vec(), i.ps_prio))
-                    .collect(),
-                hits: d.n_hits,
-            });
-        }
+    let ok = surface_xml::parse(xml.as_bytes(), true, |d| unsafe {
+        out.push(Seen {
+            name: d.name.bytes().to_vec(),
+            elasticity: d.elasticity,
+            priority: d.priority,
+            friction_mode: d.friction_mode,
+            elasticity_mode: d.elasticity_mode,
+            min_scrape_speed: d.min_scrape_speed,
+            axis: d.roll_axis_flags,
+            impacts: std::slice::from_raw_parts(d.impacts, d.n_impacts)
+                .iter()
+                .map(|i| (i.min_speed, i.sound.bytes().to_vec(), i.ps_prio))
+                .collect(),
+            hits: d.n_hits,
+        });
     });
     (ok, out)
 }
@@ -598,20 +591,21 @@ fn body_book_replaces_host_slots() {
     assert!(super::book::body_get(bk).is_none());
 }
 
+fn limit_sleep(bk: u64, dist: f32) -> bool {
+    super::book::joint_with(bk, |k| {
+        super::joint::limit_auto_sleep(true, 0.1, 2, &mut k.limit_step_count, 0.0, 1.0, dist)
+    })
+    .unwrap_or(false)
+}
+
 #[test]
 fn joint_book_keeps_step_counters() {
     let bk = super::book::joint_new();
     for _ in 0..2 {
-        assert!(!super::ffi::ohpl_h15_joint_limit_auto_sleep(
-            bk, true, 0.1, 2, 0.0, 1.0, 0.05
-        ));
+        assert!(!limit_sleep(bk, 0.05));
     }
-    assert!(super::ffi::ohpl_h15_joint_limit_auto_sleep(
-        bk, true, 0.1, 2, 0.0, 1.0, 0.05
-    ));
-    assert!(!super::ffi::ohpl_h15_joint_limit_auto_sleep(
-        bk, true, 0.1, 2, 0.0, 1.0, 0.5
-    ));
+    assert!(limit_sleep(bk, 0.05));
+    assert!(!limit_sleep(bk, 0.5));
     assert_eq!(
         super::book::joint_get(bk).map(|k| k.limit_step_count),
         Some(0)
@@ -619,64 +613,39 @@ fn joint_book_keeps_step_counters() {
     super::book::joint_free(bk);
 }
 
-struct WorldCtx {
-    book: u64,
-    seen: Vec<usize>,
-    removed: Vec<usize>,
+fn update_set(bk: u64, f: impl FnOnce(&mut super::book::WorldBook) -> bool) -> bool {
+    super::book::world_with(bk, f).unwrap_or(false)
 }
 
-unsafe extern "C" fn world_before(c: *mut std::ffi::c_void, b: usize) -> bool {
-    // SAFETY: the test passes a live WorldCtx.
-    let c = unsafe { &mut *c.cast::<WorldCtx>() };
-    c.seen.push(b);
-    if b == 20 {
-        super::ffi::ohpl_h15_world_update_insert(c.book, 25);
-        super::ffi::ohpl_h15_world_update_insert(c.book, 5);
+fn walk(bk: u64, mut visit: impl FnMut(usize)) {
+    let next = |after| super::book::world_with(bk, |w| w.next_after(after)).flatten();
+    let mut cur = next(None);
+    while let Some(b) = cur {
+        visit(b);
+        cur = next(Some(b));
     }
-    b != 30
-}
-
-unsafe extern "C" fn world_remove(c: *mut std::ffi::c_void, b: usize) {
-    // SAFETY: the test passes a live WorldCtx.
-    let c = unsafe { &mut *c.cast::<WorldCtx>() };
-    c.removed.push(b);
-    super::ffi::ohpl_h15_world_update_remove(c.book, b);
-}
-
-unsafe extern "C" fn world_after(c: *mut std::ffi::c_void, b: usize) {
-    // SAFETY: the test passes a live WorldCtx.
-    unsafe { &mut *c.cast::<WorldCtx>() }.seen.push(b);
 }
 
 #[test]
 fn world_update_set_matches_std_set_walk() {
-    let bk = super::ffi::ohpl_h15_world_new();
+    let bk = super::book::world_new();
     for b in [30, 10, 20] {
-        assert!(super::ffi::ohpl_h15_world_update_insert(bk, b));
+        assert!(update_set(bk, |w| w.insert(b)));
     }
-    assert!(!super::ffi::ohpl_h15_world_update_insert(bk, 10));
-    let mut c = WorldCtx {
-        book: bk,
-        seen: vec![],
-        removed: vec![],
-    };
-    // SAFETY: c outlives the calls.
-    unsafe {
-        super::ffi::ohpl_h15_world_update_before(
-            bk,
-            (&raw mut c).cast(),
-            world_before,
-            world_remove,
-        );
-    }
-    // 5 was inserted below the cursor: std::set would not visit it either.
-    assert_eq!(c.seen, [10, 20, 25, 30]);
-    assert_eq!(c.removed, [30]);
-    c.seen.clear();
-    // SAFETY: as above.
-    unsafe { super::ffi::ohpl_h15_world_update_after(bk, (&raw mut c).cast(), world_after) };
-    assert_eq!(c.seen, [5, 10, 20, 25]);
-    super::ffi::ohpl_h15_world_update_clear(bk);
-    super::ffi::ohpl_h15_world_free(bk);
-    assert!(!super::ffi::ohpl_h15_world_update_insert(bk, 1));
+    assert!(!update_set(bk, |w| w.insert(10)));
+    let mut seen = vec![];
+    walk(bk, |b| {
+        seen.push(b);
+        if b == 20 {
+            update_set(bk, |w| w.insert(25));
+            update_set(bk, |w| w.insert(5));
+        }
+    });
+    assert_eq!(seen, [10, 20, 25, 30]);
+    seen.clear();
+    walk(bk, |b| seen.push(b));
+    assert_eq!(seen, [5, 10, 20, 25, 30]);
+    super::book::world_with(bk, |w| w.clear());
+    super::book::world_free(bk);
+    assert!(!update_set(bk, |w| w.insert(1)));
 }

@@ -7,9 +7,8 @@ use super::controller::CtrlParams;
 use super::host::{H, Vt};
 use super::joint::{self, JointState, LimitEffect, MoveParams};
 use super::surface::{self, SurfaceParams};
-use super::world::{self, BodyFilter};
+use super::world::BodyFilter;
 use crate::types::Vector3f;
-use std::ffi::c_void;
 
 /// # Safety
 /// `p` is null or a live reference for the call.
@@ -254,75 +253,6 @@ pub extern "C" fn ohpl_h15_body_flag_set(book: u64, id: i32, v: bool) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15_joint_limit_auto_sleep(
-    book: u64,
-    enabled: bool,
-    sleep_dist: f32,
-    num_steps: i32,
-    min: f32,
-    max: f32,
-    dist: f32,
-) -> bool {
-    book::joint_with(book, |k| {
-        joint::limit_auto_sleep(
-            enabled,
-            sleep_dist,
-            num_steps,
-            &mut k.limit_step_count,
-            min,
-            max,
-            dist,
-        )
-    })
-    .unwrap_or(false)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15_world_new() -> u64 {
-    book::world_new()
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn ohpl_h15_world_free(book: u64) {
     book::world_free(book);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15_world_update_insert(book: u64, body: usize) -> bool {
-    book::world_with(book, |w| w.insert(body)).unwrap_or(false)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15_world_update_remove(book: u64, body: usize) -> bool {
-    book::world_with(book, |w| w.remove(body)).unwrap_or(false)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_h15_world_update_clear(book: u64) {
-    book::world_with(book, |w| w.clear());
-}
-
-/// # Safety
-/// `ctx` is valid for the callbacks.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h15_world_update_before(
-    book: u64,
-    ctx: *mut c_void,
-    before: world::BodyBefore,
-    remove: world::BodyAfter,
-) {
-    // SAFETY: caller contract.
-    unsafe { world::update_before(book, ctx, before, remove) };
-}
-
-/// # Safety
-/// `ctx` is valid for the callback.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h15_world_update_after(
-    book: u64,
-    ctx: *mut c_void,
-    after: world::BodyAfter,
-) {
-    // SAFETY: caller contract.
-    unsafe { world::update_after(book, ctx, after) };
 }

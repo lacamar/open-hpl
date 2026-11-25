@@ -1,15 +1,8 @@
-//! `iPhysicsBody` methods defined in Rust under their Itanium symbols; the C++ header only declares them.
-//! `this` is the C++ object; its `mS` member (offset asserted in PhysicsBody.cpp) is the Rust `BodyState`.
-
-use super::ffi_h15s as sh;
-use super::shell::BodyState;
+use super::shell::{self, BodyState};
 use crate::backend::newton::body as nb;
 use crate::types::Vector3f;
 
-/// # Safety
-/// `this` is a live object whose constructor has run.
 pub(super) unsafe fn state<'a>(this: *const u8) -> &'a mut BodyState {
-    // SAFETY: caller contract.
     unsafe { super::cxx::ptr_member(this, MS_OFFSET) }
 }
 
@@ -53,20 +46,20 @@ super::cxx::cxx! {
     "_ZN3hpl12iPhysicsBody22GetContinuousCollisionEv" continuous[this, s]() -> bool => nb::ohpl_ntb_continuous(s.rust);
     "_ZN3hpl12iPhysicsBody10SetGravityEb" set_gravity[this, s](v: bool) => nb::ohpl_ntb_set_gravity(s.rust, v);
     "_ZNK3hpl12iPhysicsBody10GetGravityEv" gravity[this, s]() -> bool => nb::ohpl_ntb_gravity(s.rust);
-    "_ZN3hpl12iPhysicsBody8AddJointEPNS_13iPhysicsJointE" add_joint[this, s](j: usize) => sh::ohpl_h15b_add_joint(s.shell, j);
-    "_ZN3hpl12iPhysicsBody8GetJointEi" joint_at[this, s](i: i32) -> usize => sh::ohpl_h15b_joint_at(s.shell, i);
-    "_ZN3hpl12iPhysicsBody11GetJointNumEv" joint_num[this, s]() -> i32 => sh::ohpl_h15b_joint_num(s.shell);
-    "_ZN3hpl12iPhysicsBody11RemoveJointEPNS_13iPhysicsJointE" remove_joint[this, s](j: usize) => sh::ohpl_h15b_remove_joint(s.shell, j);
-    "_ZN3hpl12iPhysicsBody15AddBodyCallbackEPNS_20iPhysicsBodyCallbackE" add_callback[this, s](c: usize) => sh::ohpl_h15b_add_callback(s.shell, c);
-    "_ZN3hpl12iPhysicsBody18RemoveBodyCallbackEPNS_20iPhysicsBodyCallbackE" remove_callback[this, s](c: usize) => sh::ohpl_h15b_remove_callback(s.shell, c);
-    "_ZN3hpl12iPhysicsBody15OnAABBCollisionEPS0_" on_aabb[this, s](o: usize) -> bool => sh::ohpl_h15b_on_aabb(s.shell, this as usize, o);
+    "_ZN3hpl12iPhysicsBody8AddJointEPNS_13iPhysicsJointE" add_joint[this, s](j: usize) => shell::body_add_joint(s.shell, j);
+    "_ZN3hpl12iPhysicsBody8GetJointEi" joint_at[this, s](i: i32) -> usize => shell::body_joint_at(s.shell, i);
+    "_ZN3hpl12iPhysicsBody11GetJointNumEv" joint_num[this, s]() -> i32 => shell::body_joint_num(s.shell);
+    "_ZN3hpl12iPhysicsBody11RemoveJointEPNS_13iPhysicsJointE" remove_joint[this, s](j: usize) => shell::body_remove_joint(s.shell, j);
+    "_ZN3hpl12iPhysicsBody15AddBodyCallbackEPNS_20iPhysicsBodyCallbackE" add_callback[this, s](c: usize) => shell::body_add_callback(s.shell, c);
+    "_ZN3hpl12iPhysicsBody18RemoveBodyCallbackEPNS_20iPhysicsBodyCallbackE" remove_callback[this, s](c: usize) => shell::body_remove_callback(s.shell, c);
+    "_ZN3hpl12iPhysicsBody15OnAABBCollisionEPS0_" on_aabb[this, s](o: usize) -> bool => shell::body_on_aabb(s.shell, this as usize, o);
     "_ZN3hpl12iPhysicsBody9OnCollideEPS0_PNS_19cPhysicsContactDataE" on_collide[this, s](o: usize, c: usize) => {
         super::ffi::ohpl_h15_body_flag_set(s.book, FLAG_HAS_COLLISION, true);
-        sh::ohpl_h15b_on_collide(s.shell, this as usize, o, c)
+        shell::body_on_collide(s.shell, this as usize, o, c)
     };
-    "_ZN3hpl12iPhysicsBody21AddConnectedCharacterEPNS_14iCharacterBodyE" add_char[this, s](c: usize) => sh::ohpl_h15b_add_char(s.shell, c);
-    "_ZN3hpl12iPhysicsBody24RemoveConnectedCharacterEPNS_14iCharacterBodyE" remove_char[this, s](c: usize) => sh::ohpl_h15b_remove_char(s.shell, c);
-    "_ZN3hpl12iPhysicsBody26AddAttachedVerletContainerEPNS_24iVerletParticleContainerE" add_verlet[this, s](c: usize) => sh::ohpl_h15b_add_verlet(s.shell, c);
-    "_ZN3hpl12iPhysicsBody29RemoveAttachedVerletContainerEPNS_24iVerletParticleContainerE" remove_verlet[this, s](c: usize) => sh::ohpl_h15b_remove_verlet(s.shell, c);
-    "_ZN3hpl12iPhysicsBody7DestroyEv" destroy[this, s]() => sh::ohpl_h15b_destroy(s.shell, this as usize);
+    "_ZN3hpl12iPhysicsBody21AddConnectedCharacterEPNS_14iCharacterBodyE" add_char[this, s](c: usize) => shell::body_add_char(s.shell, c);
+    "_ZN3hpl12iPhysicsBody24RemoveConnectedCharacterEPNS_14iCharacterBodyE" remove_char[this, s](c: usize) => shell::body_remove_char(s.shell, c);
+    "_ZN3hpl12iPhysicsBody26AddAttachedVerletContainerEPNS_24iVerletParticleContainerE" add_verlet[this, s](c: usize) => shell::body_add_verlet(s.shell, c);
+    "_ZN3hpl12iPhysicsBody29RemoveAttachedVerletContainerEPNS_24iVerletParticleContainerE" remove_verlet[this, s](c: usize) => shell::body_remove_verlet(s.shell, c);
+    "_ZN3hpl12iPhysicsBody7DestroyEv" destroy[this, s]() => shell::body_destroy(s.shell, this as usize);
 }

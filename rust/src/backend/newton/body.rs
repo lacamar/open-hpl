@@ -251,59 +251,51 @@ pub unsafe extern "C" fn ohpl_ntb_set_matrix(b: u64, m: *const Matrixf) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_material(b: u64, id: i32) {
+pub(crate) fn ohpl_ntb_set_material(b: u64, id: i32) {
     // SAFETY: Newton body.
     with_body(b, |r| unsafe { NewtonBodySetMaterialGroupID(r.nb, id) });
 }
 
 /// # Safety
 /// `v` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_set_velocity(b: u64, v: *const Vector3f) {
+pub(crate) unsafe fn ohpl_ntb_set_velocity(b: u64, v: *const Vector3f) {
     // SAFETY: Newton body, caller contract.
     with_body(b, |r| unsafe { NewtonBodySetVelocity(r.nb, v.cast()) });
 }
 
 /// # Safety
 /// `out` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_velocity(b: u64, out: *mut Vector3f) {
+pub(crate) unsafe fn ohpl_ntb_velocity(b: u64, out: *mut Vector3f) {
     // SAFETY: Newton body, caller contract.
     with_body(b, |r| unsafe { NewtonBodyGetVelocity(r.nb, out.cast()) });
 }
 
 /// # Safety
 /// `v` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_set_omega(b: u64, v: *const Vector3f) {
+pub(crate) unsafe fn ohpl_ntb_set_omega(b: u64, v: *const Vector3f) {
     // SAFETY: Newton body, caller contract.
     with_body(b, |r| unsafe { NewtonBodySetOmega(r.nb, v.cast()) });
 }
 
 /// # Safety
 /// `out` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_omega(b: u64, out: *mut Vector3f) {
+pub(crate) unsafe fn ohpl_ntb_omega(b: u64, out: *mut Vector3f) {
     // SAFETY: Newton body, caller contract.
     with_body(b, |r| unsafe { NewtonBodyGetOmega(r.nb, out.cast()) });
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_linear_damping(b: u64, d: f32) {
+pub(crate) fn ohpl_ntb_set_linear_damping(b: u64, d: f32) {
     let d = if d < 0.001 { 0.001 } else { d };
     // SAFETY: Newton body.
     with_body(b, |r| unsafe { NewtonBodySetLinearDamping(r.nb, d) });
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_linear_damping(b: u64) -> f32 {
+pub(crate) fn ohpl_ntb_linear_damping(b: u64) -> f32 {
     // SAFETY: Newton body.
     reg::body(b).map_or(0.0, |(_, r)| unsafe { NewtonBodyGetLinearDamping(r.nb) })
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_angular_damping(b: u64, d: f32) {
+pub(crate) fn ohpl_ntb_set_angular_damping(b: u64, d: f32) {
     let d = if d < 0.001 { 0.001 } else { d };
     let damp = [d, d, d];
     // SAFETY: Newton body, three floats.
@@ -312,8 +304,7 @@ pub extern "C" fn ohpl_ntb_set_angular_damping(b: u64, d: f32) {
     });
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_angular_damping(b: u64) -> f32 {
+pub(crate) fn ohpl_ntb_angular_damping(b: u64) -> f32 {
     let mut damp = [0.0f32; 3];
     // SAFETY: Newton body, three floats.
     with_body(b, |r| unsafe {
@@ -322,46 +313,39 @@ pub extern "C" fn ohpl_ntb_angular_damping(b: u64) -> f32 {
     damp[0]
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_max_linear(b: u64, s: f32) {
+pub(crate) fn ohpl_ntb_set_max_linear(b: u64, s: f32) {
     if let Some((h, _)) = reg::body(b) {
         reg::update_body(h, |r| r.max_linear = s);
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_max_linear(b: u64) -> f32 {
+pub(crate) fn ohpl_ntb_max_linear(b: u64) -> f32 {
     reg::body(b).map_or(0.0, |(_, r)| r.max_linear)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_max_angular(b: u64, s: f32) {
+pub(crate) fn ohpl_ntb_set_max_angular(b: u64, s: f32) {
     if let Some((h, _)) = reg::body(b) {
         reg::update_body(h, |r| r.max_angular = s);
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_max_angular(b: u64) -> f32 {
+pub(crate) fn ohpl_ntb_max_angular(b: u64) -> f32 {
     reg::body(b).map_or(0.0, |(_, r)| r.max_angular)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_gravity(b: u64, on: bool) {
+pub(crate) fn ohpl_ntb_set_gravity(b: u64, on: bool) {
     if let Some((h, _)) = reg::body(b) {
         reg::update_body(h, |r| r.gravity = on);
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_gravity(b: u64) -> bool {
+pub(crate) fn ohpl_ntb_gravity(b: u64) -> bool {
     reg::body(b).is_some_and(|(_, r)| r.gravity)
 }
 
 /// # Safety
 /// `out` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_inertia(b: u64, out: *mut Vector3f) {
+pub(crate) unsafe fn ohpl_ntb_inertia(b: u64, out: *mut Vector3f) {
     let (mut m, mut x, mut y, mut z) = (0.0f32, 0.0f32, 0.0f32, 0.0f32);
     // SAFETY: Newton body, valid out-pointers.
     with_body(b, |r| unsafe {
@@ -375,8 +359,7 @@ pub unsafe extern "C" fn ohpl_ntb_inertia(b: u64, out: *mut Vector3f) {
 
 /// # Safety
 /// `coll` is the body's live collision.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_set_mass(b: u64, coll: *const NewtonCollision, mass: f32) {
+pub(crate) unsafe fn ohpl_ntb_set_mass(b: u64, coll: *const NewtonCollision, mass: f32) {
     let Some((h, rec)) = reg::body(b) else { return };
     let (mut inertia, mut offset) = (ZERO, ZERO);
     // SAFETY: valid collision and out-pointers.
@@ -403,16 +386,14 @@ pub extern "C" fn ohpl_ntb_mass(b: u64) -> f32 {
 
 /// # Safety
 /// `v` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_set_mass_centre(b: u64, v: *const Vector3f) {
+pub(crate) unsafe fn ohpl_ntb_set_mass_centre(b: u64, v: *const Vector3f) {
     // SAFETY: Newton body, caller contract.
     with_body(b, |r| unsafe { NewtonBodySetCentreOfMass(r.nb, v.cast()) });
 }
 
 /// # Safety
 /// `out` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_mass_centre(b: u64, out: *mut Vector3f) {
+pub(crate) unsafe fn ohpl_ntb_mass_centre(b: u64, out: *mut Vector3f) {
     // SAFETY: Newton body, caller contract.
     with_body(b, |r| unsafe {
         NewtonBodyGetCentreOfMass(r.nb, out.cast())
@@ -442,8 +423,7 @@ fn accumulate(b: u64, force: Option<Vector3f>, torque: Option<Vector3f>) {
 
 /// # Safety
 /// `f` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_add_force(b: u64, f: *const Vector3f) {
+pub(crate) unsafe fn ohpl_ntb_add_force(b: u64, f: *const Vector3f) {
     // SAFETY: caller contract.
     if let Some(f) = unsafe { f.as_ref() } {
         accumulate(b, Some(*f), None);
@@ -452,8 +432,7 @@ pub unsafe extern "C" fn ohpl_ntb_add_force(b: u64, f: *const Vector3f) {
 
 /// # Safety
 /// All pointers are valid; `local` is the body's local matrix.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_add_force_at_position(
+pub(crate) unsafe fn ohpl_ntb_add_force_at_position(
     b: u64,
     f: *const Vector3f,
     pos: *const Vector3f,
@@ -486,8 +465,7 @@ pub unsafe extern "C" fn ohpl_ntb_add_force_at_position(
 
 /// # Safety
 /// `t` is a valid vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_add_torque(b: u64, t: *const Vector3f) {
+pub(crate) unsafe fn ohpl_ntb_add_torque(b: u64, t: *const Vector3f) {
     // SAFETY: caller contract.
     if let Some(t) = unsafe { t.as_ref() } {
         accumulate(b, None, Some(*t));
@@ -527,8 +505,7 @@ pub unsafe extern "C" fn ohpl_ntb_add_impulse(
 
 /// # Safety
 /// Pointers are valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_ntb_add_impulse_at(
+pub(crate) unsafe fn ohpl_ntb_add_impulse_at(
     b: u64,
     impulse: *const Vector3f,
     pos: *const Vector3f,
@@ -539,41 +516,35 @@ pub unsafe extern "C" fn ohpl_ntb_add_impulse_at(
     });
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_freeze(b: u64, state: i32) {
+pub(crate) fn ohpl_ntb_set_freeze(b: u64, state: i32) {
     // SAFETY: Newton body.
     with_body(b, |r| unsafe { NewtonBodySetFreezeState(r.nb, state) });
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_enabled(b: u64) -> bool {
+pub(crate) fn ohpl_ntb_enabled(b: u64) -> bool {
     reg::body(b).is_some_and(|(_, r)| is_enabled(r.nb))
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_auto_sleep(b: u64, on: bool) {
+pub(crate) fn ohpl_ntb_set_auto_sleep(b: u64, on: bool) {
     // SAFETY: Newton body.
     with_body(b, |r| unsafe {
         NewtonBodySetAutoSleep(r.nb, c_int::from(on))
     });
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_auto_sleep(b: u64) -> bool {
+pub(crate) fn ohpl_ntb_auto_sleep(b: u64) -> bool {
     // SAFETY: Newton body.
     reg::body(b).is_some_and(|(_, r)| unsafe { NewtonBodyGetAutoSleep(r.nb) } != 0)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_continuous(b: u64, on: bool) {
+pub(crate) fn ohpl_ntb_set_continuous(b: u64, on: bool) {
     // SAFETY: Newton body.
     with_body(b, |r| unsafe {
         NewtonBodySetContinuousCollisionMode(r.nb, u32::from(on))
     });
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_continuous(b: u64) -> bool {
+pub(crate) fn ohpl_ntb_continuous(b: u64) -> bool {
     // SAFETY: Newton body.
     reg::body(b).is_some_and(|(_, r)| unsafe { NewtonBodyGetContinuousCollisionMode(r.nb) } == 1)
 }
@@ -659,32 +630,26 @@ pub unsafe extern "C" fn ohpl_ntb_set_buoy_drag(
     });
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_auto_linear(b: u64, v: f32) {
+pub(crate) fn ohpl_ntb_set_auto_linear(b: u64, v: f32) {
     with_rec_mut(b, |r| r.auto_disable.linear = v);
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_auto_linear(b: u64) -> f32 {
+pub(crate) fn ohpl_ntb_auto_linear(b: u64) -> f32 {
     reg::body(b).map_or(0.0, |(_, r)| r.auto_disable.linear)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_auto_angular(b: u64, v: f32) {
+pub(crate) fn ohpl_ntb_set_auto_angular(b: u64, v: f32) {
     with_rec_mut(b, |r| r.auto_disable.angular = v);
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_auto_angular(b: u64) -> f32 {
+pub(crate) fn ohpl_ntb_auto_angular(b: u64) -> f32 {
     reg::body(b).map_or(0.0, |(_, r)| r.auto_disable.angular)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_set_auto_steps(b: u64, v: i32) {
+pub(crate) fn ohpl_ntb_set_auto_steps(b: u64, v: i32) {
     with_rec_mut(b, |r| r.auto_disable.steps = v);
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn ohpl_ntb_auto_steps(b: u64) -> i32 {
+pub(crate) fn ohpl_ntb_auto_steps(b: u64) -> i32 {
     reg::body(b).map_or(0, |(_, r)| r.auto_disable.steps)
 }

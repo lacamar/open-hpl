@@ -1,11 +1,7 @@
-//! Newton-backed members of `iPhysicsMaterial`, `iPhysicsBody` and `iPhysicsWorld`, defined in Rust under their Itanium symbols.
-//! Offsets are asserted in PhysicsMaterialNewton.cpp, PhysicsBody.cpp and PhysicsWorld.cpp.
-//! Methods returning `cVector3f` by value get an sret stub: it moves `this` to x1 and the result address (x8) to x0.
-
 use super::cxx::{ptr_member, val_member};
 use super::newton_material::{MatProps, surface_calls};
 use super::shell::BodyState;
-use super::{ffi_h15w as w, wreg};
+use super::wreg;
 use crate::backend::newton::reg::Buoy;
 use crate::backend::newton::{body as nb, material as nm, world as nw};
 use crate::types::{Matrixf, Vector3f};
@@ -20,24 +16,17 @@ const ENT_POD: usize = 8;
 const SHAPE_COLLISION: usize = 304;
 const BODY_STATE: usize = 304;
 
-/// # Safety
-/// `m` is a live `iPhysicsMaterial`.
 unsafe fn props(m: *const u8) -> MatProps {
-    // SAFETY: caller contract; the five members are contiguous.
     unsafe { *m.add(MAT_PROPS).cast::<MatProps>() }
 }
 
-/// # Safety
-/// `this` is a live `iPhysicsMaterial` whose world is live.
 unsafe fn update_materials(this: *const u8) {
-    // SAFETY: caller contract.
     unsafe {
         let world: *const u8 = val_member(this, MAT_WORLD);
         let book: u64 = val_member(world, WORLD_BOOK);
         let newton: u64 = val_member(world, WORLD_NEWTON);
         let a = props(this);
         let id_a: i32 = val_member(this, MAT_ID);
-        // std::map order: by name
         let mut all: Vec<(&[u8], usize)> = (0..wreg::material_len(book))
             .filter_map(|i| wreg::material_at(book, i))
             .map(|(p, n, h)| (std::slice::from_raw_parts(p, n), h))
@@ -55,7 +44,6 @@ macro_rules! mat_prop {
     ($($set:literal $setn:ident $get:literal $getn:ident $t:ty, $off:expr;)*) => {$(
         #[unsafe(export_name = $set)]
         unsafe extern "C" fn $setn(this: *const u8, v: $t) {
-            // SAFETY: C++ calls with a live material.
             unsafe {
                 *this.add(MAT_PROPS + $off).cast_mut().cast::<$t>() = v;
                 update_materials(this);
@@ -63,7 +51,6 @@ macro_rules! mat_prop {
         }
         #[unsafe(export_name = $get)]
         unsafe extern "C" fn $getn(this: *const u8) -> $t {
-            // SAFETY: C++ calls with a live material.
             unsafe { val_member(this, MAT_PROPS + $off) }
         }
     )*};
@@ -79,7 +66,6 @@ mat_prop! {
 
 #[unsafe(export_name = "_ZN3hpl16iPhysicsMaterial15UpdateMaterialsEv")]
 unsafe extern "C" fn update_materials_sym(this: *const u8) {
-    // SAFETY: C++ calls with a live material.
     unsafe { update_materials(this) }
 }
 
@@ -87,7 +73,6 @@ const MAT_SURFACE: usize = 48;
 const CD_TANGENT: usize = 4;
 const CD_POS: usize = 20;
 
-// Weak references: a strong one would pull SurfaceData.o (-> Log -> main) into test binaries that link libohpl.a.
 macro_rules! weak_calls {
     ($($sym:literal $tramp:literal $name:ident($($a:ident: $t:ty),*) $(-> $r:ty)?;)*) => {
         $(global_asm!(concat!(
@@ -109,8 +94,6 @@ unsafe extern "C" {
     fn body_on_collide(b: *const u8, other: *const u8, data: *const u8);
 }
 
-/// # Safety
-/// Both bodies and the contact data are live; the bodies' materials are set.
 #[unsafe(export_name = "_ZN3hpl16iPhysicsMaterial16DispatchContactsEPNS_12iPhysicsBodyES2_RNS_19cPhysicsContactDataEi")]
 unsafe extern "C" fn dispatch_contacts(
     b1: *const u8,
@@ -118,7 +101,6 @@ unsafe extern "C" fn dispatch_contacts(
     data: *const u8,
     contacts: i32,
 ) {
-    // SAFETY: C++ calls with live bodies and contact data.
     unsafe {
         let (s1, s2) = (body(b1), body(b2));
         let (m1, m2) = (s1.material as *const u8, s2.material as *const u8);
@@ -165,10 +147,7 @@ unsafe extern "C" fn dispatch_contacts(
     }
 }
 
-/// # Safety
-/// `b` is a live body.
 unsafe fn body<'a>(b: *const u8) -> &'a mut BodyState {
-    // SAFETY: caller contract.
     unsafe { ptr_member(b, BODY_STATE) }
 }
 
@@ -208,7 +187,6 @@ macro_rules! sret_impl {
     ($($n:ident[$this:ident] => $e:expr;)*) => {$(
         #[unsafe(no_mangle)]
         unsafe extern "C" fn $n(out: *mut Vector3f, $this: *const u8) {
-            // SAFETY: called by the sret stub with a live object.
             unsafe { ($e)(out) }
         }
     )*};
@@ -224,10 +202,7 @@ sret_impl! {
     ohpl_phy_gravity[this] => |o| nw::ohpl_ntw_gravity(val_member(this, WORLD_NEWTON), o);
 }
 
-/// # Safety
-/// `this` is a live world.
 unsafe fn world_handles(this: *const u8) -> (u64, u64) {
-    // SAFETY: caller contract.
     unsafe { (val_member(this, WORLD_BOOK), val_member(this, WORLD_NEWTON)) }
 }
 
@@ -241,11 +216,11 @@ super::cxx::cxx! {
         => nw::ohpl_ntw_debug_shape(val_member(shape, SHAPE_COLLISION), m, low, color);
     "_ZN3hpl13iPhysicsWorld19RenderContactPointsEPNS_17iLowLevelGraphicsERKNS_6cColorES5_" render_contacts[this, s](low: usize, point: *const u8, line: *const u8) => {
         let colors = [*point.cast::<[f32; 4]>(), *line.cast::<[f32; 4]>()];
-        w::ohpl_h15w_render_contacts(s.0, low, colors.as_ptr() as usize)
+        wreg::render_contacts(s.0, low, colors.as_ptr() as usize)
     };
     "_ZN3hpl13iPhysicsWorld24CheckShapeWorldCollisionEPNS_8cVector3IfEEPNS_13iCollideShapeERKNS_7cMatrixIfEEPNS_12iPhysicsBodyEbbPNS_30iPhysicsWorldCollisionCallbackEbijb" check_world[this, s](
         push: *mut Vector3f, shape: usize, m: *const Matrixf, skip: usize, skip_static: bool, is_char: bool, cb: usize, collide_char: bool, min_push: i32, flags: u32, _debug: bool) -> bool => {
         let q = wreg::Query { skip_body: skip, flags, collide_character: collide_char, is_character: is_char, skip_static, min_push };
-        w::ohpl_h15w_shape_world_collision(s.0, push, shape, m, &q, cb)
+        wreg::shape_world_collision(s.0, push, shape, m, &q, cb)
     };
 }
