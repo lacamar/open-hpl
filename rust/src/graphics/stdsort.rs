@@ -211,7 +211,7 @@ pub fn sort<T: Copy + Default>(v: &mut [T], less: impl FnMut(&T, &T) -> bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::sort;
+    use super::{Sorter, sort};
 
     #[test]
     fn inconsistent_comparison_terminates() {
@@ -231,5 +231,43 @@ mod tests {
         });
         assert_eq!(v, [1, 2, 3]);
         assert!(calls > 0);
+    }
+
+    fn keys(n: usize) -> Vec<u32> {
+        let mut s: u32 = 12345;
+        (0..n)
+            .map(|_| {
+                s = s.wrapping_mul(1103515245).wrapping_add(12345);
+                (s >> 16) % 4
+            })
+            .collect()
+    }
+
+    #[test]
+    fn heap_sort_matches_libstdcxx_on_ties() {
+        let cases: [(usize, &[usize]); 2] = [
+            (
+                17,
+                &[4, 14, 11, 13, 7, 8, 3, 12, 16, 9, 5, 2, 6, 15, 0, 1, 10],
+            ),
+            (
+                40,
+                &[
+                    11, 22, 33, 13, 39, 36, 20, 30, 4, 37, 14, 7, 31, 38, 35, 8, 34, 3, 12, 29, 16,
+                    18, 9, 21, 24, 5, 2, 6, 28, 15, 32, 17, 1, 19, 10, 23, 0, 25, 26, 27,
+                ],
+            ),
+        ];
+        for (n, want) in cases {
+            let k = keys(n);
+            let mut v: Vec<usize> = (0..n).collect();
+            let mut s = Sorter {
+                v: &mut v,
+                less: |a: &usize, b: &usize| k[*a] > k[*b],
+                base: 0,
+            };
+            s.heap_sort(0, n);
+            assert_eq!(v, want, "n={n}");
+        }
     }
 }

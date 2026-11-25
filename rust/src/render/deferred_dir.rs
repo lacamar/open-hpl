@@ -10,7 +10,7 @@ use super::deferred_fx::{Item, Seq, ask, mat, o, ops, p4, p4f, x};
 use super::deferred_light::{feature, linear_light_color, underwater_fog_color};
 use super::deferred_pass::pshape;
 use crate::math::{
-    Matrixf, Vector3f, cross3, div3, dot3, len3, matrix_mul_3x3, normalize3,
+    Matrixf, Vector3f, cross3, div3, dot3, interpolate, len3, matrix_mul_3x3, normalize3,
     orthographic_projection, sub3, tan, v3,
 };
 use crate::types::Vector2f;
@@ -23,10 +23,6 @@ fn add_first(a: f32, b: f32) -> f32 {
 }
 
 /// `cMath::Interpolate`.
-fn interpolate(a: f32, b: f32, t: f32) -> f32 {
-    a.mul_add(1.0 - t, b * t)
-}
-
 /// `kVar_*` ids used here.
 pub mod v5 {
     pub const AV_LIGHT_COLOR: i32 = 1;

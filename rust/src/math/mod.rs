@@ -57,7 +57,7 @@ pub(crate) use scalar::is_pow2;
 pub(crate) use scalar::log2_to_int;
 pub(crate) use scalar::to_deg;
 pub(crate) use scalar::{angle_from_vector, randomize};
-pub(crate) use scalar::{clamp, rand_rectf, round_float_to_decimals, to_rad};
+pub(crate) use scalar::{clamp, interpolate, rand_rectf, round_float_to_decimals, to_rad};
 pub use scalar::{cmath_max, cmath_min, correct_sign_of_speed};
 pub(crate) use scalar::{fast_random_float, modulus, rand_rectl};
 pub(crate) use scalar::{get_flag_bit, smooth_curve};
