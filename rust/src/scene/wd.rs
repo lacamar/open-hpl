@@ -1094,7 +1094,7 @@ unsafe fn update_sky_colors(w: *mut World) {
         let n = ls_host::host()
             .map_or(0, |lh| (lh.vb_vertex_num)(vb.0))
             .max(0) as usize;
-        for px in vb.floats(VB_COLOR0, n * 4).chunks_exact_mut(4) {
+        for px in vb.floats(VB_COLOR0, n * 4).as_chunks_mut::<4>().0 {
             px.copy_from_slice(&[c.r, c.g, c.b, c.a]);
         }
         vb.update(VB_FLAG_COLOR0);

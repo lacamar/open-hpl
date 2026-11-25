@@ -250,7 +250,9 @@ pub fn decode_text(s: &[u8]) -> Vec<u8> {
         let w: Vec<u32> = s
             .get(2..)
             .unwrap_or_default()
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|c| {
                 u32::from(u16::from_le_bytes([
                     c.first().copied().unwrap_or(0),
@@ -1495,7 +1497,7 @@ pub fn decode_lipsync(file: &[u8]) -> Option<Vec<LipFrame>> {
     const K: [u32; 4] = [0x8f81_2a90, 0x7182_3fad, 0x0317_fab7, 0xc385_6aa5];
     let mut d = file.to_vec();
     let enc = (d.len() >> 1).next_multiple_of(8).min(d.len() & !7);
-    for block in d.get_mut(..enc)?.chunks_exact_mut(8) {
+    for block in d.get_mut(..enc)?.as_chunks_mut::<8>().0 {
         let (lo, hi) = block.split_at_mut(4);
         let mut v = [
             u32::from_le_bytes((&*lo).try_into().ok()?),

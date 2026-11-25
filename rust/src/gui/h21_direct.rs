@@ -108,7 +108,7 @@ fn keep(p: *mut G2Popup, r: &mut Ret, idx: usize, s: &[u32]) {
 fn msg_key(c: &Cmd) -> Msg {
     let mut m = Msg::zero();
     let mut k = [0u8; 12];
-    for (dst, v) in k.chunks_exact_mut(4).zip(c.i) {
+    for (dst, v) in k.as_chunks_mut::<4>().0.iter_mut().zip(c.i) {
         dst.copy_from_slice(&v.to_ne_bytes());
     }
     m.set_key_press(&k);

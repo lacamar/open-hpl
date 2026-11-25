@@ -98,8 +98,8 @@ mod tests {
     #[test]
     fn merges_and_offsets() {
         let mut id = Matrixf::default();
-        for i in 0..4 {
-            id.m[i][i] = 1.0;
+        for (i, row) in id.m.iter_mut().enumerate() {
+            row[i] = 1.0;
         }
         let mut mv = id;
         mv.m[0][3] = 5.0;

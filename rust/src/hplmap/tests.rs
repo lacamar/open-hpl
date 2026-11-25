@@ -443,7 +443,9 @@ fn cache_round_trips_and_patches_the_total_size() {
     // Normals are stored as signed bytes (`n * 127`) and come back through the platform `char`.
     let normals: Vec<f32> = arrays[1]
         .1
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .map(|c| f32::from_ne_bytes([c[0], c[1], c[2], c[3]]))
         .collect();
     assert_eq!(normals, [0.0, 1.0, 64.0 / 127.0, 0.0, 32.0 / 127.0, 1.0]);

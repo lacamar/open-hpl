@@ -165,8 +165,8 @@ impl Rotate {
         let off = matrix_mul_3x3(&rot, self.pivot);
         let pivot = v3(t.x + off.x, t.y + off.y, t.z + off.z);
         let mut done = false;
-        let step_mtx;
-        if self.mode == ROTATE_SPEED {
+
+        let step_mtx = if self.mode == ROTATE_SPEED {
             let diff = self.max_speed - self.speed;
             self.speed += clamp(diff, -self.acc * dt, self.acc * dt);
             let mut axis = self.axis;
@@ -176,7 +176,7 @@ impl Rotate {
             let mut q = Quaternion::default();
             normalize3(&mut axis);
             quat_from_angle_axis(&mut q, self.speed * dt, axis);
-            step_mtx = matrix_quaternion(&q);
+            matrix_quaternion(&q)
         } else {
             let mut q_cur = Quaternion::default();
             let mut q_goal = Quaternion::default();
@@ -205,8 +205,8 @@ impl Rotate {
                 quat_slerp(step / angle, &q_cur, &q_goal, true)
             };
             quat_normalize(&mut q_new);
-            step_mtx = matrix_mul(&matrix_quaternion(&q_new), &matrix_inverse(&rot));
-        }
+            matrix_mul(&matrix_quaternion(&q_new), &matrix_inverse(&rot))
+        };
         let mut new = matrix_mul(&step_mtx, &rot);
         let rel = v3(t.x - pivot.x, t.y - pivot.y, t.z - pivot.z);
         let r = matrix_mul_3x3(&step_mtx, rel);

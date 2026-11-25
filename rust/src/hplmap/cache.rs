@@ -76,7 +76,7 @@ impl Shared {
         let mut v = [0.0; 16];
         self.floats(&mut v);
         let mut m = Matrixf::default();
-        for (row, chunk) in m.m.iter_mut().zip(v.chunks_exact(4)) {
+        for (row, chunk) in m.m.iter_mut().zip(v.as_chunks::<4>().0.iter()) {
             row.copy_from_slice(chunk);
         }
         m

@@ -135,7 +135,7 @@ impl Host for CHost {
                 io.i[0] = k as i32;
                 let f = self.go(op::AREA_GET, io).f;
                 let mut m = [[0.0f32; 4]; 4];
-                for (row, c) in m.iter_mut().zip(f.chunks_exact(4)) {
+                for (row, c) in m.iter_mut().zip(f.as_chunks::<4>().0.iter()) {
                     row.copy_from_slice(c);
                 }
                 ExposureArea {

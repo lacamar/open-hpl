@@ -231,11 +231,36 @@ macro_rules! set_each {
 }
 pub(super) use set_each;
 
-set_each!(SetEntityPlayerLookAtCallback(cb: S, remove: bool), TYPE_ANY, -1, ops::ENT_LOOK_AT_CB);
-set_each!(SetEntityPlayerInteractCallback(cb: S, remove: bool), TYPE_ANY, -1, ops::ENT_INTERACT_CB);
-set_each!(SetEntityCallbackFunc(cb: S), TYPE_ANY, -1, ops::ENT_CALLBACK_FUNC);
-set_each!(SetEntityConnectionStateChangeCallback(cb: S), TYPE_ANY, -1, ops::ENT_CONNECTION_CB);
-set_each!(SetEntityInteractionDisabled(off: bool), TYPE_PROP, -1, ops::PROP_INTERACTION_DISABLED);
+set_each!(
+    SetEntityPlayerLookAtCallback(cb: S, remove: bool),
+    TYPE_ANY,
+    -1,
+    ops::ENT_LOOK_AT_CB
+);
+set_each!(
+    SetEntityPlayerInteractCallback(cb: S, remove: bool),
+    TYPE_ANY,
+    -1,
+    ops::ENT_INTERACT_CB
+);
+set_each!(
+    SetEntityCallbackFunc(cb: S),
+    TYPE_ANY,
+    -1,
+    ops::ENT_CALLBACK_FUNC
+);
+set_each!(
+    SetEntityConnectionStateChangeCallback(cb: S),
+    TYPE_ANY,
+    -1,
+    ops::ENT_CONNECTION_CB
+);
+set_each!(
+    SetEntityInteractionDisabled(off: bool),
+    TYPE_PROP,
+    -1,
+    ops::PROP_INTERACTION_DISABLED
+);
 
 sf!(GetEntitiesCollide(a: S, b: S) -> bool {
     let Some(ea) = entity(a.0, TYPE_ANY, -1) else { return false };

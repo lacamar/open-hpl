@@ -93,7 +93,7 @@ fn vec_at(a: &A, second: bool) -> Vector3f {
 
 fn matrix(m: &[f32; 16]) -> Matrixf {
     let mut r = Matrixf::default();
-    for (row, chunk) in r.m.iter_mut().zip(m.chunks_exact(4)) {
+    for (row, chunk) in r.m.iter_mut().zip(m.as_chunks::<4>().0.iter()) {
         row.copy_from_slice(chunk);
     }
     r
@@ -101,7 +101,7 @@ fn matrix(m: &[f32; 16]) -> Matrixf {
 
 fn flat(m: &Matrixf) -> [f32; 16] {
     let mut r = [0.0; 16];
-    for (chunk, row) in r.chunks_exact_mut(4).zip(m.m.iter()) {
+    for (chunk, row) in r.as_chunks_mut::<4>().0.iter_mut().zip(m.m.iter()) {
         chunk.copy_from_slice(row);
     }
     r

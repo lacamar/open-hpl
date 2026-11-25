@@ -237,10 +237,11 @@ pub unsafe extern "C" fn ohpl_a2d_hands_post_update(d: *mut HandsD, dh: *const D
         let fin = hands::hands_final_rotation(&v);
         let mut buf = [0.0f32; 21];
         (dh.call)(dh.ctx, hk::FILL_POS, 0, 0.0, 0.0, buf.as_mut_ptr().cast());
-        let mut it = buf.chunks_exact(3).map(|c| match *c {
-            [x, y, z] => Vector3f { x, y, z },
-            _ => Vector3f::default(),
-        });
+        let mut it = buf
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|&[x, y, z]| Vector3f { x, y, z });
         let mut next = || it.next().unwrap_or_default();
         let p = HandsPos {
             cam_pos: next(),

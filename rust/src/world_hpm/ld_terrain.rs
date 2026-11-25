@@ -313,7 +313,13 @@ impl Area {
             area.max = [src.center[0] + src.radius, src.center[1] + src.radius];
             return Some(area);
         }
-        let pts: Vec<[f32; 2]> = src.points.chunks_exact(2).map(|c| [c[0], c[1]]).collect();
+        let pts: Vec<[f32; 2]> = src
+            .points
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|c| [c[0], c[1]])
+            .collect();
         if pts.len() < 3 {
             return None;
         }
@@ -598,7 +604,7 @@ pub fn build_undergrowth(
                 g.uv1.extend([p.y, rand, 0.0]);
             }
             g.idx.extend(mat.idx.iter().map(|k| base + k));
-            for tri in mat.idx.chunks_exact(3) {
+            for tri in mat.idx.as_chunks::<3>().0 {
                 g.idx.extend([base + tri[0], base + tri[2], base + tri[1]]);
             }
         }

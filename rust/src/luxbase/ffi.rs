@@ -1492,8 +1492,10 @@ impl headless::Env for HeadlessHost {
         let r = self.0.go(op::H_GBUFFER_PIXELS, &[ai(i64::from(target))]);
         (r.i != 0).then(|| {
             r.bytes
-                .chunks_exact(4)
-                .filter_map(|c| c.try_into().ok().map(f32::from_ne_bytes))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|c| f32::from_ne_bytes(*c))
                 .collect()
         })
     }

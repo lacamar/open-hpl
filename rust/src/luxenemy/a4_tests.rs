@@ -75,7 +75,9 @@ fn rd_snap(r: &mut Reader) -> Snap {
 
 fn queue_from(b: &[u8]) -> Queue {
     let msgs = b
-        .chunks_exact(MSG_BYTES)
+        .as_chunks::<MSG_BYTES>()
+        .0
+        .iter()
         .map(|c| {
             let mut m = Msg::default();
             // SAFETY: `c` holds one `Msg` image.

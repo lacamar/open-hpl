@@ -273,7 +273,7 @@ impl Scape {
     fn inside(host: &mut dyn ScapeHost, ent: usize, pos: [f32; 3]) -> bool {
         let st = host.area(ent);
         let mut m = Matrixf::default();
-        for (row, chunk) in m.m.iter_mut().zip(st.matrix.chunks_exact(4)) {
+        for (row, chunk) in m.m.iter_mut().zip(st.matrix.as_chunks::<4>().0.iter()) {
             row.copy_from_slice(chunk);
         }
         let local = matrix_mul_vec(&matrix_inverse(&m), v3(pos[0], pos[1], pos[2]));

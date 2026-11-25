@@ -259,8 +259,10 @@ pub fn encode_pcm(mode: u32, s: &Sample, file: &[u8]) -> Option<Vec<u8>> {
     let data = sample_data(file, s)?;
     if mode == MODE_PCM16 {
         let pcm: Vec<i16> = data
-            .chunks_exact(2)
-            .filter_map(|b| Some(i16::from_le_bytes(b.try_into().ok()?)))
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|b| i16::from_le_bytes(*b))
             .collect();
         Some(wav_stereo(s, &pcm))
     } else if mode == MODE_IMA_ADPCM {

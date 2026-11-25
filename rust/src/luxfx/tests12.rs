@@ -189,8 +189,8 @@ impl Host for Fake {
                         let parsed: Vec<f32> = v
                             .map(|v| v.split(' ').filter_map(|x| x.parse().ok()).collect())
                             .unwrap_or_default();
-                        for i in 0..4 {
-                            a.out[i] = parsed.get(i).copied().unwrap_or(1.0);
+                        for (i, slot) in a.out.iter_mut().enumerate().take(4) {
+                            *slot = parsed.get(i).copied().unwrap_or(1.0);
                         }
                     }
                 }

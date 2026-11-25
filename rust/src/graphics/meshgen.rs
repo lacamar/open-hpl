@@ -441,7 +441,7 @@ pub fn plane(c1: Vector3f, c2: Vector3f, uv: [Vector2f; 4]) -> Result<MeshData, 
 /// Each triangle becomes three line segments; a trailing partial triangle is dropped.
 pub fn wireframe_indices(tris: &[u32]) -> Vec<u32> {
     let mut out = Vec::with_capacity(tris.len().saturating_mul(2));
-    for t in tris.chunks_exact(3) {
+    for t in tris.as_chunks::<3>().0 {
         for i in 0..3usize {
             out.push(at(t, i));
             out.push(at(t, if i + 1 >= 3 { 0 } else { i + 1 }));

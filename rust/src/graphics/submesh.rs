@@ -108,7 +108,7 @@ pub fn compile_bone_pairs(
             None => flags |= WARN_TOO_MANY_BONES,
         }
     }
-    for w in weights.chunks_exact_mut(4).take(vertex_count) {
+    for w in weights.as_chunks_mut::<4>().0.iter_mut().take(vertex_count) {
         if w.first().is_none_or(|&x| x == 0.0) {
             flags |= WARN_UNCONNECTED;
             continue;

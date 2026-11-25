@@ -450,15 +450,14 @@ pub fn hash_wide(s: &[u32]) -> u32 {
         return 0;
     }
     let mut h = s.len() as u32;
-    let mut pairs = s.chunks_exact(2);
-    for p in &mut pairs {
-        let &[p0, p1] = p else { continue };
+    let (pairs, rest) = s.as_chunks::<2>();
+    for &[p0, p1] in pairs {
         h = h.wrapping_add(p0);
         let t = (p1 << 11) ^ h;
         h = (h << 16) ^ t;
         h = h.wrapping_add(h >> 11);
     }
-    if let [last] = pairs.remainder() {
+    if let [last] = rest {
         h = h.wrapping_add(*last);
         h ^= h << 10;
         h = h.wrapping_add(h >> 1);
@@ -493,8 +492,10 @@ pub fn encode_data(data: &[u8]) -> Option<Vec<u8>> {
         return None;
     }
     Some(
-        data.chunks_exact(4)
-            .filter_map(|c| <[u8; 4]>::try_from(c).ok())
+        data.as_chunks::<4>()
+            .0
+            .iter()
+            .copied()
             .flat_map(encode_chunk)
             .collect(),
     )
@@ -505,10 +506,13 @@ pub fn decode_data(s: &[u8], dest: &mut [u8]) -> bool {
     if !dest.len().is_multiple_of(4) || s.len() < (dest.len() >> 2) * 6 {
         return false;
     }
-    for (chunk, out) in s.chunks_exact(6).zip(dest.chunks_exact_mut(4)) {
-        let &[c0, c1, c2, c3, c4, c5] = chunk else {
-            continue;
-        };
+    for (chunk, out) in s
+        .as_chunks::<6>()
+        .0
+        .iter()
+        .zip(dest.as_chunks_mut::<4>().0.iter_mut())
+    {
+        let &[c0, c1, c2, c3, c4, c5] = chunk;
         let front = u32::from_le_bytes([c0, c1, c2, c3]);
         let back = i32::from(i16::from_le_bytes([c4, c5]));
         let hi = ((back << 18) | (back << 4)) as u32 & 0xc0c0_c0c0;

@@ -100,7 +100,7 @@ pub fn read_gbuffer_stats(r: &dyn Req, p: &mut dyn Resp, e: &mut dyn Env) {
     let mut nan = [0i32; 4];
     let mut zero = [0i32; 4];
     let num = (i64::from(width) as u64).wrapping_mul(i64::from(height) as u64);
-    for (n, pix) in px.chunks_exact(4).enumerate() {
+    for (n, pix) in px.as_chunks::<4>().0.iter().enumerate() {
         if n as u64 >= num {
             break;
         }

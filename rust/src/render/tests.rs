@@ -246,8 +246,8 @@ fn decal_and_illum_sorts() {
 
 fn trans(z: f32, candidate: bool, center_y: f32) -> TransKey {
     let mut world = Matrixf::default();
-    for k in 0..4 {
-        world.m[k][k] = 1.0;
+    for (k, row) in world.m.iter_mut().enumerate() {
+        row[k] = 1.0;
     }
     TransKey {
         view_z: z,

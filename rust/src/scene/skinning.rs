@@ -87,13 +87,17 @@ fn skin_n<const STRIDE: usize>(job: SkinJob<'_>) {
         .zip(skin_pos.chunks_exact_mut(stride))
         .zip(
             bind_normal
-                .chunks_exact(3)
-                .zip(skin_normal.chunks_exact_mut(3)),
+                .as_chunks::<3>()
+                .0
+                .iter()
+                .zip(skin_normal.as_chunks_mut::<3>().0.iter_mut()),
         )
         .zip(
             bind_tangent
-                .chunks_exact(4)
-                .zip(skin_tangent.chunks_exact_mut(4)),
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .zip(skin_tangent.as_chunks_mut::<4>().0.iter_mut()),
         )
         .zip(weights.iter().zip(bones));
     for ((((bp, sp), (bn, sn)), (bt, st)), (w, b)) in verts {

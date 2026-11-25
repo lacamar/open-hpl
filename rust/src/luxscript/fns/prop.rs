@@ -20,51 +20,213 @@ fn mat_arg(m: &Matrixf) -> Arg {
     Arg::ptr(std::ptr::from_ref(m).cast())
 }
 
-set_each!(PauseCurrentAnimation(fade: f32), TYPE_PROP, -1, ops::PROP_PAUSE_ANIM);
-set_each!(PlayCurrentAnimation(fade: f32, looped: bool), TYPE_PROP, -1, ops::PROP_PLAY_ANIM);
-set_each!(SetPropAnimationPosition(pos: f32), TYPE_PROP, -1, ops::PROP_ANIM_POS);
-set_each!(SetPropAnimationSpeed(speed: f32), TYPE_PROP, -1, ops::PROP_ANIM_SPEED);
+set_each!(
+    PauseCurrentAnimation(fade: f32),
+    TYPE_PROP,
+    -1,
+    ops::PROP_PAUSE_ANIM
+);
+set_each!(
+    PlayCurrentAnimation(fade: f32, looped: bool),
+    TYPE_PROP,
+    -1,
+    ops::PROP_PLAY_ANIM
+);
+set_each!(
+    SetPropAnimationPosition(pos: f32),
+    TYPE_PROP,
+    -1,
+    ops::PROP_ANIM_POS
+);
+set_each!(
+    SetPropAnimationSpeed(speed: f32),
+    TYPE_PROP,
+    -1,
+    ops::PROP_ANIM_SPEED
+);
 set_each!(StopPropAnimation(), TYPE_PROP, -1, ops::PROP_STOP_ANIM);
-set_each!(PlayPropAnimation(anim: S, fade: f32, looped: bool, cb: S), TYPE_PROP, -1, ops::PROP_PLAY_ANIMATION);
-set_each!(SetPropEffectActive(on: bool, fade: bool), TYPE_PROP, -1, ops::PROP_EFFECTS_ACTIVE);
-set_each!(SetPropStaticPhysics(on: bool), TYPE_PROP, -1, ops::PROP_STATIC_PHYSICS);
+set_each!(
+    PlayPropAnimation(anim: S, fade: f32, looped: bool, cb: S),
+    TYPE_PROP,
+    -1,
+    ops::PROP_PLAY_ANIMATION
+);
+set_each!(
+    SetPropEffectActive(on: bool, fade: bool),
+    TYPE_PROP,
+    -1,
+    ops::PROP_EFFECTS_ACTIVE
+);
+set_each!(
+    SetPropStaticPhysics(on: bool),
+    TYPE_PROP,
+    -1,
+    ops::PROP_STATIC_PHYSICS
+);
 set_each!(StopPropMovement(), TYPE_PROP, -1, ops::PROP_STOP_MOVE);
-set_each!(SetPropHealth(health: f32), TYPE_PROP, -1, ops::PROP_SET_HEALTH);
+set_each!(
+    SetPropHealth(health: f32),
+    TYPE_PROP,
+    -1,
+    ops::PROP_SET_HEALTH
+);
 set_each!(ResetProp(), TYPE_PROP, -1, ops::PROP_RESET);
 
-set_each!(FadeLampTo(r: f32, g: f32, b: f32, a: f32, radius: f32, time: f32), TYPE_PROP, LAMP, ops::LAMP_FADE_TO);
-set_each!(SetLampCanBeLitByPlayer(on: bool), TYPE_PROP, LAMP, ops::LAMP_CAN_BE_LIT);
-set_each!(SetLampLit(on: bool, effects: bool), TYPE_PROP, LAMP, ops::LAMP_SET_LIT);
+set_each!(
+    FadeLampTo(r: f32, g: f32, b: f32, a: f32, radius: f32, time: f32),
+    TYPE_PROP,
+    LAMP,
+    ops::LAMP_FADE_TO
+);
+set_each!(
+    SetLampCanBeLitByPlayer(on: bool),
+    TYPE_PROP,
+    LAMP,
+    ops::LAMP_CAN_BE_LIT
+);
+set_each!(
+    SetLampLit(on: bool, effects: bool),
+    TYPE_PROP,
+    LAMP,
+    ops::LAMP_SET_LIT
+);
 
-set_each!(SetButtonCanBeSwitchedOff(on: bool), TYPE_PROP, BUTTON, ops::BUTTON_CAN_OFF);
-set_each!(SetButtonCanBeSwitchedOn(on: bool), TYPE_PROP, BUTTON, ops::BUTTON_CAN_ON);
-set_each!(SetButtonSwitchedOn(on: bool, effects: bool), TYPE_PROP, BUTTON, ops::BUTTON_SWITCHED_ON);
+set_each!(
+    SetButtonCanBeSwitchedOff(on: bool),
+    TYPE_PROP,
+    BUTTON,
+    ops::BUTTON_CAN_OFF
+);
+set_each!(
+    SetButtonCanBeSwitchedOn(on: bool),
+    TYPE_PROP,
+    BUTTON,
+    ops::BUTTON_CAN_ON
+);
+set_each!(
+    SetButtonSwitchedOn(on: bool, effects: bool),
+    TYPE_PROP,
+    BUTTON,
+    ops::BUTTON_SWITCHED_ON
+);
 
-set_each!(SetSwingDoorOpenAmount(amount: f32, duration: f32, towards_max: bool), TYPE_PROP, SWING_DOOR, ops::DOOR_OPEN_AMOUNT);
-set_each!(SetSwingDoorLocked(locked: bool, effects: bool), TYPE_PROP, SWING_DOOR, ops::DOOR_LOCKED);
-set_each!(SetSwingDoorClosed(closed: bool, effects: bool), TYPE_PROP, SWING_DOOR, ops::DOOR_CLOSED);
-set_each!(SetSwingDoorDisableAutoClose(off: bool), TYPE_PROP, SWING_DOOR, ops::DOOR_DISABLE_AUTO_CLOSE);
+set_each!(
+    SetSwingDoorOpenAmount(amount: f32, duration: f32, towards_max: bool),
+    TYPE_PROP,
+    SWING_DOOR,
+    ops::DOOR_OPEN_AMOUNT
+);
+set_each!(
+    SetSwingDoorLocked(locked: bool, effects: bool),
+    TYPE_PROP,
+    SWING_DOOR,
+    ops::DOOR_LOCKED
+);
+set_each!(
+    SetSwingDoorClosed(closed: bool, effects: bool),
+    TYPE_PROP,
+    SWING_DOOR,
+    ops::DOOR_CLOSED
+);
+set_each!(
+    SetSwingDoorDisableAutoClose(off: bool),
+    TYPE_PROP,
+    SWING_DOOR,
+    ops::DOOR_DISABLE_AUTO_CLOSE
+);
 
-set_each!(SetLevelDoorLocked(locked: bool), TYPE_PROP, LEVEL_DOOR, ops::LEVEL_DOOR_LOCKED);
-set_each!(SetLevelDoorLockedSound(sound: S), TYPE_PROP, LEVEL_DOOR, ops::LEVEL_DOOR_SOUND);
-set_each!(SetLevelDoorLockedText(cat: S, entry: S), TYPE_PROP, LEVEL_DOOR, ops::LEVEL_DOOR_TEXT);
+set_each!(
+    SetLevelDoorLocked(locked: bool),
+    TYPE_PROP,
+    LEVEL_DOOR,
+    ops::LEVEL_DOOR_LOCKED
+);
+set_each!(
+    SetLevelDoorLockedSound(sound: S),
+    TYPE_PROP,
+    LEVEL_DOOR,
+    ops::LEVEL_DOOR_SOUND
+);
+set_each!(
+    SetLevelDoorLockedText(cat: S, entry: S),
+    TYPE_PROP,
+    LEVEL_DOOR,
+    ops::LEVEL_DOOR_TEXT
+);
 
-set_each!(SetPropObjectStuckState(state: i32), TYPE_PROP, OBJECT, ops::OBJECT_STUCK);
-set_each!(SetWheelAngle(angle: f32, auto_move: bool), TYPE_PROP, WHEEL, ops::WHEEL_ANGLE);
-set_each!(SetWheelStuckState(state: i32, effects: bool), TYPE_PROP, WHEEL, ops::WHEEL_STUCK);
-set_each!(SetLeverStuckState(state: i32, effects: bool), TYPE_PROP, LEVER, ops::LEVER_STUCK);
-set_each!(SetWheelInteractionDisablesStuck(on: bool), TYPE_PROP, WHEEL, ops::WHEEL_INTERACTION);
-set_each!(SetLeverInteractionDisablesStuck(on: bool), TYPE_PROP, LEVER, ops::LEVER_INTERACTION);
-set_each!(SetMultiSliderStuckState(state: i32, effects: bool), TYPE_PROP, MULTI_SLIDER, ops::MULTI_SLIDER_STUCK);
-set_each!(SetMultiSliderCallback(cb: S), TYPE_PROP, MULTI_SLIDER, ops::MULTI_SLIDER_CB);
+set_each!(
+    SetPropObjectStuckState(state: i32),
+    TYPE_PROP,
+    OBJECT,
+    ops::OBJECT_STUCK
+);
+set_each!(
+    SetWheelAngle(angle: f32, auto_move: bool),
+    TYPE_PROP,
+    WHEEL,
+    ops::WHEEL_ANGLE
+);
+set_each!(
+    SetWheelStuckState(state: i32, effects: bool),
+    TYPE_PROP,
+    WHEEL,
+    ops::WHEEL_STUCK
+);
+set_each!(
+    SetLeverStuckState(state: i32, effects: bool),
+    TYPE_PROP,
+    LEVER,
+    ops::LEVER_STUCK
+);
+set_each!(
+    SetWheelInteractionDisablesStuck(on: bool),
+    TYPE_PROP,
+    WHEEL,
+    ops::WHEEL_INTERACTION
+);
+set_each!(
+    SetLeverInteractionDisablesStuck(on: bool),
+    TYPE_PROP,
+    LEVER,
+    ops::LEVER_INTERACTION
+);
+set_each!(
+    SetMultiSliderStuckState(state: i32, effects: bool),
+    TYPE_PROP,
+    MULTI_SLIDER,
+    ops::MULTI_SLIDER_STUCK
+);
+set_each!(
+    SetMultiSliderCallback(cb: S),
+    TYPE_PROP,
+    MULTI_SLIDER,
+    ops::MULTI_SLIDER_CB
+);
 
-set_each!(SetNPCAwake(awake: bool, effects: bool), TYPE_PROP, NPC, ops::NPC_AWAKE);
-set_each!(SetNPCFollowPlayer(on: bool), TYPE_PROP, NPC, ops::NPC_FOLLOW);
+set_each!(
+    SetNPCAwake(awake: bool, effects: bool),
+    TYPE_PROP,
+    NPC,
+    ops::NPC_AWAKE
+);
+set_each!(
+    SetNPCFollowPlayer(on: bool),
+    TYPE_PROP,
+    NPC,
+    ops::NPC_FOLLOW
+);
 
-set_each!(SetMoveObjectState(state: f32), TYPE_PROP, MOVE_OBJECT, ops::MOVE_OBJECT_STATE);
+set_each!(
+    SetMoveObjectState(state: f32),
+    TYPE_PROP,
+    MOVE_OBJECT,
+    ops::MOVE_OBJECT_STATE
+);
 set_each!(
     SetMoveObjectStateExt(state: f32, acc: f32, max_speed: f32, slowdown: f32, reset: bool),
-    TYPE_PROP, MOVE_OBJECT, ops::MOVE_OBJECT_STATE_EXT
+    TYPE_PROP,
+    MOVE_OBJECT,
+    ops::MOVE_OBJECT_STATE_EXT
 );
 
 fn get_one(name: &[u8], sub: i32, op: ops::Op) -> Option<Arg> {

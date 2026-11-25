@@ -103,7 +103,7 @@ pub fn vertex_colors(
         c.b * rgb_mul,
         color.a * halo_alpha,
     ];
-    for q in out.chunks_exact_mut(4) {
+    for q in out.as_chunks_mut::<4>().0 {
         q.copy_from_slice(&v);
     }
 }
@@ -112,11 +112,10 @@ pub fn vertex_colors(
 pub fn vertex_positions(size: Vector2f, out: &mut [f32; 16]) {
     let (hx, hy) = (size.x / 2.0, size.y / 2.0);
     let corners = [(hx, -hy), (-hx, -hy), (-hx, hy), (hx, hy)];
-    for (q, (x, y)) in out.chunks_exact_mut(4).zip(corners) {
-        if let [a, b, c, ..] = q {
-            *a = x;
-            *b = y;
-            *c = 0.0;
-        }
+    for (q, (x, y)) in out.as_chunks_mut::<4>().0.iter_mut().zip(corners) {
+        let [a, b, c, _] = q;
+        *a = x;
+        *b = y;
+        *c = 0.0;
     }
 }

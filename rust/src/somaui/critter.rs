@@ -400,7 +400,7 @@ pub fn towards_ground_add(
         let length = mesh_height.map_or(max_height, |h| h.mul_add(0.5, max_height));
         s.ground_dist = raycast(host, pos, v3(pos.x - 0.0, pos.y - length, pos.z - 0.0))
             .and_then(|(d, _)| (d >= 0.0).then_some(d))
-            .map_or(-1.0, |d| d);
+            .unwrap_or(-1.0);
     }
     if s.ground_dist < 0.0 {
         ZERO

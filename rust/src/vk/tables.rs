@@ -227,7 +227,13 @@ pub fn convert_pixels(f: &Format, src: &[u8], pixels: usize, dst: &mut [u8]) {
     };
     match f.convert {
         CONVERT_RGB_TO_RGBA => {
-            for (i, d) in dst.chunks_exact_mut(4).take(pixels).enumerate() {
+            for (i, d) in dst
+                .as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .take(pixels)
+                .enumerate()
+            {
                 for (c, o) in d.iter_mut().enumerate() {
                     *o = if c == 3 { 255 } else { byte(i * 3 + c) };
                 }
@@ -240,7 +246,7 @@ pub fn convert_pixels(f: &Format, src: &[u8], pixels: usize, dst: &mut [u8]) {
                 return;
             }
             for (i, px) in dst.chunks_exact_mut(dc * 2).take(pixels).enumerate() {
-                for (c, o) in px.chunks_exact_mut(2).enumerate() {
+                for (c, o) in px.as_chunks_mut::<2>().0.iter_mut().enumerate() {
                     let h = if c < sc {
                         float_to_half(float(i * sc + c))
                     } else {
@@ -251,8 +257,14 @@ pub fn convert_pixels(f: &Format, src: &[u8], pixels: usize, dst: &mut [u8]) {
             }
         }
         CONVERT_FLOAT3_TO_4 => {
-            for (i, px) in dst.chunks_exact_mut(16).take(pixels).enumerate() {
-                for (c, o) in px.chunks_exact_mut(4).enumerate() {
+            for (i, px) in dst
+                .as_chunks_mut::<16>()
+                .0
+                .iter_mut()
+                .take(pixels)
+                .enumerate()
+            {
+                for (c, o) in px.as_chunks_mut::<4>().0.iter_mut().enumerate() {
                     let v = if c == 3 { 1.0 } else { float(i * 3 + c) };
                     o.copy_from_slice(&v.to_ne_bytes());
                 }
@@ -443,7 +455,7 @@ pub fn convert_indices(draw_type: i32, idx: &[u32], out: &mut [u32]) -> bool {
             true
         }
         DRAW_QUAD => {
-            for (q, quad) in out.chunks_exact_mut(6).enumerate() {
+            for (q, quad) in out.as_chunks_mut::<6>().0.iter_mut().enumerate() {
                 for (o, k) in quad.iter_mut().zip([0usize, 1, 2, 0, 2, 3]) {
                     *o = at(q * 4 + k);
                 }
@@ -451,7 +463,7 @@ pub fn convert_indices(draw_type: i32, idx: &[u32], out: &mut [u32]) -> bool {
             true
         }
         DRAW_QUAD_STRIP => {
-            for (q, quad) in out.chunks_exact_mut(6).enumerate() {
+            for (q, quad) in out.as_chunks_mut::<6>().0.iter_mut().enumerate() {
                 for (o, k) in quad.iter_mut().zip([0usize, 1, 3, 0, 3, 2]) {
                     *o = at(q * 2 + k);
                 }

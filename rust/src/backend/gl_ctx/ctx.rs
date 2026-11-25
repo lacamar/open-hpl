@@ -982,7 +982,7 @@ impl Ctx {
         self.set_matrix_mode(kind);
         gl!(self, glLoadIdentity());
         let mut t = [0.0f32; 16];
-        for (r, row) in t.chunks_exact_mut(4).enumerate() {
+        for (r, row) in t.as_chunks_mut::<4>().0.iter_mut().enumerate() {
             for (c, slot) in row.iter_mut().enumerate() {
                 *slot = m.get(c * 4 + r).copied().unwrap_or(0.0);
             }

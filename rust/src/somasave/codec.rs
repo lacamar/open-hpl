@@ -119,8 +119,8 @@ impl<'a> In<'a> {
     pub fn f32s<const N: usize>(&mut self) -> [f32; N] {
         let mut a = [0f32; N];
         if let Some(b) = self.take(N * 4) {
-            for (d, c) in a.iter_mut().zip(b.chunks_exact(4)) {
-                *d = c.try_into().map(f32::from_ne_bytes).unwrap_or(0.0);
+            for (d, c) in a.iter_mut().zip(b.as_chunks::<4>().0.iter()) {
+                *d = f32::from_ne_bytes(*c);
             }
         }
         a
@@ -139,8 +139,8 @@ impl<'a> In<'a> {
     pub fn i32s<const N: usize>(&mut self) -> [i32; N] {
         let mut a = [0i32; N];
         if let Some(b) = self.take(N * 4) {
-            for (d, c) in a.iter_mut().zip(b.chunks_exact(4)) {
-                *d = c.try_into().map(i32::from_ne_bytes).unwrap_or(0);
+            for (d, c) in a.iter_mut().zip(b.as_chunks::<4>().0.iter()) {
+                *d = i32::from_ne_bytes(*c);
             }
         }
         a

@@ -311,14 +311,18 @@ pub unsafe extern "C" fn ohpl_ls_env_setup(
     let (mut pos, mut uv0, mut uv1) = (vec![0.0; n * 16], vec![0.0; n * 12], vec![0.0; n * 12]);
     env_setup(box_size, size, sub_div, &mut pos, &mut uv0, &mut uv1);
     let quads = pos
-        .chunks_exact(16)
-        .zip(uv0.chunks_exact(12))
-        .zip(uv1.chunks_exact(12));
+        .as_chunks::<16>()
+        .0
+        .iter()
+        .zip(uv0.as_chunks::<12>().0.iter())
+        .zip(uv1.as_chunks::<12>().0.iter());
     for (i, ((p, u0), u1)) in quads.enumerate() {
         let verts = p
-            .chunks_exact(4)
-            .zip(u0.chunks_exact(3))
-            .zip(u1.chunks_exact(3));
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(u0.as_chunks::<3>().0.iter())
+            .zip(u1.as_chunks::<3>().0.iter());
         for ((pv, a), b) in verts {
             vb.add(lh::E_POS, pv);
             vb.color(lh::E_COLOR0, one());

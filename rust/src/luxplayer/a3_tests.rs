@@ -179,7 +179,9 @@ fn bf(w: u32) -> f32 {
 #[test]
 fn golden_replay() {
     let words: Vec<u32> = GOLDEN
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
         .collect();
     let mut r = Replay {

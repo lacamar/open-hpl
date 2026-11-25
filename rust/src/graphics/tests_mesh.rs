@@ -183,7 +183,7 @@ fn one_sided_plane_and_rejects() {
         "{n:?} {p:?}"
     );
     let (n, _) = submesh::one_sided(&[0, 2, 1, 0, 1, 2], &pos, 4)
-        .map_or((v3(9.0, 9.0, 9.0), v3(0.0, 0.0, 0.0)), |x| x);
+        .unwrap_or((v3(9.0, 9.0, 9.0), v3(0.0, 0.0, 0.0)));
     assert_eq!(n, v3(9.0, 9.0, 9.0), "opposite faces are not one-sided");
     assert!(submesh::one_sided(&[0, 2], &pos, 4).is_none());
     assert!(submesh::one_sided(&[0, 2, 9], &pos, 4).is_none());

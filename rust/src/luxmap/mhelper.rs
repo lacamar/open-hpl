@@ -316,11 +316,10 @@ pub fn shape_damage(d: &DamageArgs) -> (bool, bool) {
             continue;
         }
         let points: Vec<Vector3f> = slice_of(q.r as *const f32, q.i[2] as usize * 3)
-            .chunks_exact(3)
-            .filter_map(|p| match *p {
-                [x, y, z] => Some(Vector3f { x, y, z }),
-                _ => None,
-            })
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|&[x, y, z]| Vector3f { x, y, z })
             .collect();
 
         let mut ray = Ray::new(RAY_ATTACK);

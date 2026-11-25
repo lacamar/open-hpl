@@ -460,8 +460,10 @@ fn read_indices(r: &mut Reader, hpl3: bool) -> Res<Vec<u32>> {
             let mut raw = vec![0; bytes];
             r.bb.get_array(&mut raw, 4);
             indices = raw
-                .chunks_exact(4)
-                .map(|c| u32::from_le_bytes(c.try_into().unwrap_or_default()))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|c| u32::from_le_bytes(*c))
                 .collect();
         }
         lod += 1;

@@ -208,12 +208,22 @@ pub unsafe extern "C" fn ohpl_beam_geometry(
     // SAFETY: caller contract.
     unsafe {
         let g = beam::geometry(*start, *end, [size_x, size_y], tile_height);
-        for (dst, src) in slice_mut(pos, 16).chunks_exact_mut(4).zip(g.pos) {
+        for (dst, src) in slice_mut(pos, 16)
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .zip(g.pos)
+        {
             for (d, s) in dst.iter_mut().zip(src) {
                 *d = s;
             }
         }
-        for (dst, src) in slice_mut(uv, 12).chunks_exact_mut(3).zip(g.uv) {
+        for (dst, src) in slice_mut(uv, 12)
+            .as_chunks_mut::<3>()
+            .0
+            .iter_mut()
+            .zip(g.uv)
+        {
             for (d, s) in dst.iter_mut().zip(src) {
                 *d = s;
             }

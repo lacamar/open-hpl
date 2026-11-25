@@ -1140,17 +1140,21 @@ pub fn env_setup(
     let corners = [(1.0f32, 1.0f32), (0.0, 1.0), (0.0, 0.0), (1.0, 0.0)];
     let offsets = [(0.5f32, -0.5f32), (-0.5, -0.5), (-0.5, 0.5), (0.5, 0.5)];
     let quads = pos
-        .chunks_exact_mut(16)
-        .zip(uv0.chunks_exact_mut(12))
-        .zip(uv1.chunks_exact_mut(12));
+        .as_chunks_mut::<16>()
+        .0
+        .iter_mut()
+        .zip(uv0.as_chunks_mut::<12>().0.iter_mut())
+        .zip(uv1.as_chunks_mut::<12>().0.iter_mut());
     for ((p, u0), u1) in quads {
         let vp = rand_v3(v3(0.0, 0.0, 0.0), v3(box_size, box_size, box_size));
         let cx = rand_rectl(0, sx - 1) as f32 * cell.x;
         let cy = rand_rectl(0, sy - 1) as f32 * cell.y;
         let verts = p
-            .chunks_exact_mut(4)
-            .zip(u0.chunks_exact_mut(3))
-            .zip(u1.chunks_exact_mut(3));
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .zip(u0.as_chunks_mut::<3>().0.iter_mut())
+            .zip(u1.as_chunks_mut::<3>().0.iter_mut());
         for (((pv, uv), ov), (c, o)) in verts.zip(corners.iter().zip(offsets.iter())) {
             pv.copy_from_slice(&[vp.x, vp.y, vp.z, 1.0]);
             uv.copy_from_slice(&[fma(c.0, cell.x, cx), fma(c.1, cell.y, cy), 0.0]);

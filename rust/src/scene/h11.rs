@@ -427,14 +427,14 @@ pub fn rest_pose_from_map(
         return false;
     }
     for (((v, m), unit), o) in vals
-        .chunks_exact(7)
+        .as_chunks::<7>()
+        .0
+        .iter()
         .zip(locals)
         .zip(unit_scales)
         .zip(out.iter_mut())
     {
-        let [w, x, y, z, tx, ty, tz] = *v else {
-            return false;
-        };
+        let [w, x, y, z, tx, ty, tz] = *v;
         let s = min(
             min(row_length(&m.m[0]), row_length(&m.m[1])),
             row_length(&m.m[2]),

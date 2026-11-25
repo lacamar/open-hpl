@@ -485,13 +485,13 @@ pub fn update_ui_movement(nav: &[NavEntry], f: &mut Focus, act: &mut Actions<'_>
     if nav.len() < 2 || !moved {
         return;
     }
-    let target;
-    if nav.len() as i32 == f.last_count
+
+    let target = if nav.len() as i32 == f.last_count
         && f.last_dir[0] == -dir[0]
         && f.last_dir[1] == -dir[1]
         && find(f.prev_focus).is_some()
     {
-        target = f.prev_focus;
+        f.prev_focus
     } else {
         let hori = dir[0] != 0;
         let wrap = cur.wrap == 3 || (cur.wrap == 1 && hori) || (cur.wrap == 2 && !hori);
@@ -505,8 +505,8 @@ pub fn update_ui_movement(nav: &[NavEntry], f: &mut Focus, act: &mut Actions<'_>
         if t == 0 && wrap {
             t = nav_closest(nav, f, cur, dir, false, true);
         }
-        target = t;
-    }
+        t
+    };
     if target != 0 {
         f.prev_focus = f.focus;
         f.focus = target;

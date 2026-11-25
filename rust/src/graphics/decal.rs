@@ -153,7 +153,7 @@ pub fn clip_mesh(p: &ClipParams, mesh: &MeshView, counts: &mut Counts, out: &mut
     let up = v3(up_plane.a, up_plane.b, up_plane.c);
     let mut poly = Poly::default();
     let mut tmp = Poly::default();
-    for tri in mesh.indices.chunks_exact(3) {
+    for tri in mesh.indices.as_chunks::<3>().0 {
         poly.clear();
         for &idx in tri {
             let pos = read_vertex(mesh.positions, mesh.pos_stride, idx);

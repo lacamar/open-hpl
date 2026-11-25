@@ -1013,9 +1013,12 @@ getter!(ohpl_g1_set_popup_is_active, bool, false, |s| s.popup_count
     > 0);
 setter!(ohpl_g1_set_add_popup_count(n: i32), |s| s.popup_count += n);
 getter!(ohpl_g1_set_popup_z, f32, 0.0, |s| s.last_popup_z);
-setter!(ohpl_g1_set_inc_popup_z(_unused: i32), |s| s.last_popup_z = layout::next_popup_z(s.last_popup_z));
+setter!(ohpl_g1_set_inc_popup_z(_unused: i32), |s| s.last_popup_z =
+    layout::next_popup_z(s.last_popup_z));
 getter!(ohpl_g1_set_context_menu_z, f32, 0.0, |s| s.context_menu_z);
-setter!(ohpl_g1_set_add_context_menu_z(dz: f32), |s| s.context_menu_z += dz);
+setter!(ohpl_g1_set_add_context_menu_z(dz: f32), |s| s
+    .context_menu_z +=
+    dz);
 getter!(ohpl_g1_set_gui, *mut c_void, ptr::null_mut(), |s| s
     .gui_shell);
 getter!(ohpl_g1_set_resources, *mut c_void, ptr::null_mut(), |s| s
@@ -1040,8 +1043,13 @@ getter!(ohpl_g1_set_base_clip, *mut Clip, ptr::null_mut(), |s| {
 });
 getter!(ohpl_g1_set_current_clip, *mut Clip, ptr::null_mut(), |s| s
     .current_clip);
-setter!(ohpl_g1_set_set_current_clip(c: *mut Clip), |s| s.current_clip = c);
-setter!(ohpl_g1_set_set_focus_draw_callback_obj(o: *mut c_void), |s| s.focus_obj = o);
+setter!(ohpl_g1_set_set_current_clip(c: *mut Clip), |s| s
+    .current_clip =
+    c);
+setter!(
+    ohpl_g1_set_set_focus_draw_callback_obj(o: *mut c_void),
+    |s| s.focus_obj = o
+);
 getter!(ohpl_g1_set_tip_frame, W, 0, |s| s.tip_frame);
 
 /// # Safety

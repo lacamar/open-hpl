@@ -497,7 +497,9 @@ impl Build<'_> {
         element(sink, ELEMENT_TANGENT, 4, &tan);
         let idx: Vec<u32> = src
             .indices
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .flat_map(|f| f.iter().rev().copied())
             .collect();
         sink.sub_vb_indices(&idx);

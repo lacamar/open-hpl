@@ -54,7 +54,12 @@ sf!(PlayEnemyAnimation(name: S, anim: S, looped: bool, fade: f32) {
     });
 });
 
-set_each!(PlayScriptedAnimation(anim: S, looped: bool), TYPE_ENEMY, -1, ops::ENEMY_SCRIPTED_ANIM);
+set_each!(
+    PlayScriptedAnimation(anim: S, looped: bool),
+    TYPE_ENEMY,
+    -1,
+    ops::ENEMY_SCRIPTED_ANIM
+);
 
 sf!(SendEnemyTimeOut(name: S, time: f32) {
     each(name.0, TYPE_ENEMY, -1, |e| {
@@ -68,20 +73,50 @@ sf!(StopAnimationAndContinue(name: S, time: f32) {
     });
 });
 
-set_each!(SetEnemyActivationDistance(dist: f32), TYPE_ENEMY, -1, ops::ENEMY_ACTIVATION_DISTANCE);
+set_each!(
+    SetEnemyActivationDistance(dist: f32),
+    TYPE_ENEMY,
+    -1,
+    ops::ENEMY_ACTIVATION_DISTANCE
+);
 set_each!(SetEnemyBlind(on: bool), TYPE_ENEMY, -1, ops::ENEMY_BLIND);
 set_each!(SetEnemyDeaf(on: bool), TYPE_ENEMY, -1, ops::ENEMY_DEAF);
-set_each!(SetEnemyDisabled(on: bool), TYPE_ENEMY, -1, ops::ENEMY_DISABLED);
-set_each!(SetEnemyIsHallucination(on: bool), TYPE_ENEMY, -1, ops::ENEMY_HALLUCINATION);
-set_each!(FadeEnemyToSmoke(sound: bool), TYPE_ENEMY, -1, ops::ENEMY_FADE_TO_SMOKE);
-set_each!(SetEnemyDisableTriggers(on: bool), TYPE_ENEMY, -1, ops::ENEMY_DISABLE_TRIGGERS);
+set_each!(
+    SetEnemyDisabled(on: bool),
+    TYPE_ENEMY,
+    -1,
+    ops::ENEMY_DISABLED
+);
+set_each!(
+    SetEnemyIsHallucination(on: bool),
+    TYPE_ENEMY,
+    -1,
+    ops::ENEMY_HALLUCINATION
+);
+set_each!(
+    FadeEnemyToSmoke(sound: bool),
+    TYPE_ENEMY,
+    -1,
+    ops::ENEMY_FADE_TO_SMOKE
+);
+set_each!(
+    SetEnemyDisableTriggers(on: bool),
+    TYPE_ENEMY,
+    -1,
+    ops::ENEMY_DISABLE_TRIGGERS
+);
 set_each!(
     ClearEnemyPatrolNodes(),
     TYPE_ENEMY,
     -1,
     ops::ENEMY_CLEAR_PATROL
 );
-set_each!(SetEnemySanityDecreaseActive(on: bool), TYPE_ENEMY, -1, ops::ENEMY_SANITY_DECREASE);
+set_each!(
+    SetEnemySanityDecreaseActive(on: bool),
+    TYPE_ENEMY,
+    -1,
+    ops::ENEMY_SANITY_DECREASE
+);
 
 // the original's state test is a chain of `!=` joined by `||`, so it always passes
 sf!(ShowEnemyPlayerPosition(name: S) {

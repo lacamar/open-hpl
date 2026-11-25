@@ -139,22 +139,23 @@ pub unsafe extern "C" fn ohpl_h4_detail_mesh_radius(
     // SAFETY: caller contract.
     let (lo, hi) = unsafe { (slice(mins, n * 3), slice(maxs, n * 3)) };
     let bounds: Vec<_> = lo
-        .chunks_exact(3)
-        .zip(hi.chunks_exact(3))
-        .filter_map(|(a, b)| match (a, b) {
-            ([ax, ay, az], [bx, by, bz]) => Some((
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .zip(hi.as_chunks::<3>().0.iter())
+        .map(|(&[ax, ay, az], &[bx, by, bz])| {
+            (
                 Vector3f {
-                    x: *ax,
-                    y: *ay,
-                    z: *az,
+                    x: ax,
+                    y: ay,
+                    z: az,
                 },
                 Vector3f {
-                    x: *bx,
-                    y: *by,
-                    z: *bz,
+                    x: bx,
+                    y: by,
+                    z: bz,
                 },
-            )),
-            _ => None,
+            )
         })
         .collect();
     plan::detail_mesh_radius(&bounds)

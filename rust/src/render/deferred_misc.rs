@@ -256,7 +256,7 @@ fn glare_flares(
             if total.is_nan() || total > 0.0 {
                 sum += total;
                 let (gx, gy) = (c(4), c(5));
-                for (n, col) in colors.chunks_exact_mut(4).enumerate() {
+                for (n, col) in colors.as_chunks_mut::<4>().0.iter_mut().enumerate() {
                     let p = |o: usize| pos.get(n * 4 + o).copied().unwrap_or(0.0);
                     let d = v3((p(0) - gx) * i.aspect, (1.0 - p(1)) - gy, p(2));
                     let d2 = dot3(d, d);

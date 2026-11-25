@@ -173,7 +173,9 @@ pub unsafe extern "C" fn ohpl_ld_ug_build(
                 )
             };
             let v3s = |s: &[f32]| -> Vec<Vector3f> {
-                s.chunks_exact(3)
+                s.as_chunks::<3>()
+                    .0
+                    .iter()
                     .map(|c| Vector3f {
                         x: c.first().copied().unwrap_or_default(),
                         y: c.get(1).copied().unwrap_or_default(),

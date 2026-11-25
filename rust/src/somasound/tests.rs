@@ -484,7 +484,7 @@ fn voice_text_decoding_and_lipsync() {
     d.extend_from_slice(&[0; 5]);
     let k = [0x8f81_2a90u32, 0x7182_3fad, 0x0317_fab7, 0xc385_6aa5];
     let enc = (d.len() / 2).next_multiple_of(8).min(d.len() / 8 * 8);
-    for b in d[..enc].chunks_exact_mut(8) {
+    for b in d[..enc].as_chunks_mut::<8>().0 {
         let mut v = [
             u32::from_le_bytes(b[..4].try_into().unwrap()),
             u32::from_le_bytes(b[4..].try_into().unwrap()),

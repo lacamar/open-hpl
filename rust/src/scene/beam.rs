@@ -22,7 +22,7 @@ fn vertex_color(c: Color, multiply_alpha: bool) -> [f32; 4] {
 /// Fills `out` (two vertex colours, 8 floats) for the lower or upper beam edge.
 pub fn set_edge_colors(c: Color, multiply_alpha: bool, out: &mut [f32]) {
     let rgba = vertex_color(c, multiply_alpha);
-    for v in out.chunks_exact_mut(4).take(2) {
+    for v in out.as_chunks_mut::<4>().0.iter_mut().take(2) {
         v.copy_from_slice(&rgba);
     }
 }

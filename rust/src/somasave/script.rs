@@ -155,8 +155,8 @@ pub fn read_value(h: &mut dyn ScriptHost, i: &mut In, version: i32, type_id: i32
             }
             let mut w = vec![0u32; n as usize];
             if let Some(b) = i.take(n as usize * 4) {
-                for (d, c) in w.iter_mut().zip(b.chunks_exact(4)) {
-                    *d = c.try_into().map(u32::from_ne_bytes).unwrap_or(0);
+                for (d, c) in w.iter_mut().zip(b.as_chunks::<4>().0.iter()) {
+                    *d = u32::from_ne_bytes(*c);
                 }
             }
             h.wstring_set(addr, &w);

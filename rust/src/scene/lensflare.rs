@@ -494,9 +494,11 @@ pub fn multi_iris(
     const CORNERS: [(f32, f32); 4] = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)];
 
     let quads = pos
-        .chunks_exact_mut(16)
-        .zip(col.chunks_exact_mut(16))
-        .zip(uv.chunks_exact_mut(12))
+        .as_chunks_mut::<16>()
+        .0
+        .iter_mut()
+        .zip(col.as_chunks_mut::<16>().0.iter_mut())
+        .zip(uv.as_chunks_mut::<12>().0.iter_mut())
         .take(usize::try_from(f.multi_iris_count).unwrap_or(0));
     let mut written = 0;
     for ((qp, qc), qu) in quads {
@@ -517,9 +519,11 @@ pub fn multi_iris(
         let (u0, v0) = (ix as f32 * duv.x, iy as f32 * duv.y);
 
         let verts = qp
-            .chunks_exact_mut(4)
-            .zip(qc.chunks_exact_mut(4))
-            .zip(qu.chunks_exact_mut(3))
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .zip(qc.as_chunks_mut::<4>().0.iter_mut())
+            .zip(qu.as_chunks_mut::<3>().0.iter_mut())
             .zip(CORNERS);
         for (((p, cc), t), (kx, ky)) in verts {
             p.copy_from_slice(&[fma(kx, hx, cx), fma(ky, hy, cy), z, 1.0]);

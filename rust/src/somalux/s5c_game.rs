@@ -320,11 +320,10 @@ fn parse_flat(b: &[u8]) -> Vec<Elem> {
             let value = f.next()?.to_vec();
             let rest: Vec<&[u8]> = f.collect();
             let attrs = rest
-                .chunks_exact(2)
-                .filter_map(|c| match c {
-                    [k, v] => Some((k.to_vec(), v.to_vec())),
-                    _ => None,
-                })
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|[k, v]| (k.to_vec(), v.to_vec()))
                 .collect();
             Some(Elem {
                 depth,

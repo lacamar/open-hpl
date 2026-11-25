@@ -10,7 +10,7 @@ pub fn set_colors(c: Color, multiply_alpha: bool, out: &mut [f32]) {
     } else {
         (c.r, c.g, c.b)
     };
-    for v in out.chunks_exact_mut(4) {
+    for v in out.as_chunks_mut::<4>().0 {
         v.copy_from_slice(&[r, g, b, c.a]);
     }
 }
@@ -60,10 +60,12 @@ pub fn quads(points: &[Vector3f], p: &RopeParams, out: RopeOut) -> usize {
     ];
     let cells = out
         .pos
-        .chunks_exact_mut(16)
-        .zip(out.uv.chunks_exact_mut(12))
-        .zip(out.normal.chunks_exact_mut(12))
-        .zip(out.tangent.chunks_exact_mut(16));
+        .as_chunks_mut::<16>()
+        .0
+        .iter_mut()
+        .zip(out.uv.as_chunks_mut::<12>().0.iter_mut())
+        .zip(out.normal.as_chunks_mut::<12>().0.iter_mut())
+        .zip(out.tangent.as_chunks_mut::<16>().0.iter_mut());
     let mut prev = first;
     let mut written = 0;
     for (index, (point, (((qp, qu), qn), qt))) in points.iter().skip(1).zip(cells).enumerate() {
@@ -74,7 +76,7 @@ pub fn quads(points: &[Vector3f], p: &RopeParams, out: RopeOut) -> usize {
         normalize3(&mut right);
         let fwd = cross3(right, up);
 
-        for (vert, add) in qp.chunks_exact_mut(4).zip(POS_ADD) {
+        for (vert, add) in qp.as_chunks_mut::<4>().0.iter_mut().zip(POS_ADD) {
             vert.copy_from_slice(&[
                 offset(prev.x, right.x, up.x, add, p, len),
                 offset(prev.y, right.y, up.y, add, p, len),
@@ -84,7 +86,7 @@ pub fn quads(points: &[Vector3f], p: &RopeParams, out: RopeOut) -> usize {
         }
 
         let first = index == 0 && (len < p.segment_length || p.segment_length == 0.0);
-        for (i, (vert, (tx, ty))) in qu.chunks_exact_mut(3).zip(tex).enumerate() {
+        for (i, (vert, (tx, ty))) in qu.as_chunks_mut::<3>().0.iter_mut().zip(tex).enumerate() {
             let ty = match (first, i < 2) {
                 (true, true) if p.segment_length == 0.0 => ty - (1.0 - len / p.tile_size),
                 (true, true) => fma(-(1.0 - len / p.segment_length), p.tile_amount, ty),
@@ -93,10 +95,10 @@ pub fn quads(points: &[Vector3f], p: &RopeParams, out: RopeOut) -> usize {
             vert.copy_from_slice(&[tx, ty, 0.0]);
         }
 
-        for n in qn.chunks_exact_mut(3) {
+        for n in qn.as_chunks_mut::<3>().0 {
             n.copy_from_slice(&[fwd.x, fwd.y, fwd.z]);
         }
-        for t in qt.chunks_exact_mut(4) {
+        for t in qt.as_chunks_mut::<4>().0 {
             t.copy_from_slice(&[right.x, right.y, right.z, 1.0]);
         }
         prev = *point;

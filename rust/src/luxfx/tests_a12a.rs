@@ -337,9 +337,9 @@ impl Fx for Rec {
             local_center: v3(14),
             ..Outline::default()
         };
-        for r in 0..4 {
-            for c in 0..4 {
-                o.world.m[r][c] = f(17 + r * 4 + c);
+        for (r, row) in o.world.m.iter_mut().enumerate() {
+            for (c, cell) in row.iter_mut().enumerate() {
+                *cell = f(17 + r * 4 + c);
             }
         }
         o

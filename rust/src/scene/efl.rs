@@ -490,11 +490,10 @@ pub(crate) unsafe fn load_light(h: &Host, el: &El, prefix: &[u8], w: *mut World,
                                 .map(crate::string::token_to_float)
                                 .collect();
                         let bands: Vec<Vector3f> = vals
-                            .chunks_exact(3)
-                            .filter_map(|c| match *c {
-                                [x, y, z] => Some(Vector3f { x, y, z }),
-                                _ => None,
-                            })
+                            .as_chunks::<3>()
+                            .0
+                            .iter()
+                            .map(|&[x, y, z]| Vector3f { x, y, z })
                             .take(rmw::band_count(vals.len()))
                             .collect();
                         let set_name = set.string(b"SetName");

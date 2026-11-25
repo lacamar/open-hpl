@@ -159,9 +159,9 @@ impl Args<'_> {
     }
     fn m(&mut self) -> Matrixf {
         let mut m = IDENTITY;
-        for r in 0..4 {
-            for c in 0..4 {
-                m.m[r][c] = self.f();
+        for row in &mut m.m {
+            for cell in row {
+                *cell = self.f();
             }
         }
         m

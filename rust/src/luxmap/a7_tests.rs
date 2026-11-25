@@ -540,9 +540,9 @@ fn vec_s(v: Vector3f) -> String {
 
 fn rand_mtx(r: &mut Rng) -> Matrixf {
     let mut m = Matrixf::default();
-    for x in 0..4 {
-        for y in 0..4 {
-            m.m[x][y] = if x == y { 1.0 } else { r.f(0.5) - 0.5 };
+    for (x, row) in m.m.iter_mut().enumerate() {
+        for (y, cell) in row.iter_mut().enumerate() {
+            *cell = if x == y { 1.0 } else { r.f(0.5) - 0.5 };
         }
     }
     m

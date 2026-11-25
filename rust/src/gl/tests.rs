@@ -203,8 +203,8 @@ fn shadow_double_copies_positions() {
 #[test]
 fn transform_moves_positions_and_shadow() {
     let mut m = Matrixf::default();
-    for i in 0..4 {
-        m.m[i][i] = 1.0;
+    for (i, row) in m.m.iter_mut().enumerate() {
+        row[i] = 1.0;
     }
     m.m[0][3] = 5.0;
     let mut pos = vec![
