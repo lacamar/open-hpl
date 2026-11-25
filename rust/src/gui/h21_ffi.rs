@@ -1,19 +1,13 @@
-//! C ABI of the H21 popups, declared in `gui/RustGuiH21.h`.
-//!
-//! `vt` is a valid host table and `p` a popup from one of the `*_new` functions; null pointers
-//! make a call a no-op returning the zero value. A popup lives until `ohpl_h21_destroy`.
+#![allow(clippy::missing_safety_doc, clippy::too_many_arguments)]
 
+use super::g2_popup::G2Popup;
 use super::h21_log::{Ids, fmt_cmd, fmt_ret, hex, units};
 use super::h21_popup::{self as pop, Cmd, Host, Hx, Popup, Ret};
 use super::set::{Msg, W};
 use std::cell::RefCell;
-use std::ffi::{CStr, c_char, c_void};
+use std::ffi::{CStr, c_char};
 
-#[repr(C)]
-pub struct HostVt {
-    pub(super) ctx: *mut c_void,
-    pub(super) exec: extern "C" fn(*mut c_void, *const Cmd, *mut Ret),
-}
+pub(super) struct PopupHost(pub(super) *mut G2Popup);
 
 struct Recorder {
     text: String,
@@ -43,17 +37,16 @@ fn recording() -> bool {
     REC.with(|r| r.try_borrow().is_ok_and(|r| r.is_some()))
 }
 
-impl Host for HostVt {
+impl Host for PopupHost {
     fn exec(&self, c: &Cmd) -> Ret {
         record(|r| fmt_cmd(c, &mut r.ids));
         let mut ret = Ret::default();
-        (self.exec)(self.ctx, c, &mut ret);
+        super::h21_direct::exec(self.0.cast(), c, &mut ret);
         record(|r| fmt_ret(&ret, &mut r.ids));
         ret
     }
 }
 
-/// Runs an entry point, logging `ev <head>` first and `= <tail>` after when recording.
 fn entry<R>(
     head: impl FnOnce(&mut Ids) -> String,
     tail: impl FnOnce(&R, &mut Ids) -> String,
@@ -69,13 +62,6 @@ fn entry<R>(
     out
 }
 
-/// # Safety
-/// `vt` is null or valid.
-unsafe fn host<'a>(vt: *const HostVt) -> Option<&'a HostVt> {
-    // SAFETY: caller contract.
-    unsafe { vt.as_ref() }
-}
-
 fn ptr_id(p: *const Popup) -> impl FnOnce(&mut Ids) -> usize {
     move |ids| ids.id(p as usize)
 }
@@ -84,11 +70,8 @@ fn boxed(p: Popup) -> *mut Popup {
     Box::into_raw(Box::new(p))
 }
 
-/// # Safety
-/// `vt` valid; string pointers valid for their lengths.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_msgbox_new(
-    vt: *const HostVt,
+pub(super) unsafe fn msgbox_new(
+    vt: &PopupHost,
     label: *const u32,
     label_n: usize,
     text: *const u32,
@@ -100,15 +83,13 @@ pub unsafe extern "C" fn ohpl_h21_msgbox_new(
     cb_obj: usize,
     cb_fn: usize,
 ) -> *mut Popup {
-    // SAFETY: caller contract.
-    let (Some(vt), l, t, a, b) = (
-        unsafe { host(vt) },
-        unsafe { units(label, label_n) },
-        unsafe { units(text, text_n) },
-        unsafe { units(b1, b1_n) },
-        unsafe { units(b2, b2_n) },
-    ) else {
-        return std::ptr::null_mut();
+    let (l, t, a, b) = unsafe {
+        (
+            units(label, label_n),
+            units(text, text_n),
+            units(b1, b1_n),
+            units(b2, b2_n),
+        )
     };
     entry(
         |ids| {
@@ -127,19 +108,7 @@ pub unsafe extern "C" fn ohpl_h21_msgbox_new(
     )
 }
 
-/// # Safety
-/// `vt` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_color_new(
-    vt: *const HostVt,
-    dest: usize,
-    cb_obj: usize,
-    cb_fn: usize,
-) -> *mut Popup {
-    // SAFETY: caller contract.
-    let Some(vt) = (unsafe { host(vt) }) else {
-        return std::ptr::null_mut();
-    };
+pub(super) fn color_new(vt: &PopupHost, dest: usize, cb_obj: usize, cb_fn: usize) -> *mut Popup {
     entry(
         |ids| {
             format!(
@@ -154,11 +123,8 @@ pub unsafe extern "C" fn ohpl_h21_color_new(
     )
 }
 
-/// # Safety
-/// `vt` valid; string pointers valid for their lengths.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_fp_new(
-    vt: *const HostVt,
+pub(super) unsafe fn fp_new(
+    vt: &PopupHost,
     kind: i32,
     path: *const u32,
     path_n: usize,
@@ -167,14 +133,7 @@ pub unsafe extern "C" fn ohpl_h21_fp_new(
     cb_obj: usize,
     cb_fn: usize,
 ) -> *mut Popup {
-    // SAFETY: caller contract.
-    let (Some(vt), pa, na) = (
-        unsafe { host(vt) },
-        unsafe { units(path, path_n) },
-        unsafe { units(name, name_n) },
-    ) else {
-        return std::ptr::null_mut();
-    };
+    let (pa, na) = unsafe { (units(path, path_n), units(name, name_n)) };
     entry(
         |ids| {
             format!(
@@ -190,14 +149,7 @@ pub unsafe extern "C" fn ohpl_h21_fp_new(
     )
 }
 
-/// # Safety
-/// `vt` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_kb_new(vt: *const HostVt, target: W) -> *mut Popup {
-    // SAFETY: caller contract.
-    let Some(vt) = (unsafe { host(vt) }) else {
-        return std::ptr::null_mut();
-    };
+pub(super) fn kb_new(vt: &PopupHost, target: W) -> *mut Popup {
     entry(
         |ids| format!("kb_new target={}", ids.id(target)),
         |p: &*mut Popup, ids| format!("p={}", ptr_id(*p)(ids)),
@@ -205,20 +157,8 @@ pub unsafe extern "C" fn ohpl_h21_kb_new(vt: *const HostVt, target: W) -> *mut P
     )
 }
 
-/// # Safety
-/// `vt` and `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_event(
-    vt: *const HostVt,
-    p: *const Popup,
-    tag: i32,
-    w: W,
-    d: *const Msg,
-) -> bool {
-    // SAFETY: caller contract.
-    let (Some(vt), Some(po), Some(d)) = (unsafe { host(vt) }, unsafe { p.as_ref() }, unsafe {
-        d.as_ref()
-    }) else {
+pub(super) unsafe fn event(vt: &PopupHost, p: *const Popup, tag: i32, w: W, d: *const Msg) -> bool {
+    let (Some(po), Some(d)) = (unsafe { p.as_ref() }, unsafe { d.as_ref() }) else {
         return false;
     };
     entry(
@@ -235,30 +175,21 @@ pub unsafe extern "C" fn ohpl_h21_event(
     )
 }
 
-/// # Safety
-/// `vt` valid; `p` from a `*_new` function and not used afterwards.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_destroy(vt: *const HostVt, p: *mut Popup) {
-    // SAFETY: caller contract.
-    let (Some(vt), false) = (unsafe { host(vt) }, p.is_null()) else {
+pub(super) unsafe fn destroy(vt: &PopupHost, p: *mut Popup) {
+    if p.is_null() {
         return;
-    };
+    }
     entry(
         |ids| format!("destroy p={}", ids.id(p as usize)),
         |(): &(), _| String::from("ok"),
         || {
-            // SAFETY: `p` is a live `Box<Popup>` pointer given up by the caller.
             let po = unsafe { Box::from_raw(p) };
             po.destroy(&Hx(vt));
         },
     );
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_set_destroy_callback(p: *const Popup, obj: usize, f: usize) {
-    // SAFETY: caller contract.
+pub(super) unsafe fn set_destroy_callback(p: *const Popup, obj: usize, f: usize) {
     if let Some(po) = unsafe { p.as_ref() } {
         entry(
             |ids| {
@@ -275,11 +206,7 @@ pub unsafe extern "C" fn ohpl_h21_set_destroy_callback(p: *const Popup, obj: usi
     }
 }
 
-/// # Safety
-/// `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_set_next_focus(p: *const Popup, w: W) {
-    // SAFETY: caller contract.
+pub(super) unsafe fn set_next_focus(p: *const Popup, w: W) {
     if let Some(po) = unsafe { p.as_ref() } {
         entry(
             |ids| format!("set_next_focus p={} w={}", ids.id(p as usize), ids.id(w)),
@@ -289,12 +216,8 @@ pub unsafe extern "C" fn ohpl_h21_set_next_focus(p: *const Popup, w: W) {
     }
 }
 
-/// # Safety
-/// `vt` and `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_set_kill_on_escape(vt: *const HostVt, p: *const Popup, x: bool) {
-    // SAFETY: caller contract.
-    if let (Some(vt), Some(po)) = (unsafe { host(vt) }, unsafe { p.as_ref() }) {
+pub(super) unsafe fn set_kill_on_escape(vt: &PopupHost, p: *const Popup, x: bool) {
+    if let Some(po) = unsafe { p.as_ref() } {
         entry(
             |ids| {
                 format!(
@@ -309,27 +232,19 @@ pub unsafe extern "C" fn ohpl_h21_set_kill_on_escape(vt: *const HostVt, p: *cons
     }
 }
 
-/// # Safety
-/// `vt` and `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_kill_on_escape(vt: *const HostVt, p: *const Popup) -> bool {
-    // SAFETY: caller contract.
-    match (unsafe { host(vt) }, unsafe { p.as_ref() }) {
-        (Some(vt), Some(po)) => entry(
+pub(super) unsafe fn kill_on_escape(vt: &PopupHost, p: *const Popup) -> bool {
+    match unsafe { p.as_ref() } {
+        Some(po) => entry(
             |ids| format!("kill_on_escape p={}", ids.id(p as usize)),
             |r: &bool, _| format!("ret={}", u8::from(*r)),
             || po.kill_on_escape(&Hx(vt)),
         ),
-        _ => false,
+        None => false,
     }
 }
 
-/// # Safety
-/// `vt` and `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_fp_init(vt: *const HostVt, p: *const Popup) {
-    // SAFETY: caller contract.
-    if let (Some(vt), Some(po)) = (unsafe { host(vt) }, unsafe { p.as_ref() }) {
+pub(super) unsafe fn fp_init(vt: &PopupHost, p: *const Popup) {
+    if let Some(po) = unsafe { p.as_ref() } {
         entry(
             |ids| format!("fp_init p={}", ids.id(p as usize)),
             |(): &(), _| String::from("ok"),
@@ -338,19 +253,13 @@ pub unsafe extern "C" fn ohpl_h21_fp_init(vt: *const HostVt, p: *const Popup) {
     }
 }
 
-/// # Safety
-/// `vt` and `p` valid; the string is valid for its length.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_fp_set_save_dest(
-    vt: *const HostVt,
+pub(super) unsafe fn fp_set_save_dest(
+    vt: &PopupHost,
     p: *const Popup,
     name: *const u32,
     name_n: usize,
 ) {
-    // SAFETY: caller contract.
-    if let (Some(vt), Some(po), n) = (unsafe { host(vt) }, unsafe { p.as_ref() }, unsafe {
-        units(name, name_n)
-    }) {
+    if let (Some(po), n) = (unsafe { p.as_ref() }, unsafe { units(name, name_n) }) {
         entry(
             |ids| format!("fp_set_save_dest p={} name={}", ids.id(p as usize), hex(n)),
             |(): &(), _| String::from("ok"),
@@ -359,12 +268,8 @@ pub unsafe extern "C" fn ohpl_h21_fp_set_save_dest(
     }
 }
 
-/// # Safety
-/// `vt` and `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_fp_on_add_filter(vt: *const HostVt, p: *const Popup) {
-    // SAFETY: caller contract.
-    if let (Some(vt), Some(po)) = (unsafe { host(vt) }, unsafe { p.as_ref() }) {
+pub(super) unsafe fn fp_on_add_filter(vt: &PopupHost, p: *const Popup) {
+    if let Some(po) = unsafe { p.as_ref() } {
         entry(
             |ids| format!("fp_on_add_filter p={}", ids.id(p as usize)),
             |(): &(), _| String::from("ok"),
@@ -373,12 +278,8 @@ pub unsafe extern "C" fn ohpl_h21_fp_on_add_filter(vt: *const HostVt, p: *const 
     }
 }
 
-/// # Safety
-/// `vt` and `p` valid.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ohpl_h21_fp_on_navigate(vt: *const HostVt, p: *const Popup) {
-    // SAFETY: caller contract.
-    if let (Some(vt), Some(po)) = (unsafe { host(vt) }, unsafe { p.as_ref() }) {
+pub(super) unsafe fn fp_on_navigate(vt: &PopupHost, p: *const Popup) {
+    if let Some(po) = unsafe { p.as_ref() } {
         entry(
             |ids| format!("fp_on_navigate p={}", ids.id(p as usize)),
             |(): &(), _| String::from("ok"),
@@ -387,7 +288,6 @@ pub unsafe extern "C" fn ohpl_h21_fp_on_navigate(vt: *const HostVt, p: *const Po
     }
 }
 
-/// Starts recording the host traffic of this thread (cassette golden vectors).
 #[unsafe(no_mangle)]
 pub extern "C" fn ohpl_h21_log_start() {
     REC.with(|r| {
@@ -399,17 +299,11 @@ pub extern "C" fn ohpl_h21_log_start() {
         }
     });
 }
-
-/// Writes the recording to `path` and stops recording.
-///
-/// # Safety
-/// `path` is a valid C string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_h21_log_write(path: *const c_char) -> bool {
     if path.is_null() {
         return false;
     }
-    // SAFETY: caller contract.
     let Ok(path) = unsafe { CStr::from_ptr(path) }.to_str() else {
         return false;
     };
