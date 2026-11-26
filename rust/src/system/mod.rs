@@ -12,4 +12,6 @@ pub mod serialize;
 pub use diag::{frame_stats_json, gamma_lut, json_escape, num, pixel_stats_json};
 
 #[cfg(test)]
+mod ser_probe_tests;
+#[cfg(test)]
 mod tests;
